@@ -1,0 +1,39 @@
+:root {
+  --purple: #502989;
+  --black: #191e22;
+  --white: #ffffff;
+  --pink: #ff00cc;
+  --red: #ff005c;
+  --orange: #ffcc00;
+  --blue: #00bfff;
+  --darkBlue: #013e51;
+  --cyan: #00bfff;
+  --green: #0ef62d;
+  --yellow: #e8fc00;
+  --grey: #6c6c6c;
+  --darkGrey: #454545;
+  --lightGrey: #cccccc;
+  --small: 640px;
+  --medium: 768px;
+  --large: 1024px;
+  --xlarge: 1280px;
+  --breakpoint-small: 640px;
+  --breakpoint-medium: 768px;
+  --breakpoint-large: 1024px;
+  --breakpoint-xlarge: 1280px;
+  --font-bold: 'Proxima Nova W01 Regular', 'Helvetica Neue', Helvetica, Roboto,
+    Arial, sans-serif;
+  --font-display: 'Proxima Nova W01 Light', 'Helvetica Neue', Helvetica, Roboto,
+    Arial, sans-serif;
+    --font-sans: 'Proxima Nova W01 Light', 'Helvetica Neue', Helvetica, Roboto,
+    Arial, sans-serif;
+  --font-light: 'Proxima Nova W01 Thin"', 'Helvetica Neue', Helvetica, Roboto,
+    Arial, sans-serif;
+  --font-serif: 'Bauer Bodoni W01 Roman', 'Times New Roman', Times, serif;
+  --bounce: cubic-bezier(0.205, 0.47, 0.36, 1.385);
+  --curve: cubic-bezier(0.65, 0, 0.45, 1);
+  --bounce2: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --hoverEasing: cubic-bezier(0.23, 1, 0.32, 1);
+  --returnEasing: cubic-bezier(0.445, 0.05, 0.55, 0.95);
+  --border-radius-button: 30px;
+}
