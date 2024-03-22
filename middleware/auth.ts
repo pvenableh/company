@@ -6,8 +6,6 @@ export default defineNuxtRouteMiddleware(async (to) => {
 			console.log('trying refresh');
 			await refresh(); // Attempt to refresh the token
 			const refreshedUser = await readMe(); // Re-fetch user data after refreshing the token
-			console.log('refreshed user:');
-			console.log(refreshedUser);
 			setUser(refreshedUser);
 		} catch (error) {
 			console.error('Error refreshing token or fetching user data:', error);
