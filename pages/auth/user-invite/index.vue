@@ -1,5 +1,5 @@
 <script setup>
-import jwtDecode from 'jwt-decode';
+import { jwtDecode } from 'jwt-decode';
 
 const route = useRoute();
 
