@@ -12,7 +12,7 @@
 		"format": "prettier --write \"**/*.{md,y?(a)ml,json,vue}\""
 	},
 	"devDependencies": {
-		"@directus/sdk": "^15.0.3",
+		"@directus/sdk": "14.0.0",
 		"@directus/types": "11.0.3",
 		"@formkit/auto-animate": "1.0.0-beta.6",
 		"@formkit/drag-and-drop": "^0.0.36",
@@ -44,7 +44,7 @@
 		"eslint-plugin-vue": "9.23.0",
 		"form-data": "4.0.0",
 		"jwt-decode": "^4.0.0",
-		"nuxt": "^3.11.1",
+		"nuxt": "3.10.2",
 		"nuxt-directus-next": "^0.0.14",
 		"nuxt-icon": "0.6.10",
 		"prettier": "3.2.5",

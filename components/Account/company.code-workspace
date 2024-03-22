@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"name": "admin",
+			"path": "../../../admin"
+		},
+		{
+			"name": "company",
+			"path": "../.."
+		}
+	],
+	"settings": {}
+}
