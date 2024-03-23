@@ -3,6 +3,7 @@
 
 export default defineNuxtConfig({
 	ssr: true,
+	// cors: true,
 	// nitro: {
 	// 	preset: 'vercel-edge',
 	// },
