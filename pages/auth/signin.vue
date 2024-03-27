@@ -16,8 +16,9 @@ function movePanel(val: string) {
 			</div>
 			<div v-if="panel === 'login'" class="flex items-center justify-center flex-col login-panel" key="2">
 				<p class="text-xs uppercase tracking-wide">This platform is accessible by invitation only.</p>
-				<AccountLoginForm />
-
+				<ClientOnly>
+					<AccountLoginForm />
+				</ClientOnly>
 				<!-- <a @click.prevent="movePanel('register')" class="cursor-pointer login-panel__nav-button">New? <span
 						class="purple-txt">Register Here</span></a> -->
 				<a class="cursor-pointer login-panel__nav-button reset purple-txt mt-4" @click.prevent="movePanel('request')">

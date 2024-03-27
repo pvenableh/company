@@ -9,7 +9,7 @@ definePageMeta({
 	<div
 		class="relative w-full bg-center bg-contain xl:bg-cover bg-no-repeat min-h-screen flex items-center justify-center flex-col home"
 	>
-		{{ user }}
+		<p v-if="user.value"><{{ user.value }}/p></p>
 	</div>
 </template>
 
