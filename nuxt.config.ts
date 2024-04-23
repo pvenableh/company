@@ -42,7 +42,7 @@ export default defineNuxtConfig({
 		public: {
 			assetsUrl: process.env.DIRECTUS_ASSETS_URL || 'https://admin.huestudios.company/assets/',
 			websocketUrl: process.env.DIRECTUS_WEBSOCKET_URL || 'wss://admin.huestudios.company/websocket',
-			staticToken: process.env.DIRECTUS_SERVER_TOKEN || 'iT3VS_eFq4TxUDsMDhGlwLW43xtGACtI',
+			staticToken: process.env.DIRECTUS_SERVER_TOKEN || 'X5lSYDCwpp88nvSepjFIWlq4ypbtxY-1',
 			siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000',
 			adminUrl: process.env.DIRECTUS_URL || 'https://admin.huestudios.company',
 		},
@@ -65,7 +65,7 @@ export default defineNuxtConfig({
 	plugins: [],
 
 	// Nuxt DevTools - https://devtools.nuxtjs.org/
-	devtools: { enabled: false },
+	devtools: { enabled: true },
 
 	ui: {
 		icons: ['heroicons', 'wi', 'meteocons'],

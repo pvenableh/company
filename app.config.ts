@@ -4,7 +4,7 @@ export default defineAppConfig({
 	theme,
 	ui: {
 		strategy: 'override',
-		primary: 'turquoise',
+		primary: 'zinc',
 		gray: 'zinc',
 		borderRadius: 'full',
 		notifications: {
@@ -20,12 +20,12 @@ export default defineAppConfig({
 		},
 
 		button: {
-			base: 'hover:scale-105 active:hover:scale-95 transition duration-150 uppercase tracking-wide',
+			base: 'hover:scale-100 active:hover:scale-100 transition duration-150 uppercase tracking-wide text-center focus:border-0 focus:outline-none focus:ring-1 focus:ring-gray-300 disabled:cursor-not-allowed disabled:opacity-75 active:border-0 active:outline-none active:ring-1 active:ring-gray-300 tracking-wider',
 			font: 'font-bold',
 
 			default: {
 				size: 'lg',
-				loadingIcon: 'material-symbols:sync-rounded',
+				loadingIcon: 'i-heroicons-arrow-path',
 			},
 			color: {
 				white: {
@@ -42,14 +42,14 @@ export default defineAppConfig({
 			},
 		},
 		input: {
-			base: 'rounded-none relative block w-full disabled:cursor-not-allowed disabled:opacity-75 focus:ring-1 focus:ring-gray-300 border-0 ',
+			base: 'rounded-none relative block w-full disabled:cursor-not-allowed disabled:opacity-75 focus:ring-1 focus:ring-gray-300 border border-gray-50 focus:border focus:border-cyan-200 focus:outline-none focus:ring-1 focus:ring-gray-300 disabled:cursor-not-allowed disabled:opacity-75 active:border active:outline-none active:ring-1 active:ring-gray-300 active:border active:border-gray-300',
 			default: {
-				loadingIcon: 'material-symbols:sync-rounded',
+				loadingIcon: 'i-heroicons-arrow-path',
 			},
 			// rounded: `rounded-${theme.borderRadius}`,
 		},
 		select: {
-			base: 'rounded-large relative block w-full disabled:cursor-not-allowed disabled:opacity-75 focus:ring-1 focous:ring-gray-300 border-0',
+			base: 'rounded-input relative block w-full disabled:cursor-not-allowed disabled:opacity-75 focus:ring-1 focous:ring-gray-300 border-0',
 			// rounded: `rounded-${theme.borderRadius}`,
 			default: {
 				loadingIcon: 'material-symbols:sync-rounded',
@@ -62,7 +62,7 @@ export default defineAppConfig({
 		},
 		selectMenu: {
 			rounded:
-				'rounded-large relative block w-full disabled:cursor-not-allowed disabled:opacity-75 focus:ring-1 ring-gray-300 border-0',
+				'rounded-input relative block w-full disabled:cursor-not-allowed disabled:opacity-75 focus:ring-1 ring-gray-300 border-0',
 			default: {
 				selectedIcon: 'material-symbols:fitbit-check-small-rounded',
 			},

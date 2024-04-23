@@ -1,34 +1,58 @@
 <template>
-	<div v-auto-animate>
+	<div
+		v-motion="{
+			initial: {
+				y: -100,
+				opacity: 0,
+			},
+			enter: {
+				y: 0,
+				opacity: 1,
+			},
+		}"
+		class="w-full"
+	>
 		<UAlert
-			v-if="error"
+			v-if="login_error"
 			type="error"
-			class="mb-4"
-			title="Oops! Something went wrong."
-			:description="error"
-			color="rose"
-			variant="outline"
-			icon="material-symbols:warning-rounded"
+			class="my-4"
+			:description="login_error"
+			color="red"
+			variant="subtle"
+			icon="i-heroicons-exclamation-triangle"
 		>
-			Error: {{ error }}
+			Error: {{ login_error }}
 		</UAlert>
 
-		<form class="grid gap-4" @submit.prevent="attemptLogin">
-			<UFormGroup label="Email" required>
+		<UForm :validate="validate" :state="state" class="grid gap-4" @submit="attemptLogin">
+			<UFormGroup label="Email" name="email">
 				<UInput
-					v-model="credentials.email"
-					type="email"
-					:disabled="loading"
-					size="lg"
+					v-model="state.email"
 					name="email"
-					label="Work Email"
-					placeholder="john@example.com"
-				/>
-				<UInput
-					v-model="credentials.password"
-					type="password"
-					:disabled="loading"
+					label="Email"
+					type="email"
 					size="lg"
+					:loading="loading"
+					icon="i-heroicons-envelope"
+					placeholder="name@domain.com"
+					@input="emailTouched = true"
+				/>
+				<template #error="{ error }">
+					<span
+						class="uppercase tracking-wide text-xs"
+						:class="[error ? 'text-red-500 dark:text-red-400' : 'text-primary-500 dark:text-primary-400']"
+					>
+						{{ error ? error : emailTouched && !error ? 'Your email is valid' : '' }}
+					</span>
+				</template>
+			</UFormGroup>
+			<UFormGroup label="Password" required>
+				<UInput
+					v-model="state.password"
+					type="password"
+					size="lg"
+					:loading="loading"
+					icon="i-heroicons-lock-closed"
 					name="password"
 					label="Password"
 					placeholder="********"
@@ -37,45 +61,80 @@
 			<UButton
 				type="submit"
 				:loading="loading"
-				:disabled="!credentials.email"
+				:disabled="!state.email"
 				size="lg"
 				label="Sign In"
-				trailing-icon="material-symbols:arrow-forward"
+				trailing-icon="i-heroicons-arrow-right"
 				block
 			/>
-		</form>
+		</UForm>
 	</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
+import type { FormError } from '#ui/types';
+
 const { login } = useDirectusAuth();
 const route = useRoute();
 const loading = ref(false);
-const error = ref(null);
+const login_error = ref(null);
+const emailTouched = ref(false);
 
-const credentials = reactive({
-	email: 'peter@huestudios.com',
-	password: 'p195pr',
+const state = reactive({
+	email: null,
+	password: null,
 });
 
+const validate = async (state: any): Promise<FormError[]> => {
+	const errors = [];
+	const regex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i;
+
+	if (!state.email) {
+		errors.push({ path: 'email', message: 'Required' });
+	}
+
+	if (!regex.test(state.email)) {
+		errors.push({ path: 'email', message: 'This must be a valid email' });
+	}
+
+	if (state.email && regex.test(state.email)) {
+		try {
+			loading.value = true;
+			const response: any = await $fetch(`https://admin.huestudios.company/users?filter[email][_eq]=${state.email}`);
+
+			if (response.data.length < 1) {
+				errors.push({ path: 'email', message: 'This email is not registered.' });
+			}
+
+			loading.value = false;
+		} catch (error) {
+			errors.push({ path: 'email', message: 'Failed to validate email' });
+			loading.value = false;
+		}
+	}
+
+	return errors;
+};
+
 async function attemptLogin() {
-	const { email, password } = unref(credentials);
 	loading.value = true;
-	error.value = null;
+	login_error.value = null;
 
 	try {
-		// Be careful when using the login function because you have to pass the email and password as arguments.
-		await login(email, password);
+		await login(state.email, state.password);
 
 		if (route.query.redirect) {
 			const path = decodeURIComponent(route.query.redirect);
-
 			await navigateTo(path);
 		} else {
 			await navigateTo('/');
 		}
 	} catch (err) {
-		error.value = err.message;
+		if (err.data.errors.length) {
+			login_error.value = err.data.errors[0].message;
+		} else {
+			login_error.value = err.message;
+		}
 	}
 
 	loading.value = false;

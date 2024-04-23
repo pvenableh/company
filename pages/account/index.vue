@@ -2,6 +2,7 @@
 	<div class="md:px-6 mx-auto flex items-start justify-center flex-col md:flex-row relative px-4 pt-20 account">
 		<div class="md:top-4 flex md:items-end md:justify-end flex-col w-full md:mr-6 lg:mr account__navigation">
 			<Avatar size="md" />
+
 			<h1 class="hidden md:inline-block mt-6">{{ user?.first_name }} {{ user?.last_name }}</h1>
 			<a :class="{ active: panel === 1 }" @click.prevent="changePanel(1)">Profile</a>
 			<AccountLogout v-if="user" class="logout-icon" />

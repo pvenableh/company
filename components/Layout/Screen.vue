@@ -1,5 +1,5 @@
 <template>
-	<div id="screen" class="fixed h-screen w-full screen cursor-pointer"></div>
+	<div id="screen" class="fixed h-screen w-full screen cursor-pointer">Peter</div>
 </template>
 <script setup></script>
 <style scoped>

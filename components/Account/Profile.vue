@@ -22,7 +22,7 @@
 				disabled="true"
 			/>
 
-			<UButton class="w-full mb-6" type="submit">Update</UButton>
+			<UButton class="w-full mb-6" type="submit" size="lg" label="Update" block />
 		</form>
 	</div>
 </template>
