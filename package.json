@@ -23,7 +23,6 @@
 		"@nuxtjs/color-mode": "^3.3.3",
 		"@nuxtjs/eslint-config-typescript": "^12.1.0",
 		"@nuxtjs/eslint-module": "^4.1.0",
-		"@nuxtjs/seo": "2.0.0-rc.10",
 		"@nuxtjs/tailwindcss": "^6.11.4",
 		"@stripe/stripe-js": "^3.1.0",
 		"@tailwindcss/forms": "^0.5.7",

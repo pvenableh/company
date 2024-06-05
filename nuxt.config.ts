@@ -27,7 +27,7 @@ export default defineNuxtConfig({
 		'nuxt-directus-next',
 		'nuxt-icon',
 		'nuxt-gtag',
-		'@nuxtjs/seo',
+		// '@nuxtjs/seo',
 		// '@nuxtjs/tailwindcss', // https://tailwindcss.nuxtjs.org/ Removed because of Nuxt UI already includes this
 	],
 
@@ -89,12 +89,12 @@ export default defineNuxtConfig({
 		},
 	},
 
-	site: {
-		url: process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000',
-		name: 'hue: manage',
-		description: 'Welcome to the optimal project management tool for creatives.',
-		defaultLocale: 'en', // not needed if you have @nuxtjs/i18n installed
-	},
+	// site: {
+	// 	url: process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000',
+	// 	name: 'hue: manage',
+	// 	description: 'Welcome to the optimal project management tool for creatives.',
+	// 	defaultLocale: 'en', // not needed if you have @nuxtjs/i18n installed
+	// },
 
 	// Sitemap Configuration - https://nuxtseo.com/sitemap/getting-started/how-it-works
 	// sitemap: {
