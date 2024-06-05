@@ -11,8 +11,8 @@ const props = defineProps({
 		id="mobile-toolbar"
 		class="mobile-toolbar flex flex-row items-center justify-center bg-gray-100 dark:bg-gradient-to-tr dark:from-gray-800 dark:to-gray-900"
 	>
-		<nuxt-link v-for="(link, index) in links" :key="index" :to="link.to">
-			<UIcon :name="'i-heroicons-' + link.icon" />
+	<nuxt-link v-for="(link, index) in links" :key="index" :to="link.to">
+			<UIcon :name="link.icon" />
 			<h5>{{ link.name }}</h5>
 		</nuxt-link>
 

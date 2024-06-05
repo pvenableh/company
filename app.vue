@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup>
 import updateAvatarSource from '~~/composables/useAvatar';
 
 const { user } = useDirectusAuth();
@@ -27,19 +27,19 @@ const links = ref([
 		name: 'Home',
 		type: ['header', 'footer', 'toolbar', 'drawer'],
 		to: '/',
-		icon: 'home',
+		icon: 'i-heroicons-home-modern',
 	},
 	{
-		name: 'About',
+		name: 'Tickets',
 		type: ['header', 'footer', 'toolbar', 'drawer'],
-		to: '/about',
-		icon: 'information-circle',
+		to: '/tickets',
+		icon: 'i-heroicons-queue-list',
 	},
 	{
-		name: 'Contact',
+		name: 'Projects',
 		type: ['header', 'footer', 'toolbar', 'drawer'],
-		to: '/contact',
-		icon: 'device-phone-mobile',
+		to: '/projects',
+		icon: 'i-heroicons-square-3-stack-3d',
 	},
 ]);
 </script>

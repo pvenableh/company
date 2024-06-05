@@ -3,32 +3,30 @@
 
 export default defineNuxtConfig({
 	ssr: true,
-	// cors: true,
-	// nitro: {
-	// 	preset: 'vercel-edge',
-	// },
+	nitro: {
+		preset: 'vercel-edge',
+	},
 	app: {
 		pageTransition: { name: 'page', mode: 'out-in' },
 	},
-	components: [
-		// Disable prefixing base components with `Base`
-		// { path: '~/components/base', pathPrefix: false },
-		// Auto import components from `~/components`
-		'~/components',
-	],
+	// components: {
+	// 	global: true,
+	// 	dirs: ['~/components'],
+	// },
 
 	css: ['~/assets/css/tailwind.css', '~/assets/css/main.css'],
 
 	modules: [
-		// '@formkit/nuxt', // https://formkit.com/getting-started/installation#with-nuxt
-		'@nuxt/devtools', // https://devtools.nuxtjs.org/
+		'@formkit/nuxt',
+		'@nuxt/devtools',
 		'@nuxt/image',
 		'@nuxt/ui',
 		'@nuxtjs/color-mode',
-		'@vueuse/motion/nuxt', // https://motion.vueuse.org/nuxt.html
-		'@vueuse/nuxt', // https://vueuse.org/
+		'@vueuse/motion/nuxt',
+		'@vueuse/nuxt',
 		'nuxt-directus-next',
-		'nuxt-icon', // https://github.com/nuxt-modules/icon
+		'nuxt-icon',
+		'nuxt-gtag',
 		'@nuxtjs/seo',
 		// '@nuxtjs/tailwindcss', // https://tailwindcss.nuxtjs.org/ Removed because of Nuxt UI already includes this
 	],
@@ -47,17 +45,23 @@ export default defineNuxtConfig({
 			adminUrl: process.env.DIRECTUS_URL || 'https://admin.huestudios.company',
 		},
 	},
+
+	gtag: {
+		id: 'G-Y5YQ3FM1FL',
+	},
+
 	// Directus Configuration
 	directus: {
 		url: 'https://admin.huestudios.company',
 		moduleConfig: {
-			devtools: true,
-			readMeQuery: {
-				fields: ['*'],
-				updateState: true,
-			},
+			autoImport: true,
 			autoRefresh: {
 				redirectTo: '/auth/signin',
+			},
+			devtools: true,
+			readMeQuery: {
+				fields: ['*,organizations.organizations_id.id,organizations.organizations_id.name'],
+				updateState: true,
 			},
 		},
 	},
@@ -85,10 +89,12 @@ export default defineNuxtConfig({
 		},
 	},
 
-	// site: {
-	// 	url: process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000',
-	// 	name: '1033 Lenox',
-	// },
+	site: {
+		url: process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000',
+		name: 'hue: manage',
+		description: 'Welcome to the optimal project management tool for creatives.',
+		defaultLocale: 'en', // not needed if you have @nuxtjs/i18n installed
+	},
 
 	// Sitemap Configuration - https://nuxtseo.com/sitemap/getting-started/how-it-works
 	// sitemap: {
@@ -106,12 +112,12 @@ export default defineNuxtConfig({
 	// },
 
 	postcss: {
-		// plugins: {
-		// 	'postcss-import': {},
-		// 	'tailwindcss/nesting': {},
-		// 	tailwindcss: {},
-		// 	autoprefixer: {},
-		// },
+		plugins: {
+			'postcss-import': {},
+			'tailwindcss/nesting': {},
+			tailwindcss: {},
+			autoprefixer: {},
+		},
 	},
 
 	build: {

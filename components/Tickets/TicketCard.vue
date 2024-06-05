@@ -1,6 +1,7 @@
 <!-- eslint-disable no-console -->
 <script setup>
 const { updateItem } = useDirectusItems();
+
 import { onClickOutside } from '@vueuse/core';
 
 const props = defineProps({

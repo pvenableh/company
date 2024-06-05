@@ -48,7 +48,7 @@ function closeNavDrawer() {
 	closeScreen();
 }
 
-onClickOutside(navDrawerRef, (event) => {
+onClickOutside(navDrawerRef, () => {
 	closeNavDrawer();
 });
 </script>
@@ -141,6 +141,12 @@ onClickOutside(navDrawerRef, (event) => {
 
 	li:nth-of-type(8) {
 		transition-delay: 0.15s;
+	}
+	li:nth-of-type(9) {
+		transition-delay: 0.165s;
+	}
+	li:nth-of-type(10) {
+		transition-delay: 0.18s;
 	}
 }
 

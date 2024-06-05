@@ -15,20 +15,28 @@ const props = defineProps({
 		type: String,
 		default: 'sm',
 	},
+	avatar: {
+		type: String,
+		default: null,
+	},
 });
 
 watch(
 	user,
 	(newValue, oldValue) => {
-		if (newValue) {
-			if (newValue.avatar) {
-				avatarSource.value = `${config.public.assetsUrl}${newValue.avatar}?key=medium`;
-			} else {
-				// Using template literals for clarity and to handle possible undefined values gracefully
-				avatarSource.value = `https://ui-avatars.com/api/?name=${encodeURIComponent(newValue.first_name + ' ' + newValue.last_name)}&background=eeeeee&color=00bfff`;
-			}
+		if (props.avatar) {
+			avatarSource.value = `${config.public.assetsUrl}${props.avatar}?key=medium`;
 		} else {
-			avatarSource.value = 'https://ui-avatars.com/api/?name=Unknown%20User&background=eeeeee&color=00bfff';
+			if (newValue) {
+				if (newValue.avatar) {
+					avatarSource.value = `${config.public.assetsUrl}${newValue.avatar}?key=medium`;
+				} else {
+					// Using template literals for clarity and to handle possible undefined values gracefully
+					avatarSource.value = `https://ui-avatars.com/api/?name=${encodeURIComponent(newValue.first_name + ' ' + newValue.last_name)}&background=eeeeee&color=00bfff`;
+				}
+			} else {
+				avatarSource.value = 'https://ui-avatars.com/api/?name=Unknown%20User&background=eeeeee&color=00bfff';
+			}
 		}
 	},
 	{
