@@ -81,8 +81,8 @@ const login_error = ref(null);
 const emailTouched = ref(false);
 
 const state = reactive({
-	email: null,
-	password: null,
+	email: 'peter@huestudios.com',
+	password: 'p195pr',
 });
 
 const validate = async (state: any): Promise<FormError[]> => {

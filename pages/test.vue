@@ -1,7 +1,8 @@
 <!-- eslint-disable no-console -->
 <script setup>
-const user = useDirectusAuth();
 import { createDirectus, staticToken, realtime } from '@directus/sdk';
+
+const user = useDirectusAuth();
 
 const config = useRuntimeConfig();
 

@@ -105,13 +105,12 @@ function getFriendlyDateTwo(dateString: string, { monthAbbr = {} } = {}): string
 }
 
 function getFriendlyDateThree(dateString: string, { monthAbbr = {} } = {}): string {
-	const d = new Date(dateString);
-	const year = d.getFullYear();
-	const date = d.getDate();
+	const d = new Date(dateString + 'T00:00:00Z');
+	const year = d.getUTCFullYear();
+	const date = d.getUTCDate();
 
 	const dateSuffix = (date: number): string => {
 		if (date > 3 && date < 21) return 'th';
-
 		switch (date % 10) {
 			case 1:
 				return 'st';
@@ -124,12 +123,10 @@ function getFriendlyDateThree(dateString: string, { monthAbbr = {} } = {}): stri
 		}
 	};
 
-	const monthIndex = d.getMonth();
-
+	const monthIndex = d.getUTCMonth();
 	const monthName = monthAbbr ? monthsAbbr[monthIndex] : months[monthIndex];
 
-	const formatted = `${monthName} ${date}${dateSuffix(date)}, ${year}`;
-	return formatted;
+	return `${monthName} ${date}${dateSuffix(date)}, ${year}`;
 }
 
 function destructureDate(date: string): Record<string, number | string> {
@@ -180,7 +177,7 @@ function formatDueDate(date1: string | number | Date) {
 
 	// Format the string based on whether it is past due or not
 	if (isPastDue) {
-		return `This task is past due by ${days} days, ${hours} hours, and ${minutes} minutes.`;
+		return `This is past due by ${days} days, ${hours} hours, and ${minutes} minutes.`;
 	} else {
 		return `This is due in ${days} days, ${hours} hours, and ${minutes} minutes.`;
 	}

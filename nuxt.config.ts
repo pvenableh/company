@@ -3,56 +3,56 @@
 
 export default defineNuxtConfig({
 	ssr: true,
+
 	nitro: {
 		preset: 'vercel-edge',
 	},
+
 	app: {
 		pageTransition: { name: 'page', mode: 'out-in' },
 	},
-	// components: {
-	// 	global: true,
-	// 	dirs: ['~/components'],
-	// },
 
 	css: ['~/assets/css/tailwind.css', '~/assets/css/main.css'],
-
-	modules: [
-		'@formkit/nuxt',
-		'@nuxt/devtools',
-		'@nuxt/image',
-		'@nuxt/ui',
-		'@nuxtjs/color-mode',
-		'@vueuse/motion/nuxt',
-		'@vueuse/nuxt',
-		'nuxt-directus-next',
-		'nuxt-icon',
-		'nuxt-gtag',
-		// '@nuxtjs/seo',
-		// '@nuxtjs/tailwindcss', // https://tailwindcss.nuxtjs.org/ Removed because of Nuxt UI already includes this
-	],
-
-	// experimental: {
-	// 	componentIslands: true,
-	// 	asyncContext: true, // https://nuxt.com/docs/guide/going-further/experimental-features#asynccontext
-	// },
-
+	//pk_test_BmSiBo09lA9UYtmoeOk6C6yV00wZk1bmX2
+	//pk_live_hiVeCs5zdZaHDYJYzhL7C0BH00KmFyrVyH
 	runtimeConfig: {
 		public: {
+			stripePublic: 'pk_test_BmSiBo09lA9UYtmoeOk6C6yV00wZk1bmX2',
 			assetsUrl: process.env.DIRECTUS_ASSETS_URL || 'https://admin.huestudios.company/assets/',
 			websocketUrl: process.env.DIRECTUS_WEBSOCKET_URL || 'wss://admin.huestudios.company/websocket',
-			staticToken: process.env.DIRECTUS_SERVER_TOKEN || 'X5lSYDCwpp88nvSepjFIWlq4ypbtxY-1',
+			staticToken: process.env.DIRECTUS_SERVER_TOKEN || 'o46aPhk-Bc_DMYbgL3mH4nA3yOYfQ9N8',
 			siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000',
 			adminUrl: process.env.DIRECTUS_URL || 'https://admin.huestudios.company',
 		},
 	},
 
-	gtag: {
-		id: 'G-Y5YQ3FM1FL',
-	},
+	modules: [
+		'@formkit/nuxt',
+		'@nuxt/devtools',
+		'@nuxt/icon',
+		'@nuxt/image',
+		[
+			'@nuxt/ui',
+			{
+				icons: ['heroicons', 'wi', 'meteocons'],
+			},
+		],
+		'@nuxtjs/color-mode',
+		'@vueuse/motion/nuxt',
+		'@vueuse/nuxt',
+		'nuxt-directus-next',
+		'nuxt-gtag',
+	],
 
-	// Directus Configuration
+	// plugins: [],
+
+	// gtag: {
+	// 	id: 'G-Y5YQ3FM1FL',
+	// },
+
 	directus: {
 		url: 'https://admin.huestudios.company',
+		staticToken: 'o46aPhk-Bc_DMYbgL3mH4nA3yOYfQ9N8',
 		moduleConfig: {
 			autoImport: true,
 			autoRefresh: {
@@ -66,50 +66,19 @@ export default defineNuxtConfig({
 		},
 	},
 
-	plugins: [],
-
-	// Nuxt DevTools - https://devtools.nuxtjs.org/
 	devtools: { enabled: true },
 
-	ui: {
-		icons: ['heroicons', 'wi', 'meteocons'],
-	},
-
-	// Color Mode Configuration - https://color-mode.nuxtjs.org/
 	colorMode: {
 		preference: 'system',
-		classSuffix: '', // This is so we play nice with TailwindCSS
+		classSuffix: '',
 	},
 
-	// Image Configuration - https://image.nuxt.com/providers/directus
 	image: {
 		provider: 'directus',
 		directus: {
 			baseURL: `${process.env.DIRECTUS_URL}/assets/`,
 		},
 	},
-
-	// site: {
-	// 	url: process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000',
-	// 	name: 'hue: manage',
-	// 	description: 'Welcome to the optimal project management tool for creatives.',
-	// 	defaultLocale: 'en', // not needed if you have @nuxtjs/i18n installed
-	// },
-
-	// Sitemap Configuration - https://nuxtseo.com/sitemap/getting-started/how-it-works
-	// sitemap: {
-	// 	sitemaps: {
-	// 		pages: {
-	// 			exclude: ['/posts/**', '/help/**'],
-	// 		},
-	// 		posts: {
-	// 			include: ['/posts/**'],
-	// 		},
-	// 		help: {
-	// 			include: ['/help/**'],
-	// 		},
-	// 	},
-	// },
 
 	postcss: {
 		plugins: {
@@ -121,6 +90,8 @@ export default defineNuxtConfig({
 	},
 
 	build: {
-		transpile: ['@sendgrid/mail'],
+		transpile: ['@sendgrid/mail', 'swiper', 'gsap', '@vueuse/core', 'v-calendar'],
 	},
+
+	compatibilityDate: '2024-10-01',
 });
