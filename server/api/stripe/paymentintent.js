@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
 				// customer: customerId,
 				payment_method_types: ['card', 'link'],
 				receipt_email: email,
-				setup_future_usage: 'on_session',
+				// setup_future_usage: 'on_session',
 
 				statement_descriptor: 'Payment to hue.',
 			};
@@ -27,7 +27,7 @@ export default defineEventHandler(async (event) => {
 				// customer: customerId,
 				payment_method_types: [paymentType],
 				receipt_email: email,
-				setup_future_usage: 'on_session',
+				// setup_future_usage: 'on_session',
 
 				statement_descriptor: 'Payment to hue.',
 			};
@@ -38,7 +38,7 @@ export default defineEventHandler(async (event) => {
 			currency: 'usd',
 			// customer: customerId,
 			receipt_email: email,
-			setup_future_usage: 'on_session',
+			// setup_future_usage: 'on_session',
 			automatic_payment_methods: {
 				enabled: true,
 			},
