@@ -25,7 +25,7 @@ const columns = [
 		sortable: true,
 	},
 	{
-		key: 'amount',
+		key: 'total_amount',
 		label: 'Amount',
 	},
 	{
@@ -70,7 +70,9 @@ const filter = {
 };
 
 const invoices = await readItems('invoices', {
-	fields: ['id,status,due_date,amount,invoice_code,description,bill_to.id,bill_to.name'],
+	fields: [
+		'id,status,due_date,invoice_date,invoice_code,note,memo,total_amount,bill_to.id,bill_to.name,bill_to.email,bill_to.stripe_customer_id,line_items.id,line_items.description,line_items.quantity,line_items.rate,line_items.amount,line_items.product.name',
+	],
 	sort: 'due_date',
 	filter: filter,
 });
@@ -115,6 +117,7 @@ const filteredInvoices = computed(() => {
 				<p>{{ getFriendlyDateThree(row.due_date) }}</p>
 				<p v-if="row.status !== 'paid'">{{ formatDueDate(row.due_date) }}</p>
 			</template>
+			<template #total_amount-data="{ row }">${{ row.total_amount }}</template>
 			<template #actions-data="{ row }">
 				<UButton v-if="row.status === 'pending'" size="sm" color="primary" @click="handleAction(row)">Pay</UButton>
 				<!-- <UDropdown :items="items(row)">
@@ -122,9 +125,29 @@ const filteredInvoices = computed(() => {
 				</UDropdown> -->
 			</template>
 			<template #expand="{ row }">
-				<div class="p-8">
-					<h5 class="uppercase tracking-wide text-[9px]">Description:</h5>
-					<div class="" v-html="row.description"></div>
+				<div class="p-8 w-full">
+					<h5 v-if="row.note" class="uppercase tracking-wide text-[9px]">Note:</h5>
+					<div v-if="row.note" class="" v-html="row.note"></div>
+					<div v-if="row.line_items.length > 0" class="w-full mt-4">
+						<h5 class="uppercase tracking-wide text-[9px]">Line Items:</h5>
+						<div
+							v-for="(item, index) in row.line_items"
+							:key="index"
+							class="pl-10 mb-1 flex flex-row items-center justify-between"
+						>
+							<div class="">
+								<p class="uppercase tracking-wide text-[12px]">{{ item.product.name }}</p>
+								<p class="">{{ item.description }}</p>
+							</div>
+							<div class="mx-3 grow border-b border-gray-200 dark:border-gray-700"></div>
+							<p class="tracking-wide text-[12px]">${{ item.rate }} x {{ item.quantity }} = ${{ item.amount }}</p>
+						</div>
+						<div class="ml-10 flex flex-row items-center justify-between border-t mt-3 pt-3">
+							<p class="uppercase tracking-wide text-[12px] font-bold">Total:</p>
+							<!-- <div class="grow border-b border-gray-200 dark:border-gray-700"></div> -->
+							<p class="tracking-wide text-[12px]">${{ row.total_amount }}</p>
+						</div>
+					</div>
 				</div>
 			</template>
 		</UTable>

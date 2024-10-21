@@ -47,7 +47,7 @@
 	</div>
 </template>
 <script setup>
-const { user, logout } = useDirectusAuth();
+const { user } = useDirectusAuth();
 
 const props = defineProps({
 	links: {

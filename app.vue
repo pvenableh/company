@@ -47,6 +47,12 @@ const links = ref([
 		to: '/channels',
 		icon: 'i-heroicons-square-3-stack-3d',
 	},
+	{
+		name: 'Invoices',
+		type: ['header', 'footer', 'toolbar', 'drawer'],
+		to: '/invoices',
+		icon: 'i-heroicons-document-text',
+	},
 ]);
 </script>
 <template>
