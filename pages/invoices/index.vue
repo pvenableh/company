@@ -119,7 +119,7 @@ const filteredInvoices = computed(() => {
 			</template>
 			<template #total_amount-data="{ row }">${{ row.total_amount }}</template>
 			<template #actions-data="{ row }">
-				<UButton v-if="row.status === 'pending'" size="sm" color="primary" @click="handleAction(row)">Pay</UButton>
+				<UButton v-if="row.status === 'pending'" size="sm" color="primary" :to="'/invoices/' + row.id">Pay</UButton>
 				<!-- <UDropdown :items="items(row)">
 					<UButton color="gray" variant="ghost" icon="i-heroicons-ellipsis-horizontal-20-solid" />
 				</UDropdown> -->
