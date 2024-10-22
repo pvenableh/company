@@ -33,9 +33,9 @@ const invoice = await readItem('invoices', params.id, {
 			</h5>
 			<h5 class="font-bold uppercase text-xs mt-6">
 				<span class="opacity-30">Bill to:</span>
-				<p>{{ invoice.bill_to.name }}</p>
-				<p>{{ invoice.bill_to.email }}</p>
-				<p>{{ invoice.bill_to.address }}</p>
+				<p v-if="invoice.bill_to.name">{{ invoice.bill_to.name }}</p>
+				<p v-if="invoice.bill_to.email">{{ invoice.bill_to.email }}</p>
+				<p v-if="invoice.bill_to.address">{{ invoice.bill_to.address }}</p>
 			</h5>
 
 			<h5 v-if="invoice.note" class="uppercase tracking-wide text-[9px] mt-6">Note:</h5>

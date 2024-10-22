@@ -13,10 +13,8 @@ const props = defineProps({
 		default: 0,
 	},
 });
-const name = ref('');
-const address = ref('');
+
 const email = ref(props.email);
-const section = ref('one');
 const panel = ref('bank');
 const previousPanelKey = ref(1);
 const animateName = ref('slide-right');
@@ -29,8 +27,6 @@ function changePanel(newPanel, key) {
 	previousPanelKey.value = key;
 	panel.value = newPanel;
 }
-const service = ref({});
-const payment = ref({});
 
 const stripeFee = computed(() => {
 	if (panel.value === 'bank') return 0;
