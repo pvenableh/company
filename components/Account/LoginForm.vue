@@ -74,19 +74,37 @@
 <script setup lang="ts">
 import type { FormError } from '#ui/types';
 
+interface LoginState {
+	email: string;
+	password: string;
+}
+
+interface ApiResponse {
+	data: Array<Record<string, unknown>>;
+}
+
+interface LoginError {
+	data: {
+		errors: Array<{
+			message: string;
+		}>;
+	};
+	message: string;
+}
+
 const { login } = useDirectusAuth();
 const route = useRoute();
-const loading = ref(false);
-const login_error = ref(null);
-const emailTouched = ref(false);
+const loading = ref<boolean>(false);
+const login_error = ref<string | null>(null);
+const emailTouched = ref<boolean>(false);
 
-const state = reactive({
-	email: 'peter@huestudios.com',
-	password: 'p195pr',
+const state = reactive<LoginState>({
+	email: '',
+	password: '',
 });
 
-const validate = async (state: any): Promise<FormError[]> => {
-	const errors = [];
+const validate = async (state: LoginState): Promise<FormError[]> => {
+	const errors: FormError[] = [];
 	const regex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i;
 
 	if (!state.email) {
@@ -100,7 +118,9 @@ const validate = async (state: any): Promise<FormError[]> => {
 	if (state.email && regex.test(state.email)) {
 		try {
 			loading.value = true;
-			const response: any = await $fetch(`https://admin.huestudios.company/users?filter[email][_eq]=${state.email}`);
+			const response = await $fetch<ApiResponse>(
+				`https://admin.huestudios.company/users?filter[email][_eq]=${state.email}`,
+			);
 
 			if (response.data.length < 1) {
 				errors.push({ path: 'email', message: 'This email is not registered.' });
@@ -116,7 +136,7 @@ const validate = async (state: any): Promise<FormError[]> => {
 	return errors;
 };
 
-async function attemptLogin() {
+async function attemptLogin(): Promise<void> {
 	loading.value = true;
 	login_error.value = null;
 
@@ -124,16 +144,17 @@ async function attemptLogin() {
 		await login(state.email, state.password);
 
 		if (route.query.redirect) {
-			const path = decodeURIComponent(route.query.redirect);
+			const path = decodeURIComponent(route.query.redirect as string);
 			await navigateTo(path);
 		} else {
 			await navigateTo('/');
 		}
 	} catch (err) {
-		if (err.data.errors.length) {
-			login_error.value = err.data.errors[0].message;
+		const error = err as LoginError;
+		if (error.data?.errors?.length) {
+			login_error.value = error.data.errors[0].message;
 		} else {
-			login_error.value = err.message;
+			login_error.value = error.message;
 		}
 	}
 
