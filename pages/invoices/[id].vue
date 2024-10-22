@@ -1,7 +1,8 @@
 <script setup>
 const { params } = useRoute();
 const { readItem } = useDirectusItems();
-// const { user } = useDirectusAuth();
+
+const { user } = useDirectusAuth();
 
 definePageMeta({
 	middleware: ['auth'],
@@ -39,7 +40,7 @@ const invoice = await readItem('invoices', params.id, {
 			</h5>
 
 			<h5 v-if="invoice.note" class="uppercase tracking-wide text-[9px] mt-6">Note:</h5>
-			<div v-if="invoice.note" class="text-[12px]" v-html="invoice.note"></div>
+			<div v-if="invoice.note" class="text-[12px] invoice__note" v-html="invoice.note"></div>
 			<div v-if="invoice.line_items.length > 0" class="w-full mt-6">
 				<h5 class="uppercase tracking-wide text-[9px]">Line Items:</h5>
 				<div
@@ -49,7 +50,9 @@ const invoice = await readItem('invoices', params.id, {
 				>
 					<div class="">
 						<p class="uppercase tracking-wide text-[12px]">{{ item.product.name }}</p>
-						<p class="">{{ item.description }}</p>
+						<p v-if="item.description" class="text-[9px]">
+							{{ item.description }}
+						</p>
 					</div>
 					<div class="mx-3 grow border-b border-gray-200 dark:border-gray-700"></div>
 					<p class="tracking-wide text-[12px]">${{ item.rate }} x {{ item.quantity }} = ${{ item.amount }}</p>
@@ -61,7 +64,14 @@ const invoice = await readItem('invoices', params.id, {
 			</div>
 		</div>
 		<div class="w-full p-8 md:w-1/2">
-			<PaymentMethods :amount="invoice.total_amount" :email="invoice.bill_to.email" :bill_to="invoice.bill_to.name" />
+			<PaymentMethods
+				:amount="invoice.total_amount"
+				:email="invoice.bill_to.email"
+				:bill_to="invoice.bill_to.name"
+				:user="user"
+				:invoice="invoice.invoice_code"
+				:id="invoice.id"
+			/>
 		</div>
 	</div>
 </template>

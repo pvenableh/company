@@ -24,10 +24,10 @@ const props = defineProps({
 watch(
 	user,
 	(newValue, oldValue) => {
-		console.log(oldValue);
-		console.log('User changed', newValue);
+		// console.log(oldValue);
+		// console.log('User changed', newValue);
 		if (props.avatar) {
-			console.log(props.avatar);
+			// console.log(props.avatar);
 			avatarSource.value = `${config.public.assetsUrl}${props.avatar}?key=medium`;
 		} else {
 			if (newValue) {

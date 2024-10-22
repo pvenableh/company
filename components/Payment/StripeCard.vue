@@ -12,7 +12,7 @@
 <script setup>
 const config = useRuntimeConfig();
 import { loadStripe } from '@stripe/stripe-js';
-// import { openScreen, loader, closeScreen } from '~/composables/useScreen'
+import { openScreen, loader, closeScreen } from '~/composables/useScreen';
 const props = defineProps({
 	paymentType: {
 		type: String,
@@ -51,9 +51,9 @@ onMounted(async () => {
 	);
 
 	response.value = data;
-	console.log(response.value.client_secret);
+
 	clientSecret.value = response.value.client_secret;
-	// messages.value.push(`Client secret returned.`)
+
 	const options = {
 		clientSecret: clientSecret.value,
 		fields: {
@@ -76,10 +76,7 @@ onMounted(async () => {
 				colorText: '#502989',
 				colorDanger: '#df1b41',
 				fontFamily: 'Proxima Nova W01 Regular, -apple-system, Roboto, Helvetica Neue, Helvetica, sans-serif',
-				// spacingUnit: '2px',
 				borderRadius: '2px',
-
-				// See all possible variables below
 			},
 			rules: {
 				'.Label': {
@@ -114,7 +111,7 @@ const handleSubmit = async () => {
 	const { error } = await stripe.confirmPayment({
 		elements: elements,
 		confirmParams: {
-			return_url: 'https://huestudios.company/confirmation',
+			return_url: 'http://huestudios.company/confirmation',
 		},
 	});
 	if (error) {

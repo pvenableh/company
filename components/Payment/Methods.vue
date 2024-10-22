@@ -12,9 +12,26 @@ const props = defineProps({
 		type: [Number],
 		default: 0,
 	},
+	user: {
+		type: Object,
+		default: null,
+	},
+	invoice: {
+		type: String,
+		default: null,
+	},
+	id: {
+		type: String,
+		default: null,
+	},
 });
 
-const email = ref(props.email);
+const email = ref('');
+if (props.email) {
+	email.value = props.email;
+} else {
+	email.value = props.user.email;
+}
 const panel = ref('bank');
 const previousPanelKey = ref(1);
 const animateName = ref('slide-right');
@@ -45,6 +62,20 @@ function formatForStripe(amount) {
 const total = computed(() => {
 	return formatForStripe(totalWithFees.value);
 });
+
+const payment = ref({});
+
+payment.value = {
+	user: props.user,
+	bill_to: props.bill_to,
+	email: props.email,
+	amount: total.value,
+	invoice: props.invoice,
+	id: props.id,
+	stripeAmount: total.value,
+};
+
+localStorage.setItem('payment', JSON.stringify(payment.value));
 </script>
 <template>
 	<div class="w-full flex flex-col">

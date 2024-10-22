@@ -16,6 +16,11 @@ export default defineNuxtConfig({
 	//pk_test_BmSiBo09lA9UYtmoeOk6C6yV00wZk1bmX2
 	//pk_live_hiVeCs5zdZaHDYJYzhL7C0BH00KmFyrVyH
 	runtimeConfig: {
+		SENDGRID_API_KEY: process.env.SENDGRID_API_KEY,
+		FROM_EMAIL: process.env.SENDGRID_FROM_EMAIL,
+		BCC_EMAIL: process.env.SENDGRID_BCC_EMAIL,
+		REPLY_TO_EMAIL: process.env.SENDGRID_REPLY_TO_EMAIL,
+
 		public: {
 			stripePublic: 'pk_test_BmSiBo09lA9UYtmoeOk6C6yV00wZk1bmX2',
 			assetsUrl: process.env.DIRECTUS_ASSETS_URL || 'https://admin.huestudios.company/assets/',
