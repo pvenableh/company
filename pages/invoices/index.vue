@@ -137,7 +137,7 @@ const filteredInvoices = computed(() => {
 						>
 							<div class="">
 								<p class="uppercase tracking-wide text-[12px]">{{ item.product.name }}</p>
-								<p class="">{{ item.description }}</p>
+								<p v-if="item.description" class="text-[9px]">{{ item.description }}</p>
 							</div>
 							<div class="mx-3 grow border-b border-gray-200 dark:border-gray-700"></div>
 							<p class="tracking-wide text-[12px]">${{ item.rate }} x {{ item.quantity }} = ${{ item.amount }}</p>

@@ -22,7 +22,13 @@ const invoice = await readItem('invoices', params.id, {
 					<span class="opacity-30">Invoice #:</span>
 					{{ invoice.invoice_code }}
 				</h1>
-				<UIcon name="heroicons-document-arrow-down" class="text-gray-500 dark:text-gray-400" />
+				<UButton
+					size="sm"
+					variant="outline"
+					:ui="{ rounded: 'rounded-full' }"
+					icon="i-heroicons-document-arrow-down"
+					class="text-gray-500 dark:text-gray-400"
+				/>
 			</div>
 			<h5 class="font-bold uppercase text-xs">
 				<span class="opacity-30">Due date:</span>
