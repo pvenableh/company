@@ -57,11 +57,19 @@ export default defineNuxtConfig({
 
 	directus: {
 		url: 'https://admin.huestudios.company',
-		staticToken: 'o46aPhk-Bc_DMYbgL3mH4nA3yOYfQ9N8',
+		staticToken: process.env.DIRECTUS_SERVER_TOKEN,
+		authConfig: {
+			cookieSameSite: 'lax',
+			cookieSecure: process.env.NODE_ENV === 'production',
+		},
 		moduleConfig: {
 			autoImport: true,
 			autoRefresh: {
+				enableMiddleware: true,
+				global: true,
+				middlewareName: 'auth',
 				redirectTo: '/auth/signin',
+				to: ['/*'],
 			},
 			devtools: true,
 			readMeQuery: {
