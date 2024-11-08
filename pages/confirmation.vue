@@ -1,146 +1,265 @@
 <template>
 	<div class="relative flex items-center justify-center flex-col px-6 pt-12 pb-24 min-h-screen">
-		<h1 class="mb-6 uppercase text-center tracking-wider">Thank you.</h1>
-		<div class="w-full uppercase text-center tracking-wider text-sm">
-			<p v-for="(message, index) in messages" :key="index" class="mb-4">{{ message }}</p>
+		<!-- Loading State -->
+		<div v-if="isLoading" class="w-full flex flex-col items-center justify-center">
+			<ULoadingIcon size="lg" />
+			<p class="mt-4 text-sm text-gray-600 dark:text-gray-400">Processing your payment...</p>
+		</div>
+
+		<!-- Error State -->
+		<div v-else-if="error" class="w-full max-w-md">
+			<UAlert type="error" :title="error.title" :description="error.message" class="mb-4">
+				<template #icon>
+					<Icon name="heroicons:exclamation-circle" />
+				</template>
+				<template #footer>
+					<UButton v-if="error.recoverable" size="sm" @click="retryConfirmation">Retry</UButton>
+				</template>
+			</UAlert>
+			<div class="text-center">
+				<UButton to="/support" variant="link" class="text-sm">Need help? Contact support</UButton>
+			</div>
+		</div>
+
+		<!-- Success State -->
+		<div v-else class="w-full max-w-md">
+			<div class="text-center mb-8">
+				<UIcon name="heroicons:check-circle" class="h-12 w-12 text-green-500 mx-auto mb-4" />
+				<h1 class="text-2xl font-bold uppercase tracking-wider mb-2">Thank you for your payment</h1>
+				<p class="text-gray-600 dark:text-gray-400">Your transaction has been completed</p>
+			</div>
+
+			<!-- Payment Details Card -->
+			<UCard class="mb-6">
+				<template #header>
+					<div class="flex justify-between items-center">
+						<h3 class="text-sm font-medium uppercase">Payment Details</h3>
+						<UBadge :color="paymentStatusColor" :variant="paymentStatusVariant">
+							{{ formatPaymentStatus }}
+						</UBadge>
+					</div>
+				</template>
+
+				<div class="space-y-4">
+					<div v-for="(detail, index) in paymentDetails" :key="index" class="flex justify-between text-sm">
+						<span class="text-gray-600 dark:text-gray-400">{{ detail.label }}</span>
+						<span class="font-medium">{{ detail.value }}</span>
+					</div>
+				</div>
+
+				<template #footer>
+					<p class="text-xs text-gray-500">Payment ID: {{ paymentIntent?.id }}</p>
+				</template>
+			</UCard>
+
+			<!-- Action Buttons -->
+			<div class="flex flex-col gap-4">
+				<UButton v-if="payment?.invoice" :to="`/invoices/${payment.invoice}`" block>View Invoice</UButton>
+				<UButton to="/dashboard" variant="ghost" block>Return to Dashboard</UButton>
+			</div>
 		</div>
 	</div>
 </template>
 
 <script setup>
-const route = useRoute();
-const config = useRuntimeConfig();
 import { loadStripe } from '@stripe/stripe-js';
 
+const route = useRoute();
+// const router = useRouter();
+const config = useRuntimeConfig();
 const toast = useToast();
-const messages = ref([]);
-const clientSecret = ref(route.query.payment_intent_client_secret);
+
+// State
+const isLoading = ref(true);
+const error = ref(null);
+const paymentIntent = ref(null);
 const payment = useState('payment', () => ({}));
+const clientSecret = computed(() => route.query.payment_intent_client_secret);
 
-// Initialize stripe outside of ref since it's not reactive
-let stripe;
+// Stripe instance
+let stripe = null;
 
-const handlePaymentStatus = (status) => {
-	const statusMessages = {
-		succeeded: 'Payment succeeded!',
-		processing: 'Your payment is processing.',
-		requires_payment_method: 'Your payment was not successful, please try again.',
-		default: 'Something went wrong.',
+// Computed
+const paymentStatusColor = computed(() => {
+	const statusColors = {
+		succeeded: 'green',
+		processing: 'blue',
+		requires_payment_method: 'yellow',
+		default: 'gray',
 	};
+	return statusColors[paymentIntent.value?.status] || statusColors.default;
+});
 
-	toast.add({ title: statusMessages[status] || statusMessages.default });
+const paymentStatusVariant = computed(() => (paymentIntent.value?.status === 'succeeded' ? 'solid' : 'soft'));
+
+const formatPaymentStatus = computed(() => {
+	const status = paymentIntent.value?.status || '';
+	return status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ');
+});
+
+const paymentDetails = computed(() => {
+	if (!paymentIntent.value) return [];
+
+	return [
+		{
+			label: 'Amount',
+			value: formatCurrency(paymentIntent.value.amount / 100),
+		},
+		{
+			label: 'Date',
+			value: formatDate(paymentIntent.value.created * 1000),
+		},
+		{
+			label: 'Email',
+			value: paymentIntent.value.receipt_email,
+		},
+		payment.value?.bill_to && {
+			label: 'Billed To',
+			value: payment.value.bill_to,
+		},
+	].filter(Boolean);
+});
+
+// Methods
+const formatCurrency = (amount) => {
+	return new Intl.NumberFormat('en-US', {
+		style: 'currency',
+		currency: 'USD',
+	}).format(amount);
 };
 
-const sendPaymentNotification = async (paymentData) => {
+const formatDate = (timestamp) => {
+	return new Intl.DateTimeFormat('en-US', {
+		dateStyle: 'medium',
+		timeStyle: 'short',
+		timeZone: 'America/New_York',
+	}).format(new Date(timestamp));
+};
+
+const handleError = (err, recoverable = true) => {
+	console.error('Payment Confirmation Error:', err);
+	error.value = {
+		title: 'Payment Confirmation Error',
+		message: err.message || 'An error occurred while confirming your payment.',
+		recoverable,
+	};
+	isLoading.value = false;
+};
+
+const getPaymentData = () => {
 	try {
-		const response = await useFetch('/api/paymentnotification', {
-			method: 'POST',
-			body: {
-				user: paymentData.user,
-				email: paymentData.email,
-				bill_to: paymentData.bill_to,
-				invoice: paymentData.invoice,
-				amount: paymentData.amount,
-				stripeAmount: paymentData.stripeAmount,
-				id: paymentData.id,
-			},
-		});
-
-		if (response.error.value) {
-			console.error('Notification Error:', response.error.value);
-			toast.add({
-				title: 'Error sending notification',
-				description: 'Your payment was successful, but there was an error sending the confirmation email.',
-				type: 'error',
-			});
-			return false;
+		const storedPayment = window?.localStorage?.getItem('payment');
+		if (!storedPayment) {
+			throw new Error('Payment information not found');
 		}
-
-		return true;
-	} catch (error) {
-		console.error('Notification Error:', error);
-		toast.add({
-			title: 'Error sending notification',
-			description: 'Your payment was successful, but there was an error sending the confirmation email.',
-			type: 'error',
-		});
+		payment.value = JSON.parse(storedPayment);
+	} catch (err) {
+		handleError(err, false);
 		return false;
 	}
+	return true;
 };
 
-const getNewYorkDate = () => {
-	const date = new Date();
-	const newYorkTimezoneOffset = -240;
-	return new Date(date.getTime() + newYorkTimezoneOffset * 60 * 1000);
-};
-
-// Use onMounted for client-side initialization
-onMounted(async () => {
+const confirmPayment = async () => {
 	try {
-		// Get payment data from localStorage
-		const storedPayment = window?.localStorage?.getItem('payment');
-		if (storedPayment) {
-			payment.value = JSON.parse(storedPayment);
+		if (!clientSecret.value) {
+			throw new Error('Invalid payment session');
 		}
 
-		if (!payment.value || Object.keys(payment.value).length === 0) {
-			toast.add({
-				title: 'Payment information not found',
-				type: 'error',
-			});
-			return;
+		if (!getPaymentData()) return;
+
+		// Initialize Stripe if not already done
+		if (!stripe) {
+			stripe = await loadStripe(config.public.stripePublic);
 		}
 
-		// Initialize Stripe
-		stripe = await loadStripe(config.public.stripePublic);
-
-		// Retrieve payment intent
-		const { error: stripeError, paymentIntent } = await stripe.retrievePaymentIntent(clientSecret.value, {
+		const { error: stripeError, paymentIntent: intent } = await stripe.retrievePaymentIntent(clientSecret.value, {
 			expand: ['payment_method', 'latest_charge'],
 		});
 
-		if (stripeError) {
-			messages.value.push(stripeError.message);
-			return;
-		}
+		if (stripeError) throw stripeError;
 
-		// Handle payment status
-		handlePaymentStatus(paymentIntent.status);
-
-		// Add messages
-		messages.value = [
-			`Payment of $${parseFloat(paymentIntent.amount * 0.01).toFixed(2)} ${paymentIntent.status}.`,
-			`An email receipt was sent to ${paymentIntent.receipt_email}.`,
-		];
+		paymentIntent.value = intent;
 
 		// Send notification email
-		const notificationSent = await sendPaymentNotification(payment.value);
+		await sendPaymentNotification(payment.value);
 
-		if (notificationSent) {
-			// Optional: Record payment in Directus
-			/* 
-		await $directus.items('payments_received').createOne({
-		  status: 'published',
-		  name: payment.value.name,
-		  email: payment.value.email,
-		  address: payment.value.address,
-		  service: payment.value.id,
-		  date_received: getNewYorkDate().toISOString(),
-		  payment_intent: paymentIntent.id,
-		  payment_total: payment.value.amount,
-		});
-		*/
-			// Clear payment data
-			// payment.value = {};
-			// window.localStorage.removeItem('payment');
-		}
-	} catch (error) {
-		console.error('Payment Confirmation Error:', error);
+		// Record payment in Directus
+		await recordPayment(intent);
+
+		// Clean up
+		cleanupPaymentData();
+
+		isLoading.value = false;
+	} catch (err) {
+		handleError(err);
+	}
+};
+
+const sendPaymentNotification = async (paymentData) => {
+	const { error } = await useFetch('/api/paymentnotification', {
+		method: 'POST',
+		body: paymentData,
+	});
+
+	if (error.value) {
 		toast.add({
-			title: 'Error processing payment confirmation',
-			description: error.message,
-			type: 'error',
+			title: 'Notification Warning',
+			description: 'Payment successful, but confirmation email could not be sent.',
+			type: 'warning',
 		});
+	}
+};
+
+const recordPayment = async (intent) => {
+	try {
+		const { $directus } = useNuxtApp();
+		await $directus.items('payments_received').createOne({
+			status: 'published',
+			name: payment.value.user?.name,
+			email: payment.value.email,
+			service: payment.value.id,
+			date_received: new Date().toISOString(),
+			payment_intent: intent.id,
+			payment_total: payment.value.amount,
+			metadata: {
+				stripe_status: intent.status,
+				payment_method: intent.payment_method?.type,
+				charge_id: intent.latest_charge?.id,
+			},
+		});
+	} catch (err) {
+		console.error('Failed to record payment:', err);
+	}
+};
+
+const cleanupPaymentData = () => {
+	window.localStorage.removeItem('payment');
+	// Keep payment.value for displaying confirmation details
+};
+
+const retryConfirmation = () => {
+	error.value = null;
+	isLoading.value = true;
+	confirmPayment();
+};
+
+// Lifecycle
+onMounted(() => {
+	confirmPayment();
+});
+
+// Navigation guard
+onBeforeRouteLeave((to, from, next) => {
+	if (paymentIntent.value?.status === 'succeeded') {
+		next();
+	} else {
+		// Show confirmation dialog before leaving
+		if (window.confirm('Are you sure you want to leave? Payment confirmation is still in progress.')) {
+			next();
+		} else {
+			next(false);
+		}
 	}
 });
 </script>
