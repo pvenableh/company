@@ -2,7 +2,6 @@
 	<div class="relative flex items-center justify-center flex-col px-6 pt-12 pb-24 min-h-screen">
 		<!-- Loading State -->
 		<div v-if="isLoading" class="w-full flex flex-col items-center justify-center">
-			<ULoadingIcon size="lg" />
 			<p class="mt-4 text-sm text-gray-600 dark:text-gray-400">Processing your payment...</p>
 		</div>
 
@@ -52,10 +51,41 @@
 				</template>
 			</UCard>
 
+			<!-- Receipt Card -->
+			<UCard v-if="receiptUrl" class="mb-6">
+				<template #header>
+					<div class="flex justify-between items-center">
+						<h3 class="text-sm font-medium uppercase">Receipt</h3>
+						<Icon name="heroicons:document-text" class="h-5 w-5 text-gray-400" />
+					</div>
+				</template>
+
+				<p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
+					View or download your payment receipt for your records.
+				</p>
+
+				<UButton :href="receiptUrl" target="_blank" block>
+					<template #leading>
+						<Icon name="heroicons:receipt" />
+					</template>
+					View Receipt
+				</UButton>
+			</UCard>
+
 			<!-- Action Buttons -->
 			<div class="flex flex-col gap-4">
-				<UButton v-if="payment?.invoice" :to="`/invoices/${payment.invoice}`" block>View Invoice</UButton>
-				<UButton to="/dashboard" variant="ghost" block>Return to Dashboard</UButton>
+				<UButton v-if="payment?.invoice?.id" :to="`/invoices/${payment.invoice.id}`" block>
+					<template #leading>
+						<Icon name="heroicons:document-text" />
+					</template>
+					View Invoice
+				</UButton>
+				<UButton to="/dashboard" variant="ghost" block>
+					<template #leading>
+						<Icon name="heroicons:home" />
+					</template>
+					Return to Dashboard
+				</UButton>
 			</div>
 		</div>
 	</div>
@@ -65,7 +95,6 @@
 import { loadStripe } from '@stripe/stripe-js';
 
 const route = useRoute();
-// const router = useRouter();
 const config = useRuntimeConfig();
 const toast = useToast();
 
@@ -80,6 +109,10 @@ const clientSecret = computed(() => route.query.payment_intent_client_secret);
 let stripe = null;
 
 // Computed
+const receiptUrl = computed(() => {
+	return paymentIntent.value?.latest_charge?.receipt_url || null;
+});
+
 const paymentStatusColor = computed(() => {
 	const statusColors = {
 		succeeded: 'green',
@@ -116,6 +149,10 @@ const paymentDetails = computed(() => {
 		payment.value?.bill_to && {
 			label: 'Billed To',
 			value: payment.value.bill_to,
+		},
+		payment.value?.invoice?.id && {
+			label: 'Invoice ID',
+			value: payment.value.invoice.id,
 		},
 	].filter(Boolean);
 });
@@ -226,6 +263,7 @@ const recordPayment = async (intent) => {
 				stripe_status: intent.status,
 				payment_method: intent.payment_method?.type,
 				charge_id: intent.latest_charge?.id,
+				receipt_url: intent.latest_charge?.receipt_url,
 			},
 		});
 	} catch (err) {
