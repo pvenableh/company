@@ -104,6 +104,22 @@ export default defineEventHandler(async (event) => {
 			},
 		};
 
+		if (query.paymentType === 'us_bank_account') {
+			console.log('Setting up US Bank Account payment options');
+			options = {
+				...baseOptions,
+				payment_method_types: ['us_bank_account'],
+				payment_method_options: {
+					us_bank_account: {
+						financial_connections: {
+							permissions: ['payment_method', 'balances'],
+						},
+					},
+				},
+			};
+			console.log('US Bank Account Options:', options);
+		}
+
 		// Add payment method specific options
 		const paymentOptions = {
 			card: {
