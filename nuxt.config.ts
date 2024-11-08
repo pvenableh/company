@@ -22,6 +22,7 @@ export default defineNuxtConfig({
 		REPLY_TO_EMAIL: process.env.SENDGRID_REPLY_TO_EMAIL,
 
 		public: {
+			directusUrl: process.env.DIRECTUS_URL,
 			stripePublic: 'pk_test_BmSiBo09lA9UYtmoeOk6C6yV00wZk1bmX2',
 			assetsUrl: process.env.DIRECTUS_ASSETS_URL || 'https://admin.huestudios.company/assets/',
 			websocketUrl: process.env.DIRECTUS_WEBSOCKET_URL || 'wss://admin.huestudios.company/websocket',
@@ -47,6 +48,7 @@ export default defineNuxtConfig({
 		'@vueuse/nuxt',
 		'nuxt-directus-next',
 		'nuxt-gtag',
+		'@samk-dev/nuxt-vcalendar',
 	],
 
 	// plugins: [],
@@ -63,14 +65,10 @@ export default defineNuxtConfig({
 			cookieSecure: process.env.NODE_ENV === 'production',
 		},
 		moduleConfig: {
+			// Enable auto-importing of the Directus composables
 			autoImport: true,
-			autoRefresh: {
-				enableMiddleware: true,
-				global: true,
-				middlewareName: 'auth',
-				redirectTo: '/auth/signin',
-				to: ['/*'],
-			},
+			// Enable basic auto-refresh functionality
+			// autoRefresh: true,
 			devtools: true,
 			readMeQuery: {
 				fields: ['*,organizations.organizations_id.id,organizations.organizations_id.name'],

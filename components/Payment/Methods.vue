@@ -46,13 +46,12 @@ function changePanel(newPanel, key) {
 }
 
 const stripeFee = computed(() => {
-	if (panel.value === 'bank') return 0;
-	return Number((props.amount * 0.029 + 0.3).toFixed(2));
+	if (panel.value === 'bank') return '0.00';
+	return (props.amount * 0.029 + 0.3).toFixed(2);
 });
 
 const totalWithFees = computed(() => {
-	console.log(props.amount + stripeFee.value);
-	return Number((Number(props.amount) + Number(stripeFee.value)).toFixed(2));
+	return (Number(props.amount) + Number(stripeFee.value)).toFixed(2);
 });
 
 function formatForStripe(amount) {
@@ -78,8 +77,8 @@ payment.value = {
 localStorage.setItem('payment', JSON.stringify(payment.value));
 </script>
 <template>
-	<div class="w-full flex flex-col">
-		<h1 class="w-full mt-6 md:mt-0 uppercase tracking-wider">Payment</h1>
+	<div class="w-full flex flex-col payment">
+		<h1 class="w-full mt-6 lg:mt-0 uppercase tracking-wider">Payment</h1>
 		<p class="mt-2 mb-6 text-[12px]">
 			Please note, a credit card payment will add a 3% processing fee. Using a bank account for payment adds no fees.
 		</p>
@@ -237,7 +236,7 @@ localStorage.setItem('payment', JSON.stringify(payment.value));
 	}
 
 	&__panel {
-		@apply w-full max-w-xl;
+		@apply w-full;
 	}
 
 	.change-btn {

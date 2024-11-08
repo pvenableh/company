@@ -1,81 +1,58 @@
 <script setup>
+import { ref } from 'vue';
+import { useMentionPlugin } from './composables/useMentionPlugin';
+
 const props = defineProps({
-	item: {
+	parentId: {
 		type: String,
-		default: '',
+		required: true,
 	},
 	collection: {
 		type: String,
-		default: '',
-	},
-	parent: {
-		type: String,
-		default: '',
+		required: true,
 	},
 });
 
 const { user } = useDirectusAuth();
-const comment = ref(null);
-const max = ref(255);
+const content = ref('');
+const { editor } = useMentionPlugin(content);
 
-const junctionTable = props.collection + '_comments';
+const postComment = async () => {
+	if (!content.value.trim()) return;
 
-const junctionId = props.collection + '_id';
-
-async function postComment() {
-	if (!comment.value) {
-		return;
-	} else {
-		const result = await useDirectus(
+	try {
+		// Create the comment
+		const comment = await useDirectus(
 			createItem('comments', {
-				comment: comment.value,
+				comment: content.value,
 				user: user.value.id,
-				item: props.item,
 				collection: props.collection,
 			}),
 		);
 
-		connectComment(result.id);
-
-		comment.value = null;
-	}
-}
-
-async function connectComment(commentId) {
-	if (commentId) {
-		const result = await useDirectus(
-			createItem(junctionTable, {
-				[junctionId]: props.item,
-				comments_id: commentId,
+		// Create the junction
+		await useDirectus(
+			createItem(`${props.collection}_comments`, {
+				[`${props.collection}_id`]: props.parentId,
+				comments_id: comment.id,
 			}),
 		);
-		updateParent();
-	}
-}
 
-async function updateParent() {
-	const result = await useDirectus(updateItem('tasks', props.item, { updated_on: new Date() }));
-}
+		// Clear the editor
+		editor.value.commands.clearContent();
+		content.value = '';
+	} catch (error) {
+		console.error('Error creating comment:', error);
+	}
+};
 </script>
+
 <template>
-	<div class="relative w-full flex items-center justify-center flex-row">
-		<Avatar size="xs" />
-		<div class="flex-grow relative">
-			<input
-				v-model="comment"
-				type="text"
-				:maxlength="max"
-				class="w-full h-8 comment-input"
-				placeholder="Write a comment..."
-				@keyup.enter="postComment"
-			/>
-			<a
-				href="#"
-				class="absolute right-0 font-bold py-2 px-2 uppercase blue cursor-pointer post-btn"
-				@click.prevent="postComment"
-			>
-				Post
-			</a>
+	<div class="create-comment bg-white rounded-lg shadow p-4">
+		<editor-content :editor="editor" class="prose max-w-none" />
+
+		<div class="flex justify-end mt-2">
+			<UButton color="primary" :disabled="!content" @click="postComment">Post Comment</UButton>
 		</div>
 	</div>
 </template>

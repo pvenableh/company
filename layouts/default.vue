@@ -1,8 +1,10 @@
 <template>
-	<div class="relative overflow-hidden bg-white transition duration-150 dark:bg-gray-800 lg:overflow-visible">
+	<div
+		class="relative overflow-hidden bg-white transition duration-150 dark:bg-gray-800 dark:text-white lg:overflow-visible"
+	>
 		<input id="nav-drawer-toggle" type="checkbox" class="hidden" />
 		<LayoutHeader :links="headerLinks" />
-		<div class="page-content">
+		<div class="page__content">
 			<slot />
 		</div>
 

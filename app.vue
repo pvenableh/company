@@ -65,28 +65,4 @@ const links = ref([
 	/>
 	<UNotifications />
 </template>
-<style>
-.page-content {
-	transition: all 0.25s var(--curve);
-
-	.nuxt-page {
-		min-height: calc(90vh - 100px);
-		z-index: 5;
-		position: relative;
-	}
-}
-
-.screen-enter-from {
-	opacity: 0;
-}
-
-.screen-enter-active,
-.screen-leave-active {
-	transition: all 0.35s var(--curve);
-}
-
-.screen-enter,
-.screen-leave-to {
-	opacity: 0;
-}
-</style>
+<style></style>

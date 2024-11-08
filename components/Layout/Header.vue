@@ -30,15 +30,16 @@ onMounted(() => {
 </script>
 <template>
 	<header
-		class="w-full flex items-center justify-start sticky top-0 left-0 z-40 dark:bg-gray-900 transition-all header"
+		class="w-full flex items-center justify-start sticky top-0 left-0 z-40 bg-gray-100 dark:bg-gradient-to-tr dark:from-gray-800 dark:to-gray-900 transition-all py-3 shadow header"
 		:class="{ retracted: isRetracted }"
 	>
 		<!-- <div class="absolute left-[10px] sm:pl-1 md:px-6 inline-block sm:hidden mt-0">
 			<DarkModeToggle class="" />
 		</div> -->
-		<nuxt-link to="/" class="flex flex-col items-end justify-center">
+		<nuxt-link to="/" class="flex flex-row items-end justify-center ml-2">
 			<Logo color="#ffc00" />
-			<span class="uppercase tracking-widest text-xs font-bold leading-3 inline-block">Company</span>
+			<span class="uppercase text-4xl font-bold leading-7 px-1 inline-block">:</span>
+			<span class="uppercase tracking-wider text-4xl font-bold leading-6 inline-block">Company</span>
 		</nuxt-link>
 		<div class="absolute flex items-center justify-center flex-row right-[10px] sm:pr-1 md:px-6">
 			<nuxt-link to="/account" class="flex items-center justify-self-center">
@@ -65,7 +66,7 @@ header.retracted {
 }
 
 .logo {
-	width: 89px;
+	width: 75px;
 	path {
 		opacity: 0.4;
 		animation-name: logo;

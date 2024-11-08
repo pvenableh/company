@@ -1,4 +1,6 @@
 <script setup>
+// import draggable from '@/vuedraggable';
+
 const { readItems } = useDirectusItems();
 const { user } = useDirectusAuth();
 
@@ -23,9 +25,7 @@ const projects = await readItems('projects', {
 });
 </script>
 <template>
-	<div class="md:px-6 mx-auto flex items-start justify-center flex-col relative px-4 pt-20">
-		<div v-for="(project, index) in projects" :key="index" class="block my-6">{{ project.title }}</div>
-	</div>
+	<div class="md:px-6 mx-auto flex items-start justify-center flex-col relative px-4 pt-20"></div>
 </template>
 <style scoped>
 .projects {

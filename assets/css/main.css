@@ -75,3 +75,35 @@ a {
 .heroicon-sw-1 path {
   stroke-width: 1 !important;
 }
+
+.page {
+  &__content {
+    transition: all 0.25s var(--curve);
+    @apply relative z-10;
+  }
+  &__title {
+    @apply absolute top-0 w-full uppercase leading-[0.7em] font-thin text-8xl mt-2 opacity-20 z-0;
+  }
+  &__inner {
+    @apply relative z-10 mt-12;
+  }
+  .nuxt-page {
+      min-height: calc(90vh - 100px);
+      z-index: 5;
+      position: relative;
+  }
+}
+
+.screen-enter-from {
+	opacity: 0;
+}
+
+.screen-enter-active,
+.screen-leave-active {
+	transition: all 0.35s var(--curve);
+}
+
+.screen-enter,
+.screen-leave-to {
+	opacity: 0;
+}
