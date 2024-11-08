@@ -9,6 +9,10 @@
 		</div>
 
 		<div v-if="isElementLoading" class="w-full flex justify-center items-center py-12">
+			<span class="relative flex h-3 w-3">
+				<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+				<span class="relative inline-flex rounded-full h-3 w-3 bg-sky-500"></span>
+			</span>
 			<UButton loading>Loading payment form...</UButton>
 		</div>
 
@@ -96,7 +100,13 @@ const handleError = (message, err = null) => {
 
 const createPaymentIntent = async () => {
 	try {
-		const response = await $fetch('/api/stripe/paymentintent', {
+		console.log('Creating Payment Intent with:', {
+			amount: props.amount,
+			email: props.email,
+			paymentType: props.paymentType,
+		});
+		console.log('Peter');
+		const data = await $fetch('/api/stripe/paymentintent', {
 			method: 'POST',
 			body: {
 				amount: props.amount,
@@ -105,12 +115,10 @@ const createPaymentIntent = async () => {
 			},
 		});
 
-		if (!response?.clientSecret) {
-			throw new Error('Invalid response from payment intent creation');
-		}
-
-		return response;
+		console.log('Payment Intent Response:', data);
+		return data;
 	} catch (err) {
+		console.error('Payment Intent Error:', err);
 		handleError('Failed to create payment intent', err);
 		throw err;
 	}
