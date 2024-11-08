@@ -1,86 +1,46 @@
-import Stripe from 'stripe';
-
-// Constants for configuration
-const SUPPORTED_PAYMENT_TYPES = ['card', 'us_bank_account'];
-const SUPPORTED_CURRENCIES = ['usd'];
-const MIN_AMOUNT = 50; // 50 cents minimum
-const MAX_AMOUNT = 999999999; // $9,999,999.99 maximum
-
-// Utility function to validate email
-const isValidEmail = (email) => {
-	return email && email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
-};
-
-// Utility function to validate amount
-const isValidAmount = (amount) => {
-	const parsedAmount = parseInt(amount);
-	return !isNaN(parsedAmount) && parsedAmount >= MIN_AMOUNT && parsedAmount <= MAX_AMOUNT;
-};
-
-// Configure Stripe based on environment
-const getStripeConfig = (config) => {
-	const stripeSecretKey =
-		process.env.NODE_ENV === 'production' ? config.STRIPE_SECRET_KEY : config.STRIPE_SECRET_KEY_TEST;
-
-	if (!stripeSecretKey) {
-		throw new Error('Stripe secret key not configured');
-	}
-
-	const stripe = new Stripe(stripeSecretKey, {
-		apiVersion: '2023-10-16',
-		maxNetworkRetries: 2,
-	});
-
-	return stripe;
-};
-
 export default defineEventHandler(async (event) => {
 	try {
-		// Get request method
-		const method = event.method;
-
 		// Get runtime config
 		const config = useRuntimeConfig();
 		const stripe = getStripeConfig(config);
 
-		// Get request data based on method
-		const requestData = method === 'POST' ? await readBody(event) : getQuery(event);
+		// Read the request body for POST requests
+		const body = await readBody(event);
 
 		// Log incoming request
 		console.log('Payment Intent Request:', {
-			method,
-			data: requestData,
+			body,
 			timestamp: new Date().toISOString(),
 		});
 
 		// Input validation
 		const validationErrors = [];
 
-		if (!requestData.amount || !isValidAmount(requestData.amount)) {
+		if (!body.amount || !isValidAmount(body.amount)) {
 			validationErrors.push('Invalid amount specified');
 		}
 
-		if (!requestData.email || !isValidEmail(requestData.email)) {
+		if (!body.email || !isValidEmail(body.email)) {
 			validationErrors.push('Invalid email address');
 		}
 
-		if (requestData.paymentType && !SUPPORTED_PAYMENT_TYPES.includes(requestData.paymentType)) {
+		if (body.paymentType && !SUPPORTED_PAYMENT_TYPES.includes(body.paymentType)) {
 			validationErrors.push('Unsupported payment type');
 		}
 
 		// Log validation results
 		console.log('Validation Results:', {
 			amount: {
-				value: requestData.amount,
-				isValid: isValidAmount(requestData.amount),
+				value: body.amount,
+				isValid: isValidAmount(body.amount),
 			},
 			email: {
-				value: requestData.email,
-				isValid: isValidEmail(requestData.email),
+				value: body.email,
+				isValid: isValidEmail(body.email),
 			},
 			paymentType: {
-				value: requestData.paymentType,
-				isValid: !requestData.paymentType || SUPPORTED_PAYMENT_TYPES.includes(requestData.paymentType),
+				value: body.paymentType,
+				isValid: !body.paymentType || SUPPORTED_PAYMENT_TYPES.includes(body.paymentType),
 			},
 		});
 
@@ -94,9 +54,9 @@ export default defineEventHandler(async (event) => {
 
 		// Construct payment intent options
 		const baseOptions = {
-			amount: parseInt(requestData.amount),
+			amount: parseInt(body.amount),
 			currency: SUPPORTED_CURRENCIES[0],
-			receipt_email: requestData.email,
+			receipt_email: body.email,
 			statement_descriptor: config.public.companyName || 'Payment',
 			metadata: {
 				environment: process.env.NODE_ENV,
@@ -104,28 +64,12 @@ export default defineEventHandler(async (event) => {
 			},
 		};
 
-		if (query.paymentType === 'us_bank_account') {
-			console.log('Setting up US Bank Account payment options');
-			options = {
-				...baseOptions,
-				payment_method_types: ['us_bank_account'],
-				payment_method_options: {
-					us_bank_account: {
-						financial_connections: {
-							permissions: ['payment_method', 'balances'],
-						},
-					},
-				},
-			};
-			console.log('US Bank Account Options:', options);
-		}
-
 		// Add payment method specific options
 		const paymentOptions = {
 			card: {
 				...baseOptions,
 				payment_method_types: ['card'],
-				setup_future_usage: requestData.saveCard ? 'on_session' : undefined,
+				setup_future_usage: body.saveCard ? 'on_session' : undefined,
 			},
 			us_bank_account: {
 				...baseOptions,
@@ -147,14 +91,13 @@ export default defineEventHandler(async (event) => {
 		};
 
 		// Create payment intent with appropriate options
-		const options = requestData.paymentType ? paymentOptions[requestData.paymentType] : paymentOptions.default;
+		const options = body.paymentType ? paymentOptions[body.paymentType] : paymentOptions.default;
 
 		// If customer ID is provided, attach it
-		if (requestData.customer) {
-			options.customer = requestData.customer;
+		if (body.customer) {
+			options.customer = body.customer;
 		}
 
-		// Log payment intent options
 		console.log('Creating Payment Intent with options:', {
 			...options,
 			timestamp: new Date().toISOString(),
@@ -167,8 +110,8 @@ export default defineEventHandler(async (event) => {
 		console.log('Payment Intent Created:', {
 			id: paymentIntent.id,
 			amount: paymentIntent.amount,
-			email: requestData.email,
-			payment_type: requestData.paymentType || 'automatic',
+			email: body.email,
+			payment_type: body.paymentType || 'automatic',
 			timestamp: new Date().toISOString(),
 		});
 
