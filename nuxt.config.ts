@@ -13,17 +13,23 @@ export default defineNuxtConfig({
 	},
 
 	css: ['~/assets/css/tailwind.css', '~/assets/css/main.css'],
-	//pk_test_BmSiBo09lA9UYtmoeOk6C6yV00wZk1bmX2
-	//pk_live_hiVeCs5zdZaHDYJYzhL7C0BH00KmFyrVyH
+
 	runtimeConfig: {
+		// Private keys (server-side only)
 		SENDGRID_API_KEY: process.env.SENDGRID_API_KEY,
 		FROM_EMAIL: process.env.SENDGRID_FROM_EMAIL,
 		BCC_EMAIL: process.env.SENDGRID_BCC_EMAIL,
 		REPLY_TO_EMAIL: process.env.SENDGRID_REPLY_TO_EMAIL,
+		// Stripe secret keys should be here (server-side only)
+		STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
+		STRIPE_SECRET_KEY_TEST: process.env.STRIPE_SECRET_KEY_TEST,
 
 		public: {
+			companyName: process.env.COMPANY_NAME,
 			directusUrl: process.env.DIRECTUS_URL,
-			stripePublic: 'pk_test_BmSiBo09lA9UYtmoeOk6C6yV00wZk1bmX2',
+			// Stripe public key should reference env variable
+			stripePublic:
+				process.env.NODE_ENV === 'production' ? process.env.STRIPE_PUBLIC_KEY : process.env.STRIPE_PUBLIC_KEY_TEST,
 			assetsUrl: process.env.DIRECTUS_ASSETS_URL || 'https://admin.huestudios.company/assets/',
 			websocketUrl: process.env.DIRECTUS_WEBSOCKET_URL || 'wss://admin.huestudios.company/websocket',
 			staticToken: process.env.DIRECTUS_SERVER_TOKEN || 'o46aPhk-Bc_DMYbgL3mH4nA3yOYfQ9N8',

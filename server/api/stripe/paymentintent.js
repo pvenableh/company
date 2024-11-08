@@ -20,34 +20,69 @@ const isValidAmount = (amount) => {
 // Configure Stripe based on environment
 const getStripeConfig = (config) => {
 	const stripeSecretKey =
-		process.env.NODE_ENV === 'production' ? config.stripeSecretKeyLive : config.stripeSecretKeyTest;
+		process.env.NODE_ENV === 'production' ? config.STRIPE_SECRET_KEY : config.STRIPE_SECRET_KEY_TEST;
 
-	return new Stripe(stripeSecretKey, {
-		apiVersion: '2023-10-16', // Specify Stripe API version
-		maxNetworkRetries: 2, // Automatically retry failed requests
+	if (!stripeSecretKey) {
+		throw new Error('Stripe secret key not configured');
+	}
+
+	const stripe = new Stripe(stripeSecretKey, {
+		apiVersion: '2023-10-16',
+		maxNetworkRetries: 2,
 	});
+
+	return stripe;
 };
 
 export default defineEventHandler(async (event) => {
 	try {
+		// Get request method
+		const method = event.method;
+
+		// Get runtime config
 		const config = useRuntimeConfig();
 		const stripe = getStripeConfig(config);
-		const query = getQuery(event);
+
+		// Get request data based on method
+		const requestData = method === 'POST' ? await readBody(event) : getQuery(event);
+
+		// Log incoming request
+		console.log('Payment Intent Request:', {
+			method,
+			data: requestData,
+			timestamp: new Date().toISOString(),
+		});
 
 		// Input validation
 		const validationErrors = [];
 
-		if (!query.amount || !isValidAmount(query.amount)) {
+		if (!requestData.amount || !isValidAmount(requestData.amount)) {
 			validationErrors.push('Invalid amount specified');
 		}
 
-		if (!query.email || !isValidEmail(query.email)) {
+		if (!requestData.email || !isValidEmail(requestData.email)) {
 			validationErrors.push('Invalid email address');
 		}
 
-		if (query.paymentType && !SUPPORTED_PAYMENT_TYPES.includes(query.paymentType)) {
+		if (requestData.paymentType && !SUPPORTED_PAYMENT_TYPES.includes(requestData.paymentType)) {
 			validationErrors.push('Unsupported payment type');
 		}
+
+		// Log validation results
+		console.log('Validation Results:', {
+			amount: {
+				value: requestData.amount,
+				isValid: isValidAmount(requestData.amount),
+			},
+			email: {
+				value: requestData.email,
+				isValid: isValidEmail(requestData.email),
+			},
+			paymentType: {
+				value: requestData.paymentType,
+				isValid: !requestData.paymentType || SUPPORTED_PAYMENT_TYPES.includes(requestData.paymentType),
+			},
+		});
 
 		if (validationErrors.length > 0) {
 			throw createError({
@@ -59,14 +94,12 @@ export default defineEventHandler(async (event) => {
 
 		// Construct payment intent options
 		const baseOptions = {
-			amount: parseInt(query.amount),
+			amount: parseInt(requestData.amount),
 			currency: SUPPORTED_CURRENCIES[0],
-			receipt_email: query.email,
+			receipt_email: requestData.email,
 			statement_descriptor: config.public.companyName || 'Payment',
-			statement_descriptor_suffix: query.reference || '',
 			metadata: {
 				environment: process.env.NODE_ENV,
-				client_reference: query.reference || '',
 				created_at: new Date().toISOString(),
 			},
 		};
@@ -75,8 +108,8 @@ export default defineEventHandler(async (event) => {
 		const paymentOptions = {
 			card: {
 				...baseOptions,
-				payment_method_types: ['card', 'link'],
-				setup_future_usage: query.saveCard ? 'on_session' : undefined,
+				payment_method_types: ['card'],
+				setup_future_usage: requestData.saveCard ? 'on_session' : undefined,
 			},
 			us_bank_account: {
 				...baseOptions,
@@ -98,36 +131,44 @@ export default defineEventHandler(async (event) => {
 		};
 
 		// Create payment intent with appropriate options
-		const options = query.paymentType ? paymentOptions[query.paymentType] : paymentOptions.default;
+		const options = requestData.paymentType ? paymentOptions[requestData.paymentType] : paymentOptions.default;
 
 		// If customer ID is provided, attach it
-		if (query.customer) {
-			options.customer = query.customer;
+		if (requestData.customer) {
+			options.customer = requestData.customer;
 		}
+
+		// Log payment intent options
+		console.log('Creating Payment Intent with options:', {
+			...options,
+			timestamp: new Date().toISOString(),
+		});
 
 		// Create the payment intent
 		const paymentIntent = await stripe.paymentIntents.create(options);
 
-		// Log successful creation (you might want to use a proper logging service)
-		console.info('Payment intent created:', {
+		// Log successful creation
+		console.log('Payment Intent Created:', {
 			id: paymentIntent.id,
 			amount: paymentIntent.amount,
-			email: query.email,
-			payment_type: query.paymentType || 'automatic',
+			email: requestData.email,
+			payment_type: requestData.paymentType || 'automatic',
 			timestamp: new Date().toISOString(),
 		});
 
+		// Return success response
 		return {
 			clientSecret: paymentIntent.client_secret,
 			id: paymentIntent.id,
 			amount: paymentIntent.amount,
 		};
 	} catch (error) {
-		// Log the error (you might want to use a proper logging service)
-		console.error('Payment intent creation failed:', {
+		// Log the error
+		console.error('Payment Intent Error:', {
 			error: error.message,
 			code: error.code,
 			type: error.type,
+			stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
 			timestamp: new Date().toISOString(),
 		});
 
@@ -147,8 +188,8 @@ export default defineEventHandler(async (event) => {
 		// Handle other errors
 		throw createError({
 			statusCode: error.statusCode || 500,
-			message: 'Payment intent creation failed',
-			data: process.env.NODE_ENV === 'development' ? error.message : undefined,
+			message: process.env.NODE_ENV === 'development' ? error.message : 'Payment intent creation failed',
+			data: process.env.NODE_ENV === 'development' ? error.stack : undefined,
 		});
 	}
 });
