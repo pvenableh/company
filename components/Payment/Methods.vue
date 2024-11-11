@@ -5,8 +5,8 @@ const props = defineProps({
 		default: null,
 	},
 	bill_to: {
-		type: String,
-		default: null,
+		type: Object,
+		default: () => null,
 	},
 	amount: {
 		type: [Number],
@@ -14,15 +14,11 @@ const props = defineProps({
 	},
 	user: {
 		type: Object,
-		default: null,
+		default: () => null,
 	},
 	invoice: {
-		type: String,
-		default: null,
-	},
-	id: {
-		type: String,
-		default: null,
+		type: Object,
+		default: () => null,
 	},
 });
 
@@ -69,8 +65,8 @@ payment.value = {
 	bill_to: props.bill_to,
 	email: props.email,
 	amount: total.value,
-	invoice: props.invoice,
-	id: props.id,
+	invoice_code: props.invoice.invoice_code,
+	invoice_id: props.invoice.id,
 	stripeAmount: total.value,
 };
 
@@ -115,6 +111,7 @@ localStorage.setItem('payment', JSON.stringify(payment.value));
 							class="payment__panel"
 							:amount="total"
 							:email="email"
+							:invoice="invoice"
 						/>
 						<PaymentStripeCard
 							v-else-if="panel === 'card'"
@@ -123,6 +120,7 @@ localStorage.setItem('payment', JSON.stringify(payment.value));
 							class="payment__panel"
 							:amount="total"
 							:email="email"
+							:invoice="invoice"
 						/>
 					</transition>
 				</div>

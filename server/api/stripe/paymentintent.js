@@ -1,13 +1,80 @@
+import Stripe from 'stripe';
+
+const SUPPORTED_PAYMENT_TYPES = ['card', 'us_bank_account'];
+const SUPPORTED_CURRENCIES = ['usd'];
+const MIN_AMOUNT = 50; // 50 cents minimum
+const MAX_AMOUNT = 999999999; // $9,999,999.99 maximum
+
+// Utility functions
+const isValidEmail = (email) => {
+	return email && email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
+};
+
+const isValidAmount = (amount) => {
+	const parsedAmount = parseInt(amount);
+	return !isNaN(parsedAmount) && parsedAmount >= MIN_AMOUNT && parsedAmount <= MAX_AMOUNT;
+};
+
 export default defineEventHandler(async (event) => {
+	let stripe;
+
 	try {
 		// Get runtime config
 		const config = useRuntimeConfig();
-		const stripe = getStripeConfig(config);
+
+		console.log('Full Config Details:', {
+			env: process.env.NODE_ENV,
+			stripeSecretKeyTest: config.stripeSecretKeyTest?.slice(0, 8) + '...', // Only log first 8 chars
+			stripeSecretKeyLive: config.stripeSecretKeyLive?.slice(0, 8) + '...',
+			publicConfig: {
+				companyName: config.public.companyName,
+				stripePublic: config.public.stripePublic?.slice(0, 8) + '...',
+			},
+		});
+
+		console.log('Process ENV:', {
+			NODE_ENV: process.env.NODE_ENV,
+			hasStripeTestKey: !!process.env.STRIPE_SECRET_KEY_TEST,
+			hasStripeLiveKey: !!process.env.STRIPE_SECRET_KEY,
+		});
+
+		// Initialize Stripe
+		const stripeSecretKey =
+			process.env.NODE_ENV === 'production' ? config.stripeSecretKeyLive : config.stripeSecretKeyTest;
+
+		if (!stripeSecretKey) {
+			throw new Error('Stripe secret key is not configured');
+		}
+
+		// Initialize Stripe with logging
+		console.log('Initializing Stripe with config:', {
+			hasSecretKey: !!stripeSecretKey,
+			apiVersion: '2024-10-28.acacia',
+			keyPrefix: stripeSecretKey?.substring(0, 3),
+		});
+
+		stripe = new Stripe(stripeSecretKey, {
+			apiVersion: '2024-10-28.acacia',
+			maxNetworkRetries: 2,
+		});
+
+		// Test the connection
+		const testResult = await stripe.paymentIntents.list({ limit: 1 });
+		console.log('Stripe connection test successful:', {
+			connected: !!testResult,
+			timestamp: new Date().toISOString(),
+		});
 
 		// Read the request body for POST requests
 		const body = await readBody(event);
 
 		// Log incoming request
+		console.log('Request body:', {
+			hasAmount: !!body.amount,
+			hasEmail: !!body.email,
+			paymentType: body.paymentType,
+		});
+
 		console.log('Payment Intent Request:', {
 			body,
 			timestamp: new Date().toISOString(),
@@ -61,6 +128,7 @@ export default defineEventHandler(async (event) => {
 			metadata: {
 				environment: process.env.NODE_ENV,
 				created_at: new Date().toISOString(),
+				invoice_id: body.invoiceId,
 			},
 		};
 
@@ -98,12 +166,14 @@ export default defineEventHandler(async (event) => {
 			options.customer = body.customer;
 		}
 
+		options.expand = ['latest_charge'];
+
 		console.log('Creating Payment Intent with options:', {
 			...options,
 			timestamp: new Date().toISOString(),
 		});
 
-		// Create the payment intent
+		// Create the payment intent with expanded latest_charge
 		const paymentIntent = await stripe.paymentIntents.create(options);
 
 		// Log successful creation
@@ -112,6 +182,8 @@ export default defineEventHandler(async (event) => {
 			amount: paymentIntent.amount,
 			email: body.email,
 			payment_type: body.paymentType || 'automatic',
+			latest_charge: paymentIntent.latest_charge?.id,
+			receipt_url: paymentIntent.latest_charge?.receipt_url,
 			timestamp: new Date().toISOString(),
 		});
 
@@ -120,19 +192,22 @@ export default defineEventHandler(async (event) => {
 			clientSecret: paymentIntent.client_secret,
 			id: paymentIntent.id,
 			amount: paymentIntent.amount,
+			latest_charge: paymentIntent.latest_charge,
 		};
 	} catch (error) {
-		// Log the error
-		console.error('Payment Intent Error:', {
-			error: error.message,
+		// Log the full error
+		console.error('Full Payment Intent Error:', {
+			message: error.message,
 			code: error.code,
 			type: error.type,
-			stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+			raw: error.raw,
+			stack: error.stack,
 			timestamp: new Date().toISOString(),
 		});
 
 		// Handle Stripe specific errors
 		if (error instanceof Stripe.errors.StripeError) {
+			console.log('Stripe Specific Error:', error);
 			throw createError({
 				statusCode: error.statusCode || 400,
 				message: error.message,
@@ -147,8 +222,17 @@ export default defineEventHandler(async (event) => {
 		// Handle other errors
 		throw createError({
 			statusCode: error.statusCode || 500,
-			message: process.env.NODE_ENV === 'development' ? error.message : 'Payment intent creation failed',
-			data: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+			message:
+				process.env.NODE_ENV === 'development'
+					? `Payment intent creation failed: ${error.message}`
+					: 'Payment intent creation failed',
+			data:
+				process.env.NODE_ENV === 'development'
+					? {
+							stack: error.stack,
+							details: error,
+						}
+					: undefined,
 		});
 	}
 });

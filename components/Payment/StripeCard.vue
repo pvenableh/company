@@ -52,6 +52,10 @@ const props = defineProps({
 		required: true,
 		validator: (value) => Number(value) > 0,
 	},
+	invoice: {
+		type: Object,
+		default: () => null,
+	},
 });
 
 const config = useRuntimeConfig();
@@ -96,18 +100,13 @@ const handleError = (message, err = null) => {
 
 const createPaymentIntent = async () => {
 	try {
-		console.log('Creating Payment Intent with:', {
-			amount: props.amount,
-			email: props.email,
-			paymentType: props.paymentType,
-		});
-		console.log('Peter');
 		const data = await $fetch('/api/stripe/paymentintent', {
 			method: 'POST',
 			body: {
 				amount: props.amount,
 				email: props.email,
 				paymentType: props.paymentType,
+				invoiceId: props.invoice?.id,
 			},
 		});
 

@@ -22,14 +22,13 @@ const invoice = await readItem('invoices', params.id, {
 		</h1>
 		<div class="w-full flex flex-col lg:flex-row items-center lg:items-start justify-center z-10 page__inner">
 			<InvoicesInvoice :invoice="invoice" class="lg:sticky lg:top-12" />
-			<div class="w-full px-6 pt-0 pb-16 lg:w-1/2 max-w-xl">
+			<div v-if="invoice.status !== 'paid'" class="w-full px-6 pt-0 pb-16 lg:w-1/2 max-w-xl">
 				<PaymentMethods
 					:amount="invoice.total_amount"
 					:email="invoice.bill_to.email"
-					:bill_to="invoice.bill_to.name"
+					:bill_to="invoice.bill_to"
 					:user="user"
-					:invoice="invoice.invoice_code"
-					:id="invoice.id"
+					:invoice="invoice"
 				/>
 			</div>
 		</div>

@@ -17,19 +17,18 @@ export default defineNuxtConfig({
 		BCC_EMAIL: process.env.SENDGRID_BCC_EMAIL,
 		REPLY_TO_EMAIL: process.env.SENDGRID_REPLY_TO_EMAIL,
 		// Stripe secret keys should be here (server-side only)
-		STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
-		STRIPE_SECRET_KEY_TEST: process.env.STRIPE_SECRET_KEY_TEST,
+		stripeSecretKeyTest: process.env.STRIPE_SECRET_KEY_TEST,
+		stripeSecretKeyLive: process.env.STRIPE_SECRET_KEY,
 
 		public: {
-			companyName: process.env.COMPANY_NAME,
-			directusUrl: process.env.DIRECTUS_URL,
-			// Stripe public key should reference env variable
 			stripePublic:
 				process.env.NODE_ENV === 'production' ? process.env.STRIPE_PUBLIC_KEY : process.env.STRIPE_PUBLIC_KEY_TEST,
+			companyName: process.env.COMPANY_NAME,
+			directusUrl: process.env.DIRECTUS_URL,
 			assetsUrl: process.env.DIRECTUS_ASSETS_URL || 'https://admin.huestudios.company/assets/',
 			websocketUrl: process.env.DIRECTUS_WEBSOCKET_URL || 'wss://admin.huestudios.company/websocket',
 			staticToken: process.env.DIRECTUS_SERVER_TOKEN || 'o46aPhk-Bc_DMYbgL3mH4nA3yOYfQ9N8',
-			siteUrl: process.env.NUXT_PUBLIC_SITE_URL || 'http://localhost:3000',
+			siteUrl: process.env.NODE_ENV === 'production' ? 'https://huestudios.company' : 'http://localhost:3000',
 			adminUrl: process.env.DIRECTUS_URL || 'https://admin.huestudios.company',
 		},
 	},

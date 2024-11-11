@@ -64,23 +64,19 @@
 					View or download your payment receipt for your records.
 				</p>
 
-				<UButton :href="receiptUrl" target="_blank" block>
-					<template #leading>
-						<Icon name="heroicons:receipt" />
-					</template>
+				<UButton :to="receiptUrl" target="_blank" icon="i-heroicons-document-text" class="text-center" block>
 					View Receipt
 				</UButton>
 			</UCard>
-
 			<!-- Action Buttons -->
 			<div class="flex flex-col gap-4">
-				<UButton v-if="payment?.invoice?.id" :to="`/invoices/${payment.invoice.id}`" block>
+				<UButton v-if="invoiceID" :to="`/invoices/preview/${invoiceID}`" block>
 					<template #leading>
 						<Icon name="heroicons:document-text" />
 					</template>
 					View Invoice
 				</UButton>
-				<UButton to="/dashboard" variant="ghost" block>
+				<UButton to="/dashboard" variant="outline" block>
 					<template #leading>
 						<Icon name="heroicons:home" />
 					</template>
@@ -97,6 +93,7 @@ import { loadStripe } from '@stripe/stripe-js';
 const route = useRoute();
 const config = useRuntimeConfig();
 const toast = useToast();
+const { readItems, createItem } = useDirectusItems();
 
 // State
 const isLoading = ref(true);
@@ -104,14 +101,41 @@ const error = ref(null);
 const paymentIntent = ref(null);
 const payment = useState('payment', () => ({}));
 const clientSecret = computed(() => route.query.payment_intent_client_secret);
+const invoiceID = ref(null);
 
 // Stripe instance
 let stripe = null;
 
-// Computed
-const receiptUrl = computed(() => {
-	return paymentIntent.value?.latest_charge?.receipt_url || null;
+const baseUrl = computed(() => {
+	// Check if we're in development mode
+	if (process.dev) {
+		return 'http://localhost:3000';
+	}
+	// Production URL
+	return 'https://huestudios.company';
 });
+
+const receiptUrl = computed(() => {
+	// Check if we have the full charge details fetched from the API
+	if (paymentIntent.value?.latest_charge?.receipt_url) {
+		return paymentIntent.value.latest_charge.receipt_url;
+	}
+	// If we only have the charge ID, return null
+	return null;
+});
+
+// For debugging, you can add this watcher
+watch(
+	paymentIntent,
+	(newVal) => {
+		console.log('Payment Intent Updated:', {
+			hasLatestCharge: !!newVal?.latest_charge,
+			latestCharge: newVal?.latest_charge,
+			receiptUrl: receiptUrl.value,
+		});
+	},
+	{ deep: true },
+);
 
 const paymentStatusColor = computed(() => {
 	const statusColors = {
@@ -132,7 +156,7 @@ const formatPaymentStatus = computed(() => {
 
 const paymentDetails = computed(() => {
 	if (!paymentIntent.value) return [];
-
+	console.log(paymentIntent.value);
 	return [
 		{
 			label: 'Amount',
@@ -148,11 +172,7 @@ const paymentDetails = computed(() => {
 		},
 		payment.value?.bill_to && {
 			label: 'Billed To',
-			value: payment.value.bill_to,
-		},
-		payment.value?.invoice?.id && {
-			label: 'Invoice ID',
-			value: payment.value.invoice.id,
+			value: payment.value.bill_to.name,
 		},
 	].filter(Boolean);
 });
@@ -183,18 +203,47 @@ const handleError = (err, recoverable = true) => {
 	isLoading.value = false;
 };
 
-const getPaymentData = () => {
+const getPaymentData = async () => {
 	try {
+		console.log('Attempting to retrieve payment data...');
+
+		// First try localStorage
 		const storedPayment = window?.localStorage?.getItem('payment');
-		if (!storedPayment) {
-			throw new Error('Payment information not found');
+		if (storedPayment) {
+			payment.value = JSON.parse(storedPayment);
+			return true;
 		}
-		payment.value = JSON.parse(storedPayment);
+
+		// If no localStorage data, try to get from payment intent
+		if (clientSecret.value) {
+			// Extract payment intent ID from client secret
+			const piId = clientSecret.value.split('_secret_')[0];
+			console.log('Extracted Payment Intent ID:', piId);
+
+			// Get payment intent details from Stripe
+			const { error: stripeError, paymentIntent: intent } = await stripe.retrievePaymentIntent(clientSecret.value);
+
+			if (stripeError) throw stripeError;
+
+			console.log(intent);
+
+			// Create minimal payment data from intent
+			payment.value = {
+				email: intent.receipt_email,
+				amount: intent.amount,
+				id: piId,
+			};
+
+			console.log('Created payment data from intent:', payment.value);
+			return true;
+		}
+
+		throw new Error('No payment information found');
 	} catch (err) {
+		console.error('Payment Data Error:', err);
 		handleError(err, false);
 		return false;
 	}
-	return true;
 };
 
 const confirmPayment = async () => {
@@ -203,23 +252,49 @@ const confirmPayment = async () => {
 			throw new Error('Invalid payment session');
 		}
 
-		if (!getPaymentData()) return;
-
 		// Initialize Stripe if not already done
 		if (!stripe) {
 			stripe = await loadStripe(config.public.stripePublic);
 		}
 
-		const { error: stripeError, paymentIntent: intent } = await stripe.retrievePaymentIntent(clientSecret.value, {
-			expand: ['payment_method', 'latest_charge'],
-		});
+		// Now get payment data after Stripe is initialized
+		if (!(await getPaymentData())) return;
 
-		if (stripeError) throw stripeError;
+		// Get payment intent
+		const { error: stripeError, paymentIntent: intent } = await stripe.retrievePaymentIntent(clientSecret.value);
 
+		if (stripeError) {
+			console.error('Stripe Error:', stripeError);
+			throw stripeError;
+		}
+
+		if (!intent.latest_charge) {
+			try {
+				const chargeDetails = await $fetch(`/api/stripe/charges`, {
+					params: {
+						payment_id: intent.id,
+					},
+				});
+
+				// Update the latest_charge with the full charge details
+				intent.latest_charge = chargeDetails;
+
+				console.log('Updated Intent with Charge Details:', {
+					chargeId: intent.latest_charge.id,
+					receiptUrl: intent.latest_charge.receipt_url,
+				});
+			} catch (chargeError) {
+				console.error('Failed to retrieve charge details:', chargeError);
+			}
+		} else {
+			console.warn('No charge details found in payment intent');
+		}
+
+		// Now set the payment intent with the updated charge details
 		paymentIntent.value = intent;
 
 		// Send notification email
-		await sendPaymentNotification(payment.value);
+		// await sendPaymentNotification(payment.value);
 
 		// Record payment in Directus
 		await recordPayment(intent);
@@ -229,12 +304,13 @@ const confirmPayment = async () => {
 
 		isLoading.value = false;
 	} catch (err) {
+		console.error('Payment Confirmation Failed:', err);
 		handleError(err);
 	}
 };
 
 const sendPaymentNotification = async (paymentData) => {
-	const { error } = await useFetch('/api/paymentnotification', {
+	const { error } = await $fetch('/api/paymentnotification', {
 		method: 'POST',
 		body: paymentData,
 	});
@@ -248,23 +324,45 @@ const sendPaymentNotification = async (paymentData) => {
 	}
 };
 
-const recordPayment = async (intent) => {
+const recordPayment = async (intent, chargeDetails) => {
 	try {
-		const { $directus } = useNuxtApp();
-		await $directus.items('payments_received').createOne({
+		console.log('Checking for existing payment with Payment Intent ID:', intent.id);
+
+		// Check if a payment with the given payment_intent already exists
+		const existingPayments = await readItems('payments_received', {
+			filter: { payment_intent: { _eq: intent.id } },
+			limit: 1,
+		});
+
+		if (existingPayments.length > 0) {
+			if (!invoiceID.value && !payment.value.invoice_id) {
+				invoiceID.value = existingPayments[0].invoice_id;
+			}
+			console.log('Payment already recorded:', existingPayments[0]);
+			return; // Payment already exists, no need to create a new record
+		}
+
+		// console.log('Recording payment with data:', {
+		// 	paymentIntent: intent.id,
+		// 	chargeId: intent.latest_charge,
+		// 	receiptUrl: intent.latest_charge.receipt_url,
+		// });
+
+		console.log(new Date().toISOString());
+
+		await createItem('payments_received', {
 			status: 'published',
-			name: payment.value.user?.name,
+			user_id: payment.value.user?.id,
 			email: payment.value.email,
-			service: payment.value.id,
 			date_received: new Date().toISOString(),
+			invoice_id: payment.value.invoice_id,
 			payment_intent: intent.id,
-			payment_total: payment.value.amount,
-			metadata: {
-				stripe_status: intent.status,
-				payment_method: intent.payment_method?.type,
-				charge_id: intent.latest_charge?.id,
-				receipt_url: intent.latest_charge?.receipt_url,
-			},
+			amount: (payment.value.amount / 100).toFixed(2),
+			stripe_status: intent.status,
+			charge_id: intent.latest_charge.id,
+			receipt_url: intent.latest_charge.receipt_url,
+			payment_method: intent.latest_charge.payment_method_details.type,
+			organization: payment.value.bill_to,
 		});
 	} catch (err) {
 		console.error('Failed to record payment:', err);
