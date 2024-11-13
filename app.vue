@@ -4,6 +4,13 @@ import updateAvatarSource from '~~/composables/useAvatar';
 const { user } = useDirectusAuth();
 const runtimeConfig = useRuntimeConfig();
 
+if (process.env.NODE_ENV === 'development') {
+	console.log('Running in development mode');
+	// Add any development-specific code here
+} else {
+	console.log('Not in development mode');
+}
+
 const avatar = computed(() => {
 	if (user.value) {
 		if (user.value.avatar) {

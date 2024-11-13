@@ -16,7 +16,7 @@ const invoice = await readItem('invoices', params.id, {
 		</h1>
 		<div class="w-full flex flex-col items-center justify-center z-10 page__inner">
 			<InvoicesInvoice :invoice="invoice" />
-			<nuxt-link :to="'/invoices/' + invoice.id" class="mt-12">
+			<nuxt-link v-if="invoice.status !== 'paid'" :to="'/invoices/' + invoice.id" class="mt-12">
 				<UButton
 					size="sm"
 					label="Pay"
