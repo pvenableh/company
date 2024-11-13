@@ -88,8 +88,13 @@
 </template>
 
 <script setup>
+definePageMeta({
+	middleware: ['auth'],
+});
+
 import { loadStripe } from '@stripe/stripe-js';
 
+const { user } = useDirectusAuth();
 const route = useRoute();
 const config = useRuntimeConfig();
 const toast = useToast();
@@ -293,11 +298,10 @@ const confirmPayment = async () => {
 		// Now set the payment intent with the updated charge details
 		paymentIntent.value = intent;
 
-		// Send notification email
-		// await sendPaymentNotification(payment.value);
-
 		// Record payment in Directus
 		await recordPayment(intent);
+
+		// Send notification email
 
 		// Clean up
 		cleanupPaymentData();
@@ -309,24 +313,13 @@ const confirmPayment = async () => {
 	}
 };
 
-const sendPaymentNotification = async (paymentData) => {
-	const { error } = await $fetch('/api/paymentnotification', {
-		method: 'POST',
-		body: paymentData,
-	});
-
-	if (error.value) {
-		toast.add({
-			title: 'Notification Warning',
-			description: 'Payment successful, but confirmation email could not be sent.',
-			type: 'warning',
-		});
-	}
-};
-
 const recordPayment = async (intent, chargeDetails) => {
 	try {
 		console.log('Checking for existing payment with Payment Intent ID:', intent.id);
+
+		await $fetch('/api/email/test', {
+			method: 'POST',
+		});
 
 		// Check if a payment with the given payment_intent already exists
 		const existingPayments = await readItems('payments_received', {
@@ -364,9 +357,89 @@ const recordPayment = async (intent, chargeDetails) => {
 			payment_method: intent.latest_charge.payment_method_details.type,
 			organization: payment.value.bill_to,
 		});
+
+		await sendPaymentNotification(payment.value);
 	} catch (err) {
 		console.error('Failed to record payment:', err);
 	}
+};
+
+const sendPaymentNotification = async (paymentData) => {
+	console.log('Sending payment notification email...');
+	console.log(paymentData.email);
+	console.log(paymentData);
+
+	try {
+		// Validate required payment data
+		if (!paymentData?.email || !user?.value.email) {
+			throw new Error('Missing required email information');
+		}
+
+		// Deduplicate emails and remove any empty values
+		const emails = [...new Set([paymentData.email, user.value.email])].filter((email) => email && email.trim());
+
+		console.log(emails);
+
+		if (emails.length === 0) {
+			throw new Error('No valid email addresses provided');
+		}
+
+		const notificationData = {
+			emails,
+			amount: formatAmount(paymentData.stripeAmount),
+			invoice: paymentData.invoice_code,
+			company: paymentData.bill_to,
+			id: paymentData.invoice_id,
+			first_name: paymentData.user.first_name,
+		};
+
+		console.log('Sending payment notification:', notificationData);
+
+		const response = await $fetch('/api/email/paymentnotification', {
+			method: 'POST',
+			body: notificationData,
+		});
+
+		if (response.error) {
+			throw new Error(response.error);
+		}
+
+		toast.add({
+			title: 'Notification Sent',
+			description: `Payment confirmation sent to ${emails.length} recipient${emails.length > 1 ? 's' : ''}.`,
+			type: 'success',
+			timeout: 5000,
+		});
+
+		return { success: true, emails };
+	} catch (error) {
+		console.error('Payment notification error:', error);
+
+		toast.add({
+			title: 'Notification Warning',
+			description: 'Payment successful, but there was an issue sending the confirmation email.',
+			type: 'warning',
+			timeout: 8000,
+		});
+
+		return {
+			success: false,
+			error: error.message,
+			emails: emails || [],
+		};
+	}
+};
+
+const formatAmount = (amount) => {
+	if (typeof amount === 'number') {
+		// If amount is in cents, convert to dollars
+		const dollars = amount >= 100 ? amount / 100 : amount;
+		return dollars.toLocaleString('en-US', {
+			style: 'currency',
+			currency: 'USD',
+		});
+	}
+	return amount;
 };
 
 const cleanupPaymentData = () => {
