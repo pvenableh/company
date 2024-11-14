@@ -128,8 +128,9 @@ const unpaidTotalAmount = computed(() => {
 });
 </script>
 <template>
-	<div class="w-full px-12 tickets">
-		<div class="w-full flex flex-row justify-between items-center my-10">
+	<div class="md:px-6 mx-auto flex items-center justify-center flex-col relative tickets">
+		<h1 class="page__title">Invoices</h1>
+		<div class="w-full flex flex-row items-center justify-between max-w-6xl my-12">
 			<UInput v-model="q" placeholder="Filter..." />
 			<div class="flex flex-row uppercase text-[10px]">
 				<p class="mr-6">
@@ -142,7 +143,11 @@ const unpaidTotalAmount = computed(() => {
 				</p>
 			</div>
 		</div>
-		<UTable :rows="filteredInvoices" :columns="columns" class="w-full mx-0 px-0 shadow-lg border overflow-x-auto">
+		<UTable
+			:rows="filteredInvoices"
+			:columns="columns"
+			class="w-full mx-0 px-0 shadow-lg border overflow-x-auto max-w-6xl"
+		>
 			<template #status-data="{ row }">
 				<UBadge
 					size="xs"

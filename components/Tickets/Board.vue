@@ -121,7 +121,7 @@ const handleTicketCreated = () => {
 </script>
 
 <template>
-	<div class="p-4">
+	<div class="px-4">
 		<!-- Connection Status -->
 		<div v-if="!isConnected && !isLoading" class="mb-4">
 			<UAlert title="Connection Lost" description="Attempting to reconnect..." color="yellow">

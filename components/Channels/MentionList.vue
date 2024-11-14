@@ -1,118 +1,97 @@
+<script setup>
+const props = defineProps({
+	items: {
+		type: Array,
+		required: true,
+	},
+	command: {
+		type: Function,
+		required: true,
+	},
+});
+
+const selectedIndex = ref(0);
+
+watch(
+	() => props.items,
+	() => {
+		selectedIndex.value = 0;
+	},
+);
+
+const selectItem = (index) => {
+	const item = props.items[index];
+	if (item) {
+		props.command({
+			id: item.id,
+			label: `${item.first_name} ${item.last_name}`,
+		});
+	}
+};
+
+const onKeyDown = ({ event }) => {
+	if (event.key === 'ArrowUp') {
+		selectedIndex.value = (selectedIndex.value + props.items.length - 1) % props.items.length;
+		return true;
+	}
+
+	if (event.key === 'ArrowDown') {
+		selectedIndex.value = (selectedIndex.value + 1) % props.items.length;
+		return true;
+	}
+
+	if (event.key === 'Enter') {
+		selectItem(selectedIndex.value);
+		return true;
+	}
+
+	return false;
+};
+
+defineExpose({
+	onKeyDown,
+});
+</script>
+
 <template>
-	<div class="dropdown-menu">
-		<template v-if="items.length">
-			<button
-				v-for="(item, index) in items"
-				:key="index"
-				:class="{ 'is-selected': index === selectedIndex }"
-				@click="selectItem(index)"
-			>
-				{{ item }}
-			</button>
-		</template>
-		<div v-else class="item">No result</div>
+	<div class="mentions-list">
+		<button
+			v-for="(item, index) in items"
+			:key="item.id"
+			class="mention-item"
+			:class="{ 'is-selected': index === selectedIndex }"
+			@click="selectItem(index)"
+		>
+			<UAvatar
+				:src="item.avatar ? `/assets/${item.avatar}` : undefined"
+				:alt="`${item.first_name} ${item.last_name}`"
+				size="xs"
+				class="mr-2"
+			/>
+			<span class="text-sm">{{ item.first_name }} {{ item.last_name }}</span>
+		</button>
 	</div>
 </template>
 
-<script>
-export default {
-	props: {
-		items: {
-			type: Array,
-			required: true,
-		},
-
-		command: {
-			type: Function,
-			required: true,
-		},
-	},
-
-	data() {
-		return {
-			selectedIndex: 0,
-		};
-	},
-
-	watch: {
-		items() {
-			this.selectedIndex = 0;
-		},
-	},
-
-	methods: {
-		onKeyDown({ event }) {
-			if (event.key === 'ArrowUp') {
-				this.upHandler();
-				return true;
-			}
-
-			if (event.key === 'ArrowDown') {
-				this.downHandler();
-				return true;
-			}
-
-			if (event.key === 'Enter') {
-				this.enterHandler();
-				return true;
-			}
-
-			return false;
-		},
-
-		upHandler() {
-			this.selectedIndex = (this.selectedIndex + this.items.length - 1) % this.items.length;
-		},
-
-		downHandler() {
-			this.selectedIndex = (this.selectedIndex + 1) % this.items.length;
-		},
-
-		enterHandler() {
-			this.selectItem(this.selectedIndex);
-		},
-
-		selectItem(index) {
-			const item = this.items[index];
-
-			if (item) {
-				this.command({ id: item });
-			}
-		},
-	},
-};
-</script>
-
 <style>
-/* Dropdown menu */
-.dropdown-menu {
-	background: var(--white);
-	border: 1px solid var(--gray-1);
-	border-radius: 0.7rem;
-	box-shadow: var(--shadow);
-	display: flex;
-	flex-direction: column;
-	gap: 0.1rem;
-	overflow: auto;
-	padding: 0.4rem;
-	position: relative;
+.mentions-list {
+	@apply w-full min-w-[200px];
+}
 
-	button {
-		align-items: center;
-		background-color: transparent;
-		display: flex;
-		gap: 0.25rem;
-		text-align: left;
-		width: 100%;
+.mention-item {
+	@apply w-full px-3 py-2 text-left flex items-center hover:bg-gray-100 dark:hover:bg-gray-700;
+}
 
-		&:hover,
-		&:hover.is-selected {
-			background-color: var(--gray-3);
-		}
+.mention-item.is-selected {
+	@apply bg-gray-100 dark:bg-gray-700;
+}
 
-		&.is-selected {
-			background-color: var(--gray-2);
-		}
-	}
+.dark .mention-item {
+	@apply text-gray-200;
+}
+
+.dark .mention-item:hover,
+.dark .mention-item.is-selected {
+	@apply bg-gray-700;
 }
 </style>

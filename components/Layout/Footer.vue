@@ -59,7 +59,6 @@ const props = defineProps({
 <style scoped>
 .footer {
 	position: relative;
-	z-index: 10;
 
 	&__col {
 		text-align: center;

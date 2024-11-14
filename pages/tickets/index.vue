@@ -1,5 +1,5 @@
 <template>
-	<div>
+	<div class="md:px-6 mx-auto flex items-start justify-center flex-col relative">
 		<h1 class="page__title">
 			Tickets
 			<span class="block">Board</span>
