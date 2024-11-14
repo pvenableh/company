@@ -1,5 +1,6 @@
 node_modules
 admin
+logs/
 *.log*
 .nuxt
 .nitro
@@ -15,4 +16,5 @@ dist
 .directus
 .directus/data
 .directus/uploads
+
 

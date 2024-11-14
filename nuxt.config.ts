@@ -4,6 +4,10 @@
 export default defineNuxtConfig({
 	ssr: true,
 
+	future: {
+		compatibilityVersion: 4,
+	},
+
 	app: {
 		pageTransition: { name: 'page', mode: 'out-in' },
 	},

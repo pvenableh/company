@@ -71,33 +71,6 @@ payment.value = {
 };
 
 localStorage.setItem('payment', JSON.stringify(payment.value));
-
-const isLoading = ref(false);
-const result = ref(null);
-
-const testEmail = async () => {
-	isLoading.value = true;
-	result.value = null;
-
-	try {
-		const response = await $fetch('/api/email/test', {
-			method: 'POST',
-		});
-
-		result.value = {
-			success: true,
-			message: 'Test email sent successfully!',
-		};
-	} catch (error) {
-		console.error('Test email error:', error);
-		result.value = {
-			success: false,
-			message: error.message || 'Failed to send test email',
-		};
-	} finally {
-		isLoading.value = false;
-	}
-};
 </script>
 <template>
 	<div class="w-full flex flex-col payment">
@@ -153,20 +126,6 @@ const testEmail = async () => {
 				</div>
 			</div>
 		</transition>
-		<div>
-			<UButton :loading="isLoading" @click="testEmail" color="blue" class="mt-4">Test SendGrid Email</UButton>
-
-			<!-- Show result messages -->
-			<div v-if="result" class="mt-4">
-				<UAlert
-					:type="result.success ? 'success' : 'error'"
-					:title="result.success ? 'Success!' : 'Error'"
-					class="mb-4"
-				>
-					{{ result.message }}
-				</UAlert>
-			</div>
-		</div>
 	</div>
 </template>
 <style>

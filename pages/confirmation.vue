@@ -98,7 +98,7 @@ const { user } = useDirectusAuth();
 const route = useRoute();
 const config = useRuntimeConfig();
 const toast = useToast();
-const { readItems, createItem } = useDirectusItems();
+const { readItems, createItem, updateItem } = useDirectusItems();
 
 // State
 const isLoading = ref(true);
@@ -303,9 +303,6 @@ const confirmPayment = async () => {
 
 		// Send notification email
 
-		// Clean up
-		cleanupPaymentData();
-
 		isLoading.value = false;
 	} catch (err) {
 		console.error('Payment Confirmation Failed:', err);
@@ -313,38 +310,26 @@ const confirmPayment = async () => {
 	}
 };
 
-const recordPayment = async (intent, chargeDetails) => {
+const recordPayment = async (intent) => {
 	try {
-		console.log('Checking for existing payment with Payment Intent ID:', intent.id);
-
-		await $fetch('/api/email/test', {
-			method: 'POST',
-		});
-
-		// Check if a payment with the given payment_intent already exists
 		const existingPayments = await readItems('payments_received', {
 			filter: { payment_intent: { _eq: intent.id } },
 			limit: 1,
 		});
 
+		const status = intent.status === 'succeeded' ? 'paid' : 'pending';
+
 		if (existingPayments.length > 0) {
 			if (!invoiceID.value && !payment.value.invoice_id) {
 				invoiceID.value = existingPayments[0].invoice_id;
 			}
+			updateInvoiceStatus(invoiceID.value, status);
 			console.log('Payment already recorded:', existingPayments[0]);
 			return; // Payment already exists, no need to create a new record
 		}
 
-		// console.log('Recording payment with data:', {
-		// 	paymentIntent: intent.id,
-		// 	chargeId: intent.latest_charge,
-		// 	receiptUrl: intent.latest_charge.receipt_url,
-		// });
-
-		console.log(new Date().toISOString());
-
 		await createItem('payments_received', {
-			status: 'published',
+			status,
 			user_id: payment.value.user?.id,
 			email: payment.value.email,
 			date_received: new Date().toISOString(),
@@ -364,87 +349,72 @@ const recordPayment = async (intent, chargeDetails) => {
 	}
 };
 
-const sendPaymentNotification = async (paymentData) => {
-	console.log('Sending payment notification email...');
-	console.log(paymentData.email);
-	console.log(paymentData);
-
+const updateInvoiceStatus = async (invoiceId, status) => {
 	try {
-		// Validate required payment data
-		if (!paymentData?.email || !user?.value.email) {
-			throw new Error('Missing required email information');
-		}
-
-		// Deduplicate emails and remove any empty values
-		const emails = [...new Set([paymentData.email, user.value.email])].filter((email) => email && email.trim());
-
-		console.log(emails);
-
-		if (emails.length === 0) {
-			throw new Error('No valid email addresses provided');
-		}
-
-		const notificationData = {
-			emails,
-			amount: formatAmount(paymentData.stripeAmount),
-			invoice: paymentData.invoice_code,
-			company: paymentData.bill_to,
-			id: paymentData.invoice_id,
-			first_name: paymentData.user.first_name,
-		};
-
-		console.log('Sending payment notification:', notificationData);
-
-		const response = await $fetch('/api/email/paymentnotification', {
-			method: 'POST',
-			body: notificationData,
+		const invoice = await readItems('invoices', {
+			filter: { id: { _eq: invoiceId } },
+			limit: 1,
 		});
 
-		if (response.error) {
-			throw new Error(response.error);
+		if (invoice.length === 0) {
+			throw new Error('Invoice not found');
 		}
 
-		toast.add({
-			title: 'Notification Sent',
-			description: `Payment confirmation sent to ${emails.length} recipient${emails.length > 1 ? 's' : ''}.`,
-			type: 'success',
-			timeout: 5000,
+		if (invoice[0].status === 'paid') {
+			console.log('Invoice already marked as paid:', invoice[0]);
+			return;
+		}
+
+		await updateItem('invoices', invoiceId, {
+			status,
 		});
 
-		return { success: true, emails };
-	} catch (error) {
-		console.error('Payment notification error:', error);
-
-		toast.add({
-			title: 'Notification Warning',
-			description: 'Payment successful, but there was an issue sending the confirmation email.',
-			type: 'warning',
-			timeout: 8000,
-		});
-
-		return {
-			success: false,
-			error: error.message,
-			emails: emails || [],
-		};
+		console.log('Invoice marked as paid:', invoice[0]);
+	} catch (err) {
+		console.error('Failed to update invoice status:', err);
 	}
 };
 
-const formatAmount = (amount) => {
-	if (typeof amount === 'number') {
-		// If amount is in cents, convert to dollars
-		const dollars = amount >= 100 ? amount / 100 : amount;
-		return dollars.toLocaleString('en-US', {
-			style: 'currency',
-			currency: 'USD',
+const notificationData = ref({});
+
+const sendPaymentNotification = async (paymentData) => {
+	try {
+		notificationData.value = {
+			emails: [paymentData.email, user.value.email],
+			amount: paymentData.amount / 100, // Convert from cents to dollars
+			invoice: paymentData.invoice_code,
+			company: paymentData.bill_to?.name || paymentData.bill_to,
+			id: paymentData.invoice_id,
+			first_name: paymentData.user.first_name,
+			payment_method: paymentIntent.value?.latest_charge?.payment_method_details?.type,
+			receipt_url: paymentIntent.value?.latest_charge?.receipt_url,
+		};
+
+		const response = await $fetch('/api/email/paymentnotification', {
+			method: 'POST',
+			body: notificationData.value,
+		});
+
+		if (response.error) throw new Error(response.error);
+
+		toast.add({
+			title: 'Notification Sent',
+			description: 'Payment confirmation email sent successfully',
+			type: 'success',
+		});
+	} catch (error) {
+		console.error('Payment notification error:', error);
+		toast.add({
+			title: 'Notification Warning',
+			description: 'Payment successful, but confirmation email failed to send',
+			type: 'warning',
 		});
 	}
-	return amount;
+	cleanupPaymentData();
 };
 
 const cleanupPaymentData = () => {
 	window.localStorage.removeItem('payment');
-	// Keep payment.value for displaying confirmation details
 };
 
 const retryConfirmation = () => {
