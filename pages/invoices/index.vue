@@ -9,13 +9,13 @@ const { readItems } = useDirectusItems();
 
 const columns = [
 	{
-		key: 'invoice_code',
-		label: 'Invoice',
+		key: 'status',
+		label: '',
 		sortable: true,
 	},
 	{
-		key: 'status',
-		label: 'Status',
+		key: 'invoice_code',
+		label: 'Invoice',
 		sortable: true,
 	},
 
@@ -86,8 +86,13 @@ const isPastDue = (dateString) => {
 const classedInvoices = computed(() => {
 	return invoices.map((item) => ({
 		...item,
-		class: isPastDue(item.due_date) ? 'bg-red-500/50 dark:bg-red-400/50 animate-pulse' : '',
+		class: isPastDue(item.due_date) ? 'bg-red-200/50 dark:bg-red-400/50 animate-pulse' : '',
 	}));
+});
+
+const expand = ref({
+	openedRows: [],
+	row: null,
 });
 
 const q = ref('');
@@ -103,37 +108,110 @@ const filteredInvoices = computed(() => {
 		});
 	});
 });
+
+const totalAmount = computed(() => {
+	return filteredInvoices.value.reduce((acc, invoice) => {
+		const amount = Number(invoice.total_amount);
+		return acc + (isNaN(amount) ? 0 : amount); // Only add if it's a valid number
+	}, 0);
+});
+
+const unpaidTotalAmount = computed(() => {
+	return filteredInvoices.value.reduce((acc, invoice) => {
+		// Only include invoices that are not "paid"
+		if (invoice.status !== 'paid') {
+			const amount = Number(invoice.total_amount);
+			return acc + (isNaN(amount) ? 0 : amount); // Only add valid numbers
+		}
+		return acc;
+	}, 0);
+});
 </script>
 <template>
 	<div class="w-full px-12 tickets">
-		<div class="flex px-3 py-3.5 border-b border-gray-200 dark:border-gray-700">
+		<div class="w-full flex flex-row justify-between items-center my-10">
 			<UInput v-model="q" placeholder="Filter..." />
+			<div class="flex flex-row uppercase text-[10px]">
+				<p class="mr-6">
+					<span class="">Total Billed:</span>
+					${{ totalAmount }}
+				</p>
+				<p>
+					<span class="">Total Unpaid:</span>
+					${{ unpaidTotalAmount }}
+				</p>
+			</div>
 		</div>
-		<UTable :rows="filteredInvoices" :columns="columns" class="shadow-lg border">
+		<UTable :rows="filteredInvoices" :columns="columns" class="w-full mx-0 px-0 shadow-lg border overflow-x-auto">
+			<template #status-data="{ row }">
+				<UBadge
+					size="xs"
+					class="inline-block w-12 text-center uppercase text-[8px] p-0"
+					:color="row.status === 'paid' ? 'black' : 'primary'"
+					:variant="row.status === 'paid' ? 'subtle' : 'solid'"
+				>
+					{{ row.status }}
+				</UBadge>
+			</template>
 			<template #invoice_code-data="{ row }">
 				<nuxt-link :to="'/invoices/' + row.id">{{ row.invoice_code }}</nuxt-link>
 			</template>
+
 			<template #due_date-data="{ row }">
-				<p>{{ getFriendlyDateThree(row.due_date) }}</p>
-				<p v-if="row.status !== 'paid'">{{ formatDueDate(row.due_date) }}</p>
+				<p class="text-[12px] leading-3 max-w-32 whitespace-pre-wrap uppercase font-bold">
+					{{ getFriendlyDateThree(row.due_date) }}
+				</p>
+				<p
+					v-if="row.status !== 'paid'"
+					class="text-[9px] leading-3 max-w-20 whitespace-pre-wrap uppercase font-bold hidden"
+				>
+					{{ formatDueDate(row.due_date) }}
+				</p>
 			</template>
 			<template #total_amount-data="{ row }">${{ row.total_amount }}</template>
+			<template #bill_to.name-data="{ row }" class="uppercase">
+				<p class="text-[12px] leading-3 max-w-32 whitespace-pre-wrap uppercase font-bold">
+					{{ row.bill_to.name }}
+				</p>
+			</template>
 			<template #actions-data="{ row }">
-				<UButton v-if="row.status === 'pending'" size="sm" color="primary" :to="'/invoices/' + row.id">Pay</UButton>
+				<UButton
+					v-if="row.status !== 'paid'"
+					size="xs"
+					color="primary"
+					:to="'/invoices/' + row.id"
+					:ui="{ rounded: 'rounded-full' }"
+					class="inline-block text-center w-12 tracking-wide text-[10px] p-0"
+				>
+					Pay
+				</UButton>
+				<UButton
+					v-else
+					size="xs"
+					color="primary"
+					variant="outline"
+					:to="'/invoices/preview/' + row.id"
+					:ui="{ rounded: 'rounded-full' }"
+					class="inline-block text-center w-12 tracking-wide text-[10px] p-0"
+				>
+					View
+				</UButton>
+
 				<!-- <UDropdown :items="items(row)">
 					<UButton color="gray" variant="ghost" icon="i-heroicons-ellipsis-horizontal-20-solid" />
 				</UDropdown> -->
 			</template>
+
 			<template #expand="{ row }">
 				<div class="p-8 w-full">
 					<h5 v-if="row.note" class="uppercase tracking-wide text-[9px]">Note:</h5>
 					<div v-if="row.note" class="" v-html="row.note"></div>
-					<div v-if="row.line_items.length > 0" class="w-full mt-4">
-						<h5 class="uppercase tracking-wide text-[9px]">Line Items:</h5>
+					<div v-if="row.line_items.length > 0" class="w-full mt-6">
+						<h5 class="uppercase tracking-wide text-[9px] mb-6">Line Items:</h5>
 						<div
 							v-for="(item, index) in row.line_items"
 							:key="index"
-							class="pl-10 mb-1 flex flex-row items-center justify-between"
+							class="lg:pl-3 my-1 flex flex-row items-center justify-between"
 						>
 							<div class="">
 								<p class="uppercase tracking-wide text-[12px]">{{ item.product.name }}</p>
@@ -142,9 +220,8 @@ const filteredInvoices = computed(() => {
 							<div class="mx-3 grow border-b border-gray-200 dark:border-gray-700"></div>
 							<p class="tracking-wide text-[12px]">${{ item.rate }} x {{ item.quantity }} = ${{ item.amount }}</p>
 						</div>
-						<div class="ml-10 flex flex-row items-center justify-between border-t mt-3 pt-3">
+						<div class="lg:ml-3 flex flex-row items-center justify-between border-t mt-6 pt-6">
 							<p class="uppercase tracking-wide text-[12px] font-bold">Total:</p>
-							<!-- <div class="grow border-b border-gray-200 dark:border-gray-700"></div> -->
 							<p class="tracking-wide text-[12px]">${{ row.total_amount }}</p>
 						</div>
 					</div>

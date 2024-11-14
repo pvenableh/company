@@ -7,8 +7,8 @@ const props = defineProps({
 });
 </script>
 <template>
-	<div class="mx-6 lg:mx-0">
-		<div class="px-6 pt-12 pb-16 w-full border bg-white dark:bg-gray-700 bg-opacity-90 shadow invoice">
+	<div class="px-6 pt-12 pb-16 w-full border bg-white dark:bg-gray-700 bg-opacity-90 shadow invoice">
+		<div class="">
 			<div class="w-full flex flex-row items-center justify-between">
 				<h1 class="font-bold uppercase text-xl">
 					<span class="opacity-30">Invoice #:</span>
@@ -40,22 +40,23 @@ const props = defineProps({
 			<h5 v-if="invoice.note" class="uppercase tracking-wide text-[9px] mt-6">Note:</h5>
 			<div v-if="invoice.note" class="text-[12px] invoice__note" v-html="invoice.note"></div>
 			<div v-if="invoice.line_items.length > 0" class="w-full mt-6">
-				<h5 class="uppercase tracking-wide text-[9px]">Line Items:</h5>
+				<h5 class="uppercase tracking-wide text-[9px] mb-6">Line Items:</h5>
 				<div
 					v-for="(item, index) in invoice.line_items"
 					:key="index"
-					class="pl-8 my-1 flex flex-row items-center justify-between"
+					class="lg:pl-3 my-1 flex flex-row items-center justify-between"
 				>
 					<div class="">
-						<p class="uppercase tracking-wide text-[12px]">{{ item.product.name }}</p>
+						<p class="uppercase lg:tracking-wide text-[12px] font-bold">{{ item.product.name }}</p>
 						<p v-if="item.description" class="text-[9px]">
 							{{ item.description }}
 						</p>
 					</div>
 					<div class="mx-3 grow border-b border-gray-200 dark:border-gray-700"></div>
-					<p class="tracking-wide text-[12px]">${{ item.rate }} x {{ item.quantity }} = ${{ item.amount }}</p>
+					<div class="lg:tracking-wide text-[12px]">${{ item.rate }} x {{ item.quantity }}:</div>
+					<p class="lg:tracking-wide text-[12px]">${{ item.amount }}</p>
 				</div>
-				<div class="ml-8 flex flex-row items-center justify-between border-t mt-3 pt-3">
+				<div class="lg:ml-3 flex flex-row items-center justify-between border-t mt-6 pt-6">
 					<p class="uppercase tracking-wide text-[12px] font-bold">Total:</p>
 					<p class="tracking-wide text-[12px]">${{ invoice.total_amount }}</p>
 				</div>
@@ -65,6 +66,9 @@ const props = defineProps({
 </template>
 <style>
 .invoice {
-	max-width: 750px;
+	max-width: 528px;
+	@media (min-width: theme('screens.lg')) {
+		/* min-width: 500px; */
+	}
 }
 </style>

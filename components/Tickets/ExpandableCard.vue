@@ -1,32 +1,54 @@
 <template>
 	<div ref="cardRef" class="relative">
 		<!-- Card Preview -->
-		<div class="cursor-pointer" @click="isExpanded = true">
+		<div
+			class="cursor-pointer transition-transform duration-300"
+			:class="{ 'pointer-events-none': isExpanded }"
+			@click="expand"
+		>
 			<TicketsCard :element="element" />
 		</div>
 
-		<!-- Modal -->
-		<UModal v-model="isExpanded">
-			<UCard>
-				<!-- Header -->
-				<template #header>
-					<div class="flex items-center justify-between">
-						<div class="flex items-center space-x-3">
-							<span class="text-sm text-gray-500">{{ element?.id }}</span>
-							<h3 class="text-lg font-semibold">{{ element?.title }}</h3>
+		<!-- Teleported Fullscreen Overlay -->
+		<Teleport to="body">
+			<Transition
+				enter-active-class="transition duration-300 ease-out"
+				enter-from-class="opacity-0 scale-95"
+				enter-to-class="opacity-100 scale-100"
+				leave-active-class="transition duration-200 ease-in"
+				leave-from-class="opacity-100 scale-100"
+				leave-to-class="opacity-0 scale-95"
+			>
+				<div
+					v-if="isExpanded"
+					class="fixed inset-0 bg-white dark:bg-gray-800 z-[9999] overflow-auto"
+					@click.self="collapse"
+				>
+					<div class="container mx-auto p-4">
+						<!-- Header -->
+						<div class="sticky top-0 z-[10000] px-4 py-3 bg-white dark:bg-gray-800 border-b dark:border-gray-700">
+							<div class="flex items-center justify-between">
+								<div class="flex items-center space-x-3">
+									<span class="text-sm text-gray-500">{{ element?.id }}</span>
+									<h3 class="text-lg font-semibold">{{ element?.title }}</h3>
+								</div>
+								<UButton color="gray" variant="ghost" icon="i-heroicons-x-mark-20-solid" @click="collapse" />
+							</div>
+						</div>
+
+						<!-- Content -->
+						<div class="mt-4">
+							<TicketsDetails
+								v-if="element"
+								:element="element"
+								:columns="columns"
+								:is-loading="updatingTickets?.has(element.id)"
+							/>
 						</div>
 					</div>
-				</template>
-
-				<!-- Content -->
-				<TicketsDetails
-					v-if="element"
-					:element="element"
-					:columns="columns"
-					:is-loading="updatingTickets?.has(element.id)"
-				/>
-			</UCard>
-		</UModal>
+				</div>
+			</Transition>
+		</Teleport>
 	</div>
 </template>
 
@@ -46,14 +68,28 @@ const props = defineProps({
 	},
 });
 
+const cardRef = ref(null);
 const isExpanded = ref(false);
 
-// Close on escape key
+const expand = () => {
+	isExpanded.value = true;
+	document.body.style.overflow = 'hidden';
+};
+
+const collapse = () => {
+	isExpanded.value = false;
+	document.body.style.overflow = '';
+};
+
 onMounted(() => {
 	document.addEventListener('keydown', (e) => {
 		if (e.key === 'Escape' && isExpanded.value) {
-			isExpanded.value = false;
+			collapse();
 		}
 	});
+});
+
+onUnmounted(() => {
+	document.body.style.overflow = '';
 });
 </script>

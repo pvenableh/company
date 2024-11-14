@@ -1,6 +1,6 @@
 <template>
 	<div
-		class="w-full flex flex-col md:flex-row flex-wrap items-center justify-start sm:justify-center px-4 md:px-6 pb-10 mt-16 md:mt-20 text-gray-700 dark:text-gray-400 footer"
+		class="w-full flex flex-col md:flex-row flex-wrap items-start justify-start sm:justify-center px-4 md:px-6 pb-10 mt-16 md:mt-20 text-gray-700 dark:text-gray-400 footer"
 	>
 		<div class="flex items-start justify-start flex-col footer__col">
 			<nuxt-link v-for="(link, index) in links" :key="index" :to="link.to">{{ link.name }}</nuxt-link>

@@ -38,8 +38,8 @@ onMounted(() => {
 		</div> -->
 		<nuxt-link to="/" class="flex flex-row items-end justify-center ml-2">
 			<Logo color="#ffc00" />
-			<span class="uppercase text-4xl font-bold leading-7 px-1 inline-block">:</span>
-			<span class="uppercase tracking-wider text-4xl font-bold leading-6 inline-block">Company</span>
+			<span class="uppercase text-4xl font-bold leading-7 px-1 inline-block hidden">:</span>
+			<span class="uppercase tracking-wider text-4xl font-bold leading-6 inline-block hidden">Company</span>
 		</nuxt-link>
 		<div class="absolute flex items-center justify-center flex-row right-[10px] sm:pr-1 md:px-6">
 			<nuxt-link to="/account" class="flex items-center justify-self-center">

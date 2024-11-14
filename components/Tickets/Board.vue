@@ -4,12 +4,27 @@ const { updateItem } = useDirectusItems();
 
 const columns = [
 	{ id: 'pending', name: 'Pending', color: 'gray' },
-	{ id: 'scheduled', name: 'Scheduled', color: 'yellow' },
+	{ id: 'scheduled', name: 'Scheduled', color: 'black' },
 	{ id: 'in progress', name: 'In Progress', color: 'blue' },
 	{ id: 'completed', name: 'Completed', color: 'green' },
 ];
 
 // Setup realtime subscription for tickets
+// const fields = [
+// 	'id',
+// 	'title',
+// 	'category',
+// 	'description',
+// 	'status',
+// 	'priority',
+// 	'date_created',
+// 	'date_updated',
+// 	'assigned_to.directus_users_id.id',
+// 	'assigned_to.directus_users_id.first_name',
+// 	'assigned_to.directus_users_id.last_name',
+// 	'assigned_to.directus_users_id.avatar',
+// ];
+
 const fields = [
 	'id',
 	'title',
@@ -19,10 +34,7 @@ const fields = [
 	'priority',
 	'date_created',
 	'date_updated',
-	'assigned_to.directus_users_id.id',
-	'assigned_to.directus_users_id.first_name',
-	'assigned_to.directus_users_id.last_name',
-	'assigned_to.directus_users_id.avatar',
+	'assigned_to.directus_users_id.*', // Get all user fields
 ];
 
 const sort = ['-date_updated'];
@@ -34,7 +46,7 @@ const {
 	error,
 	lastUpdated,
 	refresh,
-} = useRealtimeSubscription('tickets', fields, {}, sort);
+} = useRealtimeSubscription('tickets', fields, {}, '-date_updated');
 
 const localTickets = ref({});
 const updatingTickets = ref(new Set()); // Track tickets being updated
@@ -99,6 +111,13 @@ const onDragStart = () => {
 const onDragEnd = () => {
 	isDragging.value = false;
 };
+
+const handleTicketCreated = () => {
+	// Force refresh the subscription
+	refresh();
+
+	console.log('Refreshing board after ticket creation');
+};
 </script>
 
 <template>
@@ -111,18 +130,21 @@ const onDragEnd = () => {
 				</template>
 			</UAlert>
 		</div>
-
-		<!-- Last Updated -->
-		<div v-if="lastUpdated" class="text-xs text-gray-500 mb-2">
-			Last updated: {{ new Date(lastUpdated).toLocaleTimeString() }}
+		<div class="w-full flex flex-row items-center justify-between">
+			<TicketsCreate :columns="columns" @ticketCreated="handleTicketCreated" />
+			<!-- Last Updated -->
+			<div v-if="lastUpdated" class="text-xs text-gray-500 mb-2 font-bold uppercase">
+				Last updated: {{ new Date(lastUpdated).toLocaleTimeString() }}
+			</div>
 		</div>
+
 		<div class="flex gap-4 overflow-x-auto min-h-[calc(100svh-20px)]">
-			<div v-for="column in columns" :key="column.id" class="flex-shrink-0 w-80 h-full">
+			<div v-for="column in columns" :key="column.id" class="flex-shrink-0 w-80 shadow-lg h-full">
 				<!-- Column Header -->
-				<div class="rounded-t-lg p-3" :class="`bg-${column.color}-100 dark:bg-${column.color}-900`">
+				<div class="rounded-t-lg p-3 bg-gray-200">
 					<div class="flex items-center justify-between">
 						<h3 class="text-sm font-medium">{{ column.name }}</h3>
-						<UBadge :color="column.color" class="ml-2">
+						<UBadge :color="column.color" class="ml-2 w-6 h-6 text-center inline-block">
 							{{ localTickets[column.id]?.length || 0 }}
 						</UBadge>
 					</div>

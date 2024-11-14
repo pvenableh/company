@@ -1,6 +1,5 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useRuntimeConfig } from '#imports';
-import { createDirectus, rest, realtime, readItems } from '@directus/sdk';
 
 export function useRealtimeSubscription(collection, fields = ['*'], filter = {}, sort = null) {
 	const config = useRuntimeConfig();
@@ -9,134 +8,169 @@ export function useRealtimeSubscription(collection, fields = ['*'], filter = {},
 	const isLoading = ref(true);
 	const isConnected = ref(false);
 	const lastUpdated = ref(null);
-	const retryAttempts = ref(0);
-	const maxRetryAttempts = 5;
-	let unsubscribe = null;
-	let retryTimeout = null;
+	let connection = null;
 
-	// Create Directus client with both REST and realtime
-	const client = createDirectus(config.public.directusUrl)
-		.with(rest())
-		.with(
-			realtime({
-				authMode: 'public',
-				token: config.public.staticToken,
-			}),
-		);
+	const connect = () => {
+		return new Promise((resolve, reject) => {
+			try {
+				connection = new WebSocket(config.public.websocketUrl);
 
-	const subscribe = async () => {
+				connection.addEventListener('open', () => {
+					console.log('WebSocket connected');
+					isConnected.value = true;
+					authenticate();
+					resolve(connection);
+				});
+
+				connection.addEventListener('close', () => {
+					console.log('WebSocket disconnected');
+					isConnected.value = false;
+				});
+
+				connection.addEventListener('error', (error) => {
+					console.error('WebSocket error:', error);
+					reject(error);
+				});
+
+				connection.addEventListener('message', receiveMessage);
+			} catch (err) {
+				reject(err);
+			}
+		});
+	};
+
+	const authenticate = () => {
+		if (!connection) return;
+		const authMessage = {
+			type: 'auth',
+			access_token: config.public.staticToken,
+		};
+		console.log('Sending auth message:', authMessage);
+		connection.send(JSON.stringify(authMessage));
+	};
+
+	const subscribe = () => {
+		if (!connection) return;
+		const subscriptionMessage = {
+			type: 'subscribe',
+			collection: collection,
+			query: {
+				fields: fields,
+				filter: {
+					...filter,
+					status: {
+						_nnull: true,
+					},
+				},
+				sort: sort ? [sort] : ['-date_updated'],
+			},
+		};
+		console.log('Sending subscription message:', subscriptionMessage);
+		connection.send(JSON.stringify(subscriptionMessage));
+	};
+
+	const receiveMessage = (message) => {
+		const msg = JSON.parse(message.data);
+		console.log('Received message:', msg);
+
+		switch (msg.type) {
+			case 'auth':
+				if (msg.status === 'ok') {
+					console.log('Authentication successful');
+					subscribe();
+				} else {
+					console.error('Authentication failed:', msg);
+					error.value = 'Authentication failed';
+				}
+				break;
+
+			case 'subscription':
+				handleSubscriptionMessage(msg);
+				break;
+
+			case 'ping':
+				connection?.send(JSON.stringify({ type: 'pong' }));
+				break;
+
+			default:
+				console.log('Unhandled message type:', msg.type);
+		}
+	};
+
+	const handleSubscriptionMessage = (msg) => {
+		console.log('Handling subscription message:', msg);
+
+		switch (msg.event) {
+			case 'init':
+				console.log('Initial data:', msg.data);
+				data.value = msg.data || [];
+				break;
+
+			case 'create':
+				console.log('Item created:', msg.data);
+				if (msg.data?.[0]) {
+					data.value = [...data.value, msg.data[0]];
+				}
+				break;
+
+			case 'update':
+				console.log('Item updated:', msg.data);
+				if (msg.data) {
+					data.value = data.value.map((item) => {
+						const updated = msg.data.find((d) => d.id === item.id);
+						return updated || item;
+					});
+				}
+				break;
+
+			case 'delete':
+				console.log('Item deleted:', msg.data);
+				if (msg.data) {
+					data.value = data.value.filter((item) => !msg.data.includes(item.id));
+				}
+				break;
+		}
+
+		// Apply sorting if specified
+		if (sort) {
+			data.value.sort((a, b) => {
+				const [field, direction] = sort.startsWith('-') ? [sort.slice(1), 'desc'] : [sort, 'asc'];
+
+				const aVal = field.split('.').reduce((obj, key) => obj?.[key], a);
+				const bVal = field.split('.').reduce((obj, key) => obj?.[key], b);
+				const modifier = direction === 'desc' ? -1 : 1;
+				return modifier * (new Date(aVal) - new Date(bVal));
+			});
+		}
+
+		lastUpdated.value = new Date();
+	};
+
+	const refresh = async () => {
+		if (connection) {
+			connection.close();
+		}
+		isLoading.value = true;
+		await connect();
+		isLoading.value = false;
+	};
+
+	onMounted(async () => {
 		try {
 			isLoading.value = true;
-			error.value = null;
-
-			// First, get initial data using REST
-			const initialData = await client.request(
-				readItems(collection, {
-					fields,
-					filter,
-					sort: sort ? [sort] : undefined,
-				}),
-			);
-
-			data.value = initialData;
-			lastUpdated.value = new Date();
-
-			// Then set up realtime subscription
-			const { subscription, unsubscribe: unsubscribeFunc } = await client.subscribe(collection, {
-				fields,
-				filter,
-				sort: sort ? [sort] : undefined,
-			});
-
-			unsubscribe = unsubscribeFunc;
-			isConnected.value = true;
-			retryAttempts.value = 0; // Reset retry attempts on successful connection
-
-			// Handle subscription messages
-			(async () => {
-				try {
-					for await (const message of subscription) {
-						if (!message) continue;
-
-						// Check if message is an array (initial data)
-						if (Array.isArray(message)) {
-							data.value = message;
-							lastUpdated.value = new Date();
-							continue;
-						}
-
-						// Handle subscription events
-						switch (message.event) {
-							case 'create':
-								data.value = [...data.value, message.data];
-								break;
-
-							case 'update':
-								data.value = data.value.map((item) => (item.id === message.data.id ? message.data : item));
-								break;
-
-							case 'delete':
-								data.value = data.value.filter((item) => item.id !== message.data);
-								break;
-						}
-
-						// Apply sorting if specified
-						if (sort) {
-							const [field, direction] = sort.startsWith('-') ? [sort.slice(1), 'desc'] : [sort, 'asc'];
-
-							data.value.sort((a, b) => {
-								const aVal = field.split('.').reduce((obj, key) => obj?.[key], a);
-								const bVal = field.split('.').reduce((obj, key) => obj?.[key], b);
-								const modifier = direction === 'desc' ? -1 : 1;
-								return modifier * (new Date(aVal) - new Date(bVal));
-							});
-						}
-
-						lastUpdated.value = new Date();
-					}
-				} catch (err) {
-					console.error('Subscription stream error:', err);
-					error.value = err.message;
-					isConnected.value = false;
-
-					// Implement exponential backoff for retries
-					if (retryAttempts.value < maxRetryAttempts) {
-						const delay = Math.min(1000 * Math.pow(2, retryAttempts.value), 30000);
-						retryTimeout = setTimeout(() => {
-							retryAttempts.value++;
-							subscribe();
-						}, delay);
-					} else {
-						error.value = 'Maximum retry attempts reached. Please refresh the page.';
-					}
-				}
-			})();
+			await connect();
 		} catch (err) {
-			console.error('Error in subscription setup:', err);
 			error.value = err.message;
-			isConnected.value = false;
+			console.error('Failed to connect:', err);
 		} finally {
 			isLoading.value = false;
 		}
-	};
-
-	// Clean up function
-	const cleanup = () => {
-		if (unsubscribe) {
-			unsubscribe();
-		}
-		if (retryTimeout) {
-			clearTimeout(retryTimeout);
-		}
-		isConnected.value = false;
-	};
-
-	onMounted(() => {
-		subscribe();
 	});
 
 	onUnmounted(() => {
-		cleanup();
+		if (connection) {
+			connection.close();
+		}
 	});
 
 	return {
@@ -145,10 +179,6 @@ export function useRealtimeSubscription(collection, fields = ['*'], filter = {},
 		isLoading,
 		isConnected,
 		lastUpdated,
-		refresh: async () => {
-			cleanup();
-			retryAttempts.value = 0;
-			await subscribe();
-		},
+		refresh,
 	};
 }

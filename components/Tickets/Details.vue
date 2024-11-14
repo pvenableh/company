@@ -52,7 +52,7 @@
 		<!-- Description -->
 		<div>
 			<h4 class="text-sm font-medium text-gray-500 mb-2">Description</h4>
-			<UTiptap
+			<FormTiptap
 				v-model="localElement.description"
 				:loading="isLoading"
 				:editable="!isLoading"
