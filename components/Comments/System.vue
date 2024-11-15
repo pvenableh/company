@@ -1,5 +1,6 @@
 <script setup>
 import { useRealtimeSubscription } from '~/composables/useRealtimeSubscription';
+const { createItem } = useDirectusItems();
 
 const props = defineProps({
 	itemId: {
@@ -119,20 +120,16 @@ async function postComment() {
 	isLoading.value = true;
 
 	try {
-		const comment = await useDirectus(
-			createItem('comments', {
-				comment: newComment.value,
-				user: user.value.id,
-				parent_id: replyingTo.value?.comments_id?.id?.toString() || null,
-			}),
-		);
+		const comment = await createItem('comments', {
+			comment: newComment.value,
+			user: user.value.id,
+			parent_id: replyingTo.value?.comments_id?.id?.toString() || null,
+		});
 
-		await useDirectus(
-			createItem(junctionTable, {
-				[collectionIdField]: props.itemId.toString(),
-				comments_id: comment.id,
-			}),
-		);
+		await createItem(junctionTable, {
+			[collectionIdField]: props.itemId.toString(),
+			comments_id: comment.id,
+		});
 
 		newComment.value = '';
 		replyingTo.value = null;

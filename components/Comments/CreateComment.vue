@@ -31,12 +31,10 @@ const postComment = async () => {
 		);
 
 		// Create the junction
-		await useDirectus(
-			createItem(`${props.collection}_comments`, {
-				[`${props.collection}_id`]: props.parentId,
-				comments_id: comment.id,
-			}),
-		);
+		await createItem(`${props.collection}_comments`, {
+			[`${props.collection}_id`]: props.parentId,
+			comments_id: comment.id,
+		});
 
 		// Clear the editor
 		editor.value.commands.clearContent();
