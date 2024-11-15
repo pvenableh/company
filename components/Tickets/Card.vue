@@ -1,6 +1,6 @@
 <template>
 	<div class="ticket-card bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-all mb-4">
-		<div class="p-3 space-y-2">
+		<div class="p-3 space-y-2" @click="$emit('expand')">
 			<!-- Ticket Header -->
 			<div class="flex items-start justify-between">
 				<span class="text-gray-500 font-medium text-[8px] italic">{{ element?.id }}</span>
@@ -61,6 +61,7 @@
 				<span>{{ formatDate(element?.date_updated) }}</span>
 			</div>
 		</div>
+		<ReactionsBar :item-id="element.id" collection="tickets" />
 	</div>
 </template>
 
@@ -71,6 +72,8 @@ const props = defineProps({
 		required: true,
 	},
 });
+
+const emit = defineEmits(['expand']);
 
 const { user } = useDirectusAuth();
 

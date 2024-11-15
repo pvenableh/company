@@ -1,12 +1,8 @@
 <template>
 	<div ref="cardRef" class="relative">
 		<!-- Card Preview -->
-		<div
-			class="cursor-pointer transition-transform duration-300"
-			:class="{ 'pointer-events-none': isExpanded }"
-			@click="expand"
-		>
-			<TicketsCard :element="element" />
+		<div class="cursor-pointer transition-transform duration-300" :class="{ 'pointer-events-none': isExpanded }">
+			<TicketsCard :element="element" @expand="expand" />
 		</div>
 
 		<!-- Teleported Fullscreen Overlay -->
@@ -24,13 +20,13 @@
 					class="fixed inset-0 bg-white dark:bg-gray-800 z-[9999] overflow-auto"
 					@click.self="collapse"
 				>
-					<div class="container mx-auto p-4">
+					<div class="container mx-auto">
 						<!-- Header -->
-						<div class="sticky top-0 z-[10000] px-4 py-3 bg-white dark:bg-gray-800 border-b dark:border-gray-700">
+						<div class="sticky top-0 z-[10000] bg-white dark:bg-gray-800 border-b dark:border-gray-700">
 							<div class="flex items-center justify-between">
-								<div class="flex items-center space-x-3">
-									<span class="text-sm text-gray-500">{{ element?.id }}</span>
-									<h3 class="text-lg font-semibold">{{ element?.title }}</h3>
+								<div class="flex items-center">
+									<span class="text-xs text-gray-500 uppercase">Ticket #{{ element?.id }}</span>
+									<!-- <h3 class="text-lg font-semibold">{{ element?.title }}</h3> -->
 								</div>
 								<UButton color="gray" variant="ghost" icon="i-heroicons-x-mark-20-solid" @click="collapse" />
 							</div>

@@ -1,7 +1,8 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useRuntimeConfig } from '#imports';
 
-export function useRealtimeSubscription(collection, fields = ['*'], filter = {}, sort = null) {
+export function useRealtimeSubscription(collection, fields = ['*'], filter = {}, sort = null, options = {}) {
+	const { requireStatus = false } = options;
 	const config = useRuntimeConfig();
 	const data = ref([]);
 	const error = ref(null);
@@ -41,32 +42,34 @@ export function useRealtimeSubscription(collection, fields = ['*'], filter = {},
 
 	const authenticate = () => {
 		if (!connection) return;
-		const authMessage = {
-			type: 'auth',
-			access_token: config.public.staticToken,
-		};
-		console.log('Sending auth message:', authMessage);
-		connection.send(JSON.stringify(authMessage));
+		connection.send(
+			JSON.stringify({
+				type: 'auth',
+				access_token: config.public.staticToken,
+			}),
+		);
 	};
 
 	const subscribe = () => {
 		if (!connection) return;
-		const subscriptionMessage = {
-			type: 'subscribe',
-			collection: collection,
-			query: {
-				fields: fields,
-				filter: {
+		const finalFilter = requireStatus
+			? {
 					...filter,
-					status: {
-						_nnull: true,
-					},
+					status: { _nnull: true },
+				}
+			: filter;
+
+		connection.send(
+			JSON.stringify({
+				type: 'subscribe',
+				collection: collection,
+				query: {
+					fields: fields,
+					filter: finalFilter,
+					sort: sort ? [sort] : ['-date_updated'],
 				},
-				sort: sort ? [sort] : ['-date_updated'],
-			},
-		};
-		console.log('Sending subscription message:', subscriptionMessage);
-		connection.send(JSON.stringify(subscriptionMessage));
+			}),
+		);
 	};
 
 	const receiveMessage = (message) => {

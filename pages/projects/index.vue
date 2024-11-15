@@ -1,6 +1,4 @@
 <script setup>
-// import draggable from '@/vuedraggable';
-
 const { readItems } = useDirectusItems();
 const { user } = useDirectusAuth();
 
