@@ -32,16 +32,6 @@
 									<UInput v-model="form.title" placeholder="Enter ticket title" />
 								</UFormGroup>
 
-								<UFormGroup label="Description" required>
-									<FormTiptap
-										v-model="form.description"
-										placeholder="Enter ticket description"
-										:editor-props="{
-											content: form.description,
-										}"
-									/>
-								</UFormGroup>
-
 								<div class="grid grid-cols-2 gap-4">
 									<UFormGroup label="Status">
 										<USelect v-model="form.status" :options="columns" option-attribute="name" value-attribute="id" />
@@ -52,9 +42,9 @@
 									</UFormGroup>
 								</div>
 
-								<UFormGroup label="Category">
+								<!-- <UFormGroup label="Category">
 									<UInput v-model="form.category" placeholder="Enter categories (comma-separated)" />
-								</UFormGroup>
+								</UFormGroup> -->
 
 								<UFormGroup label="Assign To">
 									<div class="space-y-2">
@@ -109,6 +99,15 @@
 											</template>
 										</USelectMenu>
 									</div>
+								</UFormGroup>
+								<UFormGroup label="Description" required>
+									<FormTiptap
+										v-model="form.description"
+										placeholder="Enter ticket description"
+										:editor-props="{
+											content: form.description,
+										}"
+									/>
 								</UFormGroup>
 
 								<div class="flex justify-end space-x-2">

@@ -1,6 +1,5 @@
 <script setup>
 import { useRealtimeSubscription } from '~/composables/useRealtimeSubscription';
-const { createItem, deleteItems } = useDirectusItems();
 
 const props = defineProps({
 	itemId: {
@@ -17,53 +16,126 @@ const { user } = useDirectusAuth();
 const newComment = ref('');
 const showComments = ref(false);
 const isLoading = ref(false);
+const replyingTo = ref(null);
 
 const junctionTable = `${props.collection}_comments`;
 const collectionIdField = `${props.collection}_id`;
 
-// Define filter explicitly without status
-const filter = {
-	[collectionIdField]: {
-		_eq: props.itemId,
-	},
-};
+const fields = [
+	'id',
+	'comments_id.id',
+	'comments_id.comment',
+	'comments_id.date_created',
+	'comments_id.parent_id',
+	'comments_id.user.id',
+	'comments_id.user.first_name',
+	'comments_id.user.last_name',
+	'comments_id.user.avatar',
+	'comments_id.reactions.id',
+	'comments_id.reactions.users_id.id',
+];
 
-const { data: comments } = useRealtimeSubscription(
+const { data: rawComments } = useRealtimeSubscription(
 	junctionTable,
-	[
-		'id',
-		'comments_id.id',
-		'comments_id.comment',
-		'comments_id.date_created',
-		'comments_id.user.id',
-		'comments_id.user.first_name',
-		'comments_id.user.last_name',
-		'comments_id.user.avatar',
-		'comments_id.reactions.id',
-		'comments_id.reactions.users_id.id',
-	],
-	filter,
+	fields,
+	{
+		[collectionIdField]: {
+			_eq: props.itemId,
+		},
+	},
 	'-comments_id.date_created',
 );
 
-const commentsCount = computed(() => comments.value?.length || 0);
+const comments = computed(() => {
+	if (!rawComments.value) return [];
+
+	const commentMap = new Map();
+	rawComments.value.forEach((comment) => {
+		commentMap.set(String(comment.comments_id.id), {
+			...comment,
+			replies: [],
+		});
+	});
+
+	const rootComments = [];
+	rawComments.value.forEach((comment) => {
+		const currentComment = commentMap.get(String(comment.comments_id.id));
+		const parentId = comment.comments_id.parent_id;
+
+		if (parentId) {
+			const parentComment = commentMap.get(String(parentId));
+			if (parentComment) {
+				parentComment.replies.push(currentComment);
+			} else {
+				rootComments.push(currentComment);
+			}
+		} else {
+			rootComments.push(currentComment);
+		}
+	});
+
+	// Sort root comments newest first
+	rootComments.sort((a, b) => {
+		return new Date(b.comments_id.date_created) - new Date(a.comments_id.date_created);
+	});
+
+	// Sort replies oldest first
+	const sortReplies = (comment) => {
+		if (comment.replies && comment.replies.length > 0) {
+			comment.replies.sort((a, b) => {
+				return new Date(a.comments_id.date_created) - new Date(b.comments_id.date_created);
+			});
+			comment.replies.forEach(sortReplies);
+		}
+	};
+
+	rootComments.forEach(sortReplies);
+	return rootComments;
+});
+
+const commentsCount = computed(() => {
+	let total = 0;
+	const countReplies = (comment) => {
+		total += 1;
+		comment.replies?.forEach(countReplies);
+	};
+	comments.value.forEach(countReplies);
+	return total;
+});
+
+function handleReply(comment) {
+	replyingTo.value = comment;
+	// Automatically show comments when replying
+	showComments.value = true;
+}
+
+function cancelReply() {
+	replyingTo.value = null;
+	newComment.value = '';
+}
 
 async function postComment() {
 	if (!newComment.value.trim()) return;
 	isLoading.value = true;
 
 	try {
-		const comment = await createItem('comments', {
-			comment: newComment.value,
-			user: user.value.id,
-		});
+		const comment = await useDirectus(
+			createItem('comments', {
+				comment: newComment.value,
+				user: user.value.id,
+				parent_id: replyingTo.value?.comments_id?.id?.toString() || null,
+			}),
+		);
 
-		await createItem(junctionTable, {
-			[collectionIdField]: props.itemId,
-			comments_id: comment.id,
-		});
+		await useDirectus(
+			createItem(junctionTable, {
+				[collectionIdField]: props.itemId.toString(),
+				comments_id: comment.id,
+			}),
+		);
 
 		newComment.value = '';
+		replyingTo.value = null;
 	} catch (error) {
 		console.error('Error posting comment:', error);
 	} finally {
@@ -79,8 +151,10 @@ async function postComment() {
 				variant="ghost"
 				:icon="showComments ? 'i-heroicons-chat-bubble-left-right' : 'i-heroicons-chat-bubble-left'"
 				@click="showComments = !showComments"
+				class="relative"
 			>
 				{{ commentsCount }} {{ commentsCount === 1 ? 'Comment' : 'Comments' }}
+				<UBadge v-if="replyingTo && !showComments" color="primary" class="absolute -top-1 -right-1" size="xs">1</UBadge>
 			</UButton>
 		</div>
 
@@ -93,56 +167,47 @@ async function postComment() {
 			leave-to-class="transform scale-95 opacity-0"
 		>
 			<div v-if="showComments" class="mt-4 space-y-4">
-				<div v-if="user" class="flex gap-2">
-					<UTextarea
-						v-model="newComment"
-						placeholder="Write a comment..."
-						:rows="1"
-						class="flex-grow"
-						@keydown.enter.exact.prevent="postComment"
-					/>
-					<UButton color="primary" @click="postComment">Post</UButton>
+				<div v-if="user" class="flex flex-col gap-2">
+					<div v-if="replyingTo" class="flex items-center gap-2 text-sm p-2 bg-gray-50 dark:bg-gray-900 rounded-lg">
+						<span class="text-gray-500">Replying to {{ replyingTo.comments_id.user?.first_name }}'s comment:</span>
+						<p class="text-sm font-medium truncate flex-1">"{{ replyingTo.comments_id.comment }}"</p>
+						<UButton size="xs" variant="ghost" icon="i-heroicons-x-mark" @click="cancelReply" />
+					</div>
+
+					<div class="flex gap-2">
+						<UTextarea
+							v-model="newComment"
+							:placeholder="replyingTo ? 'Write a reply...' : 'Write a comment...'"
+							:rows="1"
+							class="flex-grow"
+							@keydown.enter.exact.prevent="postComment"
+							@keydown.esc="cancelReply"
+						/>
+						<UButton color="primary" :loading="isLoading" @click="postComment" :disabled="!newComment.trim()">
+							{{ replyingTo ? 'Reply' : 'Post' }}
+						</UButton>
+					</div>
 				</div>
 
 				<TransitionGroup name="comments" tag="div" class="space-y-4">
-					<div v-for="comment in comments" :key="comment.id" class="flex gap-3">
-						<UAvatar
-							:src="
-								comment.comments_id.user?.avatar
-									? `${useRuntimeConfig().public.directusUrl}/assets/${comment.comments_id.user.avatar}`
-									: null
-							"
-							:alt="comment.comments_id.user?.first_name"
-							size="sm"
-						/>
-
-						<div class="flex-grow">
-							<div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-3">
-								<div class="flex items-center gap-2 mb-1">
-									<span class="font-medium text-sm">
-										{{ comment.comments_id.user?.first_name }} {{ comment.comments_id.user?.last_name }}
-									</span>
-									<span class="text-xs text-gray-500">
-										{{ new Date(comment.comments_id.date_created).toLocaleString() }}
-									</span>
-								</div>
-								<p class="text-sm">{{ comment.comments_id.comment }}</p>
-							</div>
-
-							<ReactionsBar :item-id="String(comment.comments_id.id)" collection="comments" class="mt-1" />
-						</div>
-					</div>
+					<CommentsComment
+						v-for="comment in comments"
+						:key="comment.id"
+						:comment="comment"
+						:depth="0"
+						@reply="handleReply"
+					/>
 				</TransitionGroup>
 
-				<div v-if="isLoading" class="py-4 text-center">
-					<UIcon name="i-heroicons-arrow-path" class="animate-spin" />
+				<div v-if="!comments.length" class="text-center text-sm text-gray-500 py-4">
+					No comments yet. Be the first to comment!
 				</div>
 			</div>
 		</Transition>
 	</div>
 </template>
 
-<style>
+<style scoped>
 .comments-enter-active,
 .comments-leave-active {
 	transition: all 0.3s ease;

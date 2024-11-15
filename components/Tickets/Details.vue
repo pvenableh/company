@@ -24,9 +24,9 @@
 					</UFormGroup>
 				</div>
 
-				<UFormGroup label="Category">
+				<!-- <UFormGroup label="Category">
 					<UInput v-model="form.category" placeholder="Enter categories (comma-separated)" :loading="isLoading" />
-				</UFormGroup>
+				</UFormGroup> -->
 
 				<!-- User Assignment -->
 				<UFormGroup label="Assign To">
@@ -89,8 +89,7 @@
 				<UFormGroup label="Description" required>
 					<FormTiptap
 						v-model="form.description"
-						:loading="isLoading"
-						:editable="!isLoading"
+						placeholder="Enter ticket description"
 						:editor-props="{
 							content: form.description,
 						}"
