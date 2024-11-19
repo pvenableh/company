@@ -1,24 +1,31 @@
 import { ref, watch } from 'vue';
-import { useEditor, Editor } from '@tiptap/vue-3';
+import { useEditor } from '@tiptap/vue-3';
 import StarterKit from '@tiptap/starter-kit';
 import Mention from '@tiptap/extension-mention';
-import { useDirectusUsers } from '@directus/sdk';
 
 export function useMentionPlugin(content) {
-	const directusUsers = useDirectusUsers();
 	const suggestions = ref([]);
+	const showSuggestions = ref(false);
+	const suggestionPosition = ref({ x: 0, y: 0 });
+	const selectedIndex = ref(0);
 
+	// Fetch users from Directus
 	const fetchUsers = async (query) => {
 		try {
-			const users = await directusUsers.readMany({
-				search: query,
-				fields: ['id', 'first_name', 'last_name', 'email'],
+			const { $directus } = useNuxtApp(); // Access Directus client from Nuxt app
+
+			// Use the `users` endpoint to fetch matching users
+			const response = await $directus.users.readByQuery({
+				search: query, // Search across user fields (first_name, last_name, etc.)
+				fields: ['id', 'first_name', 'last_name', 'email', 'avatar'], // Specify required fields
 			});
 
-			suggestions.value = users.map((user) => ({
+			// Map the response data to suggestions format
+			suggestions.value = (response?.data || []).map((user) => ({
 				id: user.id,
 				label: `${user.first_name} ${user.last_name}`,
 				email: user.email,
+				avatar: user.avatar,
 			}));
 		} catch (error) {
 			console.error('Error fetching users:', error);
@@ -26,6 +33,7 @@ export function useMentionPlugin(content) {
 		}
 	};
 
+	// Initialize TipTap editor
 	const editor = useEditor({
 		content: content.value,
 		extensions: [
@@ -35,25 +43,74 @@ export function useMentionPlugin(content) {
 					class: 'mention',
 				},
 				suggestion: {
-					items: ({ query }) => {
-						fetchUsers(query);
+					items: async ({ query }) => {
+						await fetchUsers(query); // Fetch users for the given query
 						return suggestions.value;
 					},
 					render: () => {
-						// Implementation of mention suggestion rendering
-						// Using NuxtUI's dropdown for suggestions
+						let command;
+
 						return {
 							onStart: (props) => {
-								// Show suggestion dropdown
+								showSuggestions.value = true;
+								command = props.command;
+								selectedIndex.value = 0;
+
+								// Calculate dropdown position
+								const rect = props.clientRect();
+								if (rect) {
+									suggestionPosition.value = {
+										x: rect.left,
+										y: rect.bottom + window.scrollY,
+									};
+								}
 							},
-							onUpdate(props) {
-								// Update suggestions
+							onUpdate: (props) => {
+								command = props.command;
+								const rect = props.clientRect();
+								if (rect) {
+									suggestionPosition.value = {
+										x: rect.left,
+										y: rect.bottom + window.scrollY,
+									};
+								}
 							},
-							onKeyDown(props) {
-								// Handle keyboard navigation
+							onKeyDown: (props) => {
+								if (!showSuggestions.value) return false;
+
+								if (props.event.key === 'ArrowUp') {
+									props.event.preventDefault();
+									selectedIndex.value = (selectedIndex.value - 1 + suggestions.value.length) % suggestions.value.length;
+									return true;
+								}
+
+								if (props.event.key === 'ArrowDown') {
+									props.event.preventDefault();
+									selectedIndex.value = (selectedIndex.value + 1) % suggestions.value.length;
+									return true;
+								}
+
+								if (props.event.key === 'Enter' || props.event.key === 'Tab') {
+									props.event.preventDefault();
+									const selectedUser = suggestions.value[selectedIndex.value];
+									if (selectedUser) {
+										command({ id: selectedUser.id, label: selectedUser.label });
+									}
+									showSuggestions.value = false;
+									return true;
+								}
+
+								if (props.event.key === 'Escape') {
+									props.event.preventDefault();
+									showSuggestions.value = false;
+									return true;
+								}
+
+								return false;
 							},
-							onExit() {
-								// Clean up
+							onExit: () => {
+								showSuggestions.value = false;
+								selectedIndex.value = 0;
 							},
 						};
 					},
@@ -65,6 +122,7 @@ export function useMentionPlugin(content) {
 		},
 	});
 
+	// Sync editor content with the reactive `content` ref
 	watch(content, (newContent) => {
 		if (editor.value && newContent !== editor.value.getHTML()) {
 			editor.value.commands.setContent(newContent);
@@ -74,5 +132,8 @@ export function useMentionPlugin(content) {
 	return {
 		editor,
 		suggestions,
+		showSuggestions,
+		suggestionPosition,
+		selectedIndex,
 	};
 }

@@ -9,22 +9,6 @@ const columns = [
 	{ id: 'completed', name: 'Completed', color: 'green' },
 ];
 
-// Setup realtime subscription for tickets
-// const fields = [
-// 	'id',
-// 	'title',
-// 	'category',
-// 	'description',
-// 	'status',
-// 	'priority',
-// 	'date_created',
-// 	'date_updated',
-// 	'assigned_to.directus_users_id.id',
-// 	'assigned_to.directus_users_id.first_name',
-// 	'assigned_to.directus_users_id.last_name',
-// 	'assigned_to.directus_users_id.avatar',
-// ];
-
 const fields = [
 	'id',
 	'title',

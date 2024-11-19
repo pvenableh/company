@@ -14,17 +14,18 @@ const props = defineProps({
 					<span class="opacity-30">Invoice #:</span>
 					{{ invoice.invoice_code }}
 				</h1>
-				<UButton
+				<!-- <UButton
 					size="sm"
 					variant="outline"
 					:ui="{ rounded: 'rounded-full' }"
 					icon="i-heroicons-document-arrow-down"
 					class="text-gray-500 dark:text-gray-400"
-				/>
+				/> -->
+				<InvoicesPdfGenerator :invoice="invoice" />
 			</div>
 			<h5 class="font-bold uppercase text-xs">
 				<span class="opacity-30">Due date:</span>
-				{{ invoice.due_date }}
+				{{ getFriendlyDateTwo(invoice.due_date) }}
 			</h5>
 			<h5 class="font-bold uppercase text-xs">
 				<span class="opacity-30">Status:</span>
@@ -52,7 +53,9 @@ const props = defineProps({
 							{{ item.description }}
 						</p>
 					</div>
-					<div class="mx-3 grow border-b border-gray-200 dark:border-gray-700"></div>
+					<div class="flex items-center flex-grow mx-3 min-w-[20px]">
+						<div class="w-full border-b border-gray-200 dark:border-gray-700"></div>
+					</div>
 					<div class="lg:tracking-wide text-[12px]">${{ item.rate }} x {{ item.quantity }}:</div>
 					<p class="lg:tracking-wide text-[12px]">${{ item.amount }}</p>
 				</div>

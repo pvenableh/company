@@ -11,7 +11,7 @@ module.exports = {
 		pink: '#fb00da',
 		green: '#00ff1b',
 		yellow: '#fff500',
-        turquoise: '#00efd1',
+		turquoise: '#00efd1',
 	},
 	container: {
 		center: true,
@@ -28,7 +28,7 @@ module.exports = {
 	],
 	theme: {
 		extend: {
-            borderRadius: {
+			borderRadius: {
 				large: '30px',
 				card: 'var(--border-radius-card)',
 				button: 'var(--border-radius-button)',
@@ -36,7 +36,7 @@ module.exports = {
 				panel: 'var(--border-radius-panel)',
 			},
 			colors: {
-				'turquoise':  {
+				turquoise: {
 					100: '#edfffc',
 					200: '#c0fff8',
 					300: '#81fff3',
@@ -46,15 +46,24 @@ module.exports = {
 					700: '#00b7a5',
 					800: '#009184',
 					900: '#00726a',
-				}, 
+				},
 			},
 			fontFamily: {
+				body: ['var(--font-body)', ...defaultTheme.fontFamily.sans],
+				bold: ['var(--font-bold)', ...defaultTheme.fontFamily.sans],
 				sans: ['var(--font-sans)', ...defaultTheme.fontFamily.sans],
 				display: ['var(--font-display)', ...defaultTheme.fontFamily.serif],
 				mono: ['var(--font-mono)', ...defaultTheme.fontFamily.mono],
 				signature: ['var(--font-signature)', 'cursive', 'sans-serif'],
 			},
-            letterSpacing: {
+			fontWeight: {
+				light: '300',
+				regular: '400',
+				medium: '500',
+				bold: '500',
+				black: '900',
+			},
+			letterSpacing: {
 				tightest: '-.075em',
 				tighter: '-.05em',
 				tight: '-.025em',
@@ -68,7 +77,7 @@ module.exports = {
 	variants: {
 		extend: {},
 	},
-    plugins: [
+	plugins: [
 		tailwindcssForms,
 		// Formkit Plugin for Tailwind
 		// https://formkit.com/guides/create-a-tailwind-theme

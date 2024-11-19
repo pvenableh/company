@@ -19,8 +19,9 @@
 				rules="email|required"
 				label="Email"
 				class="my-6"
-				disabled="true"
+				:disabled="true"
 			/>
+			<nuxt-link to="/test">Test</nuxt-link>
 
 			<UButton class="w-full mb-6" type="submit" size="lg" label="Update" block />
 		</form>

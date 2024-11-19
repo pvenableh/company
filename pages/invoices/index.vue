@@ -61,6 +61,8 @@ const items = (row) => [
 
 const userOrganizationIds = user.value.organizations.map((org) => org.organizations_id.id);
 
+console.log(userOrganizationIds);
+
 const filter = {
 	bill_to: {
 		id: {
@@ -110,14 +112,15 @@ const filteredInvoices = computed(() => {
 });
 
 const totalAmount = computed(() => {
-	return filteredInvoices.value.reduce((acc, invoice) => {
+	const total = filteredInvoices.value.reduce((acc, invoice) => {
 		const amount = Number(invoice.total_amount);
 		return acc + (isNaN(amount) ? 0 : amount); // Only add if it's a valid number
 	}, 0);
+	return new Intl.NumberFormat().format(total); // Format the total with commas
 });
 
 const unpaidTotalAmount = computed(() => {
-	return filteredInvoices.value.reduce((acc, invoice) => {
+	const total = filteredInvoices.value.reduce((acc, invoice) => {
 		// Only include invoices that are not "paid"
 		if (invoice.status !== 'paid') {
 			const amount = Number(invoice.total_amount);
@@ -125,6 +128,7 @@ const unpaidTotalAmount = computed(() => {
 		}
 		return acc;
 	}, 0);
+	return new Intl.NumberFormat().format(total); // Format the total with commas
 });
 </script>
 <template>

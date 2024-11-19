@@ -1,8 +1,15 @@
 <script setup>
+import { useMentionPlugin } from '~/composables/useMentionPlugin';
+import { EditorContent } from '@tiptap/vue-3';
+
 const props = defineProps({
-	comment: {
+	replyingTo: {
 		type: Object,
-		required: true,
+		default: null,
+	},
+	loading: {
+		type: Boolean,
+		default: false,
 	},
 	depth: {
 		type: Number,
@@ -10,162 +17,173 @@ const props = defineProps({
 	},
 });
 
-const emit = defineEmits(['reply']);
-const maxDepth = 4;
-const config = useRuntimeConfig();
-const showReplies = ref(true);
+const emit = defineEmits(['submit', 'cancel']);
+const editorContent = ref('');
 
-function handleReply() {
-	emit('reply', props.comment);
+// Initialize the editor with mention plugin
+const { editor, suggestions, showSuggestions, suggestionPosition, selectedIndex } = useMentionPlugin(editorContent);
+
+function handleSubmit() {
+	if (editor?.value && !editor.value.isEmpty) {
+		emit('submit', editor.value.getHTML());
+		editor.value.commands.setContent(''); // Clear the editor after submission
+	}
 }
 
-const hasReplies = computed(() => {
-	return props.comment.replies && props.comment.replies.length > 0;
-});
+function handleKeydown(event) {
+	// Handle keyboard shortcuts for submission or cancellation
+	if (!showSuggestions.value) {
+		if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+			event.preventDefault();
+			handleSubmit();
+		} else if (event.key === 'Escape') {
+			event.preventDefault();
+			emit('cancel');
+		}
+	}
+}
 
-const repliesCount = computed(() => {
-	let count = 0;
-	const countReplies = (comment) => {
-		count += 1;
-		comment.replies?.forEach(countReplies);
-	};
-	props.comment.replies.forEach(countReplies);
-	return count;
-});
-
-const formattedDate = computed(() => {
-	return new Date(props.comment.comments_id.date_created).toLocaleString();
-});
-
-function toggleReplies() {
-	showReplies.value = !showReplies.value;
+function selectMention(suggestion) {
+	console.log('Selected mention:', suggestion);
+	// Additional handling for selected mentions can be implemented here
 }
 </script>
 
 <template>
-	<div class="comment-group">
-		<!-- Main comment -->
-		<div class="comment-thread" :class="{ [`depth-${depth}`]: true }">
-			<div class="flex gap-3">
-				<UAvatar
-					:src="
-						comment.comments_id.user?.avatar
-							? `${config.public.directusUrl}/assets/${comment.comments_id.user.avatar}`
-							: null
-					"
-					:alt="comment.comments_id.user?.first_name"
-					size="sm"
-				/>
-
-				<div class="flex-grow">
-					<div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-3">
-						<div class="flex items-center gap-2 mb-1">
-							<span class="font-medium text-sm">
-								{{ comment.comments_id.user?.first_name }} {{ comment.comments_id.user?.last_name }}
-							</span>
-							<span class="text-xs text-gray-500">
-								{{ formattedDate }}
-							</span>
-						</div>
-						<p class="text-sm">{{ comment.comments_id.comment }}</p>
-					</div>
-
-					<div class="flex gap-2 mt-1 items-center">
-						<ReactionsBar :item-id="String(comment.comments_id.id)" collection="comments" />
-						<UButton v-if="depth < maxDepth" variant="ghost" size="xs" @click="handleReply">Reply</UButton>
-						<UButton v-if="hasReplies" variant="ghost" size="xs" class="ml-auto" @click="toggleReplies">
-							<span class="flex items-center gap-1">
-								<UIcon :name="showReplies ? 'i-heroicons-chevron-down' : 'i-heroicons-chevron-right'" class="w-4 h-4" />
-								{{ repliesCount }} {{ repliesCount === 1 ? 'reply' : 'replies' }}
-							</span>
-						</UButton>
-					</div>
-				</div>
-			</div>
+	<div class="relative flex flex-col gap-2" :class="`depth-${depth}`">
+		<!-- Reply Context -->
+		<div v-if="replyingTo" class="flex items-center gap-2 text-sm p-2 bg-gray-50 dark:bg-gray-900 rounded-lg">
+			<span class="text-gray-500">Replying to {{ replyingTo.comments_id.user?.first_name }}'s comment:</span>
+			<p class="text-sm font-medium truncate flex-1">{{ replyingTo.comments_id.comment }}</p>
+			<UButton size="xs" variant="ghost" icon="i-heroicons-x-mark" @click="$emit('cancel')" />
 		</div>
 
-		<!-- Replies -->
-		<Transition
-			enter-active-class="transition-all duration-300 ease-out"
-			enter-from-class="opacity-0 max-h-0"
-			enter-to-class="opacity-100 max-h-[1000px]"
-			leave-active-class="transition-all duration-200 ease-in"
-			leave-from-class="opacity-100 max-h-[1000px]"
-			leave-to-class="opacity-0 max-h-0"
-		>
-			<div
-				v-if="hasReplies && showReplies"
-				class="replies-wrapper ml-4 pl-4 mt-3 border-l-2 border-gray-200 dark:border-gray-700 overflow-hidden"
-			>
-				<CommentsComment
-					v-for="reply in comment.replies"
-					:key="reply.id"
-					:comment="reply"
-					:depth="depth + 1"
-					@reply="$emit('reply', $event)"
-				/>
-			</div>
-		</Transition>
+		<!-- Comment Input -->
+		<div class="flex gap-2">
+			<div class="relative flex-grow">
+				<!-- TipTap Editor -->
+				<div
+					class="prose dark:prose-invert max-w-none w-full bg-white dark:bg-gray-800 rounded-lg p-3 min-h-[40px] border dark:border-gray-700"
+					@keydown="handleKeydown"
+				>
+					<EditorContent :editor="editor" />
+				</div>
 
-		<!-- Collapsed replies indicator -->
-		<!-- <div
-			v-if="hasReplies && !showReplies"
-			class="mt-2 ml-4 text-sm text-gray-500 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300"
-			@click="toggleReplies"
-		>
-			<span class="flex items-center gap-1">
-				<UIcon name="i-heroicons-chat-bubble-left-ellipsis" class="w-4 h-4" />
-				Show {{ repliesCount }} {{ repliesCount === 1 ? 'reply' : 'replies' }}
-			</span>
-		</div> -->
+				<!-- Mentions Dropdown -->
+				<Teleport to="body">
+					<Transition
+						enter-active-class="transition duration-200 ease-out"
+						enter-from-class="opacity-0 scale-95"
+						enter-to-class="opacity-100 scale-100"
+						leave-active-class="transition duration-150 ease-in"
+						leave-from-class="opacity-100 scale-100"
+						leave-to-class="opacity-0 scale-95"
+					>
+						<div
+							v-if="showSuggestions && suggestions.length"
+							class="fixed z-50 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-700 overflow-hidden"
+							:style="{
+								left: `${suggestionPosition.x}px`,
+								top: `${suggestionPosition.y}px`,
+							}"
+						>
+							<div class="max-h-48 overflow-y-auto py-1">
+								<div
+									v-for="(suggestion, index) in suggestions"
+									:key="suggestion.id"
+									class="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-2"
+									:class="{ 'bg-gray-100 dark:bg-gray-700': index === selectedIndex }"
+									@click="selectMention(suggestion)"
+								>
+									<UAvatar
+										:src="
+											suggestion.avatar ? `${useRuntimeConfig().public.directusUrl}/assets/${suggestion.avatar}` : null
+										"
+										:alt="suggestion.label"
+										size="sm"
+									/>
+									<div>
+										<div class="font-medium text-sm">{{ suggestion.label }}</div>
+										<div class="text-xs text-gray-500">{{ suggestion.email }}</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</Transition>
+				</Teleport>
+			</div>
+
+			<!-- Submit Button -->
+			<UButton color="primary" :loading="loading" @click="handleSubmit" :disabled="editor?.isEmpty">
+				{{ replyingTo ? 'Reply' : 'Post' }}
+			</UButton>
+		</div>
+
+		<p class="text-xs text-gray-500 mt-1">Press @ to mention someone • Ctrl/Cmd + Enter to submit</p>
 	</div>
 </template>
 
-<style scoped>
-.comment-group {
-	margin-bottom: 1rem;
+<style>
+/* Editor Styles */
+.ProseMirror {
+	outline: none;
+	min-height: 40px;
 }
 
-.comment-thread {
-	margin-bottom: 0.5rem;
+.ProseMirror p {
+	margin: 0;
 }
 
+/* Depth-based Indentation */
 .depth-0 {
 	margin-left: 0;
 }
 .depth-1 {
-	margin-left: 0.5rem;
-}
-.depth-2 {
-	margin-left: 1rem;
-}
-.depth-3 {
-	margin-left: 1.5rem;
-}
-.depth-4 {
 	margin-left: 2rem;
 }
-
-.replies-wrapper {
-	position: relative;
-	transition: border-color 0.2s ease;
+.depth-2 {
+	margin-left: 4rem;
+}
+.depth-3 {
+	margin-left: 6rem;
+}
+.depth-4 {
+	margin-left: 8rem;
 }
 
-.replies-wrapper:hover {
-	border-color: var(--color-primary-500);
-}
-
+/* Responsive Indentation */
 @media (max-width: 768px) {
-	.replies-wrapper {
-		margin-left: 0.5rem;
-		padding-left: 0.5rem;
+	.depth-1 {
+		margin-left: 1rem;
 	}
-
-	.depth-1,
-	.depth-2,
-	.depth-3,
+	.depth-2 {
+		margin-left: 2rem;
+	}
+	.depth-3 {
+		margin-left: 3rem;
+	}
 	.depth-4 {
-		margin-left: 0;
+		margin-left: 4rem;
 	}
+}
+
+/* Mention Dropdown Styles */
+.suggestions-dropdown {
+	scrollbar-width: thin;
+	scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+	z-index: 9999;
+}
+
+.suggestions-dropdown::-webkit-scrollbar {
+	width: 6px;
+}
+
+.suggestions-dropdown::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.suggestions-dropdown::-webkit-scrollbar-thumb {
+	background-color: rgba(156, 163, 175, 0.5);
+	border-radius: 3px;
 }
 </style>

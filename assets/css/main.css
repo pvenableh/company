@@ -5,7 +5,9 @@
 html, body {
   color: var(--darkGrey);
   scroll-behavior: smooth;
-  @apply font-bold;
+  -webkit-font-smoothing: antialiased; /* Improves readability */
+  -moz-osx-font-smoothing: grayscale; /* For macOS */
+  @apply font-body;
 }
 *:focus {
   outline: 0 !important;
@@ -82,7 +84,9 @@ a {
     @apply relative z-10;
   }
   &__title {
-    @apply absolute top-0 w-full uppercase leading-[0.7em] font-thin text-8xl mt-2 opacity-20 z-0;
+    font-family: var(--font-light) !important;
+    font-weight: 200 !important;
+    @apply absolute top-0 w-full uppercase leading-[0.7em] text-8xl mt-2 opacity-20 z-0;
   }
   &__inner {
     @apply relative z-10 mt-12;
