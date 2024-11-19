@@ -62,7 +62,7 @@ const generatePDF = async () => {
       position: absolute;
       left: -9999px;
       color: #000000;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-family: 'Proxima Nova W01 Regular', 'Avenir Next', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       border: none;
       box-shadow: none;
     `;
