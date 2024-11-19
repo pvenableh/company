@@ -71,6 +71,13 @@ payment.value = {
 };
 
 localStorage.setItem('payment', JSON.stringify(payment.value));
+
+const formatNumber = (value) => {
+	return new Intl.NumberFormat('en-US', {
+		minimumFractionDigits: 2,
+		maximumFractionDigits: 2,
+	}).format(value);
+};
 </script>
 <template>
 	<div class="w-full flex flex-col payment">
@@ -80,7 +87,7 @@ localStorage.setItem('payment', JSON.stringify(payment.value));
 		</p>
 		<h5 class="uppercase tracking-wide mb-6">
 			<span class="opacity-50">Total:</span>
-			${{ totalWithFees }}
+			${{ formatNumber(totalWithFees) }}
 			<span v-if="panel === 'card'" class="text-[9px] uppercase">Includes a ${{ stripeFee }} Processing fee.</span>
 		</h5>
 		<transition :name="animateName" mode="out-in" class="relative transition-container">

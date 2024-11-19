@@ -245,6 +245,13 @@ onBeforeUnmount(() => {
 		elements.getElement('payment')?.destroy();
 	}
 });
+
+const formatNumber = (value) => {
+	return new Intl.NumberFormat('en-US', {
+		minimumFractionDigits: 2,
+		maximumFractionDigits: 2,
+	}).format(value);
+};
 </script>
 
 <style>
