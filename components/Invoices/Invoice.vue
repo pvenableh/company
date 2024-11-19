@@ -64,7 +64,7 @@ const formatNumber = (value) => {
 						<div v-if="item.description" class="text-[9px] max-w-64" v-html="item.description"></div>
 					</div>
 				</div>
-				<div class="lg:ml-3 flex flex-row items-center justify-between mt-6 pt-6 border-t">
+				<div class="lg:ml-3 flex flex-row items-center justify-between pt-6">
 					<p class="uppercase text-[12px] font-bold">Total:</p>
 					<p class="text-[12px]">${{ formatNumber(invoice.total_amount) }}</p>
 				</div>
