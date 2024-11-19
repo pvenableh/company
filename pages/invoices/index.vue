@@ -130,6 +130,13 @@ const unpaidTotalAmount = computed(() => {
 	}, 0);
 	return new Intl.NumberFormat().format(total); // Format the total with commas
 });
+
+const formatNumber = (value) => {
+	return new Intl.NumberFormat('en-US', {
+		minimumFractionDigits: 2,
+		maximumFractionDigits: 2,
+	}).format(value);
+};
 </script>
 <template>
 	<div class="md:px-6 mx-auto flex items-center justify-center flex-col relative tickets">
@@ -177,7 +184,7 @@ const unpaidTotalAmount = computed(() => {
 					{{ formatDueDate(row.due_date) }}
 				</p>
 			</template>
-			<template #total_amount-data="{ row }">${{ row.total_amount }}</template>
+			<template #total_amount-data="{ row }">${{ formatNumber(row.total_amount) }}</template>
 			<template #bill_to.name-data="{ row }" class="uppercase">
 				<p class="text-[12px] leading-3 max-w-32 whitespace-pre-wrap uppercase font-bold">
 					{{ row.bill_to.name }}

@@ -5,6 +5,12 @@ const props = defineProps({
 		required: true,
 	},
 });
+const formatNumber = (value) => {
+	return new Intl.NumberFormat('en-US', {
+		minimumFractionDigits: 2,
+		maximumFractionDigits: 2,
+	}).format(value);
+};
 </script>
 <template>
 	<div class="px-6 pt-12 pb-16 w-full border bg-white dark:bg-gray-700 bg-opacity-90 shadow invoice">
@@ -14,13 +20,6 @@ const props = defineProps({
 					<span class="opacity-30">Invoice #:</span>
 					{{ invoice.invoice_code }}
 				</h1>
-				<!-- <UButton
-					size="sm"
-					variant="outline"
-					:ui="{ rounded: 'rounded-full' }"
-					icon="i-heroicons-document-arrow-down"
-					class="text-gray-500 dark:text-gray-400"
-				/> -->
 				<InvoicesPdfGenerator :invoice="invoice" />
 			</div>
 			<h5 class="font-bold uppercase text-xs">
@@ -45,23 +44,29 @@ const props = defineProps({
 				<div
 					v-for="(item, index) in invoice.line_items"
 					:key="index"
-					class="lg:pl-3 my-1 flex flex-row items-center justify-between"
+					class="lg:pl-3 my-1 flex flex-col items-start justify-between pb-12"
 				>
-					<div class="">
-						<p class="uppercase lg:tracking-wide text-[12px] font-bold">{{ item.product.name }}</p>
-						<p v-if="item.description" class="text-[9px]">
-							{{ item.description }}
-						</p>
+					<div class="w-full flex flex-col md:flex-row items-start justify-between">
+						<p class="uppercase text-[12px] font-bold">{{ item.product.name }}</p>
+						<div class="hidden md:flex items-center flex-grow ml-1 mr-3 min-w-[20px] h-[15px]">
+							<div class="w-full border-b border-gray-200 dark:border-gray-700"></div>
+						</div>
+						<div
+							class="text-[12px] md:text-right w-full md:w-auto flex flex-row md:justify-end items-end whitespace-nowrap"
+						>
+							${{ formatNumber(item.rate) }} x {{ formatNumber(item.quantity) }}
+							<span class="mx-2">:</span>
+							<p class="text-[12px]">${{ formatNumber(item.amount) }}</p>
+						</div>
 					</div>
-					<div class="flex items-center flex-grow mx-3 min-w-[20px]">
-						<div class="w-full border-b border-gray-200 dark:border-gray-700"></div>
+					<div v-if="item.description" class="mt-2">
+						<h5 class="uppercase text-[8px] opacity-25">Description:</h5>
+						<div v-if="item.description" class="text-[9px] max-w-64" v-html="item.description"></div>
 					</div>
-					<div class="lg:tracking-wide text-[12px]">${{ item.rate }} x {{ item.quantity }}:</div>
-					<p class="lg:tracking-wide text-[12px]">${{ item.amount }}</p>
 				</div>
-				<div class="lg:ml-3 flex flex-row items-center justify-between border-t mt-6 pt-6">
-					<p class="uppercase tracking-wide text-[12px] font-bold">Total:</p>
-					<p class="tracking-wide text-[12px]">${{ invoice.total_amount }}</p>
+				<div class="lg:ml-3 flex flex-row items-center justify-between mt-6 pt-6 border-t">
+					<p class="uppercase text-[12px] font-bold">Total:</p>
+					<p class="text-[12px]">${{ formatNumber(invoice.total_amount) }}</p>
 				</div>
 			</div>
 		</div>
@@ -71,7 +76,14 @@ const props = defineProps({
 .invoice {
 	max-width: 528px;
 	@media (min-width: theme('screens.lg')) {
-		/* min-width: 500px; */
+		max-width: 750px;
+	}
+	ul {
+		list-style: disc;
+		list-style-position: inside;
+		padding-left: 0px;
+		margin: 2px 0px;
+		line-height: 12px;
 	}
 }
 </style>
