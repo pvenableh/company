@@ -70,7 +70,9 @@ payment.value = {
 	stripeAmount: total.value,
 };
 
-localStorage.setItem('payment', JSON.stringify(payment.value));
+if (process.client) {
+	localStorage.setItem('payment', JSON.stringify(payment.value));
+}
 
 const formatNumber = (value) => {
 	return new Intl.NumberFormat('en-US', {
