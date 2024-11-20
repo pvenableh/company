@@ -1,38 +1,40 @@
 <template>
-	<div class="ticket-card bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-all mb-4">
-		<div class="p-3 space-y-2" @click="$emit('expand')">
+	<div class="ticket-card w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-all">
+		<div class="w-full p-4" @click="$emit('expand')">
 			<!-- Ticket Header -->
-			<div class="flex items-start justify-between">
+			<div class="flex items-start justify-between my-2">
 				<span class="text-gray-500 font-medium text-[8px] italic">{{ element?.id }}</span>
-				<UBadge v-if="element?.priority" :color="getPriorityColor(element.priority)" variant="subtle" size="xs">
+				<UTooltip :text="getTicketInfo">
+					<UButton
+						color="gray"
+						variant="ghost"
+						icon="i-heroicons-information-circle"
+						size="xs"
+						class="group-hover:opacity-100 transition-opacity"
+					/>
+				</UTooltip>
+				<UBadge
+					v-if="element?.priority"
+					:color="getPriorityColor(element.priority)"
+					variant="subtle"
+					size="xs"
+					class="uppercase text-[9px]"
+				>
 					{{ element.priority }}
 				</UBadge>
 			</div>
 
 			<!-- Ticket Title -->
-			<h4 class="font-medium text-sm line-clamp-2">{{ element?.title }}</h4>
-
-			<!-- Categories -->
-			<!-- <div v-if="element?.category" class="flex flex-wrap gap-1">
-				<UBadge
-					v-for="category in getCategories"
-					:key="category"
-					color="gray"
-					variant="subtle"
-					size="xs"
-					class="truncate max-w-[150px]"
-				>
-					{{ category.trim() }}
-				</UBadge>
-			</div> -->
+			<h4 class="font-medium text-sm line-clamp-2 mt-2">{{ element?.title }}</h4>
+			<h5 class="text-gray-800 text-[8px] mt-0 uppercase mb-2">{{ element?.organization.name }}</h5>
 
 			<!-- Assigned Users -->
-			<div class="flex items-center justify-between text-xs text-gray-500">
+			<div class="flex items-center justify-between text-xs text-gray-500 mt-4">
 				<div class="flex items-center">
 					<!-- Avatar Stack -->
 					<div class="flex -space-x-1">
 						<template v-if="assignedUsers.length">
-							<UTooltip v-for="user in displayUsers" :key="user.id" :text="getUserFullName(user)">
+							<UTooltip v-for="(user, index) in displayUsers" :key="index" :text="getUserFullName(user)">
 								<UAvatar
 									:src="getAvatarUrl(user)"
 									:alt="getUserFullName(user)"
@@ -58,7 +60,10 @@
 					</div>
 				</div>
 
-				<span>{{ formatDate(element?.date_updated) }}</span>
+				<p v-if="element?.due_date" class="uppercase text-[10px]">
+					<span>due:</span>
+					{{ formatDueDate(element?.due_date) }}
+				</p>
 			</div>
 		</div>
 		<ReactionsBar :item-id="element.id" collection="tickets" />
@@ -111,8 +116,6 @@ const getAdditionalUsersTooltip = computed(() => {
 	return `Also assigned: ${additionalUsers}`;
 });
 
-const getCategories = computed(() => (props.element?.category ? props.element.category.split(',') : []));
-
 // Check if a user is the current authenticated user
 const isCurrentUser = (assignedUser) => {
 	return assignedUser?.id === user?.value?.id;
@@ -139,15 +142,42 @@ const getUserFullName = (user) => {
 	return `${user.first_name} ${user.last_name}`.trim();
 };
 
-const formatDate = (date) => {
-	if (!date) return '';
-	return new Date(date).toLocaleDateString('en-US', {
+// const formatDate = (date) => {
+// 	if (!date) return '';
+// 	return new Date(date).toLocaleDateString('en-US', {
+// 		month: 'short',
+// 		day: 'numeric',
+// 		hour: '2-digit',
+// 		minute: '2-digit',
+// 	});
+// };
+
+const getTicketInfo = computed(() => {
+	if (!props.element) return '';
+
+	const creator =
+		props.element.user_created?.first_name && props.element.user_created?.last_name
+			? `${props.element.user_created.first_name} ${props.element.user_created.last_name}`
+			: 'Unknown';
+
+	const created = new Date(props.element.date_created).toLocaleDateString('en-US', {
 		month: 'short',
 		day: 'numeric',
+		year: 'numeric',
 		hour: '2-digit',
 		minute: '2-digit',
 	});
-};
+
+	const updated = new Date(props.element.date_updated).toLocaleDateString('en-US', {
+		month: 'short',
+		day: 'numeric',
+		year: 'numeric',
+		hour: '2-digit',
+		minute: '2-digit',
+	});
+
+	return `Created by ${creator} @ ${created}<\n>Last updated: ${updated}`;
+});
 </script>
 
 <style scoped>

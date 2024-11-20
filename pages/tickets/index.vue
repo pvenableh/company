@@ -1,10 +1,10 @@
 <template>
-	<div class="md:px-6 mx-auto flex items-start justify-center flex-col relative">
+	<div class="relative">
 		<h1 class="page__title">
 			Tickets
 			<span class="block">Board</span>
 		</h1>
-		<div class="w-full flex flex-col lg:flex-row items-center lg:items-start justify-center z-10 page__inner">
+		<div class="w-full xl:flex xl:items-center xl:justify-center z-10 overflow-x-auto page__inner">
 			<TicketsBoard />
 		</div>
 	</div>

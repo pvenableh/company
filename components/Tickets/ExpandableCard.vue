@@ -1,7 +1,7 @@
 <template>
-	<div ref="cardRef" class="relative">
+	<div ref="cardRef" class="w-full relative flex flex-col lg:flex-row flex-wrap items-center justify-center">
 		<!-- Card Preview -->
-		<div class="cursor-pointer transition-transform duration-300" :class="{ 'pointer-events-none': isExpanded }">
+		<div class="w-full cursor-pointer transition-transform duration-300" :class="{ 'pointer-events-none': isExpanded }">
 			<TicketsCard :element="element" @expand="expand" />
 		</div>
 
@@ -17,7 +17,7 @@
 			>
 				<div
 					v-if="isExpanded"
-					class="fixed inset-0 bg-white dark:bg-gray-800 z-[9999] overflow-auto"
+					class="fixed inset-0 bg-white dark:bg-gray-800 z-[50] overflow-auto"
 					@click.self="collapse"
 				>
 					<div class="container mx-auto">
@@ -49,6 +49,8 @@
 </template>
 
 <script setup>
+const { triggerRefresh } = useTicketsStore();
+
 const props = defineProps({
 	element: {
 		type: Object,
@@ -75,6 +77,7 @@ const expand = () => {
 const collapse = () => {
 	isExpanded.value = false;
 	document.body.style.overflow = '';
+	triggerRefresh();
 };
 
 onMounted(() => {

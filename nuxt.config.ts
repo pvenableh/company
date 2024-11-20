@@ -1,6 +1,8 @@
 // import { formatFonts } from './utils/fonts';
 // import { theme } from './theme';
 
+import { UNotifications } from '#build/components';
+
 export default defineNuxtConfig({
 	ssr: true,
 
@@ -46,6 +48,21 @@ export default defineNuxtConfig({
 			'@nuxt/ui',
 			{
 				icons: ['heroicons', 'wi', 'meteocons'],
+				notification: {
+					position: 'top-[unset]] bottom-0',
+					timeout: 1000,
+					default: {
+						timeout: 1000,
+						closeButton: {
+							icon: 'i-heroicons-archive-box-x-mark',
+							color: 'primary',
+							variant: 'outline',
+							padded: true,
+							size: '2xs',
+							ui: { rounded: 'rounded-full' },
+						},
+					},
+				},
 			},
 		],
 		'@nuxtjs/color-mode',

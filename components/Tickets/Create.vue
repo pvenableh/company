@@ -40,6 +40,42 @@
 									<UFormGroup label="Priority">
 										<USelect v-model="form.priority" :options="priorities" />
 									</UFormGroup>
+									<UFormGroup v-if="hasMultipleOrgs" label="Organization" required>
+										<USelect
+											v-model="form.organization"
+											:options="orgOptions"
+											option-attribute="name"
+											value-attribute="id"
+											placeholder="Select organization"
+										/>
+									</UFormGroup>
+									<UFormGroup label="Due Date">
+										<div class="grid grid-cols-2 gap-4">
+											<UPopover>
+												<UInput
+													:model-value="formatDisplayDate(form.due_date)"
+													:readonly="true"
+													:placeholder="formatDisplayDate(new Date())"
+													icon="i-heroicons-calendar"
+												/>
+												<template #panel>
+													<VCalendar
+														:attributes="calendarAttrs"
+														is-expanded
+														v-model="selectedDate"
+														@dayclick="updateDueDate"
+													/>
+												</template>
+											</UPopover>
+
+											<USelect
+												v-model="selectedTime"
+												:options="timeOptions"
+												placeholder="Select time"
+												@update:model-value="updateDateTime"
+											/>
+										</div>
+									</UFormGroup>
 								</div>
 
 								<!-- <UFormGroup label="Category">
@@ -124,6 +160,12 @@
 </template>
 
 <script setup>
+defineProps({
+	columns: {
+		type: Array,
+		required: true,
+	},
+});
 const { createItem } = useDirectusItems();
 const { readUsers } = useDirectusUsers();
 const { user: currentUser } = useDirectusAuth();
@@ -134,12 +176,67 @@ const isLoading = ref(false);
 const userOptions = ref([]);
 const selectedUser = ref(null);
 
+const toast = useToast();
+
+const selectedDate = ref(new Date());
+const selectedTime = ref('17:00');
+
+const timeOptions = Array.from({ length: 48 }, (_, i) => {
+	const hour = Math.floor(i / 2);
+	const minute = (i % 2) * 30;
+	const time = new Date();
+	time.setHours(hour, minute);
+	return {
+		label: time.toLocaleTimeString('en-US', {
+			hour: '2-digit',
+			minute: '2-digit',
+			hour12: true,
+		}),
+		value: `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
+	};
+});
+
+const formatDisplayDate = (date) => {
+	if (!date) return '';
+	return new Date(date).toLocaleDateString('en-US', {
+		month: 'short',
+		day: 'numeric',
+		year: 'numeric',
+	});
+};
+
+const updateDueDate = (day) => {
+	selectedDate.value = day.date;
+	updateDateTime();
+};
+
+const updateDateTime = () => {
+	if (selectedDate.value && selectedTime.value) {
+		const [hours, minutes] = selectedTime.value.split(':');
+		const dateTime = new Date(selectedDate.value);
+		dateTime.setHours(parseInt(hours), parseInt(minutes));
+		form.value.due_date = dateTime.toISOString();
+	}
+};
+
+const orgOptions = computed(
+	() =>
+		currentUser.value?.organizations?.map((org) => ({
+			id: org.organizations_id.id,
+			name: org.organizations_id.name,
+		})) || [],
+);
+
+const hasMultipleOrgs = computed(() => orgOptions.value.length > 1);
+const defaultOrg = computed(() => orgOptions.value[0]?.id || null);
+
 const form = ref({
 	title: '',
 	description: '',
-	status: 'pending',
+	organization: defaultOrg.value,
+	status: 'Pending',
 	priority: 'medium',
-	category: '',
+	due_date: '',
 	assigned_to: [],
 });
 
@@ -148,6 +245,14 @@ const priorities = [
 	{ value: 'medium', label: 'Medium' },
 	{ value: 'high', label: 'High' },
 	{ value: 'urgent', label: 'Urgent' },
+];
+
+const calendarAttrs = [
+	{
+		key: 'today',
+		dot: true,
+		dates: new Date(),
+	},
 ];
 
 // Fetch users
@@ -170,7 +275,7 @@ const fetchUsers = async () => {
 	} catch (error) {
 		console.error('Error fetching users:', error);
 		userOptions.value = [];
-		useToast().add({
+		toast.add({
 			title: 'Error',
 			description: 'Failed to load users. Please refresh the page.',
 			color: 'red',
@@ -235,37 +340,34 @@ watch(
 	},
 	{ deep: true },
 );
+
 const createTicket = async () => {
 	try {
 		isLoading.value = true;
 
-		// Create the ticket
+		// Extract assigned_to from form data
+		const { assigned_to, ...ticketData } = form.value;
+
+		// Create ticket first
 		const ticket = await createItem('tickets', {
-			title: form.value.title,
-			description: form.value.description,
-			status: form.value.status,
-			priority: form.value.priority,
-			category: form.value.category,
+			...ticketData,
 			date_created: new Date(),
 			date_updated: new Date(),
 		});
 
-		console.log('Created ticket:', ticket);
-
-		// Create user assignments
-		if (form.value.assigned_to.length) {
-			const assignments = await Promise.all(
-				form.value.assigned_to.map((userId) =>
+		// Then create user assignments if any exist
+		if (assigned_to?.length) {
+			await Promise.all(
+				assigned_to.map((userId) =>
 					createItem('tickets_directus_users', {
 						tickets_id: ticket.id,
 						directus_users_id: userId,
 					}),
 				),
 			);
-			console.log('Created assignments:', assignments);
 		}
 
-		useToast().add({
+		toast.add({
 			title: 'Success',
 			description: 'Ticket created successfully',
 			color: 'green',
@@ -274,7 +376,7 @@ const createTicket = async () => {
 		closeForm();
 	} catch (error) {
 		console.error('Error creating ticket:', error);
-		useToast().add({
+		toast.add({
 			title: 'Error',
 			description: 'Failed to create ticket. Please try again.',
 			color: 'red',
@@ -283,6 +385,48 @@ const createTicket = async () => {
 		isLoading.value = false;
 	}
 };
+
+// const createTicket = async () => {
+// 	try {
+// 		isLoading.value = true;
+// 		console.log(form.value);
+// 		console.log(form.value.organization || defaultOrg.value);
+// 		const ticket = await createItem('tickets', {
+// 			...form.value,
+// 			organization: form.value.organization || defaultOrg.value,
+// 			date_created: new Date(),
+// 			date_updated: new Date(),
+// 		});
+
+// 		if (form.value.assigned_to.length) {
+// 			await Promise.all(
+// 				form.value.assigned_to.map((userId) =>
+// 					createItem('tickets_directus_users', {
+// 						tickets_id: ticket.id,
+// 						directus_users_id: userId,
+// 					}),
+// 				),
+// 			);
+// 		}
+
+// 		toast.add({
+// 			title: 'Success',
+// 			description: 'Ticket created successfully',
+// 			color: 'green',
+// 		});
+// 		emit('ticketCreated');
+// 		closeForm();
+// 	} catch (error) {
+// 		console.error('Error creating ticket:', error);
+// 		toast.add({
+// 			title: 'Error',
+// 			description: 'Failed to create ticket. Please try again.',
+// 			color: 'red',
+// 		});
+// 	} finally {
+// 		isLoading.value = false;
+// 	}
+// };
 
 const openForm = async () => {
 	isExpanded.value = true;
@@ -294,14 +438,15 @@ const openForm = async () => {
 const closeForm = () => {
 	isExpanded.value = false;
 	document.body.style.overflow = '';
-	// Reset form
 	form.value = {
 		title: '',
 		description: '',
-		status: 'pending',
+		status: 'Pending',
 		priority: 'medium',
 		category: '',
+		due_date: '',
 		assigned_to: [],
+		organization: defaultOrg.value,
 	};
 };
 
@@ -315,12 +460,5 @@ onMounted(() => {
 
 onUnmounted(() => {
 	document.body.style.overflow = '';
-});
-
-defineProps({
-	columns: {
-		type: Array,
-		required: true,
-	},
 });
 </script>

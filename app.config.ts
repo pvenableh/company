@@ -7,9 +7,6 @@ export default defineAppConfig({
 		primary: 'zinc',
 		gray: 'zinc',
 		borderRadius: 'full',
-		notifications: {
-			position: 'top-0 right-0 bottom-auto left-auto',
-		},
 		card: {
 			base: 'transition duration-200',
 			shadow: 'shadow-none',
@@ -30,6 +27,9 @@ export default defineAppConfig({
 			color: {
 				white: {
 					solid: 'bg-white dark:bg-gray-900',
+				},
+				ghost: {
+					solid: 'bg-transparent text-turqoise-500 dark:text-turqoise-400',
 				},
 			},
 		},
@@ -74,12 +74,18 @@ export default defineAppConfig({
 				color: 'text-primary-500 dark:text-gray-900',
 			},
 			background: 'bg-gray-800 dark:bg-primary-600 ',
+			progress: {
+				base: 'absolute bottom-0 end-0 start-0 h-1',
+				background: 'bg-turquoise-500 dark:bg-turquoise-400',
+			},
 			default: {
 				closeButton: {
-					color: 'primary-300',
 					icon: 'i-heroicons-x-circle',
 				},
 			},
+		},
+		notifications: {
+			position: 'top-auto right-0 bottom-0 left-auto',
 		},
 		commandPalette: {
 			default: {

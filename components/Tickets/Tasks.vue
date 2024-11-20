@@ -14,7 +14,7 @@ const isInitialized = ref(false);
 
 const { data: remoteTasks } = useRealtimeSubscription(
 	'tasks',
-	['*', 'user_created.first_name', 'user_created.last_name'],
+	['*', 'user_created.first_name', 'user_created.last_name', 'user_updated.first_name', 'user_updated.last_name'],
 	{
 		ticket_id: {
 			_eq: props.ticketId,
@@ -151,7 +151,8 @@ const getCreatorInfo = (task) => {
 							v-if="task.status === 'completed'"
 							class="text-[8px] text-gray-500 mt-0.5 uppercase absolute left-0 -bottom-[10px]"
 						>
-							Completed {{ formatCompletionDate(task.date_updated) }}
+							Completed {{ formatCompletionDate(task.date_updated) }} by
+							{{ task.user_updated ? ` ${task.user_updated.first_name}` : '' }}
 						</div>
 					</div>
 					<UTooltip :text="getCreatorInfo(task)">

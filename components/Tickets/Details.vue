@@ -33,6 +33,7 @@
 					<div class="space-y-2">
 						<!-- Selected Users Display -->
 						<div v-if="form.assigned_to.length" class="flex flex-wrap gap-2 mb-2">
+							<div v-for="(user, index) in element.assigned_to" :key="index">{{ user }}</div>
 							<UBadge
 								v-for="userId in form.assigned_to"
 								:key="userId"
@@ -99,25 +100,25 @@
 				<div class="flex justify-end">
 					<div class="flex items-center justify-between">
 						<div class="flex items-center space-x-2">
-							<UButton color="gray" variant="ghost" icon="i-heroicons-paper-clip" :loading="isLoading" />
-							<UButton color="gray" variant="ghost" icon="i-heroicons-share" :loading="isLoading" />
+							<UButton variant="ghost" color="gray" icon="i-heroicons-paper-clip" :loading="isLoading" />
+							<UButton variant="ghost" color="gray" icon="i-heroicons-share" :loading="isLoading" />
+							<UButton
+								variant="ghost"
+								color="red"
+								icon="i-heroicons-archive-box"
+								:loading="isLoading"
+								@click="confirmDelete"
+							/>
 						</div>
-						<UButton
-							color="red"
-							variant="ghost"
-							icon="i-heroicons-archive-box"
-							:loading="isLoading"
-							@click="confirmDelete"
-						/>
+						<UButton type="submit" color="primary" :loading="isLoading">Save Changes</UButton>
 					</div>
-					<UButton type="submit" color="primary" :loading="isLoading">Save Changes</UButton>
 				</div>
-				<div class="w-full">
+				<div class="w-full lg:pb-20">
 					<h4 class="text-sm font-medium text-gray-500 mb-2">Comments</h4>
 					<CommentsSystem :item-id="element.id" collection="tickets" />
 				</div>
 			</form>
-			<div class="w-full lg:w-[600px] lg:border lg:shadow-lg lg:p-6 lg:sticky lg:top-20 lg:ml-10">
+			<div class="w-full lg:w-[500px] lg:border lg:shadow-lg lg:p-6 lg:sticky lg:top-20">
 				<h4 class="text-sm font-medium text-gray-500 mb-2">Tasks</h4>
 				<TicketsTasks :ticket-id="element.id" class="mt-4 pb-12" />
 			</div>
@@ -139,7 +140,7 @@
 
 					<template #footer>
 						<div class="flex justify-end space-x-2">
-							<UButton color="gray" variant="soft" @click="showDeleteModal = false">Cancel</UButton>
+							<UButton variant="soft" color="gray" @click="showDeleteModal = false">Cancel</UButton>
 							<UButton color="red" :loading="isLoading" @click="deleteTicket">Delete</UButton>
 						</div>
 					</template>
@@ -166,13 +167,14 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['close', 'deleted']);
-const { createItem, deleteItem, updateItem } = useDirectusItems();
+const { createItem, deleteItems, deleteItem, updateItem } = useDirectusItems();
 const { readUsers } = useDirectusUsers();
 const { user: currentUser } = useDirectusAuth();
 const showDeleteModal = ref(false);
 const userOptions = ref([]);
 const selectedUser = ref(null);
 const isLoading = ref(false);
+const toast = useToast();
 
 // Initialize form with element data
 const form = ref({
@@ -208,7 +210,7 @@ const fetchUsers = async () => {
 		}));
 	} catch (error) {
 		console.error('Error fetching users:', error);
-		useToast().add({
+		toast.add({
 			title: 'Error',
 			description: 'Failed to load users',
 			color: 'red',
@@ -225,47 +227,39 @@ const availableUsers = computed(() => {
 const updateTicket = async () => {
 	try {
 		isLoading.value = true;
+		const { assigned_to, ...ticketData } = form.value;
 
-		// Update ticket
+		// Update main ticket data
 		await updateItem('tickets', props.element.id, {
-			...form.value,
+			...ticketData,
 			date_updated: new Date(),
 		});
 
-		// Update assignments
+		// Get current assignments for comparison
 		const currentAssignments = props.element.assigned_to?.map((a) => a.directus_users_id.id) || [];
-		const newAssignments = form.value.assigned_to;
+		const newAssignments = assigned_to;
 
-		// Remove old assignments
-		for (const userId of currentAssignments) {
-			if (!newAssignments.includes(userId)) {
-				await deleteItem('tickets_directus_users', {
-					filter: {
-						tickets_id: { _eq: props.element.id },
-						directus_users_id: { _eq: userId },
-					},
-				});
-			}
-		}
+		// Determine which assignments to add
+		const assignmentsToAdd = newAssignments.filter((id) => !currentAssignments.includes(id));
 
-		// Add new assignments
-		for (const userId of newAssignments) {
-			if (!currentAssignments.includes(userId)) {
-				await createItem('tickets_directus_users', {
-					tickets_id: props.element.id,
-					directus_users_id: userId,
-				});
-			}
-		}
+		// Create new assignments
+		const promises = assignmentsToAdd.map((userId) =>
+			createItem('tickets_directus_users', {
+				tickets_id: props.element.id,
+				directus_users_id: userId,
+			}),
+		);
 
-		useToast().add({
+		await Promise.all(promises);
+
+		toast.add({
 			title: 'Success',
 			description: 'Ticket updated successfully',
 			color: 'green',
 		});
 	} catch (error) {
 		console.error('Error updating ticket:', error);
-		useToast().add({
+		toast.add({
 			title: 'Error',
 			description: 'Failed to update ticket',
 			color: 'red',
@@ -284,7 +278,7 @@ const deleteTicket = async () => {
 	try {
 		isLoading.value = true;
 		await deleteItem('tickets', props.element.id);
-		useToast().add({
+		toast.add({
 			title: 'Success',
 			description: 'Ticket deleted successfully',
 			color: 'green',
@@ -293,7 +287,7 @@ const deleteTicket = async () => {
 		emit('close');
 	} catch (error) {
 		console.error('Error deleting ticket:', error);
-		useToast().add({
+		toast.add({
 			title: 'Error',
 			description: 'Failed to delete ticket',
 			color: 'red',
@@ -312,8 +306,25 @@ const handleUserSelect = (user) => {
 	}
 };
 
-const removeUser = (userId) => {
-	form.value.assigned_to = form.value.assigned_to.filter((id) => id !== userId);
+const removeUser = async (userId) => {
+	try {
+		// Find the junction record ID for this user assignment
+		const assignmentRecord = props.element.assigned_to.find((assignment) => assignment.directus_users_id.id === userId);
+		console.log(assignmentRecord);
+		if (assignmentRecord) {
+			// Delete using the junction record's ID
+			const result = await deleteItem('tickets_directus_users', assignmentRecord.id);
+			console.log(result);
+			form.value.assigned_to = form.value.assigned_to.filter((id) => id !== userId);
+		}
+	} catch (error) {
+		console.error('Error removing user assignment:', error);
+		useToast().add({
+			title: 'Error',
+			description: 'Failed to remove user assignment',
+			color: 'red',
+		});
+	}
 };
 
 // Utility functions

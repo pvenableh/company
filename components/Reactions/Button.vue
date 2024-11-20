@@ -23,22 +23,30 @@ const props = defineProps({
 		default: false,
 	},
 });
-const { createItem, deleteItems } = useDirectusItems();
+
+const { createItem, deleteItems, readItems } = useDirectusItems();
 const { user } = useDirectusAuth();
 const emits = defineEmits(['reaction-added', 'reaction-removed']);
+const toast = useToast();
 
 const isActive = ref(props.active);
 const reactionCount = ref(props.count);
 
 const toggleReaction = async () => {
-	console.log({
-		item_id: props.itemId,
-		collection: props.collection,
-		user_id: user.value.id,
-		reaction_type: props.reaction,
-	});
+	if (!user.value) return;
+
 	try {
-		if (isActive.value) {
+		// Check if user has already reacted
+		const existingReaction = await readItems('reactions', {
+			filter: {
+				item: { _eq: props.itemId },
+				user: { _eq: user.value.id },
+				reaction: { _eq: props.reaction },
+			},
+		});
+
+		if (existingReaction && existingReaction.length > 0) {
+			// User has already reacted - remove the reaction
 			await deleteItems('reactions', {
 				filter: {
 					item: { _eq: props.itemId },
@@ -47,21 +55,27 @@ const toggleReaction = async () => {
 				},
 			});
 			reactionCount.value--;
+			isActive.value = false;
 			emits('reaction-removed', props.reaction);
 		} else {
+			// User hasn't reacted - add the reaction
 			await createItem('reactions', {
 				item: props.itemId,
 				table: props.collection,
 				user: user.value.id,
 				reaction: props.reaction,
 			});
-
 			reactionCount.value++;
+			isActive.value = true;
 			emits('reaction-added', props.reaction);
 		}
-		isActive.value = !isActive.value;
 	} catch (error) {
 		console.error('Error toggling reaction:', error);
+		toast.add({
+			title: 'Error',
+			description: 'Failed to toggle reaction',
+			color: 'red',
+		});
 	}
 };
 
@@ -126,6 +140,15 @@ const countRef = ref(null);
 			:color="isActive ? 'primary' : 'gray'"
 			variant="soft"
 			size="xs"
+			:class="isActive ? 'text-cyan-500 fill-cyan-500' : ''"
+			:ui="{
+				icon: {
+					base: isActive ? 'w-4 h-4 flex-shrink-0 text-turqoise-500' : 'w-4 h-4 flex-shrink-0',
+					transform: isActive ? 'scale-150' : 'scale-100',
+					transition: 'transform duration-200',
+					color: isActive ? 'ghost' : 'gray',
+				},
+			}"
 			@click="toggleReaction"
 		>
 			<span ref="countRef" class="inline-block">{{ count }}</span>
