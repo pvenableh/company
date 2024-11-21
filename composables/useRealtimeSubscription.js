@@ -1,7 +1,7 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 
 export function useRealtimeSubscription(collection, fields, filter, sort) {
-	const config = useRuntimeConfig();
+	// Initialize refs
 	const data = ref([]);
 	const error = ref(null);
 	const isLoading = ref(true);
@@ -12,6 +12,9 @@ export function useRealtimeSubscription(collection, fields, filter, sort) {
 	const maxReconnectAttempts = 5;
 	const reconnectTimeout = ref(null);
 
+	// Only access runtime config when needed
+	let config;
+
 	const getQuery = () => {
 		const query = {};
 		if (fields) query.fields = fields;
@@ -21,8 +24,8 @@ export function useRealtimeSubscription(collection, fields, filter, sort) {
 	};
 
 	const authenticate = () => {
-		if (connection.value?.readyState === WebSocket.OPEN) {
-			// Use the static token from your auth setup
+		if (connection.value?.readyState === 1) {
+			// WebSocket.OPEN
 			const token = config.public.staticToken || localStorage.getItem('auth_token');
 			connection.value.send(
 				JSON.stringify({
@@ -34,37 +37,34 @@ export function useRealtimeSubscription(collection, fields, filter, sort) {
 	};
 
 	const subscribe = () => {
-		if (connection.value?.readyState === WebSocket.OPEN) {
-			const subscriptionMessage = {
-				type: 'subscribe',
-				collection: collection,
-				query: getQuery(),
-			};
-			console.log('Subscribing with:', subscriptionMessage);
-			connection.value.send(JSON.stringify(subscriptionMessage));
+		if (connection.value?.readyState === 1) {
+			// WebSocket.OPEN
+			connection.value.send(
+				JSON.stringify({
+					type: 'subscribe',
+					collection: collection,
+					query: getQuery(),
+				}),
+			);
 		}
 	};
 
 	const receiveMessage = (message) => {
 		try {
 			const messageData = JSON.parse(message.data);
-			console.log('Received WebSocket message:', messageData);
 
 			switch (messageData.type) {
 				case 'auth':
 					if (messageData.status === 'ok') {
-						console.log('WebSocket authenticated successfully');
 						subscribe();
 						isConnected.value = true;
 						reconnectAttempts.value = 0;
 					} else {
-						console.error('WebSocket authentication failed:', messageData);
 						error.value = new Error('Authentication failed');
 					}
 					break;
 
 				case 'subscription':
-					console.log('Subscription event:', messageData.event);
 					if (messageData.event === 'init') {
 						data.value = messageData.data;
 					} else if (messageData.event === 'create') {
@@ -78,28 +78,23 @@ export function useRealtimeSubscription(collection, fields, filter, sort) {
 					break;
 
 				case 'ping':
-					connection.value?.readyState === WebSocket.OPEN && connection.value.send(JSON.stringify({ type: 'pong' }));
+					if (connection.value?.readyState === 1) {
+						connection.value.send(JSON.stringify({ type: 'pong' }));
+					}
 					break;
-
-				default:
-					console.log('Unhandled message type:', messageData.type);
 			}
 		} catch (e) {
-			console.error('Error processing message:', e);
 			error.value = e;
 		}
 	};
 
 	const reconnect = () => {
 		if (reconnectAttempts.value >= maxReconnectAttempts) {
-			console.error('Max reconnection attempts reached');
 			error.value = new Error('Max reconnection attempts reached');
 			return;
 		}
 
 		const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.value), 10000);
-		console.log(`Scheduling reconnect attempt ${reconnectAttempts.value + 1} in ${delay}ms`);
-
 		reconnectTimeout.value = setTimeout(() => {
 			reconnectAttempts.value++;
 			connect();
@@ -107,14 +102,20 @@ export function useRealtimeSubscription(collection, fields, filter, sort) {
 	};
 
 	const connect = () => {
+		// Guard against SSR
+		if (typeof window === 'undefined') return;
+
+		// Initialize config here to avoid SSR issues
+		if (!config) {
+			config = useRuntimeConfig();
+		}
+
 		disconnect();
 
 		try {
-			console.log('Connecting to WebSocket:', config.public.websocketUrl);
 			connection.value = new WebSocket(config.public.websocketUrl);
 
 			connection.value.addEventListener('open', () => {
-				console.log('WebSocket connection opened');
 				isConnected.value = true;
 				isLoading.value = false;
 				authenticate();
@@ -123,7 +124,6 @@ export function useRealtimeSubscription(collection, fields, filter, sort) {
 			connection.value.addEventListener('message', receiveMessage);
 
 			connection.value.addEventListener('close', (event) => {
-				console.log('WebSocket connection closed:', event.code, event.reason);
 				isConnected.value = false;
 				if (!event.wasClean) {
 					reconnect();
@@ -131,14 +131,12 @@ export function useRealtimeSubscription(collection, fields, filter, sort) {
 			});
 
 			connection.value.addEventListener('error', (e) => {
-				console.error('WebSocket connection error:', e);
 				error.value = e;
 				isConnected.value = false;
 				isLoading.value = false;
 				reconnect();
 			});
 		} catch (e) {
-			console.error('Failed to create WebSocket connection:', e);
 			error.value = e;
 			isConnected.value = false;
 			isLoading.value = false;
@@ -153,7 +151,8 @@ export function useRealtimeSubscription(collection, fields, filter, sort) {
 		}
 
 		if (connection.value) {
-			if (connection.value.readyState === WebSocket.OPEN) {
+			if (connection.value.readyState === 1) {
+				// WebSocket.OPEN
 				connection.value.close(1000, 'Normal closure');
 			}
 			connection.value = null;
@@ -162,15 +161,15 @@ export function useRealtimeSubscription(collection, fields, filter, sort) {
 	};
 
 	const refresh = () => {
-		console.log('Refreshing WebSocket connection');
-		if (!connection.value || connection.value.readyState !== WebSocket.OPEN) {
-			reconnectAttempts.value = 0;
+		reconnectAttempts.value = 0;
+		if (!connection.value || connection.value.readyState !== 1) {
 			connect();
 		} else {
 			subscribe();
 		}
 	};
 
+	// Only set up WebSocket connection on client-side
 	onMounted(() => {
 		connect();
 	});

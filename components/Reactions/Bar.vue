@@ -43,7 +43,7 @@ const reactionGroups = computed(() => {
 <template>
 	<div class="flex gap-2">
 		<ReactionsButton
-			v-for="type in ['love', 'like', 'idea', 'dislike', 'question']"
+			v-for="type in ['love', 'like', 'idea', 'dislike']"
 			:key="type"
 			:item-id="itemId"
 			:collection="collection"

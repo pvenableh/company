@@ -64,6 +64,8 @@ const fields = [
 	'assigned_to.directus_users_id.last_name',
 	'assigned_to.directus_users_id.avatar',
 	'assigned_to.directus_users_id.email',
+	'comments',
+	'tasks',
 ];
 
 const getFilter = () => {

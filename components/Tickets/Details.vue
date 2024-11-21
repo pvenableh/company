@@ -109,7 +109,7 @@
 					<UButton type="submit" color="primary" :loading="isLoading" class="inline-block">Save Changes</UButton>
 				</div>
 				<div class="w-full lg:pb-20">
-					<CommentsSystem :item-id="element.id" collection="tickets" v-model:commentCount="totalComments" />
+					<CommentsSystem :item-id="element.id" collection="tickets" />
 				</div>
 			</form>
 			<div class="w-full lg:w-[500px] lg:border lg:shadow-lg lg:p-6 lg:sticky lg:top-20">
@@ -170,7 +170,6 @@ const userOptions = ref([]);
 const selectedUser = ref(null);
 const isLoading = ref(false);
 const toast = useToast();
-const totalComments = ref(0);
 
 // Initialize form with element data
 const form = ref({

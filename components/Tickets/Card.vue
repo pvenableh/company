@@ -29,7 +29,7 @@
 			<h5 class="text-gray-800 text-[8px] mt-0 uppercase mb-2">{{ element?.organization.name }}</h5>
 
 			<!-- Assigned Users -->
-			<div class="flex items-center justify-between text-xs text-gray-500 mt-4">
+			<div class="w-full flex items-center justify-between text-xs text-gray-500 mt-4">
 				<div class="flex items-center">
 					<!-- Avatar Stack -->
 					<div class="flex -space-x-1">
@@ -59,14 +59,26 @@
 						<span v-else class="text-gray-500">Unassigned</span>
 					</div>
 				</div>
+			</div>
+			<p v-if="element?.due_date" class="uppercase text-[10px] mt-3">
+				{{ formatDueDate(element?.due_date) }}
+			</p>
+		</div>
+		<div class="w-full border-t border-gray-200 dark:border-gray-700 flex flex-row items-center justify-between">
+			<!-- Ticket Footer -->
 
-				<p v-if="element?.due_date" class="uppercase text-[10px]">
-					<span>due:</span>
-					{{ formatDueDate(element?.due_date) }}
-				</p>
+			<ReactionsBar :item-id="element.id" collection="tickets" />
+			<div class="flex flex-row text-xs text-gray-500 mr-3">
+				<div v-if="commentCount > 0" class="flex items-center gap-1">
+					<UIcon name="i-heroicons-chat-bubble-left-right" class="w-4 h-4" />
+					{{ commentCount }}
+				</div>
+				<div v-if="taskCount > 0" class="ml-2 flex items-center gap-1">
+					<UIcon name="i-heroicons-check-circle" class="w-4 h-4" />
+					{{ taskCount }}
+				</div>
 			</div>
 		</div>
-		<ReactionsBar :item-id="element.id" collection="tickets" />
 	</div>
 </template>
 
@@ -75,6 +87,14 @@ const props = defineProps({
 	element: {
 		type: Object,
 		required: true,
+	},
+	commentCount: {
+		type: Number,
+		default: 0,
+	},
+	taskCount: {
+		type: Number,
+		default: 0,
 	},
 });
 

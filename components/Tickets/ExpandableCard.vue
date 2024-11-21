@@ -2,7 +2,12 @@
 	<div ref="cardRef" class="w-full relative flex flex-col lg:flex-row flex-wrap items-center justify-center">
 		<!-- Card Preview -->
 		<div class="w-full cursor-pointer transition-transform duration-300" :class="{ 'pointer-events-none': isExpanded }">
-			<TicketsCard :element="element" @expand="expand" />
+			<TicketsCard
+				:element="element"
+				@expand="expand"
+				:comment-count="element.comments.length"
+				:task-count="element.tasks.length"
+			/>
 		</div>
 
 		<!-- Teleported Fullscreen Overlay -->
