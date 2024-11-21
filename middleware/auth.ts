@@ -1,5 +1,5 @@
 export default defineNuxtRouteMiddleware(async (to) => {
-	const { user, readMe } = useDirectusAuth();
+	const { user, readMe, refresh } = useDirectusAuth();
 
 	// Skip for signin page to prevent redirect loops
 	if (to.path === '/auth/signin') {
@@ -8,7 +8,10 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
 	if (!user.value) {
 		try {
+			await refresh();
+
 			const fetchedUser = await readMe();
+
 			if (!fetchedUser) {
 				return navigateTo(`/auth/signin?redirect=${encodeURIComponent(to.fullPath)}`);
 			}

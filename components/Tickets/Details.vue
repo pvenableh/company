@@ -33,7 +33,6 @@
 					<div class="space-y-2">
 						<!-- Selected Users Display -->
 						<div v-if="form.assigned_to.length" class="flex flex-wrap gap-2 mb-2">
-							<div v-for="(user, index) in element.assigned_to" :key="index">{{ user }}</div>
 							<UBadge
 								v-for="userId in form.assigned_to"
 								:key="userId"
@@ -97,29 +96,24 @@
 					/>
 				</UFormGroup>
 
-				<div class="flex justify-end">
-					<div class="flex items-center justify-between">
-						<div class="flex items-center space-x-2">
-							<UButton variant="ghost" color="gray" icon="i-heroicons-paper-clip" :loading="isLoading" />
-							<UButton variant="ghost" color="gray" icon="i-heroicons-share" :loading="isLoading" />
-							<UButton
-								variant="ghost"
-								color="red"
-								icon="i-heroicons-archive-box"
-								:loading="isLoading"
-								@click="confirmDelete"
-							/>
-						</div>
-						<UButton type="submit" color="primary" :loading="isLoading">Save Changes</UButton>
-					</div>
+				<div class="w-full flex flex-row items-center justify-between">
+					<UButton
+						variant="ghost"
+						color="red"
+						icon="i-heroicons-archive-box"
+						:loading="isLoading"
+						@click="confirmDelete"
+						class="inline-block"
+					/>
+
+					<UButton type="submit" color="primary" :loading="isLoading" class="inline-block">Save Changes</UButton>
 				</div>
 				<div class="w-full lg:pb-20">
-					<h4 class="text-sm font-medium text-gray-500 mb-2">Comments</h4>
-					<CommentsSystem :item-id="element.id" collection="tickets" />
+					<CommentsSystem :item-id="element.id" collection="tickets" v-model:commentCount="totalComments" />
 				</div>
 			</form>
 			<div class="w-full lg:w-[500px] lg:border lg:shadow-lg lg:p-6 lg:sticky lg:top-20">
-				<h4 class="text-sm font-medium text-gray-500 mb-2">Tasks</h4>
+				<h4 class="uppercase block font-medium text-gray-700 dark:text-gray-200 tracking-wider">Tasks</h4>
 				<TicketsTasks :ticket-id="element.id" class="mt-4 pb-12" />
 			</div>
 
@@ -168,6 +162,7 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'deleted']);
 const { createItem, deleteItems, deleteItem, updateItem } = useDirectusItems();
+const { notify } = useNotifications();
 const { readUsers } = useDirectusUsers();
 const { user: currentUser } = useDirectusAuth();
 const showDeleteModal = ref(false);
@@ -175,6 +170,7 @@ const userOptions = ref([]);
 const selectedUser = ref(null);
 const isLoading = ref(false);
 const toast = useToast();
+const totalComments = ref(0);
 
 // Initialize form with element data
 const form = ref({
@@ -239,18 +235,17 @@ const updateTicket = async () => {
 		const currentAssignments = props.element.assigned_to?.map((a) => a.directus_users_id.id) || [];
 		const newAssignments = assigned_to;
 
-		// Determine which assignments to add
+		// Find assignments to add
 		const assignmentsToAdd = newAssignments.filter((id) => !currentAssignments.includes(id));
 
-		// Create new assignments
-		const promises = assignmentsToAdd.map((userId) =>
-			createItem('tickets_directus_users', {
+		// Add new assignments and notify users
+		for (const userId of assignmentsToAdd) {
+			await createItem('tickets_directus_users', {
 				tickets_id: props.element.id,
 				directus_users_id: userId,
-			}),
-		);
-
-		await Promise.all(promises);
+			});
+			await notifyUserAssignment(userId);
+		}
 
 		toast.add({
 			title: 'Success',
@@ -264,11 +259,12 @@ const updateTicket = async () => {
 			description: 'Failed to update ticket',
 			color: 'red',
 		});
+		// Reload the original assignments on error
+		form.value.assigned_to = props.element.assigned_to?.map((a) => a.directus_users_id.id) || [];
 	} finally {
 		isLoading.value = false;
 	}
 };
-
 // Delete handlers
 const confirmDelete = () => {
 	showDeleteModal.value = true;
@@ -298,6 +294,23 @@ const deleteTicket = async () => {
 	}
 };
 
+const notifyUserAssignment = async (userId) => {
+	try {
+		const assignedUser = getUserById(userId);
+		if (!assignedUser || assignedUser.id === currentUser.value?.id) return;
+
+		await notify({
+			recipient: userId,
+			subject: 'New ticket assignment',
+			message: `You have been assigned to the ticket: ${props.element.title}`,
+			collection: 'tickets',
+			item: props.element.id,
+		});
+	} catch (error) {
+		console.error('Error sending assignment notification:', error);
+	}
+};
+
 // User selection handlers
 const handleUserSelect = (user) => {
 	if (user?.id && !form.value.assigned_to.includes(user.id)) {
@@ -310,16 +323,34 @@ const removeUser = async (userId) => {
 	try {
 		// Find the junction record ID for this user assignment
 		const assignmentRecord = props.element.assigned_to.find((assignment) => assignment.directus_users_id.id === userId);
-		console.log(assignmentRecord);
+
 		if (assignmentRecord) {
-			// Delete using the junction record's ID
-			const result = await deleteItem('tickets_directus_users', assignmentRecord.id);
-			console.log(result);
+			// Delete the assignment
+			await deleteItem('tickets_directus_users', assignmentRecord.id);
+
+			// Update local state
 			form.value.assigned_to = form.value.assigned_to.filter((id) => id !== userId);
+
+			// Send notification if it's not the current user
+			if (userId !== currentUser.value?.id) {
+				await notify({
+					recipient: userId,
+					subject: 'Removed from ticket',
+					message: `You have been removed from the ticket: ${props.element.title}`,
+					collection: 'tickets',
+					item: props.element.id,
+				});
+			}
+
+			toast.add({
+				title: 'Success',
+				description: 'User removed successfully',
+				color: 'green',
+			});
 		}
 	} catch (error) {
 		console.error('Error removing user assignment:', error);
-		useToast().add({
+		toast.add({
 			title: 'Error',
 			description: 'Failed to remove user assignment',
 			color: 'red',

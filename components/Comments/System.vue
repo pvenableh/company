@@ -1,5 +1,57 @@
+<template>
+	<div class="comments-system">
+		<!-- Comments Toggle Button -->
+		<div class="flex items-center gap-2 text-sm">
+			<h4
+				@click="showComments = !showComments"
+				class="cursor-pointer uppercase block font-medium text-gray-700 dark:text-gray-200 tracking-wider"
+			>
+				{{ commentsCount }} {{ commentsCount === 1 ? 'Comment' : 'Comments' }}
+				<UIcon :name="showComments ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'" />
+			</h4>
+		</div>
+
+		<!-- Comments Section -->
+		<Transition
+			enter-active-class="transition duration-200 ease-out"
+			enter-from-class="transform scale-95 opacity-0"
+			enter-to-class="transform scale-100 opacity-100"
+			leave-active-class="transition duration-200 ease-in"
+			leave-from-class="transform scale-100 opacity-100"
+			leave-to-class="transform scale-95 opacity-0"
+		>
+			<div v-if="showComments" class="mt-4 space-y-4">
+				<!-- Main Comment Input -->
+				<div v-if="user && !replyingTo">
+					<CommentsComment :loading="isLoading" :depth="0" @submit="handleCommentSubmit" />
+				</div>
+
+				<!-- Comments List -->
+				<TransitionGroup name="comments" tag="div" class="space-y-4">
+					<CommentsThread
+						v-for="comment in comments"
+						:key="comment.id"
+						:comment="comment"
+						:loading="isLoading"
+						:is-active="activeCommentId === comment.comments_id.id"
+						@reply="handleReply"
+						@submit="handleCommentSubmit"
+						@cancel="cancelReply"
+						@delete="handleDelete"
+					/>
+				</TransitionGroup>
+
+				<!-- <div v-if="!comments.length" class="text-center text-sm text-gray-500 py-4">
+					No comments yet. Be the first to comment!
+				</div> -->
+			</div>
+		</Transition>
+	</div>
+</template>
+
 <script setup>
 import { useRealtimeSubscription } from '~/composables/useRealtimeSubscription';
+const emit = defineEmits(['update:commentCount']);
 
 const props = defineProps({
 	itemId: {
@@ -13,11 +65,11 @@ const props = defineProps({
 });
 
 const { user } = useDirectusAuth();
-const showComments = ref(false);
+const { createItem, deleteItem } = useDirectusItems();
+const showComments = ref(true);
 const isLoading = ref(false);
 const replyingTo = ref(null);
 const activeCommentId = ref(null);
-const { createItem } = useDirectusItems();
 
 const junctionTable = `${props.collection}_comments`;
 const collectionIdField = `${props.collection}_id`;
@@ -47,6 +99,7 @@ const { data: rawComments } = useRealtimeSubscription(
 	'-comments_id.date_created',
 );
 
+// Existing computed properties and helper functions remain the same
 const comments = computed(() => {
 	if (!rawComments.value) return [];
 
@@ -75,17 +128,11 @@ const comments = computed(() => {
 		}
 	});
 
-	// Sort root comments newest first
-	rootComments.sort((a, b) => {
-		return new Date(b.comments_id.date_created) - new Date(a.comments_id.date_created);
-	});
+	rootComments.sort((a, b) => new Date(b.comments_id.date_created) - new Date(a.comments_id.date_created));
 
-	// Sort replies oldest first
 	const sortReplies = (comment) => {
-		if (comment.replies && comment.replies.length > 0) {
-			comment.replies.sort((a, b) => {
-				return new Date(a.comments_id.date_created) - new Date(b.comments_id.date_created);
-			});
+		if (comment.replies?.length > 0) {
+			comment.replies.sort((a, b) => new Date(a.comments_id.date_created) - new Date(b.comments_id.date_created));
 			comment.replies.forEach(sortReplies);
 		}
 	};
@@ -94,9 +141,22 @@ const comments = computed(() => {
 	return rootComments;
 });
 
+const commentsCount = computed(() => {
+	let total = 0;
+	const countReplies = (comment) => {
+		total++;
+		comment.replies?.forEach(countReplies);
+	};
+	comments.value.forEach(countReplies);
+
+	// Emit the new count whenever it changes
+	emit('update:commentCount', total);
+
+	return total;
+});
+
 async function handleCommentSubmit(commentHtml) {
 	isLoading.value = true;
-
 	try {
 		const comment = await createItem('comments', {
 			comment: commentHtml,
@@ -117,158 +177,34 @@ async function handleCommentSubmit(commentHtml) {
 	}
 }
 
+async function handleDelete(commentId) {
+	try {
+		await deleteItem('comments', commentId);
+	} catch (error) {
+		console.error('Error deleting comment:', error);
+	}
+}
+
+function handleReply(comment) {
+	replyingTo.value = comment;
+	activeCommentId.value = comment.comments_id.id;
+}
+
 function cancelReply() {
 	replyingTo.value = null;
 	activeCommentId.value = null;
 }
-
-const commentsCount = computed(() => {
-	let total = 0;
-	const countReplies = (comment) => {
-		total += 1;
-		comment.replies?.forEach(countReplies);
-	};
-	comments.value.forEach(countReplies);
-	return total;
-});
 </script>
 
-<template>
-	<div class="comments-system">
-		<div class="flex items-center gap-2 text-sm">
-			<UButton
-				variant="ghost"
-				:icon="showComments ? 'i-heroicons-chat-bubble-left-right' : 'i-heroicons-chat-bubble-left'"
-				@click="showComments = !showComments"
-			>
-				{{ commentsCount }} {{ commentsCount === 1 ? 'Comment' : 'Comments' }}
-			</UButton>
-		</div>
-
-		<Transition
-			enter-active-class="transition duration-200 ease-out"
-			enter-from-class="transform scale-95 opacity-0"
-			enter-to-class="transform scale-100 opacity-100"
-			leave-active-class="transition duration-200 ease-in"
-			leave-from-class="transform scale-100 opacity-100"
-			leave-to-class="transform scale-95 opacity-0"
-		>
-			<div v-if="showComments" class="mt-4 space-y-4">
-				<!-- Main comment input -->
-				<div v-if="user && !replyingTo">
-					<CommentsComment :loading="isLoading" :depth="0" @submit="handleCommentSubmit" />
-				</div>
-
-				<!-- Comments list -->
-				<TransitionGroup name="comments" tag="div" class="space-y-4">
-					<template v-for="comment in comments" :key="comment.id">
-						<div class="comment-thread">
-							<!-- Comment content -->
-							<div class="flex gap-3">
-								<UAvatar
-									:src="
-										comment.comments_id.user?.avatar
-											? `${useRuntimeConfig().public.directusUrl}/assets/${comment.comments_id.user.avatar}`
-											: null
-									"
-									:alt="comment.comments_id.user?.first_name"
-									size="sm"
-								/>
-
-								<div class="flex-grow">
-									<div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-3">
-										<div class="flex items-center gap-2 mb-1">
-											<span class="font-medium text-sm">
-												{{ comment.comments_id.user?.first_name }}
-												{{ comment.comments_id.user?.last_name }}
-											</span>
-											<span class="text-xs text-gray-500">
-												{{ new Date(comment.comments_id.date_created).toLocaleString() }}
-											</span>
-										</div>
-										<div class="text-sm" v-html="comment.comments_id.comment" />
-									</div>
-
-									<div class="flex gap-2 mt-1">
-										<ReactionsBar :item-id="String(comment.comments_id.id)" collection="comments" />
-										<UButton
-											variant="ghost"
-											size="xs"
-											@click="
-												() => {
-													replyingTo = comment;
-													activeCommentId = comment.comments_id.id;
-												}
-											"
-										>
-											Reply
-										</UButton>
-									</div>
-
-									<!-- Reply input -->
-									<div v-if="activeCommentId === comment.comments_id.id" class="mt-2">
-										<CommentsComment
-											:replying-to="replyingTo"
-											:loading="isLoading"
-											:depth="1"
-											@submit="handleCommentSubmit"
-											@cancel="cancelReply"
-										/>
-									</div>
-
-									<!-- Nested replies -->
-									<div
-										v-if="comment.replies?.length"
-										class="mt-3 space-y-3 border-l-2 border-gray-200 dark:border-gray-700 pl-4 ml-4"
-									>
-										<div v-for="reply in comment.replies" :key="reply.id" class="comment-reply">
-											<div class="flex gap-3">
-												<UAvatar
-													:src="
-														reply.comments_id.user?.avatar
-															? `${useRuntimeConfig().public.directusUrl}/assets/${reply.comments_id.user.avatar}`
-															: null
-													"
-													:alt="reply.comments_id.user?.first_name"
-													size="sm"
-												/>
-
-												<div class="flex-grow">
-													<div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-3">
-														<div class="flex items-center gap-2 mb-1">
-															<span class="font-medium text-sm">
-																{{ reply.comments_id.user?.first_name }}
-																{{ reply.comments_id.user?.last_name }}
-															</span>
-															<span class="text-xs text-gray-500">
-																{{ new Date(reply.comments_id.date_created).toLocaleString() }}
-															</span>
-														</div>
-														<div class="text-sm" v-html="reply.comments_id.comment" />
-													</div>
-
-													<div class="flex gap-2 mt-1">
-														<ReactionsBar :item-id="String(reply.comments_id.id)" collection="comments" />
-													</div>
-												</div>
-											</div>
-										</div>
-									</div>
-								</div>
-							</div>
-						</div>
-					</template>
-				</TransitionGroup>
-
-				<div v-if="!comments.length" class="text-center text-sm text-gray-500 py-4">
-					No comments yet. Be the first to comment!
-				</div>
-			</div>
-		</Transition>
-	</div>
-</template>
-
 <style>
+.comment {
+	a:link,
+	a:visited {
+		color: #0ea5e9;
+		text-decoration: underline;
+	}
+}
+
 .comments-enter-active,
 .comments-leave-active {
 	transition: all 0.3s ease;

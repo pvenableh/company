@@ -38,7 +38,7 @@ export default defineAppConfig({
 		},
 		formGroup: {
 			label: {
-				base: 'uppercase block font-medium text-gray-700 dark:text-gray-200 tracking-widest',
+				base: 'uppercase block font-medium text-gray-700 dark:text-gray-200 tracking-wider',
 			},
 		},
 		input: {

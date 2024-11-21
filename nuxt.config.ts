@@ -90,7 +90,12 @@ export default defineNuxtConfig({
 			// Enable auto-importing of the Directus composables
 			autoImport: true,
 			// Enable basic auto-refresh functionality
-			// autoRefresh: true,
+			autoRefresh: {
+				enableMiddleware: true, // Automatically use middleware to refresh the token
+				global: true, // Apply auto-refresh globally
+				middlewareName: 'auth', // Optional: Custom name for the middleware
+				redirectTo: '/auth/signin', // Optional: Where to redirect if refresh fails
+			},
 			devtools: true,
 			readMeQuery: {
 				fields: ['*,organizations.organizations_id.id,organizations.organizations_id.name'],

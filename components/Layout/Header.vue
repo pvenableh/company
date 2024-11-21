@@ -38,14 +38,15 @@ onMounted(() => {
 		</div> -->
 		<nuxt-link to="/" class="flex flex-row items-end justify-center ml-2">
 			<Logo color="#ffc00" />
-			<span class="uppercase text-4xl font-bold leading-7 px-1 inline-block hidden">:</span>
-			<span class="uppercase tracking-wider text-4xl font-bold leading-6 inline-block hidden">Company</span>
+			<span class="uppercase text-4xl font-bold leading-7 px-1 hidden">:</span>
+			<span class="uppercase tracking-wider text-4xl font-bold leading-6 hidden">Company</span>
 		</nuxt-link>
 		<div class="absolute flex items-center justify-center flex-row right-[10px] sm:pr-1 md:px-6">
 			<nuxt-link to="/account" class="flex items-center justify-self-center">
 				<Avatar v-if="user" :user="user" text="12" class="mr-2" />
 				<UAvatar v-else icon="i-heroicons-user" size="sm" class="mr-1 sm:mr-2" />
 			</nuxt-link>
+			<LayoutNotificationsMenu class="ml-2" />
 			<div class="mt-0">
 				<DarkModeToggle class="" />
 			</div>

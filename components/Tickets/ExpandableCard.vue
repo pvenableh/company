@@ -24,9 +24,15 @@
 						<!-- Header -->
 						<div class="sticky top-0 z-[10000] bg-white dark:bg-gray-800 border-b dark:border-gray-700">
 							<div class="flex items-center justify-between">
-								<div class="flex items-center">
-									<span class="text-xs text-gray-500 uppercase">Ticket #{{ element?.id }}</span>
-									<!-- <h3 class="text-lg font-semibold">{{ element?.title }}</h3> -->
+								<div class="flex flex-col items-start">
+									<p class="text-xs text-gray-500 uppercase">
+										<span class="opacity-50 mr-1">Ticket #:</span>
+										{{ element?.id }}
+									</p>
+									<p class="text-xs text-gray-500 uppercase">
+										<span class="opacity-50 mr-1">Client:</span>
+										{{ element?.organization.name }}
+									</p>
 								</div>
 								<UButton color="gray" variant="ghost" icon="i-heroicons-x-mark-20-solid" @click="collapse" />
 							</div>

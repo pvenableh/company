@@ -28,10 +28,10 @@ const isDragging = ref(false);
 const selectedOrg = ref(null);
 
 const orgOptions = computed(() => {
-	if (!user.value?.organizations) return [];
+	const userOrgs = user.value?.organizations || [];
 	return [
-		{ id: null, name: 'All Organizations' },
-		...user.value.organizations.map((org) => ({
+		{ id: null, name: 'All Organizations' }, // Ensure id is explicitly null
+		...userOrgs.map((org) => ({
 			id: org.organizations_id.id,
 			name: org.organizations_id.name,
 		})),
@@ -71,10 +71,10 @@ const getFilter = () => {
 		return {}; // Get all tickets for admin
 	}
 
-	// Non-admin users get tickets for their organizations
+	const userOrgs = user.value?.organizations || [];
 	return {
 		organization: {
-			_in: user.value.organizations?.map((org) => org.organizations_id.id) || [],
+			_in: userOrgs.map((org) => org.organizations_id.id),
 		},
 	};
 };
@@ -93,14 +93,16 @@ watch(
 	([newTickets, newOrg]) => {
 		if (!newTickets) return;
 
-		// Apply organization filter in memory
-		const filtered = newTickets.filter((ticket) => {
-			if (!isAdmin.value) return true; // Non-admin users already have filtered data
-			if (!newOrg) return true; // Show all if no org selected
-			return ticket.organization?.id === newOrg;
-		});
+		console.log('All tickets:', newTickets); // Debug original tickets
+		console.log('Selected org:', selectedOrg.value); // Debug selected org
 
-		// Update column data
+		// Ensure the filter logic works for "All Organizations" correctly
+		const filtered =
+			newOrg === null
+				? newTickets // Show all tickets when selectedOrg is null
+				: newTickets.filter((ticket) => ticket.organization?.id === newOrg);
+
+		// Distribute filtered tickets into columns
 		columns.forEach((column) => {
 			localTickets.value[column.id] = filtered.filter((ticket) => ticket.status === column.id);
 		});
@@ -204,10 +206,13 @@ const handleTicketCreated = () => {
 	refresh();
 	console.log('Refreshing board after ticket creation');
 };
+function handleSelectChange(value) {
+	// Fix the selected value to ensure "All Organizations" maps to null
+	selectedOrg.value = value === 'null' || value === 'All Organizations' ? null : value;
+}
 </script>
-
 <template>
-	<div class="">
+	<div class="max-w-screen-2xl mx-auto">
 		<!-- Connection Status -->
 		<div v-if="!isConnected && !isLoading" class="mb-4">
 			<UAlert title="Connection Lost" description="Attempting to reconnect..." color="yellow">
@@ -227,6 +232,7 @@ const handleTicketCreated = () => {
 					value-attribute="id"
 					placeholder="Select Organization"
 					class="w-64"
+					@change="handleSelectChange"
 				/>
 			</div>
 			<div v-if="lastUpdated" class="text-xs text-gray-500 mt-2 md:mt-0 font-bold uppercase">
@@ -252,7 +258,7 @@ const handleTicketCreated = () => {
 			<div
 				v-for="column in columns"
 				:key="column.id"
-				class="flex-shrink-0 w-full md:w-80 shadow h-full min-h-dvh transition-transform duration-300 ease-in-out bg-gray-50 dark:bg-gray-800"
+				class="flex-shrink-0 w-full md:w-1/4 min-w-80 shadow h-full min-h-dvh transition-transform duration-300 ease-in-out bg-gray-50 dark:bg-gray-800"
 				:class="{
 					'hidden md:block': isMobile && column.id !== activeColumn,
 					'transform translate-x-0': !isMobile || column.id === activeColumn,

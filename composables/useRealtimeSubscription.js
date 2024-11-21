@@ -1,179 +1,182 @@
 import { ref, onMounted, onUnmounted } from 'vue';
-import { useRuntimeConfig } from '#imports';
 
-export function useRealtimeSubscription(collection, fields = ['*'], filter = {}, sort = null, options = {}) {
-	const { requireStatus = false } = options;
+export function useRealtimeSubscription(collection, fields, filter, sort) {
 	const config = useRuntimeConfig();
 	const data = ref([]);
 	const error = ref(null);
 	const isLoading = ref(true);
 	const isConnected = ref(false);
 	const lastUpdated = ref(null);
-	let connection = null;
+	const connection = ref(null);
+	const reconnectAttempts = ref(0);
+	const maxReconnectAttempts = 5;
+	const reconnectTimeout = ref(null);
 
-	const connect = () => {
-		return new Promise((resolve, reject) => {
-			try {
-				connection = new WebSocket(config.public.websocketUrl);
-
-				connection.addEventListener('open', () => {
-					console.log('WebSocket connected');
-					isConnected.value = true;
-					authenticate();
-					resolve(connection);
-				});
-
-				connection.addEventListener('close', () => {
-					console.log('WebSocket disconnected');
-					isConnected.value = false;
-				});
-
-				connection.addEventListener('error', (error) => {
-					console.error('WebSocket error:', error);
-					reject(error);
-				});
-
-				connection.addEventListener('message', receiveMessage);
-			} catch (err) {
-				reject(err);
-			}
-		});
+	const getQuery = () => {
+		const query = {};
+		if (fields) query.fields = fields;
+		if (filter) query.filter = filter;
+		if (sort) query.sort = sort;
+		return query;
 	};
 
 	const authenticate = () => {
-		if (!connection) return;
-		connection.send(
-			JSON.stringify({
-				type: 'auth',
-				access_token: config.public.staticToken,
-			}),
-		);
+		if (connection.value?.readyState === WebSocket.OPEN) {
+			// Use the static token from your auth setup
+			const token = config.public.staticToken || localStorage.getItem('auth_token');
+			connection.value.send(
+				JSON.stringify({
+					type: 'auth',
+					access_token: token,
+				}),
+			);
+		}
 	};
 
 	const subscribe = () => {
-		if (!connection) return;
-		const finalFilter = requireStatus
-			? {
-					...filter,
-					status: { _nnull: true },
-				}
-			: filter;
-
-		connection.send(
-			JSON.stringify({
+		if (connection.value?.readyState === WebSocket.OPEN) {
+			const subscriptionMessage = {
 				type: 'subscribe',
 				collection: collection,
-				query: {
-					fields: fields,
-					filter: finalFilter,
-					sort: sort ? [sort] : ['-date_updated'],
-				},
-			}),
-		);
+				query: getQuery(),
+			};
+			console.log('Subscribing with:', subscriptionMessage);
+			connection.value.send(JSON.stringify(subscriptionMessage));
+		}
 	};
 
 	const receiveMessage = (message) => {
-		const msg = JSON.parse(message.data);
-		console.log('Received message:', msg);
-
-		switch (msg.type) {
-			case 'auth':
-				if (msg.status === 'ok') {
-					console.log('Authentication successful');
-					subscribe();
-				} else {
-					console.error('Authentication failed:', msg);
-					error.value = 'Authentication failed';
-				}
-				break;
-
-			case 'subscription':
-				handleSubscriptionMessage(msg);
-				break;
-
-			case 'ping':
-				connection?.send(JSON.stringify({ type: 'pong' }));
-				break;
-
-			default:
-				console.log('Unhandled message type:', msg.type);
-		}
-	};
-
-	const handleSubscriptionMessage = (msg) => {
-		console.log('Handling subscription message:', msg);
-
-		switch (msg.event) {
-			case 'init':
-				console.log('Initial data:', msg.data);
-				data.value = msg.data || [];
-				break;
-
-			case 'create':
-				console.log('Item created:', msg.data);
-				if (msg.data?.[0]) {
-					data.value = [...data.value, msg.data[0]];
-				}
-				break;
-
-			case 'update':
-				console.log('Item updated:', msg.data);
-				if (msg.data) {
-					data.value = data.value.map((item) => {
-						const updated = msg.data.find((d) => d.id === item.id);
-						return updated || item;
-					});
-				}
-				break;
-
-			case 'delete':
-				console.log('Item deleted:', msg.data);
-				if (msg.data) {
-					data.value = data.value.filter((item) => !msg.data.includes(item.id));
-				}
-				break;
-		}
-
-		// Apply sorting if specified
-		if (sort) {
-			data.value.sort((a, b) => {
-				const [field, direction] = sort.startsWith('-') ? [sort.slice(1), 'desc'] : [sort, 'asc'];
-
-				const aVal = field.split('.').reduce((obj, key) => obj?.[key], a);
-				const bVal = field.split('.').reduce((obj, key) => obj?.[key], b);
-				const modifier = direction === 'desc' ? -1 : 1;
-				return modifier * (new Date(aVal) - new Date(bVal));
-			});
-		}
-
-		lastUpdated.value = new Date();
-	};
-
-	const refresh = async () => {
-		if (connection) {
-			connection.close();
-		}
-		isLoading.value = true;
-		await connect();
-		isLoading.value = false;
-	};
-
-	onMounted(async () => {
 		try {
-			isLoading.value = true;
-			await connect();
-		} catch (err) {
-			error.value = err.message;
-			console.error('Failed to connect:', err);
-		} finally {
-			isLoading.value = false;
+			const messageData = JSON.parse(message.data);
+			console.log('Received WebSocket message:', messageData);
+
+			switch (messageData.type) {
+				case 'auth':
+					if (messageData.status === 'ok') {
+						console.log('WebSocket authenticated successfully');
+						subscribe();
+						isConnected.value = true;
+						reconnectAttempts.value = 0;
+					} else {
+						console.error('WebSocket authentication failed:', messageData);
+						error.value = new Error('Authentication failed');
+					}
+					break;
+
+				case 'subscription':
+					console.log('Subscription event:', messageData.event);
+					if (messageData.event === 'init') {
+						data.value = messageData.data;
+					} else if (messageData.event === 'create') {
+						data.value = [...data.value, messageData.data[0]];
+					} else if (messageData.event === 'update') {
+						data.value = data.value.map((item) => (item.id === messageData.data[0].id ? messageData.data[0] : item));
+					} else if (messageData.event === 'delete') {
+						data.value = data.value.filter((item) => !messageData.data.includes(item.id));
+					}
+					lastUpdated.value = new Date();
+					break;
+
+				case 'ping':
+					connection.value?.readyState === WebSocket.OPEN && connection.value.send(JSON.stringify({ type: 'pong' }));
+					break;
+
+				default:
+					console.log('Unhandled message type:', messageData.type);
+			}
+		} catch (e) {
+			console.error('Error processing message:', e);
+			error.value = e;
 		}
+	};
+
+	const reconnect = () => {
+		if (reconnectAttempts.value >= maxReconnectAttempts) {
+			console.error('Max reconnection attempts reached');
+			error.value = new Error('Max reconnection attempts reached');
+			return;
+		}
+
+		const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.value), 10000);
+		console.log(`Scheduling reconnect attempt ${reconnectAttempts.value + 1} in ${delay}ms`);
+
+		reconnectTimeout.value = setTimeout(() => {
+			reconnectAttempts.value++;
+			connect();
+		}, delay);
+	};
+
+	const connect = () => {
+		disconnect();
+
+		try {
+			console.log('Connecting to WebSocket:', config.public.websocketUrl);
+			connection.value = new WebSocket(config.public.websocketUrl);
+
+			connection.value.addEventListener('open', () => {
+				console.log('WebSocket connection opened');
+				isConnected.value = true;
+				isLoading.value = false;
+				authenticate();
+			});
+
+			connection.value.addEventListener('message', receiveMessage);
+
+			connection.value.addEventListener('close', (event) => {
+				console.log('WebSocket connection closed:', event.code, event.reason);
+				isConnected.value = false;
+				if (!event.wasClean) {
+					reconnect();
+				}
+			});
+
+			connection.value.addEventListener('error', (e) => {
+				console.error('WebSocket connection error:', e);
+				error.value = e;
+				isConnected.value = false;
+				isLoading.value = false;
+				reconnect();
+			});
+		} catch (e) {
+			console.error('Failed to create WebSocket connection:', e);
+			error.value = e;
+			isConnected.value = false;
+			isLoading.value = false;
+			reconnect();
+		}
+	};
+
+	const disconnect = () => {
+		if (reconnectTimeout.value) {
+			clearTimeout(reconnectTimeout.value);
+			reconnectTimeout.value = null;
+		}
+
+		if (connection.value) {
+			if (connection.value.readyState === WebSocket.OPEN) {
+				connection.value.close(1000, 'Normal closure');
+			}
+			connection.value = null;
+		}
+		isConnected.value = false;
+	};
+
+	const refresh = () => {
+		console.log('Refreshing WebSocket connection');
+		if (!connection.value || connection.value.readyState !== WebSocket.OPEN) {
+			reconnectAttempts.value = 0;
+			connect();
+		} else {
+			subscribe();
+		}
+	};
+
+	onMounted(() => {
+		connect();
 	});
 
 	onUnmounted(() => {
-		if (connection) {
-			connection.close();
-		}
+		disconnect();
 	});
 
 	return {
@@ -183,5 +186,7 @@ export function useRealtimeSubscription(collection, fields = ['*'], filter = {},
 		isConnected,
 		lastUpdated,
 		refresh,
+		connect,
+		disconnect,
 	};
 }
