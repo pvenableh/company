@@ -112,17 +112,26 @@
 					/>
 				</UFormGroup>
 
-				<div class="w-full flex flex-row items-center justify-between">
+				<div class="w-full flex flex-row items-center justify-end space-x-8">
 					<UButton
-						variant="ghost"
+						variant="outline"
 						color="red"
-						icon="i-heroicons-archive-box"
+						icon="i-material-symbols-delete-outline"
+						:ui="{ rounded: 'rounded-full' }"
 						:loading="isLoading"
+						class="iflex items-center justify-center w-12 h-12"
 						@click="confirmDelete"
-						class="inline-block"
 					/>
 
-					<UButton type="submit" color="primary" :loading="isLoading" class="inline-block">Save Changes</UButton>
+					<UButton
+						type="submit"
+						color="primary"
+						variant="outline"
+						:loading="isLoading"
+						:icon="isLoading ? 'i-heroicons-spinner' : 'i-material-symbols-save-outline'"
+						class="flex items-center justify-center w-12 h-12"
+						:ui="{ rounded: 'rounded-full' }"
+					/>
 				</div>
 				<div class="w-full lg:pb-20">
 					<CommentsSystem :item-id="element.id" collection="tickets" />
@@ -138,22 +147,20 @@
 			<!-- Delete Confirmation Modal -->
 			<UModal v-model="showDeleteModal">
 				<UCard>
-					<template #header>
-						<div class="flex items-center justify-between">
-							<h3 class="text-base font-semibold leading-6 text-gray-900 dark:text-white">Delete Ticket</h3>
-						</div>
-					</template>
-
+					<div class="flex items-center justify-between mb-8">
+						<h3 class="text-2xl leading-5 font-thin uppercase tracking-wide">
+							Delete
+							<br />
+							Ticket
+						</h3>
+					</div>
 					<p class="text-sm text-gray-500">
 						Are you sure you want to delete this ticket? This action cannot be undone.
 					</p>
-
-					<template #footer>
-						<div class="flex justify-end space-x-2">
-							<UButton variant="soft" color="gray" @click="showDeleteModal = false">Cancel</UButton>
-							<UButton color="red" :loading="isLoading" @click="deleteTicket">Delete</UButton>
-						</div>
-					</template>
+					<div class="flex justify-end space-x-2 mt-8">
+						<UButton variant="soft" color="gray" @click="showDeleteModal = false">Cancel</UButton>
+						<UButton color="red" :loading="isLoading" @click="deleteTicket">Delete</UButton>
+					</div>
 				</UCard>
 			</UModal>
 		</div>
