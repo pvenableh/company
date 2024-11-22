@@ -66,6 +66,7 @@ const fetchProjects = async () => {
 	const projects = await readItems('projects', {
 		fields: ['id', 'title', 'organization.id', 'organization.name'],
 		filter,
+		sort,
 	});
 
 	projectOptions.value = [{ id: null, title: 'All Projects' }, ...projects];

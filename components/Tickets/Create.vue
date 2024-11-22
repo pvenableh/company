@@ -18,9 +18,13 @@
 				<div v-if="isExpanded" class="fixed inset-0 bg-white dark:bg-gray-800 z-[9999] overflow-auto">
 					<div class="container mx-auto p-4">
 						<!-- Header -->
-						<div class="sticky top-0 z-[10000] px-4 py-3 bg-white dark:bg-gray-800 border-b dark:border-gray-700">
+						<div class="max-w-2xl mx-auto py-3 bg-white dark:bg-gray-800">
 							<div class="flex items-center justify-between">
-								<h3 class="text-lg font-semibold">Create New Ticket</h3>
+								<h3 class="text-2xl leading-5 font-thin uppercase tracking-wide">
+									Create
+									<br />
+									New Ticket
+								</h3>
 								<UButton color="gray" variant="ghost" icon="i-heroicons-x-mark-20-solid" @click="closeForm" />
 							</div>
 						</div>
@@ -41,25 +45,45 @@
 										<USelect v-model="form.priority" :options="priorities" />
 									</UFormGroup>
 									<UFormGroup v-if="hasMultipleOrgs" label="Organization">
-										<USelect
+										<USelectMenu
+											searchable
+											v-model="form.organization"
+											:options="orgOptions"
+											option-attribute="name"
+											value-attribute="id"
+											placeholder="Select Organization"
+											class="relative"
+											@update:modelValue="handleOrgChange"
+										/>
+										<!-- <USelect
 											v-model="form.organization"
 											:options="orgOptions"
 											option-attribute="name"
 											value-attribute="id"
 											placeholder="Select organization"
 											@update:modelValue="handleOrgChange"
-										/>
+										/> -->
 									</UFormGroup>
 
 									<UFormGroup v-if="form.organization" label="Project">
-										<USelect
+										<USelectMenu
+											searchable
 											v-model="form.project"
 											:options="projectOptions"
 											option-attribute="title"
 											value-attribute="id"
 											placeholder="Select project"
 											:loading="loadingProjects"
+											class="relative"
 										/>
+										<!-- <USelect
+											v-model="form.project"
+											:options="projectOptions"
+											option-attribute="title"
+											value-attribute="id"
+											placeholder="Select project"
+											:loading="loadingProjects"
+										/> -->
 									</UFormGroup>
 									<!-- <UFormGroup v-if="hasMultipleOrgs" label="Organization" required>
 										<USelect
