@@ -44,6 +44,7 @@
 							:element="element"
 							:columns="columns"
 							:is-loading="updatingTickets?.has(element.id)"
+							@prevent-close="handlePreventClose"
 						/>
 					</div>
 				</div>
@@ -72,6 +73,7 @@ const props = defineProps({
 
 const cardRef = ref(null);
 const isExpanded = ref(false);
+const canClose = ref(true);
 
 const expand = () => {
 	isExpanded.value = true;
@@ -79,9 +81,16 @@ const expand = () => {
 };
 
 const collapse = () => {
+	if (!canClose.value) {
+		return;
+	}
 	isExpanded.value = false;
 	document.body.style.overflow = '';
 	triggerRefresh();
+};
+
+const handlePreventClose = (prevented) => {
+	canClose.value = !prevented;
 };
 
 onMounted(() => {

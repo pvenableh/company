@@ -126,10 +126,11 @@
 					<UButton
 						type="submit"
 						color="primary"
-						variant="outline"
+						:variant="isDirty ? 'solid' : 'outline'"
 						:loading="isLoading"
-						:icon="isLoading ? 'i-heroicons-spinner' : 'i-material-symbols-save-outline'"
-						class="flex items-center justify-center w-12 h-12"
+						:icon="isDirty ? 'i-material-symbols-save-outline' : 'i-material-symbols-save'"
+						class="flex items-center justify-center w-12 h-12 transition-all"
+						:class="{ 'ring-2 ring-primary-500 ring-offset-2 animate-pulse': isDirty }"
 						:ui="{ rounded: 'rounded-full' }"
 					/>
 				</div>
@@ -163,6 +164,19 @@
 					</div>
 				</UCard>
 			</UModal>
+
+			<UModal v-model="showUnsavedModal">
+				<UCard>
+					<div class="flex items-center justify-between mb-8">
+						<h3 class="text-2xl leading-5 font-thin uppercase tracking-wide">Unsaved Changes</h3>
+					</div>
+					<p class="text-sm text-gray-500">You have unsaved changes. Would you like to save them before leaving?</p>
+					<div class="flex justify-end space-x-2 mt-8">
+						<UButton variant="soft" color="gray" @click="handleDiscard">Discard</UButton>
+						<UButton color="primary" :loading="isLoading" @click="handleSave">Save</UButton>
+					</div>
+				</UCard>
+			</UModal>
 		</div>
 	</div>
 </template>
@@ -183,7 +197,7 @@ const props = defineProps({
 	},
 });
 
-const emit = defineEmits(['close', 'deleted']);
+const emit = defineEmits(['close', 'deleted', 'preventClose']);
 const { createItem, deleteItems, deleteItem, updateItem } = useDirectusItems();
 const { notify } = useNotifications();
 const { readUsers } = useDirectusUsers();
@@ -192,7 +206,24 @@ const showDeleteModal = ref(false);
 const userOptions = ref([]);
 const selectedUser = ref(null);
 const isLoading = ref(false);
+const initialFormState = ref({});
+const isDirty = ref(false);
+const showUnsavedModal = ref(false);
 const toast = useToast();
+
+// Track form changes
+const trackChanges = () => {
+	const currentState = {
+		title: form.value.title,
+		description: form.value.description,
+		status: form.value.status,
+		priority: form.value.priority,
+		category: form.value.category,
+		assigned_to: [...form.value.assigned_to],
+	};
+
+	isDirty.value = JSON.stringify(currentState) !== JSON.stringify(initialFormState.value);
+};
 
 // Initialize form with element data
 const form = ref({
@@ -210,6 +241,15 @@ const priorities = [
 	{ value: 'high', label: 'High' },
 	{ value: 'urgent', label: 'Urgent' },
 ];
+
+watch(
+	() => ({ ...form.value }),
+	() => {
+		trackChanges();
+		emit('preventClose', isDirty.value);
+	},
+	{ deep: true },
+);
 
 // Fetch users
 const fetchUsers = async () => {
@@ -268,6 +308,15 @@ const updateTicket = async () => {
 			});
 			await notifyUserAssignment(userId);
 		}
+		isDirty.value = false;
+		initialFormState.value = {
+			title: form.value.title,
+			description: form.value.description,
+			status: form.value.status,
+			priority: form.value.priority,
+			category: form.value.category,
+			assigned_to: [...form.value.assigned_to],
+		};
 
 		toast.add({
 			title: 'Success',
@@ -400,5 +449,56 @@ const isCurrentUserBadge = (userId) => {
 };
 
 // Initialize users on mount
-onMounted(fetchUsers);
+onMounted(() => {
+	fetchUsers();
+	initialFormState.value = {
+		title: props.element.title,
+		description: props.element.description,
+		status: props.element.status,
+		priority: props.element.priority,
+		category: props.element.category,
+		assigned_to: [...form.value.assigned_to],
+	};
+});
+
+// Handle navigation protection
+const router = useRouter();
+const handleBeforeUnload = (e) => {
+	if (isDirty.value) {
+		e.preventDefault();
+		e.returnValue = '';
+	}
+};
+
+// Router navigation guard
+const routerGuard = router.beforeEach((to, from, next) => {
+	if (isDirty.value) {
+		showUnsavedModal.value = true;
+		next(false);
+	} else {
+		next();
+	}
+});
+
+// Add cleanup
+onBeforeUnmount(() => {
+	window.removeEventListener('beforeunload', handleBeforeUnload);
+	routerGuard();
+});
+
+// Add save/discard handlers
+const handleSave = async () => {
+	await updateTicket();
+	if (!isLoading.value) {
+		showUnsavedModal.value = false;
+		isDirty.value = false;
+		emit('close');
+	}
+};
+
+const handleDiscard = () => {
+	showUnsavedModal.value = false;
+	isDirty.value = false;
+	emit('close');
+};
 </script>
