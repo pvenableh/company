@@ -31,10 +31,10 @@ updateAvatarSource(avatar.value);
 
 const links = ref([
 	{
-		name: 'Home',
+		name: 'Dashboard',
 		type: ['header', 'footer', 'toolbar', 'drawer'],
 		to: '/',
-		icon: 'i-heroicons-home-modern',
+		icon: 'i-heroicons-squares-2x2',
 	},
 	{
 		name: 'Tickets',
@@ -50,13 +50,13 @@ const links = ref([
 	},
 	{
 		name: 'Channels',
-		type: ['header', 'footer', 'toolbar', 'drawer'],
+		type: ['header', 'footer', 'drawer'],
 		to: '/channels',
 		icon: 'i-heroicons-square-3-stack-3d',
 	},
 	{
 		name: 'Invoices',
-		type: ['header', 'footer', 'toolbar', 'drawer'],
+		type: ['header', 'footer', 'drawer'],
 		to: '/invoices',
 		icon: 'i-heroicons-document-text',
 	},

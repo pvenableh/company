@@ -21,6 +21,7 @@
 		"@iconify-icons/wi": "^1.2.3",
 		"@iconify-json/heroicons-outline": "^1.2.0",
 		"@iconify-json/heroicons-solid": "^1.2.0",
+		"@iconify-json/material-symbols": "^1.2.8",
 		"@iconify-json/mdi": "^1.2.0",
 		"@iconify-json/meteocons": "^1.1.4",
 		"@nuxt/devtools": "latest",

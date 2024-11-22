@@ -25,33 +25,26 @@
 					class="fixed inset-0 bg-white dark:bg-gray-800 z-[50] overflow-auto"
 					@click.self="collapse"
 				>
-					<div class="container mx-auto">
+					<div class="container mx-auto relative max-w-screen-xl">
 						<!-- Header -->
-						<div class="sticky top-0 z-[10000] bg-white dark:bg-gray-800 border-b dark:border-gray-700">
-							<div class="flex items-center justify-between">
-								<div class="flex flex-col items-start">
-									<p class="text-xs text-gray-500 uppercase">
-										<span class="opacity-50 mr-1">Ticket #:</span>
-										{{ element?.id }}
-									</p>
-									<p class="text-xs text-gray-500 uppercase">
-										<span class="opacity-50 mr-1">Client:</span>
-										{{ element?.organization.name }}
-									</p>
-								</div>
-								<UButton color="gray" variant="ghost" icon="i-heroicons-x-mark-20-solid" @click="collapse" />
-							</div>
-						</div>
-
-						<!-- Content -->
-						<div class="mt-4">
-							<TicketsDetails
-								v-if="element"
-								:element="element"
-								:columns="columns"
-								:is-loading="updatingTickets?.has(element.id)"
+						<div class="w-full sticky pb-6 top-10 z-10 flex items-end justify-end">
+							<UButton
+								color="gray"
+								variant="solid"
+								icon="i-heroicons-x-mark-20-solid"
+								@click="collapse"
+								:ui="{ rounded: 'rounded-full' }"
+								class=""
 							/>
 						</div>
+						<!-- Content -->
+
+						<TicketsDetails
+							v-if="element"
+							:element="element"
+							:columns="columns"
+							:is-loading="updatingTickets?.has(element.id)"
+						/>
 					</div>
 				</div>
 			</Transition>

@@ -3,15 +3,20 @@
 		<div class="w-full p-4" @click="$emit('expand')">
 			<!-- Ticket Header -->
 			<div class="flex items-start justify-between my-2">
-				<span class="text-gray-500 font-medium text-[8px] italic">{{ element?.id }}</span>
 				<UTooltip :text="getTicketInfo">
-					<UButton
-						color="gray"
-						variant="ghost"
-						icon="i-heroicons-information-circle"
-						size="xs"
-						class="group-hover:opacity-100 transition-opacity"
-					/>
+					<nuxt-link
+						:to="`/tickets/${element.id}`"
+						class="text-gray-500 font-medium text-[10px] italic inline-block relative"
+					>
+						{{ element?.id }}
+						<UButton
+							color="gray"
+							variant="ghost"
+							icon="i-heroicons-information-circle"
+							size="xs"
+							class="group-hover:opacity-100 transition-opacity absolute -top-2 -right-8"
+						/>
+					</nuxt-link>
 				</UTooltip>
 				<UBadge
 					v-if="element?.priority"
@@ -196,7 +201,7 @@ const getTicketInfo = computed(() => {
 		minute: '2-digit',
 	});
 
-	return `Created by ${creator} @ ${created}<\n>Last updated: ${updated}`;
+	return `Created by ${creator} @ ${created}`;
 });
 </script>
 

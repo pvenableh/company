@@ -4,8 +4,12 @@ const { updateItem } = useDirectusItems();
 const { registerRefreshCallback } = useTicketsStore();
 const { user } = useDirectusAuth();
 
-const ADMIN_ROLE = '3a63a4e1-c82e-46f8-9993-7f11ac6a4b01';
-const isAdmin = computed(() => user.value?.role === ADMIN_ROLE);
+const props = defineProps({
+	projectId: {
+		type: String,
+		default: null,
+	},
+});
 
 const columns = [
 	{ id: 'Pending', name: 'Pending', color: 'gray' },
@@ -14,6 +18,18 @@ const columns = [
 	{ id: 'Completed', name: 'Completed', color: 'green' },
 ];
 
+const activeColumn = ref(columns[0].id);
+const isMobile = ref(false);
+const updatingTickets = ref(new Set());
+const isDragging = ref(false);
+
+const ADMIN_ROLE = '3a63a4e1-c82e-46f8-9993-7f11ac6a4b01';
+const isAdmin = computed(() => user.value?.role === ADMIN_ROLE);
+const selectedOrg = ref(null);
+const selectedProject = ref(null);
+const projectOptions = ref([]);
+const filterByAssignedTo = ref(false);
+
 const localTickets = ref(
 	columns.reduce((acc, column) => {
 		acc[column.id] = [];
@@ -21,11 +37,61 @@ const localTickets = ref(
 	}, {}),
 );
 
-const activeColumn = ref(columns[0].id);
-const isMobile = ref(false);
-const updatingTickets = ref(new Set());
-const isDragging = ref(false);
-const selectedOrg = ref(null);
+if (props.projectId) {
+	selectedProject.value = props.projectId;
+}
+
+const fetchProjects = async () => {
+	if (props.projectId) {
+		selectedProject.value = props.projectId;
+		return;
+	}
+
+	const { readItems } = useDirectusItems();
+	let filter = {};
+
+	if (!isAdmin.value) {
+		const userOrgs = user.value?.organizations || [];
+		filter = {
+			organization: {
+				_in: userOrgs.map((org) => org.organizations_id.id),
+			},
+		};
+	} else if (selectedOrg.value) {
+		filter = {
+			organization: { _eq: selectedOrg.value },
+		};
+	}
+
+	const projects = await readItems('projects', {
+		fields: ['id', 'title', 'organization.id', 'organization.name'],
+		filter,
+	});
+
+	projectOptions.value = [{ id: null, title: 'All Projects' }, ...projects];
+};
+// // Fetch projects for the organization
+// const fetchProjects = async (orgId) => {
+// 	if (props.projectId) {
+// 		selectedProject.value = props.projectId;
+// 		return;
+// 	}
+// 	if (!orgId) {
+// 		projectOptions.value = [{ id: null, title: 'All Projects' }];
+// 		return;
+// 	}
+
+// 	const { readItems } = useDirectusItems();
+// 	const projects = await readItems('projects', {
+// 		fields: ['id', 'title'],
+// 		filter: {
+// 			organization: { _eq: orgId },
+// 		},
+// 	});
+
+// 	projectOptions.value = [{ id: null, title: 'All Projects' }, ...projects];
+// 	console.log('Fetched projects:', projectOptions.value);
+// };
 
 const orgOptions = computed(() => {
 	const userOrgs = user.value?.organizations || [];
@@ -58,6 +124,9 @@ const fields = [
 	'organization.id',
 	'organization.name',
 	'organization.logo',
+	'project.id',
+	'project.title',
+	'project.url',
 	'assigned_to.id',
 	'assigned_to.directus_users_id.id',
 	'assigned_to.directus_users_id.first_name',
@@ -68,17 +137,78 @@ const fields = [
 	'tasks',
 ];
 
+// const getFilter = () => {
+// 	const filter = {};
+
+// 	if (!isAdmin.value) {
+// 		const userOrgs = user.value?.organizations || [];
+// 		filter._and = [
+// 			{
+// 				organization: {
+// 					_in: userOrgs.map((org) => org.organizations_id.id),
+// 				},
+// 			},
+// 		];
+// 	} else if (selectedOrg.value) {
+// 		filter._and = [
+// 			{
+// 				organization: { _eq: selectedOrg.value },
+// 			},
+// 		];
+// 	}
+
+// 	if (selectedProject.value) {
+// 		const projectFilter = { project: { _eq: selectedProject.value } };
+// 		filter._and = filter._and ? [...filter._and, projectFilter] : [projectFilter];
+// 	}
+
+// 	console.log('Final filter:', filter);
+// 	return filter;
+// };
+
 const getFilter = () => {
-	if (isAdmin.value) {
-		return {}; // Get all tickets for admin
+	const filter = {
+		_and: [],
+	};
+
+	// Organization filter
+	if (!isAdmin.value) {
+		filter._and.push({
+			organization: {
+				_in: user.value?.organizations.map((org) => org.organizations_id.id),
+			},
+		});
+	} else if (selectedOrg.value) {
+		filter._and.push({
+			organization: { _eq: selectedOrg.value },
+		});
 	}
 
-	const userOrgs = user.value?.organizations || [];
-	return {
-		organization: {
-			_in: userOrgs.map((org) => org.organizations_id.id),
-		},
-	};
+	// Project filter
+	if (selectedProject.value) {
+		filter._and.push({
+			project: { _eq: selectedProject.value },
+		});
+	}
+
+	// Assignment filter - Fixed to properly check the junction table
+	if (filterByAssignedTo.value && user.value) {
+		filter._and.push({
+			assigned_to: {
+				directus_users_id: {
+					id: { _eq: user.value.id },
+				},
+			},
+		});
+	}
+
+	// Remove _and if empty
+	if (filter._and.length === 0) {
+		delete filter._and;
+	}
+
+	console.log('Applied filter:', filter); // For debugging
+	return filter;
 };
 
 const {
@@ -90,21 +220,55 @@ const {
 	refresh,
 } = useRealtimeSubscription('tickets', fields, getFilter(), '-date_updated');
 
+const handleSelectChange = (value) => {
+	// Fix the selected value to ensure "All Organizations" maps to null
+	selectedOrg.value = value === 'null' || value === 'All Organizations' ? null : value;
+	selectedProject.value = null; // Reset project selection when org changes
+};
+
+const handleProjectChange = (value) => {
+	selectedProject.value = value === 'null' || value === 'All Projects' ? null : value;
+};
+
+watch(selectedOrg, async (newOrg) => {
+	selectedProject.value = null;
+	if (isAdmin.value) {
+		// Admin users need to refetch projects when org changes
+		await fetchProjects();
+	}
+});
+
+watch([selectedOrg, selectedProject, filterByAssignedTo], () => {
+	refresh();
+});
+
 watch(
-	[() => tickets.value, () => selectedOrg.value],
-	([newTickets, newOrg]) => {
+	[() => tickets.value, selectedOrg, selectedProject, filterByAssignedTo],
+	([newTickets]) => {
 		if (!newTickets) return;
 
-		console.log('All tickets:', newTickets); // Debug original tickets
-		console.log('Selected org:', selectedOrg.value); // Debug selected org
+		console.log('Filtering tickets:', {
+			total: newTickets.length,
+			filterByAssignedTo: filterByAssignedTo.value,
+			userId: user.value?.id,
+		});
 
-		// Ensure the filter logic works for "All Organizations" correctly
-		const filtered =
-			newOrg === null
-				? newTickets // Show all tickets when selectedOrg is null
-				: newTickets.filter((ticket) => ticket.organization?.id === newOrg);
+		const filtered = newTickets.filter((ticket) => {
+			// Base organization and project filtering
+			const orgMatch = !selectedOrg.value || ticket.organization?.id === selectedOrg.value;
+			const projectMatch = !selectedProject.value || ticket.project?.id === selectedProject.value;
 
-		// Distribute filtered tickets into columns
+			// Assignment filtering
+			let assignmentMatch = true;
+			if (filterByAssignedTo.value && user.value) {
+				assignmentMatch = ticket.assigned_to?.some((assignment) => assignment.directus_users_id?.id === user.value.id);
+			}
+
+			return orgMatch && projectMatch && assignmentMatch;
+		});
+
+		console.log('Filtered result:', filtered.length);
+
 		columns.forEach((column) => {
 			localTickets.value[column.id] = filtered.filter((ticket) => ticket.status === column.id);
 		});
@@ -208,10 +372,6 @@ const handleTicketCreated = () => {
 	refresh();
 	console.log('Refreshing board after ticket creation');
 };
-function handleSelectChange(value) {
-	// Fix the selected value to ensure "All Organizations" maps to null
-	selectedOrg.value = value === 'null' || value === 'All Organizations' ? null : value;
-}
 </script>
 <template>
 	<div class="max-w-screen-2xl mx-auto">
@@ -224,21 +384,67 @@ function handleSelectChange(value) {
 			</UAlert>
 		</div>
 
-		<div class="w-full flex flex-col md:flex-row items-center justify-between mb-4 px-4">
+		<div class="w-full flex flex-col md:flex-row items-center justify-between mb-4 px-4 pt-4">
 			<TicketsCreate :columns="columns" @ticketCreated="handleTicketCreated" />
-			<div v-if="hasMultipleOrgs" class="mb-4 flex items-center space-x-2">
-				<USelect
-					v-model="selectedOrg"
-					:options="orgOptions"
-					option-attribute="name"
-					value-attribute="id"
-					placeholder="Select Organization"
-					class="w-64"
-					@change="handleSelectChange"
-				/>
-			</div>
-			<div v-if="lastUpdated" class="text-xs text-gray-500 mt-2 md:mt-0 font-bold uppercase">
-				Last updated: {{ new Date(lastUpdated).toLocaleTimeString() }}
+
+			<div v-if="!projectId" class="flex items-center gap-4 relative">
+				<div class="flex flex-row items-center justify-center space-x-2">
+					<UToggle v-model="filterByAssignedTo" class="" />
+
+					<span class="text-[10px] text-gray-500 uppercase">
+						{{ filterByAssignedTo ? 'My Tickets' : 'All Tickets' }}
+					</span>
+				</div>
+				<div class="flex items-center space-x-2">
+					<USelectMenu
+						v-if="hasMultipleOrgs"
+						searchable
+						v-model="selectedOrg"
+						:options="orgOptions"
+						option-attribute="name"
+						value-attribute="id"
+						placeholder="Select Organization"
+						class="w-full lg:w-64 uppercase text-[10px] text-gray-400 relative"
+						@change="handleSelectChange"
+					/>
+					<UInput v-else class="w-64 uppercase text-[10px]" :value="user" disabled />
+				</div>
+				<div class="flex items-center space-x-2">
+					<USelectMenu
+						searchable
+						v-model="selectedProject"
+						:options="projectOptions"
+						option-attribute="title"
+						value-attribute="id"
+						placeholder="Select Project"
+						class="w-full lg:w-64 uppercase text-[10px] text-gray-400 relative"
+						@change="handleProjectChange"
+					>
+						<!-- <USelectMenu
+						searchable
+						v-model="selectedProject"
+						:options="projectOptions.length > 1 ? projectOptions : []"
+						option-attribute="title"
+						value-attribute="id"
+						placeholder="Select Project"
+						class="w-full lg:w-64 uppercase text-[10px] text-gray-400 relative"
+						@change="handleProjectChange"
+						:disabled="projectOptions.length < 1"
+					> -->
+						<template #option="{ option }">
+							<div class="flex flex-col">
+								<span>{{ option.title }}</span>
+								<span v-if="option.organization" class="text-xs text-gray-500">
+									{{ option.organization.name }}
+								</span>
+							</div>
+						</template>
+					</USelectMenu>
+				</div>
+
+				<div v-if="lastUpdated" class="-top-[18px] text-[10px] right-0 text-gray-500 absolute font-bold uppercase">
+					Last updated: {{ new Date(lastUpdated).toLocaleTimeString() }}
+				</div>
 			</div>
 		</div>
 

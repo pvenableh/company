@@ -1,7 +1,7 @@
 <template>
 	<div>
 		<!-- Create Button -->
-		<UButton icon="i-heroicons-document-plus" color="primary" class="mb-4 tracking-wide" @click="openForm">
+		<UButton icon="i-heroicons-document-plus" color="primary" class="tracking-wide" @click="openForm">
 			Create Ticket
 		</UButton>
 
@@ -40,7 +40,28 @@
 									<UFormGroup label="Priority">
 										<USelect v-model="form.priority" :options="priorities" />
 									</UFormGroup>
-									<UFormGroup v-if="hasMultipleOrgs" label="Organization" required>
+									<UFormGroup v-if="hasMultipleOrgs" label="Organization">
+										<USelect
+											v-model="form.organization"
+											:options="orgOptions"
+											option-attribute="name"
+											value-attribute="id"
+											placeholder="Select organization"
+											@update:modelValue="handleOrgChange"
+										/>
+									</UFormGroup>
+
+									<UFormGroup v-if="form.organization" label="Project">
+										<USelect
+											v-model="form.project"
+											:options="projectOptions"
+											option-attribute="title"
+											value-attribute="id"
+											placeholder="Select project"
+											:loading="loadingProjects"
+										/>
+									</UFormGroup>
+									<!-- <UFormGroup v-if="hasMultipleOrgs" label="Organization" required>
 										<USelect
 											v-model="form.organization"
 											:options="orgOptions"
@@ -48,7 +69,7 @@
 											value-attribute="id"
 											placeholder="Select organization"
 										/>
-									</UFormGroup>
+									</UFormGroup> -->
 									<UFormGroup label="Due Date">
 										<div class="grid grid-cols-2 gap-4">
 											<UPopover>
@@ -77,10 +98,6 @@
 										</div>
 									</UFormGroup>
 								</div>
-
-								<!-- <UFormGroup label="Category">
-									<UInput v-model="form.category" placeholder="Enter categories (comma-separated)" />
-								</UFormGroup> -->
 
 								<UFormGroup label="Assign To">
 									<div class="space-y-2">
@@ -166,7 +183,7 @@ defineProps({
 		required: true,
 	},
 });
-const { createItem } = useDirectusItems();
+const { createItem, readItems } = useDirectusItems();
 const { readUsers } = useDirectusUsers();
 const { user: currentUser } = useDirectusAuth();
 
@@ -219,6 +236,9 @@ const updateDateTime = () => {
 	}
 };
 
+const projectOptions = ref([]);
+const loadingProjects = ref(false);
+
 const orgOptions = computed(
 	() =>
 		currentUser.value?.organizations?.map((org) => ({
@@ -233,11 +253,12 @@ const defaultOrg = computed(() => orgOptions.value[0]?.id || null);
 const form = ref({
 	title: '',
 	description: '',
-	organization: defaultOrg.value,
 	status: 'Pending',
 	priority: 'medium',
-	due_date: '',
+	due_date: new Date().toISOString(),
 	assigned_to: [],
+	organization: defaultOrg.value,
+	project: null,
 });
 
 const priorities = [
@@ -348,6 +369,8 @@ const createTicket = async () => {
 		// Extract assigned_to from form data
 		const { assigned_to, ...ticketData } = form.value;
 
+		console.log(ticketData);
+
 		// Create ticket first
 		const ticket = await createItem('tickets', {
 			...ticketData,
@@ -386,48 +409,6 @@ const createTicket = async () => {
 	}
 };
 
-// const createTicket = async () => {
-// 	try {
-// 		isLoading.value = true;
-// 		console.log(form.value);
-// 		console.log(form.value.organization || defaultOrg.value);
-// 		const ticket = await createItem('tickets', {
-// 			...form.value,
-// 			organization: form.value.organization || defaultOrg.value,
-// 			date_created: new Date(),
-// 			date_updated: new Date(),
-// 		});
-
-// 		if (form.value.assigned_to.length) {
-// 			await Promise.all(
-// 				form.value.assigned_to.map((userId) =>
-// 					createItem('tickets_directus_users', {
-// 						tickets_id: ticket.id,
-// 						directus_users_id: userId,
-// 					}),
-// 				),
-// 			);
-// 		}
-
-// 		toast.add({
-// 			title: 'Success',
-// 			description: 'Ticket created successfully',
-// 			color: 'green',
-// 		});
-// 		emit('ticketCreated');
-// 		closeForm();
-// 	} catch (error) {
-// 		console.error('Error creating ticket:', error);
-// 		toast.add({
-// 			title: 'Error',
-// 			description: 'Failed to create ticket. Please try again.',
-// 			color: 'red',
-// 		});
-// 	} finally {
-// 		isLoading.value = false;
-// 	}
-// };
-
 const openForm = async () => {
 	isExpanded.value = true;
 	document.body.style.overflow = 'hidden';
@@ -447,10 +428,51 @@ const closeForm = () => {
 		due_date: '',
 		assigned_to: [],
 		organization: defaultOrg.value,
+		project: null,
 	};
+	projectOptions.value = [];
+};
+
+const fetchProjects = async (orgId) => {
+	if (!orgId) {
+		projectOptions.value = [];
+		form.value.project = null;
+		return;
+	}
+
+	loadingProjects.value = true;
+	try {
+		const projects = await readItems('projects', {
+			fields: ['id', 'title'],
+			filter: {
+				organization: { _eq: orgId },
+			},
+		});
+		console.log(projects);
+		projectOptions.value = projects;
+	} catch (error) {
+		console.error('Error fetching projects:', error);
+		toast.add({
+			title: 'Error',
+			description: 'Failed to load projects',
+			color: 'red',
+		});
+		projectOptions.value = [];
+	} finally {
+		loadingProjects.value = false;
+	}
+};
+
+const handleOrgChange = async (orgId) => {
+	form.value.project = null;
+	await fetchProjects(orgId);
 };
 
 onMounted(() => {
+	form.value.organization = defaultOrg.value;
+	if (defaultOrg.value) {
+		fetchProjects(defaultOrg.value);
+	}
 	document.addEventListener('keydown', (e) => {
 		if (e.key === 'Escape' && isExpanded.value) {
 			closeForm();

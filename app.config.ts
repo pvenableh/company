@@ -49,7 +49,7 @@ export default defineAppConfig({
 			// rounded: `rounded-${theme.borderRadius}`,
 		},
 		select: {
-			base: 'rounded-input relative block w-full disabled:cursor-not-allowed disabled:opacity-75 focus:ring-1 focous:ring-gray-300 border-0',
+			base: 'rounded-none relative block w-full disabled:cursor-not-allowed disabled:opacity-75 focus:ring-1 focous:ring-gray-300 border-0',
 			// rounded: `rounded-${theme.borderRadius}`,
 			default: {
 				loadingIcon: 'material-symbols:sync-rounded',
@@ -62,7 +62,7 @@ export default defineAppConfig({
 		},
 		selectMenu: {
 			rounded:
-				'rounded-input relative block w-full disabled:cursor-not-allowed disabled:opacity-75 focus:ring-1 ring-gray-300 border-0',
+				'rounded-none relative block w-full disabled:cursor-not-allowed disabled:opacity-75 focus:ring-1 ring-gray-300 border-0',
 			default: {
 				selectedIcon: 'material-symbols:fitbit-check-small-rounded',
 			},

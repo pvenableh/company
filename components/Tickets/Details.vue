@@ -1,8 +1,24 @@
 <template>
 	<div class="w-full">
-		<div class="flex items-start justify-between flex-col lg:flex-row flex-wrap">
+		<div class="flex items-start justify-around flex-col lg:flex-row flex-wrap">
 			<!-- Form -->
-			<form @submit.prevent="updateTicket" class="w-full lg:w-1/2 space-y-6">
+			<form @submit.prevent="updateTicket" class="w-full lg:w-1/2 space-y-6 relative">
+				<div class="absolute -top-8 left-0 flex items-center justify-around">
+					<div class="flex flex-col items-start mb-8">
+						<p class="text-xs text-gray-500 uppercase">
+							<span class="opacity-50 mr-1">Ticket #:</span>
+							{{ element?.id }}
+						</p>
+						<p v-if="element?.organization" class="text-xs text-gray-500 uppercase">
+							<span class="opacity-50 mr-1">Client:</span>
+							{{ element?.organization.name }}
+							<span v-if="element?.project" class="pl-4 text-xs">
+								<span class="opacity-50 mr-1">Project:</span>
+								{{ element?.project.title }}
+							</span>
+						</p>
+					</div>
+				</div>
 				<UFormGroup label="Title" required>
 					<UInput v-model="form.title" placeholder="Enter ticket title" :loading="isLoading" />
 				</UFormGroup>
@@ -112,8 +128,8 @@
 					<CommentsSystem :item-id="element.id" collection="tickets" />
 				</div>
 			</form>
-			<div class="w-full lg:w-[500px] lg:border lg:shadow-lg lg:p-6 lg:sticky lg:top-20">
-				<h4 class="uppercase block font-medium text-gray-700 dark:text-gray-200 tracking-wider">Tasks</h4>
+			<div class="w-full lg:w-[500px] lg:border lg:shadow-lg lg:p-6 lg:sticky lg:top-20 mt-12 lg:mt-12">
+				<h4 class="w-full uppercase block font-medium text-gray-700 dark:text-gray-200 tracking-wider">Tasks</h4>
 				<TicketsTasks :ticket-id="element.id" class="mt-4 pb-12" />
 			</div>
 
