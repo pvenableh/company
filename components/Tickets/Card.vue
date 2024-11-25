@@ -65,7 +65,7 @@
 					</div>
 				</div>
 			</div>
-			<p v-if="element?.due_date" class="uppercase text-[10px] mt-3">
+			<p v-if="element?.due_date" class="uppercase text-[10px] mt-3" :class="formatDueDateStatus(element?.due_date)">
 				{{ formatDueDate(element?.due_date) }}
 			</p>
 		</div>
@@ -75,12 +75,16 @@
 			<ReactionsBar :item-id="element.id" collection="tickets" />
 			<div class="flex flex-row text-xs text-gray-500 mr-3">
 				<div v-if="commentCount > 0" class="flex items-center gap-1">
-					<UIcon name="i-heroicons-chat-bubble-left-right" class="w-4 h-4" />
-					{{ commentCount }}
+					<UTooltip :text="commentCount + ' comments'" :popper="{ arrow: true }">
+						<UIcon name="i-heroicons-chat-bubble-left-right" class="w-4 h-4 inline-block mr-1" />
+						{{ commentCount }}
+					</UTooltip>
 				</div>
 				<div v-if="taskCount > 0" class="ml-2 flex items-center gap-1">
-					<UIcon name="i-heroicons-check-circle" class="w-4 h-4" />
-					{{ taskCount }}
+					<UTooltip :text="taskCount + ' tasks'" :popper="{ arrow: true }">
+						<UIcon name="i-heroicons-check-circle" class="w-4 h-4 inline-block mr-1" />
+						{{ taskCount }}
+					</UTooltip>
 				</div>
 			</div>
 		</div>
@@ -215,5 +219,12 @@ const getTicketInfo = computed(() => {
 .u-avatar:hover {
 	transform: translateY(-2px);
 	z-index: 10;
+}
+.urgent,
+.past {
+	@apply text-red-500;
+}
+.medium {
+	@apply text-yellow-500;
 }
 </style>

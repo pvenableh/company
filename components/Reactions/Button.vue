@@ -134,7 +134,7 @@ const countRef = ref(null);
 </script>
 
 <template>
-	<UPopover :popper="{ placement: 'top' }" mode="hover" :disabled="!userList || userList.length === 0">
+	<UPopover :popper="{ arrow: true }" mode="hover" :disabled="!userList || userList.length === 0">
 		<UButton
 			:icon="getReactionIcon(reaction)"
 			:color="isActive ? 'primary' : 'gray'"

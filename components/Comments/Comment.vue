@@ -74,9 +74,11 @@ const sanitizedComment = computed(() => {
 });
 
 async function handleDelete() {
+	console.log('handleDelete');
 	try {
 		deleteLoading.value = true;
-		await deleteItem('comments', props.comment.id);
+		const comment = await deleteItem('comments', props.comment.id);
+		console.log(comment);
 		emit('deleted', props.comment.id);
 	} catch (error) {
 		console.error('Error deleting comment:', error);

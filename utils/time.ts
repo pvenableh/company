@@ -160,13 +160,33 @@ function isPastOrFuture(inputDate: string | number | Date) {
 	}
 }
 
-function formatDueDate(date1: string | number | Date) {
-	date1 = new Date(date1);
+function formatDueDateStatus(date1: string | number | Date): string {
 	const date2 = new Date();
-
-	let diff = date1.getTime() - date2.getTime();
+	let diff = new Date(date1).getTime() - date2.getTime();
 	const isPastDue = diff < 0;
-	diff = Math.abs(diff); // Take the absolute value to handle past due dates
+
+	if (isPastDue) {
+		return 'past';
+	}
+
+	diff = Math.abs(diff); // Take the absolute value
+	const days = Math.floor(diff / (24 * 60 * 60 * 1000));
+	const hours = Math.floor((diff % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+
+	if (days === 0 && hours < 1) {
+		return 'urgent'; // Less than 1 hour remaining
+	} else if (days <= 1) {
+		return 'medium'; // 1 day or less
+	} else {
+		return 'normal'; // More than 1 day
+	}
+}
+
+function formatDueDate(date1: string | number | Date): string {
+	const date2 = new Date();
+	let diff = new Date(date1).getTime() - date2.getTime();
+	const isPastDue = diff < 0;
+	diff = Math.abs(diff); // Take the absolute value
 
 	// Convert the difference to days, hours, and minutes
 	const days = Math.floor(diff / (24 * 60 * 60 * 1000));
@@ -175,12 +195,17 @@ function formatDueDate(date1: string | number | Date) {
 	diff -= hours * (60 * 60 * 1000);
 	const minutes = Math.floor(diff / (60 * 1000));
 
-	// Format the string based on whether it is past due or not
-	if (isPastDue) {
-		return `This is past due by ${days} days, ${hours} hours, and ${minutes} minutes.`;
-	} else {
-		return `This is due in ${days} days, ${hours} hours, and ${minutes} minutes.`;
+	// Build the formatted time string dynamically
+	const parts: string[] = [];
+	if (days > 0) parts.push(`${days} day${days > 1 ? 's' : ''}`);
+	if (hours > 0) parts.push(`${hours} hour${hours > 1 ? 's' : ''}`);
+	if (minutes > 0 || (days === 0 && hours === 0)) {
+		// Always include minutes if days and hours are 0
+		parts.push(`${minutes} minute${minutes > 1 ? 's' : ''}`);
 	}
+	const formattedTime = parts.join(', ');
+
+	return isPastDue ? `Past Due by ${formattedTime}.` : `Due in ${formattedTime}.`;
 }
 
 function subtractDates(date1: string | number | Date, date2: string | number | Date, unit?: string): number {
@@ -227,6 +252,7 @@ export {
 	format,
 	getRelativeTime,
 	formatDueDate,
+	formatDueDateStatus,
 	isPastOrFuture,
 	getFriendlyDate,
 	getFriendlyDateTwo,

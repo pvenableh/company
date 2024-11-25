@@ -2,21 +2,29 @@
 	<div v-if="editor">
 		<editor-content
 			:editor="editor"
-			class="rounded-t-md border-t border-r border-l p-4 dark:text-white text-[14px] min-h-12 transition-all duration-200 tiptap-container"
+			class="rounded-t-md border-t border-r border-l p-4 dark:text-white text-[14px] min-h-20 transition-all duration-200 tiptap-container"
 			:class="{ 'px-0 pt-0 border-none': disabled }"
 		/>
 
-		<div class="w-full flex flex-row bg-gray-100 rounded-b-md border-r border-l border-b">
+		<div class="w-full flex flex-row justify-between rounded-b-md border-r border-l border-b">
+			<div>
+				<UButton
+					v-for="(button, index) in toolbarButtons"
+					:key="index"
+					size="xs"
+					variant="ghost"
+					:icon="button.icon"
+					:class="{ 'is-active': editor.isActive(button.command) }"
+					@click="button.action"
+				/>
+			</div>
 			<UButton
-				v-for="(button, index) in toolbarButtons"
-				:key="index"
+				@click="$refs.fileInput.click()"
 				size="xs"
 				variant="ghost"
-				:icon="button.icon"
-				:class="{ 'is-active': editor.isActive(button.command) }"
-				@click="button.action"
+				icon="i-heroicons-paper-clip"
+				class="px-1 mr-2"
 			/>
-			<UButton @click="$refs.fileInput.click()" size="xs" variant="ghost" icon="i-heroicons-paper-clip" />
 			<input ref="fileInput" type="file" multiple class="hidden" @change="handleFileUpload" />
 		</div>
 

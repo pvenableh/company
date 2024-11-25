@@ -116,6 +116,33 @@ const getCreatorInfo = (task) => {
 	if (!task.user_created) return 'Unknown user';
 	return `Created by ${task.user_created.first_name} ${task.user_created.last_name}\non ${formatDate(task.date_created)}`;
 };
+
+const editingTaskId = ref(null); // Track which task is being edited
+
+// Save updated task title
+async function updateTaskTitle(taskId, newTitle) {
+	if (!newTitle.trim()) return;
+
+	const index = localTasks.value.findIndex((task) => task.id === taskId);
+	if (index !== -1) {
+		// Optimistic update
+		localTasks.value[index].title = newTitle;
+
+		try {
+			await updateItem('tasks', taskId, { title: newTitle });
+		} catch (error) {
+			console.error('Failed to update task title:', error);
+			// Revert title on failure
+			localTasks.value[index].title = remoteTasks.value.find((t) => t.id === taskId)?.title || '';
+		}
+	}
+}
+function stopEditing(taskId, newTitle) {
+	if (editingTaskId.value === taskId) {
+		editingTaskId.value = null;
+		updateTaskTitle(taskId, newTitle);
+	}
+}
 </script>
 
 <template>
@@ -144,7 +171,22 @@ const getCreatorInfo = (task) => {
 					/>
 					<UCheckbox :model-value="task.status === 'completed'" @update:model-value="() => toggleTask(task)" />
 					<div class="relative flex-1">
-						<span :class="{ 'line-through text-gray-400': task.status === 'completed' }">
+						<UInput
+							v-if="editingTaskId === task.id"
+							v-model="task.title"
+							placeholder="Edit task title"
+							class="w-full"
+							@keyup.enter="stopEditing(task.id, task.title)"
+							@blur="stopEditing(task.id, task.title)"
+						/>
+
+						<!-- Display Mode -->
+						<span
+							v-else
+							@click="editingTaskId = task.id"
+							:class="{ 'line-through text-gray-400': task.status === 'completed' }"
+							class="cursor-pointer"
+						>
 							{{ task.title }}
 						</span>
 						<div
