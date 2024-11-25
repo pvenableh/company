@@ -53,6 +53,10 @@ const props = defineProps({
 		type: Object,
 		default: null,
 	},
+	refreshFn: {
+		type: Function,
+		required: true,
+	},
 });
 
 console.log(props.comment);
@@ -74,12 +78,13 @@ const sanitizedComment = computed(() => {
 });
 
 async function handleDelete() {
-	console.log('handleDelete');
 	try {
 		deleteLoading.value = true;
-		const comment = await deleteItem('comments', props.comment.id);
-		console.log(comment);
+		await deleteItem('comments', props.comment.id);
 		emit('deleted', props.comment.id);
+		if (props.refreshFn) {
+			await props.refreshFn();
+		}
 	} catch (error) {
 		console.error('Error deleting comment:', error);
 	} finally {

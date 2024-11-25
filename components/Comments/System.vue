@@ -28,22 +28,31 @@
 
 				<!-- Comments List -->
 				<TransitionGroup name="comments" tag="div" class="space-y-4">
+					<!-- <CommentsThread
+						v-for="comment in comments"
+						:key="comment.id"
+						:comment="comment"
+						:loading="isLoading"
+						:is-active="activeCommentId === comment.comments_id.id"
+						:refresh-fn="refresh"
+						@reply="handleReply"
+						@submit="handleCommentSubmit"
+						@cancel="cancelReply"
+						@delete="handleDelete"
+					/> -->
 					<CommentsThread
 						v-for="comment in comments"
 						:key="comment.id"
 						:comment="comment"
 						:loading="isLoading"
 						:is-active="activeCommentId === comment.comments_id.id"
+						:refresh-fn="refresh"
 						@reply="handleReply"
 						@submit="handleCommentSubmit"
 						@cancel="cancelReply"
 						@delete="handleDelete"
 					/>
 				</TransitionGroup>
-
-				<!-- <div v-if="!comments.length" class="text-center text-sm text-gray-500 py-4">
-					No comments yet. Be the first to comment!
-				</div> -->
 			</div>
 		</Transition>
 	</div>
@@ -51,7 +60,6 @@
 
 <script setup>
 import { useRealtimeSubscription } from '~/composables/useRealtimeSubscription';
-const emit = defineEmits(['update:commentCount']);
 
 const props = defineProps({
 	itemId: {
@@ -64,12 +72,16 @@ const props = defineProps({
 	},
 });
 
+const emit = defineEmits(['update:commentCount']);
+
 const { user } = useDirectusAuth();
 const { createItem, deleteItem } = useDirectusItems();
 const showComments = ref(true);
 const isLoading = ref(false);
 const replyingTo = ref(null);
 const activeCommentId = ref(null);
+const localComments = ref([]);
+const isInitialized = ref(false);
 
 const junctionTable = `${props.collection}_comments`;
 const collectionIdField = `${props.collection}_id`;
@@ -88,7 +100,7 @@ const fields = [
 	'comments_id.reactions.users_id.id',
 ];
 
-const { data: rawComments } = useRealtimeSubscription(
+const { data: rawComments, refresh } = useRealtimeSubscription(
 	junctionTable,
 	fields,
 	{
@@ -99,26 +111,49 @@ const { data: rawComments } = useRealtimeSubscription(
 	'-comments_id.date_created',
 );
 
-// Existing computed properties and helper functions remain the same
+watch(
+	rawComments,
+	(newComments) => {
+		if (!newComments) {
+			localComments.value = [];
+			return;
+		}
+
+		if (!isInitialized.value) {
+			localComments.value = [...newComments];
+			isInitialized.value = true;
+		} else {
+			// Always sync with remote state
+			localComments.value = [...newComments];
+		}
+	},
+	{ deep: true },
+);
+
 const comments = computed(() => {
 	if (!rawComments.value) return [];
 
 	const commentMap = new Map();
 	rawComments.value.forEach((comment) => {
-		commentMap.set(String(comment.comments_id.id), {
-			...comment,
-			replies: [],
-		});
+		if (comment?.comments_id) {
+			commentMap.set(String(comment.comments_id.id), {
+				...comment,
+				replies: [],
+			});
+		}
 	});
 
 	const rootComments = [];
 	rawComments.value.forEach((comment) => {
+		if (!comment?.comments_id) return;
+
 		const currentComment = commentMap.get(String(comment.comments_id.id));
 		const parentId = comment.comments_id.parent_id;
 
 		if (parentId) {
 			const parentComment = commentMap.get(String(parentId));
 			if (parentComment) {
+				parentComment.replies = parentComment.replies || [];
 				parentComment.replies.push(currentComment);
 			} else {
 				rootComments.push(currentComment);
@@ -131,7 +166,7 @@ const comments = computed(() => {
 	rootComments.sort((a, b) => new Date(b.comments_id.date_created) - new Date(a.comments_id.date_created));
 
 	const sortReplies = (comment) => {
-		if (comment.replies?.length > 0) {
+		if (comment?.replies?.length > 0) {
 			comment.replies.sort((a, b) => new Date(a.comments_id.date_created) - new Date(b.comments_id.date_created));
 			comment.replies.forEach(sortReplies);
 		}
@@ -148,10 +183,7 @@ const commentsCount = computed(() => {
 		comment.replies?.forEach(countReplies);
 	};
 	comments.value.forEach(countReplies);
-
-	// Emit the new count whenever it changes
 	emit('update:commentCount', total);
-
 	return total;
 });
 
@@ -164,14 +196,35 @@ async function handleCommentSubmit(commentHtml) {
 			parent_id: replyingTo.value?.comments_id?.id?.toString() || null,
 		});
 
-		await createItem(junctionTable, {
+		const junctionRecord = await createItem(junctionTable, {
 			[collectionIdField]: props.itemId.toString(),
 			comments_id: comment.id,
 		});
 
+		// Add new comment to local state
+		localComments.value = [
+			...localComments.value,
+			{
+				id: junctionRecord.id,
+				comments_id: {
+					id: comment.id,
+					comment: commentHtml,
+					date_created: new Date().toISOString(),
+					parent_id: replyingTo.value?.comments_id?.id || null,
+					user: {
+						id: user.value.id,
+						first_name: user.value.first_name,
+						last_name: user.value.last_name,
+						avatar: user.value.avatar,
+					},
+				},
+			},
+		];
+
 		cancelReply();
 	} catch (error) {
 		console.error('Error posting comment:', error);
+		refresh();
 	} finally {
 		isLoading.value = false;
 	}
@@ -180,6 +233,7 @@ async function handleCommentSubmit(commentHtml) {
 async function handleDelete(commentId) {
 	try {
 		await deleteItem('comments', commentId);
+		await refresh();
 	} catch (error) {
 		console.error('Error deleting comment:', error);
 	}
@@ -194,6 +248,8 @@ function cancelReply() {
 	replyingTo.value = null;
 	activeCommentId.value = null;
 }
+
+defineExpose({ refresh });
 </script>
 
 <style>

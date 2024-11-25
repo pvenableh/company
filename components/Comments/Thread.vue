@@ -45,6 +45,7 @@
 						:replying-to="comment"
 						:loading="loading"
 						:depth="1"
+						:refresh-fn="refreshFn"
 						@submit="$emit('submit', $event)"
 						@cancel="$emit('cancel')"
 						:comment="comment.comments_id"
@@ -88,6 +89,10 @@ const props = defineProps({
 		type: Boolean,
 		default: false,
 	},
+	refresh: {
+		type: Function,
+		required: true,
+	},
 });
 console.log(props.comment);
 const emit = defineEmits(['reply', 'submit', 'cancel', 'delete']);
@@ -100,6 +105,7 @@ async function handleDelete() {
 		deleteLoading.value = true;
 		await deleteItem('comments', props.comment.comments_id.id);
 		emit('delete', props.comment.comments_id.id);
+		props.refresh();
 	} catch (error) {
 		console.error('Error deleting comment:', error);
 	} finally {
