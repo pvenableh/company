@@ -11,5 +11,7 @@
 </template>
 
 <script setup>
-// No additional setup needed as everything is handled in the component
+definePageMeta({
+	middleware: ['auth'],
+});
 </script>
