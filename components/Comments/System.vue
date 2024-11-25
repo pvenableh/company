@@ -23,15 +23,15 @@
 			<div v-if="showComments" class="mt-4 space-y-4">
 				<!-- Main Comment Input -->
 				<div v-if="user && !replyingTo">
-					<CommentsComment :loading="isLoading" :depth="0" @submit="handleCommentSubmit" />
+					<CommentsComment v-if="user && !replyingTo" :loading="isLoading" :depth="0" @submit="handleCommentSubmit" />
 				</div>
 
 				<!-- Comments List -->
 				<TransitionGroup name="comments" tag="div" class="space-y-4">
 					<CommentsThread
 						v-for="comment in comments"
-						:depth="0"
 						:key="comment.id"
+						:depth="0"
 						:comment="comment"
 						:loading="isLoading"
 						:is-active="activeCommentId === comment.comments_id.id"

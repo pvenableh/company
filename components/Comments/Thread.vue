@@ -38,8 +38,17 @@
 					<ReactionsBar :item-id="String(comment.comments_id.id)" collection="comments" />
 					<UButton v-if="!isReply" variant="ghost" size="xs" @click="$emit('reply', comment)">Reply</UButton>
 				</div>
-
-				<!-- Reply input -->
+				<!-- 
+				Reply input
+				<div>
+					<CommentsComment
+						:comment="comment.comments_id"
+						:depth="depth"
+						:refresh-fn="refreshFn"
+						@reply="$emit('reply', comment)"
+						@deleted="$emit('delete', $event)"
+					/>
+				</div> -->
 				<div v-if="isActive && !isReply" class="mt-2">
 					<CommentsComment
 						:replying-to="comment"
@@ -55,7 +64,10 @@
 				<!-- Nested replies -->
 				<div
 					v-if="comment.replies?.length"
-					class="mt-3 space-y-3 border-l-2 border-gray-200 dark:border-gray-700 pl-4 ml-4"
+					class="mt-3 space-y-3"
+					:class="{
+						'border-l-2 border-gray-200 dark:border-gray-700 pl-4 ml-4': depth < 4,
+					}"
 				>
 					<CommentsThread
 						v-for="reply in comment.replies"
@@ -64,7 +76,12 @@
 						:comment="reply"
 						:loading="loading"
 						:is-reply="true"
+						:refresh-fn="refreshFn"
+						:is-active="isActive"
 						@delete="$emit('delete', $event)"
+						@submit="$emit('submit', $event)"
+						@reply="$emit('reply', $event)"
+						@cancel="$emit('cancel')"
 					/>
 				</div>
 			</div>
@@ -93,6 +110,10 @@ const props = defineProps({
 	refresh: {
 		type: Function,
 		required: true,
+	},
+	depth: {
+		type: Number,
+		default: 0,
 	},
 });
 console.log(props.comment);
