@@ -175,7 +175,7 @@ function stopEditing(taskId, newTitle) {
 							v-if="editingTaskId === task.id"
 							v-model="task.title"
 							placeholder="Edit task title"
-							class="w-full"
+							class="w-full text-xs"
 							@keyup.enter="stopEditing(task.id, task.title)"
 							@blur="stopEditing(task.id, task.title)"
 						/>
@@ -185,7 +185,7 @@ function stopEditing(taskId, newTitle) {
 							v-else
 							@click="editingTaskId = task.id"
 							:class="{ 'line-through text-gray-400': task.status === 'completed' }"
-							class="cursor-pointer"
+							class="cursor-pointer text-xs leading-3 inline-block"
 						>
 							{{ task.title }}
 						</span>
