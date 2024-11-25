@@ -24,7 +24,13 @@
 			</div>
 
 			<!-- Submit Button -->
-			<UButton color="primary" :loading="loading" @click="handleSubmit" :disabled="!editorContent.trim()">
+			<UButton
+				v-if="depth < 4"
+				color="primary"
+				:loading="loading"
+				@click="handleSubmit"
+				:disabled="!editorContent.trim()"
+			>
 				{{ replyingTo ? 'Reply' : 'Post' }}
 			</UButton>
 		</div>

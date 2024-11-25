@@ -28,20 +28,9 @@
 
 				<!-- Comments List -->
 				<TransitionGroup name="comments" tag="div" class="space-y-4">
-					<!-- <CommentsThread
-						v-for="comment in comments"
-						:key="comment.id"
-						:comment="comment"
-						:loading="isLoading"
-						:is-active="activeCommentId === comment.comments_id.id"
-						:refresh-fn="refresh"
-						@reply="handleReply"
-						@submit="handleCommentSubmit"
-						@cancel="cancelReply"
-						@delete="handleDelete"
-					/> -->
 					<CommentsThread
 						v-for="comment in comments"
+						:depth="0"
 						:key="comment.id"
 						:comment="comment"
 						:loading="isLoading"

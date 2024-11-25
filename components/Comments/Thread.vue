@@ -44,7 +44,7 @@
 					<CommentsComment
 						:replying-to="comment"
 						:loading="loading"
-						:depth="1"
+						:depth="depth"
 						:refresh-fn="refreshFn"
 						@submit="$emit('submit', $event)"
 						@cancel="$emit('cancel')"
@@ -59,6 +59,7 @@
 				>
 					<CommentsThread
 						v-for="reply in comment.replies"
+						:depth="depth + 1"
 						:key="reply.id"
 						:comment="reply"
 						:loading="loading"
