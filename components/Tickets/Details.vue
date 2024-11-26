@@ -40,10 +40,30 @@
 					</UFormGroup>
 				</div>
 
-				<!-- <UFormGroup label="Category">
-					<UInput v-model="form.category" placeholder="Enter categories (comma-separated)" :loading="isLoading" />
-				</UFormGroup> -->
+				<div class="grid grid-cols-2 gap-4">
+					<UFormGroup label="Due Date">
+						<div class="grid grid-cols-2 gap-4">
+							<UPopover>
+								<UInput
+									:model-value="formatDisplayDate(form.due_date)"
+									:readonly="true"
+									:placeholder="formatDisplayDate(new Date())"
+									icon="i-heroicons-calendar"
+								/>
+								<template #panel>
+									<VCalendar :attributes="calendarAttrs" is-expanded v-model="selectedDate" @dayclick="updateDueDate" />
+								</template>
+							</UPopover>
 
+							<USelect
+								v-model="selectedTime"
+								:options="timeOptions"
+								placeholder="Select time"
+								@update:model-value="updateDateTime"
+							/>
+						</div>
+					</UFormGroup>
+				</div>
 				<!-- User Assignment -->
 				<UFormGroup label="Assign To">
 					<div class="space-y-2">
@@ -106,13 +126,33 @@
 					<FormTiptap
 						v-model="form.description"
 						placeholder="Enter ticket description"
+						@mention="handleMention"
 						:editor-props="{
 							content: form.description,
 						}"
 					/>
 				</UFormGroup>
 
-				<div class="w-full flex flex-row items-center justify-end space-x-8">
+				<div class="w-full flex flex-row items-center justify-between space-x-8">
+					<div class="flex items-center flex-row">
+						<UButton
+							type="submit"
+							color="primary"
+							:variant="isDirty ? 'solid' : 'outline'"
+							:loading="isLoading"
+							:icon="isDirty ? 'i-material-symbols-save-outline' : 'i-material-symbols-save'"
+							class="flex items-center justify-center w-12 h-12 transition-all"
+							:class="{ 'ring-2 ring-primary-500 ring-offset-2 animate-pulse': isDirty }"
+							:ui="{ rounded: 'rounded-full' }"
+						/>
+						<Share
+							class="ml-4"
+							:url="'https://huestudios.company/tickets/' + element.id"
+							:title="'Hue Ticket #' + element.id"
+							:description="element.title"
+							@share="handleShare"
+						/>
+					</div>
 					<UButton
 						variant="outline"
 						color="red"
@@ -122,23 +162,13 @@
 						class="iflex items-center justify-center w-12 h-12"
 						@click="confirmDelete"
 					/>
-
-					<UButton
-						type="submit"
-						color="primary"
-						:variant="isDirty ? 'solid' : 'outline'"
-						:loading="isLoading"
-						:icon="isDirty ? 'i-material-symbols-save-outline' : 'i-material-symbols-save'"
-						class="flex items-center justify-center w-12 h-12 transition-all"
-						:class="{ 'ring-2 ring-primary-500 ring-offset-2 animate-pulse': isDirty }"
-						:ui="{ rounded: 'rounded-full' }"
-					/>
 				</div>
+
 				<div class="w-full lg:pb-20">
 					<CommentsSystem :item-id="element.id" collection="tickets" />
 				</div>
 			</form>
-			<div class="w-full lg:w-[500px] lg:border lg:shadow-lg lg:p-6 lg:sticky lg:top-20 mt-12 lg:mt-12">
+			<div class="w-full lg:w-[500px] lg:border lg:shadow-lg lg:p-6 lg:sticky lg:top-20 mt-12 lg:mt-12 ticket__tasks">
 				<h4 class="w-full uppercase block font-medium text-gray-700 dark:text-gray-200 tracking-wider">Tasks</h4>
 				<TicketsTasks :ticket-id="element.id" class="mt-4 pb-12" />
 			</div>
@@ -196,7 +226,9 @@ const props = defineProps({
 		default: false,
 	},
 });
-
+const handleShare = (method) => {
+	console.log(`Shared via ${method}`);
+};
 const emit = defineEmits(['close', 'deleted', 'preventClose']);
 const { createItem, deleteItems, deleteItem, updateItem } = useDirectusItems();
 const { notify } = useNotifications();
@@ -210,6 +242,14 @@ const initialFormState = ref({});
 const isDirty = ref(false);
 const showUnsavedModal = ref(false);
 const toast = useToast();
+const mentionedUsers = ref(new Set());
+const calendarAttrs = [
+	{
+		key: 'today',
+		dot: true,
+		dates: new Date(),
+	},
+];
 
 // Track form changes
 const trackChanges = () => {
@@ -220,6 +260,7 @@ const trackChanges = () => {
 		priority: form.value.priority,
 		category: form.value.category,
 		assigned_to: [...form.value.assigned_to],
+		due_date: form.value.due_date,
 	};
 
 	isDirty.value = JSON.stringify(currentState) !== JSON.stringify(initialFormState.value);
@@ -233,6 +274,7 @@ const form = ref({
 	priority: props.element.priority,
 	category: props.element.category,
 	assigned_to: props.element.assigned_to?.map((assignment) => assignment.directus_users_id.id) || [],
+	due_date: props.element.due_date,
 });
 
 const priorities = [
@@ -281,11 +323,95 @@ const availableUsers = computed(() => {
 	return userOptions.value.filter((user) => !form.value.assigned_to.includes(user.id));
 });
 
+const selectedDate = ref(props.element.due_date ? new Date(props.element.due_date) : new Date());
+const selectedTime = ref(props.element.due_date ? props.element.due_date.slice(11, 16) : '17:00');
+
+const timeOptions = Array.from({ length: 48 }, (_, i) => {
+	const hour = Math.floor(i / 2);
+	const minute = (i % 2) * 30;
+	const time = new Date();
+	time.setHours(hour, minute);
+	return {
+		label: time.toLocaleTimeString('en-US', {
+			hour: '2-digit',
+			minute: '2-digit',
+			hour12: true,
+		}),
+		value: `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
+	};
+});
+
+const formatDisplayDate = (date) => {
+	if (!date) return '';
+	// Create date in local timezone
+	const localDate = new Date(date);
+	return localDate.toLocaleDateString('en-US', {
+		month: 'short',
+		day: 'numeric',
+		year: 'numeric',
+		timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, // Use user's local timezone
+	});
+};
+
+const updateDueDate = (day) => {
+	// Create a new date object in local timezone
+	selectedDate.value = new Date(day.date);
+	updateDateTime();
+};
+
+const updateDateTime = () => {
+	if (selectedDate.value && selectedTime.value) {
+		// Get the user's timezone
+		const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+		// Parse hours and minutes
+		const [hours, minutes] = selectedTime.value.split(':');
+
+		// Create date in local timezone
+		const dateTime = new Date(selectedDate.value);
+
+		// Set hours and minutes in local timezone
+		dateTime.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+
+		// Convert to ISO string while preserving timezone offset
+		const offset = dateTime.getTimezoneOffset();
+		const localISOTime = new Date(dateTime.getTime() - offset * 60 * 1000).toISOString();
+
+		form.value.due_date = localISOTime;
+
+		console.log({
+			localDateTime: dateTime.toString(),
+			timezone: userTimezone,
+			isoString: form.value.due_date,
+			offset: offset,
+		});
+	}
+};
+const handleMention = (mentionData) => {
+	mentionedUsers.value.add(mentionData.id);
+};
+
+async function notifyMentionedUsers(commentText, collection, itemId) {
+	for (const userId of mentionedUsers.value) {
+		await notify({
+			recipient: userId,
+			subject: 'You were mentioned in a ticket',
+			message: `${currentUser.value.first_name} ${currentUser.value.last_name} mentioned you in a ticket: ${commentText}`,
+			collection,
+			item: itemId,
+		});
+	}
+}
 // Update ticket handler
 const updateTicket = async () => {
 	try {
 		isLoading.value = true;
 		const { assigned_to, ...ticketData } = form.value;
+
+		if (mentionedUsers.value.size > 0) {
+			const result = await notifyMentionedUsers(form.value.title, 'tickets', props.element?.id);
+			console.log(result);
+		}
 
 		// Update main ticket data
 		await updateItem('tickets', props.element.id, {
@@ -502,3 +628,12 @@ const handleDiscard = () => {
 	emit('close');
 };
 </script>
+<style>
+.ticket {
+	&__tasks {
+		.tiptap-container {
+			font-size: 12px;
+		}
+	}
+}
+</style>

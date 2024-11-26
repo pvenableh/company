@@ -184,6 +184,7 @@
 										:editor-props="{
 											content: form.description,
 										}"
+										@mention="handleMention"
 									/>
 								</UFormGroup>
 
@@ -216,11 +217,14 @@ const isExpanded = ref(false);
 const isLoading = ref(false);
 const userOptions = ref([]);
 const selectedUser = ref(null);
+const { notify } = useNotifications();
 
 const toast = useToast();
 
 const selectedDate = ref(new Date());
 const selectedTime = ref('17:00');
+
+const mentionedUsers = ref(new Set());
 
 const timeOptions = Array.from({ length: 48 }, (_, i) => {
 	const hour = Math.floor(i / 2);
@@ -239,10 +243,13 @@ const timeOptions = Array.from({ length: 48 }, (_, i) => {
 
 const formatDisplayDate = (date) => {
 	if (!date) return '';
-	return new Date(date).toLocaleDateString('en-US', {
+	// Create date in local timezone
+	const localDate = new Date(date);
+	return localDate.toLocaleDateString('en-US', {
 		month: 'short',
 		day: 'numeric',
 		year: 'numeric',
+		timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, // Use user's local timezone
 	});
 };
 
@@ -253,10 +260,30 @@ const updateDueDate = (day) => {
 
 const updateDateTime = () => {
 	if (selectedDate.value && selectedTime.value) {
+		// Get the user's timezone
+		const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+		// Parse hours and minutes
 		const [hours, minutes] = selectedTime.value.split(':');
+
+		// Create date in local timezone
 		const dateTime = new Date(selectedDate.value);
-		dateTime.setHours(parseInt(hours), parseInt(minutes));
-		form.value.due_date = dateTime.toISOString();
+
+		// Set hours and minutes in local timezone
+		dateTime.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+
+		// Convert to ISO string while preserving timezone offset
+		const offset = dateTime.getTimezoneOffset();
+		const localISOTime = new Date(dateTime.getTime() - offset * 60 * 1000).toISOString();
+
+		form.value.due_date = localISOTime;
+
+		console.log({
+			localDateTime: dateTime.toString(),
+			timezone: userTimezone,
+			isoString: form.value.due_date,
+			offset: offset,
+		});
 	}
 };
 
@@ -386,9 +413,30 @@ watch(
 	{ deep: true },
 );
 
+const handleMention = (mentionData) => {
+	mentionedUsers.value.add(mentionData.id);
+};
+
+async function notifyMentionedUsers(commentText, collection, itemId) {
+	for (const userId of mentionedUsers.value) {
+		await notify({
+			recipient: userId,
+			subject: 'You were mentioned in a ticket',
+			message: `${currentUser.value.first_name} ${currentUser.value.last_name} mentioned you in a ticket: ${commentText}`,
+			collection,
+			item: itemId,
+		});
+	}
+}
+
 const createTicket = async () => {
 	try {
 		isLoading.value = true;
+
+		if (mentionedUsers.value.size > 0) {
+			const result = await notifyMentionedUsers(form.value.title, 'tickets', props.element?.id);
+			console.log(result);
+		}
 
 		// Extract assigned_to from form data
 		const { assigned_to, ...ticketData } = form.value;

@@ -10,13 +10,19 @@
 		<!-- Comment Input -->
 		<div class="flex gap-2">
 			<div class="flex-grow">
-				<FormTiptap v-model="editorContent" :disabled="loading" @mention="handleMention" @keydown="handleKeydown" />
+				<FormTiptap
+					v-model="editorContent"
+					:disabled="loading"
+					:show-toolbar="toolbar"
+					@mention="handleMention"
+					@keydown="handleKeydown"
+				/>
 				<UButton
-					v-if="comment?.user?.id === user?.id"
+					v-if="comment?.user?.id === user?.id && !replyingTo"
 					size="xs"
 					color="red"
 					variant="ghost"
-					icon="i-heroicons-trash"
+					icon="i-heroicons-x-circle-solid"
 					class="absolute top-2 right-2"
 					:loading="deleteLoading"
 					@click="handleDelete"
@@ -27,6 +33,8 @@
 			<UButton
 				v-if="depth < 4"
 				color="primary"
+				size="xs"
+				class="flex-shrink-0"
 				:loading="loading"
 				@click="handleSubmit"
 				:disabled="!editorContent.trim()"
@@ -59,9 +67,13 @@ const props = defineProps({
 		type: Object,
 		default: null,
 	},
-	refreshFn: {
+	refresh: {
 		type: Function,
 		required: true,
+	},
+	toolbar: {
+		type: Boolean,
+		default: true,
 	},
 });
 
@@ -88,8 +100,8 @@ async function handleDelete() {
 		deleteLoading.value = true;
 		await deleteItem('comments', props.comment.id);
 		emit('deleted', props.comment.id);
-		if (props.refreshFn) {
-			await props.refreshFn();
+		if (props.refresh) {
+			await props.refresh();
 		}
 	} catch (error) {
 		console.error('Error deleting comment:', error);
@@ -130,12 +142,14 @@ async function handleSubmit() {
 	if (!editorContent.value.trim()) return;
 
 	// Send notifications for mentions
+	console.log(mentionedUsers.value);
 	if (mentionedUsers.value.size > 0) {
-		await notifyMentionedUsers(
+		const result = await notifyMentionedUsers(
 			editorContent.value,
 			props.replyingTo?.collection || 'comments',
 			props.replyingTo?.item || props.replyingTo?.comments_id?.id,
 		);
+		console.log(result);
 	}
 
 	// Send notification for reply

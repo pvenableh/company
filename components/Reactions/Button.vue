@@ -81,13 +81,28 @@ const toggleReaction = async () => {
 
 const getReactionIcon = (type) => {
 	const icons = {
-		love: 'i-heroicons-heart',
-		like: 'i-heroicons-hand-thumb-up',
-		idea: 'i-heroicons-light-bulb',
-		dislike: 'i-heroicons-hand-thumb-down',
-		question: 'i-heroicons-question-mark-circle',
+		love: {
+			outline: 'i-heroicons-heart',
+			solid: 'i-heroicons-heart-solid',
+		},
+		like: {
+			outline: 'i-heroicons-hand-thumb-up',
+			solid: 'i-heroicons-hand-thumb-up-solid',
+		},
+		idea: {
+			outline: 'i-heroicons-light-bulb',
+			solid: 'i-heroicons-light-bulb-solid',
+		},
+		dislike: {
+			outline: 'i-heroicons-hand-thumb-down',
+			solid: 'i-heroicons-hand-thumb-down-solid',
+		},
+		question: {
+			outline: 'i-heroicons-question-mark-circle',
+			solid: 'i-heroicons-question-mark-circle-solid',
+		},
 	};
-	return icons[type];
+	return isActive.value ? icons[type].solid : icons[type].outline;
 };
 
 const userList = computed(() => {
@@ -131,19 +146,52 @@ watch(
 );
 
 const countRef = ref(null);
+
+const checkUserReaction = async () => {
+	if (!user.value) return;
+
+	try {
+		const existingReaction = await readItems('reactions', {
+			filter: {
+				item: { _eq: props.itemId },
+				user: { _eq: user.value.id },
+				reaction: { _eq: props.reaction },
+			},
+		});
+
+		isActive.value = existingReaction && existingReaction.length > 0;
+	} catch (error) {
+		console.error('Error checking reaction status:', error);
+	}
+};
+
+onMounted(() => {
+	checkUserReaction();
+});
+
+watch(
+	() => user.value?.id,
+	(newUserId) => {
+		if (newUserId) {
+			checkUserReaction();
+		} else {
+			isActive.value = false;
+		}
+	},
+);
 </script>
 
 <template>
-	<UPopover :popper="{ arrow: true }" mode="hover" :disabled="!userList || userList.length === 0">
+	<UPopover mode="hover" :disabled="!userList || userList.length === 0">
 		<UButton
 			:icon="getReactionIcon(reaction)"
 			:color="isActive ? 'primary' : 'gray'"
 			variant="soft"
 			size="xs"
-			:class="isActive ? 'text-cyan-500 fill-cyan-500' : ''"
+			:class="isActive ? 'text-cyan-300 fill-cyan-300' : ''"
 			:ui="{
 				icon: {
-					base: isActive ? 'w-4 h-4 flex-shrink-0 text-turqoise-500' : 'w-4 h-4 flex-shrink-0',
+					base: isActive ? 'w-4 h-4 flex-shrink-0 text-cyan-300' : 'w-4 h-4 flex-shrink-0',
 					transform: isActive ? 'scale-150' : 'scale-100',
 					transition: 'transform duration-200',
 					color: isActive ? 'ghost' : 'gray',

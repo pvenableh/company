@@ -182,6 +182,53 @@ function formatDueDateStatus(date1: string | number | Date): string {
 	}
 }
 
+function getTimeAgo(dateTime: string | number | Date) {
+	if (!dateTime) return '';
+
+	const now = new Date();
+	const past = new Date(dateTime);
+	const diffInMs = now - past;
+
+	// Convert to different units
+	const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+	const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+	const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+	const diffInMonths = (now.getFullYear() - past.getFullYear()) * 12 + now.getMonth() - past.getMonth();
+	const diffInYears = Math.floor(diffInMonths / 12);
+
+	// Less than an hour
+	if (diffInMinutes < 60) {
+		if (diffInMinutes <= 1) return 'just now';
+		return `${diffInMinutes} minutes ago`;
+	}
+
+	// Less than a day
+	if (diffInHours < 24) {
+		if (diffInHours === 1) return '1 hour ago';
+		return `${diffInHours} hours ago`;
+	}
+
+	// Less than a month
+	if (diffInDays < 30) {
+		if (diffInDays === 1) return 'yesterday';
+		return `${diffInDays} days ago`;
+	}
+
+	// Less than a year
+	if (diffInMonths < 12) {
+		if (diffInMonths === 1) return '1 month ago';
+		return `${diffInMonths} months ago`;
+	}
+
+	// Years
+	if (diffInYears === 1) return '1 year ago';
+	return `${diffInYears} years ago`;
+}
+
+// Example usage:
+// const date = new Date('2023-11-26T10:30:00');
+// console.log(getTimeAgo(date)); // "1 year ago"
+
 function formatDueDate(date1: string | number | Date): string {
 	const date2 = new Date();
 	let diff = new Date(date1).getTime() - date2.getTime();
@@ -265,4 +312,5 @@ export {
 	getMonth,
 	getDate,
 	getDay,
+	getTimeAgo,
 };

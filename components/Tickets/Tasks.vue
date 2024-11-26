@@ -2,6 +2,12 @@
 import { useRealtimeSubscription } from '~/composables/useRealtimeSubscription';
 import draggable from 'vuedraggable';
 
+const { user: currentUser } = useDirectusAuth();
+const { createItem, updateItem, deleteItem } = useDirectusItems();
+const { notify } = useNotifications();
+const mentionedUsers = ref(new Set());
+const newTask = ref('');
+
 const props = defineProps({
 	ticketId: {
 		type: String,
@@ -14,7 +20,19 @@ const isInitialized = ref(false);
 
 const { data: remoteTasks } = useRealtimeSubscription(
 	'tasks',
-	['*', 'user_created.first_name', 'user_created.last_name', 'user_updated.first_name', 'user_updated.last_name'],
+	[
+		'*',
+		'user_created.first_name',
+		'user_created.last_name',
+		'user_updated.first_name',
+		'user_updated.last_name',
+		'assigned_to.id',
+		'assigned_to.directus_users_id.id',
+		'assigned_to.directus_users_id.first_name',
+		'assigned_to.directus_users_id.last_name',
+		'assigned_to.directus_users_id.email',
+		'assigned_to.directus_users_id.avatar',
+	],
 	{
 		ticket_id: {
 			_eq: props.ticketId,
@@ -50,18 +68,38 @@ watch(
 	{ deep: true },
 );
 
-const newTask = ref('');
-const { createItem, updateItem, deleteItem } = useDirectusItems();
+const handleMention = (mentionData) => {
+	mentionedUsers.value.add(mentionData.id);
+};
+
+async function notifyMentionedUsers(commentText, collection, itemId) {
+	for (const userId of mentionedUsers.value) {
+		await notify({
+			recipient: userId,
+			subject: 'You were mentioned in a task',
+			message: `${currentUser.value.first_name} ${currentUser.value.last_name} mentioned you in a task: ${commentText}`,
+			collection,
+			item: itemId,
+		});
+	}
+}
 
 async function addTask() {
 	if (!newTask.value.trim()) return;
 
-	await createItem('tasks', {
-		title: newTask.value,
+	const newTaskId = await createItem('tasks', {
+		description: newTask.value,
 		ticket_id: props.ticketId,
 		status: 'active',
 		sort: localTasks.value.length,
 	});
+
+	console.log(newTaskId);
+
+	if (mentionedUsers.value.size > 0) {
+		const result = await notifyMentionedUsers(newTask.value, 'tasks', newTaskId.id);
+		console.log(result);
+	}
 
 	newTask.value = '';
 	// Removed manual addition to localTasks
@@ -93,6 +131,10 @@ async function handleDragEnd() {
 	}
 }
 
+// const handleTaskUpdate = () => {
+// 	refresh();
+// };
+
 const formatCompletionDate = (date) => {
 	return new Date(date).toLocaleDateString('en-US', {
 		month: 'short',
@@ -119,28 +161,33 @@ const getCreatorInfo = (task) => {
 
 const editingTaskId = ref(null); // Track which task is being edited
 
-// Save updated task title
-async function updateTaskTitle(taskId, newTitle) {
-	if (!newTitle.trim()) return;
+// Save updated task description
+async function updateTaskDescription(taskId, newDescription) {
+	if (!newDescription.trim()) return;
+
+	if (mentionedUsers.value.size > 0) {
+		const result = await notifyMentionedUsers(newDescription, 'tasks', taskId);
+		console.log(result);
+	}
 
 	const index = localTasks.value.findIndex((task) => task.id === taskId);
 	if (index !== -1) {
 		// Optimistic update
-		localTasks.value[index].title = newTitle;
+		localTasks.value[index].description = newDescription;
 
 		try {
-			await updateItem('tasks', taskId, { title: newTitle });
+			await updateItem('tasks', taskId, { description: newDescription });
 		} catch (error) {
-			console.error('Failed to update task title:', error);
+			console.error('Failed to update task description:', error);
 			// Revert title on failure
-			localTasks.value[index].title = remoteTasks.value.find((t) => t.id === taskId)?.title || '';
+			localTasks.value[index].description = remoteTasks.value.find((t) => t.id === taskId)?.description || '';
 		}
 	}
 }
-function stopEditing(taskId, newTitle) {
+function stopEditing(taskId, newDescription) {
 	if (editingTaskId.value === taskId) {
 		editingTaskId.value = null;
-		updateTaskTitle(taskId, newTitle);
+		updateTaskDescription(taskId, newDescription);
 	}
 }
 </script>
@@ -148,7 +195,17 @@ function stopEditing(taskId, newTitle) {
 <template>
 	<div class="space-y-4">
 		<div class="flex items-center space-x-2">
-			<UInput v-model="newTask" placeholder="Add a new task..." class="flex-1" @keyup.enter="addTask" />
+			<!-- <UInput v-model="newTask" placeholder="Add a new task..." class="flex-1" @keyup.enter="addTask" /> -->
+			<FormTiptap
+				:showToolbar="false"
+				v-model="newTask"
+				placeholder="Add a new task..."
+				class="w-full text-xs"
+				height="h-12"
+				custom-classes="p-2 text-[12px]"
+				@keyup.enter="addTask"
+				@mention="handleMention"
+			/>
 			<UButton color="gray" variant="soft" icon="i-heroicons-plus" :disabled="!newTask.trim()" @click="addTask" />
 		</div>
 
@@ -171,24 +228,27 @@ function stopEditing(taskId, newTitle) {
 					/>
 					<UCheckbox :model-value="task.status === 'completed'" @update:model-value="() => toggleTask(task)" />
 					<div class="relative flex-1">
-						<UInput
+						<FormTiptap
 							v-if="editingTaskId === task.id"
-							v-model="task.title"
-							placeholder="Edit task title"
+							:showToolbar="false"
+							v-model="task.description"
 							class="w-full text-xs"
-							@keyup.enter="stopEditing(task.id, task.title)"
-							@blur="stopEditing(task.id, task.title)"
+							height="h-8"
+							custom-classes="px-2 py-1 text-[10px]"
+							@keyup.enter="stopEditing(task.id, task.description)"
+							@blur="stopEditing(task.id, task.description)"
+							@mention="handleMention"
 						/>
 
 						<!-- Display Mode -->
-						<span
+						<div
 							v-else
 							@click="editingTaskId = task.id"
 							:class="{ 'line-through text-gray-400': task.status === 'completed' }"
-							class="cursor-pointer text-xs leading-3 inline-block"
-						>
-							{{ task.title }}
-						</span>
+							class="cursor-pointer text-xs leading-4 inline-block"
+							v-html="task.description"
+						></div>
+
 						<div
 							v-if="task.status === 'completed'"
 							class="text-[8px] text-gray-500 mt-0.5 uppercase absolute left-0 -bottom-[10px]"
@@ -196,6 +256,9 @@ function stopEditing(taskId, newTitle) {
 							Completed {{ formatCompletionDate(task.date_updated) }} by
 							{{ task.user_updated ? ` ${task.user_updated.first_name}` : '' }}
 						</div>
+						<!-- <div class="mt-4 border-t pt-4">
+							<TasksTaskAssignment :task="task" @update="handleTaskUpdate" />
+						</div> -->
 					</div>
 					<UTooltip :text="getCreatorInfo(task)">
 						<UButton

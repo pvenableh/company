@@ -1,12 +1,22 @@
 <template>
-	<div v-if="editor">
+	<div v-if="editor" class="tiptap-wrapper relative">
 		<editor-content
 			:editor="editor"
-			class="rounded-t-md border-t border-r border-l p-4 dark:text-white text-[14px] min-h-20 transition-all duration-200 tiptap-container"
-			:class="{ 'px-0 pt-0 border-none': disabled }"
+			class="rounded-t-md border-t border-r border-l dark:text-white text-[14px] transition-all duration-200 overflow-y-scroll focus:border focus:border-cyan-200 relative tiptap-container"
+			:class="[
+				{ 'px-0 pt-0 border-none': disabled },
+				{ ' border-cyan-200': editor.isFocused },
+				{ 'border-b rounded-b-md': !showToolbar },
+				height,
+				customClasses,
+			]"
 		/>
 
-		<div class="w-full flex flex-row justify-between rounded-b-md border-r border-l border-b">
+		<div
+			v-if="showToolbar"
+			class="w-full flex flex-row justify-between rounded-b-md border-r border-l border-b"
+			:class="{ ' border-cyan-200': editor.isFocused }"
+		>
 			<div>
 				<UButton
 					v-for="(button, index) in toolbarButtons"
@@ -29,6 +39,7 @@
 		</div>
 
 		<UProgress v-if="isUploading" :value="uploadProgress" color="primary" class="mt-2" />
+		<div ref="mentionsPortal" class="mentions-portal" />
 	</div>
 </template>
 
@@ -46,20 +57,45 @@ const props = defineProps({
 		type: String,
 		default: '',
 	},
+	showToolbar: {
+		type: Boolean,
+		default: true,
+	},
+	height: {
+		type: String,
+		default: 'min-h-20',
+	},
+	singleLine: {
+		type: Boolean,
+		default: false,
+	},
+	customClasses: {
+		type: String,
+		default: 'p-4',
+	},
+	focusRingClasses: {
+		type: String,
+		default: 'ring-2 ring-primary-500 ring-offset-2 dark:ring-offset-gray-900 border-cyan-200',
+	},
 	disabled: {
 		type: Boolean,
 		default: false,
 	},
 });
 
-const emit = defineEmits(['update:modelValue', 'mention']);
+const emit = defineEmits(['update:modelValue', 'mention', 'blur', 'enter']);
+
 const editor = ref(null);
 const fileInput = ref(null);
 const isUploading = ref(false);
 const uploadProgress = ref(0);
 const { uploadFiles } = useDirectusFiles();
 const { readUsers } = useDirectusUsers();
+const { notify } = useNotifications();
+const { user: currentUser } = useDirectusAuth();
 const toast = useToast();
+
+const mentionsPortal = ref(null);
 
 const toolbarButtons = [
 	{ icon: 'i-heroicons-bold', command: 'bold', action: () => editor.value.chain().focus().toggleBold().run() },
@@ -80,6 +116,31 @@ const toolbarButtons = [
 		action: () => editor.value.chain().focus().toggleOrderedList().run(),
 	},
 ];
+
+// const handleUserMention = async (mentionedUser) => {
+// 	if (!mentionedUser || !props.context.collection || !props.context.itemId) return;
+
+// 	try {
+// 		const contextInfo = {
+// 			collection: props.context.collection,
+// 			item: props.context.itemId,
+// 		};
+
+// 		const notice =await notify({
+// 			recipient: mentionedUser.id,
+// 			subject: 'You were mentioned',
+// 			message: `${currentUser.value?.first_name} ${currentUser.value?.last_name} mentioned you in a ${contextInfo.collection.slice(0, -1)}`,
+// 			...contextInfo,
+// 		});
+// 	} catch (error) {
+// 		console.error('Error sending mention notification:', error);
+// 		toast.add({
+// 			title: 'Error',
+// 			description: 'Failed to notify mentioned user',
+// 			color: 'red',
+// 		});
+// 	}
+// };
 
 const CustomMention = Mention.configure({
 	HTMLAttributes: {
@@ -106,85 +167,121 @@ const CustomMention = Mention.configure({
 			}
 		},
 		render: () => {
-			let popup;
+			let popup = null;
 			let selectedIndex = 0;
 			let mentionRange = null;
 			let currentItems = [];
+			let currentClientRect = null;
+
+			const positionPopup = (coords) => {
+				if (!popup || !mentionsPortal.value) return;
+
+				const editorRect = mentionsPortal.value.getBoundingClientRect();
+				const viewportHeight = window.innerHeight;
+
+				let left = coords.left - editorRect.left;
+				let top = coords.bottom - editorRect.top;
+
+				if (coords.bottom + popup.offsetHeight > viewportHeight) {
+					top = coords.top - editorRect.top - popup.offsetHeight;
+				}
+
+				const maxLeft = editorRect.width - popup.offsetWidth;
+				left = Math.max(0, Math.min(left, maxLeft));
+
+				popup.style.transform = `translate3d(${left}px, ${top}px, 0)`;
+			};
 
 			const renderItems = (items) => {
 				currentItems = items;
+				if (!popup) return;
+
 				popup.innerHTML = `
-          <div class="max-h-48 overflow-y-auto py-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-700">
-            ${items
+					<div class="max-h-48 overflow-y-auto py-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-700">
+						${items
 							.map(
 								(item, index) => `
-              <div class="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-2 ${index === selectedIndex ? 'bg-gray-100 dark:bg-gray-700' : ''}" data-index="${index}">
-                <img src="${item.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.label)}&background=eeeeee&color=00bfff`}" class="w-8 h-8 rounded-full" alt="${item.label}">
-                <div>
-                  <div class="font-medium text-sm">${item.label}</div>
-                  <div class="text-xs text-gray-500">${item.email}</div>
-                </div>
-              </div>
-            `,
+							<div class="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-2 ${
+								index === selectedIndex ? 'bg-gray-100 dark:bg-gray-700' : ''
+							}" data-index="${index}">
+								<img src="${item.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.label)}&background=eeeeee&color=00bfff`}" 
+									class="w-8 h-8 rounded-full" alt="${item.label}">
+								<div>
+									<div class="font-medium text-sm">${item.label}</div>
+									<div class="text-xs text-gray-500">${item.email}</div>
+								</div>
+							</div>
+						`,
 							)
 							.join('')}
-          </div>
-        `;
-			};
+					</div>
+				`;
 
-			const selectMention = (range) => {
-				const item = currentItems[selectedIndex];
-				if (item && editor.value) {
-					editor.value
-						.chain()
-						.focus()
-						.deleteRange(range)
-						.insertContentAt(range.from, [
-							{
-								type: 'mention',
-								attrs: {
-									id: item.id,
-									label: item.label,
-								},
-							},
-							{ type: 'text', text: ' ' },
-						])
-						.run();
+				if (currentClientRect) {
+					positionPopup(currentClientRect());
 				}
-				popup?.remove();
-				return item;
 			};
 
 			return {
 				onStart: ({ items, clientRect, range }) => {
 					selectedIndex = 0;
 					mentionRange = range;
-					popup = document.createElement('div');
-					popup.classList.add('mentions-menu');
+					currentClientRect = clientRect;
 
-					const coords = clientRect();
-					popup.style.left = `${coords.left}px`;
-					popup.style.top = `${coords.bottom + window.scrollY}px`;
+					if (!popup) {
+						popup = document.createElement('div');
+						popup.classList.add('mentions-menu');
+						mentionsPortal.value?.appendChild(popup);
+
+						popup.addEventListener('click', (e) => {
+							const item = e.target.closest('[data-index]');
+							if (item) {
+								selectedIndex = parseInt(item.dataset.index);
+								const selectedItem = currentItems[selectedIndex];
+								if (selectedItem && editor.value) {
+									editor.value
+										.chain()
+										.focus()
+										.deleteRange(mentionRange)
+										.insertContentAt(mentionRange.from, [
+											{
+												type: 'mention',
+												attrs: {
+													id: selectedItem.id,
+													label: selectedItem.label,
+												},
+											},
+											{ type: 'text', text: ' ' },
+										])
+										.run();
+									popup?.remove();
+									popup = null;
+								}
+							}
+						});
+					}
 
 					renderItems(items);
-					document.body.appendChild(popup);
-
-					popup.addEventListener('click', (e) => {
-						const item = e.target.closest('[data-index]');
-						if (item) {
-							selectedIndex = parseInt(item.dataset.index);
-							return selectMention(mentionRange);
-						}
-					});
+					const coords = clientRect();
+					if (coords) {
+						positionPopup(coords);
+					}
 				},
 
-				onUpdate({ items, range }) {
+				onUpdate: ({ items, clientRect, range }) => {
 					selectedIndex = 0;
 					mentionRange = range;
+					currentClientRect = clientRect;
 					renderItems(items);
+					const coords = clientRect();
+					if (coords) {
+						positionPopup(coords);
+					}
 				},
 
-				onKeyDown({ event }) {
+				onKeyDown: ({ event }) => {
+					if (!popup) return false;
+
 					if (event.key === 'ArrowUp') {
 						selectedIndex = (selectedIndex - 1 + currentItems.length) % currentItems.length;
 						renderItems(currentItems);
@@ -197,41 +294,48 @@ const CustomMention = Mention.configure({
 						return true;
 					}
 
-					if (event.key === 'Enter') {
+					if (event.key === 'Enter' && currentItems[selectedIndex]) {
 						event.preventDefault();
-						return selectMention(mentionRange);
+						const selectedItem = currentItems[selectedIndex];
+						if (selectedItem && editor.value) {
+							editor.value
+								.chain()
+								.focus()
+								.deleteRange(mentionRange)
+								.insertContentAt(mentionRange.from, [
+									{
+										type: 'mention',
+										attrs: {
+											id: selectedItem.id,
+											label: selectedItem.label,
+										},
+									},
+									{ type: 'text', text: ' ' },
+								])
+								.run();
+
+							// // Handle mention notifications
+							// handleUserMention(selectedItem);
+							emit('mention', selectedItem);
+
+							popup?.remove();
+							popup = null;
+						}
+						return true;
 					}
 
 					return false;
 				},
 
-				onExit() {
+				onExit: () => {
 					popup?.remove();
+					popup = null;
 					mentionRange = null;
 					currentItems = [];
 					selectedIndex = 0;
+					currentClientRect = null;
 				},
 			};
-		},
-		command: ({ editor, range, props }) => {
-			// Emit mention event when a user is mentioned
-			emit('mention', props);
-
-			editor
-				.chain()
-				.focus()
-				.deleteRange(range)
-				.insertContentAt(range.from, [
-					{
-						type: 'mention',
-						attrs: {
-							id: props.id,
-							label: props.label,
-						},
-					},
-					{ type: 'text', text: ' ' },
-				])
-				.run();
 		},
 	},
 });
@@ -327,6 +431,16 @@ onMounted(() => {
 		onUpdate: () => {
 			emit('update:modelValue', editor.value.getHTML());
 		},
+		onBlur: ({ event }) => {
+			emit('blur', event);
+		},
+		onKeyDown: ({ event }) => {
+			if (event.key === 'Enter' && !event.shiftKey) {
+				event.preventDefault();
+				emit('enter', event);
+				return true;
+			}
+		},
 	});
 });
 
@@ -387,15 +501,55 @@ onBeforeUnmount(() => {
 		text-decoration: none;
 		white-space: nowrap;
 	}
+	&:focus-within {
+		outline: none;
+	}
+
+	/* Add a smooth transition for the focus effect */
+	&,
+	&.ProseMirror {
+		transition: all 0.2s ease-in-out;
+	}
+
+	/* Optional: Add a subtle hover effect */
+	&:not(.ProseMirror-focused):hover {
+		border-color: var(--cyan-200);
+	}
+}
+
+.tiptap-container:focus-within + div button {
+	@apply text-primary-500;
+}
+
+/* Ensure proper contrast in dark mode */
+.dark .tiptap-container:focus-within {
+	@apply border-cyan-200;
 }
 
 .is-active {
 	background-color: rgba(0, 0, 0, 0.1);
 }
 
-.mentions-menu {
-	position: fixed;
+.tiptap-wrapper {
+	position: relative;
+}
+
+.mentions-portal {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 0;
+	pointer-events: none;
 	z-index: 50;
+}
+
+.mentions-menu {
+	position: absolute;
+	pointer-events: auto;
 	width: 16rem;
+	z-index: 50;
+	transform: translate3d(0, 0, 0);
+	will-change: transform;
 }
 </style>

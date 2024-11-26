@@ -17,12 +17,12 @@ export default defineAppConfig({
 		},
 
 		button: {
-			base: 'hover:scale-100 active:hover:scale-100 transition duration-150 uppercase tracking-wide text-center focus:border-0 focus:outline-none focus:ring-1 focus:ring-gray-300 disabled:cursor-not-allowed disabled:opacity-75 active:border-0 active:outline-none active:ring-1 active:ring-gray-300 tracking-wider text-center',
+			base: 'transition duration-150 uppercase tracking-wide text-center focus:border-0 focus:outline-none focus:ring-1 focus:ring-gray-300 disabled:cursor-not-allowed disabled:opacity-75 active:border-0 active:outline-none active:ring-1 active:ring-gray-300 tracking-wider text-center',
 			font: 'font-bold',
 
 			default: {
 				size: 'lg',
-				loadingIcon: 'i-heroicons-arrow-path',
+				loadingIcon: 'i-heroicons-arrow-path-micro',
 			},
 			color: {
 				white: {

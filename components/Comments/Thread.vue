@@ -13,20 +13,19 @@
 
 			<div class="flex-grow">
 				<div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-3">
-					<div class="flex items-center gap-2 mb-1">
-						<span class="font-medium text-sm">
+					<div class="w-full flex items-center gap-2 mb-1 relative text-[10px] font-bold">
+						<span class="font-medium uppercase">
 							{{ comment.comments_id.user?.first_name }}
 							{{ comment.comments_id.user?.last_name }}
 						</span>
-						<span class="text-xs text-gray-500">
-							{{ new Date(comment.comments_id.date_created).toLocaleString() }}
-						</span>
+
 						<UButton
 							v-if="comment.comments_id.user?.id === currentUser?.id"
 							size="xs"
-							color="red"
+							color="primary"
 							variant="ghost"
-							icon="i-heroicons-trash"
+							icon="i-heroicons-x-circle-solid"
+							class="absolute right-2"
 							:loading="deleteLoading"
 							@click="handleDelete"
 						/>
@@ -34,29 +33,29 @@
 					<div class="text-sm comment" v-html="comment.comments_id.comment" />
 				</div>
 
-				<div class="flex gap-2 mt-1">
-					<ReactionsBar :item-id="String(comment.comments_id.id)" collection="comments" />
-					<UButton v-if="!isReply" variant="ghost" size="xs" @click="$emit('reply', comment)">Reply</UButton>
+				<div class="w-full flex gap-2 mt-1">
+					<div class="flex-grow flex flex-row">
+						<ReactionsBar :item-id="String(comment.comments_id.id)" collection="comments" />
+						<UButton v-if="depth < 4" variant="ghost" size="xs" class="text-[10px]" @click="handleReplyClick">
+							Reply
+						</UButton>
+					</div>
+					<span class="text-[9px] uppercase font-bold">
+						<UTooltip :text="new Date(comment.comments_id.date_created).toLocaleString()">
+							{{ getTimeAgo(new Date(comment.comments_id.date_created).toLocaleString()) }}
+						</UTooltip>
+					</span>
 				</div>
-				<!-- 
-				Reply input
-				<div>
-					<CommentsComment
-						:comment="comment.comments_id"
-						:depth="depth"
-						:refresh-fn="refreshFn"
-						@reply="$emit('reply', comment)"
-						@deleted="$emit('delete', $event)"
-					/>
-				</div> -->
-				<div v-if="isActive && !isReply" class="mt-2">
+
+				<div v-if="showReplyForm" class="mt-2">
 					<CommentsComment
 						:replying-to="comment"
 						:loading="loading"
 						:depth="depth"
-						:refresh-fn="refreshFn"
-						@submit="$emit('submit', $event)"
-						@cancel="$emit('cancel')"
+						:refresh="refresh"
+						:toolbar="false"
+						@submit="handleReplySubmit"
+						@cancel="handleReplyCancel"
 						:comment="comment.comments_id"
 					/>
 				</div>
@@ -76,12 +75,12 @@
 						:comment="reply"
 						:loading="loading"
 						:is-reply="true"
-						:refresh-fn="refreshFn"
-						:is-active="isActive"
+						:refresh="refresh"
+						:is-active="isActive && activeReplyId === reply.comments_id.id"
 						@delete="$emit('delete', $event)"
-						@submit="$emit('submit', $event)"
-						@reply="$emit('reply', $event)"
-						@cancel="$emit('cancel')"
+						@submit="handleNestedReplySubmit"
+						@reply="handleNestedReply"
+						@cancel="handleReplyCancel"
 					/>
 				</div>
 			</div>
@@ -116,11 +115,39 @@ const props = defineProps({
 		default: 0,
 	},
 });
-console.log(props.comment);
+
 const emit = defineEmits(['reply', 'submit', 'cancel', 'delete']);
 const { user: currentUser } = useDirectusAuth();
 const { deleteItem } = useDirectusItems();
 const deleteLoading = ref(false);
+const showReplyForm = ref(false);
+const activeReplyId = ref(null);
+
+function handleReplyClick() {
+	showReplyForm.value = true;
+	emit('reply', props.comment);
+}
+
+function handleReplySubmit(content) {
+	emit('submit', content);
+	showReplyForm.value = false;
+}
+
+function handleNestedReply(reply) {
+	activeReplyId.value = reply.comments_id.id;
+	emit('reply', reply);
+}
+
+function handleNestedReplySubmit(content) {
+	emit('submit', content);
+	activeReplyId.value = null;
+}
+
+function handleReplyCancel() {
+	showReplyForm.value = false;
+	activeReplyId.value = null;
+	emit('cancel');
+}
 
 async function handleDelete() {
 	try {
@@ -134,4 +161,15 @@ async function handleDelete() {
 		deleteLoading.value = false;
 	}
 }
+
+// Reset state when isActive changes
+watch(
+	() => props.isActive,
+	(newValue) => {
+		if (!newValue) {
+			showReplyForm.value = false;
+			activeReplyId.value = null;
+		}
+	},
+);
 </script>

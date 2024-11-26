@@ -1,7 +1,7 @@
 <template>
 	<div class="comments-system">
 		<!-- Comments Toggle Button -->
-		<div class="flex items-center gap-2 text-sm">
+		<div class="w-full flex items-center justify-between gap-2 text-sm relative">
 			<h4
 				@click="showComments = !showComments"
 				class="cursor-pointer uppercase block font-medium text-gray-700 dark:text-gray-200 tracking-wider"
@@ -9,6 +9,29 @@
 				{{ commentsCount }} {{ commentsCount === 1 ? 'Comment' : 'Comments' }}
 				<UIcon :name="showComments ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'" />
 			</h4>
+			<USelect
+				v-if="showComments"
+				v-model="sortOrder"
+				:options="[
+					{ label: 'NEWEST FIRST', value: 'newest' },
+					{ label: 'OLDEST FIRST', value: 'oldest' },
+				]"
+				size="xs"
+				color="white"
+				class="w-22 text-xs border-none"
+				variant="outline"
+				:ui="{
+					rounded: 'rounded-sm',
+					variant: {
+						outline: 'border-none ring-0',
+					},
+					color: {
+						white: {
+							outline: 'border-none ring-0 border-b border-b-gray-300 ring-b-gray-300 text-[10px]',
+						},
+					},
+				}"
+			/>
 		</div>
 
 		<!-- Comments Section -->
@@ -22,20 +45,23 @@
 		>
 			<div v-if="showComments" class="mt-4 space-y-4">
 				<!-- Main Comment Input -->
-				<div v-if="user && !replyingTo">
-					<CommentsComment v-if="user && !replyingTo" :loading="isLoading" :depth="0" @submit="handleCommentSubmit" />
-				</div>
+				<CommentsComment
+					v-if="user"
+					:loading="isLoading"
+					:refresh="refresh"
+					@submit="(content) => handleCommentSubmit(content)"
+				/>
 
 				<!-- Comments List -->
 				<TransitionGroup name="comments" tag="div" class="space-y-4">
 					<CommentsThread
-						v-for="comment in comments"
+						v-for="comment in sortedComments"
 						:key="comment.id"
 						:depth="0"
 						:comment="comment"
 						:loading="isLoading"
 						:is-active="activeCommentId === comment.comments_id.id"
-						:refresh-fn="refresh"
+						:refresh="refresh"
 						@reply="handleReply"
 						@submit="handleCommentSubmit"
 						@cancel="cancelReply"
@@ -66,11 +92,11 @@ const emit = defineEmits(['update:commentCount']);
 const { user } = useDirectusAuth();
 const { createItem, deleteItem } = useDirectusItems();
 const showComments = ref(true);
-const isLoading = ref(false);
 const replyingTo = ref(null);
 const activeCommentId = ref(null);
 const localComments = ref([]);
 const isInitialized = ref(false);
+const sortOrder = ref('newest');
 
 const junctionTable = `${props.collection}_comments`;
 const collectionIdField = `${props.collection}_id`;
@@ -89,7 +115,12 @@ const fields = [
 	'comments_id.reactions.users_id.id',
 ];
 
-const { data: rawComments, refresh } = useRealtimeSubscription(
+const {
+	data: rawComments,
+	isLoading,
+	error,
+	refresh,
+} = useRealtimeSubscription(
 	junctionTable,
 	fields,
 	{
@@ -165,6 +196,30 @@ const comments = computed(() => {
 	return rootComments;
 });
 
+const sortedComments = computed(() => {
+	const sorted = [...comments.value];
+
+	// Helper function to recursively sort comments and their replies
+	const sortByDate = (comments, order) => {
+		return comments
+			.sort((a, b) => {
+				const dateA = new Date(a.comments_id.date_created);
+				const dateB = new Date(b.comments_id.date_created);
+				// Apply the same sort order to replies as parent comments
+				return order === 'newest' ? dateB - dateA : dateA - dateB;
+			})
+			.map((comment) => {
+				if (comment.replies?.length) {
+					comment.replies = sortByDate(comment.replies, order);
+				}
+				return comment;
+			});
+	};
+
+	// Sort all comments and replies using the same order
+	return sortByDate(sorted, sortOrder.value);
+});
+
 const commentsCount = computed(() => {
 	let total = 0;
 	const countReplies = (comment) => {
@@ -176,13 +231,16 @@ const commentsCount = computed(() => {
 	return total;
 });
 
-async function handleCommentSubmit(commentHtml) {
+async function handleCommentSubmit(commentHtml, parentId = null) {
 	isLoading.value = true;
 	try {
+		// Use either the explicit parentId or get it from replyingTo
+		const effectiveParentId = parentId || replyingTo.value?.comments_id?.id || null;
+
 		const comment = await createItem('comments', {
 			comment: commentHtml,
 			user: user.value.id,
-			parent_id: replyingTo.value?.comments_id?.id?.toString() || null,
+			parent_id: effectiveParentId ? effectiveParentId.toString() : null,
 		});
 
 		const junctionRecord = await createItem(junctionTable, {
@@ -199,7 +257,7 @@ async function handleCommentSubmit(commentHtml) {
 					id: comment.id,
 					comment: commentHtml,
 					date_created: new Date().toISOString(),
-					parent_id: replyingTo.value?.comments_id?.id || null,
+					parent_id: effectiveParentId,
 					user: {
 						id: user.value.id,
 						first_name: user.value.first_name,
@@ -211,6 +269,8 @@ async function handleCommentSubmit(commentHtml) {
 		];
 
 		cancelReply();
+		// Refresh to ensure proper order and nesting
+		await refresh();
 	} catch (error) {
 		console.error('Error posting comment:', error);
 		refresh();
@@ -219,6 +279,11 @@ async function handleCommentSubmit(commentHtml) {
 	}
 }
 
+// Update the Thread component submission handler
+function handleReply(comment) {
+	replyingTo.value = comment;
+	activeCommentId.value = comment.comments_id.id;
+}
 async function handleDelete(commentId) {
 	try {
 		await deleteItem('comments', commentId);
@@ -226,11 +291,6 @@ async function handleDelete(commentId) {
 	} catch (error) {
 		console.error('Error deleting comment:', error);
 	}
-}
-
-function handleReply(comment) {
-	replyingTo.value = comment;
-	activeCommentId.value = comment.comments_id.id;
 }
 
 function cancelReply() {
