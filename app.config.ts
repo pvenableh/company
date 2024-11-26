@@ -22,7 +22,7 @@ export default defineAppConfig({
 
 			default: {
 				size: 'lg',
-				loadingIcon: 'i-heroicons-arrow-path-micro',
+				loadingIcon: 'i-heroicons-arrow-path',
 			},
 			color: {
 				white: {

@@ -1,5 +1,5 @@
 <template>
-	<UPopover mode="click">
+	<UPopover mode="click" :disabled="!user">
 		<UButton icon="i-heroicons-bell" color="gray" variant="ghost" :class="{ 'animate-bounce': unreadCount > 0 }">
 			<UBadge v-if="unreadCount > 0" :label="unreadCount" color="red" class="absolute -top-1 -right-1" size="xs" />
 		</UButton>
@@ -37,6 +37,7 @@
 </template>
 
 <script setup>
+const { user } = useDirectusAuth();
 const config = useRuntimeConfig();
 const { notifications, unreadCount, markAsRead } = useNotifications();
 console.log('notifications');

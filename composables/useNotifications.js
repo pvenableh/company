@@ -10,12 +10,15 @@ export function useNotifications() {
 
 	// Create a plain filter object instead of a computed
 	const getNotificationFilter = () => ({
-		_and: [
-			{ status: { _eq: 'inbox' } },
-			{ recipient: { _eq: user.value?.id } },
-			{ sender: { _neq: user.value?.id } }, // Exclude notifications where sender is current user
-		],
+		_and: [{ status: { _eq: 'inbox' } }, { recipient: { id: { _eq: user.value?.id } } }],
+		// _and: [
+		// 	{ status: { _eq: 'inbox' } },
+		// 	{ recipient: { id: { _eq: user.value?.id } } },
+		// 	{ sender: { id: { _neq: user.value?.id } } }
+		//   ]
 	});
+
+	console.log(getNotificationFilter());
 
 	// Set up realtime subscription when user is available
 	const subscriptionFields = [

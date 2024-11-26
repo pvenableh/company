@@ -46,7 +46,7 @@ onMounted(() => {
 				<Avatar v-if="user" :user="user" text="12" class="mr-2" />
 				<UAvatar v-else icon="i-heroicons-user" size="sm" class="mr-1 sm:mr-2" />
 			</nuxt-link>
-			<LayoutNotificationsMenu class="ml-2" />
+			<LayoutNotificationsMenu v-if="user" class="ml-2" />
 			<div class="mt-0">
 				<DarkModeToggle class="" />
 			</div>
