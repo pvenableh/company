@@ -122,6 +122,7 @@ async function notifyMentionedUsers(commentText, collection, itemId) {
 			message: `${user.value.first_name} ${user.value.last_name} mentioned you in a comment: ${commentText}`,
 			collection,
 			item: itemId,
+			sender: user.value.id,
 		});
 	}
 }
@@ -134,6 +135,7 @@ async function notifyReply(parentUserId, commentText, collection, itemId) {
 			message: `${user.value.first_name} ${user.value.last_name} replied to your comment: ${commentText}`,
 			collection,
 			item: itemId,
+			sender: user.value.id,
 		});
 	}
 }

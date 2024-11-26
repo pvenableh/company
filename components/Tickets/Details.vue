@@ -399,6 +399,7 @@ async function notifyMentionedUsers(commentText, collection, itemId) {
 			message: `${currentUser.value.first_name} ${currentUser.value.last_name} mentioned you in a ticket: ${commentText}`,
 			collection,
 			item: itemId,
+			sender: currentUser.value.id,
 		});
 	}
 }
@@ -502,6 +503,7 @@ const notifyUserAssignment = async (userId) => {
 			message: `You have been assigned to the ticket: ${props.element.title}`,
 			collection: 'tickets',
 			item: props.element.id,
+			sender: currentUser.value.id,
 		});
 	} catch (error) {
 		console.error('Error sending assignment notification:', error);
@@ -536,6 +538,7 @@ const removeUser = async (userId) => {
 					message: `You have been removed from the ticket: ${props.element.title}`,
 					collection: 'tickets',
 					item: props.element.id,
+					sender: currentUser.value.id,
 				});
 			}
 

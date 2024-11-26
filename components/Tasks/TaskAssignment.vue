@@ -121,6 +121,7 @@ const handleUserSelect = async (user) => {
 				message: `You have been assigned to the task: ${props.task.title}`,
 				collection: 'tasks',
 				item: props.task.id,
+				sender: currentUser.value.id,
 			});
 		}
 
@@ -169,6 +170,7 @@ const removeUser = async (userId) => {
 					message: `You have been removed from the task: ${props.task.title}`,
 					collection: 'tasks',
 					item: props.task.id,
+					sender: currentUser.value.id,
 				});
 			}
 

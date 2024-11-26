@@ -1,7 +1,13 @@
 <template>
 	<UPopover mode="click" :disabled="!user">
-		<UButton icon="i-heroicons-bell" color="gray" variant="ghost" :class="{ 'animate-bounce': unreadCount > 0 }">
-			<UBadge v-if="unreadCount > 0" :label="unreadCount" color="red" class="absolute -top-1 -right-1" size="xs" />
+		<UButton
+			icon="i-heroicons-bell"
+			color="ghost"
+			:ui="{ rounded: 'rounded-full' }"
+			variant="outline"
+			class="relative inline-block p-0 h-8 w-8 mr-2"
+		>
+			<UBadge v-if="unreadCount > 0" :label="unreadCount" color="blue" class="absolute -top-2 -right-2" size="xs" />
 		</UButton>
 
 		<template #panel>
@@ -14,16 +20,22 @@
 					>
 						<UAvatar
 							:src="
-								notification.sender?.avatar ? `${config.public.directusUrl}/assets/${notification.sender.avatar}` : null
+								notification.sender?.avatar
+									? `${config.public.directusUrl}/assets/${notification.sender.avatar}`
+									: `https://ui-avatars.com/api/?name=${encodeURIComponent(notification.sender?.first_name + ' ' + notification.sender?.last_name)}&background=eeeeee&color=00bfff`
 							"
 							:alt="notification.sender?.first_name"
 						/>
+
+						{{ notification }}
 
 						<div class="flex-1 min-w-0">
 							<p class="font-medium text-sm">{{ notification.subject }}</p>
 							<div class="text-sm text-gray-500" v-html="notification.message" />
 							<div class="flex items-center gap-2 mt-2 text-xs text-gray-400">
-								<span>{{ formatDate(notification.timestamp) }}</span>
+								<span class="uppercase font-bold">
+									{{ getTimeAgo(new Date(notification.timestamp).toLocaleString()) }}
+								</span>
 								<UButton size="xs" variant="ghost" @click="markAsRead(notification.id)">Mark as read</UButton>
 							</div>
 						</div>

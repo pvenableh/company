@@ -425,6 +425,7 @@ async function notifyMentionedUsers(commentText, collection, itemId) {
 			message: `${currentUser.value.first_name} ${currentUser.value.last_name} mentioned you in a ticket: ${commentText}`,
 			collection,
 			item: itemId,
+			sender: currentUser.value.id,
 		});
 	}
 }
