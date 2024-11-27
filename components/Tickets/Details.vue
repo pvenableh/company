@@ -1,5 +1,5 @@
 <template>
-	<div class="w-full">
+	<div class="w-full mx-auto">
 		<div class="flex items-start justify-around flex-col lg:flex-row flex-wrap">
 			<!-- Form -->
 			<form @submit.prevent="updateTicket" class="w-full lg:w-1/2 space-y-6 relative">
@@ -42,26 +42,26 @@
 
 				<div class="grid grid-cols-2 gap-4">
 					<UFormGroup label="Due Date">
-						<div class="grid grid-cols-2 gap-4">
-							<UPopover>
-								<UInput
-									:model-value="formatDisplayDate(form.due_date)"
-									:readonly="true"
-									:placeholder="formatDisplayDate(new Date())"
-									icon="i-heroicons-calendar"
-								/>
-								<template #panel>
-									<VCalendar :attributes="calendarAttrs" is-expanded v-model="selectedDate" @dayclick="updateDueDate" />
-								</template>
-							</UPopover>
-
-							<USelect
-								v-model="selectedTime"
-								:options="timeOptions"
-								placeholder="Select time"
-								@update:model-value="updateDateTime"
+						<UPopover>
+							<UInput
+								:model-value="formatDisplayDate(form.due_date)"
+								:readonly="true"
+								:placeholder="formatDisplayDate(new Date())"
+								icon="i-heroicons-calendar"
+								class="w-full"
 							/>
-						</div>
+							<template #panel>
+								<VCalendar :attributes="calendarAttrs" is-expanded v-model="selectedDate" @dayclick="updateDueDate" />
+							</template>
+						</UPopover>
+					</UFormGroup>
+					<UFormGroup label="Due Time">
+						<USelect
+							v-model="selectedTime"
+							:options="timeOptions"
+							placeholder="Select time"
+							@update:model-value="updateDateTime"
+						/>
 					</UFormGroup>
 				</div>
 				<!-- User Assignment -->
@@ -133,36 +133,6 @@
 					/>
 				</UFormGroup>
 
-				<!-- <div class="w-full flex flex-row items-center justify-between space-x-8">
-					<div class="flex items-center flex-row">
-						<UButton
-							type="submit"
-							color="primary"
-							:variant="isDirty ? 'solid' : 'outline'"
-							:loading="isLoading"
-							:icon="isDirty ? 'i-material-symbols-save-outline' : 'i-material-symbols-save'"
-							class="flex items-center justify-center w-12 h-12 transition-all"
-							:class="{ 'ring-2 ring-primary-500 ring-offset-2 animate-pulse': isDirty }"
-							:ui="{ rounded: 'rounded-full' }"
-						/>
-						<Share
-							class="ml-4"
-							:url="'https://huestudios.company/tickets/' + element.id"
-							:title="'Hue Ticket #' + element.id"
-							:description="element.title"
-							@share="handleShare"
-						/>
-					</div>
-					<UButton
-						variant="outline"
-						color="red"
-						icon="i-material-symbols-delete-outline"
-						:ui="{ rounded: 'rounded-full' }"
-						:loading="isLoading"
-						class="iflex items-center justify-center w-12 h-12"
-						@click="confirmDelete"
-					/>
-				</div> -->
 				<div class="flex flex-row items-center justify-between space-x-2">
 					<Share
 						class="ml-4"
@@ -285,7 +255,12 @@ const trackChanges = () => {
 		due_date: form.value.due_date,
 	};
 
-	isDirty.value = JSON.stringify(currentState) !== JSON.stringify(initialFormState.value);
+	const isDifferent = JSON.stringify(currentState) !== JSON.stringify(initialFormState.value);
+
+	if (isDirty.value !== isDifferent) {
+		isDirty.value = isDifferent;
+		emit('preventClose', isDifferent);
+	}
 };
 
 // Initialize form with element data
@@ -306,14 +281,44 @@ const priorities = [
 	{ value: 'urgent', label: 'Urgent' },
 ];
 
+// watch(
+// 	() => ({ ...form.value }),
+// 	() => {
+// 		trackChanges();
+// 		emit('preventClose', isDirty.value);
+// 	},
+// 	{ deep: true },
+// );
+
 watch(
-	() => ({ ...form.value }),
+	() => ({
+		title: form.value.title,
+		description: form.value.description,
+		status: form.value.status,
+		priority: form.value.priority,
+		category: form.value.category,
+		assigned_to: [...form.value.assigned_to],
+		due_date: form.value.due_date,
+	}),
 	() => {
 		trackChanges();
-		emit('preventClose', isDirty.value);
 	},
 	{ deep: true },
 );
+
+const resetFormState = () => {
+	initialFormState.value = {
+		title: form.value.title,
+		description: form.value.description,
+		status: form.value.status,
+		priority: form.value.priority,
+		category: form.value.category,
+		assigned_to: [...form.value.assigned_to],
+		due_date: form.value.due_date,
+	};
+	isDirty.value = false;
+	emit('preventClose', false);
+};
 
 // Fetch users
 const fetchUsers = async () => {
@@ -457,16 +462,7 @@ const updateTicket = async () => {
 			});
 			await notifyUserAssignment(userId);
 		}
-		isDirty.value = false;
-		initialFormState.value = {
-			title: form.value.title,
-			description: form.value.description,
-			status: form.value.status,
-			priority: form.value.priority,
-			category: form.value.category,
-			assigned_to: [...form.value.assigned_to],
-		};
-
+		resetFormState();
 		toast.add({
 			title: 'Success',
 			description: 'Ticket updated successfully',
@@ -604,14 +600,7 @@ const isCurrentUserBadge = (userId) => {
 // Initialize users on mount
 onMounted(() => {
 	fetchUsers();
-	initialFormState.value = {
-		title: props.element.title,
-		description: props.element.description,
-		status: props.element.status,
-		priority: props.element.priority,
-		category: props.element.category,
-		assigned_to: [...form.value.assigned_to],
-	};
+	resetFormState();
 });
 
 // Handle navigation protection
@@ -636,7 +625,9 @@ const routerGuard = router.beforeEach((to, from, next) => {
 // Add cleanup
 onBeforeUnmount(() => {
 	window.removeEventListener('beforeunload', handleBeforeUnload);
-	routerGuard();
+	if (routerGuard) {
+		routerGuard();
+	}
 });
 
 // Add save/discard handlers
@@ -644,14 +635,26 @@ const handleSave = async () => {
 	await updateTicket();
 	if (!isLoading.value) {
 		showUnsavedModal.value = false;
-		isDirty.value = false;
+		resetFormState();
 		emit('close');
 	}
 };
 
 const handleDiscard = () => {
+	// Reset form back to initial values
+	form.value = {
+		title: initialFormState.value.title,
+		description: initialFormState.value.description,
+		status: initialFormState.value.status,
+		priority: initialFormState.value.priority,
+		category: initialFormState.value.category,
+		assigned_to: [...initialFormState.value.assigned_to], // Spread operator for array
+		due_date: initialFormState.value.due_date,
+	};
+
 	showUnsavedModal.value = false;
 	isDirty.value = false;
+	emit('preventClose', false);
 	emit('close');
 };
 </script>

@@ -670,13 +670,13 @@ const handleTicketCreated = () => {
 }
 
 .chosen {
-	transform: scale(1.2);
+	transform: scale(1.05);
 	box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
 }
 
 .drag {
 	opacity: 0.9;
-	transform: scale(1.2);
+	transform: scale(1.05);
 	box-shadow: 0 15px 25px rgba(0, 0, 0, 0.15);
 }
 

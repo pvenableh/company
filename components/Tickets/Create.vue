@@ -9,16 +9,19 @@
 		<Teleport to="body">
 			<Transition
 				enter-active-class="transition duration-300 ease-out"
-				enter-from-class="opacity-0 scale-95"
-				enter-to-class="opacity-100 scale-100"
+				enter-from-class="opacity-0 scale-95 "
+				enter-to-class="opacity-100 scale-100 "
 				leave-active-class="transition duration-200 ease-in"
 				leave-from-class="opacity-100 scale-100"
 				leave-to-class="opacity-0 scale-95"
 			>
-				<div v-if="isExpanded" class="fixed inset-0 bg-white dark:bg-gray-800 z-[9999] overflow-auto">
-					<div class="container mx-auto p-4">
+				<div
+					v-if="isExpanded"
+					class="fixed inset-0 z-[9999] overflow-auto flex flex-col items-center justify-center backdrop-blur-lg bg-white dark:bg-gray-800 bg-opacity-75"
+				>
+					<div class="w-full p-4 lg:p-12">
 						<!-- Header -->
-						<div class="max-w-2xl mx-auto py-3 bg-white dark:bg-gray-800">
+						<div class="w-full max-w-2xl mx-auto py-3">
 							<div class="flex items-center justify-between">
 								<h3 class="text-2xl leading-5 font-thin uppercase tracking-wide">
 									Create
@@ -30,7 +33,7 @@
 						</div>
 
 						<!-- Form -->
-						<div class="mt-4 max-w-2xl mx-auto">
+						<div class="w-full mt-4 max-w-2xl mx-auto">
 							<form @submit.prevent="createTicket" class="space-y-6">
 								<UFormGroup label="Title" required>
 									<UInput v-model="form.title" placeholder="Enter ticket title" />
@@ -55,14 +58,6 @@
 											class="relative"
 											@update:modelValue="handleOrgChange"
 										/>
-										<!-- <USelect
-											v-model="form.organization"
-											:options="orgOptions"
-											option-attribute="name"
-											value-attribute="id"
-											placeholder="Select organization"
-											@update:modelValue="handleOrgChange"
-										/> -->
 									</UFormGroup>
 
 									<UFormGroup v-if="form.organization" label="Project">
@@ -76,50 +71,33 @@
 											:loading="loadingProjects"
 											class="relative"
 										/>
-										<!-- <USelect
-											v-model="form.project"
-											:options="projectOptions"
-											option-attribute="title"
-											value-attribute="id"
-											placeholder="Select project"
-											:loading="loadingProjects"
-										/> -->
 									</UFormGroup>
-									<!-- <UFormGroup v-if="hasMultipleOrgs" label="Organization" required>
-										<USelect
-											v-model="form.organization"
-											:options="orgOptions"
-											option-attribute="name"
-											value-attribute="id"
-											placeholder="Select organization"
-										/>
-									</UFormGroup> -->
 									<UFormGroup label="Due Date">
-										<div class="grid grid-cols-2 gap-4">
-											<UPopover>
-												<UInput
-													:model-value="formatDisplayDate(form.due_date)"
-													:readonly="true"
-													:placeholder="formatDisplayDate(new Date())"
-													icon="i-heroicons-calendar"
-												/>
-												<template #panel>
-													<VCalendar
-														:attributes="calendarAttrs"
-														is-expanded
-														v-model="selectedDate"
-														@dayclick="updateDueDate"
-													/>
-												</template>
-											</UPopover>
-
-											<USelect
-												v-model="selectedTime"
-												:options="timeOptions"
-												placeholder="Select time"
-												@update:model-value="updateDateTime"
+										<UPopover>
+											<UInput
+												class="w-full"
+												:model-value="formatDisplayDate(form.due_date)"
+												:readonly="true"
+												:placeholder="formatDisplayDate(new Date())"
+												icon="i-heroicons-calendar"
 											/>
-										</div>
+											<template #panel>
+												<VCalendar
+													:attributes="calendarAttrs"
+													is-expanded
+													v-model="selectedDate"
+													@dayclick="updateDueDate"
+												/>
+											</template>
+										</UPopover>
+									</UFormGroup>
+									<UFormGroup label="Due Time">
+										<USelect
+											v-model="selectedTime"
+											:options="timeOptions"
+											placeholder="Select time"
+											@update:model-value="updateDateTime"
+										/>
 									</UFormGroup>
 								</div>
 

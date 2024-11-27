@@ -22,10 +22,12 @@
 			>
 				<div
 					v-if="isExpanded"
-					class="fixed inset-0 bg-white dark:bg-gray-800 z-[50] overflow-auto"
+					class="fixed inset-0 backdrop-blur-lg bg-white dark:bg-gray-800 bg-opacity-75 z-[50] overflow-auto"
 					@click.self="collapse"
 				>
-					<div class="container mx-auto relative max-w-screen-xl">
+					<div
+						class="container mx-auto relative max-w-screen-xl flex items-center justify-center flex-wrap flex-col min-h-full"
+					>
 						<!-- Header -->
 						<div class="w-full sticky pb-6 top-10 z-10 flex items-end justify-end">
 							<UButton

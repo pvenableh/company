@@ -44,14 +44,14 @@ export default defineAppConfig({
 			},
 		},
 		input: {
-			base: 'relative block w-full box-border disabled:cursor-not-allowed disabled:opacity-75 focus:outline-none border-0 border-solid border-b border-gray-300 focus:border-b-2 focus:border-cyan-200 !ring-0 focus:ring-0 outline-none !ring-offset-0 appearance-none bg-transparent',
+			base: 'relative block w-full box-border disabled:cursor-not-allowed disabled:opacity-75 focus:outline-none border-0 border-solid border-b border-gray-300 focus:border-b-2 focus:border-cyan-200 !ring-0 focus:ring-0 outline-none !ring-offset-0 appearance-none !bg-transparent',
 			default: {
 				loadingIcon: 'i-heroicons-arrow-path',
 			},
 			rounded: `rounded-${theme.borderRadius}`,
 		},
 		select: {
-			base: 'relative block w-full box-border disabled:cursor-not-allowed disabled:opacity-75 focus:outline-none focus:ring-0 border-0 border-solid border-b border-gray-300 focus:border-b focus:border-cyan-200 !ring-0 focus:ring-0 outline-none !ring-offset-0 appearance-none bg-transparent uppercase',
+			base: 'relative block w-full box-border disabled:cursor-not-allowed disabled:opacity-75 focus:outline-none focus:ring-0 border-0 border-solid border-b border-gray-300 focus:border-b focus:border-cyan-200 !ring-0 focus:ring-0 outline-none !ring-offset-0 appearance-none !bg-transparent uppercase',
 			rounded: `rounded-${theme.borderRadius}`,
 			default: {
 				loadingIcon: 'material-symbols:sync-rounded',

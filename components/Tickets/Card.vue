@@ -21,14 +21,22 @@
 						/>
 					</nuxt-link>
 				</UTooltip>
+
 				<UBadge
 					v-if="element?.priority"
 					:color="getPriorityColor(element.priority)"
 					variant="subtle"
 					size="xs"
-					class="uppercase text-[9px]"
+					class="relative uppercase text-[9px]"
 				>
+					<!-- Display priority text -->
 					{{ element.priority }}
+
+					<!-- Pulsing ring for urgent priority -->
+					<span
+						v-if="element.priority === 'urgent'"
+						class="absolute inset-0 rounded-full border border-current animate-ping"
+					></span>
 				</UBadge>
 			</div>
 
@@ -66,12 +74,19 @@
 
 						<span v-else class="text-gray-500 uppercase text-[8px] text-bold tracking-wider">
 							Unassigned
-							<span class="text-[16px]">🤷‍♂️</span>
+							<span class="text-[16px] -mb-1 inline-block animate-bounce">🤷‍♂️</span>
 						</span>
 					</div>
 				</div>
 			</div>
 			<p v-if="element?.due_date" class="uppercase text-[10px] mt-3" :class="formatDueDateStatus(element?.due_date)">
+				<UIcon
+					name="i-heroicons-exclamation-triangle-solid"
+					class="w-4 h-4 inline-block mr-1 -mb-1.5 animate-bounce"
+					v-if="
+						formatDueDateStatus(element?.due_date) === 'urgent' || formatDueDateStatus(element?.due_date) === 'past'
+					"
+				/>
 				{{ formatDueDate(element?.due_date) }}
 			</p>
 		</div>
