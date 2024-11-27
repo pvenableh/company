@@ -65,39 +65,16 @@
 					</UFormGroup>
 				</div>
 				<!-- User Assignment -->
-				<UFormGroup label="Assign To">
-					<div class="space-y-2">
+				<div class="grid grid-cols-2 gap-4">
+					<UFormGroup label="Assign To">
 						<!-- Selected Users Display -->
-						<div v-if="form.assigned_to.length" class="flex flex-wrap gap-2 mb-2">
-							<UBadge
-								v-for="userId in form.assigned_to"
-								:key="userId"
-								:color="isCurrentUserBadge(userId) ? 'primary' : 'gray'"
-								class="flex items-center gap-2"
-							>
-								<UAvatar
-									:src="getAvatarUrl(getUserById(userId))"
-									:alt="getUserFullName(getUserById(userId))"
-									size="2xs"
-								/>
-								{{ getUserFullName(getUserById(userId)) }}
-								<UButton
-									color="white"
-									variant="ghost"
-									icon="i-heroicons-x-mark-20-solid"
-									size="2xs"
-									class="-mr-1"
-									@click="removeUser(userId)"
-								/>
-							</UBadge>
-						</div>
-
 						<!-- User Select Menu -->
 						<USelectMenu
 							v-model="selectedUser"
 							:options="availableUsers"
 							placeholder="Select users..."
 							searchable
+							class="w-full"
 							:loading="isLoading"
 							@update:modelValue="handleUserSelect"
 						>
@@ -118,9 +95,32 @@
 								</div>
 							</template>
 						</USelectMenu>
+					</UFormGroup>
+					<div v-if="form.assigned_to.length" class="flex flex-wrap flex-row gap-2 mt-6">
+						<UBadge
+							v-for="userId in form.assigned_to"
+							:key="userId"
+							:color="isCurrentUserBadge(userId) ? 'primary' : 'gray'"
+							class="flex items-center gap-2"
+						>
+							<UAvatar
+								:src="getAvatarUrl(getUserById(userId))"
+								:alt="getUserFullName(getUserById(userId))"
+								size="2xs"
+							/>
+							{{ getUserFullName(getUserById(userId)) }}
+							<UButton
+								color="white"
+								variant="ghost"
+								icon="i-heroicons-x-mark-20-solid"
+								size="2xs"
+								class="-mr-1"
+								:ui="{ rounded: 'rounded-full' }"
+								@click="removeUser(userId)"
+							/>
+						</UBadge>
 					</div>
-				</UFormGroup>
-
+				</div>
 				<!-- Description -->
 				<UFormGroup label="Description" required>
 					<FormTiptap
@@ -133,7 +133,7 @@
 					/>
 				</UFormGroup>
 
-				<div class="w-full flex flex-row items-center justify-between space-x-8">
+				<!-- <div class="w-full flex flex-row items-center justify-between space-x-8">
 					<div class="flex items-center flex-row">
 						<UButton
 							type="submit"
@@ -162,6 +162,28 @@
 						class="iflex items-center justify-center w-12 h-12"
 						@click="confirmDelete"
 					/>
+				</div> -->
+				<div class="flex flex-row items-center justify-between space-x-2">
+					<Share
+						class="ml-4"
+						:url="'https://huestudios.company/tickets/' + element.id"
+						:title="'Hue Ticket #' + element.id"
+						:description="element.title"
+						@share="handleShare"
+					/>
+					<div class="space-x-2">
+						<UButton variant="soft" color="red" :loading="isLoading" @click="confirmDelete">Delete</UButton>
+						<UButton
+							type="submit"
+							color="primary"
+							:loading="isLoading"
+							:variant="isDirty ? 'solid' : 'outline'"
+							class="transition-all"
+							:class="{ ' animate-pulse': isDirty }"
+						>
+							Save
+						</UButton>
+					</div>
 				</div>
 
 				<div class="w-full lg:pb-20">
@@ -519,11 +541,13 @@ const handleUserSelect = (user) => {
 };
 
 const removeUser = async (userId) => {
+	console.log('Removing user:', userId);
 	try {
 		// Find the junction record ID for this user assignment
 		const assignmentRecord = props.element.assigned_to.find((assignment) => assignment.directus_users_id.id === userId);
-
+		console.log('Assignment record:', assignmentRecord);
 		if (assignmentRecord) {
+			console.log('Deleting assignment:', assignmentRecord.id);
 			// Delete the assignment
 			await deleteItem('tickets_directus_users', assignmentRecord.id);
 

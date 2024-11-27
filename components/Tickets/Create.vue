@@ -123,34 +123,9 @@
 									</UFormGroup>
 								</div>
 
-								<UFormGroup label="Assign To">
-									<div class="space-y-2">
-										<!-- Selected Users Display -->
-										<div v-if="form.assigned_to.length" class="flex flex-wrap gap-2 mb-2">
-											<UBadge
-												v-for="userId in form.assigned_to"
-												:key="userId"
-												:color="isCurrentUserBadge(userId) ? 'primary' : 'gray'"
-												class="flex items-center gap-2"
-											>
-												<UAvatar
-													:src="getAvatarUrl(getUserById(userId))"
-													:alt="getUserFullName(getUserById(userId))"
-													size="2xs"
-												/>
-												{{ getUserFullName(getUserById(userId)) }}
-												<UButton
-													color="white"
-													variant="ghost"
-													icon="i-heroicons-x-mark-20-solid"
-													size="2xs"
-													class="-mr-1"
-													@click="removeUser(userId)"
-												/>
-											</UBadge>
-										</div>
-
-										<!-- Select Menu -->
+								<!-- User Assignment -->
+								<div class="grid grid-cols-2 gap-4">
+									<UFormGroup label="Assign To">
 										<USelectMenu
 											v-model="selectedUser"
 											:options="availableUsers"
@@ -175,8 +150,33 @@
 												</div>
 											</template>
 										</USelectMenu>
+									</UFormGroup>
+									<div v-if="form.assigned_to.length" class="flex flex-wrap flex-row gap-2 mt-6">
+										<UBadge
+											v-for="userId in form.assigned_to"
+											:key="userId"
+											:color="isCurrentUserBadge(userId) ? 'primary' : 'gray'"
+											class="flex items-center gap-2"
+										>
+											<UAvatar
+												:src="getAvatarUrl(getUserById(userId))"
+												:alt="getUserFullName(getUserById(userId))"
+												size="2xs"
+											/>
+											{{ getUserFullName(getUserById(userId)) }}
+											<UButton
+												color="white"
+												variant="ghost"
+												icon="i-heroicons-x-mark-20-solid"
+												size="2xs"
+												class="-mr-1"
+												:ui="{ rounded: 'rounded-full' }"
+												@click="removeUser(userId)"
+											/>
+										</UBadge>
 									</div>
-								</UFormGroup>
+								</div>
+
 								<UFormGroup label="Description" required>
 									<FormTiptap
 										v-model="form.description"

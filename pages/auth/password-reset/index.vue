@@ -24,7 +24,7 @@ import { createDirectus, rest, passwordReset } from '@directus/sdk';
 
 const password = ref();
 
-const client = createDirectus('https://admin.1033lenox.com').with(rest());
+const client = createDirectus('https://admin.huestudios.company').with(rest());
 
 async function submit() {
 	const result = await client.request(passwordReset(reset_token.value, password.value));
@@ -37,11 +37,16 @@ async function submit() {
 		<div v-if="expired">
 			<h3>Reset password for {{ decoded.email }}.</h3>
 			<h5 class="uppercase italic text-xs font-bold">Link expires in {{ getRelativeTime(expiredDate) }}</h5>
-
-			<VForm class="" @submit="submit()" v-if="expired">
+			<form @submit="submit()" v-if="expired">
+				<UFormGroup label="Password" required>
+					<UInput v-model="password" name="password" type="password" placeholder="Password" class="my-6" />
+				</UFormGroup>
+				<UButton type="submit" class="w-full mb-6 text-center" label="Reset Password" />
+			</form>
+			<!-- <VForm class="" @submit="submit()" v-if="expired">
 				<FormVInput name="password" type="password" rules="required" label="Password" v-model="password" class="my-6" />
 				<FormVButton class="w-full mb-6" type="submit">Update Password</FormVButton>
-			</VForm>
+			</VForm> -->
 		</div>
 		<h5 v-else class="uppercase italic text-xs font-bold">This link has expired.</h5>
 	</div>

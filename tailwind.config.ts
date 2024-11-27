@@ -28,6 +28,12 @@ module.exports = {
 	],
 	theme: {
 		extend: {
+			borderColor: {
+				DEFAULT: 'transparent', // Set transparent borders by default
+			},
+			ringColor: {
+				DEFAULT: 'transparent', // Set transparent rings by default
+			},
 			borderRadius: {
 				large: '30px',
 				card: 'var(--border-radius-card)',

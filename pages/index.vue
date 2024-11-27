@@ -25,7 +25,7 @@ const { user } = useDirectusAuth();
 					</nuxt-link>
 					<nuxt-link
 						to="/tickets"
-						class="bg-gray-100 text-center py-12 sm:py-20uppercase tracking-wide rounded-md shadow-lg"
+						class="bg-gray-100 text-center py-12 sm:py-20 uppercase tracking-wide rounded-md shadow-lg"
 					>
 						Tickets
 					</nuxt-link>

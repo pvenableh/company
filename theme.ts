@@ -15,7 +15,7 @@ export interface Theme {
 export const theme = {
 	primary: 'turquoise',
 	gray: 'zinc',
-	borderRadius: 'full',
+	borderRadius: 'none',
 	fonts: {
 		display: 'Bauer Bodoni W01 Roman',
 		sans: 'Proxima Nova W01 Light',

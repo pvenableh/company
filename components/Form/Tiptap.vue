@@ -2,11 +2,11 @@
 	<div v-if="editor" class="tiptap-wrapper relative">
 		<editor-content
 			:editor="editor"
-			class="rounded-t-md border-t border-r border-l dark:text-white text-[14px] transition-all duration-200 overflow-y-scroll focus:border focus:border-cyan-200 relative tiptap-container"
+			class="border-gray-300 border-t border-r border-l dark:text-white text-[14px] transition-all duration-200 overflow-y-scroll focus:border focus:border-cyan-200 relative tiptap-container"
 			:class="[
 				{ 'px-0 pt-0 border-none': disabled },
-				{ ' border-cyan-200': editor.isFocused },
-				{ 'border-b rounded-b-md': !showToolbar },
+				{ ' !border-cyan-200': editor.isFocused },
+				{ 'border-b ': !showToolbar },
 				height,
 				customClasses,
 			]"
@@ -14,8 +14,8 @@
 
 		<div
 			v-if="showToolbar"
-			class="w-full flex flex-row justify-between rounded-b-md border-r border-l border-b"
-			:class="{ ' border-cyan-200': editor.isFocused }"
+			class="w-full flex flex-row justify-between border-gray-300 border-r border-l border-b"
+			:class="{ ' !border-cyan-200': editor.isFocused }"
 		>
 			<div>
 				<UButton

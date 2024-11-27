@@ -1,6 +1,9 @@
 <template>
-	<div class="ticket-card w-full bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-all">
-		<div class="w-full p-4" @click="$emit('expand')">
+	<div class="w-full mb-2 transition-all ticket-card">
+		<div
+			class="bg-white dark:bg-gray-800 shadow-lg hover:shadow-md transition-all rounded-sm w-full p-4"
+			@click="$emit('expand')"
+		>
 			<!-- Ticket Header -->
 			<div class="flex items-start justify-between my-2">
 				<UTooltip :text="getTicketInfo">
@@ -30,7 +33,7 @@
 			</div>
 
 			<!-- Ticket Title -->
-			<h4 class="font-medium text-sm line-clamp-2 mt-2">{{ element?.title }}</h4>
+			<h4 class="font-bold text-[16px] line-clamp-2 mt-2">{{ element?.title }}</h4>
 			<h5 class="text-gray-800 text-[8px] mt-0 uppercase mb-2">{{ element?.organization.name }}</h5>
 
 			<!-- Assigned Users -->
@@ -61,7 +64,10 @@
 							</UTooltip>
 						</template>
 
-						<span v-else class="text-gray-500">Unassigned</span>
+						<span v-else class="text-gray-500 uppercase text-[8px] text-bold tracking-wider">
+							Unassigned
+							<span class="text-[16px]">🤷‍♂️</span>
+						</span>
 					</div>
 				</div>
 			</div>
@@ -69,7 +75,9 @@
 				{{ formatDueDate(element?.due_date) }}
 			</p>
 		</div>
-		<div class="w-full border-t border-gray-200 dark:border-gray-700 flex flex-row items-center justify-between">
+		<div
+			class="w-full bg-white dark:bg-gray-800 shadow-lg hover:shadow-md mt-1 rounded-sm flex flex-row items-center justify-between transition-all"
+		>
 			<!-- Ticket Footer -->
 
 			<ReactionsBar :item-id="element.id" collection="tickets" />

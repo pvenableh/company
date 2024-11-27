@@ -6,10 +6,14 @@ const { logout } = useDirectusAuth();
 
 const handleLogout = async () => {
 	try {
-		const result = await logout();
-		return await navigateTo('/', { replace: true });
+		await logout();
+		// Clear any stored tokens/state
+		localStorage.removeItem('auth_token');
+		localStorage.removeItem('auth_expires');
+		// Force page reload and redirect
+		window.location.href = '/';
 	} catch (error) {
-		console.error(error);
+		console.error('Logout error:', error);
 	}
 };
 </script>

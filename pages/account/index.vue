@@ -5,6 +5,7 @@
 
 			<h1 class="hidden md:inline-block mt-6">{{ user?.first_name }} {{ user?.last_name }}</h1>
 			<a :class="{ active: panel === 1 }" @click.prevent="changePanel(1)">Profile</a>
+			<a :class="{ active: panel === 2 }" @click.prevent="changePanel(2)">Reset Password</a>
 			<AccountLogout v-if="user" class="logout-icon" />
 		</div>
 		<transition-group
@@ -15,7 +16,9 @@
 			<div v-if="panel === 1" key="1" class="account__panel profile">
 				<AccountProfile />
 			</div>
-			<div v-if="panel === 2" key="2" class="account__panel"></div>
+			<div v-if="panel === 2" key="2" class="account__panel">
+				<AccountPasswordRequest />
+			</div>
 			<div v-if="panel === 3" key="3" class="account__panel"></div>
 			<div v-if="panel === 4" key="4" class="account__panel"></div>
 		</transition-group>

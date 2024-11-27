@@ -17,7 +17,8 @@ export default defineAppConfig({
 		},
 
 		button: {
-			base: 'transition duration-150 uppercase tracking-wide text-center focus:border-0 focus:outline-none focus:ring-1 focus:ring-gray-300 disabled:cursor-not-allowed disabled:opacity-75 active:border-0 active:outline-none active:ring-1 active:ring-gray-300 tracking-wider text-center',
+			base: 'transition duration-150 uppercase tracking-wide text-center focus:border-0 focus:outline-none focus:ring-1 focus:ring-gray-300 disabled:cursor-not-allowed disabled:opacity-75 active:border-0 active:outline-none active:ring-1 active:ring-gray-300 tracking-wider text-center items-center justify-center',
+			rounded: `rounded-${theme.borderRadius}`,
 			font: 'font-bold',
 
 			default: {
@@ -37,32 +38,33 @@ export default defineAppConfig({
 			rounded: 'rounded-large',
 		},
 		formGroup: {
+			base: 'ring-0 focus:ring-0 outline-none focus:outline-none',
 			label: {
-				base: 'uppercase block font-medium text-gray-700 dark:text-gray-200 tracking-wider',
+				base: 'uppercase block font-medium text-gray-500 dark:text-gray-200 tracking-wider',
 			},
 		},
 		input: {
-			base: 'rounded-none relative block w-full disabled:cursor-not-allowed disabled:opacity-75 focus:ring-1 focus:ring-gray-300 border border-gray-50 focus:border focus:border-cyan-200 focus:outline-none focus:ring-1 focus:ring-gray-300 disabled:cursor-not-allowed disabled:opacity-75 active:border active:outline-none active:ring-1 active:ring-gray-300 active:border active:border-gray-300',
+			base: 'relative block w-full box-border disabled:cursor-not-allowed disabled:opacity-75 focus:outline-none border-0 border-solid border-b border-gray-300 focus:border-b-2 focus:border-cyan-200 !ring-0 focus:ring-0 outline-none !ring-offset-0 appearance-none bg-transparent',
 			default: {
 				loadingIcon: 'i-heroicons-arrow-path',
 			},
-			// rounded: `rounded-${theme.borderRadius}`,
+			rounded: `rounded-${theme.borderRadius}`,
 		},
 		select: {
-			base: 'rounded-none relative block w-full disabled:cursor-not-allowed disabled:opacity-75 focus:ring-1 focous:ring-gray-300 border-0',
-			// rounded: `rounded-${theme.borderRadius}`,
+			base: 'relative block w-full box-border disabled:cursor-not-allowed disabled:opacity-75 focus:outline-none focus:ring-0 border-0 border-solid border-b border-gray-300 focus:border-b focus:border-cyan-200 !ring-0 focus:ring-0 outline-none !ring-offset-0 appearance-none bg-transparent uppercase',
+			rounded: `rounded-${theme.borderRadius}`,
 			default: {
 				loadingIcon: 'material-symbols:sync-rounded',
 				trailingIcon: 'material-symbols:expand-more-rounded',
 			},
 		},
 		textarea: {
-			base: 'rounded-input relative block w-full disabled:cursor-not-allowed disabled:opacity-75 focus:ring-1 focus:ring-gray-300 border-0',
-			rounded: 'rounded-lg',
+			base: '',
+			rounded: `rounded-${theme.borderRadius}`,
 		},
 		selectMenu: {
-			rounded:
-				'rounded-none relative block w-full disabled:cursor-not-allowed disabled:opacity-75 focus:ring-1 ring-gray-300 border-0',
+			rounded: `rounded-${theme.borderRadius}`,
+			base: 'relative block w-full box-border disabled:cursor-not-allowed disabled:opacity-75 focus:outline-none focus:ring-0 border-0 border-solid border-b border-gray-300 focus:border-b focus:border-cyan-200 !ring-0 focus:ring-0 outline-none !ring-offset-0 appearance-none bg-transparent uppercase',
 			default: {
 				selectedIcon: 'material-symbols:fitbit-check-small-rounded',
 			},
