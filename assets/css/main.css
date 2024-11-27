@@ -89,6 +89,7 @@ a {
     @apply absolute top-0 w-full uppercase leading-[0.7em] text-8xl mt-2 opacity-20 z-0;
   }
   &__inner {
+    min-height: calc(90vh - 175px);
     @apply relative z-10 mt-12;
   }
   .nuxt-page {

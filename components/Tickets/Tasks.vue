@@ -82,6 +82,8 @@ async function notifyMentionedUsers(commentText, collection, itemId) {
 			item: itemId,
 			sender: currentUser.value.id,
 		});
+
+		console.log(currentUser.value.id);
 	}
 }
 

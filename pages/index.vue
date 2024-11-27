@@ -2,15 +2,42 @@
 const { user } = useDirectusAuth();
 </script>
 <template>
-	<div
-		class="relative w-full bg-center bg-contain xl:bg-cover bg-no-repeat min-h-screen flex items-center justify-center flex-col home"
-	>
-		<nuxt-link v-if="!user" to="/auth/signin">
-			<FormVButton class="w-full mb-6" type="submit" style="max-width: 450px">Login</FormVButton>
-		</nuxt-link>
-		<nuxt-link v-else to="/dashboard">
-			<FormVButton class="w-full mb-6" type="submit" style="max-width: 450px">Dashboard</FormVButton>
-		</nuxt-link>
+	<div class="md:px-6 mx-auto flex items-start justify-center flex-col relative px-4 pt-20">
+		<h1 class="page__title">Dashboard</h1>
+		<div class="w-full flex flex-col items-center justify-center z-10 page__inner">
+			<nuxt-link v-if="!user" to="/auth/signin">
+				<FormVButton class="w-full mb-6" type="submit" style="max-width: 450px">Login</FormVButton>
+			</nuxt-link>
+			<div v-else class="w-full max-w-xl">
+				<h2 class="text-xl mb-2 font-thin">{{ greetUser() }} {{ user.first_name }}.</h2>
+				<div class="grid gap-6 grid-cols-1 sm:grid-cols-2">
+					<nuxt-link
+						to="/invoices"
+						class="bg-gray-100 text-center py-12 sm:py-20 uppercase tracking-wide rounded-md shadow-lg"
+					>
+						Invoices
+					</nuxt-link>
+					<nuxt-link
+						to="/projects"
+						class="bg-gray-100 text-center py-12 sm:py-20 uppercase tracking-wide rounded-md shadow-lg"
+					>
+						Projects
+					</nuxt-link>
+					<nuxt-link
+						to="/tickets"
+						class="bg-gray-100 text-center py-12 sm:py-20uppercase tracking-wide rounded-md shadow-lg"
+					>
+						Tickets
+					</nuxt-link>
+					<nuxt-link
+						to="/channels"
+						class="bg-gray-100 text-center py-12 sm:py-20 uppercase tracking-wide rounded-md shadow-lg"
+					>
+						Channels
+					</nuxt-link>
+				</div>
+			</div>
+		</div>
 	</div>
 </template>
 

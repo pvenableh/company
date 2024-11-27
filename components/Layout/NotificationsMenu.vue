@@ -27,8 +27,6 @@
 							:alt="notification.sender?.first_name"
 						/>
 
-						{{ notification }}
-
 						<div class="flex-1 min-w-0">
 							<p class="font-medium text-sm">{{ notification.subject }}</p>
 							<div class="text-sm text-gray-500" v-html="notification.message" />
