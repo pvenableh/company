@@ -24,9 +24,16 @@ import { createDirectus, rest, passwordReset } from '@directus/sdk';
 
 const password = ref();
 
-const client = createDirectus('https://admin.1033lenox.com').with(rest());
+const client = createDirectus('https://admin.huestudios.company').with(rest());
 
-async function submit() {
+/*************  ✨ Codeium Command ⭐  *************/
+/**
+ * Submits a password reset request to the Directus client.
+ * It uses the reset token and password to initiate the reset process.
+ * Logs the result to the console.
+ */
+
+/******  e6d15a5b-d970-4b8f-a039-99f4b1cd2f65  *******/ async function submit() {
 	const result = await client.request(passwordReset(reset_token.value, password.value));
 
 	console.log(result);
