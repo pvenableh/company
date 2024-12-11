@@ -18,45 +18,71 @@ const items = [
 		icon: 'i-heroicons-information-circle',
 	},
 	{
+		slot: 'conversations',
+		label: 'Conversations',
+		icon: 'i-heroicons-chat-bubble-left-right',
+	},
+	{
 		slot: 'tickets',
 		label: 'Tickets',
-		icon: 'i-heroicons-queue-list',
+		icon: 'i-heroicons-square-3-stack-3d',
 	},
 	{
 		slot: 'timeline',
 		label: 'Timeline',
-		icon: 'i-heroicons-eye-dropper',
+		icon: 'i-heroicons-clock',
 	},
 	{
 		slot: 'documents',
 		label: 'Documents',
-		icon: 'i-heroicons-eye-dropper',
+		icon: 'i-heroicons-document-text',
+	},
+	{
+		slot: 'billing',
+		label: 'Billing',
+		icon: 'i-heroicons-credit-card',
 	},
 ];
 </script>
 <template>
-	<UTabs
-		:items="items"
-		orientation="vertical"
-		:ui="{
-			wrapper: 'flex items-center gap-4 h-dvh ',
-			list: {
-				width: 'w-48 h-full flex items-center justify-center flex-col bg-gray-100 dark:bg-gray-800 text-left',
-			},
-		}"
-	>
-		<template #overview="{ item }">
-			<ProjectsOverview :project="project" />
-		</template>
-		<template #tickets="{ item }">
-			<TicketsBoard :projectId="project.id" />
-		</template>
-		<template #timeline="{ item }">
-			<ProjectsTimeline :project="project" />
-		</template>
-		<template #documents="{ item }">
-			<ProjectsDocuments :project="project" />
-		</template>
-	</UTabs>
+	<div class="">
+		<h1 class="page__title">Project</h1>
+		<UTabs
+			:items="items"
+			:ui="{
+				base: 'focus:outline-none',
+				list: {
+					background: 'bg-white dark:bg-gray-800',
+					marker: {
+						background: 'bg-gray-100 dark:bg-gray-900',
+					},
+					tab: {
+						base: 'uppercase relative inline-flex items-center justify-center flex-shrink-0 w-full ui-focus-visible:outline-0 ui-focus-visible:ring-2 ui-focus-visible:ring-primary-500 dark:ui-focus-visible:ring-primary-400 ui-not-focus-visible:outline-none focus:outline-none disabled:cursor-not-allowed disabled:opacity-75 transition-colors duration-200 ease-out',
+						size: 'text-[8px] font-bold tracking-wider',
+					},
+				},
+			}"
+			class="mt-6"
+		>
+			<template #overview="{ item }">
+				<ProjectsOverview :project="project" />
+			</template>
+			<template #conversations="{ item }">
+				<ProjectsConversations :project="project.id" />
+			</template>
+			<template #tickets="{ item }">
+				<TicketsBoard :projectId="project.id" />
+			</template>
+			<template #timeline="{ item }">
+				<ProjectsTimeline :project="project" />
+			</template>
+			<template #documents="{ item }">
+				<ProjectsDocuments :project="project" />
+			</template>
+			<template #billing="{ item }">
+				<ProjectsBilling :project="project" />
+			</template>
+		</UTabs>
+	</div>
 </template>
 <style></style>

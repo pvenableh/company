@@ -3,4 +3,5 @@ module.exports = {
 	printWidth: 120,
 	singleQuote: true,
 	proseWrap: 'always',
+	plugins: ['prettier/plugins/html']
 };

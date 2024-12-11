@@ -86,7 +86,7 @@ a {
   &__title {
     font-family: var(--font-light) !important;
     font-weight: 200 !important;
-    @apply absolute top-0 w-full uppercase leading-[0.7em] text-8xl mt-2 opacity-20 z-0;
+    @apply absolute top-0 w-full uppercase leading-[0.7em] text-8xl mt-2 opacity-[0.05] z-0;
   }
   &__inner {
     min-height: calc(90vh - 175px);
