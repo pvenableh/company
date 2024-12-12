@@ -7,8 +7,8 @@
 <script setup>
 const props = defineProps({
 	project: {
-		type: String,
-		default: null,
+		type: Object,
+		default: () => null,
 	},
 });
 </script>

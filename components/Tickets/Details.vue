@@ -67,8 +67,35 @@
 				<!-- User Assignment -->
 				<div class="grid grid-cols-2 gap-4">
 					<UFormGroup label="Assign To">
-						<!-- Selected Users Display -->
-						<!-- User Select Menu -->
+						<USelectMenu
+							v-model="selectedUser"
+							:options="availableUsers"
+							placeholder="Select users..."
+							searchable
+							:loading="loadingUsers"
+							@update:modelValue="handleUserSelect"
+						>
+							<template #label>
+								<div class="flex items-center gap-2">
+									<UIcon name="i-heroicons-user-plus" class="w-4 h-4 text-gray-500" />
+									<span class="text-gray-500">{{ selectedUser ? selectedUser.label : 'Add user...' }}</span>
+								</div>
+							</template>
+
+							<template #option="{ option: user }">
+								<div class="flex items-center gap-2 py-1">
+									<UAvatar :src="getAvatarUrl(user)" :alt="user.label" size="sm" />
+									<div class="flex flex-col">
+										<span class="font-medium">{{ user.label }}</span>
+										<span class="text-xs text-gray-500">{{ user.email }}</span>
+									</div>
+								</div>
+							</template>
+						</USelectMenu>
+					</UFormGroup>
+
+					<!-- <UFormGroup label="Assign To">
+						
 						<USelectMenu
 							v-model="selectedUser"
 							:options="availableUsers"
@@ -95,12 +122,13 @@
 								</div>
 							</template>
 						</USelectMenu>
-					</UFormGroup>
+					</UFormGroup> -->
 					<div v-if="form.assigned_to.length" class="flex flex-wrap flex-row gap-2 mt-6">
 						<UBadge
 							v-for="userId in form.assigned_to"
 							:key="userId"
-							:color="isCurrentUserBadge(userId) ? 'primary' : 'gray'"
+							color="gray"
+							:class="isCurrentUserBadge(userId) ? 'border border-cyan-300' : ''"
 							class="flex items-center gap-2"
 						>
 							<UAvatar
@@ -218,13 +246,15 @@ const props = defineProps({
 		default: false,
 	},
 });
+
+const { filteredUsers, fetchFilteredUsers, loading: loadingUsers } = useFilteredUsers();
 const handleShare = (method) => {
 	console.log(`Shared via ${method}`);
 };
 const emit = defineEmits(['close', 'deleted', 'preventClose']);
 const { createItem, deleteItems, deleteItem, updateItem } = useDirectusItems();
 const { notify } = useNotifications();
-const { readUsers } = useDirectusUsers();
+// const { readUsers } = useDirectusUsers();
 const { user: currentUser } = useDirectusAuth();
 const showDeleteModal = ref(false);
 const userOptions = ref([]);
@@ -321,33 +351,33 @@ const resetFormState = () => {
 };
 
 // Fetch users
-const fetchUsers = async () => {
-	try {
-		const users = await readUsers({
-			fields: ['id', 'first_name', 'last_name', 'email', 'avatar'],
-		});
+// const fetchUsers = async () => {
+// 	try {
+// 		const users = await readUsers({
+// 			fields: ['id', 'first_name', 'last_name', 'email', 'avatar'],
+// 		});
 
-		userOptions.value = users.map((user) => ({
-			id: user.id,
-			label: `${user.first_name} ${user.last_name}`,
-			email: user.email,
-			avatar: user.avatar,
-			first_name: user.first_name,
-			last_name: user.last_name,
-		}));
-	} catch (error) {
-		console.error('Error fetching users:', error);
-		toast.add({
-			title: 'Error',
-			description: 'Failed to load users',
-			color: 'red',
-		});
-	}
-};
+// 		userOptions.value = users.map((user) => ({
+// 			id: user.id,
+// 			label: `${user.first_name} ${user.last_name}`,
+// 			email: user.email,
+// 			avatar: user.avatar,
+// 			first_name: user.first_name,
+// 			last_name: user.last_name,
+// 		}));
+// 	} catch (error) {
+// 		console.error('Error fetching users:', error);
+// 		toast.add({
+// 			title: 'Error',
+// 			description: 'Failed to load users',
+// 			color: 'red',
+// 		});
+// 	}
+// };
 
 // Available users computed property
 const availableUsers = computed(() => {
-	return userOptions.value.filter((user) => !form.value.assigned_to.includes(user.id));
+	return filteredUsers.value.filter((user) => !form.value.assigned_to.includes(user.id));
 });
 
 const selectedDate = ref(props.element.due_date ? new Date(props.element.due_date) : new Date());
@@ -529,10 +559,11 @@ const notifyUserAssignment = async (userId) => {
 };
 
 // User selection handlers
+
 const handleUserSelect = (user) => {
 	if (user?.id && !form.value.assigned_to.includes(user.id)) {
 		form.value.assigned_to.push(user.id);
-		selectedUser.value = null;
+		selectedUser.value = null; // Reset the selection
 	}
 };
 
@@ -542,6 +573,7 @@ const removeUser = async (userId) => {
 		// Find the junction record ID for this user assignment
 		const assignmentRecord = props.element.assigned_to.find((assignment) => assignment.directus_users_id.id === userId);
 		console.log('Assignment record:', assignmentRecord);
+
 		if (assignmentRecord) {
 			console.log('Deleting assignment:', assignmentRecord.id);
 			// Delete the assignment
@@ -580,11 +612,12 @@ const removeUser = async (userId) => {
 
 // Utility functions
 const getUserById = (userId) => {
-	return userOptions.value.find((u) => u.id === userId);
+	return filteredUsers.value.find((u) => u.id === userId);
 };
 
 const getUserFullName = (user) => {
 	if (!user) return 'Unknown';
+	if (user.id === currentUser.value.id) return 'You';
 	return `${user.first_name} ${user.last_name}`.trim() || user.label || 'Unknown';
 };
 
@@ -599,8 +632,8 @@ const isCurrentUserBadge = (userId) => {
 
 // Initialize users on mount
 onMounted(() => {
-	fetchUsers();
-	resetFormState();
+	fetchFilteredUsers(); // Fetch filtered users when the component mounts
+	resetFormState(); // Initialize form state
 });
 
 // Handle navigation protection

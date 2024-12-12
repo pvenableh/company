@@ -68,7 +68,7 @@ const items = [
 				<ProjectsOverview :project="project" />
 			</template>
 			<template #conversations="{ item }">
-				<ProjectsConversations :project="project.id" />
+				<ProjectsConversations :project="project" />
 			</template>
 			<template #tickets="{ item }">
 				<TicketsBoard :projectId="project.id" />

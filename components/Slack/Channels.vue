@@ -2,8 +2,8 @@
 // Add project prop
 const props = defineProps({
 	project: {
-		type: String,
-		default: null,
+		type: Object,
+		default: () => null,
 	},
 });
 
@@ -27,13 +27,23 @@ const channelsFilter = computed(() => {
 console.log(channelsFilter.value);
 
 // Update channels subscription to use computed filter
+// const {
+// 	data: channels,
+// 	isLoading: channelsLoading,
+// 	error: channelsError,
+// 	isConnected: channelsConnected,
+// 	refresh: refreshChannels,
+// } = useRealtimeSubscription('channels', ['*'], channelsFilter, '-date_updated');
+
 const {
 	data: channels,
 	isLoading: channelsLoading,
 	error: channelsError,
 	isConnected: channelsConnected,
 	refresh: refreshChannels,
-} = useRealtimeSubscription('channels', ['*'], channelsFilter, '-date_updated');
+} = useRealtimeSubscription('channels', ['id', 'name', 'messages'], {
+	project: { _eq: props.project.id },
+});
 
 console.log(channels);
 
@@ -51,6 +61,7 @@ const refreshAll = () => {
 
 <template>
 	<div class="md:px-6 mx-auto flex items-start justify-center flex-col relative px-4 pt-20">
+		<SlackCreate :project="project" />
 		<!-- Connection Status Alerts -->
 		<div v-if="!isFullyConnected && !isLoading" class="w-full mb-4">
 			<UAlert title="Connection Lost" description="Attempting to reconnect to real-time updates..." color="yellow">
@@ -88,6 +99,9 @@ const refreshAll = () => {
 					class="inline-block p-12 my-6 shadow-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors duration-200 lowercase mx-3 mb-6 rounded-lg"
 				>
 					#{{ item.name }}
+					<UChip :text="item.messages.length" size="2xl">
+						<UIcon name="i-heroicons-chat-bubble-left-right" class="w-4 h-4 inline-block" />
+					</UChip>
 				</NuxtLink>
 			</div>
 		</div>

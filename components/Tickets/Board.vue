@@ -626,13 +626,21 @@ const handleTicketCreated = () => {
 									<UIcon name="i-heroicons-arrow-path" class="animate-spin h-5 w-5" />
 								</div>
 
+								<TicketsCard
+									:element="element"
+									@expand="expand"
+									:comment-count="element.comments.length"
+									:task-count="element.tasks.length"
+								/>
+
+								<!-- 
 								<TicketsExpandableCard
 									:element="element"
 									:columns="columns"
 									:updating-tickets="updatingTickets"
 									:class="{ 'opacity-50': updatingTickets.has(element.id) }"
 									class="my-2"
-								/>
+								/> -->
 							</div>
 						</div>
 					</template>

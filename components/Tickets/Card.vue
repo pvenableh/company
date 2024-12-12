@@ -1,26 +1,33 @@
 <template>
-	<div class="w-full mb-2 transition-all ticket-card">
+	<div class="w-full mb-4 transition-all ticket-card">
 		<div
-			class="bg-white dark:bg-gray-800 shadow-lg hover:shadow-md transition-all rounded-sm w-full p-4"
+			class="bg-white dark:bg-gray-800 shadow-lg hover:shadow-md transition-all rounded-sm w-full p-4 relative"
+			:class="
+				formatDueDateStatus(element?.due_date) === 'urgent' || formatDueDateStatus(element?.due_date) === 'past'
+					? 'border-red-200 border-2'
+					: ''
+			"
 			@click="$emit('expand')"
 		>
 			<!-- Ticket Header -->
 			<div class="flex items-start justify-between my-2">
-				<UTooltip :text="getTicketInfo">
-					<nuxt-link
-						:to="`/tickets/${element.id}`"
-						class="text-gray-500 font-medium text-[10px] italic inline-block relative"
-					>
-						{{ element?.id }}
+				<nuxt-link :to="`/tickets/${element.id}`" class="flex flex-row">
+					<span class="text-gray-500 font-medium text-[10px] italic">{{ element?.id }}</span>
+					<UPopover mode="hover" :popper="{ offsetDistance: 5 }">
 						<UButton
 							color="gray"
 							variant="ghost"
 							icon="i-heroicons-information-circle"
 							size="xs"
-							class="group-hover:opacity-100 transition-opacity absolute -top-2 -right-8"
+							class="p-0 ml-1 -mt-1"
 						/>
-					</nuxt-link>
-				</UTooltip>
+						<template #panel>
+							<div class="p-2 text-gray-500 font-medium text-[10px]">
+								<span v-html="getTicketInfo"></span>
+							</div>
+						</template>
+					</UPopover>
+				</nuxt-link>
 
 				<UBadge
 					v-if="element?.priority"
@@ -41,12 +48,17 @@
 			</div>
 
 			<!-- Ticket Title -->
-			<h4 class="font-bold text-[16px] line-clamp-2 mt-2">{{ element?.title }}</h4>
+			<nuxt-link :to="`/tickets/${element.id}`">
+				<h4 class="font-bold text-[16px] line-clamp-2 mt-2">{{ element?.title }}</h4>
+			</nuxt-link>
 			<h5 class="text-gray-800 text-[8px] mt-0 uppercase mb-2">{{ element?.organization.name }}</h5>
 
 			<!-- Assigned Users -->
-			<div class="w-full flex items-center justify-between text-xs text-gray-500 mt-4">
-				<div class="flex items-center">
+			<div class="w-full flex flex-col items-center justify-between text-xs text-gray-500 my-4">
+				<h5 v-if="assignedUsers.length" class="text-gray-500 uppercase text-[8px] text-bold tracking-wider w-full">
+					Assigned to:
+				</h5>
+				<div class="w-full flex items-center">
 					<!-- Avatar Stack -->
 					<div class="flex -space-x-1">
 						<template v-if="assignedUsers.length">
@@ -56,7 +68,8 @@
 									:alt="getUserFullName(user)"
 									size="xs"
 									:class="{
-										'ring-2 ring-cyan-500 ring-offset-2 shadow-lg dark:ring-offset-gray-800': isCurrentUser(user),
+										'ring-2 ring-cyan-500 ring-offset-2 scale-90 shadow-lg dark:ring-offset-gray-800':
+											isCurrentUser(user),
 										'-ml-1': true,
 									}"
 								/>
@@ -72,23 +85,37 @@
 							</UTooltip>
 						</template>
 
-						<span v-else class="text-gray-500 uppercase text-[8px] text-bold tracking-wider">
-							Unassigned
-							<span class="text-[16px] -mb-1 inline-block animate-bounce">🤷‍♂️</span>
+						<span v-else class="">
+							<UTooltip text="Unassigned">
+								<UAvatar icon="i-heroicons-user" size="xs" />
+							</UTooltip>
 						</span>
 					</div>
 				</div>
 			</div>
-			<p v-if="element?.due_date" class="uppercase text-[10px] mt-3" :class="formatDueDateStatus(element?.due_date)">
-				<UIcon
-					name="i-heroicons-exclamation-triangle-solid"
-					class="w-4 h-4 inline-block mr-1 -mb-1.5 animate-bounce"
-					v-if="
-						formatDueDateStatus(element?.due_date) === 'urgent' || formatDueDateStatus(element?.due_date) === 'past'
-					"
-				/>
-				{{ formatDueDate(element?.due_date) }}
-			</p>
+			<div v-if="element?.due_date" class="">
+				<h5 v-if="assignedUsers.length" class="text-gray-500 uppercase text-[8px] text-bold tracking-wider w-full">
+					Due Date:
+				</h5>
+				<p class="uppercase text-[10px]" :class="formatDueDateStatus(element?.due_date)">
+					{{ formatDueDate(element?.due_date) }}
+					<UIcon
+						name="i-heroicons-exclamation-triangle-solid"
+						class="w-4 h-4 inline-block mr-1 -mb-1.5"
+						v-if="
+							formatDueDateStatus(element?.due_date) === 'urgent' || formatDueDateStatus(element?.due_date) === 'past'
+						"
+					/>
+				</p>
+			</div>
+
+			<nuxt-link
+				:to="`/tickets/${element.id}`"
+				class="text-[10px] uppercase tracking-wide text-right block absolute right-4 bottom-4 px-2"
+			>
+				Details
+				<UIcon name="i-heroicons-arrow-right" size="sm" class="inline-block ml-0.5 -mb-[1px] p-0" />
+			</nuxt-link>
 		</div>
 		<div
 			class="w-full bg-white dark:bg-gray-800 shadow-lg hover:shadow-md mt-1 rounded-sm flex flex-row items-center justify-between transition-all"
@@ -189,9 +216,10 @@ const getAvatarUrl = (user) => {
 	return `${useRuntimeConfig().public.directusUrl}/assets/${user.avatar}?key=small`;
 };
 
-const getUserFullName = (user) => {
-	if (!user) return 'Unknown';
-	return `${user.first_name} ${user.last_name}`.trim();
+const getUserFullName = (assignedUser) => {
+	if (!assignedUser) return 'Unknown';
+	if (assignedUser.id === user.value.id) return 'You';
+	return `${assignedUser.first_name} ${assignedUser.last_name}`.trim();
 };
 
 // const formatDate = (date) => {
@@ -212,6 +240,11 @@ const getTicketInfo = computed(() => {
 			? `${props.element.user_created.first_name} ${props.element.user_created.last_name}`
 			: 'Unknown';
 
+	const updater =
+		props.element.user_updated?.first_name && props.element.user_updated?.last_name
+			? `${props.element.user_updated.first_name} ${props.element.user_updated.last_name}`
+			: 'Unknown';
+
 	const created = new Date(props.element.date_created).toLocaleDateString('en-US', {
 		month: 'short',
 		day: 'numeric',
@@ -228,7 +261,10 @@ const getTicketInfo = computed(() => {
 		minute: '2-digit',
 	});
 
-	return `Created by ${creator} @ ${created}`;
+	const person = creator === updater ? `Created by: ${creator}` : `Updated by: ${updater}`;
+	const time = creator === updater ? `Created on: ${created}` : `Updated on: ${updated}`;
+
+	return `${person} <br/> ${time}`;
 });
 </script>
 

@@ -44,6 +44,7 @@
 </template>
 
 <script setup>
+const { filteredUsers, fetchFilteredUsers } = useFilteredUsers();
 import StarterKit from '@tiptap/starter-kit';
 import { Editor, EditorContent } from '@tiptap/vue-3';
 import { Extension } from '@tiptap/core';
@@ -90,9 +91,9 @@ const fileInput = ref(null);
 const isUploading = ref(false);
 const uploadProgress = ref(0);
 const { uploadFiles } = useDirectusFiles();
-const { readUsers } = useDirectusUsers();
+// const { readUsers } = useDirectusUsers();
 const { notify } = useNotifications();
-const { user: currentUser } = useDirectusAuth();
+// const { user: currentUser } = useDirectusAuth();
 const toast = useToast();
 
 const mentionsPortal = ref(null);
@@ -148,23 +149,15 @@ const CustomMention = Mention.configure({
 	},
 	suggestion: {
 		char: '@',
-		items: async ({ query }) => {
-			try {
-				const users = await readUsers({
-					fields: ['id', 'first_name', 'last_name', 'email', 'avatar'],
-					search: query,
-				});
-
-				return users.map((user) => ({
+		items: ({ query }) => {
+			return filteredUsers.value
+				.filter((user) => `${user.first_name} ${user.last_name}`.toLowerCase().includes(query.toLowerCase()))
+				.map((user) => ({
 					id: user.id,
 					label: `${user.first_name} ${user.last_name}`,
 					email: user.email,
 					avatar: user.avatar ? `${useRuntimeConfig().public.directusUrl}/assets/${user.avatar}?key=small` : null,
 				}));
-			} catch (error) {
-				console.error('Error fetching users:', error);
-				return [];
-			}
 		},
 		render: () => {
 			let popup = null;
@@ -424,6 +417,7 @@ watch(
 );
 
 onMounted(() => {
+	fetchFilteredUsers();
 	editor.value = new Editor({
 		extensions: [StarterKit, Link, Image, FileUpload, CustomMention],
 		content: props.modelValue,

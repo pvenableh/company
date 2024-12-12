@@ -109,6 +109,7 @@
 											:options="availableUsers"
 											placeholder="Select users..."
 											searchable
+											:loading="loadingUsers"
 											@update:modelValue="handleUserSelect"
 										>
 											<template #label>
@@ -129,6 +130,7 @@
 											</template>
 										</USelectMenu>
 									</UFormGroup>
+
 									<div v-if="form.assigned_to.length" class="flex flex-wrap flex-row gap-2 mt-6">
 										<UBadge
 											v-for="userId in form.assigned_to"
@@ -186,8 +188,11 @@ defineProps({
 		required: true,
 	},
 });
+
+const { filteredUsers, fetchFilteredUsers, loading: loadingUsers } = useFilteredUsers();
+
 const { createItem, readItems } = useDirectusItems();
-const { readUsers } = useDirectusUsers();
+// const { readUsers } = useDirectusUsers();
 const { user: currentUser } = useDirectusAuth();
 
 const emit = defineEmits(['ticketCreated']);
@@ -306,36 +311,36 @@ const calendarAttrs = [
 ];
 
 // Fetch users
-const fetchUsers = async () => {
-	try {
-		const users = await readUsers({
-			fields: ['id', 'first_name', 'last_name', 'email', 'avatar'],
-		});
+// const fetchUsers = async () => {
+// 	try {
+// 		const users = await readUsers({
+// 			fields: ['id', 'first_name', 'last_name', 'email', 'avatar'],
+// 		});
 
-		userOptions.value = users.map((user) => ({
-			id: user.id,
-			label: `${user.first_name} ${user.last_name}`,
-			email: user.email,
-			avatar: user.avatar,
-			first_name: user.first_name,
-			last_name: user.last_name,
-		}));
+// 		userOptions.value = users.map((user) => ({
+// 			id: user.id,
+// 			label: `${user.first_name} ${user.last_name}`,
+// 			email: user.email,
+// 			avatar: user.avatar,
+// 			first_name: user.first_name,
+// 			last_name: user.last_name,
+// 		}));
 
-		console.log('Fetched users:', userOptions.value);
-	} catch (error) {
-		console.error('Error fetching users:', error);
-		userOptions.value = [];
-		toast.add({
-			title: 'Error',
-			description: 'Failed to load users. Please refresh the page.',
-			color: 'red',
-		});
-	}
-};
+// 		console.log('Fetched users:', userOptions.value);
+// 	} catch (error) {
+// 		console.error('Error fetching users:', error);
+// 		userOptions.value = [];
+// 		toast.add({
+// 			title: 'Error',
+// 			description: 'Failed to load users. Please refresh the page.',
+// 			color: 'red',
+// 		});
+// 	}
+// };
 
 // Computed for available users
 const availableUsers = computed(() => {
-	return userOptions.value.filter((user) => !form.value.assigned_to.includes(user.id));
+	return filteredUsers.value.filter((user) => !form.value.assigned_to.includes(user.id));
 });
 
 // User selection handler
@@ -355,13 +360,13 @@ const handleUserSelect = (user) => {
 
 // Helper functions
 const getUserById = (userId) => {
-	const user = userOptions.value.find((u) => u.id === userId);
-	console.log('Getting user by id:', userId, 'Found:', user);
+	const user = filteredUsers.value.find((u) => u.id === userId);
 	return user;
 };
 
 const getUserFullName = (user) => {
 	if (!user) return 'Unknown';
+	if (user.id === currentUser.value.id) return 'You';
 	return `${user.first_name} ${user.last_name}`.trim() || user.label || 'Unknown';
 };
 
@@ -464,7 +469,8 @@ const openForm = async () => {
 	isExpanded.value = true;
 	document.body.style.overflow = 'hidden';
 	// Fetch users when form opens
-	await fetchUsers();
+	// await fetchUsers();
+	await fetchFilteredUsers();
 };
 
 const closeForm = () => {
