@@ -18,7 +18,12 @@ const props = defineProps({
 const localTasks = ref([]);
 const isInitialized = ref(false);
 
-const { data: remoteTasks } = useRealtimeSubscription(
+const {
+	data: remoteTasks,
+	isLoading,
+	isConnected,
+	refresh,
+} = useRealtimeSubscription(
 	'tasks',
 	[
 		'*',
@@ -211,8 +216,9 @@ function stopEditing(taskId, newDescription) {
 			/>
 			<UButton color="gray" variant="soft" icon="i-heroicons-plus" :disabled="!newTask.trim()" @click="addTask" />
 		</div>
-
+		<div v-if="!isConnected && isLoading" class="">Loading</div>
 		<draggable
+			v-else
 			v-model="localTasks"
 			:animation="200"
 			item-key="id"

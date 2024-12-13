@@ -35,8 +35,8 @@
 						<!-- Form -->
 						<div class="w-full mt-4 max-w-2xl mx-auto">
 							<form @submit.prevent="createTicket" class="space-y-6">
-								<UFormGroup label="Title" required>
-									<UInput v-model="form.title" placeholder="Enter ticket title" />
+								<UFormGroup ref="titleGroup" label="Title" required>
+									<UInput v-model="form.title" placeholder="Enter ticket title" required />
 								</UFormGroup>
 
 								<div class="grid grid-cols-2 gap-4">
@@ -72,6 +72,8 @@
 											class="relative"
 										/>
 									</UFormGroup>
+								</div>
+								<div class="grid grid-cols-2 gap-4">
 									<UFormGroup label="Due Date">
 										<UPopover>
 											<UInput
@@ -413,15 +415,21 @@ async function notifyMentionedUsers(commentText, collection, itemId) {
 	}
 }
 
+const titleGroup = ref(null);
 const createTicket = async () => {
 	try {
 		isLoading.value = true;
 
-		if (mentionedUsers.value.size > 0) {
-			const result = await notifyMentionedUsers(form.value.title, 'tickets', props.element?.id);
-			console.log(result);
-		}
+		const isTitleValid = titleGroup.value?.isValid?.();
 
+		if (!isTitleValid) {
+			toast.add({
+				title: 'Error',
+				description: 'Please enter a valid title',
+				color: 'red',
+			});
+			return;
+		}
 		// Extract assigned_to from form data
 		const { assigned_to, ...ticketData } = form.value;
 
@@ -444,6 +452,12 @@ const createTicket = async () => {
 					}),
 				),
 			);
+		}
+
+		// Notify mentioned users
+		if (mentionedUsers.value.size > 0) {
+			const result = await notifyMentionedUsers(form.value.title, 'tickets', ticket.id);
+			console.log(result);
 		}
 
 		toast.add({

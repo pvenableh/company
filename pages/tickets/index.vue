@@ -4,7 +4,7 @@
 			Tickets
 			<span class="block">Board</span>
 		</h1>
-		<div class="xl:flex xl:items-center xl:justify-center z-10 overflow-x-auto page__inner">
+		<div class="xl:flex xl:items-center xl:justify-center z-10 w-full page__inner !mt-0">
 			<TicketsBoard />
 		</div>
 	</div>

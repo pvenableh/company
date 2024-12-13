@@ -26,16 +26,15 @@
 						class="w-full lg:w-64 uppercase text-[10px] text-gray-400 relative"
 						@change="handleSelectChange"
 					/>
-					<UInput
-						v-else
-						class="w-64 uppercase text-[10px]"
-						:value="user?.organizations?.[0]?.organizations_id?.name || ''"
-						disabled
-					/>
+
+					<h5 v-else class="uppercase text-[10px] tracking-wide font-bold">
+						{{ user?.organizations?.[0]?.organizations_id?.name }}
+						<span class="opacity-30">Projects</span>
+					</h5>
 				</div>
 
 				<!-- Service Filter -->
-				<div class="flex items-center space-x-2">
+				<div v-if="isAdmin" class="flex items-center space-x-2">
 					<USelectMenu
 						v-model="selectedService"
 						:options="serviceOptions"
@@ -55,11 +54,12 @@
 				</div>
 
 				<!-- Assigned To Filter -->
-				<UToggle v-model="filterByAssignedTo" class="ml-4">
-					<template #default="{ checked }">
-						<span class="text-xs uppercase">{{ checked ? 'My Projects' : 'All Projects' }}</span>
-					</template>
-				</UToggle>
+				<div class="flex flex-row items-center justify-center space-x-2 ml-4">
+					<UToggle v-model="filterByAssignedTo" />
+					<span class="text-[10px] text-gray-500 uppercase">
+						{{ filterByAssignedTo ? 'My Projects' : 'All Projects' }}
+					</span>
+				</div>
 			</div>
 
 			<!-- Last Updated -->
@@ -184,6 +184,7 @@ const hasMultipleOrgs = computed(() => isAdmin.value && orgOptions.value.length 
 
 // Fetch services
 const fetchServices = async () => {
+	if (!isAdmin.value) return;
 	try {
 		const services = await readItems('services', {
 			fields: ['id', 'name', 'color'],

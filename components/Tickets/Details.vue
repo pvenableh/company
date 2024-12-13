@@ -564,12 +564,16 @@ const handleUserSelect = (user) => {
 	if (user?.id && !form.value.assigned_to.includes(user.id)) {
 		form.value.assigned_to.push(user.id);
 		selectedUser.value = null; // Reset the selection
+		console.log(form.value.assigned_to);
 	}
 };
 
 const removeUser = async (userId) => {
 	console.log('Removing user:', userId);
 	try {
+		// Update local state
+		form.value.assigned_to = form.value.assigned_to.filter((id) => id !== userId);
+
 		// Find the junction record ID for this user assignment
 		const assignmentRecord = props.element.assigned_to.find((assignment) => assignment.directus_users_id.id === userId);
 		console.log('Assignment record:', assignmentRecord);
@@ -578,9 +582,6 @@ const removeUser = async (userId) => {
 			console.log('Deleting assignment:', assignmentRecord.id);
 			// Delete the assignment
 			await deleteItem('tickets_directus_users', assignmentRecord.id);
-
-			// Update local state
-			form.value.assigned_to = form.value.assigned_to.filter((id) => id !== userId);
 
 			// Send notification if it's not the current user
 			if (userId !== currentUser.value?.id) {

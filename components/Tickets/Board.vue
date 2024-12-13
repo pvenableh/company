@@ -235,13 +235,21 @@ const handleProjectChange = (value) => {
 };
 
 const hasActiveFilters = computed(() => {
-	return filterByAssignedTo.value || filterUnassigned.value || filterDueDate.value;
+	return (
+		filterByAssignedTo.value ||
+		filterUnassigned.value ||
+		filterDueDate.value ||
+		selectedOrg.value ||
+		selectedProject.value
+	);
 });
 
 const clearFilters = () => {
 	filterByAssignedTo.value = false;
 	filterUnassigned.value = false;
 	filterDueDate.value = null;
+	selectedOrg.value = null;
+	selectedProject.value = null;
 };
 
 watch(selectedOrg, async (newOrg) => {
@@ -452,107 +460,97 @@ const handleTicketCreated = () => {
 			</UAlert>
 		</div>
 
-		<div class="w-full flex flex-col md:flex-row items-center justify-between mb-4 px-4 gap-4 pt-4">
-			<TicketsCreate :columns="columns" @ticketCreated="handleTicketCreated" />
+		<div class="w-full flex flex-col md:flex-row items-end justify-between mb-4 xl:mb-8 xl:mt-2 px-4 gap-4 pt-4">
+			<TicketsCreate :columns="columns" @ticketCreated="handleTicketCreated" class="mb-4 xl:mb-0" />
 
-			<div v-if="!projectId" class="flex items-center gap-4 relative">
-				<UButton
-					v-if="hasActiveFilters"
-					icon="i-heroicons-x-mark"
-					size="xs"
-					color="gray"
-					variant="ghost"
-					@click="clearFilters"
-					class="uppercase text-[10px]"
-				>
-					Clear Filters
-				</UButton>
-				<div class="flex flex-row items-center justify-center space-x-2">
-					<UToggle v-model="filterByAssignedTo" class="" />
-
-					<span class="text-[10px] text-gray-500 uppercase">
-						{{ filterByAssignedTo ? 'My Tickets' : 'All Tickets' }}
-					</span>
-				</div>
-				<div class="flex flex-row items-center justify-center space-x-2">
-					<UToggle v-model="filterUnassigned" :disabled="filterByAssignedTo" />
-					<span class="text-[10px] text-gray-500 uppercase">
-						{{ filterUnassigned ? 'Unassigned' : 'All Assignments' }}
-					</span>
-				</div>
-
-				<!-- Due Date Filter -->
-				<div class="flex items-center space-x-2 relative">
-					<USelectMenu
-						v-model="filterDueDate"
-						:options="dueDateOptions"
-						placeholder="Due Date"
-						size="sm"
-						class="w-36 uppercase text-[10px]"
-						option-attribute="label"
-						value-attribute="value"
+			<div v-if="!projectId" class="hidden md:flex items-center flex-col xl:flex-row relative mb-4 xl:mb-0">
+				<div class="w-full flex flex-row items-center justify-end gap-4 mb-2 xl:mb-0 xl:mr-2">
+					<UButton
+						icon="i-heroicons-x-mark"
+						size="xs"
+						color="gray"
+						variant="ghost"
+						@click="clearFilters"
+						class="uppercase text-[10px] transition-opacity duration-500 p-0"
+						:class="hasActiveFilters ? 'opacity-100' : 'opacity-0'"
 					>
-						<template #trigger>
-							<UButton
-								:color="activeDueDateFilter ? 'yellow' : 'gray'"
-								variant="soft"
-								:icon="activeDueDateFilter ? 'i-heroicons-clock' : 'i-heroicons-calendar'"
-								size="xs"
-								class="uppercase text-[10px]"
-							>
-								{{ filterDueDate?.label || 'Due Date' }}
-							</UButton>
-						</template>
-					</USelectMenu>
-				</div>
-				<div class="flex items-center space-x-2">
-					<USelectMenu
-						v-if="hasMultipleOrgs"
-						searchable
-						v-model="selectedOrg"
-						:options="orgOptions"
-						option-attribute="name"
-						value-attribute="id"
-						placeholder="Select Organization"
-						class="w-full lg:w-64 uppercase !text-[8x] text-gray-400 relative"
-						@change="handleSelectChange"
-					/>
-					<UInput v-else class="w-64 uppercase text-[10px]" :value="user" disabled />
-				</div>
-				<div class="flex items-center space-x-2">
-					<USelectMenu
-						searchable
-						v-model="selectedProject"
-						:options="projectOptions"
-						option-attribute="title"
-						value-attribute="id"
-						placeholder="Select Project"
-						class="w-full lg:w-64 uppercase text-[8px] text-gray-400 relative"
-						@change="handleProjectChange"
-					>
-						<!-- <USelectMenu
-						searchable
-						v-model="selectedProject"
-						:options="projectOptions.length > 1 ? projectOptions : []"
-						option-attribute="title"
-						value-attribute="id"
-						placeholder="Select Project"
-						class="w-full lg:w-64 uppercase text-[10px] text-gray-400 relative"
-						@change="handleProjectChange"
-						:disabled="projectOptions.length < 1"
-					> -->
-						<template #option="{ option }">
-							<div class="flex flex-col">
-								<span>{{ option.title }}</span>
-								<span v-if="option.organization" class="text-xs text-gray-500">
-									{{ option.organization.name }}
-								</span>
-							</div>
-						</template>
-					</USelectMenu>
-				</div>
+						Clear Filters
+					</UButton>
+					<div class="flex flex-row items-center justify-center space-x-2">
+						<UToggle v-model="filterByAssignedTo" class="" />
 
-				<div v-if="lastUpdated" class="-top-[18px] text-[10px] right-0 text-gray-500 absolute font-bold uppercase">
+						<span class="text-[10px] text-gray-500 uppercase">
+							{{ filterByAssignedTo ? 'My Tickets' : 'All Tickets' }}
+						</span>
+					</div>
+					<div class="flex flex-row items-center justify-center space-x-2">
+						<UToggle v-model="filterUnassigned" :disabled="filterByAssignedTo" />
+						<span class="text-[10px] text-gray-500 uppercase">
+							{{ filterUnassigned ? 'Unassigned' : 'All Assignments' }}
+						</span>
+					</div>
+				</div>
+				<div class="w-full flex flex-row items-center justify-end gap-4">
+					<!-- Due Date Filter -->
+					<div class="flex items-center space-x-2 relative">
+						<USelectMenu
+							v-model="filterDueDate"
+							:options="dueDateOptions"
+							placeholder="Due Date"
+							size="sm"
+							class="w-36 uppercase text-[10px]"
+							option-attribute="label"
+							value-attribute="value"
+						>
+							<template #trigger>
+								<UButton
+									:color="activeDueDateFilter ? 'yellow' : 'gray'"
+									variant="soft"
+									:icon="activeDueDateFilter ? 'i-heroicons-clock' : 'i-heroicons-calendar'"
+									size="xs"
+									class="uppercase text-[10px]"
+								>
+									{{ filterDueDate?.label || 'Due Date' }}
+								</UButton>
+							</template>
+						</USelectMenu>
+					</div>
+					<div class="flex items-center space-x-2">
+						<USelectMenu
+							v-if="hasMultipleOrgs"
+							searchable
+							v-model="selectedOrg"
+							:options="orgOptions"
+							option-attribute="name"
+							value-attribute="id"
+							placeholder="Select Organization"
+							class="w-full lg:w-64 uppercase !text-[8x] text-gray-400 relative"
+							@change="handleSelectChange"
+						/>
+					</div>
+					<div class="flex items-center space-x-2">
+						<USelectMenu
+							searchable
+							v-model="selectedProject"
+							:options="projectOptions"
+							option-attribute="title"
+							value-attribute="id"
+							placeholder="Select Project"
+							class="w-full lg:w-64 uppercase text-[8px] text-gray-400 relative"
+							@change="handleProjectChange"
+						>
+							<template #option="{ option }">
+								<div class="flex flex-col">
+									<span>{{ option.title }}</span>
+									<span v-if="option.organization" class="text-xs text-gray-500">
+										{{ option.organization.name }}
+									</span>
+								</div>
+							</template>
+						</USelectMenu>
+					</div>
+				</div>
+				<div v-if="lastUpdated" class="-bottom-[20px] text-[9px] right-0 text-gray-500 absolute font-bold uppercase">
 					Last updated: {{ new Date(lastUpdated).toLocaleTimeString() }}
 				</div>
 			</div>
@@ -571,18 +569,22 @@ const handleTicketCreated = () => {
 		</div>
 
 		<!-- Board Layout -->
-		<div class="w-full flex px-4 gap-4 min-h-svh" @touchstart="handleTouchStart" @touchend="handleTouchEnd">
+		<div
+			class="bg-gray-100 bg-opacity-30 border-b shadow-inner border-gray-200 w-full flex pt-4 px-4 gap-4 min-h-svh overflow-x-auto overflow-hidden-scrollbar"
+			@touchstart="handleTouchStart"
+			@touchend="handleTouchEnd"
+		>
 			<div
 				v-for="column in columns"
 				:key="column.id"
-				class="flex-grow w-full basis-0 shadow h-full min-h-dvh transition-transform duration-300 ease-in-out"
+				class="flex-grow w-full basis-0 h-full min-h-dvh transition-transform duration-300 ease-in-out min-w-[350px] shadow-inner border-l border-r border-gray-100"
 				:class="{
 					'hidden md:block': isMobile && column.id !== activeColumn,
 					'transform translate-x-0': !isMobile || column.id === activeColumn,
 				}"
 			>
 				<!-- Column Header -->
-				<div class="p-3 bg-gray-200 mb-3 shadow-lg">
+				<div class="p-3 bg-gray-200 shadow-xl">
 					<div class="flex items-center justify-between">
 						<h3 class="text-xs font-bold uppercase tracking-wide">{{ column.name }}</h3>
 						<UBadge :color="column.color" class="ml-2 w-6 h-6 text-center inline-block">
@@ -592,17 +594,46 @@ const handleTicketCreated = () => {
 				</div>
 
 				<!-- Loading State -->
-				<div
-					v-if="isLoading && !localTickets[column.id]?.length"
-					class="min-h-[50vh] p-2 rounded-b-lg bg-gray-100 dark:bg-gray-800"
-				>
+				<div v-if="isLoading && !localTickets[column.id]?.length" class="min-h-[50vh] p-2 bg-gray-100 dark:bg-gray-800">
 					<div class="space-y-3">
-						<USkeleton v-for="n in 3" :key="n" class="h-24 w-full" />
+						<USkeleton v-for="n in 3" :key="n" class="h-24 mb-4 w-full" />
 					</div>
 				</div>
 
 				<!-- Draggable Container -->
 				<VueDraggable
+					v-else
+					v-model="localTickets[column.id]"
+					:group="{ name: 'tickets' }"
+					item-key="id"
+					class="min-h-screen lg:h-svh h-full py-2 px-2 bg-gray-50 bg-opacity-15 dark:bg-gray-800 overflow-y-auto overflow-hidden-scrollbar"
+					:class="{ 'is-dragging': isDragging }"
+					ghost-class="ghost"
+					chosen-class="chosen"
+					drag-class="drag"
+					@start="onDragStart"
+					@end="onDragEnd"
+					@change="(event) => updateTicketStatus(column.id, event)"
+				>
+					<template #item="{ element }">
+						<div :id="element.id" class="ticket-wrapper">
+							<div class="relative">
+								<div
+									v-if="updatingTickets.has(element.id)"
+									class="absolute inset-0 bg-white/50 dark:bg-gray-900/50 rounded-lg flex items-center justify-center z-10"
+								>
+									<UIcon name="i-heroicons-arrow-path" class="animate-spin h-5 w-5" />
+								</div>
+								<TicketsCard
+									:element="element"
+									:comment-count="element.comments.length"
+									:task-count="element.tasks.length"
+								/>
+							</div>
+						</div>
+					</template>
+				</VueDraggable>
+				<!-- <VueDraggable
 					v-else
 					v-model="localTickets[column.id]"
 					:group="{ name: 'tickets' }"
@@ -625,32 +656,45 @@ const handleTicketCreated = () => {
 								>
 									<UIcon name="i-heroicons-arrow-path" class="animate-spin h-5 w-5" />
 								</div>
-
+								 @expand="expand" 
 								<TicketsCard
 									:element="element"
-									@expand="expand"
 									:comment-count="element.comments.length"
 									:task-count="element.tasks.length"
 								/>
 
-								<!-- 
+								
 								<TicketsExpandableCard
 									:element="element"
 									:columns="columns"
 									:updating-tickets="updatingTickets"
 									:class="{ 'opacity-50': updatingTickets.has(element.id) }"
 									class="my-2"
-								/> -->
+								/> 
 							</div>
 						</div>
 					</template>
-				</VueDraggable>
+				</VueDraggable> -->
 			</div>
 		</div>
 	</div>
 </template>
 
 <style scoped>
+/* Hide scrollbar for Webkit browsers */
+.overflow-hidden-scrollbar::-webkit-scrollbar {
+	display: none;
+}
+
+/* Optional: Hide scrollbar for Firefox */
+.overflow-hidden-scrollbar {
+	scrollbar-width: none; /* Firefox */
+}
+
+/* Maintain smooth scrolling */
+.overflow-hidden-scrollbar {
+	-ms-overflow-style: none; /* IE and Edge */
+}
 @media (max-width: 768px) {
 	.column-transition-enter-active,
 	.column-transition-leave-active {

@@ -7,8 +7,8 @@
 					? 'border-red-200 border-2'
 					: ''
 			"
-			@click="$emit('expand')"
 		>
+			<!-- @click="$emit('expand')" -->
 			<!-- Ticket Header -->
 			<div class="flex items-start justify-between my-2">
 				<nuxt-link :to="`/tickets/${element.id}`" class="flex flex-row">
@@ -49,7 +49,14 @@
 
 			<!-- Ticket Title -->
 			<nuxt-link :to="`/tickets/${element.id}`">
-				<h4 class="font-bold text-[16px] line-clamp-2 mt-2">{{ element?.title }}</h4>
+				<h4 class="font-bold text-[16px] line-clamp-2 mt-2">
+					{{ element?.title }}
+					<UIcon
+						name="i-heroicons-arrow-right"
+						size="xs"
+						class="inline-block ml-0.5 -mb-[3px] p-0 scale-75 opacity-50"
+					/>
+				</h4>
 			</nuxt-link>
 			<h5 class="text-gray-800 text-[8px] mt-0 uppercase mb-2">{{ element?.organization.name }}</h5>
 
@@ -109,13 +116,13 @@
 				</p>
 			</div>
 
-			<nuxt-link
+			<!-- <nuxt-link
 				:to="`/tickets/${element.id}`"
 				class="text-[10px] uppercase tracking-wide text-right block absolute right-4 bottom-4 px-2"
 			>
 				Details
 				<UIcon name="i-heroicons-arrow-right" size="sm" class="inline-block ml-0.5 -mb-[1px] p-0" />
-			</nuxt-link>
+			</nuxt-link> -->
 		</div>
 		<div
 			class="w-full bg-white dark:bg-gray-800 shadow-lg hover:shadow-md mt-1 rounded-sm flex flex-row items-center justify-between transition-all"
@@ -157,7 +164,7 @@ const props = defineProps({
 	},
 });
 
-const emit = defineEmits(['expand']);
+// const emit = defineEmits(['expand']);
 
 const { user } = useDirectusAuth();
 
