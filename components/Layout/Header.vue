@@ -30,9 +30,12 @@ onMounted(() => {
 </script>
 <template>
 	<header
+		class="w-full flex items-center justify-start z-40 bg-gray-100 dark:bg-gradient-to-tr dark:from-gray-800 dark:to-gray-900 transition-all py-3 shadow header"
+	>
+		<!-- <header
 		class="w-full flex items-center justify-start sticky top-0 left-0 z-40 bg-gray-100 dark:bg-gradient-to-tr dark:from-gray-800 dark:to-gray-900 transition-all py-3 shadow header"
 		:class="{ retracted: isRetracted }"
-	>
+	> -->
 		<!-- <div class="absolute left-[10px] sm:pl-1 md:px-6 inline-block sm:hidden mt-0">
 			<DarkModeToggle class="" />
 		</div> -->

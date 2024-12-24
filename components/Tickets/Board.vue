@@ -12,9 +12,9 @@ const props = defineProps({
 });
 
 const columns = [
-	{ id: 'Pending', name: 'Pending', color: 'gray' },
-	{ id: 'Scheduled', name: 'Scheduled', color: 'black' },
-	{ id: 'In Progress', name: 'In Progress', color: 'blue' },
+	{ id: 'Pending', name: 'Pending', color: 'cyan' },
+	{ id: 'Scheduled', name: 'Scheduled', color: 'cyan2' },
+	{ id: 'In Progress', name: 'In Progress', color: 'green2' },
 	{ id: 'Completed', name: 'Completed', color: 'green' },
 ];
 
@@ -455,9 +455,9 @@ const handleTicketCreated = () => {
 };
 </script>
 <template>
-	<div class="w-full mx-auto max-w-[2000px]">
+	<div class="w-full mx-auto tickets-board">
 		<!-- Connection Status -->
-		<div v-if="!isConnected && !isLoading" class="mb-4">
+		<div v-if="!isConnected && !isLoading" class="mb-4 tickets-board__connection">
 			<UAlert title="Connection Lost" description="Attempting to reconnect..." color="yellow">
 				<template #footer>
 					<UButton size="sm" color="yellow" @click="refresh">Retry Connection</UButton>
@@ -465,7 +465,9 @@ const handleTicketCreated = () => {
 			</UAlert>
 		</div>
 
-		<div class="w-full flex flex-col md:flex-row items-end justify-between mb-4 xl:mb-8 xl:mt-2 px-4 gap-4 pt-4">
+		<div
+			class="w-full flex flex-col md:flex-row items-end justify-between mb-4 xl:mb-8 xl:mt-2 px-4 gap-4 pt-4 tickets-board__filters"
+		>
 			<TicketsCreate :columns="columns" @ticketCreated="handleTicketCreated" class="mb-4 xl:mb-0" />
 
 			<div v-if="!projectId" class="hidden md:flex items-center flex-col xl:flex-row relative mb-4 xl:mb-0">
@@ -555,7 +557,7 @@ const handleTicketCreated = () => {
 						</USelectMenu>
 					</div>
 				</div>
-				<div v-if="lastUpdated" class="-bottom-[20px] text-[9px] right-0 text-gray-500 absolute font-bold uppercase">
+				<div v-if="lastUpdated" class="-bottom-[22.5px] text-[9px] right-0 text-gray-500 absolute font-bold uppercase">
 					Last updated: {{ new Date(lastUpdated).toLocaleTimeString() }}
 				</div>
 			</div>
@@ -575,24 +577,27 @@ const handleTicketCreated = () => {
 
 		<!-- Board Layout -->
 		<div
-			class="bg-gray-100 bg-opacity-30 border-b shadow-inner border-gray-200 w-full flex pt-4 px-4 gap-4 min-h-svh overflow-x-auto overflow-hidden-scrollbar"
+			class="bg-gray-100 bg-opacity-30 border-b border-gray-200 w-full flex min-h-svh overflow-x-auto overflow-hidden-scrollbar tickets-board__board"
 			@touchstart="handleTouchStart"
 			@touchend="handleTouchEnd"
 		>
 			<div
 				v-for="column in columns"
 				:key="column.id"
-				class="flex-grow w-full basis-0 h-full min-h-dvh transition-transform duration-300 ease-in-out min-w-[350px] border-l border-r border-gray-100"
+				class="flex-grow w-full basis-0 h-full min-h-dvh transition-transform duration-300 ease-in-out min-w-[350px] tickets-board__board-col"
 				:class="{
 					'hidden md:block': isMobile && column.id !== activeColumn,
 					'transform translate-x-0': !isMobile || column.id === activeColumn,
 				}"
 			>
 				<!-- Column Header -->
-				<div class="p-3 bg-gray-200">
+				<div class="tickets-board__board-col-header">
 					<div class="flex items-center justify-between">
 						<h3 class="text-xs font-bold uppercase tracking-wide">{{ column.name }}</h3>
-						<UBadge :color="column.color" class="ml-2 w-6 h-6 text-center inline-block">
+						<UBadge
+							class="ml-2 w-6 h-6 text-center inline-block"
+							:style="{ backgroundColor: `var(--${column.color})` }"
+						>
 							{{ localTickets[column.id]?.length || 0 }}
 						</UBadge>
 					</div>
@@ -601,17 +606,16 @@ const handleTicketCreated = () => {
 				<!-- Loading State -->
 				<div v-if="isLoading && !localTickets[column.id]?.length" class="min-h-[50vh] p-2 bg-gray-100 dark:bg-gray-800">
 					<div class="space-y-3">
-						<USkeleton v-for="n in 3" :key="n" class="h-24 mb-4 w-full" />
+						<USkeleton v-for="n in 5" :key="n" class="h-24 mb-4 w-full" />
 					</div>
 				</div>
 
-				<!-- Draggable Container -->
 				<VueDraggable
 					v-else
 					v-model="localTickets[column.id]"
 					:group="{ name: 'tickets' }"
 					item-key="id"
-					class="min-h-screen lg:h-svh h-full py-2 px-2 bg-gray-50 bg-opacity-15 dark:bg-gray-800 overflow-y-auto overflow-hidden-scrollbar"
+					class="tickets-board__board-col-content"
 					:class="{ 'is-dragging': isDragging }"
 					ghost-class="ghost"
 					chosen-class="chosen"
@@ -634,54 +638,58 @@ const handleTicketCreated = () => {
 						</div>
 					</template>
 				</VueDraggable>
-				<!-- <VueDraggable
-					v-else
-					v-model="localTickets[column.id]"
-					:group="{ name: 'tickets' }"
-					item-key="id"
-					class="min-h-svh h-full py-2 px-2 rounded-b-lg bg-gray-100 dark:bg-gray-800 shadow-inner"
-					:class="{ 'is-dragging': isDragging }"
-					ghost-class="ghost"
-					chosen-class="chosen"
-					drag-class="drag"
-					@start="onDragStart"
-					@end="onDragEnd"
-					@change="(event) => updateTicketStatus(column.id, event)"
-				>
-					<template #item="{ element }">
-						<div :id="element.id" class="ticket-wrapper">
-							<div class="relative">
-								<div
-									v-if="updatingTickets.has(element.id)"
-									class="absolute inset-0 bg-white/50 dark:bg-gray-900/50 rounded-lg flex items-center justify-center z-10"
-								>
-									<UIcon name="i-heroicons-arrow-path" class="animate-spin h-5 w-5" />
-								</div>
-								 @expand="expand" 
-								<TicketsCard
-									:element="element"
-									:comment-count="element.comments.length"
-									:task-count="element.tasks.length"
-								/>
-
-								
-								<TicketsExpandableCard
-									:element="element"
-									:columns="columns"
-									:updating-tickets="updatingTickets"
-									:class="{ 'opacity-50': updatingTickets.has(element.id) }"
-									class="my-2"
-								/> 
-							</div>
-						</div>
-					</template>
-				</VueDraggable> -->
 			</div>
 		</div>
 	</div>
 </template>
 
 <style scoped>
+.tickets-board {
+	&__board {
+		@apply relative;
+		&-filters {
+			@apply relative max-w-[2000px] bg-red-500;
+		}
+		&-connection {
+			@apply max-w-[2000px];
+		}
+		&-col {
+			@apply border-gray-50 border-r border-l shadow-inner;
+			&-header {
+				@apply relative shadow-2xl py-5 px-4 backdrop-blur-lg mt-1 border-gray-200 border-b;
+				@media (min-width: 1600px) {
+					@apply px-8;
+				}
+			}
+			&-content {
+				@apply min-h-screen lg:h-svh h-full py-2 bg-gray-50 bg-opacity-15 dark:bg-gray-800 overflow-y-auto overflow-hidden-scrollbar px-2;
+				@media (min-width: 1600px) {
+					@apply px-6;
+				}
+			}
+		}
+	}
+	.tickets-board__board::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 1px;
+		z-index: 10;
+		background: linear-gradient(90deg, var(--cyan), var(--green));
+	}
+	.tickets-board__board::after {
+		content: '';
+		position: absolute;
+		bottom: 0;
+		left: 0;
+		width: 100%;
+		height: 1px;
+		z-index: 10;
+		background: linear-gradient(90deg, var(--cyan), var(--green));
+	}
+}
 /* Hide scrollbar for Webkit browsers */
 .overflow-hidden-scrollbar::-webkit-scrollbar {
 	display: none;

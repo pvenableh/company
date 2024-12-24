@@ -188,10 +188,10 @@ watch(
 			:color="isActive ? 'primary' : 'gray'"
 			variant="soft"
 			size="xs"
-			:class="isActive ? 'text-cyan-300 fill-cyan-300' : ''"
+			:class="isActive ? 'text-[var(--cyan)] fill-[var(--cyan)]' : ''"
 			:ui="{
 				icon: {
-					base: isActive ? 'w-4 h-4 flex-shrink-0 text-cyan-300' : 'w-4 h-4 flex-shrink-0',
+					base: isActive ? 'w-4 h-4 flex-shrink-0 text-[var(--cyan)]' : 'w-4 h-4 flex-shrink-0',
 					transform: isActive ? 'scale-150' : 'scale-100',
 					transition: 'transform duration-200',
 					color: isActive ? 'ghost' : 'gray',

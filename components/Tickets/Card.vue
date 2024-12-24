@@ -1,13 +1,14 @@
 <template>
 	<div class="w-full mb-4 transition-all ticket-card">
-		<div
+		<div class="bg-white dark:bg-gray-800 shadow-lg hover:shadow-md transition-all rounded-sm w-full p-4 relative">
+			<!-- <div
 			class="bg-white dark:bg-gray-800 shadow-lg hover:shadow-md transition-all rounded-sm w-full p-4 relative"
 			:class="
 				formatDueDateStatus(element?.due_date) === 'urgent' || formatDueDateStatus(element?.due_date) === 'past'
 					? 'border-red-200 border-2'
 					: ''
 			"
-		>
+		> -->
 			<!-- @click="$emit('expand')" -->
 			<!-- Ticket Header -->
 			<div class="flex items-start justify-between my-2 h-8">
@@ -83,39 +84,41 @@
 					Due Date:
 				</h5>
 				<p class="uppercase text-[10px]" :class="formatDueDateStatus(element?.due_date)">
+					<span
+						v-if="
+							formatDueDateStatus(element?.due_date) === 'urgent' || formatDueDateStatus(element?.due_date) === 'past'
+						"
+						class="h-[7px] w-[15px] inline-block bg-red-500"
+					></span>
 					{{ formatDueDate(element?.due_date) }}
-					<UIcon
+					<!-- <UIcon
 						name="i-heroicons-exclamation-triangle-solid"
 						class="w-4 h-4 inline-block mr-1 -mb-1.5"
 						v-if="
 							formatDueDateStatus(element?.due_date) === 'urgent' || formatDueDateStatus(element?.due_date) === 'past'
 						"
-					/>
+					/> -->
 				</p>
 			</div>
 			<div v-else class="">
 				<h5 class="text-gray-500 uppercase text-[8px] text-bold tracking-wider w-full">Date Completed:</h5>
 				<p class="uppercase text-[10px]">
-					{{ element?.date_updated }}
+					{{ getFriendlyDate(element?.date_updated) }}
 				</p>
 			</div>
 			<div class="absolute bottom-2 right-4">
-				<UPopover mode="click" :popper="{ offsetDistance: 5 }">
-					<UButton color="gray" variant="ghost" icon="i-heroicons-information-circle" size="xs" />
-					<template #panel>
-						<div class="p-2 text-gray-500 font-medium text-[10px]">
-							<span v-html="getTicketInfo"></span>
-						</div>
-					</template>
-				</UPopover>
+				<div class="flex flex-row items-center">
+					<UPopover mode="click" :popper="{ offsetDistance: 5 }">
+						<UButton color="gray" variant="ghost" icon="i-heroicons-information-circle" size="xs" />
+						<template #panel>
+							<div class="p-2 text-gray-500 font-medium text-[10px]">
+								<span v-html="getTicketInfo"></span>
+							</div>
+						</template>
+					</UPopover>
+					<!-- <UButton color="gray" variant="ghost" icon="i-heroicons-trash" size="xs" @click="deleteTicket(element?.id)" /> -->
+				</div>
 			</div>
-			<!-- <nuxt-link
-				:to="`/tickets/${element.id}`"
-				class="text-[10px] uppercase tracking-wide text-right block absolute right-4 bottom-4 px-2"
-			>
-				Details
-				<UIcon name="i-heroicons-arrow-right" size="sm" class="inline-block ml-0.5 -mb-[1px] p-0" />
-			</nuxt-link> -->
 		</div>
 		<div
 			class="w-full bg-white dark:bg-gray-800 shadow-lg hover:shadow-md mt-1 rounded-sm flex flex-row items-center justify-between transition-all"
