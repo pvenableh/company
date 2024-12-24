@@ -62,10 +62,9 @@ const props = defineProps({
 
 	&__col {
 		text-align: center;
-		width: 200px;
-
+		@apply w-full;
 		@media (min-width: theme('screens.md')) {
-			width: 250px;
+			max-width: 250px;
 		}
 
 		a {

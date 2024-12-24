@@ -2,9 +2,14 @@
 import { useRealtimeSubscription } from '~/composables/useRealtimeSubscription';
 import draggable from 'vuedraggable';
 
+const router = useRouter();
+
+import confetti from 'canvas-confetti';
+
 const { user: currentUser } = useDirectusAuth();
 const { createItem, updateItem, deleteItem } = useDirectusItems();
 const { notify } = useNotifications();
+const toast = useToast();
 const mentionedUsers = ref(new Set());
 const newTask = ref('');
 
@@ -113,6 +118,19 @@ async function addTask() {
 	// Removed manual addition to localTasks
 }
 
+function randomInRange(min, max) {
+	return Math.random() * (max - min) + min;
+}
+
+const launchConfetti = () => {
+	confetti({
+		angle: randomInRange(55, 125),
+		spread: randomInRange(50, 70),
+		particleCount: randomInRange(50, 100),
+		origin: { y: 0.6 },
+	});
+};
+
 async function toggleTask(task) {
 	const newStatus = task.status === 'completed' ? 'active' : 'completed';
 	await updateItem('tasks', task.id, { status: newStatus });
@@ -120,6 +138,33 @@ async function toggleTask(task) {
 	const index = localTasks.value.findIndex((t) => t.id === task.id);
 	if (index !== -1) {
 		localTasks.value[index] = { ...localTasks.value[index], status: newStatus };
+	}
+	if (newStatus === 'completed') {
+		console.log(progress.value);
+		if (progress.value === 100) {
+			startConfetti();
+			toast.add({
+				title: 'Set status to completed?',
+				timeout: 7000,
+				actions: [
+					{
+						label: 'Yes',
+						click: async () => {
+							await updateItem('tickets', props.ticketId, { status: 'Completed' });
+							router.push('/tickets');
+						},
+					},
+					{
+						label: 'No',
+						click: () => {
+							toast.remove();
+						},
+					},
+				],
+			});
+		} else {
+			launchConfetti();
+		}
 	}
 }
 
@@ -192,16 +237,109 @@ async function updateTaskDescription(taskId, newDescription) {
 		}
 	}
 }
+
+function startConfetti(duration = 4000) {
+	const end = Date.now() + duration;
+	const colors = ['#00bfff', '#0ef62d', '#e8fc00', '#ffcc00', '#ff005c', '#ff00cc', '#502989'];
+
+	function frame() {
+		confetti({
+			particleCount: 6,
+			angle: 60,
+			spread: 55,
+			origin: { x: 0 },
+			colors: colors,
+		});
+		confetti({
+			particleCount: 3,
+			angle: 120,
+			spread: 55,
+			origin: { x: 1 },
+			colors: colors,
+		});
+
+		if (Date.now() < end) {
+			requestAnimationFrame(frame);
+		}
+	}
+
+	frame();
+}
 function stopEditing(taskId, newDescription) {
 	if (editingTaskId.value === taskId) {
 		editingTaskId.value = null;
 		updateTaskDescription(taskId, newDescription);
 	}
 }
+
+const progress = computed(() => {
+	if (localTasks.value.length === 0) return 0;
+	const completedTasks = localTasks.value.filter((task) => task.status === 'completed').length;
+	return Math.round((completedTasks / localTasks.value.length) * 100);
+});
+
+const previousCompletedTasks = ref(null);
+
+const completedTasksCount = computed(() => {
+	return localTasks.value.filter((task) => task.status === 'completed').length;
+});
+
+watch(
+	() => localTasks.value,
+	(newTasks) => {
+		previousCompletedTasks.value = newTasks.filter((task) => task.status === 'completed').length;
+	},
+	{ deep: true, immediate: true },
+);
+
+const motivationalMessage = computed(() => {
+	const totalTasks = localTasks.value.length;
+	const completedTasks = completedTasksCount.value;
+	console.log(completedTasks.length);
+	console.log(previousCompletedTasks.value);
+	console.log(completedTasks < previousCompletedTasks.value);
+	console.log(previousCompletedTasks.value !== null);
+	console.log(previousCompletedTasks.value !== null && completedTasks < previousCompletedTasks.value);
+	let message = '';
+	if (isLoading.value) {
+		message = 'Loading tasks...';
+	} else if (isConnected.value === false && isLoading.value === false) {
+		message = 'You are offline. Changes will be synced when you are back online.';
+	} else if (previousCompletedTasks.value !== null && completedTasks < previousCompletedTasks.value) {
+		message = "Uh oh...looks like you're going backwards. Need help? 🤨";
+	} else if (completedTasks === 0) {
+		message = `Okay ${currentUser.value.first_name}, create a task to get started! ✏️`;
+	} else if (completedTasks < totalTasks / 3) {
+		message = "Keep going...you're making progress.👍";
+	} else if (completedTasks < totalTasks - 2) {
+		message = `You're doing great ${currentUser.value.first_name}...stay focused and keep going! 🤓`;
+	} else if (completedTasks < totalTasks) {
+		message = 'Look at you 👀...just a few more to complete.💪';
+	} else {
+		message = `Congratulations ${currentUser.value.first_name} you've completed all tasks! 👏💃🏻🕺🏻🍾`;
+	}
+
+	previousCompletedTasks.value = completedTasks; // Update AFTER message is determined
+
+	return message;
+});
 </script>
 
 <template>
-	<div class="space-y-4">
+	<div class="w-full space-y-4 relative bg-[var(--yellowGradient)]">
+		<div class="transform scale-[0.6] xl:scale-75 absolute -top-[80px] xl:-top-[120px] -right-4 xl:-right-20">
+			<TicketsProgressCircle :progressPercentage="progress" />
+		</div>
+
+		<div class="flex flex-col items-start">
+			<p class="text-[12px] text-gray-700 dark:text-gray-300">{{ motivationalMessage }}</p>
+
+			<!-- <UMeter :value="progress" max="100" class="w-full h-2 bg-gray-200 rounded-full">
+				<template #label="{ percent }">
+					<p class="text-sm">{{ progress }}%</p>
+				</template>
+			</UMeter> -->
+		</div>
 		<div class="flex items-center space-x-2">
 			<!-- <UInput v-model="newTask" placeholder="Add a new task..." class="flex-1" @keyup.enter="addTask" /> -->
 			<FormTiptap
@@ -216,7 +354,7 @@ function stopEditing(taskId, newDescription) {
 			/>
 			<UButton color="gray" variant="soft" icon="i-heroicons-plus" :disabled="!newTask.trim()" @click="addTask" />
 		</div>
-		<div v-if="!isConnected && isLoading" class="">Loading</div>
+		<div v-if="!isConnected && isLoading" class="w-full text-[10px] text-center mt-20 uppercase"></div>
 		<draggable
 			v-else
 			v-model="localTasks"

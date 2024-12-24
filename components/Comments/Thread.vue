@@ -31,6 +31,11 @@
 						/>
 					</div>
 					<div class="text-sm comment" v-html="comment.comments_id.comment" />
+					<!-- UModal to display the image -->
+					<UModal v-model:show="showModal">
+						<template #title>Image Preview</template>
+						<img :src="modalImageSrc" alt="Preview" class="max-w-full max-h-screen mx-auto" />
+					</UModal>
 				</div>
 
 				<div class="w-full flex gap-2 mt-1">

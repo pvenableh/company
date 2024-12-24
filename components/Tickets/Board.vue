@@ -67,14 +67,15 @@ const fetchProjects = async () => {
 
 	if (!isAdmin.value) {
 		const userOrgs = user.value?.organizations || [];
+		console.log(userOrgs);
 		filter = {
-			organization: {
+			organizations: {
 				_in: userOrgs.map((org) => org.organizations_id.id),
 			},
 		};
 	} else if (selectedOrg.value) {
 		filter = {
-			organization: { _eq: selectedOrg.value },
+			organizations: { _eq: selectedOrg.value },
 		};
 	}
 
@@ -89,12 +90,15 @@ const fetchProjects = async () => {
 
 const orgOptions = computed(() => {
 	const userOrgs = user.value?.organizations || [];
+	console.log(userOrgs);
 	return [
 		{ id: null, name: 'All Organizations' }, // Ensure id is explicitly null
-		...userOrgs.map((org) => ({
-			id: org.organizations_id.id,
-			name: org.organizations_id.name,
-		})),
+		...userOrgs
+			.filter((org) => org.organizations_id)
+			.map((org) => ({
+				id: org.organizations_id?.id,
+				name: org.organizations_id?.name,
+			})),
 	];
 });
 
@@ -128,7 +132,8 @@ const fields = [
 	'assigned_to.directus_users_id.avatar',
 	'assigned_to.directus_users_id.email',
 	'comments',
-	'tasks',
+	'tasks.id',
+	'tasks.status',
 ];
 
 const getFilter = () => {
@@ -577,14 +582,14 @@ const handleTicketCreated = () => {
 			<div
 				v-for="column in columns"
 				:key="column.id"
-				class="flex-grow w-full basis-0 h-full min-h-dvh transition-transform duration-300 ease-in-out min-w-[350px] shadow-inner border-l border-r border-gray-100"
+				class="flex-grow w-full basis-0 h-full min-h-dvh transition-transform duration-300 ease-in-out min-w-[350px] border-l border-r border-gray-100"
 				:class="{
 					'hidden md:block': isMobile && column.id !== activeColumn,
 					'transform translate-x-0': !isMobile || column.id === activeColumn,
 				}"
 			>
 				<!-- Column Header -->
-				<div class="p-3 bg-gray-200 shadow-xl">
+				<div class="p-3 bg-gray-200">
 					<div class="flex items-center justify-between">
 						<h3 class="text-xs font-bold uppercase tracking-wide">{{ column.name }}</h3>
 						<UBadge :color="column.color" class="ml-2 w-6 h-6 text-center inline-block">
@@ -624,11 +629,7 @@ const handleTicketCreated = () => {
 								>
 									<UIcon name="i-heroicons-arrow-path" class="animate-spin h-5 w-5" />
 								</div>
-								<TicketsCard
-									:element="element"
-									:comment-count="element.comments.length"
-									:task-count="element.tasks.length"
-								/>
+								<TicketsCard :element="element" :comment-count="element.comments.length" :tasks="element.tasks" />
 							</div>
 						</div>
 					</template>

@@ -91,7 +91,7 @@ const emit = defineEmits(['update:commentCount']);
 
 const { user } = useDirectusAuth();
 const { createItem, deleteItem } = useDirectusItems();
-const showComments = ref(true);
+const showComments = ref(false);
 const replyingTo = ref(null);
 const activeCommentId = ref(null);
 const localComments = ref([]);

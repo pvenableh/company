@@ -10,41 +10,19 @@
 		>
 			<!-- @click="$emit('expand')" -->
 			<!-- Ticket Header -->
-			<div class="flex items-start justify-between my-2">
-				<nuxt-link :to="`/tickets/${element.id}`" class="flex flex-row">
-					<span class="text-gray-500 font-medium text-[10px] italic">{{ element?.id }}</span>
-					<UPopover mode="hover" :popper="{ offsetDistance: 5 }">
-						<UButton
-							color="gray"
-							variant="ghost"
-							icon="i-heroicons-information-circle"
-							size="xs"
-							class="p-0 ml-1 -mt-1"
-						/>
-						<template #panel>
-							<div class="p-2 text-gray-500 font-medium text-[10px]">
-								<span v-html="getTicketInfo"></span>
-							</div>
-						</template>
-					</UPopover>
-				</nuxt-link>
+			<div class="flex items-start justify-between my-2 h-8">
+				<div v-if="element?.status !== 'Completed'" class="w-full relative flex flex-row items-center justify-start">
+					<p class="text-[10px] leading-[16px] uppercase">
+						<span class="opacity-50">Priority:</span>
+						<span class="font-bold ml-1" :class="`text-${getPriorityColor(element.priority)}-500`">
+							{{ element?.priority }}
+						</span>
+					</p>
+				</div>
 
-				<UBadge
-					v-if="element?.priority"
-					:color="getPriorityColor(element.priority)"
-					variant="subtle"
-					size="xs"
-					class="relative uppercase text-[9px]"
-				>
-					<!-- Display priority text -->
-					{{ element.priority }}
-
-					<!-- Pulsing ring for urgent priority -->
-					<span
-						v-if="element.priority === 'urgent'"
-						class="absolute inset-0 rounded-full border border-current animate-ping"
-					></span>
-				</UBadge>
+				<div class="transform scale-[0.45] absolute -right-[15px] -top-[25px]">
+					<TicketsProgressCircle :progressPercentage="progress" />
+				</div>
 			</div>
 
 			<!-- Ticket Title -->
@@ -100,7 +78,7 @@
 					</div>
 				</div>
 			</div>
-			<div v-if="element?.due_date" class="">
+			<div v-if="element?.due_date && element?.status !== 'Completed'" class="">
 				<h5 v-if="assignedUsers.length" class="text-gray-500 uppercase text-[8px] text-bold tracking-wider w-full">
 					Due Date:
 				</h5>
@@ -115,7 +93,22 @@
 					/>
 				</p>
 			</div>
-
+			<div v-else class="">
+				<h5 class="text-gray-500 uppercase text-[8px] text-bold tracking-wider w-full">Date Completed:</h5>
+				<p class="uppercase text-[10px]">
+					{{ element?.date_updated }}
+				</p>
+			</div>
+			<div class="absolute bottom-2 right-4">
+				<UPopover mode="click" :popper="{ offsetDistance: 5 }">
+					<UButton color="gray" variant="ghost" icon="i-heroicons-information-circle" size="xs" />
+					<template #panel>
+						<div class="p-2 text-gray-500 font-medium text-[10px]">
+							<span v-html="getTicketInfo"></span>
+						</div>
+					</template>
+				</UPopover>
+			</div>
 			<!-- <nuxt-link
 				:to="`/tickets/${element.id}`"
 				class="text-[10px] uppercase tracking-wide text-right block absolute right-4 bottom-4 px-2"
@@ -137,10 +130,10 @@
 						{{ commentCount }}
 					</UTooltip>
 				</div>
-				<div v-if="taskCount > 0" class="ml-2 flex items-center gap-1">
-					<UTooltip :text="taskCount + ' tasks'" :popper="{ arrow: true }">
+				<div v-if="tasks.length > 0" class="ml-2 flex items-center gap-1">
+					<UTooltip :text="tasks.length + ' tasks'" :popper="{ arrow: true }">
 						<UIcon name="i-heroicons-check-circle" class="w-4 h-4 inline-block mr-1" />
-						{{ taskCount }}
+						{{ tasks.length }}
 					</UTooltip>
 				</div>
 			</div>
@@ -158,9 +151,9 @@ const props = defineProps({
 		type: Number,
 		default: 0,
 	},
-	taskCount: {
-		type: Number,
-		default: 0,
+	tasks: {
+		type: Array,
+		default: () => [],
 	},
 });
 
@@ -171,6 +164,12 @@ const { user } = useDirectusAuth();
 // Get all assigned users
 const assignedUsers = computed(() => {
 	return props.element?.assigned_to?.map((assignment) => assignment.directus_users_id) || [];
+});
+
+const progress = computed(() => {
+	if (props.tasks.length === 0) return 0;
+	const completedTasks = props.tasks.filter((task) => task.status === 'completed').length;
+	return Math.round((completedTasks / props.tasks.length) * 100);
 });
 
 // Maximum number of avatars to display

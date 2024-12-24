@@ -48,11 +48,11 @@ const columns = [
 </script>
 <template>
 	<div class="max-w-screen-xl mx-auto">
-		<nuxt-link to="/tickets" class="uppercase text-[10px] text-gray-400">
-			<UIcon name="i-heroicons-arrow-left" />
+		<nuxt-link to="/tickets" class="uppercase text-[10px] text-gray-400 px-4 2xl:px-0">
+			<UIcon name="i-heroicons-arrow-left" class="-mb-0.5" />
 			Back to tickets
 		</nuxt-link>
-		<div class="w-full my-20">
+		<div class="w-full my-4 px-4 2xl:px-0">
 			<TicketsDetails :element="ticket" :columns="columns" />
 		</div>
 	</div>

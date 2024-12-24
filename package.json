@@ -73,6 +73,7 @@
 		"@vee-validate/nuxt": "^4.13.2",
 		"@vee-validate/yup": "^4.13.2",
 		"@vueuse/gesture": "^2.0.0",
+		"canvas-confetti": "^1.9.3",
 		"gsap": "^3.12.5",
 		"html2canvas": "^1.4.1",
 		"jspdf": "^2.5.2",

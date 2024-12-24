@@ -23,6 +23,9 @@ dependencies:
   '@vueuse/gesture':
     specifier: ^2.0.0
     version: 2.0.0(vue@3.5.13)
+  canvas-confetti:
+    specifier: ^1.9.3
+    version: 1.9.3
   gsap:
     specifier: ^3.12.5
     version: 3.12.5
@@ -4373,6 +4376,10 @@ packages:
 
   /caniuse-lite@1.0.30001687:
     resolution: {integrity: sha512-0S/FDhf4ZiqrTUiQ39dKeUjYRjkv7lOZU1Dgif2rIqrTzX/1wV2hfKu9TOm1IHkdSijfLswxTFzl/cvir+SLSQ==}
+
+  /canvas-confetti@1.9.3:
+    resolution: {integrity: sha512-rFfTURMvmVEX1gyXFgn5QMn81bYk70qa0HLzcIOSVEyl57n6o9ItHeBtUSWdvKAPY0xlvBHno4/v3QPrT83q9g==}
+    dev: false
 
   /canvg@3.0.10:
     resolution: {integrity: sha512-qwR2FRNO9NlzTeKIPIKpnTY6fqwuYSequ8Ru8c0YkYU7U0oW+hLUvWadLvAu1Rl72OMNiFhoLu4f8eUjQ7l/+Q==}

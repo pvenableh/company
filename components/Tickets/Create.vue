@@ -277,10 +277,12 @@ const loadingProjects = ref(false);
 
 const orgOptions = computed(
 	() =>
-		currentUser.value?.organizations?.map((org) => ({
-			id: org.organizations_id.id,
-			name: org.organizations_id.name,
-		})) || [],
+		currentUser.value?.organizations
+			?.filter((org) => org.organizations_id)
+			.map((org) => ({
+				id: org.organizations_id.id,
+				name: org.organizations_id.name,
+			})) || [],
 );
 
 const hasMultipleOrgs = computed(() => orgOptions.value.length > 1);
