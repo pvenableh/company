@@ -295,6 +295,15 @@ function getDay(dateString: string): string {
 	return days[dayIndex];
 }
 
+function getTime(dateString: string): string {
+	const time = dateString.toLocaleString('en-US', {
+		hour: 'numeric',
+		minute: 'numeric',
+		hour12: true,
+	});
+	return time;
+}
+
 export {
 	format,
 	getRelativeTime,
@@ -313,4 +322,5 @@ export {
 	getDate,
 	getDay,
 	getTimeAgo,
+	getTime,
 };

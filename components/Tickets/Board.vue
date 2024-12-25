@@ -582,7 +582,7 @@ const handleTicketCreated = () => {
 			@touchend="handleTouchEnd"
 		>
 			<div
-				v-for="column in columns"
+				v-for="(column, index) in columns"
 				:key="column.id"
 				class="flex-grow w-full basis-0 h-full min-h-dvh transition-transform duration-300 ease-in-out min-w-[350px] tickets-board__board-col"
 				:class="{
@@ -595,7 +595,7 @@ const handleTicketCreated = () => {
 					<div class="flex items-center justify-between">
 						<h3 class="text-xs font-bold uppercase tracking-wide">{{ column.name }}</h3>
 						<UBadge
-							class="ml-2 w-6 h-6 text-center inline-block"
+							class="ml-2 w-6 h-6 text-center inline-block text-[var(--darkBlue)]"
 							:style="{ backgroundColor: `var(--${column.color})` }"
 						>
 							{{ localTickets[column.id]?.length || 0 }}
@@ -731,13 +731,13 @@ const handleTicketCreated = () => {
 }
 
 .chosen {
-	transform: scale(1.05);
+	/* transform: scale(1.05); */
 	box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
 }
 
 .drag {
 	opacity: 0.9;
-	transform: scale(1.05);
+	/* transform: scale(1.05); */
 	box-shadow: 0 15px 25px rgba(0, 0, 0, 0.15);
 }
 
@@ -754,8 +754,8 @@ const handleTicketCreated = () => {
 	padding: 1rem;
 	color: #6b7280;
 	font-size: 0.875rem;
-	/* border: 2px dashed #e5e7eb;
-	border-radius: 0.5rem; */
+	border: 2px dashed var(--cyan);
+	border-radius: 0.1rem;
 	margin-top: 0.5rem;
 	opacity: 0;
 	transform: translateY(-10px);

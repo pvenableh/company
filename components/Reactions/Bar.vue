@@ -11,6 +11,7 @@ const props = defineProps({
 });
 
 const { user } = useDirectusAuth();
+const { createItem, deleteItems } = useDirectusItems();
 
 // Subscribe to reactions with user details in real-time
 const { data } = useRealtimeSubscription(
@@ -29,6 +30,7 @@ const reactionGroups = computed(() => {
 		groups[reaction.reaction] = groups[reaction.reaction] || {
 			users: [],
 			active: false,
+			id: reaction.id, // Store reaction ID for deletion
 		};
 		groups[reaction.reaction].users.push(reaction.user);
 		if (reaction.user.id === user.value?.id) {
@@ -38,18 +40,39 @@ const reactionGroups = computed(() => {
 
 	return groups;
 });
+
+// Handle reaction selection
+const handleReactionChange = async (type, added) => {
+	if (added) {
+		// Remove any existing reaction from the user
+		for (const [reactionType, group] of Object.entries(reactionGroups.value)) {
+			if (group.active && reactionType !== type) {
+				await deleteItems('reactions', {
+					filter: {
+						item: { _eq: props.itemId },
+						user: { _eq: user.value.id },
+						reaction: { _eq: reactionType },
+					},
+				});
+			}
+		}
+	}
+};
 </script>
 
 <template>
 	<div class="flex gap-2">
 		<ReactionsButton
-			v-for="type in ['love', 'like', 'idea', 'dislike']"
+			v-for="(type, index) in ['love', 'like', 'idea', 'dislike']"
 			:key="type"
 			:item-id="itemId"
 			:collection="collection"
 			:reaction="type"
 			:users="reactionGroups[type]?.users || []"
 			:active="reactionGroups[type]?.active || false"
+			@reaction-added="handleReactionChange(type, true)"
+			@reaction-removed="handleReactionChange(type, false)"
+			:class="{ 'border-gray-100 border-l': index !== 0 }"
 		/>
 	</div>
 </template>

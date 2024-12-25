@@ -17,8 +17,8 @@ export default defineAppConfig({
 		},
 
 		button: {
-			base: 'transition duration-150 uppercase tracking-[0.1em] text-center focus:border-0 focus:outline-none focus:ring-1 focus:ring-gray-300 disabled:cursor-not-allowed disabled:opacity-75 active:border-0 active:outline-none active:ring-1 active:ring-gray-300 text-center items-center justify-center',
-			rounded: `rounded-${theme.borderRadius}`,
+			base: 'transition duration-150 uppercase text-center focus:border-0 focus:outline-none focus:ring-1 focus:ring-gray-300 disabled:cursor-not-allowed disabled:opacity-75 active:border-0 active:outline-none active:ring-1 active:ring-gray-300 text-center items-center justify-center',
+			rounded: `rounded-sm`,
 			font: 'font-bold',
 
 			default: {

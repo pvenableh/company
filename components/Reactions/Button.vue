@@ -36,39 +36,40 @@ const toggleReaction = async () => {
 	if (!user.value) return;
 
 	try {
-		// Check if user has already reacted
-		const existingReaction = await readItems('reactions', {
+		const existingReactions = await readItems('reactions', {
 			filter: {
 				item: { _eq: props.itemId },
 				user: { _eq: user.value.id },
-				reaction: { _eq: props.reaction },
 			},
 		});
 
-		if (existingReaction && existingReaction.length > 0) {
-			// User has already reacted - remove the reaction
+		// Delete all existing reactions first
+		if (existingReactions.length > 0) {
 			await deleteItems('reactions', {
 				filter: {
 					item: { _eq: props.itemId },
 					user: { _eq: user.value.id },
-					reaction: { _eq: props.reaction },
 				},
 			});
-			reactionCount.value--;
+		}
+
+		// If clicking same reaction, just remove it
+		if (isActive.value) {
 			isActive.value = false;
 			emits('reaction-removed', props.reaction);
-		} else {
-			// User hasn't reacted - add the reaction
-			await createItem('reactions', {
-				item: props.itemId,
-				table: props.collection,
-				user: user.value.id,
-				reaction: props.reaction,
-			});
-			reactionCount.value++;
-			isActive.value = true;
-			emits('reaction-added', props.reaction);
+			return;
 		}
+
+		// Add new reaction
+		await createItem('reactions', {
+			item: props.itemId,
+			table: props.collection,
+			user: user.value.id,
+			reaction: props.reaction,
+		});
+
+		isActive.value = true;
+		emits('reaction-added', props.reaction);
 	} catch (error) {
 		console.error('Error toggling reaction:', error);
 		toast.add({
@@ -179,28 +180,25 @@ watch(
 		}
 	},
 );
+
+watch(
+	() => props.active,
+	(newValue) => {
+		isActive.value = newValue;
+	},
+);
 </script>
 
 <template>
 	<UPopover mode="hover" :disabled="!userList || userList.length === 0">
-		<UButton
-			:icon="getReactionIcon(reaction)"
-			:color="isActive ? 'primary' : 'gray'"
-			variant="soft"
-			size="xs"
-			:class="isActive ? 'text-[var(--cyan)] fill-[var(--cyan)]' : ''"
-			:ui="{
-				icon: {
-					base: isActive ? 'w-4 h-4 flex-shrink-0 text-[var(--cyan)]' : 'w-4 h-4 flex-shrink-0',
-					transform: isActive ? 'scale-150' : 'scale-100',
-					transition: 'transform duration-200',
-					color: isActive ? 'ghost' : 'gray',
-				},
-			}"
+		<div
+			class="flex items-center justify-center gap-1 h-full px-1 min-w-[35px] text-center text-xs"
 			@click="toggleReaction"
+			:class="isActive ? 'text-[var(--cyan)] fill-[var(--cyan)]' : 'text-gray-500'"
 		>
+			<UIcon :name="getReactionIcon(reaction)" />
 			<span ref="countRef" class="inline-block">{{ count }}</span>
-		</UButton>
+		</div>
 
 		<template #panel>
 			<div class="p-2 max-w-xs text-xs whitespace-pre-line">

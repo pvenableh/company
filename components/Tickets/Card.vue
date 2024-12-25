@@ -1,16 +1,6 @@
 <template>
 	<div class="w-full mb-4 transition-all ticket-card">
-		<div class="bg-white dark:bg-gray-800 shadow-lg hover:shadow-md transition-all rounded-sm w-full p-4 relative">
-			<!-- <div
-			class="bg-white dark:bg-gray-800 shadow-lg hover:shadow-md transition-all rounded-sm w-full p-4 relative"
-			:class="
-				formatDueDateStatus(element?.due_date) === 'urgent' || formatDueDateStatus(element?.due_date) === 'past'
-					? 'border-red-200 border-2'
-					: ''
-			"
-		> -->
-			<!-- @click="$emit('expand')" -->
-			<!-- Ticket Header -->
+		<div class="bg-white dark:bg-gray-800 shadow-lg transition-all rounded-sm w-full p-4 relative">
 			<div class="flex items-start justify-between my-2 h-8">
 				<div v-if="element?.status !== 'Completed'" class="w-full relative flex flex-row items-center justify-start">
 					<p class="text-[10px] leading-[16px] uppercase">
@@ -107,8 +97,8 @@
 				</p>
 			</div>
 			<div class="absolute bottom-2 right-4">
-				<div class="flex flex-row items-center">
-					<UPopover mode="click" :popper="{ offsetDistance: 5 }">
+				<div class="flex flex-row items-center relative">
+					<UPopover mode="click" :popper="{ placement: 'left', offsetDistance: 3 }">
 						<UButton color="gray" variant="ghost" icon="i-heroicons-information-circle" size="xs" />
 						<template #panel>
 							<div class="p-2 text-gray-500 font-medium text-[10px]">
