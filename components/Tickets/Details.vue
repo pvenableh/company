@@ -255,12 +255,10 @@ const handleShare = (method) => {
 	console.log(`Shared via ${method}`);
 };
 const emit = defineEmits(['close', 'deleted', 'preventClose']);
-const { createItem, deleteItems, deleteItem, updateItem } = useDirectusItems();
+const { createItem, deleteItem, updateItem } = useDirectusItems();
 const { notify } = useNotifications();
-// const { readUsers } = useDirectusUsers();
 const { user: currentUser } = useDirectusAuth();
 const showDeleteModal = ref(false);
-const userOptions = ref([]);
 const selectedUser = ref(null);
 const isLoading = ref(false);
 const initialFormState = ref({});
@@ -321,15 +319,6 @@ const priorities = [
 	{ value: 'urgent', label: 'Urgent' },
 ];
 
-// watch(
-// 	() => ({ ...form.value }),
-// 	() => {
-// 		trackChanges();
-// 		emit('preventClose', isDirty.value);
-// 	},
-// 	{ deep: true },
-// );
-
 watch(
 	() => ({
 		title: form.value.title,
@@ -360,32 +349,6 @@ const resetFormState = () => {
 	emit('preventClose', false);
 };
 
-// Fetch users
-// const fetchUsers = async () => {
-// 	try {
-// 		const users = await readUsers({
-// 			fields: ['id', 'first_name', 'last_name', 'email', 'avatar'],
-// 		});
-
-// 		userOptions.value = users.map((user) => ({
-// 			id: user.id,
-// 			label: `${user.first_name} ${user.last_name}`,
-// 			email: user.email,
-// 			avatar: user.avatar,
-// 			first_name: user.first_name,
-// 			last_name: user.last_name,
-// 		}));
-// 	} catch (error) {
-// 		console.error('Error fetching users:', error);
-// 		toast.add({
-// 			title: 'Error',
-// 			description: 'Failed to load users',
-// 			color: 'red',
-// 		});
-// 	}
-// };
-
-// Available users computed property
 const availableUsers = computed(() => {
 	return filteredUsers.value.filter((user) => !form.value.assigned_to.includes(user.id));
 });

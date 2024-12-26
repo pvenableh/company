@@ -77,16 +77,17 @@ onClickOutside(navDrawerRef, () => {
 	}
 
 	&__menu-box {
+		@apply flex items-center justify-center flex-col w-full;
 	}
 
 	&__menu {
-		@apply overflow-hidden;
+		@apply overflow-hidden w-full;
 
 		li {
 			opacity: 0;
 			transform: translateX(50px) translateZ(-9.7rem);
 			transition: all 0.4s var(--curve);
-			@apply my-1;
+			@apply my-1 w-full text-center;
 
 			a,
 			label {

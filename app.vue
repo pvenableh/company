@@ -49,6 +49,12 @@ const links = ref([
 		icon: 'i-heroicons-square-3-stack-3d',
 	},
 	{
+		name: 'Scheduler',
+		type: ['header', 'footer', 'drawer'],
+		to: '/scheduler',
+		icon: 'i-heroicons-calendar-date-range',
+	},
+	{
 		name: 'Channels',
 		type: ['header', 'footer', 'drawer'],
 		to: '/channels',

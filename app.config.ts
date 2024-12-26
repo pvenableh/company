@@ -40,11 +40,11 @@ export default defineAppConfig({
 		formGroup: {
 			base: 'ring-0 focus:ring-0 outline-none focus:outline-none',
 			label: {
-				base: 'uppercase block font-medium text-gray-500 dark:text-gray-200 tracking-wider',
+				base: 'uppercase block font-bold text-gray-500 dark:text-gray-200 tracking-wider text-[12px]',
 			},
 		},
 		input: {
-			base: 'relative block w-full box-border disabled:cursor-not-allowed disabled:opacity-75 focus:outline-none border-0 border-solid border-b border-gray-300 focus:border-b-2 focus:border-cyan-200 !ring-0 focus:ring-0 outline-none !ring-offset-0 appearance-none !bg-transparent',
+			base: 'relative block w-full box-border disabled:cursor-not-allowed disabled:opacity-75 focus:outline-none border-0 border-solid border-b border-gray-300 focus:border-b-2 focus:border-cyan-200 !ring-0 focus:ring-0 outline-none !ring-offset-0 appearance-none !bg-transparent!pl-0',
 			default: {
 				loadingIcon: 'i-heroicons-arrow-path',
 			},
@@ -113,6 +113,9 @@ export default defineAppConfig({
 					icon: 'material-symbols:database-outline',
 				},
 			},
+		},
+		popover: {
+			rounded: 'rounded-none',
 		},
 		avatar: {
 			// background: 'bg-gray-400 dark:bg-gray-800',

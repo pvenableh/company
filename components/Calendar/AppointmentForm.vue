@@ -1,33 +1,27 @@
 <template>
-	<div class="space-y-4">
-		<h3 class="text-lg font-medium">{{ appointment ? 'Edit' : 'New' }} Appointment</h3>
+	<div class="p-6 space-y-4">
+		<h3 class="text-[14px] tracking-wide uppercase">{{ appointment ? 'Edit' : 'New' }} Appointment</h3>
 
 		<form @submit.prevent="handleSubmit" class="space-y-4">
-			<UFormGroup label="Title" required>
-				<UInput v-model="form.title" placeholder="Appointment title" :disabled="isLoading" />
-			</UFormGroup>
+			<div class="w-full flex flex-row">
+				<div class="w-1/2 pr-2">
+					<UFormGroup label="Date" required class="w-full">
+						<UPopover class="w-full">
+							<UInput :model-value="formatDate(form.start_time)" readonly placeholder="Select date" class="w-full" />
+							<template #panel>
+								<VCalendar
+									:model-value="form.start_time"
+									@dayclick="handleDateSelect"
+									:attributes="calendarAttrs"
+									color="gray"
+									transparent
+									borderless
+								/>
+							</template>
+						</UPopover>
+					</UFormGroup>
 
-			<div class="grid grid-cols-2 gap-4">
-				<UFormGroup label="Date" required>
-					<UPopover>
-						<UInput
-							:model-value="formatDate(form.start_time)"
-							readonly
-							placeholder="Select date"
-							icon="i-heroicons-calendar"
-						/>
-						<template #panel>
-							<VCalendar
-								:model-value="form.start_time"
-								@input="(date) => updateDateTime('start', date)"
-								:attributes="calendarAttrs"
-								is-expanded
-							/>
-						</template>
-					</UPopover>
-				</UFormGroup>
-
-				<UFormGroup label="Status">
+					<!-- <UFormGroup label="Status">
 					<USelect
 						v-model="form.status"
 						:options="[
@@ -37,27 +31,33 @@
 						]"
 						:disabled="isLoading"
 					/>
-				</UFormGroup>
+				</UFormGroup> -->
+				</div>
+				<div class="w-1/2 flex flex-row items-center justify-between">
+					<UFormGroup label="Start" required class="w-full pr-2">
+						<USelect
+							v-model="startTime"
+							:options="timeOptions"
+							placeholder="Select time"
+							@update:model-value="(time) => updateTime('start', time)"
+							class="w-full"
+						/>
+					</UFormGroup>
 
-				<UFormGroup label="Start Time" required>
-					<USelect
-						v-model="startTime"
-						:options="timeOptions"
-						placeholder="Select time"
-						@update:model-value="(time) => updateDateTime('start', form.start_time, time)"
-					/>
-				</UFormGroup>
-
-				<UFormGroup label="End Time" required>
-					<USelect
-						v-model="endTime"
-						:options="timeOptions"
-						placeholder="Select time"
-						@update:model-value="(time) => updateDateTime('end', form.end_time, time)"
-					/>
-				</UFormGroup>
+					<UFormGroup label="End" required class="w-full">
+						<USelect
+							v-model="endTime"
+							:options="endTimeOptions"
+							placeholder="Select time"
+							@update:model-value="(time) => updateTime('end', time)"
+							class="w-full"
+						/>
+					</UFormGroup>
+				</div>
 			</div>
-
+			<UFormGroup label="Title" required>
+				<UInput v-model="form.title" placeholder="Appointment title" :disabled="isLoading" />
+			</UFormGroup>
 			<UFormGroup label="Description">
 				<FormTiptap v-model="form.description" placeholder="Add description" :disabled="isLoading" rows="3" />
 			</UFormGroup>
@@ -126,8 +126,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import { format, parse, parseISO, set } from 'date-fns';
+import { format, set, parseISO } from 'date-fns';
 
 const props = defineProps({
 	appointment: {
@@ -153,8 +152,8 @@ const endTime = ref('');
 const form = ref({
 	title: '',
 	description: '',
-	start_time: props.selectedDate,
-	end_time: props.selectedDate,
+	start_time: set(props.selectedDate, { hours: 9, minutes: 0 }),
+	end_time: set(props.selectedDate, { hours: 9, minutes: 30 }),
 	status: 'pending',
 	attendees: [],
 });
@@ -175,6 +174,34 @@ const timeOptions = Array.from({ length: 48 }, (_, i) => {
 	};
 });
 
+const endTimeOptions = computed(() => {
+	if (!startTime.value) return timeOptions;
+
+	const [startHour, startMinute] = startTime.value.split(':').map(Number);
+	const startMinutes = startHour * 60 + startMinute;
+
+	return timeOptions.filter((option) => {
+		const [hour, minute] = option.value.split(':').map(Number);
+		const minutes = hour * 60 + minute;
+		return minutes > startMinutes;
+	});
+});
+
+// Watch for start_time changes and update end_time if needed
+watch(
+	() => form.value.start_time,
+	(newStartTime) => {
+		const proposed_end = set(new Date(newStartTime), {
+			minutes: newStartTime.getMinutes() + 30,
+		});
+
+		if (proposed_end > newStartTime) {
+			form.value.end_time = proposed_end;
+			endTime.value = format(form.value.end_time, 'HH:mm');
+		}
+	},
+);
+
 const calendarAttrs = computed(() => [
 	{
 		highlight: true,
@@ -191,28 +218,64 @@ const isCurrentUserBadge = (userId) => {
 	return user.value && userId === user.value.id;
 };
 
-function updateDateTime(type, date, time) {
-	if (date) {
-		const dateObj = new Date(date);
-		if (type === 'start') {
-			form.value.start_time = dateObj;
-			if (time) {
-				const [hours, minutes] = time.split(':');
-				form.value.start_time = set(dateObj, { hours: parseInt(hours), minutes: parseInt(minutes) });
-			}
-		} else {
-			form.value.end_time = dateObj;
-			if (time) {
-				const [hours, minutes] = time.split(':');
-				form.value.end_time = set(dateObj, { hours: parseInt(hours), minutes: parseInt(minutes) });
-			}
+function handleDateSelect(day) {
+	// Get current hours and minutes from start_time
+	const currentStartHours = form.value.start_time.getHours();
+	const currentStartMinutes = form.value.start_time.getMinutes();
+	const currentEndHours = form.value.end_time.getHours();
+	const currentEndMinutes = form.value.end_time.getMinutes();
+
+	// Update start_time with new date but keep current time
+	form.value.start_time = set(day.date, {
+		hours: currentStartHours,
+		minutes: currentStartMinutes,
+		seconds: 0,
+		milliseconds: 0,
+	});
+
+	// Update end_time with new date but keep current time
+	form.value.end_time = set(day.date, {
+		hours: currentEndHours,
+		minutes: currentEndMinutes,
+		seconds: 0,
+		milliseconds: 0,
+	});
+}
+
+function updateTime(type, timeString) {
+	if (!timeString) return;
+
+	const [hours, minutes] = timeString.split(':').map(Number);
+	const currentDate = type === 'start' ? form.value.start_time : form.value.end_time;
+
+	const newDateTime = set(new Date(currentDate), {
+		hours,
+		minutes,
+		seconds: 0,
+		milliseconds: 0,
+	});
+
+	if (type === 'start') {
+		form.value.start_time = newDateTime;
+		startTime.value = timeString;
+
+		// Ensure end time is after start time
+		if (form.value.end_time <= newDateTime) {
+			const proposed_end = set(new Date(newDateTime), {
+				minutes: minutes + 30,
+			});
+			form.value.end_time = proposed_end;
+			endTime.value = format(proposed_end, 'HH:mm');
 		}
+	} else {
+		form.value.end_time = newDateTime;
+		endTime.value = timeString;
 	}
 }
 
 function formatDate(date) {
 	if (!date) return '';
-	return format(new Date(date), 'PPP');
+	return format(date, 'MMM d, yyyy');
 }
 
 function getAvatarUrl(user) {
@@ -245,8 +308,8 @@ async function handleSubmit() {
 		const appointmentData = {
 			title: form.value.title,
 			description: form.value.description,
-			start_time: form.value.start_time.toISOString(),
-			end_time: form.value.end_time.toISOString(),
+			start_time: format(form.value.start_time, "yyyy-MM-dd'T'HH:mm:ss"),
+			end_time: format(form.value.end_time, "yyyy-MM-dd'T'HH:mm:ss"),
 			status: form.value.status,
 		};
 
@@ -279,35 +342,6 @@ async function handleSubmit() {
 	}
 }
 
-const fetchUsers = async () => {
-	try {
-		const users = await readUsers({
-			fields: ['id', 'first_name', 'last_name', 'email', 'avatar'],
-			filter: {
-				id: {
-					_neq: user.value?.id,
-				},
-			},
-		});
-
-		userOptions.value = users.map((user) => ({
-			id: user.id,
-			label: `${user.first_name} ${user.last_name}`,
-			email: user.email,
-			avatar: user.avatar,
-			first_name: user.first_name,
-			last_name: user.last_name,
-		}));
-	} catch (error) {
-		console.error('Error fetching users:', error);
-		useToast().add({
-			title: 'Error',
-			description: 'Failed to load users',
-			color: 'red',
-		});
-	}
-};
-
 onMounted(async () => {
 	await fetchFilteredUsers();
 
@@ -320,9 +354,11 @@ onMounted(async () => {
 			status: props.appointment.status,
 			attendees: props.appointment.attendees || [],
 		};
-
-		startTime.value = format(parseISO(props.appointment.start_time), 'HH:mm');
-		endTime.value = format(parseISO(props.appointment.end_time), 'HH:mm');
+		startTime.value = format(form.value.start_time, 'HH:mm');
+		endTime.value = format(form.value.end_time, 'HH:mm');
+	} else {
+		startTime.value = '09:00';
+		endTime.value = '09:30';
 	}
 });
 </script>
