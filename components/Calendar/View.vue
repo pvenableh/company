@@ -5,7 +5,7 @@
 		tabindex="0"
 		ref="calendarContainer"
 	>
-		<div class="mt-12 w-full grid grid-cols-2 h-full max-w-[2000px] mx-auto">
+		<div class="mt-12 w-full grid grid-cols-1 md:grid-cols-2 h-full max-w-[2000px] mx-auto">
 			<div class="max-h-[600px]">
 				<VCalendar
 					v-model="selectedDate"
