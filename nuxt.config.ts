@@ -81,7 +81,7 @@ export default defineNuxtConfig({
 
 	directus: {
 		url: 'https://admin.huestudios.company',
-		staticToken: process.env.DIRECTUS_SERVER_TOKEN,
+		// staticToken: process.env.DIRECTUS_SERVER_TOKEN,
 		authConfig: {
 			cookieSameSite: 'lax',
 			cookieSecure: process.env.NODE_ENV === 'production',

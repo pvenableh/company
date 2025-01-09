@@ -20,14 +20,22 @@ const props = defineProps({
 		type: Object,
 		default: () => null,
 	},
+	isAnonymous: {
+		type: Boolean,
+		default: false,
+	},
 });
 
 const email = ref('');
+
 if (props.email) {
 	email.value = props.email;
-} else {
+} else if (props.user?.email) {
 	email.value = props.user.email;
+} else if (props.bill_to?.email) {
+	email.value = props.bill_to.email;
 }
+
 const panel = ref('bank');
 const previousPanelKey = ref(1);
 const animateName = ref('slide-right');
@@ -63,11 +71,12 @@ const payment = ref({});
 payment.value = {
 	user: props.user,
 	bill_to: props.bill_to,
-	email: props.email,
+	email: email.value,
 	amount: total.value,
 	invoice_code: props.invoice.invoice_code,
 	invoice_id: props.invoice.id,
 	stripeAmount: total.value,
+	isAnonymous: props.isAnonymous,
 };
 
 if (process.client) {
