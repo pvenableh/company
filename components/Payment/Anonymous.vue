@@ -1,76 +1,55 @@
+<!-- components/AnonymousUserForm.vue -->
 <script setup>
 const props = defineProps({
-  defaultEmail: {
-    type: String,
-    default: ''
-  }
+	defaultEmail: {
+		type: String,
+		required: true,
+	},
 });
 
 const emit = defineEmits(['submit']);
-
-const form = ref({
-  email: props.defaultEmail,
-  firstName: '',
-  lastName: ''
-});
-
 const isLoading = ref(false);
+const isEditing = ref(false);
+const email = ref(props.defaultEmail);
 
 const handleSubmit = async () => {
-  isLoading.value = true;
-  try {
-    await emit('submit', {
-      email: form.value.email,
-      firstName: form.value.firstName,
-      lastName: form.value.lastName
-    });
-  } finally {
-    isLoading.value = false;
-  }
+	isLoading.value = true;
+	try {
+		await emit('submit', {
+			email: email.value,
+		});
+	} finally {
+		isLoading.value = false;
+	}
 };
 </script>
 
 <template>
-  <UCard>
-    <UCardHeader>
-      <UCardTitle>Your Information</UCardTitle>
-      <p class="text-sm text-gray-500">Please provide your details to continue</p>
-    </UCardHeader>
-    <UCardContent>
-      <form @submit.prevent="handleSubmit" class="space-y-4">
-        <UFormGroup label="Email">
-          <UInput
-            v-model="form.email"
-            type="email"
-            required
-            placeholder="your@email.com"
-          />
-        </UFormGroup>
-        
-        <UFormGroup label="First Name">
-          <UInput
-            v-model="form.firstName"
-            required
-            placeholder="First Name"
-          />
-        </UFormGroup>
-        
-        <UFormGroup label="Last Name">
-          <UInput
-            v-model="form.lastName"
-            required
-            placeholder="Last Name"
-          />
-        </UFormGroup>
+	<UCard>
+		<UCardHeader>
+			<UCardTitle>Confirm Your Information</UCardTitle>
+		</UCardHeader>
+		<UCardContent>
+			<p class="text-sm text-gray-500 mb-4">Please confirm your email address to continue with the payment:</p>
 
-        <UButton
-          type="submit"
-          block
-          :loading="isLoading"
-        >
-          Continue to Payment
-        </UButton>
-      </form>
-    </UCardContent>
-  </UCard>
+			<div v-if="!isEditing" class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg mb-4">
+				<div class="flex items-center justify-between">
+					<p class="font-medium">{{ email }}</p>
+					<UButton color="gray" variant="ghost" size="xs" @click="isEditing = true">Edit</UButton>
+				</div>
+			</div>
+
+			<form v-else @submit.prevent="handleSubmit" class="mb-4">
+				<UFormGroup>
+					<UInput v-model="email" type="email" required placeholder="your@email.com" autofocus>
+						<template #trailing>
+							<UButton color="gray" variant="ghost" size="xs" @click="isEditing = false">Cancel</UButton>
+						</template>
+					</UInput>
+				</UFormGroup>
+			</form>
+
+			<UButton type="submit" block :loading="isLoading" @click="handleSubmit">Continue to Payment</UButton>
+		</UCardContent>
+	</UCard>
 </template>

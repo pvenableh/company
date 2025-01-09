@@ -14,17 +14,12 @@ const invoice = await readItem('invoices', params.id, {
 	],
 });
 
-// State for anonymous user
 const anonymousUser = ref(null);
 const showAnonymousForm = computed(() => !user.value && !anonymousUser.value);
 
-// Handle anonymous user form submission
 const handleAnonymousSubmit = async (formData) => {
-	// Store anonymous user data
 	anonymousUser.value = {
 		email: formData.email,
-		first_name: formData.firstName,
-		last_name: formData.lastName,
 	};
 };
 </script>
