@@ -1,25 +1,38 @@
 import { ref } from 'vue';
 
-export const useAuthRefresh = () => {
+export const useAuthRefresh = (defaultCooldown: number = 5000) => {
 	const lastRefreshAttempt = ref(0);
-	const refreshCooldown = ref(5000); // Increased to 5 seconds to avoid too frequent refreshes
+	const refreshCooldown = ref(defaultCooldown);
 
-	const canAttemptRefresh = () => {
+	/**
+	 * Determines if a refresh attempt is allowed based on the cooldown period.
+	 * @returns {boolean} True if allowed, false otherwise.
+	 */
+	const isRefreshAllowed = (): boolean => {
 		const now = Date.now();
 		if (now - lastRefreshAttempt.value < refreshCooldown.value) {
+			console.info(
+				`Refresh blocked. Cooldown active. ${refreshCooldown.value - (now - lastRefreshAttempt.value)} ms remaining.`,
+			);
 			return false;
 		}
 		lastRefreshAttempt.value = now;
 		return true;
 	};
 
-	const setCooldown = (ms: number) => {
+	/**
+	 * Updates the cooldown period.
+	 * @param ms {number} The new cooldown period in milliseconds.
+	 */
+	const setCooldown = (ms: number): void => {
 		refreshCooldown.value = ms;
+		console.info(`Cooldown period updated to ${ms} ms.`);
 	};
 
 	return {
-		canAttemptRefresh,
+		isRefreshAllowed,
 		setCooldown,
 		lastRefreshAttempt,
+		refreshCooldown,
 	};
 };

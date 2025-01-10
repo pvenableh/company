@@ -22,6 +22,11 @@ const handleSubmit = async () => {
 		isLoading.value = false;
 	}
 };
+
+const cancelEdit = () => {
+	isEditing.value = false;
+	email.value = props.defaultEmail;
+};
 </script>
 
 <template>
@@ -31,24 +36,29 @@ const handleSubmit = async () => {
 		</UCardHeader>
 		<UCardContent>
 			<p class="text-sm text-gray-500 mb-4">Please confirm your email address to continue with the payment:</p>
+			<div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg mb-4 h-16">
+				<div v-if="!isEditing">
+					<div class="flex items-start gap-2">
+						<UInput
+							v-model="email"
+							type="email"
+							required
+							placeholder="your@email.com"
+							autofocus
+							class="flex-grow"
+							readonly
+						/>
+						<UButton color="gray" variant="ghost" size="sm" @click="isEditing = true">Edit</UButton>
+					</div>
+				</div>
 
-			<div v-if="!isEditing" class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg mb-4">
-				<div class="flex items-center justify-between">
-					<p class="font-medium">{{ email }}</p>
-					<UButton color="gray" variant="ghost" size="xs" @click="isEditing = true">Edit</UButton>
+				<div v-else>
+					<div class="flex items-start gap-2">
+						<UInput v-model="email" type="email" required placeholder="your@email.com" autofocus class="flex-grow" />
+						<UButton color="gray" variant="soft" size="sm" @click="cancelEdit">Cancel</UButton>
+					</div>
 				</div>
 			</div>
-
-			<form v-else @submit.prevent="handleSubmit" class="mb-4">
-				<UFormGroup>
-					<UInput v-model="email" type="email" required placeholder="your@email.com" autofocus>
-						<template #trailing>
-							<UButton color="gray" variant="ghost" size="xs" @click="isEditing = false">Cancel</UButton>
-						</template>
-					</UInput>
-				</UFormGroup>
-			</form>
-
 			<UButton type="submit" block :loading="isLoading" @click="handleSubmit">Continue to Payment</UButton>
 		</UCardContent>
 	</UCard>

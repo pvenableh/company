@@ -83,9 +83,13 @@ export default defineNuxtConfig({
 		url: 'https://admin.huestudios.company',
 		// staticToken: process.env.DIRECTUS_SERVER_TOKEN,
 		authConfig: {
-			cookieSameSite: 'lax',
+			// mode: 'cookie',
 			cookieSecure: process.env.NODE_ENV === 'production',
+			cookieSameSite: 'lax',
+			refreshTokenCookieName: 'directus_refresh_token',
+			authTokenCookieName: 'directus_auth_token',
 		},
+
 		moduleConfig: {
 			// Enable auto-importing of the Directus composables
 			autoImport: true,
