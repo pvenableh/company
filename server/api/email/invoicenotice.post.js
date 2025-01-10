@@ -1,3 +1,4 @@
+// server/api/email/invoicenotice.post.js
 import { logger } from '../../../utils/logger';
 import sgMail from '@sendgrid/mail';
 
@@ -5,8 +6,11 @@ export default defineEventHandler(async (event) => {
 	try {
 		const body = await readBody(event);
 
-		// Validate required data
-		if (!body || !body.invoices || !Array.isArray(body.invoices)) {
+		// Handle both array and object formats
+		const invoices = Array.isArray(body) ? body : body.invoices;
+
+		// Validate invoices data
+		if (!invoices || !Array.isArray(invoices) || invoices.length === 0) {
 			throw createError({
 				statusCode: 400,
 				message: 'Invalid request: invoices array is required',
@@ -14,11 +18,11 @@ export default defineEventHandler(async (event) => {
 		}
 
 		logger.info('Invoice notification initiated', {
-			invoiceCount: body.invoices.length,
-			organization: body.invoices[0]?.bill_to?.name,
+			invoiceCount: invoices.length,
+			organization: invoices[0]?.bill_to?.name,
 		});
 
-		sgMail.setApiKey('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');
+		sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 		// Format monetary values
 		const formatAmount = (amount) => {
@@ -41,7 +45,7 @@ export default defineEventHandler(async (event) => {
 		};
 
 		// Group invoices by organization
-		const groupedInvoices = body.invoices.reduce((acc, invoice) => {
+		const groupedInvoices = invoices.reduce((acc, invoice) => {
 			const orgId = invoice.bill_to.id;
 			if (!acc[orgId]) {
 				acc[orgId] = {
@@ -63,6 +67,13 @@ export default defineEventHandler(async (event) => {
 				due_date: formatDate(invoice.due_date),
 				status: invoice.status,
 				total_amount: formatAmount(invoice.total_amount),
+				line_items: invoice.line_items.map((item) => ({
+					product_name: item.product.name,
+					description: item.description,
+					quantity: item.quantity,
+					rate: formatAmount(item.rate),
+					amount: formatAmount(item.amount),
+				})),
 			}));
 
 			const totalAmount = invoices.reduce((sum, inv) => sum + parseFloat(inv.total_amount), 0);
@@ -92,7 +103,7 @@ export default defineEventHandler(async (event) => {
 				],
 				dynamicTemplateData: {
 					organization_name: organization.name,
-					organization_address: organization.address,
+					organization_address: organization.address || 'No address provided',
 					invoices: formattedInvoices,
 					total_amount: formatAmount(totalAmount),
 					invoice_count: invoices.length,
@@ -120,6 +131,7 @@ export default defineEventHandler(async (event) => {
 					organization: organization.name,
 					status: 'success',
 					email: organization.email,
+					invoiceCount: invoices.length,
 				};
 			} catch (error) {
 				logger.error('Failed to send invoice email', {
