@@ -5,11 +5,24 @@ export default defineEventHandler(async (event) => {
 	try {
 		const body = await readBody(event);
 
-		// Handle both array and object formats
-		const invoices = Array.isArray(body) ? body : body.invoices;
+		// Handle all possible input formats
+		let invoices;
+		if (Array.isArray(body)) {
+			invoices = body;
+		} else if (body.invoices) {
+			invoices = body.invoices;
+		} else if (body.id && body.bill_to) {
+			// Single invoice object
+			invoices = [body];
+		} else {
+			throw createError({
+				statusCode: 400,
+				message: 'Invalid request format: expected invoice data',
+			});
+		}
 
 		// Validate invoices data
-		if (!invoices || !Array.isArray(invoices) || invoices.length === 0) {
+		if (!Array.isArray(invoices) || invoices.length === 0) {
 			throw createError({
 				statusCode: 400,
 				message: 'Invalid request: invoices array is required',
@@ -83,15 +96,16 @@ export default defineEventHandler(async (event) => {
 				return Array.isArray(emails) ? emails : [emails];
 			};
 
-			const emails = formatEmails(organization.emails);
+			const emails = formatEmails(organization.bill_to?.emails || organization.emails);
 			const [primaryEmail, ...ccEmails] = emails;
 
 			const personalization = {
 				to: [{ email: primaryEmail || organization.email }], // Fallback to organization.email if no emails array
-				cc: [{ email: 'camila@huestudios.com' }],
 				bcc: [{ email: 'huestudios.com@gmail.com' }],
+				cc: [{ email: 'camila@huestudios.com' }],
 			};
 
+			// Add additional CC recipients if they exist
 			if (ccEmails.length > 0) {
 				personalization.cc.push(...ccEmails.map((email) => ({ email })));
 			}
