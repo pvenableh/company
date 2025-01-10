@@ -1,5 +1,4 @@
-// server/api/email/invoicenotice.post.js
-import { logger } from '../../../utils/logger';
+import { logger } from '../../utils/logger';
 import sgMail from '@sendgrid/mail';
 
 export default defineEventHandler(async (event) => {
