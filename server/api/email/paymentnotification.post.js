@@ -60,7 +60,7 @@ export default defineEventHandler(async (event) => {
 			},
 		],
 		dynamicTemplateData: {
-			first_name: body.first_name || 'Valued Customer',
+			first_name: body.first_name || '',
 			company: formatCompany(body.company),
 			amount: formatAmount(body.amount),
 			invoice: body.invoice || 'Not specified',

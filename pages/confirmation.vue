@@ -68,19 +68,20 @@
 					View Receipt
 				</UButton>
 			</UCard>
+
 			<!-- Action Buttons -->
 			<div class="flex flex-col gap-4">
-				<UButton v-if="invoiceID" :to="`/invoices/preview/${invoiceID}`" block>
+				<UButton v-if="invoiceID" :to="`/invoices/${invoiceID}`" block>
 					<template #leading>
 						<Icon name="heroicons:document-text" />
 					</template>
 					View Invoice
 				</UButton>
-				<UButton to="/dashboard" variant="outline" block>
+				<UButton :to="returnPath" variant="outline" block>
 					<template #leading>
 						<Icon name="heroicons:home" />
 					</template>
-					Return to Dashboard
+					{{ returnButtonText }}
 				</UButton>
 			</div>
 		</div>
@@ -88,8 +89,9 @@
 </template>
 
 <script setup>
+// Remove the auth middleware to allow non-logged-in users
 definePageMeta({
-	middleware: ['auth'],
+	middleware: [],
 });
 
 import { loadStripe } from '@stripe/stripe-js';
@@ -107,6 +109,10 @@ const paymentIntent = ref(null);
 const payment = useState('payment', () => ({}));
 const clientSecret = computed(() => route.query.payment_intent_client_secret);
 const invoiceID = ref(null);
+
+// Computed properties for return path and button text
+const returnPath = computed(() => (user.value ? '/dashboard' : '/'));
+const returnButtonText = computed(() => (user.value ? 'Return to Dashboard' : 'Return Home'));
 
 // Stripe instance
 let stripe = null;
@@ -216,6 +222,8 @@ const getPaymentData = async () => {
 		const storedPayment = window?.localStorage?.getItem('payment');
 		if (storedPayment) {
 			payment.value = JSON.parse(storedPayment);
+			console.log(payment.value);
+			invoiceID.value = payment.value.invoice_id;
 			return true;
 		}
 
@@ -313,9 +321,11 @@ const confirmPayment = async () => {
 const recordPayment = async (intent) => {
 	try {
 		const existingPayments = await readItems('payments_received', {
-			filter: { payment_intent: { _eq: intent.id } },
+			filter: { invoice_id: { _eq: invoiceID.value } },
 			limit: 1,
 		});
+
+		console.log('Existing Payments:', existingPayments);
 
 		const status = intent.status === 'succeeded' ? 'paid' : 'pending';
 
@@ -323,14 +333,14 @@ const recordPayment = async (intent) => {
 			if (!invoiceID.value && !payment.value.invoice_id) {
 				invoiceID.value = existingPayments[0].invoice_id;
 			}
-			updateInvoiceStatus(invoiceID.value, status);
+			await updateInvoiceStatus(invoiceID.value, status);
 			console.log('Payment already recorded:', existingPayments[0]);
-			return; // Payment already exists, no need to create a new record
+			return;
 		}
 
-		await createItem('payments_received', {
+		// Create payment record with optional user association
+		const paymentData = {
 			status,
-			user_id: payment.value.user?.id,
 			email: payment.value.email,
 			date_received: new Date().toISOString(),
 			invoice_id: payment.value.invoice_id,
@@ -341,8 +351,17 @@ const recordPayment = async (intent) => {
 			receipt_url: intent.latest_charge.receipt_url,
 			payment_method: intent.latest_charge.payment_method_details.type,
 			organization: payment.value.bill_to,
-		});
+		};
+		console.log(paymentData);
 
+		// Only add user_id if user is logged in
+		if (user.value) {
+			paymentData.user_id = user.value.id;
+		}
+
+		const paymentRecord = await createItem('payments_received', paymentData);
+		console.log(paymentRecord);
+		await updateInvoiceStatus(invoiceID.value, status);
 		await sendPaymentNotification(payment.value);
 	} catch (err) {
 		console.error('Failed to record payment:', err);
@@ -379,13 +398,34 @@ const notificationData = ref({});
 
 const sendPaymentNotification = async (paymentData) => {
 	try {
+		// Get organization emails
+		let recipientEmails = [];
+
+		// Add organization emails if available
+		if (Array.isArray(paymentData.bill_to?.emails)) {
+			recipientEmails.push(...paymentData.bill_to.emails);
+		}
+
+		// Add the payment email if not already included
+		if (paymentData.email && !recipientEmails.includes(paymentData.email)) {
+			recipientEmails.push(paymentData.email);
+		}
+
+		// Add logged-in user's email if available and not already included
+		if (user.value?.email && !recipientEmails.includes(user.value.email)) {
+			recipientEmails.push(user.value.email);
+		}
+
+		// Remove any duplicates and invalid emails
+		recipientEmails = [...new Set(recipientEmails)].filter((email) => email && typeof email === 'string');
+
 		notificationData.value = {
-			emails: [paymentData.email, user.value.email],
-			amount: paymentData.amount / 100, // Convert from cents to dollars
+			emails: recipientEmails,
+			amount: paymentData.amount / 100,
 			invoice: paymentData.invoice_code,
 			company: paymentData.bill_to?.name || paymentData.bill_to,
 			id: paymentData.invoice_id,
-			first_name: paymentData.user.first_name,
+			first_name: paymentData.user?.first_name || '',
 			payment_method: paymentIntent.value?.latest_charge?.payment_method_details?.type,
 			receipt_url: paymentIntent.value?.latest_charge?.receipt_url,
 		};

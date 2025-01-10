@@ -71,6 +71,7 @@ const payment = ref({});
 payment.value = {
 	user: props.user,
 	bill_to: props.bill_to,
+	emails: props.bill_to?.emails,
 	email: email.value,
 	amount: total.value,
 	invoice_code: props.invoice.invoice_code,
@@ -94,7 +95,9 @@ const formatNumber = (value) => {
 	<div class="w-full flex flex-col payment">
 		<h1 class="w-full mt-6 lg:mt-0 uppercase tracking-wider">Payment</h1>
 		<p class="mt-2 mb-6 text-[12px]">
-			Please note, a credit card payment will add a 3% processing fee. Using a bank account for payment adds no fees.
+			Please note, a credit card payment will add a 3% processing fee. Using a bank account for payment adds
+			<strong>no fees</strong>
+			.
 		</p>
 		<h5 class="uppercase tracking-wide mb-6">
 			<span class="opacity-50">Total:</span>

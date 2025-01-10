@@ -31,10 +31,10 @@ const cancelEdit = () => {
 
 <template>
 	<UCard>
-		<UCardHeader>
-			<UCardTitle>Confirm Your Information</UCardTitle>
-		</UCardHeader>
-		<UCardContent>
+		<template #header>
+			<h5>Confirm Your Information</h5>
+		</template>
+		<div>
 			<p class="text-sm text-gray-500 mb-4">Please confirm your email address to continue with the payment:</p>
 			<div class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg mb-4 h-16">
 				<div v-if="!isEditing">
@@ -60,6 +60,6 @@ const cancelEdit = () => {
 				</div>
 			</div>
 			<UButton type="submit" block :loading="isLoading" @click="handleSubmit">Continue to Payment</UButton>
-		</UCardContent>
+		</div>
 	</UCard>
 </template>
