@@ -369,6 +369,7 @@ const recordPayment = async (intent) => {
 };
 
 const updateInvoiceStatus = async (invoiceId, status) => {
+	console.log('trying to update invoice');
 	try {
 		const invoice = await readItems('invoices', {
 			filter: { id: { _eq: invoiceId } },

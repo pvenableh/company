@@ -35,7 +35,7 @@ const handleAnonymousSubmit = async (formData) => {
 		</h1>
 		<div class="w-full flex flex-col lg:flex-row items-center lg:items-start justify-center z-10 page__inner">
 			<InvoicesInvoice :invoice="invoice" class="lg:sticky lg:top-12" />
-			<div v-if="showAnonymousForm" class="w-full px-6 pt-0 pb-16 lg:w-1/2 max-w-xl">
+			<div v-if="showAnonymousForm && invoice.status !== 'paid'" class="w-full px-6 pt-0 pb-16 lg:w-1/2 max-w-xl">
 				<PaymentAnonymous :default-email="defaultEmail" @submit="handleAnonymousSubmit" />
 			</div>
 			<div v-else-if="invoice.status !== 'paid'" class="w-full px-6 pt-0 pb-16 lg:w-1/2 max-w-xl">
