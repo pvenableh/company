@@ -77,13 +77,27 @@ export default defineEventHandler(async (event) => {
 
 			const totalAmount = invoices.reduce((sum, inv) => sum + parseFloat(inv.total_amount), 0);
 
+			// Handle array of emails
+			const formatEmails = (emails) => {
+				if (!emails) return [];
+				return Array.isArray(emails) ? emails : [emails];
+			};
+
+			const emails = formatEmails(organization.emails);
+			const [primaryEmail, ...ccEmails] = emails;
+
+			const personalization = {
+				to: [{ email: primaryEmail || organization.email }], // Fallback to organization.email if no emails array
+				bcc: [{ email: 'huestudios.com@gmail.com' }, { email: 'camila@huestudios.com' }],
+			};
+
+			// Add CC recipients if there are additional emails
+			if (ccEmails?.length > 0) {
+				personalization.cc = ccEmails.map((email) => ({ email }));
+			}
+
 			const message = {
-				personalizations: [
-					{
-						to: [{ email: organization.email }],
-						bcc: [{ email: 'huestudios.com@gmail.com' }],
-					},
-				],
+				personalizations: [personalization],
 				from: {
 					email: 'mail@huestudios.company',
 					name: 'hue: company',
