@@ -88,12 +88,12 @@ export default defineEventHandler(async (event) => {
 
 			const personalization = {
 				to: [{ email: primaryEmail || organization.email }], // Fallback to organization.email if no emails array
-				bcc: [{ email: 'huestudios.com@gmail.com' }, { email: 'camila@huestudios.com' }],
+				cc: [{ email: 'camila@huestudios.com' }],
+				bcc: [{ email: 'huestudios.com@gmail.com' }],
 			};
 
-			// Add CC recipients if there are additional emails
-			if (ccEmails?.length > 0) {
-				personalization.cc = ccEmails.map((email) => ({ email }));
+			if (ccEmails.length > 0) {
+				personalization.cc.push(...ccEmails.map((email) => ({ email })));
 			}
 
 			const message = {
