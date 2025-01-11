@@ -2,6 +2,12 @@
 const { params } = useRoute();
 const { readItem } = useDirectusItems();
 const { user } = useDirectusAuth();
+import * as yup from 'yup';
+const toast = useToast();
+
+const emailSchema = yup.object({
+	email: yup.string().email('Please enter a valid email address').required('Email is required'),
+});
 
 // Remove auth middleware
 definePageMeta({
@@ -15,16 +21,37 @@ const invoice = await readItem('invoices', params.id, {
 });
 
 const anonymousUser = ref(null);
-const showAnonymousForm = computed(() => !user.value && !anonymousUser.value);
+const showAnonymousForm = computed(() => {
+	return !user.value && (!anonymousUser.value || !anonymousUser.value.email.trim());
+});
 
 const defaultEmail = computed(() => {
 	return invoice.bill_to.emails?.[0] || '';
 });
 
+// const handleAnonymousSubmit = async (formData) => {
+// 	if (formData.email.trim()) {
+// 		anonymousUser.value = {
+// 			email: formData.email,
+// 		};
+// 	}
+// };
+
 const handleAnonymousSubmit = async (formData) => {
-	anonymousUser.value = {
-		email: formData.email,
-	};
+	try {
+		// Validate email format using yup
+		await emailSchema.validate({ email: formData.email });
+
+		anonymousUser.value = {
+			email: formData.email,
+		};
+	} catch (error) {
+		toast.add({
+			title: 'Invalid Email',
+			description: error.message,
+			color: 'red',
+		});
+	}
 };
 </script>
 <template>
