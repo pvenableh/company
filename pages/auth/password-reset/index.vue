@@ -1,55 +1,125 @@
 <script setup>
 import { jwtDecode } from 'jwt-decode';
-
+import { useForm, useField } from 'vee-validate';
+import * as yup from 'yup';
+const { passwordReset } = useDirectusAuth();
 const route = useRoute();
 
 const reset_token = ref(route.query.token ? route.query.token : '');
 const decoded = ref('');
 const expired = ref(false);
 const expiredDate = ref('');
+const loading = ref(true);
+const toast = useToast();
+const showPassword = ref(false);
+
+// Define validation schema
+// const schema = yup.object({
+// 	password: yup
+// 		.string()
+// 		.required('Password is required')
+// 		.min(8, 'Password must be at least 8 characters')
+// 		.matches(/[A-Z]/, 'Password must contain at least one uppercase letter')
+// 		.matches(/[a-z]/, 'Password must contain at least one lowercase letter')
+// 		.matches(/[0-9]/, 'Password must contain at least one number')
+// 		.matches(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
+// });
+const schema = yup.object({
+	password: yup
+		.string()
+		.required('Password is required')
+		.min(6, 'Password must be at least 6 characters')
+		.matches(/[a-z]/, 'Password must contain at least one lowercase letter')
+		.matches(/[0-9]/, 'Password must contain at least one number'),
+});
+
+// Use vee-validate's useForm and useField
+const { handleSubmit } = useForm({
+	validationSchema: schema,
+});
+
+// Use useField for password
+const { value: password, errorMessage } = useField('password', schema.fields.password);
 
 onMounted(() => {
 	if (reset_token.value) {
 		decoded.value = jwtDecode(reset_token.value);
-
 		expiredDate.value = new Date(decoded.value.exp * 1000);
-
 		if (expiredDate.value >= new Date()) {
 			expired.value = true;
 		}
+		loading.value = false;
+	} else {
+		loading.value = false;
 	}
 });
 
-import { createDirectus, rest, passwordReset } from '@directus/sdk';
+const onSubmit = handleSubmit(async (values) => {
+	try {
+		await passwordReset(reset_token.value, values.password);
+		toast.add({
+			title: 'Success',
+			description: 'Password reset successfully. Routing to login page.',
+			color: 'green',
+		});
+		setTimeout(() => {
+			navigateTo('/auth/signin');
+		}, 2000);
+	} catch (error) {
+		toast.add({
+			title: 'Error',
+			description: error.message || 'Failed to reset password',
+			color: 'red',
+		});
+	}
+});
 
-const password = ref();
-
-const client = createDirectus('https://admin.huestudios.company').with(rest());
-
-async function submit() {
-	const result = await client.request(passwordReset(reset_token.value, password.value));
-
-	console.log(result);
-}
+const togglePassword = () => {
+	showPassword.value = !showPassword.value;
+};
 </script>
+
 <template>
-	<div class="flex items-center justify-center flex-col min-h-screen">
-		<div v-if="expired">
-			<h3>Reset password for {{ decoded.email }}.</h3>
-			<h5 class="uppercase italic text-xs font-bold">Link expires in {{ getRelativeTime(expiredDate) }}</h5>
-			<form @submit="submit()" v-if="expired">
-				<UFormGroup label="Password" required>
-					<UInput v-model="password" name="password" type="password" placeholder="Password" class="my-6" />
-				</UFormGroup>
-				<UButton type="submit" class="w-full mb-6 text-center" label="Reset Password" />
-			</form>
-			<!-- <VForm class="" @submit="submit()" v-if="expired">
-				<FormVInput name="password" type="password" rules="required" label="Password" v-model="password" class="my-6" />
-				<FormVButton class="w-full mb-6" type="submit">Update Password</FormVButton>
-			</VForm> -->
-		</div>
-		<h5 v-else class="uppercase italic text-xs font-bold">This link has expired.</h5>
+	<div class="flex items-center justify-center flex-col min-h-[90svh]">
+		<transition name="fade" mode="out-in">
+			<div v-if="expired">
+				<h3>Reset password for {{ decoded.email }}.</h3>
+				<h5 class="uppercase italic text-xs font-bold mt-2 mb-6">Link expires in {{ getRelativeTime(expiredDate) }}</h5>
+				<form @submit.prevent="onSubmit">
+					<UFormGroup label="Password" required :error="errorMessage">
+						<div class="relative">
+							<UInput
+								v-model="password"
+								name="password"
+								:type="showPassword ? 'text' : 'password'"
+								placeholder="Enter new password"
+								class=""
+								:ui="{
+									icon: { trailing: { pointer: 'cursor-pointer' } },
+								}"
+							>
+								<template #trailing>
+									<UButton
+										:icon="showPassword ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'"
+										color="gray"
+										variant="ghost"
+										@click="togglePassword"
+										:padded="false"
+									/>
+								</template>
+							</UInput>
+						</div>
+						<template #error>
+							<p class="text-xs text-red-500 text-right uppercase font-bold">{{ errorMessage }}</p>
+						</template>
+					</UFormGroup>
+					<UButton type="submit" class="w-full my-6 text-center" label="Reset Password" />
+				</form>
+			</div>
+
+			<h5 v-else-if="expired" class="uppercase italic text-xs font-bold">This link has expired.</h5>
+			<h5 v-else-if="!loading" class="uppercase italic text-xs font-bold">There was an error</h5>
+			<h5 v-else-if="loading" class="uppercase tracking-wide text-xs font-bold">Loading</h5>
+		</transition>
 	</div>
 </template>
-
-<style></style>

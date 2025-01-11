@@ -84,12 +84,12 @@ interface ApiResponse {
 }
 
 interface LoginError {
-	data: {
-		errors: Array<{
-			message: string;
+	data?: {
+		errors?: Array<{
+			message?: string;
 		}>;
 	};
-	message: string;
+	message?: string;
 }
 
 const { login } = useDirectusAuth();
@@ -151,11 +151,7 @@ async function attemptLogin(): Promise<void> {
 		}
 	} catch (err) {
 		const error = err as LoginError;
-		if (error.data?.errors?.length) {
-			login_error.value = error.data.errors[0].message;
-		} else {
-			login_error.value = error.message;
-		}
+		login_error.value = error.data?.errors?.[0]?.message ?? error.message ?? null;
 	}
 
 	loading.value = false;
