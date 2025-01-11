@@ -2,6 +2,8 @@
 import { jwtDecode } from 'jwt-decode';
 import { useForm, useField } from 'vee-validate';
 import * as yup from 'yup';
+import { openScreen, closeScreen } from '~/composables/useScreen';
+
 const { passwordReset } = useDirectusAuth();
 const route = useRoute();
 
@@ -13,17 +15,6 @@ const loading = ref(true);
 const toast = useToast();
 const showPassword = ref(false);
 
-// Define validation schema
-// const schema = yup.object({
-// 	password: yup
-// 		.string()
-// 		.required('Password is required')
-// 		.min(8, 'Password must be at least 8 characters')
-// 		.matches(/[A-Z]/, 'Password must contain at least one uppercase letter')
-// 		.matches(/[a-z]/, 'Password must contain at least one lowercase letter')
-// 		.matches(/[0-9]/, 'Password must contain at least one number')
-// 		.matches(/[^A-Za-z0-9]/, 'Password must contain at least one special character'),
-// });
 const schema = yup.object({
 	password: yup
 		.string()
@@ -33,7 +24,6 @@ const schema = yup.object({
 		.matches(/[0-9]/, 'Password must contain at least one number'),
 });
 
-// Use vee-validate's useForm and useField
 const { handleSubmit } = useForm({
 	validationSchema: schema,
 });
@@ -56,6 +46,7 @@ onMounted(() => {
 
 const onSubmit = handleSubmit(async (values) => {
 	try {
+		openScreen();
 		await passwordReset(reset_token.value, values.password);
 		toast.add({
 			title: 'Success',
@@ -63,9 +54,11 @@ const onSubmit = handleSubmit(async (values) => {
 			color: 'green',
 		});
 		setTimeout(() => {
+			closeScreen();
 			navigateTo('/auth/signin');
 		}, 2000);
 	} catch (error) {
+		closeScreen();
 		toast.add({
 			title: 'Error',
 			description: error.message || 'Failed to reset password',
