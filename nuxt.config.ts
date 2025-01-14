@@ -1,8 +1,6 @@
 // import { formatFonts } from './utils/fonts';
 // import { theme } from './theme';
 
-import { UNotifications } from '#build/components';
-
 export default defineNuxtConfig({
 	ssr: true,
 
@@ -27,6 +25,7 @@ export default defineNuxtConfig({
 		stripeSecretKeyLive: process.env.STRIPE_SECRET_KEY,
 
 		public: {
+			adminRole: '3a63a4e1-c82e-46f8-9993-7f11ac6a4b01',
 			stripePublic:
 				process.env.NODE_ENV === 'production' ? process.env.STRIPE_PUBLIC_KEY : process.env.STRIPE_PUBLIC_KEY_TEST,
 			companyName: process.env.COMPANY_NAME,

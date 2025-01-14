@@ -5,7 +5,7 @@ export default function useFilteredUsers() {
 	const filteredUsers = ref([]);
 	const loading = ref(false);
 
-	const fetchFilteredUsers = async () => {
+	const fetchFilteredUsers = async (organizationId = null) => {
 		try {
 			loading.value = true;
 
@@ -16,40 +16,45 @@ export default function useFilteredUsers() {
 				return;
 			}
 
-			// Get the organization IDs the current user belongs to
-			const currentOrgIds = currentUser.value.organizations.map((org) => org.organizations_id.id);
+			let orgFilter;
 
-			// Add the specific organization ID to the list
-			const allOrgIds = [...currentOrgIds, '423f5e7e-e14c-4348-9fea-89ba5c6b9d96'];
-
-			// Fetch users filtered by these organization IDs
-			const users = await readUsers({
-				fields: ['id', 'first_name', 'last_name', 'email', 'avatar', 'organizations.id'],
-				filter: {
+			if (organizationId) {
+				// If specific organization is provided, filter by that
+				orgFilter = {
 					organizations: {
 						organizations_id: {
 							id: {
-								_in: allOrgIds, // Match any of the organization IDs
+								_eq: organizationId,
 							},
 						},
 					},
-				},
+				};
+			} else {
+				// Otherwise use the original multiple organizations filter
+				const currentOrgIds = currentUser.value.organizations.map((org) => org.organizations_id.id);
+				const allOrgIds = [...currentOrgIds, '423f5e7e-e14c-4348-9fea-89ba5c6b9d96'];
+
+				orgFilter = {
+					organizations: {
+						organizations_id: {
+							id: {
+								_in: allOrgIds,
+							},
+						},
+					},
+				};
+			}
+
+			// Fetch users with the determined filter
+			const users = await readUsers({
+				fields: ['id', 'first_name', 'last_name', 'email', 'avatar', 'organizations.id'],
+				filter: orgFilter,
 			});
 
 			filteredUsers.value = users.map((user) => ({
 				...user,
 				label: user.id === currentUser.value.id ? 'You' : `${user.first_name} ${user.last_name}`,
 			}));
-
-			// filteredUsers.value = users.map((user) => ({
-			// 	id: user.id,
-			// 	first_name: user.first_name,
-			// 	last_name: user.last_name,
-			// 	label: `${user.first_name} ${user.last_name}`,
-			// 	email: user.email,
-			// 	avatar: user.avatar,
-			// 	organizations: user.organizations,
-			// }));
 		} catch (error) {
 			console.error('Error fetching filtered users:', error);
 			filteredUsers.value = [];

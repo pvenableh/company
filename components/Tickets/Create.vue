@@ -251,19 +251,14 @@ const updateDueDate = (day) => {
 
 const updateDateTime = () => {
 	if (selectedDate.value && selectedTime.value) {
-		// Get the user's timezone
 		const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
-		// Parse hours and minutes
 		const [hours, minutes] = selectedTime.value.split(':');
 
-		// Create date in local timezone
 		const dateTime = new Date(selectedDate.value);
 
-		// Set hours and minutes in local timezone
 		dateTime.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
 
-		// Convert to ISO string while preserving timezone offset
 		const offset = dateTime.getTimezoneOffset();
 		const localISOTime = new Date(dateTime.getTime() - offset * 60 * 1000).toISOString();
 
@@ -281,17 +276,20 @@ const updateDateTime = () => {
 const projectOptions = ref([]);
 const loadingProjects = ref(false);
 
-const orgOptions = computed(
-	() =>
+const orgOptions = computed(() => {
+	const options =
 		currentUser.value?.organizations
 			?.filter((org) => org.organizations_id)
 			.map((org) => ({
 				id: org.organizations_id.id,
 				name: org.organizations_id.name,
-			})) || [],
-);
+			})) || [];
 
-const hasMultipleOrgs = computed(() => orgOptions.value.length > 1);
+	console.log('Available organizations:', options);
+	return options;
+});
+
+const hasMultipleOrgs = computed(() => orgOptions.value.length >= 1);
 const defaultOrg = computed(() => orgOptions.value[0]?.id || null);
 
 const form = ref({
@@ -393,6 +391,15 @@ const isCurrentUserBadge = (userId) => {
 const removeUser = (userId) => {
 	form.value.assigned_to = form.value.assigned_to.filter((id) => id !== userId);
 };
+
+watch(
+	() => currentUser.value,
+	(newUser) => {
+		console.log('Current user updated:', newUser);
+		console.log('User organizations:', newUser?.organizations);
+	},
+	{ immediate: true },
+);
 
 watch(
 	() => form.value.assigned_to,
@@ -544,13 +551,17 @@ const fetchProjects = async (orgId) => {
 
 const handleOrgChange = async (orgId) => {
 	form.value.project = null;
-	await fetchProjects(orgId);
+	form.value.assigned_to = []; // Clear assigned users when org changes
+	await Promise.all([
+		fetchProjects(orgId),
+		fetchFilteredUsers(orgId), // Pass the org ID to filter users
+	]);
 };
 
 onMounted(() => {
 	form.value.organization = defaultOrg.value;
 	if (defaultOrg.value) {
-		fetchProjects(defaultOrg.value);
+		Promise.all([fetchProjects(defaultOrg.value), fetchFilteredUsers(defaultOrg.value)]);
 	}
 	document.addEventListener('keydown', (e) => {
 		if (e.key === 'Escape' && isExpanded.value) {

@@ -10,6 +10,7 @@
 						<span class="opacity-50 mr-1">Ticket #:</span>
 						{{ element?.id }}
 					</p>
+
 					<p v-if="element?.organization" class="text-[9px] text-gray-500 uppercase">
 						<span class="opacity-50 mr-1">Client:</span>
 						{{ element?.organization.name }}
@@ -17,6 +18,10 @@
 							<span class="opacity-50 mr-1">Project:</span>
 							{{ element?.project.title }}
 						</span>
+					</p>
+					<p v-if="element?.user_created" class="text-[9px] text-gray-500 uppercase">
+						<span class="opacity-50 mr-1">Created by:</span>
+						{{ element?.user_created.first_name }} {{ element?.user_created.last_name }}
 					</p>
 				</div>
 
@@ -33,6 +38,31 @@
 							option-attribute="name"
 							value-attribute="id"
 							:loading="isLoading"
+						/>
+					</UFormGroup>
+					<UFormGroup v-if="hasMultipleOrgs" label="Organization">
+						<USelectMenu
+							searchable
+							v-model="form.organization"
+							:options="orgOptions"
+							option-attribute="name"
+							value-attribute="id"
+							placeholder="Select Organization"
+							class="relative"
+							@update:modelValue="handleOrgChange"
+						/>
+					</UFormGroup>
+
+					<UFormGroup v-if="form.organization" label="Project">
+						<USelectMenu
+							searchable
+							v-model="form.project"
+							:options="projectOptions"
+							option-attribute="title"
+							value-attribute="id"
+							placeholder="Select project"
+							:loading="loadingProjects"
+							class="relative"
 						/>
 					</UFormGroup>
 
@@ -173,6 +203,7 @@
 					<div class="space-x-2">
 						<UButton variant="soft" color="red" :loading="isLoading" @click="confirmDelete">Delete</UButton>
 						<UButton
+							:disabled="!hasAccess"
 							type="submit"
 							color="primary"
 							:loading="isLoading"
@@ -254,6 +285,8 @@ const { filteredUsers, fetchFilteredUsers, loading: loadingUsers } = useFiltered
 const handleShare = (method) => {
 	console.log(`Shared via ${method}`);
 };
+const config = useRuntimeConfig();
+const adminRole = config.public.adminRole;
 const emit = defineEmits(['close', 'deleted', 'preventClose']);
 const { createItem, deleteItem, updateItem } = useDirectusItems();
 const { notify } = useNotifications();
@@ -348,6 +381,23 @@ const resetFormState = () => {
 	isDirty.value = false;
 	emit('preventClose', false);
 };
+
+const hasDeleteAccess = computed(() => {
+	const isCreator = currentUser.value.id === props.element.user_created.id;
+	const isAdmin = currentUser.value.role === adminRole;
+
+	return isAdmin || isCreator;
+});
+
+const hasAccess = computed(() => {
+	const isCreator = currentUser.value.id === props.element.user_created.id;
+	const isAdmin = currentUser.value.role === adminRole;
+	const isAssigned = props.element.assigned_to?.some(
+		(assignment) => assignment.directus_users_id.id === currentUser.value.id,
+	);
+
+	return isAdmin || isCreator || isAssigned;
+});
 
 const availableUsers = computed(() => {
 	return filteredUsers.value.filter((user) => !form.value.assigned_to.includes(user.id));
@@ -486,13 +536,29 @@ const updateTicket = async () => {
 };
 // Delete handlers
 const confirmDelete = () => {
-	showDeleteModal.value = true;
+	if (!hasDeleteAccess.value) {
+		toast.add({
+			title: 'Warning',
+			description: "You don't have access to delete this ticket.",
+			color: 'red',
+		});
+	} else {
+		showDeleteModal.value = true;
+	}
 };
 
 const deleteTicket = async () => {
 	try {
 		isLoading.value = true;
-		await deleteItem('tickets', props.element.id);
+		if (currentUser.value.role === adminRole) {
+			console.log('yes should delete');
+			await deleteItem('tickets', props.element.id);
+		} else {
+			console.log('yes should archive');
+			await updateItem('tickets', props.element.id, {
+				status: 'archived',
+			});
+		}
 		toast.add({
 			title: 'Success',
 			description: 'Ticket deleted successfully',

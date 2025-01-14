@@ -102,7 +102,7 @@ const orgOptions = computed(() => {
 	];
 });
 
-const hasMultipleOrgs = computed(() => isAdmin.value && orgOptions.value.length > 1);
+const hasMultipleOrgs = computed(() => orgOptions.value.length > 1);
 
 const fields = [
 	'id',
