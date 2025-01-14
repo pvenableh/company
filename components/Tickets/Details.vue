@@ -508,6 +508,7 @@ const deleteTicket = async () => {
 			color: 'red',
 		});
 	} finally {
+		router.push('/tickets');
 		showDeleteModal.value = false;
 		isLoading.value = false;
 	}

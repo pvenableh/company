@@ -17,7 +17,7 @@
 			>
 				<div
 					v-if="isExpanded"
-					class="fixed inset-0 z-[9999] overflow-auto flex flex-col items-center justify-center backdrop-blur-lg bg-white dark:bg-gray-800 bg-opacity-75"
+					class="fixed inset-0 z-[50] overflow-auto flex flex-col items-center justify-center backdrop-blur-lg bg-white dark:bg-gray-800 bg-opacity-75"
 				>
 					<div class="w-full p-4 lg:p-12">
 						<!-- Header -->
@@ -35,8 +35,14 @@
 						<!-- Form -->
 						<div class="w-full mt-4 max-w-2xl mx-auto">
 							<form @submit.prevent="createTicket" class="space-y-6">
-								<UFormGroup ref="titleGroup" label="Title" required>
-									<UInput v-model="form.title" placeholder="Enter ticket title" required />
+								<UFormGroup label="Title" required>
+									<UInput
+										v-model="form.title"
+										placeholder="Enter ticket title"
+										required
+										:ui="{ error: showTitleError }"
+									/>
+									<template v-if="showTitleError" #error>Title is required</template>
 								</UFormGroup>
 
 								<div class="grid grid-cols-2 gap-4">
@@ -417,14 +423,14 @@ async function notifyMentionedUsers(commentText, collection, itemId) {
 	}
 }
 
-const titleGroup = ref(null);
+const showTitleError = ref(false);
+
 const createTicket = async () => {
 	try {
 		isLoading.value = true;
 
-		const isTitleValid = titleGroup.value?.isValid?.();
-
-		if (!isTitleValid) {
+		if (!form.value.title.trim()) {
+			showTitleError.value = true;
 			toast.add({
 				title: 'Error',
 				description: 'Please enter a valid title',
