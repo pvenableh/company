@@ -81,16 +81,16 @@ const invoices = await readItems('invoices', {
 	filter: filter,
 });
 
-const isPastDue = (dateString) => {
+const isPastDue = (dateString, status) => {
 	const dueDate = new Date(dateString);
 	const today = new Date();
-	return dueDate < today;
+	return dueDate < today && status !== 'paid';
 };
 
 const classedInvoices = computed(() => {
 	return invoices.map((item) => ({
 		...item,
-		class: isPastDue(item.due_date) ? 'bg-red-200/50 dark:bg-red-400/50 animate-pulse' : '',
+		class: isPastDue(item.due_date, item.status) ? 'bg-red-200/50 dark:bg-red-400/50 animate-pulse' : '',
 	}));
 });
 
