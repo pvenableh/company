@@ -69,18 +69,18 @@ const fetchProjects = async () => {
 		const userOrgs = user.value?.organizations || [];
 		console.log(userOrgs);
 		filter = {
-			organizations: {
+			organization: {
 				_in: userOrgs.map((org) => org.organizations_id.id),
 			},
 		};
 	} else if (selectedOrg.value) {
 		filter = {
-			organizations: { _eq: selectedOrg.value },
+			organization: { _eq: selectedOrg.value },
 		};
 	}
 
 	const projects = await readItems('projects', {
-		fields: ['id', 'title', 'sort', 'organization.id', 'organization.name'],
+		fields: ['id', 'title', 'sort', 'organization.id', 'organization.name', 'tickets'],
 		filter,
 		sort: 'sort',
 	});
@@ -547,9 +547,17 @@ const handleTicketCreated = () => {
 							@change="handleProjectChange"
 						>
 							<template #option="{ option }">
-								<div class="flex flex-col">
-									<span>{{ option.title }}</span>
-									<span v-if="option.organization" class="text-xs text-gray-500">
+								<div class="flex flex-col w-full">
+									<span class="w-full flex flex-row items-center justify-start leading-4">
+										{{ option.title }}
+										<span
+											v-if="option.tickets?.length"
+											class="text-[8px] font-bold h-4 w-4 !text-white rounded-full bg-[var(--cyan)] inline-flex items-center justify-center ml-1 text-center"
+										>
+											{{ option.tickets.length }}
+										</span>
+									</span>
+									<span v-if="option.organization" class="text-[9px] leading-3 text-gray-500">
 										{{ option.organization.name }}
 									</span>
 								</div>

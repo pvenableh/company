@@ -1,6 +1,5 @@
 <template>
 	<div class="w-full mx-auto max-w-[2000px]">
-		<!-- Connection Status -->
 		<div v-if="!isConnected && !isLoading" class="mb-4">
 			<UAlert title="Connection Lost" color="yellow">
 				<template #footer>
@@ -8,8 +7,6 @@
 				</template>
 			</UAlert>
 		</div>
-
-		<!-- Filters Section -->
 		<div class="w-full flex flex-col md:flex-row items-center justify-between mb-4 px-4">
 			<!-- <ProjectsCreate v-if="showCreate" :columns="columns" @projectCreated="handleProjectCreated" /> -->
 			<div class="flex items-center gap-4">
