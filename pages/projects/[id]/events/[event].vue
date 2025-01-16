@@ -47,10 +47,10 @@ const event = await readItem('project_events', params.event, {
 				<div class="w-full flex flex-row justify-between p-4 pt-10">
 					<div class="">
 						<h5 class="uppercase text-[9px] font-bold">{{ event.project.organization.name }}</h5>
-						<h5 class="uppercase text-[9px] font-bold">
+						<nuxt-link :to="`/projects/${event.project.id}`" class="uppercase text-[9px] font-bold">
 							<span class="h-2 w-2 inline-block mr-0.5" :style="'background:' + event.project.service.color"></span>
 							{{ event.project.title }}
-						</h5>
+						</nuxt-link>
 						<h2 class="uppercase tracking-wide">Project Event: {{ event.title }}</h2>
 						<p class="text-xs">{{ event.description }}</p>
 					</div>
