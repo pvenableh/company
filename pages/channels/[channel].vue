@@ -27,6 +27,7 @@ const messageFields = [
 	'user_created.avatar',
 	'channel.id',
 	'channel.name',
+	'parent_id',
 ];
 
 // Setup realtime subscription for messages
@@ -207,14 +208,15 @@ const handleKeyboard = (event) => {
 					:key="message.id"
 					class="group flex items-start space-x-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
 				>
-					<!-- Avatar -->
+					<ChannelsMessage :channel="message.channel" :message="message" />
+
+					<!-- 			
 					<UAvatar
 						:src="message.user_created?.avatar ? `/assets/${message.user_created.avatar}` : undefined"
 						:alt="message.user_created?.first_name"
 						size="sm"
 					/>
 
-					<!-- Message Content -->
 					<div class="flex-1 min-w-0">
 						<div class="flex items-center space-x-2">
 							<span class="font-medium">
@@ -227,7 +229,6 @@ const handleKeyboard = (event) => {
 						<div class="prose prose-sm dark:prose-invert max-w-none mt-1" v-html="message.text" />
 					</div>
 
-					<!-- Actions -->
 					<div
 						v-if="message.user_created?.id === user?.id"
 						class="opacity-0 group-hover:opacity-100 transition-opacity"
@@ -239,7 +240,7 @@ const handleKeyboard = (event) => {
 							size="xs"
 							@click="deleteMessage(message.id)"
 						/>
-					</div>
+					</div> -->
 				</div>
 			</template>
 
@@ -257,7 +258,13 @@ const handleKeyboard = (event) => {
 		>
 			<div class="max-w-5xl mx-auto">
 				<div class="flex space-x-2">
-					<ChannelsCreateMessage v-model="newMessage" class="flex-1" :disabled="!channelId" @keydown="handleKeyboard" />
+					<FormTiptap
+						:show-toolbar="false"
+						v-model="newMessage"
+						class="flex-1"
+						:disabled="!channelId"
+						@keydown="handleKeyboard"
+					/>
 					<UButton
 						color="primary"
 						:loading="messagesLoading"

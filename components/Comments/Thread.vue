@@ -11,45 +11,49 @@
 				size="sm"
 			/>
 
-			<div class="flex-grow">
+			<div class="w-auto">
+				<div class="flex flex-row ml-2">
+					<span class="text-[9px] uppercase font-bold">
+						<UTooltip :text="new Date(comment.comments_id.date_created).toLocaleString()">
+							<span class="lowercase">
+								{{ getTimeAgoShort(new Date(comment.comments_id.date_created).toLocaleString()) }}
+							</span>
+						</UTooltip>
+					</span>
+				</div>
 				<div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-3">
 					<div class="w-full flex items-center gap-2 mb-1 relative text-[10px] font-bold">
 						<span class="font-medium uppercase">
 							{{ comment.comments_id.user?.first_name }}
 							{{ comment.comments_id.user?.last_name }}
 						</span>
-
 						<UButton
 							v-if="comment.comments_id.user?.id === currentUser?.id"
 							size="xs"
 							color="primary"
 							variant="ghost"
 							icon="i-heroicons-x-circle-solid"
-							class="absolute right-2"
+							class="absolute -right-2"
 							:loading="deleteLoading"
 							@click="handleDelete"
 						/>
 					</div>
 					<div class="text-sm comment" v-html="comment.comments_id.comment" />
+					<CommentsImageModal />
 					<!-- UModal to display the image -->
-					<UModal v-model:show="showModal">
+					<!-- <UModal v-model:show="showModal">
 						<template #title>Image Preview</template>
 						<img :src="modalImageSrc" alt="Preview" class="max-w-full max-h-screen mx-auto" />
-					</UModal>
+					</UModal> -->
 				</div>
 
 				<div class="w-full flex gap-2 mt-1">
-					<div class="flex-grow flex flex-row">
+					<div class="flex-grow flex flex-row justify-between">
 						<ReactionsBar :item-id="String(comment.comments_id.id)" collection="comments" />
 						<UButton v-if="depth < 4" variant="ghost" size="xs" class="text-[10px]" @click="handleReplyClick">
 							Reply
 						</UButton>
 					</div>
-					<span class="text-[9px] uppercase font-bold">
-						<UTooltip :text="new Date(comment.comments_id.date_created).toLocaleString()">
-							{{ getTimeAgo(new Date(comment.comments_id.date_created).toLocaleString()) }}
-						</UTooltip>
-					</span>
 				</div>
 
 				<div v-if="showReplyForm" class="mt-2">
@@ -62,6 +66,7 @@
 						@submit="handleReplySubmit"
 						@cancel="handleReplyCancel"
 						:comment="comment.comments_id"
+						:organization-id="organizationId"
 					/>
 				</div>
 
@@ -86,6 +91,7 @@
 						@submit="handleNestedReplySubmit"
 						@reply="handleNestedReply"
 						@cancel="handleReplyCancel"
+						:organization-id="organizationId"
 					/>
 				</div>
 			</div>
@@ -118,6 +124,10 @@ const props = defineProps({
 	depth: {
 		type: Number,
 		default: 0,
+	},
+	organizationId: {
+		type: [String, Number],
+		default: null,
 	},
 });
 
@@ -178,3 +188,13 @@ watch(
 	},
 );
 </script>
+<style>
+.comment img {
+	cursor: pointer;
+	transition: opacity 0.2s ease;
+}
+
+.comment img:hover {
+	opacity: 0.9;
+}
+</style>

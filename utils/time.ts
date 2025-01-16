@@ -182,6 +182,45 @@ function formatDueDateStatus(date1: string | number | Date): string {
 	}
 }
 
+function getTimeAgoShort(dateTime: string | number | Date) {
+	if (!dateTime) return '';
+
+	const now = new Date();
+	const past = new Date(dateTime);
+	const diffInMs = now - past;
+
+	// Convert to different units
+	const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+	const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+	const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+	const diffInMonths = (now.getFullYear() - past.getFullYear()) * 12 + now.getMonth() - past.getMonth();
+	const diffInYears = Math.floor(diffInMonths / 12);
+
+	// Less than an hour
+	if (diffInMinutes < 60) {
+		if (diffInMinutes <= 1) return 'now';
+		return `${diffInMinutes}m`;
+	}
+
+	// Less than a day
+	if (diffInHours < 24) {
+		return `${diffInHours}h`;
+	}
+
+	// Less than a month
+	if (diffInDays < 30) {
+		return `${diffInDays}d`;
+	}
+
+	// Less than a year
+	if (diffInMonths < 12) {
+		return `${diffInMonths}mo`;
+	}
+
+	// Years
+	return `${diffInYears}y`;
+}
+
 function getTimeAgo(dateTime: string | number | Date) {
 	if (!dateTime) return '';
 
@@ -321,6 +360,7 @@ export {
 	getMonth,
 	getDate,
 	getDay,
+	getTimeAgoShort,
 	getTimeAgo,
 	getTime,
 };

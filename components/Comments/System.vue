@@ -6,7 +6,11 @@
 				@click="showComments = !showComments"
 				class="cursor-pointer uppercase block font-medium text-gray-700 dark:text-gray-200 tracking-wider"
 			>
-				{{ commentsCount }} {{ commentsCount === 1 ? 'Comment' : 'Comments' }}
+				<transition name="fade" mode="out-in">
+					<span v-if="isLoading">Loading</span>
+					<span v-else>{{ commentsCount }}</span>
+				</transition>
+				{{ commentsCount === 1 ? 'Comment' : 'Comments' }}
 				<UIcon :name="showComments ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'" />
 			</h4>
 			<USelect
@@ -50,10 +54,11 @@
 					:loading="isLoading"
 					:refresh="refresh"
 					@submit="(content) => handleCommentSubmit(content)"
+					:organization-id="organizationId"
 				/>
 
 				<!-- Comments List -->
-				<TransitionGroup name="comments" tag="div" class="space-y-4">
+				<TransitionGroup name="comments" tag="div" class="space-y-4" mo>
 					<CommentsThread
 						v-for="comment in sortedComments"
 						:key="comment.id"
@@ -66,6 +71,7 @@
 						@submit="handleCommentSubmit"
 						@cancel="cancelReply"
 						@delete="handleDelete"
+						:organization-id="organizationId"
 					/>
 				</TransitionGroup>
 			</div>
@@ -85,13 +91,22 @@ const props = defineProps({
 		type: String,
 		required: true,
 	},
+	showComments: {
+		type: Boolean,
+		default: false,
+	},
+	organizationId: {
+		type: [String, Number],
+		default: null,
+	},
 });
+
+console.log(props.organizationId);
 
 const emit = defineEmits(['update:commentCount']);
 
 const { user } = useDirectusAuth();
 const { createItem, deleteItem } = useDirectusItems();
-const showComments = ref(false);
 const replyingTo = ref(null);
 const activeCommentId = ref(null);
 const localComments = ref([]);
@@ -234,17 +249,19 @@ const commentsCount = computed(() => {
 async function handleCommentSubmit(commentHtml, parentId = null) {
 	isLoading.value = true;
 	try {
-		// Use either the explicit parentId or get it from replyingTo
 		const effectiveParentId = parentId || replyingTo.value?.comments_id?.id || null;
 
+		// Create the comment (WITHOUT item_id, item, table, or collection)
 		const comment = await createItem('comments', {
+			status: 'published',
 			comment: commentHtml,
 			user: user.value.id,
 			parent_id: effectiveParentId ? effectiveParentId.toString() : null,
 		});
 
+		// Create the junction table entry (linking the comment to the item)
 		const junctionRecord = await createItem(junctionTable, {
-			[collectionIdField]: props.itemId.toString(),
+			[collectionIdField]: props.itemId.toString(), // e.g., tickets_id: '123'
 			comments_id: comment.id,
 		});
 
@@ -312,13 +329,13 @@ defineExpose({ refresh });
 
 .comments-enter-active,
 .comments-leave-active {
-	transition: all 0.3s ease;
+	transition: all 0.15s ease;
 }
 
 .comments-enter-from,
 .comments-leave-to {
 	opacity: 0;
-	transform: translateX(-20px);
+	transform: translateY(-20px);
 }
 
 .mention {

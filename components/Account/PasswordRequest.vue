@@ -43,7 +43,7 @@ const loading = ref(false);
 const emailTouched = ref(false);
 
 const state = reactive({
-	email: 'peter@huestudios.com',
+	email: '',
 });
 
 const validate = async (state: any): Promise<FormError[]> => {

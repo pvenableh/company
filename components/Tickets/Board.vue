@@ -641,7 +641,7 @@ const handleTicketCreated = () => {
 								>
 									<UIcon name="i-heroicons-arrow-path" class="animate-spin h-5 w-5" />
 								</div>
-								<TicketsCard :element="element" :comment-count="element.comments.length" :tasks="element.tasks" />
+								<TicketsCard :element="element" :comment-count="element.comments?.length" :tasks="element.tasks" />
 							</div>
 						</div>
 					</template>

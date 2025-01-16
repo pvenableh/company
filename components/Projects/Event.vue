@@ -8,13 +8,16 @@
 			<h5>{{ project.service.name }}</h5>
 		</div>
 		<div v-for="(event, index) in designEvents" :key="index" class="">
-			{{ event.id }}
 			<h5>{{ event.title }}</h5>
-
-			<nuxt-link :to="/projects/ + project.id + '/events/' + event.id">
-				EVENT DETAILS
-				<UIcon name="i-heroicons-arrow-right" class="h-4 w-4" />
-			</nuxt-link>
+			<div v-if="event.prototype" class="w-full">
+				<iframe
+					style="border: 1px solid rgba(0, 0, 0, 0.1)"
+					width="800"
+					height="450"
+					:src="event.prototype"
+					allowfullscreen
+				></iframe>
+			</div>
 		</div>
 		<!-- <ProjectsTimeline :project="project" />
 		<ProjectsTimelineTwo :project="project" /> -->
@@ -40,7 +43,6 @@ const designEvents = computed(() => {
 		?.filter((event) => event.type.toLowerCase() === 'design')
 		.map((event) => {
 			return {
-				id: event.id,
 				title: event.title,
 				description: event.description,
 				prototype: event.prototype_link,

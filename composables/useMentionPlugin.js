@@ -12,6 +12,7 @@ export function useMentionPlugin(content) {
 	const isLoading = ref(false);
 	const mentionRange = ref(null);
 
+	const { user: currentUser } = useDirectusAuth();
 	const { readUsers } = useDirectusUsers();
 
 	const selectUser = (user) => {
@@ -44,17 +45,44 @@ export function useMentionPlugin(content) {
 			items: async ({ query }) => {
 				isLoading.value = true;
 				try {
+					const userOrgIds = currentUser.value?.organizations?.map((org) => org.organizations_id.id) || [];
+
+					console.log(userOrgIds);
+
 					const users = await readUsers({
-						fields: ['id', 'first_name', 'last_name', 'email', 'avatar'],
+						fields: ['id', 'first_name', 'last_name', 'email', 'avatar', 'organizations.organizations_id.id'],
+						filter: {
+							organizations: {
+								organizations_id: {
+									id: {
+										_in: userOrgIds,
+									},
+								},
+							},
+							_and: [
+								{
+									id: {
+										_neq: currentUser.value?.id, // Exclude current user
+									},
+								},
+							],
+						},
 						search: query,
 					});
 
-					return users.map((user) => ({
-						id: user.id,
-						label: `${user.first_name} ${user.last_name}`,
-						email: user.email,
-						avatar: user.avatar ? `${useRuntimeConfig().public.directusUrl}/assets/${user.avatar}?key=small` : null,
-					}));
+					console.log(users);
+
+					return users
+						.filter((user) => {
+							const userOrgs = user.organizations?.map((org) => org.organizations_id.id) || [];
+							return userOrgs.some((orgId) => userOrgIds.includes(orgId));
+						})
+						.map((user) => ({
+							id: user.id,
+							label: `${user.first_name} ${user.last_name}`,
+							email: user.email,
+							avatar: user.avatar ? `${useRuntimeConfig().public.directusUrl}/assets/${user.avatar}?key=small` : null,
+						}));
 				} catch (error) {
 					console.error('Error fetching users:', error);
 					return [];

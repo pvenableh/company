@@ -14,26 +14,51 @@
 
 		<div
 			v-if="showToolbar"
-			class="w-full flex flex-row justify-between border-gray-300 border-r border-l border-b"
+			class="w-full flex flex-row justify-between border-gray-300 border-r border-l border-b toolbar"
 			:class="{ ' !border-cyan-200': editor.isFocused }"
 		>
-			<div>
+			<div class="flex items-center flex-row">
 				<UButton
 					v-for="(button, index) in toolbarButtons"
 					:key="index"
 					size="xs"
 					variant="ghost"
 					:icon="button.icon"
+					class="transform scale-75"
 					:class="{ 'is-active': editor.isActive(button.command) }"
 					@click="button.action"
 				/>
+				<UPopover :popper="{ placement: 'bottom-start' }" mode="click">
+					<UButton
+						size="xs"
+						variant="ghost"
+						:icon="'i-heroicons-link'"
+						class="transform scale-75"
+						:class="{ 'is-active': editor.isActive('link') }"
+					/>
+					<template #panel="{ close }">
+						<div class="p-2 w-72 space-y-4">
+							<UFormGroup label="URL">
+								<UInput v-model="linkUrl" placeholder="https://example.com" @keyup.enter="setLink(close)" />
+							</UFormGroup>
+							<div class="flex justify-end space-x-2">
+								<UButton v-if="editor.isActive('link')" size="xs" color="red" variant="soft" @click="removeLink(close)">
+									Remove
+								</UButton>
+								<UButton size="xs" color="primary" @click="setLink(close)">
+									{{ editor.isActive('link') ? 'Update' : 'Add' }}
+								</UButton>
+							</div>
+						</div>
+					</template>
+				</UPopover>
 			</div>
 			<UButton
 				@click="$refs.fileInput.click()"
 				size="xs"
 				variant="ghost"
 				icon="i-heroicons-paper-clip"
-				class="px-1 mr-2"
+				class="px-1 mr-2 transform scale-75"
 			/>
 			<input ref="fileInput" type="file" multiple class="hidden" @change="handleFileUpload" />
 		</div>
@@ -44,7 +69,6 @@
 </template>
 
 <script setup>
-const { filteredUsers, fetchFilteredUsers } = useFilteredUsers();
 import StarterKit from '@tiptap/starter-kit';
 import { Editor, EditorContent } from '@tiptap/vue-3';
 import { Extension } from '@tiptap/core';
@@ -82,6 +106,10 @@ const props = defineProps({
 		type: Boolean,
 		default: false,
 	},
+	organizationId: {
+		type: String,
+		default: null,
+	},
 });
 
 const emit = defineEmits(['update:modelValue', 'mention', 'blur', 'enter']);
@@ -89,14 +117,35 @@ const emit = defineEmits(['update:modelValue', 'mention', 'blur', 'enter']);
 const editor = ref(null);
 const fileInput = ref(null);
 const isUploading = ref(false);
+const linkUrl = ref('');
 const uploadProgress = ref(0);
 const { uploadFiles } = useDirectusFiles();
-// const { readUsers } = useDirectusUsers();
+const { readUsers } = useDirectusUsers();
 const { notify } = useNotifications();
-// const { user: currentUser } = useDirectusAuth();
+const { user: currentUser } = useDirectusAuth();
 const toast = useToast();
 
 const mentionsPortal = ref(null);
+
+const setLink = (close) => {
+	if (linkUrl.value) {
+		editor.value.chain().focus().setLink({ href: linkUrl.value, target: '_blank' }).run();
+	}
+	linkUrl.value = '';
+	close();
+};
+
+const removeLink = (close) => {
+	editor.value.chain().focus().unsetLink().run();
+	linkUrl.value = '';
+	close();
+};
+
+// Update linkUrl when a link is selected
+const updateLinkUrl = () => {
+	const link = editor.value?.getAttributes('link');
+	linkUrl.value = link?.href || '';
+};
 
 const toolbarButtons = [
 	{ icon: 'i-heroicons-bold', command: 'bold', action: () => editor.value.chain().focus().toggleBold().run() },
@@ -118,30 +167,30 @@ const toolbarButtons = [
 	},
 ];
 
-// const handleUserMention = async (mentionedUser) => {
-// 	if (!mentionedUser || !props.context.collection || !props.context.itemId) return;
+const handleUserMention = async (mentionedUser) => {
+	if (!mentionedUser || !props.context.collection || !props.context.itemId) return;
 
-// 	try {
-// 		const contextInfo = {
-// 			collection: props.context.collection,
-// 			item: props.context.itemId,
-// 		};
+	try {
+		const contextInfo = {
+			collection: props.context.collection,
+			item: props.context.itemId,
+		};
 
-// 		const notice =await notify({
-// 			recipient: mentionedUser.id,
-// 			subject: 'You were mentioned',
-// 			message: `${currentUser.value?.first_name} ${currentUser.value?.last_name} mentioned you in a ${contextInfo.collection.slice(0, -1)}`,
-// 			...contextInfo,
-// 		});
-// 	} catch (error) {
-// 		console.error('Error sending mention notification:', error);
-// 		toast.add({
-// 			title: 'Error',
-// 			description: 'Failed to notify mentioned user',
-// 			color: 'red',
-// 		});
-// 	}
-// };
+		const notice = await notify({
+			recipient: mentionedUser.id,
+			subject: 'You were mentioned',
+			message: `${currentUser.value?.first_name} ${currentUser.value?.last_name} mentioned you in a ${contextInfo.collection.slice(0, -1)}`,
+			...contextInfo,
+		});
+	} catch (error) {
+		console.error('Error sending mention notification:', error);
+		toast.add({
+			title: 'Error',
+			description: 'Failed to notify mentioned user',
+			color: 'red',
+		});
+	}
+};
 
 const CustomMention = Mention.configure({
 	HTMLAttributes: {
@@ -149,15 +198,91 @@ const CustomMention = Mention.configure({
 	},
 	suggestion: {
 		char: '@',
-		items: ({ query }) => {
-			return filteredUsers.value
-				.filter((user) => `${user.first_name} ${user.last_name}`.toLowerCase().includes(query.toLowerCase()))
-				.map((user) => ({
+		items: async ({ query }) => {
+			console.log('Mention query started', { query });
+			console.log('Current user:', currentUser.value);
+
+			if (!currentUser.value?.organizations) {
+				console.log('No organizations found for current user');
+				return [];
+			}
+
+			const currentOrgIds = currentUser.value.organizations.map((org) => org.organizations_id.id);
+			const allOrgIds = [...currentOrgIds, '423f5e7e-e14c-4348-9fea-89ba5c6b9d96'];
+
+			console.log('Organization IDs:', { currentOrgIds, allOrgIds });
+
+			try {
+				const orgIds = props.organizationId
+					? [props.organizationId, '423f5e7e-e14c-4348-9fea-89ba5c6b9d96']
+					: [
+							...currentUser.value.organizations.map((org) => org.organizations_id.id),
+							'423f5e7e-e14c-4348-9fea-89ba5c6b9d96',
+						];
+				console.log(orgIds);
+				const users = await readUsers({
+					fields: [
+						'id',
+						'first_name',
+						'last_name',
+						'email',
+						'avatar',
+						'organizations.organizations_id.id',
+						'organizations.organizations_id.name',
+					],
+					filter: {
+						_and: [
+							{
+								organizations: {
+									organizations_id: {
+										id: {
+											_in: orgIds,
+										},
+									},
+								},
+							},
+							{
+								id: {
+									_neq: currentUser.value.id,
+								},
+							},
+						],
+					},
+				});
+
+				console.log('Users returned from API:', users);
+
+				// Additional client-side filtering
+				const filteredUsers = users.filter((user) => {
+					const userOrgIds = user.organizations?.map((org) => org.organizations_id.id) || [];
+					const hasMatchingOrg = userOrgIds.some((orgId) => allOrgIds.includes(orgId));
+					const matchesQuery = `${user.first_name} ${user.last_name}`.toLowerCase().includes(query.toLowerCase());
+
+					console.log('Filtering user:', {
+						user: `${user.first_name} ${user.last_name}`,
+						userOrgIds,
+						hasMatchingOrg,
+						matchesQuery,
+					});
+
+					return hasMatchingOrg && matchesQuery;
+				});
+
+				console.log('Final filtered users:', filteredUsers);
+
+				const mappedUsers = filteredUsers.map((user) => ({
 					id: user.id,
 					label: `${user.first_name} ${user.last_name}`,
 					email: user.email,
 					avatar: user.avatar ? `${useRuntimeConfig().public.directusUrl}/assets/${user.avatar}?key=small` : null,
 				}));
+
+				console.log('Mapped users for display:', mappedUsers);
+				return mappedUsers;
+			} catch (error) {
+				console.error('Error in mentions query:', error);
+				return [];
+			}
 		},
 		render: () => {
 			let popup = null;
@@ -289,6 +414,7 @@ const CustomMention = Mention.configure({
 
 					if (event.key === 'Enter' && currentItems[selectedIndex]) {
 						event.preventDefault();
+						handleUserMention(currentItems[selectedIndex]);
 						const selectedItem = currentItems[selectedIndex];
 						if (selectedItem && editor.value) {
 							editor.value
@@ -417,9 +543,21 @@ watch(
 );
 
 onMounted(() => {
-	fetchFilteredUsers();
 	editor.value = new Editor({
-		extensions: [StarterKit, Link, Image, FileUpload, CustomMention],
+		extensions: [
+			StarterKit,
+			Link.configure({
+				openOnClick: true,
+				HTMLAttributes: {
+					target: '_blank',
+					rel: 'noopener noreferrer',
+				},
+			}),
+			,
+			Image,
+			FileUpload,
+			CustomMention,
+		],
 		content: props.modelValue,
 		editable: !props.disabled,
 		onUpdate: () => {
@@ -434,6 +572,9 @@ onMounted(() => {
 				emit('enter', event);
 				return true;
 			}
+		},
+		onSelectionUpdate: () => {
+			updateLinkUrl();
 		},
 	});
 });
@@ -461,9 +602,12 @@ onBeforeUnmount(() => {
 		font-family: var(--font-bold);
 	}
 
-	ul,
-	ol {
+	ul {
 		list-style-type: disc;
+		padding: 0 1rem;
+	}
+	ol {
+		list-style-type: decimal;
 		padding: 0 1rem;
 	}
 
@@ -508,6 +652,12 @@ onBeforeUnmount(() => {
 	/* Optional: Add a subtle hover effect */
 	&:not(.ProseMirror-focused):hover {
 		border-color: var(--cyan-200);
+	}
+	.toolbar {
+		button {
+			background: red !important;
+			@apply transform scale-75;
+		}
 	}
 }
 

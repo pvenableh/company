@@ -6,7 +6,6 @@
 			<p class="font-medium truncate flex-1 italic">"{{ sanitizedComment }}"</p>
 			<UButton size="xs" variant="ghost" icon="i-heroicons-x-mark" @click="$emit('cancel')" />
 		</div>
-
 		<!-- Comment Input -->
 		<div class="flex gap-2">
 			<div class="flex-grow">
@@ -16,6 +15,7 @@
 					:show-toolbar="toolbar"
 					@mention="handleMention"
 					@keydown="handleKeydown"
+					:organization-id="organizationId"
 				/>
 				<UButton
 					v-if="comment?.user?.id === user?.id && !replyingTo"
@@ -24,6 +24,7 @@
 					variant="ghost"
 					icon="i-heroicons-x-circle-solid"
 					class="absolute top-2 right-2"
+					:ui="{ rounded: 'rounded-full' }"
 					:loading="deleteLoading"
 					@click="handleDelete"
 				/>
@@ -74,6 +75,10 @@ const props = defineProps({
 	toolbar: {
 		type: Boolean,
 		default: true,
+	},
+	organizationId: {
+		type: String,
+		default: null,
 	},
 });
 

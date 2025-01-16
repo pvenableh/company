@@ -49,7 +49,7 @@
 <script setup>
 const name = ref('');
 const address = ref('');
-const email = ref('peter@huestudios.com');
+const email = ref('');
 const section = ref('one');
 const panel = ref('card');
 const previousPanelKey = ref(1);

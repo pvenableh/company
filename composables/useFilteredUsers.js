@@ -19,7 +19,6 @@ export default function useFilteredUsers() {
 			let orgFilter;
 
 			if (organizationId) {
-				// If specific organization is provided, filter by that
 				orgFilter = {
 					organizations: {
 						organizations_id: {
@@ -30,7 +29,6 @@ export default function useFilteredUsers() {
 					},
 				};
 			} else {
-				// Otherwise use the original multiple organizations filter
 				const currentOrgIds = currentUser.value.organizations.map((org) => org.organizations_id.id);
 				const allOrgIds = [...currentOrgIds, '423f5e7e-e14c-4348-9fea-89ba5c6b9d96'];
 
@@ -45,15 +43,43 @@ export default function useFilteredUsers() {
 				};
 			}
 
-			// Fetch users with the determined filter
+			const filter = {
+				_and: [
+					orgFilter,
+					// {
+					// 	id: {
+					// 		_neq: currentUser.value.id,
+					// 	},
+					// },
+				],
+			};
+
+			// Update the fields to match what we're filtering on
 			const users = await readUsers({
-				fields: ['id', 'first_name', 'last_name', 'email', 'avatar', 'organizations.id'],
-				filter: orgFilter,
+				fields: [
+					'id',
+					'first_name',
+					'last_name',
+					'email',
+					'avatar',
+					'organizations.organizations_id.id',
+					'organizations.organizations_id.name',
+				],
+				filter: filter,
 			});
 
+			console.log('Fetched users:', users);
+
 			filteredUsers.value = users.map((user) => ({
-				...user,
-				label: user.id === currentUser.value.id ? 'You' : `${user.first_name} ${user.last_name}`,
+				id: user.id,
+				first_name: user.first_name,
+				last_name: user.last_name,
+				email: user.email,
+				avatar: user.avatar,
+				organizations: user.organizations?.map((org) => ({
+					id: org.organizations_id.id,
+					name: org.organizations_id.name,
+				})),
 			}));
 		} catch (error) {
 			console.error('Error fetching filtered users:', error);
