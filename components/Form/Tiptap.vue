@@ -65,6 +65,26 @@
 
 		<UProgress v-if="isUploading" :value="uploadProgress" color="primary" class="mt-2" />
 		<div ref="mentionsPortal" class="mentions-portal" />
+		<UModal v-model="isModalOpen" fullscreen>
+			<div class="relative">
+				<UButton
+					class="absolute top-2 right-2 z-10"
+					color="gray"
+					variant="outline"
+					icon="i-heroicons-x-mark"
+					:ui="{ rounded: 'rounded-full' }"
+					@click="closeModal"
+				/>
+				<transition name="fade">
+					<img
+						v-if="currentImageSrc"
+						:src="currentImageSrc"
+						alt="Expanded view"
+						class="w-full h-auto max-h-screenrounded-none object-contain"
+					/>
+				</transition>
+			</div>
+		</UModal>
 	</div>
 </template>
 
@@ -111,6 +131,15 @@ const props = defineProps({
 		default: null,
 	},
 });
+
+// Modal state
+const isModalOpen = ref(false);
+const currentImageSrc = ref('');
+
+const closeModal = () => {
+	isModalOpen.value = false;
+	currentImageSrc.value = '';
+};
 
 const emit = defineEmits(['update:modelValue', 'mention', 'blur', 'enter']);
 
@@ -459,6 +488,37 @@ const CustomMention = Mention.configure({
 	},
 });
 
+const CustomImage = Image.extend({
+	addAttributes() {
+		return {
+			...Image.config.addAttributes(),
+			src: {
+				default: null,
+				parseHTML: (element) => element.getAttribute('src'),
+			},
+		};
+	},
+	addProseMirrorPlugins() {
+		return [
+			new Plugin({
+				props: {
+					handleClick: (view, pos, event) => {
+						const node = view.state.doc.nodeAt(pos);
+						if (node?.type.name === 'image') {
+							event.preventDefault();
+							// Using the global refs since we can't access component's scope here
+							currentImageSrc.value = node.attrs.src;
+							isModalOpen.value = true;
+							return true;
+						}
+						return false;
+					},
+				},
+			}),
+		];
+	},
+});
+
 const FileUpload = Extension.create({
 	name: 'fileUpload',
 	addProseMirrorPlugins() {
@@ -553,8 +613,7 @@ onMounted(() => {
 					rel: 'noopener noreferrer',
 				},
 			}),
-			,
-			Image,
+			CustomImage,
 			FileUpload,
 			CustomMention,
 		],
@@ -658,6 +717,14 @@ onBeforeUnmount(() => {
 			background: red !important;
 			@apply transform scale-75;
 		}
+	}
+	.ProseMirror img {
+		cursor: pointer;
+		transition: opacity 0.2s ease;
+	}
+
+	.ProseMirror img:hover {
+		opacity: 0.9;
 	}
 }
 

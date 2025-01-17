@@ -1,4 +1,3 @@
-# components/CommentImageModal.vue
 <template>
 	<UModal v-model="isOpen">
 		<div class="relative">

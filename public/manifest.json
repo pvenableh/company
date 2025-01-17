@@ -1,5 +1,11 @@
 {
- "name": "1033 Lenox",
+ "name": "hue: manage",
+ "short_name": "hue",
+ "start_url": "/",
+ "display": "standalone",
+ "background_color": "#ffcc00",
+ "theme_color": "#ffcc00",
+ "orientation": "portrait",
  "icons": [
   {
    "src": "\/android-icon-36x36.png",
