@@ -101,13 +101,18 @@ export default defineNuxtConfig({
 			},
 			devtools: true,
 			readMeQuery: {
-				fields: ['*,organizations.organizations_id.id,organizations.organizations_id.name,organizations_id.logo'],
+				fields: [
+					'*,organizations.organizations_id.id,organizations.organizations_id.name,organizations.organizations_id.logo',
+				],
 				updateState: true,
 			},
 		},
 	},
 
 	devtools: { enabled: true },
+
+	debug: true,
+	logLevel: 'verbose',
 
 	colorMode: {
 		preference: 'system',

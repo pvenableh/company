@@ -59,6 +59,10 @@ const items = (row) => [
 	],
 ];
 
+const { organizationOptions } = useOrganization();
+
+console.log(organizationOptions);
+
 const userOrganizationIds = user.value.organizations.map((org) => org.organizations_id.id);
 
 console.log(userOrganizationIds);
