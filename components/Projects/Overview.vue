@@ -42,7 +42,7 @@ const isAdmin = computed(() => user.value.role === amdinRole.value);
 
 const designEvents = computed(() => {
 	return props.project?.events
-		?.filter((event) => event.type.toLowerCase() === 'design' && event.status === 'published')
+		?.filter((event) => event.type.toLowerCase() === 'design' && event.status === 'Active')
 		.sort((a, b) => new Date(a.date) - new Date(b.date))
 		.map((event) => {
 			return {

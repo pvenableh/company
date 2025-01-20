@@ -14,7 +14,7 @@
 const props = defineProps({
 	initialStatus: {
 		type: String,
-		default: 'Need Approval',
+		default: 'Active',
 	},
 	itemId: {
 		type: String,
@@ -59,13 +59,13 @@ function startConfetti(duration = 4000) {
 const handleToggle = async () => {
 	isLoading.value = true;
 	try {
-		const newStatus = status.value === 'Need Approval' ? 'Approved' : 'Need Approval';
-
+		const newStatus = status.value === 'Active' ? 'Completed' : 'Active';
+		console.log(newStatus);
 		// Update the item in Directus
-		await updateItem('project_events', props.itemId, {
-			approval: newStatus,
-		});
-		if (newStatus === 'Approved') {
+		// await updateItem('project_events', props.itemId, {
+		// 	status: newStatus,
+		// });
+		if (newStatus === 'Completed') {
 			startConfetti();
 		}
 		status.value = newStatus;

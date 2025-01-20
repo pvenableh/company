@@ -1,6 +1,6 @@
 <script setup>
 const { params } = useRoute();
-const { readItem } = useDirectusItems();
+const { readItem, updateItem } = useDirectusItems();
 const { readRevisions } = useDirectusRevisions();
 
 const { user } = useDirectusAuth();
@@ -34,6 +34,15 @@ const event = await readItem('project_events', params.event, {
 // });
 
 // console.log(approvalStatus);
+
+const handleStatusChanged = async (newStatus) => {
+	// event.value.status = newStatus;
+	console.log(newStatus);
+	const result = await updateItem('project_events', event.id, {
+		status: newStatus,
+	});
+	console.log(result);
+};
 </script>
 <template>
 	<div class="max-w-[2600px] mx-auto border-b border-gray-200 dark:border-gray-700 project-event">
@@ -55,9 +64,8 @@ const event = await readItem('project_events', params.event, {
 						<p class="text-xs">{{ event.description }}</p>
 					</div>
 					<div>
-						<ProjectsApprovalButton
-							v-if="event.approval !== 'No Approval Necessary'"
-							:initial-status="event.approval"
+						<ProjectsCompletedButton
+							:initial-status="event.status"
 							:item-id="event.id"
 							@status-changed="handleStatusChanged"
 						/>
