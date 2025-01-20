@@ -43,7 +43,7 @@ onMounted(() => {
 			<Logo color="#ffc00" />
 			<span class="uppercase text-4xl font-bold leading-7 px-1 hidden">:</span>
 			<span class="uppercase tracking-wider text-4xl font-bold leading-6 hidden">Company</span>
-			<!-- <LayoutOrganizationSelect /> -->
+			<LayoutOrganizationSelect :user="user" />
 		</nuxt-link>
 		<div class="absolute flex items-center justify-center flex-row right-[10px] sm:pr-1 md:px-6">
 			<nuxt-link to="/account" class="flex items-center justify-self-center">

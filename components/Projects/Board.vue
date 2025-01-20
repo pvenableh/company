@@ -11,7 +11,7 @@
 			<!-- <ProjectsCreate v-if="showCreate" :columns="columns" @projectCreated="handleProjectCreated" /> -->
 			<div class="flex items-center gap-4">
 				<!-- Organization Filter -->
-				<div class="flex items-center space-x-2">
+				<!-- <div class="flex items-center space-x-2">
 					<USelectMenu
 						v-if="hasMultipleOrgs"
 						searchable
@@ -28,10 +28,10 @@
 						{{ user?.organizations?.[0]?.organizations_id?.name }}
 						<span class="opacity-30">Projects</span>
 					</h5>
-				</div>
+				</div> -->
 
 				<!-- Service Filter -->
-				<div v-if="isAdmin" class="flex items-center space-x-2">
+				<div class="flex items-center space-x-2">
 					<USelectMenu
 						v-model="selectedService"
 						:options="serviceOptions"
@@ -131,6 +131,8 @@
 import VueDraggable from 'vuedraggable';
 const { readItems, updateItem } = useDirectusItems();
 const { user } = useDirectusAuth();
+const { selectedOrg, hasMultipleOrgs, organizationOptions, setOrganization, clearOrganization, getOrganizationFilter } =
+	useOrganization();
 
 const props = defineProps({
 	showCreate: {
@@ -150,13 +152,9 @@ const activeColumn = ref(columns[0].id);
 const isMobile = ref(false);
 const updatingProjects = ref(new Set());
 const isDragging = ref(false);
-const selectedOrg = ref(null);
 const selectedService = ref(null);
 const filterByAssignedTo = ref(false);
 const serviceOptions = ref([]);
-
-const ADMIN_ROLE = '3a63a4e1-c82e-46f8-9993-7f11ac6a4b01';
-const isAdmin = computed(() => user.value?.role === ADMIN_ROLE);
 
 const localProjects = ref(
 	columns.reduce((acc, column) => {
@@ -177,11 +175,8 @@ const orgOptions = computed(() => {
 	];
 });
 
-const hasMultipleOrgs = computed(() => isAdmin.value && orgOptions.value.length > 1);
-
 // Fetch services
 const fetchServices = async () => {
-	if (!isAdmin.value) return;
 	try {
 		const services = await readItems('services', {
 			fields: ['id', 'name', 'color'],
@@ -224,16 +219,9 @@ const getFilter = () => {
 	};
 
 	// Organization filter
-	if (!isAdmin.value) {
-		filter._and.push({
-			organization: {
-				_in: user.value?.organizations.map((org) => org.organizations_id.id),
-			},
-		});
-	} else if (selectedOrg.value) {
-		filter._and.push({
-			organization: { _eq: selectedOrg.value },
-		});
+	const orgFilter = getOrganizationFilter();
+	if (Object.keys(orgFilter).length > 0) {
+		filter._and.push(orgFilter);
 	}
 
 	// Service filter
@@ -283,9 +271,13 @@ watch([() => projects.value, selectedOrg, selectedService, filterByAssignedTo], 
 	});
 });
 
-const handleSelectChange = (value) => {
-	selectedOrg.value = value === 'null' || value === 'All Organizations' ? null : value;
-};
+watch(
+	() => selectedOrg.value,
+	async (newOrg) => {
+		console.log('Organization changed:', newOrg);
+		refresh();
+	},
+);
 
 const handleServiceChange = (value) => {
 	selectedService.value = value === 'null' || value === 'All Services' ? null : value;

@@ -15,7 +15,17 @@ const handleSelectChange = (value) => {
 	setOrganization(orgId);
 };
 
+// Computed property to get the current organization name
+const currentOrgName = computed(() => {
+	const selectedOption = organizationOptions.value.find((org) => org.id === selectedOrg.value);
+	return selectedOption?.name || 'Select Organization';
+});
+
 const props = defineProps({
+	user: {
+		type: Object,
+		default: null,
+	},
 	containerClass: {
 		type: String,
 		default: 'w-full lg:w-64 relative',
@@ -24,47 +34,36 @@ const props = defineProps({
 </script>
 
 <template>
-	<div v-if="hasMultipleOrgs" :class="containerClass">
-		{{ selectedOrg }}
-		<span class="block text-red-500">{{ localSelectedOrg }}</span>
+	<div :class="containerClass">
 		<USelectMenu
+			v-if="hasMultipleOrgs"
 			v-model="localSelectedOrg"
 			:options="organizationOptions"
 			option-attribute="name"
 			value-attribute="id"
-			placeholder="Select Organization"
-			class="uppercase text-xs text-gray-400"
+			:placeholder="currentOrgName"
+			class="uppercase text-xs text-gray-400 ml-2"
 			@change="handleSelectChange"
 			searchable
 		>
 			<!-- Label Template -->
-			<template #label="{ option }">
+			<template #label>
 				<div class="flex items-center gap-2">
-					<img
-						v-if="option?.logo"
-						:src="`${config.public.directusUrl}/assets/${option.logo}?key=small`"
-						class="w-6 h-6 object-contain rounded-full"
-						:alt="option?.name"
-					/>
-					<span class="truncate">{{ option?.name || 'Select Organization' }}</span>
+					<span class="truncate">{{ currentOrgName }}</span>
 				</div>
 			</template>
 
 			<!-- Option Template -->
 			<template #option="{ option }">
 				<div class="flex items-center gap-2 py-1">
-					{{ option }}
-					<img
-						v-if="option.logo"
-						:src="`${config.public.directusUrl}/assets/${option.logo}?key=small`"
-						class="w-6 h-6 object-contain rounded-full"
-						:alt="option.name"
-					/>
 					<div class="flex flex-col">
-						<span class="font-medium">{{ option.name }}</span>
+						<span class="text-[10px] leading-3">{{ option.name }}</span>
 					</div>
 				</div>
 			</template>
 		</USelectMenu>
+		<div v-else class="ml-2 flex items-center space-x-2 text-[12px] leading-3 uppercase">
+			{{ user.organizations?.[0]?.organizations_id?.name }}
+		</div>
 	</div>
 </template>

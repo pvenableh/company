@@ -3,6 +3,8 @@ import VueDraggable from 'vuedraggable';
 const { updateItem } = useDirectusItems();
 const { registerRefreshCallback } = useTicketsStore();
 const { user } = useDirectusAuth();
+const { selectedOrg, hasMultipleOrgs, organizationOptions, setOrganization, clearOrganization, getOrganizationFilter } =
+	useOrganization();
 
 const props = defineProps({
 	projectId: {
@@ -23,9 +25,6 @@ const isMobile = ref(false);
 const updatingTickets = ref(new Set());
 const isDragging = ref(false);
 
-const ADMIN_ROLE = '3a63a4e1-c82e-46f8-9993-7f11ac6a4b01';
-const isAdmin = computed(() => user.value?.role === ADMIN_ROLE);
-const selectedOrg = ref(null);
 const selectedProject = ref(null);
 const projectOptions = ref([]);
 const filterByAssignedTo = ref(false);
@@ -65,18 +64,10 @@ const fetchProjects = async () => {
 	const { readItems } = useDirectusItems();
 	let filter = {};
 
-	if (!isAdmin.value) {
-		const userOrgs = user.value?.organizations || [];
-		console.log(userOrgs);
-		filter = {
-			organization: {
-				_in: userOrgs.map((org) => org.organizations_id.id),
-			},
-		};
-	} else if (selectedOrg.value) {
-		filter = {
-			organization: { _eq: selectedOrg.value },
-		};
+	// Apply organization filter
+	const orgFilter = getOrganizationFilter();
+	if (Object.keys(orgFilter).length > 0) {
+		filter = orgFilter;
 	}
 
 	const projects = await readItems('projects', {
@@ -87,22 +78,6 @@ const fetchProjects = async () => {
 
 	projectOptions.value = [{ id: null, title: 'All Projects' }, ...projects];
 };
-
-const orgOptions = computed(() => {
-	const userOrgs = user.value?.organizations || [];
-	console.log(userOrgs);
-	return [
-		{ id: null, name: 'All Organizations' }, // Ensure id is explicitly null
-		...userOrgs
-			.filter((org) => org.organizations_id)
-			.map((org) => ({
-				id: org.organizations_id?.id,
-				name: org.organizations_id?.name,
-			})),
-	];
-});
-
-const hasMultipleOrgs = computed(() => orgOptions.value.length > 1);
 
 const fields = [
 	'id',
@@ -141,18 +116,19 @@ const getFilter = () => {
 		_and: [],
 	};
 
-	// Organization filter
-	if (!isAdmin.value) {
-		filter._and.push({
-			organization: {
-				_in: user.value?.organizations.map((org) => org.organizations_id.id),
-			},
-		});
-	} else if (selectedOrg.value) {
-		filter._and.push({
-			organization: { _eq: selectedOrg.value },
-		});
+	// Debug organization state
+	console.log('Selected Org:', selectedOrg.value);
+
+	// Apply organization filter
+	const orgFilter = getOrganizationFilter();
+	console.log('Organization Filter:', orgFilter);
+
+	if (Object.keys(orgFilter).length > 0) {
+		filter._and.push(orgFilter);
 	}
+
+	// Debug project state
+	console.log('Selected Project:', selectedProject.value);
 
 	// Project filter
 	if (selectedProject.value) {
@@ -160,6 +136,13 @@ const getFilter = () => {
 			project: { _eq: selectedProject.value },
 		});
 	}
+
+	// Debug assignment state
+	console.log('Assignment Filters:', {
+		filterByAssignedTo: filterByAssignedTo.value,
+		filterUnassigned: filterUnassigned.value,
+		userId: user.value?.id,
+	});
 
 	// Assignment filters
 	if (filterByAssignedTo.value && user.value) {
@@ -175,6 +158,9 @@ const getFilter = () => {
 			assigned_to: { _empty: true },
 		});
 	}
+
+	// Debug due date state
+	console.log('Due Date Filter:', filterDueDate.value);
 
 	// Due date filter
 	if (filterDueDate.value) {
@@ -209,14 +195,24 @@ const getFilter = () => {
 				},
 			});
 		}
-		console.log('Due Date Filter applied:', filterDueDate.value, filter);
 	}
 
 	// Remove _and if empty
 	if (filter._and.length === 0) {
 		delete filter._and;
 	}
-	console.log('Applied filter:', filter);
+
+	// Debug final filter
+	console.log('Final Filter:', JSON.stringify(filter, null, 2));
+
+	// Debug final query
+	const query = {
+		fields,
+		filter,
+		sort: '-date_updated',
+	};
+	console.log('Final Query:', JSON.stringify(query, null, 2));
+
 	return filter;
 };
 
@@ -229,11 +225,16 @@ const {
 	refresh,
 } = useRealtimeSubscription('tickets', fields, getFilter(), '-date_updated');
 
-const handleSelectChange = (value) => {
-	// Fix the selected value to ensure "All Organizations" maps to null
-	selectedOrg.value = value === 'null' || value === 'All Organizations' ? null : value;
-	selectedProject.value = null; // Reset project selection when org changes
-};
+watch(
+	() => tickets.value,
+	(newTickets) => {
+		console.log('Tickets updated:', {
+			count: newTickets?.length,
+			org: selectedOrg.value,
+			filter: getFilter(),
+		});
+	},
+);
 
 const handleProjectChange = (value) => {
 	selectedProject.value = value === 'null' || value === 'All Projects' ? null : value;
@@ -253,19 +254,24 @@ const clearFilters = () => {
 	filterByAssignedTo.value = false;
 	filterUnassigned.value = false;
 	filterDueDate.value = null;
-	selectedOrg.value = null;
 	selectedProject.value = null;
+	clearOrganization();
 };
 
-watch(selectedOrg, async (newOrg) => {
-	selectedProject.value = null;
-	if (isAdmin.value) {
-		// Admin users need to refetch projects when org changes
+watch(
+	() => selectedOrg.value,
+	async (newOrg) => {
+		console.log('Organization changed to:', newOrg);
+		selectedProject.value = null;
 		await fetchProjects();
-	}
-});
+		// Force refresh the realtime subscription
+		await refresh();
+	},
+	{ immediate: true },
+); // Add immediate: true to run on mount
 
-watch([selectedOrg, selectedProject, filterByAssignedTo, filterUnassigned, filterDueDate], () => {
+// Keep other filter watches separate
+watch([selectedProject, filterByAssignedTo, filterUnassigned, filterDueDate], () => {
 	refresh();
 });
 
@@ -357,10 +363,14 @@ watch(
 	{ immediate: true },
 );
 
-onMounted(() => {
+onMounted(async () => {
 	checkMobile();
 	window.addEventListener('resize', checkMobile);
 	registerRefreshCallback(refresh);
+
+	if (selectedOrg.value) {
+		await fetchProjects();
+	}
 });
 
 onUnmounted(() => {
@@ -522,19 +532,18 @@ const handleTicketCreated = () => {
 							</template>
 						</USelectMenu>
 					</div>
-					<div class="flex items-center space-x-2">
+					<!-- <div class="flex items-center space-x-2">
 						<USelectMenu
 							v-if="hasMultipleOrgs"
-							searchable
 							v-model="selectedOrg"
-							:options="orgOptions"
+							:options="organizationOptions"
 							option-attribute="name"
 							value-attribute="id"
 							placeholder="Select Organization"
-							class="w-full lg:w-64 uppercase !text-[8x] text-gray-400 relative"
-							@change="handleSelectChange"
+							class="w-full lg:w-64 uppercase text-[10px] text-gray-400 relative"
+							@change="(value) => setOrganization(value)"
 						/>
-					</div>
+					</div> -->
 					<div class="flex items-center space-x-2">
 						<USelectMenu
 							searchable
