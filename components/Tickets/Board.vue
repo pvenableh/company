@@ -6,6 +6,8 @@ const { user } = useDirectusAuth();
 const { selectedOrg, hasMultipleOrgs, organizationOptions, setOrganization, clearOrganization, getOrganizationFilter } =
 	useOrganization();
 
+const { triggerHaptic } = useHaptic();
+
 const props = defineProps({
 	projectId: {
 		type: String,
@@ -255,7 +257,7 @@ const clearFilters = () => {
 	filterUnassigned.value = false;
 	filterDueDate.value = null;
 	selectedProject.value = null;
-	clearOrganization();
+	// clearOrganization();
 };
 
 watch(
@@ -442,6 +444,7 @@ const updateTicketStatus = async (columnId, event) => {
 
 		const ticket = event.added.element;
 		ticket.status = newStatus;
+		triggerHaptic([100, 30, 100]);
 	} catch (error) {
 		console.error('Error updating ticket:', error);
 
