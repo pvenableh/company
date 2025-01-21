@@ -1,53 +1,40 @@
 export function useOrganization() {
-	console.log('[useOrganization] Composable initialized');
-
+	// Use a more specific name for loading state to avoid conflicts
+	const orgInitializing = useState('orgInitializing', () => false);
 	const selectedOrg = useState('selectedOrganization', () => null);
 	const organizations = useState('organizations', () => []);
-	const isLoading = useState('orgIsLoading', () => false);
 	const error = useState('orgError', () => null);
 	const isInitialized = useState('orgIsInitialized', () => false);
 
 	const { user } = useDirectusAuth();
-	console.log('[useOrganization] Initial user state:', user.value);
 
 	const hasMultipleOrgs = computed(() => organizations.value.length > 1);
 	const organizationOptions = computed(() => [{ id: null, name: 'All Organizations' }, ...organizations.value]);
 
 	const currentOrg = computed(() => {
-		if (!selectedOrg.value || !organizations.value.length) {
-			console.log(
-				'[useOrganization] No current org - selected:',
-				selectedOrg.value,
-				'orgs:',
-				organizations.value.length,
-			);
-			return null;
-		}
+		if (!selectedOrg.value || !organizations.value.length) return null;
 		return organizations.value.find((org) => org.id === selectedOrg.value);
 	});
 
-	const loadUserOrganizations = (userData) => {
-		console.log('[useOrganization] Loading organizations for user:', userData?.id);
+	const getOrganizationFilter = () => {
+		if (!selectedOrg.value) return {};
+		return { organization: { _eq: selectedOrg.value } };
+	};
 
+	const loadUserOrganizations = (userData) => {
 		if (!userData || typeof userData !== 'object') {
-			console.log('[useOrganization] No valid user data, clearing organizations');
 			organizations.value = [];
 			return;
 		}
 
-		// Check if user.organizations is defined and is an array
 		if (!Array.isArray(userData.organizations)) {
-			console.warn('[useOrganization] User has no valid organizations array:', userData);
 			organizations.value = [];
 			return;
 		}
 
 		try {
 			organizations.value = userData.organizations.reduce((validOrgs, org) => {
-				if (!org || typeof org !== 'object') {
-					console.warn('[useOrganization] Invalid organization entry:', org);
-					return validOrgs;
-				}
+				if (!org || typeof org !== 'object') return validOrgs;
 
 				const organizationData = org.organizations_id;
 				if (organizationData?.id && organizationData?.name) {
@@ -56,13 +43,11 @@ export function useOrganization() {
 						name: organizationData.name,
 						logo: organizationData.logo ?? null,
 					});
-				} else {
-					console.warn('[useOrganization] Invalid organization data:', organizationData);
 				}
 				return validOrgs;
 			}, []);
 		} catch (err) {
-			console.error('[useOrganization] Error processing organizations:', err);
+			console.error('Error processing organizations:', err);
 			organizations.value = [];
 		}
 	};
@@ -71,7 +56,7 @@ export function useOrganization() {
 		selectedOrg.value = orgId;
 		if (process.client) {
 			try {
-				localStorage.setItem('selectedOrganization', orgId);
+				localStorage.setItem('selectedOrganization', JSON.stringify(orgId));
 			} catch (err) {
 				console.warn('Failed to save selected organization to localStorage:', err);
 			}
@@ -79,9 +64,9 @@ export function useOrganization() {
 	};
 
 	const clearOrganization = () => {
-		console.log('[useOrganization] Clearing organization');
 		selectedOrg.value = null;
 		organizations.value = [];
+		isInitialized.value = false;
 		if (process.client) {
 			try {
 				localStorage.removeItem('selectedOrganization');
@@ -108,7 +93,7 @@ export function useOrganization() {
 					}
 				}
 			} catch (err) {
-				console.warn('[useOrganization] Error restoring saved organization:', err);
+				console.warn('Error restoring saved organization:', err);
 			}
 		}
 
@@ -116,57 +101,53 @@ export function useOrganization() {
 	};
 
 	const initializeOrganizations = async () => {
+		// Skip if already initializing or initialized
+		if (orgInitializing.value || isInitialized.value) return;
 		if (!user.value) {
-			console.log('[useOrganization] User not available, skipping initialization');
+			clearOrganization();
 			return;
 		}
 
-		console.log('[useOrganization] Starting initialization');
-		isLoading.value = true;
+		orgInitializing.value = true;
 		error.value = null;
 
 		try {
 			organizations.value = [];
+			await nextTick(); // Ensure state is updated before proceeding
+
 			loadUserOrganizations(user.value);
 			tryRestoreSelectedOrg();
 			isInitialized.value = true;
 		} catch (err) {
-			console.error('[useOrganization] Initialization error:', err);
 			error.value = err.message;
 			clearOrganization();
 		} finally {
-			isLoading.value = false;
+			orgInitializing.value = false;
 		}
 	};
 
-	// Watch for changes in `user` and run initialization when available
+	// Watch for user changes
 	watch(
-		user,
+		() => user.value,
 		(newUser) => {
-			console.log('[useOrganization] User changed:', newUser?.id);
-
 			if (newUser) {
 				initializeOrganizations();
 			} else {
-				console.log('[useOrganization] User is not logged in, clearing organizations');
 				clearOrganization();
 			}
 		},
 		{ immediate: true },
 	);
 
-	onMounted(() => {
-		console.log('[useOrganization] Component mounted');
-		// Check if user is loaded and initialize
-		if (user.value) {
-			initializeOrganizations();
-		}
-	});
+	// Initialize if user is already available
+	if (user.value && !isInitialized.value) {
+		initializeOrganizations();
+	}
 
 	return {
 		selectedOrg: readonly(selectedOrg),
 		organizations: readonly(organizations),
-		isLoading: readonly(isLoading),
+		isLoading: readonly(orgInitializing), // Keep isLoading in the return for compatibility
 		error: readonly(error),
 		isInitialized: readonly(isInitialized),
 		hasMultipleOrgs,
@@ -175,5 +156,6 @@ export function useOrganization() {
 		setOrganization,
 		clearOrganization,
 		initializeOrganizations,
+		getOrganizationFilter,
 	};
 }
