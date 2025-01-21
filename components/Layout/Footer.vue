@@ -11,10 +11,10 @@
 			<nuxt-link v-else to="/auth/signin">Login</nuxt-link>
 		</div>
 		<div class="w-full flex items-center justify-center flex-col sm:flex-row my-12 footer__contact-info">
-			<h5>929 Alton Road</h5>
-			<h5>Maimi Beach, FL</h5>
+			<h5>605 Lincoln Road Suite 200</h5>
+			<h5>Miami Beach, FL</h5>
 			<h5>33139</h5>
-			<h5>305.555.5555</h5>
+			<h5>305.680.0485</h5>
 		</div>
 		<div class="flex w-full flex-col items-center justify-center">
 			<h5 class="web-designer">
