@@ -132,9 +132,9 @@ const { selectedOrg, hasMultipleOrgs, organizationOptions, setOrganization, clea
 	useOrganization();
 
 const columns = [
-	{ id: 'Pending', name: 'Pending', color: 'gray' },
-	{ id: 'Scheduled', name: 'Scheduled', color: 'black' },
-	{ id: 'In Progress', name: 'In Progress', color: 'blue' },
+	{ id: 'Pending', name: 'Pending', color: 'cyan' },
+	{ id: 'Scheduled', name: 'Scheduled', color: 'cyan2' },
+	{ id: 'In Progress', name: 'In Progress', color: 'green2' },
 	{ id: 'Completed', name: 'Completed', color: 'green' },
 ];
 
