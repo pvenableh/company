@@ -1,7 +1,7 @@
 <template>
-	<div class="w-full mx-auto max-w-[2000px]">
+	<div class="w-full mx-auto relative projects-board">
 		<transition name="fade">
-			<div v-if="!isConnected && !isLoading" class="mb-4 absolute right-0 top-0 tickets-board__connection">
+			<div v-if="!isConnected && !isLoading" class="mb-4 absolute right-0 top-0 projects-board__connection">
 				<UAlert title="Connection Lost" description="Attempting to reconnect..." color="yellow">
 					<template #footer>
 						<UButton size="sm" color="yellow" @click="refresh">Retry Connection</UButton>
@@ -9,7 +9,9 @@
 				</UAlert>
 			</div>
 		</transition>
-		<div class="w-full flex flex-col md:flex-row items-center justify-between mb-4 px-4">
+		<div
+			class="w-full flex flex-col md:flex-row items-end justify-between mb-4 xl:mb-8 xl:mt-2 px-4 gap-4 pt-4 projects-board__filters"
+		>
 			<div class="flex items-center gap-4">
 				<div class="flex items-center space-x-2">
 					<USelectMenu
@@ -40,19 +42,34 @@
 			</div>
 
 			<!-- Last Updated -->
-			<div v-if="lastUpdated" class="text-xs text-gray-500 mt-2 md:mt-0 font-bold uppercase">
+			<div v-if="lastUpdated" class="-bottom-[22.5px] text-[9px] right-0 text-gray-500 absolute font-bold uppercase">
 				Last updated: {{ new Date(lastUpdated).toLocaleTimeString() }}
 			</div>
 		</div>
 
 		<!-- Board Layout -->
-		<div class="w-full flex px-4 gap-4 min-h-svh">
-			<div v-for="column in columns" :key="column.id" class="flex-grow w-full basis-0 shadow h-full min-h-dvh">
+		<div
+			class="bg-gray-100 bg-opacity-30 border-b border-gray-200 w-full flex min-h-svh overflow-x-auto overflow-hidden-scrollbar projects-board__board"
+			@touchstart="handleTouchStart"
+			@touchend="handleTouchEnd"
+		>
+			<div
+				v-for="(column, index) in columns"
+				:key="column.id"
+				class="flex-grow w-full basis-0 h-full min-h-dvh transition-transform duration-300 ease-in-out min-w-[350px] projects-board__board-col"
+				:class="{
+					'hidden md:block': isMobile && column.id !== activeColumn,
+					'transform translate-x-0': !isMobile || column.id === activeColumn,
+				}"
+			>
 				<!-- Column Header -->
-				<div class="p-3 bg-gray-200 mb-3 shadow-lg">
+				<div class="projects-board__board-col-header">
 					<div class="flex items-center justify-between">
 						<h3 class="text-xs font-bold uppercase tracking-wide">{{ column.name }}</h3>
-						<UBadge :color="column.color" class="ml-2 w-6 h-6 text-center">
+						<UBadge
+							class="ml-2 w-6 h-6 text-center inline-block text-[var(--darkBlue)]"
+							:style="{ backgroundColor: `var(--${column.color})` }"
+						>
 							{{ localProjects[column.id]?.length || 0 }}
 						</UBadge>
 					</div>
@@ -74,7 +91,7 @@
 					v-model="localProjects[column.id]"
 					:group="{ name: 'projects' }"
 					item-key="id"
-					class="min-h-svh h-full py-2 px-2 bg-gray-100 dark:bg-gray-800 shadow-inner"
+					class="projects-board__board-col-content"
 					:class="{ 'is-dragging': isDragging }"
 					ghost-class="ghost"
 					chosen-class="chosen"
@@ -262,9 +279,9 @@ const handleServiceChange = (value) => {
 	selectedService.value = value === 'null' || value === 'All Services' ? null : value;
 };
 
-const handleProjectCreated = () => {
-	refresh();
-};
+// const handleProjectCreated = () => {
+// 	refresh();
+// };
 
 const onDragStart = () => {
 	isDragging.value = true;
@@ -320,32 +337,142 @@ function checkMobile() {
 </script>
 
 <style scoped>
-.ghost {
-	opacity: 0.5;
-	background: #f0f0f0;
-	border: 2px dashed #ccc;
-	border-radius: 0.5rem;
+.projects-board {
+	&__board {
+		@apply relative;
+		&-filters {
+			@apply relative max-w-[2000px] bg-red-500;
+		}
+		&-connection {
+			@apply max-w-[2000px];
+		}
+		&-col {
+			@apply border-gray-50 border-r border-l shadow-inner;
+			&-header {
+				@apply relative shadow-2xl py-5 px-4 backdrop-blur-lg mt-1 border-gray-200 border-b;
+				@media (min-width: 1600px) {
+					@apply px-8;
+				}
+			}
+			&-content {
+				@apply min-h-screen lg:h-svh h-full py-2 bg-gray-50 bg-opacity-15 dark:bg-gray-800 overflow-y-auto overflow-hidden-scrollbar px-2;
+				@media (min-width: 1600px) {
+					@apply px-6;
+				}
+			}
+		}
+	}
+	.projects-board__board::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 1px;
+		z-index: 10;
+		background: linear-gradient(90deg, var(--cyan), var(--green));
+	}
+	.projects-board__board::after {
+		content: '';
+		position: absolute;
+		bottom: 0;
+		left: 0;
+		width: 100%;
+		height: 1px;
+		z-index: 10;
+		background: linear-gradient(90deg, var(--cyan), var(--green));
+	}
+}
+/* Hide scrollbar for Webkit browsers */
+.overflow-hidden-scrollbar::-webkit-scrollbar {
+	display: none;
 }
 
-.chosen {
-	transform: scale(1.02);
-	box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+/* Optional: Hide scrollbar for Firefox */
+.overflow-hidden-scrollbar {
+	scrollbar-width: none; /* Firefox */
 }
 
-.drag {
-	opacity: 0.9;
-	transform: scale(1.05);
-	box-shadow: 0 15px 25px rgba(0, 0, 0, 0.15);
+/* Maintain smooth scrolling */
+.overflow-hidden-scrollbar {
+	-ms-overflow-style: none; /* IE and Edge */
+}
+@media (max-width: 768px) {
+	.column-transition-enter-active,
+	.column-transition-leave-active {
+		transition: transform 0.3s ease-in-out;
+	}
+
+	.column-transition-enter-from {
+		transform: translateX(100%);
+	}
+
+	.column-transition-leave-to {
+		transform: translateX(-100%);
+	}
 }
 
 .project-wrapper {
 	transition: all 0.3s ease;
 }
 
+.ghost {
+	opacity: 0.5;
+	background: #f0f0f0;
+	/* border: 2px dashed #ccc;
+	border-radius: 0.5rem; */
+}
+
+.chosen {
+	/* transform: scale(1.05); */
+	box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.drag {
+	opacity: 0.9;
+	/* transform: scale(1.05); */
+	box-shadow: 0 15px 25px rgba(0, 0, 0, 0.15);
+}
+
 .is-dragging {
-	background: rgba(59, 130, 246, 0.05);
-	border: 2px dashed rgba(59, 130, 246, 0.2);
-	border-radius: 0.5rem;
+	/* background: rgba(59, 130, 246, 0.05); */
+	/* border: 2px dashed rgba(59, 130, 246, 0.2);
+	border-radius: 0.5rem; */
 	transition: all 0.3s ease;
+}
+
+.drop-zone-indicator {
+	display: none;
+	text-align: center;
+	padding: 1rem;
+	color: #6b7280;
+	font-size: 0.875rem;
+	border: 2px dashed var(--cyan);
+	border-radius: 0.1rem;
+	margin-top: 0.5rem;
+	opacity: 0;
+	transform: translateY(-10px);
+	transition: all 0.3s ease;
+}
+
+.drop-zone-indicator.show {
+	display: block;
+	opacity: 1;
+	transform: translateY(0);
+}
+
+.project-move {
+	transition: transform 0.5s ease;
+}
+
+.project-enter-active,
+.project-leave-active {
+	transition: all 0.5s ease;
+}
+
+.project-enter-from,
+.project-leave-to {
+	opacity: 0;
+	transform: translateX(30px);
 }
 </style>

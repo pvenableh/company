@@ -1,7 +1,7 @@
 export default function useFilteredUsers() {
 	const { readUsers } = useDirectusUsers();
 	const { user: currentUser } = useDirectusAuth();
-	const { selectedOrg, getOrganizationFilter } = useOrganization(); // Import selectedOrg and getOrganizationFilter
+	const { selectedOrg, getOrganizationFilter } = useOrganization();
 
 	const filteredUsers = ref([]);
 	const loading = ref(false);
@@ -17,31 +17,29 @@ export default function useFilteredUsers() {
 				return;
 			}
 
-			// Use getOrganizationFilter to filter users by the selected organization
+			// Get the organization filter from the composable
 			const orgFilter = getOrganizationFilter();
-			const currentOrgIds = currentUser.value.organizations.map((org) => org.organizations_id.id);
-			const allOrgIds = [...currentOrgIds, '423f5e7e-e14c-4348-9fea-89ba5c6b9d96'];
 
+			// Get current organization ids (only for the current user)
+			const currentOrgIds = currentUser.value.organizations.map((org) => org.organizations_id.id);
+
+			// If selectedOrg is set, filter users by that organization only
 			const filter = {
 				_and: [
 					{
 						organizations: {
 							organizations_id: {
-								id: {
-									_in: selectedOrg.value ? [selectedOrg.value] : allOrgIds,
-								},
+								id: selectedOrg.value
+									? { _eq: selectedOrg.value } // Use _eq for single selectedOrg
+									: { _in: currentOrgIds }, // Use _in if no selectedOrg or for multiple organizations
 							},
 						},
 					},
-					// Uncomment if you want to exclude the current user
-					// {
-					//   id: {
-					//     _neq: currentUser.value.id,
-					//   },
-					// },
+					// ...(orgFilter ? [orgFilter] : []), // Merge the organization-specific filter if it exists
 				],
-				...orgFilter, // Merge the organization-specific filter
 			};
+
+			console.log(filter);
 
 			const users = await readUsers({
 				fields: [
@@ -65,8 +63,8 @@ export default function useFilteredUsers() {
 				email: user.email,
 				avatar: user.avatar,
 				organizations: user.organizations?.map((org) => ({
-					id: org.organizations_id.id,
-					name: org.organizations_id.name,
+					id: org.id,
+					name: org.name,
 				})),
 			}));
 		} catch (error) {
