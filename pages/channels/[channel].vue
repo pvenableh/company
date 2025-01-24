@@ -5,6 +5,9 @@ const { createItem, deleteItem } = useDirectusItems();
 const { params } = useRoute();
 const { user } = useDirectusAuth();
 
+const { selectedOrg, hasMultipleOrgs, organizationOptions, setOrganization, clearOrganization, getOrganizationFilter } =
+	useOrganization();
+
 definePageMeta({
 	middleware: ['auth'],
 	layout: 'default',
@@ -14,6 +17,12 @@ definePageMeta({
 const newMessage = ref('');
 const channelId = ref(null);
 const messagesContainer = ref(null);
+const channelFilter = computed(() => {
+	const filter = {
+		_and: [{ name: { _eq: params.channel } }, selectedOrg.value ? { organization: { _eq: selectedOrg.value } } : {}],
+	};
+	return filter;
+});
 
 // Define fields for messages
 const messageFields = [
@@ -52,7 +61,7 @@ const {
 	data: channels,
 	isLoading: channelsLoading,
 	error: channelsError,
-} = useRealtimeSubscription('channels', ['id', 'name'], {
+} = useRealtimeSubscription('channels', ['id', 'name', 'organization', 'project'], {
 	name: { _eq: params.channel },
 });
 

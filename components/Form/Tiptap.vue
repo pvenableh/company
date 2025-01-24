@@ -130,6 +130,13 @@ const props = defineProps({
 		type: String,
 		default: null,
 	},
+	context: {
+		type: Object,
+		default: () => ({
+			collection: null,
+			itemId: null,
+		}),
+	},
 });
 
 // Modal state
@@ -149,7 +156,6 @@ const isUploading = ref(false);
 const linkUrl = ref('');
 const uploadProgress = ref(0);
 const { uploadFiles } = useDirectusFiles();
-const { readUsers } = useDirectusUsers();
 const { notify } = useNotifications();
 const { user: currentUser } = useDirectusAuth();
 const toast = useToast();
@@ -198,6 +204,9 @@ const toolbarButtons = [
 
 const handleUserMention = async (mentionedUser) => {
 	if (!mentionedUser || !props.context.collection || !props.context.itemId) return;
+	console.log(mentionedUser);
+	const route = useRoute();
+	const currentUrl = `https://huestudios.company/${route.fullPath}`;
 
 	try {
 		const contextInfo = {
@@ -208,9 +217,10 @@ const handleUserMention = async (mentionedUser) => {
 		const notice = await notify({
 			recipient: mentionedUser.id,
 			subject: 'You were mentioned',
-			message: `${currentUser.value?.first_name} ${currentUser.value?.last_name} mentioned you in a ${contextInfo.collection.slice(0, -1)}`,
+			message: `${currentUser.value?.first_name} ${currentUser.value?.last_name} mentioned you in a ${contextInfo.collection.slice(0, -1)}. <br><a href='${currentUrl}'>View ${contextInfo.collection.slice(0, -1)}</a>`,
 			...contextInfo,
 		});
+		console.log(notice);
 	} catch (error) {
 		console.error('Error sending mention notification:', error);
 		toast.add({
@@ -228,27 +238,18 @@ const CustomMention = Mention.configure({
 	suggestion: {
 		char: '@',
 		items: async ({ query }) => {
-			console.log('Mention query started', { query });
-			console.log('Current user:', currentUser.value);
+			const { selectedOrg, organizations } = useOrganization();
+			const { user: currentUser } = useDirectusAuth();
+			const { readUsers } = useDirectusUsers();
 
-			if (!currentUser.value?.organizations) {
-				console.log('No organizations found for current user');
-				return [];
-			}
-
-			const currentOrgIds = currentUser.value.organizations.map((org) => org.organizations_id.id);
-			const allOrgIds = [...currentOrgIds, '423f5e7e-e14c-4348-9fea-89ba5c6b9d96'];
-
-			console.log('Organization IDs:', { currentOrgIds, allOrgIds });
+			if (!currentUser.value) return [];
 
 			try {
-				const orgIds = props.organizationId
-					? [props.organizationId, '423f5e7e-e14c-4348-9fea-89ba5c6b9d96']
-					: [
-							...currentUser.value.organizations.map((org) => org.organizations_id.id),
-							'423f5e7e-e14c-4348-9fea-89ba5c6b9d96',
-						];
-				console.log(orgIds);
+				const adminOrgId = '423f5e7e-e14c-4348-9fea-89ba5c6b9d96';
+				const orgIds = selectedOrg.value
+					? [selectedOrg.value, adminOrgId]
+					: [...organizations.value.map((org) => org.id), adminOrgId];
+
 				const users = await readUsers({
 					fields: [
 						'id',
@@ -279,35 +280,20 @@ const CustomMention = Mention.configure({
 					},
 				});
 
-				console.log('Users returned from API:', users);
-
-				// Additional client-side filtering
 				const filteredUsers = users.filter((user) => {
 					const userOrgIds = user.organizations?.map((org) => org.organizations_id.id) || [];
-					const hasMatchingOrg = userOrgIds.some((orgId) => allOrgIds.includes(orgId));
+					const hasMatchingOrg = userOrgIds.some((orgId) => orgIds.includes(orgId));
 					const matchesQuery = `${user.first_name} ${user.last_name}`.toLowerCase().includes(query.toLowerCase());
-
-					console.log('Filtering user:', {
-						user: `${user.first_name} ${user.last_name}`,
-						userOrgIds,
-						hasMatchingOrg,
-						matchesQuery,
-					});
 
 					return hasMatchingOrg && matchesQuery;
 				});
 
-				console.log('Final filtered users:', filteredUsers);
-
-				const mappedUsers = filteredUsers.map((user) => ({
+				return filteredUsers.map((user) => ({
 					id: user.id,
 					label: `${user.first_name} ${user.last_name}`,
 					email: user.email,
 					avatar: user.avatar ? `${useRuntimeConfig().public.directusUrl}/assets/${user.avatar}?key=small` : null,
 				}));
-
-				console.log('Mapped users for display:', mappedUsers);
-				return mappedUsers;
 			} catch (error) {
 				console.error('Error in mentions query:', error);
 				return [];
@@ -344,25 +330,25 @@ const CustomMention = Mention.configure({
 				if (!popup) return;
 
 				popup.innerHTML = `
-					<div class="max-h-48 overflow-y-auto py-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-700">
-						${items
+          <div class="max-h-48 overflow-y-auto py-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-700">
+            ${items
 							.map(
 								(item, index) => `
-							<div class="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-2 ${
+              <div class="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-2 ${
 								index === selectedIndex ? 'bg-gray-100 dark:bg-gray-700' : ''
 							}" data-index="${index}">
-								<img src="${item.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.label)}&background=eeeeee&color=00bfff`}" 
-									class="w-8 h-8 rounded-full" alt="${item.label}">
-								<div>
-									<div class="font-medium text-sm">${item.label}</div>
-									<div class="text-xs text-gray-500">${item.email}</div>
-								</div>
-							</div>
-						`,
+                <img src="${item.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.label)}&background=eeeeee&color=00bfff`}" 
+                  class="w-8 h-8 rounded-full" alt="${item.label}">
+                <div>
+                  <div class="font-medium text-sm">${item.label}</div>
+                  <div class="text-xs text-gray-500">${item.email}</div>
+                </div>
+              </div>
+            `,
 							)
 							.join('')}
-					</div>
-				`;
+          </div>
+        `;
 
 				if (currentClientRect) {
 					positionPopup(currentClientRect());
@@ -386,6 +372,7 @@ const CustomMention = Mention.configure({
 								selectedIndex = parseInt(item.dataset.index);
 								const selectedItem = currentItems[selectedIndex];
 								if (selectedItem && editor.value) {
+									handleUserMention(selectedItem);
 									editor.value
 										.chain()
 										.focus()
@@ -401,6 +388,7 @@ const CustomMention = Mention.configure({
 											{ type: 'text', text: ' ' },
 										])
 										.run();
+									emit('mention', selectedItem);
 									popup?.remove();
 									popup = null;
 								}
@@ -409,10 +397,9 @@ const CustomMention = Mention.configure({
 					}
 
 					renderItems(items);
-					const coords = clientRect();
-					if (coords) {
-						positionPopup(coords);
-					}
+					const coords = clientRect?.(); // Use optional chaining
+					if (!coords) return;
+					positionPopup(coords);
 				},
 
 				onUpdate: ({ items, clientRect, range }) => {
@@ -432,20 +419,41 @@ const CustomMention = Mention.configure({
 					if (event.key === 'ArrowUp') {
 						selectedIndex = (selectedIndex - 1 + currentItems.length) % currentItems.length;
 						renderItems(currentItems);
+
+						// Scroll the selected item into view
+						const selectedElement = popup.querySelector(`[data-index="${selectedIndex}"]`);
+						const container = popup.querySelector('.max-h-48');
+						if (selectedElement && container) {
+							if (selectedElement.offsetTop < container.scrollTop) {
+								container.scrollTop = selectedElement.offsetTop;
+							}
+						}
 						return true;
 					}
 
 					if (event.key === 'ArrowDown') {
 						selectedIndex = (selectedIndex + 1) % currentItems.length;
 						renderItems(currentItems);
+
+						// Scroll the selected item into view
+						const selectedElement = popup.querySelector(`[data-index="${selectedIndex}"]`);
+						const container = popup.querySelector('.max-h-48');
+						if (selectedElement && container) {
+							const elementBottom = selectedElement.offsetTop + selectedElement.offsetHeight;
+							const containerBottom = container.scrollTop + container.offsetHeight;
+
+							if (elementBottom > containerBottom) {
+								container.scrollTop = elementBottom - container.offsetHeight;
+							}
+						}
 						return true;
 					}
 
 					if (event.key === 'Enter' && currentItems[selectedIndex]) {
 						event.preventDefault();
-						handleUserMention(currentItems[selectedIndex]);
 						const selectedItem = currentItems[selectedIndex];
 						if (selectedItem && editor.value) {
+							handleUserMention(selectedItem);
 							editor.value
 								.chain()
 								.focus()
@@ -462,10 +470,7 @@ const CustomMention = Mention.configure({
 								])
 								.run();
 
-							// // Handle mention notifications
-							// handleUserMention(selectedItem);
 							emit('mention', selectedItem);
-
 							popup?.remove();
 							popup = null;
 						}

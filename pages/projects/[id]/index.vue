@@ -49,42 +49,50 @@ const items = [
 <template>
 	<div class="">
 		<h1 class="page__title">Project</h1>
-		<UTabs
-			:items="items"
-			:ui="{
-				base: 'focus:outline-none',
-				list: {
-					background: 'bg-white dark:bg-gray-800',
-					marker: {
-						background: 'bg-gray-100 dark:bg-gray-900',
+		<div class="max-w-screen-xl mx-auto">
+			<nuxt-link to="/projects" class="uppercase text-[10px] text-gray-400 px-4 2xl:px-0">
+				<UIcon name="i-heroicons-arrow-left" class="-mb-0.5" />
+				Back to Projects
+			</nuxt-link>
+		</div>
+		<div class="w-full my-4 px-4 2xl:px-0">
+			<UTabs
+				:items="items"
+				:ui="{
+					base: 'focus:outline-none',
+					list: {
+						background: 'bg-white dark:bg-gray-800',
+						marker: {
+							background: 'bg-gray-100 dark:bg-gray-900',
+						},
+						tab: {
+							base: 'uppercase relative inline-flex items-center justify-center flex-shrink-0 w-full ui-focus-visible:outline-0 ui-focus-visible:ring-2 ui-focus-visible:ring-primary-500 dark:ui-focus-visible:ring-primary-400 ui-not-focus-visible:outline-none focus:outline-none disabled:cursor-not-allowed disabled:opacity-75 transition-colors duration-200 ease-out',
+							size: 'text-[8px] font-bold tracking-wider',
+						},
 					},
-					tab: {
-						base: 'uppercase relative inline-flex items-center justify-center flex-shrink-0 w-full ui-focus-visible:outline-0 ui-focus-visible:ring-2 ui-focus-visible:ring-primary-500 dark:ui-focus-visible:ring-primary-400 ui-not-focus-visible:outline-none focus:outline-none disabled:cursor-not-allowed disabled:opacity-75 transition-colors duration-200 ease-out',
-						size: 'text-[8px] font-bold tracking-wider',
-					},
-				},
-			}"
-			class="mt-6"
-		>
-			<template #overview="{ item }">
-				<ProjectsOverview :project="project" />
-			</template>
-			<template #conversations="{ item }">
-				<ProjectsConversations :project="project" />
-			</template>
-			<template #tickets="{ item }">
-				<TicketsBoard :projectId="project.id" />
-			</template>
-			<!-- <template #timeline="{ item }">
+				}"
+				class="mt-6"
+			>
+				<template #overview="{ item }">
+					<ProjectsOverview :project="project" />
+				</template>
+				<template #conversations="{ item }">
+					<ProjectsConversations :project="project" />
+				</template>
+				<template #tickets="{ item }">
+					<TicketsBoard :projectId="project.id" />
+				</template>
+				<!-- <template #timeline="{ item }">
 				<ProjectsTimeline :project="project" />
 			</template> -->
-			<template #documents="{ item }">
-				<ProjectsDocuments :project="project" />
-			</template>
-			<template #billing="{ item }">
-				<ProjectsBilling :project="project" />
-			</template>
-		</UTabs>
+				<template #documents="{ item }">
+					<ProjectsDocuments :project="project" />
+				</template>
+				<template #billing="{ item }">
+					<ProjectsBilling :project="project" />
+				</template>
+			</UTabs>
+		</div>
 	</div>
 </template>
 <style></style>

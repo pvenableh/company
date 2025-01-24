@@ -1,36 +1,16 @@
 <template>
 	<div class="w-full mx-auto max-w-[2000px]">
-		<div v-if="!isConnected && !isLoading" class="mb-4">
-			<UAlert title="Connection Lost" color="yellow">
-				<template #footer>
-					<UButton size="sm" color="yellow" @click="refresh">Retry</UButton>
-				</template>
-			</UAlert>
-		</div>
+		<transition name="fade">
+			<div v-if="!isConnected && !isLoading" class="mb-4 absolute right-0 top-0 tickets-board__connection">
+				<UAlert title="Connection Lost" description="Attempting to reconnect..." color="yellow">
+					<template #footer>
+						<UButton size="sm" color="yellow" @click="refresh">Retry Connection</UButton>
+					</template>
+				</UAlert>
+			</div>
+		</transition>
 		<div class="w-full flex flex-col md:flex-row items-center justify-between mb-4 px-4">
-			<!-- <ProjectsCreate v-if="showCreate" :columns="columns" @projectCreated="handleProjectCreated" /> -->
 			<div class="flex items-center gap-4">
-				<!-- Organization Filter -->
-				<!-- <div class="flex items-center space-x-2">
-					<USelectMenu
-						v-if="hasMultipleOrgs"
-						searchable
-						v-model="selectedOrg"
-						:options="orgOptions"
-						option-attribute="name"
-						value-attribute="id"
-						placeholder="Select Organization"
-						class="w-full lg:w-64 uppercase text-[10px] text-gray-400 relative"
-						@change="handleSelectChange"
-					/>
-
-					<h5 v-else class="uppercase text-[10px] tracking-wide font-bold">
-						{{ user?.organizations?.[0]?.organizations_id?.name }}
-						<span class="opacity-30">Projects</span>
-					</h5>
-				</div> -->
-
-				<!-- Service Filter -->
 				<div class="flex items-center space-x-2">
 					<USelectMenu
 						v-model="selectedService"
@@ -81,7 +61,7 @@
 				<!-- Loading State -->
 				<div
 					v-if="isLoading && !localProjects[column.id]?.length"
-					class="min-h-[50vh] p-2 bg-gray-100 dark:bg-gray-800"
+					class="min-h-[90svh] p-2 bg-gray-100 dark:bg-gray-800"
 				>
 					<div class="space-y-3">
 						<USkeleton v-for="n in 3" :key="n" class="h-24 w-full" />
@@ -134,13 +114,6 @@ const { user } = useDirectusAuth();
 const { selectedOrg, hasMultipleOrgs, organizationOptions, setOrganization, clearOrganization, getOrganizationFilter } =
 	useOrganization();
 
-const props = defineProps({
-	showCreate: {
-		type: Boolean,
-		default: true,
-	},
-});
-
 const columns = [
 	{ id: 'Pending', name: 'Pending', color: 'gray' },
 	{ id: 'Scheduled', name: 'Scheduled', color: 'black' },
@@ -162,18 +135,6 @@ const localProjects = ref(
 		return acc;
 	}, {}),
 );
-
-// Organization options
-const orgOptions = computed(() => {
-	const userOrgs = user.value?.organizations || [];
-	return [
-		{ id: null, name: 'All Organizations' },
-		...userOrgs.map((org) => ({
-			id: org.organizations_id.id,
-			name: org.organizations_id.name,
-		})),
-	];
-});
 
 // Fetch services
 const fetchServices = async () => {
@@ -213,7 +174,10 @@ const fields = [
 	'assigned_to.directus_users_id.avatar',
 ];
 
+const filterRef = computed(() => getFilter());
+
 const getFilter = () => {
+	console.log('Getting filter');
 	const filter = {
 		_and: [],
 	};
@@ -241,8 +205,23 @@ const getFilter = () => {
 			},
 		});
 	}
+	// Remove _and if empty
+	if (filter._and.length === 0) {
+		delete filter._and;
+	}
 
-	return filter._and.length ? filter : {};
+	// Debug final filter
+	console.log('Final Filter:', JSON.stringify(filter, null, 2));
+
+	// Debug final query
+	const query = {
+		fields,
+		filter,
+		sort: '-date_updated',
+	};
+	console.log('Final Query:', JSON.stringify(query, null, 2));
+
+	return filter;
 };
 
 const {
@@ -251,7 +230,7 @@ const {
 	isConnected,
 	lastUpdated,
 	refresh,
-} = useRealtimeSubscription('projects', fields, getFilter(), ['sort', '-date_updated']);
+} = useRealtimeSubscription('projects', fields, filterRef.value, '-date_updated');
 
 watch([() => projects.value, selectedOrg, selectedService, filterByAssignedTo], ([newProjects]) => {
 	if (!newProjects) return;

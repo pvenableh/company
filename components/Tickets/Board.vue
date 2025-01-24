@@ -113,6 +113,8 @@ const fields = [
 	'tasks.status',
 ];
 
+const filterRef = computed(() => getFilter());
+
 const getFilter = () => {
 	const filter = {
 		_and: [],
@@ -225,7 +227,7 @@ const {
 	error,
 	lastUpdated,
 	refresh,
-} = useRealtimeSubscription('tickets', fields, getFilter(), '-date_updated');
+} = useRealtimeSubscription('tickets', fields, filterRef.value, '-date_updated');
 
 watch(
 	() => tickets.value,
@@ -468,15 +470,17 @@ const handleTicketCreated = () => {
 };
 </script>
 <template>
-	<div class="w-full mx-auto tickets-board">
+	<div class="w-full mx-auto relative tickets-board">
 		<!-- Connection Status -->
-		<div v-if="!isConnected && !isLoading" class="mb-4 tickets-board__connection">
-			<UAlert title="Connection Lost" description="Attempting to reconnect..." color="yellow">
-				<template #footer>
-					<UButton size="sm" color="yellow" @click="refresh">Retry Connection</UButton>
-				</template>
-			</UAlert>
-		</div>
+		<transition name="fade">
+			<div v-if="!isConnected && !isLoading" class="mb-4 absolute right-0 top-0 tickets-board__connection">
+				<UAlert title="Connection Lost" description="Attempting to reconnect..." color="yellow">
+					<template #footer>
+						<UButton size="sm" color="yellow" @click="refresh">Retry Connection</UButton>
+					</template>
+				</UAlert>
+			</div>
+		</transition>
 
 		<div
 			class="w-full flex flex-col md:flex-row items-end justify-between mb-4 xl:mb-8 xl:mt-2 px-4 gap-4 pt-4 tickets-board__filters"
@@ -624,7 +628,10 @@ const handleTicketCreated = () => {
 				</div>
 
 				<!-- Loading State -->
-				<div v-if="isLoading && !localTickets[column.id]?.length" class="min-h-[50vh] p-2 bg-gray-100 dark:bg-gray-800">
+				<div
+					v-if="isLoading && !localTickets[column.id]?.length"
+					class="min-h-[90svh] p-2 bg-gray-100 dark:bg-gray-800"
+				>
 					<div class="space-y-3">
 						<USkeleton v-for="n in 5" :key="n" class="h-24 mb-4 w-full" />
 					</div>

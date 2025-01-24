@@ -40,7 +40,7 @@
 							:loading="isLoading"
 						/>
 					</UFormGroup>
-					<UFormGroup v-if="hasMultipleOrgs" label="Organization">
+					<!-- <UFormGroup v-if="hasMultipleOrgs" label="Organization">
 						<USelectMenu
 							searchable
 							v-model="form.organization"
@@ -49,9 +49,24 @@
 							value-attribute="id"
 							placeholder="Select Organization"
 							class="relative"
-							@update:modelValue="handleOrgChange"
-						/>
-					</UFormGroup>
+						>
+						
+							<template #label>
+								<div class="flex items-center gap-2">
+									<span class="truncate">{{ form.organization?.name }}</span>
+								</div>
+							</template>
+
+						
+							<template #option="{ option }">
+								<div class="flex items-center gap-2 py-1">
+									<div class="flex flex-col">
+										<span class="text-[10px] leading-3">{{ option.name }}</span>
+									</div>
+								</div>
+							</template>
+						</USelectMenu>
+					</UFormGroup> -->
 
 					<UFormGroup v-if="form.organization" label="Project">
 						<USelectMenu
@@ -189,6 +204,10 @@
 						:editor-props="{
 							content: form.description,
 						}"
+						:context="{
+							collection: 'tickets',
+							itemId: element.id,
+						}"
 					/>
 				</UFormGroup>
 
@@ -306,6 +325,7 @@ const calendarAttrs = [
 		dates: new Date(),
 	},
 ];
+const { hasMultipleOrgs, orgOptions, selectedOrg } = useOrganization();
 
 watch(
 	() => props.element?.status,

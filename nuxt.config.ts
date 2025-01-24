@@ -32,7 +32,7 @@ export default defineNuxtConfig({
 			directusUrl: process.env.DIRECTUS_URL,
 			assetsUrl: process.env.DIRECTUS_ASSETS_URL || 'https://admin.huestudios.company/assets/',
 			websocketUrl: process.env.DIRECTUS_WEBSOCKET_URL || 'wss://admin.huestudios.company/websocket',
-			staticToken: process.env.DIRECTUS_SERVER_TOKEN || 'o46aPhk-Bc_DMYbgL3mH4nA3yOYfQ9N8',
+			staticToken: process.env.DIRECTUS_SERVER_TOKEN || 'oJHqE7kSlk6D00ix93e2z6PwUYixkjo2S',
 			siteUrl: process.env.NODE_ENV === 'production' ? 'https://huestudios.company' : 'http://localhost:3000',
 			adminUrl: process.env.DIRECTUS_URL || 'https://admin.huestudios.company',
 		},

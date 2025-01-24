@@ -1,11 +1,12 @@
 export default function useFilteredUsers() {
 	const { readUsers } = useDirectusUsers();
 	const { user: currentUser } = useDirectusAuth();
+	const { selectedOrg, getOrganizationFilter } = useOrganization(); // Import selectedOrg and getOrganizationFilter
 
 	const filteredUsers = ref([]);
 	const loading = ref(false);
 
-	const fetchFilteredUsers = async (organizationId = null) => {
+	const fetchFilteredUsers = async () => {
 		try {
 			loading.value = true;
 
@@ -16,45 +17,32 @@ export default function useFilteredUsers() {
 				return;
 			}
 
-			let orgFilter;
-
-			if (organizationId) {
-				orgFilter = {
-					organizations: {
-						organizations_id: {
-							id: {
-								_eq: organizationId,
-							},
-						},
-					},
-				};
-			} else {
-				const currentOrgIds = currentUser.value.organizations.map((org) => org.organizations_id.id);
-				const allOrgIds = [...currentOrgIds, '423f5e7e-e14c-4348-9fea-89ba5c6b9d96'];
-
-				orgFilter = {
-					organizations: {
-						organizations_id: {
-							id: {
-								_in: allOrgIds,
-							},
-						},
-					},
-				};
-			}
+			// Use getOrganizationFilter to filter users by the selected organization
+			const orgFilter = getOrganizationFilter();
+			const currentOrgIds = currentUser.value.organizations.map((org) => org.organizations_id.id);
+			const allOrgIds = [...currentOrgIds, '423f5e7e-e14c-4348-9fea-89ba5c6b9d96'];
 
 			const filter = {
 				_and: [
-					orgFilter,
+					{
+						organizations: {
+							organizations_id: {
+								id: {
+									_in: selectedOrg.value ? [selectedOrg.value] : allOrgIds,
+								},
+							},
+						},
+					},
+					// Uncomment if you want to exclude the current user
 					// {
-					// 	id: {
-					// 		_neq: currentUser.value.id,
-					// 	},
+					//   id: {
+					//     _neq: currentUser.value.id,
+					//   },
 					// },
 				],
+				...orgFilter, // Merge the organization-specific filter
 			};
 
-			// Update the fields to match what we're filtering on
 			const users = await readUsers({
 				fields: [
 					'id',
