@@ -318,35 +318,6 @@ const calendarAttrs = [
 	},
 ];
 
-// Fetch users
-// const fetchUsers = async () => {
-// 	try {
-// 		const users = await readUsers({
-// 			fields: ['id', 'first_name', 'last_name', 'email', 'avatar'],
-// 		});
-
-// 		userOptions.value = users.map((user) => ({
-// 			id: user.id,
-// 			label: `${user.first_name} ${user.last_name}`,
-// 			email: user.email,
-// 			avatar: user.avatar,
-// 			first_name: user.first_name,
-// 			last_name: user.last_name,
-// 		}));
-
-// 		console.log('Fetched users:', userOptions.value);
-// 	} catch (error) {
-// 		console.error('Error fetching users:', error);
-// 		userOptions.value = [];
-// 		toast.add({
-// 			title: 'Error',
-// 			description: 'Failed to load users. Please refresh the page.',
-// 			color: 'red',
-// 		});
-// 	}
-// };
-
-// Computed for available users
 const availableUsers = computed(() => {
 	return filteredUsers.value.filter((user) => !form.value.assigned_to.includes(user.id));
 });
@@ -417,20 +388,25 @@ const handleMention = (mentionData) => {
 	mentionedUsers.value.add(mentionData.id);
 };
 
-async function notifyMentionedUsers(commentText, collection, itemId) {
-	for (const userId of mentionedUsers.value) {
+const showTitleError = ref(false);
+
+const sendTicketNotification = async (userId, type, message, ticketId) => {
+	// Skip notification if it's the current user
+	if (userId === currentUser.value?.id) return;
+
+	try {
 		await notify({
 			recipient: userId,
-			subject: 'You were mentioned in a ticket',
-			message: `${currentUser.value.first_name} ${currentUser.value.last_name} mentioned you in a ticket: ${commentText}`,
-			collection,
-			item: itemId,
+			subject: `New Ticket ${type}`,
+			message: `${message}<br/><a href='https://huestudios.company/tickets/${ticketId}'>View ticket</a>`,
+			collection: 'tickets',
+			item: ticketId,
 			sender: currentUser.value.id,
 		});
+	} catch (error) {
+		console.error(`Error sending ${type} notification:`, error);
 	}
-}
-
-const showTitleError = ref(false);
+};
 
 const createTicket = async () => {
 	try {
@@ -448,8 +424,6 @@ const createTicket = async () => {
 		// Extract assigned_to from form data
 		const { assigned_to, ...ticketData } = form.value;
 
-		console.log(ticketData);
-
 		// Create ticket first
 		const ticket = await createItem('tickets', {
 			...ticketData,
@@ -457,7 +431,10 @@ const createTicket = async () => {
 			date_updated: new Date(),
 		});
 
-		// Then create user assignments if any exist
+		// Process assignments and mentions in parallel
+		const notificationPromises = [];
+
+		// Handle user assignments
 		if (assigned_to?.length) {
 			await Promise.all(
 				assigned_to.map((userId) =>
@@ -467,13 +444,36 @@ const createTicket = async () => {
 					}),
 				),
 			);
+
+			// Queue assignment notifications
+			assigned_to.forEach((userId) => {
+				notificationPromises.push(
+					sendTicketNotification(
+						userId,
+						'Assignment',
+						`You have been assigned to a new ticket: ${form.value.title}`,
+						ticket.id,
+					),
+				);
+			});
 		}
 
-		// Notify mentioned users
+		// Handle mentions if any
 		if (mentionedUsers.value.size > 0) {
-			const result = await notifyMentionedUsers(form.value.title, 'tickets', ticket.id);
-			console.log(result);
+			mentionedUsers.value.forEach((userId) => {
+				notificationPromises.push(
+					sendTicketNotification(
+						userId,
+						'Mention',
+						`${currentUser.value.first_name} ${currentUser.value.last_name} mentioned you in a new ticket: ${form.value.title}`,
+						ticket.id,
+					),
+				);
+			});
 		}
+
+		// Send all notifications in parallel
+		await Promise.all(notificationPromises);
 
 		toast.add({
 			title: 'Success',

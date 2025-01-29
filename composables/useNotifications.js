@@ -52,7 +52,10 @@ export function useNotifications() {
 
 	const unreadCount = computed(() => data.value?.length || 0);
 
+	const loadingNotifications = ref(new Set());
+
 	const markAsRead = async (notificationId) => {
+		loadingNotifications.value.add(notificationId);
 		try {
 			await updateNotification(notificationId, {
 				status: 'archived',
@@ -62,6 +65,8 @@ export function useNotifications() {
 		} catch (error) {
 			console.error('Error marking notification as read:', error);
 			throw error;
+		} finally {
+			loadingNotifications.value.delete(notificationId);
 		}
 	};
 

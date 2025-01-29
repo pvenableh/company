@@ -3,7 +3,7 @@
 		<!-- Comments Toggle Button -->
 		<div class="w-full flex items-center justify-between gap-2 text-sm relative">
 			<h4
-				@click="showComments = !showComments"
+				@click="isCommentsVisible = !isCommentsVisible"
 				class="cursor-pointer uppercase block font-medium text-gray-700 dark:text-gray-200 tracking-wider"
 			>
 				<transition name="fade" mode="out-in">
@@ -11,10 +11,10 @@
 					<span v-else>{{ commentsCount }}</span>
 				</transition>
 				{{ commentsCount === 1 ? 'Comment' : 'Comments' }}
-				<UIcon :name="showComments ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'" />
+				<UIcon :name="isCommentsVisible ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'" />
 			</h4>
 			<USelect
-				v-if="showComments"
+				v-if="isCommentsVisible"
 				v-model="sortOrder"
 				:options="[
 					{ label: 'NEWEST FIRST', value: 'newest' },
@@ -47,7 +47,7 @@
 			leave-from-class="transform scale-100 opacity-100"
 			leave-to-class="transform scale-95 opacity-0"
 		>
-			<div v-if="showComments" class="mt-4 space-y-4">
+			<div v-if="isCommentsVisible" class="mt-4 space-y-4">
 				<!-- Main Comment Input -->
 				<CommentsComment
 					v-if="user"
@@ -91,10 +91,10 @@ const props = defineProps({
 		type: String,
 		required: true,
 	},
-	showComments: {
-		type: Boolean,
-		default: false,
-	},
+	// showComments: {
+	// 	type: Boolean,
+	// 	default: false,
+	// },
 	organizationId: {
 		type: [String, Number],
 		default: null,
@@ -164,6 +164,8 @@ watch(
 	},
 	{ deep: true },
 );
+
+const isCommentsVisible = ref(false);
 
 const comments = computed(() => {
 	if (!rawComments.value) return [];

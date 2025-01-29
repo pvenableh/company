@@ -14,7 +14,7 @@
 					<p v-if="element?.organization" class="text-[9px] text-gray-500 uppercase">
 						<span class="opacity-50 mr-1">Client:</span>
 						{{ element?.organization.name }}
-						<span v-if="element?.project" class="pl-4 text-xs">
+						<span v-if="element?.project" class="pl-4">
 							<span class="opacity-50 mr-1">Project:</span>
 							{{ element?.project.title }}
 						</span>
@@ -491,28 +491,29 @@ const handleMention = (mentionData) => {
 	mentionedUsers.value.add(mentionData.id);
 };
 
-async function notifyMentionedUsers(commentText, collection, itemId) {
-	for (const userId of mentionedUsers.value) {
+const sendTicketNotification = async (userId, type, message) => {
+	// Skip notification if it's the current user
+	if (userId === currentUser.value?.id) return;
+
+	try {
 		await notify({
 			recipient: userId,
-			subject: 'You were mentioned in a ticket',
-			message: `${currentUser.value.first_name} ${currentUser.value.last_name} mentioned you in a ticket: ${commentText}`,
-			collection,
-			item: itemId,
+			subject: `Ticket ${type}`,
+			message: `${message}<br/><a href='https://huestudios.company/tickets/${props.element.id}'>View ticket</a>`,
+			collection: 'tickets',
+			item: props.element.id,
 			sender: currentUser.value.id,
 		});
+	} catch (error) {
+		console.error(`Error sending ${type} notification:`, error);
 	}
-}
+};
 // Update ticket handler
+// Update ticket handler with consolidated notifications
 const updateTicket = async () => {
 	try {
 		isLoading.value = true;
 		const { assigned_to, ...ticketData } = form.value;
-
-		if (mentionedUsers.value.size > 0) {
-			const result = await notifyMentionedUsers(form.value.title, 'tickets', props.element?.id);
-			console.log(result);
-		}
 
 		// Update main ticket data
 		await updateItem('tickets', props.element.id, {
@@ -527,14 +528,39 @@ const updateTicket = async () => {
 		// Find assignments to add
 		const assignmentsToAdd = newAssignments.filter((id) => !currentAssignments.includes(id));
 
-		// Add new assignments and notify users
+		// Process new assignments and mentions in a single batch
+		const notificationPromises = [];
+
+		// Handle new assignments
 		for (const userId of assignmentsToAdd) {
+			// Create the assignment record
 			await createItem('tickets_directus_users', {
 				tickets_id: props.element.id,
 				directus_users_id: userId,
 			});
-			await notifyUserAssignment(userId);
+
+			// Queue assignment notification
+			notificationPromises.push(
+				sendTicketNotification(userId, 'Assignment', `You have been assigned to the ticket: ${props.element.title}`),
+			);
 		}
+
+		// Handle mentions (if any)
+		if (mentionedUsers.value.size > 0) {
+			for (const userId of mentionedUsers.value) {
+				notificationPromises.push(
+					sendTicketNotification(
+						userId,
+						'Mention',
+						`${currentUser.value.first_name} ${currentUser.value.last_name} mentioned you in the ticket: ${props.element.title}`,
+					),
+				);
+			}
+		}
+
+		// Send all notifications in parallel
+		await Promise.all(notificationPromises);
+
 		resetFormState();
 		toast.add({
 			title: 'Success',
@@ -600,24 +626,6 @@ const deleteTicket = async () => {
 	}
 };
 
-const notifyUserAssignment = async (userId) => {
-	try {
-		const assignedUser = getUserById(userId);
-		if (!assignedUser || assignedUser.id === currentUser.value?.id) return;
-
-		await notify({
-			recipient: userId,
-			subject: 'New ticket assignment',
-			message: `You have been assigned to the ticket: ${props.element.title}<br/><a href='https://huestudios.company/tickets/${props.element.id}'>View ticket</a>`,
-			collection: 'tickets',
-			item: props.element.id,
-			sender: currentUser.value.id,
-		});
-	} catch (error) {
-		console.error('Error sending assignment notification:', error);
-	}
-};
-
 // User selection handlers
 
 const handleUserSelect = (user) => {
@@ -629,31 +637,19 @@ const handleUserSelect = (user) => {
 };
 
 const removeUser = async (userId) => {
-	console.log('Removing user:', userId);
 	try {
 		// Update local state
 		form.value.assigned_to = form.value.assigned_to.filter((id) => id !== userId);
 
 		// Find the junction record ID for this user assignment
 		const assignmentRecord = props.element.assigned_to.find((assignment) => assignment.directus_users_id.id === userId);
-		console.log('Assignment record:', assignmentRecord);
 
 		if (assignmentRecord) {
-			console.log('Deleting assignment:', assignmentRecord.id);
 			// Delete the assignment
 			await deleteItem('tickets_directus_users', assignmentRecord.id);
 
-			// Send notification if it's not the current user
-			if (userId !== currentUser.value?.id) {
-				await notify({
-					recipient: userId,
-					subject: 'Removed from ticket',
-					message: `You have been removed from the ticket: ${props.element.title}`,
-					collection: 'tickets',
-					item: props.element.id,
-					sender: currentUser.value.id,
-				});
-			}
+			// Send removal notification
+			await sendTicketNotification(userId, 'Removal', `You have been removed from the ticket: ${props.element.title}`);
 
 			toast.add({
 				title: 'Success',

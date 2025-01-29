@@ -7,13 +7,12 @@
 			variant="outline"
 			class="relative inline-block p-0 h-8 w-8 mr-2"
 		>
-			<UBadge v-if="unreadCount > 0" :label="unreadCount" color="blue" class="absolute -top-2 -right-2" size="xs" />
+			<UBadge v-if="unreadCount > 0" :label="unreadCount" color="red" class="absolute -top-2 -right-2" size="xs" />
 		</UButton>
 
 		<template #panel>
 			<div class="w-96 max-h-[70vh] overflow-y-auto p-4">
 				<div v-if="notifications?.length" class="space-y-4">
-					{{ notifications }}
 					<div
 						v-for="notification in notifications"
 						:key="notification.id"
@@ -35,10 +34,22 @@
 								<span class="uppercase font-bold">
 									{{ getTimeAgo(new Date(notification.timestamp).toLocaleString()) }}
 								</span>
-								<UButton size="xs" variant="ghost" @click="markAsRead(notification.id)">Mark as read</UButton>
+								<UButton
+									size="xs"
+									variant="ghost"
+									:loading="loadingNotifications.has(notification.id)"
+									:disabled="loadingNotifications.has(notification.id)"
+									@click="handleMarkAsRead(notification.id)"
+								>
+									Mark as read
+								</UButton>
 							</div>
 						</div>
 					</div>
+				</div>
+				<div v-else-if="isLoading" class="text-center py-8">
+					<UIcon name="i-heroicons-arrow-path" class="animate-spin h-5 w-5 mx-auto mb-2" />
+					<p class="text-gray-500">Loading notifications...</p>
 				</div>
 
 				<div v-else class="text-center py-8 text-gray-500">No new notifications</div>
@@ -51,10 +62,42 @@
 const { user } = useDirectusAuth();
 const config = useRuntimeConfig();
 const { notifications, unreadCount, markAsRead } = useNotifications();
+const loadingNotifications = ref(new Set());
+const isLoading = ref(false);
 console.log('notifications');
 console.log(notifications);
+
+const handleMarkAsRead = async (notificationId) => {
+	if (loadingNotifications.value.has(notificationId)) return;
+
+	loadingNotifications.value.add(notificationId);
+
+	try {
+		await markAsRead(notificationId);
+	} catch (error) {
+		// Error is already logged in the markAsRead function
+		useToast().add({
+			id: 'notification-error',
+			title: 'Error',
+			description: 'Failed to mark notification as read',
+			color: 'red',
+		});
+	} finally {
+		loadingNotifications.value.delete(notificationId);
+	}
+};
 
 const formatDate = (date) => {
 	return new Date(date).toLocaleString();
 };
+
+// If your notifications are loaded asynchronously,
+// you might want to add a watch effect:
+watch(
+	() => notifications.value,
+	(newVal) => {
+		isLoading.value = !newVal;
+	},
+	{ immediate: true },
+);
 </script>
