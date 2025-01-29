@@ -65,7 +65,7 @@ export function useNotifications() {
 		}
 	};
 
-	const notify = async ({ recipient, subject, message, collection, item }) => {
+	const notify = async ({ recipient, subject, message, collection, item, sender }) => {
 		if (recipient === user.value?.id) {
 			return;
 		}
@@ -76,6 +76,7 @@ export function useNotifications() {
 				message,
 				collection,
 				item,
+				sender,
 				status: 'inbox',
 			});
 			// Refresh the subscription after creating new notification

@@ -216,6 +216,7 @@ const handleUserMention = async (mentionedUser) => {
 
 		const notice = await notify({
 			recipient: mentionedUser.id,
+			sender: currentUser.value?.id,
 			subject: 'You were mentioned',
 			message: `${currentUser.value?.first_name} ${currentUser.value?.last_name} mentioned you in a ${contextInfo.collection.slice(0, -1)}. <br><a href='${currentUrl}'>View ${contextInfo.collection.slice(0, -1)}</a>`,
 			...contextInfo,

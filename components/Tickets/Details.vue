@@ -608,7 +608,7 @@ const notifyUserAssignment = async (userId) => {
 		await notify({
 			recipient: userId,
 			subject: 'New ticket assignment',
-			message: `You have been assigned to the ticket: ${props.element.title}`,
+			message: `You have been assigned to the ticket: ${props.element.title}<br/><a href='https://huestudios.company/tickets/${props.element.id}'>View ticket</a>`,
 			collection: 'tickets',
 			item: props.element.id,
 			sender: currentUser.value.id,
@@ -683,7 +683,8 @@ const getUserFullName = (user) => {
 };
 
 const getAvatarUrl = (user) => {
-	if (!user?.avatar) return null;
+	if (!user?.avatar)
+		return `https://ui-avatars.com/api/?name=${user?.first_name}%20${user?.last_name}&background=eeeeee&color=00bfff`;
 	return `${useRuntimeConfig().public.directusUrl}/assets/${user.avatar}?key=small`;
 };
 

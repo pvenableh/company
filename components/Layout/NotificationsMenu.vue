@@ -13,6 +13,7 @@
 		<template #panel>
 			<div class="w-96 max-h-[70vh] overflow-y-auto p-4">
 				<div v-if="notifications?.length" class="space-y-4">
+					{{ notifications }}
 					<div
 						v-for="notification in notifications"
 						:key="notification.id"
