@@ -149,7 +149,7 @@ const setupStripeElement = async (clientSecret) => {
 					},
 					'.Input': {
 						letterSpacing: '0.1em',
-						textTransform: 'uppercase',
+						// textTransform: 'uppercase',
 					},
 				},
 			},
