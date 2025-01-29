@@ -1,14 +1,19 @@
 <template>
 	<UPopover mode="click" :disabled="!user">
-		<UButton
-			icon="i-heroicons-bell"
-			color="ghost"
-			:ui="{ rounded: 'rounded-full' }"
-			variant="outline"
-			class="relative inline-block p-0 h-8 w-8 mr-2"
-		>
-			<UBadge v-if="unreadCount > 0" :label="unreadCount" color="red" class="absolute -top-2 -right-2" size="xs" />
-		</UButton>
+		<div class="flex items-center justify-center relative rounded-full h-8 w-8 bg-white dark:bg-gray-800 shadow">
+			<UIcon
+				v-if="unreadCount"
+				name="i-heroicons-bell-alert"
+				class="w-4 h-4 animate-ping absolute text--[var(--cyan)]"
+			/>
+			<UIcon :name="unreadCount ? 'i-heroicons-bell-alert' : 'i-heroicons-bell'" class="w-4 h-4" />
+			<div
+				v-if="unreadCount > 0"
+				class="absolute -top-1 -right-1 text-[9px] leading-3 rounded-full h-4 w-4 bg-[var(--cyan)] flex items-center justify-center text-white font-bold p-1"
+			>
+				{{ unreadCount }}
+			</div>
+		</div>
 
 		<template #panel>
 			<div class="w-96 max-h-[70vh] overflow-y-auto p-4">
