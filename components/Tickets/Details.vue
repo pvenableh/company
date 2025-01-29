@@ -499,7 +499,7 @@ const sendTicketNotification = async (userId, type, message) => {
 		await notify({
 			recipient: userId,
 			subject: `Ticket ${type}`,
-			message: `${message}<br/><a href='https://huestudios.company/tickets/${props.element.id}'>View ticket</a>`,
+			message: `${message}`,
 			collection: 'tickets',
 			item: props.element.id,
 			sender: currentUser.value.id,
@@ -541,7 +541,11 @@ const updateTicket = async () => {
 
 			// Queue assignment notification
 			notificationPromises.push(
-				sendTicketNotification(userId, 'Assignment', `You have been assigned to the ticket: ${props.element.title}`),
+				sendTicketNotification(
+					userId,
+					'Assignment',
+					`You have been assigned to the ticket:  <br/><a class="text-[var(--cyan)] font-bold" href='https://huestudios.company/tickets/${props.element.id}'>${props.element.title}</a>`,
+				),
 			);
 		}
 
@@ -552,7 +556,7 @@ const updateTicket = async () => {
 					sendTicketNotification(
 						userId,
 						'Mention',
-						`${currentUser.value.first_name} ${currentUser.value.last_name} mentioned you in the ticket: ${props.element.title}`,
+						`${currentUser.value.first_name} ${currentUser.value.last_name} mentioned you in the ticket: <br/><a class="text-[var(--cyan)] font-bold" href='https://huestudios.company/tickets/${props.element.id}'>${props.element.title}</a>`,
 					),
 				);
 			}
@@ -649,7 +653,11 @@ const removeUser = async (userId) => {
 			await deleteItem('tickets_directus_users', assignmentRecord.id);
 
 			// Send removal notification
-			await sendTicketNotification(userId, 'Removal', `You have been removed from the ticket: ${props.element.title}`);
+			await sendTicketNotification(
+				userId,
+				'Removal',
+				`You have been removed from the ticket:  <br/><a style="text-[var(--cyan)] font-bold" href='https://huestudios.company/tickets/${props.element.id}'>${props.element.title}</a>`,
+			);
 
 			toast.add({
 				title: 'Success',
