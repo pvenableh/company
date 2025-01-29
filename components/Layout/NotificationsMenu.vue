@@ -33,9 +33,9 @@
 						/>
 
 						<div class="flex-1 min-w-0">
-							<p class="font-medium text-sm">{{ notification.subject }}</p>
-							<div class="text-sm text-gray-500" v-html="notification.message" />
-							<div class="flex items-center gap-2 mt-2 text-xs text-gray-400">
+							<p class="font-medium text-xs">{{ notification.subject }}</p>
+							<div class="text-xs text-gray-500" v-html="notification.message" />
+							<div class="flex items-center gap-2 mt-2 text-[9px] font-bold text-gray-400">
 								<span class="uppercase font-bold">
 									{{ getTimeAgo(new Date(notification.timestamp).toLocaleString()) }}
 								</span>
@@ -44,6 +44,7 @@
 									variant="ghost"
 									:loading="loadingNotifications.has(notification.id)"
 									:disabled="loadingNotifications.has(notification.id)"
+									class="text-[9px] font-bold"
 									@click="handleMarkAsRead(notification.id)"
 								>
 									Mark as read
