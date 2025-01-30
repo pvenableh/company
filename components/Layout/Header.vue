@@ -44,10 +44,11 @@ onMounted(() => {
 
 			<!-- <span class="uppercase text-4xl font-bold leading-7 px-1 hidden">:</span>
 			<span class="uppercase tracking-wider text-4xl font-bold leading-6 hidden">Company</span> -->
+			<client-only>
+				<LayoutOrganizationSelect v-if="user" :user="user" />
+			</client-only>
 		</nuxt-link>
-		<client-only>
-			<LayoutOrganizationSelect v-if="user" :user="user" />
-		</client-only>
+
 		<div class="absolute flex items-center justify-center flex-row right-[10px] sm:pr-1 md:px-6">
 			<nuxt-link to="/account" class="flex items-center justify-self-center">
 				<Avatar v-if="user" :user="user" text="12" class="mr-2" />
