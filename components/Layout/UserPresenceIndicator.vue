@@ -73,7 +73,7 @@ onBeforeUnmount(() => {
 			@mouseleave="handleMouseLeave"
 		>
 			<div
-				class="bg-gray-50/90 dark:bg-gray-800/90 backdrop-blur-sm border border-[var(--cyan)] px-3 py-2 z-10"
+				class="bg-gray-50/90 dark:bg-gray-800/90 backdrop-blur-sm border border-[var(--cyan)] rounded-md shadow px-3 py-2 z-10"
 				:class="{ 'opacity-30 hover:opacity-100': !isVisible }"
 			>
 				<div class="flex items-center gap-3 flex-col">
