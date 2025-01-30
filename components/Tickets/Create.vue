@@ -206,7 +206,7 @@ const { user: currentUser } = useDirectusAuth();
 const emit = defineEmits(['ticketCreated']);
 const isExpanded = ref(false);
 const isLoading = ref(false);
-const userOptions = ref([]);
+// const userOptions = ref([]);
 const selectedUser = ref(null);
 const { notify } = useNotifications();
 
@@ -307,7 +307,6 @@ const priorities = [
 	{ value: 'low', label: 'Low' },
 	{ value: 'medium', label: 'Medium' },
 	{ value: 'high', label: 'High' },
-	{ value: 'urgent', label: 'Urgent' },
 ];
 
 const calendarAttrs = [
@@ -563,6 +562,10 @@ onMounted(() => {
 	if (defaultOrg.value) {
 		Promise.all([fetchProjects(defaultOrg.value), fetchFilteredUsers(defaultOrg.value)]);
 	}
+	nextTick(() => {
+		// Ensure that form.due_date is initialized before calling updateDateTime
+		updateDateTime();
+	});
 	document.addEventListener('keydown', (e) => {
 		if (e.key === 'Escape' && isExpanded.value) {
 			closeForm();

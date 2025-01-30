@@ -25,7 +25,7 @@
 						{{ element?.user_created.first_name }} {{ element?.user_created.last_name }}
 					</p>
 				</div>
-				<div class="relative w-1/2">
+				<div class="relative w-1/3">
 					<UFormGroup label="Priority:">
 						<URange v-model="priorityValue" :max="rangeMax" :step="1" :color="color" />
 						<!-- <p class="uppercase text-[10px]">{{ priorities.find((p) => p.value === form.priority).label }}</p> -->
@@ -33,7 +33,7 @@
 							<p class="uppercase text-[12px] inline-block tracking-wide font-bold" :style="{ color: color }">
 								{{ priorities[priorityValue].label }}
 							</p>
-							<span class="inline-block -mb-4 ml-1">{{ priorities[priorityValue].icon }}</span>
+							<!-- <span class="inline-block -mb-4 ml-1">{{ priorities[priorityValue].icon }}</span> -->
 						</div>
 					</UFormGroup>
 				</div>
@@ -419,7 +419,7 @@ const fetchProjects = async (orgId) => {
 			},
 		});
 		console.log(projects);
-		projectOptions.value = projects;
+		projectOptions.value = [{ id: null, title: 'None' }, ...projects];
 	} catch (error) {
 		console.error('Error fetching projects:', error);
 		toast.add({
