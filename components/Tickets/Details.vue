@@ -1,5 +1,6 @@
 <template>
 	<div class="w-full mx-auto">
+		<LayoutUserPresenceIndicator v-if="currentUser" />
 		<TicketsStatusTimeline :currentStatus="form.status" class="mb-4" />
 		<div class="flex items-start justify-between flex-col lg:flex-row flex-wrap">
 			<!-- Form -->
@@ -178,6 +179,7 @@
 							class="flex items-center gap-2"
 						>
 							<UAvatar
+								v-if="userId"
 								:src="getAvatarUrl(getUserById(userId))"
 								:alt="getUserFullName(getUserById(userId))"
 								size="2xs"
@@ -204,6 +206,7 @@
 						:editor-props="{
 							content: form.description,
 						}"
+						:organization-id="element.organization.id"
 						:context="{
 							collection: 'tickets',
 							itemId: element.id,
@@ -340,6 +343,8 @@ const trackChanges = () => {
 		title: form.value.title,
 		description: form.value.description,
 		status: form.value.status,
+		organization: form.value.organization,
+		project: form.value.project,
 		priority: form.value.priority,
 		category: form.value.category,
 		assigned_to: [...form.value.assigned_to],
@@ -361,6 +366,8 @@ const form = ref({
 	status: props.element.status,
 	priority: props.element.priority,
 	category: props.element.category,
+	project: props.element.project,
+	organization: props.element.organization,
 	assigned_to: props.element.assigned_to?.map((assignment) => assignment.directus_users_id.id) || [],
 	due_date: props.element.due_date,
 });
@@ -378,6 +385,8 @@ watch(
 		description: form.value.description,
 		status: form.value.status,
 		priority: form.value.priority,
+		project: form.value.project,
+		organization: form.value.organization,
 		category: form.value.category,
 		assigned_to: [...form.value.assigned_to],
 		due_date: form.value.due_date,
@@ -394,12 +403,49 @@ const resetFormState = () => {
 		description: form.value.description,
 		status: form.value.status,
 		priority: form.value.priority,
+		project: form.value.project,
+		organization: form.value.organization,
 		category: form.value.category,
 		assigned_to: [...form.value.assigned_to],
 		due_date: form.value.due_date,
 	};
+	projectOptions.value = [];
+	loadingProjects.value = false;
 	isDirty.value = false;
 	emit('preventClose', false);
+};
+
+const projectOptions = ref([]);
+const loadingProjects = ref(false);
+
+const fetchProjects = async (orgId) => {
+	if (props.element.organization) {
+		projectOptions.value = [];
+		form.value.project = null;
+		return;
+	}
+
+	loadingProjects.value = true;
+	try {
+		const projects = await readItems('projects', {
+			fields: ['id', 'title'],
+			filter: {
+				organization: { _eq: props.element.organization },
+			},
+		});
+		console.log(projects);
+		projectOptions.value = projects;
+	} catch (error) {
+		console.error('Error fetching projects:', error);
+		toast.add({
+			title: 'Error',
+			description: 'Failed to load projects',
+			color: 'red',
+		});
+		projectOptions.value = [];
+	} finally {
+		loadingProjects.value = false;
+	}
 };
 
 const hasDeleteAccess = computed(() => {
@@ -700,6 +746,7 @@ const isCurrentUserBadge = (userId) => {
 onMounted(() => {
 	fetchFilteredUsers(); // Fetch filtered users when the component mounts
 	resetFormState(); // Initialize form state
+	fetchProjects();
 });
 
 // Handle navigation protection

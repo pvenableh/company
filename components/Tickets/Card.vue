@@ -27,7 +27,7 @@
 					/>
 				</h4>
 			</nuxt-link>
-			<h5 class="text-gray-800 text-[8px] mt-0 uppercase mb-2">{{ element?.organization.name }}</h5>
+			<h5 class="text-gray-800 text-[8px] mt-0 uppercase mb-2">{{ element?.organization?.name }}</h5>
 
 			<!-- Assigned Users -->
 			<div class="w-full flex flex-col items-center justify-between text-xs text-gray-500 my-4">
