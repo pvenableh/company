@@ -25,7 +25,18 @@
 						{{ element?.user_created.first_name }} {{ element?.user_created.last_name }}
 					</p>
 				</div>
-
+				<div class="relative w-1/2">
+					<UFormGroup label="Priority:">
+						<URange v-model="priorityValue" :max="rangeMax" :step="1" :color="color" />
+						<!-- <p class="uppercase text-[10px]">{{ priorities.find((p) => p.value === form.priority).label }}</p> -->
+						<div class="absolute -top-[27px] left-[80px]">
+							<p class="uppercase text-[12px] inline-block tracking-wide font-bold" :style="{ color: color }">
+								{{ priorities[priorityValue].label }}
+							</p>
+							<span class="inline-block -mb-4 ml-1">{{ priorities[priorityValue].icon }}</span>
+						</div>
+					</UFormGroup>
+				</div>
 				<UFormGroup label="Title" required>
 					<UInput v-model="form.title" placeholder="Enter ticket title" :loading="isLoading" />
 				</UFormGroup>
@@ -41,34 +52,6 @@
 							:loading="isLoading"
 						/>
 					</UFormGroup>
-					<!-- <UFormGroup v-if="hasMultipleOrgs" label="Organization">
-						<USelectMenu
-							searchable
-							v-model="form.organization"
-							:options="orgOptions"
-							option-attribute="name"
-							value-attribute="id"
-							placeholder="Select Organization"
-							class="relative"
-						>
-						
-							<template #label>
-								<div class="flex items-center gap-2">
-									<span class="truncate">{{ form.organization?.name }}</span>
-								</div>
-							</template>
-
-						
-							<template #option="{ option }">
-								<div class="flex items-center gap-2 py-1">
-									<div class="flex flex-col">
-										<span class="text-[10px] leading-3">{{ option.name }}</span>
-									</div>
-								</div>
-							</template>
-						</USelectMenu>
-					</UFormGroup> -->
-
 					<UFormGroup v-if="form.organization" label="Project">
 						<USelectMenu
 							searchable
@@ -81,13 +64,13 @@
 							class="relative"
 						/>
 					</UFormGroup>
-
-					<UFormGroup label="Priority">
-						<USelect v-model="form.priority" :options="priorities" :loading="isLoading" />
-					</UFormGroup>
 				</div>
 
 				<div class="grid grid-cols-2 gap-4">
+					<!-- <UFormGroup label="Priority">
+						<USelect v-model="form.priority" :options="priorities" :loading="isLoading" />
+					</UFormGroup> -->
+
 					<UFormGroup label="Due Date">
 						<UPopover>
 							<UInput
@@ -102,6 +85,7 @@
 							</template>
 						</UPopover>
 					</UFormGroup>
+
 					<UFormGroup label="Due Time">
 						<USelect
 							v-model="selectedTime"
@@ -140,36 +124,6 @@
 							</template>
 						</USelectMenu>
 					</UFormGroup>
-
-					<!-- <UFormGroup label="Assign To">
-						
-						<USelectMenu
-							v-model="selectedUser"
-							:options="availableUsers"
-							placeholder="Select users..."
-							searchable
-							class="w-full"
-							:loading="isLoading"
-							@update:modelValue="handleUserSelect"
-						>
-							<template #label>
-								<div class="flex items-center gap-2">
-									<UIcon name="i-heroicons-user-plus" class="w-4 h-4 text-gray-500" />
-									<span class="text-gray-500">{{ selectedUser ? selectedUser.label : 'Add user...' }}</span>
-								</div>
-							</template>
-
-							<template #option="{ option: user }">
-								<div class="flex items-center gap-2 py-1">
-									<UAvatar :src="getAvatarUrl(user)" :alt="user.label" size="sm" />
-									<div class="flex flex-col">
-										<span class="font-medium">{{ user.label }}</span>
-										<span class="text-xs text-gray-500">{{ user.email }}</span>
-									</div>
-								</div>
-							</template>
-						</USelectMenu>
-					</UFormGroup> -->
 					<div v-if="form.assigned_to.length" class="flex flex-wrap flex-row gap-2 mt-6">
 						<UBadge
 							v-for="userId in form.assigned_to"
@@ -310,7 +264,7 @@ const handleShare = (method) => {
 const config = useRuntimeConfig();
 const adminRole = config.public.adminRole;
 const emit = defineEmits(['close', 'deleted', 'preventClose']);
-const { createItem, deleteItem, updateItem } = useDirectusItems();
+const { createItem, deleteItem, updateItem, readItems } = useDirectusItems();
 const { notify } = useNotifications();
 const { user: currentUser } = useDirectusAuth();
 const showDeleteModal = ref(false);
@@ -367,17 +321,47 @@ const form = ref({
 	priority: props.element.priority,
 	category: props.element.category,
 	project: props.element.project,
-	organization: props.element.organization,
+	organization: props.element.organization.id,
 	assigned_to: props.element.assigned_to?.map((assignment) => assignment.directus_users_id.id) || [],
 	due_date: props.element.due_date,
 });
 
 const priorities = [
-	{ value: 'low', label: 'Low' },
-	{ value: 'medium', label: 'Medium' },
-	{ value: 'high', label: 'High' },
-	{ value: 'urgent', label: 'Urgent' },
+	{ value: 'low', label: 'Low', icon: '😎👍' },
+	{ value: 'medium', label: 'Medium', icon: '👀💪' },
+	{ value: 'high', label: 'High', icon: '🙀❗️' },
 ];
+
+const priorityLevels = ['Low', 'Medium', 'High'];
+
+const priorityValue = computed({
+	get() {
+		// Find the index of the *capitalized* version in priorityLevels
+		const capitalizedPriority = priorities.find((p) => p.value === form.value.priority)?.label || 'Low'; // Default to Low if not found
+		return priorityLevels.indexOf(capitalizedPriority);
+	},
+	set(newValue) {
+		// Get the lowercase value from the priorities array
+		form.value.priority = priorities[newValue].value;
+	},
+});
+
+const color = computed(() => {
+	switch (
+		priorityLevels[priorityValue.value] // Use priorityLevels here
+	) {
+		case 'Low':
+			return 'gray';
+		case 'Medium':
+			return 'orange';
+		case 'High':
+			return 'red';
+		default:
+			return 'gray';
+	}
+});
+
+const rangeMax = priorityLevels.length - 1;
 
 watch(
 	() => ({
@@ -419,7 +403,8 @@ const projectOptions = ref([]);
 const loadingProjects = ref(false);
 
 const fetchProjects = async (orgId) => {
-	if (props.element.organization) {
+	console.log(orgId);
+	if (!orgId) {
 		projectOptions.value = [];
 		form.value.project = null;
 		return;
@@ -430,7 +415,7 @@ const fetchProjects = async (orgId) => {
 		const projects = await readItems('projects', {
 			fields: ['id', 'title'],
 			filter: {
-				organization: { _eq: props.element.organization },
+				organization: { _eq: orgId },
 			},
 		});
 		console.log(projects);
@@ -746,7 +731,10 @@ const isCurrentUserBadge = (userId) => {
 onMounted(() => {
 	fetchFilteredUsers(); // Fetch filtered users when the component mounts
 	resetFormState(); // Initialize form state
-	fetchProjects();
+	fetchProjects(props.element.organization?.id);
+	if (!form.value.priority) {
+		form.value.priority = 'Low'; // Or your default priority
+	}
 });
 
 // Handle navigation protection
