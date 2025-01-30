@@ -42,14 +42,14 @@ const props = defineProps({
 			option-attribute="name"
 			value-attribute="id"
 			:placeholder="currentOrgName"
-			class="uppercase text-xs text-gray-400 ml-2"
+			class="uppercase text-gray-400 ml-2 !pb-0"
 			@change="handleSelectChange"
 			searchable
 		>
 			<!-- Label Template -->
 			<template #label>
 				<div class="flex items-center gap-2">
-					<span class="truncate">{{ currentOrgName }}</span>
+					<span class="truncate text-[10px]">{{ currentOrgName }}</span>
 				</div>
 			</template>
 

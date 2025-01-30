@@ -97,7 +97,7 @@ onClickOutside(navDrawerRef, () => {
 			}
 
 			a.router-link-exact-active {
-				color: var(--cyan2);
+				color: var(--cyan);
 				@apply font-bold;
 			}
 		}

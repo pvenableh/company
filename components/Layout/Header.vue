@@ -41,12 +41,13 @@ onMounted(() => {
 		</div> -->
 		<nuxt-link to="/" class="flex flex-row items-end justify-center ml-2">
 			<Logo color="#ffc00" />
-			<span class="uppercase text-4xl font-bold leading-7 px-1 hidden">:</span>
-			<span class="uppercase tracking-wider text-4xl font-bold leading-6 hidden">Company</span>
-			<client-only>
-				<LayoutOrganizationSelect v-if="user" :user="user" />
-			</client-only>
+
+			<!-- <span class="uppercase text-4xl font-bold leading-7 px-1 hidden">:</span>
+			<span class="uppercase tracking-wider text-4xl font-bold leading-6 hidden">Company</span> -->
 		</nuxt-link>
+		<client-only>
+			<LayoutOrganizationSelect v-if="user" :user="user" />
+		</client-only>
 		<div class="absolute flex items-center justify-center flex-row right-[10px] sm:pr-1 md:px-6">
 			<nuxt-link to="/account" class="flex items-center justify-self-center">
 				<Avatar v-if="user" :user="user" text="12" class="mr-2" />
