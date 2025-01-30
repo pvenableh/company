@@ -1,5 +1,4 @@
 export function useOrganization() {
-	// Use a more specific name for loading state to avoid conflicts
 	const orgInitializing = useState('orgInitializing', () => false);
 	const selectedOrg = useState('selectedOrganization', () => null);
 	const organizations = useState('organizations', () => []);
@@ -33,19 +32,41 @@ export function useOrganization() {
 		}
 
 		try {
-			organizations.value = userData.organizations.reduce((validOrgs, org) => {
+			// First, gather all valid organizations with their activity counts
+			const orgsWithActivity = userData.organizations.reduce((validOrgs, org) => {
 				if (!org || typeof org !== 'object') return validOrgs;
 
 				const organizationData = org.organizations_id;
 				if (organizationData?.id && organizationData?.name) {
+					// Count tickets and projects, ensuring they're valid arrays
+					const ticketsCount = Array.isArray(organizationData.tickets) ? organizationData.tickets.length : 0;
+					const projectsCount = Array.isArray(organizationData.projects) ? organizationData.projects.length : 0;
+					const totalActivity = ticketsCount + projectsCount;
+
 					validOrgs.push({
 						id: organizationData.id,
 						name: organizationData.name,
 						logo: organizationData.logo ?? null,
+						ticketsCount,
+						projectsCount,
+						totalActivity,
 					});
 				}
 				return validOrgs;
 			}, []);
+
+			// Sort organizations by total activity (tickets + projects) in descending order
+			const sortedOrgs = orgsWithActivity.sort((a, b) => {
+				// Primary sort by total activity
+				if (b.totalActivity !== a.totalActivity) {
+					return b.totalActivity - a.totalActivity;
+				}
+				// Secondary sort by name if total activity is equal
+				return a.name.localeCompare(b.name);
+			});
+
+			// Update the organizations state with the sorted results
+			organizations.value = sortedOrgs;
 		} catch (err) {
 			console.error('Error processing organizations:', err);
 			organizations.value = [];
@@ -101,7 +122,6 @@ export function useOrganization() {
 	};
 
 	const initializeOrganizations = async () => {
-		// Skip if already initializing or initialized
 		if (orgInitializing.value || isInitialized.value) return;
 		if (!user.value) {
 			clearOrganization();
@@ -113,7 +133,7 @@ export function useOrganization() {
 
 		try {
 			organizations.value = [];
-			await nextTick(); // Ensure state is updated before proceeding
+			await nextTick();
 
 			loadUserOrganizations(user.value);
 			tryRestoreSelectedOrg();
@@ -126,7 +146,6 @@ export function useOrganization() {
 		}
 	};
 
-	// Watch for user changes
 	watch(
 		() => user.value,
 		(newUser) => {
@@ -139,7 +158,6 @@ export function useOrganization() {
 		{ immediate: true },
 	);
 
-	// Initialize if user is already available
 	if (user.value && !isInitialized.value) {
 		initializeOrganizations();
 	}
@@ -147,7 +165,7 @@ export function useOrganization() {
 	return {
 		selectedOrg: readonly(selectedOrg),
 		organizations: readonly(organizations),
-		isLoading: readonly(orgInitializing), // Keep isLoading in the return for compatibility
+		isLoading: readonly(orgInitializing),
 		error: readonly(error),
 		isInitialized: readonly(isInitialized),
 		hasMultipleOrgs,

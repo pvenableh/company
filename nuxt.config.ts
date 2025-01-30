@@ -102,7 +102,7 @@ export default defineNuxtConfig({
 			devtools: true,
 			readMeQuery: {
 				fields: [
-					'*,organizations.organizations_id.id,organizations.organizations_id.name,organizations.organizations_id.logo',
+					'*,organizations.organizations_id.id,organizations.organizations_id.name,organizations.organizations_id.logo,organizations.organizations_id.tickets,organizations.organizations_id.projects',
 				],
 				updateState: true,
 			},

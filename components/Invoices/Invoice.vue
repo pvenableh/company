@@ -61,7 +61,7 @@ const formatNumber = (value) => {
 					</div>
 					<div v-if="item.description" class="mt-2">
 						<h5 class="uppercase text-[8px] opacity-25">Description:</h5>
-						<div v-if="item.description" class="text-[9px] max-w-64" v-html="item.description"></div>
+						<div v-if="item.description" class="text-[12px] max-w-64" v-html="item.description"></div>
 					</div>
 				</div>
 				<div class="lg:ml-3 flex flex-row items-center justify-between pt-6">
