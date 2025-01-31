@@ -212,7 +212,7 @@ const formatNumber = (value) => {
 					size="xs"
 					color="primary"
 					variant="outline"
-					:to="'/invoices/preview/' + row.id"
+					:to="'/invoices/' + row.id"
 					:ui="{ rounded: 'rounded-full' }"
 					class="inline-block text-center w-12 tracking-wide text-[10px] p-0"
 				>
