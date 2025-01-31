@@ -76,7 +76,7 @@ const handleAnonymousSubmit = async (formData) => {
 				/>
 			</div>
 			<div
-				v-else-if="invoice.status === 'paid' && invoice.payments.length"
+				v-else-if="invoice.status === 'paid' && invoice.payments.length && !showAnonymousForm"
 				class="w-full px-6 pt-0 pb-16 lg:w-1/2 max-w-xl"
 			>
 				<h3 class="uppercase font-bold tracking-wide border-b border-gray-200 dark:border-gray-700">Payments</h3>
