@@ -16,7 +16,7 @@ definePageMeta({
 
 const invoice = await readItem('invoices', params.id, {
 	fields: [
-		'id,status,due_date,invoice_date,invoice_code,note,memo,total_amount,bill_to.id,bill_to.name,bill_to.email,bill_to.emails,bill_to.stripe_customer_id,bill_to.address,line_items.id,line_items.description,line_items.quantity,line_items.rate,line_items.amount,line_items.product.name',
+		'id,status,due_date,invoice_date,invoice_code,note,memo,total_amount,bill_to.id,bill_to.name,bill_to.email,bill_to.emails,bill_to.stripe_customer_id,bill_to.address,line_items.id,line_items.description,line_items.quantity,line_items.rate,line_items.amount,line_items.product.name,payments.*',
 	],
 });
 
@@ -74,6 +74,26 @@ const handleAnonymousSubmit = async (formData) => {
 					:invoice="invoice"
 					:is-anonymous="!user"
 				/>
+			</div>
+			<div
+				v-else-if="invoice.status === 'paid' && invoice.payments.length"
+				class="w-full px-6 pt-0 pb-16 lg:w-1/2 max-w-xl"
+			>
+				<h3 class="uppercase font-bold tracking-wide border-b border-gray-200 dark:border-gray-700">Payments</h3>
+				<div v-for="payment in invoice.payments" :key="payment.id">
+					<!-- <h5>{{ payment.payment_method }}</h5>
+					<h5>{{ payment.stripe_status }}</h5>
+					<UButton
+						:href="payment.receipt_url"
+						target="_blank"
+						size="xs"
+						class="mb-2"
+						label="Stripe Receipt"
+						:ui="{ rounded: 'rounded-full' }"
+					/>
+					<h5>{{ payment.status }}</h5> -->
+					<InvoicesPaymentItem :payment="payment" />
+				</div>
 			</div>
 		</div>
 	</div>

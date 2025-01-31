@@ -45,9 +45,25 @@ export default defineEventHandler(async (event) => {
 		// Return only the necessary charge details
 		return {
 			id: charge.id,
-			amount: charge.amount,
+			amount: charge.amount / 100, // Convert from cents to dollars
+			payment_method: charge.payment_method_details?.type,
 			status: charge.status,
 			receipt_url: charge.receipt_url,
+			created: charge.created,
+			card: charge.payment_method_details?.card
+				? {
+						last4: charge.payment_method_details.card.last4,
+						brand: charge.payment_method_details.card.brand,
+						exp_month: charge.payment_method_details.card.exp_month,
+						exp_year: charge.payment_method_details.card.exp_year,
+					}
+				: null,
+			bank_account: charge.payment_method_details?.ach_debit
+				? {
+						bank_name: charge.payment_method_details.ach_debit.bank_name,
+						last4: charge.payment_method_details.ach_debit.last4,
+					}
+				: null,
 			payment_method_details: charge.payment_method_details,
 		};
 	} catch (error) {
