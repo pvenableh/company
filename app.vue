@@ -62,7 +62,7 @@ const links = ref([
 	},
 	{
 		name: 'Invoices',
-		type: ['header', 'footer', 'drawer'],
+		type: ['header', 'footer', 'toolbar', 'drawer'],
 		to: '/invoices',
 		icon: 'i-heroicons-document-text',
 	},

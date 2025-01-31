@@ -11,9 +11,9 @@ const props = defineProps({
 		id="mobile-toolbar"
 		class="mobile-toolbar flex flex-row items-center justify-center bg-gray-100 dark:bg-gradient-to-tr dark:from-gray-800 dark:to-gray-900"
 	>
-	<nuxt-link v-for="(link, index) in links" :key="index" :to="link.to">
+		<nuxt-link v-for="(link, index) in links" :key="index" :to="link.to">
 			<UIcon :name="link.icon" />
-			<h5>{{ link.name }}</h5>
+			<h5 class="text-">{{ link.name }}</h5>
 		</nuxt-link>
 
 		<LayoutNavButton />
@@ -32,7 +32,7 @@ const props = defineProps({
 	height: 65px;
 
 	border-top: solid 1px rgba(55, 55, 55, 0.05);
-	padding-right: 25%;
+	padding-right: 20%;
 	overflow: hidden;
 	box-shadow: -1px 2px 10px rgba(0, 0, 0, 0.15);
 	z-index: 10;
@@ -60,9 +60,8 @@ const props = defineProps({
 		}
 
 		h5 {
-			font-size: 7px;
 			margin-top: 2px;
-			@apply uppercase tracking-widest;
+			@apply uppercase tracking-widest text-[5px] sm:text-[7px];
 		}
 	}
 
@@ -81,7 +80,7 @@ const props = defineProps({
 		top: 0px;
 		left: -0%;
 		height: 2px;
-		width: 25%;
+		width: 20%;
 		top: -2px;
 		opacity: 0;
 		transition: 0.25s var(--curve);
@@ -111,21 +110,21 @@ const props = defineProps({
 
 .mobile-toolbar a:nth-of-type(2).router-link-exact-active ~ .indicator {
 	left: 33.333333%;
-	left: 25%;
+	left: 20%;
 	top: 0px;
 	opacity: 1;
 }
 
 .mobile-toolbar a:nth-of-type(3).router-link-exact-active ~ .indicator {
 	left: 53%;
-	left: 50%;
+	left: 40%;
 	top: 0px;
 	opacity: 1;
 }
 
 .mobile-toolbar a:nth-of-type(4).router-link-exact-active ~ .indicator {
 	left: 60%;
-	left: 75%;
+
 	top: 0px;
 	opacity: 1;
 }

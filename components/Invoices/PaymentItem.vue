@@ -7,9 +7,11 @@ const props = defineProps({
 });
 
 const chargeDetails = ref(null);
+const payoutDetails = ref(null);
 const isLoading = ref(false);
 const showDetails = ref(false);
 const { getCharge } = useStripeCharge();
+const { getPayout } = useStripePayout();
 const toast = useToast();
 
 const formatDate = (dateString) => {
@@ -22,24 +24,41 @@ const formatDate = (dateString) => {
 	});
 };
 
+const formatAmount = (amount) => {
+	return new Intl.NumberFormat('en-US', {
+		style: 'currency',
+		currency: 'USD',
+	}).format(amount / 100); // Stripe amounts are in cents
+};
+
 const getStatusColor = (status) => {
 	const statusColors = {
 		succeeded: 'green',
 		pending: 'yellow',
 		failed: 'red',
 		processing: 'blue',
+		paid: 'green',
+		in_transit: 'blue',
+		canceled: 'red',
+		failed: 'red',
 	};
 	return statusColors[status] || 'gray';
 };
 
-const loadChargeDetails = async () => {
-	if (!props.payment.charge_id || chargeDetails.value) return;
+const loadDetails = async () => {
+	if (!props.payment.charge_id || (chargeDetails.value && payoutDetails.value)) return;
 
 	isLoading.value = true;
 	try {
-		chargeDetails.value = await getCharge(props.payment.charge_id);
+		const [charge, payout] = await Promise.all([
+			getCharge(props.payment.charge_id),
+			getPayout(props.payment.charge_id),
+		]);
+
+		chargeDetails.value = charge;
+		payoutDetails.value = payout;
 	} catch (error) {
-		console.error('Error loading charge details:', error);
+		console.error('Error loading payment details:', error);
 		toast.add({
 			title: 'Error',
 			description: 'Failed to load payment details',
@@ -53,7 +72,7 @@ const loadChargeDetails = async () => {
 // Watch for details panel expansion
 watch(showDetails, async (newValue) => {
 	if (newValue) {
-		await loadChargeDetails();
+		await loadDetails();
 	}
 });
 </script>
@@ -86,7 +105,7 @@ watch(showDetails, async (newValue) => {
 			<div class="flex gap-2">
 				<UButton
 					v-if="payment.receipt_url"
-					icon="i-heroicons-receipt"
+					icon="i-heroicons-receipt-percent-solid"
 					:to="payment.receipt_url"
 					target="_blank"
 					size="xs"
@@ -146,6 +165,42 @@ watch(showDetails, async (newValue) => {
 							<div>Transaction ID: {{ chargeDetails.id }}</div>
 							<div>Date: {{ formatDate(chargeDetails.created * 1000) }}</div>
 							<div>Status: {{ chargeDetails.status }}</div>
+						</div>
+					</div>
+					<!-- Payout Details -->
+					<div v-if="payoutDetails?.payout" class="mt-4 pt-4 border-t dark:border-gray-700">
+						<p class="text-gray-500 mb-2">Payout Details</p>
+						<div class="grid grid-cols-2 gap-2 text-xs">
+							<div>Payout Amount: {{ formatAmount(payoutDetails.payout.amount) }}</div>
+							<div>
+								Status:
+								<UBadge :color="getStatusColor(payoutDetails.payout.status)" class="ml-1">
+									{{ payoutDetails.payout.status }}
+								</UBadge>
+							</div>
+							<div>Expected Date: {{ formatDate(payoutDetails.payout.arrival_date * 1000) }}</div>
+							<div>Type: {{ payoutDetails.payout.type }}</div>
+						</div>
+
+						<!-- Transaction Summary -->
+						<div v-if="payoutDetails.transactions?.length" class="mt-2">
+							<p class="text-gray-500 mb-1 text-xs">Transaction Summary</p>
+							<div class="space-y-1">
+								<div v-for="transaction in payoutDetails.transactions" :key="transaction.id" class="text-xs">
+									{{ transaction.description }}: {{ formatAmount(transaction.amount) }}
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<!-- Transfer Details -->
+					<div v-if="payoutDetails?.transfer" class="mt-4 pt-4 border-t dark:border-gray-700">
+						<p class="text-gray-500 mb-2">Transfer Details</p>
+						<div class="grid grid-cols-2 gap-2 text-xs">
+							<div>Transfer ID: {{ payoutDetails.transfer.id }}</div>
+							<div>Amount: {{ formatAmount(payoutDetails.transfer.amount) }}</div>
+							<div>Status: {{ payoutDetails.transfer.status }}</div>
+							<div>Created: {{ formatDate(payoutDetails.transfer.created * 1000) }}</div>
 						</div>
 					</div>
 				</template>

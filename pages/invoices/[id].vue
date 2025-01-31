@@ -60,6 +60,13 @@ const handleAnonymousSubmit = async (formData) => {
 			Invoice
 			<span class="block">Payment</span>
 		</h1>
+		<div class="w-full max-w-screen-xl mx-auto z-10">
+			<nuxt-link to="/invoices" class="uppercase text-[10px] text-gray-400 px-4 2xl:px-0">
+				<UIcon name="i-heroicons-arrow-left" class="-mb-0.5" />
+				Back to Invoices
+			</nuxt-link>
+		</div>
+
 		<div class="w-full flex flex-col lg:flex-row items-center lg:items-start justify-center z-10 page__inner">
 			<InvoicesInvoice :invoice="invoice" class="lg:sticky lg:top-12" />
 			<div v-if="showAnonymousForm && invoice.status !== 'paid'" class="w-full px-6 pt-0 pb-16 lg:w-1/2 max-w-xl">
