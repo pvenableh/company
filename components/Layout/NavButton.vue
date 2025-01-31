@@ -26,7 +26,7 @@ function sideMenuToggle() {
 	display: block;
 	position: fixed;
 	background: none;
-	width: 25%;
+	width: 20%;
 	text-align: center;
 	cursor: pointer;
 	transition: 0.475s var(--curve);
