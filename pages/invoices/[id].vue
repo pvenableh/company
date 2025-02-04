@@ -99,6 +99,7 @@ const handleAnonymousSubmit = async (formData) => {
 						:ui="{ rounded: 'rounded-full' }"
 					/>
 					<h5>{{ payment.status }}</h5> -->
+
 					<InvoicesPaymentItem :payment="payment" />
 				</div>
 			</div>

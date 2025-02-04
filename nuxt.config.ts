@@ -46,7 +46,7 @@ export default defineNuxtConfig({
 		[
 			'@nuxt/ui',
 			{
-				icons: ['heroicons', 'wi', 'meteocons', 'material-symbols'],
+				icons: ['heroicons', 'wi', 'meteocons', 'material-symbols', 'logos'],
 				notification: {
 					position: 'top-[unset]] bottom-0',
 					timeout: 1000,

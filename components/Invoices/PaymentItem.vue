@@ -143,8 +143,13 @@ watch(showDetails, async (newValue) => {
 					<template v-if="chargeDetails.card">
 						<p class="text-gray-500">Card Details</p>
 						<div class="grid grid-cols-2 gap-2 text-xs">
-							<div>Card Type: {{ chargeDetails.card.brand }}</div>
-							<div>Last 4: •••• {{ chargeDetails.card.last4 }}</div>
+							<div>
+								<UIcon
+									:name="`i-logos-${chargeDetails.card.brand}`"
+									class="w-8 h-6 mr-1 shadow border border-gray-100"
+								/>
+								Last 4: •••• {{ chargeDetails.card.last4 }}
+							</div>
 							<div>Expires: {{ chargeDetails.card.exp_month }}/{{ chargeDetails.card.exp_year }}</div>
 						</div>
 					</template>
