@@ -80,6 +80,7 @@ export default defineEventHandler(async (event) => {
 				transfer,
 			};
 		} else {
+			console.log('Retrieving payout:', id);
 			// If it's a payout ID, proceed as before
 			const payout = await stripe.payouts.retrieve(id);
 
