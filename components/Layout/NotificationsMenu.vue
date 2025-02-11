@@ -70,8 +70,6 @@ const config = useRuntimeConfig();
 const { notifications, unreadCount, markAsRead } = useNotifications();
 const loadingNotifications = ref(new Set());
 const isLoading = ref(false);
-console.log('notifications');
-console.log(notifications);
 
 const handleMarkAsRead = async (notificationId) => {
 	if (loadingNotifications.value.has(notificationId)) return;

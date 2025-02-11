@@ -1,4 +1,3 @@
-import { logger } from '../../utils/logger';
 import sgMail from '@sendgrid/mail';
 
 export default defineEventHandler(async (event) => {

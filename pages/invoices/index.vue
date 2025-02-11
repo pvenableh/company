@@ -6,6 +6,7 @@ definePageMeta({
 const router = useRouter();
 const { user } = useDirectusAuth();
 const { readItems } = useDirectusItems();
+const { selectedOrg, hasMultipleOrgs, organizationOptions, setOrganization, getOrganizationFilter } = useOrganization();
 
 const columns = [
 	{
@@ -59,42 +60,76 @@ const items = (row) => [
 	],
 ];
 
-const { organizationOptions } = useOrganization();
+const filterRef = computed(() => {
+	const baseFilter = {
+		_and: [],
+	};
 
-console.log(organizationOptions);
+	// Add organization filter if selected
+	const orgFilter = getOrganizationFilter();
+	if (Object.keys(orgFilter).length > 0) {
+		baseFilter._and.push({
+			bill_to: orgFilter.organization, // Adjust the path to match your schema
+		});
+	}
 
-const userOrganizationIds = user.value.organizations.map((org) => org.organizations_id.id);
+	// If no organization is selected, filter by user's organizations
+	if (!selectedOrg.value) {
+		const userOrganizationIds = user.value.organizations.map((org) => org.organizations_id.id);
+		baseFilter._and.push({
+			bill_to: {
+				id: {
+					_in: userOrganizationIds,
+				},
+			},
+		});
+	}
 
-console.log(userOrganizationIds);
+	// Remove _and if empty
+	if (baseFilter._and.length === 0) {
+		delete baseFilter._and;
+	}
 
-const filter = {
-	bill_to: {
-		id: {
-			_in: userOrganizationIds,
-		},
-	},
-};
+	return baseFilter;
+});
 
-console.log(filter);
-
-const invoices = await readItems('invoices', {
-	fields: [
-		'id,status,due_date,invoice_date,invoice_code,note,memo,total_amount,bill_to.id,bill_to.name,bill_to.email,bill_to.stripe_customer_id,line_items.id,line_items.description,line_items.quantity,line_items.rate,line_items.amount,line_items.product.name',
-	],
-	sort: 'due_date',
-	filter: filter,
+// Use watchEffect to fetch invoices when the filter changes
+const invoices = ref([]);
+watchEffect(async () => {
+	try {
+		const results = await readItems('invoices', {
+			fields: [
+				'id,status,due_date,invoice_date,invoice_code,note,memo,total_amount,bill_to.id,bill_to.name,bill_to.email,bill_to.stripe_customer_id,line_items.id,line_items.description,line_items.quantity,line_items.rate,line_items.amount,line_items.product.name',
+			],
+			sort: 'due_date',
+			filter: filterRef.value,
+		});
+		invoices.value = results;
+	} catch (error) {
+		console.error('Error fetching invoices:', error);
+	}
 });
 
 const isPastDue = (dateString, status) => {
 	const dueDate = new Date(dateString);
 	const today = new Date();
-	return dueDate < today && status !== 'paid';
+	return dueDate < today && status === 'pending';
+};
+
+const isProcessing = (dateString, status) => {
+	const dueDate = new Date(dateString);
+	const today = new Date();
+	return dueDate < today && status === 'processing';
 };
 
 const classedInvoices = computed(() => {
-	return invoices.map((item) => ({
+	return invoices.value.map((item) => ({
 		...item,
-		class: isPastDue(item.due_date, item.status) ? 'bg-red-200/50 dark:bg-red-400/50 animate-pulse' : '',
+		class: isPastDue(item.due_date, item.status)
+			? 'bg-red-200/50 dark:bg-red-400/50 animate-pulse'
+			: isProcessing(item.due_date, item.status)
+				? 'bg-yellow-100/50 dark:bg-yellow-400/50'
+				: '',
 	}));
 });
 
@@ -147,6 +182,7 @@ const formatNumber = (value) => {
 <template>
 	<div class="md:px-6 mx-auto flex items-center justify-center flex-col relative tickets">
 		<h1 class="page__title">Invoices</h1>
+
 		<div class="w-full flex flex-row items-center justify-between max-w-6xl my-12">
 			<UInput v-model="q" placeholder="Filter..." />
 			<div class="flex flex-row uppercase text-[10px]">
@@ -198,7 +234,7 @@ const formatNumber = (value) => {
 			</template>
 			<template #actions-data="{ row }">
 				<UButton
-					v-if="row.status !== 'paid'"
+					v-if="row.status === 'pending'"
 					size="xs"
 					color="primary"
 					:to="'/invoices/' + row.id"

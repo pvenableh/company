@@ -119,97 +119,88 @@ watch(showDetails, async (newValue) => {
 			</div>
 		</div>
 
-		<!-- Expandable Details -->
-		<div v-if="payment.charge_id">
-			<UButton
-				size="xs"
-				color="gray"
-				variant="ghost"
-				:loading="isLoading"
-				class="flex items-center gap-2 w-full justify-start"
-				@click="showDetails = !showDetails"
-			>
-				<UIcon :name="showDetails ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'" class="w-4 h-4" />
-				{{ showDetails ? 'Hide' : 'Show' }} Details
-			</UButton>
+		<div v-if="payment.charge_id" class="space-y-2 text-sm">
+			<div v-if="isLoading" class="flex justify-center py-4">
+				<UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin" />
+			</div>
 
-			<div v-if="showDetails" class="mt-4 space-y-2 text-sm">
-				<div v-if="isLoading" class="flex justify-center py-4">
-					<UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin" />
+			<div v-else-if="chargeDetails">
+				<!-- Card Details -->
+				<div v-if="chargeDetails.card">
+					<p class="text-sm font-medium text-gray-500 dark:text-gray-100 mb-2 uppercase font-bold">Card Details</p>
+					<div class="grid grid-cols-2 gap-2 text-xs">
+						<div>
+							<UIcon :name="`i-logos-${chargeDetails.card.brand}`" class="w-8 h-6 mr-1 shadow border border-gray-100" />
+							Last 4: •••• {{ chargeDetails.card.last4 }}
+						</div>
+						<div>Expires: {{ chargeDetails.card.exp_month }}/{{ chargeDetails.card.exp_year }}</div>
+					</div>
 				</div>
 
-				<template v-else-if="chargeDetails">
-					<!-- Card Details -->
-					<template v-if="chargeDetails.card">
-						<p class="text-gray-500">Card Details</p>
-						<div class="grid grid-cols-2 gap-2 text-xs">
-							<div>
-								<UIcon
-									:name="`i-logos-${chargeDetails.card.brand}`"
-									class="w-8 h-6 mr-1 shadow border border-gray-100"
-								/>
-								Last 4: •••• {{ chargeDetails.card.last4 }}
-							</div>
-							<div>Expires: {{ chargeDetails.card.exp_month }}/{{ chargeDetails.card.exp_year }}</div>
-						</div>
-					</template>
-
-					<!-- Bank Account Details -->
-					<template v-else-if="chargeDetails.bank_account">
-						<p class="text-gray-500">Bank Details</p>
-						<div class="grid grid-cols-2 gap-2 text-xs">
-							<div>Bank: {{ chargeDetails.bank_account.bank_name }}</div>
-							<div>Account: •••• {{ chargeDetails.bank_account.last4 }}</div>
-						</div>
-					</template>
-
-					<!-- Transaction Details -->
-					<div class="mt-4 pt-4 border-t dark:border-gray-700">
-						<p class="text-gray-500 mb-2">Transaction Details</p>
-						<div class="grid grid-cols-2 gap-2 text-xs">
-							<div>Transaction ID: {{ chargeDetails.id }}</div>
-							<div>Date: {{ formatDate(chargeDetails.created * 1000) }}</div>
-							<div>Status: {{ chargeDetails.status }}</div>
-						</div>
+				<!-- Bank Account Details -->
+				<div v-else-if="chargeDetails.bank_account">
+					<p class="text-sm font-medium text-gray-500 dark:text-gray-100 mb-2 uppercase font-bold">Bank Details</p>
+					<div class="grid grid-cols-2 gap-2 text-xs">
+						<div>Bank: {{ chargeDetails.bank_account.bank_name }}</div>
+						<div>Account: •••• {{ chargeDetails.bank_account.last4 }}</div>
 					</div>
-					<!-- Payout Details -->
-					<div v-if="payoutDetails?.payout" class="mt-4 pt-4 border-t dark:border-gray-700">
-						<p class="text-gray-500 mb-2">Payout Details</p>
-						<div class="grid grid-cols-2 gap-2 text-xs">
-							<div>Payout Amount: {{ formatAmount(payoutDetails.payout.amount) }}</div>
-							<div>
-								Status:
-								<UBadge :color="getStatusColor(payoutDetails.payout.status)" class="ml-1">
-									{{ payoutDetails.payout.status }}
-								</UBadge>
-							</div>
-							<div>Expected Date: {{ formatDate(payoutDetails.payout.arrival_date * 1000) }}</div>
-							<div>Type: {{ payoutDetails.payout.type }}</div>
-						</div>
+				</div>
 
-						<!-- Transaction Summary -->
-						<div v-if="payoutDetails.transactions?.length" class="mt-2">
-							<p class="text-gray-500 mb-1 text-xs">Transaction Summary</p>
-							<div class="space-y-1">
-								<div v-for="transaction in payoutDetails.transactions" :key="transaction.id" class="text-xs">
-									{{ transaction.description }}: {{ formatAmount(transaction.amount) }}
-								</div>
+				<!-- Transaction Details -->
+				<div class="">
+					<p class="payment-item__subtitle">Transaction Details:</p>
+					<div class="grid grid-cols-2 gap-2 text-xs">
+						<div>Transaction ID: {{ chargeDetails.id }}</div>
+						<div>Date: {{ formatDate(chargeDetails.created * 1000) }}</div>
+						<div>Status: {{ chargeDetails.status }}</div>
+					</div>
+				</div>
+				<!-- Payout Details -->
+				<div v-if="payoutDetails?.payout" class="">
+					<p class="payment-item__subtitle">Payout Details:</p>
+					<div class="grid grid-cols-2 gap-2 text-xs">
+						<div>Payout Amount: {{ formatAmount(payoutDetails.payout.amount) }}</div>
+						<div>
+							Status:
+							<UBadge :color="getStatusColor(payoutDetails.payout.status)" class="ml-1">
+								{{ payoutDetails.payout.status }}
+							</UBadge>
+						</div>
+						<div>Expected Date: {{ formatDate(payoutDetails.payout.arrival_date * 1000) }}</div>
+						<div>Type: {{ payoutDetails.payout.type }}</div>
+					</div>
+
+					<!-- Transaction Summary -->
+					<div v-if="payoutDetails.transactions?.length" class="">
+						<p class="payment-item__subtitle">Transaction Summary:</p>
+						<div class="space-y-1">
+							<div v-for="transaction in payoutDetails.transactions" :key="transaction.id" class="text-xs">
+								{{ transaction.description }}: {{ formatAmount(transaction.amount) }}
 							</div>
 						</div>
 					</div>
+				</div>
 
-					<!-- Transfer Details -->
-					<div v-if="payoutDetails?.transfer" class="mt-4 pt-4 border-t dark:border-gray-700">
-						<p class="text-gray-500 mb-2">Transfer Details</p>
-						<div class="grid grid-cols-2 gap-2 text-xs">
-							<div>Transfer ID: {{ payoutDetails.transfer.id }}</div>
-							<div>Amount: {{ formatAmount(payoutDetails.transfer.amount) }}</div>
-							<div>Status: {{ payoutDetails.transfer.status }}</div>
-							<div>Created: {{ formatDate(payoutDetails.transfer.created * 1000) }}</div>
-						</div>
+				<!-- Transfer Details -->
+				<div v-if="payoutDetails?.transfer" class="">
+					<p class="payment-item__subtitle">Transfer Details:</p>
+					<div class="grid grid-cols-2 gap-2 text-xs">
+						<div>Transfer ID: {{ payoutDetails.transfer.id }}</div>
+						<div>Amount: {{ formatAmount(payoutDetails.transfer.amount) }}</div>
+						<div>Status: {{ payoutDetails.transfer.status }}</div>
+						<div>Created: {{ formatDate(payoutDetails.transfer.created * 1000) }}</div>
 					</div>
-				</template>
+				</div>
 			</div>
 		</div>
+
+		<InvoicesPaymentEvents v-if="payment.payment_intent" :payment-intent-id="payment.payment_intent" class="mt-8" />
 	</div>
 </template>
+<style>
+.payment-item {
+	&__subtitle {
+		@apply text-sm font-medium text-gray-500 dark:text-gray-100 mb-2 uppercase font-bold border-l-8 border-gray-500 leading-3 pl-1;
+	}
+}
+</style>

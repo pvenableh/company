@@ -36,7 +36,7 @@ const client = createDirectus('https://admin.huestudios.company').with(rest());
 /******  e6d15a5b-d970-4b8f-a039-99f4b1cd2f65  *******/ async function submit() {
 	const result = await client.request(passwordReset(reset_token.value, password.value));
 
-	console.log(result);
+	// console.log(result);
 }
 </script>
 <template>

@@ -151,11 +151,8 @@ const onEnd = (event) => {
 			>
 				<template #item="{ element }">
 					<div :id="element.id">
-						<component
-							:is="resolveCardComponent"
-							:element="element"
-							@error="(err) => console.error('Card error:', err)"
-						/>
+						<component :is="resolveCardComponent" :element="element" />
+						<!-- @error="(err) => console.error('Card error:', err)" -->
 					</div>
 				</template>
 			</VueDraggable>

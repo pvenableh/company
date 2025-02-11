@@ -69,10 +69,10 @@ const handleAnonymousSubmit = async (formData) => {
 
 		<div class="w-full flex flex-col lg:flex-row items-center lg:items-start justify-center z-10 page__inner">
 			<InvoicesInvoice :invoice="invoice" class="lg:sticky lg:top-12" />
-			<div v-if="showAnonymousForm && invoice.status !== 'paid'" class="w-full px-6 pt-0 pb-16 lg:w-1/2 max-w-xl">
+			<div v-if="showAnonymousForm && invoice.status === 'pending'" class="w-full px-6 pt-0 pb-16 lg:w-1/2 max-w-xl">
 				<PaymentAnonymous :default-email="defaultEmail" @submit="handleAnonymousSubmit" />
 			</div>
-			<div v-else-if="invoice.status !== 'paid'" class="w-full px-6 pt-0 pb-16 lg:w-1/2 max-w-xl">
+			<div v-else-if="invoice.status === 'pending'" class="w-full px-6 pt-0 pb-16 lg:w-1/2 max-w-xl">
 				<PaymentMethods
 					:amount="invoice.total_amount"
 					:email="user ? user.email : anonymousUser.email"
@@ -83,7 +83,7 @@ const handleAnonymousSubmit = async (formData) => {
 				/>
 			</div>
 			<div
-				v-else-if="invoice.status === 'paid' && invoice.payments.length && !showAnonymousForm"
+				v-else-if="invoice.status !== 'pending' && invoice.payments.length && !showAnonymousForm"
 				class="w-full px-6 pt-0 pb-16 lg:w-1/2 max-w-xl"
 			>
 				<h3 class="uppercase font-bold tracking-wide border-b border-gray-200 dark:border-gray-700">Payments</h3>

@@ -68,7 +68,6 @@ export function useOrganization() {
 			// Update the organizations state with the sorted results
 			organizations.value = sortedOrgs;
 		} catch (err) {
-			console.error('Error processing organizations:', err);
 			organizations.value = [];
 		}
 	};

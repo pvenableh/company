@@ -17,6 +17,8 @@ export const useStripeCharge = () => {
 				if (response._data.error) {
 					throw new Error(response._data.error);
 				}
+				console.log('Charge data:', response._data);
+				console.log(options);
 				return response._data;
 			},
 			onResponseError({ request, response, options }) {

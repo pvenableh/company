@@ -18,7 +18,7 @@ export function useNotifications() {
 		//   ]
 	});
 
-	console.log(getNotificationFilter());
+	// console.log(getNotificationFilter());
 
 	// Set up realtime subscription when user is available
 	const subscriptionFields = [
@@ -63,7 +63,6 @@ export function useNotifications() {
 			// Refresh the subscription after updating
 			refresh();
 		} catch (error) {
-			console.error('Error marking notification as read:', error);
 			throw error;
 		} finally {
 			loadingNotifications.value.delete(notificationId);
@@ -87,7 +86,6 @@ export function useNotifications() {
 			// Refresh the subscription after creating new notification
 			refresh();
 		} catch (error) {
-			console.error('Error creating notification:', error);
 			throw error;
 		}
 	};
@@ -103,9 +101,7 @@ export function useNotifications() {
 				sort: ['-timestamp'],
 			});
 			data.value = initialNotifications;
-		} catch (error) {
-			console.error('Error loading notifications:', error);
-		}
+		} catch (error) {}
 	};
 
 	// Load initial data when user is available
