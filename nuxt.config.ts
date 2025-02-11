@@ -23,6 +23,7 @@ export default defineNuxtConfig({
 		// Stripe secret keys should be here (server-side only)
 		stripeSecretKeyTest: process.env.STRIPE_SECRET_KEY_TEST,
 		stripeSecretKeyLive: process.env.STRIPE_SECRET_KEY,
+		stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
 
 		public: {
 			adminRole: '3a63a4e1-c82e-46f8-9993-7f11ac6a4b01',
