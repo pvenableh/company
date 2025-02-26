@@ -6,6 +6,7 @@
 			<nuxt-link v-for="(link, index) in links" :key="index" :to="link.to">{{ link.name }}</nuxt-link>
 		</div>
 		<div class="flex items-start justify-start flex-col footer__col">
+			<nuxt-link to="/organization">Organization</nuxt-link>
 			<nuxt-link v-if="user" to="/account">Account</nuxt-link>
 			<AccountLogout v-if="user" />
 			<nuxt-link v-else to="/auth/signin">Login</nuxt-link>

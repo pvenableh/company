@@ -43,6 +43,7 @@ export default defineNuxtConfig({
 		'@formkit/nuxt',
 		'@nuxt/devtools',
 		'@nuxt/icon',
+		'shadcn-nuxt',
 		'@nuxt/image',
 		[
 			'@nuxt/ui',
@@ -71,6 +72,7 @@ export default defineNuxtConfig({
 		'nuxt-directus-next',
 		'nuxt-gtag',
 		'@samk-dev/nuxt-vcalendar',
+		'shadcn-nuxt',
 	],
 
 	// plugins: [],
@@ -78,6 +80,18 @@ export default defineNuxtConfig({
 	// gtag: {
 	// 	id: 'G-Y5YQ3FM1FL',
 	// },
+
+	shadcn: {
+		/**
+		 * Prefix for all the imported component
+		 */
+		prefix: '',
+		/**
+		 * Directory that the component lives in.
+		 * @default "./components/ui"
+		 */
+		componentDir: './components/ui',
+	},
 
 	directus: {
 		url: 'https://admin.huestudios.company',

@@ -98,6 +98,34 @@ const handleError = (message, err = null) => {
 	closeScreen();
 };
 
+const formatLineItems = () => {
+	const lineItems = props.invoice?.line_items;
+
+	if (!Array.isArray(lineItems) || lineItems.length === 0) {
+		return 'No items listed';
+	}
+
+	return lineItems
+		.map((item) => {
+			const productName = item?.product?.name || 'Unknown product';
+			const quantity = item?.quantity ?? 0;
+			const rate = (item?.rate ?? 0) / 100;
+
+			return `${productName} (x${quantity}): $${rate.toFixed(2)}`;
+		})
+		.join(', ');
+};
+
+const description = computed(() => {
+	const lineItems = props.invoice?.line_items;
+
+	if (!Array.isArray(lineItems) || lineItems.length === 0) {
+		return `Invoice #${props.invoice?.invoice_code || 'N/A'} - No items listed`;
+	}
+
+	return `Invoice #${props.invoice?.invoice_code || 'N/A'} - Items: ${formatLineItems()}`;
+});
+
 const createPaymentIntent = async () => {
 	try {
 		const data = await $fetch('/api/stripe/paymentintent', {
@@ -106,7 +134,8 @@ const createPaymentIntent = async () => {
 				amount: props.amount,
 				email: props.email,
 				paymentType: props.paymentType,
-				invoiceId: props.invoice?.id,
+				description: props.description,
+				...(props.invoice && { invoiceId: props.invoice.id, invoiceCode: props.invoice.invoice_code }),
 			},
 		});
 

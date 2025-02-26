@@ -132,6 +132,15 @@ export default defineEventHandler(async (event) => {
 			},
 		};
 
+		// Add description if it exists
+		if (body.description) {
+			baseOptions.description = body.description;
+		}
+
+		if (body.invoiceCode) {
+			baseOptions.metadata.invoice_code = body.invoice_code;
+		}
+
 		// Add payment method specific options
 		const paymentOptions = {
 			card: {

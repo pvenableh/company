@@ -72,28 +72,23 @@ export function useOrganization() {
 		}
 	};
 
+	// Use Nuxt's useCookie instead of localStorage for cross-tab/window synchronization
 	const setOrganization = (orgId) => {
 		selectedOrg.value = orgId;
-		if (process.client) {
-			try {
-				localStorage.setItem('selectedOrganization', JSON.stringify(orgId));
-			} catch (err) {
-				console.warn('Failed to save selected organization to localStorage:', err);
-			}
-		}
+		const cookie = useCookie('selectedOrganization', {
+			maxAge: 60 * 60 * 24 * 30, // 30 days
+			path: '/',
+			sameSite: 'lax',
+		});
+		cookie.value = orgId;
 	};
 
 	const clearOrganization = () => {
 		selectedOrg.value = null;
 		organizations.value = [];
 		isInitialized.value = false;
-		if (process.client) {
-			try {
-				localStorage.removeItem('selectedOrganization');
-			} catch (err) {
-				console.warn('Failed to remove organization from localStorage:', err);
-			}
-		}
+		const cookie = useCookie('selectedOrganization');
+		cookie.value = null;
 	};
 
 	const tryRestoreSelectedOrg = () => {
@@ -102,13 +97,13 @@ export function useOrganization() {
 			return;
 		}
 
-		if (process.client && organizations.value.length > 1) {
+		if (organizations.value.length > 1) {
 			try {
-				const savedOrg = localStorage.getItem('selectedOrganization');
+				const savedOrg = useCookie('selectedOrganization').value;
 				if (savedOrg) {
-					const parsedOrg = JSON.parse(savedOrg);
-					if (organizations.value.some((org) => org.id === parsedOrg)) {
-						selectedOrg.value = parsedOrg;
+					// Check if the saved org exists in the current organizations list
+					if (organizations.value.some((org) => org.id === savedOrg)) {
+						selectedOrg.value = savedOrg;
 						return;
 					}
 				}
@@ -117,6 +112,7 @@ export function useOrganization() {
 			}
 		}
 
+		// Default to first organization if only one exists, otherwise null (All Organizations)
 		selectedOrg.value = organizations.value.length === 1 ? organizations.value[0].id : null;
 	};
 
@@ -144,6 +140,22 @@ export function useOrganization() {
 			orgInitializing.value = false;
 		}
 	};
+
+	// Listen for storage events to synchronize state across tabs (as a backup mechanism)
+	if (process.client) {
+		window.addEventListener('storage', (event) => {
+			if (event.key === 'selectedOrganization') {
+				try {
+					const newValue = event.newValue ? JSON.parse(event.newValue) : null;
+					if (newValue !== selectedOrg.value) {
+						selectedOrg.value = newValue;
+					}
+				} catch (err) {
+					console.warn('Error parsing storage event:', err);
+				}
+			}
+		});
+	}
 
 	watch(
 		() => user.value,

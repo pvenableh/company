@@ -57,12 +57,23 @@
 										<USelectMenu
 											searchable
 											v-model="form.organization"
-											:options="orgOptions"
+											:options="organizationOptions"
 											option-attribute="name"
 											value-attribute="id"
 											placeholder="Select Organization"
 											class="relative"
 											@update:modelValue="handleOrgChange"
+										/>
+									</UFormGroup>
+									<UFormGroup label="Team" required>
+										<USelect
+											v-model="form.team"
+											:options="teams"
+											option-attribute="name"
+											value-attribute="id"
+											placeholder="Select team"
+											:loading="teamsLoading"
+											:disabled="teams.length <= 1"
 										/>
 									</UFormGroup>
 
@@ -197,6 +208,10 @@ defineProps({
 	},
 });
 
+const { selectedOrg, organizations, hasMultipleOrgs, organizationOptions } = useOrganization();
+
+const { teams, loading: teamsLoading, fetchTeams, selectedTeam, setTeam, currentTeam } = useTeams();
+
 const { filteredUsers, fetchFilteredUsers, loading: loadingUsers } = useFilteredUsers();
 
 const { createItem, readItems } = useDirectusItems();
@@ -276,22 +291,6 @@ const updateDateTime = () => {
 const projectOptions = ref([]);
 const loadingProjects = ref(false);
 
-const orgOptions = computed(() => {
-	const options =
-		currentUser.value?.organizations
-			?.filter((org) => org.organizations_id)
-			.map((org) => ({
-				id: org.organizations_id.id,
-				name: org.organizations_id.name,
-			})) || [];
-
-	console.log('Available organizations:', options);
-	return options;
-});
-
-const hasMultipleOrgs = computed(() => orgOptions.value.length >= 1);
-const defaultOrg = computed(() => orgOptions.value[0]?.id || null);
-
 const form = ref({
 	title: '',
 	description: '',
@@ -299,8 +298,9 @@ const form = ref({
 	priority: 'medium',
 	due_date: new Date().toISOString(),
 	assigned_to: [],
-	organization: defaultOrg.value,
+	organization: selectedOrg.value,
 	project: null,
+	team: selectedTeam.value,
 });
 
 const priorities = [
@@ -512,8 +512,9 @@ const closeForm = () => {
 		category: '',
 		due_date: '',
 		assigned_to: [],
-		organization: defaultOrg.value,
+		organization: selectedOrg.value,
 		project: null,
+		team: selectedTeam.value,
 	};
 	projectOptions.value = [];
 };
@@ -548,24 +549,59 @@ const fetchProjects = async (orgId) => {
 	}
 };
 
+watch(
+	() => selectedOrg.value,
+	async (newOrg) => {
+		if (newOrg) {
+			await fetchTeams(newOrg);
+			// Set default team if available and no team selected
+			if (!form.value.team && teams.value.length > 0) {
+				// Find default team or use first team
+				const defaultTeam = teams.value.find((team) => team.is_default) || teams.value[0];
+				form.value.team = defaultTeam.id;
+			}
+		}
+	},
+	{ immediate: true },
+);
+
+watch(
+	() => form.value.team,
+	async (newTeamId) => {
+		if (newTeamId) {
+			setTeam(newTeamId);
+			form.value.assigned_to = []; // Clear assigned users when team changes
+			await fetchFilteredUsers(form.value.organization, newTeamId);
+		}
+	},
+);
+
 const handleOrgChange = async (orgId) => {
 	form.value.project = null;
 	form.value.assigned_to = []; // Clear assigned users when org changes
 	await Promise.all([
 		fetchProjects(orgId),
-		fetchFilteredUsers(orgId), // Pass the org ID to filter users
+		fetchTeams(orgId),
+		fetchFilteredUsers(orgId, form.value.team), // Pass both org and team
 	]);
 };
 
-onMounted(() => {
-	form.value.organization = defaultOrg.value;
-	if (defaultOrg.value) {
-		Promise.all([fetchProjects(defaultOrg.value), fetchFilteredUsers(defaultOrg.value)]);
+onMounted(async () => {
+	if (selectedOrg.value) {
+		await fetchTeams(selectedOrg.value);
+		form.value = {
+			...form.value,
+			organization: selectedOrg.value,
+			team: selectedTeam.value || teams.value[0]?.id,
+		};
+
+		await Promise.all([fetchProjects(selectedOrg.value), fetchFilteredUsers(selectedOrg.value, form.value.team)]);
 	}
+
 	nextTick(() => {
-		// Ensure that form.due_date is initialized before calling updateDateTime
 		updateDateTime();
 	});
+
 	document.addEventListener('keydown', (e) => {
 		if (e.key === 'Escape' && isExpanded.value) {
 			closeForm();

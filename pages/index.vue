@@ -6,7 +6,7 @@ const { user } = useDirectusAuth();
 		<h1 class="page__title">Dashboard</h1>
 		<div class="w-full flex flex-col items-center justify-center z-10 page__inner">
 			<nuxt-link v-if="!user" to="/auth/signin">
-				<FormVButton class="w-full mb-6" type="submit" style="max-width: 450px">Login</FormVButton>
+				<FormVButton class="w-full mb-6" type="submit" variant="outline" style="max-width: 450px">Login</FormVButton>
 			</nuxt-link>
 			<div v-else class="w-full max-w-xl">
 				<h2 class="text-xl mb-2 font-thin">{{ greetUser() }} {{ user.first_name }}.</h2>

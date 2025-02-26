@@ -5,6 +5,7 @@ const { registerRefreshCallback } = useTicketsStore();
 const { user } = useDirectusAuth();
 const { selectedOrg, hasMultipleOrgs, organizationOptions, setOrganization, clearOrganization, getOrganizationFilter } =
 	useOrganization();
+const { selectedTeam, allTeams, setTeam, clearTeam, getTeamFilter, DEFAULT_TEAM_ID } = useTeams();
 
 const { triggerHaptic } = useHaptic();
 
@@ -32,6 +33,16 @@ const projectOptions = ref([]);
 const filterByAssignedTo = ref(false);
 const filterUnassigned = ref(false);
 const filterDueDate = ref(null);
+
+// Team options selector
+const teamOptions = computed(() => {
+	return allTeams.value.map((team) => ({
+		id: team.id,
+		name: team.name,
+		description: team.description,
+		isVirtual: team.isVirtual || false,
+	}));
+});
 
 // Add due date filter options
 const dueDateOptions = ref([
@@ -66,19 +77,28 @@ const fetchProjects = async () => {
 	const { readItems } = useDirectusItems();
 	let filter = {};
 
-	// Apply organization filter
+	// Apply organization and team filters
 	const orgFilter = getOrganizationFilter();
+	const teamFilter = getTeamFilter();
+
 	if (Object.keys(orgFilter).length > 0) {
-		filter = orgFilter;
+		filter = { _and: [orgFilter] };
+
+		if (Object.keys(teamFilter).length > 0) {
+			filter._and.push(teamFilter);
+		}
 	}
 
+	console.log('Fetching projects with filter:', filter);
+
 	const projects = await readItems('projects', {
-		fields: ['id', 'title', 'sort', 'organization.id', 'organization.name', 'tickets'],
+		fields: ['id', 'title', 'sort', 'organization.id', 'organization.name', 'team.id', 'team.name', 'tickets'],
 		filter,
 		sort: 'sort',
 	});
 
 	projectOptions.value = [{ id: null, title: 'All Projects' }, ...projects];
+	console.log('Fetched projects:', projectOptions.value.length);
 };
 
 const fields = [
@@ -111,6 +131,8 @@ const fields = [
 	'comments',
 	'tasks.id',
 	'tasks.status',
+	'team.id',
+	'team.name',
 ];
 
 const filterRef = computed(() => getFilter());
@@ -120,19 +142,26 @@ const getFilter = () => {
 		_and: [],
 	};
 
-	// Debug organization state
-	console.log('Selected Org:', selectedOrg.value);
+	// Debug state values
+	console.log('Building filter with:', {
+		org: selectedOrg.value,
+		team: selectedTeam.value,
+		project: selectedProject.value,
+		assignedTo: filterByAssignedTo.value,
+		unassigned: filterUnassigned.value,
+	});
 
 	// Apply organization filter
 	const orgFilter = getOrganizationFilter();
-	console.log('Organization Filter:', orgFilter);
-
 	if (Object.keys(orgFilter).length > 0) {
 		filter._and.push(orgFilter);
 	}
 
-	// Debug project state
-	console.log('Selected Project:', selectedProject.value);
+	// Apply team filter (only if not the default team)
+	const teamFilter = getTeamFilter();
+	if (Object.keys(teamFilter).length > 0) {
+		filter._and.push(teamFilter);
+	}
 
 	// Project filter
 	if (selectedProject.value) {
@@ -140,13 +169,6 @@ const getFilter = () => {
 			project: { _eq: selectedProject.value },
 		});
 	}
-
-	// Debug assignment state
-	console.log('Assignment Filters:', {
-		filterByAssignedTo: filterByAssignedTo.value,
-		filterUnassigned: filterUnassigned.value,
-		userId: user.value?.id,
-	});
 
 	// Assignment filters
 	if (filterByAssignedTo.value && user.value) {
@@ -162,9 +184,6 @@ const getFilter = () => {
 			assigned_to: { _empty: true },
 		});
 	}
-
-	// Debug due date state
-	console.log('Due Date Filter:', filterDueDate.value);
 
 	// Due date filter
 	if (filterDueDate.value) {
@@ -206,17 +225,7 @@ const getFilter = () => {
 		delete filter._and;
 	}
 
-	// Debug final filter
-	console.log('Final Filter:', JSON.stringify(filter, null, 2));
-
-	// Debug final query
-	const query = {
-		fields,
-		filter,
-		sort: '-date_updated',
-	};
-	console.log('Final Query:', JSON.stringify(query, null, 2));
-
+	console.log('Final filter:', filter);
 	return filter;
 };
 
@@ -235,7 +244,7 @@ watch(
 		console.log('Tickets updated:', {
 			count: newTickets?.length,
 			org: selectedOrg.value,
-			filter: getFilter(),
+			team: selectedTeam.value,
 		});
 	},
 );
@@ -244,13 +253,18 @@ const handleProjectChange = (value) => {
 	selectedProject.value = value === 'null' || value === 'All Projects' ? null : value;
 };
 
+const handleTeamChange = (value) => {
+	const newTeamValue = value === 'null' ? null : value;
+	setTeam(newTeamValue);
+};
+
 const hasActiveFilters = computed(() => {
 	return (
 		filterByAssignedTo.value ||
 		filterUnassigned.value ||
 		filterDueDate.value ||
-		selectedOrg.value ||
-		selectedProject.value
+		selectedProject.value ||
+		(selectedTeam.value && selectedTeam.value !== DEFAULT_TEAM_ID)
 	);
 });
 
@@ -259,22 +273,44 @@ const clearFilters = () => {
 	filterUnassigned.value = false;
 	filterDueDate.value = null;
 	selectedProject.value = null;
-	// clearOrganization();
+	setTeam(DEFAULT_TEAM_ID); // Reset to default team instead of null
 };
 
+// Watch for organization changes
 watch(
 	() => selectedOrg.value,
 	async (newOrg) => {
-		console.log('Organization changed to:', newOrg);
+		console.log('Organization changed:', newOrg);
+
+		// Reset team to default team when organization changes
+		setTeam(DEFAULT_TEAM_ID);
+
+		// Reset project selection
 		selectedProject.value = null;
+
+		// Fetch projects for the new organization and refresh data
 		await fetchProjects();
-		// Force refresh the realtime subscription
 		await refresh();
 	},
 	{ immediate: true },
-); // Add immediate: true to run on mount
+);
 
-// Keep other filter watches separate
+// Watch for team changes
+watch(
+	() => selectedTeam.value,
+	async (newTeam) => {
+		console.log('Team changed:', newTeam);
+
+		// Reset project selection when team changes
+		selectedProject.value = null;
+
+		// Fetch projects for the new team and refresh data
+		await fetchProjects();
+		await refresh();
+	},
+);
+
+// Keep existing filter watches
 watch([selectedProject, filterByAssignedTo, filterUnassigned, filterDueDate], () => {
 	refresh();
 });
@@ -291,20 +327,28 @@ watch(filterUnassigned, (newValue) => {
 	}
 });
 
+// Watch for tickets changes and apply client-side filtering
 watch(
-	[() => tickets.value, selectedOrg, selectedProject, filterByAssignedTo, filterUnassigned, activeDueDateFilter],
+	[
+		() => tickets.value,
+		selectedOrg,
+		selectedTeam,
+		selectedProject,
+		filterByAssignedTo,
+		filterUnassigned,
+		activeDueDateFilter,
+	],
 	([newTickets]) => {
 		if (!newTickets) return;
 
-		console.log('Starting filter with:', {
-			totalTickets: newTickets.length,
-			dueFilterValue: activeDueDateFilter.value,
-			ticketsWithDueDates: newTickets.filter((t) => t.due_date).length,
-		});
-
 		const filtered = newTickets.filter((ticket) => {
-			// Base organization and project filtering
+			// Base organization and team filtering
 			const orgMatch = !selectedOrg.value || ticket.organization?.id === selectedOrg.value;
+
+			// For team matching, if it's DEFAULT_TEAM_ID, don't filter by team
+			const teamMatch =
+				!selectedTeam.value || selectedTeam.value === DEFAULT_TEAM_ID || ticket.team?.id === selectedTeam.value;
+
 			const projectMatch = !selectedProject.value || ticket.project?.id === selectedProject.value;
 
 			// Assignment filtering
@@ -337,27 +381,9 @@ watch(
 						dueDateMatch = dueDate >= today && dueDate < nextWeek;
 						break;
 				}
-
-				console.log('Ticket due date check:', {
-					id: ticket.id,
-					dueDate: ticket.due_date,
-					matches: dueDateMatch,
-					filter: activeDueDateFilter.value,
-				});
 			}
 
-			return orgMatch && projectMatch && assignmentMatch && dueDateMatch;
-		});
-
-		console.log('Filtered results:', {
-			before: newTickets.length,
-			after: filtered.length,
-			dueFilter: activeDueDateFilter.value,
-			filteredTickets: filtered.map((t) => ({
-				id: t.id,
-				dueDate: t.due_date,
-				status: t.status,
-			})),
+			return orgMatch && teamMatch && projectMatch && assignmentMatch && dueDateMatch;
 		});
 
 		columns.forEach((column) => {
@@ -515,6 +541,29 @@ const handleTicketCreated = () => {
 					</div>
 				</div>
 				<div class="w-full flex flex-row items-center justify-end gap-4">
+					<!-- Team Filter Dropdown -->
+					<!-- <div class="flex items-center space-x-2">
+						<USelectMenu
+							v-model="selectedTeam"
+							:options="teamOptions"
+							option-attribute="name"
+							value-attribute="id"
+							placeholder="Select Team"
+							size="sm"
+							class="w-36 uppercase text-[10px]"
+							@change="handleTeamChange"
+						>
+							<template #option="{ option }">
+								<div class="flex flex-col">
+									<span class="font-medium">{{ option.name }}</span>
+									<span v-if="option.description" class="text-xs text-gray-500 truncate">
+										{{ option.description }}
+									</span>
+								</div>
+							</template>
+						</USelectMenu>
+					</div> -->
+
 					<!-- Due Date Filter -->
 					<div class="flex items-center space-x-2 relative">
 						<USelectMenu
@@ -539,6 +588,8 @@ const handleTicketCreated = () => {
 							</template>
 						</USelectMenu>
 					</div>
+
+					<!-- Organization Selector (Commented out but kept as reference) -->
 					<!-- <div class="flex items-center space-x-2">
 						<USelectMenu
 							v-if="hasMultipleOrgs"
@@ -551,6 +602,8 @@ const handleTicketCreated = () => {
 							@change="(value) => setOrganization(value)"
 						/>
 					</div> -->
+
+					<!-- Project Selector -->
 					<div class="flex items-center space-x-2">
 						<USelectMenu
 							searchable
@@ -575,6 +628,9 @@ const handleTicketCreated = () => {
 									</span>
 									<span v-if="option.organization" class="text-[9px] leading-3 text-gray-500">
 										{{ option.organization.name }}
+									</span>
+									<span v-if="option.team" class="text-[9px] leading-3 text-gray-500">
+										Team: {{ option.team.name }}
 									</span>
 								</div>
 							</template>
@@ -660,7 +716,7 @@ const handleTicketCreated = () => {
 								>
 									<UIcon name="i-heroicons-arrow-path" class="animate-spin h-5 w-5" />
 								</div>
-								<TicketsCard :element="element" :comment-count="element.comments?.length" :tasks="element.tasks" />
+								<TicketsExpandableCard :element="element" :columns="columns" :updating-tickets="updatingTickets" />
 							</div>
 						</div>
 					</template>
@@ -675,7 +731,7 @@ const handleTicketCreated = () => {
 	&__board {
 		@apply relative;
 		&-filters {
-			@apply relative max-w-[2000px] bg-red-500;
+			@apply relative max-w-[2000px];
 		}
 		&-connection {
 			@apply max-w-[2000px];
@@ -753,25 +809,18 @@ const handleTicketCreated = () => {
 .ghost {
 	opacity: 0.5;
 	background: #f0f0f0;
-	/* border: 2px dashed #ccc;
-	border-radius: 0.5rem; */
 }
 
 .chosen {
-	/* transform: scale(1.05); */
 	box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
 }
 
 .drag {
 	opacity: 0.9;
-	/* transform: scale(1.05); */
 	box-shadow: 0 15px 25px rgba(0, 0, 0, 0.15);
 }
 
 .is-dragging {
-	/* background: rgba(59, 130, 246, 0.05); */
-	/* border: 2px dashed rgba(59, 130, 246, 0.2);
-	border-radius: 0.5rem; */
 	transition: all 0.3s ease;
 }
 

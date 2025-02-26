@@ -15,6 +15,9 @@
 					<nuxt-link :to="link.to">{{ link.name }}</nuxt-link>
 				</li>
 				<li v-if="user">
+					<nuxt-link to="/organization">Organization</nuxt-link>
+				</li>
+				<li v-if="user">
 					<nuxt-link to="/account">Account</nuxt-link>
 				</li>
 				<li v-if="user">

@@ -65,6 +65,7 @@
 		"nuxt": "^3.15.1",
 		"nuxt-directus-next": "^0.0.15",
 		"prettier": "3.2.5",
+		"shadcn-nuxt": "1.0.1",
 		"stripe": "^14.25.0",
 		"tippy.js": "^6.3.7",
 		"typescript": "^5.7.3",
@@ -74,17 +75,26 @@
 	"dependencies": {
 		"@nuxt/image": "^1.9.0",
 		"@sendgrid/mail": "^8.1.4",
+		"@unovis/ts": "^1.5.1",
+		"@unovis/vue": "^1.5.1",
 		"@use-gesture/vanilla": "^10.3.1",
 		"@vee-validate/nuxt": "^4.15.0",
 		"@vee-validate/yup": "^4.15.0",
+		"@vueuse/core": "^12.7.0",
 		"@vueuse/gesture": "^2.0.0",
 		"canvas-confetti": "^1.9.3",
+		"class-variance-authority": "^0.7.1",
+		"clsx": "^2.1.1",
 		"gsap": "^3.12.5",
 		"html2canvas": "^1.4.1",
 		"jspdf": "^2.5.2",
+		"lucide-vue-next": "^0.476.0",
 		"nuxt-gtag": "^2.1.0",
+		"reka-ui": "^2.0.0",
 		"sharp": "^0.33.5",
 		"swiper": "^11.2.1",
+		"tailwind-merge": "^3.0.2",
+		"tailwindcss-animate": "^1.0.7",
 		"v-calendar": "^3.1.2",
 		"vee-validate": "^4.15.0",
 		"vuedraggable": "^4.1.0",
@@ -97,5 +107,6 @@
 	"lint-staged": {
 		"*.{js,ts,vue}": "eslint --cache --fix",
 		"*.{js,ts,vue,md,y?(a)ml,json}": "prettier --write"
-	}
+	},
+	"packageManager": "pnpm@8.15.6+sha1.8105075ad0aa306138be128c017e9c41e28ecffa"
 }
