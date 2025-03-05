@@ -2,7 +2,7 @@
 	<div class="relative flex flex-col gap-2" :class="`depth-${depth}`">
 		<!-- Reply Context -->
 		<div v-if="replyingTo" class="flex items-center gap-2 text-[10px] p-1 bg-gray-50 dark:bg-gray-900 rounded-lg">
-			<span class="text-gray-500">Replying to {{ replyingTo.comments_id.user?.first_name }}'s comment:</span>
+			<span class="text-gray-500">Replying to {{ replyingTo.user?.first_name }}'s comment:</span>
 			<p class="font-medium truncate flex-1 italic">"{{ sanitizedComment }}"</p>
 			<UButton size="xs" variant="ghost" icon="i-heroicons-x-mark" @click="$emit('cancel')" />
 		</div>
@@ -82,8 +82,6 @@ const props = defineProps({
 	},
 });
 
-console.log(props.comment);
-
 const { deleteItem } = useDirectusItems();
 const emit = defineEmits(['submit', 'cancel', 'deleted']);
 const editorContent = ref('');
@@ -93,9 +91,9 @@ const { notify } = useNotifications();
 const mentionedUsers = ref(new Set());
 
 const sanitizedComment = computed(() => {
-	if (!props.replyingTo?.comments_id?.comment) return '';
+	if (!props.replyingTo?.comment) return '';
 	const div = document.createElement('div');
-	div.innerHTML = props.replyingTo.comments_id.comment;
+	div.innerHTML = props.replyingTo.comment;
 	const text = div.textContent || div.innerText;
 	return text.length > 50 ? text.substring(0, 50) + '...' : text;
 });
@@ -149,20 +147,20 @@ async function handleSubmit() {
 	if (!editorContent.value.trim()) return;
 
 	// Send notifications for mentions
-	console.log(mentionedUsers.value);
 	if (mentionedUsers.value.size > 0) {
-		const result = await notifyMentionedUsers(
+		await notifyMentionedUsers(
 			editorContent.value,
 			props.replyingTo?.collection || 'comments',
-			props.replyingTo?.item || props.replyingTo?.comments_id?.id,
+			props.replyingTo?.item || props.replyingTo?.id,
 		);
-		console.log(result);
 	}
 
 	// Send notification for reply
 	if (props.replyingTo) {
-		const parentUserId = props.replyingTo.comments_id.user?.id;
-		await notifyReply(parentUserId, editorContent.value, props.replyingTo.collection, props.replyingTo.item);
+		const parentUserId = props.replyingTo.user?.id;
+		if (parentUserId) {
+			await notifyReply(parentUserId, editorContent.value, props.replyingTo.collection, props.replyingTo.item);
+		}
 	}
 
 	emit('submit', editorContent.value);

@@ -1,10 +1,13 @@
 // composables/useFilteredUsers.js
-export default function useFilteredUsers() {
+
+// Changed from default export to named export
+export const useFilteredUsers = () => {
 	const { readUsers } = useDirectusUsers();
 	const { readItems } = useDirectusItems();
 	const { user: currentUser } = useDirectusAuth();
 	const { selectedOrg, getOrganizationFilter } = useOrganization();
-	const DEFAULT_TEAM_ID = 'org-default'; // Match the constant in useTeams
+	const config = useRuntimeConfig();
+	const DEFAULT_TEAM_ID = config.public.defaultTeamId;
 
 	const filteredUsers = ref([]);
 	const loading = ref(false);
@@ -81,7 +84,7 @@ export default function useFilteredUsers() {
 				delete filter._and;
 			}
 
-			console.log('User filter:', filter);
+			// console.log('User filter:', filter);
 
 			// Fetch the users with the constructed filter
 			const users = await readUsers({
@@ -97,7 +100,7 @@ export default function useFilteredUsers() {
 				filter: filter,
 			});
 
-			console.log('Fetched filtered users:', users.length);
+			// console.log('Fetched filtered users:', users.length);
 
 			// Map the users to a simpler structure
 			filteredUsers.value = users.map((user) => ({
@@ -166,4 +169,7 @@ export default function useFilteredUsers() {
 		loading,
 		DEFAULT_TEAM_ID,
 	};
-}
+};
+
+// For backward compatibility: also provide as default export
+export default useFilteredUsers;

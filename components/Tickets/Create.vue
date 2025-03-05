@@ -68,13 +68,23 @@
 									<UFormGroup label="Team" required>
 										<USelect
 											v-model="form.team"
-											:options="teams"
+											:options="teamsList"
 											option-attribute="name"
 											value-attribute="id"
 											placeholder="Select team"
 											:loading="teamsLoading"
-											:disabled="teams.length <= 1"
-										/>
+											@update:modelValue="handleTeamChange"
+										>
+											<template #option="{ option }">
+												<div class="flex flex-col">
+													<span class="font-medium">{{ option.name }}</span>
+													<span v-if="option.id === null" class="text-xs text-gray-500">
+														Admin/Manager only - Shows all users in the organization
+													</span>
+													<span v-else-if="option.is_default" class="text-xs text-green-500">Default team</span>
+												</div>
+											</template>
+										</USelect>
 									</UFormGroup>
 
 									<UFormGroup v-if="form.organization" label="Project">
@@ -129,6 +139,7 @@
 											placeholder="Select users..."
 											searchable
 											:loading="loadingUsers"
+											:disabled="filteredUsers.length === 0"
 											@update:modelValue="handleUserSelect"
 										>
 											<template #label>
@@ -209,28 +220,73 @@ defineProps({
 });
 
 const { selectedOrg, organizations, hasMultipleOrgs, organizationOptions } = useOrganization();
-
-const { teams, loading: teamsLoading, fetchTeams, selectedTeam, setTeam, currentTeam } = useTeams();
-
-const { filteredUsers, fetchFilteredUsers, loading: loadingUsers } = useFilteredUsers();
-
+const { teams, loading: teamsLoading, fetchTeams, selectedTeam, setTeam } = useTeams();
+const { filteredUsers, fetchFilteredUsers, loading: loadingUsers, DEFAULT_TEAM_ID } = useFilteredUsers();
 const { createItem, readItems } = useDirectusItems();
-// const { readUsers } = useDirectusUsers();
 const { user: currentUser } = useDirectusAuth();
+
+// Admin and Client Manager role IDs (using the ones from your code)
+const ADMIN_ROLE_ID = '3a63a4e1-c82e-46f8-9993-7f11ac6a4b01';
+const CLIENT_MANAGER_ROLE_ID = '7b62b285-e3a8-46ff-9e8c-d1445a3c13bb';
+
+// Check if user has admin access (admin or client manager)
+const hasAdminAccess = computed(() => {
+	return currentUser.value?.role?.id === ADMIN_ROLE_ID || currentUser.value?.role?.id === CLIENT_MANAGER_ROLE_ID;
+});
 
 const emit = defineEmits(['ticketCreated']);
 const isExpanded = ref(false);
 const isLoading = ref(false);
-// const userOptions = ref([]);
 const selectedUser = ref(null);
 const { notify } = useNotifications();
-
 const toast = useToast();
 
 const selectedDate = ref(new Date());
 const selectedTime = ref('17:00');
-
 const mentionedUsers = ref(new Set());
+
+// Format teams for the dropdown, ensuring the default team is first and add "No Team" option for admins
+const teamsList = computed(() => {
+	if (!teams.value || teams.value.length === 0) {
+		// If no teams and user is admin/manager, show "No Team" option
+		if (hasAdminAccess.value) {
+			return [
+				{
+					id: null,
+					name: 'No Team (All Organization Users)',
+					is_default: false,
+				},
+			];
+		}
+		return []; // Otherwise return empty list
+	}
+
+	// Create teams list with "No Team" option if user is admin/manager
+	let teamsArray = [...teams.value];
+
+	if (hasAdminAccess.value) {
+		teamsArray.unshift({
+			id: null,
+			name: 'No Team (All Organization Users)',
+			is_default: false,
+		});
+	}
+
+	// Sort teams with default team first, then alphabetically
+	// Keep "No Team" at the very top if it exists
+	return teamsArray.sort((a, b) => {
+		// Always keep "No Team" option at the top
+		if (a.id === null) return -1;
+		if (b.id === null) return 1;
+
+		// Then sort by default status
+		if (a.is_default && !b.is_default) return -1;
+		if (!a.is_default && b.is_default) return 1;
+
+		// Then sort alphabetically
+		return a.name.localeCompare(b.name);
+	});
+});
 
 const timeOptions = Array.from({ length: 48 }, (_, i) => {
 	const hour = Math.floor(i / 2);
@@ -279,12 +335,12 @@ const updateDateTime = () => {
 
 		form.value.due_date = localISOTime;
 
-		console.log({
-			localDateTime: dateTime.toString(),
-			timezone: userTimezone,
-			isoString: form.value.due_date,
-			offset: offset,
-		});
+		// console.log({
+		// 	localDateTime: dateTime.toString(),
+		// 	timezone: userTimezone,
+		// 	isoString: form.value.due_date,
+		// 	offset: offset,
+		// });
 	}
 };
 
@@ -300,7 +356,7 @@ const form = ref({
 	assigned_to: [],
 	organization: selectedOrg.value,
 	project: null,
-	team: selectedTeam.value,
+	team: null, // Initially null, will be set after teams are loaded
 });
 
 const priorities = [
@@ -317,19 +373,25 @@ const calendarAttrs = [
 	},
 ];
 
+// Filter the available users by removing those already assigned
 const availableUsers = computed(() => {
-	return filteredUsers.value.filter((user) => !form.value.assigned_to.includes(user.id));
+	return filteredUsers.value
+		.filter((user) => !form.value.assigned_to.includes(user.id))
+		.map((user) => ({
+			id: user.id,
+			label: `${user.first_name} ${user.last_name}`.trim(),
+			email: user.email,
+			avatar: user.avatar,
+			first_name: user.first_name,
+			last_name: user.last_name,
+		}));
 });
 
 // User selection handler
 const handleUserSelect = (user) => {
-	console.log('handleUserSelect called with:', user);
-
 	if (user && user.id) {
-		console.log('Adding user:', user);
 		if (!form.value.assigned_to.includes(user.id)) {
 			form.value.assigned_to.push(user.id);
-			console.log('Updated assigned_to:', form.value.assigned_to);
 		}
 		// Reset selection after adding
 		selectedUser.value = null;
@@ -338,8 +400,7 @@ const handleUserSelect = (user) => {
 
 // Helper functions
 const getUserById = (userId) => {
-	const user = filteredUsers.value.find((u) => u.id === userId);
-	return user;
+	return filteredUsers.value.find((u) => u.id === userId);
 };
 
 const getUserFullName = (user) => {
@@ -353,7 +414,6 @@ const getAvatarUrl = (user) => {
 	return `${useRuntimeConfig().public.directusUrl}/assets/${user.avatar}?key=small`;
 };
 
-// Updated isCurrentUser function
 const isCurrentUserBadge = (userId) => {
 	return currentUser.value && userId === currentUser.value.id;
 };
@@ -361,27 +421,6 @@ const isCurrentUserBadge = (userId) => {
 const removeUser = (userId) => {
 	form.value.assigned_to = form.value.assigned_to.filter((id) => id !== userId);
 };
-
-watch(
-	() => currentUser.value,
-	(newUser) => {
-		console.log('Current user updated:', newUser);
-		console.log('User organizations:', newUser?.organizations);
-	},
-	{ immediate: true },
-);
-
-watch(
-	() => form.value.assigned_to,
-	(newVal) => {
-		console.log('assigned_to changed:', newVal);
-		console.log(
-			'Current users:',
-			newVal.map((id) => getUserById(id)),
-		);
-	},
-	{ deep: true },
-);
 
 const handleMention = (mentionData) => {
 	mentionedUsers.value.add(mentionData.id);
@@ -420,6 +459,17 @@ const createTicket = async () => {
 			});
 			return;
 		}
+
+		// For non-admin users, ensure a team is selected
+		if (!hasAdminAccess.value && form.value.team === null) {
+			toast.add({
+				title: 'Error',
+				description: 'Please select a team for this ticket',
+				color: 'red',
+			});
+			return;
+		}
+
 		// Extract assigned_to from form data
 		const { assigned_to, ...ticketData } = form.value;
 
@@ -496,9 +546,51 @@ const createTicket = async () => {
 const openForm = async () => {
 	isExpanded.value = true;
 	document.body.style.overflow = 'hidden';
-	// Fetch users when form opens
-	// await fetchUsers();
-	await fetchFilteredUsers();
+
+	// Initialize form with current org and default values
+	form.value = {
+		title: '',
+		description: '',
+		status: 'Pending',
+		priority: 'medium',
+		due_date: new Date().toISOString(),
+		assigned_to: [],
+		organization: selectedOrg.value,
+		project: null,
+		team: null,
+	};
+
+	// Set up initial data
+	try {
+		// Fetch teams for the current organization
+		if (selectedOrg.value) {
+			await fetchTeams(selectedOrg.value);
+
+			// Load projects for the organization
+			await fetchProjects(selectedOrg.value);
+
+			if (hasAdminAccess.value) {
+				// Default to "No Team" option for admins/managers
+				form.value.team = null;
+				// Fetch all users in the organization
+				await fetchAllOrganizationUsers(selectedOrg.value);
+			} else {
+				// For regular users, select default team
+				const defaultTeam = teams.value.find((t) => t.is_default) || teams.value[0];
+				if (defaultTeam) {
+					form.value.team = defaultTeam.id;
+					await fetchFilteredUsers(selectedOrg.value, defaultTeam.id);
+				}
+			}
+		}
+	} catch (error) {
+		console.error('Error initializing form:', error);
+		toast.add({
+			title: 'Error',
+			description: 'Failed to load initial data',
+			color: 'red',
+		});
+	}
 };
 
 const closeForm = () => {
@@ -509,14 +601,14 @@ const closeForm = () => {
 		description: '',
 		status: 'Pending',
 		priority: 'medium',
-		category: '',
 		due_date: '',
 		assigned_to: [],
 		organization: selectedOrg.value,
 		project: null,
-		team: selectedTeam.value,
+		team: null,
 	};
 	projectOptions.value = [];
+	mentionedUsers.value.clear();
 };
 
 const fetchProjects = async (orgId) => {
@@ -534,7 +626,6 @@ const fetchProjects = async (orgId) => {
 				organization: { _eq: orgId },
 			},
 		});
-		console.log(projects);
 		projectOptions.value = projects;
 	} catch (error) {
 		console.error('Error fetching projects:', error);
@@ -549,67 +640,122 @@ const fetchProjects = async (orgId) => {
 	}
 };
 
-watch(
-	() => selectedOrg.value,
-	async (newOrg) => {
-		if (newOrg) {
-			await fetchTeams(newOrg);
-			// Set default team if available and no team selected
-			if (!form.value.team && teams.value.length > 0) {
-				// Find default team or use first team
-				const defaultTeam = teams.value.find((team) => team.is_default) || teams.value[0];
-				form.value.team = defaultTeam.id;
-			}
-		}
-	},
-	{ immediate: true },
-);
-
-watch(
-	() => form.value.team,
-	async (newTeamId) => {
-		if (newTeamId) {
-			setTeam(newTeamId);
-			form.value.assigned_to = []; // Clear assigned users when team changes
-			await fetchFilteredUsers(form.value.organization, newTeamId);
-		}
-	},
-);
-
+// Handler for organization change
 const handleOrgChange = async (orgId) => {
 	form.value.project = null;
 	form.value.assigned_to = []; // Clear assigned users when org changes
-	await Promise.all([
-		fetchProjects(orgId),
-		fetchTeams(orgId),
-		fetchFilteredUsers(orgId, form.value.team), // Pass both org and team
-	]);
+
+	// Fetch teams for the new organization
+	await fetchTeams(orgId);
+
+	// Fetch projects for the new organization
+	await fetchProjects(orgId);
+
+	if (hasAdminAccess.value) {
+		// Admin/managers can default to "No Team"
+		form.value.team = null;
+		await fetchAllOrganizationUsers(orgId);
+	} else {
+		// Regular users must select a team (preferably default)
+		const defaultTeam = teams.value.find((t) => t.is_default) || teams.value[0];
+		if (defaultTeam) {
+			form.value.team = defaultTeam.id;
+			await fetchFilteredUsers(orgId, defaultTeam.id);
+		} else {
+			form.value.team = null;
+		}
+	}
+};
+
+// Handler for team change
+const handleTeamChange = async (teamId) => {
+	// console.log('Team changed to:', teamId);
+
+	// Clear assigned users when team changes
+	form.value.assigned_to = [];
+
+	if (teamId === null) {
+		// Only admin/client manager can use "No Team" option
+		if (!hasAdminAccess.value) {
+			// Reset to default team if not admin
+			const defaultTeam = teams.value.find((t) => t.is_default) || teams.value[0];
+			if (defaultTeam) {
+				form.value.team = defaultTeam.id;
+				await fetchFilteredUsers(form.value.organization, defaultTeam.id);
+				setTeam(defaultTeam.id);
+				toast.add({
+					title: 'Team required',
+					description: 'You must select a team when creating a ticket',
+					color: 'yellow',
+				});
+				return;
+			}
+		}
+
+		// If "No Team" is selected and user has permission, fetch all users in the organization
+		await fetchAllOrganizationUsers(form.value.organization);
+	} else {
+		// Fetch users filtered by the selected team
+		await fetchFilteredUsers(form.value.organization, teamId);
+	}
+
+	// Update the global team selection
+	setTeam(teamId);
+};
+
+// Function to fetch all users in an organization
+const fetchAllOrganizationUsers = async (orgId) => {
+	if (!orgId) return;
+
+	try {
+		loadingUsers.value = true;
+		const { readUsers } = useDirectusUsers();
+
+		const users = await readUsers({
+			filter: {
+				organizations: {
+					organizations_id: { _eq: orgId },
+				},
+			},
+			fields: ['id', 'first_name', 'last_name', 'email', 'avatar'],
+		});
+
+		filteredUsers.value = users;
+	} catch (error) {
+		console.error('Error fetching organization users:', error);
+		toast.add({
+			title: 'Error',
+			description: 'Failed to load organization users',
+			color: 'red',
+		});
+		filteredUsers.value = [];
+	} finally {
+		loadingUsers.value = false;
+	}
 };
 
 onMounted(async () => {
-	if (selectedOrg.value) {
-		await fetchTeams(selectedOrg.value);
-		form.value = {
-			...form.value,
-			organization: selectedOrg.value,
-			team: selectedTeam.value || teams.value[0]?.id,
-		};
-
-		await Promise.all([fetchProjects(selectedOrg.value), fetchFilteredUsers(selectedOrg.value, form.value.team)]);
-	}
-
-	nextTick(() => {
+	try {
+		// Set initial date/time
 		updateDateTime();
-	});
 
-	document.addEventListener('keydown', (e) => {
-		if (e.key === 'Escape' && isExpanded.value) {
-			closeForm();
-		}
-	});
+		// Set up escape key handler
+		document.addEventListener('keydown', (e) => {
+			if (e.key === 'Escape' && isExpanded.value) {
+				closeForm();
+			}
+		});
+	} catch (error) {
+		console.error('Error in onMounted:', error);
+	}
 });
 
 onUnmounted(() => {
 	document.body.style.overflow = '';
+	document.removeEventListener('keydown', (e) => {
+		if (e.key === 'Escape' && isExpanded.value) {
+			closeForm();
+		}
+	});
 });
 </script>

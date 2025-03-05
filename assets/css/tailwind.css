@@ -56,12 +56,13 @@
     --chart-5: 340 75% 55%
   }
 }
-@layer base {
+/* @layer base {
   * {
-    @apply border-border;
+    border-color: var(--border);
+    border-width: 1px;
   }
   body {
     @apply bg-background text-foreground;
   }
-}
+} */
 

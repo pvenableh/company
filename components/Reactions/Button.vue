@@ -108,7 +108,6 @@ const getReactionIcon = (type) => {
 
 const userList = computed(() => {
 	if (!props.users.length) return '';
-	console.log(props.users);
 	return props.users
 		.map((reactUser) => {
 			if (reactUser?.id === user.value?.id) {

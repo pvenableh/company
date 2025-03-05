@@ -17,8 +17,8 @@ export default defineAppConfig({
 		},
 
 		button: {
-			base: 'transition duration-150 uppercase text-center focus:border-0 focus:outline-none focus:ring-1 focus:ring-gray-300 disabled:cursor-not-allowed disabled:opacity-75 active:border-0 active:outline-none active:ring-1 active:ring-gray-300 text-center items-center justify-center',
-			rounded: `rounded-sm`,
+			base: 'transition duration-150 uppercase tracking-wide text-center focus:border-0 focus:outline-none focus:ring-1 focus:ring-gray-300 disabled:cursor-not-allowed disabled:opacity-75 active:border-0 active:outline-none active:ring-1 active:ring-gray-300 tracking-wider text-center items-center justify-center',
+			rounded: `rounded-none`,
 			font: 'font-bold',
 
 			default: {
@@ -38,21 +38,24 @@ export default defineAppConfig({
 			rounded: 'rounded-large',
 		},
 		formGroup: {
-			base: 'ring-0 focus:ring-0 outline-none focus:outline-none',
+			base: 'ring-0 focus:ring-0 outline-none focus:outline-none ',
+			container: 'relative mt-1 mb-4',
 			label: {
-				base: 'uppercase block font-bold text-gray-500 dark:text-gray-200 tracking-wider text-[12px]',
+				base: 'uppercase block font-medium text-gray-700 dark:text-gray-200 tracking-wider text-[12px] leading-3',
 			},
+			error:
+				'absolute -bottom-[18px] right-0 !text-[10px] text-red-500 dark:text-red-400 uppercase tracking-wider w-full block text-right tracking-wide',
 		},
 		input: {
-			base: 'relative block w-full box-border disabled:cursor-not-allowed disabled:opacity-75 focus:outline-none border-0 border-solid border-b border-gray-300 focus:border-cyan-200 !ring-0 focus:ring-0 outline-none !ring-offset-0 appearance-none !bg-transparent!pl-0',
+			base: 'relative block w-full box-border disabled:cursor-not-allowed disabled:opacity-75 focus:outline-none border-0 border-solid border-b border-gray-300 focus:border-b-2 focus:border-cyan-200 !ring-0 focus:ring-0 outline-none !ring-offset-0 appearance-none !bg-transparent',
 			default: {
 				loadingIcon: 'i-heroicons-arrow-path',
 			},
-			rounded: `rounded-${theme.borderRadius}`,
+			rounded: `rounded-none`,
 		},
 		select: {
 			base: 'relative block w-full box-border disabled:cursor-not-allowed disabled:opacity-75 focus:outline-none focus:ring-0 border-0 border-solid border-b border-gray-300 focus:border-b focus:border-cyan-200 !ring-0 focus:ring-0 outline-none !ring-offset-0 appearance-none !bg-transparent uppercase overflow-y-scroll',
-			rounded: `rounded-${theme.borderRadius}`,
+			rounded: `rounded-none`,
 			default: {
 				loadingIcon: 'material-symbols:sync-rounded',
 				trailingIcon: 'material-symbols:expand-more-rounded',
@@ -63,7 +66,7 @@ export default defineAppConfig({
 			rounded: `rounded-${theme.borderRadius}`,
 		},
 		selectMenu: {
-			rounded: `rounded-${theme.borderRadius}`,
+			rounded: `rounded-none`,
 			base: 'relative block w-full box-border disabled:cursor-not-allowed disabled:opacity-75 focus:outline-none focus:ring-0 border-0 border-solid border-b border-gray-300 focus:border-b focus:border-cyan-200 !ring-0 focus:ring-0 outline-none !ring-offset-0 appearance-none bg-transparent uppercase overflow-y-scroll',
 			default: {
 				selectedIcon: 'material-symbols:fitbit-check-small-rounded',

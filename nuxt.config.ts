@@ -4,9 +4,9 @@
 export default defineNuxtConfig({
 	ssr: true,
 
-	future: {
-		compatibilityVersion: 4,
-	},
+	// future: {
+	// 	compatibilityVersion: 4,
+	// },
 
 	app: {
 		pageTransition: { name: 'page', mode: 'out-in' },
@@ -33,9 +33,12 @@ export default defineNuxtConfig({
 			directusUrl: process.env.DIRECTUS_URL,
 			assetsUrl: process.env.DIRECTUS_ASSETS_URL || 'https://admin.huestudios.company/assets/',
 			websocketUrl: process.env.DIRECTUS_WEBSOCKET_URL || 'wss://admin.huestudios.company/websocket',
-			staticToken: process.env.DIRECTUS_SERVER_TOKEN || 'oJHqE7kSlk6D00ix93e2z6PwUYixkjo2S',
+			staticToken: process.env.DIRECTUS_SERVER_TOKEN || '3njk8nRR70D6o8VHC1IxW87kSBZm3_FS',
 			siteUrl: process.env.NODE_ENV === 'production' ? 'https://huestudios.company' : 'http://localhost:3000',
 			adminUrl: process.env.DIRECTUS_URL || 'https://admin.huestudios.company',
+			defaultTeamId: process.env.NUXT_PUBLIC_DEFAULT_TEAM_ID || 'org-default',
+			adminRoleId: process.env.NUXT_PUBLIC_ADMIN_ROLE_ID || '3a63a4e1-c82e-46f8-9993-7f11ac6a4b01',
+			clientManagerRoleId: process.env.NUXT_PUBLIC_CLIENT_MANAGER_ROLE_ID || '7b62b285-e3a8-46ff-9e8c-d1445a3c13bb',
 		},
 	},
 
@@ -117,7 +120,7 @@ export default defineNuxtConfig({
 			devtools: true,
 			readMeQuery: {
 				fields: [
-					'*,organizations.organizations_id.id,organizations.organizations_id.name,organizations.organizations_id.logo,organizations.organizations_id.tickets,organizations.organizations_id.projects',
+					'*,organizations.organizations_id.id,organizations.organizations_id.name,organizations.organizations_id.logo,organizations.organizations_id.icon,organizations.organizations_id.tickets,organizations.organizations_id.projects',
 				],
 				updateState: true,
 			},
@@ -126,8 +129,8 @@ export default defineNuxtConfig({
 
 	devtools: { enabled: true },
 
-	debug: true,
-	logLevel: 'verbose',
+	// debug: true,
+	// logLevel: 'verbose',
 
 	colorMode: {
 		preference: 'system',

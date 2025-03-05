@@ -24,7 +24,7 @@ watch(selectedOrg, (newVal) => {
 });
 
 const handleOrgSelect = (orgId) => {
-	console.log('Selected organization ID:', orgId);
+	// console.log('Selected organization ID:', orgId);
 	setOrganization(orgId);
 	isDropdownOpen.value = false;
 };
@@ -34,10 +34,10 @@ const currentOrg = computed(() => {
 	return organizationOptions.value.find((org) => org.id === selectedOrg.value) || organizationOptions.value[0];
 });
 
-// Get logo URL for an organization
-const getLogoUrl = (org) => {
-	if (!org?.logo) return null;
-	return `${config.public.directusUrl}/assets/${org.logo}?key=small`;
+// Get icon URL for an organization
+const getIconUrl = (org) => {
+	if (!org?.icon) return null;
+	return `${config.public.directusUrl}/assets/${org.icon}?key=avatar`;
 };
 
 // Check if organization is the "All Organizations" option
@@ -71,7 +71,7 @@ const props = defineProps({
 		<!-- Single Organization Display -->
 		<div v-if="!hasMultipleOrgs" class="flex items-center">
 			<UAvatar
-				:src="getLogoUrl(user.organizations?.[0]?.organizations_id)"
+				:src="getIconUrl(user.organizations?.[0]?.organizations_id)"
 				:alt="user.organizations?.[0]?.organizations_id?.name || 'Organization'"
 				size="sm"
 			/>
@@ -80,19 +80,28 @@ const props = defineProps({
 		<!-- Multiple Organizations Selector - Custom Dropdown -->
 		<div v-else class="relative" ref="dropdownRef">
 			<!-- Dropdown Trigger -->
-			<button @click="toggleDropdown" class="flex items-center group focus:outline-none">
+			<button
+				@click="toggleDropdown"
+				class="flex items-center group relative focus:outline-none rounded-full border-2 border-[var(--cyan)]"
+			>
 				<!-- Show icon for "All Organizations" or avatar for specific organization -->
 				<template v-if="isAllOrganizations(currentOrg)">
-					<div class="h-8 w-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center shadow">
+					<div
+						class="h-8 w-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center relative shadow"
+					>
 						<UIcon name="i-heroicons-building-office-2" class="h-5 w-5 text-gray-500 dark:text-gray-300" />
 					</div>
 				</template>
+
 				<UAvatar
 					v-else
-					:src="getLogoUrl(currentOrg)"
+					:src="getIconUrl(currentOrg)"
 					:alt="currentOrg?.name || 'Organization'"
 					class="h-8 !w-8 shadow"
 				/>
+				<!-- <div class="bg-white bg-opacity-75 absolute bottom-0 left-0 z-50 h-3 w-3">
+					<UIcon name="i-heroicons-chevron-down" class="text-gray-900" />
+				</div> -->
 			</button>
 
 			<!-- Custom Dropdown -->
@@ -116,7 +125,7 @@ const props = defineProps({
 							:key="org.id || 'all'"
 							@click="handleOrgSelect(org.id)"
 							class="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-left"
-							:class="{ 'bg-blue-50 dark:bg-blue-900': selectedOrg?.value && org.id === selectedOrg.value }"
+							:class="{ 'bg-blue-50 dark:bg-blue-900': selectedOrg && org.id === selectedOrg }"
 						>
 							<!-- Show icon for "All Organizations" or avatar for specific organization -->
 							<template v-if="isAllOrganizations(org)">
@@ -124,8 +133,17 @@ const props = defineProps({
 									<UIcon name="i-heroicons-building-office-2" class="h-5 w-5 text-gray-500 dark:text-gray-300" />
 								</div>
 							</template>
-							<UAvatar v-else :src="getLogoUrl(org)" :alt="org.name" size="sm" class="flex-shrink-0" />
-							<span class="text-sm">{{ org.name }}</span>
+							<UAvatar
+								v-else
+								:src="getIconUrl(org)"
+								:alt="org.name"
+								size="sm"
+								class="flex-shrink-0"
+								:class="{ 'border-2 border-[var(--cyan)] rounded-full': selectedOrg && org.id === selectedOrg }"
+							/>
+							<span class="text-[11px] uppercase leading-3">
+								{{ org.name }}
+							</span>
 						</button>
 					</div>
 				</div>

@@ -116,8 +116,10 @@ watch(
 			</client-only>
 		</div>
 
-		<nuxt-link to="/" class="flex flex-row items-center justify-center ml-2">
+		<nuxt-link to="/" class="flex flex-row items-end justify-end">
 			<Confetti />
+			<span class="opacity-75 ml-2 mr-1 font-bold leading-3 inline-block text-[9px] -mb-[3px]">by</span>
+			<Logo class="transform scale-[0.35] origin-bottom-left" />
 		</nuxt-link>
 		<div class="absolute flex items-center justify-center flex-row right-[10px] sm:pr-1 md:px-6">
 			<nuxt-link to="/account" class="flex items-center justify-self-center">

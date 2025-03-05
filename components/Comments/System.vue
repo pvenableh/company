@@ -58,14 +58,14 @@
 				/>
 
 				<!-- Comments List -->
-				<TransitionGroup name="comments" tag="div" class="space-y-4" mo>
+				<TransitionGroup name="comments" tag="div" class="space-y-4">
 					<CommentsThread
 						v-for="comment in sortedComments"
 						:key="comment.id"
 						:depth="0"
 						:comment="comment"
 						:loading="isLoading"
-						:is-active="activeCommentId === comment.comments_id.id"
+						:is-active="activeCommentId === comment.id"
 						:refresh="refresh"
 						@reply="handleReply"
 						@submit="handleCommentSubmit"
@@ -91,17 +91,11 @@ const props = defineProps({
 		type: String,
 		required: true,
 	},
-	// showComments: {
-	// 	type: Boolean,
-	// 	default: false,
-	// },
 	organizationId: {
 		type: [String, Number],
 		default: null,
 	},
 });
-
-console.log(props.organizationId);
 
 const emit = defineEmits(['update:commentCount']);
 
@@ -112,39 +106,40 @@ const activeCommentId = ref(null);
 const localComments = ref([]);
 const isInitialized = ref(false);
 const sortOrder = ref('newest');
+const isCommentsVisible = ref(false);
 
-const junctionTable = `${props.collection}_comments`;
+// Generate collection-specific field name for relation
 const collectionIdField = `${props.collection}_id`;
 
+// Fields to request from the comments collection
 const fields = [
 	'id',
-	'comments_id.id',
-	'comments_id.comment',
-	'comments_id.date_created',
-	'comments_id.parent_id',
-	'comments_id.user.id',
-	'comments_id.user.first_name',
-	'comments_id.user.last_name',
-	'comments_id.user.avatar',
-	'comments_id.reactions.id',
-	'comments_id.reactions.users_id.id',
+	'comment',
+	'date_created',
+	'parent_id',
+	'collection',
+	'item',
+	`${collectionIdField}`,
+	'user.id',
+	'user.first_name',
+	'user.last_name',
+	'user.avatar',
+	'reactions.id',
+	'reactions.users_id.id',
 ];
 
+// Filter for comments related to this specific item
+const filter = computed(() => ({
+	_and: [{ collection: { _eq: props.collection } }, { item: { _eq: props.itemId } }],
+}));
+
+// Subscribe to comments for this item
 const {
 	data: rawComments,
 	isLoading,
 	error,
 	refresh,
-} = useRealtimeSubscription(
-	junctionTable,
-	fields,
-	{
-		[collectionIdField]: {
-			_eq: props.itemId,
-		},
-	},
-	'-comments_id.date_created',
-);
+} = useRealtimeSubscription('comments', fields, filter.value, '-date_created');
 
 watch(
 	rawComments,
@@ -154,26 +149,21 @@ watch(
 			return;
 		}
 
-		if (!isInitialized.value) {
-			localComments.value = [...newComments];
-			isInitialized.value = true;
-		} else {
-			// Always sync with remote state
-			localComments.value = [...newComments];
-		}
+		// For simplicity, just replace the entire array
+		// This avoids complex logic that might introduce bugs
+		localComments.value = [...newComments];
+		isInitialized.value = true;
 	},
 	{ deep: true },
 );
-
-const isCommentsVisible = ref(false);
 
 const comments = computed(() => {
 	if (!rawComments.value) return [];
 
 	const commentMap = new Map();
 	rawComments.value.forEach((comment) => {
-		if (comment?.comments_id) {
-			commentMap.set(String(comment.comments_id.id), {
+		if (comment) {
+			commentMap.set(String(comment.id), {
 				...comment,
 				replies: [],
 			});
@@ -182,10 +172,10 @@ const comments = computed(() => {
 
 	const rootComments = [];
 	rawComments.value.forEach((comment) => {
-		if (!comment?.comments_id) return;
+		if (!comment) return;
 
-		const currentComment = commentMap.get(String(comment.comments_id.id));
-		const parentId = comment.comments_id.parent_id;
+		const currentComment = commentMap.get(String(comment.id));
+		const parentId = comment.parent_id;
 
 		if (parentId) {
 			const parentComment = commentMap.get(String(parentId));
@@ -200,11 +190,11 @@ const comments = computed(() => {
 		}
 	});
 
-	rootComments.sort((a, b) => new Date(b.comments_id.date_created) - new Date(a.comments_id.date_created));
+	rootComments.sort((a, b) => new Date(b.date_created) - new Date(a.date_created));
 
 	const sortReplies = (comment) => {
 		if (comment?.replies?.length > 0) {
-			comment.replies.sort((a, b) => new Date(a.comments_id.date_created) - new Date(b.comments_id.date_created));
+			comment.replies.sort((a, b) => new Date(a.date_created) - new Date(b.date_created));
 			comment.replies.forEach(sortReplies);
 		}
 	};
@@ -220,8 +210,8 @@ const sortedComments = computed(() => {
 	const sortByDate = (comments, order) => {
 		return comments
 			.sort((a, b) => {
-				const dateA = new Date(a.comments_id.date_created);
-				const dateB = new Date(b.comments_id.date_created);
+				const dateA = new Date(a.date_created);
+				const dateB = new Date(b.date_created);
 				// Apply the same sort order to replies as parent comments
 				return order === 'newest' ? dateB - dateA : dateA - dateB;
 			})
@@ -251,38 +241,37 @@ const commentsCount = computed(() => {
 async function handleCommentSubmit(commentHtml, parentId = null) {
 	isLoading.value = true;
 	try {
-		const effectiveParentId = parentId || replyingTo.value?.comments_id?.id || null;
+		const effectiveParentId = parentId || replyingTo.value?.id || null;
 
-		// Create the comment (WITHOUT item_id, item, table, or collection)
+		// Create the comment with direct references to item and collection
 		const comment = await createItem('comments', {
 			status: 'published',
 			comment: commentHtml,
 			user: user.value.id,
 			parent_id: effectiveParentId ? effectiveParentId.toString() : null,
-		});
-
-		// Create the junction table entry (linking the comment to the item)
-		const junctionRecord = await createItem(junctionTable, {
-			[collectionIdField]: props.itemId.toString(), // e.g., tickets_id: '123'
-			comments_id: comment.id,
+			// Add the direct references
+			collection: props.collection,
+			item: props.itemId.toString(),
+			// Add the dynamic field specific to this collection (e.g. tickets_id, projects_id)
+			[collectionIdField]: props.itemId.toString(),
 		});
 
 		// Add new comment to local state
 		localComments.value = [
 			...localComments.value,
 			{
-				id: junctionRecord.id,
-				comments_id: {
-					id: comment.id,
-					comment: commentHtml,
-					date_created: new Date().toISOString(),
-					parent_id: effectiveParentId,
-					user: {
-						id: user.value.id,
-						first_name: user.value.first_name,
-						last_name: user.value.last_name,
-						avatar: user.value.avatar,
-					},
+				id: comment.id,
+				comment: commentHtml,
+				date_created: new Date().toISOString(),
+				parent_id: effectiveParentId,
+				collection: props.collection,
+				item: props.itemId.toString(),
+				[collectionIdField]: props.itemId.toString(),
+				user: {
+					id: user.value.id,
+					first_name: user.value.first_name,
+					last_name: user.value.last_name,
+					avatar: user.value.avatar,
 				},
 			},
 		];
@@ -301,8 +290,9 @@ async function handleCommentSubmit(commentHtml, parentId = null) {
 // Update the Thread component submission handler
 function handleReply(comment) {
 	replyingTo.value = comment;
-	activeCommentId.value = comment.comments_id.id;
+	activeCommentId.value = comment.id;
 }
+
 async function handleDelete(commentId) {
 	try {
 		await deleteItem('comments', commentId);

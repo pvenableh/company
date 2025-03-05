@@ -1,16 +1,18 @@
 // composables/useTeams.js
 export const useTeams = () => {
-	const { createItem, readItems, deleteItems } = useDirectusItems();
+	const { createItem, readItems, deleteItems, updateItem } = useDirectusItems();
 	const { readUsers } = useDirectusUsers();
 	const { getAvailableTeamUsers } = useFilteredUsers();
 
-	// Special constant for the default "all users" team ID
-	const DEFAULT_TEAM_ID = 'org-default';
+	// Role IDs for permission checks
+	const ADMIN_ROLE_ID = '3a63a4e1-c82e-46f8-9993-7f11ac6a4b01';
+	const CLIENT_MANAGER_ROLE_ID = '7b62b285-e3a8-46ff-9e8c-d1445a3c13bb';
 
 	const teams = ref([]);
 	const organizationUsers = ref([]);
+	const visibleTeams = ref([]);
 	const loading = ref(false);
-	const selectedTeam = useState('selectedTeam', () => DEFAULT_TEAM_ID);
+	const selectedTeam = useState('selectedTeam', () => null);
 	const isInitialized = useState('teamsIsInitialized', () => false);
 
 	// Get all users for an organization
@@ -35,16 +37,23 @@ export const useTeams = () => {
 		}
 	};
 
+	// Check if user has admin or client manager role
+	const hasAdminAccess = (user) => {
+		return user?.role === ADMIN_ROLE_ID || user?.role === CLIENT_MANAGER_ROLE_ID;
+	};
+
 	// Get teams for an organization with full user details
 	const fetchTeams = async (organizationId) => {
 		if (!organizationId) return;
 
+		const { user } = useDirectusAuth();
 		loading.value = true;
+
 		try {
 			// First, fetch all users in the organization
 			await fetchOrganizationUsers(organizationId);
 
-			// Then fetch regular teams
+			// Then fetch all teams for the organization
 			const response = await readItems('teams', {
 				filter: {
 					organization: { _eq: organizationId },
@@ -55,6 +64,8 @@ export const useTeams = () => {
 					'description',
 					'organization',
 					'organization.id',
+					'users.id', // Junction table ID
+					'users.is_manager', // Include manager flag
 					'users.directus_users_id.id',
 					'users.directus_users_id.first_name',
 					'users.directus_users_id.last_name',
@@ -63,10 +74,27 @@ export const useTeams = () => {
 				],
 			});
 
+			console.log(response);
+
 			teams.value = response;
+
+			// Filter teams based on user role and membership
+			if (hasAdminAccess(user.value)) {
+				// Admin or client manager sees all teams
+				visibleTeams.value = [...teams.value];
+			} else {
+				// Regular users only see teams they're a member of
+				visibleTeams.value = teams.value.filter((team) =>
+					team.users?.some((member) => member.directus_users_id?.id === user.value?.id),
+				);
+			}
+
+			// Handle team selection
 			tryRestoreSelectedTeam(organizationId);
 		} catch (error) {
 			console.error('Error fetching teams:', error);
+			teams.value = [];
+			visibleTeams.value = [];
 		} finally {
 			loading.value = false;
 		}
@@ -74,20 +102,24 @@ export const useTeams = () => {
 
 	// Set selected team with persistence using cookie
 	const setTeam = (teamId) => {
-		selectedTeam.value = teamId; // Can be null, DEFAULT_TEAM_ID, or a real team ID
-		const cookie = useCookie('selectedTeam', {
-			maxAge: 60 * 60 * 24 * 30, // 30 days
-			path: '/',
-			sameSite: 'lax',
-		});
-		cookie.value = teamId;
+		if (teamId === selectedTeam.value) {
+			clearTeam();
+		} else {
+			selectedTeam.value = teamId; // Can be null or a real team ID
+			const cookie = useCookie('selectedTeam', {
+				maxAge: 60 * 60 * 24 * 30, // 30 days
+				path: '/',
+				sameSite: 'lax',
+			});
+			cookie.value = teamId;
+		}
 	};
 
-	// Clear selected team (sets to default)
+	// Clear selected team (sets to null)
 	const clearTeam = () => {
-		selectedTeam.value = DEFAULT_TEAM_ID;
+		selectedTeam.value = null;
 		const cookie = useCookie('selectedTeam');
-		cookie.value = DEFAULT_TEAM_ID;
+		cookie.value = null;
 	};
 
 	// Try to restore selected team from cookie
@@ -95,88 +127,72 @@ export const useTeams = () => {
 		try {
 			const savedTeam = useCookie('selectedTeam').value;
 
-			// If there's a saved team ID and it exists in the teams list, use it
-			if (savedTeam && teams.value.some((team) => team.id === savedTeam)) {
+			// If there's a saved team ID and it exists in the visible teams list, use it
+			if (savedTeam && visibleTeams.value.some((team) => team.id === savedTeam)) {
 				selectedTeam.value = savedTeam;
 				return;
 			}
 
-			// If no valid saved team, check if we have any teams
-			if (teams.value.length === 0) {
-				// No teams exist, set to default
-				selectedTeam.value = DEFAULT_TEAM_ID;
-			} else {
-				// Teams exist but saved team wasn't found, set to first team
-				selectedTeam.value = teams.value[0].id;
-			}
+			// If no valid saved team, don't automatically select one - remain null
+			selectedTeam.value = null;
 		} catch (err) {
 			console.warn('Error restoring saved team:', err);
-			selectedTeam.value = DEFAULT_TEAM_ID;
+			selectedTeam.value = null;
 		}
 	};
 
 	// Get team filter for queries
 	const getTeamFilter = () => {
-		// If default team is selected or no team is selected, return empty filter
-		if (!selectedTeam.value || selectedTeam.value === DEFAULT_TEAM_ID) {
-			return {}; // No team filter means all org users
+		// If no team is selected, return empty filter
+		if (!selectedTeam.value) {
+			return {}; // No team filter
 		}
 
+		// Get users in the selected team
+		const team = teams.value.find((t) => t.id === selectedTeam.value);
+		if (!team || !team.users?.length) return {};
+
+		const teamUserIds = team.users.map((u) => u.directus_users_id.id);
+
 		return {
-			teams: {
-				_some: {
-					teams_id: { _eq: selectedTeam.value },
+			assigned_to: {
+				directus_users_id: {
+					id: { _in: teamUserIds },
 				},
 			},
 		};
 	};
 
-	// Check if the selected team is the default virtual team
-	const isDefaultTeam = computed(() => {
-		return selectedTeam.value === DEFAULT_TEAM_ID;
-	});
-
 	// Computed for current team details
 	const currentTeam = computed(() => {
-		// If default team is selected, return virtual team object
-		if (selectedTeam.value === DEFAULT_TEAM_ID) {
-			return {
-				id: DEFAULT_TEAM_ID,
-				name: 'Default Team',
-				description: 'All users in this organization',
-				isVirtual: true,
-			};
-		}
-
-		// Otherwise find the real team
 		if (!selectedTeam.value) return null;
 		return teams.value.find((team) => team.id === selectedTeam.value);
 	});
 
-	// Computed for users based on selection (team users or all org users)
-	const currentUsers = computed(() => {
-		// If default team or no team is selected, return all organization users
-		if (!selectedTeam.value || selectedTeam.value === DEFAULT_TEAM_ID) {
-			return organizationUsers.value;
-		}
+	// Computed for users in current team
+	const currentTeamUsers = computed(() => {
+		if (!selectedTeam.value) return [];
 
-		// Otherwise return just the team's users
 		const team = teams.value.find((t) => t.id === selectedTeam.value);
 		return team?.users?.map((u) => u.directus_users_id) || [];
 	});
 
-	// Get all teams with the virtual default team included
-	const allTeams = computed(() => {
-		const virtualDefaultTeam = {
-			id: DEFAULT_TEAM_ID,
-			name: 'Default Team',
-			description: 'All users in this organization',
-			isVirtual: true,
-			users: organizationUsers.value.map((user) => ({ directus_users_id: user })),
-		};
+	// Check if a user is a manager of a specific team
+	const isTeamManager = (teamId, userId) => {
+		const { user } = useDirectusAuth();
+		const currentUserId = userId || user.value?.id;
+		if (!currentUserId) return false;
 
-		return [virtualDefaultTeam, ...teams.value];
-	});
+		const team = teams.value.find((t) => t.id === teamId);
+		return team?.users?.some((u) => u.directus_users_id?.id === currentUserId && u.is_manager === true);
+	};
+
+	// Check if user can manage a team (is manager or has admin role)
+	const canManageTeam = (teamId) => {
+		const { user } = useDirectusAuth();
+		if (hasAdminAccess(user.value)) return true;
+		return isTeamManager(teamId);
+	};
 
 	// Create a new team
 	const createTeam = async (organizationId, teamData) => {
@@ -189,16 +205,27 @@ export const useTeams = () => {
 				status: 'published',
 			});
 
-			// Add team members
+			// Add team members with manager status
 			if (teamData.users?.length) {
 				await Promise.all(
-					teamData.users.map((userId) =>
+					teamData.users.map((userData) =>
 						createItem('junction_directus_users_teams', {
 							teams_id: team.id,
-							directus_users_id: userId,
+							directus_users_id: userData.id,
+							is_manager: userData.isManager || false,
 						}),
 					),
 				);
+			} else {
+				// If no users specified, add current user as manager by default
+				const { user } = useDirectusAuth();
+				if (user.value) {
+					await createItem('junction_directus_users_teams', {
+						teams_id: team.id,
+						directus_users_id: user.value.id,
+						is_manager: true,
+					});
+				}
 			}
 
 			// Refresh the teams list
@@ -210,16 +237,50 @@ export const useTeams = () => {
 		}
 	};
 
+	// Update existing team
+	const updateTeam = async (teamId, teamData, organizationId) => {
+		try {
+			await updateItem('teams', teamId, {
+				name: teamData.name,
+				description: teamData.description,
+			});
+
+			// Refresh the teams list
+			await fetchTeams(organizationId);
+		} catch (error) {
+			console.error('Error updating team:', error);
+			throw error;
+		}
+	};
+
+	// Delete a team
+	const deleteTeam = async (teamId, organizationId) => {
+		try {
+			await deleteItem('teams', teamId);
+
+			// Clear selection if the deleted team was selected
+			if (selectedTeam.value === teamId) {
+				clearTeam();
+			}
+
+			// Refresh the teams list
+			await fetchTeams(organizationId);
+		} catch (error) {
+			console.error('Error deleting team:', error);
+			throw error;
+		}
+	};
+
 	// Add users to team
-	const addUsersToTeam = async (teamId, userIds, organizationId) => {
-		// Can't add users to the virtual default team
-		if (teamId === DEFAULT_TEAM_ID || !teamId || !userIds?.length || !organizationId) return;
+	const addUsersToTeam = async (teamId, userIds, organizationId, isManager = false) => {
+		if (!teamId || !userIds?.length || !organizationId) return;
 
 		try {
 			const promises = userIds.map((userId) =>
 				createItem('junction_directus_users_teams', {
 					directus_users_id: userId,
 					teams_id: teamId,
+					is_manager: isManager,
 				}),
 			);
 			await Promise.all(promises);
@@ -234,8 +295,7 @@ export const useTeams = () => {
 
 	// Remove user from team
 	const removeUserFromTeam = async (teamId, userId, organizationId) => {
-		// Can't remove users from the virtual default team
-		if (teamId === DEFAULT_TEAM_ID || !teamId || !userId || !organizationId) return;
+		if (!teamId || !userId || !organizationId) return;
 
 		try {
 			await deleteItems('junction_directus_users_teams', {
@@ -255,15 +315,15 @@ export const useTeams = () => {
 
 	return {
 		teams: readonly(teams),
-		allTeams,
+		visibleTeams: readonly(visibleTeams),
 		loading: readonly(loading),
 		selectedTeam: readonly(selectedTeam),
 		currentTeam,
-		currentUsers,
-		isDefaultTeam,
-		DEFAULT_TEAM_ID,
+		currentTeamUsers,
 		fetchTeams,
 		createTeam,
+		updateTeam,
+		deleteTeam,
 		addUsersToTeam,
 		removeUserFromTeam,
 		getAvailableTeamUsers,
@@ -272,5 +332,10 @@ export const useTeams = () => {
 		getTeamFilter,
 		fetchOrganizationUsers,
 		organizationUsers: readonly(organizationUsers),
+		isTeamManager,
+		canManageTeam,
+		hasAdminAccess,
+		ADMIN_ROLE_ID,
+		CLIENT_MANAGER_ROLE_ID,
 	};
 };

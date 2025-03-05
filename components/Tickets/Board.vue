@@ -1,3 +1,231 @@
+<template>
+	<div class="w-full mx-auto relative tickets-board">
+		<!-- Connection Status -->
+		<!-- <transition name="fade">
+			<div
+				v-if="!isConnected && !isLoading"
+				class="mb-4 absolute right-[10px] top-[20px] z-10 min-w-60 tickets-board__connection"
+			>
+				<UAlert title="Connection Lost" description="Attempting to reconnect..." color="yellow">
+					<template #footer>
+						<UButton size="sm" color="yellow" @click="refresh">Retry Connection</UButton>
+					</template>
+				</UAlert>
+			</div>
+		</transition> -->
+
+		<div
+			class="w-full flex flex-col md:flex-row items-end justify-between mb-4 xl:mb-8 xl:mt-2 px-4 gap-4 pt-4 tickets-board__filters"
+		>
+			<TicketsCreate :columns="columns" @ticketCreated="handleTicketCreated" class="mb-4 xl:mb-0" />
+
+			<div v-if="!projectId" class="hidden md:flex items-center flex-col xl:flex-row relative mb-4 xl:mb-0">
+				<div class="w-full flex flex-row items-center justify-end gap-4 mb-2 xl:mb-0 xl:mr-2">
+					<UButton
+						icon="i-heroicons-x-mark"
+						size="xs"
+						color="gray"
+						variant="ghost"
+						@click="clearFilters"
+						class="uppercase text-[10px] transition-opacity duration-500 p-0"
+						:class="hasActiveFilters ? 'opacity-100' : 'opacity-0'"
+					>
+						Clear Filters
+					</UButton>
+					<div class="flex flex-row items-center justify-center space-x-2">
+						<UToggle v-model="filterByAssignedTo" class="" />
+
+						<span class="text-[10px] text-gray-500 uppercase">
+							{{ filterByAssignedTo ? 'My Tickets' : 'All Tickets' }}
+						</span>
+					</div>
+					<div class="flex flex-row items-center justify-center space-x-2">
+						<UToggle v-model="filterUnassigned" :disabled="filterByAssignedTo" />
+						<span class="text-[10px] text-gray-500 uppercase">
+							{{ filterUnassigned ? 'Unassigned' : 'All Assignments' }}
+						</span>
+					</div>
+				</div>
+				<div class="w-full flex flex-row items-center justify-end gap-4">
+					<!-- Due Date Filter -->
+					<div class="flex items-center space-x-2 relative">
+						<USelectMenu
+							v-model="filterDueDate"
+							:options="dueDateOptions"
+							placeholder="Due Date"
+							size="sm"
+							class="w-36 uppercase text-[10px]"
+							option-attribute="label"
+							value-attribute="value"
+						>
+							<template #trigger>
+								<UButton
+									:color="activeDueDateFilter ? 'yellow' : 'gray'"
+									variant="soft"
+									:icon="activeDueDateFilter ? 'i-heroicons-clock' : 'i-heroicons-calendar'"
+									size="xs"
+									class="uppercase text-[10px]"
+								>
+									{{ filterDueDate?.label || 'Due Date' }}
+								</UButton>
+							</template>
+						</USelectMenu>
+					</div>
+
+					<!-- Project Selector -->
+					<div class="flex items-center space-x-2">
+						<USelectMenu
+							searchable
+							v-model="selectedProject"
+							:options="projectOptions"
+							option-attribute="title"
+							value-attribute="id"
+							placeholder="Select Project"
+							class="w-full lg:w-64 uppercase text-[8px] text-gray-400 relative"
+							@change="handleProjectChange"
+						>
+							<template #option="{ option }">
+								<div class="flex flex-col w-full">
+									<span class="w-full flex flex-row items-center justify-start leading-4">
+										{{ option.title }}
+										<span
+											v-if="option.tickets?.length"
+											class="text-[8px] font-bold h-4 w-4 !text-white rounded-full bg-[var(--cyan)] inline-flex items-center justify-center ml-1 text-center"
+										>
+											{{ option.tickets.length }}
+										</span>
+									</span>
+									<span v-if="option.organization" class="text-[9px] leading-3 text-gray-500">
+										{{ option.organization.name }}
+									</span>
+									<span v-if="option.team" class="text-[9px] leading-3 text-gray-500">
+										Team: {{ option.team.name }}
+									</span>
+								</div>
+							</template>
+						</USelectMenu>
+					</div>
+				</div>
+				<div v-if="lastUpdated" class="-bottom-[22.5px] text-[9px] right-0 text-gray-500 absolute font-bold uppercase">
+					Last updated: {{ new Date(lastUpdated).toLocaleTimeString() }}
+				</div>
+			</div>
+		</div>
+
+		<!-- Mobile Column Navigation -->
+		<div
+			v-if="isMobile"
+			class="flex items-center justify-between mb-4 mx-4 rounded bg-gray-500 px-4 gap-4 py-3 text-white"
+		>
+			<UIcon name="i-heroicons-chevron-left" class="w-5 h-5" @click="previousColumn" />
+			<h3 class="text-sm font-medium uppercase tracking-wide">
+				{{ columns.find((col) => col.id === activeColumn)?.name }}
+			</h3>
+			<UIcon name="i-heroicons-chevron-right" class="w-5 h-5" @click="nextColumn" />
+		</div>
+
+		<!-- Debug info -->
+		<UButton v-if="user.email === 'peter@huestudios.com'" @click="debugMode = !debugMode">Toggle Debug</UButton>
+		<div v-if="debugMode" class="p-4 mb-4 bg-gray-100 border border-gray-300 rounded">
+			<h3 class="font-bold">Debug Info</h3>
+			<div class="flex justify-between">
+				<div>
+					<pre class="text-xs mt-2">Tickets: {{ tickets?.length || 0 }}</pre>
+					<pre class="text-xs mt-2">Processed: {{ processedTickets?.length || 0 }}</pre>
+					<pre class="text-xs mt-2">Connection: {{ isConnected ? 'Connected' : 'Disconnected' }}</pre>
+					<pre class="text-xs mt-2">Status: {{ connectionStatus }}</pre>
+					<pre class="text-xs mt-2">Last Error: {{ error || 'None' }}</pre>
+					<pre class="text-xs mt-2">Selected Org: {{ selectedOrg }}</pre>
+					<pre class="text-xs mt-2">Selected Team: {{ selectedTeam }}</pre>
+					<pre class="text-xs mt-2">Selected Project: {{ selectedProject }}</pre>
+				</div>
+				<div class="flex-1 ml-4">
+					<h4 class="text-xs font-bold">Current Filter:</h4>
+					<pre class="text-xs mt-1 bg-gray-200 p-2 rounded overflow-auto max-h-32">{{
+						JSON.stringify(filterRef, null, 2)
+					}}</pre>
+				</div>
+			</div>
+			<div class="grid grid-cols-4 gap-2 mt-2">
+				<div v-for="(col, idx) in columns" :key="idx" class="text-xs">
+					{{ col.name }}: {{ localTickets[col.id]?.length || 0 }}
+				</div>
+			</div>
+			<UButton size="xs" class="mt-2" @click="refresh">Force Refresh</UButton>
+			<UButton size="xs" class="mt-2 ml-2" color="cyan" @click="testWebSocketConnection">Test WebSocket</UButton>
+		</div>
+
+		<!-- Board Layout -->
+		<div
+			class="bg-gray-100 bg-opacity-30 border-b border-gray-200 w-full flex min-h-svh overflow-x-auto overflow-hidden-scrollbar tickets-board__board"
+			@touchstart="handleTouchStart"
+			@touchend="handleTouchEnd"
+		>
+			<div
+				v-for="(column, index) in columns"
+				:key="column.id"
+				class="flex-grow w-full basis-0 h-full min-h-dvh transition-transform duration-300 ease-in-out min-w-[350px] tickets-board__board-col"
+				:class="{
+					'hidden md:block': isMobile && column.id !== activeColumn,
+					'transform translate-x-0': !isMobile || column.id === activeColumn,
+				}"
+			>
+				<!-- Column Header -->
+				<div class="tickets-board__board-col-header">
+					<div class="flex items-center justify-between">
+						<h3 class="text-xs font-bold uppercase tracking-wide">{{ column.name }}</h3>
+						<UBadge
+							class="ml-2 w-6 h-6 text-center inline-block text-[var(--darkBlue)]"
+							:style="{ backgroundColor: `var(--${column.color})` }"
+						>
+							{{ localTickets[column.id]?.length || 0 }}
+						</UBadge>
+					</div>
+				</div>
+
+				<!-- Loading State -->
+				<div
+					v-if="isLoading && !localTickets[column.id]?.length"
+					class="min-h-[90svh] p-2 bg-gray-100 dark:bg-gray-800"
+				>
+					<div class="space-y-3">
+						<USkeleton v-for="n in 5" :key="n" class="h-24 mb-4 w-full" />
+					</div>
+				</div>
+
+				<VueDraggable
+					v-else
+					v-model="localTickets[column.id]"
+					:group="{ name: 'tickets' }"
+					item-key="id"
+					class="tickets-board__board-col-content"
+					:class="{ 'is-dragging': isDragging }"
+					ghost-class="ghost"
+					chosen-class="chosen"
+					drag-class="drag"
+					@start="onDragStart"
+					@end="onDragEnd"
+					@change="(event) => updateTicketStatus(column.id, event)"
+				>
+					<template #item="{ element }">
+						<div :id="element.id" class="ticket-wrapper">
+							<div class="relative">
+								<div
+									v-if="updatingTickets.has(element.id)"
+									class="absolute inset-0 bg-white/50 dark:bg-gray-900/50 rounded-lg flex items-center justify-center z-10"
+								>
+									<UIcon name="i-heroicons-arrow-path" class="animate-spin h-5 w-5" />
+								</div>
+								<TicketsExpandableCard :element="element" :columns="columns" :updating-tickets="updatingTickets" />
+							</div>
+						</div>
+					</template>
+				</VueDraggable>
+			</div>
+		</div>
+	</div>
+</template>
+
 <script setup>
 import VueDraggable from 'vuedraggable';
 const { updateItem } = useDirectusItems();
@@ -8,6 +236,10 @@ const { selectedOrg, hasMultipleOrgs, organizationOptions, setOrganization, clea
 const { selectedTeam, allTeams, setTeam, clearTeam, getTeamFilter, DEFAULT_TEAM_ID } = useTeams();
 
 const { triggerHaptic } = useHaptic();
+
+const commentsCache = ref(new Map());
+const processedTickets = ref([]);
+const debugMode = ref(false); // Set to false in production
 
 const props = defineProps({
 	projectId: {
@@ -89,16 +321,18 @@ const fetchProjects = async () => {
 		}
 	}
 
-	console.log('Fetching projects with filter:', filter);
+	try {
+		const projects = await readItems('projects', {
+			fields: ['id', 'title', 'sort', 'organization.id', 'organization.name', 'team.id', 'team.name', 'tickets'],
+			filter,
+			sort: 'sort',
+		});
 
-	const projects = await readItems('projects', {
-		fields: ['id', 'title', 'sort', 'organization.id', 'organization.name', 'team.id', 'team.name', 'tickets'],
-		filter,
-		sort: 'sort',
-	});
-
-	projectOptions.value = [{ id: null, title: 'All Projects' }, ...projects];
-	console.log('Fetched projects:', projectOptions.value.length);
+		projectOptions.value = [{ id: null, title: 'All Projects' }, ...projects];
+	} catch (error) {
+		console.error('Error fetching projects:', error);
+		projectOptions.value = [{ id: null, title: 'All Projects' }];
+	}
 };
 
 const fields = [
@@ -128,7 +362,6 @@ const fields = [
 	'assigned_to.directus_users_id.last_name',
 	'assigned_to.directus_users_id.avatar',
 	'assigned_to.directus_users_id.email',
-	'comments',
 	'tasks.id',
 	'tasks.status',
 	'team.id',
@@ -142,14 +375,13 @@ const getFilter = () => {
 		_and: [],
 	};
 
-	// Debug state values
-	console.log('Building filter with:', {
-		org: selectedOrg.value,
-		team: selectedTeam.value,
-		project: selectedProject.value,
-		assignedTo: filterByAssignedTo.value,
-		unassigned: filterUnassigned.value,
-	});
+	// console.log('Building filter with:', {
+	// 	org: selectedOrg.value,
+	// 	team: selectedTeam.value,
+	// 	project: selectedProject.value,
+	// 	assignedTo: filterByAssignedTo.value,
+	// 	unassigned: filterUnassigned.value,
+	// });
 
 	// Apply organization filter
 	const orgFilter = getOrganizationFilter();
@@ -158,9 +390,10 @@ const getFilter = () => {
 	}
 
 	// Apply team filter (only if not the default team)
-	const teamFilter = getTeamFilter();
-	if (Object.keys(teamFilter).length > 0) {
-		filter._and.push(teamFilter);
+	if (selectedTeam.value && selectedTeam.value !== DEFAULT_TEAM_ID) {
+		filter._and.push({
+			team: { _eq: selectedTeam.value },
+		});
 	}
 
 	// Project filter
@@ -225,7 +458,6 @@ const getFilter = () => {
 		delete filter._and;
 	}
 
-	console.log('Final filter:', filter);
 	return filter;
 };
 
@@ -236,18 +468,9 @@ const {
 	error,
 	lastUpdated,
 	refresh,
-} = useRealtimeSubscription('tickets', fields, filterRef.value, '-date_updated');
-
-watch(
-	() => tickets.value,
-	(newTickets) => {
-		console.log('Tickets updated:', {
-			count: newTickets?.length,
-			org: selectedOrg.value,
-			team: selectedTeam.value,
-		});
-	},
-);
+	connectionStatus,
+	connect,
+} = useRealtimeSubscription('tickets', fields, filterRef.value, '-date_updated', { debug: true });
 
 const handleProjectChange = (value) => {
 	selectedProject.value = value === 'null' || value === 'All Projects' ? null : value;
@@ -276,14 +499,63 @@ const clearFilters = () => {
 	setTeam(DEFAULT_TEAM_ID); // Reset to default team instead of null
 };
 
+const fetchCommentCounts = async (ticketIds) => {
+	if (!ticketIds || ticketIds.length === 0) return;
+
+	try {
+		const { readItems } = useDirectusItems();
+
+		// Query the tickets_comments junction table for comments tied to tickets
+		const comments = await readItems('tickets_comments', {
+			fields: ['id', 'tickets_id', 'comments_id'],
+			filter: {
+				tickets_id: { _in: ticketIds },
+			},
+		});
+
+		// Process results into a map of ticket ID to comment count
+		const countMap = new Map();
+
+		comments.forEach((comment) => {
+			const ticketId = comment.tickets_id;
+			if (!countMap.has(ticketId)) {
+				countMap.set(ticketId, 0);
+			}
+			countMap.set(ticketId, countMap.get(ticketId) + 1);
+		});
+
+		// Update our cache
+		commentsCache.value = countMap;
+	} catch (error) {
+		console.error('Error fetching comment counts:', error);
+	}
+};
+
+// Process tickets to ensure they have comment count information
+const processTicketsWithComments = (ticketsData) => {
+	if (!ticketsData) return [];
+
+	return ticketsData.map((ticket) => {
+		// Add comment count from cache
+		const commentCount = commentsCache.value.get(ticket.id) || 0;
+		const taskCount = ticket.tasks?.length || 0;
+
+		return {
+			...ticket,
+			commentCount,
+			taskCount,
+		};
+	});
+};
+
 // Watch for organization changes
 watch(
 	() => selectedOrg.value,
 	async (newOrg) => {
-		console.log('Organization changed:', newOrg);
-
-		// Reset team to default team when organization changes
-		setTeam(DEFAULT_TEAM_ID);
+		// Initialize team to DEFAULT_TEAM_ID instead of null
+		if (!selectedTeam.value) {
+			setTeam(DEFAULT_TEAM_ID);
+		}
 
 		// Reset project selection
 		selectedProject.value = null;
@@ -299,8 +571,6 @@ watch(
 watch(
 	() => selectedTeam.value,
 	async (newTeam) => {
-		console.log('Team changed:', newTeam);
-
 		// Reset project selection when team changes
 		selectedProject.value = null;
 
@@ -327,21 +597,43 @@ watch(filterUnassigned, (newValue) => {
 	}
 });
 
-// Watch for tickets changes and apply client-side filtering
+// Watch tickets for changes and fetch comment counts
 watch(
-	[
-		() => tickets.value,
-		selectedOrg,
-		selectedTeam,
-		selectedProject,
-		filterByAssignedTo,
-		filterUnassigned,
-		activeDueDateFilter,
-	],
-	([newTickets]) => {
-		if (!newTickets) return;
+	() => tickets.value,
+	async (newTickets) => {
+		// console.log('Tickets updated:', {
+		// 	count: newTickets?.length || 0,
+		// 	org: selectedOrg.value,
+		// 	team: selectedTeam.value,
+		// });
 
-		const filtered = newTickets.filter((ticket) => {
+		if (newTickets && newTickets.length > 0) {
+			// Extract ticket IDs for comment count fetching
+			const ticketIds = newTickets.map((ticket) => ticket.id);
+			await fetchCommentCounts(ticketIds);
+
+			// Process tickets with comment counts
+			processedTickets.value = processTicketsWithComments(newTickets);
+		} else {
+			processedTickets.value = [];
+		}
+	},
+	{ immediate: true },
+);
+
+// Watch processed tickets and filter them into columns
+watch(
+	() => processedTickets.value,
+	(newProcessedTickets) => {
+		if (!newProcessedTickets) {
+			// Reset all columns to empty arrays
+			Object.keys(localTickets.value).forEach((key) => {
+				localTickets.value[key] = [];
+			});
+			return;
+		}
+
+		const filtered = newProcessedTickets.filter((ticket) => {
 			// Base organization and team filtering
 			const orgMatch = !selectedOrg.value || ticket.organization?.id === selectedOrg.value;
 
@@ -386,8 +678,17 @@ watch(
 			return orgMatch && teamMatch && projectMatch && assignmentMatch && dueDateMatch;
 		});
 
-		columns.forEach((column) => {
-			localTickets.value[column.id] = filtered.filter((ticket) => ticket.status === column.id);
+		// Reset all columns
+		Object.keys(localTickets.value).forEach((key) => {
+			localTickets.value[key] = [];
+		});
+
+		// Distribute tickets to appropriate columns
+		filtered.forEach((ticket) => {
+			const status = ticket.status;
+			if (localTickets.value[status]) {
+				localTickets.value[status].push(ticket);
+			}
 		});
 	},
 	{ immediate: true },
@@ -492,239 +793,34 @@ const updateTicketStatus = async (columnId, event) => {
 
 const handleTicketCreated = () => {
 	refresh();
-	console.log('Refreshing board after ticket creation');
+};
+
+// Function to test WebSocket connection
+const testWebSocketConnection = async () => {
+	// Check if WebSocket URL is available
+	const config = useRuntimeConfig();
+	const wsUrl = config.public.directusWebsocketUrl || `${config.public.directusUrl.replace(/^http/, 'ws')}/websocket`;
+
+	console.log('WebSocket URL:', wsUrl);
+
+	// Check if auth token is available
+	const token =
+		localStorage.getItem('directus_token') || localStorage.getItem('auth_token') || config.public.staticToken;
+
+	console.log('Auth token available:', !!token);
+
+	// Try to manually connect
+	connect();
+
+	// Toast with connection info
+	useToast().add({
+		title: 'WebSocket Test',
+		description: `WebSocket URL: ${wsUrl.substring(0, 30)}... | Token: ${token ? 'Available' : 'Missing'}`,
+		color: 'blue',
+		timeout: 5000,
+	});
 };
 </script>
-<template>
-	<div class="w-full mx-auto relative tickets-board">
-		<!-- Connection Status -->
-		<transition name="fade">
-			<div v-if="!isConnected && !isLoading" class="mb-4 absolute right-0 top-0 tickets-board__connection">
-				<UAlert title="Connection Lost" description="Attempting to reconnect..." color="yellow">
-					<template #footer>
-						<UButton size="sm" color="yellow" @click="refresh">Retry Connection</UButton>
-					</template>
-				</UAlert>
-			</div>
-		</transition>
-
-		<div
-			class="w-full flex flex-col md:flex-row items-end justify-between mb-4 xl:mb-8 xl:mt-2 px-4 gap-4 pt-4 tickets-board__filters"
-		>
-			<TicketsCreate :columns="columns" @ticketCreated="handleTicketCreated" class="mb-4 xl:mb-0" />
-
-			<div v-if="!projectId" class="hidden md:flex items-center flex-col xl:flex-row relative mb-4 xl:mb-0">
-				<div class="w-full flex flex-row items-center justify-end gap-4 mb-2 xl:mb-0 xl:mr-2">
-					<UButton
-						icon="i-heroicons-x-mark"
-						size="xs"
-						color="gray"
-						variant="ghost"
-						@click="clearFilters"
-						class="uppercase text-[10px] transition-opacity duration-500 p-0"
-						:class="hasActiveFilters ? 'opacity-100' : 'opacity-0'"
-					>
-						Clear Filters
-					</UButton>
-					<div class="flex flex-row items-center justify-center space-x-2">
-						<UToggle v-model="filterByAssignedTo" class="" />
-
-						<span class="text-[10px] text-gray-500 uppercase">
-							{{ filterByAssignedTo ? 'My Tickets' : 'All Tickets' }}
-						</span>
-					</div>
-					<div class="flex flex-row items-center justify-center space-x-2">
-						<UToggle v-model="filterUnassigned" :disabled="filterByAssignedTo" />
-						<span class="text-[10px] text-gray-500 uppercase">
-							{{ filterUnassigned ? 'Unassigned' : 'All Assignments' }}
-						</span>
-					</div>
-				</div>
-				<div class="w-full flex flex-row items-center justify-end gap-4">
-					<!-- Team Filter Dropdown -->
-					<!-- <div class="flex items-center space-x-2">
-						<USelectMenu
-							v-model="selectedTeam"
-							:options="teamOptions"
-							option-attribute="name"
-							value-attribute="id"
-							placeholder="Select Team"
-							size="sm"
-							class="w-36 uppercase text-[10px]"
-							@change="handleTeamChange"
-						>
-							<template #option="{ option }">
-								<div class="flex flex-col">
-									<span class="font-medium">{{ option.name }}</span>
-									<span v-if="option.description" class="text-xs text-gray-500 truncate">
-										{{ option.description }}
-									</span>
-								</div>
-							</template>
-						</USelectMenu>
-					</div> -->
-
-					<!-- Due Date Filter -->
-					<div class="flex items-center space-x-2 relative">
-						<USelectMenu
-							v-model="filterDueDate"
-							:options="dueDateOptions"
-							placeholder="Due Date"
-							size="sm"
-							class="w-36 uppercase text-[10px]"
-							option-attribute="label"
-							value-attribute="value"
-						>
-							<template #trigger>
-								<UButton
-									:color="activeDueDateFilter ? 'yellow' : 'gray'"
-									variant="soft"
-									:icon="activeDueDateFilter ? 'i-heroicons-clock' : 'i-heroicons-calendar'"
-									size="xs"
-									class="uppercase text-[10px]"
-								>
-									{{ filterDueDate?.label || 'Due Date' }}
-								</UButton>
-							</template>
-						</USelectMenu>
-					</div>
-
-					<!-- Organization Selector (Commented out but kept as reference) -->
-					<!-- <div class="flex items-center space-x-2">
-						<USelectMenu
-							v-if="hasMultipleOrgs"
-							v-model="selectedOrg"
-							:options="organizationOptions"
-							option-attribute="name"
-							value-attribute="id"
-							placeholder="Select Organization"
-							class="w-full lg:w-64 uppercase text-[10px] text-gray-400 relative"
-							@change="(value) => setOrganization(value)"
-						/>
-					</div> -->
-
-					<!-- Project Selector -->
-					<div class="flex items-center space-x-2">
-						<USelectMenu
-							searchable
-							v-model="selectedProject"
-							:options="projectOptions"
-							option-attribute="title"
-							value-attribute="id"
-							placeholder="Select Project"
-							class="w-full lg:w-64 uppercase text-[8px] text-gray-400 relative"
-							@change="handleProjectChange"
-						>
-							<template #option="{ option }">
-								<div class="flex flex-col w-full">
-									<span class="w-full flex flex-row items-center justify-start leading-4">
-										{{ option.title }}
-										<span
-											v-if="option.tickets?.length"
-											class="text-[8px] font-bold h-4 w-4 !text-white rounded-full bg-[var(--cyan)] inline-flex items-center justify-center ml-1 text-center"
-										>
-											{{ option.tickets.length }}
-										</span>
-									</span>
-									<span v-if="option.organization" class="text-[9px] leading-3 text-gray-500">
-										{{ option.organization.name }}
-									</span>
-									<span v-if="option.team" class="text-[9px] leading-3 text-gray-500">
-										Team: {{ option.team.name }}
-									</span>
-								</div>
-							</template>
-						</USelectMenu>
-					</div>
-				</div>
-				<div v-if="lastUpdated" class="-bottom-[22.5px] text-[9px] right-0 text-gray-500 absolute font-bold uppercase">
-					Last updated: {{ new Date(lastUpdated).toLocaleTimeString() }}
-				</div>
-			</div>
-		</div>
-
-		<!-- Mobile Column Navigation -->
-		<div
-			v-if="isMobile"
-			class="flex items-center justify-between mb-4 mx-4 rounded bg-gray-500 px-4 gap-4 py-3 text-white"
-		>
-			<UIcon name="i-heroicons-chevron-left" class="w-5 h-5" @click="previousColumn" />
-			<h3 class="text-sm font-medium uppercase tracking-wide">
-				{{ columns.find((col) => col.id === activeColumn)?.name }}
-			</h3>
-			<UIcon name="i-heroicons-chevron-right" class="w-5 h-5" @click="nextColumn" />
-		</div>
-
-		<!-- Board Layout -->
-		<div
-			class="bg-gray-100 bg-opacity-30 border-b border-gray-200 w-full flex min-h-svh overflow-x-auto overflow-hidden-scrollbar tickets-board__board"
-			@touchstart="handleTouchStart"
-			@touchend="handleTouchEnd"
-		>
-			<div
-				v-for="(column, index) in columns"
-				:key="column.id"
-				class="flex-grow w-full basis-0 h-full min-h-dvh transition-transform duration-300 ease-in-out min-w-[350px] tickets-board__board-col"
-				:class="{
-					'hidden md:block': isMobile && column.id !== activeColumn,
-					'transform translate-x-0': !isMobile || column.id === activeColumn,
-				}"
-			>
-				<!-- Column Header -->
-				<div class="tickets-board__board-col-header">
-					<div class="flex items-center justify-between">
-						<h3 class="text-xs font-bold uppercase tracking-wide">{{ column.name }}</h3>
-						<UBadge
-							class="ml-2 w-6 h-6 text-center inline-block text-[var(--darkBlue)]"
-							:style="{ backgroundColor: `var(--${column.color})` }"
-						>
-							{{ localTickets[column.id]?.length || 0 }}
-						</UBadge>
-					</div>
-				</div>
-
-				<!-- Loading State -->
-				<div
-					v-if="isLoading && !localTickets[column.id]?.length"
-					class="min-h-[90svh] p-2 bg-gray-100 dark:bg-gray-800"
-				>
-					<div class="space-y-3">
-						<USkeleton v-for="n in 5" :key="n" class="h-24 mb-4 w-full" />
-					</div>
-				</div>
-
-				<VueDraggable
-					v-else
-					v-model="localTickets[column.id]"
-					:group="{ name: 'tickets' }"
-					item-key="id"
-					class="tickets-board__board-col-content"
-					:class="{ 'is-dragging': isDragging }"
-					ghost-class="ghost"
-					chosen-class="chosen"
-					drag-class="drag"
-					@start="onDragStart"
-					@end="onDragEnd"
-					@change="(event) => updateTicketStatus(column.id, event)"
-				>
-					<template #item="{ element }">
-						<div :id="element.id" class="ticket-wrapper">
-							<div class="relative">
-								<div
-									v-if="updatingTickets.has(element.id)"
-									class="absolute inset-0 bg-white/50 dark:bg-gray-900/50 rounded-lg flex items-center justify-center z-10"
-								>
-									<UIcon name="i-heroicons-arrow-path" class="animate-spin h-5 w-5" />
-								</div>
-								<TicketsExpandableCard :element="element" :columns="columns" :updating-tickets="updatingTickets" />
-							</div>
-						</div>
-					</template>
-				</VueDraggable>
-			</div>
-		</div>
-	</div>
-</template>
 
 <style scoped>
 .tickets-board {

@@ -28,11 +28,11 @@ watch(
 		// console.log('User changed', newValue);
 		if (props.avatar) {
 			// console.log(props.avatar);
-			avatarSource.value = `${config.public.assetsUrl}${props.avatar}?key=medium`;
+			avatarSource.value = `${config.public.assetsUrl}${props.avatar}?key=avatar`;
 		} else {
 			if (newValue) {
 				if (newValue.avatar) {
-					avatarSource.value = `${config.public.assetsUrl}${newValue.avatar}?key=medium`;
+					avatarSource.value = `${config.public.assetsUrl}${newValue.avatar}?key=avatar`;
 				} else {
 					// Using template literals for clarity and to handle possible undefined values gracefully
 					avatarSource.value = `https://ui-avatars.com/api/?name=${encodeURIComponent(newValue.first_name + ' ' + newValue.last_name)}&background=eeeeee&color=00bfff`;

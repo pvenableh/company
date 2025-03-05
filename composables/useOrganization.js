@@ -47,6 +47,7 @@ export function useOrganization() {
 						id: organizationData.id,
 						name: organizationData.name,
 						logo: organizationData.logo ?? null,
+						icon: organizationData.icon ?? null,
 						ticketsCount,
 						projectsCount,
 						totalActivity,
@@ -75,20 +76,33 @@ export function useOrganization() {
 	// Use Nuxt's useCookie instead of localStorage for cross-tab/window synchronization
 	const setOrganization = (orgId) => {
 		selectedOrg.value = orgId;
+
+		// Create a cookie that will be readable across tabs
 		const cookie = useCookie('selectedOrganization', {
 			maxAge: 60 * 60 * 24 * 30, // 30 days
 			path: '/',
 			sameSite: 'lax',
 		});
 		cookie.value = orgId;
+
+		// Also use localStorage for fallback and to trigger the storage event
+		if (process.client) {
+			localStorage.setItem('selectedOrganization', orgId);
+		}
 	};
 
 	const clearOrganization = () => {
 		selectedOrg.value = null;
 		organizations.value = [];
 		isInitialized.value = false;
+
+		// Clear from both cookie and localStorage
 		const cookie = useCookie('selectedOrganization');
 		cookie.value = null;
+
+		if (process.client) {
+			localStorage.removeItem('selectedOrganization');
+		}
 	};
 
 	const tryRestoreSelectedOrg = () => {
@@ -99,7 +113,15 @@ export function useOrganization() {
 
 		if (organizations.value.length > 1) {
 			try {
-				const savedOrg = useCookie('selectedOrganization').value;
+				// First try to get from cookie
+				const savedOrgCookie = useCookie('selectedOrganization').value;
+
+				// Then try localStorage as fallback
+				const savedOrgLocalStorage = process.client ? localStorage.getItem('selectedOrganization') : null;
+
+				// Use whichever is available
+				const savedOrg = savedOrgCookie || savedOrgLocalStorage;
+
 				if (savedOrg) {
 					// Check if the saved org exists in the current organizations list
 					if (organizations.value.some((org) => org.id === savedOrg)) {
@@ -133,6 +155,9 @@ export function useOrganization() {
 			loadUserOrganizations(user.value);
 			tryRestoreSelectedOrg();
 			isInitialized.value = true;
+
+			// Log for debugging
+			console.log('Organization set:', selectedOrg.value);
 		} catch (err) {
 			error.value = err.message;
 			clearOrganization();
@@ -141,13 +166,14 @@ export function useOrganization() {
 		}
 	};
 
-	// Listen for storage events to synchronize state across tabs (as a backup mechanism)
+	// Listen for storage events to synchronize state across tabs
 	if (process.client) {
 		window.addEventListener('storage', (event) => {
 			if (event.key === 'selectedOrganization') {
 				try {
-					const newValue = event.newValue ? JSON.parse(event.newValue) : null;
+					const newValue = event.newValue;
 					if (newValue !== selectedOrg.value) {
+						console.log('Organization changed in another tab:', newValue);
 						selectedOrg.value = newValue;
 					}
 				} catch (err) {
@@ -169,9 +195,22 @@ export function useOrganization() {
 		{ immediate: true },
 	);
 
-	if (user.value && !isInitialized.value) {
-		initializeOrganizations();
-	}
+	// Add an additional initialization check when the component mounts
+	onMounted(() => {
+		if (user.value && !isInitialized.value) {
+			initializeOrganizations();
+		} else if (isInitialized.value) {
+			// If already initialized, just check if we have a saved organization
+			// that needs to be synchronized from other tabs
+			if (process.client && !selectedOrg.value) {
+				const savedOrgLocalStorage = localStorage.getItem('selectedOrganization');
+				if (savedOrgLocalStorage && organizations.value.some((org) => org.id === savedOrgLocalStorage)) {
+					console.log('Restoring organization from localStorage:', savedOrgLocalStorage);
+					selectedOrg.value = savedOrgLocalStorage;
+				}
+			}
+		}
+	});
 
 	return {
 		selectedOrg: readonly(selectedOrg),

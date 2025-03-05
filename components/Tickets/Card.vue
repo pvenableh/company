@@ -27,7 +27,14 @@
 					/>
 				</h4>
 			</nuxt-link>
-			<h5 class="text-gray-800 text-[8px] mt-0 uppercase mb-2">{{ element?.organization?.name }}</h5>
+			<h5 v-if="element?.team" class="text-gray-800 text-[8px] mt-0 uppercase mb-2">
+				<UIcon name="i-heroicons-user-group" />
+				{{ element?.team?.name }}
+			</h5>
+			<h5 v-if="element?.organization" class="text-gray-800 text-[8px] mt-0 uppercase mb-2">
+				<UIcon name="i-heroicons-building-office" />
+				{{ element?.organization?.name }}
+			</h5>
 
 			<!-- Assigned Users -->
 			<div class="w-full flex flex-col items-center justify-between text-xs text-gray-500 my-4">
@@ -117,16 +124,19 @@
 
 			<ReactionsBar :item-id="element.id" collection="tickets" />
 			<div class="flex flex-row text-xs text-gray-500 mr-3">
-				<div v-if="commentCount > 0" class="flex items-center gap-1">
-					<UTooltip :text="commentCount + ' comments'" :popper="{ arrow: true }">
+				<div v-if="element.commentCount > 0" class="flex items-center gap-1">
+					<UTooltip
+						:text="element.commentCount + (element.commentCount === 1 ? ' Comment' : ' Comments')"
+						:popper="{ arrow: true }"
+					>
 						<UIcon name="i-heroicons-chat-bubble-left-right" class="w-4 h-4 inline-block mr-1" />
-						{{ commentCount }}
+						{{ element.commentCount }}
 					</UTooltip>
 				</div>
-				<div v-if="tasks.length > 0" class="ml-2 flex items-center gap-1">
-					<UTooltip :text="tasks.length + ' tasks'" :popper="{ arrow: true }">
+				<div v-if="element.taskCount > 0" class="ml-2 flex items-center gap-1">
+					<UTooltip :text="element.taskCount + ' tasks'" :popper="{ arrow: true }">
 						<UIcon name="i-heroicons-check-circle" class="w-4 h-4 inline-block mr-1" />
-						{{ tasks.length }}
+						{{ element.taskCount }}
 					</UTooltip>
 				</div>
 			</div>

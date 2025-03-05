@@ -96,6 +96,7 @@ import { Plugin } from '@tiptap/pm/state';
 import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
 import { Mention } from '@tiptap/extension-mention';
+import { useFilteredUsers } from '~/composables/useFilteredUsers';
 
 const props = defineProps({
 	modelValue: {
@@ -130,6 +131,10 @@ const props = defineProps({
 		type: String,
 		default: null,
 	},
+	teamId: {
+		type: String,
+		default: null,
+	},
 	context: {
 		type: Object,
 		default: () => ({
@@ -158,6 +163,9 @@ const uploadProgress = ref(0);
 const { uploadFiles } = useDirectusFiles();
 const { notify } = useNotifications();
 const { user: currentUser } = useDirectusAuth();
+const { selectedOrg } = useOrganization();
+const { selectedTeam } = useTeams();
+const { filteredUsers, fetchFilteredUsers, loading: loadingUsers } = useFilteredUsers();
 const toast = useToast();
 
 const mentionsPortal = ref(null);
@@ -204,7 +212,8 @@ const toolbarButtons = [
 
 const handleUserMention = async (mentionedUser) => {
 	if (!mentionedUser || !props.context.collection || !props.context.itemId) return;
-	console.log(mentionedUser);
+	console.log('Sending mention notification to:', mentionedUser);
+
 	const route = useRoute();
 	const currentUrl = `https://huestudios.company/${route.fullPath}`;
 
@@ -221,7 +230,7 @@ const handleUserMention = async (mentionedUser) => {
 			message: `${currentUser.value?.first_name} ${currentUser.value?.last_name} mentioned you in a ${contextInfo.collection.slice(0, -1)}. <br><a href='${currentUrl}'>View ${contextInfo.collection.slice(0, -1)}</a>`,
 			...contextInfo,
 		});
-		console.log(notice);
+		console.log('Mention notification sent:', notice);
 	} catch (error) {
 		console.error('Error sending mention notification:', error);
 		toast.add({
@@ -239,62 +248,33 @@ const CustomMention = Mention.configure({
 	suggestion: {
 		char: '@',
 		items: async ({ query }) => {
-			const { selectedOrg, organizations } = useOrganization();
-			const { user: currentUser } = useDirectusAuth();
-			const { readUsers } = useDirectusUsers();
-
 			if (!currentUser.value) return [];
 
 			try {
-				const adminOrgId = '423f5e7e-e14c-4348-9fea-89ba5c6b9d96';
-				const orgIds = selectedOrg.value
-					? [selectedOrg.value, adminOrgId]
-					: [...organizations.value.map((org) => org.id), adminOrgId];
+				// Determine which org/team to use (props take precedence over global state)
+				const orgId = props.organizationId || selectedOrg.value;
+				const teamId = props.teamId || selectedTeam.value;
 
-				const users = await readUsers({
-					fields: [
-						'id',
-						'first_name',
-						'last_name',
-						'email',
-						'avatar',
-						'organizations.organizations_id.id',
-						'organizations.organizations_id.name',
-					],
-					filter: {
-						_and: [
-							{
-								organizations: {
-									organizations_id: {
-										id: {
-											_in: orgIds,
-										},
-									},
-								},
-							},
-							{
-								id: {
-									_neq: currentUser.value.id,
-								},
-							},
-						],
-					},
-				});
+				console.log(`Fetching filtered users for org: ${orgId}, team: ${teamId}`);
 
-				const filteredUsers = users.filter((user) => {
-					const userOrgIds = user.organizations?.map((org) => org.organizations_id.id) || [];
-					const hasMatchingOrg = userOrgIds.some((orgId) => orgIds.includes(orgId));
-					const matchesQuery = `${user.first_name} ${user.last_name}`.toLowerCase().includes(query.toLowerCase());
+				// Fetch users based on organization and team
+				await fetchFilteredUsers(orgId, teamId);
 
-					return hasMatchingOrg && matchesQuery;
-				});
+				// Filter out the current user and apply the search query
+				const mentionUsers = filteredUsers.value
+					.filter((user) => user.id !== currentUser.value.id)
+					.filter((user) => {
+						const fullName = `${user.first_name} ${user.last_name}`.toLowerCase();
+						return fullName.includes(query.toLowerCase());
+					})
+					.map((user) => ({
+						id: user.id,
+						label: `${user.first_name} ${user.last_name}`,
+						email: user.email,
+						avatar: user.avatar ? `${useRuntimeConfig().public.directusUrl}/assets/${user.avatar}?key=small` : null,
+					}));
 
-				return filteredUsers.map((user) => ({
-					id: user.id,
-					label: `${user.first_name} ${user.last_name}`,
-					email: user.email,
-					avatar: user.avatar ? `${useRuntimeConfig().public.directusUrl}/assets/${user.avatar}?key=small` : null,
-				}));
+				return mentionUsers;
 			} catch (error) {
 				console.error('Error in mentions query:', error);
 				return [];
@@ -331,25 +311,29 @@ const CustomMention = Mention.configure({
 				if (!popup) return;
 
 				popup.innerHTML = `
-          <div class="max-h-48 overflow-y-auto py-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-700">
-            ${items
-							.map(
-								(item, index) => `
-              <div class="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-2 ${
-								index === selectedIndex ? 'bg-gray-100 dark:bg-gray-700' : ''
-							}" data-index="${index}">
-                <img src="${item.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.label)}&background=eeeeee&color=00bfff`}" 
-                  class="w-8 h-8 rounded-full" alt="${item.label}">
-                <div>
-                  <div class="font-medium text-sm">${item.label}</div>
-                  <div class="text-xs text-gray-500">${item.email}</div>
-                </div>
-              </div>
-            `,
-							)
-							.join('')}
-          </div>
-        `;
+			<div class="max-h-48 overflow-y-auto py-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-700">
+			  ${
+					items.length === 0
+						? '<div class="px-3 py-2 text-gray-500">No users found</div>'
+						: items
+								.map(
+									(item, index) => `
+				<div class="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-2 ${
+					index === selectedIndex ? 'bg-gray-100 dark:bg-gray-700' : ''
+				}" data-index="${index}">
+				  <img src="${item.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.label)}&background=eeeeee&color=00bfff`}" 
+					class="w-8 h-8 rounded-full" alt="${item.label}">
+				  <div>
+					<div class="font-medium text-sm">${item.label}</div>
+					<div class="text-xs text-gray-500">${item.email}</div>
+				  </div>
+				</div>
+			  `,
+								)
+								.join('')
+				}
+			</div>
+		  `;
 
 				if (currentClientRect) {
 					positionPopup(currentClientRect());
@@ -608,6 +592,22 @@ watch(
 	},
 );
 
+// Watch for teamId or organizationId changes to refresh the filtered users
+watch(
+	[() => props.teamId, () => props.organizationId, () => selectedOrg.value, () => selectedTeam.value],
+	async ([newTeamId, newOrgId, newSelectedOrg, newSelectedTeam]) => {
+		// Props take precedence over global state
+		const orgId = newOrgId || newSelectedOrg;
+		const teamId = newTeamId || newSelectedTeam;
+
+		if (orgId) {
+			console.log(`Org/team changed, updating filtered users - Org: ${orgId}, Team: ${teamId}`);
+			await fetchFilteredUsers(orgId, teamId);
+		}
+	},
+	{ immediate: true },
+);
+
 onMounted(() => {
 	editor.value = new Editor({
 		extensions: [
@@ -642,6 +642,14 @@ onMounted(() => {
 			updateLinkUrl();
 		},
 	});
+
+	// Initial load of filtered users based on current organization and team context
+	const orgId = props.organizationId || selectedOrg.value;
+	const teamId = props.teamId || selectedTeam.value;
+
+	if (orgId) {
+		fetchFilteredUsers(orgId, teamId);
+	}
 });
 
 onBeforeUnmount(() => {
@@ -720,7 +728,6 @@ onBeforeUnmount(() => {
 	}
 	.toolbar {
 		button {
-			background: red !important;
 			@apply transform scale-75;
 		}
 	}
