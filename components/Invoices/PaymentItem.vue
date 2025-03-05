@@ -35,7 +35,6 @@ const getStatusColor = (status) => {
 	const statusColors = {
 		succeeded: 'green',
 		pending: 'yellow',
-		failed: 'red',
 		processing: 'blue',
 		paid: 'green',
 		in_transit: 'blue',

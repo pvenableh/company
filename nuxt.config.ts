@@ -4,9 +4,9 @@
 export default defineNuxtConfig({
 	ssr: true,
 
-	// future: {
-	// 	compatibilityVersion: 4,
-	// },
+	future: {
+		compatibilityVersion: 4,
+	},
 
 	app: {
 		pageTransition: { name: 'page', mode: 'out-in' },
@@ -46,7 +46,6 @@ export default defineNuxtConfig({
 		'@formkit/nuxt',
 		'@nuxt/devtools',
 		'@nuxt/icon',
-		'shadcn-nuxt',
 		'@nuxt/image',
 		[
 			'@nuxt/ui',
@@ -75,7 +74,7 @@ export default defineNuxtConfig({
 		'nuxt-directus-next',
 		'nuxt-gtag',
 		'@samk-dev/nuxt-vcalendar',
-		'shadcn-nuxt',
+		// 'shadcn-nuxt',
 	],
 
 	// plugins: [],
@@ -84,17 +83,17 @@ export default defineNuxtConfig({
 	// 	id: 'G-Y5YQ3FM1FL',
 	// },
 
-	shadcn: {
-		/**
-		 * Prefix for all the imported component
-		 */
-		prefix: '',
-		/**
-		 * Directory that the component lives in.
-		 * @default "./components/ui"
-		 */
-		componentDir: './components/ui',
-	},
+	// shadcn: {
+	// 	/**
+	// 	 * Prefix for all the imported component
+	// 	 */
+	// 	prefix: '',
+	// 	/**
+	// 	 * Directory that the component lives in.
+	// 	 * @default "./components/ui"
+	// 	 */
+	// 	componentDir: './components/ui',
+	// },
 
 	directus: {
 		url: 'https://admin.huestudios.company',

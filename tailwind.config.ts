@@ -1,10 +1,9 @@
 import type { Config } from 'tailwindcss';
-// import plugin from 'tailwindcss/plugin';
 import tailwindcssForms from '@tailwindcss/forms';
 import defaultTheme from 'tailwindcss/defaultTheme';
 
 module.exports = {
-	darkMode: ['class', 'class'],
+	darkMode: 'class',
 	colors: {
 		primary: '#00efd1',
 		blue: '#00bfff',
@@ -30,10 +29,10 @@ module.exports = {
 	theme: {
 		extend: {
 			borderColor: {
-				DEFAULT: 'transparent',
+				DEFAULT: 'transparent', // Set transparent borders by default
 			},
 			ringColor: {
-				DEFAULT: 'transparent',
+				DEFAULT: 'transparent', // Set transparent rings by default
 			},
 			borderRadius: {
 				large: '30px',
@@ -56,9 +55,9 @@ module.exports = {
 				},
 			},
 			fontFamily: {
-				body: ['Proxima Nova W01 Light', 'Helvetica Neue', 'Helvetica', 'Roboto', 'Arial', 'sans-serif'],
-				bold: ['Proxima Nova W01 Regular', 'Helvetica Neue', 'Helvetica', 'Roboto', 'Arial', 'sans-serif'],
-				sans: ['Proxima Nova W01 Light', 'Helvetica Neue', 'Helvetica', 'Roboto', 'Arial', 'sans-serif'],
+				body: ['var(--font-body)', ...defaultTheme.fontFamily.sans],
+				bold: ['var(--font-bold)', ...defaultTheme.fontFamily.sans],
+				sans: ['var(--font-sans)', ...defaultTheme.fontFamily.sans],
 				display: ['var(--font-display)', ...defaultTheme.fontFamily.serif],
 				mono: ['var(--font-mono)', ...defaultTheme.fontFamily.mono],
 				signature: ['var(--font-signature)', 'cursive', 'sans-serif'],
@@ -89,16 +88,5 @@ module.exports = {
 		// Formkit Plugin for Tailwind
 		// https://formkit.com/guides/create-a-tailwind-theme
 		// require('@formkit/themes/tailwindcss'),
-		// plugin(function ({ addUtilities }) {
-		// 	addUtilities({
-		// 		'.no-scrollbar': {
-		// 			'-ms-overflow-style': 'none' /* IE and Edge */,
-		// 			'scrollbar-width': 'none' /* Firefox */,
-		// 			'&::-webkit-scrollbar': {
-		// 				display: 'none' /* Chrome, Safari and Opera */,
-		// 			},
-		// 		},
-		// 	});
-		// }),
 	],
 } satisfies Config;
