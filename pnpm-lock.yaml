@@ -3898,7 +3898,7 @@ packages:
       '@vue/compiler-sfc': 3.5.13
       ast-kit: 1.4.2
       local-pkg: 1.1.1
-      magic-string-ast: 0.7.0
+      magic-string-ast: 0.7.1
       pathe: 2.0.3
       picomatch: 4.0.2
       vue: 3.5.13(typescript@5.8.2)
@@ -4855,7 +4855,7 @@ packages:
       confbox: 0.1.8
       defu: 6.1.4
       dotenv: 16.4.7
-      exsolve: 1.0.1
+      exsolve: 1.0.2
       giget: 2.0.0
       jiti: 2.4.2
       magicast: 0.3.5
@@ -5112,7 +5112,6 @@ packages:
   /commander@7.2.0:
     resolution: {integrity: sha512-QrWXB+ZQSVPmIWIhtEO9H+gwHaMGYiF5ChvoJ+K9ZGHG/sVsa6yiesAD1GC/x46sET00Xlwo1u49RVVVzvcSkw==}
     engines: {node: '>= 10'}
-    requiresBuild: true
 
   /commander@8.3.0:
     resolution: {integrity: sha512-OkTL9umf+He2DZkUq8f8J9of7yL6RJKI24dVITBmNfZBmri9zYZQrKkuXiKhyfPSu8tUhnVBB1iKXevvnlR4Ww==}
@@ -6382,8 +6381,8 @@ packages:
     requiresBuild: true
     optional: true
 
-  /exsolve@1.0.1:
-    resolution: {integrity: sha512-Smf0iQtkQVJLaph8r/qS8C8SWfQkaq9Q/dFcD44MLbJj6DNhlWefVuaS21SjfqOsBbjVlKtbCj6L9ekXK6EZUg==}
+  /exsolve@1.0.2:
+    resolution: {integrity: sha512-ZEcIMbthn2zeX4/wD/DLxDUjuCltHXT8Htvm/JFlTkdYgWh2+HGppgwwNUnIVxzxP7yJOPtuBAec0dLx6lVY8w==}
 
   /externality@1.0.2:
     resolution: {integrity: sha512-LyExtJWKxtgVzmgtEHyQtLFpw1KFhQphF9nTG8TpAIVkiI/xQ3FJh75tRFLYl4hkn7BNIIdLJInuDAavX35pMw==}
@@ -7653,8 +7652,8 @@ packages:
       vue: 3.5.13(typescript@5.8.2)
     dev: false
 
-  /magic-string-ast@0.7.0:
-    resolution: {integrity: sha512-686fgAHaJY7wLTFEq7nnKqeQrhqmXB19d1HnqT35Ci7BN6hbAYLZUezTQ062uUHM7ggZEQlqJ94Ftls+KDXU8Q==}
+  /magic-string-ast@0.7.1:
+    resolution: {integrity: sha512-ub9iytsEbT7Yw/Pd29mSo/cNQpaEu67zR1VVcXDiYjSFwzeBxNdTd0FMnSslLQXiRj8uGPzwsaoefrMD5XAmdw==}
     engines: {node: '>=16.14.0'}
     dependencies:
       magic-string: 0.30.17
@@ -7985,7 +7984,7 @@ packages:
       esbuild: 0.25.0
       escape-string-regexp: 5.0.0
       etag: 1.8.1
-      exsolve: 1.0.1
+      exsolve: 1.0.2
       fs-extra: 11.3.0
       globby: 14.1.0
       gzip-size: 7.0.0
@@ -8673,7 +8672,7 @@ packages:
     resolution: {integrity: sha512-wmJwA+8ihJixSoHKxZJRBQG1oY8Yr9pGLzRmSsNms0iNWyHHAlZCa7mmKiFR10YPZuz/2k169JiS/inOjBCZ2A==}
     dependencies:
       confbox: 0.2.1
-      exsolve: 1.0.1
+      exsolve: 1.0.2
       pathe: 2.0.3
 
   /pluralize@8.0.0:
@@ -10574,7 +10573,7 @@ packages:
     resolution: {integrity: sha512-aygmJLhrEnuLKDCISMoOL7ceRJeksnvXJXvtEvFei4zoOXQfvQkUGhZe8u//iK5C++M4pq3CsMbhVjFmWvOlmA==}
     dependencies:
       defu: 6.1.4
-      exsolve: 1.0.1
+      exsolve: 1.0.2
       ohash: 2.0.11
       pathe: 2.0.3
       ufo: 1.5.4

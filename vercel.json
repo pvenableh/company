@@ -1,0 +1,6 @@
+{
+    "env": {
+        "NPM_CONFIG_ENGINE_STRICT": "true",
+        "PNPM_VERSION": "8.15.3"
+    }
+}
