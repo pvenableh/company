@@ -2,19 +2,14 @@
 	<div class="comments-system">
 		<!-- Comments Toggle Button -->
 		<div class="w-full flex items-center justify-between gap-2 text-sm relative">
-			<h4
-				@click="isCommentsVisible = !isCommentsVisible"
-				class="cursor-pointer uppercase block font-medium text-gray-700 dark:text-gray-200 tracking-wider"
-			>
+			<h4 class="cursor-pointer uppercase block font-medium text-gray-700 dark:text-gray-200 tracking-wide">
 				<transition name="fade" mode="out-in">
 					<span v-if="isLoading">Loading</span>
 					<span v-else>{{ commentsCount }}</span>
 				</transition>
 				{{ commentsCount === 1 ? 'Comment' : 'Comments' }}
-				<UIcon :name="isCommentsVisible ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'" />
 			</h4>
 			<USelect
-				v-if="isCommentsVisible"
 				v-model="sortOrder"
 				:options="[
 					{ label: 'NEWEST FIRST', value: 'newest' },
@@ -39,43 +34,35 @@
 		</div>
 
 		<!-- Comments Section -->
-		<Transition
-			enter-active-class="transition duration-200 ease-out"
-			enter-from-class="transform scale-95 opacity-0"
-			enter-to-class="transform scale-100 opacity-100"
-			leave-active-class="transition duration-200 ease-in"
-			leave-from-class="transform scale-100 opacity-100"
-			leave-to-class="transform scale-95 opacity-0"
-		>
-			<div v-if="isCommentsVisible" class="mt-4 space-y-4">
-				<!-- Main Comment Input -->
-				<CommentsComment
-					v-if="user"
+
+		<div class="mt-2 space-y-4">
+			<!-- Main Comment Input -->
+			<CommentsComment
+				v-if="user"
+				:loading="isLoading"
+				:refresh="refresh"
+				@submit="(content) => handleCommentSubmit(content)"
+				:organization-id="organizationId"
+			/>
+
+			<!-- Comments List -->
+			<TransitionGroup name="comments" tag="div" class="space-y-4">
+				<CommentsThread
+					v-for="comment in sortedComments"
+					:key="comment.id"
+					:depth="0"
+					:comment="comment"
 					:loading="isLoading"
+					:is-active="activeCommentId === comment.id"
 					:refresh="refresh"
-					@submit="(content) => handleCommentSubmit(content)"
+					@reply="handleReply"
+					@submit="handleCommentSubmit"
+					@cancel="cancelReply"
+					@delete="handleDelete"
 					:organization-id="organizationId"
 				/>
-
-				<!-- Comments List -->
-				<TransitionGroup name="comments" tag="div" class="space-y-4">
-					<CommentsThread
-						v-for="comment in sortedComments"
-						:key="comment.id"
-						:depth="0"
-						:comment="comment"
-						:loading="isLoading"
-						:is-active="activeCommentId === comment.id"
-						:refresh="refresh"
-						@reply="handleReply"
-						@submit="handleCommentSubmit"
-						@cancel="cancelReply"
-						@delete="handleDelete"
-						:organization-id="organizationId"
-					/>
-				</TransitionGroup>
-			</div>
-		</Transition>
+			</TransitionGroup>
+		</div>
 	</div>
 </template>
 
@@ -106,7 +93,7 @@ const activeCommentId = ref(null);
 const localComments = ref([]);
 const isInitialized = ref(false);
 const sortOrder = ref('newest');
-const isCommentsVisible = ref(false);
+const isCommentsVisible = ref(true);
 
 // Generate collection-specific field name for relation
 const collectionIdField = `${props.collection}_id`;

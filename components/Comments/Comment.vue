@@ -7,7 +7,7 @@
 			<UButton size="xs" variant="ghost" icon="i-heroicons-x-mark" @click="$emit('cancel')" />
 		</div>
 		<!-- Comment Input -->
-		<div class="flex gap-2">
+		<div class="flex gap-2 relative">
 			<div class="flex-grow">
 				<FormTiptap
 					v-model="editorContent"
@@ -33,9 +33,9 @@
 			<!-- Submit Button -->
 			<UButton
 				v-if="depth < 4"
-				color="primary"
+				variant="outline"
 				size="xs"
-				class="flex-shrink-0"
+				class="absolute bottom-2 right-2"
 				:loading="loading"
 				@click="handleSubmit"
 				:disabled="!editorContent.trim()"

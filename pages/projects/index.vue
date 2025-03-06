@@ -7,7 +7,7 @@ definePageMeta({
 </script>
 
 <template>
-	<div class="w-full relative">
+	<div class="page__content">
 		<h1 class="page__title">
 			Projects
 			<span class="block">Board</span>

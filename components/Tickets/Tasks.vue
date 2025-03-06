@@ -351,6 +351,7 @@ const motivationalMessage = computed(() => {
 				custom-classes="p-2 text-[12px]"
 				@keyup.enter="addTask"
 				@mention="handleMention"
+				:showCharCount="false"
 			/>
 			<UButton color="gray" variant="soft" icon="i-heroicons-plus" :disabled="!newTask.trim()" @click="addTask" />
 		</div>

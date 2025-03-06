@@ -82,7 +82,7 @@ const props = defineProps({
 			<!-- Dropdown Trigger -->
 			<button
 				@click="toggleDropdown"
-				class="flex items-center group relative focus:outline-none rounded-full border-2 border-[var(--cyan)]"
+				class="flex items-center group relative focus:outline-none rounded-full bg-white border-2 border-[var(--cyan)]"
 			>
 				<!-- Show icon for "All Organizations" or avatar for specific organization -->
 				<template v-if="isAllOrganizations(currentOrg)">
@@ -97,7 +97,7 @@ const props = defineProps({
 					v-else
 					:src="getIconUrl(currentOrg)"
 					:alt="currentOrg?.name || 'Organization'"
-					class="h-8 !w-8 shadow"
+					class="h-8 !w-8 shadow bg-white"
 				/>
 				<!-- <div class="bg-white bg-opacity-75 absolute bottom-0 left-0 z-50 h-3 w-3">
 					<UIcon name="i-heroicons-chevron-down" class="text-gray-900" />

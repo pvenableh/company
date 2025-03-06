@@ -4,7 +4,7 @@
 	>
 		<input id="nav-drawer-toggle" type="checkbox" class="hidden" />
 		<LayoutHeader :links="headerLinks" />
-		<div class="page__content">
+		<div class="page">
 			<slot />
 		</div>
 

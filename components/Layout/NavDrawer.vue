@@ -27,6 +27,9 @@
 					<nuxt-link to="/auth/signin">Login</nuxt-link>
 				</li>
 			</ul>
+			<div class="mt-10">
+				<DarkModeToggle class="" />
+			</div>
 		</div>
 	</div>
 </template>

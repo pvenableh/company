@@ -10,151 +10,91 @@ const props = defineProps({
 
 const previousScrollTop = ref(0);
 const isRetracted = ref(false);
-const confettiActive = ref(false);
-const confettiCanvas = ref(null);
-let confettiFrame = null; // Define the frame variable at component scope
 
 const manageNavBarAnimations = () => {
-	const header = document.querySelector('header');
-	const scrollTop = document.documentElement.scrollTop;
+	const scrollTop = window.scrollY;
 
-	if (scrollTop > previousScrollTop.value && scrollTop >= 10) {
+	if (scrollTop > 10) {
 		isRetracted.value = true;
 	} else {
 		isRetracted.value = false;
 	}
-
-	previousScrollTop.value = scrollTop;
 };
 
 onMounted(() => {
 	window.addEventListener('scroll', manageNavBarAnimations);
-	startContinuousConfetti();
 });
 
 onUnmounted(() => {
 	window.removeEventListener('scroll', manageNavBarAnimations);
-	stopConfetti();
 });
-
-import confetti from 'canvas-confetti';
-
-function startContinuousConfetti() {
-	confettiActive.value = true;
-
-	const colors = ['#00bfff', '#0ef62d', '#e8fc00', '#ffcc00', '#ff005c', '#ff00cc', '#502989'];
-
-	// Function to run a single burst of confetti
-	const runConfettiBurst = () => {
-		if (!confettiActive.value) return;
-
-		// Left side confetti - allowing for more spread now that overflow is enabled
-		confetti({
-			particleCount: 3,
-			angle: 60,
-			spread: 55,
-			origin: { x: 0, y: 0.1 },
-			colors: colors,
-			gravity: 0.4,
-			scalar: 0.7,
-			drift: 0.2,
-			ticks: 250,
-		});
-
-		// Right side confetti
-		confetti({
-			particleCount: 3,
-			angle: 120,
-			spread: 55,
-			origin: { x: 1, y: 0.1 },
-			colors: colors,
-			gravity: 0.4,
-			scalar: 0.7,
-			drift: 0.2,
-			ticks: 250,
-		});
-
-		// Schedule next burst with a random delay
-		confettiFrame = setTimeout(runConfettiBurst, Math.random() * 2000 + 600);
-	};
-
-	// Start the cycle
-	runConfettiBurst();
-}
-
-function stopConfetti() {
-	confettiActive.value = false;
-	if (confettiFrame) {
-		clearTimeout(confettiFrame);
-		confettiFrame = null;
-	}
-}
-
-// Optionally restart confetti on route change
-const route = useRoute();
-watch(
-	() => route.path,
-	() => {
-		if (confettiActive.value) {
-			stopConfetti();
-			startContinuousConfetti();
-		}
-	},
-);
 </script>
 <template>
-	<header
-		class="w-full flex items-center justify-center z-40 bg-gray-100 dark:bg-gradient-to-tr dark:from-gray-800 dark:to-gray-900 transition-all py-3 shadow header"
-	>
-		<!-- Create an absolutely positioned canvas container that allows overflow -->
-		<div class="absolute inset-0 pointer-events-none" ref="confettiCanvas"></div>
-
-		<div class="absolute flex items-center justify-center flex-row left-[10px] sm:pr-1 md:px-6">
+	<header class="header" :class="{ retracted: isRetracted }">
+		<div class="filter-controls">
 			<client-only>
 				<LayoutOrganizationSelect v-if="user" :user="user" />
 				<LayoutTeamSelect v-if="user" class="ml-2" />
 			</client-only>
 		</div>
 
-		<nuxt-link to="/" class="flex flex-row items-end justify-end">
-			<Confetti />
-			<span class="opacity-75 ml-2 mr-1 font-bold leading-3 inline-block text-[9px] -mb-[3px]">by</span>
-			<Logo class="transform scale-[0.35] origin-bottom-left" />
+		<nuxt-link to="/" class="flex flex-row items-end justify-end mt-[5px] -mb-[2px]">
+			<LogoNew class="logo-new drop-shadow-sm" />
+			<span class="opacity-75 ml-2 mr-1 font-bold leading-3 hidden md:inline-block text-[9px] mb-[9px]">by</span>
+			<Logo class="hidden md:inline-block h-[10px] mb-[12px] !fill-[#666666] !hover:fill-[#666666]" />
 		</nuxt-link>
-		<div class="absolute flex items-center justify-center flex-row right-[10px] sm:pr-1 md:px-6">
+		<div class="account-controls">
 			<nuxt-link to="/account" class="flex items-center justify-self-center">
 				<Avatar v-if="user" :user="user" text="12" class="mr-2" />
 				<UAvatar v-else icon="i-heroicons-user" size="sm" class="mr-1 sm:mr-2" />
 			</nuxt-link>
 			<LayoutNotificationsMenu v-if="user" class="mr-2" />
-			<div class="mt-0">
-				<DarkModeToggle class="" />
-			</div>
 		</div>
 	</header>
 </template>
 
 <style>
 header {
-	/* background: #eeeeee;
-	border-bottom: solid 1px rgba(55, 55, 55, 0.05);
-	box-shadow: -1px 2px 10px rgba(0, 0, 0, 0.05); */
-	transition: transform 0.25s var(--curve);
-	position: relative; /* Ensure it's positioned relatively for absolute children */
-	/* Removed overflow: hidden to allow confetti to extend beyond header */
-	#confetti {
+	position: fixed;
+	@apply w-full flex items-center justify-center z-40 bg-gray-50 dark:bg-gradient-to-tr dark:from-gray-600 dark:to-gray-800 border border-white dark:border-gray-600 transition-all duration-300 ease-in-out py-3 shadow-lg left-1/2 -translate-x-1/2;
+	.logo-new {
 		height: 30px;
 		width: auto;
+		@apply transition-all duration-300 ease-in-out;
+		@media (min-width: theme('screens.md')) {
+			height: 40px;
+		}
+	}
+	.filter-controls {
+		@apply absolute flex items-center justify-center flex-row left-[10px] sm:pr-1 md:px-6 transition-all duration-300 ease-in-out;
+	}
+	.account-controls {
+		@apply absolute flex items-center justify-center flex-row right-[10px] sm:pr-1 md:px-6 transition-all duration-300 ease-in-out;
 	}
 }
 
 header.retracted {
-	transform: translateY(-100px);
+	/* transform: translateY(-100px); */
+	top: 8px;
+	@apply rounded-full w-11/12 md:w-5/6 lg:w-4/5 xl:w-3/5 py-2 md:py-1.5 border border-gray-100 bg-gray-800 dark:border-gray-600;
+	.logo-new {
+		height: 25px;
+		width: auto;
+		@media (min-width: theme('screens.md')) {
+			height: 30px;
+		}
+	}
+	.filter-controls {
+		@apply left-[5px] md:px-0;
+	}
+	.account-controls {
+		@apply right-[5px] md:px-0;
+	}
 }
 
-/* Rest of your styles remain the same */
 .logo {
 	width: 75px;
+	height: 50px;
 	path {
 		opacity: 0.4;
 		animation-name: logo;
@@ -163,12 +103,9 @@ header.retracted {
 		animation-iteration-count: infinite;
 	}
 
-	/* Animation delays remain the same */
 	path:nth-of-type(1) {
 		animation-delay: 0.1s;
 	}
-
-	/* Rest of the path animation delays */
 }
 
 @keyframes logo {

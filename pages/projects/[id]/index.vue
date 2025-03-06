@@ -47,9 +47,9 @@ const items = [
 ];
 </script>
 <template>
-	<div class="">
+	<div class="page__content">
 		<h1 class="page__title">Project</h1>
-		<div class="max-w-screen-xl mx-auto">
+		<div class="max-w-screen-xl mx-auto page_inner">
 			<nuxt-link to="/projects" class="uppercase text-[10px] text-gray-400 px-4 2xl:px-0">
 				<UIcon name="i-heroicons-arrow-left" class="-mb-0.5" />
 				Back to Projects

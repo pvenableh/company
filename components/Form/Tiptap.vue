@@ -1,30 +1,53 @@
 <template>
 	<div v-if="editor" class="tiptap-wrapper relative">
+		<!-- Drop zone overlay that appears when dragging files -->
+		<div
+			v-if="isDragging"
+			class="absolute inset-0 bg-cyan-50 dark:bg-cyan-900/20 border-2 border-dashed border-cyan-300 dark:border-cyan-600 rounded z-10 flex items-center justify-center pointer-events-none"
+		>
+			<div class="text-center">
+				<UIcon name="i-heroicons-arrow-down-tray" class="w-12 h-12 text-cyan-500 mb-2" />
+				<p class="text-cyan-600 dark:text-cyan-300 font-medium">Drop files to upload</p>
+			</div>
+		</div>
+
 		<editor-content
 			:editor="editor"
-			class="border-gray-300 border-t border-r border-l dark:text-white text-[14px] transition-all duration-200 overflow-y-scroll focus:border focus:border-cyan-200 relative tiptap-container"
+			class="border-gray-300 border-t border-r border-l dark:text-white text-[14px] transition-all duration-200 overflow-y-scroll focus:border focus:border-cyan-200 relative tiptap-container rounded-t"
 			:class="[
 				{ 'px-0 pt-0 border-none': disabled },
 				{ ' !border-cyan-200': editor.isFocused },
-				{ 'border-b ': !showToolbar },
+				{ 'border-b rounded-b': !showToolbar },
 				height,
 				customClasses,
 			]"
+			@dragenter.prevent="handleDragEnter"
+			@dragover.prevent="handleDragOver"
+			@dragleave.prevent="handleDragLeave"
+			@drop.prevent="handleDrop"
 		/>
 
 		<div
 			v-if="showToolbar"
-			class="w-full flex flex-row justify-between border-gray-300 border-r border-l border-b toolbar"
+			class="w-full flex flex-row justify-between border-gray-300 border-r border-l border-b toolbar rounded-b"
 			:class="{ ' !border-cyan-200': editor.isFocused }"
 		>
 			<div class="flex items-center flex-row">
+				<UButton
+					@click="$refs.fileInput.click()"
+					size="xs"
+					variant="ghost"
+					icon="i-heroicons-paper-clip"
+					class="ml-2 px-1 transform scale-[0.85]"
+				/>
+				<input ref="fileInput" type="file" multiple class="hidden" @change="handleFileUpload" />
 				<UButton
 					v-for="(button, index) in toolbarButtons"
 					:key="index"
 					size="xs"
 					variant="ghost"
 					:icon="button.icon"
-					class="transform scale-75"
+					class="transform scale-[0.8]"
 					:class="{ 'is-active': editor.isActive(button.command) }"
 					@click="button.action"
 				/>
@@ -53,17 +76,26 @@
 					</template>
 				</UPopover>
 			</div>
-			<UButton
-				@click="$refs.fileInput.click()"
-				size="xs"
-				variant="ghost"
-				icon="i-heroicons-paper-clip"
-				class="px-1 mr-2 transform scale-75"
-			/>
-			<input ref="fileInput" type="file" multiple class="hidden" @change="handleFileUpload" />
+			<div v-if="showCharCount" class="absolute -bottom-[20px] right-0">
+				<!-- Character count display -->
+				<span
+					class="text-[10px]"
+					:class="{
+						'text-red-500': characterCount > characterLimit && characterLimit > 0,
+						'text-gray-500': characterCount <= characterLimit || characterLimit === 0,
+					}"
+				>
+					{{ characterCount }} / {{ characterLimit }}
+				</span>
+			</div>
 		</div>
 
-		<UProgress v-if="isUploading" :value="uploadProgress" color="primary" class="mt-2" />
+		<!-- Upload Progress Bar -->
+		<div v-if="isUploading" class="mt-2">
+			<UProgress :value="uploadProgress" color="primary" size="xs" />
+			<p class="text-xs text-gray-500 text-center mt-1">Uploading {{ currentFile }}</p>
+		</div>
+
 		<div ref="mentionsPortal" class="mentions-portal" />
 		<UModal v-model="isModalOpen" fullscreen>
 			<div class="relative">
@@ -97,6 +129,8 @@ import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
 import { Mention } from '@tiptap/extension-mention';
 import { useFilteredUsers } from '~/composables/useFilteredUsers';
+import CharacterCount from '@tiptap/extension-character-count';
+import { useFileUpload } from '~/composables/useFileUpload';
 
 const props = defineProps({
 	modelValue: {
@@ -121,7 +155,7 @@ const props = defineProps({
 	},
 	focusRingClasses: {
 		type: String,
-		default: 'ring-2 ring-primary-500 ring-offset-2 dark:ring-offset-gray-900 border-cyan-200',
+		default: 'ring-2 ring-primary-500 ring-offset-2 dark:ring-offset-gray-900 border-[var(--cyan)]',
 	},
 	disabled: {
 		type: Boolean,
@@ -142,33 +176,113 @@ const props = defineProps({
 			itemId: null,
 		}),
 	},
+	characterLimit: {
+		type: Number,
+		default: 1000, // 0 means no limit
+	},
+	showCharCount: {
+		type: Boolean,
+		default: true,
+	},
+	allowUploads: {
+		type: Boolean,
+		default: true,
+	},
 });
 
 // Modal state
 const isModalOpen = ref(false);
 const currentImageSrc = ref('');
 
+// Drag and drop state
+const isDragging = ref(false);
+const dragCounter = ref(0);
+
 const closeModal = () => {
 	isModalOpen.value = false;
 	currentImageSrc.value = '';
 };
 
-const emit = defineEmits(['update:modelValue', 'mention', 'blur', 'enter']);
+const emit = defineEmits([
+	'update:modelValue',
+	'mention',
+	'blur',
+	'enter',
+	'upload-start',
+	'upload-complete',
+	'upload-error',
+	'limitExceeded',
+]);
 
 const editor = ref(null);
 const fileInput = ref(null);
-const isUploading = ref(false);
 const linkUrl = ref('');
-const uploadProgress = ref(0);
-const { uploadFiles } = useDirectusFiles();
+const { uploadFiles, updateFile } = useDirectusFiles();
 const { notify } = useNotifications();
 const { user: currentUser } = useDirectusAuth();
 const { selectedOrg } = useOrganization();
 const { selectedTeam } = useTeams();
 const { filteredUsers, fetchFilteredUsers, loading: loadingUsers } = useFilteredUsers();
-const toast = useToast();
+const {
+	validateFiles,
+	processUpload,
+	uploadFilesWithProgress,
+	startUpload,
+	setProgress,
+	resetUploadState,
+	setCurrentFile,
+	sanitizeFilename,
+	isUploading, // Readonly
+	uploadProgress, // Readonly
+	currentFile, // Readonly
+	formatFileSize,
+} = useFileUpload();
 
+const toast = useToast();
 const mentionsPortal = ref(null);
+
+// Handling drag and drop events
+const handleDragEnter = (event) => {
+	if (props.disabled || !props.allowUploads) return;
+	dragCounter.value++;
+	if (hasFiles(event)) {
+		isDragging.value = true;
+	}
+};
+
+const handleDragOver = (event) => {
+	if (props.disabled || !props.allowUploads) return;
+	if (hasFiles(event)) {
+		event.dataTransfer.dropEffect = 'copy';
+		isDragging.value = true;
+	}
+};
+
+const handleDragLeave = (event) => {
+	if (props.disabled) return;
+	dragCounter.value--;
+	if (dragCounter.value <= 0) {
+		isDragging.value = false;
+		dragCounter.value = 0;
+	}
+};
+
+const handleDrop = (event) => {
+	if (props.disabled || !props.allowUploads) return;
+	isDragging.value = false;
+	dragCounter.value = 0;
+
+	if (hasFiles(event)) {
+		const files = Array.from(event.dataTransfer.files);
+		handleFiles(files);
+	}
+};
+
+// Check if the event contains files
+const hasFiles = (event) => {
+	if (!event.dataTransfer?.types) return false;
+	return event.dataTransfer.types.includes('Files');
+};
 
 const setLink = (close) => {
 	if (linkUrl.value) {
@@ -227,7 +341,10 @@ const handleUserMention = async (mentionedUser) => {
 			recipient: mentionedUser.id,
 			sender: currentUser.value?.id,
 			subject: 'You were mentioned',
-			message: `${currentUser.value?.first_name} ${currentUser.value?.last_name} mentioned you in a ${contextInfo.collection.slice(0, -1)}. <br><a href='${currentUrl}'>View ${contextInfo.collection.slice(0, -1)}</a>`,
+			message: `${currentUser.value?.first_name} ${currentUser.value?.last_name} mentioned you in a ${contextInfo.collection.slice(
+				0,
+				-1,
+			)}. <br><a href='${currentUrl}'>View ${contextInfo.collection.slice(0, -1)}</a>`,
 			...contextInfo,
 		});
 		console.log('Mention notification sent:', notice);
@@ -254,8 +371,6 @@ const CustomMention = Mention.configure({
 				// Determine which org/team to use (props take precedence over global state)
 				const orgId = props.organizationId || selectedOrg.value;
 				const teamId = props.teamId || selectedTeam.value;
-
-				console.log(`Fetching filtered users for org: ${orgId}, team: ${teamId}`);
 
 				// Fetch users based on organization and team
 				await fetchFilteredUsers(orgId, teamId);
@@ -311,29 +426,31 @@ const CustomMention = Mention.configure({
 				if (!popup) return;
 
 				popup.innerHTML = `
-			<div class="max-h-48 overflow-y-auto py-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-700">
-			  ${
-					items.length === 0
-						? '<div class="px-3 py-2 text-gray-500">No users found</div>'
-						: items
-								.map(
-									(item, index) => `
-				<div class="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-2 ${
-					index === selectedIndex ? 'bg-gray-100 dark:bg-gray-700' : ''
-				}" data-index="${index}">
-				  <img src="${item.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.label)}&background=eeeeee&color=00bfff`}" 
-					class="w-8 h-8 rounded-full" alt="${item.label}">
-				  <div>
-					<div class="font-medium text-sm">${item.label}</div>
-					<div class="text-xs text-gray-500">${item.email}</div>
-				  </div>
-				</div>
-			  `,
-								)
-								.join('')
-				}
-			</div>
-		  `;
+  <div class="max-h-48 overflow-y-auto py-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border dark:border-gray-700">
+	${
+		items.length === 0
+			? '<div class="px-3 py-2 text-gray-500">No users found</div>'
+			: items
+					.map(
+						(item, index) => `
+	<div class="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer flex items-center gap-2 ${
+		index === selectedIndex ? 'bg-gray-100 dark:bg-gray-700' : ''
+	}" data-index="${index}">
+	  <img src="${
+			item.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.label)}&background=eeeeee&color=00bfff`
+		}"
+	  class="w-8 h-8 rounded-full" alt="${item.label}">
+	  <div>
+	  <div class="font-medium text-sm">${item.label}</div>
+	  <div class="text-xs text-gray-500">${item.email}</div>
+	  </div>
+	</div>
+	`,
+					)
+					.join('')
+	}
+  </div>
+  `;
 
 				if (currentClientRect) {
 					positionPopup(currentClientRect());
@@ -512,19 +629,8 @@ const CustomImage = Image.extend({
 const FileUpload = Extension.create({
 	name: 'fileUpload',
 	addProseMirrorPlugins() {
-		return [
-			new Plugin({
-				props: {
-					handleDrop: (view, event) => {
-						const hasFiles = event.dataTransfer?.files?.length;
-						if (!hasFiles) return false;
-						event.preventDefault();
-						handleFiles(Array.from(event.dataTransfer.files));
-						return true;
-					},
-				},
-			}),
-		];
+		// We don't need this plugin anymore since we're handling the drop events at the Vue component level
+		return [];
 	},
 });
 
@@ -534,45 +640,60 @@ const handleFileUpload = async (event) => {
 	event.target.value = '';
 };
 
-const handleFiles = async (files) => {
-	if (!files.length) return;
+const characterCount = computed(() => {
+	return editor.value?.storage.characterCount.characters() ?? 0;
+});
 
-	isUploading.value = true;
-	uploadProgress.value = 0;
-
-	try {
-		const formData = new FormData();
-		const folderId = '50aebdbd-1c67-4fae-8f56-8895b1b4c0cc';
-
-		files.forEach((file, index) => {
-			formData.append(`title_${index}`, file.name);
-			formData.append(`type_${index}`, file.type);
-			formData.append(`folder_${index}`, folderId);
-			formData.append('file', file, file.name);
-		});
-
-		const result = await uploadFiles(formData);
-		const uploadedFiles = Array.isArray(result) ? result : [result];
-
-		uploadedFiles.forEach((file) => {
-			const fileUrl = `${useRuntimeConfig().public.directusUrl}/assets/${file.id}`;
-			if (file.type.startsWith('image/')) {
-				editor.value.chain().focus().setImage({ src: fileUrl }).run();
-			} else {
-				editor.value.chain().focus().setLink({ href: fileUrl }).insertContent(file.filename_download).run();
+onMounted(() => {
+	editor.value = new Editor({
+		extensions: [
+			StarterKit,
+			Link.configure({
+				openOnClick: true,
+				HTMLAttributes: {
+					target: '_blank',
+					rel: 'noopener noreferrer',
+				},
+			}),
+			CustomImage,
+			FileUpload,
+			CustomMention,
+			CharacterCount,
+		],
+		content: props.modelValue,
+		editable: !props.disabled,
+		onUpdate: () => {
+			if (editor.value) {
+				const content = editor.value.getHTML();
+				const currentCount = editor.value.storage.characterCount.characters();
+				const isExceeded = props.characterLimit > 0 && currentCount > props.characterLimit;
+				emit('update:modelValue', content);
+				emit('limitExceeded', isExceeded);
 			}
-		});
-	} catch (error) {
-		console.error('Upload failed:', error);
-		toast.add({
-			title: 'Error',
-			description: error.message || 'Failed to upload files',
-			color: 'red',
-		});
-	} finally {
-		isUploading.value = false;
+		},
+		onBlur: ({ event }) => {
+			emit('blur', event);
+		},
+		onKeyDown: ({ event }) => {
+			if (event.key === 'Enter' && !event.shiftKey && props.singleLine) {
+				event.preventDefault();
+				emit('enter', event);
+				return true;
+			}
+		},
+		onSelectionUpdate: () => {
+			updateLinkUrl();
+		},
+	});
+
+	// Initial load of filtered users based on current organization and team context
+	const orgId = props.organizationId || selectedOrg.value;
+	const teamId = props.teamId || selectedTeam.value;
+
+	if (orgId) {
+		fetchFilteredUsers(orgId, teamId);
 	}
-};
+});
 
 watch(
 	() => props.modelValue,
@@ -601,60 +722,150 @@ watch(
 		const teamId = newTeamId || newSelectedTeam;
 
 		if (orgId) {
-			console.log(`Org/team changed, updating filtered users - Org: ${orgId}, Team: ${teamId}`);
 			await fetchFilteredUsers(orgId, teamId);
 		}
 	},
 	{ immediate: true },
 );
 
-onMounted(() => {
-	editor.value = new Editor({
-		extensions: [
-			StarterKit,
-			Link.configure({
-				openOnClick: true,
-				HTMLAttributes: {
-					target: '_blank',
-					rel: 'noopener noreferrer',
-				},
-			}),
-			CustomImage,
-			FileUpload,
-			CustomMention,
-		],
-		content: props.modelValue,
-		editable: !props.disabled,
-		onUpdate: () => {
-			emit('update:modelValue', editor.value.getHTML());
-		},
-		onBlur: ({ event }) => {
-			emit('blur', event);
-		},
-		onKeyDown: ({ event }) => {
-			if (event.key === 'Enter' && !event.shiftKey) {
-				event.preventDefault();
-				emit('enter', event);
-				return true;
-			}
-		},
-		onSelectionUpdate: () => {
-			updateLinkUrl();
-		},
-	});
-
-	// Initial load of filtered users based on current organization and team context
-	const orgId = props.organizationId || selectedOrg.value;
-	const teamId = props.teamId || selectedTeam.value;
-
-	if (orgId) {
-		fetchFilteredUsers(orgId, teamId);
-	}
-});
-
 onBeforeUnmount(() => {
 	editor.value?.destroy();
 });
+
+// Inside Tiptap.vue, within handleFiles
+// Inside Tiptap.vue
+
+// Inside Tiptap.vue
+
+// Inside Tiptap.vue, within handleFiles
+
+const handleFiles = async (files) => {
+	if (!files.length) return;
+
+	if (isUploading.value) {
+		toast.add({ title: 'Upload in Progress', description: 'Another upload is already in progress.', color: 'yellow' });
+		return;
+	}
+
+	try {
+		const validation = validateFiles(files);
+		if (!validation.isValid) {
+			toast.add({ title: 'Invalid Files', description: validation.errors.join('\n'), color: 'red' });
+			return;
+		}
+
+		emit('upload-start');
+		resetUploadState();
+		startUpload();
+
+		const folderId = '50aebdbd-1c67-4fae-8f56-8895b1b4c0cc'; // Or from config
+
+		// --- Simpler FormData ---
+		const formData = new FormData();
+		const processedFiles = [];
+
+		for (const file of files) {
+			const sanitizedName = sanitizeFilename(file.name);
+			formData.append('file', file, sanitizedName); // Only append 'file'
+			processedFiles.push({
+				originalName: file.name,
+				sanitizedName,
+				type: file.type,
+				size: file.size,
+			});
+		}
+		// --- End of simpler FormData ---
+
+		try {
+			const uploadResults = await uploadFilesWithProgress(formData, setProgress);
+			const uploadedFiles = Array.isArray(uploadResults) ? uploadResults : [uploadResults];
+
+			console.log('Uploaded Files (from uploadResults):', uploadedFiles); // Keep this log
+
+			if (uploadedFiles.length === 0) {
+				throw new Error('No files were uploaded');
+			}
+
+			// --- Update Loop (Crucial Changes) ---
+			const updatePromises = uploadedFiles.map(async (file) => {
+				// Use async/await *inside* map
+				if (!file || !file.id) {
+					console.warn('Skipping update: Invalid file or file.id', file);
+					return null; // Or handle the error appropriately
+				}
+
+				const matchedFile = processedFiles.find((pf) => pf.sanitizedName === file.filename_download);
+
+				try {
+					console.log('Calling updateFile with:', file.id, { folder: folderId }); // Keep this log
+					const updatedFile = await updateFile(file.id, { folder: folderId }); // Await the update
+					console.log('updateFile result:', updatedFile); // Log the result
+					return updatedFile; // Return the updated file object
+				} catch (updateError) {
+					console.error(`Error updating file ${file.id}:`, updateError);
+					toast.add({
+						title: 'Update Failed',
+						description: `Failed to update folder for ${file.filename_download}.`,
+						color: 'red', // Or yellow, as appropriate
+					});
+					return null; // Or handle differently (e.g., retry)
+				}
+			});
+
+			// Await *all* updates and filter out nulls (failed updates)
+			const updatedFiles = (await Promise.all(updatePromises)).filter(Boolean);
+			console.log('Updated Files (after updatePromises):', updatedFiles); // Keep this log
+			// --- End of Update Loop ---
+			// --- Insert into editor (using processedFiles and updatedFiles)---
+
+			updatedFiles.forEach((file) => {
+				if (!file || !file.id) return;
+
+				const fileUrl = `${useRuntimeConfig().public.directusUrl}/assets/${file.id}`;
+				//Find the matching file to get the file type
+				const matchedFile = processedFiles.find((pf) => pf?.sanitizedName === file.filename_download);
+
+				if (matchedFile?.type?.startsWith('image/')) {
+					editor.value
+						.chain()
+						.focus()
+						.createParagraphNear()
+						.setImage({ src: fileUrl, alt: matchedFile?.originalName })
+						.run();
+				} else {
+					const fileSize = formatFileSize(file.filesize || 0); // Use the updated filesize if available
+					const fileType = file.type || 'document'; //Provide a default
+					const displayText = `${file.filename_download} (${fileType} - ${fileSize})`;
+
+					editor.value
+						.chain()
+						.focus()
+						.createParagraphNear() // Also use for links for consistency
+						.insertContent(`<a href="${fileUrl}" target="_blank">${displayText}</a>`)
+						.run();
+				}
+			});
+
+			// --- End Insert into Editor ---
+
+			emit('upload-complete', updatedFiles); // Emit the *updated* files
+			toast.add({
+				title: 'Upload Complete',
+				description: `Uploaded and updated ${updatedFiles.length} file(s)`,
+				color: 'green',
+			});
+		} catch (uploadError) {
+			console.error('Upload failed:', uploadError);
+			emit('upload-error', uploadError);
+			toast.add({ title: 'Upload Failed', description: uploadError.message || 'Failed to upload', color: 'red' });
+		}
+	} catch (error) {
+		console.error('File handling error:', error);
+		toast.add({ title: 'Error', description: error.message || 'Failed to process files', color: 'red' });
+	} finally {
+		resetUploadState();
+	}
+};
 </script>
 
 <style>
@@ -775,5 +986,20 @@ onBeforeUnmount(() => {
 	z-index: 50;
 	transform: translate3d(0, 0, 0);
 	will-change: transform;
+}
+
+/* Drop zone animation */
+@keyframes pulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.8;
+	}
+}
+
+.tiptap-wrapper .absolute {
+	animation: pulse 1.5s infinite;
 }
 </style>

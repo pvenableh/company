@@ -7,7 +7,7 @@ const props = defineProps({
 });
 </script>
 <template>
-	<svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 98.44 48.62">
+	<svg class="logo-hue" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 98.44 48.62">
 		<path
 			class="h"
 			:style="'fill: ' + color"

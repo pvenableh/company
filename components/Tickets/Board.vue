@@ -125,7 +125,7 @@
 		</div>
 
 		<!-- Debug info -->
-		<UButton v-if="user.email === 'peter@huestudios.com'" @click="debugMode = !debugMode">Toggle Debug</UButton>
+		<!-- <UButton v-if="user.email === 'peter@huestudios.com'" @click="debugMode = !debugMode">Toggle Debug</UButton>
 		<div v-if="debugMode" class="p-4 mb-4 bg-gray-100 border border-gray-300 rounded">
 			<h3 class="font-bold">Debug Info</h3>
 			<div class="flex justify-between">
@@ -153,7 +153,7 @@
 			</div>
 			<UButton size="xs" class="mt-2" @click="refresh">Force Refresh</UButton>
 			<UButton size="xs" class="mt-2 ml-2" color="cyan" @click="testWebSocketConnection">Test WebSocket</UButton>
-		</div>
+		</div> -->
 
 		<!-- Board Layout -->
 		<div
@@ -505,11 +505,12 @@ const fetchCommentCounts = async (ticketIds) => {
 	try {
 		const { readItems } = useDirectusItems();
 
-		// Query the tickets_comments junction table for comments tied to tickets
-		const comments = await readItems('tickets_comments', {
-			fields: ['id', 'tickets_id', 'comments_id'],
+		// Query the comments table directly
+		const comments = await readItems('comments', {
+			fields: ['id', 'item'],
 			filter: {
-				tickets_id: { _in: ticketIds },
+				collection: { _eq: 'tickets' },
+				item: { _in: ticketIds },
 			},
 		});
 
@@ -517,7 +518,7 @@ const fetchCommentCounts = async (ticketIds) => {
 		const countMap = new Map();
 
 		comments.forEach((comment) => {
-			const ticketId = comment.tickets_id;
+			const ticketId = comment.item;
 			if (!countMap.has(ticketId)) {
 				countMap.set(ticketId, 0);
 			}

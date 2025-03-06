@@ -150,14 +150,6 @@ const props = defineProps({
 		type: Object,
 		required: true,
 	},
-	commentCount: {
-		type: Number,
-		default: 0,
-	},
-	tasks: {
-		type: Array,
-		default: () => [],
-	},
 });
 
 // const emit = defineEmits(['expand']);
@@ -170,9 +162,17 @@ const assignedUsers = computed(() => {
 });
 
 const progress = computed(() => {
-	if (props.tasks.length === 0) return 0;
-	const completedTasks = props.tasks.filter((task) => task.status === 'completed').length;
-	return Math.round((completedTasks / props.tasks.length) * 100);
+	console.log('coming to you from the card.');
+	console.log(props.element.taskCount);
+
+	// If there are no tasks, return 0
+	if (!props.element.tasks || props.element.tasks.length === 0) return 0;
+
+	// Count completed tasks from the tasks array property
+	const completedTasks = props.element.tasks.filter((task) => task.status === 'completed').length;
+
+	// Calculate and return the percentage
+	return Math.round((completedTasks / props.element.tasks.length) * 100);
 });
 
 // Maximum number of avatars to display
