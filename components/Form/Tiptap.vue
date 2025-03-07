@@ -732,136 +732,131 @@ onBeforeUnmount(() => {
 	editor.value?.destroy();
 });
 
-// Inside Tiptap.vue, within handleFiles
-// Inside Tiptap.vue
-
-// Inside Tiptap.vue
-
-// Inside Tiptap.vue, within handleFiles
+// This updated handleFiles function for Form/Tiptap.vue integrates
+// with the enhanced useFileUpload composable
 
 const handleFiles = async (files) => {
 	if (!files.length) return;
 
 	if (isUploading.value) {
-		toast.add({ title: 'Upload in Progress', description: 'Another upload is already in progress.', color: 'yellow' });
+		toast.add({
+			title: 'Upload in Progress',
+			description: 'Another upload is already in progress.',
+			color: 'yellow',
+		});
 		return;
 	}
 
 	try {
-		const validation = validateFiles(files);
-		if (!validation.isValid) {
-			toast.add({ title: 'Invalid Files', description: validation.errors.join('\n'), color: 'red' });
-			return;
-		}
-
 		emit('upload-start');
 		resetUploadState();
 		startUpload();
 
-		const folderId = '50aebdbd-1c67-4fae-8f56-8895b1b4c0cc'; // Or from config
+		const folderId = '50aebdbd-1c67-4fae-8f56-8895b1b4c0cc'; // Your folder ID
 
-		// --- Simpler FormData ---
-		const formData = new FormData();
-		const processedFiles = [];
+		// Process files with enhanced validation and compression
+		const { success, formData, processedFilesInfo, errors, warnings } = await processUpload(files, {
+			compressImages: true,
+		});
 
-		for (const file of files) {
-			const sanitizedName = sanitizeFilename(file.name);
-			formData.append('file', file, sanitizedName); // Only append 'file'
-			processedFiles.push({
-				originalName: file.name,
-				sanitizedName,
-				type: file.type,
-				size: file.size,
+		if (!success) {
+			toast.add({
+				title: 'File Validation Failed',
+				description: errors.join('\n'),
+				color: 'red',
+				timeout: 5000,
+			});
+			resetUploadState();
+			return;
+		}
+
+		// Show warnings if any (like compression info)
+		if (warnings && warnings.length > 0) {
+			toast.add({
+				title: 'File Processing Notes',
+				description: warnings.join('\n'),
+				color: 'blue',
+				timeout: 5000,
 			});
 		}
-		// --- End of simpler FormData ---
 
 		try {
 			const uploadResults = await uploadFilesWithProgress(formData, setProgress);
 			const uploadedFiles = Array.isArray(uploadResults) ? uploadResults : [uploadResults];
 
-			console.log('Uploaded Files (from uploadResults):', uploadedFiles); // Keep this log
-
 			if (uploadedFiles.length === 0) {
 				throw new Error('No files were uploaded');
 			}
 
-			// --- Update Loop (Crucial Changes) ---
+			// Update folder for uploaded files
 			const updatePromises = uploadedFiles.map(async (file) => {
-				// Use async/await *inside* map
 				if (!file || !file.id) {
 					console.warn('Skipping update: Invalid file or file.id', file);
-					return null; // Or handle the error appropriately
+					return null;
 				}
 
-				const matchedFile = processedFiles.find((pf) => pf.sanitizedName === file.filename_download);
-
 				try {
-					console.log('Calling updateFile with:', file.id, { folder: folderId }); // Keep this log
-					const updatedFile = await updateFile(file.id, { folder: folderId }); // Await the update
-					console.log('updateFile result:', updatedFile); // Log the result
-					return updatedFile; // Return the updated file object
+					const updatedFile = await updateFile(file.id, { folder: folderId });
+					return updatedFile;
 				} catch (updateError) {
 					console.error(`Error updating file ${file.id}:`, updateError);
-					toast.add({
-						title: 'Update Failed',
-						description: `Failed to update folder for ${file.filename_download}.`,
-						color: 'red', // Or yellow, as appropriate
-					});
-					return null; // Or handle differently (e.g., retry)
+					return null;
 				}
 			});
 
-			// Await *all* updates and filter out nulls (failed updates)
+			// Wait for all updates and filter out failed ones
 			const updatedFiles = (await Promise.all(updatePromises)).filter(Boolean);
-			console.log('Updated Files (after updatePromises):', updatedFiles); // Keep this log
-			// --- End of Update Loop ---
-			// --- Insert into editor (using processedFiles and updatedFiles)---
 
+			// Insert each file into the editor
 			updatedFiles.forEach((file) => {
 				if (!file || !file.id) return;
 
 				const fileUrl = `${useRuntimeConfig().public.directusUrl}/assets/${file.id}`;
-				//Find the matching file to get the file type
-				const matchedFile = processedFiles.find((pf) => pf?.sanitizedName === file.filename_download);
-
-				if (matchedFile?.type?.startsWith('image/')) {
+				// Insert as image if it's an image type
+				if (file.type?.startsWith('image/')) {
 					editor.value
 						.chain()
 						.focus()
 						.createParagraphNear()
-						.setImage({ src: fileUrl, alt: matchedFile?.originalName })
+						.setImage({ src: fileUrl, alt: file.filename_download || 'Uploaded image' })
 						.run();
 				} else {
-					const fileSize = formatFileSize(file.filesize || 0); // Use the updated filesize if available
-					const fileType = file.type || 'document'; //Provide a default
+					// Insert as link for other file types
+					const fileSize = formatFileSize(file.filesize || 0);
+					const fileType = file.type || 'document';
 					const displayText = `${file.filename_download} (${fileType} - ${fileSize})`;
 
 					editor.value
 						.chain()
 						.focus()
-						.createParagraphNear() // Also use for links for consistency
+						.createParagraphNear()
 						.insertContent(`<a href="${fileUrl}" target="_blank">${displayText}</a>`)
 						.run();
 				}
 			});
 
-			// --- End Insert into Editor ---
-
-			emit('upload-complete', updatedFiles); // Emit the *updated* files
+			emit('upload-complete', updatedFiles);
 			toast.add({
 				title: 'Upload Complete',
-				description: `Uploaded and updated ${updatedFiles.length} file(s)`,
+				description: `Uploaded ${updatedFiles.length} file(s) successfully`,
 				color: 'green',
 			});
 		} catch (uploadError) {
 			console.error('Upload failed:', uploadError);
 			emit('upload-error', uploadError);
-			toast.add({ title: 'Upload Failed', description: uploadError.message || 'Failed to upload', color: 'red' });
+			toast.add({
+				title: 'Upload Failed',
+				description: uploadError.message || 'Failed to upload files',
+				color: 'red',
+			});
 		}
 	} catch (error) {
 		console.error('File handling error:', error);
-		toast.add({ title: 'Error', description: error.message || 'Failed to process files', color: 'red' });
+		toast.add({
+			title: 'Error',
+			description: error.message || 'Failed to process files',
+			color: 'red',
+		});
 	} finally {
 		resetUploadState();
 	}
