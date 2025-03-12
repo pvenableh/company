@@ -120,12 +120,15 @@ onUnmounted(() => {
 <template>
 	<div :class="containerClass" class="org-selector">
 		<!-- Single Organization Display -->
-		<div v-if="!hasMultipleOrgs" class="flex items-center">
+		<div
+			v-if="!hasMultipleOrgs"
+			class="flex items-center rounded-full border-2 border-[var(--cyan)] p-1 shadow-inner overflow-hidden"
+		>
 			<UAvatar
 				:src="getIconUrl(props.user?.organizations?.[0]?.organizations_id)"
 				:alt="props.user?.organizations?.[0]?.organizations_id?.name || 'Organization'"
 				size="sm"
-				class="h-8 !w-8 shadow"
+				class="h-7 !w-7 shadow-lg"
 			>
 				<template #fallback>
 					<span class="text-xs font-medium">
@@ -140,13 +143,13 @@ onUnmounted(() => {
 			<!-- Dropdown Trigger -->
 			<button
 				@click="toggleDropdown"
-				class="flex items-center group relative focus:outline-none rounded-full bg-white border-2 border-[var(--cyan)] p-0.5"
+				class="flex items-center group relative focus:outline-none rounded-full bg-white border-2 border-[var(--cyan)] p-0.5 shadow-inner overflow-hidden"
 				:class="{ 'border-cyan-400': isDropdownOpen }"
 			>
 				<!-- Show icon for "All Organizations" or avatar for specific organization -->
 				<template v-if="isAllOrganizations(currentOrg)">
 					<div
-						class="h-7 w-7 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center relative shadow"
+						class="h-7 w-7 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center relative shadow-lg"
 					>
 						<UIcon name="i-heroicons-building-office-2" class="h-5 w-5 text-gray-500 dark:text-gray-300" />
 					</div>

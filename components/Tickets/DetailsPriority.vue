@@ -1,5 +1,5 @@
 <template>
-	<div class="relative w-1/3">
+	<div class="relative w-full">
 		<UFormGroup label="Priority:">
 			<URange v-model="priorityValue" :max="rangeMax" :step="1" :color="color" />
 			<div class="absolute -top-[27px] left-[80px]">

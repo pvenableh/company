@@ -2,10 +2,39 @@
 	<div :class="containerClass" class="team-selector" ref="dropdownRef">
 		<!-- When organization is selected -->
 		<div v-if="selectedOrg">
+			<!-- For Regular User with Only One Team - Static Display (No Dropdown) -->
+			<div
+				v-if="isRegularUserWithSingleTeam"
+				class="flex items-center gap-2 rounded-full border-2 border-[var(--cyan)] p-1"
+			>
+				<!-- Team Avatar -->
+				<div class="h-7 w-7 rounded-full bg-white flex items-center justify-center relative shadow">
+					<div v-if="singleTeam">
+						<div v-if="singleTeam.icon">
+							<img
+								:src="`${$config.public.directusUrl}/assets/${singleTeam.icon}?key=avatar`"
+								alt="Team Icon"
+								class="object-cover rounded-full"
+							/>
+						</div>
+						<div v-else class="h-full w-full flex items-center justify-center">
+							<span class="font-medium text-gray-700 text-sm">{{ getTeamInitials(singleTeam) }}</span>
+						</div>
+					</div>
+					<UIcon v-else name="i-heroicons-user-group" class="w-5 h-5 text-gray-400" />
+				</div>
+
+				<!-- Team Name (visible on larger screens) -->
+				<span class="hidden md:block text-xs uppercase truncate max-w-24 pr-1">
+					{{ singleTeam?.name || 'Your Team' }}
+				</span>
+			</div>
+
+			<!-- Dropdown Button - For Admin or Users with Multiple Teams -->
 			<button
+				v-else
 				@click="toggleDropdown"
 				class="flex items-center gap-2 group relative focus:outline-none rounded-full border-2 border-[var(--cyan)] p-1"
-				:class="{ 'border-cyan-400': isDropdownOpen }"
 			>
 				<!-- Team Avatar -->
 				<div class="h-7 w-7 rounded-full bg-white flex items-center justify-center relative shadow">
@@ -14,7 +43,7 @@
 							<img
 								:src="`${$config.public.directusUrl}/assets/${currentTeam.icon}?key=avatar`"
 								alt="Team Icon"
-								class="h-8 w-8 object-cover rounded-full"
+								class="object-cover rounded-full"
 							/>
 						</div>
 						<div v-else class="h-full w-full flex items-center justify-center">
@@ -36,7 +65,7 @@
 				/>
 			</button>
 
-			<!-- Team Dropdown -->
+			<!-- Team Dropdown - Only for Admin or Users with Multiple Teams -->
 			<Transition
 				enter-active-class="transition duration-200 ease-out"
 				enter-from-class="opacity-0 scale-95 translate-y-1"
@@ -46,7 +75,7 @@
 				leave-to-class="opacity-0 scale-95 translate-y-1"
 			>
 				<div
-					v-if="isDropdownOpen"
+					v-if="isDropdownOpen && !isRegularUserWithSingleTeam"
 					class="absolute z-50 top-full left-0 mt-1 w-64 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 overflow-hidden"
 				>
 					<div class="py-1 px-2 text-xs uppercase font-medium text-gray-600 dark:text-gray-400">Teams</div>
@@ -69,9 +98,9 @@
 
 					<!-- Teams List -->
 					<div v-else class="max-h-60 overflow-y-auto">
-						<!-- Reset/Clear Selection Option -->
+						<!-- Reset/Clear Selection Option - Only show for admins -->
 						<button
-							v-if="selectedTeam !== null"
+							v-if="showClearTeamOption"
 							@click="clearTeamSelection"
 							class="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-left border-b border-gray-200 dark:border-gray-700"
 						>
@@ -151,6 +180,7 @@ const {
 	canManageTeam,
 	hasAdminAccess,
 	loading,
+	showAllTeamsOption, // New function from our enhanced useTeams
 } = useTeams();
 const { selectedOrg, currentOrg } = useOrganization();
 const { user } = useDirectusAuth();
@@ -166,9 +196,28 @@ onClickOutside(dropdownRef, () => {
 	isDropdownOpen.value = false;
 });
 
+// Check if user is a regular user (non-admin) with only one team
+const isRegularUserWithSingleTeam = computed(() => {
+	// First, check if the user is an admin
+	if (hasAdminAccess(user.value)) return false;
+
+	// Next, check if there's only one visible team
+	return visibleTeams.value?.length === 1;
+});
+
+// Get the single team for regular users with one team
+const singleTeam = computed(() => {
+	if (isRegularUserWithSingleTeam.value && visibleTeams.value?.length === 1) {
+		return visibleTeams.value[0];
+	}
+	return null;
+});
+
 // Helper: Create default "All Teams" option for admin users
 const getAllTeamsOption = () => {
-	if (!hasAdminAccess(user.value)) return [];
+	// Use the new showAllTeamsOption function to determine if we should show the All Teams option
+	if (!showAllTeamsOption()) return [];
+
 	return [
 		{
 			id: null,
@@ -178,6 +227,12 @@ const getAllTeamsOption = () => {
 		},
 	];
 };
+
+// Show clear team option only for admins
+const showClearTeamOption = computed(() => {
+	// Only show "Deselect Team" for admins and only when a team is selected
+	return hasAdminAccess(user.value) && selectedTeam.value !== null;
+});
 
 // Computed for team options in dropdown with proper reactivity
 const teamOptions = computed(() => {
@@ -215,7 +270,7 @@ const currentTeamName = computed(() => {
 	if (!selectedOrg.value) return 'Select Organization First';
 
 	// For "All Teams" option (null value)
-	if (selectedTeam.value === null && hasAdminAccess(user.value)) return 'All Teams';
+	if (selectedTeam.value === null && showAllTeamsOption()) return 'All Teams';
 
 	// For regular teams
 	const team = visibleTeams.value.find((t) => t.id === selectedTeam.value);
@@ -263,9 +318,12 @@ const handleTeamSelect = (teamId) => {
 
 // Clear/reset team selection
 const clearTeamSelection = () => {
-	clearTeam();
-	isDropdownOpen.value = false;
-	console.log('TeamSelect: Team selection cleared');
+	// Only allow admins to clear team selection
+	if (hasAdminAccess(user.value)) {
+		clearTeam();
+		isDropdownOpen.value = false;
+		console.log('TeamSelect: Team selection cleared');
+	}
 };
 
 // Validate that a team belongs to the current organization
@@ -289,9 +347,14 @@ watch(
 			// Fetch teams for new organization
 			await fetchTeams(newOrgId);
 
+			// For regular users with a single team, auto-select it
+			if (isRegularUserWithSingleTeam.value && singleTeam.value) {
+				setTeam(singleTeam.value.id);
+			}
+			// For other cases, let useTeams.js handle the restoration logic
+
 			// Only try to restore from storage on initial load
 			if (!initialLoadComplete.value) {
-				// We'll let useTeams.js handle the restoration logic
 				console.log('TeamSelect: Initial load, checking for saved team in storage');
 				initialLoadComplete.value = true;
 			}
@@ -305,6 +368,11 @@ watch(
 	() => visibleTeams.value,
 	(newTeams) => {
 		console.log('TeamSelect: Teams updated, count:', newTeams?.length || 0);
+
+		// For regular users with a single team, auto-select it
+		if (isRegularUserWithSingleTeam.value && singleTeam.value) {
+			setTeam(singleTeam.value.id);
+		}
 
 		// Validate if the currently selected team is valid for this organization
 		if (selectedTeam.value && !isTeamValidForCurrentOrg(selectedTeam.value)) {
@@ -326,6 +394,12 @@ onMounted(async () => {
 	if (selectedOrg.value) {
 		console.log('TeamSelect: Initial fetch for org:', selectedOrg.value);
 		await fetchTeams(selectedOrg.value);
+
+		// For regular users with a single team, auto-select it
+		if (isRegularUserWithSingleTeam.value && singleTeam.value) {
+			setTeam(singleTeam.value.id);
+		}
+
 		initialLoadComplete.value = true;
 	}
 

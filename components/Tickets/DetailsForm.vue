@@ -4,15 +4,8 @@
 		<TicketsDetailsHeader :ticket="ticket" />
 
 		<!-- Priority Slider -->
-		<TicketsDetailsPriority v-model="form.priority" />
-
-		<!-- Title -->
-		<UFormGroup label="Title" required>
-			<UInput v-model="form.title" placeholder="Enter ticket title" :loading="isLoading" />
-		</UFormGroup>
-
-		<!-- Status and Project Grid -->
 		<div class="grid grid-cols-2 gap-4">
+			<TicketsDetailsPriority v-model="form.priority" />
 			<UFormGroup label="Status">
 				<USelect
 					v-model="form.status"
@@ -22,22 +15,13 @@
 					:loading="isLoading"
 				/>
 			</UFormGroup>
-			<!-- Only show project dropdown if we have projects -->
-			<UFormGroup v-if="form.organization && projectOptions.length > 1" label="Project">
-				<USelectMenu
-					searchable
-					v-model="form.project"
-					:options="projectOptions"
-					option-attribute="title"
-					value-attribute="id"
-					placeholder="Select project"
-					:loading="loadingProjects"
-					class="relative"
-				/>
-			</UFormGroup>
 		</div>
+		<!-- Title -->
+		<UFormGroup label="Title" required>
+			<UInput v-model="form.title" placeholder="Enter ticket title" :loading="isLoading" />
+		</UFormGroup>
 
-		<!-- Organization & Team Grid -->
+		<!-- Status and Project Grid -->
 		<div class="grid grid-cols-2 gap-4">
 			<UFormGroup v-if="hasMultipleOrgs" label="Organization">
 				<USelectMenu
@@ -55,7 +39,7 @@
 
 			<!-- Only show team UI if we have teams -->
 			<UFormGroup
-				v-if="localTeamOptions.length > 0 || isAdminOrManager"
+				v-if="localTeamOptions.length > 0"
 				:label="isAdminOrManager ? 'Team (optional)' : 'Team'"
 				:required="!isAdminOrManager"
 			>
@@ -66,11 +50,21 @@
 					value-attribute="id"
 					placeholder="Select team"
 					:loading="teamsLoading"
-					:disabled="localTeamOptions.length <= 1 || isLoading || noTeamSelected"
+					:disabled="localTeamOptions.length <= 1 || isLoading"
 				/>
-				<div v-if="isAdminOrManager" class="mt-2">
-					<UCheckbox v-model="noTeamSelected" label="No Team" @change="handleNoTeamChange" />
-				</div>
+			</UFormGroup>
+			<!-- Only show project dropdown if we have projects -->
+			<UFormGroup v-if="form.organization && projectOptions.length > 1" label="Project">
+				<USelectMenu
+					searchable
+					v-model="form.project"
+					:options="projectOptions"
+					option-attribute="title"
+					value-attribute="id"
+					placeholder="Select project"
+					:loading="loadingProjects"
+					class="relative"
+				/>
 			</UFormGroup>
 		</div>
 
@@ -243,6 +237,7 @@ const trackChanges = () => {
 };
 
 // Load teams for a given organization - maintains local team state
+// Load teams for a given organization - maintains local team state
 const loadTeamsForOrg = async (orgId) => {
 	if (!orgId) {
 		localTeams.value = [];
@@ -254,15 +249,47 @@ const loadTeamsForOrg = async (orgId) => {
 		// First fetch teams using the composable
 		await fetchTeams(orgId, { disableTeamRestoration: true });
 
-		// Copy the teams to our local state
-		localTeams.value = [...teams.value];
+		// Regular users should only see teams they belong to
+		// Copy the appropriate teams to our local state based on user role
+		if (isAdminOrManager.value) {
+			// Admins and managers see all teams
+			localTeams.value = [...teams.value];
+		} else {
+			// Regular users only see teams they're members of
+			localTeams.value = [...visibleTeams.value];
+		}
 
 		// Prepare options for the dropdown
-		localTeamOptions.value = localTeams.value.map((team) => ({
+		let options = localTeams.value.map((team) => ({
 			id: team.id,
 			name: team.name,
 			description: team.description || '',
 		}));
+
+		// Special handling for when the ticket already has a team assigned
+		// If the ticket has a team that isn't in the filtered list, add it as view-only
+		if (form.value.team && !options.some((team) => team.id === form.value.team)) {
+			const ticketTeam = teams.value.find((team) => team.id === form.value.team);
+			if (ticketTeam) {
+				options.push({
+					id: ticketTeam.id,
+					name: `${ticketTeam.name} (View Only)`,
+					description: ticketTeam.description || '',
+					viewOnly: true,
+				});
+			}
+		}
+
+		// Add "No Team" option for admin/manager users
+		if (isAdminOrManager.value) {
+			options.unshift({
+				id: null,
+				name: 'No Team',
+				description: 'This ticket will not be assigned to any team',
+			});
+		}
+
+		localTeamOptions.value = options;
 	} catch (error) {
 		console.error('Error loading teams:', error);
 		toast.add({

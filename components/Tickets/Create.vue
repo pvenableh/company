@@ -222,7 +222,7 @@ defineProps({
 });
 
 const { selectedOrg, organizations, hasMultipleOrgs, organizationOptions } = useOrganization();
-const { teams, loading: teamsLoading, fetchTeams, selectedTeam, setTeam, hasAdminAccess } = useTeams();
+const { teams, visibleTeams, loading: teamsLoading, fetchTeams, selectedTeam, setTeam, hasAdminAccess } = useTeams();
 const { filteredUsers, fetchFilteredUsers, loading: loadingUsers, DEFAULT_TEAM_ID } = useFilteredUsers();
 const { createItem, readItems } = useDirectusItems();
 const { user: currentUser } = useDirectusAuth();
@@ -243,6 +243,7 @@ const showTitleError = ref(false);
 const noTeamValue = undefined; // Use undefined to properly handle null in APIs
 
 const teamsList = computed(() => {
+	// If we have no teams data yet
 	if (!teams.value || teams.value.length === 0) {
 		// If no teams, always show "No Team" option
 		return [
@@ -254,8 +255,12 @@ const teamsList = computed(() => {
 		];
 	}
 
+	// For regular users, use visibleTeams which only contains teams they're members of
+	// For admins, use all teams
+	const teamsSource = hasAdminAccess(currentUser.value) ? teams.value : visibleTeams.value;
+
 	// Create teams list including "No Team" option for everyone
-	let teamsArray = [...teams.value];
+	let teamsArray = [...teamsSource];
 
 	// Add "No Team" option at the beginning
 	teamsArray.unshift({

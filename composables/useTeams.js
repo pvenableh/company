@@ -173,6 +173,19 @@ export const useTeams = () => {
 
 	// Clear selected team (sets to null)
 	const clearTeam = () => {
+		const { user } = useDirectusAuth();
+
+		// For regular users, don't actually clear to null
+		// unless there are no visible teams
+		if (!hasAdminAccess(user.value) && visibleTeams.value.length > 0) {
+			// Instead, set to the first visible team
+			const firstTeamId = visibleTeams.value[0]?.id;
+			setTeam(firstTeamId);
+			console.log('useTeams: Regular user - setting to first team:', firstTeamId);
+			return;
+		}
+
+		// For admins or when no teams are available, clear as normal
 		selectedTeam.value = null;
 		teamCookie.value = null;
 		setLocalStorageTeam(null);
@@ -181,13 +194,25 @@ export const useTeams = () => {
 
 	// Check if a teamId is valid for the current organization
 	const isValidTeamForOrg = (teamId) => {
-		if (!teamId) return true; // null is always valid (All Teams)
+		const { user } = useDirectusAuth();
+
+		// For regular users, null/all teams is not a valid option
+		if (!teamId && !hasAdminAccess(user.value)) {
+			return false;
+		}
+
+		// null is always valid for admins (All Teams)
+		if (!teamId && hasAdminAccess(user.value)) {
+			return true;
+		}
+
 		return visibleTeams.value.some((team) => team.id === teamId);
 	};
 
 	// Try to restore selected team from cookie and localStorage
 	const tryRestoreSelectedTeam = async (organizationId) => {
 		try {
+			const { user } = useDirectusAuth();
 			let savedTeam = teamCookie.value;
 			const localStorageTeam = getLocalStorageTeam();
 
@@ -199,9 +224,31 @@ export const useTeams = () => {
 			console.log('useTeams: Trying to restore team, saved team ID:', savedTeam);
 			console.log('useTeams: visibleTeams count:', visibleTeams.value.length);
 
-			// If there's a saved team ID and it exists in the visible teams list, use it
+			// If there are no visible teams, clear selection and return
+			if (visibleTeams.value.length === 0) {
+				console.log('useTeams: No visible teams available, clearing selection');
+				selectedTeam.value = null;
+				return;
+			}
+
+			// For regular users, ensure they always have a team selected
+			if (!hasAdminAccess(user.value)) {
+				// If they have a saved team and it's valid, use it
+				if (savedTeam && isValidTeamForOrg(savedTeam)) {
+					console.log('useTeams: Restoring saved team for regular user:', savedTeam);
+					selectedTeam.value = savedTeam;
+				} else {
+					// Otherwise, select the first team they have access to
+					const firstTeamId = visibleTeams.value[0]?.id;
+					console.log('useTeams: Setting regular user to first visible team:', firstTeamId);
+					setTeam(firstTeamId);
+				}
+				return;
+			}
+
+			// For admins, allow null team (All Teams) or any valid team
 			if (savedTeam && isValidTeamForOrg(savedTeam)) {
-				console.log('useTeams: Restoring saved team:', savedTeam);
+				console.log('useTeams: Restoring saved team for admin:', savedTeam);
 				selectedTeam.value = savedTeam;
 				return;
 			} else if (savedTeam) {
@@ -211,8 +258,8 @@ export const useTeams = () => {
 				return;
 			}
 
-			// If no valid saved team, don't select any team by default
-			console.log('useTeams: No saved team or invalid saved team, setting to null');
+			// If no valid saved team for admin, don't select any team by default
+			console.log('useTeams: No saved team or invalid saved team for admin, setting to null');
 			selectedTeam.value = null;
 		} catch (err) {
 			console.warn('Error restoring saved team:', err);
@@ -222,24 +269,51 @@ export const useTeams = () => {
 
 	// Get team filter for queries
 	const getTeamFilter = () => {
-		// If no team is selected or no organization is selected, return empty filter
-		if (!selectedTeam.value || !selectedOrg.value) {
+		const { user } = useDirectusAuth();
+
+		// If no organization is selected, return empty filter
+		if (!selectedOrg.value) {
 			return {}; // No team filter
 		}
 
-		// Get users in the selected team
-		const team = teams.value.find((t) => t.id === selectedTeam.value);
-		if (!team || !team.users?.length) return {};
+		// For regular users, apply team filter even when no team is explicitly selected
+		// This ensures they only see content from their teams
+		if (!selectedTeam.value && !hasAdminAccess(user.value) && visibleTeams.value.length > 0) {
+			// Create a filter for all teams they're a member of
+			const teamUserIds = visibleTeams.value.flatMap((team) => team.users?.map((u) => u.directus_users_id.id) || []);
 
-		const teamUserIds = team.users.map((u) => u.directus_users_id.id);
+			// Remove duplicates
+			const uniqueUserIds = [...new Set(teamUserIds)];
 
-		return {
-			assigned_to: {
-				directus_users_id: {
-					id: { _in: teamUserIds },
+			if (uniqueUserIds.length > 0) {
+				return {
+					assigned_to: {
+						directus_users_id: {
+							id: { _in: uniqueUserIds },
+						},
+					},
+				};
+			}
+		}
+
+		// If a specific team is selected, filter by that team's users
+		if (selectedTeam.value) {
+			const team = teams.value.find((t) => t.id === selectedTeam.value);
+			if (!team || !team.users?.length) return {};
+
+			const teamUserIds = team.users.map((u) => u.directus_users_id.id);
+
+			return {
+				assigned_to: {
+					directus_users_id: {
+						id: { _in: teamUserIds },
+					},
 				},
-			},
-		};
+			};
+		}
+
+		// For admins with no team selected, return empty filter
+		return {};
 	};
 
 	// Computed for current team details
@@ -409,6 +483,12 @@ export const useTeams = () => {
 		}
 	};
 
+	// Should the UI show the "All Teams" option
+	const showAllTeamsOption = () => {
+		const { user } = useDirectusAuth();
+		return hasAdminAccess(user.value);
+	};
+
 	// --- Cross-Tab Synchronization ---
 	// Setup storage event listener for cross-tab coordination
 	const setupStorageListener = () => {
@@ -430,7 +510,14 @@ export const useTeams = () => {
 				if (newTeamId && isValidTeamForOrg(newTeamId)) {
 					selectedTeam.value = newTeamId;
 				} else if (!newTeamId) {
-					selectedTeam.value = null;
+					// For regular users, don't set to null
+					const { user } = useDirectusAuth();
+					if (!hasAdminAccess(user.value) && visibleTeams.value.length > 0) {
+						// Instead of null, set to first visible team
+						selectedTeam.value = visibleTeams.value[0].id;
+					} else {
+						selectedTeam.value = null;
+					}
 				} else {
 					console.warn(
 						'Team ID from localStorage is not valid in this context. It might be from a different organization or deleted.',
@@ -534,6 +621,7 @@ export const useTeams = () => {
 		isOnTeam,
 		getTeamMembers,
 		isValidTeamForOrg,
+		showAllTeamsOption,
 
 		// Role constants
 		ADMIN_ROLE_ID,
