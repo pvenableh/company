@@ -1,6 +1,24 @@
 <template>
-	<div class="comments-system">
-		<!-- Comments Toggle Button -->
+	<div class="relative comments-system">
+		<transition name="fade">
+			<div
+				v-if="isLoading"
+				class="absolute inset-0 bg-white/70 dark:bg-gray-800/70 z-50 flex items-center justify-center"
+			>
+				<LayoutLoader text="Loading Comments" />
+			</div>
+		</transition>
+
+		<transition name="fade">
+			<div v-if="!isConnected && !isLoading" class="mb-4 absolute right-0 top-0 comments-system__connection">
+				<UAlert title="Connection Lost" description="Attempting to reconnect..." color="yellow">
+					<template #footer>
+						<UButton size="sm" color="yellow" @click="refreshData">Retry Connection</UButton>
+					</template>
+				</UAlert>
+			</div>
+		</transition>
+
 		<div class="w-full flex items-center justify-between gap-2 text-sm relative">
 			<h4 class="cursor-pointer uppercase block font-medium text-gray-700 dark:text-gray-200 tracking-wide">
 				<transition name="fade" mode="out-in">
@@ -33,19 +51,15 @@
 			/>
 		</div>
 
-		<!-- Comments Section -->
-
 		<div class="mt-2 space-y-4">
-			<!-- Main Comment Input -->
 			<CommentsComment
 				v-if="user"
-				:loading="isLoading"
-				:refresh="refresh"
+				:loading="isSubmitting"
+				:refresh="refreshData"
 				@submit="(content) => handleCommentSubmit(content)"
 				:organization-id="organizationId"
 			/>
 
-			<!-- Comments List -->
 			<TransitionGroup name="comments" tag="div" class="space-y-4">
 				<CommentsThread
 					v-for="comment in sortedComments"
@@ -54,7 +68,7 @@
 					:comment="comment"
 					:loading="isLoading"
 					:is-active="activeCommentId === comment.id"
-					:refresh="refresh"
+					:refresh="refreshData"
 					@reply="handleReply"
 					@submit="handleCommentSubmit"
 					@cancel="cancelReply"
@@ -93,7 +107,11 @@ const activeCommentId = ref(null);
 const localComments = ref([]);
 const isInitialized = ref(false);
 const sortOrder = ref('newest');
-const isCommentsVisible = ref(true);
+
+const isLoading = ref(true);
+const isSubmitting = ref(false);
+const isConnected = ref(true);
+const error = ref(null);
 
 // Generate collection-specific field name for relation
 const collectionIdField = `${props.collection}_id`;
@@ -123,10 +141,17 @@ const filter = computed(() => ({
 // Subscribe to comments for this item
 const {
 	data: rawComments,
-	isLoading,
-	error,
-	refresh,
+	isLoading: wsLoading,
+	isConnected: wsConnected,
+	error: wsError,
+	refresh: wsRefresh,
+	connect,
+	disconnect,
 } = useRealtimeSubscription('comments', fields, filter.value, '-date_created');
+
+watch(wsLoading, (val) => (isLoading.value = val));
+watch(wsConnected, (val) => (isConnected.value = val));
+watch(wsError, (val) => (error.value = val));
 
 watch(
 	rawComments,
@@ -135,18 +160,15 @@ watch(
 			localComments.value = [];
 			return;
 		}
-
-		// For simplicity, just replace the entire array
-		// This avoids complex logic that might introduce bugs
 		localComments.value = [...newComments];
 		isInitialized.value = true;
+		isLoading.value = false;
 	},
-	{ deep: true },
+	{ deep: true, immediate: true },
 );
 
 const comments = computed(() => {
 	if (!rawComments.value) return [];
-
 	const commentMap = new Map();
 	rawComments.value.forEach((comment) => {
 		if (comment) {
@@ -192,14 +214,11 @@ const comments = computed(() => {
 
 const sortedComments = computed(() => {
 	const sorted = [...comments.value];
-
-	// Helper function to recursively sort comments and their replies
 	const sortByDate = (comments, order) => {
 		return comments
 			.sort((a, b) => {
 				const dateA = new Date(a.date_created);
 				const dateB = new Date(b.date_created);
-				// Apply the same sort order to replies as parent comments
 				return order === 'newest' ? dateB - dateA : dateA - dateB;
 			})
 			.map((comment) => {
@@ -209,8 +228,6 @@ const sortedComments = computed(() => {
 				return comment;
 			});
 	};
-
-	// Sort all comments and replies using the same order
 	return sortByDate(sorted, sortOrder.value);
 });
 
@@ -226,24 +243,19 @@ const commentsCount = computed(() => {
 });
 
 async function handleCommentSubmit(commentHtml, parentId = null) {
-	isLoading.value = true;
+	isSubmitting.value = true;
 	try {
 		const effectiveParentId = parentId || replyingTo.value?.id || null;
-
-		// Create the comment with direct references to item and collection
 		const comment = await createItem('comments', {
 			status: 'published',
 			comment: commentHtml,
 			user: user.value.id,
 			parent_id: effectiveParentId ? effectiveParentId.toString() : null,
-			// Add the direct references
 			collection: props.collection,
 			item: props.itemId.toString(),
-			// Add the dynamic field specific to this collection (e.g. tickets_id, projects_id)
 			[collectionIdField]: props.itemId.toString(),
 		});
 
-		// Add new comment to local state
 		localComments.value = [
 			...localComments.value,
 			{
@@ -264,17 +276,15 @@ async function handleCommentSubmit(commentHtml, parentId = null) {
 		];
 
 		cancelReply();
-		// Refresh to ensure proper order and nesting
-		await refresh();
+		refreshData();
 	} catch (error) {
 		console.error('Error posting comment:', error);
-		refresh();
+		refreshData();
 	} finally {
-		isLoading.value = false;
+		isSubmitting.value = false;
 	}
 }
 
-// Update the Thread component submission handler
 function handleReply(comment) {
 	replyingTo.value = comment;
 	activeCommentId.value = comment.id;
@@ -283,7 +293,7 @@ function handleReply(comment) {
 async function handleDelete(commentId) {
 	try {
 		await deleteItem('comments', commentId);
-		await refresh();
+		refreshData();
 	} catch (error) {
 		console.error('Error deleting comment:', error);
 	}
@@ -294,7 +304,24 @@ function cancelReply() {
 	activeCommentId.value = null;
 }
 
-defineExpose({ refresh });
+const refreshData = async () => {
+	isLoading.value = true;
+	try {
+		await wsRefresh();
+	} catch (err) {
+		console.error('Error refreshing comments:', err);
+	} finally {
+		isLoading.value = false;
+	}
+};
+
+onMounted(() => {
+	connect();
+});
+
+onUnmounted(() => {
+	disconnect();
+});
 </script>
 
 <style>

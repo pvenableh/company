@@ -5,8 +5,8 @@
 			<TicketsCard
 				:element="{
 					...element,
-					commentCount: commentCount,
-					taskCount: taskCount,
+					comments: commentsCount,
+					tasks: tasksCount,
 				}"
 				@expand="expand"
 			/>
@@ -75,12 +75,9 @@ const props = defineProps({
 	},
 });
 
-const commentCount = ref(props.element.commentCount || 0);
-const taskCount = ref(props.element.taskCount || 0);
-
-const updateCommentCount = (count) => {
-	commentCount.value = count;
-};
+console.log(props.element);
+const commentsCount = ref(props.element.comments || 0);
+const tasksCount = ref(props.element.tasks || 0);
 
 const cardRef = ref(null);
 const isExpanded = ref(false);

@@ -65,7 +65,7 @@
 											@update:modelValue="handleOrgChange"
 										/>
 									</UFormGroup>
-									<UFormGroup label="Team" required>
+									<UFormGroup label="Team">
 										<USelect
 											v-model="form.team"
 											:options="teamsList"
@@ -74,12 +74,13 @@
 											placeholder="Select team"
 											:loading="teamsLoading"
 											@update:modelValue="handleTeamChange"
+											:nullable="true"
 										>
 											<template #option="{ option }">
 												<div class="flex flex-col">
 													<span class="font-medium">{{ option.name }}</span>
 													<span v-if="option.id === null" class="text-xs text-gray-500">
-														Admin/Manager only - Shows all users in the organization
+														Ticket will not be assigned to any team
 													</span>
 													<span v-else-if="option.is_default" class="text-xs text-green-500">Default team</span>
 												</div>
@@ -195,6 +196,7 @@
 											content: form.description,
 										}"
 										@mention="handleMention"
+										:organization-id="form.organization"
 									/>
 								</UFormGroup>
 
@@ -220,60 +222,49 @@ defineProps({
 });
 
 const { selectedOrg, organizations, hasMultipleOrgs, organizationOptions } = useOrganization();
-const { teams, loading: teamsLoading, fetchTeams, selectedTeam, setTeam } = useTeams();
+const { teams, loading: teamsLoading, fetchTeams, selectedTeam, setTeam, hasAdminAccess } = useTeams();
 const { filteredUsers, fetchFilteredUsers, loading: loadingUsers, DEFAULT_TEAM_ID } = useFilteredUsers();
 const { createItem, readItems } = useDirectusItems();
 const { user: currentUser } = useDirectusAuth();
-
-// Admin and Client Manager role IDs (using the ones from your code)
-const ADMIN_ROLE_ID = '3a63a4e1-c82e-46f8-9993-7f11ac6a4b01';
-const CLIENT_MANAGER_ROLE_ID = '7b62b285-e3a8-46ff-9e8c-d1445a3c13bb';
-
-// Check if user has admin access (admin or client manager)
-const hasAdminAccess = computed(() => {
-	return currentUser.value?.role?.id === ADMIN_ROLE_ID || currentUser.value?.role?.id === CLIENT_MANAGER_ROLE_ID;
-});
+const { notify } = useNotifications();
+const { notifyTicketAssignment, notifyMentions } = useNotificationHelper();
+const toast = useToast();
 
 const emit = defineEmits(['ticketCreated']);
 const isExpanded = ref(false);
 const isLoading = ref(false);
 const selectedUser = ref(null);
-const { notify } = useNotifications();
-const toast = useToast();
-
 const selectedDate = ref(new Date());
 const selectedTime = ref('17:00');
 const mentionedUsers = ref(new Set());
+const showTitleError = ref(false);
 
-// Format teams for the dropdown, ensuring the default team is first and add "No Team" option for admins
+// Format teams for the dropdown
+const noTeamValue = undefined; // Use undefined to properly handle null in APIs
+
 const teamsList = computed(() => {
 	if (!teams.value || teams.value.length === 0) {
-		// If no teams and user is admin/manager, show "No Team" option
-		if (hasAdminAccess.value) {
-			return [
-				{
-					id: null,
-					name: 'No Team (All Organization Users)',
-					is_default: false,
-				},
-			];
-		}
-		return []; // Otherwise return empty list
+		// If no teams, always show "No Team" option
+		return [
+			{
+				id: noTeamValue,
+				name: 'No Team',
+				is_default: false,
+			},
+		];
 	}
 
-	// Create teams list with "No Team" option if user is admin/manager
+	// Create teams list including "No Team" option for everyone
 	let teamsArray = [...teams.value];
 
-	if (hasAdminAccess.value) {
-		teamsArray.unshift({
-			id: null,
-			name: 'No Team (All Organization Users)',
-			is_default: false,
-		});
-	}
+	// Add "No Team" option at the beginning
+	teamsArray.unshift({
+		id: noTeamValue,
+		name: 'No Team',
+		is_default: false,
+	});
 
-	// Sort teams with default team first, then alphabetically
-	// Keep "No Team" at the very top if it exists
+	// Sort with default team after "No Team", then alphabetically
 	return teamsArray.sort((a, b) => {
 		// Always keep "No Team" option at the top
 		if (a.id === null) return -1;
@@ -288,6 +279,7 @@ const teamsList = computed(() => {
 	});
 });
 
+// Time options for due time dropdown
 const timeOptions = Array.from({ length: 48 }, (_, i) => {
 	const hour = Math.floor(i / 2);
 	const minute = (i % 2) * 30;
@@ -302,47 +294,6 @@ const timeOptions = Array.from({ length: 48 }, (_, i) => {
 		value: `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`,
 	};
 });
-
-const formatDisplayDate = (date) => {
-	if (!date) return '';
-	// Create date in local timezone
-	const localDate = new Date(date);
-	return localDate.toLocaleDateString('en-US', {
-		month: 'short',
-		day: 'numeric',
-		year: 'numeric',
-		timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, // Use user's local timezone
-	});
-};
-
-const updateDueDate = (day) => {
-	selectedDate.value = day.date;
-	updateDateTime();
-};
-
-const updateDateTime = () => {
-	if (selectedDate.value && selectedTime.value) {
-		const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-		const [hours, minutes] = selectedTime.value.split(':');
-
-		const dateTime = new Date(selectedDate.value);
-
-		dateTime.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
-
-		const offset = dateTime.getTimezoneOffset();
-		const localISOTime = new Date(dateTime.getTime() - offset * 60 * 1000).toISOString();
-
-		form.value.due_date = localISOTime;
-
-		// console.log({
-		// 	localDateTime: dateTime.toString(),
-		// 	timezone: userTimezone,
-		// 	isoString: form.value.due_date,
-		// 	offset: offset,
-		// });
-	}
-};
 
 const projectOptions = ref([]);
 const loadingProjects = ref(false);
@@ -372,6 +323,49 @@ const calendarAttrs = [
 		dates: new Date(),
 	},
 ];
+
+// Helper function to format date display
+const formatDisplayDate = (date) => {
+	if (!date) return '';
+	// Create date in local timezone
+	const localDate = new Date(date);
+	return localDate.toLocaleDateString('en-US', {
+		month: 'short',
+		day: 'numeric',
+		year: 'numeric',
+		timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+	});
+};
+
+// Update due date from calendar click
+const updateDueDate = (day) => {
+	selectedDate.value = day.date;
+	updateDateTime();
+};
+
+// Update due date and time when either changes
+const updateDateTime = () => {
+	if (selectedDate.value && selectedTime.value) {
+		// Get the user's timezone
+		const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+		// Parse hours and minutes
+		const [hours, minutes] = selectedTime.value.split(':');
+
+		// Create date in local timezone
+		const dateTime = new Date(selectedDate.value);
+
+		// Set hours and minutes in local timezone
+		dateTime.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+
+		// Convert to ISO string while preserving timezone offset
+		const offset = dateTime.getTimezoneOffset();
+		const localISOTime = new Date(dateTime.getTime() - offset * 60 * 1000).toISOString();
+
+		// Update form value
+		form.value.due_date = localISOTime;
+	}
+};
 
 // Filter the available users by removing those already assigned
 const availableUsers = computed(() => {
@@ -405,7 +399,7 @@ const getUserById = (userId) => {
 
 const getUserFullName = (user) => {
 	if (!user) return 'Unknown';
-	if (user.id === currentUser.value.id) return 'You';
+	if (user.id === currentUser.value?.id) return 'You';
 	return `${user.first_name} ${user.last_name}`.trim() || user.label || 'Unknown';
 };
 
@@ -426,30 +420,13 @@ const handleMention = (mentionData) => {
 	mentionedUsers.value.add(mentionData.id);
 };
 
-const showTitleError = ref(false);
-
-const sendTicketNotification = async (userId, type, message, ticketId) => {
-	// Skip notification if it's the current user
-	if (userId === currentUser.value?.id) return;
-
-	try {
-		await notify({
-			recipient: userId,
-			subject: `New Ticket ${type}`,
-			message: `${message}<br/><a href='https://huestudios.company/tickets/${ticketId}'>View ticket</a>`,
-			collection: 'tickets',
-			item: ticketId,
-			sender: currentUser.value.id,
-		});
-	} catch (error) {
-		console.error(`Error sending ${type} notification:`, error);
-	}
-};
-
+// Create ticket submission
 const createTicket = async () => {
 	try {
 		isLoading.value = true;
+		showTitleError.value = false;
 
+		// Validate title
 		if (!form.value.title.trim()) {
 			showTitleError.value = true;
 			toast.add({
@@ -457,78 +434,63 @@ const createTicket = async () => {
 				description: 'Please enter a valid title',
 				color: 'red',
 			});
+			isLoading.value = false;
 			return;
 		}
 
-		// For non-admin users, ensure a team is selected
-		if (!hasAdminAccess.value && form.value.team === null) {
-			toast.add({
-				title: 'Error',
-				description: 'Please select a team for this ticket',
-				color: 'red',
-			});
-			return;
-		}
-
-		// Extract assigned_to from form data
+		// Extract assigned_to from form data for separate handling
 		const { assigned_to, ...ticketData } = form.value;
+
+		// Create a clean ticket data object to send to the API
+		const cleanedTicketData = { ...ticketData };
+
+		// Remove team field if it's null or undefined to avoid UUID validation errors
+		if (cleanedTicketData.team === null || cleanedTicketData.team === undefined || cleanedTicketData.team === '') {
+			delete cleanedTicketData.team;
+		}
 
 		// Create ticket first
 		const ticket = await createItem('tickets', {
-			...ticketData,
+			...cleanedTicketData,
 			date_created: new Date(),
 			date_updated: new Date(),
 		});
 
-		// Process assignments and mentions in parallel
-		const notificationPromises = [];
+		// Promise group for parallel processing
+		const promises = [];
 
-		// Handle user assignments
+		// Handle user assignments if any
 		if (assigned_to?.length) {
-			await Promise.all(
-				assigned_to.map((userId) =>
-					createItem('tickets_directus_users', {
-						tickets_id: ticket.id,
-						directus_users_id: userId,
-					}),
-				),
+			const assignmentPromises = assigned_to.map((userId) =>
+				createItem('tickets_directus_users', {
+					tickets_id: ticket.id,
+					directus_users_id: userId,
+				}),
 			);
 
-			// Queue assignment notifications
-			assigned_to.forEach((userId) => {
-				notificationPromises.push(
-					sendTicketNotification(
-						userId,
-						'Assignment',
-						`You have been assigned to a new ticket: ${form.value.title}`,
-						ticket.id,
-					),
-				);
-			});
+			// Wait for all assignments to complete
+			await Promise.all(assignmentPromises);
+
+			// Send assignment notifications
+			promises.push(notifyTicketAssignment(ticket, assigned_to));
 		}
 
 		// Handle mentions if any
 		if (mentionedUsers.value.size > 0) {
-			mentionedUsers.value.forEach((userId) => {
-				notificationPromises.push(
-					sendTicketNotification(
-						userId,
-						'Mention',
-						`${currentUser.value.first_name} ${currentUser.value.last_name} mentioned you in a new ticket: ${form.value.title}`,
-						ticket.id,
-					),
-				);
-			});
+			const mentionedUserIds = Array.from(mentionedUsers.value);
+			promises.push(notifyMentions(mentionedUserIds, ticket.id, ticket.title, 'tickets'));
 		}
 
 		// Send all notifications in parallel
-		await Promise.all(notificationPromises);
+		await Promise.all(promises);
 
+		// Success message and cleanup
 		toast.add({
 			title: 'Success',
 			description: 'Ticket created successfully',
 			color: 'green',
 		});
+
 		emit('ticketCreated');
 		closeForm();
 	} catch (error) {
@@ -543,6 +505,7 @@ const createTicket = async () => {
 	}
 };
 
+// Open form and initialize data
 const openForm = async () => {
 	isExpanded.value = true;
 	document.body.style.overflow = 'hidden';
@@ -557,7 +520,7 @@ const openForm = async () => {
 		assigned_to: [],
 		organization: selectedOrg.value,
 		project: null,
-		team: null,
+		team: undefined,
 	};
 
 	// Set up initial data
@@ -569,19 +532,8 @@ const openForm = async () => {
 			// Load projects for the organization
 			await fetchProjects(selectedOrg.value);
 
-			if (hasAdminAccess.value) {
-				// Default to "No Team" option for admins/managers
-				form.value.team = null;
-				// Fetch all users in the organization
-				await fetchAllOrganizationUsers(selectedOrg.value);
-			} else {
-				// For regular users, select default team
-				const defaultTeam = teams.value.find((t) => t.is_default) || teams.value[0];
-				if (defaultTeam) {
-					form.value.team = defaultTeam.id;
-					await fetchFilteredUsers(selectedOrg.value, defaultTeam.id);
-				}
-			}
+			// Fetch all users in the organization for initial view
+			await fetchAllOrganizationUsers(selectedOrg.value);
 		}
 	} catch (error) {
 		console.error('Error initializing form:', error);
@@ -593,6 +545,7 @@ const openForm = async () => {
 	}
 };
 
+// Close the form and reset values
 const closeForm = () => {
 	isExpanded.value = false;
 	document.body.style.overflow = '';
@@ -605,12 +558,14 @@ const closeForm = () => {
 		assigned_to: [],
 		organization: selectedOrg.value,
 		project: null,
-		team: null,
+		team: undefined,
 	};
 	projectOptions.value = [];
 	mentionedUsers.value.clear();
+	showTitleError.value = false;
 };
 
+// Fetch projects for an organization
 const fetchProjects = async (orgId) => {
 	if (!orgId) {
 		projectOptions.value = [];
@@ -651,56 +606,31 @@ const handleOrgChange = async (orgId) => {
 	// Fetch projects for the new organization
 	await fetchProjects(orgId);
 
-	if (hasAdminAccess.value) {
-		// Admin/managers can default to "No Team"
-		form.value.team = null;
-		await fetchAllOrganizationUsers(orgId);
-	} else {
-		// Regular users must select a team (preferably default)
-		const defaultTeam = teams.value.find((t) => t.is_default) || teams.value[0];
-		if (defaultTeam) {
-			form.value.team = defaultTeam.id;
-			await fetchFilteredUsers(orgId, defaultTeam.id);
-		} else {
-			form.value.team = null;
-		}
-	}
+	// Fetch all users in the organization
+	await fetchAllOrganizationUsers(orgId);
 };
 
 // Handler for team change
 const handleTeamChange = async (teamId) => {
-	// console.log('Team changed to:', teamId);
-
 	// Clear assigned users when team changes
 	form.value.assigned_to = [];
 
-	if (teamId === null) {
-		// Only admin/client manager can use "No Team" option
-		if (!hasAdminAccess.value) {
-			// Reset to default team if not admin
-			const defaultTeam = teams.value.find((t) => t.is_default) || teams.value[0];
-			if (defaultTeam) {
-				form.value.team = defaultTeam.id;
-				await fetchFilteredUsers(form.value.organization, defaultTeam.id);
-				setTeam(defaultTeam.id);
-				toast.add({
-					title: 'Team required',
-					description: 'You must select a team when creating a ticket',
-					color: 'yellow',
-				});
-				return;
-			}
-		}
-
-		// If "No Team" is selected and user has permission, fetch all users in the organization
+	if (teamId === undefined || teamId === null) {
+		// Fetch all users in the organization
 		await fetchAllOrganizationUsers(form.value.organization);
+
+		// Ensure form team value is properly undefined/null
+		form.value.team = undefined;
+
+		// Don't update global team selection when selecting "No Team"
+		// This prevents interfering with other components that expect a valid team ID
 	} else {
 		// Fetch users filtered by the selected team
 		await fetchFilteredUsers(form.value.organization, teamId);
-	}
 
-	// Update the global team selection
-	setTeam(teamId);
+		// Update the global team selection only when a valid team is selected
+		setTeam(teamId);
+	}
 };
 
 // Function to fetch all users in an organization
@@ -734,6 +664,7 @@ const fetchAllOrganizationUsers = async (orgId) => {
 	}
 };
 
+// Lifecycle hooks
 onMounted(async () => {
 	try {
 		// Set initial date/time

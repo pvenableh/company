@@ -124,19 +124,19 @@
 
 			<ReactionsBar :item-id="element.id" collection="tickets" />
 			<div class="flex flex-row text-xs text-gray-500 mr-3">
-				<div v-if="element.commentCount > 0" class="flex items-center gap-1">
+				<div v-if="element.comments.length > 0" class="flex items-center gap-1">
 					<UTooltip
-						:text="element.commentCount + (element.commentCount === 1 ? ' Comment' : ' Comments')"
+						:text="element.comments.length + (element.comments.length === 1 ? ' Comment' : ' Comments')"
 						:popper="{ arrow: true }"
 					>
 						<UIcon name="i-heroicons-chat-bubble-left-right" class="w-4 h-4 inline-block mr-1" />
-						{{ element.commentCount }}
+						{{ element.comments.length }}
 					</UTooltip>
 				</div>
-				<div v-if="element.taskCount > 0" class="ml-2 flex items-center gap-1">
-					<UTooltip :text="element.taskCount + ' tasks'" :popper="{ arrow: true }">
+				<div v-if="element.tasks.length > 0" class="ml-2 flex items-center gap-1">
+					<UTooltip :text="element.tasks.length + ' tasks'" :popper="{ arrow: true }">
 						<UIcon name="i-heroicons-check-circle" class="w-4 h-4 inline-block mr-1" />
-						{{ element.taskCount }}
+						{{ element.tasks.length }}
 					</UTooltip>
 				</div>
 			</div>
@@ -162,8 +162,8 @@ const assignedUsers = computed(() => {
 });
 
 const progress = computed(() => {
-	console.log('coming to you from the card.');
-	console.log(props.element.taskCount);
+	// console.log('coming to you from the card.');
+	// console.log(props.element.taskCount);
 
 	// If there are no tasks, return 0
 	if (!props.element.tasks || props.element.tasks.length === 0) return 0;

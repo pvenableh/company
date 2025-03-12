@@ -27,7 +27,7 @@
 					<nuxt-link to="/auth/signin">Login</nuxt-link>
 				</li>
 			</ul>
-			<div class="mt-10">
+			<div class="mt-10 darkmode-toggle">
 				<DarkModeToggle class="" />
 			</div>
 		</div>
@@ -74,7 +74,7 @@ onClickOutside(navDrawerRef, () => {
 	width: 100%;
 	max-width: 500px;
 	backdrop-filter: blur(10px);
-	@apply shadow-lg;
+	@apply shadow-lg dark:bg-gray-800;
 
 	.close-btn {
 		/* right: 0px;
@@ -83,7 +83,13 @@ onClickOutside(navDrawerRef, () => {
 	}
 
 	&__menu-box {
-		@apply flex items-center justify-center flex-col w-full;
+		@apply flex items-center justify-center flex-col w-full overflow-hidden;
+	}
+	.darkmode-toggle {
+		opacity: 0;
+		transform: translateX(50px) translateZ(-9.7rem);
+		transition: all 0.4s var(--curve);
+		@apply my-1 w-full text-center;
 	}
 
 	&__menu {
@@ -113,7 +119,8 @@ onClickOutside(navDrawerRef, () => {
 #nav-drawer-toggle:checked ~ .nav-drawer {
 	transform: translateX(0%);
 
-	li {
+	li,
+	.darkmode-toggle {
 		opacity: 1;
 		transform: translateX(0%) translateZ(0rem);
 	}
@@ -154,6 +161,9 @@ onClickOutside(navDrawerRef, () => {
 	}
 	li:nth-of-type(10) {
 		transition-delay: 0.18s;
+	}
+	.darkmode-toggle {
+		transition-delay: 0.19s;
 	}
 }
 

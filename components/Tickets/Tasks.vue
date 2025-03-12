@@ -1,10 +1,8 @@
 <script setup>
-import { useRealtimeSubscription } from '~/composables/useRealtimeSubscription';
 import draggable from 'vuedraggable';
+import confetti from 'canvas-confetti';
 
 const router = useRouter();
-
-import confetti from 'canvas-confetti';
 
 const { user: currentUser } = useDirectusAuth();
 const { createItem, updateItem, deleteItem } = useDirectusItems();
@@ -20,22 +18,35 @@ const props = defineProps({
 	},
 });
 
-const localTasks = ref([]);
+const localTasks = ref();
 const isInitialized = ref(false);
+const isLoading = ref(true); // Added loading state
+const isConnected = ref(true); // Added connection state
+const error = ref(null); // Added error state
 
 const {
 	data: remoteTasks,
-	isLoading,
-	isConnected,
+	isLoading: wsLoading,
+	isConnected: wsConnected,
+	error: wsError,
 	refresh,
+	connect,
+	disconnect,
 } = useRealtimeSubscription(
 	'tasks',
 	[
-		'*',
+		'id',
+		'description',
+		'status',
+		'sort',
+		'date_created',
+		'date_updated',
 		'user_created.first_name',
 		'user_created.last_name',
+		'user_created.id',
 		'user_updated.first_name',
 		'user_updated.last_name',
+		'user_updated.id',
 		'assigned_to.id',
 		'assigned_to.directus_users_id.id',
 		'assigned_to.directus_users_id.first_name',
@@ -51,14 +62,23 @@ const {
 	'sort',
 );
 
+// Update loading and connection state
+watch(wsLoading, (val) => (isLoading.value = val));
+watch(wsConnected, (val) => (isConnected.value = val));
+watch(wsError, (val) => (error.value = val));
+
 // Modified watch to handle updates after initialization
 watch(
 	remoteTasks,
 	(newTasks) => {
-		if (!isInitialized.value && newTasks.length) {
+		if (!newTasks) {
+			localTasks.value = [];
+			return;
+		}
+		if (!isInitialized.value) {
 			localTasks.value = [...newTasks].sort((a, b) => a.sort - b.sort);
 			isInitialized.value = true;
-		} else if (isInitialized.value) {
+		} else {
 			// Update localTasks when remoteTasks changes, preserving the current order
 			const currentOrder = localTasks.value.map((task) => task.id);
 			const updatedTasks = [...newTasks];
@@ -75,7 +95,7 @@ watch(
 			localTasks.value = updatedTasks;
 		}
 	},
-	{ deep: true },
+	{ deep: true, immediate: true },
 );
 
 const handleMention = (mentionData) => {
@@ -100,22 +120,29 @@ async function notifyMentionedUsers(commentText, collection, itemId) {
 async function addTask() {
 	if (!newTask.value.trim()) return;
 
-	const newTaskId = await createItem('tasks', {
-		description: newTask.value,
-		ticket_id: props.ticketId,
-		status: 'active',
-		sort: localTasks.value.length,
-	});
+	try {
+		const newTaskId = await createItem('tasks', {
+			description: newTask.value,
+			ticket_id: props.ticketId,
+			status: 'active',
+			sort: localTasks.value.length,
+		});
 
-	console.log(newTaskId);
+		console.log(newTaskId);
 
-	if (mentionedUsers.value.size > 0) {
-		const result = await notifyMentionedUsers(newTask.value, 'tasks', newTaskId.id);
-		console.log(result);
+		if (mentionedUsers.value.size > 0) {
+			await notifyMentionedUsers(newTask.value, 'tasks', newTaskId.id);
+		}
+
+		newTask.value = '';
+	} catch (error) {
+		console.error('Error adding task:', error);
+		toast.add({
+			title: 'Error Adding Task',
+			description: 'Failed to add the task. Please try again.',
+			color: 'red',
+		});
 	}
-
-	newTask.value = '';
-	// Removed manual addition to localTasks
 }
 
 function randomInRange(min, max) {
@@ -133,60 +160,79 @@ const launchConfetti = () => {
 
 async function toggleTask(task) {
 	const newStatus = task.status === 'completed' ? 'active' : 'completed';
-	await updateItem('tasks', task.id, { status: newStatus });
+	try {
+		await updateItem('tasks', task.id, { status: newStatus });
 
-	const index = localTasks.value.findIndex((t) => t.id === task.id);
-	if (index !== -1) {
-		localTasks.value[index] = { ...localTasks.value[index], status: newStatus };
-	}
-	if (newStatus === 'completed') {
-		console.log(progress.value);
-		if (progress.value === 100) {
-			startConfetti();
-			toast.add({
-				title: 'Set status to completed?',
-				timeout: 7000,
-				actions: [
-					{
-						label: 'Yes',
-						click: async () => {
-							await updateItem('tickets', props.ticketId, { status: 'Completed' });
-							router.push('/tickets');
-						},
-					},
-					{
-						label: 'No',
-						click: () => {
-							toast.remove();
-						},
-					},
-				],
-			});
-		} else {
-			launchConfetti();
+		const index = localTasks.value.findIndex((t) => t.id === task.id);
+		if (index !== -1) {
+			localTasks.value[index] = { ...localTasks.value[index], status: newStatus };
 		}
+		if (newStatus === 'completed') {
+			console.log(progress.value);
+			if (progress.value === 100) {
+				startConfetti();
+				toast.add({
+					title: 'Set status to completed?',
+					timeout: 7000,
+					actions: [
+						{
+							label: 'Yes',
+							click: async () => {
+								await updateItem('tickets', props.ticketId, { status: 'Completed' });
+								router.push('/tickets');
+							},
+						},
+						{
+							label: 'No',
+							click: () => {
+								toast.remove();
+							},
+						},
+					],
+				});
+			} else {
+				launchConfetti();
+			}
+		}
+	} catch (error) {
+		console.error('Error toggling task:', error);
+		toast.add({
+			title: 'Error Toggling Task',
+			description: 'Failed to toggle the task status. Please try again.',
+			color: 'red',
+		});
 	}
 }
 
 async function removeTask(taskId) {
-	await deleteItem('tasks', taskId);
-	localTasks.value = localTasks.value.filter((task) => task.id !== taskId);
-}
-
-async function handleDragEnd() {
-	const updatePromises = localTasks.value.map((task, index) => updateItem('tasks', task.id, { sort: index }));
-
 	try {
-		await Promise.all(updatePromises);
+		await deleteItem('tasks', taskId);
+		localTasks.value = localTasks.value.filter((task) => task.id !== taskId);
 	} catch (error) {
-		console.error('Failed to update task order:', error);
-		localTasks.value = [...remoteTasks.value].sort((a, b) => a.sort - b.sort);
+		console.error('Error removing task:', error);
+		toast.add({
+			title: 'Error Removing Task',
+			description: 'Failed to remove the task. Please try again.',
+			color: 'red',
+		});
 	}
 }
 
-// const handleTaskUpdate = () => {
-// 	refresh();
-// };
+async function handleDragEnd() {
+	try {
+		const updatePromises = localTasks.value.map((task, index) => updateItem('tasks', task.id, { sort: index }));
+
+		await Promise.all(updatePromises);
+	} catch (error) {
+		console.error('Failed to update task order:', error);
+		toast.add({
+			title: 'Error Updating Task Order',
+			description: 'Failed to update the task order. Please try again.',
+			color: 'red',
+		});
+		localTasks.value = [...remoteTasks.value].sort((a, b) => a.sort - b.sort);
+	}
+}
 
 const formatCompletionDate = (date) => {
 	return new Date(date).toLocaleDateString('en-US', {
@@ -218,23 +264,33 @@ const editingTaskId = ref(null); // Track which task is being edited
 async function updateTaskDescription(taskId, newDescription) {
 	if (!newDescription.trim()) return;
 
-	if (mentionedUsers.value.size > 0) {
-		const result = await notifyMentionedUsers(newDescription, 'tasks', taskId);
-		console.log(result);
-	}
-
-	const index = localTasks.value.findIndex((task) => task.id === taskId);
-	if (index !== -1) {
-		// Optimistic update
-		localTasks.value[index].description = newDescription;
-
-		try {
-			await updateItem('tasks', taskId, { description: newDescription });
-		} catch (error) {
-			console.error('Failed to update task description:', error);
-			// Revert title on failure
-			localTasks.value[index].description = remoteTasks.value.find((t) => t.id === taskId)?.description || '';
+	try {
+		if (mentionedUsers.value.size > 0) {
+			await notifyMentionedUsers(newDescription, 'tasks', taskId);
 		}
+
+		const index = localTasks.value.findIndex((task) => task.id === taskId);
+		if (index !== -1) {
+			// Optimistic update
+			localTasks.value[index].description = newDescription;
+
+			await updateItem('tasks', taskId, { description: newDescription });
+		}
+	} catch (error) {
+		console.error('Failed to update task description:', error);
+		toast.add({
+			title: 'Error Updating Task Description',
+			description: 'Failed to update the task description. Please try again.',
+			color: 'red',
+		});
+		// Revert title on failure
+		localTasks.value.forEach((task, index) => {
+			if (task.id === taskId) {
+				localTasks.value[index].description = remoteTasks.value.find((t) => t.id === taskId)?.description || '';
+			}
+		});
+	} finally {
+		editingTaskId.value = null;
 	}
 }
 
@@ -323,25 +379,44 @@ const motivationalMessage = computed(() => {
 
 	return message;
 });
+
+onMounted(() => {
+	connect();
+});
+
+onUnmounted(() => {
+	disconnect();
+});
 </script>
 
 <template>
 	<div class="w-full space-y-4 relative bg-[var(--yellowGradient)]">
-		<div class="transform scale-[0.6] xl:scale-75 absolute -top-[80px] xl:-top-[120px] -right-4 xl:-right-20">
+		<transition name="fade">
+			<div
+				v-if="isLoading"
+				class="absolute inset-0 bg-white/70 dark:bg-gray-800/70 z-50 flex items-center justify-center"
+			>
+				<LayoutLoader text="Loading Tasks" />
+			</div>
+		</transition>
+
+		<transition name="fade">
+			<div v-if="!isConnected && !isLoading" class="mb-4 absolute right-0 top-0 tasks__connection">
+				<UAlert title="Connection Lost" description="Attempting to reconnect..." color="yellow">
+					<template #footer>
+						<UButton size="sm" color="yellow" @click="refresh">Retry Connection</UButton>
+					</template>
+				</UAlert>
+			</div>
+		</transition>
+		<div class="transform scale-xl:scale-75 absolute -top-[80px] xl:-top-[120px] -right-4 xl:-right-20">
 			<TicketsProgressCircle :progressPercentage="progress" />
 		</div>
 
 		<div class="flex flex-col items-start">
 			<p class="text-[12px] text-gray-700 dark:text-gray-300">{{ motivationalMessage }}</p>
-
-			<!-- <UMeter :value="progress" max="100" class="w-full h-2 bg-gray-200 rounded-full">
-				<template #label="{ percent }">
-					<p class="text-sm">{{ progress }}%</p>
-				</template>
-			</UMeter> -->
 		</div>
 		<div class="flex items-center space-x-2">
-			<!-- <UInput v-model="newTask" placeholder="Add a new task..." class="flex-1" @keyup.enter="addTask" /> -->
 			<FormTiptap
 				:showToolbar="false"
 				v-model="newTask"
@@ -388,7 +463,6 @@ const motivationalMessage = computed(() => {
 							@mention="handleMention"
 						/>
 
-						<!-- Display Mode -->
 						<div
 							v-else
 							@click="editingTaskId = task.id"
@@ -404,9 +478,6 @@ const motivationalMessage = computed(() => {
 							Completed {{ formatCompletionDate(task.date_updated) }} by
 							{{ task.user_updated ? ` ${task.user_updated.first_name}` : '' }}
 						</div>
-						<!-- <div class="mt-4 border-t pt-4">
-							<TasksTaskAssignment :task="task" @update="handleTaskUpdate" />
-						</div> -->
 					</div>
 					<UTooltip :text="getCreatorInfo(task)">
 						<UButton
@@ -434,5 +505,11 @@ const motivationalMessage = computed(() => {
 <style scoped>
 .drag-handle {
 	touch-action: none;
+}
+
+.tasks {
+	&__connection {
+		@apply max-w-[2000px];
+	}
 }
 </style>

@@ -76,7 +76,7 @@ header {
 header.retracted {
 	/* transform: translateY(-100px); */
 	top: 8px;
-	@apply rounded-full w-11/12 md:w-5/6 lg:w-4/5 xl:w-3/5 py-2 md:py-1.5 border border-gray-100 bg-gray-800 dark:border-gray-600;
+	@apply rounded-full w-11/12 md:w-5/6 lg:w-4/5 xl:w-3/5 py-2 md:py-1.5 border border-gray-100 bg-gray-100 dark:border-gray-600;
 	.logo-new {
 		height: 25px;
 		width: auto;

@@ -1,7 +1,7 @@
 <template>
-	<div class="container mx-auto py-6 px-4">
+	<div class="teams-manager">
 		<div class="flex items-center justify-between mb-6">
-			<h2 class="text-2xl font-semibold">Teams</h2>
+			<h2 class="text-2xl font-semibold">{{ embedded ? '' : 'Teams' }}</h2>
 			<UButton
 				v-if="hasTeamManagementAccess"
 				color="primary"
@@ -12,13 +12,13 @@
 			</UButton>
 		</div>
 
-		<div v-if="loading" class="flex justify-center py-12">
+		<div v-if="isLoading" class="flex justify-center py-12">
 			<UIcon name="i-heroicons-arrow-path" class="animate-spin h-8 w-8" />
 		</div>
 
 		<div v-else>
 			<!-- Current Organization Display -->
-			<div class="mb-6 flex items-center">
+			<div v-if="!embedded" class="mb-6 flex items-center">
 				<h3 class="text-md font-medium text-gray-500">
 					{{ currentOrg ? `Teams for ${currentOrg.name}` : 'No Organization Selected' }}
 				</h3>
@@ -26,7 +26,7 @@
 
 			<!-- No Organization Selected -->
 			<UAlert
-				v-if="!selectedOrg"
+				v-if="!effectiveOrgId"
 				class="mb-6"
 				title="No Organization Selected"
 				description="Please select an organization from the global header to manage teams."
@@ -34,7 +34,7 @@
 			/>
 
 			<!-- No Teams Found -->
-			<UCard v-else-if="!visibleTeams.length" class="mb-6 text-center py-8">
+			<UCard v-else-if="!displayTeams.length" class="mb-6 text-center py-8">
 				<UIcon name="i-heroicons-user-group" class="mx-auto h-12 w-12 text-gray-300 mb-4" />
 				<h3 class="text-lg font-medium mb-2">No Teams Found</h3>
 				<p class="text-gray-500 mb-4">
@@ -53,7 +53,7 @@
 			<div v-else class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
 				<!-- Regular Team Cards -->
 				<UCard
-					v-for="team in visibleTeams"
+					v-for="team in displayTeams"
 					:key="team.id"
 					class="border-2"
 					:ui="{ border: { color: selectedTeam === team.id ? 'primary' : 'gray-200' } }"
@@ -73,7 +73,7 @@
 					<div class="mt-4 flex items-center justify-between">
 						<span class="text-xs font-medium text-gray-500">{{ getTeamMembers(team).length }} Members</span>
 
-						<UDropdown v-if="canManageTeam(team.id)" :items="dropdownItems(team)">
+						<UDropdown v-if="hasTeamManagementAccess && canManageTeam(team.id)" :items="dropdownItems(team)">
 							<UButton icon="i-heroicons-ellipsis-horizontal" color="gray" variant="ghost" size="xs" />
 						</UDropdown>
 					</div>
@@ -135,7 +135,7 @@
 					v-if="currentEditTeam"
 					:team-id="currentEditTeam.id"
 					:team-name="currentEditTeam.name"
-					:organization-id="selectedOrg"
+					:organization-id="effectiveOrgId"
 					@update="refreshTeams"
 				/>
 			</UCard>
@@ -198,11 +198,34 @@
 </template>
 
 <script setup>
+// Props for better component composition
+const props = defineProps({
+	// Allow embedding the component in another page
+	embedded: {
+		type: Boolean,
+		default: false,
+	},
+	// Allow specifying organization ID directly (for embedding)
+	organizationId: {
+		type: String,
+		default: null,
+	},
+	// Allow providing initial teams data (for embedding)
+	initialTeams: {
+		type: Array,
+		default: () => [],
+	},
+	// Control loading state externally
+	externalLoading: {
+		type: Boolean,
+		default: null,
+	},
+});
+
 // Get composables
 const {
-	teams,
 	visibleTeams,
-	loading,
+	loading: teamsLoading,
 	selectedTeam,
 	fetchTeams,
 	createTeam: createTeamAction,
@@ -210,10 +233,12 @@ const {
 	deleteTeam: deleteTeamAction,
 	setTeam,
 	clearTeam,
-	organizationUsers,
 	isTeamManager,
 	canManageTeam,
 	hasAdminAccess,
+	isOnTeam,
+	getTeamMembers,
+	setupStorageListener,
 	ADMIN_ROLE_ID,
 	CLIENT_MANAGER_ROLE_ID,
 } = useTeams();
@@ -222,6 +247,34 @@ const { selectedOrg, currentOrg } = useOrganization();
 
 const { user: currentUser } = useDirectusAuth();
 const toast = useToast();
+
+// Set up cross-tab sync listener
+onMounted(() => {
+	if (typeof setupStorageListener === 'function') {
+		const cleanup = setupStorageListener();
+		onUnmounted(() => {
+			if (typeof cleanup === 'function') {
+				cleanup();
+			}
+		});
+	}
+});
+
+// Use either provided organizationId or global selectedOrg
+const effectiveOrgId = computed(() => props.organizationId || selectedOrg.value);
+
+// Determine which teams to display based on props
+const displayTeams = computed(() => {
+	if (props.initialTeams && props.initialTeams.length > 0) {
+		return props.initialTeams;
+	}
+	return visibleTeams.value;
+});
+
+// Combined loading state from props and internal state
+const isLoading = computed(() => {
+	return props.externalLoading !== null ? props.externalLoading : teamsLoading.value;
+});
 
 // State
 const showTeamMembersModal = ref(false);
@@ -236,45 +289,43 @@ const isEditing = ref(false);
 const submittingTeam = ref(false);
 const deletingTeam = ref(false);
 
-const dropdownItems = (team) => [
-	[
-		{
-			label: 'Edit Team',
-			icon: 'i-heroicons-pencil-square',
-			click: () => editTeam(team),
-		},
-		{
-			label: 'Delete Team',
-			icon: 'i-heroicons-trash',
-			color: 'red',
-			click: () => confirmDeleteTeam(team),
-		},
-	],
-];
+const dropdownItems = (team) => {
+	// Only show management actions if user has appropriate role
+	if (!hasTeamManagementAccess.value) {
+		return [];
+	}
+
+	return [
+		[
+			{
+				label: 'Edit Team',
+				icon: 'i-heroicons-pencil-square',
+				click: () => editTeam(team),
+			},
+			{
+				label: 'Delete Team',
+				icon: 'i-heroicons-trash',
+				color: 'red',
+				click: () => confirmDeleteTeam(team),
+			},
+		],
+	];
+};
+
+// Emit events
+const emit = defineEmits(['team-created', 'team-updated', 'team-deleted', 'team-selected']);
 
 // Computed permissions
 const hasTeamManagementAccess = computed(() => {
-	// Admins or client managers can create/manage teams
-	console.log('Checking team management access...', currentUser.value);
-	return hasAdminAccess(currentUser.value);
+	// Check if user has the required role for team management
+	return currentUser.value?.role === ADMIN_ROLE_ID || currentUser.value?.role === CLIENT_MANAGER_ROLE_ID;
 });
 
-// Check if current user is on a team
-const isOnTeam = (team) => {
-	return team.users?.some((user) => user.directus_users_id?.id === currentUser.value?.id);
-};
-
-// Methods
-// No longer needed since organization is managed globally
-
+// Helper methods for team relationships
 const refreshTeams = async () => {
-	if (selectedOrg.value) {
-		await fetchTeams(selectedOrg.value);
+	if (effectiveOrgId.value) {
+		await fetchTeams(effectiveOrgId.value);
 	}
-};
-
-const getTeamMembers = (team) => {
-	return team.users || [];
 };
 
 // Avatar and name utilities
@@ -290,6 +341,16 @@ const getUserFullName = (user) => {
 
 // Team CRUD operations
 const editTeam = (team) => {
+	// Check if user has permission to edit teams
+	if (!hasTeamManagementAccess.value) {
+		toast.add({
+			title: 'Permission Denied',
+			description: 'You do not have permission to edit teams',
+			color: 'red',
+		});
+		return;
+	}
+
 	currentEditTeam.value = team;
 	teamForm.value.name = team.name;
 	teamForm.value.description = team.description || '';
@@ -307,22 +368,34 @@ const cancelTeamForm = () => {
 const submitTeamForm = async () => {
 	if (!teamForm.value.name) return;
 
+	// Validate permission
+	if (!hasTeamManagementAccess.value) {
+		toast.add({
+			title: 'Permission Denied',
+			description: 'You do not have permission to create or edit teams',
+			color: 'red',
+		});
+		return;
+	}
+
 	submittingTeam.value = true;
 	try {
 		if (isEditing.value && currentEditTeam.value) {
-			await updateTeamAction(currentEditTeam.value.id, teamForm.value, selectedOrg.value);
+			await updateTeamAction(currentEditTeam.value.id, teamForm.value, effectiveOrgId.value);
 			toast.add({
 				title: 'Success',
 				description: 'Team updated successfully',
 				color: 'green',
 			});
+			emit('team-updated', currentEditTeam.value.id);
 		} else {
-			await createTeamAction(selectedOrg.value, teamForm.value);
+			const newTeam = await createTeamAction(effectiveOrgId.value, teamForm.value);
 			toast.add({
 				title: 'Success',
 				description: 'Team created successfully',
 				color: 'green',
 			});
+			emit('team-created', newTeam);
 		}
 
 		// Reset form and close modal
@@ -340,6 +413,16 @@ const submitTeamForm = async () => {
 };
 
 const confirmDeleteTeam = (team) => {
+	// Check if user has permission to delete teams
+	if (!hasTeamManagementAccess.value) {
+		toast.add({
+			title: 'Permission Denied',
+			description: 'You do not have permission to delete teams',
+			color: 'red',
+		});
+		return;
+	}
+
 	currentEditTeam.value = team;
 	showDeleteTeamModal.value = true;
 };
@@ -347,15 +430,28 @@ const confirmDeleteTeam = (team) => {
 const deleteTeam = async () => {
 	if (!currentEditTeam.value) return;
 
+	// Final permission check before deletion
+	if (!hasTeamManagementAccess.value) {
+		toast.add({
+			title: 'Permission Denied',
+			description: 'You do not have permission to delete teams',
+			color: 'red',
+		});
+		showDeleteTeamModal.value = false;
+		return;
+	}
+
 	deletingTeam.value = true;
 	try {
-		await deleteTeamAction(currentEditTeam.value.id, selectedOrg.value);
+		await deleteTeamAction(currentEditTeam.value.id, effectiveOrgId.value);
 
 		toast.add({
 			title: 'Success',
 			description: 'Team deleted successfully',
 			color: 'green',
 		});
+
+		emit('team-deleted', currentEditTeam.value.id);
 
 		// Close modal and refresh
 		showDeleteTeamModal.value = false;
@@ -377,17 +473,16 @@ const manageTeamMembers = (team) => {
 	showTeamMembersModal.value = true;
 };
 
-// Initialize - teams will be loaded through the watch hook with immediate:true
-
-// Watch for organization changes from the global state
+// Watch for organization changes from the global state or props
 watch(
-	() => selectedOrg.value,
+	() => effectiveOrgId.value,
 	async (newOrgId) => {
 		if (newOrgId) {
-			clearTeam(); // Reset team selection when organization changes
+			if (selectedTeam.value) {
+				clearTeam(); // Reset team selection when organization changes
+			}
 			await fetchTeams(newOrgId);
 		} else {
-			// Let the composable handle clearing team data
 			await refreshTeams();
 		}
 	},

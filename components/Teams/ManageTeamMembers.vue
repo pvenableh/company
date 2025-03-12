@@ -29,6 +29,7 @@
 					<div class="flex items-center gap-2">
 						<UBadge v-if="member.is_manager" color="green" class="text-[9px]">Manager</UBadge>
 						<UButton
+							v-if="canRemoveMember(member)"
 							color="red"
 							variant="ghost"
 							size="xs"
@@ -36,6 +37,7 @@
 							@click="confirmRemoveMember(member)"
 						/>
 						<UButton
+							v-if="canToggleManager(member)"
 							color="blue"
 							variant="ghost"
 							size="xs"
@@ -136,7 +138,8 @@ const props = defineProps({
 
 const emit = defineEmits(['update']);
 
-const { isTeamManager, hasAdminAccess, removeUserFromTeam, addUsersToTeam } = useTeams();
+// Get team management methods from composable
+const { isTeamManager, hasAdminAccess, removeUserFromTeam, addUsersToTeam, canManageTeam } = useTeams();
 
 // Get the filtered users functionality
 const { getAvailableTeamUsers } = useFilteredUsers();
@@ -177,6 +180,7 @@ const fetchTeamMembers = async () => {
 				'users.directus_users_id.last_name',
 				'users.directus_users_id.email',
 				'users.directus_users_id.avatar',
+				'users.directus_users_id.role.id',
 			],
 		});
 
@@ -221,6 +225,28 @@ const fetchAvailableUsers = async () => {
 	}
 };
 
+// Check if the current user can remove this member
+const canRemoveMember = (member) => {
+	// Can't remove yourself
+	if (member.directus_users_id?.id === currentUser.value?.id) {
+		return false;
+	}
+
+	// Check if user has admin access or is team manager
+	return canManageTeam(props.teamId);
+};
+
+// Check if the current user can toggle manager status
+const canToggleManager = (member) => {
+	// Check if user has admin/manager permissions
+	if (!canManageTeam(props.teamId)) {
+		return false;
+	}
+
+	// Users can't modify their own manager status
+	return member.directus_users_id?.id !== currentUser.value?.id;
+};
+
 // Utility functions
 const getAvatarUrl = (user) => {
 	if (!user?.avatar) return null;
@@ -262,7 +288,6 @@ const handleConfirm = async () => {
 			});
 		} else if (confirmAction.value === 'toggleManager') {
 			// This would typically update the junction record's is_manager field
-			// For simplicity in this example, we'll use a mock update
 			const { updateItem } = useDirectusItems();
 			await updateItem('junction_directus_users_teams', confirmMember.value.id, {
 				is_manager: !confirmMember.value.is_manager,

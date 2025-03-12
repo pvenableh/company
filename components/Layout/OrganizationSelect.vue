@@ -1,38 +1,49 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue';
 import { onClickOutside } from '@vueuse/core';
 
-const { selectedOrg, organizationOptions, hasMultipleOrgs, setOrganization } = useOrganization();
+const { selectedOrg, organizationOptions, hasMultipleOrgs, setOrganization, currentOrg } = useOrganization();
+const { hasAdminAccess } = useTeams();
 const config = useRuntimeConfig();
+const toast = useToast();
 
-// Create a local ref for organization display
-const localSelectedOrg = ref(selectedOrg.value);
+// Local state
 const isDropdownOpen = ref(false);
 const dropdownRef = ref(null);
 
 // Set default organization if needed
 onMounted(() => {
-	if (!selectedOrg.value && organizationOptions.value.length > 0) {
-		const defaultOrg = organizationOptions.value[0].id;
-		setOrganization(defaultOrg);
-		localSelectedOrg.value = defaultOrg;
+	if (!selectedOrg.value && organizationOptions.value.length > 1) {
+		// Skip the first "All Organizations" option and use the first real organization
+		const defaultOrg = organizationOptions.value[1]?.id;
+		if (defaultOrg) {
+			setOrganization(defaultOrg);
+		}
 	}
 });
 
-watch(selectedOrg, (newVal) => {
-	localSelectedOrg.value = newVal;
-});
+// const handleOrgSelect = (orgId) => {
+// 	setOrganization(orgId);
+// 	isDropdownOpen.value = false;
+// };
 
 const handleOrgSelect = (orgId) => {
-	// console.log('Selected organization ID:', orgId);
+	// Check if user has admin access before allowing "All Organizations" selection
+	console.log(props.user);
+	// If selecting "All Organizations" (null) and user is not admin, prevent it
+	if (orgId === null && !hasAdminAccess(props.user)) {
+		toast.add({
+			title: 'Permission Required',
+			description: 'Only administrators can view all organizations.',
+			color: 'yellow',
+		});
+		isDropdownOpen.value = false;
+		return;
+	}
+
+	// Set the organization
 	setOrganization(orgId);
 	isDropdownOpen.value = false;
 };
-
-// Computed property to get the current organization
-const currentOrg = computed(() => {
-	return organizationOptions.value.find((org) => org.id === selectedOrg.value) || organizationOptions.value[0];
-});
 
 // Get icon URL for an organization
 const getIconUrl = (org) => {
@@ -42,7 +53,7 @@ const getIconUrl = (org) => {
 
 // Check if organization is the "All Organizations" option
 const isAllOrganizations = (org) => {
-	return org.id === null || org.id === 'all';
+	return org?.id === null || org?.id === 'all';
 };
 
 const toggleDropdown = () => {
@@ -54,6 +65,18 @@ onClickOutside(dropdownRef, () => {
 	isDropdownOpen.value = false;
 });
 
+// Get organization initials when no icon is available
+const getOrgInitials = (org) => {
+	if (!org?.name) return '';
+
+	return org.name
+		.split(' ')
+		.map((word) => word[0])
+		.join('')
+		.toUpperCase()
+		.substring(0, 2); // Up to 2 initials
+};
+
 const props = defineProps({
 	user: {
 		type: Object,
@@ -64,6 +87,34 @@ const props = defineProps({
 		default: 'relative',
 	},
 });
+
+// Setup Listeners for cross-tab synchronization
+let cleanupListeners = null;
+
+onMounted(() => {
+	// Use the setupListeners method from the useOrganization composable
+	cleanupListeners = useOrganization().setupListeners();
+
+	// Close dropdown when ESC key is pressed
+	const handleEscKey = (e) => {
+		if (e.key === 'Escape' && isDropdownOpen.value) {
+			isDropdownOpen.value = false;
+		}
+	};
+
+	document.addEventListener('keydown', handleEscKey);
+
+	// Clean up event listener
+	onUnmounted(() => {
+		document.removeEventListener('keydown', handleEscKey);
+	});
+});
+
+onUnmounted(() => {
+	if (cleanupListeners) {
+		cleanupListeners();
+	}
+});
 </script>
 
 <template>
@@ -71,10 +122,17 @@ const props = defineProps({
 		<!-- Single Organization Display -->
 		<div v-if="!hasMultipleOrgs" class="flex items-center">
 			<UAvatar
-				:src="getIconUrl(user.organizations?.[0]?.organizations_id)"
-				:alt="user.organizations?.[0]?.organizations_id?.name || 'Organization'"
+				:src="getIconUrl(props.user?.organizations?.[0]?.organizations_id)"
+				:alt="props.user?.organizations?.[0]?.organizations_id?.name || 'Organization'"
 				size="sm"
-			/>
+				class="h-8 !w-8 shadow"
+			>
+				<template #fallback>
+					<span class="text-xs font-medium">
+						{{ getOrgInitials(props.user?.organizations?.[0]?.organizations_id) }}
+					</span>
+				</template>
+			</UAvatar>
 		</div>
 
 		<!-- Multiple Organizations Selector - Custom Dropdown -->
@@ -82,26 +140,23 @@ const props = defineProps({
 			<!-- Dropdown Trigger -->
 			<button
 				@click="toggleDropdown"
-				class="flex items-center group relative focus:outline-none rounded-full bg-white border-2 border-[var(--cyan)]"
+				class="flex items-center group relative focus:outline-none rounded-full bg-white border-2 border-[var(--cyan)] p-0.5"
+				:class="{ 'border-cyan-400': isDropdownOpen }"
 			>
 				<!-- Show icon for "All Organizations" or avatar for specific organization -->
 				<template v-if="isAllOrganizations(currentOrg)">
 					<div
-						class="h-8 w-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center relative shadow"
+						class="h-7 w-7 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center relative shadow"
 					>
 						<UIcon name="i-heroicons-building-office-2" class="h-5 w-5 text-gray-500 dark:text-gray-300" />
 					</div>
 				</template>
 
-				<UAvatar
-					v-else
-					:src="getIconUrl(currentOrg)"
-					:alt="currentOrg?.name || 'Organization'"
-					class="h-8 !w-8 shadow bg-white"
-				/>
-				<!-- <div class="bg-white bg-opacity-75 absolute bottom-0 left-0 z-50 h-3 w-3">
-					<UIcon name="i-heroicons-chevron-down" class="text-gray-900" />
-				</div> -->
+				<UAvatar v-else :src="getIconUrl(currentOrg)" :alt="currentOrg?.name || 'Organization'" class="bg-white">
+					<template #fallback>
+						<span class="text-xs font-medium">{{ getOrgInitials(currentOrg) }}</span>
+					</template>
+				</UAvatar>
 			</button>
 
 			<!-- Custom Dropdown -->
@@ -125,22 +180,29 @@ const props = defineProps({
 							:key="org.id || 'all'"
 							@click="handleOrgSelect(org.id)"
 							class="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-left"
-							:class="{ 'bg-blue-50 dark:bg-blue-900': selectedOrg && org.id === selectedOrg }"
+							:class="{ 'bg-gray-100 dark:bg-gray-700': selectedOrg && org.id === selectedOrg }"
 						>
 							<!-- Show icon for "All Organizations" or avatar for specific organization -->
 							<template v-if="isAllOrganizations(org)">
-								<div class="h-8 w-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+								<div class="rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
 									<UIcon name="i-heroicons-building-office-2" class="h-5 w-5 text-gray-500 dark:text-gray-300" />
 								</div>
+								<!-- Add admin badge for All Organizations -->
+								<span class="text-[7px] bg-purple-100 text-purple-800 px-1 rounded absolute right-3">Admin Only</span>
 							</template>
-							<UAvatar
+							<div
 								v-else
-								:src="getIconUrl(org)"
-								:alt="org.name"
-								size="sm"
-								class="flex-shrink-0"
-								:class="{ 'border-2 border-[var(--cyan)] rounded-full': selectedOrg && org.id === selectedOrg }"
-							/>
+								class="flex items-center justify-center rounded-full"
+								:class="{
+									'border-2 border-[var(--cyan)] ': selectedOrg && org.id === selectedOrg,
+								}"
+							>
+								<UAvatar :src="getIconUrl(org)" :alt="org.name" size="xs" class="">
+									<template #fallback>
+										<span class="text-xs font-medium">{{ getOrgInitials(org) }}</span>
+									</template>
+								</UAvatar>
+							</div>
 							<span class="text-[11px] uppercase leading-3">
 								{{ org.name }}
 							</span>
@@ -155,5 +217,35 @@ const props = defineProps({
 <style scoped>
 .org-selector {
 	position: relative;
+}
+
+/* Animation for organization selection */
+.org-selector button img,
+.org-selector button .w-5 {
+	transition: transform 0.2s ease;
+}
+
+.org-selector button:hover img,
+.org-selector button:hover .w-5 {
+	transform: scale(1.05);
+}
+
+/* Custom scrollbar for dropdown */
+.max-h-60 {
+	scrollbar-width: thin;
+	scrollbar-color: #cbd5e0 #f7fafc;
+}
+
+.max-h-60::-webkit-scrollbar {
+	width: 6px;
+}
+
+.max-h-60::-webkit-scrollbar-track {
+	background: #f7fafc;
+}
+
+.max-h-60::-webkit-scrollbar-thumb {
+	background-color: #cbd5e0;
+	border-radius: 6px;
 }
 </style>

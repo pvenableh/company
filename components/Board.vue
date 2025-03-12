@@ -1,6 +1,6 @@
 <script setup>
 import { VueDraggable } from 'vuedraggable';
-const { updateItem, deleteItems } = useDirectusItems();
+const { updateItem } = useDirectusItems();
 
 const props = defineProps({
 	collection: {

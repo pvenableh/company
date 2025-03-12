@@ -3,15 +3,34 @@ const { readItems } = useDirectusItems();
 const { user } = useDirectusAuth();
 const { selectedOrg } = useOrganization();
 const { filteredUsers, fetchFilteredUsers } = useFilteredUsers();
-const { fetchTeams } = useTeams();
+const { fetchTeams, visibleTeams, loading: teamsLoading, setupStorageListener } = useTeams();
 const config = useRuntimeConfig();
 
 const org = ref(null);
 const isLoading = ref(true);
-const activeTab = ref('overview');
+
+const activeTab = ref(0);
+
+// Define tab items once:
+const tabItems = [
+	{ slot: 'overview', label: 'Overview', icon: 'i-heroicons-home' },
+	{ slot: 'members', label: 'Members', icon: 'i-heroicons-users' },
+	{ slot: 'teams', label: 'Teams', icon: 'i-heroicons-user-group' },
+];
+
+// Optional: Get the current tab slot name when needed
+const currentTabSlot = computed(() => tabItems[activeTab.value]?.slot || 'overview');
 
 definePageMeta({
 	middleware: ['auth'],
+});
+
+// Set up cross-tab synchronization for teams
+const cleanup = setupStorageListener();
+onUnmounted(() => {
+	if (typeof cleanup === 'function') {
+		cleanup();
+	}
 });
 
 // Function to fetch organization data with correct fields
@@ -46,11 +65,13 @@ const fetchOrganizationData = async () => {
 
 		org.value = orgs?.[0] || null;
 
-		// Fetch organization users
-		await fetchFilteredUsers(selectedOrg.value);
-
-		// Fetch teams for the organization
-		await fetchTeams(selectedOrg.value);
+		// Run these in parallel for better performance
+		await Promise.all([
+			// Fetch organization users
+			fetchFilteredUsers(selectedOrg.value),
+			// Fetch teams for the organization
+			fetchTeams(selectedOrg.value),
+		]);
 	} catch (error) {
 		console.error('Error fetching organization data:', error);
 		org.value = null;
@@ -61,7 +82,7 @@ const fetchOrganizationData = async () => {
 
 // Watch for changes in selectedOrg and fetch data
 watch(
-	selectedOrg,
+	() => selectedOrg.value,
 	(newVal) => {
 		if (newVal) {
 			fetchOrganizationData();
@@ -135,10 +156,6 @@ const getIconUrl = computed(() => {
 						</div>
 
 						<div class="flex flex-wrap gap-x-6 gap-y-1 mb-4 text-sm text-gray-600 dark:text-gray-300">
-							<!-- <div v-if="org.category" class="flex items-center">
-							<UIcon name="i-heroicons-tag" class="w-4 h-4 mr-1" />
-							<span>{{ org.category }}</span>
-						</div> -->
 							<div v-if="org.industry?.name" class="flex items-center">
 								<UIcon name="i-heroicons-building-office-2" class="w-4 h-4 mr-1" />
 								<span>{{ org.industry.name }}</span>
@@ -192,14 +209,7 @@ const getIconUrl = computed(() => {
 				</div>
 
 				<!-- Tabs -->
-				<UTabs
-					v-model="activeTab"
-					:items="[
-						{ slot: 'overview', label: 'Overview', icon: 'i-heroicons-home' },
-						{ slot: 'members', label: 'Members', icon: 'i-heroicons-users' },
-						{ slot: 'teams', label: 'Teams', icon: 'i-heroicons-user-group' },
-					]"
-				>
+				<UTabs v-model="activeTab" :items="tabItems">
 					<template #overview>
 						<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
 							<!-- Contact Information Card -->
@@ -316,7 +326,18 @@ const getIconUrl = computed(() => {
 
 					<template #teams>
 						<div class="mt-6">
-							<TeamsManageTeams />
+							<!-- Add loading indicator for teams -->
+							<div v-if="teamsLoading" class="flex justify-center py-8">
+								<UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-gray-500" />
+							</div>
+
+							<TeamsManageTeams
+								v-else
+								:embedded="true"
+								:organization-id="selectedOrg"
+								:initial-teams="visibleTeams"
+								:external-loading="teamsLoading"
+							/>
 						</div>
 					</template>
 				</UTabs>

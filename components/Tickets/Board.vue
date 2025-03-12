@@ -1,19 +1,27 @@
 <template>
 	<div class="w-full mx-auto relative tickets-board">
-		<!-- Connection Status -->
-		<!-- <transition name="fade">
+		<!-- Loading Overlay -->
+		<!--  -->
+		<transition name="fade">
 			<div
-				v-if="!isConnected && !isLoading"
-				class="mb-4 absolute right-[10px] top-[20px] z-10 min-w-60 tickets-board__connection"
+				v-if="isLoading"
+				class="absolute h-svh inset-0 bg-white/70 dark:bg-gray-800/70 z-50 flex items-center justify-center"
 			>
+				<LayoutLoader text="Loading Tickets" />
+			</div>
+		</transition>
+		<!-- Connection Status -->
+		<transition name="fade">
+			<div v-if="!isConnected && !isLoading" class="mb-4 absolute w-64 right-10 top-0 tickets-board__connection">
 				<UAlert title="Connection Lost" description="Attempting to reconnect..." color="yellow">
 					<template #footer>
-						<UButton size="sm" color="yellow" @click="refresh">Retry Connection</UButton>
+						<UButton size="sm" color="yellow" @click="refreshData">Retry Connection</UButton>
 					</template>
 				</UAlert>
 			</div>
-		</transition> -->
+		</transition>
 
+		<!-- Filters and Controls -->
 		<div
 			class="w-full flex flex-col md:flex-row items-end justify-between mb-4 xl:mb-8 xl:mt-2 px-4 gap-4 pt-4 tickets-board__filters"
 		>
@@ -33,13 +41,12 @@
 						Clear Filters
 					</UButton>
 					<div class="flex flex-row items-center justify-center space-x-2">
-						<UToggle v-model="filterByAssignedTo" class="" />
-
+						<UToggle v-model="filterByAssignedTo" />
 						<span class="text-[10px] text-gray-500 uppercase">
 							{{ filterByAssignedTo ? 'My Tickets' : 'All Tickets' }}
 						</span>
 					</div>
-					<div class="flex flex-row items-center justify-center space-x-2">
+					<div class="flex flex-row items-center justify-center space-x-2 hidden">
 						<UToggle v-model="filterUnassigned" :disabled="filterByAssignedTo" />
 						<span class="text-[10px] text-gray-500 uppercase">
 							{{ filterUnassigned ? 'Unassigned' : 'All Assignments' }}
@@ -47,7 +54,6 @@
 					</div>
 				</div>
 				<div class="w-full flex flex-row items-center justify-end gap-4">
-					<!-- Due Date Filter -->
 					<div class="flex items-center space-x-2 relative">
 						<USelectMenu
 							v-model="filterDueDate"
@@ -72,7 +78,6 @@
 						</USelectMenu>
 					</div>
 
-					<!-- Project Selector -->
 					<div class="flex items-center space-x-2">
 						<USelectMenu
 							searchable
@@ -107,7 +112,7 @@
 					</div>
 				</div>
 				<div v-if="lastUpdated" class="-bottom-[22.5px] text-[9px] right-0 text-gray-500 absolute font-bold uppercase">
-					Last updated: {{ new Date(lastUpdated).toLocaleTimeString() }}
+					Last updated: {{ formatLastUpdated(lastUpdated) }}
 				</div>
 			</div>
 		</div>
@@ -124,38 +129,7 @@
 			<UIcon name="i-heroicons-chevron-right" class="w-5 h-5" @click="nextColumn" />
 		</div>
 
-		<!-- Debug info -->
-		<!-- <UButton v-if="user.email === 'peter@huestudios.com'" @click="debugMode = !debugMode">Toggle Debug</UButton>
-		<div v-if="debugMode" class="p-4 mb-4 bg-gray-100 border border-gray-300 rounded">
-			<h3 class="font-bold">Debug Info</h3>
-			<div class="flex justify-between">
-				<div>
-					<pre class="text-xs mt-2">Tickets: {{ tickets?.length || 0 }}</pre>
-					<pre class="text-xs mt-2">Processed: {{ processedTickets?.length || 0 }}</pre>
-					<pre class="text-xs mt-2">Connection: {{ isConnected ? 'Connected' : 'Disconnected' }}</pre>
-					<pre class="text-xs mt-2">Status: {{ connectionStatus }}</pre>
-					<pre class="text-xs mt-2">Last Error: {{ error || 'None' }}</pre>
-					<pre class="text-xs mt-2">Selected Org: {{ selectedOrg }}</pre>
-					<pre class="text-xs mt-2">Selected Team: {{ selectedTeam }}</pre>
-					<pre class="text-xs mt-2">Selected Project: {{ selectedProject }}</pre>
-				</div>
-				<div class="flex-1 ml-4">
-					<h4 class="text-xs font-bold">Current Filter:</h4>
-					<pre class="text-xs mt-1 bg-gray-200 p-2 rounded overflow-auto max-h-32">{{
-						JSON.stringify(filterRef, null, 2)
-					}}</pre>
-				</div>
-			</div>
-			<div class="grid grid-cols-4 gap-2 mt-2">
-				<div v-for="(col, idx) in columns" :key="idx" class="text-xs">
-					{{ col.name }}: {{ localTickets[col.id]?.length || 0 }}
-				</div>
-			</div>
-			<UButton size="xs" class="mt-2" @click="refresh">Force Refresh</UButton>
-			<UButton size="xs" class="mt-2 ml-2" color="cyan" @click="testWebSocketConnection">Test WebSocket</UButton>
-		</div> -->
-
-		<!-- Board Layout -->
+		<!-- Main Board -->
 		<div
 			class="bg-gray-100 bg-opacity-30 border-b border-gray-200 w-full flex min-h-svh overflow-x-auto overflow-hidden-scrollbar tickets-board__board"
 			@touchstart="handleTouchStart"
@@ -170,7 +144,6 @@
 					'transform translate-x-0': !isMobile || column.id === activeColumn,
 				}"
 			>
-				<!-- Column Header -->
 				<div class="tickets-board__board-col-header">
 					<div class="flex items-center justify-between">
 						<h3 class="text-xs font-bold uppercase tracking-wide">{{ column.name }}</h3>
@@ -183,7 +156,7 @@
 					</div>
 				</div>
 
-				<!-- Loading State -->
+				<!-- Loading Skeletons -->
 				<div
 					v-if="isLoading && !localTickets[column.id]?.length"
 					class="min-h-[90svh] p-2 bg-gray-100 dark:bg-gray-800"
@@ -193,6 +166,7 @@
 					</div>
 				</div>
 
+				<!-- Draggable Column Content -->
 				<VueDraggable
 					v-else
 					v-model="localTickets[column.id]"
@@ -214,7 +188,8 @@
 									v-if="updatingTickets.has(element.id)"
 									class="absolute inset-0 bg-white/50 dark:bg-gray-900/50 rounded-lg flex items-center justify-center z-10"
 								>
-									<UIcon name="i-heroicons-arrow-path" class="animate-spin h-5 w-5" />
+									<LayoutLoader />
+									<!-- <UIcon name="i-heroicons-arrow-path" class="animate-spin h-5 w-5" /> -->
 								</div>
 								<TicketsExpandableCard :element="element" :columns="columns" :updating-tickets="updatingTickets" />
 							</div>
@@ -228,18 +203,25 @@
 
 <script setup>
 import VueDraggable from 'vuedraggable';
-const { updateItem } = useDirectusItems();
+
+const { updateItem, readItems } = useDirectusItems();
 const { registerRefreshCallback } = useTicketsStore();
 const { user } = useDirectusAuth();
-const { selectedOrg, hasMultipleOrgs, organizationOptions, setOrganization, clearOrganization, getOrganizationFilter } =
-	useOrganization();
-const { selectedTeam, allTeams, setTeam, clearTeam, getTeamFilter, DEFAULT_TEAM_ID } = useTeams();
-
 const { triggerHaptic } = useHaptic();
+const toast = useToast();
+const config = useRuntimeConfig();
 
-const commentsCache = ref(new Map());
-const processedTickets = ref([]);
-const debugMode = ref(false); // Set to false in production
+// Use our composables
+const { selectedOrg, organizations, setupListeners: setupOrgListeners, getOrganizationFilter } = useOrganization();
+
+const {
+	selectedTeam,
+	visibleTeams,
+	fetchTeams,
+	DEFAULT_TEAM_ID,
+	setupStorageListener: setupTeamListeners,
+	getTeamFilter,
+} = useTeams();
 
 const props = defineProps({
 	projectId: {
@@ -248,6 +230,7 @@ const props = defineProps({
 	},
 });
 
+// Define columns
 const columns = [
 	{ id: 'Pending', name: 'Pending', color: 'cyan' },
 	{ id: 'Scheduled', name: 'Scheduled', color: 'cyan2' },
@@ -255,40 +238,40 @@ const columns = [
 	{ id: 'Completed', name: 'Completed', color: 'green' },
 ];
 
-const activeColumn = ref(columns[0].id);
-const isMobile = ref(false);
+// Use our mobile navigation composable
+const {
+	isMobile,
+	activeColumn,
+	handleTouchStart,
+	handleTouchEnd,
+	nextColumn,
+	previousColumn,
+	setupMobileDetection,
+	setActiveColumn,
+} = useMobileBoardNavigation({
+	columns,
+	breakpoint: 768,
+	swipeThreshold: 50,
+	onColumnChange: (columnId) => {
+		console.log(`Column changed to: ${columnId}`);
+	},
+});
+
+// Component state
 const updatingTickets = ref(new Set());
 const isDragging = ref(false);
-
-const selectedProject = ref(null);
+const selectedProject = ref(props.projectId || null);
 const projectOptions = ref([]);
 const filterByAssignedTo = ref(false);
 const filterUnassigned = ref(false);
 const filterDueDate = ref(null);
+const isLoading = ref(true);
+const isConnected = ref(true);
+const error = ref(null);
+const lastUpdated = ref(null);
+let cleanupMobileDetection = null;
 
-// Team options selector
-const teamOptions = computed(() => {
-	return allTeams.value.map((team) => ({
-		id: team.id,
-		name: team.name,
-		description: team.description,
-		isVirtual: team.isVirtual || false,
-	}));
-});
-
-// Add due date filter options
-const dueDateOptions = ref([
-	{ value: 'all', label: 'All Dates' },
-	{ value: 'overdue', label: 'Overdue' },
-	{ value: 'today', label: 'Due Today' },
-	{ value: 'week', label: 'Due This Week' },
-]);
-
-const activeDueDateFilter = computed(() => {
-	if (!filterDueDate.value || filterDueDate.value === 'all') return null;
-	return typeof filterDueDate.value === 'object' ? filterDueDate.value.value : filterDueDate.value;
-});
-
+// Initialize localTickets with empty arrays for each column
 const localTickets = ref(
 	columns.reduce((acc, column) => {
 		acc[column.id] = [];
@@ -296,45 +279,35 @@ const localTickets = ref(
 	}, {}),
 );
 
-if (props.projectId) {
-	selectedProject.value = props.projectId;
-}
+// Storage for filter preferences
+const assignedToStorage = useStorageSync('ticketFilterAssignedTo');
+const unassignedStorage = useStorageSync('ticketFilterUnassigned');
+const dueDateStorage = useStorageSync('ticketFilterDueDate');
+const projectStorage = useStorageSync('selectedProject');
 
-const fetchProjects = async () => {
-	if (props.projectId) {
-		selectedProject.value = props.projectId;
-		return;
-	}
+// WebSocket ticket subscription
+let ticketsSubscription = null;
+let connectFunc = null;
+let disconnectFunc = null;
 
-	const { readItems } = useDirectusItems();
-	let filter = {};
+// The tickets data from our subscription
+const ticketsData = ref([]);
 
-	// Apply organization and team filters
-	const orgFilter = getOrganizationFilter();
-	const teamFilter = getTeamFilter();
+// Due date filter options
+const dueDateOptions = ref([
+	{ value: 'all', label: 'All Dates' },
+	{ value: 'overdue', label: 'Overdue' },
+	{ value: 'today', label: 'Due Today' },
+	{ value: 'week', label: 'Due This Week' },
+]);
 
-	if (Object.keys(orgFilter).length > 0) {
-		filter = { _and: [orgFilter] };
+// Active due date filter
+const activeDueDateFilter = computed(() => {
+	if (!filterDueDate.value || filterDueDate.value === 'all') return null;
+	return typeof filterDueDate.value === 'object' ? filterDueDate.value.value : filterDueDate.value;
+});
 
-		if (Object.keys(teamFilter).length > 0) {
-			filter._and.push(teamFilter);
-		}
-	}
-
-	try {
-		const projects = await readItems('projects', {
-			fields: ['id', 'title', 'sort', 'organization.id', 'organization.name', 'team.id', 'team.name', 'tickets'],
-			filter,
-			sort: 'sort',
-		});
-
-		projectOptions.value = [{ id: null, title: 'All Projects' }, ...projects];
-	} catch (error) {
-		console.error('Error fetching projects:', error);
-		projectOptions.value = [{ id: null, title: 'All Projects' }];
-	}
-};
-
+// Required fields for ticket data
 const fields = [
 	'id',
 	'title',
@@ -362,75 +335,80 @@ const fields = [
 	'assigned_to.directus_users_id.last_name',
 	'assigned_to.directus_users_id.avatar',
 	'assigned_to.directus_users_id.email',
+	'comments.id',
 	'tasks.id',
 	'tasks.status',
 	'team.id',
 	'team.name',
 ];
 
-const filterRef = computed(() => getFilter());
+// Generate filter based on current state
+const generateFilter = () => {
+	console.log('Board: Generating filter with context:', {
+		org: selectedOrg.value,
+		team: selectedTeam.value,
+		project: selectedProject.value,
+		assignedTo: filterByAssignedTo.value,
+		unassigned: filterUnassigned.value,
+		dueDate: activeDueDateFilter.value,
+	});
 
-const getFilter = () => {
-	const filter = {
-		_and: [],
-	};
+	const filter = { _and: [] };
 
-	// console.log('Building filter with:', {
-	// 	org: selectedOrg.value,
-	// 	team: selectedTeam.value,
-	// 	project: selectedProject.value,
-	// 	assignedTo: filterByAssignedTo.value,
-	// 	unassigned: filterUnassigned.value,
-	// });
+	// Handle "All Organizations" (null) state for admins
+	if (selectedOrg.value === null) {
+		// For admins with multiple orgs, we want to show all accessible data
+		// No organization filter is needed as they should see all orgs they have access to
+		console.log('Board: Admin viewing all organizations');
 
-	// Apply organization filter
-	const orgFilter = getOrganizationFilter();
-	if (Object.keys(orgFilter).length > 0) {
-		filter._and.push(orgFilter);
+		// Instead of filtering by org, we might want to filter by user's accessible orgs
+		// This ensures they only see orgs they have access to
+		if (user.value?.organizations?.length > 0) {
+			const orgIds = user.value.organizations.map((org) => org.organizations_id?.id).filter(Boolean);
+			if (orgIds.length > 0) {
+				filter._and.push({
+					organization: { _in: orgIds },
+				});
+			}
+		}
+	} else {
+		// Organization filter for specific organization
+		const orgFilter = getOrganizationFilter();
+		if (orgFilter && Object.keys(orgFilter).length > 0) {
+			filter._and.push(orgFilter);
+		}
 	}
 
-	// Apply team filter (only if not the default team)
+	// Team filter (only apply if a specific team is selected)
 	if (selectedTeam.value && selectedTeam.value !== DEFAULT_TEAM_ID) {
-		filter._and.push({
-			team: { _eq: selectedTeam.value },
-		});
+		filter._and.push({ team: { _eq: selectedTeam.value } });
 	}
 
 	// Project filter
 	if (selectedProject.value) {
-		filter._and.push({
-			project: { _eq: selectedProject.value },
-		});
+		filter._and.push({ project: { _eq: selectedProject.value } });
 	}
 
-	// Assignment filters
+	// Assigned to filter
 	if (filterByAssignedTo.value && user.value) {
+		console.log('trying to filter by assignment');
 		filter._and.push({
-			assigned_to: {
-				directus_users_id: {
-					id: { _eq: user.value.id },
-				},
-			},
+			assigned_to: { directus_users_id: { id: { _eq: user.value.id } } },
 		});
 	} else if (filterUnassigned.value) {
-		filter._and.push({
-			assigned_to: { _empty: true },
-		});
+		filter._and.push({ assigned_to: { _empty: true } });
 	}
 
 	// Due date filter
-	if (filterDueDate.value) {
+	if (activeDueDateFilter.value) {
 		const today = new Date();
 		today.setHours(0, 0, 0, 0);
 
-		if (filterDueDate.value === 'overdue') {
+		if (activeDueDateFilter.value === 'overdue') {
 			filter._and.push({
-				due_date: {
-					_lt: today.toISOString(),
-					_nnull: true,
-				},
+				due_date: { _lt: today.toISOString(), _nnull: true },
 			});
-		} else if (filterDueDate.value === 'today') {
+		} else if (activeDueDateFilter.value === 'today') {
 			const tomorrow = new Date(today);
 			tomorrow.setDate(tomorrow.getDate() + 1);
 			filter._and.push({
@@ -440,7 +418,7 @@ const getFilter = () => {
 					_nnull: true,
 				},
 			});
-		} else if (filterDueDate.value === 'week') {
+		} else if (activeDueDateFilter.value === 'week') {
 			const nextWeek = new Date(today);
 			nextWeek.setDate(nextWeek.getDate() + 7);
 			filter._and.push({
@@ -453,303 +431,338 @@ const getFilter = () => {
 		}
 	}
 
-	// Remove _and if empty
+	// Clean up empty filter
 	if (filter._and.length === 0) {
-		delete filter._and;
+		return {}; // Return empty object instead of deleting _and
 	}
 
+	console.log('Generated filter:', filter);
 	return filter;
 };
 
-const {
-	data: tickets,
-	isLoading,
-	isConnected,
-	error,
-	lastUpdated,
-	refresh,
-	connectionStatus,
-	connect,
-} = useRealtimeSubscription('tickets', fields, filterRef.value, '-date_updated', { debug: true });
+// Initialize or update the subscription
+const setupTicketsSubscription = () => {
+	// Always create a fresh filter
+	const filter = generateFilter();
 
-const handleProjectChange = (value) => {
-	selectedProject.value = value === 'null' || value === 'All Projects' ? null : value;
-};
+	// Skip if we're on server side
+	if (import.meta.server) {
+		isLoading.value = false;
+		return;
+	}
 
-const handleTeamChange = (value) => {
-	const newTeamValue = value === 'null' ? null : value;
-	setTeam(newTeamValue);
-};
+	console.log('Setting up tickets subscription with filter:', filter);
+	isLoading.value = true;
 
-const hasActiveFilters = computed(() => {
-	return (
-		filterByAssignedTo.value ||
-		filterUnassigned.value ||
-		filterDueDate.value ||
-		selectedProject.value ||
-		(selectedTeam.value && selectedTeam.value !== DEFAULT_TEAM_ID)
+	// Clean up existing subscription
+	if (disconnectFunc) {
+		disconnectFunc();
+	}
+
+	// Create a new subscription
+	const {
+		data,
+		isLoading: wsLoading,
+		isConnected: wsConnected,
+		error: wsError,
+		lastUpdated: wsLastUpdated,
+		connect,
+		disconnect,
+		updateFilter,
+		refresh,
+	} = useRealtimeSubscription('tickets', fields, filter, '-date_updated');
+
+	// Store functions for lifecycle management
+	connectFunc = connect;
+	disconnectFunc = disconnect;
+
+	// Store ticket data and subscribe to changes
+	ticketsData.value = data;
+
+	// Watch for changes to subscription state
+	watch(
+		wsLoading,
+		(val) => {
+			console.log('Subscription loading state:', val);
+			isLoading.value = val;
+		},
+		{ immediate: true },
 	);
+
+	watch(
+		wsConnected,
+		(val) => {
+			console.log('Subscription connection state:', val);
+			isConnected.value = val;
+
+			// If connection is lost, set isLoading to false
+			if (!val && isLoading.value) {
+				setTimeout(() => {
+					isLoading.value = false;
+				}, 1000);
+			}
+		},
+		{ immediate: true },
+	);
+
+	watch(
+		wsError,
+		(val) => {
+			error.value = val;
+			if (val) {
+				console.error('Subscription error:', val);
+				toast.add({
+					title: 'Error',
+					description: 'Failed to load tickets. Please try again.',
+					color: 'red',
+				});
+				// Set loading to false on error
+				isLoading.value = false;
+			}
+		},
+		{ immediate: true },
+	);
+
+	watch(
+		wsLastUpdated,
+		(val) => {
+			lastUpdated.value = val;
+		},
+		{ immediate: true },
+	);
+
+	// Store the functions we need for later
+	ticketsSubscription = {
+		updateFilter,
+		refresh,
+	};
+
+	// Process ticket data when it changes
+	watch(
+		data,
+		(newData) => {
+			if (newData) {
+				console.log(`Received ${newData.length} tickets from subscription`);
+				processTickets(newData);
+			} else {
+				console.log('Received null or undefined data from subscription');
+				processTickets([]);
+			}
+
+			// End loading state when data is received
+			isLoading.value = false;
+		},
+		{ immediate: true },
+	);
+
+	// Safety timeout to prevent infinite loading state
+	setTimeout(() => {
+		if (isLoading.value) {
+			console.log('Safety timeout: ending loading state after 8 seconds');
+			isLoading.value = false;
+		}
+	}, 8000);
+};
+
+// Call refresh on the current subscription
+const refreshData = async () => {
+	console.log('Board: Refreshing tickets...');
+	isLoading.value = true;
+
+	try {
+		if (ticketsSubscription) {
+			await ticketsSubscription.refresh();
+			console.log('Board: Tickets refreshed.');
+		} else {
+			// If no subscription exists, set one up
+			setupTicketsSubscription();
+		}
+	} catch (err) {
+		console.error('Error refreshing tickets:', err);
+		error.value = err;
+		toast.add({
+			title: 'Error',
+			description: 'Failed to refresh tickets. Please try again.',
+			color: 'red',
+		});
+	} finally {
+		// Set loading to false after a timeout in case the subscription doesn't update it
+		setTimeout(() => {
+			if (isLoading.value) {
+				isLoading.value = false;
+			}
+		}, 3000);
+	}
+};
+
+// Process tickets into columns
+const processTickets = (tickets) => {
+	console.log('Board: Processing tickets data', tickets);
+
+	// Create a new object to avoid reactivity issues
+	const newLocalTickets = {};
+
+	// Initialize columns with empty arrays
+	columns.forEach((col) => {
+		newLocalTickets[col.id] = [];
+	});
+
+	// If tickets data is null, undefined, or empty array, just set empty columns
+	if (!tickets || !Array.isArray(tickets) || tickets.length === 0) {
+		console.log('Board: No tickets data to process, setting empty columns');
+		localTickets.value = newLocalTickets;
+		return;
+	}
+
+	// Log the actual data
+	console.log(`Board: Processing ${tickets.length} tickets`);
+
+	// Process each ticket
+	tickets.forEach((ticket) => {
+		if (!ticket) return; // Skip null or undefined tickets
+
+		const status = ticket.status;
+
+		// Check if status exists in our columns
+		if (columns.some((col) => col.id === status)) {
+			// Add ticket to the correct column
+			newLocalTickets[status].push(ticket);
+		} else {
+			// For tickets with invalid status, put them in the first column
+			const defaultColumn = columns[0].id;
+			console.log(`Ticket ${ticket.id} with invalid status "${status}" moved to "${defaultColumn}"`);
+			newLocalTickets[defaultColumn].push({ ...ticket, status: defaultColumn });
+		}
+	});
+
+	// Log column counts
+	columns.forEach((col) => {
+		console.log(`Column ${col.id}: ${newLocalTickets[col.id].length} tickets`);
+	});
+
+	// Update the reactive state once
+	localTickets.value = newLocalTickets;
+};
+
+// Handle newly created ticket
+const handleTicketCreated = () => {
+	refreshData();
+};
+
+// Check for active filters
+const hasActiveFilters = computed(() => {
+	return filterByAssignedTo.value || filterUnassigned.value || filterDueDate.value || selectedProject.value;
 });
 
+// Clear all filters
 const clearFilters = () => {
 	filterByAssignedTo.value = false;
 	filterUnassigned.value = false;
 	filterDueDate.value = null;
 	selectedProject.value = null;
-	setTeam(DEFAULT_TEAM_ID); // Reset to default team instead of null
 };
 
-const fetchCommentCounts = async (ticketIds) => {
-	if (!ticketIds || ticketIds.length === 0) return;
+// Fetch projects for the current organization
+// Update the fetchProjects function to handle "All Organizations" mode
+const fetchProjects = async () => {
+	if (props.projectId) {
+		selectedProject.value = props.projectId;
+		return;
+	}
 
 	try {
-		const { readItems } = useDirectusItems();
+		let filter = {};
 
-		// Query the comments table directly
-		const comments = await readItems('comments', {
-			fields: ['id', 'item'],
-			filter: {
-				collection: { _eq: 'tickets' },
-				item: { _in: ticketIds },
-			},
-		});
+		// Handle "All Organizations" vs specific organization
+		if (selectedOrg.value === null) {
+			// For "All Organizations" mode (admin users)
+			if (user.value?.organizations?.length > 0) {
+				// Get all organizations the user has access to
+				const orgIds = user.value.organizations.map((org) => org.organizations_id?.id).filter(Boolean);
 
-		// Process results into a map of ticket ID to comment count
-		const countMap = new Map();
-
-		comments.forEach((comment) => {
-			const ticketId = comment.item;
-			if (!countMap.has(ticketId)) {
-				countMap.set(ticketId, 0);
-			}
-			countMap.set(ticketId, countMap.get(ticketId) + 1);
-		});
-
-		// Update our cache
-		commentsCache.value = countMap;
-	} catch (error) {
-		console.error('Error fetching comment counts:', error);
-	}
-};
-
-// Process tickets to ensure they have comment count information
-const processTicketsWithComments = (ticketsData) => {
-	if (!ticketsData) return [];
-
-	return ticketsData.map((ticket) => {
-		// Add comment count from cache
-		const commentCount = commentsCache.value.get(ticket.id) || 0;
-		const taskCount = ticket.tasks?.length || 0;
-
-		return {
-			...ticket,
-			commentCount,
-			taskCount,
-		};
-	});
-};
-
-// Watch for organization changes
-watch(
-	() => selectedOrg.value,
-	async (newOrg) => {
-		// Initialize team to DEFAULT_TEAM_ID instead of null
-		if (!selectedTeam.value) {
-			setTeam(DEFAULT_TEAM_ID);
-		}
-
-		// Reset project selection
-		selectedProject.value = null;
-
-		// Fetch projects for the new organization and refresh data
-		await fetchProjects();
-		await refresh();
-	},
-	{ immediate: true },
-);
-
-// Watch for team changes
-watch(
-	() => selectedTeam.value,
-	async (newTeam) => {
-		// Reset project selection when team changes
-		selectedProject.value = null;
-
-		// Fetch projects for the new team and refresh data
-		await fetchProjects();
-		await refresh();
-	},
-);
-
-// Keep existing filter watches
-watch([selectedProject, filterByAssignedTo, filterUnassigned, filterDueDate], () => {
-	refresh();
-});
-
-watch(filterByAssignedTo, (newValue) => {
-	if (newValue) {
-		filterUnassigned.value = false;
-	}
-});
-
-watch(filterUnassigned, (newValue) => {
-	if (newValue) {
-		filterByAssignedTo.value = false;
-	}
-});
-
-// Watch tickets for changes and fetch comment counts
-watch(
-	() => tickets.value,
-	async (newTickets) => {
-		// console.log('Tickets updated:', {
-		// 	count: newTickets?.length || 0,
-		// 	org: selectedOrg.value,
-		// 	team: selectedTeam.value,
-		// });
-
-		if (newTickets && newTickets.length > 0) {
-			// Extract ticket IDs for comment count fetching
-			const ticketIds = newTickets.map((ticket) => ticket.id);
-			await fetchCommentCounts(ticketIds);
-
-			// Process tickets with comment counts
-			processedTickets.value = processTicketsWithComments(newTickets);
-		} else {
-			processedTickets.value = [];
-		}
-	},
-	{ immediate: true },
-);
-
-// Watch processed tickets and filter them into columns
-watch(
-	() => processedTickets.value,
-	(newProcessedTickets) => {
-		if (!newProcessedTickets) {
-			// Reset all columns to empty arrays
-			Object.keys(localTickets.value).forEach((key) => {
-				localTickets.value[key] = [];
-			});
-			return;
-		}
-
-		const filtered = newProcessedTickets.filter((ticket) => {
-			// Base organization and team filtering
-			const orgMatch = !selectedOrg.value || ticket.organization?.id === selectedOrg.value;
-
-			// For team matching, if it's DEFAULT_TEAM_ID, don't filter by team
-			const teamMatch =
-				!selectedTeam.value || selectedTeam.value === DEFAULT_TEAM_ID || ticket.team?.id === selectedTeam.value;
-
-			const projectMatch = !selectedProject.value || ticket.project?.id === selectedProject.value;
-
-			// Assignment filtering
-			let assignmentMatch = true;
-			if (filterByAssignedTo.value && user.value) {
-				assignmentMatch = ticket.assigned_to?.some((assignment) => assignment.directus_users_id?.id === user.value.id);
-			} else if (filterUnassigned.value) {
-				assignmentMatch = !ticket.assigned_to || ticket.assigned_to.length === 0;
-			}
-
-			// Due date filtering
-			let dueDateMatch = true;
-			if (activeDueDateFilter.value && ticket.due_date) {
-				const today = new Date();
-				today.setHours(0, 0, 0, 0);
-				const dueDate = new Date(ticket.due_date);
-
-				switch (activeDueDateFilter.value) {
-					case 'overdue':
-						dueDateMatch = dueDate < today;
-						break;
-					case 'today':
-						const tomorrow = new Date(today);
-						tomorrow.setDate(tomorrow.getDate() + 1);
-						dueDateMatch = dueDate >= today && dueDate < tomorrow;
-						break;
-					case 'week':
-						const nextWeek = new Date(today);
-						nextWeek.setDate(nextWeek.getDate() + 7);
-						dueDateMatch = dueDate >= today && dueDate < nextWeek;
-						break;
+				if (orgIds.length > 0) {
+					filter = {
+						organization: { _in: orgIds },
+					};
 				}
 			}
-
-			return orgMatch && teamMatch && projectMatch && assignmentMatch && dueDateMatch;
-		});
-
-		// Reset all columns
-		Object.keys(localTickets.value).forEach((key) => {
-			localTickets.value[key] = [];
-		});
-
-		// Distribute tickets to appropriate columns
-		filtered.forEach((ticket) => {
-			const status = ticket.status;
-			if (localTickets.value[status]) {
-				localTickets.value[status].push(ticket);
-			}
-		});
-	},
-	{ immediate: true },
-);
-
-onMounted(async () => {
-	checkMobile();
-	window.addEventListener('resize', checkMobile);
-	registerRefreshCallback(refresh);
-
-	if (selectedOrg.value) {
-		await fetchProjects();
-	}
-});
-
-onUnmounted(() => {
-	window.removeEventListener('resize', checkMobile);
-});
-
-function checkMobile() {
-	isMobile.value = window.innerWidth < 768;
-}
-
-function nextColumn() {
-	const currentIndex = columns.findIndex((col) => col.id === activeColumn.value);
-	activeColumn.value = columns[(currentIndex + 1) % columns.length].id;
-}
-
-function previousColumn() {
-	const currentIndex = columns.findIndex((col) => col.id === activeColumn.value);
-	activeColumn.value = columns[(currentIndex - 1 + columns.length) % columns.length].id;
-}
-
-const touchStart = ref({ x: 0, y: 0 });
-
-function handleTouchStart(event) {
-	touchStart.value = {
-		x: event.touches[0].clientX,
-		y: event.touches[0].clientY,
-	};
-}
-
-function handleTouchEnd(event) {
-	const touchEnd = {
-		x: event.changedTouches[0].clientX,
-		y: event.changedTouches[0].clientY,
-	};
-
-	const deltaX = touchEnd.x - touchStart.value.x;
-	const deltaY = touchEnd.y - touchStart.value.y;
-
-	if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
-		if (deltaX > 0) {
-			previousColumn();
 		} else {
-			nextColumn();
-		}
-	}
-}
+			// For specific organization mode
+			const orgFilter = getOrganizationFilter();
+			const teamFilter = getTeamFilter();
 
+			// Build filter based on org and team
+			if (Object.keys(orgFilter).length > 0) {
+				filter = { _and: [orgFilter] };
+
+				if (Object.keys(teamFilter).length > 0) {
+					filter._and.push(teamFilter);
+				}
+			}
+		}
+
+		// Fetch projects with the filter
+		const projects = await readItems('projects', {
+			fields: ['id', 'title', 'sort', 'organization.id', 'organization.name', 'team.id', 'team.name', 'tickets'],
+			filter,
+			sort: 'sort',
+		});
+
+		projectOptions.value = [{ id: null, title: 'All Projects' }, ...projects];
+	} catch (error) {
+		console.error('Error fetching projects:', error);
+		projectOptions.value = [{ id: null, title: 'All Projects' }];
+		toast.add({
+			title: 'Error',
+			description: 'Failed to load projects',
+			color: 'red',
+		});
+	}
+};
+
+// Project selection handler
+const handleProjectChange = (value) => {
+	selectedProject.value = value === 'null' || value === 'All Projects' ? null : value;
+};
+
+// Format last updated timestamp
+const formatLastUpdated = (timestamp) => {
+	if (!timestamp) return '';
+	return new Date(timestamp).toLocaleTimeString();
+};
+
+// Debounce function to prevent too many rapid updates
+const debounce = (fn, delay) => {
+	let timeoutId;
+	return function (...args) {
+		clearTimeout(timeoutId);
+		timeoutId = setTimeout(() => {
+			fn.apply(this, args);
+		}, delay);
+	};
+};
+
+// Debounced subscription update
+const debouncedUpdateSubscription = debounce(() => {
+	if (ticketsSubscription) {
+		isLoading.value = true;
+		const filter = generateFilter();
+		console.log('Updating subscription with filter:', filter);
+		ticketsSubscription.updateFilter(filter);
+
+		// Add a safety timeout to prevent infinite loading
+		setTimeout(() => {
+			if (isLoading.value) {
+				console.log('Force ending loading state after timeout');
+				isLoading.value = false;
+			}
+		}, 5000);
+	} else {
+		setupTicketsSubscription();
+	}
+}, 300);
+
+// Drag and drop handlers
 const onDragStart = () => {
 	isDragging.value = true;
 };
@@ -782,7 +795,7 @@ const updateTicketStatus = async (columnId, event) => {
 		localTickets.value[originalStatus].push(event.added.element);
 		localTickets.value[columnId] = localTickets.value[columnId].filter((t) => t.id !== ticketId);
 
-		useToast().add({
+		toast.add({
 			title: 'Error updating ticket',
 			description: 'Failed to update ticket status. Please try again.',
 			color: 'red',
@@ -792,35 +805,167 @@ const updateTicketStatus = async (columnId, event) => {
 	}
 };
 
-const handleTicketCreated = () => {
-	refresh();
-};
+// Lifecycle hooks
+onMounted(async () => {
+	console.log('Board: Component mounted');
 
-// Function to test WebSocket connection
-const testWebSocketConnection = async () => {
-	// Check if WebSocket URL is available
-	const config = useRuntimeConfig();
-	const wsUrl = config.public.directusWebsocketUrl || `${config.public.directusUrl.replace(/^http/, 'ws')}/websocket`;
+	// Set up mobile detection
+	cleanupMobileDetection = setupMobileDetection();
 
-	console.log('WebSocket URL:', wsUrl);
+	// Register refresh callback
+	registerRefreshCallback(refreshData);
 
-	// Check if auth token is available
-	const token =
-		localStorage.getItem('directus_token') || localStorage.getItem('auth_token') || config.public.staticToken;
+	// Set up cross-tab sync
+	setupOrgListeners();
+	setupTeamListeners();
 
-	console.log('Auth token available:', !!token);
+	// Initialize filter values from storage
+	filterByAssignedTo.value = assignedToStorage.getValue() || false;
+	filterUnassigned.value = unassignedStorage.getValue() || false;
+	filterDueDate.value = dueDateStorage.getValue() || null;
 
-	// Try to manually connect
-	connect();
+	// Load saved project
+	if (!props.projectId) {
+		const savedProject = projectStorage.getValue();
+		if (savedProject) selectedProject.value = savedProject;
+	}
 
-	// Toast with connection info
-	useToast().add({
-		title: 'WebSocket Test',
-		description: `WebSocket URL: ${wsUrl.substring(0, 30)}... | Token: ${token ? 'Available' : 'Missing'}`,
-		color: 'blue',
-		timeout: 5000,
-	});
-};
+	// Ensure WebSocket URL is set
+	if (!config.public.websocketUrl) {
+		console.error('WebSocket URL is not configured. Make sure to set public.websocketUrl in your Nuxt config.');
+		toast.add({
+			title: 'Configuration Error',
+			description: 'WebSocket connection is not properly configured.',
+			color: 'red',
+		});
+		isLoading.value = false;
+		return;
+	}
+
+	// Allow component to mount fully before loading data
+	await nextTick();
+
+	// Load initial data
+	if (selectedOrg.value) {
+		await fetchProjects();
+
+		try {
+			// Make sure we're in client-side before setting up the subscription
+			if (process.client) {
+				setupTicketsSubscription();
+				// Now call connect (moved from inside setupTicketsSubscription)
+				if (connectFunc) connectFunc();
+			}
+		} catch (error) {
+			console.error('Error setting up subscription:', error);
+			isLoading.value = false;
+		}
+	}
+
+	// Safety timeout to prevent infinite loading state
+	setTimeout(() => {
+		if (isLoading.value) {
+			console.log('Board: Loading timeout reached, forcing loading state to false');
+			isLoading.value = false;
+		}
+	}, 5000);
+});
+
+onUnmounted(() => {
+	// Clean up mobile detection
+	if (cleanupMobileDetection) {
+		cleanupMobileDetection();
+	}
+
+	// Clean up WebSocket connection
+	if (disconnectFunc) {
+		console.log('Board: Cleaning up WebSocket connection');
+		disconnectFunc();
+	}
+});
+
+// Watch organization changes
+watch(
+	() => selectedOrg.value,
+	async (newOrg, oldOrg) => {
+		console.log('Board: Organization changed', { newOrg, oldOrg });
+		if (newOrg !== oldOrg) {
+			// Clear tickets and show loading
+			localTickets.value = columns.reduce((acc, column) => {
+				acc[column.id] = [];
+				return acc;
+			}, {});
+
+			isLoading.value = true;
+
+			// Fetch related data - for both specific org and "All Organizations" mode
+			await fetchProjects();
+
+			// If switching between specific organizations, fetch teams
+			if (newOrg) {
+				await fetchTeams(newOrg);
+			}
+
+			// Reset or create subscription with proper filter
+			if (ticketsSubscription) {
+				const filter = generateFilter();
+				ticketsSubscription.updateFilter(filter);
+			} else {
+				setupTicketsSubscription();
+				if (connectFunc) connectFunc();
+			}
+		}
+	},
+	{ immediate: false },
+);
+
+// Watch team changes
+watch(
+	() => selectedTeam.value,
+	(newTeam, oldTeam) => {
+		if (newTeam !== oldTeam) {
+			debouncedUpdateSubscription();
+		}
+	},
+);
+
+// Watch project changes
+watch(
+	() => selectedProject.value,
+	() => {
+		if (!props.projectId) {
+			projectStorage.setValue(selectedProject.value);
+		}
+		debouncedUpdateSubscription();
+	},
+);
+
+// Watch filter changes
+watch(
+	() => filterByAssignedTo.value,
+	(newVal) => {
+		if (newVal) filterUnassigned.value = false;
+		assignedToStorage.setValue(newVal);
+		debouncedUpdateSubscription();
+	},
+);
+
+watch(
+	() => filterUnassigned.value,
+	(newVal) => {
+		if (newVal) filterByAssignedTo.value = false;
+		unassignedStorage.setValue(newVal);
+		debouncedUpdateSubscription();
+	},
+);
+
+watch(
+	() => filterDueDate.value,
+	(newVal) => {
+		dueDateStorage.setValue(newVal);
+		debouncedUpdateSubscription();
+	},
+);
 </script>
 
 <style scoped>
@@ -870,6 +1015,7 @@ const testWebSocketConnection = async () => {
 		background: linear-gradient(90deg, var(--cyan), var(--green));
 	}
 }
+
 /* Hide scrollbar for Webkit browsers */
 .overflow-hidden-scrollbar::-webkit-scrollbar {
 	display: none;
@@ -877,13 +1023,14 @@ const testWebSocketConnection = async () => {
 
 /* Optional: Hide scrollbar for Firefox */
 .overflow-hidden-scrollbar {
-	scrollbar-width: none; /* Firefox */
+	scrollbar-width: none;
 }
 
 /* Maintain smooth scrolling */
 .overflow-hidden-scrollbar {
 	-ms-overflow-style: none; /* IE and Edge */
 }
+
 @media (max-width: 768px) {
 	.column-transition-enter-active,
 	.column-transition-leave-active {

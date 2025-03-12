@@ -22,7 +22,8 @@
 					:loading="isLoading"
 				/>
 			</UFormGroup>
-			<UFormGroup v-if="form.organization" label="Project">
+			<!-- Only show project dropdown if we have projects -->
+			<UFormGroup v-if="form.organization && projectOptions.length > 1" label="Project">
 				<USelectMenu
 					searchable
 					v-model="form.project"
@@ -52,16 +53,24 @@
 				/>
 			</UFormGroup>
 
-			<UFormGroup :label="isAdminOrManager ? 'Team (optional)' : 'Team'" :required="!isAdminOrManager">
+			<!-- Only show team UI if we have teams -->
+			<UFormGroup
+				v-if="localTeamOptions.length > 0 || isAdminOrManager"
+				:label="isAdminOrManager ? 'Team (optional)' : 'Team'"
+				:required="!isAdminOrManager"
+			>
 				<USelect
 					v-model="localTeamId"
-					:options="teamOptionsWithNone"
+					:options="localTeamOptions"
 					option-attribute="name"
 					value-attribute="id"
 					placeholder="Select team"
 					:loading="teamsLoading"
-					:disabled="localTeamOptions.length <= 1 || isLoading"
+					:disabled="localTeamOptions.length <= 1 || isLoading || noTeamSelected"
 				/>
+				<div v-if="isAdminOrManager" class="mt-2">
+					<UCheckbox v-model="noTeamSelected" label="No Team" @change="handleNoTeamChange" />
+				</div>
 			</UFormGroup>
 		</div>
 
@@ -143,17 +152,11 @@ const { teams, loading: teamsLoading, fetchTeams, setTeam, ADMIN_ROLE_ID, CLIENT
 const localTeamId = ref(null);
 const localTeams = ref([]);
 const localTeamOptions = ref([]);
+const noTeamSelected = ref(false);
 
 const isAdminOrManager = computed(() => {
 	if (!currentUser.value || !currentUser.value.role) return false;
 	return [ADMIN_ROLE_ID, CLIENT_MANAGER_ROLE_ID].includes(currentUser.value.role);
-});
-
-const teamOptionsWithNone = computed(() => {
-	if (isAdminOrManager.value) {
-		return [{ id: null, name: 'None (No Team)' }, ...localTeamOptions.value];
-	}
-	return localTeamOptions.value;
 });
 
 // Local state for form
@@ -176,8 +179,24 @@ const projectOptions = ref([]);
 const loadingProjects = ref(false);
 const mentionedUsers = ref(new Set());
 
+// Handle the "No Team" checkbox changes
+const handleNoTeamChange = (checked) => {
+	if (checked) {
+		// If "No Team" is checked, set localTeamId to null
+		localTeamId.value = null;
+		form.value.team = null;
+	} else if (localTeamOptions.value.length > 0) {
+		// If unchecked and there are teams available, let user select one but don't auto-select
+		localTeamId.value = null;
+		form.value.team = null;
+	}
+};
+
 // Sync localTeamId with form.team
 watch(localTeamId, (newTeamId) => {
+	if (newTeamId !== null) {
+		noTeamSelected.value = false;
+	}
 	form.value.team = newTeamId;
 	emit('change', { type: 'team-changed', teamId: newTeamId });
 });
@@ -233,7 +252,7 @@ const loadTeamsForOrg = async (orgId) => {
 
 	try {
 		// First fetch teams using the composable
-		await fetchTeams(orgId);
+		await fetchTeams(orgId, { disableTeamRestoration: true });
 
 		// Copy the teams to our local state
 		localTeams.value = [...teams.value];
@@ -294,18 +313,11 @@ const handleOrgChange = async (orgId) => {
 	// Reset both local and form team state
 	localTeamId.value = null;
 	form.value.team = null;
+	noTeamSelected.value = isAdminOrManager.value; // Set "No Team" by default for admins/managers
 
 	// Load data for the new organization
 	await loadTeamsForOrg(orgId);
 	await fetchProjects(orgId);
-
-	// Set default team if available
-	if (localTeams.value.length > 0) {
-		// Find default team or use first team
-		const defaultTeam = localTeams.value.find((team) => team.is_default) || localTeams.value[0];
-		localTeamId.value = defaultTeam.id;
-		// Don't update global state here
-	}
 };
 
 // Handler for user removal
@@ -343,7 +355,7 @@ const handleShare = (method) => {
 
 // Submit form - sync global team state before submitting
 const handleSubmit = () => {
-	// Check if the team field is set
+	// Check if the team field is set (only required for non-admin/manager users)
 	if (!isAdminOrManager.value && !form.value.team) {
 		toast.add({
 			title: 'Error',
@@ -398,13 +410,14 @@ watch(
 			category: newTicket.category || '',
 			project: newTicket.project?.id || null,
 			organization: newTicket.organization?.id || null,
-			team: ticketTeamId,
+			team: ticketTeamId, // Use original team value without defaulting
 			assigned_to: newTicket.assigned_to?.map((a) => a.directus_users_id.id) || [],
 			due_date: newTicket.due_date || new Date().toISOString(),
 		};
 
-		// Update local team state
+		// Update local team state and no team checkbox
 		localTeamId.value = ticketTeamId;
+		noTeamSelected.value = ticketTeamId === null && isAdminOrManager.value;
 
 		// Reset dirty state
 		initializeFormState();
@@ -427,13 +440,13 @@ onMounted(async () => {
 		// Load teams for the organization
 		await loadTeamsForOrg(props.ticket.organization.id);
 
-		// Set local team ID from ticket
+		// Set local team ID from ticket - don't set a default if null
 		if (props.ticket.team?.id) {
 			localTeamId.value = props.ticket.team.id;
-		} else if (localTeams.value.length > 0) {
-			// Only set default if no team is specified
-			const defaultTeam = localTeams.value.find((team) => team.is_default) || localTeams.value[0];
-			localTeamId.value = defaultTeam.id;
+			noTeamSelected.value = false;
+		} else {
+			// If no team is selected, set noTeamSelected to true for admins/managers
+			noTeamSelected.value = isAdminOrManager.value;
 		}
 
 		await fetchProjects(props.ticket.organization.id);
