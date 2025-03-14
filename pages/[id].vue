@@ -53,7 +53,7 @@ const columns = [
 			Back to tickets
 		</nuxt-link>
 		<div class="w-full my-4 px-4 2xl:px-0">
-			<TicketsDetailsNew :element="ticket" :columns="columns" />
+			<TicketsDetailsFuture :element="ticket" :columns="columns" />
 		</div>
 	</div>
 </template>

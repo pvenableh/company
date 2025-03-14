@@ -16,6 +16,11 @@
   --darkGrey: #454545;
   --lightGrey: #cccccc;
   --yellowGradient: linear-gradient(100deg,#fffa96,#fffa96 100%,#fffab4);
+  --pending: #00bfff;
+  --scheduled: #05d1ba;
+  --in-progress: #0ae470;
+  --completed: #0ef62d;
+
   --small: 640px;
   --medium: 768px;
   --large: 1024px;

@@ -409,7 +409,7 @@ onUnmounted(() => {
 				</UAlert>
 			</div>
 		</transition>
-		<div class="transform scale-xl:scale-75 absolute -top-[80px] xl:-top-[120px] -right-4 xl:-right-20">
+		<div class="transform scale-50 xl:scale-75 absolute -top-[90px] xl:-top-[120px] -right-10 xl:-right-20">
 			<TicketsProgressCircle :progressPercentage="progress" />
 		</div>
 

@@ -1,6 +1,5 @@
 <template>
-	<div class="flex flex-row items-center justify-between space-x-2">
-		<Share class="ml-4" :url="shareUrl" :title="shareTitle" :description="shareDescription" @share="handleShare" />
+	<div class="flex flex-row items-center justify-end space-x-2">
 		<div class="space-x-2">
 			<UButton variant="soft" color="red" :loading="isLoading" @click="confirmDelete" :disabled="!hasDeleteAccess">
 				Delete
@@ -53,10 +52,6 @@ const emit = defineEmits(['delete-click', 'share']);
 const { user: currentUser } = useDirectusAuth();
 const config = useRuntimeConfig();
 const adminRole = config.public.adminRole;
-
-const shareUrl = computed(() => `https://huestudios.company/tickets/${props.ticketId}`);
-const shareTitle = computed(() => `Hue Ticket #${props.ticketId}`);
-const shareDescription = computed(() => props.ticketTitle);
 
 const hasDeleteAccess = computed(() => {
 	const isCreator = currentUser.value.id === props.creatorId;

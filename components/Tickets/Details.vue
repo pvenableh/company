@@ -1,22 +1,32 @@
 <template>
 	<div class="w-full mx-auto">
 		<LayoutUserPresenceIndicator v-if="currentUser" />
+
 		<TicketsStatusTimeline :currentStatus="formRef?.form?.status" class="mb-4" />
 		<div class="flex items-start justify-between flex-col lg:flex-row flex-wrap">
-			<!-- Main Form Section -->
-			<TicketsDetailsForm
-				ref="formRef"
-				:ticket="element"
-				:columns="columns"
-				:is-loading="isLoading"
-				@update="updateTicket"
-				@delete-click="showDeleteModal = true"
-				@comment-count-update="handleCommentCountUpdate"
-				@share="handleShare"
-				@change="handleFormChange"
-				@dirty-state-change="handleDirtyStateChange"
-				class="w-full lg:w-1/2"
-			/>
+			<div class="w-full lg:w-1/2">
+				<!-- Main Form Section -->
+				<TicketsDetailsForm
+					ref="formRef"
+					:ticket="element"
+					:columns="columns"
+					:is-loading="isLoading"
+					@update="updateTicket"
+					@delete-click="showDeleteModal = true"
+					@comment-count-update="handleCommentCountUpdate"
+					@share="handleShare"
+					@change="handleFormChange"
+					@dirty-state-change="handleDirtyStateChange"
+				/>
+				<!-- Comments -->
+
+				<CommentsSystem
+					:item-id="element.id"
+					collection="tickets"
+					class="w-full lg:pb-20"
+					@update:commentCount="handleCommentCountUpdate"
+				/>
+			</div>
 
 			<!-- Tasks Section -->
 			<div

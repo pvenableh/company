@@ -1,104 +1,107 @@
 <template>
-	<form @submit.prevent="handleSubmit" class="w-full space-y-6 relative">
-		<!-- Ticket Header -->
-		<TicketsDetailsHeader :ticket="ticket" />
-
-		<!-- Priority Slider -->
-		<div class="grid grid-cols-2 gap-4">
-			<TicketsDetailsPriority v-model="form.priority" />
-			<UFormGroup label="Status">
-				<USelect
-					v-model="form.status"
-					:options="columns"
-					option-attribute="name"
-					value-attribute="id"
-					:loading="isLoading"
-				/>
-			</UFormGroup>
-		</div>
-		<!-- Title -->
-		<UFormGroup label="Title" required>
-			<UInput v-model="form.title" placeholder="Enter ticket title" :loading="isLoading" />
-		</UFormGroup>
-
-		<!-- Status and Project Grid -->
-		<div class="grid grid-cols-2 gap-4">
-			<UFormGroup v-if="hasMultipleOrgs" label="Organization">
-				<USelectMenu
-					searchable
-					v-model="form.organization"
-					:options="organizationOptions"
-					option-attribute="name"
-					value-attribute="id"
-					placeholder="Select Organization"
-					class="relative"
-					@update:modelValue="handleOrgChange"
-					:disabled="isLoading"
-				/>
-			</UFormGroup>
-
-			<!-- Only show team UI if we have teams -->
-			<UFormGroup
-				v-if="localTeamOptions.length > 0"
-				:label="isAdminOrManager ? 'Team (optional)' : 'Team'"
-				:required="!isAdminOrManager"
+	<form
+		@submit.prevent="handleSubmit"
+		class="w-full space-y-6 lg:space-y-0 relative flex flex-col lg:flex-row flex-wrap items-start justify-between"
+	>
+		<transition name="fade">
+			<a
+				v-if="isDirty"
+				@click.prevent="scrollToActions"
+				class="text-red-500 absolute -top-4 right-0 uppercase text-[9px] teacking-wide"
 			>
-				<USelect
-					v-model="localTeamId"
-					:options="localTeamOptions"
-					option-attribute="name"
-					value-attribute="id"
-					placeholder="Select team"
-					:loading="teamsLoading"
-					:disabled="localTeamOptions.length <= 1 || isLoading"
-				/>
-			</UFormGroup>
-			<!-- Only show project dropdown if we have projects -->
-			<UFormGroup v-if="form.organization && projectOptions.length > 1" label="Project">
-				<USelectMenu
-					searchable
-					v-model="form.project"
-					:options="projectOptions"
-					option-attribute="title"
-					value-attribute="id"
-					placeholder="Select project"
-					:loading="loadingProjects"
-					class="relative"
+				You need to save your edits.
+			</a>
+		</transition>
+		<div class="w-full lg:w-1/2 lg:pr-4 lg:space-y-2">
+			<div class="w-full max-w-96 pb-1">
+				<TicketsDetailsPriority v-model="form.priority" animationDuration="0.2" />
+			</div>
+			<div class="w-full pb-1">
+				<UFormGroup label="Title" required>
+					<UInput v-model="form.title" placeholder="Enter ticket title" :loading="isLoading" />
+				</UFormGroup>
+			</div>
+			<!-- Status and Project Grid -->
+			<div class="grid grid-cols-2 xl:grid-cols-3 gap-4">
+				<UFormGroup v-if="hasMultipleOrgs" label="Organization">
+					<USelectMenu
+						searchable
+						v-model="form.organization"
+						:options="organizationOptions"
+						option-attribute="name"
+						value-attribute="id"
+						placeholder="Select Organization"
+						class="relative"
+						@update:modelValue="handleOrgChange"
+						:disabled="isLoading"
+					/>
+				</UFormGroup>
+
+				<!-- Only show team UI if we have teams -->
+				<UFormGroup
+					v-if="(localTeamOptions.length > 0 && !isAdminOrManager) || (localTeamOptions.length > 1 && isAdminOrManager)"
+					:label="isAdminOrManager ? 'Team (optional)' : 'Team'"
+					:required="!isAdminOrManager"
+				>
+					<USelect
+						v-model="localTeamId"
+						:options="localTeamOptions"
+						option-attribute="name"
+						value-attribute="id"
+						placeholder="Select team"
+						:loading="teamsLoading"
+						:disabled="localTeamOptions.length <= 1 || isLoading"
+					/>
+				</UFormGroup>
+				<!-- Only show project dropdown if we have projects -->
+				<UFormGroup v-if="form.organization && projectOptions.length > 1" label="Project">
+					<USelectMenu
+						searchable
+						v-model="form.project"
+						:options="projectOptions"
+						option-attribute="title"
+						value-attribute="id"
+						placeholder="Select project"
+						:loading="loadingProjects"
+						class="relative"
+					/>
+				</UFormGroup>
+			</div>
+
+			<!-- Due Date & Time -->
+			<TicketsDetailsDateTime v-model="form.due_date" />
+
+			<!-- User Assignment -->
+			<TicketsDetailsAssignment
+				:organization-id="form.organization"
+				:team-id="localTeamId"
+				v-model:assigned-users="form.assigned_to"
+				@user-removed="handleUserRemoved"
+				@user-added="handleUserAdded"
+			/>
+		</div>
+		<div class="w-full lg:w-1/2 lg:pl-4">
+			<!-- Description -->
+			<UFormGroup label="Description" required>
+				<FormTiptap
+					v-model="form.description"
+					placeholder="Enter ticket description"
+					@mention="handleMention"
+					:editor-props="{
+						content: form.description,
+					}"
+					:organization-id="form.organization"
+					:context="{
+						collection: 'tickets',
+						itemId: ticket.id,
+					}"
 				/>
 			</UFormGroup>
 		</div>
-
-		<!-- Due Date & Time -->
-		<TicketsDetailsDateTime v-model="form.due_date" />
-
-		<!-- User Assignment -->
-		<TicketsDetailsAssignment
-			:organization-id="form.organization"
-			:team-id="localTeamId"
-			v-model:assigned-users="form.assigned_to"
-			@user-removed="handleUserRemoved"
-			@user-added="handleUserAdded"
-		/>
-
-		<!-- Description -->
-		<UFormGroup label="Description" required>
-			<FormTiptap
-				v-model="form.description"
-				placeholder="Enter ticket description"
-				@mention="handleMention"
-				:editor-props="{
-					content: form.description,
-				}"
-				:organization-id="form.organization"
-				:context="{
-					collection: 'tickets',
-					itemId: ticket.id,
-				}"
-			/>
-		</UFormGroup>
 
 		<!-- Action Buttons -->
 		<TicketsDetailsActions
+			id="actions"
 			:ticket-id="ticket.id"
 			:ticket-title="form.title"
 			:creator-id="ticket.user_created?.id"
@@ -107,12 +110,8 @@
 			:is-dirty="isDirty"
 			@delete-click="handleDeleteClick"
 			@share="handleShare"
+			class="w-full"
 		/>
-
-		<!-- Comments -->
-		<div class="w-full lg:pb-20">
-			<CommentsSystem :item-id="ticket.id" collection="tickets" @update:commentCount="handleCommentCountUpdate" />
-		</div>
 	</form>
 </template>
 
@@ -172,6 +171,16 @@ const isDirty = ref(false);
 const projectOptions = ref([]);
 const loadingProjects = ref(false);
 const mentionedUsers = ref(new Set());
+
+const scrollToActions = () => {
+	const actionsElement = document.getElementById('actions');
+	if (actionsElement) {
+		actionsElement.scrollIntoView({
+			behavior: 'smooth',
+			block: 'center',
+		});
+	}
+};
 
 // Handle the "No Team" checkbox changes
 const handleNoTeamChange = (checked) => {

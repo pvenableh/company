@@ -19,7 +19,7 @@
 			</div>
 		</transition>
 
-		<div class="w-full flex items-center justify-between gap-2 text-sm relative">
+		<div class="w-full flex items-center justify-between gap-2 text-xs relative">
 			<h4 class="cursor-pointer uppercase block font-medium text-gray-700 dark:text-gray-200 tracking-wide">
 				<transition name="fade" mode="out-in">
 					<span v-if="isLoading">Loading</span>
@@ -27,39 +27,45 @@
 				</transition>
 				{{ commentsCount === 1 ? 'Comment' : 'Comments' }}
 			</h4>
-			<USelect
-				v-model="sortOrder"
-				:options="[
-					{ label: 'NEWEST FIRST', value: 'newest' },
-					{ label: 'OLDEST FIRST', value: 'oldest' },
-				]"
-				size="xs"
-				color="white"
-				class="w-22 text-xs border-none"
-				variant="outline"
-				:ui="{
-					rounded: 'rounded-sm',
-					variant: {
-						outline: 'border-none ring-0',
-					},
-					color: {
-						white: {
-							outline: 'border-none ring-0 border-b border-b-gray-300 ring-b-gray-300 text-[10px]',
-						},
-					},
-				}"
-			/>
+			<h5
+				class="cursor-pointer uppercase tracking-wide text-[9px] inline-block"
+				@click="toggleComment = !toggleComment"
+			>
+				{{ !toggleComment ? 'Add Comment' : 'Hide' }}
+			</h5>
 		</div>
 
 		<div class="mt-2 space-y-4">
 			<CommentsComment
-				v-if="user"
+				v-if="user && toggleComment"
 				:loading="isSubmitting"
 				:refresh="refreshData"
 				@submit="(content) => handleCommentSubmit(content)"
 				:organization-id="organizationId"
 			/>
-
+			<div class="w-full flex items-start justify-start">
+				<USelect
+					v-model="sortOrder"
+					:options="[
+						{ label: 'NEWEST FIRST', value: 'newest' },
+						{ label: 'OLDEST FIRST', value: 'oldest' },
+					]"
+					color="white"
+					size="xs"
+					class="w-22 relative"
+					:ui="{
+						rounded: 'rounded-sm',
+						variant: {
+							outline: ' ring-0',
+						},
+						color: {
+							white: {
+								outline: 'py-0.5 ring-0 border border-gray-300  text-[9px]',
+							},
+						},
+					}"
+				/>
+			</div>
 			<TransitionGroup name="comments" tag="div" class="space-y-4">
 				<CommentsThread
 					v-for="comment in sortedComments"
@@ -112,6 +118,8 @@ const isLoading = ref(true);
 const isSubmitting = ref(false);
 const isConnected = ref(true);
 const error = ref(null);
+
+const toggleComment = ref(false);
 
 // Generate collection-specific field name for relation
 const collectionIdField = `${props.collection}_id`;

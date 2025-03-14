@@ -1,5 +1,5 @@
 <template>
-	<div class="grid grid-cols-2 gap-4">
+	<div class="grid grid-cols-1">
 		<!-- User Selection Input -->
 		<UFormGroup label="Assign To">
 			<div v-if="loadingUsers" class="flex justify-center my-2">
@@ -39,7 +39,7 @@
 		</UFormGroup>
 
 		<!-- Selected Users List -->
-		<div v-if="assignedUsers.length" class="flex flex-wrap flex-row gap-2 mt-6">
+		<div v-if="assignedUsers.length" class="flex flex-wrap flex-row gap-2 mt-2">
 			<!-- <UBadge
 				v-for="userId in assignedUsers"
 				:key="userId"
@@ -117,8 +117,8 @@ const props = defineProps({
 		required: true,
 	},
 	teamId: {
-		type: String,
-		required: true,
+		type: [String, null], // Allow both String and null values
+		default: null,
 	},
 	assignedUsers: {
 		type: Array,

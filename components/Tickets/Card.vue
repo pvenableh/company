@@ -214,7 +214,7 @@ const getPriorityColor = (priority) => {
 	const colors = {
 		low: 'gray',
 		medium: 'blue',
-		high: 'yellow',
+		high: 'red',
 		urgent: 'red',
 	};
 	return colors[priority] || 'gray';

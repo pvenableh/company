@@ -34,11 +34,11 @@
 const props = defineProps({
 	url: {
 		type: String,
-		default: () => (process.client ? window.location.href : ''),
+		default: () => (import.meta.client ? window.location.href : ''),
 	},
 	title: {
 		type: String,
-		default: () => (process.client ? document.title : ''),
+		default: () => (import.meta.client ? document.title : ''),
 	},
 	description: {
 		type: String,
@@ -74,7 +74,7 @@ const toast = useToast();
 
 // Check if Web Share API is available
 const canNativeShare = computed(() => {
-	return process.client && navigator.share;
+	return import.meta.client && navigator.share;
 });
 
 const shareOptions = computed(() => [
