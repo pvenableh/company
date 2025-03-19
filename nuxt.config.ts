@@ -40,10 +40,17 @@ export default defineNuxtConfig({
 	},
 
 	modules: [
-		'@formkit/nuxt',
 		'@nuxt/devtools',
 		'@nuxt/icon',
-		'@nuxt/image',
+		[
+			'@nuxt/image',
+			{
+				provider: 'directus',
+				directus: {
+					baseURL: `${process.env.DIRECTUS_URL}/assets/`,
+				},
+			},
+		],
 		[
 			'@nuxt/ui',
 			{
@@ -65,67 +72,56 @@ export default defineNuxtConfig({
 				},
 			},
 		],
-		'@nuxtjs/color-mode',
+		[
+			'@nuxtjs/color-mode',
+			{
+				preference: 'system',
+				classSuffix: '',
+			},
+		],
 		'@vueuse/motion/nuxt',
 		'@vueuse/nuxt',
-		'nuxt-directus-next',
+		[
+			'nuxt-directus-next',
+			{
+				url: 'https://admin.huestudios.company',
+				// staticToken: process.env.DIRECTUS_SERVER_TOKEN,
+				authConfig: {
+					// mode: 'cookie',
+					cookieSecure: process.env.NODE_ENV === 'production',
+					cookieSameSite: 'lax',
+					refreshTokenCookieName: 'directus_refresh_token',
+					authTokenCookieName: 'directus_auth_token',
+				},
+
+				moduleConfig: {
+					// Enable auto-importing of the Directus composables
+					autoImport: true,
+					// Enable basic auto-refresh functionality
+					autoRefresh: {
+						enableMiddleware: true, // Automatically use middleware to refresh the token
+						global: true, // Apply auto-refresh globally
+						middlewareName: 'auth', // Optional: Custom name for the middleware
+						redirectTo: '/auth/signin', // Optional: Where to redirect if refresh fails
+					},
+					devtools: true,
+					readMeQuery: {
+						fields: [
+							'*,organizations.organizations_id.id,organizations.organizations_id.name,organizations.organizations_id.logo,organizations.organizations_id.tickets,organizations.organizations_id.projects',
+						],
+						updateState: true,
+					},
+				},
+			},
+		],
 		'nuxt-gtag',
 		'@samk-dev/nuxt-vcalendar',
 	],
-
-	// plugins: [],
-
-	// gtag: {
-	// 	id: 'G-Y5YQ3FM1FL',
-	// },
-
-	directus: {
-		url: 'https://admin.huestudios.company',
-		// staticToken: process.env.DIRECTUS_SERVER_TOKEN,
-		authConfig: {
-			// mode: 'cookie',
-			cookieSecure: process.env.NODE_ENV === 'production',
-			cookieSameSite: 'lax',
-			refreshTokenCookieName: 'directus_refresh_token',
-			authTokenCookieName: 'directus_auth_token',
-		},
-
-		moduleConfig: {
-			// Enable auto-importing of the Directus composables
-			autoImport: true,
-			// Enable basic auto-refresh functionality
-			autoRefresh: {
-				enableMiddleware: true, // Automatically use middleware to refresh the token
-				global: true, // Apply auto-refresh globally
-				middlewareName: 'auth', // Optional: Custom name for the middleware
-				redirectTo: '/auth/signin', // Optional: Where to redirect if refresh fails
-			},
-			devtools: true,
-			readMeQuery: {
-				fields: [
-					'*,organizations.organizations_id.id,organizations.organizations_id.name,organizations.organizations_id.logo,organizations.organizations_id.tickets,organizations.organizations_id.projects',
-				],
-				updateState: true,
-			},
-		},
-	},
 
 	devtools: { enabled: true },
 
 	debug: true,
 	logLevel: 'verbose',
-
-	colorMode: {
-		preference: 'system',
-		classSuffix: '',
-	},
-
-	image: {
-		provider: 'directus',
-		directus: {
-			baseURL: `${process.env.DIRECTUS_URL}/assets/`,
-		},
-	},
 
 	postcss: {
 		plugins: {
