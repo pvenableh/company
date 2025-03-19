@@ -1,3 +1,4 @@
+<!-- Template section remains largely the same, but we'll update the revision changes display -->
 <template>
 	<div class="ticket-activity">
 		<h4 class="w-full uppercase block font-medium text-gray-700 dark:text-gray-200 tracking-wider mb-4">Activity</h4>
@@ -68,12 +69,17 @@
 						<!-- Revision changes display -->
 						<div
 							v-if="
-								item.type === 'revision' && item.action === 'update' && showChangeDetails && item.updatedFields?.length
+								item.type === 'revision' &&
+								item.action === 'update' &&
+								showChangeDetails &&
+								item.updatedFields &&
+								Array.isArray(item.updatedFields) &&
+								hasChanges(item.updatedFields)
 							"
 							class="mt-2"
 						>
-							<div class="border-l-2 border-gray-200 dark:border-gray-700 pl-3 py-1">
-								<div class="text-xs text-gray-700 dark:text-gray-300 font-medium mb-2">Changed:</div>
+							<div class="border-l-2 border-green-200 dark:border-green-700 pl-3 py-1">
+								<div class="text-xs text-gray-700 dark:text-gray-300 font-medium mb-2">Changed to:</div>
 
 								<div class="space-y-2">
 									<div
@@ -85,39 +91,43 @@
 											{{ formatFieldName(field.name) }}
 										</div>
 
-										<!-- Team changes (special handling) -->
-										<div v-if="field.name === 'team'" class="flex flex-col text-xs">
-											<div class="text-red-500 dark:text-red-400 line-through flex items-center">
-												<UIcon name="i-heroicons-minus-circle" class="h-3 w-3 mr-1" />
-												<span>{{ getTeamName(field.oldValue) }}</span>
-											</div>
+										<!-- Team changes -->
+										<div v-if="field.name === 'team'" class="text-sm">
 											<div class="text-green-500 dark:text-green-400 flex items-center">
-												<UIcon name="i-heroicons-plus-circle" class="h-3 w-3 mr-1" />
-												<span>{{ getTeamName(field.newValue) }}</span>
+												<UIcon name="i-heroicons-arrow-right" class="h-3 w-3 mr-1" />
+												<span class="font-medium">{{ getTeamName(field.newValue) }}</span>
 											</div>
 										</div>
 
-										<!-- Status changes (special handling) -->
-										<div v-else-if="field.name === 'status'" class="flex flex-col text-xs">
-											<div class="text-red-500 dark:text-red-400 line-through flex items-center">
-												<UIcon name="i-heroicons-minus-circle" class="h-3 w-3 mr-1" />
-												<span>{{ field.oldValue }}</span>
-											</div>
+										<!-- Status changes -->
+										<div v-else-if="field.name === 'status'" class="text-sm">
 											<div class="text-green-500 dark:text-green-400 flex items-center">
-												<UIcon name="i-heroicons-plus-circle" class="h-3 w-3 mr-1" />
-												<span>{{ field.newValue }}</span>
+												<UIcon name="i-heroicons-arrow-right" class="h-3 w-3 mr-1" />
+												<span class="font-medium">{{ field.newValue || 'None' }}</span>
+											</div>
+										</div>
+
+										<!-- Due date changes -->
+										<div v-else-if="field.name === 'due_date'" class="text-sm">
+											<div class="text-green-500 dark:text-green-400 flex items-center">
+												<UIcon name="i-heroicons-arrow-right" class="h-3 w-3 mr-1" />
+												<span class="font-medium">{{ formatDate(field.newValue, true) }}</span>
+											</div>
+										</div>
+
+										<!-- Description changes -->
+										<div v-else-if="field.name === 'description'" class="text-sm">
+											<div class="text-green-500 dark:text-green-400 flex items-start">
+												<UIcon name="i-heroicons-arrow-right" class="h-3 w-3 mr-1 mt-1 flex-shrink-0" />
+												<div class="description-preview" v-html="sanitizeHtml(field.newValue)"></div>
 											</div>
 										</div>
 
 										<!-- Regular field changes -->
-										<div v-else class="flex flex-col text-xs">
-											<div class="text-red-500 dark:text-red-400 line-through flex items-center">
-												<UIcon name="i-heroicons-minus-circle" class="h-3 w-3 mr-1" />
-												<span>{{ formatFieldValue(field.oldValue) }}</span>
-											</div>
+										<div v-else class="text-sm">
 											<div class="text-green-500 dark:text-green-400 flex items-center">
-												<UIcon name="i-heroicons-plus-circle" class="h-3 w-3 mr-1" />
-												<span>{{ formatFieldValue(field.newValue) }}</span>
+												<UIcon name="i-heroicons-arrow-right" class="h-3 w-3 mr-1" />
+												<span class="font-medium">{{ formatFieldValue(field.newValue) }}</span>
 											</div>
 										</div>
 									</div>
@@ -125,40 +135,48 @@
 							</div>
 						</div>
 
-						<!-- For create actions, we want to show a summary of initial values -->
+						<!-- For create actions, show a summary of initial values -->
 						<div
-							v-if="item.type === 'revision' && item.action === 'create'"
+							v-if="item.type === 'revision' && item.action === 'create' && item.initialDetails?.length"
 							class="mt-2 border-l-2 border-green-200 dark:border-green-700 pl-3 py-1"
 						>
 							<div class="text-xs text-gray-700 dark:text-gray-300 font-medium mb-2">Initial details:</div>
 							<div class="space-y-2">
-								<div v-if="item.initialDetails?.length > 0">
-									<div
-										v-for="field in item.initialDetails"
-										:key="field.name"
-										class="bg-gray-50 dark:bg-gray-800/50 rounded p-2 mb-1"
-									>
-										<div class="font-medium text-xs text-gray-700 dark:text-gray-300 mb-1">
-											{{ formatFieldName(field.name) }}
-										</div>
-										<div class="text-green-500 dark:text-green-400 text-xs flex items-center">
-											<UIcon name="i-heroicons-plus-circle" class="h-3 w-3 mr-1" />
-											<span>{{ formatFieldValue(field.value) }}</span>
-										</div>
+								<div
+									v-for="field in item.initialDetails"
+									:key="field.name"
+									class="bg-gray-50 dark:bg-gray-800/50 rounded p-2 mb-1"
+								>
+									<div class="font-medium text-xs text-gray-700 dark:text-gray-300 mb-1">
+										{{ formatFieldName(field.name) }}
+									</div>
+									<div class="text-green-500 dark:text-green-400 text-xs flex items-center">
+										<UIcon name="i-heroicons-plus-circle" class="h-3 w-3 mr-1" />
+										<!-- Special handling for description -->
+										<div v-if="field.name === 'description'" v-html="sanitizeHtml(field.value)"></div>
+										<span v-else>{{ formatFieldValue(field.value) }}</span>
 									</div>
 								</div>
-								<div v-else class="text-xs text-gray-500 italic">No initial details available</div>
 							</div>
 						</div>
 					</div>
 				</div>
 			</div>
 
-			<!-- Load more button -->
-			<div v-if="hasMore" class="w-full flex justify-center mt-4">
-				<UButton size="sm" variant="ghost" @click="loadMore" :loading="loadingMore" :disabled="loadingMore">
-					Load More Activity
+			// If using debug mode, add debugging info at the bottom
+			<div
+				v-if="props.debugMode"
+				class="mt-6 p-4 border border-red-300 bg-red-50 dark:bg-red-900/10 dark:border-red-900 rounded-lg"
+			>
+				<h5 class="text-red-600 dark:text-red-400 font-bold mb-2">Debug Mode Enabled</h5>
+				<p class="text-xs mb-2">Debug information is being logged to the browser console.</p>
+				<UButton size="xs" color="red" @click="toggleDebugInfo">
+					{{ showDebugInfo ? 'Hide Debug Info' : 'Show Debug Info' }}
 				</UButton>
+
+				<pre v-if="showDebugInfo" class="mt-4 text-xs bg-black text-green-400 p-4 rounded overflow-auto max-h-96">{{
+					debugInfo
+				}}</pre>
 			</div>
 		</div>
 	</div>
@@ -167,6 +185,7 @@
 <script setup>
 import { formatDistanceToNow } from 'date-fns';
 
+// Add a props option to enable debug mode directly in the template
 const props = defineProps({
 	ticketId: {
 		type: String,
@@ -197,6 +216,26 @@ const { readItems } = useDirectusItems();
 const { readRevisions } = useDirectusRevisions();
 const config = useRuntimeConfig();
 
+// Debug info display state
+const showDebugInfo = ref(false);
+const debugInfo = ref('No debug data collected yet');
+
+// Toggle debug info display
+const toggleDebugInfo = () => {
+	showDebugInfo.value = !showDebugInfo.value;
+
+	// If showing debug info, collect the current state
+	if (showDebugInfo.value) {
+		let debugData = {
+			activityItems: activityItems.value,
+			ticketId: props.ticketId,
+			lastFetched: new Date().toISOString(),
+		};
+
+		debugInfo.value = JSON.stringify(debugData, null, 2);
+	}
+};
+
 // Computed values
 const baseDirectusUrl = computed(() => config.public.directusUrl || 'https://admin.huestudios.company');
 
@@ -224,9 +263,91 @@ const getTeamName = (teamId) => {
 	return team ? team.name : `Team ${teamId}`;
 };
 
-// Enhanced version to detect actual changes in revisions
+// Function to sanitize HTML content safely
+const sanitizeHtml = (htmlContent) => {
+	if (!htmlContent) return '';
+
+	try {
+		// Create a new DOMParser to safely parse the HTML
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(htmlContent, 'text/html');
+
+		// Remove any potentially dangerous elements
+		const dangerousTags = ['script', 'iframe', 'object', 'embed'];
+		dangerousTags.forEach((tag) => {
+			const elements = doc.querySelectorAll(tag);
+			for (const el of elements) {
+				el.parentNode.removeChild(el);
+			}
+		});
+
+		// Extract the safe HTML from the parsed document
+		const safeHtml = doc.body.innerHTML;
+		return truncateHtml(safeHtml);
+	} catch (e) {
+		console.error('Error sanitizing HTML:', e);
+		// If there's an error, return a plain text version or empty string
+		return truncateHtml(htmlContent) || '';
+	}
+};
+
+// Function to truncate HTML content safely
+const truncateHtml = (htmlContent, maxLength = 200) => {
+	if (!htmlContent) return '';
+
+	try {
+		// Create a temporary div to work with the HTML
+		const tempDiv = document.createElement('div');
+		tempDiv.innerHTML = htmlContent;
+		const text = tempDiv.textContent || tempDiv.innerText || '';
+
+		// If it's already short, just return the original HTML
+		if (text.length <= maxLength) {
+			return htmlContent;
+		}
+
+		// Otherwise create a truncated version with ellipsis
+		const truncated = text.substring(0, maxLength) + '...';
+
+		// Return a sanitized version of the truncated text
+		return `<span class="truncated-content">${truncated}</span>`;
+	} catch (e) {
+		console.error('Error truncating HTML:', e);
+		return htmlContent.substring(0, maxLength) + '...';
+	}
+};
+
+// Enhanced debug mode - logs detailed information about revision processing
+const debugLogRevision = (revision, title) => {
+	if (!props.debugMode) return;
+
+	try {
+		console.group(`DEBUG: ${title || 'Revision Processing'}`);
+		console.log('Revision ID:', revision.id);
+		console.log('Action:', revision.activity?.action);
+		console.log('Timestamp:', revision.activity?.timestamp);
+
+		// Parse and prettify the data objects for better reading
+		const fullData = typeof revision.data === 'string' ? JSON.parse(revision.data) : revision.data;
+		const deltaData = typeof revision.delta === 'string' ? JSON.parse(revision.delta) : revision.delta;
+
+		console.log('Full Data:', fullData);
+		console.log('Delta Data:', deltaData);
+
+		// Extract just the keys that are present in the delta object
+		const deltaKeys = Object.keys(deltaData || {});
+		console.log('Delta Keys (changed fields):', deltaKeys);
+
+		console.groupEnd();
+	} catch (error) {
+		console.error('Error in debug logging:', error);
+		console.groupEnd();
+	}
+};
+
+// Completely rewritten to focus exclusively on delta changes
 const processRevisionChanges = (dataObj, deltaObj) => {
-	// Fields we want to track (expand this list as needed)
+	// Fields we want to track if they changed
 	const interestingFields = [
 		'status',
 		'title',
@@ -236,86 +357,155 @@ const processRevisionChanges = (dataObj, deltaObj) => {
 		'description',
 		'due_date',
 		'organization',
+		'assigned_to',
 	];
 
 	const changes = [];
 
-	// For each key present in both objects, check if they're different
-	for (const key of interestingFields) {
-		// Only process if both objects have this field
-		if (!(key in dataObj) || !(key in deltaObj)) continue;
+	try {
+		// Parse objects if they're strings
+		const fullData = typeof dataObj === 'string' ? JSON.parse(dataObj) : dataObj || {};
+		const deltaData = typeof deltaObj === 'string' ? JSON.parse(deltaObj) : deltaObj || {};
 
-		// Special handling for team field which is often an object in one version and ID in another
-		if (key === 'team') {
-			const oldId = typeof dataObj[key] === 'object' ? dataObj[key]?.id : dataObj[key];
-			const newId = typeof deltaObj[key] === 'object' ? deltaObj[key]?.id : deltaObj[key];
+		if (props.debugMode) {
+			console.group('DEBUG: Processing Revision Changes');
+			console.log('Full Data Object:', fullData);
+			console.log('Delta Data Object:', deltaData);
+		}
 
-			if (oldId !== newId) {
-				changes.push({
-					name: key,
-					oldValue: oldId,
-					newValue: newId,
-				});
+		// Get only fields that exist in the delta (these are the ones that changed)
+		const changedKeys = Object.keys(deltaData);
+
+		// Log what keys actually changed
+		if (props.debugMode) {
+			console.log('All Changed Keys:', changedKeys);
+		}
+
+		// Keep only the fields we're interested in tracking
+		const relevantChangedKeys = changedKeys.filter((key) => interestingFields.includes(key));
+
+		if (props.debugMode) {
+			console.log('Relevant Changed Keys:', relevantChangedKeys);
+		}
+
+		// Process each changed field we care about
+		for (const key of relevantChangedKeys) {
+			// Get the new value from the delta
+			const newValue = deltaData[key];
+
+			if (props.debugMode) {
+				console.log(`Processing field "${key}":`, newValue);
 			}
-			continue;
-		}
 
-		// Special handling for deep objects like project
-		if (key === 'project' || key === 'organization') {
-			const oldId = typeof dataObj[key] === 'object' ? dataObj[key]?.id : dataObj[key];
-			const newId = typeof deltaObj[key] === 'object' ? deltaObj[key]?.id : deltaObj[key];
+			// Create a change object for this field
+			const change = { name: key };
 
-			if (oldId !== newId) {
-				changes.push({
-					name: key,
-					oldValue: oldId,
-					newValue: newId,
-				});
+			// Handle different field types appropriately
+			switch (key) {
+				case 'team':
+					// Normalize team ID references
+					change.newValue = typeof newValue === 'object' ? newValue?.id : newValue;
+					break;
+
+				case 'project':
+				case 'organization':
+					// Normalize relation ID references
+					change.newValue = typeof newValue === 'object' ? newValue?.id : newValue;
+					break;
+
+				case 'assigned_to':
+					// Extract user IDs from assigned_to array
+					if (Array.isArray(newValue)) {
+						change.newValue = newValue
+							.map((item) => (typeof item === 'object' ? item.directus_users_id?.id : item))
+							.filter(Boolean);
+					} else {
+						change.newValue = []; // Empty array for empty assignments
+					}
+					break;
+
+				default:
+					// For all other fields, use the value directly
+					change.newValue = newValue;
 			}
-			continue;
+
+			// Add this change to the list
+			changes.push(change);
 		}
 
-		// For most fields, simple comparison should work
-		const oldValue = dataObj[key];
-		const newValue = deltaObj[key];
-
-		// Skip undefined values
-		if (oldValue === undefined && newValue === undefined) continue;
-
-		// Use deep comparison to check if objects are equal
-		const isEqual = JSON.stringify(oldValue) === JSON.stringify(newValue);
-
-		if (!isEqual) {
-			changes.push({
-				name: key,
-				oldValue,
-				newValue,
-			});
+		if (props.debugMode) {
+			console.log('Final Processed Changes:', changes);
+			console.groupEnd();
 		}
+	} catch (error) {
+		console.error('Error processing revision changes:', error);
+		if (props.debugMode) {
+			console.log('Error occurred during processing');
+			console.groupEnd();
+		}
+		return [];
 	}
 
 	return changes;
+};
+
+// Helper to check if any fields have valid changes
+const hasChanges = (fields) => {
+	if (!fields || !Array.isArray(fields)) return false;
+
+	// Consider only fields with meaningful values (not just empty/null values)
+	const meaningfulFields = fields.filter((field) => {
+		// Status is always meaningful
+		if (field.name === 'status') return true;
+
+		// For other fields, make sure newValue isn't null/undefined/empty
+		if (field.newValue === null || field.newValue === undefined || field.newValue === '') return false;
+
+		// For arrays (like assigned_to), make sure they're not empty
+		if (Array.isArray(field.newValue) && field.newValue.length === 0) return false;
+
+		return true;
+	});
+
+	return meaningfulFields.length > 0;
 };
 
 // Process initial values for creation revisions
 const extractInitialDetails = (data) => {
 	if (!data) return [];
 
-	// These are the fields we care about for initial details
-	const relevantFields = ['title', 'description', 'status', 'priority', 'team', 'project', 'organization', 'due_date'];
+	try {
+		// Process object if it's a string
+		const dataObj = typeof data === 'string' ? JSON.parse(data) : data || {};
 
-	const details = [];
+		// These are the fields we care about for initial details
+		const relevantFields = [
+			'title',
+			'description',
+			'status',
+			'priority',
+			'team',
+			'project',
+			'organization',
+			'due_date',
+		];
 
-	for (const field of relevantFields) {
-		if (data[field] !== undefined && data[field] !== null && data[field] !== '') {
-			details.push({
-				name: field,
-				value: data[field],
-			});
+		const details = [];
+
+		for (const field of relevantFields) {
+			if (dataObj[field] !== undefined && dataObj[field] !== null && dataObj[field] !== '') {
+				details.push({
+					name: field,
+					value: dataObj[field],
+				});
+			}
 		}
-	}
 
-	return details;
+		return details;
+	} catch (e) {
+		console.error('Error extracting initial details:', e, data);
+		return [];
+	}
 };
 
 // Fetch all activity (comments, revisions, and tasks)
@@ -323,6 +513,8 @@ const fetchActivity = async (reset = false) => {
 	if (reset) {
 		page.value = 1;
 		loading.value = true;
+		// Clear existing data to avoid any DOM update conflicts
+		activityItems.value = [];
 	} else {
 		loadingMore.value = true;
 	}
@@ -331,93 +523,131 @@ const fetchActivity = async (reset = false) => {
 		// Fetch teams for name lookup
 		await fetchTeams();
 
-		// Fetch comments directly for the ticket
-		// Use a simpler filter to avoid permission issues
-		const comments = await readItems('comments', {
-			fields: [
-				'id',
-				'comment',
-				'date_created',
-				'user.id',
-				'user.first_name',
-				'user.last_name',
-				'user.avatar',
-				'collection',
-				'item',
-			],
-			filter: {
-				collection: { _eq: 'tickets' },
-				item: { _eq: props.ticketId },
-			},
-			sort: ['-date_created'],
-			limit: props.limit,
-			page: page.value,
-		});
+		// Construct item batches to ensure proper error handling for each
+		let commentsData = [];
+		let revisionsData = [];
+		let tasksData = [];
 
-		if (props.debugMode) {
-			console.log('Fetched comments:', comments?.length || 0);
+		try {
+			// Fetch comments directly for the ticket
+			commentsData =
+				(await readItems('comments', {
+					fields: [
+						'id',
+						'comment',
+						'date_created',
+						'user.id',
+						'user.first_name',
+						'user.last_name',
+						'user.avatar',
+						'collection',
+						'item',
+					],
+					filter: {
+						collection: { _eq: 'tickets' },
+						item: { _eq: props.ticketId },
+					},
+					sort: ['-date_created'],
+					limit: props.limit,
+					page: page.value,
+				})) || [];
+
+			if (props.debugMode) {
+				console.log('Fetched comments:', commentsData.length);
+			}
+		} catch (error) {
+			console.error('Error fetching comments:', error);
 		}
 
-		// Fetch revisions for the ticket
-		const revisions = await readRevisions({
-			fields: [
-				'id',
-				'collection',
-				'item',
-				'data',
-				'delta',
-				'activity.action',
-				'activity.timestamp',
-				'activity.user.id',
-				'activity.user.first_name',
-				'activity.user.last_name',
-				'activity.user.avatar',
-			],
-			filter: {
-				collection: { _eq: 'tickets' },
-				item: { _eq: props.ticketId },
-			},
-			sort: ['-activity.timestamp'],
-			limit: props.limit,
-			page: page.value,
-		});
+		try {
+			// Fetch revisions for the ticket
+			revisionsData =
+				(await readRevisions({
+					fields: [
+						'id',
+						'collection',
+						'item',
+						'data',
+						'delta',
+						'activity.action',
+						'activity.timestamp',
+						'activity.user.id',
+						'activity.user.first_name',
+						'activity.user.last_name',
+						'activity.user.avatar',
+					],
+					filter: {
+						collection: { _eq: 'tickets' },
+						item: { _eq: props.ticketId },
+					},
+					sort: ['-activity.timestamp'],
+					limit: props.limit,
+					page: page.value,
+				})) || [];
 
-		if (props.debugMode) {
-			console.log('Fetched revisions:', revisions?.length || 0);
+			if (props.debugMode) {
+				console.group('Fetched Revisions Data');
+				console.log('Count:', revisionsData.length);
+				console.log('Raw revisions data:', revisionsData);
+
+				// Log the first revision's delta in detail to help debugging
+				if (revisionsData.length > 0) {
+					const firstRev = revisionsData[0];
+					console.log('First Revision ID:', firstRev.id);
+					console.log('First Revision Action:', firstRev.activity?.action);
+
+					try {
+						const deltaData = typeof firstRev.delta === 'string' ? JSON.parse(firstRev.delta) : firstRev.delta;
+						console.log('First Revision Delta:', deltaData);
+						console.log('Delta Keys:', Object.keys(deltaData || {}));
+					} catch (e) {
+						console.error('Error parsing first revision delta:', e);
+					}
+				}
+
+				console.groupEnd();
+			}
+		} catch (error) {
+			console.error('Error fetching revisions:', error);
 		}
 
-		// Fetch tasks for this ticket
-		const tasks = await readItems('tasks', {
-			fields: [
-				'id',
-				'description',
-				'status',
-				'date_created',
-				'date_updated',
-				'user_created.id',
-				'user_created.first_name',
-				'user_created.last_name',
-				'user_created.avatar',
-				'user_updated.id',
-				'user_updated.first_name',
-				'user_updated.last_name',
-				'user_updated.avatar',
-			],
-			filter: {
-				ticket_id: { _eq: props.ticketId },
-			},
-			sort: ['-date_updated'],
-		});
+		try {
+			// Fetch tasks for this ticket
+			tasksData =
+				(await readItems('tasks', {
+					fields: [
+						'id',
+						'description',
+						'status',
+						'date_created',
+						'date_updated',
+						'user_created.id',
+						'user_created.first_name',
+						'user_created.last_name',
+						'user_created.avatar',
+						'user_updated.id',
+						'user_updated.first_name',
+						'user_updated.last_name',
+						'user_updated.avatar',
+					],
+					filter: {
+						ticket_id: { _eq: props.ticketId },
+					},
+					sort: ['-date_updated'],
+				})) || [];
 
-		if (props.debugMode) {
-			console.log('Fetched tasks:', tasks?.length || 0);
+			if (props.debugMode) {
+				console.log('Fetched tasks:', tasksData.length);
+			}
+		} catch (error) {
+			console.error('Error fetching tasks:', error);
 		}
 
 		// Process the comments data with normalized timestamps
-		const commentItems = (comments || []).map((comment) => ({
+		const commentItems = (commentsData || []).map((comment) => ({
 			id: comment.id,
 			type: 'comment',
-			content: comment.comment, // HTML content from Directus
+			content: sanitizeHtml(comment.comment), // Sanitize HTML content
 			timestamp: new Date(comment.date_created).toISOString(),
 			user: comment.user,
 		}));
@@ -425,71 +655,65 @@ const fetchActivity = async (reset = false) => {
 		// Process revisions with normalized timestamps
 		const revisionItems = [];
 
-		for (const revision of revisions || []) {
-			// Skip if there's no activity data
-			if (!revision.activity || !revision.activity.action || !revision.activity.timestamp) {
-				continue;
-			}
-
-			try {
-				// Normalize timestamp for consistent sorting
-				const timestamp = new Date(revision.activity.timestamp).toISOString();
-
-				// Parse data and delta objects
-				const dataObj = typeof revision.data === 'string' ? JSON.parse(revision.data) : revision.data || {};
-				const deltaObj = typeof revision.delta === 'string' ? JSON.parse(revision.delta) : revision.delta || {};
-
-				// Basic revision info
-				const revItem = {
-					id: `revision-${revision.id}`,
-					type: 'revision',
-					action: revision.activity.action,
-					timestamp: timestamp,
-					user: revision.activity.user,
-					updatedFields: [],
-				};
-
-				// For create actions, extract initial values
-				if (revision.activity.action === 'create') {
-					revItem.initialDetails = extractInitialDetails(deltaObj);
-					revisionItems.push(revItem);
+		if (revisionsData && revisionsData.length) {
+			for (const revision of revisionsData) {
+				// Skip if there's no activity data
+				if (!revision.activity || !revision.activity.action || !revision.activity.timestamp) {
 					continue;
 				}
 
-				// For updates, find the changes
-				if (revision.activity.action === 'update') {
-					revItem.updatedFields = processRevisionChanges(dataObj, deltaObj);
+				try {
+					// Normalize timestamp for consistent sorting
+					const timestamp = new Date(revision.activity.timestamp).toISOString();
 
-					// Only include updates with actual changes
-					if (revItem.updatedFields.length > 0 || props.debugMode) {
+					// Basic revision info
+					const revItem = {
+						id: `revision-${revision.id}`,
+						type: 'revision',
+						action: revision.activity.action,
+						timestamp: timestamp,
+						user: revision.activity.user,
+						updatedFields: [],
+					};
+
+					// For create actions, extract initial values
+					if (revision.activity.action === 'create') {
+						revItem.initialDetails = extractInitialDetails(revision.delta);
+						revisionItems.push(revItem);
+						continue;
+					}
+
+					// For updates, find the changes
+					if (revision.activity.action === 'update') {
+						if (props.debugMode) {
+							debugLogRevision(revision, 'Processing Update Revision');
+						}
+
+						// Process only the delta fields that actually changed
+						revItem.updatedFields = processRevisionChanges(revision.data, revision.delta);
+
+						// Only include updates that have meaningful changes
+						if (hasChanges(revItem.updatedFields)) {
+							revisionItems.push(revItem);
+						}
+					}
+
+					// Include all other revision types (delete, etc.)
+					if (revision.activity.action !== 'update' && revision.activity.action !== 'create') {
 						revisionItems.push(revItem);
 					}
+				} catch (err) {
+					console.error('Error processing revision:', err, revision);
+					// Continue processing other revisions
 				}
-
-				// Include all other revision types (delete, etc.)
-				if (revision.activity.action !== 'update' && revision.activity.action !== 'create') {
-					revisionItems.push(revItem);
-				}
-			} catch (err) {
-				console.error('Error processing revision:', err, revision);
-				// Add a minimal version so we still see something
-				revisionItems.push({
-					id: `revision-${revision.id}`,
-					type: 'revision',
-					action: revision.activity.action,
-					timestamp: revision.activity.timestamp,
-					user: revision.activity.user,
-					error: true,
-					updatedFields: [],
-				});
 			}
 		}
 
 		// Process task activities
 		const taskItems = [];
 
-		if (tasks && tasks.length > 0) {
-			tasks.forEach((task) => {
+		if (tasksData && tasksData.length > 0) {
+			tasksData.forEach((task) => {
 				// Add task creation activity
 				taskItems.push({
 					id: `task-create-${task.id}`,
@@ -499,7 +723,7 @@ const fetchActivity = async (reset = false) => {
 					user: task.user_created,
 					task: {
 						id: task.id,
-						description: task.description,
+						description: sanitizeHtml(task.description),
 						status: 'active', // New tasks are always active
 					},
 				});
@@ -514,7 +738,7 @@ const fetchActivity = async (reset = false) => {
 						user: task.user_updated,
 						task: {
 							id: task.id,
-							description: task.description,
+							description: sanitizeHtml(task.description),
 							status: 'completed',
 						},
 					});
@@ -522,8 +746,32 @@ const fetchActivity = async (reset = false) => {
 			});
 		}
 
-		// Combine and sort by timestamp - ensure proper date comparison
-		const combinedItems = [...commentItems, ...revisionItems, ...taskItems].sort((a, b) => {
+		// Validate and prepare items array
+		const validItems = [];
+
+		// Validate and add comment items
+		for (const item of commentItems) {
+			if (item && item.id && item.type && item.timestamp) {
+				validItems.push(item);
+			}
+		}
+
+		// Validate and add revision items
+		for (const item of revisionItems) {
+			if (item && item.id && item.type && item.timestamp) {
+				validItems.push(item);
+			}
+		}
+
+		// Validate and add task items
+		for (const item of taskItems) {
+			if (item && item.id && item.type && item.timestamp) {
+				validItems.push(item);
+			}
+		}
+
+		// Sort by timestamp - ensure proper date comparison
+		validItems.sort((a, b) => {
 			// Convert timestamps to Date objects for proper comparison
 			const dateA = new Date(a.timestamp);
 			const dateB = new Date(b.timestamp);
@@ -537,26 +785,36 @@ const fetchActivity = async (reset = false) => {
 				comments: commentItems.length,
 				revisions: revisionItems.length,
 				tasks: taskItems.length,
-				total: combinedItems.length,
+				total: validItems.length,
 			});
 		}
 
-		// Update state - ensure proper sorting when combining existing and new data
+		// Update state - ensure proper merging when combining existing and new data
 		if (reset) {
-			activityItems.value = combinedItems;
+			activityItems.value = validItems;
 		} else {
-			// When loading more, combine everything and resort
-			const allItems = [...activityItems.value, ...combinedItems].sort((a, b) => {
+			// When loading more, add new items and sort
+			const newItems = [...activityItems.value];
+
+			// Add only items that don't already exist (based on unique ID)
+			for (const item of validItems) {
+				if (!newItems.some((existing) => existing.id === item.id)) {
+					newItems.push(item);
+				}
+			}
+
+			// Sort the combined array
+			newItems.sort((a, b) => {
 				const dateA = new Date(a.timestamp);
 				const dateB = new Date(b.timestamp);
 				return dateB - dateA;
 			});
 
-			activityItems.value = allItems;
+			activityItems.value = newItems;
 		}
 
 		// Determine if there are more items to load
-		hasMore.value = (comments?.length || 0) + (revisions?.length || 0) >= props.limit;
+		hasMore.value = (commentsData?.length || 0) + (revisionsData?.length || 0) >= props.limit;
 		page.value++;
 	} catch (error) {
 		console.error('Error fetching ticket activity:', error);
@@ -572,16 +830,31 @@ const loadMore = async () => {
 	await fetchActivity(false);
 };
 
-// Format functions with normalized timestamps for consistent display
-const formatDate = (timestamp) => {
+// Format date with option for full date display
+const formatDate = (timestamp, fullFormat = false) => {
 	if (!timestamp) return 'Unknown date';
+
 	try {
 		// Ensure we're working with a proper date object
 		const date = new Date(timestamp);
+
 		// Check if date is valid
 		if (isNaN(date.getTime())) {
 			return 'Invalid date';
 		}
+
+		// Return full date format if requested
+		if (fullFormat) {
+			return date.toLocaleString(undefined, {
+				year: 'numeric',
+				month: 'short',
+				day: 'numeric',
+				hour: '2-digit',
+				minute: '2-digit',
+			});
+		}
+
+		// Otherwise return relative time
 		return formatDistanceToNow(date, { addSuffix: true });
 	} catch (e) {
 		console.error('Date formatting error:', e);
@@ -710,10 +983,9 @@ const formatFieldName = (field) => {
 
 // Fetch initial data
 onMounted(() => {
-	if (props.debugMode) {
-		console.log('Ticket Activity component mounted, fetching data for ticket:', props.ticketId);
+	if (props.ticketId) {
+		fetchActivity(true);
 	}
-	fetchActivity(true);
 });
 
 // Watch for ticket ID changes
@@ -735,7 +1007,7 @@ defineExpose({
 });
 </script>
 
-<style scoped>
+<style>
 /* Custom styling for activity feed */
 .activity-item {
 	transition: all 0.2s ease;
@@ -776,5 +1048,16 @@ defineExpose({
 .comment-content {
 	max-height: 300px;
 	overflow-y: auto;
+}
+
+/* Description preview styling */
+.description-preview {
+	max-height: 100px;
+	overflow: hidden;
+	word-break: break-word;
+}
+
+.truncated-content {
+	white-space: pre-line;
 }
 </style>

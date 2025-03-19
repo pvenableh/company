@@ -390,6 +390,8 @@ const handleShare = (method) => {
 };
 
 // Submit form - sync global team state before submitting
+// Submit form - sync global team state before submitting
+// Modified to only send changed fields
 const handleSubmit = () => {
 	// Check if the team field is set (only required for non-admin/manager users)
 	if (!isAdminOrManager.value && !form.value.team) {
@@ -404,10 +406,63 @@ const handleSubmit = () => {
 	// Sync team with global state only when submitting
 	setTeam(form.value.team);
 
-	emit('update', {
-		...form.value,
-		mentioned_users: Array.from(mentionedUsers.value),
-	});
+	// Compare current form state with initial state to find changed fields
+	const changedFields = {};
+	let hasChanges = false;
+
+	// Helper function to check if values are different (handles arrays, dates, etc.)
+	const isDifferent = (a, b) => {
+		// Handle arrays (like assigned_to)
+		if (Array.isArray(a) && Array.isArray(b)) {
+			if (a.length !== b.length) return true;
+
+			// Sort arrays to ensure consistent comparison
+			const sortedA = [...a].sort();
+			const sortedB = [...b].sort();
+
+			return JSON.stringify(sortedA) !== JSON.stringify(sortedB);
+		}
+
+		// Handle dates
+		if (typeof a === 'string' && typeof b === 'string') {
+			// Check if both are date strings
+			const datePattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
+			if (datePattern.test(a) && datePattern.test(b)) {
+				const dateA = new Date(a);
+				const dateB = new Date(b);
+				return dateA.getTime() !== dateB.getTime();
+			}
+		}
+
+		// Regular comparison for other types
+		return JSON.stringify(a) !== JSON.stringify(b);
+	};
+
+	// Check each field for changes
+	for (const key in form.value) {
+		if (isDifferent(form.value[key], initialFormState.value[key])) {
+			changedFields[key] = form.value[key];
+			hasChanges = true;
+		}
+	}
+
+	// Always include assigned_to for proper junction table handling
+	changedFields.assigned_to = form.value.assigned_to;
+
+	// Add mentioned users to the data if any
+	if (mentionedUsers.value.size > 0) {
+		changedFields.mentioned_users = Array.from(mentionedUsers.value);
+	}
+
+	if (changedFields.status) {
+		form.value.status = changedFields.status;
+	}
+	if (changedFields.priority) {
+		form.value.priority = changedFields.priority;
+	}
+
+	// Emit the update event with only the changed fields
+	emit('update', changedFields);
 };
 
 // Watch for changes to update dirty state
@@ -492,11 +547,32 @@ onMounted(async () => {
 	initializeFormState();
 });
 
+const updateFormData = (newData) => {
+	if (!newData) return;
+	// Update the form with the latest data
+	form.value = {
+		title: newData.title || '',
+		description: newData.description || '',
+		status: newData.status || '',
+		priority: newData.priority || 'low',
+		category: newData.category || '',
+		project: newData.project?.id || null,
+		organization: newData.organization?.id || null,
+		team: newData.team?.id || null,
+		assigned_to: newData.assigned_to?.map((a) => a.directus_users_id?.id) || [],
+		due_date: newData.due_date || new Date().toISOString(),
+	};
+
+	// Reset the form's initial state to prevent it from being marked as dirty
+	initializeFormState();
+};
+
 // Expose form value and isDirty state to parent
 defineExpose({
 	form,
 	isDirty,
 	resetFormState: initializeFormState,
+	updateFormData,
 	// Also expose method to sync team with global state
 	syncTeamWithGlobalState: () => {
 		if (form.value.team) {

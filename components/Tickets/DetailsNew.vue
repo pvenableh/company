@@ -7,7 +7,7 @@
 				v-model:currentStatus="currentStatus"
 				:statuses="columns"
 				collection="tickets"
-				:itemId="element.id"
+				:itemId="localElement.id"
 				:loading="isUpdatingStatus"
 				@status-change="handleStatusChange"
 				class="mb-4"
@@ -16,12 +16,12 @@
 		<div class="flex flex-row justify-between items-start my-4">
 			<div class="flex-grow">
 				<div class="flex items-center justify-between">
-					<h2 class="mt-6 mb-2 text-[22px] leading-5 lg:text-[32px] lg:mb-4 font-bold">{{ element.title }}</h2>
+					<h2 class="mt-6 mb-2 text-[22px] leading-5 lg:text-[32px] lg:mb-4 font-bold">{{ localElement.title }}</h2>
 				</div>
-				<div class="text-xs uppercase" v-if="element.due_date">
+				<div class="text-xs uppercase" v-if="localElement.due_date">
 					<span class="opacity-50 inline-block mr-2">Due date:</span>
 
-					{{ formatDate(element.due_date) }}
+					{{ formatDate(localElement.due_date) }}
 				</div>
 				<div class="flex flex-wrap gap-2 mt-2">
 					<UBadge size="sm" class="uppercase !text-[10px] font-bold" :class="getStatusColor(currentStatus)">
@@ -38,7 +38,7 @@
 
 			<!-- Right side: Actions -->
 			<div class="flex gap-2 mt-4">
-				<TicketsDetailsMetadata :ticket="element" />
+				<TicketsDetailsMetadata :ticket="localElement" />
 			</div>
 		</div>
 
@@ -67,19 +67,19 @@
 			v-if="activeTab === 'work'"
 			class="flex items-start justify-between flex-col lg:flex-row flex-wrap animate-fadein"
 		>
-			<div class="w-full py-4 mb-10">
+			<div v-if="displayDescription" class="w-full py-4 mb-10">
 				<h5
 					class="w-full uppercase block font-medium text-gray-400 dark:text-gray-200 tracking-wider text-[12px] leading-3 mb-1"
 				>
 					Description:
 				</h5>
-				<div v-html="element.description" class="text-sm w-full lg:pr-20 ticket__description" />
+				<div v-html="displayDescription" class="text-sm w-full lg:pr-20 ticket__description" />
 			</div>
 			<div class="flex items-start justify-between flex-col lg:flex-row flex-wrap w-full">
 				<div class="w-full lg:w-1/2 lg:sticky lg:top-20">
 					<CommentsSystem
 						ref="commentsSystemRef"
-						:item-id="element.id"
+						:item-id="localElement.id"
 						collection="tickets"
 						class="w-full lg:pb-20"
 						@update:commentCount="handleCommentCountUpdate"
@@ -89,17 +89,17 @@
 					class="w-full lg:w-[500px] border-gray-50 lg:border lg:shadow py-6 lg:p-6 lg:sticky lg:top-20 mt-12 lg:mt-0 ticket__tasks"
 				>
 					<h4 class="w-full uppercase block font-medium text-gray-700 dark:text-gray-200 tracking-wider">Tasks</h4>
-					<TicketsTasks ref="tasksRef" :ticket-id="element.id" class="mt-4 pb-12" />
+					<TicketsTasks ref="tasksRef" :ticket-id="localElement.id" class="mt-4 pb-12" />
 				</div>
 			</div>
 		</div>
 		<div v-else-if="activeTab === 'activity'" class="animate-fadein">
-			<TicketsActivity ref="activityRef" :ticket-id="element.id" :debug-mode="true" />
+			<TicketsActivity ref="activityRef" :ticket-id="localElement.id" :debug-mode="true" />
 		</div>
 		<div v-else-if="activeTab === 'edit'" class="animate-fadein">
 			<TicketsDetailsForm
 				ref="formRef"
-				:ticket="element"
+				:ticket="localElement"
 				:columns="columns"
 				:is-loading="isLoading"
 				@update="updateTicket"
@@ -192,6 +192,12 @@ const shareDescription = computed(() => {
 	return plainText.length > 150 ? plainText.substring(0, 147) + '...' : plainText;
 });
 
+const displayDescription = computed(() => props.element.description || '');
+const displayTitle = computed(() => props.element.title || '');
+const displayDueDate = computed(() => props.element.due_date || '');
+
+const localElement = ref({ ...props.element });
+
 // Add this with your methods
 async function handleStatusChange(event) {
 	if (isUpdatingStatus.value || isLoading.value) return;
@@ -201,34 +207,42 @@ async function handleStatusChange(event) {
 
 		// Create a record of the old status for notifications
 		const oldStatus = event.oldStatus;
+		const newStatus = event.newStatus; // Define newStatus before using it
+
+		// Update the local reactive state immediately for UI
+		currentStatus.value = newStatus;
+
+		// Also update our local element copy
+		localElement.value = {
+			...localElement.value,
+			status: newStatus,
+		};
 
 		// Update the ticket status
 		await updateItem('tickets', props.element.id, {
-			status: event.newStatus,
+			status: newStatus,
 			date_updated: new Date(),
 		});
 
 		// Send notification to assigned users about status change
-		await notifyTicketStatusChange(props.element, event.newStatus, oldStatus);
-
-		// Update the UI to reflect the change
-		currentStatus.value = event.newStatus;
+		await notifyTicketStatusChange(props.element, newStatus, oldStatus);
 
 		// Show success message
 		toast.add({
 			title: 'Success',
-			description: `Ticket status updated to ${event.newStatus}`,
+			description: `Ticket status updated to ${newStatus}`,
 			color: 'green',
 		});
 
 		// Create a shallow copy of the element to update the parent component
-		const updatedElement = { ...props.element, status: event.newStatus };
+		const updatedElement = { ...props.element, status: newStatus };
 		emit('updated', updatedElement);
 	} catch (error) {
 		console.error('Error updating ticket status:', error);
 
 		// Revert the status in the UI
 		currentStatus.value = event.oldStatus;
+		localElement.value.status = event.oldStatus;
 
 		toast.add({
 			title: 'Error',
@@ -239,6 +253,30 @@ async function handleStatusChange(event) {
 		isUpdatingStatus.value = false;
 	}
 }
+
+const updateFormWithLatestData = () => {
+	if (!formRef.value || !formRef.value.updateFormData) {
+		console.warn('FormRef or updateFormData method not available');
+		return;
+	}
+
+	console.log('Explicitly updating form with latest data');
+	formRef.value.updateFormData(localElement.value);
+};
+
+const updateDescriptionInDOM = (newDescription) => {
+	if (!newDescription) return;
+
+	nextTick(() => {
+		// Query for the description element in the DOM
+		const descriptionEl = document.querySelector('.ticket__description');
+		if (descriptionEl) {
+			// Update its content with the new description
+			descriptionEl.innerHTML = newDescription;
+			console.log('Description updated in DOM');
+		}
+	});
+};
 
 const activeTab = ref('work');
 // Tab configuration
@@ -252,8 +290,24 @@ const tabs = [
 const setActiveTab = (tabId) => {
 	// Store previous tab
 	previousTab.value = activeTab.value;
+
 	// Set new active tab
 	activeTab.value = tabId;
+
+	// If switching to edit tab, make sure the form has the latest data
+
+	if (tabId === 'edit') {
+		nextTick(() => {
+			updateFormWithLatestData();
+		});
+	}
+
+	// If switching to the work tab, ensure description is up to date
+	if (tabId === 'work' && localElement.value.description) {
+		nextTick(() => {
+			updateDescriptionInDOM(localElement.value.description);
+		});
+	}
 
 	// Schedule refresh of components after tab switch is complete
 	nextTick(() => {
@@ -377,12 +431,21 @@ const updateTicket = async (formData) => {
 		if (ticketData.priority !== oldPriority) updatedFields.push('priority');
 		if (ticketData.due_date !== props.element.due_date) updatedFields.push('due date');
 
-		// Update currentStatus and currentPriority for the UI components
-		if (ticketData.status !== oldStatus) {
+		// IMPORTANT: Update the local reactive state BEFORE API calls
+		if (ticketData.status) {
 			currentStatus.value = ticketData.status;
 		}
-		if (ticketData.priority !== oldPriority) {
+		if (ticketData.priority) {
 			currentPriority.value = ticketData.priority;
+		}
+
+		// Handle description reactivity explicitly
+		// We need to check if the description has changed before attempting to update it
+		if (ticketData.description && ticketData.description !== props.element.description) {
+			// Use our helper function to update the description in the DOM
+			if (activeTab.value === 'work') {
+				updateDescriptionInDOM(ticketData.description);
+			}
 		}
 
 		// Sync team with global state before saving (using exposed method)
@@ -445,13 +508,19 @@ const updateTicket = async (formData) => {
 		// After successful update, refresh the appropriate content
 		refreshTabContent(activeTab.value);
 
-		// Important: Manually update the local element data to reflect changes in the UI
-		// This ensures the header and other components reflect the updated status immediately
-		// Create a shallow copy of the element to trigger reactivity
+		// Important: Create a reactive copy of the element for UI updates
 		const updatedElement = { ...props.element };
 
-		// Update the fields that changed
-		Object.assign(updatedElement, ticketData);
+		// Merge all the updated fields into our local copy
+		Object.keys(ticketData).forEach((key) => {
+			updatedElement[key] = ticketData[key];
+		});
+
+		localElement.value = updatedElement;
+
+		if (activeTab.value === 'edit') {
+			updateFormWithLatestData();
+		}
 
 		// Emit an event to update the parent component
 		emit('updated', updatedElement);
@@ -568,14 +637,38 @@ const handleBeforeUnload = (e) => {
 watch(
 	() => props.element,
 	(newElement) => {
+		console.log('Element prop changed, updating local copy');
+
+		// Update our local copy with the new element data
+		localElement.value = { ...newElement };
+
+		// Also update the individual reactive state vars
 		if (newElement.status !== currentStatus.value) {
+			console.log(`Status changed from ${currentStatus.value} to ${newElement.status}`);
 			currentStatus.value = newElement.status;
 		}
+
 		if (newElement.priority !== currentPriority.value) {
+			console.log(`Priority changed from ${currentPriority.value} to ${newElement.priority}`);
 			currentPriority.value = newElement.priority;
 		}
+
+		// Add an explicit refresh check for description to ensure the UI updates
+		if (activeTab.value === 'work' && newElement.description) {
+			console.log('Description update detected, updating DOM');
+			updateDescriptionInDOM(newElement.description);
+		}
 	},
-	{ deep: true },
+	{ deep: true, immediate: true },
+);
+
+watch(
+	() => displayDescription.value,
+	(newDescription) => {
+		console.log('Description computed property changed');
+		// Force DOM update when the computed property changes
+		updateDescriptionInDOM(newDescription);
+	},
 );
 </script>
 
