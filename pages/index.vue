@@ -8,8 +8,11 @@ const { user } = useDirectusAuth();
 			<nuxt-link v-if="!user" to="/auth/signin">
 				<FormVButton class="w-full mb-6" type="submit" variant="outline" style="max-width: 450px">Login</FormVButton>
 			</nuxt-link>
-			<div v-else class="w-full max-w-xl">
+			<div v-else class="w-full max-w-[1200px]">
 				<h2 class="text-xl mb-2 font-thin">{{ greetUser() }} {{ user.first_name }}.</h2>
+				<!-- <div class="">
+					<TicketsDashboard />
+				</div> -->
 				<div class="grid gap-6 grid-cols-1 sm:grid-cols-2">
 					<nuxt-link
 						to="/invoices"
