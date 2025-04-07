@@ -3,9 +3,6 @@ const { data, status } = useAuth();
 const user = computed(() => {
 	return status.value === 'authenticated' ? data.value.user : null;
 });
-console.log('Auth Status:', status.value); // For debugging purposes
-console.log('Auth Data:', data.value); // For debugging purposes
-// Create a user ref that accesses the data from the new auth system
 </script>
 <template>
 	<div class="md:px-6 mx-auto flex items-start justify-center flex-col relative px-4 pt-20">
@@ -25,7 +22,7 @@ console.log('Auth Data:', data.value); // For debugging purposes
 					</h5>
 					<TicketsDashboard />
 				</div>
-				<div class="grid gap-6 grid-cols-1 sm:grid-cols-2 hidden">
+				<div class="gap-6 grid-cols-1 sm:grid-cols-2 hidden">
 					<nuxt-link
 						to="/invoices"
 						class="bg-gray-100 text-center py-12 sm:py-20 uppercase tracking-wide rounded-md shadow-lg"
