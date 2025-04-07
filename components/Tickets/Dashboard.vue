@@ -90,33 +90,6 @@
 			<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
 				<!-- Left Column -->
 				<div class="space-y-8">
-					<!-- Ticket Age Distribution -->
-					<UCard>
-						<template #header>
-							<div class="flex justify-between items-center">
-								<h2 class="text-base font-bold">Ticket Age Distribution</h2>
-								<UBadge color="blue" variant="soft">Non-Completed Tickets</UBadge>
-							</div>
-						</template>
-						<div class="h-80">
-							<TicketsDistributionAge :data="ticketAgeData" />
-						</div>
-					</UCard>
-
-					<!-- Your Completion Rate -->
-					<UCard v-if="showOnlyMyTickets">
-						<template #header>
-							<div class="flex justify-between items-center">
-								<h2 class="text-base font-bold">Your Completion Rate</h2>
-								<UBadge color="green" variant="soft">Last {{ timePeriodLabel }}</UBadge>
-							</div>
-						</template>
-						<div class="h-80">
-							<TicketsCompletionPersonal :data="personalCompletionData" />
-						</div>
-					</UCard>
-
-					<!-- Oldest Open Tickets -->
 					<UCard>
 						<template #header>
 							<div class="flex justify-between items-center">
@@ -159,10 +132,49 @@
 							<div v-if="!oldestTickets.length" class="py-4 text-center text-gray-500">No open tickets found</div>
 						</div>
 					</UCard>
+					<!-- Ticket Age Distribution -->
+					<UCard>
+						<template #header>
+							<div class="flex justify-between items-center">
+								<h2 class="text-base font-bold">Ticket Age Distribution</h2>
+								<UBadge color="blue" variant="soft">Non-Completed Tickets</UBadge>
+							</div>
+						</template>
+						<div class="h-80">
+							<TicketsDistributionAge :data="ticketAgeData" />
+						</div>
+					</UCard>
+
+					<!-- Your Completion Rate -->
+					<UCard v-if="showOnlyMyTickets">
+						<template #header>
+							<div class="flex justify-between items-center">
+								<h2 class="text-base font-bold">Your Completion Rate</h2>
+								<UBadge color="green" variant="soft">Last {{ timePeriodLabel }}</UBadge>
+							</div>
+						</template>
+						<div class="h-80">
+							<TicketsCompletionPersonal :data="personalCompletionData" />
+						</div>
+					</UCard>
+
+					<!-- Oldest Open Tickets -->
 				</div>
 
 				<!-- Right Column -->
 				<div class="space-y-8">
+					<!-- Completion Rate Trend -->
+					<UCard>
+						<template #header>
+							<div class="flex justify-between items-center">
+								<h2 class="text-base font-bold">Completion Rate Trend</h2>
+								<UBadge color="cyan" variant="soft">Last {{ timePeriodLabel }}</UBadge>
+							</div>
+						</template>
+						<div class="h-80">
+							<TicketsCompletionTrend :data="completionTrendData" />
+						</div>
+					</UCard>
 					<!-- Team Activity Distribution -->
 					<UCard>
 						<template #header>
@@ -176,19 +188,6 @@
 								v-if="activityDistributionData && activityDistributionData.length"
 								:data="activityDistributionData"
 							/>
-						</div>
-					</UCard>
-
-					<!-- Completion Rate Trend -->
-					<UCard>
-						<template #header>
-							<div class="flex justify-between items-center">
-								<h2 class="text-base font-bold">Completion Rate Trend</h2>
-								<UBadge color="cyan" variant="soft">Last {{ timePeriodLabel }}</UBadge>
-							</div>
-						</template>
-						<div class="h-80">
-							<TicketsCompletionTrend :data="completionTrendData" />
 						</div>
 					</UCard>
 
