@@ -18,7 +18,6 @@
 	</div>
 </template>
 <script setup lang="ts">
-// const { user } = useDirectusAuth();
 interface Link {
 	name: string;
 	type: string[];

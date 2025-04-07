@@ -154,7 +154,10 @@ const props = defineProps({
 
 // const emit = defineEmits(['expand']);
 
-const { user } = useDirectusAuth();
+const { data, status } = useAuth();
+const user = computed(() => {
+	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
+});
 
 // Get all assigned users
 const assignedUsers = computed(() => {

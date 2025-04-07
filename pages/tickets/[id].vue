@@ -1,7 +1,6 @@
 <script setup>
 const { params } = useRoute();
 const { readItem } = useDirectusItems();
-// const { user } = useDirectusAuth();
 
 definePageMeta({
 	middleware: ['auth'],

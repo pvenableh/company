@@ -183,7 +183,10 @@ const {
 	showAllTeamsOption, // New function from our enhanced useTeams
 } = useTeams();
 const { selectedOrg, currentOrg } = useOrganization();
-const { user } = useDirectusAuth();
+const { data, status } = useAuth();
+const user = computed(() => {
+	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
+});
 const $config = useRuntimeConfig();
 
 // Local state

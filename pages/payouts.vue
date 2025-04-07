@@ -2,7 +2,10 @@
 definePageMeta({
 	middleware: ['auth'],
 });
-const { user } = useDirectusAuth();
+const { data: authData, status } = useAuth();
+const user = computed(() => {
+	return status.value === 'authenticated' ? authData?.value?.user ?? null : null;
+});
 const config = useRuntimeConfig();
 
 const admin = computed(() => {

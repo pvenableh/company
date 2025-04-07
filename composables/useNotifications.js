@@ -5,7 +5,10 @@ import { useRealtimeSubscription } from '~/composables/useRealtimeSubscription';
 export function useNotifications() {
 	const config = useRuntimeConfig();
 	const { readNotifications, createNotification, updateNotification } = useDirectusNotifications();
-	const { user } = useDirectusAuth();
+	const { data: authData, status } = useAuth();
+	const user = computed(() => {
+		return status.value === 'authenticated' ? authData?.value?.user ?? null : null;
+	});
 	const toast = useToast();
 
 	// Initialize data ref

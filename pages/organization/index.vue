@@ -1,6 +1,9 @@
 <script setup>
 const { readItems } = useDirectusItems();
-const { user } = useDirectusAuth();
+const { data: authData, status } = useAuth();
+const user = computed(() => {
+	return status.value === 'authenticated' ? authData?.value?.user ?? null : null;
+});
 const { selectedOrg } = useOrganization();
 const { filteredUsers, fetchFilteredUsers } = useFilteredUsers();
 const { fetchTeams, visibleTeams, loading: teamsLoading, setupStorageListener } = useTeams();

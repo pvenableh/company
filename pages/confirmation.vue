@@ -96,7 +96,10 @@ definePageMeta({
 
 import { loadStripe } from '@stripe/stripe-js';
 
-const { user } = useDirectusAuth();
+const { data: authData, status } = useAuth();
+const user = computed(() => {
+	return status.value === 'authenticated' ? authData?.value?.user ?? null : null;
+});
 const route = useRoute();
 const config = useRuntimeConfig();
 const toast = useToast();

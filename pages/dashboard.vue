@@ -2,7 +2,6 @@
 definePageMeta({
 	middleware: ['auth'],
 });
-// const { user } = useDirectusAuth();
 const { readItems } = useDirectusItems();
 
 const tickets = await readItems('tickets', {

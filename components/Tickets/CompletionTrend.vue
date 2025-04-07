@@ -4,13 +4,7 @@
 			No data available
 		</div>
 		<client-only>
-			<Line
-				v-if="chartData.labels.length"
-				:chart-options="chartOptions"
-				:chart-data="chartData"
-				:height="null"
-				:width="null"
-			/>
+			<Line v-if="chartData.labels.length" :options="chartOptions" :data="chartData" :height="null" :width="null" />
 		</client-only>
 	</div>
 </template>
@@ -59,20 +53,20 @@ const chartData = computed(() => {
 		datasets: [
 			{
 				label: 'Completed',
-				borderColor: '#10B981',
-				backgroundColor: 'rgba(16, 185, 129, 0.1)',
+				borderColor: '#0ef62d',
+				backgroundColor: 'rgba(14, 246, 45, 0.2)',
 				borderWidth: 2,
-				pointBackgroundColor: '#10B981',
+				pointBackgroundColor: '#0ef62d',
 				tension: 0.4,
 				fill: true,
 				data: processedData.value.map((item) => item.completed),
 			},
 			{
 				label: 'Created',
-				borderColor: '#6366F1',
-				backgroundColor: 'rgba(99, 102, 241, 0.1)',
+				borderColor: '#00bfff',
+				backgroundColor: 'rgba(0, 191, 255, 0.2)',
 				borderWidth: 2,
-				pointBackgroundColor: '#6366F1',
+				pointBackgroundColor: '#00bfff',
 				tension: 0.4,
 				fill: true,
 				data: processedData.value.map((item) => item.created),

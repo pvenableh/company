@@ -18,6 +18,10 @@ export const useTeams = () => {
 	const selectedTeam = useState('selectedTeam', () => null);
 	const lastFetchedOrg = ref(null);
 	const storageListener = ref(null);
+	const { data, status } = useAuth();
+	const user = computed(() => {
+		return status.value === 'authenticated' ? data?.value?.user ?? null : null;
+	});
 
 	const { selectedOrg } = useOrganization();
 
@@ -89,8 +93,6 @@ export const useTeams = () => {
 			console.warn('fetchTeams called without organizationId');
 			return;
 		}
-
-		const { user } = useDirectusAuth();
 
 		// Skip if already fetching for this org
 		if (loading.value && lastFetchedOrg.value === organizationId) {
@@ -173,8 +175,6 @@ export const useTeams = () => {
 
 	// Clear selected team (sets to null)
 	const clearTeam = () => {
-		const { user } = useDirectusAuth();
-
 		// For regular users, don't actually clear to null
 		// unless there are no visible teams
 		if (!hasAdminAccess(user.value) && visibleTeams.value.length > 0) {
@@ -194,8 +194,6 @@ export const useTeams = () => {
 
 	// Check if a teamId is valid for the current organization
 	const isValidTeamForOrg = (teamId) => {
-		const { user } = useDirectusAuth();
-
 		// For regular users, null/all teams is not a valid option
 		if (!teamId && !hasAdminAccess(user.value)) {
 			return false;
@@ -212,7 +210,6 @@ export const useTeams = () => {
 	// Try to restore selected team from cookie and localStorage
 	const tryRestoreSelectedTeam = async (organizationId) => {
 		try {
-			const { user } = useDirectusAuth();
 			let savedTeam = teamCookie.value;
 			const localStorageTeam = getLocalStorageTeam();
 
@@ -269,8 +266,6 @@ export const useTeams = () => {
 
 	// Get team filter for queries
 	const getTeamFilter = () => {
-		const { user } = useDirectusAuth();
-
 		// If no organization is selected, return empty filter
 		if (!selectedOrg.value) {
 			return {}; // No team filter
@@ -337,7 +332,6 @@ export const useTeams = () => {
 
 	// Check if a user is a manager of a specific team
 	const isTeamManager = (teamId, userId) => {
-		const { user } = useDirectusAuth();
 		const currentUserId = userId || user.value?.id;
 		if (!currentUserId) return false;
 
@@ -347,14 +341,12 @@ export const useTeams = () => {
 
 	// Check if user can manage a team (is manager or has admin role)
 	const canManageTeam = (teamId) => {
-		const { user } = useDirectusAuth();
 		if (hasAdminAccess(user.value)) return true;
 		return isTeamManager(teamId);
 	};
 
 	// Check if user is on a team
 	const isOnTeam = (team) => {
-		const { user } = useDirectusAuth();
 		if (!user.value || !team.users) return false;
 		return team.users.some((u) => u.directus_users_id?.id === user.value.id);
 	};
@@ -388,7 +380,6 @@ export const useTeams = () => {
 				);
 			} else {
 				// If no users specified, add current user as manager by default
-				const { user } = useDirectusAuth();
 				if (user.value) {
 					await createItem('junction_directus_users_teams', {
 						teams_id: team.id,
@@ -485,7 +476,6 @@ export const useTeams = () => {
 
 	// Should the UI show the "All Teams" option
 	const showAllTeamsOption = () => {
-		const { user } = useDirectusAuth();
 		return hasAdminAccess(user.value);
 	};
 
@@ -511,7 +501,6 @@ export const useTeams = () => {
 					selectedTeam.value = newTeamId;
 				} else if (!newTeamId) {
 					// For regular users, don't set to null
-					const { user } = useDirectusAuth();
 					if (!hasAdminAccess(user.value) && visibleTeams.value.length > 0) {
 						// Instead of null, set to first visible team
 						selectedTeam.value = visibleTeams.value[0].id;

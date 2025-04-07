@@ -182,7 +182,7 @@ onUnmounted(() => {
 							v-for="org in organizationOptions"
 							:key="org.id || 'all'"
 							@click="handleOrgSelect(org.id)"
-							class="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-left"
+							class="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-left relative"
 							:class="{ 'bg-gray-100 dark:bg-gray-700': selectedOrg && org.id === selectedOrg }"
 						>
 							<!-- Show icon for "All Organizations" or avatar for specific organization -->

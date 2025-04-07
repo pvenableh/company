@@ -4,13 +4,7 @@
 			No data available
 		</div>
 		<client-only>
-			<Doughnut
-				v-if="chartData.labels.length"
-				:chart-options="chartOptions"
-				:chart-data="chartData"
-				:height="null"
-				:width="null"
-			/>
+			<Doughnut v-if="chartData.labels.length" :options="chartOptions" :data="chartData" :height="null" :width="null" />
 		</client-only>
 	</div>
 </template>
@@ -30,7 +24,7 @@ const props = defineProps({
 });
 
 // Chart colors
-const COLORS = ['#8B5CF6', '#10B981', '#3B82F6', '#F97316'];
+const COLORS = ['#00bfff', '#05d1ba', '#0ae470', '#0ef62d'];
 
 // Process chart data with percentages
 const processedData = computed(() => {

@@ -14,7 +14,10 @@
 <script setup>
 import { computed } from 'vue';
 
-const { user } = useDirectusAuth();
+const { data: authData, status } = useAuth();
+const user = computed(() => {
+	return status.value === 'authenticated' ? authData?.value?.user ?? null : null;
+});
 const config = useRuntimeConfig();
 
 const isAdmin = computed(() => {

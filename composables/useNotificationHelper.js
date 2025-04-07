@@ -4,7 +4,10 @@
  * A composable to handle common notification scenarios in your app
  */
 export function useNotificationHelper() {
-	const { user } = useDirectusAuth();
+	const { data, status } = useAuth();
+	const user = computed(() => {
+		return status.value === 'authenticated' ? data?.value?.user ?? null : null;
+	});
 	const { notify, notifyMany } = useNotifications();
 	const config = useRuntimeConfig();
 

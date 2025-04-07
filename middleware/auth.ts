@@ -1,12 +1,12 @@
-// auth.js - updated middleware for "All Organizations" mode
-
+// middleware/auth.ts
 export default defineNuxtRouteMiddleware(async (to) => {
 	console.log('--- Auth Middleware Executing ---');
 	console.log('Target Route:', to.path);
 
-	const { user, setUser } = useDirectusAuth();
-	const { selectedOrg, initializeOrganizations } = useOrganization();
+	const { status, data: authData } = await useAuth();
+	const { selectedOrg, initializeOrganizations, setOrganization } = useOrganization();
 	const { selectedTeam, fetchTeams, visibleTeams, hasAdminAccess } = useTeams();
+	const route = useRoute();
 
 	// Skip auth check for signin page
 	if (to.path === '/auth/signin') {
@@ -14,14 +14,32 @@ export default defineNuxtRouteMiddleware(async (to) => {
 		return;
 	}
 
-	// If no user, redirect to signin
-	if (!user.value) {
+	// If no user, redirect to signin with the current path as redirect target
+	if (status.value === 'unauthenticated') {
 		console.log('--- User not logged in, redirecting to signin ---');
-		return navigateTo({ path: '/auth/signin', query: { redirect: to.fullPath } });
+		return navigateTo({
+			path: '/auth/signin',
+			query: { redirect: to.fullPath },
+		});
 	}
 
-	console.log('--- User authenticated:', user.value.email);
-	setUser(user.value);
+	// User is authenticated at this point
+	const user = authData.value?.user;
+	console.log('--- User authenticated:', user?.email);
+
+	// Handle redirect from query parameter if it exists
+	// This is for the case when a user was redirected to signin and is now authenticated
+	const redirectPath = route.query.redirect;
+	if (redirectPath && typeof redirectPath === 'string' && redirectPath !== to.path) {
+		console.log('--- Redirecting to:', redirectPath);
+		return navigateTo(redirectPath);
+	}
+
+	// Set user in directus auth state if needed (compatibility layer)
+	const { setUser } = useDirectusAuth();
+	if (setUser && user) {
+		setUser(user);
+	}
 
 	// --- Organization Handling ---
 	console.log('--- Organization Handling ---');
@@ -34,12 +52,13 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
 		// If still no organization selected and this route requires one, and user is not admin
 		// redirect to organization selection
-		if (selectedOrg.value === null && isOrganizationRequiredForRoute(to.path) && !hasAdminAccess(user.value)) {
+		if (selectedOrg.value === null && isOrganizationRequiredForRoute(to.path) && !hasAdminAccess(user)) {
 			console.log('Non-admin user with no organization selected on restricted route');
+
 			// Instead of redirecting, force select the first organization
 			// This prevents normal users from ever having null organization
-			if (user.value?.organizations?.length > 0) {
-				const firstOrgId = user.value.organizations[0]?.organizations_id?.id;
+			if ((user?.organizations ?? []).length > 0) {
+				const firstOrgId = user?.organizations?.[0]?.organizations_id?.id;
 				if (firstOrgId) {
 					console.log('Automatically selecting first organization:', firstOrgId);
 					setOrganization(firstOrgId);
@@ -67,7 +86,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
 });
 
 // Helper function to determine if a route requires an organization
-function isOrganizationRequiredForRoute(path) {
+function isOrganizationRequiredForRoute(path: string) {
 	// List routes that require an organization to function
 	const orgRequiredRoutes = ['/tickets', '/tickets/', '/teams', '/teams/', '/projects', '/projects/'];
 

@@ -36,7 +36,10 @@ const config = useRuntimeConfig();
 
 const amdinRole = ref(config.public.adminRole);
 
-const { user } = useDirectusAuth();
+const { data, status } = useAuth();
+const user = computed(() => {
+	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
+});
 
 const isAdmin = computed(() => user.value.role === amdinRole.value);
 

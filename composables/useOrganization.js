@@ -20,7 +20,10 @@ export function useOrganization() {
 		priorities: ['cookie', 'localStorage'], // Cookie has priority for SSR support
 	});
 
-	const { user } = useDirectusAuth();
+	const { data, status } = useAuth();
+	const user = computed(() => {
+		return status.value === 'authenticated' ? data?.value?.user ?? null : null;
+	});
 	let storageListener = null;
 
 	const hasMultipleOrgs = computed(() => organizations.value.length > 1);

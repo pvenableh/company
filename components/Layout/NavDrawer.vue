@@ -34,7 +34,10 @@
 	</div>
 </template>
 <script setup>
-const { user } = useDirectusAuth();
+const { data, status } = useAuth();
+const user = computed(() => {
+	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
+});
 
 import { onClickOutside } from '@vueuse/core';
 import { closeScreen } from '~~/composables/useScreen';

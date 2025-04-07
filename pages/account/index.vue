@@ -26,7 +26,10 @@
 </template>
 
 <script setup lang="ts">
-const { user } = useDirectusAuth();
+const { data, status } = useAuth();
+const user = computed(() => {
+	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
+});
 
 definePageMeta({
 	middleware: ['auth'],

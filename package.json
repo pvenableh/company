@@ -76,6 +76,7 @@
 	"dependencies": {
 		"@nuxt/image": "^1.9.0",
 		"@sendgrid/mail": "^8.1.4",
+		"@sidebase/nuxt-auth": "^0.10.1",
 		"@unovis/ts": "^1.5.1",
 		"@unovis/vue": "^1.5.1",
 		"@use-gesture/vanilla": "^10.3.1",
@@ -88,6 +89,7 @@
 		"gsap": "^3.12.7",
 		"html2canvas": "^1.4.1",
 		"jspdf": "^2.5.2",
+		"next-auth": "4.21.1",
 		"nuxt-gtag": "^2.1.0",
 		"sharp": "^0.33.5",
 		"swiper": "^11.2.5",
@@ -99,10 +101,11 @@
 	},
 	"engines": {
 		"node": ">=20.0.0 <=22.14.0",
-		"pnpm": ">=8.6.0"
+		"pnpm": ">=9.4.0"
 	},
 	"lint-staged": {
 		"*.{js,ts,vue}": "eslint --cache --fix",
 		"*.{js,ts,vue,md,y?(a)ml,json}": "prettier --write"
-	}
+	},
+	"packageManager": "pnpm@9.4.0+sha512.f549b8a52c9d2b8536762f99c0722205efc5af913e77835dbccc3b0b0b2ca9e7dc8022b78062c17291c48e88749c70ce88eb5a74f1fa8c4bf5e18bb46c8bd83a"
 }

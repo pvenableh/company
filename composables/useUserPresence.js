@@ -1,6 +1,9 @@
 // composables/useUserPresence.js
 export function useUserPresence() {
-	const { user } = useDirectusAuth();
+	const { data: authData, status } = useAuth();
+	const user = computed(() => {
+		return status.value === 'authenticated' ? authData?.value?.user ?? null : null;
+	});
 	const route = useRoute();
 	const { createItem, deleteItems, readItems, updateItem } = useDirectusItems();
 	const location = ref(route.fullPath);

@@ -31,6 +31,7 @@ export default defineNuxtConfig({
 		stripeSecretKeyTest: process.env.STRIPE_SECRET_KEY_TEST,
 		stripeSecretKeyLive: process.env.STRIPE_SECRET_KEY,
 		stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+		authSecret: process.env.NEXTAUTH_SECRET || 'sKG+LfHMxZVZv3aGnf70dxJ8+776LbJHDttKxF3znYw=',
 
 		public: {
 			adminRole: '3a63a4e1-c82e-46f8-9993-7f11ac6a4b01',
@@ -89,32 +90,28 @@ export default defineNuxtConfig({
 				classSuffix: '',
 			},
 		],
+		'@sidebase/nuxt-auth',
 		'@vueuse/motion/nuxt',
 		'@vueuse/nuxt',
 		[
 			'nuxt-directus-next',
 			{
 				url: 'https://admin.huestudios.company',
-				// staticToken: process.env.DIRECTUS_SERVER_TOKEN,
-				authConfig: {
-					// mode: 'cookie',
-					cookieSecure: process.env.NODE_ENV === 'production',
-					cookieSameSite: 'lax',
-					refreshTokenCookieName: 'directus_refresh_token',
-					authTokenCookieName: 'directus_auth_token',
-				},
+
+				// Remove authConfig section
 
 				moduleConfig: {
-					// Enable auto-importing of the Directus composables
+					// Keep these features
 					autoImport: true,
-					// Enable basic auto-refresh functionality
-					autoRefresh: {
-						enableMiddleware: true, // Automatically use middleware to refresh the token
-						global: true, // Apply auto-refresh globally
-						middlewareName: 'auth', // Optional: Custom name for the middleware
-						redirectTo: '/auth/signin', // Optional: Where to redirect if refresh fails
-					},
 					devtools: true,
+
+					// Disable auto-refresh since you'll handle auth with nuxt-auth
+					autoRefresh: {
+						enableMiddleware: false,
+						global: false,
+					},
+
+					// Keep user data fetching config
 					readMeQuery: {
 						fields: [
 							'*,organizations.organizations_id.id,organizations.organizations_id.name,organizations.organizations_id.logo,organizations.organizations_id.icon,organizations.organizations_id.tickets,organizations.organizations_id.projects',
@@ -127,6 +124,15 @@ export default defineNuxtConfig({
 		'nuxt-gtag',
 		'@samk-dev/nuxt-vcalendar',
 	],
+	auth: {
+		provider: {
+			type: 'authjs',
+		},
+		globalAppMiddleware: {
+			isEnabled: false, // Set to true if you want to enable auth for the entire app
+		},
+		baseURL: 'http://localhost:3000/api/auth',
+	},
 
 	devtools: { enabled: true },
 

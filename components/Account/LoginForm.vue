@@ -84,15 +84,15 @@ interface ApiResponse {
 }
 
 interface LoginError {
+	error?: string;
+	message?: string;
 	data?: {
 		errors?: Array<{
 			message?: string;
 		}>;
 	};
-	message?: string;
 }
-
-const { login } = useDirectusAuth();
+const { signIn } = useAuth();
 const route = useRoute();
 const loading = ref<boolean>(false);
 const login_error = ref<string | null>(null);
@@ -141,7 +141,18 @@ async function attemptLogin(): Promise<void> {
 	login_error.value = null;
 
 	try {
-		await login(state.email, state.password);
+		// Use signIn from @sidebase/nuxt-auth instead of login from useDirectusAuth
+		const result = await signIn('credentials', {
+			email: state.email,
+			password: state.password,
+			redirect: false,
+		});
+
+		if (result?.error) {
+			login_error.value = result.error;
+			loading.value = false;
+			return;
+		}
 
 		if (route.query.redirect) {
 			const path = decodeURIComponent(route.query.redirect as string);
@@ -151,7 +162,8 @@ async function attemptLogin(): Promise<void> {
 		}
 	} catch (err) {
 		const error = err as LoginError;
-		login_error.value = error.data?.errors?.[0]?.message ?? error.message ?? null;
+		login_error.value =
+			error.error || error.message || error.data?.errors?.[0]?.message || 'An unexpected error occurred';
 	}
 
 	loading.value = false;

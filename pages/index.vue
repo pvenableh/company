@@ -1,19 +1,31 @@
 <script setup>
-const { user } = useDirectusAuth();
+const { data, status } = useAuth();
+const user = computed(() => {
+	return status.value === 'authenticated' ? data.value.user : null;
+});
+console.log('Auth Status:', status.value); // For debugging purposes
+console.log('Auth Data:', data.value); // For debugging purposes
+// Create a user ref that accesses the data from the new auth system
 </script>
 <template>
 	<div class="md:px-6 mx-auto flex items-start justify-center flex-col relative px-4 pt-20">
 		<h1 class="page__title">Dashboard</h1>
-		<div class="w-full flex flex-col items-center justify-center z-10 page__inner">
+		<div
+			class="w-full flex flex-col items-center justify-center min-h-svh z-10 page__inner"
+			:class="{ '!mt-0 justify-start': user }"
+		>
 			<nuxt-link v-if="!user" to="/auth/signin">
 				<FormVButton class="w-full mb-6" type="submit" variant="outline" style="max-width: 450px">Login</FormVButton>
 			</nuxt-link>
 			<div v-else class="w-full max-w-[1200px]">
-				<h2 class="text-xl mb-2 font-thin">{{ greetUser() }} {{ user.first_name }}.</h2>
-				<!-- <div class="">
+				<h2 class="text-lg uppercase tracking-wide mb-2 font-thin">{{ greetUser() }} {{ user.first_name }}.</h2>
+				<div class="">
+					<h5 class="w-full uppercase block font-medium text-gray-700 dark:text-gray-200 tracking-wider text-[10px]">
+						Tickets Activity:
+					</h5>
 					<TicketsDashboard />
-				</div> -->
-				<div class="grid gap-6 grid-cols-1 sm:grid-cols-2">
+				</div>
+				<div class="grid gap-6 grid-cols-1 sm:grid-cols-2 hidden">
 					<nuxt-link
 						to="/invoices"
 						class="bg-gray-100 text-center py-12 sm:py-20 uppercase tracking-wide rounded-md shadow-lg"

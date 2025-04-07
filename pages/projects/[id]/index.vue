@@ -2,7 +2,10 @@
 const { params } = useRoute();
 const { readItem } = useDirectusItems();
 
-const { user } = useDirectusAuth();
+const { data: authData, status } = useAuth();
+const user = computed(() => {
+	return status.value === 'authenticated' ? authData?.value?.user ?? null : null;
+});
 
 definePageMeta({
 	middleware: ['auth'],

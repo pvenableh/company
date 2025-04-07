@@ -1,7 +1,5 @@
 <template>
 	<div class="w-full mx-auto">
-		<h1 class="text-2xl font-bold mb-6">Ticket Dashboard</h1>
-
 		<!-- Loading state -->
 		<div v-if="isLoading" class="flex justify-center items-center h-64">
 			<LayoutLoader text="Loading Dashboard Data" />
@@ -139,7 +137,9 @@
 									<div>
 										<h3 class="text-sm font-medium">{{ ticket.title }}</h3>
 										<div class="flex gap-2 mt-1">
-											<UBadge size="xs" :color="getStatusColor(ticket.status)">{{ ticket.status }}</UBadge>
+											<UBadge size="xs" :class="'uppercase bg-[' + getStatusColor(ticket.status) + ']'">
+												{{ ticket.status }}
+											</UBadge>
 											<UBadge size="xs" color="gray">{{ ticket.priority }}</UBadge>
 										</div>
 									</div>
@@ -172,7 +172,10 @@
 							</div>
 						</template>
 						<div class="h-80">
-							<TicketsDistributionActivity :data="activityDistributionData" />
+							<TicketsDistributionActivity
+								v-if="activityDistributionData && activityDistributionData.length"
+								:data="activityDistributionData"
+							/>
 						</div>
 					</UCard>
 
@@ -210,13 +213,13 @@
 									<div>
 										<h3 class="text-sm font-medium">{{ ticket.title }}</h3>
 										<div class="flex gap-2 mt-1">
-											<UBadge size="xs" color="green">Completed</UBadge>
+											<UBadge size="xs" class="uppercase bg-[var(--green)]">Completed</UBadge>
 											<UBadge size="xs" color="gray">{{ ticket.priority }}</UBadge>
 										</div>
 									</div>
 									<div class="text-right">
 										<p class="text-xs text-gray-500">Completed: {{ formatDate(ticket.date_updated) }}</p>
-										<p class="text-xs text-green-500">
+										<p class="text-xs text-[var(--green)]">
 											Time to complete: {{ formatDuration(getTicketTimeToComplete(ticket)) }}
 										</p>
 									</div>
@@ -315,7 +318,10 @@ const timePeriodLabel = computed(() => {
 
 // Fetch repositories
 const { readItems } = useDirectusItems();
-const { user } = useDirectusAuth();
+const { data, status } = useAuth();
+const user = computed(() => {
+	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
+});
 const { selectedTeam, teams, visibleTeams } = useTeams();
 const { selectedOrg } = useOrganization();
 const router = useRouter();
@@ -400,37 +406,22 @@ const fetchTickets = async () => {
 
 		// Build filter
 		const filter = {
-			_or: [
-				// Include tickets created in the time period
-				{ date_created: { _gte: startDate.toISOString() } },
-				// Also include open tickets from before the period
+			_and: [
 				{
-					_and: [{ date_created: { _lt: startDate.toISOString() } }, { status: { _nin: ['Completed'] } }],
+					_or: [
+						{ date_created: { _gte: startDate.toISOString() } },
+						{
+							_and: [{ date_created: { _lt: startDate.toISOString() } }, { status: { _nin: ['Completed'] } }],
+						},
+					],
 				},
+				...(selectedOrg.value ? [{ organization: { id: { _eq: selectedOrg.value } } }] : []),
+				...(teamFilter.value ? [{ team: { id: { _eq: teamFilter.value } } }] : []),
+				...(showOnlyMyTickets.value && user.value
+					? [{ assigned_to: { directus_users_id: { id: { _eq: user.value.id } } } }]
+					: []),
 			],
 		};
-
-		// Add organization filter if selected
-		if (selectedOrg.value) {
-			filter._and = filter._and || [];
-			filter._and.push({ organization: { _eq: selectedOrg.value } });
-		}
-
-		// Add team filter if selected
-		if (teamFilter.value) {
-			filter._and = filter._and || [];
-			filter._and.push({ team: { _eq: teamFilter.value } });
-		}
-
-		// Filter for current user's tickets if selected
-		if (showOnlyMyTickets.value && user.value) {
-			filter._and = filter._and || [];
-			filter._and.push({
-				assigned_to: {
-					directus_users_id: { id: { _eq: user.value.id } },
-				},
-			});
-		}
 
 		// Fetch tickets with this filter
 		const tickets = await readItems('tickets', {
@@ -459,7 +450,7 @@ const fetchTickets = async () => {
 			filter,
 			sort: ['-date_created'],
 		});
-
+		console.log(tickets);
 		// Store all tickets
 		allTickets.value = tickets || [];
 
@@ -641,6 +632,7 @@ const generateActivityDistribution = () => {
 		}
 	});
 
+	console.log('Activity Distribution:', activityTypes); // For debugging purposes
 	// Set chart data
 	activityDistributionData.value = activityTypes;
 };
@@ -1033,13 +1025,13 @@ const getStatusColor = (status) => {
 
 	switch (status) {
 		case 'pending':
-			return 'yellow';
+			return 'var(--cyan)';
 		case 'scheduled':
-			return 'blue';
+			return 'var(--cyan2)';
 		case 'inprogress':
-			return 'purple';
+			return 'var(--green2)';
 		case 'completed':
-			return 'green';
+			return 'var(--green)';
 		default:
 			return 'gray';
 	}
@@ -1049,13 +1041,13 @@ const getStatusColor = (status) => {
 const getStatusCardClass = (status) => {
 	switch (status) {
 		case 'pending':
-			return 'border-yellow-500';
+			return 'border-[var(--cyan)]';
 		case 'scheduled':
-			return 'border-blue-500';
+			return 'border-[var(--cyan2)]';
 		case 'inProgress':
-			return 'border-purple-500';
+			return 'border-[var(--green2)]';
 		case 'completed':
-			return 'border-green-500';
+			return 'border-[var(--green)]';
 		default:
 			return 'border-gray-500';
 	}
@@ -1076,4 +1068,6 @@ const refreshData = () => {
 onMounted(() => {
 	fetchTickets();
 });
+
+watch([selectedOrg, teamFilter, showOnlyMyTickets], fetchTickets, { immediate: true });
 </script>

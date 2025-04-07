@@ -10,11 +10,14 @@ const props = defineProps({
 	},
 });
 
-const { user } = useDirectusAuth();
+const { data, status } = useAuth();
+const user = computed(() => {
+	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
+});
 const { createItem, deleteItems } = useDirectusItems();
 
 // Subscribe to reactions with user details in real-time
-const { data } = useRealtimeSubscription(
+const { data: reactions } = useRealtimeSubscription(
 	'reactions',
 	['id', 'reaction', 'user.id', 'user.first_name', 'user.last_name'],
 	{
@@ -26,7 +29,7 @@ const { data } = useRealtimeSubscription(
 const reactionGroups = computed(() => {
 	const groups = {};
 
-	data.value?.forEach((reaction) => {
+	reactions.value?.forEach((reaction) => {
 		groups[reaction.reaction] = groups[reaction.reaction] || {
 			users: [],
 			active: false,

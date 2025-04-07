@@ -1,7 +1,10 @@
 <script setup>
 const { readItem } = useDirectusItems();
 const { params } = useRoute();
-const { user } = useDirectusAuth();
+const { data: authData, status } = useAuth();
+const user = computed(() => {
+	return status.value === 'authenticated' ? authData?.value?.user ?? null : null;
+});
 
 const { selectedOrg, hasMultipleOrgs, organizationOptions, setOrganization, clearOrganization, getOrganizationFilter } =
 	useOrganization();
