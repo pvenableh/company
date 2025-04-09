@@ -38,7 +38,7 @@ export default defineNuxtConfig({
 			stripePublic:
 				process.env.NODE_ENV === 'production' ? process.env.STRIPE_PUBLIC_KEY : process.env.STRIPE_PUBLIC_KEY_TEST,
 			companyName: process.env.COMPANY_NAME,
-			directusUrl: process.env.DIRECTUS_URL,
+			directusUrl: process.env.DIRECTUS_URL || 'https://admin.huestudios.company',
 			assetsUrl: process.env.DIRECTUS_ASSETS_URL || 'https://admin.huestudios.company/assets/',
 			websocketUrl: process.env.DIRECTUS_WEBSOCKET_URL || 'wss://admin.huestudios.company/websocket',
 			staticToken: process.env.DIRECTUS_SERVER_TOKEN || '3njk8nRR70D6o8VHC1IxW87kSBZm3_FS',
@@ -131,7 +131,7 @@ export default defineNuxtConfig({
 		globalAppMiddleware: {
 			isEnabled: false, // Set to true if you want to enable auth for the entire app
 		},
-		baseURL: 'http://localhost:3000/api/auth',
+		baseURL: 'https://huestudios.company/api/auth',
 	},
 
 	devtools: { enabled: true },
