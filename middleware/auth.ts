@@ -6,7 +6,6 @@ export default defineNuxtRouteMiddleware(async (to) => {
 	const { status, data: authData } = await useAuth();
 	const { selectedOrg, initializeOrganizations, setOrganization } = useOrganization();
 	const { selectedTeam, fetchTeams, visibleTeams, hasAdminAccess } = useTeams();
-	const route = useRoute();
 
 	// Skip auth check for signin page
 	if (to.path === '/auth/signin') {
@@ -29,7 +28,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
 	// Handle redirect from query parameter if it exists
 	// This is for the case when a user was redirected to signin and is now authenticated
-	const redirectPath = route.query.redirect;
+	const redirectPath = to.query.redirect;
 	if (redirectPath && typeof redirectPath === 'string' && redirectPath !== to.path) {
 		console.log('--- Redirecting to:', redirectPath);
 		return navigateTo(redirectPath);

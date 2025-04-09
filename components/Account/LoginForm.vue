@@ -145,7 +145,6 @@ async function attemptLogin(): Promise<void> {
 		const result = await signIn('credentials', {
 			email: state.email,
 			password: state.password,
-			redirect: false,
 		});
 
 		if (result?.error) {
