@@ -1,19 +1,32 @@
-<template>
-	<a class="cursor-pointer" @click.prevent="handleLogout">Logout</a>
-</template>
-<script setup>
-const { signOut: logout } = useAuth();
+<script setup lang="ts">
+const { signOut } = useAuth();
 
-const handleLogout = async () => {
+// On page load, trigger logout and redirect to home
+onMounted(async () => {
 	try {
-		await logout();
-		// Clear any stored tokens/state
-
-		// Force page reload and redirect
-		window.location.href = '/';
+		await signOut({ redirect: true, callbackUrl: '/' });
+		// If the above doesn't redirect, force reload
+		setTimeout(() => {
+			window.location.href = '/';
+		}, 500);
 	} catch (error) {
 		console.error('Logout error:', error);
+		window.location.href = '/';
 	}
-};
+});
 </script>
-<style></style>
+
+<template>
+	<div class="flex items-center justify-center h-screen">
+		<UCard>
+			<template #header>
+				<div class="text-center">
+					<h3 class="text-lg font-medium">Logging out...</h3>
+				</div>
+			</template>
+			<div class="flex justify-center">
+				<UButton to="/" label="Return to Home" variant="ghost" />
+			</div>
+		</UCard>
+	</div>
+</template>

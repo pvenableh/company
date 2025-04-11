@@ -2,6 +2,9 @@
 // import { theme } from './theme';
 import { defineNuxtConfig } from 'nuxt/config';
 
+const isProduction = process.env.NODE_ENV === 'production';
+const authBaseURL = isProduction ? 'https://huestudios.company/api/auth' : 'http://localhost:3000/api/auth';
+
 export default defineNuxtConfig({
 	ssr: true,
 
@@ -97,6 +100,9 @@ export default defineNuxtConfig({
 			'nuxt-directus-next',
 			{
 				url: 'https://admin.huestudios.company',
+				authConfig: {
+					mode: 'static',
+				},
 
 				// Remove authConfig section
 
@@ -131,7 +137,12 @@ export default defineNuxtConfig({
 		globalAppMiddleware: {
 			isEnabled: false, // Set to true if you want to enable auth for the entire app
 		},
-		baseURL: 'https://huestudios.company/api/auth',
+		baseURL: authBaseURL,
+		sessionRefresh: {
+			// Ensuring session refreshes periodically and on window focus
+			enablePeriodically: true,
+			enableOnWindowFocus: true,
+		},
 	},
 
 	devtools: { enabled: true },

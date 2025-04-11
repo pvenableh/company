@@ -97,6 +97,7 @@ const route = useRoute();
 const loading = ref<boolean>(false);
 const login_error = ref<string | null>(null);
 const emailTouched = ref<boolean>(false);
+const config = useRuntimeConfig();
 
 const state = reactive<LoginState>({
 	email: '',
@@ -119,7 +120,7 @@ const validate = async (state: LoginState): Promise<FormError[]> => {
 		try {
 			loading.value = true;
 			const response = await $fetch<ApiResponse>(
-				`https://admin.huestudios.company/users?filter[email][_eq]=${state.email}`,
+				`${config.public.directusUrl}/users?filter[email][_eq]=${state.email}`,
 			);
 
 			if (response.data.length < 1) {
@@ -141,30 +142,32 @@ async function attemptLogin(): Promise<void> {
 	login_error.value = null;
 
 	try {
-		// Use signIn from @sidebase/nuxt-auth instead of login from useDirectusAuth
+		// Get redirect URL from query params or default to homepage
+		const redirectTo = route.query.redirect ? decodeURIComponent(route.query.redirect as string) : '/';
+
+		// Use signIn with redirect: true to let NextAuth handle the redirect automatically
 		const result = await signIn('credentials', {
 			email: state.email,
 			password: state.password,
+			redirect: true,
+			callbackUrl: redirectTo,
 		});
 
+		// The code below will not execute if redirect is true
+		// Keeping as fallback in case redirect doesn't work
 		if (result?.error) {
 			login_error.value = result.error;
 			loading.value = false;
 			return;
 		}
 
-		if (route.query.redirect) {
-			const path = decodeURIComponent(route.query.redirect as string);
-			await navigateTo(path);
-		} else {
-			await navigateTo('/');
-		}
+		// If we somehow get here despite redirect:true, try navigating manually
+		window.location.href = redirectTo;
 	} catch (err) {
 		const error = err as LoginError;
 		login_error.value =
 			error.error || error.message || error.data?.errors?.[0]?.message || 'An unexpected error occurred';
+		loading.value = false;
 	}
-
-	loading.value = false;
 }
 </script>

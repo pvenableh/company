@@ -449,7 +449,7 @@ const fetchTickets = async () => {
 			filter,
 			sort: ['-date_created'],
 		});
-		console.log(tickets);
+		// console.log(tickets);
 		// Store all tickets
 		allTickets.value = tickets || [];
 
@@ -631,7 +631,7 @@ const generateActivityDistribution = () => {
 		}
 	});
 
-	console.log('Activity Distribution:', activityTypes); // For debugging purposes
+	// console.log('Activity Distribution:', activityTypes);
 	// Set chart data
 	activityDistributionData.value = activityTypes;
 };
