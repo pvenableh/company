@@ -150,7 +150,6 @@ async function attemptLogin(): Promise<void> {
 			email: state.email,
 			password: state.password,
 			redirect: true,
-			callbackUrl: redirectTo,
 		});
 
 		// The code below will not execute if redirect is true
