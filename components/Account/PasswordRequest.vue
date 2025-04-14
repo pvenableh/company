@@ -39,7 +39,7 @@ const onSubmit = handleSubmit(async (formValues) => {
 	}
 });
 
-const resetForm = () => {
+const resetFormState = () => {
 	resetSent.value = false;
 };
 </script>
@@ -75,7 +75,7 @@ const resetForm = () => {
 				<strong>{{ values.email }}</strong>
 				. Please check your inbox and follow the instructions.
 			</p>
-			<UButton @click="resetForm" variant="ghost" label="Try Another Email" />
+			<UButton @click="resetFormState" variant="ghost" label="Try Another Email" />
 		</div>
 	</div>
 </template>
