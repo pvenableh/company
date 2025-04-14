@@ -21,7 +21,7 @@
 					<nuxt-link to="/account">Account</nuxt-link>
 				</li>
 				<li v-if="user">
-					<AccountLogout />
+					<a @click.prevent="logout" class="cursor-pointer">Logout</a>
 				</li>
 				<li v-else>
 					<nuxt-link to="/auth/signin">Login</nuxt-link>
@@ -38,6 +38,8 @@ const { data, status } = useAuth();
 const user = computed(() => {
 	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
 });
+
+const { logout } = useLogout();
 
 import { onClickOutside } from '@vueuse/core';
 import { closeScreen } from '~~/composables/useScreen';

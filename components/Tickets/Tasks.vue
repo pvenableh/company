@@ -4,7 +4,10 @@ import confetti from 'canvas-confetti';
 
 const router = useRouter();
 
-const { user: currentUser } = useDirectusAuth();
+const { data, status } = useAuth();
+const currentUser = computed(() => {
+	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
+});
 const { createItem, updateItem, deleteItem } = useDirectusItems();
 const { notify } = useNotifications();
 const toast = useToast();

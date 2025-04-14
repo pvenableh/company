@@ -93,7 +93,10 @@ const emit = defineEmits(['update:isOpen', 'update']);
 
 // Composables
 const { createItem, deleteItems } = useDirectusItems();
-const { user: currentUser } = useDirectusAuth();
+const { data, status } = useAuth();
+const currentUser = computed(() => {
+	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
+});
 const { filteredUsers, fetchFilteredUsers, loading: loadingUsers } = useFilteredUsers();
 const toast = useToast();
 

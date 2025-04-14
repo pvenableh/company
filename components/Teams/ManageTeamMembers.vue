@@ -144,7 +144,10 @@ const { isTeamManager, hasAdminAccess, removeUserFromTeam, addUsersToTeam, canMa
 // Get the filtered users functionality
 const { getAvailableTeamUsers } = useFilteredUsers();
 
-const { user: currentUser } = useDirectusAuth();
+const { data, status } = useAuth();
+const currentUser = computed(() => {
+	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
+});
 const toast = useToast();
 
 // State

@@ -49,7 +49,10 @@ const props = defineProps({
 
 const emit = defineEmits(['delete-click', 'share']);
 
-const { user: currentUser } = useDirectusAuth();
+const { data, status } = useAuth();
+const currentUser = computed(() => {
+	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
+});
 const config = useRuntimeConfig();
 const adminRole = config.public.adminRole;
 

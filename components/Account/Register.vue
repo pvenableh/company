@@ -177,7 +177,7 @@ interface Organization {
 }
 
 const { createUser } = useDirectusUsers();
-const { login } = useDirectusAuth();
+const { login } = useAuthActions();
 const { readItems, createItem } = useDirectusItems();
 const route = useRoute();
 const loading = ref<boolean>(false);

@@ -131,7 +131,10 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update:assignedUsers', 'user-removed', 'user-added']);
-const { user: currentUser } = useDirectusAuth();
+const { data, status } = useAuth();
+const currentUser = computed(() => {
+	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
+});
 const { filteredUsers, fetchFilteredUsers, loading: loadingUsers } = useFilteredUsers();
 const selectedUser = ref(null);
 

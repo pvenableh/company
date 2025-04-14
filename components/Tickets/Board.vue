@@ -46,7 +46,7 @@
 							{{ filterByAssignedTo ? 'My Tickets' : 'All Tickets' }}
 						</span>
 					</div>
-					<div class="flex flex-row items-center justify-center space-x-2 hidden">
+					<div class="flex flex-row items-center justify-center space-x-2">
 						<UToggle v-model="filterUnassigned" :disabled="filterByAssignedTo" />
 						<span class="text-[10px] text-gray-500 uppercase">
 							{{ filterUnassigned ? 'Unassigned' : 'All Assignments' }}

@@ -1,88 +1,81 @@
-<template>
-	<div class="w-full flex items-start justify-start flex-row password-request">
-		<UForm :validate="validate" :state="state" class="w-full" @submit="submit">
-			<UFormGroup label="Email" name="email" class="my-6">
-				<UInput
-					v-model="state.email"
-					name="email"
-					type="email"
-					label="Email"
-					size="lg"
-					:loading="loading"
-					icon="i-heroicons-envelope"
-					placeholder="name@domain.com"
-					@input="emailTouched = true"
-				/>
-				<template #error="{ error }">
-					<span
-						class="uppercase tracking-wide text-xs"
-						:class="[error ? 'text-red-500 dark:text-red-400' : 'text-primary-500 dark:text-primary-400']"
-					>
-						{{ error ? error : emailTouched && !error ? 'Your email is valid' : '' }}
-					</span>
-				</template>
-			</UFormGroup>
-			<UButton
-				class="w-full mb-6"
-				type="submit"
-				size="lg"
-				label="Send Email"
-				trailing-icon="i-heroicons-arrow-right"
-				block
-			></UButton>
-		</UForm>
-	</div>
-</template>
+<script setup>
+import { useForm } from 'vee-validate';
+import * as yup from 'yup';
 
-<script setup lang="ts">
-import type { FormError } from '#ui/types';
-
-const { passwordRequest } = useDirectusAuth();
+const { passwordRequest } = useAuthActions();
 const toast = useToast();
 const loading = ref(false);
-const emailTouched = ref(false);
+const resetSent = ref(false);
 
-const state = reactive({
-	email: '',
+const schema = yup.object({
+	email: yup.string().required('Email is required').email('Must be a valid email'),
 });
 
-const validate = async (state: any): Promise<FormError[]> => {
-	const errors = [];
+const { handleSubmit, resetForm, errors, values } = useForm({
+	validationSchema: schema,
+	initialValues: {
+		email: '',
+	},
+});
 
-	if (!state.email) {
-		errors.push({ path: 'email', message: 'Required' });
+const onSubmit = handleSubmit(async (formValues) => {
+	loading.value = true;
+	try {
+		await passwordRequest(formValues.email);
+		resetSent.value = true;
+		toast.add({
+			title: 'Reset Email Sent',
+			description: 'Check your email for the password reset link',
+			color: 'green',
+		});
+	} catch (error) {
+		toast.add({
+			title: 'Error',
+			description: error.message || 'Failed to send reset email',
+			color: 'red',
+		});
+	} finally {
+		loading.value = false;
 	}
+});
 
-	const regex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i;
-
-	if (!regex.test(state.email)) {
-		errors.push({ path: 'email', message: 'This must be a valid email' });
-	}
-
-	if (state.email && regex.test(state.email)) {
-		try {
-			loading.value = true;
-			const response: any = await $fetch(`https://admin.huestudios.company/users?filter[email][_eq]=${state.email}`);
-
-			if (response.data.length < 1) {
-				errors.push({ path: 'email', message: 'This email is not registered.' });
-			}
-
-			loading.value = false;
-		} catch (error) {
-			errors.push({ path: 'email', message: 'Failed to validate email' });
-			loading.value = false;
-		}
-	}
-
-	return errors;
+const resetForm = () => {
+	resetSent.value = false;
 };
-
-function submit() {
-	openScreen();
-	passwordRequest(state.email, 'https://huestudios.company/auth/password-reset');
-	closeScreen();
-	toast.add({ title: 'An email was sent to ' + state.email + '.' });
-}
 </script>
-<style></style>
+
+<template>
+	<div class="w-full max-w-md">
+		<div v-if="!resetSent">
+			<h3 class="text-lg font-medium mb-4">Reset Your Password</h3>
+			<p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
+				Enter your email address below and we'll send you a link to reset your password.
+			</p>
+
+			<form @submit.prevent="onSubmit" class="space-y-4">
+				<UFormGroup label="Email Address" :error="errors.email">
+					<UInput
+						v-model="values.email"
+						type="email"
+						placeholder="name@example.com"
+						autocomplete="email"
+						icon="i-heroicons-envelope"
+					/>
+				</UFormGroup>
+
+				<UButton type="submit" :loading="loading" block label="Send Reset Link" />
+			</form>
+		</div>
+
+		<div v-else class="text-center py-6">
+			<UIcon name="i-heroicons-check-circle" class="text-4xl text-green-500 mb-4" />
+			<h3 class="text-lg font-medium mb-2">Check Your Email</h3>
+			<p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
+				We've sent a password reset link to
+				<strong>{{ values.email }}</strong>
+				. Please check your inbox and follow the instructions.
+			</p>
+			<UButton @click="resetForm" variant="ghost" label="Try Another Email" />
+		</div>
+	</div>
+</template>

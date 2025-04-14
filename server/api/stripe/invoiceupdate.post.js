@@ -1,9 +1,11 @@
 // server/api/webhook/stripe.post.js
 import Stripe from 'stripe';
+import { readItems, updateItem, createItem } from '@directus/sdk';
+import { createDirectus, rest, authentication } from '@directus/sdk';
 
 export default defineEventHandler(async (event) => {
 	const config = useRuntimeConfig();
-	const stripe = new Stripe(config.stripeSecret);
+	const stripe = new Stripe(config.stripeSecretKeyLive); // Use the correct key from config
 
 	try {
 		const rawBody = await readRawBody(event);
@@ -74,12 +76,20 @@ export default defineEventHandler(async (event) => {
 				return { received: true };
 		}
 
-		// Update or create payments_received record and update invoice
-		const { directus } = useDirectusAuth();
+		// Create Directus client instance - server-side approach
+		// Since we're in a server route we need a different approach than composables
+		const directusUrl = config.public.directusUrl;
+		const directusToken = config.public.staticToken;
+
+		// Create Directus client with the static token for server-side operations
+		const directusClient = createDirectus(directusUrl).with(authentication()).with(rest());
+
+		// Static token authentication for server-side operations
+		directusClient.setToken(directusToken);
 
 		try {
 			// First check if a payment record exists
-			const existingPayments = await directus.request(
+			const existingPayments = await directusClient.request(
 				readItems('payments_received', {
 					filter: {
 						payment_intent: { _eq: paymentIntent.id },
@@ -89,10 +99,10 @@ export default defineEventHandler(async (event) => {
 
 			if (existingPayments.length > 0) {
 				// Update existing payment record
-				await directus.request(updateItem('payments_received', existingPayments[0].id, paymentData));
+				await directusClient.request(updateItem('payments_received', existingPayments[0].id, paymentData));
 			} else {
 				// Create new payment record
-				await directus.request(
+				await directusClient.request(
 					createItem('payments_received', {
 						...paymentData,
 						date_received: new Date().toISOString(),
@@ -101,7 +111,7 @@ export default defineEventHandler(async (event) => {
 			}
 
 			// Update invoice status
-			await directus.request(
+			await directusClient.request(
 				updateItem('invoices', invoiceId, {
 					status: paymentData.status,
 					date_updated: new Date().toISOString(),

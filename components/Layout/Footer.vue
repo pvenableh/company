@@ -8,7 +8,7 @@
 		<div class="flex items-start justify-start flex-col footer__col">
 			<nuxt-link to="/organization">Organization</nuxt-link>
 			<nuxt-link v-if="user" to="/account">Account</nuxt-link>
-			<AccountLogout v-if="user" />
+			<a @click.prevent="logout" v-if="user" class="cursor-pointer">Logout</a>
 			<nuxt-link v-else to="/auth/signin">Login</nuxt-link>
 		</div>
 		<div class="w-full flex items-center justify-center flex-col sm:flex-row my-12 footer__contact-info">
@@ -52,6 +52,8 @@ const { data, status } = useAuth();
 const user = computed(() => {
 	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
 });
+
+const { logout } = useLogout();
 
 const props = defineProps({
 	links: {

@@ -219,7 +219,10 @@ const fileInput = ref(null);
 const linkUrl = ref('');
 const { uploadFiles, updateFile } = useDirectusFiles();
 const { notify } = useNotifications();
-const { user: currentUser } = useDirectusAuth();
+const { data, status } = useAuth();
+const currentUser = computed(() => {
+	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
+});
 const { selectedOrg } = useOrganization();
 const { selectedTeam } = useTeams();
 const { filteredUsers, fetchFilteredUsers, loading: loadingUsers } = useFilteredUsers();

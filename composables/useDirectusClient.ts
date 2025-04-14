@@ -9,7 +9,7 @@ export function useDirectusClient() {
 	const client = computed(() => {
 		const directusUrl = config.public.directusUrl;
 
-		const directusClient = createDirectus(directusUrl).with(authentication()).with(rest()).with(realtime());
+		const directusClient = createDirectus(directusUrl).with(authentication()).with(rest()).with(realtime()); // Include realtime if you need it
 
 		// If we have a session with token, set it in the client
 		if (session.value?.directusToken) {
@@ -20,5 +20,13 @@ export function useDirectusClient() {
 		return directusClient;
 	});
 
-	return { client };
+	// Helper to check if client is authenticated
+	const isAuthenticated = computed(() => {
+		return !!session.value?.directusToken;
+	});
+
+	return {
+		client,
+		isAuthenticated,
+	};
 }

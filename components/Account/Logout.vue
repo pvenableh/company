@@ -1,11 +1,19 @@
 <script setup lang="ts">
 const { signOut } = useAuth();
+const router = useRouter();
 
-// On page load, trigger logout and redirect to home
-onMounted(async () => {
+// Function to handle logout when triggered by a user action
+const handleLogout = async () => {
 	try {
-		await signOut({ redirect: true, callbackUrl: '/' });
-		// If the above doesn't redirect, force reload
+		// Show a loading state if needed
+		console.log('Logging out...');
+
+		await signOut({ redirect: false });
+
+		// Navigate to home page
+		router.push('/');
+
+		// If navigation doesn't work, fallback to direct URL change
 		setTimeout(() => {
 			window.location.href = '/';
 		}, 500);
@@ -13,20 +21,15 @@ onMounted(async () => {
 		console.error('Logout error:', error);
 		window.location.href = '/';
 	}
-});
+};
 </script>
 
 <template>
-	<div class="flex items-center justify-center h-screen">
-		<UCard>
-			<template #header>
-				<div class="text-center">
-					<h3 class="text-lg font-medium">Logging out...</h3>
-				</div>
-			</template>
-			<div class="flex justify-center">
-				<UButton to="/" label="Return to Home" variant="ghost" />
-			</div>
-		</UCard>
+	<div>
+		<!-- Use slot for custom button/trigger -->
+		<slot :logout="handleLogout">
+			<!-- Default button if no slot content is provided -->
+			<a @click.prevent="handleLogout">Logout</a>
+		</slot>
 	</div>
 </template>

@@ -225,7 +225,10 @@ const { selectedOrg, organizations, hasMultipleOrgs, organizationOptions } = use
 const { teams, visibleTeams, loading: teamsLoading, fetchTeams, selectedTeam, setTeam, hasAdminAccess } = useTeams();
 const { filteredUsers, fetchFilteredUsers, loading: loadingUsers, DEFAULT_TEAM_ID } = useFilteredUsers();
 const { createItem, readItems } = useDirectusItems();
-const { user: currentUser } = useDirectusAuth();
+const { data, status } = useAuth();
+const currentUser = computed(() => {
+	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
+});
 const { notify } = useNotifications();
 const { notifyTicketAssignment, notifyMentions } = useNotificationHelper();
 const toast = useToast();

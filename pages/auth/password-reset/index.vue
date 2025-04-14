@@ -4,7 +4,8 @@ import { useForm, useField } from 'vee-validate';
 import * as yup from 'yup';
 import { openScreen, closeScreen } from '~/composables/useScreen';
 
-const { passwordReset } = useDirectusAuth();
+// Replace useDirectusAuth with our new composable
+const { passwordReset } = useAuthActions();
 const route = useRoute();
 
 const reset_token = ref(route.query.token ? route.query.token : '');

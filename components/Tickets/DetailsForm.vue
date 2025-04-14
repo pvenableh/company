@@ -136,7 +136,10 @@ const emit = defineEmits(['update', 'delete-click', 'comment-count-update', 'sha
 // Composables
 const { readItems } = useDirectusItems();
 const { notify } = useNotifications();
-const { user: currentUser } = useDirectusAuth();
+const { data, status } = useAuth();
+const currentUser = computed(() => {
+	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
+});
 const toast = useToast();
 const { hasMultipleOrgs, organizationOptions } = useOrganization();
 const { teams, loading: teamsLoading, fetchTeams, setTeam, ADMIN_ROLE_ID, CLIENT_MANAGER_ROLE_ID } = useTeams();

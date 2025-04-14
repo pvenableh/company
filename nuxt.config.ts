@@ -96,37 +96,37 @@ export default defineNuxtConfig({
 		'@sidebase/nuxt-auth',
 		'@vueuse/motion/nuxt',
 		'@vueuse/nuxt',
-		[
-			'nuxt-directus-next',
-			{
-				url: 'https://admin.huestudios.company',
-				authConfig: {
-					mode: 'static',
-				},
+		// [
+		// 	'nuxt-directus-next',
+		// 	{
+		// 		url: 'https://admin.huestudios.company',
+		// 		authConfig: {
+		// 			mode: 'static',
+		// 		},
 
-				// Remove authConfig section
+		// 		// Remove authConfig section
 
-				moduleConfig: {
-					// Keep these features
-					autoImport: true,
-					devtools: true,
+		// 		moduleConfig: {
+		// 			// Keep these features
+		// 			autoImport: true,
+		// 			devtools: true,
 
-					// Disable auto-refresh since you'll handle auth with nuxt-auth
-					autoRefresh: {
-						enableMiddleware: false,
-						global: false,
-					},
+		// 			// Disable auto-refresh since you'll handle auth with nuxt-auth
+		// 			autoRefresh: {
+		// 				enableMiddleware: false,
+		// 				global: false,
+		// 			},
 
-					// Keep user data fetching config
-					readMeQuery: {
-						fields: [
-							'*,organizations.organizations_id.id,organizations.organizations_id.name,organizations.organizations_id.logo,organizations.organizations_id.icon,organizations.organizations_id.tickets,organizations.organizations_id.projects',
-						],
-						updateState: true,
-					},
-				},
-			},
-		],
+		// 			// Keep user data fetching config
+		// 			readMeQuery: {
+		// 				fields: [
+		// 					'*,organizations.organizations_id.id,organizations.organizations_id.name,organizations.organizations_id.logo,organizations.organizations_id.icon,organizations.organizations_id.tickets,organizations.organizations_id.projects',
+		// 				],
+		// 				updateState: true,
+		// 			},
+		// 		},
+		// 	},
+		// ],
 		'nuxt-gtag',
 		'@samk-dev/nuxt-vcalendar',
 	],

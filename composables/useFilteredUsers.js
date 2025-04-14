@@ -3,7 +3,10 @@
 export const useFilteredUsers = () => {
 	const { readUsers } = useDirectusUsers();
 	const { readItems } = useDirectusItems();
-	const { user: currentUser } = useDirectusAuth();
+	const { data, status } = useAuth();
+	const currentUser = computed(() => {
+		return status.value === 'authenticated' ? data?.value?.user ?? null : null;
+	});
 	const { selectedOrg } = useOrganization();
 
 	// Use a consistent DEFAULT_TEAM_ID

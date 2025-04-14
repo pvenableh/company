@@ -148,7 +148,10 @@ const props = defineProps({
 const emit = defineEmits(['close', 'deleted', 'preventClose', 'commentCountUpdated', 'updated']);
 
 // Composables
-const { user: currentUser } = useDirectusAuth();
+const { data, status } = useAuth();
+const currentUser = computed(() => {
+	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
+});
 const { createItem, deleteItem, updateItem } = useDirectusItems();
 const { notify } = useNotifications();
 const toast = useToast();

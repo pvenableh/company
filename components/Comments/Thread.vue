@@ -123,7 +123,10 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['reply', 'submit', 'cancel', 'delete']);
-const { user: currentUser } = useDirectusAuth();
+const { data, status } = useAuth();
+const currentUser = computed(() => {
+	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
+});
 const { deleteItem } = useDirectusItems();
 const deleteLoading = ref(false);
 const showReplyForm = ref(false);

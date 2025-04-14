@@ -149,7 +149,7 @@ async function attemptLogin(): Promise<void> {
 		const result = await signIn('credentials', {
 			email: state.email,
 			password: state.password,
-			redirect: true,
+			redirect: false,
 		});
 
 		// The code below will not execute if redirect is true

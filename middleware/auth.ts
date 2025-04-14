@@ -1,15 +1,18 @@
 // middleware/auth.ts
 export default defineNuxtRouteMiddleware(async (to) => {
 	console.log('--- Auth Middleware Executing ---');
-	console.log('Target Route:', to.path);
 
 	const { status, data: authData } = await useAuth();
 	const { selectedOrg, initializeOrganizations, setOrganization } = useOrganization();
 	const { selectedTeam, fetchTeams, visibleTeams, hasAdminAccess } = useTeams();
 
-	// Skip auth check for signin page
-	if (to.path === '/auth/signin') {
-		console.log('--- On signin route, allowing navigation ---');
+	// Skip auth check for auth-related pages
+	if (to.path.startsWith('/auth/') && to.path !== '/auth/logout') {
+		// If already logged in and trying to access login page, redirect to dashboard
+		if (status.value === 'authenticated' && to.path === '/auth/signin') {
+			return navigateTo('/');
+		}
+		console.log('--- On auth route, allowing navigation ---');
 		return;
 	}
 
@@ -22,6 +25,12 @@ export default defineNuxtRouteMiddleware(async (to) => {
 		});
 	}
 
+	// Skip auth check for signin page
+	if (to.path === '/auth/signin') {
+		console.log('--- On signin route, allowing navigation ---');
+		return;
+	}
+
 	// User is authenticated at this point
 	const user = authData.value?.user;
 	console.log('--- User authenticated:', user?.email);
@@ -32,12 +41,6 @@ export default defineNuxtRouteMiddleware(async (to) => {
 	if (redirectPath && typeof redirectPath === 'string' && redirectPath !== to.path) {
 		console.log('--- Redirecting to:', redirectPath);
 		return navigateTo(redirectPath);
-	}
-
-	// Set user in directus auth state if needed (compatibility layer)
-	const { setUser } = useDirectusAuth();
-	if (setUser && user) {
-		setUser(user);
 	}
 
 	// --- Organization Handling ---

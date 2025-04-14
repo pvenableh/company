@@ -14,12 +14,6 @@
 		"clean": "rm -rf .nuxt dist .output node_modules",
 		"prepare": "husky install"
 	},
-	"pnpm": {
-		"overrides": {
-			"glob": "10.4.5",
-			"ohash": "1.1.6"
-		}
-	},
 	"devDependencies": {
 		"@formkit/auto-animate": "1.0.0-beta.6",
 		"@formkit/nuxt": "^1.6.9",
@@ -65,7 +59,6 @@
 		"jwt-decode": "^4.0.0",
 		"lint-staged": "^15.4.3",
 		"nuxt": "^3.15.4",
-		"nuxt-directus-next": "^0.0.15",
 		"prettier": "3.2.5",
 		"stripe": "^14.25.0",
 		"tippy.js": "^6.3.7",
@@ -74,11 +67,10 @@
 		"vue-tsc": "^2.2.8"
 	},
 	"dependencies": {
+		"@directus/sdk": "^19.1.0",
 		"@nuxt/image": "^1.9.0",
 		"@sendgrid/mail": "^8.1.4",
 		"@sidebase/nuxt-auth": "^0.10.1",
-		"@unovis/ts": "^1.5.1",
-		"@unovis/vue": "^1.5.1",
 		"@use-gesture/vanilla": "^10.3.1",
 		"@vee-validate/nuxt": "^4.15.0",
 		"@vee-validate/yup": "^4.15.0",

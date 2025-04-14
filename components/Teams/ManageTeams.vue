@@ -245,7 +245,10 @@ const {
 
 const { selectedOrg, currentOrg } = useOrganization();
 
-const { user: currentUser } = useDirectusAuth();
+const { data, status } = useAuth();
+const currentUser = computed(() => {
+	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
+});
 const toast = useToast();
 
 // Set up cross-tab sync listener
