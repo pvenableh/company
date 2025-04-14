@@ -8,17 +8,22 @@ const user = computed(() => {
 	<div class="md:px-6 mx-auto flex items-start justify-center flex-col relative px-4 pt-20">
 		<h1 class="page__title">Dashboard</h1>
 		<div
+			v-if="!user"
 			class="w-full flex flex-col items-center justify-center min-h-svh z-10 page__inner"
-			:class="{ '!mt-0 justify-start': user }"
+			:class="{ '!mt-0 justify-start ': user }"
 		>
-			<nuxt-link v-if="!user" to="/auth/signin">
+			<nuxt-link to="/auth/signin">
 				<FormVButton class="w-full mb-6" type="submit" variant="outline" style="max-width: 450px">Login</FormVButton>
 			</nuxt-link>
-			<div v-else class="w-full max-w-[1200px]">
+		</div>
+		<div v-else class="w-full flex flex-col items-center min-h-svh z-10 !mt-0 justify-start page__inner">
+			<div class="w-full max-w-[1200px]">
 				<h2 class="text-lg uppercase tracking-wide mb-2 font-thin">{{ greetUser() }} {{ user.first_name }}.</h2>
 				<div class="">
-					<h5 class="w-full uppercase block font-medium text-gray-700 dark:text-gray-200 tracking-wider text-[10px]">
-						Tickets Activity:
+					<h5
+						class="w-full mb-2 uppercase block font-medium text-gray-700 dark:text-gray-200 tracking-wider text-[10px]"
+					>
+						Ticket Activity:
 					</h5>
 					<TicketsDashboard />
 				</div>

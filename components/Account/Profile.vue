@@ -28,7 +28,11 @@
 	</div>
 </template>
 <script setup>
-const { user, updateMe } = useDirectusUsers();
+const { updateMe } = useDirectusUsers();
+const { data, status } = useAuth();
+const user = computed(() => {
+	return status.value === 'authenticated' ? data.value.user : null;
+});
 const toast = useToast();
 
 watch(user.value, (currentValue, oldValue) => {
