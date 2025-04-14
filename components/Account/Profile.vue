@@ -21,8 +21,7 @@
 				class="my-6"
 				:disabled="true"
 			/>
-			<nuxt-link to="/test">Test</nuxt-link>
-
+			d
 			<UButton class="w-full mb-6" type="submit" size="lg" label="Update" block />
 		</form>
 	</div>
