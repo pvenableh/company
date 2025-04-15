@@ -1,279 +1,80 @@
 <template>
-	<div class="w-full mx-auto">
-		<!-- Loading state -->
-		<div v-if="isLoading" class="flex justify-center items-center h-64">
+	<div class="w-full flex items-center justify-center flex-col relative mx-auto">
+		<!-- Connection error - only show if not loading or filtering -->
+		<!-- <Transition name="fade">
+			<UAlert
+				v-if="!isConnected && !isLoading && !isFilterLoading && !isFetching"
+				title="Connection Lost"
+				description="Attempting to reconnect..."
+				color="yellow"
+				class="mb-6 absolute right-10 top-[80px] z-10"
+			>
+				<template #footer>
+					<UButton size="sm" color="yellow" @click="refreshData">Retry Connection</UButton>
+				</template>
+			</UAlert>
+		</Transition> -->
+		<!-- Loading state - Initial load -->
+		<div v-if="isLoading" class="flex justify-center items-center h-svh w-full absolute">
 			<LayoutLoader text="Loading Dashboard Data" />
 		</div>
 
-		<!-- Connection error -->
-		<UAlert
-			v-else-if="!isConnected"
-			title="Connection Lost"
-			description="Attempting to reconnect..."
-			color="yellow"
-			class="mb-6"
-		>
-			<template #footer>
-				<UButton size="sm" color="yellow" @click="refreshData">Retry Connection</UButton>
-			</template>
-		</UAlert>
+		<!-- Filter loading state with transition -->
+		<Transition name="fade" mode="out-in" @after-leave="showContent = !isFilterLoading">
+			<div v-if="isFilterLoading && !isLoading" class="flex justify-center items-center h-svh w-full absolute">
+				<LayoutLoader text="Updating Dashboard..." />
+			</div>
+		</Transition>
 
 		<!-- Dashboard content -->
-		<div v-else class="space-y-8">
+		<div v-show="showContent && !isFilterLoading && !isLoading" class="space-y-8">
 			<!-- Overview Cards -->
-			<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-				<UCard class="border-l-4" :class="getStatusCardClass('pending')">
-					<div class="flex justify-between items-center">
-						<div>
-							<h3 class="text-xs uppercase font-bold text-gray-500">Pending</h3>
-							<p class="text-2xl font-bold">{{ ticketCounts.pending }}</p>
-						</div>
-						<UIcon name="i-heroicons-clock" class="w-10 h-10 text-gray-300" />
-					</div>
-					<p class="text-xs mt-2">Avg. age: {{ formatDuration(avgTicketAge.pending) }}</p>
-				</UCard>
-
-				<UCard class="border-l-4" :class="getStatusCardClass('scheduled')">
-					<div class="flex justify-between items-center">
-						<div>
-							<h3 class="text-xs uppercase font-bold text-gray-500">Scheduled</h3>
-							<p class="text-2xl font-bold">{{ ticketCounts.scheduled }}</p>
-						</div>
-						<UIcon name="i-heroicons-calendar" class="w-10 h-10 text-gray-300" />
-					</div>
-					<p class="text-xs mt-2">Avg. age: {{ formatDuration(avgTicketAge.scheduled) }}</p>
-				</UCard>
-
-				<UCard class="border-l-4" :class="getStatusCardClass('inProgress')">
-					<div class="flex justify-between items-center">
-						<div>
-							<h3 class="text-xs uppercase font-bold text-gray-500">In Progress</h3>
-							<p class="text-2xl font-bold">{{ ticketCounts.inProgress }}</p>
-						</div>
-						<UIcon name="i-heroicons-arrow-path" class="w-10 h-10 text-gray-300" />
-					</div>
-					<p class="text-xs mt-2">Avg. age: {{ formatDuration(avgTicketAge.inProgress) }}</p>
-				</UCard>
-
-				<UCard class="border-l-4" :class="getStatusCardClass('completed')">
-					<div class="flex justify-between items-center">
-						<div>
-							<h3 class="text-xs uppercase font-bold text-gray-500">Completed</h3>
-							<p class="text-2xl font-bold">{{ ticketCounts.completed }}</p>
-						</div>
-						<UIcon name="i-heroicons-check-circle" class="w-10 h-10 text-gray-300" />
-					</div>
-					<p class="text-xs mt-2">Last 30 days: {{ ticketCounts.recentlyCompleted }}</p>
-				</UCard>
-			</div>
+			<TicketsDashboardStatusCards :ticket-counts="ticketCounts" :avg-ticket-age="avgTicketAge" />
 
 			<!-- Filter Controls -->
-			<div class="flex flex-wrap gap-4 items-center mb-6">
-				<div class="flex-grow">
-					<UFormGroup label="Time Period">
-						<USelect v-model="timePeriod" :options="timePeriodOptions" @change="refreshData" />
-					</UFormGroup>
-				</div>
-				<div class="flex-grow">
-					<UFormGroup label="Team Filter" v-if="showTeamFilter">
-						<USelect v-model="teamFilter" :options="teamOptions" @change="refreshData" />
-					</UFormGroup>
-				</div>
-				<div class="flex-grow">
-					<UFormGroup label="Your Tickets Only">
-						<UToggle v-model="showOnlyMyTickets" @change="refreshData" />
-					</UFormGroup>
-				</div>
-			</div>
+			<TicketsDashboardFilterControls
+				v-model:time-period="timePeriod"
+				v-model:team-filter="teamFilter"
+				v-model:show-only-my-tickets="showOnlyMyTickets"
+				:time-period-options="timePeriodOptions"
+				:team-options="teamOptions"
+				:show-team-filter="showTeamFilter"
+				@change="refreshData"
+			/>
 
 			<!-- Main Dashboard Sections -->
 			<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
 				<!-- Left Column -->
 				<div class="space-y-8">
-					<UCard>
-						<template #header>
-							<div class="flex justify-between items-center">
-								<h2 class="text-base font-bold">Oldest Open Tickets</h2>
-								<UButton
-									size="xs"
-									variant="ghost"
-									@click="navigateToTicket(oldestTickets[0]?.id)"
-									v-if="oldestTickets.length"
-								>
-									View All
-								</UButton>
-							</div>
-						</template>
-						<div class="divide-y">
-							<div v-for="ticket in oldestTickets" :key="ticket.id" class="py-3">
-								<div class="flex justify-between">
-									<div>
-										<h3 class="text-sm font-medium">{{ ticket.title }}</h3>
-										<div class="flex gap-2 mt-1">
-											<UBadge size="xs" :class="'uppercase bg-[' + getStatusColor(ticket.status) + ']'">
-												{{ ticket.status }}
-											</UBadge>
-											<UBadge size="xs" color="gray">{{ ticket.priority }}</UBadge>
-										</div>
-									</div>
-									<div class="text-right">
-										<p class="text-xs text-gray-500">Created: {{ formatDate(ticket.date_created) }}</p>
-										<p class="text-xs font-bold text-red-500">Age: {{ formatDuration(getTicketAge(ticket)) }}</p>
-									</div>
-								</div>
-								<div class="flex justify-between mt-2">
-									<div class="flex items-center gap-1 text-xs text-gray-500">
-										<UIcon name="i-heroicons-user-circle" class="w-3 h-3" />
-										<span>{{ formatAssignees(ticket.assigned_to) }}</span>
-									</div>
-									<UButton size="xs" variant="link" @click="navigateToTicket(ticket.id)">View</UButton>
-								</div>
-							</div>
-							<div v-if="!oldestTickets.length" class="py-4 text-center text-gray-500">No open tickets found</div>
-						</div>
-					</UCard>
-					<!-- Ticket Age Distribution -->
-					<UCard>
-						<template #header>
-							<div class="flex justify-between items-center">
-								<h2 class="text-base font-bold">Ticket Age Distribution</h2>
-								<UBadge color="blue" variant="soft">Non-Completed Tickets</UBadge>
-							</div>
-						</template>
-						<div class="h-80">
-							<TicketsDistributionAge :data="ticketAgeData" />
-						</div>
-					</UCard>
-
-					<!-- Your Completion Rate -->
-					<UCard v-if="showOnlyMyTickets">
-						<template #header>
-							<div class="flex justify-between items-center">
-								<h2 class="text-base font-bold">Your Completion Rate</h2>
-								<UBadge color="green" variant="soft">Last {{ timePeriodLabel }}</UBadge>
-							</div>
-						</template>
-						<div class="h-80">
-							<TicketsCompletionPersonal :data="personalCompletionData" />
-						</div>
-					</UCard>
-
 					<!-- Oldest Open Tickets -->
+					<TicketsDashboardOldestList :tickets="oldestTickets" @view-ticket="navigateToTicket" />
+
+					<!-- Ticket Age Distribution -->
+					<TicketsDashboardAgeDistribution :data="ticketAgeData" />
+
+					<!-- Your Completion Rate (Only when showing user's tickets) -->
+					<TicketsDashboardPersonalCompletion
+						v-if="showOnlyMyTickets"
+						:data="personalCompletionData"
+						:time-period-label="timePeriodLabel"
+					/>
 				</div>
 
 				<!-- Right Column -->
 				<div class="space-y-8">
 					<!-- Completion Rate Trend -->
-					<UCard>
-						<template #header>
-							<div class="flex justify-between items-center">
-								<h2 class="text-base font-bold">Completion Rate Trend</h2>
-								<UBadge color="cyan" variant="soft">Last {{ timePeriodLabel }}</UBadge>
-							</div>
-						</template>
-						<div class="h-80">
-							<TicketsCompletionTrend :data="completionTrendData" />
-						</div>
-					</UCard>
+					<TicketsDashboardCompletionTrendCard :data="completionTrendData" :time-period-label="timePeriodLabel" />
+
 					<!-- Team Activity Distribution -->
-					<UCard>
-						<template #header>
-							<div class="flex justify-between items-center">
-								<h2 class="text-base font-bold">Activity Distribution</h2>
-								<UBadge color="purple" variant="soft">{{ teamFilter === null ? 'Organization' : 'Team' }}</UBadge>
-							</div>
-						</template>
-						<div class="h-80">
-							<TicketsDistributionActivity
-								v-if="activityDistributionData && activityDistributionData.length"
-								:data="activityDistributionData"
-							/>
-						</div>
-					</UCard>
+					<TicketsDashboardActivityDistribution :data="activityDistributionData" :team-filter="teamFilter" />
 
 					<!-- Recently Completed Tickets -->
-					<UCard>
-						<template #header>
-							<div class="flex justify-between items-center">
-								<h2 class="text-base font-bold">Recently Completed</h2>
-								<UButton
-									size="xs"
-									variant="ghost"
-									@click="navigateToTicket(recentTickets[0]?.id)"
-									v-if="recentTickets.length"
-								>
-									View All
-								</UButton>
-							</div>
-						</template>
-						<div class="divide-y">
-							<div v-for="ticket in recentTickets" :key="ticket.id" class="py-3">
-								<div class="flex justify-between">
-									<div>
-										<h3 class="text-sm font-medium">{{ ticket.title }}</h3>
-										<div class="flex gap-2 mt-1">
-											<UBadge size="xs" class="uppercase bg-[var(--green)]">Completed</UBadge>
-											<UBadge size="xs" color="gray">{{ ticket.priority }}</UBadge>
-										</div>
-									</div>
-									<div class="text-right">
-										<p class="text-xs text-gray-500">Completed: {{ formatDate(ticket.date_updated) }}</p>
-										<p class="text-xs text-[var(--green)]">
-											Time to complete: {{ formatDuration(getTicketTimeToComplete(ticket)) }}
-										</p>
-									</div>
-								</div>
-								<div class="flex justify-between mt-2">
-									<div class="flex items-center gap-1 text-xs text-gray-500">
-										<UIcon name="i-heroicons-user-circle" class="w-3 h-3" />
-										<span>{{ formatAssignees(ticket.assigned_to) }}</span>
-									</div>
-									<UButton size="xs" variant="link" @click="navigateToTicket(ticket.id)">View</UButton>
-								</div>
-							</div>
-							<div v-if="!recentTickets.length" class="py-4 text-center text-gray-500">
-								No recently completed tickets found
-							</div>
-						</div>
-					</UCard>
+					<TicketsDashboardRecentList :tickets="recentTickets" @view-ticket="navigateToTicket" />
 				</div>
 			</div>
 
-			<!-- Your Performance Section -->
-			<div v-if="showOnlyMyTickets">
-				<UCard>
-					<template #header>
-						<h2 class="text-base font-bold">Your Performance Summary</h2>
-					</template>
-					<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-						<div class="border-r border-gray-200 pr-4">
-							<h3 class="text-xs uppercase font-bold text-gray-500">Average Resolution Time</h3>
-							<p class="text-xl font-bold">{{ formatDuration(personalPerformance.avgResolutionTime) }}</p>
-							<div class="mt-1">
-								<TicketsCompletionIndicator
-									:value="personalPerformance.comparison.avgResolutionTime"
-									:higher-is-better="false"
-									prefix="vs team: "
-								/>
-							</div>
-						</div>
-						<div class="border-r border-gray-200 px-4">
-							<h3 class="text-xs uppercase font-bold text-gray-500">Completion Rate</h3>
-							<p class="text-xl font-bold">{{ personalPerformance.completionRate }}%</p>
-							<div class="mt-1">
-								<TicketsCompletionIndicator :value="personalPerformance.comparison.completionRate" prefix="vs team: " />
-							</div>
-						</div>
-						<div class="pl-4">
-							<h3 class="text-xs uppercase font-bold text-gray-500">Activity Level</h3>
-							<p class="text-xl font-bold">{{ personalPerformance.activityLevel }} actions/ticket</p>
-							<div class="mt-1">
-								<TicketsCompletionIndicator :value="personalPerformance.comparison.activityLevel" prefix="vs team: " />
-							</div>
-						</div>
-					</div>
-				</UCard>
-			</div>
+			<!-- Your Performance Section (Only when showing user's tickets) -->
+			<TicketsDashboardPersonalPerformance v-if="showOnlyMyTickets" :performance="personalPerformance" />
 		</div>
 	</div>
 </template>
@@ -283,10 +84,47 @@ import { differenceInDays, differenceInHours, format, subDays, subMonths } from 
 
 // State
 const isLoading = ref(true);
+const isFilterLoading = ref(false);
 const isConnected = ref(true);
 const timePeriod = ref('30days');
 const teamFilter = ref(null);
 const showOnlyMyTickets = ref(false);
+const ticketSubscription = ref(null);
+const showContent = ref(false);
+const isFetching = ref(false);
+
+// Dashboard data
+const allTickets = ref([]);
+const oldestTickets = ref([]);
+const recentTickets = ref([]);
+const ticketCounts = ref({
+	pending: 0,
+	scheduled: 0,
+	inProgress: 0,
+	completed: 0,
+	recentlyCompleted: 0,
+});
+const avgTicketAge = ref({
+	pending: 0,
+	scheduled: 0,
+	inProgress: 0,
+});
+
+// Chart data
+const ticketAgeData = ref([]);
+const activityDistributionData = ref([]);
+const completionTrendData = ref([]);
+const personalCompletionData = ref([]);
+const personalPerformance = ref({
+	avgResolutionTime: 0,
+	completionRate: 0,
+	activityLevel: 0,
+	comparison: {
+		avgResolutionTime: 0,
+		completionRate: 0,
+		activityLevel: 0,
+	},
+});
 
 // Time period options
 const timePeriodOptions = [
@@ -325,6 +163,32 @@ const { selectedTeam, teams, visibleTeams } = useTeams();
 const { selectedOrg } = useOrganization();
 const router = useRouter();
 
+const applyFilters = () => {
+	// Show the filter loading state
+	isFilterLoading.value = true;
+	showContent.value = false;
+
+	// Set a minimum loading time to ensure smooth transition
+	const startTime = Date.now();
+
+	// Use setTimeout to allow the UI to update before starting the fetch
+	setTimeout(async () => {
+		await fetchTickets();
+
+		// Ensure a minimum loading time of 500ms for better UX
+		const elapsed = Date.now() - startTime;
+		if (elapsed < 500) {
+			setTimeout(() => {
+				isFilterLoading.value = false;
+				showContent.value = true;
+			}, 500 - elapsed);
+		} else {
+			isFilterLoading.value = false;
+			showContent.value = true;
+		}
+	}, 10);
+};
+
 // Whether to show team filter (only if user has access to multiple teams)
 const showTeamFilter = computed(() => visibleTeams.value?.length > 1);
 
@@ -344,42 +208,15 @@ const teamOptions = computed(() => {
 	return options;
 });
 
-// Dashboard data
-const allTickets = ref([]);
-const oldestTickets = ref([]);
-const recentTickets = ref([]);
-const ticketCounts = ref({
-	pending: 0,
-	scheduled: 0,
-	inProgress: 0,
-	completed: 0,
-	recentlyCompleted: 0,
-});
-const avgTicketAge = ref({
-	pending: 0,
-	scheduled: 0,
-	inProgress: 0,
-});
-
-// Chart data
-const ticketAgeData = ref([]);
-const activityDistributionData = ref([]);
-const completionTrendData = ref([]);
-const personalCompletionData = ref([]);
-const personalPerformance = ref({
-	avgResolutionTime: 0,
-	completionRate: 0,
-	activityLevel: 0,
-	comparison: {
-		avgResolutionTime: 0,
-		completionRate: 0,
-		activityLevel: 0,
-	},
-});
-
-// Fetch tickets and related data
+// Fetch tickets via REST API then setup websocket
 const fetchTickets = async () => {
-	isLoading.value = true;
+	// Track that we're fetching data to prevent connection errors from showing
+	isFetching.value = true;
+
+	if (!isFilterLoading.value) {
+		isLoading.value = true;
+		showContent.value = false;
+	}
 
 	try {
 		// Calculate date range based on selected time period
@@ -449,20 +286,116 @@ const fetchTickets = async () => {
 			filter,
 			sort: ['-date_created'],
 		});
-		// console.log(tickets);
+
 		// Store all tickets
 		allTickets.value = tickets || [];
 
 		// Process ticket data for dashboard
 		processTicketData();
 
+		// Setup realtime subscription
+		setupRealtimeSubscription(filter);
+
+		// Set connected state after successful fetch
 		isConnected.value = true;
 	} catch (error) {
 		console.error('Error fetching tickets:', error);
-		isConnected.value = false;
+		// Only set disconnected if we're not in the middle of filtering
+		if (!isFilterLoading.value) {
+			isConnected.value = false;
+		}
 	} finally {
-		isLoading.value = false;
+		// End fetching state
+		isFetching.value = false;
+
+		// If this is initial load, show content
+		if (isLoading.value) {
+			isLoading.value = false;
+			// Small delay to ensure smooth transition
+			setTimeout(() => {
+				showContent.value = true;
+			}, 50);
+		}
 	}
+};
+
+// Setup realtime subscription
+const setupRealtimeSubscription = (filter) => {
+	// If we already have a subscription, disconnect first
+	if (ticketSubscription.value && ticketSubscription.value.disconnect) {
+		ticketSubscription.value.disconnect();
+	}
+
+	// Fields to fetch via websocket (same as REST API)
+	const fields = [
+		'id',
+		'title',
+		'status',
+		'priority',
+		'date_created',
+		'date_updated',
+		'user_created.id',
+		'user_created.first_name',
+		'user_created.last_name',
+		'assigned_to.directus_users_id.id',
+		'assigned_to.directus_users_id.first_name',
+		'assigned_to.directus_users_id.last_name',
+		'organization.id',
+		'organization.name',
+		'team.id',
+		'team.name',
+		'comments.id',
+		'comments.date_created',
+		'tasks.id',
+		'tasks.status',
+	];
+
+	// Create subscription with initial data
+	const {
+		data,
+		isLoading: subLoading,
+		isConnected: wsConnected,
+		error,
+		connect,
+		disconnect,
+	} = useRealtimeSubscription(
+		'tickets',
+		fields,
+		filter,
+		'-date_created',
+		allTickets.value, // Pass our initially fetched data
+	);
+
+	// Update connected status when websocket connection changes
+	watch(wsConnected, (newConnectedState) => {
+		// Only update connection state if we're not actively fetching data
+		if (!isFetching.value) {
+			isConnected.value = newConnectedState;
+		}
+	});
+
+	// Watch for data changes from websocket
+	watch(data, (newTickets) => {
+		if (newTickets && newTickets.length > 0) {
+			// Update our data when we get updates from websocket
+			allTickets.value = newTickets;
+			// Reprocess for dashboard
+			processTicketData();
+		}
+	});
+
+	// Store subscription for later cleanup
+	ticketSubscription.value = {
+		data,
+		isLoading: subLoading,
+		isConnected: wsConnected,
+		error,
+		connect,
+		disconnect,
+	};
+
+	// Connect to websocket
+	connect();
 };
 
 // Process ticket data for dashboard visualizations
@@ -564,7 +497,7 @@ const processTicketData = () => {
 	}
 };
 
-// Generate ticket age distribution for chart
+// Helper function for generating ticket age distribution chart data
 const generateTicketAgeDistribution = (openTickets) => {
 	// Define age buckets in days
 	const ageBuckets = [
@@ -593,7 +526,7 @@ const generateTicketAgeDistribution = (openTickets) => {
 	ticketAgeData.value = ageBuckets;
 };
 
-// Generate activity distribution data
+// Helper function for generating activity distribution chart data
 const generateActivityDistribution = () => {
 	// Activity types
 	const activityTypes = [
@@ -631,12 +564,11 @@ const generateActivityDistribution = () => {
 		}
 	});
 
-	// console.log('Activity Distribution:', activityTypes);
 	// Set chart data
 	activityDistributionData.value = activityTypes;
 };
 
-// Generate completion trend data
+// Helper function for generating completion trend chart data
 const generateCompletionTrend = (completedTickets) => {
 	// Get date ranges based on time period
 	const endDate = new Date();
@@ -749,7 +681,7 @@ const generateCompletionTrend = (completedTickets) => {
 	completionTrendData.value = trendData;
 };
 
-// Generate personal performance data
+// Helper function for generating personal performance data
 const generatePersonalPerformanceData = () => {
 	if (!user.value || !showOnlyMyTickets.value) return;
 
@@ -828,7 +760,7 @@ const generatePersonalPerformanceData = () => {
 	generatePersonalCompletionData();
 };
 
-// Generate personal completion chart data
+// Helper function for generating personal completion chart data
 const generatePersonalCompletionData = () => {
 	// Calculate date range based on selected time period
 	const endDate = new Date();
@@ -1060,7 +992,27 @@ const navigateToTicket = (ticketId) => {
 
 // Refresh data
 const refreshData = () => {
-	fetchTickets();
+	isFilterLoading.value = true;
+	showContent.value = false;
+
+	// Set a minimum loading time to ensure smooth transition
+	const startTime = Date.now();
+
+	setTimeout(async () => {
+		await fetchTickets();
+
+		// Ensure a minimum loading time of 500ms for better UX
+		const elapsed = Date.now() - startTime;
+		if (elapsed < 500) {
+			setTimeout(() => {
+				isFilterLoading.value = false;
+				showContent.value = true;
+			}, 500 - elapsed);
+		} else {
+			isFilterLoading.value = false;
+			showContent.value = true;
+		}
+	}, 10);
 };
 
 // Initial data fetch
@@ -1068,5 +1020,44 @@ onMounted(() => {
 	fetchTickets();
 });
 
-watch([selectedOrg, teamFilter, showOnlyMyTickets], fetchTickets, { immediate: true });
+// Cleanup on component unmount
+onUnmounted(() => {
+	if (ticketSubscription.value && ticketSubscription.value.disconnect) {
+		ticketSubscription.value.disconnect();
+	}
+});
+
+// Watch for filter changes but use debounce to prevent multiple fetches
+const debouncedFetchTickets = useDebounceFn(() => {
+	applyFilters();
+}, 300);
+
+// Watch for filter changes
+watch(
+	[teamFilter, showOnlyMyTickets, timePeriod],
+	() => {
+		debouncedFetchTickets();
+	},
+	{ deep: true },
+);
+
+// Watch for organization changes which should trigger an immediate refresh
+watch(
+	[selectedOrg],
+	() => {
+		applyFilters();
+	},
+	{ immediate: false },
+);
+
+// Export helper functions for child components
+const helpers = {
+	formatDate,
+	formatDuration,
+	formatAssignees,
+	getStatusColor,
+	getStatusCardClass,
+	getTicketAge,
+	getTicketTimeToComplete,
+};
 </script>

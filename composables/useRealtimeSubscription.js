@@ -1,8 +1,8 @@
 // composables/useRealtimeSubscription.js
-export function useRealtimeSubscription(collection, fields, initialFilter, sort = '-date_created') {
+export function useRealtimeSubscription(collection, fields, initialFilter, sort = '-date_created', initialData = null) {
 	// Core state
-	const data = ref([]);
-	const isLoading = ref(true);
+	const data = ref(initialData || []);
+	const isLoading = ref(initialData ? false : true);
 	const isConnected = ref(false);
 	const error = ref(null);
 	const lastUpdated = ref(null);
@@ -247,8 +247,10 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 
 		switch (message.event) {
 			case 'init':
-				// Initial data load
-				data.value = message.data || [];
+				// Initial data load - only replace if we don't have initialData or data is empty
+				if (!initialData || data.value.length === 0) {
+					data.value = message.data || [];
+				}
 				isLoading.value = false;
 				break;
 
@@ -329,6 +331,13 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 		}
 	};
 
+	// Set new data manually (useful when you fetch data from another source)
+	const setData = (newData) => {
+		data.value = newData;
+		isLoading.value = false;
+		lastUpdated.value = new Date();
+	};
+
 	// Return the public API
 	return {
 		data,
@@ -340,6 +349,7 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 		disconnect,
 		refresh,
 		updateFilter,
+		setData, // New method to manually set data
 		currentFilter: readonly(currentFilter),
 	};
 }
