@@ -1,5 +1,5 @@
 <template>
-	<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+	<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
 		<UCard class="border-l-4 border-[var(--cyan)]">
 			<div class="flex justify-between items-center">
 				<div>

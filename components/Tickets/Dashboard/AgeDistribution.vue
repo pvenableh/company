@@ -3,7 +3,7 @@
 		<template #header>
 			<div class="flex justify-between items-center">
 				<div class="flex items-center">
-					<h2 class="text-base font-bold">Your Completion Rate</h2>
+					<h2 class="font-bold uppercase tracking-wide text-sm">Your Completion Rate</h2>
 					<UTooltip
 						text="This chart shows how many non-completed tickets fall into each age category. Older tickets may require attention, while a high number of newer tickets might indicate a sudden influx of work."
 					>

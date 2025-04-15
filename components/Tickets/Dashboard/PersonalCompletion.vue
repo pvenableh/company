@@ -3,7 +3,7 @@
 		<template #header>
 			<div class="flex justify-between items-center">
 				<div class="flex items-center">
-					<h2 class="text-base font-bold">Your Completion Rate</h2>
+					<h2 class="font-bold uppercase tracking-wide text-sm">Your Completion Rate</h2>
 					<UTooltip
 						text="This chart tracks your ticket completion rate (percentage of assigned tickets resolved) and the absolute number of tickets you've completed over time. Higher completion rates indicate greater efficiency."
 					>

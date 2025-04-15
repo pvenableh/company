@@ -3,7 +3,7 @@
 		<template #header>
 			<div class="flex justify-between items-center">
 				<div class="flex items-center">
-					<h2 class="text-base font-bold">Activity Distribution</h2>
+					<h2 class="font-bold uppercase tracking-wide text-sm">Activity Distribution</h2>
 					<UTooltip
 						text="This chart shows the breakdown of different activities performed on tickets. It helps identify which types of actions are most common in your workflow, revealing patterns in how tickets are processed and managed."
 					>
