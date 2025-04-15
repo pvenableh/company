@@ -1,8 +1,6 @@
 // plugins/auth-token-sync.ts
-import type { DirectusClient, StaticTokenClient, AuthenticationClient } from '@directus/sdk'; // Adjust the import path based on your project structure
 
 export default defineNuxtPlugin(() => {
-	// This plugin ensures that the Directus token is always synced with the next-auth session
 	const { data: authData } = useAuth();
 	let lastToken: string | null = null;
 
@@ -11,15 +9,14 @@ export default defineNuxtPlugin(() => {
 		if (directusToken !== lastToken) {
 			lastToken = directusToken ?? null;
 			console.log('Auth token changed, plugin updated lastToken');
-			// No need to dispatch event here anymore
 		}
 	});
 
 	// Expose a function to get the current auth token
 	const getCurrentToken = () => authData.value?.directusToken || null;
 
-	// The applyTokenToClient function might be less necessary now
-	const applyTokenToClient = (client: StaticTokenClient<any>) => {
+	// Apply token to any Directus client with a setToken method
+	const applyTokenToClient = <T extends { setToken: (token: string) => void }>(client: T) => {
 		const token = getCurrentToken();
 		if (token) {
 			client.setToken(token);
@@ -32,7 +29,7 @@ export default defineNuxtPlugin(() => {
 		provide: {
 			authTokenSync: {
 				getCurrentToken,
-				applyTokenToClient, // Optionally remove if not used elsewhere
+				applyTokenToClient,
 			},
 		},
 	};
