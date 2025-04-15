@@ -17,19 +17,23 @@
 			<div
 				v-for="(status, index) in statuses"
 				:key="status.id || status"
-				class="relative flex-shrink-0 w-6 h-6 border-4 rounded-full flex items-center justify-center transition-all duration-300"
-				:class="{
-					'border-[var(--cyan)] bg-gray-100 shadow cursor-pointer hover:scale-110': statusIndex >= index,
-					'border-gray-200 bg-white cursor-pointer hover:border-gray-400 hover:scale-110': statusIndex < index,
-					'scale-125': currentStatus === (status.id || status),
-				}"
+				class="relative flex-shrink-0 w-4 h-4 border-4 rounded-full flex items-center justify-center transition-all duration-300 bg-gray-100"
+				:class="[
+					statusIndex >= index
+						? 'shadow cursor-pointer hover:scale-110'
+						: 'border-gray-200 cursor-pointer hover:border-gray-400 hover:scale-110',
+					currentStatus === (status.id || status) ? 'scale-125' : '',
+					// Apply correct border colors based on index
+					getBorderColorClass(index, statusIndex >= index),
+				]"
 				:title="status.name || status"
 				@click="handleStatusClick(status.id || status, index)"
 				:data-status="status.id || status"
 			>
 				<!-- Animate current status point -->
 				<div
-					class="absolute w-6 h-6 bg-white border-4 rounded-full flex items-center justify-center border-blue-500 animate-ping"
+					class="absolute w-5 h-5 border-4 rounded-full flex items-center justify-center animate-ping"
+					:class="getBorderColorClass(index, statusIndex >= index)"
 					v-if="currentStatus === (status.id || status)"
 				></div>
 
@@ -121,6 +125,23 @@ const statusIndex = computed(() => {
 const progressGradient = computed(() => {
 	return props.gradient;
 });
+
+const getBorderColorClass = (index, isActive) => {
+	if (!isActive) return 'border-gray-200';
+
+	switch (index) {
+		case 0:
+			return 'border-[var(--cyan)]'; // First status - Cyan
+		case 1:
+			return ' border-[var(--cyan2)]'; // Second status - Blue
+		case 2:
+			return 'border-[var(--green2)]'; // Third status - Light Green
+		case 3:
+			return 'border-[var(--green)]'; // Fourth status - Green
+		default:
+			return 'border-gray-500'; // Fallback
+	}
+};
 
 // Handle status click
 const handleStatusClick = async (statusId, index) => {
