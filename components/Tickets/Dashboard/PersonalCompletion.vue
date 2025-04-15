@@ -2,7 +2,17 @@
 	<UCard>
 		<template #header>
 			<div class="flex justify-between items-center">
-				<h2 class="text-base font-bold">Your Completion Rate</h2>
+				<div class="flex items-center">
+					<h2 class="text-base font-bold">Your Completion Rate</h2>
+					<UTooltip
+						text="This chart tracks your ticket completion rate (percentage of assigned tickets resolved) and the absolute number of tickets you've completed over time. Higher completion rates indicate greater efficiency."
+					>
+						<UIcon
+							name="i-heroicons-information-circle"
+							class="w-4 h-4 text-gray-400 hover:text-gray-600 cursor-help ml-1"
+						/>
+					</UTooltip>
+				</div>
 				<UBadge color="green" variant="soft">Last {{ timePeriodLabel }}</UBadge>
 			</div>
 		</template>

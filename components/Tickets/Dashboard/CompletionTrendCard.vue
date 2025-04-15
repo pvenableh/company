@@ -2,7 +2,17 @@
 	<UCard>
 		<template #header>
 			<div class="flex justify-between items-center">
-				<h2 class="text-base font-bold">Completion Rate Trend</h2>
+				<div class="flex items-center">
+					<h2 class="text-base font-bold">Completion Rate Trend</h2>
+					<UTooltip
+						text="This chart shows the number of tickets created versus completed over time. The completion rate (shown in tooltips) is calculated as (completed tickets ÷ created tickets) × 100%. Higher rates indicate more efficient ticket processing."
+					>
+						<UIcon
+							name="i-heroicons-information-circle"
+							class="w-4 h-4 text-gray-400 hover:text-gray-600 cursor-help ml-1"
+						/>
+					</UTooltip>
+				</div>
 				<UBadge color="cyan" variant="soft">Last {{ timePeriodLabel }}</UBadge>
 			</div>
 		</template>

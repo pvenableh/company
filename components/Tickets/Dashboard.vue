@@ -27,7 +27,7 @@
 		</Transition>
 
 		<!-- Dashboard content -->
-		<div v-show="showContent && !isFilterLoading && !isLoading" class="space-y-8">
+		<div v-show="showContent && !isFilterLoading && !isLoading" class="w-full space-y-8">
 			<!-- Overview Cards -->
 			<TicketsDashboardStatusCards :ticket-counts="ticketCounts" :avg-ticket-age="avgTicketAge" />
 

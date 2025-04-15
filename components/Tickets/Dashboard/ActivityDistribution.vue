@@ -2,7 +2,17 @@
 	<UCard>
 		<template #header>
 			<div class="flex justify-between items-center">
-				<h2 class="text-base font-bold">Activity Distribution</h2>
+				<div class="flex items-center">
+					<h2 class="text-base font-bold">Activity Distribution</h2>
+					<UTooltip
+						text="This chart shows the breakdown of different activities performed on tickets. It helps identify which types of actions are most common in your workflow, revealing patterns in how tickets are processed and managed."
+					>
+						<UIcon
+							name="i-heroicons-information-circle"
+							class="w-4 h-4 text-gray-400 hover:text-gray-600 cursor-help ml-1"
+						/>
+					</UTooltip>
+				</div>
 				<UBadge color="purple" variant="soft">{{ teamFilter === null ? 'Organization' : 'Team' }}</UBadge>
 			</div>
 		</template>

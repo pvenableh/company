@@ -2,7 +2,17 @@
 	<UCard>
 		<template #header>
 			<div class="flex justify-between items-center">
-				<h2 class="text-base font-bold">Ticket Age Distribution</h2>
+				<div class="flex items-center">
+					<h2 class="text-base font-bold">Your Completion Rate</h2>
+					<UTooltip
+						text="This chart shows how many non-completed tickets fall into each age category. Older tickets may require attention, while a high number of newer tickets might indicate a sudden influx of work."
+					>
+						<UIcon
+							name="i-heroicons-information-circle"
+							class="w-4 h-4 text-gray-400 hover:text-gray-600 cursor-help ml-1"
+						/>
+					</UTooltip>
+				</div>
 				<UBadge color="blue" variant="soft">Non-Completed Tickets</UBadge>
 			</div>
 		</template>
