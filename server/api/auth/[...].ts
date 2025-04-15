@@ -45,6 +45,7 @@ export default NuxtAuthHandler({
 	pages: {
 		signIn: '/auth/signin',
 	},
+
 	callbacks: {
 		async jwt({ token, user }) {
 			if (user) {
@@ -160,5 +161,9 @@ export default NuxtAuthHandler({
 	],
 	session: {
 		strategy: 'jwt',
+		maxAge: 7 * 24 * 60 * 60, // 7 days in seconds for active session
+	},
+	jwt: {
+		maxAge: 30 * 24 * 60 * 60, // 30 days for refresh capability
 	},
 });
