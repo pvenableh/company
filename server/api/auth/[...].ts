@@ -31,6 +31,7 @@ interface DirectusUserResponse {
 		avatar?: string;
 		role: string;
 		organizationIds?: Array<string> | null;
+		organizations?: Array<string> | null;
 	};
 }
 
@@ -152,12 +153,9 @@ export default NuxtAuthHandler({
 								'email',
 								'avatar',
 								'role',
-								'organizations',
-								// 'organizations.organizations_id.name',
-								// 'organizations.organizations_id.logo',
-								// 'organizations.organizations_id.icon',
-								// 'organizations.organizations_id.tickets',
-								// 'organizations.organizations_id.projects',
+								'organizations', // Ensure this is still in your fields
+								'teams', // You might want to include this as well if needed
+								// ... other fields
 							].join(','),
 						},
 					});
@@ -167,7 +165,10 @@ export default NuxtAuthHandler({
 					}
 					console.log('User data:', userResponse.data);
 
-					const organizationIds = userResponse.data.organizationIds;
+					// Directly use the organizations array
+					const organizationIds = userResponse.data.organizations
+						? userResponse.data.organizations.map((id) => String(id))
+						: [];
 
 					// Structure the user data for NextAuth
 					return {
