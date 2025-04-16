@@ -95,8 +95,7 @@ export default defineNuxtConfig({
 		],
 		'@sidebase/nuxt-auth',
 		'@vueuse/motion/nuxt',
-		'@vueuse/nuxt',
-		// [
+		'@vueuse/nuxt', // [
 		// 	'nuxt-directus-next',
 		// 	{
 		// 		url: 'https://admin.huestudios.company',
@@ -129,6 +128,7 @@ export default defineNuxtConfig({
 		// ],
 		'nuxt-gtag',
 		'@samk-dev/nuxt-vcalendar',
+		'@vite-pwa/nuxt',
 	],
 	auth: {
 		provider: {
@@ -142,6 +142,61 @@ export default defineNuxtConfig({
 			// Ensuring session refreshes periodically and on window focus
 			enablePeriodically: true,
 			enableOnWindowFocus: true,
+		},
+	},
+	pwa: {
+		registerType: 'autoUpdate',
+		manifest: {
+			name: 'ahhble',
+			short_name: 'ahhble',
+			theme_color: '#ffffff',
+			icons: [
+				{
+					src: 'android-icon-192x192.png',
+					sizes: '192x192',
+					type: 'image/png',
+				},
+				{
+					src: 'icon-512x512.png',
+					sizes: '512x512',
+					type: 'image/png',
+				},
+				{
+					src: 'icon-512x512.png',
+					sizes: '512x512',
+					type: 'image/png',
+					purpose: 'any maskable',
+				},
+			],
+		},
+		workbox: {
+			navigateFallback: '/',
+			globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
+			runtimeCaching: [
+				{
+					urlPattern: new RegExp('^https://admin.huestudios.company/assets/'),
+					handler: 'CacheFirst',
+					options: {
+						cacheName: 'directus-images',
+						expiration: {
+							maxEntries: 100,
+							maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+						},
+					},
+				},
+			],
+		},
+		client: {
+			installPrompt: true,
+			// you can omit the next line if you don't want the install button
+			//   installPromptOptions: {
+			// 	buttonText: 'Install App'
+			//   }
+		},
+		devOptions: {
+			enabled: true,
+			suppressWarnings: true,
+			type: 'module',
 		},
 	},
 

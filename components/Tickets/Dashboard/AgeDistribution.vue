@@ -3,15 +3,22 @@
 		<template #header>
 			<div class="flex justify-between items-center">
 				<div class="flex items-center">
-					<h2 class="font-bold uppercase tracking-wide text-sm">Your Completion Rate</h2>
-					<UTooltip
-						text="This chart shows how many non-completed tickets fall into each age category. Older tickets may require attention, while a high number of newer tickets might indicate a sudden influx of work."
-					>
+					<h2 class="font-bold uppercase tracking-wide text-sm">Completion Rate</h2>
+					<UPopover mode="hover" :ui="{ rounded: 'rounded-sm' }">
 						<UIcon
 							name="i-heroicons-information-circle"
 							class="w-4 h-4 text-gray-400 hover:text-gray-600 cursor-help ml-1"
 						/>
-					</UTooltip>
+
+						<template #panel>
+							<div class="p-4 max-w-sm">
+								<p class="text-xs text-gray-600">
+									This chart shows how many non-completed tickets fall into each age category. Older tickets may require
+									attention, while a high number of newer tickets might indicate a sudden influx of work.
+								</p>
+							</div>
+						</template>
+					</UPopover>
 				</div>
 				<UBadge color="blue" variant="soft">Non-Completed Tickets</UBadge>
 			</div>
@@ -56,7 +63,7 @@ const chartData = computed(() => {
 		datasets: [
 			{
 				label: 'Number of Tickets',
-				backgroundColor: 'rgba(75, 192, 192, 0.7)',
+				backgroundColor: 'rgba(92, 214, 254, 0.7)',
 				data: props.data.map((item) => item.count),
 			},
 		],

@@ -48,6 +48,7 @@
 		"@tiptap/suggestion": "^2.11.5",
 		"@tiptap/vue-3": "^2.11.5",
 		"@types/uuid": "^9.0.8",
+		"@vite-pwa/nuxt": "1.0.0",
 		"@vueuse/motion": "^2.2.6",
 		"@vueuse/nuxt": "^11.3.0",
 		"eslint": "^9.21.0",

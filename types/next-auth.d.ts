@@ -13,7 +13,7 @@ declare module "next-auth" {
       last_name?: string;
       avatar?: string;
       role?: string;
-      organizations?: any[];
+      organizationIds?: any[];
     };
     directusToken?: string;
     refreshToken?: string; 
@@ -29,7 +29,7 @@ declare module "next-auth" {
     last_name?: string;
     avatar?: string;
     role?: string;
-    organizations?: any[];
+    organizationIds?: any[];
     accessToken?: string;
     refreshToken?: string;
     accessTokenExpires?: number;
@@ -46,7 +46,7 @@ declare module "next-auth/jwt" {
       last_name?: string;
       avatar?: string;
       role?: string;
-      organizations?: any[];
+      organizationIds?: any[];
     };
     directusToken?: string;
     refreshToken?: string;

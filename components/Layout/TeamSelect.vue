@@ -146,10 +146,10 @@
 		</div>
 
 		<!-- When no organization is selected -->
-		<div v-else class="flex items-center space-x-2 text-[12px] leading-3 uppercase text-gray-400">
+		<!-- <div v-else class="flex items-center space-x-2 text-[12px] leading-3 uppercase text-gray-400">
 			<UIcon name="i-heroicons-building-office" class="w-4 h-4" />
 			<span>Select organization</span>
-		</div>
+		</div> -->
 	</div>
 </template>
 

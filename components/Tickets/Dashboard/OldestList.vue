@@ -3,7 +3,14 @@
 		<template #header>
 			<div class="flex justify-between items-center">
 				<h2 class="font-bold uppercase tracking-wide text-sm">Oldest Open Tickets</h2>
-				<UButton size="xs" variant="ghost" @click="$emit('viewTicket', tickets[0]?.id)" v-if="tickets.length">
+				<UButton
+					size="xs"
+					variant="ghost"
+					to="/tickets"
+					v-if="tickets.length"
+					icon="i-heroicons-arrow-right"
+					:trailing="true"
+				>
 					View All
 				</UButton>
 			</div>
@@ -30,7 +37,15 @@
 						<UIcon name="i-heroicons-user-circle" class="w-3 h-3" />
 						<span>{{ formatAssignees(ticket.assigned_to) }}</span>
 					</div>
-					<UButton size="xs" variant="link" @click="$emit('viewTicket', ticket.id)">View</UButton>
+					<UButton
+						size="xs"
+						variant="ghost"
+						@click="$emit('viewTicket', ticket.id)"
+						icon="i-heroicons-arrow-right"
+						:trailing="true"
+					>
+						View
+					</UButton>
 				</div>
 			</div>
 			<div v-if="!tickets.length" class="py-4 text-center text-gray-500">No open tickets found</div>

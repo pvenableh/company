@@ -4,14 +4,22 @@
 			<div class="flex justify-between items-center">
 				<div class="flex items-center">
 					<h2 class="font-bold uppercase tracking-wide text-sm">Activity Distribution</h2>
-					<UTooltip
-						text="This chart shows the breakdown of different activities performed on tickets. It helps identify which types of actions are most common in your workflow, revealing patterns in how tickets are processed and managed."
-					>
+					<UPopover mode="hover" :ui="{ rounded: 'rounded-sm' }">
 						<UIcon
 							name="i-heroicons-information-circle"
 							class="w-4 h-4 text-gray-400 hover:text-gray-600 cursor-help ml-1"
 						/>
-					</UTooltip>
+
+						<template #panel>
+							<div class="p-4 max-w-sm">
+								<p class="text-xs text-gray-600">
+									This chart shows the breakdown of different activities performed on tickets. It helps identify which
+									types of actions are most common in your workflow, revealing patterns in how tickets are processed and
+									managed.
+								</p>
+							</div>
+						</template>
+					</UPopover>
 				</div>
 				<UBadge color="purple" variant="soft">{{ teamFilter === null ? 'Organization' : 'Team' }}</UBadge>
 			</div>
@@ -46,12 +54,13 @@ const props = defineProps({
 
 // Chart colors
 const chartColors = [
-	'rgba(255, 99, 132, 0.7)', // Red
-	'rgba(54, 162, 235, 0.7)', // Blue
-	'rgba(255, 206, 86, 0.7)', // Yellow
-	'rgba(75, 192, 192, 0.7)', // Teal
-	'rgba(153, 102, 255, 0.7)', // Purple
-	'rgba(255, 159, 64, 0.7)', // Orange
+	'rgba(92, 214, 254, 0.7)', //
+	'rgba(56, 204, 254, 0.7)', //
+	'rgba(21, 194, 252, 0.7)', //
+	'rgba(3, 176, 233, 0.7)', //
+	'rgba(4, 148, 197, 0.7)', //
+	'rgba(4, 121, 160, 0.7)', //
+	'rgba(3, 94, 124, 0.7)', //
 ];
 
 // Prepare chart data

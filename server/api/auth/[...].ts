@@ -33,8 +33,6 @@ interface DirectusUserResponse {
 		organizations?: Array<{
 			organizations_id: {
 				id: string;
-				name: string;
-				logo?: string;
 			};
 		}>;
 	};
@@ -58,7 +56,7 @@ export default NuxtAuthHandler({
 					last_name: user.last_name,
 					avatar: user.avatar,
 					role: user.role,
-					organizations: user.organizations,
+					organizationIds: user.organizationIds,
 				};
 				token.directusToken = directusUser.accessToken;
 				token.refreshToken = directusUser.refreshToken;
@@ -154,11 +152,11 @@ export default NuxtAuthHandler({
 								'avatar',
 								'role',
 								'organizations.organizations_id.id',
-								'organizations.organizations_id.name',
-								'organizations.organizations_id.logo',
-								'organizations.organizations_id.icon',
-								'organizations.organizations_id.tickets',
-								'organizations.organizations_id.projects',
+								// 'organizations.organizations_id.name',
+								// 'organizations.organizations_id.logo',
+								// 'organizations.organizations_id.icon',
+								// 'organizations.organizations_id.tickets',
+								// 'organizations.organizations_id.projects',
 							].join(','),
 						},
 					});
@@ -166,6 +164,8 @@ export default NuxtAuthHandler({
 					if (!userResponse || !userResponse.data) {
 						throw new Error('Failed to fetch user data');
 					}
+
+					const organizationIds = userResponse.data.organizations?.map((org) => org.organizations_id.id) || [];
 
 					// Structure the user data for NextAuth
 					return {
@@ -175,7 +175,7 @@ export default NuxtAuthHandler({
 						last_name: userResponse.data.last_name,
 						avatar: userResponse.data.avatar,
 						role: userResponse.data.role,
-						organizations: userResponse.data.organizations,
+						organizationIds,
 						accessToken: authResponse.data.access_token,
 						accessTokenExpires: Date.now() + authResponse.data.expires,
 						refreshToken: authResponse.data.refresh_token,
