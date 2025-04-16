@@ -64,8 +64,8 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
 			// Instead of redirecting, force select the first organization
 			// This prevents normal users from ever having null organization
-			if ((user?.organizations ?? []).length > 0) {
-				const firstOrgId = user?.organizations?.[0]?.organizations_id?.id;
+			if ((user?.organizationIds ?? []).length > 0) {
+				const firstOrgId = user?.organizationIds?.[0];
 				if (firstOrgId) {
 					console.log('Automatically selecting first organization:', firstOrgId);
 					setOrganization(firstOrgId);

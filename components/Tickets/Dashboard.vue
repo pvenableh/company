@@ -15,6 +15,7 @@
 			</UAlert>
 		</Transition> -->
 		<!-- Loading state - Initial load -->
+		{{ user }}
 		<Transition name="fade" mode="out-in">
 			<div
 				v-if="isLoading"

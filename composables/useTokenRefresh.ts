@@ -11,7 +11,7 @@ interface DirectusSession {
 		last_name?: string;
 		avatar?: string;
 		role?: string;
-		organizations?: any[];
+		organizationIds?: any[];
 		[key: string]: any;
 	};
 	expires?: string;
@@ -57,7 +57,7 @@ export function useTokenRefresh() {
 				}
 
 				// Store the new token in localStorage for persistence
-				if (process.client) {
+				if (import.meta.client) {
 					try {
 						// Manually store in localStorage since we can't safely use the composable
 						localStorage.setItem('directus_auth_token', response.data.access_token);

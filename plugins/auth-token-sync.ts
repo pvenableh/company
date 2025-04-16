@@ -11,7 +11,7 @@ interface DirectusSession {
 		last_name?: string;
 		avatar?: string;
 		role?: string;
-		organizations?: any[];
+		organizationIds?: any[];
 		[key: string]: any;
 	};
 	expires?: string;

@@ -30,11 +30,7 @@ interface DirectusUserResponse {
 		last_name: string;
 		avatar?: string;
 		role: string;
-		organizations?: Array<{
-			organizations_id: {
-				id: string;
-			};
-		}>;
+		organizationIds?: Array<string> | null;
 	};
 }
 
@@ -87,6 +83,11 @@ export default NuxtAuthHandler({
 					return {};
 				}
 			}
+
+			if (token.user) {
+				return token;
+			}
+
 			return token;
 		},
 		async session({ session, token }) {
@@ -151,7 +152,7 @@ export default NuxtAuthHandler({
 								'email',
 								'avatar',
 								'role',
-								'organizations.organizations_id.id',
+								'organizations',
 								// 'organizations.organizations_id.name',
 								// 'organizations.organizations_id.logo',
 								// 'organizations.organizations_id.icon',
@@ -164,8 +165,9 @@ export default NuxtAuthHandler({
 					if (!userResponse || !userResponse.data) {
 						throw new Error('Failed to fetch user data');
 					}
+					console.log('User data:', userResponse.data);
 
-					const organizationIds = userResponse.data.organizations?.map((org) => org.organizations_id.id) || [];
+					const organizationIds = userResponse.data.organizationIds;
 
 					// Structure the user data for NextAuth
 					return {
