@@ -16,6 +16,7 @@ declare module "next-auth" {
       organizations?: any[];
     };
     directusToken?: string;
+    refreshToken?: string; 
   }
 
   /**

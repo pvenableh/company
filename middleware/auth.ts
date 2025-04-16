@@ -3,8 +3,13 @@ export default defineNuxtRouteMiddleware(async (to) => {
 	console.log('--- Auth Middleware Executing ---');
 
 	const { status, data: authData } = await useAuth();
+	const { client, isInitializing } = useDirectusClient();
 	const { selectedOrg, initializeOrganizations, setOrganization } = useOrganization();
 	const { selectedTeam, fetchTeams, visibleTeams, hasAdminAccess } = useTeams();
+
+	if (isInitializing.value) {
+		await new Promise((resolve) => setTimeout(resolve, 100));
+	}
 
 	// Skip auth check for auth-related pages
 	if (to.path.startsWith('/auth/') && to.path !== '/auth/logout') {

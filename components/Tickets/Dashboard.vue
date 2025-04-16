@@ -1,5 +1,5 @@
 <template>
-	<div class="w-full flex items-center justify-center flex-col relative mx-auto">
+	<div class="w-full flex items-center justify-start flex-col relative mx-auto min-h-[80vh]">
 		<!-- Connection error - only show if not loading or filtering -->
 		<!-- <Transition name="fade">
 			<UAlert
@@ -15,13 +15,20 @@
 			</UAlert>
 		</Transition> -->
 		<!-- Loading state - Initial load -->
-		<div v-if="isLoading" class="flex justify-center items-center h-svh w-full absolute">
-			<LayoutLoader text="Loading Dashboard Data" />
-		</div>
-
+		<Transition name="fade" mode="out-in">
+			<div
+				v-if="isLoading"
+				class="flex justify-center items-center min-h-[80vh] w-full absolute z-10 bg-white bg-opacity-50"
+			>
+				<LayoutLoader text="Loading Dashboard Data" />
+			</div>
+		</Transition>
 		<!-- Filter loading state with transition -->
 		<Transition name="fade" mode="out-in" @after-leave="showContent = !isFilterLoading">
-			<div v-if="isFilterLoading && !isLoading" class="flex justify-center items-center h-svh w-full absolute">
+			<div
+				v-if="isFilterLoading && !isLoading"
+				class="flex justify-center items-center min-h-[80vh] w-full absolute bg-white bg-opacity-50"
+			>
 				<LayoutLoader text="Updating Dashboard..." />
 			</div>
 		</Transition>

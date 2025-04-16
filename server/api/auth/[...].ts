@@ -64,6 +64,31 @@ export default NuxtAuthHandler({
 				token.refreshToken = directusUser.refreshToken;
 				token.accessTokenExpires = directusUser.accessTokenExpires;
 			}
+			if (token.accessTokenExpires && Date.now() < token.accessTokenExpires) {
+				return token;
+			}
+			if (token.refreshToken) {
+				try {
+					const response = await $fetch<DirectusAuthResponse>(`${useRuntimeConfig().public.directusUrl}/auth/refresh`, {
+						method: 'POST',
+						body: {
+							refresh_token: token.refreshToken,
+							mode: 'json',
+						},
+					});
+
+					if (response.data && response.data.access_token) {
+						token.directusToken = response.data.access_token;
+						token.refreshToken = response.data.refresh_token;
+						token.accessTokenExpires = Date.now() + response.data.expires;
+						return token;
+					}
+				} catch (error) {
+					console.error('Error refreshing token:', error);
+					// Token could not be refreshed - destroy session
+					return {};
+				}
+			}
 			return token;
 		},
 		async session({ session, token }) {
@@ -73,6 +98,9 @@ export default NuxtAuthHandler({
 			}
 			if (token.directusToken) {
 				session.directusToken = token.directusToken;
+			}
+			if (token.refreshToken) {
+				session.refreshToken = token.refreshToken; // Add this line
 			}
 			return session;
 		},

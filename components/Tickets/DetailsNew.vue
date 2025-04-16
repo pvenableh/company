@@ -49,7 +49,7 @@
 				<button
 					v-for="tab in tabs"
 					:key="tab.id"
-					class="flex items-center justify-center p-4 border-b-2 border-t-gray-100 border-t border-x-gray-100 border-x text-sm uppercase tracking-wide font-medium w-1/3 md:w-auto md:px-12 shadow-inner"
+					class="flex items-center justify-center p-4 border-t-2 border-x-gray-100 border-x text-sm uppercase tracking-wide font-medium w-1/3 md:w-auto md:px-12 shadow-inner"
 					:class="
 						activeTab === tab.id
 							? 'border-[var(--cyan)] text-[var(--cyan)] dark:text-[var(--cyan)] bg-white shadow-sm transition'
