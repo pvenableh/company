@@ -135,10 +135,7 @@
 <script setup>
 import { format, parseISO, isEqual, startOfDay } from 'date-fns';
 
-const { data, status } = useAuth();
-const user = computed(() => {
-	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
-});
+const { user } = useEnhancedAuth();
 const { deleteItem } = useDirectusItems();
 const toast = useToast();
 const showAppointmentForm = ref(false);

@@ -1,6 +1,5 @@
 // server/api/auth/[...].ts
 import { NuxtAuthHandler } from '#auth';
-// Note the .default being used here - this is crucial
 import CredentialsProvider from 'next-auth/providers/credentials';
 
 interface DirectusCredentials {
@@ -38,7 +37,7 @@ interface DirectusUserResponse {
 		avatar?: string;
 		role: string;
 		organizationIds?: Array<string> | null;
-		organizations?: Array<OrganizationReference> | null; // Fixed: Define proper type
+		organizations?: Array<OrganizationReference> | null;
 	};
 }
 
@@ -76,6 +75,11 @@ export default NuxtAuthHandler({
 			if (token.refreshToken) {
 				try {
 					const directusUrl = useRuntimeConfig().public.directusUrl;
+
+					// Added more detailed logging
+					console.log(`Attempting to refresh token with refresh_token: ${token.refreshToken.substring(0, 10)}...`);
+
+					// IMPORTANT: Modified the refresh token request to use JSON mode and proper Content-Type
 					const response = await $fetch<DirectusAuthResponse>(`${directusUrl}/auth/refresh`, {
 						method: 'POST',
 						body: {
@@ -88,10 +92,25 @@ export default NuxtAuthHandler({
 					});
 
 					if (response.data && response.data.access_token) {
+						console.log('Token refresh successful, new token received');
 						// Update token with new values
 						token.directusToken = response.data.access_token;
 						token.refreshToken = response.data.refresh_token;
 						token.accessTokenExpires = Date.now() + response.data.expires;
+
+						// Log token expiry time in human-readable format
+						const expiryDate = new Date(token.accessTokenExpires);
+						console.log(`New token expires at: ${expiryDate.toISOString()}`);
+
+						// Store refresh token in localStorage for cross-tab consistency
+						if (import.meta.client) {
+							try {
+								localStorage.setItem('auth_refresh_token', response.data.refresh_token);
+							} catch (storageError) {
+								console.warn('Could not store refresh token in localStorage:', storageError);
+							}
+						}
+
 						return token;
 					} else {
 						console.error('Token refresh response missing data:', response);
@@ -104,6 +123,21 @@ export default NuxtAuthHandler({
 					}
 				} catch (error) {
 					console.error('Error refreshing token:', error);
+
+					// Check if we have a refresh token in localStorage as backup
+					if (import.meta.client) {
+						try {
+							const storedRefreshToken = localStorage.getItem('auth_refresh_token');
+							if (storedRefreshToken && storedRefreshToken !== token.refreshToken) {
+								console.log('Trying with alternate refresh token from localStorage');
+								token.refreshToken = storedRefreshToken;
+								// Don't attempt to refresh here, let the next cycle handle it
+								return token;
+							}
+						} catch (storageError) {
+							console.warn('Error accessing localStorage:', storageError);
+						}
+					}
 
 					// Important: If token refresh fails but we still have user data,
 					// return the token anyway to keep the user logged in
@@ -129,7 +163,6 @@ export default NuxtAuthHandler({
 
 		async session({ session, token }) {
 			// Make user and token info available in the session
-
 			if (token.user) {
 				console.log('Setting user data from token to session');
 				session.user = token.user;
@@ -139,13 +172,21 @@ export default NuxtAuthHandler({
 
 			if (token.directusToken) {
 				session.directusToken = token.directusToken;
+
+				// Store access token in localStorage for use with websockets
+				if (import.meta.client) {
+					try {
+						localStorage.setItem('auth_token', token.directusToken);
+					} catch (error) {
+						console.warn('Could not store token in localStorage:', error);
+					}
+				}
 			}
 
 			if (token.refreshToken) {
 				session.refreshToken = token.refreshToken;
 			}
 
-			console.log('Output session:', JSON.stringify(session, null, 2));
 			return session;
 		},
 	},
@@ -182,6 +223,7 @@ export default NuxtAuthHandler({
 							body: {
 								email: credentials.email,
 								password: credentials.password,
+								mode: 'json', // Explicitly request JSON mode
 							},
 							headers: {
 								'Content-Type': 'application/json',
@@ -189,6 +231,16 @@ export default NuxtAuthHandler({
 						});
 
 						console.log('Auth response received:', authResponse ? 'success' : 'failed');
+
+						// Store tokens in localStorage for persistence
+						if (import.meta.client && authResponse?.data) {
+							try {
+								localStorage.setItem('auth_token', authResponse.data.access_token);
+								localStorage.setItem('auth_refresh_token', authResponse.data.refresh_token);
+							} catch (error) {
+								console.warn('Could not store tokens in localStorage:', error);
+							}
+						}
 					} catch (loginError) {
 						console.error('Login request failed:', loginError);
 						if (loginError instanceof Error) {

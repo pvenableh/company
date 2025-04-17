@@ -185,10 +185,7 @@ definePageMeta({
 	middleware: ['auth'],
 });
 // Get user data
-const { data, status } = useAuth();
-const user = computed(() => {
-	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
-});
+const { user } = useEnhancedAuth();
 
 // Get organization and team data
 const { selectedOrg, organizations } = useOrganization();

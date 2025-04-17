@@ -1,9 +1,6 @@
 <script setup>
 const config = useRuntimeConfig();
-const { data, status } = useAuth();
-const user = computed(() => {
-	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
-});
+const { user } = useEnhancedAuth();
 
 const props = defineProps({
 	chip: {

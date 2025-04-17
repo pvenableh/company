@@ -1,10 +1,7 @@
 <script setup>
 import updateAvatarSource from '~~/composables/useAvatar';
 
-const { data, status } = useAuth();
-const user = computed(() => {
-	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
-});
+const { user } = useEnhancedAuth();
 const runtimeConfig = useRuntimeConfig();
 
 if (process.env.NODE_ENV === 'development') {

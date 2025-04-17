@@ -1,10 +1,7 @@
 <script setup>
 // Import all necessary composables
 const { readItem, readItems } = useDirectusItems();
-const { data, status } = useAuth();
-const user = computed(() => {
-	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
-});
+const { user } = useEnhancedAuth();
 const { selectedOrg } = useOrganization();
 const config = useRuntimeConfig();
 

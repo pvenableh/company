@@ -10,10 +10,7 @@ const props = defineProps({
 	},
 });
 
-const { data, status } = useAuth();
-const user = computed(() => {
-	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
-});
+const { user } = useEnhancedAuth();
 
 const assignedUsers = computed(() => {
 	return props.project?.assigned_to?.map((assignment) => assignment.directus_users_id) || [];

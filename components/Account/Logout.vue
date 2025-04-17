@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { signOut } = useAuth();
+const { signOut } = useEnhancedAuth();
 const router = useRouter();
 
 // Function to handle logout when triggered by a user action

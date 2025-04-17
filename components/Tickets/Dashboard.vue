@@ -163,10 +163,7 @@ const timePeriodLabel = computed(() => {
 
 // Fetch repositories
 const { readItems } = useDirectusItems();
-const { data, status } = useAuth();
-const user = computed(() => {
-	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
-});
+const { user } = useEnhancedAuth();
 const { selectedTeam, teams, visibleTeams } = useTeams();
 const { selectedOrg } = useOrganization();
 const router = useRouter();

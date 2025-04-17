@@ -80,7 +80,7 @@ payment.value = {
 	isAnonymous: props.isAnonymous,
 };
 
-if (process.client) {
+if (import.meta.client) {
 	localStorage.setItem('payment', JSON.stringify(payment.value));
 }
 

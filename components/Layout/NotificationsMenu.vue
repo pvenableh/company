@@ -235,10 +235,7 @@ import { ref, computed, watch } from 'vue';
 import { useInfiniteScroll } from '@vueuse/core';
 import { useNotifications } from '~/composables/useNotifications';
 
-const { data, status } = useAuth();
-const user = computed(() => {
-	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
-});
+const { user } = useEnhancedAuth();
 const config = useRuntimeConfig();
 const {
 	notifications,

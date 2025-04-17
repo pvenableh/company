@@ -11,10 +11,7 @@ const props = defineProps({
 });
 
 const { createItem, deleteItem } = useDirectusItems();
-const { data, status } = useAuth();
-const user = computed(() => {
-	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
-});
+const { user } = useEnhancedAuth();
 const showReplyInput = ref(false);
 const replyText = ref('');
 const showReplies = ref(false);

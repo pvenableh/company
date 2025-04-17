@@ -92,7 +92,7 @@ interface LoginError {
 		}>;
 	};
 }
-const { signIn } = useAuth();
+const { signIn } = useEnhancedAuth();
 const route = useRoute();
 const loading = ref<boolean>(false);
 const login_error = ref<string | null>(null);
@@ -146,7 +146,7 @@ async function attemptLogin(): Promise<void> {
 		const redirectTo = route.query.redirect ? decodeURIComponent(route.query.redirect as string) : '/';
 
 		// Use signIn with redirect: true to let NextAuth handle the redirect automatically
-		const result = await signIn('credentials', {
+		const result = await signIn({
 			email: state.email,
 			password: state.password,
 			redirect: false,

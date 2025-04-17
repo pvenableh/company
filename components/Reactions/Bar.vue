@@ -10,10 +10,7 @@ const props = defineProps({
 	},
 });
 
-const { data, status } = useAuth();
-const user = computed(() => {
-	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
-});
+const { user } = useEnhancedAuth();
 const { createItem, deleteItems } = useDirectusItems();
 
 // Subscribe to reactions with user details in real-time

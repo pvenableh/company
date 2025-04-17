@@ -127,10 +127,7 @@
 <script setup>
 import VueDraggable from 'vuedraggable';
 const { readItems, updateItem } = useDirectusItems();
-const { data, status } = useAuth();
-const user = computed(() => {
-	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
-});
+const { user } = useEnhancedAuth();
 const { selectedOrg, hasMultipleOrgs, organizationOptions, setOrganization, clearOrganization, getOrganizationFilter } =
 	useOrganization();
 

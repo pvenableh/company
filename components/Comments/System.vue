@@ -106,10 +106,7 @@ const props = defineProps({
 
 const emit = defineEmits(['update:commentCount']);
 
-const { data, status } = useAuth();
-const user = computed(() => {
-	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
-});
+const { user } = useEnhancedAuth();
 const { createItem, deleteItem } = useDirectusItems();
 const replyingTo = ref(null);
 const activeCommentId = ref(null);

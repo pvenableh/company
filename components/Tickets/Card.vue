@@ -154,10 +154,7 @@ const props = defineProps({
 
 // const emit = defineEmits(['expand']);
 
-const { data, status } = useAuth();
-const user = computed(() => {
-	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
-});
+const { user } = useEnhancedAuth();
 
 // Get all assigned users
 const assignedUsers = computed(() => {

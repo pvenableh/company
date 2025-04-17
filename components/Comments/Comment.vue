@@ -86,10 +86,7 @@ const { deleteItem } = useDirectusItems();
 const emit = defineEmits(['submit', 'cancel', 'deleted']);
 const editorContent = ref('');
 const deleteLoading = ref(false);
-const { data, status } = useAuth();
-const user = computed(() => {
-	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
-});
+const { user } = useEnhancedAuth();
 const { notify } = useNotifications();
 const mentionedUsers = ref(new Set());
 

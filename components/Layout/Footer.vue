@@ -48,10 +48,7 @@
 	</div>
 </template>
 <script setup>
-const { data, status } = useAuth();
-const user = computed(() => {
-	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
-});
+const { user } = useEnhancedAuth();
 
 const { logout } = useLogout();
 

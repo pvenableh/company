@@ -206,10 +206,7 @@ import VueDraggable from 'vuedraggable';
 
 const { updateItem, readItems } = useDirectusItems();
 const { registerRefreshCallback } = useTicketsStore();
-const { data, status } = useAuth();
-const user = computed(() => {
-	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
-});
+const { user } = useEnhancedAuth();
 const { triggerHaptic } = useHaptic();
 const toast = useToast();
 const config = useRuntimeConfig();
@@ -854,7 +851,7 @@ onMounted(async () => {
 
 		try {
 			// Make sure we're in client-side before setting up the subscription
-			if (process.client) {
+			if (import.meta.client) {
 				setupTicketsSubscription();
 				// Now call connect (moved from inside setupTicketsSubscription)
 				if (connectFunc) connectFunc();

@@ -26,10 +26,7 @@
 </template>
 
 <script setup lang="ts">
-const { data, status } = useAuth();
-const user = computed(() => {
-	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
-});
+const { user } = useEnhancedAuth();
 
 definePageMeta({
 	middleware: ['auth'],
