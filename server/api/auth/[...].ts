@@ -76,73 +76,71 @@ export default NuxtAuthHandler({
 				try {
 					const directusUrl = useRuntimeConfig().public.directusUrl;
 
-					// Added more detailed logging
 					console.log(`Attempting to refresh token with refresh_token: ${token.refreshToken.substring(0, 10)}...`);
 
-					// IMPORTANT: Modified the refresh token request to use JSON mode and proper Content-Type
-					const response = await $fetch<DirectusAuthResponse>(`${directusUrl}/auth/refresh`, {
-						method: 'POST',
-						body: {
-							refresh_token: token.refreshToken,
-							mode: 'json',
-						},
-						headers: {
-							'Content-Type': 'application/json',
-						},
-					});
+					// Try our own endpoint first (to avoid CORS/cookie issues)
+					let refreshSuccessful = false;
+					let response: { data?: { access_token?: string; refresh_token?: string; expires?: number } } | undefined =
+						undefined;
 
-					if (response.data && response.data.access_token) {
+					try {
+						console.log('Trying via server proxy...');
+						response = await $fetch('/api/auth/token-refresh', {
+							method: 'POST',
+							body: {
+								refreshToken: token.refreshToken,
+							},
+						});
+
+						if (response?.data) {
+							refreshSuccessful = true;
+						}
+					} catch (proxyError) {
+						console.log('Proxy refresh failed, trying direct refresh');
+					}
+
+					// If proxy refresh failed, try direct request
+					if (!refreshSuccessful) {
+						response = await $fetch(`${directusUrl}/auth/refresh`, {
+							method: 'POST',
+							body: {
+								refresh_token: token.refreshToken,
+								mode: 'json',
+							},
+							headers: {
+								'Content-Type': 'application/json',
+							},
+						});
+					}
+
+					if (response?.data && response.data.access_token) {
 						console.log('Token refresh successful, new token received');
+
 						// Update token with new values
 						token.directusToken = response.data.access_token;
 						token.refreshToken = response.data.refresh_token;
-						token.accessTokenExpires = Date.now() + response.data.expires;
-
-						// Log token expiry time in human-readable format
-						const expiryDate = new Date(token.accessTokenExpires);
-						console.log(`New token expires at: ${expiryDate.toISOString()}`);
-
-						// Store refresh token in localStorage for cross-tab consistency
-						if (import.meta.client) {
-							try {
-								localStorage.setItem('auth_refresh_token', response.data.refresh_token);
-							} catch (storageError) {
-								console.warn('Could not store refresh token in localStorage:', storageError);
-							}
-						}
+						token.accessTokenExpires = Date.now() + (response.data.expires ?? 0);
 
 						return token;
 					} else {
 						console.error('Token refresh response missing data:', response);
+
 						// If refresh fails but we still have user data, keep it
 						if (token.user) {
 							return token;
 						}
+
 						// Otherwise clear the token
 						return {};
 					}
 				} catch (error) {
 					console.error('Error refreshing token:', error);
 
-					// Check if we have a refresh token in localStorage as backup
-					if (import.meta.client) {
-						try {
-							const storedRefreshToken = localStorage.getItem('auth_refresh_token');
-							if (storedRefreshToken && storedRefreshToken !== token.refreshToken) {
-								console.log('Trying with alternate refresh token from localStorage');
-								token.refreshToken = storedRefreshToken;
-								// Don't attempt to refresh here, let the next cycle handle it
-								return token;
-							}
-						} catch (storageError) {
-							console.warn('Error accessing localStorage:', storageError);
-						}
-					}
-
 					// Important: If token refresh fails but we still have user data,
 					// return the token anyway to keep the user logged in
 					if (token.user) {
 						console.log('Keeping existing user session despite refresh error');
+
 						// Set the token as expired to trigger another refresh attempt later
 						token.accessTokenExpires = 0;
 						return token;

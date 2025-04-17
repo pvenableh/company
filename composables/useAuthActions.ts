@@ -84,7 +84,7 @@ export function useAuthActions() {
 			const options = inviteUrl ? { inviteUrl } : undefined;
 
 			// Use the SDK's inviteUser function
-			return await client.value.request(directusInviteUser(email, role, options));
+			return await client.value.request(directusInviteUser(email, role, options?.inviteUrl));
 		} catch (error) {
 			console.error('Invite user error:', error);
 			throw error;
