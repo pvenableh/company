@@ -186,13 +186,17 @@ const shareTitle = computed(() => {
 });
 
 const shareDescription = computed(() => {
-	// Create a plain text version of the description by removing HTML tags
-	const tempDiv = document.createElement('div');
-	tempDiv.innerHTML = props.element.description || '';
-	const plainText = tempDiv.textContent || tempDiv.innerText || '';
-
-	// Return a truncated version if it's too long
-	return plainText.length > 150 ? plainText.substring(0, 147) + '...' : plainText;
+	const description = props.element.description || '';
+	if (import.meta.client) {
+		// Only run this on the client-side
+		const tempDiv = document.createElement('div');
+		tempDiv.innerHTML = description;
+		const plainText = tempDiv.textContent || tempDiv.innerText || '';
+		return plainText.length > 150 ? plainText.substring(0, 147) + '...' : plainText;
+	} else {
+		// Provide a server-safe fallback (e.g., the raw description or a truncated version without DOM manipulation)
+		return description.length > 150 ? description.substring(0, 147) + '...' : description;
+	}
 });
 
 const displayDescription = computed(() => props.element.description || '');
