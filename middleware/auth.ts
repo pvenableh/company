@@ -89,6 +89,9 @@ export default defineNuxtRouteMiddleware(async (to) => {
 		console.log('In "All Organizations" mode, skipping team fetch');
 	}
 
+	console.log(authData.value?.user);
+	console.log(authData);
+
 	console.log('--- Auth Middleware Complete ---');
 });
 

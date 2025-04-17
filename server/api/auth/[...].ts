@@ -21,6 +21,13 @@ interface DirectusAuthResponse {
 	};
 }
 
+// Define organization structure
+interface OrganizationReference {
+	organizations_id: {
+		id: string;
+	};
+}
+
 // Define the user response type
 interface DirectusUserResponse {
 	data: {
@@ -31,7 +38,7 @@ interface DirectusUserResponse {
 		avatar?: string;
 		role: string;
 		organizationIds?: Array<string> | null;
-		organizations?: Array<string> | null;
+		organizations?: Array<OrganizationReference> | null; // Fixed: Define proper type
 	};
 }
 
@@ -42,10 +49,10 @@ export default NuxtAuthHandler({
 	},
 
 	callbacks: {
-		async jwt({ token, user }) {
+		async jwt({ token, user, account }) {
+			// If we have user data from initial sign-in, store it in the token
 			if (user) {
 				const directusUser = user as any;
-				// Store user info and tokens in the JWT
 				token.user = {
 					id: user.id,
 					email: user.email,
@@ -59,54 +66,91 @@ export default NuxtAuthHandler({
 				token.refreshToken = directusUser.refreshToken;
 				token.accessTokenExpires = directusUser.accessTokenExpires;
 			}
+
+			// Return early if token doesn't need refreshing
 			if (token.accessTokenExpires && Date.now() < token.accessTokenExpires) {
 				return token;
 			}
+
+			// If we have a refresh token, try to refresh the token
 			if (token.refreshToken) {
 				try {
-					const response = await $fetch<DirectusAuthResponse>(`${useRuntimeConfig().public.directusUrl}/auth/refresh`, {
+					const directusUrl = useRuntimeConfig().public.directusUrl;
+					const response = await $fetch<DirectusAuthResponse>(`${directusUrl}/auth/refresh`, {
 						method: 'POST',
 						body: {
 							refresh_token: token.refreshToken,
 							mode: 'json',
 						},
+						headers: {
+							'Content-Type': 'application/json',
+						},
 					});
 
 					if (response.data && response.data.access_token) {
+						// Update token with new values
 						token.directusToken = response.data.access_token;
 						token.refreshToken = response.data.refresh_token;
 						token.accessTokenExpires = Date.now() + response.data.expires;
 						return token;
+					} else {
+						console.error('Token refresh response missing data:', response);
+						// If refresh fails but we still have user data, keep it
+						if (token.user) {
+							return token;
+						}
+						// Otherwise clear the token
+						return {};
 					}
 				} catch (error) {
 					console.error('Error refreshing token:', error);
-					// Token could not be refreshed - destroy session
+
+					// Important: If token refresh fails but we still have user data,
+					// return the token anyway to keep the user logged in
+					if (token.user) {
+						console.log('Keeping existing user session despite refresh error');
+						// Set the token as expired to trigger another refresh attempt later
+						token.accessTokenExpires = 0;
+						return token;
+					}
+
+					// If no user data, treat as unauthenticated
 					return {};
 				}
 			}
 
+			// If we have user data but no refresh token, keep the session
 			if (token.user) {
 				return token;
 			}
 
 			return token;
 		},
+
 		async session({ session, token }) {
 			// Make user and token info available in the session
+
 			if (token.user) {
+				console.log('Setting user data from token to session');
 				session.user = token.user;
+			} else {
+				console.log('No user data in token!');
 			}
+
 			if (token.directusToken) {
 				session.directusToken = token.directusToken;
 			}
+
 			if (token.refreshToken) {
-				session.refreshToken = token.refreshToken; // Add this line
+				session.refreshToken = token.refreshToken;
 			}
+
+			console.log('Output session:', JSON.stringify(session, null, 2));
 			return session;
 		},
 	},
+
 	providers: [
-		// Important: Use .default here as shown in the example
 		// @ts-expect-error You need to use .default here for it to work during SSR
 		CredentialsProvider.default({
 			name: 'Directus',
@@ -115,76 +159,110 @@ export default NuxtAuthHandler({
 				password: { label: 'Password', type: 'password' },
 			},
 			async authorize(credentials: DirectusCredentials | undefined) {
+				console.log(
+					'Authorize function called with credentials:',
+					credentials ? `email: ${credentials.email}` : 'no credentials',
+				);
+
 				try {
 					if (!credentials?.email || !credentials?.password) {
+						console.log('Missing credentials');
 						throw new Error('Missing credentials');
 					}
 
 					const directusUrl = useRuntimeConfig().public.directusUrl;
+					console.log('Directus URL:', directusUrl);
 
-					// Using $fetch instead of directus SDK for login
-					const authResponse = await $fetch<DirectusAuthResponse>(`${directusUrl}/auth/login`, {
-						method: 'POST',
-						body: {
-							email: credentials.email,
-							password: credentials.password,
-						},
-						headers: {
-							'Content-Type': 'application/json',
-						},
-					});
+					// First, attempt the login
+					console.log('Attempting directus login...');
+					let authResponse;
+					try {
+						authResponse = await $fetch<DirectusAuthResponse>(`${directusUrl}/auth/login`, {
+							method: 'POST',
+							body: {
+								email: credentials.email,
+								password: credentials.password,
+							},
+							headers: {
+								'Content-Type': 'application/json',
+							},
+						});
+
+						console.log('Auth response received:', authResponse ? 'success' : 'failed');
+					} catch (loginError) {
+						console.error('Login request failed:', loginError);
+						if (loginError instanceof Error) {
+							throw new Error(`Login failed: ${loginError.message}`);
+						} else {
+							throw new Error('Login failed: An unknown error occurred');
+						}
+					}
 
 					if (!authResponse || !authResponse.data || !authResponse.data.access_token) {
-						throw new Error('Authentication failed');
+						console.log('Invalid auth response:', authResponse);
+						throw new Error('Authentication failed - invalid response');
 					}
 
-					// Fetch user data
-					const userResponse = await $fetch<DirectusUserResponse>(`${directusUrl}/users/me`, {
-						method: 'GET',
-						headers: {
-							'Content-Type': 'application/json',
-							Authorization: `Bearer ${authResponse.data.access_token}`,
-						},
-						params: {
-							fields: [
-								'id',
-								'first_name',
-								'last_name',
-								'email',
-								'avatar',
-								'role',
-								'organizations', // Ensure this is still in your fields
-								'teams', // You might want to include this as well if needed
-								// ... other fields
-							].join(','),
-						},
-					});
+					// Then, fetch user data with the token
+					console.log('Fetching user data...');
+					let userResponse;
+					try {
+						userResponse = await $fetch<DirectusUserResponse>(`${directusUrl}/users/me`, {
+							method: 'GET',
+							headers: {
+								'Content-Type': 'application/json',
+								Authorization: `Bearer ${authResponse.data.access_token}`,
+							},
+							query: {
+								fields: 'id,first_name,last_name,email,avatar,role,organizations.organizations_id.id',
+							},
+						});
+
+						console.log('User data received:', userResponse?.data?.id ? `id: ${userResponse.data.id}` : 'no data');
+					} catch (userError) {
+						console.error('User data request failed:', userError);
+						if (userError instanceof Error) {
+							throw new Error(`Failed to fetch user data: ${userError.message}`);
+						} else {
+							throw new Error('Failed to fetch user data: An unknown error occurred');
+						}
+					}
 
 					if (!userResponse || !userResponse.data) {
-						throw new Error('Failed to fetch user data');
+						console.log('Invalid user response');
+						throw new Error('Failed to fetch user data - invalid response');
 					}
-					console.log('User data:', userResponse.data);
 
-					// Directly use the organizations array
-					const organizationIds = userResponse.data.organizations
-						? userResponse.data.organizations.map((id) => String(id))
-						: [];
+					// Process organizations properly
+					const organizationIds: string[] = [];
+					if (userResponse.data.organizations && Array.isArray(userResponse.data.organizations)) {
+						userResponse.data.organizations.forEach((org: OrganizationReference) => {
+							if (org && org.organizations_id && org.organizations_id.id) {
+								organizationIds.push(org.organizations_id.id);
+							}
+						});
+					}
 
-					// Structure the user data for NextAuth
-					return {
+					console.log('Found organization IDs:', organizationIds);
+
+					// Create and return the user object for NextAuth
+					const user = {
 						id: userResponse.data.id,
 						email: userResponse.data.email,
 						first_name: userResponse.data.first_name,
 						last_name: userResponse.data.last_name,
 						avatar: userResponse.data.avatar,
 						role: userResponse.data.role,
-						organizationIds,
+						organizationIds: organizationIds,
 						accessToken: authResponse.data.access_token,
-						accessTokenExpires: Date.now() + authResponse.data.expires,
 						refreshToken: authResponse.data.refresh_token,
+						accessTokenExpires: Date.now() + authResponse.data.expires,
 					};
+
+					console.log('Returning user object with id:', user.id);
+					return user;
 				} catch (error) {
-					console.error('Authentication error:', error);
+					console.error('Authorization failed:', error);
 					return null;
 				}
 			},
