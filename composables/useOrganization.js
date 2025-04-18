@@ -99,7 +99,7 @@ export function useOrganization() {
 			await fetchOrganizationDetails();
 			tryRestoreSelectedOrg();
 			isInitialized.value = true;
-			console.log('Organization initialized:', selectedOrg.value);
+			// console.log('Organization initialized:', selectedOrg.value);
 		} catch (err) {
 			console.error('Initialization error:', err);
 			error.value = err.message;
@@ -128,7 +128,7 @@ export function useOrganization() {
 			if (event.key === 'selectedOrganization') {
 				const newValue = event.newValue;
 				if (newValue !== selectedOrg.value) {
-					console.log('Org changed in another tab:', newValue);
+					// console.log('Org changed in another tab:', newValue);
 
 					if (!newValue) {
 						selectedOrg.value = null;

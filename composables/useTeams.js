@@ -82,7 +82,7 @@ export const useTeams = () => {
 	// Get teams for an organization with full user details
 	const fetchTeams = async (organizationId) => {
 		if (organizationId === null && hasAdminAccess(user.value)) {
-			console.log('useTeams: Admin in "All Organizations" mode, clearing teams');
+			// console.log('useTeams: Admin in "All Organizations" mode, clearing teams');
 			teams.value = [];
 			visibleTeams.value = [];
 			clearTeam();
@@ -90,13 +90,13 @@ export const useTeams = () => {
 		}
 
 		if (!organizationId) {
-			console.warn('fetchTeams called without organizationId');
+			//  console.warn('fetchTeams called without organizationId');
 			return;
 		}
 
 		// Skip if already fetching for this org
 		if (loading.value && lastFetchedOrg.value === organizationId) {
-			console.log('Already fetching teams for this org, skipping');
+			//  console.log('Already fetching teams for this org, skipping');
 			return;
 		}
 
@@ -105,7 +105,7 @@ export const useTeams = () => {
 		error.value = null;
 
 		try {
-			console.log('useTeams: Fetching teams for organization:', organizationId);
+			// 	console.log('useTeams: Fetching teams for organization:', organizationId);
 
 			// First, fetch all users in the organization
 			await fetchOrganizationUsers(organizationId);
@@ -133,7 +133,7 @@ export const useTeams = () => {
 				],
 			});
 
-			console.log(`useTeams: Fetched ${response.length} teams for org ${organizationId}`);
+			// 	console.log(`useTeams: Fetched ${response.length} teams for org ${organizationId}`);
 
 			teams.value = response || [];
 
@@ -148,7 +148,7 @@ export const useTeams = () => {
 				);
 			}
 
-			console.log(`useTeams: Visible teams: ${visibleTeams.value.length}`);
+			// console.log(`useTeams: Visible teams: ${visibleTeams.value.length}`);
 
 			// Try to restore selected team after fetching
 			await tryRestoreSelectedTeam(organizationId);
@@ -170,7 +170,7 @@ export const useTeams = () => {
 		selectedTeam.value = teamId;
 		teamCookie.value = teamId;
 		setLocalStorageTeam(teamId);
-		console.log('useTeams: Team set to:', teamId);
+		// console.log('useTeams: Team set to:', teamId);
 	};
 
 	// Clear selected team (sets to null)
@@ -181,7 +181,7 @@ export const useTeams = () => {
 			// Instead, set to the first visible team
 			const firstTeamId = visibleTeams.value[0]?.id;
 			setTeam(firstTeamId);
-			console.log('useTeams: Regular user - setting to first team:', firstTeamId);
+			// console.log('useTeams: Regular user - setting to first team:', firstTeamId);
 			return;
 		}
 
@@ -189,7 +189,7 @@ export const useTeams = () => {
 		selectedTeam.value = null;
 		teamCookie.value = null;
 		setLocalStorageTeam(null);
-		console.log('useTeams: Team cleared');
+		//  console.log('useTeams: Team cleared');
 	};
 
 	// Check if a teamId is valid for the current organization
@@ -218,12 +218,12 @@ export const useTeams = () => {
 				savedTeam = localStorageTeam;
 			}
 
-			console.log('useTeams: Trying to restore team, saved team ID:', savedTeam);
-			console.log('useTeams: visibleTeams count:', visibleTeams.value.length);
+			// console.log('useTeams: Trying to restore team, saved team ID:', savedTeam);
+			// console.log('useTeams: visibleTeams count:', visibleTeams.value.length);
 
 			// If there are no visible teams, clear selection and return
 			if (visibleTeams.value.length === 0) {
-				console.log('useTeams: No visible teams available, clearing selection');
+				// console.log('useTeams: No visible teams available, clearing selection');
 				selectedTeam.value = null;
 				return;
 			}
@@ -232,12 +232,12 @@ export const useTeams = () => {
 			if (!hasAdminAccess(user.value)) {
 				// If they have a saved team and it's valid, use it
 				if (savedTeam && isValidTeamForOrg(savedTeam)) {
-					console.log('useTeams: Restoring saved team for regular user:', savedTeam);
+					// console.log('useTeams: Restoring saved team for regular user:', savedTeam);
 					selectedTeam.value = savedTeam;
 				} else {
 					// Otherwise, select the first team they have access to
 					const firstTeamId = visibleTeams.value[0]?.id;
-					console.log('useTeams: Setting regular user to first visible team:', firstTeamId);
+					// console.log('useTeams: Setting regular user to first visible team:', firstTeamId);
 					setTeam(firstTeamId);
 				}
 				return;
@@ -245,21 +245,21 @@ export const useTeams = () => {
 
 			// For admins, allow null team (All Teams) or any valid team
 			if (savedTeam && isValidTeamForOrg(savedTeam)) {
-				console.log('useTeams: Restoring saved team for admin:', savedTeam);
+				// console.log('useTeams: Restoring saved team for admin:', savedTeam);
 				selectedTeam.value = savedTeam;
 				return;
 			} else if (savedTeam) {
-				console.log('useTeams: Saved team not found in visible teams, not restoring');
+				// console.log('useTeams: Saved team not found in visible teams, not restoring');
 				// Important: Don't auto-select a team if the saved one is invalid
 				selectedTeam.value = null;
 				return;
 			}
 
 			// If no valid saved team for admin, don't select any team by default
-			console.log('useTeams: No saved team or invalid saved team for admin, setting to null');
+			// console.log('useTeams: No saved team or invalid saved team for admin, setting to null');
 			selectedTeam.value = null;
 		} catch (err) {
-			console.warn('Error restoring saved team:', err);
+			// console.warn('Error restoring saved team:', err);
 			selectedTeam.value = null;
 		}
 	};
@@ -494,7 +494,7 @@ export const useTeams = () => {
 		const listener = (event) => {
 			if (event.key === 'selectedTeamId') {
 				const newTeamId = event.newValue;
-				console.log('Team changed in another tab:', newTeamId);
+				//  console.log('Team changed in another tab:', newTeamId);
 
 				// Check if the new team ID is valid within the current context
 				if (newTeamId && isValidTeamForOrg(newTeamId)) {
@@ -531,17 +531,17 @@ export const useTeams = () => {
 	watch(
 		() => selectedOrg.value,
 		async (newOrg, oldOrg) => {
-			console.log('useTeams: Organization changed from', oldOrg, 'to', newOrg);
+			// console.log('useTeams: Organization changed from', oldOrg, 'to', newOrg);
 
 			if (newOrg !== oldOrg) {
 				// If switching to a new valid organization
 				if (newOrg) {
-					console.log('useTeams: Fetching teams for new organization:', newOrg);
+					// console.log('useTeams: Fetching teams for new organization:', newOrg);
 					clearTeam(); // Clear team selection before fetching new teams
 					await fetchTeams(newOrg);
 				} else {
 					// Handle "All Organizations" mode for admins
-					console.log('useTeams: Admin in "All Organizations" mode');
+					// console.log('useTeams: Admin in "All Organizations" mode');
 
 					// Clear team data but don't display error messages
 					teams.value = [];
@@ -556,7 +556,7 @@ export const useTeams = () => {
 	// Set up lifecycle hooks via the Nuxt app if available
 	if (import.meta.client && nuxtApp) {
 		nuxtApp.hook('app:mounted', () => {
-			console.log('useTeams: App mounted hook called');
+			// console.log('useTeams: App mounted hook called');
 			if (selectedOrg?.value) {
 				fetchTeams(selectedOrg.value);
 			}
@@ -566,7 +566,7 @@ export const useTeams = () => {
 		});
 
 		nuxtApp.hook('app:beforeUnmount', () => {
-			console.log('useTeams: App before unmount hook called');
+			// console.log('useTeams: App before unmount hook called');
 			// Clean up storage listener
 			if (storageListener.value) {
 				window.removeEventListener('storage', storageListener.value);
