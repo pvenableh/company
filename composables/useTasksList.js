@@ -28,7 +28,10 @@ export function useTasksList({
 
 	const updatingTasks = ref(new Set());
 
-	const effectiveOrgId = computed(() => (organizationId !== undefined ? organizationId : selectedOrg.value?.id));
+	const effectiveOrgId = computed(() => {
+		console.log('Computed effectiveOrgId:', organizationId || selectedOrg.value?.id);
+		return organizationId || selectedOrg.value?.id;
+	});
 	const effectiveTeamId = computed(() => (teamId !== undefined ? teamId : selectedTeam.value?.id));
 
 	const generateFilter = () => {
@@ -221,16 +224,18 @@ export function useTasksList({
 	};
 
 	// Watch for changes to the effective filter values and update the subscription
-	watch([effectiveOrgId, effectiveTeamId], ([newOrgId, newTeamId]) => {
+	watch([effectiveOrgId, effectiveTeamId], ([newOrgId, newTeamId], [oldOrgId, oldTeamId]) => {
 		console.log('Effective filter values changed:', { organization: newOrgId, team: newTeamId });
-		// Check if the subscription is initialized before updating the filter.
+
+		// Check if the subscription is initialized before updating the filter
 		if (subscriptionInitialized && updateFilterFunc) {
 			isLoading.value = true;
 			const newFilter = generateFilter();
+			console.log('Updating subscription filter:', newFilter);
 			updateFilterFunc(newFilter);
 		} else {
-			console.warn('updateFilter function not available yet.  Will update on setup.');
-			//  No action needed here, the filter will be applied on initial setup
+			console.warn('updateFilter function not available yet. Will update on setup.');
+			// No action needed here, the filter will be applied on initial setup
 		}
 	});
 

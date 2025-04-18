@@ -321,7 +321,7 @@ watch([selectedOrg, selectedTeam], ([newOrg, newTeam], [oldOrg, oldTeam]) => {
 
 	// Only refresh if values actually changed
 	if (newOrg !== oldOrg || newTeam !== oldTeam) {
-		refreshData();
+		tasksList.value.refreshTasks(); // Call the exposed refreshTasks method
 	}
 });
 

@@ -259,6 +259,10 @@ watch(
 // Watch for organization and team changes from global context
 watch([selectedOrg, selectedTeam], ([newOrg, newTeam]) => {
 	console.log('Global organization or team changed:', { org: newOrg, team: newTeam });
+	if (newOrg !== effectiveOrgId.value || newTeam !== effectiveTeamId.value) {
+		console.log('Refreshing tasks due to organization/team change');
+		refreshTasks();
+	}
 	// The updated useTasksList composable now handles these changes internally
 });
 
