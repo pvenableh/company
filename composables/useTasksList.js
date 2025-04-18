@@ -1,5 +1,3 @@
-// composables/useTasksList.js
-import { ref, computed, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 
 export function useTasksList({
@@ -16,57 +14,44 @@ export function useTasksList({
 	const isConnected = ref(true);
 	const error = ref(null);
 	const lastUpdated = ref(null);
-	const totalCount = ref(0); // Added total count for pagination
+	const totalCount = ref(0);
 
-	// Get global organization and team values for fallback
+	// Get global organization and team values
 	const { selectedOrg, getOrganizationFilter } = useOrganization();
-
 	const { selectedTeam, getTeamFilter } = useTeams();
 
 	let disconnect = null;
 	let refresh = null;
 	let connect = null;
+	let updateFilterFunc = null; // To hold the updateFilter function from the subscription
+	let subscriptionInitialized = false; // Track subscription initialization
 
-	// Tasks being updated (for loading indicators)
 	const updatingTasks = ref(new Set());
 
-	// Use computed properties to determine effective filter values
-	const effectiveOrgId = computed(() => {
-		return organizationId !== undefined ? organizationId : selectedOrg.value;
-	});
+	const effectiveOrgId = computed(() => (organizationId !== undefined ? organizationId : selectedOrg.value?.id));
+	const effectiveTeamId = computed(() => (teamId !== undefined ? teamId : selectedTeam.value?.id));
 
-	const effectiveTeamId = computed(() => {
-		return teamId !== undefined ? teamId : selectedTeam.value;
-	});
-
-	// Generate filter based on effective parameters
 	const generateFilter = () => {
 		const filter = { _and: [] };
 
-		// Organization filter - use effective value
 		if (effectiveOrgId.value) {
-			// If a specific organization is provided or selected
-			const orgFilter = getOrganizationFilter();
+			const orgFilter = getOrganizationFilter(effectiveOrgId.value);
 			if (orgFilter && Object.keys(orgFilter).length > 0) {
 				filter._and.push(orgFilter);
 			}
 		}
 
-		// Team filter - use effective value
 		if (effectiveTeamId.value) {
-			// If a specific team is provided or selected
-			const teamFilter = getTeamFilter();
+			const teamFilter = getTeamFilter(effectiveTeamId.value);
 			if (teamFilter && Object.keys(teamFilter).length > 0) {
 				filter._and.push(teamFilter);
 			}
 		}
 
-		// Project filter
 		if (projectId) {
 			filter._and.push({ project: { _eq: projectId } });
 		}
 
-		// User assignment filter (optional)
 		if (userId) {
 			filter._and.push({
 				assigned_to: {
@@ -75,7 +60,6 @@ export function useTasksList({
 			});
 		}
 
-		// Clean up empty filter
 		if (filter._and.length === 0) {
 			return {};
 		}
@@ -114,24 +98,20 @@ export function useTasksList({
 
 	// Process data and extract tasks with ticket context
 	const processTicketData = (ticketsData) => {
-		// Initialize with empty array
 		const processedTasks = [];
 
-		// Check if ticketsData is an array and has items
 		if (!ticketsData || !Array.isArray(ticketsData) || ticketsData.length === 0) {
 			return [];
 		}
 
 		console.log('Processing', ticketsData.length, 'tickets');
 
-		// Process each ticket and extract tasks
 		ticketsData.forEach((ticket) => {
 			if (ticket && ticket.tasks && Array.isArray(ticket.tasks) && ticket.tasks.length > 0) {
 				console.log(`Ticket ${ticket.id} has ${ticket.tasks.length} tasks`);
 
-				// Add ticket context to each task
 				const tasksWithContext = ticket.tasks
-					.filter((task) => task) // Filter out null/undefined tasks
+					.filter((task) => task)
 					.map((task) => ({
 						...task,
 						ticketContext: {
@@ -152,60 +132,44 @@ export function useTasksList({
 		});
 
 		console.log('Total processed tasks:', processedTasks.length);
-
-		// Set the total count for pagination info
 		totalCount.value = processedTasks.length;
 
-		// Sort tasks by priority:
-		// 1. Active tasks before completed tasks
-		// 2. Overdue tasks first
-		// 3. Due today second
-		// 4. Then by due date
-		// 5. Then by sort order
 		processedTasks.sort((a, b) => {
 			const today = new Date();
 			today.setHours(0, 0, 0, 0);
 			const tomorrow = new Date(today);
 			tomorrow.setDate(tomorrow.getDate() + 1);
 
-			// First by completion status (active tasks first)
 			if (a.status === 'completed' && b.status !== 'completed') return 1;
 			if (a.status !== 'completed' && b.status === 'completed') return -1;
 
-			// For active tasks, prioritize by due date
 			if (a.status !== 'completed' && b.status !== 'completed') {
 				const dateA = a.ticketContext?.due_date ? new Date(a.ticketContext.due_date) : null;
 				const dateB = b.ticketContext?.due_date ? new Date(b.ticketContext.due_date) : null;
 
-				// Handle cases where one or both tasks don't have due dates
-				if (dateA && !dateB) return -1; // Tasks with due dates before tasks without due dates
-				if (!dateA && dateB) return 1; // Tasks without due dates after tasks with due dates
-				if (!dateA && !dateB) return 0; // If neither has a due date, they're equal for this sort
+				if (dateA && !dateB) return -1;
+				if (!dateA && dateB) return 1;
+				if (!dateA && !dateB) return 0;
 
-				// Check for overdue tasks
 				const aIsOverdue = dateA < today;
 				const bIsOverdue = dateB < today;
-				if (aIsOverdue && !bIsOverdue) return -1; // Overdue tasks first
+				if (aIsOverdue && !bIsOverdue) return -1;
 				if (!aIsOverdue && bIsOverdue) return 1;
 
-				// Check for tasks due today
 				const aIsDueToday = dateA >= today && dateA < tomorrow;
 				const bIsDueToday = dateB >= today && dateB < tomorrow;
-				if (aIsDueToday && !bIsDueToday) return -1; // Tasks due today second
+				if (aIsDueToday && !bIsDueToday) return -1;
 				if (!aIsDueToday && bIsDueToday) return 1;
 
-				// Otherwise sort by due date
 				return dateA - dateB;
 			}
 
-			// For completed tasks, sort by completion date (most recent first)
 			if (a.status === 'completed' && b.status === 'completed') {
 				const updateA = a.date_updated ? new Date(a.date_updated) : new Date(0);
 				const updateB = b.date_updated ? new Date(b.date_updated) : new Date(0);
 				return updateB - updateA;
 			}
 
-			// Then by task sort order if all else is equal
 			return (a.sort || 0) - (b.sort || 0);
 		});
 
@@ -222,7 +186,6 @@ export function useTasksList({
 		const filter = generateFilter();
 		console.log('Setting up task subscription with filter:', filter);
 
-		// Use the existing useRealtimeSubscription composable
 		const {
 			data: ticketsData,
 			isLoading: wsLoading,
@@ -235,139 +198,68 @@ export function useTasksList({
 			updateFilter: wsUpdateFilter,
 		} = useRealtimeSubscription('tickets', fields, filter, sortBy);
 
-		// Store functions for later use
 		connect = wsConnect;
 		disconnect = wsDisconnect;
 		refresh = wsRefresh;
+		updateFilterFunc = wsUpdateFilter; // Store the updateFilter function
+		subscriptionInitialized = true; // Mark subscription as initialized
 
-		// Store the updateFilter function to use when filter parameters change
-		const updateFilterFunc = wsUpdateFilter;
+		watch(wsLoading, (val) => (isLoading.value = val), { immediate: true });
+		watch(wsConnected, (val) => (isConnected.value = val), { immediate: true });
+		watch(wsError, (val) => (error.value = val), { immediate: true });
+		watch(wsLastUpdated, (val) => (lastUpdated.value = val), { immediate: true });
 
-		// Watch for subscription state changes
-		watch(
-			wsLoading,
-			(val) => {
-				console.log('WebSocket loading state changed:', val);
-				isLoading.value = val;
-			},
-			{ immediate: true },
-		);
-
-		watch(
-			wsConnected,
-			(val) => {
-				console.log('WebSocket connection state changed:', val);
-				isConnected.value = val;
-			},
-			{ immediate: true },
-		);
-
-		watch(
-			wsError,
-			(val) => {
-				if (val) console.error('WebSocket error:', val);
-				error.value = val;
-			},
-			{ immediate: true },
-		);
-
-		watch(
-			wsLastUpdated,
-			(val) => {
-				if (val) console.log('WebSocket data updated at:', val);
-				lastUpdated.value = val;
-			},
-			{ immediate: true },
-		);
-
-		// Process tickets data when it changes
 		watch(
 			ticketsData,
 			(newTickets) => {
-				console.log('Received ticket data:', newTickets?.length || 0, 'tickets');
-
-				if (newTickets && newTickets.length > 0) {
-					// Log count of tasks for first few tickets
-					newTickets.slice(0, 3).forEach((ticket, i) => {
-						console.log(`Ticket ${i + 1} (${ticket.id}) has ${ticket.tasks?.length || 0} tasks`);
-					});
-				}
-
 				const allTasks = processTicketData(newTickets);
-				console.log('Processed tasks:', allTasks.length);
-
-				// Take only the first 'limit' tasks for initial view
 				tasks.value = allTasks.slice(0, limit);
-				console.log('Set tasks.value with', tasks.value.length, 'tasks (limited by', limit, ')');
-
 				isLoading.value = false;
 			},
 			{ immediate: true, deep: true },
 		);
-
-		// Watch for changes to the effective filter values and update the subscription
-		watch([effectiveOrgId, effectiveTeamId], ([newOrgId, newTeamId], [oldOrgId, oldTeamId]) => {
-			if (newOrgId !== oldOrgId || newTeamId !== oldTeamId) {
-				console.log('Filter values changed, updating subscription:', {
-					organization: newOrgId,
-					team: newTeamId,
-				});
-
-				// Only update if we have an updateFilter function
-				if (updateFilterFunc) {
-					isLoading.value = true;
-					const newFilter = generateFilter();
-					updateFilterFunc(newFilter);
-				} else {
-					console.warn('No updateFilter function available');
-					// If no update function, refresh the entire subscription
-					setupSubscription();
-				}
-			}
-		});
-
-		// Safety timeout to prevent infinite loading state
-		setTimeout(() => {
-			if (isLoading.value) {
-				console.log('Forcing loading state to false after timeout');
-				isLoading.value = false;
-			}
-		}, 5000);
 	};
+
+	// Watch for changes to the effective filter values and update the subscription
+	watch([effectiveOrgId, effectiveTeamId], ([newOrgId, newTeamId]) => {
+		console.log('Effective filter values changed:', { organization: newOrgId, team: newTeamId });
+		// Check if the subscription is initialized before updating the filter.
+		if (subscriptionInitialized && updateFilterFunc) {
+			isLoading.value = true;
+			const newFilter = generateFilter();
+			updateFilterFunc(newFilter);
+		} else {
+			console.warn('updateFilter function not available yet.  Will update on setup.');
+			//  No action needed here, the filter will be applied on initial setup
+		}
+	});
 
 	// Function to toggle task status
 	const toggleTaskStatus = async (taskId) => {
-		// Find the task
 		const task = tasks.value.find((t) => t.id === taskId);
 		if (!task) {
 			console.error('Task not found:', taskId);
 			return;
 		}
 
-		// Mark as updating
 		updatingTasks.value.add(taskId);
 		console.log('Toggling task status:', taskId);
 
 		try {
 			const { updateItem } = useDirectusItems();
 
-			// Toggle status
 			const newStatus = task.status === 'completed' ? 'active' : 'completed';
 			console.log('New status will be:', newStatus);
 
-			// Update in Directus
 			await updateItem('tasks', taskId, {
 				status: newStatus,
 			});
 
-			// Get the current date for updated timestamp
 			const now = new Date().toISOString();
 
-			// Update local state (optimistic update)
 			task.status = newStatus;
 			task.date_updated = now;
 
-			// Handle user info for update
 			const { user } = useEnhancedAuth();
 			if (user.value && newStatus === 'completed') {
 				task.user_updated = {
@@ -377,11 +269,8 @@ export function useTasksList({
 				};
 			}
 
-			// Force reactive update
 			tasks.value = [...tasks.value];
-			console.log('Task updated successfully');
 
-			// Optionally notify user of success
 			if (import.meta.client) {
 				const toast = useToast();
 				toast.add({
@@ -390,7 +279,6 @@ export function useTasksList({
 				});
 			}
 
-			// Use ticketsStore to refresh parent components that might display this data
 			if (import.meta.client) {
 				try {
 					const { triggerRefresh } = useTicketsStore();
@@ -404,12 +292,10 @@ export function useTasksList({
 		} catch (err) {
 			console.error('Error toggling task status:', err);
 
-			// Revert local change on error
 			if (task) {
 				task.status = task.status === 'completed' ? 'active' : 'completed';
 			}
 
-			// Show error notification
 			if (import.meta.client) {
 				const toast = useToast();
 				toast.add({
@@ -421,32 +307,25 @@ export function useTasksList({
 
 			return false;
 		} finally {
-			// Remove from updating set
 			updatingTasks.value.delete(taskId);
 		}
 	};
 
-	// Function to navigate to ticket view
 	const navigateToTicket = (ticketId) => {
 		if (!ticketId) return;
 		console.log('Navigating to ticket:', ticketId);
 		router.push(`/tickets/${ticketId}`);
 	};
 
-	// Refresh tasks data
 	const refreshTasks = () => {
 		console.log('Refreshing tasks data');
 		isLoading.value = true;
-
 		if (refresh) {
 			refresh();
 		} else {
-			// If the refresh function isn't available yet, re-setup the subscription
 			console.log('Refresh function not available, re-setting up subscription');
 			setupSubscription();
 		}
-
-		// Safety timeout
 		setTimeout(() => {
 			if (isLoading.value) {
 				console.log('Force ending loading state after timeout');
@@ -459,21 +338,24 @@ export function useTasksList({
 	onMounted(() => {
 		if (import.meta.client) {
 			console.log('Component mounted, setting up subscription');
-			setupSubscription();
-			// Connect to WebSocket
+			setupSubscription(); // Call setupSubscription directly here
 			if (connect) {
 				connect();
 			}
 		}
 	});
 
-	// Initialize with empty values for SSR
+	onUnmounted(() => {
+		if (disconnect) {
+			disconnect();
+		}
+	});
+
 	if (import.meta.server) {
 		isLoading.value = false;
 		tasks.value = [];
 	}
 
-	// Return all needed values and functions
 	return {
 		tasks: computed(() => tasks.value),
 		isLoading: computed(() => isLoading.value),
@@ -484,12 +366,11 @@ export function useTasksList({
 		totalCount: computed(() => totalCount.value),
 		effectiveOrgId,
 		effectiveTeamId,
-
+		generateFilter,
+		refresh,
 		toggleTaskStatus,
 		navigateToTicket,
 		refreshTasks,
-
-		// Clean up function for component unmount
 		cleanup: () => {
 			if (disconnect) {
 				console.log('Cleaning up and disconnecting WebSocket');

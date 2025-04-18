@@ -1,6 +1,12 @@
 <template>
 	<div class="task-list-container">
 		<!-- Loading State -->
+		<div class="bg-yellow-100 p-4 rounded-lg mt-4">
+			<h3>Debug API Test</h3>
+			<button @click="testApiCall" class="bg-blue-500 text-white py-2 px-4 rounded">Run Test API Call</button>
+			<pre v-if="apiTestResult">{{ JSON.stringify(apiTestResult, null, 2) }}</pre>
+			<p v-if="apiTestError" class="text-red-500">{{ apiTestError }}</p>
+		</div>
 		<ClientOnly>
 			<transition name="fade">
 				<div
@@ -188,6 +194,7 @@ const emit = defineEmits(['stats-update']);
 const totalTaskCount = ref(0);
 const currentLimit = ref(props.limit);
 const activeFilter = ref('active'); // Default value now set within the component
+const { readItems } = useDirectusItems();
 
 // 3. Update the emits to remove the update:filter event
 
@@ -216,6 +223,7 @@ const {
 	toggleTaskStatus,
 	navigateToTicket,
 	refreshTasks,
+	generateFilter,
 	cleanup,
 	effectiveOrgId,
 	effectiveTeamId,
@@ -388,6 +396,28 @@ const getStatusColor = (status) => {
 	};
 
 	return statusColors[status] || 'gray';
+};
+
+const apiTestResult = ref(null);
+const apiTestError = ref(null);
+
+const testApiCall = async () => {
+	apiTestResult.value = null;
+	apiTestError.value = null;
+	const filterToTest = generateFilter();
+	console.log('Testing API call with filter:', filterToTest);
+
+	try {
+		const response = await readItems('tickets', {
+			filter: filterToTest,
+			// Add any other necessary parameters like fields, sort, etc.
+		});
+		apiTestResult.value = response.data;
+		console.log('Test API call result:', response);
+	} catch (error) {
+		console.error('Error during test API call:', error);
+		apiTestError.value = error.message || 'An error occurred during the test API call.';
+	}
 };
 
 onMounted(() => {

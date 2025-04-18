@@ -29,8 +29,9 @@ export function useOrganization() {
 		return organizations.value.find((org) => org.id === selectedOrg.value);
 	});
 
-	const getOrganizationFilter = () => {
-		return selectedOrg.value ? { organization: { _eq: selectedOrg.value } } : {};
+	const getOrganizationFilter = (orgId) => {
+		const idToFilterBy = orgId !== undefined ? orgId : selectedOrg.value;
+		return idToFilterBy ? { organization: { _eq: idToFilterBy } } : {};
 	};
 
 	const fetchOrganizationDetails = async () => {
