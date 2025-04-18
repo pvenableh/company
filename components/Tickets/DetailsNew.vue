@@ -273,7 +273,7 @@ async function handleStatusChange(event) {
 }
 
 const updateFormWithLatestData = () => {
-	if (!formRef.value || !formRef.value.updateFormData) {
+	if (!import.meta.client || !formRef.value || !formRef.value.updateFormData) {
 		console.warn('FormRef or updateFormData method not available');
 		return;
 	}
@@ -283,7 +283,7 @@ const updateFormWithLatestData = () => {
 };
 
 const updateDescriptionInDOM = (newDescription) => {
-	if (!newDescription) return;
+	if (!newDescription || !import.meta.client) return;
 
 	nextTick(() => {
 		// Query for the description element in the DOM
@@ -295,7 +295,6 @@ const updateDescriptionInDOM = (newDescription) => {
 		}
 	});
 };
-
 const activeTab = ref('work');
 // Tab configuration
 const tabs = [
@@ -313,7 +312,6 @@ const setActiveTab = (tabId) => {
 	activeTab.value = tabId;
 
 	// If switching to edit tab, make sure the form has the latest data
-
 	if (tabId === 'edit') {
 		nextTick(() => {
 			updateFormWithLatestData();
@@ -321,7 +319,7 @@ const setActiveTab = (tabId) => {
 	}
 
 	// If switching to the work tab, ensure description is up to date
-	if (tabId === 'work' && localElement.value.description) {
+	if (tabId === 'work' && localElement.value.description && import.meta.client) {
 		nextTick(() => {
 			updateDescriptionInDOM(localElement.value.description);
 		});
@@ -676,7 +674,7 @@ watch(
 		}
 
 		// Add an explicit refresh check for description to ensure the UI updates
-		if (activeTab.value === 'work' && newElement.description) {
+		if (activeTab.value === 'work' && newElement.description && import.meta.client) {
 			console.log('Description update detected, updating DOM');
 			updateDescriptionInDOM(newElement.description);
 		}
@@ -688,8 +686,11 @@ watch(
 	() => displayDescription.value,
 	(newDescription) => {
 		console.log('Description computed property changed');
-		// Force DOM update when the computed property changes
-		updateDescriptionInDOM(newDescription);
+		// Only run on client-side
+		if (import.meta.client) {
+			// Force DOM update when the computed property changes
+			updateDescriptionInDOM(newDescription);
+		}
 	},
 );
 </script>
