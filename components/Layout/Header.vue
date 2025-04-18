@@ -22,11 +22,15 @@ const manageNavBarAnimations = () => {
 };
 
 onMounted(() => {
-	window.addEventListener('scroll', manageNavBarAnimations);
+	if (import.meta.client) {
+		window.addEventListener('scroll', manageNavBarAnimations);
+	}
 });
 
 onUnmounted(() => {
-	window.removeEventListener('scroll', manageNavBarAnimations);
+	if (import.meta.client) {
+		window.removeEventListener('scroll', manageNavBarAnimations);
+	}
 });
 </script>
 <template>

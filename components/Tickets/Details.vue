@@ -267,9 +267,10 @@ onMounted(() => {
 			next();
 		}
 	});
-
-	// Set up beforeunload handler
-	window.addEventListener('beforeunload', handleBeforeUnload);
+	if (import.meta.client) {
+		// Set up beforeunload handler
+		window.addEventListener('beforeunload', handleBeforeUnload);
+	}
 });
 
 onBeforeUnmount(() => {
@@ -277,7 +278,9 @@ onBeforeUnmount(() => {
 	if (routerGuard) {
 		routerGuard();
 	}
-	window.removeEventListener('beforeunload', handleBeforeUnload);
+	if (import.meta.client) {
+		window.removeEventListener('beforeunload', handleBeforeUnload);
+	}
 });
 
 const handleBeforeUnload = (e) => {

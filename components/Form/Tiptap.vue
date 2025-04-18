@@ -283,6 +283,7 @@ const handleDrop = (event) => {
 
 // Check if the event contains files
 const hasFiles = (event) => {
+	if (!import.meta.client) return false;
 	if (!event.dataTransfer?.types) return false;
 	return event.dataTransfer.types.includes('Files');
 };
@@ -739,6 +740,7 @@ onBeforeUnmount(() => {
 // with the enhanced useFileUpload composable
 
 const handleFiles = async (files) => {
+	if (!import.meta.client || !files.length) return;
 	if (!files.length) return;
 
 	if (isUploading.value) {

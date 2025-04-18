@@ -91,13 +91,13 @@ export function useMobileBoardNavigation(options = {}) {
 		checkMobile();
 
 		// Only add event listener in client-side environment
-		if (typeof window !== 'undefined') {
+		if (import.meta.client) {
 			window.addEventListener('resize', checkMobile);
 		}
 
 		// Return cleanup function
 		return () => {
-			if (typeof window !== 'undefined') {
+			if (import.meta.client) {
 				window.removeEventListener('resize', checkMobile);
 			}
 		};

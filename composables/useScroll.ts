@@ -18,11 +18,15 @@ export default function useScroll() {
 	}
 
 	onMounted(() => {
-		window.addEventListener('scroll', updateProgress);
+		if (import.meta.client) {
+			window.addEventListener('scroll', updateProgress);
+		}
 	});
 
 	onUnmounted(() => {
-		window.removeEventListener('scroll', updateProgress);
+		if (import.meta.client) {
+			window.removeEventListener('scroll', updateProgress);
+		}
 	});
 
 	return { progress: readonly(progress), scrollToTop };

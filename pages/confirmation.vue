@@ -458,6 +458,7 @@ const sendPaymentNotification = async (paymentData) => {
 };
 
 const cleanupPaymentData = () => {
+	if (!import.meta.client) return;
 	window.localStorage.removeItem('payment');
 };
 

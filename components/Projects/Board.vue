@@ -323,12 +323,16 @@ const updateProjectStatus = async (columnId, event) => {
 
 onMounted(() => {
 	checkMobile();
-	window.addEventListener('resize', checkMobile);
+	if (import.meta.client) {
+		window.addEventListener('resize', checkMobile);
+	}
 	fetchServices();
 });
 
 onUnmounted(() => {
-	window.removeEventListener('resize', checkMobile);
+	if (import.meta.client) {
+		window.removeEventListener('resize', checkMobile);
+	}
 });
 
 function checkMobile() {

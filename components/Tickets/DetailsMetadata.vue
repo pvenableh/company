@@ -150,12 +150,16 @@ const formatDate = (dateString, includeTime = false) => {
 // Add resize listener on mount
 onMounted(() => {
 	checkMobile();
-	window.addEventListener('resize', checkMobile);
+	if (import.meta.client) {
+		window.addEventListener('resize', checkMobile);
+	}
 });
 
 // Clean up resize listener on unmount
 onUnmounted(() => {
-	window.removeEventListener('resize', checkMobile);
+	if (import.meta.client) {
+		window.removeEventListener('resize', checkMobile);
+	}
 });
 </script>
 

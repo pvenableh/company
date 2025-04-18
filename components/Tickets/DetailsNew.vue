@@ -199,7 +199,18 @@ const shareDescription = computed(() => {
 	}
 });
 
-const displayDescription = computed(() => props.element.description || '');
+const processDescription = (description) => {
+	if (!import.meta.client || !description) return description;
+
+	const tempDiv = document.createElement('div');
+	tempDiv.innerHTML = description;
+	return tempDiv.textContent || tempDiv.innerText || '';
+};
+
+const displayDescription = computed(() => {
+	const rawDescription = props.element.description || '';
+	return import.meta.client ? processDescription(rawDescription) : rawDescription;
+});
 const displayTitle = computed(() => props.element.title || '');
 const displayDueDate = computed(() => props.element.due_date || '');
 
@@ -622,7 +633,9 @@ onMounted(() => {
 	});
 
 	// Set up beforeunload handler
-	window.addEventListener('beforeunload', handleBeforeUnload);
+	if (import.meta.client) {
+		window.addEventListener('beforeunload', handleBeforeUnload);
+	}
 });
 
 onBeforeUnmount(() => {
@@ -630,7 +643,9 @@ onBeforeUnmount(() => {
 	if (routerGuard) {
 		routerGuard();
 	}
-	window.removeEventListener('beforeunload', handleBeforeUnload);
+	if (import.meta.client) {
+		window.removeEventListener('beforeunload', handleBeforeUnload);
+	}
 });
 
 const handleBeforeUnload = (e) => {
