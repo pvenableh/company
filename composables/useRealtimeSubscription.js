@@ -137,7 +137,25 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 		if (!connection.value || connection.value.readyState !== 1) return;
 
 		console.log('[WebSocket] Authenticating...');
-		const token = localStorage.getItem('auth_token') || config.public.staticToken;
+		let token = null;
+
+		if (import.meta.client) {
+			// Try localStorage first (may be more up-to-date from recent refresh)
+			token = localStorage.getItem('auth_token');
+
+			// If no token in localStorage or it looks invalid (less than 20 chars),
+			// use the static token as fallback
+			if (!token || token.length < 20) {
+				token = config.public.staticToken;
+				console.log('[WebSocket] Using static token (auth token not found in localStorage)');
+			} else {
+				console.log('[WebSocket] Using token from localStorage');
+			}
+		} else {
+			// Server-side, use static token
+			token = config.public.staticToken;
+			console.log('[WebSocket] Using static token (server-side)');
+		}
 
 		if (!token) {
 			console.error('[WebSocket] No authentication token available');

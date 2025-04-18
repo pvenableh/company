@@ -20,6 +20,24 @@ interface DirectusAuthResponse {
 	};
 }
 
+// Define the token refresh response type
+interface TokenRefreshResponse {
+	success?: boolean;
+	data?: {
+		access_token: string;
+		refresh_token: string;
+		expires?: number; // Make expires optional since it might not always be present
+	};
+}
+
+// Response from direct Directus refresh
+interface DirectusRefreshResponse {
+	data: {
+		access_token: string;
+		refresh_token: string;
+		expires?: number; // Make expires optional
+	};
+}
 // Define organization structure
 interface OrganizationReference {
 	organizations_id: {
@@ -74,64 +92,77 @@ export default NuxtAuthHandler({
 			// If we have a refresh token, try to refresh the token
 			if (token.refreshToken) {
 				try {
-					const directusUrl = useRuntimeConfig().public.directusUrl;
-
 					console.log(`Attempting to refresh token with refresh_token: ${token.refreshToken.substring(0, 10)}...`);
 
-					// Try our own endpoint first (to avoid CORS/cookie issues)
-					let refreshSuccessful = false;
-					let response: { data?: { access_token?: string; refresh_token?: string; expires?: number } } | undefined =
-						undefined;
-
+					// Try our own proxy endpoint
 					try {
 						console.log('Trying via server proxy...');
-						response = await $fetch('/api/auth/token-refresh', {
+						const response = await $fetch<TokenRefreshResponse>('/api/auth/token-refresh', {
 							method: 'POST',
 							body: {
 								refreshToken: token.refreshToken,
 							},
 						});
 
-						if (response?.data) {
-							refreshSuccessful = true;
+						if (response?.success && response?.data?.access_token) {
+							// Update token with new values
+							console.log('Token refresh successful, new token received');
+							token.directusToken = response.data.access_token;
+							token.refreshToken = response.data.refresh_token;
+							// Safely handle the expires value with a fallback
+							const expiresInMs = response.data.expires ? response.data.expires * 1000 : 900000;
+							token.accessTokenExpires = Date.now() + expiresInMs;
+
+							// Store in localStorage for WebSockets
+							if (import.meta.client) {
+								try {
+									localStorage.setItem('auth_token', response.data.access_token);
+									localStorage.setItem('auth_refresh_token', response.data.refresh_token);
+								} catch (e) {
+									console.warn('Failed to store token in localStorage', e);
+								}
+							}
+
+							return token;
 						}
 					} catch (proxyError) {
 						console.log('Proxy refresh failed, trying direct refresh');
 					}
 
-					// If proxy refresh failed, try direct request
-					if (!refreshSuccessful) {
-						response = await $fetch(`${directusUrl}/auth/refresh`, {
-							method: 'POST',
-							body: {
-								refresh_token: token.refreshToken,
-								mode: 'json',
-							},
-							headers: {
-								'Content-Type': 'application/json',
-							},
-						});
-					}
+					// If proxy refresh failed, try direct request as fallback
+					const directusUrl = useRuntimeConfig().public.directusUrl;
+					const directResponse = await $fetch<DirectusRefreshResponse>(`${directusUrl}/auth/refresh`, {
+						method: 'POST',
+						body: {
+							refresh_token: token.refreshToken,
+							mode: 'json',
+						},
+						headers: {
+							'Content-Type': 'application/json',
+						},
+					});
 
-					if (response?.data && response.data.access_token) {
-						console.log('Token refresh successful, new token received');
+					if (directResponse?.data?.access_token) {
+						console.log('Direct token refresh successful');
+						token.directusToken = directResponse.data.access_token;
+						token.refreshToken = directResponse.data.refresh_token;
+						// Safely handle the expires value with a fallback
+						const expiresInMs = directResponse.data.expires ? directResponse.data.expires * 1000 : 900000;
+						token.accessTokenExpires = Date.now() + expiresInMs;
 
-						// Update token with new values
-						token.directusToken = response.data.access_token;
-						token.refreshToken = response.data.refresh_token;
-						token.accessTokenExpires = Date.now() + (response.data.expires ?? 0);
+						// Store in localStorage for WebSockets
+						if (import.meta.client) {
+							try {
+								localStorage.setItem('auth_token', directResponse.data.access_token);
+								localStorage.setItem('auth_refresh_token', directResponse.data.refresh_token);
+							} catch (e) {
+								console.warn('Failed to store token in localStorage', e);
+							}
+						}
 
 						return token;
 					} else {
-						console.error('Token refresh response missing data:', response);
-
-						// If refresh fails but we still have user data, keep it
-						if (token.user) {
-							return token;
-						}
-
-						// Otherwise clear the token
-						return {};
+						throw new Error('Invalid response from direct refresh');
 					}
 				} catch (error) {
 					console.error('Error refreshing token:', error);
@@ -140,9 +171,6 @@ export default NuxtAuthHandler({
 					// return the token anyway to keep the user logged in
 					if (token.user) {
 						console.log('Keeping existing user session despite refresh error');
-
-						// Set the token as expired to trigger another refresh attempt later
-						token.accessTokenExpires = 0;
 						return token;
 					}
 

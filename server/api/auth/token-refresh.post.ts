@@ -1,4 +1,4 @@
-// server/api/auth/token-refresh.post.js
+// server/api/auth/token-refresh.post.ts
 
 /**
  * Server-side proxy for token refresh
@@ -25,14 +25,15 @@ export default defineEventHandler(async (event) => {
 		interface DirectusRefreshResponse {
 			data: {
 				access_token: string;
+				refresh_token: string;
 			};
 		}
 
 		const response = await $fetch<DirectusRefreshResponse>(`${directusUrl}/auth/refresh`, {
 			method: 'POST',
 			body: {
-				refresh_token: refreshToken,
-				mode: 'json',
+				refresh_token: refreshToken, // Use correct property name (refresh_token, not refreshToken)
+				mode: 'json', // Explicitly specify json mode
 			},
 			headers: {
 				'Content-Type': 'application/json',
@@ -54,11 +55,7 @@ export default defineEventHandler(async (event) => {
 			data: response.data,
 		};
 	} catch (error) {
-		if (error instanceof Error) {
-			console.error('Server: Token refresh failed:', error.message);
-		} else {
-			console.error('Server: Token refresh failed:', error);
-		}
+		console.error('Server: Token refresh failed:', error);
 
 		// Return a structured error response
 		throw createError({
