@@ -4,16 +4,6 @@
 
 		<!-- Organization & Filters -->
 		<div class="mb-6 flex flex-wrap gap-4 items-center">
-			<div class="w-full md:w-auto">
-				<USelectMenu
-					v-model="filterType"
-					:options="filterOptions"
-					placeholder="Filter Tasks"
-					size="sm"
-					class="w-full md:w-64"
-				/>
-			</div>
-
 			<div v-if="selectedOrgData" class="flex items-center space-x-2">
 				<div class="h-6 w-6 rounded-full bg-gray-100 flex items-center justify-center">
 					<img
@@ -35,15 +25,17 @@
 			</div>
 		</div>
 
-		<!-- Debug Banner (remove in production) -->
+		<!-- Debug Banner (for development purposes) -->
 		<div v-if="debug" class="mb-4 p-2 bg-yellow-100 dark:bg-yellow-800 rounded text-xs">
 			<div>
 				<strong>Debug:</strong>
 				Active Tab: {{ activeTab }} ({{ tabs[activeTab].content }})
 			</div>
-			<div>Organization ID: {{ getTasksOrganizationId }}</div>
-			<div>Team ID: {{ getTasksTeamId }}</div>
-			<div>User ID: {{ getTasksUserId }}</div>
+			<div>Global Organization ID: {{ selectedOrg }}</div>
+			<div>Global Team ID: {{ selectedTeam }}</div>
+			<div>Computed Organization ID: {{ getTasksOrganizationId }}</div>
+			<div>Computed Team ID: {{ getTasksTeamId }}</div>
+			<div>Computed User ID: {{ getTasksUserId }}</div>
 			<div>Filter Type: {{ filterType }}</div>
 			<div>Task Stats: {{ JSON.stringify(taskStats) }}</div>
 		</div>
@@ -62,10 +54,9 @@
 						:organizationId="getTasksOrganizationId"
 						:teamId="getTasksTeamId"
 						:userId="getTasksUserId"
-						:filterType="filterType"
 						:limit="20"
+						:debug="debug"
 						ref="tasksList"
-						@update:filter="filterType = $event"
 						@stats-update="handleTasksUpdate"
 					/>
 
@@ -149,46 +140,48 @@ const debug = ref(false);
 // Get user data
 const { user } = useEnhancedAuth();
 
-// Get organization and team data
-const { selectedOrg, organizations } = useOrganization();
-const { selectedTeam } = useTeams();
+// Get organization and team data directly from the composables
+const { selectedOrg, organizations, setupListeners: setupOrgListeners, getOrganizationFilter } = useOrganization();
+
+const {
+	selectedTeam,
+	visibleTeams,
+	fetchTeams,
+	DEFAULT_TEAM_ID,
+	setupStorageListener: setupTeamListeners,
+	getTeamFilter,
+} = useTeams();
 const config = useRuntimeConfig();
 const tasksList = ref(null);
 
-// Filter Type
-const filterType = ref('active');
-const filterOptions = [
-	{ label: 'All Tasks', value: 'all' },
-	{ label: 'Active Tasks', value: 'active' },
-	{ label: 'Completed Tasks', value: 'completed' },
-	{ label: 'Due Today', value: 'today' },
-	{ label: 'Overdue', value: 'overdue' },
-];
-
 // Tabs
 const activeTab = ref(0); // Use numeric index
-const tabs = [
+const tabs = computed(() => [
 	{
 		label: 'Assigned to Me',
 		icon: 'i-heroicons-user-circle',
 		content: 'assigned',
+		disabled: false, // Always enabled
 	},
 	{
 		label: 'My Team',
 		icon: 'i-heroicons-user-group',
 		content: 'team',
+		disabled: !selectedTeam.value, // Disabled if no team is selected
 	},
 	{
 		label: 'Organization',
 		icon: 'i-heroicons-building-office',
 		content: 'organization',
+		disabled: !selectedOrg.value, // Disabled if no organization is selected
 	},
 	{
 		label: 'All Tasks',
 		icon: 'i-heroicons-clipboard-document-list',
 		content: 'all',
+		disabled: false, // Always enabled
 	},
-];
+]);
 
 // Task statistics
 const taskStats = reactive({
@@ -216,20 +209,23 @@ const getOrgInitials = (org) => {
 };
 
 // Computed properties for task list
+// These computed properties determine what filters we send to the TasksList component
 const getTasksOrganizationId = computed(() => {
-	// For "All Tasks" tab, don't filter by organization
-	if (tabs[activeTab.value].content === 'all') return null;
+	// For all tabs, we use the global organization filter from useOrganization()
+	// This ensures organization context is maintained across all tabs
 	return selectedOrg.value;
 });
 
 const getTasksTeamId = computed(() => {
 	// Only use team filter on the "My Team" tab
-	return tabs[activeTab.value].content === 'team' ? selectedTeam.value : null;
+	// For other tabs, use null to indicate no team filter
+	return tabs.value[activeTab.value].content === 'team' ? selectedTeam.value : null;
 });
 
 const getTasksUserId = computed(() => {
 	// Only use user filter on the "Assigned to Me" tab
-	return tabs[activeTab.value].content === 'assigned' ? user.value?.id : null;
+	// For other tabs, use null to indicate no user filter
+	return tabs.value[activeTab.value].content === 'assigned' ? user.value?.id : null;
 });
 
 const handleTasksUpdate = (tasksList) => {
@@ -282,7 +278,7 @@ const handleTasksUpdate = (tasksList) => {
 	console.log('Stats updated via event:', taskStats);
 };
 
-// Add a manual stats update function for testing
+// Add a manual stats update function
 const updateStats = () => {
 	if (tasksList.value) {
 		if (typeof tasksList.value.updateParentStats === 'function') {
@@ -297,7 +293,7 @@ const updateStats = () => {
 	}
 };
 
-// Function to refresh all data (defined BEFORE we use it in any watchers)
+// Function to refresh all data
 const refreshData = () => {
 	console.log('Refreshing data');
 	if (tasksList.value) {
@@ -310,89 +306,28 @@ const refreshData = () => {
 	}
 };
 
-// Calculate and update task statistics
-const updateTaskStats = () => {
-	if (!tasksList.value) {
-		console.warn('tasksList ref is not available yet');
-		return;
-	}
-
-	const taskList = tasksList.value.tasks?.value;
-	if (!taskList || !Array.isArray(taskList)) {
-		console.warn('No tasks array available', taskList);
-		return;
-	}
-
-	console.log('Updating task stats with', taskList.length, 'tasks');
-
-	// Reset stats
-	taskStats.active = 0;
-	taskStats.completed = 0;
-	taskStats.dueToday = 0;
-	taskStats.overdue = 0;
-
-	// Define today for date comparisons
-	const today = new Date();
-	today.setHours(0, 0, 0, 0);
-	const tomorrow = new Date(today);
-	tomorrow.setDate(tomorrow.getDate() + 1);
-
-	// Count tasks for each category
-	taskList.forEach((task) => {
-		// Active vs. Completed
-		if (task.status === 'completed') {
-			taskStats.completed++;
-		} else {
-			taskStats.active++;
-
-			// Due date checks (only for active tasks)
-			if (task.ticketContext?.due_date) {
-				const dueDate = new Date(task.ticketContext.due_date);
-				dueDate.setHours(0, 0, 0, 0);
-
-				if (dueDate < today) {
-					taskStats.overdue++;
-				} else if (dueDate >= today && dueDate < tomorrow) {
-					taskStats.dueToday++;
-				}
-			}
-		}
-	});
-
-	console.log('Task stats updated:', taskStats);
-};
-
-// Watch for task list changes to update stats (AFTER defining updateTaskStats)
-watch(
-	() => tasksList.value?.tasks?.value,
-	(newTasks) => {
-		if (newTasks) {
-			console.log('Tasks updated, updating stats...');
-			updateTaskStats();
-		}
-	},
-	{ deep: true },
-);
-
-// Watch for filter changes (AFTER defining refreshData)
-watch(filterType, () => {
-	console.log('Filter type changed to:', filterType.value);
-	refreshData();
-});
-
-// Watch for tab changes (AFTER defining refreshData)
+// Watch for tab changes
 watch(activeTab, () => {
 	console.log('Active tab changed to:', activeTab.value);
 	refreshData();
 });
 
-// Watch for organization or team changes (AFTER defining refreshData)
-watch([() => selectedOrg.value, () => selectedTeam.value], () => {
-	console.log('Org/Team changed:', { org: selectedOrg.value, team: selectedTeam.value });
-	refreshData();
+// Watch for organization or team changes from the global context
+watch([selectedOrg, selectedTeam], ([newOrg, newTeam], [oldOrg, oldTeam]) => {
+	console.log('Global context changed:', {
+		org: { old: oldOrg, new: newOrg },
+		team: { old: oldTeam, new: newTeam },
+	});
+
+	// Only refresh if values actually changed
+	if (newOrg !== oldOrg || newTeam !== oldTeam) {
+		refreshData();
+	}
 });
 
 onMounted(() => {
+	setupOrgListeners();
+	setupTeamListeners();
 	// Initial update after mount with retry logic
 	nextTick(() => {
 		console.log('Component mounted, scheduling stats update');

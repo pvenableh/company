@@ -59,6 +59,26 @@
 					</div>
 				</div>
 
+				<!-- Debug section to help troubleshoot the filtering -->
+				<div v-if="debug" class="bg-gray-100 p-2 rounded-lg mb-3 text-xs">
+					<div>
+						<strong>Org ID:</strong>
+						{{ effectiveOrgId }}
+					</div>
+					<div>
+						<strong>Team ID:</strong>
+						{{ effectiveTeamId }}
+					</div>
+					<div>
+						<strong>Filter:</strong>
+						{{ activeFilter }}
+					</div>
+					<div>
+						<strong>Tasks:</strong>
+						{{ tasks.length }} (Filtered: {{ filteredTasks.length }})
+					</div>
+				</div>
+
 				<div v-for="task in filteredTasks" :key="task.id" class="task-item">
 					<div class="flex items-center space-x-3 group bg-white dark:bg-gray-800 p-2 rounded-lg shadow-sm">
 						<!-- Loading State for Task Update -->
@@ -154,20 +174,26 @@ const props = defineProps({
 		type: Number,
 		default: 20,
 	},
-	filterType: {
-		type: String,
-		default: 'all',
-		validator: (value) => ['all', 'active', 'completed', 'today', 'overdue'].includes(value),
+	// Add debug prop to help with troubleshooting
+	debug: {
+		type: Boolean,
+		default: false,
 	},
 });
 
 // Emit event for filter changes
-const emit = defineEmits(['update:filter', 'stats-update']);
+const emit = defineEmits(['stats-update']);
 
 // Total tasks count for "load more" functionality
 const totalTaskCount = ref(0);
 const currentLimit = ref(props.limit);
-const activeFilter = ref(props.filterType);
+const activeFilter = ref('active'); // Default value now set within the component
+
+// 3. Update the emits to remove the update:filter event
+
+// Get global context
+const { selectedOrg } = useOrganization();
+const { selectedTeam } = useTeams();
 
 // Create a reactive object to track prop changes
 const filterParams = computed(() => ({
@@ -191,10 +217,11 @@ const {
 	navigateToTicket,
 	refreshTasks,
 	cleanup,
+	effectiveOrgId,
+	effectiveTeamId,
 } = useTasksList(filterParams.value);
 
 // Export refreshTasks method for parent component
-
 defineExpose({
 	refreshTasks,
 	// Expose both the raw ref and a simple getter function
@@ -206,6 +233,9 @@ defineExpose({
 	updateParentStats: () => {
 		emit('stats-update', tasks.value);
 	},
+	// Expose effective IDs for debugging
+	effectiveOrgId,
+	effectiveTeamId,
 });
 
 // Watch for filter changes from props
@@ -217,6 +247,12 @@ watch(
 	},
 	{ immediate: true },
 );
+
+// Watch for organization and team changes from global context
+watch([selectedOrg, selectedTeam], ([newOrg, newTeam]) => {
+	console.log('Global organization or team changed:', { org: newOrg, team: newTeam });
+	// The updated useTasksList composable now handles these changes internally
+});
 
 watch(
 	tasks,
@@ -245,7 +281,10 @@ watch(
 const applyFilter = (filterValue) => {
 	console.log('Applying filter:', filterValue);
 	activeFilter.value = filterValue;
-	emit('update:filter', filterValue);
+	// Removed emit call
+
+	// Option to refresh data when filter changes
+	refreshTasks();
 };
 
 // Filtered tasks based on active filter
@@ -361,9 +400,6 @@ onMounted(() => {
 		},
 		{ immediate: true },
 	);
-
-	// Emit initial filter value
-	emit('update:filter', activeFilter.value);
 });
 
 onUnmounted(() => {

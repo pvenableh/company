@@ -92,11 +92,11 @@ export default NuxtAuthHandler({
 			// If we have a refresh token, try to refresh the token
 			if (token.refreshToken) {
 				try {
-					console.log(`Attempting to refresh token with refresh_token: ${token.refreshToken.substring(0, 10)}...`);
+					// console.log(`Attempting to refresh token with refresh_token: ${token.refreshToken.substring(0, 10)}...`);
 
 					// Try our own proxy endpoint
 					try {
-						console.log('Trying via server proxy...');
+						// console.log('Trying via server proxy...');
 						const response = await $fetch<TokenRefreshResponse>('/api/auth/token-refresh', {
 							method: 'POST',
 							body: {
@@ -106,7 +106,7 @@ export default NuxtAuthHandler({
 
 						if (response?.success && response?.data?.access_token) {
 							// Update token with new values
-							console.log('Token refresh successful, new token received');
+							// 'Token refresh successful, new token received');
 							token.directusToken = response.data.access_token;
 							token.refreshToken = response.data.refresh_token;
 							// Safely handle the expires value with a fallback
@@ -170,7 +170,7 @@ export default NuxtAuthHandler({
 					// Important: If token refresh fails but we still have user data,
 					// return the token anyway to keep the user logged in
 					if (token.user) {
-						console.log('Keeping existing user session despite refresh error');
+						// console.log('Keeping existing user session despite refresh error');
 						return token;
 					}
 
@@ -190,7 +190,7 @@ export default NuxtAuthHandler({
 		async session({ session, token }) {
 			// Make user and token info available in the session
 			if (token.user) {
-				console.log('Setting user data from token to session');
+				// console.log('Setting user data from token to session');
 				session.user = token.user;
 			} else {
 				console.log('No user data in token!');
@@ -226,22 +226,22 @@ export default NuxtAuthHandler({
 				password: { label: 'Password', type: 'password' },
 			},
 			async authorize(credentials: DirectusCredentials | undefined) {
-				console.log(
-					'Authorize function called with credentials:',
-					credentials ? `email: ${credentials.email}` : 'no credentials',
-				);
+				// console.log(
+				// 	'Authorize function called with credentials:',
+				// 	credentials ? `email: ${credentials.email}` : 'no credentials',
+				// );
 
 				try {
 					if (!credentials?.email || !credentials?.password) {
-						console.log('Missing credentials');
+						// console.log('Missing credentials');
 						throw new Error('Missing credentials');
 					}
 
 					const directusUrl = useRuntimeConfig().public.directusUrl;
-					console.log('Directus URL:', directusUrl);
+					// 'Directus URL:', directusUrl);
 
 					// First, attempt the login
-					console.log('Attempting directus login...');
+					// console.log('Attempting directus login...');
 					let authResponse;
 					try {
 						authResponse = await $fetch<DirectusAuthResponse>(`${directusUrl}/auth/login`, {
@@ -256,7 +256,7 @@ export default NuxtAuthHandler({
 							},
 						});
 
-						console.log('Auth response received:', authResponse ? 'success' : 'failed');
+						// console.log('Auth response received:', authResponse ? 'success' : 'failed');
 
 						// Store tokens in localStorage for persistence
 						if (import.meta.client && authResponse?.data) {
@@ -277,12 +277,12 @@ export default NuxtAuthHandler({
 					}
 
 					if (!authResponse || !authResponse.data || !authResponse.data.access_token) {
-						console.log('Invalid auth response:', authResponse);
+						// console.log('Invalid auth response:', authResponse);
 						throw new Error('Authentication failed - invalid response');
 					}
 
 					// Then, fetch user data with the token
-					console.log('Fetching user data...');
+					// console.log('Fetching user data...');
 					let userResponse;
 					try {
 						userResponse = await $fetch<DirectusUserResponse>(`${directusUrl}/users/me`, {
@@ -296,7 +296,7 @@ export default NuxtAuthHandler({
 							},
 						});
 
-						console.log('User data received:', userResponse?.data?.id ? `id: ${userResponse.data.id}` : 'no data');
+						// console.log('User data received:', userResponse?.data?.id ? `id: ${userResponse.data.id}` : 'no data');
 					} catch (userError) {
 						console.error('User data request failed:', userError);
 						if (userError instanceof Error) {
@@ -307,7 +307,7 @@ export default NuxtAuthHandler({
 					}
 
 					if (!userResponse || !userResponse.data) {
-						console.log('Invalid user response');
+						// console.log('Invalid user response');
 						throw new Error('Failed to fetch user data - invalid response');
 					}
 
@@ -321,7 +321,7 @@ export default NuxtAuthHandler({
 						});
 					}
 
-					console.log('Found organization IDs:', organizationIds);
+					// console.log('Found organization IDs:', organizationIds);
 
 					// Create and return the user object for NextAuth
 					const user = {
@@ -337,7 +337,7 @@ export default NuxtAuthHandler({
 						accessTokenExpires: Date.now() + authResponse.data.expires,
 					};
 
-					console.log('Returning user object with id:', user.id);
+					// console.log('Returning user object with id:', user.id);
 					return user;
 				} catch (error) {
 					console.error('Authorization failed:', error);

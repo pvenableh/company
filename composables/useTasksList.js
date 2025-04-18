@@ -18,6 +18,11 @@ export function useTasksList({
 	const lastUpdated = ref(null);
 	const totalCount = ref(0); // Added total count for pagination
 
+	// Get global organization and team values for fallback
+	const { selectedOrg, getOrganizationFilter } = useOrganization();
+
+	const { selectedTeam, getTeamFilter } = useTeams();
+
 	let disconnect = null;
 	let refresh = null;
 	let connect = null;
@@ -25,18 +30,35 @@ export function useTasksList({
 	// Tasks being updated (for loading indicators)
 	const updatingTasks = ref(new Set());
 
-	// Generate filter based on provided parameters
+	// Use computed properties to determine effective filter values
+	const effectiveOrgId = computed(() => {
+		return organizationId !== undefined ? organizationId : selectedOrg.value;
+	});
+
+	const effectiveTeamId = computed(() => {
+		return teamId !== undefined ? teamId : selectedTeam.value;
+	});
+
+	// Generate filter based on effective parameters
 	const generateFilter = () => {
 		const filter = { _and: [] };
 
-		// Organization filter
-		if (organizationId) {
-			filter._and.push({ organization: { _eq: organizationId } });
+		// Organization filter - use effective value
+		if (effectiveOrgId.value) {
+			// If a specific organization is provided or selected
+			const orgFilter = getOrganizationFilter();
+			if (orgFilter && Object.keys(orgFilter).length > 0) {
+				filter._and.push(orgFilter);
+			}
 		}
 
-		// Team filter - note the modified structure to target team assignments
-		if (teamId) {
-			filter._and.push({ team: { _eq: teamId } });
+		// Team filter - use effective value
+		if (effectiveTeamId.value) {
+			// If a specific team is provided or selected
+			const teamFilter = getTeamFilter();
+			if (teamFilter && Object.keys(teamFilter).length > 0) {
+				filter._and.push(teamFilter);
+			}
 		}
 
 		// Project filter
@@ -58,7 +80,7 @@ export function useTasksList({
 			return {};
 		}
 
-		console.log('Generated filter:', JSON.stringify(filter));
+		console.log('Generated task filter:', JSON.stringify(filter));
 		return filter;
 	};
 
@@ -210,12 +232,16 @@ export function useTasksList({
 			connect: wsConnect,
 			disconnect: wsDisconnect,
 			refresh: wsRefresh,
+			updateFilter: wsUpdateFilter,
 		} = useRealtimeSubscription('tickets', fields, filter, sortBy);
 
 		// Store functions for later use
 		connect = wsConnect;
 		disconnect = wsDisconnect;
 		refresh = wsRefresh;
+
+		// Store the updateFilter function to use when filter parameters change
+		const updateFilterFunc = wsUpdateFilter;
 
 		// Watch for subscription state changes
 		watch(
@@ -278,6 +304,27 @@ export function useTasksList({
 			},
 			{ immediate: true, deep: true },
 		);
+
+		// Watch for changes to the effective filter values and update the subscription
+		watch([effectiveOrgId, effectiveTeamId], ([newOrgId, newTeamId], [oldOrgId, oldTeamId]) => {
+			if (newOrgId !== oldOrgId || newTeamId !== oldTeamId) {
+				console.log('Filter values changed, updating subscription:', {
+					organization: newOrgId,
+					team: newTeamId,
+				});
+
+				// Only update if we have an updateFilter function
+				if (updateFilterFunc) {
+					isLoading.value = true;
+					const newFilter = generateFilter();
+					updateFilterFunc(newFilter);
+				} else {
+					console.warn('No updateFilter function available');
+					// If no update function, refresh the entire subscription
+					setupSubscription();
+				}
+			}
+		});
 
 		// Safety timeout to prevent infinite loading state
 		setTimeout(() => {
@@ -408,25 +455,6 @@ export function useTasksList({
 		}, 5000);
 	};
 
-	// Watch for changes in filter params to update subscription
-	watch(
-		() => [organizationId, teamId, projectId, userId, limit],
-		(newValues, oldValues) => {
-			// Only refresh if values actually changed
-			if (JSON.stringify(newValues) !== JSON.stringify(oldValues)) {
-				console.log('Task list filter params changed:', {
-					organizationId,
-					teamId,
-					projectId,
-					userId,
-					limit,
-				});
-				refreshTasks();
-			}
-		},
-		{ immediate: true, deep: true },
-	);
-
 	// Initialize on component mount
 	onMounted(() => {
 		if (import.meta.client) {
@@ -454,6 +482,8 @@ export function useTasksList({
 		lastUpdated: computed(() => lastUpdated.value),
 		updatingTasks: computed(() => updatingTasks.value),
 		totalCount: computed(() => totalCount.value),
+		effectiveOrgId,
+		effectiveTeamId,
 
 		toggleTaskStatus,
 		navigateToTicket,

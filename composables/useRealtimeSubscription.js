@@ -136,7 +136,7 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 	const authenticate = () => {
 		if (!connection.value || connection.value.readyState !== 1) return;
 
-		console.log('[WebSocket] Authenticating...');
+		// console.log('[WebSocket] Authenticating...');
 		let token = null;
 
 		if (import.meta.client) {
@@ -147,14 +147,14 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 			// use the static token as fallback
 			if (!token || token.length < 20) {
 				token = config.public.staticToken;
-				console.log('[WebSocket] Using static token (auth token not found in localStorage)');
+				// console.log('[WebSocket] Using static token (auth token not found in localStorage)');
 			} else {
 				console.log('[WebSocket] Using token from localStorage');
 			}
 		} else {
 			// Server-side, use static token
 			token = config.public.staticToken;
-			console.log('[WebSocket] Using static token (server-side)');
+			// console.log('[WebSocket] Using static token (server-side)');
 		}
 
 		if (!token) {
@@ -178,7 +178,7 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 
 		// If we have a previous subscription, unsubscribe first
 		if (subscriptionId.value) {
-			console.log(`[WebSocket] Unsubscribing from previous subscription: ${subscriptionId.value}`);
+			// console.log(`[WebSocket] Unsubscribing from previous subscription: ${subscriptionId.value}`);
 			connection.value.send(
 				JSON.stringify({
 					type: 'unsubscribe',
@@ -188,8 +188,8 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 			subscriptionId.value = null;
 		}
 
-		console.log(`[WebSocket] Subscribing to ${collection}...`);
-		console.log('[WebSocket] Filter:', currentFilter.value);
+		// console.log(`[WebSocket] Subscribing to ${collection}...`);
+		// console.log('[WebSocket] Filter:', currentFilter.value);
 
 		// Generate a unique subscription ID
 		const uid = Math.random().toString(36).substring(2, 15);
@@ -238,10 +238,10 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 	// Handle authentication response
 	const handleAuthResponse = (message) => {
 		if (message.status === 'ok') {
-			console.log('[WebSocket] Authentication successful');
+			// console.log('[WebSocket] Authentication successful');
 			subscribe();
 		} else {
-			console.error('[WebSocket] Authentication failed:', message.reason || 'Unknown reason');
+			// console.error('[WebSocket] Authentication failed:', message.reason || 'Unknown reason');
 			error.value = new Error(`Authentication failed: ${message.reason || 'Unknown reason'}`);
 			isLoading.value = false;
 		}
@@ -250,10 +250,10 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 	// Handle subscribe response
 	const handleSubscribeResponse = (message) => {
 		if (message.status === 'ok') {
-			console.log('[WebSocket] Subscription created successfully:', message.subscription);
+			// console.log('[WebSocket] Subscription created successfully:', message.subscription);
 			subscriptionId.value = message.subscription;
 		} else {
-			console.error('[WebSocket] Failed to create subscription:', message.reason || 'Unknown reason');
+			// console.error('[WebSocket] Failed to create subscription:', message.reason || 'Unknown reason');
 			error.value = new Error(`Subscription failed: ${message.reason || 'Unknown reason'}`);
 			isLoading.value = false;
 		}
@@ -261,7 +261,7 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 
 	// Handle subscription data updates
 	const handleSubscriptionData = (message) => {
-		console.log(`[WebSocket] Received ${message.event} event for ${collection}`);
+		// console.log(`[WebSocket] Received ${message.event} event for ${collection}`);
 
 		switch (message.event) {
 			case 'init':
@@ -309,7 +309,7 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 
 	// Refresh the subscription
 	const refresh = () => {
-		console.log('[WebSocket] Refreshing subscription...');
+		// console.log('[WebSocket] Refreshing subscription...');
 		isLoading.value = true;
 
 		if (!connection.value || connection.value.readyState !== 1) {
@@ -324,7 +324,7 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 		// Failsafe for stuck loading state
 		setTimeout(() => {
 			if (isLoading.value) {
-				console.log('[WebSocket] Force ending loading state after timeout');
+				// console.log('[WebSocket] Force ending loading state after timeout');
 				isLoading.value = false;
 			}
 		}, 5000);
@@ -336,7 +336,7 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 			return; // No change in filter
 		}
 
-		console.log('[WebSocket] Updating filter:', newFilter);
+		// console.log('[WebSocket] Updating filter:', newFilter);
 		currentFilter.value = newFilter;
 		isLoading.value = true;
 
