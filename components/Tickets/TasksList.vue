@@ -28,18 +28,38 @@
 		<!-- Tasks List -->
 		<div v-if="!isLoading" class="space-y-2">
 			<!-- Empty State -->
-			<div v-if="tasks.length === 0" class="p-4 text-center text-gray-500">
+			<div v-if="filteredTasks.length === 0" class="p-4 text-center text-gray-500">
 				<UIcon name="i-heroicons-document-text" class="w-12 h-12 mx-auto mb-2 text-gray-300" />
 				<p class="text-sm">No tasks found</p>
+				<p class="text-xs text-gray-400 mt-2">Try changing your filters or create new tasks in your tickets</p>
 			</div>
 
 			<!-- Tasks -->
 			<div v-else>
-				<h3 class="text-xs font-bold uppercase tracking-wide mb-3">
-					Tasks ({{ tasks.length }}{{ totalTaskCount > limit ? '+' : '' }})
-				</h3>
+				<div class="flex justify-between items-center mb-3">
+					<h3 class="text-xs font-bold uppercase tracking-wide">
+						Tasks ({{ filteredTasks.length }}{{ totalTaskCount > limit ? '+' : '' }})
+					</h3>
 
-				<div v-for="task in tasks" :key="task.id" class="task-item">
+					<!-- Filter Controls -->
+					<div class="flex space-x-2">
+						<USelectMenu
+							v-model="activeFilter"
+							:options="[
+								{ label: 'All Tasks', value: 'all' },
+								{ label: 'Active Tasks', value: 'active' },
+								{ label: 'Completed Tasks', value: 'completed' },
+								{ label: 'Due Today', value: 'today' },
+								{ label: 'Overdue', value: 'overdue' },
+							]"
+							size="xs"
+							class="w-40"
+							@update:modelValue="applyFilter($event)"
+						/>
+					</div>
+				</div>
+
+				<div v-for="task in filteredTasks" :key="task.id" class="task-item">
 					<div class="flex items-center space-x-3 group bg-white dark:bg-gray-800 p-2 rounded-lg shadow-sm">
 						<!-- Loading State for Task Update -->
 						<div
@@ -61,9 +81,9 @@
 							></div>
 
 							<!-- Ticket Context -->
-							<div class="text-[8px] text-gray-500 uppercase mt-1 flex items-center">
-								<span class="mr-2">
-									From ticket:
+							<div class="text-[8px] text-gray-500 uppercase mt-1 flex items-center flex-wrap">
+								<span class="mr-2 inline-flex items-center">
+									<UIcon name="i-heroicons-document-text" class="w-3 h-3 mr-1" />
 									<UButton
 										size="xs"
 										variant="link"
@@ -71,14 +91,16 @@
 										class="!p-0 underline hover:text-blue-500"
 										@click="navigateToTicket(task.ticketContext.id)"
 									>
-										{{ task.ticketContext.title }}
+										{{ task.ticketContext.title || 'Untitled Ticket' }}
 									</UButton>
 								</span>
 
 								<!-- Due Date if available -->
-								<span v-if="task.ticketContext.due_date" class="mr-2">
-									<UIcon name="i-heroicons-calendar" class="w-3 h-3 inline-block" />
-									{{ formatDate(task.ticketContext.due_date) }}
+								<span v-if="task.ticketContext.due_date" class="mr-2 inline-flex items-center">
+									<UIcon name="i-heroicons-calendar" class="w-3 h-3 mr-1" />
+									<span :class="{ 'text-red-500': isOverdue(task) }">
+										{{ formatDate(task.ticketContext.due_date) }}
+									</span>
 								</span>
 
 								<!-- Task Status Badge -->
@@ -100,8 +122,10 @@
 				</div>
 
 				<!-- Load More Button (if needed) -->
-				<div v-if="totalTaskCount > limit" class="text-center mt-4">
-					<UButton size="sm" color="gray" variant="soft" @click="loadMore">Load More Tasks</UButton>
+				<div v-if="totalTaskCount > limit && filteredTasks.length < totalTaskCount" class="text-center mt-4">
+					<UButton size="sm" color="gray" variant="soft" @click="loadMore">
+						Load More Tasks ({{ filteredTasks.length }} of {{ totalTaskCount }})
+					</UButton>
 				</div>
 			</div>
 		</div>
@@ -130,11 +154,20 @@ const props = defineProps({
 		type: Number,
 		default: 20,
 	},
+	filterType: {
+		type: String,
+		default: 'all',
+		validator: (value) => ['all', 'active', 'completed', 'today', 'overdue'].includes(value),
+	},
 });
+
+// Emit event for filter changes
+const emit = defineEmits(['update:filter', 'stats-update']);
 
 // Total tasks count for "load more" functionality
 const totalTaskCount = ref(0);
 const currentLimit = ref(props.limit);
+const activeFilter = ref(props.filterType);
 
 // Create a reactive object to track prop changes
 const filterParams = computed(() => ({
@@ -153,16 +186,137 @@ const {
 	error,
 	lastUpdated,
 	updatingTasks,
+	totalCount,
 	toggleTaskStatus,
 	navigateToTicket,
 	refreshTasks,
 	cleanup,
 } = useTasksList(filterParams.value);
 
+// Export refreshTasks method for parent component
+
+defineExpose({
+	refreshTasks,
+	// Expose both the raw ref and a simple getter function
+	tasks,
+	getTasks: () => tasks.value,
+	// Also expose filtered tasks
+	filteredTasks: computed(() => filteredTasks.value),
+	// Add a method to manually trigger stats updates in parent
+	updateParentStats: () => {
+		emit('stats-update', tasks.value);
+	},
+});
+
+// Watch for filter changes from props
+watch(
+	() => props.filterType,
+	(newValue) => {
+		console.log('Filter type prop changed to:', newValue);
+		activeFilter.value = newValue;
+	},
+	{ immediate: true },
+);
+
+watch(
+	tasks,
+	(newTasks) => {
+		console.log('Tasks updated in TasksList, emitting stats-update');
+		emit('stats-update', newTasks);
+	},
+	{ deep: true },
+);
+
+// 4. Add a callback after initial data load
+watch(
+	isLoading,
+	(loading) => {
+		if (loading === false) {
+			console.log('Tasks finished loading, emitting stats-update');
+			nextTick(() => {
+				emit('stats-update', tasks.value);
+			});
+		}
+	},
+	{ immediate: true },
+);
+
+// Apply filter and emit event
+const applyFilter = (filterValue) => {
+	console.log('Applying filter:', filterValue);
+	activeFilter.value = filterValue;
+	emit('update:filter', filterValue);
+};
+
+// Filtered tasks based on active filter
+const filteredTasks = computed(() => {
+	console.log('Computing filtered tasks with filter:', activeFilter.value);
+	console.log('Current tasks:', tasks.value?.length);
+
+	if (!tasks.value || tasks.value.length === 0) return [];
+
+	const today = new Date();
+	today.setHours(0, 0, 0, 0);
+	const tomorrow = new Date(today);
+	tomorrow.setDate(tomorrow.getDate() + 1);
+
+	let result = [];
+
+	switch (activeFilter.value) {
+		case 'active':
+			result = tasks.value.filter((task) => task.status !== 'completed');
+			break;
+
+		case 'completed':
+			result = tasks.value.filter((task) => task.status === 'completed');
+			break;
+
+		case 'today':
+			result = tasks.value.filter((task) => {
+				if (!task.ticketContext?.due_date) return false;
+				const dueDate = new Date(task.ticketContext.due_date);
+				dueDate.setHours(0, 0, 0, 0);
+				return dueDate >= today && dueDate < tomorrow;
+			});
+			break;
+
+		case 'overdue':
+			result = tasks.value.filter((task) => {
+				if (!task.ticketContext?.due_date) return false;
+				const dueDate = new Date(task.ticketContext.due_date);
+				dueDate.setHours(0, 0, 0, 0);
+				return dueDate < today && task.status !== 'completed';
+			});
+			break;
+
+		default: // 'all'
+			result = tasks.value;
+			break;
+	}
+
+	console.log('Filtered tasks result:', result.length);
+	return result;
+});
+
+// Function to check if a task is overdue
+const isOverdue = (task) => {
+	if (!task.ticketContext?.due_date) return false;
+	const today = new Date();
+	today.setHours(0, 0, 0, 0);
+	const dueDate = new Date(task.ticketContext.due_date);
+	dueDate.setHours(0, 0, 0, 0);
+	return dueDate < today && task.status !== 'completed';
+};
+
 // Load more tasks
 const loadMore = () => {
 	currentLimit.value += props.limit;
 	refreshTasks();
+};
+
+// Clear all filters
+const clearFilters = () => {
+	applyFilter('all');
 };
 
 // Format date for display
@@ -191,14 +345,25 @@ const getStatusColor = (status) => {
 		Scheduled: 'blue',
 		'In Progress': 'yellow',
 		Completed: 'green',
+		'On Hold': 'orange',
 	};
 
 	return statusColors[status] || 'gray';
 };
 
 onMounted(() => {
-	// Fetch initial total count (could be fetched from API if needed)
-	totalTaskCount.value = tasks.value.length;
+	// Update total count when data changes
+	watch(
+		totalCount,
+		(newCount) => {
+			console.log('Total task count updated:', newCount);
+			totalTaskCount.value = newCount;
+		},
+		{ immediate: true },
+	);
+
+	// Emit initial filter value
+	emit('update:filter', activeFilter.value);
 });
 
 onUnmounted(() => {
@@ -220,6 +385,7 @@ onUnmounted(() => {
 .task-item {
 	position: relative;
 	transition: all 0.2s ease;
+	margin-bottom: 0.5rem;
 }
 
 .task-item:hover {
