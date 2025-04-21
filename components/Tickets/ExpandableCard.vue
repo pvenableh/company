@@ -74,10 +74,36 @@ const props = defineProps({
 		required: true,
 	},
 });
+if (props.element.comments.length) {
+	console.log('Comments:', props.element.comments);
+}
 
-console.log(props.element);
-const commentsCount = ref(props.element.comments || 0);
-const tasksCount = ref(props.element.tasks || 0);
+// Use computed properties instead of refs to keep values reactive
+const commentsCount = computed(() => {
+	// If comments is an array, return its length
+	if (Array.isArray(props.element.comments)) {
+		return props.element.comments.length;
+	}
+	// If comments is already a number, return it directly
+	if (typeof props.element.comments === 'number') {
+		return props.element.comments;
+	}
+	// Default to 0 if undefined or null
+	return 0;
+});
+
+const tasksCount = computed(() => {
+	// If tasks is an array, return its length
+	if (Array.isArray(props.element.tasks)) {
+		return props.element.tasks.length;
+	}
+	// If tasks is already a number, return it directly
+	if (typeof props.element.tasks === 'number') {
+		return props.element.tasks;
+	}
+	// Default to 0 if undefined or null
+	return 0;
+});
 
 const cardRef = ref(null);
 const isExpanded = ref(false);

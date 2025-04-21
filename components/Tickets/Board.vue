@@ -335,7 +335,6 @@ const fields = [
 	'assigned_to.directus_users_id.last_name',
 	'assigned_to.directus_users_id.avatar',
 	'assigned_to.directus_users_id.email',
-	'comments.id',
 	'tasks.id',
 	'tasks.status',
 	'team.id',
@@ -441,6 +440,7 @@ const generateFilter = () => {
 };
 
 // Initialize or update the subscription
+// Initialize or update the subscription
 const setupTicketsSubscription = () => {
 	// Always create a fresh filter
 	const filter = generateFilter();
@@ -540,9 +540,58 @@ const setupTicketsSubscription = () => {
 	// Process ticket data when it changes
 	watch(
 		data,
-		(newData) => {
+		async (newData) => {
 			if (newData) {
 				console.log(`Received ${newData.length} tickets from subscription`);
+
+				// Get ticket IDs for fetching comment counts
+				const ticketIds = newData.map((ticket) => ticket.id).filter(Boolean);
+
+				if (ticketIds.length > 0) {
+					try {
+						// Fetch comment counts with an efficient aggregate query
+						const commentCounts = await readItems('comments', {
+							filter: {
+								collection: { _eq: 'tickets' },
+								item: { _in: ticketIds },
+							},
+							aggregate: {
+								count: 'id',
+							},
+							groupBy: ['item'],
+						});
+
+						// Create a map of ticket ID to comment count
+						const countMap = {};
+						if (Array.isArray(commentCounts)) {
+							commentCounts.forEach((result) => {
+								if (result && result.item) {
+									countMap[result.item] = result.count || 0;
+								}
+							});
+						}
+
+						// Add comment counts to the tickets
+						newData.forEach((ticket) => {
+							const commentCount = countMap[ticket.id] || 0;
+							// Create a comments array with the right number of elements
+							ticket.comments = Array(commentCount).fill({ id: 1 });
+						});
+					} catch (error) {
+						console.error('Error fetching comment counts:', error);
+						// If error occurs, set empty comments arrays
+						newData.forEach((ticket) => {
+							ticket.comments = [];
+						});
+					}
+				} else {
+					// No tickets, no comments to fetch
+					newData.forEach((ticket) => {
+						ticket.comments = [];
+					});
+				}
+
+				// Now process the tickets with comment counts added
 				processTickets(newData);
 			} else {
 				console.log('Received null or undefined data from subscription');
@@ -805,9 +854,55 @@ const updateTicketStatus = async (columnId, event) => {
 	}
 };
 
+const setupCommentSubscription = () => {
+	// Skip if we're on server side
+	if (import.meta.server) return { connect: () => {}, disconnect: () => {} };
+
+	console.log('Setting up comment subscription for real-time updates');
+
+	// Create a basic filter for all ticket comments
+	const commentFilter = {
+		collection: { _eq: 'tickets' },
+	};
+
+	// Simple fields, we just need to know when comments change
+	const commentFields = ['id', 'item'];
+
+	// Set up subscription
+	const { connect: commentConnect, disconnect: commentDisconnect } = useRealtimeSubscription(
+		'comments',
+		commentFields,
+		commentFilter,
+		null, // no sort needed
+	);
+
+	// We'll listen for any comment changes and refresh our tickets
+	// This approach is simpler than trying to update specific tickets
+	const handleCommentChange = () => {
+		console.log('Comment change detected, refreshing ticket data');
+		refreshData();
+	};
+
+	// Return the connection functions
+	return {
+		connect: () => {
+			commentConnect();
+			// Listen for comment changes
+			document.addEventListener('comment-changed', handleCommentChange);
+		},
+		disconnect: () => {
+			commentDisconnect();
+			document.removeEventListener('comment-changed', handleCommentChange);
+		},
+	};
+};
+
 // Lifecycle hooks
 onMounted(async () => {
 	console.log('Board: Component mounted');
+
+	const commentSub = setupCommentSubscription();
+	if (commentSub?.connect) commentSub.connect();
 
 	// Set up mobile detection
 	cleanupMobileDetection = setupMobileDetection();
@@ -876,7 +971,7 @@ onUnmounted(() => {
 	if (cleanupMobileDetection) {
 		cleanupMobileDetection();
 	}
-
+	if (commentSub?.disconnect) commentSub.disconnect();
 	// Clean up WebSocket connection
 	if (disconnectFunc) {
 		console.log('Board: Cleaning up WebSocket connection');

@@ -124,19 +124,17 @@
 
 			<ReactionsBar :item-id="element.id" collection="tickets" />
 			<div class="flex flex-row text-xs text-gray-500 mr-3">
-				<div v-if="element.comments.length > 0" class="flex items-center gap-1">
-					<UTooltip
-						:text="element.comments.length + (element.comments.length === 1 ? ' Comment' : ' Comments')"
-						:popper="{ arrow: true }"
-					>
+				<div v-if="commentsCount > 0" class="flex items-center gap-1">
+					<UTooltip :text="commentsCount + (commentsCount === 1 ? ' Comment' : ' Comments')" :popper="{ arrow: true }">
 						<UIcon name="i-heroicons-chat-bubble-left-right" class="w-4 h-4 inline-block mr-1" />
-						{{ element.comments.length }}
+						{{ commentsCount }}
 					</UTooltip>
 				</div>
-				<div v-if="element.tasks.length > 0" class="ml-2 flex items-center gap-1">
-					<UTooltip :text="element.tasks.length + ' tasks'" :popper="{ arrow: true }">
+
+				<div v-if="tasksCount > 0" class="ml-2 flex items-center gap-1">
+					<UTooltip :text="tasksCount + ' tasks'" :popper="{ arrow: true }">
 						<UIcon name="i-heroicons-check-circle" class="w-4 h-4 inline-block mr-1" />
-						{{ element.tasks.length }}
+						{{ tasksCount }}
 					</UTooltip>
 				</div>
 			</div>
@@ -150,11 +148,41 @@ const props = defineProps({
 		type: Object,
 		required: true,
 	},
+	comments: {
+		type: Number,
+		default: 0,
+	},
+	tasks: {
+		type: Number,
+		default: 0,
+	},
 });
+
+console.log('Comments:', props.element.comments);
 
 // const emit = defineEmits(['expand']);
 
 const { user } = useEnhancedAuth();
+
+const commentsCount = computed(() => {
+	if (typeof props.element.comments === 'number') {
+		return props.element.comments;
+	}
+	if (Array.isArray(props.element.comments)) {
+		return props.element.comments.length;
+	}
+	return 0;
+});
+
+const tasksCount = computed(() => {
+	if (typeof props.element.tasks === 'number') {
+		return props.element.tasks;
+	}
+	if (Array.isArray(props.element.tasks)) {
+		return props.element.tasks.length;
+	}
+	return 0;
+});
 
 // Get all assigned users
 const assignedUsers = computed(() => {
@@ -162,16 +190,20 @@ const assignedUsers = computed(() => {
 });
 
 const progress = computed(() => {
-	// console.log('coming to you from the card.');
-	// console.log(props.element.taskCount);
+	// If tasks is a number, we can't calculate progress (no task status data)
+	if (typeof props.element.tasks === 'number') {
+		return 0;
+	}
 
 	// If there are no tasks, return 0
-	if (!props.element.tasks || props.element.tasks.length === 0) return 0;
+	if (!props.element.tasks || !Array.isArray(props.element.tasks) || props.element.tasks.length === 0) {
+		return 0;
+	}
 
-	// Count completed tasks from the tasks array property
-	const completedTasks = props.element.tasks.filter((task) => task.status === 'completed').length;
+	// Count completed tasks
+	const completedTasks = props.element.tasks.filter((task) => task && task.status === 'completed').length;
 
-	// Calculate and return the percentage
+	// Calculate percentage
 	return Math.round((completedTasks / props.element.tasks.length) * 100);
 });
 

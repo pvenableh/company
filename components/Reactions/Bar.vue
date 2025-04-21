@@ -11,10 +11,9 @@ const props = defineProps({
 });
 
 const { user } = useEnhancedAuth();
-const { createItem, deleteItems } = useDirectusItems();
 
 // Subscribe to reactions with user details in real-time
-const { data: reactions } = useRealtimeSubscription(
+const { data: reactions, refresh } = useRealtimeSubscription(
 	'reactions',
 	['id', 'reaction', 'user.id', 'user.first_name', 'user.last_name'],
 	{
@@ -26,37 +25,54 @@ const { data: reactions } = useRealtimeSubscription(
 const reactionGroups = computed(() => {
 	const groups = {};
 
-	reactions.value?.forEach((reaction) => {
-		groups[reaction.reaction] = groups[reaction.reaction] || {
+	// Initialize with empty groups for all reaction types
+	['love', 'like', 'idea', 'dislike'].forEach((type) => {
+		groups[type] = {
 			users: [],
 			active: false,
-			id: reaction.id, // Store reaction ID for deletion
+			id: null,
 		};
-		groups[reaction.reaction].users.push(reaction.user);
-		if (reaction.user.id === user.value?.id) {
-			groups[reaction.reaction].active = true;
-		}
 	});
+
+	// Fill with actual data if we have reactions
+	if (reactions.value && Array.isArray(reactions.value)) {
+		reactions.value.forEach((reaction) => {
+			if (!reaction || !reaction.reaction) return;
+
+			// Ensure the reaction type exists in our groups
+			if (!groups[reaction.reaction]) {
+				groups[reaction.reaction] = {
+					users: [],
+					active: false,
+					id: null,
+				};
+			}
+
+			// Add user to the users array for this reaction type
+			if (reaction.user) {
+				groups[reaction.reaction].users.push(reaction.user);
+			}
+
+			// Check if current user has this reaction
+			if (reaction.user?.id === user.value?.id) {
+				groups[reaction.reaction].active = true;
+				groups[reaction.reaction].id = reaction.id;
+			}
+		});
+	}
+
+	// console.log(
+	// 	'Updated reaction groups:',
+	// 	Object.entries(groups).map(([type, group]) => `${type}: ${group.users.length} users, active: ${group.active}`),
+	// );
 
 	return groups;
 });
 
-// Handle reaction selection
-const handleReactionChange = async (type, added) => {
-	if (added) {
-		// Remove any existing reaction from the user
-		for (const [reactionType, group] of Object.entries(reactionGroups.value)) {
-			if (group.active && reactionType !== type) {
-				await deleteItems('reactions', {
-					filter: {
-						item: { _eq: props.itemId },
-						user: { _eq: user.value.id },
-						reaction: { _eq: reactionType },
-					},
-				});
-			}
-		}
-	}
+// Force refresh when reactions are added/removed
+const handleReactionChange = () => {
+	console.log('Refreshing reactions data');
+	refresh && refresh();
 };
 </script>
 
@@ -70,8 +86,8 @@ const handleReactionChange = async (type, added) => {
 			:reaction="type"
 			:users="reactionGroups[type]?.users || []"
 			:active="reactionGroups[type]?.active || false"
-			@reaction-added="handleReactionChange(type, true)"
-			@reaction-removed="handleReactionChange(type, false)"
+			@reaction-added="handleReactionChange"
+			@reaction-removed="handleReactionChange"
 			:class="{ 'border-gray-100 border-l': index !== 0 }"
 		/>
 	</div>

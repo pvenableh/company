@@ -30,46 +30,101 @@ const emits = defineEmits(['reaction-added', 'reaction-removed']);
 const toast = useToast();
 
 const isActive = ref(props.active);
-const reactionCount = ref(props.count);
+const countRef = ref(null);
+const localCount = ref(props.users.length);
+
+// Update localCount when users array changes
+watch(
+	() => props.users,
+	(newUsers) => {
+		// console.log('Users changed:', newUsers.length);
+
+		// Only animate if the count is different
+		if (localCount.value !== newUsers.length) {
+			const direction = newUsers.length > localCount.value ? 1 : -1;
+			const element = countRef.value;
+
+			if (element) {
+				gsap.fromTo(
+					element,
+					{ y: -10 * direction, opacity: 0 },
+					{
+						y: 0,
+						opacity: 1,
+						duration: 0.3,
+						ease: 'back.out(1.7)',
+						onComplete: () => {
+							// Update the local count after animation completes
+							localCount.value = newUsers.length;
+						},
+					},
+				);
+			} else {
+				// If no element reference, just update the count
+				localCount.value = newUsers.length;
+			}
+		}
+	},
+	{ deep: true, immediate: true },
+);
+
+// Also watch the active prop
+watch(
+	() => props.active,
+	(newActive) => {
+		isActive.value = newActive;
+	},
+);
 
 const toggleReaction = async () => {
 	if (!user.value) return;
 
 	try {
-		const existingReactions = await readItems('reactions', {
+		// First check if user already has a reaction of this type
+		const existingReaction = await readItems('reactions', {
 			filter: {
 				item: { _eq: props.itemId },
 				user: { _eq: user.value.id },
+				reaction: { _eq: props.reaction },
 			},
 		});
 
-		// Delete all existing reactions first
-		if (existingReactions.length > 0) {
+		const hasThisReaction = existingReaction && existingReaction.length > 0;
+
+		// If they have this reaction, remove it
+		if (hasThisReaction) {
+			await deleteItems('reactions', {
+				filter: {
+					item: { _eq: props.itemId },
+					user: { _eq: user.value.id },
+					reaction: { _eq: props.reaction },
+				},
+			});
+
+			isActive.value = false;
+			emits('reaction-removed', props.reaction);
+		}
+		// Otherwise, first remove any other reactions they have
+		else {
+			// Remove all existing reactions from this user
 			await deleteItems('reactions', {
 				filter: {
 					item: { _eq: props.itemId },
 					user: { _eq: user.value.id },
 				},
 			});
+
+			// Then add the new reaction
+			await createItem('reactions', {
+				item: props.itemId,
+				table: props.collection,
+				user: user.value.id,
+				reaction: props.reaction,
+			});
+
+			isActive.value = true;
+			emits('reaction-added', props.reaction);
 		}
-
-		// If clicking same reaction, just remove it
-		if (isActive.value) {
-			isActive.value = false;
-			emits('reaction-removed', props.reaction);
-			return;
-		}
-
-		// Add new reaction
-		await createItem('reactions', {
-			item: props.itemId,
-			table: props.collection,
-			user: user.value.id,
-			reaction: props.reaction,
-		});
-
-		isActive.value = true;
-		emits('reaction-added', props.reaction);
 	} catch (error) {
 		console.error('Error toggling reaction:', error);
 		toast.add({
@@ -118,74 +173,9 @@ const userList = computed(() => {
 		.join('\n');
 });
 
-const count = ref(props.users.length);
-
-// Animate count changes
-watch(
-	() => props.users.length,
-	(newCount, oldCount) => {
-		if (newCount === oldCount) return;
-
-		const direction = newCount > oldCount ? 1 : -1;
-		const element = countRef.value;
-
-		gsap.fromTo(
-			element,
-			{ y: -10 * direction, opacity: 0 },
-			{
-				y: 0,
-				opacity: 1,
-				duration: 0.3,
-				ease: 'back.out(1.7)',
-				onStart: () => {
-					count.value = newCount;
-				},
-			},
-		);
-	},
-);
-
-const countRef = ref(null);
-
-const checkUserReaction = async () => {
-	if (!user.value) return;
-
-	try {
-		const existingReaction = await readItems('reactions', {
-			filter: {
-				item: { _eq: props.itemId },
-				user: { _eq: user.value.id },
-				reaction: { _eq: props.reaction },
-			},
-		});
-
-		isActive.value = existingReaction && existingReaction.length > 0;
-	} catch (error) {
-		console.error('Error checking reaction status:', error);
-	}
-};
-
-onMounted(() => {
-	checkUserReaction();
-});
-
-watch(
-	() => user.value?.id,
-	(newUserId) => {
-		if (newUserId) {
-			checkUserReaction();
-		} else {
-			isActive.value = false;
-		}
-	},
-);
-
-watch(
-	() => props.active,
-	(newValue) => {
-		isActive.value = newValue;
-	},
-);
+// onMounted(() => {
+// 	console.log(`Button mounted for ${props.reaction} with ${props.users.length} users`);
+// });
 </script>
 
 <template>
@@ -196,7 +186,7 @@ watch(
 			:class="isActive ? 'text-[var(--cyan)] fill-[var(--cyan)]' : 'text-gray-500'"
 		>
 			<UIcon :name="getReactionIcon(reaction)" />
-			<span ref="countRef" class="inline-block">{{ count }}</span>
+			<span ref="countRef" class="inline-block">{{ localCount }}</span>
 		</div>
 
 		<template #panel>
@@ -206,6 +196,7 @@ watch(
 		</template>
 	</UPopover>
 </template>
+
 <style>
 .bounce-enter-active {
 	animation: bounce-in 0.3s;
