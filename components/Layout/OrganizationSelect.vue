@@ -63,7 +63,7 @@
 							v-for="org in organizationOptions"
 							:key="org.id || 'all'"
 							@click="handleOrgSelect(org.id)"
-							class="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-left relative"
+							class="w-full flex items-center gap-3 px-3 py-2 hover:bg-gray-200 dark:hover:bg-gray-700 text-left relative"
 							:class="{ 'bg-gray-100 dark:bg-gray-700': selectedOrg && org.id === selectedOrg }"
 						>
 							<!-- Show icon for "All Organizations" or avatar for specific organization -->
@@ -72,7 +72,11 @@
 									<UIcon name="i-heroicons-building-office-2" class="h-5 w-5 text-gray-500 dark:text-gray-300" />
 								</div>
 								<!-- Add admin badge for All Organizations -->
-								<span class="text-[7px] bg-purple-100 text-purple-800 px-1 rounded absolute right-3">Admin Only</span>
+								<span
+									class="text-[7px] text-[var(--cyan)] px-2 py-1 w-[60px] absolute right-[30px] flex items-center justify-center rounded uppercase"
+								>
+									Admin Only
+								</span>
 							</template>
 							<div
 								v-else
@@ -87,16 +91,23 @@
 									</template>
 								</UAvatar>
 							</div>
-							<span class="text-[11px] uppercase leading-3">
+							<span class="text-[9px] uppercase leading-3">
 								{{ org.name }}
 							</span>
 							<!-- Display activity count badges -->
-							<div v-if="org.id && (org.ticketsCount > 0 || org.projectsCount > 0)" class="ml-auto flex gap-1">
-								<span v-if="org.ticketsCount > 0" class="text-[7px] bg-blue-100 text-blue-800 px-1 rounded">
-									{{ org.ticketsCount }} Ticket{{ org.ticketsCount > 1 ? 's' : '' }}
+							<div
+								v-if="org.id && (org.ticketsCount > 0 || org.projectsCount > 0)"
+								class="ml-auto flex gap-1 items-center justify-center flex-col uppercase px-2 py-1 rounded"
+							>
+								<span v-if="org.ticketsCount > 0" class="inline-flex text-[7px] text-[var(--cyan)] w-[60px]">
+									{{ org.ticketsCount }}
+
+									Ticket{{ org.ticketsCount > 1 ? 's' : '' }}
 								</span>
-								<span v-if="org.projectsCount > 0" class="text-[7px] bg-green-100 text-green-800 px-1 rounded">
-									{{ org.projectsCount }} Project{{ org.projectsCount > 1 ? 's' : '' }}
+								<span v-if="org.projectsCount > 0" class="inline-flex text-[7px] text-green-500 w-[60px]">
+									{{ org.projectsCount }}
+
+									Project{{ org.projectsCount > 1 ? 's' : '' }}
 								</span>
 							</div>
 						</button>

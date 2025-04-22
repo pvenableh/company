@@ -52,7 +52,7 @@ onUnmounted(() => {
 				<Avatar v-if="user" :user="user" text="12" class="mr-2" />
 				<UAvatar v-else icon="i-heroicons-user" size="sm" class="mr-1 sm:mr-2" />
 			</nuxt-link>
-			<!-- <LayoutNotificationsMenu v-if="user" class="mr-2" /> -->
+			<LayoutNotificationsMenu v-if="user" class="mr-2" />
 		</div>
 	</header>
 </template>
