@@ -32,41 +32,30 @@ const toast = useToast();
 const isActive = ref(props.active);
 const countRef = ref(null);
 const localCount = ref(props.users.length);
+const isToggling = ref(false);
 
-// Update localCount when users array changes
-watch(
-	() => props.users,
-	(newUsers) => {
-		// console.log('Users changed:', newUsers.length);
+const animateCountChange = (newCount) => {
+	const direction = newCount > localCount.value ? 1 : -1;
+	const element = countRef.value;
 
-		// Only animate if the count is different
-		if (localCount.value !== newUsers.length) {
-			const direction = newUsers.length > localCount.value ? 1 : -1;
-			const element = countRef.value;
-
-			if (element) {
-				gsap.fromTo(
-					element,
-					{ y: -10 * direction, opacity: 0 },
-					{
-						y: 0,
-						opacity: 1,
-						duration: 0.3,
-						ease: 'back.out(1.7)',
-						onComplete: () => {
-							// Update the local count after animation completes
-							localCount.value = newUsers.length;
-						},
-					},
-				);
-			} else {
-				// If no element reference, just update the count
-				localCount.value = newUsers.length;
-			}
-		}
-	},
-	{ deep: true, immediate: true },
-);
+	if (element) {
+		gsap.fromTo(
+			element,
+			{ y: -10 * direction, opacity: 0 },
+			{
+				y: 0,
+				opacity: 1,
+				duration: 0.3,
+				ease: 'back.out(1.7)',
+				onComplete: () => {
+					localCount.value = newCount;
+				},
+			},
+		);
+	} else {
+		localCount.value = newCount;
+	}
+};
 
 // Also watch the active prop
 watch(
@@ -76,8 +65,18 @@ watch(
 	},
 );
 
+watch(
+	() => props.users.length,
+	(newLength, oldLength) => {
+		if (newLength !== oldLength) {
+			animateCountChange(newLength);
+		}
+	},
+);
+
 const toggleReaction = async () => {
-	if (!user.value) return;
+	if (!user.value || isToggling.value) return;
+	isToggling.value = true;
 
 	try {
 		// First check if user already has a reaction of this type
@@ -132,6 +131,8 @@ const toggleReaction = async () => {
 			description: 'Failed to toggle reaction',
 			color: 'red',
 		});
+	} finally {
+		isToggling.value = false;
 	}
 };
 
@@ -182,8 +183,11 @@ const userList = computed(() => {
 	<UPopover mode="hover" :disabled="!userList || userList.length === 0">
 		<div
 			class="flex items-center justify-center gap-1 h-full px-1 min-w-[35px] text-center text-xs"
-			@click="toggleReaction"
-			:class="isActive ? 'text-[var(--cyan)] fill-[var(--cyan)]' : 'text-gray-500'"
+			@click="!isToggling && toggleReaction()"
+			:class="[
+				isActive ? 'text-[var(--cyan)] fill-[var(--cyan)]' : 'text-gray-500',
+				isToggling ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+			]"
 		>
 			<UIcon :name="getReactionIcon(reaction)" />
 			<span ref="countRef" class="inline-block">{{ localCount }}</span>
