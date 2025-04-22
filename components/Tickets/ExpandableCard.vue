@@ -2,14 +2,7 @@
 	<div ref="cardRef" class="w-full relative flex flex-col lg:flex-row flex-wrap items-center justify-center">
 		<!-- Card Preview -->
 		<div class="w-full cursor-pointer transition-transform duration-300" :class="{ 'pointer-events-none': isExpanded }">
-			<TicketsCard
-				:element="{
-					...element,
-					comments: commentsCount, // This is now a simple number
-					tasks: tasksCount,
-				}"
-				@expand="expand"
-			/>
+			<TicketsCard :element="element" @expand="expand" />
 		</div>
 
 		<!-- Teleported Fullscreen Overlay -->
@@ -80,6 +73,11 @@ if (props.element.comments.length) {
 
 // Use computed properties instead of refs to keep values reactive
 const commentsCount = computed(() => {
+	// If commentsCount is explicitly set, use it
+	if (typeof props.element.commentsCount === 'number') {
+		return props.element.commentsCount;
+	}
+
 	// If comments is a number, return it directly
 	if (typeof props.element.comments === 'number') {
 		return props.element.comments;

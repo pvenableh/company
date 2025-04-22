@@ -270,6 +270,7 @@ const isConnected = ref(true);
 const error = ref(null);
 const lastUpdated = ref(null);
 let cleanupMobileDetection = null;
+let commentSub = null;
 
 // Initialize localTickets with empty arrays for each column
 const localTickets = ref(
@@ -549,14 +550,15 @@ const setupTicketsSubscription = () => {
 
 				if (ticketIds.length > 0) {
 					try {
-						// Fetch comment counts with an efficient aggregate query
+						// Fetch comment counts with proper aggregate query
 						const commentCounts = await readItems('comments', {
 							filter: {
 								collection: { _eq: 'tickets' },
 								item: { _in: ticketIds },
 							},
+							fields: ['item'],
 							aggregate: {
-								count: 'id',
+								count: ['*'],
 							},
 							groupBy: ['item'],
 						});
@@ -566,7 +568,9 @@ const setupTicketsSubscription = () => {
 						if (Array.isArray(commentCounts)) {
 							commentCounts.forEach((result) => {
 								if (result && result.item) {
-									countMap[result.item] = result.count || 0;
+									// Parse the count as an integer since it's being returned as a string
+									const count = parseInt(result.count, 10) || 0;
+									countMap[result.item] = count;
 								}
 							});
 						}
@@ -574,8 +578,10 @@ const setupTicketsSubscription = () => {
 						// Add comment counts to the tickets
 						newData.forEach((ticket) => {
 							const commentCount = countMap[ticket.id] || 0;
-							// Just store the comment count as a number - no need for an artificial array
 							ticket.comments = commentCount;
+							ticket.commentsCount = commentCount; // Also add as commentsCount for compatibility
+
+							console.log(`Ticket ${ticket.id} has ${commentCount} comments`);
 						});
 					} catch (error) {
 						console.error('Error fetching comment counts:', error);
@@ -673,17 +679,6 @@ const processTickets = (tickets) => {
 		if (!ticket) return; // Skip null or undefined tickets
 
 		const status = ticket.status;
-
-		// Make sure comments is always accessible as a number for display
-		// This is important for the Card component
-		if (ticket.comments === undefined) {
-			ticket.comments = 0;
-		} else if (Array.isArray(ticket.comments)) {
-			// Store the actual count as a separate property to preserve the array
-			ticket.commentsCount = ticket.comments.length;
-		} else if (typeof ticket.comments === 'number') {
-			ticket.commentsCount = ticket.comments;
-		}
 
 		// Check if status exists in our columns
 		if (columns.some((col) => col.id === status)) {
@@ -914,7 +909,7 @@ const setupCommentSubscription = () => {
 onMounted(async () => {
 	console.log('Board: Component mounted');
 
-	const commentSub = setupCommentSubscription();
+	commentSub = setupCommentSubscription();
 	if (commentSub?.connect) commentSub.connect();
 
 	// Set up mobile detection
