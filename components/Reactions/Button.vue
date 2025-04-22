@@ -47,7 +47,10 @@ const animateCountChange = (newCount) => {
 				opacity: 1,
 				duration: 0.3,
 				ease: 'back.out(1.7)',
-				onComplete: () => {
+				// onComplete: () => {
+				// 	localCount.value = newCount;
+				// },
+				onStart: () => {
 					localCount.value = newCount;
 				},
 			},
