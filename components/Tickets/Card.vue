@@ -165,12 +165,22 @@ console.log('Comments:', props.element.comments);
 const { user } = useEnhancedAuth();
 
 const commentsCount = computed(() => {
+	// If element.commentsCount exists, use it (this is our explicitly set number)
+	if (typeof props.element.commentsCount === 'number') {
+		return props.element.commentsCount;
+	}
+
+	// If comments is a number, return it directly
 	if (typeof props.element.comments === 'number') {
 		return props.element.comments;
 	}
+
+	// If comments is an array, return its length
 	if (Array.isArray(props.element.comments)) {
 		return props.element.comments.length;
 	}
+
+	// Default to 0 if undefined or null
 	return 0;
 });
 

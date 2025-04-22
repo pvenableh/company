@@ -26,14 +26,15 @@ export default defineEventHandler(async (event) => {
 			data: {
 				access_token: string;
 				refresh_token: string;
+				expires?: number;
 			};
 		}
 
 		const response = await $fetch<DirectusRefreshResponse>(`${directusUrl}/auth/refresh`, {
 			method: 'POST',
 			body: {
-				refresh_token: refreshToken, // Use correct property name (refresh_token, not refreshToken)
-				mode: 'json', // Explicitly specify json mode
+				refresh_token: refreshToken, // Using correct property name per Directus docs
+				mode: 'json', // Explicitly specify json mode as per Directus docs
 			},
 			headers: {
 				'Content-Type': 'application/json',
@@ -49,13 +50,25 @@ export default defineEventHandler(async (event) => {
 
 		console.log('Server: Token refresh successful');
 
-		// Return the response data
+		// Return the response data with proper expiration
 		return {
 			success: true,
-			data: response.data,
+			data: {
+				access_token: response.data.access_token,
+				refresh_token: response.data.refresh_token,
+				expires: response.data.expires || Math.floor(Date.now() / 1000) + 15 * 60, // Default to 15 minutes if not provided
+			},
 		};
 	} catch (error) {
 		console.error('Server: Token refresh failed:', error);
+
+		// Check if it's a Directus-specific error
+		if ((error as { response?: { status?: number } })?.response?.status === 401) {
+			throw createError({
+				statusCode: 401,
+				message: 'Refresh token is invalid or expired',
+			});
+		}
 
 		// Return a structured error response
 		throw createError({

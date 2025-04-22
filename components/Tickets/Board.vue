@@ -574,20 +574,22 @@ const setupTicketsSubscription = () => {
 						// Add comment counts to the tickets
 						newData.forEach((ticket) => {
 							const commentCount = countMap[ticket.id] || 0;
-							// Create a comments array with the right number of elements
-							ticket.comments = Array(commentCount).fill({ id: 1 });
+							// Just store the comment count as a number - no need for an artificial array
+							ticket.comments = commentCount;
 						});
 					} catch (error) {
 						console.error('Error fetching comment counts:', error);
-						// If error occurs, set empty comments arrays
+						// If error occurs, set empty comments
 						newData.forEach((ticket) => {
-							ticket.comments = [];
+							ticket.comments = 0;
+							ticket.commentsCount = 0;
 						});
 					}
 				} else {
 					// No tickets, no comments to fetch
 					newData.forEach((ticket) => {
-						ticket.comments = [];
+						ticket.comments = 0;
+						ticket.commentsCount = 0;
 					});
 				}
 
@@ -671,6 +673,17 @@ const processTickets = (tickets) => {
 		if (!ticket) return; // Skip null or undefined tickets
 
 		const status = ticket.status;
+
+		// Make sure comments is always accessible as a number for display
+		// This is important for the Card component
+		if (ticket.comments === undefined) {
+			ticket.comments = 0;
+		} else if (Array.isArray(ticket.comments)) {
+			// Store the actual count as a separate property to preserve the array
+			ticket.commentsCount = ticket.comments.length;
+		} else if (typeof ticket.comments === 'number') {
+			ticket.commentsCount = ticket.comments;
+		}
 
 		// Check if status exists in our columns
 		if (columns.some((col) => col.id === status)) {

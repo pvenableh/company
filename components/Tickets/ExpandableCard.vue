@@ -5,7 +5,7 @@
 			<TicketsCard
 				:element="{
 					...element,
-					comments: commentsCount,
+					comments: commentsCount, // This is now a simple number
 					tasks: tasksCount,
 				}"
 				@expand="expand"
@@ -80,14 +80,16 @@ if (props.element.comments.length) {
 
 // Use computed properties instead of refs to keep values reactive
 const commentsCount = computed(() => {
+	// If comments is a number, return it directly
+	if (typeof props.element.comments === 'number') {
+		return props.element.comments;
+	}
+
 	// If comments is an array, return its length
 	if (Array.isArray(props.element.comments)) {
 		return props.element.comments.length;
 	}
-	// If comments is already a number, return it directly
-	if (typeof props.element.comments === 'number') {
-		return props.element.comments;
-	}
+
 	// Default to 0 if undefined or null
 	return 0;
 });

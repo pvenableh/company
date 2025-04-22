@@ -1,6 +1,8 @@
 // server/api/auth/[...].ts
 import { NuxtAuthHandler } from '#auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import type { JWT } from 'next-auth/jwt';
+import type { User } from 'next-auth';
 
 interface DirectusCredentials {
 	email: string;
@@ -26,7 +28,7 @@ interface TokenRefreshResponse {
 	data?: {
 		access_token: string;
 		refresh_token: string;
-		expires?: number; // Make expires optional since it might not always be present
+		expires?: number;
 	};
 }
 
@@ -35,9 +37,10 @@ interface DirectusRefreshResponse {
 	data: {
 		access_token: string;
 		refresh_token: string;
-		expires?: number; // Make expires optional
+		expires?: number;
 	};
 }
+
 // Define organization structure
 interface OrganizationReference {
 	organizations_id: {
@@ -66,7 +69,7 @@ export default NuxtAuthHandler({
 	},
 
 	callbacks: {
-		async jwt({ token, user, account }) {
+		async jwt({ token, user }: { token: JWT; user?: User }) {
 			// If we have user data from initial sign-in, store it in the token
 			if (user) {
 				const directusUser = user as any;
@@ -85,18 +88,16 @@ export default NuxtAuthHandler({
 			}
 
 			// Return early if token doesn't need refreshing
-			if (token.accessTokenExpires && Date.now() < token.accessTokenExpires) {
+			const currentTime = Date.now();
+			if (token.accessTokenExpires && currentTime < token.accessTokenExpires) {
 				return token;
 			}
 
-			// If we have a refresh token, try to refresh the token
+			// Token needs refresh
 			if (token.refreshToken) {
 				try {
-					// console.log(`Attempting to refresh token with refresh_token: ${token.refreshToken.substring(0, 10)}...`);
-
-					// Try our own proxy endpoint
+					// Try our own proxy endpoint first
 					try {
-						// console.log('Trying via server proxy...');
 						const response = await $fetch<TokenRefreshResponse>('/api/auth/token-refresh', {
 							method: 'POST',
 							body: {
@@ -105,23 +106,11 @@ export default NuxtAuthHandler({
 						});
 
 						if (response?.success && response?.data?.access_token) {
-							// Update token with new values
-							// 'Token refresh successful, new token received');
 							token.directusToken = response.data.access_token;
 							token.refreshToken = response.data.refresh_token;
-							// Safely handle the expires value with a fallback
-							const expiresInMs = response.data.expires ? response.data.expires * 1000 : 900000;
-							token.accessTokenExpires = Date.now() + expiresInMs;
-
-							// Store in localStorage for WebSockets
-							if (import.meta.client) {
-								try {
-									localStorage.setItem('auth_token', response.data.access_token);
-									localStorage.setItem('auth_refresh_token', response.data.refresh_token);
-								} catch (e) {
-									console.warn('Failed to store token in localStorage', e);
-								}
-							}
+							// Ensure expires is properly converted to timestamp
+							const expiresInMs = response.data.expires ? response.data.expires * 1000 : 900000; // 15 minutes in milliseconds
+							token.accessTokenExpires = currentTime + expiresInMs;
 
 							return token;
 						}
@@ -129,12 +118,12 @@ export default NuxtAuthHandler({
 						console.log('Proxy refresh failed, trying direct refresh');
 					}
 
-					// If proxy refresh failed, try direct request as fallback
+					// If proxy refresh failed, try direct request to Directus
 					const directusUrl = useRuntimeConfig().public.directusUrl;
 					const directResponse = await $fetch<DirectusRefreshResponse>(`${directusUrl}/auth/refresh`, {
 						method: 'POST',
 						body: {
-							refresh_token: token.refreshToken,
+							refresh_token: token.refreshToken, // Using correct property name
 							mode: 'json',
 						},
 						headers: {
@@ -143,70 +132,63 @@ export default NuxtAuthHandler({
 					});
 
 					if (directResponse?.data?.access_token) {
-						console.log('Direct token refresh successful');
 						token.directusToken = directResponse.data.access_token;
 						token.refreshToken = directResponse.data.refresh_token;
-						// Safely handle the expires value with a fallback
-						const expiresInMs = directResponse.data.expires ? directResponse.data.expires * 1000 : 900000;
-						token.accessTokenExpires = Date.now() + expiresInMs;
-
-						// Store in localStorage for WebSockets
-						if (import.meta.client) {
-							try {
-								localStorage.setItem('auth_token', directResponse.data.access_token);
-								localStorage.setItem('auth_refresh_token', directResponse.data.refresh_token);
-							} catch (e) {
-								console.warn('Failed to store token in localStorage', e);
-							}
-						}
+						const expiresInMs = directResponse.data.expires ? directResponse.data.expires * 1000 : 900000; // 15 minutes in milliseconds
+						token.accessTokenExpires = currentTime + expiresInMs;
 
 						return token;
-					} else {
-						throw new Error('Invalid response from direct refresh');
 					}
+
+					// If no valid response, throw error
+					throw new Error('Invalid refresh response from Directus');
 				} catch (error) {
 					console.error('Error refreshing token:', error);
 
-					// Important: If token refresh fails but we still have user data,
-					// return the token anyway to keep the user logged in
-					if (token.user) {
-						// console.log('Keeping existing user session despite refresh error');
-						return token;
+					// Check if it's a refresh token expiration error
+					if (
+						(error as any).status === 401 ||
+						(error as any).message?.includes('invalid') ||
+						(error as any).message?.includes('expired')
+					) {
+						// Refresh token has expired, need to force logout
+						return {
+							...token,
+							directusToken: undefined,
+							refreshToken: undefined,
+							accessTokenExpires: undefined,
+							error: 'RefreshTokenExpired',
+						} as JWT;
 					}
 
-					// If no user data, treat as unauthenticated
-					return {};
+					// For other errors, we can try again later
+					return token; // Keep existing token to retry later
 				}
 			}
 
-			// If we have user data but no refresh token, keep the session
-			if (token.user) {
-				return token;
-			}
-
-			return token;
+			// If no refresh token is available, force re-authentication
+			return {
+				...token,
+				error: 'NoRefreshTokenError',
+			} as JWT;
 		},
 
 		async session({ session, token }) {
+			// If there's an error in the token, force re-authentication
+			if (token.error) {
+				return {
+					...session,
+					error: token.error,
+				};
+			}
+
 			// Make user and token info available in the session
 			if (token.user) {
-				// console.log('Setting user data from token to session');
 				session.user = token.user;
-			} else {
-				console.log('No user data in token!');
 			}
 
 			if (token.directusToken) {
 				session.directusToken = token.directusToken;
-
-				// Store access token in localStorage for use with websockets
-				if (import.meta.client) {
-					try {
-						localStorage.setItem('auth_token', token.directusToken);
-					} catch (error) {
-						console.warn('Could not store token in localStorage:', error);
-					}
-				}
 			}
 
 			if (token.refreshToken) {
@@ -226,22 +208,14 @@ export default NuxtAuthHandler({
 				password: { label: 'Password', type: 'password' },
 			},
 			async authorize(credentials: DirectusCredentials | undefined) {
-				// console.log(
-				// 	'Authorize function called with credentials:',
-				// 	credentials ? `email: ${credentials.email}` : 'no credentials',
-				// );
-
 				try {
 					if (!credentials?.email || !credentials?.password) {
-						// console.log('Missing credentials');
 						throw new Error('Missing credentials');
 					}
 
 					const directusUrl = useRuntimeConfig().public.directusUrl;
-					// 'Directus URL:', directusUrl);
 
 					// First, attempt the login
-					// console.log('Attempting directus login...');
 					let authResponse;
 					try {
 						authResponse = await $fetch<DirectusAuthResponse>(`${directusUrl}/auth/login`, {
@@ -249,40 +223,22 @@ export default NuxtAuthHandler({
 							body: {
 								email: credentials.email,
 								password: credentials.password,
-								mode: 'json', // Explicitly request JSON mode
+								mode: 'json',
 							},
 							headers: {
 								'Content-Type': 'application/json',
 							},
 						});
-
-						// console.log('Auth response received:', authResponse ? 'success' : 'failed');
-
-						// Store tokens in localStorage for persistence
-						if (import.meta.client && authResponse?.data) {
-							try {
-								localStorage.setItem('auth_token', authResponse.data.access_token);
-								localStorage.setItem('auth_refresh_token', authResponse.data.refresh_token);
-							} catch (error) {
-								console.warn('Could not store tokens in localStorage:', error);
-							}
-						}
 					} catch (loginError) {
 						console.error('Login request failed:', loginError);
-						if (loginError instanceof Error) {
-							throw new Error(`Login failed: ${loginError.message}`);
-						} else {
-							throw new Error('Login failed: An unknown error occurred');
-						}
+						throw new Error('Login failed');
 					}
 
 					if (!authResponse || !authResponse.data || !authResponse.data.access_token) {
-						// console.log('Invalid auth response:', authResponse);
 						throw new Error('Authentication failed - invalid response');
 					}
 
 					// Then, fetch user data with the token
-					// console.log('Fetching user data...');
 					let userResponse;
 					try {
 						userResponse = await $fetch<DirectusUserResponse>(`${directusUrl}/users/me`, {
@@ -295,19 +251,12 @@ export default NuxtAuthHandler({
 								fields: 'id,first_name,last_name,email,avatar,role,organizations.organizations_id.id',
 							},
 						});
-
-						// console.log('User data received:', userResponse?.data?.id ? `id: ${userResponse.data.id}` : 'no data');
 					} catch (userError) {
 						console.error('User data request failed:', userError);
-						if (userError instanceof Error) {
-							throw new Error(`Failed to fetch user data: ${userError.message}`);
-						} else {
-							throw new Error('Failed to fetch user data: An unknown error occurred');
-						}
+						throw new Error('Failed to fetch user data');
 					}
 
 					if (!userResponse || !userResponse.data) {
-						// console.log('Invalid user response');
 						throw new Error('Failed to fetch user data - invalid response');
 					}
 
@@ -321,8 +270,6 @@ export default NuxtAuthHandler({
 						});
 					}
 
-					// console.log('Found organization IDs:', organizationIds);
-
 					// Create and return the user object for NextAuth
 					const user = {
 						id: userResponse.data.id,
@@ -334,10 +281,9 @@ export default NuxtAuthHandler({
 						organizationIds: organizationIds,
 						accessToken: authResponse.data.access_token,
 						refreshToken: authResponse.data.refresh_token,
-						accessTokenExpires: Date.now() + authResponse.data.expires,
+						accessTokenExpires: Date.now() + authResponse.data.expires * 1000, // Convert to timestamp
 					};
 
-					// console.log('Returning user object with id:', user.id);
 					return user;
 				} catch (error) {
 					console.error('Authorization failed:', error);
@@ -348,9 +294,9 @@ export default NuxtAuthHandler({
 	],
 	session: {
 		strategy: 'jwt',
-		maxAge: 7 * 24 * 60 * 60, // 7 days in seconds for active session
+		maxAge: 7 * 24 * 60 * 60, // 7 days for the session
 	},
 	jwt: {
-		maxAge: 30 * 24 * 60 * 60, // 30 days for refresh capability
+		maxAge: 7 * 24 * 60 * 60, // 7 days for JWT (same as session)
 	},
 });

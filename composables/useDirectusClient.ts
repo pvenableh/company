@@ -1,8 +1,21 @@
 // composables/useDirectusClient.ts
-import { createDirectus, rest, authentication, realtime } from '@directus/sdk';
+import { createDirectus, rest, authentication, realtime, readMe } from '@directus/sdk';
 
 export function useDirectusClient() {
-	const { data: session, status, getSession } = useAuth();
+	interface ExtendedSession {
+		directusToken?: string;
+		error?: string;
+	}
+
+	const {
+		data: session,
+		status,
+		getSession,
+	} = useAuth() as {
+		data: Ref<ExtendedSession | null>;
+		status: Ref<string>;
+		getSession: () => Promise<ExtendedSession | null>;
+	};
 	const config = useRuntimeConfig();
 	const isInitializing = ref(true);
 	const refreshInProgress = ref(false);
@@ -12,25 +25,25 @@ export function useDirectusClient() {
 	const client = computed(() => {
 		const directusUrl = config.public.directusUrl;
 		// Use json mode explicitly for authentication
-		const directusClient = createDirectus(directusUrl).with(authentication('json')).with(rest()).with(realtime());
+		const directusClient = createDirectus<any>(directusUrl).with(authentication('json')).with(rest()).with(realtime());
 
-		// If we have a session with token, set it in the client
+		// First check session token, then localStorage as fallback
 		if (session.value?.directusToken) {
-			// Set the token for authentication
 			directusClient.setToken(session.value.directusToken);
 
-			// Also store in localStorage for cross-tab consistency
+			// Also ensure it's in localStorage for realtime
 			if (import.meta.client) {
 				try {
 					localStorage.setItem('auth_token', session.value.directusToken);
-				} catch (error) {
-					console.warn('Could not store token in localStorage:', error);
+					localStorage.setItem('directus_session_token', session.value.directusToken);
+				} catch (e) {
+					console.warn('Failed to store token in localStorage:', e);
 				}
 			}
 		} else if (import.meta.client) {
 			// Try to get token from localStorage as fallback
 			try {
-				const storedToken = localStorage.getItem('auth_token');
+				const storedToken = localStorage.getItem('auth_token') || localStorage.getItem('directus_session_token');
 				if (storedToken) {
 					directusClient.setToken(storedToken);
 				}
@@ -71,6 +84,9 @@ export function useDirectusClient() {
 						console.warn('Could not update token in localStorage:', error);
 					}
 				}
+
+				// Ensure the client gets the new token
+				client.value.setToken(result.directusToken);
 			}
 
 			return result;
@@ -108,6 +124,15 @@ export function useDirectusClient() {
 			) {
 				console.log('Got 401 error, attempting to refresh token...');
 
+				// Check if there's an error in the session (this will be set by the auth handler)
+				if (session.value?.error) {
+					console.log('Session has error:', session.value.error);
+					// Force sign out
+					const { signOut } = useAuth();
+					await signOut({ callbackUrl: '/auth/signin' });
+					return;
+				}
+
 				// Try to refresh the session
 				const refreshed = await refreshSession();
 
@@ -117,6 +142,9 @@ export function useDirectusClient() {
 					return await requestFn(client.value);
 				} else {
 					console.error('Token refresh failed, request cannot be completed');
+					// Force sign out
+					const { signOut } = useAuth();
+					await signOut({ callbackUrl: '/auth/signin' });
 					throw authError;
 				}
 			}
@@ -128,57 +156,52 @@ export function useDirectusClient() {
 
 	// Explicitly trigger SDK client refresh
 	const refreshToken = async () => {
-		try {
-			if (!client.value) {
-				console.warn('Client not initialized, cannot refresh token');
-				return false;
-			}
-
-			console.log('Manually refreshing token via SDK...');
-			await client.value.refresh();
-
-			// After successful refresh, update tokens
-			const token = client.value.getToken();
-			if (token && import.meta.client) {
-				try {
-					const resolvedToken = await token;
-					if (resolvedToken) {
-						localStorage.setItem('auth_token', resolvedToken);
-					}
-				} catch (error) {
-					console.warn('Could not store refreshed token in localStorage:', error);
-				}
-			}
-
-			console.log('SDK token refresh successful');
-			return true;
-		} catch (error) {
-			console.error('SDK token refresh failed:', error);
-
-			// If SDK refresh fails, try our session refresh as fallback
-			try {
-				const result = await refreshSession();
-				return !!result;
-			} catch (fallbackError) {
-				console.error('Fallback refresh also failed:', fallbackError);
-				return false;
-			}
-		}
+		return refreshSession();
 	};
 
-	// Use watch instead of onMounted for lifecycle management
+	// Initialize and check token validity
+	const initializeClient = async () => {
+		if (status.value === 'authenticated' && session.value?.directusToken) {
+			// Check if the token is still valid by making a simple request
+			try {
+				await authRequest(async (client) => {
+					// Type assertion to handle the TypeScript error
+					return (client as any).request(readMe());
+				});
+			} catch (error) {
+				console.error('Token validation failed:', error);
+				// Token is invalid, force refresh
+				await refreshSession();
+			}
+		}
+		isInitializing.value = false;
+	};
+
+	// Watch for auth status changes
 	watch(
 		status,
-		(newStatus) => {
-			if (newStatus === 'authenticated' || newStatus === 'unauthenticated') {
-				isInitializing.value = false;
+		async (newStatus) => {
+			if (newStatus === 'authenticated' && !isInitializing.value) {
+				await initializeClient();
 			}
 		},
 		{ immediate: true },
 	);
 
-	// Safety timeout to prevent infinite loading
 	if (import.meta.client) {
+		// For component context, use lifecycle hook
+		if (getCurrentInstance()) {
+			onMounted(async () => {
+				await initializeClient();
+			});
+		} else {
+			// For non-component context (plugins, etc), just run initialization directly
+			nextTick(async () => {
+				await initializeClient();
+			});
+		}
+
+		// Keep the safety timeout to prevent infinite loading
 		setTimeout(() => {
 			isInitializing.value = false;
 		}, 2000);
