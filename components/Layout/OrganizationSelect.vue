@@ -67,7 +67,7 @@
 							:class="{ 'bg-gray-100 dark:bg-gray-700': selectedOrg && org.id === selectedOrg }"
 						>
 							<!-- Show icon for "All Organizations" or avatar for specific organization -->
-							<template v-if="isAllOrganizations(org)">
+							<template v-if="isAllOrganizations(org) && hasAdminAccess(user)">
 								<div class="rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
 									<UIcon name="i-heroicons-building-office-2" class="h-5 w-5 text-gray-500 dark:text-gray-300" />
 								</div>

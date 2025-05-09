@@ -23,8 +23,8 @@ export function useTasksList({
 	let disconnect = null;
 	let refresh = null;
 	let connect = null;
-	let updateFilterFunc = null; // To hold the updateFilter function from the subscription
-	let subscriptionInitialized = false; // Track subscription initialization
+	let updateFilterFunc = null;
+	let subscriptionInitialized = false;
 
 	const updatingTasks = ref(new Set());
 
@@ -32,6 +32,7 @@ export function useTasksList({
 		console.log('Computed effectiveOrgId:', organizationId || selectedOrg.value?.id);
 		return organizationId || selectedOrg.value?.id;
 	});
+
 	const effectiveTeamId = computed(() => (teamId !== undefined ? teamId : selectedTeam.value?.id));
 
 	const generateFilter = () => {
@@ -71,7 +72,6 @@ export function useTasksList({
 		return filter;
 	};
 
-	// Fields to fetch
 	const fields = [
 		'id',
 		'title',
@@ -99,7 +99,6 @@ export function useTasksList({
 		'tasks.assigned_to.directus_users_id.last_name',
 	];
 
-	// Process data and extract tasks with ticket context
 	const processTicketData = (ticketsData) => {
 		const processedTasks = [];
 
@@ -179,7 +178,6 @@ export function useTasksList({
 		return processedTasks;
 	};
 
-	// Set up the subscription
 	const setupSubscription = () => {
 		if (import.meta.server) {
 			isLoading.value = false;
@@ -204,8 +202,8 @@ export function useTasksList({
 		connect = wsConnect;
 		disconnect = wsDisconnect;
 		refresh = wsRefresh;
-		updateFilterFunc = wsUpdateFilter; // Store the updateFilter function
-		subscriptionInitialized = true; // Mark subscription as initialized
+		updateFilterFunc = wsUpdateFilter;
+		subscriptionInitialized = true;
 
 		watch(wsLoading, (val) => (isLoading.value = val), { immediate: true });
 		watch(wsConnected, (val) => (isConnected.value = val), { immediate: true });
@@ -223,11 +221,9 @@ export function useTasksList({
 		);
 	};
 
-	// Watch for changes to the effective filter values and update the subscription
 	watch([effectiveOrgId, effectiveTeamId], ([newOrgId, newTeamId], [oldOrgId, oldTeamId]) => {
 		console.log('Effective filter values changed:', { organization: newOrgId, team: newTeamId });
 
-		// Check if the subscription is initialized before updating the filter
 		if (subscriptionInitialized && updateFilterFunc) {
 			isLoading.value = true;
 			const newFilter = generateFilter();
@@ -235,11 +231,9 @@ export function useTasksList({
 			updateFilterFunc(newFilter);
 		} else {
 			console.warn('updateFilter function not available yet. Will update on setup.');
-			// No action needed here, the filter will be applied on initial setup
 		}
 	});
 
-	// Function to toggle task status
 	const toggleTaskStatus = async (taskId) => {
 		const task = tasks.value.find((t) => t.id === taskId);
 		if (!task) {
@@ -339,11 +333,10 @@ export function useTasksList({
 		}, 5000);
 	};
 
-	// Initialize on component mount
 	onMounted(() => {
 		if (import.meta.client) {
 			console.log('Component mounted, setting up subscription');
-			setupSubscription(); // Call setupSubscription directly here
+			setupSubscription();
 			if (connect) {
 				connect();
 			}

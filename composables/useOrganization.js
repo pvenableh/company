@@ -16,10 +16,9 @@ export function useOrganization() {
 		priorities: ['cookie', 'localStorage'],
 	});
 
-	const { data: authData, status } = useAuth();
 	const { readItems } = useDirectusItems();
 
-	const user = computed(() => (status.value === 'authenticated' ? authData.value?.user ?? null : null));
+	const { user } = useEnhancedAuth();
 
 	const hasMultipleOrgs = computed(() => organizations.value.length > 1);
 	const organizationOptions = computed(() => [{ id: null, name: 'All Organizations' }, ...organizations.value]);

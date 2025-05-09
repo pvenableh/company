@@ -2,7 +2,6 @@
 	<div class="max-w-screen-xl mx-auto px-4 py-6">
 		<h1 class="text-2xl font-semibold mb-6">My Tasks</h1>
 
-		<!-- Organization & Filters -->
 		<div class="mb-6 flex flex-wrap gap-4 items-center">
 			<div v-if="selectedOrgData" class="flex items-center space-x-2">
 				<div class="h-6 w-6 rounded-full bg-gray-100 flex items-center justify-center">
@@ -25,7 +24,6 @@
 			</div>
 		</div>
 
-		<!-- Debug Banner (for development purposes) -->
 		<div v-if="debug" class="mb-4 p-2 bg-yellow-100 dark:bg-yellow-800 rounded text-xs">
 			<div>
 				<strong>Debug:</strong>
@@ -36,16 +34,12 @@
 			<div>Computed Organization ID: {{ getTasksOrganizationId }}</div>
 			<div>Computed Team ID: {{ getTasksTeamId }}</div>
 			<div>Computed User ID: {{ getTasksUserId }}</div>
-			<div>Filter Type: {{ filterType }}</div>
 			<div>Task Stats: {{ JSON.stringify(taskStats) }}</div>
 		</div>
 
-		<!-- Tabs -->
 		<UTabs v-model="activeTab" :items="tabs" class="mb-6" />
 
-		<!-- Tasks Lists & Summary -->
 		<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-			<!-- Tasks List -->
 			<div class="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
 				<h2 class="text-lg font-medium mb-4">{{ tabs[activeTab].label }} Tasks</h2>
 
@@ -53,6 +47,7 @@
 					<TicketsTasksList
 						:organizationId="getTasksOrganizationId"
 						:teamId="getTasksTeamId"
+						:projectId="getTasksProjectId"
 						:userId="getTasksUserId"
 						:limit="20"
 						:debug="debug"
@@ -68,11 +63,9 @@
 				</ClientOnly>
 			</div>
 
-			<!-- Task Status Summary -->
 			<div class="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
 				<h2 class="text-lg font-medium mb-4">Task Summary</h2>
 				<div class="grid grid-cols-2 gap-4">
-					<!-- Active Tasks -->
 					<div class="bg-white dark:bg-gray-700 rounded p-4 shadow-sm">
 						<div class="flex items-center space-x-2">
 							<div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -85,7 +78,6 @@
 						</div>
 					</div>
 
-					<!-- Completed Tasks -->
 					<div class="bg-white dark:bg-gray-700 rounded p-4 shadow-sm">
 						<div class="flex items-center space-x-2">
 							<div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
@@ -98,7 +90,6 @@
 						</div>
 					</div>
 
-					<!-- Due Today -->
 					<div class="bg-white dark:bg-gray-700 rounded p-4 shadow-sm">
 						<div class="flex items-center space-x-2">
 							<div class="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
@@ -111,7 +102,6 @@
 						</div>
 					</div>
 
-					<!-- Overdue -->
 					<div class="bg-white dark:bg-gray-700 rounded p-4 shadow-sm">
 						<div class="flex items-center space-x-2">
 							<div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
@@ -219,13 +209,19 @@ const getTasksOrganizationId = computed(() => {
 const getTasksTeamId = computed(() => {
 	// Only use team filter on the "My Team" tab
 	// For other tabs, use null to indicate no team filter
-	return tabs.value[activeTab.value].content === 'team' ? selectedTeam.value : null;
+	return tabs[activeTab.value].content === 'team' ? selectedTeam.value : null;
 });
 
 const getTasksUserId = computed(() => {
 	// Only use user filter on the "Assigned to Me" tab
 	// For other tabs, use null to indicate no user filter
-	return tabs.value[activeTab.value].content === 'assigned' ? user.value?.id : null;
+	return tabs[activeTab.value].content === 'assigned' ? user.value?.id : null;
+});
+
+const getTasksProjectId = computed(() => {
+	// Logic to determine projectId based on your tabs or other state
+	// For example, if you have a project context:
+	return null; // Replace with your actual project ID logic
 });
 
 const handleTasksUpdate = (tasksList) => {
@@ -297,7 +293,7 @@ const updateStats = () => {
 const refreshData = () => {
 	console.log('Refreshing data');
 	if (tasksList.value) {
-		tasksList.value.refreshTasks();
+		tasksList.value.refresh(); //  Use the exposed refresh function
 
 		// We'll update stats after a short delay to allow data to load
 		setTimeout(() => {
@@ -313,15 +309,10 @@ watch(activeTab, () => {
 });
 
 // Watch for organization or team changes from the global context
-watch([selectedOrg, selectedTeam], ([newOrg, newTeam], [oldOrg, oldTeam]) => {
-	console.log('Global context changed:', {
-		org: { old: oldOrg, new: newOrg },
-		team: { old: oldTeam, new: newTeam },
-	});
-
-	// Only refresh if values actually changed
-	if (newOrg !== oldOrg || newTeam !== oldTeam) {
-		tasksList.value.refreshTasks(); // Call the exposed refreshTasks method
+watch([selectedOrg, selectedTeam], () => {
+	console.log('Global context changed:', { org: selectedOrg.value, team: selectedTeam.value });
+	if (tasksList.value) {
+		tasksList.value.refresh(); // Call the exposed refreshTasks method
 	}
 });
 

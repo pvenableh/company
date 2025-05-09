@@ -30,15 +30,20 @@ export default defineEventHandler(async (event) => {
 			};
 		}
 
+		// Add more robust fetch options with timeout and retry logic
 		const response = await $fetch<DirectusRefreshResponse>(`${directusUrl}/auth/refresh`, {
 			method: 'POST',
 			body: {
-				refresh_token: refreshToken, // Using correct property name per Directus docs
-				mode: 'json', // Explicitly specify json mode as per Directus docs
+				refresh_token: refreshToken,
+				mode: 'json',
 			},
 			headers: {
 				'Content-Type': 'application/json',
 			},
+			// Add timeout to prevent long-hanging requests
+			timeout: 10000, // 10 seconds
+			// Add retry logic for network issues
+			retry: 2,
 		});
 
 		if (!response?.data?.access_token) {
@@ -51,29 +56,53 @@ export default defineEventHandler(async (event) => {
 		console.log('Server: Token refresh successful');
 
 		// Return the response data with proper expiration
+		// Use the expires from Directus response or calculate based on your Directus config
 		return {
 			success: true,
 			data: {
 				access_token: response.data.access_token,
 				refresh_token: response.data.refresh_token,
-				expires: response.data.expires || Math.floor(Date.now() / 1000) + 15 * 60, // Default to 15 minutes if not provided
+				// Default to 7 days (matching your Directus ACCESS_TOKEN_TTL) if expires not provided
+				expires: response.data.expires || Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60,
 			},
 		};
 	} catch (error) {
 		console.error('Server: Token refresh failed:', error);
 
-		// Check if it's a Directus-specific error
-		if ((error as { response?: { status?: number } })?.response?.status === 401) {
+		// Enhance error handling for different scenarios
+		const err = error as any;
+
+		// Check for specific Directus error messages in the response
+		const directusError = err.response?.data?.errors?.[0] || {};
+		const directusErrorMessage = directusError.message || '';
+
+		// Handle different error types
+		if (
+			err.response?.status === 401 ||
+			directusErrorMessage.includes('expired') ||
+			directusErrorMessage.includes('invalid')
+		) {
 			throw createError({
 				statusCode: 401,
 				message: 'Refresh token is invalid or expired',
+				cause: error,
 			});
 		}
 
-		// Return a structured error response
+		// Network-related errors
+		if (err.name === 'FetchError' || err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT') {
+			throw createError({
+				statusCode: 503,
+				message: 'Cannot connect to authentication server',
+				cause: error,
+			});
+		}
+
+		// Generic error fallback
 		throw createError({
-			statusCode: (error as { statusCode?: number }).statusCode || 401,
-			message: (error as { message?: string }).message || 'Token refresh failed',
+			statusCode: err.statusCode || err.response?.status || 500,
+			message: directusErrorMessage || err.message || 'Token refresh failed',
+			cause: error,
 		});
 	}
 });

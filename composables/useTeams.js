@@ -18,10 +18,8 @@ export const useTeams = () => {
 	const selectedTeam = useState('selectedTeam', () => null);
 	const lastFetchedOrg = ref(null);
 	const storageListener = ref(null);
-	const { data, status } = useAuth();
-	const user = computed(() => {
-		return status.value === 'authenticated' ? data?.value?.user ?? null : null;
-	});
+
+	const { user } = useEnhancedAuth();
 
 	const { selectedOrg } = useOrganization();
 

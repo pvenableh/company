@@ -87,54 +87,71 @@ export default NuxtAuthHandler({
 				token.accessTokenExpires = directusUser.accessTokenExpires;
 			}
 
-			// Return early if token doesn't need refreshing
+			// IMPROVED TOKEN REFRESH LOGIC
 			const currentTime = Date.now();
-			if (token.accessTokenExpires && currentTime < token.accessTokenExpires) {
+
+			// Add a buffer period to refresh the token BEFORE it expires
+			// Refresh when less than 30 minutes remain to prevent disruptions
+			const refreshBuffer = 30 * 60 * 1000; // 30 minutes in milliseconds
+
+			if (token.accessTokenExpires && currentTime + refreshBuffer < token.accessTokenExpires) {
+				// Token still valid with buffer period, no refresh needed
 				return token;
 			}
 
-			// Token needs refresh
+			// Token needs refresh or will expire soon
 			if (token.refreshToken) {
 				try {
 					// Try our own proxy endpoint first
 					try {
+						console.log('Attempting token refresh via proxy endpoint');
 						const response = await $fetch<TokenRefreshResponse>('/api/auth/token-refresh', {
 							method: 'POST',
 							body: {
 								refreshToken: token.refreshToken,
 							},
+							// Add timeout to prevent long-hanging requests
+							timeout: 8000, // 8 seconds
 						});
 
 						if (response?.success && response?.data?.access_token) {
+							console.log('Token refresh successful');
 							token.directusToken = response.data.access_token;
 							token.refreshToken = response.data.refresh_token;
 							// Ensure expires is properly converted to timestamp
-							const expiresInMs = response.data.expires ? response.data.expires * 1000 : 900000; // 15 minutes in milliseconds
+							const expiresInMs = response.data.expires ? response.data.expires * 1000 : 7 * 24 * 60 * 60 * 1000; // Default to 7 days to match Directus config
 							token.accessTokenExpires = currentTime + expiresInMs;
 
 							return token;
 						}
 					} catch (proxyError) {
-						console.log('Proxy refresh failed, trying direct refresh');
+						console.log('Proxy refresh failed, trying direct refresh', proxyError);
 					}
 
 					// If proxy refresh failed, try direct request to Directus
+					console.log('Attempting direct token refresh with Directus');
 					const directusUrl = useRuntimeConfig().public.directusUrl;
 					const directResponse = await $fetch<DirectusRefreshResponse>(`${directusUrl}/auth/refresh`, {
 						method: 'POST',
 						body: {
-							refresh_token: token.refreshToken, // Using correct property name
+							refresh_token: token.refreshToken,
 							mode: 'json',
 						},
 						headers: {
 							'Content-Type': 'application/json',
 						},
+						// Add timeout and retry for resilience
+						timeout: 8000,
+						retry: 1,
 					});
 
 					if (directResponse?.data?.access_token) {
+						console.log('Direct token refresh successful');
 						token.directusToken = directResponse.data.access_token;
 						token.refreshToken = directResponse.data.refresh_token;
-						const expiresInMs = directResponse.data.expires ? directResponse.data.expires * 1000 : 900000; // 15 minutes in milliseconds
+						const expiresInMs = directResponse.data.expires
+							? directResponse.data.expires * 1000
+							: 7 * 24 * 60 * 60 * 1000; // Default to 7 days to match Directus config
 						token.accessTokenExpires = currentTime + expiresInMs;
 
 						return token;
@@ -145,13 +162,30 @@ export default NuxtAuthHandler({
 				} catch (error) {
 					console.error('Error refreshing token:', error);
 
-					// Check if it's a refresh token expiration error
-					if (
-						(error as any).status === 401 ||
-						(error as any).message?.includes('invalid') ||
-						(error as any).message?.includes('expired')
-					) {
-						// Refresh token has expired, need to force logout
+					// Enhanced error handling with better type checking
+					const errorObj = error as any;
+
+					// Check for explicit 401 status
+					const is401 = errorObj.status === 401 || errorObj.response?.status === 401;
+
+					// Check for error messages indicating token problems
+					const hasTokenErrorMsg =
+						typeof errorObj.message === 'string' &&
+						(errorObj.message.includes('invalid') ||
+							errorObj.message.includes('expired') ||
+							errorObj.message.includes('Invalid refresh token'));
+
+					// Check response data for Directus-specific errors
+					const directusErrorMsg = errorObj.response?.data?.errors?.[0]?.message;
+					const hasDirectusTokenError =
+						typeof directusErrorMsg === 'string' &&
+						(directusErrorMsg.includes('invalid') ||
+							directusErrorMsg.includes('expired') ||
+							directusErrorMsg.includes('refresh token'));
+
+					// If it's a token validity issue, force reauth
+					if (is401 || hasTokenErrorMsg || hasDirectusTokenError) {
+						console.log('Refresh token expired or invalid, forcing reauth');
 						return {
 							...token,
 							directusToken: undefined,
@@ -161,8 +195,24 @@ export default NuxtAuthHandler({
 						} as JWT;
 					}
 
-					// For other errors, we can try again later
-					return token; // Keep existing token to retry later
+					// For network errors, keep token but add a flag to retry sooner
+					if (
+						errorObj.name === 'FetchError' ||
+						errorObj.code === 'ECONNREFUSED' ||
+						errorObj.code === 'ETIMEDOUT' ||
+						errorObj.message?.includes('network')
+					) {
+						console.log('Network error during refresh, will retry soon');
+						return {
+							...token,
+							// Set a much shorter expiration to retry refresh sooner
+							accessTokenExpires: currentTime + 2 * 60 * 1000, // Try again in 2 minutes
+						};
+					}
+
+					// For other unexpected errors, keep existing token but log
+					console.log('Unexpected error during token refresh, will try again later');
+					return token;
 				}
 			}
 
@@ -228,6 +278,9 @@ export default NuxtAuthHandler({
 							headers: {
 								'Content-Type': 'application/json',
 							},
+							// Add timeout and retry for resilience
+							timeout: 10000, // 10 seconds
+							retry: 1,
 						});
 					} catch (loginError) {
 						console.error('Login request failed:', loginError);
@@ -250,6 +303,8 @@ export default NuxtAuthHandler({
 							query: {
 								fields: 'id,first_name,last_name,email,avatar,role,organizations.organizations_id.id',
 							},
+							// Add timeout for resilience
+							timeout: 8000,
 						});
 					} catch (userError) {
 						console.error('User data request failed:', userError);
