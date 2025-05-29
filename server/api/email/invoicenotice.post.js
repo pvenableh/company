@@ -189,17 +189,34 @@ export default defineEventHandler(async (event) => {
 				let allBillToEmails = [];
 				let allInvoiceEmails = [];
 
+				console.log('Processing invoices for emails:', invoices.length);
+
 				for (const invoice of invoices) {
+					console.log('Invoice email data:', {
+						invoiceId: invoice.id,
+						billToEmails: invoice.bill_to?.emails,
+						invoiceEmails: invoice.emails,
+					});
+
 					const billToEmails = getValidEmails(invoice.bill_to?.emails);
 					const invoiceEmails = getValidEmails(invoice.emails);
 
-					allBillToEmails.push(...billToEmails);
-					allInvoiceEmails.push(...invoiceEmails);
+					if (billToEmails.length > 0) {
+						allBillToEmails.push(...billToEmails);
+					}
+					if (invoiceEmails.length > 0) {
+						allInvoiceEmails.push(...invoiceEmails);
+					}
 				}
 
-				// Remove duplicates
-				allBillToEmails = [...new Set(allBillToEmails)];
-				allInvoiceEmails = [...new Set(allInvoiceEmails)];
+				// Remove duplicates safely
+				allBillToEmails = allBillToEmails.length > 0 ? [...new Set(allBillToEmails)] : [];
+				allInvoiceEmails = allInvoiceEmails.length > 0 ? [...new Set(allInvoiceEmails)] : [];
+
+				console.log('Collected emails:', {
+					allBillToEmails,
+					allInvoiceEmails,
+				});
 
 				// Determine primary email (bill_to.emails takes priority for primary)
 				if (allBillToEmails.length > 0) {
@@ -238,10 +255,21 @@ export default defineEventHandler(async (event) => {
 					],
 				};
 
-				// Add additional emails to CC
+				// Ensure CC array exists and add additional emails
+				if (!personalization.cc) {
+					personalization.cc = [];
+				}
+
 				if (additionalEmails.length > 0) {
 					personalization.cc.push(...additionalEmails.map((email) => ({ email })));
 				}
+
+				console.log('Email configuration:', {
+					primaryEmail,
+					additionalEmails,
+					ccCount: personalization.cc.length,
+					bccCount: personalization.bcc.length,
+				});
 
 				const message = {
 					personalizations: [personalization],
