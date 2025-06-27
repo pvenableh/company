@@ -1,4 +1,4 @@
-// composables/useNotifications.js
+// composables/useNotifications.js - Fixed version with loop prevention
 import { ref, computed, watchEffect } from 'vue';
 import { useRealtimeSubscription } from '~/composables/useRealtimeSubscription';
 
@@ -10,6 +10,48 @@ export function useNotifications() {
 		return status.value === 'authenticated' ? authData?.value?.user ?? null : null;
 	});
 	const toast = useToast();
+
+	// Singleton instance tracking to prevent multiple subscriptions
+	const INSTANCE_KEY = 'notifications_instance_active';
+	const LAST_REFRESH_KEY = 'notifications_last_refresh';
+
+	// Check if another instance is already running
+	const isInstanceActive = () => {
+		if (!import.meta.client) return false;
+		return sessionStorage.getItem(INSTANCE_KEY) === 'true';
+	};
+
+	// Mark instance as active
+	const markInstanceActive = () => {
+		if (import.meta.client) {
+			sessionStorage.setItem(INSTANCE_KEY, 'true');
+		}
+	};
+
+	// Mark instance as inactive
+	const markInstanceInactive = () => {
+		if (import.meta.client) {
+			sessionStorage.removeItem(INSTANCE_KEY);
+		}
+	};
+
+	// Throttle refresh calls
+	const canRefresh = () => {
+		if (!import.meta.client) return false;
+
+		const lastRefresh = sessionStorage.getItem(LAST_REFRESH_KEY);
+		if (lastRefresh) {
+			const timeSinceLastRefresh = Date.now() - parseInt(lastRefresh);
+			return timeSinceLastRefresh > 5000; // 5 second minimum between refreshes
+		}
+		return true;
+	};
+
+	const recordRefresh = () => {
+		if (import.meta.client) {
+			sessionStorage.setItem(LAST_REFRESH_KEY, Date.now().toString());
+		}
+	};
 
 	// Initialize data ref
 	const data = ref([]);
@@ -68,13 +110,41 @@ export function useNotifications() {
 		'item',
 	];
 
-	const {
-		data: realtimeData,
-		refresh,
-		isConnected,
-		error,
-		lastUpdated,
-	} = useRealtimeSubscription('directus_notifications', subscriptionFields, getNotificationFilter(), '-timestamp');
+	// Only create subscription if no other instance is active
+	let realtimeData = ref([]);
+	let refresh = () => {};
+	let isConnected = ref(false);
+	let error = ref(null);
+	let lastUpdated = ref(null);
+
+	// Initialize subscription only if we're the primary instance
+	if (!isInstanceActive() && user.value) {
+		console.log('🔔 Initializing notifications subscription (primary instance)');
+		markInstanceActive();
+
+		const subscription = useRealtimeSubscription(
+			'directus_notifications',
+			subscriptionFields,
+			getNotificationFilter(),
+			'-timestamp',
+		);
+
+		realtimeData = subscription.data;
+		refresh = () => {
+			if (canRefresh()) {
+				console.log('🔔 Refreshing notifications (throttled)');
+				recordRefresh();
+				subscription.refresh();
+			} else {
+				console.log('🔔 Refresh throttled, skipping');
+			}
+		};
+		isConnected = subscription.isConnected;
+		error = subscription.error;
+		lastUpdated = subscription.lastUpdated;
+	} else {
+		console.log('🔔 Notifications instance already active, using passive mode');
+	}
 
 	// Fetch archived notifications with pagination
 	const fetchArchivedNotifications = async (reset = false) => {
@@ -288,8 +358,11 @@ export function useNotifications() {
 			await updateNotification(notificationId, {
 				status: 'archived',
 			});
-			// Refresh the subscription after updating
-			refresh();
+			// Only refresh if we can (throttled)
+			if (canRefresh()) {
+				recordRefresh();
+				refresh();
+			}
 
 			// Reset archived notifications as they need to be reloaded
 			archivedNotifications.value = [];
@@ -316,8 +389,11 @@ export function useNotifications() {
 
 			await Promise.all(updatePromises);
 
-			// Refresh to update the UI
-			refresh();
+			// Only refresh if we can (throttled)
+			if (canRefresh()) {
+				recordRefresh();
+				refresh();
+			}
 
 			// Reset archived notifications cache as it's now outdated
 			archivedNotifications.value = [];
@@ -344,8 +420,11 @@ export function useNotifications() {
 				sender: sender || user.value?.id,
 				status: 'inbox',
 			});
-			// Refresh the subscription after creating new notification
-			refresh();
+			// Only refresh if we can (throttled)
+			if (canRefresh()) {
+				recordRefresh();
+				refresh();
+			}
 		} catch (error) {
 			throw error;
 		}
@@ -378,7 +457,11 @@ export function useNotifications() {
 			);
 
 			const results = await Promise.all(createPromises);
-			refresh();
+			// Only refresh if we can (throttled)
+			if (canRefresh()) {
+				recordRefresh();
+				refresh();
+			}
 			return results;
 		} catch (error) {
 			console.error('Failed to send notifications:', error);
@@ -411,9 +494,13 @@ export function useNotifications() {
 			if (import.meta.client) {
 				loadPreferences();
 			}
-			// Refresh the subscription when user changes
-			refresh();
 		}
+	});
+
+	// Cleanup when component unmounts
+	onUnmounted(() => {
+		console.log('🔔 Notifications composable unmounting, marking instance inactive');
+		markInstanceInactive();
 	});
 
 	return {
