@@ -6,7 +6,28 @@ export default defineNuxtPlugin(async () => {
 	// Only run on client side
 	if (import.meta.server) return;
 
+	// Prevent multiple runs and reload loops
+	const RECOVERY_SESSION_KEY = 'auth_recovery_running';
+	const LAST_RECOVERY_KEY = 'auth_last_recovery';
+
+	// Check if recovery already ran recently (within last 10 seconds)
+	const lastRecovery = sessionStorage.getItem(LAST_RECOVERY_KEY);
+	if (lastRecovery && Date.now() - parseInt(lastRecovery) < 10000) {
+		console.log('[Auth Recovery] Recently ran, skipping to prevent loops');
+		return;
+	}
+
+	// Check if recovery is already running
+	if (sessionStorage.getItem(RECOVERY_SESSION_KEY)) {
+		console.log('[Auth Recovery] Already running, skipping duplicate');
+		return;
+	}
+
 	console.log('[Auth Recovery] Starting auth state validation...');
+
+	// Mark recovery as running
+	sessionStorage.setItem(RECOVERY_SESSION_KEY, 'true');
+	sessionStorage.setItem(LAST_RECOVERY_KEY, Date.now().toString());
 
 	// Function to clear all auth-related storage
 	const clearAllAuthData = () => {
@@ -103,40 +124,44 @@ export default defineNuxtPlugin(async () => {
 		}
 	};
 
+	// Cleanup function
+	const cleanup = () => {
+		sessionStorage.removeItem(RECOVERY_SESSION_KEY);
+	};
+
 	// Main recovery logic
 	const performAuthRecovery = async () => {
-		// Only proceed if we think we're authenticated
-		if (status.value !== 'authenticated') {
-			console.log('[Auth Recovery] Not authenticated, skipping recovery');
-			return;
-		}
-
-		console.log('[Auth Recovery] Current auth status: authenticated, validating...');
-
-		// Step 1: Validate current token
-		const isTokenValid = await validateCurrentToken();
-
-		if (isTokenValid) {
-			console.log('[Auth Recovery] Token is valid, no recovery needed');
-			return;
-		}
-
-		console.log('[Auth Recovery] Token invalid, attempting refresh...');
-
-		// Step 2: Try to refresh the token
-		const refreshSuccessful = await attemptTokenRefresh();
-
-		if (refreshSuccessful) {
-			console.log('[Auth Recovery] Token refresh successful, reloading page...');
-			// Reload to ensure clean state with new tokens
-			window.location.reload();
-			return;
-		}
-
-		// Step 3: If refresh failed, force logout
-		console.log('[Auth Recovery] Token refresh failed, forcing logout...');
-
 		try {
+			// Only proceed if we think we're authenticated
+			if (status.value !== 'authenticated') {
+				console.log('[Auth Recovery] Not authenticated, skipping recovery');
+				return;
+			}
+
+			console.log('[Auth Recovery] Current auth status: authenticated, validating...');
+
+			// Step 1: Validate current token
+			const isTokenValid = await validateCurrentToken();
+
+			if (isTokenValid) {
+				console.log('[Auth Recovery] Token is valid, no recovery needed');
+				return;
+			}
+
+			console.log('[Auth Recovery] Token invalid, attempting refresh...');
+
+			// Step 2: Try to refresh the token
+			const refreshSuccessful = await attemptTokenRefresh();
+
+			if (refreshSuccessful) {
+				console.log('[Auth Recovery] Token refresh successful - auth should work now');
+				// DON'T reload the page - just let the components use the new token
+				return;
+			}
+
+			// Step 3: If refresh failed, force logout
+			console.log('[Auth Recovery] Token refresh failed, forcing logout...');
+
 			// Clear all auth data first
 			clearAllAuthData();
 
@@ -149,36 +174,40 @@ export default defineNuxtPlugin(async () => {
 			// Force navigation to signin
 			await router.push('/auth/signin');
 		} catch (error) {
-			console.error('[Auth Recovery] Error during forced logout:', error);
-			// As last resort, clear everything and redirect
+			console.error('[Auth Recovery] Recovery process failed:', error);
+			// Emergency cleanup
 			clearAllAuthData();
 			window.location.href = '/auth/signin';
+		} finally {
+			cleanup();
 		}
 	};
 
 	// Run recovery with delay to ensure all composables are ready
 	setTimeout(async () => {
-		try {
-			await performAuthRecovery();
-		} catch (error) {
-			console.error('[Auth Recovery] Recovery process failed:', error);
-			// Emergency cleanup
-			clearAllAuthData();
-			window.location.href = '/auth/signin';
-		}
+		await performAuthRecovery();
 	}, 1000);
 
-	// Also set up a periodic check
+	// Set up a periodic check (but less frequent and with guards)
 	setInterval(
 		async () => {
-			if (status.value === 'authenticated') {
+			// Only run periodic check if:
+			// 1. User is authenticated
+			// 2. Recovery isn't already running
+			// 3. Haven't run recently
+			const lastRecovery = sessionStorage.getItem(LAST_RECOVERY_KEY);
+			const recentlyRan = lastRecovery && Date.now() - parseInt(lastRecovery) < 30000; // 30 seconds
+
+			if (status.value === 'authenticated' && !sessionStorage.getItem(RECOVERY_SESSION_KEY) && !recentlyRan) {
 				const isValid = await validateCurrentToken();
 				if (!isValid) {
 					console.log('[Auth Recovery] Periodic check failed, triggering recovery...');
+					sessionStorage.setItem(RECOVERY_SESSION_KEY, 'true');
+					sessionStorage.setItem(LAST_RECOVERY_KEY, Date.now().toString());
 					await performAuthRecovery();
 				}
 			}
 		},
-		5 * 60 * 1000,
-	); // Check every 5 minutes
+		2 * 60 * 1000,
+	); // Check every 2 minutes (less frequent)
 });
