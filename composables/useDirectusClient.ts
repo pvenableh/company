@@ -11,44 +11,47 @@ export function useDirectusClient() {
 		data: session,
 		status,
 		getSession,
+		signOut,
 	} = useAuth() as {
 		data: Ref<ExtendedSession | null>;
 		status: Ref<string>;
 		getSession: () => Promise<ExtendedSession | null>;
+		signOut: (options?: any) => Promise<void>;
 	};
+
 	const config = useRuntimeConfig();
 	const isInitializing = ref(true);
 	const refreshInProgress = ref(false);
 	const lastRefreshTime = ref<number | null>(null);
+	const forceLogoutTriggered = ref(false);
 
 	// Create Directus client with auth token from session
 	const client = computed(() => {
 		const directusUrl = config.public.directusUrl;
-		// Use json mode explicitly for authentication
 		const directusClient = createDirectus<any>(directusUrl).with(authentication('json')).with(rest()).with(realtime());
 
-		// First check session token, then localStorage as fallback
-		if (session.value?.directusToken) {
-			directusClient.setToken(session.value.directusToken);
+		// Get token from session or localStorage
+		let token = session.value?.directusToken;
 
-			// Also ensure it's in localStorage for realtime
+		if (!token && import.meta.client) {
+			try {
+				token = localStorage.getItem('auth_token') ?? localStorage.getItem('directus_session_token') ?? undefined;
+			} catch (error) {
+				console.warn('Could not retrieve token from localStorage:', error);
+			}
+		}
+
+		if (token) {
+			directusClient.setToken(token);
+
+			// Sync to localStorage
 			if (import.meta.client) {
 				try {
-					localStorage.setItem('auth_token', session.value.directusToken);
-					localStorage.setItem('directus_session_token', session.value.directusToken);
+					localStorage.setItem('auth_token', token);
+					localStorage.setItem('directus_session_token', token);
 				} catch (e) {
 					console.warn('Failed to store token in localStorage:', e);
 				}
-			}
-		} else if (import.meta.client) {
-			// Try to get token from localStorage as fallback
-			try {
-				const storedToken = localStorage.getItem('auth_token') || localStorage.getItem('directus_session_token');
-				if (storedToken) {
-					directusClient.setToken(storedToken);
-				}
-			} catch (error) {
-				console.warn('Could not retrieve token from localStorage:', error);
 			}
 		}
 
@@ -57,10 +60,47 @@ export function useDirectusClient() {
 
 	// Helper to check if client is authenticated and ready
 	const isAuthenticated = computed(() => {
-		return !!session.value?.directusToken || (import.meta.client && !!localStorage.getItem('auth_token'));
+		return (
+			!!session.value?.directusToken || (import.meta.client && !!(localStorage.getItem('auth_token') ?? undefined))
+		);
 	});
 
-	// Refresh the session
+	// Force logout - clears everything and redirects
+	const forceLogout = async (reason = 'Authentication failed') => {
+		if (forceLogoutTriggered.value) {
+			console.log('Force logout already triggered, skipping');
+			return;
+		}
+
+		forceLogoutTriggered.value = true;
+		console.log(`Force logout triggered: ${reason}`);
+
+		// Clear localStorage
+		if (import.meta.client) {
+			try {
+				const authKeys = ['auth_token', 'auth_refresh_token', 'directus_session_token'];
+				authKeys.forEach((key) => localStorage.removeItem(key));
+			} catch (error) {
+				console.warn('Error cleaning up localStorage:', error);
+			}
+		}
+
+		try {
+			await signOut({
+				callbackUrl: '/auth/signin',
+				redirect: false,
+			});
+		} catch (error) {
+			console.warn('Error during signOut:', error);
+		}
+
+		// Force navigation
+		if (import.meta.client) {
+			window.location.href = '/auth/signin';
+		}
+	};
+
+	// Enhanced session refresh with better error handling
 	const refreshSession = async () => {
 		// Prevent concurrent refreshes
 		if (refreshInProgress.value) {
@@ -68,15 +108,24 @@ export function useDirectusClient() {
 			return null;
 		}
 
+		// Prevent refresh loops - don't refresh more than once per minute
+		if (lastRefreshTime.value && Date.now() - lastRefreshTime.value < 60000) {
+			console.log('Recent refresh attempt, skipping to prevent loops');
+			return null;
+		}
+
 		refreshInProgress.value = true;
+		lastRefreshTime.value = Date.now();
 
 		try {
 			console.log('Refreshing session...');
+
 			const result = await getSession();
-			lastRefreshTime.value = Date.now();
 
 			if (result?.directusToken) {
-				// Update the token in localStorage
+				console.log('Session refresh successful');
+
+				// Update localStorage
 				if (import.meta.client) {
 					try {
 						localStorage.setItem('auth_token', result.directusToken);
@@ -87,93 +136,114 @@ export function useDirectusClient() {
 
 				// Ensure the client gets the new token
 				client.value.setToken(result.directusToken);
+				return result;
+			} else {
+				console.log('Session refresh returned no token');
+				return null;
+			}
+		} catch (error) {
+			console.error('Session refresh failed:', error);
+
+			// Check if it's an auth-related error
+			const err = error as any;
+			if (err.status === 401 || err.message?.includes('invalid') || err.message?.includes('expired')) {
+				console.log('Refresh failed due to invalid credentials, forcing logout');
+				await forceLogout('Token refresh failed');
 			}
 
-			return result;
-		} catch (error) {
-			console.error('Failed to refresh session:', error);
 			return null;
 		} finally {
 			refreshInProgress.value = false;
 		}
 	};
 
-	// Method to make authenticated requests with automatic refresh on 401
-	interface AuthRequestFn {
-		(client: ReturnType<typeof createDirectus>): Promise<any>;
-	}
+	// Enhanced auth request method with circuit breaker pattern
+	const authRequest = async (requestFn: (client: ReturnType<typeof createDirectus>) => Promise<any>): Promise<any> => {
+		// If force logout was triggered, don't attempt requests
+		if (forceLogoutTriggered.value) {
+			throw new Error('Authentication session terminated');
+		}
 
-	interface AuthRequestError extends Error {
-		status?: number;
-		errors?: { extensions?: { code?: string } }[];
-		message: string;
-	}
+		let attempt = 0;
+		const maxAttempts = 2;
 
-	const authRequest = async (requestFn: AuthRequestFn): Promise<any> => {
-		try {
-			// First attempt with current token
-			return await requestFn(client.value);
-		} catch (error: unknown) {
-			const authError = error as AuthRequestError;
+		while (attempt < maxAttempts) {
+			attempt++;
 
-			// If unauthorized (401), try to refresh the token and retry
-			if (
-				authError.status === 401 ||
-				(authError.errors && authError.errors.some((e) => e.extensions?.code === 'INVALID_CREDENTIALS')) ||
-				authError.message?.includes('invalid token')
-			) {
-				console.log('Got 401 error, attempting to refresh token...');
+			try {
+				console.log(`Auth request attempt ${attempt}/${maxAttempts}`);
+				return await requestFn(client.value);
+			} catch (error: unknown) {
+				const authError = error as any;
 
-				// Check if there's an error in the session (this will be set by the auth handler)
-				if (session.value?.error) {
-					console.log('Session has error:', session.value.error);
-					// Force sign out
-					const { signOut } = useAuth();
-					await signOut({ callbackUrl: '/auth/signin' });
-					return;
-				}
+				// Log the error for debugging
+				console.log('Auth request failed:', {
+					attempt,
+					status: authError.status,
+					message: authError.message,
+					errors: authError.errors,
+				});
 
-				// Try to refresh the session
-				const refreshed = await refreshSession();
+				// Check for 401 or auth-related errors
+				const isAuthError =
+					authError.status === 401 ||
+					(authError.errors &&
+						authError.errors.some(
+							(e: any) => e.extensions?.code === 'INVALID_CREDENTIALS' || e.extensions?.code === 'FORBIDDEN',
+						)) ||
+					authError.message?.includes('invalid token') ||
+					authError.message?.includes('unauthorized');
 
-				if (refreshed) {
-					console.log('Token refreshed, retrying request');
-					// Retry with the new token
-					return await requestFn(client.value);
+				if (isAuthError) {
+					console.log(`Auth error detected on attempt ${attempt}`);
+
+					// On first attempt, try to refresh
+					if (attempt === 1) {
+						console.log('Attempting token refresh before retry...');
+
+						const refreshed = await refreshSession();
+
+						if (refreshed?.directusToken) {
+							console.log('Token refreshed, retrying request');
+							continue; // Retry the request
+						} else {
+							console.log('Token refresh failed, forcing logout');
+							await forceLogout('Failed to refresh expired token');
+							throw new Error('Authentication failed - please log in again');
+						}
+					} else {
+						// Second attempt also failed, force logout
+						console.log('Second auth attempt failed, forcing logout');
+						await forceLogout('Multiple authentication failures');
+						throw new Error('Authentication failed - please log in again');
+					}
 				} else {
-					console.error('Token refresh failed, request cannot be completed');
-					// Force sign out
-					const { signOut } = useAuth();
-					await signOut({ callbackUrl: '/auth/signin' });
+					// Non-auth error, don't retry
 					throw authError;
 				}
 			}
-
-			// For other errors, just pass them through
-			throw authError;
 		}
+
+		// Should never reach here, but just in case
+		throw new Error('Authentication request failed after all attempts');
 	};
 
-	// Explicitly trigger SDK client refresh
-	const refreshToken = async () => {
-		return refreshSession();
-	};
-
-	// Initialize and check token validity
+	// Initialize client and validate token
 	const initializeClient = async () => {
 		if (status.value === 'authenticated' && session.value?.directusToken) {
-			// Check if the token is still valid by making a simple request
 			try {
+				// Quick validation - try to read current user
 				await authRequest(async (client) => {
-					// Type assertion to handle the TypeScript error
-					return (client as any).request(readMe());
+					return (client as any).request(readMe({ fields: ['id'] }));
 				});
+
+				console.log('Token validation successful');
 			} catch (error) {
-				console.error('Token validation failed:', error);
-				// Token is invalid, force refresh
-				await refreshSession();
+				console.error('Token validation failed during initialization:', error);
+				// Let the auth recovery plugin handle this
 			}
 		}
+
 		isInitializing.value = false;
 	};
 
@@ -183,28 +253,30 @@ export function useDirectusClient() {
 		async (newStatus) => {
 			if (newStatus === 'authenticated' && !isInitializing.value) {
 				await initializeClient();
+			} else if (newStatus === 'unauthenticated') {
+				// Reset force logout flag when user is properly unauthenticated
+				forceLogoutTriggered.value = false;
 			}
 		},
 		{ immediate: true },
 	);
 
+	// Client-side initialization
 	if (import.meta.client) {
-		// For component context, use lifecycle hook
 		if (getCurrentInstance()) {
 			onMounted(async () => {
 				await initializeClient();
 			});
 		} else {
-			// For non-component context (plugins, etc), just run initialization directly
 			nextTick(async () => {
 				await initializeClient();
 			});
 		}
 
-		// Keep the safety timeout to prevent infinite loading
+		// Safety timeout to prevent infinite loading
 		setTimeout(() => {
 			isInitializing.value = false;
-		}, 2000);
+		}, 3000);
 	}
 
 	return {
@@ -214,7 +286,7 @@ export function useDirectusClient() {
 		refreshInProgress: readonly(refreshInProgress),
 		lastRefreshTime: readonly(lastRefreshTime),
 		refreshSession,
-		refreshToken,
 		authRequest,
+		forceLogout,
 	};
 }

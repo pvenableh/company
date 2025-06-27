@@ -13,7 +13,8 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 	const reconnectAttempts = ref(0);
 	const reconnectTimer = ref(null);
 	const maxReconnectAttempts = 5;
-	const subscriptionId = ref(null); // Track the current subscription ID
+	const subscriptionId = ref(null);
+	const authCheckTimer = ref(null);
 
 	// Skip in SSR context
 	if (process.server) {
@@ -32,6 +33,46 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 	}
 
 	const config = useRuntimeConfig();
+	const { status } = useAuth();
+
+	// ===== Enhanced Authentication Checking =====
+
+	// Check if we have valid auth before attempting connection
+	const hasValidAuth = () => {
+		// Must be authenticated according to auth status
+		if (status.value !== 'authenticated') {
+			console.log('[WebSocket] Not authenticated, skipping connection');
+			return false;
+		}
+
+		// Check for available tokens
+		let hasToken = false;
+
+		if (import.meta.client) {
+			const { data: authData } = useAuth();
+
+			// Check for session error
+			if (authData.value?.error) {
+				console.log('[WebSocket] Auth session has error, skipping connection');
+				return false;
+			}
+
+			// Check for valid tokens
+			const sessionToken = authData.value?.directusToken;
+			const localToken =
+				localStorage.getItem('auth_token') ?? localStorage.getItem('directus_session_token') ?? undefined;
+			const staticToken = config.public.staticToken;
+
+			hasToken = !!(sessionToken || localToken || staticToken);
+		}
+
+		if (!hasToken) {
+			console.log('[WebSocket] No authentication tokens available');
+			return false;
+		}
+
+		return true;
+	};
 
 	// ===== Core Functions =====
 
@@ -44,8 +85,18 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 
 	// Connect to WebSocket server
 	const connect = () => {
+		// Don't connect if we don't have valid auth
+		if (!hasValidAuth()) {
+			console.log('[WebSocket] Skipping connection due to invalid auth state');
+			isLoading.value = false;
+			return;
+		}
+
 		// Prevent multiple connections
-		if (connection.value && connection.value.readyState < 2) return;
+		if (connection.value && connection.value.readyState < 2) {
+			console.log('[WebSocket] Connection already exists');
+			return;
+		}
 
 		try {
 			console.log(`[WebSocket] Connecting to ${config.public.websocketUrl}`);
@@ -64,34 +115,55 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 			connection.value.addEventListener('close', (event) => {
 				console.log(`[WebSocket] Connection closed (${event.code}: ${event.reason})`);
 				isConnected.value = false;
-				if (!event.wasClean) scheduleTryReconnect();
+
+				// Only attempt reconnect if we still have valid auth
+				if (!event.wasClean && hasValidAuth()) {
+					scheduleTryReconnect();
+				} else {
+					console.log('[WebSocket] Not reconnecting due to invalid auth or clean close');
+					isLoading.value = false;
+				}
 			});
 
 			connection.value.addEventListener('error', (event) => {
 				console.error('[WebSocket] Connection error:', event);
 				error.value = new Error('WebSocket connection error');
 				isConnected.value = false;
-				scheduleTryReconnect();
+
+				// Only attempt reconnect if we have valid auth
+				if (hasValidAuth()) {
+					scheduleTryReconnect();
+				} else {
+					console.log('[WebSocket] Not reconnecting due to invalid auth');
+					isLoading.value = false;
+				}
 			});
 		} catch (err) {
 			console.error('[WebSocket] Failed to create connection:', err);
 			error.value = err;
-			scheduleTryReconnect();
+			isLoading.value = false;
 		}
 	};
 
 	// Disconnect from WebSocket server
 	const disconnect = () => {
+		console.log('[WebSocket] Disconnecting...');
+
 		// Clear any reconnection timer
 		if (reconnectTimer.value) {
 			clearTimeout(reconnectTimer.value);
 			reconnectTimer.value = null;
 		}
 
+		// Clear auth check timer
+		if (authCheckTimer.value) {
+			clearInterval(authCheckTimer.value);
+			authCheckTimer.value = null;
+		}
+
 		// Close connection if it exists
 		if (connection.value) {
 			try {
-				// Only close if not already closed
 				if (connection.value.readyState < 2) {
 					connection.value.close(1000, 'Intentional disconnect');
 				}
@@ -102,7 +174,7 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 		}
 
 		isConnected.value = false;
-		subscriptionId.value = null; // Clear the subscription ID
+		subscriptionId.value = null;
 	};
 
 	// Schedule reconnection with exponential backoff
@@ -121,6 +193,13 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 			return;
 		}
 
+		// Don't reconnect if auth is invalid
+		if (!hasValidAuth()) {
+			console.log('[WebSocket] Skipping reconnect due to invalid auth');
+			isLoading.value = false;
+			return;
+		}
+
 		// Calculate backoff delay: 1s, 2s, 4s, 8s, 16s
 		const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.value), 16000);
 		console.log(`[WebSocket] Scheduling reconnect in ${delay}ms (attempt ${reconnectAttempts.value + 1})`);
@@ -132,15 +211,26 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 		}, delay);
 	};
 
-	// Authenticate with the server
+	// Enhanced authenticate function
 	const authenticate = () => {
-		if (!connection.value || connection.value.readyState !== 1) return;
+		if (!connection.value || connection.value.readyState !== 1) {
+			console.log('[WebSocket] Cannot authenticate - connection not ready');
+			return;
+		}
+
+		if (!hasValidAuth()) {
+			console.log('[WebSocket] Cannot authenticate - invalid auth state');
+			error.value = new Error('Authentication failed - invalid auth state');
+			isLoading.value = false;
+			return;
+		}
 
 		let token = null;
 
 		if (import.meta.client) {
-			// Check for session error which might indicate expired token
 			const { data: authData } = useAuth();
+
+			// Check for session error
 			if (authData.value?.error) {
 				console.error('[WebSocket] Auth error detected, cannot authenticate');
 				error.value = new Error('Authentication failed - session error');
@@ -150,19 +240,15 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 
 			// Try to get token from multiple sources
 			token =
-				localStorage.getItem('auth_token') ||
-				localStorage.getItem('directus_session_token') ||
-				authData.value?.directusToken;
+				(authData.value?.directusToken || localStorage.getItem('auth_token')) ??
+				localStorage.getItem('directus_session_token') ??
+				config.public.staticToken;
 
-			// If no token found, use static token as fallback
-			if (!token || token.length < 20) {
+			if (token && token.length < 20) {
+				console.log('[WebSocket] Token seems too short, using static token');
 				token = config.public.staticToken;
-				console.log('[WebSocket] Using static token (user token not found)');
-			} else {
-				console.log('[WebSocket] Using user access token');
 			}
 		} else {
-			// Server-side, use static token
 			token = config.public.staticToken;
 		}
 
@@ -172,6 +258,8 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 			isLoading.value = false;
 			return;
 		}
+
+		console.log('[WebSocket] Authenticating with token...');
 
 		connection.value.send(
 			JSON.stringify({
@@ -183,7 +271,10 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 
 	// Subscribe to collection
 	const subscribe = () => {
-		if (!connection.value || connection.value.readyState !== 1) return;
+		if (!connection.value || connection.value.readyState !== 1) {
+			console.log('[WebSocket] Cannot subscribe - connection not ready');
+			return;
+		}
 
 		// If we have a previous subscription, unsubscribe first
 		if (subscriptionId.value) {
@@ -199,12 +290,14 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 		// Generate a unique subscription ID
 		const uid = Math.random().toString(36).substring(2, 15);
 
+		console.log('[WebSocket] Subscribing to collection:', collection);
+
 		connection.value.send(
 			JSON.stringify({
 				type: 'subscribe',
 				collection,
 				query: getQuery(),
-				uid, // Add a unique ID for the subscription
+				uid,
 			}),
 		);
 	};
@@ -243,16 +336,17 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 	// Handle authentication response
 	const handleAuthResponse = (message) => {
 		if (message.status === 'ok') {
+			console.log('[WebSocket] Authentication successful');
 			subscribe();
 		} else {
 			console.error('[WebSocket] Authentication failed:', message.reason || 'Unknown reason');
 			error.value = new Error(`Authentication failed: ${message.reason || 'Unknown reason'}`);
 			isLoading.value = false;
 
-			// If auth failed due to invalid token, trigger auth refresh
+			// If auth failed due to invalid token, don't retry
 			if (message.reason?.includes('invalid') || message.reason?.includes('expired')) {
-				const { refreshSession } = useEnhancedAuth();
-				refreshSession();
+				console.log('[WebSocket] Token invalid, not retrying');
+				disconnect();
 			}
 		}
 	};
@@ -260,8 +354,10 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 	// Handle subscribe response
 	const handleSubscribeResponse = (message) => {
 		if (message.status === 'ok') {
+			console.log('[WebSocket] Subscription successful');
 			subscriptionId.value = message.subscription;
 		} else {
+			console.error('[WebSocket] Subscription failed:', message.reason || 'Unknown reason');
 			error.value = new Error(`Subscription failed: ${message.reason || 'Unknown reason'}`);
 			isLoading.value = false;
 		}
@@ -271,7 +367,7 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 	const handleSubscriptionData = (message) => {
 		switch (message.event) {
 			case 'init':
-				// Initial data load - only replace if we don't have initialData or data is empty
+				// Initial data load
 				if (!initialData || data.value.length === 0) {
 					data.value = message.data || [];
 				}
@@ -279,14 +375,12 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 				break;
 
 			case 'create':
-				// New item created
 				if (message.data && message.data[0]) {
 					data.value = [...data.value, message.data[0]];
 				}
 				break;
 
 			case 'update':
-				// Item updated
 				if (message.data && message.data[0]) {
 					const id = message.data[0].id;
 					data.value = data.value.map((item) => (item.id === id ? message.data[0] : item));
@@ -294,7 +388,6 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 				break;
 
 			case 'delete':
-				// Item(s) deleted
 				if (message.data && Array.isArray(message.data)) {
 					data.value = data.value.filter((item) => !message.data.includes(item.id));
 				}
@@ -307,7 +400,6 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 	// Handle ping messages
 	const handlePing = () => {
 		if (!connection.value || connection.value.readyState !== 1) return;
-
 		connection.value.send(JSON.stringify({ type: 'pong' }));
 	};
 
@@ -315,6 +407,15 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 
 	// Refresh the subscription
 	const refresh = () => {
+		console.log('[WebSocket] Refreshing subscription...');
+
+		// Check auth before refreshing
+		if (!hasValidAuth()) {
+			console.log('[WebSocket] Cannot refresh - invalid auth state');
+			isLoading.value = false;
+			return;
+		}
+
 		isLoading.value = true;
 
 		if (!connection.value || connection.value.readyState !== 1) {
@@ -329,9 +430,10 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 		// Failsafe for stuck loading state
 		setTimeout(() => {
 			if (isLoading.value) {
+				console.log('[WebSocket] Refresh timeout, ending loading state');
 				isLoading.value = false;
 			}
-		}, 5000);
+		}, 8000);
 	};
 
 	// Update the filter and refresh subscription
@@ -340,7 +442,16 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 			return; // No change in filter
 		}
 
+		console.log('[WebSocket] Updating filter');
 		currentFilter.value = newFilter;
+
+		// Check auth before updating
+		if (!hasValidAuth()) {
+			console.log('[WebSocket] Cannot update filter - invalid auth state');
+			isLoading.value = false;
+			return;
+		}
+
 		isLoading.value = true;
 
 		// If connected, resubscribe with new filter
@@ -352,12 +463,48 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 		}
 	};
 
-	// Set new data manually (useful when you fetch data from another source)
+	// Set new data manually
 	const setData = (newData) => {
 		data.value = newData;
 		isLoading.value = false;
 		lastUpdated.value = new Date();
 	};
+
+	// ===== Lifecycle Management =====
+
+	// Watch for auth status changes
+	watch(
+		() => status.value,
+		(newStatus, oldStatus) => {
+			console.log(`[WebSocket] Auth status changed: ${oldStatus} -> ${newStatus}`);
+
+			if (newStatus === 'unauthenticated') {
+				// User logged out, disconnect immediately
+				disconnect();
+				data.value = [];
+				isLoading.value = false;
+			} else if (newStatus === 'authenticated' && oldStatus === 'unauthenticated') {
+				// User logged in, connect if we have a subscription
+				if (collection) {
+					setTimeout(() => {
+						if (hasValidAuth()) {
+							connect();
+						}
+					}, 1000); // Small delay to ensure auth state is stable
+				}
+			}
+		},
+	);
+
+	// Set up periodic auth check
+	if (import.meta.client) {
+		authCheckTimer.value = setInterval(() => {
+			if (isConnected.value && !hasValidAuth()) {
+				console.log('[WebSocket] Periodic auth check failed, disconnecting');
+				disconnect();
+			}
+		}, 30000); // Check every 30 seconds
+	}
 
 	// Return the public API
 	return {
@@ -366,11 +513,11 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 		isConnected,
 		error,
 		lastUpdated,
-		connect, // Component will call this in onMounted
+		connect,
 		disconnect,
 		refresh,
 		updateFilter,
-		setData, // New method to manually set data
+		setData,
 		currentFilter: readonly(currentFilter),
 	};
 }
