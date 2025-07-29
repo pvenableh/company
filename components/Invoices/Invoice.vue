@@ -44,7 +44,7 @@ const formatNumber = (value) => {
 				<div
 					v-for="(item, index) in invoice.line_items"
 					:key="index"
-					class="lg:pl-3 my-1 flex flex-col items-start justify-between pb-12"
+					class="lg:pl-3 my-1 flex flex-col items-start justify-between pb-12 line-item"
 				>
 					<div class="w-full flex flex-col md:flex-row items-start justify-between">
 						<p class="uppercase text-[12px] font-bold">{{ item.product.name }}</p>
@@ -61,7 +61,11 @@ const formatNumber = (value) => {
 					</div>
 					<div v-if="item.description" class="mt-2">
 						<h5 class="uppercase text-[8px] opacity-25">Description:</h5>
-						<div v-if="item.description" class="text-[12px] max-w-64" v-html="item.description"></div>
+						<div
+							v-if="item.description"
+							class="text-[12px] max-w-md line-item__description"
+							v-html="item.description"
+						></div>
 					</div>
 				</div>
 				<div class="lg:ml-3 flex flex-row items-center justify-between pt-6">
@@ -84,6 +88,16 @@ const formatNumber = (value) => {
 		padding-left: 0px;
 		margin: 2px 0px;
 		line-height: 12px;
+	}
+	.line-item {
+		&__description {
+			p {
+				@apply mb-2;
+			}
+			p:last-child {
+				@apply mb-0;
+			}
+		}
 	}
 }
 </style>
