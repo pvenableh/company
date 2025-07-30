@@ -13,9 +13,9 @@ const emailSchema = yup.object({
 });
 
 // Remove auth middleware
-definePageMeta({
-	// middleware: ['auth'], // Removed
-});
+// definePageMeta({
+// 	 middleware: ['auth'], // Removed
+// });
 
 const invoice = await readItem('invoices', params.id, {
 	fields: [
@@ -63,7 +63,7 @@ const handleAnonymousSubmit = async (formData) => {
 			Invoice
 			<span class="block">Payment</span>
 		</h1>
-		<div class="w-full max-w-screen-xl mx-auto z-10">
+		<div v-if="user" class="w-full max-w-screen-xl mx-auto z-10">
 			<nuxt-link to="/invoices" class="uppercase text-[10px] text-gray-400 px-4 2xl:px-0">
 				<UIcon name="i-heroicons-arrow-left" class="-mb-0.5" />
 				Back to Invoices
