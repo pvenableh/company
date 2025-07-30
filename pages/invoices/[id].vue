@@ -29,7 +29,7 @@ const showAnonymousForm = computed(() => {
 });
 
 const defaultEmail = computed(() => {
-	return invoice.bill_to.emails?.[0] || '';
+	return invoice.bill_to?.emails?.[0] || '';
 });
 
 // const handleAnonymousSubmit = async (formData) => {
