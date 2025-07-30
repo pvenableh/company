@@ -20,7 +20,9 @@ const formatNumber = (value) => {
 					<span class="opacity-30">Invoice #:</span>
 					{{ invoice.invoice_code }}
 				</h1>
-				<InvoicesPdfGenerator :invoice="invoice" />
+				<ClientOnly>
+					<InvoicesPdfGenerator :invoice="invoice" />
+				</ClientOnly>
 			</div>
 			<h5 class="font-bold uppercase text-xs">
 				<span class="opacity-30">Due date:</span>
