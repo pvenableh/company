@@ -171,6 +171,13 @@ export default defineEventHandler(async (event) => {
 					totalAmount: formatAmount(totalAmount),
 				});
 
+				console.log('Invoice overdue check:', {
+				  due_date_raw: invoice.due_date,
+				  overdue: formattedInvoices[0].overdue,
+				  days_overdue: formattedInvoices[0].days_overdue,
+				});
+				console.log('dynamicTemplateData:', JSON.stringify(message.dynamicTemplateData, null, 2));
+
 				const response = await sgMail.send(message);
 
 				logger.info('Invoice email sent successfully', {
