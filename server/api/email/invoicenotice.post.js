@@ -172,7 +172,7 @@ export default defineEventHandler(async (event) => {
 				});
 
 				console.log('Invoice overdue check:', {
-				  due_date_raw: invoice.due_date,
+				  due_date_raw: invoices[0].due_date,  // Changed from invoice.due_date
 				  overdue: formattedInvoices[0].overdue,
 				  days_overdue: formattedInvoices[0].days_overdue,
 				});
