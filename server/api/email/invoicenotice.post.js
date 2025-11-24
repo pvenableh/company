@@ -45,6 +45,16 @@ export default defineEventHandler(async (event) => {
 			}
 			return amount;
 		};
+		
+		// Check overdue status
+		const isOverdue = (dueDate) => {
+		  const due = new Date(dueDate);
+		  const today = new Date();
+		  // Compare dates at start of day for accuracy
+		  today.setHours(0, 0, 0, 0);
+		  due.setHours(0, 0, 0, 0);
+		  return due < today;
+		};
 
 		// Format dates
 		const formatDate = (date) => {
@@ -78,6 +88,7 @@ export default defineEventHandler(async (event) => {
 				due_date: formatDate(invoice.due_date),
 				status: invoice.status,
 				total_amount: formatAmount(invoice.total_amount),
+				overdue: isOverdue(invoice.due_date),
 				line_items: invoice.line_items.map((item) => ({
 					product_name: item.product.name,
 					description: item.description,
@@ -100,8 +111,7 @@ export default defineEventHandler(async (event) => {
 
 			const personalization = {
 				to: [{ email: primaryEmail || organization.email }], // Fallback to organization.email if no emails array
-				bcc: [{ email: 'huestudios.com@gmail.com' }],
-				cc: [{ email: 'camila@huestudios.com' }],
+				bcc: [{ email: 'huestudios.com@gmail.com' }, { email: 'camila@huestudios.com' }],
 			};
 
 			// Add additional CC recipients if they exist
@@ -134,6 +144,7 @@ export default defineEventHandler(async (event) => {
 					total_amount: formatAmount(totalAmount),
 					invoice_count: invoices.length,
 					email_date: formatDate(new Date()),
+					has_overdue: formattedInvoices.some(inv => inv.overdue),
 				},
 				categories: ['hue', 'invoices'],
 			};
