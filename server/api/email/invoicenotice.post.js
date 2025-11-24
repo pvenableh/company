@@ -56,6 +56,20 @@ export default defineEventHandler(async (event) => {
 		  return due < today;
 		};
 
+		// Get days overdue
+		const getDaysOverdue = (dueDate) => {
+		  const due = new Date(dueDate);
+		  const today = new Date();
+		  // Normalize to start of day
+		  today.setHours(0, 0, 0, 0);
+		  due.setHours(0, 0, 0, 0);
+		  
+		  const diffTime = today - due;
+		  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+		  
+		  return diffDays > 0 ? diffDays : 0;
+		};
+
 		// Format dates
 		const formatDate = (date) => {
 			return new Date(date).toLocaleDateString('en-US', {
@@ -89,6 +103,7 @@ export default defineEventHandler(async (event) => {
 				status: invoice.status,
 				total_amount: formatAmount(invoice.total_amount),
 				overdue: isOverdue(invoice.due_date),
+				days_overdue: getDaysOverdue(invoice.due_date),
 				line_items: invoice.line_items.map((item) => ({
 					product_name: item.product.name,
 					description: item.description,
