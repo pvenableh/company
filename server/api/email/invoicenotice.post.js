@@ -2,24 +2,6 @@ import sgMail from '@sendgrid/mail';
 
 export default defineEventHandler(async (event) => {
 	try {
-		// Add method check
-		if (getMethod(event) !== 'POST') {
-			throw createError({
-				statusCode: 405,
-				statusMessage: 'Method Not Allowed',
-			});
-		}
-
-		const config = useRuntimeConfig();
-
-		// Validate SendGrid API key exists
-		if (!config.SENDGRID_API_KEY) {
-			throw createError({
-				statusCode: 500,
-				statusMessage: 'SendGrid API key not configured',
-			});
-		}
-
 		const body = await readBody(event);
 
 		// Handle all possible input formats
@@ -34,7 +16,7 @@ export default defineEventHandler(async (event) => {
 		} else {
 			throw createError({
 				statusCode: 400,
-				statusMessage: 'Invalid request format: expected invoice data',
+				message: 'Invalid request format: expected invoice data',
 			});
 		}
 
@@ -42,18 +24,8 @@ export default defineEventHandler(async (event) => {
 		if (!Array.isArray(invoices) || invoices.length === 0) {
 			throw createError({
 				statusCode: 400,
-				statusMessage: 'Invalid request: invoices array is required',
+				message: 'Invalid request: invoices array is required',
 			});
-		}
-
-		// Validate each invoice has required fields
-		for (const invoice of invoices) {
-			if (!invoice.id || !invoice.bill_to) {
-				throw createError({
-					statusCode: 400,
-					statusMessage: 'Each invoice must have id and bill_to fields',
-				});
-			}
 		}
 
 		console.log('Invoice notification initiated', {
@@ -61,274 +33,175 @@ export default defineEventHandler(async (event) => {
 			organization: invoices[0]?.bill_to?.name,
 		});
 
-		sgMail.setApiKey(config.SENDGRID_API_KEY);
+		sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-		// Format monetary values with error handling
+		// Format monetary values
 		const formatAmount = (amount) => {
-			try {
-				if (amount === null || amount === undefined) return '$0.00';
-				const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-				if (isNaN(numAmount)) return '$0.00';
-
+			if (typeof amount === 'number' || typeof amount === 'string') {
 				return new Intl.NumberFormat('en-US', {
 					style: 'currency',
 					currency: 'USD',
-				}).format(numAmount);
-			} catch (error) {
-				console.error('Error formatting amount:', amount, error);
-				return '$0.00';
+				}).format(parseFloat(amount));
 			}
+			return amount;
 		};
 
-		// Format dates with error handling
+		// Check overdue status
+		const isOverdue = (dueDate) => {
+			const due = new Date(dueDate);
+			const today = new Date();
+			today.setHours(0, 0, 0, 0);
+			due.setHours(0, 0, 0, 0);
+			return due < today;
+		};
+
+		// Get days overdue
+		const getDaysOverdue = (dueDate) => {
+			const due = new Date(dueDate);
+			const today = new Date();
+			today.setHours(0, 0, 0, 0);
+			due.setHours(0, 0, 0, 0);
+
+			const diffTime = today - due;
+			const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+			return diffDays > 0 ? diffDays : 0;
+		};
+
+		// Format dates
 		const formatDate = (date) => {
-			try {
-				if (!date) return 'No date';
-				const dateObj = new Date(date);
-				if (isNaN(dateObj.getTime())) return 'Invalid date';
-
-				return dateObj.toLocaleDateString('en-US', {
-					year: 'numeric',
-					month: 'long',
-					day: 'numeric',
-				});
-			} catch (error) {
-				console.error('Error formatting date:', date, error);
-				return 'Invalid date';
-			}
+			return new Date(date).toLocaleDateString('en-US', {
+				year: 'numeric',
+				month: 'long',
+				day: 'numeric',
+			});
 		};
 
-		// Group invoices by organization with better error handling
+		// Group invoices by organization
 		const groupedInvoices = invoices.reduce((acc, invoice) => {
-			try {
-				const orgId = invoice.bill_to?.id;
-				if (!orgId) {
-					console.warn('Invoice missing organization ID:', invoice.id);
-					return acc;
-				}
-
-				if (!acc[orgId]) {
-					acc[orgId] = {
-						organization: invoice.bill_to,
-						invoices: [],
-					};
-				}
-				acc[orgId].invoices.push(invoice);
-				return acc;
-			} catch (error) {
-				console.error('Error processing invoice:', invoice.id, error);
-				return acc;
+			const orgId = invoice.bill_to.id;
+			if (!acc[orgId]) {
+				acc[orgId] = {
+					organization: invoice.bill_to,
+					invoices: [],
+				};
 			}
+			acc[orgId].invoices.push(invoice);
+			return acc;
 		}, {});
-
-		// Validate we have organizations to send to
-		if (Object.keys(groupedInvoices).length === 0) {
-			throw createError({
-				statusCode: 400,
-				statusMessage: 'No valid invoices with organization data found',
-			});
-		}
 
 		// Send emails for each organization
 		const emailPromises = Object.values(groupedInvoices).map(async ({ organization, invoices }) => {
+			// Format invoice data for template
+			const formattedInvoices = invoices.map((invoice) => ({
+				id: invoice.id,
+				invoice_code: invoice.invoice_code,
+				invoice_date: formatDate(invoice.invoice_date),
+				due_date: formatDate(invoice.due_date),
+				status: invoice.status,
+				total_amount: formatAmount(invoice.total_amount),
+				overdue: isOverdue(invoice.due_date),
+				days_overdue: getDaysOverdue(invoice.due_date),
+				line_items: invoice.line_items.map((item) => ({
+					product_name: item.product.name,
+					description: item.description,
+					quantity: item.quantity,
+					rate: formatAmount(item.rate),
+					amount: formatAmount(item.amount),
+				})),
+			}));
+
+			const totalAmount = invoices.reduce((sum, inv) => sum + parseFloat(inv.total_amount), 0);
+
+			// Handle array of emails
+			const formatEmails = (emails) => {
+				if (!emails) return [];
+				return Array.isArray(emails) ? emails : [emails];
+			};
+
+			const emails = formatEmails(organization.bill_to?.emails || organization.emails);
+			const [primaryEmail, ...ccEmails] = emails;
+
+			const personalization = {
+				to: [{ email: primaryEmail || organization.email }],
+				bcc: [{ email: 'huestudios.com@gmail.com' }, { email: 'camila@huestudios.com' }],
+			};
+
+			// Add additional CC recipients if they exist
+			if (ccEmails.length > 0) {
+				personalization.cc = ccEmails.map((email) => ({ email }));
+			}
+
+			const message = {
+				personalizations: [personalization],
+				from: {
+					email: 'mail@huestudios.company',
+					name: 'hue: company',
+				},
+				template_id: 'd-fc7fc838e55e41ebbf64aac386092efd',
+				replyTo: {
+					email: 'contact@huestudios.com',
+					name: 'hue',
+				},
+				subject: 'Invoice Notice from huestudios.company',
+				content: [
+					{
+						type: 'text/html',
+						value: '&nbsp;',
+					},
+				],
+				dynamicTemplateData: {
+					organization_name: organization.name,
+					organization_address: organization.address || 'No address provided',
+					invoices: formattedInvoices,
+					total_amount: formatAmount(totalAmount),
+					invoice_count: invoices.length,
+					email_date: formatDate(new Date()),
+					has_overdue: formattedInvoices.some((inv) => inv.overdue),
+				},
+				categories: ['hue', 'invoices'],
+			};
+
 			try {
-				// Format invoice data for template with error handling
-				const formattedInvoices = invoices.map((invoice) => {
-					try {
-						return {
-							id: invoice.id || 'N/A',
-							invoice_code: invoice.invoice_code || 'N/A',
-							invoice_date: formatDate(invoice.invoice_date),
-							due_date: formatDate(invoice.due_date),
-							status: invoice.status || 'pending',
-							total_amount: formatAmount(invoice.total_amount),
-							line_items: (invoice.line_items || []).map((item) => ({
-								product_name: item.product?.name || 'Unknown Product',
-								description: item.description || '',
-								quantity: item.quantity || 0,
-								rate: formatAmount(item.rate),
-								amount: formatAmount(item.amount),
-							})),
-						};
-					} catch (error) {
-						console.error('Error formatting invoice:', invoice.id, error);
-						return {
-							id: invoice.id || 'Error',
-							invoice_code: 'Error',
-							invoice_date: 'Error',
-							due_date: 'Error',
-							status: 'error',
-							total_amount: '$0.00',
-							line_items: [],
-						};
-					}
-				});
-
-				const totalAmount = invoices.reduce((sum, inv) => {
-					try {
-						const amount = parseFloat(inv.total_amount) || 0;
-						return sum + amount;
-					} catch {
-						return sum;
-					}
-				}, 0);
-
-				// Helper function to validate and filter emails
-				const getValidEmails = (emails) => {
-					if (!emails || !Array.isArray(emails)) return [];
-					return emails.filter(
-						(email) => email && typeof email === 'string' && email.includes('@') && email.trim().length > 0,
-					);
-				};
-
-				// Get emails with proper priority and combination logic
-				let primaryEmail = null;
-				let additionalEmails = [];
-
-				// Collect all valid emails from all invoices
-				let allBillToEmails = [];
-				let allInvoiceEmails = [];
-
-				console.log('Processing invoices for emails:', invoices.length);
-
-				for (const invoice of invoices) {
-					console.log('Invoice email data:', {
-						invoiceId: invoice.id,
-						billToEmails: invoice.bill_to?.emails,
-						invoiceEmails: invoice.emails,
-					});
-
-					const billToEmails = getValidEmails(invoice.bill_to?.emails);
-					const invoiceEmails = getValidEmails(invoice.emails);
-
-					if (billToEmails.length > 0) {
-						allBillToEmails.push(...billToEmails);
-					}
-					if (invoiceEmails.length > 0) {
-						allInvoiceEmails.push(...invoiceEmails);
-					}
-				}
-
-				// Remove duplicates safely
-				allBillToEmails = allBillToEmails.length > 0 ? [...new Set(allBillToEmails)] : [];
-				allInvoiceEmails = allInvoiceEmails.length > 0 ? [...new Set(allInvoiceEmails)] : [];
-
-				console.log('Collected emails:', {
-					allBillToEmails,
-					allInvoiceEmails,
-				});
-
-				// Determine primary email (bill_to.emails takes priority for primary)
-				if (allBillToEmails.length > 0) {
-					primaryEmail = allBillToEmails[0];
-					// Add remaining bill_to emails to additional emails
-					additionalEmails.push(...allBillToEmails.slice(1));
-				} else if (allInvoiceEmails.length > 0) {
-					primaryEmail = allInvoiceEmails[0];
-					// Add remaining invoice emails to additional emails
-					additionalEmails.push(...allInvoiceEmails.slice(1));
-				}
-
-				// Always include invoice.emails in CC (if they exist and primary isn't from invoice.emails)
-				if (allInvoiceEmails.length > 0 && allBillToEmails.length > 0) {
-					// If primary came from bill_to.emails, add ALL invoice.emails to CC
-					additionalEmails.push(...allInvoiceEmails);
-				}
-
-				// Remove duplicates from additional emails and exclude primary email
-				additionalEmails = [...new Set(additionalEmails)].filter((email) => email !== primaryEmail);
-
-				// Final fallback to organization email if it exists
-				if (!primaryEmail && organization.email) {
-					primaryEmail = organization.email;
-				}
-
-				if (!primaryEmail) {
-					throw new Error(`No valid email found for organization: ${organization.name || 'Unknown'}`);
-				}
-
-				// Build personalization object
-				const personalization = {
-					to: [{ email: primaryEmail }],
-					bcc: [
-						{ email: 'huestudios.com@gmail.com' }, // Hardcoded BCC
-					],
-				};
-
-				// Ensure CC array exists and add additional emails
-				if (!personalization.cc) {
-					personalization.cc = [];
-				}
-
-				if (additionalEmails.length > 0) {
-					personalization.cc.push(...additionalEmails.map((email) => ({ email })));
-				}
-
-				console.log('Email configuration:', {
-					primaryEmail,
-					additionalEmails,
-					ccCount: personalization.cc.length,
-					bccCount: personalization.bcc.length,
-				});
-
-				const message = {
-					personalizations: [personalization],
-					from: {
-						email: config.FROM_EMAIL || 'mail@huestudios.company',
-						name: 'hue: company',
-					},
-					template_id: 'd-fc7fc838e55e41ebbf64aac386092efd',
-					replyTo: {
-						email: config.REPLY_TO_EMAIL || 'contact@huestudios.com',
-						name: 'hue',
-					},
-					subject: 'Invoice Notice from huestudios.company',
-					content: [
-						{
-							type: 'text/html',
-							value: '&nbsp;',
-						},
-					],
-					dynamicTemplateData: {
-						organization_name: organization.name || 'Unknown Organization',
-						organization_address: organization.address || 'No address provided',
-						invoices: formattedInvoices,
-						total_amount: formatAmount(totalAmount),
-						invoice_count: invoices.length,
-						email_date: formatDate(new Date()),
-					},
-					categories: ['hue', 'invoices'],
-				};
-
 				console.log('Sending invoice email with data:', {
-					recipient: primaryEmail,
+					recipient: organization.email,
 					invoiceCount: invoices.length,
 					totalAmount: formatAmount(totalAmount),
 				});
+
+				console.log('Invoice overdue check:', {
+					due_date_raw: invoices[0].due_date,
+					overdue: formattedInvoices[0].overdue,
+					days_overdue: formattedInvoices[0].days_overdue,
+				});
+
+				console.log('dynamicTemplateData:', JSON.stringify(message.dynamicTemplateData, null, 2));
 
 				const response = await sgMail.send(message);
 
 				console.log('Invoice email sent successfully', {
 					organization: organization.name,
-					email: primaryEmail,
+					email: organization.email,
 					invoiceCount: invoices.length,
 				});
 
 				return {
 					organization: organization.name,
 					status: 'success',
-					email: primaryEmail,
+					email: organization.email,
 					invoiceCount: invoices.length,
 				};
 			} catch (error) {
 				console.error('Failed to send invoice email', {
 					organization: organization.name,
+					email: organization.email,
 					error: error.message,
 				});
 
 				return {
 					organization: organization.name,
 					status: 'failed',
+					email: organization.email,
 					error: error.message,
 				};
 			}
@@ -338,26 +211,18 @@ export default defineEventHandler(async (event) => {
 		const failedCount = results.filter((r) => r.status === 'failed').length;
 		const successCount = results.filter((r) => r.status === 'success').length;
 
-		// Set appropriate status code based on results
-		const statusCode = failedCount > 0 && successCount === 0 ? 500 : 200;
-
 		return {
-			statusCode,
-			success: successCount > 0,
-			message: `Sent ${successCount} invoice emails successfully${failedCount > 0 ? `, ${failedCount} failed` : ''}`,
-			results,
-			summary: {
-				total: results.length,
-				successful: successCount,
-				failed: failedCount,
+			statusCode: 200,
+			body: {
+				message: `Sent ${successCount} invoice emails successfully${failedCount > 0 ? `, ${failedCount} failed` : ''}`,
+				results,
 			},
 		};
 	} catch (error) {
 		console.error('Invoice email process failed', error);
-
 		throw createError({
 			statusCode: error.statusCode || 500,
-			statusMessage: error.statusMessage || error.message || 'Failed to process invoice emails',
+			message: error.message || 'Failed to process invoice emails',
 		});
 	}
 });
