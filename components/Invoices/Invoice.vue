@@ -44,7 +44,7 @@ const formatNumber = (value) => {
 				<div
 					v-for="(item, index) in invoice.line_items"
 					:key="index"
-					class="lg:pl-3 my-1 flex flex-col items-start justify-between pb-12"
+					class="lg:pl-3 my-1 flex flex-col items-start justify-between pb-6"
 				>
 					<div class="w-full flex flex-col md:flex-row items-start justify-between">
 						<p class="uppercase text-[12px] font-bold">{{ item.product.name }}</p>
