@@ -1,10 +1,4 @@
 {
-    "crons": [
-		{
-			"path": "/api/scheduler/send-reminders",
-			"schedule": "*/15 * * * *"
-		}
-	],
     "env": {
         "NPM_CONFIG_ENGINE_STRICT": "true",
         "PNPM_VERSION": "8.15.3"
