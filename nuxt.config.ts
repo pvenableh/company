@@ -46,7 +46,7 @@ export default defineNuxtConfig({
 			directusUrl: process.env.DIRECTUS_URL || 'https://admin.huestudios.company',
 			assetsUrl: process.env.DIRECTUS_ASSETS_URL || 'https://admin.huestudios.company/assets/',
 			websocketUrl: process.env.DIRECTUS_WEBSOCKET_URL || 'wss://admin.huestudios.company/websocket',
-			staticToken: process.env.DIRECTUS_SERVER_TOKEN || '3njk8nRR70D6o8VHC1IxW87kSBZm3_FS',
+			staticToken: process.env.DIRECTUS_SERVER_TOKEN,
 			siteUrl: 'https://huestudios.company',
 			adminUrl: process.env.DIRECTUS_URL || 'https://admin.huestudios.company',
 			defaultTeamId: process.env.NUXT_PUBLIC_DEFAULT_TEAM_ID || 'org-default',
