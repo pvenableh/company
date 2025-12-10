@@ -35,7 +35,9 @@ export default defineNuxtConfig({
 		stripeSecretKeyLive: process.env.STRIPE_SECRET_KEY,
 		stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
 		authSecret: process.env.NEXTAUTH_SECRET || 'sKG+LfHMxZVZv3aGnf70dxJ8+776LbJHDttKxF3znYw=',
-
+		twilioAccountSid: process.env.TWILIO_ACCOUNT_SID,
+		twilioAuthToken: process.env.TWILIO_AUTH_TOKEN,
+		twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER,
 		public: {
 			adminRole: '3a63a4e1-c82e-46f8-9993-7f11ac6a4b01',
 			stripePublic:
