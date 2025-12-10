@@ -5,7 +5,7 @@ export default defineEventHandler(async (event) => {
 	const query = getQuery(event);
 	const encoded_email = Buffer.from(query.email).toString('base64');
 	const config = useRuntimeConfig();
-	sgMail.setApiKey(config.SENDGRID_API_KEY);
+	sgMail.setApiKey(config.sendgridApiKey);
 	const message = {
 		personalizations: [
 			{

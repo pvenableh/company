@@ -3,7 +3,7 @@ import sgMail from '@sendgrid/mail';
 
 export default defineEventHandler(async (event) => {
 	const config = useRuntimeConfig();
-	sgMail.setApiKey(config.SENDGRID_API_KEY);
+	sgMail.setApiKey(config.sendgridApiKey);
 
 	try {
 		await sgMail.send({

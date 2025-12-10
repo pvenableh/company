@@ -63,11 +63,14 @@
 		"prettier": "3.2.5",
 		"stripe": "^14.25.0",
 		"tippy.js": "^6.3.7",
+		"twilio": "^5.10.7",
+		"twilio-video": "^2.33.0",
 		"typescript": "^5.8.2",
 		"uuid": "^9.0.1",
 		"vue-tsc": "^2.2.8"
 	},
 	"dependencies": {
+		"@azure/msal-node": "^3.8.4",
 		"@directus/sdk": "^20.0.0",
 		"@nuxt/image": "^1.9.0",
 		"@sendgrid/mail": "^8.1.4",
@@ -79,6 +82,7 @@
 		"@vueuse/gesture": "^2.0.0",
 		"canvas-confetti": "^1.9.3",
 		"chart.js": "^4.4.8",
+		"googleapis": "^168.0.0",
 		"gsap": "^3.12.7",
 		"html2canvas": "^1.4.1",
 		"jspdf": "^2.5.2",

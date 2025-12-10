@@ -26,6 +26,9 @@ export default defineNuxtConfig({
 
 	runtimeConfig: {
 		// Private keys (server-side only)
+		sendgridApiKey: process.env.SENDGRID_API_KEY,
+		sendgridFromEmail: process.env.SENDGRID_FROM_EMAIL || 'hello@huestudios.company',
+		sendgridFromName: process.env.SENDGRID_FROM_NAME || 'Hue Creative Agency',
 		SENDGRID_API_KEY: process.env.SENDGRID_API_KEY,
 		FROM_EMAIL: process.env.SENDGRID_FROM_EMAIL,
 		BCC_EMAIL: process.env.SENDGRID_BCC_EMAIL,
@@ -34,11 +37,25 @@ export default defineNuxtConfig({
 		stripeSecretKeyTest: process.env.STRIPE_SECRET_KEY_TEST,
 		stripeSecretKeyLive: process.env.STRIPE_SECRET_KEY,
 		stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+
 		directusServerToken: process.env.DIRECTUS_SERVER_TOKEN,
+		directusStaticToken: process.env.DIRECTUS_STATIC_TOKEN,
 		authSecret: process.env.NEXTAUTH_SECRET || 'sKG+LfHMxZVZv3aGnf70dxJ8+776LbJHDttKxF3znYw=',
 		twilioAccountSid: process.env.TWILIO_ACCOUNT_SID,
 		twilioAuthToken: process.env.TWILIO_AUTH_TOKEN,
 		twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER,
+		twilioApiKey: process.env.TWILIO_API_KEY,
+		twilioApiSecret: process.env.TWILIO_API_SECRET,
+
+		googleClientId: process.env.GOOGLE_CLIENT_ID,
+		googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
+
+		// Outlook/Azure OAuth
+		azureClientId: process.env.AZURE_CLIENT_ID,
+		azureClientSecret: process.env.AZURE_CLIENT_SECRET,
+
+		// Cron secret for automated tasks
+		cronSecret: process.env.CRON_SECRET,
 		public: {
 			adminRole: '3a63a4e1-c82e-46f8-9993-7f11ac6a4b01',
 			stripePublic:
@@ -48,7 +65,7 @@ export default defineNuxtConfig({
 			assetsUrl: process.env.DIRECTUS_ASSETS_URL || 'https://admin.huestudios.company/assets/',
 			websocketUrl: process.env.DIRECTUS_WEBSOCKET_URL || 'wss://admin.huestudios.company/websocket',
 			staticToken: process.env.DIRECTUS_STATIC_TOKEN,
-			siteUrl: 'https://huestudios.company',
+			siteUrl: process.env.SITE_URL || 'https://huestudios.company',
 			adminUrl: process.env.DIRECTUS_URL || 'https://admin.huestudios.company',
 			defaultTeamId: process.env.NUXT_PUBLIC_DEFAULT_TEAM_ID || 'org-default',
 			adminRoleId: process.env.NUXT_PUBLIC_ADMIN_ROLE_ID || '3a63a4e1-c82e-46f8-9993-7f11ac6a4b01',
