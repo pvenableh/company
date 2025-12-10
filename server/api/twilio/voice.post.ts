@@ -1,91 +1,164 @@
-import { createDirectus, rest, readItems, staticToken } from '@directus/sdk';
+// server/api/twilio/voice.post.ts
+// Fixed version with proper Directus authentication
 
-const directus = createDirectus(process.env.DIRECTUS_URL!).with(rest()).with(staticToken(process.env.DIRECTUS_TOKEN!));
+import { createDirectus, rest, staticToken, readItems, createItem } from '@directus/sdk';
 
 export default defineEventHandler(async (event) => {
+	const config = useRuntimeConfig();
+
+	// Log incoming request for debugging
+	console.log('='.repeat(60));
+	console.log('📞 TWILIO VOICE WEBHOOK RECEIVED');
+	console.log('='.repeat(60));
+
 	try {
-		// Get phone settings - FILTER BY STATUS
+		const query = getQuery(event);
+		const body = await readBody(event);
+
+		console.log('Query params:', JSON.stringify(query));
+		console.log('Body:', JSON.stringify(body));
+
+		const toNumber = body.To;
+		const fromNumber = body.From;
+		const callSid = body.CallSid;
+		const lineId = query.line as string;
+
+		console.log(`Call from: ${fromNumber} to: ${toNumber}, line: ${lineId || 'auto-detect'}`);
+
+		// Create Directus client with static token (NOT login!)
+		const directusUrl = config.public.directusUrl;
+		const directusToken = config.public.staticToken;
+
+		console.log(`Connecting to Directus: ${directusUrl}`);
+
+		if (!directusUrl || !directusToken) {
+			console.error('❌ Missing Directus configuration');
+			throw new Error('Missing Directus configuration');
+		}
+
+		const directus = createDirectus(directusUrl).with(rest()).with(staticToken(directusToken));
+
+		// Build filter for phone settings
+		let filter: any = {
+			active: { _eq: true },
+			status: { _eq: 'published' },
+		};
+
+		if (lineId) {
+			filter.line_identifier = { _eq: lineId };
+		} else if (toNumber) {
+			filter.twilio_phone_number = { _eq: toNumber };
+		}
+
+		console.log('Fetching phone settings with filter:', JSON.stringify(filter));
+
 		const settings = await directus.request(
 			readItems('phone_settings', {
-				filter: {
-					active: { _eq: true },
-					status: { _eq: 'published' }, // ✅ Added status filter
-				},
+				filter,
 				limit: 1,
-				fields: ['*', 'greeting_audio.*', 'business_hours.*', 'call_routes.*'],
+				fields: ['*', 'call_routes.*', 'business_hours.*'],
 			}),
 		);
 
-		// Type guard
-		if (!Array.isArray(settings) || settings.length === 0) {
-			const fallback = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Say>No active phone line configuration found. Please contact support.</Say>
-</Response>`;
-			setResponseHeader(event, 'Content-Type', 'text/xml');
-			return fallback;
+		console.log(`Found ${settings.length} phone settings`);
+
+		if (settings.length === 0) {
+			console.error('❌ No active phone line configuration found');
+			throw new Error('No active phone line configuration found');
 		}
 
-		const config = settings[0];
+		const phoneConfig = settings[0] as any;
+		console.log(`Using phone config: ${phoneConfig.line_name} (${phoneConfig.line_identifier})`);
 
 		// Check business hours if enabled
-		if (config?.business_hours_enabled) {
-			const isOpen = await checkBusinessHours(config?.timezone, config.business_hours);
+		let isOpen = true;
+		if (phoneConfig.business_hours_enabled && phoneConfig.business_hours?.length > 0) {
+			isOpen = checkBusinessHours(phoneConfig.business_hours, phoneConfig.timezone || 'America/New_York');
+			console.log(`Business hours check: ${isOpen ? 'OPEN' : 'CLOSED'}`);
+		}
 
-			if (!isOpen) {
-				// Outside business hours - go to voicemail/after hours message
-				const afterHoursMsg =
-					config.after_hours_message ||
-					'Thank you for calling. Our office is currently closed. Please call back during business hours.';
+		// Log the call
+		try {
+			await directus.request(
+				createItem('call_logs', {
+					call_id: callSid,
+					from_number: fromNumber,
+					to_number: toNumber,
+					event_type: 'incoming',
+					timestamp: new Date().toISOString(),
+					status: 'published',
+				}),
+			);
+			console.log('✅ Call logged');
+		} catch (logError) {
+			console.error('⚠️ Failed to log call (non-fatal):', logError);
+		}
 
-				const twiml = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Say voice="Polly.Joanna">${escapeXml(afterHoursMsg)}</Say>
-  <Redirect>/api/twilio/voicemail</Redirect>
-</Response>`;
+		// Build TwiML response
+		let twiml = '<?xml version="1.0" encoding="UTF-8"?>\n<Response>\n';
 
-				setResponseHeader(event, 'Content-Type', 'text/xml');
-				return twiml;
+		if (!isOpen) {
+			// After hours response
+			const afterHoursMessage =
+				phoneConfig.after_hours_message ||
+				`Thank you for calling ${phoneConfig.company_name}. We are currently closed. Please call back during business hours.`;
+
+			if (phoneConfig.after_hours_audio) {
+				const audioUrl = `${directusUrl}/assets/${phoneConfig.after_hours_audio}`;
+				twiml += `  <Play>${audioUrl}</Play>\n`;
+			} else {
+				twiml += `  <Say voice="alice">${escapeXml(afterHoursMessage)}</Say>\n`;
+			}
+
+			// Offer voicemail
+			twiml += `  <Say voice="alice">Please leave a message after the tone.</Say>\n`;
+			twiml += `  <Record maxLength="120" transcribe="true" transcribeCallback="/api/twilio/transcription" />\n`;
+		} else {
+			// Business hours - play greeting and gather input
+			const greeting = phoneConfig.greeting_text || `Thank you for calling ${phoneConfig.company_name}.`;
+
+			if (phoneConfig.greeting_audio) {
+				const audioUrl = `${directusUrl}/assets/${phoneConfig.greeting_audio}`;
+				twiml += `  <Play>${audioUrl}</Play>\n`;
+			} else {
+				twiml += `  <Say voice="alice">${escapeXml(greeting)}</Say>\n`;
+			}
+
+			// Only add Gather if there are active routes
+			const activeRoutes = phoneConfig.call_routes?.filter((r: any) => r.active && r.status === 'published') || [];
+
+			if (activeRoutes.length > 0) {
+				const actionUrl = lineId ? `/api/twilio/handle-key?line=${lineId}` : '/api/twilio/handle-key';
+
+				twiml += `  <Gather numDigits="1" action="${actionUrl}" method="POST" timeout="10">\n`;
+				twiml += `    <Say voice="alice">Please make your selection now.</Say>\n`;
+				twiml += `  </Gather>\n`;
+
+				// If no input, repeat
+				const redirectUrl = lineId ? `/api/twilio/voice?line=${lineId}` : '/api/twilio/voice';
+				twiml += `  <Say voice="alice">We didn't receive any input.</Say>\n`;
+				twiml += `  <Redirect>${redirectUrl}</Redirect>\n`;
+			} else {
+				// No routes configured - just play message and hang up
+				twiml += `  <Say voice="alice">Please hold while we connect your call.</Say>\n`;
+				twiml += `  <Hangup/>\n`;
 			}
 		}
 
-		// Get active call routes - filter by status
-		const routes = (config?.call_routes || []).filter((route: any) => route.active && route.status === 'published');
-
-		// Build greeting
-		let twiml = '<?xml version="1.0" encoding="UTF-8"?>\n<Response>\n';
-		twiml += '  <Gather numDigits="1" action="/api/twilio/handle-key" timeout="5">\n';
-
-		// Priority: 1) Custom audio, 2) Custom text, 3) Auto-generated from routes
-		if (config?.greeting_audio) {
-			// Use uploaded audio file
-			const audioUrl = `${process.env.DIRECTUS_URL}/assets/${config?.greeting_audio}`;
-			twiml += `    <Play>${audioUrl}</Play>\n`;
-		} else if (config?.greeting_text) {
-			// Use custom text greeting
-			twiml += `    <Say voice="Polly.Joanna">${escapeXml(config.greeting_text)}</Say>\n`;
-		} else {
-			// Auto-generate from company name and routes
-			let autoGreeting = `Welcome to ${config?.company_name || 'our company'}. `;
-			routes.forEach((route: any) => {
-				autoGreeting += `Press ${route.menu_key} for ${route.department}. `;
-			});
-			twiml += `    <Say voice="Polly.Joanna">${escapeXml(autoGreeting)}</Say>\n`;
-		}
-
-		twiml += '  </Gather>\n';
-		twiml += "  <Say>We didn't receive a selection.</Say>\n";
-		twiml += '  <Redirect>/api/twilio/voice</Redirect>\n';
 		twiml += '</Response>';
+
+		console.log('✅ Returning TwiML response');
+		console.log(twiml);
 
 		setResponseHeader(event, 'Content-Type', 'text/xml');
 		return twiml;
-	} catch (error) {
-		console.error('Twilio voice error:', error);
+	} catch (error: any) {
+		console.error('❌ TWILIO VOICE ERROR:', error);
+		console.error('Error stack:', error.stack);
 
 		const fallback = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say>We're experiencing technical difficulties. Please try again later.</Say>
+  <Say voice="alice">We're experiencing technical difficulties. Please try again later.</Say>
 </Response>`;
 
 		setResponseHeader(event, 'Content-Type', 'text/xml');
@@ -93,35 +166,40 @@ export default defineEventHandler(async (event) => {
 	}
 });
 
-// Helper function to check if current time is within business hours
-async function checkBusinessHours(timezone: string = 'America/New_York', businessHours?: any[]): Promise<boolean> {
-	const now = new Date();
+function checkBusinessHours(businessHours: any[], timezone: string = 'America/New_York'): boolean {
+	try {
+		const now = new Date();
+		const localTime = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
+		const dayOfWeek = localTime.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+		const currentTime = localTime.toTimeString().slice(0, 5); // HH:MM format
 
-	// Convert to the business timezone
-	const localTime = new Date(now.toLocaleString('en-US', { timeZone: timezone }));
-	const dayOfWeek = localTime.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-	const currentTime = localTime.toTimeString().slice(0, 5); // HH:MM format
+		console.log(`Business hours check: ${dayOfWeek} ${currentTime} (${timezone})`);
 
-	// If business hours are already loaded (from the fields parameter), use them
-	if (businessHours && Array.isArray(businessHours)) {
 		const todayHours = businessHours.find(
 			(h: any) => h.day_of_week === dayOfWeek && h.is_open && h.status === 'published',
 		);
 
-		if (!todayHours || !todayHours.open_time || !todayHours.close_time) {
+		if (!todayHours) {
+			console.log('No business hours found for today or closed');
 			return false;
 		}
 
-		const openTime = todayHours.open_time.slice(0, 5); // Get HH:MM from HH:MM:SS
-		const closeTime = todayHours.close_time.slice(0, 5);
+		const { open_time, close_time } = todayHours;
 
-		return currentTime >= openTime && currentTime < closeTime;
+		// Handle time comparison (strip seconds if present)
+		const openTime = open_time?.slice(0, 5) || '00:00';
+		const closeTime = close_time?.slice(0, 5) || '23:59';
+
+		const isWithinHours = currentTime >= openTime && currentTime < closeTime;
+		console.log(`Hours: ${openTime} - ${closeTime}, Current: ${currentTime}, Open: ${isWithinHours}`);
+
+		return isWithinHours;
+	} catch (error) {
+		console.error('Error checking business hours:', error);
+		return true; // Default to open if error
 	}
-
-	return false;
 }
 
-// Helper to escape XML special characters
 function escapeXml(text: string): string {
 	return text
 		.replace(/&/g, '&amp;')
