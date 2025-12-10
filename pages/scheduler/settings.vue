@@ -2,19 +2,37 @@
 <script setup>
 definePageMeta({ middleware: ['auth'] });
 
-const { data: authData, status } = useAuth();
-const user = computed(() => status.value === 'authenticated' ? authData?.value?.user ?? null : null);
-
+const { user } = useEnhancedAuth();
 const toast = useToast();
 
 // State
-const loading = ref(true);
 const saving = ref(false);
-const activeTab = ref('general');
+const activeTab = ref(0);
 
-// Data
-const settings = ref(null);
-const availability = ref({});
+// Realtime subscription for scheduler_settings
+const {
+	data: settingsData,
+	error: settingsError,
+	refresh: refreshSettings,
+} = useRealtimeSubscription('scheduler_settings', ['*'], { user_id: { _eq: user.value?.id } });
+
+// Realtime subscription for availability
+const {
+	data: availabilityData,
+	error: availabilityError,
+	refresh: refreshAvailability,
+} = useRealtimeSubscription('availability', ['*'], { user_id: { _eq: user.value?.id } });
+
+// Initialize availability with defaults for all days
+const availability = ref({
+	monday: { enabled: true, start: '09:00', end: '17:00', breakStart: '', breakEnd: '' },
+	tuesday: { enabled: true, start: '09:00', end: '17:00', breakStart: '', breakEnd: '' },
+	wednesday: { enabled: true, start: '09:00', end: '17:00', breakStart: '', breakEnd: '' },
+	thursday: { enabled: true, start: '09:00', end: '17:00', breakStart: '', breakEnd: '' },
+	friday: { enabled: true, start: '09:00', end: '17:00', breakStart: '', breakEnd: '' },
+	saturday: { enabled: false, start: '09:00', end: '17:00', breakStart: '', breakEnd: '' },
+	sunday: { enabled: false, start: '09:00', end: '17:00', breakStart: '', breakEnd: '' },
+});
 
 // Tabs
 const tabs = [
@@ -63,7 +81,7 @@ const weekDays = [
 	{ label: 'Sunday', value: 'sunday' },
 ];
 
-// Form
+// Form with defaults
 const form = reactive({
 	default_duration: 30,
 	default_meeting_type: 'general',
@@ -83,62 +101,132 @@ const form = reactive({
 });
 
 // Computed
+const loading = computed(() => !settingsData.value && !settingsError.value);
+
+const settings = computed(() => settingsData.value?.[0] || null);
+
 const bookingUrl = computed(() => {
+	const baseUrl = useRuntimeConfig().public.siteUrl || window.location.origin;
 	const slug = form.booking_page_slug || user.value?.id;
-	return `${window.location.origin}/book/${slug}`;
+	return `${baseUrl}/book/${slug}`;
+});
+
+// Watch for settings changes and update form
+watch(
+	settings,
+	(newSettings) => {
+		if (newSettings) {
+			Object.keys(form).forEach((key) => {
+				if (newSettings[key] !== undefined && newSettings[key] !== null) {
+					form[key] = newSettings[key];
+				}
+			});
+		}
+	},
+	{ immediate: true },
+);
+
+// Watch for availability changes
+watch(
+	availabilityData,
+	(newData) => {
+		if (newData && newData.length > 0) {
+			weekDays.forEach((day) => {
+				const dayData = newData.find((a) => a.day_of_week?.toLowerCase() === day.value);
+				if (dayData) {
+					availability.value[day.value] = {
+						enabled: dayData.is_available !== false,
+						start: dayData.start_time?.substring(0, 5) || '09:00',
+						end: dayData.end_time?.substring(0, 5) || '17:00',
+						breakStart: dayData.break_start?.substring(0, 5) || '',
+						breakEnd: dayData.break_end?.substring(0, 5) || '',
+					};
+				}
+			});
+		}
+	},
+	{ immediate: true },
+);
+
+// Watch for errors
+watch(settingsError, (error) => {
+	if (error) {
+		console.warn('Settings subscription error:', error);
+	}
+});
+
+watch(availabilityError, (error) => {
+	if (error) {
+		console.warn('Availability subscription error:', error);
+	}
 });
 
 // Methods
-const fetchSettings = async () => {
-	loading.value = true;
-	try {
-		const [settingsRes, availRes] = await Promise.all([
-			$fetch('/api/scheduler/settings'),
-			$fetch('/api/scheduler/availability'),
-		]);
-		
-		settings.value = settingsRes.data;
-		if (settings.value) {
-			Object.keys(form).forEach((key) => {
-				if (settings.value[key] !== undefined) form[key] = settings.value[key];
-			});
-		}
-		
-		const availData = availRes.data || [];
-		weekDays.forEach((day) => {
-			const dayData = availData.find((a) => a.day_of_week?.toLowerCase() === day.value);
-			availability.value[day.value] = {
-				enabled: dayData?.is_available !== false && !!dayData,
-				start: dayData?.start_time?.substring(0, 5) || '09:00',
-				end: dayData?.end_time?.substring(0, 5) || '17:00',
-				breakStart: dayData?.break_start?.substring(0, 5) || '',
-				breakEnd: dayData?.break_end?.substring(0, 5) || '',
-			};
-		});
-	} catch (error) {
-		console.error('Error:', error);
-	}
-	loading.value = false;
-};
+const { createItem, updateItem } = useDirectusItems();
 
 const saveSettings = async () => {
 	saving.value = true;
 	try {
-		await $fetch('/api/scheduler/settings', { method: 'POST', body: form });
+		if (settings.value?.id) {
+			await updateItem('scheduler_settings', settings.value.id, { ...form });
+		} else {
+			await createItem('scheduler_settings', {
+				user_id: user.value?.id,
+				...form,
+			});
+		}
 		toast.add({ title: 'Settings saved', color: 'green' });
+		refreshSettings();
 	} catch (error) {
-		toast.add({ title: 'Error saving', description: error.message, color: 'red' });
+		console.error('Error saving settings:', error);
+		toast.add({ title: 'Error saving settings', description: error.message, color: 'red' });
 	}
 	saving.value = false;
 };
 
+const { deleteItem } = useDirectusItems();
+
 const saveAvailability = async () => {
 	saving.value = true;
 	try {
-		await $fetch('/api/scheduler/availability', { method: 'POST', body: availability.value });
+		// Delete existing availability for this user
+		if (availabilityData.value?.length) {
+			for (const item of availabilityData.value) {
+				await deleteItem('availability', item.id);
+			}
+		}
+
+		// Create new records
+		const dayMapping = {
+			monday: 'Monday',
+			tuesday: 'Tuesday',
+			wednesday: 'Wednesday',
+			thursday: 'Thursday',
+			friday: 'Friday',
+			saturday: 'Saturday',
+			sunday: 'Sunday',
+		};
+
+		for (const [day, data] of Object.entries(availability.value)) {
+			if (data.enabled) {
+				await createItem('availability', {
+					user_id: user.value?.id,
+					day_of_week: dayMapping[day],
+					start_time: data.start + ':00',
+					end_time: data.end + ':00',
+					is_available: true,
+					break_start: data.breakStart ? data.breakStart + ':00' : null,
+					break_end: data.breakEnd ? data.breakEnd + ':00' : null,
+					recurring: true,
+				});
+			}
+		}
+
 		toast.add({ title: 'Availability saved', color: 'green' });
+		refreshAvailability();
 	} catch (error) {
-		toast.add({ title: 'Error saving', description: error.message, color: 'red' });
+		console.error('Error saving availability:', error);
+		toast.add({ title: 'Error saving availability', description: error.message, color: 'red' });
 	}
 	saving.value = false;
 };
@@ -148,7 +236,11 @@ const connectGoogle = async () => {
 		const response = await $fetch('/api/calendar/google/auth-url');
 		window.location.href = response.url;
 	} catch (error) {
-		toast.add({ title: 'Error connecting Google Calendar', color: 'red' });
+		toast.add({
+			title: 'Google Calendar not configured',
+			description: 'Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET',
+			color: 'yellow',
+		});
 	}
 };
 
@@ -157,6 +249,7 @@ const disconnectGoogle = async () => {
 		await $fetch('/api/calendar/google/disconnect', { method: 'POST' });
 		form.google_calendar_enabled = false;
 		form.google_calendar_id = '';
+		refreshSettings();
 		toast.add({ title: 'Google Calendar disconnected', color: 'green' });
 	} catch (error) {
 		toast.add({ title: 'Error disconnecting', color: 'red' });
@@ -168,7 +261,11 @@ const connectOutlook = async () => {
 		const response = await $fetch('/api/calendar/outlook/auth-url');
 		window.location.href = response.url;
 	} catch (error) {
-		toast.add({ title: 'Error connecting Outlook', color: 'red' });
+		toast.add({
+			title: 'Outlook not configured',
+			description: 'Set AZURE_CLIENT_ID and AZURE_CLIENT_SECRET',
+			color: 'yellow',
+		});
 	}
 };
 
@@ -176,6 +273,7 @@ const disconnectOutlook = async () => {
 	try {
 		await $fetch('/api/calendar/outlook/disconnect', { method: 'POST' });
 		form.outlook_calendar_enabled = false;
+		refreshSettings();
 		toast.add({ title: 'Outlook disconnected', color: 'green' });
 	} catch (error) {
 		toast.add({ title: 'Error disconnecting', color: 'red' });
@@ -187,171 +285,222 @@ const copyBookingLink = async () => {
 	toast.add({ title: 'Link copied', color: 'green' });
 };
 
-onMounted(() => fetchSettings());
+// Check URL params for OAuth callback status
+onMounted(() => {
+	const route = useRoute();
+	if (route.query.google === 'connected') {
+		toast.add({ title: 'Google Calendar connected!', color: 'green' });
+		form.google_calendar_enabled = true;
+	}
+	if (route.query.outlook === 'connected') {
+		toast.add({ title: 'Outlook Calendar connected!', color: 'green' });
+		form.outlook_calendar_enabled = true;
+	}
+	if (route.query.error) {
+		toast.add({ title: 'Connection failed', description: route.query.error, color: 'red' });
+	}
+});
 </script>
 
 <template>
-	<div class="w-full relative">
-		<div class="flex items-center justify-between mb-6">
-			<div class="flex items-center gap-3">
-				<UButton color="gray" variant="ghost" icon="i-heroicons-arrow-left" to="/scheduler" />
-				<h1 class="page__title mb-0">Scheduler Settings</h1>
+	<ClientOnly>
+		<div class="w-full relative">
+			<div class="flex items-center justify-between mb-6">
+				<div class="flex items-center gap-3">
+					<UButton color="gray" variant="ghost" icon="i-heroicons-arrow-left" to="/scheduler" />
+					<h1 class="text-2xl font-bold">Scheduler Settings</h1>
+				</div>
+				<UButton color="primary" :loading="saving" @click="saveSettings">Save Changes</UButton>
 			</div>
-			<UButton color="primary" :loading="saving" @click="saveSettings">Save Changes</UButton>
-		</div>
 
-		<div v-if="loading" class="text-center py-12">
-			<UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin mx-auto text-gray-400" />
-		</div>
+			<div v-if="loading" class="text-center py-12">
+				<UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin mx-auto text-gray-400" />
+				<p class="text-sm text-gray-500 mt-2">Loading settings...</p>
+			</div>
 
-		<div v-else class="page__inner">
-			<UTabs v-model="activeTab" :items="tabs" orientation="vertical" :ui="{ wrapper: 'flex gap-6' }">
-				<template #default="{ item }">
-					<div class="flex items-center gap-2">
-						<UIcon :name="item.icon" class="w-4 h-4" />
-						<span>{{ item.label }}</span>
-					</div>
-				</template>
-
-				<template #item="{ item }">
-					<UCard class="flex-1">
-						<!-- General -->
-						<div v-if="item.key === 'general'" class="space-y-6">
-							<h2 class="text-lg font-semibold">General Settings</h2>
-							<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-								<UFormGroup label="Default Duration">
-									<USelect v-model="form.default_duration" :options="durationOptions" />
-								</UFormGroup>
-								<UFormGroup label="Default Meeting Type">
-									<USelect v-model="form.default_meeting_type" :options="meetingTypeOptions" />
-								</UFormGroup>
-								<UFormGroup label="Buffer Before (min)">
-									<UInput v-model.number="form.buffer_before" type="number" min="0" max="60" />
-								</UFormGroup>
-								<UFormGroup label="Buffer After (min)">
-									<UInput v-model.number="form.buffer_after" type="number" min="0" max="60" />
-								</UFormGroup>
-								<UFormGroup label="Timezone">
-									<USelect v-model="form.timezone" :options="timezoneOptions" />
-								</UFormGroup>
-							</div>
+			<div v-else>
+				<UTabs v-model="activeTab" :items="tabs" orientation="vertical" :ui="{ wrapper: 'flex gap-6' }">
+					<template #default="{ item }">
+						<div class="flex items-center gap-2">
+							<UIcon :name="item.icon" class="w-4 h-4" />
+							<span>{{ item.label }}</span>
 						</div>
+					</template>
 
-						<!-- Availability -->
-						<div v-else-if="item.key === 'availability'" class="space-y-6">
-							<div class="flex items-center justify-between">
-								<h2 class="text-lg font-semibold">Availability</h2>
-								<UButton color="primary" size="sm" :loading="saving" @click="saveAvailability">Save Availability</UButton>
-							</div>
-							<div class="space-y-4">
-								<div v-for="day in weekDays" :key="day.value" class="flex items-center gap-4 py-3 border-b border-gray-100 dark:border-gray-800">
-									<div class="w-28">
-										<UCheckbox v-model="availability[day.value].enabled" :label="day.label" />
-									</div>
-									<template v-if="availability[day.value]?.enabled">
-										<UInput v-model="availability[day.value].start" type="time" class="w-28" size="sm" />
-										<span class="text-gray-400">to</span>
-										<UInput v-model="availability[day.value].end" type="time" class="w-28" size="sm" />
-										<span class="text-gray-400 ml-4">Break:</span>
-										<UInput v-model="availability[day.value].breakStart" type="time" class="w-24" size="sm" placeholder="Start" />
-										<span class="text-gray-400">-</span>
-										<UInput v-model="availability[day.value].breakEnd" type="time" class="w-24" size="sm" placeholder="End" />
-									</template>
-									<span v-else class="text-gray-400 text-sm">Unavailable</span>
-								</div>
-							</div>
-						</div>
-
-						<!-- Booking Page -->
-						<div v-else-if="item.key === 'booking'" class="space-y-6">
-							<h2 class="text-lg font-semibold">Booking Page</h2>
-							<UFormGroup label="Enable Public Booking">
-								<UToggle v-model="form.public_booking_enabled" />
-							</UFormGroup>
-							<UFormGroup label="Booking Page URL">
-								<div class="flex gap-2">
-									<UInput :model-value="bookingUrl" readonly class="flex-1" />
-									<UButton color="gray" icon="i-heroicons-clipboard" @click="copyBookingLink" />
-									<UButton color="gray" icon="i-heroicons-arrow-top-right-on-square" :to="bookingUrl" target="_blank" />
-								</div>
-							</UFormGroup>
-							<UFormGroup label="Custom URL Slug" hint="Leave empty to use your user ID">
-								<UInput v-model="form.booking_page_slug" placeholder="your-custom-slug" />
-							</UFormGroup>
-							<UFormGroup label="Page Title">
-								<UInput v-model="form.booking_page_title" placeholder="Schedule a meeting with me" />
-							</UFormGroup>
-							<UFormGroup label="Page Description">
-								<UTextarea v-model="form.booking_page_description" placeholder="Brief description" rows="3" />
-							</UFormGroup>
-						</div>
-
-						<!-- Calendar Sync -->
-						<div v-else-if="item.key === 'calendar'" class="space-y-6">
-							<h2 class="text-lg font-semibold">Calendar Integrations</h2>
-							<p class="text-sm text-gray-500">Connect your calendars to sync events and block busy times.</p>
-							
-							<!-- Google Calendar -->
-							<div class="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
-								<div class="flex items-center justify-between">
-									<div class="flex items-center gap-3">
-										<div class="w-10 h-10 bg-red-50 dark:bg-red-900/20 rounded-lg flex items-center justify-center">
-											<UIcon name="i-simple-icons-google" class="w-5 h-5 text-red-500" />
-										</div>
-										<div>
-											<div class="font-medium">Google Calendar</div>
-											<div class="text-sm text-gray-500">{{ form.google_calendar_enabled ? 'Connected' : 'Not connected' }}</div>
-										</div>
-									</div>
-									<UButton v-if="!form.google_calendar_enabled" color="gray" @click="connectGoogle">Connect</UButton>
-									<UButton v-else color="red" variant="soft" @click="disconnectGoogle">Disconnect</UButton>
-								</div>
-								<div v-if="form.google_calendar_enabled" class="mt-4">
-									<UFormGroup label="Calendar ID">
-										<UInput v-model="form.google_calendar_id" placeholder="primary" />
+					<template #item="{ item }">
+						<UCard class="flex-1">
+							<!-- General -->
+							<div v-if="item.key === 'general'" class="space-y-6">
+								<h2 class="text-lg font-semibold">General Settings</h2>
+								<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+									<UFormGroup label="Default Duration">
+										<USelect v-model="form.default_duration" :options="durationOptions" />
+									</UFormGroup>
+									<UFormGroup label="Default Meeting Type">
+										<USelect v-model="form.default_meeting_type" :options="meetingTypeOptions" />
+									</UFormGroup>
+									<UFormGroup label="Buffer Before (min)">
+										<UInput v-model.number="form.buffer_before" type="number" min="0" max="60" />
+									</UFormGroup>
+									<UFormGroup label="Buffer After (min)">
+										<UInput v-model.number="form.buffer_after" type="number" min="0" max="60" />
+									</UFormGroup>
+									<UFormGroup label="Timezone">
+										<USelect v-model="form.timezone" :options="timezoneOptions" />
 									</UFormGroup>
 								</div>
 							</div>
-							
-							<!-- Outlook Calendar -->
-							<div class="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+
+							<!-- Availability -->
+							<div v-else-if="item.key === 'availability'" class="space-y-6">
 								<div class="flex items-center justify-between">
-									<div class="flex items-center gap-3">
-										<div class="w-10 h-10 bg-blue-50 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
-											<UIcon name="i-simple-icons-microsoftoutlook" class="w-5 h-5 text-blue-500" />
+									<h2 class="text-lg font-semibold">Availability</h2>
+									<UButton color="primary" size="sm" :loading="saving" @click="saveAvailability">
+										Save Availability
+									</UButton>
+								</div>
+								<div class="space-y-4">
+									<div
+										v-for="day in weekDays"
+										:key="day.value"
+										class="flex items-center gap-4 py-3 border-b border-gray-100 dark:border-gray-800"
+									>
+										<div class="w-28">
+											<UCheckbox v-model="availability[day.value].enabled" :label="day.label" />
 										</div>
-										<div>
-											<div class="font-medium">Outlook Calendar</div>
-											<div class="text-sm text-gray-500">{{ form.outlook_calendar_enabled ? 'Connected' : 'Not connected' }}</div>
-										</div>
+										<template v-if="availability[day.value].enabled">
+											<UInput v-model="availability[day.value].start" type="time" class="w-28" size="sm" />
+											<span class="text-gray-400">to</span>
+											<UInput v-model="availability[day.value].end" type="time" class="w-28" size="sm" />
+											<span class="text-gray-400 ml-4">Break:</span>
+											<UInput
+												v-model="availability[day.value].breakStart"
+												type="time"
+												class="w-24"
+												size="sm"
+												placeholder="Start"
+											/>
+											<span class="text-gray-400">-</span>
+											<UInput
+												v-model="availability[day.value].breakEnd"
+												type="time"
+												class="w-24"
+												size="sm"
+												placeholder="End"
+											/>
+										</template>
+										<span v-else class="text-gray-400 text-sm">Unavailable</span>
 									</div>
-									<UButton v-if="!form.outlook_calendar_enabled" color="gray" @click="connectOutlook">Connect</UButton>
-									<UButton v-else color="red" variant="soft" @click="disconnectOutlook">Disconnect</UButton>
 								</div>
 							</div>
-						</div>
 
-						<!-- Notifications -->
-						<div v-else-if="item.key === 'notifications'" class="space-y-6">
-							<h2 class="text-lg font-semibold">Notifications</h2>
-							<UFormGroup label="Send Confirmation Emails" hint="Send email when a meeting is booked">
-								<UToggle v-model="form.send_confirmations" />
-							</UFormGroup>
-							<UFormGroup label="Send Reminder Emails" hint="Send reminder before meetings">
-								<UToggle v-model="form.send_reminders" />
-							</UFormGroup>
-							<UFormGroup v-if="form.send_reminders" label="Reminder Time">
-								<USelect v-model="form.reminder_time" :options="reminderOptions" />
-							</UFormGroup>
-						</div>
-					</UCard>
-				</template>
-			</UTabs>
+							<!-- Booking Page -->
+							<div v-else-if="item.key === 'booking'" class="space-y-6">
+								<h2 class="text-lg font-semibold">Booking Page</h2>
+								<UFormGroup label="Enable Public Booking">
+									<UToggle v-model="form.public_booking_enabled" />
+								</UFormGroup>
+								<UFormGroup label="Booking Page URL">
+									<div class="flex gap-2">
+										<UInput :model-value="bookingUrl" readonly class="flex-1" />
+										<UButton color="gray" icon="i-heroicons-clipboard" @click="copyBookingLink" />
+										<UButton
+											color="gray"
+											icon="i-heroicons-arrow-top-right-on-square"
+											:to="bookingUrl"
+											target="_blank"
+										/>
+									</div>
+								</UFormGroup>
+								<UFormGroup label="Custom URL Slug" hint="Leave empty to use your user ID">
+									<UInput v-model="form.booking_page_slug" placeholder="your-custom-slug" />
+								</UFormGroup>
+								<UFormGroup label="Page Title">
+									<UInput v-model="form.booking_page_title" placeholder="Schedule a meeting with me" />
+								</UFormGroup>
+								<UFormGroup label="Page Description">
+									<UTextarea v-model="form.booking_page_description" placeholder="Brief description" rows="3" />
+								</UFormGroup>
+							</div>
+
+							<!-- Calendar Sync -->
+							<div v-else-if="item.key === 'calendar'" class="space-y-6">
+								<h2 class="text-lg font-semibold">Calendar Integrations</h2>
+								<p class="text-sm text-gray-500">Connect your calendars to sync events and block busy times.</p>
+
+								<!-- Google Calendar -->
+								<div class="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+									<div class="flex items-center justify-between">
+										<div class="flex items-center gap-3">
+											<div class="w-10 h-10 bg-red-50 dark:bg-red-900/20 rounded-lg flex items-center justify-center">
+												<UIcon name="i-simple-icons-google" class="w-5 h-5 text-red-500" />
+											</div>
+											<div>
+												<div class="font-medium">Google Calendar</div>
+												<div class="text-sm" :class="form.google_calendar_enabled ? 'text-green-500' : 'text-gray-500'">
+													{{ form.google_calendar_enabled ? 'Connected' : 'Not connected' }}
+												</div>
+											</div>
+										</div>
+										<UButton v-if="!form.google_calendar_enabled" color="gray" @click="connectGoogle">Connect</UButton>
+										<UButton v-else color="red" variant="soft" @click="disconnectGoogle">Disconnect</UButton>
+									</div>
+									<div v-if="form.google_calendar_enabled" class="mt-4">
+										<UFormGroup label="Calendar ID">
+											<UInput v-model="form.google_calendar_id" placeholder="primary" />
+										</UFormGroup>
+									</div>
+								</div>
+
+								<!-- Outlook Calendar -->
+								<div class="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+									<div class="flex items-center justify-between">
+										<div class="flex items-center gap-3">
+											<div class="w-10 h-10 bg-blue-50 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
+												<UIcon name="i-simple-icons-microsoftoutlook" class="w-5 h-5 text-blue-500" />
+											</div>
+											<div>
+												<div class="font-medium">Outlook Calendar</div>
+												<div
+													class="text-sm"
+													:class="form.outlook_calendar_enabled ? 'text-green-500' : 'text-gray-500'"
+												>
+													{{ form.outlook_calendar_enabled ? 'Connected' : 'Not connected' }}
+												</div>
+											</div>
+										</div>
+										<UButton v-if="!form.outlook_calendar_enabled" color="gray" @click="connectOutlook">
+											Connect
+										</UButton>
+										<UButton v-else color="red" variant="soft" @click="disconnectOutlook">Disconnect</UButton>
+									</div>
+								</div>
+							</div>
+
+							<!-- Notifications -->
+							<div v-else-if="item.key === 'notifications'" class="space-y-6">
+								<h2 class="text-lg font-semibold">Notifications</h2>
+								<UFormGroup label="Send Confirmation Emails" hint="Send email when a meeting is booked">
+									<UToggle v-model="form.send_confirmations" />
+								</UFormGroup>
+								<UFormGroup label="Send Reminder Emails" hint="Send reminder before meetings">
+									<UToggle v-model="form.send_reminders" />
+								</UFormGroup>
+								<UFormGroup v-if="form.send_reminders" label="Reminder Time">
+									<USelect v-model="form.reminder_time" :options="reminderOptions" />
+								</UFormGroup>
+							</div>
+						</UCard>
+					</template>
+				</UTabs>
+			</div>
 		</div>
-	</div>
-</template>
 
-<style scoped>
-.page__title { @apply text-2xl font-bold; }
-.page__inner { @apply w-full; }
-</style>
+		<template #fallback>
+			<div class="text-center py-12">
+				<UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin mx-auto text-gray-400" />
+				<p class="text-sm text-gray-500 mt-2">Loading...</p>
+			</div>
+		</template>
+	</ClientOnly>
+</template>
