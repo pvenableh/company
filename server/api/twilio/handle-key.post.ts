@@ -1,7 +1,10 @@
 // server/api/twilio/handle-key.post.ts
-// Fixed version with proper Directus authentication
+// Reads voice setting from Directus phone_settings
 
-import { createDirectus, rest, staticToken, readItems, createItem, updateItem } from '@directus/sdk';
+import { createDirectus, rest, staticToken, readItems, createItem } from '@directus/sdk';
+
+const DEFAULT_VOICE = 'Polly.Matthew-Neural';
+const DEFAULT_LANGUAGE = 'en-US';
 
 export default defineEventHandler(async (event) => {
 	const config = useRuntimeConfig();
@@ -23,9 +26,8 @@ export default defineEventHandler(async (event) => {
 		console.log(`Digit pressed: ${digit}, Call SID: ${callSid}`);
 		console.log(`From: ${fromNumber}, To: ${toNumber}, Line: ${lineId || 'auto-detect'}`);
 
-		// Create Directus client with static token
 		const directusUrl = config.public.directusUrl;
-		const directusToken = config.public.staticToken;
+		const directusToken = config.directusServerToken as string;
 
 		if (!directusUrl || !directusToken) {
 			throw new Error('Missing Directus configuration');
@@ -33,7 +35,6 @@ export default defineEventHandler(async (event) => {
 
 		const directus = createDirectus(directusUrl).with(rest()).with(staticToken(directusToken));
 
-		// Build filter for phone settings
 		let filter: any = {
 			active: { _eq: true },
 			status: { _eq: 'published' },
@@ -60,7 +61,11 @@ export default defineEventHandler(async (event) => {
 		const phoneConfig = settings[0] as any;
 		console.log(`Using config: ${phoneConfig.line_name}`);
 
-		// Find the matching route
+		// Get voice from settings or use default
+		const voice = phoneConfig.voice || DEFAULT_VOICE;
+		const language = DEFAULT_LANGUAGE;
+		console.log(`Using voice: ${voice}`);
+
 		const route = phoneConfig.call_routes?.find(
 			(r: any) => r.menu_key === digit && r.active && r.status === 'published',
 		);
@@ -70,7 +75,6 @@ export default defineEventHandler(async (event) => {
 		if (route) {
 			console.log(`✅ Found route: ${route.department} -> ${route.phone_number}`);
 
-			// Log the call with selected option
 			try {
 				await directus.request(
 					createItem('call_logs', {
@@ -79,7 +83,7 @@ export default defineEventHandler(async (event) => {
 						to_number: toNumber,
 						selected_option: digit,
 						routed_to: route.phone_number,
-						event_type: 'incoming',
+						event_type: route.phone_number === 'voicemail' ? 'voicemail' : 'incoming',
 						timestamp: new Date().toISOString(),
 						status: 'published',
 					}),
@@ -89,25 +93,40 @@ export default defineEventHandler(async (event) => {
 				console.error('⚠️ Failed to log call:', logError);
 			}
 
-			// Format phone number (ensure it has +)
-			let phoneNumber = route.phone_number;
-			if (!phoneNumber.startsWith('+')) {
-				phoneNumber = '+1' + phoneNumber.replace(/\D/g, '');
+			// Check if this is a voicemail route
+			if (route.phone_number === 'voicemail' || route.department.toLowerCase() === 'voicemail') {
+				console.log('📧 Voicemail route selected');
+
+				twiml += `  <Say voice="${voice}" language="${language}">Please leave your message after the tone. Press the pound key when finished, or simply hang up.</Say>\n`;
+				twiml += `  <Record \n`;
+				twiml += `    maxLength="120" \n`;
+				twiml += `    finishOnKey="#" \n`;
+				twiml += `    transcribe="true" \n`;
+				twiml += `    transcribeCallback="/api/twilio/transcription" \n`;
+				twiml += `    action="/api/twilio/voicemail-complete?voice=${encodeURIComponent(voice)}" \n`;
+				twiml += `    playBeep="true"\n`;
+				twiml += `  />\n`;
+				twiml += `  <Say voice="${voice}" language="${language}">We did not receive a recording. Goodbye.</Say>\n`;
+			} else {
+				// Regular phone routing
+				let phoneNumber = route.phone_number;
+				if (!phoneNumber.startsWith('+')) {
+					phoneNumber = '+1' + phoneNumber.replace(/\D/g, '');
+				}
+
+				console.log(`Dialing: ${phoneNumber}`);
+
+				twiml += `  <Say voice="${voice}" language="${language}">Connecting you to ${escapeXml(route.department)}. Please hold.</Say>\n`;
+				twiml += `  <Dial timeout="30" callerId="${toNumber}">\n`;
+				twiml += `    <Number>${phoneNumber}</Number>\n`;
+				twiml += `  </Dial>\n`;
+				twiml += `  <Say voice="${voice}" language="${language}">The call could not be completed. Please try again later. Goodbye.</Say>\n`;
 			}
-
-			console.log(`Dialing: ${phoneNumber}`);
-
-			twiml += `  <Say voice="alice">Connecting you to ${escapeXml(route.department)}. Please hold.</Say>\n`;
-			twiml += `  <Dial timeout="30" callerId="${toNumber}">\n`;
-			twiml += `    <Number>${phoneNumber}</Number>\n`;
-			twiml += `  </Dial>\n`;
-			twiml += `  <Say voice="alice">The call could not be completed. Please try again later. Goodbye.</Say>\n`;
 		} else {
 			console.log(`❌ Invalid option: ${digit}`);
 
-			twiml += `  <Say voice="alice">That is not a valid option.</Say>\n`;
+			twiml += `  <Say voice="${voice}" language="${language}">That is not a valid option.</Say>\n`;
 
-			// Redirect back to main menu
 			const redirectUrl = lineId ? `/api/twilio/voice?line=${lineId}` : '/api/twilio/voice';
 			twiml += `  <Redirect>${redirectUrl}</Redirect>\n`;
 		}
@@ -121,11 +140,10 @@ export default defineEventHandler(async (event) => {
 		return twiml;
 	} catch (error: any) {
 		console.error('❌ HANDLE-KEY ERROR:', error);
-		console.error('Stack:', error.stack);
 
 		const fallback = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say voice="alice">We're experiencing technical difficulties. Please try again later.</Say>
+  <Say voice="${DEFAULT_VOICE}" language="${DEFAULT_LANGUAGE}">We're experiencing technical difficulties. Please try again later.</Say>
 </Response>`;
 
 		setResponseHeader(event, 'Content-Type', 'text/xml');
