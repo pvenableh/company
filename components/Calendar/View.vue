@@ -31,7 +31,6 @@
 								{{ sortedAppointments(day).length === 1 ? 'event' : 'events' }}
 							</span>
 							<div class="flex-grow overflow-y-auto relative">
-								<!-- :style="{ height: `${appointment.duration * 20}px`, marginBottom: '4px' }" -->
 								<div
 									v-for="appointment in sortedAppointments(day)"
 									:key="appointment.id"
@@ -44,8 +43,18 @@
 									@click.stop="handleAppointmentClick(appointment)"
 									@dblclick.stop="handleAppointmentDoubleClick(appointment)"
 								>
-									<strong class="!font-bold">{{ getTime(appointment.start_time) }}</strong>
-									: {{ appointment.title }}
+									<div class="flex items-center gap-1">
+										<!-- Video icon for video meetings -->
+										<UIcon
+											v-if="appointment.is_video"
+											name="i-heroicons-video-camera"
+											class="w-3 h-3 text-green-500 flex-shrink-0"
+										/>
+										<span>
+											<strong class="!font-bold">{{ getTime(appointment.start_time) }}</strong>
+											: {{ appointment.title }}
+										</span>
+									</div>
 								</div>
 							</div>
 						</div>
@@ -53,7 +62,16 @@
 				</VCalendar>
 			</div>
 			<div class="mt-4 lg:mt-0 px-6 max-h-[600px]">
-				<div class="w-full flex items-end justify-end mb-4">
+				<div class="w-full flex items-end justify-end mb-4 gap-2">
+					<UButton
+						icon="i-heroicons-video-camera"
+						size="sm"
+						color="green"
+						variant="soft"
+						@click="openVideoMeetingModal()"
+					>
+						Video Meeting
+					</UButton>
 					<UButton icon="i-heroicons-plus" size="sm" @click="openAppointmentModal()">New Appointment</UButton>
 				</div>
 				<div v-if="filteredAppointments.length !== 0" class="flex items-center justify-between mb-4">
@@ -62,7 +80,6 @@
 						<strong>{{ formatDate(selectedDate) }}</strong>
 						:
 					</h3>
-					<!-- <UButton icon="i-heroicons-plus" size="xs" @click="openAppointmentModal()">New</UButton> -->
 				</div>
 
 				<div v-if="loading" class="text-center uppercase text-[10px]">Loading appointments...</div>
@@ -82,17 +99,58 @@
 						class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
 					>
 						<div class="flex items-start justify-between">
-							<div>
-								<h4 class="uppercase text-sm">{{ appointment.title }}</h4>
-								<p class="text-xs text-gray-600 dark:text-gray-300 font-bold">
+							<div class="flex-1">
+								<div class="flex items-center gap-2">
+									<!-- Video badge -->
+									<UBadge v-if="appointment.is_video" color="green" variant="soft" size="xs">
+										<UIcon name="i-heroicons-video-camera" class="w-3 h-3 mr-1" />
+										Video
+									</UBadge>
+									<h4 class="uppercase text-sm">{{ appointment.title }}</h4>
+								</div>
+								<p class="text-xs text-gray-600 dark:text-gray-300 font-bold mt-1">
 									{{ formatTime(appointment.start_time) }} - {{ formatTime(appointment.end_time) }}
 								</p>
 								<div v-if="appointment.description" class="text-xs mt-2" v-html="appointment.description" />
+
+								<!-- Join meeting button for video appointments -->
+								<div v-if="appointment.is_video && appointment.meeting_link" class="mt-3">
+									<UButton
+										size="xs"
+										color="green"
+										:to="appointment.meeting_link"
+										target="_blank"
+										icon="i-heroicons-video-camera"
+									>
+										Join Meeting
+									</UButton>
+									<UButton
+										size="xs"
+										color="gray"
+										variant="ghost"
+										icon="i-heroicons-clipboard"
+										class="ml-2"
+										@click.stop="copyMeetingLink(appointment.meeting_link)"
+									>
+										Copy Link
+									</UButton>
+								</div>
 							</div>
 							<UPopover :popper="{ placement: 'bottom-end' }">
 								<UButton color="gray" variant="ghost" icon="i-heroicons-ellipsis-vertical" />
 								<template #panel>
 									<div class="p-2 flex flex-col gap-1">
+										<UButton
+											v-if="appointment.is_video && appointment.meeting_link"
+											class="w-full justify-start"
+											color="green"
+											variant="ghost"
+											icon="i-heroicons-video-camera"
+											:to="appointment.meeting_link"
+											target="_blank"
+										>
+											Join Meeting
+										</UButton>
 										<UButton
 											class="w-full justify-start"
 											color="gray"
@@ -119,6 +177,8 @@
 				</ul>
 			</div>
 		</div>
+
+		<!-- Appointment Form Modal -->
 		<UModal v-model="showAppointmentForm">
 			<div v-if="showAppointmentForm" class="">
 				<CalendarAppointmentForm
@@ -127,6 +187,73 @@
 					@saved="onAppointmentSaved"
 					@cancelled="closeAppointmentModal"
 				/>
+			</div>
+		</UModal>
+
+		<!-- Video Meeting Modal -->
+		<UModal v-model="showVideoMeetingForm">
+			<div v-if="showVideoMeetingForm" class="p-6">
+				<h3 class="text-lg font-semibold mb-4">Create Video Meeting</h3>
+				<form @submit.prevent="createVideoMeeting" class="space-y-4">
+					<UFormGroup label="Title" required>
+						<UInput v-model="videoForm.title" placeholder="Meeting title" />
+					</UFormGroup>
+
+					<div class="grid grid-cols-2 gap-4">
+						<UFormGroup label="Date" required>
+							<UInput type="date" v-model="videoForm.date" />
+						</UFormGroup>
+						<UFormGroup label="Time" required>
+							<UInput type="time" v-model="videoForm.time" />
+						</UFormGroup>
+					</div>
+
+					<UFormGroup label="Duration">
+						<USelect
+							v-model="videoForm.duration"
+							:options="[
+								{ label: '15 minutes', value: 15 },
+								{ label: '30 minutes', value: 30 },
+								{ label: '45 minutes', value: 45 },
+								{ label: '60 minutes', value: 60 },
+							]"
+						/>
+					</UFormGroup>
+
+					<UFormGroup label="Description">
+						<UTextarea v-model="videoForm.description" placeholder="Meeting description" rows="2" />
+					</UFormGroup>
+
+					<UDivider label="Invite Guest (Optional)" />
+
+					<div class="grid grid-cols-2 gap-4">
+						<UFormGroup label="Guest Name">
+							<UInput v-model="videoForm.invitee_name" placeholder="John Doe" />
+						</UFormGroup>
+						<UFormGroup label="Guest Email">
+							<UInput v-model="videoForm.invitee_email" type="email" placeholder="john@example.com" />
+						</UFormGroup>
+					</div>
+
+					<UFormGroup label="Send Invite Via">
+						<USelect
+							v-model="videoForm.invite_method"
+							:options="[
+								{ label: 'Don\'t send invite', value: 'none' },
+								{ label: 'Email', value: 'email' },
+								{ label: 'SMS', value: 'sms' },
+								{ label: 'Both', value: 'both' },
+							]"
+						/>
+					</UFormGroup>
+
+					<div class="flex justify-end gap-2 pt-4">
+						<UButton color="gray" variant="soft" @click="closeVideoMeetingModal">Cancel</UButton>
+						<UButton type="submit" color="green" :loading="creatingVideo" icon="i-heroicons-video-camera">
+							Create Meeting
+						</UButton>
+					</div>
+				</form>
 			</div>
 		</UModal>
 	</div>
@@ -139,6 +266,7 @@ const { user } = useEnhancedAuth();
 const { deleteItem } = useDirectusItems();
 const toast = useToast();
 const showAppointmentForm = ref(false);
+const showVideoMeetingForm = ref(false);
 const selectedDate = ref(new Date());
 const selectedAppointment = ref(null);
 const calendarContainer = ref(null);
@@ -146,6 +274,20 @@ const selectedAppointmentId = ref(null);
 const appointments = ref([]);
 const loading = ref(true);
 const error = ref(null);
+const creatingVideo = ref(false);
+
+// Video meeting form
+const videoForm = reactive({
+	title: '',
+	date: format(new Date(), 'yyyy-MM-dd'),
+	time: '09:00',
+	duration: 30,
+	description: '',
+	invitee_name: '',
+	invitee_email: '',
+	invitee_phone: '',
+	invite_method: 'none',
+});
 
 const {
 	data: realtimeAppointments,
@@ -160,6 +302,11 @@ const {
 		'start_time',
 		'end_time',
 		'status',
+		'is_video',
+		'meeting_link',
+		'room_name',
+		'video_meeting.id',
+		'video_meeting.room_name',
 		'attendees.id',
 		'attendees.directus_users_id.id',
 		'attendees.directus_users_id.first_name',
@@ -180,7 +327,7 @@ watch(subscriptionError, (newError) => {
 		error.value = newError;
 		loading.value = false;
 		console.error('Subscription Error:', newError);
-		toast.add({ title: 'Error', description: newError.message || 'Failed to load appointments', color: 'red' }); // Display toast error
+		toast.add({ title: 'Error', description: newError.message || 'Failed to load appointments', color: 'red' });
 	}
 });
 
@@ -210,9 +357,6 @@ const calendarAttributes = computed(() => {
 		key: appointment.id,
 		dates: parseISO(appointment.start_time),
 		customData: appointment,
-		// dot: {
-		// 	color: getStatusColor(appointment.status),
-		// },
 	}));
 });
 
@@ -221,7 +365,6 @@ function getTime(dateTime) {
 }
 
 function dayClicked(day) {
-	console.log('day clicked');
 	selectedAppointmentId.value = null;
 	if (day?.date) {
 		selectedDate.value = day.date;
@@ -229,11 +372,7 @@ function dayClicked(day) {
 }
 
 function handleAppointmentClick(appointment) {
-	// Toggle selection
-	console.log(appointment);
 	selectedAppointmentId.value = selectedAppointmentId.value === appointment.id ? null : appointment.id;
-	console.log(selectedAppointmentId.value);
-	// Focus the container to enable keyboard events
 	calendarContainer.value?.focus();
 }
 
@@ -242,14 +381,11 @@ function handleAppointmentDoubleClick(appointment) {
 }
 
 function handleDayDoubleClick(day) {
-	console.log('Day double-clicked:', day);
 	selectedDate.value = day.date;
-	openAppointmentModal(); // Open modal for creating a new event
+	openAppointmentModal();
 }
 
 async function handleKeyDown(event) {
-	console.log(event);
-	console.log(selectedAppointmentId.value);
 	if ((event.key === 'Delete' || event.key === 'Backspace') && selectedAppointmentId.value) {
 		await deleteAppointment(selectedAppointmentId.value);
 		selectedAppointmentId.value = null;
@@ -263,13 +399,14 @@ function getAppointmentClass(appointment) {
 		'border-l-[5px] border-yellow-200 dark:border-yellow-800': appointment.status === 'pending',
 		'border-l-[5px] bg-[var(--cyan)] border-[var(--cyan)]': appointment.status === 'confirmed',
 		'border-l-[5px] border-red-200 dark:border-red-800': appointment.status === 'cancelled',
+		'border-l-[5px] border-green-400 dark:border-green-600': appointment.is_video, // Green border for video meetings
 	};
 }
 
 const sortedAppointments = (day) => {
-	const currentDayStart = day.date; // Use the date property directly
+	const currentDayStart = day.date;
 	const currentDayEnd = new Date(day.date);
-	currentDayEnd.setHours(23, 59, 59, 999); // Set the end of the day
+	currentDayEnd.setHours(23, 59, 59, 999);
 
 	return appointments.value
 		.filter((appointment) => {
@@ -284,24 +421,18 @@ const sortedAppointments = (day) => {
 		.map((appointment) => {
 			const start = new Date(appointment.start_time);
 			const end = new Date(appointment.end_time);
-			const durationInHours = (end - start) / (1000 * 60 * 60); // Convert milliseconds to hours
+			const durationInHours = (end - start) / (1000 * 60 * 60);
 			return {
 				...appointment,
 				duration: durationInHours,
 			};
 		})
-		.sort((a, b) => new Date(a.start_time) - new Date(b.start_time)); // Sort by start_time
+		.sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
 };
 
 function editAppointment(appointment) {
 	selectedAppointment.value = appointment;
 	openAppointmentModal();
-}
-
-function openEventDetails(eventData) {
-	selectedAppointment.value = eventData; // Set the selected appointment
-	showAppointmentForm.value = true; // Open the appointment modal or details view
-	console.log('Event details opened for:', eventData);
 }
 
 async function deleteAppointment(id) {
@@ -330,6 +461,72 @@ function closeAppointmentModal() {
 	selectedAppointment.value = null;
 }
 
+function openVideoMeetingModal() {
+	// Pre-fill date with selected date
+	videoForm.date = format(selectedDate.value, 'yyyy-MM-dd');
+	videoForm.title = '';
+	videoForm.time = '09:00';
+	videoForm.duration = 30;
+	videoForm.description = '';
+	videoForm.invitee_name = '';
+	videoForm.invitee_email = '';
+	videoForm.invite_method = 'none';
+	showVideoMeetingForm.value = true;
+}
+
+function closeVideoMeetingModal() {
+	showVideoMeetingForm.value = false;
+}
+
+async function createVideoMeeting() {
+	if (!videoForm.title) {
+		toast.add({ title: 'Title is required', color: 'red' });
+		return;
+	}
+
+	creatingVideo.value = true;
+	try {
+		const scheduledStart = new Date(`${videoForm.date}T${videoForm.time}`);
+
+		const response = await $fetch('/api/video/create-room', {
+			method: 'POST',
+			body: {
+				title: videoForm.title,
+				description: videoForm.description,
+				scheduled_start: scheduledStart.toISOString(),
+				duration: videoForm.duration,
+				invitee_name: videoForm.invitee_name,
+				invitee_email: videoForm.invitee_email,
+				invitee_phone: videoForm.invitee_phone,
+				invite_method: videoForm.invite_method,
+			},
+		});
+
+		toast.add({
+			title: 'Video meeting created!',
+			description: 'Meeting link copied to clipboard',
+			color: 'green',
+		});
+
+		// Copy meeting link to clipboard
+		if (response.data?.meetingLink) {
+			await navigator.clipboard.writeText(response.data.meetingLink);
+		}
+
+		closeVideoMeetingModal();
+		refresh(); // Refresh calendar to show new appointment
+	} catch (err) {
+		console.error('Error creating video meeting:', err);
+		toast.add({ title: 'Error', description: err.message || 'Failed to create video meeting', color: 'red' });
+	}
+	creatingVideo.value = false;
+}
+
+async function copyMeetingLink(link) {
+	await navigator.clipboard.writeText(link);
+	toast.add({ title: 'Meeting link copied!', color: 'green' });
+}
+
 function formatDate(date) {
 	return format(date, 'MMMM d, yyyy');
 }
@@ -346,19 +543,19 @@ onUnmounted(() => {
 <style>
 .calendar-container {
 	@apply w-full overflow-hidden !font-body;
-	height: calc(100vh - 12rem); /* Adjust based on your layout */
+	height: calc(100vh - 12rem);
 
 	.appointment-title {
-		padding-left: 5px; /* Space between border and text */
-		background-color: rgba(198, 198, 198, 0.05); /* Optional: background color for better visibility */
-		transition: background-color 0.3s; /* Optional: transition effect */
+		padding-left: 5px;
+		background-color: rgba(198, 198, 198, 0.05);
+		transition: background-color 0.3s;
 		font-size: 8px;
 		line-height: 8px;
 		@apply py-1 min-h-5;
 	}
 
 	.appointment-title:hover {
-		background-color: rgba(198, 198, 198, 0.35); /* Optional: hover effect */
+		background-color: rgba(198, 198, 198, 0.35);
 	}
 	.appointment-selected {
 		background-color: rgba(198, 198, 198, 0.32);

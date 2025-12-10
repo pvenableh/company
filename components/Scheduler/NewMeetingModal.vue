@@ -1,28 +1,108 @@
 <!-- components/Scheduler/NewMeetingModal.vue -->
-<script setup>
+<template>
+	<UModal v-model="isOpen" :ui="{ width: 'max-w-2xl' }">
+		<UCard>
+			<template #header>
+				<div class="flex items-center justify-between">
+					<h3 class="text-lg font-semibold">Create Video Meeting</h3>
+					<UButton color="gray" variant="ghost" icon="i-heroicons-x-mark" @click="close" />
+				</div>
+			</template>
+
+			<form @submit.prevent="createMeeting" class="space-y-6">
+				<!-- Title -->
+				<UFormGroup label="Meeting Title" required>
+					<UInput v-model="form.title" placeholder="Project discussion" size="lg" />
+				</UFormGroup>
+
+				<!-- Date/Time -->
+				<div class="grid grid-cols-3 gap-4">
+					<UFormGroup label="Date" required>
+						<UInput type="date" v-model="form.date" />
+					</UFormGroup>
+					<UFormGroup label="Start Time" required>
+						<UInput type="time" v-model="form.time" />
+					</UFormGroup>
+					<UFormGroup label="Duration">
+						<USelect v-model="form.duration" :options="durationOptions" />
+					</UFormGroup>
+				</div>
+
+				<!-- Description -->
+				<UFormGroup label="Description">
+					<UTextarea v-model="form.description" placeholder="Meeting agenda..." rows="2" />
+				</UFormGroup>
+
+				<!-- Settings -->
+				<div class="flex items-center gap-6">
+					<UCheckbox v-model="form.waiting_room_enabled" label="Enable waiting room" />
+				</div>
+
+				<UDivider label="Invite Attendees" />
+
+				<!-- Attendees List -->
+				<div class="space-y-3">
+					<div
+						v-for="(attendee, index) in form.attendees"
+						:key="index"
+						class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+					>
+						<div class="flex-1 grid grid-cols-2 gap-3">
+							<UFormGroup label="Name">
+								<UInput v-model="attendee.name" placeholder="John Doe" size="sm" />
+							</UFormGroup>
+							<UFormGroup label="Email">
+								<UInput v-model="attendee.email" type="email" placeholder="john@example.com" size="sm" />
+							</UFormGroup>
+							<UFormGroup label="Phone (optional)">
+								<UInput v-model="attendee.phone" type="tel" placeholder="+1234567890" size="sm" />
+							</UFormGroup>
+							<UFormGroup label="Send Invite">
+								<USelect v-model="attendee.invite_method" :options="inviteMethodOptions" size="sm" />
+							</UFormGroup>
+						</div>
+						<UButton color="red" variant="ghost" icon="i-heroicons-trash" size="sm" @click="removeAttendee(index)" />
+					</div>
+
+					<!-- Add Attendee Button -->
+					<UButton color="gray" variant="dashed" icon="i-heroicons-plus" block @click="addAttendee">
+						Add Attendee
+					</UButton>
+				</div>
+
+				<!-- Custom Message -->
+				<UFormGroup v-if="hasInvites" label="Custom Message (optional)">
+					<UTextarea v-model="form.custom_message" placeholder="Looking forward to meeting with you!" rows="2" />
+				</UFormGroup>
+
+				<!-- Actions -->
+				<div class="flex justify-end gap-3 pt-4">
+					<UButton color="gray" variant="soft" @click="close">Cancel</UButton>
+					<UButton type="submit" color="green" :loading="creating" icon="i-heroicons-video-camera">
+						Create Meeting
+					</UButton>
+				</div>
+			</form>
+		</UCard>
+	</UModal>
+</template>
+
+<script setup lang="ts">
 import { format } from 'date-fns';
 
-const emit = defineEmits(['created']);
-const schedulerData = inject('schedulerData');
-const { user, settings } = schedulerData;
+const props = defineProps<{
+	modelValue: boolean;
+	selectedDate?: Date;
+}>();
+
+const emit = defineEmits(['update:modelValue', 'created']);
 
 const toast = useToast();
+const creating = ref(false);
 
-const showModal = ref(false);
-const saving = ref(false);
-
-const form = reactive({
-	title: '',
-	description: '',
-	is_video: true,
-	meeting_type: 'general',
-	start_time: '',
-	duration: 30,
-	status: 'pending',
-	invite_method: 'email',
-	invitee_email: '',
-	invitee_phone: '',
-	invitee_name: '',
+const isOpen = computed({
+	get: () => props.modelValue,
+	set: (value) => emit('update:modelValue', value),
 });
 
 const durationOptions = [
@@ -33,161 +113,124 @@ const durationOptions = [
 	{ label: '90 minutes', value: 90 },
 ];
 
-const meetingTypeOptions = [
-	{ label: 'Consultation', value: 'consultation' },
-	{ label: 'Discovery Call', value: 'discovery' },
-	{ label: 'Project Review', value: 'project_review' },
-	{ label: 'Presentation', value: 'presentation' },
-	{ label: 'General', value: 'general' },
-];
-
 const inviteMethodOptions = [
+	{ label: "Don't send", value: 'none' },
 	{ label: 'Email', value: 'email' },
 	{ label: 'SMS', value: 'sms' },
 	{ label: 'Both', value: 'both' },
-	{ label: 'None', value: 'none' },
 ];
 
-const openModal = () => {
-	Object.assign(form, {
-		title: '',
-		description: '',
-		is_video: true,
-		meeting_type: settings.value?.default_meeting_type || 'general',
-		start_time: '',
-		duration: settings.value?.default_duration || 30,
-		status: 'pending',
+const form = reactive({
+	title: '',
+	date: format(new Date(), 'yyyy-MM-dd'),
+	time: '09:00',
+	duration: 30,
+	description: '',
+	waiting_room_enabled: true,
+	custom_message: '',
+	attendees: [] as Array<{
+		name: string;
+		email: string;
+		phone: string;
+		invite_method: string;
+	}>,
+});
+
+// Watch for selectedDate changes
+watch(
+	() => props.selectedDate,
+	(newDate) => {
+		if (newDate) {
+			form.date = format(newDate, 'yyyy-MM-dd');
+		}
+	},
+	{ immediate: true },
+);
+
+const hasInvites = computed(() => {
+	return form.attendees.some((a) => a.invite_method !== 'none' && (a.email || a.phone));
+});
+
+const addAttendee = () => {
+	form.attendees.push({
+		name: '',
+		email: '',
+		phone: '',
 		invite_method: 'email',
-		invitee_email: '',
-		invitee_phone: '',
-		invitee_name: '',
 	});
-	
-	const now = new Date();
-	now.setHours(now.getHours() + 1, 0, 0, 0);
-	form.start_time = format(now, "yyyy-MM-dd'T'HH:mm");
-	
-	showModal.value = true;
 };
 
-const saveMeeting = async () => {
-	if (!form.title) {
-		toast.add({ title: 'Title is required', color: 'red' });
+const removeAttendee = (index: number) => {
+	form.attendees.splice(index, 1);
+};
+
+const resetForm = () => {
+	form.title = '';
+	form.date = format(props.selectedDate || new Date(), 'yyyy-MM-dd');
+	form.time = '09:00';
+	form.duration = 30;
+	form.description = '';
+	form.waiting_room_enabled = true;
+	form.custom_message = '';
+	form.attendees = [];
+};
+
+const close = () => {
+	isOpen.value = false;
+	resetForm();
+};
+
+const createMeeting = async () => {
+	if (!form.title.trim()) {
+		toast.add({ title: 'Please enter a meeting title', color: 'red' });
 		return;
 	}
-	
-	saving.value = true;
+
+	creating.value = true;
 	try {
-		const startTime = new Date(form.start_time);
-		const endTime = new Date(startTime.getTime() + form.duration * 60000);
-		
-		if (form.is_video) {
-			await $fetch('/api/video/create-room', {
-				method: 'POST',
-				body: {
-					title: form.title,
-					description: form.description,
-					meetingType: form.meeting_type,
-					scheduledStart: startTime.toISOString(),
-					scheduledEnd: endTime.toISOString(),
-					durationMinutes: form.duration,
-					hostName: `${user.value?.first_name} ${user.value?.last_name}`,
-					hostUserId: user.value?.id,
-					inviteeEmail: form.invitee_email || undefined,
-					inviteePhone: form.invitee_phone || undefined,
-					inviteeName: form.invitee_name || undefined,
-					inviteMethod: form.invite_method,
-					createAppointment: true,
-				},
-			});
-			toast.add({ title: 'Video meeting created', color: 'green' });
-		} else {
-			const { createItem } = useDirectusItems();
-			await createItem('appointments', {
+		const scheduledStart = new Date(`${form.date}T${form.time}`);
+
+		const response = await $fetch('/api/video/create-room', {
+			method: 'POST',
+			body: {
 				title: form.title,
 				description: form.description,
-				start_time: startTime.toISOString(),
-				end_time: endTime.toISOString(),
-				status: form.status,
-				is_video: false,
-			});
-			toast.add({ title: 'Appointment created', color: 'green' });
+				scheduled_start: scheduledStart.toISOString(),
+				duration: form.duration,
+				waiting_room_enabled: form.waiting_room_enabled,
+				custom_message: form.custom_message,
+				attendees: form.attendees.filter((a) => a.name || a.email),
+			},
+		});
+
+		toast.add({
+			title: 'Video meeting created!',
+			description: 'Meeting link copied to clipboard',
+			color: 'green',
+		});
+
+		// Copy meeting link
+		if (response.data?.meetingLink) {
+			await navigator.clipboard.writeText(response.data.meetingLink);
 		}
-		
-		showModal.value = false;
-		emit('created');
-	} catch (error) {
-		toast.add({ title: 'Error', description: error.message, color: 'red' });
+
+		emit('created', response.data);
+		close();
+	} catch (error: any) {
+		console.error('Error creating meeting:', error);
+		toast.add({
+			title: 'Error creating meeting',
+			description: error.message,
+			color: 'red',
+		});
 	}
-	saving.value = false;
+	creating.value = false;
 };
+
+// Add one attendee by default when opening
+watch(isOpen, (open) => {
+	if (open && form.attendees.length === 0) {
+		addAttendee();
+	}
+});
 </script>
-
-<template>
-	<div>
-		<UButton color="primary" icon="i-heroicons-plus" @click="openModal">New Meeting</UButton>
-
-		<UModal v-model="showModal">
-			<UCard>
-				<template #header>
-					<div class="flex items-center justify-between">
-						<h3 class="text-lg font-semibold">New Meeting</h3>
-						<UButton color="gray" variant="ghost" icon="i-heroicons-x-mark" @click="showModal = false" />
-					</div>
-				</template>
-
-				<form @submit.prevent="saveMeeting" class="space-y-4">
-					<UFormGroup label="Title" required>
-						<UInput v-model="form.title" placeholder="Meeting title" />
-					</UFormGroup>
-
-					<UFormGroup label="Description">
-						<UTextarea v-model="form.description" placeholder="Description" rows="2" />
-					</UFormGroup>
-
-					<div class="flex items-center gap-4">
-						<UFormGroup label="Video Meeting">
-							<UToggle v-model="form.is_video" />
-						</UFormGroup>
-						<UFormGroup v-if="form.is_video" label="Type" class="flex-1">
-							<USelect v-model="form.meeting_type" :options="meetingTypeOptions" />
-						</UFormGroup>
-					</div>
-
-					<div class="grid grid-cols-2 gap-4">
-						<UFormGroup label="Start Time" required>
-							<UInput v-model="form.start_time" type="datetime-local" />
-						</UFormGroup>
-						<UFormGroup label="Duration">
-							<USelect v-model="form.duration" :options="durationOptions" />
-						</UFormGroup>
-					</div>
-
-					<template v-if="form.is_video">
-						<UFormGroup label="Invite Method">
-							<USelect v-model="form.invite_method" :options="inviteMethodOptions" />
-						</UFormGroup>
-						<div v-if="form.invite_method !== 'none'" class="space-y-4">
-							<UFormGroup v-if="['email', 'both'].includes(form.invite_method)" label="Invitee Email">
-								<UInput v-model="form.invitee_email" type="email" placeholder="guest@example.com" />
-							</UFormGroup>
-							<UFormGroup v-if="['sms', 'both'].includes(form.invite_method)" label="Invitee Phone">
-								<UInput v-model="form.invitee_phone" type="tel" placeholder="+1 (555) 000-0000" />
-							</UFormGroup>
-							<UFormGroup label="Invitee Name">
-								<UInput v-model="form.invitee_name" placeholder="Guest name" />
-							</UFormGroup>
-						</div>
-					</template>
-				</form>
-
-				<template #footer>
-					<div class="flex justify-end gap-3">
-						<UButton color="gray" variant="soft" @click="showModal = false">Cancel</UButton>
-						<UButton color="primary" :loading="saving" @click="saveMeeting">Create</UButton>
-					</div>
-				</template>
-			</UCard>
-		</UModal>
-	</div>
-</template>
