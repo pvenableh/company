@@ -64,7 +64,7 @@ export default defineEventHandler(async (event) => {
 
 		const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say voice="${voice}" language="${language}">Thanks for your message. We look forward to creating what is possible together. We will be in touch as soon as possible. Take care.</Say>
+  <Say voice="${voice}" language="${language}">Thank you for your message. We will get back to you as soon as possible. Goodbye.</Say>
   <Hangup/>
 </Response>`;
 

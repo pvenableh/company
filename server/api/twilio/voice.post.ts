@@ -32,6 +32,7 @@ export default defineEventHandler(async (event) => {
 		const directusToken = config.directusServerToken as string;
 
 		console.log(`Connecting to Directus: ${directusUrl}`);
+		console.log(`Token available: ${directusToken ? 'Yes' : 'No'}`);
 
 		if (!directusUrl || !directusToken) {
 			throw new Error('Missing Directus configuration');
