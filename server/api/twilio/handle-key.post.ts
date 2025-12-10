@@ -1,7 +1,7 @@
 // server/api/twilio/handle-key.post.ts
-// Reads voice setting from Directus phone_settings
+// Handles IVR key presses - UPDATES existing call_log instead of creating new one
 
-import { createDirectus, rest, staticToken, readItems, createItem } from '@directus/sdk';
+import { createDirectus, rest, staticToken, readItems, updateItem, createItem } from '@directus/sdk';
 
 const DEFAULT_VOICE = 'Polly.Matthew-Neural';
 const DEFAULT_LANGUAGE = 'en-US';
@@ -75,20 +75,50 @@ export default defineEventHandler(async (event) => {
 		if (route) {
 			console.log(`✅ Found route: ${route.department} -> ${route.phone_number}`);
 
+			// Update existing call_log with selected option
 			try {
-				await directus.request(
-					createItem('call_logs', {
-						call_id: callSid,
-						from_number: fromNumber,
-						to_number: toNumber,
-						selected_option: digit,
-						routed_to: route.phone_number,
-						event_type: route.phone_number === 'voicemail' ? 'voicemail' : 'incoming',
-						timestamp: new Date().toISOString(),
-						status: 'published',
+				const existingLogs = await directus.request(
+					readItems('call_logs', {
+						filter: {
+							call_id: { _eq: callSid },
+						},
+						sort: ['-date_created'],
+						limit: 1,
 					}),
 				);
-				console.log('✅ Call logged with route');
+
+				const isVoicemail = route.phone_number === 'voicemail' || route.department.toLowerCase() === 'voicemail';
+
+				if (existingLogs.length > 0) {
+					// UPDATE existing record
+					const logEntry = existingLogs[0] as any;
+					console.log(`Found existing call_log: ${logEntry.id}, updating...`);
+
+					await directus.request(
+						updateItem('call_logs', logEntry.id, {
+							selected_option: digit,
+							routed_to: route.phone_number,
+							event_type: isVoicemail ? 'voicemail' : 'incoming',
+						}),
+					);
+					console.log('✅ Call log updated with selection');
+				} else {
+					// CREATE new if none exists (fallback)
+					console.log('⚠️ No existing call_log found, creating new entry');
+					await directus.request(
+						createItem('call_logs', {
+							call_id: callSid,
+							from_number: fromNumber,
+							to_number: toNumber,
+							selected_option: digit,
+							routed_to: route.phone_number,
+							event_type: isVoicemail ? 'voicemail' : 'incoming',
+							timestamp: new Date().toISOString(),
+							status: 'published',
+						}),
+					);
+					console.log('✅ Call log created with selection');
+				}
 			} catch (logError) {
 				console.error('⚠️ Failed to log call:', logError);
 			}
@@ -117,7 +147,7 @@ export default defineEventHandler(async (event) => {
 				console.log(`Dialing: ${phoneNumber}`);
 
 				twiml += `  <Say voice="${voice}" language="${language}">Connecting you to ${escapeXml(route.department)}. Please hold.</Say>\n`;
-				twiml += `  <Dial timeout="30" callerId="${toNumber}">\n`;
+				twiml += `  <Dial timeout="30" callerId="${toNumber}" statusCallback="/api/twilio/status-callback" statusCallbackEvent="completed">\n`;
 				twiml += `    <Number>${phoneNumber}</Number>\n`;
 				twiml += `  </Dial>\n`;
 				twiml += `  <Say voice="${voice}" language="${language}">The call could not be completed. Please try again later. Goodbye.</Say>\n`;
