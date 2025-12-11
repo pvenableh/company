@@ -30,7 +30,7 @@
 
 				<!-- Description -->
 				<UFormGroup label="Description">
-					<UTextarea v-model="form.description" placeholder="Meeting agenda..." rows="2" />
+					<UTextarea v-model="form.description" placeholder="Meeting agenda..." :rows="2" />
 				</UFormGroup>
 
 				<!-- Settings -->
@@ -65,14 +65,14 @@
 					</div>
 
 					<!-- Add Attendee Button -->
-					<UButton color="gray" variant="dashed" icon="i-heroicons-plus" block @click="addAttendee">
+					<UButton color="gray" variant="outline" icon="i-heroicons-plus" block @click="addAttendee">
 						Add Attendee
 					</UButton>
 				</div>
 
 				<!-- Custom Message -->
 				<UFormGroup v-if="hasInvites" label="Custom Message (optional)">
-					<UTextarea v-model="form.custom_message" placeholder="Looking forward to meeting with you!" rows="2" />
+					<UTextarea v-model="form.custom_message" placeholder="Looking forward to meeting with you!" :rows="2" />
 				</UFormGroup>
 
 				<!-- Actions -->

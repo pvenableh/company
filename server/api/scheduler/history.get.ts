@@ -1,93 +1,104 @@
 // server/api/scheduler/history.get.ts
-import { createDirectus, rest, readItems, authentication } from '@directus/sdk';
+import { createDirectus, rest, readItems, staticToken } from '@directus/sdk';
+import { getServerSession } from '#auth';
 
 export default defineEventHandler(async (event) => {
-	const config = useRuntimeConfig();
-	
-	const client = createDirectus(config.public.directusUrl)
-		.with(authentication())
-		.with(rest());
-
 	try {
-		const session = await getUserSession(event);
-		const accessToken = session?.user?.access_token || session?.secure?.access_token;
+		const config = useRuntimeConfig();
 
-		if (accessToken) {
-			await client.setToken(accessToken);
+		// Get session to identify current user
+		const session = await getServerSession(event);
+
+		if (!session?.user?.id) {
+			throw createError({
+				statusCode: 401,
+				message: 'Unauthorized - Please sign in',
+			});
 		}
 
-		// Get video meetings history
-		const videoMeetings = await client.request(
-			readItems('video_meetings', {
-				fields: [
-					'id',
-					'title',
-					'meeting_type',
-					'status',
-					'scheduled_start',
-					'scheduled_end',
-					'actual_start',
-					'actual_end',
-					'actual_duration_minutes',
-					'duration_minutes',
-					'invitee_name',
-					'invitee_email',
-					'participant_count',
-					'room_name',
-					'date_created',
-				],
-				filter: {
-					status: { _in: ['completed', 'cancelled', 'no_show'] },
-				},
-				sort: ['-scheduled_start'],
-				limit: 500,
-			})
-		);
+		const userId = session.user.id;
 
-		// Get appointments history
-		const appointments = await client.request(
+		// Get query parameters for filtering
+		const query = getQuery(event);
+		const limit = parseInt(query.limit as string) || 50;
+		const offset = parseInt(query.offset as string) || 0;
+		const status = query.status as string;
+		const startDate = query.start_date as string;
+		const endDate = query.end_date as string;
+
+		// Create Directus client with server token
+		const directus = createDirectus(config.public.directusUrl)
+			.with(rest())
+			.with(staticToken(config.directusStaticToken || config.directusServerToken));
+
+		// Build filter - get appointments where user is creator or an attendee
+		const filter: any = {
+			_or: [{ user_created: { _eq: userId } }, { attendees: { directus_users_id: { _eq: userId } } }],
+		};
+
+		// Add status filter if provided
+		if (status) {
+			filter.status = { _eq: status };
+		}
+
+		// Add date range filter if provided
+		if (startDate) {
+			filter.start_time = { ...(filter.start_time || {}), _gte: startDate };
+		}
+		if (endDate) {
+			filter.end_time = { ...(filter.end_time || {}), _lte: endDate };
+		}
+
+		// Fetch appointments history
+		const appointments = await directus.request(
 			readItems('appointments', {
+				filter,
+				sort: ['-start_time'],
+				limit,
+				offset,
 				fields: [
 					'id',
 					'title',
-					'status',
+					'description',
 					'start_time',
 					'end_time',
+					'status',
 					'is_video',
+					'meeting_link',
+					'room_name',
+					'reminder_sent',
+					'google_event_id',
+					'outlook_event_id',
+					'user_created.id',
+					'user_created.first_name',
+					'user_created.last_name',
+					'user_created.email',
+					'video_meeting.id',
+					'video_meeting.room_name',
+					'video_meeting.status',
+					'attendees.id',
+					'attendees.directus_users_id.id',
+					'attendees.directus_users_id.first_name',
+					'attendees.directus_users_id.last_name',
+					'attendees.directus_users_id.email',
+					'attendees.directus_users_id.avatar',
 					'date_created',
+					'date_updated',
 				],
-				filter: {
-					_or: [
-						{ status: { _in: ['completed', 'canceled'] } },
-						{ start_time: { _lt: new Date().toISOString() } },
-					],
-				},
-				sort: ['-start_time'],
-				limit: 500,
-			})
+			}),
 		);
 
-		// Merge and format
-		const history = [
-			...videoMeetings.map((vm: any) => ({
-				...vm,
-				type: 'video',
-				start_time: vm.scheduled_start,
-			})),
-			...appointments
-				.filter((a: any) => !a.is_video)
-				.map((a: any) => ({
-					...a,
-					type: 'appointment',
-				})),
-		].sort((a, b) => new Date(b.start_time || b.scheduled_start).getTime() - new Date(a.start_time || a.scheduled_start).getTime());
+		return {
+			success: true,
+			data: appointments,
+		};
+	} catch (error) {
+		const err = error as any;
+		console.error('Error fetching scheduler history:', err);
 
-		return { data: history };
-	} catch (error: any) {
-		console.error('Error fetching history:', error);
 		throw createError({
-			statusCode: error.status || 500,
-			message: error.message || 'Failed to fetch history',
+			statusCode: err.statusCode || 500,
+			message: err.message || 'Failed to fetch scheduler history',
 		});
 	}
 });

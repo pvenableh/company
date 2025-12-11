@@ -1,145 +1,161 @@
 // server/api/video/webhook.post.ts
-// Handles Twilio Video room status callbacks
+import { createDirectus, rest, readItems, updateItem, staticToken } from '@directus/sdk';
 
-import { createDirectus, rest, staticToken, readItems, updateItem } from '@directus/sdk';
+interface TwilioRoomEvent {
+	RoomName: string;
+	RoomSid: string;
+	RoomStatus: 'in-progress' | 'completed' | 'failed';
+	StatusCallbackEvent:
+		| 'room-created'
+		| 'room-ended'
+		| 'participant-connected'
+		| 'participant-disconnected'
+		| 'recording-started'
+		| 'recording-completed';
+	ParticipantIdentity?: string;
+	ParticipantSid?: string;
+	Timestamp?: string;
+	SequenceNumber?: string;
+	RecordingSid?: string;
+	RecordingUri?: string;
+}
 
 export default defineEventHandler(async (event) => {
-	const config = useRuntimeConfig();
-
-	console.log('='.repeat(60));
-	console.log('📡 VIDEO WEBHOOK RECEIVED');
-	console.log('='.repeat(60));
-
 	try {
-		const body = await readBody(event);
+		const config = useRuntimeConfig();
 
-		console.log('Webhook body:', JSON.stringify(body, null, 2));
+		// Parse the webhook body (Twilio sends form data)
+		const body = await readBody<TwilioRoomEvent>(event);
 
-		const {
-			RoomName: roomName,
-			RoomSid: roomSid,
-			RoomStatus: roomStatus,
-			StatusCallbackEvent: eventType,
-			ParticipantIdentity: participantIdentity,
-			ParticipantStatus: participantStatus,
-			Timestamp: timestamp,
-			RoomDuration: roomDuration,
-		} = body;
+		console.log('Twilio video webhook received:', body.StatusCallbackEvent, body.RoomName);
 
-		console.log(`Room: ${roomName}`);
-		console.log(`Event: ${eventType}`);
-		console.log(`Status: ${roomStatus}`);
+		// Create Directus client
+		const directus = createDirectus(config.public.directusUrl)
+			.with(rest())
+			.with(staticToken(config.directusStaticToken || config.directusServerToken));
 
-		const directusUrl = config.public.directusUrl;
-		const directusToken = config.directusServerToken as string;
-
-		if (!directusUrl || !directusToken) {
-			console.log('⚠️ Directus not configured, skipping update');
-			return { success: true };
-		}
-
-		const directus = createDirectus(directusUrl).with(rest()).with(staticToken(directusToken));
-
-		// Find the meeting
+		// Find the video meeting by room_name
 		const meetings = await directus.request(
 			readItems('video_meetings', {
-				filter: { room_name: { _eq: roomName } },
+				filter: {
+					room_name: { _eq: body.RoomName },
+				},
 				limit: 1,
 			}),
 		);
 
-		if (meetings.length === 0) {
-			console.log('⚠️ Meeting not found in Directus');
-			return { success: true };
+		if (!meetings || meetings.length === 0) {
+			console.log('Video meeting not found for room:', body.RoomName);
+			return { success: true, message: 'Meeting not found' };
 		}
 
-		const meeting = meetings[0] as any;
-		console.log(`Found meeting: ${meeting.id}`);
+		const meeting = meetings[0];
+		const now = new Date().toISOString();
 
-		// Handle different events
-		const updateData: any = {};
-
-		switch (eventType) {
+		// Handle different webhook events
+		switch (body.StatusCallbackEvent) {
 			case 'room-created':
-				updateData.status = 'scheduled';
-				updateData.room_sid = roomSid;
-				console.log('Room created');
-				break;
-
-			case 'room-ended':
-				updateData.status = 'completed';
-				updateData.actual_end = new Date().toISOString();
-				if (roomDuration) {
-					// roomDuration is in seconds
-					console.log(`Room duration: ${roomDuration} seconds`);
-				}
-				console.log('Room ended');
+				// Room is ready
+				await directus.request(
+					updateItem('video_meetings', meeting?.id, {
+						room_sid: body.RoomSid,
+						status: 'scheduled',
+					}),
+				);
 				break;
 
 			case 'participant-connected':
-				// Update participant list and count
-				const currentParticipants = meeting.participants || [];
-				const participantEntry = {
-					identity: participantIdentity,
-					joinedAt: timestamp || new Date().toISOString(),
-					status: 'connected',
+				// First participant joined - meeting started
+				const participantsLog = meeting?.participants_log || [];
+				participantsLog.push({
+					event: 'connected',
+					identity: body.ParticipantIdentity,
+					sid: body.ParticipantSid,
+					timestamp: body.Timestamp || now,
+				});
+
+				const updateData: any = {
+					participants_log: participantsLog,
+					participant_count: Math.max((meeting?.participant_count || 0) + 1, 1),
 				};
 
-				// Check if participant already in list (reconnection)
-				const existingIndex = currentParticipants.findIndex((p: any) => p.identity === participantIdentity);
-				if (existingIndex >= 0) {
-					currentParticipants[existingIndex] = participantEntry;
-				} else {
-					currentParticipants.push(participantEntry);
-				}
-
-				updateData.participants = currentParticipants;
-				updateData.participant_count = Math.max(meeting.participant_count || 0, currentParticipants.length);
-
-				// If first participant and meeting not started, mark as in progress
-				if (meeting.status === 'scheduled') {
+				// If this is the first participant, set actual_start
+				if (!meeting?.actual_start) {
+					updateData.actual_start = now;
 					updateData.status = 'in_progress';
-					updateData.actual_start = new Date().toISOString();
 				}
 
-				console.log(`Participant connected: ${participantIdentity}`);
+				await directus.request(updateItem('video_meetings', meeting?.id, updateData));
 				break;
 
 			case 'participant-disconnected':
-				// Update participant status
-				const participants = meeting.participants || [];
-				const pIndex = participants.findIndex((p: any) => p.identity === participantIdentity);
-				if (pIndex >= 0) {
-					participants[pIndex].status = 'disconnected';
-					participants[pIndex].leftAt = timestamp || new Date().toISOString();
-					updateData.participants = participants;
+				// Participant left
+				const log = meeting?.participants_log || [];
+				log.push({
+					event: 'disconnected',
+					identity: body.ParticipantIdentity,
+					sid: body.ParticipantSid,
+					timestamp: body.Timestamp || now,
+				});
+
+				await directus.request(
+					updateItem('video_meetings', meeting?.id, {
+						participants_log: log,
+					}),
+				);
+				break;
+
+			case 'room-ended':
+				// Meeting ended
+				const endLog = meeting?.participants_log || [];
+				endLog.push({
+					event: 'room-ended',
+					timestamp: body.Timestamp || now,
+				});
+
+				// Calculate actual duration
+				let actualDuration = null;
+				if (meeting?.actual_start) {
+					const startTime = new Date(meeting.actual_start);
+					const endTime = new Date(body.Timestamp || now);
+					actualDuration = Math.round((endTime.getTime() - startTime.getTime()) / 60000);
 				}
-				console.log(`Participant disconnected: ${participantIdentity}`);
+
+				await directus.request(
+					updateItem('video_meetings', meeting?.id, {
+						status: 'completed',
+						actual_end: now,
+						actual_duration_minutes: actualDuration,
+						participants_log: endLog,
+					}),
+				);
 				break;
 
 			case 'recording-started':
-				updateData.recording_enabled = true;
-				console.log('Recording started');
+				await directus.request(
+					updateItem('video_meetings', meeting?.id, {
+						recording_enabled: true,
+					}),
+				);
 				break;
 
 			case 'recording-completed':
-				// Recording URL would be in a separate composition webhook
-				console.log('Recording completed');
+				await directus.request(
+					updateItem('video_meetings', meeting?.id, {
+						recording_url: body.RecordingUri,
+					}),
+				);
 				break;
 
 			default:
-				console.log(`Unhandled event: ${eventType}`);
+				console.log('Unhandled webhook event:', body.StatusCallbackEvent);
 		}
 
-		// Update the meeting record
-		if (Object.keys(updateData).length > 0) {
-			await directus.request(updateItem('video_meetings', meeting.id, updateData));
-			console.log('✅ Meeting updated');
-		}
-
+		// Return 200 OK to acknowledge receipt
 		return { success: true };
-	} catch (error: any) {
-		console.error('❌ VIDEO WEBHOOK ERROR:', error);
-		return { success: false, error: error.message };
+	} catch (error) {
+		console.error('Error processing video webhook:', error);
+		// Still return 200 to prevent Twilio from retrying
+		return { success: false, error: 'Internal error' };
 	}
 });

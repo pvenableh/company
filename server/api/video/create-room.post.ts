@@ -1,269 +1,304 @@
 // server/api/video/create-room.post.ts
-// Creates a Twilio video room, appointment, and supports multiple attendees
-
-import twilio from 'twilio';
 import { createDirectus, rest, createItem, updateItem, staticToken } from '@directus/sdk';
 import { getServerSession } from '#auth';
+import twilio from 'twilio';
+
+interface CreateRoomBody {
+	title: string;
+	description?: string;
+	scheduled_start: string;
+	duration?: number;
+	invitee_name?: string;
+	invitee_email?: string;
+	invitee_phone?: string;
+	invite_method?: 'none' | 'email' | 'sms' | 'both';
+	meeting_type?: string;
+	waiting_room_enabled?: boolean;
+	recording_enabled?: boolean;
+}
 
 export default defineEventHandler(async (event) => {
-	const config = useRuntimeConfig();
-	const body = await readBody(event);
-
-	console.log('📹 Creating video room with multiple attendees...');
-
 	try {
-		// Get user session using sidebase/nuxt-auth
+		const config = useRuntimeConfig();
+
+		// Get session to identify current user
 		const session = await getServerSession(event);
 
 		if (!session?.user?.id) {
-			throw createError({ statusCode: 401, message: 'Unauthorized' });
+			throw createError({
+				statusCode: 401,
+				message: 'Unauthorized - Please sign in',
+			});
 		}
 
 		const userId = session.user.id;
-		const userName = session.user.name || session.user.email?.split('@')[0] || 'Host';
-		const accessToken = session.accessToken || session.user.accessToken;
+		const userName = `${session.user.first_name || ''} ${session.user.last_name || ''}`.trim() || 'Host';
 
-		// Validate required fields
-		const {
-			title,
-			scheduled_start,
-			scheduled_end,
-			duration = 30,
-			meeting_type = 'general',
-			description = '',
-			custom_message = '',
-			is_instant = false,
-			waiting_room_enabled = true,
-			// Support both single invitee (backwards compat) and multiple attendees
-			invitee_name,
-			invitee_email,
-			invitee_phone,
-			invite_method = 'none',
-			// New: array of attendees
-			attendees = [],
-		} = body;
+		// Get request body
+		const body = await readBody<CreateRoomBody>(event);
 
-		if (!title) {
-			throw createError({ statusCode: 400, message: 'Title is required' });
+		if (!body.title) {
+			throw createError({
+				statusCode: 400,
+				message: 'Meeting title is required',
+			});
+		}
+
+		// Validate Twilio credentials
+		if (!config.twilioAccountSid || !config.twilioApiKey || !config.twilioApiSecret) {
+			throw createError({
+				statusCode: 500,
+				message: 'Video service is not configured. Please contact support.',
+			});
 		}
 
 		// Generate unique room name
-		const roomName = `hue-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+		const roomName = `meeting-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
 
-		// Create Twilio room
+		// Calculate scheduled end time
+		const scheduledStart = new Date(body.scheduled_start);
+		const durationMinutes = body.duration || 30;
+		const scheduledEnd = new Date(scheduledStart.getTime() + durationMinutes * 60 * 1000);
+
+		// Initialize Twilio client
 		const twilioClient = twilio(config.twilioAccountSid, config.twilioAuthToken);
 
+		// Create Twilio video room
 		let twilioRoom;
 		try {
 			twilioRoom = await twilioClient.video.v1.rooms.create({
 				uniqueName: roomName,
-				type: 'group',
-				maxParticipants: 50,
-				statusCallback: `${config.public.siteUrl}/api/video/webhook`,
+				type: 'group', // Use 'group' for better features, 'peer-to-peer' for simple 1:1
+				maxParticipants: 10,
+				statusCallback: `${config.public.siteUrl || 'https://huestudios.company'}/api/video/webhook`,
 				statusCallbackMethod: 'POST',
+				// Room expires 1 hour after scheduled end time
+				emptyRoomTimeout: 60,
+				unusedRoomTimeout: 60,
 			});
-			console.log('✅ Twilio room created:', twilioRoom.sid);
 		} catch (twilioError: any) {
-			console.error('Twilio error:', twilioError.message);
-			// Continue without Twilio room - we'll create on connect
+			console.error('Twilio room creation error:', twilioError);
+			throw createError({
+				statusCode: 500,
+				message: `Failed to create video room: ${twilioError.message}`,
+			});
 		}
 
-		// Setup Directus client - use static token for reliable server-side operations
+		// Create Directus client
 		const directus = createDirectus(config.public.directusUrl)
 			.with(rest())
-			.with(staticToken(config.directusStaticToken));
+			.with(staticToken(config.directusStaticToken || config.directusServerToken));
 
-		// Calculate times
-		const startTime = scheduled_start ? new Date(scheduled_start) : new Date();
-		const endTime = scheduled_end ? new Date(scheduled_end) : new Date(startTime.getTime() + duration * 60 * 1000);
+		// Generate meeting URL
+		const meetingUrl = `${config.public.siteUrl || 'https://huestudios.company'}/video/${roomName}`;
 
-		// Meeting link
-		const meetingLink = `${config.public.siteUrl}/meeting/${roomName}`;
+		// Create video meeting record in Directus
+		const videoMeeting = await directus.request(
+			createItem('video_meetings', {
+				room_name: roomName,
+				room_sid: twilioRoom.sid,
+				title: body.title,
+				description: body.description || null,
+				meeting_type: body.meeting_type || 'general',
+				duration_minutes: durationMinutes,
+				scheduled_start: scheduledStart.toISOString(),
+				scheduled_end: scheduledEnd.toISOString(),
+				status: 'scheduled',
+				host_identity: userName,
+				host_user: userId,
+				meeting_url: meetingUrl,
+				invitee_name: body.invitee_name || null,
+				invitee_email: body.invitee_email || null,
+				invitee_phone: body.invitee_phone || null,
+				invite_method: body.invite_method || 'none',
+				invite_sent: false,
+				waiting_room_enabled: body.waiting_room_enabled ?? false,
+				recording_enabled: body.recording_enabled ?? false,
+				booked_via: 'direct',
+			}),
+		);
 
-		// 1. Create the appointment
-		let appointment;
-		try {
-			const appointmentData = {
-				title,
-				description: description || `Video meeting: ${title}`,
-				start_time: startTime.toISOString(),
-				end_time: endTime.toISOString(),
+		// Create corresponding appointment record
+		const appointment = await directus.request(
+			createItem('appointments', {
+				title: body.title,
+				description: body.description || null,
+				start_time: scheduledStart.toISOString(),
+				end_time: scheduledEnd.toISOString(),
 				status: 'confirmed',
 				is_video: true,
-				meeting_link: meetingLink,
+				video_meeting: videoMeeting.id,
+				meeting_link: meetingUrl,
 				room_name: roomName,
-				user_created: userId,
-			};
+			}),
+		);
 
-			console.log('Creating appointment...');
-			appointment = await directus.request(createItem('appointments', appointmentData));
-			console.log('✅ Appointment created:', appointment.id);
-		} catch (appointmentError: any) {
-			console.warn('Could not create appointment:', appointmentError.message);
-			// Continue without appointment
-		}
-
-		// 2. Create the video meeting record
-		const videoMeetingData: any = {
-			title,
-			description,
-			room_name: roomName,
-			room_sid: twilioRoom?.sid || null,
-			meeting_link: meetingLink,
-			host_user: userId,
-			status: 'scheduled',
-			scheduled_start: startTime.toISOString(),
-			scheduled_end: endTime.toISOString(),
-			duration,
-			meeting_type,
-			waiting_room_enabled,
-			is_instant,
-			custom_message: custom_message || null,
-		};
-
-		if (appointment?.id) {
-			videoMeetingData.related_appointment = appointment.id;
-		}
-
-		console.log('Creating video meeting...');
-		const videoMeeting = await directus.request(createItem('video_meetings', videoMeetingData));
-		console.log('✅ Video meeting created:', videoMeeting.id);
-
-		// 3. Link appointment back to video meeting
-		if (appointment?.id) {
+		// Send invitations if requested
+		let inviteSent = false;
+		if (body.invite_method && body.invite_method !== 'none') {
 			try {
-				await directus.request(
-					updateItem('appointments', appointment.id, {
-						video_meeting: videoMeeting.id,
-					}),
-				);
-			} catch (e) {
-				console.warn('Could not link appointment:', e);
-			}
-		}
-
-		// 4. Create host as an attendee
-		try {
-			await directus.request(
-				createItem('video_meeting_attendees', {
-					video_meeting: videoMeeting.id,
-					attendee_type: 'user',
-					directus_user: userId,
-					guest_name: userName,
-					status: 'admitted', // Host is always admitted
-				}),
-			);
-		} catch (e) {
-			console.warn('Could not create host attendee record:', e);
-		}
-
-		// 5. Merge single invitee with attendees array for backwards compatibility
-		const allAttendees = [...attendees];
-		if (invitee_email || invitee_name) {
-			allAttendees.push({
-				name: invitee_name,
-				email: invitee_email,
-				phone: invitee_phone,
-				invite_method: invite_method,
-			});
-		}
-
-		// 6. Create attendee records and send invites
-		const createdAttendees = [];
-		for (const attendee of allAttendees) {
-			if (!attendee.email && !attendee.name) continue;
-
-			try {
-				const attendeeRecord = await directus.request(
-					createItem('video_meeting_attendees', {
-						video_meeting: videoMeeting.id,
-						attendee_type: 'guest',
-						guest_name: attendee.name || null,
-						guest_email: attendee.email || null,
-						guest_phone: attendee.phone || null,
-						status: 'invited',
-						invite_method: attendee.invite_method || invite_method,
-					}),
-				);
-
-				createdAttendees.push(attendeeRecord);
-
-				// Send invites
-				const method = attendee.invite_method || invite_method;
-				if (method !== 'none') {
-					try {
-						if ((method === 'email' || method === 'both') && attendee.email) {
-							await $fetch('/api/video/send-email-invite', {
-								method: 'POST',
-								body: {
-									meetingId: videoMeeting.id,
-									email: attendee.email,
-									recipientName: attendee.name,
-									meetingTitle: title,
-									meetingLink,
-									scheduledStart: startTime.toISOString(),
-									hostName: userName,
-									customMessage: custom_message,
-								},
-							});
-
-							// Update invite sent
-							await directus.request(
-								updateItem('video_meeting_attendees', attendeeRecord.id, {
-									invite_sent_at: new Date().toISOString(),
-								}),
-							);
-
-							console.log(`✅ Email invite sent to ${attendee.email}`);
-						}
-
-						if ((method === 'sms' || method === 'both') && attendee.phone) {
-							await $fetch('/api/video/send-invite', {
-								method: 'POST',
-								body: {
-									meetingId: videoMeeting.id,
-									phone: attendee.phone,
-									recipientName: attendee.name,
-									meetingTitle: title,
-									meetingLink,
-									scheduledStart: startTime.toISOString(),
-									customMessage: custom_message,
-								},
-							});
-
-							await directus.request(
-								updateItem('video_meeting_attendees', attendeeRecord.id, {
-									invite_sent_at: new Date().toISOString(),
-								}),
-							);
-
-							console.log(`✅ SMS invite sent to ${attendee.phone}`);
-						}
-					} catch (inviteError) {
-						console.error(`Failed to send invite to ${attendee.email || attendee.phone}:`, inviteError);
-					}
+				if ((body.invite_method === 'email' || body.invite_method === 'both') && body.invitee_email) {
+					// Send email invitation using SendGrid
+					await sendEmailInvitation({
+						to: body.invitee_email,
+						guestName: body.invitee_name || 'Guest',
+						hostName: userName,
+						meetingTitle: body.title,
+						meetingUrl,
+						scheduledStart,
+						durationMinutes,
+						config,
+					});
+					inviteSent = true;
 				}
-			} catch (attendeeError) {
-				console.error(`Failed to create attendee ${attendee.email}:`, attendeeError);
+
+				if ((body.invite_method === 'sms' || body.invite_method === 'both') && body.invitee_phone) {
+					// Send SMS invitation using Twilio
+					await sendSmsInvitation({
+						to: body.invitee_phone,
+						guestName: body.invitee_name || 'Guest',
+						hostName: userName,
+						meetingTitle: body.title,
+						meetingUrl,
+						scheduledStart,
+						twilioClient,
+						fromNumber: config.twilioPhoneNumber,
+					});
+					inviteSent = true;
+				}
+
+				// Update video meeting with invite_sent status
+				if (inviteSent) {
+					await directus.request(
+						updateItem('video_meetings', videoMeeting.id, {
+							invite_sent: true,
+							invite_sent_at: new Date().toISOString(),
+						}),
+					);
+				}
+			} catch (inviteError) {
+				// Log invite error but don't fail the request
+				console.error('Failed to send invitation:', inviteError);
 			}
 		}
 
 		return {
 			success: true,
 			data: {
-				videoMeeting,
-				appointment,
+				meetingId: videoMeeting.id,
+				appointmentId: appointment.id,
 				roomName,
-				meetingLink,
-				roomSid: twilioRoom?.sid,
-				attendees: createdAttendees,
+				roomSid: twilioRoom.sid,
+				meetingLink: meetingUrl,
+				scheduledStart: scheduledStart.toISOString(),
+				scheduledEnd: scheduledEnd.toISOString(),
+				inviteSent,
 			},
 		};
-	} catch (error: any) {
-		console.error('❌ Create room error:', error);
+	} catch (error) {
+		const err = error as any;
+		console.error('Error creating video room:', err);
+
 		throw createError({
-			statusCode: error.statusCode || 500,
-			message: error.message || 'Failed to create video meeting',
+			statusCode: err.statusCode || 500,
+			message: err.message || 'Failed to create video room',
 		});
 	}
 });
+
+// Helper function to send email invitation
+async function sendEmailInvitation(params: {
+	to: string;
+	guestName: string;
+	hostName: string;
+	meetingTitle: string;
+	meetingUrl: string;
+	scheduledStart: Date;
+	durationMinutes: number;
+	config: any;
+}) {
+	const { to, guestName, hostName, meetingTitle, meetingUrl, scheduledStart, durationMinutes, config } = params;
+
+	const sgMail = await import('@sendgrid/mail');
+	sgMail.default.setApiKey(config.sendgridApiKey);
+
+	const formattedDate = scheduledStart.toLocaleDateString('en-US', {
+		weekday: 'long',
+		year: 'numeric',
+		month: 'long',
+		day: 'numeric',
+	});
+
+	const formattedTime = scheduledStart.toLocaleTimeString('en-US', {
+		hour: 'numeric',
+		minute: '2-digit',
+		hour12: true,
+		timeZoneName: 'short',
+	});
+
+	const message = {
+		to,
+		from: {
+			email: config.sendgridFromEmail,
+			name: config.sendgridFromName || 'Hue Creative Agency',
+		},
+		subject: `Video Meeting Invitation: ${meetingTitle}`,
+		html: `
+			<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+				<h2 style="color: #333;">You're Invited to a Video Meeting</h2>
+				<p>Hi ${guestName},</p>
+				<p><strong>${hostName}</strong> has invited you to a video meeting.</p>
+				
+				<div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+					<h3 style="margin-top: 0; color: #333;">${meetingTitle}</h3>
+					<p><strong>Date:</strong> ${formattedDate}</p>
+					<p><strong>Time:</strong> ${formattedTime}</p>
+					<p><strong>Duration:</strong> ${durationMinutes} minutes</p>
+				</div>
+				
+				<a href="${meetingUrl}" style="display: inline-block; background: #10B981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
+					Join Meeting
+				</a>
+				
+				<p style="margin-top: 20px; color: #666; font-size: 14px;">
+					Or copy this link: <a href="${meetingUrl}">${meetingUrl}</a>
+				</p>
+				
+				<hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+				<p style="color: #999; font-size: 12px;">This is an automated message from Hue Creative Agency.</p>
+			</div>
+		`,
+	};
+
+	await sgMail.default.send(message);
+}
+
+// Helper function to send SMS invitation
+async function sendSmsInvitation(params: {
+	to: string;
+	guestName: string;
+	hostName: string;
+	meetingTitle: string;
+	meetingUrl: string;
+	scheduledStart: Date;
+	twilioClient: any;
+	fromNumber: string;
+}) {
+	const { to, guestName, hostName, meetingTitle, meetingUrl, scheduledStart, twilioClient, fromNumber } = params;
+
+	const formattedDateTime = scheduledStart.toLocaleString('en-US', {
+		month: 'short',
+		day: 'numeric',
+		hour: 'numeric',
+		minute: '2-digit',
+		hour12: true,
+	});
+
+	const message = `Hi ${guestName}! ${hostName} invited you to "${meetingTitle}" on ${formattedDateTime}. Join here: ${meetingUrl}`;
+
+	await twilioClient.messages.create({
+		body: message,
+		to,
+		from: fromNumber,
+	});
+}

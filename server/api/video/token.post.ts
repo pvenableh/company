@@ -1,48 +1,85 @@
 // server/api/video/token.post.ts
-// Generate Twilio video token for joining a room
-
 import twilio from 'twilio';
+import { getServerSession } from '#auth';
+
+interface TokenRequestBody {
+	roomName: string;
+	identity?: string;
+}
 
 export default defineEventHandler(async (event) => {
-	const config = useRuntimeConfig();
-	const body = await readBody(event);
-
-	const { roomName, identity } = body;
-
-	if (!roomName) {
-		throw createError({ statusCode: 400, message: 'roomName is required' });
-	}
-
-	if (!identity) {
-		throw createError({ statusCode: 400, message: 'identity is required' });
-	}
-
 	try {
-		const { AccessToken } = twilio.jwt;
-		const { VideoGrant } = AccessToken;
+		const config = useRuntimeConfig();
+
+		// Get session to identify current user (optional for guests)
+		const session = await getServerSession(event);
+
+		// Get request body
+		const body = await readBody<TokenRequestBody>(event);
+
+		if (!body.roomName) {
+			throw createError({
+				statusCode: 400,
+				message: 'Room name is required',
+			});
+		}
+
+		// Validate Twilio credentials
+		if (!config.twilioAccountSid || !config.twilioApiKey || !config.twilioApiSecret) {
+			throw createError({
+				statusCode: 500,
+				message: 'Video service is not configured',
+			});
+		}
+
+		// Determine identity
+		let identity: string;
+
+		if (session?.user) {
+			// Authenticated user
+			identity = `${session.user.first_name || ''} ${session.user.last_name || ''}`.trim();
+			if (!identity) {
+				identity = session.user.email?.split('@')[0] || `user-${session.user.id.substring(0, 8)}`;
+			}
+		} else if (body.identity) {
+			// Guest with provided identity
+			identity = body.identity;
+		} else {
+			// Anonymous guest
+			identity = `Guest-${Math.random().toString(36).substring(2, 8)}`;
+		}
 
 		// Create access token
-		const token = new AccessToken(config.twilioAccountSid, config.twilioApiKey, config.twilioApiSecret, { identity });
+		const AccessToken = twilio.jwt.AccessToken;
+		const VideoGrant = AccessToken.VideoGrant;
 
-		// Grant access to Video
-		const videoGrant = new VideoGrant({
-			room: roomName,
+		const token = new AccessToken(config.twilioAccountSid, config.twilioApiKey, config.twilioApiSecret, {
+			identity,
+			ttl: 3600, // Token valid for 1 hour
 		});
+
+		// Create video grant for the specific room
+		const videoGrant = new VideoGrant({
+			room: body.roomName,
+		});
+
 		token.addGrant(videoGrant);
 
-		// Set token TTL (1 hour)
-		token.ttl = 3600;
-
 		return {
-			token: token.toJwt(),
-			identity,
-			roomName,
+			success: true,
+			data: {
+				token: token.toJwt(),
+				identity,
+				roomName: body.roomName,
+			},
 		};
-	} catch (error: any) {
-		console.error('Token generation error:', error);
+	} catch (error) {
+		const err = error as any;
+		console.error('Error generating video token:', err);
+
 		throw createError({
-			statusCode: 500,
-			message: error.message || 'Failed to generate token',
+			statusCode: err.statusCode || 500,
+			message: err.message || 'Failed to generate video token',
 		});
 	}
 });

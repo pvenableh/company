@@ -1,84 +1,70 @@
-// server/api/scheduler/settings.ts
-import { createDirectus, rest, readItems, createItem, updateItem, authentication } from '@directus/sdk';
+// server/api/scheduler/settings.get.ts
+import { createDirectus, rest, readItems, staticToken } from '@directus/sdk';
+import { getServerSession } from '#auth';
 
 export default defineEventHandler(async (event) => {
-	const config = useRuntimeConfig();
-	const method = event.method;
-	
-	const client = createDirectus(config.public.directusUrl)
-		.with(authentication())
-		.with(rest());
-
 	try {
-		const session = await getUserSession(event);
-		const accessToken = session?.user?.access_token || session?.secure?.access_token;
-		const userId = session?.user?.id;
+		const config = useRuntimeConfig();
 
-		if (!userId) {
-			throw createError({ statusCode: 401, message: 'Unauthorized' });
+		// Get session to identify current user
+		const session = await getServerSession(event);
+
+		if (!session?.user?.id) {
+			throw createError({
+				statusCode: 401,
+				message: 'Unauthorized - Please sign in',
+			});
 		}
 
-		if (accessToken) {
-			await client.setToken(accessToken);
-		}
+		const userId = session.user.id;
 
-		if (method === 'GET') {
-			const settings = await client.request(
-				readItems('scheduler_settings', {
-					fields: ['*'],
-					filter: { user_id: { _eq: userId } },
-					limit: 1,
-				})
-			);
-			return { data: settings[0] || null };
-		}
+		// Create Directus client with server token
+		const directus = createDirectus(config.public.directusUrl)
+			.with(rest())
+			.with(staticToken(config.directusStaticToken || config.directusServerToken));
 
-		if (method === 'POST') {
-			const body = await readBody(event);
-			
-			const existing = await client.request(
-				readItems('scheduler_settings', {
-					fields: ['id'],
-					filter: { user_id: { _eq: userId } },
-					limit: 1,
-				})
-			);
+		// Fetch scheduler settings for the current user
+		const settings = await directus.request(
+			readItems('scheduler_settings', {
+				filter: {
+					user_id: { _eq: userId },
+				},
+				limit: 1,
+			}),
+		);
 
-			const settingsData = {
-				user_id: userId,
-				default_duration: body.default_duration,
-				default_meeting_type: body.default_meeting_type,
-				buffer_before: body.buffer_before,
-				buffer_after: body.buffer_after,
-				timezone: body.timezone,
-				public_booking_enabled: body.public_booking_enabled,
-				booking_page_slug: body.booking_page_slug,
-				booking_page_title: body.booking_page_title,
-				booking_page_description: body.booking_page_description,
-				send_confirmations: body.send_confirmations,
-				send_reminders: body.send_reminders,
-				reminder_time: body.reminder_time,
-				google_calendar_enabled: body.google_calendar_enabled,
-				google_calendar_id: body.google_calendar_id,
-				outlook_calendar_enabled: body.outlook_calendar_enabled,
+		// If no settings exist, return defaults
+		if (!settings || settings.length === 0) {
+			return {
+				success: true,
+				data: {
+					user_id: userId,
+					default_duration: 30,
+					default_meeting_type: 'general',
+					buffer_before: 0,
+					buffer_after: 0,
+					send_confirmations: true,
+					send_reminders: true,
+					reminder_time: 60,
+					public_booking_enabled: false,
+					google_calendar_enabled: false,
+					outlook_calendar_enabled: false,
+					timezone: 'America/New_York',
+				},
 			};
-
-			let result;
-			if (existing.length > 0) {
-				result = await client.request(updateItem('scheduler_settings', existing[0].id, settingsData));
-			} else {
-				result = await client.request(createItem('scheduler_settings', settingsData));
-			}
-
-			return { data: result };
 		}
 
-		throw createError({ statusCode: 405, message: 'Method not allowed' });
-	} catch (error: any) {
-		console.error('Error with settings:', error);
+		return {
+			success: true,
+			data: settings[0],
+		};
+	} catch (error) {
+		const err = error as any;
+		console.error('Error fetching scheduler settings:', err);
+
 		throw createError({
-			statusCode: error.status || 500,
-			message: error.message || 'Failed to process settings',
+			statusCode: err.statusCode || 500,
+			message: err.message || 'Failed to fetch scheduler settings',
 		});
 	}
 });

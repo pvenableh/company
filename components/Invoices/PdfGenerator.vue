@@ -33,8 +33,8 @@ const generatePDF = async () => {
              style="height: 48px; width: auto; margin-right: 16px;" />
         <div style="font-size: 9px; text-transform: uppercase; line-height: 1; margin-top: -8px;">
           <p style="font-weight: bold;">hue</p>
-          <p>605 Lincoln Road</p>
-          <p>Suite 200</p>
+          <p>1033 Lenox Ave</p>
+          <p>Suite 314</p>
           <p>Miami Beach, FL 33139</p>
           <p>305.680.0485</p>
           <p>contact@huestudios.com</p>
