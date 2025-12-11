@@ -55,9 +55,18 @@ export default defineEventHandler(async (event) => {
 		// Generate unique room name
 		const roomName = `meeting-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
 
-		// Calculate scheduled end time
+		// Calculate scheduled end time with validation
 		const scheduledStart = new Date(body.scheduled_start);
-		const durationMinutes = body.duration || 30;
+
+		// Validate the date is valid
+		if (isNaN(scheduledStart.getTime())) {
+			throw createError({
+				statusCode: 400,
+				message: 'Invalid scheduled start time. Please select a valid date and time.',
+			});
+		}
+
+		const durationMinutes = Number(body.duration) || 30;
 		const scheduledEnd = new Date(scheduledStart.getTime() + durationMinutes * 60 * 1000);
 
 		// Initialize Twilio client

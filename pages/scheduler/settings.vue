@@ -163,19 +163,37 @@ watch(availabilityError, (error) => {
 });
 
 // Methods
-const { createItem, updateItem, deleteItem } = useDirectusItems();
+const { createItem, updateItem, deleteItem, readItems } = useDirectusItems();
 
 const saveSettings = async () => {
 	saving.value = true;
 	try {
-		if (settings.value?.id) {
-			await updateItem('scheduler_settings', settings.value.id, { ...form });
+		// First, check if we have settings from subscription
+		let existingSettingsId = settings.value?.id;
+
+		// If not loaded yet, fetch directly from Directus to check
+		if (!existingSettingsId) {
+			const existingSettings = await readItems('scheduler_settings', {
+				filter: { user_id: { _eq: user.value?.id } },
+				limit: 1,
+			});
+
+			if (existingSettings && existingSettings.length > 0) {
+				existingSettingsId = existingSettings[0].id;
+			}
+		}
+
+		if (existingSettingsId) {
+			// UPDATE existing settings
+			await updateItem('scheduler_settings', existingSettingsId, { ...form });
 		} else {
+			// CREATE new settings (only if none exist)
 			await createItem('scheduler_settings', {
 				user_id: user.value?.id,
 				...form,
 			});
 		}
+
 		toast.add({ title: 'Settings saved', color: 'green' });
 		refreshSettings();
 	} catch (error) {
