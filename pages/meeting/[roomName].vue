@@ -119,83 +119,277 @@
 						<span class="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse" />
 						Live
 					</UBadge>
+					<UBadge v-if="anyScreenShareActive" color="blue" variant="soft" size="xs">
+						<UIcon name="i-lucide-monitor" class="w-3 h-3 mr-1" />
+						Screen Sharing
+					</UBadge>
 				</div>
-				<div class="flex items-center gap-2">
+				<div class="flex items-center gap-3">
+					<!-- View Mode Selector -->
+					<div class="flex items-center bg-gray-700 rounded-lg p-0.5">
+						<button
+							v-for="mode in viewModes"
+							:key="mode.value"
+							class="px-3 py-1.5 text-xs font-medium rounded-md transition-colors"
+							:class="viewMode === mode.value ? 'bg-gray-500 text-white' : 'text-gray-400 hover:text-white'"
+							@click="viewMode = mode.value"
+							:title="mode.label"
+						>
+							<UIcon :name="mode.icon" class="w-4 h-4" />
+						</button>
+					</div>
 					<span class="text-sm text-gray-400">{{ formatDuration(meetingDuration) }}</span>
 					<UButton
-						v-if="isHost"
 						color="gray"
 						variant="ghost"
 						size="sm"
 						icon="i-lucide-users"
-						@click="showParticipants = true"
+						@click="showParticipantsPanel = !showParticipantsPanel"
 					>
-						{{ participantIdentities.length }}
+						{{ participantIdentities.length + 1 }}
 					</UButton>
 				</div>
 			</div>
 
-			<!-- Video Grid -->
-			<div class="flex-1 bg-black p-4 relative overflow-hidden">
-				<div class="h-full grid gap-4" :class="videoGridClass">
-					<!-- Remote Participants -->
-					<div
-						v-for="p in participantIdentities"
-						:key="p.sid"
-						class="relative bg-gray-800 rounded-lg overflow-hidden"
-					>
-						<div :ref="(el) => attachRemoteTracks(el, p.sid)" class="w-full h-full remote-video-container" />
-						<div class="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-sm">
-							{{ p.identity }}
+			<!-- Main Content Area -->
+			<div class="flex-1 flex overflow-hidden">
+				<!-- Video Area -->
+				<div class="flex-1 bg-black p-4 relative overflow-hidden">
+					<!-- Screen Share Active Layout (Zoom-style) -->
+					<div v-if="anyScreenShareActive" class="h-full flex gap-4">
+						<!-- Main Screen Share Area -->
+						<div class="flex-1 relative bg-gray-800 rounded-lg overflow-hidden">
+							<!-- Local screen share -->
+							<div v-if="screenShareEnabled" ref="screenShareContainer" class="w-full h-full screen-share-container" />
+							<!-- Remote screen share -->
+							<div v-else-if="remoteScreenShareParticipantSid" :ref="(el) => attachRemoteScreenShare(el)" class="w-full h-full screen-share-container" />
+							<div class="absolute bottom-3 left-3 bg-black/60 px-3 py-1.5 rounded-lg text-sm flex items-center gap-2">
+								<UIcon name="i-lucide-monitor" class="w-4 h-4 text-blue-400" />
+								{{ screenShareEnabled ? 'Your Screen' : remoteScreenShareIdentity + "'s Screen" }}
+							</div>
+						</div>
+						<!-- Participant Thumbnails Strip -->
+						<div class="w-48 flex flex-col gap-2 overflow-y-auto">
+							<!-- Local Video Thumbnail -->
+							<div class="relative bg-gray-800 rounded-lg overflow-hidden aspect-video flex-shrink-0">
+								<div ref="localVideoContainer" class="w-full h-full mirror local-video-container" />
+								<div class="absolute bottom-1 left-1 bg-black/60 px-1.5 py-0.5 rounded text-xs">
+									You {{ isHost ? '(Host)' : '' }}
+								</div>
+							</div>
+							<!-- Remote Participant Thumbnails -->
+							<div
+								v-for="p in participantIdentities"
+								:key="p.sid"
+								class="relative bg-gray-800 rounded-lg overflow-hidden aspect-video flex-shrink-0"
+							>
+								<div :ref="(el) => attachRemoteTracks(el, p.sid)" class="w-full h-full remote-video-container" />
+								<div class="absolute bottom-1 left-1 bg-black/60 px-1.5 py-0.5 rounded text-xs">
+									{{ p.identity }}
+								</div>
+							</div>
 						</div>
 					</div>
 
-					<!-- Screen Share -->
-					<div v-if="screenShareEnabled" class="relative bg-gray-800 rounded-lg overflow-hidden">
-						<div ref="screenShareContainer" class="w-full h-full remote-video-container" />
-						<div class="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-sm">
-							Your Screen
+					<!-- Speaker View Layout -->
+					<div v-else-if="viewMode === 'speaker'" class="h-full flex flex-col gap-4">
+						<!-- Main Speaker Area -->
+						<div class="flex-1 relative bg-gray-800 rounded-lg overflow-hidden">
+							<template v-if="dominantSpeakerSid && dominantSpeakerSid !== '__local__'">
+								<div :ref="(el) => attachRemoteTracks(el, dominantSpeakerSid)" class="w-full h-full remote-video-container" />
+								<div class="absolute bottom-3 left-3 bg-black/60 px-3 py-1.5 rounded-lg text-sm">
+									{{ getDominantSpeakerIdentity() }}
+								</div>
+							</template>
+							<template v-else>
+								<div ref="localVideoContainer" class="w-full h-full mirror local-video-container" />
+								<div class="absolute bottom-3 left-3 bg-black/60 px-3 py-1.5 rounded-lg text-sm">
+									You {{ isHost ? '(Host)' : '' }}
+								</div>
+							</template>
+						</div>
+						<!-- Bottom Strip -->
+						<div class="h-28 flex gap-2 overflow-x-auto flex-shrink-0">
+							<!-- Local (if not dominant) -->
+							<div
+								v-if="dominantSpeakerSid && dominantSpeakerSid !== '__local__'"
+								class="relative bg-gray-800 rounded-lg overflow-hidden aspect-video h-full flex-shrink-0"
+							>
+								<div ref="localVideoContainerAlt" class="w-full h-full mirror local-video-container" />
+								<div class="absolute bottom-1 left-1 bg-black/60 px-1.5 py-0.5 rounded text-xs">
+									You {{ isHost ? '(Host)' : '' }}
+								</div>
+							</div>
+							<!-- Other remote participants (not the dominant speaker) -->
+							<div
+								v-for="p in nonDominantParticipants"
+								:key="p.sid"
+								class="relative bg-gray-800 rounded-lg overflow-hidden aspect-video h-full flex-shrink-0"
+							>
+								<div :ref="(el) => attachRemoteTracks(el, p.sid)" class="w-full h-full remote-video-container" />
+								<div class="absolute bottom-1 left-1 bg-black/60 px-1.5 py-0.5 rounded text-xs">
+									{{ p.identity }}
+								</div>
+							</div>
 						</div>
 					</div>
 
-					<!-- Local Video (smaller, corner) -->
-					<div class="relative bg-gray-800 rounded-lg overflow-hidden">
-						<div ref="localVideoContainer" class="w-full h-full mirror local-video-container" />
-						<div class="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-sm">
-							You {{ isHost ? '(Host)' : '' }}
+					<!-- Sidebar View Layout -->
+					<div v-else-if="viewMode === 'sidebar'" class="h-full flex gap-4">
+						<!-- Main Speaker Area -->
+						<div class="flex-1 relative bg-gray-800 rounded-lg overflow-hidden">
+							<template v-if="dominantSpeakerSid && dominantSpeakerSid !== '__local__'">
+								<div :ref="(el) => attachRemoteTracks(el, dominantSpeakerSid)" class="w-full h-full remote-video-container" />
+								<div class="absolute bottom-3 left-3 bg-black/60 px-3 py-1.5 rounded-lg text-sm">
+									{{ getDominantSpeakerIdentity() }}
+								</div>
+							</template>
+							<template v-else>
+								<div ref="localVideoContainer" class="w-full h-full mirror local-video-container" />
+								<div class="absolute bottom-3 left-3 bg-black/60 px-3 py-1.5 rounded-lg text-sm">
+									You {{ isHost ? '(Host)' : '' }}
+								</div>
+							</template>
+						</div>
+						<!-- Right Side Strip -->
+						<div class="w-56 flex flex-col gap-2 overflow-y-auto">
+							<!-- Local (if not dominant) -->
+							<div
+								v-if="dominantSpeakerSid && dominantSpeakerSid !== '__local__'"
+								class="relative bg-gray-800 rounded-lg overflow-hidden aspect-video flex-shrink-0"
+							>
+								<div ref="localVideoContainerAlt" class="w-full h-full mirror local-video-container" />
+								<div class="absolute bottom-1 left-1 bg-black/60 px-1.5 py-0.5 rounded text-xs">
+									You {{ isHost ? '(Host)' : '' }}
+								</div>
+							</div>
+							<!-- Other remote participants -->
+							<div
+								v-for="p in nonDominantParticipants"
+								:key="p.sid"
+								class="relative bg-gray-800 rounded-lg overflow-hidden aspect-video flex-shrink-0"
+							>
+								<div :ref="(el) => attachRemoteTracks(el, p.sid)" class="w-full h-full remote-video-container" />
+								<div class="absolute bottom-1 left-1 bg-black/60 px-1.5 py-0.5 rounded text-xs">
+									{{ p.identity }}
+								</div>
+							</div>
 						</div>
 					</div>
-				</div>
 
-				<!-- Waiting Room Panel (Host Only) -->
-				<div
-					v-if="isHost && waitingParticipants.length > 0"
-					class="absolute top-4 right-4 bg-gray-800 rounded-lg p-4 w-72 shadow-xl"
-				>
-					<h3 class="font-semibold mb-3 flex items-center gap-2">
-						<UIcon name="i-lucide-clock" class="w-4 h-4 text-yellow-500" />
-						Waiting Room ({{ waitingParticipants.length }})
-					</h3>
-					<div class="space-y-2 max-h-48 overflow-y-auto">
+					<!-- Gallery View Layout (Default) -->
+					<div v-else class="h-full grid gap-4" :class="videoGridClass">
+						<!-- Remote Participants -->
 						<div
-							v-for="attendee in waitingParticipants"
-							:key="attendee.id"
-							class="flex items-center justify-between bg-gray-700 rounded p-2"
+							v-for="p in participantIdentities"
+							:key="p.sid"
+							class="relative bg-gray-800 rounded-lg overflow-hidden"
 						>
-							<span class="text-sm truncate flex-1">{{ attendee.guest_name || 'Guest' }}</span>
-							<div class="flex gap-1">
-								<UButton color="green" size="xs" icon="i-lucide-check" @click="admitParticipant(attendee)" />
-								<UButton
-									color="red"
-									size="xs"
-									variant="soft"
-									icon="i-lucide-x"
-									@click="rejectParticipant(attendee)"
-								/>
+							<div :ref="(el) => attachRemoteTracks(el, p.sid)" class="w-full h-full remote-video-container" />
+							<div class="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-sm">
+								{{ p.identity }}
+							</div>
+						</div>
+
+						<!-- Local Video -->
+						<div class="relative bg-gray-800 rounded-lg overflow-hidden">
+							<div ref="localVideoContainer" class="w-full h-full mirror local-video-container" />
+							<div class="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-sm">
+								You {{ isHost ? '(Host)' : '' }}
 							</div>
 						</div>
 					</div>
 				</div>
+
+				<!-- Participants Side Panel -->
+				<transition name="slide-panel">
+					<div
+						v-if="showParticipantsPanel"
+						class="w-80 bg-gray-800 border-l border-gray-700 flex flex-col overflow-hidden flex-shrink-0"
+					>
+						<!-- Panel Header -->
+						<div class="px-4 py-3 border-b border-gray-700 flex items-center justify-between">
+							<h3 class="font-semibold text-sm">Participants ({{ participantIdentities.length + 1 }})</h3>
+							<UButton
+								color="gray"
+								variant="ghost"
+								size="xs"
+								icon="i-lucide-x"
+								@click="showParticipantsPanel = false"
+							/>
+						</div>
+
+						<!-- Panel Content -->
+						<div class="flex-1 overflow-y-auto p-3 space-y-4">
+							<!-- Waiting Section -->
+							<div v-if="waitingParticipants.length > 0">
+								<h4 class="text-xs font-semibold text-yellow-500 uppercase tracking-wider mb-2">
+									Waiting ({{ waitingParticipants.length }})
+								</h4>
+								<div class="space-y-1.5">
+									<div
+										v-for="attendee in waitingParticipants"
+										:key="attendee.id"
+										class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-700/50 transition-colors"
+									>
+										<div class="w-8 h-8 rounded-full bg-yellow-600 flex items-center justify-center text-xs font-bold flex-shrink-0">
+											{{ getInitials(attendee.guest_name || 'G') }}
+										</div>
+										<div class="flex-1 min-w-0">
+											<p class="text-sm font-medium truncate">{{ attendee.guest_name || 'Guest' }}</p>
+											<p v-if="attendee.guest_email" class="text-xs text-gray-400 truncate">{{ attendee.guest_email }}</p>
+										</div>
+										<div v-if="isHost" class="flex gap-1 flex-shrink-0">
+											<UButton color="green" size="xs" icon="i-lucide-check" variant="soft" @click="admitParticipant(attendee)" />
+											<UButton color="red" size="xs" icon="i-lucide-x" variant="soft" @click="rejectParticipant(attendee)" />
+										</div>
+									</div>
+								</div>
+							</div>
+
+							<!-- In Meeting Section -->
+							<div>
+								<h4 class="text-xs font-semibold text-green-500 uppercase tracking-wider mb-2">
+									In Meeting ({{ inMeetingParticipants.length }})
+								</h4>
+								<div class="space-y-1.5">
+									<!-- Current user (you) -->
+									<div class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-700/50 transition-colors">
+										<div class="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center text-xs font-bold flex-shrink-0">
+											{{ getInitials(guestName || 'You') }}
+										</div>
+										<div class="flex-1 min-w-0">
+											<p class="text-sm font-medium truncate">
+												{{ guestName || 'You' }}
+												<span class="text-xs text-gray-400">(You)</span>
+												<UBadge v-if="isHost" size="xs" color="blue" class="ml-1">Host</UBadge>
+											</p>
+										</div>
+									</div>
+									<!-- Other in-meeting participants -->
+									<div
+										v-for="attendee in inMeetingParticipants.filter(a => a.id !== myAttendeeId)"
+										:key="attendee.id"
+										class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-700/50 transition-colors"
+									>
+										<div class="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center text-xs font-bold flex-shrink-0">
+											{{ getInitials(attendee.guest_name || attendee.directus_user?.first_name || 'G') }}
+										</div>
+										<div class="flex-1 min-w-0">
+											<p class="text-sm font-medium truncate">
+												{{ attendee.guest_name || attendee.directus_user?.first_name || 'Guest' }}
+												<UBadge v-if="attendee.directus_user?.id === meeting.host_user?.id" size="xs" color="blue" class="ml-1">
+													Host
+												</UBadge>
+											</p>
+											<p v-if="attendee.guest_email" class="text-xs text-gray-400 truncate">{{ attendee.guest_email }}</p>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</transition>
 			</div>
 
 			<!-- Meeting Controls -->
@@ -224,11 +418,10 @@
 						:title="screenShareEnabled ? 'Stop sharing' : 'Share screen'"
 					/>
 					<UButton
-						v-if="isHost"
 						color="gray"
 						size="lg"
 						icon="i-lucide-users"
-						@click="showParticipants = true"
+						@click="showParticipantsPanel = !showParticipantsPanel"
 						class="rounded-full relative"
 					>
 						<UBadge v-if="waitingParticipants.length" color="yellow" size="xs" class="absolute -top-1 -right-1">
@@ -240,58 +433,6 @@
 				</div>
 			</div>
 		</div>
-
-		<!-- Participants Modal -->
-		<UModal v-model="showParticipants">
-			<UCard class="bg-gray-800">
-				<template #header>
-					<h3 class="font-semibold">Participants</h3>
-				</template>
-
-				<!-- Waiting -->
-				<div v-if="waitingParticipants.length" class="mb-4">
-					<h4 class="text-sm text-yellow-500 font-medium mb-2">Waiting ({{ waitingParticipants.length }})</h4>
-					<div class="space-y-2">
-						<div
-							v-for="attendee in waitingParticipants"
-							:key="attendee.id"
-							class="flex items-center justify-between bg-gray-700 rounded p-2"
-						>
-							<div>
-								<p class="font-medium">{{ attendee.guest_name || 'Guest' }}</p>
-								<p class="text-xs text-gray-400">{{ attendee.guest_email }}</p>
-							</div>
-							<div class="flex gap-1">
-								<UButton color="green" size="xs" @click="admitParticipant(attendee)">Admit</UButton>
-								<UButton color="red" size="xs" variant="soft" @click="rejectParticipant(attendee)">Reject</UButton>
-							</div>
-						</div>
-					</div>
-				</div>
-
-				<!-- In Meeting -->
-				<div>
-					<h4 class="text-sm text-green-500 font-medium mb-2">In Meeting ({{ inMeetingParticipants.length }})</h4>
-					<div class="space-y-2">
-						<div
-							v-for="attendee in inMeetingParticipants"
-							:key="attendee.id"
-							class="flex items-center justify-between bg-gray-700 rounded p-2"
-						>
-							<div>
-								<p class="font-medium">
-									{{ attendee.guest_name || attendee.directus_user?.first_name || 'Guest' }}
-									<UBadge v-if="attendee.directus_user?.id === meeting.host_user?.id" size="xs" color="blue">
-										Host
-									</UBadge>
-								</p>
-								<p class="text-xs text-gray-400">{{ attendee.guest_email }}</p>
-							</div>
-						</div>
-					</div>
-				</div>
-			</UCard>
-		</UModal>
 	</div>
 </template>
 
@@ -323,16 +464,38 @@ const joining = ref(false);
 const guestName = ref('');
 const guestEmail = ref('');
 const myAttendeeId = ref(null);
-const showParticipants = ref(false);
+const showParticipantsPanel = ref(false);
+
+// View mode state
+const viewMode = ref('gallery');
+const viewModes = [
+	{ value: 'gallery', label: 'Gallery View', icon: 'i-lucide-layout-grid' },
+	{ value: 'speaker', label: 'Speaker View', icon: 'i-lucide-user' },
+	{ value: 'sidebar', label: 'Sidebar View', icon: 'i-lucide-panel-right' },
+];
+
+// Dominant speaker tracking
+const dominantSpeakerSid = ref(null);
+
+// Remote screen share tracking
+const remoteScreenShareParticipantSid = ref(null);
+const remoteScreenShareIdentity = ref('');
+let _remoteScreenShareTrack = null;
 
 // Media state
 const videoEnabled = ref(true);
 const audioEnabled = ref(true);
 const previewStream = ref(null);
 const localVideoContainer = ref(null);
+const localVideoContainerAlt = ref(null);
 const previewVideo = ref(null);
 const screenShareEnabled = ref(false);
 const screenShareContainer = ref(null);
+
+// Computed: is any screen share active (local or remote)
+const anyScreenShareActive = computed(() => {
+	return screenShareEnabled.value || !!remoteScreenShareParticipantSid.value;
+});
 
 // Twilio state - kept as plain variables (NOT reactive) to avoid Vue Proxy
 // wrapping Twilio objects. Twilio's internal loglevel library has non-configurable
@@ -376,13 +539,61 @@ const inMeetingParticipants = computed(() => {
 	return participants.value.filter((p) => p.status === 'in_meeting' || p.status === 'admitted');
 });
 
+const nonDominantParticipants = computed(() => {
+	return participantIdentities.value.filter((p) => p.sid !== dominantSpeakerSid.value);
+});
+
 const videoGridClass = computed(() => {
-	const count = participantIdentities.value.length + 1 + (screenShareEnabled.value ? 1 : 0); // +1 for local, +1 for screen share
+	const count = participantIdentities.value.length + 1; // +1 for local
 	if (count === 1) return 'grid-cols-1';
 	if (count === 2) return 'grid-cols-2';
 	if (count <= 4) return 'grid-cols-2 grid-rows-2';
 	return 'grid-cols-3 grid-rows-2';
 });
+
+// Helper to get initials from a name
+const getInitials = (name) => {
+	if (!name) return '?';
+	return name
+		.split(' ')
+		.map((n) => n[0])
+		.join('')
+		.toUpperCase()
+		.slice(0, 2);
+};
+
+// Get dominant speaker identity
+const getDominantSpeakerIdentity = () => {
+	const p = participantIdentities.value.find((p) => p.sid === dominantSpeakerSid.value);
+	return p ? p.identity : 'Speaker';
+};
+
+// Attach local video to the appropriate container based on current view
+const attachLocalVideoToContainer = () => {
+	const videoTrack = _localTracks.find((t) => t.kind === 'video');
+	if (!videoTrack) return;
+
+	// Determine which container to use
+	const container = localVideoContainer.value || localVideoContainerAlt.value;
+	if (container) {
+		container.innerHTML = '';
+		container.appendChild(videoTrack.attach());
+	}
+};
+
+// Watch for view mode and dominant speaker changes to re-attach local video
+watch([viewMode, dominantSpeakerSid, () => anyScreenShareActive.value], async () => {
+	await nextTick();
+	await nextTick();
+	attachLocalVideoToContainer();
+	// Re-attach all remote tracks
+	participantIdentities.value.forEach((p) => {
+		const els = document.querySelectorAll(`[data-participant-sid="${p.sid}"]`);
+		if (els.length) {
+			attachRemoteTracks(els[0], p.sid);
+		}
+	});
+}, { flush: 'post' });
 
 // Fetch meeting data
 const fetchMeeting = async () => {
@@ -525,6 +736,9 @@ const toggleVideo = async () => {
 			if (localVideoContainer.value) {
 				localVideoContainer.value.innerHTML = '';
 			}
+			if (localVideoContainerAlt.value) {
+				localVideoContainerAlt.value.innerHTML = '';
+			}
 			_localTracks = _localTracks.filter((t) => t.kind !== 'video');
 		}
 	} else {
@@ -536,10 +750,8 @@ const toggleVideo = async () => {
 			if (_twilioRoom) {
 				_twilioRoom.localParticipant.publishTrack(newTrack);
 			}
-			if (localVideoContainer.value) {
-				localVideoContainer.value.innerHTML = '';
-				localVideoContainer.value.appendChild(newTrack.attach());
-			}
+			await nextTick();
+			attachLocalVideoToContainer();
 		} catch (err) {
 			console.error('Error re-enabling video:', err);
 			videoEnabled.value = false;
@@ -614,6 +826,46 @@ const joinMeeting = async () => {
 	joining.value = false;
 };
 
+// Check if a track is a screen share track
+const isScreenShareTrack = (track) => {
+	return track.name === 'screen' || track.name === 'screen-share';
+};
+
+// Handle remote screen share track
+const handleRemoteScreenShare = (track, participant) => {
+	_remoteScreenShareTrack = track;
+	remoteScreenShareParticipantSid.value = participant.sid;
+	remoteScreenShareIdentity.value = participant.identity;
+
+	// Wait for DOM to update then attach
+	nextTick(() => {
+		nextTick(() => {
+			const container = document.querySelector('.screen-share-container');
+			if (container && _remoteScreenShareTrack) {
+				container.innerHTML = '';
+				container.appendChild(_remoteScreenShareTrack.attach());
+			}
+		});
+	});
+};
+
+// Remove remote screen share
+const removeRemoteScreenShare = (track) => {
+	if (_remoteScreenShareTrack === track) {
+		track.detach().forEach((el) => el.remove());
+		_remoteScreenShareTrack = null;
+		remoteScreenShareParticipantSid.value = null;
+		remoteScreenShareIdentity.value = '';
+	}
+};
+
+// Attach remote screen share to container
+const attachRemoteScreenShare = (el) => {
+	if (!el || !_remoteScreenShareTrack) return;
+	el.innerHTML = '';
+	el.appendChild(_remoteScreenShareTrack.attach());
+};
+
 // Connect to Twilio room
 const connectToRoom = async () => {
 	try {
@@ -647,31 +899,13 @@ const connectToRoom = async () => {
 		await nextTick();
 
 		// Attach local video to container div
-		const videoTrack = tracks.find((t) => t.kind === 'video');
-		if (videoTrack) {
-			const attachLocalVideo = () => {
-				if (localVideoContainer.value) {
-					localVideoContainer.value.innerHTML = '';
-					localVideoContainer.value.appendChild(videoTrack.attach());
-					return true;
-				}
-				return false;
-			};
-
-			// Try immediately, or retry briefly if the ref isn't ready yet
-			if (!attachLocalVideo()) {
-				const unwatch = watch(localVideoContainer, () => {
-					if (attachLocalVideo()) {
-						unwatch();
-					}
-				});
-			}
-		}
+		attachLocalVideoToContainer();
 
 		// Connect to room
 		const room = await TwilioVideo.connect(tokenResponse.data.token, {
 			name: roomName.value,
 			tracks,
+			dominantSpeaker: true,
 		});
 		_twilioRoom = room;
 
@@ -689,6 +923,16 @@ const connectToRoom = async () => {
 		// Handle new participants
 		room.on('participantConnected', handleParticipantConnected);
 		room.on('participantDisconnected', handleParticipantDisconnected);
+
+		// Track dominant speaker
+		room.on('dominantSpeakerChanged', (participant) => {
+			if (participant) {
+				dominantSpeakerSid.value = participant.sid;
+			} else {
+				// No dominant speaker - default to local
+				dominantSpeakerSid.value = '__local__';
+			}
+		});
 
 		// Update my status to in_meeting
 		if (myAttendeeId.value) {
@@ -740,12 +984,47 @@ const handleParticipantConnected = (participant) => {
 	_remoteParticipantMap.set(participant.sid, participant);
 	// Update reactive list with plain data only
 	participantIdentities.value = [...participantIdentities.value, { sid: participant.sid, identity: participant.identity }];
+
+	// Check existing tracks for screen share
+	participant.tracks.forEach((publication) => {
+		if (publication.track && isScreenShareTrack(publication.track)) {
+			handleRemoteScreenShare(publication.track, participant);
+		}
+	});
+
+	// Listen for new tracks (including screen share)
+	participant.on('trackSubscribed', (track) => {
+		if (isScreenShareTrack(track)) {
+			handleRemoteScreenShare(track, participant);
+		}
+	});
+
+	participant.on('trackUnsubscribed', (track) => {
+		if (isScreenShareTrack(track)) {
+			removeRemoteScreenShare(track);
+		}
+	});
 };
 
 const handleParticipantDisconnected = (participant) => {
 	console.log('Participant disconnected:', participant.identity);
 	_remoteParticipantMap.delete(participant.sid);
 	participantIdentities.value = participantIdentities.value.filter((p) => p.sid !== participant.sid);
+
+	// Clear remote screen share if this participant was sharing
+	if (remoteScreenShareParticipantSid.value === participant.sid) {
+		if (_remoteScreenShareTrack) {
+			_remoteScreenShareTrack.detach().forEach((el) => el.remove());
+			_remoteScreenShareTrack = null;
+		}
+		remoteScreenShareParticipantSid.value = null;
+		remoteScreenShareIdentity.value = '';
+	}
+
+	// Clear dominant speaker if they disconnected
+	if (dominantSpeakerSid.value === participant.sid) {
+		dominantSpeakerSid.value = '__local__';
+	}
 };
 
 // Attach remote participant tracks to a DOM element
@@ -756,17 +1035,21 @@ const attachRemoteTracks = (el, sid) => {
 
 	el.innerHTML = '';
 	participant.tracks.forEach((publication) => {
-		if (publication.track) {
+		if (publication.track && !isScreenShareTrack(publication.track)) {
 			el.appendChild(publication.track.attach());
 		}
 	});
 
 	participant.on('trackSubscribed', (track) => {
-		el.appendChild(track.attach());
+		if (!isScreenShareTrack(track)) {
+			el.appendChild(track.attach());
+		}
 	});
 
 	participant.on('trackUnsubscribed', (track) => {
-		track.detach().forEach((detachedEl) => detachedEl.remove());
+		if (!isScreenShareTrack(track)) {
+			track.detach().forEach((detachedEl) => detachedEl.remove());
+		}
 	});
 };
 
@@ -845,7 +1128,7 @@ const toggleScreenShare = async () => {
 		});
 
 		const { LocalVideoTrack } = await import('twilio-video');
-		const track = new LocalVideoTrack(stream.getTracks()[0], { name: 'screen' });
+		const track = new LocalVideoTrack(stream.getTracks()[0], { name: 'screen-share' });
 
 		if (_twilioRoom) {
 			_twilioRoom.localParticipant.publishTrack(track);
@@ -855,6 +1138,7 @@ const toggleScreenShare = async () => {
 		screenShareEnabled.value = true;
 
 		// Attach screen share to local preview container
+		await nextTick();
 		await nextTick();
 		if (screenShareContainer.value) {
 			screenShareContainer.value.innerHTML = '';
@@ -882,6 +1166,14 @@ const leaveMeeting = async () => {
 		_screenTrack = null;
 		screenShareEnabled.value = false;
 	}
+
+	// Clean up remote screen share
+	if (_remoteScreenShareTrack) {
+		_remoteScreenShareTrack.detach().forEach((el) => el.remove());
+		_remoteScreenShareTrack = null;
+	}
+	remoteScreenShareParticipantSid.value = null;
+	remoteScreenShareIdentity.value = '';
 
 	// Disconnect from Twilio
 	if (_twilioRoom) {
@@ -962,6 +1254,10 @@ onBeforeUnmount(() => {
 		_screenTrack.stop();
 		_screenTrack = null;
 	}
+	if (_remoteScreenShareTrack) {
+		_remoteScreenShareTrack.detach().forEach((el) => el.remove());
+		_remoteScreenShareTrack = null;
+	}
 	if (_twilioRoom) {
 		_twilioRoom.disconnect();
 		_twilioRoom = null;
@@ -986,14 +1282,35 @@ onBeforeUnmount(() => {
 	transform: scaleX(-1);
 }
 .local-video-container,
-.remote-video-container {
+.remote-video-container,
+.screen-share-container {
 	max-height: 100%;
 	overflow: hidden;
 }
 .local-video-container :deep(video),
-.remote-video-container :deep(video) {
+.remote-video-container :deep(video),
+.screen-share-container :deep(video) {
 	width: 100%;
 	height: 100%;
 	object-fit: cover;
+}
+.screen-share-container :deep(video) {
+	object-fit: contain;
+}
+
+/* Participants panel slide transition */
+.slide-panel-enter-active,
+.slide-panel-leave-active {
+	transition: all 0.3s ease;
+}
+.slide-panel-enter-from,
+.slide-panel-leave-to {
+	transform: translateX(100%);
+	opacity: 0;
+}
+.slide-panel-enter-to,
+.slide-panel-leave-from {
+	transform: translateX(0);
+	opacity: 1;
 }
 </style>
