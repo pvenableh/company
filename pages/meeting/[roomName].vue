@@ -289,6 +289,7 @@
 
 <script setup>
 import { format } from 'date-fns';
+import { nextTick } from 'vue';
 
 // No auth middleware - this page is public
 definePageMeta({
@@ -499,29 +500,69 @@ const togglePreviewAudio = () => {
 	}
 };
 
-// In-meeting toggles (operate on raw Twilio track objects)
-const toggleVideo = () => {
+// In-meeting toggles (unpublish+stop to actually release browser devices)
+const toggleVideo = async () => {
 	videoEnabled.value = !videoEnabled.value;
-	for (const track of _localTracks) {
-		if (track.kind === 'video') {
-			if (videoEnabled.value) {
-				track.enable();
-			} else {
-				track.disable();
+
+	if (!videoEnabled.value) {
+		// Stop and unpublish the video track so the browser camera light turns off
+		const videoTrack = _localTracks.find((t) => t.kind === 'video');
+		if (videoTrack) {
+			if (_twilioRoom) {
+				_twilioRoom.localParticipant.unpublishTrack(videoTrack);
 			}
+			videoTrack.stop();
+			// Remove the <video> element from the local container
+			if (localVideoContainer.value) {
+				localVideoContainer.value.innerHTML = '';
+			}
+			_localTracks = _localTracks.filter((t) => t.kind !== 'video');
+		}
+	} else {
+		// Create a new video track and publish it
+		try {
+			const TwilioVideo = await import('twilio-video');
+			const newTrack = await TwilioVideo.createLocalVideoTrack();
+			_localTracks.push(newTrack);
+			if (_twilioRoom) {
+				_twilioRoom.localParticipant.publishTrack(newTrack);
+			}
+			if (localVideoContainer.value) {
+				localVideoContainer.value.innerHTML = '';
+				localVideoContainer.value.appendChild(newTrack.attach());
+			}
+		} catch (err) {
+			console.error('Error re-enabling video:', err);
+			videoEnabled.value = false;
 		}
 	}
 };
 
-const toggleAudio = () => {
+const toggleAudio = async () => {
 	audioEnabled.value = !audioEnabled.value;
-	for (const track of _localTracks) {
-		if (track.kind === 'audio') {
-			if (audioEnabled.value) {
-				track.enable();
-			} else {
-				track.disable();
+
+	if (!audioEnabled.value) {
+		// Stop and unpublish the audio track so the browser mic indicator turns off
+		const audioTrack = _localTracks.find((t) => t.kind === 'audio');
+		if (audioTrack) {
+			if (_twilioRoom) {
+				_twilioRoom.localParticipant.unpublishTrack(audioTrack);
 			}
+			audioTrack.stop();
+			_localTracks = _localTracks.filter((t) => t.kind !== 'audio');
+		}
+	} else {
+		// Create a new audio track and publish it
+		try {
+			const TwilioVideo = await import('twilio-video');
+			const newTrack = await TwilioVideo.createLocalAudioTrack();
+			_localTracks.push(newTrack);
+			if (_twilioRoom) {
+				_twilioRoom.localParticipant.publishTrack(newTrack);
+			}
+		} catch (err) {
+			console.error('Error re-enabling audio:', err);
+			audioEnabled.value = false;
 		}
 	}
 };
@@ -589,6 +630,9 @@ const connectToRoom = async () => {
 			audio: audioEnabled.value,
 		});
 		_localTracks = tracks;
+
+		// Wait for Vue to render the in-meeting DOM (hasJoined was set before this call)
+		await nextTick();
 
 		// Attach local video to container div
 		const videoTrack = tracks.find((t) => t.kind === 'video');
