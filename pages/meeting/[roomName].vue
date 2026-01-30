@@ -369,7 +369,7 @@
 					<UButton
 						:color="backgroundBlurEnabled ? 'blue' : 'gray'"
 						size="lg"
-						icon="i-lucide-blur"
+						icon="i-lucide-squircle-dashed"
 						@click="toggleBackgroundBlur"
 						class="rounded-full"
 						:title="backgroundBlurEnabled ? 'Disable background blur' : 'Blur background'"
