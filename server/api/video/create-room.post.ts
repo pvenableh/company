@@ -3,6 +3,13 @@ import { createDirectus, rest, createItem, updateItem, staticToken } from '@dire
 import { getServerSession } from '#auth';
 import twilio from 'twilio';
 
+interface AttendeeInput {
+	name?: string;
+	email?: string;
+	phone?: string;
+	invite_method?: 'none' | 'email' | 'sms' | 'both';
+}
+
 interface CreateRoomBody {
 	title: string;
 	description?: string;
@@ -15,6 +22,8 @@ interface CreateRoomBody {
 	meeting_type?: string;
 	waiting_room_enabled?: boolean;
 	recording_enabled?: boolean;
+	attendees?: AttendeeInput[];
+	custom_message?: string;
 }
 
 export default defineEventHandler(async (event) => {
@@ -96,10 +105,10 @@ export default defineEventHandler(async (event) => {
 		// Create Directus client
 		const directus = createDirectus(config.public.directusUrl)
 			.with(rest())
-			.with(staticToken(config.directusStaticToken || config.directusServerToken));
+			.with(staticToken(config.directusServerToken || config.directusStaticToken));
 
 		// Generate meeting URL
-		const meetingUrl = `${config.public.siteUrl || 'https://huestudios.company'}/video/${roomName}`;
+		const meetingUrl = `${config.public.siteUrl || 'https://huestudios.company'}/meeting/${roomName}`;
 
 		// Create video meeting record in Directus
 		const videoMeeting = await directus.request(
@@ -142,15 +151,45 @@ export default defineEventHandler(async (event) => {
 			}),
 		);
 
-		// Send invitations if requested
+		// Create attendee records and send invitations
 		let inviteSent = false;
-		if (body.invite_method && body.invite_method !== 'none') {
+
+		// Handle attendees array from the modal
+		const attendeesList = body.attendees?.filter((a) => a.name || a.email) || [];
+
+		// If no attendees array but legacy single invitee fields exist, convert them
+		if (attendeesList.length === 0 && (body.invitee_name || body.invitee_email)) {
+			attendeesList.push({
+				name: body.invitee_name,
+				email: body.invitee_email,
+				phone: body.invitee_phone,
+				invite_method: body.invite_method || 'none',
+			});
+		}
+
+		for (const attendeeInput of attendeesList) {
 			try {
-				if ((body.invite_method === 'email' || body.invite_method === 'both') && body.invitee_email) {
-					// Send email invitation using SendGrid
+				// Create attendee record in Directus
+				await directus.request(
+					createItem('video_meeting_attendees', {
+						video_meeting: videoMeeting.id,
+						attendee_type: 'guest',
+						guest_name: attendeeInput.name || null,
+						guest_email: attendeeInput.email || null,
+						guest_phone: attendeeInput.phone || null,
+						status: 'invited',
+						invite_method: attendeeInput.invite_method || 'none',
+					}),
+				);
+
+				const method = attendeeInput.invite_method || 'none';
+				if (method === 'none') continue;
+
+				// Send email invitation
+				if ((method === 'email' || method === 'both') && attendeeInput.email) {
 					await sendEmailInvitation({
-						to: body.invitee_email,
-						guestName: body.invitee_name || 'Guest',
+						to: attendeeInput.email,
+						guestName: attendeeInput.name || 'Guest',
 						hostName: userName,
 						meetingTitle: body.title,
 						meetingUrl,
@@ -161,11 +200,11 @@ export default defineEventHandler(async (event) => {
 					inviteSent = true;
 				}
 
-				if ((body.invite_method === 'sms' || body.invite_method === 'both') && body.invitee_phone) {
-					// Send SMS invitation using Twilio
+				// Send SMS invitation
+				if ((method === 'sms' || method === 'both') && attendeeInput.phone) {
 					await sendSmsInvitation({
-						to: body.invitee_phone,
-						guestName: body.invitee_name || 'Guest',
+						to: attendeeInput.phone,
+						guestName: attendeeInput.name || 'Guest',
 						hostName: userName,
 						meetingTitle: body.title,
 						meetingUrl,
@@ -175,19 +214,22 @@ export default defineEventHandler(async (event) => {
 					});
 					inviteSent = true;
 				}
+			} catch (attendeeError) {
+				console.error('Failed to process attendee:', attendeeInput.email, attendeeError);
+			}
+		}
 
-				// Update video meeting with invite_sent status
-				if (inviteSent) {
-					await directus.request(
-						updateItem('video_meetings', videoMeeting.id, {
-							invite_sent: true,
-							invite_sent_at: new Date().toISOString(),
-						}),
-					);
-				}
-			} catch (inviteError) {
-				// Log invite error but don't fail the request
-				console.error('Failed to send invitation:', inviteError);
+		// Update video meeting with invite_sent status
+		if (inviteSent) {
+			try {
+				await directus.request(
+					updateItem('video_meetings', videoMeeting.id, {
+						invite_sent: true,
+						invite_sent_at: new Date().toISOString(),
+					}),
+				);
+			} catch (updateError) {
+				console.error('Failed to update invite_sent status:', updateError);
 			}
 		}
 

@@ -32,7 +32,7 @@ export default defineEventHandler(async (event) => {
 		// Create Directus client
 		const directus = createDirectus(config.public.directusUrl)
 			.with(rest())
-			.with(staticToken(config.directusStaticToken || config.directusServerToken));
+			.with(staticToken(config.directusServerToken || config.directusStaticToken));
 
 		// Find the video meeting by room_name
 		const meetings = await directus.request(

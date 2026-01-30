@@ -26,7 +26,7 @@ export default defineEventHandler(async (event) => {
 		// Create Directus client with server token
 		const directus = createDirectus(config.public.directusUrl)
 			.with(rest())
-			.with(staticToken(config.directusStaticToken || config.directusServerToken));
+			.with(staticToken(config.directusServerToken || config.directusStaticToken));
 
 		// Build filter - get meetings where user is the host or creator
 		const filter: any = {

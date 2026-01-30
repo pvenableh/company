@@ -368,12 +368,36 @@ const fetchMeeting = async () => {
 
 		// If user is host, pre-fill name and auto-join
 		if (isHost.value) {
-			guestName.value = currentUser.value.name || currentUser.value.email?.split('@')[0] || 'Host';
+			const hostDisplayName =
+				`${currentUser.value.first_name || ''} ${currentUser.value.last_name || ''}`.trim() ||
+				currentUser.value.email?.split('@')[0] ||
+				'Host';
+			guestName.value = hostDisplayName;
+
+			// Register host as attendee so they have an attendee record
+			try {
+				const joinResponse = await $fetch('/api/video/join-meeting', {
+					method: 'POST',
+					body: {
+						roomName: roomName.value,
+						guestName: hostDisplayName,
+						guestEmail: currentUser.value.email || '',
+					},
+				});
+				myAttendeeId.value = joinResponse.attendeeId;
+			} catch (e) {
+				console.error('Error registering host as attendee:', e);
+			}
+
 			hasJoined.value = true;
 			await connectToRoom();
 		} else if (currentUser.value) {
 			// Pre-fill name for logged in non-host users
-			guestName.value = currentUser.value.name || currentUser.value.email?.split('@')[0] || '';
+			const displayName =
+				`${currentUser.value.first_name || ''} ${currentUser.value.last_name || ''}`.trim() ||
+				currentUser.value.email?.split('@')[0] ||
+				'';
+			guestName.value = displayName;
 			guestEmail.value = currentUser.value.email || '';
 		}
 	} catch (error) {
@@ -519,11 +543,15 @@ const joinMeeting = async () => {
 const connectToRoom = async () => {
 	try {
 		// Get Twilio token
+		const identity =
+			guestName.value ||
+			`${currentUser.value?.first_name || ''} ${currentUser.value?.last_name || ''}`.trim() ||
+			'Guest';
 		const tokenResponse = await $fetch('/api/video/token', {
 			method: 'POST',
 			body: {
 				roomName: roomName.value,
-				identity: guestName.value || currentUser.value?.name || 'Guest',
+				identity,
 			},
 		});
 
@@ -544,7 +572,7 @@ const connectToRoom = async () => {
 		}
 
 		// Connect to room
-		const room = await connect(tokenResponse.token, {
+		const room = await connect(tokenResponse.data.token, {
 			name: roomName.value,
 			tracks,
 		});

@@ -35,7 +35,7 @@ export default defineEventHandler(async (event) => {
 
 		const directus = createDirectus(config.public.directusUrl)
 			.with(rest())
-			.with(staticToken(config.directusStaticToken));
+			.with(staticToken(config.directusServerToken || config.directusStaticToken));
 
 		// Get the attendee record with meeting info
 		const attendee = await directus.request(
