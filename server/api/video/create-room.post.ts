@@ -151,6 +151,17 @@ export default defineEventHandler(async (event) => {
 			}),
 		);
 
+		// Link video meeting back to the appointment via related_appointment
+		try {
+			await directus.request(
+				updateItem('video_meetings', videoMeeting.id, {
+					related_appointment: appointment.id,
+				}),
+			);
+		} catch (linkError) {
+			console.error('Failed to link video meeting to appointment:', linkError);
+		}
+
 		// Create attendee records and send invitations
 		let inviteSent = false;
 
