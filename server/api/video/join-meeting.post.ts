@@ -30,7 +30,7 @@ export default defineEventHandler(async (event) => {
 	try {
 		const directus = createDirectus(config.public.directusUrl)
 			.with(rest())
-			.with(staticToken(config.directusStaticToken));
+			.with(staticToken(config.directusServerToken || config.directusStaticToken));
 
 		// Get the meeting
 		const meetings = await directus.request(

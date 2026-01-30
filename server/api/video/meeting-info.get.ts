@@ -13,10 +13,10 @@ export default defineEventHandler(async (event) => {
 	}
 
 	try {
-		// Use static token for public access
+		// Use server token to read meeting data with relations
 		const directus = createDirectus(config.public.directusUrl)
 			.with(rest())
-			.with(staticToken(config.directusStaticToken));
+			.with(staticToken(config.directusServerToken || config.directusStaticToken));
 
 		const meetings = await directus.request(
 			readItems('video_meetings', {
@@ -29,13 +29,14 @@ export default defineEventHandler(async (event) => {
 					'description',
 					'room_name',
 					'room_sid',
-					'meeting_link',
+					'meeting_url',
 					'status',
 					'scheduled_start',
 					'scheduled_end',
-					'duration',
+					'duration_minutes',
 					'meeting_type',
 					'waiting_room_enabled',
+					'host_identity',
 					'host_user.id',
 					'host_user.first_name',
 					'host_user.last_name',
