@@ -172,7 +172,7 @@
 						<div class="w-48 flex flex-col gap-2 overflow-y-auto">
 							<!-- Local Video Thumbnail -->
 							<div class="relative bg-gray-800 rounded-lg overflow-hidden aspect-video flex-shrink-0">
-								<div ref="localVideoContainer" class="w-full h-full mirror local-video-container" />
+								<div ref="localVideoContainer" class="w-full h-full mirror local-video-container" :class="{ 'video-enhanced': enhancementEnabled }" />
 								<div class="absolute bottom-1 left-1 bg-black/60 px-1.5 py-0.5 rounded text-xs">
 									You {{ isHost ? '(Host)' : '' }}
 								</div>
@@ -202,7 +202,7 @@
 								</div>
 							</template>
 							<template v-else>
-								<div ref="localVideoContainer" class="w-full h-full mirror local-video-container" />
+								<div ref="localVideoContainer" class="w-full h-full mirror local-video-container" :class="{ 'video-enhanced': enhancementEnabled }" />
 								<div class="absolute bottom-3 left-3 bg-black/60 px-3 py-1.5 rounded-lg text-sm">
 									You {{ isHost ? '(Host)' : '' }}
 								</div>
@@ -215,7 +215,7 @@
 								v-if="dominantSpeakerSid && dominantSpeakerSid !== '__local__'"
 								class="relative bg-gray-800 rounded-lg overflow-hidden aspect-video h-full flex-shrink-0"
 							>
-								<div ref="localVideoContainerAlt" class="w-full h-full mirror local-video-container" />
+								<div ref="localVideoContainerAlt" class="w-full h-full mirror local-video-container" :class="{ 'video-enhanced': enhancementEnabled }" />
 								<div class="absolute bottom-1 left-1 bg-black/60 px-1.5 py-0.5 rounded text-xs">
 									You {{ isHost ? '(Host)' : '' }}
 								</div>
@@ -225,49 +225,6 @@
 								v-for="p in nonDominantParticipants"
 								:key="p.sid"
 								class="relative bg-gray-800 rounded-lg overflow-hidden aspect-video h-full flex-shrink-0"
-							>
-								<div :ref="(el) => attachRemoteTracks(el, p.sid)" class="w-full h-full remote-video-container" />
-								<div class="absolute bottom-1 left-1 bg-black/60 px-1.5 py-0.5 rounded text-xs">
-									{{ p.identity }}
-								</div>
-							</div>
-						</div>
-					</div>
-
-					<!-- Sidebar View Layout -->
-					<div v-else-if="viewMode === 'sidebar'" class="h-full flex gap-4">
-						<!-- Main Speaker Area -->
-						<div class="flex-1 relative bg-gray-800 rounded-lg overflow-hidden">
-							<template v-if="dominantSpeakerSid && dominantSpeakerSid !== '__local__'">
-								<div :ref="(el) => attachRemoteTracks(el, dominantSpeakerSid)" class="w-full h-full remote-video-container" />
-								<div class="absolute bottom-3 left-3 bg-black/60 px-3 py-1.5 rounded-lg text-sm">
-									{{ getDominantSpeakerIdentity() }}
-								</div>
-							</template>
-							<template v-else>
-								<div ref="localVideoContainer" class="w-full h-full mirror local-video-container" />
-								<div class="absolute bottom-3 left-3 bg-black/60 px-3 py-1.5 rounded-lg text-sm">
-									You {{ isHost ? '(Host)' : '' }}
-								</div>
-							</template>
-						</div>
-						<!-- Right Side Strip -->
-						<div class="w-56 flex flex-col gap-2 overflow-y-auto">
-							<!-- Local (if not dominant) -->
-							<div
-								v-if="dominantSpeakerSid && dominantSpeakerSid !== '__local__'"
-								class="relative bg-gray-800 rounded-lg overflow-hidden aspect-video flex-shrink-0"
-							>
-								<div ref="localVideoContainerAlt" class="w-full h-full mirror local-video-container" />
-								<div class="absolute bottom-1 left-1 bg-black/60 px-1.5 py-0.5 rounded text-xs">
-									You {{ isHost ? '(Host)' : '' }}
-								</div>
-							</div>
-							<!-- Other remote participants -->
-							<div
-								v-for="p in nonDominantParticipants"
-								:key="p.sid"
-								class="relative bg-gray-800 rounded-lg overflow-hidden aspect-video flex-shrink-0"
 							>
 								<div :ref="(el) => attachRemoteTracks(el, p.sid)" class="w-full h-full remote-video-container" />
 								<div class="absolute bottom-1 left-1 bg-black/60 px-1.5 py-0.5 rounded text-xs">
@@ -293,7 +250,7 @@
 
 						<!-- Local Video -->
 						<div class="relative bg-gray-800 rounded-lg overflow-hidden">
-							<div ref="localVideoContainer" class="w-full h-full mirror local-video-container" />
+							<div ref="localVideoContainer" class="w-full h-full mirror local-video-container" :class="{ 'video-enhanced': enhancementEnabled }" />
 							<div class="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-sm">
 								You {{ isHost ? '(Host)' : '' }}
 							</div>
@@ -410,6 +367,24 @@
 						class="rounded-full"
 					/>
 					<UButton
+						:color="backgroundBlurEnabled ? 'blue' : 'gray'"
+						size="lg"
+						icon="i-lucide-blur"
+						@click="toggleBackgroundBlur"
+						class="rounded-full"
+						:title="backgroundBlurEnabled ? 'Disable background blur' : 'Blur background'"
+						:disabled="!videoEnabled"
+					/>
+					<UButton
+						:color="enhancementEnabled ? 'blue' : 'gray'"
+						size="lg"
+						icon="i-lucide-sparkles"
+						@click="toggleEnhancement"
+						class="rounded-full"
+						:title="enhancementEnabled ? 'Disable enhancement' : 'Enhance image'"
+						:disabled="!videoEnabled"
+					/>
+					<UButton
 						:color="screenShareEnabled ? 'green' : 'gray'"
 						size="lg"
 						icon="i-lucide-monitor"
@@ -471,7 +446,6 @@ const viewMode = ref('gallery');
 const viewModes = [
 	{ value: 'gallery', label: 'Gallery View', icon: 'i-lucide-layout-grid' },
 	{ value: 'speaker', label: 'Speaker View', icon: 'i-lucide-user' },
-	{ value: 'sidebar', label: 'Sidebar View', icon: 'i-lucide-panel-right' },
 ];
 
 // Dominant speaker tracking
@@ -482,15 +456,20 @@ const remoteScreenShareParticipantSid = ref(null);
 const remoteScreenShareIdentity = ref('');
 let _remoteScreenShareTrack = null;
 
-// Media state
-const videoEnabled = ref(true);
-const audioEnabled = ref(true);
+// Media state - camera and mic start disabled until user explicitly enables
+const videoEnabled = ref(false);
+const audioEnabled = ref(false);
 const previewStream = ref(null);
 const localVideoContainer = ref(null);
 const localVideoContainerAlt = ref(null);
 const previewVideo = ref(null);
 const screenShareEnabled = ref(false);
 const screenShareContainer = ref(null);
+
+// Camera enhancement state
+const backgroundBlurEnabled = ref(false);
+const enhancementEnabled = ref(false);
+let _blurProcessor = null;
 
 // Computed: is any screen share active (local or remote)
 const anyScreenShareActive = computed(() => {
@@ -688,12 +667,16 @@ const startStatusPolling = () => {
 // Setup media preview
 const setupPreview = async () => {
 	try {
-		previewStream.value = await navigator.mediaDevices.getUserMedia({
-			video: videoEnabled.value,
-			audio: audioEnabled.value,
+		const stream = await navigator.mediaDevices.getUserMedia({
+			video: true,
+			audio: true,
 		});
+		// Mute tracks that should be off based on current toggle state
+		stream.getVideoTracks().forEach((t) => { t.enabled = videoEnabled.value; });
+		stream.getAudioTracks().forEach((t) => { t.enabled = audioEnabled.value; });
+		previewStream.value = stream;
 		if (previewVideo.value) {
-			previewVideo.value.srcObject = previewStream.value;
+			previewVideo.value.srcObject = stream;
 		}
 	} catch (error) {
 		console.error('Error accessing media:', error);
@@ -702,20 +685,37 @@ const setupPreview = async () => {
 };
 
 // Preview-only toggles (before joining the Twilio room)
-const togglePreviewVideo = () => {
+const togglePreviewVideo = async () => {
 	videoEnabled.value = !videoEnabled.value;
-	if (previewStream.value) {
+	if (videoEnabled.value) {
+		// Request camera access if we don't have a preview stream yet
+		if (!previewStream.value) {
+			await setupPreview();
+		} else {
+			previewStream.value.getVideoTracks().forEach((track) => {
+				track.enabled = true;
+			});
+		}
+	} else if (previewStream.value) {
 		previewStream.value.getVideoTracks().forEach((track) => {
-			track.enabled = videoEnabled.value;
+			track.enabled = false;
 		});
 	}
 };
 
-const togglePreviewAudio = () => {
+const togglePreviewAudio = async () => {
 	audioEnabled.value = !audioEnabled.value;
-	if (previewStream.value) {
+	if (audioEnabled.value) {
+		if (!previewStream.value) {
+			await setupPreview();
+		} else {
+			previewStream.value.getAudioTracks().forEach((track) => {
+				track.enabled = true;
+			});
+		}
+	} else if (previewStream.value) {
 		previewStream.value.getAudioTracks().forEach((track) => {
-			track.enabled = audioEnabled.value;
+			track.enabled = false;
 		});
 	}
 };
@@ -725,9 +725,12 @@ const toggleVideo = async () => {
 	videoEnabled.value = !videoEnabled.value;
 
 	if (!videoEnabled.value) {
-		// Stop and unpublish the video track so the browser camera light turns off
+		// Remove blur processor before stopping the track
 		const videoTrack = _localTracks.find((t) => t.kind === 'video');
 		if (videoTrack) {
+			if (_blurProcessor && backgroundBlurEnabled.value) {
+				try { videoTrack.removeProcessor(_blurProcessor); } catch (e) { /* ignore */ }
+			}
 			if (_twilioRoom) {
 				_twilioRoom.localParticipant.unpublishTrack(videoTrack);
 			}
@@ -747,6 +750,10 @@ const toggleVideo = async () => {
 			const TwilioVideo = await import('twilio-video');
 			const newTrack = await TwilioVideo.createLocalVideoTrack();
 			_localTracks.push(newTrack);
+			// Re-apply blur processor if it was enabled
+			if (backgroundBlurEnabled.value && _blurProcessor) {
+				newTrack.addProcessor(_blurProcessor);
+			}
 			if (_twilioRoom) {
 				_twilioRoom.localParticipant.publishTrack(newTrack);
 			}
@@ -786,6 +793,45 @@ const toggleAudio = async () => {
 			audioEnabled.value = false;
 		}
 	}
+};
+
+// Background blur toggle
+const toggleBackgroundBlur = async () => {
+	const videoTrack = _localTracks.find((t) => t.kind === 'video');
+	if (!videoTrack) {
+		toast.add({ title: 'Enable camera first', color: 'yellow' });
+		return;
+	}
+
+	backgroundBlurEnabled.value = !backgroundBlurEnabled.value;
+
+	if (backgroundBlurEnabled.value) {
+		try {
+			const VideoProcessors = await import('@twilio/video-processors');
+			if (!_blurProcessor) {
+				_blurProcessor = new VideoProcessors.GaussianBlurBackgroundProcessor({
+					assetsPath: '/twilio-video-processors/',
+					blurFilterRadius: 15,
+					maskBlurRadius: 5,
+				});
+				await _blurProcessor.loadModel();
+			}
+			videoTrack.addProcessor(_blurProcessor);
+		} catch (err) {
+			console.error('Error enabling background blur:', err);
+			backgroundBlurEnabled.value = false;
+			toast.add({ title: 'Failed to enable background blur', color: 'red' });
+		}
+	} else {
+		if (_blurProcessor) {
+			videoTrack.removeProcessor(_blurProcessor);
+		}
+	}
+};
+
+// Image enhancement toggle (brightness, contrast, saturation boost via CSS)
+const toggleEnhancement = () => {
+	enhancementEnabled.value = !enhancementEnabled.value;
 };
 
 // Join meeting
@@ -1181,6 +1227,13 @@ const leaveMeeting = async () => {
 		_twilioRoom = null;
 	}
 
+	// Clean up blur processor
+	if (_blurProcessor) {
+		_blurProcessor = null;
+	}
+	backgroundBlurEnabled.value = false;
+	enhancementEnabled.value = false;
+
 	// Stop local tracks
 	_localTracks.forEach((track) => track.stop());
 	_localTracks = [];
@@ -1242,7 +1295,6 @@ const formatDuration = (seconds) => {
 // Lifecycle
 onMounted(() => {
 	fetchMeeting();
-	setupPreview();
 });
 
 onBeforeUnmount(() => {
@@ -1312,5 +1364,10 @@ onBeforeUnmount(() => {
 .slide-panel-leave-from {
 	transform: translateX(0);
 	opacity: 1;
+}
+
+/* Video enhancement filter - subtle brightness, contrast and saturation boost */
+.video-enhanced :deep(video) {
+	filter: brightness(1.08) contrast(1.1) saturate(1.15);
 }
 </style>

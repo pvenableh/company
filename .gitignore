@@ -16,5 +16,4 @@ dist
 .directus
 .directus/data
 .directus/uploads
-
-
+node-compile-cache/

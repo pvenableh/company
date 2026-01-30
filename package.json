@@ -75,6 +75,7 @@
 		"@nuxt/image": "^1.9.0",
 		"@sendgrid/mail": "^8.1.4",
 		"@sidebase/nuxt-auth": "^0.10.1",
+		"@twilio/video-processors": "^3.1.0",
 		"@use-gesture/vanilla": "^10.3.1",
 		"@vee-validate/nuxt": "^4.15.0",
 		"@vee-validate/yup": "^4.15.0",
