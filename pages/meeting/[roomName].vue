@@ -46,8 +46,8 @@
 						<UInput v-model="guestName" placeholder="Enter your name" size="lg" :disabled="joining" />
 					</UFormGroup>
 
-					<UFormGroup label="Email (optional)">
-						<UInput v-model="guestEmail" type="email" placeholder="your@email.com" size="lg" :disabled="joining" />
+					<UFormGroup label="Email" required>
+						<UInput v-model="guestEmail" type="email" placeholder="your@email.com" size="lg" :disabled="joining" required />
 					</UFormGroup>
 
 					<!-- Camera/Mic Preview -->
@@ -369,7 +369,7 @@
 					<UButton
 						:color="backgroundBlurEnabled ? 'blue' : 'gray'"
 						size="lg"
-						icon="i-lucide-blur"
+						icon="i-lucide-squircle-dashed"
 						@click="toggleBackgroundBlur"
 						class="rounded-full"
 						:title="backgroundBlurEnabled ? 'Disable background blur' : 'Blur background'"
@@ -609,13 +609,37 @@ const fetchMeeting = async () => {
 			hasJoined.value = true;
 			await connectToRoom();
 		} else if (currentUser.value) {
-			// Pre-fill name for logged in non-host users
+			// Authenticated non-host user: auto-join without showing the entry form
 			const displayName =
 				`${currentUser.value.first_name || ''} ${currentUser.value.last_name || ''}`.trim() ||
 				currentUser.value.email?.split('@')[0] ||
-				'';
+				'User';
 			guestName.value = displayName;
 			guestEmail.value = currentUser.value.email || '';
+
+			// Register as attendee and join automatically
+			try {
+				const joinResponse = await $fetch('/api/video/join-meeting', {
+					method: 'POST',
+					body: {
+						roomName: roomName.value,
+						guestName: displayName,
+						guestEmail: currentUser.value.email || '',
+					},
+				});
+				myAttendeeId.value = joinResponse.attendeeId;
+
+				if (joinResponse.status === 'waiting') {
+					inWaitingRoom.value = true;
+					startStatusPolling();
+				} else if (joinResponse.status === 'admitted') {
+					hasJoined.value = true;
+					await connectToRoom();
+				}
+			} catch (e) {
+				console.error('Error auto-joining as authenticated user:', e);
+				toast.add({ title: 'Failed to join meeting', description: e.message, color: 'red' });
+			}
 		}
 	} catch (error) {
 		console.error('Error fetching meeting:', error);
@@ -838,6 +862,11 @@ const toggleEnhancement = () => {
 const joinMeeting = async () => {
 	if (!guestName.value.trim()) {
 		toast.add({ title: 'Please enter your name', color: 'red' });
+		return;
+	}
+
+	if (!guestEmail.value.trim()) {
+		toast.add({ title: 'Please enter your email', color: 'red' });
 		return;
 	}
 
