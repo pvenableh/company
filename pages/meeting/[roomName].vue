@@ -152,7 +152,7 @@
 
 					<!-- Local Video (smaller, corner) -->
 					<div class="relative bg-gray-800 rounded-lg overflow-hidden">
-						<video ref="localVideo" autoplay muted playsinline class="w-full h-full object-cover mirror" />
+						<div ref="localVideo" class="w-full h-full mirror local-video-container" />
 						<div class="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-sm">
 							You {{ isHost ? '(Host)' : '' }}
 						</div>
@@ -206,6 +206,14 @@
 						:icon="videoEnabled ? 'i-heroicons-video-camera' : 'i-heroicons-video-camera-slash'"
 						@click="toggleVideo"
 						class="rounded-full"
+					/>
+					<UButton
+						:color="screenShareEnabled ? 'green' : 'gray'"
+						size="lg"
+						icon="i-heroicons-computer-desktop"
+						@click="toggleScreenShare"
+						class="rounded-full"
+						:title="screenShareEnabled ? 'Stop sharing' : 'Share screen'"
 					/>
 					<UButton
 						v-if="isHost"
@@ -314,10 +322,14 @@ const audioEnabled = ref(true);
 const previewStream = ref(null);
 const localVideo = ref(null);
 const previewVideo = ref(null);
+const screenShareEnabled = ref(false);
 
-// Twilio state
-const twilioRoom = ref(null);
-const localTracks = ref([]);
+// Twilio state - use shallowRef to prevent Vue from deeply proxying Twilio objects.
+// Twilio's internal loglevel library breaks when wrapped in a Proxy (causes the
+// "'get' on proxy: property '_log' is a read-only" error).
+const twilioRoom = shallowRef(null);
+const localTracks = shallowRef([]);
+const screenTrack = shallowRef(null);
 const remoteParticipants = ref([]);
 
 // Meeting timer
@@ -471,15 +483,16 @@ const toggleVideo = () => {
 		});
 	}
 	// Also toggle in Twilio room if connected
-	localTracks.value
-		.filter((t) => t.kind === 'video')
-		.forEach((track) => {
+	const tracks = localTracks.value;
+	for (const track of tracks) {
+		if (track.kind === 'video') {
 			if (videoEnabled.value) {
 				track.enable();
 			} else {
 				track.disable();
 			}
-		});
+		}
+	}
 };
 
 const toggleAudio = () => {
@@ -490,15 +503,16 @@ const toggleAudio = () => {
 		});
 	}
 	// Also toggle in Twilio room if connected
-	localTracks.value
-		.filter((t) => t.kind === 'audio')
-		.forEach((track) => {
+	const tracks = localTracks.value;
+	for (const track of tracks) {
+		if (track.kind === 'audio') {
 			if (audioEnabled.value) {
 				track.enable();
 			} else {
 				track.disable();
 			}
-		});
+		}
+	}
 };
 
 // Join meeting
@@ -556,23 +570,27 @@ const connectToRoom = async () => {
 		});
 
 		// Import Twilio Video (client-side only)
-		const { connect, createLocalTracks } = await import('twilio-video');
+		const TwilioVideo = await import('twilio-video');
 
 		// Create local tracks
-		const tracks = await createLocalTracks({
+		const tracks = await TwilioVideo.createLocalTracks({
 			video: videoEnabled.value,
 			audio: audioEnabled.value,
 		});
 		localTracks.value = tracks;
 
-		// Attach local video
+		// Attach local video to container div
 		const videoTrack = tracks.find((t) => t.kind === 'video');
 		if (videoTrack && localVideo.value) {
-			localVideo.value.srcObject = new MediaStream([videoTrack.mediaStreamTrack]);
+			const el = videoTrack.attach();
+			el.style.width = '100%';
+			el.style.height = '100%';
+			el.style.objectFit = 'cover';
+			localVideo.value.appendChild(el);
 		}
 
 		// Connect to room
-		const room = await connect(tokenResponse.data.token, {
+		const room = await TwilioVideo.connect(tokenResponse.data.token, {
 			name: roomName.value,
 			tracks,
 		});
@@ -725,7 +743,61 @@ const leaveWaitingRoom = () => {
 	router.push('/');
 };
 
+// Screen sharing
+const toggleScreenShare = async () => {
+	if (screenShareEnabled.value) {
+		// Stop screen share
+		if (screenTrack.value) {
+			const room = twilioRoom.value;
+			if (room) {
+				room.localParticipant.unpublishTrack(screenTrack.value);
+			}
+			screenTrack.value.stop();
+			screenTrack.value = null;
+		}
+		screenShareEnabled.value = false;
+		return;
+	}
+
+	try {
+		const stream = await navigator.mediaDevices.getDisplayMedia({
+			video: { cursor: 'always' },
+			audio: false,
+		});
+
+		const { LocalVideoTrack } = await import('twilio-video');
+		const track = new LocalVideoTrack(stream.getTracks()[0], { name: 'screen' });
+
+		const room = twilioRoom.value;
+		if (room) {
+			room.localParticipant.publishTrack(track);
+		}
+
+		screenTrack.value = track;
+		screenShareEnabled.value = true;
+
+		// Handle the browser's "Stop sharing" button
+		track.mediaStreamTrack.addEventListener('ended', () => {
+			if (screenShareEnabled.value) {
+				toggleScreenShare();
+			}
+		});
+	} catch (error) {
+		if (error.name !== 'NotAllowedError') {
+			console.error('Screen share error:', error);
+			toast.add({ title: 'Failed to share screen', description: error.message, color: 'red' });
+		}
+	}
+};
+
 const leaveMeeting = async () => {
+	// Stop screen share if active
+	if (screenTrack.value) {
+		screenTrack.value.stop();
+		screenTrack.value = null;
+		screenShareEnabled.value = false;
+	}
+
 	// Disconnect from Twilio
 	if (twilioRoom.value) {
 		twilioRoom.value.disconnect();
@@ -795,6 +867,9 @@ onBeforeUnmount(() => {
 	if (previewStream.value) {
 		previewStream.value.getTracks().forEach((t) => t.stop());
 	}
+	if (screenTrack.value) {
+		screenTrack.value.stop();
+	}
 	if (twilioRoom.value) {
 		twilioRoom.value.disconnect();
 	}
@@ -814,5 +889,10 @@ onBeforeUnmount(() => {
 <style scoped>
 .mirror {
 	transform: scaleX(-1);
+}
+.local-video-container :deep(video) {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
 }
 </style>
