@@ -16,13 +16,13 @@ const createInstantMeeting = async () => {
 			method: 'POST',
 			body: {
 				title: 'Instant Meeting',
-				hostName: `${user.value?.first_name} ${user.value?.last_name}`,
-				hostUserId: user.value?.id,
+				scheduled_start: new Date().toISOString(),
+				duration: 60,
 			},
 		});
-		
+
 		toast.add({ title: 'Meeting created', color: 'green' });
-		window.open(`/meeting/${response.room.name}`, '_blank');
+		window.open(`/meeting/${response.data.roomName}`, '_blank');
 		emit('created');
 	} catch (error) {
 		toast.add({ title: 'Error creating meeting', description: error.message, color: 'red' });
