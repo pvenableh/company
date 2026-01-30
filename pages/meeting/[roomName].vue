@@ -136,7 +136,7 @@
 			</div>
 
 			<!-- Video Grid -->
-			<div class="flex-1 bg-black p-4 relative">
+			<div class="flex-1 bg-black p-4 relative overflow-hidden">
 				<div class="h-full grid gap-4" :class="videoGridClass">
 					<!-- Remote Participants -->
 					<div
@@ -147,6 +147,14 @@
 						<div :ref="(el) => attachRemoteTracks(el, p.sid)" class="w-full h-full remote-video-container" />
 						<div class="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-sm">
 							{{ p.identity }}
+						</div>
+					</div>
+
+					<!-- Screen Share -->
+					<div v-if="screenShareEnabled" class="relative bg-gray-800 rounded-lg overflow-hidden">
+						<div ref="screenShareContainer" class="w-full h-full remote-video-container" />
+						<div class="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-sm">
+							Your Screen
 						</div>
 					</div>
 
@@ -289,7 +297,7 @@
 
 <script setup>
 import { format } from 'date-fns';
-import { nextTick } from 'vue';
+import { nextTick, watch } from 'vue';
 
 // No auth middleware - this page is public
 definePageMeta({
@@ -324,6 +332,7 @@ const previewStream = ref(null);
 const localVideoContainer = ref(null);
 const previewVideo = ref(null);
 const screenShareEnabled = ref(false);
+const screenShareContainer = ref(null);
 
 // Twilio state - kept as plain variables (NOT reactive) to avoid Vue Proxy
 // wrapping Twilio objects. Twilio's internal loglevel library has non-configurable
@@ -368,7 +377,7 @@ const inMeetingParticipants = computed(() => {
 });
 
 const videoGridClass = computed(() => {
-	const count = participantIdentities.value.length + 1; // +1 for local
+	const count = participantIdentities.value.length + 1 + (screenShareEnabled.value ? 1 : 0); // +1 for local, +1 for screen share
 	if (count === 1) return 'grid-cols-1';
 	if (count === 2) return 'grid-cols-2';
 	if (count <= 4) return 'grid-cols-2 grid-rows-2';
@@ -632,13 +641,31 @@ const connectToRoom = async () => {
 		_localTracks = tracks;
 
 		// Wait for Vue to render the in-meeting DOM (hasJoined was set before this call)
+		// Multiple nextTick calls ensure the v-else conditional block is fully rendered
+		// and template refs are assigned
+		await nextTick();
 		await nextTick();
 
 		// Attach local video to container div
 		const videoTrack = tracks.find((t) => t.kind === 'video');
-		if (videoTrack && localVideoContainer.value) {
-			const el = videoTrack.attach();
-			localVideoContainer.value.appendChild(el);
+		if (videoTrack) {
+			const attachLocalVideo = () => {
+				if (localVideoContainer.value) {
+					localVideoContainer.value.innerHTML = '';
+					localVideoContainer.value.appendChild(videoTrack.attach());
+					return true;
+				}
+				return false;
+			};
+
+			// Try immediately, or retry briefly if the ref isn't ready yet
+			if (!attachLocalVideo()) {
+				const unwatch = watch(localVideoContainer, () => {
+					if (attachLocalVideo()) {
+						unwatch();
+					}
+				});
+			}
 		}
 
 		// Connect to room
@@ -827,6 +854,13 @@ const toggleScreenShare = async () => {
 		_screenTrack = track;
 		screenShareEnabled.value = true;
 
+		// Attach screen share to local preview container
+		await nextTick();
+		if (screenShareContainer.value) {
+			screenShareContainer.value.innerHTML = '';
+			screenShareContainer.value.appendChild(track.attach());
+		}
+
 		// Handle the browser's "Stop sharing" button
 		track.mediaStreamTrack.addEventListener('ended', () => {
 			if (screenShareEnabled.value) {
@@ -950,6 +984,11 @@ onBeforeUnmount(() => {
 <style scoped>
 .mirror {
 	transform: scaleX(-1);
+}
+.local-video-container,
+.remote-video-container {
+	max-height: 100%;
+	overflow: hidden;
 }
 .local-video-container :deep(video),
 .remote-video-container :deep(video) {
