@@ -4,7 +4,7 @@
 		<!-- Loading State -->
 		<div v-if="loading" class="flex items-center justify-center min-h-screen">
 			<div class="text-center">
-				<UIcon name="i-heroicons-arrow-path" class="w-12 h-12 animate-spin mx-auto text-gray-400" />
+				<UIcon name="i-lucide-loader-2" class="w-12 h-12 animate-spin mx-auto text-gray-400" />
 				<p class="mt-4 text-gray-400">Loading meeting...</p>
 			</div>
 		</div>
@@ -12,7 +12,7 @@
 		<!-- Meeting Not Found -->
 		<div v-else-if="!meeting" class="flex items-center justify-center min-h-screen">
 			<div class="text-center max-w-md">
-				<UIcon name="i-heroicons-video-camera-slash" class="w-16 h-16 mx-auto text-gray-500" />
+				<UIcon name="i-lucide-video-off" class="w-16 h-16 mx-auto text-gray-500" />
 				<h1 class="text-2xl font-bold mt-4">Meeting Not Found</h1>
 				<p class="text-gray-400 mt-2">This meeting doesn't exist or has ended.</p>
 				<UButton to="/" class="mt-6" color="gray">Go Home</UButton>
@@ -22,7 +22,7 @@
 		<!-- Meeting Ended -->
 		<div v-else-if="meeting.status === 'completed'" class="flex items-center justify-center min-h-screen">
 			<div class="text-center max-w-md">
-				<UIcon name="i-heroicons-check-circle" class="w-16 h-16 mx-auto text-green-500" />
+				<UIcon name="i-lucide-check-circle-2" class="w-16 h-16 mx-auto text-green-500" />
 				<h1 class="text-2xl font-bold mt-4">Meeting Ended</h1>
 				<p class="text-gray-400 mt-2">This meeting has already ended.</p>
 				<UButton to="/" class="mt-6" color="gray">Go Home</UButton>
@@ -33,7 +33,7 @@
 		<div v-else-if="!hasJoined && !isHost" class="flex items-center justify-center min-h-screen p-4">
 			<UCard class="w-full max-w-md bg-gray-800 border-gray-700">
 				<div class="text-center mb-6">
-					<UIcon name="i-heroicons-video-camera" class="w-12 h-12 mx-auto text-green-500" />
+					<UIcon name="i-lucide-video" class="w-12 h-12 mx-auto text-green-500" />
 					<h1 class="text-xl font-bold mt-4">{{ meeting.title }}</h1>
 					<p class="text-gray-400 text-sm mt-1">Hosted by {{ meeting.host_user?.first_name || 'Host' }}</p>
 					<p v-if="meeting.scheduled_start" class="text-gray-500 text-xs mt-2">
@@ -55,30 +55,30 @@
 						<div class="aspect-video bg-black rounded-lg overflow-hidden mb-3 relative">
 							<video ref="previewVideo" autoplay muted playsinline class="w-full h-full object-cover" />
 							<div v-if="!previewStream" class="absolute inset-0 flex items-center justify-center">
-								<UIcon name="i-heroicons-video-camera-slash" class="w-12 h-12 text-gray-600" />
+								<UIcon name="i-lucide-video-off" class="w-12 h-12 text-gray-600" />
 							</div>
 						</div>
 						<div class="flex justify-center gap-4">
 							<UButton
 								:color="videoEnabled ? 'green' : 'red'"
 								variant="soft"
-								:icon="videoEnabled ? 'i-heroicons-video-camera' : 'i-heroicons-video-camera-slash'"
-								@click="toggleVideo"
+								:icon="videoEnabled ? 'i-lucide-video' : 'i-lucide-video-off'"
+								@click="togglePreviewVideo"
 							>
 								{{ videoEnabled ? 'Camera On' : 'Camera Off' }}
 							</UButton>
 							<UButton
 								:color="audioEnabled ? 'green' : 'red'"
 								variant="soft"
-								:icon="audioEnabled ? 'i-heroicons-microphone' : 'i-heroicons-microphone-slash'"
-								@click="toggleAudio"
+								:icon="audioEnabled ? 'i-lucide-mic' : 'i-lucide-mic-off'"
+								@click="togglePreviewAudio"
 							>
 								{{ audioEnabled ? 'Mic On' : 'Mic Off' }}
 							</UButton>
 						</div>
 					</div>
 
-					<UButton type="submit" color="green" size="lg" block :loading="joining" icon="i-heroicons-video-camera">
+					<UButton type="submit" color="green" size="lg" block :loading="joining" icon="i-lucide-video">
 						{{ meeting.waiting_room_enabled ? 'Ask to Join' : 'Join Meeting' }}
 					</UButton>
 				</form>
@@ -88,7 +88,7 @@
 		<!-- Waiting Room -->
 		<div v-else-if="inWaitingRoom && !isHost" class="flex items-center justify-center min-h-screen p-4">
 			<UCard class="w-full max-w-md bg-gray-800 border-gray-700 text-center">
-				<UIcon name="i-heroicons-clock" class="w-16 h-16 mx-auto text-yellow-500 animate-pulse" />
+				<UIcon name="i-lucide-clock" class="w-16 h-16 mx-auto text-yellow-500 animate-pulse" />
 				<h1 class="text-xl font-bold mt-4">Waiting to be admitted</h1>
 				<p class="text-gray-400 mt-2">The host will let you in soon...</p>
 				<p class="text-gray-500 text-sm mt-4">
@@ -101,7 +101,7 @@
 		<!-- Rejected -->
 		<div v-else-if="wasRejected" class="flex items-center justify-center min-h-screen p-4">
 			<UCard class="w-full max-w-md bg-gray-800 border-gray-700 text-center">
-				<UIcon name="i-heroicons-x-circle" class="w-16 h-16 mx-auto text-red-500" />
+				<UIcon name="i-lucide-x-circle" class="w-16 h-16 mx-auto text-red-500" />
 				<h1 class="text-xl font-bold mt-4">Unable to Join</h1>
 				<p class="text-gray-400 mt-2">The host did not admit you to this meeting.</p>
 				<UButton to="/" color="gray" class="mt-6">Go Home</UButton>
@@ -113,7 +113,7 @@
 			<!-- Meeting Header -->
 			<div class="bg-gray-800 px-4 py-3 flex items-center justify-between">
 				<div class="flex items-center gap-3">
-					<UIcon name="i-heroicons-video-camera" class="w-5 h-5 text-green-500" />
+					<UIcon name="i-lucide-video" class="w-5 h-5 text-green-500" />
 					<span class="font-medium">{{ meeting.title }}</span>
 					<UBadge color="green" variant="soft" size="xs">
 						<span class="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse" />
@@ -127,10 +127,10 @@
 						color="gray"
 						variant="ghost"
 						size="sm"
-						icon="i-heroicons-users"
+						icon="i-lucide-users"
 						@click="showParticipants = true"
 					>
-						{{ participants.length }}
+						{{ participantIdentities.length }}
 					</UButton>
 				</div>
 			</div>
@@ -140,19 +140,19 @@
 				<div class="h-full grid gap-4" :class="videoGridClass">
 					<!-- Remote Participants -->
 					<div
-						v-for="participant in remoteParticipants"
-						:key="participant.sid"
+						v-for="p in participantIdentities"
+						:key="p.sid"
 						class="relative bg-gray-800 rounded-lg overflow-hidden"
 					>
-						<div :ref="(el) => attachParticipantTracks(el, participant)" class="w-full h-full" />
+						<div :ref="(el) => attachRemoteTracks(el, p.sid)" class="w-full h-full remote-video-container" />
 						<div class="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-sm">
-							{{ participant.identity }}
+							{{ p.identity }}
 						</div>
 					</div>
 
 					<!-- Local Video (smaller, corner) -->
 					<div class="relative bg-gray-800 rounded-lg overflow-hidden">
-						<div ref="localVideo" class="w-full h-full mirror local-video-container" />
+						<div ref="localVideoContainer" class="w-full h-full mirror local-video-container" />
 						<div class="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-sm">
 							You {{ isHost ? '(Host)' : '' }}
 						</div>
@@ -165,7 +165,7 @@
 					class="absolute top-4 right-4 bg-gray-800 rounded-lg p-4 w-72 shadow-xl"
 				>
 					<h3 class="font-semibold mb-3 flex items-center gap-2">
-						<UIcon name="i-heroicons-clock" class="w-4 h-4 text-yellow-500" />
+						<UIcon name="i-lucide-clock" class="w-4 h-4 text-yellow-500" />
 						Waiting Room ({{ waitingParticipants.length }})
 					</h3>
 					<div class="space-y-2 max-h-48 overflow-y-auto">
@@ -176,12 +176,12 @@
 						>
 							<span class="text-sm truncate flex-1">{{ attendee.guest_name || 'Guest' }}</span>
 							<div class="flex gap-1">
-								<UButton color="green" size="xs" icon="i-heroicons-check" @click="admitParticipant(attendee)" />
+								<UButton color="green" size="xs" icon="i-lucide-check" @click="admitParticipant(attendee)" />
 								<UButton
 									color="red"
 									size="xs"
 									variant="soft"
-									icon="i-heroicons-x-mark"
+									icon="i-lucide-x"
 									@click="rejectParticipant(attendee)"
 								/>
 							</div>
@@ -196,21 +196,21 @@
 					<UButton
 						:color="audioEnabled ? 'gray' : 'red'"
 						size="lg"
-						:icon="audioEnabled ? 'i-heroicons-microphone' : 'i-heroicons-microphone-slash'"
+						:icon="audioEnabled ? 'i-lucide-mic' : 'i-lucide-mic-off'"
 						@click="toggleAudio"
 						class="rounded-full"
 					/>
 					<UButton
 						:color="videoEnabled ? 'gray' : 'red'"
 						size="lg"
-						:icon="videoEnabled ? 'i-heroicons-video-camera' : 'i-heroicons-video-camera-slash'"
+						:icon="videoEnabled ? 'i-lucide-video' : 'i-lucide-video-off'"
 						@click="toggleVideo"
 						class="rounded-full"
 					/>
 					<UButton
 						:color="screenShareEnabled ? 'green' : 'gray'"
 						size="lg"
-						icon="i-heroicons-computer-desktop"
+						icon="i-lucide-monitor"
 						@click="toggleScreenShare"
 						class="rounded-full"
 						:title="screenShareEnabled ? 'Stop sharing' : 'Share screen'"
@@ -219,7 +219,7 @@
 						v-if="isHost"
 						color="gray"
 						size="lg"
-						icon="i-heroicons-users"
+						icon="i-lucide-users"
 						@click="showParticipants = true"
 						class="rounded-full relative"
 					>
@@ -227,8 +227,8 @@
 							{{ waitingParticipants.length }}
 						</UBadge>
 					</UButton>
-					<UButton color="gray" size="lg" icon="i-heroicons-clipboard" @click="copyMeetingLink" class="rounded-full" />
-					<UButton color="red" size="lg" icon="i-heroicons-phone-x-mark" @click="leaveMeeting" class="rounded-full" />
+					<UButton color="gray" size="lg" icon="i-lucide-clipboard" @click="copyMeetingLink" class="rounded-full" />
+					<UButton color="red" size="lg" icon="i-lucide-phone-off" @click="leaveMeeting" class="rounded-full" />
 				</div>
 			</div>
 		</div>
@@ -320,17 +320,22 @@ const showParticipants = ref(false);
 const videoEnabled = ref(true);
 const audioEnabled = ref(true);
 const previewStream = ref(null);
-const localVideo = ref(null);
+const localVideoContainer = ref(null);
 const previewVideo = ref(null);
 const screenShareEnabled = ref(false);
 
-// Twilio state - use shallowRef to prevent Vue from deeply proxying Twilio objects.
-// Twilio's internal loglevel library breaks when wrapped in a Proxy (causes the
-// "'get' on proxy: property '_log' is a read-only" error).
-const twilioRoom = shallowRef(null);
-const localTracks = shallowRef([]);
-const screenTrack = shallowRef(null);
-const remoteParticipants = ref([]);
+// Twilio state - kept as plain variables (NOT reactive) to avoid Vue Proxy
+// wrapping Twilio objects. Twilio's internal loglevel library has non-configurable
+// properties that break when accessed through a Proxy.
+let _twilioRoom = null;
+let _localTracks = [];
+let _screenTrack = null;
+
+// Map of participant SID -> raw Twilio RemoteParticipant (not reactive)
+const _remoteParticipantMap = new Map();
+
+// Reactive list of participant identities for template rendering (plain data only)
+const participantIdentities = ref([]);
 
 // Meeting timer
 const meetingStartTime = ref(null);
@@ -362,7 +367,7 @@ const inMeetingParticipants = computed(() => {
 });
 
 const videoGridClass = computed(() => {
-	const count = remoteParticipants.value.length + 1; // +1 for local
+	const count = participantIdentities.value.length + 1; // +1 for local
 	if (count === 1) return 'grid-cols-1';
 	if (count === 2) return 'grid-cols-2';
 	if (count <= 4) return 'grid-cols-2 grid-rows-2';
@@ -475,16 +480,29 @@ const setupPreview = async () => {
 	}
 };
 
-const toggleVideo = () => {
+// Preview-only toggles (before joining the Twilio room)
+const togglePreviewVideo = () => {
 	videoEnabled.value = !videoEnabled.value;
 	if (previewStream.value) {
 		previewStream.value.getVideoTracks().forEach((track) => {
 			track.enabled = videoEnabled.value;
 		});
 	}
-	// Also toggle in Twilio room if connected
-	const tracks = localTracks.value;
-	for (const track of tracks) {
+};
+
+const togglePreviewAudio = () => {
+	audioEnabled.value = !audioEnabled.value;
+	if (previewStream.value) {
+		previewStream.value.getAudioTracks().forEach((track) => {
+			track.enabled = audioEnabled.value;
+		});
+	}
+};
+
+// In-meeting toggles (operate on raw Twilio track objects)
+const toggleVideo = () => {
+	videoEnabled.value = !videoEnabled.value;
+	for (const track of _localTracks) {
 		if (track.kind === 'video') {
 			if (videoEnabled.value) {
 				track.enable();
@@ -497,14 +515,7 @@ const toggleVideo = () => {
 
 const toggleAudio = () => {
 	audioEnabled.value = !audioEnabled.value;
-	if (previewStream.value) {
-		previewStream.value.getAudioTracks().forEach((track) => {
-			track.enabled = audioEnabled.value;
-		});
-	}
-	// Also toggle in Twilio room if connected
-	const tracks = localTracks.value;
-	for (const track of tracks) {
+	for (const track of _localTracks) {
 		if (track.kind === 'audio') {
 			if (audioEnabled.value) {
 				track.enable();
@@ -577,16 +588,13 @@ const connectToRoom = async () => {
 			video: videoEnabled.value,
 			audio: audioEnabled.value,
 		});
-		localTracks.value = tracks;
+		_localTracks = tracks;
 
 		// Attach local video to container div
 		const videoTrack = tracks.find((t) => t.kind === 'video');
-		if (videoTrack && localVideo.value) {
+		if (videoTrack && localVideoContainer.value) {
 			const el = videoTrack.attach();
-			el.style.width = '100%';
-			el.style.height = '100%';
-			el.style.objectFit = 'cover';
-			localVideo.value.appendChild(el);
+			localVideoContainer.value.appendChild(el);
 		}
 
 		// Connect to room
@@ -594,7 +602,7 @@ const connectToRoom = async () => {
 			name: roomName.value,
 			tracks,
 		});
-		twilioRoom.value = room;
+		_twilioRoom = room;
 
 		// Start duration timer
 		meetingStartTime.value = new Date();
@@ -657,26 +665,23 @@ const startHostPolling = () => {
 
 const handleParticipantConnected = (participant) => {
 	console.log('Participant connected:', participant.identity);
-	remoteParticipants.value.push(participant);
-
-	participant.tracks.forEach((publication) => {
-		if (publication.track) {
-			// Track is already subscribed
-		}
-	});
-
-	participant.on('trackSubscribed', (track) => {
-		// Track subscribed
-	});
+	// Store raw Twilio object in a plain Map (no Vue reactivity)
+	_remoteParticipantMap.set(participant.sid, participant);
+	// Update reactive list with plain data only
+	participantIdentities.value = [...participantIdentities.value, { sid: participant.sid, identity: participant.identity }];
 };
 
 const handleParticipantDisconnected = (participant) => {
 	console.log('Participant disconnected:', participant.identity);
-	remoteParticipants.value = remoteParticipants.value.filter((p) => p.sid !== participant.sid);
+	_remoteParticipantMap.delete(participant.sid);
+	participantIdentities.value = participantIdentities.value.filter((p) => p.sid !== participant.sid);
 };
 
-const attachParticipantTracks = (el, participant) => {
+// Attach remote participant tracks to a DOM element
+const attachRemoteTracks = (el, sid) => {
 	if (!el) return;
+	const participant = _remoteParticipantMap.get(sid);
+	if (!participant) return;
 
 	el.innerHTML = '';
 	participant.tracks.forEach((publication) => {
@@ -687,6 +692,10 @@ const attachParticipantTracks = (el, participant) => {
 
 	participant.on('trackSubscribed', (track) => {
 		el.appendChild(track.attach());
+	});
+
+	participant.on('trackUnsubscribed', (track) => {
+		track.detach().forEach((detachedEl) => detachedEl.remove());
 	});
 };
 
@@ -747,13 +756,12 @@ const leaveWaitingRoom = () => {
 const toggleScreenShare = async () => {
 	if (screenShareEnabled.value) {
 		// Stop screen share
-		if (screenTrack.value) {
-			const room = twilioRoom.value;
-			if (room) {
-				room.localParticipant.unpublishTrack(screenTrack.value);
+		if (_screenTrack) {
+			if (_twilioRoom) {
+				_twilioRoom.localParticipant.unpublishTrack(_screenTrack);
 			}
-			screenTrack.value.stop();
-			screenTrack.value = null;
+			_screenTrack.stop();
+			_screenTrack = null;
 		}
 		screenShareEnabled.value = false;
 		return;
@@ -768,12 +776,11 @@ const toggleScreenShare = async () => {
 		const { LocalVideoTrack } = await import('twilio-video');
 		const track = new LocalVideoTrack(stream.getTracks()[0], { name: 'screen' });
 
-		const room = twilioRoom.value;
-		if (room) {
-			room.localParticipant.publishTrack(track);
+		if (_twilioRoom) {
+			_twilioRoom.localParticipant.publishTrack(track);
 		}
 
-		screenTrack.value = track;
+		_screenTrack = track;
 		screenShareEnabled.value = true;
 
 		// Handle the browser's "Stop sharing" button
@@ -792,19 +799,25 @@ const toggleScreenShare = async () => {
 
 const leaveMeeting = async () => {
 	// Stop screen share if active
-	if (screenTrack.value) {
-		screenTrack.value.stop();
-		screenTrack.value = null;
+	if (_screenTrack) {
+		_screenTrack.stop();
+		_screenTrack = null;
 		screenShareEnabled.value = false;
 	}
 
 	// Disconnect from Twilio
-	if (twilioRoom.value) {
-		twilioRoom.value.disconnect();
+	if (_twilioRoom) {
+		_twilioRoom.disconnect();
+		_twilioRoom = null;
 	}
 
 	// Stop local tracks
-	localTracks.value.forEach((track) => track.stop());
+	_localTracks.forEach((track) => track.stop());
+	_localTracks = [];
+
+	// Clear participant map
+	_remoteParticipantMap.clear();
+	participantIdentities.value = [];
 
 	// Clear intervals
 	if (durationInterval) {
@@ -867,13 +880,17 @@ onBeforeUnmount(() => {
 	if (previewStream.value) {
 		previewStream.value.getTracks().forEach((t) => t.stop());
 	}
-	if (screenTrack.value) {
-		screenTrack.value.stop();
+	if (_screenTrack) {
+		_screenTrack.stop();
+		_screenTrack = null;
 	}
-	if (twilioRoom.value) {
-		twilioRoom.value.disconnect();
+	if (_twilioRoom) {
+		_twilioRoom.disconnect();
+		_twilioRoom = null;
 	}
-	localTracks.value.forEach((track) => track.stop());
+	_localTracks.forEach((track) => track.stop());
+	_localTracks = [];
+	_remoteParticipantMap.clear();
 	if (durationInterval) {
 		clearInterval(durationInterval);
 	}
@@ -890,7 +907,8 @@ onBeforeUnmount(() => {
 .mirror {
 	transform: scaleX(-1);
 }
-.local-video-container :deep(video) {
+.local-video-container :deep(video),
+.remote-video-container :deep(video) {
 	width: 100%;
 	height: 100%;
 	object-fit: cover;
