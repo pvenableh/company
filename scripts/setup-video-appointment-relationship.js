@@ -69,7 +69,7 @@ async function setupRelationship() {
 			field: 'video_meeting',
 			related_collection: 'video_meetings',
 			meta: {
-				one_field: 'appointment', // This creates the reverse O2M on video_meetings
+				one_field: 'related_appointment', // Uses existing M2O field on video_meetings
 				one_deselect_action: 'nullify',
 			},
 			schema: {
@@ -81,27 +81,18 @@ async function setupRelationship() {
 		console.log('⏭️  appointments.video_meeting already exists');
 	}
 
-	// 2. Add/update appointment field on video_meetings (reverse side)
-	if (!(await fieldExists('video_meetings', 'appointment'))) {
-		console.log('Creating video_meetings.appointment field...');
-		await apiRequest('POST', '/fields/video_meetings', {
-			field: 'appointment',
-			type: 'alias',
-			meta: {
-				interface: 'select-dropdown-m2o',
-				display: 'related-values',
-				display_options: {
-					template: '{{title}}',
-				},
-				special: ['o2m'],
-				note: 'Linked appointment',
-				hidden: true, // Hide since it's auto-managed
-			},
-		});
-		console.log('✅ video_meetings.appointment alias created');
-	} else {
-		console.log('⏭️  video_meetings.appointment already exists');
+	// 2. Remove phantom 'appointment' alias field if it exists (causes SQL errors)
+	if (await fieldExists('video_meetings', 'appointment')) {
+		console.log('Removing phantom video_meetings.appointment field...');
+		try {
+			await apiRequest('DELETE', '/fields/video_meetings/appointment');
+			console.log('✅ Removed phantom video_meetings.appointment field');
+		} catch (err) {
+			console.warn('⚠️  Could not remove video_meetings.appointment:', err.message);
+		}
 	}
+	// related_appointment M2O already exists on video_meetings - no need to create it
+	console.log('⏭️  video_meetings.related_appointment already exists (M2O to appointments)');
 
 	// 3. Add is_video field to appointments to easily identify video appointments
 	if (!(await fieldExists('appointments', 'is_video'))) {
