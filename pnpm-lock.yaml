@@ -23,6 +23,9 @@ importers:
       '@sidebase/nuxt-auth':
         specifier: ^0.10.1
         version: 0.10.1(magicast@0.5.1)(next-auth@4.21.1(next@13.5.11(@babel/core@7.28.5)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1))
+      '@twilio/video-processors':
+        specifier: ^3.1.0
+        version: 3.1.0
       '@use-gesture/vanilla':
         specifier: ^10.3.1
         version: 10.3.1
@@ -2510,6 +2513,10 @@ packages:
     resolution: {integrity: sha512-L7z9BgrNEcYyUYtF+HaEfiS5ebkh9jXqbszz7pC0hRBPaatV0XjSD3+eHrpqFemQfgwiFF0QPIarnIihIDn7OA==}
     engines: {node: '>=10.13.0'}
 
+  '@twilio/video-processors@3.1.0':
+    resolution: {integrity: sha512-QIlgoGVNh8B9m90/UW1i6cCjeS6kxiHkxfUleIEsQCAKP6xzr+lEn9uq+YflZU1YOE/ViKSqD51qsy4hw1DPfA==}
+    engines: {node: '>=18'}
+
   '@tybys/wasm-util@0.10.1':
     resolution: {integrity: sha512-9tTaPJLSiejZKx+Bmog4uSubteqTvFrVrURwkmHixBo0G4seD0zUxp98E1DzUBJxLQ3NPwXrGKDiVjwx/DpPsg==}
 
@@ -3342,6 +3349,9 @@ packages:
   combined-stream@1.0.8:
     resolution: {integrity: sha512-FQN4MRfuJeHf7cBbBMJFXhKSDq+2kAArBlmRBvcvFE5BB1HZKXtSFASDhdlz9zOYwxh8lDdnvmMOe/+5cdoEdg==}
     engines: {node: '>= 0.8'}
+
+  comlink@4.4.2:
+    resolution: {integrity: sha512-OxGdvBmJuNKSCMO4NTl1L47VRp6xn2wG4F/2hYzB6tiCb709otOxtEYCSvK80PtjODfXXZu8ds+Nw5kVCjqd2g==}
 
   commander@11.1.0:
     resolution: {integrity: sha512-yPVavfyCcRhmorC7rWlkHn15b4wDVgVmBA7kV4QVBsF7kv/9TKJAbAXVTxvTnwP8HHKjRCJDClKbciiYS7p0DQ==}
@@ -9656,6 +9666,10 @@ snapshots:
   '@trysound/sax@0.2.0':
     optional: true
 
+  '@twilio/video-processors@3.1.0':
+    dependencies:
+      comlink: 4.4.2
+
   '@tybys/wasm-util@0.10.1':
     dependencies:
       tslib: 2.8.1
@@ -10667,6 +10681,8 @@ snapshots:
   combined-stream@1.0.8:
     dependencies:
       delayed-stream: 1.0.0
+
+  comlink@4.4.2: {}
 
   commander@11.1.0: {}
 
