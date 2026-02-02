@@ -954,7 +954,7 @@ const handleFiles = async (files) => {
 }
 
 .tiptap-container:focus-within + div button {
-	@apply text-primary-500;
+	@apply text-primary;
 }
 
 /* Ensure proper contrast in dark mode */

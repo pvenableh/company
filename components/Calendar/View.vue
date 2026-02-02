@@ -635,7 +635,7 @@ onUnmounted(() => {
 	}
 }
 .calendar-container:focus {
-	@apply outline-none ring-1 ring-primary-500;
+	@apply outline-none ring-1 ring-primary;
 }
 
 .day-content-wrapper {
