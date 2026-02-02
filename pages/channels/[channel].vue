@@ -294,6 +294,7 @@ const handleKeyboard = (event) => {
 </template>
 
 <style scoped>
+@reference "~/assets/css/tailwind.css";
 .prose :deep(p) {
 	margin: 0;
 }

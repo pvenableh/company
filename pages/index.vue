@@ -59,6 +59,7 @@ const user = computed(() => {
 </template>
 
 <style>
+@reference "~/assets/css/tailwind.css";
 .home {
 	/* background-color: rgba(0,0,0,0.35);
     background-blend-mode: darken; */

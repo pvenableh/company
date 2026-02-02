@@ -52,6 +52,7 @@ function changePanel(val: string | number) {
 }
 </script>
 <style>
+@reference "~/assets/css/tailwind.css";
 .account {
 	max-width: 1600px;
 

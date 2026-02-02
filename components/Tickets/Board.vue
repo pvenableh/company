@@ -1072,6 +1072,7 @@ watch(
 </script>
 
 <style scoped>
+@reference "~/assets/css/tailwind.css";
 .tickets-board {
 	&__board {
 		@apply relative;

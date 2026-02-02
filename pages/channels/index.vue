@@ -122,6 +122,7 @@ const sortedChannels = computed(() => {
 </template>
 
 <style scoped>
+@reference "~/assets/css/tailwind.css";
 .page__title {
 	@apply text-2xl font-bold mb-8;
 }

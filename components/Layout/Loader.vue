@@ -18,6 +18,7 @@ const props = defineProps({
 </script>
 
 <style scoped>
+@reference "~/assets/css/tailwind.css";
 .lds-ripple,
 .lds-ripple div {
 	box-sizing: border-box;

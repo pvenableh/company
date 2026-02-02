@@ -506,6 +506,7 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+@reference "~/assets/css/tailwind.css";
 .drag-handle {
 	touch-action: none;
 }

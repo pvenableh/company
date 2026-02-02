@@ -246,6 +246,7 @@ function useUpload() {
 </template>
 
 <style lang="postcss">
+@reference "~/assets/css/tailwind.css";
 .dropzone {
 	@apply relative flex items-center p-8 min-h-[100px] transition duration-150 border-2 border-dashed rounded-card;
 }

@@ -292,6 +292,7 @@ const formatNumber = (value) => {
 	</div>
 </template>
 <style>
+@reference "~/assets/css/tailwind.css";
 .tickets {
 	th {
 		font-size: 10px !important;

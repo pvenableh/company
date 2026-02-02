@@ -45,6 +45,7 @@ function movePanel(val: string) {
 </template>
 
 <style>
+@reference "~/assets/css/tailwind.css";
 .login {
 	/* height: 90vh; */
 }

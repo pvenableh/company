@@ -181,6 +181,7 @@ if (props.ticket.category === 'Completed') {
 	</div>
 </template>
 <style>
+@reference "~/assets/css/tailwind.css";
 .ticket-card.minimize {
 	box-shadow: 0px -2px 12px rgba(0, 0, 0, 0.1);
 	@apply h-28 transition-all duration-200 -mt-14 first:mt-0 first:shadow z-10;

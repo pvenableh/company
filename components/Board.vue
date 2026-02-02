@@ -161,6 +161,7 @@ const onEnd = (event) => {
 </template>
 
 <style scoped>
+@reference "~/assets/css/tailwind.css";
 .draggable-ghost {
 	@apply opacity-50 border-2 border-dashed border-gray-400;
 }

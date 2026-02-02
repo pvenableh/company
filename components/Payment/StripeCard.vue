@@ -284,6 +284,7 @@ const formatNumber = (value) => {
 </script>
 
 <style>
+@reference "~/assets/css/tailwind.css";
 #payment-form {
 	width: 100%;
 	@apply max-w-xl mx-auto;

@@ -37,6 +37,7 @@ const props = defineProps({
 </script>
 
 <style>
+@reference "~/assets/css/tailwind.css";
 .glow {
 	animation: move 4s ease-in infinite;
 	offset-path: rect(0% auto 100% auto);

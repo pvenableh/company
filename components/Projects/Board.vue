@@ -341,6 +341,7 @@ function checkMobile() {
 </script>
 
 <style scoped>
+@reference "~/assets/css/tailwind.css";
 .projects-board {
 	&__board {
 		@apply relative;

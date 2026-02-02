@@ -97,6 +97,7 @@ const total = ref(0);
 // }
 </script>
 <style scoped>
+@reference "~/assets/css/tailwind.css";
 .payment {
 	.details {
 		font-size: 10px;

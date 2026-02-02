@@ -308,6 +308,7 @@ const handleSignup = async () => {
 };
 </script>
 <style>
+@reference "~/assets/css/tailwind.css";
 /* Error message styling */
 .error-message {
 	@apply text-xs uppercase tracking-wide font-medium;
