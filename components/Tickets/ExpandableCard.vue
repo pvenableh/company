@@ -17,7 +17,7 @@
 			>
 				<div
 					v-if="isExpanded"
-					class="fixed inset-0 backdrop-blur-lg bg-white dark:bg-gray-800 bg-opacity-75 z-[50] overflow-auto"
+					class="fixed inset-0 backdrop-blur-lg bg-white/75 dark:bg-gray-800 z-[50] overflow-auto"
 					@click.self="collapse"
 				>
 					<div

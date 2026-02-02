@@ -217,7 +217,7 @@ function useUpload() {
 			>
 				<div
 					v-if="uploading"
-					class="absolute inset-0 flex items-center justify-center bg-white rounded-md bg-opacity-70 dark:bg-gray-800 dark:bg-opacity-90"
+					class="absolute inset-0 flex items-center justify-center bg-white/70 rounded-md dark:bg-gray-800/90"
 				>
 					<VLoading class="w-16 h-16 text-primary dark:text-primary" />
 				</div>

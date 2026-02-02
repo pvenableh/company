@@ -19,7 +19,7 @@
 		<Transition name="fade" mode="out-in">
 			<div
 				v-if="isLoading"
-				class="flex justify-center items-center min-h-[80vh] w-full absolute z-10 bg-white bg-opacity-50"
+				class="flex justify-center items-center min-h-[80vh] w-full absolute z-10 bg-white/50"
 			>
 				<LayoutLoader text="Loading Dashboard Data" />
 			</div>
@@ -28,7 +28,7 @@
 		<Transition name="fade" mode="out-in" @after-leave="showContent = !isFilterLoading">
 			<div
 				v-if="isFilterLoading && !isLoading"
-				class="flex justify-center items-center min-h-[80vh] w-full absolute bg-white bg-opacity-50"
+				class="flex justify-center items-center min-h-[80vh] w-full absolute bg-white/50"
 			>
 				<LayoutLoader text="Updating Dashboard..." />
 			</div>

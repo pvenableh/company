@@ -131,7 +131,7 @@
 
 		<!-- Main Board -->
 		<div
-			class="bg-gray-100 bg-opacity-30 border-b border-gray-200 w-full flex min-h-svh overflow-x-auto overflow-hidden-scrollbar tickets-board__board"
+			class="bg-gray-100/30 border-b border-gray-200 w-full flex min-h-svh overflow-x-auto overflow-hidden-scrollbar tickets-board__board"
 			@touchstart="handleTouchStart"
 			@touchend="handleTouchEnd"
 		>
@@ -1091,7 +1091,7 @@ watch(
 				}
 			}
 			&-content {
-				@apply min-h-screen lg:h-svh h-full py-2 bg-gray-50 bg-opacity-15 dark:bg-gray-800 overflow-y-auto px-2;
+				@apply min-h-screen lg:h-svh h-full py-2 bg-gray-50/15 dark:bg-gray-800 overflow-y-auto px-2;
 				scrollbar-width: none;
 				-ms-overflow-style: none;
 				&::-webkit-scrollbar {
