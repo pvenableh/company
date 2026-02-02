@@ -26,6 +26,7 @@ export default defineNuxtConfig({
 		// ============================================
 		session: {
 			maxAge: 60 * 60 * 24 * 7, // 1 week
+			password: process.env.NUXT_SESSION_PASSWORD || '',
 			cookie: {
 				sameSite: 'lax',
 			},
@@ -57,9 +58,6 @@ export default defineNuxtConfig({
 		},
 		directusServerToken: process.env.DIRECTUS_SERVER_TOKEN,
 		directusStaticToken: process.env.DIRECTUS_STATIC_TOKEN,
-
-		// Session password for nuxt-auth-utils (minimum 32 characters)
-		sessionPassword: process.env.NUXT_SESSION_PASSWORD,
 
 		// Twilio
 		twilioAccountSid: process.env.TWILIO_ACCOUNT_SID,
@@ -103,7 +101,6 @@ export default defineNuxtConfig({
 			directusUrl: process.env.DIRECTUS_URL || 'https://admin.huestudios.company',
 			assetsUrl: process.env.DIRECTUS_ASSETS_URL || 'https://admin.huestudios.company/assets/',
 			websocketUrl: process.env.DIRECTUS_WEBSOCKET_URL || 'wss://admin.huestudios.company/websocket',
-			staticToken: process.env.DIRECTUS_STATIC_TOKEN,
 			adminUrl: process.env.DIRECTUS_URL || 'https://admin.huestudios.company',
 
 			// Site
