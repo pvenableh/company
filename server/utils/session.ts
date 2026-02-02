@@ -1,5 +1,6 @@
 // server/utils/session.ts
 // Session management utilities for nuxt-auth-utils
+// ALL tokens are stored in the `secure` field (server-only, never exposed to client)
 
 import type { H3Event } from "h3";
 
@@ -18,9 +19,8 @@ interface UserSessionData {
     avatar: string | null;
     role: any;
   };
-  // Access token exposed to client for Directus SDK usage
-  directusAccessToken?: string;
   secure?: {
+    directusAccessToken?: string;
     directusRefreshToken?: string;
   };
   loggedInAt: number;
@@ -28,10 +28,10 @@ interface UserSessionData {
 }
 
 /**
- * Get access token from session
+ * Get access token from session (server-side only via secure field)
  */
 export function getSessionAccessToken(session: any): string | null {
-  return session?.directusAccessToken || session?.secure?.directusAccessToken || null;
+  return session?.secure?.directusAccessToken || null;
 }
 
 /**
@@ -53,9 +53,8 @@ export async function updateSessionTokens(
 
   await setUserSession(event, {
     ...session,
-    directusAccessToken: tokens.access_token,
     secure: {
-      ...session.secure,
+      directusAccessToken: tokens.access_token,
       directusRefreshToken: tokens.refresh_token,
     },
     expiresAt,
@@ -74,8 +73,8 @@ export async function createUserSession(
 
   await setUserSession(event, {
     user,
-    directusAccessToken: tokens.access_token,
     secure: {
+      directusAccessToken: tokens.access_token,
       directusRefreshToken: tokens.refresh_token,
     },
     loggedInAt: Date.now(),

@@ -1,15 +1,8 @@
 // composables/useAuthActions.ts
-import {
-	passwordRequest as directusPasswordRequest,
-	passwordReset as directusPasswordReset,
-	inviteUser as directusInviteUser,
-	acceptUserInvite as directusAcceptInvite,
-} from '@directus/sdk';
+// All operations go through server API routes - no client-side tokens
 
 export function useAuthActions() {
 	const { signIn, signOut } = useEnhancedAuth();
-	const { client } = useDirectusClient();
-	const config = useRuntimeConfig();
 
 	/**
 	 * Login a user with credentials via server API
@@ -44,66 +37,43 @@ export function useAuthActions() {
 	};
 
 	/**
-	 * Request a password reset
-	 * Uses the Directus SDK via your client composable
+	 * Request a password reset via server API
 	 */
 	const passwordRequest = async (email: string) => {
-		try {
-			return await client.value.request(directusPasswordRequest(email));
-		} catch (error) {
-			console.error('Password request error:', error);
-			throw error;
-		}
+		return await $fetch('/api/directus/users/password-reset-request', {
+			method: 'POST',
+			body: { email },
+		});
 	};
 
 	/**
-	 * Reset a password using a reset token
-	 * Uses the Directus SDK via your client composable
+	 * Reset a password using a reset token via server API
 	 */
 	const passwordReset = async (token: string, password: string) => {
-		try {
-			return await client.value.request(directusPasswordReset(token, password));
-		} catch (error) {
-			console.error('Password reset error:', error);
-			throw error;
-		}
+		return await $fetch('/api/directus/users/password-reset', {
+			method: 'POST',
+			body: { token, password },
+		});
 	};
 
 	/**
-	 * Invite a user to the system
-	 * Uses the Directus SDK's built-in inviteUser function
+	 * Invite a user to the system via server API
 	 */
 	const inviteUser = async (email: string, role: string, inviteUrl?: string) => {
-		try {
-			const { isAuthenticated } = useDirectusClient();
-
-			// Ensure we have an authentication token
-			if (!isAuthenticated.value) {
-				throw new Error('Authentication required to invite users');
-			}
-
-			// Configure the invite options
-			const options = inviteUrl ? { inviteUrl } : undefined;
-
-			// Use the SDK's inviteUser function
-			return await client.value.request(directusInviteUser(email, role, options?.inviteUrl));
-		} catch (error) {
-			console.error('Invite user error:', error);
-			throw error;
-		}
+		return await $fetch('/api/directus/users/invite', {
+			method: 'POST',
+			body: { email, role, invite_url: inviteUrl },
+		});
 	};
 
 	/**
-	 * Accept a user invitation
-	 * Uses the Directus SDK's built-in acceptUserInvite function
+	 * Accept a user invitation via server API
 	 */
 	const acceptUserInvite = async (token: string, password: string) => {
-		try {
-			return await client.value.request(directusAcceptInvite(token, password));
-		} catch (error) {
-			console.error('Accept invite error:', error);
-			throw error;
-		}
+		return await $fetch('/api/directus/users/accept-invite', {
+			method: 'POST',
+			body: { token, password },
+		});
 	};
 
 	return {

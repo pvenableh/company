@@ -1,4 +1,6 @@
 // composables/useRealtimeSubscription.js
+// WebSocket token is fetched from /api/websocket/token server endpoint - never stored client-side
+
 export function useRealtimeSubscription(collection, fields, initialFilter, sort = '-date_created', initialData = null) {
 	// Core state
 	const data = ref(initialData || []);
@@ -33,37 +35,27 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 	}
 
 	const config = useRuntimeConfig();
-	const { loggedIn, session } = useUserSession();
+	const { loggedIn } = useUserSession();
 
-	// ===== Enhanced Authentication Checking =====
+	// ===== Authentication =====
 
 	// Check if we have valid auth before attempting connection
 	const hasValidAuth = () => {
-		// Must be authenticated according to session status
 		if (!loggedIn.value) {
-			console.log('[WebSocket] Not authenticated, skipping connection');
 			return false;
 		}
-
-		// Check for available tokens
-		let hasToken = false;
-
-		if (import.meta.client) {
-			// Check for valid tokens
-			const sessionToken = session.value?.directusAccessToken;
-			const localToken =
-				localStorage.getItem('auth_token') ?? localStorage.getItem('directus_session_token') ?? undefined;
-			const staticToken = config.public.staticToken;
-
-			hasToken = !!(sessionToken || localToken || staticToken);
-		}
-
-		if (!hasToken) {
-			console.log('[WebSocket] No authentication tokens available');
-			return false;
-		}
-
 		return true;
+	};
+
+	// Fetch a fresh token from server for WebSocket auth
+	const fetchWebSocketToken = async () => {
+		try {
+			const response = await $fetch('/api/websocket/token');
+			return response?.token || null;
+		} catch (error) {
+			console.error('[WebSocket] Failed to fetch token:', error);
+			return null;
+		}
 	};
 
 	// ===== Core Functions =====
@@ -79,24 +71,20 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 	const connect = () => {
 		// Don't connect if we don't have valid auth
 		if (!hasValidAuth()) {
-			console.log('[WebSocket] Skipping connection due to invalid auth state');
 			isLoading.value = false;
 			return;
 		}
 
 		// Prevent multiple connections
 		if (connection.value && connection.value.readyState < 2) {
-			console.log('[WebSocket] Connection already exists');
 			return;
 		}
 
 		try {
-			console.log(`[WebSocket] Connecting to ${config.public.websocketUrl}`);
 			connection.value = new WebSocket(config.public.websocketUrl);
 
 			// Event handlers
 			connection.value.addEventListener('open', () => {
-				console.log('[WebSocket] Connection opened');
 				isConnected.value = true;
 				reconnectAttempts.value = 0;
 				authenticate();
@@ -105,14 +93,12 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 			connection.value.addEventListener('message', handleMessage);
 
 			connection.value.addEventListener('close', (event) => {
-				console.log(`[WebSocket] Connection closed (${event.code}: ${event.reason})`);
 				isConnected.value = false;
 
 				// Only attempt reconnect if we still have valid auth
 				if (!event.wasClean && hasValidAuth()) {
 					scheduleTryReconnect();
 				} else {
-					console.log('[WebSocket] Not reconnecting due to invalid auth or clean close');
 					isLoading.value = false;
 				}
 			});
@@ -122,11 +108,9 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 				error.value = new Error('WebSocket connection error');
 				isConnected.value = false;
 
-				// Only attempt reconnect if we have valid auth
 				if (hasValidAuth()) {
 					scheduleTryReconnect();
 				} else {
-					console.log('[WebSocket] Not reconnecting due to invalid auth');
 					isLoading.value = false;
 				}
 			});
@@ -139,8 +123,6 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 
 	// Disconnect from WebSocket server
 	const disconnect = () => {
-		console.log('[WebSocket] Disconnecting...');
-
 		// Clear any reconnection timer
 		if (reconnectTimer.value) {
 			clearTimeout(reconnectTimer.value);
@@ -171,68 +153,44 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 
 	// Schedule reconnection with exponential backoff
 	const scheduleTryReconnect = () => {
-		// Clear any existing timer
 		if (reconnectTimer.value) {
 			clearTimeout(reconnectTimer.value);
 			reconnectTimer.value = null;
 		}
 
-		// Check if max attempts reached
 		if (reconnectAttempts.value >= maxReconnectAttempts) {
-			console.warn('[WebSocket] Max reconnection attempts reached');
 			error.value = new Error('Could not connect after several attempts');
 			isLoading.value = false;
 			return;
 		}
 
-		// Don't reconnect if auth is invalid
 		if (!hasValidAuth()) {
-			console.log('[WebSocket] Skipping reconnect due to invalid auth');
 			isLoading.value = false;
 			return;
 		}
 
-		// Calculate backoff delay: 1s, 2s, 4s, 8s, 16s
 		const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.value), 16000);
-		console.log(`[WebSocket] Scheduling reconnect in ${delay}ms (attempt ${reconnectAttempts.value + 1})`);
 
-		// Schedule reconnection
 		reconnectTimer.value = setTimeout(() => {
 			reconnectAttempts.value++;
 			connect();
 		}, delay);
 	};
 
-	// Enhanced authenticate function
-	const authenticate = () => {
+	// Authenticate using token from server endpoint
+	const authenticate = async () => {
 		if (!connection.value || connection.value.readyState !== 1) {
-			console.log('[WebSocket] Cannot authenticate - connection not ready');
 			return;
 		}
 
 		if (!hasValidAuth()) {
-			console.log('[WebSocket] Cannot authenticate - invalid auth state');
-			error.value = new Error('Authentication failed - invalid auth state');
+			error.value = new Error('Authentication failed - not logged in');
 			isLoading.value = false;
 			return;
 		}
 
-		let token = null;
-
-		if (import.meta.client) {
-			// Try to get token from multiple sources
-			token =
-				(session.value?.directusAccessToken || localStorage.getItem('auth_token')) ??
-				localStorage.getItem('directus_session_token') ??
-				config.public.staticToken;
-
-			if (token && token.length < 20) {
-				console.log('[WebSocket] Token seems too short, using static token');
-				token = config.public.staticToken;
-			}
-		} else {
-			token = config.public.staticToken;
-		}
+		// Fetch token from server endpoint
+		const token = await fetchWebSocketToken();
 
 		if (!token) {
 			console.error('[WebSocket] No authentication token available');
@@ -240,8 +198,6 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 			isLoading.value = false;
 			return;
 		}
-
-		console.log('[WebSocket] Authenticating with token...');
 
 		connection.value.send(
 			JSON.stringify({
@@ -254,7 +210,6 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 	// Subscribe to collection
 	const subscribe = () => {
 		if (!connection.value || connection.value.readyState !== 1) {
-			console.log('[WebSocket] Cannot subscribe - connection not ready');
 			return;
 		}
 
@@ -269,10 +224,7 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 			subscriptionId.value = null;
 		}
 
-		// Generate a unique subscription ID
 		const uid = Math.random().toString(36).substring(2, 15);
-
-		console.log('[WebSocket] Subscribing to collection:', collection);
 
 		connection.value.send(
 			JSON.stringify({
@@ -307,7 +259,7 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 					break;
 
 				default:
-					console.log(`[WebSocket] Received unhandled message type: ${message.type}`);
+					break;
 			}
 		} catch (err) {
 			console.error('[WebSocket] Error processing message:', err);
@@ -318,16 +270,13 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 	// Handle authentication response
 	const handleAuthResponse = (message) => {
 		if (message.status === 'ok') {
-			console.log('[WebSocket] Authentication successful');
 			subscribe();
 		} else {
 			console.error('[WebSocket] Authentication failed:', message.reason || 'Unknown reason');
 			error.value = new Error(`Authentication failed: ${message.reason || 'Unknown reason'}`);
 			isLoading.value = false;
 
-			// If auth failed due to invalid token, don't retry
 			if (message.reason?.includes('invalid') || message.reason?.includes('expired')) {
-				console.log('[WebSocket] Token invalid, not retrying');
 				disconnect();
 			}
 		}
@@ -336,7 +285,6 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 	// Handle subscribe response
 	const handleSubscribeResponse = (message) => {
 		if (message.status === 'ok') {
-			console.log('[WebSocket] Subscription successful');
 			subscriptionId.value = message.subscription;
 		} else {
 			console.error('[WebSocket] Subscription failed:', message.reason || 'Unknown reason');
@@ -349,7 +297,6 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 	const handleSubscriptionData = (message) => {
 		switch (message.event) {
 			case 'init':
-				// Initial data load
 				if (!initialData || data.value.length === 0) {
 					data.value = message.data || [];
 				}
@@ -389,11 +336,7 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 
 	// Refresh the subscription
 	const refresh = () => {
-		console.log('[WebSocket] Refreshing subscription...');
-
-		// Check auth before refreshing
 		if (!hasValidAuth()) {
-			console.log('[WebSocket] Cannot refresh - invalid auth state');
 			isLoading.value = false;
 			return;
 		}
@@ -401,18 +344,15 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 		isLoading.value = true;
 
 		if (!connection.value || connection.value.readyState !== 1) {
-			// If no connection, reconnect
 			reconnectAttempts.value = 0;
 			connect();
 		} else {
-			// If connected, just re-subscribe
 			subscribe();
 		}
 
 		// Failsafe for stuck loading state
 		setTimeout(() => {
 			if (isLoading.value) {
-				console.log('[WebSocket] Refresh timeout, ending loading state');
 				isLoading.value = false;
 			}
 		}, 8000);
@@ -421,26 +361,21 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 	// Update the filter and refresh subscription
 	const updateFilter = (newFilter) => {
 		if (JSON.stringify(currentFilter.value) === JSON.stringify(newFilter)) {
-			return; // No change in filter
+			return;
 		}
 
-		console.log('[WebSocket] Updating filter');
 		currentFilter.value = newFilter;
 
-		// Check auth before updating
 		if (!hasValidAuth()) {
-			console.log('[WebSocket] Cannot update filter - invalid auth state');
 			isLoading.value = false;
 			return;
 		}
 
 		isLoading.value = true;
 
-		// If connected, resubscribe with new filter
 		if (connection.value && connection.value.readyState === 1) {
 			subscribe();
 		} else {
-			// Not connected, try to connect
 			connect();
 		}
 	};
@@ -456,23 +391,19 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 
 	// Watch for auth status changes
 	watch(
-		() => status.value,
-		(newStatus, oldStatus) => {
-			console.log(`[WebSocket] Auth status changed: ${oldStatus} -> ${newStatus}`);
-
-			if (newStatus === 'unauthenticated') {
-				// User logged out, disconnect immediately
+		loggedIn,
+		(isLoggedIn, wasLoggedIn) => {
+			if (!isLoggedIn) {
 				disconnect();
 				data.value = [];
 				isLoading.value = false;
-			} else if (newStatus === 'authenticated' && oldStatus === 'unauthenticated') {
-				// User logged in, connect if we have a subscription
+			} else if (isLoggedIn && !wasLoggedIn) {
 				if (collection) {
 					setTimeout(() => {
 						if (hasValidAuth()) {
 							connect();
 						}
-					}, 1000); // Small delay to ensure auth state is stable
+					}, 1000);
 				}
 			}
 		},
@@ -482,10 +413,9 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 	if (import.meta.client) {
 		authCheckTimer.value = setInterval(() => {
 			if (isConnected.value && !hasValidAuth()) {
-				console.log('[WebSocket] Periodic auth check failed, disconnecting');
 				disconnect();
 			}
-		}, 30000); // Check every 30 seconds
+		}, 30000);
 	}
 
 	// Return the public API

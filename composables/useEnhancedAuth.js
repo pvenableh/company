@@ -3,6 +3,7 @@
 /**
  * An enhanced authentication composable built on nuxt-auth-utils.
  * Uses useUserSession() and server API endpoints for Directus authentication.
+ * No tokens are exposed to the client - all token operations happen server-side.
  */
 export const useEnhancedAuth = () => {
 	const { user, loggedIn, session, fetch: fetchSession, clear: clearSession } = useUserSession();
@@ -17,26 +18,6 @@ export const useEnhancedAuth = () => {
 		return loggedIn.value ? 'authenticated' : 'unauthenticated';
 	});
 
-	// Get the current access token from session
-	const accessToken = computed(() => {
-		return session.value?.directusAccessToken || null;
-	});
-
-	// Get expiration time (if available)
-	const tokenExpires = computed(() => {
-		if (session.value?.expiresAt) {
-			return session.value.expiresAt;
-		}
-		return null;
-	});
-
-	// Check if token is expired or will expire soon
-	const isTokenExpiringSoon = computed(() => {
-		if (!tokenExpires.value) return false;
-		const expiresInMs = tokenExpires.value - Date.now();
-		return expiresInMs < 5 * 60 * 1000; // 5 minutes
-	});
-
 	// Method to refresh the session tokens via server endpoint
 	const refreshSession = async () => {
 		if (isRefreshing.value) return;
@@ -47,17 +28,6 @@ export const useEnhancedAuth = () => {
 		try {
 			await $fetch('/api/auth/refresh', { method: 'POST' });
 			await fetchSession();
-
-			// Sync token to localStorage as backup
-			if (import.meta.client && session.value?.directusAccessToken) {
-				try {
-					localStorage.setItem('auth_token', session.value.directusAccessToken);
-					localStorage.setItem('directus_session_token', session.value.directusAccessToken);
-				} catch (storageError) {
-					console.warn('Error storing token in localStorage:', storageError);
-				}
-			}
-
 			return session.value;
 		} catch (error) {
 			console.error('Error refreshing session:', error);
@@ -100,16 +70,6 @@ export const useEnhancedAuth = () => {
 			// Fetch the updated session
 			await fetchSession();
 
-			// Store token in localStorage as backup
-			if (import.meta.client && session.value?.directusAccessToken) {
-				try {
-					localStorage.setItem('auth_token', session.value.directusAccessToken);
-					localStorage.setItem('directus_session_token', session.value.directusAccessToken);
-				} catch (storageError) {
-					console.warn('Error storing tokens in localStorage:', storageError);
-				}
-			}
-
 			return result;
 		} catch (error) {
 			console.error('Sign in failed:', error);
@@ -119,17 +79,6 @@ export const useEnhancedAuth = () => {
 
 	// Logout and clean up
 	const signOut = async (options = {}) => {
-		// Clean up localStorage
-		if (import.meta.client) {
-			try {
-				localStorage.removeItem('auth_token');
-				localStorage.removeItem('auth_refresh_token');
-				localStorage.removeItem('directus_session_token');
-			} catch (error) {
-				console.warn('Error cleaning up localStorage:', error);
-			}
-		}
-
 		// Clear the refresh timer
 		if (import.meta.client && refreshTimer.value) {
 			clearInterval(refreshTimer.value);
@@ -192,9 +141,6 @@ export const useEnhancedAuth = () => {
 		user,
 		loggedIn,
 		session,
-		accessToken,
-		tokenExpires,
-		isTokenExpiringSoon,
 		isRefreshing: readonly(isRefreshing),
 		lastRefreshAttempt: readonly(lastRefreshAttempt),
 

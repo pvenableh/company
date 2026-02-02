@@ -1,15 +1,5 @@
 // composables/useDirectusNotifications.ts
-import { useDirectusClient } from './useDirectusClient';
-import {
-	createNotification as createNotificationSdk,
-	createNotifications as createNotificationsSdk,
-	readNotification as readNotificationSdk,
-	readNotifications as readNotificationsSdk,
-	updateNotification as updateNotificationSdk,
-	updateNotifications as updateNotificationsSdk,
-	deleteNotification as deleteNotificationSdk,
-	deleteNotifications as deleteNotificationsSdk,
-} from '@directus/sdk';
+// All operations go through server API routes - no client-side tokens
 
 // Custom interface for your notification structure
 export interface AppNotification {
@@ -29,182 +19,127 @@ export interface AppNotification {
 }
 
 export function useDirectusNotifications() {
-	const { client } = useDirectusClient();
-
 	/**
 	 * Create a single notification
 	 */
 	const createNotification = async (notification: Partial<AppNotification>) => {
-		try {
-			// Type cast to work with SDK function
-			return await client.value.request(createNotificationSdk(notification as any));
-		} catch (error) {
-			console.error('Error creating notification:', error);
-			throw error;
-		}
+		return await $fetch('/api/directus/notifications', {
+			method: 'POST',
+			body: { operation: 'create', data: notification },
+		});
 	};
 
 	/**
 	 * Create multiple notifications
 	 */
 	const createNotifications = async (notifications: Partial<AppNotification>[]) => {
-		try {
-			// Type cast to work with SDK function
-			return await client.value.request(createNotificationsSdk(notifications as any));
-		} catch (error) {
-			console.error('Error creating multiple notifications:', error);
-			throw error;
-		}
+		return await $fetch('/api/directus/notifications', {
+			method: 'POST',
+			body: { operation: 'createMany', data: notifications },
+		});
 	};
 
 	/**
 	 * Read a single notification
 	 */
 	const readNotification = async (id: string, query?: Record<string, any>) => {
-		try {
-			return await client.value.request(readNotificationSdk(id, query));
-		} catch (error) {
-			console.error(`Error reading notification with ID ${id}:`, error);
-			throw error;
-		}
+		return await $fetch('/api/directus/notifications', {
+			method: 'POST',
+			body: { operation: 'get', id, query },
+		});
 	};
 
 	/**
 	 * Read a single notification asynchronously
 	 */
 	const readAsyncNotification = async (id: string, query?: Record<string, any>) => {
-		try {
-			return await client.value.request(readNotificationSdk(id, query));
-		} catch (error) {
-			console.error(`Error reading async notification with ID ${id}:`, error);
-			throw error;
-		}
+		return await readNotification(id, query);
 	};
 
 	/**
 	 * Read multiple notifications
 	 */
 	const readNotifications = async (query?: Record<string, any>) => {
-		try {
-			return await client.value.request(readNotificationsSdk(query));
-		} catch (error) {
-			console.error('Error reading notifications:', error);
-			throw error;
-		}
+		return await $fetch('/api/directus/notifications', {
+			method: 'POST',
+			body: { operation: 'list', query },
+		});
 	};
 
 	/**
 	 * Read multiple notifications asynchronously
 	 */
 	const readAsyncNotifications = async (query?: Record<string, any>) => {
-		try {
-			return await client.value.request(readNotificationsSdk(query));
-		} catch (error) {
-			console.error('Error reading async notifications:', error);
-			throw error;
-		}
+		return await readNotifications(query);
 	};
 
 	/**
 	 * Update a single notification
 	 */
 	const updateNotification = async (id: string, notification: Partial<AppNotification>) => {
-		try {
-			// Type cast to work with SDK function
-			return await client.value.request(updateNotificationSdk(id, notification as any));
-		} catch (error) {
-			console.error(`Error updating notification with ID ${id}:`, error);
-			throw error;
-		}
+		return await $fetch('/api/directus/notifications', {
+			method: 'POST',
+			body: { operation: 'update', id, data: notification },
+		});
 	};
 
 	/**
 	 * Update multiple notifications
 	 */
-	const updateNotifications = async (
-		ids: string[] | Record<string, any>,
-		notifications: Record<string, Partial<AppNotification>>,
-	) => {
-		try {
-			// Type cast to work with SDK function
-			if (Array.isArray(ids)) {
-				return await client.value.request(updateNotificationsSdk(ids, notifications as any));
-			} else {
-				throw new Error('Invalid argument: ids must be an array of strings');
-			}
-		} catch (error) {
-			console.error('Error updating multiple notifications:', error);
-			throw error;
-		}
+	const updateNotifications = async (ids: string[], notifications: Record<string, Partial<AppNotification>>) => {
+		return await $fetch('/api/directus/notifications', {
+			method: 'POST',
+			body: { operation: 'updateMany', ids, data: notifications },
+		});
 	};
 
 	/**
 	 * Delete a single notification
 	 */
 	const deleteNotification = async (id: string) => {
-		try {
-			return await client.value.request(deleteNotificationSdk(id));
-		} catch (error) {
-			console.error(`Error deleting notification with ID ${id}:`, error);
-			throw error;
-		}
+		return await $fetch('/api/directus/notifications', {
+			method: 'POST',
+			body: { operation: 'delete', id },
+		});
 	};
 
 	/**
 	 * Delete multiple notifications
 	 */
-	const deleteNotifications = async (ids: string[] | Record<string, any>) => {
-		try {
-			if (Array.isArray(ids)) {
-				return await client.value.request(deleteNotificationsSdk(ids));
-			} else {
-				throw new Error('Invalid argument: ids must be an array of strings');
-			}
-		} catch (error) {
-			console.error('Error deleting multiple notifications:', error);
-			throw error;
-		}
+	const deleteNotifications = async (ids: string[]) => {
+		return await $fetch('/api/directus/notifications', {
+			method: 'POST',
+			body: { operation: 'deleteMany', ids },
+		});
 	};
 
 	/**
 	 * Mark a notification as read
 	 */
 	const markAsRead = async (id: string) => {
-		try {
-			// Type cast to work with SDK function
-			return await client.value.request(
-				updateNotificationSdk(id, {
-					read: true,
-					read_at: new Date().toISOString(),
-				} as any),
-			);
-		} catch (error) {
-			console.error(`Error marking notification ${id} as read:`, error);
-			throw error;
-		}
+		return await $fetch('/api/directus/notifications', {
+			method: 'POST',
+			body: {
+				operation: 'update',
+				id,
+				data: { read: true, read_at: new Date().toISOString() },
+			},
+		});
 	};
 
 	/**
 	 * Mark multiple notifications as read
 	 */
 	const markMultipleAsRead = async (ids: string[]) => {
-		try {
-			// Using individual update requests instead of batch update
-			const now = new Date().toISOString();
-			const promises = ids.map((id) =>
-				client.value.request(
-					updateNotificationSdk(id, {
-						read: true,
-						read_at: now,
-					} as any),
-				),
-			);
-
-			return await Promise.all(promises);
-		} catch (error) {
-			console.error('Error marking multiple notifications as read:', error);
-			throw error;
-		}
+		const now = new Date().toISOString();
+		return await $fetch('/api/directus/notifications', {
+			method: 'POST',
+			body: {
+				operation: 'updateMany',
+				ids,
+				data: { read: true, read_at: now },
+			},
+		});
 	};
 
 	/**
@@ -212,27 +147,28 @@ export function useDirectusNotifications() {
 	 */
 	const getUnreadCount = async (userId?: string, organizationId?: string | null) => {
 		try {
-			// Build filter
 			const filter: Record<string, any> = {
 				read: { _eq: false },
 			};
 
-			// Add user filter if provided
 			if (userId) {
 				filter.recipient = { _eq: userId };
 			}
 
-			// Add organization filter if provided
 			if (organizationId) {
 				filter.organization = { _eq: organizationId };
 			}
 
-			const query = {
-				filter,
-				aggregate: { count: 'id' },
-			};
-
-			const result = await client.value.request(readNotificationsSdk(query));
+			const result = await $fetch('/api/directus/notifications', {
+				method: 'POST',
+				body: {
+					operation: 'list',
+					query: {
+						filter,
+						aggregate: { count: 'id' },
+					},
+				},
+			}) as any;
 
 			// Handle different response formats
 			if (result && typeof result === 'object') {
