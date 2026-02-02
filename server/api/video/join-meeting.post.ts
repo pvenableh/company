@@ -1,11 +1,9 @@
 // server/api/video/join-meeting.post.ts
 // Public endpoint for guests to join a meeting (creates attendee record)
 
-import { createDirectus, rest, readItems, createItem, updateItem, staticToken } from '@directus/sdk';
-import { getServerSession } from '#auth';
+import { readItems, createItem, updateItem } from '@directus/sdk';
 
 export default defineEventHandler(async (event) => {
-	const config = useRuntimeConfig();
 	const body = await readBody(event);
 
 	const { roomName, guestName, guestEmail, guestPhone } = body;
@@ -17,7 +15,7 @@ export default defineEventHandler(async (event) => {
 	// Try to get authenticated user (optional - guests won't have this)
 	let userId = null;
 	try {
-		const session = await getServerSession(event);
+		const session = await getUserSession(event);
 		userId = session?.user?.id || null;
 	} catch {
 		// No session - that's fine for guests
@@ -28,9 +26,8 @@ export default defineEventHandler(async (event) => {
 	}
 
 	try {
-		const directus = createDirectus(config.public.directusUrl)
-			.with(rest())
-			.with(staticToken(config.directusServerToken || config.directusStaticToken));
+		// Use admin client since guests may not be authenticated
+		const directus = getTypedDirectus();
 
 		// Get the meeting
 		const meetings = await directus.request(

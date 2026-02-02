@@ -1,13 +1,10 @@
 // server/api/scheduler/video-meetings.get.ts
-import { createDirectus, rest, readItems, staticToken } from '@directus/sdk';
-import { getServerSession } from '#auth';
+import { readItems } from '@directus/sdk';
 
 export default defineEventHandler(async (event) => {
 	try {
-		const config = useRuntimeConfig();
-
-		// Get session to identify current user
-		const session = await getServerSession(event);
+		// Get session from nuxt-auth-utils
+		const session = await getUserSession(event);
 
 		if (!session?.user?.id) {
 			throw createError({
@@ -23,10 +20,8 @@ export default defineEventHandler(async (event) => {
 		const limit = parseInt(query.limit as string) || 50;
 		const status = query.status as string;
 
-		// Create Directus client with server token
-		const directus = createDirectus(config.public.directusUrl)
-			.with(rest())
-			.with(staticToken(config.directusServerToken || config.directusStaticToken));
+		// Get Directus client with user's session token
+		const directus = await getUserDirectus(event);
 
 		// Build filter - get meetings where user is the host or creator
 		const filter: any = {

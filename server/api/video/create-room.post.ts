@@ -1,6 +1,5 @@
 // server/api/video/create-room.post.ts
-import { createDirectus, rest, createItem, updateItem, staticToken } from '@directus/sdk';
-import { getServerSession } from '#auth';
+import { createItem, updateItem } from '@directus/sdk';
 import twilio from 'twilio';
 
 interface AttendeeInput {
@@ -30,8 +29,8 @@ export default defineEventHandler(async (event) => {
 	try {
 		const config = useRuntimeConfig();
 
-		// Get session to identify current user
-		const session = await getServerSession(event);
+		// Get session from nuxt-auth-utils
+		const session = await getUserSession(event);
 
 		if (!session?.user?.id) {
 			throw createError({
@@ -86,11 +85,10 @@ export default defineEventHandler(async (event) => {
 		try {
 			twilioRoom = await twilioClient.video.v1.rooms.create({
 				uniqueName: roomName,
-				type: 'group', // Use 'group' for better features, 'peer-to-peer' for simple 1:1
+				type: 'group',
 				maxParticipants: 10,
 				statusCallback: `${config.public.siteUrl || 'https://huestudios.company'}/api/video/webhook`,
 				statusCallbackMethod: 'POST',
-				// Room expires 1 hour after scheduled end time
 				emptyRoomTimeout: 60,
 				unusedRoomTimeout: 60,
 			});
@@ -102,10 +100,8 @@ export default defineEventHandler(async (event) => {
 			});
 		}
 
-		// Create Directus client
-		const directus = createDirectus(config.public.directusUrl)
-			.with(rest())
-			.with(staticToken(config.directusServerToken || config.directusStaticToken));
+		// Get Directus client with user's session token
+		const directus = await getUserDirectus(event);
 
 		// Generate meeting URL
 		const meetingUrl = `${config.public.siteUrl || 'https://huestudios.company'}/meeting/${roomName}`;
@@ -306,30 +302,30 @@ async function sendEmailInvitation(params: {
 		},
 		subject: `Video Meeting Invitation: ${meetingTitle}`,
 		html: `
-			<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-				<h2 style="color: #333;">You're Invited to a Video Meeting</h2>
-				<p>Hi ${guestName},</p>
-				<p><strong>${hostName}</strong> has invited you to a video meeting.</p>
-				
-				<div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
-					<h3 style="margin-top: 0; color: #333;">${meetingTitle}</h3>
-					<p><strong>Date:</strong> ${formattedDate}</p>
-					<p><strong>Time:</strong> ${formattedTime}</p>
-					<p><strong>Duration:</strong> ${durationMinutes} minutes</p>
-				</div>
-				
-				<a href="${meetingUrl}" style="display: inline-block; background: #10B981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
-					Join Meeting
-				</a>
-				
-				<p style="margin-top: 20px; color: #666; font-size: 14px;">
-					Or copy this link: <a href="${meetingUrl}">${meetingUrl}</a>
-				</p>
-				
-				<hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-				<p style="color: #999; font-size: 12px;">This is an automated message from Hue Creative Agency.</p>
-			</div>
-		`,
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #333;">You're Invited to a Video Meeting</h2>
+        <p>Hi ${guestName},</p>
+        <p><strong>${hostName}</strong> has invited you to a video meeting.</p>
+        
+        <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="margin-top: 0; color: #333;">${meetingTitle}</h3>
+          <p><strong>Date:</strong> ${formattedDate}</p>
+          <p><strong>Time:</strong> ${formattedTime}</p>
+          <p><strong>Duration:</strong> ${durationMinutes} minutes</p>
+        </div>
+        
+        <a href="${meetingUrl}" style="display: inline-block; background: #10B981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
+          Join Meeting
+        </a>
+        
+        <p style="margin-top: 20px; color: #666; font-size: 14px;">
+          Or copy this link: <a href="${meetingUrl}">${meetingUrl}</a>
+        </p>
+        
+        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+        <p style="color: #999; font-size: 12px;">This is an automated message from Hue Creative Agency.</p>
+      </div>
+    `,
 	};
 
 	await sgMail.default.send(message);

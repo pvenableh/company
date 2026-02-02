@@ -1,6 +1,5 @@
 // server/api/video/token.post.ts
 import twilio from 'twilio';
-import { getServerSession } from '#auth';
 
 interface TokenRequestBody {
 	roomName: string;
@@ -12,7 +11,12 @@ export default defineEventHandler(async (event) => {
 		const config = useRuntimeConfig();
 
 		// Get session to identify current user (optional for guests)
-		const session = await getServerSession(event);
+		let session = null;
+		try {
+			session = await getUserSession(event);
+		} catch {
+			// No session - that's fine for guests
+		}
 
 		// Get request body
 		const body = await readBody<TokenRequestBody>(event);

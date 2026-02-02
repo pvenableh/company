@@ -1,13 +1,10 @@
 // server/api/scheduler/history.get.ts
-import { createDirectus, rest, readItems, staticToken } from '@directus/sdk';
-import { getServerSession } from '#auth';
+import { readItems } from '@directus/sdk';
 
 export default defineEventHandler(async (event) => {
 	try {
-		const config = useRuntimeConfig();
-
-		// Get session to identify current user
-		const session = await getServerSession(event);
+		// Get session from nuxt-auth-utils
+		const session = await getUserSession(event);
 
 		if (!session?.user?.id) {
 			throw createError({
@@ -26,10 +23,8 @@ export default defineEventHandler(async (event) => {
 		const startDate = query.start_date as string;
 		const endDate = query.end_date as string;
 
-		// Create Directus client with server token
-		const directus = createDirectus(config.public.directusUrl)
-			.with(rest())
-			.with(staticToken(config.directusStaticToken || config.directusServerToken));
+		// Get Directus client with user's session token (auto-refreshes if needed)
+		const directus = await getUserDirectus(event);
 
 		// Build filter - get appointments where user is creator or an attendee
 		const filter: any = {
