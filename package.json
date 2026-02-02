@@ -12,7 +12,8 @@
 		"lint:fix": "eslint --cache . --fix",
 		"format": "prettier --write \"**/*.{ts,js,md,y?(a)ml,json,vue}\"",
 		"clean": "rm -rf .nuxt dist .output node_modules",
-		"prepare": "husky install"
+		"prepare": "husky install",
+		"generate:types": "dotenv -- sh -c 'directus-sdk-typegen -u $DIRECTUS_URL -t $DIRECTUS_SERVER_TOKEN -o ./types/directus.ts'"
 	},
 	"devDependencies": {
 		"@iconify-icons/wi": "^1.2.3",
