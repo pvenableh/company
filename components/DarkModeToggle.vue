@@ -39,6 +39,6 @@ const isDark = computed({
 <style>
 @reference "~/assets/css/tailwind.css";
 #theme-toggle {
-	@apply rounded-large;
+	@apply rounded-lg;
 }
 </style>
