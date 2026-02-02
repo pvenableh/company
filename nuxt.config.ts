@@ -51,9 +51,6 @@ export default defineNuxtConfig({
 		// Session password for nuxt-auth-utils (minimum 32 characters)
 		sessionPassword: process.env.NUXT_SESSION_PASSWORD,
 
-		// Auth secret (keeping for backwards compatibility during migration)
-		authSecret: process.env.NEXTAUTH_SECRET || 'sKG+LfHMxZVZv3aGnf70dxJ8+776LbJHDttKxF3znYw=',
-
 		// Twilio
 		twilioAccountSid: process.env.TWILIO_ACCOUNT_SID,
 		twilioAuthToken: process.env.TWILIO_AUTH_TOKEN,

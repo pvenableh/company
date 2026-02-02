@@ -102,9 +102,9 @@ import { useOrganization } from '~/composables/useOrganization';
 
 const { hasAdminAccess, ADMIN_ROLE_ID, CLIENT_MANAGER_ROLE_ID } = useTeams();
 const { selectedOrg } = useOrganization();
-const { data, status } = useAuth();
+const { user: sessionUser, loggedIn } = useUserSession();
 const currentUser = computed(() => {
-	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
+	return loggedIn.value ? sessionUser.value ?? null : null;
 });
 
 const showUserDetails = ref(false);

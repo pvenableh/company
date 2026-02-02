@@ -2,22 +2,7 @@
 import { createDirectus, rest, authentication, realtime, readMe } from '@directus/sdk';
 
 export function useDirectusClient() {
-	interface ExtendedSession {
-		directusToken?: string;
-		error?: string;
-	}
-
-	const {
-		data: session,
-		status,
-		getSession,
-		signOut,
-	} = useAuth() as {
-		data: Ref<ExtendedSession | null>;
-		status: Ref<string>;
-		getSession: () => Promise<ExtendedSession | null>;
-		signOut: (options?: any) => Promise<void>;
-	};
+	const { user, loggedIn, session, fetch: fetchSession, clear: clearSession } = useUserSession();
 
 	const config = useRuntimeConfig();
 	const isInitializing = ref(true);
@@ -31,7 +16,7 @@ export function useDirectusClient() {
 		const directusClient = createDirectus<any>(directusUrl).with(authentication('json')).with(rest()).with(realtime());
 
 		// Get token from session or localStorage
-		let token = session.value?.directusToken;
+		let token = session.value?.directusAccessToken;
 
 		if (!token && import.meta.client) {
 			try {
@@ -61,7 +46,7 @@ export function useDirectusClient() {
 	// Helper to check if client is authenticated and ready
 	const isAuthenticated = computed(() => {
 		return (
-			!!session.value?.directusToken || (import.meta.client && !!(localStorage.getItem('auth_token') ?? undefined))
+			!!session.value?.directusAccessToken || (import.meta.client && !!(localStorage.getItem('auth_token') ?? undefined))
 		);
 	});
 
@@ -86,12 +71,15 @@ export function useDirectusClient() {
 		}
 
 		try {
-			await signOut({
-				callbackUrl: '/auth/signin',
-				redirect: false,
-			});
+			await $fetch('/api/auth/logout', { method: 'POST' });
 		} catch (error) {
-			console.warn('Error during signOut:', error);
+			console.warn('Error during server logout:', error);
+		}
+
+		try {
+			await clearSession();
+		} catch (error) {
+			console.warn('Error clearing session:', error);
 		}
 
 		// Force navigation
@@ -120,23 +108,25 @@ export function useDirectusClient() {
 		try {
 			console.log('Refreshing session...');
 
-			const result = await getSession();
+			await $fetch('/api/auth/refresh', { method: 'POST' });
+			await fetchSession();
 
-			if (result?.directusToken) {
+			if (session.value?.directusAccessToken) {
 				console.log('Session refresh successful');
 
 				// Update localStorage
 				if (import.meta.client) {
 					try {
-						localStorage.setItem('auth_token', result.directusToken);
+						localStorage.setItem('auth_token', session.value.directusAccessToken);
+						localStorage.setItem('directus_session_token', session.value.directusAccessToken);
 					} catch (error) {
 						console.warn('Could not update token in localStorage:', error);
 					}
 				}
 
 				// Ensure the client gets the new token
-				client.value.setToken(result.directusToken);
-				return result;
+				client.value.setToken(session.value.directusAccessToken);
+				return session.value;
 			} else {
 				console.log('Session refresh returned no token');
 				return null;
@@ -203,7 +193,7 @@ export function useDirectusClient() {
 
 						const refreshed = await refreshSession();
 
-						if (refreshed?.directusToken) {
+						if (refreshed?.directusAccessToken) {
 							console.log('Token refreshed, retrying request');
 							continue; // Retry the request
 						} else {
@@ -230,7 +220,7 @@ export function useDirectusClient() {
 
 	// Initialize client and validate token
 	const initializeClient = async () => {
-		if (status.value === 'authenticated' && session.value?.directusToken) {
+		if (loggedIn.value && session.value?.directusAccessToken) {
 			try {
 				// Quick validation - try to read current user
 				await authRequest(async (client) => {
@@ -240,7 +230,6 @@ export function useDirectusClient() {
 				console.log('Token validation successful');
 			} catch (error) {
 				console.error('Token validation failed during initialization:', error);
-				// Let the auth recovery plugin handle this
 			}
 		}
 
@@ -249,11 +238,11 @@ export function useDirectusClient() {
 
 	// Watch for auth status changes
 	watch(
-		status,
-		async (newStatus) => {
-			if (newStatus === 'authenticated' && !isInitializing.value) {
+		loggedIn,
+		async (isLoggedIn) => {
+			if (isLoggedIn && !isInitializing.value) {
 				await initializeClient();
-			} else if (newStatus === 'unauthenticated') {
+			} else if (!isLoggedIn) {
 				// Reset force logout flag when user is properly unauthenticated
 				forceLogoutTriggered.value = false;
 			}

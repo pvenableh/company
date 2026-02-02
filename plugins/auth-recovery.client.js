@@ -1,6 +1,6 @@
 // plugins/auth-recovery.client.js
 export default defineNuxtPlugin(async () => {
-	const { status, data, signOut } = useAuth();
+	const { loggedIn, session, clear: clearSession } = useUserSession();
 	const router = useRouter();
 
 	// Only run on client side
@@ -64,7 +64,7 @@ export default defineNuxtPlugin(async () => {
 
 	// Function to validate token by making a test request
 	const validateCurrentToken = async () => {
-		const token = localStorage.getItem('auth_token') ?? data.value?.directusToken ?? undefined;
+		const token = localStorage.getItem('auth_token') ?? session.value?.directusAccessToken ?? undefined;
 
 		if (!token) {
 			console.log('[Auth Recovery] No token found');
@@ -87,33 +87,18 @@ export default defineNuxtPlugin(async () => {
 		}
 	};
 
-	// Function to attempt token refresh
+	// Function to attempt token refresh via server endpoint
 	const attemptTokenRefresh = async () => {
-		const refreshToken = localStorage.getItem('auth_refresh_token') ?? data.value?.refreshToken ?? undefined;
-
-		if (!refreshToken) {
-			console.log('[Auth Recovery] No refresh token available');
-			return false;
-		}
-
 		try {
-			console.log('[Auth Recovery] Attempting token refresh...');
+			console.log('[Auth Recovery] Attempting token refresh via server...');
 
-			const response = await $fetch('/api/auth/token-refresh', {
+			const response = await $fetch('/api/auth/refresh', {
 				method: 'POST',
-				body: { refreshToken },
 				timeout: 8000,
 			});
 
-			if (response.success && response.data?.access_token) {
+			if (response.success) {
 				console.log('[Auth Recovery] Token refresh successful');
-
-				// Update localStorage with new tokens
-				localStorage.setItem('auth_token', response.data.access_token);
-				if (response.data.refresh_token) {
-					localStorage.setItem('auth_refresh_token', response.data.refresh_token);
-				}
-
 				return true;
 			}
 
@@ -133,7 +118,7 @@ export default defineNuxtPlugin(async () => {
 	const performAuthRecovery = async () => {
 		try {
 			// Only proceed if we think we're authenticated
-			if (status.value !== 'authenticated') {
+			if (!loggedIn.value) {
 				console.log('[Auth Recovery] Not authenticated, skipping recovery');
 				return;
 			}
@@ -165,11 +150,8 @@ export default defineNuxtPlugin(async () => {
 			// Clear all auth data first
 			clearAllAuthData();
 
-			// Then call signOut
-			await signOut({
-				callbackUrl: '/auth/signin',
-				redirect: false,
-			});
+			// Then clear session
+			await clearSession();
 
 			// Force navigation to signin
 			await router.push('/auth/signin');
@@ -198,7 +180,7 @@ export default defineNuxtPlugin(async () => {
 			const lastRecovery = sessionStorage.getItem(LAST_RECOVERY_KEY);
 			const recentlyRan = lastRecovery && Date.now() - parseInt(lastRecovery) < 30000; // 30 seconds
 
-			if (status.value === 'authenticated' && !sessionStorage.getItem(RECOVERY_SESSION_KEY) && !recentlyRan) {
+			if (loggedIn.value && !sessionStorage.getItem(RECOVERY_SESSION_KEY) && !recentlyRan) {
 				const isValid = await validateCurrentToken();
 				if (!isValid) {
 					console.log('[Auth Recovery] Periodic check failed, triggering recovery...');

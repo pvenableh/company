@@ -4,9 +4,9 @@
  * A composable to handle common notification scenarios in your app
  */
 export function useNotificationHelper() {
-	const { data, status } = useAuth();
+	const { user: sessionUser, loggedIn } = useUserSession();
 	const user = computed(() => {
-		return status.value === 'authenticated' ? data?.value?.user ?? null : null;
+		return loggedIn.value ? sessionUser.value ?? null : null;
 	});
 	const { notify, notifyMany } = useNotifications();
 	const config = useRuntimeConfig();

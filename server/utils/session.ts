@@ -18,8 +18,9 @@ interface UserSessionData {
     avatar: string | null;
     role: any;
   };
+  // Access token exposed to client for Directus SDK usage
+  directusAccessToken?: string;
   secure?: {
-    directusAccessToken?: string;
     directusRefreshToken?: string;
   };
   loggedInAt: number;
@@ -30,11 +31,11 @@ interface UserSessionData {
  * Get access token from session
  */
 export function getSessionAccessToken(session: any): string | null {
-  return session?.secure?.directusAccessToken || null;
+  return session?.directusAccessToken || session?.secure?.directusAccessToken || null;
 }
 
 /**
- * Get refresh token from session
+ * Get refresh token from session (server-side only via secure field)
  */
 export function getSessionRefreshToken(session: any): string | null {
   return session?.secure?.directusRefreshToken || null;
@@ -52,9 +53,9 @@ export async function updateSessionTokens(
 
   await setUserSession(event, {
     ...session,
+    directusAccessToken: tokens.access_token,
     secure: {
       ...session.secure,
-      directusAccessToken: tokens.access_token,
       directusRefreshToken: tokens.refresh_token,
     },
     expiresAt,
@@ -73,8 +74,8 @@ export async function createUserSession(
 
   await setUserSession(event, {
     user,
+    directusAccessToken: tokens.access_token,
     secure: {
-      directusAccessToken: tokens.access_token,
       directusRefreshToken: tokens.refresh_token,
     },
     loggedInAt: Date.now(),

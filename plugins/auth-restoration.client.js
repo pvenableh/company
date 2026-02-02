@@ -1,4 +1,4 @@
-// plugins/auth-restoration.client.ts
+// plugins/auth-restoration.client.js
 
 export default defineNuxtPlugin(async (nuxtApp) => {
 	// Only run on client-side
@@ -6,63 +6,39 @@ export default defineNuxtPlugin(async (nuxtApp) => {
 
 	console.log('[Auth Restoration] Starting auth state check...');
 
-	const { status, data: authData, signOut } = useAuth();
+	const { loggedIn, session, fetch: fetchSession, clear: clearSession } = useUserSession();
 	const config = useRuntimeConfig();
 
 	try {
-		// Get all auth-related tokens
+		// Get auth-related tokens from localStorage
 		const authToken = localStorage.getItem('auth_token');
-		const refreshToken = localStorage.getItem('auth_refresh_token');
 		const directusSessionToken = localStorage.getItem('directus_session_token');
-		const nextAuthSessionToken = document.cookie
-			.split('; ')
-			.find((row) => row.startsWith('next-auth.session-token='))
-			?.split('=')[1];
 
 		console.log('[Auth Restoration] Current state:', {
 			hasAuthToken: !!authToken,
-			hasRefreshToken: !!refreshToken,
 			hasDirectusSessionToken: !!directusSessionToken,
-			hasNextAuthSessionToken: !!nextAuthSessionToken,
-			authStatus: status.value,
+			isLoggedIn: loggedIn.value,
 		});
 
-		// Handle various edge cases
-
-		// Case 1: Has nextAuth cookie but no localStorage tokens
-		if (nextAuthSessionToken && !authToken && status.value === 'authenticated') {
-			console.log('[Auth Restoration] Case 1: Has nextAuth cookie but no localStorage tokens');
-
-			// Try to get tokens from the session
-			if (authData.value?.directusToken) {
-				console.log('[Auth Restoration] Restoring tokens from session');
-				localStorage.setItem('auth_token', authData.value.directusToken);
-				localStorage.setItem('directus_session_token', authData.value.directusToken);
-
-				if (authData.value?.refreshToken) {
-					localStorage.setItem('auth_refresh_token', authData.value.refreshToken);
-				}
-			} else {
-				// If no tokens in session, force logout
-				console.log('[Auth Restoration] No tokens in session, forcing logout');
-				await signOut({ callbackUrl: '/auth/signin' });
-				return;
-			}
+		// Case 1: Has session but no localStorage tokens - restore them
+		if (loggedIn.value && session.value?.directusAccessToken && !authToken) {
+			console.log('[Auth Restoration] Restoring tokens from session to localStorage');
+			localStorage.setItem('auth_token', session.value.directusAccessToken);
+			localStorage.setItem('directus_session_token', session.value.directusAccessToken);
 		}
 
 		// Case 2: Has auth_token but no directus_session_token
 		if (authToken && !directusSessionToken) {
-			console.log('[Auth Restoration] Case 2: Has auth_token but no directus_session_token');
+			console.log('[Auth Restoration] Syncing auth_token to directus_session_token');
 			localStorage.setItem('directus_session_token', authToken);
 		}
 
 		// Case 3: Token validation after page reload
-		if (status.value === 'authenticated' && authToken) {
+		if (loggedIn.value && authToken) {
 			console.log('[Auth Restoration] Validating existing token...');
 
 			try {
-				// Try to use the token with Directus API
-				const response = await $fetch(`${config.public.directusUrl}/users/me`, {
+				await $fetch(`${config.public.directusUrl}/users/me`, {
 					headers: {
 						Authorization: `Bearer ${authToken}`,
 					},
@@ -73,54 +49,53 @@ export default defineNuxtPlugin(async (nuxtApp) => {
 				console.error('[Auth Restoration] Token validation failed:', error);
 
 				if (error.status === 401) {
-					// Token is invalid or expired
-					if (refreshToken) {
-						console.log('[Auth Restoration] Attempting token refresh');
-						const { refreshSession } = useEnhancedAuth();
-						const result = await refreshSession();
+					// Token is invalid or expired, try server-side refresh
+					console.log('[Auth Restoration] Attempting token refresh via server');
+					try {
+						await $fetch('/api/auth/refresh', { method: 'POST' });
+						await fetchSession();
 
-						if (!result) {
-							console.log('[Auth Restoration] Refresh failed, forcing logout');
-							await signOut({ callbackUrl: '/auth/signin' });
+						if (session.value?.directusAccessToken) {
+							localStorage.setItem('auth_token', session.value.directusAccessToken);
+							localStorage.setItem('directus_session_token', session.value.directusAccessToken);
+							console.log('[Auth Restoration] Token refresh successful');
+						} else {
+							console.log('[Auth Restoration] Refresh returned no token, clearing session');
+							await clearSession();
+							navigateTo('/auth/signin');
+							return;
 						}
-					} else {
-						console.log('[Auth Restoration] No refresh token, forcing logout');
-						await signOut({ callbackUrl: '/auth/signin' });
+					} catch (refreshError) {
+						console.log('[Auth Restoration] Refresh failed, forcing logout');
+						await clearSession();
+						navigateTo('/auth/signin');
+						return;
 					}
 				}
 			}
 		}
 
-		// Case 4: Check for session errors
-		if (authData.value?.error) {
-			console.log('[Auth Restoration] Session has error:', authData.value.error);
-			await signOut({ callbackUrl: '/auth/signin' });
-		}
-
-		// Case 5: Orphaned tokens (no nextAuth session but has localStorage tokens)
-		if (!nextAuthSessionToken && (authToken || refreshToken) && status.value === 'unauthenticated') {
+		// Case 4: Orphaned tokens (no session but has localStorage tokens)
+		if (!loggedIn.value && (authToken || directusSessionToken)) {
 			console.log('[Auth Restoration] Orphaned tokens detected, cleaning up');
 
-			// Clear all auth-related items
 			const authKeys = ['auth_token', 'auth_refresh_token', 'directus_session_token'];
-
 			authKeys.forEach((key) => {
 				localStorage.removeItem(key);
 			});
 		}
 	} catch (error) {
 		console.error('[Auth Restoration] Fatal error:', error);
-		// On fatal error, we should clean everything and force re-login
 		try {
-			await signOut({ callbackUrl: '/auth/signin' });
+			await clearSession();
 		} catch (e) {
-			// If even signOut fails, manually clean up
+			// If even session clear fails, manually clean up
 			localStorage.clear();
 			document.cookie.split(';').forEach((c) => {
 				document.cookie = c.replace(/^ +/, '').replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/');
 			});
-			window.location.href = '/auth/signin';
 		}
+		window.location.href = '/auth/signin';
 	}
 
 	console.log('[Auth Restoration] Auth state check completed');

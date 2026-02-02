@@ -7,21 +7,22 @@ import {
 } from '@directus/sdk';
 
 export function useAuthActions() {
-	const { signIn, signOut } = useAuth();
+	const { signIn, signOut } = useEnhancedAuth();
 	const { client } = useDirectusClient();
 	const config = useRuntimeConfig();
 
 	/**
-	 * Login a user with credentials
-	 * This is a wrapper around next-auth's signIn
+	 * Login a user with credentials via server API
 	 */
 	const login = async (email: string, password: string, options = { redirect: true }) => {
 		try {
-			return await signIn('credentials', {
-				email,
-				password,
-				...options,
-			});
+			const result = await signIn({ email, password });
+
+			if (options.redirect) {
+				navigateTo('/');
+			}
+
+			return result;
 		} catch (error) {
 			console.error('Login error:', error);
 			throw error;
@@ -29,12 +30,13 @@ export function useAuthActions() {
 	};
 
 	/**
-	 * Logout the current user
-	 * This is a wrapper around next-auth's signOut
+	 * Logout the current user via server API
 	 */
 	const logout = async (options = { redirect: true, callbackUrl: '/' }) => {
 		try {
-			return await signOut(options);
+			return await signOut({
+				callbackUrl: options.redirect ? (options.callbackUrl || '/') : undefined,
+			});
 		} catch (error) {
 			console.error('Logout error:', error);
 			throw error;

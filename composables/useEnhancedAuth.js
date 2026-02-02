@@ -1,36 +1,31 @@
 // composables/useEnhancedAuth.js
 
 /**
- * An enhanced authentication composable that manages token refresh
- * and provides a consistent API for authentication state
+ * An enhanced authentication composable built on nuxt-auth-utils.
+ * Uses useUserSession() and server API endpoints for Directus authentication.
  */
 export const useEnhancedAuth = () => {
-	const { status, data, signIn, signOut, getSession } = useAuth();
+	const { user, loggedIn, session, fetch: fetchSession, clear: clearSession } = useUserSession();
 
 	// Store the token refresh timer
 	const refreshTimer = ref(null);
 	const isRefreshing = ref(false);
 	const lastRefreshAttempt = ref(null);
 
-	// Get the user object from auth data
-	const user = computed(() => {
-		return status.value === 'authenticated' ? data.value?.user ?? null : null;
+	// Computed status for backwards compatibility
+	const status = computed(() => {
+		return loggedIn.value ? 'authenticated' : 'unauthenticated';
 	});
 
-	// Get the current access token
+	// Get the current access token from session
 	const accessToken = computed(() => {
-		return data.value?.directusToken || null;
-	});
-
-	// Get the refresh token
-	const refreshToken = computed(() => {
-		return data.value?.refreshToken || null;
+		return session.value?.directusAccessToken || null;
 	});
 
 	// Get expiration time (if available)
 	const tokenExpires = computed(() => {
-		if (data.value?.expires) {
-			return new Date(data.value.expires).getTime();
+		if (session.value?.expiresAt) {
+			return session.value.expiresAt;
 		}
 		return null;
 	});
@@ -38,13 +33,11 @@ export const useEnhancedAuth = () => {
 	// Check if token is expired or will expire soon
 	const isTokenExpiringSoon = computed(() => {
 		if (!tokenExpires.value) return false;
-
-		// Consider token as "expiring soon" if it expires in less than 5 minutes
 		const expiresInMs = tokenExpires.value - Date.now();
-		return expiresInMs < 5 * 60 * 1000; // 5 minutes in milliseconds
+		return expiresInMs < 5 * 60 * 1000; // 5 minutes
 	});
 
-	// Method to manually refresh the token
+	// Method to refresh the session tokens via server endpoint
 	const refreshSession = async () => {
 		if (isRefreshing.value) return;
 
@@ -52,25 +45,20 @@ export const useEnhancedAuth = () => {
 		lastRefreshAttempt.value = Date.now();
 
 		try {
-			console.log('Manually refreshing session...');
-			const result = await getSession();
+			await $fetch('/api/auth/refresh', { method: 'POST' });
+			await fetchSession();
 
-			// If we successfully refreshed, store any new tokens in localStorage as a backup
-			if (import.meta.client && result) {
+			// Sync token to localStorage as backup
+			if (import.meta.client && session.value?.directusAccessToken) {
 				try {
-					if (result.directusToken) {
-						localStorage.setItem('auth_token', result.directusToken);
-					}
-					if (result.refreshToken) {
-						localStorage.setItem('auth_refresh_token', result.refreshToken);
-					}
+					localStorage.setItem('auth_token', session.value.directusAccessToken);
+					localStorage.setItem('directus_session_token', session.value.directusAccessToken);
 				} catch (storageError) {
-					console.warn('Error storing tokens in localStorage:', storageError);
+					console.warn('Error storing token in localStorage:', storageError);
 				}
 			}
 
-			console.log('Session refresh completed');
-			return result;
+			return session.value;
 		} catch (error) {
 			console.error('Error refreshing session:', error);
 			return null;
@@ -81,56 +69,45 @@ export const useEnhancedAuth = () => {
 
 	// Setup token refresh intervals - CLIENT SIDE ONLY
 	const setupRefreshInterval = () => {
-		// Only run on client side
 		if (!import.meta.client) return;
 
-		// Clear any existing timer
 		if (refreshTimer.value) {
 			clearInterval(refreshTimer.value);
 			refreshTimer.value = null;
 		}
 
-		// Only set up refresh timer if authenticated
-		if (status.value !== 'authenticated') return;
+		if (!loggedIn.value) return;
 
-		// Set refresh interval for every hour
-		// This is a fallback, the JWT callback will normally handle token refreshes
+		// Refresh every hour as a fallback
 		refreshTimer.value = setInterval(
 			async () => {
-				// Only refresh if authenticated and not already refreshing
-				if (status.value === 'authenticated' && !isRefreshing.value) {
+				if (loggedIn.value && !isRefreshing.value) {
 					await refreshSession();
 				}
 			},
 			60 * 60 * 1000,
-		); // 1 hour
+		);
 	};
 
-	// Enhanced login method that ensures proper storage of tokens
-	const enhancedSignIn = async (providerOrCredentials, credentials) => {
+	// Login with email and password
+	const signIn = async (credentials) => {
 		try {
-			// Handle both usage patterns:
-			// signIn(credentials) - single object with credentials
-			// signIn('credentials', credentials) - provider name + credentials object
-			let provider = 'credentials';
-			let credentialsObj = providerOrCredentials;
+			const result = await $fetch('/api/auth/login', {
+				method: 'POST',
+				body: credentials,
+			});
 
-			if (typeof providerOrCredentials === 'string') {
-				provider = providerOrCredentials;
-				credentialsObj = credentials || {};
-			}
+			// Fetch the updated session
+			await fetchSession();
 
-			// Make sure redirect is set to false by default
-			if (credentialsObj && !('redirect' in credentialsObj)) {
-				credentialsObj.redirect = false;
-			}
-
-			// Call the original signIn
-			const result = await signIn(provider, credentialsObj);
-
-			// After login, refresh the session to ensure we have the latest tokens
-			if (result?.ok) {
-				await refreshSession();
+			// Store token in localStorage as backup
+			if (import.meta.client && session.value?.directusAccessToken) {
+				try {
+					localStorage.setItem('auth_token', session.value.directusAccessToken);
+					localStorage.setItem('directus_session_token', session.value.directusAccessToken);
+				} catch (storageError) {
+					console.warn('Error storing tokens in localStorage:', storageError);
+				}
 			}
 
 			return result;
@@ -140,48 +117,56 @@ export const useEnhancedAuth = () => {
 		}
 	};
 
-	// Enhanced logout method that cleans up localStorage
-	const enhancedSignOut = async (options = {}) => {
-		// Clean up localStorage - client side only
+	// Logout and clean up
+	const signOut = async (options = {}) => {
+		// Clean up localStorage
 		if (import.meta.client) {
 			try {
 				localStorage.removeItem('auth_token');
 				localStorage.removeItem('auth_refresh_token');
+				localStorage.removeItem('directus_session_token');
 			} catch (error) {
 				console.warn('Error cleaning up localStorage:', error);
 			}
 		}
 
-		// Clear the refresh timer - client side only
+		// Clear the refresh timer
 		if (import.meta.client && refreshTimer.value) {
 			clearInterval(refreshTimer.value);
 			refreshTimer.value = null;
 		}
 
-		// Call the original signOut
-		return await signOut(options);
+		try {
+			await $fetch('/api/auth/logout', { method: 'POST' });
+		} catch (error) {
+			console.warn('Server logout error:', error);
+		}
+
+		await clearSession();
+
+		// Handle redirect if specified
+		if (options.callbackUrl && import.meta.client) {
+			navigateTo(options.callbackUrl);
+		}
 	};
 
-	// Set up watchers - but only on client
+	// Set up watchers - client only
 	if (import.meta.client) {
 		watch(
-			() => status.value,
-			(newStatus) => {
-				if (newStatus === 'authenticated') {
+			loggedIn,
+			(isLoggedIn) => {
+				if (isLoggedIn) {
 					setupRefreshInterval();
-				} else {
-					// Clean up timer if not authenticated
-					if (refreshTimer.value) {
-						clearInterval(refreshTimer.value);
-						refreshTimer.value = null;
-					}
+				} else if (refreshTimer.value) {
+					clearInterval(refreshTimer.value);
+					refreshTimer.value = null;
 				}
 			},
 			{ immediate: true },
 		);
 	}
 
-	// Clean up on component unmount - client side only
+	// Clean up on component unmount
 	if (import.meta.client) {
 		onUnmounted(() => {
 			if (refreshTimer.value) {
@@ -191,33 +176,32 @@ export const useEnhancedAuth = () => {
 		});
 	}
 
-	// Initialize when in client-side
+	// Initialize refresh interval on mount
 	if (import.meta.client) {
 		onMounted(() => {
-			if (status.value === 'authenticated') {
+			if (loggedIn.value) {
 				setupRefreshInterval();
 			}
 		});
 	}
 
-	// Return the enhanced composable
 	return {
-		// Original auth properties and methods
+		// Session state
 		status,
-		data,
-
-		// Enhanced properties
+		data: session,
 		user,
+		loggedIn,
+		session,
 		accessToken,
-		refreshToken,
 		tokenExpires,
 		isTokenExpiringSoon,
 		isRefreshing: readonly(isRefreshing),
 		lastRefreshAttempt: readonly(lastRefreshAttempt),
 
-		// Enhanced methods
-		signIn: enhancedSignIn,
-		signOut: enhancedSignOut,
+		// Methods
+		signIn,
+		signOut,
 		refreshSession,
+		fetchSession,
 	};
 };

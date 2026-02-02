@@ -219,9 +219,9 @@ const fileInput = ref(null);
 const linkUrl = ref('');
 const { uploadFiles, updateFile } = useDirectusFiles();
 const { notify } = useNotifications();
-const { data, status } = useAuth();
+const { user: sessionUser, loggedIn } = useUserSession();
 const currentUser = computed(() => {
-	return status.value === 'authenticated' ? data?.value?.user ?? null : null;
+	return loggedIn.value ? sessionUser.value ?? null : null;
 });
 const { selectedOrg } = useOrganization();
 const { selectedTeam } = useTeams();

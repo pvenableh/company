@@ -4,9 +4,9 @@ definePageMeta({
 });
 
 const router = useRouter();
-const { data: authData, status } = useAuth();
+const { user: sessionUser, loggedIn } = useUserSession();
 const user = computed(() => {
-	return status.value === 'authenticated' ? authData?.value?.user ?? null : null;
+	return loggedIn.value ? sessionUser.value ?? null : null;
 });
 const { readItems } = useDirectusItems();
 const { selectedOrg, hasMultipleOrgs, organizationOptions, setOrganization, getOrganizationFilter } = useOrganization();

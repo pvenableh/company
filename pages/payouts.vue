@@ -2,9 +2,9 @@
 definePageMeta({
 	middleware: ['auth'],
 });
-const { data: authData, status } = useAuth();
+const { user: sessionUser, loggedIn } = useUserSession();
 const user = computed(() => {
-	return status.value === 'authenticated' ? authData?.value?.user ?? null : null;
+	return loggedIn.value ? sessionUser.value ?? null : null;
 });
 const config = useRuntimeConfig();
 

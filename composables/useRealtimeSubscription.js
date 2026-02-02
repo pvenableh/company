@@ -33,14 +33,14 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 	}
 
 	const config = useRuntimeConfig();
-	const { status } = useAuth();
+	const { loggedIn, session } = useUserSession();
 
 	// ===== Enhanced Authentication Checking =====
 
 	// Check if we have valid auth before attempting connection
 	const hasValidAuth = () => {
-		// Must be authenticated according to auth status
-		if (status.value !== 'authenticated') {
+		// Must be authenticated according to session status
+		if (!loggedIn.value) {
 			console.log('[WebSocket] Not authenticated, skipping connection');
 			return false;
 		}
@@ -49,16 +49,8 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 		let hasToken = false;
 
 		if (import.meta.client) {
-			const { data: authData } = useAuth();
-
-			// Check for session error
-			if (authData.value?.error) {
-				console.log('[WebSocket] Auth session has error, skipping connection');
-				return false;
-			}
-
 			// Check for valid tokens
-			const sessionToken = authData.value?.directusToken;
+			const sessionToken = session.value?.directusAccessToken;
 			const localToken =
 				localStorage.getItem('auth_token') ?? localStorage.getItem('directus_session_token') ?? undefined;
 			const staticToken = config.public.staticToken;
@@ -228,19 +220,9 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 		let token = null;
 
 		if (import.meta.client) {
-			const { data: authData } = useAuth();
-
-			// Check for session error
-			if (authData.value?.error) {
-				console.error('[WebSocket] Auth error detected, cannot authenticate');
-				error.value = new Error('Authentication failed - session error');
-				isLoading.value = false;
-				return;
-			}
-
 			// Try to get token from multiple sources
 			token =
-				(authData.value?.directusToken || localStorage.getItem('auth_token')) ??
+				(session.value?.directusAccessToken || localStorage.getItem('auth_token')) ??
 				localStorage.getItem('directus_session_token') ??
 				config.public.staticToken;
 
