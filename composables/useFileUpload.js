@@ -400,6 +400,15 @@ export function useFileUpload() {
 		abortController.value = new AbortController();
 		const signal = abortController.value.signal;
 
+		// Fetch token before creating the Promise (await requires async context)
+		let uploadToken = null;
+		try {
+			const tokenResponse = await $fetch('/api/websocket/token');
+			uploadToken = tokenResponse?.token;
+		} catch (e) {
+			console.warn('Could not fetch upload token:', e);
+		}
+
 		return new Promise((resolve, reject) => {
 			const xhr = new XMLHttpRequest();
 
@@ -436,15 +445,6 @@ export function useFileUpload() {
 			signal.addEventListener('abort', () => {
 				xhr.abort();
 			});
-
-			// Fetch token from server endpoint for file upload auth
-			let uploadToken = null;
-			try {
-				const tokenResponse = await $fetch('/api/websocket/token');
-				uploadToken = tokenResponse?.token;
-			} catch (e) {
-				console.warn('Could not fetch upload token:', e);
-			}
 
 			const uploadUrl = `${useRuntimeConfig().public.directusUrl}/files`;
 			xhr.open('POST', uploadUrl);
