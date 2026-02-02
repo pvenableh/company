@@ -79,7 +79,7 @@ export default defineEventHandler(async (event) => {
 		// Create Directus client instance - server-side approach
 		// Since we're in a server route we need a different approach than composables
 		const directusUrl = config.public.directusUrl;
-		const directusToken = config.public.staticToken;
+		const directusToken = config.directusStaticToken;
 
 		// Create Directus client with the static token for server-side operations
 		const directusClient = createDirectus(directusUrl).with(authentication()).with(rest());

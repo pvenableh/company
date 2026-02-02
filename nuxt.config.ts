@@ -101,7 +101,6 @@ export default defineNuxtConfig({
 			directusUrl: process.env.DIRECTUS_URL || 'https://admin.huestudios.company',
 			assetsUrl: process.env.DIRECTUS_ASSETS_URL || 'https://admin.huestudios.company/assets/',
 			websocketUrl: process.env.DIRECTUS_WEBSOCKET_URL || 'wss://admin.huestudios.company/websocket',
-			staticToken: process.env.DIRECTUS_STATIC_TOKEN,
 			adminUrl: process.env.DIRECTUS_URL || 'https://admin.huestudios.company',
 
 			// Site
