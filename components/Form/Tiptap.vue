@@ -883,7 +883,7 @@ const handleFiles = async (files) => {
 
 	strong {
 		font-weight: 900;
-		font-family: var(--legacy-font-bold);
+		@apply font-proxima-regular;
 	}
 
 	ul {
