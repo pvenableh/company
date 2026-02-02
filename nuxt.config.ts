@@ -1,22 +1,18 @@
-// import { formatFonts } from './utils/fonts';
-// import { theme } from './theme';
-import { defineNuxtConfig } from 'nuxt/config';
+// nuxt.config.ts
+// Migrated to Tailwind CSS v4 + shadcn-vue + Directus with nuxt-auth-utils
+
+import tailwindcss from '@tailwindcss/vite';
 
 const isProduction = process.env.NODE_ENV === 'production';
-const authBaseURL = isProduction ? 'https://huestudios.company/api/auth' : 'http://localhost:3000/api/auth';
 
 export default defineNuxtConfig({
 	ssr: true,
 
-	// typescript: {
-	// 	strict: true,
-	// 	typeCheck: false, // Set to false if you're having issues
-	// 	shim: true,
-	// },
-
 	future: {
 		compatibilityVersion: 4,
 	},
+
+	compatibilityDate: '2024-10-01',
 
 	app: {
 		pageTransition: { name: 'page', mode: 'out-in' },
@@ -25,7 +21,11 @@ export default defineNuxtConfig({
 	css: ['~/assets/css/tailwind.css', '~/assets/css/main.css'],
 
 	runtimeConfig: {
+		// ============================================
 		// Private keys (server-side only)
+		// ============================================
+
+		// SendGrid
 		sendgridApiKey: process.env.SENDGRID_API_KEY,
 		sendgridFromEmail: process.env.SENDGRID_FROM_EMAIL || 'hello@huestudios.company',
 		sendgridFromName: process.env.SENDGRID_FROM_NAME || 'Hue Creative Agency',
@@ -33,137 +33,169 @@ export default defineNuxtConfig({
 		FROM_EMAIL: process.env.SENDGRID_FROM_EMAIL,
 		BCC_EMAIL: process.env.SENDGRID_BCC_EMAIL,
 		REPLY_TO_EMAIL: process.env.SENDGRID_REPLY_TO_EMAIL,
-		// Stripe secret keys should be here (server-side only)
+
+		// Stripe (server-side only)
 		stripeSecretKeyTest: process.env.STRIPE_SECRET_KEY_TEST,
 		stripeSecretKeyLive: process.env.STRIPE_SECRET_KEY,
 		stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
 
+		// Directus (server-side - NEVER expose to client)
+		directus: {
+			url: process.env.DIRECTUS_URL || 'https://admin.huestudios.company',
+			staticToken: process.env.DIRECTUS_STATIC_TOKEN,
+			serverToken: process.env.DIRECTUS_SERVER_TOKEN,
+		},
 		directusServerToken: process.env.DIRECTUS_SERVER_TOKEN,
 		directusStaticToken: process.env.DIRECTUS_STATIC_TOKEN,
+
+		// Session password for nuxt-auth-utils (minimum 32 characters)
+		sessionPassword: process.env.NUXT_SESSION_PASSWORD,
+
+		// Auth secret (keeping for backwards compatibility during migration)
 		authSecret: process.env.NEXTAUTH_SECRET || 'sKG+LfHMxZVZv3aGnf70dxJ8+776LbJHDttKxF3znYw=',
+
+		// Twilio
 		twilioAccountSid: process.env.TWILIO_ACCOUNT_SID,
 		twilioAuthToken: process.env.TWILIO_AUTH_TOKEN,
 		twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER,
 		twilioApiKey: process.env.TWILIO_API_KEY,
 		twilioApiSecret: process.env.TWILIO_API_SECRET,
 
+		// Google OAuth
 		googleClientId: process.env.GOOGLE_CLIENT_ID,
 		googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
 
-		// Outlook/Azure OAuth
+		// Azure/Outlook OAuth
 		azureClientId: process.env.AZURE_CLIENT_ID,
 		azureClientSecret: process.env.AZURE_CLIENT_SECRET,
 
-		// Cron secret for automated tasks
+		// Cron
 		cronSecret: process.env.CRON_SECRET,
+
+		// ============================================
+		// Public keys (exposed to client)
+		// ============================================
 		public: {
+			// Roles
 			adminRole: '3a63a4e1-c82e-46f8-9993-7f11ac6a4b01',
-			stripePublic:
-				process.env.NODE_ENV === 'production' ? process.env.STRIPE_PUBLIC_KEY : process.env.STRIPE_PUBLIC_KEY_TEST,
+			adminRoleId: process.env.NUXT_PUBLIC_ADMIN_ROLE_ID || '3a63a4e1-c82e-46f8-9993-7f11ac6a4b01',
+			clientManagerRoleId: process.env.NUXT_PUBLIC_CLIENT_MANAGER_ROLE_ID || '7b62b285-e3a8-46ff-9e8c-d1445a3c13bb',
+			directusRoleUser: process.env.NUXT_PUBLIC_DIRECTUS_ROLE_USER,
+
+			// Stripe public key
+			stripePublic: isProduction ? process.env.STRIPE_PUBLIC_KEY : process.env.STRIPE_PUBLIC_KEY_TEST,
+
+			// Company
 			companyName: process.env.COMPANY_NAME,
+
+			// Directus URLs (public)
+			directus: {
+				url: process.env.DIRECTUS_URL || 'https://admin.huestudios.company',
+				websocketUrl: process.env.DIRECTUS_WEBSOCKET_URL || 'wss://admin.huestudios.company/websocket',
+			},
 			directusUrl: process.env.DIRECTUS_URL || 'https://admin.huestudios.company',
 			assetsUrl: process.env.DIRECTUS_ASSETS_URL || 'https://admin.huestudios.company/assets/',
 			websocketUrl: process.env.DIRECTUS_WEBSOCKET_URL || 'wss://admin.huestudios.company/websocket',
 			staticToken: process.env.DIRECTUS_STATIC_TOKEN,
-			siteUrl: process.env.SITE_URL || 'https://huestudios.company',
 			adminUrl: process.env.DIRECTUS_URL || 'https://admin.huestudios.company',
+
+			// Site
+			siteUrl: process.env.SITE_URL || 'https://huestudios.company',
+			appUrl: process.env.APP_URL || process.env.SITE_URL || 'https://huestudios.company',
+
+			// Default team
 			defaultTeamId: process.env.NUXT_PUBLIC_DEFAULT_TEAM_ID || 'org-default',
-			adminRoleId: process.env.NUXT_PUBLIC_ADMIN_ROLE_ID || '3a63a4e1-c82e-46f8-9993-7f11ac6a4b01',
-			clientManagerRoleId: process.env.NUXT_PUBLIC_CLIENT_MANAGER_ROLE_ID || '7b62b285-e3a8-46ff-9e8c-d1445a3c13bb',
 		},
 	},
 
 	modules: [
-		'@nuxt/devtools',
+		// Authentication - nuxt-auth-utils (replaces @sidebase/nuxt-auth)
+		'nuxt-auth-utils',
+
+		// UI & Components
+		'shadcn-nuxt',
 		'@nuxt/icon',
+		'@nuxtjs/color-mode',
+
+		// Utilities
+		'@vueuse/nuxt',
+		'@vueuse/motion/nuxt',
+
+		// Forms
+		'@vee-validate/nuxt',
+
+		// Image optimization
 		[
 			'@nuxt/image',
 			{
 				provider: 'directus',
 				directus: {
-					baseURL: `${process.env.DIRECTUS_URL}/assets/`,
+					baseURL: `${process.env.DIRECTUS_URL || 'https://admin.huestudios.company'}/assets/`,
 				},
 			},
 		],
-		[
-			'@nuxt/ui',
-			{
-				icons: ['heroicons', 'wi', 'meteocons', 'material-symbols', 'material-symbols-light', 'logos'],
-				notification: {
-					position: 'top-[unset]] bottom-0',
-					timeout: 1000,
-					default: {
-						timeout: 1000,
-						closeButton: {
-							icon: 'i-heroicons-archive-box-x-mark',
-							color: 'primary',
-							variant: 'outline',
-							padded: true,
-							size: '2xs',
-							ui: { rounded: 'rounded-full' },
-						},
-					},
-				},
-			},
-		],
-		[
-			'@nuxtjs/color-mode',
-			{
-				preference: 'system',
-				classSuffix: '',
-			},
-		],
-		'@sidebase/nuxt-auth',
-		'@vueuse/motion/nuxt',
-		'@vueuse/nuxt', // [
-		// 	'nuxt-directus-next',
-		// 	{
-		// 		url: 'https://admin.huestudios.company',
-		// 		authConfig: {
-		// 			mode: 'static',
-		// 		},
 
-		// 		// Remove authConfig section
-
-		// 		moduleConfig: {
-		// 			// Keep these features
-		// 			autoImport: true,
-		// 			devtools: true,
-
-		// 			// Disable auto-refresh since you'll handle auth with nuxt-auth
-		// 			autoRefresh: {
-		// 				enableMiddleware: false,
-		// 				global: false,
-		// 			},
-
-		// 			// Keep user data fetching config
-		// 			readMeQuery: {
-		// 				fields: [
-		// 					'*,organizations.organizations_id.id,organizations.organizations_id.name,organizations.organizations_id.logo,organizations.organizations_id.icon,organizations.organizations_id.tickets,organizations.organizations_id.projects',
-		// 				],
-		// 				updateState: true,
-		// 			},
-		// 		},
-		// 	},
-		// ],
-		'nuxt-gtag',
+		// Calendar
 		'@samk-dev/nuxt-vcalendar',
+
+		// Analytics
+		'nuxt-gtag',
+
+		// PWA
 		'@vite-pwa/nuxt',
+
+		// Dev tools
+		'@nuxt/devtools',
 	],
-	auth: {
-		provider: {
-			type: 'authjs',
+
+	// Vite plugins - Tailwind CSS v4
+	vite: {
+		plugins: [tailwindcss()],
+	},
+
+	// shadcn-vue configuration
+	shadcn: {
+		prefix: '',
+		componentDir: './components/ui',
+	},
+
+	// Color mode for dark theme support
+	colorMode: {
+		preference: 'system',
+		classSuffix: '',
+	},
+
+	// Icon configuration
+	icon: {
+		serverBundle: 'remote',
+		clientBundle: {
+			scan: true,
 		},
-		globalAppMiddleware: {
-			isEnabled: false, // Set to true if you want to enable auth for the entire app
-		},
-		baseURL: authBaseURL,
-		sessionRefresh: {
-			// Ensuring session refreshes periodically and on window focus
-			enablePeriodically: true,
-			enableOnWindowFocus: true,
+		collections: [
+			'heroicons',
+			'heroicons-outline',
+			'heroicons-solid',
+			'lucide',
+			'wi',
+			'meteocons',
+			'material-symbols',
+			'material-symbols-light',
+			'logos',
+		],
+	},
+
+	// VeeValidate configuration
+	veeValidate: {
+		autoImports: true,
+		componentNames: {
+			Form: 'VeeForm',
+			Field: 'VeeField',
+			FieldArray: 'VeeFieldArray',
+			ErrorMessage: 'VeeErrorMessage',
 		},
 	},
+
+	// PWA configuration (preserved from original)
 	pwa: {
 		registerType: 'autoUpdate',
 		manifest: {
@@ -208,10 +240,6 @@ export default defineNuxtConfig({
 		},
 		client: {
 			installPrompt: true,
-			// you can omit the next line if you don't want the install button
-			//   installPromptOptions: {
-			// 	buttonText: 'Install App'
-			//   }
 		},
 		devOptions: {
 			enabled: true,
@@ -222,21 +250,7 @@ export default defineNuxtConfig({
 
 	devtools: { enabled: true },
 
-	// debug: true,
-	// logLevel: 'verbose',
-
-	postcss: {
-		plugins: {
-			'postcss-import': {},
-			'tailwindcss/nesting': {},
-			tailwindcss: {},
-			autoprefixer: {},
-		},
-	},
-
 	build: {
 		transpile: ['@sendgrid/mail', 'swiper', 'gsap', '@vueuse/core', 'v-calendar', 'vue-chartjs'],
 	},
-
-	compatibilityDate: '2024-10-01',
 });

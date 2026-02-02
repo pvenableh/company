@@ -1,0 +1,254 @@
+// server/utils/directus.ts
+/**
+ * Directus Server Utilities
+ *
+ * Provides server-side Directus client instances:
+ * - getTypedDirectus(): Admin client with static token
+ * - getUserDirectus(event): User client with session token
+ * - getPublicDirectus(): Unauthenticated client
+ */
+
+import {
+  createDirectus,
+  rest,
+  authentication,
+  readMe,
+  refresh as directusRefreshToken,
+  login as directusLoginFn,
+  logout as directusLogoutFn,
+  type AuthenticationData,
+  type DirectusClient,
+  type RestClient,
+  type AuthenticationClient,
+} from "@directus/sdk";
+import type { H3Event } from "h3";
+
+// Type for authenticated client
+type DirectusAuthClient = DirectusClient<any> &
+  RestClient<any> &
+  AuthenticationClient<any>;
+
+/**
+ * Get admin Directus client with static token
+ * Use for server-side admin operations
+ */
+export function getTypedDirectus(): DirectusAuthClient {
+  const config = useRuntimeConfig();
+  const directusUrl = config.directus?.url || config.public.directusUrl;
+  const staticToken = config.directus?.staticToken;
+
+  if (!directusUrl) {
+    throw new Error("DIRECTUS_URL not configured");
+  }
+
+  const client = createDirectus(directusUrl)
+    .with(rest())
+    .with(authentication("json"));
+
+  if (staticToken) {
+    client.setToken(staticToken);
+  }
+
+  return client;
+}
+
+/**
+ * Get user-authenticated Directus client
+ * Uses session tokens with automatic refresh
+ */
+export async function getUserDirectus(
+  event: H3Event
+): Promise<DirectusAuthClient> {
+  const config = useRuntimeConfig();
+  const directusUrl = config.directus?.url || config.public.directusUrl;
+
+  if (!directusUrl) {
+    throw new Error("DIRECTUS_URL not configured");
+  }
+
+  const client = createDirectus(directusUrl)
+    .with(rest())
+    .with(authentication("json"));
+
+  // Get tokens from session
+  const accessToken = await getSessionAccessToken(event);
+  const refreshToken = await getSessionRefreshToken(event);
+
+  if (!accessToken && !refreshToken) {
+    throw createError({
+      statusCode: 401,
+      message: "Not authenticated",
+    });
+  }
+
+  // Check if token needs refresh (within 60 seconds of expiry)
+  const isExpired = await isSessionExpired(event, 60);
+
+  if (isExpired && refreshToken) {
+    try {
+      // Refresh tokens
+      const result = await client.request(directusRefreshToken("json", refreshToken));
+
+      if (result?.access_token && result?.refresh_token) {
+        // Update session with new tokens
+        await updateSessionTokens(event, {
+          access_token: result.access_token,
+          refresh_token: result.refresh_token,
+          expires: result.expires ?? 900000,
+        });
+
+        client.setToken(result.access_token);
+      }
+    } catch (error) {
+      // Clear session on refresh failure
+      await clearUserSession(event);
+      throw createError({
+        statusCode: 401,
+        message: "Session expired",
+      });
+    }
+  } else if (accessToken) {
+    client.setToken(accessToken);
+  }
+
+  return client;
+}
+
+/**
+ * Get public (unauthenticated) Directus client
+ */
+export function getPublicDirectus(): DirectusAuthClient {
+  const config = useRuntimeConfig();
+  const directusUrl = config.directus?.url || config.public.directusUrl;
+
+  if (!directusUrl) {
+    throw new Error("DIRECTUS_URL not configured");
+  }
+
+  return createDirectus(directusUrl).with(rest()).with(authentication("json"));
+}
+
+/**
+ * Login to Directus and return auth data
+ */
+export async function directusLogin(
+  email: string,
+  password: string
+): Promise<AuthenticationData> {
+  const client = getPublicDirectus();
+
+  const result = await client.request(
+    directusLoginFn(email, password, { mode: "json" })
+  );
+
+  if (!result?.access_token || !result?.refresh_token) {
+    throw createError({
+      statusCode: 401,
+      message: "Invalid credentials",
+    });
+  }
+
+  return result;
+}
+
+/**
+ * Refresh Directus tokens
+ */
+export async function directusRefresh(
+  refreshToken: string
+): Promise<AuthenticationData> {
+  const client = getPublicDirectus();
+
+  const result = await client.request(
+    directusRefreshToken("json", refreshToken)
+  );
+
+  if (!result?.access_token || !result?.refresh_token) {
+    throw createError({
+      statusCode: 401,
+      message: "Token refresh failed",
+    });
+  }
+
+  return result;
+}
+
+/**
+ * Logout from Directus
+ */
+export async function directusLogout(refreshToken: string): Promise<void> {
+  try {
+    const client = getPublicDirectus();
+    await client.request(directusLogoutFn(refreshToken, "json"));
+  } catch (error) {
+    // Ignore logout errors (token might already be invalid)
+    console.warn("Directus logout error (ignored):", error);
+  }
+}
+
+/**
+ * Get current user from Directus
+ */
+export async function directusGetMe(event: H3Event) {
+  const client = await getUserDirectus(event);
+
+  return await client.request(
+    readMe({
+      fields: [
+        "*",
+        "role.id",
+        "role.name",
+        "role.admin_access",
+        // Include your organization fields
+        "organizations.organizations_id.id",
+        "organizations.organizations_id.name",
+        "organizations.organizations_id.logo",
+        "organizations.organizations_id.icon",
+        "organizations.organizations_id.tickets",
+        "organizations.organizations_id.projects",
+      ],
+    })
+  );
+}
+
+/**
+ * Helper to make authenticated requests with auto-retry on 401
+ */
+export async function withAuthRetry<T>(
+  event: H3Event,
+  requestFn: (client: DirectusAuthClient) => Promise<T>
+): Promise<T> {
+  try {
+    const client = await getUserDirectus(event);
+    return await requestFn(client);
+  } catch (error: any) {
+    // If 401 and we have a refresh token, try refresh and retry
+    if (error?.response?.status === 401 || error?.statusCode === 401) {
+      const refreshToken = await getSessionRefreshToken(event);
+
+      if (refreshToken) {
+        try {
+          const result = await directusRefresh(refreshToken);
+
+          await updateSessionTokens(event, {
+            access_token: result.access_token!,
+            refresh_token: result.refresh_token!,
+            expires: result.expires ?? 900000,
+          });
+
+          // Retry with new token
+          const client = await getUserDirectus(event);
+          return await requestFn(client);
+        } catch (refreshError) {
+          await clearUserSession(event);
+          throw createError({
+            statusCode: 401,
+            message: "Session expired",
+          });
+        }
+      }
+    }
+
+    throw error;
+  }
+}

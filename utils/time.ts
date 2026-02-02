@@ -1,5 +1,3 @@
-import { format } from '@formkit/tempo';
-
 const months: string[] = [
 	'January',
 	'February',
@@ -32,6 +30,51 @@ const units: Record<string, number> = {
 };
 
 const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+
+function format(
+	date: Date | string | number,
+	formatOrOptions: string | Intl.DateTimeFormatOptions = 'medium',
+	locale: string = 'en-US',
+): string {
+	const d = date instanceof Date ? date : new Date(date);
+
+	if (isNaN(d.getTime())) {
+		return 'Invalid Date';
+	}
+
+	const presets: Record<string, Intl.DateTimeFormatOptions> = {
+		short: { dateStyle: 'short' },
+		medium: { dateStyle: 'medium' },
+		long: { dateStyle: 'long' },
+		full: { dateStyle: 'full' },
+		time: { timeStyle: 'short' },
+		datetime: { dateStyle: 'medium', timeStyle: 'short' },
+	};
+
+	if (typeof formatOrOptions === 'string' && formatOrOptions in presets) {
+		return new Intl.DateTimeFormat(locale, presets[formatOrOptions]).format(d);
+	}
+
+	if (typeof formatOrOptions === 'string') {
+		// Handle custom format strings like 'YYYY-MM-DD'
+		const pad = (n: number) => n.toString().padStart(2, '0');
+		const tokens: Record<string, string> = {
+			YYYY: d.getFullYear().toString(),
+			MM: pad(d.getMonth() + 1),
+			DD: pad(d.getDate()),
+			HH: pad(d.getHours()),
+			mm: pad(d.getMinutes()),
+			ss: pad(d.getSeconds()),
+		};
+		let result = formatOrOptions;
+		for (const [token, value] of Object.entries(tokens)) {
+			result = result.replace(token, value);
+		}
+		return result;
+	}
+
+	return new Intl.DateTimeFormat(locale, formatOrOptions).format(d);
+}
 
 function getRelativeTime(d1: Date | string, d2: Date = new Date()): string {
 	if (!(d1 instanceof Date)) d1 = new Date(d1);

@@ -1,215 +1,235 @@
 // composables/useDirectusFiles.ts
-import { useDirectusClient } from './useDirectusClient';
-import {
-	uploadFiles as sdkUploadFiles,
-	importFile,
-	readFile,
-	readFiles,
-	updateFile,
-	updateFiles,
-	deleteFile,
-	deleteFiles,
-} from '@directus/sdk';
+/**
+ * useDirectusFiles - File operations composable
+ *
+ * Handles file uploads, downloads, updates, and deletions
+ * using native Directus SDK methods
+ *
+ * Usage:
+ * const { list, get, upload, update, remove, getUrl } = useDirectusFiles()
+ */
 
-export function useDirectusFiles() {
-	const { client } = useDirectusClient();
+export const useDirectusFiles = () => {
+  const config = useRuntimeConfig();
+  const { loggedIn } = useUserSession();
 
-	// Define TypeScript interfaces
-	interface FileProperty {
-		[key: string]: string | number | boolean;
-	}
+  /**
+   * Get file URL with optional transformations
+   */
+  const getUrl = (
+    fileId: string,
+    options?: {
+      width?: number;
+      height?: number;
+      fit?: "cover" | "contain" | "inside" | "outside";
+      quality?: number;
+      format?: "jpg" | "png" | "webp" | "tiff" | "avif";
+      key?: string;
+    }
+  ) => {
+    if (!fileId) return null;
 
-	interface UploadOptions {
-		folder?: string;
-		title?: string;
-		fileProperties?: FileProperty | FileProperty[];
-		[key: string]: any;
-	}
+    const baseUrl = `${config.public.directus.url}/assets/${fileId}`;
 
-	// Upload files directly
-	const uploadFilesFn = async (files: File | File[], options: UploadOptions = {}) => {
-		try {
-			// Create FormData for file uploads
-			const formData = new FormData();
+    if (!options) return baseUrl;
 
-			// If files is an array, handle multiple files
-			if (Array.isArray(files)) {
-				files.forEach((file, index) => {
-					// Add file-specific properties if provided
-					if (options.fileProperties && Array.isArray(options.fileProperties) && options.fileProperties[index]) {
-						const fileProps = options.fileProperties[index];
-						Object.entries(fileProps).forEach(([key, value]) => {
-							formData.append(`file_${index + 1}_${key}`, value as string);
-						});
-					}
-					formData.append('file', file);
-				});
-			} else {
-				// Single file
-				// Add file properties if provided
-				if (options.fileProperties && !Array.isArray(options.fileProperties)) {
-					Object.entries(options.fileProperties).forEach(([key, value]) => {
-						formData.append(`file_${key}`, value as string);
-					});
-				}
-				formData.append('file', files);
-			}
+    const params = new URLSearchParams();
 
-			// Add folder if specified
-			if (options.folder) {
-				formData.append('folder', options.folder);
-			}
+    if (options.key) {
+      params.append("key", options.key);
+      return `${baseUrl}?${params.toString()}`;
+    }
 
-			// Add title if specified (global title)
-			if (options.title) {
-				formData.append('title', options.title);
-			}
+    if (options.width) params.append("width", options.width.toString());
+    if (options.height) params.append("height", options.height.toString());
+    if (options.fit) params.append("fit", options.fit);
+    if (options.quality) params.append("quality", options.quality.toString());
+    if (options.format) params.append("format", options.format);
 
-			// Handle other global metadata options
-			Object.entries(options).forEach(([key, value]) => {
-				if (!['folder', 'title', 'fileProperties'].includes(key)) {
-					formData.append(key, value);
-				}
-			});
+    return `${baseUrl}?${params.toString()}`;
+  };
 
-			// Use the SDK's uploadFiles function
-			return await client.value.request(sdkUploadFiles(formData));
-		} catch (error) {
-			console.error('Error uploading files:', error);
-			throw error;
-		}
-	};
+  /**
+   * Get optimized image URL that preserves transparency
+   */
+  const getOptimizedUrl = (
+    fileId: string,
+    size: "xs" | "sm" | "md" | "lg" | "xl" | number = "md",
+    options?: {
+      format?: "webp" | "png" | "avif";
+      quality?: number;
+      fit?: "inside" | "cover";
+    }
+  ) => {
+    if (!fileId) return null;
 
-	interface ImportFileData {
-		url: string;
-		data?: {
-			title?: string;
-			folder?: string;
-			[key: string]: any;
-		};
-	}
+    const sizeMap = { xs: 32, sm: 64, md: 128, lg: 256, xl: 512 };
+    const width = typeof size === "number" ? size : sizeMap[size];
 
-	// Import file from URL
-	const importFileFn = async (importData: ImportFileData) => {
-		try {
-			return await client.value.request(importFile(importData as any));
-		} catch (error) {
-			console.error('Error importing file:', error);
-			throw error;
-		}
-	};
+    return getUrl(fileId, {
+      width,
+      fit: options?.fit ?? "inside",
+      format: options?.format ?? "webp",
+      quality: options?.quality ?? 80,
+    });
+  };
 
-	// Read a single file
-	const readFileFn = async (id: string, query: Record<string, any> = {}) => {
-		try {
-			return await client.value.request(readFile(id, query));
-		} catch (error) {
-			console.error('Error reading file:', error);
-			throw error;
-		}
-	};
+  /**
+   * List files with optional filtering
+   */
+  const list = async (query?: {
+    filter?: Record<string, any>;
+    fields?: string[];
+    sort?: string[];
+    limit?: number;
+    search?: string;
+  }) => {
+    if (!loggedIn.value) {
+      throw new Error("Authentication required");
+    }
 
-	// Read a single file asynchronously
-	const readAsyncFileFn = async (id: string, query: Record<string, any> = {}) => {
-		try {
-			return await client.value.request(readFile(id, query));
-		} catch (error) {
-			console.error('Error reading async file:', error);
-			throw error;
-		}
-	};
+    return await $fetch("/api/directus/files", {
+      method: "POST",
+      body: {
+        operation: "list",
+        query,
+      },
+    });
+  };
 
-	// Read multiple files
-	const readFilesFn = async (query: Record<string, any> = {}) => {
-		try {
-			return await client.value.request(readFiles(query));
-		} catch (error) {
-			console.error('Error reading files:', error);
-			throw error;
-		}
-	};
+  /**
+   * Get single file metadata
+   */
+  const get = async (fileId: string, fields?: string[]) => {
+    if (!loggedIn.value) {
+      throw new Error("Authentication required");
+    }
 
-	// Read multiple files asynchronously
-	const readAsyncFilesFn = async (query: Record<string, any> = {}) => {
-		try {
-			return await client.value.request(readFiles(query));
-		} catch (error) {
-			console.error('Error reading async files:', error);
-			throw error;
-		}
-	};
+    return await $fetch("/api/directus/files", {
+      method: "POST",
+      body: {
+        operation: "get",
+        id: fileId,
+        query: { fields },
+      },
+    });
+  };
 
-	interface FileUpdateData {
-		title?: string;
-		description?: string;
-		folder?: string;
-		tags?: string[];
-		[key: string]: any;
-	}
+  /**
+   * Upload a file
+   */
+  const upload = async (
+    file: File,
+    metadata?: {
+      title?: string;
+      description?: string;
+      folder?: string | { id: string };
+      tags?: string[];
+    }
+  ) => {
+    if (!loggedIn.value) {
+      throw new Error("Authentication required");
+    }
 
-	// Update a single file
-	const updateFileFn = async (id: string, data: FileUpdateData) => {
-		try {
-			return await client.value.request(updateFile(id, data));
-		} catch (error) {
-			console.error('Error updating file:', error);
-			throw error;
-		}
-	};
+    const formData = new FormData();
+    formData.append("file", file);
 
-	interface FilesBulkUpdateData {
-		keys: string[];
-		data: FileUpdateData;
-	}
+    if (metadata) {
+      Object.entries(metadata).forEach(([key, value]) => {
+        if (value === undefined || value === null) return;
 
-	// Update multiple files
-	const updateFilesFn = async (ids: string[] | Record<string, any>, data: FilesBulkUpdateData) => {
-		try {
-			if (Array.isArray(ids)) {
-				return await client.value.request(updateFiles(ids, data as any));
-			} else {
-				throw new Error('Invalid argument for updateFiles');
-			}
-		} catch (error) {
-			console.error('Error updating files:', error);
-			throw error;
-		}
-	};
+        if (key === "folder" && typeof value === "object" && "id" in value) {
+          formData.append(key, (value as { id: string }).id);
+        } else if (Array.isArray(value)) {
+          formData.append(key, JSON.stringify(value));
+        } else {
+          formData.append(key, String(value));
+        }
+      });
+    }
 
-	// Delete a single file
-	const deleteFileFn = async (id: string) => {
-		try {
-			return await client.value.request(deleteFile(id));
-		} catch (error) {
-			console.error('Error deleting file:', error);
-			throw error;
-		}
-	};
+    return await $fetch("/api/directus/files/upload", {
+      method: "POST",
+      body: formData,
+    });
+  };
 
-	// Delete multiple files
-	const deleteFilesFn = async (ids: string[] | { filter: Record<string, any> }) => {
-		try {
-			if (Array.isArray(ids)) {
-				return await client.value.request(deleteFiles(ids));
-			} else {
-				throw new Error('Invalid argument for deleteFiles');
-			}
-		} catch (error) {
-			console.error('Error deleting files:', error);
-			throw error;
-		}
-	};
+  /**
+   * Update file metadata
+   */
+  const update = async (
+    fileId: string,
+    updates: {
+      title?: string;
+      description?: string;
+      folder?: string;
+      tags?: string[];
+    }
+  ) => {
+    if (!loggedIn.value) {
+      throw new Error("Authentication required");
+    }
 
-	return {
-		uploadFiles: uploadFilesFn,
-		importFile: importFileFn,
-		readFile: readFileFn,
-		readAsyncFile: readAsyncFileFn,
-		readFiles: readFilesFn,
-		readAsyncFiles: readAsyncFilesFn,
-		updateFile: updateFileFn,
-		updateFiles: updateFilesFn,
-		deleteFile: deleteFileFn,
-		deleteFiles: deleteFilesFn,
-	};
-}
+    return await $fetch("/api/directus/files", {
+      method: "POST",
+      body: {
+        operation: "update",
+        id: fileId,
+        data: updates,
+      },
+    });
+  };
+
+  /**
+   * Delete file
+   */
+  const remove = async (fileId: string | string[]) => {
+    if (!loggedIn.value) {
+      throw new Error("Authentication required");
+    }
+
+    await $fetch("/api/directus/files", {
+      method: "POST",
+      body: {
+        operation: "delete",
+        id: fileId,
+      },
+    });
+
+    return true;
+  };
+
+  /**
+   * List files by folder
+   */
+  const listByFolder = async (
+    folderId: string | null,
+    query?: {
+      fields?: string[];
+      sort?: string[];
+      limit?: number;
+      search?: string;
+    }
+  ) => {
+    const filter = folderId
+      ? { folder: { _eq: folderId } }
+      : { folder: { _null: true } };
+
+    return await list({
+      filter,
+      ...query,
+    });
+  };
+
+  return {
+    list,
+    get,
+    upload,
+    update,
+    remove,
+    delete: remove,
+    getUrl,
+    getOptimizedUrl,
+    listByFolder,
+  };
+};
