@@ -1,6 +1,10 @@
 <script setup>
-import { useForm } from 'vee-validate';
+import { useForm, useField } from 'vee-validate';
 import * as yup from 'yup';
+import { Button } from '@/components/ui/button';
+import { Field, FieldError, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { CheckCircle, Loader2 } from 'lucide-vue-next';
 
 const { passwordRequest } = useAuthActions();
 const toast = useToast();
@@ -11,12 +15,14 @@ const schema = yup.object({
 	email: yup.string().required('Email is required').email('Must be a valid email'),
 });
 
-const { handleSubmit, resetForm, errors, values } = useForm({
+const { handleSubmit, resetForm } = useForm({
 	validationSchema: schema,
 	initialValues: {
 		email: '',
 	},
 });
+
+const { value: emailValue, errorMessage: emailErrorMessage } = useField('email');
 
 const onSubmit = handleSubmit(async (formValues) => {
 	loading.value = true;
@@ -41,6 +47,7 @@ const onSubmit = handleSubmit(async (formValues) => {
 
 const resetFormState = () => {
 	resetSent.value = false;
+	resetForm();
 };
 </script>
 
@@ -52,30 +59,35 @@ const resetFormState = () => {
 				Enter your email address below and we'll send you a link to reset your password.
 			</p>
 
-			<form @submit.prevent="onSubmit" class="space-y-4">
-				<UFormGroup label="Email Address" :error="errors.email">
-					<UInput
-						v-model="values.email"
+			<form class="space-y-4" @submit.prevent="onSubmit">
+				<Field>
+					<FieldLabel for="reset-email">Email Address</FieldLabel>
+					<Input
+						id="reset-email"
+						v-model="emailValue"
 						type="email"
 						placeholder="name@example.com"
 						autocomplete="email"
-						icon="i-heroicons-envelope"
 					/>
-				</UFormGroup>
+					<FieldError v-if="emailErrorMessage" :errors="[emailErrorMessage]" />
+				</Field>
 
-				<UButton type="submit" :loading="loading" block label="Send Reset Link" />
+				<Button type="submit" class="w-full" :disabled="loading">
+					<Loader2 v-if="loading" class="mr-2 size-4 animate-spin" />
+					{{ loading ? 'Sending...' : 'Send Reset Link' }}
+				</Button>
 			</form>
 		</div>
 
 		<div v-else class="text-center py-6">
-			<UIcon name="i-heroicons-check-circle" class="text-4xl text-green-500 mb-4" />
+			<CheckCircle class="mx-auto size-10 text-green-500 mb-4" />
 			<h3 class="text-lg font-medium mb-2">Check Your Email</h3>
 			<p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
 				We've sent a password reset link to
-				<strong>{{ values.email }}</strong>
+				<strong>{{ emailValue }}</strong>
 				. Please check your inbox and follow the instructions.
 			</p>
-			<UButton @click="resetFormState" variant="ghost" label="Try Another Email" />
+			<Button variant="ghost" @click="resetFormState">Try Another Email</Button>
 		</div>
 	</div>
 </template>

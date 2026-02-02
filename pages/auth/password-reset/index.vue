@@ -3,8 +3,11 @@ import { jwtDecode } from 'jwt-decode';
 import { useForm, useField } from 'vee-validate';
 import * as yup from 'yup';
 import { openScreen, closeScreen } from '~/composables/useScreen';
+import { Button } from '@/components/ui/button';
+import { Field, FieldError, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { Eye, EyeOff } from 'lucide-vue-next';
 
-// Replace useDirectusAuth with our new composable
 const { passwordReset } = useAuthActions();
 const route = useRoute();
 
@@ -29,7 +32,6 @@ const { handleSubmit } = useForm({
 	validationSchema: schema,
 });
 
-// Use useField for password
 const { value: password, errorMessage } = useField('password', schema.fields.password);
 
 onMounted(() => {
@@ -80,34 +82,29 @@ const togglePassword = () => {
 				<h3>Reset password for {{ decoded.email }}.</h3>
 				<h5 class="uppercase italic text-xs font-bold mt-2 mb-6">Link expires in {{ getRelativeTime(expiredDate) }}</h5>
 				<form @submit.prevent="onSubmit">
-					<UFormGroup label="Password" required :error="errorMessage">
+					<Field>
+						<FieldLabel for="reset-password">Password <span class="text-destructive">*</span></FieldLabel>
 						<div class="relative">
-							<UInput
+							<Input
+								id="reset-password"
 								v-model="password"
 								name="password"
 								:type="showPassword ? 'text' : 'password'"
 								placeholder="Enter new password"
-								class=""
-								:ui="{
-									icon: { trailing: { pointer: 'cursor-pointer' } },
-								}"
+								class="pr-10"
+							/>
+							<button
+								type="button"
+								class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+								@click="togglePassword"
 							>
-								<template #trailing>
-									<UButton
-										:icon="showPassword ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'"
-										color="gray"
-										variant="ghost"
-										@click="togglePassword"
-										:padded="false"
-									/>
-								</template>
-							</UInput>
+								<EyeOff v-if="showPassword" class="size-4" />
+								<Eye v-else class="size-4" />
+							</button>
 						</div>
-						<template #error>
-							<p class="text-xs text-red-500 text-right uppercase font-bold">{{ errorMessage }}</p>
-						</template>
-					</UFormGroup>
-					<UButton type="submit" class="w-full my-6 text-center" label="Reset Password" />
+						<FieldError v-if="errorMessage" :errors="[errorMessage]" />
+					</Field>
+					<Button type="submit" class="w-full my-6">Reset Password</Button>
 				</form>
 			</div>
 

@@ -12,67 +12,64 @@
 		}"
 		class="w-full"
 	>
-		<UAlert
+		<Alert
 			v-if="login_error"
-			type="error"
+			variant="destructive"
 			class="my-4"
-			:description="login_error"
-			color="red"
-			variant="subtle"
-			icon="i-heroicons-exclamation-triangle"
 		>
-			Error: {{ login_error }}
-		</UAlert>
+			<AlertTriangle class="size-4" />
+			<AlertDescription>{{ login_error }}</AlertDescription>
+		</Alert>
 
-		<UForm :validate="validate" :state="state" class="grid gap-4" @submit="attemptLogin">
-			<UFormGroup label="Email" name="email">
-				<UInput
+		<form class="grid gap-4" @submit.prevent="attemptLogin">
+			<Field>
+				<FieldLabel for="login-email">Email</FieldLabel>
+				<Input
+					id="login-email"
 					v-model="state.email"
 					name="email"
-					label="Email"
 					type="email"
-					size="lg"
-					:loading="loading"
-					icon="i-heroicons-envelope"
 					placeholder="name@domain.com"
 					@input="emailTouched = true"
 				/>
-				<template #error="{ error }">
-					<span
-						class="uppercase tracking-wide text-xs"
-						:class="[error ? 'text-red-500 dark:text-red-400' : 'text-primary-500 dark:text-primary-400']"
-					>
-						{{ error ? error : emailTouched && !error ? 'Your email is valid' : '' }}
-					</span>
-				</template>
-			</UFormGroup>
-			<UFormGroup label="Password" required>
-				<UInput
+				<FieldError v-if="emailError" :errors="[emailError]" />
+				<FieldDescription
+					v-else-if="emailTouched && !emailError && state.email"
+					class="text-primary text-xs uppercase tracking-wide"
+				>
+					Your email is valid
+				</FieldDescription>
+			</Field>
+
+			<Field>
+				<FieldLabel for="login-password">Password <span class="text-destructive">*</span></FieldLabel>
+				<Input
+					id="login-password"
 					v-model="state.password"
 					type="password"
-					size="lg"
-					:loading="loading"
-					icon="i-heroicons-lock-closed"
 					name="password"
-					label="Password"
 					placeholder="********"
 				/>
-			</UFormGroup>
-			<UButton
+			</Field>
+
+			<Button
 				type="submit"
-				:loading="loading"
-				:disabled="!state.email"
-				size="lg"
-				label="Sign In"
-				trailing-icon="i-heroicons-arrow-right"
-				block
-			/>
-		</UForm>
+				class="w-full"
+				:disabled="loading || !state.email"
+			>
+				<Loader2 v-if="loading" class="mr-2 size-4 animate-spin" />
+				{{ loading ? 'Signing in...' : 'Sign In' }}
+			</Button>
+		</form>
 	</div>
 </template>
 
 <script setup lang="ts">
-import type { FormError } from '#ui/types';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Field, FieldDescription, FieldError, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { AlertTriangle, Loader2 } from 'lucide-vue-next';
 
 interface LoginState {
 	email: string;
@@ -92,11 +89,13 @@ interface LoginError {
 		}>;
 	};
 }
+
 const { signIn } = useEnhancedAuth();
 const route = useRoute();
 const loading = ref<boolean>(false);
 const login_error = ref<string | null>(null);
 const emailTouched = ref<boolean>(false);
+const emailError = ref<string | null>(null);
 const config = useRuntimeConfig();
 
 const state = reactive<LoginState>({
@@ -104,63 +103,66 @@ const state = reactive<LoginState>({
 	password: '',
 });
 
-const validate = async (state: LoginState): Promise<FormError[]> => {
-	const errors: FormError[] = [];
+async function validateEmail(): Promise<boolean> {
 	const regex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i;
+	emailError.value = null;
 
 	if (!state.email) {
-		errors.push({ path: 'email', message: 'Required' });
+		emailError.value = 'Required';
+		return false;
 	}
 
 	if (!regex.test(state.email)) {
-		errors.push({ path: 'email', message: 'This must be a valid email' });
+		emailError.value = 'This must be a valid email';
+		return false;
 	}
 
-	if (state.email && regex.test(state.email)) {
-		try {
-			loading.value = true;
-			const response = await $fetch<ApiResponse>(
-				`${config.public.directusUrl}/users?filter[email][_eq]=${state.email}`,
-			);
+	try {
+		loading.value = true;
+		const response = await $fetch<ApiResponse>(
+			`${config.public.directusUrl}/users?filter[email][_eq]=${state.email}`,
+		);
 
-			if (response.data.length < 1) {
-				errors.push({ path: 'email', message: 'This email is not registered.' });
-			}
-
+		if (response.data.length < 1) {
+			emailError.value = 'This email is not registered.';
 			loading.value = false;
-		} catch (error) {
-			errors.push({ path: 'email', message: 'Failed to validate email' });
-			loading.value = false;
+			return false;
 		}
-	}
 
-	return errors;
-};
+		loading.value = false;
+		return true;
+	} catch {
+		emailError.value = 'Failed to validate email';
+		loading.value = false;
+		return false;
+	}
+}
 
 async function attemptLogin(): Promise<void> {
 	loading.value = true;
 	login_error.value = null;
 
+	const valid = await validateEmail();
+	if (!valid) {
+		loading.value = false;
+		return;
+	}
+
 	try {
-		// Get redirect URL from query params or default to homepage
 		const redirectTo = route.query.redirect ? decodeURIComponent(route.query.redirect as string) : '/';
 
-		// Use signIn with redirect: true to let NextAuth handle the redirect automatically
 		const result = await signIn({
 			email: state.email,
 			password: state.password,
 			redirect: false,
 		});
 
-		// The code below will not execute if redirect is true
-		// Keeping as fallback in case redirect doesn't work
 		if (result?.error) {
 			login_error.value = result.error;
 			loading.value = false;
 			return;
 		}
 
-		// If we somehow get here despite redirect:true, try navigating manually
 		window.location.href = redirectTo;
 	} catch (err) {
 		const error = err as LoginError;
