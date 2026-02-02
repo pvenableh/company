@@ -5,14 +5,7 @@
 
 export default defineEventHandler(async (event) => {
   try {
-    const session = await getUserSession(event);
-
-    if (!session?.user) {
-      throw createError({
-        statusCode: 401,
-        message: "No active session",
-      });
-    }
+    const session = await requireUserSession(event);
 
     const refreshToken = getSessionRefreshToken(session);
     if (!refreshToken) {

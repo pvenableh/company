@@ -22,6 +22,16 @@ export default defineNuxtConfig({
 
 	runtimeConfig: {
 		// ============================================
+		// Session configuration for nuxt-auth-utils
+		// ============================================
+		session: {
+			maxAge: 60 * 60 * 24 * 7, // 1 week
+			cookie: {
+				sameSite: 'lax',
+			},
+		},
+
+		// ============================================
 		// Private keys (server-side only)
 		// ============================================
 

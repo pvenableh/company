@@ -8,6 +8,7 @@ import { uploadFiles } from "@directus/sdk";
 
 export default defineEventHandler(async (event) => {
   try {
+    await requireUserSession(event);
     const directus = await getUserDirectus(event);
     const formData = await readMultipartFormData(event);
 

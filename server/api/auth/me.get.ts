@@ -4,23 +4,9 @@
  */
 
 export default defineEventHandler(async (event) => {
-  try {
-    const session = await getUserSession(event);
+  const session = await requireUserSession(event);
 
-    if (!session?.user) {
-      throw createError({
-        statusCode: 401,
-        message: "Not authenticated",
-      });
-    }
-
-    return {
-      user: session.user,
-    };
-  } catch (error: any) {
-    throw createError({
-      statusCode: error.statusCode || 401,
-      message: error.message || "Authentication required",
-    });
-  }
+  return {
+    user: session.user,
+  };
 });
