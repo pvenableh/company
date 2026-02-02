@@ -426,8 +426,8 @@ const router = useRouter();
 const toast = useToast();
 const config = useRuntimeConfig();
 
-// Get session using sidebase/nuxt-auth (will be null for guests)
-const { data: session } = useAuth();
+// Get session using nuxt-auth-utils (will be null for guests)
+const { user: sessionUser } = useUserSession();
 
 // State
 const loading = ref(true);
@@ -500,7 +500,7 @@ let statusPollInterval = null;
 // Computed
 const roomName = computed(() => route.params.roomName);
 
-const currentUser = computed(() => session.value?.user || null);
+const currentUser = computed(() => sessionUser.value || null);
 
 const isHost = computed(() => {
 	return currentUser.value?.id && meeting.value?.host_user?.id === currentUser.value.id;

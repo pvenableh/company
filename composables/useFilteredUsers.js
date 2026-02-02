@@ -3,9 +3,9 @@
 export const useFilteredUsers = () => {
 	const { readUsers } = useDirectusUsers();
 	const { readItems } = useDirectusItems();
-	const { data, status } = useAuth();
+	const { user: sessionUser, loggedIn } = useUserSession();
 	const currentUser = computed(() => {
-		return status.value === 'authenticated' ? data?.value?.user ?? null : null;
+		return loggedIn.value ? sessionUser.value ?? null : null;
 	});
 	const { selectedOrg } = useOrganization();
 

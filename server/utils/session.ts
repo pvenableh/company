@@ -1,7 +1,9 @@
 // server/utils/session.ts
 // Session management utilities for nuxt-auth-utils
+// ALL tokens are stored in the `secure` field (server-only, never exposed to client)
 
 import type { H3Event } from "h3";
+import type { User, UserSession, SecureSessionData } from "#auth-utils";
 
 interface DirectusTokens {
   access_token: string;
@@ -9,34 +11,17 @@ interface DirectusTokens {
   expires: number;
 }
 
-interface UserSessionData {
-  user: {
-    id: string;
-    email: string | null;
-    first_name: string | null;
-    last_name: string | null;
-    avatar: string | null;
-    role: any;
-  };
-  secure?: {
-    directusAccessToken?: string;
-    directusRefreshToken?: string;
-  };
-  loggedInAt: number;
-  expiresAt?: number;
-}
-
 /**
- * Get access token from session
+ * Get access token from session (server-side only via secure field)
  */
-export function getSessionAccessToken(session: any): string | null {
+export function getSessionAccessToken(session: { secure?: SecureSessionData }): string | null {
   return session?.secure?.directusAccessToken || null;
 }
 
 /**
- * Get refresh token from session
+ * Get refresh token from session (server-side only via secure field)
  */
-export function getSessionRefreshToken(session: any): string | null {
+export function getSessionRefreshToken(session: { secure?: SecureSessionData }): string | null {
   return session?.secure?.directusRefreshToken || null;
 }
 
@@ -45,7 +30,7 @@ export function getSessionRefreshToken(session: any): string | null {
  */
 export async function updateSessionTokens(
   event: H3Event,
-  session: any,
+  session: UserSession & { user: User; secure?: SecureSessionData },
   tokens: DirectusTokens
 ): Promise<void> {
   const expiresAt = Date.now() + tokens.expires;
@@ -53,7 +38,6 @@ export async function updateSessionTokens(
   await setUserSession(event, {
     ...session,
     secure: {
-      ...session.secure,
       directusAccessToken: tokens.access_token,
       directusRefreshToken: tokens.refresh_token,
     },
@@ -66,7 +50,7 @@ export async function updateSessionTokens(
  */
 export async function createUserSession(
   event: H3Event,
-  user: UserSessionData["user"],
+  user: User,
   tokens: DirectusTokens
 ): Promise<void> {
   const expiresAt = Date.now() + tokens.expires;
@@ -85,7 +69,7 @@ export async function createUserSession(
 /**
  * Check if session is expired or about to expire
  */
-export function isSessionExpired(session: any, bufferMs: number = 60000): boolean {
+export function isSessionExpired(session: UserSession, bufferMs: number = 60000): boolean {
   const expiresAt = session?.expiresAt;
   if (!expiresAt) return false; // No expiration info, assume valid
   return Date.now() >= expiresAt - bufferMs;

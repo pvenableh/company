@@ -14,6 +14,7 @@ import {
 
 export default defineEventHandler(async (event) => {
   try {
+    await requireUserSession(event);
     const body = await readBody(event);
     const { operation, id, data, query } = body;
 

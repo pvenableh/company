@@ -22,6 +22,16 @@ export default defineNuxtConfig({
 
 	runtimeConfig: {
 		// ============================================
+		// Session configuration for nuxt-auth-utils
+		// ============================================
+		session: {
+			maxAge: 60 * 60 * 24 * 7, // 1 week
+			cookie: {
+				sameSite: 'lax',
+			},
+		},
+
+		// ============================================
 		// Private keys (server-side only)
 		// ============================================
 
@@ -50,9 +60,6 @@ export default defineNuxtConfig({
 
 		// Session password for nuxt-auth-utils (minimum 32 characters)
 		sessionPassword: process.env.NUXT_SESSION_PASSWORD,
-
-		// Auth secret (keeping for backwards compatibility during migration)
-		authSecret: process.env.NEXTAUTH_SECRET || 'sKG+LfHMxZVZv3aGnf70dxJ8+776LbJHDttKxF3znYw=',
 
 		// Twilio
 		twilioAccountSid: process.env.TWILIO_ACCOUNT_SID,

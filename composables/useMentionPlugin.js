@@ -12,9 +12,9 @@ export function useMentionPlugin(content) {
 	const isLoading = ref(false);
 	const mentionRange = ref(null);
 
-	const { data, status } = useAuth();
+	const { user: sessionUser, loggedIn } = useUserSession();
 	const currentUser = computed(() => {
-		return status.value === 'authenticated' ? data?.value?.user ?? null : null;
+		return loggedIn.value ? sessionUser.value ?? null : null;
 	});
 	const { readUsers } = useDirectusUsers();
 

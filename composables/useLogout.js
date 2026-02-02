@@ -1,13 +1,12 @@
 // composables/useLogout.js
 export const useLogout = () => {
-	const { signOut } = useAuth();
+	const { signOut } = useEnhancedAuth();
 	const router = useRouter();
 	const toast = useToast();
 
 	const logout = async () => {
 		try {
-			// Optional: show loading state or notification
-			await signOut({ redirect: false });
+			await signOut();
 
 			// Navigate to home page
 			router.push('/');

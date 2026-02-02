@@ -70,9 +70,10 @@ export async function getUserDirectus(
     .with(rest())
     .with(authentication("json"));
 
-  // Get tokens from session
-  const accessToken = await getSessionAccessToken(event);
-  const refreshToken = await getSessionRefreshToken(event);
+  // Get session and extract tokens
+  const session = await getUserSession(event);
+  const accessToken = getSessionAccessToken(session);
+  const refreshToken = getSessionRefreshToken(session);
 
   if (!accessToken && !refreshToken) {
     throw createError({
@@ -82,7 +83,7 @@ export async function getUserDirectus(
   }
 
   // Check if token needs refresh (within 60 seconds of expiry)
-  const isExpired = await isSessionExpired(event, 60);
+  const isExpired = isSessionExpired(session, 60000);
 
   if (isExpired && refreshToken) {
     try {
@@ -91,7 +92,7 @@ export async function getUserDirectus(
 
       if (result?.access_token && result?.refresh_token) {
         // Update session with new tokens
-        await updateSessionTokens(event, {
+        await updateSessionTokens(event, session, {
           access_token: result.access_token,
           refresh_token: result.refresh_token,
           expires: result.expires ?? 900000,
@@ -187,9 +188,44 @@ export async function directusLogout(refreshToken: string): Promise<void> {
 }
 
 /**
- * Get current user from Directus
+ * Get current user from Directus using a raw access token
+ * Used during login before session exists
  */
-export async function directusGetMe(event: H3Event) {
+export async function directusGetMe(
+  accessToken: string,
+  fields?: string[]
+) {
+  const config = useRuntimeConfig();
+  const directusUrl = config.directus?.url || config.public.directusUrl;
+
+  const client = createDirectus(directusUrl)
+    .with(rest())
+    .with(authentication("json"));
+
+  client.setToken(accessToken);
+
+  return await client.request(
+    readMe({
+      fields: fields || [
+        "*",
+        "role.id",
+        "role.name",
+        "role.admin_access",
+        "organizations.organizations_id.id",
+        "organizations.organizations_id.name",
+        "organizations.organizations_id.logo",
+        "organizations.organizations_id.icon",
+        "organizations.organizations_id.tickets",
+        "organizations.organizations_id.projects",
+      ],
+    })
+  );
+}
+
+/**
+ * Get current user from Directus using session event
+ */
+export async function directusGetMeFromSession(event: H3Event) {
   const client = await getUserDirectus(event);
 
   return await client.request(
@@ -199,7 +235,6 @@ export async function directusGetMe(event: H3Event) {
         "role.id",
         "role.name",
         "role.admin_access",
-        // Include your organization fields
         "organizations.organizations_id.id",
         "organizations.organizations_id.name",
         "organizations.organizations_id.logo",
@@ -224,13 +259,14 @@ export async function withAuthRetry<T>(
   } catch (error: any) {
     // If 401 and we have a refresh token, try refresh and retry
     if (error?.response?.status === 401 || error?.statusCode === 401) {
-      const refreshToken = await getSessionRefreshToken(event);
+      const session = await getUserSession(event);
+      const refreshToken = getSessionRefreshToken(session);
 
       if (refreshToken) {
         try {
           const result = await directusRefresh(refreshToken);
 
-          await updateSessionTokens(event, {
+          await updateSessionTokens(event, session, {
             access_token: result.access_token!,
             refresh_token: result.refresh_token!,
             expires: result.expires ?? 900000,

@@ -10,6 +10,7 @@ import { readUser, updateUser, deleteUser } from "@directus/sdk";
 
 export default defineEventHandler(async (event) => {
   try {
+    await requireUserSession(event);
     const method = event.method;
     const userId = getRouterParam(event, "id");
 

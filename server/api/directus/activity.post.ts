@@ -8,6 +8,7 @@ import { readActivities, readActivity } from "@directus/sdk";
 
 export default defineEventHandler(async (event) => {
   try {
+    await requireUserSession(event);
     const body = await readBody(event);
     const { operation, id, query } = body;
 

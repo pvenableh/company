@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { signOut } = useAuth();
+const { signOut } = useEnhancedAuth();
 const route = useRoute();
 
 // Add logging to understand when and why this component is mounted
@@ -11,7 +11,7 @@ onMounted(async () => {
 	});
 
 	try {
-		await signOut({ redirect: true, callbackUrl: '/' });
+		await signOut();
 		console.log('Signout completed, redirecting to home');
 
 		// If the above doesn't redirect, force reload

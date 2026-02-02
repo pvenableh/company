@@ -396,7 +396,7 @@ export function useFileUpload() {
 		};
 	};
 
-	const uploadFilesWithProgress = async (formData, onProgress, authToken = null) => {
+	const uploadFilesWithProgress = async (formData, onProgress) => {
 		abortController.value = new AbortController();
 		const signal = abortController.value.signal;
 
@@ -437,11 +437,19 @@ export function useFileUpload() {
 				xhr.abort();
 			});
 
+			// Fetch token from server endpoint for file upload auth
+			let uploadToken = null;
+			try {
+				const tokenResponse = await $fetch('/api/websocket/token');
+				uploadToken = tokenResponse?.token;
+			} catch (e) {
+				console.warn('Could not fetch upload token:', e);
+			}
+
 			const uploadUrl = `${useRuntimeConfig().public.directusUrl}/files`;
 			xhr.open('POST', uploadUrl);
-			const token = authToken || localStorage.getItem('auth_token') || useRuntimeConfig().public.staticToken;
-			if (token) {
-				xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+			if (uploadToken) {
+				xhr.setRequestHeader('Authorization', `Bearer ${uploadToken}`);
 			}
 			xhr.send(formData);
 		});

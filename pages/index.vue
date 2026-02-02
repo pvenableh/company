@@ -1,7 +1,7 @@
 <script setup>
-const { data, status } = useAuth();
+const { user: sessionUser, loggedIn } = useUserSession();
 const user = computed(() => {
-	return status.value === 'authenticated' ? data.value.user : null;
+	return loggedIn.value ? sessionUser.value ?? null : null;
 });
 </script>
 <template>

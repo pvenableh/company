@@ -9,6 +9,7 @@ import { readMe, updateMe } from "@directus/sdk";
 
 export default defineEventHandler(async (event) => {
   try {
+    await requireUserSession(event);
     const method = event.method;
     const directus = await getUserDirectus(event);
 

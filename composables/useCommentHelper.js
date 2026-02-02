@@ -5,9 +5,9 @@
  */
 export function useCommentHelper() {
 	const { createItem, updateItem, deleteItem } = useDirectusItems();
-	const { data, status } = useAuth();
+	const { user: sessionUser, loggedIn } = useUserSession();
 	const user = computed(() => {
-		return status.value === 'authenticated' ? data?.value?.user ?? null : null;
+		return loggedIn.value ? sessionUser.value ?? null : null;
 	});
 	const { notify } = useNotifications();
 

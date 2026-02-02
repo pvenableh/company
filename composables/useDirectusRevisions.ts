@@ -1,28 +1,21 @@
 // composables/useDirectusRevisions.ts
-import { useDirectusClient } from './useDirectusClient';
-import { readRevision as sdkReadRevision, readRevisions as sdkReadRevisions } from '@directus/sdk';
+// All operations go through server API routes - no client-side tokens
 
 export function useDirectusRevisions() {
-	const { client } = useDirectusClient();
-
 	// Read a single revision
 	const readRevision = async (id: string, query?: Record<string, any>) => {
-		try {
-			return await client.value.request(sdkReadRevision(id, query));
-		} catch (error) {
-			console.error(`Error reading revision ${id}:`, error);
-			throw error;
-		}
+		return await $fetch('/api/directus/revisions', {
+			method: 'POST',
+			body: { operation: 'get', id, query },
+		});
 	};
 
 	// Read multiple revisions
 	const readRevisions = async (query?: Record<string, any>) => {
-		try {
-			return await client.value.request(sdkReadRevisions(query));
-		} catch (error) {
-			console.error('Error reading revisions:', error);
-			throw error;
-		}
+		return await $fetch('/api/directus/revisions', {
+			method: 'POST',
+			body: { operation: 'list', query },
+		});
 	};
 
 	return {
