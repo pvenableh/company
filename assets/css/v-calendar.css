@@ -13,7 +13,7 @@
     --vc-gray-800: #1e293b;
     --vc-gray-900: #0f172a;
   
-    --vc-font-family: var(--font-body);
+    --vc-font-family: var(--legacy-font-body);
   
     --vc-font-normal: 400;
     --vc-font-medium: 500;

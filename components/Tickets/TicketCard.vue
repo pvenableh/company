@@ -195,7 +195,7 @@ if (props.ticket.category === 'Completed') {
 
 	&__category {
 		font-weight: bolder;
-		font-family: var(--font-bold);
+		font-family: var(--legacy-font-bold);
 
 		p {
 			background: var(--lightGrey);
@@ -239,7 +239,7 @@ if (props.ticket.category === 'Completed') {
 	&__due {
 		font-size: 12px;
 		font-weight: bolder;
-		font-family: var(--font-bold);
+		font-family: var(--legacy-font-bold);
 
 		.alert {
 			@apply text-red-500;
@@ -256,7 +256,7 @@ if (props.ticket.category === 'Completed') {
 		}
 		strong {
 			font-weight: 900;
-			font-family: var(--font-bold);
+			font-family: var(--legacy-font-bold);
 		}
 
 		ul,
