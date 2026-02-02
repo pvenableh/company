@@ -9,13 +9,9 @@
 						<UPopover class="w-full">
 							<UInput :model-value="formatDate(form.start_time)" readonly placeholder="Select date" class="w-full" />
 							<template #panel>
-								<VCalendar
-									:model-value="form.start_time"
-									@dayclick="handleDateSelect"
-									:attributes="calendarAttrs"
-									color="gray"
-									transparent
-									borderless
+								<Calendar
+									:model-value="calendarValue"
+									@update:model-value="handleCalendarSelect"
 								/>
 							</template>
 						</UPopover>
@@ -127,6 +123,8 @@
 
 <script setup>
 import { format, set, parseISO } from 'date-fns';
+import { CalendarDate } from '@internationalized/date';
+import { Calendar } from '~/components/ui/calendar';
 
 const props = defineProps({
 	appointment: {
@@ -202,12 +200,17 @@ watch(
 	},
 );
 
-const calendarAttrs = computed(() => [
-	{
-		highlight: true,
-		dates: form.value.start_time,
-	},
-]);
+const calendarValue = computed(() => {
+	const d = form.value.start_time;
+	if (!d) return undefined;
+	return new CalendarDate(d.getFullYear(), d.getMonth() + 1, d.getDate());
+});
+
+function handleCalendarSelect(val) {
+	if (!val) return;
+	const nativeDate = new Date(val.year, val.month - 1, val.day);
+	handleDateSelect({ date: nativeDate });
+}
 
 const availableUsers = computed(() => {
 	const currentAttendeeIds = form.value.attendees.map((a) => a.directus_users_id.id);
