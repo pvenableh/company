@@ -189,14 +189,14 @@
 	--color-sidebar-ring: hsl(var(--sidebar-ring));
 
 	/* Font families */
-	--font-family-body: 'Proxima Nova W01 Regular', 'Helvetica Neue', Helvetica, Roboto, Arial, sans-serif;
-	--font-family-sans: 'Proxima Nova W01 Light', 'Helvetica Neue', Helvetica, Roboto, Arial, sans-serif;
-	--font-family-display: 'Proxima Nova W01 Light', 'Helvetica Neue', Helvetica, Roboto, Arial, sans-serif;
-	--font-family-proxima-light: 'Proxima Nova W01 Light', 'Helvetica Neue', Helvetica, Roboto, Arial, sans-serif;
-	--font-family-proxima-regular: 'Proxima Nova W01 Regular', 'Helvetica Neue', Helvetica, Roboto, Arial, sans-serif;
-	--font-family-proxima-thin: 'Proxima Nova W01 Thin', 'Helvetica Neue', Helvetica, Roboto, Arial, sans-serif;
-	--font-family-bauer-bodoni: 'Bauer Bodoni Pro_1 W05 Roman', 'Times New Roman', Times, serif;
-	--font-family-signature: 'Gaegu', cursive;
+	--font-body: 'Proxima Nova W01 Regular', 'Helvetica Neue', Helvetica, Roboto, Arial, sans-serif;
+	--font-sans: 'Proxima Nova W01 Light', 'Helvetica Neue', Helvetica, Roboto, Arial, sans-serif;
+	--font-display: 'Proxima Nova W01 Light', 'Helvetica Neue', Helvetica, Roboto, Arial, sans-serif;
+	--font-proxima-light: 'Proxima Nova W01 Light', 'Helvetica Neue', Helvetica, Roboto, Arial, sans-serif;
+	--font-proxima-regular: 'Proxima Nova W01 Regular', 'Helvetica Neue', Helvetica, Roboto, Arial, sans-serif;
+	--font-proxima-thin: 'Proxima Nova W01 Thin', 'Helvetica Neue', Helvetica, Roboto, Arial, sans-serif;
+	--font-bauer-bodoni: 'Bauer Bodoni Pro_1 W05 Roman', 'Times New Roman', Times, serif;
+	--font-signature: 'Gaegu', cursive;
 
 	/* Border radius */
 	--radius-sm: calc(var(--radius) - 4px);
