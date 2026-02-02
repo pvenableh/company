@@ -112,11 +112,9 @@
 												icon="i-heroicons-calendar"
 											/>
 											<template #panel>
-												<VCalendar
-													:attributes="calendarAttrs"
-													is-expanded
-													v-model="selectedDate"
-													@dayclick="updateDueDate"
+												<Calendar
+													:model-value="calendarDateValue"
+													@update:model-value="handleCalendarSelect"
 												/>
 											</template>
 										</UPopover>
@@ -214,6 +212,9 @@
 </template>
 
 <script setup>
+import { CalendarDate } from '@internationalized/date';
+import { Calendar } from '~/components/ui/calendar';
+
 defineProps({
 	columns: {
 		type: Array,
@@ -324,13 +325,17 @@ const priorities = [
 	{ value: 'high', label: 'High' },
 ];
 
-const calendarAttrs = [
-	{
-		key: 'today',
-		dot: true,
-		dates: new Date(),
-	},
-];
+const calendarDateValue = computed(() => {
+	const d = selectedDate.value;
+	return new CalendarDate(d.getFullYear(), d.getMonth() + 1, d.getDate());
+});
+
+function handleCalendarSelect(val) {
+	if (!val) return;
+	const nativeDate = new Date(val.year, val.month - 1, val.day);
+	selectedDate.value = nativeDate;
+	updateDateTime();
+}
 
 // Helper function to format date display
 const formatDisplayDate = (date) => {
@@ -343,12 +348,6 @@ const formatDisplayDate = (date) => {
 		year: 'numeric',
 		timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 	});
-};
-
-// Update due date from calendar click
-const updateDueDate = (day) => {
-	selectedDate.value = day.date;
-	updateDateTime();
 };
 
 // Update due date and time when either changes

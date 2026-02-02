@@ -10,7 +10,7 @@
 					class="w-full"
 				/>
 				<template #panel>
-					<VCalendar :attributes="calendarAttrs" is-expanded v-model="localDate" @dayclick="updateDueDate" />
+					<Calendar :model-value="calendarDateValue" @update:model-value="handleCalendarSelect" />
 				</template>
 			</UPopover>
 		</UFormGroup>
@@ -28,6 +28,8 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue';
+import { CalendarDate } from '@internationalized/date';
+import { Calendar } from '~/components/ui/calendar';
 
 const props = defineProps({
 	modelValue: {
@@ -46,14 +48,17 @@ const emit = defineEmits(['update:modelValue']);
 const localDate = ref(props.modelValue ? new Date(props.modelValue) : new Date());
 const localTime = ref(props.modelValue ? props.modelValue.slice(11, 16) : '17:00');
 
-// Calendar attributes
-const calendarAttrs = [
-	{
-		key: 'today',
-		dot: true,
-		dates: new Date(),
-	},
-];
+const calendarDateValue = computed(() => {
+	const d = localDate.value;
+	return new CalendarDate(d.getFullYear(), d.getMonth() + 1, d.getDate());
+});
+
+function handleCalendarSelect(val) {
+	if (!val) return;
+	const nativeDate = new Date(val.year, val.month - 1, val.day);
+	localDate.value = nativeDate;
+	updateDateTime();
+}
 
 // Generate time options in 30-minute increments
 const timeOptions = Array.from({ length: 48 }, (_, i) => {
@@ -88,12 +93,6 @@ const formatDisplayDate = (date) => {
 const formattedDate = computed(() => {
 	return formatDisplayDate(localDate.value);
 });
-
-// Handle date update from calendar
-const updateDueDate = (day) => {
-	localDate.value = day.date;
-	updateDateTime();
-};
 
 // Update date and time together
 const updateDateTime = () => {

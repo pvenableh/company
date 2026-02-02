@@ -7,59 +7,94 @@
 	>
 		<div class="mt-12 w-full grid grid-cols-1 md:grid-cols-2 h-full max-w-[2000px] mx-auto">
 			<div class="max-h-[600px]">
-				<VCalendar
-					v-model="selectedDate"
-					@dayclick="dayClicked"
-					:attributes="calendarAttributes"
-					mode="month"
-					color="gray"
+				<CalendarRoot
+					v-model="calendarValue"
+					v-model:placeholder="calendarPlaceholder"
 					class="calendar-container"
-					expanded
-					transparent
-					borderless
+					v-slot="{ grid, weekDays, date }"
 				>
-					<template #day-content="{ day, attributes }">
-						<div class="day-content-wrapper h-full p-1" @click="dayClicked(day)" @dblclick="handleDayDoubleClick(day)">
-							<span class="w-4 text-center text-xs cursor-pointer hover:bg-gray-100 transition-all duration-100">
-								{{ day.day }}
-							</span>
-							<span
-								v-if="sortedAppointments(day).length > 0"
-								class="text-[8px] font-bold absolute top-0 right-0 uppercase text-gray-400 pr-2 pt-[6px] rounded-full"
-							>
-								{{ sortedAppointments(day).length }}
-								{{ sortedAppointments(day).length === 1 ? 'event' : 'events' }}
-							</span>
-							<div class="flex-grow overflow-y-auto relative">
-								<div
-									v-for="appointment in sortedAppointments(day)"
-									:key="appointment.id"
-									class="cursor-pointer appointment-title"
-									:class="[
-										getAppointmentClass(appointment),
-										{ 'appointment-selected': selectedAppointmentId === appointment.id },
-									]"
-									:style="{ marginBottom: '4px' }"
-									@click.stop="handleAppointmentClick(appointment)"
-									@dblclick.stop="handleAppointmentDoubleClick(appointment)"
-								>
-									<div class="flex items-center gap-1">
-										<!-- Video icon for video meetings -->
-										<UIcon
-											v-if="appointment.is_video"
-											name="i-heroicons-video-camera"
-											class="w-3 h-3 text-green-500 flex-shrink-0"
-										/>
-										<span>
-											<strong class="!font-bold">{{ getTime(appointment.start_time) }}</strong>
-											: {{ appointment.title }}
-										</span>
-									</div>
-								</div>
-							</div>
-						</div>
-					</template>
-				</VCalendar>
+					<CalendarHeader class="flex items-center justify-between px-2 pb-2">
+						<CalendarPrevButton />
+						<CalendarHeading class="uppercase text-gray-600 font-normal font-body tracking-wider text-[14px]" />
+						<CalendarNextButton />
+					</CalendarHeader>
+
+					<div class="w-full">
+						<CalendarGrid v-for="month in grid" :key="month.value.toString()" class="w-full border-collapse">
+							<CalendarGridHead>
+								<CalendarGridRow class="flex w-full border-t border-gray-100">
+									<CalendarHeadCell
+										v-for="day in weekDays"
+										:key="day"
+										class="flex-1 uppercase text-gray-600 font-normal font-body tracking-wider text-[10px] leading-[10px] py-3 text-center"
+									>
+										{{ day }}
+									</CalendarHeadCell>
+								</CalendarGridRow>
+							</CalendarGridHead>
+							<CalendarGridBody>
+								<CalendarGridRow v-for="(weekDates, index) in month.rows" :key="`weekDate-${index}`" class="flex w-full">
+									<CalendarCell
+										v-for="weekDate in weekDates"
+										:key="weekDate.toString()"
+										:date="weekDate"
+										class="relative flex-1 border-t border-gray-50 p-0"
+										:class="{ 'bg-gray-100': isToday(weekDate) }"
+									>
+										<div
+											class="day-content-wrapper h-full p-1"
+											@click="dayClickedFromCalendar(weekDate)"
+											@dblclick="handleDayDoubleClickFromCalendar(weekDate)"
+										>
+											<span
+												class="w-4 text-center text-xs cursor-pointer hover:bg-gray-100 transition-all duration-100"
+												:class="{
+													'font-bold text-primary': isSelected(weekDate),
+													'text-muted-foreground': isOutsideMonth(weekDate, month.value),
+												}"
+											>
+												{{ weekDate.day }}
+											</span>
+											<span
+												v-if="sortedAppointmentsForDate(weekDate).length > 0"
+												class="text-[8px] font-bold absolute top-0 right-0 uppercase text-gray-400 pr-2 pt-[6px] rounded-full"
+											>
+												{{ sortedAppointmentsForDate(weekDate).length }}
+												{{ sortedAppointmentsForDate(weekDate).length === 1 ? 'event' : 'events' }}
+											</span>
+											<div class="flex-grow overflow-y-auto relative">
+												<div
+													v-for="appointment in sortedAppointmentsForDate(weekDate)"
+													:key="appointment.id"
+													class="cursor-pointer appointment-title"
+													:class="[
+														getAppointmentClass(appointment),
+														{ 'appointment-selected': selectedAppointmentId === appointment.id },
+													]"
+													:style="{ marginBottom: '4px' }"
+													@click.stop="handleAppointmentClick(appointment)"
+													@dblclick.stop="handleAppointmentDoubleClick(appointment)"
+												>
+													<div class="flex items-center gap-1">
+														<UIcon
+															v-if="appointment.is_video"
+															name="i-heroicons-video-camera"
+															class="w-3 h-3 text-green-500 flex-shrink-0"
+														/>
+														<span>
+															<strong class="!font-bold">{{ getTime(appointment.start_time) }}</strong>
+															: {{ appointment.title }}
+														</span>
+													</div>
+												</div>
+											</div>
+										</div>
+									</CalendarCell>
+								</CalendarGridRow>
+							</CalendarGridBody>
+						</CalendarGrid>
+					</div>
+				</CalendarRoot>
 			</div>
 			<div class="mt-4 lg:mt-0 px-6 max-h-[600px]">
 				<div class="w-full flex items-end justify-end mb-4 gap-2">
@@ -261,6 +296,20 @@
 
 <script setup>
 import { format, parseISO, isEqual, startOfDay } from 'date-fns';
+import { CalendarDate, getLocalTimeZone, today } from '@internationalized/date';
+import { CalendarRoot } from 'reka-ui';
+import {
+	CalendarCell,
+	CalendarGrid,
+	CalendarGridBody,
+	CalendarGridHead,
+	CalendarGridRow,
+	CalendarHeadCell,
+	CalendarHeader,
+	CalendarHeading,
+	CalendarNextButton,
+	CalendarPrevButton,
+} from '~/components/ui/calendar';
 
 const { user } = useEnhancedAuth();
 const { deleteItem } = useDirectusItems();
@@ -275,6 +324,77 @@ const appointments = ref([]);
 const loading = ref(true);
 const error = ref(null);
 const creatingVideo = ref(false);
+
+// Bridge between native Date and @internationalized/date CalendarDate
+const calendarPlaceholder = ref(today(getLocalTimeZone()));
+
+const calendarValue = computed({
+	get() {
+		const d = selectedDate.value;
+		return new CalendarDate(d.getFullYear(), d.getMonth() + 1, d.getDate());
+	},
+	set(val) {
+		if (val) {
+			selectedDate.value = new Date(val.year, val.month - 1, val.day);
+		}
+	},
+});
+
+function dateValueToNative(dateValue) {
+	return new Date(dateValue.year, dateValue.month - 1, dateValue.day);
+}
+
+function isToday(dateValue) {
+	const t = today(getLocalTimeZone());
+	return dateValue.year === t.year && dateValue.month === t.month && dateValue.day === t.day;
+}
+
+function isSelected(dateValue) {
+	const d = selectedDate.value;
+	return dateValue.year === d.getFullYear() && dateValue.month === d.getMonth() + 1 && dateValue.day === d.getDate();
+}
+
+function isOutsideMonth(dateValue, monthValue) {
+	return dateValue.month !== monthValue.month;
+}
+
+function dayClickedFromCalendar(dateValue) {
+	selectedAppointmentId.value = null;
+	selectedDate.value = dateValueToNative(dateValue);
+}
+
+function handleDayDoubleClickFromCalendar(dateValue) {
+	selectedDate.value = dateValueToNative(dateValue);
+	openAppointmentModal();
+}
+
+const sortedAppointmentsForDate = (dateValue) => {
+	const nativeDate = dateValueToNative(dateValue);
+	const currentDayStart = nativeDate;
+	const currentDayEnd = new Date(nativeDate);
+	currentDayEnd.setHours(23, 59, 59, 999);
+
+	return appointments.value
+		.filter((appointment) => {
+			const start = new Date(appointment.start_time);
+			const end = new Date(appointment.end_time);
+			return (
+				(start >= currentDayStart && start <= currentDayEnd) ||
+				(end >= currentDayStart && end <= currentDayEnd) ||
+				(start <= currentDayStart && end >= currentDayEnd)
+			);
+		})
+		.map((appointment) => {
+			const start = new Date(appointment.start_time);
+			const end = new Date(appointment.end_time);
+			const durationInHours = (end - start) / (1000 * 60 * 60);
+			return {
+				...appointment,
+				duration: durationInHours,
+			};
+		})
+		.sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+};
 
 // Video meeting form
 const videoForm = reactive({
@@ -351,24 +471,8 @@ const filteredAppointments = computed(() => {
 	});
 });
 
-const calendarAttributes = computed(() => {
-	if (!appointments.value) return [];
-	return appointments.value.map((appointment) => ({
-		key: appointment.id,
-		dates: parseISO(appointment.start_time),
-		customData: appointment,
-	}));
-});
-
 function getTime(dateTime) {
 	return format(parseISO(dateTime), 'h:mm a');
-}
-
-function dayClicked(day) {
-	selectedAppointmentId.value = null;
-	if (day?.date) {
-		selectedDate.value = day.date;
-	}
 }
 
 function handleAppointmentClick(appointment) {
@@ -378,11 +482,6 @@ function handleAppointmentClick(appointment) {
 
 function handleAppointmentDoubleClick(appointment) {
 	editAppointment(appointment);
-}
-
-function handleDayDoubleClick(day) {
-	selectedDate.value = day.date;
-	openAppointmentModal();
 }
 
 async function handleKeyDown(event) {
@@ -402,33 +501,6 @@ function getAppointmentClass(appointment) {
 		'border-l-[5px] border-green-400 dark:border-green-600': appointment.is_video, // Green border for video meetings
 	};
 }
-
-const sortedAppointments = (day) => {
-	const currentDayStart = day.date;
-	const currentDayEnd = new Date(day.date);
-	currentDayEnd.setHours(23, 59, 59, 999);
-
-	return appointments.value
-		.filter((appointment) => {
-			const start = new Date(appointment.start_time);
-			const end = new Date(appointment.end_time);
-			return (
-				(start >= currentDayStart && start <= currentDayEnd) ||
-				(end >= currentDayStart && end <= currentDayEnd) ||
-				(start <= currentDayStart && end >= currentDayEnd)
-			);
-		})
-		.map((appointment) => {
-			const start = new Date(appointment.start_time);
-			const end = new Date(appointment.end_time);
-			const durationInHours = (end - start) / (1000 * 60 * 60);
-			return {
-				...appointment,
-				duration: durationInHours,
-			};
-		})
-		.sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
-};
 
 function editAppointment(appointment) {
 	selectedAppointment.value = appointment;
@@ -542,7 +614,7 @@ onUnmounted(() => {
 
 <style>
 .calendar-container {
-	@apply w-full overflow-hidden !font-body;
+	@apply w-full overflow-hidden font-body p-0;
 	height: calc(100vh - 12rem);
 
 	.appointment-title {
@@ -563,5 +635,18 @@ onUnmounted(() => {
 }
 .calendar-container:focus {
 	@apply outline-none ring-1 ring-primary-500;
+}
+
+.day-content-wrapper {
+	@apply flex flex-col h-full min-h-[5rem] max-h-[180px];
+}
+
+.day-content-wrapper > div {
+	scrollbar-width: none;
+	-ms-overflow-style: none;
+}
+
+.day-content-wrapper > div::-webkit-scrollbar {
+	display: none;
 }
 </style>

@@ -135,9 +135,6 @@ export default defineNuxtConfig({
 			},
 		],
 
-		// Calendar
-		'@samk-dev/nuxt-vcalendar',
-
 		// Analytics
 		'nuxt-gtag',
 
@@ -251,6 +248,6 @@ export default defineNuxtConfig({
 	devtools: { enabled: true },
 
 	build: {
-		transpile: ['@sendgrid/mail', 'swiper', 'gsap', '@vueuse/core', 'v-calendar', 'vue-chartjs'],
+		transpile: ['@sendgrid/mail', 'swiper', 'gsap', '@vueuse/core', 'vue-chartjs'],
 	},
 });
