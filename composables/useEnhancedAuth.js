@@ -6,7 +6,6 @@
  */
 export const useEnhancedAuth = () => {
 	const { status, data, signIn, signOut, getSession } = useAuth();
-	const config = useRuntimeConfig();
 
 	// Store the token refresh timer
 	const refreshTimer = ref(null);
