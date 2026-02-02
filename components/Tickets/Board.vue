@@ -1074,33 +1074,33 @@ watch(
 <style scoped>
 @reference "~/assets/css/tailwind.css";
 .tickets-board {
-	&__board {
+	.tickets-board__board {
 		@apply relative;
-		&-filters {
-			@apply relative max-w-[2000px];
+	}
+	.tickets-board__board-filters {
+		@apply relative max-w-[2000px];
+	}
+	.tickets-board__board-connection {
+		@apply max-w-[2000px];
+	}
+	.tickets-board__board-col {
+		@apply border-gray-50 border-r border-l shadow-inner;
+	}
+	.tickets-board__board-col-header {
+		@apply relative shadow-2xl py-5 px-4 backdrop-blur-lg mt-1 border-gray-200 border-b;
+		@media (min-width: 1600px) {
+			@apply px-8;
 		}
-		&-connection {
-			@apply max-w-[2000px];
+	}
+	.tickets-board__board-col-content {
+		@apply min-h-screen lg:h-svh h-full py-2 bg-gray-50/15 dark:bg-gray-800 overflow-y-auto px-2;
+		scrollbar-width: none;
+		-ms-overflow-style: none;
+		&::-webkit-scrollbar {
+			display: none;
 		}
-		&-col {
-			@apply border-gray-50 border-r border-l shadow-inner;
-			&-header {
-				@apply relative shadow-2xl py-5 px-4 backdrop-blur-lg mt-1 border-gray-200 border-b;
-				@media (min-width: 1600px) {
-					@apply px-8;
-				}
-			}
-			&-content {
-				@apply min-h-screen lg:h-svh h-full py-2 bg-gray-50/15 dark:bg-gray-800 overflow-y-auto px-2;
-				scrollbar-width: none;
-				-ms-overflow-style: none;
-				&::-webkit-scrollbar {
-					display: none;
-				}
-				@media (min-width: 1600px) {
-					@apply px-6;
-				}
-			}
+		@media (min-width: 1600px) {
+			@apply px-6;
 		}
 	}
 	.tickets-board__board::before {

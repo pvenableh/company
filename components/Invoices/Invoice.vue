@@ -92,14 +92,12 @@ const formatNumber = (value) => {
 		margin: 2px 0px;
 		line-height: 12px;
 	}
-	.line-item {
-		&__description {
-			p {
-				@apply mb-2;
-			}
-			p:last-child {
-				@apply mb-0;
-			}
+	.line-item__description {
+		p {
+			@apply mb-2;
+		}
+		p:last-child {
+			@apply mb-0;
 		}
 	}
 }

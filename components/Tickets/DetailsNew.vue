@@ -697,23 +697,21 @@ watch(
 
 <style>
 @reference "~/assets/css/tailwind.css";
-.ticket {
-	&__description {
-		@apply w-full text-wrap break-words;
-		a:link,
-		a:visited {
-			color: var(--cyan);
-			text-decoration: underline;
-			@apply mr-0.5;
-		}
-		a:hover {
-			color: var(--green);
-		}
+.ticket__description {
+	@apply w-full text-wrap break-words;
+	a:link,
+	a:visited {
+		color: var(--cyan);
+		text-decoration: underline;
+		@apply mr-0.5;
 	}
-	&__tasks {
-		.tiptap-container {
-			font-size: 12px;
-		}
+	a:hover {
+		color: var(--green);
+	}
+}
+.ticket__tasks {
+	.tiptap-container {
+		font-size: 12px;
 	}
 }
 
