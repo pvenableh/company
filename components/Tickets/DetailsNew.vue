@@ -696,6 +696,7 @@ watch(
 </script>
 
 <style>
+@reference "~/assets/css/tailwind.css";
 .ticket {
 	&__description {
 		@apply w-full text-wrap break-words;

@@ -149,6 +149,7 @@ const formatNumber = (value) => {
 	</div>
 </template>
 <style>
+@reference "~/assets/css/tailwind.css";
 .payment {
 	.details {
 		font-size: 10px;

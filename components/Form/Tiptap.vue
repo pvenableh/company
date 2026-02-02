@@ -869,6 +869,7 @@ const handleFiles = async (files) => {
 </script>
 
 <style>
+@reference "~/assets/css/tailwind.css";
 .tiptap {
 	> * + * {
 		margin-top: 0.75em;

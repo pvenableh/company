@@ -79,6 +79,7 @@ const formatNumber = (value) => {
 	</div>
 </template>
 <style>
+@reference "~/assets/css/tailwind.css";
 .invoice {
 	max-width: 528px;
 	@media (min-width: theme('screens.lg')) {

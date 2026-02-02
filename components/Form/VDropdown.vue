@@ -22,6 +22,7 @@ const props = defineProps({
 })
 </script>
 <style lang="postcss" scoped>
+@reference "~/assets/css/tailwind.css";
 .dropdown {
   &-content {
     li {

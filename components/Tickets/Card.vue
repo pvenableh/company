@@ -307,6 +307,7 @@ const getTicketInfo = computed(() => {
 </script>
 
 <style scoped>
+@reference "~/assets/css/tailwind.css";
 /* Smooth transitions for avatar highlighting */
 .u-avatar {
 	transition: all 0.2s ease-in-out;

@@ -164,6 +164,7 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+@reference "~/assets/css/tailwind.css";
 .metadata-content {
 	@apply bg-white dark:bg-gray-800 p-2;
 }

@@ -613,6 +613,7 @@ onUnmounted(() => {
 </script>
 
 <style>
+@reference "~/assets/css/tailwind.css";
 .calendar-container {
 	@apply w-full overflow-hidden font-body p-0;
 	height: calc(100vh - 12rem);

@@ -61,6 +61,7 @@ onClickOutside(navDrawerRef, () => {
 });
 </script>
 <style scoped>
+@reference "~/assets/css/tailwind.css";
 .nav-drawer {
 	min-height: 100vh;
 	max-height: 100vh;

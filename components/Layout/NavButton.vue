@@ -19,6 +19,7 @@ function sideMenuToggle() {
 }
 </script>
 <style scoped>
+@reference "~/assets/css/tailwind.css";
 #nav-btn {
 	bottom: 0px;
 	right: 0px;

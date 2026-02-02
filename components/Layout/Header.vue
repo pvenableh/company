@@ -58,6 +58,7 @@ onUnmounted(() => {
 </template>
 
 <style>
+@reference "~/assets/css/tailwind.css";
 header {
 	position: fixed;
 	@apply w-full flex items-center justify-center z-40 bg-gray-50 dark:bg-gradient-to-tr dark:from-gray-600 dark:to-gray-800 border border-white dark:border-gray-600 transition-all duration-300 ease-in-out py-3 shadow-lg left-1/2 -translate-x-1/2;

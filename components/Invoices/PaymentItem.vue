@@ -197,6 +197,7 @@ watch(showDetails, async (newValue) => {
 	</div>
 </template>
 <style>
+@reference "~/assets/css/tailwind.css";
 .payment-item {
 	&__subtitle {
 		@apply text-sm font-medium text-gray-500 dark:text-gray-100 mb-2 uppercase font-bold border-l-8 border-gray-500 leading-3 pl-1;

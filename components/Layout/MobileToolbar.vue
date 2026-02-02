@@ -24,6 +24,7 @@ const props = defineProps({
 </template>
 
 <style scoped>
+@reference "~/assets/css/tailwind.css";
 .mobile-toolbar {
 	position: fixed;
 	bottom: 0px;
