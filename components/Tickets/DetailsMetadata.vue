@@ -19,7 +19,7 @@
 			<Transition name="fade">
 				<div
 					v-if="showMetadata && isMobile"
-					class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+					class="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
 					@click.self="showMetadata = false"
 				>
 					<div class="bg-white dark:bg-gray-800 p-4 w-full max-w-sm relative">

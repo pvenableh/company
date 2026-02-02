@@ -85,7 +85,7 @@ onClickOutside(navDrawerRef, () => {
 	  @apply absolute; */
 	}
 
-	&__menu-box {
+	.nav-drawer__menu-box {
 		@apply flex items-center justify-center flex-col w-full overflow-hidden;
 	}
 	.darkmode-toggle {
@@ -95,7 +95,7 @@ onClickOutside(navDrawerRef, () => {
 		@apply my-1 w-full text-center;
 	}
 
-	&__menu {
+	.nav-drawer__menu {
 		@apply overflow-hidden w-full;
 
 		li {

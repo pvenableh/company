@@ -13,7 +13,7 @@ const formatNumber = (value) => {
 };
 </script>
 <template>
-	<div class="px-6 pt-12 pb-16 w-full border bg-white dark:bg-gray-700 bg-opacity-90 shadow invoice">
+	<div class="px-6 pt-12 pb-16 w-full border bg-white/90 dark:bg-gray-700 shadow invoice">
 		<div class="">
 			<div class="w-full flex flex-row items-center justify-between">
 				<h1 class="font-bold uppercase text-xl">
@@ -92,14 +92,12 @@ const formatNumber = (value) => {
 		margin: 2px 0px;
 		line-height: 12px;
 	}
-	.line-item {
-		&__description {
-			p {
-				@apply mb-2;
-			}
-			p:last-child {
-				@apply mb-0;
-			}
+	.line-item__description {
+		p {
+			@apply mb-2;
+		}
+		p:last-child {
+			@apply mb-0;
 		}
 	}
 }

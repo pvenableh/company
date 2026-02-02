@@ -53,14 +53,14 @@ function movePanel(val: string) {
 .login-panel {
 	width: 325px;
 	height: 450px;
+}
 
-	&__nav-button {
-		font-size: 14px;
-		@apply uppercase tracking-wider;
-	}
+.login-panel__nav-button {
+	font-size: 14px;
+	@apply uppercase tracking-wider;
+}
 
-	&__nav-button.reset {
-		font-size: 10px;
-	}
+.login-panel__nav-button.reset {
+	font-size: 10px;
 }
 </style>

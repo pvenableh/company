@@ -55,52 +55,50 @@ function changePanel(val: string | number) {
 @reference "~/assets/css/tailwind.css";
 .account {
 	max-width: 1600px;
+}
 
-	&__navigation {
-		border-bottom: thin solid var(--lightGrey);
+.account__navigation {
+	border-bottom: thin solid var(--lightGrey);
 
-		@media (min-width: theme('screens.md')) {
-			width: 220px;
-			border-bottom: none;
-		}
-		h1 {
-			font-size: 10px;
-			@apply w-full text-center md:text-right uppercase tracking-wider pb-2 mb-0 md:mb-2;
-		}
-
-		a,
-		.logout-btn {
-			font-size: 10px;
-			@apply w-full text-center md:text-right uppercase tracking-wider pb-2 mb-0 md:mb-2 cursor-pointer;
-		}
-
-		a.active {
-			color: var(--purple);
-			opacity: 0.25;
-		}
+	@media (min-width: theme('screens.md')) {
+		width: 220px;
+		border-bottom: none;
+	}
+	h1 {
+		font-size: 10px;
+		@apply w-full text-center md:text-right uppercase tracking-wider pb-2 mb-0 md:mb-2;
 	}
 
-	&__panels {
-		width: 100%;
-
-		@media (min-width: theme('screens.md')) {
-			width: 800px;
-		}
+	a,
+	.logout-btn {
+		font-size: 10px;
+		@apply w-full text-center md:text-right uppercase tracking-wider pb-2 mb-0 md:mb-2 cursor-pointer;
 	}
 
-	&__panel {
-		@apply w-full;
+	a.active {
+		color: var(--purple);
+		opacity: 0.25;
+	}
+}
 
-		h2 {
-			@apply uppercase tracking-wider font-bold text-sm text-center w-full mt-6;
-		}
+.account__panels {
+	width: 100%;
 
-		.addresses {
-			&__nav {
-				a {
-					max-width: 200px;
-				}
-			}
+	@media (min-width: theme('screens.md')) {
+		width: 800px;
+	}
+}
+
+.account__panel {
+	@apply w-full;
+
+	h2 {
+		@apply uppercase tracking-wider font-bold text-sm text-center w-full mt-6;
+	}
+
+	.addresses__nav {
+		a {
+			max-width: 200px;
 		}
 	}
 }

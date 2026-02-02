@@ -292,11 +292,9 @@ const handleBeforeUnload = (e) => {
 </script>
 
 <style>
-.ticket {
-	&__tasks {
-		.tiptap-container {
-			font-size: 12px;
-		}
+.ticket__tasks {
+	.tiptap-container {
+		font-size: 12px;
 	}
 }
 </style>

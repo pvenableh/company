@@ -511,9 +511,7 @@ onUnmounted(() => {
 	touch-action: none;
 }
 
-.tasks {
-	&__connection {
-		@apply max-w-[2000px];
-	}
+.tasks__connection {
+	@apply max-w-[2000px];
 }
 </style>

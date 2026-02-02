@@ -155,33 +155,31 @@ const formatNumber = (value) => {
 		font-size: 10px;
 		@apply uppercase font-bold;
 	}
-	.services {
-		&__title {
-			font-size: 12px;
-		}
-
-		&__item {
-			background: white;
-			transition: 0.4s var(--curve);
-			background: rgba(255, 255, 255, 0.25);
-			backdrop-filter: blur(10px);
-		}
-		&__item:hover {
-			background: var(--darkGrey);
-			color: var(--white);
-			opacity: 1;
-		}
-		.services__item.selected {
-			background: var(--darkGrey);
-			color: var(--white);
-			opacity: 1;
-		}
+	.services__title {
+		font-size: 12px;
 	}
 
-	&__nav {
+	.services__item {
+		background: white;
+		transition: 0.4s var(--curve);
+		background: rgba(255, 255, 255, 0.25);
+		backdrop-filter: blur(10px);
+	}
+	.services__item:hover {
+		background: var(--darkGrey);
+		color: var(--white);
+		opacity: 1;
+	}
+	.services__item.selected {
+		background: var(--darkGrey);
+		color: var(--white);
+		opacity: 1;
+	}
+
+	.payment__nav {
 		@apply flex flex-row justify-around items-center;
 
-		&-item {
+		.payment__nav-item {
 			opacity: 0.5;
 			transition: all 0.3s var(--curve);
 
@@ -240,7 +238,7 @@ const formatNumber = (value) => {
 		} */
 	}
 
-	&__container {
+	.payment__container {
 		@apply flex flex-col justify-center items-center w-full max-w-xl overflow-hidden;
 
 		@media (min-width: theme('screens.md')) {
@@ -254,7 +252,7 @@ const formatNumber = (value) => {
 		@apply max-w-xl;
 	}
 
-	&__panel {
+	.payment__panel {
 		@apply w-full;
 	}
 

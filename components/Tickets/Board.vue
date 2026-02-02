@@ -131,7 +131,7 @@
 
 		<!-- Main Board -->
 		<div
-			class="bg-gray-100 bg-opacity-30 border-b border-gray-200 w-full flex min-h-svh overflow-x-auto overflow-hidden-scrollbar tickets-board__board"
+			class="bg-gray-100/30 border-b border-gray-200 w-full flex min-h-svh overflow-x-auto overflow-hidden-scrollbar tickets-board__board"
 			@touchstart="handleTouchStart"
 			@touchend="handleTouchEnd"
 		>
@@ -1074,28 +1074,33 @@ watch(
 <style scoped>
 @reference "~/assets/css/tailwind.css";
 .tickets-board {
-	&__board {
+	.tickets-board__board {
 		@apply relative;
-		&-filters {
-			@apply relative max-w-[2000px];
+	}
+	.tickets-board__board-filters {
+		@apply relative max-w-[2000px];
+	}
+	.tickets-board__board-connection {
+		@apply max-w-[2000px];
+	}
+	.tickets-board__board-col {
+		@apply border-gray-50 border-r border-l shadow-inner;
+	}
+	.tickets-board__board-col-header {
+		@apply relative shadow-2xl py-5 px-4 backdrop-blur-lg mt-1 border-gray-200 border-b;
+		@media (min-width: 1600px) {
+			@apply px-8;
 		}
-		&-connection {
-			@apply max-w-[2000px];
+	}
+	.tickets-board__board-col-content {
+		@apply min-h-screen lg:h-svh h-full py-2 bg-gray-50/15 dark:bg-gray-800 overflow-y-auto px-2;
+		scrollbar-width: none;
+		-ms-overflow-style: none;
+		&::-webkit-scrollbar {
+			display: none;
 		}
-		&-col {
-			@apply border-gray-50 border-r border-l shadow-inner;
-			&-header {
-				@apply relative shadow-2xl py-5 px-4 backdrop-blur-lg mt-1 border-gray-200 border-b;
-				@media (min-width: 1600px) {
-					@apply px-8;
-				}
-			}
-			&-content {
-				@apply min-h-screen lg:h-svh h-full py-2 bg-gray-50 bg-opacity-15 dark:bg-gray-800 overflow-y-auto overflow-hidden-scrollbar px-2;
-				@media (min-width: 1600px) {
-					@apply px-6;
-				}
-			}
+		@media (min-width: 1600px) {
+			@apply px-6;
 		}
 	}
 	.tickets-board__board::before {

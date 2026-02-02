@@ -17,7 +17,7 @@
 			>
 				<div
 					v-if="isExpanded"
-					class="fixed inset-0 z-[50] overflow-auto flex flex-col items-center justify-center backdrop-blur-lg bg-white dark:bg-gray-800 bg-opacity-75"
+					class="fixed inset-0 z-[50] overflow-auto flex flex-col items-center justify-center backdrop-blur-lg bg-white/75 dark:bg-gray-800"
 				>
 					<div class="w-full p-4 lg:p-12">
 						<!-- Header -->

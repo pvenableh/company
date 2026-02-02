@@ -194,89 +194,90 @@ if (props.ticket.category === 'Completed') {
 	background: var(--white);
 	@apply rounded-md shadow-lg mb-8 overflow-hidden;
 
-	&__category {
-		font-weight: bolder;
-		@apply font-proxima-regular;
+}
 
-		p {
-			background: var(--lightGrey);
-			color: var(--white);
-			font-size: 7px;
-			@apply font-bold uppercase px-2 py-1 rounded-full;
-		}
+.ticket-card__category {
+	font-weight: bolder;
+	@apply font-proxima-regular;
 
-		.scheduled {
-			background: var(--cyan);
-			color: var(--black);
-		}
-
-		.in-progress {
-			background: var(--green);
-			color: var(--black);
-		}
-
-		span {
-			color: red;
-			@apply inline-block ml-2 border-2 border-red-500;
-		}
+	p {
+		background: var(--lightGrey);
+		color: var(--white);
+		font-size: 7px;
+		@apply font-bold uppercase px-2 py-1 rounded-full;
 	}
 
-	&__title {
+	.scheduled {
+		background: var(--cyan);
+		color: var(--black);
+	}
+
+	.in-progress {
+		background: var(--green);
+		color: var(--black);
+	}
+
+	span {
+		color: red;
+		@apply inline-block ml-2 border-2 border-red-500;
+	}
+}
+
+.ticket-card__title {
+	font-size: 18px;
+	@apply font-bold pb-1;
+	input {
 		font-size: 18px;
-		@apply font-bold pb-1;
+
+		box-shadow: none !important;
+		@apply w-full px-0 transition-all duration-200 border border-white dark:bg-gray-900 dark:border-gray-900;
+	}
+	&.editable {
 		input {
-			font-size: 18px;
-
-			box-shadow: none !important;
-			@apply w-full px-0 transition-all duration-200 border border-white dark:bg-gray-900 dark:border-gray-900;
-		}
-		&.editable {
-			input {
-				@apply border px-2 border-gray-200 dark:bg-gray-900 dark:border-gray-800;
-			}
+			@apply border px-2 border-gray-200 dark:bg-gray-900 dark:border-gray-800;
 		}
 	}
+}
 
-	&__due {
-		font-size: 12px;
-		font-weight: bolder;
+.ticket-card__due {
+	font-size: 12px;
+	font-weight: bolder;
+	@apply font-proxima-regular;
+
+	.alert {
+		@apply text-red-500;
+	}
+}
+
+.ticket-card__description {
+	font-size: 12px;
+	@apply w-full pb-2;
+	&.editable {
+		.tiptap-container {
+			@apply border border-gray-200 dark:bg-gray-900 dark:border-gray-800;
+		}
+	}
+	strong {
+		font-weight: 900;
 		@apply font-proxima-regular;
-
-		.alert {
-			@apply text-red-500;
-		}
 	}
 
-	&__description {
-		font-size: 12px;
-		@apply w-full pb-2;
-		&.editable {
-			.tiptap-container {
-				@apply border border-gray-200 dark:bg-gray-900 dark:border-gray-800;
-			}
-		}
-		strong {
-			font-weight: 900;
-			@apply font-proxima-regular;
-		}
-
-		ul,
-		ol {
-			list-style-type: disc;
-			padding: 0 1rem;
-		}
-
-		blockquote {
-			padding-left: 1rem;
-			border-left: 2px solid rgba(#0d0d0d, 0.1);
-		}
+	ul,
+	ol {
+		list-style-type: disc;
+		padding: 0 1rem;
 	}
 
-	&__created {
-		font-size: 10px;
-		background: var(--grey);
-		@apply text-white font-bold flex flex-col items-start justify-between uppercase;
+	blockquote {
+		padding-left: 1rem;
+		border-left: 2px solid rgba(#0d0d0d, 0.1);
 	}
+}
+
+.ticket-card__created {
+	font-size: 10px;
+	background: var(--grey);
+	@apply text-white font-bold flex flex-col items-start justify-between uppercase;
 }
 
 .ticket-card.alert {

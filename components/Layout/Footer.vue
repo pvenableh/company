@@ -63,31 +63,31 @@ const props = defineProps({
 @reference "~/assets/css/tailwind.css";
 .footer {
 	position: relative;
+}
 
-	&__col {
-		text-align: center;
-		@apply w-full;
-		@media (min-width: theme('screens.md')) {
-			max-width: 250px;
-		}
-
-		a {
-			font-size: 10px;
-
-			@apply uppercase tracking-widest py-1 mb-1 w-full;
-		}
-		a:hover,
-		a.active,
-		a.router-link-exact-active {
-			color: var(--blue);
-		}
+.footer__col {
+	text-align: center;
+	@apply w-full;
+	@media (min-width: theme('screens.md')) {
+		max-width: 250px;
 	}
 
-	&__contact-info {
-		h5 {
-			font-size: 9px;
-			@apply uppercase tracking-wider font-bold px-2;
-		}
+	a {
+		font-size: 10px;
+
+		@apply uppercase tracking-widest py-1 mb-1 w-full;
+	}
+	a:hover,
+	a.active,
+	a.router-link-exact-active {
+		color: var(--blue);
+	}
+}
+
+.footer__contact-info {
+	h5 {
+		font-size: 9px;
+		@apply uppercase tracking-wider font-bold px-2;
 	}
 }
 
