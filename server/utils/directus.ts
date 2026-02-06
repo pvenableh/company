@@ -112,7 +112,7 @@ export async function directusLogin(
   const client = getPublicDirectus();
 
   const result = await client.request(
-    directusLoginFn({ email, password, mode: "json" })
+    directusLoginFn({ email, password }, { mode: "json" })
   );
 
   if (!result?.access_token || !result?.refresh_token) {
