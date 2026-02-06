@@ -128,7 +128,7 @@ definePageMeta({
 const debug = ref(false);
 
 // Get user data
-const { user } = useEnhancedAuth();
+const { user } = useDirectusAuth();
 
 // Get organization and team data directly from the composables
 const { selectedOrg, organizations, setupListeners: setupOrgListeners, getOrganizationFilter } = useOrganization();

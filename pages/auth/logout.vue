@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { signOut } = useEnhancedAuth();
+const { signOut } = useDirectusAuth();
 const route = useRoute();
 
 // Add logging to understand when and why this component is mounted

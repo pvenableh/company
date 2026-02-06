@@ -259,7 +259,7 @@ export function useTasksList({
 			task.status = newStatus;
 			task.date_updated = now;
 
-			const { user } = useEnhancedAuth();
+			const { user } = useDirectusAuth();
 			if (user.value && newStatus === 'completed') {
 				task.user_updated = {
 					id: user.value.id,

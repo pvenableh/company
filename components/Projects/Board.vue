@@ -127,7 +127,7 @@
 <script setup>
 import VueDraggable from 'vuedraggable';
 const { readItems, updateItem } = useDirectusItems();
-const { user } = useEnhancedAuth();
+const { user } = useDirectusAuth();
 const { selectedOrg, hasMultipleOrgs, organizationOptions, setOrganization, clearOrganization, getOrganizationFilter } =
 	useOrganization();
 

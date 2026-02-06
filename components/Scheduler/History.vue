@@ -152,37 +152,37 @@ onMounted(() => fetchHistory());
 	<div class="space-y-6">
 		<!-- Stats -->
 		<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-			<UCard :ui="{ body: { padding: 'p-4' } }">
+			<UCard :ui="{ body: 'p-4' }">
 				<div class="text-center">
 					<div class="text-2xl font-bold">{{ stats.total }}</div>
 					<div class="text-xs text-gray-500">Total Meetings</div>
 				</div>
 			</UCard>
-			<UCard :ui="{ body: { padding: 'p-4' } }">
+			<UCard :ui="{ body: 'p-4' }">
 				<div class="text-center">
 					<div class="text-2xl font-bold text-green-500">{{ stats.completed }}</div>
 					<div class="text-xs text-gray-500">Completed</div>
 				</div>
 			</UCard>
-			<UCard :ui="{ body: { padding: 'p-4' } }">
+			<UCard :ui="{ body: 'p-4' }">
 				<div class="text-center">
 					<div class="text-2xl font-bold text-red-500">{{ stats.cancelled }}</div>
 					<div class="text-xs text-gray-500">Cancelled</div>
 				</div>
 			</UCard>
-			<UCard :ui="{ body: { padding: 'p-4' } }">
+			<UCard :ui="{ body: 'p-4' }">
 				<div class="text-center">
 					<div class="text-2xl font-bold text-orange-500">{{ stats.noShow }}</div>
 					<div class="text-xs text-gray-500">No Show</div>
 				</div>
 			</UCard>
-			<UCard :ui="{ body: { padding: 'p-4' } }">
+			<UCard :ui="{ body: 'p-4' }">
 				<div class="text-center">
 					<div class="text-2xl font-bold">{{ stats.avgDuration }}m</div>
 					<div class="text-xs text-gray-500">Avg Duration</div>
 				</div>
 			</UCard>
-			<UCard :ui="{ body: { padding: 'p-4' } }">
+			<UCard :ui="{ body: 'p-4' }">
 				<div class="text-center">
 					<div class="text-2xl font-bold">{{ formatDuration(stats.totalDuration) }}</div>
 					<div class="text-xs text-gray-500">Total Time</div>

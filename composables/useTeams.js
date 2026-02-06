@@ -19,7 +19,7 @@ export const useTeams = () => {
 	const lastFetchedOrg = ref(null);
 	const storageListener = ref(null);
 
-	const { user } = useEnhancedAuth();
+	const { user } = useDirectusAuth();
 
 	const { selectedOrg } = useOrganization();
 

@@ -1,6 +1,6 @@
 // composables/useLogout.js
 export const useLogout = () => {
-	const { signOut } = useEnhancedAuth();
+	const { signOut } = useDirectusAuth();
 	const router = useRouter();
 	const toast = useToast();
 

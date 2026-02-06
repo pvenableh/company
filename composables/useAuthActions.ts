@@ -2,7 +2,7 @@
 // All operations go through server API routes - no client-side tokens
 
 export function useAuthActions() {
-	const { signIn, signOut } = useEnhancedAuth();
+	const { signIn, signOut } = useDirectusAuth();
 
 	/**
 	 * Login a user with credentials via server API

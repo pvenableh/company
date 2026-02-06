@@ -1,68 +1,31 @@
 <script setup lang="ts">
 /**
- * UCard - NuxtUI-compatible card wrapper for shadcn-vue Card
+ * UCard - Card wrapper composing shadcn-vue Card primitives.
+ * Provides a simplified header/body/footer slot API.
  */
 
-import { cn } from "@/lib/utils";
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 
-const props = withDefaults(
-  defineProps<{
-    class?: string;
-    ui?: {
-      base?: string;
-      header?: string;
-      body?: string;
-      footer?: string;
-      divide?: string;
-      ring?: string;
-      rounded?: string;
-      shadow?: string;
-      background?: string;
-    };
-  }>(),
-  {}
-);
-
-const cardClasses = computed(() =>
-  cn(
-    "rounded-lg border bg-card text-card-foreground shadow-sm",
-    props.ui?.base,
-    props.ui?.ring,
-    props.ui?.rounded,
-    props.ui?.shadow,
-    props.ui?.background,
-    props.class
-  )
-);
-
-const headerClasses = computed(() =>
-  cn("flex flex-col space-y-1.5 p-6", props.ui?.header)
-);
-
-const bodyClasses = computed(() =>
-  cn("p-6 pt-0", props.ui?.body)
-);
-
-const footerClasses = computed(() =>
-  cn("flex items-center p-6 pt-0", props.ui?.footer)
-);
+const props = defineProps<{
+  class?: string
+  ui?: {
+    header?: string
+    body?: string
+    footer?: string
+  }
+}>()
 </script>
 
 <template>
-  <div :class="cardClasses">
-    <!-- Header -->
-    <div v-if="$slots.header" :class="headerClasses">
+  <Card :class="props.class">
+    <CardHeader v-if="$slots.header" :class="props.ui?.header">
       <slot name="header" />
-    </div>
-
-    <!-- Body / Default slot -->
-    <div :class="bodyClasses">
+    </CardHeader>
+    <CardContent :class="props.ui?.body">
       <slot />
-    </div>
-
-    <!-- Footer -->
-    <div v-if="$slots.footer" :class="footerClasses">
+    </CardContent>
+    <CardFooter v-if="$slots.footer" :class="props.ui?.footer">
       <slot name="footer" />
-    </div>
-  </div>
+    </CardFooter>
+  </Card>
 </template>

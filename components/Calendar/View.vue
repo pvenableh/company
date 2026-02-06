@@ -311,7 +311,7 @@ import {
 	CalendarPrevButton,
 } from '~/components/ui/calendar';
 
-const { user } = useEnhancedAuth();
+const { user } = useDirectusAuth();
 const { deleteItem } = useDirectusItems();
 const toast = useToast();
 const showAppointmentForm = ref(false);

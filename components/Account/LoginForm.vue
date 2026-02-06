@@ -90,7 +90,7 @@ interface LoginError {
 	};
 }
 
-const { signIn } = useEnhancedAuth();
+const { signIn } = useDirectusAuth();
 const route = useRoute();
 const loading = ref<boolean>(false);
 const login_error = ref<string | null>(null);

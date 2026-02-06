@@ -138,7 +138,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['saved', 'cancelled']);
-const { user } = useEnhancedAuth();
+const { user } = useDirectusAuth();
 const { createItem, updateItem } = useDirectusItems();
 const { filteredUsers, fetchFilteredUsers, loading: loadingUsers } = useFilteredUsers();
 

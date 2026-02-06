@@ -26,7 +26,7 @@
 </template>
 
 <script setup lang="ts">
-const { user } = useEnhancedAuth();
+const { user } = useDirectusAuth();
 
 definePageMeta({
 	middleware: ['auth'],

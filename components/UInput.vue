@@ -3,7 +3,7 @@
  * UInput - NuxtUI-compatible input wrapper for shadcn-vue Input
  */
 
-import { cn } from "@/lib/utils";
+import { cn, convertIconName } from "@/lib/utils";
 
 const props = withDefaults(
   defineProps<{
@@ -91,25 +91,10 @@ const inputClasses = computed(() =>
   )
 );
 
-// Convert icon name format
-const convertIcon = (icon: string) => {
-  if (!icon) return "";
-  if (icon.includes(":")) return icon;
-  if (icon.startsWith("i-")) {
-    const name = icon.slice(2);
-    if (name.startsWith("heroicons-solid-")) return `heroicons-solid:${name.slice(16)}`;
-    if (name.startsWith("heroicons-outline-")) return `heroicons-outline:${name.slice(18)}`;
-    if (name.startsWith("heroicons-")) return `heroicons:${name.slice(10)}`;
-    if (name.startsWith("lucide-")) return `lucide:${name.slice(7)}`;
-    return `heroicons:${name}`;
-  }
-  return icon;
-};
-
-const leadingIconName = computed(() => convertIcon(props.leadingIcon || props.icon || ""));
+const leadingIconName = computed(() => convertIconName(props.leadingIcon || props.icon || ""));
 const trailingIconName = computed(() => {
   if (props.loading) return "lucide:loader-2";
-  return convertIcon(props.trailingIcon || "");
+  return convertIconName(props.trailingIcon || "");
 });
 </script>
 
