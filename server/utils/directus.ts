@@ -88,7 +88,7 @@ export async function getUserDirectus(
   if (isExpired && refreshToken) {
     try {
       // Refresh tokens
-      const result = await client.request(directusRefreshToken("json", refreshToken));
+      const result = await client.request(directusRefreshToken({ mode: "json", refresh_token: refreshToken }));
 
       if (result?.access_token && result?.refresh_token) {
         // Update session with new tokens
@@ -139,7 +139,7 @@ export async function directusLogin(
   const client = getPublicDirectus();
 
   const result = await client.request(
-    directusLoginFn(email, password, { mode: "json" })
+    directusLoginFn({ email, password, mode: "json" })
   );
 
   if (!result?.access_token || !result?.refresh_token) {
@@ -161,7 +161,7 @@ export async function directusRefresh(
   const client = getPublicDirectus();
 
   const result = await client.request(
-    directusRefreshToken("json", refreshToken)
+    directusRefreshToken({ mode: "json", refresh_token: refreshToken })
   );
 
   if (!result?.access_token || !result?.refresh_token) {
@@ -180,7 +180,7 @@ export async function directusRefresh(
 export async function directusLogout(refreshToken: string): Promise<void> {
   try {
     const client = getPublicDirectus();
-    await client.request(directusLogoutFn(refreshToken, "json"));
+    await client.request(directusLogoutFn({ refresh_token: refreshToken, mode: "json" }));
   } catch (error) {
     // Ignore logout errors (token might already be invalid)
     console.warn("Directus logout error (ignored):", error);
