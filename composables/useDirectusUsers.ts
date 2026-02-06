@@ -40,22 +40,12 @@ export function useDirectusUsers() {
 		});
 	};
 
-	// Read a single user asynchronously (same as readUser)
-	const readAsyncUserFn = async (id: string, query?: Record<string, any>) => {
-		return await readUserFn(id, query);
-	};
-
 	// Read multiple users
 	const readUsersFn = async (query?: Record<string, any>) => {
 		return await $fetch('/api/directus/users', {
 			method: 'POST',
 			body: { operation: 'list', query },
 		});
-	};
-
-	// Read multiple users asynchronously (same as readUsers)
-	const readAsyncUsersFn = async (query?: Record<string, any>) => {
-		return await readUsersFn(query);
 	};
 
 	// Update current user (me)
@@ -115,9 +105,7 @@ export function useDirectusUsers() {
 		deleteUsers: deleteUsersFn,
 		readMe: readMeFn,
 		readUser: readUserFn,
-		readAsyncUser: readAsyncUserFn,
 		readUsers: readUsersFn,
-		readAsyncUsers: readAsyncUsersFn,
 		setUser: setUserFn,
 		updateMe: updateMeFn,
 		updateUser: updateUserFn,

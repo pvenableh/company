@@ -50,13 +50,6 @@ export function useDirectusNotifications() {
 	};
 
 	/**
-	 * Read a single notification asynchronously
-	 */
-	const readAsyncNotification = async (id: string, query?: Record<string, any>) => {
-		return await readNotification(id, query);
-	};
-
-	/**
 	 * Read multiple notifications
 	 */
 	const readNotifications = async (query?: Record<string, any>) => {
@@ -64,13 +57,6 @@ export function useDirectusNotifications() {
 			method: 'POST',
 			body: { operation: 'list', query },
 		});
-	};
-
-	/**
-	 * Read multiple notifications asynchronously
-	 */
-	const readAsyncNotifications = async (query?: Record<string, any>) => {
-		return await readNotifications(query);
 	};
 
 	/**
@@ -189,9 +175,7 @@ export function useDirectusNotifications() {
 		createNotification,
 		createNotifications,
 		readNotification,
-		readAsyncNotification,
 		readNotifications,
-		readAsyncNotifications,
 		updateNotification,
 		updateNotifications,
 		deleteNotification,

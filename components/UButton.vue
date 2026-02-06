@@ -4,7 +4,7 @@
  */
 
 import { computed } from "vue";
-import { cn } from "@/lib/utils";
+import { cn, convertIconName } from "@/lib/utils";
 
 const props = withDefaults(
   defineProps<{
@@ -46,18 +46,6 @@ const props = withDefaults(
 const emit = defineEmits<{
   (e: "click", event: MouseEvent): void;
 }>();
-
-// Map NuxtUI variants to shadcn variants
-const variantMap = computed(() => {
-  const map: Record<string, string> = {
-    solid: "default",
-    soft: "secondary",
-    outline: "outline",
-    ghost: "ghost",
-    link: "link",
-  };
-  return map[props.variant] || "default";
-});
 
 // Map colors to tailwind classes
 const colorClasses = computed(() => {
@@ -154,28 +142,13 @@ const buttonClasses = computed(() => {
   );
 });
 
-// Convert icon name format
-const convertIcon = (icon: string) => {
-  if (!icon) return "";
-  if (icon.includes(":")) return icon;
-  if (icon.startsWith("i-")) {
-    const name = icon.slice(2);
-    if (name.startsWith("heroicons-solid-")) return `heroicons-solid:${name.slice(16)}`;
-    if (name.startsWith("heroicons-outline-")) return `heroicons-outline:${name.slice(18)}`;
-    if (name.startsWith("heroicons-")) return `heroicons:${name.slice(10)}`;
-    if (name.startsWith("lucide-")) return `lucide:${name.slice(7)}`;
-    return `heroicons:${name}`;
-  }
-  return icon;
-};
-
 const leadingIconName = computed(() => {
   if (props.loading) return "lucide:loader-2";
-  return convertIcon(props.leadingIcon || (!props.trailing ? props.icon : "") || "");
+  return convertIconName(props.leadingIcon || (!props.trailing ? props.icon : "") || "");
 });
 
 const trailingIconName = computed(() => {
-  return convertIcon(props.trailingIcon || (props.trailing ? props.icon : "") || "");
+  return convertIconName(props.trailingIcon || (props.trailing ? props.icon : "") || "");
 });
 
 const handleClick = (event: MouseEvent) => {
