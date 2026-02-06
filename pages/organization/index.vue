@@ -179,7 +179,7 @@ const getIconUrl = computed(() => {
 								:href="org.website.startsWith('http') ? org.website : 'https://' + org.website"
 								target="_blank"
 								rel="noopener noreferrer"
-								class="flex items-center text-primary-600 dark:text-primary-400"
+								class="flex items-center text-primary"
 							>
 								<UIcon name="i-heroicons-globe-alt" class="w-4 h-4 mr-1" />
 								<span>{{ org.website.startsWith('http') ? org.website : 'https://' + org.website }}</span>
@@ -202,7 +202,7 @@ const getIconUrl = computed(() => {
 							<a
 								v-if="org.phone"
 								:href="'tel:' + org.phone"
-								class="flex items-center text-primary-600 dark:text-primary-400"
+								class="flex items-center text-primary"
 							>
 								<UIcon name="i-heroicons-phone" class="w-4 h-4 mr-1" />
 								<span>{{ org.phone }}</span>
@@ -258,7 +258,7 @@ const getIconUrl = computed(() => {
 												:href="org.website.startsWith('http') ? org.website : 'https://' + org.website"
 												target="_blank"
 												rel="noopener noreferrer"
-												class="text-primary-600 dark:text-primary-400"
+												class="text-primary"
 											>
 												{{ org.website }}
 											</a>

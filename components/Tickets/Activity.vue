@@ -21,9 +21,9 @@
 				>
 					<!-- Activity icon (left side) -->
 					<div
-						class="absolute left-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-primary-50 dark:bg-primary-900/20"
+						class="absolute left-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-primary/10"
 					>
-						<UIcon :name="getActionIcon(item)" class="text-primary-500 h-4 w-4" />
+						<UIcon :name="getActionIcon(item)" class="text-primary h-4 w-4" />
 					</div>
 
 					<!-- Content container (with left margin for icon) -->

@@ -386,7 +386,7 @@ async function submitPost() {
 										</div>
 										<button
 											@click="selectAllInClient(group.client?.id || null)"
-											class="text-xs text-primary-500 hover:text-primary-600"
+											class="text-xs text-primary hover:text-primary/85"
 										>
 											Select all
 										</button>
@@ -400,7 +400,7 @@ async function submitPost() {
 											class="flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors"
 											:class="
 												selectedAccounts.includes(account.id)
-													? 'bg-primary-50 dark:bg-primary-900/20'
+													? 'bg-primary/10'
 													: 'hover:bg-gray-50 dark:hover:bg-gray-800'
 											"
 										>

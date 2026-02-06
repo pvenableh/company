@@ -166,7 +166,7 @@ const websiteUrl = 'https://huestudios.com';
 						href="https://www.facebook.com/privacy/policy/"
 						target="_blank"
 						rel="noopener"
-						class="text-primary-600 hover:underline"
+						class="text-primary hover:underline"
 					>
 						Meta's Privacy Policy
 					</a>
@@ -175,7 +175,7 @@ const websiteUrl = 'https://huestudios.com';
 						href="https://developers.facebook.com/terms/"
 						target="_blank"
 						rel="noopener"
-						class="text-primary-600 hover:underline"
+						class="text-primary hover:underline"
 					>
 						Meta Platform Terms
 					</a>
@@ -190,7 +190,7 @@ const websiteUrl = 'https://huestudios.com';
 						href="https://www.tiktok.com/legal/privacy-policy"
 						target="_blank"
 						rel="noopener"
-						class="text-primary-600 hover:underline"
+						class="text-primary hover:underline"
 					>
 						TikTok's Privacy Policy
 					</a>
@@ -199,7 +199,7 @@ const websiteUrl = 'https://huestudios.com';
 						href="https://www.tiktok.com/legal/terms-of-service"
 						target="_blank"
 						rel="noopener"
-						class="text-primary-600 hover:underline"
+						class="text-primary hover:underline"
 					>
 						Terms of Service
 					</a>
@@ -310,7 +310,7 @@ const websiteUrl = 'https://huestudios.com';
 				</ul>
 				<p class="mt-4">
 					To exercise these rights, please contact us at
-					<a :href="`mailto:${contactEmail}`" class="text-primary-600 hover:underline">
+					<a :href="`mailto:${contactEmail}`" class="text-primary hover:underline">
 						{{ contactEmail }}
 					</a>
 					.
@@ -331,7 +331,7 @@ const websiteUrl = 'https://huestudios.com';
 				</ul>
 				<p class="mt-4">
 					To make a request, contact us at
-					<a :href="`mailto:${contactEmail}`" class="text-primary-600 hover:underline">
+					<a :href="`mailto:${contactEmail}`" class="text-primary hover:underline">
 						{{ contactEmail }}
 					</a>
 					. We will verify your identity before processing your request.
@@ -377,12 +377,12 @@ const websiteUrl = 'https://huestudios.com';
 					<p class="font-medium text-gray-900 dark:text-white">{{ businessName }}</p>
 					<p class="text-gray-600 dark:text-gray-400">{{ businessAddress }}</p>
 					<p class="mt-2">
-						<a :href="`mailto:${contactEmail}`" class="text-primary-600 hover:underline">
+						<a :href="`mailto:${contactEmail}`" class="text-primary hover:underline">
 							{{ contactEmail }}
 						</a>
 					</p>
 					<p>
-						<a :href="websiteUrl" target="_blank" class="text-primary-600 hover:underline">
+						<a :href="websiteUrl" target="_blank" class="text-primary hover:underline">
 							{{ websiteUrl }}
 						</a>
 					</p>
@@ -432,7 +432,7 @@ const websiteUrl = 'https://huestudios.com';
 }
 
 .prose a {
-	@apply text-primary-600 dark:text-primary-400;
+	@apply text-primary;
 }
 
 .prose ul {

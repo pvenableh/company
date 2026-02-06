@@ -155,7 +155,7 @@ const props = defineProps({
 	},
 	focusRingClasses: {
 		type: String,
-		default: 'ring-2 ring-primary-500 ring-offset-2 dark:ring-offset-gray-900 border-[var(--cyan)]',
+		default: 'ring-2 ring-primary ring-offset-2 dark:ring-offset-gray-900 border-[var(--cyan)]',
 	},
 	disabled: {
 		type: Boolean,

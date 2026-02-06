@@ -313,7 +313,7 @@ const businessAddress = '605 Lincoln Road Suite 200, Miami Beach, FL';
 					<p class="font-medium text-gray-900 dark:text-white">{{ businessName }}</p>
 					<p class="text-gray-600 dark:text-gray-400">{{ businessAddress }}</p>
 					<p class="mt-2">
-						<a :href="`mailto:${contactEmail}`" class="text-primary-600 hover:underline">
+						<a :href="`mailto:${contactEmail}`" class="text-primary hover:underline">
 							{{ contactEmail }}
 						</a>
 					</p>
@@ -336,7 +336,7 @@ const businessAddress = '605 Lincoln Road Suite 200, Miami Beach, FL';
 }
 
 .prose a {
-	@apply text-primary-600 dark:text-primary-400;
+	@apply text-primary;
 }
 
 .prose ul {
