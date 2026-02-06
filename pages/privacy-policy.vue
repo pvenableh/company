@@ -425,6 +425,8 @@ const websiteUrl = 'https://huestudios.com';
 </template>
 
 <style scoped>
+@reference "~/assets/css/tailwind.css";
+
 .prose h2 {
 	@apply border-b border-gray-200 dark:border-gray-700 pb-2;
 }

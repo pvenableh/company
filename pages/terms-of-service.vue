@@ -329,6 +329,8 @@ const businessAddress = '605 Lincoln Road Suite 200, Miami Beach, FL';
 </template>
 
 <style scoped>
+@reference "~/assets/css/tailwind.css";
+
 .prose h2 {
 	@apply border-b border-gray-200 dark:border-gray-700 pb-2;
 }
