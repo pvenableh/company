@@ -227,7 +227,7 @@ onMounted(() => fetchBookingData());
 			<!-- Progress -->
 			<div class="flex items-center justify-center gap-4 mb-8">
 				<div v-for="s in 3" :key="s" class="flex items-center gap-2">
-					<div :class="['w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium', step >= s ? 'bg-primary-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-500']">
+					<div :class="['w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium', step >= s ? 'bg-primary text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-500']">
 						{{ s }}
 					</div>
 					<span v-if="s < 3" class="w-12 h-0.5 bg-gray-200 dark:bg-gray-700" />
@@ -242,7 +242,7 @@ onMounted(() => fetchBookingData());
 						<div
 							v-for="type in meetingTypes"
 							:key="type.value"
-							:class="['p-4 border-2 rounded-lg cursor-pointer transition', bookingForm.meetingType === type.value ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20' : 'border-gray-200 dark:border-gray-700 hover:border-gray-300']"
+							:class="['p-4 border-2 rounded-lg cursor-pointer transition', bookingForm.meetingType === type.value ? 'border-primary bg-primary/10' : 'border-gray-200 dark:border-gray-700 hover:border-gray-300']"
 							@click="selectMeetingType(type)"
 						>
 							<div class="flex items-center justify-between mb-1">
@@ -260,7 +260,7 @@ onMounted(() => fetchBookingData());
 						<button
 							v-for="dateObj in availableDates"
 							:key="dateObj.formatted"
-							:class="['px-4 py-2 rounded-lg border transition text-sm', selectedDate?.formatted === dateObj.formatted ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-600' : 'border-gray-200 dark:border-gray-700 hover:border-gray-300']"
+							:class="['px-4 py-2 rounded-lg border transition text-sm', selectedDate?.formatted === dateObj.formatted ? 'border-primary bg-primary/10 text-primary' : 'border-gray-200 dark:border-gray-700 hover:border-gray-300']"
 							@click="selectDate(dateObj)"
 						>
 							{{ dateObj.formatted }}
@@ -275,7 +275,7 @@ onMounted(() => fetchBookingData());
 						<button
 							v-for="slot in availableTimeSlots"
 							:key="slot.formatted"
-							:class="['px-3 py-2 rounded-lg border transition text-sm', selectedTime?.formatted === slot.formatted ? 'border-primary-500 bg-primary-500 text-white' : 'border-gray-200 dark:border-gray-700 hover:border-primary-300']"
+							:class="['px-3 py-2 rounded-lg border transition text-sm', selectedTime?.formatted === slot.formatted ? 'border-primary bg-primary text-white' : 'border-gray-200 dark:border-gray-700 hover:border-primary/60']"
 							@click="selectTime(slot)"
 						>
 							{{ slot.formatted }}
@@ -294,7 +294,7 @@ onMounted(() => fetchBookingData());
 
 				<div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-4 mb-6">
 					<div class="flex items-center gap-3">
-						<UIcon name="i-heroicons-calendar" class="w-5 h-5 text-primary-500" />
+						<UIcon name="i-heroicons-calendar" class="w-5 h-5 text-primary" />
 						<div>
 							<div class="font-medium">{{ selectedDate?.formatted }}</div>
 							<div class="text-sm text-gray-500">{{ selectedTime?.formatted }} · {{ selectedDuration }} minutes</div>

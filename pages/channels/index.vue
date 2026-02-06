@@ -102,7 +102,7 @@ const sortedChannels = computed(() => {
 
 						<UIcon
 							name="i-heroicons-arrow-right"
-							class="w-5 h-5 text-gray-400 group-hover:text-primary-500 transform group-hover:translate-x-1 transition-all"
+							class="w-5 h-5 text-gray-400 group-hover:text-primary transform group-hover:translate-x-1 transition-all"
 						/>
 					</div>
 				</NuxtLink>

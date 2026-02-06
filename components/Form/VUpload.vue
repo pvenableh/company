@@ -175,7 +175,7 @@ function useUpload() {
 			:class="[
 				'dropzone',
 				{
-					'border-primary bg-primary-50 dark:bg-primary !text-primary  dark:!text-gray-100 dark:border-primary':
+					'border-primary bg-primary/10 dark:bg-primary !text-primary  dark:!text-gray-100 dark:border-primary':
 						dragging,
 					'hover:border-primary hover:text-primary dark:hover:text-primary dark:hover:border-primary':
 						!dragging && !uploading,

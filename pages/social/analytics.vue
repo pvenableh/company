@@ -287,7 +287,7 @@ const platformIcons: Record<string, string> = {
             class="flex-1 flex flex-col items-center gap-2"
           >
             <div
-              class="w-full bg-primary-500 rounded-t transition-all"
+              class="w-full bg-primary rounded-t transition-all"
               :style="{ height: `${((point.value - 12000) / 500) * 100}%` }"
             />
             <span class="text-xs text-gray-500 dark:text-gray-400">

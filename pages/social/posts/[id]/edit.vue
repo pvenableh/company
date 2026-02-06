@@ -306,7 +306,7 @@ const minDate = today(getLocalTimeZone())
               v-for="account in accounts"
               :key="account.id"
               class="flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors"
-              :class="selectedAccounts.includes(account.id) ? 'bg-primary-50 dark:bg-primary-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-800'"
+              :class="selectedAccounts.includes(account.id) ? 'bg-primary/10' : 'hover:bg-gray-50 dark:hover:bg-gray-800'"
             >
               <UCheckbox :model-value="selectedAccounts.includes(account.id)" @update:model-value="toggleAccount(account.id)" />
               <UAvatar :src="account.profile_picture_url || undefined" :alt="account.account_name" size="xs" />
@@ -369,7 +369,7 @@ const minDate = today(getLocalTimeZone())
                             v-if="getDayNumber(i)"
                             class="w-8 h-8 text-sm rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                             :class="{
-                              'bg-primary-500 text-white hover:bg-primary-600': calendarDate.day === getDayNumber(i),
+                              'bg-primary text-white hover:bg-primary/85': calendarDate.day === getDayNumber(i),
                               'text-gray-400': !isInCurrentMonth(i),
                             }"
                             @click="calendarDate = new CalendarDate(calendarDate.year, calendarDate.month, getDayNumber(i)!)"
