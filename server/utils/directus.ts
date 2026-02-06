@@ -54,7 +54,9 @@ export function getTypedDirectus(): DirectusAuthClient {
 
 /**
  * Get user-authenticated Directus client
- * Uses session tokens with automatic refresh
+ * Token refresh is handled by the session plugin's "fetch" hook,
+ * which runs when getUserSession() is called below.
+ * If the token is still rejected, use withAuthRetry() to recover.
  */
 export async function getUserDirectus(
   event: H3Event
@@ -70,48 +72,19 @@ export async function getUserDirectus(
     .with(rest())
     .with(authentication("json"));
 
-  // Get session and extract tokens
+  // getUserSession triggers the session "fetch" hook which refreshes
+  // expired tokens automatically before we read them here.
   const session = await getUserSession(event);
   const accessToken = getSessionAccessToken(session);
-  const refreshToken = getSessionRefreshToken(session);
 
-  if (!accessToken && !refreshToken) {
+  if (!accessToken) {
     throw createError({
       statusCode: 401,
       message: "Not authenticated",
     });
   }
 
-  // Check if token needs refresh (within 60 seconds of expiry)
-  const isExpired = isSessionExpired(session, 60000);
-
-  if (isExpired && refreshToken) {
-    try {
-      // Refresh tokens
-      const result = await client.request(directusRefreshToken({ mode: "json", refresh_token: refreshToken }));
-
-      if (result?.access_token && result?.refresh_token) {
-        // Update session with new tokens
-        await updateSessionTokens(event, session, {
-          access_token: result.access_token,
-          refresh_token: result.refresh_token,
-          expires: result.expires ?? 900000,
-        });
-
-        client.setToken(result.access_token);
-      }
-    } catch (error) {
-      // Clear session on refresh failure
-      await clearUserSession(event);
-      throw createError({
-        statusCode: 401,
-        message: "Session expired",
-      });
-    }
-  } else if (accessToken) {
-    client.setToken(accessToken);
-  }
-
+  client.setToken(accessToken);
   return client;
 }
 

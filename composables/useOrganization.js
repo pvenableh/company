@@ -18,7 +18,7 @@ export function useOrganization() {
 
 	const { readItems } = useDirectusItems();
 
-	const { user } = useEnhancedAuth();
+	const { user } = useDirectusAuth();
 
 	const hasMultipleOrgs = computed(() => organizations.value.length > 1);
 	const organizationOptions = computed(() => [{ id: null, name: 'All Organizations' }, ...organizations.value]);

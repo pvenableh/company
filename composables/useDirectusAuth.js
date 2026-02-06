@@ -1,0 +1,204 @@
+// composables/useDirectusAuth.js
+
+/**
+ * Core authentication composable for Directus integration.
+ * Built on nuxt-auth-utils with server-side token management.
+ *
+ * Features:
+ * - Proactive token refresh scheduled from session expiresAt
+ * - Cross-tab session sync via BroadcastChannel
+ * - Automatic re-validation when a hidden tab regains focus
+ * - Module-level lock to prevent concurrent refresh attempts
+ */
+
+// ─── Module-level singletons (shared across all composable instances) ──────
+let _refreshTimer = null
+let _isRefreshing = false
+let _channel = null
+let _initialized = false
+
+export const useDirectusAuth = () => {
+	const { user, loggedIn, session, fetch: fetchSession, clear: clearSession } = useUserSession()
+
+	const status = computed(() => (loggedIn.value ? 'authenticated' : 'unauthenticated'))
+
+	// ─── Token Refresh ─────────────────────────────────────────────────────────
+
+	const refreshSession = async () => {
+		if (_isRefreshing) return null
+		_isRefreshing = true
+
+		try {
+			await $fetch('/api/auth/refresh', { method: 'POST' })
+			await fetchSession()
+			scheduleRefresh()
+			broadcastAuth('refresh')
+			return session.value
+		} catch (error) {
+			console.error('[Auth] Token refresh failed:', error)
+			return null
+		} finally {
+			_isRefreshing = false
+		}
+	}
+
+	// ─── Proactive Refresh Scheduling ──────────────────────────────────────────
+
+	const clearRefreshTimer = () => {
+		if (_refreshTimer) {
+			clearTimeout(_refreshTimer)
+			_refreshTimer = null
+		}
+	}
+
+	const scheduleRefresh = () => {
+		if (!import.meta.client) return
+		clearRefreshTimer()
+		if (!loggedIn.value) return
+
+		const expiresAt = session.value?.expiresAt
+		if (!expiresAt) return
+
+		// Refresh 2 minutes before token expiry, minimum 10 s from now
+		const refreshIn = Math.max(expiresAt - Date.now() - 120_000, 10_000)
+
+		_refreshTimer = setTimeout(async () => {
+			if (loggedIn.value && !_isRefreshing) {
+				await refreshSession()
+			}
+		}, refreshIn)
+	}
+
+	// ─── Cross-Tab Synchronization ─────────────────────────────────────────────
+
+	const broadcastAuth = (type) => {
+		if (!import.meta.client) return
+		try {
+			if (_channel) {
+				_channel.postMessage({ type })
+			} else {
+				// Fallback: localStorage fires "storage" events in other tabs
+				localStorage.setItem(`auth-${type}`, Date.now().toString())
+				localStorage.removeItem(`auth-${type}`)
+			}
+		} catch {
+			// Ignore – best-effort broadcast
+		}
+	}
+
+	const initCrossTabSync = () => {
+		if (!import.meta.client || _channel) return
+
+		try {
+			_channel = new BroadcastChannel('directus-auth')
+			_channel.onmessage = async ({ data }) => {
+				if (data.type === 'logout') {
+					clearRefreshTimer()
+					await clearSession()
+					navigateTo('/auth/signin')
+				} else if (data.type === 'login' || data.type === 'refresh') {
+					await fetchSession()
+					scheduleRefresh()
+				}
+			}
+		} catch {
+			// BroadcastChannel unsupported – fall back to storage events
+			window.addEventListener('storage', async (e) => {
+				if (e.key === 'auth-logout') {
+					clearRefreshTimer()
+					await clearSession()
+					navigateTo('/auth/signin')
+				} else if (e.key === 'auth-login' || e.key === 'auth-refresh') {
+					await fetchSession()
+					scheduleRefresh()
+				}
+			})
+		}
+	}
+
+	// ─── Sign In / Sign Out ────────────────────────────────────────────────────
+
+	const signIn = async (credentials) => {
+		try {
+			const result = await $fetch('/api/auth/login', {
+				method: 'POST',
+				body: credentials,
+			})
+
+			await fetchSession()
+			scheduleRefresh()
+			broadcastAuth('login')
+			return result
+		} catch (error) {
+			console.error('[Auth] Sign in failed:', error)
+			throw error
+		}
+	}
+
+	const signOut = async (options = {}) => {
+		clearRefreshTimer()
+
+		try {
+			await $fetch('/api/auth/logout', { method: 'POST' })
+		} catch (error) {
+			console.warn('[Auth] Server logout error:', error)
+		}
+
+		await clearSession()
+		broadcastAuth('logout')
+
+		if (options.callbackUrl && import.meta.client) {
+			navigateTo(options.callbackUrl)
+		}
+	}
+
+	// ─── Client-Side Lifecycle (runs once globally) ────────────────────────────
+
+	if (import.meta.client && !_initialized) {
+		_initialized = true
+
+		// Re-check token when tab becomes visible again
+		document.addEventListener('visibilitychange', async () => {
+			if (document.visibilityState !== 'visible' || !loggedIn.value) return
+
+			const expiresAt = session.value?.expiresAt
+			if (expiresAt && Date.now() >= expiresAt - 120_000) {
+				await refreshSession()
+			} else {
+				scheduleRefresh()
+			}
+		})
+
+		initCrossTabSync()
+	}
+
+	// Per-instance watcher to start/stop scheduling when auth state changes
+	if (import.meta.client) {
+		watch(
+			loggedIn,
+			(isLoggedIn) => {
+				if (isLoggedIn) {
+					scheduleRefresh()
+				} else {
+					clearRefreshTimer()
+				}
+			},
+			{ immediate: true },
+		)
+	}
+
+	return {
+		// State
+		status,
+		data: session,
+		user,
+		loggedIn,
+		session,
+
+		// Methods
+		signIn,
+		signOut,
+		refreshSession,
+		fetchSession,
+	}
+}

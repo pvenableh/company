@@ -206,7 +206,7 @@ import VueDraggable from 'vuedraggable';
 
 const { updateItem, readItems } = useDirectusItems();
 const { registerRefreshCallback } = useTicketsStore();
-const { user } = useEnhancedAuth();
+const { user } = useDirectusAuth();
 const { triggerHaptic } = useHaptic();
 const toast = useToast();
 const config = useRuntimeConfig();

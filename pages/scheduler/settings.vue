@@ -2,7 +2,7 @@
 <script setup>
 definePageMeta({ middleware: ['auth'] });
 
-const { user } = useEnhancedAuth();
+const { user } = useDirectusAuth();
 const toast = useToast();
 
 // State

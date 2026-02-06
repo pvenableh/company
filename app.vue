@@ -2,7 +2,7 @@
 import updateAvatarSource from '~~/composables/useAvatar';
 import { Toaster } from 'vue-sonner';
 
-const { user } = useEnhancedAuth();
+const { user } = useDirectusAuth();
 const runtimeConfig = useRuntimeConfig();
 
 if (process.env.NODE_ENV === 'development') {

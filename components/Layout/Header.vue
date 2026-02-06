@@ -1,5 +1,5 @@
 <script setup>
-const { user } = useEnhancedAuth();
+const { user } = useDirectusAuth();
 
 const props = defineProps({
 	links: {

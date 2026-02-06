@@ -28,7 +28,7 @@
 </template>
 <script setup>
 const { updateMe } = useDirectusUsers();
-const { user } = useEnhancedAuth();
+const { user } = useDirectusAuth();
 const toast = useToast();
 
 watch(user.value, (currentValue, oldValue) => {

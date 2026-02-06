@@ -166,7 +166,7 @@
 <script setup lang="ts">
 import { format, parseISO, isAfter } from 'date-fns';
 
-const { user } = useEnhancedAuth();
+const { user } = useDirectusAuth();
 const toast = useToast();
 
 // State

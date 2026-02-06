@@ -34,7 +34,7 @@
 	</div>
 </template>
 <script setup>
-const { user } = useEnhancedAuth();
+const { user } = useDirectusAuth();
 
 const { logout } = useLogout();
 

@@ -25,7 +25,7 @@ const props = defineProps({
 });
 
 const { createItem, deleteItems, readItems } = useDirectusItems();
-const { user } = useEnhancedAuth();
+const { user } = useDirectusAuth();
 const emits = defineEmits(['reaction-added', 'reaction-removed']);
 const toast = useToast();
 

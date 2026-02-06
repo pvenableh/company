@@ -235,7 +235,7 @@ import { ref, computed, watch } from 'vue';
 import { useInfiniteScroll } from '@vueuse/core';
 import { useNotifications } from '~/composables/useNotifications';
 
-const { user } = useEnhancedAuth();
+const { user } = useDirectusAuth();
 const config = useRuntimeConfig();
 const {
 	notifications,

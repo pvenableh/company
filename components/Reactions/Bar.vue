@@ -10,7 +10,7 @@ const props = defineProps({
 	},
 });
 
-const { user } = useEnhancedAuth();
+const { user } = useDirectusAuth();
 
 // Subscribe to reactions with user details in real-time
 const { data: reactions, refresh } = useRealtimeSubscription(

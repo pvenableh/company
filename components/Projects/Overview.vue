@@ -36,7 +36,7 @@ const config = useRuntimeConfig();
 
 const amdinRole = ref(config.public.adminRole);
 
-const { user } = useEnhancedAuth();
+const { user } = useDirectusAuth();
 
 const isAdmin = computed(() => user.value.role === amdinRole.value);
 

@@ -10,7 +10,7 @@ const props = defineProps({
 	},
 });
 
-const { user } = useEnhancedAuth();
+const { user } = useDirectusAuth();
 
 const assignedUsers = computed(() => {
 	return props.project?.assigned_to?.map((assignment) => assignment.directus_users_id) || [];

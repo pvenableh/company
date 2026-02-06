@@ -2,7 +2,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 const config = useRuntimeConfig();
-const { user } = useEnhancedAuth();
+const { user } = useDirectusAuth();
 
 const props = defineProps({
 	chip: {

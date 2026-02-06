@@ -152,7 +152,7 @@ const props = defineProps({
 
 // const emit = defineEmits(['expand']);
 
-const { user } = useEnhancedAuth();
+const { user } = useDirectusAuth();
 
 const commentsCount = computed(() => {
 	// If element.commentsCount exists, use it (this is our explicitly set number)
