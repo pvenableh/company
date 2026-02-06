@@ -1859,6 +1859,143 @@ export interface Slide {
 	slides_id?: string | null;
 }
 
+export interface SocialAccount {
+	/** @primaryKey */
+	id: string;
+	status?: 'published' | 'draft' | 'archived';
+	sort?: number | null;
+	user_created?: DirectusUser | string | null;
+	date_created?: string | null;
+	user_updated?: DirectusUser | string | null;
+	date_updated?: string | null;
+	/** @required */
+	platform: 'instagram' | 'tiktok';
+	/** @description Unique ID from the platform @required */
+	platform_user_id: string;
+	/** @description Display name on the platform @required */
+	account_name: string;
+	/** @description The @username handle @required */
+	account_handle: string;
+	/** @description Profile picture URL from platform */
+	profile_picture_url?: string | null;
+	/** @description Encrypted OAuth access token @required */
+	access_token: string;
+	/** @description Encrypted OAuth refresh token */
+	refresh_token?: string | null;
+	/** @description When the access token expires @required */
+	token_expires_at: string;
+	/** @description Connection status of this account */
+	account_status?: 'active' | 'expired' | 'revoked';
+	/** @description Platform-specific data (page_id, scopes, etc.) */
+	metadata?: Record<string, any> | null;
+	/** @description Which agency client this account belongs to */
+	client_id?: string | null;
+}
+
+export interface SocialActivityLog {
+	/** @primaryKey */
+	id: string;
+	status?: 'published' | 'draft' | 'archived';
+	sort?: number | null;
+	user_created?: DirectusUser | string | null;
+	date_created?: string | null;
+	user_updated?: DirectusUser | string | null;
+	date_updated?: string | null;
+}
+
+export interface SocialAnalyticsSnapshot {
+	/** @primaryKey */
+	id: string;
+	status?: 'published' | 'draft' | 'archived';
+	sort?: number | null;
+	user_created?: DirectusUser | string | null;
+	date_created?: string | null;
+	user_updated?: DirectusUser | string | null;
+	date_updated?: string | null;
+	/** @description The social account this snapshot belongs to @required */
+	social_account: string;
+	/** @description Linked post for post-level metrics (null for account-level) */
+	social_post?: string | null;
+	/** @required */
+	snapshot_type: 'account' | 'post';
+	/** @description When these metrics were captured @required */
+	captured_at: string;
+	/** @description Platform-specific metrics object (followers, likes, impressions, etc.) @required */
+	metrics: Record<string, any>;
+}
+
+export interface SocialClient {
+	/** @primaryKey */
+	id: string;
+	status?: 'published' | 'draft' | 'archived';
+	sort?: number | null;
+	user_created?: DirectusUser | string | null;
+	date_created?: string | null;
+	user_updated?: DirectusUser | string | null;
+	date_updated?: string | null;
+	/** @required */
+	name: string;
+	/** @description URL to client logo image */
+	logo_url?: string | null;
+	/** @description Primary contact email */
+	contact_email?: string | null;
+	brand_color?: string | null;
+	notes?: string | null;
+}
+
+export interface SocialComment {
+	/** @primaryKey */
+	id: string;
+	status?: 'published' | 'draft' | 'archived';
+	sort?: number | null;
+	user_created?: DirectusUser | string | null;
+	date_created?: string | null;
+	user_updated?: DirectusUser | string | null;
+	date_updated?: string | null;
+	/** @description The post this comment belongs to @required */
+	social_post: string;
+	/** @description The account this comment was made on @required */
+	social_account: string;
+	/** @description Comment ID from the platform @required */
+	platform_comment_id: string;
+	/** @description User ID of the commenter on the platform @required */
+	platform_user_id: string;
+	/** @description Commenter username @required */
+	username: string;
+}
+
+export interface SocialPost {
+	/** @primaryKey */
+	id: string;
+	status?: 'published' | 'draft' | 'archived';
+	sort?: number | null;
+	user_created?: DirectusUser | string | null;
+	date_created?: string | null;
+	user_updated?: DirectusUser | string | null;
+	date_updated?: string | null;
+	/** @description Post caption / text content @required */
+	caption: string;
+	/** @description Array of media URLs @required */
+	media_urls: Record<string, any>;
+	/** @description Array of media types — "image" or "video" per URL @required */
+	media_types: Record<string, any>;
+	/** @description Preview thumbnail URL */
+	thumbnail_url?: string | null;
+	post_type?: 'image' | 'video' | 'carousel' | 'reel' | 'story';
+	/** @description Array of target accounts with platform-specific options @required */
+	platforms: Record<string, any>;
+	/** @description When to publish this post @required */
+	scheduled_at: string;
+	/** @description Publishing workflow status */
+	post_status?: 'draft' | 'scheduled' | 'publishing' | 'published' | 'failed';
+	/** @description Results per platform after publishing (post IDs, URLs, etc.) */
+	publish_results?: Record<string, any> | null;
+	/** @description When the post was actually published */
+	published_at?: string | null;
+	/** @description Error details if publishing failed */
+	error_message?: string | null;
+}
+
 export interface Task {
 	/** @primaryKey */
 	id: string;
@@ -2636,6 +2773,12 @@ export interface Schema {
 	shop_shipping_options: ShopShippingOption[];
 	shop_variants: ShopVariant[];
 	slides: Slide[];
+	social_accounts: SocialAccount[];
+	social_activity_log: SocialActivityLog[];
+	social_analytics_snapshots: SocialAnalyticsSnapshot[];
+	social_clients: SocialClient[];
+	social_comments: SocialComment[];
+	social_posts: SocialPost[];
 	tasks: Task[];
 	tasks_directus_users: TasksDirectusUser[];
 	teams: Team[];
@@ -2787,6 +2930,12 @@ export enum CollectionNames {
 	shop_shipping_options = 'shop_shipping_options',
 	shop_variants = 'shop_variants',
 	slides = 'slides',
+	social_accounts = 'social_accounts',
+	social_activity_log = 'social_activity_log',
+	social_analytics_snapshots = 'social_analytics_snapshots',
+	social_clients = 'social_clients',
+	social_comments = 'social_comments',
+	social_posts = 'social_posts',
 	tasks = 'tasks',
 	tasks_directus_users = 'tasks_directus_users',
 	teams = 'teams',

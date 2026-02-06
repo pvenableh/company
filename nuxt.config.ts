@@ -49,7 +49,20 @@ export default defineNuxtConfig({
 		stripeSecretKeyTest: process.env.STRIPE_SECRET_KEY_TEST,
 		stripeSecretKeyLive: process.env.STRIPE_SECRET_KEY,
 		stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
-
+		social: {
+			instagram: {
+				appId: process.env.INSTAGRAM_APP_ID || '',
+				appSecret: process.env.INSTAGRAM_APP_SECRET || '',
+				redirectUri: process.env.INSTAGRAM_REDIRECT_URI || '',
+				apiVersion: 'v21.0',
+			},
+			tiktok: {
+				clientKey: process.env.TIKTOK_CLIENT_KEY || '',
+				clientSecret: process.env.TIKTOK_CLIENT_SECRET || '',
+				redirectUri: process.env.TIKTOK_REDIRECT_URI || '',
+			},
+			encryptionKey: process.env.SOCIAL_ENCRYPTION_KEY || '',
+		},
 		// Directus (server-side - NEVER expose to client)
 		directus: {
 			url: process.env.DIRECTUS_URL || 'https://admin.huestudios.company',

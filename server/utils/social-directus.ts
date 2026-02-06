@@ -1,0 +1,312 @@
+/**
+ * Social Media Directus Helpers
+ *
+ * Type-safe helpers for interacting with social media collections in Directus.
+ */
+
+import type {
+  SocialAccount,
+  SocialPost,
+  SocialAnalyticsSnapshot,
+  SocialComment,
+  SocialActivityLog,
+  SocialAction,
+  SocialPlatform,
+} from '~/types/social'
+import { encryptSocialToken, safeDecryptSocialToken } from './social-crypto'
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CONFIGURATION
+// ══════════════════════════════════════════════════════════════════════════════
+
+function getDirectusConfig() {
+  const config = useRuntimeConfig()
+  return {
+    url: config.directus?.url || process.env.DIRECTUS_URL || 'http://localhost:8055',
+    token: config.directus?.serverToken || process.env.DIRECTUS_SERVER_TOKEN || '',
+  }
+}
+
+async function directusFetch<T>(
+  path: string,
+  options: { method?: string; body?: unknown; params?: Record<string, string> } = {}
+): Promise<T> {
+  const { url, token } = getDirectusConfig()
+  const { method = 'GET', body, params } = options
+
+  const queryString = params ? `?${new URLSearchParams(params).toString()}` : ''
+
+  const response = await fetch(`${url}${path}${queryString}`, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  })
+
+  if (!response.ok) {
+    const error = await response.text()
+    throw new Error(`Directus request failed: ${response.status} ${error}`)
+  }
+
+  const json = await response.json()
+  return json.data as T
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SOCIAL ACCOUNTS
+// ══════════════════════════════════════════════════════════════════════════════
+
+export async function getSocialAccounts(filters?: {
+  platform?: SocialPlatform
+  status?: 'active' | 'expired' | 'revoked'
+}): Promise<SocialAccount[]> {
+  const params: Record<string, string> = {}
+
+  if (filters?.platform) {
+    params['filter[platform][_eq]'] = filters.platform
+  }
+  if (filters?.status) {
+    params['filter[status][_eq]'] = filters.status
+  }
+
+  return directusFetch<SocialAccount[]>('/items/social_accounts', { params })
+}
+
+export async function getSocialAccountById(id: string): Promise<SocialAccount | null> {
+  try {
+    return await directusFetch<SocialAccount>(`/items/social_accounts/${id}`)
+  } catch {
+    return null
+  }
+}
+
+export async function getSocialAccountByPlatformId(
+  platform: SocialPlatform,
+  platformUserId: string
+): Promise<SocialAccount | null> {
+  const accounts = await directusFetch<SocialAccount[]>('/items/social_accounts', {
+    params: {
+      'filter[platform][_eq]': platform,
+      'filter[platform_user_id][_eq]': platformUserId,
+      limit: '1',
+    },
+  })
+  return accounts[0] || null
+}
+
+export async function createSocialAccount(data: {
+  platform: SocialPlatform
+  platform_user_id: string
+  account_name: string
+  account_handle: string
+  profile_picture_url?: string
+  access_token: string
+  refresh_token?: string
+  token_expires_at: string
+  metadata?: Record<string, unknown>
+}): Promise<SocialAccount> {
+  return directusFetch<SocialAccount>('/items/social_accounts', {
+    method: 'POST',
+    body: {
+      ...data,
+      access_token: encryptSocialToken(data.access_token),
+      refresh_token: data.refresh_token ? encryptSocialToken(data.refresh_token) : null,
+      status: 'active',
+    },
+  })
+}
+
+export async function updateSocialAccount(
+  id: string,
+  data: Partial<{
+    account_name: string
+    account_handle: string
+    profile_picture_url: string
+    access_token: string
+    refresh_token: string
+    token_expires_at: string
+    status: 'active' | 'expired' | 'revoked'
+    metadata: Record<string, unknown>
+  }>
+): Promise<SocialAccount> {
+  const updateData: Record<string, unknown> = { ...data }
+
+  if (data.access_token) {
+    updateData.access_token = encryptSocialToken(data.access_token)
+  }
+  if (data.refresh_token) {
+    updateData.refresh_token = encryptSocialToken(data.refresh_token)
+  }
+
+  return directusFetch<SocialAccount>(`/items/social_accounts/${id}`, {
+    method: 'PATCH',
+    body: updateData,
+  })
+}
+
+export async function deleteSocialAccount(id: string): Promise<void> {
+  await directusFetch(`/items/social_accounts/${id}`, { method: 'DELETE' })
+}
+
+export async function getDecryptedAccessToken(accountId: string): Promise<string | null> {
+  const account = await getSocialAccountById(accountId)
+  if (!account) return null
+  return safeDecryptSocialToken(account.access_token)
+}
+
+export async function getDecryptedRefreshToken(accountId: string): Promise<string | null> {
+  const account = await getSocialAccountById(accountId)
+  if (!account?.refresh_token) return null
+  return safeDecryptSocialToken(account.refresh_token)
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// SOCIAL POSTS
+// ══════════════════════════════════════════════════════════════════════════════
+
+export async function getSocialPosts(filters?: {
+  status?: string
+  scheduled_after?: string
+  scheduled_before?: string
+  limit?: number
+}): Promise<SocialPost[]> {
+  const params: Record<string, string> = { sort: '-scheduled_at' }
+
+  if (filters?.status) params['filter[status][_eq]'] = filters.status
+  if (filters?.scheduled_after) params['filter[scheduled_at][_gte]'] = filters.scheduled_after
+  if (filters?.scheduled_before) params['filter[scheduled_at][_lte]'] = filters.scheduled_before
+  if (filters?.limit) params.limit = String(filters.limit)
+
+  return directusFetch<SocialPost[]>('/items/social_posts', { params })
+}
+
+export async function getSocialPostById(id: string): Promise<SocialPost | null> {
+  try {
+    return await directusFetch<SocialPost>(`/items/social_posts/${id}`)
+  } catch {
+    return null
+  }
+}
+
+export async function createSocialPost(
+  data: Omit<SocialPost, 'id' | 'date_created' | 'date_updated'>
+): Promise<SocialPost> {
+  return directusFetch<SocialPost>('/items/social_posts', { method: 'POST', body: data })
+}
+
+export async function updateSocialPost(id: string, data: Partial<SocialPost>): Promise<SocialPost> {
+  return directusFetch<SocialPost>(`/items/social_posts/${id}`, { method: 'PATCH', body: data })
+}
+
+export async function deleteSocialPost(id: string): Promise<void> {
+  await directusFetch(`/items/social_posts/${id}`, { method: 'DELETE' })
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ANALYTICS SNAPSHOTS
+// ══════════════════════════════════════════════════════════════════════════════
+
+export async function createAnalyticsSnapshot(
+  data: Omit<SocialAnalyticsSnapshot, 'id' | 'date_created'>
+): Promise<SocialAnalyticsSnapshot> {
+  return directusFetch<SocialAnalyticsSnapshot>('/items/social_analytics_snapshots', {
+    method: 'POST',
+    body: data,
+  })
+}
+
+export async function getAnalyticsSnapshots(filters: {
+  social_account: string
+  snapshot_type?: 'account' | 'post'
+  captured_after?: string
+  captured_before?: string
+  limit?: number
+}): Promise<SocialAnalyticsSnapshot[]> {
+  const params: Record<string, string> = {
+    'filter[social_account][_eq]': filters.social_account,
+    sort: '-captured_at',
+  }
+
+  if (filters.snapshot_type) params['filter[snapshot_type][_eq]'] = filters.snapshot_type
+  if (filters.captured_after) params['filter[captured_at][_gte]'] = filters.captured_after
+  if (filters.captured_before) params['filter[captured_at][_lte]'] = filters.captured_before
+  if (filters.limit) params.limit = String(filters.limit)
+
+  return directusFetch<SocialAnalyticsSnapshot[]>('/items/social_analytics_snapshots', { params })
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// COMMENTS
+// ══════════════════════════════════════════════════════════════════════════════
+
+export async function getSocialComments(filters: {
+  social_account?: string
+  platform?: SocialPlatform
+  is_hidden?: boolean
+  limit?: number
+}): Promise<SocialComment[]> {
+  const params: Record<string, string> = { sort: '-commented_at' }
+
+  if (filters.social_account) params['filter[social_account][_eq]'] = filters.social_account
+  if (filters.platform) params['filter[platform][_eq]'] = filters.platform
+  if (filters.is_hidden !== undefined) params['filter[is_hidden][_eq]'] = String(filters.is_hidden)
+  if (filters.limit) params.limit = String(filters.limit)
+
+  return directusFetch<SocialComment[]>('/items/social_comments', { params })
+}
+
+export async function upsertSocialComment(
+  data: Omit<SocialComment, 'id' | 'date_created'>
+): Promise<SocialComment> {
+  const existing = await directusFetch<SocialComment[]>('/items/social_comments', {
+    params: { 'filter[platform_comment_id][_eq]': data.platform_comment_id, limit: '1' },
+  })
+
+  if (existing.length > 0) {
+    return directusFetch<SocialComment>(`/items/social_comments/${existing[0].id}`, {
+      method: 'PATCH',
+      body: data,
+    })
+  }
+
+  return directusFetch<SocialComment>('/items/social_comments', { method: 'POST', body: data })
+}
+
+export async function updateSocialComment(id: string, data: Partial<SocialComment>): Promise<SocialComment> {
+  return directusFetch<SocialComment>(`/items/social_comments/${id}`, { method: 'PATCH', body: data })
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ACTIVITY LOG
+// ══════════════════════════════════════════════════════════════════════════════
+
+export async function logSocialActivity(data: {
+  action: SocialAction
+  entity_type: 'post' | 'account' | 'comment'
+  entity_id: string
+  platform?: SocialPlatform
+  details?: Record<string, unknown>
+  performed_by?: string
+}): Promise<SocialActivityLog> {
+  return directusFetch<SocialActivityLog>('/items/social_activity_log', { method: 'POST', body: data })
+}
+
+export async function getSocialActivityLog(filters?: {
+  action?: SocialAction
+  entity_type?: string
+  entity_id?: string
+  platform?: SocialPlatform
+  limit?: number
+}): Promise<SocialActivityLog[]> {
+  const params: Record<string, string> = { sort: '-date_created' }
+
+  if (filters?.action) params['filter[action][_eq]'] = filters.action
+  if (filters?.entity_type) params['filter[entity_type][_eq]'] = filters.entity_type
+  if (filters?.entity_id) params['filter[entity_id][_eq]'] = filters.entity_id
+  if (filters?.platform) params['filter[platform][_eq]'] = filters.platform
+  if (filters?.limit) params.limit = String(filters.limit)
+
+  return directusFetch<SocialActivityLog[]>('/items/social_activity_log', { params })
+}

@@ -71,6 +71,8 @@
 		"vue-tsc": "^2.2.8"
 	},
 	"dependencies": {
+		"@aws-sdk/client-s3": "^3.984.0",
+		"@aws-sdk/s3-request-presigner": "^3.984.0",
 		"@azure/msal-node": "^3.8.4",
 		"@directus/sdk": "^20.3.0",
 		"@internationalized/date": "^3.10.1",
