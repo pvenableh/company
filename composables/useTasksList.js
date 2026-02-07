@@ -19,6 +19,7 @@ export function useTasksList({
 	// Get global organization and team values
 	const { selectedOrg, getOrganizationFilter } = useOrganization();
 	const { selectedTeam, getTeamFilter } = useTeams();
+	const taskItemsApi = useDirectusItems('tasks');
 
 	let disconnect = null;
 	let refresh = null;
@@ -245,12 +246,10 @@ export function useTasksList({
 		console.log('Toggling task status:', taskId);
 
 		try {
-			const { updateItem } = useDirectusItems();
-
 			const newStatus = task.status === 'completed' ? 'active' : 'completed';
 			console.log('New status will be:', newStatus);
 
-			await updateItem('tasks', taskId, {
+			await taskItemsApi.update(taskId, {
 				status: newStatus,
 			});
 

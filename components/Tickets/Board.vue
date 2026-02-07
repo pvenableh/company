@@ -204,7 +204,9 @@
 <script setup>
 import VueDraggable from 'vuedraggable';
 
-const { updateItem, readItems } = useDirectusItems();
+const ticketItems = useDirectusItems('tickets');
+const commentItems = useDirectusItems('comments');
+const projectItems = useDirectusItems('projects');
 const { registerRefreshCallback } = useTicketsStore();
 const { user } = useDirectusAuth();
 const { triggerHaptic } = useHaptic();
@@ -551,7 +553,7 @@ const setupTicketsSubscription = () => {
 				if (ticketIds.length > 0) {
 					try {
 						// Fetch comment counts with proper aggregate query
-						const commentCounts = await readItems('comments', {
+						const commentCounts = await commentItems.list({
 							filter: {
 								collection: { _eq: 'tickets' },
 								item: { _in: ticketIds },
@@ -759,7 +761,7 @@ const fetchProjects = async () => {
 		}
 
 		// Fetch projects with the filter
-		const projects = await readItems('projects', {
+		const projects = await projectItems.list({
 			fields: ['id', 'title', 'sort', 'organization.id', 'organization.name', 'team.id', 'team.name', 'tickets'],
 			filter,
 			sort: 'sort',
@@ -837,7 +839,7 @@ const updateTicketStatus = async (columnId, event) => {
 	updatingTickets.value.add(ticketId);
 
 	try {
-		await updateItem('tickets', ticketId, {
+		await ticketItems.update(ticketId, {
 			status: newStatus,
 			date_updated: new Date(),
 		});

@@ -10,7 +10,7 @@ const props = defineProps({
 	},
 });
 
-const { createItem, deleteItem } = useDirectusItems();
+const messageItems = useDirectusItems('messages');
 const { user } = useDirectusAuth();
 const showReplyInput = ref(false);
 const replyText = ref('');
@@ -57,7 +57,7 @@ const sendReply = async () => {
 	if (!replyText.value?.trim()) return;
 
 	try {
-		await createItem('messages', {
+		await messageItems.create({
 			text: replyText.value,
 			channel: props.message.channel,
 			parent_id: props.message.id,
@@ -80,7 +80,7 @@ const sendReply = async () => {
 
 const deleteMessage = async () => {
 	try {
-		await deleteItem('messages', props.message.id);
+		await messageItems.remove(props.message.id);
 		useToast().add({
 			title: 'Success',
 			description: 'Message deleted',

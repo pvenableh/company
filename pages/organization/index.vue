@@ -1,5 +1,5 @@
 <script setup>
-const { readItems } = useDirectusItems();
+const organizationItems = useDirectusItems('organizations');
 const { user: sessionUser, loggedIn } = useUserSession();
 const user = computed(() => {
 	return loggedIn.value ? sessionUser.value ?? null : null;
@@ -44,7 +44,7 @@ const fetchOrganizationData = async () => {
 		isLoading.value = true;
 
 		// Use readItems with the correct fields
-		const orgs = await readItems('organizations', {
+		const orgs = await organizationItems.list({
 			filter: { id: { _eq: selectedOrg.value } },
 			fields: [
 				'id',

@@ -1,7 +1,7 @@
 <script setup>
 import { useRealtimeSubscription } from '~/composables/useRealtimeSubscription';
 
-const { createItem, deleteItem } = useDirectusItems();
+const messageItems = useDirectusItems('messages');
 const { params } = useRoute();
 const { user: sessionUser, loggedIn } = useUserSession();
 const user = computed(() => {
@@ -96,7 +96,7 @@ const sendMessage = async () => {
 			user_created: user.value.id,
 		};
 
-		await createItem('messages', messageData);
+		await messageItems.create(messageData);
 		newMessage.value = '';
 	} catch (error) {
 		console.error('Error sending message:', error);
@@ -111,7 +111,7 @@ const sendMessage = async () => {
 // Delete message function
 const deleteMessage = async (id) => {
 	try {
-		await deleteItem('messages', id);
+		await messageItems.remove(id);
 		useToast().add({
 			title: 'Success',
 			description: 'Message deleted',

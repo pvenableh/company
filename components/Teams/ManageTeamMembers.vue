@@ -149,6 +149,8 @@ const currentUser = computed(() => {
 	return loggedIn.value ? sessionUser.value ?? null : null;
 });
 const toast = useToast();
+const teamItems = useDirectusItems('teams');
+const junctionDirectusUsersTeamsItems = useDirectusItems('junction_directus_users_teams');
 
 // State
 const teamMembers = ref([]);
@@ -170,8 +172,7 @@ const fetchTeamMembers = async () => {
 		loading.value = true;
 
 		// This would typically use your API, but for simplicity:
-		const { readItems } = useDirectusItems();
-		const team = await readItems('teams', {
+		const team = await teamItems.list({
 			filter: { id: { _eq: props.teamId } },
 			fields: [
 				'id',
@@ -291,8 +292,7 @@ const handleConfirm = async () => {
 			});
 		} else if (confirmAction.value === 'toggleManager') {
 			// This would typically update the junction record's is_manager field
-			const { updateItem } = useDirectusItems();
-			await updateItem('junction_directus_users_teams', confirmMember.value.id, {
+			await junctionDirectusUsersTeamsItems.update(confirmMember.value.id, {
 				is_manager: !confirmMember.value.is_manager,
 			});
 

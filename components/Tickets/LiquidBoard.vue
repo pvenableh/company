@@ -131,7 +131,7 @@ const draggedTicket = ref(null);
 const draggableInstances = ref([]);
 
 // API integration
-const { updateItem } = useDirectusItems();
+const ticketItems = useDirectusItems('tickets');
 const fields = ['id', 'title', 'status', 'priority', 'date_updated'];
 
 const getFilter = () => {
@@ -250,7 +250,7 @@ const handleDragEnd = async (finalX) => {
 
 const updateTicketStatus = async (ticketId, newStatus) => {
 	try {
-		await updateItem('tickets', ticketId, {
+		await ticketItems.update(ticketId, {
 			status: newStatus,
 			date_updated: new Date(),
 		});

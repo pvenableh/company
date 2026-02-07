@@ -1,12 +1,12 @@
 <script setup>
 const { params } = useRoute();
-const { readItem } = useDirectusItems();
+const ticketItems = useDirectusItems('tickets');
 
 definePageMeta({
 	middleware: ['auth'],
 });
 
-const ticket = await readItem('tickets', params.id, {
+const ticket = await ticketItems.get(params.id, {
 	fields: [
 		'id',
 		'title',

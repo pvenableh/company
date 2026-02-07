@@ -8,7 +8,7 @@ const props = defineProps({
 const emit = defineEmits(['refresh']);
 
 const toast = useToast();
-const { updateItem } = useDirectusItems();
+const videoMeetingItems = useDirectusItems('video_meetings');
 
 const showInviteModal = ref(false);
 const selectedMeeting = ref(null);
@@ -88,7 +88,7 @@ const sendInvite = async () => {
 const cancelMeeting = async (meeting) => {
 	if (!confirm('Cancel this meeting?')) return;
 	try {
-		await updateItem('video_meetings', meeting.id, { status: 'cancelled' });
+		await videoMeetingItems.update(meeting.id, { status: 'cancelled' });
 		emit('refresh');
 		toast.add({ title: 'Meeting cancelled', color: 'yellow' });
 	} catch (error) {

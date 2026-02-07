@@ -6,12 +6,12 @@
 </template>
 
 <script setup>
-const { readItems, updateItem } = useDirectusItems();
+const commentItems = useDirectusItems('comments');
 
 async function migrateCommentItemToUuid() {
 	try {
 		// Fetch all comments
-		const comments = await readItems('comments', {
+		const comments = await commentItems.list({
 			fields: ['id', 'item_id'],
 		});
 
@@ -22,7 +22,7 @@ async function migrateCommentItemToUuid() {
 					const uuid = comment.item_id; // No parsing needed if 'item' already contains UUID strings.
 
 					// Update the comment with the UUID in the new item_id field
-					await updateItem('comments', comment.id, {
+					await commentItems.update(comment.id, {
 						item: uuid,
 					});
 
@@ -42,7 +42,7 @@ async function migrateCommentItemToUuid() {
 
 async function migrateCommentItemToUuid2() {
 	try {
-		const comments = await readItems('comments', {
+		const comments = await commentItems.list({
 			fields: ['id', 'tickets_id'],
 		});
 
@@ -51,7 +51,7 @@ async function migrateCommentItemToUuid2() {
 			if (comment.tickets_id && typeof comment.tickets_id === 'string') {
 				try {
 					// Assuming comment.item is already a valid UUID string.
-					await updateItem('comments', comment.id, {
+					await commentItems.update(comment.id, {
 						item: comment.tickets_id,
 					});
 

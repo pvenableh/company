@@ -1,5 +1,5 @@
 <script setup>
-const { readItem } = useDirectusItems();
+const organizationItems = useDirectusItems('organization');
 const { params } = useRoute();
 const { user: sessionUser, loggedIn } = useUserSession();
 const user = computed(() => {
@@ -14,7 +14,7 @@ definePageMeta({
 	layout: 'default',
 });
 
-const org = await readItem('organization', params.id, {
+const org = await organizationItems.get(params.id, {
 	fields: [
 		'*,users.directus_users_id.id,users.directus_users_id.first_name,users.directus_users_id.last_name,users.directus_users_id.avatar,users.directus_users_id.email',
 	],

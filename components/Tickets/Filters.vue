@@ -36,18 +36,17 @@ const emit = defineEmits(['update:organization', 'update:my-tickets']);
 const selectedOrg = ref(null);
 const showMyTickets = ref(false);
 
-const { readItems } = useDirectusItems();
+const organizationItems = useDirectusItems('organizations');
 // const organizations = ref([]);
 
 // onMounted(async () => {
-// 	const { data } = await readItems({
-// 		collection: 'organizations',
+// 	const { data } = await organizationItems.list({
 // 		fields: ['id', 'name'],
 // 	});
 // 	organizations.value = data;
 // });
 
-const organizations = await readItems('organizations', {
+const organizations = await organizationItems.list({
 	fields: ['id,name'],
 });
 

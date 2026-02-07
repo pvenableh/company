@@ -182,6 +182,8 @@ const activeFilter = ref('all');
 const { selectedOrg } = useOrganization();
 const { selectedTeam } = useTeams();
 
+const ticketItems = useDirectusItems('tickets');
+
 // Setup tasks list with the composable, passing initial filter params
 const {
 	tasks,
@@ -384,7 +386,7 @@ const testApiCall = async () => {
 	console.log('Testing API call with filter:', filterToTest);
 
 	try {
-		const response = await readItems('tickets', {
+		const response = await ticketItems.list({
 			filter: filterToTest,
 			// Add any other necessary parameters like fields, sort, etc.
 		});

@@ -163,7 +163,8 @@ watch(availabilityError, (error) => {
 });
 
 // Methods
-const { createItem, updateItem, deleteItem, readItems } = useDirectusItems();
+const schedulerSettingsItems = useDirectusItems('scheduler_settings');
+const availabilityItems = useDirectusItems('availability');
 
 const saveSettings = async () => {
 	saving.value = true;
@@ -173,7 +174,7 @@ const saveSettings = async () => {
 
 		// If not loaded yet, fetch directly from Directus to check
 		if (!existingSettingsId) {
-			const existingSettings = await readItems('scheduler_settings', {
+			const existingSettings = await schedulerSettingsItems.list({
 				filter: { user_id: { _eq: user.value?.id } },
 				limit: 1,
 			});
@@ -185,10 +186,10 @@ const saveSettings = async () => {
 
 		if (existingSettingsId) {
 			// UPDATE existing settings
-			await updateItem('scheduler_settings', existingSettingsId, { ...form });
+			await schedulerSettingsItems.update(existingSettingsId, { ...form });
 		} else {
 			// CREATE new settings (only if none exist)
-			await createItem('scheduler_settings', {
+			await schedulerSettingsItems.create({
 				user_id: user.value?.id,
 				...form,
 			});
@@ -209,7 +210,7 @@ const saveAvailability = async () => {
 		// Delete existing availability for this user
 		if (availabilityData.value?.length) {
 			for (const item of availabilityData.value) {
-				await deleteItem('availability', item.id);
+				await availabilityItems.remove(item.id);
 			}
 		}
 
@@ -226,7 +227,7 @@ const saveAvailability = async () => {
 
 		for (const [day, data] of Object.entries(availability.value)) {
 			if (data.enabled) {
-				await createItem('availability', {
+				await availabilityItems.create({
 					user_id: user.value?.id,
 					day_of_week: dayMapping[day],
 					start_time: data.start + ':00',

@@ -2,7 +2,7 @@
 
 export const useFilteredUsers = () => {
 	const { readUsers } = useDirectusUsers();
-	const { readItems } = useDirectusItems();
+	const junctionItems = useDirectusItems('junction_directus_users_teams');
 	const { user: sessionUser, loggedIn } = useUserSession();
 	const currentUser = computed(() => {
 		return loggedIn.value ? sessionUser.value ?? null : null;
@@ -65,7 +65,7 @@ export const useFilteredUsers = () => {
 					console.log(`Filtering by team: ${teamId}`);
 
 					// Get the members of the team
-					const teamMembers = await readItems('junction_directus_users_teams', {
+					const teamMembers = await junctionItems.list({
 						filter: {
 							teams_id: { _eq: teamId },
 						},
@@ -150,7 +150,7 @@ export const useFilteredUsers = () => {
 
 			try {
 				// Get users already in the team
-				const teamUsers = await readItems('junction_directus_users_teams', {
+				const teamUsers = await junctionItems.list({
 					filter: {
 						teams_id: { _eq: teamId },
 					},

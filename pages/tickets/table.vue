@@ -8,7 +8,7 @@ const { user: sessionUser, loggedIn } = useUserSession();
 const user = computed(() => {
 	return loggedIn.value ? sessionUser.value ?? null : null;
 });
-const { readItems } = useDirectusItems();
+const ticketItems = useDirectusItems('tickets');
 
 const columns = [
 	{
@@ -67,7 +67,7 @@ const items = (row) => [
 	],
 ];
 
-const tickets = await readItems('tickets', {
+const tickets = await ticketItems.list({
 	fields: [
 		'*,services.services_id.id,services.services_id.name,tasks,assigned_to.directus_users_id.first_name,assigned_to.directus_users_id.last_name,assigned_to.directus_users_id.id,assigned_to.directus_users_id.avatar,organization.name',
 	],

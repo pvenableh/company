@@ -107,7 +107,7 @@ const props = defineProps({
 const emit = defineEmits(['update:commentCount']);
 
 const { user } = useDirectusAuth();
-const { createItem, deleteItem } = useDirectusItems();
+const commentItems = useDirectusItems('comments');
 const replyingTo = ref(null);
 const activeCommentId = ref(null);
 const localComments = ref([]);
@@ -254,7 +254,7 @@ async function handleCommentSubmit(commentHtml, parentId = null) {
 	isSubmitting.value = true;
 	try {
 		const effectiveParentId = parentId || replyingTo.value?.id || null;
-		const comment = await createItem('comments', {
+		const comment = await commentItems.create({
 			status: 'published',
 			comment: commentHtml,
 			user: user.value.id,
@@ -300,7 +300,7 @@ function handleReply(comment) {
 
 async function handleDelete(commentId) {
 	try {
-		await deleteItem('comments', commentId);
+		await commentItems.remove(commentId);
 		refreshData();
 	} catch (error) {
 		console.error('Error deleting comment:', error);

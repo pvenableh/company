@@ -139,7 +139,8 @@ const props = defineProps({
 
 const emit = defineEmits(['saved', 'cancelled']);
 const { user } = useDirectusAuth();
-const { createItem, updateItem } = useDirectusItems();
+const appointmentItems = useDirectusItems('appointments');
+const appointmentsDirectusUsersItems = useDirectusItems('appointments_directus_users');
 const { filteredUsers, fetchFilteredUsers, loading: loadingUsers } = useFilteredUsers();
 
 const isLoading = ref(false);
@@ -317,14 +318,14 @@ async function handleSubmit() {
 		};
 
 		if (props.appointment) {
-			await updateItem('appointments', props.appointment.id, appointmentData);
+			await appointmentItems.update(props.appointment.id, appointmentData);
 		} else {
-			const appointment = await createItem('appointments', appointmentData);
+			const appointment = await appointmentItems.create(appointmentData);
 
 			// Create attendee relationships
 			await Promise.all(
 				form.value.attendees.map((attendee) =>
-					createItem('appointments_directus_users', {
+					appointmentsDirectusUsersItems.create({
 						appointments_id: appointment.id,
 						directus_users_id: attendee.directus_users_id.id,
 					}),

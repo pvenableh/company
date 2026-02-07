@@ -1,6 +1,7 @@
 // composables/useTeams.js
 export const useTeams = () => {
-	const { createItem, readItems, deleteItems, updateItem } = useDirectusItems();
+	const teamItems = useDirectusItems('teams');
+	const junctionItems = useDirectusItems('junction_directus_users_teams');
 	const { readUsers } = useDirectusUsers();
 	const nuxtApp = useNuxtApp();
 
@@ -109,7 +110,7 @@ export const useTeams = () => {
 			await fetchOrganizationUsers(organizationId);
 
 			// Then fetch all teams for the organization
-			const response = await readItems('teams', {
+			const response = await teamItems.list({
 				filter: {
 					organization: { _eq: organizationId },
 				},
@@ -358,7 +359,7 @@ export const useTeams = () => {
 	const createTeam = async (organizationId, teamData) => {
 		try {
 			// Create the team
-			const team = await createItem('teams', {
+			const team = await teamItems.create({
 				name: teamData.name,
 				description: teamData.description,
 				organization: organizationId,
@@ -369,7 +370,7 @@ export const useTeams = () => {
 			if (teamData.users?.length) {
 				await Promise.all(
 					teamData.users.map((userData) =>
-						createItem('junction_directus_users_teams', {
+						junctionItems.create({
 							teams_id: team.id,
 							directus_users_id: userData.id,
 							is_manager: userData.isManager || false,
@@ -379,7 +380,7 @@ export const useTeams = () => {
 			} else {
 				// If no users specified, add current user as manager by default
 				if (user.value) {
-					await createItem('junction_directus_users_teams', {
+					await junctionItems.create({
 						teams_id: team.id,
 						directus_users_id: user.value.id,
 						is_manager: true,
@@ -399,7 +400,7 @@ export const useTeams = () => {
 	// Update existing team
 	const updateTeam = async (teamId, teamData, organizationId) => {
 		try {
-			await updateItem('teams', teamId, {
+			await teamItems.update(teamId, {
 				name: teamData.name,
 				description: teamData.description,
 			});
@@ -415,7 +416,7 @@ export const useTeams = () => {
 	// Delete a team
 	const deleteTeam = async (teamId, organizationId) => {
 		try {
-			await deleteItems('teams', teamId);
+			await teamItems.remove(teamId);
 
 			// Clear selection if the deleted team was selected
 			if (selectedTeam.value === teamId) {
@@ -436,7 +437,7 @@ export const useTeams = () => {
 
 		try {
 			const promises = userIds.map((userId) =>
-				createItem('junction_directus_users_teams', {
+				junctionItems.create({
 					directus_users_id: userId,
 					teams_id: teamId,
 					is_manager: isManager,
@@ -457,12 +458,14 @@ export const useTeams = () => {
 		if (!teamId || !userId || !organizationId) return;
 
 		try {
-			await deleteItems('junction_directus_users_teams', {
+			const toDelete = await junctionItems.list({
 				filter: {
 					teams_id: { _eq: teamId },
 					directus_users_id: { _eq: userId },
 				},
+				fields: ['id'],
 			});
+			if (toDelete.length) await junctionItems.remove(toDelete.map(r => r.id));
 
 			// Refresh teams data
 			await fetchTeams(organizationId);

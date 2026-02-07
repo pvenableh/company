@@ -4,7 +4,7 @@
  * A composable to handle comment creation with dynamic field generation based on collection name
  */
 export function useCommentHelper() {
-	const { createItem, updateItem, deleteItem } = useDirectusItems();
+	const commentItems = useDirectusItems('comments');
 	const { user: sessionUser, loggedIn } = useUserSession();
 	const user = computed(() => {
 		return loggedIn.value ? sessionUser.value ?? null : null;
@@ -73,7 +73,7 @@ export function useCommentHelper() {
 		}
 
 		try {
-			const newComment = await createItem('comments', commentData);
+			const newComment = await commentItems.create(commentData);
 			return newComment;
 		} catch (error) {
 			console.error('Error creating comment:', error);
@@ -88,7 +88,7 @@ export function useCommentHelper() {
 		if (!commentId) return null;
 
 		try {
-			await deleteItem('comments', commentId);
+			await commentItems.remove(commentId);
 			return true;
 		} catch (error) {
 			console.error('Error deleting comment:', error);
