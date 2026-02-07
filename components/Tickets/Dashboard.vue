@@ -162,7 +162,7 @@ const timePeriodLabel = computed(() => {
 });
 
 // Fetch repositories
-const { readItems } = useDirectusItems();
+const ticketItems = useDirectusItems('tickets');
 const { user } = useDirectusAuth();
 const { selectedTeam, teams, visibleTeams } = useTeams();
 const { selectedOrg } = useOrganization();
@@ -265,7 +265,7 @@ const fetchTickets = async () => {
 		};
 
 		// Fetch tickets with this filter
-		const tickets = await readItems('tickets', {
+		const tickets = await ticketItems.list({
 			fields: [
 				'id',
 				'title',
