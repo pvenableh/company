@@ -2,15 +2,17 @@
 definePageMeta({
 	middleware: ['auth'],
 });
-const { readItems } = useDirectusItems();
+const ticketItems = useDirectusItems('tickets');
+const serviceItems = useDirectusItems('services');
+const organizationItems = useDirectusItems('organizations');
 
-const tickets = await readItems('tickets', {
+const tickets = await ticketItems.list({
 	fields: [
 		'*,organization.id,organization.name,services.services_id.name,services.services_id.color,services.services_id.id',
 	],
 });
 
-const services = await readItems('services', {
+const services = await serviceItems.list({
 	fields: ['id', 'name', 'color'],
 	filter: {
 		status: 'published',
@@ -23,7 +25,7 @@ services.push({
 	color: '#cccccc',
 });
 
-const organizations = await readItems('organizations', {
+const organizations = await organizationItems.list({
 	fields: ['id', 'name'],
 	filter: {
 		status: 'published',

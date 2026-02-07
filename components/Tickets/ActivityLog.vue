@@ -75,7 +75,7 @@ const props = defineProps({
 
 const activities = ref([]);
 const isLoading = ref(true);
-const { readItems } = useDirectusItems();
+const commentItems = useDirectusItems('comments');
 
 // Load ticket activity
 const loadActivity = async () => {
@@ -85,7 +85,7 @@ const loadActivity = async () => {
     // For this example, we'll fetch comments and ticket revision history
     
     // Fetch comments
-    const comments = await readItems('comments', {
+    const comments = await commentItems.list({
       fields: [
         'id',
         'comment',

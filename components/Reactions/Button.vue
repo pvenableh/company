@@ -24,7 +24,7 @@ const props = defineProps({
 	},
 });
 
-const { createItem, deleteItems, readItems } = useDirectusItems();
+const reactionItems = useDirectusItems('reactions');
 const { user } = useDirectusAuth();
 const emits = defineEmits(['reaction-added', 'reaction-removed']);
 const toast = useToast();
@@ -83,7 +83,7 @@ const toggleReaction = async () => {
 
 	try {
 		// First check if user already has a reaction of this type
-		const existingReaction = await readItems('reactions', {
+		const existingReaction = await reactionItems.list({
 			filter: {
 				item: { _eq: props.itemId },
 				user: { _eq: user.value.id },
@@ -95,7 +95,7 @@ const toggleReaction = async () => {
 
 		// If they have this reaction, remove it
 		if (hasThisReaction) {
-			await deleteItems('reactions', {
+			await reactionItems.remove({
 				filter: {
 					item: { _eq: props.itemId },
 					user: { _eq: user.value.id },
@@ -109,7 +109,7 @@ const toggleReaction = async () => {
 		// Otherwise, first remove any other reactions they have
 		else {
 			// Remove all existing reactions from this user
-			await deleteItems('reactions', {
+			await reactionItems.remove({
 				filter: {
 					item: { _eq: props.itemId },
 					user: { _eq: user.value.id },
@@ -117,7 +117,7 @@ const toggleReaction = async () => {
 			});
 
 			// Then add the new reaction
-			await createItem('reactions', {
+			await reactionItems.create({
 				item: props.itemId,
 				table: props.collection,
 				user: user.value.id,

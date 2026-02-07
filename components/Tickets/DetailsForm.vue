@@ -134,7 +134,7 @@ const props = defineProps({
 const emit = defineEmits(['update', 'delete-click', 'comment-count-update', 'share', 'change', 'dirty-state-change']);
 
 // Composables
-const { readItems } = useDirectusItems();
+const projectItems = useDirectusItems('projects');
 const { notify } = useNotifications();
 const { user: sessionUser, loggedIn } = useUserSession();
 const currentUser = computed(() => {
@@ -324,7 +324,7 @@ const fetchProjects = async (orgId) => {
 
 	loadingProjects.value = true;
 	try {
-		const projects = await readItems('projects', {
+		const projects = await projectItems.list({
 			fields: ['id', 'title'],
 			filter: {
 				organization: { _eq: orgId },

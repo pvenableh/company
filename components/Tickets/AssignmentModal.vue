@@ -92,7 +92,7 @@ const props = defineProps({
 const emit = defineEmits(['update:isOpen', 'update']);
 
 // Composables
-const { createItem, deleteItems } = useDirectusItems();
+const ticketsDirectusUsersItems = useDirectusItems('tickets_directus_users');
 const { user: sessionUser, loggedIn } = useUserSession();
 const currentUser = computed(() => {
 	return loggedIn.value ? sessionUser.value ?? null : null;
@@ -186,7 +186,7 @@ const handleSave = async () => {
 
 		// Delete removed assignments
 		if (assignmentsToRemove.length > 0) {
-			await deleteItems('tickets_directus_users', {
+			await ticketsDirectusUsersItems.remove({
 				filter: {
 					tickets_id: { _eq: props.ticket.id },
 					directus_users_id: { _in: assignmentsToRemove },
@@ -196,7 +196,7 @@ const handleSave = async () => {
 
 		// Add new assignments
 		for (const userId of assignmentsToAdd) {
-			await createItem('tickets_directus_users', {
+			await ticketsDirectusUsersItems.create({
 				tickets_id: props.ticket.id,
 				directus_users_id: userId,
 			});

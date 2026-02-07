@@ -8,7 +8,8 @@ const { user: sessionUser, loggedIn } = useUserSession();
 const currentUser = computed(() => {
 	return loggedIn.value ? sessionUser.value ?? null : null;
 });
-const { createItem, updateItem, deleteItem } = useDirectusItems();
+const taskItems = useDirectusItems('tasks');
+const ticketItems = useDirectusItems('tickets');
 const { notify } = useNotifications();
 const toast = useToast();
 const mentionedUsers = ref(new Set());
@@ -124,7 +125,7 @@ async function addTask() {
 	if (!newTask.value.trim()) return;
 
 	try {
-		const newTaskId = await createItem('tasks', {
+		const newTaskId = await taskItems.create({
 			description: newTask.value,
 			ticket_id: props.ticketId,
 			status: 'active',
@@ -164,7 +165,7 @@ const launchConfetti = () => {
 async function toggleTask(task) {
 	const newStatus = task.status === 'completed' ? 'active' : 'completed';
 	try {
-		await updateItem('tasks', task.id, { status: newStatus });
+		await taskItems.update(task.id, { status: newStatus });
 
 		const index = localTasks.value.findIndex((t) => t.id === task.id);
 		if (index !== -1) {
@@ -181,7 +182,7 @@ async function toggleTask(task) {
 						{
 							label: 'Yes',
 							click: async () => {
-								await updateItem('tickets', props.ticketId, { status: 'Completed' });
+								await ticketItems.update(props.ticketId, { status: 'Completed' });
 								router.push('/tickets');
 							},
 						},
@@ -209,7 +210,7 @@ async function toggleTask(task) {
 
 async function removeTask(taskId) {
 	try {
-		await deleteItem('tasks', taskId);
+		await taskItems.remove(taskId);
 		localTasks.value = localTasks.value.filter((task) => task.id !== taskId);
 	} catch (error) {
 		console.error('Error removing task:', error);
@@ -223,7 +224,7 @@ async function removeTask(taskId) {
 
 async function handleDragEnd() {
 	try {
-		const updatePromises = localTasks.value.map((task, index) => updateItem('tasks', task.id, { sort: index }));
+		const updatePromises = localTasks.value.map((task, index) => taskItems.update(task.id, { sort: index }));
 
 		await Promise.all(updatePromises);
 	} catch (error) {
@@ -277,7 +278,7 @@ async function updateTaskDescription(taskId, newDescription) {
 			// Optimistic update
 			localTasks.value[index].description = newDescription;
 
-			await updateItem('tasks', taskId, { description: newDescription });
+			await taskItems.update(taskId, { description: newDescription });
 		}
 	} catch (error) {
 		console.error('Failed to update task description:', error);

@@ -41,6 +41,17 @@
 <script setup>
 import { ref, computed } from 'vue';
 
+const ticketsCommentsItems = useDirectusItems('tickets_comments');
+const projectsCommentsItems = useDirectusItems('projects_comments');
+const projectEventsCommentsItems = useDirectusItems('project_events_comments');
+const commentItems = useDirectusItems('comments');
+
+const junctionItemsMap = {
+	'tickets_comments': ticketsCommentsItems,
+	'projects_comments': projectsCommentsItems,
+	'project_events_comments': projectEventsCommentsItems,
+};
+
 const isLoading = ref(false);
 const confirmed = ref(false);
 const migrationStarted = ref(false);
@@ -112,11 +123,9 @@ const startMigration = async () => {
 		// First, count how many operations we'll need to do
 		addLog('Counting records to migrate...');
 
-		const { readItems } = useDirectusItems();
-
 		for (const { table } of junctionTables) {
 			try {
-				const count = await readItems(table, { limit: -1, aggregate: { count: 'id' } });
+				const count = await junctionItemsMap[table].list({ limit: -1, aggregate: { count: 'id' } });
 				const recordCount = count?.[0]?.count?.id || 0;
 				totalOperations += recordCount;
 				addLog(`Found ${recordCount} records in ${table}`);
@@ -142,7 +151,7 @@ const startMigration = async () => {
 
 			try {
 				// Fetch records from the junction table
-				const junctionRecords = await readItems(table, {
+				const junctionRecords = await junctionItemsMap[table].list({
 					fields: ['id', field, 'comments_id'],
 				});
 
@@ -158,8 +167,7 @@ const startMigration = async () => {
 
 					try {
 						// Update the comment with collection and item fields
-						const { updateItem } = useDirectusItems();
-						await updateItem('comments', record.comments_id, {
+						await commentItems.update(record.comments_id, {
 							collection: collection,
 							item: record[field],
 						});

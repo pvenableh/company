@@ -23,7 +23,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['statusChanged']);
-const { updateItem } = useDirectusItems();
+const projectEventItems = useDirectusItems('project_events');
 const status = ref(props.initialStatus);
 const isLoading = ref(false);
 import confetti from 'canvas-confetti';
@@ -62,7 +62,7 @@ const handleToggle = async () => {
 		const newStatus = status.value === 'Active' ? 'Completed' : 'Active';
 		console.log(newStatus);
 		// Update the item in Directus
-		// await updateItem('project_events', props.itemId, {
+		// await projectEventItems.update(props.itemId, {
 		// 	status: newStatus,
 		// });
 		if (newStatus === 'Completed') {

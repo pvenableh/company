@@ -312,7 +312,7 @@ import {
 } from '~/components/ui/calendar';
 
 const { user } = useDirectusAuth();
-const { deleteItem } = useDirectusItems();
+const appointmentItems = useDirectusItems('appointments');
 const toast = useToast();
 const showAppointmentForm = ref(false);
 const showVideoMeetingForm = ref(false);
@@ -509,7 +509,7 @@ function editAppointment(appointment) {
 
 async function deleteAppointment(id) {
 	try {
-		await deleteItem('appointments', id);
+		await appointmentItems.remove(id);
 		refresh();
 		toast.add({ title: 'Success', description: 'Appointment deleted', color: 'green' });
 	} catch (err) {

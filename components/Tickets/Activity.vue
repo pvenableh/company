@@ -212,7 +212,9 @@ const loadingMore = ref(false);
 const page = ref(1);
 const hasMore = ref(false);
 const teams = ref([]);
-const { readItems } = useDirectusItems();
+const commentItems = useDirectusItems('comments');
+const teamItems = useDirectusItems('teams');
+const taskItems = useDirectusItems('tasks');
 const { readRevisions } = useDirectusRevisions();
 const config = useRuntimeConfig();
 
@@ -242,7 +244,7 @@ const baseDirectusUrl = computed(() => config.public.directusUrl || 'https://adm
 // Fetch teams for name lookup
 const fetchTeams = async () => {
 	try {
-		const fetchedTeams = await readItems('teams', {
+		const fetchedTeams = await teamItems.list({
 			fields: ['id', 'name', 'organization.id'],
 		});
 
@@ -531,7 +533,7 @@ const fetchActivity = async (reset = false) => {
 		try {
 			// Fetch comments directly for the ticket
 			commentsData =
-				(await readItems('comments', {
+				(await commentItems.list({
 					fields: [
 						'id',
 						'comment',
@@ -614,7 +616,7 @@ const fetchActivity = async (reset = false) => {
 		try {
 			// Fetch tasks for this ticket
 			tasksData =
-				(await readItems('tasks', {
+				(await taskItems.list({
 					fields: [
 						'id',
 						'description',

@@ -7,12 +7,12 @@ const { user: sessionUser, loggedIn } = useUserSession();
 const user = computed(() => {
 	return loggedIn.value ? sessionUser.value ?? null : null;
 });
-const { readItems } = useDirectusItems();
+const paymentsReceivedItems = useDirectusItems('payments_received');
 const config = useRuntimeConfig();
 
 const admin = config.public.adminRole;
 
-const payments = await readItems('payments_received', {
+const payments = await paymentsReceivedItems.list({
 	fields: ['*,invoice_id.*'],
 	sort: 'date_received',
 });

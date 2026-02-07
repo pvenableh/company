@@ -1,6 +1,6 @@
 <script setup>
 const { params } = useRoute();
-const { readItem } = useDirectusItems();
+const projectItems = useDirectusItems('projects');
 
 const { user: sessionUser, loggedIn } = useUserSession();
 const user = computed(() => {
@@ -11,7 +11,7 @@ definePageMeta({
 	middleware: ['auth'],
 });
 
-const project = await readItem('projects', params.id, {
+const project = await projectItems.get(params.id, {
 	fields: [
 		'id,status,service.name,service.color,title,description,contract_value,start_date,due_date,projected_date,completion_date,organization.id,organization.name,organization.logo,events.id,events.status,events.type,events.approval,events.priority,events.hours,events.title,events.description,events.date,events.link,events.prototype_link,events.amount,events.payment_amount,events.file,assigned_to.directus_users_id.id,assigned_to.directus_users_id.first_name,assigned_to.directus_users_id.last_name,assigned_to.directus_users_id.avatar,assigned_to.directus_users_id.email,assigned_to.directus_users_id.phone',
 	],

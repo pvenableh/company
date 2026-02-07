@@ -259,7 +259,8 @@ const { user: sessionUser, loggedIn } = useUserSession();
 const currentUser = computed(() => {
 	return loggedIn.value ? sessionUser.value ?? null : null;
 });
-const { deleteItem, updateItem } = useDirectusItems();
+const ticketItems = useDirectusItems('tickets');
+const ticketsDirectusUsersItems = useDirectusItems('tickets_directus_users');
 const { notify } = useNotifications();
 const toast = useToast();
 const router = useRouter();
@@ -400,7 +401,7 @@ const editDescription = () => {
 const saveDescription = async () => {
 	try {
 		isLoading.value = true;
-		await updateItem('tickets', props.element.id, {
+		await ticketItems.update(props.element.id, {
 			description: form.value.description,
 			date_updated: new Date(),
 		});
@@ -426,7 +427,7 @@ const saveDescription = async () => {
 const updatePriority = async (priority) => {
 	try {
 		isLoading.value = true;
-		await updateItem('tickets', props.element.id, {
+		await ticketItems.update(props.element.id, {
 			priority,
 			date_updated: new Date(),
 		});
@@ -515,7 +516,7 @@ const updateTicket = async (formData) => {
 		if (ticketData.due_date !== props.element.due_date) updatedFields.push('due date');
 
 		// Update the main ticket data
-		await updateItem('tickets', props.element.id, {
+		await ticketItems.update(props.element.id, {
 			...ticketData,
 			date_updated: new Date(),
 		});
@@ -525,7 +526,7 @@ const updateTicket = async (formData) => {
 
 		// Process new assignments
 		for (const userId of assignmentsToAdd) {
-			await createItem('tickets_directus_users', {
+			await ticketsDirectusUsersItems.create({
 				tickets_id: props.element.id,
 				directus_users_id: userId,
 			});
@@ -594,9 +595,9 @@ const deleteTicket = async () => {
 
 		// Check if admin (can permanently delete) or just archive
 		if (currentUser.value.role === useRuntimeConfig().public.adminRole) {
-			await deleteItem('tickets', props.element.id);
+			await ticketItems.remove(props.element.id);
 		} else {
-			await updateItem('tickets', props.element.id, {
+			await ticketItems.update(props.element.id, {
 				status: 'archived',
 			});
 		}

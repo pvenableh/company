@@ -152,7 +152,8 @@ const { user: sessionUser, loggedIn } = useUserSession();
 const currentUser = computed(() => {
 	return loggedIn.value ? sessionUser.value ?? null : null;
 });
-const { createItem, deleteItem, updateItem } = useDirectusItems();
+const ticketItems = useDirectusItems('tickets');
+const ticketsDirectusUsersItems = useDirectusItems('tickets_directus_users');
 const { notify } = useNotifications();
 const toast = useToast();
 const router = useRouter();
@@ -237,7 +238,7 @@ async function handleStatusChange(event) {
 		};
 
 		// Update the ticket status
-		await updateItem('tickets', props.element.id, {
+		await ticketItems.update(props.element.id, {
 			status: newStatus,
 			date_updated: new Date(),
 		});
@@ -470,7 +471,7 @@ const updateTicket = async (formData) => {
 		}
 
 		// Update the main ticket data
-		const updatedTicket = await updateItem('tickets', props.element.id, {
+		const updatedTicket = await ticketItems.update(props.element.id, {
 			...ticketData,
 			date_updated: new Date(),
 		});
@@ -480,7 +481,7 @@ const updateTicket = async (formData) => {
 
 		// Process new assignments
 		for (const userId of assignmentsToAdd) {
-			await createItem('tickets_directus_users', {
+			await ticketsDirectusUsersItems.create({
 				tickets_id: props.element.id,
 				directus_users_id: userId,
 			});
@@ -565,9 +566,9 @@ const deleteTicket = async () => {
 
 		// Check if admin (can permanently delete) or just archive
 		if (currentUser.value.role === useRuntimeConfig().public.adminRole) {
-			await deleteItem('tickets', props.element.id);
+			await ticketItems.remove(props.element.id);
 		} else {
-			await updateItem('tickets', props.element.id, {
+			await ticketItems.update(props.element.id, {
 				status: 'archived',
 			});
 		}

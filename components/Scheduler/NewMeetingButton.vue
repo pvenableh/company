@@ -8,6 +8,7 @@ const schedulerData = inject('schedulerData');
 const { user, settings } = schedulerData;
 
 const toast = useToast();
+const appointmentItems = useDirectusItems('appointments');
 
 const showModal = ref(false);
 const saving = ref(false);
@@ -100,8 +101,7 @@ const saveMeeting = async () => {
 			});
 			toast.add({ title: 'Video meeting created', color: 'green' });
 		} else {
-			const { createItem } = useDirectusItems();
-			await createItem('appointments', {
+			await appointmentItems.create({
 				title: form.title,
 				description: form.description,
 				start_time: startTime.toISOString(),

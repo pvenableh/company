@@ -8,7 +8,7 @@ const { user: sessionUser, loggedIn } = useUserSession();
 const user = computed(() => {
 	return loggedIn.value ? sessionUser.value ?? null : null;
 });
-const { readItems } = useDirectusItems();
+const invoiceItems = useDirectusItems('invoices');
 const { selectedOrg, hasMultipleOrgs, organizationOptions, setOrganization, getOrganizationFilter } = useOrganization();
 
 const columns = [
@@ -100,7 +100,7 @@ const filterRef = computed(() => {
 const invoices = ref([]);
 watchEffect(async () => {
 	try {
-		const results = await readItems('invoices', {
+		const results = await invoiceItems.list({
 			fields: [
 				'id,status,due_date,invoice_date,invoice_code,note,memo,total_amount,bill_to.id,bill_to.name,bill_to.email,bill_to.stripe_customer_id,line_items.id,line_items.description,line_items.quantity,line_items.rate,line_items.amount,line_items.product.name',
 			],

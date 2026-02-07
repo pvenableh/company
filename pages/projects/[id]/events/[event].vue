@@ -1,6 +1,6 @@
 <script setup>
 const { params } = useRoute();
-const { readItem, updateItem } = useDirectusItems();
+const projectEventItems = useDirectusItems('project_events');
 const { readRevisions } = useDirectusRevisions();
 
 const { user: sessionUser, loggedIn } = useUserSession();
@@ -12,7 +12,7 @@ definePageMeta({
 	middleware: ['auth'],
 });
 
-const event = await readItem('project_events', params.event, {
+const event = await projectEventItems.get(params.event, {
 	fields: [
 		'*,project.id,project.title,project.service.color,project.organization.id,project.organization.name,project.organization.logo',
 	],
@@ -41,7 +41,7 @@ const event = await readItem('project_events', params.event, {
 const handleStatusChanged = async (newStatus) => {
 	// event.value.status = newStatus;
 	console.log(newStatus);
-	const result = await updateItem('project_events', event.id, {
+	const result = await projectEventItems.update(event.id, {
 		status: newStatus,
 	});
 	console.log(result);

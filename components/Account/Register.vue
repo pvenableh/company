@@ -177,8 +177,9 @@ interface Organization {
 }
 
 const { createUser } = useDirectusUsers();
-const { login } = useAuthActions();
-const { readItems, createItem } = useDirectusItems();
+const { login } = useDirectusAuth();
+const organizationItems = useDirectusItems('organizations');
+const organizationsDirectusUsersItems = useDirectusItems('organizations_directus_users');
 const route = useRoute();
 const loading = ref<boolean>(false);
 const signup_error = ref<string | null>(null);
@@ -199,7 +200,7 @@ const state = reactive<SignupState>({
 // Fetch organizations when component mounts
 onMounted(async () => {
 	try {
-		organizations.value = await readItems('organizations' as any, {
+		organizations.value = await organizationItems.list({
 			fields: ['id', 'name'],
 			sort: ['name'],
 		});
@@ -284,7 +285,7 @@ const handleSignup = async () => {
 
 		// Create organization relationship
 		if (user?.id) {
-			await createItem('organizations_directus_users', {
+			await organizationsDirectusUsersItems.create({
 				organizations_id: state.organization,
 				directus_users_id: user.id,
 			});

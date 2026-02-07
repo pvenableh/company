@@ -58,7 +58,7 @@ const successMessage = ref('');
 const errorMessage = ref('');
 
 // Directus API (assuming you're using Directus SDK or similar for the backend)
-const { createItem } = useDirectusItems();
+const channelItems = useDirectusItems('channels');
 
 // Computed property for validating channel name (must be at least 3 characters)
 const isValidChannelName = computed(() => channelName.value.length >= 3);
@@ -73,7 +73,7 @@ const createChannel = async () => {
 
 	try {
 		// Create a new channel using the Directus API
-		await createItem('channels', {
+		await channelItems.create({
 			name: channelSlug.value,
 			project: props.project.id,
 		});

@@ -5,6 +5,11 @@
  * Collection-agnostic composable that provides list, get, create, update,
  * delete, and aggregate operations for any Directus collection.
  *
+ * Features:
+ * - Request deduplication: concurrent identical read requests share the same promise
+ * - Short-lived cache: read results cached for 5s to avoid redundant fetches
+ * - Automatic cache invalidation on mutations (create, update, delete)
+ *
  * Usage:
  * const posts = useDirectusItems('posts')
  * const items = await posts.list({ filter: { status: { _eq: 'published' } } })
@@ -27,6 +32,84 @@ export interface ItemsQuery {
   groupBy?: string[];
 }
 
+// ─── Module-level request dedup & cache ──────────────────────────────────────
+
+const CACHE_TTL = 5_000; // 5 seconds
+
+interface CacheEntry {
+  data: any;
+  expiresAt: number;
+}
+
+/** In-flight read requests keyed by serialized request params */
+const _inflight = new Map<string, Promise<any>>();
+
+/** Short-lived cache for read responses */
+const _cache = new Map<string, CacheEntry>();
+
+function makeCacheKey(
+  collection: string,
+  operation: string,
+  params: any
+): string {
+  return `${collection}:${operation}:${JSON.stringify(params)}`;
+}
+
+function getCached(key: string): any | undefined {
+  const entry = _cache.get(key);
+  if (!entry) return undefined;
+  if (Date.now() > entry.expiresAt) {
+    _cache.delete(key);
+    return undefined;
+  }
+  return entry.data;
+}
+
+function setCache(key: string, data: any): void {
+  _cache.set(key, { data, expiresAt: Date.now() + CACHE_TTL });
+}
+
+/** Invalidate all cache entries for a given collection */
+function invalidateCollection(collection: string): void {
+  for (const key of _cache.keys()) {
+    if (key.startsWith(`${collection}:`)) {
+      _cache.delete(key);
+    }
+  }
+}
+
+/**
+ * Execute a read request with deduplication and caching.
+ * Concurrent identical requests share the same in-flight promise.
+ */
+async function dedupedFetch<R>(
+  cacheKey: string,
+  fetchFn: () => Promise<R>
+): Promise<R> {
+  // 1. Return from cache if fresh
+  const cached = getCached(cacheKey);
+  if (cached !== undefined) return cached as R;
+
+  // 2. Join existing in-flight request
+  const existing = _inflight.get(cacheKey);
+  if (existing) return existing as Promise<R>;
+
+  // 3. Create new request, store in inflight map
+  const promise = fetchFn()
+    .then((result) => {
+      setCache(cacheKey, result);
+      return result;
+    })
+    .finally(() => {
+      _inflight.delete(cacheKey);
+    });
+
+  _inflight.set(cacheKey, promise);
+  return promise;
+}
+
+// ─── Composable ──────────────────────────────────────────────────────────────
+
 export const useDirectusItems = <T = any>(
   collection: string,
   options: { requireAuth?: boolean } = {}
@@ -42,16 +125,18 @@ export const useDirectusItems = <T = any>(
       throw new Error("Authentication required");
     }
 
-    const result = await $fetch("/api/directus/items", {
-      method: "POST",
-      body: {
-        collection,
-        operation: "list",
-        query,
-      },
-    });
+    const cacheKey = makeCacheKey(collection, "list", query);
 
-    return result as T[];
+    return dedupedFetch(cacheKey, () =>
+      $fetch("/api/directus/items", {
+        method: "POST",
+        body: {
+          collection,
+          operation: "list",
+          query,
+        },
+      })
+    ) as Promise<T[]>;
   };
 
   /**
@@ -65,15 +150,19 @@ export const useDirectusItems = <T = any>(
       throw new Error("Authentication required");
     }
 
-    return await $fetch("/api/directus/items", {
-      method: "POST",
-      body: {
-        collection,
-        operation: "get",
-        id,
-        query,
-      },
-    });
+    const cacheKey = makeCacheKey(collection, "get", { id, ...query });
+
+    return dedupedFetch(cacheKey, () =>
+      $fetch("/api/directus/items", {
+        method: "POST",
+        body: {
+          collection,
+          operation: "get",
+          id,
+          query,
+        },
+      })
+    ) as Promise<T>;
   };
 
   /**
@@ -87,7 +176,7 @@ export const useDirectusItems = <T = any>(
       throw new Error("Authentication required");
     }
 
-    return await $fetch("/api/directus/items", {
+    const result = await $fetch("/api/directus/items", {
       method: "POST",
       body: {
         collection,
@@ -96,6 +185,9 @@ export const useDirectusItems = <T = any>(
         query,
       },
     });
+
+    invalidateCollection(collection);
+    return result as T;
   };
 
   /**
@@ -110,7 +202,7 @@ export const useDirectusItems = <T = any>(
       throw new Error("Authentication required");
     }
 
-    return await $fetch("/api/directus/items", {
+    const result = await $fetch("/api/directus/items", {
       method: "POST",
       body: {
         collection,
@@ -120,6 +212,9 @@ export const useDirectusItems = <T = any>(
         query,
       },
     });
+
+    invalidateCollection(collection);
+    return result as T;
   };
 
   /**
@@ -141,6 +236,7 @@ export const useDirectusItems = <T = any>(
       },
     });
 
+    invalidateCollection(collection);
     return true;
   };
 
@@ -154,14 +250,18 @@ export const useDirectusItems = <T = any>(
       throw new Error("Authentication required");
     }
 
-    return await $fetch("/api/directus/items", {
-      method: "POST",
-      body: {
-        collection,
-        operation: "aggregate",
-        query,
-      },
-    });
+    const cacheKey = makeCacheKey(collection, "aggregate", query);
+
+    return dedupedFetch(cacheKey, () =>
+      $fetch("/api/directus/items", {
+        method: "POST",
+        body: {
+          collection,
+          operation: "aggregate",
+          query,
+        },
+      })
+    );
   };
 
   /**
@@ -177,6 +277,13 @@ export const useDirectusItems = <T = any>(
     return data?.[0]?.count || 0;
   };
 
+  /**
+   * Manually invalidate the cache for this collection
+   */
+  const invalidateCache = (): void => {
+    invalidateCollection(collection);
+  };
+
   return {
     list,
     get,
@@ -186,5 +293,6 @@ export const useDirectusItems = <T = any>(
     delete: remove,
     aggregate,
     count,
+    invalidateCache,
   };
 };

@@ -126,7 +126,8 @@
 
 <script setup>
 import VueDraggable from 'vuedraggable';
-const { readItems, updateItem } = useDirectusItems();
+const serviceItems = useDirectusItems('services');
+const projectItems = useDirectusItems('projects');
 const { user } = useDirectusAuth();
 const { selectedOrg, hasMultipleOrgs, organizationOptions, setOrganization, clearOrganization, getOrganizationFilter } =
 	useOrganization();
@@ -156,7 +157,7 @@ const localProjects = ref(
 // Fetch services
 const fetchServices = async () => {
 	try {
-		const services = await readItems('services', {
+		const services = await serviceItems.list({
 			fields: ['id', 'name', 'color'],
 		});
 		serviceOptions.value = [{ id: null, name: 'All Services', color: '#808080' }, ...services];
@@ -298,7 +299,7 @@ const updateProjectStatus = async (columnId, event) => {
 	updatingProjects.value.add(projectId);
 
 	try {
-		await updateItem('projects', projectId, {
+		await projectItems.update(projectId, {
 			status: columnId,
 			date_updated: new Date(),
 		});

@@ -1,6 +1,5 @@
 <script setup>
 import { VueDraggable } from 'vuedraggable';
-const { updateItem } = useDirectusItems();
 
 const props = defineProps({
 	collection: {
@@ -25,6 +24,8 @@ const props = defineProps({
 		default: null,
 	},
 });
+
+const collectionItems = useDirectusItems(props.collection);
 
 // Setup realtime subscription
 const sort = ['-date_updated'];
@@ -108,12 +109,10 @@ const onMove = async (event) => {
 
 	if (fromColumn !== toColumn) {
 		try {
-			await useDirectus(
-				updateItem(props.collection, itemId, {
-					status: toColumn,
-					date_updated: new Date(),
-				}),
-			);
+			await collectionItems.update(itemId, {
+				status: toColumn,
+				date_updated: new Date(),
+			});
 		} catch (error) {
 			console.error('Error updating item:', error);
 		}

@@ -16,7 +16,7 @@ export function useOrganization() {
 		priorities: ['cookie', 'localStorage'],
 	});
 
-	const { readItems } = useDirectusItems();
+	const orgItems = useDirectusItems('organizations');
 
 	const { user } = useDirectusAuth();
 
@@ -45,7 +45,7 @@ export function useOrganization() {
 		try {
 			const orgIds = user.value.organizationIds;
 
-			const data = await readItems('organizations', {
+			const data = await orgItems.list({
 				filter: { id: { _in: orgIds } },
 				fields: ['id', 'name', 'logo', 'icon', 'tickets.id', 'projects.id'],
 			});

@@ -5,7 +5,7 @@ export function useUserPresence() {
 		return loggedIn.value ? sessionUser.value ?? null : null;
 	});
 	const route = useRoute();
-	const { createItem, deleteItems, readItems, updateItem } = useDirectusItems();
+	const presenceItems = useDirectusItems('user_presence');
 	const location = ref(route.fullPath);
 	const presenceId = ref(null);
 	const heartbeatInterval = ref(null);
@@ -46,12 +46,12 @@ export function useUserPresence() {
 		try {
 			if (presenceId.value) {
 				// Update existing presence record
-				await updateItem('user_presence', presenceId.value, {
+				await presenceItems.update(presenceId.value, {
 					last_seen: new Date().toISOString(),
 				});
 			} else {
 				// Check for existing records first
-				const existingRecords = await readItems('user_presence', {
+				const existingRecords = await presenceItems.list({
 					filter: {
 						user_id: { _eq: user.value.id },
 						location: { _eq: location.value },
@@ -61,12 +61,12 @@ export function useUserPresence() {
 				if (existingRecords?.length > 0) {
 					// Update existing record
 					presenceId.value = existingRecords[0].id;
-					await updateItem('user_presence', presenceId.value, {
+					await presenceItems.update(presenceId.value, {
 						last_seen: new Date().toISOString(),
 					});
 				} else {
 					// Create new record
-					const newPresence = await createItem('user_presence', {
+					const newPresence = await presenceItems.create({
 						user_id: user.value.id,
 						location: location.value,
 						last_seen: new Date().toISOString(),
@@ -94,18 +94,18 @@ export function useUserPresence() {
 
 		try {
 			if (presenceId.value) {
-				await deleteItems('user_presence', {
-					filter: { id: { _eq: presenceId.value } },
-				});
+				await presenceItems.remove(presenceId.value);
 				presenceId.value = null;
 			} else {
 				// Cleanup any orphaned records
-				await deleteItems('user_presence', {
+				const orphaned = await presenceItems.list({
 					filter: {
 						user_id: { _eq: user.value.id },
 						location: { _eq: location.value },
 					},
+					fields: ['id'],
 				});
+				if (orphaned.length) await presenceItems.remove(orphaned.map(r => r.id));
 			}
 		} catch (err) {
 			console.error('Error removing presence:', err);

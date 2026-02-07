@@ -1,6 +1,6 @@
 <!-- eslint-disable no-console -->
 <script setup>
-const { updateItem } = useDirectusItems();
+const ticketItems = useDirectusItems('tickets');
 
 import { onClickOutside } from '@vueuse/core';
 
@@ -41,7 +41,7 @@ const state = ref({
 });
 
 async function updateticket() {
-	const result = await updateItem('tickets', props.ticket?.id, state.value);
+	const result = await ticketItems.update(props.ticket?.id, state.value);
 	console.log(result);
 	editable.value = false;
 }

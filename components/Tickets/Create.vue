@@ -225,7 +225,9 @@ defineProps({
 const { selectedOrg, organizations, hasMultipleOrgs, organizationOptions } = useOrganization();
 const { teams, visibleTeams, loading: teamsLoading, fetchTeams, selectedTeam, setTeam, hasAdminAccess } = useTeams();
 const { filteredUsers, fetchFilteredUsers, loading: loadingUsers, DEFAULT_TEAM_ID } = useFilteredUsers();
-const { createItem, readItems } = useDirectusItems();
+const ticketItems = useDirectusItems('tickets');
+const ticketsDirectusUsersItems = useDirectusItems('tickets_directus_users');
+const projectItems = useDirectusItems('projects');
 const { user: sessionUser, loggedIn } = useUserSession();
 const currentUser = computed(() => {
 	return loggedIn.value ? sessionUser.value ?? null : null;
@@ -457,7 +459,7 @@ const createTicket = async () => {
 		}
 
 		// Create ticket first
-		const ticket = await createItem('tickets', {
+		const ticket = await ticketItems.create({
 			...cleanedTicketData,
 			date_created: new Date(),
 			date_updated: new Date(),
@@ -469,7 +471,7 @@ const createTicket = async () => {
 		// Handle user assignments if any
 		if (assigned_to?.length) {
 			const assignmentPromises = assigned_to.map((userId) =>
-				createItem('tickets_directus_users', {
+				ticketsDirectusUsersItems.create({
 					tickets_id: ticket.id,
 					directus_users_id: userId,
 				}),
@@ -582,7 +584,7 @@ const fetchProjects = async (orgId) => {
 
 	loadingProjects.value = true;
 	try {
-		const projects = await readItems('projects', {
+		const projects = await projectItems.list({
 			fields: ['id', 'title'],
 			filter: {
 				organization: { _eq: orgId },

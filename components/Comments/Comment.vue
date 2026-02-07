@@ -82,7 +82,7 @@ const props = defineProps({
 	},
 });
 
-const { deleteItem } = useDirectusItems();
+const commentItems = useDirectusItems('comments');
 const emit = defineEmits(['submit', 'cancel', 'deleted']);
 const editorContent = ref('');
 const deleteLoading = ref(false);
@@ -101,7 +101,7 @@ const sanitizedComment = computed(() => {
 async function handleDelete() {
 	try {
 		deleteLoading.value = true;
-		await deleteItem('comments', props.comment.id);
+		await commentItems.remove(props.comment.id);
 		emit('deleted', props.comment.id);
 		if (props.refresh) {
 			await props.refresh();

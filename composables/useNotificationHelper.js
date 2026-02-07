@@ -10,6 +10,8 @@ export function useNotificationHelper() {
 	});
 	const { notify, notifyMany } = useNotifications();
 	const config = useRuntimeConfig();
+	const commentItemsApi = useDirectusItems('comments');
+	const taskItemsApi = useDirectusItems('tasks');
 
 	// Get base URL for constructing item links
 	const baseUrl = import.meta.client ? window.location.origin : config.public.appUrl || 'https://huestudios.company';
@@ -154,8 +156,7 @@ export function useNotificationHelper() {
 
 		try {
 			// Fetch the comment with its collection and item data
-			const { readItems } = useDirectusItems();
-			const comment = await readItems('comments', {
+			const comment = await commentItemsApi.list({
 				filter: { id: { _eq: commentId } },
 				fields: ['id', 'collection', 'item'],
 				limit: 1,
@@ -182,8 +183,7 @@ export function useNotificationHelper() {
 
 		try {
 			// Use readItems to fetch the task with its ticket_id
-			const { readItems } = useDirectusItems();
-			const task = await readItems('tasks', {
+			const task = await taskItemsApi.list({
 				filter: { id: { _eq: taskId } },
 				fields: ['id', 'ticket_id'],
 				limit: 1,

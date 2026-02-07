@@ -127,7 +127,7 @@ const { user: sessionUser, loggedIn } = useUserSession();
 const currentUser = computed(() => {
 	return loggedIn.value ? sessionUser.value ?? null : null;
 });
-const { deleteItem } = useDirectusItems();
+const commentItems = useDirectusItems('comments');
 const deleteLoading = ref(false);
 const showReplyForm = ref(false);
 const activeReplyId = ref(null);
@@ -161,7 +161,7 @@ function handleReplyCancel() {
 async function handleDelete() {
 	try {
 		deleteLoading.value = true;
-		await deleteItem('comments', props.comment.id);
+		await commentItems.remove(props.comment.id);
 		emit('delete', props.comment.id);
 		props.refresh();
 	} catch (error) {

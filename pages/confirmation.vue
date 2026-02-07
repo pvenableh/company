@@ -103,7 +103,8 @@ const user = computed(() => {
 const route = useRoute();
 const config = useRuntimeConfig();
 const toast = useToast();
-const { readItems, createItem, updateItem } = useDirectusItems();
+const paymentsReceivedItems = useDirectusItems('payments_received');
+const invoiceItems = useDirectusItems('invoices');
 
 // State
 const isLoading = ref(true);
@@ -323,7 +324,7 @@ const confirmPayment = async () => {
 
 const recordPayment = async (intent) => {
 	try {
-		const existingPayments = await readItems('payments_received', {
+		const existingPayments = await paymentsReceivedItems.list({
 			filter: { invoice_id: { _eq: invoiceID.value } },
 			limit: 1,
 		});
@@ -362,7 +363,7 @@ const recordPayment = async (intent) => {
 			paymentData.user_id = user.value.id;
 		}
 
-		const paymentRecord = await createItem('payments_received', paymentData);
+		const paymentRecord = await paymentsReceivedItems.create(paymentData);
 		console.log(paymentRecord);
 		await updateInvoiceStatus(invoiceID.value, status);
 		await sendPaymentNotification(payment.value);
@@ -374,7 +375,7 @@ const recordPayment = async (intent) => {
 const updateInvoiceStatus = async (invoiceId, status) => {
 	console.log('trying to update invoice');
 	try {
-		const invoice = await readItems('invoices', {
+		const invoice = await invoiceItems.list({
 			filter: { id: { _eq: invoiceId } },
 			limit: 1,
 		});
@@ -388,7 +389,7 @@ const updateInvoiceStatus = async (invoiceId, status) => {
 			return;
 		}
 
-		await updateItem('invoices', invoiceId, {
+		await invoiceItems.update(invoiceId, {
 			status,
 		});
 
