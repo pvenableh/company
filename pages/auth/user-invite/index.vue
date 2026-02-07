@@ -2,7 +2,7 @@
 import { jwtDecode } from 'jwt-decode';
 
 const route = useRoute();
-const { acceptUserInvite } = useAuthActions();
+const { acceptUserInvite } = useDirectusAuth();
 const toast = useToast();
 
 const invite_token = ref(route.query.token ? route.query.token : '');

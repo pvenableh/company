@@ -8,7 +8,7 @@ import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Eye, EyeOff } from 'lucide-vue-next';
 
-const { passwordReset } = useAuthActions();
+const { passwordReset } = useDirectusAuth();
 const route = useRoute();
 
 const reset_token = ref(route.query.token ? route.query.token : '');

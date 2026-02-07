@@ -6,7 +6,7 @@ import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { CheckCircle, Loader2 } from 'lucide-vue-next';
 
-const { passwordRequest } = useAuthActions();
+const { passwordRequest } = useDirectusAuth();
 const toast = useToast();
 const loading = ref(false);
 const resetSent = ref(false);

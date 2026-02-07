@@ -152,6 +152,57 @@ export const useDirectusAuth = () => {
 		}
 	}
 
+	// ─── Convenience Wrappers (merged from useAuthActions) ────────────────────
+
+	const login = async (email, password, options = { redirect: true }) => {
+		try {
+			const result = await signIn({ email, password })
+			if (options.redirect) {
+				navigateTo('/')
+			}
+			return result
+		} catch (error) {
+			console.error('[Auth] Login error:', error)
+			throw error
+		}
+	}
+
+	const logout = async (options = { redirect: true, callbackUrl: '/' }) => {
+		return signOut({
+			callbackUrl: options.redirect ? (options.callbackUrl || '/') : undefined,
+		})
+	}
+
+	// ─── Password & Invitation Actions (merged from useAuthActions) ───────────
+
+	const passwordRequest = async (email) => {
+		return await $fetch('/api/directus/users/password-reset-request', {
+			method: 'POST',
+			body: { email },
+		})
+	}
+
+	const passwordReset = async (token, password) => {
+		return await $fetch('/api/directus/users/password-reset', {
+			method: 'POST',
+			body: { token, password },
+		})
+	}
+
+	const inviteUser = async (email, role, inviteUrl) => {
+		return await $fetch('/api/directus/users/invite', {
+			method: 'POST',
+			body: { email, role, invite_url: inviteUrl },
+		})
+	}
+
+	const acceptUserInvite = async (token, password) => {
+		return await $fetch('/api/directus/users/accept-invite', {
+			method: 'POST',
+			body: { token, password },
+		})
+	}
+
 	// ─── Client-Side Lifecycle (runs once globally) ────────────────────────────
 
 	if (import.meta.client && !_initialized) {
@@ -195,10 +246,20 @@ export const useDirectusAuth = () => {
 		loggedIn,
 		session,
 
-		// Methods
+		// Core methods
 		signIn,
 		signOut,
 		refreshSession,
 		fetchSession,
+
+		// Convenience wrappers
+		login,
+		logout,
+
+		// Password & invitation actions
+		passwordRequest,
+		passwordReset,
+		inviteUser,
+		acceptUserInvite,
 	}
 }
