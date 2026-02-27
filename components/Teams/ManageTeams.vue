@@ -321,7 +321,7 @@ const emit = defineEmits(['team-created', 'team-updated', 'team-deleted', 'team-
 // Computed permissions
 const hasTeamManagementAccess = computed(() => {
 	// Check if user has the required role for team management
-	return currentUser.value?.role === ADMIN_ROLE_ID || currentUser.value?.role === CLIENT_MANAGER_ROLE_ID;
+	return hasAdminAccess(currentUser.value);
 });
 
 // Helper methods for team relationships
