@@ -1,9 +1,22 @@
 <script setup lang="ts">
 /**
- * USelectMenu - NuxtUI-compatible select menu wrapper
- * Uses native <select> with shadcn-vue styling for broad compatibility
+ * USelectMenu - NuxtUI-compatible select wrapper using shadcn-vue Select
+ *
+ * Maps NuxtUI's USelectMenu API (v-model, :options, option-attribute,
+ * value-attribute, searchable, placeholder) onto shadcn-vue's
+ * Select / SelectTrigger / SelectValue / SelectContent / SelectItem.
+ *
+ * shadcn-vue Select only accepts string values, so we serialise option
+ * values to strings and resolve them back on change.
  */
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 
 const props = withDefaults(
@@ -37,9 +50,7 @@ const emit = defineEmits<{
   (e: 'change', value: any): void
 }>()
 
-const searchQuery = ref('')
-const isOpen = ref(false)
-const dropdownRef = ref<HTMLElement | null>(null)
+// ── Helpers ──────────────────────────────────────────────────────────────
 
 function getOptionLabel(option: any): string {
   if (typeof option === 'string') return option
@@ -52,27 +63,66 @@ function getOptionValue(option: any): any {
   return option
 }
 
-function isSelected(option: any): boolean {
-  const optionValue = getOptionValue(option)
-  if (props.modelValue == null) return false
-  if (typeof props.modelValue === 'object' && props.valueAttribute) {
-    return props.modelValue[props.valueAttribute] === optionValue
-  }
-  return props.modelValue === optionValue
+/**
+ * Convert any option value to a string key for shadcn-vue Select
+ */
+function toStringKey(option: any, index: number): string {
+  const val = getOptionValue(option)
+  if (val == null) return `__null_${index}`
+  if (typeof val === 'string') return val
+  if (typeof val === 'number') return String(val)
+  // Object value – use index as key
+  return `__idx_${index}`
 }
 
-const selectedLabel = computed(() => {
-  if (props.modelValue == null) return ''
-  if (typeof props.modelValue === 'string') {
-    const found = props.options.find((o: any) => getOptionValue(o) === props.modelValue)
-    return found ? getOptionLabel(found) : props.modelValue
+/**
+ * Resolve a string key back to the original value
+ */
+function fromStringKey(key: string): any {
+  if (key.startsWith('__null_')) return null
+  if (key.startsWith('__idx_')) {
+    const idx = parseInt(key.replace('__idx_', ''), 10)
+    const option = props.options[idx]
+    return props.valueAttribute ? getOptionValue(option) : option
   }
-  if (typeof props.modelValue === 'object') {
-    return getOptionLabel(props.modelValue)
+  // Direct string or numeric value – check if it matches a valueAttribute
+  const found = props.options.find((o: any, i: number) => toStringKey(o, i) === key)
+  if (found) return props.valueAttribute ? getOptionValue(found) : found
+  return key
+}
+
+// ── Computed selected key for shadcn-vue Select ─────────────────────────
+
+const selectedKey = computed(() => {
+  if (props.modelValue == null) return undefined
+  // Find the matching option
+  for (let i = 0; i < props.options.length; i++) {
+    const optVal = getOptionValue(props.options[i])
+    if (props.modelValue === optVal) return toStringKey(props.options[i], i)
+    if (
+      typeof props.modelValue === 'object' &&
+      typeof optVal === 'object' &&
+      props.valueAttribute &&
+      props.modelValue?.[props.valueAttribute] === optVal
+    ) {
+      return toStringKey(props.options[i], i)
+    }
   }
-  const found = props.options.find((o: any) => getOptionValue(o) === props.modelValue)
-  return found ? getOptionLabel(found) : String(props.modelValue)
+  // Fallback: if modelValue is a string itself, use it
+  if (typeof props.modelValue === 'string') return props.modelValue
+  if (typeof props.modelValue === 'number') return String(props.modelValue)
+  return undefined
 })
+
+function onValueChange(key: string) {
+  const resolved = fromStringKey(key)
+  emit('update:modelValue', resolved)
+  emit('change', resolved)
+}
+
+// ── Search filter (for searchable mode) ─────────────────────────────────
+
+const searchQuery = ref('')
 
 const filteredOptions = computed(() => {
   if (!props.searchable || !searchQuery.value) return props.options
@@ -80,105 +130,52 @@ const filteredOptions = computed(() => {
   return props.options.filter((o: any) => getOptionLabel(o).toLowerCase().includes(q))
 })
 
-function selectOption(option: any) {
-  const value = props.valueAttribute ? getOptionValue(option) : option
-  emit('update:modelValue', value)
-  emit('change', value)
-  isOpen.value = false
-  searchQuery.value = ''
+const sizeMap: Record<string, 'sm' | 'default'> = {
+  xs: 'sm',
+  sm: 'sm',
+  md: 'default',
+  lg: 'default',
 }
-
-const sizeClasses = computed(() => {
-  const sizes: Record<string, string> = {
-    xs: 'h-7 text-xs px-2',
-    sm: 'h-8 text-xs px-2.5',
-    md: 'h-9 text-sm px-3',
-    lg: 'h-10 text-sm px-3.5',
-  }
-  return sizes[props.size] || sizes.sm
-})
-
-// Close on click outside
-function onClickOutside(event: Event) {
-  if (dropdownRef.value && !dropdownRef.value.contains(event.target as Node)) {
-    isOpen.value = false
-    searchQuery.value = ''
-  }
-}
-
-onMounted(() => {
-  document.addEventListener('click', onClickOutside)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('click', onClickOutside)
-})
 </script>
 
 <template>
-  <div ref="dropdownRef" :class="cn('relative inline-block', props.class)">
-    <button
-      type="button"
-      :disabled="disabled"
-      :class="cn(
-        'flex w-full items-center justify-between rounded-md border border-input bg-background',
-        'ring-offset-background placeholder:text-muted-foreground',
-        'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
-        'disabled:cursor-not-allowed disabled:opacity-50',
-        sizeClasses,
-        props.ui?.base
-      )"
-      @click="isOpen = !isOpen"
-    >
+  <Select
+    :model-value="selectedKey"
+    :disabled="disabled"
+    @update:model-value="onValueChange"
+  >
+    <SelectTrigger :size="sizeMap[size] || 'default'" :class="cn(props.class, props.ui?.base)">
       <slot name="label">
-        <span :class="selectedLabel ? '' : 'text-muted-foreground'">
-          {{ selectedLabel || placeholder || 'Select...' }}
-        </span>
+        <SelectValue :placeholder="placeholder || 'Select...'" />
       </slot>
-      <Icon name="lucide:chevron-down" class="ml-2 h-4 w-4 shrink-0 opacity-50" />
-    </button>
+    </SelectTrigger>
 
-    <Transition
-      enter-active-class="transition duration-100 ease-out"
-      leave-active-class="transition duration-75 ease-in"
-      enter-from-class="opacity-0 scale-95"
-      enter-to-class="opacity-100 scale-100"
-      leave-from-class="opacity-100 scale-100"
-      leave-to-class="opacity-0 scale-95"
-    >
-      <div
-        v-if="isOpen"
-        class="absolute z-50 mt-1 w-full min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md"
-      >
-        <div v-if="searchable" class="p-1">
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="Search..."
-            class="w-full rounded-sm border-0 bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground"
-            @click.stop
-          />
-        </div>
-        <div class="max-h-60 overflow-y-auto p-1">
-          <button
-            v-for="(option, idx) in filteredOptions"
-            :key="idx"
-            type="button"
-            :class="cn(
-              'relative flex w-full cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none',
-              'hover:bg-accent hover:text-accent-foreground',
-              isSelected(option) && 'bg-accent text-accent-foreground'
-            )"
-            @click.stop="selectOption(option)"
-          >
-            <Icon v-if="isSelected(option)" name="lucide:check" class="mr-2 h-4 w-4" />
-            <span :class="isSelected(option) ? '' : 'ml-6'">{{ getOptionLabel(option) }}</span>
-          </button>
-          <div v-if="filteredOptions.length === 0" class="px-2 py-1.5 text-sm text-muted-foreground">
-            No results found
-          </div>
-        </div>
+    <SelectContent>
+      <!-- Optional inline search -->
+      <div v-if="searchable" class="px-2 pb-1 pt-1">
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="Search..."
+          class="w-full rounded-sm border border-input bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground focus-visible:ring-1 focus-visible:ring-ring"
+          @keydown.stop
+        />
       </div>
-    </Transition>
-  </div>
+
+      <SelectItem
+        v-for="(option, idx) in filteredOptions"
+        :key="toStringKey(option, idx)"
+        :value="toStringKey(option, idx)"
+      >
+        {{ getOptionLabel(option) }}
+      </SelectItem>
+
+      <div
+        v-if="searchable && filteredOptions.length === 0"
+        class="px-2 py-1.5 text-center text-sm text-muted-foreground"
+      >
+        No results found
+      </div>
+    </SelectContent>
+  </Select>
 </template>
