@@ -21,7 +21,7 @@ export default defineEventHandler(async (event) => {
     const directus = getPublicDirectus();
 
     await directus.request(
-      passwordRequest(email, reset_url || `${config.public.appUrl}/reset-password`)
+      passwordRequest(email, reset_url || `${config.public.appUrl}/auth/password-reset`)
     );
 
     return {

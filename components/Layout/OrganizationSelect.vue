@@ -130,7 +130,7 @@ onUnmounted(() => {
 				</button>
 			</DropdownMenuTrigger>
 
-			<DropdownMenuContent align="start" class="w-64">
+			<DropdownMenuContent align="start" class="w-64 org-selector-dropdown">
 				<DropdownMenuLabel class="text-xs uppercase text-muted-foreground">Organizations</DropdownMenuLabel>
 				<DropdownMenuSeparator />
 				<div class="max-h-60 overflow-y-auto">
@@ -198,5 +198,12 @@ onUnmounted(() => {
 
 .org-selector button:hover img {
 	transform: scale(1.05);
+}
+</style>
+
+<style>
+/* Unscoped to reach teleported dropdown content */
+.org-selector-dropdown img {
+	object-fit: contain !important;
 }
 </style>

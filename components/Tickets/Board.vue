@@ -12,7 +12,7 @@
 		</transition>
 		<!-- Connection Status -->
 		<transition name="fade">
-			<div v-if="!isConnected && !isLoading" class="mb-4 absolute w-64 right-10 top-0 tickets-board__connection">
+			<div v-if="!isConnected && !isLoading && hasEverConnected" class="mb-4 absolute w-64 right-10 top-0 tickets-board__connection">
 				<UAlert title="Connection Lost" description="Attempting to reconnect..." color="yellow">
 					<template #footer>
 						<UButton size="sm" color="yellow" @click="refreshData">Retry Connection</UButton>
@@ -268,7 +268,9 @@ const filterByAssignedTo = ref(false);
 const filterUnassigned = ref(false);
 const filterDueDate = ref(null);
 const isLoading = ref(true);
+const isFetching = ref(false);
 const isConnected = ref(true);
+const hasEverConnected = ref(false);
 const error = ref(null);
 const lastUpdated = ref(null);
 let cleanupMobileDetection = null;
@@ -442,30 +444,85 @@ const generateFilter = () => {
 	return filter;
 };
 
-// Initialize or update the subscription
-// Initialize or update the subscription
-const setupTicketsSubscription = () => {
-	// Always create a fresh filter
-	const filter = generateFilter();
+// Fetch comment counts and attach them to tickets
+const attachCommentCounts = async (tickets) => {
+	const ticketIds = tickets.map((ticket) => ticket.id).filter(Boolean);
 
-	// Skip if we're on server side
-	if (import.meta.server) {
-		isLoading.value = false;
+	if (ticketIds.length === 0) {
+		tickets.forEach((ticket) => {
+			ticket.comments = 0;
+			ticket.commentsCount = 0;
+		});
 		return;
 	}
 
-	console.log('Setting up tickets subscription with filter:', filter);
-	isLoading.value = true;
+	try {
+		const commentCounts = await commentItems.list({
+			filter: {
+				collection: { _eq: 'tickets' },
+				item: { _in: ticketIds },
+			},
+			fields: ['item'],
+			aggregate: {
+				count: ['*'],
+			},
+			groupBy: ['item'],
+		});
 
+		const countMap = {};
+		if (Array.isArray(commentCounts)) {
+			commentCounts.forEach((result) => {
+				if (result && result.item) {
+					countMap[result.item] = parseInt(result.count, 10) || 0;
+				}
+			});
+		}
+
+		tickets.forEach((ticket) => {
+			const commentCount = countMap[ticket.id] || 0;
+			ticket.comments = commentCount;
+			ticket.commentsCount = commentCount;
+		});
+	} catch (err) {
+		console.error('Error fetching comment counts:', err);
+		tickets.forEach((ticket) => {
+			ticket.comments = 0;
+			ticket.commentsCount = 0;
+		});
+	}
+};
+
+// Fetch tickets via REST API for instant display
+const fetchTicketsViaREST = async (filter) => {
+	isFetching.value = true;
+
+	try {
+		const tickets = await ticketItems.list({
+			fields,
+			filter,
+			sort: ['-date_updated'],
+		});
+
+		const result = tickets || [];
+		await attachCommentCounts(result);
+		return result;
+	} catch (err) {
+		console.error('Error fetching tickets via REST:', err);
+		return null;
+	} finally {
+		isFetching.value = false;
+	}
+};
+
+// Set up WebSocket subscription for real-time updates, using pre-fetched data
+const setupRealtimeOnly = (filter, initialTickets) => {
 	// Clean up existing subscription
 	if (disconnectFunc) {
 		disconnectFunc();
 	}
 
-	// Create a new subscription
 	const {
 		data,
-		isLoading: wsLoading,
 		isConnected: wsConnected,
 		error: wsError,
 		lastUpdated: wsLastUpdated,
@@ -473,36 +530,27 @@ const setupTicketsSubscription = () => {
 		disconnect,
 		updateFilter,
 		refresh,
-	} = useRealtimeSubscription('tickets', fields, filter, '-date_updated');
+	} = useRealtimeSubscription('tickets', fields, filter, '-date_updated', initialTickets);
 
-	// Store functions for lifecycle management
 	connectFunc = connect;
 	disconnectFunc = disconnect;
-
-	// Store ticket data and subscribe to changes
 	ticketsData.value = data;
 
-	// Watch for changes to subscription state
-	watch(
-		wsLoading,
-		(val) => {
-			console.log('Subscription loading state:', val);
-			isLoading.value = val;
-		},
-		{ immediate: true },
-	);
+	ticketsSubscription = {
+		updateFilter,
+		refresh,
+	};
 
+	// Track connection state
 	watch(
 		wsConnected,
 		(val) => {
-			console.log('Subscription connection state:', val);
-			isConnected.value = val;
-
-			// If connection is lost, set isLoading to false
-			if (!val && isLoading.value) {
-				setTimeout(() => {
-					isLoading.value = false;
-				}, 1000);
+			// Don't update connection state while REST fetch is in progress
+			if (!isFetching.value) {
+				isConnected.value = val;
+			}
+			if (val) {
+				hasEverConnected.value = true;
 			}
 		},
 		{ immediate: true },
@@ -514,13 +562,6 @@ const setupTicketsSubscription = () => {
 			error.value = val;
 			if (val) {
 				console.error('Subscription error:', val);
-				toast.add({
-					title: 'Error',
-					description: 'Failed to load tickets. Please try again.',
-					color: 'red',
-				});
-				// Set loading to false on error
-				isLoading.value = false;
 			}
 		},
 		{ immediate: true },
@@ -534,124 +575,53 @@ const setupTicketsSubscription = () => {
 		{ immediate: true },
 	);
 
-	// Store the functions we need for later
-	ticketsSubscription = {
-		updateFilter,
-		refresh,
-	};
-
-	// Process ticket data when it changes
+	// Process real-time updates as they arrive
 	watch(
 		data,
 		async (newData) => {
-			if (newData) {
-				console.log(`Received ${newData.length} tickets from subscription`);
-
-				// Get ticket IDs for fetching comment counts
-				const ticketIds = newData.map((ticket) => ticket.id).filter(Boolean);
-
-				if (ticketIds.length > 0) {
-					try {
-						// Fetch comment counts with proper aggregate query
-						const commentCounts = await commentItems.list({
-							filter: {
-								collection: { _eq: 'tickets' },
-								item: { _in: ticketIds },
-							},
-							fields: ['item'],
-							aggregate: {
-								count: ['*'],
-							},
-							groupBy: ['item'],
-						});
-
-						// Create a map of ticket ID to comment count
-						const countMap = {};
-						if (Array.isArray(commentCounts)) {
-							commentCounts.forEach((result) => {
-								if (result && result.item) {
-									// Parse the count as an integer since it's being returned as a string
-									const count = parseInt(result.count, 10) || 0;
-									countMap[result.item] = count;
-								}
-							});
-						}
-
-						// Add comment counts to the tickets
-						newData.forEach((ticket) => {
-							const commentCount = countMap[ticket.id] || 0;
-							ticket.comments = commentCount;
-							ticket.commentsCount = commentCount; // Also add as commentsCount for compatibility
-
-							console.log(`Ticket ${ticket.id} has ${commentCount} comments`);
-						});
-					} catch (error) {
-						console.error('Error fetching comment counts:', error);
-						// If error occurs, set empty comments
-						newData.forEach((ticket) => {
-							ticket.comments = 0;
-							ticket.commentsCount = 0;
-						});
-					}
-				} else {
-					// No tickets, no comments to fetch
-					newData.forEach((ticket) => {
-						ticket.comments = 0;
-						ticket.commentsCount = 0;
-					});
-				}
-
-				// Now process the tickets with comment counts added
+			if (newData && newData.length > 0) {
+				await attachCommentCounts(newData);
 				processTickets(newData);
-			} else {
-				console.log('Received null or undefined data from subscription');
-				processTickets([]);
 			}
-
-			// End loading state when data is received
-			isLoading.value = false;
 		},
-		{ immediate: true },
 	);
 
-	// Safety timeout to prevent infinite loading state
-	setTimeout(() => {
-		if (isLoading.value) {
-			console.log('Safety timeout: ending loading state after 8 seconds');
-			isLoading.value = false;
-		}
-	}, 8000);
+	// Connect WebSocket
+	if (import.meta.client) {
+		connect();
+	}
 };
 
-// Call refresh on the current subscription
-const refreshData = async () => {
-	console.log('Board: Refreshing tickets...');
+// Main loading function: REST first, then WebSocket
+const loadTickets = async () => {
+	const filter = generateFilter();
+
+	if (import.meta.server) {
+		isLoading.value = false;
+		return;
+	}
+
 	isLoading.value = true;
 
-	try {
-		if (ticketsSubscription) {
-			await ticketsSubscription.refresh();
-			console.log('Board: Tickets refreshed.');
-		} else {
-			// If no subscription exists, set one up
-			setupTicketsSubscription();
-		}
-	} catch (err) {
-		console.error('Error refreshing tickets:', err);
-		error.value = err;
-		toast.add({
-			title: 'Error',
-			description: 'Failed to refresh tickets. Please try again.',
-			color: 'red',
-		});
-	} finally {
-		// Set loading to false after a timeout in case the subscription doesn't update it
-		setTimeout(() => {
-			if (isLoading.value) {
-				isLoading.value = false;
-			}
-		}, 3000);
+	// 1. Fetch via REST for instant display
+	const tickets = await fetchTicketsViaREST(filter);
+
+	if (tickets) {
+		processTickets(tickets);
+		isConnected.value = true;
 	}
+
+	// End loading immediately after REST data is displayed
+	isLoading.value = false;
+
+	// 2. Set up WebSocket subscription for real-time updates
+	setupRealtimeOnly(filter, tickets || []);
+};
+
+// Refresh: re-fetch via REST and reconnect WebSocket
+const refreshData = async () => {
+	console.log('Board: Refreshing tickets...');
+	await loadTickets();
 };
 
 // Process tickets into columns
@@ -801,23 +771,21 @@ const debounce = (fn, delay) => {
 	};
 };
 
-// Debounced subscription update
-const debouncedUpdateSubscription = debounce(() => {
-	if (ticketsSubscription) {
-		isLoading.value = true;
-		const filter = generateFilter();
-		console.log('Updating subscription with filter:', filter);
-		ticketsSubscription.updateFilter(filter);
+// Debounced filter update: re-fetch via REST and update WebSocket filter
+const debouncedUpdateSubscription = debounce(async () => {
+	const filter = generateFilter();
 
-		// Add a safety timeout to prevent infinite loading
-		setTimeout(() => {
-			if (isLoading.value) {
-				console.log('Force ending loading state after timeout');
-				isLoading.value = false;
-			}
-		}, 5000);
+	// Fetch fresh data via REST immediately
+	const tickets = await fetchTicketsViaREST(filter);
+	if (tickets) {
+		processTickets(tickets);
+	}
+
+	// Update the WebSocket subscription filter
+	if (ticketsSubscription) {
+		ticketsSubscription.updateFilter(filter);
 	} else {
-		setupTicketsSubscription();
+		setupRealtimeOnly(filter, tickets || []);
 	}
 }, 300);
 
@@ -954,26 +922,12 @@ onMounted(async () => {
 	if (selectedOrg.value) {
 		await fetchProjects();
 
-		try {
-			// Make sure we're in client-side before setting up the subscription
-			if (import.meta.client) {
-				setupTicketsSubscription();
-				// Now call connect (moved from inside setupTicketsSubscription)
-				if (connectFunc) connectFunc();
-			}
-		} catch (error) {
-			console.error('Error setting up subscription:', error);
-			isLoading.value = false;
+		if (import.meta.client) {
+			await loadTickets();
 		}
+	} else {
+		isLoading.value = false;
 	}
-
-	// Safety timeout to prevent infinite loading state
-	setTimeout(() => {
-		if (isLoading.value) {
-			console.log('Board: Loading timeout reached, forcing loading state to false');
-			isLoading.value = false;
-		}
-	}, 5000);
 });
 
 onUnmounted(() => {
@@ -1011,14 +965,8 @@ watch(
 				await fetchTeams(newOrg);
 			}
 
-			// Reset or create subscription with proper filter
-			if (ticketsSubscription) {
-				const filter = generateFilter();
-				ticketsSubscription.updateFilter(filter);
-			} else {
-				setupTicketsSubscription();
-				if (connectFunc) connectFunc();
-			}
+			// Re-load tickets via REST and reconnect WebSocket
+			await loadTickets();
 		}
 	},
 	{ immediate: false },
