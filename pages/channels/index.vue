@@ -1,5 +1,9 @@
 <script setup>
 const { selectedOrg, organizationOptions } = useOrganization();
+const { user } = useDirectusAuth();
+const { hasAdminAccess } = useTeams();
+
+const isAdmin = computed(() => hasAdminAccess(user.value));
 
 definePageMeta({
 	middleware: ['auth'],
@@ -72,52 +76,61 @@ const sortedChannels = computed(() => {
 	<div class="md:px-6 mx-auto flex items-start justify-start flex-col relative px-4 pt-20 min-h-svh">
 		<h1 class="page__title">Channels</h1>
 
-		<div v-if="channelsLoading" class="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-			<USkeleton v-for="n in 6" :key="n" class="h-32" />
+		<!-- Coming Soon for non-admin users -->
+		<div v-if="!isAdmin" class="flex flex-col items-center justify-center z-10 min-h-[60vh] w-full page__inner">
+			<h2 class="text-2xl font-proxima-light uppercase tracking-widest text-gray-400">Coming Soon</h2>
+			<p class="text-sm text-gray-400 mt-2">This feature is currently under development.</p>
 		</div>
 
-		<!-- Channels Grid -->
-		<div v-else class="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-			<template v-if="sortedChannels.length">
-				<NuxtLink
-					v-for="channel in sortedChannels"
-					:key="channel.id"
-					:to="'/channels/' + channel.name"
-					class="group relative bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm hover:shadow-md transition-all duration-200"
-				>
-					<div class="flex items-start justify-between">
-						<div class="space-y-2">
-							<div class="flex items-center space-x-2">
-								<h3 class="text-lg font-medium">#{{ channel.name }}</h3>
-								<UBadge v-if="channel.messageCount" color="primary" variant="subtle" size="sm" class="font-mono">
-									{{ channel.messageCount }}
-								</UBadge>
-							</div>
-
-							<div v-if="channel.project?.title" class="flex items-center text-sm text-gray-500">
-								<UIcon name="i-heroicons-folder" class="w-4 h-4 mr-1" />
-								{{ channel.project.title }}
-							</div>
-						</div>
-
-						<UIcon
-							name="i-heroicons-arrow-right"
-							class="w-5 h-5 text-gray-400 group-hover:text-primary transform group-hover:translate-x-1 transition-all"
-						/>
-					</div>
-				</NuxtLink>
-			</template>
-
-			<!-- Empty State -->
-			<div
-				v-else
-				class="col-span-full flex flex-col items-center justify-center py-12 px-4 border-2 border-dashed rounded-lg"
-			>
-				<UIcon name="i-heroicons-chat-bubble-left-right" class="w-12 h-12 text-gray-400 mb-4" />
-				<h3 class="text-lg font-medium">No Channels Found</h3>
-				<p class="text-gray-500 text-center mt-2">No channels exist for the current organization.</p>
+		<!-- Admin content -->
+		<template v-else>
+			<div v-if="channelsLoading" class="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+				<USkeleton v-for="n in 6" :key="n" class="h-32" />
 			</div>
-		</div>
+
+			<!-- Channels Grid -->
+			<div v-else class="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+				<template v-if="sortedChannels.length">
+					<NuxtLink
+						v-for="channel in sortedChannels"
+						:key="channel.id"
+						:to="'/channels/' + channel.name"
+						class="group relative bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm hover:shadow-md transition-all duration-200"
+					>
+						<div class="flex items-start justify-between">
+							<div class="space-y-2">
+								<div class="flex items-center space-x-2">
+									<h3 class="text-lg font-medium">#{{ channel.name }}</h3>
+									<UBadge v-if="channel.messageCount" color="primary" variant="subtle" size="sm" class="font-mono">
+										{{ channel.messageCount }}
+									</UBadge>
+								</div>
+
+								<div v-if="channel.project?.title" class="flex items-center text-sm text-gray-500">
+									<UIcon name="i-heroicons-folder" class="w-4 h-4 mr-1" />
+									{{ channel.project.title }}
+								</div>
+							</div>
+
+							<UIcon
+								name="i-heroicons-arrow-right"
+								class="w-5 h-5 text-gray-400 group-hover:text-primary transform group-hover:translate-x-1 transition-all"
+							/>
+						</div>
+					</NuxtLink>
+				</template>
+
+				<!-- Empty State -->
+				<div
+					v-else
+					class="col-span-full flex flex-col items-center justify-center py-12 px-4 border-2 border-dashed rounded-lg"
+				>
+					<UIcon name="i-heroicons-chat-bubble-left-right" class="w-12 h-12 text-gray-400 mb-4" />
+					<h3 class="text-lg font-medium">No Channels Found</h3>
+					<p class="text-gray-500 text-center mt-2">No channels exist for the current organization.</p>
+				</div>
+			</div>
+		</template>
 	</div>
 </template>
 
