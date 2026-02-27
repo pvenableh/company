@@ -1080,8 +1080,14 @@ export interface MeetingRequest {
 	user_updated?: DirectusUser | string | null;
 	date_updated?: string | null;
 	requester_id?: DirectusUser | string | null;
+	host_user?: DirectusUser | string | null;
 	requested_date?: string | null;
+	preferred_time?: string | null;
+	duration_minutes?: number | null;
+	meeting_type?: 'consultation' | 'discovery' | 'project_review' | 'presentation' | 'general' | null;
+	request_status?: 'pending' | 'approved' | 'rejected' | null;
 	notes?: string | null;
+	admin_notes?: string | null;
 	linked_appointment?: Appointment | string | null;
 }
 

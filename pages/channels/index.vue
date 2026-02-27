@@ -31,6 +31,7 @@ const {
 	error: channelsError,
 	isConnected,
 	refresh: refreshChannels,
+	updateFilter,
 } = useRealtimeSubscription(
 	'channels',
 	[
@@ -47,6 +48,12 @@ const {
 	currentFilter.value,
 	'name',
 );
+
+// Keep subscription filter in sync with reactive filter
+watch(currentFilter, (newFilter) => {
+	updateFilter(newFilter);
+});
+
 const localChannels = ref([]);
 
 watch(

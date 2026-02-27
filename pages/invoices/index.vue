@@ -9,7 +9,10 @@ const user = computed(() => {
 	return loggedIn.value ? sessionUser.value ?? null : null;
 });
 const invoiceItems = useDirectusItems('invoices');
-const { selectedOrg, hasMultipleOrgs, organizationOptions, setOrganization, getOrganizationFilter } = useOrganization();
+const { selectedOrg, hasMultipleOrgs, organizations, organizationOptions, setOrganization, getOrganizationFilter } = useOrganization();
+const { user: directusUser } = useDirectusAuth();
+const { hasAdminAccess } = useTeams();
+const isAdmin = computed(() => hasAdminAccess(directusUser.value));
 
 const columns = [
 	{
@@ -68,17 +71,19 @@ const filterRef = computed(() => {
 		_and: [],
 	};
 
-	// Add organization filter if selected
+	// Add organization filter if a specific org is selected
 	const orgFilter = getOrganizationFilter();
 	if (Object.keys(orgFilter).length > 0) {
 		baseFilter._and.push({
-			bill_to: orgFilter.organization, // Adjust the path to match your schema
+			bill_to: orgFilter.organization,
 		});
 	}
 
-	// If no organization is selected, filter by user's organizations
-	if (!selectedOrg.value) {
-		const userOrganizationIds = user.value.organizations.map((org) => org.organizations_id.id);
+	// If no organization is selected:
+	// - Admins see all invoices (no bill_to filter)
+	// - Non-admins see only invoices for their organizations
+	if (!selectedOrg.value && !isAdmin.value && organizations.value?.length) {
+		const userOrganizationIds = organizations.value.map((org) => org.id);
 		baseFilter._and.push({
 			bill_to: {
 				id: {
