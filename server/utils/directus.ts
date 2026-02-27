@@ -59,7 +59,8 @@ export function getTypedDirectus(): DirectusAuthClient {
  * If the token is still rejected, use withAuthRetry() to recover.
  */
 export async function getUserDirectus(
-  event: H3Event
+  event: H3Event,
+  forceRefresh: boolean = false
 ): Promise<DirectusAuthClient> {
   const config = useRuntimeConfig();
   const directusUrl = config.directus?.url || config.public.directusUrl;
@@ -74,7 +75,22 @@ export async function getUserDirectus(
 
   // getUserSession triggers the session "fetch" hook which refreshes
   // expired tokens automatically before we read them here.
-  const session = await getUserSession(event);
+  let session = await getUserSession(event);
+
+  // If forceRefresh is requested, proactively refresh the token
+  if (forceRefresh) {
+    const refreshToken = getSessionRefreshToken(session);
+    if (refreshToken) {
+      try {
+        const newTokens = await directusRefresh(refreshToken);
+        await updateSessionTokens(event, session, newTokens);
+        session = await getUserSession(event);
+      } catch {
+        // If refresh fails, continue with existing token
+      }
+    }
+  }
+
   const accessToken = getSessionAccessToken(session);
 
   if (!accessToken) {

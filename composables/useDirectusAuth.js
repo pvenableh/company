@@ -173,6 +173,15 @@ export const useDirectusAuth = () => {
 		})
 	}
 
+	// ─── Registration ─────────────────────────────────────────────────────────
+
+	const register = async (userData) => {
+		return await $fetch('/api/auth/register', {
+			method: 'POST',
+			body: userData,
+		})
+	}
+
 	// ─── Password & Invitation Actions (merged from useAuthActions) ───────────
 
 	const passwordRequest = async (email) => {
@@ -255,6 +264,7 @@ export const useDirectusAuth = () => {
 		// Convenience wrappers
 		login,
 		logout,
+		register,
 
 		// Password & invitation actions
 		passwordRequest,
