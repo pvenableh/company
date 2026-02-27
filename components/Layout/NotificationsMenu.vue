@@ -1,178 +1,169 @@
 <template>
 	<div>
 		<!-- Notification Bell with Popover -->
-		<UPopover mode="click" :disabled="!user">
-			<div class="flex items-center justify-center relative rounded-full h-8 w-8 bg-white dark:bg-gray-800 shadow">
-				<UIcon
-					v-if="unreadCount"
-					name="i-heroicons-bell-alert"
-					class="w-4 h-4 animate-ping absolute text--[var(--cyan)]"
-				/>
-				<UIcon :name="unreadCount ? 'i-heroicons-bell-alert' : 'i-heroicons-bell'" class="w-4 h-4" />
-				<div
-					v-if="unreadCount > 0"
-					class="absolute -top-1 -right-1 text-[9px] leading-3 rounded-full h-4 w-4 bg-[var(--cyan)] flex items-center justify-center text-white font-bold p-1"
+		<Popover v-model:open="isPopoverOpen">
+			<PopoverTrigger as-child>
+				<button
+					class="flex items-center justify-center relative rounded-full h-8 w-8 bg-white dark:bg-gray-800 shadow hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+					:disabled="!user"
 				>
-					{{ unreadCount }}
-				</div>
-			</div>
+					<BellRing
+						v-if="unreadCount"
+						class="size-4 animate-ping absolute text-[var(--cyan)] opacity-50"
+					/>
+					<component :is="unreadCount ? BellRing : Bell" class="size-4" />
+					<div
+						v-if="unreadCount > 0"
+						class="absolute -top-1 -right-1 text-[9px] leading-3 rounded-full h-4 w-4 bg-[var(--cyan)] flex items-center justify-center text-white font-bold p-1"
+					>
+						{{ unreadCount }}
+					</div>
+				</button>
+			</PopoverTrigger>
 
-			<template #panel>
-				<div class="w-96 max-h-[70vh] overflow-y-auto">
-					<!-- Header -->
-					<div class="flex items-center justify-between p-4 border-b dark:border-gray-700">
-						<p class="text-sm font-bold">Notifications</p>
-						<div class="flex items-center gap-2">
-							<UButton
-								v-if="unreadCount > 0"
-								size="xs"
-								color="gray"
-								variant="ghost"
-								icon="i-heroicons-check"
-								@click="handleMarkAllAsRead"
-								:loading="isMarkingAll"
-							>
-								Mark all as read
-							</UButton>
-							<UButton
-								size="xs"
-								color="gray"
-								variant="ghost"
-								icon="i-heroicons-arrows-pointing-out"
-								@click="openSlideover"
-							>
-								View all
-							</UButton>
+			<PopoverContent align="end" :side-offset="8" class="w-96 max-h-[70vh] overflow-y-auto p-0">
+				<!-- Header -->
+				<div class="flex items-center justify-between p-4 border-b dark:border-gray-700">
+					<p class="text-sm font-bold">Notifications</p>
+					<div class="flex items-center gap-2">
+						<Button
+							v-if="unreadCount > 0"
+							variant="ghost"
+							size="sm"
+							class="h-7 text-xs"
+							:disabled="isMarkingAll"
+							@click="handleMarkAllAsRead"
+						>
+							<Check class="size-3 mr-1" />
+							Mark all as read
+						</Button>
+						<Button
+							variant="ghost"
+							size="sm"
+							class="h-7 text-xs"
+							@click="openSheet"
+						>
+							<Maximize2 class="size-3 mr-1" />
+							View all
+						</Button>
+					</div>
+				</div>
+
+				<!-- Notifications List -->
+				<div class="p-4">
+					<div v-if="notifications?.length" class="space-y-4">
+						<LayoutNotificationItem
+							v-for="notification in notifications.slice(0, 5)"
+							:key="notification.id"
+							:notification="notification"
+							:loading="loadingNotifications.has(notification.id)"
+							@mark-read="handleMarkAsRead"
+							@navigate="viewNotification"
+							compact
+						/>
+
+						<div v-if="notifications.length > 5" class="text-center pt-2 border-t dark:border-gray-700">
+							<Button variant="link" size="sm" class="text-[var(--cyan)] text-xs" @click="openSheet">
+								View all notifications
+							</Button>
 						</div>
 					</div>
 
-					<!-- Notifications List -->
-					<div class="p-4">
-						<div v-if="notifications?.length" class="space-y-4">
-							<LayoutNotificationItem
-								v-for="notification in notifications.slice(0, 5)"
-								:key="notification.id"
-								:notification="notification"
-								:loading="loadingNotifications.has(notification.id)"
-								@mark-read="handleMarkAsRead"
-								@navigate="viewNotification"
-								compact
-							/>
-
-							<div v-if="notifications.length > 5" class="text-center pt-2 border-t dark:border-gray-700">
-								<UButton size="xs" variant="link" class="text-[var(--cyan)]" @click="openSlideover">
-									View all notifications
-								</UButton>
-							</div>
-						</div>
-
-						<div v-else-if="isLoading" class="text-center py-8">
-							<UIcon name="i-heroicons-arrow-path" class="animate-spin h-5 w-5 mx-auto mb-2" />
-							<p class="text-gray-500">Loading notifications...</p>
-						</div>
-
-						<div v-else class="text-center py-8 text-gray-500">No new notifications</div>
+					<div v-else-if="isLoading" class="text-center py-8">
+						<Loader2 class="size-5 animate-spin mx-auto mb-2 text-muted-foreground" />
+						<p class="text-gray-500 text-sm">Loading notifications...</p>
 					</div>
-				</div>
-			</template>
-		</UPopover>
 
-		<!-- Full Notifications Slideover -->
-		<USlideover
-			v-model="isSlideoverOpen"
-			:ui="{
-				width: 'sm:max-w-lg',
-				padding: 'p-0',
-			}"
-		>
-			<div class="flex h-full flex-col">
-				<!-- Slideover Header -->
-				<div class="px-4 py-6 sm:px-6 bg-white dark:bg-gray-800 border-b dark:border-gray-700">
+					<div v-else class="text-center py-8 text-gray-500 text-sm">No new notifications</div>
+				</div>
+			</PopoverContent>
+		</Popover>
+
+		<!-- Full Notifications Sheet -->
+		<Sheet v-model:open="isSheetOpen">
+			<SheetContent side="right" class="sm:max-w-lg p-0 flex flex-col" :show-close-button="false">
+				<!-- Sheet Header -->
+				<SheetHeader class="px-6 py-4 border-b dark:border-gray-700 space-y-0">
 					<div class="flex items-center justify-between">
-						<h3 class="text-lg font-bold">Notifications</h3>
-						<div class="ml-3 flex h-7 items-center">
-							<UButton
-								color="gray"
-								variant="ghost"
-								icon="i-heroicons-x-mark"
-								aria-label="Close panel"
-								@click="isSlideoverOpen = false"
-							/>
-						</div>
+						<SheetTitle class="text-lg">Notifications</SheetTitle>
+						<SheetClose as-child>
+							<Button variant="ghost" size="icon-sm">
+								<X class="size-4" />
+							</Button>
+						</SheetClose>
 					</div>
-					<p class="mt-1 text-sm text-gray-500">
+					<SheetDescription>
 						{{ unreadCount }} unread notification{{ unreadCount !== 1 ? 's' : '' }}
-					</p>
-				</div>
+					</SheetDescription>
+				</SheetHeader>
 
 				<!-- Actions and Filters -->
-				<div class="px-4 py-3 sm:px-6 bg-gray-50 dark:bg-gray-900 border-b dark:border-gray-700">
+				<div class="px-6 py-3 bg-muted/50 border-b dark:border-gray-700">
 					<div class="flex flex-wrap items-center justify-between gap-3">
 						<div class="flex items-center space-x-2">
-							<UButton
+							<Button
 								v-if="unreadCount > 0"
 								size="sm"
-								color="cyan"
+								class="bg-[var(--cyan)] hover:bg-[var(--cyan)]/90 text-white"
+								:disabled="isMarkingAll"
 								@click="handleMarkAllAsRead"
-								:loading="isMarkingAll"
 							>
 								Mark All as Read
-							</UButton>
+							</Button>
 
-							<USelect
-								v-model="statusFilter"
-								:options="statusOptions"
-								size="sm"
-								placeholder="Filter by Status"
-								class="w-40"
-							/>
+							<Select v-model="statusFilter">
+								<SelectTrigger class="w-28 h-8">
+									<SelectValue placeholder="Filter" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="inbox">Unread</SelectItem>
+									<SelectItem value="archived">Read</SelectItem>
+								</SelectContent>
+							</Select>
 						</div>
 
-						<UButton
+						<Button
+							variant="outline"
 							size="sm"
-							color="gray"
-							variant="soft"
-							icon="i-heroicons-cog-6-tooth"
 							@click="showSettings = !showSettings"
 						>
+							<Settings class="size-3.5 mr-1" />
 							Settings
-						</UButton>
+						</Button>
 					</div>
 				</div>
 
 				<!-- Settings Panel -->
-				<UCard v-if="showSettings" class="mx-4 my-3 bg-gray-50 dark:bg-gray-800">
-					<template #header>
-						<div class="flex items-center justify-between">
-							<h3 class="text-sm font-medium">Notification Settings</h3>
-							<UButton color="gray" variant="ghost" icon="i-heroicons-x-mark" size="xs" @click="showSettings = false" />
-						</div>
-					</template>
+				<div v-if="showSettings" class="mx-4 my-3 border rounded-lg">
+					<div class="flex items-center justify-between p-4 pb-2">
+						<h3 class="text-sm font-medium">Notification Settings</h3>
+						<Button variant="ghost" size="icon-sm" class="size-6" @click="showSettings = false">
+							<X class="size-3" />
+						</Button>
+					</div>
 
-					<div class="space-y-4">
+					<div class="space-y-4 p-4 pt-2">
 						<div class="flex items-center justify-between">
 							<div>
 								<div class="font-medium text-sm">Sound Alerts</div>
-								<div class="text-xs text-gray-500">Play sound when new notifications arrive</div>
+								<div class="text-xs text-muted-foreground">Play sound when new notifications arrive</div>
 							</div>
-							<UToggle v-model="preferences.soundEnabled" />
+							<Switch :checked="preferences.soundEnabled" @update:checked="preferences.soundEnabled = $event" />
 						</div>
 
 						<div class="flex items-center justify-between">
 							<div>
 								<div class="font-medium text-sm">Email Notifications</div>
-								<div class="text-xs text-gray-500">Receive email for important notifications</div>
+								<div class="text-xs text-muted-foreground">Receive email for important notifications</div>
 							</div>
-							<UToggle v-model="preferences.emailEnabled" />
+							<Switch :checked="preferences.emailEnabled" @update:checked="preferences.emailEnabled = $event" />
 						</div>
 					</div>
 
-					<template #footer>
-						<div class="flex justify-end gap-2">
-							<UButton color="primary" size="sm" @click="savePreferences">Save Settings</UButton>
-						</div>
-					</template>
-				</UCard>
+					<div class="flex justify-end gap-2 p-4 pt-2 border-t">
+						<Button size="sm" @click="savePreferences">Save Settings</Button>
+					</div>
+				</div>
 
 				<!-- Notifications List with Infinite Scroll -->
 				<div class="relative flex-1 overflow-auto" ref="notificationsContainer">
@@ -180,13 +171,13 @@
 						v-if="isLoading && !filteredNotifications.length"
 						class="absolute inset-0 flex items-center justify-center"
 					>
-						<UIcon name="i-heroicons-arrow-path" class="animate-spin h-10 w-10 text-gray-300" />
+						<Loader2 class="size-10 animate-spin text-muted-foreground" />
 					</div>
 
 					<div v-else-if="filteredNotifications.length === 0" class="flex flex-col items-center justify-center h-full">
-						<UIcon name="i-heroicons-bell-slash" class="h-16 w-16 text-gray-300 mb-4" />
-						<p class="text-lg text-gray-500">No notifications</p>
-						<p class="text-sm text-gray-400">
+						<BellOff class="size-16 text-muted-foreground/30 mb-4" />
+						<p class="text-lg text-muted-foreground">No notifications</p>
+						<p class="text-sm text-muted-foreground/70">
 							{{
 								statusFilter === 'archived'
 									? "You don't have any read notifications"
@@ -209,14 +200,14 @@
 
 						<!-- Loading indicator for infinite scroll -->
 						<div v-if="isLoadingMore" class="py-4 text-center">
-							<UIcon name="i-heroicons-arrow-path" class="animate-spin h-5 w-5 mx-auto text-gray-400" />
-							<p class="text-xs text-gray-500 mt-2">Loading more notifications...</p>
+							<Loader2 class="size-5 animate-spin mx-auto text-muted-foreground" />
+							<p class="text-xs text-muted-foreground mt-2">Loading more notifications...</p>
 						</div>
 
 						<!-- End of list message -->
 						<div
 							v-if="!hasMoreToLoad && filteredNotifications.length > 0"
-							class="py-4 text-center text-sm text-gray-500"
+							class="py-4 text-center text-sm text-muted-foreground"
 						>
 							End of notifications
 						</div>
@@ -225,8 +216,8 @@
 						<div v-if="hasMoreToLoad" ref="loadMoreTrigger" class="h-1"></div>
 					</div>
 				</div>
-			</div>
-		</USlideover>
+			</SheetContent>
+		</Sheet>
 	</div>
 </template>
 
@@ -234,9 +225,15 @@
 import { ref, computed, watch } from 'vue';
 import { useInfiniteScroll } from '@vueuse/core';
 import { useNotifications } from '~/composables/useNotifications';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
+import { Bell, BellRing, BellOff, Check, Maximize2, Loader2, X, Settings } from 'lucide-vue-next'
+import { toast } from 'vue-sonner'
 
 const { user } = useDirectusAuth();
-const config = useRuntimeConfig();
 const {
 	notifications,
 	archivedNotifications,
@@ -254,7 +251,8 @@ const {
 } = useNotifications();
 
 const isLoading = ref(false);
-const isSlideoverOpen = ref(false);
+const isPopoverOpen = ref(false);
+const isSheetOpen = ref(false);
 const showSettings = ref(false);
 const isMarkingAll = ref(false);
 const statusFilter = ref('inbox');
@@ -286,19 +284,18 @@ useInfiniteScroll(
 		}
 	},
 	{
-		distance: 200, // Load more when within 200px of the bottom
-		throttle: 300, // Throttle scroll events
+		distance: 200,
+		throttle: 300,
 	},
 );
 
 watch(statusFilter, async (newValue) => {
 	if (newValue === 'archived' && archivedNotifications.value.length === 0) {
-		await fetchArchivedNotifications(true); // Reset and fetch archived notifications
+		await fetchArchivedNotifications(true);
 	}
 });
 
-// Watch for slideover opening to ensure we have the right notifications
-watch(isSlideoverOpen, async (isOpen) => {
+watch(isSheetOpen, async (isOpen) => {
 	if (isOpen && statusFilter.value === 'archived' && archivedNotifications.value.length === 0) {
 		await fetchArchivedNotifications(true);
 	}
@@ -307,78 +304,57 @@ watch(isSlideoverOpen, async (isOpen) => {
 // Filtered notifications based on status
 const filteredNotifications = computed(() => {
 	if (statusFilter.value === 'inbox') {
-		return notifications.value; // Already filtered to inbox status
+		return notifications.value;
 	} else {
-		return archivedNotifications.value; // Archived notifications
+		return archivedNotifications.value;
 	}
 });
 
-// Check if notification is already read
 const isRead = (notification) => {
 	return notification.status === 'archived';
 };
 
-// Open slideover
-const openSlideover = () => {
-	isSlideoverOpen.value = true;
-
-	// Reset status filter to show unread notifications by default when opening slideover
+const openSheet = () => {
+	isPopoverOpen.value = false;
+	isSheetOpen.value = true;
 	statusFilter.value = 'inbox';
 };
 
-// Handle marking notification as read
 const handleMarkAsRead = async (notificationId) => {
 	try {
 		await markAsRead(notificationId);
 	} catch (error) {
-		useToast().add({
-			id: 'notification-error',
-			title: 'Error',
-			description: 'Failed to mark notification as read',
-			color: 'red',
-		});
+		toast.error('Failed to mark notification as read');
 	}
 };
 
-// Handle marking all notifications as read
 const handleMarkAllAsRead = async () => {
 	try {
 		isMarkingAll.value = true;
 		await markAllAsRead();
 	} catch (error) {
-		useToast().add({
-			id: 'notification-error',
-			title: 'Error',
-			description: 'Failed to mark all notifications as read',
-			color: 'red',
-		});
+		toast.error('Failed to mark all notifications as read');
 	} finally {
 		isMarkingAll.value = false;
 	}
 };
 
-// View notification and navigate to item
 const viewNotification = (notification) => {
-	// First mark as read if unread
 	if (!isRead(notification)) {
 		handleMarkAsRead(notification.id);
 	}
 
-	// Navigate to the item and close the slideover
 	navigateToItem(notification);
 
-	// Close slideover
-	isSlideoverOpen.value = false;
+	isPopoverOpen.value = false;
+	isSheetOpen.value = false;
 };
 
-// Save notification preferences
 const savePreferences = async () => {
 	await saveUserPreferences(preferences.value);
 	showSettings.value = false;
 };
 
-// If your notifications are loaded asynchronously,
-// you might want to add a watch effect:
 watch(
 	() => notifications.value,
 	(newVal) => {

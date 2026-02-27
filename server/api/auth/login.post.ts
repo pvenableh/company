@@ -53,7 +53,7 @@ export default defineEventHandler(async (event) => {
   } catch (error: any) {
     console.error("Login error:", error);
 
-    // Handle Directus-specific errors
+    // Handle Directus-specific errors (invalid credentials, etc.)
     if (error.errors?.[0]?.message) {
       throw createError({
         statusCode: 401,
@@ -61,9 +61,15 @@ export default defineEventHandler(async (event) => {
       });
     }
 
+    // Re-throw H3/Nitro errors with their original status code
+    if (error.statusCode) {
+      throw error;
+    }
+
+    // Internal errors (e.g. session config issues) should not be masked as 401
     throw createError({
-      statusCode: error.statusCode || 401,
-      message: error.message || "Invalid credentials",
+      statusCode: 500,
+      message: "Login failed due to a server error",
     });
   }
 });
