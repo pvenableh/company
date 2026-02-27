@@ -78,14 +78,14 @@
 
 					<!-- Teams List -->
 					<div v-else class="max-h-60 overflow-y-auto">
-						<!-- Reset/Clear Selection Option - Only show for admins -->
+						<!-- See All Option - Available for all users with multiple teams -->
 						<DropdownMenuItem
 							v-if="showClearTeamOption"
 							class="flex items-center gap-3 cursor-pointer border-b border-gray-200 dark:border-gray-700 rounded-none"
 							@click="clearTeamSelection"
 						>
-							<XCircle class="size-4 shrink-0 text-gray-500" />
-							<span class="text-[11px] uppercase leading-3 truncate text-gray-500">Deselect Team</span>
+							<Eye class="size-4 shrink-0 text-gray-500" />
+							<span class="text-[11px] uppercase leading-3 truncate text-gray-500">See All</span>
 						</DropdownMenuItem>
 
 						<!-- Team Options -->
@@ -137,7 +137,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Users, ChevronDown, Loader2, XCircle } from 'lucide-vue-next'
+import { Users, ChevronDown, Loader2, Eye } from 'lucide-vue-next'
 
 const props = defineProps({
 	containerClass: {
@@ -197,9 +197,9 @@ const getAllTeamsOption = () => {
 	];
 };
 
-// Show clear team option only for admins
+// Show "See All" option for any user with multiple teams when a team is selected
 const showClearTeamOption = computed(() => {
-	return hasAdminAccess(user.value) && selectedTeam.value !== null;
+	return selectedTeam.value !== null && visibleTeams.value?.length > 1;
 });
 
 // Computed for team options in dropdown with proper reactivity
@@ -229,7 +229,7 @@ const currentTeam = computed(() => {
 // Get team name for display
 const currentTeamName = computed(() => {
 	if (!selectedOrg.value) return 'Select Organization First';
-	if (selectedTeam.value === null && showAllTeamsOption()) return 'All Teams';
+	if (selectedTeam.value === null) return 'See All';
 	const team = visibleTeams.value.find((t) => t.id === selectedTeam.value);
 	return team?.name || 'Select Team';
 });
@@ -262,11 +262,9 @@ const handleTeamSelect = (teamId) => {
 	}
 };
 
-// Clear/reset team selection
+// Clear/reset team selection (See All)
 const clearTeamSelection = () => {
-	if (hasAdminAccess(user.value)) {
-		clearTeam();
-	}
+	clearTeam();
 };
 
 // Validate that a team belongs to the current organization

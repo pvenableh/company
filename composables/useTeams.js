@@ -174,17 +174,6 @@ export const useTeams = () => {
 
 	// Clear selected team (sets to null)
 	const clearTeam = () => {
-		// For regular users, don't actually clear to null
-		// unless there are no visible teams
-		if (!hasAdminAccess(user.value) && visibleTeams.value.length > 0) {
-			// Instead, set to the first visible team
-			const firstTeamId = visibleTeams.value[0]?.id;
-			setTeam(firstTeamId);
-			// console.log('useTeams: Regular user - setting to first team:', firstTeamId);
-			return;
-		}
-
-		// For admins or when no teams are available, clear as normal
 		selectedTeam.value = null;
 		teamCookie.value = null;
 		setLocalStorageTeam(null);
@@ -193,13 +182,8 @@ export const useTeams = () => {
 
 	// Check if a teamId is valid for the current organization
 	const isValidTeamForOrg = (teamId) => {
-		// For regular users, null/all teams is not a valid option
-		if (!teamId && !hasAdminAccess(user.value)) {
-			return false;
-		}
-
-		// null is always valid for admins (All Teams)
-		if (!teamId && hasAdminAccess(user.value)) {
+		// null is valid for all users (See All / All Teams)
+		if (!teamId) {
 			return true;
 		}
 
@@ -227,14 +211,16 @@ export const useTeams = () => {
 				return;
 			}
 
-			// For regular users, ensure they always have a team selected
+			// For regular users, restore saved team or default to first team
 			if (!hasAdminAccess(user.value)) {
-				// If they have a saved team and it's valid, use it
 				if (savedTeam && isValidTeamForOrg(savedTeam)) {
 					// console.log('useTeams: Restoring saved team for regular user:', savedTeam);
 					selectedTeam.value = savedTeam;
+				} else if (savedTeam === null || savedTeam === 'null') {
+					// User previously selected "See All" - keep it
+					selectedTeam.value = null;
 				} else {
-					// Otherwise, select the first team they have access to
+					// No saved team, select the first team they have access to
 					const firstTeamId = visibleTeams.value[0]?.id;
 					// console.log('useTeams: Setting regular user to first visible team:', firstTeamId);
 					setTeam(firstTeamId);
@@ -501,13 +487,8 @@ export const useTeams = () => {
 				if (newTeamId && isValidTeamForOrg(newTeamId)) {
 					selectedTeam.value = newTeamId;
 				} else if (!newTeamId) {
-					// For regular users, don't set to null
-					if (!hasAdminAccess(user.value) && visibleTeams.value.length > 0) {
-						// Instead of null, set to first visible team
-						selectedTeam.value = visibleTeams.value[0].id;
-					} else {
-						selectedTeam.value = null;
-					}
+					// Allow null for all users (See All)
+					selectedTeam.value = null;
 				} else {
 					console.warn(
 						'Team ID from localStorage is not valid in this context. It might be from a different organization or deleted.',
