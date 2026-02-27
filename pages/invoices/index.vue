@@ -9,7 +9,7 @@ const user = computed(() => {
 	return loggedIn.value ? sessionUser.value ?? null : null;
 });
 const invoiceItems = useDirectusItems('invoices');
-const { selectedOrg, hasMultipleOrgs, organizationOptions, setOrganization, getOrganizationFilter } = useOrganization();
+const { selectedOrg, hasMultipleOrgs, organizations, organizationOptions, setOrganization, getOrganizationFilter } = useOrganization();
 
 const columns = [
 	{
@@ -77,8 +77,8 @@ const filterRef = computed(() => {
 	}
 
 	// If no organization is selected, filter by user's organizations
-	if (!selectedOrg.value) {
-		const userOrganizationIds = user.value.organizations.map((org) => org.organizations_id.id);
+	if (!selectedOrg.value && organizations.value?.length) {
+		const userOrganizationIds = organizations.value.map((org) => org.id);
 		baseFilter._and.push({
 			bill_to: {
 				id: {
