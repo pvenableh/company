@@ -2,36 +2,8 @@
 	<div :class="containerClass" class="team-selector">
 		<!-- When organization is selected -->
 		<div v-if="selectedOrg">
-			<!-- For Regular User with Only One Team - Static Display (No Dropdown) -->
-			<div
-				v-if="isRegularUserWithSingleTeam"
-				class="flex items-center gap-2 rounded-full border-2 border-[var(--cyan)] p-1"
-			>
-				<!-- Team Avatar -->
-				<div class="h-7 w-7 rounded-full bg-white flex items-center justify-center relative shadow">
-					<div v-if="singleTeam">
-						<div v-if="singleTeam.icon">
-							<img
-								:src="`${$config.public.directusUrl}/assets/${singleTeam.icon}?key=avatar`"
-								alt="Team Icon"
-								class="object-cover rounded-full"
-							/>
-						</div>
-						<div v-else class="h-full w-full flex items-center justify-center">
-							<span class="font-medium text-gray-700 text-sm">{{ getTeamInitials(singleTeam) }}</span>
-						</div>
-					</div>
-					<Users v-else class="size-4 text-gray-400" />
-				</div>
-
-				<!-- Team Name (visible on larger screens) -->
-				<span class="hidden md:block text-xs uppercase truncate max-w-24 pr-1">
-					{{ singleTeam?.name || 'Your Team' }}
-				</span>
-			</div>
-
-			<!-- Dropdown for Admin or Users with Multiple Teams -->
-			<DropdownMenu v-else>
+			<!-- Team Dropdown -->
+			<DropdownMenu>
 				<DropdownMenuTrigger as-child>
 					<button
 						class="flex items-center gap-2 group relative focus:outline-none rounded-full border-2 border-[var(--cyan)] p-1"
@@ -197,9 +169,9 @@ const getAllTeamsOption = () => {
 	];
 };
 
-// Show "See All" option for any user with multiple teams when a team is selected
+// Show "See All" option when a team is selected
 const showClearTeamOption = computed(() => {
-	return selectedTeam.value !== null && visibleTeams.value?.length > 1;
+	return selectedTeam.value !== null && visibleTeams.value?.length >= 1;
 });
 
 // Computed for team options in dropdown with proper reactivity

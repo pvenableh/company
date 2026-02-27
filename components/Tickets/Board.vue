@@ -12,7 +12,7 @@
 		</transition>
 		<!-- Connection Status -->
 		<transition name="fade">
-			<div v-if="!isConnected && !isLoading" class="mb-4 absolute w-64 right-10 top-0 tickets-board__connection">
+			<div v-if="!isConnected && !isLoading && hasEverConnected" class="mb-4 absolute w-64 right-10 top-0 tickets-board__connection">
 				<UAlert title="Connection Lost" description="Attempting to reconnect..." color="yellow">
 					<template #footer>
 						<UButton size="sm" color="yellow" @click="refreshData">Retry Connection</UButton>
@@ -269,6 +269,7 @@ const filterUnassigned = ref(false);
 const filterDueDate = ref(null);
 const isLoading = ref(true);
 const isConnected = ref(true);
+const hasEverConnected = ref(false);
 const error = ref(null);
 const lastUpdated = ref(null);
 let cleanupMobileDetection = null;
@@ -498,8 +499,12 @@ const setupTicketsSubscription = () => {
 			console.log('Subscription connection state:', val);
 			isConnected.value = val;
 
-			// If connection is lost, set isLoading to false
-			if (!val && isLoading.value) {
+			if (val) {
+				hasEverConnected.value = true;
+			}
+
+			// If connection is lost after initial connection, stop loading
+			if (!val && hasEverConnected.value && isLoading.value) {
 				setTimeout(() => {
 					isLoading.value = false;
 				}, 1000);
@@ -613,6 +618,11 @@ const setupTicketsSubscription = () => {
 		},
 		{ immediate: true },
 	);
+
+	// Connect immediately
+	if (import.meta.client) {
+		connect();
+	}
 
 	// Safety timeout to prevent infinite loading state
 	setTimeout(() => {
@@ -958,8 +968,6 @@ onMounted(async () => {
 			// Make sure we're in client-side before setting up the subscription
 			if (import.meta.client) {
 				setupTicketsSubscription();
-				// Now call connect (moved from inside setupTicketsSubscription)
-				if (connectFunc) connectFunc();
 			}
 		} catch (error) {
 			console.error('Error setting up subscription:', error);
@@ -1017,7 +1025,6 @@ watch(
 				ticketsSubscription.updateFilter(filter);
 			} else {
 				setupTicketsSubscription();
-				if (connectFunc) connectFunc();
 			}
 		}
 	},
