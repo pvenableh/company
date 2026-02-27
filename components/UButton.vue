@@ -23,6 +23,7 @@ const props = withDefaults(
     padded?: boolean;
     truncate?: boolean;
     to?: string;
+    external?: boolean;
     target?: string;
     label?: string;
     class?: string;
@@ -160,9 +161,10 @@ const handleClick = (event: MouseEvent) => {
 
 <template>
   <component
-    :is="to ? 'NuxtLink' : 'button'"
+    :is="to ? (external ? 'a' : 'NuxtLink') : 'button'"
     :type="to ? undefined : type"
-    :to="to"
+    :to="to && !external ? to : undefined"
+    :href="to && external ? to : undefined"
     :target="target"
     :disabled="disabled || loading"
     :class="buttonClasses"

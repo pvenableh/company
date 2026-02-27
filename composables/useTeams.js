@@ -75,7 +75,8 @@ export const useTeams = () => {
 	// Check if user has admin or client manager role
 	const hasAdminAccess = (user) => {
 		if (!user) return false;
-		return user?.role === ADMIN_ROLE_ID || user?.role === CLIENT_MANAGER_ROLE_ID;
+		const roleId = typeof user?.role === 'object' ? user?.role?.id : user?.role;
+		return roleId === ADMIN_ROLE_ID || roleId === CLIENT_MANAGER_ROLE_ID;
 	};
 
 	// Get teams for an organization with full user details
