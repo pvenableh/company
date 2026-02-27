@@ -5,3 +5,6 @@ export type * from './system';
 export type * from './help';
 export type * from './os';
 export type * from './schema';
+export type * from './projects';
+export type * from './comments';
+export type * from './reactions';
