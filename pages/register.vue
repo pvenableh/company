@@ -1,12 +1,48 @@
-<script setup></script>
+<script setup lang="ts">
+import { toast } from 'vue-sonner';
+
+definePageMeta({
+	layout: 'blank',
+	middleware: 'guest',
+});
+
+const { register } = useDirectusAuth();
+const route = useRoute();
+
+async function handleRegister(values: {
+	firstName: string;
+	lastName: string;
+	email: string;
+	password: string;
+}) {
+	try {
+		await register({
+			first_name: values.firstName,
+			last_name: values.lastName,
+			email: values.email,
+			password: values.password,
+		});
+
+		toast.success('Account created! Redirecting...');
+
+		const redirectTo = route.query.redirect ? decodeURIComponent(route.query.redirect as string) : '/';
+		setTimeout(() => {
+			window.location.href = redirectTo;
+		}, 1000);
+	} catch (err: any) {
+		const message = err?.data?.message || err?.message || 'Failed to create account';
+		toast.error(message);
+	}
+}
+</script>
+
 <template>
-	<div class="md:px-6 mx-auto flex items-start justify-center flex-col relative px-4 pt-20">
-		<h1 class="page__title">Register</h1>
-		<div class="w-full flex flex-col items-center justify-center z-10 page__inner">
-			<div class="max-w-screen-sm">
-				<AccountRegister />
-			</div>
+	<div class="flex min-h-svh items-center justify-center px-4">
+		<div class="w-full max-w-md">
+			<AuthRegisterForm
+				@submit="handleRegister"
+				@login="navigateTo('/auth/signin')"
+			/>
 		</div>
 	</div>
 </template>
-<style></style>

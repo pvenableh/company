@@ -158,7 +158,10 @@
 </template>
 
 <script setup lang="ts">
-import type { FormError } from '#ui/types';
+interface FormError {
+	path: string;
+	message: string;
+}
 
 interface SignupState {
 	first_name: string;
