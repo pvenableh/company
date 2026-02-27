@@ -9,6 +9,7 @@ import type { SocialAccountPublic } from '~/types/social'
 
 definePageMeta({
   layout: 'default',
+  middleware: ['auth'],
 })
 
 const route = useRoute()

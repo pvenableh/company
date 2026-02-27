@@ -14,6 +14,7 @@ import type { SocialAccountPublic, SocialPostTarget, PostType, SocialClient } fr
 
 definePageMeta({
 	layout: 'default',
+	middleware: ['auth'],
 });
 
 // Fetch data

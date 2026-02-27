@@ -10,6 +10,7 @@ import type { SocialPost, SocialAccountPublic, SocialPostTarget, PostType } from
 
 definePageMeta({
   layout: 'default',
+  middleware: ['auth'],
 })
 
 const route = useRoute()

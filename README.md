@@ -110,6 +110,57 @@ The app will be available at `http://localhost:3000`.
 └── scripts/            # Setup and utility scripts
 ```
 
+## Social Media Module
+
+The platform includes a full social media management system for Instagram and TikTok. See the in-app setup guide at `/social/setup` for detailed configuration steps.
+
+### Quick Setup
+
+1. **Create Directus collections** — run the setup script:
+   ```bash
+   pnpm tsx scripts/setup-social-collections.ts
+   ```
+
+2. **Configure environment variables** — add to `.env`:
+   ```env
+   # Instagram (Facebook Login for Business)
+   INSTAGRAM_APP_ID=
+   INSTAGRAM_APP_SECRET=
+   INSTAGRAM_REDIRECT_URI=https://your-domain.com/api/social/oauth/instagram/callback
+
+   # TikTok
+   TIKTOK_CLIENT_KEY=
+   TIKTOK_CLIENT_SECRET=
+   TIKTOK_REDIRECT_URI=https://your-domain.com/api/social/oauth/tiktok/callback
+
+   # Token encryption (required, min 32 chars)
+   SOCIAL_ENCRYPTION_KEY=
+   ```
+
+3. **Regenerate types** after Directus collections are created:
+   ```bash
+   pnpm generate:types
+   ```
+
+4. **Connect accounts** — navigate to `/social/settings` and click Connect for Instagram or TikTok.
+
+### Social Pages
+
+| Page | Path | Description |
+|---|---|---|
+| Dashboard | `/social/dashboard` | Overview stats, upcoming posts, quick actions |
+| Compose | `/social/compose` | Create and schedule posts across platforms |
+| Calendar | `/social/calendar` | Monthly calendar view of scheduled content |
+| Analytics | `/social/analytics` | Follower growth, engagement, post performance |
+| Clients | `/social/clients` | Manage agency clients, assign accounts |
+| Settings | `/social/settings` | Connect/disconnect social accounts |
+| Setup Guide | `/social/setup` | In-app configuration instructions |
+
+### Platform Requirements
+
+- **Instagram**: Requires a Facebook Developer app with Instagram Graph API, and an Instagram Business/Creator account linked to a Facebook Page.
+- **TikTok**: Requires a TikTok Developer app with Login Kit and Content Posting API. Direct posting requires TikTok audit approval; otherwise posts go to inbox as drafts.
+
 ## Deployment
 
 The app is configured for deployment on **Vercel**. Make sure all required environment variables are set in your Vercel project settings, especially `NUXT_SESSION_PASSWORD`.
