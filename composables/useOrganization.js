@@ -34,7 +34,7 @@ export function useOrganization() {
 	};
 
 	const fetchOrganizationDetails = async () => {
-		if (!user.value?.organizationIds?.length) {
+		if (!user.value?.id) {
 			organizations.value = [];
 			return;
 		}
@@ -43,10 +43,8 @@ export function useOrganization() {
 		error.value = null;
 
 		try {
-			const orgIds = user.value.organizationIds;
-
 			const data = await orgItems.list({
-				filter: { id: { _in: orgIds } },
+				filter: { users: { directus_users_id: { _eq: user.value.id } } },
 				fields: ['id', 'name', 'logo', 'icon', 'tickets.id', 'projects.id'],
 			});
 
