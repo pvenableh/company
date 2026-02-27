@@ -16,6 +16,7 @@ import type { SocialPost, SocialClient, SocialAccountPublic } from '~/types/soci
 
 definePageMeta({
   layout: 'default',
+  middleware: ['auth'],
 })
 
 const toast = useToast()

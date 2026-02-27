@@ -10,6 +10,7 @@ import type { SocialClient, SocialAccountPublic } from '~/types/social'
 
 definePageMeta({
   layout: 'default',
+  middleware: ['auth'],
 })
 
 const toast = useToast()

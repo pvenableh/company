@@ -67,6 +67,12 @@ const links = ref([
 		to: '/invoices',
 		icon: 'i-heroicons-document-text',
 	},
+	{
+		name: 'Social',
+		type: ['header', 'footer', 'drawer'],
+		to: '/social/dashboard',
+		icon: 'i-heroicons-share',
+	},
 ]);
 </script>
 <template>

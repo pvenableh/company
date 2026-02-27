@@ -17,6 +17,7 @@ import type { SocialClient, SocialAccountPublic, SocialAnalyticsSnapshot, Instag
 
 definePageMeta({
   layout: 'default',
+  middleware: ['auth'],
 })
 
 // Date range

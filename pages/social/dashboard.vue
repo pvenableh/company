@@ -9,6 +9,7 @@ import type { SocialPost, SocialAccountPublic, SocialDashboardStats } from '~/ty
 
 definePageMeta({
   layout: 'default',
+  middleware: ['auth'],
 })
 
 // Fetch data
@@ -254,6 +255,15 @@ const statusColor = (status: string) => {
               icon="i-lucide-settings"
             >
               Settings
+            </UButton>
+            <UButton
+              to="/social/setup"
+              block
+              variant="soft"
+              color="gray"
+              icon="i-lucide-book-open"
+            >
+              Setup Guide
             </UButton>
           </div>
         </UCard>
