@@ -80,23 +80,23 @@ a {
 
 .page {
   @apply pt-[70px];
-  &__content {
-    transition: all 0.25s var(--curve);
-    @apply relative z-10 ;
-  }
-  &__title {
-    font-weight: 200 !important;
-    @apply font-proxima-thin absolute top-0 left-0 w-full uppercase leading-[0.7em] text-8xl mt-2 opacity-[0.05] z-0;
-  }
-  &__inner {
-    min-height: calc(90vh - 175px);
-    @apply relative z-10 mt-12;
-  }
-  .nuxt-page {
-      min-height: calc(90vh - 100px);
-      z-index: 5;
-      position: relative;
-  }
+}
+.page__content {
+  transition: all 0.25s var(--curve);
+  @apply relative z-10;
+}
+.page__title {
+  font-weight: 200 !important;
+  @apply font-proxima-thin absolute top-0 left-0 w-full uppercase leading-[0.7em] text-8xl mt-2 opacity-[0.05] z-0;
+}
+.page__inner {
+  min-height: calc(90vh - 175px);
+  @apply relative z-10 mt-12;
+}
+.page .nuxt-page {
+  min-height: calc(90vh - 100px);
+  z-index: 5;
+  position: relative;
 }
 
 .screen-enter-from {

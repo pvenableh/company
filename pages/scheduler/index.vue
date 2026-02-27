@@ -1,5 +1,16 @@
 <template>
 	<div class="min-h-screen">
+		<!-- Coming Soon for non-admin users -->
+		<div v-if="!isAdmin" class="page__content">
+			<h1 class="page__title">Scheduler</h1>
+			<div class="flex flex-col items-center justify-center z-10 min-h-[60vh] page__inner">
+				<h2 class="text-2xl font-proxima-light uppercase tracking-widest text-gray-400">Coming Soon</h2>
+				<p class="text-sm text-gray-400 mt-2">This feature is currently under development.</p>
+			</div>
+		</div>
+
+		<!-- Full scheduler for admin users -->
+		<template v-else>
 		<!-- Header -->
 		<div class="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
 			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -160,6 +171,7 @@
 				</template>
 			</UTabs>
 		</div>
+		</template>
 	</div>
 </template>
 
@@ -167,6 +179,9 @@
 import { format, parseISO, isAfter } from 'date-fns';
 
 const { user } = useDirectusAuth();
+const { hasAdminAccess } = useTeams();
+
+const isAdmin = computed(() => hasAdminAccess(user.value));
 const toast = useToast();
 
 // State

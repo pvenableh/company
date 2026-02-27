@@ -188,6 +188,10 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+.org-selector :deep(img) {
+	object-fit: contain;
+}
+
 .org-selector button img {
 	transition: transform 0.2s ease;
 }
