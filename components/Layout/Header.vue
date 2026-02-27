@@ -1,5 +1,9 @@
 <script setup>
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { User } from 'lucide-vue-next'
+
 const { user } = useDirectusAuth();
+const config = useRuntimeConfig();
 
 const props = defineProps({
 	links: {
@@ -8,8 +12,19 @@ const props = defineProps({
 	},
 });
 
-const previousScrollTop = ref(0);
 const isRetracted = ref(false);
+
+const avatarUrl = computed(() => {
+	if (!user.value?.avatar) return null;
+	return `${config.public.assetsUrl}${user.value.avatar}?key=avatar`;
+});
+
+const initials = computed(() => {
+	if (!user.value) return 'U';
+	const first = user.value.first_name?.[0] ?? '';
+	const last = user.value.last_name?.[0] ?? '';
+	return (first + last).toUpperCase() || 'U';
+});
 
 const manageNavBarAnimations = () => {
 	const scrollTop = window.scrollY;
@@ -49,8 +64,13 @@ onUnmounted(() => {
 		</nuxt-link>
 		<div class="account-controls">
 			<nuxt-link to="/account" class="flex items-center justify-self-center">
-				<Avatar v-if="user" :user="user" text="12" class="mr-2" />
-				<UAvatar v-else icon="i-heroicons-user" size="sm" class="mr-1 sm:mr-2" />
+				<Avatar class="size-8 mr-2">
+					<AvatarImage v-if="avatarUrl" :src="avatarUrl" :alt="user?.first_name" />
+					<AvatarFallback v-if="user">{{ initials }}</AvatarFallback>
+					<AvatarFallback v-else>
+						<User class="size-4" />
+					</AvatarFallback>
+				</Avatar>
 			</nuxt-link>
 			<LayoutNotificationsMenu v-if="user" class="mr-2" />
 		</div>
@@ -79,7 +99,6 @@ header {
 }
 
 header.retracted {
-	/* transform: translateY(-100px); */
 	top: 8px;
 	@apply rounded-full w-11/12 md:w-5/6 lg:w-4/5 xl:w-3/5 py-2 md:py-1.5 border border-gray-100 bg-gray-100 dark:border-gray-600;
 	.logo-new {

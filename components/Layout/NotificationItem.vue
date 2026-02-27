@@ -11,7 +11,10 @@
 	>
 		<div class="flex items-start gap-3">
 			<!-- Sender Avatar -->
-			<UAvatar :src="getAvatarUrl(notification.sender)" :alt="getSenderName()" :size="compact ? 'sm' : 'md'" />
+			<Avatar :class="compact ? 'size-7' : 'size-9'">
+				<AvatarImage :src="getAvatarUrl(notification.sender)" :alt="getSenderName()" />
+				<AvatarFallback class="text-xs">{{ getSenderInitials() }}</AvatarFallback>
+			</Avatar>
 
 			<!-- Content -->
 			<div class="flex-grow min-w-0">
@@ -19,30 +22,25 @@
 					<h4 class="font-medium" :class="compact ? 'text-xs' : 'text-sm'">{{ notification.subject }}</h4>
 					<div class="flex items-center gap-2 ml-2">
 						<span class="text-xs text-gray-500 whitespace-nowrap">{{ formatTimeAgo(notification.timestamp) }}</span>
-						<UButton
+						<Button
 							v-if="!isArchived"
-							icon="i-heroicons-check"
-							color="gray"
 							variant="ghost"
-							size="xs"
-							class="opacity-50 hover:opacity-100"
+							size="icon-sm"
+							class="size-6 opacity-50 hover:opacity-100"
 							@click.stop="$emit('mark-read', notification.id)"
-							:loading="loading"
-						/>
+							:disabled="loading"
+						>
+							<Check class="size-3" />
+						</Button>
 					</div>
 				</div>
 
 				<!-- Collection badge (shown only in non-compact mode) -->
 				<div v-if="!compact && notification.collection" class="flex items-center gap-2 mt-1 mb-2">
-					<UBadge
-						size="xs"
-						:color="getCollectionColor(notification.collection)"
-						variant="subtle"
-						class="uppercase text-[9px]"
-					>
-						<UIcon :name="getCollectionIcon()" class="w-3 h-3 mr-1" />
+					<Badge variant="secondary" class="uppercase text-[9px] gap-1">
+						<component :is="getCollectionIcon()" class="size-3" />
 						{{ notification.collection }}
-					</UBadge>
+					</Badge>
 				</div>
 
 				<!-- Message -->
@@ -52,46 +50,48 @@
 					v-html="notification.message"
 				></div>
 
-				<!-- Footer Actions (shown in different layouts for compact vs. full) -->
+				<!-- Footer Actions (compact mode) -->
 				<div v-if="compact" class="flex items-center gap-2 mt-2 text-[9px] font-bold text-gray-400">
 					<span class="uppercase font-bold">{{ formatTimeAgo(notification.timestamp) }}</span>
-					<UButton
-						size="xs"
+					<Button
 						variant="ghost"
-						:loading="loading"
+						size="sm"
+						class="h-5 text-[9px] font-bold px-1"
 						:disabled="loading"
-						class="text-[9px] font-bold"
 						@click.stop="$emit('mark-read', notification.id)"
 					>
 						Mark as read
-					</UButton>
-					<UButton
-						size="xs"
+					</Button>
+					<Button
 						variant="ghost"
-						color="cyan"
-						class="text-[9px] font-bold"
+						size="sm"
+						class="h-5 text-[9px] font-bold text-[var(--cyan)] px-1"
 						@click.stop="$emit('navigate', notification)"
 					>
 						View
-					</UButton>
+					</Button>
 				</div>
 
-				<!-- Fuller view with actions at bottom (only in non-compact mode) -->
+				<!-- Full view actions -->
 				<div v-if="!compact" class="mt-2 flex justify-end space-x-2">
-					<UButton
+					<Button
 						v-if="!isArchived"
-						size="xs"
-						color="gray"
-						variant="soft"
-						:loading="loading"
+						variant="outline"
+						size="sm"
+						class="h-7 text-xs"
+						:disabled="loading"
 						@click.stop="$emit('mark-read', notification.id)"
 					>
 						Mark as Read
-					</UButton>
-
-					<UButton size="xs" color="cyan" :loading="loading" @click.stop="$emit('navigate', notification)">
+					</Button>
+					<Button
+						size="sm"
+						class="h-7 text-xs bg-[var(--cyan)] hover:bg-[var(--cyan)]/90 text-white"
+						:disabled="loading"
+						@click.stop="$emit('navigate', notification)"
+					>
 						View
-					</UButton>
+					</Button>
 				</div>
 			</div>
 		</div>
@@ -99,7 +99,10 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Check, Ticket, Folder, CheckCircle, MessageSquare, FileText, Bell } from 'lucide-vue-next'
 
 const props = defineProps({
 	notification: {
@@ -124,24 +127,25 @@ const emit = defineEmits(['mark-read', 'navigate']);
 
 const config = useRuntimeConfig();
 
-// Get sender name
 const getSenderName = () => {
 	const sender = props.notification.sender;
 	if (!sender) return 'System';
 	return `${sender.first_name || ''} ${sender.last_name || ''}`.trim() || sender.email || 'Unknown';
 };
 
-// Get avatar URL
+const getSenderInitials = () => {
+	const sender = props.notification.sender;
+	if (!sender) return 'S';
+	const first = sender.first_name?.[0] ?? '';
+	const last = sender.last_name?.[0] ?? '';
+	return (first + last).toUpperCase() || 'U';
+};
+
 const getAvatarUrl = (user) => {
-	if (!user?.avatar) {
-		// Fallback to avatar generator API
-		const name = getSenderName();
-		return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=eeeeee&color=00bfff`;
-	}
+	if (!user?.avatar) return null;
 	return `${config.public.directusUrl}/assets/${user.avatar}?key=small`;
 };
 
-// Format notification time
 const formatTimeAgo = (timestamp) => {
 	if (!timestamp) return '';
 
@@ -164,39 +168,20 @@ const formatTimeAgo = (timestamp) => {
 	});
 };
 
-// Get color for collection badge
-const getCollectionColor = (collection) => {
-	const colorMap = {
-		tickets: 'blue',
-		projects: 'green',
-		tasks: 'orange',
-		comments: 'indigo',
-		invoices: 'gray',
-	};
-
-	return colorMap[collection] || 'gray';
+const iconMap = {
+	tickets: Ticket,
+	projects: Folder,
+	tasks: CheckCircle,
+	comments: MessageSquare,
+	invoices: FileText,
 };
 
-// Get icon for collection
 const getCollectionIcon = () => {
-	const collection = props.notification.collection;
-
-	if (!collection) return 'i-heroicons-bell-alert';
-
-	const iconMap = {
-		tickets: 'i-heroicons-ticket',
-		projects: 'i-heroicons-folder',
-		tasks: 'i-heroicons-check-circle',
-		comments: 'i-heroicons-chat-bubble-left',
-		invoices: 'i-heroicons-document-text',
-	};
-
-	return iconMap[collection] || 'i-heroicons-bell-alert';
+	return iconMap[props.notification.collection] || Bell;
 };
 </script>
 
 <style scoped>
-/* Make sure links in notification messages are styled properly */
 .notification-item :deep(a) {
 	color: var(--cyan, #0ea5e9);
 	text-decoration: none;
@@ -206,7 +191,6 @@ const getCollectionIcon = () => {
 	text-decoration: underline;
 }
 
-/* Limit message height to prevent extremely long notifications */
 .notification-item :deep(div[v-html]) {
 	max-height: 120px;
 	overflow-y: auto;
