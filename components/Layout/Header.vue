@@ -63,16 +63,23 @@ onUnmounted(() => {
 			<Logo class="hidden md:inline-block h-[10px] mb-[12px] !fill-[#666666] !hover:fill-[#666666]" />
 		</nuxt-link>
 		<div class="account-controls">
-			<nuxt-link to="/account" class="flex items-center justify-self-center">
-				<Avatar class="size-8 mr-2">
-					<AvatarImage v-if="avatarUrl" :src="avatarUrl" :alt="user?.first_name" />
-					<AvatarFallback v-if="user">{{ initials }}</AvatarFallback>
-					<AvatarFallback v-else>
-						<User class="size-4" />
-					</AvatarFallback>
-				</Avatar>
-			</nuxt-link>
-			<LayoutNotificationsMenu v-if="user" class="mr-2" />
+			<template v-if="user">
+				<nuxt-link to="/account" class="flex items-center justify-self-center">
+					<Avatar class="size-8 mr-2">
+						<AvatarImage v-if="avatarUrl" :src="avatarUrl" :alt="user?.first_name" />
+						<AvatarFallback>{{ initials }}</AvatarFallback>
+					</Avatar>
+				</nuxt-link>
+				<LayoutNotificationsMenu class="mr-2" />
+			</template>
+			<template v-else>
+				<nuxt-link
+					to="/auth/signin"
+					class="flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-medium uppercase tracking-wider text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:border-primary hover:text-primary transition-all duration-300"
+				>
+					Sign In
+				</nuxt-link>
+			</template>
 		</div>
 	</header>
 </template>
