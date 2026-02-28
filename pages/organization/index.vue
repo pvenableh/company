@@ -47,7 +47,7 @@ const editForm = ref({
 const savingOrg = ref(false);
 
 const canManageOrg = computed(() => {
-	return user.value?.role === ADMIN_ROLE_ID || user.value?.role === CLIENT_MANAGER_ROLE_ID;
+	return hasAdminAccess(user.value);
 });
 
 const openEditModal = () => {

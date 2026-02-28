@@ -5,9 +5,8 @@ export const useTeams = () => {
 	const { readUsers } = useDirectusUsers();
 	const nuxtApp = useNuxtApp();
 
-	// Role IDs for permission checks
-	const ADMIN_ROLE_ID = '3a63a4e1-c82e-46f8-9993-7f11ac6a4b01';
-	const CLIENT_MANAGER_ROLE_ID = '7b62b285-e3a8-46ff-9e8c-d1445a3c13bb';
+	// Role IDs and helpers from shared composable
+	const { ADMIN_ROLE_ID, CLIENT_MANAGER_ROLE_ID, hasAdminAccess: _hasAdminAccess, getRoleId } = useRole();
 	const DEFAULT_TEAM_ID = 'org-default'; // Virtual team ID for "Default Team"
 
 	// State
@@ -73,11 +72,7 @@ export const useTeams = () => {
 	};
 
 	// Check if user has admin or client manager role
-	const hasAdminAccess = (user) => {
-		if (!user) return false;
-		const roleId = typeof user?.role === 'object' ? user?.role?.id : user?.role;
-		return roleId === ADMIN_ROLE_ID || roleId === CLIENT_MANAGER_ROLE_ID;
-	};
+	const hasAdminAccess = (user) => _hasAdminAccess(user);
 
 	// Get teams for an organization with full user details
 	const fetchTeams = async (organizationId) => {

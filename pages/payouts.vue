@@ -6,10 +6,10 @@ const { user: sessionUser, loggedIn } = useUserSession();
 const user = computed(() => {
 	return loggedIn.value ? sessionUser.value ?? null : null;
 });
-const config = useRuntimeConfig();
+const { isAdmin } = useRole();
 
 const admin = computed(() => {
-	return user.value.role === config.public.adminRole;
+	return isAdmin(user.value);
 });
 // Fetch all payouts when the component loads
 const { data: payouts, error } = useFetch('/api/stripe/payouts');

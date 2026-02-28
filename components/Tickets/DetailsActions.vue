@@ -53,22 +53,21 @@ const { user: sessionUser, loggedIn } = useUserSession();
 const currentUser = computed(() => {
 	return loggedIn.value ? sessionUser.value ?? null : null;
 });
-const config = useRuntimeConfig();
-const adminRole = config.public.adminRole;
+const { isAdmin: checkIsAdmin } = useRole();
 
 const hasDeleteAccess = computed(() => {
 	const isCreator = currentUser.value.id === props.creatorId;
-	const isAdmin = currentUser.value.role === adminRole;
+	const admin = checkIsAdmin(currentUser.value);
 
-	return isAdmin || isCreator;
+	return admin || isCreator;
 });
 
 const hasAccess = computed(() => {
 	const isCreator = currentUser.value.id === props.creatorId;
-	const isAdmin = currentUser.value.role === adminRole;
+	const admin = checkIsAdmin(currentUser.value);
 	const isAssigned = props.assignedUserIds.includes(currentUser.value.id);
 
-	return isAdmin || isCreator || isAssigned;
+	return admin || isCreator || isAssigned;
 });
 
 function confirmDelete() {

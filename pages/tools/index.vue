@@ -18,9 +18,9 @@ const { user: sessionUser, loggedIn } = useUserSession();
 const user = computed(() => {
 	return loggedIn.value ? sessionUser.value ?? null : null;
 });
-const config = useRuntimeConfig();
+const { isAdmin: checkIsAdmin } = useRole();
 
 const isAdmin = computed(() => {
-	return user.value?.role === config.public.adminRole;
+	return checkIsAdmin(user.value);
 });
 </script>
