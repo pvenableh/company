@@ -1,66 +1,5 @@
 <template>
 	<div class="sell-sheet t-bg min-h-screen">
-		<!-- Static Hero Navigation (always visible at top of page) -->
-		<nav
-			class="absolute top-0 left-0 right-0 z-40 px-6 py-5 transition-opacity duration-500"
-			:class="showNav ? 'opacity-0 pointer-events-none' : 'opacity-100'"
-		>
-			<div class="max-w-6xl mx-auto flex items-center justify-between">
-				<span class="t-heading text-xl font-light text-cream/80">Hue Studios</span>
-				<div class="flex items-center gap-6">
-					<NuxtLink
-						to="/register"
-						class="text-sm text-cream-alt hover:text-cream transition-colors hidden sm:block"
-					>
-						Register
-					</NuxtLink>
-					<NuxtLink
-						to="/auth/signin"
-						class="group flex items-center gap-2 px-4 py-2 rounded-full border border-white/20 hover:border-white/40 transition-all duration-300"
-					>
-						<span class="text-sm text-cream-alt group-hover:text-cream transition-colors">Sign In</span>
-						<Icon
-							name="i-heroicons-arrow-right"
-							class="w-4 h-4 text-cream-alt/60 group-hover:text-cream group-hover:translate-x-1 transition-all duration-300"
-						/>
-					</NuxtLink>
-				</div>
-			</div>
-		</nav>
-
-		<!-- Floating Navigation (appears after scrolling) -->
-		<nav
-			class="floating-nav fixed top-0 left-0 right-0 z-50 px-6 py-4 transition-all duration-500"
-			:class="[
-				showNav ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0',
-				scrolledPastHero ? 'bg-white/90 dark:bg-gray-900/90 backdrop-blur-md shadow-sm' : '',
-			]"
-		>
-			<div class="max-w-6xl mx-auto flex items-center justify-between">
-				<NuxtLink to="/" class="t-heading text-xl font-light t-text hover:t-text-accent transition-colors">
-					Hue Studios
-				</NuxtLink>
-				<div class="flex items-center gap-6">
-					<button
-						@click="scrollToSection('plans')"
-						class="text-sm t-text-secondary hover:t-text transition-colors hidden sm:block"
-					>
-						Pricing
-					</button>
-					<NuxtLink
-						to="/auth/signin"
-						class="group flex items-center gap-2 px-4 py-2 rounded-full border t-border hover:t-border-accent transition-all duration-300"
-					>
-						<span class="text-sm t-text-secondary group-hover:t-text-accent transition-colors">Sign In</span>
-						<Icon
-							name="i-heroicons-arrow-right"
-							class="w-4 h-4 t-text-tertiary group-hover:t-text-accent group-hover:translate-x-1 transition-all duration-300"
-						/>
-					</NuxtLink>
-				</div>
-			</div>
-		</nav>
-
 		<!-- Hero Section -->
 		<section ref="heroRef" class="hero min-h-screen flex flex-col justify-center items-center relative px-6">
 			<!-- Hero Background -->
@@ -522,24 +461,6 @@ const techRef = ref(null);
 const targetRef = ref(null);
 const ctaRef = ref(null);
 
-// Navigation scroll state
-const showNav = ref(false);
-const scrolledPastHero = ref(false);
-
-const handleScroll = () => {
-	const scrollY = window.scrollY;
-	const heroHeight = heroRef.value?.offsetHeight || window.innerHeight;
-	showNav.value = scrollY > 100;
-	scrolledPastHero.value = scrollY > heroHeight * 0.8;
-};
-
-const scrollToSection = (id) => {
-	if (import.meta.client) {
-		const el = document.getElementById(id);
-		el?.scrollIntoView({ behavior: 'smooth' });
-	}
-};
-
 // Data
 const introStats = [
 	{ value: '7+', label: 'Modules' },
@@ -683,9 +604,6 @@ const targetCustomers = [
 let ctx;
 
 onMounted(() => {
-	window.addEventListener('scroll', handleScroll, { passive: true });
-	handleScroll();
-
 	ctx = gsap.context(() => {
 		// Hero animations
 		const heroTl = gsap.timeline({ delay: 0.3 });
@@ -871,7 +789,6 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-	window.removeEventListener('scroll', handleScroll);
 	if (ctx) ctx.revert();
 });
 
