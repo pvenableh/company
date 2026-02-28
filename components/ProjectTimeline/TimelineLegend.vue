@@ -20,14 +20,15 @@ defineProps<{
         :style="{ backgroundColor: project.color }"
       />
       <span class="text-[10px] font-medium text-gray-600 dark:text-gray-400">
-        {{ project.name }}
+        {{ project.title }}
       </span>
       <span
         class="text-[8px] uppercase tracking-wider px-1.5 py-0.5 rounded-full"
         :class="{
-          'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400': project.status === 'active',
+          'bg-green-50 text-green-600 dark:bg-green-900/20 dark:text-green-400': project.status === 'In Progress',
           'bg-gray-50 text-gray-500 dark:bg-gray-800 dark:text-gray-400': project.status === 'completed',
-          'bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400': project.status === 'paused',
+          'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400': project.status === 'Scheduled',
+          'bg-yellow-50 text-yellow-600 dark:bg-yellow-900/20 dark:text-yellow-400': project.status === 'Pending',
         }"
       >
         {{ project.status }}

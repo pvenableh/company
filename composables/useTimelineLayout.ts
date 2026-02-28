@@ -20,13 +20,13 @@ export function useTimelineLayout(
       const startTime = new Date(project.start_date).getTime();
       if (startTime < min) min = startTime;
 
-      if (project.actual_end_date) {
-        const endTime = new Date(project.actual_end_date).getTime();
+      if (project.completion_date) {
+        const endTime = new Date(project.completion_date).getTime();
         if (endTime > max) max = endTime;
       }
 
       for (const event of project.events || []) {
-        const eventTime = new Date(event.event_date).getTime();
+        const eventTime = new Date(event.event_date || event.date || '').getTime();
         if (eventTime < min) min = eventTime;
         if (eventTime > max) max = eventTime;
       }

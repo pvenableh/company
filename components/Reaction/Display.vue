@@ -1,22 +1,23 @@
 <script setup lang="ts">
-import type { ReactableCollection, ReactionSummary, ReactionCount } from '~/types/reactions';
+import type { ReactionType } from '~/types/reactions';
+import { REACTION_ICONS } from '~/types/reactions';
 
 const props = defineProps<{
-  collection: ReactableCollection;
+  collection: string;
   itemId: string;
 }>();
 
-const { useReactionSummary, toggleReaction, getReactionTypes } = useReactions();
+const { useReactionSummary, toggleReaction } = useReactions();
 const { summary, loading, refresh } = useReactionSummary(props.collection, props.itemId);
 
 const showPicker = ref(false);
 
-async function handleToggle(reactionTypeId: number) {
+async function handleToggle(reaction: ReactionType) {
   try {
     await toggleReaction({
-      collection: props.collection,
-      item_id: props.itemId,
-      reaction_type: reactionTypeId,
+      table: props.collection,
+      item: props.itemId,
+      reaction,
     });
     await refresh();
   } catch (e) {
@@ -24,9 +25,9 @@ async function handleToggle(reactionTypeId: number) {
   }
 }
 
-function handlePickerSelect(reactionTypeId: number) {
+function handlePickerSelect(reaction: ReactionType) {
   showPicker.value = false;
-  handleToggle(reactionTypeId);
+  handleToggle(reaction);
 }
 </script>
 
@@ -40,25 +41,21 @@ function handlePickerSelect(reactionTypeId: number) {
     <!-- Reaction badges -->
     <template v-else>
       <button
-        v-for="reaction in summary.reactions"
-        :key="reaction.reaction_type.id"
+        v-for="group in summary.groups"
+        :key="group.reaction"
         class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border transition-colors"
-        :class="reaction.hasReacted
+        :class="group.hasReacted
           ? 'border-[#C4A052]/30 bg-[#C4A052]/10 text-[#C4A052]'
           : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-500 hover:border-gray-300'"
-        @click="handleToggle(reaction.reaction_type.id)"
+        @click="handleToggle(group.reaction)"
       >
-        <span v-if="reaction.reaction_type.emoji" class="text-sm">
-          {{ reaction.reaction_type.emoji }}
-        </span>
         <Icon
-          v-else-if="reaction.reaction_type.icon"
-          :name="reaction.reaction_type.icon_family === 'heroicons'
-            ? `i-heroicons-${reaction.reaction_type.icon}${reaction.hasReacted ? '-solid' : ''}`
-            : `i-lucide-${reaction.reaction_type.icon}`"
+          :name="group.hasReacted
+            ? REACTION_ICONS[group.reaction]?.solid
+            : REACTION_ICONS[group.reaction]?.outline"
           class="h-3.5 w-3.5"
         />
-        <span class="text-[10px] font-medium">{{ reaction.count }}</span>
+        <span class="text-[10px] font-medium">{{ group.count }}</span>
       </button>
 
       <!-- Add reaction button -->

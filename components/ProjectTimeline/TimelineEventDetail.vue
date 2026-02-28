@@ -14,7 +14,7 @@ const emit = defineEmits<{
 const config = useRuntimeConfig();
 
 const formattedDate = computed(() => {
-  return new Date(props.event.event_date).toLocaleDateString('en-US', {
+  return new Date(props.event.event_date || props.event.date || '').toLocaleDateString('en-US', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
@@ -95,8 +95,8 @@ const fileCount = computed(() => props.event.files?.length || 0);
     <div class="space-y-3">
       <h4 class="text-xs font-bold uppercase tracking-wider text-gray-500">Comments</h4>
       <CommentThread
-        target-collection="project_events"
-        :target-id="event.id"
+        collection="project_events"
+        :item-id="event.id"
       />
     </div>
 

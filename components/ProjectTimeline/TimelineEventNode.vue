@@ -102,7 +102,7 @@ const categoryTextColor = computed(() => {
       font-size="9"
       font-weight="600"
     >
-      {{ event.title.length > 20 ? event.title.slice(0, 18) + '...' : event.title }}
+      {{ (event.title || '').length > 20 ? (event.title || '').slice(0, 18) + '...' : (event.title || '') }}
     </text>
 
     <!-- Date label -->
@@ -113,7 +113,7 @@ const categoryTextColor = computed(() => {
       class="fill-gray-400 dark:fill-gray-500"
       font-size="7"
     >
-      {{ new Date(event.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }}
+      {{ new Date(event.event_date || event.date || '').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }}
     </text>
 
     <!-- Category badge -->

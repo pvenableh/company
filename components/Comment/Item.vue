@@ -7,8 +7,8 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  reply: [content: string, parentId: string];
-  delete: [commentId: string];
+  reply: [content: string, parentId: number];
+  delete: [commentId: number];
 }>();
 
 const { canEditComment } = useComments();
@@ -47,11 +47,11 @@ function handleDelete() {
   emit('delete', props.comment.id);
 }
 
-function handleNestedReply(content: string, parentId: string) {
+function handleNestedReply(content: string, parentId: number) {
   emit('reply', content, parentId);
 }
 
-function handleNestedDelete(commentId: string) {
+function handleNestedDelete(commentId: number) {
   emit('delete', commentId);
 }
 </script>
@@ -61,12 +61,12 @@ function handleNestedDelete(commentId: string) {
     <!-- Avatar -->
     <Avatar class="h-7 w-7 flex-shrink-0">
       <AvatarImage
-        v-if="comment.user_created?.avatar"
-        :src="`${config.public.directusUrl}/assets/${comment.user_created.avatar}`"
-        :alt="comment.user_created?.first_name"
+        v-if="comment.user?.avatar"
+        :src="`${config.public.directusUrl}/assets/${comment.user.avatar}`"
+        :alt="comment.user?.first_name"
       />
       <AvatarFallback class="text-[8px]">
-        {{ (comment.user_created?.first_name?.[0] || '') + (comment.user_created?.last_name?.[0] || '') }}
+        {{ (comment.user?.first_name?.[0] || '') + (comment.user?.last_name?.[0] || '') }}
       </AvatarFallback>
     </Avatar>
 
@@ -74,7 +74,7 @@ function handleNestedDelete(commentId: string) {
       <!-- Header -->
       <div class="flex items-center gap-2">
         <span class="text-[10px] font-bold uppercase">
-          {{ comment.user_created?.first_name }} {{ comment.user_created?.last_name }}
+          {{ comment.user?.first_name }} {{ comment.user?.last_name }}
         </span>
         <span class="text-[9px] text-gray-400">{{ timeAgo }}</span>
         <span v-if="comment.is_edited" class="text-[8px] text-gray-400 italic">(edited)</span>
@@ -87,22 +87,7 @@ function handleNestedDelete(commentId: string) {
       <div
         class="mt-1 text-sm bg-gray-50 dark:bg-gray-800 rounded-lg p-2.5"
       >
-        <div class="prose prose-sm max-w-none dark:prose-invert" v-html="comment.content" />
-
-        <!-- Attached files -->
-        <div v-if="comment.files?.length" class="mt-2 flex flex-wrap gap-1.5">
-          <a
-            v-for="file in comment.files"
-            :key="file.id"
-            :href="`${config.public.directusUrl}/assets/${file.directus_files_id.id}`"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="inline-flex items-center gap-1 text-[9px] text-gray-500 hover:text-gray-700 bg-gray-100 dark:bg-gray-700 rounded px-1.5 py-0.5"
-          >
-            <Icon name="i-heroicons-paper-clip" class="h-2.5 w-2.5" />
-            {{ file.directus_files_id.filename_download }}
-          </a>
-        </div>
+        <div class="prose prose-sm max-w-none dark:prose-invert" v-html="comment.comment" />
       </div>
 
       <!-- Actions -->

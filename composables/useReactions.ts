@@ -1,169 +1,142 @@
 /**
- * useReactions - Polymorphic reaction management for the new project timeline system
+ * useReactions - Polymorphic reaction management for the project timeline system
+ *
+ * Uses existing `reactions` collection with fields: table, item, reaction (string), user.
+ * Reactions are string-based ('love', 'like', 'idea', 'dislike') — no lookup table.
  */
 
 import type {
   ReactionRecord,
-  ReactionWithRelations,
-  ReactionCount,
+  ReactionWithUser,
+  ReactionGroup,
   ReactionSummary,
-  ReactionTypeRecord,
-  ReactableCollection,
+  ReactionType,
   CreateReactionPayload,
 } from '~/types/reactions';
 
 export function useReactions() {
   const reactions = useDirectusItems<ReactionRecord>('reactions');
-  const reactionTypes = useDirectusItems<ReactionTypeRecord>('reaction_types');
   const { user } = useDirectusAuth();
 
-  const cachedReactionTypes = useState<ReactionTypeRecord[]>('reaction-types', () => []);
-
-  const getReactionTypes = async (): Promise<ReactionTypeRecord[]> => {
-    if (cachedReactionTypes.value.length > 0) return cachedReactionTypes.value;
-
-    const types = await reactionTypes.list({
-      filter: { status: { _eq: 'published' } },
-      sort: ['sort', 'name'],
-      limit: -1,
-    });
-
-    cachedReactionTypes.value = types;
-    return types;
-  };
-
   const getReactions = async (
-    collection: ReactableCollection,
+    table: string,
     itemId: string
-  ): Promise<ReactionWithRelations[]> => {
+  ): Promise<ReactionWithUser[]> => {
     return await reactions.list({
       filter: {
-        collection: { _eq: collection },
-        item_id: { _eq: itemId },
+        item: { _eq: itemId },
       },
       fields: [
         '*',
-        'user_created.id',
-        'user_created.first_name',
-        'user_created.last_name',
-        'user_created.avatar',
-        'reaction_type.*',
+        'user.id',
+        'user.first_name',
+        'user.last_name',
+        'user.avatar',
       ],
       limit: -1,
-    }) as ReactionWithRelations[];
+    }) as ReactionWithUser[];
   };
 
   const getReactionSummary = async (
-    collection: ReactableCollection,
+    table: string,
     itemId: string
   ): Promise<ReactionSummary> => {
-    const allReactions = await getReactions(collection, itemId);
+    const allReactions = await getReactions(table, itemId);
     const currentUserId = user.value?.id;
 
-    const reactionCounts: ReactionCount[] = [];
+    const groups: ReactionGroup[] = [];
 
-    for (const reaction of allReactions) {
-      let existingCount = reactionCounts.find(
-        (r) => r.reaction_type.id === reaction.reaction_type.id
-      );
+    for (const r of allReactions) {
+      if (!r.reaction) continue;
 
-      if (!existingCount) {
-        existingCount = {
-          reaction_type: reaction.reaction_type,
+      let group = groups.find((g) => g.reaction === r.reaction);
+      if (!group) {
+        group = {
+          reaction: r.reaction as ReactionType,
           count: 0,
           users: [],
           hasReacted: false,
+          activeReactionId: null,
         };
-        reactionCounts.push(existingCount);
+        groups.push(group);
       }
 
-      existingCount.count++;
-      existingCount.users.push(reaction.user_created);
-      if (reaction.user_created.id === currentUserId) {
-        existingCount.hasReacted = true;
+      group.count++;
+      group.users.push(r.user);
+      if (r.user.id === currentUserId) {
+        group.hasReacted = true;
+        group.activeReactionId = r.id;
       }
     }
 
-    reactionCounts.sort((a, b) => {
-      if (b.count !== a.count) return b.count - a.count;
-      return (a.reaction_type.sort ?? 999) - (b.reaction_type.sort ?? 999);
-    });
+    groups.sort((a, b) => b.count - a.count);
 
     return {
-      item_id: itemId,
-      collection,
-      reactions: reactionCounts,
+      item: itemId,
+      table,
+      groups,
       totalCount: allReactions.length,
     };
   };
 
   const toggleReaction = async (
     payload: CreateReactionPayload
-  ): Promise<{ action: 'added' | 'removed' | 'switched'; reaction: ReactionWithRelations | null }> => {
+  ): Promise<{ action: 'added' | 'removed' | 'switched' }> => {
     if (!user.value?.id) throw new Error('Must be logged in to react');
 
-    const existingReactions = await reactions.list({
+    const existing = await reactions.list({
       filter: {
-        collection: { _eq: payload.collection },
-        item_id: { _eq: payload.item_id },
-        user_created: { _eq: user.value.id },
+        item: { _eq: payload.item },
+        user: { _eq: user.value.id },
+        reaction: { _eq: payload.reaction },
       },
-      fields: ['*', 'reaction_type.*'],
-      limit: -1,
     });
 
-    const existingSameType = existingReactions.find(
-      (r) => r.reaction_type === payload.reaction_type ||
-             (typeof r.reaction_type === 'object' && r.reaction_type.id === payload.reaction_type)
-    );
-
-    if (existingSameType) {
-      await reactions.remove(existingSameType.id);
-      return { action: 'removed', reaction: null };
+    if (existing.length > 0) {
+      await reactions.remove(existing[0].id);
+      return { action: 'removed' };
     }
 
-    const isSwitching = existingReactions.length > 0;
+    const otherReactions = await reactions.list({
+      filter: {
+        item: { _eq: payload.item },
+        user: { _eq: user.value.id },
+      },
+    });
+
+    const isSwitching = otherReactions.length > 0;
     if (isSwitching) {
-      await reactions.remove(existingReactions.map((r) => r.id));
+      for (const r of otherReactions) {
+        await reactions.remove(r.id);
+      }
     }
 
-    const created = await reactions.create(
-      {
-        collection: payload.collection,
-        item_id: payload.item_id,
-        reaction_type: payload.reaction_type,
-      } as Partial<ReactionRecord>,
-      {
-        fields: [
-          '*',
-          'user_created.id',
-          'user_created.first_name',
-          'user_created.last_name',
-          'user_created.avatar',
-          'reaction_type.*',
-        ],
-      }
-    ) as ReactionWithRelations;
+    await reactions.create({
+      item: payload.item,
+      table: payload.table,
+      user: user.value.id,
+      reaction: payload.reaction,
+    } as Partial<ReactionRecord>);
 
-    return { action: isSwitching ? 'switched' : 'added', reaction: created };
+    return { action: isSwitching ? 'switched' : 'added' };
   };
 
-  const removeReaction = async (reactionId: number): Promise<boolean> => {
+  const removeReaction = async (reactionId: string): Promise<boolean> => {
     return await reactions.remove(reactionId);
   };
 
-  function useReactionSummary(collection: ReactableCollection, itemId: Ref<string> | string) {
+  function useReactionSummary(table: string, itemId: Ref<string> | string) {
     const summary = ref<ReactionSummary>({
-      item_id: typeof itemId === 'string' ? itemId : itemId.value,
-      collection,
-      reactions: [],
+      item: typeof itemId === 'string' ? itemId : itemId.value,
+      table,
+      groups: [],
       totalCount: 0,
     });
     const loading = ref(true);
 
     const fetch = async () => {
       const id = typeof itemId === 'string' ? itemId : itemId.value;
-      summary.value = await getReactionSummary(collection, id);
+      summary.value = await getReactionSummary(table, id);
       loading.value = false;
     };
 
@@ -173,25 +146,11 @@ export function useReactions() {
     return { summary, loading, refresh: fetch };
   }
 
-  function useReactionTypes() {
-    const types = ref<ReactionTypeRecord[]>([]);
-    const loading = ref(true);
-
-    onMounted(async () => {
-      types.value = await getReactionTypes();
-      loading.value = false;
-    });
-
-    return { types, loading };
-  }
-
   return {
-    getReactionTypes,
     getReactions,
     getReactionSummary,
     toggleReaction,
     removeReaction,
     useReactionSummary,
-    useReactionTypes,
   };
 }
