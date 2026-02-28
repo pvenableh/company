@@ -463,7 +463,7 @@ const advantages = [
 	{
 		icon: 'i-heroicons-arrow-path',
 		title: 'Always Growing',
-		text: 'Web analytics, email newsletters, phone system, budgeting, and more on the roadmap. Your platform gets better every month.',
+		text: 'Web analytics, email newsletters, budgeting, CRM, and more on the roadmap. Your platform gets better every month.',
 	},
 	{
 		icon: 'i-heroicons-device-phone-mobile',
@@ -490,8 +490,13 @@ const features = [
 	},
 	{
 		icon: 'i-heroicons-calendar-date-range',
-		title: 'Scheduling & Video Meetings',
-		text: 'Public booking links, Google Calendar and Outlook sync, plus built-in Twilio video conferencing.',
+		title: 'Scheduling & Bookings',
+		text: 'Public booking links, Google Calendar and Outlook sync, and availability management.',
+	},
+	{
+		icon: 'i-heroicons-phone',
+		title: 'Phone System & Video Conferencing',
+		text: 'Business phone lines, SMS, and HD video meetings powered by Twilio — replace Zoom, Google Meet, and your VoIP provider.',
 	},
 	{
 		icon: 'i-heroicons-chat-bubble-left-right',
@@ -532,11 +537,6 @@ const roadmapItems = [
 		icon: 'i-heroicons-envelope',
 		title: 'Email Newsletters',
 		text: 'Design and send email campaigns to your contacts directly from the platform.',
-	},
-	{
-		icon: 'i-heroicons-phone',
-		title: 'Phone System & Video Conferencing',
-		text: 'Business phone lines and HD video meetings built in — replace Zoom, Google Meet, and your VoIP provider.',
 	},
 	{
 		icon: 'i-heroicons-calculator',
