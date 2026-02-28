@@ -823,6 +823,8 @@ export interface Comment {
 	collection?: string | null;
 	tickets_id?: string | null;
 	item?: string | null;
+	is_edited?: boolean | null;
+	is_resolved?: boolean | null;
 }
 
 export interface Contact {
@@ -1462,6 +1464,38 @@ export interface Product {
 	description?: string | null;
 }
 
+export interface ProjectCategory {
+	/** @primaryKey */
+	id: string;
+	status?: 'published' | 'draft' | 'archived';
+	sort?: number | null;
+	/** @required */
+	name: string;
+	color?: string | null;
+	icon?: string | null;
+}
+
+export interface ProjectEventCategory {
+	/** @primaryKey */
+	id: string;
+	status?: 'published' | 'draft' | 'archived';
+	sort?: number | null;
+	/** @required */
+	name: string;
+	/** @required */
+	color: string;
+	text_color?: string | null;
+	icon?: string | null;
+}
+
+export interface ProjectEventFile {
+	/** @primaryKey */
+	id: number;
+	sort?: number | null;
+	project_event_id?: ProjectEvent | string | null;
+	directus_files_id?: DirectusFile | string | null;
+}
+
 export interface ProjectEvent {
 	/** @primaryKey */
 	id: string;
@@ -1486,7 +1520,13 @@ export interface ProjectEvent {
 	amount?: number | null;
 	prototype_link?: string | null;
 	content?: string | null;
+	event_date?: string | null;
+	is_milestone?: boolean | null;
+	category_id?: ProjectEventCategory | string | null;
 	comments?: ProjectEventsComment[] | string[];
+	spawned_projects?: Project[] | string[];
+	tasks?: ProjectTask[] | string[];
+	files?: ProjectEventFile[] | string[];
 }
 
 export interface ProjectEventsComment {
@@ -1519,9 +1559,18 @@ export interface Project {
 	completion_date?: string | null;
 	projected_date?: string | null;
 	team?: Team | string | null;
+	/** @description Timeline line color */
+	color?: string | null;
+	/** @description Optional icon identifier */
+	icon?: string | null;
+	parent_id?: Project | string | null;
+	parent_event_id?: ProjectEvent | string | null;
+	member_visible?: boolean | null;
+	category_id?: ProjectCategory | string | null;
 	events?: ProjectEvent[] | string[];
-	tickets?: Ticket[] | string[];
 	assigned_to?: ProjectsDirectusUser[] | string[];
+	tickets?: Ticket[] | string[];
+	children?: Project[] | string[];
 }
 
 export interface ProjectsDirectusUser {
@@ -1529,6 +1578,35 @@ export interface ProjectsDirectusUser {
 	id: number;
 	projects_id?: Project | string | null;
 	directus_users_id?: DirectusUser | string | null;
+	sort?: number | null;
+}
+
+export interface ProjectTask {
+	/** @primaryKey */
+	id: string;
+	status?: 'published' | 'draft' | 'archived';
+	sort?: number | null;
+	user_created?: DirectusUser | string | null;
+	date_created?: string | null;
+	/** @required */
+	event_id: ProjectEvent | string;
+	title?: string | null;
+	description?: string | null;
+	assignee_id?: DirectusUser | string | null;
+	completed?: boolean | null;
+	completed_at?: string | null;
+	completed_by?: DirectusUser | string | null;
+	due_date?: string | null;
+	priority?: 'low' | 'medium' | 'high' | null;
+	watchers?: ProjectTasksWatcher[] | string[];
+}
+
+export interface ProjectTasksWatcher {
+	/** @primaryKey */
+	id: number;
+	date_created?: string | null;
+	task_id?: ProjectTask | string | null;
+	user_id?: DirectusUser | string | null;
 	sort?: number | null;
 }
 
@@ -2785,10 +2863,15 @@ export interface Schema {
 	portfolio_files: PortfolioFile[];
 	portfolio_industries: PortfolioIndustry[];
 	products: Product[];
+	project_categories: ProjectCategory[];
+	project_event_categories: ProjectEventCategory[];
+	project_event_files: ProjectEventFile[];
 	project_events: ProjectEvent[];
 	project_events_comments: ProjectEventsComment[];
 	projects: Project[];
 	projects_directus_users: ProjectsDirectusUser[];
+	project_tasks: ProjectTask[];
+	project_tasks_watchers: ProjectTasksWatcher[];
 	prompts: Prompt[];
 	proposals: Proposal[];
 	proposals_files: ProposalsFile[];
@@ -2944,10 +3027,15 @@ export enum CollectionNames {
 	portfolio_files = 'portfolio_files',
 	portfolio_industries = 'portfolio_industries',
 	products = 'products',
+	project_categories = 'project_categories',
+	project_event_categories = 'project_event_categories',
+	project_event_files = 'project_event_files',
 	project_events = 'project_events',
 	project_events_comments = 'project_events_comments',
 	projects = 'projects',
 	projects_directus_users = 'projects_directus_users',
+	project_tasks = 'project_tasks',
+	project_tasks_watchers = 'project_tasks_watchers',
 	prompts = 'prompts',
 	proposals = 'proposals',
 	proposals_files = 'proposals_files',
