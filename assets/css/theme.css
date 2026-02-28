@@ -1,0 +1,104 @@
+/* ============================================
+   Theme System - Semantic utility classes
+   Provides t-* classes that adapt to light/dark mode
+   using the existing shadcn-vue CSS variables.
+   ============================================ */
+
+/* ---- Background ---- */
+.t-bg {
+  @apply bg-background;
+}
+.t-bg-alt {
+  @apply bg-muted/40;
+}
+.t-section-alt {
+  @apply bg-muted/20;
+}
+.t-bg-subtle {
+  @apply bg-muted/60;
+}
+.t-bg-elevated {
+  @apply bg-card;
+}
+.t-bg-accent {
+  @apply bg-primary;
+}
+
+/* ---- Text ---- */
+.t-text {
+  @apply text-foreground;
+}
+.t-text-secondary {
+  @apply text-muted-foreground;
+}
+.t-text-tertiary {
+  @apply text-muted-foreground/60;
+}
+.t-text-muted {
+  @apply text-muted-foreground/40;
+}
+.t-text-accent {
+  @apply text-primary;
+}
+.t-text-accent-tertiary {
+  @apply text-primary/80;
+}
+.t-text-inverse {
+  @apply text-primary-foreground;
+}
+
+/* ---- Heading & Body fonts ---- */
+.t-heading {
+  @apply font-display;
+}
+.t-body {
+  @apply font-body;
+}
+
+/* ---- Border ---- */
+.t-border {
+  @apply border-border;
+}
+.t-border-accent {
+  @apply border-primary;
+}
+.t-border-divider {
+  @apply border-border/60;
+}
+
+/* ---- Button ---- */
+.t-btn {
+  @apply bg-primary text-primary-foreground hover:bg-primary/90;
+}
+
+/* ---- Cream tones (for dark overlays / hero sections) ---- */
+.text-cream {
+  color: #faf8f5;
+}
+.text-cream-alt {
+  color: rgba(250, 248, 245, 0.65);
+}
+
+/* ---- Gold accent for decorative elements ---- */
+.bg-gold {
+  background-color: hsl(var(--primary));
+}
+.from-gold {
+  --tw-gradient-from: hsl(var(--primary));
+}
+
+/* ---- Extra tracking utilities ---- */
+.tracking-extra-wide {
+  letter-spacing: 0.15em;
+}
+.tracking-ultra-wide {
+  letter-spacing: 0.25em;
+}
+
+/* ---- Glass container (for hero overlays) ---- */
+.glass-container {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 0.75rem 1.5rem;
+}

@@ -1,6 +1,7 @@
 @import './tailwind.css';
 @import './fonts.css';
 @import './variables.css';
+@import './theme.css';
 
 html, body {
   color: var(--darkGrey);
