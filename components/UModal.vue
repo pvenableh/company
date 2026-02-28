@@ -79,7 +79,7 @@ const handleEscapeKeyDown = (event: KeyboardEvent) => {
     </DialogTrigger>
 
     <DialogContent
-      :show-close-button="!preventClose"
+      :show-close-button="false"
       :class="cn(
         props.fullscreen && 'max-w-none h-screen w-screen rounded-none sm:max-w-none',
         props.ui?.content,

@@ -4,6 +4,32 @@ const { user } = useDirectusAuth();
 const { hasAdminAccess } = useTeams();
 
 const isAdmin = computed(() => hasAdminAccess(user.value));
+const showCreateChannel = ref(false);
+const newChannelName = ref('');
+const creatingChannel = ref(false);
+const channelItems = useDirectusItems('channels');
+const toast = useToast();
+
+const createChannel = async () => {
+	if (!newChannelName.value || newChannelName.value.length < 3) return;
+	creatingChannel.value = true;
+	try {
+		await channelItems.create({
+			name: slugify(newChannelName.value),
+			organization: selectedOrg.value || undefined,
+			status: 'published',
+		});
+		toast.add({ title: 'Channel created', color: 'green' });
+		newChannelName.value = '';
+		showCreateChannel.value = false;
+		refreshChannels();
+	} catch (err) {
+		console.error('Error creating channel:', err);
+		toast.add({ title: 'Failed to create channel', color: 'red' });
+	} finally {
+		creatingChannel.value = false;
+	}
+};
 
 definePageMeta({
 	middleware: ['auth'],
@@ -81,7 +107,31 @@ const sortedChannels = computed(() => {
 
 <template>
 	<div class="md:px-6 mx-auto flex items-start justify-start flex-col relative px-4 pt-20 min-h-svh">
-		<h1 class="page__title">Channels</h1>
+		<div class="flex items-center justify-between w-full mb-8">
+			<h1 class="text-2xl font-bold">Channels</h1>
+			<UButton v-if="isAdmin" icon="i-heroicons-plus" size="sm" @click="showCreateChannel = true">
+				New Channel
+			</UButton>
+		</div>
+
+		<!-- Create Channel Modal -->
+		<UModal v-model="showCreateChannel">
+			<div class="p-6 space-y-4">
+				<h3 class="text-lg font-semibold">Create New Channel</h3>
+				<UFormGroup label="Channel Name" required>
+					<UInput v-model="newChannelName" placeholder="e.g. general, design, marketing" :disabled="creatingChannel" />
+				</UFormGroup>
+				<p v-if="newChannelName && newChannelName.length < 3" class="text-xs text-red-500">
+					Channel name must be at least 3 characters.
+				</p>
+				<div class="flex justify-end gap-2">
+					<UButton color="gray" variant="soft" @click="showCreateChannel = false">Cancel</UButton>
+					<UButton :loading="creatingChannel" :disabled="!newChannelName || newChannelName.length < 3" @click="createChannel">
+						Create Channel
+					</UButton>
+				</div>
+			</div>
+		</UModal>
 
 		<!-- Coming Soon for non-admin users -->
 		<div v-if="!isAdmin" class="flex flex-col items-center justify-center z-10 min-h-[60vh] w-full page__inner">
