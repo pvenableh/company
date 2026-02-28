@@ -1,85 +1,71 @@
 /**
- * Reactions System Types - Polymorphic for any collection
+ * Reactions System Types - Uses existing Directus `reactions` collection
+ *
+ * Existing fields: id (string/uuid), table, item, reaction (string), user, status
+ * Keeps existing string-based reaction types ('love', 'like', 'idea', 'dislike').
+ * No reaction_types lookup table needed.
  */
 
 import type { User } from '../system';
 
-export type IconFamily = 'heroicons' | 'lucide' | 'fluent-emoji-flat' | 'emoji';
+/** The hardcoded reaction type strings used in the existing system */
+export type ReactionType = 'love' | 'like' | 'idea' | 'dislike';
 
-export interface ReactionTypeRecord {
-  id: number;
-  status: 'published' | 'draft';
-  sort: number | null;
-  name: string;
-  emoji: string | null;
-  icon: string | null;
-  icon_family: IconFamily | null;
-  user_created: string | User | null;
-  user_updated: string | User | null;
-  date_created: string | null;
-  date_updated: string | null;
-}
-
-export type ReactableCollection = 'channel_messages' | 'comments' | 'project_events';
-
+/**
+ * Maps to the existing `reactions` collection.
+ * Field names match Directus: `table` (collection), `item`, `reaction`, `user`.
+ */
 export interface ReactionRecord {
-  id: number;
-  user_created: string | User;
+  id: string;
+  status: 'published' | 'draft' | 'archived';
+  sort: number | null;
+  user_created: string | User | null;
   date_created: string | null;
-  collection: ReactableCollection;
-  item_id: string;
-  reaction_type: number | ReactionTypeRecord;
+  user_updated: string | User | null;
+  date_updated: string | null;
+  /** The reactor - existing field */
+  user: string | User | null;
+  /** Reaction type string - existing field */
+  reaction: ReactionType | string | null;
+  /** Polymorphic: item UUID - existing field */
+  item: string | null;
+  /** Polymorphic: which collection - existing field */
+  table: string | null;
+  date_added: string | null;
 }
 
-export interface ReactionWithRelations extends Omit<ReactionRecord, 'user_created' | 'reaction_type'> {
-  user_created: User;
-  reaction_type: ReactionTypeRecord;
+export interface ReactionWithUser extends Omit<ReactionRecord, 'user'> {
+  user: User;
 }
 
-export interface ReactionCount {
-  reaction_type: ReactionTypeRecord;
+export interface ReactionGroup {
+  reaction: ReactionType;
   count: number;
   users: User[];
   hasReacted: boolean;
+  activeReactionId: string | null;
 }
 
 export interface ReactionSummary {
-  item_id: string;
-  collection: ReactableCollection;
-  reactions: ReactionCount[];
+  item: string;
+  table: string;
+  groups: ReactionGroup[];
   totalCount: number;
 }
 
 export interface CreateReactionPayload {
-  collection: ReactableCollection;
-  item_id: string;
-  reaction_type: number;
+  table: string;
+  item: string;
+  reaction: ReactionType;
 }
 
-export function getReactionIcon(reactionType: ReactionTypeRecord): string {
-  if (!reactionType.icon_family || !reactionType.icon) return '';
+/** Hardcoded reaction icons matching existing Reactions/Button.vue */
+export const REACTION_ICONS: Record<ReactionType, { outline: string; solid: string }> = {
+  love: { outline: 'i-heroicons-heart', solid: 'i-heroicons-heart-solid' },
+  like: { outline: 'i-heroicons-hand-thumb-up', solid: 'i-heroicons-hand-thumb-up-solid' },
+  idea: { outline: 'i-heroicons-light-bulb', solid: 'i-heroicons-light-bulb-solid' },
+  dislike: { outline: 'i-heroicons-hand-thumb-down', solid: 'i-heroicons-hand-thumb-down-solid' },
+};
 
-  switch (reactionType.icon_family) {
-    case 'heroicons':
-      return `i-heroicons-${reactionType.icon}`;
-    case 'lucide':
-      return `i-lucide-${reactionType.icon}`;
-    case 'fluent-emoji-flat':
-      return `i-fluent-emoji-flat-${reactionType.icon}`;
-    default:
-      return reactionType.icon;
-  }
-}
-
-export function getReactionIconFilled(reactionType: ReactionTypeRecord): string {
-  if (!reactionType.icon_family || !reactionType.icon) return '';
-
-  switch (reactionType.icon_family) {
-    case 'heroicons':
-      return `i-heroicons-${reactionType.icon}-solid`;
-    case 'lucide':
-      return `i-lucide-${reactionType.icon}`;
-    default:
-      return reactionType.icon;
-  }
-}
+/** All available reaction types in display order */
+export const REACTION_TYPES: ReactionType[] = ['love', 'like', 'idea', 'dislike'];

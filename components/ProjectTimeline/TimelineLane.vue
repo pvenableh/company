@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { TimelineLane, ProjectEventWithRelations } from '~/types/projects';
+import { getEventTimelineDate } from '~/types/projects';
 
 const props = defineProps<{
   lane: TimelineLane;
@@ -17,25 +18,25 @@ const y = computed(() => props.lane.yPosition + props.layout.laneHeight / 2);
 
 const lineStart = computed(() => {
   if (events.value.length === 0) return props.layout.getXPosition(project.value.start_date);
-  const firstEventX = props.layout.getXPosition(events.value[0].event_date);
+  const firstEventX = props.layout.getXPosition(getEventTimelineDate(events.value[0]));
   const startX = props.layout.getXPosition(project.value.start_date);
   return Math.min(firstEventX, startX);
 });
 
 const lineEnd = computed(() => {
   if (events.value.length === 0) {
-    return project.value.actual_end_date
-      ? props.layout.getXPosition(project.value.actual_end_date)
+    return project.value.completion_date
+      ? props.layout.getXPosition(project.value.completion_date)
       : props.layout.todayX.value;
   }
-  const lastEventX = props.layout.getXPosition(events.value[events.value.length - 1].event_date);
-  const endX = project.value.actual_end_date
-    ? props.layout.getXPosition(project.value.actual_end_date)
+  const lastEventX = props.layout.getXPosition(getEventTimelineDate(events.value[events.value.length - 1]));
+  const endX = project.value.completion_date
+    ? props.layout.getXPosition(project.value.completion_date)
     : props.layout.todayX.value;
   return Math.max(lastEventX, endX);
 });
 
-const isActive = computed(() => project.value.status === 'active');
+const isActive = computed(() => project.value.status === 'In Progress');
 </script>
 
 <template>
@@ -50,7 +51,7 @@ const isActive = computed(() => project.value.status === 'active');
       font-weight="700"
       letter-spacing="0.05em"
     >
-      {{ project.name.toUpperCase() }}
+      {{ (project.title || '').toUpperCase() }}
     </text>
 
     <!-- Status badge -->
@@ -117,16 +118,16 @@ const isActive = computed(() => project.value.status === 'active');
       :fill="project.color"
     />
 
-    <!-- End marker for completed/paused -->
+    <!-- End marker for completed projects -->
     <rect
-      v-if="project.status === 'completed' || project.status === 'paused'"
+      v-if="project.status === 'completed'"
       :x="lineEnd - 4"
       :y="y - 4"
       width="8"
       height="8"
       rx="2"
       :fill="project.color"
-      :opacity="project.status === 'completed' ? 0.6 : 0.4"
+      opacity="0.6"
     />
 
     <!-- Event nodes -->
@@ -134,7 +135,7 @@ const isActive = computed(() => project.value.status === 'active');
       v-for="event in events"
       :key="event.id"
       :event="event"
-      :x="layout.getXPosition(event.event_date)"
+      :x="layout.getXPosition(getEventTimelineDate(event))"
       :y="y"
       :color="project.color"
       :selected="event.id === selectedEventId"

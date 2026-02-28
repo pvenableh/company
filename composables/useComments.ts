@@ -1,10 +1,12 @@
 /**
- * useComments - Polymorphic comment management for the new project timeline system
+ * useComments - Polymorphic comment management for the project timeline system
+ *
+ * Uses existing `comments` collection with fields: collection, item, comment, user, parent_id.
+ * Field names match the existing Directus schema.
  */
 
 import type {
-  ProjectComment,
-  CommentMention,
+  TimelineComment,
   CommentWithRelations,
   CreateCommentPayload,
   UpdateCommentPayload,
@@ -12,25 +14,21 @@ import type {
 } from '~/types/comments';
 
 export function useComments() {
-  const comments = useDirectusItems<ProjectComment>('comments');
-  const commentMentions = useDirectusItems<CommentMention>('comment_mentions');
+  const comments = useDirectusItems<TimelineComment>('comments');
   const { user } = useDirectusAuth();
 
-  const COMMENT_UPLOADS_FOLDER = 'comment-uploads';
-
   const getComments = async (
-    targetCollection: string,
-    targetId: string,
+    collection: string,
+    itemId: string,
     options?: {
       includeReplies?: boolean;
-      parentId?: string | null;
+      parentId?: number | null;
       limit?: number;
-      offset?: number;
     }
   ): Promise<CommentWithRelations[]> => {
     const filter: Record<string, any> = {
-      target_collection: { _eq: targetCollection },
-      target_id: { _eq: targetId },
+      collection: { _eq: collection },
+      item: { _eq: itemId },
     };
 
     if (options?.parentId !== undefined) {
@@ -40,27 +38,18 @@ export function useComments() {
     const result = await comments.list({
       fields: [
         '*',
-        'user_created.id',
-        'user_created.first_name',
-        'user_created.last_name',
-        'user_created.avatar',
-        'mentions.id',
-        'mentions.user_id.id',
-        'mentions.user_id.first_name',
-        'mentions.user_id.last_name',
-        'files.id',
-        'files.directus_files_id.id',
-        'files.directus_files_id.filename_download',
-        'files.directus_files_id.type',
-        'files.directus_files_id.filesize',
+        'user.id',
+        'user.first_name',
+        'user.last_name',
+        'user.avatar',
         ...(options?.includeReplies ? [
           'replies.id',
-          'replies.content',
+          'replies.comment',
           'replies.date_created',
-          'replies.user_created.id',
-          'replies.user_created.first_name',
-          'replies.user_created.last_name',
-          'replies.user_created.avatar',
+          'replies.user.id',
+          'replies.user.first_name',
+          'replies.user.last_name',
+          'replies.user.avatar',
         ] : []),
       ],
       filter,
@@ -71,75 +60,63 @@ export function useComments() {
     return result as CommentWithRelations[];
   };
 
-  const createComment = async (data: CreateCommentPayload): Promise<ProjectComment> => {
-    const comment = await comments.create({
-      content: data.content,
-      target_collection: data.target_collection,
-      target_id: data.target_id,
+  const createComment = async (data: CreateCommentPayload): Promise<TimelineComment> => {
+    return await comments.create({
+      status: 'published',
+      comment: data.comment,
+      collection: data.collection,
+      item: data.item,
+      user: user.value?.id || null,
       parent_id: data.parent_id || null,
       is_edited: false,
       is_resolved: false,
-    } as Partial<ProjectComment>);
-
-    if (data.mentioned_user_ids?.length) {
-      for (const userId of data.mentioned_user_ids) {
-        if (userId !== user.value?.id) {
-          await commentMentions.create({
-            comment_id: comment.id,
-            user_id: userId,
-            notified: false,
-          } as Partial<CommentMention>);
-        }
-      }
-    }
-
-    return comment;
+    } as Partial<TimelineComment>);
   };
 
-  const updateComment = async (commentId: string, data: UpdateCommentPayload): Promise<ProjectComment> => {
+  const updateComment = async (commentId: number, data: UpdateCommentPayload): Promise<TimelineComment> => {
     return await comments.update(commentId, {
-      content: data.content,
+      comment: data.comment,
       is_edited: true,
       ...(data.is_resolved !== undefined && { is_resolved: data.is_resolved }),
-    } as Partial<ProjectComment>);
+    } as Partial<TimelineComment>);
   };
 
-  const deleteComment = async (commentId: string): Promise<boolean> => {
+  const deleteComment = async (commentId: number): Promise<boolean> => {
     return await comments.remove(commentId);
   };
 
-  const toggleResolved = async (commentId: string, resolved: boolean): Promise<ProjectComment> => {
-    return await comments.update(commentId, { is_resolved: resolved } as Partial<ProjectComment>);
+  const toggleResolved = async (commentId: number, resolved: boolean): Promise<TimelineComment> => {
+    return await comments.update(commentId, { is_resolved: resolved } as Partial<TimelineComment>);
   };
 
   const getCommentCount = async (
-    targetCollection: string,
-    targetId: string
+    collection: string,
+    itemId: string
   ): Promise<CommentCountInfo> => {
     const totalCount = await comments.count({
-      target_collection: { _eq: targetCollection },
-      target_id: { _eq: targetId },
+      collection: { _eq: collection },
+      item: { _eq: itemId },
     });
 
     const unresolvedCount = await comments.count({
-      target_collection: { _eq: targetCollection },
-      target_id: { _eq: targetId },
+      collection: { _eq: collection },
+      item: { _eq: itemId },
       is_resolved: { _eq: false },
     });
 
     return {
-      target_collection: targetCollection,
-      target_id: targetId,
+      collection,
+      item: itemId,
       total_count: totalCount,
       unresolved_count: unresolvedCount,
     };
   };
 
-  const canEditComment = (comment: ProjectComment | CommentWithRelations): boolean => {
+  const canEditComment = (comment: TimelineComment | CommentWithRelations): boolean => {
     if (!user.value?.id) return false;
-    const authorId = typeof comment.user_created === 'string'
-      ? comment.user_created
-      : comment.user_created?.id;
+    const authorId = typeof comment.user === 'string'
+      ? comment.user
+      : comment.user?.id;
     return authorId === user.value.id;
   };
 
@@ -151,6 +128,5 @@ export function useComments() {
     toggleResolved,
     getCommentCount,
     canEditComment,
-    COMMENT_UPLOADS_FOLDER,
   };
 }

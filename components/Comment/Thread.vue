@@ -2,8 +2,8 @@
 import type { CommentWithRelations } from '~/types/comments';
 
 const props = defineProps<{
-  targetCollection: string;
-  targetId: string;
+  collection: string;
+  itemId: string;
 }>();
 
 const { getComments, createComment, deleteComment } = useComments();
@@ -15,7 +15,7 @@ const submitting = ref(false);
 async function fetchComments() {
   loading.value = true;
   try {
-    comments.value = await getComments(props.targetCollection, props.targetId, {
+    comments.value = await getComments(props.collection, props.itemId, {
       includeReplies: true,
       parentId: null,
     });
@@ -26,13 +26,13 @@ async function fetchComments() {
   }
 }
 
-async function handleSubmit(content: string, parentId?: string) {
+async function handleSubmit(content: string, parentId?: number) {
   submitting.value = true;
   try {
     await createComment({
-      content,
-      target_collection: props.targetCollection,
-      target_id: props.targetId,
+      comment: content,
+      collection: props.collection,
+      item: props.itemId,
       parent_id: parentId,
     });
     await fetchComments();
@@ -43,7 +43,7 @@ async function handleSubmit(content: string, parentId?: string) {
   }
 }
 
-async function handleDelete(commentId: string) {
+async function handleDelete(commentId: number) {
   try {
     await deleteComment(commentId);
     await fetchComments();
@@ -56,7 +56,7 @@ onMounted(() => {
   fetchComments();
 });
 
-watch(() => props.targetId, () => {
+watch(() => props.itemId, () => {
   fetchComments();
 });
 </script>
@@ -75,7 +75,7 @@ watch(() => props.targetId, () => {
         :key="comment.id"
         :comment="comment"
         :depth="0"
-        @reply="(content: string, parentId: string) => handleSubmit(content, parentId)"
+        @reply="(content: string, parentId: number) => handleSubmit(content, parentId)"
         @delete="handleDelete"
       />
     </div>

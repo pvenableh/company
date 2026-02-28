@@ -116,7 +116,7 @@ onMounted(() => {
               class="inline-block h-2 w-2 rounded-full mr-1"
               :style="{ backgroundColor: selectedEventProject.color }"
             />
-            {{ selectedEventProject.name }}
+            {{ selectedEventProject.title }}
           </SheetDescription>
         </SheetHeader>
 

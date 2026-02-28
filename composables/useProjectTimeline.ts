@@ -1,5 +1,8 @@
 /**
  * useProjectTimeline - Main composable for project timeline data
+ *
+ * Uses existing Directus field names: title (not name), due_date (not target_end_date),
+ * completion_date (not actual_end_date), project (not project_id), date/event_date.
  */
 
 import type {
@@ -29,7 +32,7 @@ export function useProjectTimeline() {
     '*',
     'category_id.*',
     'parent_id.id',
-    'parent_id.name',
+    'parent_id.title',
     'parent_id.color',
     'parent_event_id.id',
     'parent_event_id.title',
@@ -37,12 +40,18 @@ export function useProjectTimeline() {
     'user_created.first_name',
     'user_created.last_name',
     'user_created.avatar',
+    'service.name',
+    'service.color',
+    'organization.id',
+    'organization.name',
     'events.id',
     'events.status',
     'events.title',
     'events.description',
+    'events.date',
     'events.event_date',
     'events.is_milestone',
+    'events.type',
     'events.category_id.*',
     'events.tasks.id',
     'events.tasks.title',
@@ -59,10 +68,16 @@ export function useProjectTimeline() {
     'events.files.directus_files_id.type',
     'events.files.directus_files_id.filesize',
     'children.id',
-    'children.name',
+    'children.title',
     'children.color',
     'children.status',
   ];
+
+  /** Existing project statuses considered visible for timeline display */
+  const TIMELINE_VISIBLE_STATUSES = ['In Progress', 'completed', 'Scheduled', 'Pending'];
+
+  /** Existing event statuses considered visible for timeline display */
+  const EVENT_VISIBLE_STATUSES = ['Active', 'Scheduled', 'Completed'];
 
   const fetchProjects = async () => {
     if (!user.value?.id) {
@@ -76,7 +91,7 @@ export function useProjectTimeline() {
     try {
       const result = await projects.list({
         fields: projectFields,
-        filter: { status: { _in: ['active', 'completed', 'paused'] } },
+        filter: { status: { _in: TIMELINE_VISIBLE_STATUSES } },
         sort: ['sort', 'start_date'],
         limit: -1,
       });
@@ -84,8 +99,12 @@ export function useProjectTimeline() {
       for (const project of result as ProjectWithRelations[]) {
         if (project.events) {
           project.events = (project.events as ProjectEventWithRelations[])
-            .filter((e) => e.status === 'published')
-            .sort((a, b) => new Date(a.event_date).getTime() - new Date(b.event_date).getTime());
+            .filter((e) => EVENT_VISIBLE_STATUSES.includes(e.status))
+            .sort((a, b) => {
+              const dateA = a.event_date || a.date || '';
+              const dateB = b.event_date || b.date || '';
+              return new Date(dateA).getTime() - new Date(dateB).getTime();
+            });
 
           for (const event of project.events as ProjectEventWithRelations[]) {
             try {
@@ -104,7 +123,7 @@ export function useProjectTimeline() {
 
         if (project.children) {
           project.children = (project.children as Project[]).filter((c) =>
-            ['active', 'completed'].includes(c.status)
+            ['In Progress', 'completed'].includes(c.status)
           ) as ProjectWithRelations[];
         }
       }
@@ -140,7 +159,12 @@ export function useProjectTimeline() {
   };
 
   const createEvent = async (data: CreateEventPayload): Promise<ProjectEventWithRelations> => {
-    const created = await events.create({ ...data, status: 'published' } as Partial<ProjectEvent>);
+    const payload: Partial<ProjectEvent> = {
+      ...data,
+      status: 'Active',
+      date: data.event_date,
+    };
+    const created = await events.create(payload);
     await fetchProjects();
     return created as ProjectEventWithRelations;
   };

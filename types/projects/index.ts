@@ -1,31 +1,50 @@
 /**
  * Project Timeline System Types
+ *
+ * Maps to the existing Directus `projects` and `project_events` collections
+ * with new fields added for the timeline system. Uses existing field names
+ * (title, due_date, completion_date, date) so the Board view keeps working.
  */
 
 import type { User } from '../system';
 import type { File } from '../system';
 
+/**
+ * Maps to the existing `projects` collection.
+ * Existing fields preserved; new fields: color, icon, category_id, parent_id,
+ * parent_event_id, member_visible.
+ */
 export interface Project {
   id: string;
-  status: 'draft' | 'active' | 'paused' | 'completed' | 'archived';
+  status: 'Pending' | 'Scheduled' | 'In Progress' | 'completed' | 'Archived';
   sort: number | null;
   user_created: string | User | null;
   user_updated: string | User | null;
   date_created: string | null;
   date_updated: string | null;
-  name: string;
+  title: string | null;
   description: string | null;
-  color: string;
+  color: string | null;
   icon: string | null;
   category_id: string | ProjectCategory | null;
   parent_id: string | Project | null;
   parent_event_id: string | ProjectEvent | null;
-  member_visible: boolean;
-  start_date: string;
-  target_end_date: string | null;
-  actual_end_date: string | null;
+  member_visible: boolean | null;
+  start_date: string | null;
+  due_date: string | null;
+  completion_date: string | null;
+  projected_date: string | null;
+  service: any | null;
+  organization: any | null;
+  team: any | null;
+  template: string | null;
+  contract_value: number | null;
+  url: string | null;
+  tags: string[] | null;
   events?: ProjectEvent[];
   children?: Project[];
+  tickets?: any[];
+  assigned_to?: any[];
 }
 
 export interface ProjectCategory {
@@ -47,22 +66,41 @@ export interface ProjectEventCategory {
   icon: string | null;
 }
 
+/**
+ * Maps to the existing `project_events` collection.
+ * Existing fields preserved; new fields: event_date, is_milestone, category_id.
+ */
 export interface ProjectEvent {
   id: string;
-  status: 'published' | 'draft';
+  status: 'draft' | 'Scheduled' | 'Active' | 'Completed' | 'archived';
   sort: number | null;
   user_created: string | User | null;
   user_updated: string | User | null;
   date_created: string | null;
   date_updated: string | null;
-  project_id: string | Project;
-  title: string;
+  project: string | Project | null;
+  title: string | null;
   description: string | null;
-  event_date: string;
+  /** Existing date field */
+  date: string | null;
+  /** New: explicit timeline date (prefers this, falls back to `date`) */
+  event_date: string | null;
   category_id: string | ProjectEventCategory | null;
-  is_milestone: boolean;
+  is_milestone: boolean | null;
+  type: string | null;
+  approval: string | null;
+  priority: string | null;
+  hours: string | null;
+  payment_amount: string | null;
+  paid: boolean | null;
+  link: string | null;
+  file: any | null;
+  amount: number | null;
+  prototype_link: string | null;
+  content: string | null;
   tasks?: ProjectTask[];
   files?: ProjectEventFile[];
+  comments?: any[];
   spawned_projects?: Project[];
 }
 
@@ -112,7 +150,7 @@ export interface ProjectStats {
 }
 
 export interface CreateProjectPayload {
-  name: string;
+  title: string;
   description?: string | null;
   color?: string;
   icon?: string | null;
@@ -121,15 +159,16 @@ export interface CreateProjectPayload {
   parent_event_id?: string | null;
   member_visible?: boolean;
   start_date: string;
-  target_end_date?: string | null;
+  due_date?: string | null;
   status?: Project['status'];
 }
 
 export interface CreateEventPayload {
-  project_id: string;
+  project: string;
   title: string;
   description?: string | null;
   event_date: string;
+  date?: string;
   category_id?: string | null;
   is_milestone?: boolean;
 }
@@ -153,9 +192,9 @@ export interface ProjectWithRelations extends Omit<Project, 'user_created' | 'us
   children: ProjectWithRelations[];
 }
 
-export interface ProjectEventWithRelations extends Omit<ProjectEvent, 'user_created' | 'project_id' | 'category_id'> {
+export interface ProjectEventWithRelations extends Omit<ProjectEvent, 'user_created' | 'project' | 'category_id'> {
   user_created: User | null;
-  project_id: Project;
+  project: Project;
   category_id: ProjectEventCategory | null;
   tasks: ProjectTaskWithRelations[];
   files: (Omit<ProjectEventFile, 'directus_files_id'> & { directus_files_id: File })[];
@@ -181,4 +220,9 @@ export interface TimelineLane {
   project: ProjectWithRelations;
   laneIndex: number;
   yPosition: number;
+}
+
+/** Get the effective timeline date for an event (prefers event_date, falls back to date) */
+export function getEventTimelineDate(event: ProjectEvent | ProjectEventWithRelations): string {
+  return event.event_date || event.date || '';
 }
