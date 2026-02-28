@@ -1,6 +1,34 @@
 <template>
 	<div class="sell-sheet t-bg min-h-screen">
-		<!-- Floating Navigation -->
+		<!-- Static Hero Navigation (always visible at top of page) -->
+		<nav
+			class="absolute top-0 left-0 right-0 z-40 px-6 py-5 transition-opacity duration-500"
+			:class="showNav ? 'opacity-0 pointer-events-none' : 'opacity-100'"
+		>
+			<div class="max-w-6xl mx-auto flex items-center justify-between">
+				<span class="t-heading text-xl font-light text-cream/80">Hue Studios</span>
+				<div class="flex items-center gap-6">
+					<NuxtLink
+						to="/register"
+						class="text-sm text-cream-alt hover:text-cream transition-colors hidden sm:block"
+					>
+						Register
+					</NuxtLink>
+					<NuxtLink
+						to="/auth/signin"
+						class="group flex items-center gap-2 px-4 py-2 rounded-full border border-white/20 hover:border-white/40 transition-all duration-300"
+					>
+						<span class="text-sm text-cream-alt group-hover:text-cream transition-colors">Sign In</span>
+						<Icon
+							name="i-heroicons-arrow-right"
+							class="w-4 h-4 text-cream-alt/60 group-hover:text-cream group-hover:translate-x-1 transition-all duration-300"
+						/>
+					</NuxtLink>
+				</div>
+			</div>
+		</nav>
+
+		<!-- Floating Navigation (appears after scrolling) -->
 		<nav
 			class="floating-nav fixed top-0 left-0 right-0 z-50 px-6 py-4 transition-all duration-500"
 			:class="[
