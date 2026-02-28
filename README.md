@@ -1,17 +1,30 @@
 # Hue Studios
 
-A full-featured agency and business management platform built with [Nuxt 3](https://nuxt.com) and [Directus](https://directus.io).
+An all-in-one, agency-grade business management platform built with [Nuxt 3](https://nuxt.com), [Vue 3](https://vuejs.org), and [Directus](https://directus.io). Designed for creative agencies, consultancies, and growing SMBs that need project delivery, client management, financials, team collaboration, and social media management under one roof.
 
 ## Features
 
-- **Dashboard** — Activity overview with ticket analytics
-- **Ticket Management** — Kanban board for task tracking
-- **Project Management** — Projects with sub-tasks, events, and timelines
-- **Invoices & Payments** — Stripe-powered billing, invoice PDF generation, payment tracking
-- **Scheduling** — Calendar with public booking links and Twilio video meetings
-- **Team Communication** — Channels and comment threads on tasks
-- **Social Media** — Instagram and TikTok content calendar, post scheduling, analytics
-- **Organization & Teams** — Multi-team support with role-based access control
+### Core Modules
+
+- **Dashboard** — Personalized activity overview with ticket analytics and quick-access links
+- **Ticket Management** — Kanban board with drag-and-drop, custom statuses, service tagging, organization filtering, assignment modal, and detailed activity logs
+- **Project Management** — Visual Gantt-style timeline with milestones, Kanban board view, sub-tasks, event scheduling, file attachments, threaded conversations, and emoji reactions
+- **Invoicing & Payments** — Stripe-powered billing, invoice creation and editing, PDF generation (html2canvas + jsPDF), payment tracking, payout management, and public payment links
+- **Scheduling & Video Meetings** — Calendar with public booking links, availability management, Google Calendar and Outlook sync, and built-in Twilio video conferencing
+- **Team Communication** — Slack-style channels per organization with threaded comments, @mentions, emoji reactions, and WebSocket-powered real-time messaging
+- **Social Media Management** — Compose, schedule, and publish to Instagram and TikTok; content calendar, engagement analytics, multi-client management, and OAuth account connections
+- **Organizations & Teams** — Multi-organization support with team structures, role-based access control (admin, client manager, user), member invitations, and cross-tab state sync
+
+### Supporting Features
+
+- **Task Management** — Personal task lists tied to projects and organizations
+- **Real-Time Collaboration** — WebSocket multiplexing for live updates, user presence indicators, and instant notifications
+- **Email Notifications** — Transactional emails via SendGrid for invoices, appointments, password resets, and team invitations
+- **File Storage** — AWS S3 integration with presigned URLs for secure uploads
+- **Dark Mode** — System-aware dark/light theme with manual toggle
+- **PWA** — Install as a native-feeling progressive web app on any device
+- **Theme System** — Semantic `t-*` CSS utility classes that adapt to light and dark mode
+- **Marketing Sell Sheet** — Design-forward landing page shown to unauthenticated visitors at `/`
 
 ## Tech Stack
 
@@ -19,6 +32,7 @@ A full-featured agency and business management platform built with [Nuxt 3](http
 |---|---|
 | Framework | Nuxt 3, Vue 3, TypeScript |
 | UI | shadcn-vue, Tailwind CSS v4, Reka UI |
+| Icons | @nuxt/icon (Heroicons, Lucide, Material Symbols) |
 | CMS / Backend | Directus (headless) |
 | Auth | nuxt-auth-utils + Directus Auth |
 | Payments | Stripe |
@@ -27,6 +41,12 @@ A full-featured agency and business management platform built with [Nuxt 3](http
 | Calendar | Google Calendar API, Microsoft Outlook (Azure) |
 | Social | Instagram Graph API, TikTok API |
 | Storage | AWS S3 |
+| Charts | Chart.js, Unovis |
+| Animations | GSAP, VueUse Motion |
+| Forms | VeeValidate, Yup, Zod |
+| Rich Text | TipTap |
+| Tables | TanStack Vue Table |
+| Analytics | Google Analytics (nuxt-gtag) |
 | Package Manager | pnpm |
 
 ## Prerequisites
@@ -94,21 +114,57 @@ The app will be available at `http://localhost:3000`.
 
 ```
 ├── pages/              # Route pages (Nuxt file-based routing)
-├── components/         # Vue components (including shadcn-vue ui/)
-├── composables/        # Vue composables (auth, data fetching, etc.)
+├── components/
+│   ├── Pages/          # Full-page components (SellSheet, etc.)
+│   ├── Tickets/        # Kanban board, dashboard, cards
+│   ├── Projects/       # Timeline, board, overview
+│   ├── Invoices/       # Invoice forms, PDF generation
+│   ├── Channels/       # Real-time messaging
+│   ├── Scheduler/      # Calendar, booking, video meetings
+│   ├── Social/         # Social media date pickers
+│   ├── ProjectTimeline/# Canvas-based timeline visualization
+│   ├── Comments/       # Threaded comment system
+│   ├── Reactions/      # Emoji reactions
+│   ├── Layout/         # Header, footer, navigation, notifications
+│   ├── Auth/           # Login, register, password reset forms
+│   ├── Form/           # Reusable form components (TipTap, uploads)
+│   ├── Payment/        # Stripe card and payment UI
+│   ├── Teams/          # Team management cards and modals
+│   └── ui/             # shadcn-vue base components
+├── composables/        # Vue composables (auth, data fetching, real-time, etc.)
 ├── server/
-│   ├── api/            # API routes (auth, directus, stripe, email, etc.)
-│   ├── adapters/       # Social media platform adapters
+│   ├── api/            # API routes (auth, directus, stripe, email, social, etc.)
+│   ├── adapters/       # Social media platform adapters (Instagram, TikTok)
 │   ├── plugins/        # Nitro plugins (session hooks)
-│   └── utils/          # Server utilities (Directus client, session mgmt)
+│   └── utils/          # Server utilities (Directus client, crypto, logging)
 ├── middleware/          # Route middleware (auth, guest)
 ├── plugins/            # Client-side plugins
-├── layouts/            # Page layouts
+├── layouts/            # Page layouts (default, auth, blank, email)
 ├── types/              # TypeScript type definitions
-├── assets/css/         # Tailwind CSS styles
+├── assets/css/         # Tailwind CSS, theme system, fonts, variables
 ├── public/             # Static assets
 └── scripts/            # Setup and utility scripts
 ```
+
+## Key Pages
+
+| Page | Route | Description |
+|---|---|---|
+| Home | `/` | Sell sheet (unauthenticated) or dashboard (authenticated) |
+| Tickets | `/tickets` | Kanban board for task management |
+| Projects | `/projects` | Timeline and board views for project management |
+| Invoices | `/invoices` | Invoice list, creation, and payment tracking |
+| Scheduler | `/scheduler` | Calendar, booking, and video meeting management |
+| Channels | `/channels` | Real-time team messaging |
+| Social Dashboard | `/social/dashboard` | Social media overview and scheduling |
+| Social Compose | `/social/compose` | Create and schedule posts |
+| Social Calendar | `/social/calendar` | Visual content calendar |
+| Social Analytics | `/social/analytics` | Engagement and growth metrics |
+| Social Clients | `/social/clients` | Agency client management |
+| Organizations | `/organization` | Organization and member management |
+| Teams | `/organization/teams` | Team structure and roles |
+| Account | `/account` | User profile and settings |
+| Public Booking | `/book/[userId]` | Client-facing scheduling page |
 
 ## Social Media Module
 
@@ -144,22 +200,23 @@ The platform includes a full social media management system for Instagram and Ti
 
 4. **Connect accounts** — navigate to `/social/settings` and click Connect for Instagram or TikTok.
 
-### Social Pages
-
-| Page | Path | Description |
-|---|---|---|
-| Dashboard | `/social/dashboard` | Overview stats, upcoming posts, quick actions |
-| Compose | `/social/compose` | Create and schedule posts across platforms |
-| Calendar | `/social/calendar` | Monthly calendar view of scheduled content |
-| Analytics | `/social/analytics` | Follower growth, engagement, post performance |
-| Clients | `/social/clients` | Manage agency clients, assign accounts |
-| Settings | `/social/settings` | Connect/disconnect social accounts |
-| Setup Guide | `/social/setup` | In-app configuration instructions |
-
 ### Platform Requirements
 
 - **Instagram**: Requires a Facebook Developer app with Instagram Graph API, and an Instagram Business/Creator account linked to a Facebook Page.
 - **TikTok**: Requires a TikTok Developer app with Login Kit and Content Posting API. Direct posting requires TikTok audit approval; otherwise posts go to inbox as drafts.
+
+## Theme System
+
+The platform uses a semantic theme system via `t-*` CSS utility classes defined in `assets/css/theme.css`. These classes automatically adapt to light and dark mode using the existing shadcn-vue CSS variables.
+
+| Class | Purpose |
+|---|---|
+| `t-bg`, `t-bg-alt`, `t-bg-subtle`, `t-bg-elevated` | Background variants |
+| `t-text`, `t-text-secondary`, `t-text-tertiary`, `t-text-muted` | Text hierarchy |
+| `t-text-accent`, `t-text-inverse` | Accent and inverse text |
+| `t-border`, `t-border-accent`, `t-border-divider` | Border variants |
+| `t-btn` | Primary button styling |
+| `t-heading`, `t-body` | Typography classes |
 
 ## Deployment
 
