@@ -30,13 +30,10 @@ const props = defineProps({
 		required: true,
 	},
 });
-const config = useRuntimeConfig();
-
-const amdinRole = ref(config.public.adminRole);
-
 const { user } = useDirectusAuth();
+const { isAdmin: checkIsAdmin } = useRole();
 
-const isAdmin = computed(() => user.value.role === amdinRole.value);
+const isAdmin = computed(() => checkIsAdmin(user.value));
 
 const designEvents = computed(() => {
 	return props.project?.events
