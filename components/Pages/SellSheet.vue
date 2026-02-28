@@ -23,7 +23,7 @@
 				<p
 					class="-mt-44 lg:mt-0 hero-address text-xs tracking-[0.3em] lg:tracking-[0.6em] uppercase mb-6 lg:mb-12 opacity-0 text-cream-alt"
 				>
-					Agency-Grade Business Management
+					Every Tool Your Business Needs. One Platform.
 				</p>
 				<h1
 					class="hero-title t-heading text-[clamp(2.5rem,10vw,6rem)] font-light tracking-tight leading-[0.9] mb-8 opacity-0 text-cream"
@@ -34,7 +34,7 @@
 				<p
 					class="hero-tagline t-heading text-[clamp(1.125rem,2.5vw,2rem)] italic font-light text-cream-alt opacity-0"
 				>
-					Run Your Business Like a Creative Agency
+					Stop Juggling Apps. Start Running Your Business.
 				</p>
 			</div>
 			<div
@@ -51,15 +51,14 @@
 				<h2
 					class="intro-title t-heading text-[clamp(2rem,5vw,3rem)] font-normal tracking-tight leading-tight mb-8 opacity-0"
 				>
-					One Platform. Every Department.
+					One Login. Every Department.
 				</h2>
 				<p
 					class="intro-text t-body text-[clamp(1.0625rem,3vw,1.35rem)] leading-relaxed font-light t-text t-text-secondary mb-16 opacity-0"
 				>
-					Hue Studios is an all-in-one business management platform built for creative agencies, consultancies,
-					and small-to-medium businesses. From project timelines and Kanban boards to invoicing, scheduling,
-					team channels, and social media management &mdash; everything your team needs in one beautifully
-					designed workspace.
+					Hue Studios replaces the patchwork of apps your company pays for every month. Projects, invoicing,
+					scheduling, team chat, social media, video meetings, and more &mdash; all in one beautifully
+					designed platform built for small and medium-sized businesses.
 				</p>
 
 				<!-- Intro Stats -->
@@ -92,26 +91,27 @@
 								<h2
 									class="section-title t-heading text-[clamp(2rem,5vw,3rem)] font-normal tracking-tight leading-tight mb-8 opacity-0"
 								>
-									Too Many Tools. Too Little Cohesion.
+									A Subscription for Everything
 								</h2>
 								<p
 									class="section-body text-[1.0625rem] leading-relaxed t-text-secondary mb-8 opacity-0"
 								>
-									Small businesses juggle a dozen subscriptions &mdash; one for project management,
-									another for invoicing, a third for scheduling, a fourth for team chat. The result?
-									Fragmented workflows, missed handoffs, and a monthly SaaS bill that keeps climbing.
+									Project management in one app. Invoicing in another. Scheduling somewhere else. Team
+									chat, video calls, social media, analytics &mdash; each with its own login, its own
+									bill, and none of them talking to each other. Your team wastes hours switching
+									between tools, and your monthly SaaS spend keeps climbing.
 								</p>
 								<p
 									class="section-tagline t-heading text-lg italic t-text-accent-tertiary pt-8 border-t t-border-divider opacity-0"
 								>
-									Your business deserves more than duct-taped software.
+									Your business deserves better than a dozen disconnected apps.
 								</p>
 							</div>
 							<div class="aspect-[3/4] t-bg-subtle flex items-center justify-center opacity-0 section-image">
 								<div class="text-center p-6">
 									<div class="grid grid-cols-3 gap-3 mb-6 max-w-[200px] mx-auto">
 										<div
-											v-for="n in 9"
+											v-for="n in 12"
 											:key="n"
 											class="aspect-square rounded-lg border-2 t-border flex items-center justify-center"
 										>
@@ -121,7 +121,7 @@
 											/>
 										</div>
 									</div>
-									<p class="text-sm t-text-tertiary font-medium">9 TOOLS</p>
+									<p class="text-sm t-text-tertiary font-medium">12 SUBSCRIPTIONS</p>
 									<p class="text-xs t-text-muted mt-1">Replaced by one platform</p>
 								</div>
 							</div>
@@ -145,15 +145,15 @@
 						<h2
 							class="section-title t-heading text-[clamp(2rem,5vw,3rem)] font-normal tracking-tight leading-tight mb-8 opacity-0"
 						>
-							Built by Creatives. Engineered for Business.
+							One Platform That Does It All
 						</h2>
 						<p
 							class="section-body text-[1.0625rem] leading-relaxed t-text-secondary mb-8 opacity-0"
 						>
-							Hue Studios was born inside a creative agency with 18+ years of brand and communications
-							experience. We built the tool we wished existed &mdash; one that combines project delivery,
-							client management, financials, and team collaboration under a single, beautifully crafted
-							interface.
+							Hue Studios was born inside a real business &mdash; a creative agency with 18+ years of
+							operations experience. We built the tool we wished existed: one platform that handles
+							projects, clients, invoices, scheduling, team communication, social media, and more. No
+							more app-switching. No more duct-taping tools together.
 						</p>
 
 						<div class="advantages-grid grid grid-cols-1 sm:grid-cols-2 gap-6 my-8">
@@ -177,7 +177,7 @@
 						<p
 							class="section-tagline t-heading text-lg italic t-text-accent-tertiary pt-8 border-t t-border-divider opacity-0"
 						>
-							Design-forward. Precision-engineered. Refreshingly simple.
+							One bill. One login. Everything your business needs.
 						</p>
 					</div>
 				</div>
@@ -261,38 +261,39 @@
 			</div>
 		</section>
 
-		<!-- Social Media Module Section -->
-		<section ref="socialRef" class="section py-24 lg:py-32 px-6 lg:px-16 t-bg-alt">
+		<!-- Roadmap Section -->
+		<section ref="roadmapRef" class="section py-24 lg:py-32 px-6 lg:px-16 t-bg-alt">
 			<div class="max-w-6xl mx-auto">
 				<div class="grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-8 lg:gap-16">
 					<div class="content-label flex flex-col gap-2 opacity-0">
 						<span class="t-heading text-sm lg:text-[26px] lg:leading-6 t-text-accent">04</span>
 						<span class="text-xs lg:text-sm lg:leading-3 tracking-wider uppercase t-text-tertiary"
-							>Social Media</span
+							>Roadmap</span
 						>
 					</div>
 					<div class="content-main max-w-4xl min-w-0 overflow-hidden">
 						<h2
 							class="section-title t-heading text-[clamp(2rem,5vw,3rem)] font-normal tracking-tight leading-tight mb-8 opacity-0"
 						>
-							Publish. Schedule. Analyze.
+							And We're Just Getting Started
 						</h2>
 						<p class="section-body text-[1.0625rem] leading-relaxed t-text-secondary mb-8 opacity-0">
-							Manage your Instagram and TikTok presence directly from your business dashboard. Compose
-							posts, schedule content on a visual calendar, track engagement analytics, and manage
-							multiple client accounts &mdash; all without switching tools.
+							The features above are live today. But the vision is bigger &mdash; one platform that
+							truly replaces every business tool you pay for. Here's what's coming next.
 						</p>
 
-						<div class="social-features grid grid-cols-1 sm:grid-cols-3 gap-6 my-8">
+						<div class="roadmap-grid grid grid-cols-1 sm:grid-cols-2 gap-6 my-8">
 							<div
-								v-for="(item, index) in socialFeatures"
+								v-for="(item, index) in roadmapItems"
 								:key="index"
-								class="social-feature-item p-6 t-bg-subtle opacity-0"
+								class="roadmap-item p-6 t-bg-subtle opacity-0"
 							>
-								<div class="flex flex-col items-start gap-3">
-									<Icon :name="item.icon" class="w-8 h-8 t-text-accent-tertiary" />
-									<p class="text-sm font-medium t-text">{{ item.title }}</p>
-									<p class="text-[0.875rem] leading-relaxed t-text-secondary">{{ item.text }}</p>
+								<div class="flex items-start gap-4">
+									<Icon :name="item.icon" class="w-7 h-7 t-text-accent-tertiary flex-shrink-0 mt-0.5" />
+									<div>
+										<p class="text-sm font-medium t-text mb-1">{{ item.title }}</p>
+										<p class="text-[0.875rem] leading-relaxed t-text-secondary">{{ item.text }}</p>
+									</div>
 								</div>
 							</div>
 						</div>
@@ -300,52 +301,7 @@
 						<p
 							class="section-tagline t-heading text-lg italic t-text-accent-tertiary pt-8 border-t t-border-divider opacity-0"
 						>
-							Instagram. TikTok. One dashboard.
-						</p>
-					</div>
-				</div>
-			</div>
-		</section>
-
-		<!-- Tech Stack Section -->
-		<section ref="techRef" class="section py-24 lg:py-32 px-6 lg:px-16 t-bg">
-			<div class="max-w-6xl mx-auto">
-				<div class="grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-8 lg:gap-16">
-					<div class="content-label flex flex-col gap-2 opacity-0">
-						<span class="t-heading text-sm lg:text-[26px] lg:leading-6 t-text-accent">05</span>
-						<span class="text-xs lg:text-sm lg:leading-3 tracking-wider uppercase t-text-tertiary"
-							>Under the Hood</span
-						>
-					</div>
-					<div class="content-main max-w-4xl min-w-0 overflow-hidden">
-						<h2
-							class="section-title t-heading text-[clamp(2rem,5vw,3rem)] font-normal tracking-tight leading-tight mb-8 opacity-0"
-						>
-							Built on a Modern Stack
-						</h2>
-						<p class="section-body text-[1.0625rem] leading-relaxed t-text-secondary mb-8 opacity-0">
-							Hue Studios is built with the same technologies trusted by engineering teams at scale. Fast,
-							secure, and designed for real-time collaboration.
-						</p>
-
-						<div class="tech-grid grid grid-cols-2 sm:grid-cols-3 gap-4 my-8">
-							<div
-								v-for="(tech, index) in techStack"
-								:key="index"
-								class="tech-item flex items-center gap-3 p-4 t-bg-subtle opacity-0"
-							>
-								<Icon :name="tech.icon" class="w-5 h-5 t-text-accent-tertiary flex-shrink-0" />
-								<div>
-									<p class="text-sm font-medium t-text">{{ tech.name }}</p>
-									<p class="text-[0.75rem] t-text-tertiary">{{ tech.role }}</p>
-								</div>
-							</div>
-						</div>
-
-						<p
-							class="section-tagline t-heading text-lg italic t-text-accent-tertiary pt-8 border-t t-border-divider opacity-0"
-						>
-							Enterprise-grade infrastructure. Startup-speed iteration.
+							Every feature is one less subscription on your credit card.
 						</p>
 					</div>
 				</div>
@@ -357,7 +313,7 @@
 			<div class="max-w-6xl mx-auto">
 				<div class="grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-8 lg:gap-16">
 					<div class="content-label flex flex-col gap-2 opacity-0">
-						<span class="t-heading text-sm lg:text-[26px] lg:leading-6 t-text-accent">06</span>
+						<span class="t-heading text-sm lg:text-[26px] lg:leading-6 t-text-accent">05</span>
 						<span class="text-xs lg:text-sm lg:leading-3 tracking-wider uppercase t-text-tertiary"
 							>For You</span
 						>
@@ -383,7 +339,7 @@
 						<p
 							class="section-tagline t-heading text-lg italic t-text-accent-tertiary pt-8 border-t t-border-divider opacity-0"
 						>
-							Built for teams that care about craft.
+							If you're tired of paying for ten tools, you only need one.
 						</p>
 					</div>
 				</div>
@@ -411,13 +367,13 @@
 				<h2
 					class="cta-headline t-heading text-[clamp(2rem,5vw,3.5rem)] font-light leading-tight mb-8 opacity-0"
 				>
-					Ready to Simplify
+					Ready to Replace
 					<br />
-					Your Business Operations?
+					Your Entire Tool Stack?
 				</h2>
 				<p class="cta-body text-[1.0625rem] leading-relaxed text-cream-alt mb-12 opacity-0">
-					Join growing businesses that have consolidated their tools into one elegant platform. Less
-					software. More focus. Better results.
+					One platform for projects, invoicing, scheduling, team chat, social media, video meetings,
+					and everything else your business runs on. Cancel the rest.
 				</p>
 				<div class="cta-divider w-16 h-px bg-gold mx-auto mb-12 opacity-0 scale-x-0"></div>
 				<div class="cta-buttons flex flex-col sm:flex-row gap-4 justify-center opacity-0">
@@ -456,17 +412,16 @@ const introRef = ref(null);
 const problemRef = ref(null);
 const solutionRef = ref(null);
 const featuresRef = ref(null);
-const socialRef = ref(null);
-const techRef = ref(null);
+const roadmapRef = ref(null);
 const targetRef = ref(null);
 const ctaRef = ref(null);
 
 // Data
 const introStats = [
-	{ value: '7+', label: 'Modules' },
+	{ value: '10+', label: 'Tools Replaced' },
 	{ value: '1', label: 'Platform' },
-	{ value: '24/7', label: 'Access' },
-	{ value: '0', label: 'Context Switching' },
+	{ value: '1', label: 'Monthly Bill' },
+	{ value: '0', label: 'App Switching' },
 ];
 
 const toolIcons = [
@@ -478,39 +433,42 @@ const toolIcons = [
 	'i-heroicons-banknotes',
 	'i-heroicons-share',
 	'i-heroicons-chart-bar',
+	'i-heroicons-envelope',
+	'i-heroicons-phone',
 	'i-heroicons-users',
+	'i-heroicons-megaphone',
 ];
 
 const advantages = [
 	{
-		icon: 'i-heroicons-paint-brush',
-		title: 'Design-First Philosophy',
-		text: 'Every screen is crafted with the same care we bring to client work. No ugly dashboards.',
+		icon: 'i-heroicons-puzzle-piece',
+		title: 'Everything in One Place',
+		text: 'Projects, invoicing, scheduling, team chat, social media, video calls, and more — one login, one bill.',
 	},
 	{
-		icon: 'i-heroicons-puzzle-piece',
-		title: 'Unified Workspace',
-		text: 'Projects, invoices, scheduling, channels, and social media under one roof.',
+		icon: 'i-heroicons-banknotes',
+		title: 'Cut Your SaaS Spend',
+		text: 'Replace a dozen subscriptions with a single platform. Your accountant will thank you.',
 	},
 	{
 		icon: 'i-heroicons-shield-check',
 		title: 'Role-Based Access',
-		text: 'Multi-team support with admin, manager, and member roles. Your data stays secure.',
+		text: 'Admin, manager, and member roles across multiple teams and organizations. Your data stays secure.',
 	},
 	{
 		icon: 'i-heroicons-bolt',
 		title: 'Real-Time Collaboration',
-		text: 'WebSocket-powered live updates, presence indicators, and instant notifications.',
+		text: 'Live updates, presence indicators, threaded conversations, and instant notifications across every module.',
 	},
 	{
-		icon: 'i-heroicons-cpu-chip',
-		title: 'Modern Stack',
-		text: 'Nuxt 3, Vue 3, Tailwind CSS v4, shadcn-vue, and Directus &mdash; fast and extensible.',
+		icon: 'i-heroicons-arrow-path',
+		title: 'Always Growing',
+		text: 'Web analytics, email newsletters, phone system, budgeting, and more on the roadmap. Your platform gets better every month.',
 	},
 	{
 		icon: 'i-heroicons-device-phone-mobile',
 		title: 'Mobile-Ready PWA',
-		text: 'Install as a native-feeling app on any device. Works offline where it counts.',
+		text: 'Install as a native-feeling app on any device. Manage your business from anywhere.',
 	},
 ];
 
@@ -559,45 +517,48 @@ const features = [
 	},
 ];
 
-const socialFeatures = [
-	{
-		icon: 'i-heroicons-pencil-square',
-		title: 'Compose & Schedule',
-		text: 'Write posts, attach media, and schedule publishing across Instagram and TikTok.',
-	},
-	{
-		icon: 'i-heroicons-calendar',
-		title: 'Content Calendar',
-		text: 'Visual monthly calendar showing all scheduled and published content at a glance.',
-	},
+const roadmapItems = [
 	{
 		icon: 'i-heroicons-chart-bar',
-		title: 'Analytics Dashboard',
-		text: 'Track follower growth, engagement rates, and individual post performance metrics.',
+		title: 'Web Analytics',
+		text: 'Built-in website and app analytics so you never need a separate tracking tool.',
 	},
-];
-
-const techStack = [
-	{ name: 'Nuxt 3', role: 'Framework', icon: 'i-heroicons-code-bracket' },
-	{ name: 'Vue 3', role: 'UI Library', icon: 'i-heroicons-sparkles' },
-	{ name: 'Tailwind v4', role: 'Styling', icon: 'i-heroicons-paint-brush' },
-	{ name: 'Directus', role: 'Backend / CMS', icon: 'i-heroicons-server' },
-	{ name: 'Stripe', role: 'Payments', icon: 'i-heroicons-credit-card' },
-	{ name: 'Twilio', role: 'Video / SMS', icon: 'i-heroicons-video-camera' },
-	{ name: 'SendGrid', role: 'Email', icon: 'i-heroicons-envelope' },
-	{ name: 'AWS S3', role: 'Storage', icon: 'i-heroicons-cloud' },
-	{ name: 'shadcn-vue', role: 'Components', icon: 'i-heroicons-cube' },
+	{
+		icon: 'i-heroicons-chat-bubble-left-ellipsis',
+		title: 'Real-Time Chat',
+		text: 'Live chat for your website and internal team messaging — no more Intercom or Drift.',
+	},
+	{
+		icon: 'i-heroicons-envelope',
+		title: 'Email Newsletters',
+		text: 'Design and send email campaigns to your contacts directly from the platform.',
+	},
+	{
+		icon: 'i-heroicons-phone',
+		title: 'Phone System & Video Conferencing',
+		text: 'Business phone lines and HD video meetings built in — replace Zoom, Google Meet, and your VoIP provider.',
+	},
+	{
+		icon: 'i-heroicons-calculator',
+		title: 'Basic Budgeting',
+		text: 'Track expenses, set budgets, and monitor cash flow alongside your invoicing and payments.',
+	},
+	{
+		icon: 'i-heroicons-arrow-trending-up',
+		title: 'And More',
+		text: 'CRM, proposals, contracts, time tracking, HR basics — the goal is to be the only business app you need.',
+	},
 ];
 
 const targetCustomers = [
+	'Small businesses with 2\u201350 employees',
 	'Creative agencies and design studios',
 	'Consultancies and professional services firms',
-	'Small teams that need project + client management',
+	'Startups that want one tool instead of ten',
 	'Freelancers scaling into an agency model',
-	'Businesses managing social media for clients',
-	'Teams tired of juggling 5+ separate tools',
-	'Organizations that value design and UX',
-	'Anyone who believes business software can be beautiful',
+	'Teams paying for Asana + Slack + Zoom + Stripe + Mailchimp + more',
+	'Any organization tired of disconnected software',
+	'Businesses that believe their tools should be as good as their work',
 ];
 
 // GSAP animations
@@ -703,18 +664,11 @@ onMounted(() => {
 			'.feature-item',
 			'.section-tagline',
 		]);
-		animateSection(socialRef, [
+		animateSection(roadmapRef, [
 			'.content-label',
 			'.section-title',
 			'.section-body',
-			'.social-feature-item',
-			'.section-tagline',
-		]);
-		animateSection(techRef, [
-			'.content-label',
-			'.section-title',
-			'.section-body',
-			'.tech-item',
+			'.roadmap-item',
 			'.section-tagline',
 		]);
 		animateSection(targetRef, [
@@ -794,12 +748,12 @@ onUnmounted(() => {
 
 // SEO
 useHead({
-	title: 'Hue Studios | Agency-Grade Business Management',
+	title: 'Hue Studios | All-in-One Business Management for SMBs',
 	meta: [
 		{
 			name: 'description',
 			content:
-				'All-in-one business management platform for creative agencies and SMBs. Projects, invoicing, scheduling, channels, social media management, and more — beautifully designed.',
+				'Replace your entire tool stack with one platform. Projects, invoicing, scheduling, team chat, social media, video meetings, and more — built for small and medium-sized businesses.',
 		},
 	],
 });
