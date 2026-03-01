@@ -17,18 +17,20 @@ export function useTimelineLayout(
     let max = -Infinity;
 
     for (const project of projects.value) {
-      const startTime = new Date(project.start_date).getTime();
-      if (startTime < min) min = startTime;
+      const startTime = new Date(project.start_date || new Date().toISOString()).getTime();
+      if (!isNaN(startTime) && startTime < min) min = startTime;
 
       if (project.completion_date) {
         const endTime = new Date(project.completion_date).getTime();
-        if (endTime > max) max = endTime;
+        if (!isNaN(endTime) && endTime > max) max = endTime;
       }
 
       for (const event of project.events || []) {
         const eventTime = new Date(event.event_date || event.date || '').getTime();
-        if (eventTime < min) min = eventTime;
-        if (eventTime > max) max = eventTime;
+        if (!isNaN(eventTime)) {
+          if (eventTime < min) min = eventTime;
+          if (eventTime > max) max = eventTime;
+        }
       }
     }
 
@@ -54,8 +56,10 @@ export function useTimelineLayout(
   const canvasWidth = computed(() => 1200 * zoom.value);
 
   const getXPosition = (dateString: string): number => {
-    const time = new Date(dateString).getTime();
+    const time = new Date(dateString || new Date().toISOString()).getTime();
+    if (isNaN(time)) return padding;
     const range = dateRange.value.end.getTime() - dateRange.value.start.getTime();
+    if (range === 0) return padding;
     const ratio = (time - dateRange.value.start.getTime()) / range;
     return padding + ratio * (canvasWidth.value - 2 * padding);
   };

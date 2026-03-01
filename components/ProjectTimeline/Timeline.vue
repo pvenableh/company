@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ProjectWithRelations, ProjectEventWithRelations } from '~/types/projects';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '~/components/ui/sheet';
 
 const { projects, loading, error, refresh, fetchProjects } = useProjectTimeline();
 const zoom = ref(1);

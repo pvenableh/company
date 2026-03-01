@@ -12,9 +12,9 @@ definePageMeta({
   middleware: ['auth'],
 })
 
-// Fetch data
-const { data: accountsData } = await useFetch('/api/social/accounts')
-const { data: postsData } = await useFetch('/api/social/posts', {
+// Fetch data (lazy to avoid blocking page render on Directus errors)
+const { data: accountsData } = useLazyFetch('/api/social/accounts')
+const { data: postsData } = useLazyFetch('/api/social/posts', {
   query: { limit: 10, status: 'scheduled' },
 })
 

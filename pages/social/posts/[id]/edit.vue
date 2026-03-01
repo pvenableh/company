@@ -39,7 +39,7 @@ const selectedAccounts = ref(post.platforms.map((p) => p.account_id))
 const postType = ref<PostType>(post.post_type)
 
 // Parse the scheduled date/time
-const scheduledDate = ref(parseISO(post.scheduled_at))
+const scheduledDate = ref(post.scheduled_at ? parseISO(post.scheduled_at) : new Date())
 const scheduledTime = ref(format(scheduledDate.value, 'HH:mm'))
 
 // Date picker state using @internationalized/date
@@ -83,7 +83,9 @@ const canSubmit = computed(() => {
 })
 
 const scheduledDateTime = computed(() => {
-  const [hours, minutes] = scheduledTime.value.split(':').map(Number)
+  const timeParts = (scheduledTime.value || '09:00').split(':').map(Number)
+  const hours = timeParts[0] || 0
+  const minutes = timeParts[1] || 0
   const date = new Date(calendarDate.value.year, calendarDate.value.month - 1, calendarDate.value.day)
   date.setHours(hours, minutes, 0, 0)
   return date

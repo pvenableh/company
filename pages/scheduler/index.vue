@@ -357,7 +357,7 @@ const isAdmin = computed(() => hasAdminAccess(user.value));
 const toast = useToast();
 
 // ===== Client-side state (for non-admin users) =====
-const clientActiveTab = ref(0);
+const clientActiveTab = ref('request');
 const availableHosts = ref<any[]>([]);
 const loadingHosts = ref(true);
 const clientRequests = ref<any[]>([]);
@@ -484,7 +484,7 @@ const clientFormatTime = (timeStr: string) => {
 };
 
 // ===== Admin-side state =====
-const activeTab = ref(0);
+const activeTab = ref('calendar');
 const videoMeetings = ref<any[]>([]);
 const settings = ref<any>(null);
 const loadingVideoMeetings = ref(true);

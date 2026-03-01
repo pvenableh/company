@@ -2,6 +2,10 @@
 import { ref, computed, watchEffect } from 'vue';
 import { useRealtimeSubscription } from '~/composables/useRealtimeSubscription';
 
+// Module-level singleton tracking (resets on page reload, survives soft navigations)
+let _instanceActive = false;
+let _instanceSubscription = null;
+
 export function useNotifications() {
 	const config = useRuntimeConfig();
 	const { readNotifications, createNotification, updateNotification } = useDirectusNotifications();
@@ -11,27 +15,27 @@ export function useNotifications() {
 	});
 	const toast = useToast();
 
-	// Singleton instance tracking to prevent multiple subscriptions
-	const INSTANCE_KEY = 'notifications_instance_active';
+	// Singleton instance tracking using module-level variable
 	const LAST_REFRESH_KEY = 'notifications_last_refresh';
 
 	// Check if another instance is already running
 	const isInstanceActive = () => {
 		if (!import.meta.client) return false;
-		return sessionStorage.getItem(INSTANCE_KEY) === 'true';
+		return _instanceActive;
 	};
 
 	// Mark instance as active
 	const markInstanceActive = () => {
 		if (import.meta.client) {
-			sessionStorage.setItem(INSTANCE_KEY, 'true');
+			_instanceActive = true;
 		}
 	};
 
 	// Mark instance as inactive
 	const markInstanceInactive = () => {
 		if (import.meta.client) {
-			sessionStorage.removeItem(INSTANCE_KEY);
+			_instanceActive = false;
+			_instanceSubscription = null;
 		}
 	};
 
@@ -118,8 +122,19 @@ export function useNotifications() {
 	let lastUpdated = ref(null);
 
 	// Initialize subscription only if we're the primary instance
-	if (!isInstanceActive() && user.value) {
-		console.log('🔔 Initializing notifications subscription (primary instance)');
+	if (_instanceSubscription && _instanceActive) {
+		// Reuse existing subscription
+		realtimeData = _instanceSubscription.data;
+		refresh = () => {
+			if (canRefresh()) {
+				recordRefresh();
+				_instanceSubscription.refresh();
+			}
+		};
+		isConnected = _instanceSubscription.isConnected;
+		error = _instanceSubscription.error;
+		lastUpdated = _instanceSubscription.lastUpdated;
+	} else if (!isInstanceActive() && user.value) {
 		markInstanceActive();
 
 		const subscription = useRealtimeSubscription(
@@ -129,21 +144,17 @@ export function useNotifications() {
 			'-timestamp',
 		);
 
+		_instanceSubscription = subscription;
 		realtimeData = subscription.data;
 		refresh = () => {
 			if (canRefresh()) {
-				console.log('🔔 Refreshing notifications (throttled)');
 				recordRefresh();
 				subscription.refresh();
-			} else {
-				console.log('🔔 Refresh throttled, skipping');
 			}
 		};
 		isConnected = subscription.isConnected;
 		error = subscription.error;
 		lastUpdated = subscription.lastUpdated;
-	} else {
-		console.log('🔔 Notifications instance already active, using passive mode');
 	}
 
 	// Fetch archived notifications with pagination
@@ -486,22 +497,22 @@ export function useNotifications() {
 		}
 	};
 
-	// Load initial data when user is available
-	watchEffect(() => {
-		if (user.value?.id) {
-			loadNotifications();
-			// Load saved preferences
-			if (import.meta.client) {
+	// Load initial data when user is available (client-only to avoid hydration mismatch)
+	if (import.meta.client) {
+		watchEffect(() => {
+			if (user.value?.id) {
+				loadNotifications();
 				loadPreferences();
 			}
-		}
-	});
+		});
+	}
 
-	// Cleanup when component unmounts
-	onUnmounted(() => {
-		console.log('🔔 Notifications composable unmounting, marking instance inactive');
-		markInstanceInactive();
-	});
+	// Cleanup when scope is disposed (works for both components and standalone composables)
+	if (getCurrentInstance()) {
+		onUnmounted(() => {
+			markInstanceInactive();
+		});
+	}
 
 	return {
 		// State
