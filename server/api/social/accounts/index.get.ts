@@ -50,26 +50,33 @@ export default defineEventHandler(async (event) => {
 
     if (platform) params['filter[platform][_eq]'] = platform
     if (clientId) params['filter[client_id][_eq]'] = clientId
-    if (status) params['filter[status][_eq]'] = status
+    if (status) params['filter[account_status][_eq]'] = status
 
     const accounts = await directusFetch<any[]>('/items/social_accounts', { params })
 
     // Get clients for name lookup
-    const clients = await directusFetch<any[]>('/items/social_clients', {
-      params: { fields: 'id,name' },
-    })
-    const clientMap = new Map(clients.map((c) => [c.id, c.name]))
+    let clientMap = new Map<string, string>()
+    try {
+      const clients = await directusFetch<any[]>('/items/social_clients', {
+        params: { fields: 'id,name' },
+      })
+      clientMap = new Map(clients.map((c) => [c.id, c.name]))
+    } catch {
+      // Clients collection may not exist yet
+    }
 
-    // Transform to public format
+    // Transform to public format (account_status maps to public status)
     const publicAccounts: SocialAccountPublic[] = accounts.map((a) => ({
       id: a.id,
       platform: a.platform,
       account_name: a.account_name,
       account_handle: a.account_handle,
       profile_picture_url: a.profile_picture_url,
-      status: a.status,
+      status: a.account_status || 'active',
       token_expires_at: a.token_expires_at,
-      is_token_expiring_soon: differenceInHours(new Date(a.token_expires_at), new Date()) < 24 * 7,
+      is_token_expiring_soon: a.token_expires_at
+        ? differenceInHours(new Date(a.token_expires_at), new Date()) < 24 * 7
+        : false,
       client_id: a.client_id,
       client_name: a.client_id ? clientMap.get(a.client_id) : undefined,
     }))

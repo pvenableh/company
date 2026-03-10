@@ -6,13 +6,14 @@
 
 import type {
   SocialAccount,
-  SocialPost,
   SocialAnalyticsSnapshot,
   SocialComment,
   SocialActivityLog,
   SocialAction,
   SocialPlatform,
+  SocialPost,
 } from '~/types/social'
+import type { SocialPost as DirectusSocialPost } from '~/types/directus'
 import { encryptSocialToken, safeDecryptSocialToken } from './social-crypto'
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -68,7 +69,7 @@ export async function getSocialAccounts(filters?: {
     params['filter[platform][_eq]'] = filters.platform
   }
   if (filters?.status) {
-    params['filter[status][_eq]'] = filters.status
+    params['filter[account_status][_eq]'] = filters.status
   }
 
   return directusFetch<SocialAccount[]>('/items/social_accounts', { params })
@@ -166,6 +167,42 @@ export async function getDecryptedRefreshToken(accountId: string): Promise<strin
 // SOCIAL POSTS
 // ══════════════════════════════════════════════════════════════════════════════
 
+/**
+ * Map Directus SocialPost (post_status, Record fields) to frontend SocialPost
+ */
+function mapDirectusPost(raw: DirectusSocialPost): SocialPost {
+  return {
+    id: raw.id,
+    caption: raw.caption,
+    media_urls: Array.isArray(raw.media_urls) ? raw.media_urls : [],
+    media_types: Array.isArray(raw.media_types) ? raw.media_types : [],
+    thumbnail_url: raw.thumbnail_url ?? null,
+    platforms: Array.isArray(raw.platforms) ? raw.platforms : [],
+    post_type: raw.post_type ?? 'image',
+    scheduled_at: raw.scheduled_at,
+    status: (raw.post_status ?? 'draft') as SocialPost['status'],
+    publish_results: raw.publish_results ? (Array.isArray(raw.publish_results) ? raw.publish_results : []) : null,
+    published_at: raw.published_at ?? null,
+    error_message: raw.error_message ?? null,
+    created_by: null,
+    date_created: raw.date_created ?? '',
+    date_updated: raw.date_updated ?? null,
+  }
+}
+
+/**
+ * Map frontend SocialPost fields back to Directus field names for writes
+ */
+function mapPostToDirectus(data: Record<string, unknown>): Record<string, unknown> {
+  const mapped = { ...data }
+  // Map 'status' -> 'post_status' for Directus
+  if ('status' in mapped) {
+    mapped.post_status = mapped.status
+    delete mapped.status
+  }
+  return mapped
+}
+
 export async function getSocialPosts(filters?: {
   status?: string
   scheduled_after?: string
@@ -174,17 +211,19 @@ export async function getSocialPosts(filters?: {
 }): Promise<SocialPost[]> {
   const params: Record<string, string> = { sort: '-scheduled_at' }
 
-  if (filters?.status) params['filter[status][_eq]'] = filters.status
+  if (filters?.status) params['filter[post_status][_eq]'] = filters.status
   if (filters?.scheduled_after) params['filter[scheduled_at][_gte]'] = filters.scheduled_after
   if (filters?.scheduled_before) params['filter[scheduled_at][_lte]'] = filters.scheduled_before
   if (filters?.limit) params.limit = String(filters.limit)
 
-  return directusFetch<SocialPost[]>('/items/social_posts', { params })
+  const raw = await directusFetch<DirectusSocialPost[]>('/items/social_posts', { params })
+  return raw.map(mapDirectusPost)
 }
 
 export async function getSocialPostById(id: string): Promise<SocialPost | null> {
   try {
-    return await directusFetch<SocialPost>(`/items/social_posts/${id}`)
+    const raw = await directusFetch<DirectusSocialPost>(`/items/social_posts/${id}`)
+    return mapDirectusPost(raw)
   } catch {
     return null
   }
@@ -193,11 +232,19 @@ export async function getSocialPostById(id: string): Promise<SocialPost | null> 
 export async function createSocialPost(
   data: Omit<SocialPost, 'id' | 'date_created' | 'date_updated'>
 ): Promise<SocialPost> {
-  return directusFetch<SocialPost>('/items/social_posts', { method: 'POST', body: data })
+  const raw = await directusFetch<DirectusSocialPost>('/items/social_posts', {
+    method: 'POST',
+    body: mapPostToDirectus(data as unknown as Record<string, unknown>),
+  })
+  return mapDirectusPost(raw)
 }
 
 export async function updateSocialPost(id: string, data: Partial<SocialPost>): Promise<SocialPost> {
-  return directusFetch<SocialPost>(`/items/social_posts/${id}`, { method: 'PATCH', body: data })
+  const raw = await directusFetch<DirectusSocialPost>(`/items/social_posts/${id}`, {
+    method: 'PATCH',
+    body: mapPostToDirectus(data as unknown as Record<string, unknown>),
+  })
+  return mapDirectusPost(raw)
 }
 
 export async function deleteSocialPost(id: string): Promise<void> {
@@ -264,7 +311,7 @@ export async function upsertSocialComment(
     params: { 'filter[platform_comment_id][_eq]': data.platform_comment_id, limit: '1' },
   })
 
-  if (existing.length > 0) {
+  if (existing.length > 0 && existing[0]) {
     return directusFetch<SocialComment>(`/items/social_comments/${existing[0].id}`, {
       method: 'PATCH',
       body: data,

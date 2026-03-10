@@ -10,6 +10,7 @@ const createClientSchema = z.object({
   name: z.string().min(1).max(255),
   logo_url: z.string().url().optional(),
   contact_email: z.string().email().optional(),
+  brand_color: z.string().max(20).optional(),
   notes: z.string().optional(),
 })
 

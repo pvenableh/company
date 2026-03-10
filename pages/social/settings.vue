@@ -40,8 +40,8 @@ onMounted(() => {
   }
 })
 
-// Fetch accounts
-const { data: accountsData, refresh: refreshAccounts } = await useFetch('/api/social/accounts')
+// Fetch accounts (lazy to avoid blocking page render on Directus errors)
+const { data: accountsData, refresh: refreshAccounts } = useLazyFetch('/api/social/accounts')
 const accounts = computed(() => (accountsData.value?.data || []) as SocialAccountPublic[])
 
 const instagramAccounts = computed(() => accounts.value.filter((a) => a.platform === 'instagram'))

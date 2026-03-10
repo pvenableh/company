@@ -10,8 +10,8 @@ const props = withDefaults(
   defineProps<{
     title?: string
     description?: string
-    color?: 'primary' | 'red' | 'green' | 'blue' | 'yellow' | 'orange' | 'gray' | 'white'
-    variant?: 'solid' | 'soft' | 'outline'
+    color?: 'primary' | 'red' | 'green' | 'blue' | 'yellow' | 'orange' | 'gray' | 'white' | 'amber' | 'emerald' | string
+    variant?: 'solid' | 'soft' | 'subtle' | 'outline'
     icon?: string
     class?: string
     ui?: Record<string, string>
@@ -23,7 +23,9 @@ const props = withDefaults(
 )
 
 const colorClasses = computed(() => {
-  const { color, variant } = props
+  const { color } = props
+  // Map "subtle" to "soft"
+  const variant = props.variant === 'subtle' ? 'soft' : props.variant
   const map: Record<string, Record<string, string>> = {
     primary: {
       solid: 'bg-primary text-primary-foreground border-primary',
@@ -64,6 +66,16 @@ const colorClasses = computed(() => {
       solid: 'bg-white text-gray-900 border-gray-200',
       soft: 'bg-white/80 text-gray-900 border-gray-100',
       outline: 'border-gray-200 text-gray-900 bg-white',
+    },
+    amber: {
+      solid: 'bg-amber-500 text-white border-amber-500',
+      soft: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800',
+      outline: 'border-amber-500 text-amber-600',
+    },
+    emerald: {
+      solid: 'bg-emerald-500 text-white border-emerald-500',
+      soft: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800',
+      outline: 'border-emerald-500 text-emerald-600',
     },
   }
   return map[color]?.[variant] || map.gray.soft
