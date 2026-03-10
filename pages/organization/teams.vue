@@ -161,6 +161,15 @@
 					<UFormGroup label="Description">
 						<UTextarea v-model="teamForm.description" placeholder="Describe the purpose of this team" />
 					</UFormGroup>
+
+					<UFormGroup label="Active">
+						<div class="flex items-center gap-3">
+							<UToggle v-model="teamForm.active" />
+							<span class="text-sm text-gray-500">
+								{{ teamForm.active ? 'Team is active and visible in selectors' : 'Team is inactive and hidden from selectors' }}
+							</span>
+						</div>
+					</UFormGroup>
 				</form>
 
 				<template #footer>
@@ -236,6 +245,7 @@ const currentEditTeam = ref(null);
 const teamForm = ref({
 	name: '',
 	description: '',
+	active: true,
 });
 const isEditing = ref(false);
 const submittingTeam = ref(false);
@@ -297,12 +307,13 @@ const editTeam = (team) => {
 	currentEditTeam.value = team;
 	teamForm.value.name = team.name;
 	teamForm.value.description = team.description || '';
+	teamForm.value.active = team.active !== false;
 	isEditing.value = true;
 	showCreateTeamModal.value = true;
 };
 
 const cancelTeamForm = () => {
-	teamForm.value = { name: '', description: '' };
+	teamForm.value = { name: '', description: '', active: true };
 	isEditing.value = false;
 	currentEditTeam.value = null;
 	showCreateTeamModal.value = false;

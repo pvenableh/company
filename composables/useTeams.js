@@ -109,6 +109,7 @@ export const useTeams = () => {
 			const response = await teamItems.list({
 				filter: {
 					organization: { _eq: organizationId },
+					active: { _eq: true },
 				},
 				fields: [
 					'id',
@@ -116,6 +117,7 @@ export const useTeams = () => {
 					'description',
 					'organization',
 					'icon',
+					'active',
 					'organization.id',
 					'users.id', // Junction table ID
 					'users.is_manager', // Include manager flag
@@ -346,6 +348,7 @@ export const useTeams = () => {
 				description: teamData.description,
 				organization: organizationId,
 				status: 'published',
+				active: teamData.active !== false,
 			});
 
 			// Add team members with manager status
@@ -385,6 +388,7 @@ export const useTeams = () => {
 			await teamItems.update(teamId, {
 				name: teamData.name,
 				description: teamData.description,
+				active: teamData.active !== false,
 			});
 
 			// Refresh the teams list

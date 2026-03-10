@@ -44,7 +44,10 @@ export function useOrganization() {
 
 		try {
 			const data = await orgItems.list({
-				filter: { users: { directus_users_id: { _eq: user.value.id } } },
+				filter: {
+					users: { directus_users_id: { _eq: user.value.id } },
+					active: { _eq: true },
+				},
 				fields: ['id', 'name', 'logo', 'icon', 'tickets.id', 'projects.id'],
 			});
 
