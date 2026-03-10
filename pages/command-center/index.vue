@@ -4,12 +4,17 @@ definePageMeta({
 });
 
 const { suggestions, metrics, isAnalyzing, greeting, analyze } = useAIProductivityEngine();
+const { enabledModules } = useAIPreferences();
 const aiTrayOpen = ref(false);
 
 // Badge counts for app icons
 const badges = computed(() => {
 	const b: Record<string, number> = {};
 	if (metrics.value.overdueItems > 0) b.tasks = metrics.value.overdueItems;
+	if (metrics.value.overdueProjects > 0) b.projects = metrics.value.overdueProjects;
+	if (metrics.value.unreadChannelMessages > 0) b.channels = metrics.value.unreadChannelMessages;
+	if (metrics.value.failedSocialPosts > 0) b.social = metrics.value.failedSocialPosts;
+	if (metrics.value.upcomingMeetings > 0) b.scheduler = metrics.value.upcomingMeetings;
 	return b;
 });
 
@@ -18,8 +23,12 @@ const topSuggestions = computed(() => {
 	return suggestions.value.slice(0, 5);
 });
 
+const runAnalysis = () => {
+	analyze(new Set(enabledModules.value));
+};
+
 onMounted(() => {
-	analyze();
+	runAnalysis();
 });
 </script>
 
@@ -49,6 +58,9 @@ onMounted(() => {
 					:overdue-items="metrics.overdueItems"
 					:pending-invoice-total="metrics.pendingInvoiceTotal"
 					:tasks-completed-today="metrics.tasksCompletedToday"
+					:active-projects="metrics.activeProjects"
+					:unread-messages="metrics.unreadChannelMessages"
+					:upcoming-meetings="metrics.upcomingMeetings"
 				/>
 
 				<!-- AI Suggestions Feed -->
@@ -61,7 +73,7 @@ onMounted(() => {
 							</h3>
 						</div>
 						<button
-							@click="analyze"
+							@click="runAnalysis"
 							:disabled="isAnalyzing"
 							class="text-xs text-primary hover:underline disabled:opacity-50"
 						>

@@ -1,10 +1,20 @@
 <script setup lang="ts">
-const props = defineProps<{
-	score: number;
-	overdueItems: number;
-	pendingInvoiceTotal: number;
-	tasksCompletedToday: number;
-}>();
+const props = withDefaults(
+	defineProps<{
+		score: number;
+		overdueItems: number;
+		pendingInvoiceTotal: number;
+		tasksCompletedToday: number;
+		activeProjects?: number;
+		unreadMessages?: number;
+		upcomingMeetings?: number;
+	}>(),
+	{
+		activeProjects: 0,
+		unreadMessages: 0,
+		upcomingMeetings: 0,
+	},
+);
 
 const scoreColor = computed(() => {
 	if (props.score >= 80) return 'text-green-500';
@@ -26,6 +36,11 @@ const progressColor = computed(() => {
 	if (props.score >= 40) return 'bg-amber-500';
 	return 'bg-red-500';
 });
+
+// Show expanded metrics only when extra data is available
+const hasExtendedMetrics = computed(() => {
+	return props.activeProjects > 0 || props.unreadMessages > 0 || props.upcomingMeetings > 0;
+});
 </script>
 
 <template>
@@ -46,6 +61,7 @@ const progressColor = computed(() => {
 		</div>
 		<p class="text-xs text-gray-500 dark:text-gray-400 mb-4" :class="scoreColor">{{ scoreLabel }}</p>
 
+		<!-- Primary metrics row -->
 		<div class="grid grid-cols-3 gap-3 text-center">
 			<div>
 				<p class="text-lg font-bold text-gray-900 dark:text-white">{{ tasksCompletedToday }}</p>
@@ -60,6 +76,22 @@ const progressColor = computed(() => {
 			<div>
 				<p class="text-lg font-bold text-emerald-600">${{ (pendingInvoiceTotal / 1000).toFixed(1) }}k</p>
 				<p class="text-[10px] uppercase tracking-wide text-gray-500">Pending</p>
+			</div>
+		</div>
+
+		<!-- Extended metrics row -->
+		<div v-if="hasExtendedMetrics" class="grid grid-cols-3 gap-3 text-center mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+			<div v-if="activeProjects > 0">
+				<p class="text-lg font-bold text-purple-500">{{ activeProjects }}</p>
+				<p class="text-[10px] uppercase tracking-wide text-gray-500">Projects</p>
+			</div>
+			<div v-if="unreadMessages > 0">
+				<p class="text-lg font-bold text-cyan-500">{{ unreadMessages }}</p>
+				<p class="text-[10px] uppercase tracking-wide text-gray-500">Messages</p>
+			</div>
+			<div v-if="upcomingMeetings > 0">
+				<p class="text-lg font-bold text-amber-500">{{ upcomingMeetings }}</p>
+				<p class="text-[10px] uppercase tracking-wide text-gray-500">Meetings</p>
 			</div>
 		</div>
 	</div>
