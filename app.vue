@@ -32,8 +32,14 @@ updateAvatarSource(avatar.value);
 
 const links = ref([
 	{
-		name: 'Dashboard',
+		name: 'Command Center',
 		type: ['header', 'footer', 'toolbar', 'drawer'],
+		to: '/command-center',
+		icon: 'i-heroicons-sparkles',
+	},
+	{
+		name: 'Dashboard',
+		type: ['footer', 'drawer'],
 		to: '/',
 		icon: 'i-heroicons-squares-2x2',
 	},
