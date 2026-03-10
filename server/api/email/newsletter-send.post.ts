@@ -1,21 +1,33 @@
 /**
- * Send a newsletter to a contact list or array of recipients.
+ * Send a newsletter to mailing lists, individual recipients, or both.
  * Uses the pre-compiled MJML from email_templates.mjml_source.
+ * Supports list-based targeting with deduplication.
  */
 import sgMail from '@sendgrid/mail';
 import { compileMjml, compileSubject } from '~/server/utils/mjml-compiler';
+import { buildContactVariableMap } from '~/server/utils/contact-variables';
 import { readItems, readItem } from '@directus/sdk';
 
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig();
-  const { template_id, list_id, recipient_ids, cc_list, bcc_list } = await readBody(event);
+  const {
+    template_id,
+    target_lists,
+    recipient_ids,
+    cc_list,
+    bcc_list,
+    custom_variables,
+  } = await readBody(event);
 
   if (!template_id) {
     throw createError({ statusCode: 400, message: 'template_id is required' });
   }
 
-  if (!list_id && !recipient_ids) {
-    throw createError({ statusCode: 400, message: 'list_id or recipient_ids is required' });
+  if (!target_lists?.length && !recipient_ids?.length) {
+    throw createError({
+      statusCode: 400,
+      message: 'target_lists or recipient_ids is required',
+    });
   }
 
   const apiKey = config.sendgridApiKey || config.SENDGRID_API_KEY;
@@ -23,7 +35,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, message: 'SendGrid API key not configured' });
   }
 
-  sgMail.setApiKey(apiKey);
+  sgMail.setApiKey(apiKey as string);
   const directus = getTypedDirectus();
 
   // Fetch the template
@@ -32,39 +44,70 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Template has no compiled MJML' });
   }
 
-  // Fetch recipients
-  let contacts: any[] = [];
+  // ── Resolve recipients from mailing lists (deduplicated) ──────────────
+  const seen = new Set<string>();
+  const contacts: any[] = [];
 
-  if (list_id) {
-    const members = await directus.request(
-      readItems('contact_list_members', {
-        fields: ['contact_id.*'],
-        filter: {
-          _and: [
-            { list_id: { _eq: list_id } },
-            { subscribed: { _eq: true } },
-          ],
-        },
-        limit: -1,
-      })
-    ) as any[];
+  if (target_lists?.length) {
+    const allMembers = await Promise.all(
+      target_lists.map((listId: number) =>
+        directus.request(
+          readItems('mailing_list_contacts', {
+            fields: ['contact_id.*', 'custom_fields'],
+            filter: {
+              _and: [
+                { list_id: { _eq: listId } },
+                { subscribed: { _eq: true } },
+                { 'contact_id.email_subscribed': { _eq: true } },
+                { 'contact_id.email_bounced': { _eq: false } },
+                { 'contact_id.status': { _eq: 'active' } },
+              ],
+            },
+            limit: -1,
+          })
+        )
+      )
+    );
 
-    contacts = members
-      .map((m: any) => m.contact_id)
-      .filter((c: any) => c?.email && c?.email_subscribed !== false);
-  } else if (recipient_ids?.length) {
-    const fetched = await directus.request(
+    for (const members of allMembers) {
+      for (const member of members as any[]) {
+        const contact = member.contact_id;
+        if (contact?.email && !seen.has(contact.email)) {
+          seen.add(contact.email);
+          contacts.push({
+            ...contact,
+            custom_fields: {
+              ...(contact.custom_fields || {}),
+              ...(member.custom_fields || {}),
+            },
+          });
+        }
+      }
+    }
+  }
+
+  // Also include individual recipients
+  if (recipient_ids?.length) {
+    const fetched = (await directus.request(
       readItems('contacts', {
         filter: {
           _and: [
             { id: { _in: recipient_ids } },
-            { email_subscribed: { _neq: false } },
+            { email_subscribed: { _eq: true } },
+            { email_bounced: { _eq: false } },
+            { status: { _eq: 'active' } },
           ],
         },
         limit: -1,
       })
-    ) as any[];
-    contacts = fetched.filter((c: any) => c?.email);
+    )) as any[];
+
+    for (const contact of fetched) {
+      if (contact?.email && !seen.has(contact.email)) {
+        seen.add(contact.email);
+        contacts.push(contact);
+      }
+    }
   }
 
   if (contacts.length === 0) {
@@ -73,24 +116,20 @@ export default defineEventHandler(async (event) => {
 
   const fromEmail = config.sendgridFromEmail || config.FROM_EMAIL || 'hello@huestudios.company';
   const fromName = config.sendgridFromName || 'Hue Creative Agency';
-  const appName = config.public?.companyName || fromName;
-  const siteUrl = config.public?.siteUrl || 'https://huestudios.company';
+  const appName = (config.public?.companyName as string) || fromName;
+  const siteUrl = (config.public?.siteUrl as string) || 'https://huestudios.company';
 
   const errors: string[] = [];
   let sentCount = 0;
 
   // Send one email per recipient for personalization
   for (const contact of contacts) {
-    const variables = {
-      first_name: contact.first_name || '',
-      last_name: contact.last_name || '',
-      email: contact.email,
+    const variables = buildContactVariableMap(contact, {
+      appName,
+      appUrl: siteUrl,
       year: new Date().getFullYear(),
-      app_name: appName,
-      unsubscribe_url: contact.unsubscribe_token
-        ? `${siteUrl}/unsubscribe?token=${contact.unsubscribe_token}`
-        : '#unsubscribe',
-    };
+      announcementCustomVars: custom_variables || {},
+    });
 
     const { html, errors: compileErrors } = compileMjml(template.mjml_source, variables);
     if (!html) {

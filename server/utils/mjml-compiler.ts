@@ -1,6 +1,16 @@
 import mjml2html from 'mjml';
 import Handlebars from 'handlebars';
 
+// Register comparison and logic helpers for conditional content in templates
+Handlebars.registerHelper('eq', (a, b) => a === b);
+Handlebars.registerHelper('ne', (a, b) => a !== b);
+Handlebars.registerHelper('gt', (a, b) => a > b);
+Handlebars.registerHelper('lt', (a, b) => a < b);
+Handlebars.registerHelper('and', (a, b) => a && b);
+Handlebars.registerHelper('or', (a, b) => a || b);
+Handlebars.registerHelper('not', (a) => !a);
+Handlebars.registerHelper('default', (val, fallback) => val || fallback);
+
 export interface CompileResult {
   html: string;
   errors: string[];
