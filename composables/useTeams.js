@@ -109,7 +109,7 @@ export const useTeams = () => {
 			const response = await teamItems.list({
 				filter: {
 					organization: { _eq: organizationId },
-					active: { _eq: true },
+					active: { _neq: false },
 				},
 				fields: [
 					'id',

@@ -125,14 +125,12 @@
 
 		<!-- Team Management Modal -->
 		<UModal v-model="showTeamMembersModal" :ui="{ width: 'max-w-xl' }">
-			<UCard>
-				<template #header>
-					<div class="flex items-center justify-between">
-						<h3 class="text-lg font-semibold">Manage Team: {{ currentEditTeam?.name }}</h3>
-						<UButton color="gray" variant="ghost" icon="i-heroicons-x-mark" @click="showTeamMembersModal = false" />
-					</div>
-				</template>
+			<div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+				<h3 class="text-lg font-semibold">Manage Team: {{ currentEditTeam?.name }}</h3>
+				<UButton color="gray" variant="ghost" icon="i-heroicons-x-mark" @click="showTeamMembersModal = false" />
+			</div>
 
+			<div class="p-4">
 				<TeamsManageTeamMembers
 					v-if="currentEditTeam"
 					:team-id="currentEditTeam.id"
@@ -140,70 +138,60 @@
 					:organization-id="selectedOrg"
 					@update="refreshTeams"
 				/>
-			</UCard>
+			</div>
 		</UModal>
 
 		<!-- Create/Edit Team Modal -->
 		<UModal v-model="showCreateTeamModal">
-			<UCard>
-				<template #header>
-					<div class="flex items-center justify-between">
-						<h3 class="text-lg font-semibold">{{ isEditing ? 'Edit' : 'Create' }} Team</h3>
-						<UButton color="gray" variant="ghost" icon="i-heroicons-x-mark" @click="cancelTeamForm" />
+			<div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+				<h3 class="text-lg font-semibold">{{ isEditing ? 'Edit' : 'Create' }} Team</h3>
+				<UButton color="gray" variant="ghost" icon="i-heroicons-x-mark" @click="cancelTeamForm" />
+			</div>
+
+			<form @submit.prevent="submitTeamForm" class="space-y-4 p-4">
+				<UFormGroup label="Team Name" required>
+					<UInput v-model="teamForm.name" placeholder="Enter team name" />
+				</UFormGroup>
+
+				<UFormGroup label="Description">
+					<UTextarea v-model="teamForm.description" placeholder="Describe the purpose of this team" />
+				</UFormGroup>
+
+				<UFormGroup label="Active">
+					<div class="flex items-center gap-3">
+						<UToggle v-model="teamForm.active" />
+						<span class="text-sm text-gray-500">
+							{{ teamForm.active ? 'Team is active and visible in selectors' : 'Team is inactive and hidden from selectors' }}
+						</span>
 					</div>
-				</template>
+				</UFormGroup>
+			</form>
 
-				<form @submit.prevent="submitTeamForm">
-					<UFormGroup label="Team Name" required>
-						<UInput v-model="teamForm.name" placeholder="Enter team name" />
-					</UFormGroup>
-
-					<UFormGroup label="Description">
-						<UTextarea v-model="teamForm.description" placeholder="Describe the purpose of this team" />
-					</UFormGroup>
-
-					<UFormGroup label="Active">
-						<div class="flex items-center gap-3">
-							<UToggle v-model="teamForm.active" />
-							<span class="text-sm text-gray-500">
-								{{ teamForm.active ? 'Team is active and visible in selectors' : 'Team is inactive and hidden from selectors' }}
-							</span>
-						</div>
-					</UFormGroup>
-				</form>
-
-				<template #footer>
-					<div class="flex justify-end gap-2">
-						<UButton color="gray" variant="ghost" @click="cancelTeamForm">Cancel</UButton>
-						<UButton color="primary" :loading="submittingTeam" :disabled="!teamForm.name" @click="submitTeamForm">
-							{{ isEditing ? 'Save Changes' : 'Create Team' }}
-						</UButton>
-					</div>
-				</template>
-			</UCard>
+			<div class="flex justify-end gap-2 p-4 border-t border-gray-200 dark:border-gray-700">
+				<UButton color="gray" variant="ghost" @click="cancelTeamForm">Cancel</UButton>
+				<UButton color="primary" :loading="submittingTeam" :disabled="!teamForm.name" @click="submitTeamForm">
+					{{ isEditing ? 'Save Changes' : 'Create Team' }}
+				</UButton>
+			</div>
 		</UModal>
 
 		<!-- Delete Confirmation Modal -->
 		<UModal v-model="showDeleteTeamModal">
-			<UCard>
-				<template #header>
-					<h3 class="text-lg font-semibold text-red-600">Delete Team</h3>
-				</template>
+			<div class="p-4 border-b border-gray-200 dark:border-gray-700">
+				<h3 class="text-lg font-semibold text-red-600">Delete Team</h3>
+			</div>
 
-				<div>
-					<p class="mb-4">Are you sure you want to delete the team "{{ currentEditTeam?.name }}"?</p>
-					<p class="text-sm text-gray-500">
-						This action cannot be undone. All team associations will be removed, but user accounts will remain.
-					</p>
-				</div>
+			<div class="p-4">
+				<p class="mb-4">Are you sure you want to delete the team "{{ currentEditTeam?.name }}"?</p>
+				<p class="text-sm text-gray-500">
+					This action cannot be undone. All team associations will be removed, but user accounts will remain.
+				</p>
+			</div>
 
-				<template #footer>
-					<div class="flex justify-end gap-2">
-						<UButton color="gray" variant="ghost" @click="showDeleteTeamModal = false">Cancel</UButton>
-						<UButton color="red" :loading="deletingTeam" @click="deleteTeam">Delete Team</UButton>
-					</div>
-				</template>
-			</UCard>
+			<div class="flex justify-end gap-2 p-4 border-t border-gray-200 dark:border-gray-700">
+				<UButton color="gray" variant="ghost" @click="showDeleteTeamModal = false">Cancel</UButton>
+				<UButton color="red" :loading="deletingTeam" @click="deleteTeam">Delete Team</UButton>
+			</div>
 		</UModal>
 	</div>
 </template>

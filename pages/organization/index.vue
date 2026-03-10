@@ -609,208 +609,186 @@ watch(searchEmail, (val) => {
 
 		<!-- Edit Organization Modal -->
 		<UModal v-model="showEditOrgModal">
-			<UCard>
-				<template #header>
-					<div class="flex items-center justify-between">
-						<h3 class="text-lg font-semibold">Edit Organization</h3>
-						<UButton color="gray" variant="ghost" icon="i-heroicons-x-mark" @click="showEditOrgModal = false" />
+			<div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+				<h3 class="text-lg font-semibold">Edit Organization</h3>
+				<UButton color="gray" variant="ghost" icon="i-heroicons-x-mark" @click="showEditOrgModal = false" />
+			</div>
+
+			<form @submit.prevent="saveOrganization" class="space-y-4 p-4">
+				<UFormGroup label="Organization Name" required>
+					<UInput v-model="editForm.name" placeholder="Organization name" />
+				</UFormGroup>
+
+				<UFormGroup label="Website">
+					<UInput v-model="editForm.website" placeholder="https://example.com" />
+				</UFormGroup>
+
+				<UFormGroup label="Phone">
+					<UInput v-model="editForm.phone" placeholder="+1 (555) 000-0000" />
+				</UFormGroup>
+
+				<UFormGroup label="Notes">
+					<UInput v-model="editForm.notes" placeholder="Organization description or notes" />
+				</UFormGroup>
+
+				<UFormGroup label="Brand Color">
+					<div class="flex items-center gap-3">
+						<input
+							type="color"
+							v-model="editForm.brand_color"
+							class="w-10 h-10 rounded cursor-pointer border border-gray-200"
+						/>
+						<UInput v-model="editForm.brand_color" placeholder="#000000" class="flex-1" />
 					</div>
-				</template>
+				</UFormGroup>
 
-				<form @submit.prevent="saveOrganization" class="space-y-4">
-					<UFormGroup label="Organization Name" required>
-						<UInput v-model="editForm.name" placeholder="Organization name" />
-					</UFormGroup>
-
-					<UFormGroup label="Website">
-						<UInput v-model="editForm.website" placeholder="https://example.com" />
-					</UFormGroup>
-
-					<UFormGroup label="Phone">
-						<UInput v-model="editForm.phone" placeholder="+1 (555) 000-0000" />
-					</UFormGroup>
-
-					<UFormGroup label="Notes">
-						<UInput v-model="editForm.notes" placeholder="Organization description or notes" />
-					</UFormGroup>
-
-					<UFormGroup label="Brand Color">
-						<div class="flex items-center gap-3">
-							<input
-								type="color"
-								v-model="editForm.brand_color"
-								class="w-10 h-10 rounded cursor-pointer border border-gray-200"
-							/>
-							<UInput v-model="editForm.brand_color" placeholder="#000000" class="flex-1" />
-						</div>
-					</UFormGroup>
-
-					<UFormGroup label="Active">
-						<div class="flex items-center gap-3">
-							<UToggle v-model="editForm.active" />
-							<span class="text-sm text-gray-500">
-								{{ editForm.active ? 'Organization is active and visible in selectors' : 'Organization is inactive and hidden from selectors' }}
-							</span>
-						</div>
-					</UFormGroup>
-				</form>
-
-				<template #footer>
-					<div class="flex justify-end gap-2">
-						<UButton color="gray" variant="ghost" @click="showEditOrgModal = false">Cancel</UButton>
-						<UButton color="primary" :loading="savingOrg" :disabled="!editForm.name" @click="saveOrganization">
-							Save Changes
-						</UButton>
+				<UFormGroup label="Active">
+					<div class="flex items-center gap-3">
+						<UToggle v-model="editForm.active" />
+						<span class="text-sm text-gray-500">
+							{{ editForm.active ? 'Organization is active and visible in selectors' : 'Organization is inactive and hidden from selectors' }}
+						</span>
 					</div>
-				</template>
-			</UCard>
+				</UFormGroup>
+			</form>
+
+			<div class="flex justify-end gap-2 p-4 border-t border-gray-200 dark:border-gray-700">
+				<UButton color="gray" variant="ghost" @click="showEditOrgModal = false">Cancel</UButton>
+				<UButton color="primary" :loading="savingOrg" :disabled="!editForm.name" @click="saveOrganization">
+					Save Changes
+				</UButton>
+			</div>
 		</UModal>
 
 		<!-- Invite Member Modal -->
 		<UModal v-model="showInviteModal">
-			<UCard>
-				<template #header>
-					<div class="flex items-center justify-between">
-						<h3 class="text-lg font-semibold">Invite Member</h3>
-						<UButton color="gray" variant="ghost" icon="i-heroicons-x-mark" @click="showInviteModal = false" />
-					</div>
-				</template>
+			<div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+				<h3 class="text-lg font-semibold">Invite Member</h3>
+				<UButton color="gray" variant="ghost" icon="i-heroicons-x-mark" @click="showInviteModal = false" />
+			</div>
 
-				<form @submit.prevent="sendInvitation" class="space-y-4">
-					<p class="text-sm text-gray-500">
-						Send an email invitation to join this organization. The user will receive an email with instructions to create their account.
-					</p>
+			<form @submit.prevent="sendInvitation" class="space-y-4 p-4">
+				<p class="text-sm text-gray-500">
+					Send an email invitation to join this organization. The user will receive an email with instructions to create their account.
+				</p>
 
-					<UFormGroup label="Email Address" required>
-						<UInput
-							v-model="inviteForm.email"
-							type="email"
-							placeholder="user@example.com"
-							icon="i-heroicons-envelope"
-						/>
-					</UFormGroup>
+				<UFormGroup label="Email Address" required>
+					<UInput
+						v-model="inviteForm.email"
+						type="email"
+						placeholder="user@example.com"
+						icon="i-heroicons-envelope"
+					/>
+				</UFormGroup>
 
-					<UFormGroup label="Role">
-						<USelect
-							v-model="inviteForm.role"
-							:options="roleOptions"
-							option-attribute="label"
-							value-attribute="value"
-						/>
-					</UFormGroup>
-				</form>
+				<UFormGroup label="Role">
+					<USelect
+						v-model="inviteForm.role"
+						:options="roleOptions"
+						option-attribute="label"
+						value-attribute="value"
+					/>
+				</UFormGroup>
+			</form>
 
-				<template #footer>
-					<div class="flex justify-end gap-2">
-						<UButton color="gray" variant="ghost" @click="showInviteModal = false">Cancel</UButton>
-						<UButton
-							color="primary"
-							:loading="sendingInvite"
-							:disabled="!inviteForm.email"
-							@click="sendInvitation"
-						>
-							Send Invitation
-						</UButton>
-					</div>
-				</template>
-			</UCard>
+			<div class="flex justify-end gap-2 p-4 border-t border-gray-200 dark:border-gray-700">
+				<UButton color="gray" variant="ghost" @click="showInviteModal = false">Cancel</UButton>
+				<UButton
+					color="primary"
+					:loading="sendingInvite"
+					:disabled="!inviteForm.email"
+					@click="sendInvitation"
+				>
+					Send Invitation
+				</UButton>
+			</div>
 		</UModal>
 
 		<!-- Add Existing User Modal -->
 		<UModal v-model="showAddMemberModal" :ui="{ width: 'max-w-lg' }">
-			<UCard>
-				<template #header>
-					<div class="flex items-center justify-between">
-						<h3 class="text-lg font-semibold">Add Member to Organization</h3>
-						<UButton color="gray" variant="ghost" icon="i-heroicons-x-mark" @click="showAddMemberModal = false" />
-					</div>
-				</template>
+			<div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+				<h3 class="text-lg font-semibold">Add Member to Organization</h3>
+				<UButton color="gray" variant="ghost" icon="i-heroicons-x-mark" @click="showAddMemberModal = false" />
+			</div>
 
-				<div class="space-y-4">
-					<p class="text-sm text-gray-500">
-						Search for existing users to add them to this organization.
-					</p>
+			<div class="space-y-4 p-4">
+				<p class="text-sm text-gray-500">
+					Search for existing users to add them to this organization.
+				</p>
 
-					<UFormGroup label="Search Users">
-						<UInput
-							v-model="searchEmail"
-							placeholder="Search by name or email..."
-							icon="i-heroicons-magnifying-glass"
-						/>
-					</UFormGroup>
+				<UFormGroup label="Search Users">
+					<UInput
+						v-model="searchEmail"
+						placeholder="Search by name or email..."
+						icon="i-heroicons-magnifying-glass"
+					/>
+				</UFormGroup>
 
-					<div v-if="searching" class="flex justify-center py-4">
-						<UIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin text-gray-500" />
-					</div>
-
-					<div v-else-if="searchResults.length > 0" class="space-y-2 max-h-64 overflow-y-auto">
-						<div
-							v-for="result in searchResults"
-							:key="result.id"
-							class="flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-gray-700"
-						>
-							<div class="flex items-center space-x-3">
-								<UAvatar
-									:src="result.avatar ? `${config.public.directusUrl}/assets/${result.avatar}?key=small` : null"
-									:alt="`${result.first_name} ${result.last_name}`"
-									size="sm"
-								/>
-								<div>
-									<p class="font-medium text-sm">{{ result.first_name }} {{ result.last_name }}</p>
-									<p class="text-xs text-gray-500">{{ result.email }}</p>
-								</div>
-							</div>
-							<UButton
-								color="primary"
-								variant="outline"
-								size="xs"
-								icon="i-heroicons-plus"
-								:loading="addingUser"
-								@click="addUserToOrganization(result.id)"
-							>
-								Add
-							</UButton>
-						</div>
-					</div>
-
-					<p v-else-if="searchEmail.length >= 2 && !searching" class="text-center text-sm text-gray-500 py-4">
-						No users found matching your search.
-					</p>
+				<div v-if="searching" class="flex justify-center py-4">
+					<UIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin text-gray-500" />
 				</div>
 
-				<template #footer>
-					<div class="flex justify-end">
-						<UButton color="gray" variant="ghost" @click="showAddMemberModal = false">Close</UButton>
+				<div v-else-if="searchResults.length > 0" class="space-y-2 max-h-64 overflow-y-auto">
+					<div
+						v-for="result in searchResults"
+						:key="result.id"
+						class="flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-gray-700"
+					>
+						<div class="flex items-center space-x-3">
+							<UAvatar
+								:src="result.avatar ? `${config.public.directusUrl}/assets/${result.avatar}?key=small` : null"
+								:alt="`${result.first_name} ${result.last_name}`"
+								size="sm"
+							/>
+							<div>
+								<p class="font-medium text-sm">{{ result.first_name }} {{ result.last_name }}</p>
+								<p class="text-xs text-gray-500">{{ result.email }}</p>
+							</div>
+						</div>
+						<UButton
+							color="primary"
+							variant="outline"
+							size="xs"
+							icon="i-heroicons-plus"
+							:loading="addingUser"
+							@click="addUserToOrganization(result.id)"
+						>
+							Add
+						</UButton>
 					</div>
-				</template>
-			</UCard>
+				</div>
+
+				<p v-else-if="searchEmail.length >= 2 && !searching" class="text-center text-sm text-gray-500 py-4">
+					No users found matching your search.
+				</p>
+			</div>
+
+			<div class="flex justify-end p-4 border-t border-gray-200 dark:border-gray-700">
+				<UButton color="gray" variant="ghost" @click="showAddMemberModal = false">Close</UButton>
+			</div>
 		</UModal>
 
 		<!-- Remove Member Confirmation Modal -->
 		<UModal v-model="showRemoveMemberModal">
-			<UCard>
-				<template #header>
-					<h3 class="text-lg font-semibold text-red-600">Remove Member</h3>
-				</template>
+			<div class="p-4 border-b border-gray-200 dark:border-gray-700">
+				<h3 class="text-lg font-semibold text-red-600">Remove Member</h3>
+			</div>
 
-				<div>
-					<p class="mb-4">
-						Are you sure you want to remove
-						<strong>{{ memberToRemove?.first_name }} {{ memberToRemove?.last_name }}</strong>
-						from this organization?
-					</p>
-					<p class="text-sm text-gray-500">
-						This will remove their access to organization resources. Their user account will remain active.
-					</p>
-				</div>
+			<div class="p-4">
+				<p class="mb-4">
+					Are you sure you want to remove
+					<strong>{{ memberToRemove?.first_name }} {{ memberToRemove?.last_name }}</strong>
+					from this organization?
+				</p>
+				<p class="text-sm text-gray-500">
+					This will remove their access to organization resources. Their user account will remain active.
+				</p>
+			</div>
 
-				<template #footer>
-					<div class="flex justify-end gap-2">
-						<UButton color="gray" variant="ghost" @click="showRemoveMemberModal = false">Cancel</UButton>
-						<UButton color="red" :loading="removingMember" @click="removeMember">Remove Member</UButton>
-					</div>
-				</template>
-			</UCard>
+			<div class="flex justify-end gap-2 p-4 border-t border-gray-200 dark:border-gray-700">
+				<UButton color="gray" variant="ghost" @click="showRemoveMemberModal = false">Cancel</UButton>
+				<UButton color="red" :loading="removingMember" @click="removeMember">Remove Member</UButton>
+			</div>
 		</UModal>
 	</div>
 </template>
