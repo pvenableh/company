@@ -122,6 +122,37 @@ export default defineEventHandler(async (event) => {
   const appName = (config.public?.companyName as string) || fromName;
   const siteUrl = (config.public?.siteUrl as string) || 'https://huestudios.company';
 
+  // ── Pre-create / update email record as "sending" to get an ID ──────
+  let recordedEmailId = email_id;
+  try {
+    if (email_id) {
+      await directus.request(
+        updateItem('emails', email_id, { status: 'sending' })
+      );
+    } else {
+      const created = await directus.request(
+        createItem('emails', {
+          status: 'sending',
+          name: name || template.name,
+          subject: emailSubject || template.subject_template || template.name,
+          template_id: template_id,
+          target_lists: target_lists || null,
+          cc_list: cc_list || null,
+          bcc_list: bcc_list || null,
+          custom_variables: custom_variables || null,
+        })
+      );
+      recordedEmailId = (created as any)?.id;
+    }
+  } catch (recordErr: any) {
+    console.error('[newsletter-send] Failed to pre-create email record:', recordErr.message);
+  }
+
+  // Build the web view URL (available for the {{web_view_url}} merge tag)
+  const webViewUrl = recordedEmailId
+    ? `${siteUrl}/email/view/${recordedEmailId}`
+    : '';
+
   const errors: string[] = [];
   let sentCount = 0;
 
@@ -131,7 +162,10 @@ export default defineEventHandler(async (event) => {
       appName,
       appUrl: siteUrl,
       year: new Date().getFullYear(),
-      emailCustomVars: custom_variables || {},
+      emailCustomVars: {
+        ...(custom_variables || {}),
+        web_view_url: webViewUrl,
+      },
     });
 
     const { html, errors: compileErrors } = compileMjml(template.mjml_source, variables);
@@ -166,49 +200,55 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  // ── Record the sent email in the emails collection ──────────────────
+  // ── Build a generic preview HTML for web view (no personalized data) ──
+  let previewHtml: string | null = null;
   try {
-    if (email_id) {
-      // Update existing email record
+    const previewVars: Record<string, any> = {
+      first_name: '',
+      last_name: '',
+      email: '',
+      full_name: '',
+      formal_name: '',
+      year: new Date().getFullYear(),
+      app_name: appName,
+      app_url: siteUrl,
+      unsubscribe_url: `${siteUrl}/unsubscribe`,
+      web_view_url: webViewUrl,
+      ...(custom_variables || {}),
+    };
+    const previewResult = compileMjml(template.mjml_source, previewVars);
+    if (previewResult.html) {
+      previewHtml = previewResult.html;
+    }
+  } catch {
+    // Non-critical — web view just won't be available
+  }
+
+  // ── Finalize the email record ─────────────────────────────────────────
+  try {
+    if (recordedEmailId) {
       await directus.request(
-        updateItem('emails', email_id, {
+        updateItem('emails', recordedEmailId, {
           status: errors.length === 0 ? 'sent' : 'failed',
           sent_at: new Date().toISOString(),
           total_recipients: contacts.length,
           total_sent: sentCount,
           total_failed: contacts.length - sentCount,
           send_errors: errors.length > 0 ? errors : null,
-        })
-      );
-    } else {
-      // Create a new email record
-      await directus.request(
-        createItem('emails', {
-          status: errors.length === 0 ? 'sent' : 'failed',
-          name: name || template.name,
-          subject: emailSubject || template.subject_template || template.name,
-          template_id: template_id,
-          target_lists: target_lists || null,
-          cc_list: cc_list || null,
-          bcc_list: bcc_list || null,
-          custom_variables: custom_variables || null,
-          sent_at: new Date().toISOString(),
-          total_recipients: contacts.length,
-          total_sent: sentCount,
-          total_failed: contacts.length - sentCount,
-          send_errors: errors.length > 0 ? errors : null,
+          preview_html: previewHtml,
         })
       );
     }
   } catch (recordErr: any) {
-    // Don't fail the send if recording fails
-    console.error('[newsletter-send] Failed to record email:', recordErr.message);
+    console.error('[newsletter-send] Failed to update email record:', recordErr.message);
   }
 
   return {
     success: errors.length === 0,
     sent: sentCount,
     total: contacts.length,
+    email_id: recordedEmailId,
+    web_view_url: recordedEmailId ? `/email/view/${recordedEmailId}` : undefined,
     errors: errors.length > 0 ? errors : undefined,
   };
 });

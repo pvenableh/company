@@ -33,11 +33,51 @@
 
     <div class="flex flex-1 overflow-hidden">
       <!-- Block Library Sidebar -->
-      <BlockLibrarySidebar
-        :library="blockLibrary"
-        class="w-64 shrink-0 border-r overflow-y-auto"
-        @add-block="builder.addBlock($event)"
-      />
+      <div class="w-64 shrink-0 border-r overflow-y-auto flex flex-col">
+        <BlockLibrarySidebar
+          :library="blockLibrary"
+          class="flex-1"
+          @add-block="builder.addBlock($event)"
+        />
+
+        <!-- Partial Toggles -->
+        <div class="border-t p-3 space-y-2 bg-background">
+          <p class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Attachments</p>
+          <label class="flex items-center gap-2 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              :checked="builder.includeWebVersionBar.value"
+              class="rounded border-border"
+              @change="handlePartialToggle('web_version_bar', ($event.target as HTMLInputElement).checked)"
+            />
+            <span>Web version bar</span>
+          </label>
+          <label class="flex items-center gap-2 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              :checked="builder.includeHeader.value"
+              class="rounded border-border"
+              @change="handlePartialToggle('header', ($event.target as HTMLInputElement).checked)"
+            />
+            <span>Header</span>
+            <span v-if="builder.headerPartial.value" class="text-xs text-muted-foreground truncate">
+              ({{ builder.headerPartial.value.name }})
+            </span>
+          </label>
+          <label class="flex items-center gap-2 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              :checked="builder.includeFooter.value"
+              class="rounded border-border"
+              @change="handlePartialToggle('footer', ($event.target as HTMLInputElement).checked)"
+            />
+            <span>Footer</span>
+            <span v-if="builder.footerPartial.value" class="text-xs text-muted-foreground truncate">
+              ({{ builder.footerPartial.value.name }})
+            </span>
+          </label>
+        </div>
+      </div>
 
       <!-- Canvas -->
       <div class="flex-1 overflow-y-auto bg-muted/30 p-6">
@@ -102,6 +142,11 @@ onMounted(async () => {
 
 function handleVarsUpdate(payload: { id: string; vars: Record<string, any> }) {
   builder.updateBlockVariables(payload.id, payload.vars);
+  debouncedPreview();
+}
+
+function handlePartialToggle(type: 'header' | 'footer' | 'web_version_bar', value: boolean) {
+  builder.togglePartial(type, value);
   debouncedPreview();
 }
 

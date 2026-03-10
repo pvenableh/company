@@ -79,11 +79,39 @@ export interface EmailTemplate {
   date_updated: string | null;
   user_created: string | User | null;
   user_updated: string | User | null;
+
+  // Partial toggles (all default to true)
+  include_header: boolean;
+  include_footer: boolean;
+  include_web_version_bar: boolean;
+  header_partial_id: number | EmailPartial | null;
+  footer_partial_id: number | EmailPartial | null;
 }
 
 export interface MjmlCompileResult {
   html: string;
   errors: string[];
+}
+
+// ── Email Partials (header / footer / web-version bar) ──────────────────────
+
+export type EmailPartialType = 'header' | 'footer' | 'web_version_bar';
+
+export interface EmailPartial {
+  id: number;
+  status: 'published' | 'draft';
+  user_created: string | User | null;
+  user_updated: string | User | null;
+  date_created: string | null;
+  date_updated: string | null;
+  name: string;
+  slug: string;
+  type: EmailPartialType;
+  description: string | null;
+  mjml_source: string;
+  variables_schema: BlockVariableDefinition[] | null;
+  instance_variables: Record<string, any> | null;
+  is_default: boolean;
 }
 
 // ── Emails (sent campaigns / newsletters) ──────────────────────────────────

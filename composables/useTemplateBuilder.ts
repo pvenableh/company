@@ -1,12 +1,14 @@
 import { nanoid } from 'nanoid';
 import type {
   CanvasBlock,
+  EmailPartial,
   NewsletterBlock,
   TemplateBlockWithBlock,
 } from '~/types/email/blocks';
 
 export function useTemplateBuilder(templateId: Ref<number>) {
   const { previewNewsletter } = useEmailTemplates();
+  const { getDefaultPartial, getPartial } = useEmailPartials();
   const templateBlockItems = useDirectusItems('template_blocks');
   const emailTemplateItems = useDirectusItems('email_templates');
 
@@ -16,7 +18,15 @@ export function useTemplateBuilder(templateId: Ref<number>) {
   const isDirty = ref(false);
   const saving = ref(false);
 
-  // ── Load existing template blocks ──────────────────────────────────
+  // Partial toggles
+  const includeHeader = ref(true);
+  const includeFooter = ref(true);
+  const includeWebVersionBar = ref(true);
+  const headerPartial = ref<EmailPartial | null>(null);
+  const footerPartial = ref<EmailPartial | null>(null);
+  const webVersionBarPartial = ref<EmailPartial | null>(null);
+
+  // ── Load existing template blocks + partial settings ───────────────
   const loadBlocks = async () => {
     const blocks = await templateBlockItems.list({
       fields: ['*', 'block_id.*'],
@@ -31,6 +41,29 @@ export function useTemplateBuilder(templateId: Ref<number>) {
       variables: tb.instance_variables || {},
       sort: i,
     }));
+
+    // Load template partial settings
+    const tmpl = await emailTemplateItems.get(templateId.value, {
+      fields: ['include_header', 'include_footer', 'include_web_version_bar', 'header_partial_id', 'footer_partial_id'],
+    }) as any;
+
+    includeHeader.value = tmpl.include_header !== false;
+    includeFooter.value = tmpl.include_footer !== false;
+    includeWebVersionBar.value = tmpl.include_web_version_bar !== false;
+
+    // Load partials (from template or defaults)
+    await loadPartials(tmpl.header_partial_id, tmpl.footer_partial_id);
+  };
+
+  const loadPartials = async (headerId?: number | null, footerId?: number | null) => {
+    const [header, footer, webBar] = await Promise.all([
+      headerId ? getPartial(headerId) : getDefaultPartial('header'),
+      footerId ? getPartial(footerId) : getDefaultPartial('footer'),
+      getDefaultPartial('web_version_bar'),
+    ]);
+    headerPartial.value = header;
+    footerPartial.value = footer;
+    webVersionBarPartial.value = webBar;
   };
 
   // ── Canvas operations ──────────────────────────────────────────────
@@ -82,14 +115,46 @@ export function useTemplateBuilder(templateId: Ref<number>) {
   };
 
   // ── MJML Assembly ──────────────────────────────────────────────────
+  const resolvePartialMjml = (partial: EmailPartial | null): string => {
+    if (!partial) return '';
+    let source = partial.mjml_source;
+    const vars = partial.instance_variables || {};
+    // Replace design-time variables
+    if (partial.variables_schema) {
+      for (const def of partial.variables_schema) {
+        const value = vars[def.key] ?? def.default ?? '';
+        source = source.replaceAll(`{{{${def.key}}}}`, String(value));
+      }
+    }
+    return source;
+  };
+
   const assembleMjml = (): string => {
-    const blocksWithVars = canvas.value.map((cb) => {
+    const sections: string[] = [];
+
+    // Web version bar (always first if enabled)
+    if (includeWebVersionBar.value && webVersionBarPartial.value) {
+      sections.push(resolvePartialMjml(webVersionBarPartial.value));
+    }
+
+    // Header partial
+    if (includeHeader.value && headerPartial.value) {
+      sections.push(resolvePartialMjml(headerPartial.value));
+    }
+
+    // Canvas blocks
+    for (const cb of canvas.value) {
       let source = cb.block.mjml_source;
       for (const [key, value] of Object.entries(cb.variables)) {
         source = source.replaceAll(`{{{${key}}}}`, String(value ?? ''));
       }
-      return source;
-    });
+      sections.push(source);
+    }
+
+    // Footer partial
+    if (includeFooter.value && footerPartial.value) {
+      sections.push(resolvePartialMjml(footerPartial.value));
+    }
 
     return `<mjml>
   <mj-head>
@@ -104,7 +169,7 @@ export function useTemplateBuilder(templateId: Ref<number>) {
     </mj-style>
   </mj-head>
   <mj-body background-color="#f4f4f4">
-${blocksWithVars.join('\n')}
+${sections.join('\n')}
   </mj-body>
 </mjml>`;
   };
@@ -155,11 +220,16 @@ ${blocksWithVars.join('\n')}
         });
       }
 
-      // 4. Update email_template with compiled MJML
+      // 4. Update email_template with compiled MJML + partial settings
       await emailTemplateItems.update(templateId.value, {
         mjml_source: assembledMjml,
         mjml_assembled_at: new Date().toISOString(),
         block_count: canvas.value.length,
+        include_header: includeHeader.value,
+        include_footer: includeFooter.value,
+        include_web_version_bar: includeWebVersionBar.value,
+        header_partial_id: headerPartial.value?.id || null,
+        footer_partial_id: footerPartial.value?.id || null,
       });
 
       isDirty.value = false;
@@ -176,17 +246,31 @@ ${blocksWithVars.join('\n')}
     );
   }
 
+  const togglePartial = (type: 'header' | 'footer' | 'web_version_bar', value: boolean) => {
+    if (type === 'header') includeHeader.value = value;
+    else if (type === 'footer') includeFooter.value = value;
+    else includeWebVersionBar.value = value;
+    isDirty.value = true;
+  };
+
   return {
     canvas,
     previewHtml,
     previewErrors,
     isDirty,
     saving,
+    includeHeader,
+    includeFooter,
+    includeWebVersionBar,
+    headerPartial,
+    footerPartial,
+    webVersionBarPartial,
     loadBlocks,
     addBlock,
     removeBlock,
     moveBlock,
     updateBlockVariables,
+    togglePartial,
     assembleMjml,
     refreshPreview,
     save,

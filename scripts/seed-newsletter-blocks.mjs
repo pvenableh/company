@@ -525,6 +525,130 @@ const BLOCKS = [
   },
 ];
 
+// ─── DEFAULT EMAIL PARTIALS ──────────────────────────────────────────────────
+
+const PARTIALS = [
+  {
+    name: 'Web Version Bar',
+    slug: 'web-version-bar-default',
+    type: 'web_version_bar',
+    is_default: true,
+    description: 'Small bar at the top of every email with a link to view in browser',
+    mjml_source: `<mj-section background-color="#f4f4f4" padding="8px 30px">
+  <mj-column>
+    <mj-text align="center" font-size="11px" color="#999999" line-height="1.4">
+      Having trouble viewing this email? <a href="{{web_view_url}}" style="color:#999999;text-decoration:underline;">View in your browser</a>
+    </mj-text>
+  </mj-column>
+</mj-section>`,
+    variables_schema: [],
+    instance_variables: {},
+  },
+  {
+    name: 'Default Header',
+    slug: 'header-default',
+    type: 'header',
+    is_default: true,
+    description: 'Default centered logo header attached to all newsletters',
+    mjml_source: `<mj-section background-color="{{{bg_color}}}" padding="24px 30px">
+  <mj-column>
+    <mj-image src="{{{logo_url}}}" width="{{{logo_width}}}" alt="{{{org_name}}}" align="center" href="{{{site_url}}}" />
+  </mj-column>
+</mj-section>`,
+    variables_schema: [
+      { key: 'bg_color', label: 'Background Color', type: 'color', default: '#ffffff' },
+      { key: 'logo_url', label: 'Logo Image URL', type: 'image', default: '' },
+      { key: 'logo_width', label: 'Logo Width', type: 'text', default: '160px' },
+      { key: 'org_name', label: 'Organization Name', type: 'text', default: 'Your Organization' },
+      { key: 'site_url', label: 'Site URL', type: 'url', default: 'https://yourdomain.com' },
+    ],
+    instance_variables: {
+      bg_color: '#ffffff',
+      logo_url: '',
+      logo_width: '160px',
+      org_name: 'Your Organization',
+      site_url: 'https://yourdomain.com',
+    },
+  },
+  {
+    name: 'Default Footer',
+    slug: 'footer-default',
+    type: 'footer',
+    is_default: true,
+    description: 'Default footer with copyright, unsubscribe, and privacy links',
+    mjml_source: `<mj-section background-color="{{{bg_color}}}" padding="32px 30px">
+  <mj-column>
+    <mj-text align="center" font-size="13px" color="{{{text_color}}}" line-height="1.7" padding-bottom="12px">{{{address}}}</mj-text>
+    <mj-divider border-color="{{{divider_color}}}" border-width="1px" width="60%" padding="8px 0" />
+    <mj-text align="center" font-size="12px" color="{{{muted_color}}}" line-height="1.7" padding-top="8px">&copy; {{year}} {{{org_name}}}. All rights reserved.<br /><a href="{{unsubscribe_url}}" style="color:{{{muted_color}}};text-decoration:underline;">Unsubscribe</a>&nbsp;&middot;&nbsp;<a href="{{{privacy_url}}}" style="color:{{{muted_color}}};text-decoration:underline;">Privacy Policy</a></mj-text>
+  </mj-column>
+</mj-section>`,
+    variables_schema: [
+      { key: 'bg_color', label: 'Background Color', type: 'color', default: '#f4f4f4' },
+      { key: 'address', label: 'Mailing Address', type: 'text', default: '123 Main St, City, State 00000' },
+      { key: 'org_name', label: 'Organization Name', type: 'text', default: 'Your Organization' },
+      { key: 'text_color', label: 'Text Color', type: 'color', default: '#666666' },
+      { key: 'muted_color', label: 'Muted Text Color', type: 'color', default: '#aaaaaa' },
+      { key: 'divider_color', label: 'Divider Color', type: 'color', default: '#dddddd' },
+      { key: 'privacy_url', label: 'Privacy Policy URL', type: 'url', default: '#privacy' },
+    ],
+    instance_variables: {
+      bg_color: '#f4f4f4',
+      address: '123 Main St, City, State 00000',
+      org_name: 'Your Organization',
+      text_color: '#666666',
+      muted_color: '#aaaaaa',
+      divider_color: '#dddddd',
+      privacy_url: '#privacy',
+    },
+  },
+];
+
+async function seedPartials() {
+  console.log(`\nSeeding ${PARTIALS.length} email partials...`);
+  console.log('');
+
+  let created = 0;
+  let skipped = 0;
+  let failed = 0;
+
+  for (const partial of PARTIALS) {
+    try {
+      const existingRes = await fetch(
+        `${DIRECTUS_URL}/items/email_partials?filter[slug][_eq]=${encodeURIComponent(partial.slug)}&limit=1`,
+        { headers }
+      );
+      const existing = await existingRes.json();
+
+      if (existing?.data?.length > 0) {
+        console.log(`  [skip] "${partial.name}" (already exists)`);
+        skipped++;
+        continue;
+      }
+
+      const result = await fetch(`${DIRECTUS_URL}/items/email_partials`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ ...partial, status: 'published' }),
+      }).then((r) => r.json());
+
+      if (result.data?.id) {
+        console.log(`  [ok]   Created: ${partial.name} (id: ${result.data.id})`);
+        created++;
+      } else {
+        console.error(`  [fail] ${partial.name}:`, JSON.stringify(result.errors || result));
+        failed++;
+      }
+    } catch (err) {
+      console.error(`  [fail] ${partial.name}:`, err.message);
+      failed++;
+    }
+  }
+
+  console.log('');
+  console.log(`Partials — Created: ${created}, Skipped: ${skipped}, Failed: ${failed}`);
+}
+
 async function seedBlocks() {
   console.log(`Seeding ${BLOCKS.length} blocks to ${DIRECTUS_URL}...`);
   console.log('');
@@ -571,4 +695,9 @@ async function seedBlocks() {
   console.log(`Done. Created: ${created}, Skipped: ${skipped}, Failed: ${failed}`);
 }
 
-seedBlocks().catch(console.error);
+async function seedAll() {
+  await seedBlocks();
+  await seedPartials();
+}
+
+seedAll().catch(console.error);
