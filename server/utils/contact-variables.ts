@@ -10,7 +10,7 @@ export function buildContactVariableMap(
     appName: string;
     appUrl: string;
     year: number;
-    announcementCustomVars?: Record<string, any>;
+    emailCustomVars?: Record<string, any>;
   }
 ): Record<string, any> {
   const unsubscribeUrl = contact.unsubscribe_token
@@ -18,8 +18,8 @@ export function buildContactVariableMap(
     : `${globals.appUrl}/unsubscribe`;
 
   return {
-    // Announcement-level custom variables (lowest priority)
-    ...(globals.announcementCustomVars || {}),
+    // Email-level custom variables (lowest priority)
+    ...(globals.emailCustomVars || {}),
 
     // All contact fields (spread directly as merge tags)
     ...contact,

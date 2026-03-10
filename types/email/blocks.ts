@@ -81,27 +81,42 @@ export interface EmailTemplate {
   user_updated: string | User | null;
 }
 
-export interface ContactList {
-  id: number;
-  status: 'published' | 'draft';
-  name: string;
-  description: string | null;
-  member_count: number | null;
-  date_created: string | null;
-  user_created: string | User | null;
-  members?: ContactListMember[];
-}
-
-export interface ContactListMember {
-  id: number;
-  list_id: number | ContactList;
-  contact_id: number;
-  subscribed: boolean;
-  date_subscribed: string;
-  date_unsubscribed: string | null;
-}
-
 export interface MjmlCompileResult {
   html: string;
   errors: string[];
+}
+
+// ── Emails (sent campaigns / newsletters) ──────────────────────────────────
+
+export type EmailStatus = 'draft' | 'scheduled' | 'sending' | 'sent' | 'failed' | 'archived';
+
+export interface Email {
+  id: number;
+  status: EmailStatus;
+  user_created: string | User | null;
+  user_updated: string | User | null;
+  date_created: string | null;
+  date_updated: string | null;
+
+  // Content
+  name: string;
+  subject: string | null;
+  template_id: number | EmailTemplate | null;
+
+  // Targeting
+  target_lists: number[] | null;
+  cc_list: string[] | null;
+  bcc_list: string[] | null;
+  custom_variables: Record<string, any> | null;
+
+  // Send tracking
+  scheduled_at: string | null;
+  sent_at: string | null;
+  total_recipients: number | null;
+  total_sent: number | null;
+  total_failed: number | null;
+  send_errors: string[] | null;
+
+  // Preview (cached at send time)
+  preview_html: string | null;
 }

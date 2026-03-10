@@ -1,5 +1,5 @@
 /**
- * Send a test email to a single address without creating an announcement.
+ * Send a test email to a single address.
  * Used by the template editor "Send Test" button.
  */
 import sgMail from '@sendgrid/mail';

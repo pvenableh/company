@@ -6,12 +6,15 @@
 import sgMail from '@sendgrid/mail';
 import { compileMjml, compileSubject } from '~/server/utils/mjml-compiler';
 import { buildContactVariableMap } from '~/server/utils/contact-variables';
-import { readItems, readItem } from '@directus/sdk';
+import { readItems, readItem, createItem, updateItem } from '@directus/sdk';
 
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig();
   const {
+    email_id,
     template_id,
+    name,
+    subject: emailSubject,
     target_lists,
     recipient_ids,
     cc_list,
@@ -128,7 +131,7 @@ export default defineEventHandler(async (event) => {
       appName,
       appUrl: siteUrl,
       year: new Date().getFullYear(),
-      announcementCustomVars: custom_variables || {},
+      emailCustomVars: custom_variables || {},
     });
 
     const { html, errors: compileErrors } = compileMjml(template.mjml_source, variables);
@@ -161,6 +164,45 @@ export default defineEventHandler(async (event) => {
     } catch (err: any) {
       errors.push(`Failed to send to ${contact.email}: ${err.message}`);
     }
+  }
+
+  // ── Record the sent email in the emails collection ──────────────────
+  try {
+    if (email_id) {
+      // Update existing email record
+      await directus.request(
+        updateItem('emails', email_id, {
+          status: errors.length === 0 ? 'sent' : 'failed',
+          sent_at: new Date().toISOString(),
+          total_recipients: contacts.length,
+          total_sent: sentCount,
+          total_failed: contacts.length - sentCount,
+          send_errors: errors.length > 0 ? errors : null,
+        })
+      );
+    } else {
+      // Create a new email record
+      await directus.request(
+        createItem('emails', {
+          status: errors.length === 0 ? 'sent' : 'failed',
+          name: name || template.name,
+          subject: emailSubject || template.subject_template || template.name,
+          template_id: template_id,
+          target_lists: target_lists || null,
+          cc_list: cc_list || null,
+          bcc_list: bcc_list || null,
+          custom_variables: custom_variables || null,
+          sent_at: new Date().toISOString(),
+          total_recipients: contacts.length,
+          total_sent: sentCount,
+          total_failed: contacts.length - sentCount,
+          send_errors: errors.length > 0 ? errors : null,
+        })
+      );
+    }
+  } catch (recordErr: any) {
+    // Don't fail the send if recording fails
+    console.error('[newsletter-send] Failed to record email:', recordErr.message);
   }
 
   return {
