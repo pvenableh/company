@@ -15,6 +15,20 @@
 		<transition name="screen">
 			<LayoutScreen v-if="screen" />
 		</transition>
+
+		<!-- AI Assistant FAB -->
+		<button
+			@click="aiTrayOpen = true"
+			class="fixed bottom-20 right-4 md:bottom-6 md:right-6 w-12 h-12 bg-gradient-to-r from-primary to-violet-500 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center z-30 hover:scale-105"
+			title="AI Assistant"
+		>
+			<UIcon name="i-heroicons-sparkles" class="w-6 h-6" />
+		</button>
+
+		<!-- AI Tray -->
+		<ClientOnly>
+			<CommandCenterAITray :is-open="aiTrayOpen" @close="aiTrayOpen = false" />
+		</ClientOnly>
 	</div>
 </template>
 <script setup lang="ts">
@@ -31,6 +45,8 @@ const props = defineProps({
 		default: () => [],
 	},
 });
+
+const aiTrayOpen = ref(false);
 
 const headerLinks = props.links.filter((link) => link.type.includes('header'));
 const footerLinks = props.links.filter((link) => link.type.includes('footer'));
