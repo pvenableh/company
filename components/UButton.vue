@@ -9,8 +9,8 @@ import { cn, convertIconName } from "@/lib/utils";
 const props = withDefaults(
   defineProps<{
     type?: "button" | "submit" | "reset";
-    color?: "primary" | "secondary" | "gray" | "white" | "red" | "green" | "blue" | "yellow" | "orange" | "purple" | "pink" | "destructive";
-    variant?: "solid" | "soft" | "outline" | "ghost" | "link";
+    color?: "primary" | "secondary" | "gray" | "white" | "red" | "green" | "blue" | "yellow" | "orange" | "purple" | "pink" | "destructive" | "emerald" | "amber" | string;
+    variant?: "solid" | "soft" | "subtle" | "outline" | "ghost" | "link";
     size?: "xs" | "sm" | "md" | "lg" | "xl" | "2xs";
     icon?: string;
     trailing?: boolean;
@@ -50,7 +50,9 @@ const emit = defineEmits<{
 
 // Map colors to tailwind classes
 const colorClasses = computed(() => {
-  const { color, variant } = props;
+  const { color } = props;
+  // Map "subtle" to "soft"
+  const variant = props.variant === "subtle" ? "soft" : props.variant;
 
   // Primary color (turquoise)
   if (color === "primary") {
@@ -74,6 +76,22 @@ const colorClasses = computed(() => {
     if (variant === "soft") return "bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400";
     if (variant === "outline") return "border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20";
     if (variant === "ghost") return "text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20";
+  }
+
+  // Emerald
+  if (color === "emerald") {
+    if (variant === "solid") return "bg-emerald-600 text-white hover:bg-emerald-700";
+    if (variant === "soft") return "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400";
+    if (variant === "outline") return "border-emerald-600 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20";
+    if (variant === "ghost") return "text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20";
+  }
+
+  // Amber
+  if (color === "amber") {
+    if (variant === "solid") return "bg-amber-500 text-white hover:bg-amber-600";
+    if (variant === "soft") return "bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400";
+    if (variant === "outline") return "border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20";
+    if (variant === "ghost") return "text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20";
   }
 
   // Gray/Secondary
