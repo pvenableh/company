@@ -1288,6 +1288,7 @@ export interface Organization {
 	parent_organization?: Organization | string | null;
 	email?: string | null;
 	short_name?: string | null;
+	active?: boolean | null;
 	users?: OrganizationsDirectusUser[] | string[];
 	projects?: Project[] | string[];
 	tickets?: Ticket[] | string[];
