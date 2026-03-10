@@ -2238,6 +2238,7 @@ export interface Team {
 	description?: string | null;
 	organization?: Organization | string | null;
 	icon?: DirectusFile | string | null;
+	active?: boolean | null;
 	users?: JunctionDirectusUsersTeam[] | string[];
 	projects?: Project[] | string[];
 }
