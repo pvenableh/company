@@ -43,6 +43,7 @@ const editForm = ref({
 	phone: '',
 	notes: '',
 	brand_color: '',
+	active: true,
 });
 const savingOrg = ref(false);
 
@@ -58,6 +59,7 @@ const openEditModal = () => {
 		phone: org.value.phone || '',
 		notes: org.value.notes || '',
 		brand_color: org.value.brand_color || '',
+		active: org.value.active !== false,
 	};
 	showEditOrgModal.value = true;
 };
@@ -72,6 +74,7 @@ const saveOrganization = async () => {
 			phone: editForm.value.phone,
 			notes: editForm.value.notes,
 			brand_color: editForm.value.brand_color,
+			active: editForm.value.active,
 		});
 		toast.add({ title: 'Success', description: 'Organization updated successfully', color: 'green' });
 		showEditOrgModal.value = false;
@@ -262,6 +265,7 @@ const fetchOrganizationData = async () => {
 				'date_created',
 				'origin_date',
 				'icon',
+				'active',
 			],
 			limit: 1,
 		});
@@ -638,6 +642,15 @@ watch(searchEmail, (val) => {
 								class="w-10 h-10 rounded cursor-pointer border border-gray-200"
 							/>
 							<UInput v-model="editForm.brand_color" placeholder="#000000" class="flex-1" />
+						</div>
+					</UFormGroup>
+
+					<UFormGroup label="Active">
+						<div class="flex items-center gap-3">
+							<UToggle v-model="editForm.active" />
+							<span class="text-sm text-gray-500">
+								{{ editForm.active ? 'Organization is active and visible in selectors' : 'Organization is inactive and hidden from selectors' }}
+							</span>
 						</div>
 					</UFormGroup>
 				</form>
