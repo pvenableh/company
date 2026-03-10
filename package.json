@@ -61,6 +61,7 @@
 		"prettier": "3.2.5",
 		"stripe": "^14.25.0",
 		"tippy.js": "^6.3.7",
+		"tsx": "^4.21.0",
 		"twilio": "^5.10.7",
 		"twilio-video": "^2.33.0",
 		"typescript": "^5.8.2",

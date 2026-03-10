@@ -12,6 +12,48 @@ export interface ExtensionSeoMetadata {
     no_follow?: boolean;
 }
 
+export interface AiChatMessage {
+	/** @primaryKey */
+	id: number;
+	sort?: number | null;
+	/** @required */
+	role: 'user' | 'assistant' | 'system';
+	/** @required */
+	content: string;
+	/** @description Optional metadata: referenced items, suggestion IDs, action taken, etc. */
+	metadata?: Record<string, any> | null;
+	date_created?: string | null;
+	/** @required */
+	session: AiChatSession | string;
+}
+
+export interface AiChatSession {
+	/** @primaryKey */
+	id: number;
+	status?: 'active' | 'archived' | null;
+	/** @description Auto-generated or user-set session title */
+	title?: string | null;
+	/** @description Session context: page, selected items, active module, etc. */
+	context?: Record<string, any> | null;
+	date_created?: string | null;
+	date_updated?: string | null;
+	user?: DirectusUser | string | null;
+	user_created?: DirectusUser | string | null;
+	messages?: string;
+}
+
+export interface AiPreference {
+	/** @primaryKey */
+	id: number;
+	/** @description JSON array of enabled module keys, e.g. ["tickets","projects","invoices"] */
+	enabled_modules?: Record<string, any> | null;
+	date_created?: string | null;
+	date_updated?: string | null;
+	/** @required */
+	user: DirectusUser | string;
+	user_created?: DirectusUser | string | null;
+}
+
 export interface AnimationPreset {
 	/** @primaryKey */
 	id: number;
@@ -765,6 +807,66 @@ export interface CaseStudiesService {
 	sort?: number | null;
 }
 
+export interface CdActivity {
+	/** @primaryKey */
+	id: string;
+	user_created?: DirectusUser | string | null;
+	date_created?: string | null;
+	contact?: CdContact | string | null;
+	type?: 'email' | 'text' | 'call' | 'meeting' | 'linkedin' | 'other' | null;
+	label?: string | null;
+	date?: string | null;
+	note?: string | null;
+	is_response?: boolean | null;
+	response_note?: string | null;
+}
+
+export interface CdContact {
+	/** @primaryKey */
+	id: string;
+	status?: 'published' | 'draft' | 'archived';
+	sort?: number | null;
+	user_created?: DirectusUser | string | null;
+	date_created?: string | null;
+	user_updated?: DirectusUser | string | null;
+	date_updated?: string | null;
+	name?: string | null;
+	first_name?: string | null;
+	last_name?: string | null;
+	title?: string | null;
+	company?: string | null;
+	email?: string | null;
+	phone?: string | null;
+	industry?: 'Technology' | 'Finance' | 'Healthcare' | `Real Estate` | 'Legal' | 'Marketing' | `Venture Capital` | null;
+	met_at?: string | null;
+	rating?: 'hot' | 'warm' | 'nurture' | 'cold' | null;
+	hibernated?: boolean | null;
+	hibernated_at?: string | null;
+	notes?: string | null;
+	is_client?: boolean | null;
+	client_at?: string | null;
+}
+
+export interface CdXpState {
+	/** @primaryKey */
+	id: string;
+	user_created?: DirectusUser | string | null;
+	date_created?: string | null;
+	total_xp?: number | null;
+	level?: number | null;
+	streak?: number | null;
+	last_activity_date?: string | null;
+	total_scans?: number | null;
+	total_contacts?: number | null;
+	fast_followups?: number | null;
+	hot_responses?: number | null;
+	intros?: number | null;
+	unlocked_badges?: Record<string, any> | null;
+	completed_missions?: Record<string, any> | null;
+	missions_date?: string | null;
+	total_clients?: number | null;
+}
+
 export interface Channel {
 	/** @primaryKey */
 	id: string;
@@ -883,6 +985,25 @@ export interface Course {
 	description?: string | null;
 	menu_id?: Menu | string | null;
 	options?: Option[] | string[];
+}
+
+export interface FinancialGoal {
+	/** @primaryKey */
+	id: number;
+	/** @required */
+	year: number;
+	/** @description Q1 revenue target */
+	q1_goal?: number | null;
+	/** @description Q2 revenue target */
+	q2_goal?: number | null;
+	/** @description Q3 revenue target */
+	q3_goal?: number | null;
+	/** @description Q4 revenue target */
+	q4_goal?: number | null;
+	date_created?: string | null;
+	date_updated?: string | null;
+	organization?: Organization | string | null;
+	user_created?: DirectusUser | string | null;
 }
 
 export interface Hero {
@@ -2612,6 +2733,8 @@ export interface DirectusUser {
 	phone?: string | null;
 	cell_phone?: string | null;
 	text_direction?: 'auto' | 'ltr' | 'rtl';
+	industry?: string | null;
+	networking_goal?: string | null;
 	organizations?: OrganizationsDirectusUser[] | string[];
 	teams?: JunctionDirectusUsersTeam[] | string[];
 	policies?: DirectusAccess[] | string[];
@@ -2778,6 +2901,9 @@ export interface DirectusDeploymentRun {
 }
 
 export interface Schema {
+	ai_chat_messages: AiChatMessage[];
+	ai_chat_sessions: AiChatSession[];
+	ai_preferences: AiPreference[];
 	animation_presets: AnimationPreset[];
 	appointments: Appointment[];
 	appointments_directus_users: AppointmentsDirectusUser[];
@@ -2818,12 +2944,16 @@ export interface Schema {
 	case_studies: CaseStudy[];
 	case_studies_files: CaseStudiesFile[];
 	case_studies_services: CaseStudiesService[];
+	cd_activities: CdActivity[];
+	cd_contacts: CdContact[];
+	cd_xp_state: CdXpState[];
 	channels: Channel[];
 	client_testimonials: ClientTestimonial[];
 	comments: Comment[];
 	contacts: Contact[];
 	contacts_organizations: ContactsOrganization[];
 	courses: Course[];
+	financial_goals: FinancialGoal[];
 	heros: Hero[];
 	home: Home;
 	home_files: HomeFile[];
@@ -2942,6 +3072,9 @@ export interface Schema {
 }
 
 export enum CollectionNames {
+	ai_chat_messages = 'ai_chat_messages',
+	ai_chat_sessions = 'ai_chat_sessions',
+	ai_preferences = 'ai_preferences',
 	animation_presets = 'animation_presets',
 	appointments = 'appointments',
 	appointments_directus_users = 'appointments_directus_users',
@@ -2982,12 +3115,16 @@ export enum CollectionNames {
 	case_studies = 'case_studies',
 	case_studies_files = 'case_studies_files',
 	case_studies_services = 'case_studies_services',
+	cd_activities = 'cd_activities',
+	cd_contacts = 'cd_contacts',
+	cd_xp_state = 'cd_xp_state',
 	channels = 'channels',
 	client_testimonials = 'client_testimonials',
 	comments = 'comments',
 	contacts = 'contacts',
 	contacts_organizations = 'contacts_organizations',
 	courses = 'courses',
+	financial_goals = 'financial_goals',
 	heros = 'heros',
 	home = 'home',
 	home_files = 'home_files',
