@@ -8,7 +8,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Building2, Check } from 'lucide-vue-next'
+import { Building2 } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 
 const props = defineProps({
@@ -138,6 +138,7 @@ onUnmounted(() => {
 						v-for="org in organizationOptions"
 						:key="org.id || 'all'"
 						class="flex items-center gap-3 cursor-pointer"
+						:class="{ 'bg-accent': !isAllOrganizations(org) && selectedOrg && org.id === selectedOrg }"
 						@click="handleOrgSelect(org.id)"
 					>
 						<!-- All Organizations icon -->
@@ -177,8 +178,6 @@ onUnmounted(() => {
 								</span>
 							</div>
 
-							<!-- Selected check -->
-							<Check v-if="selectedOrg && org.id === selectedOrg" class="size-3.5 text-[var(--cyan)] shrink-0" />
 						</template>
 					</DropdownMenuItem>
 				</div>
