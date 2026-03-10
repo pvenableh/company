@@ -1,10 +1,66 @@
 // types/social.ts — API and derived types only
 // Directus collection types come from generate:types
 
+// Re-export Directus collection types used across pages and server utils
+export type {
+	SocialAccount,
+	SocialAnalyticsSnapshot,
+	SocialActivityLog,
+	SocialComment,
+} from './directus';
+// Re-export SocialClient and SocialPost with augmented fields for frontend use
+export type { SocialClient } from './directus';
+
 export type SocialPlatform = 'instagram' | 'tiktok';
 export type PostType = 'image' | 'video' | 'carousel' | 'reel' | 'story';
 export type PostStatus = 'draft' | 'scheduled' | 'publishing' | 'published' | 'failed';
 export type AccountStatus = 'active' | 'expired' | 'revoked';
+
+// Action types for the activity log
+export type SocialAction =
+	| 'post_created'
+	| 'post_scheduled'
+	| 'post_published'
+	| 'post_failed'
+	| 'post_deleted'
+	| 'account_connected'
+	| 'account_disconnected'
+	| 'account_token_refreshed'
+	| 'account_token_expired'
+	| 'comment_replied'
+	| 'comment_hidden'
+	| 'comment_deleted'
+	| 'analytics_synced';
+
+// Frontend-friendly post type (maps Directus fields to what pages expect)
+export interface SocialPost {
+	id: string;
+	caption: string;
+	media_urls: string[];
+	media_types: ('image' | 'video')[];
+	thumbnail_url: string | null;
+	platforms: SocialPostTarget[];
+	post_type: PostType;
+	scheduled_at: string;
+	status: PostStatus;
+	publish_results: PublishResult[] | null;
+	published_at: string | null;
+	error_message: string | null;
+	created_by: string | null;
+	date_created: string;
+	date_updated: string | null;
+}
+
+// Dashboard stats summary
+export interface SocialDashboardStats {
+	total_scheduled: number;
+	published_today: number;
+	published_this_week: number;
+	failed_count: number;
+	accounts_by_platform: Record<SocialPlatform, number>;
+	engagement_rate_avg: number;
+	follower_growth_weekly: number;
+}
 
 // Public account (no tokens) — used in API responses
 export interface SocialAccountPublic {

@@ -15,12 +15,12 @@ definePageMeta({
 
 const toast = useToast()
 
-// Fetch data
-const { data: clientsData, refresh: refreshClients } = await useFetch('/api/social/clients')
-const { data: accountsData, refresh: refreshAccounts } = await useFetch('/api/social/accounts')
+// Fetch data (lazy to avoid blocking page render on Directus errors)
+const { data: clientsData, refresh: refreshClients } = useLazyFetch('/api/social/clients')
+const { data: accountsData, refresh: refreshAccounts } = useLazyFetch('/api/social/accounts')
 
-const clients = computed(() => (clientsData.value?.data || []) as (SocialClient & { account_count: number })[])
-const accounts = computed(() => (accountsData.value?.data || []) as SocialAccountPublic[])
+const clients = computed(() => ((clientsData.value as any)?.data || []) as (SocialClient & { account_count: number })[])
+const accounts = computed(() => ((accountsData.value as any)?.data || []) as SocialAccountPublic[])
 const unassignedAccounts = computed(() => accounts.value.filter((a) => !a.client_id))
 
 // UI State

@@ -9,7 +9,7 @@ const props = withDefaults(
   defineProps<{
     value?: number
     max?: number
-    color?: 'primary' | 'gray' | 'red' | 'green' | 'blue' | 'yellow'
+    color?: 'primary' | 'gray' | 'red' | 'green' | 'blue' | 'yellow' | 'emerald' | 'amber' | string
     size?: 'xs' | 'sm' | 'md' | 'lg'
     class?: string
   }>(),
@@ -41,6 +41,8 @@ const colorClasses = computed(() => {
     green: 'bg-green-500',
     blue: 'bg-blue-500',
     yellow: 'bg-yellow-500',
+    emerald: 'bg-emerald-500',
+    amber: 'bg-amber-500',
   }
   return colors[props.color] || colors.primary
 })

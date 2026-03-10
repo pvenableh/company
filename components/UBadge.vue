@@ -7,8 +7,8 @@ import { cn } from "@/lib/utils";
 
 const props = withDefaults(
   defineProps<{
-    color?: "primary" | "gray" | "red" | "green" | "blue" | "yellow" | "orange" | "purple" | "pink" | "white";
-    variant?: "solid" | "soft" | "outline";
+    color?: "primary" | "gray" | "red" | "green" | "blue" | "yellow" | "orange" | "purple" | "pink" | "white" | "emerald" | "amber" | string;
+    variant?: "solid" | "soft" | "subtle" | "outline";
     size?: "xs" | "sm" | "md" | "lg";
     label?: string;
     class?: string;
@@ -32,7 +32,9 @@ const sizeClasses = computed(() => {
 });
 
 const colorClasses = computed(() => {
-  const { color, variant } = props;
+  const { color } = props;
+  // Map "subtle" to "soft"
+  const variant = props.variant === 'subtle' ? 'soft' : props.variant;
 
   // Color mapping
   const colorMap: Record<string, Record<string, string>> = {
@@ -85,6 +87,16 @@ const colorClasses = computed(() => {
       solid: "bg-white text-gray-900 border border-gray-200",
       soft: "bg-white/80 text-gray-900",
       outline: "border border-white text-white",
+    },
+    emerald: {
+      solid: "bg-emerald-500 text-white",
+      soft: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+      outline: "border border-emerald-500 text-emerald-600",
+    },
+    amber: {
+      solid: "bg-amber-500 text-white",
+      soft: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+      outline: "border border-amber-500 text-amber-600",
     },
   };
 

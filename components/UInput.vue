@@ -18,8 +18,8 @@ const props = withDefaults(
     name?: string;
     id?: string;
     size?: "xs" | "sm" | "md" | "lg" | "xl";
-    color?: "primary" | "gray" | "red" | "green";
-    variant?: "outline" | "none";
+    color?: "primary" | "gray" | "red" | "green" | "emerald" | "amber" | string;
+    variant?: "outline" | "none" | "subtle";
     icon?: string;
     leadingIcon?: string;
     trailingIcon?: string;

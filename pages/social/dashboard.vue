@@ -41,7 +41,7 @@ const stats = computed<SocialDashboardStats>(() => {
   }
 })
 
-const platformIcon = (platform: string) => {
+const platformIcon = (platform?: string) => {
   return platform === 'instagram' ? 'i-lucide-instagram' : 'i-lucide-music'
 }
 

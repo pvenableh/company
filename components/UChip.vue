@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 const props = withDefaults(
   defineProps<{
     text?: string | number;
-    color?: "primary" | "red" | "green" | "blue" | "gray" | "amber";
+    color?: "primary" | "red" | "green" | "blue" | "gray" | "amber" | "emerald" | string;
     size?: "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
     position?: "top-right" | "top-left" | "bottom-right" | "bottom-left";
     show?: boolean;
@@ -61,6 +61,7 @@ const colorClasses = computed(() => {
     blue: "bg-blue-500 text-white",
     gray: "bg-gray-500 text-white",
     amber: "bg-amber-500 text-white",
+    emerald: "bg-emerald-500 text-white",
   };
   return colors[props.color] || colors.primary;
 });

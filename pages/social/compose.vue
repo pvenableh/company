@@ -17,12 +17,12 @@ definePageMeta({
 	middleware: ['auth'],
 });
 
-// Fetch data
-const { data: accountsData } = await useFetch('/api/social/accounts');
-const { data: clientsData, refresh: refreshClients } = await useFetch('/api/social/clients');
+// Fetch data (lazy to avoid blocking page render on Directus errors)
+const { data: accountsData } = useLazyFetch('/api/social/accounts');
+const { data: clientsData, refresh: refreshClients } = useLazyFetch('/api/social/clients');
 
-const accounts = computed(() => (accountsData.value?.data || []) as SocialAccountPublic[]);
-const clients = computed(() => (clientsData.value?.data || []) as (SocialClient & { account_count: number })[]);
+const accounts = computed(() => ((accountsData.value as any)?.data || []) as SocialAccountPublic[]);
+const clients = computed(() => ((clientsData.value as any)?.data || []) as (SocialClient & { account_count: number })[]);
 
 // Form state
 const caption = ref('');

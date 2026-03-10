@@ -75,7 +75,7 @@ const links = ref([
 	},
 	{
 		name: 'Social',
-		type: ['header', 'footer', 'drawer'],
+		type: ['header', 'footer', 'toolbar', 'drawer'],
 		to: '/social/dashboard',
 		icon: 'i-heroicons-share',
 	},

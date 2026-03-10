@@ -30,18 +30,18 @@ const selectedClientId = ref<string | null>(null)
 const selectedPlatform = ref<string | null>(null)
 const selectedStatus = ref<string | null>(null)
 
-// Fetch data
-const { data: clientsData } = await useFetch('/api/social/clients')
-const { data: accountsData } = await useFetch('/api/social/accounts')
+// Fetch data (lazy to avoid blocking page render on Directus errors)
+const { data: clientsData } = useLazyFetch('/api/social/clients')
+const { data: accountsData } = useLazyFetch('/api/social/accounts')
 
-const clients = computed(() => (clientsData.value?.data || []) as SocialClient[])
-const accounts = computed(() => (accountsData.value?.data || []) as SocialAccountPublic[])
+const clients = computed(() => ((clientsData.value as any)?.data || []) as SocialClient[])
+const accounts = computed(() => ((accountsData.value as any)?.data || []) as SocialAccountPublic[])
 
 // Fetch posts for current month range
 const monthStart = computed(() => format(startOfMonth(currentMonth.value), 'yyyy-MM-dd'))
 const monthEnd = computed(() => format(endOfMonth(currentMonth.value), 'yyyy-MM-dd'))
 
-const { data: postsData, refresh: refreshPosts } = await useFetch('/api/social/posts', {
+const { data: postsData, refresh: refreshPosts } = useLazyFetch('/api/social/posts', {
   query: {
     scheduled_after: computed(() => `${monthStart.value}T00:00:00Z`),
     scheduled_before: computed(() => `${monthEnd.value}T23:59:59Z`),
@@ -50,7 +50,7 @@ const { data: postsData, refresh: refreshPosts } = await useFetch('/api/social/p
   watch: [monthStart, monthEnd],
 })
 
-const posts = computed(() => (postsData.value?.data || []) as SocialPost[])
+const posts = computed(() => ((postsData.value as any)?.data || []) as SocialPost[])
 
 // Filter posts
 const filteredPosts = computed(() => {
@@ -313,7 +313,7 @@ const df = new DateFormatter('en-US', { month: 'long', year: 'numeric' })
     </UCard>
 
     <!-- Post Detail Modal -->
-    <UModal v-model="showPostModal" :ui="{ width: 'sm:max-w-xl' }">
+    <UModal v-model="showPostModal" class="sm:max-w-xl">
       <UCard v-if="selectedPost">
         <template #header>
           <div class="flex items-center justify-between">

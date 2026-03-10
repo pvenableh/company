@@ -21,15 +21,16 @@ const postId = route.params.id as string
 // Fetch post data
 const { data: postData, error: postError } = await useFetch(`/api/social/posts/${postId}`)
 
-if (postError.value || !postData.value?.data) {
+const postResponse = postData.value as any
+if (postError.value || !postResponse?.data) {
   throw createError({ statusCode: 404, message: 'Post not found' })
 }
 
-const post = postData.value.data as SocialPost
+const post = postResponse.data as SocialPost
 
-// Fetch accounts
-const { data: accountsData } = await useFetch('/api/social/accounts')
-const accounts = computed(() => (accountsData.value?.data || []) as SocialAccountPublic[])
+// Fetch accounts (lazy to avoid blocking render)
+const { data: accountsData } = useLazyFetch('/api/social/accounts')
+const accounts = computed(() => ((accountsData.value as any)?.data || []) as SocialAccountPublic[])
 
 // Form state (initialized from post)
 const caption = ref(post.caption)

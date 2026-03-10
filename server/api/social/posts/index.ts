@@ -8,7 +8,7 @@ import { getSocialPosts, createSocialPost, logSocialActivity } from '~/server/ut
 import type { SocialPostTarget } from '~/types/social';
 
 const createPostSchema = z.object({
-	caption: z.string().min(1).max(2200),
+	caption: z.string().min(1).max(4000),
 	media_urls: z.array(z.string().url()).min(1).max(10),
 	media_types: z
 		.array(z.enum(['image', 'video']))
@@ -72,6 +72,8 @@ export default defineEventHandler(async (event) => {
 			scheduled_at: data.scheduled_at,
 			status: data.status,
 			publish_results: null,
+			published_at: null,
+			error_message: null,
 			created_by: null, // TODO: get from session
 		});
 

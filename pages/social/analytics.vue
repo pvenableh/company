@@ -57,12 +57,12 @@ const dateRange = computed(() => {
 const selectedClientId = ref<string | null>(null)
 const selectedAccountId = ref<string | null>(null)
 
-// Fetch data
-const { data: clientsData } = await useFetch('/api/social/clients')
-const { data: accountsData } = await useFetch('/api/social/accounts')
+// Fetch data (lazy to avoid blocking page render on Directus errors)
+const { data: clientsData } = useLazyFetch('/api/social/clients')
+const { data: accountsData } = useLazyFetch('/api/social/accounts')
 
-const clients = computed(() => (clientsData.value?.data || []) as SocialClient[])
-const accounts = computed(() => (accountsData.value?.data || []) as SocialAccountPublic[])
+const clients = computed(() => ((clientsData.value as any)?.data || []) as SocialClient[])
+const accounts = computed(() => ((accountsData.value as any)?.data || []) as SocialAccountPublic[])
 
 // Filter accounts by client
 const filteredAccounts = computed(() => {
@@ -76,7 +76,7 @@ watch(selectedClientId, () => {
 })
 
 // Fetch analytics for selected account or all accounts
-const { data: analyticsData, pending: analyticsLoading } = await useFetch('/api/social/analytics', {
+const { data: analyticsData, pending: analyticsLoading } = useLazyFetch('/api/social/analytics', {
   query: {
     account_id: selectedAccountId,
     start_date: computed(() => dateRange.value.start),
@@ -85,64 +85,52 @@ const { data: analyticsData, pending: analyticsLoading } = await useFetch('/api/
   watch: [selectedAccountId, dateRange],
 })
 
-// Mock analytics data (replace with real API response)
+// Derive analytics from real API data with safe defaults
+const defaultAnalytics = {
+  overview: {
+    followers: { current: 0, change: 0, change_pct: 0 },
+    reach: { total: 0, change_pct: 0 },
+    impressions: { total: 0, change_pct: 0 },
+    engagement_rate: { current: 0, change: 0 },
+    posts_count: 0,
+  },
+  followerHistory: [] as { date: string; value: number }[],
+  engagementHistory: [] as { date: string; value: number }[],
+  topPosts: [] as { id: string; thumbnail_url: string; caption: string; platform: string; engagement: number; reach: number; posted_at: string }[],
+  platformBreakdown: {} as Record<string, { followers: number; engagement_rate: number; posts: number }>,
+}
+
 const analytics = computed(() => {
-  // In production, this comes from the API
+  const apiData = analyticsData.value?.data as any
+  if (!apiData) return defaultAnalytics
+
+  // Map the API overview response to the display format
+  const overview = apiData.overview || {}
   return {
     overview: {
-      followers: { current: 12450, change: 248, change_pct: 2.0 },
-      reach: { total: 45200, change_pct: 12.5 },
-      impressions: { total: 128900, change_pct: 8.3 },
-      engagement_rate: { current: 4.7, change: 0.3 },
-      posts_count: 24,
+      followers: {
+        current: overview.total_followers ?? 0,
+        change: 0,
+        change_pct: 0,
+      },
+      reach: { total: overview.total_reach ?? 0, change_pct: 0 },
+      impressions: { total: overview.total_impressions ?? 0, change_pct: 0 },
+      engagement_rate: { current: overview.avg_engagement_rate ?? 0, change: 0 },
+      posts_count: overview.total_accounts ?? 0,
     },
-    followerHistory: [
-      { date: '2026-01-06', value: 12200 },
-      { date: '2026-01-13', value: 12280 },
-      { date: '2026-01-20', value: 12350 },
-      { date: '2026-01-27', value: 12400 },
-      { date: '2026-02-03', value: 12450 },
-    ],
-    engagementHistory: [
-      { date: '2026-01-06', value: 4.2 },
-      { date: '2026-01-13', value: 4.5 },
-      { date: '2026-01-20', value: 4.3 },
-      { date: '2026-01-27', value: 4.8 },
-      { date: '2026-02-03', value: 4.7 },
-    ],
-    topPosts: [
-      {
-        id: '1',
-        thumbnail_url: 'https://picsum.photos/seed/post1/200',
-        caption: 'New collection dropping this Friday! 🔥',
-        platform: 'instagram',
-        engagement: 892,
-        reach: 4520,
-        posted_at: '2026-01-28T14:00:00Z',
-      },
-      {
-        id: '2',
-        thumbnail_url: 'https://picsum.photos/seed/post2/200',
-        caption: 'Behind the scenes at the studio',
-        platform: 'tiktok',
-        engagement: 1250,
-        reach: 8900,
-        posted_at: '2026-01-25T18:00:00Z',
-      },
-      {
-        id: '3',
-        thumbnail_url: 'https://picsum.photos/seed/post3/200',
-        caption: 'Art Deco Weekend highlights',
-        platform: 'instagram',
-        engagement: 654,
-        reach: 3200,
-        posted_at: '2026-01-12T12:00:00Z',
-      },
-    ],
-    platformBreakdown: {
-      instagram: { followers: 8200, engagement_rate: 4.9, posts: 18 },
-      tiktok: { followers: 4250, engagement_rate: 4.2, posts: 6 },
-    },
+    followerHistory: [] as { date: string; value: number }[],
+    engagementHistory: [] as { date: string; value: number }[],
+    topPosts: [] as { id: string; thumbnail_url: string; caption: string; platform: string; engagement: number; reach: number; posted_at: string }[],
+    platformBreakdown: (apiData.accounts || []).reduce((acc: Record<string, any>, a: any) => {
+      const platform = a.platform || 'unknown'
+      const metrics = a.metrics || {}
+      acc[platform] = {
+        followers: metrics.followers_count ?? metrics.follower_count ?? 0,
+        engagement_rate: metrics.engagement_rate ?? 0,
+        posts: metrics.media_count ?? metrics.video_count ?? 0,
+      }
+      return acc
+    }, {}),
   }
 })
 
