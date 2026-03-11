@@ -73,14 +73,14 @@ export const useAIProductivityEngine = () => {
 
 	const ticketItems = useDirectusItems('tickets');
 	const invoiceItems = useDirectusItems('invoices');
-	const projectItems = useDirectusItems('os_projects');
-	const taskItems = useDirectusItems('os_tasks');
+	const projectItems = useDirectusItems('projects');
+	const taskItems = useDirectusItems('project_tasks');
 	const channelItems = useDirectusItems('channels');
 	const messageItems = useDirectusItems('messages');
 	const socialPostItems = useDirectusItems('social_posts');
 	const socialAccountItems = useDirectusItems('social_accounts');
-	const activityItems = useDirectusItems('os_activities');
-	const dealItems = useDirectusItems('os_deals');
+	const callLogItems = useDirectusItems('call_logs');
+	const dealItems = useDirectusItems('leads');
 	const appointmentItems = useDirectusItems('appointments');
 	const { user } = useDirectusAuth();
 
@@ -215,9 +215,9 @@ export const useAIProductivityEngine = () => {
 
 		try {
 			const projects = await projectItems.list({
-				fields: ['id', 'name', 'status', 'due_date', 'start_date', 'organization.name', 'owner.first_name'],
+				fields: ['id', 'title', 'status', 'due_date', 'start_date', 'organization.name'],
 				filter: {
-					status: { _nin: ['completed', 'archived', 'cancelled'] },
+					status: { _nin: ['completed', 'Archived'] },
 				},
 				sort: ['due_date'],
 				limit: 50,
@@ -241,7 +241,7 @@ export const useAIProductivityEngine = () => {
 						type: 'action',
 						priority: 'urgent',
 						icon: 'i-heroicons-square-3-stack-3d',
-						title: `Project Overdue: ${project.name}`,
+						title: `Project Overdue: ${project.title}`,
 						description: `${daysOver} day${daysOver > 1 ? 's' : ''} past deadline${project.organization?.name ? ` for ${project.organization.name}` : ''}`,
 						actionLabel: 'Review Project',
 						actionRoute: `/projects/${project.id}`,
@@ -256,7 +256,7 @@ export const useAIProductivityEngine = () => {
 						type: 'reminder',
 						priority: 'high',
 						icon: 'i-heroicons-square-3-stack-3d',
-						title: `Project Due ${daysLeft === 0 ? 'Today' : `in ${daysLeft} day${daysLeft > 1 ? 's' : ''}`}: ${project.name}`,
+						title: `Project Due ${daysLeft === 0 ? 'Today' : `in ${daysLeft} day${daysLeft > 1 ? 's' : ''}`}: ${project.title}`,
 						description: `Ensure all tasks are on track${project.organization?.name ? ` for ${project.organization.name}` : ''}`,
 						actionLabel: 'View Project',
 						actionRoute: `/projects/${project.id}`,
@@ -301,11 +301,11 @@ export const useAIProductivityEngine = () => {
 
 		try {
 			const tasks = await taskItems.list({
-				fields: ['id', 'name', 'status', 'due_date', 'assigned_to.first_name', 'project.name', 'project.id'],
+				fields: ['id', 'title', 'status', 'due_date', 'completed', 'assignee_id.first_name', 'event_id.id'],
 				filter: {
 					_and: [
-						{ status: { _neq: 'completed' } },
-						{ assigned_to: { _eq: '$CURRENT_USER' } },
+						{ completed: { _neq: true } },
+						{ assignee_id: { _eq: '$CURRENT_USER' } },
 					],
 				},
 				sort: ['due_date'],
@@ -328,10 +328,10 @@ export const useAIProductivityEngine = () => {
 						type: 'action',
 						priority: 'urgent',
 						icon: 'i-heroicons-clipboard-document-check',
-						title: `Overdue Task: ${task.name}`,
-						description: `${daysOver} day${daysOver > 1 ? 's' : ''} overdue${task.project?.name ? ` on ${task.project.name}` : ''}`,
+						title: `Overdue Task: ${task.title}`,
+						description: `${daysOver} day${daysOver > 1 ? 's' : ''} overdue`,
 						actionLabel: 'Complete',
-						actionRoute: task.project?.id ? `/projects/${task.project.id}` : '/tasks',
+						actionRoute: '/tasks',
 						category: 'tasks',
 						timestamp: new Date(),
 						score: calculateScore({ type: 'action', daysOverdue: daysOver }),
@@ -342,10 +342,10 @@ export const useAIProductivityEngine = () => {
 						type: 'reminder',
 						priority: 'high',
 						icon: 'i-heroicons-clipboard-document-check',
-						title: `Task Due Today: ${task.name}`,
-						description: task.project?.name ? `Part of ${task.project.name}` : 'Complete before end of day',
+						title: `Task Due Today: ${task.title}`,
+						description: 'Complete before end of day',
 						actionLabel: 'Do It',
-						actionRoute: task.project?.id ? `/projects/${task.project.id}` : '/tasks',
+						actionRoute: '/tasks',
 						category: 'tasks',
 						timestamp: new Date(),
 						score: calculateScore({ type: 'action', isToday: true }),
@@ -711,64 +711,46 @@ export const useAIProductivityEngine = () => {
 		const results: TaskSuggestion[] = [];
 
 		try {
-			// Analyze recent activities (calls, follow-ups)
-			const activities = await activityItems.list({
-				fields: ['id', 'name', 'activity_type', 'due_date', 'status', 'deal.name', 'contacts.contacts_id.first_name', 'contacts.contacts_id.last_name'],
+			// Analyze recent call logs
+			const calls = await callLogItems.list({
+				fields: ['id', 'event_type', 'call_duration', 'from_number', 'date_created', 'related_contact.id'],
 				filter: {
-					_and: [
-						{ status: { _neq: 'completed' } },
-						{ assigned_to: { _eq: '$CURRENT_USER' } },
-					],
+					event_type: { _eq: 'missed' },
+					status: { _eq: 'published' },
 				},
-				sort: ['due_date'],
-				limit: 30,
+				sort: ['-date_created'],
+				limit: 20,
 			});
 
 			const t = today();
 			let missedCount = 0;
 
-			for (const activity of activities) {
-				const dueDate = activity.due_date ? new Date(activity.due_date) : null;
-				const isOverdue = dueDate && dueDate < t;
-				const isDueToday = dueDate && dueDate.toDateString() === t.toDateString();
-				const isCall = activity.activity_type === 'call' || activity.activity_type === 'phone';
+			for (const call of calls) {
+				missedCount++;
+				const callDate = call.date_created ? new Date(call.date_created) : null;
+				if (!callDate) continue;
 
-				if (isOverdue) {
-					if (isCall) missedCount++;
-					const daysOver = Math.floor((t.getTime() - dueDate!.getTime()) / 86400000);
+				const daysAgo = Math.floor((t.getTime() - callDate.getTime()) / 86400000);
+				if (daysAgo <= 7) {
 					results.push({
-						id: `activity-overdue-${activity.id}`,
+						id: `call-missed-${call.id}`,
 						type: 'followup',
-						priority: isCall ? 'high' : 'medium',
-						icon: isCall ? 'i-heroicons-phone' : 'i-heroicons-arrow-uturn-right',
-						title: `Overdue ${activity.activity_type || 'Activity'}: ${activity.name}`,
-						description: `${daysOver} day${daysOver > 1 ? 's' : ''} overdue${activity.deal?.name ? ` (${activity.deal.name})` : ''}`,
-						actionLabel: isCall ? 'Call Now' : 'Follow Up',
+						priority: daysAgo <= 1 ? 'high' : 'medium',
+						icon: 'i-heroicons-phone',
+						title: `Missed Call: ${call.from_number || 'Unknown'}`,
+						description: daysAgo === 0 ? 'Today' : `${daysAgo} day${daysAgo > 1 ? 's' : ''} ago`,
+						actionLabel: 'Call Back',
 						actionRoute: '/phone-settings',
 						category: 'phone',
 						timestamp: new Date(),
-						score: calculateScore({ type: 'action', daysOverdue: daysOver }),
-					});
-				} else if (isDueToday) {
-					results.push({
-						id: `activity-today-${activity.id}`,
-						type: 'reminder',
-						priority: 'high',
-						icon: isCall ? 'i-heroicons-phone' : 'i-heroicons-arrow-uturn-right',
-						title: `${activity.activity_type || 'Activity'} Due Today: ${activity.name}`,
-						description: activity.deal?.name ? `Related to deal: ${activity.deal.name}` : 'Scheduled for today',
-						actionLabel: isCall ? 'Make Call' : 'Do It',
-						actionRoute: '/phone-settings',
-						category: 'phone',
-						timestamp: new Date(),
-						score: calculateScore({ type: 'action', isToday: true }),
+						score: calculateScore({ type: 'action', daysOverdue: daysAgo }),
 					});
 				}
 			}
 
 			metrics.value.missedCalls = missedCount;
 		} catch (e) {
-			console.warn('[AI Engine] Could not analyze phone/activities:', e);
+			console.warn('[AI Engine] Could not analyze phone/call logs:', e);
 		}
 
 		return results;
@@ -780,37 +762,38 @@ export const useAIProductivityEngine = () => {
 		const results: TaskSuggestion[] = [];
 
 		try {
-			const deals = await dealItems.list({
-				fields: ['id', 'name', 'status', 'deal_value', 'close_date', 'next_contact_date', 'deal_stage.name', 'organization.name'],
+			const leads = await dealItems.list({
+				fields: ['id', 'status', 'priority', 'estimated_value', 'next_follow_up', 'related_contact.id', 'source', 'notes', 'closed_date'],
 				filter: {
-					status: { _in: ['open', 'active', 'published'] },
+					status: { _in: ['published', 'draft'] },
+					converted_to_customer: { _neq: true },
 				},
-				sort: ['close_date'],
+				sort: ['next_follow_up'],
 				limit: 30,
 			});
 
 			const t = today();
 			let totalPipelineValue = 0;
 
-			for (const deal of deals) {
-				const value = Number(deal.deal_value) || 0;
+			for (const lead of leads) {
+				const value = Number(lead.estimated_value) || 0;
 				totalPipelineValue += value;
 
-				// Check next contact date
-				if (deal.next_contact_date) {
-					const contactDate = new Date(deal.next_contact_date);
-					const isOverdue = contactDate < t;
-					const isToday = contactDate.toDateString() === t.toDateString();
+				// Check next follow-up date
+				if (lead.next_follow_up) {
+					const followUpDate = new Date(lead.next_follow_up);
+					const isOverdue = followUpDate < t;
+					const isToday = followUpDate.toDateString() === t.toDateString();
 
 					if (isOverdue) {
-						const daysOver = Math.floor((t.getTime() - contactDate.getTime()) / 86400000);
+						const daysOver = Math.floor((t.getTime() - followUpDate.getTime()) / 86400000);
 						results.push({
-							id: `deal-followup-${deal.id}`,
+							id: `lead-followup-${lead.id}`,
 							type: 'followup',
 							priority: 'high',
 							icon: 'i-heroicons-user-plus',
-							title: `Follow Up: ${deal.name}`,
-							description: `Contact was due ${daysOver} day${daysOver > 1 ? 's' : ''} ago${value ? ` ($${value.toLocaleString()})` : ''}`,
+							title: `Follow Up on Lead #${lead.id}`,
+							description: `Follow-up was due ${daysOver} day${daysOver > 1 ? 's' : ''} ago${value ? ` ($${value.toLocaleString()})` : ''}`,
 							actionLabel: 'Contact Now',
 							actionRoute: '/organization',
 							category: 'leads',
@@ -819,12 +802,12 @@ export const useAIProductivityEngine = () => {
 						});
 					} else if (isToday) {
 						results.push({
-							id: `deal-contact-today-${deal.id}`,
+							id: `lead-contact-today-${lead.id}`,
 							type: 'lead',
 							priority: 'high',
 							icon: 'i-heroicons-user-plus',
-							title: `Contact Today: ${deal.name}`,
-							description: `${deal.deal_stage?.name || 'Active deal'}${value ? ` - $${value.toLocaleString()}` : ''}`,
+							title: `Follow Up Today: Lead #${lead.id}`,
+							description: `${lead.source || 'Active lead'}${value ? ` - $${value.toLocaleString()}` : ''}`,
 							actionLabel: 'Reach Out',
 							actionRoute: '/organization',
 							category: 'leads',
@@ -834,20 +817,20 @@ export const useAIProductivityEngine = () => {
 					}
 				}
 
-				// Stale deal check: close date passed
-				if (deal.close_date) {
-					const closeDate = new Date(deal.close_date);
+				// Stale lead check: closed_date passed but not converted
+				if (lead.closed_date) {
+					const closeDate = new Date(lead.closed_date);
 					if (closeDate < t) {
 						const daysOver = Math.floor((t.getTime() - closeDate.getTime()) / 86400000);
 						if (daysOver > 7) {
 							results.push({
-								id: `deal-stale-${deal.id}`,
+								id: `lead-stale-${lead.id}`,
 								type: 'insight',
 								priority: 'medium',
 								icon: 'i-heroicons-exclamation-circle',
-								title: `Stale Deal: ${deal.name}`,
-								description: `Expected close date was ${daysOver} days ago. Update or close this deal.`,
-								actionLabel: 'Review Deal',
+								title: `Stale Lead #${lead.id}`,
+								description: `Expected close date was ${daysOver} days ago. Update or close this lead.`,
+								actionLabel: 'Review Lead',
 								actionRoute: '/organization',
 								category: 'leads',
 								timestamp: new Date(),
@@ -858,7 +841,7 @@ export const useAIProductivityEngine = () => {
 				}
 			}
 
-			metrics.value.openDeals = deals.length;
+			metrics.value.openDeals = leads.length;
 			metrics.value.dealsPipelineValue = totalPipelineValue;
 		} catch (e) {
 			console.warn('[AI Engine] Could not analyze deals:', e);

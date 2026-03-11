@@ -14,6 +14,7 @@ import {
   deleteItem,
   deleteItems,
   aggregate as directusAggregate,
+  readNotifications,
 } from "@directus/sdk";
 
 /**
@@ -42,6 +43,10 @@ async function executeOperation(
   try {
     switch (operation) {
       case "list":
+        // System collections need specific SDK functions
+        if (collection === "directus_notifications") {
+          return await directus.request(readNotifications(query || {}));
+        }
         return await directus.request(readItems(collection, query || {}));
 
       case "get":
