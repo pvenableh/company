@@ -57,8 +57,9 @@
 					class="intro-text t-body text-[clamp(1.0625rem,3vw,1.35rem)] leading-relaxed font-light t-text t-text-secondary mb-16 opacity-0"
 				>
 					Hue Studios replaces the patchwork of apps your company pays for every month. Projects, invoicing,
-					scheduling, team chat, social media, video meetings, and more &mdash; all in one beautifully
-					designed platform built for small and medium-sized businesses.
+					scheduling, team chat, social media, email marketing, video meetings, and an AI command center
+					that tells you what to do next &mdash; all in one beautifully designed platform built for
+					small and medium-sized businesses.
 				</p>
 
 				<!-- Intro Stats -->
@@ -218,7 +219,21 @@
 								</div>
 							</div>
 							<div
-								class="aspect-[10/6.1] t-bg-subtle flex items-center justify-center opacity-0 section-image md:col-span-2"
+								class="aspect-[4/5] t-bg-subtle flex items-center justify-center opacity-0 section-image"
+							>
+								<div class="text-center p-4">
+									<Icon
+										name="i-heroicons-sparkles"
+										class="w-8 h-8 t-text-muted mx-auto mb-2"
+									/>
+									<p class="text-xs t-text-tertiary font-medium mb-1">AI COMMAND CENTER</p>
+									<p class="text-[10px] t-text-muted">
+										AI analyzes every module and tells you exactly what needs attention.
+									</p>
+								</div>
+							</div>
+							<div
+								class="aspect-[4/5] t-bg-subtle flex items-center justify-center opacity-0 section-image"
 							>
 								<div class="text-center p-4">
 									<Icon name="i-heroicons-map" class="w-8 h-8 t-text-muted mx-auto mb-2" />
@@ -373,7 +388,7 @@
 				</h2>
 				<p class="cta-body text-[1.0625rem] leading-relaxed text-cream-alt mb-12 opacity-0">
 					One platform for projects, invoicing, scheduling, team chat, social media, video meetings,
-					and everything else your business runs on. Cancel the rest.
+					email marketing, and everything else your business runs on. Cancel the rest.
 				</p>
 				<div class="cta-divider w-16 h-px bg-gold mx-auto mb-12 opacity-0 scale-x-0"></div>
 				<div class="cta-buttons flex flex-col sm:flex-row gap-4 justify-center opacity-0">
@@ -463,7 +478,7 @@ const advantages = [
 	{
 		icon: 'i-heroicons-arrow-path',
 		title: 'Always Growing',
-		text: 'Web analytics, email newsletters, budgeting, CRM, and more on the roadmap. Your platform gets better every month.',
+		text: 'Web analytics, budgeting, CRM, and more on the roadmap. Your platform gets better every month.',
 	},
 	{
 		icon: 'i-heroicons-device-phone-mobile',
@@ -512,13 +527,23 @@ const features = [
 		icon: 'i-heroicons-envelope',
 		title: 'Email Notifications',
 		text: 'Transactional emails via SendGrid for invoices, appointment confirmations, and team invitations.',
+	},
+	{
+		icon: 'i-heroicons-megaphone',
+		title: 'Email Marketing & Newsletters',
+		text: 'Block-based newsletter builder, mailing lists with deduplication, merge tags for personalization, CSV import, one-click unsubscribe, and "View in Browser" links.',
+		wide: true,
+	},
+	{
+		icon: 'i-heroicons-sparkles',
+		title: 'AI Command Center',
+		text: 'AI-powered productivity engine that analyzes your tickets, projects, invoices, emails, contacts, channels, and more — then generates a prioritized action list so you always know what to do next.',
 		wide: true,
 	},
 	{
 		icon: 'i-heroicons-clipboard-document-list',
 		title: 'Task Management',
 		text: 'Personal task lists tied to projects and organizations with progress tracking.',
-		wide: true,
 	},
 ];
 
@@ -532,11 +557,6 @@ const roadmapItems = [
 		icon: 'i-heroicons-chat-bubble-left-ellipsis',
 		title: 'Real-Time Chat',
 		text: 'Live chat for your website and internal team messaging — no more Intercom or Drift.',
-	},
-	{
-		icon: 'i-heroicons-envelope',
-		title: 'Email Newsletters',
-		text: 'Design and send email campaigns to your contacts directly from the platform.',
 	},
 	{
 		icon: 'i-heroicons-calculator',
