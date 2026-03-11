@@ -269,6 +269,10 @@ export default defineNuxtConfig({
 	},
 
 	nitro: {
+		preset: 'vercel',
+		experimental: {
+			websocket: true,
+		},
 		externals: {
 			inline: ['lodash'],
 		},
