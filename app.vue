@@ -79,6 +79,12 @@ const links = ref([
 		to: '/social/dashboard',
 		icon: 'i-heroicons-share',
 	},
+	{
+		name: 'Email',
+		type: ['header', 'footer', 'drawer'],
+		to: '/contacts',
+		icon: 'i-heroicons-envelope',
+	},
 ]);
 </script>
 <template>

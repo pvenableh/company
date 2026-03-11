@@ -72,6 +72,13 @@ const apps: AppItem[] = [
 		description: 'Manage contacts',
 	},
 	{
+		name: 'Email',
+		icon: 'i-heroicons-envelope',
+		route: '/contacts',
+		color: 'bg-rose-500',
+		description: 'Email & lists',
+	},
+	{
 		name: 'Financials',
 		icon: 'i-heroicons-chart-bar',
 		route: '/command-center/financials',
