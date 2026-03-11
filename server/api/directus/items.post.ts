@@ -14,6 +14,7 @@ import {
   deleteItem,
   deleteItems,
   aggregate as directusAggregate,
+  readNotifications,
 } from "@directus/sdk";
 
 /**
@@ -42,6 +43,10 @@ async function executeOperation(
   try {
     switch (operation) {
       case "list":
+        // System collections need specific SDK functions
+        if (collection === "directus_notifications") {
+          return await directus.request(readNotifications(query || {}));
+        }
         return await directus.request(readItems(collection, query || {}));
 
       case "get":
@@ -131,9 +136,18 @@ export default defineEventHandler(async (event) => {
       });
     }
 
+    // Check for permission/not-found errors from Directus
+    const msg = error.message || "";
+    if (msg.includes("permission") || msg.includes("does not exist")) {
+      throw createError({
+        statusCode: 403,
+        message: msg,
+      });
+    }
+
     throw createError({
       statusCode: error.statusCode || 500,
-      message: error.message || "Failed to perform operation",
+      message: msg || "Failed to perform operation",
     });
   }
 });

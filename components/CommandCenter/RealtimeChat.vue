@@ -45,7 +45,7 @@ const loadMessages = async () => {
 		const result = await messageItems.list({
 			fields: [
 				'id',
-				'content',
+				'text',
 				'date_created',
 				'user_created.id',
 				'user_created.first_name',
@@ -84,7 +84,7 @@ const setupRealtimeSubscription = () => {
 		{
 			fields: [
 				'id',
-				'content',
+				'text',
 				'date_created',
 				'user_created.id',
 				'user_created.first_name',
@@ -129,7 +129,7 @@ const sendMessage = async () => {
 
 	try {
 		await messageItems.create({
-			content,
+			text: content,
 			channel: selectedChannel.value,
 			status: 'published',
 		});
@@ -263,7 +263,7 @@ onUnmounted(() => {
 						<p v-if="!isOwnMessage(msg)" class="text-[10px] font-semibold text-gray-500 mb-0.5">
 							{{ msg.user_created?.first_name }}
 						</p>
-						<p class="whitespace-pre-wrap break-words">{{ msg.content }}</p>
+						<p class="whitespace-pre-wrap break-words">{{ msg.text }}</p>
 						<p class="text-[10px] text-gray-400 mt-1 text-right">{{ formatTime(msg.date_created) }}</p>
 					</div>
 				</div>

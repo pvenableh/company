@@ -75,6 +75,13 @@ const AI_MODULES: AIModule[] = [
 		description: 'Missed calls and overdue activities',
 		category: 'Communication',
 	},
+	{
+		key: 'carddesk',
+		label: 'CardDesk',
+		icon: 'i-heroicons-identification',
+		description: 'Networking follow-ups and contact pipeline',
+		category: 'Marketing',
+	},
 ];
 
 const STORAGE_KEY = 'ai-tray-preferences';
