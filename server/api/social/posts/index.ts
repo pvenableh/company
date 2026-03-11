@@ -35,14 +35,19 @@ export default defineEventHandler(async (event) => {
 
 	// ── GET: List posts ──
 	if (method === 'GET') {
-		const query = getQuery(event);
-		const posts = await getSocialPosts({
-			status: query.status as string | undefined,
-			scheduled_after: query.scheduled_after as string | undefined,
-			scheduled_before: query.scheduled_before as string | undefined,
-			limit: query.limit ? Number(query.limit) : 50,
-		});
-		return { data: posts };
+		try {
+			const query = getQuery(event);
+			const posts = await getSocialPosts({
+				status: query.status as string | undefined,
+				scheduled_after: query.scheduled_after as string | undefined,
+				scheduled_before: query.scheduled_before as string | undefined,
+				limit: query.limit ? Number(query.limit) : 50,
+			});
+			return { data: posts };
+		} catch (error: any) {
+			console.warn('[Social Posts API] GET error:', error.message || error);
+			return { data: [] };
+		}
 	}
 
 	// ── POST: Create post ──

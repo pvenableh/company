@@ -98,10 +98,18 @@ export default defineEventHandler(async (event) => {
       },
     }
   } catch (error: any) {
-    console.error('[api:analytics] Error:', error)
-    throw createError({
-      statusCode: 500,
-      message: error.message || 'Failed to fetch analytics',
-    })
+    console.warn('[Social Analytics API] Error:', error.message || error)
+    return {
+      data: {
+        overview: {
+          total_accounts: 0,
+          total_followers: 0,
+          total_reach: 0,
+          total_impressions: 0,
+          avg_engagement_rate: 0,
+        },
+        accounts: [],
+      },
+    }
   }
 })

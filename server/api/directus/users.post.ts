@@ -25,32 +25,33 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const directus = await getUserDirectus(event);
+    // Use withAuthRetry to automatically refresh expired tokens
+    return await withAuthRetry(event, async (directus) => {
+      switch (operation) {
+        case "list":
+          return await directus.request(readUsers(query || {}));
 
-    switch (operation) {
-      case "list":
-        return await directus.request(readUsers(query || {}));
+        case "create":
+          if (!data) throw createError({ statusCode: 400, message: "Data required" });
+          return await directus.request(createUser(data));
 
-      case "create":
-        if (!data) throw createError({ statusCode: 400, message: "Data required" });
-        return await directus.request(createUser(data));
+        case "createMany":
+          if (!data) throw createError({ statusCode: 400, message: "Data required" });
+          return await directus.request(createUsers(data));
 
-      case "createMany":
-        if (!data) throw createError({ statusCode: 400, message: "Data required" });
-        return await directus.request(createUsers(data));
+        case "updateMany":
+          if (!ids || !data) throw createError({ statusCode: 400, message: "IDs and data required" });
+          return await directus.request(updateUsers(ids, data));
 
-      case "updateMany":
-        if (!ids || !data) throw createError({ statusCode: 400, message: "IDs and data required" });
-        return await directus.request(updateUsers(ids, data));
+        case "deleteMany":
+          if (!ids) throw createError({ statusCode: 400, message: "IDs required" });
+          await directus.request(deleteUsers(ids));
+          return { success: true, deleted: ids.length };
 
-      case "deleteMany":
-        if (!ids) throw createError({ statusCode: 400, message: "IDs required" });
-        await directus.request(deleteUsers(ids));
-        return { success: true, deleted: ids.length };
-
-      default:
-        throw createError({ statusCode: 400, message: `Unknown operation: ${operation}` });
-    }
+        default:
+          throw createError({ statusCode: 400, message: `Unknown operation: ${operation}` });
+      }
+    });
   } catch (error: any) {
     console.error("[/api/directus/users] Error:", error);
 

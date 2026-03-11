@@ -11,7 +11,6 @@ export default defineEventHandler(async (event) => {
   try {
     await requireUserSession(event);
     const method = event.method;
-    const directus = await getUserDirectus(event);
 
     if (method === "GET") {
       const query = getQuery(event);
@@ -19,14 +18,16 @@ export default defineEventHandler(async (event) => {
         ? (query.fields as string).split(",")
         : ["*", "role.*", "avatar.*"];
 
-      const user = await directus.request(readMe({ fields }));
-      return user;
+      return await withAuthRetry(event, async (directus) => {
+        return await directus.request(readMe({ fields }));
+      });
     }
 
     if (method === "PATCH") {
       const updates = await readBody(event);
-      const user = await directus.request(updateMe(updates));
-      return user;
+      return await withAuthRetry(event, async (directus) => {
+        return await directus.request(updateMe(updates));
+      });
     }
 
     throw createError({

@@ -3,7 +3,6 @@
  * GET /api/social/accounts — List all accounts (with optional client filter)
  */
 
-import { getSocialAccounts, getSocialAccountById } from '~/server/utils/social-directus'
 import type { SocialAccountPublic, SocialPlatform } from '~/types/social'
 import { differenceInHours } from 'date-fns'
 
@@ -15,11 +14,18 @@ async function directusFetch<T>(
   const { method = 'GET', body, params } = options
   const queryString = params ? `?${new URLSearchParams(params).toString()}` : ''
 
-  const response = await fetch(`${config.directus.url}${path}${queryString}`, {
+  const directusUrl = config.directus?.url || config.public?.directusUrl
+  const serverToken = config.directus?.serverToken || config.directusServerToken
+
+  if (!directusUrl || !serverToken) {
+    throw new Error('Social media not configured: missing DIRECTUS_URL or DIRECTUS_SERVER_TOKEN')
+  }
+
+  const response = await fetch(`${directusUrl}${path}${queryString}`, {
     method,
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${config.directus.serverToken}`,
+      Authorization: `Bearer ${serverToken}`,
     },
     body: body ? JSON.stringify(body) : undefined,
   })
@@ -35,9 +41,7 @@ async function directusFetch<T>(
 
 // ── GET /api/social/accounts ──
 export default defineEventHandler(async (event) => {
-  const method = getMethod(event)
-
-  if (method === 'GET') {
+  try {
     const query = getQuery(event)
     const platform = query.platform as SocialPlatform | undefined
     const clientId = query.client_id as string | undefined
@@ -82,7 +86,9 @@ export default defineEventHandler(async (event) => {
     }))
 
     return { data: publicAccounts }
+  } catch (error: any) {
+    // Return empty data gracefully when collections don't exist or token isn't configured
+    console.warn('[Social Accounts API]', error.message || error)
+    return { data: [] }
   }
-
-  throw createError({ statusCode: 405, message: 'Method not allowed' })
 })

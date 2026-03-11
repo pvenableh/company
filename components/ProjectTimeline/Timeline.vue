@@ -48,8 +48,24 @@ function handleZoomReset() {
   zoom.value = 1;
 }
 
+// Watch for user becoming available (session hydration may not be complete at mount)
+const { user: authUser } = useDirectusAuth();
+
+watch(
+  () => authUser.value?.id,
+  (newId) => {
+    if (newId && projects.value.length === 0 && !loading.value) {
+      fetchProjects();
+    }
+  },
+  { immediate: true }
+);
+
 onMounted(() => {
-  fetchProjects();
+  // Attempt fetch on mount; if user isn't hydrated yet, the watcher above will retry
+  if (authUser.value?.id) {
+    fetchProjects();
+  }
 });
 </script>
 

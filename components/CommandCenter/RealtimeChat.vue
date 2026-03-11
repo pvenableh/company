@@ -263,7 +263,7 @@ onUnmounted(() => {
 						<p v-if="!isOwnMessage(msg)" class="text-[10px] font-semibold text-gray-500 mb-0.5">
 							{{ msg.user_created?.first_name }}
 						</p>
-						<p class="whitespace-pre-wrap break-words">{{ msg.text }}</p>
+						<p class="whitespace-pre-wrap break-words" v-html="msg.text"></p>
 						<p class="text-[10px] text-gray-400 mt-1 text-right">{{ formatTime(msg.date_created) }}</p>
 					</div>
 				</div>
