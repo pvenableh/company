@@ -264,6 +264,12 @@ export default defineNuxtConfig({
 
 	devtools: { enabled: true },
 
+	nitro: {
+		externals: {
+			inline: ['lodash'],
+		},
+	},
+
 	build: {
 		transpile: ['@sendgrid/mail', 'swiper', 'gsap', '@vueuse/core', 'vue-chartjs', 'mjml', 'handlebars'],
 	},
