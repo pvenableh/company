@@ -961,7 +961,24 @@ export interface Contact {
 	tags?: string[] | null;
 	/** @description Mailing address for sending materials */
 	mailing_address?: string | null;
+	prefix?: `Mr.` | `Ms.` | `Mrs.` | `Dr.` | `Prof.` | `Mx.` | null;
+	industry?: 'Technology' | 'Healthcare' | 'Finance' | 'Education' | `Real Estate` | 'Hospitality' | 'Legal' | `Non-Profit` | 'Government' | null;
+	email_subscribed?: boolean | null;
+	email_unsubscribed_at?: string | null;
+	unsubscribe_token?: string | null;
+	email_bounced?: boolean | null;
+	email_bounced_at?: string | null;
+	email_bounce_type?: string | null;
+	last_opened_at?: string | null;
+	last_clicked_at?: string | null;
+	total_emails_sent?: number | null;
+	total_opens?: number | null;
+	total_clicks?: number | null;
+	custom_fields?: string | null;
+	source?: string | null;
+	timezone?: string | null;
 	organizations?: ContactsOrganization[] | string[];
+	lists?: MailingListContact[] | string[];
 }
 
 export interface ContactsOrganization {
@@ -985,6 +1002,77 @@ export interface Course {
 	description?: string | null;
 	menu_id?: Menu | string | null;
 	options?: Option[] | string[];
+}
+
+export interface EmailPartial {
+	/** @primaryKey */
+	id: number;
+	status?: 'published' | 'draft' | 'archived';
+	sort?: number | null;
+	user_created?: DirectusUser | string | null;
+	date_created?: string | null;
+	user_updated?: DirectusUser | string | null;
+	date_updated?: string | null;
+	name?: string | null;
+	slug?: string | null;
+	type?: 'header' | 'footer' | 'web_version_bar' | null;
+	description?: string | null;
+	mjml_source?: string | null;
+	variables_schema?: Record<string, any> | null;
+	instance_variables?: Record<string, any> | null;
+	is_default?: boolean | null;
+}
+
+export interface Email {
+	/** @primaryKey */
+	id: number;
+	status?: 'published' | 'draft' | 'archived' | 'sending' | 'sent' | 'failed';
+	sort?: number | null;
+	user_created?: DirectusUser | string | null;
+	date_created?: string | null;
+	user_updated?: DirectusUser | string | null;
+	date_updated?: string | null;
+	/** @required */
+	name: string;
+	subject?: string | null;
+	template_id?: EmailTemplate | string | null;
+	target_lists?: string | null;
+	cc_list?: string | null;
+	bcc_list?: string | null;
+	custom_variables?: string | null;
+	scheduled_at?: string | null;
+	sent_at?: string | null;
+	total_recipients?: number | null;
+	total_sent?: number | null;
+	total_failed?: number | null;
+	send_errors?: Record<string, any> | null;
+	preview_html?: string | null;
+}
+
+export interface EmailTemplate {
+	/** @primaryKey */
+	id: number;
+	status?: 'published' | 'draft' | 'archived';
+	sort?: number | null;
+	user_created?: DirectusUser | string | null;
+	date_created?: string | null;
+	user_updated?: DirectusUser | string | null;
+	date_updated?: string | null;
+	name?: string | null;
+	/** @required */
+	slug: string;
+	type?: 'newsletter' | 'transactional' | null;
+	subject_template?: string | null;
+	mjml_source?: string | null;
+	html_compiled?: string | null;
+	mjml_assembled_at?: string | null;
+	block_count?: number | null;
+	include_header?: boolean | null;
+	include_footer?: boolean | null;
+	include_web_version_bar?: boolean | null;
+	header_partial_id?: EmailPartial | string | null;
+	footer_partial_id?: EmailPartial | string | null;
+	blocks?: TemplateBlock[] | string[];
 }
 
 export interface FinancialGoal {
@@ -1193,6 +1281,39 @@ export interface LineItem {
 	amount?: number | null;
 }
 
+export interface MailingListContact {
+	/** @primaryKey */
+	id: number;
+	/** @required */
+	list_id: MailingList | string;
+	/** @required */
+	contact_id: Contact | string;
+	subscribed?: boolean | null;
+	date_subscribed?: string | null;
+	date_unsubscribed?: string | null;
+	source?: string | null;
+	custom_fields?: string | null;
+}
+
+export interface MailingList {
+	/** @primaryKey */
+	id: number;
+	status?: 'published' | 'draft' | 'archived';
+	sort?: number | null;
+	user_created?: DirectusUser | string | null;
+	date_created?: string | null;
+	user_updated?: DirectusUser | string | null;
+	date_updated?: string | null;
+	name?: string | null;
+	/** @required */
+	slug: string;
+	description?: string | null;
+	is_default?: boolean | null;
+	double_opt_in?: boolean | null;
+	subscriber_count?: number | null;
+	contacts?: MailingListContact[] | string[];
+}
+
 export interface MeetingRequest {
 	/** @primaryKey */
 	id: string;
@@ -1240,6 +1361,26 @@ export interface Message {
 	text?: string | null;
 	channel?: Channel | string | null;
 	parent_id?: string | null;
+}
+
+export interface NewsletterBlock {
+	/** @primaryKey */
+	id: number;
+	status?: 'published' | 'draft' | 'archived';
+	sort?: number | null;
+	user_created?: DirectusUser | string | null;
+	date_created?: string | null;
+	user_updated?: DirectusUser | string | null;
+	date_updated?: string | null;
+	name?: string | null;
+	/** @required */
+	slug: string;
+	category?: 'header' | 'hero' | `two-column` | `three-column` | 'cta' | 'image' | 'stats' | 'quote' | 'list' | 'divider' | 'social' | 'footer' | 'content' | null;
+	description?: string | null;
+	mjml_source?: string | null;
+	variables_schema?: string | null;
+	thumbnail?: DirectusFile | string | null;
+	is_system?: boolean | null;
 }
 
 export interface Option {
@@ -2243,6 +2384,18 @@ export interface Team {
 	projects?: Project[] | string[];
 }
 
+export interface TemplateBlock {
+	/** @primaryKey */
+	id: number;
+	sort?: number | null;
+	date_created?: string | null;
+	/** @required */
+	template_id: EmailTemplate | string;
+	/** @required */
+	block_id: NewsletterBlock | string;
+	instance_variables?: Record<string, any> | null;
+}
+
 export interface Ticket {
 	/** @primaryKey */
 	id: string;
@@ -2955,6 +3108,9 @@ export interface Schema {
 	contacts: Contact[];
 	contacts_organizations: ContactsOrganization[];
 	courses: Course[];
+	email_partials: EmailPartial[];
+	emails: Email[];
+	email_templates: EmailTemplate[];
 	financial_goals: FinancialGoal[];
 	heros: Hero[];
 	home: Home;
@@ -2969,9 +3125,12 @@ export interface Schema {
 	lead_activities_files: LeadActivitiesFile[];
 	leads: Lead[];
 	line_items: LineItem[];
+	mailing_list_contacts: MailingListContact[];
+	mailing_lists: MailingList[];
 	meeting_requests: MeetingRequest[];
 	menus: Menu[];
 	messages: Message[];
+	newsletter_blocks: NewsletterBlock[];
 	options: Option[];
 	organizations: Organization[];
 	organizations_directus_users: OrganizationsDirectusUser[];
@@ -3033,6 +3192,7 @@ export interface Schema {
 	tasks: Task[];
 	tasks_directus_users: TasksDirectusUser[];
 	teams: Team[];
+	template_blocks: TemplateBlock[];
 	tickets: Ticket[];
 	tickets_comments: TicketsComment[];
 	tickets_directus_users: TicketsDirectusUser[];
@@ -3126,6 +3286,9 @@ export enum CollectionNames {
 	contacts = 'contacts',
 	contacts_organizations = 'contacts_organizations',
 	courses = 'courses',
+	email_partials = 'email_partials',
+	emails = 'emails',
+	email_templates = 'email_templates',
 	financial_goals = 'financial_goals',
 	heros = 'heros',
 	home = 'home',
@@ -3140,9 +3303,12 @@ export enum CollectionNames {
 	lead_activities_files = 'lead_activities_files',
 	leads = 'leads',
 	line_items = 'line_items',
+	mailing_list_contacts = 'mailing_list_contacts',
+	mailing_lists = 'mailing_lists',
 	meeting_requests = 'meeting_requests',
 	menus = 'menus',
 	messages = 'messages',
+	newsletter_blocks = 'newsletter_blocks',
 	options = 'options',
 	organizations = 'organizations',
 	organizations_directus_users = 'organizations_directus_users',
@@ -3204,6 +3370,7 @@ export enum CollectionNames {
 	tasks = 'tasks',
 	tasks_directus_users = 'tasks_directus_users',
 	teams = 'teams',
+	template_blocks = 'template_blocks',
 	tickets = 'tickets',
 	tickets_comments = 'tickets_comments',
 	tickets_directus_users = 'tickets_directus_users',
