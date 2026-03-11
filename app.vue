@@ -82,7 +82,7 @@ const links = ref([
 	{
 		name: 'Email',
 		type: ['header', 'footer', 'drawer'],
-		to: '/contacts',
+		to: '/email',
 		icon: 'i-heroicons-envelope',
 	},
 ]);

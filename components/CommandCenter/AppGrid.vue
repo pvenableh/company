@@ -74,7 +74,7 @@ const apps: AppItem[] = [
 	{
 		name: 'Email',
 		icon: 'i-heroicons-envelope',
-		route: '/contacts',
+		route: '/email',
 		color: 'bg-rose-500',
 		description: 'Email & lists',
 	},
