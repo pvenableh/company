@@ -13,6 +13,8 @@ An all-in-one, agency-grade business management platform built with [Nuxt 3](htt
 - **Scheduling & Video Meetings** — Calendar with public booking links, availability management, Google Calendar and Outlook sync, and built-in Twilio video conferencing
 - **Team Communication** — Slack-style channels per organization with threaded comments, @mentions, emoji reactions, and WebSocket-powered real-time messaging
 - **Social Media Management** — Compose, schedule, and publish to Instagram and TikTok; content calendar, engagement analytics, multi-client management, and OAuth account connections
+- **Email Marketing & Newsletters** — Block-based MJML newsletter builder with 17+ reusable blocks, drag-and-drop assembly, live preview, mailing list management with deduplication, CSV contact import, merge-tag personalization via Handlebars, editable header/footer partials, one-click unsubscribe, "View in Browser" web links, and campaign send tracking via SendGrid
+- **Contact CRM** — Contact management with tagging, custom fields, mailing list membership, subscription tracking, and CSV import/export
 - **Organizations & Teams** — Multi-organization support with team structures, role-based access control (admin, client manager, user), member invitations, and cross-tab state sync
 
 ### Supporting Features
@@ -20,6 +22,7 @@ An all-in-one, agency-grade business management platform built with [Nuxt 3](htt
 - **Task Management** — Personal task lists tied to projects and organizations
 - **Real-Time Collaboration** — WebSocket multiplexing for live updates, user presence indicators, and instant notifications
 - **Email Notifications** — Transactional emails via SendGrid for invoices, appointments, password resets, and team invitations
+- **Email Templates** — MJML-powered responsive email templates with block-based composition, design-time variables (`{{{triple braces}}}`), and runtime personalization (`{{double braces}}`)
 - **File Storage** — AWS S3 integration with presigned URLs for secure uploads
 - **Dark Mode** — System-aware dark/light theme with manual toggle
 - **PWA** — Install as a native-feeling progressive web app on any device
@@ -36,7 +39,7 @@ An all-in-one, agency-grade business management platform built with [Nuxt 3](htt
 | CMS / Backend | Directus (headless) |
 | Auth | nuxt-auth-utils + Directus Auth |
 | Payments | Stripe |
-| Email | SendGrid |
+| Email | SendGrid, MJML, Handlebars |
 | Video / SMS | Twilio |
 | Calendar | Google Calendar API, Microsoft Outlook (Azure) |
 | Social | Instagram Graph API, TikTok API |
@@ -121,6 +124,9 @@ The app will be available at `http://localhost:3000`.
 │   ├── Invoices/       # Invoice forms, PDF generation
 │   ├── Channels/       # Real-time messaging
 │   ├── Scheduler/      # Calendar, booking, video meetings
+│   ├── Newsletter/     # Block builder, canvas, variable editor, partials
+│   ├── Contacts/       # Contact forms, tables, merge tag reference
+│   ├── Import/         # CSV column mapper
 │   ├── Social/         # Social media date pickers
 │   ├── ProjectTimeline/# Canvas-based timeline visualization
 │   ├── Comments/       # Threaded comment system
@@ -156,6 +162,11 @@ The app will be available at `http://localhost:3000`.
 | Invoices | `/invoices` | Invoice list, creation, and payment tracking |
 | Scheduler | `/scheduler` | Calendar, booking, and video meeting management |
 | Channels | `/channels` | Real-time team messaging |
+| Email Templates | `/email/templates` | Newsletter template builder |
+| Email Campaigns | `/email` | Campaign management and send tracking |
+| Contacts | `/contacts` | Contact CRM and mailing lists |
+| Contact Import | `/contacts/import` | CSV import with column mapping |
+| Email Web View | `/email/view/[id]` | Public "View in Browser" link for sent emails |
 | Social Dashboard | `/social/dashboard` | Social media overview and scheduling |
 | Social Compose | `/social/compose` | Create and schedule posts |
 | Social Calendar | `/social/calendar` | Visual content calendar |
@@ -165,6 +176,51 @@ The app will be available at `http://localhost:3000`.
 | Teams | `/organization/teams` | Team structure and roles |
 | Account | `/account` | User profile and settings |
 | Public Booking | `/book/[userId]` | Client-facing scheduling page |
+
+## Email Marketing System
+
+The platform includes a full email marketing system (MailChimp replacement) built on MJML for responsive emails, Handlebars for personalization, and SendGrid for delivery.
+
+### Architecture
+
+- **Block Library** — 17+ reusable MJML blocks (headers, hero sections, text, images, CTAs, footers, etc.) stored in Directus and assembled into templates
+- **Template Builder** — Drag-and-drop canvas where blocks are composed into complete email templates with live MJML preview
+- **Header/Footer Partials** — Shared, editable partials that auto-attach to templates (toggleable per template)
+- **Two-Variable System** — Design-time `{{{triple braces}}}` for template composition; runtime `{{double braces}}` for per-recipient personalization via Handlebars
+- **Mailing Lists** — Named lists with deduplication, per-member custom fields, and subscriber count tracking
+- **Contact CRM** — Full contact management with tags, custom fields (JSON), subscription tracking, and unsubscribe tokens
+- **Campaign Tracking** — `emails` collection records send status, recipient counts, errors, and caches preview HTML for web viewing
+
+### Directus Collections
+
+| Collection | Purpose |
+|---|---|
+| `newsletter_blocks` | Reusable MJML block library |
+| `email_templates` | Composed newsletter templates |
+| `email_template_blocks` | Junction: blocks assigned to templates with sort order and variable overrides |
+| `email_partials` | Shared header/footer partials |
+| `emails` | Sent campaign records with status tracking |
+| `contacts` | Contact CRM with subscription and custom fields |
+| `mailing_lists` | Named mailing lists |
+| `mailing_list_contacts` | Junction: list membership with per-member custom fields |
+
+### Environment Variables
+
+Add to `.env`:
+
+```env
+SENDGRID_API_KEY=SG.xxxxx
+SENDGRID_FROM_EMAIL=hello@yourdomain.com
+SENDGRID_FROM_NAME=Your Company
+```
+
+### Seeding Blocks
+
+To seed the block library with starter blocks:
+
+```bash
+pnpm tsx scripts/seed-newsletter-blocks.mjs
+```
 
 ## Social Media Module
 

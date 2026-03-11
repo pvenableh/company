@@ -373,7 +373,7 @@
 				</h2>
 				<p class="cta-body text-[1.0625rem] leading-relaxed text-cream-alt mb-12 opacity-0">
 					One platform for projects, invoicing, scheduling, team chat, social media, video meetings,
-					and everything else your business runs on. Cancel the rest.
+					email marketing, and everything else your business runs on. Cancel the rest.
 				</p>
 				<div class="cta-divider w-16 h-px bg-gold mx-auto mb-12 opacity-0 scale-x-0"></div>
 				<div class="cta-buttons flex flex-col sm:flex-row gap-4 justify-center opacity-0">
@@ -463,7 +463,7 @@ const advantages = [
 	{
 		icon: 'i-heroicons-arrow-path',
 		title: 'Always Growing',
-		text: 'Web analytics, email newsletters, budgeting, CRM, and more on the roadmap. Your platform gets better every month.',
+		text: 'Web analytics, budgeting, CRM, and more on the roadmap. Your platform gets better every month.',
 	},
 	{
 		icon: 'i-heroicons-device-phone-mobile',
@@ -512,13 +512,17 @@ const features = [
 		icon: 'i-heroicons-envelope',
 		title: 'Email Notifications',
 		text: 'Transactional emails via SendGrid for invoices, appointment confirmations, and team invitations.',
+	},
+	{
+		icon: 'i-heroicons-megaphone',
+		title: 'Email Marketing & Newsletters',
+		text: 'Block-based newsletter builder, mailing lists with deduplication, merge tags for personalization, CSV import, one-click unsubscribe, and "View in Browser" links.',
 		wide: true,
 	},
 	{
 		icon: 'i-heroicons-clipboard-document-list',
 		title: 'Task Management',
 		text: 'Personal task lists tied to projects and organizations with progress tracking.',
-		wide: true,
 	},
 ];
 
@@ -532,11 +536,6 @@ const roadmapItems = [
 		icon: 'i-heroicons-chat-bubble-left-ellipsis',
 		title: 'Real-Time Chat',
 		text: 'Live chat for your website and internal team messaging — no more Intercom or Drift.',
-	},
-	{
-		icon: 'i-heroicons-envelope',
-		title: 'Email Newsletters',
-		text: 'Design and send email campaigns to your contacts directly from the platform.',
 	},
 	{
 		icon: 'i-heroicons-calculator',
