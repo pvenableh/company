@@ -266,7 +266,19 @@ export default defineNuxtConfig({
 
 	nitro: {
 		externals: {
-			inline: ['lodash'],
+			inline: [
+				'lodash',
+				'htmlparser2',
+				'dom-serializer',
+				'domelementtype',
+				'domhandler',
+				'domutils',
+				'entities',
+				'cheerio',
+				'cheerio-select',
+				'parse5',
+				'parse5-htmlparser2-tree-adapter',
+			],
 		},
 	},
 

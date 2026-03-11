@@ -131,9 +131,18 @@ export default defineEventHandler(async (event) => {
       });
     }
 
+    // Check for permission/not-found errors from Directus
+    const msg = error.message || "";
+    if (msg.includes("permission") || msg.includes("does not exist")) {
+      throw createError({
+        statusCode: 403,
+        message: msg,
+      });
+    }
+
     throw createError({
       statusCode: error.statusCode || 500,
-      message: error.message || "Failed to perform operation",
+      message: msg || "Failed to perform operation",
     });
   }
 });
