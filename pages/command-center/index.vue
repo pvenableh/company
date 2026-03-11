@@ -116,12 +116,15 @@ onMounted(() => {
 				<CommandCenterAppGrid :badges="badges" />
 			</div>
 
-			<!-- Bottom Section: Chat + Financials -->
-			<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+			<!-- Bottom Section: Chat + CardDesk + Financials -->
+			<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 				<!-- Real-time Chat -->
 				<div class="h-[500px]">
 					<CommandCenterRealtimeChat />
 				</div>
+
+				<!-- CardDesk Pipeline -->
+				<CommandCenterCardDeskPipeline />
 
 				<!-- Financial Analysis -->
 				<CommandCenterFinancialQuarter />

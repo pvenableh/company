@@ -93,6 +93,13 @@ const apps: AppItem[] = [
 		description: 'Phone system',
 	},
 	{
+		name: 'CardDesk',
+		icon: 'i-heroicons-identification',
+		route: '/carddesk',
+		color: 'bg-gradient-to-br from-orange-400 to-red-500',
+		description: 'Networking CRM',
+	},
+	{
 		name: 'Tools',
 		icon: 'i-heroicons-wrench-screwdriver',
 		route: '/tools',

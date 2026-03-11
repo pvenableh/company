@@ -23,7 +23,8 @@ export interface TaskSuggestion {
 		| 'leads'
 		| 'scheduling'
 		| 'social'
-		| 'phone';
+		| 'phone'
+		| 'carddesk';
 	timestamp: Date;
 	score: number;
 }
@@ -850,6 +851,75 @@ export const useAIProductivityEngine = () => {
 		return results;
 	};
 
+	// ─── CardDesk Analysis ───────────────────────────────────────────────────
+
+	const analyzeCardDesk = async (): Promise<TaskSuggestion[]> => {
+		const results: TaskSuggestion[] = [];
+
+		try {
+			const { fetchStats, stats: cdStats } = useCardDesk();
+			await fetchStats();
+
+			const s = cdStats.value;
+
+			// Hot contacts needing follow-up
+			for (const contact of s.needsFollowUp.slice(0, 3)) {
+				const isHot = contact.rating === 'hot';
+				results.push({
+					id: `cd-followup-${contact.id}`,
+					type: 'followup',
+					priority: isHot ? 'high' : 'medium',
+					icon: 'i-heroicons-identification',
+					title: `Follow up: ${contact.name}`,
+					description: `${contact.daysSinceContact}d since last contact${contact.company ? ` (${contact.company})` : ''}`,
+					actionLabel: 'View Contact',
+					actionRoute: '/carddesk',
+					category: 'carddesk',
+					timestamp: new Date(),
+					score: calculateScore({ type: 'action', daysOverdue: contact.daysSinceContact }),
+				});
+			}
+
+			// Streak reminder
+			if (s.xp.streak > 0) {
+				results.push({
+					id: 'cd-streak',
+					type: 'reminder',
+					priority: 'low',
+					icon: 'i-heroicons-fire',
+					title: `${s.xp.streak}-Day Networking Streak`,
+					description: 'Keep it going! Log an activity today to maintain your streak.',
+					actionLabel: 'Open CardDesk',
+					actionRoute: '/carddesk',
+					category: 'carddesk',
+					timestamp: new Date(),
+					score: 35,
+				});
+			}
+
+			// Cold contacts insight
+			if (s.coldContacts > 5) {
+				results.push({
+					id: 'cd-cold-contacts',
+					type: 'insight',
+					priority: 'low',
+					icon: 'i-heroicons-identification',
+					title: `${s.coldContacts} Cold Contacts`,
+					description: 'Consider re-engaging or hibernating contacts that have gone cold.',
+					actionLabel: 'Review',
+					actionRoute: '/carddesk',
+					category: 'carddesk',
+					timestamp: new Date(),
+					score: 28,
+				});
+			}
+		} catch (e) {
+			console.warn('[AI Engine] Could not analyze CardDesk:', e);
+		}
+
+		return results;
+	};
+
 	// ─── Business Suggestions (time-aware coaching) ───────────────────────────
 
 	const generateBusinessSuggestions = (): TaskSuggestion[] => {
@@ -1010,7 +1080,7 @@ export const useAIProductivityEngine = () => {
 		// Default: all modules enabled
 		const modules = enabledModules || new Set([
 			'tickets', 'projects', 'tasks', 'invoices',
-			'channels', 'social', 'scheduling', 'phone', 'deals',
+			'channels', 'social', 'scheduling', 'phone', 'deals', 'carddesk',
 		]);
 
 		try {
@@ -1025,6 +1095,7 @@ export const useAIProductivityEngine = () => {
 			if (modules.has('scheduling')) analyzerPromises.push(analyzeScheduling());
 			if (modules.has('phone')) analyzerPromises.push(analyzePhone());
 			if (modules.has('deals')) analyzerPromises.push(analyzeDeals());
+			if (modules.has('carddesk')) analyzerPromises.push(analyzeCardDesk());
 
 			const allResults = await Promise.all(analyzerPromises);
 			const businessSuggestions = generateBusinessSuggestions();
