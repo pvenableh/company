@@ -21,30 +21,32 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const directus = await getUserDirectus(event);
-
     if (method === "GET") {
       const query = getQuery(event);
       const fields = query.fields
         ? (query.fields as string).split(",")
         : ["*", "role.*"];
 
-      const user = await directus.request(readUser(userId, { fields }));
-      return user;
+      return await withAuthRetry(event, async (directus) => {
+        return await directus.request(readUser(userId, { fields }));
+      });
     }
 
     if (method === "PATCH") {
       const updates = await readBody(event);
-      const user = await directus.request(updateUser(userId, updates));
-      return user;
+      return await withAuthRetry(event, async (directus) => {
+        return await directus.request(updateUser(userId, updates));
+      });
     }
 
     if (method === "DELETE") {
-      await directus.request(deleteUser(userId));
-      return {
-        success: true,
-        message: "User deleted successfully",
-      };
+      return await withAuthRetry(event, async (directus) => {
+        await directus.request(deleteUser(userId));
+        return {
+          success: true,
+          message: "User deleted successfully",
+        };
+      });
     }
 
     throw createError({

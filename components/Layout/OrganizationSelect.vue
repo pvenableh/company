@@ -64,7 +64,7 @@ const handleOrgSelect = (orgId) => {
 };
 
 const getIconUrl = (org) => {
-	if (!org?.icon) return null;
+	if (!org?.icon) return undefined;
 	return `${config.public.directusUrl}/assets/${org.icon}?key=avatar`;
 };
 

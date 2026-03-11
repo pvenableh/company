@@ -65,11 +65,18 @@ const apps: AppItem[] = [
 		description: 'Social media',
 	},
 	{
-		name: 'Clients',
+		name: 'Contacts',
 		icon: 'i-heroicons-building-office-2',
-		route: '/organization',
+		route: '/social/clients',
 		color: 'bg-orange-500',
-		description: 'Organizations',
+		description: 'Manage contacts',
+	},
+	{
+		name: 'Email',
+		icon: 'i-heroicons-envelope',
+		route: '/email',
+		color: 'bg-rose-500',
+		description: 'Email & lists',
 	},
 	{
 		name: 'Financials',

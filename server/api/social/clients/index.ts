@@ -22,11 +22,18 @@ async function directusFetch<T>(
   const { method = 'GET', body, params } = options
   const queryString = params ? `?${new URLSearchParams(params).toString()}` : ''
 
-  const response = await fetch(`${config.directus.url}${path}${queryString}`, {
+  const directusUrl = config.directus?.url || config.public?.directusUrl
+  const serverToken = config.directus?.serverToken || config.directusServerToken
+
+  if (!directusUrl || !serverToken) {
+    throw new Error('Social media not configured: missing DIRECTUS_URL or DIRECTUS_SERVER_TOKEN')
+  }
+
+  const response = await fetch(`${directusUrl}${path}${queryString}`, {
     method,
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${config.directus.serverToken}`,
+      Authorization: `Bearer ${serverToken}`,
     },
     body: body ? JSON.stringify(body) : undefined,
   })
@@ -45,28 +52,38 @@ export default defineEventHandler(async (event) => {
 
   // GET: List clients
   if (method === 'GET') {
-    const clients = await directusFetch<any[]>('/items/social_clients', {
-      params: { sort: 'name' },
-    })
+    try {
+      const clients = await directusFetch<any[]>('/items/social_clients', {
+        params: { sort: 'name' },
+      })
 
-    // Get account counts per client
-    const accounts = await directusFetch<any[]>('/items/social_accounts', {
-      params: { 'fields': 'id,client_id' },
-    })
-
-    const accountCounts = accounts.reduce((acc, a) => {
-      if (a.client_id) {
-        acc[a.client_id] = (acc[a.client_id] || 0) + 1
+      // Get account counts per client
+      let accounts: any[] = []
+      try {
+        accounts = await directusFetch<any[]>('/items/social_accounts', {
+          params: { 'fields': 'id,client_id' },
+        })
+      } catch {
+        // Accounts collection may not exist yet
       }
-      return acc
-    }, {} as Record<string, number>)
 
-    const clientsWithCounts = clients.map((c) => ({
-      ...c,
-      account_count: accountCounts[c.id] || 0,
-    }))
+      const accountCounts = accounts.reduce((acc, a) => {
+        if (a.client_id) {
+          acc[a.client_id] = (acc[a.client_id] || 0) + 1
+        }
+        return acc
+      }, {} as Record<string, number>)
 
-    return { data: clientsWithCounts }
+      const clientsWithCounts = clients.map((c) => ({
+        ...c,
+        account_count: accountCounts[c.id] || 0,
+      }))
+
+      return { data: clientsWithCounts }
+    } catch (error: any) {
+      console.warn('[Social Clients API] GET error:', error.message || error)
+      return { data: [] }
+    }
   }
 
   // POST: Create client

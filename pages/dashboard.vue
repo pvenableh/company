@@ -2,117 +2,32 @@
 definePageMeta({
 	middleware: ['auth'],
 });
-const ticketItems = useDirectusItems('tickets');
-const serviceItems = useDirectusItems('services');
-const organizationItems = useDirectusItems('organizations');
 
-const tickets = await ticketItems.list({
-	fields: [
-		'*,organization.id,organization.name,services.services_id.name,services.services_id.color,services.services_id.id',
-	],
-});
+const { user } = useDirectusAuth();
 
-const services = await serviceItems.list({
-	fields: ['id', 'name', 'color'],
-	filter: {
-		status: 'published',
-	},
-});
-
-services.push({
-	id: '',
-	name: 'Show All',
-	color: '#cccccc',
-});
-
-const organizations = await organizationItems.list({
-	fields: ['id', 'name'],
-	filter: {
-		status: 'published',
-	},
-});
-
-organizations.push({
-	id: '',
-	name: 'Show All',
-	color: '#cccccc',
-});
-
-const service = ref({
-	id: '',
-	name: '',
-	color: '',
-});
-
-const organization = ref({
-	id: '',
-	name: '',
-});
-
-const filteredTickets = ref(tickets);
-
-const organizationChange = (organization) => {
-	if (organization.id) {
-		filteredTickets.value = tickets.filter((ticket) => {
-			if (ticket.organization) {
-				return ticket.organization.id === organization.id;
-			}
-		});
-	} else {
-		filteredTickets.value = tickets;
-	}
-};
+function greetUser() {
+	const hour = new Date().getHours();
+	if (hour < 12) return 'Good morning';
+	if (hour < 18) return 'Good afternoon';
+	return 'Good evening';
+}
 </script>
+
 <template>
-	<div class="relative w-full min-h-screen flex items-center justify-start flex-col">
-		<div class="w-full flex flex-row items-start max-w-xl">
-			<div class="w-64 uppercase relative">
-				<USelectMenu v-model="service" :options="services" class="p-0">
-					<template #label>
-						<span v-if="service.name" class="uppercase tracking-wide">{{ service.name }}</span>
-						<span v-else class="uppercase tracking-wide">Select Service</span>
-						<span v-if="service.color" class="h-2 w-2 rounded-full" :style="`background: ${service.color}`" />
-						<span v-else class="h-2 w-2 rounded-full" :style="`background: #CCCCCC`" />
-					</template>
-					<template #option="{ option: serviceItem }">
-						<span class="uppercase tracking-wide">{{ serviceItem.name }}</span>
-						<span class="h-2 w-2 rounded-full" :style="`background: ${serviceItem.color}`" />
-					</template>
-				</USelectMenu>
-			</div>
-			<div class="mx-2 w-64 uppercase relative">
-				<USelectMenu
-					v-model="organization"
-					:options="organizations"
-					class="p-0"
-					@update:model-value="organizationChange"
-				>
-					<template #label>
-						<span v-if="organization.name" class="uppercase tracking-wide">{{ organization.name }}</span>
-						<span v-else class="uppercase tracking-wide">Select Client</span>
-					</template>
-					<template #option="{ option: organizationItem }">
-						<span class="uppercase tracking-wide">{{ organizationItem.name }}</span>
-					</template>
-				</USelectMenu>
-			</div>
-		</div>
-		<div class="w-full grid gap-2 grid-cols-3">
-			<div v-for="(ticket, index) in filteredTickets" :key="index">
-				<UCard>
-					<template #header>
-						<Placeholder class="h-8" />
-					</template>
-
-					{{ ticket.title }}
-
-					<template #footer>
-						<Placeholder class="h-8" />
-					</template>
-				</UCard>
+	<div class="md:px-6 mx-auto flex items-start justify-center flex-col relative px-4 pt-20">
+		<h1 class="page__title">Statistics</h1>
+		<div class="w-full flex flex-col items-center min-h-svh z-10 !mt-0 justify-start page__inner">
+			<div class="w-full max-w-[1200px]">
+				<h2 class="text-lg uppercase tracking-wide mb-2 font-thin">{{ greetUser() }} {{ user?.first_name }}.</h2>
+				<div>
+					<h5
+						class="w-full mb-2 uppercase block font-medium text-gray-700 dark:text-gray-200 tracking-wider text-[10px]"
+					>
+						Ticket Activity:
+					</h5>
+					<TicketsDashboard />
+				</div>
 			</div>
 		</div>
 	</div>
 </template>
-
-<style></style>

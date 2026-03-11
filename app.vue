@@ -34,13 +34,13 @@ const links = ref([
 	{
 		name: 'Command Center',
 		type: ['header', 'footer', 'toolbar', 'drawer'],
-		to: '/command-center',
+		to: '/',
 		icon: 'i-heroicons-sparkles',
 	},
 	{
-		name: 'Dashboard',
+		name: 'Statistics',
 		type: ['footer', 'drawer'],
-		to: '/',
+		to: '/dashboard',
 		icon: 'i-heroicons-squares-2x2',
 	},
 	{
@@ -78,6 +78,12 @@ const links = ref([
 		type: ['header', 'footer', 'toolbar', 'drawer'],
 		to: '/social/dashboard',
 		icon: 'i-heroicons-share',
+	},
+	{
+		name: 'Email',
+		type: ['header', 'footer', 'drawer'],
+		to: '/email',
+		icon: 'i-heroicons-envelope',
 	},
 ]);
 </script>

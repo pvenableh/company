@@ -1,56 +1,144 @@
-<script setup>
+<script setup lang="ts">
 const { user: sessionUser, loggedIn } = useUserSession();
 const user = computed(() => {
 	return loggedIn.value ? sessionUser.value ?? null : null;
 });
+
+// ── Command Center (logged-in) ──
+const { suggestions, metrics, isAnalyzing, greeting, analyze } = useAIProductivityEngine();
+const { enabledModules } = useAIPreferences();
+const aiTrayOpen = ref(false);
+
+const badges = computed(() => {
+	const b: Record<string, number> = {};
+	if (metrics.value.overdueItems > 0) b.tasks = metrics.value.overdueItems;
+	if (metrics.value.overdueProjects > 0) b.projects = metrics.value.overdueProjects;
+	if (metrics.value.unreadChannelMessages > 0) b.channels = metrics.value.unreadChannelMessages;
+	if (metrics.value.failedSocialPosts > 0) b.social = metrics.value.failedSocialPosts;
+	if (metrics.value.upcomingMeetings > 0) b.scheduler = metrics.value.upcomingMeetings;
+	return b;
+});
+
+const topSuggestions = computed(() => {
+	return suggestions.value.slice(0, 5);
+});
+
+const runAnalysis = () => {
+	analyze(new Set(enabledModules.value));
+};
+
+onMounted(() => {
+	if (user.value) {
+		runAnalysis();
+	}
+});
+
+watch(user, (newUser) => {
+	if (newUser) {
+		runAnalysis();
+	}
+});
 </script>
+
 <template>
 	<div class="min-h-screen t-bg t-text">
 		<!-- Marketing Page: shown when user is NOT logged in -->
 		<PagesSellSheet v-if="!user" />
 
-		<!-- Dashboard: shown when user IS logged in -->
-		<div v-else class="md:px-6 mx-auto flex items-start justify-center flex-col relative px-4 pt-20">
-			<h1 class="page__title">Dashboard</h1>
-			<div class="w-full flex flex-col items-center min-h-svh z-10 !mt-0 justify-start page__inner">
-				<div class="w-full max-w-[1200px]">
-					<h2 class="text-lg uppercase tracking-wide mb-2 font-thin">{{ greetUser() }} {{ user.first_name }}.</h2>
-					<div class="">
-						<h5
-							class="w-full mb-2 uppercase block font-medium text-gray-700 dark:text-gray-200 tracking-wider text-[10px]"
-						>
-							Ticket Activity:
-						</h5>
-						<TicketsDashboard />
+		<!-- Command Center: shown when user IS logged in -->
+		<div v-else class="min-h-screen">
+			<div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+				<!-- Greeting & AI Toggle -->
+				<div class="flex items-center justify-between mb-8">
+					<div>
+						<h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ greeting }}</h1>
+						<p class="text-sm text-gray-500 mt-1">Here's what needs your attention today</p>
 					</div>
-					<div class="gap-6 grid-cols-1 sm:grid-cols-2 hidden">
-						<nuxt-link
-							to="/invoices"
-							class="bg-gray-100 text-center py-12 sm:py-20 uppercase tracking-wide rounded-md shadow-lg"
+					<button
+						@click="aiTrayOpen = true"
+						class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-violet-500 text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200 text-sm font-medium"
+					>
+						<UIcon name="i-heroicons-sparkles" class="w-4 h-4" />
+						AI Assistant
+					</button>
+				</div>
+
+				<!-- Productivity + Quick Suggestions Row -->
+				<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+					<CommandCenterProductivityMeter
+						:score="metrics.productivityScore"
+						:overdue-items="metrics.overdueItems"
+						:pending-invoice-total="metrics.pendingInvoiceTotal"
+						:tasks-completed-today="metrics.tasksCompletedToday"
+						:active-projects="metrics.activeProjects"
+						:unread-messages="metrics.unreadChannelMessages"
+						:upcoming-meetings="metrics.upcomingMeetings"
+					/>
+
+					<div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
+						<div class="flex items-center justify-between mb-3">
+							<div class="flex items-center gap-2">
+								<UIcon name="i-heroicons-sparkles" class="w-5 h-5 text-violet-500" />
+								<h3 class="text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">
+									Smart Suggestions
+								</h3>
+							</div>
+							<button
+								@click="runAnalysis"
+								:disabled="isAnalyzing"
+								class="text-xs text-primary hover:underline disabled:opacity-50"
+							>
+								Refresh
+							</button>
+						</div>
+
+						<div v-if="isAnalyzing" class="space-y-2">
+							<div v-for="n in 3" :key="n" class="h-14 bg-gray-100 dark:bg-gray-700 rounded-lg animate-pulse" />
+						</div>
+
+						<div v-else-if="topSuggestions.length === 0" class="text-center py-8 text-gray-400">
+							<UIcon name="i-heroicons-check-circle" class="w-10 h-10 mx-auto mb-2 text-green-400" />
+							<p class="text-sm">You're all caught up! Great job.</p>
+						</div>
+
+						<div v-else class="space-y-2">
+							<CommandCenterSuggestionCard
+								v-for="suggestion in topSuggestions"
+								:key="suggestion.id"
+								:suggestion="suggestion"
+							/>
+						</div>
+
+						<button
+							v-if="suggestions.length > 5"
+							@click="aiTrayOpen = true"
+							class="mt-3 text-xs text-primary hover:underline w-full text-center"
 						>
-							Invoices
-						</nuxt-link>
-						<nuxt-link
-							to="/projects"
-							class="bg-gray-100 text-center py-12 sm:py-20 uppercase tracking-wide rounded-md shadow-lg"
-						>
-							Projects
-						</nuxt-link>
-						<nuxt-link
-							to="/tickets"
-							class="bg-gray-100 text-center py-12 sm:py-20 uppercase tracking-wide rounded-md shadow-lg"
-						>
-							Tickets
-						</nuxt-link>
-						<nuxt-link
-							to="/channels"
-							class="bg-gray-100 text-center py-12 sm:py-20 uppercase tracking-wide rounded-md shadow-lg"
-						>
-							Channels
-						</nuxt-link>
+							View all {{ suggestions.length }} suggestions &rarr;
+						</button>
 					</div>
 				</div>
+
+				<!-- App Grid -->
+				<div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 mb-8">
+					<h3 class="text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300 mb-4">
+						Your Workspace
+					</h3>
+					<CommandCenterAppGrid :badges="badges" />
+				</div>
+
+				<!-- Bottom Section: Chat + CardDesk + Financials -->
+				<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+					<div class="h-[500px]">
+						<CommandCenterRealtimeChat />
+					</div>
+					<CommandCenterCardDeskPipeline />
+					<CommandCenterFinancialQuarter />
+				</div>
 			</div>
+
+			<!-- AI Tray -->
+			<CommandCenterAITray :is-open="aiTrayOpen" @close="aiTrayOpen = false" />
 		</div>
 	</div>
 </template>
