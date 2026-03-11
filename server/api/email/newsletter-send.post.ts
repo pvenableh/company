@@ -63,7 +63,7 @@ export default defineEventHandler(async (event) => {
                 { subscribed: { _eq: true } },
                 { 'contact_id.email_subscribed': { _eq: true } },
                 { 'contact_id.email_bounced': { _eq: false } },
-                { 'contact_id.status': { _eq: 'active' } },
+                { 'contact_id.status': { _eq: 'published' } },
               ],
             },
             limit: -1,
@@ -77,12 +77,16 @@ export default defineEventHandler(async (event) => {
         const contact = member.contact_id;
         if (contact?.email && !seen.has(contact.email)) {
           seen.add(contact.email);
+          // Parse JSON string custom_fields before merging
+          const contactCF = typeof contact.custom_fields === 'string'
+            ? (() => { try { return JSON.parse(contact.custom_fields); } catch { return {}; } })()
+            : (contact.custom_fields || {});
+          const memberCF = typeof member.custom_fields === 'string'
+            ? (() => { try { return JSON.parse(member.custom_fields); } catch { return {}; } })()
+            : (member.custom_fields || {});
           contacts.push({
             ...contact,
-            custom_fields: {
-              ...(contact.custom_fields || {}),
-              ...(member.custom_fields || {}),
-            },
+            custom_fields: { ...contactCF, ...memberCF },
           });
         }
       }
@@ -98,7 +102,7 @@ export default defineEventHandler(async (event) => {
             { id: { _in: recipient_ids } },
             { email_subscribed: { _eq: true } },
             { email_bounced: { _eq: false } },
-            { status: { _eq: 'active' } },
+            { status: { _eq: 'published' } },
           ],
         },
         limit: -1,
@@ -136,10 +140,10 @@ export default defineEventHandler(async (event) => {
           name: name || template.name,
           subject: emailSubject || template.subject_template || template.name,
           template_id: template_id,
-          target_lists: target_lists || null,
-          cc_list: cc_list || null,
-          bcc_list: bcc_list || null,
-          custom_variables: custom_variables || null,
+          target_lists: target_lists ? JSON.stringify(target_lists) : null,
+          cc_list: cc_list ? JSON.stringify(cc_list) : null,
+          bcc_list: bcc_list ? JSON.stringify(bcc_list) : null,
+          custom_variables: custom_variables ? JSON.stringify(custom_variables) : null,
         })
       );
       recordedEmailId = (created as any)?.id;
@@ -234,7 +238,7 @@ export default defineEventHandler(async (event) => {
           total_recipients: contacts.length,
           total_sent: sentCount,
           total_failed: contacts.length - sentCount,
-          send_errors: errors.length > 0 ? errors : null,
+          send_errors: errors.length > 0 ? JSON.stringify(errors) : null,
           preview_html: previewHtml,
         })
       );

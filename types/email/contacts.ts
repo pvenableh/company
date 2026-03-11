@@ -1,4 +1,14 @@
-export type ContactStatus = 'active' | 'unsubscribed' | 'bounced' | 'spam' | 'archived';
+/**
+ * Contact and Mailing List types — aligned with Directus schema.
+ *
+ * Key notes:
+ * - Contact.id is a string (UUID) in Directus
+ * - Contact uses standard Directus status: published/draft/archived
+ * - Contact has `title` (not `job_title`), no city/state/country (use `mailing_address`)
+ * - JSON fields stored as strings in Directus (custom_fields, etc.)
+ */
+
+export type ContactStatus = 'published' | 'draft' | 'archived';
 
 export type IndustryType =
   | 'Technology'
@@ -6,87 +16,97 @@ export type IndustryType =
   | 'Finance'
   | 'Education'
   | 'Real Estate'
-  | 'Retail'
   | 'Hospitality'
   | 'Legal'
   | 'Non-Profit'
   | 'Government'
-  | 'Other'
   | string;
 
 export interface Contact {
-  id: number;
-  status: ContactStatus;
-  sort: number | null;
-  user_created: string | null;
-  date_created: string | null;
-  date_updated: string | null;
+  id: string;
+  status?: ContactStatus;
+  sort?: number | null;
+  user_created?: string | null;
+  user_updated?: string | null;
+  date_created?: string | null;
+  date_updated?: string | null;
 
   // Identity
-  prefix: string | null;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone: string | null;
+  prefix?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
 
   // Professional
-  job_title: string | null;
-  company: string | null;
-  industry: IndustryType | null;
-  website: string | null;
+  title?: string | null;
+  company?: string | null;
+  industry?: IndustryType | null;
+  website?: string | null;
+
+  // Social
+  linkedin_url?: string | null;
+  instagram_handle?: string | null;
 
   // Location
-  city: string | null;
-  state: string | null;
-  country: string | null;
-  timezone: string | null;
+  mailing_address?: string | null;
+  timezone?: string | null;
+
+  // Categorization
+  category?: 'client' | 'prospect' | 'architect' | 'developer' | 'hospitality' | 'partner' | 'media' | null;
+  tags?: string[] | null;
+  custom_fields?: string | null;
+  source?: string | null;
+  notes?: string | null;
+  photo?: string | null;
 
   // Email preferences
-  email_subscribed: boolean;
-  email_unsubscribed_at: string | null;
-  unsubscribe_token: string | null;
-  email_bounced: boolean;
-  email_bounced_at: string | null;
-  email_bounce_type: 'hard' | 'soft' | null;
+  email_subscribed?: boolean | null;
+  email_unsubscribed_at?: string | null;
+  unsubscribe_token?: string | null;
+  email_bounced?: boolean | null;
+  email_bounced_at?: string | null;
+  email_bounce_type?: string | null;
 
   // Engagement
-  last_opened_at: string | null;
-  last_clicked_at: string | null;
-  total_emails_sent: number;
-  total_opens: number;
-  total_clicks: number;
-
-  // Flexible
-  tags: string[] | null;
-  custom_fields: Record<string, any> | null;
-  source: string | null;
-  notes: string | null;
+  last_opened_at?: string | null;
+  last_clicked_at?: string | null;
+  total_emails_sent?: number | null;
+  total_opens?: number | null;
+  total_clicks?: number | null;
 
   // Relations
+  user?: string | null;
+  organizations?: any[];
   lists?: MailingListContact[];
 }
 
 export interface MailingList {
   id: number;
-  status: 'active' | 'archived';
-  name: string;
+  status?: 'published' | 'draft' | 'archived';
+  sort?: number | null;
+  user_created?: string | null;
+  user_updated?: string | null;
+  date_created?: string | null;
+  date_updated?: string | null;
+  name?: string | null;
   slug: string;
-  description: string | null;
-  is_default: boolean;
-  double_opt_in: boolean;
-  subscriber_count: number | null;
+  description?: string | null;
+  is_default?: boolean | null;
+  double_opt_in?: boolean | null;
+  subscriber_count?: number | null;
   contacts?: MailingListContact[];
 }
 
 export interface MailingListContact {
   id: number;
-  list_id: number | MailingList;
-  contact_id: number | Contact;
-  subscribed: boolean;
-  date_subscribed: string;
-  date_unsubscribed: string | null;
-  source: string | null;
-  custom_fields: Record<string, any> | null;
+  list_id: number | MailingList | string;
+  contact_id: string | Contact;
+  subscribed?: boolean | null;
+  date_subscribed?: string | null;
+  date_unsubscribed?: string | null;
+  source?: string | null;
+  custom_fields?: string | null;
 }
 
 export interface CreateContactPayload {
@@ -95,15 +115,13 @@ export interface CreateContactPayload {
   email: string;
   prefix?: string;
   phone?: string;
-  job_title?: string;
+  title?: string;
   company?: string;
   industry?: string;
   website?: string;
-  city?: string;
-  state?: string;
-  country?: string;
+  mailing_address?: string;
   tags?: string[];
-  custom_fields?: Record<string, any>;
+  custom_fields?: string;
   source?: string;
 }
 
@@ -113,13 +131,11 @@ export interface CsvContactRow {
   email: string;
   prefix?: string;
   phone?: string;
-  job_title?: string;
+  title?: string;
   company?: string;
   industry?: string;
   website?: string;
-  city?: string;
-  state?: string;
-  country?: string;
+  mailing_address?: string;
   tags?: string;
   [key: string]: string | undefined;
 }
@@ -139,13 +155,11 @@ export interface ContactVariableMap {
   prefix: string;
   email: string;
   phone: string;
-  job_title: string;
+  title: string;
   company: string;
   industry: string;
   website: string;
-  city: string;
-  state: string;
-  country: string;
+  mailing_address: string;
   year: number;
   app_name: string;
   app_url: string;

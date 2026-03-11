@@ -23,8 +23,8 @@
               <span class="font-medium">
                 {{ contact.prefix ? `${contact.prefix} ` : '' }}{{ contact.first_name }} {{ contact.last_name }}
               </span>
-              <span v-if="contact.job_title" class="block text-xs text-muted-foreground">
-                {{ contact.job_title }}
+              <span v-if="contact.title" class="block text-xs text-muted-foreground">
+                {{ contact.title }}
               </span>
             </div>
           </td>

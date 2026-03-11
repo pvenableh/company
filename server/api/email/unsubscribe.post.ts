@@ -33,7 +33,6 @@ export default defineEventHandler(async (event) => {
     updateItem('contacts', contact.id, {
       email_subscribed: false,
       email_unsubscribed_at: new Date().toISOString(),
-      status: 'unsubscribed',
     })
   );
 

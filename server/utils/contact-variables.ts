@@ -33,17 +33,17 @@ export function buildContactVariableMap(
       : contact.first_name,
 
     // Flatten custom_fields so {{ account_tier }} works directly
-    ...(contact.custom_fields || {}),
+    ...(typeof contact.custom_fields === 'string'
+      ? (() => { try { return JSON.parse(contact.custom_fields); } catch { return {}; } })()
+      : (contact.custom_fields || {})),
 
     // Ensure null fields become empty strings
     phone: contact.phone || '',
-    job_title: contact.job_title || '',
+    title: contact.title || '',
     company: contact.company || '',
     industry: contact.industry || '',
     website: contact.website || '',
-    city: contact.city || '',
-    state: contact.state || '',
-    country: contact.country || '',
+    mailing_address: contact.mailing_address || '',
     prefix: contact.prefix || '',
 
     // System globals (highest priority — cannot be overridden by contact data)

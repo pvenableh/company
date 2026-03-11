@@ -7,7 +7,7 @@ export function useMailingLists() {
   const getLists = async (): Promise<MailingList[]> => {
     return items.list({
       fields: ['*'],
-      filter: { status: { _eq: 'active' } },
+      filter: { status: { _eq: 'published' } },
       sort: ['-is_default', 'name'],
     });
   };
@@ -17,7 +17,7 @@ export function useMailingLists() {
   };
 
   const createList = async (payload: Partial<MailingList>): Promise<MailingList> => {
-    return items.create({ ...payload, status: 'active' } as any);
+    return items.create({ ...payload, status: 'published' } as any);
   };
 
   const updateList = async (id: number, payload: Partial<MailingList>): Promise<MailingList> => {
@@ -33,19 +33,25 @@ export function useMailingLists() {
           { subscribed: { _eq: true } },
           { 'contact_id.email_subscribed': { _eq: true } },
           { 'contact_id.email_bounced': { _eq: false } },
-          { 'contact_id.status': { _eq: 'active' } },
+          { 'contact_id.status': { _eq: 'published' } },
         ],
       },
       limit: -1,
     });
 
-    return (members || []).map((m: any) => ({
-      ...m.contact_id,
-      custom_fields: {
-        ...(m.contact_id.custom_fields || {}),
-        ...(m.custom_fields || {}),
-      },
-    }));
+    return (members || []).map((m: any) => {
+      // Parse JSON string custom_fields before merging
+      const contactCF = typeof m.contact_id.custom_fields === 'string'
+        ? (() => { try { return JSON.parse(m.contact_id.custom_fields); } catch { return {}; } })()
+        : (m.contact_id.custom_fields || {});
+      const memberCF = typeof m.custom_fields === 'string'
+        ? (() => { try { return JSON.parse(m.custom_fields); } catch { return {}; } })()
+        : (m.custom_fields || {});
+      return {
+        ...m.contact_id,
+        custom_fields: { ...contactCF, ...memberCF },
+      };
+    });
   };
 
   // Resolve contacts from multiple lists, deduplicated by email

@@ -29,8 +29,8 @@
         <input v-model="formData.phone" class="w-full rounded-md border bg-background px-3 py-2 text-sm" />
       </div>
       <div>
-        <label class="block text-sm font-medium mb-1">Job Title</label>
-        <input v-model="formData.job_title" class="w-full rounded-md border bg-background px-3 py-2 text-sm" />
+        <label class="block text-sm font-medium mb-1">Title</label>
+        <input v-model="formData.title" class="w-full rounded-md border bg-background px-3 py-2 text-sm" />
       </div>
     </div>
 
@@ -53,19 +53,9 @@
       <input v-model="formData.website" class="w-full rounded-md border bg-background px-3 py-2 text-sm" placeholder="https://" />
     </div>
 
-    <div class="grid grid-cols-3 gap-4">
-      <div>
-        <label class="block text-sm font-medium mb-1">City</label>
-        <input v-model="formData.city" class="w-full rounded-md border bg-background px-3 py-2 text-sm" />
-      </div>
-      <div>
-        <label class="block text-sm font-medium mb-1">State</label>
-        <input v-model="formData.state" class="w-full rounded-md border bg-background px-3 py-2 text-sm" />
-      </div>
-      <div>
-        <label class="block text-sm font-medium mb-1">Country</label>
-        <input v-model="formData.country" class="w-full rounded-md border bg-background px-3 py-2 text-sm" />
-      </div>
+    <div>
+      <label class="block text-sm font-medium mb-1">Mailing Address</label>
+      <textarea v-model="formData.mailing_address" rows="2" class="w-full rounded-md border bg-background px-3 py-2 text-sm" />
     </div>
 
     <div>
@@ -130,13 +120,11 @@ const formData = reactive<any>({
   last_name: props.contact?.last_name || '',
   email: props.contact?.email || '',
   phone: props.contact?.phone || '',
-  job_title: props.contact?.job_title || '',
+  title: props.contact?.title || '',
   company: props.contact?.company || '',
   industry: props.contact?.industry || '',
   website: props.contact?.website || '',
-  city: props.contact?.city || '',
-  state: props.contact?.state || '',
-  country: props.contact?.country || '',
+  mailing_address: props.contact?.mailing_address || '',
   tags: [...(props.contact?.tags || [])],
   notes: props.contact?.notes || '',
 });

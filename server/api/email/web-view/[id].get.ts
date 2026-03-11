@@ -28,8 +28,8 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 404, message: 'No web version available for this email' });
     }
 
-    // Only allow viewing sent or archived emails
-    if (!['sent', 'archived'].includes(email.status)) {
+    // Only allow viewing sent/published/archived emails (not drafts)
+    if (!['sent', 'published', 'archived'].includes(email.status)) {
       throw createError({ statusCode: 404, message: 'Email not available for web viewing' });
     }
 

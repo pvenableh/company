@@ -64,8 +64,8 @@ function parseFile(file: File) {
     // Auto-map columns
     const knownFields = new Set([
       'first_name', 'last_name', 'email', 'prefix', 'phone',
-      'job_title', 'company', 'industry', 'website',
-      'city', 'state', 'country', 'timezone', 'tags', 'notes',
+      'title', 'company', 'industry', 'website',
+      'mailing_address', 'timezone', 'tags', 'notes',
     ]);
     const mapping: Record<string, string> = {};
     for (const header of csvHeaders.value) {
@@ -166,8 +166,8 @@ async function runImport() {
 
       <div class="mt-6 p-4 bg-muted/50 rounded-lg text-sm">
         <p class="font-medium mb-2">Expected CSV format:</p>
-        <pre class="text-xs text-muted-foreground overflow-x-auto font-mono">first_name,last_name,email,job_title,company,industry,city,state,country,tags
-Jane,Smith,jane@acme.com,CEO,Acme Corp,Technology,Miami,FL,US,"vip,enterprise"</pre>
+        <pre class="text-xs text-muted-foreground overflow-x-auto font-mono">first_name,last_name,email,title,company,industry,mailing_address,tags
+Jane,Smith,jane@acme.com,CEO,Acme Corp,Technology,"123 Main St, Miami FL 33101","vip,enterprise"</pre>
         <p class="mt-2 text-muted-foreground/80">
           Any extra columns not in the standard list are saved as custom_fields.
         </p>

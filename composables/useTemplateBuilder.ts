@@ -5,6 +5,7 @@ import type {
   NewsletterBlock,
   TemplateBlockWithBlock,
 } from '~/types/email/blocks';
+import { parseVariablesSchema } from '~/types/email/blocks';
 
 export function useTemplateBuilder(templateId: Ref<number>) {
   const { previewNewsletter } = useEmailTemplates();
@@ -120,8 +121,9 @@ export function useTemplateBuilder(templateId: Ref<number>) {
     let source = partial.mjml_source;
     const vars = partial.instance_variables || {};
     // Replace design-time variables
-    if (partial.variables_schema) {
-      for (const def of partial.variables_schema) {
+    const schema = parseVariablesSchema(partial.variables_schema);
+    if (schema.length) {
+      for (const def of schema) {
         const value = vars[def.key] ?? def.default ?? '';
         source = source.replaceAll(`{{{${def.key}}}}`, String(value));
       }
@@ -240,9 +242,10 @@ ${sections.join('\n')}
 
   // ── Helpers ────────────────────────────────────────────────────────
   function getDefaultVariables(block: NewsletterBlock): Record<string, any> {
-    if (!block.variables_schema) return {};
+    const schema = parseVariablesSchema(block.variables_schema);
+    if (!schema.length) return {};
     return Object.fromEntries(
-      block.variables_schema.map((v) => [v.key, v.default ?? ''])
+      schema.map((v) => [v.key, v.default ?? ''])
     );
   }
 

@@ -52,7 +52,7 @@
     <!-- Variable Editor (collapsible) -->
     <div v-if="isEditing">
       <BlockVariableEditor
-        :schema="canvasBlock.block.variables_schema"
+        :schema="parsedSchema"
         :variables="canvasBlock.variables"
         @update="handleVarUpdate"
       />
@@ -62,6 +62,7 @@
 
 <script setup lang="ts">
 import type { CanvasBlock } from '~/types/email/blocks';
+import { parseVariablesSchema } from '~/types/email/blocks';
 
 const props = defineProps<{
   canvasBlock: CanvasBlock;
@@ -76,6 +77,7 @@ const emit = defineEmits<{
 }>();
 
 const isEditing = ref(false);
+const parsedSchema = computed(() => parseVariablesSchema(props.canvasBlock.block.variables_schema));
 
 function handleVarUpdate(key: string, value: any) {
   emit('update-vars', {

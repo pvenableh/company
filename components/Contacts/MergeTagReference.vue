@@ -74,7 +74,7 @@ const tagGroups = [
   {
     label: 'Professional',
     tags: [
-      { key: 'job_title', label: 'Job Title' },
+      { key: 'title', label: 'Title' },
       { key: 'company', label: 'Company' },
       { key: 'industry', label: 'Industry' },
       { key: 'website', label: 'Website' },
@@ -83,9 +83,8 @@ const tagGroups = [
   {
     label: 'Location',
     tags: [
-      { key: 'city', label: 'City' },
-      { key: 'state', label: 'State' },
-      { key: 'country', label: 'Country' },
+      { key: 'mailing_address', label: 'Mailing Address' },
+      { key: 'timezone', label: 'Timezone' },
     ],
   },
   {

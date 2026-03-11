@@ -21,10 +21,10 @@ const COLUMN_MAP: Record<string, string> = {
   'phone number': 'phone',
   'mobile': 'phone',
   'telephone': 'phone',
-  'job title': 'job_title',
-  'title': 'job_title',
-  'position': 'job_title',
-  'role': 'job_title',
+  'job title': 'title',
+  'title': 'title',
+  'position': 'title',
+  'role': 'title',
   'organization': 'company',
   'organisation': 'company',
   'company name': 'company',
@@ -32,8 +32,9 @@ const COLUMN_MAP: Record<string, string> = {
 
 const KNOWN_FIELDS = new Set([
   'first_name', 'last_name', 'email', 'prefix', 'phone',
-  'job_title', 'company', 'industry', 'website',
-  'city', 'state', 'country', 'timezone', 'tags', 'notes',
+  'title', 'company', 'industry', 'website',
+  'mailing_address', 'timezone', 'tags', 'notes',
+  'linkedin_url', 'instagram_handle', 'category',
 ]);
 
 export default defineEventHandler(async (event) => {
@@ -112,7 +113,7 @@ export default defineEventHandler(async (event) => {
     }
 
     if (Object.keys(customFields).length > 0) {
-      contactData.custom_fields = customFields;
+      contactData.custom_fields = JSON.stringify(customFields);
     }
 
     try {
@@ -125,7 +126,7 @@ export default defineEventHandler(async (event) => {
         })
       )) as any[];
 
-      let contactId: number;
+      let contactId: string;
 
       if (existing?.length > 0) {
         contactId = existing[0].id;
@@ -139,7 +140,7 @@ export default defineEventHandler(async (event) => {
         const created = (await directus.request(
           createItem('contacts', {
             ...contactData,
-            status: 'active',
+            status: 'published',
             email_subscribed: true,
             unsubscribe_token: generateUnsubscribeToken(),
           })

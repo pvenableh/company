@@ -51,10 +51,14 @@ export function useEmails() {
           : email.template_id,
         name: email.name,
         subject: email.subject,
-        target_lists: email.target_lists,
-        cc_list: email.cc_list,
-        bcc_list: email.bcc_list,
-        custom_variables: email.custom_variables,
+        target_lists: typeof email.target_lists === 'string'
+          ? JSON.parse(email.target_lists) : email.target_lists,
+        cc_list: typeof email.cc_list === 'string'
+          ? JSON.parse(email.cc_list) : email.cc_list,
+        bcc_list: typeof email.bcc_list === 'string'
+          ? JSON.parse(email.bcc_list) : email.bcc_list,
+        custom_variables: typeof email.custom_variables === 'string'
+          ? JSON.parse(email.custom_variables) : email.custom_variables,
       },
     });
   };
