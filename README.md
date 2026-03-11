@@ -1,6 +1,6 @@
 # Hue Studios
 
-An all-in-one, agency-grade business management platform built with [Nuxt 3](https://nuxt.com), [Vue 3](https://vuejs.org), and [Directus](https://directus.io). Designed for creative agencies, consultancies, and growing SMBs that need project delivery, client management, financials, team collaboration, and social media management under one roof.
+An all-in-one, agency-grade business management platform built with [Nuxt 3](https://nuxt.com), [Vue 3](https://vuejs.org), and [Directus](https://directus.io). Designed for creative agencies, consultancies, and growing SMBs that need project delivery, client management, financials, team collaboration, social media management, email marketing, and AI-powered productivity intelligence under one roof.
 
 ## Features
 
@@ -15,6 +15,7 @@ An all-in-one, agency-grade business management platform built with [Nuxt 3](htt
 - **Social Media Management** — Compose, schedule, and publish to Instagram and TikTok; content calendar, engagement analytics, multi-client management, and OAuth account connections
 - **Email Marketing & Newsletters** — Block-based MJML newsletter builder with 17+ reusable blocks, drag-and-drop assembly, live preview, mailing list management with deduplication, CSV contact import, merge-tag personalization via Handlebars, editable header/footer partials, one-click unsubscribe, "View in Browser" web links, and campaign send tracking via SendGrid
 - **Contact CRM** — Contact management with tagging, custom fields, mailing list membership, subscription tracking, and CSV import/export
+- **AI Command Center** — AI-powered productivity engine that analyzes tickets, projects, tasks, invoices, contacts, deals, channels, social media, scheduling, and phone activity to generate prioritized action items, reminders, insights, and follow-ups; includes productivity scoring (0-100), customizable AI module preferences, team chat, and financial analysis; supports Claude (Anthropic), GPT (OpenAI), and Gemini (Google) backends
 - **Organizations & Teams** — Multi-organization support with team structures, role-based access control (admin, client manager, user), member invitations, and cross-tab state sync
 
 ### Supporting Features
@@ -39,6 +40,7 @@ An all-in-one, agency-grade business management platform built with [Nuxt 3](htt
 | CMS / Backend | Directus (headless) |
 | Auth | nuxt-auth-utils + Directus Auth |
 | Payments | Stripe |
+| AI | Anthropic Claude, OpenAI GPT, Google Gemini |
 | Email | SendGrid, MJML, Handlebars |
 | Video / SMS | Twilio |
 | Calendar | Google Calendar API, Microsoft Outlook (Azure) |
@@ -124,6 +126,7 @@ The app will be available at `http://localhost:3000`.
 │   ├── Invoices/       # Invoice forms, PDF generation
 │   ├── Channels/       # Real-time messaging
 │   ├── Scheduler/      # Calendar, booking, video meetings
+│   ├── CommandCenter/  # AI tray, suggestion cards, productivity meter, preferences
 │   ├── Newsletter/     # Block builder, canvas, variable editor, partials
 │   ├── Contacts/       # Contact forms, tables, merge tag reference
 │   ├── Import/         # CSV column mapper
@@ -162,6 +165,9 @@ The app will be available at `http://localhost:3000`.
 | Invoices | `/invoices` | Invoice list, creation, and payment tracking |
 | Scheduler | `/scheduler` | Calendar, booking, and video meeting management |
 | Channels | `/channels` | Real-time team messaging |
+| Command Center | `/command-center` | AI productivity dashboard and task analyzer |
+| Command Center Chat | `/command-center/chat` | AI-powered team chat |
+| Financials | `/command-center/financials` | Financial analysis and quarterly goals |
 | Email Templates | `/email/templates` | Newsletter template builder |
 | Email Campaigns | `/email` | Campaign management and send tracking |
 | Contacts | `/contacts` | Contact CRM and mailing lists |
@@ -176,6 +182,62 @@ The app will be available at `http://localhost:3000`.
 | Teams | `/organization/teams` | Team structure and roles |
 | Account | `/account` | User profile and settings |
 | Public Booking | `/book/[userId]` | Client-facing scheduling page |
+
+## AI Command Center
+
+The platform includes an AI-powered command center that acts as a productivity co-pilot. It analyzes data across every module and generates a prioritized, actionable task list — so your team always knows what to focus on next.
+
+### How It Works
+
+The AI Productivity Engine (`useAIProductivityEngine.ts`) scans 9 business modules in real-time:
+
+| Module | What It Analyzes |
+|---|---|
+| Tickets | Overdue tickets, unassigned work, stale items |
+| Projects | Missed milestones, upcoming deadlines, blocked tasks |
+| Tasks | Personal task completion rate, overdue items |
+| Invoices | Unpaid invoices, aging receivables, payment follow-ups |
+| Deals & Leads | Stale leads, deals needing follow-up, pipeline health |
+| Channels & Messages | Unread mentions, unanswered messages, idle channels |
+| Social Media | Pending posts, engagement drops, scheduling gaps |
+| Scheduling | Upcoming meetings, unconfirmed bookings, calendar conflicts |
+| Phone & Activities | Missed calls, unanswered voicemails, follow-up reminders |
+
+### Features
+
+- **Smart Suggestions** — Categorized as actions, reminders, insights, leads, or follow-ups with priority levels
+- **Productivity Score** — 0-100 score based on task completion, overdue items, and response times
+- **AI Tray** — Sliding panel with quick-access suggestions, filterable by category
+- **AI Preferences** — Per-user toggles to enable/disable analysis for each module
+- **Multi-Provider AI** — Supports Anthropic Claude, OpenAI GPT, and Google Gemini backends (configurable in Directus settings)
+- **Chat Sessions** — Persistent AI assistant conversations with context awareness
+- **Financial Analysis** — Quarterly revenue goals and financial health dashboard
+
+### Directus Collections
+
+| Collection | Purpose |
+|---|---|
+| `ai_preferences` | Per-user AI module toggle preferences |
+| `ai_chat_sessions` | AI assistant chat session history with context |
+| `ai_chat_messages` | Individual messages (user/assistant/system roles) |
+| `financial_goals` | Quarterly revenue goals per organization |
+
+### Setup
+
+1. **Create Directus collections:**
+   ```bash
+   pnpm tsx scripts/setup-ai-collections.ts
+   ```
+
+2. **Configure permissions:**
+   ```bash
+   pnpm tsx scripts/setup-ai-permissions.ts
+   ```
+
+3. **Add API keys** in Directus Settings (Settings > Project Settings):
+   - `ai_anthropic_api_key` — Anthropic/Claude API key
+   - `ai_openai_api_key` — OpenAI API key (optional)
+   - `ai_google_api_key` — Google Gemini API key (optional)
 
 ## Email Marketing System
 
