@@ -36,8 +36,22 @@ const formatDate = (dateStr: string) => {
 	return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 };
 
+const { user: authUser } = useDirectusAuth();
+
+watch(
+	() => authUser.value?.id,
+	(newId) => {
+		if (newId && stats.totalContacts === 0 && !isLoading) {
+			fetchStats();
+		}
+	},
+	{ immediate: true },
+);
+
 onMounted(() => {
-	fetchStats();
+	if (authUser.value?.id) {
+		fetchStats();
+	}
 });
 </script>
 
@@ -103,11 +117,11 @@ onMounted(() => {
 				</div>
 			</div>
 
-			<!-- Converted Clients -->
+			<!-- Converted Contacts -->
 			<div v-if="stats.convertedClients > 0" class="flex items-center gap-2 px-3 py-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
 				<UIcon name="i-heroicons-check-badge" class="w-4 h-4 text-emerald-500" />
 				<span class="text-xs font-medium text-emerald-700 dark:text-emerald-300">
-					{{ stats.convertedClients }} converted to client{{ stats.convertedClients !== 1 ? 's' : '' }}
+					{{ stats.convertedClients }} converted to contact{{ stats.convertedClients !== 1 ? 's' : '' }}
 				</span>
 			</div>
 

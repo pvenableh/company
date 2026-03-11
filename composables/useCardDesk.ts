@@ -64,6 +64,7 @@ export const useCardDesk = () => {
 	const contactItems = useDirectusItems('cd_contacts');
 	const activityItems = useDirectusItems('cd_activities');
 	const xpItems = useDirectusItems('cd_xp_state');
+	const { user: authUser } = useDirectusAuth();
 
 	const stats = ref<CardDeskStats>({
 		totalContacts: 0,
@@ -110,20 +111,28 @@ export const useCardDesk = () => {
 		isLoading.value = true;
 		error.value = null;
 
+		const userId = authUser.value?.id;
+		if (!userId) {
+			isLoading.value = false;
+			return;
+		}
+
 		try {
 			const [contacts, activities, xpState] = await Promise.all([
 				contactItems.list({
 					fields: ['id', 'name', 'first_name', 'last_name', 'company', 'rating', 'hibernated', 'is_client', 'client_at', 'date_created'],
-					filter: { status: { _eq: 'published' } },
+					filter: { _and: [{ status: { _eq: 'published' } }, { user_created: { _eq: userId } }] },
 					limit: -1,
 				}).catch(() => []),
 				activityItems.list({
 					fields: ['id', 'type', 'label', 'date', 'is_response', 'contact.id', 'contact.name'],
+					filter: { user_created: { _eq: userId } },
 					sort: ['-date'],
 					limit: 20,
 				}).catch(() => []),
 				xpItems.list({
 					fields: ['total_xp', 'level', 'streak', 'last_activity_date', 'total_scans', 'total_contacts', 'total_clients'],
+					filter: { user_created: { _eq: userId } },
 					limit: 1,
 				}).catch(() => []),
 			]);
@@ -208,8 +217,10 @@ export const useCardDesk = () => {
 
 	// Fetch contacts list with pagination
 	const fetchContacts = async (opts?: { rating?: string; hibernated?: boolean; isClient?: boolean; search?: string; page?: number; limit?: number }) => {
+		const userId = authUser.value?.id;
 		const filter: any = { status: { _eq: 'published' } };
 		const conditions: any[] = [filter];
+		if (userId) conditions.push({ user_created: { _eq: userId } });
 
 		if (opts?.rating) conditions.push({ rating: { _eq: opts.rating } });
 		if (opts?.hibernated !== undefined) conditions.push({ hibernated: { _eq: opts.hibernated } });
@@ -235,9 +246,13 @@ export const useCardDesk = () => {
 
 	// Fetch activities for a specific contact
 	const fetchContactActivities = async (contactId: string) => {
+		const userId = authUser.value?.id;
+		const filter: any = { contact: { _eq: contactId } };
+		if (userId) filter.user_created = { _eq: userId };
+
 		return activityItems.list({
 			fields: ['id', 'type', 'label', 'date', 'note', 'is_response', 'response_note', 'date_created'],
-			filter: { contact: { _eq: contactId } },
+			filter,
 			sort: ['-date'],
 			limit: 50,
 		});

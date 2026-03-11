@@ -34,13 +34,13 @@ const links = ref([
 	{
 		name: 'Command Center',
 		type: ['header', 'footer', 'toolbar', 'drawer'],
-		to: '/command-center',
+		to: '/',
 		icon: 'i-heroicons-sparkles',
 	},
 	{
-		name: 'Dashboard',
+		name: 'Statistics',
 		type: ['footer', 'drawer'],
-		to: '/',
+		to: '/dashboard',
 		icon: 'i-heroicons-squares-2x2',
 	},
 	{

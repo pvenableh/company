@@ -171,10 +171,10 @@ const platformIcons: Record<string, string> = {
     <div class="flex flex-wrap items-center gap-3 mb-6">
       <USelectMenu
         v-model="selectedClientId"
-        :options="[{ label: 'All Clients', value: null }, ...clients.map((c) => ({ label: c.name, value: c.id }))]"
+        :options="[{ label: 'All Contacts', value: null }, ...clients.map((c) => ({ label: c.name, value: c.id }))]"
         value-attribute="value"
         option-attribute="label"
-        placeholder="Filter by client"
+        placeholder="Filter by contact"
         class="w-40"
       />
       <USelectMenu

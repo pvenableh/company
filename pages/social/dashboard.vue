@@ -245,7 +245,7 @@ const statusColor = (status: string) => {
               color="gray"
               icon="i-lucide-building-2"
             >
-              Manage Clients
+              Manage Contacts
             </UButton>
             <UButton
               to="/social/settings"
