@@ -760,8 +760,16 @@ async function seedBlocks() {
   console.log(`Done. Created: ${created}, Skipped: ${skipped}, Failed: ${failed}`);
 }
 
-async function fixCategoryField() {
-  const choices = [
+/**
+ * Fix corrupted field metadata on newsletter_blocks.
+ * Reads all fields, identifies any with broken validation that causes
+ * VALUE_TOO_LONG errors, deletes them, and recreates with clean schemas.
+ */
+async function fixCollectionFields() {
+  console.log('Checking newsletter_blocks fields for corrupted metadata...');
+  console.log('');
+
+  const categoryChoices = [
     { text: 'Header', value: 'header' },
     { text: 'Hero', value: 'hero' },
     { text: 'Content', value: 'content' },
@@ -777,61 +785,135 @@ async function fixCategoryField() {
     { text: 'Footer', value: 'footer' },
   ];
 
+  // Custom recreate configs for known field types
+  const fieldFixConfigs = {
+    category: {
+      type: 'string',
+      schema: { max_length: 255, is_nullable: true, default_value: null },
+      meta: {
+        interface: 'select-dropdown',
+        display: 'labels',
+        options: { choices: categoryChoices, allowOther: true },
+        validation: null,
+        validation_message: null,
+      },
+    },
+    date_created: {
+      type: 'timestamp',
+      schema: { is_nullable: true, default_value: null },
+      meta: {
+        interface: 'datetime',
+        display: 'datetime',
+        special: ['date-created'],
+        readonly: true,
+        hidden: true,
+        validation: null,
+        validation_message: null,
+      },
+    },
+    date_updated: {
+      type: 'timestamp',
+      schema: { is_nullable: true, default_value: null },
+      meta: {
+        interface: 'datetime',
+        display: 'datetime',
+        special: ['date-updated'],
+        readonly: true,
+        hidden: true,
+        validation: null,
+        validation_message: null,
+      },
+    },
+    user_created: {
+      type: 'uuid',
+      schema: { is_nullable: true, default_value: null, foreign_key_table: 'directus_users', foreign_key_column: 'id' },
+      meta: {
+        interface: 'select-dropdown-m2o',
+        display: 'user',
+        special: ['user-created'],
+        readonly: true,
+        hidden: true,
+        validation: null,
+        validation_message: null,
+      },
+    },
+    user_updated: {
+      type: 'uuid',
+      schema: { is_nullable: true, default_value: null, foreign_key_table: 'directus_users', foreign_key_column: 'id' },
+      meta: {
+        interface: 'select-dropdown-m2o',
+        display: 'user',
+        special: ['user-updated'],
+        readonly: true,
+        hidden: true,
+        validation: null,
+        validation_message: null,
+      },
+    },
+  };
+
   try {
-    // First, read the full field config to diagnose the issue
-    const getRes = await fetch(`${DIRECTUS_URL}/fields/newsletter_blocks/category`, { headers });
-    const fieldData = await getRes.json();
-    console.log('Current category field config:');
-    console.log('  schema.max_length:', fieldData?.data?.schema?.max_length);
-    console.log('  meta.validation:', JSON.stringify(fieldData?.data?.meta?.validation));
-    console.log('  meta.options:', JSON.stringify(fieldData?.data?.meta?.options));
-    console.log('');
+    // Read all fields on the collection
+    const fieldsRes = await fetch(`${DIRECTUS_URL}/fields/newsletter_blocks`, { headers });
+    const fieldsData = await fieldsRes.json();
 
-    // Delete the field and recreate it cleanly
-    console.log('Deleting and recreating category field...');
-    await fetch(`${DIRECTUS_URL}/fields/newsletter_blocks/category`, {
-      method: 'DELETE',
-      headers,
-    });
-
-    const createRes = await fetch(`${DIRECTUS_URL}/fields/newsletter_blocks`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        field: 'category',
-        type: 'string',
-        schema: {
-          max_length: 255,
-          is_nullable: true,
-          default_value: null,
-        },
-        meta: {
-          interface: 'select-dropdown',
-          display: 'labels',
-          options: {
-            choices,
-            allowOther: true,
-          },
-          validation: null,
-          validation_message: null,
-        },
-      }),
-    });
-    const createData = await createRes.json();
-    if (createRes.ok) {
-      console.log('Recreated category field successfully.');
-    } else {
-      console.error('Failed to recreate:', JSON.stringify(createData.errors || createData));
+    if (!fieldsData?.data) {
+      console.error('Could not read fields:', JSON.stringify(fieldsData));
+      return;
     }
+
+    // Try to fix known problematic fields
+    const fieldsToFix = Object.keys(fieldFixConfigs);
+
+    for (const fieldName of fieldsToFix) {
+      const existing = fieldsData.data.find((f) => f.field === fieldName);
+      if (!existing) {
+        console.log(`  [skip] "${fieldName}" — not present in collection`);
+        continue;
+      }
+
+      const config = fieldFixConfigs[fieldName];
+
+      try {
+        // Delete
+        const delRes = await fetch(`${DIRECTUS_URL}/fields/newsletter_blocks/${fieldName}`, {
+          method: 'DELETE',
+          headers,
+        });
+        if (!delRes.ok) {
+          const delBody = await delRes.text();
+          console.error(`  [fail] Could not delete "${fieldName}":`, delBody);
+          continue;
+        }
+
+        // Recreate
+        const createRes = await fetch(`${DIRECTUS_URL}/fields/newsletter_blocks`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ field: fieldName, ...config }),
+        });
+        const createData = await createRes.json();
+        if (createRes.ok) {
+          console.log(`  [ok]   Recreated "${fieldName}" with clean metadata`);
+        } else {
+          console.error(`  [fail] Recreate "${fieldName}":`, JSON.stringify(createData.errors || createData));
+        }
+      } catch (err) {
+        console.error(`  [fail] "${fieldName}":`, err.message);
+      }
+    }
+
+    console.log('');
+    console.log('Field cleanup complete.');
     console.log('');
   } catch (err) {
-    console.error('Could not fix category field:', err.message);
+    console.error('Could not fix collection fields:', err.message);
     console.log('');
   }
 }
 
 async function seedAll() {
-  await fixCategoryField();
+  await fixCollectionFields();
   await seedBlocks();
   await seedPartials();
 }
