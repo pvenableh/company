@@ -15,7 +15,8 @@
 		"prepare": "husky install",
 		"test": "vitest run",
 		"test:watch": "vitest",
-		"generate:types": "dotenv -- sh -c 'directus-sdk-typegen -u $DIRECTUS_URL -t $DIRECTUS_SERVER_TOKEN -o ./types/directus.ts'"
+		"generate:types": "dotenv -- sh -c 'directus-sdk-typegen -u $DIRECTUS_URL -t $DIRECTUS_SERVER_TOKEN -o ./types/directus.ts'",
+		"seed:blocks": "node scripts/seed-newsletter-blocks.mjs"
 	},
 	"devDependencies": {
 		"@iconify-icons/wi": "^1.2.3",

@@ -1,19 +1,47 @@
 /**
  * Seed the newsletter_blocks collection with the standard block library.
- * Run with: DIRECTUS_STATIC_TOKEN=xxx node scripts/seed-newsletter-blocks.mjs
+ * Run with: node scripts/seed-newsletter-blocks.mjs
  *
- * Optional env vars:
- *   DIRECTUS_URL (default: http://localhost:8055)
- *   DIRECTUS_STATIC_TOKEN (required)
+ * Reads DIRECTUS_URL and DIRECTUS_STATIC_TOKEN from .env automatically.
+ * You can also set them as environment variables to override.
  */
+
+import { readFileSync } from 'fs';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+// Load .env file (same as dotenv-cli used by other scripts)
+const __dirname = dirname(fileURLToPath(import.meta.url));
+try {
+  const envPath = resolve(__dirname, '..', '.env');
+  const envFile = readFileSync(envPath, 'utf-8');
+  for (const line of envFile.split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eqIdx = trimmed.indexOf('=');
+    if (eqIdx === -1) continue;
+    const key = trimmed.slice(0, eqIdx).trim();
+    const value = trimmed.slice(eqIdx + 1).trim();
+    // Don't override existing env vars
+    if (!(key in process.env)) {
+      process.env[key] = value;
+    }
+  }
+} catch {
+  // .env file not found — rely on environment variables
+}
 
 const DIRECTUS_URL = process.env.DIRECTUS_URL || 'http://localhost:8055';
 const STATIC_TOKEN = process.env.DIRECTUS_STATIC_TOKEN;
 
 if (!STATIC_TOKEN) {
-  console.error('DIRECTUS_STATIC_TOKEN env var required');
+  console.error('Error: DIRECTUS_STATIC_TOKEN is not set.');
+  console.error('Set it in your .env file or pass it as an environment variable.');
   process.exit(1);
 }
+
+console.log(`Using Directus at: ${DIRECTUS_URL}`);
+console.log('');
 
 const headers = {
   'Content-Type': 'application/json',
