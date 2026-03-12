@@ -4,11 +4,11 @@
     <div class="flex items-center justify-between px-4 py-2 border-b bg-background">
       <div class="flex items-center gap-3">
         <NuxtLink
-          to="/admin/email/templates"
+          to="/email"
           class="text-muted-foreground hover:text-foreground text-sm"
         >
           <Icon name="lucide:arrow-left" class="w-4 h-4 inline mr-1" />
-          Templates
+          Email
         </NuxtLink>
         <span class="text-muted-foreground/40">|</span>
         <h1 class="font-semibold text-sm">{{ template?.name || 'Template Builder' }}</h1>

@@ -13,7 +13,7 @@ const badges = computed(() => {
 	const b: Record<string, number> = {};
 	if (metrics.value.overdueItems > 0) b.tasks = metrics.value.overdueItems;
 	if (metrics.value.overdueProjects > 0) b.projects = metrics.value.overdueProjects;
-	if (metrics.value.unreadChannelMessages > 0) b.channels = metrics.value.unreadChannelMessages;
+	if (metrics.value.unreadChannelMessages > 0) b.messages = metrics.value.unreadChannelMessages;
 	if (metrics.value.failedSocialPosts > 0) b.social = metrics.value.failedSocialPosts;
 	if (metrics.value.upcomingMeetings > 0) b.scheduler = metrics.value.upcomingMeetings;
 	return b;
@@ -46,25 +46,30 @@ watch(user, (newUser) => {
 		<PagesSellSheet v-if="!user" />
 
 		<!-- Command Center: shown when user IS logged in -->
-		<div v-else class="min-h-screen">
-			<div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+		<div v-else class="min-h-screen bg-gray-50/50 dark:bg-gray-900">
+			<div class="max-w-7xl mx-auto px-4 pt-20 pb-8 sm:px-6 lg:px-8 space-y-6">
 				<!-- Greeting & AI Toggle -->
-				<div class="flex items-center justify-between mb-8">
+				<div class="flex items-center justify-between">
 					<div>
 						<h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ greeting }}</h1>
-						<p class="text-sm text-gray-500 mt-1">Here's what needs your attention today</p>
+						<p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Here's what needs your attention today</p>
 					</div>
 					<button
 						@click="aiTrayOpen = true"
-						class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-violet-500 text-white rounded-xl shadow-md hover:shadow-lg transition-all duration-200 text-sm font-medium"
+						class="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-primary to-violet-500 text-white rounded-xl shadow-md hover:shadow-lg hover:scale-[1.02] transition-all duration-200 text-sm font-medium"
 					>
 						<UIcon name="i-heroicons-sparkles" class="w-4 h-4" />
 						AI Assistant
 					</button>
 				</div>
 
-				<!-- Productivity + Quick Suggestions Row -->
-				<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+				<!-- App Grid -->
+				<div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700/50">
+					<CommandCenterAppGrid :badges="badges" />
+				</div>
+
+				<!-- Productivity + Smart Suggestions -->
+				<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 					<CommandCenterProductivityMeter
 						:score="metrics.productivityScore"
 						:overdue-items="metrics.overdueItems"
@@ -75,8 +80,8 @@ watch(user, (newUser) => {
 						:upcoming-meetings="metrics.upcomingMeetings"
 					/>
 
-					<div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm border border-gray-100 dark:border-gray-700">
-						<div class="flex items-center justify-between mb-3">
+					<div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700/50">
+						<div class="flex items-center justify-between mb-4">
 							<div class="flex items-center gap-2">
 								<UIcon name="i-heroicons-sparkles" class="w-5 h-5 text-violet-500" />
 								<h3 class="text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">
@@ -98,7 +103,7 @@ watch(user, (newUser) => {
 
 						<div v-else-if="topSuggestions.length === 0" class="text-center py-8 text-gray-400">
 							<UIcon name="i-heroicons-check-circle" class="w-10 h-10 mx-auto mb-2 text-green-400" />
-							<p class="text-sm">You're all caught up! Great job.</p>
+							<p class="text-sm">You're all caught up!</p>
 						</div>
 
 						<div v-else class="space-y-2">
@@ -117,14 +122,6 @@ watch(user, (newUser) => {
 							View all {{ suggestions.length }} suggestions &rarr;
 						</button>
 					</div>
-				</div>
-
-				<!-- App Grid -->
-				<div class="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 mb-8">
-					<h3 class="text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300 mb-4">
-						Your Workspace
-					</h3>
-					<CommandCenterAppGrid :badges="badges" />
 				</div>
 
 				<!-- Bottom Section: Chat + CardDesk + Financials -->

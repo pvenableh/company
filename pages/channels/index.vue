@@ -106,9 +106,12 @@ const sortedChannels = computed(() => {
 </script>
 
 <template>
-	<div class="md:px-6 mx-auto flex items-start justify-start flex-col relative px-4 pt-20 min-h-svh">
+	<div class="max-w-7xl md:px-6 mx-auto flex items-start justify-start flex-col relative px-4 pt-20 min-h-svh">
 		<div class="flex items-center justify-between w-full mb-8">
-			<h1 class="text-2xl font-bold">Channels</h1>
+			<div>
+				<h1 class="text-2xl font-bold text-gray-900 dark:text-white">Messages</h1>
+				<p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Team channels and conversations</p>
+			</div>
 			<UButton v-if="isAdmin" icon="i-heroicons-plus" size="sm" @click="showCreateChannel = true">
 				New Channel
 			</UButton>
@@ -146,32 +149,35 @@ const sortedChannels = computed(() => {
 			</div>
 
 			<!-- Channels Grid -->
-			<div v-else class="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+			<div v-else class="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 				<template v-if="sortedChannels.length">
 					<NuxtLink
 						v-for="channel in sortedChannels"
 						:key="channel.id"
 						:to="'/channels/' + channel.name"
-						class="group relative bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm hover:shadow-md transition-all duration-200"
+						class="group relative bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700/50 hover:border-primary/30 hover:shadow-sm transition-all duration-200"
 					>
-						<div class="flex items-start justify-between">
-							<div class="space-y-2">
-								<div class="flex items-center space-x-2">
-									<h3 class="text-lg font-medium">#{{ channel.name }}</h3>
-									<UBadge v-if="channel.messageCount" color="primary" variant="subtle" size="sm" class="font-mono">
+						<div class="flex items-center gap-3">
+							<div class="w-10 h-10 rounded-lg bg-cyan-50 dark:bg-cyan-900/20 flex items-center justify-center flex-shrink-0">
+								<UIcon name="i-heroicons-chat-bubble-left-right" class="w-5 h-5 text-cyan-500" />
+							</div>
+							<div class="flex-1 min-w-0">
+								<div class="flex items-center gap-2">
+									<h3 class="font-semibold text-gray-900 dark:text-white truncate">#{{ channel.name }}</h3>
+									<UBadge v-if="channel.messageCount" color="primary" variant="subtle" size="xs" class="font-mono">
 										{{ channel.messageCount }}
 									</UBadge>
 								</div>
-
-								<div v-if="channel.project?.title" class="flex items-center text-sm text-gray-500">
-									<UIcon name="i-heroicons-folder" class="w-4 h-4 mr-1" />
+								<p v-if="channel.project?.title" class="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
 									{{ channel.project.title }}
-								</div>
+								</p>
+								<p v-else class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+									{{ channel.organization?.name || 'General' }}
+								</p>
 							</div>
-
 							<UIcon
-								name="i-heroicons-arrow-right"
-								class="w-5 h-5 text-gray-400 group-hover:text-primary transform group-hover:translate-x-1 transition-all"
+								name="i-heroicons-chevron-right"
+								class="w-4 h-4 text-gray-300 dark:text-gray-600 group-hover:text-primary transition-colors flex-shrink-0"
 							/>
 						</div>
 					</NuxtLink>
@@ -180,11 +186,13 @@ const sortedChannels = computed(() => {
 				<!-- Empty State -->
 				<div
 					v-else
-					class="col-span-full flex flex-col items-center justify-center py-12 px-4 border-2 border-dashed rounded-lg"
+					class="col-span-full flex flex-col items-center justify-center py-16 px-4 border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl"
 				>
-					<UIcon name="i-heroicons-chat-bubble-left-right" class="w-12 h-12 text-gray-400 mb-4" />
-					<h3 class="text-lg font-medium">No Channels Found</h3>
-					<p class="text-gray-500 text-center mt-2">No channels exist for the current organization.</p>
+					<div class="w-14 h-14 rounded-2xl bg-cyan-50 dark:bg-cyan-900/20 flex items-center justify-center mb-4">
+						<UIcon name="i-heroicons-chat-bubble-left-right" class="w-7 h-7 text-cyan-400" />
+					</div>
+					<h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-1">No channels yet</h3>
+					<p class="text-sm text-gray-500 dark:text-gray-400 text-center">Create a channel to start team conversations.</p>
 				</div>
 			</div>
 		</template>

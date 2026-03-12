@@ -30,32 +30,25 @@ const apps: AppItem[] = [
 		description: 'Track projects',
 	},
 	{
-		name: 'Tickets',
-		icon: 'i-heroicons-queue-list',
-		route: '/tickets',
-		color: 'bg-indigo-500',
-		description: 'Support tickets',
-	},
-	{
-		name: 'Invoices',
-		icon: 'i-heroicons-document-text',
-		route: '/invoices',
-		color: 'bg-emerald-500',
-		description: 'Billing & payments',
-	},
-	{
-		name: 'Scheduler',
-		icon: 'i-heroicons-calendar-date-range',
-		route: '/scheduler',
-		color: 'bg-amber-500',
-		description: 'Book meetings',
-	},
-	{
-		name: 'Channels',
+		name: 'Messages',
 		icon: 'i-heroicons-chat-bubble-left-right',
 		route: '/channels',
 		color: 'bg-cyan-500',
 		description: 'Team messaging',
+	},
+	{
+		name: 'Email',
+		icon: 'i-heroicons-envelope',
+		route: '/email',
+		color: 'bg-rose-500',
+		description: 'Campaigns & lists',
+	},
+	{
+		name: 'Contacts',
+		icon: 'i-heroicons-user-group',
+		route: '/contacts',
+		color: 'bg-orange-500',
+		description: 'Manage contacts',
 	},
 	{
 		name: 'Social',
@@ -65,39 +58,25 @@ const apps: AppItem[] = [
 		description: 'Social media',
 	},
 	{
-		name: 'Contacts',
-		icon: 'i-heroicons-building-office-2',
-		route: '/social/clients',
-		color: 'bg-orange-500',
-		description: 'Manage contacts',
+		name: 'Scheduler',
+		icon: 'i-heroicons-calendar-date-range',
+		route: '/scheduler',
+		color: 'bg-amber-500',
+		description: 'Book meetings',
 	},
 	{
-		name: 'Email',
-		icon: 'i-heroicons-envelope',
-		route: '/email',
-		color: 'bg-rose-500',
-		description: 'Email & lists',
+		name: 'Invoices',
+		icon: 'i-heroicons-document-text',
+		route: '/invoices',
+		color: 'bg-emerald-500',
+		description: 'Billing & payments',
 	},
 	{
-		name: 'Financials',
-		icon: 'i-heroicons-chart-bar',
-		route: '/command-center/financials',
-		color: 'bg-green-600',
-		description: 'Financial analysis',
-	},
-	{
-		name: 'Chat',
-		icon: 'i-heroicons-chat-bubble-bottom-center-text',
-		route: '/command-center/chat',
-		color: 'bg-violet-500',
-		description: 'Team chat',
-	},
-	{
-		name: 'Phone',
-		icon: 'i-heroicons-phone',
-		route: '/phone-settings',
-		color: 'bg-teal-500',
-		description: 'Phone system',
+		name: 'Tickets',
+		icon: 'i-heroicons-queue-list',
+		route: '/tickets',
+		color: 'bg-indigo-500',
+		description: 'Support tickets',
 	},
 	{
 		name: 'CardDesk',
@@ -107,11 +86,18 @@ const apps: AppItem[] = [
 		description: 'Networking CRM',
 	},
 	{
-		name: 'Tools',
-		icon: 'i-heroicons-wrench-screwdriver',
-		route: '/tools',
-		color: 'bg-gray-500',
-		description: 'Utilities',
+		name: 'Financials',
+		icon: 'i-heroicons-chart-bar',
+		route: '/command-center/financials',
+		color: 'bg-green-600',
+		description: 'Financial reports',
+	},
+	{
+		name: 'Phone',
+		icon: 'i-heroicons-phone',
+		route: '/phone-settings',
+		color: 'bg-teal-500',
+		description: 'Phone system',
 	},
 ];
 
@@ -121,30 +107,33 @@ const navigateTo = (route: string) => {
 </script>
 
 <template>
-	<div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4">
+	<div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
 		<button
 			v-for="app in apps"
 			:key="app.name"
-			class="group flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-all duration-200 cursor-pointer"
+			class="group flex flex-col items-center gap-2.5 p-3 rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-all duration-200 cursor-pointer"
 			@click="navigateTo(app.route)"
 		>
 			<div class="relative">
 				<div
 					:class="[app.color]"
-					class="w-14 h-14 rounded-2xl flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-105 transition-all duration-200"
+					class="w-13 h-13 rounded-[16px] flex items-center justify-center shadow-sm group-hover:shadow-md group-hover:scale-[1.06] transition-all duration-200"
 				>
-					<UIcon :name="app.icon" class="w-7 h-7 text-white" />
+					<UIcon :name="app.icon" class="w-6 h-6 text-white" />
 				</div>
 				<span
 					v-if="badges?.[app.name.toLowerCase()]"
-					class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center"
+					class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center ring-2 ring-white dark:ring-gray-800"
 				>
 					{{ badges[app.name.toLowerCase()] > 9 ? '9+' : badges[app.name.toLowerCase()] }}
 				</span>
 			</div>
-			<span class="text-xs font-medium text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
-				{{ app.name }}
-			</span>
+			<div class="text-center">
+				<span class="text-xs font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
+					{{ app.name }}
+				</span>
+				<p class="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 hidden sm:block">{{ app.description }}</p>
+			</div>
 		</button>
 	</div>
 </template>
