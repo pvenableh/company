@@ -62,8 +62,8 @@
 
 		<!-- Quote Break -->
 		<div class="quote-break">
-			<p class="quote-text opacity-0">&ldquo;The most essential gift for a good writer is a built-in, <em>shock-proof</em> shit detector.&rdquo;</p>
-			<p class="quote-attr opacity-0">&mdash; Ernest Hemingway &nbsp;&middot;&nbsp; Earnest applies the same standard to software.</p>
+			<p class="quote-text opacity-0">&ldquo;Perfection is achieved, not when there is nothing more to add, but when there is nothing left to <em>take away.</em>&rdquo;</p>
+			<p class="quote-attr opacity-0">&mdash; Antoine de Saint-Exup&eacute;ry &nbsp;&middot;&nbsp; Earnest applies the same standard to software.</p>
 		</div>
 
 		<!-- Pricing -->
