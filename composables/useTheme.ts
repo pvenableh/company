@@ -1,12 +1,14 @@
 /**
  * Universal Theme System for Earnest.
  *
- * Each theme is a named set of CSS custom-property overrides applied via
- * `data-theme` on <html>. Adding a new theme is one object in `themes`.
+ * Two independent axes:
+ *   1. Color theme — `data-theme` on <html> (earnest, midnight, dawn, ocean)
+ *   2. Style variant — `data-style` on <html> (modern, classic)
  *
  * Usage:
- *   const { currentTheme, setTheme, themes } = useTheme()
+ *   const { currentTheme, setTheme, currentStyle, setStyle, themes, styles } = useTheme()
  *   setTheme('midnight')
+ *   setStyle('classic')
  */
 
 export interface ThemeDefinition {
@@ -17,7 +19,13 @@ export interface ThemeDefinition {
 	swatches: string[];
 }
 
-/** Registry of available themes. CSS lives in assets/css/themes.css */
+export interface StyleDefinition {
+	id: string;
+	name: string;
+	description: string;
+}
+
+/** Registry of available color themes. CSS lives in assets/css/themes.css */
 const themes: ThemeDefinition[] = [
 	{
 		id: 'earnest',
@@ -45,10 +53,26 @@ const themes: ThemeDefinition[] = [
 	},
 ];
 
-const STORAGE_KEY = 'earnest-theme';
+/** Registry of typographic style variants */
+const styles: StyleDefinition[] = [
+	{
+		id: 'modern',
+		name: 'Modern',
+		description: 'Proxima Nova, uppercase, tracked-out',
+	},
+	{
+		id: 'classic',
+		name: 'Classic',
+		description: 'Bauer Bodoni, mixed-case, editorial',
+	},
+];
+
+const THEME_KEY = 'earnest-theme';
+const STYLE_KEY = 'earnest-style';
 
 export function useTheme() {
 	const currentTheme = useState<string>('earnest-theme', () => 'earnest');
+	const currentStyle = useState<string>('earnest-style', () => 'modern');
 
 	const setTheme = (themeId: string) => {
 		const exists = themes.find((t) => t.id === themeId);
@@ -58,23 +82,42 @@ export function useTheme() {
 
 		if (import.meta.client) {
 			document.documentElement.setAttribute('data-theme', themeId);
-			localStorage.setItem(STORAGE_KEY, themeId);
+			localStorage.setItem(THEME_KEY, themeId);
 		}
 	};
 
-	/** Restore saved theme on client hydration */
+	const setStyle = (styleId: string) => {
+		const exists = styles.find((s) => s.id === styleId);
+		if (!exists) return;
+
+		currentStyle.value = styleId;
+
+		if (import.meta.client) {
+			document.documentElement.setAttribute('data-style', styleId);
+			localStorage.setItem(STYLE_KEY, styleId);
+		}
+	};
+
+	/** Restore saved theme + style on client hydration */
 	const initTheme = () => {
 		if (!import.meta.client) return;
 
-		const saved = localStorage.getItem(STORAGE_KEY) || 'earnest';
-		currentTheme.value = saved;
-		document.documentElement.setAttribute('data-theme', saved);
+		const savedTheme = localStorage.getItem(THEME_KEY) || 'earnest';
+		currentTheme.value = savedTheme;
+		document.documentElement.setAttribute('data-theme', savedTheme);
+
+		const savedStyle = localStorage.getItem(STYLE_KEY) || 'modern';
+		currentStyle.value = savedStyle;
+		document.documentElement.setAttribute('data-style', savedStyle);
 	};
 
 	return {
 		themes,
+		styles,
 		currentTheme: readonly(currentTheme),
+		currentStyle: readonly(currentStyle),
 		setTheme,
+		setStyle,
 		initTheme,
 	};
 }

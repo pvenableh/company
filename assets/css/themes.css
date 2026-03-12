@@ -431,3 +431,29 @@
 	--sidebar-border: 166 15% 18%;
 	--sidebar-ring: 168 76% 42%;
 }
+
+/* ══════════════════════════════════════════════
+   Style Variants — Typography & Aesthetic
+   ══════════════════════════════════════════════
+   Layered on top of color themes via data-style.
+   Mix and match: any color theme + any style.
+   ══════════════════════════════════════════════ */
+
+/* ── Modern (default) ──
+   Proxima Nova, uppercase, tracked-out, clean  */
+:root,
+[data-style='modern'] {
+	--title-font: var(--font-proxima-regular);
+	--title-transform: uppercase;
+	--title-tracking: 0.12em;
+	--title-weight: 500;
+}
+
+/* ── Classic ──
+   Bauer Bodoni, mixed-case, tight, editorial  */
+[data-style='classic'] {
+	--title-font: var(--font-bauer-bodoni);
+	--title-transform: none;
+	--title-tracking: -0.01em;
+	--title-weight: 400;
+}

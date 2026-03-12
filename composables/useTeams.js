@@ -509,6 +509,17 @@ export const useTeams = () => {
 		};
 	};
 
+	// Re-fetch teams when user auth hydrates (fixes empty team list on initial load)
+	watch(
+		() => user.value?.id,
+		async (newUserId, oldUserId) => {
+			if (newUserId && !oldUserId && selectedOrg.value) {
+				// User just became available — re-fetch teams so visibility filter works
+				await fetchTeams(selectedOrg.value);
+			}
+		},
+	);
+
 	// Watch for organization changes
 	watch(
 		() => selectedOrg.value,

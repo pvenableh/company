@@ -1,415 +1,109 @@
 <template>
-	<div class="sell-sheet t-bg min-h-screen">
-		<!-- Hero Section -->
-		<section ref="heroRef" class="hero min-h-screen flex flex-col justify-center items-center relative px-6">
-			<!-- Hero Background -->
-			<div class="fixed inset-0 z-0 hero-bg-container">
+	<div class="sell-sheet">
+		<!-- Hero -->
+		<section ref="heroRef" class="earnest-hero">
+			<p class="hero-kicker opacity-0">The agency operating system</p>
+			<h1 class="hero-wordmark opacity-0">Earnest<span class="hero-period">.</span></h1>
+			<p class="hero-tagline opacity-0">Do good work.</p>
+			<p class="hero-sub opacity-0">A platform that means it.</p>
+			<div class="hero-actions opacity-0">
+				<nuxt-link to="/register" class="btn-ink">Start for free</nuxt-link>
+				<nuxt-link to="#features" class="btn-ghost">See how it works</nuxt-link>
+			</div>
+			<div class="hero-scroll opacity-0">
+				<div class="scroll-line"></div>
+				<span class="scroll-label">scroll</span>
+			</div>
+		</section>
+
+		<!-- Marquee -->
+		<div class="marquee-wrap" aria-hidden="true">
+			<div class="marquee-track">
+				<span v-for="(item, i) in [...marqueeItems, ...marqueeItems]" :key="i" class="marquee-item">
+					{{ item }} <span class="marquee-dot">&middot;</span>
+				</span>
+			</div>
+		</div>
+
+		<!-- Truth Section -->
+		<section ref="truthRef" class="truth-section">
+			<div class="truth-label opacity-0">The honest case</div>
+			<div class="truth-body">
+				<h2 class="truth-title opacity-0">Your agency runs on <em>eight tools.</em><br/>It should run on one.</h2>
+				<p class="truth-text opacity-0">You have a project tool. An invoice tool. A social tool. A phone system. A shared inbox. A calendar. A document editor. And Slack to hold it all together.</p>
+				<p class="truth-text opacity-0"><strong>None of them talk to each other.</strong> You pay for all of them. You lose hours between them every week.</p>
+				<p class="truth-text opacity-0">Earnest is the one place where the work actually lives &mdash; from the first brief to the final invoice. No integrations to maintain. No context to re-explain. No tab-switching at 11pm before a client call.</p>
+				<p class="truth-text opacity-0">Just the work. Done well.</p>
+			</div>
+		</section>
+
+		<!-- Divider -->
+		<div class="section-rule"><span class="section-rule-mark">&starf;</span></div>
+
+		<!-- Features -->
+		<section ref="featuresRef" id="features" class="features-section">
+			<div class="features-header">
+				<h2 class="features-title opacity-0">Everything your agency needs.<br/>Nothing it doesn't.</h2>
+				<p class="features-sub opacity-0">Built for 2&ndash;15 person agencies who are serious about their work.</p>
+			</div>
+
+			<div class="feature-list">
 				<div
-					class="hero-image w-full h-full flex items-center justify-center opacity-0 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900"
+					v-for="(feature, index) in features"
+					:key="index"
+					class="feature-item opacity-0"
 				>
-					<div class="absolute inset-0 overflow-hidden">
-						<div
-							class="absolute -top-1/2 -left-1/4 w-[80vw] h-[80vw] rounded-full bg-primary/5 blur-3xl"
-						></div>
-						<div
-							class="absolute -bottom-1/4 -right-1/4 w-[60vw] h-[60vw] rounded-full bg-primary/8 blur-3xl"
-						></div>
-					</div>
+					<span class="feature-number">{{ String(index + 1).padStart(2, '0') }}</span>
+					<div class="feature-name">{{ feature.name }}</div>
+					<div class="feature-desc">{{ feature.desc }}</div>
 				</div>
-				<div class="absolute inset-0 bg-gradient-to-b from-black/50 to-black/30"></div>
+			</div>
+		</section>
+
+		<!-- Quote Break -->
+		<div class="quote-break">
+			<p class="quote-text opacity-0">&ldquo;The most essential gift for a good writer is a built-in, <em>shock-proof</em> shit detector.&rdquo;</p>
+			<p class="quote-attr opacity-0">&mdash; Ernest Hemingway &nbsp;&middot;&nbsp; Earnest applies the same standard to software.</p>
+		</div>
+
+		<!-- Pricing -->
+		<section ref="pricingRef" id="pricing" class="pricing-section">
+			<div class="pricing-header">
+				<h2 class="pricing-title opacity-0">Honest pricing.<br/>No surprises.</h2>
+				<p class="pricing-sub opacity-0">One price. Your whole agency. Cancel any time &mdash; we'd rather earn your business than trap it.</p>
 			</div>
 
-			<div class="hero-content text-center relative z-10 lg:-mt-32">
-				<p
-					class="-mt-44 lg:mt-0 hero-address text-xs tracking-[0.3em] lg:tracking-[0.6em] uppercase mb-6 lg:mb-12 opacity-0 text-cream-alt"
+			<div class="plans-grid">
+				<div
+					v-for="(plan, index) in plans"
+					:key="index"
+					class="plan opacity-0"
+					:class="{ 'plan-featured': plan.featured }"
 				>
-					Every Tool Your Business Needs. One Platform.
-				</p>
-				<h1
-					class="hero-title t-heading text-[clamp(2.5rem,10vw,6rem)] font-light tracking-tight leading-[0.9] mb-8 opacity-0 text-cream"
-				>
-					Hue Studios
-				</h1>
-				<div class="hero-divider w-16 h-px bg-gold mx-auto mb-4 lg:mb-8 opacity-0 scale-x-0"></div>
-				<p
-					class="hero-tagline t-heading text-[clamp(1.125rem,2.5vw,2rem)] italic font-light text-cream-alt opacity-0"
-				>
-					Stop Juggling Apps. Start Running Your Business.
-				</p>
-			</div>
-			<div
-				class="absolute bottom-16 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-0 scroll-indicator z-10"
-			>
-				<span class="text-[0.625rem] tracking-[0.2em] uppercase t-text-tertiary">Scroll to discover</span>
-				<div class="w-px h-10 bg-gradient-to-b from-gold to-transparent scroll-line"></div>
-			</div>
-		</section>
-
-		<!-- Intro Section -->
-		<section ref="introRef" class="section py-24 lg:py-32 px-6 lg:px-16 t-section-alt">
-			<div class="max-w-6xl mx-auto text-left">
-				<h2
-					class="intro-title t-heading text-[clamp(2rem,5vw,3rem)] font-normal tracking-tight leading-tight mb-8 opacity-0"
-				>
-					One Login. Every Department.
-				</h2>
-				<p
-					class="intro-text t-body text-[clamp(1.0625rem,3vw,1.35rem)] leading-relaxed font-light t-text t-text-secondary mb-16 opacity-0"
-				>
-					Hue Studios replaces the patchwork of apps your company pays for every month. Projects, invoicing,
-					scheduling, team chat, social media, email marketing, video meetings, and an AI command center
-					that tells you what to do next &mdash; all in one beautifully designed platform built for
-					small and medium-sized businesses.
-				</p>
-
-				<!-- Intro Stats -->
-				<div class="grid grid-cols-2 md:grid-cols-4 gap-6 intro-images">
-					<div
-						v-for="(stat, index) in introStats"
-						:key="index"
-						class="text-center p-6 t-bg-subtle opacity-0 intro-image"
-					>
-						<div class="t-heading text-3xl font-light t-text-accent mb-2">{{ stat.value }}</div>
-						<p class="text-xs tracking-[0.15em] uppercase t-text-tertiary">{{ stat.label }}</p>
-					</div>
+					<div class="plan-name">{{ plan.name }}</div>
+					<div class="plan-price"><sup>$</sup>{{ plan.price }}<span> / mo</span></div>
+					<div class="plan-desc">{{ plan.desc }}</div>
+					<ul class="plan-features">
+						<li v-for="(feat, fi) in plan.features" :key="fi">{{ feat }}</li>
+					</ul>
+					<nuxt-link :to="plan.cta.to" class="plan-btn">{{ plan.cta.label }}</nuxt-link>
 				</div>
 			</div>
 		</section>
 
-		<!-- The Problem Section -->
-		<section ref="problemRef" class="section py-24 lg:py-32 px-6 lg:px-16 t-bg">
-			<div class="max-w-6xl mx-auto">
-				<div class="grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-8 lg:gap-16">
-					<div class="content-label flex flex-col gap-2 opacity-0">
-						<span class="t-heading text-sm lg:text-[26px] lg:leading-6 t-text-accent">01</span>
-						<span class="text-xs lg:text-sm lg:leading-3 tracking-wider uppercase t-text-tertiary"
-							>The Problem</span
-						>
-					</div>
-					<div class="content-main min-w-0 overflow-hidden">
-						<div class="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-8 lg:gap-12">
-							<div class="max-w-xl">
-								<h2
-									class="section-title t-heading text-[clamp(2rem,5vw,3rem)] font-normal tracking-tight leading-tight mb-8 opacity-0"
-								>
-									A Subscription for Everything
-								</h2>
-								<p
-									class="section-body text-[1.0625rem] leading-relaxed t-text-secondary mb-8 opacity-0"
-								>
-									Project management in one app. Invoicing in another. Scheduling somewhere else. Team
-									chat, video calls, social media, analytics &mdash; each with its own login, its own
-									bill, and none of them talking to each other. Your team wastes hours switching
-									between tools, and your monthly SaaS spend keeps climbing.
-								</p>
-								<p
-									class="section-tagline t-heading text-lg italic t-text-accent-tertiary pt-8 border-t t-border-divider opacity-0"
-								>
-									Your business deserves better than a dozen disconnected apps.
-								</p>
-							</div>
-							<div class="aspect-[3/4] t-bg-subtle flex items-center justify-center opacity-0 section-image">
-								<div class="text-center p-6">
-									<div class="grid grid-cols-3 gap-3 mb-6 max-w-[200px] mx-auto">
-										<div
-											v-for="n in 12"
-											:key="n"
-											class="aspect-square rounded-lg border-2 t-border flex items-center justify-center"
-										>
-											<Icon
-												:name="toolIcons[n - 1]"
-												class="w-5 h-5 t-text-muted"
-											/>
-										</div>
-									</div>
-									<p class="text-sm t-text-tertiary font-medium">12 SUBSCRIPTIONS</p>
-									<p class="text-xs t-text-muted mt-1">Replaced by one platform</p>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
+		<!-- Footer -->
+		<footer class="earnest-footer">
+			<div>
+				<div class="footer-brand">Earnest<span class="footer-accent">.</span></div>
+				<div class="footer-tagline">Do good work.</div>
 			</div>
-		</section>
-
-		<!-- The Solution Section -->
-		<section ref="solutionRef" class="section py-24 lg:py-32 px-6 lg:px-16 t-bg-alt">
-			<div class="max-w-6xl mx-auto">
-				<div class="grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-8 lg:gap-16">
-					<div class="content-label flex flex-col gap-2 opacity-0">
-						<span class="t-heading text-sm lg:text-[26px] lg:leading-6 t-text-accent">02</span>
-						<span class="text-xs lg:text-sm lg:leading-3 tracking-wider uppercase t-text-tertiary"
-							>The Solution</span
-						>
-					</div>
-					<div class="content-main max-w-4xl min-w-0 overflow-hidden">
-						<h2
-							class="section-title t-heading text-[clamp(2rem,5vw,3rem)] font-normal tracking-tight leading-tight mb-8 opacity-0"
-						>
-							One Platform That Does It All
-						</h2>
-						<p
-							class="section-body text-[1.0625rem] leading-relaxed t-text-secondary mb-8 opacity-0"
-						>
-							Hue Studios was born inside a real business &mdash; a creative agency with 18+ years of
-							operations experience. We built the tool we wished existed: one platform that handles
-							projects, clients, invoices, scheduling, team communication, social media, and more. No
-							more app-switching. No more duct-taping tools together.
-						</p>
-
-						<div class="advantages-grid grid grid-cols-1 sm:grid-cols-2 gap-6 my-8">
-							<div
-								v-for="(advantage, index) in advantages"
-								:key="index"
-								class="advantage-item flex gap-4 items-start opacity-0"
-							>
-								<div class="advantage-icon w-6 h-6 flex-shrink-0 t-text-accent-tertiary">
-									<Icon :name="advantage.icon" class="w-6 h-6" />
-								</div>
-								<div>
-									<p class="text-sm font-medium t-text mb-1">{{ advantage.title }}</p>
-									<p class="text-[0.875rem] leading-relaxed t-text-secondary">
-										{{ advantage.text }}
-									</p>
-								</div>
-							</div>
-						</div>
-
-						<p
-							class="section-tagline t-heading text-lg italic t-text-accent-tertiary pt-8 border-t t-border-divider opacity-0"
-						>
-							One bill. One login. Everything your business needs.
-						</p>
-					</div>
-				</div>
+			<div class="footer-links">
+				<nuxt-link to="#features">Features</nuxt-link>
+				<nuxt-link to="#pricing">Pricing</nuxt-link>
+				<nuxt-link to="/auth/signin">Login</nuxt-link>
 			</div>
-		</section>
-
-		<!-- Features Section -->
-		<section ref="featuresRef" class="section py-24 lg:py-32 px-6 lg:px-16 t-bg">
-			<div class="max-w-6xl mx-auto">
-				<div class="grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-8 lg:gap-16">
-					<div class="content-label flex flex-col gap-2 opacity-0">
-						<span class="t-heading text-sm lg:text-[26px] lg:leading-6 t-text-accent">03</span>
-						<span class="text-xs lg:text-sm lg:leading-3 tracking-wider uppercase t-text-tertiary"
-							>Features</span
-						>
-					</div>
-					<div class="content-main max-w-4xl min-w-0 overflow-hidden">
-						<h2
-							class="section-title t-heading text-[clamp(2rem,5vw,3rem)] font-normal tracking-tight leading-tight mb-8 opacity-0"
-						>
-							Everything Your Team Needs
-						</h2>
-
-						<!-- Feature Highlight Grid -->
-						<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-							<div
-								class="aspect-[4/5] t-bg-subtle flex items-center justify-center opacity-0 section-image"
-							>
-								<div class="text-center p-4">
-									<Icon
-										name="i-heroicons-view-columns"
-										class="w-8 h-8 t-text-muted mx-auto mb-2"
-									/>
-									<p class="text-xs t-text-tertiary font-medium mb-1">KANBAN BOARDS</p>
-									<p class="text-[10px] t-text-muted">
-										Drag-and-drop task management with custom statuses and filters.
-									</p>
-								</div>
-							</div>
-							<div
-								class="aspect-[4/5] t-bg-subtle flex items-center justify-center opacity-0 section-image"
-							>
-								<div class="text-center p-4">
-									<Icon
-										name="i-heroicons-sparkles"
-										class="w-8 h-8 t-text-muted mx-auto mb-2"
-									/>
-									<p class="text-xs t-text-tertiary font-medium mb-1">AI COMMAND CENTER</p>
-									<p class="text-[10px] t-text-muted">
-										AI analyzes every module and tells you exactly what needs attention.
-									</p>
-								</div>
-							</div>
-							<div
-								class="aspect-[4/5] t-bg-subtle flex items-center justify-center opacity-0 section-image"
-							>
-								<div class="text-center p-4">
-									<Icon name="i-heroicons-map" class="w-8 h-8 t-text-muted mx-auto mb-2" />
-									<p class="text-xs t-text-tertiary font-medium mb-1">PROJECT TIMELINE</p>
-									<p class="text-[10px] t-text-muted">
-										Visual timeline with milestones, task dependencies, and drag-to-reschedule.
-									</p>
-								</div>
-							</div>
-						</div>
-
-						<div class="feature-grid grid grid-cols-1 sm:grid-cols-2 gap-6 my-8">
-							<div
-								v-for="(feature, index) in features"
-								:key="index"
-								:class="[
-									'feature-item flex gap-4 items-start opacity-0',
-									feature.wide ? 'sm:col-span-2' : '',
-								]"
-							>
-								<div class="feature-icon w-6 h-6 flex-shrink-0 t-text-accent-tertiary">
-									<Icon :name="feature.icon" class="w-6 h-6" />
-								</div>
-								<div>
-									<p class="text-sm font-medium t-text mb-1">{{ feature.title }}</p>
-									<p class="text-[0.875rem] leading-relaxed t-text-secondary">
-										{{ feature.text }}
-									</p>
-								</div>
-							</div>
-						</div>
-
-						<p
-							class="section-tagline t-heading text-lg italic t-text-accent-tertiary pt-8 border-t t-border-divider opacity-0"
-						>
-							Modern tech stack. Beautiful by default.
-						</p>
-					</div>
-				</div>
-			</div>
-		</section>
-
-		<!-- Roadmap Section -->
-		<section ref="roadmapRef" class="section py-24 lg:py-32 px-6 lg:px-16 t-bg-alt">
-			<div class="max-w-6xl mx-auto">
-				<div class="grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-8 lg:gap-16">
-					<div class="content-label flex flex-col gap-2 opacity-0">
-						<span class="t-heading text-sm lg:text-[26px] lg:leading-6 t-text-accent">04</span>
-						<span class="text-xs lg:text-sm lg:leading-3 tracking-wider uppercase t-text-tertiary"
-							>Roadmap</span
-						>
-					</div>
-					<div class="content-main max-w-4xl min-w-0 overflow-hidden">
-						<h2
-							class="section-title t-heading text-[clamp(2rem,5vw,3rem)] font-normal tracking-tight leading-tight mb-8 opacity-0"
-						>
-							And We're Just Getting Started
-						</h2>
-						<p class="section-body text-[1.0625rem] leading-relaxed t-text-secondary mb-8 opacity-0">
-							The features above are live today. But the vision is bigger &mdash; one platform that
-							truly replaces every business tool you pay for. Here's what's coming next.
-						</p>
-
-						<div class="roadmap-grid grid grid-cols-1 sm:grid-cols-2 gap-6 my-8">
-							<div
-								v-for="(item, index) in roadmapItems"
-								:key="index"
-								class="roadmap-item p-6 t-bg-subtle opacity-0"
-							>
-								<div class="flex items-start gap-4">
-									<Icon :name="item.icon" class="w-7 h-7 t-text-accent-tertiary flex-shrink-0 mt-0.5" />
-									<div>
-										<p class="text-sm font-medium t-text mb-1">{{ item.title }}</p>
-										<p class="text-[0.875rem] leading-relaxed t-text-secondary">{{ item.text }}</p>
-									</div>
-								</div>
-							</div>
-						</div>
-
-						<p
-							class="section-tagline t-heading text-lg italic t-text-accent-tertiary pt-8 border-t t-border-divider opacity-0"
-						>
-							Every feature is one less subscription on your credit card.
-						</p>
-					</div>
-				</div>
-			</div>
-		</section>
-
-		<!-- Target Audience Section -->
-		<section ref="targetRef" class="section py-24 lg:py-32 px-6 lg:px-16 t-bg-alt">
-			<div class="max-w-6xl mx-auto">
-				<div class="grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-8 lg:gap-16">
-					<div class="content-label flex flex-col gap-2 opacity-0">
-						<span class="t-heading text-sm lg:text-[26px] lg:leading-6 t-text-accent">05</span>
-						<span class="text-xs lg:text-sm lg:leading-3 tracking-wider uppercase t-text-tertiary"
-							>For You</span
-						>
-					</div>
-					<div class="content-main max-w-4xl min-w-0 overflow-hidden">
-						<h2
-							class="section-title t-heading text-[clamp(2rem,5vw,3rem)] font-normal tracking-tight leading-tight mb-8 opacity-0"
-						>
-							Is Hue Studios Right for You?
-						</h2>
-
-						<div class="target-list grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1 my-8">
-							<div
-								v-for="(target, index) in targetCustomers"
-								:key="index"
-								class="target-item flex items-center gap-4 py-3 opacity-0"
-							>
-								<span class="w-1.5 h-1.5 bg-gold rounded-full flex-shrink-0"></span>
-								<span class="text-[0.9375rem] t-text-secondary">{{ target }}</span>
-							</div>
-						</div>
-
-						<p
-							class="section-tagline t-heading text-lg italic t-text-accent-tertiary pt-8 border-t t-border-divider opacity-0"
-						>
-							If you're tired of paying for ten tools, you only need one.
-						</p>
-					</div>
-				</div>
-			</div>
-		</section>
-
-		<!-- CTA Section -->
-		<section
-			ref="ctaRef"
-			class="section relative py-32 lg:py-40 px-6 lg:px-16 bg-gray-900 text-cream overflow-hidden"
-		>
-			<!-- CTA Background -->
-			<div class="absolute inset-0 z-0 overflow-hidden">
-				<div class="w-full h-full bg-gray-900">
-					<div
-						class="absolute -top-1/3 -right-1/4 w-[60vw] h-[60vw] rounded-full bg-primary/5 blur-3xl"
-					></div>
-					<div
-						class="absolute -bottom-1/3 -left-1/4 w-[50vw] h-[50vw] rounded-full bg-primary/8 blur-3xl"
-					></div>
-				</div>
-			</div>
-
-			<div class="max-w-3xl mx-auto text-center relative z-10">
-				<h2
-					class="cta-headline t-heading text-[clamp(2rem,5vw,3.5rem)] font-light leading-tight mb-8 opacity-0"
-				>
-					Ready to Replace
-					<br />
-					Your Entire Tool Stack?
-				</h2>
-				<p class="cta-body text-[1.0625rem] leading-relaxed text-cream-alt mb-12 opacity-0">
-					One platform for projects, invoicing, scheduling, team chat, social media, video meetings,
-					email marketing, and everything else your business runs on. Cancel the rest.
-				</p>
-				<div class="cta-divider w-16 h-px bg-gold mx-auto mb-12 opacity-0 scale-x-0"></div>
-				<div class="cta-buttons flex flex-col sm:flex-row gap-4 justify-center opacity-0">
-					<NuxtLink
-						to="/register"
-						class="t-btn px-8 py-4 text-lg font-semibold transition shadow-lg inline-block text-center"
-					>
-						Get Started Free
-					</NuxtLink>
-					<NuxtLink
-						to="/auth/signin"
-						class="bg-white/10 backdrop-blur-sm border border-white/20 text-cream px-8 py-4 text-lg font-semibold hover:bg-white/20 transition shadow-lg inline-block text-center"
-					>
-						Sign In
-					</NuxtLink>
-				</div>
-				<p class="cta-address text-sm tracking-wide text-cream-alt opacity-0 mt-12 uppercase">
-					huestudios.company
-				</p>
-			</div>
-		</section>
+		</footer>
+		<p class="footer-copy">&copy; 2026 Earnest. A platform that means it.</p>
 	</div>
 </template>
 
@@ -418,347 +112,116 @@ import { ref, onMounted, onUnmounted } from 'vue';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
-// Register GSAP plugins
 gsap.registerPlugin(ScrollTrigger);
 
-// Section refs
 const heroRef = ref(null);
-const introRef = ref(null);
-const problemRef = ref(null);
-const solutionRef = ref(null);
+const truthRef = ref(null);
 const featuresRef = ref(null);
-const roadmapRef = ref(null);
-const targetRef = ref(null);
-const ctaRef = ref(null);
+const pricingRef = ref(null);
 
-// Data
-const introStats = [
-	{ value: '10+', label: 'Tools Replaced' },
-	{ value: '1', label: 'Platform' },
-	{ value: '1', label: 'Monthly Bill' },
-	{ value: '0', label: 'App Switching' },
-];
-
-const toolIcons = [
-	'i-heroicons-rectangle-stack',
-	'i-heroicons-document-text',
-	'i-heroicons-calendar',
-	'i-heroicons-chat-bubble-left-right',
-	'i-heroicons-video-camera',
-	'i-heroicons-banknotes',
-	'i-heroicons-share',
-	'i-heroicons-chart-bar',
-	'i-heroicons-envelope',
-	'i-heroicons-phone',
-	'i-heroicons-users',
-	'i-heroicons-megaphone',
-];
-
-const advantages = [
-	{
-		icon: 'i-heroicons-puzzle-piece',
-		title: 'Everything in One Place',
-		text: 'Projects, invoicing, scheduling, team chat, social media, video calls, and more — one login, one bill.',
-	},
-	{
-		icon: 'i-heroicons-banknotes',
-		title: 'Cut Your SaaS Spend',
-		text: 'Replace a dozen subscriptions with a single platform. Your accountant will thank you.',
-	},
-	{
-		icon: 'i-heroicons-shield-check',
-		title: 'Role-Based Access',
-		text: 'Admin, manager, and member roles across multiple teams and organizations. Your data stays secure.',
-	},
-	{
-		icon: 'i-heroicons-bolt',
-		title: 'Real-Time Collaboration',
-		text: 'Live updates, presence indicators, threaded conversations, and instant notifications across every module.',
-	},
-	{
-		icon: 'i-heroicons-arrow-path',
-		title: 'Always Growing',
-		text: 'Web analytics, budgeting, CRM, and more on the roadmap. Your platform gets better every month.',
-	},
-	{
-		icon: 'i-heroicons-device-phone-mobile',
-		title: 'Mobile-Ready PWA',
-		text: 'Install as a native-feeling app on any device. Manage your business from anywhere.',
-	},
+const marqueeItems = [
+	'Projects', 'Invoicing', 'Client Management', 'Social Scheduling',
+	'Team Channels', 'Video & Phone', 'Email Analytics', 'Proposals & Billing', 'Contacts & CRM',
 ];
 
 const features = [
+	{ name: 'Project Management', desc: 'Kanban boards, task lists, timelines, and file attachments. Your team always knows what\'s next.' },
+	{ name: 'Invoicing & Billing', desc: 'Stripe-powered invoices, proposals, payment tracking, and PDF generation. Get paid on time.' },
+	{ name: 'Social Scheduling', desc: 'Instagram and TikTok content calendar. Create, schedule, publish, and measure \u2014 all in one tab.' },
+	{ name: 'Team Channels', desc: 'Slack-style messaging built into your workspace. Conversations stay with the work they\'re about.' },
+	{ name: 'Phone & Video', desc: 'Twilio-powered calling, video meetings, and public booking links. A full communications system.' },
+	{ name: 'Client & Contact CRM', desc: 'Every client, prospect, and partner in one place. With the full history of every conversation and project.' },
+	{ name: 'Email Analytics', desc: 'Send and track client emails with open rates, click tracking, and full campaign history built in.' },
+	{ name: 'Scheduling & Calendar', desc: 'Public booking links, Google and Outlook sync, and a team calendar that shows you the whole picture.' },
+];
+
+const plans = [
 	{
-		icon: 'i-heroicons-queue-list',
-		title: 'Ticket Management',
-		text: 'Kanban board with custom statuses, service tagging, organization filtering, and detailed activity logs.',
+		name: 'Solo',
+		price: '29',
+		desc: 'For the one-person shop doing serious work.',
+		featured: false,
+		features: ['1 user', 'Unlimited projects', 'Invoicing & Stripe billing', 'Social scheduling (2 accounts)', 'Contact CRM', '5GB storage'],
+		cta: { label: 'Get started', to: '/register' },
 	},
 	{
-		icon: 'i-heroicons-square-3-stack-3d',
-		title: 'Project Management',
-		text: 'Visual timelines, Kanban boards, sub-tasks, milestones, file attachments, and project conversations.',
+		name: 'Agency',
+		price: '89',
+		desc: 'For the team that means business.',
+		featured: true,
+		features: ['Up to 10 users', 'Everything in Solo', 'Team channels & video', 'Phone system (Twilio)', 'Social scheduling (10 accounts)', 'Email analytics', 'Priority support', '25GB storage'],
+		cta: { label: 'Start free trial', to: '/register' },
 	},
 	{
-		icon: 'i-heroicons-document-text',
-		title: 'Invoicing & Payments',
-		text: 'Create invoices, track payments via Stripe, generate PDFs, and manage payouts &mdash; all in one place.',
-	},
-	{
-		icon: 'i-heroicons-calendar-date-range',
-		title: 'Scheduling & Bookings',
-		text: 'Public booking links, Google Calendar and Outlook sync, and availability management.',
-	},
-	{
-		icon: 'i-heroicons-phone',
-		title: 'Phone System & Video Conferencing',
-		text: 'Business phone lines, SMS, and HD video meetings powered by Twilio — replace Zoom, Google Meet, and your VoIP provider.',
-	},
-	{
-		icon: 'i-heroicons-chat-bubble-left-right',
-		title: 'Channels & Messaging',
-		text: 'Slack-style channels per organization with threaded comments, reactions, and real-time updates.',
-	},
-	{
-		icon: 'i-heroicons-building-office-2',
-		title: 'Organizations & Teams',
-		text: 'Multi-organization support with team structures, role-based permissions, and organization-level filtering.',
-	},
-	{
-		icon: 'i-heroicons-envelope',
-		title: 'Email Notifications',
-		text: 'Transactional emails via SendGrid for invoices, appointment confirmations, and team invitations.',
-	},
-	{
-		icon: 'i-heroicons-megaphone',
-		title: 'Email Marketing & Newsletters',
-		text: 'Block-based newsletter builder, mailing lists with deduplication, merge tags for personalization, CSV import, one-click unsubscribe, and "View in Browser" links.',
-		wide: true,
-	},
-	{
-		icon: 'i-heroicons-sparkles',
-		title: 'AI Command Center',
-		text: 'AI-powered productivity engine that analyzes your tickets, projects, invoices, emails, contacts, channels, and more — then generates a prioritized action list so you always know what to do next.',
-		wide: true,
-	},
-	{
-		icon: 'i-heroicons-clipboard-document-list',
-		title: 'Task Management',
-		text: 'Personal task lists tied to projects and organizations with progress tracking.',
+		name: 'Studio',
+		price: '189',
+		desc: 'For the agency that\'s grown into something real.',
+		featured: false,
+		features: ['Up to 25 users', 'Everything in Agency', 'Custom domain', 'White-label client portal', 'Unlimited social accounts', 'Advanced analytics', '100GB storage'],
+		cta: { label: 'Talk to us', to: '/register' },
 	},
 ];
 
-const roadmapItems = [
-	{
-		icon: 'i-heroicons-chart-bar',
-		title: 'Web Analytics',
-		text: 'Built-in website and app analytics so you never need a separate tracking tool.',
-	},
-	{
-		icon: 'i-heroicons-chat-bubble-left-ellipsis',
-		title: 'Real-Time Chat',
-		text: 'Live chat for your website and internal team messaging — no more Intercom or Drift.',
-	},
-	{
-		icon: 'i-heroicons-calculator',
-		title: 'Basic Budgeting',
-		text: 'Track expenses, set budgets, and monitor cash flow alongside your invoicing and payments.',
-	},
-	{
-		icon: 'i-heroicons-arrow-trending-up',
-		title: 'And More',
-		text: 'CRM, proposals, contracts, time tracking, HR basics — the goal is to be the only business app you need.',
-	},
-];
-
-const targetCustomers = [
-	'Small businesses with 2\u201350 employees',
-	'Creative agencies and design studios',
-	'Consultancies and professional services firms',
-	'Startups that want one tool instead of ten',
-	'Freelancers scaling into an agency model',
-	'Teams paying for Asana + Slack + Zoom + Stripe + Mailchimp + more',
-	'Any organization tired of disconnected software',
-	'Businesses that believe their tools should be as good as their work',
-];
-
-// GSAP animations
 let ctx;
 
 onMounted(() => {
 	ctx = gsap.context(() => {
-		// Hero animations
-		const heroTl = gsap.timeline({ delay: 0.3 });
+		// Hero sequence
+		const heroTl = gsap.timeline({ delay: 0.2 });
 		heroTl
-			.to('.hero-image', { opacity: 1, duration: 1.2, ease: 'power2.out' })
-			.to('.hero-address', { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' }, '-=0.6')
-			.to('.hero-title', { opacity: 1, y: 0, duration: 1, ease: 'power3.out' }, '-=0.4')
-			.to('.hero-divider', { opacity: 1, scaleX: 1, duration: 0.6, ease: 'power3.out' }, '-=0.4')
-			.to('.hero-tagline', { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' }, '-=0.3')
-			.to('.scroll-indicator', { opacity: 1, duration: 0.6, ease: 'power3.out' }, '-=0.2');
+			.fromTo('.hero-kicker', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' })
+			.fromTo('.hero-wordmark', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.9, ease: 'power3.out' }, '-=0.5')
+			.fromTo('.hero-period', { opacity: 0, y: -20 }, { opacity: 1, y: 0, duration: 0.5, ease: 'back.out(1.5)' }, '-=0.3')
+			.fromTo('.hero-tagline', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' }, '-=0.3')
+			.fromTo('.hero-sub', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' }, '-=0.5')
+			.fromTo('.hero-actions', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' }, '-=0.5')
+			.fromTo('.hero-scroll', { opacity: 0 }, { opacity: 1, duration: 0.6, ease: 'power3.out' }, '-=0.2');
 
-		// Scroll line animation
+		// Scroll line pulse
 		gsap.to('.scroll-line', {
-			scaleY: 0.7,
-			opacity: 0.5,
-			duration: 1.5,
+			scaleY: 0.6,
+			opacity: 0.3,
+			duration: 2,
 			repeat: -1,
 			yoyo: true,
 			ease: 'power2.inOut',
 		});
 
-		// Hero content parallax
-		gsap.to('.hero-content', {
-			y: 350,
-			ease: 'none',
-			scrollTrigger: {
-				trigger: heroRef.value,
-				start: 'top top',
-				end: 'bottom top',
-				scrub: true,
-			},
-		});
-
-		// Fade out scroll indicator
-		gsap.fromTo(
-			'.scroll-indicator',
-			{ opacity: 1, y: 0 },
-			{
-				opacity: 0,
-				y: 30,
-				ease: 'none',
-				scrollTrigger: {
-					trigger: heroRef.value,
-					start: 'top top',
-					end: '20% top',
-					scrub: true,
-				},
-			}
-		);
-
-		// Section animations helper
-		const animateSection = (sectionRef, selectors) => {
+		// Section reveal helper
+		const revealElements = (sectionRef, selector) => {
 			if (!sectionRef.value) return;
-			selectors.forEach((selector) => {
-				const elements = sectionRef.value.querySelectorAll(selector);
-				elements.forEach((el, elIndex) => {
-					gsap.fromTo(
-						el,
-						{ opacity: 0, y: 30 },
-						{
-							opacity: 1,
-							y: 0,
-							duration: 0.8,
-							ease: 'power3.out',
-							scrollTrigger: {
-								trigger: el,
-								start: 'top 85%',
-								toggleActions: 'play none none none',
-							},
-							delay: elIndex * 0.1,
-						}
-					);
-				});
+			const els = sectionRef.value.querySelectorAll(selector);
+			els.forEach((el, i) => {
+				gsap.fromTo(el,
+					{ opacity: 0, y: 30 },
+					{
+						opacity: 1, y: 0, duration: 0.8, ease: 'power3.out',
+						scrollTrigger: { trigger: el, start: 'top 85%', toggleActions: 'play none none none' },
+						delay: i * 0.08,
+					}
+				);
 			});
 		};
 
-		// Animate all sections
-		animateSection(introRef, ['.intro-title', '.intro-text', '.intro-image']);
-		animateSection(problemRef, [
-			'.content-label',
-			'.section-title',
-			'.section-body',
-			'.section-tagline',
-			'.section-image',
-		]);
-		animateSection(solutionRef, [
-			'.content-label',
-			'.section-title',
-			'.section-body',
-			'.advantage-item',
-			'.section-tagline',
-		]);
-		animateSection(featuresRef, [
-			'.content-label',
-			'.section-title',
-			'.section-image',
-			'.feature-item',
-			'.section-tagline',
-		]);
-		animateSection(roadmapRef, [
-			'.content-label',
-			'.section-title',
-			'.section-body',
-			'.roadmap-item',
-			'.section-tagline',
-		]);
-		animateSection(targetRef, [
-			'.content-label',
-			'.section-title',
-			'.target-item',
-			'.section-tagline',
-		]);
+		// Truth section
+		revealElements(truthRef, '.truth-label, .truth-title, .truth-text');
 
-		// CTA section
-		if (ctaRef.value) {
-			gsap.fromTo(
-				ctaRef.value.querySelector('.cta-headline'),
-				{ opacity: 0, y: 40 },
-				{
-					opacity: 1,
-					y: 0,
-					duration: 1,
-					ease: 'power3.out',
-					scrollTrigger: { trigger: ctaRef.value, start: 'top 70%' },
-				}
-			);
-			gsap.fromTo(
-				ctaRef.value.querySelector('.cta-body'),
-				{ opacity: 0, y: 30 },
-				{
-					opacity: 1,
-					y: 0,
-					duration: 0.8,
-					ease: 'power3.out',
-					scrollTrigger: { trigger: ctaRef.value, start: 'top 70%' },
-					delay: 0.2,
-				}
-			);
-			gsap.fromTo(
-				ctaRef.value.querySelector('.cta-divider'),
-				{ opacity: 0, scaleX: 0 },
-				{
-					opacity: 1,
-					scaleX: 1,
-					duration: 0.6,
-					ease: 'power3.out',
-					scrollTrigger: { trigger: ctaRef.value, start: 'top 70%' },
-					delay: 0.4,
-				}
-			);
-			gsap.fromTo(
-				ctaRef.value.querySelector('.cta-buttons'),
-				{ opacity: 0, y: 20 },
-				{
-					opacity: 1,
-					y: 0,
-					duration: 0.6,
-					ease: 'power3.out',
-					scrollTrigger: { trigger: ctaRef.value, start: 'top 70%' },
-					delay: 0.5,
-				}
-			);
-			gsap.fromTo(
-				ctaRef.value.querySelector('.cta-address'),
-				{ opacity: 0 },
-				{
-					opacity: 1,
-					duration: 0.6,
-					ease: 'power3.out',
-					scrollTrigger: { trigger: ctaRef.value, start: 'top 70%' },
-					delay: 0.6,
-				}
-			);
-		}
+		// Features section
+		revealElements(featuresRef, '.features-title, .features-sub, .feature-item');
+
+		// Quote
+		gsap.fromTo('.quote-text', { opacity: 0, y: 30 }, {
+			opacity: 1, y: 0, duration: 1, ease: 'power3.out',
+			scrollTrigger: { trigger: '.quote-break', start: 'top 75%' },
+		});
+		gsap.fromTo('.quote-attr', { opacity: 0 }, {
+			opacity: 1, duration: 0.8, ease: 'power3.out',
+			scrollTrigger: { trigger: '.quote-break', start: 'top 75%' },
+			delay: 0.3,
+		});
+
+		// Pricing
+		revealElements(pricingRef, '.pricing-title, .pricing-sub, .plan');
 	});
 });
 
@@ -766,58 +229,556 @@ onUnmounted(() => {
 	if (ctx) ctx.revert();
 });
 
-// SEO
 useHead({
-	title: 'Hue Studios | All-in-One Business Management for SMBs',
+	title: 'Earnest. Do good work. | The Agency Operating System',
 	meta: [
 		{
 			name: 'description',
-			content:
-				'Replace your entire tool stack with one platform. Projects, invoicing, scheduling, team chat, social media, video meetings, and more — built for small and medium-sized businesses.',
+			content: 'Earnest is the one platform where your agency\'s work actually lives. Projects, invoicing, social scheduling, team channels, phone & video, CRM, and more.',
 		},
 	],
 });
 </script>
 
 <style scoped>
+/* ─── Earnest Brand Tokens ─── */
 .sell-sheet {
+	--paper:   #F6F1E7;
+	--paper-2: #EDE7D9;
+	--ink:     #1C1812;
+	--ink-2:   #3D3529;
+	--muted:   #8C7B6B;
+	--accent:  #B85C2C;
+	--rule:    rgba(28,24,18,0.12);
+
+	background: var(--paper);
+	color: var(--ink);
+	font-family: var(--font-proxima-light);
 	-webkit-font-smoothing: antialiased;
-	-moz-osx-font-smoothing: grayscale;
 }
 
-/* Hero section clips the fixed background */
-.hero {
-	clip-path: inset(0);
-}
-
-/* Fixed background contained within hero via clip-path */
-.hero-bg-container {
-	position: fixed;
-	inset: 0;
-}
-
-/* All sections after hero need proper stacking context */
-.section {
+/* ─── HERO ─── */
+.earnest-hero {
+	min-height: 100vh;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+	padding: 120px 24px 80px;
 	position: relative;
-	z-index: 10;
+	background: var(--paper);
+}
+.earnest-hero::before,
+.earnest-hero::after {
+	content: '';
+	position: absolute;
+	left: 48px; right: 48px;
+	height: 1px;
+	background: var(--rule);
+}
+.earnest-hero::before { top: 100px; }
+.earnest-hero::after  { bottom: 60px; }
+
+.hero-kicker {
+	font-family: var(--font-proxima-light);
+	font-style: italic;
+	font-size: 15px;
+	color: var(--muted);
+	letter-spacing: 0.08em;
+	margin-bottom: 48px;
+}
+.hero-wordmark {
+	font-family: var(--font-bauer-bodoni);
+	font-size: clamp(96px, 18vw, 200px);
+	font-weight: 600;
+	letter-spacing: -0.02em;
+	line-height: 0.9;
+	color: var(--ink);
+}
+.hero-period {
+	color: var(--accent);
+	display: inline-block;
+}
+.hero-tagline {
+	font-family: var(--font-bauer-bodoni);
+	font-size: clamp(28px, 5vw, 52px);
+	font-weight: 300;
+	font-style: italic;
+	color: var(--ink-2);
+	margin-top: 24px;
+	letter-spacing: 0.01em;
+}
+.hero-sub {
+	font-family: var(--font-proxima-light);
+	font-size: 16px;
+	color: var(--muted);
+	margin-top: 20px;
+	letter-spacing: 0.05em;
+}
+.hero-actions {
+	display: flex;
+	gap: 16px;
+	margin-top: 52px;
+	flex-wrap: wrap;
+	justify-content: center;
+}
+.btn-ink {
+	background: var(--ink);
+	color: var(--paper);
+	border: none;
+	padding: 16px 36px;
+	font-family: var(--font-proxima-light);
+	font-size: 14px;
+	font-weight: 500;
+	letter-spacing: 0.08em;
+	cursor: pointer;
+	transition: all 0.25s;
+	text-decoration: none;
+	text-transform: uppercase;
+}
+.btn-ink:hover { background: var(--accent); }
+.btn-ghost {
+	background: transparent;
+	color: var(--muted);
+	border: 1px solid var(--rule);
+	padding: 16px 36px;
+	font-family: var(--font-proxima-light);
+	font-size: 14px;
+	letter-spacing: 0.08em;
+	cursor: pointer;
+	transition: all 0.25s;
+	text-decoration: none;
+	text-transform: uppercase;
+}
+.btn-ghost:hover { border-color: var(--ink); color: var(--ink); }
+
+.hero-scroll {
+	position: absolute;
+	bottom: 80px;
+	left: 50%;
+	transform: translateX(-50%);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 8px;
+}
+.scroll-line {
+	width: 1px;
+	height: 48px;
+	background: var(--muted);
+	transform-origin: top;
+}
+.scroll-label {
+	font-family: var(--font-proxima-light);
+	font-style: italic;
+	font-size: 11px;
+	color: var(--muted);
+	letter-spacing: 0.1em;
 }
 
-/* Sticky content labels on large screens */
-.content-label {
-	@media (min-width: 1024px) {
-		position: sticky;
-		top: 8rem;
-		align-self: start;
-		height: fit-content;
-	}
+/* ─── MARQUEE ─── */
+.marquee-wrap {
+	border-top: 1px solid var(--rule);
+	border-bottom: 1px solid var(--rule);
+	padding: 14px 0;
+	background: var(--ink);
+	overflow: hidden;
+}
+.marquee-track {
+	display: flex;
+	white-space: nowrap;
+	animation: marquee 30s linear infinite;
+}
+.marquee-item {
+	font-family: var(--font-bauer-bodoni);
+	font-style: italic;
+	font-size: 15px;
+	color: rgba(246,241,231,0.5);
+	padding: 0 32px;
+	flex-shrink: 0;
+}
+.marquee-dot { color: var(--accent); margin: 0 4px; }
+@keyframes marquee {
+	from { transform: translateX(0); }
+	to   { transform: translateX(-50%); }
 }
 
-/* Hide scrollbar while maintaining scroll functionality */
-.scrollbar-hide {
-	-ms-overflow-style: none;
-	scrollbar-width: none;
+/* ─── TRUTH ─── */
+.truth-section {
+	padding: 120px 48px;
+	max-width: 860px;
+	margin: 0 auto;
+	display: grid;
+	grid-template-columns: 1fr 2fr;
+	gap: 80px;
+	align-items: start;
+	background: var(--paper);
 }
-.scrollbar-hide::-webkit-scrollbar {
-	display: none;
+@media (max-width: 700px) {
+	.truth-section { grid-template-columns: 1fr; gap: 40px; padding: 80px 24px; }
+}
+.truth-label {
+	font-family: var(--font-proxima-light);
+	font-style: italic;
+	font-size: 13px;
+	color: var(--accent);
+	letter-spacing: 0.08em;
+	padding-top: 6px;
+	position: sticky;
+	top: 100px;
+}
+.truth-title {
+	font-family: var(--font-bauer-bodoni);
+	font-size: clamp(36px, 5vw, 58px);
+	font-weight: 500;
+	line-height: 1.15;
+	letter-spacing: -0.01em;
+	margin-bottom: 32px;
+}
+.truth-title em {
+	font-style: italic;
+	color: var(--accent);
+}
+.truth-text {
+	font-size: 17px;
+	line-height: 1.85;
+	color: var(--ink-2);
+	margin-bottom: 20px;
+	font-weight: 400;
+}
+.truth-text strong { color: var(--ink); font-weight: 600; }
+
+/* ─── DIVIDER ─── */
+.section-rule {
+	display: flex;
+	align-items: center;
+	gap: 20px;
+	padding: 0 48px;
+	max-width: 860px;
+	margin: 0 auto;
+	background: var(--paper);
+}
+.section-rule::before,
+.section-rule::after {
+	content: '';
+	flex: 1;
+	height: 1px;
+	background: var(--rule);
+}
+.section-rule-mark {
+	font-family: var(--font-bauer-bodoni);
+	font-size: 20px;
+	color: var(--accent);
+	opacity: 0.5;
+}
+
+/* ─── FEATURES ─── */
+.features-section {
+	padding: 80px 48px 120px;
+	max-width: 860px;
+	margin: 0 auto;
+	background: var(--paper);
+}
+@media (max-width: 700px) { .features-section { padding: 60px 24px 80px; } }
+
+.features-header { margin-bottom: 64px; }
+.features-title {
+	font-family: var(--font-bauer-bodoni);
+	font-size: clamp(32px, 4vw, 48px);
+	font-weight: 500;
+	letter-spacing: -0.01em;
+	line-height: 1.2;
+}
+.features-sub {
+	font-family: var(--font-proxima-light);
+	font-style: italic;
+	font-size: 16px;
+	color: var(--muted);
+	margin-top: 12px;
+}
+
+.feature-list {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 0;
+	border: 1px solid var(--rule);
+}
+@media (max-width: 600px) { .feature-list { grid-template-columns: 1fr; } }
+
+.feature-item {
+	padding: 36px 32px;
+	border-right: 1px solid var(--rule);
+	border-bottom: 1px solid var(--rule);
+	transition: background 0.2s;
+	cursor: default;
+}
+.feature-item:hover { background: var(--paper-2); }
+.feature-item:nth-child(2n) { border-right: none; }
+
+.feature-number {
+	font-family: var(--font-bauer-bodoni);
+	font-size: 11px;
+	font-weight: 500;
+	letter-spacing: 0.15em;
+	color: var(--accent);
+	margin-bottom: 14px;
+	display: block;
+}
+.feature-name {
+	font-family: var(--font-bauer-bodoni);
+	font-size: 24px;
+	font-weight: 600;
+	color: var(--ink);
+	margin-bottom: 10px;
+	letter-spacing: -0.01em;
+}
+.feature-desc {
+	font-size: 14px;
+	line-height: 1.7;
+	color: var(--muted);
+}
+
+/* ─── QUOTE BREAK ─── */
+.quote-break {
+	background: var(--ink);
+	padding: 100px 48px;
+	text-align: center;
+	position: relative;
+	overflow: hidden;
+}
+.quote-break::before {
+	content: '\201C';
+	position: absolute;
+	top: -40px; left: 50%;
+	transform: translateX(-50%);
+	font-family: var(--font-bauer-bodoni);
+	font-size: 300px;
+	color: rgba(246,241,231,0.04);
+	line-height: 1;
+	pointer-events: none;
+}
+.quote-text {
+	font-family: var(--font-bauer-bodoni);
+	font-size: clamp(28px, 5vw, 54px);
+	font-weight: 400;
+	font-style: italic;
+	color: var(--paper);
+	line-height: 1.3;
+	max-width: 800px;
+	margin: 0 auto;
+	position: relative;
+	z-index: 1;
+}
+.quote-text em {
+	font-style: normal;
+	color: var(--accent);
+}
+.quote-attr {
+	font-family: var(--font-proxima-light);
+	font-size: 13px;
+	color: rgba(246,241,231,0.35);
+	letter-spacing: 0.1em;
+	margin-top: 32px;
+	text-transform: uppercase;
+}
+
+/* ─── PRICING ─── */
+.pricing-section {
+	padding: 120px 48px;
+	max-width: 860px;
+	margin: 0 auto;
+	background: var(--paper);
+}
+@media (max-width: 700px) { .pricing-section { padding: 80px 24px; } }
+
+.pricing-header {
+	margin-bottom: 64px;
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 40px;
+	align-items: end;
+}
+@media (max-width: 600px) { .pricing-header { grid-template-columns: 1fr; } }
+.pricing-title {
+	font-family: var(--font-bauer-bodoni);
+	font-size: clamp(36px, 5vw, 52px);
+	font-weight: 500;
+	line-height: 1.1;
+	letter-spacing: -0.01em;
+}
+.pricing-sub {
+	font-size: 15px;
+	line-height: 1.7;
+	color: var(--muted);
+}
+
+.plans-grid {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 1px;
+	background: var(--rule);
+	border: 1px solid var(--rule);
+}
+@media (max-width: 600px) { .plans-grid { grid-template-columns: 1fr; } }
+
+.plan {
+	background: var(--paper);
+	padding: 40px 32px;
+	transition: background 0.2s;
+}
+.plan:hover { background: var(--paper-2); }
+
+.plan-featured {
+	background: var(--ink) !important;
+	color: var(--paper);
+}
+.plan-featured:hover { background: var(--ink) !important; }
+
+.plan-name {
+	font-family: var(--font-bauer-bodoni);
+	font-size: 22px;
+	font-weight: 600;
+	letter-spacing: 0.02em;
+}
+.plan-featured .plan-name { color: var(--paper); }
+
+.plan-price {
+	font-family: var(--font-bauer-bodoni);
+	font-size: 52px;
+	font-weight: 600;
+	line-height: 1;
+	margin-top: 20px;
+	letter-spacing: -0.02em;
+	color: var(--ink);
+}
+.plan-featured .plan-price { color: var(--paper); }
+.plan-price sup {
+	font-size: 22px;
+	vertical-align: super;
+	font-weight: 400;
+}
+.plan-price span {
+	font-family: var(--font-proxima-light);
+	font-size: 14px;
+	font-weight: 400;
+	color: var(--muted);
+}
+.plan-featured .plan-price span { color: rgba(246,241,231,0.5); }
+
+.plan-desc {
+	font-family: var(--font-proxima-light);
+	font-style: italic;
+	font-size: 13px;
+	color: var(--muted);
+	margin-top: 8px;
+	margin-bottom: 28px;
+	padding-bottom: 28px;
+	border-bottom: 1px solid var(--rule);
+}
+.plan-featured .plan-desc { color: rgba(246,241,231,0.4); border-bottom-color: rgba(246,241,231,0.1); }
+
+.plan-features {
+	list-style: none;
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding: 0;
+	margin: 0;
+}
+.plan-features li {
+	font-size: 13px;
+	color: var(--ink-2);
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	line-height: 1.4;
+}
+.plan-featured .plan-features li { color: rgba(246,241,231,0.75); }
+.plan-features li::before {
+	content: '\2014';
+	color: var(--accent);
+	flex-shrink: 0;
+	font-family: var(--font-bauer-bodoni);
+}
+
+.plan-btn {
+	display: block;
+	width: 100%;
+	margin-top: 32px;
+	padding: 14px;
+	text-align: center;
+	font-family: var(--font-proxima-light);
+	font-size: 13px;
+	letter-spacing: 0.08em;
+	cursor: pointer;
+	transition: all 0.2s;
+	border: 1px solid var(--rule);
+	background: transparent;
+	color: var(--ink);
+	text-decoration: none;
+	text-transform: uppercase;
+}
+.plan-btn:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.plan-featured .plan-btn {
+	background: var(--accent);
+	border-color: var(--accent);
+	color: white;
+}
+.plan-featured .plan-btn:hover { filter: brightness(1.1); }
+
+/* ─── FOOTER ─── */
+.earnest-footer {
+	border-top: 1px solid var(--rule);
+	padding: 60px 48px;
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 40px;
+	align-items: end;
+	max-width: 1200px;
+	margin: 0 auto;
+	background: var(--paper);
+}
+@media (max-width: 600px) { .earnest-footer { grid-template-columns: 1fr; padding: 48px 24px; } }
+
+.footer-brand {
+	font-family: var(--font-bauer-bodoni);
+	font-size: 36px;
+	font-weight: 600;
+	letter-spacing: 0.01em;
+}
+.footer-accent { color: var(--accent); }
+.footer-tagline {
+	font-family: var(--font-proxima-light);
+	font-style: italic;
+	font-size: 14px;
+	color: var(--muted);
+	margin-top: 8px;
+}
+.footer-links {
+	display: flex;
+	gap: 32px;
+	justify-content: flex-end;
+	flex-wrap: wrap;
+}
+.footer-links a {
+	font-family: var(--font-proxima-light);
+	font-size: 13px;
+	color: var(--muted);
+	text-decoration: none;
+	letter-spacing: 0.04em;
+	transition: color 0.2s;
+}
+.footer-links a:hover { color: var(--ink); }
+.footer-copy {
+	font-size: 12px;
+	color: var(--muted);
+	letter-spacing: 0.04em;
+	opacity: 0.6;
+	padding: 20px 48px 40px;
+	text-align: center;
+	font-family: var(--font-proxima-light);
+	font-style: italic;
+	background: var(--paper);
 }
 </style>

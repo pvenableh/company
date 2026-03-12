@@ -32,15 +32,15 @@ const handleNavigation = (link) => {
 			<span class="ios-tab-label">{{ link.name }}</span>
 		</nuxt-link>
 
-		<!-- More button -->
+		<!-- Menu button -->
 		<button
 			class="ios-tab-item"
 			@click="() => { triggerHaptic(10); toggleSheet(); }"
 		>
 			<div class="ios-tab-icon-wrap">
-				<UIcon name="i-heroicons-ellipsis-horizontal" class="ios-tab-icon" />
+				<UIcon name="i-heroicons-bars-3" class="ios-tab-icon" />
 			</div>
-			<span class="ios-tab-label">More</span>
+			<span class="ios-tab-label">Menu</span>
 		</button>
 	</nav>
 </template>
@@ -57,8 +57,9 @@ const handleNavigation = (link) => {
 	display: flex;
 	align-items: flex-end;
 	justify-content: space-around;
-	height: calc(49px + env(safe-area-inset-bottom, 0px));
-	padding-bottom: env(safe-area-inset-bottom, 0px);
+	height: calc(56px + env(safe-area-inset-bottom, 0px));
+	padding-top: 4px;
+	padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px));
 	border-top: 0.5px solid hsl(var(--border) / 0.5);
 
 	/* iOS frosted glass */
@@ -78,7 +79,7 @@ const handleNavigation = (link) => {
 	align-items: center;
 	justify-content: center;
 	flex: 1;
-	height: 49px;
+	height: 48px;
 	gap: 2px;
 	color: hsl(var(--muted-foreground));
 	transition: color 0.2s ease;
@@ -98,8 +99,8 @@ const handleNavigation = (link) => {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 28px;
-	height: 28px;
+	width: 24px;
+	height: 24px;
 	transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -108,8 +109,8 @@ const handleNavigation = (link) => {
 }
 
 .ios-tab-icon {
-	width: 22px;
-	height: 22px;
+	width: 18px;
+	height: 18px;
 }
 
 .ios-tab-label {

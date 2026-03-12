@@ -3,8 +3,10 @@
  * UButton - NuxtUI-compatible button wrapper for shadcn-vue Button
  */
 
-import { computed } from "vue";
+import { computed, resolveComponent } from "vue";
 import { cn, convertIconName } from "@/lib/utils";
+
+const NuxtLinkComponent = resolveComponent('NuxtLink');
 
 const props = withDefaults(
   defineProps<{
@@ -179,7 +181,7 @@ const handleClick = (event: MouseEvent) => {
 
 <template>
   <component
-    :is="to ? (external ? 'a' : 'NuxtLink') : 'button'"
+    :is="to ? (external ? 'a' : NuxtLinkComponent) : 'button'"
     :type="to ? undefined : type"
     :to="to && !external ? to : undefined"
     :href="to && external ? to : undefined"

@@ -34,7 +34,7 @@ export default defineNuxtConfig({
 			],
 			link: [
 				{ rel: 'apple-touch-icon', href: '/android-icon-192x192.png' },
-			],
+				],
 		},
 	},
 
@@ -186,6 +186,14 @@ export default defineNuxtConfig({
 	vite: {
 		plugins: [tailwindcss()],
 	},
+
+	// Ensure all component directories are scanned with path prefixes
+	components: [
+		{
+			path: '~/components',
+			pathPrefix: true,
+		},
+	],
 
 	// shadcn-vue configuration
 	shadcn: {

@@ -55,6 +55,13 @@
   @apply font-body;
 }
 
+/* ---- Title treatment — adapts to style variant ---- */
+.t-title {
+  text-transform: var(--title-transform, uppercase);
+  letter-spacing: var(--title-tracking, 0.12em);
+  font-family: var(--title-font);
+}
+
 /* ---- Border ---- */
 .t-border {
   @apply border-border;
