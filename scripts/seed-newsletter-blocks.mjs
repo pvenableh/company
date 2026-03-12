@@ -761,99 +761,14 @@ async function seedBlocks() {
 }
 
 /**
- * Fix corrupted field metadata on newsletter_blocks.
- * Reads all fields, identifies any with broken validation that causes
- * VALUE_TOO_LONG errors, deletes them, and recreates with clean schemas.
+ * Dump all field schemas for newsletter_blocks so we can identify
+ * which fields have restrictive max_length or broken validation.
  */
-async function fixCollectionFields() {
-  console.log('Checking newsletter_blocks fields for corrupted metadata...');
+async function diagnoseFields() {
+  console.log('=== Field Schema Dump for newsletter_blocks ===');
   console.log('');
 
-  const categoryChoices = [
-    { text: 'Header', value: 'header' },
-    { text: 'Hero', value: 'hero' },
-    { text: 'Content', value: 'content' },
-    { text: 'Two Column', value: 'two-column' },
-    { text: 'Three Column', value: 'three-column' },
-    { text: 'CTA', value: 'cta' },
-    { text: 'Image', value: 'image' },
-    { text: 'Stats', value: 'stats' },
-    { text: 'Quote', value: 'quote' },
-    { text: 'List', value: 'list' },
-    { text: 'Divider', value: 'divider' },
-    { text: 'Social', value: 'social' },
-    { text: 'Footer', value: 'footer' },
-  ];
-
-  // Custom recreate configs for known field types
-  const fieldFixConfigs = {
-    category: {
-      type: 'string',
-      schema: { max_length: 255, is_nullable: true, default_value: null },
-      meta: {
-        interface: 'select-dropdown',
-        display: 'labels',
-        options: { choices: categoryChoices, allowOther: true },
-        validation: null,
-        validation_message: null,
-      },
-    },
-    date_created: {
-      type: 'timestamp',
-      schema: { is_nullable: true, default_value: null },
-      meta: {
-        interface: 'datetime',
-        display: 'datetime',
-        special: ['date-created'],
-        readonly: true,
-        hidden: true,
-        validation: null,
-        validation_message: null,
-      },
-    },
-    date_updated: {
-      type: 'timestamp',
-      schema: { is_nullable: true, default_value: null },
-      meta: {
-        interface: 'datetime',
-        display: 'datetime',
-        special: ['date-updated'],
-        readonly: true,
-        hidden: true,
-        validation: null,
-        validation_message: null,
-      },
-    },
-    user_created: {
-      type: 'uuid',
-      schema: { is_nullable: true, default_value: null, foreign_key_table: 'directus_users', foreign_key_column: 'id' },
-      meta: {
-        interface: 'select-dropdown-m2o',
-        display: 'user',
-        special: ['user-created'],
-        readonly: true,
-        hidden: true,
-        validation: null,
-        validation_message: null,
-      },
-    },
-    user_updated: {
-      type: 'uuid',
-      schema: { is_nullable: true, default_value: null, foreign_key_table: 'directus_users', foreign_key_column: 'id' },
-      meta: {
-        interface: 'select-dropdown-m2o',
-        display: 'user',
-        special: ['user-updated'],
-        readonly: true,
-        hidden: true,
-        validation: null,
-        validation_message: null,
-      },
-    },
-  };
-
   try {
-    // Read all fields on the collection
     const fieldsRes = await fetch(`${DIRECTUS_URL}/fields/newsletter_blocks`, { headers });
     const fieldsData = await fieldsRes.json();
 
@@ -862,60 +777,92 @@ async function fixCollectionFields() {
       return;
     }
 
-    // Try to fix known problematic fields
-    const fieldsToFix = Object.keys(fieldFixConfigs);
+    for (const f of fieldsData.data) {
+      const ml = f.schema?.max_length ?? 'null';
+      const dt = f.schema?.data_type ?? f.type ?? '?';
+      const val = f.meta?.validation ? JSON.stringify(f.meta.validation) : 'null';
+      console.log(`  ${f.field.padEnd(20)} type=${dt.padEnd(12)} max_length=${String(ml).padEnd(6)} validation=${val}`);
+    }
 
-    for (const fieldName of fieldsToFix) {
-      const existing = fieldsData.data.find((f) => f.field === fieldName);
-      if (!existing) {
-        console.log(`  [skip] "${fieldName}" — not present in collection`);
-        continue;
-      }
+    console.log('');
 
-      const config = fieldFixConfigs[fieldName];
+    // Attempt a minimal insert with only required fields to see if error persists
+    console.log('=== Minimal Insert Test ===');
+    const testPayload = {
+      name: '__test_diag',
+      slug: '__test_diag',
+      status: 'draft',
+    };
+    console.log('Payload:', JSON.stringify(testPayload));
+    const testRes = await fetch(`${DIRECTUS_URL}/items/newsletter_blocks`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(testPayload),
+    });
+    const testData = await testRes.json();
 
-      try {
-        // Delete
-        const delRes = await fetch(`${DIRECTUS_URL}/fields/newsletter_blocks/${fieldName}`, {
-          method: 'DELETE',
-          headers,
-        });
-        if (!delRes.ok) {
-          const delBody = await delRes.text();
-          console.error(`  [fail] Could not delete "${fieldName}":`, delBody);
-          continue;
+    if (testData.data?.id) {
+      console.log('Minimal insert SUCCEEDED (id:', testData.data.id, ')');
+      // Clean up
+      await fetch(`${DIRECTUS_URL}/items/newsletter_blocks/${testData.data.id}`, {
+        method: 'DELETE',
+        headers,
+      });
+      console.log('Cleaned up test record.');
+    } else {
+      console.log('Minimal insert FAILED:', JSON.stringify(testData.errors || testData));
+
+      // Try progressively adding fields to find the culprit
+      console.log('');
+      console.log('=== Field-by-field test ===');
+      const testFields = ['name', 'slug', 'is_system', 'description', 'mjml_source', 'variables_schema', 'category'];
+
+      for (const fieldName of testFields) {
+        const sampleBlock = BLOCKS[0]; // Header — Logo Centered
+        const payload = { status: 'draft' };
+
+        // Add fields one at a time up to current
+        for (const fn of testFields) {
+          if (fn === 'variables_schema') {
+            payload[fn] = JSON.stringify(sampleBlock[fn]);
+          } else {
+            payload[fn] = sampleBlock[fn];
+          }
+          if (fn === fieldName) break;
         }
 
-        // Recreate
-        const createRes = await fetch(`${DIRECTUS_URL}/fields/newsletter_blocks`, {
+        const res = await fetch(`${DIRECTUS_URL}/items/newsletter_blocks`, {
           method: 'POST',
           headers,
-          body: JSON.stringify({ field: fieldName, ...config }),
+          body: JSON.stringify(payload),
         });
-        const createData = await createRes.json();
-        if (createRes.ok) {
-          console.log(`  [ok]   Recreated "${fieldName}" with clean metadata`);
+        const data = await res.json();
+
+        if (data.data?.id) {
+          console.log(`  + "${fieldName}" => OK (id: ${data.data.id})`);
+          // Clean up
+          await fetch(`${DIRECTUS_URL}/items/newsletter_blocks/${data.data.id}`, {
+            method: 'DELETE',
+            headers,
+          });
         } else {
-          console.error(`  [fail] Recreate "${fieldName}":`, JSON.stringify(createData.errors || createData));
+          const errMsg = data.errors?.[0]?.message || JSON.stringify(data);
+          console.log(`  + "${fieldName}" => FAILED: ${errMsg}`);
         }
-      } catch (err) {
-        console.error(`  [fail] "${fieldName}":`, err.message);
       }
     }
 
     console.log('');
-    console.log('Field cleanup complete.');
-    console.log('');
   } catch (err) {
-    console.error('Could not fix collection fields:', err.message);
+    console.error('Diagnosis failed:', err.message);
     console.log('');
   }
 }
 
 async function seedAll() {
-  await fixCollectionFields();
-  await seedBlocks();
-  await seedPartials();
+  await diagnoseFields();
+  // await seedBlocks();
+  // await seedPartials();
 }
 
 seedAll().catch(console.error);
