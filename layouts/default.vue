@@ -1,6 +1,6 @@
 <template>
 	<div
-		class="relative overflow-hidden bg-white transition duration-150 dark:bg-gray-800 dark:text-white lg:overflow-visible"
+		class="relative overflow-hidden bg-background text-foreground transition duration-150 lg:overflow-visible"
 	>
 		<input id="nav-drawer-toggle" type="checkbox" class="hidden" />
 		<LayoutHeader :links="headerLinks" />
@@ -19,7 +19,7 @@
 		<!-- AI Assistant FAB -->
 		<button
 			@click="aiTrayOpen = true"
-			class="fixed bottom-20 right-4 md:bottom-6 md:right-6 w-12 h-12 bg-gradient-to-r from-primary to-violet-500 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center z-30 hover:scale-105"
+			class="fixed bottom-20 right-4 md:bottom-6 md:right-6 w-12 h-12 bg-primary text-primary-foreground rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center z-30 ios-press"
 			title="AI Assistant"
 		>
 			<UIcon name="i-heroicons-sparkles" class="w-6 h-6" />

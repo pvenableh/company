@@ -46,17 +46,17 @@ watch(user, (newUser) => {
 		<PagesSellSheet v-if="!user" />
 
 		<!-- Command Center: shown when user IS logged in -->
-		<div v-else class="min-h-screen bg-gray-50/50 dark:bg-gray-900">
+		<div v-else class="min-h-screen bg-background">
 			<div class="max-w-7xl mx-auto px-4 pt-20 pb-8 sm:px-6 lg:px-8 space-y-6">
 				<!-- Greeting & AI Toggle -->
 				<div class="flex items-center justify-between">
 					<div>
-						<h1 class="text-2xl font-bold text-gray-900 dark:text-white">{{ greeting }}</h1>
-						<p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Here's what needs your attention today</p>
+						<h1 class="text-2xl font-semibold text-foreground tracking-tight">{{ greeting }}</h1>
+						<p class="text-sm text-muted-foreground mt-1">Here's what needs your attention today</p>
 					</div>
 					<button
 						@click="aiTrayOpen = true"
-						class="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-primary to-violet-500 text-white rounded-xl shadow-md hover:shadow-lg hover:scale-[1.02] transition-all duration-200 text-sm font-medium"
+						class="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-xl shadow-sm hover:shadow-md transition-all duration-200 text-sm font-medium ios-press"
 					>
 						<UIcon name="i-heroicons-sparkles" class="w-4 h-4" />
 						AI Assistant
@@ -64,7 +64,7 @@ watch(user, (newUser) => {
 				</div>
 
 				<!-- App Grid -->
-				<div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700/50">
+				<div class="ios-card p-6">
 					<CommandCenterAppGrid :badges="badges" />
 				</div>
 
@@ -80,11 +80,11 @@ watch(user, (newUser) => {
 						:upcoming-meetings="metrics.upcomingMeetings"
 					/>
 
-					<div class="lg:col-span-2 bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-sm border border-gray-100 dark:border-gray-700/50">
+					<div class="lg:col-span-2 ios-card p-5">
 						<div class="flex items-center justify-between mb-4">
 							<div class="flex items-center gap-2">
-								<UIcon name="i-heroicons-sparkles" class="w-5 h-5 text-violet-500" />
-								<h3 class="text-sm font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-300">
+								<UIcon name="i-heroicons-sparkles" class="w-5 h-5 text-primary" />
+								<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70">
 									Smart Suggestions
 								</h3>
 							</div>
@@ -98,11 +98,11 @@ watch(user, (newUser) => {
 						</div>
 
 						<div v-if="isAnalyzing" class="space-y-2">
-							<div v-for="n in 3" :key="n" class="h-14 bg-gray-100 dark:bg-gray-700 rounded-lg animate-pulse" />
+							<div v-for="n in 3" :key="n" class="h-14 bg-muted rounded-xl animate-pulse" />
 						</div>
 
-						<div v-else-if="topSuggestions.length === 0" class="text-center py-8 text-gray-400">
-							<UIcon name="i-heroicons-check-circle" class="w-10 h-10 mx-auto mb-2 text-green-400" />
+						<div v-else-if="topSuggestions.length === 0" class="text-center py-8 text-muted-foreground">
+							<UIcon name="i-heroicons-check-circle" class="w-10 h-10 mx-auto mb-2 text-success" />
 							<p class="text-sm">You're all caught up!</p>
 						</div>
 
