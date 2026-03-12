@@ -749,42 +749,54 @@ async function seedBlocks() {
   console.log(`Done. Created: ${created}, Skipped: ${skipped}, Failed: ${failed}`);
 }
 
-async function ensureCategoryFieldLength() {
-  // First, read the current field config to see the actual DB max_length
+async function ensureCategoryField() {
+  // Directus dropdown validation throws "VALUE_TOO_LONG" when a value
+  // doesn't match configured choices and allowOther isn't enabled.
+  // Patch the field meta to include all category choices and allow custom values.
+  const choices = [
+    { text: 'Header', value: 'header' },
+    { text: 'Hero', value: 'hero' },
+    { text: 'Content', value: 'content' },
+    { text: 'Two Column', value: 'two-column' },
+    { text: 'Three Column', value: 'three-column' },
+    { text: 'CTA', value: 'cta' },
+    { text: 'Image', value: 'image' },
+    { text: 'Stats', value: 'stats' },
+    { text: 'Quote', value: 'quote' },
+    { text: 'List', value: 'list' },
+    { text: 'Divider', value: 'divider' },
+    { text: 'Social', value: 'social' },
+    { text: 'Footer', value: 'footer' },
+  ];
+
   try {
-    const getRes = await fetch(`${DIRECTUS_URL}/fields/newsletter_blocks/category`, { headers });
-    const fieldData = await getRes.json();
-    const currentMax = fieldData?.data?.schema?.max_length;
-    console.log(`Category field current max_length: ${currentMax}`);
-
-    if (!currentMax || currentMax < 255) {
-      // PATCH the schema to increase max_length (this alters the DB column)
-      const patchRes = await fetch(`${DIRECTUS_URL}/fields/newsletter_blocks/category`, {
-        method: 'PATCH',
-        headers,
-        body: JSON.stringify({ schema: { max_length: 255 } }),
-      });
-      const patchData = await patchRes.json();
-      const newMax = patchData?.data?.schema?.max_length;
-      console.log(`Patched category max_length to: ${newMax}`);
-
-      if (newMax && newMax < 255) {
-        console.error('WARNING: Could not increase category max_length. Check Directus admin.');
-        console.error('Go to Settings > Data Model > newsletter_blocks > category > Schema');
-        console.error('and set "Max Length" to 255.');
-      }
+    const res = await fetch(`${DIRECTUS_URL}/fields/newsletter_blocks/category`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({
+        meta: {
+          options: {
+            choices,
+            allowOther: true,
+          },
+        },
+      }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      console.log('Updated category field: set choices + allowOther.');
     } else {
-      console.log('Category field max_length is already sufficient.');
+      console.error('Failed to update category field:', JSON.stringify(data.errors || data));
     }
     console.log('');
   } catch (err) {
-    console.error('Could not read/patch category field:', err.message);
+    console.error('Could not patch category field:', err.message);
     console.log('');
   }
 }
 
 async function seedAll() {
-  await ensureCategoryFieldLength();
+  await ensureCategoryField();
   await seedBlocks();
   await seedPartials();
 }
