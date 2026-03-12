@@ -749,10 +749,7 @@ async function seedBlocks() {
   console.log(`Done. Created: ${created}, Skipped: ${skipped}, Failed: ${failed}`);
 }
 
-async function ensureCategoryField() {
-  // Directus dropdown validation throws "VALUE_TOO_LONG" when a value
-  // doesn't match configured choices and allowOther isn't enabled.
-  // Patch the field meta to include all category choices and allow custom values.
+async function fixCategoryField() {
   const choices = [
     { text: 'Header', value: 'header' },
     { text: 'Hero', value: 'hero' },
@@ -770,33 +767,60 @@ async function ensureCategoryField() {
   ];
 
   try {
-    const res = await fetch(`${DIRECTUS_URL}/fields/newsletter_blocks/category`, {
-      method: 'PATCH',
+    // First, read the full field config to diagnose the issue
+    const getRes = await fetch(`${DIRECTUS_URL}/fields/newsletter_blocks/category`, { headers });
+    const fieldData = await getRes.json();
+    console.log('Current category field config:');
+    console.log('  schema.max_length:', fieldData?.data?.schema?.max_length);
+    console.log('  meta.validation:', JSON.stringify(fieldData?.data?.meta?.validation));
+    console.log('  meta.options:', JSON.stringify(fieldData?.data?.meta?.options));
+    console.log('');
+
+    // Delete the field and recreate it cleanly
+    console.log('Deleting and recreating category field...');
+    await fetch(`${DIRECTUS_URL}/fields/newsletter_blocks/category`, {
+      method: 'DELETE',
+      headers,
+    });
+
+    const createRes = await fetch(`${DIRECTUS_URL}/fields/newsletter_blocks`, {
+      method: 'POST',
       headers,
       body: JSON.stringify({
+        field: 'category',
+        type: 'string',
+        schema: {
+          max_length: 255,
+          is_nullable: true,
+          default_value: null,
+        },
         meta: {
+          interface: 'select-dropdown',
+          display: 'labels',
           options: {
             choices,
             allowOther: true,
           },
+          validation: null,
+          validation_message: null,
         },
       }),
     });
-    const data = await res.json();
-    if (res.ok) {
-      console.log('Updated category field: set choices + allowOther.');
+    const createData = await createRes.json();
+    if (createRes.ok) {
+      console.log('Recreated category field successfully.');
     } else {
-      console.error('Failed to update category field:', JSON.stringify(data.errors || data));
+      console.error('Failed to recreate:', JSON.stringify(createData.errors || createData));
     }
     console.log('');
   } catch (err) {
-    console.error('Could not patch category field:', err.message);
+    console.error('Could not fix category field:', err.message);
     console.log('');
   }
 }
 
 async function seedAll() {
-  await ensureCategoryField();
+  await fixCategoryField();
   await seedBlocks();
   await seedPartials();
 }
