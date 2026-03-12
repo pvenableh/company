@@ -253,7 +253,7 @@ useHead({
 
 	background: var(--paper);
 	color: var(--ink);
-	font-family: 'Lora', Georgia, serif;
+	font-family: var(--font-proxima-light);
 	-webkit-font-smoothing: antialiased;
 }
 
@@ -281,7 +281,7 @@ useHead({
 .earnest-hero::after  { bottom: 60px; }
 
 .hero-kicker {
-	font-family: 'Lora', serif;
+	font-family: var(--font-proxima-light);
 	font-style: italic;
 	font-size: 15px;
 	color: var(--muted);
@@ -289,7 +289,7 @@ useHead({
 	margin-bottom: 48px;
 }
 .hero-wordmark {
-	font-family: 'Cormorant Garamond', serif;
+	font-family: var(--font-bauer-bodoni);
 	font-size: clamp(96px, 18vw, 200px);
 	font-weight: 600;
 	letter-spacing: -0.02em;
@@ -301,7 +301,7 @@ useHead({
 	display: inline-block;
 }
 .hero-tagline {
-	font-family: 'Cormorant Garamond', serif;
+	font-family: var(--font-bauer-bodoni);
 	font-size: clamp(28px, 5vw, 52px);
 	font-weight: 300;
 	font-style: italic;
@@ -310,7 +310,7 @@ useHead({
 	letter-spacing: 0.01em;
 }
 .hero-sub {
-	font-family: 'Lora', serif;
+	font-family: var(--font-proxima-light);
 	font-size: 16px;
 	color: var(--muted);
 	margin-top: 20px;
@@ -328,7 +328,7 @@ useHead({
 	color: var(--paper);
 	border: none;
 	padding: 16px 36px;
-	font-family: 'Lora', serif;
+	font-family: var(--font-proxima-light);
 	font-size: 14px;
 	font-weight: 500;
 	letter-spacing: 0.08em;
@@ -343,7 +343,7 @@ useHead({
 	color: var(--muted);
 	border: 1px solid var(--rule);
 	padding: 16px 36px;
-	font-family: 'Lora', serif;
+	font-family: var(--font-proxima-light);
 	font-size: 14px;
 	letter-spacing: 0.08em;
 	cursor: pointer;
@@ -370,7 +370,7 @@ useHead({
 	transform-origin: top;
 }
 .scroll-label {
-	font-family: 'Lora', serif;
+	font-family: var(--font-proxima-light);
 	font-style: italic;
 	font-size: 11px;
 	color: var(--muted);
@@ -391,7 +391,7 @@ useHead({
 	animation: marquee 30s linear infinite;
 }
 .marquee-item {
-	font-family: 'Cormorant Garamond', serif;
+	font-family: var(--font-bauer-bodoni);
 	font-style: italic;
 	font-size: 15px;
 	color: rgba(246,241,231,0.5);
@@ -419,7 +419,7 @@ useHead({
 	.truth-section { grid-template-columns: 1fr; gap: 40px; padding: 80px 24px; }
 }
 .truth-label {
-	font-family: 'Lora', serif;
+	font-family: var(--font-proxima-light);
 	font-style: italic;
 	font-size: 13px;
 	color: var(--accent);
@@ -429,7 +429,7 @@ useHead({
 	top: 100px;
 }
 .truth-title {
-	font-family: 'Cormorant Garamond', serif;
+	font-family: var(--font-bauer-bodoni);
 	font-size: clamp(36px, 5vw, 58px);
 	font-weight: 500;
 	line-height: 1.15;
@@ -467,7 +467,7 @@ useHead({
 	background: var(--rule);
 }
 .section-rule-mark {
-	font-family: 'Cormorant Garamond', serif;
+	font-family: var(--font-bauer-bodoni);
 	font-size: 20px;
 	color: var(--accent);
 	opacity: 0.5;
@@ -484,14 +484,14 @@ useHead({
 
 .features-header { margin-bottom: 64px; }
 .features-title {
-	font-family: 'Cormorant Garamond', serif;
+	font-family: var(--font-bauer-bodoni);
 	font-size: clamp(32px, 4vw, 48px);
 	font-weight: 500;
 	letter-spacing: -0.01em;
 	line-height: 1.2;
 }
 .features-sub {
-	font-family: 'Lora', serif;
+	font-family: var(--font-proxima-light);
 	font-style: italic;
 	font-size: 16px;
 	color: var(--muted);
@@ -517,7 +517,7 @@ useHead({
 .feature-item:nth-child(2n) { border-right: none; }
 
 .feature-number {
-	font-family: 'Cormorant Garamond', serif;
+	font-family: var(--font-bauer-bodoni);
 	font-size: 11px;
 	font-weight: 500;
 	letter-spacing: 0.15em;
@@ -526,7 +526,7 @@ useHead({
 	display: block;
 }
 .feature-name {
-	font-family: 'Cormorant Garamond', serif;
+	font-family: var(--font-bauer-bodoni);
 	font-size: 24px;
 	font-weight: 600;
 	color: var(--ink);
@@ -552,14 +552,14 @@ useHead({
 	position: absolute;
 	top: -40px; left: 50%;
 	transform: translateX(-50%);
-	font-family: 'Cormorant Garamond', serif;
+	font-family: var(--font-bauer-bodoni);
 	font-size: 300px;
 	color: rgba(246,241,231,0.04);
 	line-height: 1;
 	pointer-events: none;
 }
 .quote-text {
-	font-family: 'Cormorant Garamond', serif;
+	font-family: var(--font-bauer-bodoni);
 	font-size: clamp(28px, 5vw, 54px);
 	font-weight: 400;
 	font-style: italic;
@@ -575,7 +575,7 @@ useHead({
 	color: var(--accent);
 }
 .quote-attr {
-	font-family: 'Lora', serif;
+	font-family: var(--font-proxima-light);
 	font-size: 13px;
 	color: rgba(246,241,231,0.35);
 	letter-spacing: 0.1em;
@@ -601,7 +601,7 @@ useHead({
 }
 @media (max-width: 600px) { .pricing-header { grid-template-columns: 1fr; } }
 .pricing-title {
-	font-family: 'Cormorant Garamond', serif;
+	font-family: var(--font-bauer-bodoni);
 	font-size: clamp(36px, 5vw, 52px);
 	font-weight: 500;
 	line-height: 1.1;
@@ -636,7 +636,7 @@ useHead({
 .plan-featured:hover { background: var(--ink) !important; }
 
 .plan-name {
-	font-family: 'Cormorant Garamond', serif;
+	font-family: var(--font-bauer-bodoni);
 	font-size: 22px;
 	font-weight: 600;
 	letter-spacing: 0.02em;
@@ -644,7 +644,7 @@ useHead({
 .plan-featured .plan-name { color: var(--paper); }
 
 .plan-price {
-	font-family: 'Cormorant Garamond', serif;
+	font-family: var(--font-bauer-bodoni);
 	font-size: 52px;
 	font-weight: 600;
 	line-height: 1;
@@ -659,7 +659,7 @@ useHead({
 	font-weight: 400;
 }
 .plan-price span {
-	font-family: 'Lora', serif;
+	font-family: var(--font-proxima-light);
 	font-size: 14px;
 	font-weight: 400;
 	color: var(--muted);
@@ -667,7 +667,7 @@ useHead({
 .plan-featured .plan-price span { color: rgba(246,241,231,0.5); }
 
 .plan-desc {
-	font-family: 'Lora', serif;
+	font-family: var(--font-proxima-light);
 	font-style: italic;
 	font-size: 13px;
 	color: var(--muted);
@@ -699,7 +699,7 @@ useHead({
 	content: '\2014';
 	color: var(--accent);
 	flex-shrink: 0;
-	font-family: 'Cormorant Garamond', serif;
+	font-family: var(--font-bauer-bodoni);
 }
 
 .plan-btn {
@@ -708,7 +708,7 @@ useHead({
 	margin-top: 32px;
 	padding: 14px;
 	text-align: center;
-	font-family: 'Lora', serif;
+	font-family: var(--font-proxima-light);
 	font-size: 13px;
 	letter-spacing: 0.08em;
 	cursor: pointer;
@@ -742,14 +742,14 @@ useHead({
 @media (max-width: 600px) { .earnest-footer { grid-template-columns: 1fr; padding: 48px 24px; } }
 
 .footer-brand {
-	font-family: 'Cormorant Garamond', serif;
+	font-family: var(--font-bauer-bodoni);
 	font-size: 36px;
 	font-weight: 600;
 	letter-spacing: 0.01em;
 }
 .footer-accent { color: var(--accent); }
 .footer-tagline {
-	font-family: 'Lora', serif;
+	font-family: var(--font-proxima-light);
 	font-style: italic;
 	font-size: 14px;
 	color: var(--muted);
@@ -762,7 +762,7 @@ useHead({
 	flex-wrap: wrap;
 }
 .footer-links a {
-	font-family: 'Lora', serif;
+	font-family: var(--font-proxima-light);
 	font-size: 13px;
 	color: var(--muted);
 	text-decoration: none;
@@ -777,7 +777,7 @@ useHead({
 	opacity: 0.6;
 	padding: 20px 48px 40px;
 	text-align: center;
-	font-family: 'Lora', serif;
+	font-family: var(--font-proxima-light);
 	font-style: italic;
 	background: var(--paper);
 }
