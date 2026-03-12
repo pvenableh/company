@@ -93,19 +93,18 @@ const fileCount = computed(() => props.event.files?.length || 0);
 
     <!-- Comments section -->
     <div class="space-y-3">
-      <h4 class="text-xs font-bold uppercase tracking-wider text-gray-500">Comments</h4>
-      <CommentThread
+      <CommentsSystem
         collection="project_events"
-        :item-id="event.id"
+        :item-id="String(event.id)"
       />
     </div>
 
     <!-- Reactions section -->
     <div class="space-y-3">
       <h4 class="text-xs font-bold uppercase tracking-wider text-gray-500">Reactions</h4>
-      <ReactionDisplay
+      <ReactionsBar
+        :item-id="String(event.id)"
         collection="project_events"
-        :item-id="event.id"
       />
     </div>
   </div>

@@ -91,33 +91,6 @@
 			</div>
 		</section>
 
-		<!-- Footer -->
-		<footer class="earnest-footer">
-			<div>
-				<div class="footer-brand">Earnest<span class="footer-accent">.</span></div>
-				<div class="footer-tagline">Do good work.</div>
-			</div>
-			<div class="footer-nav">
-				<div class="footer-col">
-					<span class="footer-col-title">Product</span>
-					<nuxt-link to="#features">Features</nuxt-link>
-					<nuxt-link to="#pricing">Pricing</nuxt-link>
-					<nuxt-link to="/register">Get Started</nuxt-link>
-				</div>
-				<div class="footer-col">
-					<span class="footer-col-title">Platform</span>
-					<nuxt-link to="#features">Projects</nuxt-link>
-					<nuxt-link to="#features">Invoicing</nuxt-link>
-					<nuxt-link to="#features">Channels</nuxt-link>
-				</div>
-				<div class="footer-col">
-					<span class="footer-col-title">Account</span>
-					<nuxt-link to="/auth/signin">Login</nuxt-link>
-					<nuxt-link to="/register">Register</nuxt-link>
-				</div>
-			</div>
-		</footer>
-		<p class="footer-copy">&copy; 2026 Earnest. A platform that means it.</p>
 	</div>
 </template>
 
@@ -742,73 +715,4 @@ useHead({
 .plan-featured .plan-btn:hover { filter: brightness(1.1); }
 
 /* ─── FOOTER ─── */
-.earnest-footer {
-	border-top: 1px solid var(--rule);
-	padding: 60px 48px;
-	display: grid;
-	grid-template-columns: 1fr;
-	gap: 48px;
-	max-width: 1200px;
-	margin: 0 auto;
-	background: var(--paper);
-}
-@media (min-width: 601px) {
-	.earnest-footer { grid-template-columns: 1fr 2fr; align-items: start; }
-}
-@media (max-width: 600px) { .earnest-footer { padding: 48px 24px; } }
-
-.footer-brand {
-	font-family: var(--font-bauer-bodoni);
-	font-size: 36px;
-	font-weight: 600;
-	letter-spacing: 0.01em;
-}
-.footer-accent { color: var(--accent); }
-.footer-tagline {
-	font-family: var(--font-proxima-light);
-	font-style: italic;
-	font-size: 14px;
-	color: var(--muted);
-	margin-top: 8px;
-}
-.footer-nav {
-	display: grid;
-	grid-template-columns: repeat(3, 1fr);
-	gap: 32px;
-}
-@media (max-width: 600px) { .footer-nav { grid-template-columns: repeat(2, 1fr); } }
-
-.footer-col {
-	display: flex;
-	flex-direction: column;
-	gap: 12px;
-}
-.footer-col-title {
-	font-family: var(--font-bauer-bodoni);
-	font-size: 13px;
-	font-weight: 600;
-	color: var(--ink);
-	letter-spacing: 0.02em;
-	margin-bottom: 4px;
-}
-.footer-col a {
-	font-family: var(--font-proxima-light);
-	font-size: 13px;
-	color: var(--muted);
-	text-decoration: none;
-	letter-spacing: 0.04em;
-	transition: color 0.2s;
-}
-.footer-col a:hover { color: var(--ink); }
-.footer-copy {
-	font-size: 12px;
-	color: var(--muted);
-	letter-spacing: 0.04em;
-	opacity: 0.6;
-	padding: 20px 48px 40px;
-	text-align: center;
-	font-family: var(--font-proxima-light);
-	font-style: italic;
-	background: var(--paper);
-}
 </style>

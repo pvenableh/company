@@ -1,36 +1,62 @@
 <template>
-	<div
-		class="w-full flex flex-col md:flex-row flex-wrap items-start justify-start sm:justify-center px-4 md:px-6 pb-10 mt-16 md:mt-20 text-gray-700 dark:text-gray-400 footer"
-	>
-		<div class="flex items-start justify-start flex-col footer__col">
-			<nuxt-link v-for="(link, index) in links" :key="index" :to="link.to">{{ link.name }}</nuxt-link>
+	<footer class="site-footer">
+		<div class="footer-grid">
+			<div>
+				<nuxt-link to="/" class="footer-brand-link">
+					<div class="footer-brand">Earnest<span class="footer-accent">.</span></div>
+				</nuxt-link>
+				<div class="footer-tagline">Do good work.</div>
+			</div>
+			<!-- Logged-in nav -->
+			<div v-if="user" class="footer-nav">
+				<div class="footer-col">
+					<span class="footer-col-title">Product</span>
+					<nuxt-link to="/projects">Projects</nuxt-link>
+					<nuxt-link to="/invoices">Invoices</nuxt-link>
+					<nuxt-link to="/social/dashboard">Social</nuxt-link>
+					<nuxt-link to="/email">Email</nuxt-link>
+				</div>
+				<div class="footer-col">
+					<span class="footer-col-title">Platform</span>
+					<nuxt-link to="/tickets">Tickets</nuxt-link>
+					<nuxt-link to="/channels">Channels</nuxt-link>
+					<nuxt-link to="/scheduler">Scheduler</nuxt-link>
+					<nuxt-link to="/dashboard">Statistics</nuxt-link>
+				</div>
+				<div class="footer-col">
+					<span class="footer-col-title">Account</span>
+					<nuxt-link to="/organization">Organization</nuxt-link>
+					<nuxt-link to="/account">Account</nuxt-link>
+					<a @click.prevent="logout" class="cursor-pointer">Logout</a>
+				</div>
+			</div>
+			<!-- Marketing nav -->
+			<div v-else class="footer-nav">
+				<div class="footer-col">
+					<span class="footer-col-title">Product</span>
+					<nuxt-link to="#features">Features</nuxt-link>
+					<nuxt-link to="#pricing">Pricing</nuxt-link>
+					<nuxt-link to="/register">Get Started</nuxt-link>
+				</div>
+				<div class="footer-col">
+					<span class="footer-col-title">Platform</span>
+					<nuxt-link to="#features">Projects</nuxt-link>
+					<nuxt-link to="#features">Invoicing</nuxt-link>
+					<nuxt-link to="#features">Channels</nuxt-link>
+				</div>
+				<div class="footer-col">
+					<span class="footer-col-title">Account</span>
+					<nuxt-link to="/auth/signin">Login</nuxt-link>
+					<nuxt-link to="/register">Register</nuxt-link>
+				</div>
+			</div>
 		</div>
-		<div class="flex items-start justify-start flex-col footer__col">
-			<nuxt-link to="/organization">Organization</nuxt-link>
-			<nuxt-link v-if="user" to="/account">Account</nuxt-link>
-			<a @click.prevent="logout" v-if="user" class="cursor-pointer">Logout</a>
-			<nuxt-link v-else to="/auth/signin">Login</nuxt-link>
-		</div>
-		<div class="w-full flex items-center justify-center flex-col sm:flex-row my-12 footer__contact-info">
-			<h5>605 Lincoln Road Suite 200</h5>
-			<h5>Miami Beach, FL</h5>
-			<h5>33139</h5>
-			<h5>305.680.0485</h5>
-		</div>
-		<div class="flex w-full flex-col items-center justify-center">
-			<nuxt-link to="/" class="mb-3 text-foreground hover:text-primary transition-colors">
-				<LogoEarnest size="sm" />
-			</nuxt-link>
-			<p class="text-[10px] tracking-wider text-muted-foreground mb-1">Do good work.</p>
-			<h5 class="tracking-widest uppercase body-font copyright">
-				&#169; {{ new Date().getFullYear() }} Earnest
-			</h5>
-		</div>
-	</div>
+		<p class="footer-copy">&copy; {{ new Date().getFullYear() }} Earnest. A platform that means it.</p>
+	</footer>
 </template>
+
 <script setup>
 const { user } = useDirectusAuth();
-
 const { logout } = useLogout();
 
 const props = defineProps({
@@ -40,42 +66,111 @@ const props = defineProps({
 	},
 });
 </script>
+
 <style scoped>
 @reference "~/assets/css/tailwind.css";
-.footer {
-	position: relative;
+
+.site-footer {
+	border-top: 1px solid hsl(var(--border) / 0.4);
+	max-width: 1200px;
+	margin: 60px auto 0;
+	width: 100%;
 }
 
-.footer__col {
+.footer-grid {
+	padding: 60px 48px;
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: 48px;
+}
+@media (min-width: 601px) {
+	.footer-grid {
+		grid-template-columns: 1fr 2fr;
+		align-items: start;
+	}
+}
+@media (max-width: 600px) {
+	.footer-grid {
+		padding: 48px 24px;
+	}
+}
+
+.footer-brand-link {
+	text-decoration: none;
+	color: hsl(var(--foreground));
+	transition: color 0.2s;
+}
+.footer-brand-link:hover {
+	color: hsl(var(--primary));
+}
+
+.footer-brand {
+	font-family: var(--font-bauer-bodoni);
+	font-size: 36px;
+	font-weight: 600;
+	letter-spacing: 0.01em;
+	color: hsl(var(--foreground));
+}
+
+.footer-accent {
+	color: hsl(var(--primary));
+}
+
+.footer-tagline {
+	font-family: var(--font-proxima-light);
+	font-style: italic;
+	font-size: 14px;
+	color: hsl(var(--muted-foreground));
+	margin-top: 8px;
+}
+
+.footer-nav {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 32px;
+}
+@media (max-width: 600px) {
+	.footer-nav {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+.footer-col {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.footer-col-title {
+	font-family: var(--font-bauer-bodoni);
+	font-size: 13px;
+	font-weight: 600;
+	color: hsl(var(--foreground));
+	letter-spacing: 0.02em;
+	margin-bottom: 4px;
+}
+
+.footer-col a {
+	font-family: var(--font-proxima-light);
+	font-size: 13px;
+	color: hsl(var(--muted-foreground));
+	text-decoration: none;
+	letter-spacing: 0.04em;
+	transition: color 0.2s;
+}
+
+.footer-col a:hover {
+	color: hsl(var(--foreground));
+}
+
+.footer-copy {
+	font-size: 12px;
+	color: hsl(var(--muted-foreground));
+	letter-spacing: 0.04em;
+	opacity: 0.6;
+	padding: 20px 48px 40px;
 	text-align: center;
-	@apply w-full;
-	@media (min-width: theme('screens.md')) {
-		max-width: 250px;
-	}
-
-	a {
-		font-size: 10px;
-
-		@apply uppercase tracking-widest py-1 mb-1 w-full;
-	}
-	a:hover,
-	a.active,
-	a.router-link-exact-active {
-		color: var(--blue);
-	}
-}
-
-.footer__contact-info {
-	h5 {
-		font-size: 9px;
-		@apply uppercase tracking-wider font-bold px-2;
-	}
-}
-
-h5.copyright {
-	font-size: 9px;
-	margin-top: 0px;
-	margin-bottom: 50px;
-	letter-spacing: 0.3em;
+	font-family: var(--font-proxima-light);
+	font-style: italic;
 }
 </style>

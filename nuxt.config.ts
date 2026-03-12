@@ -223,6 +223,7 @@ export default defineNuxtConfig({
 			'material-symbols',
 			'material-symbols-light',
 			'logos',
+			'fluent-emoji-flat',
 		],
 	},
 
