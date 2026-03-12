@@ -654,10 +654,18 @@ async function seedPartials() {
         continue;
       }
 
+      // Directus stores variables_schema and instance_variables as JSON text fields
+      const payload = {
+        ...partial,
+        status: 'published',
+        variables_schema: JSON.stringify(partial.variables_schema),
+        instance_variables: JSON.stringify(partial.instance_variables),
+      };
+
       const result = await fetch(`${DIRECTUS_URL}/items/email_partials`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ ...partial, status: 'published' }),
+        body: JSON.stringify(payload),
       }).then((r) => r.json());
 
       if (result.data?.id) {
@@ -700,10 +708,17 @@ async function seedBlocks() {
         continue;
       }
 
+      // Directus stores variables_schema as a JSON text field — stringify before sending
+      const payload = {
+        ...block,
+        status: 'published',
+        variables_schema: JSON.stringify(block.variables_schema),
+      };
+
       const result = await fetch(`${DIRECTUS_URL}/items/newsletter_blocks`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ ...block, status: 'published' }),
+        body: JSON.stringify(payload),
       }).then((r) => r.json());
 
       if (result.data?.id) {
@@ -723,7 +738,24 @@ async function seedBlocks() {
   console.log(`Done. Created: ${created}, Skipped: ${skipped}, Failed: ${failed}`);
 }
 
+async function ensureCategoryFieldLength() {
+  try {
+    const res = await fetch(`${DIRECTUS_URL}/fields/newsletter_blocks/category`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ schema: { max_length: 255 } }),
+    });
+    if (res.ok) {
+      console.log('Ensured category field max_length is 255.');
+      console.log('');
+    }
+  } catch {
+    // Field may not support patching — continue anyway
+  }
+}
+
 async function seedAll() {
+  await ensureCategoryFieldLength();
   await seedBlocks();
   await seedPartials();
 }
