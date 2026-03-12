@@ -271,10 +271,11 @@ const handleKeyboard = (event) => {
 			<div class="max-w-5xl mx-auto">
 				<div class="flex space-x-2">
 					<FormTiptap
-						:show-toolbar="false"
 						v-model="newMessage"
 						class="flex-1"
 						:disabled="!channelId"
+						:organization-id="selectedOrg"
+						:context="{ collection: 'messages', itemId: channelId }"
 						@keydown="handleKeyboard"
 					/>
 					<UButton

@@ -105,7 +105,7 @@ header {
 header.retracted {
 	top: 8px;
 	background: rgba(255, 255, 255, 0.82);
-	@apply rounded-full w-11/12 md:w-5/6 lg:w-4/5 xl:w-3/5 py-2 md:py-1.5 border border-border/30 shadow-sm;
+	@apply rounded-full w-11/12 md:w-5/6 lg:w-4/5 xl:w-3/5 py-3 md:py-2.5 border border-border/30 shadow-sm;
 	.filter-controls {
 		@apply left-[5px] md:px-0;
 	}

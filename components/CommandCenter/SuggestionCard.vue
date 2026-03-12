@@ -17,10 +17,17 @@ const props = defineProps<{
 }>();
 
 const priorityColors: Record<string, string> = {
-	urgent: 'border-l-red-500 bg-red-50/50 dark:bg-red-900/10',
-	high: 'border-l-amber-500 bg-amber-50/50 dark:bg-amber-900/10',
-	medium: 'border-l-blue-500 bg-blue-50/30 dark:bg-blue-900/10',
-	low: 'border-l-gray-300 bg-gray-50/30 dark:bg-gray-800/30',
+	urgent: 'bg-red-50/50 dark:bg-red-900/10',
+	high: 'bg-amber-50/50 dark:bg-amber-900/10',
+	medium: 'bg-blue-50/30 dark:bg-blue-900/10',
+	low: 'bg-gray-50/30 dark:bg-gray-800/30',
+};
+
+const priorityLineColors: Record<string, string> = {
+	urgent: 'bg-red-500',
+	high: 'bg-amber-500',
+	medium: 'bg-blue-500',
+	low: 'bg-gray-300',
 };
 
 const typeIcons: Record<string, string> = {
@@ -41,9 +48,13 @@ const handleAction = () => {
 <template>
 	<div
 		:class="[priorityColors[suggestion.priority] || priorityColors.low]"
-		class="border-l-4 rounded-lg p-3 hover:shadow-md transition-all duration-200 cursor-pointer group"
+		class="relative rounded-lg p-3 pl-5 hover:shadow-md transition-all duration-200 cursor-pointer group overflow-hidden"
 		@click="handleAction"
 	>
+		<span
+			:class="[priorityLineColors[suggestion.priority] || priorityLineColors.low]"
+			class="absolute left-0 top-0 bottom-0 w-1"
+		/>
 		<div class="flex items-start gap-3">
 			<div class="flex-shrink-0 mt-0.5">
 				<UIcon

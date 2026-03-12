@@ -66,13 +66,12 @@
 	--color-sidebar-border: hsl(var(--sidebar-border));
 	--color-sidebar-ring: hsl(var(--sidebar-ring));
 
-	/* ---- Font families — iOS-inspired system stack ---- */
-	--font-body: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto,
-		Helvetica, Arial, sans-serif;
-	--font-sans: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto,
-		Helvetica, Arial, sans-serif;
-	--font-display: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI',
-		Roboto, Helvetica, Arial, sans-serif;
+	/* ---- Font families ---- */
+	--font-body: 'Proxima Nova W01 Regular', 'Helvetica Neue', Helvetica, Roboto, Arial,
+		sans-serif;
+	--font-sans: 'Proxima Nova W01 Regular', 'Helvetica Neue', Helvetica, Roboto, Arial,
+		sans-serif;
+	--font-display: 'Bauer Bodoni Pro_1 W05 Roman', 'Times New Roman', Times, serif;
 	--font-proxima-light: 'Proxima Nova W01 Light', 'Helvetica Neue', Helvetica, Roboto, Arial,
 		sans-serif;
 	--font-proxima-regular: 'Proxima Nova W01 Regular', 'Helvetica Neue', Helvetica, Roboto, Arial,

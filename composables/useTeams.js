@@ -9,14 +9,14 @@ export const useTeams = () => {
 	const { ADMIN_ROLE_ID, CLIENT_MANAGER_ROLE_ID, hasAdminAccess: _hasAdminAccess, getRoleId } = useRole();
 	const DEFAULT_TEAM_ID = 'org-default'; // Virtual team ID for "Default Team"
 
-	// State
-	const teams = ref([]);
-	const visibleTeams = ref([]);
-	const organizationUsers = ref([]);
-	const loading = ref(false);
-	const error = ref(null);
+	// State — use useState for cross-component shared state
+	const teams = useState('teams_list', () => []);
+	const visibleTeams = useState('teams_visible', () => []);
+	const organizationUsers = useState('teams_org_users', () => []);
+	const loading = useState('teams_loading', () => false);
+	const error = useState('teams_error', () => null);
 	const selectedTeam = useState('selectedTeam', () => null);
-	const lastFetchedOrg = ref(null);
+	const lastFetchedOrg = useState('teams_lastFetchedOrg', () => null);
 	const storageListener = ref(null);
 
 	const { user } = useDirectusAuth();

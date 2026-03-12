@@ -36,8 +36,7 @@ const sizeClass = computed(() => {
 }
 
 .earnest-wordmark__text {
-	font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto,
-		Helvetica, Arial, sans-serif;
+	font-family: var(--font-bauer-bodoni);
 }
 
 .earnest-wordmark__period {

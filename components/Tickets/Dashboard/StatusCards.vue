@@ -1,6 +1,7 @@
 <template>
 	<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-		<UCard class="border-l-4 border-[var(--cyan)]">
+		<UCard class="relative overflow-hidden">
+			<span class="absolute left-0 top-0 bottom-0 w-1 bg-[var(--cyan)]" />
 			<div class="flex justify-between items-center">
 				<div>
 					<div class="flex items-center">
@@ -21,7 +22,8 @@
 			<p class="text-xs mt-2">Avg. age: {{ formatDuration(avgTicketAge.pending) }}</p>
 		</UCard>
 
-		<UCard class="border-l-4 border-[var(--cyan2)]">
+		<UCard class="relative overflow-hidden">
+			<span class="absolute left-0 top-0 bottom-0 w-1 bg-[var(--cyan2)]" />
 			<div class="flex justify-between items-center">
 				<div>
 					<div class="flex items-center">
@@ -42,7 +44,8 @@
 			<p class="text-xs mt-2">Avg. age: {{ formatDuration(avgTicketAge.scheduled) }}</p>
 		</UCard>
 
-		<UCard class="border-l-4 border-[var(--green2)]">
+		<UCard class="relative overflow-hidden">
+			<span class="absolute left-0 top-0 bottom-0 w-1 bg-[var(--green2)]" />
 			<div class="flex justify-between items-center">
 				<div>
 					<div class="flex items-center">
@@ -63,7 +66,8 @@
 			<p class="text-xs mt-2">Avg. age: {{ formatDuration(avgTicketAge.inProgress) }}</p>
 		</UCard>
 
-		<UCard class="border-l-4 border-[var(--green)]">
+		<UCard class="relative overflow-hidden">
+			<span class="absolute left-0 top-0 bottom-0 w-1 bg-[var(--green)]" />
 			<div class="flex justify-between items-center">
 				<div>
 					<div class="flex items-center">

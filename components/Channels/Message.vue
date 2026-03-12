@@ -12,6 +12,7 @@ const props = defineProps({
 
 const messageItems = useDirectusItems('messages');
 const { user } = useDirectusAuth();
+const { selectedOrg } = useOrganization();
 const showReplyInput = ref(false);
 const replyText = ref('');
 const showReplies = ref(false);
@@ -155,7 +156,7 @@ const handleKeyboard = (event) => {
 
 		<!-- Reply Input -->
 		<div v-if="showReplyInput" class="pl-8">
-			<FormTiptap v-model="replyText" :show-toolbar="false" @keydown="handleKeyboard">
+			<FormTiptap v-model="replyText" :show-toolbar="false" :organization-id="selectedOrg" :context="{ collection: 'messages', itemId: message.id }" @keydown="handleKeyboard">
 				<template #footer>
 					<div class="flex justify-between items-center">
 						<span class="text-xs text-gray-500">Press Ctrl + Enter to send</span>
