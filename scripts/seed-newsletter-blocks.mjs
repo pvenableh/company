@@ -761,108 +761,56 @@ async function seedBlocks() {
 }
 
 /**
- * Dump all field schemas for newsletter_blocks so we can identify
- * which fields have restrictive max_length or broken validation.
+ * Fix variables_schema field: change from varchar(255) to text so it can
+ * hold the full JSON-stringified variable definitions.
  */
-async function diagnoseFields() {
-  console.log('=== Field Schema Dump for newsletter_blocks ===');
-  console.log('');
+async function fixVariablesSchemaField() {
+  console.log('Fixing variables_schema field (varchar(255) → text)...');
 
   try {
-    const fieldsRes = await fetch(`${DIRECTUS_URL}/fields/newsletter_blocks`, { headers });
-    const fieldsData = await fieldsRes.json();
-
-    if (!fieldsData?.data) {
-      console.error('Could not read fields:', JSON.stringify(fieldsData));
+    // Delete the varchar(255) field
+    const delRes = await fetch(`${DIRECTUS_URL}/fields/newsletter_blocks/variables_schema`, {
+      method: 'DELETE',
+      headers,
+    });
+    if (!delRes.ok) {
+      console.error('  Could not delete field:', await delRes.text());
       return;
     }
 
-    for (const f of fieldsData.data) {
-      const ml = f.schema?.max_length ?? 'null';
-      const dt = f.schema?.data_type ?? f.type ?? '?';
-      const val = f.meta?.validation ? JSON.stringify(f.meta.validation) : 'null';
-      console.log(`  ${f.field.padEnd(20)} type=${dt.padEnd(12)} max_length=${String(ml).padEnd(6)} validation=${val}`);
-    }
-
-    console.log('');
-
-    // Attempt a minimal insert with only required fields to see if error persists
-    console.log('=== Minimal Insert Test ===');
-    const testPayload = {
-      name: '__test_diag',
-      slug: '__test_diag',
-      status: 'draft',
-    };
-    console.log('Payload:', JSON.stringify(testPayload));
-    const testRes = await fetch(`${DIRECTUS_URL}/items/newsletter_blocks`, {
+    // Recreate as text (no max_length)
+    const createRes = await fetch(`${DIRECTUS_URL}/fields/newsletter_blocks`, {
       method: 'POST',
       headers,
-      body: JSON.stringify(testPayload),
+      body: JSON.stringify({
+        field: 'variables_schema',
+        type: 'text',
+        schema: { is_nullable: true, default_value: null },
+        meta: {
+          interface: 'input-multiline',
+          display: 'raw',
+          validation: null,
+          validation_message: null,
+        },
+      }),
     });
-    const testData = await testRes.json();
-
-    if (testData.data?.id) {
-      console.log('Minimal insert SUCCEEDED (id:', testData.data.id, ')');
-      // Clean up
-      await fetch(`${DIRECTUS_URL}/items/newsletter_blocks/${testData.data.id}`, {
-        method: 'DELETE',
-        headers,
-      });
-      console.log('Cleaned up test record.');
+    const createData = await createRes.json();
+    if (createRes.ok) {
+      console.log('  Recreated variables_schema as text — OK');
     } else {
-      console.log('Minimal insert FAILED:', JSON.stringify(testData.errors || testData));
-
-      // Try progressively adding fields to find the culprit
-      console.log('');
-      console.log('=== Field-by-field test ===');
-      const testFields = ['name', 'slug', 'is_system', 'description', 'mjml_source', 'variables_schema', 'category'];
-
-      for (const fieldName of testFields) {
-        const sampleBlock = BLOCKS[0]; // Header — Logo Centered
-        const payload = { status: 'draft' };
-
-        // Add fields one at a time up to current
-        for (const fn of testFields) {
-          if (fn === 'variables_schema') {
-            payload[fn] = JSON.stringify(sampleBlock[fn]);
-          } else {
-            payload[fn] = sampleBlock[fn];
-          }
-          if (fn === fieldName) break;
-        }
-
-        const res = await fetch(`${DIRECTUS_URL}/items/newsletter_blocks`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(payload),
-        });
-        const data = await res.json();
-
-        if (data.data?.id) {
-          console.log(`  + "${fieldName}" => OK (id: ${data.data.id})`);
-          // Clean up
-          await fetch(`${DIRECTUS_URL}/items/newsletter_blocks/${data.data.id}`, {
-            method: 'DELETE',
-            headers,
-          });
-        } else {
-          const errMsg = data.errors?.[0]?.message || JSON.stringify(data);
-          console.log(`  + "${fieldName}" => FAILED: ${errMsg}`);
-        }
-      }
+      console.error('  Failed to recreate:', JSON.stringify(createData.errors || createData));
     }
-
-    console.log('');
   } catch (err) {
-    console.error('Diagnosis failed:', err.message);
-    console.log('');
+    console.error('  Error:', err.message);
   }
+
+  console.log('');
 }
 
 async function seedAll() {
-  await diagnoseFields();
-  // await seedBlocks();
-  // await seedPartials();
+  await fixVariablesSchemaField();
+  await seedBlocks();
+  await seedPartials();
 }
 
 seedAll().catch(console.error);
