@@ -1,45 +1,100 @@
 <template>
-	<div
-		id="nav-drawer"
-		ref="navDrawerRef"
-		class="flex items-center justify-center flex-col nav-drawer"
-		@click="closeNavDrawer"
-	>
-		<div class="nav-drawer__menu-box p-4 overflow-y-auto relative">
-			<UIcon
-				name="i-heroicons-x-mark"
-				class="cursor-pointer h-6 w-6 -ml-[5px] -mt-[10px] mb-[10px] heroicon-sw-1.2 close-btn"
-			/>
-			<ul tabindex="0" class="nav-drawer__menu">
-				<li v-for="(link, index) in links" :key="index">
-					<nuxt-link :to="link.to">{{ link.name }}</nuxt-link>
-				</li>
-				<li v-if="user">
-					<nuxt-link to="/organization">Organization</nuxt-link>
-				</li>
-				<li v-if="user">
-					<nuxt-link to="/account">Account</nuxt-link>
-				</li>
-				<li v-if="user">
-					<a @click.prevent="logout" class="cursor-pointer">Logout</a>
-				</li>
-				<li v-else>
-					<nuxt-link to="/auth/signin">Login</nuxt-link>
-				</li>
-			</ul>
-			<div class="mt-10 darkmode-toggle">
-				<DarkModeToggle class="" />
+	<!-- Backdrop -->
+	<Transition name="sheet-backdrop">
+		<div
+			v-if="isOpen"
+			class="sheet-backdrop"
+			@click="closeSheet"
+		/>
+	</Transition>
+
+	<!-- Bottom Sheet -->
+	<Transition name="sheet">
+		<div
+			v-if="isOpen"
+			ref="sheetRef"
+			class="ios-sheet"
+			@touchstart="onTouchStart"
+			@touchmove="onTouchMove"
+			@touchend="onTouchEnd"
+			:style="{ transform: dragOffset > 0 ? `translateY(${dragOffset}px)` : undefined }"
+		>
+			<!-- Drag handle -->
+			<div class="sheet-handle-area">
+				<div class="sheet-handle" />
+			</div>
+
+			<!-- Sheet content -->
+			<div class="sheet-content">
+				<!-- Navigation links -->
+				<div class="ios-group mx-4 mb-4">
+					<nuxt-link
+						v-for="(link, index) in links"
+						:key="index"
+						:to="link.to"
+						class="sheet-row"
+						:class="{ 'sheet-row-active': route.path === link.to }"
+						@click="closeSheet"
+					>
+						<UIcon :name="link.icon" class="w-5 h-5" />
+						<span class="flex-1">{{ link.name }}</span>
+						<UIcon name="i-heroicons-chevron-right" class="w-4 h-4 text-muted-foreground/40" />
+					</nuxt-link>
+				</div>
+
+				<!-- Account section -->
+				<div class="ios-group mx-4 mb-4">
+					<nuxt-link
+						v-if="user"
+						to="/organization"
+						class="sheet-row"
+						@click="closeSheet"
+					>
+						<UIcon name="i-heroicons-building-office-2" class="w-5 h-5" />
+						<span class="flex-1">Organization</span>
+						<UIcon name="i-heroicons-chevron-right" class="w-4 h-4 text-muted-foreground/40" />
+					</nuxt-link>
+					<nuxt-link
+						v-if="user"
+						to="/account"
+						class="sheet-row"
+						@click="closeSheet"
+					>
+						<UIcon name="i-heroicons-user-circle" class="w-5 h-5" />
+						<span class="flex-1">Account</span>
+						<UIcon name="i-heroicons-chevron-right" class="w-4 h-4 text-muted-foreground/40" />
+					</nuxt-link>
+				</div>
+
+				<!-- Dark mode + Logout -->
+				<div class="ios-group mx-4 mb-6">
+					<div class="sheet-row">
+						<UIcon name="i-heroicons-moon" class="w-5 h-5" />
+						<span class="flex-1">Dark Mode</span>
+						<DarkModeToggle />
+					</div>
+					<template v-if="user">
+						<a class="sheet-row cursor-pointer text-destructive" @click.prevent="handleLogout">
+							<UIcon name="i-heroicons-arrow-right-start-on-rectangle" class="w-5 h-5" />
+							<span class="flex-1">Sign Out</span>
+						</a>
+					</template>
+					<nuxt-link v-else to="/auth/signin" class="sheet-row" @click="closeSheet">
+						<UIcon name="i-heroicons-arrow-right-end-on-rectangle" class="w-5 h-5" />
+						<span class="flex-1">Sign In</span>
+					</nuxt-link>
+				</div>
 			</div>
 		</div>
-	</div>
+	</Transition>
 </template>
+
 <script setup>
+const route = useRoute();
 const { user } = useDirectusAuth();
-
 const { logout } = useLogout();
-
-import { onClickOutside } from '@vueuse/core';
-import { closeScreen } from '~~/composables/useScreen';
+const { triggerHaptic } = useHaptic();
+import { sheetOpen, closeSheet as closeSheetState } from '~~/composables/useScreen';
 
 const props = defineProps({
 	links: {
@@ -48,137 +103,141 @@ const props = defineProps({
 	},
 });
 
-const navDrawerRef = ref(null);
+const sheetRef = ref(null);
+const dragOffset = ref(0);
+let startY = 0;
+let isDragging = false;
 
-function closeNavDrawer() {
-	const element = document.getElementById('nav-drawer-toggle');
-	element.checked = false;
-	closeScreen();
+const isOpen = sheetOpen;
+
+function closeSheet() {
+	closeSheetState();
+	dragOffset.value = 0;
 }
 
-onClickOutside(navDrawerRef, () => {
-	closeNavDrawer();
-});
+function handleLogout() {
+	closeSheet();
+	logout();
+}
+
+function onTouchStart(e) {
+	startY = e.touches[0].clientY;
+	isDragging = true;
+}
+
+function onTouchMove(e) {
+	if (!isDragging) return;
+	const diff = e.touches[0].clientY - startY;
+	if (diff > 0) {
+		dragOffset.value = diff;
+	}
+}
+
+function onTouchEnd() {
+	isDragging = false;
+	if (dragOffset.value > 120) {
+		triggerHaptic(10);
+		closeSheet();
+	} else {
+		dragOffset.value = 0;
+	}
+}
 </script>
+
 <style scoped>
 @reference "~/assets/css/tailwind.css";
-.nav-drawer {
-	min-height: 100vh;
-	max-height: 100vh;
+
+/* Backdrop */
+.sheet-backdrop {
 	position: fixed;
-	right: 0%;
-	top: 0px;
+	inset: 0;
 	z-index: 50;
-	background: var(--white);
-	background: rgba(208, 208, 208, 0.5);
-	background: rgba(255, 255, 255, 0.75);
-	transform: translateX(100%);
-	transition: 0.35s var(--curve);
-	width: 100%;
-	max-width: 500px;
-	backdrop-filter: blur(10px);
-	@apply shadow-lg dark:bg-gray-800;
-
-	.close-btn {
-		/* right: 0px;
-	  top: 0px;
-	  @apply absolute; */
-	}
-
-	.nav-drawer__menu-box {
-		@apply flex items-center justify-center flex-col w-full overflow-hidden;
-	}
-	.darkmode-toggle {
-		opacity: 0;
-		transform: translateX(50px) translateZ(-9.7rem);
-		transition: all 0.4s var(--curve);
-		@apply my-1 w-full text-center;
-	}
-
-	.nav-drawer__menu {
-		@apply overflow-hidden w-full;
-
-		li {
-			opacity: 0;
-			transform: translateX(50px) translateZ(-9.7rem);
-			transition: all 0.4s var(--curve);
-			@apply my-1 w-full text-center;
-
-			a,
-			label {
-				font-size: 13px;
-				letter-spacing: 0.3em;
-				@apply block uppercase py-1;
-			}
-
-			a.router-link-exact-active {
-				color: var(--cyan);
-				@apply font-bold;
-			}
-		}
-	}
+	background: rgba(0, 0, 0, 0.3);
+	-webkit-tap-highlight-color: transparent;
 }
 
-#nav-drawer-toggle:checked ~ .nav-drawer {
-	transform: translateX(0%);
-
-	li,
-	.darkmode-toggle {
-		opacity: 1;
-		transform: translateX(0%) translateZ(0rem);
-	}
-
-	li:nth-of-type(1) {
-		transition-delay: 0.045s;
-	}
-
-	li:nth-of-type(2) {
-		transition-delay: 0.06s;
-	}
-
-	li:nth-of-type(3) {
-		transition-delay: 0.075s;
-	}
-
-	li:nth-of-type(4) {
-		transition-delay: 0.09s;
-	}
-
-	li:nth-of-type(5) {
-		transition-delay: 0.105s;
-	}
-
-	li:nth-of-type(6) {
-		transition-delay: 0.12s;
-	}
-
-	li:nth-of-type(7) {
-		transition-delay: 0.135s;
-	}
-
-	li:nth-of-type(8) {
-		transition-delay: 0.15s;
-	}
-	li:nth-of-type(9) {
-		transition-delay: 0.165s;
-	}
-	li:nth-of-type(10) {
-		transition-delay: 0.18s;
-	}
-	.darkmode-toggle {
-		transition-delay: 0.19s;
-	}
+.sheet-backdrop-enter-active,
+.sheet-backdrop-leave-active {
+	transition: opacity 0.3s ease;
+}
+.sheet-backdrop-enter-from,
+.sheet-backdrop-leave-to {
+	opacity: 0;
 }
 
-#nav-drawer-toggle:checked ~ .page-content {
-	/* transform: matrix(1, 0, 0, 1, 8, 0); */
-	transform: translateX(8px);
-	filter: blur(2px);
+/* Bottom Sheet */
+.ios-sheet {
+	position: fixed;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	z-index: 51;
+	max-height: 85vh;
+	border-radius: 14px 14px 0 0;
+	padding-bottom: env(safe-area-inset-bottom, 0px);
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	-webkit-overflow-scrolling: touch;
+	transition: transform 0.15s ease;
+
+	/* iOS sheet material */
+	background: hsl(var(--card));
 }
 
-/* #nav-drawer-toggle:checked ~ .nav-drawer > .nav-drawer-overlay {
-	background: rgba(48, 54, 64, 0.4);
-	opacity: 0.999999;
-	visibility: visible;
-  } */
+:is(.dark) .ios-sheet {
+	background: hsl(var(--card));
+}
+
+.sheet-enter-active {
+	transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.sheet-leave-active {
+	transition: transform 0.3s cubic-bezier(0.4, 0, 1, 1);
+}
+.sheet-enter-from,
+.sheet-leave-to {
+	transform: translateY(100%) !important;
+}
+
+/* Drag handle */
+.sheet-handle-area {
+	display: flex;
+	justify-content: center;
+	padding: 10px 0 6px;
+	cursor: grab;
+}
+
+.sheet-handle {
+	width: 36px;
+	height: 5px;
+	border-radius: 3px;
+	background: hsl(var(--muted-foreground) / 0.3);
+}
+
+.sheet-content {
+	padding: 8px 0;
+}
+
+/* Row items — iOS settings style */
+.sheet-row {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 13px 16px;
+	font-size: 15px;
+	font-weight: 400;
+	color: hsl(var(--foreground));
+	transition: background 0.15s ease;
+	-webkit-tap-highlight-color: transparent;
+	text-decoration: none;
+}
+
+.sheet-row:active {
+	background: hsl(var(--muted) / 0.6);
+}
+
+.sheet-row-active {
+	color: hsl(var(--primary));
+	font-weight: 500;
+}
 </style>

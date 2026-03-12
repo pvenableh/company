@@ -1,5 +1,6 @@
 <template>
-	<div id="nav-btn" @click.prevent="sideMenuToggle()">
+	<!-- Hidden on mobile (tab bar handles it), visible on desktop -->
+	<div id="nav-btn" class="hidden lg:block" @click.prevent="sideMenuToggle()">
 		<div id="nav-icon">
 			<span></span>
 			<span></span>
@@ -8,14 +9,10 @@
 	</div>
 </template>
 <script setup>
-import { openScreen } from '~~/composables/useScreen';
+import { toggleSheet } from '~~/composables/useScreen';
 
 function sideMenuToggle() {
-	// const element = document.getElementById('nav-btn')
-	// element.classList.toggle('open')
-	const navToggle = document.getElementById('nav-drawer-toggle');
-	navToggle.checked = !navToggle.checked;
-	openScreen();
+	toggleSheet();
 }
 </script>
 <style scoped>

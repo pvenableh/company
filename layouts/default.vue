@@ -1,25 +1,28 @@
 <template>
-	<div
-		class="relative overflow-hidden bg-background text-foreground transition duration-150 lg:overflow-visible"
-	>
-		<input id="nav-drawer-toggle" type="checkbox" class="hidden" />
+	<div class="relative bg-background text-foreground transition duration-150 lg:overflow-visible ios-safe-area">
 		<LayoutHeader :links="headerLinks" />
-		<div class="page">
+
+		<div class="page pb-safe">
 			<slot />
 		</div>
 
-		<LayoutFooter :links="footerLinks" />
-		<LayoutMobileToolbar :links="toolbarLinks" />
-		<LayoutNavButton />
-		<LayoutNavDrawer :links="drawerLinks" />
-		<transition name="screen">
-			<LayoutScreen v-if="screen" />
-		</transition>
+		<LayoutFooter :links="footerLinks" class="hidden md:flex" />
 
-		<!-- AI Assistant FAB -->
+		<!-- iOS Tab Bar (mobile) -->
+		<LayoutMobileToolbar :links="toolbarLinks" />
+
+		<!-- iOS Bottom Sheet (nav drawer) -->
+		<ClientOnly>
+			<LayoutNavDrawer :links="drawerLinks" />
+		</ClientOnly>
+
+		<!-- Desktop nav button (hidden on mobile) -->
+		<LayoutNavButton />
+
+		<!-- AI Assistant FAB — positioned above tab bar on mobile -->
 		<button
 			@click="aiTrayOpen = true"
-			class="fixed bottom-20 right-4 md:bottom-6 md:right-6 w-12 h-12 bg-primary text-primary-foreground rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center z-30 ios-press"
+			class="fixed z-30 w-12 h-12 bg-primary text-primary-foreground rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center ios-press bottom-[calc(49px+env(safe-area-inset-bottom,0px)+12px)] right-4 md:bottom-6 md:right-6"
 			title="AI Assistant"
 		>
 			<UIcon name="i-heroicons-sparkles" class="w-6 h-6" />
@@ -31,6 +34,7 @@
 		</ClientOnly>
 	</div>
 </template>
+
 <script setup lang="ts">
 interface Link {
 	name: string;
@@ -53,4 +57,15 @@ const footerLinks = props.links.filter((link) => link.type.includes('footer'));
 const toolbarLinks = props.links.filter((link) => link.type.includes('toolbar'));
 const drawerLinks = props.links.filter((link) => link.type.includes('drawer'));
 </script>
-<style></style>
+
+<style>
+/* Safe area padding for bottom content (above tab bar) */
+.pb-safe {
+	padding-bottom: calc(49px + env(safe-area-inset-bottom, 0px) + 16px);
+}
+@media (min-width: 768px) {
+	.pb-safe {
+		padding-bottom: 0;
+	}
+}
+</style>
