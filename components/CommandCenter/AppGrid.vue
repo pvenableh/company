@@ -111,28 +111,28 @@ const navigateTo = (route: string) => {
 		<button
 			v-for="app in apps"
 			:key="app.name"
-			class="group flex flex-col items-center gap-2.5 p-3 rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-all duration-200 cursor-pointer"
+			class="group flex flex-col items-center gap-2.5 p-3 rounded-2xl hover:bg-muted/40 transition-all duration-200 cursor-pointer ios-press"
 			@click="navigateTo(app.route)"
 		>
 			<div class="relative">
 				<div
 					:class="[app.color]"
-					class="w-13 h-13 rounded-[16px] flex items-center justify-center shadow-sm group-hover:shadow-md group-hover:scale-[1.06] transition-all duration-200"
+					class="w-13 h-13 rounded-[16px] flex items-center justify-center shadow-sm group-hover:shadow-md group-hover:scale-[1.04] transition-all duration-200"
 				>
 					<UIcon :name="app.icon" class="w-6 h-6 text-white" />
 				</div>
 				<span
 					v-if="badges?.[app.name.toLowerCase()]"
-					class="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center ring-2 ring-white dark:ring-gray-800"
+					class="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center ring-2 ring-background"
 				>
 					{{ badges[app.name.toLowerCase()] > 9 ? '9+' : badges[app.name.toLowerCase()] }}
 				</span>
 			</div>
 			<div class="text-center">
-				<span class="text-xs font-medium text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
+				<span class="text-xs font-medium text-foreground/80 group-hover:text-foreground transition-colors">
 					{{ app.name }}
 				</span>
-				<p class="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 hidden sm:block">{{ app.description }}</p>
+				<p class="text-[10px] text-muted-foreground mt-0.5 hidden sm:block">{{ app.description }}</p>
 			</div>
 		</button>
 	</div>

@@ -16,6 +16,26 @@ export default defineNuxtConfig({
 
 	app: {
 		pageTransition: { name: 'page', mode: 'out-in' },
+		head: {
+			meta: [
+				// iOS PWA — native app feel
+				{ name: 'apple-mobile-web-app-capable', content: 'yes' },
+				{ name: 'apple-mobile-web-app-status-bar-style', content: 'default' },
+				{ name: 'apple-mobile-web-app-title', content: 'Earnest' },
+				{ name: 'mobile-web-app-capable', content: 'yes' },
+				// Viewport with safe area coverage for notched devices
+				{
+					name: 'viewport',
+					content: 'width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no',
+				},
+				// Theme color matches Earnest warm background
+				{ name: 'theme-color', content: '#faf7f4', media: '(prefers-color-scheme: light)' },
+				{ name: 'theme-color', content: '#141210', media: '(prefers-color-scheme: dark)' },
+			],
+			link: [
+				{ rel: 'apple-touch-icon', href: '/android-icon-192x192.png' },
+			],
+		},
 	},
 
 	css: ['~/assets/css/main.css'],
@@ -39,7 +59,7 @@ export default defineNuxtConfig({
 		// SendGrid
 		sendgridApiKey: process.env.SENDGRID_API_KEY,
 		sendgridFromEmail: process.env.SENDGRID_FROM_EMAIL || 'hello@huestudios.company',
-		sendgridFromName: process.env.SENDGRID_FROM_NAME || 'Hue Creative Agency',
+		sendgridFromName: process.env.SENDGRID_FROM_NAME || 'Earnest',
 		SENDGRID_API_KEY: process.env.SENDGRID_API_KEY,
 		FROM_EMAIL: process.env.SENDGRID_FROM_EMAIL,
 		BCC_EMAIL: process.env.SENDGRID_BCC_EMAIL,
@@ -209,13 +229,20 @@ export default defineNuxtConfig({
 		},
 	},
 
-	// PWA configuration (preserved from original)
+	// PWA — native iOS & Android app experience
 	pwa: {
 		registerType: 'autoUpdate',
 		manifest: {
-			name: 'ahhble',
-			short_name: 'ahhble',
-			theme_color: '#ffffff',
+			name: 'Earnest. Do good work.',
+			short_name: 'Earnest',
+			description: 'A platform that means it.',
+			theme_color: '#faf7f4',
+			background_color: '#faf7f4',
+			display: 'standalone',
+			orientation: 'portrait',
+			start_url: '/',
+			scope: '/',
+			categories: ['business', 'productivity'],
 			icons: [
 				{
 					src: 'android-icon-192x192.png',

@@ -57,10 +57,8 @@ onUnmounted(() => {
 			</client-only>
 		</div>
 
-		<nuxt-link to="/" class="flex flex-row items-end justify-end mt-[5px] -mb-[2px]">
-			<LogoNew class="logo-new drop-shadow-sm" />
-			<span class="opacity-75 ml-2 mr-1 font-bold leading-3 hidden md:inline-block text-[9px] mb-[9px]">by</span>
-			<Logo class="hidden md:inline-block h-[10px] mb-[12px] !fill-[#666666] !hover:fill-[#666666]" />
+		<nuxt-link to="/" class="flex flex-row items-center justify-center">
+			<LogoEarnest :size="isRetracted ? 'sm' : 'md'" />
 		</nuxt-link>
 		<div class="account-controls">
 			<template v-if="user">
@@ -88,15 +86,10 @@ onUnmounted(() => {
 @reference "~/assets/css/tailwind.css";
 header {
 	position: fixed;
-	@apply w-full flex items-center justify-center z-40 bg-gray-50 dark:bg-gradient-to-tr dark:from-gray-600 dark:to-gray-800 border border-white dark:border-gray-600 transition-all duration-300 ease-in-out py-3 shadow-lg left-1/2 -translate-x-1/2;
-	.logo-new {
-		height: 30px;
-		width: auto;
-		@apply transition-all duration-300 ease-in-out;
-		@media (min-width: theme('screens.md')) {
-			height: 40px;
-		}
-	}
+	background: rgba(255, 255, 255, 0.72);
+	backdrop-filter: saturate(180%) blur(20px);
+	-webkit-backdrop-filter: saturate(180%) blur(20px);
+	@apply w-full flex items-center justify-center z-40 border-b border-border/40 transition-all duration-300 ease-in-out py-3 left-1/2 -translate-x-1/2;
 	.filter-controls {
 		@apply absolute flex items-center justify-center flex-row left-[10px] sm:pr-1 md:px-6 transition-all duration-300 ease-in-out;
 	}
@@ -105,16 +98,14 @@ header {
 	}
 }
 
+:is(.dark) header {
+	background: rgba(20, 20, 20, 0.72);
+}
+
 header.retracted {
 	top: 8px;
-	@apply rounded-full w-11/12 md:w-5/6 lg:w-4/5 xl:w-3/5 py-2 md:py-1.5 border border-gray-100 bg-gray-100 dark:border-gray-600;
-	.logo-new {
-		height: 25px;
-		width: auto;
-		@media (min-width: theme('screens.md')) {
-			height: 30px;
-		}
-	}
+	background: rgba(255, 255, 255, 0.82);
+	@apply rounded-full w-11/12 md:w-5/6 lg:w-4/5 xl:w-3/5 py-2 md:py-1.5 border border-border/30 shadow-sm;
 	.filter-controls {
 		@apply left-[5px] md:px-0;
 	}
@@ -123,36 +114,7 @@ header.retracted {
 	}
 }
 
-.logo {
-	width: 75px;
-	height: 50px;
-	path {
-		opacity: 0.4;
-		animation-name: logo;
-		animation-duration: 5s;
-		animation-timing-function: var(--curve);
-		animation-iteration-count: infinite;
-	}
-
-	path:nth-of-type(1) {
-		animation-delay: 0.1s;
-	}
-}
-
-@keyframes logo {
-	0% {
-		opacity: 0.9;
-		fill: #666666;
-	}
-
-	50% {
-		opacity: 1;
-		fill: var(--cyan);
-	}
-
-	100% {
-		opacity: 0.9;
-		fill: #666666;
-	}
+:is(.dark) header.retracted {
+	background: rgba(20, 20, 20, 0.82);
 }
 </style>

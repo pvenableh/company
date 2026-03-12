@@ -1,11 +1,13 @@
 {
- "name": "hue: manage",
- "short_name": "hue",
+ "name": "Earnest. Do good work.",
+ "short_name": "Earnest",
+ "description": "A platform that means it.",
  "start_url": "/",
  "display": "standalone",
- "background_color": "#ffcc00",
- "theme_color": "#ffcc00",
+ "background_color": "#faf7f4",
+ "theme_color": "#faf7f4",
  "orientation": "portrait",
+ "categories": ["business", "productivity"],
  "icons": [
   {
    "src": "\/android-icon-36x36.png",

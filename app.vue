@@ -5,12 +5,11 @@ import { Toaster } from 'vue-sonner';
 const { user } = useDirectusAuth();
 const runtimeConfig = useRuntimeConfig();
 
-if (process.env.NODE_ENV === 'development') {
-	console.log('Running in development mode');
-	// Add any development-specific code here
-} else {
-	console.log('Not in development mode');
-}
+// Initialize universal theme system
+const { initTheme } = useTheme();
+onMounted(() => {
+	initTheme();
+});
 
 const avatar = computed(() => {
 	if (user.value) {
@@ -92,27 +91,33 @@ const links = ref([
 		<NuxtPage />
 	</NuxtLayout>
 	<NuxtLoadingIndicator
-		color="repeating-linear-gradient(to right,#FF99DD
-    0%,#94a3b8 100%)"
+		color="repeating-linear-gradient(to right, hsl(var(--primary)) 0%, hsl(var(--muted-foreground)) 100%)"
 	/>
 	<Toaster
-		position="top-right"
+		position="top-center"
 		:toast-options="{
 			classNames: {
-				toast: 'group toast bg-background text-foreground border-border shadow-lg',
-				title: 'text-foreground',
-				description: 'text-muted-foreground',
-				actionButton: 'bg-primary text-primary-foreground',
-				cancelButton: 'bg-muted text-muted-foreground',
-				closeButton: 'bg-background text-foreground border-border',
-				success: 'border-green-500/50 bg-green-50 dark:bg-green-900/20',
-				error: 'border-red-500/50 bg-red-50 dark:bg-red-900/20',
-				warning: 'border-yellow-500/50 bg-yellow-50 dark:bg-yellow-900/20',
-				info: 'border-blue-500/50 bg-blue-50 dark:bg-blue-900/20',
+				toast: 'group toast bg-card text-foreground border-border/50 shadow-xl rounded-2xl backdrop-blur-xl',
+				title: 'text-foreground font-medium',
+				description: 'text-muted-foreground text-sm',
+				actionButton: 'bg-primary text-primary-foreground rounded-lg',
+				cancelButton: 'bg-muted text-muted-foreground rounded-lg',
+				closeButton: 'bg-card text-foreground border-border',
+				success: 'border-green-500/30',
+				error: 'border-red-500/30',
+				warning: 'border-yellow-500/30',
+				info: 'border-blue-500/30',
 			},
 		}"
 		rich-colors
 		close-button
+		:offset="'env(safe-area-inset-top, 8px)'"
 	/>
 </template>
-<style></style>
+
+<style>
+/* iOS-style toast positioning */
+.sonner-toaster {
+	padding-top: env(safe-area-inset-top, 0px) !important;
+}
+</style>
