@@ -62,8 +62,8 @@
 
 		<!-- Quote Break -->
 		<div class="quote-break">
-			<p class="quote-text opacity-0">&ldquo;The most essential gift for a good writer is a built-in, <em>shock-proof</em> shit detector.&rdquo;</p>
-			<p class="quote-attr opacity-0">&mdash; Ernest Hemingway &nbsp;&middot;&nbsp; Earnest applies the same standard to software.</p>
+			<p class="quote-text opacity-0">&ldquo;Design is so simple. That&rsquo;s why it is so <em>complicated.</em>&rdquo;</p>
+			<p class="quote-attr opacity-0">&mdash; Paul Rand &nbsp;&middot;&nbsp; Earnest applies the same standard to software.</p>
 		</div>
 
 		<!-- Pricing -->
@@ -97,10 +97,24 @@
 				<div class="footer-brand">Earnest<span class="footer-accent">.</span></div>
 				<div class="footer-tagline">Do good work.</div>
 			</div>
-			<div class="footer-links">
-				<nuxt-link to="#features">Features</nuxt-link>
-				<nuxt-link to="#pricing">Pricing</nuxt-link>
-				<nuxt-link to="/auth/signin">Login</nuxt-link>
+			<div class="footer-nav">
+				<div class="footer-col">
+					<span class="footer-col-title">Product</span>
+					<nuxt-link to="#features">Features</nuxt-link>
+					<nuxt-link to="#pricing">Pricing</nuxt-link>
+					<nuxt-link to="/register">Get Started</nuxt-link>
+				</div>
+				<div class="footer-col">
+					<span class="footer-col-title">Platform</span>
+					<nuxt-link to="#features">Projects</nuxt-link>
+					<nuxt-link to="#features">Invoicing</nuxt-link>
+					<nuxt-link to="#features">Channels</nuxt-link>
+				</div>
+				<div class="footer-col">
+					<span class="footer-col-title">Account</span>
+					<nuxt-link to="/auth/signin">Login</nuxt-link>
+					<nuxt-link to="/register">Register</nuxt-link>
+				</div>
 			</div>
 		</footer>
 		<p class="footer-copy">&copy; 2026 Earnest. A platform that means it.</p>
@@ -732,14 +746,16 @@ useHead({
 	border-top: 1px solid var(--rule);
 	padding: 60px 48px;
 	display: grid;
-	grid-template-columns: 1fr 1fr;
-	gap: 40px;
-	align-items: end;
+	grid-template-columns: 1fr;
+	gap: 48px;
 	max-width: 1200px;
 	margin: 0 auto;
 	background: var(--paper);
 }
-@media (max-width: 600px) { .earnest-footer { grid-template-columns: 1fr; padding: 48px 24px; } }
+@media (min-width: 601px) {
+	.earnest-footer { grid-template-columns: 1fr 2fr; align-items: start; }
+}
+@media (max-width: 600px) { .earnest-footer { padding: 48px 24px; } }
 
 .footer-brand {
 	font-family: var(--font-bauer-bodoni);
@@ -755,13 +771,27 @@ useHead({
 	color: var(--muted);
 	margin-top: 8px;
 }
-.footer-links {
-	display: flex;
+.footer-nav {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
 	gap: 32px;
-	justify-content: flex-end;
-	flex-wrap: wrap;
 }
-.footer-links a {
+@media (max-width: 600px) { .footer-nav { grid-template-columns: repeat(2, 1fr); } }
+
+.footer-col {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+.footer-col-title {
+	font-family: var(--font-bauer-bodoni);
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--ink);
+	letter-spacing: 0.02em;
+	margin-bottom: 4px;
+}
+.footer-col a {
 	font-family: var(--font-proxima-light);
 	font-size: 13px;
 	color: var(--muted);
@@ -769,7 +799,7 @@ useHead({
 	letter-spacing: 0.04em;
 	transition: color 0.2s;
 }
-.footer-links a:hover { color: var(--ink); }
+.footer-col a:hover { color: var(--ink); }
 .footer-copy {
 	font-size: 12px;
 	color: var(--muted);

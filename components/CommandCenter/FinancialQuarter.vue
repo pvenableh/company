@@ -20,6 +20,7 @@ const quarters = ref<QuarterData[]>([]);
 const yearlyGoal = ref(0);
 const editingGoals = ref(false);
 const goalInputs = ref<number[]>([0, 0, 0, 0]);
+const showHelp = ref(false);
 
 // Quarter date ranges
 const getQuarterRange = (q: number, year: number) => {
@@ -156,6 +157,13 @@ onMounted(() => {
 			</div>
 			<div class="flex items-center gap-2">
 				<button
+					@click="showHelp = !showHelp"
+					class="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+					title="How are financials calculated?"
+				>
+					<UIcon name="i-heroicons-question-mark-circle" class="w-4 h-4" />
+				</button>
+				<button
 					@click="editingGoals = !editingGoals"
 					class="text-xs text-primary hover:underline"
 				>
@@ -194,6 +202,18 @@ onMounted(() => {
 			>
 				Save Goals
 			</button>
+		</div>
+
+		<!-- How It Works -->
+		<div v-if="showHelp" class="p-4 bg-gray-50/80 dark:bg-gray-700/30 border-b border-gray-100 dark:border-gray-700 text-xs text-gray-600 dark:text-gray-400 space-y-2">
+			<p class="font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide text-[10px] mb-2">How financials are calculated</p>
+			<ul class="space-y-1.5 list-none">
+				<li><span class="font-medium text-gray-700 dark:text-gray-300">Total Billed</span> &mdash; The sum of all invoice amounts (total_amount) for the selected year, filtered by invoice date and organization.</li>
+				<li><span class="font-medium text-green-600">Collected</span> &mdash; The sum of invoices with a status of "paid." This is actual revenue received.</li>
+				<li><span class="font-medium text-amber-600">Outstanding</span> &mdash; Total Billed minus Collected. These are invoices that have been sent but not yet paid.</li>
+			</ul>
+			<p class="pt-1"><span class="font-medium text-gray-700 dark:text-gray-300">Quarterly breakdown:</span> Invoices are grouped by invoice date into Q1 (Jan&ndash;Mar), Q2 (Apr&ndash;Jun), Q3 (Jul&ndash;Sep), and Q4 (Oct&ndash;Dec).</p>
+			<p><span class="font-medium text-gray-700 dark:text-gray-300">Progress bar:</span> When goals are set, the bar shows the percentage of paid invoices relative to your quarterly goal. Colors indicate progress &mdash; red (&lt;50%), amber (50&ndash;74%), blue (75&ndash;99%), green (100%+).</p>
 		</div>
 
 		<div v-if="isLoading" class="p-8 flex items-center justify-center">
