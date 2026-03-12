@@ -16,13 +16,10 @@
 			<LayoutNavDrawer :links="drawerLinks" />
 		</ClientOnly>
 
-		<!-- Desktop nav button (hidden on mobile) -->
-		<LayoutNavButton />
-
 		<!-- AI Assistant FAB — positioned above tab bar on mobile -->
 		<button
 			@click="aiTrayOpen = true"
-			class="fixed z-30 w-12 h-12 bg-primary text-primary-foreground rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center ios-press bottom-[calc(49px+env(safe-area-inset-bottom,0px)+12px)] right-4 md:bottom-6 md:right-6"
+			class="fixed z-30 w-12 h-12 bg-primary text-primary-foreground rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center ios-press bottom-[calc(56px+env(safe-area-inset-bottom,0px)+12px)] right-4 md:bottom-6 md:right-6"
 			title="AI Assistant"
 		>
 			<UIcon name="i-heroicons-sparkles" class="w-6 h-6" />
@@ -61,7 +58,7 @@ const drawerLinks = props.links.filter((link) => link.type.includes('drawer'));
 <style>
 /* Safe area padding for bottom content (above tab bar) */
 .pb-safe {
-	padding-bottom: calc(49px + env(safe-area-inset-bottom, 0px) + 16px);
+	padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 16px);
 }
 @media (min-width: 768px) {
 	.pb-safe {
