@@ -138,8 +138,8 @@ function getContactAccounts(contactId: string) {
       <div class="flex items-center gap-4">
         <UButton to="/social/dashboard" variant="ghost" icon="i-lucide-arrow-left" size="sm" />
         <div>
-          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Contacts</h1>
-          <p class="text-gray-500 dark:text-gray-400 mt-0.5">Manage contacts and assign social accounts</p>
+          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Social Accounts</h1>
+          <p class="text-gray-500 dark:text-gray-400 mt-0.5">Organize clients and assign social media accounts</p>
         </div>
       </div>
       <UButton icon="i-lucide-plus" @click="showNewContactModal = true">New Contact</UButton>

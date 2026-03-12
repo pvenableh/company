@@ -5,12 +5,11 @@ import { Toaster } from 'vue-sonner';
 const { user } = useDirectusAuth();
 const runtimeConfig = useRuntimeConfig();
 
-if (process.env.NODE_ENV === 'development') {
-	console.log('Running in development mode');
-	// Add any development-specific code here
-} else {
-	console.log('Not in development mode');
-}
+// Initialize universal theme system
+const { initTheme } = useTheme();
+onMounted(() => {
+	initTheme();
+});
 
 const avatar = computed(() => {
 	if (user.value) {
@@ -92,8 +91,7 @@ const links = ref([
 		<NuxtPage />
 	</NuxtLayout>
 	<NuxtLoadingIndicator
-		color="repeating-linear-gradient(to right,#FF99DD
-    0%,#94a3b8 100%)"
+		color="repeating-linear-gradient(to right, hsl(var(--primary)) 0%, hsl(var(--muted-foreground)) 100%)"
 	/>
 	<Toaster
 		position="top-right"

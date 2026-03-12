@@ -39,7 +39,7 @@ export default defineNuxtConfig({
 		// SendGrid
 		sendgridApiKey: process.env.SENDGRID_API_KEY,
 		sendgridFromEmail: process.env.SENDGRID_FROM_EMAIL || 'hello@huestudios.company',
-		sendgridFromName: process.env.SENDGRID_FROM_NAME || 'Hue Creative Agency',
+		sendgridFromName: process.env.SENDGRID_FROM_NAME || 'Earnest',
 		SENDGRID_API_KEY: process.env.SENDGRID_API_KEY,
 		FROM_EMAIL: process.env.SENDGRID_FROM_EMAIL,
 		BCC_EMAIL: process.env.SENDGRID_BCC_EMAIL,
@@ -213,8 +213,8 @@ export default defineNuxtConfig({
 	pwa: {
 		registerType: 'autoUpdate',
 		manifest: {
-			name: 'ahhble',
-			short_name: 'ahhble',
+			name: 'Earnest',
+			short_name: 'Earnest',
 			theme_color: '#ffffff',
 			icons: [
 				{

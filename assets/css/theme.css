@@ -1,7 +1,7 @@
 /* ============================================
-   Theme System - Semantic utility classes
+   Earnest — Semantic Utility Classes
    Provides t-* classes that adapt to light/dark mode
-   using the existing shadcn-vue CSS variables.
+   and iOS-inspired material utilities.
    ============================================ */
 
 /* ---- Background ---- */
@@ -68,7 +68,7 @@
 
 /* ---- Button ---- */
 .t-btn {
-  @apply bg-primary text-primary-foreground hover:bg-primary/90;
+  @apply bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200;
 }
 
 /* ---- Cream tones (for dark overlays / hero sections) ---- */
@@ -95,10 +95,65 @@
   letter-spacing: 0.25em;
 }
 
-/* ---- Glass container (for hero overlays) ---- */
+/* ============================================
+   iOS-Inspired Material Utilities
+   ============================================ */
+
+/* ---- Glass / frosted-glass material ---- */
+.glass {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+.dark .glass {
+  background: rgba(30, 30, 30, 0.72);
+}
+
+.glass-thin {
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: saturate(150%) blur(12px);
+  -webkit-backdrop-filter: saturate(150%) blur(12px);
+}
+.dark .glass-thin {
+  background: rgba(30, 30, 30, 0.45);
+}
+
+.glass-ultra {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: saturate(200%) blur(30px);
+  -webkit-backdrop-filter: saturate(200%) blur(30px);
+}
+.dark .glass-ultra {
+  background: rgba(20, 20, 20, 0.85);
+}
+
+/* Legacy alias */
 .glass-container {
   background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.12);
   padding: 0.75rem 1.5rem;
+}
+
+/* ---- iOS card style ---- */
+.ios-card {
+  @apply bg-card rounded-2xl border border-border/50 shadow-sm;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.ios-card:hover {
+  @apply shadow-md;
+}
+
+/* ---- iOS-style inset group (Settings-like sections) ---- */
+.ios-group {
+  @apply bg-card rounded-xl overflow-hidden divide-y divide-border/60;
+}
+
+/* ---- iOS button press feedback ---- */
+.ios-press {
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.15s ease;
+}
+.ios-press:active {
+  transform: scale(0.97);
+  opacity: 0.85;
 }
