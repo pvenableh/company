@@ -720,8 +720,11 @@ async function seedBlocks() {
       }
 
       // Directus stores variables_schema as a JSON text field — stringify before sending
+      // Omit category from initial POST to avoid broken dropdown validation,
+      // then set it via PATCH afterward.
+      const { category, ...blockWithoutCategory } = block;
       const payload = {
-        ...block,
+        ...blockWithoutCategory,
         status: 'published',
         variables_schema: JSON.stringify(block.variables_schema),
       };
@@ -733,6 +736,14 @@ async function seedBlocks() {
       }).then((r) => r.json());
 
       if (result.data?.id) {
+        // Set category via PATCH (bypasses dropdown POST validation)
+        if (category) {
+          await fetch(`${DIRECTUS_URL}/items/newsletter_blocks/${result.data.id}`, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify({ category }),
+          });
+        }
         console.log(`  [ok]   Created: ${block.name} (id: ${result.data.id})`);
         created++;
       } else {
