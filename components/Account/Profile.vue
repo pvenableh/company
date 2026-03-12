@@ -1,8 +1,67 @@
 <script setup>
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+
 const { updateMe } = useDirectusUsers();
 const { user, fetchSession } = useDirectusAuth();
+const config = useRuntimeConfig();
 const toast = useToast();
 const saving = ref(false);
+const uploadingAvatar = ref(false);
+const avatarInput = ref(null);
+
+const { processUpload, uploadFilesWithProgress, resetUploadState } = useFileUpload();
+
+const avatarUrl = computed(() => {
+	if (!user.value?.avatar) return null;
+	return `${config.public.assetsUrl}${user.value.avatar}?key=avatar`;
+});
+
+const initials = computed(() => {
+	if (!user.value) return 'U';
+	const first = user.value.first_name?.[0] ?? '';
+	const last = user.value.last_name?.[0] ?? '';
+	return (first + last).toUpperCase() || 'U';
+});
+
+async function handleAvatarSelect(event) {
+	const files = event.target.files;
+	if (!files?.length) return;
+
+	uploadingAvatar.value = true;
+	try {
+		const result = await processUpload(files, { compressImages: true });
+		if (!result.success) {
+			toast.add({ icon: 'i-heroicons-exclamation-circle', title: 'Error', description: result.errors[0], color: 'red' });
+			return;
+		}
+
+		const uploaded = await uploadFilesWithProgress(result.formData);
+		const fileId = Array.isArray(uploaded) ? uploaded[0]?.id : uploaded?.id;
+
+		if (fileId) {
+			await updateMe({ avatar: fileId });
+			await fetchSession();
+			toast.add({ icon: 'i-heroicons-check-circle-solid', title: 'Avatar updated!' });
+		}
+	} catch (error) {
+		console.error('Avatar upload error:', error);
+		toast.add({ icon: 'i-heroicons-exclamation-circle', title: 'Error', description: 'Failed to upload avatar.', color: 'red' });
+	} finally {
+		uploadingAvatar.value = false;
+		resetUploadState();
+		if (avatarInput.value) avatarInput.value.value = '';
+	}
+}
+
+async function removeAvatar() {
+	try {
+		await updateMe({ avatar: null });
+		await fetchSession();
+		toast.add({ icon: 'i-heroicons-check-circle-solid', title: 'Avatar removed.' });
+	} catch (error) {
+		toast.add({ icon: 'i-heroicons-exclamation-circle', title: 'Error', description: 'Failed to remove avatar.', color: 'red' });
+	}
+}
 
 // Local form state to avoid mutating auth user directly
 const form = ref({
@@ -15,7 +74,6 @@ const form = ref({
 	description: '',
 	language: '',
 	nickname: '',
-	pronouns: '',
 	linkedin: '',
 	github: '',
 	timezone: '',
@@ -35,7 +93,6 @@ const populateForm = () => {
 		description: user.value.description || '',
 		language: user.value.language || '',
 		nickname: user.value.nickname || '',
-		pronouns: user.value.pronouns || '',
 		linkedin: user.value.linkedin || '',
 		github: user.value.github || '',
 		timezone: user.value.timezone || '',
@@ -82,6 +139,54 @@ async function updatePerson() {
 <template>
 	<div class="px-10 account__profile max-w-2xl">
 		<h2 class="text-2xl font-bold mb-6">Profile</h2>
+
+		<!-- Avatar Management -->
+		<div class="flex items-center gap-5 mb-8">
+			<div class="relative group">
+				<Avatar class="w-20 h-20">
+					<AvatarImage v-if="avatarUrl" :src="avatarUrl" :alt="user?.first_name" />
+					<AvatarFallback class="text-xl">{{ initials }}</AvatarFallback>
+				</Avatar>
+				<button
+					type="button"
+					@click="avatarInput?.click()"
+					class="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+				>
+					<UIcon name="i-heroicons-camera" class="w-6 h-6 text-white" />
+				</button>
+				<input
+					ref="avatarInput"
+					type="file"
+					accept="image/*"
+					class="hidden"
+					@change="handleAvatarSelect"
+				/>
+			</div>
+			<div class="flex flex-col gap-1.5">
+				<p class="text-sm font-medium text-foreground">Profile Photo</p>
+				<div class="flex items-center gap-2">
+					<UButton
+						size="xs"
+						variant="outline"
+						:label="uploadingAvatar ? 'Uploading...' : 'Upload'"
+						:disabled="uploadingAvatar"
+						icon="i-heroicons-arrow-up-tray"
+						@click="avatarInput?.click()"
+					/>
+					<UButton
+						v-if="avatarUrl"
+						size="xs"
+						variant="ghost"
+						color="red"
+						label="Remove"
+						icon="i-heroicons-trash"
+						@click="removeAvatar"
+					/>
+				</div>
+				<p class="text-[11px] text-muted-foreground">JPG, PNG or GIF. Max 10MB.</p>
+			</div>
+		</div>
+
 		<form class="grid gap-6" @submit.prevent="updatePerson()">
 			<!-- Basic Info -->
 			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -107,21 +212,12 @@ async function updatePerson() {
 				:disabled="true"
 			/>
 
-			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-				<UInput
-					v-model="form.nickname"
-					name="nickname"
-					type="text"
-					label="Nickname"
-				/>
-				<UInput
-					v-model="form.pronouns"
-					name="pronouns"
-					type="text"
-					label="Pronouns"
-					placeholder="e.g. he/him, she/her, they/them"
-				/>
-			</div>
+			<UInput
+				v-model="form.nickname"
+				name="nickname"
+				type="text"
+				label="Nickname"
+			/>
 
 			<UInput
 				v-model="form.title"

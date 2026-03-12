@@ -1,5 +1,6 @@
 <script setup>
 import { gsap } from 'gsap';
+import { getReactionIcon } from '~/types/reactions';
 
 const props = defineProps({
 	itemId: {
@@ -139,31 +140,7 @@ const toggleReaction = async () => {
 	}
 };
 
-const getReactionIcon = (type) => {
-	const icons = {
-		love: {
-			outline: 'i-heroicons-heart',
-			solid: 'i-heroicons-heart-solid',
-		},
-		like: {
-			outline: 'i-heroicons-hand-thumb-up',
-			solid: 'i-heroicons-hand-thumb-up-solid',
-		},
-		idea: {
-			outline: 'i-heroicons-light-bulb',
-			solid: 'i-heroicons-light-bulb-solid',
-		},
-		dislike: {
-			outline: 'i-heroicons-hand-thumb-down',
-			solid: 'i-heroicons-hand-thumb-down-solid',
-		},
-		question: {
-			outline: 'i-heroicons-question-mark-circle',
-			solid: 'i-heroicons-question-mark-circle-solid',
-		},
-	};
-	return isActive.value ? icons[type].solid : icons[type].outline;
-};
+const reactionIconName = computed(() => getReactionIcon(props.reaction, isActive.value));
 
 const userList = computed(() => {
 	if (!props.users.length) return '';
@@ -177,9 +154,6 @@ const userList = computed(() => {
 		.join('\n');
 });
 
-// onMounted(() => {
-// 	console.log(`Button mounted for ${props.reaction} with ${props.users.length} users`);
-// });
 </script>
 
 <template>
@@ -192,7 +166,7 @@ const userList = computed(() => {
 				isToggling ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
 			]"
 		>
-			<UIcon :name="getReactionIcon(reaction)" />
+			<UIcon :name="reactionIconName" />
 			<span ref="countRef" class="inline-block">{{ localCount }}</span>
 		</div>
 

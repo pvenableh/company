@@ -57,8 +57,9 @@ onUnmounted(() => {
 			</client-only>
 		</div>
 
-		<nuxt-link to="/" class="flex flex-row items-center justify-center">
-			<LogoEarnest :size="isRetracted ? 'sm' : 'md'" />
+		<nuxt-link to="/" class="header-brand" :class="{ 'header-brand--retracted': isRetracted }">
+			<LogoEarnest size="md" />
+			<span class="header-tagline">Do good work.</span>
 		</nuxt-link>
 		<div class="account-controls">
 			<template v-if="user">
@@ -116,5 +117,28 @@ header.retracted {
 
 :is(.dark) header.retracted {
 	background: rgba(20, 20, 20, 0.82);
+}
+
+.header-brand {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	transform: scale(1);
+	transform-origin: center center;
+	transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.header-brand--retracted {
+	transform: scale(0.78);
+}
+
+.header-tagline {
+	font-family: var(--font-proxima-light);
+	font-style: italic;
+	font-size: 9px;
+	letter-spacing: 0.06em;
+	color: hsl(var(--muted-foreground));
+	margin-top: 1px;
 }
 </style>

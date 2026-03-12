@@ -1,8 +1,11 @@
 /**
- * useReactions - Polymorphic reaction management for the project timeline system
+ * useReactions - Polymorphic reaction management
  *
- * Uses existing `reactions` collection with fields: table, item, reaction (string), user.
- * Reactions are string-based ('love', 'like', 'idea', 'dislike') — no lookup table.
+ * Uses existing `reactions` Directus collection with fields: table, item, reaction (string), user.
+ * Supports any string-based reaction: legacy types (love, like, idea, dislike) and emoji identifiers.
+ *
+ * Note: The Directus column is named `table` but we use `collection` at the app level for
+ * consistency with the comments system. Mapping happens at the API boundary.
  */
 
 import type {
@@ -10,7 +13,6 @@ import type {
   ReactionWithUser,
   ReactionGroup,
   ReactionSummary,
-  ReactionType,
   CreateReactionPayload,
 } from '~/types/reactions';
 
@@ -19,12 +21,13 @@ export function useReactions() {
   const { user } = useDirectusAuth();
 
   const getReactions = async (
-    table: string,
+    collection: string,
     itemId: string
   ): Promise<ReactionWithUser[]> => {
     return await reactions.list({
       filter: {
         item: { _eq: itemId },
+        table: { _eq: collection },
       },
       fields: [
         '*',
@@ -38,10 +41,10 @@ export function useReactions() {
   };
 
   const getReactionSummary = async (
-    table: string,
+    collection: string,
     itemId: string
   ): Promise<ReactionSummary> => {
-    const allReactions = await getReactions(table, itemId);
+    const allReactions = await getReactions(collection, itemId);
     const currentUserId = user.value?.id;
 
     const groups: ReactionGroup[] = [];
@@ -52,7 +55,7 @@ export function useReactions() {
       let group = groups.find((g) => g.reaction === r.reaction);
       if (!group) {
         group = {
-          reaction: r.reaction as ReactionType,
+          reaction: r.reaction,
           count: 0,
           users: [],
           hasReacted: false,
@@ -73,7 +76,7 @@ export function useReactions() {
 
     return {
       item: itemId,
-      table,
+      collection,
       groups,
       totalCount: allReactions.length,
     };
@@ -113,7 +116,7 @@ export function useReactions() {
 
     await reactions.create({
       item: payload.item,
-      table: payload.table,
+      table: payload.collection,
       user: user.value.id,
       reaction: payload.reaction,
     } as Partial<ReactionRecord>);
@@ -125,10 +128,10 @@ export function useReactions() {
     return await reactions.remove(reactionId);
   };
 
-  function useReactionSummary(table: string, itemId: Ref<string> | string) {
+  function useReactionSummary(collection: string, itemId: Ref<string> | string) {
     const summary = ref<ReactionSummary>({
       item: typeof itemId === 'string' ? itemId : itemId.value,
-      table,
+      collection,
       groups: [],
       totalCount: 0,
     });
@@ -136,7 +139,7 @@ export function useReactions() {
 
     const fetch = async () => {
       const id = typeof itemId === 'string' ? itemId : itemId.value;
-      summary.value = await getReactionSummary(table, id);
+      summary.value = await getReactionSummary(collection, id);
       loading.value = false;
     };
 
