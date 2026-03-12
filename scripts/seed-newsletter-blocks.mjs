@@ -176,7 +176,13 @@ const BLOCKS = [
       { key: 'bg_color', label: 'Background Color', type: 'color', default: '#ffffff' },
       { key: 'heading', label: 'Section Heading', type: 'text', default: 'Section Heading' },
       { key: 'heading_color', label: 'Heading Color', type: 'color', default: '#111111' },
-      { key: 'body', label: 'Body Text (HTML allowed)', type: 'html', required: true, default: '<p>Your content here.</p>' },
+      {
+        key: 'body',
+        label: 'Body Text (HTML allowed)',
+        type: 'html',
+        required: true,
+        default: '<p>Your content here.</p>',
+      },
       { key: 'body_color', label: 'Body Color', type: 'color', default: '#444444' },
     ],
   },
@@ -197,7 +203,12 @@ const BLOCKS = [
       { key: 'bg_color', label: 'Background Color', type: 'color', default: '#ffffff' },
       { key: 'heading', label: 'Heading', type: 'text', default: 'A personal note' },
       { key: 'heading_color', label: 'Heading Color', type: 'color', default: '#111111' },
-      { key: 'intro', label: "Intro (after 'Hi [first_name],')", type: 'text', default: 'we wanted to share something with you.' },
+      {
+        key: 'intro',
+        label: "Intro (after 'Hi [first_name],')",
+        type: 'text',
+        default: 'we wanted to share something with you.',
+      },
       { key: 'body', label: 'Body', type: 'html', default: '<p>Your content here.</p>' },
       { key: 'body_color', label: 'Body Color', type: 'color', default: '#444444' },
     ],
@@ -644,7 +655,7 @@ async function seedPartials() {
     try {
       const existingRes = await fetch(
         `${DIRECTUS_URL}/items/email_partials?filter[slug][_eq]=${encodeURIComponent(partial.slug)}&limit=1`,
-        { headers }
+        { headers },
       );
       const existing = await existingRes.json();
 
@@ -698,7 +709,7 @@ async function seedBlocks() {
       // Check if slug already exists
       const existingRes = await fetch(
         `${DIRECTUS_URL}/items/newsletter_blocks?filter[slug][_eq]=${encodeURIComponent(block.slug)}&limit=1`,
-        { headers }
+        { headers },
       );
       const existing = await existingRes.json();
 
