@@ -720,11 +720,8 @@ async function seedBlocks() {
       }
 
       // Directus stores variables_schema as a JSON text field — stringify before sending
-      // Omit category from initial POST to avoid broken dropdown validation,
-      // then set it via PATCH afterward.
-      const { category, ...blockWithoutCategory } = block;
       const payload = {
-        ...blockWithoutCategory,
+        ...block,
         status: 'published',
         variables_schema: JSON.stringify(block.variables_schema),
       };
@@ -736,14 +733,6 @@ async function seedBlocks() {
       }).then((r) => r.json());
 
       if (result.data?.id) {
-        // Set category via PATCH (bypasses dropdown POST validation)
-        if (category) {
-          await fetch(`${DIRECTUS_URL}/items/newsletter_blocks/${result.data.id}`, {
-            method: 'PATCH',
-            headers,
-            body: JSON.stringify({ category }),
-          });
-        }
         console.log(`  [ok]   Created: ${block.name} (id: ${result.data.id})`);
         created++;
       } else {
@@ -760,55 +749,7 @@ async function seedBlocks() {
   console.log(`Done. Created: ${created}, Skipped: ${skipped}, Failed: ${failed}`);
 }
 
-/**
- * Fix variables_schema field: change from varchar(255) to text so it can
- * hold the full JSON-stringified variable definitions.
- */
-async function fixVariablesSchemaField() {
-  console.log('Fixing variables_schema field (varchar(255) → text)...');
-
-  try {
-    // Delete the varchar(255) field
-    const delRes = await fetch(`${DIRECTUS_URL}/fields/newsletter_blocks/variables_schema`, {
-      method: 'DELETE',
-      headers,
-    });
-    if (!delRes.ok) {
-      console.error('  Could not delete field:', await delRes.text());
-      return;
-    }
-
-    // Recreate as text (no max_length)
-    const createRes = await fetch(`${DIRECTUS_URL}/fields/newsletter_blocks`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        field: 'variables_schema',
-        type: 'text',
-        schema: { is_nullable: true, default_value: null },
-        meta: {
-          interface: 'input-multiline',
-          display: 'raw',
-          validation: null,
-          validation_message: null,
-        },
-      }),
-    });
-    const createData = await createRes.json();
-    if (createRes.ok) {
-      console.log('  Recreated variables_schema as text — OK');
-    } else {
-      console.error('  Failed to recreate:', JSON.stringify(createData.errors || createData));
-    }
-  } catch (err) {
-    console.error('  Error:', err.message);
-  }
-
-  console.log('');
-}
-
 async function seedAll() {
-  await fixVariablesSchemaField();
   await seedBlocks();
   await seedPartials();
 }
