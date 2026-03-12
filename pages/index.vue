@@ -47,19 +47,19 @@ watch(user, (newUser) => {
 
 		<!-- Command Center: shown when user IS logged in -->
 		<div v-else class="min-h-screen bg-background">
-			<div class="max-w-7xl mx-auto px-4 pt-20 pb-8 sm:px-6 lg:px-8 space-y-6">
-				<!-- Greeting & AI Toggle -->
-				<div class="flex items-center justify-between">
+			<div class="max-w-7xl mx-auto px-4 pt-16 pb-8 sm:px-6 lg:px-8 space-y-5">
+				<!-- iOS Large Title + AI button -->
+				<div class="flex items-end justify-between pt-2">
 					<div>
-						<h1 class="text-2xl font-semibold text-foreground tracking-tight">{{ greeting }}</h1>
-						<p class="text-sm text-muted-foreground mt-1">Here's what needs your attention today</p>
+						<h1 class="text-[28px] font-bold text-foreground tracking-tight leading-tight">{{ greeting }}</h1>
+						<p class="text-[15px] text-muted-foreground mt-0.5">Here's what needs your attention</p>
 					</div>
 					<button
 						@click="aiTrayOpen = true"
-						class="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-xl shadow-sm hover:shadow-md transition-all duration-200 text-sm font-medium ios-press"
+						class="flex items-center gap-1.5 px-3.5 py-2 bg-primary text-primary-foreground rounded-full shadow-sm transition-all duration-200 text-[13px] font-medium ios-press"
 					>
 						<UIcon name="i-heroicons-sparkles" class="w-4 h-4" />
-						AI Assistant
+						<span class="hidden sm:inline">Assistant</span>
 					</button>
 				</div>
 

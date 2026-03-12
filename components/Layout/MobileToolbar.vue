@@ -1,132 +1,121 @@
 <script setup>
+import { toggleSheet } from '~~/composables/useScreen';
+
+const route = useRoute();
+const { triggerHaptic } = useHaptic();
+
 const props = defineProps({
 	links: {
 		type: Array,
 		default: () => [],
 	},
 });
+
+const handleNavigation = (link) => {
+	triggerHaptic(10);
+};
 </script>
 <template>
-	<div
-		id="mobile-toolbar"
-		class="mobile-toolbar flex flex-row items-center justify-center bg-gray-100 dark:bg-gradient-to-tr dark:from-gray-800 dark:to-gray-900"
-	>
-		<nuxt-link v-for="(link, index) in links" :key="index" :to="link.to">
-			<UIcon :name="link.icon" />
-			<h5 class="text-">{{ link.name }}</h5>
+	<nav class="ios-tab-bar md:hidden" role="tablist">
+		<nuxt-link
+			v-for="(link, index) in links"
+			:key="index"
+			:to="link.to"
+			role="tab"
+			class="ios-tab-item"
+			:class="{ active: route.path === link.to }"
+			@click="handleNavigation(link)"
+		>
+			<div class="ios-tab-icon-wrap">
+				<UIcon :name="link.icon" class="ios-tab-icon" />
+			</div>
+			<span class="ios-tab-label">{{ link.name }}</span>
 		</nuxt-link>
 
-		<LayoutNavButton />
-		<div class="indicator">
-			<span></span>
-		</div>
-	</div>
+		<!-- More button -->
+		<button
+			class="ios-tab-item"
+			@click="() => { triggerHaptic(10); toggleSheet(); }"
+		>
+			<div class="ios-tab-icon-wrap">
+				<UIcon name="i-heroicons-ellipsis-horizontal" class="ios-tab-icon" />
+			</div>
+			<span class="ios-tab-label">More</span>
+		</button>
+	</nav>
 </template>
 
 <style scoped>
 @reference "~/assets/css/tailwind.css";
-.mobile-toolbar {
+
+.ios-tab-bar {
 	position: fixed;
-	bottom: 0px;
-	left: 0px;
-	width: 100%;
-	height: 65px;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	z-index: 40;
+	display: flex;
+	align-items: flex-end;
+	justify-content: space-around;
+	height: calc(49px + env(safe-area-inset-bottom, 0px));
+	padding-bottom: env(safe-area-inset-bottom, 0px);
+	border-top: 0.5px solid hsl(var(--border) / 0.5);
 
-	border-top: solid 1px rgba(55, 55, 55, 0.05);
-	padding-right: 20%;
-	overflow: hidden;
-	box-shadow: -1px 2px 10px rgba(0, 0, 0, 0.15);
-	z-index: 10;
-
-	/* @media (min-width: theme('screens.sm')) {
-		padding-right: 33.333333%;
-	} */
-
-	a {
-		width: 50%;
-		height: 50px;
-		/* border-right: thin solid var(--white); */
-		@apply relative flex flex-col items-center justify-center border-r border-white dark:border-gray-700;
-
-		svg {
-			height: 20px;
-			width: auto;
-			margin-top: 2px;
-			transition: 0.25s var(--curve);
-
-			path {
-				fill: var(--grey) !important;
-				transition: 0.25s var(--curve);
-			}
-		}
-
-		h5 {
-			margin-top: 2px;
-			@apply uppercase tracking-widest text-[5px] sm:text-[7px];
-		}
-	}
-
-	a.router-link-exact-active {
-		color: var(--blue);
-		svg {
-			path {
-				fill: var(--blue) !important;
-			}
-		}
-	}
-
-	.indicator {
-		z-index: 10;
-		position: absolute;
-		top: 0px;
-		left: -0%;
-		height: 2px;
-		width: 20%;
-		top: -2px;
-		opacity: 0;
-		transition: 0.25s var(--curve);
-		@apply flex items-center justify-center;
-		/* @media (min-width: theme('screens.sm')) {
-			width: 33.333333%;
-		} */
-
-		span {
-			display: block;
-			width: 40px;
-			height: 2px;
-			background: var(--blue);
-
-			@media (min-width: theme('screens.sm')) {
-				width: 60px;
-			}
-		}
-	}
+	/* iOS frosted glass */
+	background: rgba(255, 255, 255, 0.78);
+	backdrop-filter: saturate(180%) blur(20px);
+	-webkit-backdrop-filter: saturate(180%) blur(20px);
 }
 
-.mobile-toolbar a:nth-of-type(1).router-link-exact-active ~ .indicator {
-	left: 0%;
-	top: 0px;
-	opacity: 1;
+:is(.dark) .ios-tab-bar {
+	background: rgba(20, 20, 20, 0.78);
+	border-top-color: rgba(255, 255, 255, 0.08);
 }
 
-.mobile-toolbar a:nth-of-type(2).router-link-exact-active ~ .indicator {
-	left: 33.333333%;
-	left: 20%;
-	top: 0px;
-	opacity: 1;
+.ios-tab-item {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	flex: 1;
+	height: 49px;
+	gap: 2px;
+	color: hsl(var(--muted-foreground));
+	transition: color 0.2s ease;
+	-webkit-tap-highlight-color: transparent;
+	cursor: pointer;
+	background: none;
+	border: none;
+	padding: 0;
 }
 
-.mobile-toolbar a:nth-of-type(3).router-link-exact-active ~ .indicator {
-	left: 53%;
-	left: 40%;
-	top: 0px;
-	opacity: 1;
+.ios-tab-item.active,
+.ios-tab-item.router-link-exact-active {
+	color: hsl(var(--primary));
 }
 
-.mobile-toolbar a:nth-of-type(4).router-link-exact-active ~ .indicator {
-	left: 60%;
+.ios-tab-icon-wrap {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
 
-	top: 0px;
-	opacity: 1;
+.ios-tab-item:active .ios-tab-icon-wrap {
+	transform: scale(0.82);
+}
+
+.ios-tab-icon {
+	width: 22px;
+	height: 22px;
+}
+
+.ios-tab-label {
+	font-size: 10px;
+	font-weight: 500;
+	letter-spacing: 0.01em;
+	line-height: 1;
 }
 </style>
