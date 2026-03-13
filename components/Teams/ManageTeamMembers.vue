@@ -70,7 +70,6 @@
 					searchable
 					placeholder="Select user to add"
 					option-attribute="label"
-					value-attribute="id"
 				>
 					<template #option="{ option: user }">
 						<div class="flex items-center gap-2 py-1">
@@ -326,7 +325,8 @@ const addMember = async () => {
 
 	addingMember.value = true;
 	try {
-		await addUsersToTeam(props.teamId, [selectedUser.value], props.organizationId, addAsManager.value);
+		const userId = typeof selectedUser.value === 'object' ? selectedUser.value.id : selectedUser.value;
+		await addUsersToTeam(props.teamId, [userId], props.organizationId, addAsManager.value);
 
 		toast.add({
 			title: 'Success',

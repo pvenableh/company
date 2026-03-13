@@ -878,6 +878,7 @@ export interface Channel {
 	date_updated?: string | null;
 	name?: string | null;
 	project?: Project | string | null;
+	ticket?: Ticket | string | null;
 	organization?: Organization | string | null;
 	description?: string | null;
 	messages?: Message[] | string[];

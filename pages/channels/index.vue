@@ -6,21 +6,62 @@ const { hasAdminAccess } = useTeams();
 const isAdmin = computed(() => hasAdminAccess(user.value));
 const showCreateChannel = ref(false);
 const newChannelName = ref('');
+const newChannelProject = ref(null);
+const newChannelTicket = ref(null);
 const creatingChannel = ref(false);
 const channelItems = useDirectusItems('channels');
+const projectItems = useDirectusItems('projects');
+const ticketItems = useDirectusItems('tickets');
 const toast = useToast();
+
+// Fetch projects and tickets for the create modal selects
+const availableProjects = ref([]);
+const availableTickets = ref([]);
+
+const fetchSelectOptions = async () => {
+	try {
+		const [projects, tickets] = await Promise.all([
+			projectItems.list({
+				fields: ['id', 'title'],
+				filter: { status: { _nin: ['Archived', 'completed'] }, ...(selectedOrg.value ? { organization: { _eq: selectedOrg.value } } : {}) },
+				sort: ['title'],
+				limit: 100,
+			}),
+			ticketItems.list({
+				fields: ['id', 'title'],
+				filter: { status: { _nin: ['completed', 'archived'] }, ...(selectedOrg.value ? { organization: { _eq: selectedOrg.value } } : {}) },
+				sort: ['-date_created'],
+				limit: 100,
+			}),
+		]);
+		availableProjects.value = projects;
+		availableTickets.value = tickets;
+	} catch (e) {
+		console.warn('Could not fetch projects/tickets:', e);
+	}
+};
+
+watch(showCreateChannel, (open) => {
+	if (open) fetchSelectOptions();
+});
 
 const createChannel = async () => {
 	if (!newChannelName.value || newChannelName.value.length < 3) return;
 	creatingChannel.value = true;
 	try {
-		await channelItems.create({
+		const data = {
 			name: slugify(newChannelName.value),
 			organization: selectedOrg.value || undefined,
 			status: 'published',
-		});
+		};
+		if (newChannelProject.value) data.project = newChannelProject.value;
+		if (newChannelTicket.value) data.ticket = newChannelTicket.value;
+
+		await channelItems.create(data);
 		toast.add({ title: 'Channel created', color: 'green' });
 		newChannelName.value = '';
+		newChannelProject.value = null;
+		newChannelTicket.value = null;
 		showCreateChannel.value = false;
 		refreshChannels();
 	} catch (err) {
@@ -67,6 +108,8 @@ const {
 		'organization.name',
 		'project.id',
 		'project.title',
+		'ticket.id',
+		'ticket.title',
 		'messages.id',
 		'messages.status',
 		'messages.date_created',
@@ -127,6 +170,28 @@ const sortedChannels = computed(() => {
 				<p v-if="newChannelName && newChannelName.length < 3" class="text-xs text-red-500">
 					Channel name must be at least 3 characters.
 				</p>
+				<UFormGroup label="Link to Project" hint="Optional">
+					<USelectMenu
+						v-model="newChannelProject"
+						:options="availableProjects"
+						option-attribute="title"
+						value-attribute="id"
+						placeholder="Select a project..."
+						clearable
+						:disabled="creatingChannel"
+					/>
+				</UFormGroup>
+				<UFormGroup label="Link to Ticket" hint="Optional">
+					<USelectMenu
+						v-model="newChannelTicket"
+						:options="availableTickets"
+						option-attribute="title"
+						value-attribute="id"
+						placeholder="Select a ticket..."
+						clearable
+						:disabled="creatingChannel"
+					/>
+				</UFormGroup>
 				<div class="flex justify-end gap-2">
 					<UButton color="gray" variant="soft" @click="showCreateChannel = false">Cancel</UButton>
 					<UButton :loading="creatingChannel" :disabled="!newChannelName || newChannelName.length < 3" @click="createChannel">
@@ -168,12 +233,19 @@ const sortedChannels = computed(() => {
 										{{ channel.messageCount }}
 									</UBadge>
 								</div>
-								<p v-if="channel.project?.title" class="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
-									{{ channel.project.title }}
-								</p>
-								<p v-else class="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-									{{ channel.organization?.name || 'General' }}
-								</p>
+								<div class="flex items-center gap-2 mt-0.5">
+									<p v-if="channel.project?.title" class="text-xs text-gray-500 dark:text-gray-400 truncate">
+										<UIcon name="i-heroicons-square-3-stack-3d" class="w-3 h-3 inline -mt-0.5 mr-0.5" />
+										{{ channel.project.title }}
+									</p>
+									<p v-if="channel.ticket?.title" class="text-xs text-gray-500 dark:text-gray-400 truncate">
+										<UIcon name="i-heroicons-ticket" class="w-3 h-3 inline -mt-0.5 mr-0.5" />
+										{{ channel.ticket.title }}
+									</p>
+									<p v-if="!channel.project?.title && !channel.ticket?.title" class="text-xs text-gray-400 dark:text-gray-500">
+										{{ channel.organization?.name || 'General' }}
+									</p>
+								</div>
 							</div>
 							<UIcon
 								name="i-heroicons-chevron-right"

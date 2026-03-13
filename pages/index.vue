@@ -38,6 +38,16 @@ watch(user, (newUser) => {
 		runAnalysis();
 	}
 });
+
+// Re-run analysis when org/team changes
+const { selectedOrg } = useOrganization();
+const { selectedTeam } = useTeams();
+
+watch([selectedOrg, selectedTeam], () => {
+	if (user.value) {
+		runAnalysis();
+	}
+});
 </script>
 
 <template>

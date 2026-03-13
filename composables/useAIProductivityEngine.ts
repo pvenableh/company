@@ -84,6 +84,11 @@ export const useAIProductivityEngine = () => {
 	const dealItems = useDirectusItems('leads');
 	const appointmentItems = useDirectusItems('appointments');
 	const { user } = useDirectusAuth();
+	const { selectedOrg } = useOrganization();
+	const { selectedTeam } = useTeams();
+
+	// Build org/team filter fragments for Directus queries
+	const orgFilter = () => selectedOrg.value ? { organization: { _eq: selectedOrg.value } } : {};
 
 	// ─── Helpers ──────────────────────────────────────────────────────────────
 
@@ -140,6 +145,7 @@ export const useAIProductivityEngine = () => {
 				fields: ['id', 'title', 'status', 'priority', 'due_date', 'assigned_to', 'organization.name'],
 				filter: {
 					status: { _nin: ['completed', 'archived'] },
+					...orgFilter(),
 				},
 				sort: ['due_date'],
 				limit: 50,
@@ -193,6 +199,7 @@ export const useAIProductivityEngine = () => {
 						_and: [
 							{ status: { _eq: 'completed' } },
 							{ date_updated: { _gte: todayISO() } },
+							...(selectedOrg.value ? [{ organization: { _eq: selectedOrg.value } }] : []),
 						],
 					},
 					limit: 100,
@@ -219,6 +226,7 @@ export const useAIProductivityEngine = () => {
 				fields: ['id', 'title', 'status', 'due_date', 'start_date', 'organization.name'],
 				filter: {
 					status: { _nin: ['completed', 'Archived'] },
+					...orgFilter(),
 				},
 				sort: ['due_date'],
 				limit: 50,
@@ -372,6 +380,7 @@ export const useAIProductivityEngine = () => {
 				fields: ['id', 'invoice_code', 'status', 'due_date', 'total_amount', 'bill_to.name'],
 				filter: {
 					status: { _in: ['pending', 'processing'] },
+					...orgFilter(),
 				},
 				sort: ['due_date'],
 				limit: 50,
@@ -439,7 +448,7 @@ export const useAIProductivityEngine = () => {
 			// Get channels the user has access to
 			const channels = await channelItems.list({
 				fields: ['id', 'name'],
-				filter: { status: { _eq: 'published' } },
+				filter: { status: { _eq: 'published' }, ...orgFilter() },
 				limit: 50,
 			});
 
