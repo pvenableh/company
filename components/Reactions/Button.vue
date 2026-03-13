@@ -155,25 +155,28 @@ const userList = computed(() => {
 </script>
 
 <template>
-	<UPopover mode="hover" :disabled="!userList || userList.length === 0">
+	<div class="group/reaction relative inline-flex">
 		<div
 			class="flex items-center justify-center gap-1 h-full px-1 min-w-[35px] text-center text-xs"
 			@click="!isToggling && toggleReaction()"
 			:class="[
-				isActive ? 'text-[var(--cyan)] fill-[var(--cyan)]' : 'text-gray-500',
-				isToggling ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer',
+				isActive ? 'text-[var(--cyan)] fill-[var(--cyan)]' : 'text-muted-foreground',
+				isToggling ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-muted/50 rounded transition-colors',
 			]"
 		>
 			<UIcon :name="reactionIconName" />
 			<span ref="countRef" class="inline-block">{{ localCount }}</span>
 		</div>
 
-		<template #panel>
-			<div class="p-2 max-w-xs text-xs whitespace-pre-line">
-				{{ userList }}
-			</div>
-		</template>
-	</UPopover>
+		<!-- Pure CSS hover tooltip — works universally -->
+		<div
+			v-if="userList"
+			class="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/reaction:block z-50 bg-popover text-popover-foreground text-xs rounded-md shadow-lg border border-border px-2.5 py-1.5 whitespace-pre-line min-w-max max-w-[200px] pointer-events-none"
+		>
+			{{ userList }}
+			<div class="absolute top-full left-1/2 -translate-x-1/2 -mt-px w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-border" />
+		</div>
+	</div>
 </template>
 
 <style>

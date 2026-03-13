@@ -554,3 +554,58 @@
 	letter-spacing: 0.02em;
 	font-weight: 500;
 }
+
+/* ── Casual ──
+   Handwritten headers (Gaegu), sans-serif body,
+   relaxed spacing — friendly, approachable, personal  */
+[data-style='casual'] {
+	--title-font: var(--font-signature);
+	--title-transform: none;
+	--title-tracking: 0.01em;
+	--title-weight: 400;
+	--body-font: var(--font-proxima-regular);
+	--label-transform: none;
+	--label-tracking: 0.02em;
+	--label-weight: 500;
+	--label-size: 0.75rem;
+	--card-border-width: 1px;
+	--card-shadow: 0 1px 3px rgba(0,0,0,0.05);
+	--card-hover-shadow: 0 4px 14px rgba(0,0,0,0.07);
+	--btn-transform: none;
+	--btn-tracking: 0.01em;
+	--btn-weight: 500;
+}
+
+[data-style='casual'] h1,
+[data-style='casual'] h2,
+[data-style='casual'] h3 {
+	font-family: var(--font-signature);
+	text-transform: none;
+	letter-spacing: 0.01em;
+	font-weight: 400;
+}
+[data-style='casual'] h1 { font-size: 2rem; }
+[data-style='casual'] h4,
+[data-style='casual'] h5,
+[data-style='casual'] h6 {
+	font-family: var(--font-proxima-regular);
+	text-transform: none;
+	letter-spacing: 0.02em;
+	font-weight: 500;
+}
+
+[data-style='casual'] .t-label,
+[data-style='casual'] label {
+	text-transform: none;
+	letter-spacing: 0.02em;
+	font-size: 0.75rem;
+	font-weight: 500;
+}
+
+[data-style='casual'] button,
+[data-style='casual'] .btn,
+[data-style='casual'] [class*="Button"] {
+	text-transform: none;
+	letter-spacing: 0.01em;
+	font-weight: 500;
+}

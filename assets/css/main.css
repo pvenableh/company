@@ -127,6 +127,7 @@ a {
 }
 .page__content {
   transition: all 0.25s var(--spring);
+  min-height: calc(100svh - 56px);
   @apply relative z-10;
 }
 .page__title {

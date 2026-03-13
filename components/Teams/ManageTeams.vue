@@ -60,7 +60,15 @@
 				>
 					<template #header>
 						<div class="flex items-center justify-between">
-							<h3 class="text-lg font-medium">{{ team.name }}</h3>
+							<div class="flex items-center gap-2.5">
+								<div v-if="team.icon" class="w-8 h-8 rounded-lg overflow-hidden shrink-0">
+									<img :src="getTeamIconUrl(team.icon)" :alt="team.name" class="w-full h-full object-cover" />
+								</div>
+								<div v-else class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+									<span class="text-sm font-semibold text-primary">{{ team.name?.charAt(0)?.toUpperCase() }}</span>
+								</div>
+								<h3 class="text-lg font-medium">{{ team.name }}</h3>
+							</div>
 							<div class="flex gap-1">
 								<UBadge v-if="isTeamManager(team.id)" color="green" class="text-[9px] uppercase">Manager</UBadge>
 								<UBadge v-if="isOnTeam(team)" color="blue" class="text-[9px] uppercase">Member</UBadge>
@@ -141,12 +149,53 @@
 
 		<!-- Create/Edit Team Modal -->
 		<UModal v-model="showCreateTeamModal">
-			<div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+			<div class="flex items-center justify-between p-4 border-b border-border">
 				<h3 class="text-lg font-semibold">{{ isEditing ? 'Edit' : 'Create' }} Team</h3>
 				<UButton color="gray" variant="ghost" icon="i-heroicons-x-mark" @click="cancelTeamForm" />
 			</div>
 
 			<form @submit.prevent="submitTeamForm" class="space-y-4 p-4">
+				<!-- Icon Upload -->
+				<UFormGroup label="Team Icon" hint="Optional">
+					<div class="flex items-center gap-4">
+						<div
+							class="w-16 h-16 rounded-xl border-2 border-dashed border-border flex items-center justify-center bg-muted/30 overflow-hidden cursor-pointer hover:border-primary/40 transition-colors"
+							@click="$refs.iconInput?.click()"
+						>
+							<img
+								v-if="teamForm.iconPreview"
+								:src="teamForm.iconPreview"
+								class="w-full h-full object-cover"
+								alt="Team icon"
+							/>
+							<UIcon v-else name="i-heroicons-camera" class="w-6 h-6 text-muted-foreground" />
+						</div>
+						<div class="flex-1">
+							<input
+								ref="iconInput"
+								type="file"
+								accept="image/*"
+								class="hidden"
+								@change="handleIconUpload"
+							/>
+							<div class="flex gap-2">
+								<UButton type="button" size="xs" variant="outline" @click="$refs.iconInput?.click()">
+									{{ teamForm.iconPreview ? 'Change' : 'Upload' }}
+								</UButton>
+								<UButton v-if="teamForm.iconPreview" type="button" size="xs" variant="ghost" color="red" @click="removeIcon">
+									Remove
+								</UButton>
+							</div>
+							<p class="text-xs text-muted-foreground mt-1">Square image recommended. Max 2MB.</p>
+						</div>
+					</div>
+					<div v-if="iconUploading" class="mt-2">
+						<div class="h-1 bg-muted rounded-full overflow-hidden">
+							<div class="h-full bg-primary transition-all duration-300 rounded-full" :style="{ width: iconProgress + '%' }" />
+						</div>
+					</div>
+				</UFormGroup>
+
 				<UFormGroup label="Team Name" required>
 					<UInput v-model="teamForm.name" placeholder="Enter team name" />
 				</UFormGroup>
@@ -158,16 +207,16 @@
 				<UFormGroup label="Active">
 					<div class="flex items-center gap-3">
 						<UToggle v-model="teamForm.active" />
-						<span class="text-sm text-gray-500">
+						<span class="text-sm text-muted-foreground">
 							{{ teamForm.active ? 'Team is active and visible in selectors' : 'Team is inactive and hidden from selectors' }}
 						</span>
 					</div>
 				</UFormGroup>
 			</form>
 
-			<div class="flex justify-end gap-2 p-4 border-t border-gray-200 dark:border-gray-700">
+			<div class="flex justify-end gap-2 p-4 border-t border-border">
 				<UButton color="gray" variant="ghost" @click="cancelTeamForm">Cancel</UButton>
-				<UButton color="primary" :loading="submittingTeam" :disabled="!teamForm.name" @click="submitTeamForm">
+				<UButton color="primary" :loading="submittingTeam" :disabled="!teamForm.name || iconUploading" @click="submitTeamForm">
 					{{ isEditing ? 'Save Changes' : 'Create Team' }}
 				</UButton>
 			</div>
@@ -285,10 +334,73 @@ const teamForm = ref({
 	name: '',
 	description: '',
 	active: true,
+	icon: null,
+	iconPreview: null,
 });
 const isEditing = ref(false);
 const submittingTeam = ref(false);
 const deletingTeam = ref(false);
+const iconUploading = ref(false);
+const iconProgress = ref(0);
+
+// File upload for team icon
+const { processUpload, uploadFilesWithProgress } = useFileUpload();
+
+const getTeamIconUrl = (iconId) => {
+	if (!iconId) return null;
+	const id = typeof iconId === 'object' ? iconId.id : iconId;
+	return `${useRuntimeConfig().public.directusUrl}/assets/${id}?key=small`;
+};
+
+const handleIconUpload = async (event) => {
+	const file = event.target.files?.[0];
+	if (!file) return;
+
+	// Validate size (2MB max for icons)
+	if (file.size > 2 * 1024 * 1024) {
+		toast.add({ title: 'File too large', description: 'Icon must be under 2MB', color: 'red' });
+		return;
+	}
+
+	// Show preview immediately
+	const reader = new FileReader();
+	reader.onload = (e) => {
+		teamForm.value.iconPreview = e.target.result;
+	};
+	reader.readAsDataURL(file);
+
+	// Upload to Directus
+	iconUploading.value = true;
+	iconProgress.value = 0;
+	try {
+		const result = await processUpload([file], { compressImages: true });
+		if (!result.success) {
+			toast.add({ title: 'Upload failed', description: result.errors.join(', '), color: 'red' });
+			teamForm.value.iconPreview = null;
+			return;
+		}
+
+		const uploadedFiles = await uploadFilesWithProgress(result.formData, (progress) => {
+			iconProgress.value = progress;
+		});
+
+		// Get the file ID from the upload response
+		const uploadedFile = Array.isArray(uploadedFiles) ? uploadedFiles[0] : uploadedFiles;
+		teamForm.value.icon = uploadedFile?.id || null;
+	} catch (err) {
+		console.error('Error uploading icon:', err);
+		toast.add({ title: 'Upload failed', description: 'Could not upload icon', color: 'red' });
+		teamForm.value.iconPreview = null;
+		teamForm.value.icon = null;
+	} finally {
+		iconUploading.value = false;
+	}
+};
+
+const removeIcon = () => {
+	teamForm.value.icon = null;
+	teamForm.value.iconPreview = null;
+};
 
 const dropdownItems = (team) => {
 	// Only show management actions if user has appropriate role
@@ -356,12 +468,14 @@ const editTeam = (team) => {
 	teamForm.value.name = team.name;
 	teamForm.value.description = team.description || '';
 	teamForm.value.active = team.active !== false;
+	teamForm.value.icon = team.icon || null;
+	teamForm.value.iconPreview = team.icon ? getTeamIconUrl(team.icon) : null;
 	isEditing.value = true;
 	showCreateTeamModal.value = true;
 };
 
 const cancelTeamForm = () => {
-	teamForm.value = { name: '', description: '', active: true };
+	teamForm.value = { name: '', description: '', active: true, icon: null, iconPreview: null };
 	isEditing.value = false;
 	currentEditTeam.value = null;
 	showCreateTeamModal.value = false;
