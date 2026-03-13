@@ -99,6 +99,13 @@ const apps: AppItem[] = [
 		color: 'bg-teal-500',
 		description: 'Phone system',
 	},
+	{
+		name: 'AI Chat',
+		icon: 'i-heroicons-sparkles',
+		route: '/command-center/ai',
+		color: 'bg-gradient-to-br from-violet-500 to-purple-600',
+		description: 'AI assistant',
+	},
 ];
 
 const navigateTo = (route: string) => {

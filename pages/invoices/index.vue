@@ -11,8 +11,8 @@ const user = computed(() => {
 const invoiceItems = useDirectusItems('invoices');
 const { selectedOrg, hasMultipleOrgs, organizations, organizationOptions, setOrganization, getOrganizationFilter } = useOrganization();
 const { user: directusUser } = useDirectusAuth();
-const { hasAdminAccess } = useTeams();
-const isAdmin = computed(() => hasAdminAccess(directusUser.value));
+const { canAccess } = useRole();
+const isAdmin = computed(() => canAccess('invoices'));
 
 const columns = [
 	{

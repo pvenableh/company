@@ -128,10 +128,10 @@ const props = defineProps({
 const emit = defineEmits(['eventCreated']);
 
 const { user } = useDirectusAuth();
-const { isAdmin: checkIsAdmin } = useRole();
+const { canAccess } = useRole();
 const eventItems = useDirectusItems('project_events');
 
-const isAdmin = computed(() => checkIsAdmin(user.value));
+const isAdmin = computed(() => canAccess('projects'));
 
 // New Event modal state
 const showNewEventModal = ref(false);

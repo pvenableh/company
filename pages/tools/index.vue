@@ -12,15 +12,9 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
-
-const { user: sessionUser, loggedIn } = useUserSession();
-const user = computed(() => {
-	return loggedIn.value ? sessionUser.value ?? null : null;
-});
-const { isAdmin: checkIsAdmin } = useRole();
+const { canAccess } = useRole();
 
 const isAdmin = computed(() => {
-	return checkIsAdmin(user.value);
+	return canAccess('org_settings');
 });
 </script>

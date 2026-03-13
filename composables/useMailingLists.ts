@@ -3,11 +3,22 @@ import type { MailingList, Contact } from '~/types/email/contacts';
 export function useMailingLists() {
   const items = useDirectusItems<MailingList>('mailing_lists');
   const memberItems = useDirectusItems('mailing_list_contacts');
+  const { selectedOrg, getOrganizationFilter } = useOrganization();
 
   const getLists = async (): Promise<MailingList[]> => {
+    const filter: any = { _and: [] };
+
+    // Org-scope
+    const orgFilter = getOrganizationFilter();
+    if (orgFilter?.organization) {
+      filter._and.push({ organization: orgFilter.organization });
+    }
+
+    filter._and.push({ status: { _eq: 'published' } });
+
     return items.list({
       fields: ['*'],
-      filter: { status: { _eq: 'published' } },
+      filter: filter._and.length ? filter : undefined,
       sort: ['-is_default', 'name'],
     });
   };
@@ -17,7 +28,12 @@ export function useMailingLists() {
   };
 
   const createList = async (payload: Partial<MailingList>): Promise<MailingList> => {
-    return items.create({ ...payload, status: 'published' } as any);
+    // Auto-set organization on create
+    return items.create({
+      ...payload,
+      status: 'published',
+      organization: selectedOrg.value || undefined,
+    } as any);
   };
 
   const updateList = async (id: number, payload: Partial<MailingList>): Promise<MailingList> => {

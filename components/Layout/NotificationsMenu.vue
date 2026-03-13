@@ -131,6 +131,21 @@
 							Settings
 						</Button>
 					</div>
+
+					<!-- Type filter chips -->
+					<div class="flex flex-wrap gap-1.5 mt-2">
+						<button
+							v-for="tf in typeFilters"
+							:key="tf.value"
+							class="px-2.5 py-1 rounded-full text-xs font-medium transition-colors"
+							:class="typeFilter === tf.value
+								? 'bg-primary text-primary-foreground'
+								: 'bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80'"
+							@click="typeFilter = tf.value"
+						>
+							{{ tf.label }}
+						</button>
+					</div>
 				</div>
 
 				<!-- Settings Panel -->
@@ -256,6 +271,7 @@ const isSheetOpen = ref(false);
 const showSettings = ref(false);
 const isMarkingAll = ref(false);
 const statusFilter = ref('inbox');
+const typeFilter = ref('all');
 const preferences = ref({ ...userPreferences.value });
 const notificationsContainer = ref(null);
 const loadMoreTrigger = ref(null);
@@ -265,6 +281,39 @@ const statusOptions = [
 	{ label: 'Unread', value: 'inbox' },
 	{ label: 'Read', value: 'archived' },
 ];
+
+// Type filter options
+const typeFilters = [
+	{ label: 'All', value: 'all' },
+	{ label: 'Mentions', value: 'mention' },
+	{ label: 'Comments', value: 'comment' },
+	{ label: 'Assignments', value: 'assignment' },
+	{ label: 'Messages', value: 'message' },
+];
+
+// Map collection names to notification types for filtering
+function getNotificationType(notification) {
+	// If the notification has a type metadata field, use it
+	if (notification.type) return notification.type;
+
+	// Infer type from collection
+	const collectionTypeMap = {
+		comments: 'comment',
+		messages: 'message',
+		tickets: 'assignment',
+		projects: 'assignment',
+		project_tasks: 'assignment',
+		invoices: 'invoice',
+	};
+
+	// Check subject for mention keywords
+	const subject = (notification.subject || '').toLowerCase();
+	if (subject.includes('mention')) return 'mention';
+	if (subject.includes('assign')) return 'assignment';
+	if (subject.includes('react')) return 'reaction';
+
+	return collectionTypeMap[notification.collection] || 'system';
+}
 
 // Computed properties for pagination
 const hasMoreToLoad = computed(() => {
@@ -301,13 +350,16 @@ watch(isSheetOpen, async (isOpen) => {
 	}
 });
 
-// Filtered notifications based on status
+// Filtered notifications based on status and type
 const filteredNotifications = computed(() => {
-	if (statusFilter.value === 'inbox') {
-		return notifications.value;
-	} else {
-		return archivedNotifications.value;
-	}
+	const source = statusFilter.value === 'inbox'
+		? notifications.value
+		: archivedNotifications.value;
+
+	// Apply type filter
+	if (typeFilter.value === 'all') return source;
+
+	return source.filter((n) => getNotificationType(n) === typeFilter.value);
 });
 
 const isRead = (notification) => {

@@ -1,5 +1,5 @@
 // composables/useNotifications.js - Fixed version with loop prevention
-import { ref, computed, watchEffect } from 'vue';
+import { ref, computed, watch, watchEffect } from 'vue';
 import { useRealtimeSubscription } from '~/composables/useRealtimeSubscription';
 
 // Module-level singleton tracking (resets on page reload, survives soft navigations)
@@ -226,6 +226,9 @@ export function useNotifications() {
 		},
 	);
 
+	// Desktop notification support
+	const desktopNotifications = import.meta.client ? useDesktopNotifications() : null;
+
 	// Update local data when realtime data changes and detect new notifications
 	const previousCount = ref(0);
 
@@ -242,6 +245,21 @@ export function useNotifications() {
 				if (newNotification) {
 					showToastNotification(newNotification);
 					playSound();
+
+					// Show desktop notification when tab is not focused
+					if (desktopNotifications && userPreferences.value.desktopEnabled) {
+						const sender = newNotification.sender?.first_name
+							? `${newNotification.sender.first_name} ${newNotification.sender.last_name}`
+							: 'Notification';
+						desktopNotifications.show(
+							newNotification.subject || sender,
+							{
+								body: stripHtmlTags(newNotification.message),
+								tag: `notification-${newNotification.id}`,
+							},
+							() => navigateToItem(newNotification),
+						);
+					}
 				}
 			}
 
@@ -498,13 +516,18 @@ export function useNotifications() {
 	};
 
 	// Load initial data when user is available (client-only to avoid hydration mismatch)
+	// Use explicit watch instead of watchEffect to prevent firing on every reactive change
 	if (import.meta.client) {
-		watchEffect(() => {
-			if (user.value?.id) {
-				loadNotifications();
-				loadPreferences();
-			}
-		});
+		watch(
+			() => user.value?.id,
+			(newUserId) => {
+				if (newUserId) {
+					loadNotifications();
+					loadPreferences();
+				}
+			},
+			{ immediate: true },
+		);
 	}
 
 	// Cleanup when scope is disposed (works for both components and standalone composables)

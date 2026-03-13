@@ -75,6 +75,7 @@
 		"vue-tsc": "^2.2.8"
 	},
 	"dependencies": {
+		"@anthropic-ai/sdk": "^0.78.0",
 		"@aws-sdk/client-s3": "^3.984.0",
 		"@aws-sdk/s3-request-presigner": "^3.984.0",
 		"@azure/msal-node": "^3.8.4",

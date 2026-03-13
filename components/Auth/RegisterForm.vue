@@ -21,6 +21,7 @@ const emit = defineEmits<{
       lastName: string;
       email: string;
       password: string;
+      organizationName?: string;
     }
   ): void;
   (e: "login"): void;
@@ -32,6 +33,7 @@ const formSchema = toTypedSchema(
       firstName: z.string().min(1, "First name is required"),
       lastName: z.string().min(1, "Last name is required"),
       email: z.string().email("Please enter a valid email address"),
+      organizationName: z.string().optional(),
       password: z
         .string()
         .min(8, "Password must be at least 8 characters")
@@ -52,6 +54,7 @@ const { handleSubmit, isSubmitting, values } = useForm({
     firstName: "",
     lastName: "",
     email: "",
+    organizationName: "",
     password: "",
     confirmPassword: "",
   },
@@ -79,6 +82,7 @@ const onSubmit = handleSubmit(async (values) => {
     lastName: values.lastName!,
     email: values.email!,
     password: values.password!,
+    organizationName: values.organizationName || undefined,
   });
 });
 </script>
@@ -149,6 +153,25 @@ const onSubmit = handleSubmit(async (values) => {
               />
               <p v-if="errors.length" class="text-sm text-destructive">
                 {{ errors[0] }}
+              </p>
+            </div>
+          </VeeField>
+
+          <VeeField v-slot="{ field, errors }" name="organizationName">
+            <div class="space-y-2">
+              <label for="organizationName" class="text-sm font-medium leading-none">
+                Organization Name
+                <span class="text-muted-foreground font-normal">(optional)</span>
+              </label>
+              <input
+                id="organizationName"
+                type="text"
+                placeholder="Your company or team name"
+                v-bind="field"
+                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              />
+              <p class="text-xs text-muted-foreground">
+                Creates an organization with you as the owner. You can add team members later.
               </p>
             </div>
           </VeeField>

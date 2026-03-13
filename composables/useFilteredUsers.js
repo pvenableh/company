@@ -17,12 +17,10 @@ export const useFilteredUsers = () => {
 
 	const fetchFilteredUsers = async (organizationId = null, teamId = null) => {
 		try {
-			console.log('fetchFilteredUsers called with:', { organizationId, teamId });
 			loading.value = true;
 
 			// Get the active organization ID
 			const orgId = organizationId || selectedOrg.value;
-			console.log('Using organization ID:', orgId);
 
 			// Early validation
 			if (!orgId) {
@@ -31,7 +29,7 @@ export const useFilteredUsers = () => {
 				return;
 			}
 
-			// Simplified approach - just get all users in the organization first
+			// Build a single filter that handles both org and team in one query
 			const userFilter = {
 				organizations: {
 					organizations_id: {
@@ -40,9 +38,14 @@ export const useFilteredUsers = () => {
 				},
 			};
 
-			console.log('Fetching users with filter:', JSON.stringify(userFilter));
+			// If a specific team is requested, add team filter to the same query
+			if (teamId && teamId !== DEFAULT_TEAM_ID) {
+				userFilter.teams = {
+					teams_id: { _eq: teamId },
+				};
+			}
 
-			// Get all users in the organization
+			// Single API call — org + team filter combined
 			const users = await readUsers({
 				fields: [
 					'id',
@@ -56,43 +59,8 @@ export const useFilteredUsers = () => {
 				filter: userFilter,
 			});
 
-			console.log(`Found ${users.length} users in organization`);
-
-			// If team ID is specified and not the default team, filter by team
-			let teamFilteredUsers = users;
-			if (teamId && teamId !== DEFAULT_TEAM_ID) {
-				try {
-					console.log(`Filtering by team: ${teamId}`);
-
-					// Get the members of the team
-					const teamMembers = await junctionItems.list({
-						filter: {
-							teams_id: { _eq: teamId },
-						},
-						fields: ['directus_users_id'],
-					});
-
-					console.log(`Found ${teamMembers.length} members in team`);
-
-					if (teamMembers.length > 0) {
-						// Extract user IDs from team members
-						const teamUserIds = teamMembers.map((member) => member.directus_users_id);
-
-						// Filter the users to only those in the team
-						teamFilteredUsers = users.filter((user) => teamUserIds.includes(user.id));
-
-						console.log(`Filtered to ${teamFilteredUsers.length} users in both org and team`);
-					} else {
-						console.log('No team members found - using all organization users');
-					}
-				} catch (teamError) {
-					console.error('Error fetching team members:', teamError);
-					// Fall back to organization users if team filtering fails
-				}
-			}
-
 			// Map the filtered users to the required format
-			filteredUsers.value = teamFilteredUsers.map((user) => ({
+			filteredUsers.value = users.map((user) => ({
 				id: user.id,
 				first_name: user.first_name || '',
 				last_name: user.last_name || '',
@@ -108,8 +76,6 @@ export const useFilteredUsers = () => {
 						name: org.organizations_id?.name,
 					})) || [],
 			}));
-
-			console.log(`Final filtered users count: ${filteredUsers.value.length}`);
 		} catch (error) {
 			console.error('Error in fetchFilteredUsers:', error);
 			filteredUsers.value = []; // Reset on error

@@ -5,10 +5,10 @@ const user = computed(() => {
 });
 
 const { user: directusUser } = useDirectusAuth();
-const { hasAdminAccess } = useTeams();
+const { canAccess } = useRole();
 const { selectedOrg, getOrganizationFilter } = useOrganization();
 
-const isAdmin = computed(() => hasAdminAccess(directusUser.value));
+const isAdmin = computed(() => canAccess('projects'));
 
 // Non-admins default to table view; admins default to timeline
 const activeView = ref(isAdmin.value ? 'timeline' : 'table');

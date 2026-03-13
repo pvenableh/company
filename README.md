@@ -1,6 +1,6 @@
 # Hue Studios
 
-An all-in-one, agency-grade business management platform built with [Nuxt 3](https://nuxt.com), [Vue 3](https://vuejs.org), and [Directus](https://directus.io). Designed for creative agencies, consultancies, and growing SMBs that need project delivery, client management, financials, team collaboration, social media management, email marketing, and AI-powered productivity intelligence under one roof.
+A multi-tenant SaaS business management platform built with [Nuxt 3](https://nuxt.com), [Vue 3](https://vuejs.org), and [Directus](https://directus.io). Designed for creative agencies, consultancies, and growing SMBs that need project delivery, client management, financials, team collaboration, social media management, email marketing, and AI-powered productivity intelligence under one roof. Organizations serve as the tenant boundary, with per-org roles, customizable permissions, and subscription plan gating.
 
 ## Features
 
@@ -14,9 +14,10 @@ An all-in-one, agency-grade business management platform built with [Nuxt 3](htt
 - **Team Communication** — Slack-style channels per organization with threaded comments, @mentions, emoji reactions, and WebSocket-powered real-time messaging
 - **Social Media Management** — Compose, schedule, and publish to Instagram and TikTok; content calendar, engagement analytics, multi-client management, and OAuth account connections
 - **Email Marketing & Newsletters** — Block-based MJML newsletter builder with 17+ reusable blocks, drag-and-drop assembly, live preview, mailing list management with deduplication, CSV contact import, merge-tag personalization via Handlebars, editable header/footer partials, one-click unsubscribe, "View in Browser" web links, and campaign send tracking via SendGrid
-- **Contact CRM** — Contact management with tagging, custom fields, mailing list membership, subscription tracking, and CSV import/export
+- **Client Management** — Track the companies your organization serves with status workflows (active, prospect, inactive, churned), industry tagging, primary contact assignment, and linked contacts/projects/tickets/invoices per client
+- **Contact CRM** — Contact management with tagging, custom fields, mailing list membership, subscription tracking, client association, and CSV import/export
 - **AI Command Center** — AI-powered productivity engine that analyzes tickets, projects, tasks, invoices, contacts, deals, channels, social media, scheduling, and phone activity to generate prioritized action items, reminders, insights, and follow-ups; includes productivity scoring (0-100), customizable AI module preferences, team chat, and financial analysis; supports Claude (Anthropic), GPT (OpenAI), and Gemini (Google) backends
-- **Organizations & Teams** — Multi-organization support with team structures, role-based access control (admin, client manager, user), member invitations, and cross-tab state sync
+- **Organizations & Multi-Tenancy** — Multi-organization support with per-org roles (Owner, Admin, Manager, Member, Client), customizable permission matrices per role, team structures, member invitations, subscription plan tiers, and cross-tab state sync
 
 ### Supporting Features
 
@@ -125,6 +126,7 @@ The app will be available at `http://localhost:3000`.
 │   ├── Projects/       # Timeline, board, overview
 │   ├── Invoices/       # Invoice forms, PDF generation
 │   ├── Channels/       # Real-time messaging
+│   ├── Clients/        # Client forms, cards
 │   ├── Scheduler/      # Calendar, booking, video meetings
 │   ├── CommandCenter/  # AI tray, suggestion cards, productivity meter, preferences
 │   ├── Newsletter/     # Block builder, canvas, variable editor, partials
@@ -142,7 +144,7 @@ The app will be available at `http://localhost:3000`.
 │   └── ui/             # shadcn-vue base components
 ├── composables/        # Vue composables (auth, data fetching, real-time, etc.)
 ├── server/
-│   ├── api/            # API routes (auth, directus, stripe, email, social, etc.)
+│   ├── api/            # API routes (auth, directus, stripe, email, social, org, etc.)
 │   ├── adapters/       # Social media platform adapters (Instagram, TikTok)
 │   ├── plugins/        # Nitro plugins (session hooks)
 │   └── utils/          # Server utilities (Directus client, crypto, logging)
@@ -178,10 +180,72 @@ The app will be available at `http://localhost:3000`.
 | Social Calendar | `/social/calendar` | Visual content calendar |
 | Social Analytics | `/social/analytics` | Engagement and growth metrics |
 | Social Clients | `/social/clients` | Agency client management |
+| Clients | `/clients` | Client list with status filters and search |
+| Client Detail | `/clients/[id]` | Client overview with linked contacts, projects, and tickets |
 | Organizations | `/organization` | Organization and member management |
 | Teams | `/organization/teams` | Team structure and roles |
 | Account | `/account` | User profile and settings |
 | Public Booking | `/book/[userId]` | Client-facing scheduling page |
+
+## Multi-Tenant SaaS Architecture
+
+The platform uses **organizations as the tenant boundary**. Each user can belong to multiple organizations with different roles in each. Data (projects, tickets, contacts, invoices, clients) is scoped to the active organization.
+
+### Per-Org Role System
+
+Rather than relying on global Directus roles, the platform implements **app-level roles** stored in `org_roles` and `org_memberships`. A user can be an Admin in Org A and a Member in Org B.
+
+| Role | Purpose | Default Access |
+|---|---|---|
+| **Owner** | Org creator, cannot be removed | Full access including org settings and billing |
+| **Admin** | Full org access | Everything except delete org |
+| **Manager** | Manages projects, clients, and teams | CRUD most features, limited org settings |
+| **Member** | Works on assigned items | Read most, CRUD tasks/tickets/comments |
+| **Client** | External user (customer) | Read assigned projects/tickets, create tickets/comments/messages |
+
+### Permission Matrix
+
+Each role has a customizable **permission matrix** stored as JSON in `org_roles.permissions`. The matrix maps 18 features to CRUD flags:
+
+```
+{ "projects": { "access": true, "create": true, "read": true, "update": true, "delete": false } }
+```
+
+Admins can customize permissions per-role via the organization settings page. The `useOrgRole()` composable exposes `canAccess(feature)`, `hasPermission(feature, action)`, `canView()`, `canCreate()`, `canEdit()`, and `canDelete()` helpers.
+
+### Subscription Plan Gating
+
+Organizations have a `plan` field (free, starter, pro, enterprise) that hooks into the permission system. The `planAllows(feature)` function in `useOrgRole()` is a placeholder that currently returns `true` for all features. When subscription tiers are implemented, it becomes a two-layer check: role permissions AND plan availability.
+
+### Directus Collections
+
+| Collection | Purpose |
+|---|---|
+| `organizations` | Tenant boundary with plan tier |
+| `clients` | Companies an organization serves (active, prospect, inactive, churned) |
+| `org_roles` | Per-org role definitions with permission matrices |
+| `org_memberships` | User-to-org membership with role, status, client scope, and invitation tracking |
+| `organizations_directus_users` | Legacy junction (kept for backward compatibility) |
+
+### Key Composables
+
+| Composable | Purpose |
+|---|---|
+| `useOrganization()` | Org context: selected org, org list with membership data, org-scoped filters |
+| `useOrgRole()` | Per-org role: role booleans, permission checks, client scope, plan gating |
+| `useRole()` | Legacy global role checks (bridge to `useOrgRole` in progress) |
+| `useClients()` | Client CRUD with org-scoping, search, status filters |
+
+### Server Endpoints
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /api/org/seed-roles` | Creates 5 system roles for an organization (idempotent) |
+| `POST /api/org/migrate-memberships` | Converts legacy junction entries to `org_memberships` |
+
+### Migration Path
+
+The system is designed for backward compatibility. The legacy `organizations_directus_users` junction and `useRole.ts` continue working alongside the new system. The migration endpoint converts existing user-org relationships into `org_memberships` with appropriate role mappings (Directus admin role to org admin, client manager to org manager, others to member).
 
 ## AI Command Center
 
@@ -342,3 +406,21 @@ The app is configured for deployment on **Vercel**. Make sure all required envir
 
 Build command: `pnpm build`
 Output directory: `.output`
+
+## Roadmap
+
+The following features are planned for upcoming development phases:
+
+### In Progress
+
+- **Replace Role Checks** (Phase 3) — Refactor all `isAdmin()` / `hasAdminAccess()` checks to use `useOrgRole()` permission system; add `<PermissionGate>` renderless component; build admin page for editing org role permissions
+- **Registration & Invitation Flows** (Phase 4) — Sign-up creates user + org + default roles + owner membership; member invitation system with role selection; client invitation scoped to client records; welcome/invite email templates via MJML
+
+### Planned
+
+- **Org-Scope Data Isolation** (Phase 5) — Ensure contacts, mailing lists, and email templates are org-scoped in all queries; add client filter support to contacts
+- **Client Portal** (Phase 6) — Simplified layout for client-role users with scoped access to their projects, tickets, and messages; middleware to redirect client users away from admin routes
+- **SendGrid Email Activity Tracking** — Webhook endpoint to receive SendGrid events (opens, clicks, bounces, spam reports); `email_activity` collection for per-recipient event history; automatic bounce handling and contact status updates
+- **Chat Widget** — Frontend UI for the existing `ai_chat_sessions` / `ai_chat_messages` Directus collections; `useAIChat` composable; streaming AI responses; persistent conversation history
+- **Notification Email Pipeline** — Unified transactional email handler for form submissions, sign-ups, ticket updates, and appointment confirmations using the existing MJML compiler + Handlebars system
+- **Subscription Plan Billing** — Stripe subscription integration; `subscription_plans` collection with feature caps and usage limits; plan-gated feature availability via `planAllows()`

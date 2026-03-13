@@ -967,6 +967,80 @@ export interface Comment {
 	is_resolved?: boolean | null;
 }
 
+export interface Client {
+	/** @primaryKey */
+	id: string;
+	status?: 'active' | 'prospect' | 'inactive' | 'churned';
+	sort?: number | null;
+	user_created?: DirectusUser | string | null;
+	date_created?: string | null;
+	date_updated?: string | null;
+	/** @required */
+	name: string;
+	slug?: string | null;
+	/** @description The organization that owns this client */
+	organization?: Organization | string | null;
+	logo?: DirectusFile | string | null;
+	website?: string | null;
+	industry?: string | null;
+	primary_contact?: Contact | string | null;
+	notes?: string | null;
+	tags?: string[] | null;
+	/** @description Contacts associated with this client */
+	contacts?: Contact[] | string[];
+	/** @description Projects for this client */
+	projects?: Project[] | string[];
+	/** @description Tickets for this client */
+	tickets?: Ticket[] | string[];
+	/** @description Invoices for this client */
+	invoices?: Invoice[] | string[];
+	/** @description Org memberships scoped to this client */
+	memberships?: OrgMembership[] | string[];
+}
+
+export interface OrgRole {
+	/** @primaryKey */
+	id: string;
+	sort?: number | null;
+	date_created?: string | null;
+	date_updated?: string | null;
+	/** @required @description Display name of the role */
+	name: string;
+	/** @required @description Slug identifier (owner/admin/manager/member/client) */
+	slug: 'owner' | 'admin' | 'manager' | 'member' | 'client';
+	/** @description System roles cannot be deleted */
+	is_system?: boolean;
+	/** @description JSON permission matrix — feature × CRUD */
+	permissions?: import('./permissions').PermissionMatrix | null;
+	/** @description Organization this role belongs to */
+	organization?: Organization | string | null;
+	/** @description Users assigned this role */
+	memberships?: OrgMembership[] | string[];
+}
+
+export interface OrgMembership {
+	/** @primaryKey */
+	id: string;
+	/** @description Membership status */
+	status: 'active' | 'pending' | 'suspended';
+	/** @description When the invitation was sent */
+	invited_at?: string | null;
+	/** @description When the user accepted the invitation */
+	accepted_at?: string | null;
+	date_created?: string | null;
+	date_updated?: string | null;
+	/** @required @description Organization this membership belongs to */
+	organization: Organization | string;
+	/** @required @description User who holds this membership */
+	user: DirectusUser | string;
+	/** @required @description The org role assigned to this user */
+	role: OrgRole | string;
+	/** @description Client scope — only set for client-role users */
+	client?: Client | string | null;
+	/** @description User who sent the invitation */
+	invited_by?: DirectusUser | string | null;
+}
+
 export interface Contact {
 	/** @primaryKey */
 	id: string;
@@ -1015,6 +1089,8 @@ export interface Contact {
 	custom_fields?: string | null;
 	source?: string | null;
 	timezone?: string | null;
+	/** @description The client company this contact belongs to */
+	client?: Client | string | null;
 	organizations?: ContactsOrganization[] | string[];
 	lists?: MailingListContact[] | string[];
 }
@@ -1111,6 +1187,7 @@ export interface EmailTemplate {
 	header_partial_id?: EmailPartial | string | null;
 	footer_partial_id?: EmailPartial | string | null;
 	blocks?: TemplateBlock[] | string[];
+	organization?: Organization | string | null;
 }
 
 export interface FinancialGoal {
@@ -1227,6 +1304,8 @@ export interface Invoice {
 	melio?: string | null;
 	/** @required */
 	line_items: LineItem[] | string[];
+	/** @description The client this invoice is for */
+	client?: Client | string | null;
 	payments?: PaymentsReceived[] | string[];
 }
 
@@ -1350,6 +1429,7 @@ export interface MailingList {
 	double_opt_in?: boolean | null;
 	subscriber_count?: number | null;
 	contacts?: MailingListContact[] | string[];
+	organization?: Organization | string | null;
 }
 
 export interface MeetingRequest {
@@ -1472,6 +1552,13 @@ export interface Organization {
 	projects?: Project[] | string[];
 	tickets?: Ticket[] | string[];
 	teams?: Team[] | string[];
+	clients?: Client[] | string[];
+	/** @description Subscription plan tier */
+	plan?: 'free' | 'starter' | 'pro' | 'enterprise' | null;
+	/** @description Per-org role definitions */
+	org_roles?: OrgRole[] | string[];
+	/** @description User memberships in this org */
+	memberships?: OrgMembership[] | string[];
 }
 
 export interface OrganizationsDirectusUser {
@@ -1871,6 +1958,8 @@ export interface Project {
 	events?: ProjectEvent[] | string[];
 	assigned_to?: ProjectsDirectusUser[] | string[];
 	tickets?: Ticket[] | string[];
+	/** @description The client this project is for */
+	client?: Client | string | null;
 	children?: Project[] | string[];
 }
 
@@ -2454,6 +2543,8 @@ export interface Ticket {
 	files?: TicketsFile[] | string[];
 	services?: TicketsService[] | string[];
 	assigned_to?: TicketsDirectusUser[] | string[];
+	/** @description The client this ticket is for */
+	client?: Client | string | null;
 	tasks?: Task[] | string[];
 }
 
@@ -2931,6 +3022,8 @@ export interface DirectusUser {
 	organizations?: OrganizationsDirectusUser[] | string[];
 	teams?: JunctionDirectusUsersTeam[] | string[];
 	policies?: DirectusAccess[] | string[];
+	/** @description Per-org memberships with role assignment */
+	org_memberships?: OrgMembership[] | string[];
 }
 
 export interface DirectusDashboard {

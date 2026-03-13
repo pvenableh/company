@@ -1,9 +1,9 @@
 <script setup>
 const { selectedOrg, organizationOptions } = useOrganization();
 const { user } = useDirectusAuth();
-const { hasAdminAccess } = useTeams();
+const { canAccess, canCreate: canCreateFeature } = useRole();
 
-const isAdmin = computed(() => hasAdminAccess(user.value));
+const isAdmin = computed(() => canAccess('channels'));
 const showCreateChannel = ref(false);
 const newChannelName = ref('');
 const newChannelProject = ref(null);
