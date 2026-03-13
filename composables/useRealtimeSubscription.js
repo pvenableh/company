@@ -4,11 +4,14 @@
 // Strategy:
 //   1. Fire a REST call immediately for fast initial data display
 //   2. Register a WebSocket subscription (via useWebSocketManager) for live updates
-//   3. WebSocket "init" event reconciles with latest server state
+//   3. WebSocket "init" event reconciles with latest server state (diff-based)
 //   4. Live create/update/delete events keep data reactive
+//   5. Optimistic event dedup prevents double-application from local mutations
 //
 // All subscriptions share a single WebSocket connection managed by useWebSocketManager.
 // This reduces N connections per user down to 1.
+
+import { consumeOptimisticEvent } from '~/composables/useDirectusItems';
 
 export function useRealtimeSubscription(collection, fields, initialFilter, sort = '-date_created', initialData = null) {
 	// ─── Core reactive state ─────────────────────────────────────────────────
@@ -93,27 +96,104 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 		}
 	};
 
+	// ─── Reconnection reconciliation ────────────────────────────────────────
+	// On reconnect, the `init` event carries the full server state.
+	// Instead of wholesale replacing local data (which causes UI flicker),
+	// we diff the server state against the local state and apply only changes.
+
+	let _hasReceivedInit = false; // Track whether we've received at least one init
+
+	const reconcileInit = (serverData) => {
+		if (!Array.isArray(serverData)) {
+			data.value = serverData || [];
+			return;
+		}
+
+		// First init — just accept the data
+		if (!_hasReceivedInit || data.value.length === 0) {
+			data.value = serverData;
+			_hasReceivedInit = true;
+			return;
+		}
+
+		// Subsequent init (reconnection) — diff against local state
+		const localMap = new Map(data.value.map((item) => [item.id, item]));
+		const serverMap = new Map(serverData.map((item) => [item.id, item]));
+
+		let changed = false;
+		const result = [];
+
+		// Walk server items — detect new and updated items
+		for (const [id, serverItem] of serverMap) {
+			const localItem = localMap.get(id);
+			if (!localItem) {
+				// New item from server
+				result.push(serverItem);
+				changed = true;
+			} else if (JSON.stringify(localItem) !== JSON.stringify(serverItem)) {
+				// Updated item — use server version
+				result.push(serverItem);
+				changed = true;
+			} else {
+				// Unchanged — keep local reference (prevents reactive re-render)
+				result.push(localItem);
+			}
+		}
+
+		// Detect removed items (in local but not in server)
+		if (localMap.size !== serverMap.size) {
+			changed = true;
+		} else {
+			for (const id of localMap.keys()) {
+				if (!serverMap.has(id)) {
+					changed = true;
+					break;
+				}
+			}
+		}
+
+		// Only update the ref if something actually changed
+		if (changed) {
+			data.value = result;
+		}
+	};
+
 	// ─── WebSocket event handler (called by the shared manager) ──────────────
 
 	const handleEvent = (event, eventData) => {
 		switch (event) {
 			case 'init':
-				// WebSocket init is the source of truth — reconcile with REST data
-				data.value = eventData || [];
+				// Reconcile with local data instead of full replace (prevents flicker on reconnect)
+				reconcileInit(eventData);
 				_restLoaded = true;
 				isLoading.value = false;
 				break;
 
 			case 'create':
 				if (eventData?.[0]) {
-					data.value = [...data.value, eventData[0]];
+					const newItem = eventData[0];
+					// Skip if this was from our own optimistic create
+					if (typeof consumeOptimisticEvent === 'function' &&
+						consumeOptimisticEvent(collection, 'create', newItem.id)) {
+						break;
+					}
+					// Avoid duplicates (item might already exist from REST or optimistic add)
+					if (!data.value.some((item) => item.id === newItem.id)) {
+						data.value = [...data.value, newItem];
+					}
 				}
 				break;
 
 			case 'update':
 				if (eventData?.[0]) {
-					const id = eventData[0].id;
-					data.value = data.value.map((item) => (item.id === id ? eventData[0] : item));
+					const updated = eventData[0];
+					// Skip if this was from our own optimistic update
+					if (typeof consumeOptimisticEvent === 'function' &&
+						consumeOptimisticEvent(collection, 'update', updated.id)) {
+						break;
+					}
+					const id = updated.id;
+					data.value = data.value.map((item) => (item.id === id ? updated : item));
 				}
 				break;
 

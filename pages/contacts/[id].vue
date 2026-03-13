@@ -8,7 +8,9 @@ const route = useRoute();
 const router = useRouter();
 const contactId = route.params.id as string;
 
-const { getContact, updateContact, deleteContact } = useContacts();
+const { getContact, updateContact, deleteContact, linkToClient } = useContacts();
+const { getClients } = useClients();
+const { selectedOrg } = useOrganization();
 
 const contact = ref<Contact | null>(null);
 const loading = ref(true);
@@ -16,6 +18,34 @@ const saving = ref(false);
 const deleting = ref(false);
 const showDeleteConfirm = ref(false);
 const error = ref<string | null>(null);
+
+// Client association
+const availableClients = ref<any[]>([]);
+const showClientPicker = ref(false);
+const linkingClient = ref(false);
+
+async function loadClients() {
+  if (!selectedOrg.value) return;
+  try {
+    const result = await getClients({ limit: 100 });
+    availableClients.value = result.data;
+  } catch {
+    availableClients.value = [];
+  }
+}
+
+async function handleLinkClient(clientId: string | null) {
+  linkingClient.value = true;
+  try {
+    await linkToClient(contactId, clientId);
+    contact.value = await getContact(contactId);
+    showClientPicker.value = false;
+  } catch (e: any) {
+    error.value = e?.message || 'Failed to update client association';
+  } finally {
+    linkingClient.value = false;
+  }
+}
 
 async function loadContact() {
   loading.value = true;
@@ -53,7 +83,10 @@ async function handleDelete() {
   }
 }
 
-onMounted(loadContact);
+onMounted(() => {
+  loadContact();
+  loadClients();
+});
 </script>
 
 <template>
@@ -158,6 +191,62 @@ onMounted(loadContact);
 
         <!-- Sidebar -->
         <div class="space-y-4">
+          <!-- Client Association -->
+          <div class="ios-card p-5">
+            <h3 class="font-medium text-sm mb-3 flex items-center gap-2">
+              <Icon name="lucide:building-2" class="w-4 h-4 text-muted-foreground" />
+              Client
+            </h3>
+            <div v-if="(contact as any).client && typeof (contact as any).client === 'object'" class="flex items-center justify-between">
+              <NuxtLink
+                :to="`/clients/${(contact as any).client.id}`"
+                class="text-sm text-primary hover:underline font-medium"
+              >
+                {{ (contact as any).client.name }}
+              </NuxtLink>
+              <button
+                class="text-xs text-muted-foreground hover:text-destructive"
+                @click="handleLinkClient(null)"
+                :disabled="linkingClient"
+              >
+                Remove
+              </button>
+            </div>
+            <div v-else-if="(contact as any).client" class="text-sm text-muted-foreground">
+              Linked to a client
+            </div>
+            <div v-else>
+              <div v-if="!showClientPicker">
+                <p class="text-sm text-muted-foreground mb-2">Not linked to any client.</p>
+                <button
+                  v-if="availableClients.length > 0"
+                  class="text-xs text-primary hover:underline"
+                  @click="showClientPicker = true"
+                >
+                  Link to client
+                </button>
+              </div>
+              <div v-else class="space-y-2">
+                <select
+                  class="w-full text-sm rounded-lg border border-input bg-background px-3 py-2"
+                  @change="handleLinkClient(($event.target as HTMLSelectElement).value)"
+                  :disabled="linkingClient"
+                >
+                  <option value="">Select a client...</option>
+                  <option v-for="c in availableClients" :key="c.id" :value="c.id">
+                    {{ c.name }}
+                  </option>
+                </select>
+                <button
+                  class="text-xs text-muted-foreground hover:text-foreground"
+                  @click="showClientPicker = false"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+
           <!-- Mailing Lists -->
           <div class="ios-card p-5">
             <h3 class="font-medium text-sm mb-3 flex items-center gap-2">

@@ -14,6 +14,7 @@ async function handleRegister(values: {
 	lastName: string;
 	email: string;
 	password: string;
+	organizationName?: string;
 }) {
 	try {
 		await register({
@@ -21,6 +22,7 @@ async function handleRegister(values: {
 			last_name: values.lastName,
 			email: values.email,
 			password: values.password,
+			organization_name: values.organizationName || undefined,
 		});
 
 		toast.success('Account created! Redirecting...');

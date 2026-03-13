@@ -53,18 +53,18 @@ const { user: sessionUser, loggedIn } = useUserSession();
 const currentUser = computed(() => {
 	return loggedIn.value ? sessionUser.value ?? null : null;
 });
-const { isAdmin: checkIsAdmin } = useRole();
+const { canDelete: canDeleteFeature, canEdit: canEditFeature } = useRole();
 
 const hasDeleteAccess = computed(() => {
 	const isCreator = currentUser.value.id === props.creatorId;
-	const admin = checkIsAdmin(currentUser.value);
+	const admin = canDeleteFeature('tickets');
 
 	return admin || isCreator;
 });
 
 const hasAccess = computed(() => {
 	const isCreator = currentUser.value.id === props.creatorId;
-	const admin = checkIsAdmin(currentUser.value);
+	const admin = canEditFeature('tickets');
 	const isAssigned = props.assignedUserIds.includes(currentUser.value.id);
 
 	return admin || isCreator || isAssigned;

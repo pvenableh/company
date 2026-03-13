@@ -110,6 +110,19 @@ export default defineNuxtConfig({
 		// Cron
 		cronSecret: process.env.CRON_SECRET,
 
+		// LLM (AI Chat)
+		llm: {
+			provider: process.env.LLM_PROVIDER || 'claude',
+			apiKey: process.env.LLM_API_KEY || process.env.ANTHROPIC_API_KEY || '',
+			model: process.env.LLM_MODEL || 'claude-sonnet-4-20250514',
+		},
+
+		// Notification webhook secret
+		notificationWebhookSecret: process.env.NOTIFICATION_WEBHOOK_SECRET || '',
+
+		// SendGrid webhook verification key
+		sendgridWebhookKey: process.env.SENDGRID_WEBHOOK_VERIFICATION_KEY || '',
+
 		// ============================================
 		// Public keys (exposed to client)
 		// ============================================

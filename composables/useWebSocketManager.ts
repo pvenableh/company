@@ -110,6 +110,7 @@ function _teardown() {
 	_authenticated = false;
 	_authenticating = false;
 	_reconnectAttempts = 0;
+	_sharedSubs.clear();
 }
 
 function _scheduleReconnect() {
@@ -226,6 +227,23 @@ function _sendUnsubscribe(uid: string) {
 	_ws.send(JSON.stringify({ type: 'unsubscribe', uid }));
 }
 
+// ─── Subscription deduplication registry ────────────────────────────────────
+// Tracks active subscriptions by `collection:filterHash` so multiple components
+// subscribing to the same query share a single WS subscription.
+
+interface SharedSubscription {
+	uid: string;
+	collection: string;
+	query: SubscriptionQuery;
+	handlers: Set<(event: string, data: any[]) => void>;
+}
+
+const _sharedSubs = new Map<string, SharedSubscription>();
+
+function _makeSubKey(collection: string, query: SubscriptionQuery): string {
+	return `${collection}:${JSON.stringify(query.filter || {})}:${JSON.stringify(query.fields)}:${query.sort || ''}`;
+}
+
 // ─── Public composable ──────────────────────────────────────────────────────
 
 export function useWebSocketManager() {
@@ -234,6 +252,8 @@ export function useWebSocketManager() {
 
 	/**
 	 * Register a new subscription on the shared connection.
+	 * If another component already subscribes to the same collection+filter+fields,
+	 * the handler is added to the shared subscription instead of creating a duplicate.
 	 * Returns a uid and an unsubscribe function.
 	 */
 	function subscribe(
@@ -241,9 +261,56 @@ export function useWebSocketManager() {
 		query: SubscriptionQuery,
 		handler: (event: string, data: any[]) => void,
 	): { uid: string; unsubscribe: () => void } {
-		const uid = `${collection}_${Math.random().toString(36).slice(2, 10)}_${Date.now()}`;
+		const subKey = _makeSubKey(collection, query);
+		const existing = _sharedSubs.get(subKey);
 
-		_subscriptions.set(uid, { collection, query, handler });
+		if (existing) {
+			// Share existing WS subscription — just add the handler
+			existing.handlers.add(handler);
+
+			return {
+				uid: existing.uid,
+				unsubscribe: () => {
+					existing.handlers.delete(handler);
+
+					// If no handlers remain, tear down the shared subscription
+					if (existing.handlers.size === 0) {
+						_sharedSubs.delete(subKey);
+						_sendUnsubscribe(existing.uid);
+						_subscriptions.delete(existing.uid);
+
+						if (_subscriptions.size === 0) {
+							_teardown();
+						}
+					}
+				},
+			};
+		}
+
+		// Create new subscription
+		const uid = `${collection}_${Math.random().toString(36).slice(2, 10)}_${Date.now()}`;
+		const handlers = new Set<(event: string, data: any[]) => void>([handler]);
+
+		// Store in shared registry
+		_sharedSubs.set(subKey, { uid, collection, query, handlers });
+
+		// The per-uid entry fans out to all shared handlers
+		_subscriptions.set(uid, {
+			collection,
+			query,
+			handler: (event, data) => {
+				const shared = _sharedSubs.get(subKey);
+				if (shared) {
+					for (const h of shared.handlers) {
+						try {
+							h(event, data);
+						} catch (err) {
+							console.error(`[WS Manager] Handler error for ${collection}:`, err);
+						}
+					}
+				}
+			},
+		});
 
 		// Ensure the shared connection exists
 		_ensureConnection();
@@ -255,12 +322,17 @@ export function useWebSocketManager() {
 		// Otherwise _onAuth will subscribe all entries when auth completes
 
 		const unsubscribe = () => {
-			_sendUnsubscribe(uid);
-			_subscriptions.delete(uid);
+			handlers.delete(handler);
 
-			// Tear down the shared connection when the last subscriber leaves
-			if (_subscriptions.size === 0) {
-				_teardown();
+			// If no handlers remain, tear down this subscription
+			if (handlers.size === 0) {
+				_sharedSubs.delete(subKey);
+				_sendUnsubscribe(uid);
+				_subscriptions.delete(uid);
+
+				if (_subscriptions.size === 0) {
+					_teardown();
+				}
 			}
 		};
 

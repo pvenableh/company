@@ -102,6 +102,33 @@ async function executeOperation(
   }
 }
 
+// ── Query limit enforcement ────────────────────────────────────────────────
+const MAX_QUERY_LIMIT = 500;
+const DEFAULT_QUERY_LIMIT = 100;
+
+function enforceQueryLimits(query: any): any {
+  if (!query) return { limit: DEFAULT_QUERY_LIMIT };
+
+  const enforced = { ...query };
+
+  // Apply default limit if none specified (for list operations)
+  if (enforced.limit === undefined || enforced.limit === null) {
+    enforced.limit = DEFAULT_QUERY_LIMIT;
+  }
+
+  // Cap limit to prevent excessive data transfer
+  if (typeof enforced.limit === 'number' && enforced.limit > MAX_QUERY_LIMIT) {
+    enforced.limit = MAX_QUERY_LIMIT;
+  }
+
+  // Handle -1 (unlimited) — cap it to max
+  if (enforced.limit === -1) {
+    enforced.limit = MAX_QUERY_LIMIT;
+  }
+
+  return enforced;
+}
+
 export default defineEventHandler(async (event) => {
   let collection: string | undefined;
   let operation: string | undefined;
@@ -110,13 +137,18 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event);
     collection = body.collection;
     operation = body.operation;
-    const { id, data, query } = body;
+    let { id, data, query } = body;
 
     if (!collection || !operation) {
       throw createError({
         statusCode: 400,
         message: "Collection and operation are required",
       });
+    }
+
+    // Enforce query limits on read operations
+    if (operation === 'list') {
+      query = enforceQueryLimits(query);
     }
 
     return await executeOperation(event, collection, operation, id, data, query);

@@ -1,0 +1,149 @@
+<template>
+  <form @submit.prevent="handleSubmit" class="space-y-4">
+    <div>
+      <label class="block text-sm font-medium mb-1">Name *</label>
+      <input
+        v-model="formData.name"
+        required
+        class="w-full rounded-md border bg-background px-3 py-2 text-sm"
+        placeholder="Client name"
+      />
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium mb-1">Slug</label>
+        <input
+          v-model="formData.slug"
+          class="w-full rounded-md border bg-background px-3 py-2 text-sm"
+          placeholder="client-slug"
+        />
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Status</label>
+        <select v-model="formData.status" class="w-full rounded-md border bg-background px-3 py-2 text-sm">
+          <option v-for="s in statusOptions" :key="s.value" :value="s.value">{{ s.label }}</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium mb-1">Website</label>
+        <input
+          v-model="formData.website"
+          class="w-full rounded-md border bg-background px-3 py-2 text-sm"
+          placeholder="https://"
+        />
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Industry</label>
+        <input
+          v-model="formData.industry"
+          class="w-full rounded-md border bg-background px-3 py-2 text-sm"
+          placeholder="e.g. Technology"
+        />
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-1">Tags</label>
+      <div class="flex flex-wrap gap-1 mb-2">
+        <span
+          v-for="tag in formData.tags"
+          :key="tag"
+          class="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2.5 py-0.5 text-xs text-muted-foreground"
+        >
+          {{ tag }}
+          <button type="button" class="hover:text-foreground transition-colors" @click="removeTag(tag)">
+            <Icon name="lucide:x" class="w-3 h-3" />
+          </button>
+        </span>
+      </div>
+      <div class="flex gap-2">
+        <input
+          v-model="newTag"
+          class="flex-1 rounded-md border bg-background px-3 py-2 text-sm"
+          placeholder="Add tag..."
+          @keydown.enter.prevent="addTag"
+        />
+        <Button type="button" variant="outline" size="sm" @click="addTag">Add</Button>
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-1">Notes</label>
+      <textarea
+        v-model="formData.notes"
+        rows="3"
+        class="w-full rounded-md border bg-background px-3 py-2 text-sm"
+        placeholder="Internal notes about this client..."
+      />
+    </div>
+
+    <div class="flex justify-end gap-2 pt-2">
+      <Button type="button" variant="outline" @click="$emit('cancel')">Cancel</Button>
+      <Button type="submit" :disabled="saving">
+        {{ saving ? 'Saving...' : (client ? 'Update' : 'Create') }}
+      </Button>
+    </div>
+  </form>
+</template>
+
+<script setup lang="ts">
+import type { Client } from '~/types/directus';
+import { Button } from '~/components/ui/button';
+
+const props = defineProps<{
+  client?: Client | null;
+  saving?: boolean;
+}>();
+
+const emit = defineEmits<{
+  save: [data: Partial<Client>];
+  cancel: [];
+}>();
+
+const statusOptions = [
+  { label: 'Active', value: 'active' },
+  { label: 'Prospect', value: 'prospect' },
+  { label: 'Inactive', value: 'inactive' },
+  { label: 'Churned', value: 'churned' },
+];
+
+const formData = reactive({
+  name: props.client?.name || '',
+  slug: props.client?.slug || '',
+  status: props.client?.status || 'active',
+  website: props.client?.website || '',
+  industry: props.client?.industry || '',
+  notes: props.client?.notes || '',
+  tags: [...(props.client?.tags || [])] as string[],
+});
+
+const newTag = ref('');
+
+function addTag() {
+  const tag = newTag.value.trim().toLowerCase();
+  if (tag && !formData.tags.includes(tag)) {
+    formData.tags.push(tag);
+  }
+  newTag.value = '';
+}
+
+function removeTag(tag: string) {
+  formData.tags = formData.tags.filter((t: string) => t !== tag);
+}
+
+function handleSubmit() {
+  emit('save', {
+    name: formData.name,
+    slug: formData.slug || undefined,
+    status: formData.status as Client['status'],
+    website: formData.website || undefined,
+    industry: formData.industry || undefined,
+    notes: formData.notes || undefined,
+    tags: formData.tags.length ? formData.tags : undefined,
+  });
+}
+</script>

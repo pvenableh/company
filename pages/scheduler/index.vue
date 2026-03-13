@@ -351,9 +351,9 @@ import { format, parseISO, isAfter, addDays } from 'date-fns';
 definePageMeta({ middleware: ['auth'] });
 
 const { user } = useDirectusAuth();
-const { hasAdminAccess } = useTeams();
+const { canAccess } = useRole();
 
-const isAdmin = computed(() => hasAdminAccess(user.value));
+const isAdmin = computed(() => canAccess('appointments'));
 const toast = useToast();
 
 // ===== Client-side state (for non-admin users) =====

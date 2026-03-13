@@ -31,9 +31,9 @@ const props = defineProps({
 	},
 });
 const { user } = useDirectusAuth();
-const { isAdmin: checkIsAdmin } = useRole();
+const { canAccess } = useRole();
 
-const isAdmin = computed(() => checkIsAdmin(user.value));
+const isAdmin = computed(() => canAccess('invoices'));
 
 const designEvents = computed(() => {
 	return props.project?.events

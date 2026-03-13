@@ -1,18 +1,24 @@
 <script setup>
+import { ROLE_METADATA } from '~/types/permissions';
+
 const organizationItems = useDirectusItems('organizations');
 const orgUserJunction = useDirectusItems('organizations_directus_users');
+const roleItems = useDirectusItems('org_roles');
+const membershipItems = useDirectusItems('org_memberships');
 const { user: sessionUser, loggedIn } = useUserSession();
 const user = computed(() => {
 	return loggedIn.value ? sessionUser.value ?? null : null;
 });
 const { selectedOrg, fetchOrganizationDetails } = useOrganization();
 const { filteredUsers, fetchFilteredUsers } = useFilteredUsers();
-const { fetchTeams, visibleTeams, loading: teamsLoading, setupStorageListener, hasAdminAccess, ADMIN_ROLE_ID, CLIENT_MANAGER_ROLE_ID } = useTeams();
+const { fetchTeams, visibleTeams, loading: teamsLoading, setupStorageListener } = useTeams();
 const config = useRuntimeConfig();
 const toast = useToast();
 
 const org = ref(null);
 const isLoading = ref(true);
+const orgRoles = ref([]);
+const orgMemberships = ref([]);
 
 const activeTab = ref(0);
 
@@ -47,8 +53,9 @@ const editForm = ref({
 });
 const savingOrg = ref(false);
 
+const { canAccess } = useRole();
 const canManageOrg = computed(() => {
-	return hasAdminAccess(user.value);
+	return canAccess('org_settings');
 });
 
 const openEditModal = () => {
@@ -79,7 +86,6 @@ const saveOrganization = async () => {
 		toast.add({ title: 'Success', description: 'Organization updated successfully', color: 'green' });
 		showEditOrgModal.value = false;
 		await fetchOrganizationData();
-		// Also refresh the global org data so the sidebar updates
 		await fetchOrganizationDetails();
 	} catch (error) {
 		console.error('Error updating organization:', error);
@@ -89,52 +95,19 @@ const saveOrganization = async () => {
 	}
 };
 
-// --- Invite Member ---
+// --- Invite Member (new system) ---
 const showInviteModal = ref(false);
-const inviteForm = ref({
-	email: '',
-	role: CLIENT_MANAGER_ROLE_ID,
-});
-const sendingInvite = ref(false);
-
-const roleOptions = [
-	{ label: 'Member', value: CLIENT_MANAGER_ROLE_ID },
-];
 
 const openInviteModal = () => {
-	inviteForm.value = { email: '', role: CLIENT_MANAGER_ROLE_ID };
 	showInviteModal.value = true;
 };
 
-const sendInvitation = async () => {
-	if (!inviteForm.value.email || !selectedOrg.value) return;
-	sendingInvite.value = true;
-	try {
-		// 1. Invite the user via Directus
-		await $fetch('/api/directus/users/invite', {
-			method: 'POST',
-			body: {
-				email: inviteForm.value.email,
-				role: inviteForm.value.role,
-			},
-		});
-
-		toast.add({
-			title: 'Invitation Sent',
-			description: `An invitation has been sent to ${inviteForm.value.email}`,
-			color: 'green',
-		});
-		showInviteModal.value = false;
-
-		// Refresh users list
-		await fetchFilteredUsers(selectedOrg.value);
-	} catch (error) {
-		console.error('Error sending invitation:', error);
-		const message = error?.data?.message || error?.message || 'Failed to send invitation';
-		toast.add({ title: 'Error', description: message, color: 'red' });
-	} finally {
-		sendingInvite.value = false;
-	}
+const onMemberInvited = async () => {
+	// Refresh both legacy users and new memberships
+	await Promise.all([
+		fetchFilteredUsers(selectedOrg.value),
+		fetchOrgMemberships(),
+	]);
 };
 
 // --- Add Existing User to Organization ---
@@ -191,9 +164,7 @@ const addUserToOrganization = async (userId) => {
 			directus_users_id: userId,
 		});
 		toast.add({ title: 'Success', description: 'User added to organization', color: 'green' });
-		// Refresh
 		await fetchFilteredUsers(selectedOrg.value);
-		// Remove from search results
 		searchResults.value = searchResults.value.filter((u) => u.id !== userId);
 	} catch (error) {
 		console.error('Error adding user to organization:', error);
@@ -217,7 +188,7 @@ const removeMember = async () => {
 	if (!memberToRemove.value || !selectedOrg.value) return;
 	removingMember.value = true;
 	try {
-		// Find the junction record
+		// Remove from legacy junction
 		const junctions = await orgUserJunction.list({
 			filter: {
 				organizations_id: { _eq: selectedOrg.value },
@@ -228,10 +199,26 @@ const removeMember = async () => {
 		if (junctions.length > 0) {
 			await orgUserJunction.remove(junctions.map((j) => j.id));
 		}
+
+		// Also suspend org_membership if exists
+		const memberships = await membershipItems.list({
+			filter: {
+				organization: { _eq: selectedOrg.value },
+				user: { _eq: memberToRemove.value.id },
+			},
+			fields: ['id'],
+		});
+		for (const m of memberships) {
+			await membershipItems.update(m.id, { status: 'suspended' });
+		}
+
 		toast.add({ title: 'Success', description: 'Member removed from organization', color: 'green' });
 		showRemoveMemberModal.value = false;
 		memberToRemove.value = null;
-		await fetchFilteredUsers(selectedOrg.value);
+		await Promise.all([
+			fetchFilteredUsers(selectedOrg.value),
+			fetchOrgMemberships(),
+		]);
 	} catch (error) {
 		console.error('Error removing member:', error);
 		toast.add({ title: 'Error', description: 'Failed to remove member', color: 'red' });
@@ -239,6 +226,107 @@ const removeMember = async () => {
 		removingMember.value = false;
 	}
 };
+
+// --- Fetch Org Roles ---
+const fetchOrgRoles = async () => {
+	if (!selectedOrg.value) return;
+	try {
+		const data = await roleItems.list({
+			filter: { organization: { _eq: selectedOrg.value } },
+			fields: ['id', 'name', 'slug', 'is_system'],
+			sort: ['sort', 'name'],
+		});
+		// Sort by hierarchy
+		const order = ['owner', 'admin', 'manager', 'member', 'client'];
+		orgRoles.value = data.sort((a, b) => {
+			const ai = order.indexOf(a.slug);
+			const bi = order.indexOf(b.slug);
+			return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+		});
+	} catch {
+		orgRoles.value = [];
+	}
+};
+
+// --- Fetch Org Memberships ---
+const fetchOrgMemberships = async () => {
+	if (!selectedOrg.value) return;
+	try {
+		orgMemberships.value = await membershipItems.list({
+			filter: {
+				organization: { _eq: selectedOrg.value },
+			},
+			fields: ['id', 'status', 'user', 'role.id', 'role.name', 'role.slug', 'client.id', 'client.name'],
+			limit: -1,
+		});
+	} catch {
+		orgMemberships.value = [];
+	}
+};
+
+// --- Get member's org role ---
+const getMemberRole = (memberId) => {
+	const membership = orgMemberships.value.find(
+		(m) => (typeof m.user === 'object' ? m.user?.id : m.user) === memberId && m.status === 'active'
+	);
+	return membership?.role || null;
+};
+
+const getRoleBadgeColor = (slug) => {
+	const colors = {
+		owner: 'purple',
+		admin: 'red',
+		manager: 'blue',
+		member: 'green',
+		client: 'orange',
+	};
+	return colors[slug] || 'gray';
+};
+
+// --- Change Member Role ---
+const changingRole = ref(false);
+
+const changeMemberRole = async (memberId, newRoleId) => {
+	if (!selectedOrg.value || changingRole.value) return;
+
+	// Find the membership for this user
+	const membership = orgMemberships.value.find(
+		(m) => (typeof m.user === 'object' ? m.user?.id : m.user) === memberId && m.status === 'active'
+	);
+	if (!membership) {
+		toast.add({ title: 'Error', description: 'Could not find membership for this user', color: 'red' });
+		return;
+	}
+
+	// Prevent changing owner role
+	const currentRole = membership.role;
+	if (currentRole && typeof currentRole === 'object' && currentRole.slug === 'owner') {
+		toast.add({ title: 'Error', description: 'Cannot change the owner role', color: 'red' });
+		return;
+	}
+
+	changingRole.value = true;
+	try {
+		await membershipItems.update(membership.id, { role: newRoleId });
+		toast.add({ title: 'Success', description: 'Member role updated', color: 'green' });
+		await fetchOrgMemberships();
+	} catch (error) {
+		console.error('Error changing member role:', error);
+		toast.add({ title: 'Error', description: 'Failed to update member role', color: 'red' });
+	} finally {
+		changingRole.value = false;
+	}
+};
+
+// Available roles for dropdown (excludes owner)
+const assignableRoles = computed(() => {
+	return orgRoles.value.filter((r) => r.slug !== 'owner');
+});
+
+// --- Pending invites ---
+const pendingInvites = computed(() => {
+	return orgMemberships.value.filter((m) => m.status === 'pending');
+});
 
 // Function to fetch organization data with correct fields
 const fetchOrganizationData = async () => {
@@ -276,6 +364,8 @@ const fetchOrganizationData = async () => {
 		await Promise.all([
 			fetchFilteredUsers(selectedOrg.value),
 			fetchTeams(selectedOrg.value),
+			fetchOrgRoles(),
+			fetchOrgMemberships(),
 		]);
 	} catch (error) {
 		console.error('Error fetching organization data:', error);
@@ -547,6 +637,14 @@ watch(searchEmail, (val) => {
 								</div>
 							</div>
 
+							<!-- Pending invites banner -->
+							<div v-if="pendingInvites.length > 0" class="mb-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 px-4 py-3">
+								<div class="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-300">
+									<UIcon name="i-heroicons-clock" class="w-4 h-4" />
+									<span>{{ pendingInvites.length }} pending invitation{{ pendingInvites.length === 1 ? '' : 's' }}</span>
+								</div>
+							</div>
+
 							<div v-if="filteredUsers.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
 								<UCard v-for="member in filteredUsers" :key="member.id">
 									<div class="flex items-center justify-between">
@@ -556,7 +654,35 @@ watch(searchEmail, (val) => {
 												:alt="`${member.first_name} ${member.last_name}`"
 											/>
 											<div>
-												<h4 class="font-medium">{{ member.first_name }} {{ member.last_name }}</h4>
+												<div class="flex items-center gap-2">
+													<h4 class="font-medium">{{ member.first_name }} {{ member.last_name }}</h4>
+													<!-- Role: editable dropdown for owners/admins, badge otherwise -->
+													<template v-if="getMemberRole(member.id)">
+														<select
+															v-if="canManageOrg && member.id !== user?.id && getMemberRole(member.id).slug !== 'owner'"
+															class="text-xs rounded-md border border-gray-200 dark:border-gray-600 bg-transparent px-1.5 py-0.5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
+															:value="getMemberRole(member.id).id"
+															:disabled="changingRole"
+															@change="changeMemberRole(member.id, $event.target.value)"
+														>
+															<option
+																v-for="role in assignableRoles"
+																:key="role.id"
+																:value="role.id"
+															>
+																{{ role.name }}
+															</option>
+														</select>
+														<UBadge
+															v-else
+															:color="getRoleBadgeColor(getMemberRole(member.id).slug)"
+															variant="soft"
+															size="xs"
+														>
+															{{ getMemberRole(member.id).name }}
+														</UBadge>
+													</template>
+												</div>
 												<p class="text-sm text-gray-500">{{ member.email }}</p>
 											</div>
 										</div>
@@ -660,49 +786,14 @@ watch(searchEmail, (val) => {
 			</div>
 		</UModal>
 
-		<!-- Invite Member Modal -->
-		<UModal v-model="showInviteModal">
-			<div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-				<h3 class="text-lg font-semibold">Invite Member</h3>
-				<UButton color="gray" variant="ghost" icon="i-heroicons-x-mark" @click="showInviteModal = false" />
-			</div>
-
-			<form @submit.prevent="sendInvitation" class="space-y-4 p-4">
-				<p class="text-sm text-gray-500">
-					Send an email invitation to join this organization. The user will receive an email with instructions to create their account.
-				</p>
-
-				<UFormGroup label="Email Address" required>
-					<UInput
-						v-model="inviteForm.email"
-						type="email"
-						placeholder="user@example.com"
-						icon="i-heroicons-envelope"
-					/>
-				</UFormGroup>
-
-				<UFormGroup label="Role">
-					<USelect
-						v-model="inviteForm.role"
-						:options="roleOptions"
-						option-attribute="label"
-						value-attribute="value"
-					/>
-				</UFormGroup>
-			</form>
-
-			<div class="flex justify-end gap-2 p-4 border-t border-gray-200 dark:border-gray-700">
-				<UButton color="gray" variant="ghost" @click="showInviteModal = false">Cancel</UButton>
-				<UButton
-					color="primary"
-					:loading="sendingInvite"
-					:disabled="!inviteForm.email"
-					@click="sendInvitation"
-				>
-					Send Invitation
-				</UButton>
-			</div>
-		</UModal>
+		<!-- Invite Member Modal (new org-aware component) -->
+		<OrganizationInviteMemberModal
+			v-if="selectedOrg"
+			v-model="showInviteModal"
+			:organization-id="selectedOrg"
+			:roles="orgRoles"
+			@invited="onMemberInvited"
+		/>
 
 		<!-- Add Existing User Modal -->
 		<UModal v-model="showAddMemberModal" :ui="{ width: 'max-w-lg' }">

@@ -5,9 +5,9 @@ const user = computed(() => {
 });
 
 const { user: directusUser } = useDirectusAuth();
-const { hasAdminAccess } = useTeams();
+const { canAccess } = useRole();
 
-const isAdmin = computed(() => hasAdminAccess(directusUser.value));
+const isAdmin = computed(() => canAccess('projects'));
 
 const activeView = ref('timeline');
 

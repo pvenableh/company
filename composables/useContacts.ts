@@ -3,6 +3,8 @@ import type { Contact, CreateContactPayload } from '~/types/email/contacts';
 export function useContacts() {
   const items = useDirectusItems<Contact>('contacts');
   const memberItems = useDirectusItems('mailing_list_contacts');
+  const junctionItems = useDirectusItems('contacts_organizations');
+  const { selectedOrg, getOrganizationFilter } = useOrganization();
 
   // ── Contact CRUD ──────────────────────────────────────────────────
   const getContacts = async (params?: {
@@ -10,10 +12,20 @@ export function useContacts() {
     search?: string;
     tags?: string[];
     industry?: string;
+    client?: string;
     limit?: number;
     page?: number;
   }): Promise<{ data: Contact[]; total: number }> => {
     const filter: any = { _and: [] };
+
+    // Org-scope via M2M junction (contacts_organizations)
+    if (selectedOrg.value) {
+      filter._and.push({
+        organizations: {
+          organizations_id: { _eq: selectedOrg.value },
+        },
+      });
+    }
 
     if (params?.status) {
       filter._and.push({ status: { _eq: params.status } });
@@ -40,8 +52,13 @@ export function useContacts() {
       filter._and.push({ tags: { _contains: params.tags[0] } });
     }
 
+    // Filter by client association
+    if (params?.client) {
+      filter._and.push({ client: { _eq: params.client } });
+    }
+
     const data = await items.list({
-      fields: ['*'],
+      fields: ['*', 'client.id', 'client.name'],
       filter: filter._and.length ? filter : undefined,
       sort: ['last_name', 'first_name'],
       limit: params?.limit || 50,
@@ -55,18 +72,32 @@ export function useContacts() {
 
   const getContact = async (id: string): Promise<Contact> => {
     return items.get(id, {
-      fields: ['*', 'lists.id', 'lists.list_id.*', 'lists.subscribed'],
+      fields: ['*', 'lists.id', 'lists.list_id.*', 'lists.subscribed', 'client.id', 'client.name', 'organizations.id', 'organizations.organizations_id.id', 'organizations.organizations_id.name'],
     });
   };
 
   const createContact = async (payload: CreateContactPayload): Promise<Contact> => {
-    return items.create({
+    const contact = await items.create({
       ...payload,
       status: 'published',
       email_subscribed: true,
       unsubscribe_token: crypto.randomUUID(),
       source: payload.source || 'manual',
     } as any);
+
+    // Auto-link to current org via junction
+    if (selectedOrg.value && contact?.id) {
+      try {
+        await junctionItems.create({
+          contacts_id: contact.id,
+          organizations_id: selectedOrg.value,
+        });
+      } catch (err) {
+        console.warn('Failed to link contact to org (non-fatal):', err);
+      }
+    }
+
+    return contact;
   };
 
   const updateContact = async (id: string, payload: Partial<Contact>): Promise<Contact> => {
@@ -82,6 +113,11 @@ export function useContacts() {
       email_subscribed: false,
       email_unsubscribed_at: new Date().toISOString(),
     } as any);
+  };
+
+  // ── Client association ──────────────────────────────────────────────
+  const linkToClient = async (contactId: string, clientId: string | null): Promise<void> => {
+    await updateContact(contactId, { client: clientId } as any);
   };
 
   // ── Tag management ────────────────────────────────────────────────
@@ -156,6 +192,7 @@ export function useContacts() {
     updateContact,
     deleteContact,
     unsubscribeContact,
+    linkToClient,
     addTag,
     removeTag,
     addToList,

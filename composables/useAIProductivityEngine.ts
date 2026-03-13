@@ -1071,6 +1071,58 @@ export const useAIProductivityEngine = () => {
 		return Math.max(0, Math.min(100, score));
 	};
 
+	// ─── Concurrency limiter ─────────────────────────────────────────────────
+	// Limits concurrent API calls to avoid request bursts on page load
+
+	function createLimiter(concurrency: number) {
+		let active = 0;
+		const queue: Array<() => void> = [];
+
+		return <T>(fn: () => Promise<T>): Promise<T> => {
+			return new Promise<T>((resolve, reject) => {
+				const run = () => {
+					active++;
+					fn()
+						.then(resolve)
+						.catch(reject)
+						.finally(() => {
+							active--;
+							if (queue.length > 0) {
+								const next = queue.shift()!;
+								next();
+							}
+						});
+				};
+
+				if (active < concurrency) {
+					run();
+				} else {
+					queue.push(run);
+				}
+			});
+		};
+	}
+
+	// ─── Per-module cache ────────────────────────────────────────────────────
+	// Prevents re-fetching on repeated dashboard visits within 60s
+
+	const MODULE_CACHE_TTL = 60_000; // 60 seconds
+	const _moduleCache = new Map<string, { data: TaskSuggestion[]; expiresAt: number }>();
+
+	function getModuleCache(module: string): TaskSuggestion[] | null {
+		const entry = _moduleCache.get(module);
+		if (!entry) return null;
+		if (Date.now() > entry.expiresAt) {
+			_moduleCache.delete(module);
+			return null;
+		}
+		return entry.data;
+	}
+
+	function setModuleCache(module: string, data: TaskSuggestion[]): void {
+		_moduleCache.set(module, { data, expiresAt: Date.now() + MODULE_CACHE_TTL });
+	}
+
 	// ─── Main Analysis ────────────────────────────────────────────────────────
 
 	const analyze = async (enabledModules?: Set<string>) => {
@@ -1083,21 +1135,57 @@ export const useAIProductivityEngine = () => {
 			'channels', 'social', 'scheduling', 'phone', 'deals', 'carddesk',
 		]);
 
+		// Priority modules run first, secondary modules deferred
+		const priorityModules = ['tickets', 'projects', 'tasks', 'invoices', 'channels'];
+		const secondaryModules = ['social', 'scheduling', 'phone', 'deals', 'carddesk'];
+
+		const analyzers: Record<string, () => Promise<TaskSuggestion[]>> = {
+			tickets: analyzeTickets,
+			projects: analyzeProjects,
+			tasks: analyzeTasks,
+			invoices: analyzeInvoices,
+			channels: analyzeChannels,
+			social: analyzeSocial,
+			scheduling: analyzeScheduling,
+			phone: analyzePhone,
+			deals: analyzeDeals,
+			carddesk: analyzeCardDesk,
+		};
+
+		// Limit to 3 concurrent API requests
+		const limit = createLimiter(3);
+
 		try {
-			const analyzerPromises: Promise<TaskSuggestion[]>[] = [];
+			const allResults: TaskSuggestion[][] = [];
 
-			if (modules.has('tickets')) analyzerPromises.push(analyzeTickets());
-			if (modules.has('projects')) analyzerPromises.push(analyzeProjects());
-			if (modules.has('tasks')) analyzerPromises.push(analyzeTasks());
-			if (modules.has('invoices')) analyzerPromises.push(analyzeInvoices());
-			if (modules.has('channels')) analyzerPromises.push(analyzeChannels());
-			if (modules.has('social')) analyzerPromises.push(analyzeSocial());
-			if (modules.has('scheduling')) analyzerPromises.push(analyzeScheduling());
-			if (modules.has('phone')) analyzerPromises.push(analyzePhone());
-			if (modules.has('deals')) analyzerPromises.push(analyzeDeals());
-			if (modules.has('carddesk')) analyzerPromises.push(analyzeCardDesk());
+			// Run with concurrency limit, using cache when available
+			const runModule = (name: string) => {
+				const cached = getModuleCache(name);
+				if (cached) return Promise.resolve(cached);
 
-			const allResults = await Promise.all(analyzerPromises);
+				return limit(async () => {
+					const results = await analyzers[name]();
+					setModuleCache(name, results);
+					return results;
+				});
+			};
+
+			// Run priority modules first
+			const priorityTasks = priorityModules
+				.filter((m) => modules.has(m))
+				.map((m) => runModule(m));
+
+			const priorityResults = await Promise.all(priorityTasks);
+			allResults.push(...priorityResults);
+
+			// Run secondary modules (deferred, non-blocking for initial render)
+			const secondaryTasks = secondaryModules
+				.filter((m) => modules.has(m))
+				.map((m) => runModule(m));
+
+			const secondaryResults = await Promise.all(secondaryTasks);
+			allResults.push(...secondaryResults);
+
 			const businessSuggestions = generateBusinessSuggestions();
 
 			// Merge and sort by score (highest first)

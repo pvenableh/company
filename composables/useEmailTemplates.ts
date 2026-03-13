@@ -2,11 +2,26 @@ import type { EmailTemplate, MjmlCompileResult } from '~/types/email/blocks';
 
 export function useEmailTemplates() {
   const items = useDirectusItems<EmailTemplate>('email_templates');
+  const { selectedOrg, getOrganizationFilter } = useOrganization();
 
   const getTemplates = async (type?: 'newsletter' | 'transactional'): Promise<EmailTemplate[]> => {
-    const filter: Record<string, any> = {};
-    if (type) filter.type = { _eq: type };
-    return items.list({ fields: ['*'], filter, sort: ['-date_updated'] });
+    const filter: any = { _and: [] };
+
+    // Org-scope
+    const orgFilter = getOrganizationFilter();
+    if (orgFilter?.organization) {
+      filter._and.push({ organization: orgFilter.organization });
+    }
+
+    if (type) {
+      filter._and.push({ type: { _eq: type } });
+    }
+
+    return items.list({
+      fields: ['*'],
+      filter: filter._and.length ? filter : undefined,
+      sort: ['-date_updated'],
+    });
   };
 
   const getTemplate = async (id: number): Promise<EmailTemplate> => {
@@ -14,7 +29,11 @@ export function useEmailTemplates() {
   };
 
   const createTemplate = async (data: Partial<EmailTemplate>): Promise<EmailTemplate> => {
-    return items.create(data);
+    // Auto-set organization on create
+    return items.create({
+      ...data,
+      organization: selectedOrg.value || undefined,
+    } as any);
   };
 
   const updateTemplate = async (id: number, data: Partial<EmailTemplate>): Promise<EmailTemplate> => {
