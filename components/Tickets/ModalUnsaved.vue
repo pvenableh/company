@@ -4,7 +4,7 @@
 			<div class="flex items-center justify-between mb-8">
 				<h3 class="text-2xl leading-5 font-thin uppercase tracking-wide">Unsaved Changes</h3>
 			</div>
-			<p class="text-sm text-gray-500">You have unsaved changes. Would you like to save them before leaving?</p>
+			<p class="text-sm text-muted-foreground">You have unsaved changes. Would you like to save them before leaving?</p>
 			<div class="flex justify-end space-x-2 mt-8">
 				<UButton variant="soft" color="gray" @click="handleDiscard">Discard</UButton>
 				<UButton color="primary" :loading="isLoading" @click="handleSave">Save</UButton>

@@ -75,7 +75,7 @@ export const useTeams = () => {
 	const hasAdminAccess = (user) => _hasAdminAccess(user);
 
 	// Get teams for an organization with full user details
-	const fetchTeams = async (organizationId) => {
+	const fetchTeams = async (organizationId, { force = false } = {}) => {
 		if (organizationId === null && hasAdminAccess(user.value)) {
 			// console.log('useTeams: Admin in "All Organizations" mode, clearing teams');
 			teams.value = [];
@@ -95,6 +95,11 @@ export const useTeams = () => {
 			return;
 		}
 
+		// Skip if we already successfully fetched for this org (unless forced)
+		if (!force && !loading.value && lastFetchedOrg.value === organizationId && teams.value.length >= 0 && visibleTeams.value !== null) {
+			return teams.value;
+		}
+
 		loading.value = true;
 		lastFetchedOrg.value = organizationId;
 		error.value = null;
@@ -109,7 +114,7 @@ export const useTeams = () => {
 			const response = await teamItems.list({
 				filter: {
 					organization: { _eq: organizationId },
-					active: { _neq: false },
+					status: { _eq: 'published' },
 				},
 				fields: [
 					'id',
@@ -514,8 +519,8 @@ export const useTeams = () => {
 		() => user.value?.id,
 		async (newUserId, oldUserId) => {
 			if (newUserId && !oldUserId && selectedOrg.value) {
-				// User just became available — re-fetch teams so visibility filter works
-				await fetchTeams(selectedOrg.value);
+				// User just became available — force re-fetch so visibility filter works correctly
+				await fetchTeams(selectedOrg.value, { force: true });
 			}
 		},
 	);
@@ -524,19 +529,13 @@ export const useTeams = () => {
 	watch(
 		() => selectedOrg.value,
 		async (newOrg, oldOrg) => {
-			// console.log('useTeams: Organization changed from', oldOrg, 'to', newOrg);
-
 			if (newOrg !== oldOrg) {
 				// If switching to a new valid organization
 				if (newOrg) {
-					// console.log('useTeams: Fetching teams for new organization:', newOrg);
 					clearTeam(); // Clear team selection before fetching new teams
-					await fetchTeams(newOrg);
+					await fetchTeams(newOrg, { force: true });
 				} else {
 					// Handle "All Organizations" mode for admins
-					// console.log('useTeams: Admin in "All Organizations" mode');
-
-					// Clear team data but don't display error messages
 					teams.value = [];
 					visibleTeams.value = [];
 					clearTeam();
@@ -549,12 +548,7 @@ export const useTeams = () => {
 	// Set up lifecycle hooks via the Nuxt app if available
 	if (import.meta.client && nuxtApp) {
 		nuxtApp.hook('app:mounted', () => {
-			// console.log('useTeams: App mounted hook called');
-			if (selectedOrg?.value) {
-				fetchTeams(selectedOrg.value);
-			}
-
-			// Set up storage listener
+			// Initial fetch is handled by the selectedOrg watcher — only set up storage listener here
 			setupStorageListener();
 		});
 

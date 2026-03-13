@@ -79,7 +79,7 @@
 											<template #option="{ option }">
 												<div class="flex flex-col">
 													<span class="font-medium">{{ option.name }}</span>
-													<span v-if="option.id === null" class="text-xs text-gray-500">
+													<span v-if="option.id === null" class="text-xs text-muted-foreground">
 														Ticket will not be assigned to any team
 													</span>
 													<span v-else-if="option.is_default" class="text-xs text-green-500">Default team</span>
@@ -143,8 +143,8 @@
 										>
 											<template #label>
 												<div class="flex items-center gap-2">
-													<UIcon name="i-heroicons-user-plus" class="w-4 h-4 text-gray-500" />
-													<span class="text-gray-500">{{ selectedUser ? selectedUser.label : 'Add user...' }}</span>
+													<UIcon name="i-heroicons-user-plus" class="w-4 h-4 text-muted-foreground" />
+													<span class="text-muted-foreground">{{ selectedUser ? selectedUser.label : 'Add user...' }}</span>
 												</div>
 											</template>
 
@@ -153,7 +153,7 @@
 													<UAvatar :src="getAvatarUrl(user)" :alt="user.label" size="sm" />
 													<div class="flex flex-col">
 														<span class="font-medium">{{ user.label }}</span>
-														<span class="text-xs text-gray-500">{{ user.email }}</span>
+														<span class="text-xs text-muted-foreground">{{ user.email }}</span>
 													</div>
 												</div>
 											</template>

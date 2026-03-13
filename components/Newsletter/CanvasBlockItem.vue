@@ -51,7 +51,7 @@
 
     <!-- Variable Editor (collapsible) -->
     <div v-if="isEditing">
-      <BlockVariableEditor
+      <NewsletterBlockVariableEditor
         :schema="parsedSchema"
         :variables="canvasBlock.variables"
         @update="handleVarUpdate"

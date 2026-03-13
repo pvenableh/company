@@ -331,8 +331,8 @@ onMounted(() => {
 		</div>
 
 		<div v-if="loading" class="text-center py-12">
-			<UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin mx-auto text-gray-400" />
-			<p class="text-sm text-gray-500 mt-2">Loading settings...</p>
+			<UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
+			<p class="text-sm text-muted-foreground mt-2">Loading settings...</p>
 		</div>
 
 		<div v-else class="flex gap-6">
@@ -373,16 +373,16 @@ onMounted(() => {
 						<div
 							v-for="day in weekDays"
 							:key="day.value"
-							class="flex items-center gap-4 py-3 border-b border-gray-100 dark:border-gray-800"
+							class="flex items-center gap-4 py-3 border-b border-border"
 						>
 							<div class="w-28">
 								<UCheckbox v-model="availability[day.value].enabled" :label="day.label" />
 							</div>
 							<template v-if="availability[day.value].enabled">
 								<UInput v-model="availability[day.value].start" type="time" class="w-28" size="sm" />
-								<span class="text-gray-400">to</span>
+								<span class="text-muted-foreground">to</span>
 								<UInput v-model="availability[day.value].end" type="time" class="w-28" size="sm" />
-								<span class="text-gray-400 ml-4">Break:</span>
+								<span class="text-muted-foreground ml-4">Break:</span>
 								<UInput
 									v-model="availability[day.value].breakStart"
 									type="time"
@@ -390,7 +390,7 @@ onMounted(() => {
 									size="sm"
 									placeholder="Start"
 								/>
-								<span class="text-gray-400">-</span>
+								<span class="text-muted-foreground">-</span>
 								<UInput
 									v-model="availability[day.value].breakEnd"
 									type="time"
@@ -399,7 +399,7 @@ onMounted(() => {
 									placeholder="End"
 								/>
 							</template>
-							<span v-else class="text-gray-400 text-sm">Unavailable</span>
+							<span v-else class="text-muted-foreground text-sm">Unavailable</span>
 						</div>
 					</div>
 				</div>
@@ -431,10 +431,10 @@ onMounted(() => {
 				<!-- Calendar Sync -->
 				<div v-else-if="activeTab === 3" class="space-y-6">
 					<h2 class="text-lg font-semibold">Calendar Integrations</h2>
-					<p class="text-sm text-gray-500">Connect your calendars to sync events and block busy times.</p>
+					<p class="text-sm text-muted-foreground">Connect your calendars to sync events and block busy times.</p>
 
 					<!-- Google Calendar -->
-					<div class="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+					<div class="p-4 border border-border rounded-lg">
 						<div class="flex items-center justify-between">
 							<div class="flex items-center gap-3">
 								<div class="w-10 h-10 bg-red-50 dark:bg-red-900/20 rounded-lg flex items-center justify-center">
@@ -442,7 +442,7 @@ onMounted(() => {
 								</div>
 								<div>
 									<div class="font-medium">Google Calendar</div>
-									<div class="text-sm" :class="form.google_calendar_enabled ? 'text-green-500' : 'text-gray-500'">
+									<div class="text-sm" :class="form.google_calendar_enabled ? 'text-green-500' : 'text-muted-foreground'">
 										{{ form.google_calendar_enabled ? 'Connected' : 'Not connected' }}
 									</div>
 								</div>
@@ -458,7 +458,7 @@ onMounted(() => {
 					</div>
 
 					<!-- Outlook Calendar -->
-					<div class="p-4 border border-gray-200 dark:border-gray-700 rounded-lg">
+					<div class="p-4 border border-border rounded-lg">
 						<div class="flex items-center justify-between">
 							<div class="flex items-center gap-3">
 								<div class="w-10 h-10 bg-blue-50 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
@@ -466,7 +466,7 @@ onMounted(() => {
 								</div>
 								<div>
 									<div class="font-medium">Outlook Calendar</div>
-									<div class="text-sm" :class="form.outlook_calendar_enabled ? 'text-green-500' : 'text-gray-500'">
+									<div class="text-sm" :class="form.outlook_calendar_enabled ? 'text-green-500' : 'text-muted-foreground'">
 										{{ form.outlook_calendar_enabled ? 'Connected' : 'Not connected' }}
 									</div>
 								</div>

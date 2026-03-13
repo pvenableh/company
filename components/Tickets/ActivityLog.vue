@@ -5,46 +5,46 @@
       <div v-if="!activities.length && !isLoading" class="text-center py-10">
         <UIcon name="i-heroicons-clock" class="w-12 h-12 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
         <h3 class="text-lg font-medium text-gray-700 dark:text-gray-300">No activity yet</h3>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
+        <p class="text-sm text-muted-foreground mt-2">
           Activity will be recorded when changes are made to this ticket
         </p>
       </div>
       
       <!-- Loading state -->
       <div v-if="isLoading" class="text-center py-10">
-        <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 mx-auto text-gray-400 animate-spin" />
-        <p class="text-sm text-gray-500 mt-2">Loading activity history...</p>
+        <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 mx-auto text-muted-foreground animate-spin" />
+        <p class="text-sm text-muted-foreground mt-2">Loading activity history...</p>
       </div>
       
       <!-- Activity timeline -->
       <div v-if="activities.length && !isLoading" class="relative">
         <!-- Time line -->
-        <div class="absolute left-8 top-0 bottom-0 w-px bg-gray-200 dark:bg-gray-700"></div>
+        <div class="absolute left-8 top-0 bottom-0 w-px bg-border"></div>
         
         <!-- Activity items -->
         <div class="space-y-8">
           <div v-for="(activity, index) in activities" :key="index" class="relative pl-12">
             <!-- Activity icon -->
-            <div class="absolute left-4 bg-white dark:bg-gray-800 rounded-full p-1 border-2 border-gray-200 dark:border-gray-700">
+            <div class="absolute left-4 bg-card rounded-full p-1 border-2 border-border">
               <UIcon :name="getActivityIcon(activity)" class="w-6 h-6" :class="getActivityIconColor(activity)" />
             </div>
             
             <!-- Activity content -->
-            <div class="bg-white dark:bg-gray-800 rounded-lg p-4 border border-gray-100 dark:border-gray-700 shadow-sm">
+            <div class="bg-card rounded-lg p-4 border border-border shadow-sm">
               <div class="flex justify-between items-start">
                 <div>
                   <span class="font-medium">{{ activity.user }}</span>
-                  <span class="text-gray-500 dark:text-gray-400"> {{ activity.action }} </span>
+                  <span class="text-muted-foreground"> {{ activity.action }} </span>
                   <span v-if="activity.field">
                     <span class="font-medium">{{ activity.field }}</span>
                   </span>
                 </div>
-                <div class="text-xs text-gray-500">{{ formatTimeAgo(activity.timestamp) }}</div>
+                <div class="text-xs text-muted-foreground">{{ formatTimeAgo(activity.timestamp) }}</div>
               </div>
               
               <!-- Change details for edited fields -->
               <div v-if="activity.type === 'update' && activity.oldValue && activity.newValue" class="mt-2 text-sm">
-                <div class="flex gap-2 text-gray-500 dark:text-gray-400">
+                <div class="flex gap-2 text-muted-foreground">
                   <div class="line-through">{{ activity.oldValue }}</div>
                   <UIcon name="i-heroicons-arrow-right" class="w-4 h-4" />
                   <div class="font-medium text-gray-700 dark:text-gray-300">{{ activity.newValue }}</div>
@@ -52,7 +52,7 @@
               </div>
               
               <!-- Comment content -->
-              <div v-if="activity.type === 'comment' && activity.content" class="mt-2 p-2 bg-gray-50 dark:bg-gray-900 rounded border-l-2 border-gray-300 dark:border-gray-600 text-sm">
+              <div v-if="activity.type === 'comment' && activity.content" class="mt-2 p-2 bg-muted rounded border-l-2 border-border text-sm">
                 <div v-html="activity.content"></div>
               </div>
             </div>

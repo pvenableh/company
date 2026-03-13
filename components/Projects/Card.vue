@@ -63,17 +63,17 @@ const isCurrentUser = (assignedUser) => {
 </script>
 <template>
 	<nuxt-link :to="`/projects/${project.id}`" class="inline-block w-full mb-2 transition-all project-card">
-		<div class="bg-white dark:bg-gray-800 shadow-lg hover:shadow-md transition-all rounded-sm w-full p-4">
+		<div class="ios-card transition-all w-full p-4">
 			<h5
-				class="text-[8px] inline-flex rounded-full px-2 py-0.5 text-black uppercase"
+				class="t-label inline-flex rounded-full px-2 py-0.5 text-black"
 				:style="{ background: project.service?.color }"
 			>
 				{{ project.service?.name }}
 			</h5>
-			<h3 class="font-medium">{{ project.title }}</h3>
-			<h5 class="text-sm text-gray-600">{{ project.organization?.name }}</h5>
+			<h3 class="t-title font-medium text-foreground">{{ project.title }}</h3>
+			<h5 class="text-sm text-muted-foreground">{{ project.organization?.name }}</h5>
 			<!-- Assigned Users -->
-			<div class="w-full flex items-center justify-between text-xs text-gray-500 mt-4">
+			<div class="w-full flex items-center justify-between text-xs text-muted-foreground mt-4">
 				<div class="flex items-center">
 					<!-- Avatar Stack -->
 					<div class="flex -space-x-1">
@@ -84,7 +84,7 @@ const isCurrentUser = (assignedUser) => {
 									:alt="getUserFullName(user)"
 									size="xs"
 									:class="{
-										'ring-2 ring-cyan-500 ring-offset-2 shadow-lg dark:ring-offset-gray-800': isCurrentUser(user),
+										'ring-2 ring-cyan-500 ring-offset-2 shadow-lg ring-offset-card': isCurrentUser(user),
 										'-ml-1': true,
 									}"
 								/>
@@ -93,25 +93,25 @@ const isCurrentUser = (assignedUser) => {
 							<!-- Additional users count -->
 							<UTooltip v-if="additionalUsersCount > 0" :text="getAdditionalUsersTooltip">
 								<div
-									class="-ml-2 flex items-center justify-center w-6 h-6 text-xs font-medium text-gray-600 bg-gray-100 dark:text-gray-300 dark:bg-gray-700 rounded-full border-2 border-white dark:border-gray-800"
+									class="-ml-2 flex items-center justify-center w-6 h-6 text-xs font-medium text-muted-foreground bg-muted/40 rounded-full border-2 border-card"
 								>
 									+{{ additionalUsersCount }}
 								</div>
 							</UTooltip>
 						</template>
 
-						<span v-else class="text-gray-500 uppercase text-[8px] text-bold tracking-wider">Unassigned</span>
+						<span v-else class="t-label text-muted-foreground">Unassigned</span>
 					</div>
 				</div>
 			</div>
 		</div>
 		<div
 			v-if="project.events.length > 0 || project.tickets.length > 0"
-			class="w-full bg-white dark:bg-gray-800 shadow-lg hover:shadow-md mt-1 px-2 py-1 rounded-sm flex flex-row items-center justify-between transition-all"
+			class="w-full ios-card mt-1 px-2 py-1 flex flex-row items-center justify-between transition-all"
 		>
 			<!-- Ticket Footer -->
 
-			<div class="flex flex-row text-xs text-gray-500 mr-3">
+			<div class="flex flex-row text-xs text-muted-foreground mr-3">
 				<div v-if="project.events.length > 0" class="flex items-center gap-1">
 					<UTooltip :text="project.events.length + ' events'" :popper="{ arrow: true }">
 						<UIcon name="i-heroicons-clock" class="w-4 h-4 inline-block mr-1" />

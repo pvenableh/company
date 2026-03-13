@@ -53,7 +53,7 @@ const items = [
 	<div class="page__content">
 		<h1 class="page__title">Project</h1>
 		<div class="max-w-screen-xl mx-auto page_inner">
-			<nuxt-link to="/projects" class="uppercase text-[10px] text-gray-400 px-4 2xl:px-0">
+			<nuxt-link to="/projects" class="t-label text-muted-foreground px-4 2xl:px-0">
 				<UIcon name="i-heroicons-arrow-left" class="-mb-0.5" />
 				Back to Projects
 			</nuxt-link>
@@ -64,9 +64,9 @@ const items = [
 				:ui="{
 					base: 'focus:outline-none',
 					list: {
-						background: 'bg-white dark:bg-gray-800',
+						background: 'bg-card',
 						marker: {
-							background: 'bg-gray-100 dark:bg-gray-900',
+							background: 'bg-muted',
 						},
 						tab: {
 							base: 'uppercase relative inline-flex items-center justify-center flex-shrink-0 w-full ui-focus-visible:outline-0 ui-focus-visible:ring-2 ui-focus-visible:ring-primary ui-not-focus-visible:outline-none focus:outline-none disabled:cursor-not-allowed disabled:opacity-75 transition-colors duration-200 ease-out',

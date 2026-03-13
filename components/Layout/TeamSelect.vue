@@ -278,12 +278,10 @@ watch(
 	},
 );
 
-onMounted(async () => {
+onMounted(() => {
+	// Initial fetch is handled by the selectedOrg watcher with { immediate: true }
+	// Only mark initial load complete if org is already set
 	if (selectedOrg.value) {
-		await fetchTeams(selectedOrg.value);
-		if (isRegularUserWithSingleTeam.value && singleTeam.value) {
-			setTeam(singleTeam.value.id);
-		}
 		initialLoadComplete.value = true;
 	}
 });

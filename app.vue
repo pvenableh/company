@@ -84,6 +84,18 @@ const links = ref([
 		to: '/email',
 		icon: 'i-heroicons-envelope',
 	},
+	{
+		name: 'Financials',
+		type: ['footer', 'drawer'],
+		to: '/command-center/financials',
+		icon: 'i-heroicons-banknotes',
+	},
+	{
+		name: 'Contacts',
+		type: ['footer', 'drawer'],
+		to: '/contacts',
+		icon: 'i-heroicons-user-group',
+	},
 ]);
 </script>
 <template>

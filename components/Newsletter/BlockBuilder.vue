@@ -34,7 +34,7 @@
     <div class="flex flex-1 overflow-hidden">
       <!-- Block Library Sidebar -->
       <div class="w-64 shrink-0 border-r overflow-y-auto flex flex-col">
-        <BlockLibrarySidebar
+        <NewsletterBlockLibrarySidebar
           :library="blockLibrary"
           class="flex-1"
           @add-block="builder.addBlock($event)"
@@ -81,7 +81,7 @@
 
       <!-- Canvas -->
       <div class="flex-1 overflow-y-auto bg-muted/30 p-6">
-        <BuilderCanvas
+        <NewsletterBuilderCanvas
           v-if="builder.canvas.value.length"
           :blocks="builder.canvas.value"
           @remove="builder.removeBlock($event)"
@@ -99,7 +99,7 @@
       </div>
 
       <!-- Preview Pane -->
-      <TemplatePreviewPane
+      <NewsletterTemplatePreviewPane
         v-if="showPreview"
         :html="builder.previewHtml.value"
         :errors="builder.previewErrors.value"
@@ -108,7 +108,7 @@
     </div>
 
     <!-- Send Test Modal -->
-    <SendTestModal
+    <NewsletterSendTestModal
       v-if="showTestModal"
       :template-id="templateId"
       @close="showTestModal = false"

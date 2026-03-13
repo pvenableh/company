@@ -144,19 +144,19 @@ onMounted(() => {
 		<div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
 			<template v-if="project.start_date">
 				<div>
-					<span class="text-gray-500">Start Date</span>
+					<span class="text-muted-foreground">Start Date</span>
 					<p class="font-semibold">{{ formatDate(timelineData.startDate) }}</p>
 				</div>
 			</template>
 			<template v-if="project.due_date">
 				<div>
-					<span class="text-gray-500">Due Date</span>
+					<span class="text-muted-foreground">Due Date</span>
 					<p class="font-semibold">{{ formatDate(timelineData.dueDate) }}</p>
 				</div>
 			</template>
 			<template v-if="timelineData.completionDate">
 				<div>
-					<span class="text-gray-500">Completion Date</span>
+					<span class="text-muted-foreground">Completion Date</span>
 					<p class="font-semibold">{{ formatDate(timelineData.completionDate) }}</p>
 				</div>
 			</template>
