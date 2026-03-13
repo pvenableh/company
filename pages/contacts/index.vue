@@ -153,11 +153,13 @@ onMounted(async () => {
     </div>
 
     <!-- Create Modal -->
-    <div v-if="showCreateModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="showCreateModal = false">
-      <div class="bg-background rounded-lg shadow-lg w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto p-6">
-        <h2 class="font-semibold mb-4">New Contact</h2>
-        <ContactForm :saving="creating" @submit="handleCreate" @cancel="showCreateModal = false" />
+    <Teleport to="body">
+      <div v-if="showCreateModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" @click.self="showCreateModal = false">
+        <div class="ios-card shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto p-6">
+          <h2 class="font-semibold mb-4">New Contact</h2>
+          <ContactForm :saving="creating" @submit="handleCreate" @cancel="showCreateModal = false" />
+        </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>

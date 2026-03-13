@@ -475,19 +475,19 @@ const manageTeamMembers = (team) => {
 	showTeamMembersModal.value = true;
 };
 
-// Watch for organization changes from the global state or props
+// Watch for organization changes — only re-fetch when org actually changes (not on mount)
+// The parent (organization page) handles the initial fetch via fetchOrganizationData
 watch(
 	() => effectiveOrgId.value,
-	async (newOrgId) => {
-		if (newOrgId) {
+	async (newOrgId, oldOrgId) => {
+		if (newOrgId && newOrgId !== oldOrgId) {
 			if (selectedTeam.value) {
 				clearTeam(); // Reset team selection when organization changes
 			}
-			await fetchTeams(newOrgId);
-		} else {
+			await fetchTeams(newOrgId, { force: true });
+		} else if (!newOrgId) {
 			await refreshTeams();
 		}
 	},
-	{ immediate: true },
 );
 </script>

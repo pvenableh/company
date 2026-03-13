@@ -1,6 +1,6 @@
 <template>
 	<div class="w-full h-full">
-		<div v-if="!chartData.labels.length" class="flex justify-center items-center h-full text-gray-400">
+		<div v-if="!chartData.labels.length" class="flex justify-center items-center h-full text-muted-foreground">
 			No data available
 		</div>
 		<client-only>

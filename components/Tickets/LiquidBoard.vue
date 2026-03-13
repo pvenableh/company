@@ -1,5 +1,5 @@
 <template>
-	<div class="fixed inset-0 overflow-hidden touch-none bg-gray-50 dark:bg-gray-900">
+	<div class="fixed inset-0 overflow-hidden touch-none bg-muted">
 		<!-- SVG Filter Definition -->
 		<svg class="absolute w-0 h-0">
 			<defs>
@@ -13,7 +13,7 @@
 
 		<!-- Loading State -->
 		<div v-if="isLoading" class="absolute inset-0 flex items-center justify-center">
-			<UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-gray-400" />
+			<UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-muted-foreground" />
 		</div>
 
 		<!-- Connection Status -->
@@ -81,14 +81,14 @@
 					<Transition name="fade">
 						<div
 							v-if="selectedTicket?.id === ticket.id && !isDragging"
-							class="absolute top-full left-1/2 transform -translate-x-1/2 mt-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 w-56 z-10"
+							class="absolute top-full left-1/2 transform -translate-x-1/2 mt-4 bg-card rounded-lg shadow-lg p-4 w-56 z-10"
 						>
 							<h3 class="font-medium text-sm mb-2">{{ ticket.title }}</h3>
 							<div class="flex items-center gap-2">
 								<UBadge :color="getPriorityBadgeColor(ticket.priority)" size="xs">
 									{{ ticket.priority }}
 								</UBadge>
-								<span class="text-xs text-gray-500 dark:text-gray-400">
+								<span class="text-xs text-muted-foreground">
 									{{ ticket.status }}
 								</span>
 							</div>

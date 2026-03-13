@@ -7,7 +7,7 @@
 					<UPopover mode="hover" :ui="{ rounded: 'rounded-sm' }">
 						<UIcon
 							name="i-heroicons-information-circle"
-							class="w-4 h-4 text-gray-400 hover:text-gray-600 cursor-help ml-1"
+							class="w-4 h-4 text-muted-foreground hover:text-foreground cursor-help ml-1"
 						/>
 
 						<template #panel>
@@ -25,7 +25,7 @@
 		</template>
 		<div class="h-80">
 			<Bar v-if="chartData.labels && chartData.labels.length > 0" :data="chartData" :options="chartOptions" />
-			<div v-else class="h-full flex items-center justify-center text-gray-500">No data available</div>
+			<div v-else class="h-full flex items-center justify-center text-muted-foreground">No data available</div>
 		</div>
 	</UCard>
 </template>

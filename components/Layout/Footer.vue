@@ -10,18 +10,20 @@
 			<!-- Logged-in nav -->
 			<div v-if="user" class="footer-nav">
 				<div class="footer-col">
-					<span class="footer-col-title">Product</span>
-					<nuxt-link to="/projects">Projects</nuxt-link>
-					<nuxt-link to="/invoices">Invoices</nuxt-link>
-					<nuxt-link to="/social/dashboard">Social</nuxt-link>
-					<nuxt-link to="/email">Email</nuxt-link>
-				</div>
-				<div class="footer-col">
 					<span class="footer-col-title">Platform</span>
 					<nuxt-link to="/tickets">Tickets</nuxt-link>
+					<nuxt-link to="/projects">Projects</nuxt-link>
 					<nuxt-link to="/channels">Channels</nuxt-link>
 					<nuxt-link to="/scheduler">Scheduler</nuxt-link>
 					<nuxt-link to="/dashboard">Statistics</nuxt-link>
+				</div>
+				<div class="footer-col">
+					<span class="footer-col-title">Tools</span>
+					<nuxt-link to="/invoices">Invoices</nuxt-link>
+					<nuxt-link to="/command-center/financials">Financials</nuxt-link>
+					<nuxt-link to="/email">Email</nuxt-link>
+					<nuxt-link to="/social/dashboard">Social</nuxt-link>
+					<nuxt-link to="/contacts">Contacts</nuxt-link>
 				</div>
 				<div class="footer-col">
 					<span class="footer-col-title">Account</span>
@@ -75,10 +77,11 @@ const props = defineProps({
 	max-width: 1200px;
 	margin: 60px auto 0;
 	width: 100%;
+	flex-direction: column;
 }
 
 .footer-grid {
-	padding: 60px 48px;
+	padding: 60px 48px 0;
 	display: grid;
 	grid-template-columns: 1fr;
 	gap: 48px;
@@ -91,7 +94,7 @@ const props = defineProps({
 }
 @media (max-width: 600px) {
 	.footer-grid {
-		padding: 48px 24px;
+		padding: 48px 24px 0;
 	}
 }
 
@@ -168,7 +171,7 @@ const props = defineProps({
 	color: hsl(var(--muted-foreground));
 	letter-spacing: 0.04em;
 	opacity: 0.6;
-	padding: 20px 48px 40px;
+	padding: 40px 48px 40px;
 	text-align: center;
 	font-family: var(--font-proxima-light);
 	font-style: italic;

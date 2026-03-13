@@ -94,28 +94,26 @@ const toggleReaction = async () => {
 
 		const hasThisReaction = existingReaction && existingReaction.length > 0;
 
-		// If they have this reaction, remove it
+		// If they have this reaction, remove it (toggle off)
 		if (hasThisReaction) {
-			await reactionItems.remove({
-				filter: {
-					item: { _eq: props.itemId },
-					user: { _eq: user.value.id },
-					reaction: { _eq: props.reaction },
-				},
-			});
+			await reactionItems.remove(existingReaction[0].id);
 
 			isActive.value = false;
 			emits('reaction-removed', props.reaction);
 		}
-		// Otherwise, first remove any other reactions they have
+		// Otherwise, remove any other reactions from this user first, then add new one
 		else {
-			// Remove all existing reactions from this user
-			await reactionItems.remove({
+			const userReactions = await reactionItems.list({
 				filter: {
 					item: { _eq: props.itemId },
 					user: { _eq: user.value.id },
 				},
 			});
+
+			// Remove each existing reaction by ID
+			for (const r of userReactions) {
+				await reactionItems.remove(r.id);
+			}
 
 			// Then add the new reaction
 			await reactionItems.create({

@@ -19,21 +19,21 @@
 						</div>
 					</div>
 					<div class="text-right">
-						<p class="text-xs text-gray-500">Completed: {{ formatDate(ticket.date_updated) }}</p>
+						<p class="text-xs text-muted-foreground">Completed: {{ formatDate(ticket.date_updated) }}</p>
 						<p class="text-xs text-[var(--green)]">
 							Time to complete: {{ formatDuration(getTicketTimeToComplete(ticket)) }}
 						</p>
 					</div>
 				</div>
 				<div class="flex justify-between mt-2">
-					<div class="flex items-center gap-1 text-xs text-gray-500">
+					<div class="flex items-center gap-1 text-xs text-muted-foreground">
 						<UIcon name="i-heroicons-user-circle" class="w-3 h-3" />
 						<span>{{ formatAssignees(ticket.assigned_to) }}</span>
 					</div>
 					<UButton size="xs" variant="link" @click="$emit('viewTicket', ticket.id)">View</UButton>
 				</div>
 			</div>
-			<div v-if="!tickets.length" class="py-4 text-center text-gray-500">No recently completed tickets found</div>
+			<div v-if="!tickets.length" class="py-4 text-center text-muted-foreground">No recently completed tickets found</div>
 		</div>
 	</UCard>
 </template>

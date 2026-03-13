@@ -1,10 +1,10 @@
 <template>
 	<div class="w-full mb-4 transition-all ticket-card">
-		<div class="bg-white dark:bg-gray-800 shadow-lg transition-all rounded-sm w-full p-4 relative">
+		<div class="ios-card transition-all w-full p-4 relative">
 			<div class="flex items-start justify-between my-2 h-8">
 				<div v-if="element?.status !== 'Completed'" class="w-full relative flex flex-row items-center justify-start">
-					<p class="text-[10px] leading-[16px] uppercase">
-						<span class="opacity-50">Priority:</span>
+					<p class="t-label leading-[16px]">
+						<span class="text-muted-foreground">Priority:</span>
 						<span class="font-bold ml-1" :class="`text-${getPriorityColor(element.priority)}-500`">
 							{{ element?.priority }}
 						</span>
@@ -18,7 +18,7 @@
 
 			<!-- Ticket Title -->
 			<nuxt-link :to="`/tickets/${element.id}`">
-				<h4 class="font-bold text-[16px] line-clamp-2 mt-2">
+				<h4 class="t-title font-bold text-[16px] line-clamp-2 mt-2 text-foreground">
 					{{ element?.title }}
 					<UIcon
 						name="i-heroicons-arrow-right"
@@ -27,18 +27,18 @@
 					/>
 				</h4>
 			</nuxt-link>
-			<h5 v-if="element?.team" class="text-gray-800 text-[8px] mt-0 uppercase mb-2">
+			<h5 v-if="element?.team" class="t-label text-muted-foreground mt-0 mb-2">
 				<UIcon name="i-heroicons-user-group" />
 				{{ element?.team?.name }}
 			</h5>
-			<h5 v-if="element?.organization" class="text-gray-800 text-[8px] mt-0 uppercase mb-2">
+			<h5 v-if="element?.organization" class="t-label text-muted-foreground mt-0 mb-2">
 				<UIcon name="i-heroicons-building-office" />
 				{{ element?.organization?.name }}
 			</h5>
 
 			<!-- Assigned Users -->
-			<div class="w-full flex flex-col items-center justify-between text-xs text-gray-500 my-4">
-				<h5 v-if="assignedUsers.length" class="text-gray-500 uppercase text-[8px] text-bold tracking-wider w-full">
+			<div class="w-full flex flex-col items-center justify-between text-xs text-muted-foreground my-4">
+				<h5 v-if="assignedUsers.length" class="t-label text-muted-foreground w-full">
 					Assigned to:
 				</h5>
 				<div class="w-full flex items-center">
@@ -51,7 +51,7 @@
 									:alt="getUserFullName(user)"
 									size="xs"
 									:class="{
-										'ring-2 ring-cyan-500 ring-offset-2 scale-90 shadow-lg dark:ring-offset-gray-800':
+										'ring-2 ring-cyan-500 ring-offset-2 scale-90 shadow-lg ring-offset-card':
 											isCurrentUser(user),
 										'-ml-1': true,
 									}"
@@ -61,7 +61,7 @@
 							<!-- Additional users count -->
 							<UTooltip v-if="additionalUsersCount > 0" :text="getAdditionalUsersTooltip">
 								<div
-									class="-ml-2 flex items-center justify-center w-6 h-6 text-xs font-medium text-gray-600 bg-gray-100 dark:text-gray-300 dark:bg-gray-700 rounded-full border-2 border-white dark:border-gray-800"
+									class="-ml-2 flex items-center justify-center w-6 h-6 text-xs font-medium text-muted-foreground bg-muted/40 rounded-full border-2 border-card"
 								>
 									+{{ additionalUsersCount }}
 								</div>
@@ -77,7 +77,7 @@
 				</div>
 			</div>
 			<div v-if="element?.due_date && element?.status !== 'Completed'" class="">
-				<h5 v-if="assignedUsers.length" class="text-gray-500 uppercase text-[8px] text-bold tracking-wider w-full">
+				<h5 v-if="assignedUsers.length" class="t-label text-muted-foreground w-full">
 					Due Date:
 				</h5>
 				<p class="uppercase text-[10px]" :class="formatDueDateStatus(element?.due_date)">
@@ -98,7 +98,7 @@
 				</p>
 			</div>
 			<div v-else class="">
-				<h5 class="text-gray-500 uppercase text-[8px] text-bold tracking-wider w-full">Date Completed:</h5>
+				<h5 class="t-label text-muted-foreground w-full">Date Completed:</h5>
 				<p class="uppercase text-[10px]">
 					{{ getFriendlyDate(element?.date_updated) }}
 				</p>
@@ -108,7 +108,7 @@
 					<UPopover mode="click" :popper="{ placement: 'left', offsetDistance: 3 }">
 						<UButton color="gray" variant="ghost" icon="i-heroicons-information-circle" size="xs" />
 						<template #panel>
-							<div class="p-2 text-gray-500 font-medium text-[10px]">
+							<div class="p-2 text-muted-foreground font-medium text-[10px]">
 								<span v-html="getTicketInfo"></span>
 							</div>
 						</template>
@@ -118,12 +118,12 @@
 			</div>
 		</div>
 		<div
-			class="w-full bg-white dark:bg-gray-800 shadow-lg hover:shadow-md mt-1 rounded-sm flex flex-row items-center justify-between transition-all"
+			class="w-full ios-card mt-1 flex flex-row items-center justify-between transition-all"
 		>
 			<!-- Ticket Footer -->
 
 			<ReactionsBar :item-id="element.id" collection="tickets" />
-			<div class="flex flex-row text-xs text-gray-500 mr-3">
+			<div class="flex flex-row text-xs text-muted-foreground mr-3">
 				<div v-if="commentsCount > 0" class="flex items-center gap-1">
 					<UTooltip :text="commentsCount + (commentsCount === 1 ? ' Comment' : ' Comments')" :popper="{ arrow: true }">
 						<UIcon name="i-heroicons-chat-bubble-left-right" class="w-4 h-4 inline-block mr-1" />

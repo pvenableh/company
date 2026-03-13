@@ -37,7 +37,7 @@
 							/>
 						</UBadge>
 					</div>
-					<div v-else class="text-sm text-gray-500 italic">No users assigned</div>
+					<div v-else class="text-sm text-muted-foreground italic">No users assigned</div>
 				</div>
 
 				<!-- User Selector -->
@@ -56,7 +56,7 @@
 								<UAvatar :src="getAvatarUrl(user)" :alt="user.label" size="sm" />
 								<div class="flex flex-col">
 									<span class="font-medium">{{ user.label }}</span>
-									<span class="text-xs text-gray-500">{{ user.email }}</span>
+									<span class="text-xs text-muted-foreground">{{ user.email }}</span>
 								</div>
 							</div>
 						</template>

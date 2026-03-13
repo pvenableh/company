@@ -4,13 +4,13 @@
 			<h2 class="text-base font-bold">Your Performance Summary</h2>
 		</template>
 		<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-			<div class="border-r border-gray-200 pr-4">
+			<div class="border-r border-border pr-4">
 				<div class="flex items-center">
-					<h3 class="text-xs uppercase font-bold text-gray-500">Average Resolution Time</h3>
+					<h3 class="text-xs uppercase font-bold text-muted-foreground">Average Resolution Time</h3>
 					<UPopover mode="hover" :ui="{ rounded: 'rounded-sm' }">
 						<UIcon
 							name="i-heroicons-information-circle"
-							class="w-4 h-4 text-gray-400 hover:text-gray-600 cursor-help ml-1"
+							class="w-4 h-4 text-muted-foreground hover:text-foreground cursor-help ml-1"
 						/>
 
 						<template #panel>
@@ -32,14 +32,14 @@
 					/>
 				</div>
 			</div>
-			<div class="border-r border-gray-200 px-4">
+			<div class="border-r border-border px-4">
 				<div class="flex items-center">
-					<h3 class="text-xs uppercase font-bold text-gray-500">Completion Rate</h3>
+					<h3 class="text-xs uppercase font-bold text-muted-foreground">Completion Rate</h3>
 
 					<UPopover mode="hover" :ui="{ rounded: 'rounded-sm' }">
 						<UIcon
 							name="i-heroicons-information-circle"
-							class="w-4 h-4 text-gray-400 hover:text-gray-600 cursor-help ml-1"
+							class="w-4 h-4 text-muted-foreground hover:text-foreground cursor-help ml-1"
 						/>
 
 						<template #panel>
@@ -59,12 +59,12 @@
 			</div>
 			<div class="pl-4">
 				<div class="flex items-center">
-					<h3 class="text-xs uppercase font-bold text-gray-500">Activity Level</h3>
+					<h3 class="text-xs uppercase font-bold text-muted-foreground">Activity Level</h3>
 
 					<UPopover mode="hover" :ui="{ rounded: 'rounded-sm' }">
 						<UIcon
 							name="i-heroicons-information-circle"
-							class="w-4 h-4 text-gray-400 hover:text-gray-600 cursor-help ml-1"
+							class="w-4 h-4 text-muted-foreground hover:text-foreground cursor-help ml-1"
 						/>
 
 						<template #panel>

@@ -75,7 +75,7 @@ if (props.ticket.category === 'Completed') {
 <template>
 	<div
 		ref="ticketCard"
-		class="w-full flex flex-col items-center justify-between border bg-white dark:border-gray-700 dark:bg-gray-900 ticket-card"
+		class="w-full flex flex-col items-center justify-between border bg-card border-border ticket-card"
 		:class="{ minimize: minimize }"
 		:data-id="ticket.id"
 	>
@@ -83,7 +83,7 @@ if (props.ticket.category === 'Completed') {
 			<UIcon name="i-heroicons-exclamation-triangle-solid" size="lg" class="-mb-[2px]" />
 			Due {{ getRelativeTime(ticket.due_date) }}
 		</div>
-		<div class="pt-4 relative w-full flex flex-col items-start justify-start px-4 bg-white dark:bg-gray-900">
+		<div class="pt-4 relative w-full flex flex-col items-start justify-start px-4 bg-card">
 			<div class="absolute right-4 top-4">
 				<UIcon
 					v-if="!minimize && ticket.category === 'Completed'"

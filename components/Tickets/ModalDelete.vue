@@ -8,7 +8,7 @@
 					Ticket
 				</h3>
 			</div>
-			<p class="text-sm text-gray-500">Are you sure you want to delete this ticket? This action cannot be undone.</p>
+			<p class="text-sm text-muted-foreground">Are you sure you want to delete this ticket? This action cannot be undone.</p>
 			<div class="flex justify-end space-x-2 mt-8">
 				<UButton variant="soft" color="gray" @click="handleCancel">Cancel</UButton>
 				<UButton color="red" :loading="isLoading" @click="handleDelete">Delete</UButton>

@@ -20,7 +20,7 @@
 						option-attribute="name"
 						value-attribute="id"
 						placeholder="Select Service"
-						class="w-full lg:w-64 uppercase text-[10px] text-gray-400 relative"
+						class="w-full lg:w-64 t-label text-muted-foreground relative"
 						@change="handleServiceChange"
 					>
 						<template #option="{ option }">
@@ -35,21 +35,27 @@
 				<!-- Assigned To Filter -->
 				<div class="flex flex-row items-center justify-center space-x-2 ml-4">
 					<UToggle v-model="filterByAssignedTo" />
-					<span class="text-[10px] text-gray-500 uppercase">
+					<span class="t-label text-muted-foreground">
 						{{ filterByAssignedTo ? 'My Projects' : 'All Projects' }}
 					</span>
 				</div>
+
+				<!-- New Project Button -->
+				<Button size="sm" variant="outline" class="ml-2 uppercase text-[10px] tracking-wide" @click="showNewProjectModal = true">
+					<UIcon name="i-heroicons-plus" class="h-3 w-3 mr-1" />
+					New Project
+				</Button>
 			</div>
 
 			<!-- Last Updated -->
-			<div v-if="lastUpdated" class="-bottom-[22.5px] text-[9px] right-0 text-gray-500 absolute font-bold uppercase">
+			<div v-if="lastUpdated" class="-bottom-[22.5px] right-0 absolute t-label text-muted-foreground">
 				Last updated: {{ new Date(lastUpdated).toLocaleTimeString() }}
 			</div>
 		</div>
 
 		<!-- Board Layout -->
 		<div
-			class="bg-gray-100/30 border-b border-gray-200 w-full flex min-h-svh overflow-x-auto overflow-hidden-scrollbar projects-board__board"
+			class="bg-muted/20 border-b border-border w-full flex min-h-svh overflow-x-auto overflow-hidden-scrollbar projects-board__board"
 			@touchstart="handleTouchStart"
 			@touchend="handleTouchEnd"
 		>
@@ -65,7 +71,7 @@
 				<!-- Column Header -->
 				<div class="projects-board__board-col-header">
 					<div class="flex items-center justify-between">
-						<h3 class="text-xs font-bold uppercase tracking-wide">{{ column.name }}</h3>
+						<h3 class="t-label text-foreground">{{ column.name }}</h3>
 						<UBadge
 							class="ml-2 w-6 h-6 text-center inline-block text-[var(--darkBlue)]"
 							:style="{ backgroundColor: `var(--${column.color})` }"
@@ -78,7 +84,7 @@
 				<!-- Loading State -->
 				<div
 					v-if="isLoading && !localProjects[column.id]?.length"
-					class="min-h-[90svh] p-2 bg-gray-100 dark:bg-gray-800"
+					class="min-h-[90svh] p-2 bg-muted/30"
 				>
 					<div class="space-y-3">
 						<USkeleton v-for="n in 3" :key="n" class="h-24 w-full" />
@@ -105,7 +111,7 @@
 							<div class="relative">
 								<div
 									v-if="updatingProjects.has(element.id)"
-									class="absolute inset-0 bg-white/50 dark:bg-gray-900/50 rounded-lg flex items-center justify-center z-10"
+									class="absolute inset-0 bg-card/50 rounded-lg flex items-center justify-center z-10"
 								>
 									<UIcon name="i-heroicons-arrow-path" class="animate-spin h-5 w-5" />
 								</div>
@@ -121,11 +127,85 @@
 				</VueDraggable>
 			</div>
 		</div>
+
+		<!-- New Project Modal -->
+		<UModal v-model="showNewProjectModal" title="New Project">
+			<template #header>
+				<div class="flex items-center justify-between w-full">
+					<h3 class="text-sm font-bold uppercase tracking-wide">New Project</h3>
+					<Button variant="ghost" size="icon-sm" @click="showNewProjectModal = false">
+						<UIcon name="i-heroicons-x-mark" class="h-4 w-4" />
+					</Button>
+				</div>
+			</template>
+
+			<form @submit.prevent="handleCreateProject" class="space-y-4 p-4">
+				<!-- Title -->
+				<div class="space-y-1">
+					<label class="t-label text-muted-foreground">Title *</label>
+					<UInput v-model="newProjectForm.title" placeholder="Project title" />
+				</div>
+
+				<!-- Description -->
+				<div class="space-y-1">
+					<label class="t-label text-muted-foreground">Description</label>
+					<UTextarea v-model="newProjectForm.description" placeholder="Project description..." :rows="3" />
+				</div>
+
+				<!-- Status -->
+				<div class="space-y-1">
+					<label class="t-label text-muted-foreground">Status</label>
+					<USelectMenu
+						v-model="newProjectForm.status"
+						:options="columns.map((c) => ({ label: c.name, value: c.id }))"
+						option-attribute="label"
+						value-attribute="value"
+						placeholder="Select status"
+					/>
+				</div>
+
+				<!-- Service -->
+				<div class="space-y-1">
+					<label class="t-label text-muted-foreground">Service</label>
+					<USelectMenu
+						v-model="newProjectForm.service"
+						:options="serviceOptions.filter((s) => s.id !== null)"
+						option-attribute="name"
+						value-attribute="id"
+						placeholder="Select service"
+					>
+						<template #option="{ option }">
+							<div class="flex items-center gap-2">
+								<div class="w-3 h-3 rounded-full" :style="{ backgroundColor: option.color }"></div>
+								<span>{{ option.name }}</span>
+							</div>
+						</template>
+					</USelectMenu>
+				</div>
+
+				<!-- Start Date -->
+				<div class="space-y-1">
+					<label class="t-label text-muted-foreground">Start Date</label>
+					<UInput v-model="newProjectForm.start_date" type="date" />
+				</div>
+			</form>
+
+			<template #footer>
+				<div class="flex justify-end gap-3 w-full">
+					<Button variant="outline" size="sm" @click="showNewProjectModal = false">Cancel</Button>
+					<Button size="sm" :disabled="creatingProject || !newProjectForm.title.trim()" @click="handleCreateProject">
+						<UIcon v-if="creatingProject" name="i-heroicons-arrow-path" class="animate-spin h-3 w-3 mr-1" />
+						Create Project
+					</Button>
+				</div>
+			</template>
+		</UModal>
 	</div>
 </template>
 
 <script setup>
 import VueDraggable from 'vuedraggable';
+import { Button } from '~/components/ui/button';
 const serviceItems = useDirectusItems('services');
 const projectItems = useDirectusItems('projects');
 const { user } = useDirectusAuth();
@@ -146,6 +226,75 @@ const isDragging = ref(false);
 const selectedService = ref(null);
 const filterByAssignedTo = ref(false);
 const serviceOptions = ref([]);
+
+// New Project modal state
+const showNewProjectModal = ref(false);
+const creatingProject = ref(false);
+const newProjectForm = reactive({
+	title: '',
+	description: '',
+	status: 'Pending',
+	service: null,
+	start_date: '',
+});
+
+const resetNewProjectForm = () => {
+	newProjectForm.title = '';
+	newProjectForm.description = '';
+	newProjectForm.status = 'Pending';
+	newProjectForm.service = null;
+	newProjectForm.start_date = '';
+};
+
+const handleCreateProject = async () => {
+	if (!newProjectForm.title.trim()) {
+		useToast().add({
+			title: 'Error',
+			description: 'Project title is required',
+			color: 'red',
+		});
+		return;
+	}
+
+	creatingProject.value = true;
+	try {
+		const data = {
+			title: newProjectForm.title.trim(),
+			status: newProjectForm.status,
+		};
+
+		if (newProjectForm.description?.trim()) {
+			data.description = newProjectForm.description.trim();
+		}
+		if (newProjectForm.service) {
+			data.service = newProjectForm.service;
+		}
+		if (newProjectForm.start_date) {
+			data.start_date = newProjectForm.start_date;
+		}
+
+		await projectItems.create(data);
+		await refresh();
+
+		useToast().add({
+			title: 'Project Created',
+			description: `"${data.title}" has been created`,
+			color: 'green',
+		});
+
+		showNewProjectModal.value = false;
+		resetNewProjectForm();
+	} catch (error) {
+		console.error('Error creating project:', error);
+		useToast().add({
+			title: 'Error',
+			description: 'Failed to create project',
+			color: 'red',
+		});
+	} finally {
+		creatingProject.value = false;
+	}
+};
 
 const localProjects = ref(
 	columns.reduce((acc, column) => {
@@ -348,22 +497,22 @@ function checkMobile() {
 		@apply relative;
 	}
 	.projects-board__board-filters {
-		@apply relative max-w-[2000px] bg-red-500;
+		@apply relative max-w-[2000px];
 	}
 	.projects-board__board-connection {
 		@apply max-w-[2000px];
 	}
 	.projects-board__board-col {
-		@apply border-gray-50 border-r border-l shadow-inner;
+		@apply border-border/30 border-r border-l shadow-inner;
 	}
 	.projects-board__board-col-header {
-		@apply relative shadow-2xl py-5 px-4 backdrop-blur-lg mt-1 border-gray-200 border-b;
+		@apply relative shadow-2xl py-5 px-4 backdrop-blur-lg mt-1 border-border border-b;
 		@media (min-width: 1600px) {
 			@apply px-8;
 		}
 	}
 	.projects-board__board-col-content {
-		@apply min-h-screen lg:h-svh h-full py-2 bg-gray-50/15 dark:bg-gray-800 overflow-y-auto px-2;
+		@apply min-h-screen lg:h-svh h-full py-2 bg-muted/20 overflow-y-auto px-2;
 		scrollbar-width: none;
 		-ms-overflow-style: none;
 		&::-webkit-scrollbar {

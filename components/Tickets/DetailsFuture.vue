@@ -3,7 +3,7 @@
 		<LayoutUserPresenceIndicator v-if="currentUser" />
 
 		<!-- Main Content with Tabs -->
-		<div class="mb-4 border-b border-gray-200">
+		<div class="mb-4 border-b border-border">
 			<div class="flex flex-wrap -mb-px">
 				<button
 					v-for="tab in tabs"
@@ -35,7 +35,7 @@
 		</div>
 
 		<!-- Ticket Header - Always Visible -->
-		<div class="flex flex-col lg:flex-row justify-between items-start mb-4 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+		<div class="flex flex-col lg:flex-row justify-between items-start mb-4 bg-muted p-4 rounded-lg">
 			<!-- Left side: Title and status -->
 			<div class="flex-grow">
 				<h2 class="text-xl font-bold">{{ element.title }}</h2>
@@ -43,7 +43,7 @@
 					<UBadge :color="getStatusColor(element.status)" size="md">{{ element.status }}</UBadge>
 					<UBadge :color="getPriorityColor(element.priority)" size="md">{{ element.priority }}</UBadge>
 
-					<div class="flex items-center text-xs text-gray-500 ml-2" v-if="element.due_date">
+					<div class="flex items-center text-xs text-muted-foreground ml-2" v-if="element.due_date">
 						<UIcon name="i-heroicons-calendar" class="mr-1" />
 						{{ formatDate(element.due_date) }}
 					</div>
@@ -79,7 +79,7 @@
 		<!-- Collapsible Metadata Section -->
 		<div
 			v-if="isMetadataExpanded"
-			class="mb-6 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg transition-all duration-300 ease-in-out"
+			class="mb-6 bg-muted p-4 rounded-lg transition-all duration-300 ease-in-out"
 		>
 			<div class="flex justify-between items-center mb-4">
 				<h3 class="text-sm font-medium uppercase tracking-wide">Ticket Details</h3>
@@ -90,17 +90,17 @@
 				<!-- Column 1: Basic Info -->
 				<div class="space-y-2">
 					<div>
-						<div class="text-xs text-gray-500 uppercase">Ticket ID</div>
+						<div class="text-xs text-muted-foreground uppercase">Ticket ID</div>
 						<div class="text-sm font-medium">{{ element.id }}</div>
 					</div>
 					<div>
-						<div class="text-xs text-gray-500 uppercase">Created By</div>
+						<div class="text-xs text-muted-foreground uppercase">Created By</div>
 						<div class="text-sm font-medium">
 							{{ element.user_created?.first_name }} {{ element.user_created?.last_name }}
 						</div>
 					</div>
 					<div>
-						<div class="text-xs text-gray-500 uppercase">Created Date</div>
+						<div class="text-xs text-muted-foreground uppercase">Created Date</div>
 						<div class="text-sm font-medium">{{ formatDate(element.date_created, true) }}</div>
 					</div>
 				</div>
@@ -108,22 +108,22 @@
 				<!-- Column 2: Organization Info -->
 				<div class="space-y-2">
 					<div>
-						<div class="text-xs text-gray-500 uppercase">Organization</div>
+						<div class="text-xs text-muted-foreground uppercase">Organization</div>
 						<div class="text-sm font-medium">{{ element.organization?.name || 'None' }}</div>
 					</div>
 					<div>
-						<div class="text-xs text-gray-500 uppercase">Team</div>
+						<div class="text-xs text-muted-foreground uppercase">Team</div>
 						<div class="text-sm font-medium">{{ element.team?.name || 'None' }}</div>
 					</div>
 					<div>
-						<div class="text-xs text-gray-500 uppercase">Project</div>
+						<div class="text-xs text-muted-foreground uppercase">Project</div>
 						<div class="text-sm font-medium">{{ element.project?.title || 'None' }}</div>
 					</div>
 				</div>
 
 				<!-- Column 3: Assignment -->
 				<div>
-					<div class="text-xs text-gray-500 uppercase mb-2">Assigned To</div>
+					<div class="text-xs text-muted-foreground uppercase mb-2">Assigned To</div>
 					<div class="flex flex-wrap gap-2">
 						<UAvatar
 							v-for="assignment in element.assigned_to"
@@ -148,7 +148,7 @@
 			<!-- Description Section -->
 			<div class="mt-4">
 				<div class="flex justify-between items-center">
-					<div class="text-xs text-gray-500 uppercase mb-2">Description</div>
+					<div class="text-xs text-muted-foreground uppercase mb-2">Description</div>
 					<UButton
 						v-if="isEditing"
 						size="xs"
@@ -160,7 +160,7 @@
 				</div>
 				<div
 					v-if="!isEditingDescription"
-					class="prose prose-sm max-w-none dark:prose-invert p-3 bg-white dark:bg-gray-900 rounded-lg"
+					class="prose prose-sm max-w-none dark:prose-invert p-3 bg-card rounded-lg"
 					v-html="element.description"
 				></div>
 				<FormTiptap

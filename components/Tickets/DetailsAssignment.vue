@@ -16,8 +16,8 @@
 			>
 				<template #label>
 					<div class="flex items-center gap-2">
-						<UIcon name="i-heroicons-user-plus" class="w-4 h-4 text-gray-500" />
-						<span class="text-gray-500">{{ selectedUser ? selectedUser.label : 'Add user...' }}</span>
+						<UIcon name="i-heroicons-user-plus" class="w-4 h-4 text-muted-foreground" />
+						<span class="text-muted-foreground">{{ selectedUser ? selectedUser.label : 'Add user...' }}</span>
 					</div>
 				</template>
 
@@ -26,14 +26,14 @@
 						<UAvatar :src="getAvatarUrl(user)" :alt="user.label" size="sm" />
 						<div class="flex flex-col">
 							<span class="font-medium">{{ user.label }}</span>
-							<span class="text-xs text-gray-500">{{ user.email }}</span>
+							<span class="text-xs text-muted-foreground">{{ user.email }}</span>
 						</div>
 					</div>
 				</template>
 			</USelectMenu>
 
 			<!-- Debug output in development only -->
-			<div v-if="isDevelopment" class="text-[9px] mt-1 text-gray-500 uppercase">
+			<div v-if="isDevelopment" class="text-[9px] mt-1 text-muted-foreground uppercase">
 				Available users: {{ availableUserOptions.length }}
 			</div>
 		</UFormGroup>
@@ -103,7 +103,7 @@
 		</div>
 
 		<!-- Empty State -->
-		<div v-else-if="!loadingUsers" class="text-xs text-gray-500 mt-6">No users assigned yet</div>
+		<div v-else-if="!loadingUsers" class="text-xs text-muted-foreground mt-6">No users assigned yet</div>
 	</div>
 </template>
 

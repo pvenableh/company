@@ -129,7 +129,7 @@ onUpdated(() => {
 				:key="date"
 			>
 				<div v-if="props.project[date]">
-					<span class="text-gray-500">{{ label }}</span>
+					<span class="text-muted-foreground">{{ label }}</span>
 					<p class="font-semibold">{{ formatDate(props.project[date]) }}</p>
 				</div>
 			</template>

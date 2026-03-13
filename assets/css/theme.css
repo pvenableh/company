@@ -60,6 +60,15 @@
   text-transform: var(--title-transform, uppercase);
   letter-spacing: var(--title-tracking, 0.12em);
   font-family: var(--title-font);
+  font-weight: var(--title-weight, 500);
+}
+
+/* ---- Label treatment — adapts to style variant ---- */
+.t-label {
+  text-transform: var(--label-transform, uppercase);
+  letter-spacing: var(--label-tracking, 0.08em);
+  font-weight: var(--label-weight, 600);
+  font-size: var(--label-size, 0.625rem);
 }
 
 /* ---- Border ---- */

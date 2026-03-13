@@ -58,12 +58,12 @@ const styles: StyleDefinition[] = [
 	{
 		id: 'modern',
 		name: 'Modern',
-		description: 'Proxima Nova, uppercase, tracked-out',
+		description: 'Sans-serif, uppercase, tracked-out — Apple-like gallery aesthetic',
 	},
 	{
 		id: 'classic',
 		name: 'Classic',
-		description: 'Bauer Bodoni, mixed-case, editorial',
+		description: 'Serif titles, sentence case, warm tones — editorial / fashion',
 	},
 ];
 

@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-3">
-    <CanvasBlockItem
+    <NewsletterCanvasBlockItem
       v-for="(block, index) in blocks"
       :key="block.instanceId"
       :canvas-block="block"

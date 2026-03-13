@@ -440,20 +440,117 @@
    ══════════════════════════════════════════════ */
 
 /* ── Modern (default) ──
-   Proxima Nova, uppercase, tracked-out, clean  */
+   All sans-serif, uppercase tracked-out titles,
+   white-on-white Apple aesthetic, gallery feel  */
 :root,
 [data-style='modern'] {
 	--title-font: var(--font-proxima-regular);
 	--title-transform: uppercase;
 	--title-tracking: 0.12em;
 	--title-weight: 500;
+	--body-font: var(--font-proxima-regular);
+	--label-transform: uppercase;
+	--label-tracking: 0.08em;
+	--label-weight: 600;
+	--label-size: 0.625rem;
+	--card-border-width: 1px;
+	--card-shadow: 0 1px 2px rgba(0,0,0,0.04);
+	--card-hover-shadow: 0 4px 12px rgba(0,0,0,0.06);
+	--btn-transform: uppercase;
+	--btn-tracking: 0.08em;
+	--btn-weight: 500;
 }
 
 /* ── Classic ──
-   Bauer Bodoni, mixed-case, tight, editorial  */
+   Serif titles (Bauer Bodoni) with sans-serif body,
+   warm tones, sentence case — editorial / fashion / NYT  */
 [data-style='classic'] {
 	--title-font: var(--font-bauer-bodoni);
 	--title-transform: none;
 	--title-tracking: -0.01em;
 	--title-weight: 400;
+	--body-font: var(--font-proxima-regular);
+	--label-transform: none;
+	--label-tracking: 0.02em;
+	--label-weight: 500;
+	--label-size: 0.75rem;
+	--card-border-width: 1px;
+	--card-shadow: 0 1px 4px rgba(0,0,0,0.06);
+	--card-hover-shadow: 0 3px 10px rgba(0,0,0,0.08);
+	--btn-transform: none;
+	--btn-tracking: 0.02em;
+	--btn-weight: 500;
+}
+
+/* ── Style Variant: Global Element Overrides ──────────── */
+
+/* Headings — respond to style variant automatically */
+[data-style='modern'] h1,
+[data-style='modern'] h2,
+[data-style='modern'] h3 {
+	font-family: var(--font-proxima-regular);
+	text-transform: uppercase;
+	letter-spacing: 0.12em;
+	font-weight: 500;
+}
+[data-style='modern'] h1 { font-size: 1.25rem; }
+[data-style='modern'] h4,
+[data-style='modern'] h5,
+[data-style='modern'] h6 {
+	font-family: var(--font-proxima-regular);
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	font-weight: 600;
+}
+
+[data-style='classic'] h1,
+[data-style='classic'] h2,
+[data-style='classic'] h3 {
+	font-family: var(--font-bauer-bodoni);
+	text-transform: none;
+	letter-spacing: -0.01em;
+	font-weight: 400;
+}
+[data-style='classic'] h1 { font-size: 1.75rem; }
+[data-style='classic'] h4,
+[data-style='classic'] h5,
+[data-style='classic'] h6 {
+	font-family: var(--font-proxima-regular);
+	text-transform: none;
+	letter-spacing: 0.02em;
+	font-weight: 500;
+}
+
+/* Labels and small caps — navigation, badges, meta text */
+[data-style='modern'] .t-label,
+[data-style='modern'] label {
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	font-size: 0.625rem;
+	font-weight: 600;
+}
+
+[data-style='classic'] .t-label,
+[data-style='classic'] label {
+	text-transform: none;
+	letter-spacing: 0.02em;
+	font-size: 0.75rem;
+	font-weight: 500;
+}
+
+/* Buttons */
+[data-style='modern'] button,
+[data-style='modern'] .btn,
+[data-style='modern'] [class*="Button"] {
+	text-transform: var(--btn-transform);
+	letter-spacing: var(--btn-tracking);
+	font-weight: var(--btn-weight);
+}
+
+[data-style='classic'] button,
+[data-style='classic'] .btn,
+[data-style='classic'] [class*="Button"] {
+	text-transform: none;
+	letter-spacing: 0.02em;
+	font-weight: 500;
 }

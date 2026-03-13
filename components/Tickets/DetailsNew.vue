@@ -44,7 +44,7 @@
 
 		<!-- Priority slider in header -->
 
-		<div class="mb-4 border-b border-gray-200">
+		<div class="mb-4 border-b border-border">
 			<div class="flex flex-wrap -mb-px">
 				<button
 					v-for="tab in tabs"
@@ -69,7 +69,7 @@
 		>
 			<div v-if="displayDescription" class="w-full py-4 mb-10">
 				<h5
-					class="w-full uppercase block font-medium text-gray-400 dark:text-gray-200 tracking-wider text-[12px] leading-3 mb-1"
+					class="w-full uppercase block font-medium text-muted-foreground tracking-wider text-[12px] leading-3 mb-1"
 				>
 					Description:
 				</h5>

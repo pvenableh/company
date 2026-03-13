@@ -159,18 +159,18 @@ const handleKeyboard = (event) => {
 </script>
 
 <template>
-	<div class="flex flex-col h-svh bg-white dark:bg-gray-900">
+	<div class="flex flex-col h-svh bg-card">
 		<!-- Header -->
 		<div
-			class="flex items-center justify-between p-4 border-b dark:border-gray-800 bg-white dark:bg-gray-900 sticky top-0 z-10"
+			class="flex items-center justify-between p-4 border-b border-border bg-card sticky top-0 z-10"
 		>
 			<div class="flex items-center space-x-4">
-				<NuxtLink to="/channels" class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">
+				<NuxtLink to="/channels" class="text-muted-foreground hover:text-foreground">
 					<UIcon name="i-heroicons-chevron-left" class="w-5 h-5" />
 				</NuxtLink>
 				<div>
 					<h1 class="text-xl font-bold">#{{ params.channel }}</h1>
-					<p class="text-sm text-gray-500">
+					<p class="text-sm text-muted-foreground">
 						{{ channelsLoading ? 'Loading...' : channels?.[0]?.name || 'Channel not found' }}
 					</p>
 				</div>
@@ -218,7 +218,7 @@ const handleKeyboard = (event) => {
 				<div
 					v-for="message in messages"
 					:key="message.id"
-					class="group flex items-start space-x-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+					class="group flex items-start space-x-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"
 				>
 					<ChannelsMessage :channel="message.channel" :message="message" />
 
@@ -257,7 +257,7 @@ const handleKeyboard = (event) => {
 			</template>
 
 			<!-- Empty State -->
-			<div v-else class="flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400">
+			<div v-else class="flex flex-col items-center justify-center h-full text-muted-foreground">
 				<UIcon name="i-heroicons-chat-bubble-left-right" class="w-12 h-12 mb-4" />
 				<p>No messages yet</p>
 				<p class="text-sm">Be the first to send a message!</p>
@@ -266,7 +266,7 @@ const handleKeyboard = (event) => {
 
 		<!-- Message Input -->
 		<div
-			class="w-screen fixed bottom-[60px] border-t shadow-lg dark:border-gray-800 bg-gray-100 dark:bg-gray-900 p-4 z-100"
+			class="w-screen fixed bottom-[60px] border-t shadow-lg border-border bg-muted p-4 z-100"
 		>
 			<div class="max-w-5xl mx-auto">
 				<div class="flex space-x-2">
@@ -288,7 +288,7 @@ const handleKeyboard = (event) => {
 					</UButton>
 				</div>
 				<p v-if="!channelId" class="text-xs text-red-500 mt-1">Channel not found or still loading...</p>
-				<p v-else class="text-xs text-gray-500 mt-1">Press Ctrl + Enter to send</p>
+				<p v-else class="text-xs text-muted-foreground mt-1">Press Ctrl + Enter to send</p>
 			</div>
 		</div>
 	</div>
@@ -305,7 +305,7 @@ const handleKeyboard = (event) => {
 }
 
 .prose :deep(.mention) {
-	@apply bg-gray-100 dark:bg-gray-800 rounded px-2 py-0.5 font-medium;
+	@apply bg-muted rounded px-2 py-0.5 font-medium;
 }
 
 /* Hide scrollbar but maintain functionality */
@@ -323,7 +323,7 @@ const handleKeyboard = (event) => {
 }
 
 .messages-container::-webkit-scrollbar-thumb {
-	@apply bg-gray-200 dark:bg-gray-700 rounded;
+	@apply bg-border rounded;
 }
 
 /* Smooth scrolling */

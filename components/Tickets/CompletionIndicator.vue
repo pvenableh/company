@@ -50,7 +50,7 @@ const iconName = computed(() => {
 
 const colorClass = computed(() => {
   if (props.value === 0) {
-    return 'text-gray-500';
+    return 'text-muted-foreground';
   } else if (isPositive.value) {
     return 'text-green-500';
   } else {

@@ -30,10 +30,10 @@
 		</ClientOnly>
 
 		<div v-if="!isLoading" class="space-y-2">
-			<div v-if="filteredTasks.length === 0" class="p-4 text-center text-gray-500">
-				<UIcon name="i-heroicons-document-text" class="w-12 h-12 mx-auto mb-2 text-gray-300" />
+			<div v-if="filteredTasks.length === 0" class="p-4 text-center text-muted-foreground">
+				<UIcon name="i-heroicons-document-text" class="w-12 h-12 mx-auto mb-2 text-muted-foreground" />
 				<p class="text-sm">No tasks found</p>
-				<p class="text-xs text-gray-400 mt-2">Try changing your filters or create new tasks in your tickets</p>
+				<p class="text-xs text-muted-foreground mt-2">Try changing your filters or create new tasks in your tickets</p>
 			</div>
 
 			<div v-else>
@@ -59,7 +59,7 @@
 					</div>
 				</div>
 
-				<div v-if="debug" class="bg-gray-100 p-2 rounded-lg mb-3 text-xs">
+				<div v-if="debug" class="bg-muted p-2 rounded-lg mb-3 text-xs">
 					<div>
 						<strong>Org ID:</strong>
 						{{ effectiveOrgId }}
@@ -79,7 +79,7 @@
 				</div>
 
 				<div v-for="task in filteredTasks" :key="task.id" class="task-item">
-					<div class="flex items-center space-x-3 group bg-white dark:bg-gray-800 p-2 rounded-lg shadow-sm">
+					<div class="flex items-center space-x-3 group bg-card p-2 rounded-lg shadow-sm">
 						<div
 							v-if="updatingTasks.has(task.id)"
 							class="absolute inset-0 bg-white/50 dark:bg-gray-900/50 rounded-lg flex items-center justify-center z-10"
@@ -96,7 +96,7 @@
 								v-html="task.description"
 							></div>
 
-							<div class="text-[8px] text-gray-500 uppercase mt-1 flex items-center flex-wrap">
+							<div class="text-[8px] text-muted-foreground uppercase mt-1 flex items-center flex-wrap">
 								<span class="mr-2 inline-flex items-center">
 									<UIcon name="i-heroicons-document-text" class="w-3 h-3 mr-1" />
 									<UButton
@@ -124,7 +124,7 @@
 
 							<div
 								v-if="task.status === 'completed' && task.date_updated"
-								class="text-[8px] text-gray-500 mt-0.5 uppercase"
+								class="text-[8px] text-muted-foreground mt-0.5 uppercase"
 							>
 								Completed {{ formatCompletionDate(task.date_updated) }}
 								{{ task.user_updated ? `by ${task.user_updated.first_name}` : '' }}

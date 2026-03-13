@@ -42,13 +42,13 @@
 					</UButton>
 					<div class="flex flex-row items-center justify-center space-x-2">
 						<UToggle v-model="filterByAssignedTo" />
-						<span class="text-[10px] text-gray-500 uppercase">
+						<span class="text-[10px] text-muted-foreground uppercase">
 							{{ filterByAssignedTo ? 'My Tickets' : 'All Tickets' }}
 						</span>
 					</div>
 					<div class="flex flex-row items-center justify-center space-x-2">
 						<UToggle v-model="filterUnassigned" :disabled="filterByAssignedTo" />
-						<span class="text-[10px] text-gray-500 uppercase">
+						<span class="text-[10px] text-muted-foreground uppercase">
 							{{ filterUnassigned ? 'Unassigned' : 'All Assignments' }}
 						</span>
 					</div>
@@ -86,7 +86,7 @@
 							option-attribute="title"
 							value-attribute="id"
 							placeholder="Select Project"
-							class="w-full lg:w-64 uppercase text-[8px] text-gray-400 relative"
+							class="w-full lg:w-64 uppercase text-[8px] text-muted-foreground relative"
 							@change="handleProjectChange"
 						>
 							<template #option="{ option }">
@@ -100,10 +100,10 @@
 											{{ option.tickets.length }}
 										</span>
 									</span>
-									<span v-if="option.organization" class="text-[9px] leading-3 text-gray-500">
+									<span v-if="option.organization" class="text-[9px] leading-3 text-muted-foreground">
 										{{ option.organization.name }}
 									</span>
-									<span v-if="option.team" class="text-[9px] leading-3 text-gray-500">
+									<span v-if="option.team" class="text-[9px] leading-3 text-muted-foreground">
 										Team: {{ option.team.name }}
 									</span>
 								</div>
@@ -111,7 +111,7 @@
 						</USelectMenu>
 					</div>
 				</div>
-				<div v-if="lastUpdated" class="-bottom-[22.5px] text-[9px] right-0 text-gray-500 absolute font-bold uppercase">
+				<div v-if="lastUpdated" class="-bottom-[22.5px] text-[9px] right-0 text-muted-foreground absolute font-bold uppercase">
 					Last updated: {{ formatLastUpdated(lastUpdated) }}
 				</div>
 			</div>
@@ -131,7 +131,7 @@
 
 		<!-- Main Board -->
 		<div
-			class="bg-gray-100/30 border-b border-gray-200 w-full flex min-h-svh overflow-x-auto overflow-hidden-scrollbar tickets-board__board"
+			class="bg-muted/30 border-b border-border w-full flex min-h-svh overflow-x-auto overflow-hidden-scrollbar tickets-board__board"
 			@touchstart="handleTouchStart"
 			@touchend="handleTouchEnd"
 		>
@@ -159,7 +159,7 @@
 				<!-- Loading Skeletons -->
 				<div
 					v-if="isLoading && !localTickets[column.id]?.length"
-					class="min-h-[90svh] p-2 bg-gray-100 dark:bg-gray-800"
+					class="min-h-[90svh] p-2 bg-muted"
 				>
 					<div class="space-y-3">
 						<USkeleton v-for="n in 5" :key="n" class="h-24 mb-4 w-full" />
@@ -1037,7 +1037,7 @@ watch(
 		@apply border-gray-50 border-r border-l shadow-inner;
 	}
 	.tickets-board__board-col-header {
-		@apply relative shadow-2xl py-5 px-4 backdrop-blur-lg mt-1 border-gray-200 border-b;
+		@apply relative shadow-2xl py-5 px-4 backdrop-blur-lg mt-1 border-border border-b;
 		@media (min-width: 1600px) {
 			@apply px-8;
 		}

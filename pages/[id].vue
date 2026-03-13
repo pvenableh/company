@@ -47,7 +47,7 @@ const columns = [
 </script>
 <template>
 	<div class="max-w-screen-xl mx-auto">
-		<nuxt-link to="/tickets" class="uppercase text-[10px] text-gray-400 px-4 2xl:px-0">
+		<nuxt-link to="/tickets" class="t-label text-muted-foreground px-4 2xl:px-0">
 			<UIcon name="i-heroicons-arrow-left" class="-mb-0.5" />
 			Back to tickets
 		</nuxt-link>

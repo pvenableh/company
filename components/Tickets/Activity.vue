@@ -7,8 +7,8 @@
 			<UIcon name="i-heroicons-arrow-path" class="animate-spin h-5 w-5" />
 		</div>
 
-		<div v-else-if="!activityItems.length" class="text-center py-6 bg-gray-50 dark:bg-gray-800 rounded-lg">
-			<p class="text-gray-500">No activity history available</p>
+		<div v-else-if="!activityItems.length" class="text-center py-6 bg-muted rounded-lg">
+			<p class="text-muted-foreground">No activity history available</p>
 		</div>
 
 		<div v-else>
@@ -17,7 +17,7 @@
 				<div
 					v-for="(item, index) in activityItems"
 					:key="`${item.type}-${item.id}-${index}`"
-					class="activity-item bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700 p-3 relative"
+					class="activity-item bg-card rounded-lg shadow-sm border border-border p-3 relative"
 				>
 					<!-- Activity icon (left side) -->
 					<div
@@ -42,7 +42,7 @@
 						</div>
 
 						<!-- User and timestamp info -->
-						<div class="flex items-center text-xs text-gray-500 mb-3">
+						<div class="flex items-center text-xs text-muted-foreground mb-3">
 							<UAvatar :src="getUserAvatar(item.user)" :alt="getUserName(item.user)" size="2xs" class="mr-2" />
 							<span>{{ getUserName(item.user) }}</span>
 							<span class="mx-2">•</span>
@@ -52,7 +52,7 @@
 						<!-- Comment content -->
 						<div
 							v-if="item.type === 'comment'"
-							class="mt-2 text-sm bg-gray-50 dark:bg-gray-800/50 p-2 rounded comment-content"
+							class="mt-2 text-sm bg-muted p-2 rounded comment-content"
 						>
 							<!-- Using v-html with trusted content from Directus -->
 							<div v-html="item.content"></div>
@@ -60,7 +60,7 @@
 
 						<!-- Task activity content -->
 						<div v-if="item.type === 'task'" class="mt-2">
-							<div class="mt-2 text-sm bg-gray-50 dark:bg-gray-800/50 p-2 rounded flex items-start gap-2">
+							<div class="mt-2 text-sm bg-muted p-2 rounded flex items-start gap-2">
 								<UCheckbox :model-value="item.task.status === 'completed'" disabled class="mt-0.5" />
 								<div v-html="item.task.description"></div>
 							</div>
@@ -85,7 +85,7 @@
 									<div
 										v-for="field in item.updatedFields"
 										:key="field.name"
-										class="bg-gray-50 dark:bg-gray-800/50 rounded p-2"
+										class="bg-muted rounded p-2"
 									>
 										<div class="font-medium text-xs text-gray-700 dark:text-gray-300 mb-1">
 											{{ formatFieldName(field.name) }}
@@ -145,7 +145,7 @@
 								<div
 									v-for="field in item.initialDetails"
 									:key="field.name"
-									class="bg-gray-50 dark:bg-gray-800/50 rounded p-2 mb-1"
+									class="bg-muted rounded p-2 mb-1"
 								>
 									<div class="font-medium text-xs text-gray-700 dark:text-gray-300 mb-1">
 										{{ formatFieldName(field.name) }}

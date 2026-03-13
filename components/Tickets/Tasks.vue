@@ -445,7 +445,7 @@ onUnmounted(() => {
 			@end="handleDragEnd"
 		>
 			<template #item="{ element: task }">
-				<div class="flex items-center space-x-3 group bg-white dark:bg-gray-800 p-2 rounded-lg shadow-sm">
+				<div class="flex items-center space-x-3 group bg-card p-2 rounded-lg shadow-sm">
 					<UButton
 						color="gray"
 						variant="ghost"
@@ -477,7 +477,7 @@ onUnmounted(() => {
 
 						<div
 							v-if="task.status === 'completed'"
-							class="text-[8px] text-gray-500 mt-0.5 uppercase absolute left-0 -bottom-[10px]"
+							class="text-[8px] text-muted-foreground mt-0.5 uppercase absolute left-0 -bottom-[10px]"
 						>
 							Completed {{ formatCompletionDate(task.date_updated) }} by
 							{{ task.user_updated ? ` ${task.user_updated.first_name}` : '' }}

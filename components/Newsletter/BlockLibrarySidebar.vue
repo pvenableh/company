@@ -17,7 +17,7 @@
         <p class="px-2 py-1 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
           {{ formatCategory(category as string) }}
         </p>
-        <BlockLibraryItem
+        <NewsletterBlockLibraryItem
           v-for="block in blocks"
           :key="block.id"
           :block="block"
