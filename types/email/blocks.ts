@@ -25,16 +25,70 @@ export interface BlockVariableDefinition {
 /**
  * Parse a variables_schema field which may be a JSON string or already-parsed array.
  * Directus stores JSON fields as strings; this normalizes them.
+ *
+ * If the schema is empty but `mjmlSource` is provided, auto-detects variables
+ * from `{{{variable_name}}}` patterns in the MJML and generates definitions
+ * with smart type inference based on the variable name.
  */
 export function parseVariablesSchema(
-  raw: BlockVariableDefinition[] | string | Record<string, any> | null | undefined
+  raw: BlockVariableDefinition[] | string | Record<string, any> | null | undefined,
+  mjmlSource?: string | null,
 ): BlockVariableDefinition[] {
-  if (!raw) return [];
-  if (Array.isArray(raw)) return raw;
-  if (typeof raw === 'string') {
-    try { return JSON.parse(raw); } catch { return []; }
+  let schema: BlockVariableDefinition[] = [];
+
+  if (raw) {
+    if (Array.isArray(raw)) {
+      schema = raw;
+    } else if (typeof raw === 'string') {
+      try { schema = JSON.parse(raw); } catch { /* ignore parse errors */ }
+    }
   }
+
+  // If we have a valid schema, return it
+  if (schema.length > 0) return schema;
+
+  // Fallback: auto-detect variables from MJML source
+  if (mjmlSource) {
+    return inferVariablesFromMjml(mjmlSource);
+  }
+
   return [];
+}
+
+/**
+ * Scan MJML source for `{{{variable_name}}}` patterns and generate
+ * BlockVariableDefinition entries with smart type inference.
+ */
+export function inferVariablesFromMjml(mjml: string): BlockVariableDefinition[] {
+  const matches = mjml.match(/\{\{\{([^}]+)\}\}\}/g);
+  if (!matches) return [];
+
+  const uniqueKeys = [...new Set(matches.map((m) => m.replace(/\{\{\{|\}\}\}/g, '')))];
+
+  return uniqueKeys.map((key) => {
+    const lower = key.toLowerCase();
+    let type: BlockVariableDefinition['type'] = 'text';
+    let defaultVal: string | undefined;
+
+    // Infer type from variable name
+    if (lower.includes('color') || lower.includes('bg') || lower.includes('background')) {
+      type = 'color';
+      defaultVal = 'transparent';
+    } else if (lower.includes('url') || lower.includes('link') || lower.includes('href')) {
+      type = 'url';
+    } else if (lower.includes('image') || lower.includes('img') || lower.includes('src') || lower.includes('logo') || lower.includes('photo') || lower.includes('avatar')) {
+      type = 'image';
+    } else if (lower.includes('html') || lower.includes('body') || lower.includes('content') || lower.includes('description')) {
+      type = 'html';
+    }
+
+    return {
+      key,
+      label: key.replace(/[_-]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+      type,
+      default: defaultVal,
+    };
+  });
 }
 
 export interface NewsletterBlock {
@@ -129,6 +183,8 @@ export interface EmailPartial {
   variables_schema?: BlockVariableDefinition[] | Record<string, any> | null;
   instance_variables?: Record<string, any> | null;
   is_default?: boolean | null;
+  /** Organization that owns this partial. Null = system default partial. */
+  organization?: string | null;
 }
 
 // ── Emails (sent campaigns / newsletters) ──────────────────────────────────

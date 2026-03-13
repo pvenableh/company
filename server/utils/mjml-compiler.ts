@@ -17,6 +17,22 @@ export interface CompileResult {
 }
 
 /**
+ * Strip MJML attributes that have empty, whitespace-only, or unreplaced
+ * template variable values. These produce MJML validation errors
+ * (invalid Color, Unit, or Enum values).
+ */
+export function stripEmptyMjmlAttributes(mjml: string): string {
+  let result = mjml;
+  // Strip attributes with empty values: attr=""
+  result = result.replace(/\s+[\w-]+=""/g, '');
+  // Strip attributes with whitespace-only values: attr="   "
+  result = result.replace(/\s+[\w-]+="\s+"/g, '');
+  // Strip attributes with unreplaced design-time variables: attr="{{{...}}}"
+  result = result.replace(/\s+[\w-]+="\{\{\{[^}]*\}\}\}"/g, '');
+  return result;
+}
+
+/**
  * Compile an MJML template string with Handlebars variables into HTML.
  * Runtime variables ({{double braces}}) are injected per-recipient.
  */
@@ -29,8 +45,11 @@ export function compileMjml(
     const template = Handlebars.compile(mjmlSource, { noEscape: true });
     const renderedMjml = template(variables);
 
+    // Strip any remaining empty/invalid MJML attributes as a safety net
+    const cleanedMjml = stripEmptyMjmlAttributes(renderedMjml);
+
     // Then compile MJML to HTML
-    const result = mjml2html(renderedMjml, {
+    const result = mjml2html(cleanedMjml, {
       validationLevel: 'soft',
       minify: false,
     });
