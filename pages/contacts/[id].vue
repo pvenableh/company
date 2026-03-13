@@ -132,7 +132,7 @@ onMounted(() => {
             </h1>
             <p class="text-sm text-muted-foreground">{{ contact.email }}</p>
           </div>
-          <ContactStatusBadge :status="contact.status" />
+          <ContactsContactStatusBadge :status="contact.status" />
         </div>
         <Button
           variant="outline"
@@ -162,7 +162,7 @@ onMounted(() => {
         <div class="lg:col-span-2 space-y-4">
           <div class="ios-card p-6">
             <h2 class="font-medium mb-4">Contact Details</h2>
-            <ContactForm
+            <ContactsContactForm
               :contact="contact"
               :saving="saving"
               @submit="handleUpdate"

@@ -6,10 +6,63 @@ const user = computed(() => {
 
 const { user: directusUser } = useDirectusAuth();
 const { canAccess } = useRole();
+const { selectedOrg, getOrganizationFilter } = useOrganization();
 
 const isAdmin = computed(() => canAccess('projects'));
 
-const activeView = ref('timeline');
+// Non-admins default to table view; admins default to timeline
+const activeView = ref(isAdmin.value ? 'timeline' : 'table');
+
+// Table view data
+const projectItems = useDirectusItems('projects');
+const tableProjects = ref([]);
+const tableLoading = ref(false);
+
+const fetchTableProjects = async () => {
+	tableLoading.value = true;
+	try {
+		const filter = {};
+		const orgFilter = getOrganizationFilter();
+		if (Object.keys(orgFilter).length > 0) {
+			Object.assign(filter, orgFilter);
+		}
+
+		tableProjects.value = await projectItems.list({
+			fields: [
+				'id', 'title', 'status', 'due_date', 'date_updated',
+				'service.id', 'service.name', 'service.color',
+				'organization.id', 'organization.name',
+				'assigned_to.id',
+				'assigned_to.directus_users_id.id',
+				'assigned_to.directus_users_id.first_name',
+				'assigned_to.directus_users_id.last_name',
+			],
+			filter: {
+				status: { _nin: ['Archived'] },
+				...filter,
+			},
+			sort: ['-date_updated'],
+			limit: 200,
+		});
+	} catch (e) {
+		console.error('Error fetching projects:', e);
+	} finally {
+		tableLoading.value = false;
+	}
+};
+
+// Fetch table data when view switches to table or org changes
+watch([() => activeView.value, selectedOrg], ([view]) => {
+	if (view === 'table') {
+		fetchTableProjects();
+	}
+});
+
+onMounted(() => {
+	if (activeView.value === 'table') {
+		fetchTableProjects();
+	}
+});
 
 definePageMeta({
 	middleware: ['auth'],
@@ -20,12 +73,15 @@ definePageMeta({
 	<div class="page__content">
 		<h1 class="page__title">
 			Projects
-			<span class="block">{{ activeView === 'timeline' ? 'Timeline' : 'Board' }}</span>
+			<span class="block">
+				{{ activeView === 'timeline' ? 'Timeline' : activeView === 'board' ? 'Board' : 'Overview' }}
+			</span>
 		</h1>
 
 		<!-- View switcher -->
-		<div v-if="isAdmin" class="flex items-center gap-1 px-4 2xl:px-0 mb-4">
+		<div class="flex items-center gap-1 px-4 2xl:px-0 mb-4">
 			<button
+				v-if="isAdmin"
 				class="px-3 py-1.5 t-label rounded-md transition-colors"
 				:class="activeView === 'timeline'
 					? 'bg-primary text-primary-foreground'
@@ -36,6 +92,7 @@ definePageMeta({
 				Timeline
 			</button>
 			<button
+				v-if="isAdmin"
 				class="px-3 py-1.5 t-label rounded-md transition-colors"
 				:class="activeView === 'board'
 					? 'bg-primary text-primary-foreground'
@@ -45,22 +102,33 @@ definePageMeta({
 				<Icon name="i-heroicons-view-columns" class="h-3.5 w-3.5 inline -mt-0.5 mr-1" />
 				Board
 			</button>
+			<button
+				class="px-3 py-1.5 t-label rounded-md transition-colors"
+				:class="activeView === 'table'
+					? 'bg-primary text-primary-foreground'
+					: 'text-muted-foreground hover:text-foreground'"
+				@click="activeView = 'table'"
+			>
+				<Icon name="i-heroicons-table-cells" class="h-3.5 w-3.5 inline -mt-0.5 mr-1" />
+				Table
+			</button>
 		</div>
 
-		<div v-if="isAdmin">
-			<!-- Timeline view -->
-			<div v-if="activeView === 'timeline'" class="z-10 min-h-svh page__inner">
-				<ProjectTimelineTimeline />
-			</div>
-
-			<!-- Board view -->
-			<div v-else class="xl:flex xl:items-center xl:justify-center z-10 min-h-svh overflow-x-auto page__inner">
-				<ProjectsBoard />
-			</div>
+		<!-- Timeline view (admin only) -->
+		<div v-if="isAdmin && activeView === 'timeline'" class="z-10 min-h-svh page__inner">
+			<ProjectTimelineTimeline />
 		</div>
-		<div v-else class="flex flex-col items-center justify-center z-10 min-h-[60vh] page__inner">
-			<h2 class="text-2xl t-title text-muted-foreground">Coming Soon</h2>
-			<p class="text-sm text-muted-foreground mt-2">This feature is currently under development.</p>
+
+		<!-- Board view (admin only) -->
+		<div v-else-if="isAdmin && activeView === 'board'" class="xl:flex xl:items-center xl:justify-center z-10 min-h-svh overflow-x-auto page__inner">
+			<ProjectsBoard />
+		</div>
+
+		<!-- Table view (all users) -->
+		<div v-else-if="activeView === 'table'" class="z-10 page__inner px-4 2xl:px-0">
+			<div class="ios-card p-5">
+				<ProjectsTable :projects="tableProjects" :loading="tableLoading" />
+			</div>
 		</div>
 	</div>
 </template>

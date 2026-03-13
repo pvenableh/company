@@ -6,6 +6,7 @@
 			<h1 class="hidden md:inline-block mt-6">{{ user?.first_name }} {{ user?.last_name }}</h1>
 			<a :class="{ active: panel === 1 }" @click.prevent="changePanel(1)">Profile</a>
 			<a :class="{ active: panel === 2 }" @click.prevent="changePanel(2)">Reset Password</a>
+			<a :class="{ active: panel === 3 }" @click.prevent="changePanel(3)">Earnest Score</a>
 			<a :class="{ active: panel === 5 }" @click.prevent="changePanel(5)">Appearance</a>
 			<a :class="{ active: panel === 6 }" @click.prevent="changePanel(6)">Notifications</a>
 			<AccountLogout v-if="user" class="logout-icon" />
@@ -21,7 +22,12 @@
 			<div v-if="panel === 2" key="2" class="account__panel">
 				<AccountPasswordRequest />
 			</div>
-			<div v-if="panel === 3" key="3" class="account__panel"></div>
+			<div v-if="panel === 3" key="3" class="account__panel">
+				<div class="max-w-xl">
+					<h2 class="text-lg font-semibold text-foreground mb-6">Earnest Score</h2>
+					<EarnestProfilePanel />
+				</div>
+			</div>
 			<div v-if="panel === 4" key="4" class="account__panel"></div>
 			<div v-if="panel === 5" key="5" class="account__panel">
 				<div class="max-w-md">

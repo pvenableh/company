@@ -61,7 +61,7 @@
     <div>
       <label class="block text-sm font-medium mb-1">Tags</label>
       <div class="flex flex-wrap gap-1 mb-2">
-        <ContactTagBadge
+        <ContactsContactTagBadge
           v-for="tag in (formData.tags || [])"
           :key="tag"
           :tag="tag"

@@ -867,6 +867,43 @@ export interface CdXpState {
 	total_clients?: number | null;
 }
 
+export interface EarnestScore {
+	/** @primaryKey */
+	id: string;
+	user_created?: DirectusUser | string | null;
+	date_created?: string | null;
+	date_updated?: string | null;
+	organization?: string | null;
+	total_ep?: number | null;
+	level?: number | null;
+	current_score?: number | null;
+	streak?: number | null;
+	best_streak?: number | null;
+	last_activity_date?: string | null;
+	days_active_this_week?: number | null;
+	total_tasks_completed?: number | null;
+	projects_fully_completed?: number | null;
+	advance_schedule_count?: number | null;
+	consecutive_high_completion_days?: number | null;
+	consecutive_responsive_days?: number | null;
+	consecutive_top_rank_days?: number | null;
+	badges_unlocked?: string[] | null;
+	dimension_scores?: Record<string, number> | null;
+}
+
+export interface EarnestHistory {
+	/** @primaryKey */
+	id: string;
+	user_created?: DirectusUser | string | null;
+	date_created?: string | null;
+	organization?: string | null;
+	date?: string | null;
+	score?: number | null;
+	ep_earned?: number | null;
+	streak?: number | null;
+	dimensions?: Record<string, number> | null;
+}
+
 export interface Channel {
 	/** @primaryKey */
 	id: string;
@@ -878,6 +915,7 @@ export interface Channel {
 	date_updated?: string | null;
 	name?: string | null;
 	project?: Project | string | null;
+	ticket?: Ticket | string | null;
 	organization?: Organization | string | null;
 	description?: string | null;
 	messages?: Message[] | string[];

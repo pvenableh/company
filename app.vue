@@ -86,7 +86,7 @@ const links = ref([
 	},
 	{
 		name: 'Financials',
-		type: ['footer', 'drawer'],
+		type: ['footer', 'toolbar', 'drawer'],
 		to: '/command-center/financials',
 		icon: 'i-heroicons-banknotes',
 	},
