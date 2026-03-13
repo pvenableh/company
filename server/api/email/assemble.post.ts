@@ -2,7 +2,7 @@
  * Assembles template blocks into compiled MJML and validates.
  * Called by the builder UI on save for server-side validation.
  */
-import { compileMjml } from '~/server/utils/mjml-compiler';
+import { compileMjml, stripEmptyMjmlAttributes } from '~/server/utils/mjml-compiler';
 
 export default defineEventHandler(async (event) => {
   const { canvas_blocks } = await readBody(event);
@@ -15,13 +15,15 @@ export default defineEventHandler(async (event) => {
     ({ block_mjml, instance_variables = {} }: { block_mjml: string; instance_variables?: Record<string, any> }) => {
       let source = block_mjml;
       for (const [key, value] of Object.entries(instance_variables)) {
-        source = source.replaceAll(`{{{${key}}}}`, String(value ?? ''));
+        const str = String(value ?? '');
+        source = source.replaceAll(`{{{${key}}}}`, str);
       }
       return source;
     }
   );
 
-  const assembled = `<mjml>
+  // Strip empty attributes before MJML compilation to prevent validation errors
+  const assembled = stripEmptyMjmlAttributes(`<mjml>
   <mj-head>
     <mj-attributes>
       <mj-all font-family="Arial, Helvetica, sans-serif" />
@@ -36,7 +38,7 @@ export default defineEventHandler(async (event) => {
   <mj-body background-color="#f4f4f4">
 ${blockSources.join('\n')}
   </mj-body>
-</mjml>`;
+</mjml>`);
 
   const { html, errors } = compileMjml(assembled, { first_name: 'Test' });
 

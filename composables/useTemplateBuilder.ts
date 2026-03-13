@@ -9,7 +9,8 @@ import { parseVariablesSchema } from '~/types/email/blocks';
 
 export function useTemplateBuilder(templateId: Ref<number>) {
   const { previewNewsletter } = useEmailTemplates();
-  const { getDefaultPartial, getPartial } = useEmailPartials();
+  const { getDefaultPartial, getOrgPartial, getPartial, getAvailablePartials, updatePartial } = useEmailPartials();
+  const { selectedOrg } = useOrganization();
   const templateBlockItems = useDirectusItems('template_blocks');
   const emailTemplateItems = useDirectusItems('email_templates');
 
@@ -39,7 +40,7 @@ export function useTemplateBuilder(templateId: Ref<number>) {
       instanceId: nanoid(8),
       blockId: tb.block_id.id,
       block: tb.block_id,
-      variables: tb.instance_variables || {},
+      variables: mergeWithSchemaDefaults(tb.instance_variables || {}, tb.block_id),
       sort: i,
     }));
 
@@ -57,14 +58,39 @@ export function useTemplateBuilder(templateId: Ref<number>) {
   };
 
   const loadPartials = async (headerId?: number | null, footerId?: number | null) => {
+    const orgId = selectedOrg.value || null;
     const [header, footer, webBar] = await Promise.all([
-      headerId ? getPartial(headerId) : getDefaultPartial('header'),
-      footerId ? getPartial(footerId) : getDefaultPartial('footer'),
-      getDefaultPartial('web_version_bar'),
+      headerId ? getPartial(headerId) : getOrgPartial('header', orgId),
+      footerId ? getPartial(footerId) : getOrgPartial('footer', orgId),
+      getOrgPartial('web_version_bar', orgId),
     ]);
     headerPartial.value = header;
     footerPartial.value = footer;
     webVersionBarPartial.value = webBar;
+  };
+
+  /** Get available partials for a type (org-specific + system defaults). */
+  const getPartialOptions = async (type: 'header' | 'footer' | 'web_version_bar') => {
+    const orgId = selectedOrg.value || null;
+    return getAvailablePartials(type, orgId);
+  };
+
+  /** Update the variables for the current header or footer partial and save to Directus. */
+  const updatePartialVariables = async (
+    type: 'header' | 'footer' | 'web_version_bar',
+    vars: Record<string, any>,
+  ) => {
+    const partial =
+      type === 'header' ? headerPartial.value
+      : type === 'footer' ? footerPartial.value
+      : webVersionBarPartial.value;
+    if (!partial) return;
+
+    // Update in Directus
+    await updatePartial(partial.id, { instance_variables: vars });
+    // Update locally
+    partial.instance_variables = vars;
+    isDirty.value = true;
   };
 
   // ── Canvas operations ──────────────────────────────────────────────
@@ -116,25 +142,53 @@ export function useTemplateBuilder(templateId: Ref<number>) {
   };
 
   // ── MJML Assembly ──────────────────────────────────────────────────
+
+  /**
+   * Get a safe fallback value for an MJML variable based on its schema type.
+   * Prevents empty strings from producing invalid MJML attributes like
+   * background-color="" or width="".
+   */
+  function resolveVariableValue(value: any, type?: string): string {
+    const str = String(value ?? '');
+    if (str.trim() !== '') return str;
+    // Type-aware fallbacks for empty values
+    switch (type) {
+      case 'color': return 'transparent';
+      case 'boolean': return 'false';
+      default: return '';
+    }
+  }
+
   const resolvePartialMjml = (partial: EmailPartial | null): string => {
     if (!partial) return '';
     let source = partial.mjml_source;
     const vars = partial.instance_variables || {};
-    // Replace design-time variables
-    const schema = parseVariablesSchema(partial.variables_schema);
+    // Replace design-time variables with type-aware defaults
+    const schema = parseVariablesSchema(partial.variables_schema, partial.mjml_source);
     if (schema.length) {
       for (const def of schema) {
-        const value = vars[def.key] ?? def.default ?? '';
-        source = source.replaceAll(`{{{${def.key}}}}`, String(value));
+        const raw = vars[def.key] ?? def.default ?? '';
+        const value = resolveVariableValue(raw, def.type);
+        source = source.replaceAll(`{{{${def.key}}}}`, value);
       }
     }
     return source;
   };
 
-  // Remove MJML attributes with empty values (e.g. background-color="" or width="")
-  // which cause MJML validation errors
+  /**
+   * Remove MJML attributes with empty, whitespace-only, or unreplaced
+   * template variable values — all of which cause MJML validation errors
+   * (invalid Color, Unit, or Enum values).
+   */
   const stripEmptyMjmlAttributes = (mjml: string): string => {
-    return mjml.replace(/\s+[\w-]+=""/g, '');
+    let result = mjml;
+    // Strip attributes with empty values: attr=""
+    result = result.replace(/\s+[\w-]+=""/g, '');
+    // Strip attributes with whitespace-only values: attr="   "
+    result = result.replace(/\s+[\w-]+="\s+"/g, '');
+    // Strip attributes with unreplaced design-time variables: attr="{{{...}}}"
+    result = result.replace(/\s+[\w-]+="\{\{\{[^}]*\}\}\}"/g, '');
+    return result;
   };
 
   const assembleMjml = (): string => {
@@ -150,11 +204,14 @@ export function useTemplateBuilder(templateId: Ref<number>) {
       sections.push(resolvePartialMjml(headerPartial.value));
     }
 
-    // Canvas blocks
+    // Canvas blocks — use schema-aware substitution
     for (const cb of canvas.value) {
       let source = cb.block.mjml_source;
+      const schema = parseVariablesSchema(cb.block.variables_schema, cb.block.mjml_source);
       for (const [key, value] of Object.entries(cb.variables)) {
-        source = source.replaceAll(`{{{${key}}}}`, String(value ?? ''));
+        const def = schema.find((s) => s.key === key);
+        const resolved = resolveVariableValue(value, def?.type);
+        source = source.replaceAll(`{{{${key}}}}`, resolved);
       }
       sections.push(source);
     }
@@ -249,12 +306,53 @@ ${sections.join('\n')}
   };
 
   // ── Helpers ────────────────────────────────────────────────────────
+
+  /** Return a safe default value for a variable type (prevents empty MJML attrs). */
+  function getTypeDefault(type: string): any {
+    switch (type) {
+      case 'color': return 'transparent';
+      case 'boolean': return false;
+      default: return '';
+    }
+  }
+
   function getDefaultVariables(block: NewsletterBlock): Record<string, any> {
-    const schema = parseVariablesSchema(block.variables_schema);
+    const schema = parseVariablesSchema(block.variables_schema, block.mjml_source);
     if (!schema.length) return {};
     return Object.fromEntries(
-      schema.map((v) => [v.key, v.default ?? ''])
+      schema.map((v) => [v.key, v.default ?? getTypeDefault(v.type)])
     );
+  }
+
+  /**
+   * Merge saved instance variables with schema defaults.
+   * Ensures variables added after a block was saved still get safe defaults,
+   * and empty/null saved values fall back to type-aware defaults.
+   */
+  function mergeWithSchemaDefaults(
+    saved: Record<string, any>,
+    block: NewsletterBlock,
+  ): Record<string, any> {
+    const schema = parseVariablesSchema(block.variables_schema, block.mjml_source);
+    if (!schema.length) return saved;
+
+    const result: Record<string, any> = {};
+    // Apply schema-aware defaults, then overlay saved values
+    for (const def of schema) {
+      const savedVal = saved[def.key];
+      if (savedVal !== undefined && savedVal !== null && savedVal !== '') {
+        result[def.key] = savedVal;
+      } else {
+        result[def.key] = def.default ?? getTypeDefault(def.type);
+      }
+    }
+    // Preserve any extra saved variables not in current schema
+    for (const [key, val] of Object.entries(saved)) {
+      if (!(key in result)) {
+        result[key] = val;
+      }
+    }
+    return result;
   }
 
   const togglePartial = (type: 'header' | 'footer' | 'web_version_bar', value: boolean) => {
@@ -282,6 +380,8 @@ ${sections.join('\n')}
     moveBlock,
     updateBlockVariables,
     togglePartial,
+    getPartialOptions,
+    updatePartialVariables,
     assembleMjml,
     refreshPreview,
     save,
