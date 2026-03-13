@@ -1,4 +1,4 @@
-# Hue Studios
+# Earnest
 
 A multi-tenant SaaS business management platform built with [Nuxt 3](https://nuxt.com), [Vue 3](https://vuejs.org), and [Directus](https://directus.io). Designed for creative agencies, consultancies, and growing SMBs that need project delivery, client management, financials, team collaboration, social media management, email marketing, and AI-powered productivity intelligence under one roof. Organizations serve as the tenant boundary, with per-org roles, customizable permissions, and subscription plan gating.
 
