@@ -131,6 +131,12 @@ export function useTemplateBuilder(templateId: Ref<number>) {
     return source;
   };
 
+  // Remove MJML attributes with empty values (e.g. background-color="" or width="")
+  // which cause MJML validation errors
+  const stripEmptyMjmlAttributes = (mjml: string): string => {
+    return mjml.replace(/\s+[\w-]+=""/g, '');
+  };
+
   const assembleMjml = (): string => {
     const sections: string[] = [];
 
@@ -158,7 +164,8 @@ export function useTemplateBuilder(templateId: Ref<number>) {
       sections.push(resolvePartialMjml(footerPartial.value));
     }
 
-    return `<mjml>
+    // Strip empty attributes before returning to prevent MJML validation errors
+    const raw = `<mjml>
   <mj-head>
     <mj-attributes>
       <mj-all font-family="Arial, Helvetica, sans-serif" />
@@ -174,6 +181,7 @@ export function useTemplateBuilder(templateId: Ref<number>) {
 ${sections.join('\n')}
   </mj-body>
 </mjml>`;
+    return stripEmptyMjmlAttributes(raw);
   };
 
   // ── Preview ────────────────────────────────────────────────────────

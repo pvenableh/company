@@ -171,9 +171,14 @@ const props = defineProps({
 	color: hsl(var(--muted-foreground));
 	letter-spacing: 0.04em;
 	opacity: 0.6;
-	padding: 40px 48px 40px;
+	padding: 40px 48px calc(40px + 72px);
 	text-align: center;
 	font-family: var(--font-proxima-light);
 	font-style: italic;
+}
+@media (min-width: 769px) {
+	.footer-copy {
+		padding-bottom: 40px;
+	}
 }
 </style>

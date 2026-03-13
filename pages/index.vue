@@ -9,6 +9,10 @@ const { suggestions, metrics, isAnalyzing, greeting, analyze } = useAIProductivi
 const { enabledModules } = useAIPreferences();
 const aiTrayOpen = ref(false);
 
+// ── Earnest Score ──
+const { state: earnestState, syncState, fetchState, fetchTeamRanking, newBadges, leveledUp } = useEarnestScore();
+const { celebrate } = useConfetti();
+
 const badges = computed(() => {
 	const b: Record<string, number> = {};
 	if (metrics.value.overdueItems > 0) b.tasks = metrics.value.overdueItems;
@@ -23,18 +27,36 @@ const topSuggestions = computed(() => {
 	return suggestions.value.slice(0, 5);
 });
 
-const runAnalysis = () => {
-	analyze(new Set(enabledModules.value));
+const runAnalysis = async () => {
+	await analyze(new Set(enabledModules.value));
+	// Sync earnest score after productivity analysis completes
+	await syncState(metrics.value);
+	await fetchTeamRanking();
+	// Celebrate achievements
+	if (leveledUp.value || (newBadges.value && newBadges.value.length > 0)) {
+		celebrate();
+	}
 };
 
-onMounted(() => {
+onMounted(async () => {
 	if (user.value) {
+		await fetchState();
 		runAnalysis();
 	}
 });
 
 watch(user, (newUser) => {
 	if (newUser) {
+		runAnalysis();
+	}
+});
+
+// Re-run analysis when org/team changes
+const { selectedOrg } = useOrganization();
+const { selectedTeam } = useTeams();
+
+watch([selectedOrg, selectedTeam], () => {
+	if (user.value) {
 		runAnalysis();
 	}
 });
@@ -68,16 +90,19 @@ watch(user, (newUser) => {
 					<CommandCenterAppGrid :badges="badges" />
 				</div>
 
-				<!-- Productivity + Smart Suggestions -->
+				<!-- Earnest Score + Smart Suggestions -->
 				<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-					<CommandCenterProductivityMeter
-						:score="metrics.productivityScore"
-						:overdue-items="metrics.overdueItems"
-						:pending-invoice-total="metrics.pendingInvoiceTotal"
-						:tasks-completed-today="metrics.tasksCompletedToday"
-						:active-projects="metrics.activeProjects"
-						:unread-messages="metrics.unreadChannelMessages"
-						:upcoming-meetings="metrics.upcomingMeetings"
+					<EarnestScoreWidget
+						:current-score="earnestState.currentScore"
+						:level="earnestState.level"
+						:level-title="earnestState.levelTitle"
+						:total-e-p="earnestState.totalEP"
+						:next-level-e-p="earnestState.nextLevelEP"
+						:level-progress="earnestState.levelProgress"
+						:streak="earnestState.streak"
+						:team-rank="earnestState.teamRank"
+						:team-size="earnestState.teamSize"
+						:dimensions="earnestState.dimensions"
 					/>
 
 					<div class="lg:col-span-2 ios-card p-5">

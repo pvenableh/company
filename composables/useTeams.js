@@ -348,13 +348,15 @@ export const useTeams = () => {
 	const createTeam = async (organizationId, teamData) => {
 		try {
 			// Create the team
-			const team = await teamItems.create({
+			const payload = {
 				name: teamData.name,
 				description: teamData.description,
 				organization: organizationId,
 				status: 'published',
 				active: teamData.active !== false,
-			});
+			};
+			if (teamData.icon !== undefined) payload.icon = teamData.icon || null;
+			const team = await teamItems.create(payload);
 
 			// Add team members with manager status
 			if (teamData.users?.length) {
@@ -390,11 +392,13 @@ export const useTeams = () => {
 	// Update existing team
 	const updateTeam = async (teamId, teamData, organizationId) => {
 		try {
-			await teamItems.update(teamId, {
+			const updatePayload = {
 				name: teamData.name,
 				description: teamData.description,
 				active: teamData.active !== false,
-			});
+			};
+			if (teamData.icon !== undefined) updatePayload.icon = teamData.icon || null;
+			await teamItems.update(teamId, updatePayload);
 
 			// Refresh the teams list
 			await fetchTeams(organizationId);

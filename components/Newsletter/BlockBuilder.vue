@@ -103,7 +103,7 @@
         v-if="showPreview"
         :html="builder.previewHtml.value"
         :errors="builder.previewErrors.value"
-        class="w-96 shrink-0 border-l"
+        class="w-[500px] shrink-0 border-l"
       />
     </div>
 

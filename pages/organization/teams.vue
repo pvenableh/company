@@ -123,6 +123,11 @@
 			</div>
 		</div>
 
+		<!-- Earnest Leaderboard (Admin only) -->
+		<div v-if="hasTeamManagementAccess && selectedOrg" class="mt-8 ios-card rounded-2xl border border-border bg-card p-5">
+			<EarnestTeamLeaderboard />
+		</div>
+
 		<!-- Team Management Modal -->
 		<UModal v-model="showTeamMembersModal" :ui="{ width: 'max-w-xl' }">
 			<div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">

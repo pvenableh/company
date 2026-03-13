@@ -111,7 +111,7 @@ header.retracted {
 		@apply left-[5px] md:px-0;
 	}
 	.account-controls {
-		@apply right-[5px] md:px-0;
+		@apply right-[5px] md:px-3;
 	}
 }
 

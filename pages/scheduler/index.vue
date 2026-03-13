@@ -3,10 +3,10 @@
 		<!-- Client scheduler view -->
 		<div v-if="!isAdmin" class="min-h-screen">
 			<!-- Client Header -->
-			<div class="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+			<div class="border-b border-border bg-background">
 				<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
 					<h1 class="text-2xl font-bold">Schedule a Meeting</h1>
-					<p class="text-sm text-gray-500 mt-1">View availability and request a meeting</p>
+					<p class="text-sm text-muted-foreground mt-1">View availability and request a meeting</p>
 				</div>
 			</div>
 
@@ -17,13 +17,13 @@
 						<div v-if="item.key === 'request'" class="py-4">
 							<!-- Available Hosts -->
 							<div v-if="loadingHosts" class="flex justify-center py-8">
-								<UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-gray-400" />
+								<UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground" />
 							</div>
 
 							<div v-else-if="availableHosts.length === 0" class="text-center py-12">
-								<UIcon name="i-heroicons-calendar" class="w-12 h-12 text-gray-300 mx-auto mb-3" />
-								<h3 class="text-lg font-medium text-gray-600">No Hosts Available</h3>
-								<p class="text-sm text-gray-400 mt-1">No team members have booking enabled at this time.</p>
+								<UIcon name="i-heroicons-calendar" class="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+								<h3 class="text-lg font-medium text-muted-foreground">No Hosts Available</h3>
+								<p class="text-sm text-muted-foreground mt-1">No team members have booking enabled at this time.</p>
 							</div>
 
 							<div v-else class="space-y-6">
@@ -33,8 +33,8 @@
 											<UAvatar :alt="`${host.first_name} ${host.last_name}`" size="lg" />
 											<div>
 												<h3 class="font-semibold text-lg">{{ host.first_name }} {{ host.last_name }}</h3>
-												<p v-if="host.booking_page_title" class="text-sm text-gray-500">{{ host.booking_page_title }}</p>
-												<p v-if="host.booking_page_description" class="text-sm text-gray-400">{{ host.booking_page_description }}</p>
+												<p v-if="host.booking_page_title" class="text-sm text-muted-foreground">{{ host.booking_page_title }}</p>
+												<p v-if="host.booking_page_description" class="text-sm text-muted-foreground">{{ host.booking_page_description }}</p>
 											</div>
 										</div>
 
@@ -67,13 +67,13 @@
 						<!-- My Requests Tab -->
 						<div v-else-if="item.key === 'my-requests'" class="py-4">
 							<div v-if="loadingClientRequests" class="flex justify-center py-8">
-								<UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-gray-400" />
+								<UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground" />
 							</div>
 
 							<div v-else-if="clientRequests.length === 0" class="text-center py-12 border-2 border-dashed rounded-lg">
-								<UIcon name="i-heroicons-inbox" class="w-10 h-10 text-gray-300 mx-auto mb-2" />
-								<p class="text-gray-500">No meeting requests yet</p>
-								<p class="text-sm text-gray-400 mt-1">Request a meeting to get started</p>
+								<UIcon name="i-heroicons-inbox" class="w-10 h-10 text-muted-foreground mx-auto mb-2" />
+								<p class="text-muted-foreground">No meeting requests yet</p>
+								<p class="text-sm text-muted-foreground mt-1">Request a meeting to get started</p>
 							</div>
 
 							<div v-else class="space-y-3">
@@ -93,7 +93,7 @@
 													{{ request.request_status || 'pending' }}
 												</UBadge>
 											</div>
-											<div class="flex flex-wrap items-center gap-3 text-sm text-gray-500">
+											<div class="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
 												<span class="flex items-center gap-1">
 													<UIcon name="i-heroicons-calendar" class="w-4 h-4" />
 													{{ clientFormatDate(request.requested_date) }}
@@ -104,7 +104,7 @@
 												</span>
 												<span v-if="request.duration_minutes">{{ request.duration_minutes }} min</span>
 											</div>
-											<p v-if="request.notes" class="text-sm text-gray-400 mt-2 italic">"{{ request.notes }}"</p>
+											<p v-if="request.notes" class="text-sm text-muted-foreground mt-2 italic">"{{ request.notes }}"</p>
 											<p v-if="request.admin_notes" class="text-sm text-blue-500 mt-1">Response: {{ request.admin_notes }}</p>
 										</div>
 										<div v-if="request.request_status === 'approved' && request.linked_appointment">
@@ -136,11 +136,11 @@
 					</template>
 
 					<div v-if="selectedHost" class="space-y-4">
-						<div class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+						<div class="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
 							<UAvatar :alt="`${selectedHost.first_name} ${selectedHost.last_name}`" size="sm" />
 							<div>
 								<p class="font-medium">{{ selectedHost.first_name }} {{ selectedHost.last_name }}</p>
-								<p class="text-sm text-gray-500">{{ selectedHost.email }}</p>
+								<p class="text-sm text-muted-foreground">{{ selectedHost.email }}</p>
 							</div>
 						</div>
 
@@ -178,12 +178,12 @@
 		<!-- Full scheduler for admin users -->
 		<template v-else>
 		<!-- Header -->
-		<div class="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
-			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+		<div class="border-b border-border bg-background">
+			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pt-20">
 				<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 					<div>
-						<h1 class="text-2xl font-bold">Scheduler</h1>
-						<p class="text-sm text-gray-500 mt-1">Manage appointments and video meetings</p>
+						<h1 class="text-2xl font-bold text-foreground">Scheduler</h1>
+						<p class="text-sm text-muted-foreground mt-1">Manage appointments and video meetings</p>
 					</div>
 					<div class="flex items-center gap-3">
 						<SchedulerNewMeetingButton @created="refreshVideoMeetings" />
@@ -203,7 +203,7 @@
 						</div>
 						<div>
 							<p class="text-2xl font-bold">{{ stats.upcoming }}</p>
-							<p class="text-xs text-gray-500">Upcoming</p>
+							<p class="text-xs text-muted-foreground">Upcoming</p>
 						</div>
 					</div>
 				</UCard>
@@ -214,7 +214,7 @@
 						</div>
 						<div>
 							<p class="text-2xl font-bold">{{ stats.videoMeetings }}</p>
-							<p class="text-xs text-gray-500">Video Meetings</p>
+							<p class="text-xs text-muted-foreground">Video Meetings</p>
 						</div>
 					</div>
 				</UCard>
@@ -225,18 +225,18 @@
 						</div>
 						<div>
 							<p class="text-2xl font-bold">{{ stats.pending }}</p>
-							<p class="text-xs text-gray-500">Pending</p>
+							<p class="text-xs text-muted-foreground">Pending</p>
 						</div>
 					</div>
 				</UCard>
 				<UCard>
 					<div class="flex items-center gap-3">
-						<div class="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg">
-							<UIcon name="i-heroicons-check-circle" class="w-5 h-5 text-gray-600 dark:text-gray-400" />
+						<div class="p-2 bg-muted rounded-lg">
+							<UIcon name="i-heroicons-check-circle" class="w-5 h-5 text-muted-foreground dark:text-muted-foreground" />
 						</div>
 						<div>
 							<p class="text-2xl font-bold">{{ stats.completed }}</p>
-							<p class="text-xs text-gray-500">Completed</p>
+							<p class="text-xs text-muted-foreground">Completed</p>
 						</div>
 					</div>
 				</UCard>
@@ -260,7 +260,7 @@
 										<h3 class="font-semibold text-sm">Your Booking Link</h3>
 									</template>
 									<div class="space-y-3">
-										<p class="text-xs text-gray-500">Share this link for clients to book meetings with you</p>
+										<p class="text-xs text-muted-foreground">Share this link for clients to book meetings with you</p>
 										<div class="flex gap-2">
 											<UInput :model-value="bookingUrl" readonly size="sm" class="flex-1 text-xs" />
 											<UButton size="sm" color="gray" icon="i-heroicons-clipboard" @click="copyBookingLink" />
@@ -279,22 +279,22 @@
 										</div>
 									</template>
 									<div v-if="loadingVideoMeetings" class="text-center py-4">
-										<UIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin text-gray-400" />
+										<UIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin text-muted-foreground" />
 									</div>
 									<div v-else-if="upcomingVideoMeetings.length === 0" class="text-center py-4">
-										<p class="text-sm text-gray-500">No upcoming video meetings</p>
+										<p class="text-sm text-muted-foreground">No upcoming video meetings</p>
 									</div>
 									<div v-else class="space-y-3">
 										<div
 											v-for="meeting in upcomingVideoMeetings.slice(0, 5)"
 											:key="meeting.id"
-											class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+											class="p-3 bg-muted/50 rounded-lg"
 										>
 											<div class="flex items-start justify-between">
 												<div class="flex-1 min-w-0">
 													<p class="font-medium text-sm truncate">{{ meeting.title }}</p>
-													<p class="text-xs text-gray-500">{{ formatMeetingTime(meeting.scheduled_start) }}</p>
-													<p v-if="meeting.invitee_name" class="text-xs text-gray-400">
+													<p class="text-xs text-muted-foreground">{{ formatMeetingTime(meeting.scheduled_start) }}</p>
+													<p v-if="meeting.invitee_name" class="text-xs text-muted-foreground">
 														with {{ meeting.invitee_name }}
 													</p>
 												</div>
