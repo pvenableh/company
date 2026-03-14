@@ -18,3 +18,8 @@ dist
 .directus/uploads
 node-compile-cache/
 .env.local
+
+# Claude Code
+.claude/worktrees/
+.claude/settings.local.json
+.claude/plans/
