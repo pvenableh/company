@@ -13,6 +13,7 @@ const props = defineProps({
 });
 
 const isRetracted = ref(false);
+const showOrgSwitcher = ref(false);
 
 const avatarUrl = computed(() => {
 	if (!user.value?.avatar) return null;
@@ -52,10 +53,13 @@ onUnmounted(() => {
 	<header class="header" :class="{ retracted: isRetracted }">
 		<div class="filter-controls">
 			<client-only>
-				<LayoutOrganizationSelect v-if="user" :user="user" />
+				<LayoutClientSelect v-if="user" :user="user" @open-org-switcher="showOrgSwitcher = true" />
 				<LayoutTeamSelect v-if="user" class="ml-2" />
 			</client-only>
 		</div>
+
+		<!-- Org Switcher Modal -->
+		<LayoutOrgSwitcher v-if="user" v-model="showOrgSwitcher" />
 
 		<nuxt-link to="/" class="header-brand" :class="{ 'header-brand--retracted': isRetracted }">
 			<LogoEarnest size="md" />

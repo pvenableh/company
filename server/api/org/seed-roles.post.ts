@@ -26,7 +26,7 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const directus = getTypedDirectus();
+    const directus = getServerDirectus();
 
     // Check which roles already exist for this org
     const existing = await directus.request(

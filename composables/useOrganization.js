@@ -138,7 +138,8 @@ export function useOrganization() {
 			if (selectedOrg.value !== savedOrg) {
 				orgStorage.setValue(savedOrg);
 			}
-		} else if (organizations.value.length === 1) {
+		} else if (organizations.value.length >= 1) {
+			// Auto-select the first org (sorted by most activity) when no saved value
 			orgStorage.setValue(organizations.value[0].id);
 		} else {
 			orgStorage.clearValue();
@@ -201,6 +202,18 @@ export function useOrganization() {
 		window.addEventListener('storage', onStorageChange);
 		return () => window.removeEventListener('storage', onStorageChange);
 	};
+
+	// Reset SSR-stale loading state on client hydration and retry init
+	if (import.meta.client) {
+		onNuxtReady(() => {
+			if (orgInitializing.value && !isInitialized.value) {
+				orgInitializing.value = false;
+				if (user.value) {
+					initializeOrganizations();
+				}
+			}
+		});
+	}
 
 	watch(
 		() => user.value,

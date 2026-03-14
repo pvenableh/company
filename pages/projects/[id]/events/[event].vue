@@ -96,6 +96,7 @@ const handleStatusChanged = async (newStatus) => {
 						collection="project_events"
 						show-comments="true"
 						:organization-id="event.project.organization.id"
+						:client-id="typeof event.project?.client === 'object' ? event.project.client?.id : event.project?.client"
 					/>
 				</div>
 			</div>

@@ -27,6 +27,7 @@
 					<nuxt-link to="/email">Email</nuxt-link>
 					<nuxt-link to="/social/dashboard">Social</nuxt-link>
 					<nuxt-link to="/contacts">Contacts</nuxt-link>
+					<nuxt-link to="/clients">Clients</nuxt-link>
 				</div>
 				<div class="footer-col">
 					<span class="footer-col-title">Account</span>

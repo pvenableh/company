@@ -53,6 +53,32 @@ export function getTypedDirectus(): DirectusAuthClient {
 }
 
 /**
+ * Get admin Directus client with server token (full admin access)
+ * Use for migrations, schema operations, and admin tasks
+ */
+export function getServerDirectus(): DirectusAuthClient {
+  const config = useRuntimeConfig();
+  const directusUrl = config.directus?.url || config.public.directusUrl;
+  const serverToken = (config.directus as any)?.serverToken || (config as any).directusServerToken;
+
+  if (!directusUrl) {
+    throw new Error("DIRECTUS_URL not configured");
+  }
+
+  if (!serverToken) {
+    throw new Error("DIRECTUS_SERVER_TOKEN not configured — required for admin operations");
+  }
+
+  const client = createDirectus(directusUrl)
+    .with(rest())
+    .with(authentication("json"));
+
+  client.setToken(serverToken);
+
+  return client;
+}
+
+/**
  * Get user-authenticated Directus client
  * Token refresh is handled by the session plugin's "fetch" hook,
  * which runs when getUserSession() is called below.

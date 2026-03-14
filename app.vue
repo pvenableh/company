@@ -96,6 +96,12 @@ const links = ref([
 		to: '/contacts',
 		icon: 'i-heroicons-user-group',
 	},
+	{
+		name: 'Clients',
+		type: ['footer', 'drawer'],
+		to: '/clients',
+		icon: 'i-heroicons-building-office-2',
+	},
 ]);
 </script>
 <template>

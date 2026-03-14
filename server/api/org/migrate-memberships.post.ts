@@ -25,7 +25,7 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event);
     const { organizationId } = body || {};
 
-    const directus = getTypedDirectus();
+    const directus = getServerDirectus();
 
     // 1. Get junction entries
     const junctionFilter: any = {};

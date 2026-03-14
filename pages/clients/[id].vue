@@ -60,7 +60,7 @@ function getLogoUrl(client: Client): string | null {
   if (!client.logo) return null;
   const fileId = typeof client.logo === 'string' ? client.logo : client.logo?.id;
   if (!fileId) return null;
-  return `${config.public.directusUrl}/assets/${fileId}?key=small`;
+  return `${config.public.directusUrl}/assets/${fileId}?key=medium-contain`;
 }
 
 function getInitial(name: string): string {
@@ -133,7 +133,7 @@ onMounted(loadClient);
               v-if="getLogoUrl(client)"
               :src="getLogoUrl(client)!"
               :alt="client.name"
-              class="w-10 h-10 rounded-lg object-cover"
+              class="w-10 h-10 rounded-lg object-contain"
             />
             <div
               v-else

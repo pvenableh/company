@@ -91,6 +91,7 @@
 						content: form.description,
 					}"
 					:organization-id="form.organization"
+					:client-id="typeof form.client === 'object' ? form.client?.id : form.client"
 					:context="{
 						collection: 'tickets',
 						itemId: ticket.id,

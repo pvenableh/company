@@ -1,5 +1,6 @@
 import type { OrgMembership, OrgRole } from '~/types/directus';
 import type { FeatureKey, CrudAction, PermissionMatrix, RoleSlug } from '~/types/permissions';
+import { DEFAULT_ROLE_PERMISSIONS } from '~/types/permissions';
 
 /**
  * useOrgRole — Per-org role + permission composable
@@ -113,6 +114,44 @@ export function useOrgRole() {
     return true;
   }
 
+  // ── Directus role → org role fallback ────────────────────────────────────────
+  // When no org_membership exists (pre-migration), map the user's Directus
+  // global role to a default org role so the permission system still works.
+  const config = useRuntimeConfig();
+
+  function getFallbackRoleSlug(): RoleSlug | null {
+    if (!user.value) return null;
+    const roleId = typeof user.value.role === 'object'
+      ? (user.value.role as any)?.id
+      : user.value.role;
+    if (!roleId) return null;
+
+    const adminRoleId = config.public.adminRole || config.public.adminRoleId;
+    const clientManagerRoleId = config.public.clientManagerRoleId || '7b62b285-e3a8-46ff-9e8c-d1445a3c13bb';
+
+    if (roleId === adminRoleId) return 'admin';
+    if (roleId === clientManagerRoleId) return 'manager';
+    return 'member';
+  }
+
+  function applyFallbackRole(): void {
+    const slug = getFallbackRoleSlug();
+    if (!slug) {
+      orgRole.value = null;
+      return;
+    }
+
+    const defaultPerms = DEFAULT_ROLE_PERMISSIONS[slug];
+
+    orgRole.value = {
+      id: `fallback-${slug}`,
+      name: slug.charAt(0).toUpperCase() + slug.slice(1),
+      slug,
+      is_system: true,
+      permissions: defaultPerms,
+    } as unknown as OrgRole;
+  }
+
   // ── Fetch membership ───────────────────────────────────────────────────────
   async function fetchMembership(): Promise<void> {
     if (!user.value?.id || !selectedOrg.value) {
@@ -149,14 +188,16 @@ export function useOrgRole() {
         membership.value = results[0];
         orgRole.value = (typeof results[0].role === 'object' ? results[0].role : null) as OrgRole | null;
       } else {
+        // No org_membership found — apply fallback from Directus global role
         membership.value = null;
-        orgRole.value = null;
+        applyFallbackRole();
       }
     } catch (err: any) {
       console.error('Failed to fetch org membership:', err);
       error.value = err.message || 'Failed to fetch membership';
       membership.value = null;
-      orgRole.value = null;
+      // Still apply fallback so the app is usable
+      applyFallbackRole();
     } finally {
       loading.value = false;
     }

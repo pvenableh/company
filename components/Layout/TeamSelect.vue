@@ -6,31 +6,28 @@
 			<DropdownMenu>
 				<DropdownMenuTrigger as-child>
 					<button
-						class="flex items-center gap-2 group relative focus:outline-none rounded-full border-2 border-[var(--cyan)] p-1"
+						class="flex items-center gap-1 px-2 py-1 rounded-full bg-white border border-gray-200 hover:border-[var(--cyan)] transition-colors text-[9px] uppercase tracking-wider font-medium text-gray-700 max-w-[180px]"
 					>
 						<!-- Team Avatar -->
-						<div class="h-7 w-7 rounded-full bg-white flex items-center justify-center relative shadow">
-							<div v-if="selectedTeam && currentTeam">
-								<div v-if="currentTeam.icon">
-									<img
-										:src="`${$config.public.directusUrl}/assets/${currentTeam.icon}?key=avatar`"
-										alt="Team Icon"
-										class="object-cover rounded-full"
-									/>
-								</div>
-								<div v-else class="h-full w-full flex items-center justify-center">
-									<span class="font-medium text-gray-700 text-sm">{{ getTeamInitials(currentTeam) }}</span>
-								</div>
-							</div>
-							<Users v-else class="size-4 text-gray-400" />
+						<div class="size-5 rounded-full bg-gray-100 flex items-center justify-center shrink-0 overflow-hidden">
+							<template v-if="selectedTeam && currentTeam">
+								<img
+									v-if="currentTeam.icon"
+									:src="`${$config.public.directusUrl}/assets/${currentTeam.icon}?key=avatar`"
+									alt="Team Icon"
+									class="size-5 object-cover rounded-full"
+								/>
+								<span v-else class="font-medium text-gray-700 text-[8px]">{{ getTeamInitials(currentTeam) }}</span>
+							</template>
+							<Users v-else class="size-3 text-gray-400" />
 						</div>
 
-						<!-- Team Name (visible on larger screens) -->
-						<span class="hidden md:block text-xs uppercase truncate max-w-24">
+						<!-- Team Name -->
+						<span class="truncate">
 							{{ currentTeamName }}
 						</span>
 
-						<ChevronDown class="size-3 text-gray-400 hidden md:block" />
+						<ChevronDown class="size-3 text-gray-400 shrink-0" />
 					</button>
 				</DropdownMenuTrigger>
 

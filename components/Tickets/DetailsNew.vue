@@ -82,6 +82,7 @@
 						:item-id="localElement.id"
 						collection="tickets"
 						class="w-full lg:pb-20"
+						:client-id="typeof localElement.client === 'object' ? localElement.client?.id : localElement.client"
 						@update:commentCount="handleCommentCountUpdate"
 					/>
 				</div>

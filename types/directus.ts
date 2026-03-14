@@ -867,43 +867,6 @@ export interface CdXpState {
 	total_clients?: number | null;
 }
 
-export interface EarnestScore {
-	/** @primaryKey */
-	id: string;
-	user_created?: DirectusUser | string | null;
-	date_created?: string | null;
-	date_updated?: string | null;
-	organization?: string | null;
-	total_ep?: number | null;
-	level?: number | null;
-	current_score?: number | null;
-	streak?: number | null;
-	best_streak?: number | null;
-	last_activity_date?: string | null;
-	days_active_this_week?: number | null;
-	total_tasks_completed?: number | null;
-	projects_fully_completed?: number | null;
-	advance_schedule_count?: number | null;
-	consecutive_high_completion_days?: number | null;
-	consecutive_responsive_days?: number | null;
-	consecutive_top_rank_days?: number | null;
-	badges_unlocked?: string[] | null;
-	dimension_scores?: Record<string, number> | null;
-}
-
-export interface EarnestHistory {
-	/** @primaryKey */
-	id: string;
-	user_created?: DirectusUser | string | null;
-	date_created?: string | null;
-	organization?: string | null;
-	date?: string | null;
-	score?: number | null;
-	ep_earned?: number | null;
-	streak?: number | null;
-	dimensions?: Record<string, number> | null;
-}
-
 export interface Channel {
 	/** @primaryKey */
 	id: string;
@@ -915,10 +878,33 @@ export interface Channel {
 	date_updated?: string | null;
 	name?: string | null;
 	project?: Project | string | null;
-	ticket?: Ticket | string | null;
 	organization?: Organization | string | null;
 	description?: string | null;
+	ticket?: Ticket | string | null;
+	/** @description The client this channel belongs to */
+	client?: string | null;
 	messages?: Message[] | string[];
+}
+
+export interface Client {
+	/** @primaryKey */
+	id: string;
+	status?: 'active' | 'prospect' | 'inactive' | 'churned' | null;
+	sort?: number | null;
+	user_created?: DirectusUser | string | null;
+	date_created?: string | null;
+	date_updated?: string | null;
+	/** @required */
+	name: string;
+	slug?: string | null;
+	website?: string | null;
+	industry?: string | null;
+	notes?: string | null;
+	tags?: string[] | null;
+	/** @required */
+	organization: Organization | string;
+	logo?: string | null;
+	primary_contact?: Contact | string | null;
 }
 
 export interface ClientTestimonial {
@@ -944,7 +930,7 @@ export interface ClientTestimonial {
 	/** @description Feature this testimonial */
 	featured?: boolean | null;
 	/** @description Related portfolio item from your existing portfolio collection */
-	related_portfolio?: string | null;
+	related_portfolio?: Portfolio | string | null;
 	service_category?: 'brand_design' | 'web_design' | 'digital_marketing' | 'strategy' | null;
 }
 
@@ -965,80 +951,6 @@ export interface Comment {
 	item?: string | null;
 	is_edited?: boolean | null;
 	is_resolved?: boolean | null;
-}
-
-export interface Client {
-	/** @primaryKey */
-	id: string;
-	status?: 'active' | 'prospect' | 'inactive' | 'churned';
-	sort?: number | null;
-	user_created?: DirectusUser | string | null;
-	date_created?: string | null;
-	date_updated?: string | null;
-	/** @required */
-	name: string;
-	slug?: string | null;
-	/** @description The organization that owns this client */
-	organization?: Organization | string | null;
-	logo?: DirectusFile | string | null;
-	website?: string | null;
-	industry?: string | null;
-	primary_contact?: Contact | string | null;
-	notes?: string | null;
-	tags?: string[] | null;
-	/** @description Contacts associated with this client */
-	contacts?: Contact[] | string[];
-	/** @description Projects for this client */
-	projects?: Project[] | string[];
-	/** @description Tickets for this client */
-	tickets?: Ticket[] | string[];
-	/** @description Invoices for this client */
-	invoices?: Invoice[] | string[];
-	/** @description Org memberships scoped to this client */
-	memberships?: OrgMembership[] | string[];
-}
-
-export interface OrgRole {
-	/** @primaryKey */
-	id: string;
-	sort?: number | null;
-	date_created?: string | null;
-	date_updated?: string | null;
-	/** @required @description Display name of the role */
-	name: string;
-	/** @required @description Slug identifier (owner/admin/manager/member/client) */
-	slug: 'owner' | 'admin' | 'manager' | 'member' | 'client';
-	/** @description System roles cannot be deleted */
-	is_system?: boolean;
-	/** @description JSON permission matrix — feature × CRUD */
-	permissions?: import('./permissions').PermissionMatrix | null;
-	/** @description Organization this role belongs to */
-	organization?: Organization | string | null;
-	/** @description Users assigned this role */
-	memberships?: OrgMembership[] | string[];
-}
-
-export interface OrgMembership {
-	/** @primaryKey */
-	id: string;
-	/** @description Membership status */
-	status: 'active' | 'pending' | 'suspended';
-	/** @description When the invitation was sent */
-	invited_at?: string | null;
-	/** @description When the user accepted the invitation */
-	accepted_at?: string | null;
-	date_created?: string | null;
-	date_updated?: string | null;
-	/** @required @description Organization this membership belongs to */
-	organization: Organization | string;
-	/** @required @description User who holds this membership */
-	user: DirectusUser | string;
-	/** @required @description The org role assigned to this user */
-	role: OrgRole | string;
-	/** @description Client scope — only set for client-role users */
-	client?: Client | string | null;
-	/** @description User who sent the invitation */
-	invited_by?: DirectusUser | string | null;
 }
 
 export interface Contact {
@@ -1118,6 +1030,48 @@ export interface Course {
 	options?: Option[] | string[];
 }
 
+export interface EarnestHistory {
+	/** @primaryKey */
+	id: string;
+	user_created?: DirectusUser | string | null;
+	date_created?: string | null;
+	organization?: Organization | string | null;
+	/** @description The day this snapshot represents @required */
+	date: string;
+	/** @description Earnest score 0-100 */
+	score?: number | null;
+	ep_earned?: number | null;
+	streak?: number | null;
+	/** @description Five dimension breakdown */
+	dimensions?: Record<string, any> | null;
+}
+
+export interface EarnestScore {
+	/** @primaryKey */
+	id: string;
+	user_created?: DirectusUser | string | null;
+	date_created?: string | null;
+	date_updated?: string | null;
+	organization?: Organization | string | null;
+	total_ep?: number | null;
+	level?: number | null;
+	/** @description Todays earnest score 0-100 */
+	current_score?: number | null;
+	streak?: number | null;
+	best_streak?: number | null;
+	last_activity_date?: string | null;
+	days_active_this_week?: number | null;
+	total_tasks_completed?: number | null;
+	projects_fully_completed?: number | null;
+	advance_schedule_count?: number | null;
+	consecutive_high_completion_days?: number | null;
+	consecutive_responsive_days?: number | null;
+	consecutive_top_rank_days?: number | null;
+	badges_unlocked?: Record<string, any> | null;
+	/** @description Five dimension breakdown */
+	dimension_scores?: Record<string, any> | null;
+}
+
 export interface EmailPartial {
 	/** @primaryKey */
 	id: number;
@@ -1135,6 +1089,8 @@ export interface EmailPartial {
 	variables_schema?: Record<string, any> | null;
 	instance_variables?: Record<string, any> | null;
 	is_default?: boolean | null;
+	/** @description Organization that owns this partial. Null = system default. */
+	organization?: Organization | string | null;
 }
 
 export interface Email {
@@ -1186,8 +1142,9 @@ export interface EmailTemplate {
 	include_web_version_bar?: boolean | null;
 	header_partial_id?: EmailPartial | string | null;
 	footer_partial_id?: EmailPartial | string | null;
-	blocks?: TemplateBlock[] | string[];
+	/** @description Organization this template belongs to */
 	organization?: Organization | string | null;
+	blocks?: TemplateBlock[] | string[];
 }
 
 export interface FinancialGoal {
@@ -1302,10 +1259,10 @@ export interface Invoice {
 	emails?: string[] | null;
 	project?: Project | string | null;
 	melio?: string | null;
-	/** @required */
-	line_items: LineItem[] | string[];
 	/** @description The client this invoice is for */
 	client?: Client | string | null;
+	/** @required */
+	line_items: LineItem[] | string[];
 	payments?: PaymentsReceived[] | string[];
 }
 
@@ -1428,8 +1385,9 @@ export interface MailingList {
 	is_default?: boolean | null;
 	double_opt_in?: boolean | null;
 	subscriber_count?: number | null;
-	contacts?: MailingListContact[] | string[];
+	/** @description Organization this list belongs to */
 	organization?: Organization | string | null;
+	contacts?: MailingListContact[] | string[];
 }
 
 export interface MeetingRequest {
@@ -1486,19 +1444,19 @@ export interface NewsletterBlock {
 	id: number;
 	status?: 'published' | 'draft' | 'archived';
 	sort?: number | null;
-	user_created?: DirectusUser | string | null;
-	date_created?: string | null;
-	user_updated?: DirectusUser | string | null;
-	date_updated?: string | null;
 	name?: string | null;
 	/** @required */
 	slug: string;
-	category?: 'header' | 'hero' | `two-column` | `three-column` | 'cta' | 'image' | 'stats' | 'quote' | 'list' | 'divider' | 'social' | 'footer' | 'content' | null;
 	description?: string | null;
 	mjml_source?: string | null;
-	variables_schema?: string | null;
 	thumbnail?: DirectusFile | string | null;
 	is_system?: boolean | null;
+	category?: 'header' | 'hero' | 'content' | `two-column` | `three-column` | 'cta' | 'image' | 'stats' | 'quote' | 'list' | 'divider' | 'social' | 'footer' | null;
+	date_created?: string | null;
+	date_updated?: string | null;
+	user_created?: DirectusUser | string | null;
+	user_updated?: DirectusUser | string | null;
+	variables_schema?: string | null;
 }
 
 export interface Option {
@@ -1548,17 +1506,12 @@ export interface Organization {
 	email?: string | null;
 	short_name?: string | null;
 	active?: boolean | null;
+	/** @description Subscription plan tier */
+	plan?: 'free' | 'starter' | 'pro' | 'enterprise' | null;
 	users?: OrganizationsDirectusUser[] | string[];
 	projects?: Project[] | string[];
 	tickets?: Ticket[] | string[];
 	teams?: Team[] | string[];
-	clients?: Client[] | string[];
-	/** @description Subscription plan tier */
-	plan?: 'free' | 'starter' | 'pro' | 'enterprise' | null;
-	/** @description Per-org role definitions */
-	org_roles?: OrgRole[] | string[];
-	/** @description User memberships in this org */
-	memberships?: OrgMembership[] | string[];
 }
 
 export interface OrganizationsDirectusUser {
@@ -1567,6 +1520,43 @@ export interface OrganizationsDirectusUser {
 	organizations_id?: Organization | string | null;
 	directus_users_id?: DirectusUser | string | null;
 	sort?: number | null;
+}
+
+export interface OrgMembership {
+	/** @primaryKey */
+	id: string;
+	status?: 'active' | 'pending' | 'suspended';
+	invited_at?: string | null;
+	accepted_at?: string | null;
+	date_created?: string | null;
+	date_updated?: string | null;
+	/** @required */
+	organization: Organization | string;
+	/** @required */
+	user: DirectusUser | string;
+	/** @required */
+	role: OrgRole | string;
+	/** @description Only set for client-role users — scopes their access */
+	client?: Client | string | null;
+	invited_by?: DirectusUser | string | null;
+}
+
+export interface OrgRole {
+	/** @primaryKey */
+	id: string;
+	sort?: number | null;
+	date_created?: string | null;
+	date_updated?: string | null;
+	/** @required */
+	name: string;
+	/** @description owner, admin, manager, member, client @required */
+	slug: string;
+	/** @description System roles cannot be deleted */
+	is_system?: boolean | null;
+	/** @description Feature CRUD permission matrix */
+	permissions?: Record<string, any> | null;
+	/** @required */
+	organization: Organization | string;
 }
 
 export interface PageAgency {
@@ -1955,11 +1945,11 @@ export interface Project {
 	parent_event_id?: ProjectEvent | string | null;
 	member_visible?: boolean | null;
 	category_id?: ProjectCategory | string | null;
+	/** @description The client this project is for */
+	client?: Client | string | null;
 	events?: ProjectEvent[] | string[];
 	assigned_to?: ProjectsDirectusUser[] | string[];
 	tickets?: Ticket[] | string[];
-	/** @description The client this project is for */
-	client?: Client | string | null;
 	children?: Project[] | string[];
 }
 
@@ -2114,7 +2104,7 @@ export interface RevealBlock {
 export interface SchedulerSetting {
 	/** @primaryKey */
 	id: string;
-	user_created?: string | null;
+	user_created?: DirectusUser | string | null;
 	date_created?: string | null;
 	date_updated?: string | null;
 	/** @required */
@@ -2363,7 +2353,7 @@ export interface SocialAccount {
 	/** @description Platform-specific data (page_id, scopes, etc.) */
 	metadata?: Record<string, any> | null;
 	/** @description Which agency client this account belongs to */
-	client_id?: string | null;
+	client_id?: SocialClient | string | null;
 }
 
 export interface SocialActivityLog {
@@ -2387,9 +2377,9 @@ export interface SocialAnalyticsSnapshot {
 	user_updated?: DirectusUser | string | null;
 	date_updated?: string | null;
 	/** @description The social account this snapshot belongs to @required */
-	social_account: string;
+	social_account: SocialAccount | string;
 	/** @description Linked post for post-level metrics (null for account-level) */
-	social_post?: string | null;
+	social_post?: SocialPost | string | null;
 	/** @required */
 	snapshot_type: 'account' | 'post';
 	/** @description When these metrics were captured @required */
@@ -2427,9 +2417,9 @@ export interface SocialComment {
 	user_updated?: DirectusUser | string | null;
 	date_updated?: string | null;
 	/** @description The post this comment belongs to @required */
-	social_post: string;
+	social_post: SocialPost | string;
 	/** @description The account this comment was made on @required */
-	social_account: string;
+	social_account: SocialAccount | string;
 	/** @description Comment ID from the platform @required */
 	platform_comment_id: string;
 	/** @description User ID of the commenter on the platform @required */
@@ -2540,11 +2530,11 @@ export interface Ticket {
 	priority?: 'low' | 'medium' | 'high' | null;
 	project?: Project | string | null;
 	team?: Team | string | null;
+	/** @description The client this ticket is for */
+	client?: Client | string | null;
 	files?: TicketsFile[] | string[];
 	services?: TicketsService[] | string[];
 	assigned_to?: TicketsDirectusUser[] | string[];
-	/** @description The client this ticket is for */
-	client?: Client | string | null;
 	tasks?: Task[] | string[];
 }
 
@@ -2617,9 +2607,9 @@ export interface VideoMeeting {
 	id: string;
 	status?: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'archived' | null;
 	sort?: number | null;
-	user_created?: string | null;
+	user_created?: DirectusUser | string | null;
 	date_created?: string | null;
-	user_updated?: string | null;
+	user_updated?: DirectusUser | string | null;
 	date_updated?: string | null;
 	/** @description Unique room identifier @required */
 	room_name: string;
@@ -3022,8 +3012,6 @@ export interface DirectusUser {
 	organizations?: OrganizationsDirectusUser[] | string[];
 	teams?: JunctionDirectusUsersTeam[] | string[];
 	policies?: DirectusAccess[] | string[];
-	/** @description Per-org memberships with role assignment */
-	org_memberships?: OrgMembership[] | string[];
 }
 
 export interface DirectusDashboard {
@@ -3234,11 +3222,14 @@ export interface Schema {
 	cd_contacts: CdContact[];
 	cd_xp_state: CdXpState[];
 	channels: Channel[];
+	clients: Client[];
 	client_testimonials: ClientTestimonial[];
 	comments: Comment[];
 	contacts: Contact[];
 	contacts_organizations: ContactsOrganization[];
 	courses: Course[];
+	earnest_history: EarnestHistory[];
+	earnest_scores: EarnestScore[];
 	email_partials: EmailPartial[];
 	emails: Email[];
 	email_templates: EmailTemplate[];
@@ -3265,6 +3256,8 @@ export interface Schema {
 	options: Option[];
 	organizations: Organization[];
 	organizations_directus_users: OrganizationsDirectusUser[];
+	org_memberships: OrgMembership[];
+	org_roles: OrgRole[];
 	page_agency: PageAgency;
 	page_agency_content_blocks: PageAgencyContentBlock[];
 	page_home: PageHome;
@@ -3412,11 +3405,14 @@ export enum CollectionNames {
 	cd_contacts = 'cd_contacts',
 	cd_xp_state = 'cd_xp_state',
 	channels = 'channels',
+	clients = 'clients',
 	client_testimonials = 'client_testimonials',
 	comments = 'comments',
 	contacts = 'contacts',
 	contacts_organizations = 'contacts_organizations',
 	courses = 'courses',
+	earnest_history = 'earnest_history',
+	earnest_scores = 'earnest_scores',
 	email_partials = 'email_partials',
 	emails = 'emails',
 	email_templates = 'email_templates',
@@ -3443,6 +3439,8 @@ export enum CollectionNames {
 	options = 'options',
 	organizations = 'organizations',
 	organizations_directus_users = 'organizations_directus_users',
+	org_memberships = 'org_memberships',
+	org_roles = 'org_roles',
 	page_agency = 'page_agency',
 	page_agency_content_blocks = 'page_agency_content_blocks',
 	page_home = 'page_home',

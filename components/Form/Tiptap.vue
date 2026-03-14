@@ -169,6 +169,10 @@ const props = defineProps({
 		type: String,
 		default: null,
 	},
+	clientId: {
+		type: String,
+		default: null,
+	},
 	context: {
 		type: Object,
 		default: () => ({
@@ -372,12 +376,13 @@ const CustomMention = Mention.configure({
 			if (!currentUser.value) return [];
 
 			try {
-				// Determine which org/team to use (props take precedence over global state)
+				// Determine which org/team/client to use (props take precedence over global state)
 				const orgId = props.organizationId || selectedOrg.value;
 				const teamId = props.teamId || selectedTeam.value;
+				const clientId = props.clientId || null;
 
-				// Fetch users based on organization and team
-				await fetchFilteredUsers(orgId, teamId);
+				// Fetch users based on organization, team, and client context
+				await fetchFilteredUsers(orgId, teamId, clientId);
 
 				// Filter out the current user and apply the search query
 				const mentionUsers = filteredUsers.value
@@ -391,6 +396,8 @@ const CustomMention = Mention.configure({
 						label: `${user.first_name} ${user.last_name}`,
 						email: user.email,
 						avatar: user.avatar ? `${useRuntimeConfig().public.directusUrl}/assets/${user.avatar}?key=small` : null,
+						type: user.type || 'internal',
+						clientName: user.clientName || null,
 					}));
 
 				return mentionUsers;
@@ -444,9 +451,13 @@ const CustomMention = Mention.configure({
 			item.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(item.label)}&background=eeeeee&color=00bfff`
 		}"
 	  class="w-8 h-8 rounded-full" alt="${item.label}">
-	  <div>
-	  <div class="font-medium text-sm">${item.label}</div>
-	  <div class="text-xs text-gray-500">${item.email}</div>
+	  <div class="flex-1 min-w-0">
+	  <div class="font-medium text-sm flex items-center gap-1.5">${item.label}${
+			item.type === 'client'
+				? `<span class="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900/40 px-1.5 py-0.5 text-[9px] font-medium text-blue-700 dark:text-blue-300">${item.clientName || 'Client'}</span>`
+				: ''
+		}</div>
+	  <div class="text-xs text-gray-500 truncate">${item.email}</div>
 	  </div>
 	</div>
 	`,
@@ -690,12 +701,13 @@ onMounted(() => {
 		},
 	});
 
-	// Initial load of filtered users based on current organization and team context
+	// Initial load of filtered users based on current organization, team, and client context
 	const orgId = props.organizationId || selectedOrg.value;
 	const teamId = props.teamId || selectedTeam.value;
+	const clientId = props.clientId || null;
 
 	if (orgId) {
-		fetchFilteredUsers(orgId, teamId);
+		fetchFilteredUsers(orgId, teamId, clientId);
 	}
 });
 
@@ -717,16 +729,17 @@ watch(
 	},
 );
 
-// Watch for teamId or organizationId changes to refresh the filtered users
+// Watch for teamId, organizationId, or clientId changes to refresh the filtered users
 watch(
-	[() => props.teamId, () => props.organizationId, () => selectedOrg.value, () => selectedTeam.value],
-	async ([newTeamId, newOrgId, newSelectedOrg, newSelectedTeam]) => {
+	[() => props.teamId, () => props.organizationId, () => props.clientId, () => selectedOrg.value, () => selectedTeam.value],
+	async ([newTeamId, newOrgId, newClientId, newSelectedOrg, newSelectedTeam]) => {
 		// Props take precedence over global state
 		const orgId = newOrgId || newSelectedOrg;
 		const teamId = newTeamId || newSelectedTeam;
+		const clientId = newClientId || null;
 
 		if (orgId) {
-			await fetchFilteredUsers(orgId, teamId);
+			await fetchFilteredUsers(orgId, teamId, clientId);
 		}
 	},
 	{ immediate: true },

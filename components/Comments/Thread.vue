@@ -58,6 +58,7 @@
 						@cancel="handleReplyCancel"
 						:comment="comment"
 						:organization-id="organizationId"
+						:client-id="clientId"
 					/>
 				</div>
 
@@ -83,6 +84,7 @@
 						@reply="handleNestedReply"
 						@cancel="handleReplyCancel"
 						:organization-id="organizationId"
+						:client-id="clientId"
 					/>
 				</div>
 			</div>
@@ -118,6 +120,10 @@ const props = defineProps({
 	},
 	organizationId: {
 		type: [String, Number],
+		default: null,
+	},
+	clientId: {
+		type: String,
 		default: null,
 	},
 });

@@ -177,7 +177,7 @@
 		<div class="mt-4">
 			<!-- Comments Tab -->
 			<div v-show="activeTab === 'comments'" class="animate-fadein">
-				<CommentsSystem :item-id="element.id" collection="tickets" @update:commentCount="handleCommentCountUpdate" />
+				<CommentsSystem :item-id="element.id" collection="tickets" :client-id="typeof element.client === 'object' ? element.client?.id : element.client" @update:commentCount="handleCommentCountUpdate" />
 			</div>
 
 			<!-- Tasks Tab -->

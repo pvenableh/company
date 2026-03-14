@@ -24,6 +24,7 @@
 					:item-id="element.id"
 					collection="tickets"
 					class="w-full lg:pb-20"
+					:client-id="typeof element.client === 'object' ? element.client?.id : element.client"
 					@update:commentCount="handleCommentCountUpdate"
 				/>
 			</div>

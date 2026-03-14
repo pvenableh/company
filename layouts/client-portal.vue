@@ -4,7 +4,7 @@
 		<header class="portal-header" :class="{ retracted: isRetracted }">
 			<div class="filter-controls">
 				<client-only>
-					<LayoutOrganizationSelect v-if="user" :user="user" />
+					<LayoutClientSelect v-if="user" :user="user" />
 				</client-only>
 			</div>
 

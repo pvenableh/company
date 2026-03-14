@@ -42,6 +42,7 @@
 				:refresh="refreshData"
 				@submit="(content) => handleCommentSubmit(content)"
 				:organization-id="organizationId"
+				:client-id="clientId"
 			/>
 			<div class="w-full flex items-start justify-start">
 				<USelect
@@ -80,6 +81,7 @@
 					@cancel="cancelReply"
 					@delete="handleDelete"
 					:organization-id="organizationId"
+					:client-id="clientId"
 				/>
 			</TransitionGroup>
 		</div>
@@ -100,6 +102,10 @@ const props = defineProps({
 	},
 	organizationId: {
 		type: [String, Number],
+		default: null,
+	},
+	clientId: {
+		type: String,
 		default: null,
 	},
 });

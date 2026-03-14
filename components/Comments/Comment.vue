@@ -16,6 +16,7 @@
 					@mention="handleMention"
 					@keydown="handleKeydown"
 					:organization-id="organizationId"
+					:client-id="clientId"
 				/>
 				<UButton
 					v-if="comment?.user?.id === user?.id && !replyingTo"
@@ -77,6 +78,10 @@ const props = defineProps({
 		default: true,
 	},
 	organizationId: {
+		type: String,
+		default: null,
+	},
+	clientId: {
 		type: String,
 		default: null,
 	},
