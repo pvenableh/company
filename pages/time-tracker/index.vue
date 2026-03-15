@@ -15,8 +15,6 @@ const {
   isTimerRunning,
   restoreTimer,
   getTimeEntries,
-  createManualEntry,
-  updateTimeEntry,
   deleteTimeEntry,
   formatDuration,
 } = useTimeTracker();
@@ -134,18 +132,11 @@ function closeForm() {
   editingEntry.value = null;
 }
 
-async function handleSave(data: any) {
-  try {
-    if (editingEntry.value) {
-      await updateTimeEntry(editingEntry.value.id, data);
-    } else {
-      await createManualEntry(data);
-    }
-    closeForm();
-    await fetchEntries();
-  } catch (err) {
-    console.error('Failed to save time entry:', err);
-  }
+async function handleSave() {
+  // EntryForm already saves to Directus and emits the result.
+  // We just close the form and refetch the list.
+  closeForm();
+  await fetchEntries();
 }
 
 async function handleDelete(entry: TimeEntry) {

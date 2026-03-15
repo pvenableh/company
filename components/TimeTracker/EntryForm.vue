@@ -199,7 +199,13 @@ const emit = defineEmits<{
 }>();
 
 const { createManualEntry, updateTimeEntry } = useTimeTracker();
-const { getClientOptions } = useClients();
+const { getClientOptions, selectedClient } = useClients();
+
+// Auto-select client from header (skip 'org' sentinel value)
+const headerClient = computed(() => {
+	const c = selectedClient.value;
+	return c && c !== 'org' ? c : null;
+});
 
 const saving = ref(false);
 const clients = ref<{ label: string; value: string }[]>([]);
@@ -247,7 +253,7 @@ watch(
 			form.hours = 0;
 			form.minutes = 0;
 			form.description = '';
-			form.client = null;
+			form.client = headerClient.value;
 			form.project = null;
 			form.ticket = null;
 			form.task = null;
