@@ -905,8 +905,10 @@ export interface Client {
 	organization: Organization | string;
 	logo?: string | null;
 	primary_contact?: Contact | string | null;
-	folder?: DirectusFolder | string | null;
-	billing_contacts?: { name: string; email: string }[] | null;
+	/** @description File storage folder for this client */
+	folder?: string | null;
+	/** @description Billing contact emails for invoice delivery */
+	billing_contacts?: Array<{ name: string; email: string }> | null;
 	/** @description Short code for invoice numbering (e.g., ABC, XYZ) */
 	code?: string | null;
 }
@@ -2542,48 +2544,6 @@ export interface Ticket {
 	tasks?: Task[] | string[];
 }
 
-export interface TimeEntry {
-	/** @primaryKey */
-	id: string;
-	status?: 'running' | 'completed' | 'archived';
-	sort?: number | null;
-	user_created?: DirectusUser | string | null;
-	date_created?: string | null;
-	user_updated?: DirectusUser | string | null;
-	date_updated?: string | null;
-	/** @required */
-	organization: Organization | string;
-	/** @description The user who performed the work @required */
-	user: DirectusUser | string;
-	/** @description Optional client association */
-	client?: Client | string | null;
-	/** @description Optional project association */
-	project?: Project | string | null;
-	/** @description Optional ticket association */
-	ticket?: Ticket | string | null;
-	/** @description Optional task association */
-	task?: Task | string | null;
-	/** @description What was worked on */
-	description?: string | null;
-	/** @required */
-	start_time: string;
-	end_time?: string | null;
-	/** @description Duration in minutes — stored, not computed, to allow manual adjustments */
-	duration_minutes?: number | null;
-	/** @description Calendar date for this entry (from start_time), used for reporting */
-	date?: string | null;
-	/** @description Is this time billable? */
-	billable?: boolean | null;
-	/** @description Hourly rate snapshot at time of entry */
-	hourly_rate?: number | null;
-	/** @description Has this entry been billed on an invoice? */
-	billed?: boolean | null;
-	/** @description The invoice this was billed on */
-	invoice?: Invoice | string | null;
-	/** @description Optional tags for categorization */
-	tags?: string[] | null;
-}
-
 export interface TicketsComment {
 	/** @primaryKey */
 	id: number;
@@ -2612,6 +2572,39 @@ export interface TicketsService {
 	tickets_id?: Ticket | string | null;
 	services_id?: Service | string | null;
 	sort?: number | null;
+}
+
+export interface TimeEntry {
+	/** @primaryKey */
+	id: number;
+	status?: 'running' | 'completed' | 'archived' | null;
+	sort?: number | null;
+	/** @required */
+	organization: string;
+	/** @required */
+	user: string;
+	client?: string | null;
+	project?: string | null;
+	ticket?: string | null;
+	task?: string | null;
+	description?: string | null;
+	/** @required */
+	start_time: string;
+	end_time?: string | null;
+	/** @description Stored duration in minutes (allows manual adjustment) */
+	duration_minutes?: number | null;
+	/** @description Calendar date derived from start_time */
+	date?: string | null;
+	billable?: boolean | null;
+	/** @description Rate snapshot at time of entry */
+	hourly_rate?: number | null;
+	billed?: boolean | null;
+	invoice?: string | null;
+	tags?: string[] | null;
+	user_created?: string | null;
+	date_created?: string | null;
+	user_updated?: string | null;
+	date_updated?: string | null;
 }
 
 export interface UserPresence {
@@ -3368,6 +3361,7 @@ export interface Schema {
 	tickets_directus_users: TicketsDirectusUser[];
 	tickets_files: TicketsFile[];
 	tickets_services: TicketsService[];
+	time_entries: TimeEntry[];
 	user_presence: UserPresence[];
 	video_meeting_attendees: VideoMeetingAttendee[];
 	video_meetings: VideoMeeting[];
@@ -3551,6 +3545,7 @@ export enum CollectionNames {
 	tickets_directus_users = 'tickets_directus_users',
 	tickets_files = 'tickets_files',
 	tickets_services = 'tickets_services',
+	time_entries = 'time_entries',
 	user_presence = 'user_presence',
 	video_meeting_attendees = 'video_meeting_attendees',
 	video_meetings = 'video_meetings',
