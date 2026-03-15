@@ -27,7 +27,7 @@ const { selectedClient } = useClients();
 const allEntries = ref<TimeEntry[]>([]);
 const total = ref(0);
 const loading = ref(true);
-const activeTab = ref<'today' | 'week' | 'all'>('today');
+const activeTab = ref<'today' | 'week' | 'all' | 'reports'>('today');
 const showManualEntry = ref(false);
 const editingEntry = ref<TimeEntry | null>(null);
 const page = ref(1);
@@ -39,6 +39,7 @@ const tabs = [
   { key: 'today' as const, label: 'Today' },
   { key: 'week' as const, label: 'This Week' },
   { key: 'all' as const, label: 'All Entries' },
+  { key: 'reports' as const, label: 'Reports' },
 ];
 
 // ── Date Filters ────────────────────────────────────────────────
@@ -157,10 +158,12 @@ async function handleDelete(entry: TimeEntry) {
   }
 }
 
-function switchTab(tab: 'today' | 'week' | 'all') {
+function switchTab(tab: 'today' | 'week' | 'all' | 'reports') {
   activeTab.value = tab;
   page.value = 1;
-  fetchEntries();
+  if (tab !== 'reports') {
+    fetchEntries();
+  }
 }
 
 // ── Lifecycle ───────────────────────────────────────────────────
@@ -221,8 +224,11 @@ watch(() => selectedClient.value, () => {
       </button>
     </div>
 
+    <!-- Reports Tab -->
+    <TimeTrackerReport v-if="activeTab === 'reports'" />
+
     <!-- Loading State -->
-    <div v-if="loading" class="flex flex-col items-center justify-center py-24 gap-3">
+    <div v-else-if="loading" class="flex flex-col items-center justify-center py-24 gap-3">
       <Icon name="lucide:loader-2" class="w-8 h-8 text-muted-foreground animate-spin" />
       <p class="text-sm text-muted-foreground">Loading entries...</p>
     </div>
