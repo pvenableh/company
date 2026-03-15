@@ -48,7 +48,7 @@
         :value="variables[field.key] || field.default || ''"
         rows="3"
         class="w-full rounded-md border px-2 py-1.5 text-xs bg-background font-mono resize-y"
-        @input="emit('update', field.key, ($event.target as HTMLTextAreaElement).value)"
+        @input="debouncedEmit(field.key, ($event.target as HTMLTextAreaElement).value)"
       />
 
       <!-- URL input -->
@@ -58,7 +58,7 @@
           :value="variables[field.key] || field.default || ''"
           :placeholder="field.type === 'image' ? 'https://example.com/image.jpg' : 'https://example.com'"
           class="w-full rounded-md border px-2 py-1.5 text-xs bg-background pl-7"
-          @input="emit('update', field.key, ($event.target as HTMLInputElement).value)"
+          @input="debouncedEmit(field.key, ($event.target as HTMLInputElement).value)"
         />
         <span class="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-[10px]">
           {{ field.type === 'image' ? '🖼' : '🔗' }}
@@ -72,7 +72,7 @@
         :value="variables[field.key] || field.default || ''"
         :placeholder="field.description || field.label"
         class="w-full rounded-md border px-2 py-1.5 text-xs bg-background"
-        @input="emit('update', field.key, ($event.target as HTMLInputElement).value)"
+        @input="debouncedEmit(field.key, ($event.target as HTMLInputElement).value)"
       />
 
       <p v-if="field.description" class="text-[11px] text-muted-foreground">
@@ -87,6 +87,7 @@
 </template>
 
 <script setup lang="ts">
+import { useDebounceFn } from '@vueuse/core';
 import type { BlockVariableDefinition } from '~/types/email/blocks';
 
 const props = defineProps<{
@@ -97,6 +98,16 @@ const props = defineProps<{
 const emit = defineEmits<{
   update: [key: string, value: any];
 }>();
+
+/** Debounced emit for text-heavy inputs to avoid lag */
+const debouncedEmit = useDebounceFn((key: string, value: any) => {
+  emit('update', key, value);
+}, 300);
+
+/** Immediate emit for discrete inputs (color picker, checkboxes) */
+function emitImmediate(key: string, value: any) {
+  emit('update', key, value);
+}
 
 /** Get a valid hex color for the native color picker (transparent → #000000). */
 function getColorValue(field: BlockVariableDefinition): string {
@@ -114,12 +125,12 @@ function getColorDisplay(field: BlockVariableDefinition): string {
 
 /** Handle color picker input — never emit empty strings. */
 function handleColorInput(key: string, value: string) {
-  emit('update', key, value || 'transparent');
+  emitImmediate(key, value || 'transparent');
 }
 
 /** Handle color text input — fall back to transparent for empty. */
 function handleColorText(key: string, value: string) {
   const trimmed = value.trim();
-  emit('update', key, trimmed || 'transparent');
+  debouncedEmit(key, trimmed || 'transparent');
 }
 </script>

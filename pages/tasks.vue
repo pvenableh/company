@@ -27,7 +27,7 @@
 		<div v-if="debug" class="mb-4 p-2 bg-yellow-100 dark:bg-yellow-800 rounded text-xs">
 			<div>
 				<strong>Debug:</strong>
-				Active Tab: {{ activeTab }} ({{ tabs[activeTab].content }})
+				Active Tab: {{ activeTab }} ({{ tabs[activeTab]?.content }})
 			</div>
 			<div>Global Organization ID: {{ selectedOrg }}</div>
 			<div>Global Team ID: {{ selectedTeam }}</div>
@@ -41,7 +41,7 @@
 
 		<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
 			<div class="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
-				<h2 class="text-lg font-medium mb-4">{{ tabs[activeTab].label }} Tasks</h2>
+				<h2 class="text-lg font-medium mb-4">{{ tabs[activeTab]?.label }} Tasks</h2>
 
 				<ClientOnly>
 					<TicketsTasksList
@@ -209,13 +209,13 @@ const getTasksOrganizationId = computed(() => {
 const getTasksTeamId = computed(() => {
 	// Only use team filter on the "My Team" tab
 	// For other tabs, use null to indicate no team filter
-	return tabs[activeTab.value].content === 'team' ? selectedTeam.value : null;
+	return tabs.value?.[activeTab.value]?.content === 'team' ? selectedTeam.value : null;
 });
 
 const getTasksUserId = computed(() => {
 	// Only use user filter on the "Assigned to Me" tab
 	// For other tabs, use null to indicate no user filter
-	return tabs[activeTab.value].content === 'assigned' ? user.value?.id : null;
+	return tabs.value?.[activeTab.value]?.content === 'assigned' ? user.value?.id : null;
 });
 
 const getTasksProjectId = computed(() => {
@@ -301,6 +301,13 @@ const refreshData = () => {
 		}, 1000);
 	}
 };
+
+// Reset tab if current becomes disabled or invalid
+watch(tabs, (newTabs) => {
+	if (!newTabs[activeTab.value] || newTabs[activeTab.value].disabled) {
+		activeTab.value = 0;
+	}
+});
 
 // Watch for tab changes
 watch(activeTab, () => {

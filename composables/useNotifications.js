@@ -6,6 +6,11 @@ import { useRealtimeSubscription } from '~/composables/useRealtimeSubscription';
 let _instanceActive = false;
 let _instanceSubscription = null;
 
+// Audio unlock state (module-level to survive composable re-calls)
+let _audioUnlocked = false;
+let _notificationAudio = null;
+let _unlockListenersAdded = false;
+
 export function useNotifications() {
 	const config = useRuntimeConfig();
 	const { readNotifications, createNotification, updateNotification } = useDirectusNotifications();
@@ -79,14 +84,55 @@ export function useNotifications() {
 		desktopEnabled: true,
 	}));
 
-	// Notification sound setup
-	const notificationSound = import.meta.client ? new Audio('/sounds/notification.mp3') : null;
+	// Notification sound setup with browser autoplay unlock
+	const getAudio = () => {
+		if (!import.meta.client) return null;
+		if (!_notificationAudio) {
+			_notificationAudio = new Audio('/sounds/notification.mp3');
+			_notificationAudio.preload = 'auto';
+		}
+		return _notificationAudio;
+	};
+
+	// Unlock audio playback on first user interaction (browser autoplay policy)
+	const unlockAudio = () => {
+		if (_audioUnlocked) return;
+		const audio = getAudio();
+		if (!audio) return;
+
+		const savedVolume = audio.volume;
+		audio.volume = 0;
+		audio.play().then(() => {
+			audio.pause();
+			audio.currentTime = 0;
+			audio.volume = savedVolume;
+			_audioUnlocked = true;
+			// Clean up listeners
+			document.removeEventListener('click', unlockAudio);
+			document.removeEventListener('touchstart', unlockAudio);
+			document.removeEventListener('keydown', unlockAudio);
+		}).catch(() => {
+			// Still locked, listeners remain for next interaction
+		});
+	};
+
+	// Register unlock listeners once
+	if (import.meta.client && !_unlockListenersAdded) {
+		_unlockListenersAdded = true;
+		document.addEventListener('click', unlockAudio, { passive: true });
+		document.addEventListener('touchstart', unlockAudio, { passive: true });
+		document.addEventListener('keydown', unlockAudio, { passive: true });
+	}
 
 	// Play notification sound if enabled
 	const playSound = () => {
-		if (import.meta.client && notificationSound && userPreferences.value.soundEnabled) {
-			notificationSound.play().catch((err) => console.error('Failed to play notification sound:', err));
-		}
+		if (!import.meta.client || !userPreferences.value.soundEnabled) return;
+		const audio = getAudio();
+		if (!audio) return;
+		audio.currentTime = 0;
+		audio.play().catch(() => {
+			// Autoplay still blocked — will unlock on next user gesture
+		});
 	};
 
 	// Create a plain filter object instead of a computed

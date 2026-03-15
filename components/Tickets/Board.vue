@@ -215,6 +215,7 @@ const config = useRuntimeConfig();
 
 // Use our composables
 const { selectedOrg, organizations, setupListeners: setupOrgListeners, getOrganizationFilter } = useOrganization();
+const { selectedClient, getClientFilter } = useClients();
 
 const {
 	selectedTeam,
@@ -433,6 +434,12 @@ const generateFilter = () => {
 				},
 			});
 		}
+	}
+
+	// Client filter
+	const clientFilter = getClientFilter();
+	if (Object.keys(clientFilter).length > 0) {
+		filter._and.push(clientFilter);
 	}
 
 	// Clean up empty filter
@@ -1016,6 +1023,13 @@ watch(
 	() => filterDueDate.value,
 	(newVal) => {
 		dueDateStorage.setValue(newVal);
+		debouncedUpdateSubscription();
+	},
+);
+
+watch(
+	() => selectedClient.value,
+	() => {
 		debouncedUpdateSubscription();
 	},
 );

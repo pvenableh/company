@@ -25,7 +25,30 @@
 			</div>
 		</template>
 		<div class="h-80">
-			<PieChart v-if="data && data.length" :data="chartData" :options="chartOptions" />
+			<template v-if="data && data.length">
+				<ChartContainer :config="chartConfig" class="h-full">
+					<VisDonut
+						:data="donutData"
+						:value="(d: any) => d.count"
+						:arc-width="80"
+						:pad-angle="0.02"
+						:corner-radius="4"
+						:color="(d: any, i: number) => chartColors[i % chartColors.length]"
+						:central-label="totalCount.toString()"
+						:central-sub-label="'total'"
+					/>
+				</ChartContainer>
+				<div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 mt-2 text-xs text-muted-foreground">
+					<span
+						v-for="(item, i) in data"
+						:key="item.type"
+						class="flex items-center gap-1.5"
+					>
+						<span class="w-2.5 h-2.5 rounded-full shrink-0" :style="{ background: chartColors[i % chartColors.length] }"></span>
+						{{ item.type }} ({{ item.count }})
+					</span>
+				</div>
+			</template>
 			<div v-else class="h-full flex items-center justify-center text-muted-foreground">No activity data available</div>
 		</div>
 	</UCard>
@@ -33,13 +56,8 @@
 
 <script setup>
 import { computed } from 'vue';
-
-// Import vue-chartjs components
-import { Pie as PieChart } from 'vue-chartjs';
-import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
-
-// Register ChartJS components
-ChartJS.register(ArcElement, Tooltip, Legend);
+import { ChartContainer } from '~/components/ui/chart';
+import { VisDonut } from '@unovis/vue';
 
 const props = defineProps({
 	data: {
@@ -52,50 +70,35 @@ const props = defineProps({
 	},
 });
 
-// Chart colors
 const chartColors = [
-	'rgba(92, 214, 254, 0.7)', //
-	'rgba(56, 204, 254, 0.7)', //
-	'rgba(21, 194, 252, 0.7)', //
-	'rgba(3, 176, 233, 0.7)', //
-	'rgba(4, 148, 197, 0.7)', //
-	'rgba(4, 121, 160, 0.7)', //
-	'rgba(3, 94, 124, 0.7)', //
+	'rgba(92, 214, 254, 0.8)',
+	'rgba(56, 204, 254, 0.8)',
+	'rgba(21, 194, 252, 0.8)',
+	'rgba(3, 176, 233, 0.8)',
+	'rgba(4, 148, 197, 0.8)',
+	'rgba(4, 121, 160, 0.8)',
+	'rgba(3, 94, 124, 0.8)',
 ];
 
-// Prepare chart data
-const chartData = computed(() => {
-	return {
-		labels: props.data.map((item) => item.type),
-		datasets: [
-			{
-				data: props.data.map((item) => item.count),
-				backgroundColor: chartColors.slice(0, props.data.length),
-				borderWidth: 1,
-			},
-		],
-	};
+const chartConfig = computed(() => {
+	const config = {};
+	props.data.forEach((item, i) => {
+		config[`segment_${i}`] = {
+			label: item.type,
+			color: chartColors[i % chartColors.length],
+		};
+	});
+	return config;
 });
 
-// Chart options
-const chartOptions = {
-	responsive: true,
-	maintainAspectRatio: false,
-	plugins: {
-		legend: {
-			position: 'bottom',
-		},
-		tooltip: {
-			callbacks: {
-				label: function (context) {
-					const label = context.label || '';
-					const value = context.raw || 0;
-					const total = context.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
-					const percentage = Math.round((value / total) * 100);
-					return `${label}: ${value} (${percentage}%)`;
-				},
-			},
-		},
-	},
-};
+const donutData = computed(() => {
+	return props.data.map((item) => ({
+		type: item.type,
+		count: item.count,
+	}));
+});
+
+const totalCount = computed(() => {
+	return props.data.reduce((sum, item) => sum + item.count, 0);
+});
 </script>

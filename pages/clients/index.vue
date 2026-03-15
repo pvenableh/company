@@ -12,14 +12,11 @@ const { getClients, updateClient, updateClientSort, deleteClient: doDelete } = u
 
 // All fetched clients
 const allClients = ref<Client[]>([]);
-// Active/prospect clients — regular ref for VueDraggable compatibility
-const activeClientsList = ref<Client[]>([]);
 const total = ref(0);
 const loading = ref(true);
 const search = ref('');
 const showCreateModal = ref(false);
 const creating = ref(false);
-const showInactive = ref(false);
 
 // ── Active / Inactive split ─────────────────────────────────────────────────
 const activeStatuses = ['active', 'prospect'];
@@ -28,27 +25,16 @@ function isActiveStatus(status: string | undefined | null): boolean {
   return activeStatuses.includes(status || '');
 }
 
-const inactiveClients = computed(() =>
-  allClients.value.filter(c => !isActiveStatus(c.status))
-);
+// Separate mutable arrays for VueDraggable
+const activeClientsList = ref<Client[]>([]);
+const inactiveClientsList = ref<Client[]>([]);
 
 /** Re-split allClients into active/inactive refs */
 function splitClients() {
   activeClientsList.value = allClients.value.filter(c => isActiveStatus(c.status));
+  inactiveClientsList.value = allClients.value.filter(c => !isActiveStatus(c.status));
 }
 
-// ── Sorting ──────────────────────────────────────────────────────────────────
-const sortBy = ref('sort,name');
-
-const sortOptions = [
-  { label: 'Custom Order', value: 'sort,name' },
-  { label: 'Name A→Z', value: 'name' },
-  { label: 'Name Z→A', value: '-name' },
-  { label: 'Newest First', value: '-date_created' },
-  { label: 'Recently Updated', value: '-date_updated' },
-];
-
-const isCustomOrder = computed(() => sortBy.value === 'sort,name');
 const isDragging = ref(false);
 const savingOrder = ref(false);
 
@@ -57,7 +43,7 @@ const fetchData = async () => {
   try {
     const result = await getClients({
       search: search.value || undefined,
-      sort: sortBy.value.split(','),
+      sort: ['sort', 'name'],
       limit: 200,
       page: 1,
     });
@@ -84,32 +70,6 @@ async function handleDelete(client: Client) {
 
 const togglingIds = ref<Set<string>>(new Set());
 
-async function toggleStatus(client: Client, newStatus: string) {
-  const oldStatus = client.status;
-  // Optimistic update — card moves between sections instantly
-  client.status = newStatus;
-
-  // Move between active/inactive lists
-  if (isActiveStatus(newStatus) && !isActiveStatus(oldStatus)) {
-    // Inactive → Active: add to activeClientsList
-    activeClientsList.value = [...activeClientsList.value, client];
-  } else if (!isActiveStatus(newStatus) && isActiveStatus(oldStatus)) {
-    // Active → Inactive: remove from activeClientsList
-    activeClientsList.value = activeClientsList.value.filter(c => c.id !== client.id);
-  }
-
-  togglingIds.value.add(client.id);
-  try {
-    await updateClient(client.id, { status: newStatus });
-  } catch {
-    // Revert
-    client.status = oldStatus;
-    splitClients();
-  } finally {
-    togglingIds.value.delete(client.id);
-  }
-}
-
 const { createClient } = useClients();
 
 async function handleCreate(data: any) {
@@ -127,7 +87,6 @@ function getLogoUrl(client: Client): string | null {
   if (!client.logo) return null;
   const fileId = typeof client.logo === 'string' ? client.logo : client.logo?.id;
   if (!fileId) return null;
-  // Use fit=contain to preserve aspect ratio (no cropping)
   return `${config.public.directusUrl}/assets/${fileId}?key=medium-contain`;
 }
 
@@ -145,7 +104,8 @@ function getStatusLabel(status: string): string {
   if (status === 'prospect') return 'Prospect';
   if (status === 'churned') return 'Churned';
   if (status === 'inactive') return 'Inactive';
-  return '';
+  if (status === 'active') return 'Active';
+  return status || '';
 }
 
 // ── Activity Counts ──────────────────────────────────────────────────────────
@@ -227,30 +187,69 @@ const activityColors: Record<string, string> = {
   none: 'text-muted-foreground/30',
 };
 
-// ── Drag-and-Drop ────────────────────────────────────────────────────────────
+// ── Kanban Drag-and-Drop ─────────────────────────────────────────────────────
 function onDragStart() {
   isDragging.value = true;
 }
 
-async function handleDragEnd() {
+async function handleActiveChange(evt: any) {
   isDragging.value = false;
-  savingOrder.value = true;
-  try {
-    await Promise.all(
-      activeClientsList.value.map((client, index) =>
-        updateClientSort(client.id, index)
-      )
-    );
-  } catch (err) {
-    console.error('Failed to save client order:', err);
-    await fetchData();
-  } finally {
-    savingOrder.value = false;
+
+  // An item was added to the active column from inactive
+  if (evt.added) {
+    const client = evt.added.element as Client;
+    savingOrder.value = true;
+    try {
+      await updateClient(client.id, { status: 'active' });
+      client.status = 'active';
+    } catch {
+      // Revert on failure
+      await fetchData();
+    } finally {
+      savingOrder.value = false;
+    }
+    return;
+  }
+
+  // Items were reordered within the active column
+  if (evt.moved) {
+    savingOrder.value = true;
+    try {
+      await Promise.all(
+        activeClientsList.value.map((client, index) =>
+          updateClientSort(client.id, index)
+        )
+      );
+    } catch (err) {
+      console.error('Failed to save client order:', err);
+      await fetchData();
+    } finally {
+      savingOrder.value = false;
+    }
   }
 }
 
-function onSortChange() {
-  fetchData();
+async function handleInactiveChange(evt: any) {
+  isDragging.value = false;
+
+  // An item was added to the inactive column from active
+  if (evt.added) {
+    const client = evt.added.element as Client;
+    savingOrder.value = true;
+    try {
+      await updateClient(client.id, { status: 'inactive' });
+      client.status = 'inactive';
+    } catch {
+      // Revert on failure
+      await fetchData();
+    } finally {
+      savingOrder.value = false;
+    }
+  }
+}
+
+function handleDragEnd() {
+  isDragging.value = false;
 }
 
 onMounted(() => {
@@ -260,13 +259,13 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="p-6 max-w-7xl mx-auto">
+  <div class="p-4 md:p-6 max-w-7xl mx-auto">
     <!-- Header -->
     <div class="flex items-center justify-between mb-6">
       <div>
         <h1 class="text-xl font-semibold">Clients</h1>
         <p class="text-sm text-muted-foreground">
-          {{ activeClientsList.length }} active<span v-if="inactiveClients.length">, {{ inactiveClients.length }} inactive</span>
+          {{ activeClientsList.length }} active<span v-if="inactiveClientsList.length">, {{ inactiveClientsList.length }} inactive</span>
         </p>
       </div>
       <Button size="sm" @click="showCreateModal = true">
@@ -275,8 +274,8 @@ onMounted(() => {
       </Button>
     </div>
 
-    <!-- Filters -->
-    <div class="flex gap-3 mb-6 flex-wrap">
+    <!-- Search -->
+    <div class="flex gap-3 mb-6">
       <input
         v-model="search"
         type="search"
@@ -284,19 +283,12 @@ onMounted(() => {
         class="flex-1 min-w-48 rounded-md border bg-background px-3 py-2 text-sm"
         @input="debouncedFetch"
       />
-      <select
-        v-model="sortBy"
-        @change="onSortChange"
-        class="rounded-md border bg-background px-3 py-2 text-sm w-48"
-      >
-        <option v-for="opt in sortOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-      </select>
     </div>
 
     <!-- Saving order indicator -->
     <div v-if="savingOrder" class="flex items-center gap-2 mb-4 text-sm text-muted-foreground">
       <Icon name="lucide:loader-2" class="w-4 h-4 animate-spin" />
-      Saving order...
+      Saving...
     </div>
 
     <!-- Loading State -->
@@ -320,166 +312,168 @@ onMounted(() => {
       </Button>
     </div>
 
-    <template v-else>
-      <!-- ═══════════ ACTIVE CLIENTS ═══════════ -->
-      <VueDraggable
-        v-if="activeClientsList.length"
-        v-model="activeClientsList"
-        item-key="id"
-        :disabled="!isCustomOrder"
-        handle=".drag-handle"
-        ghost-class="opacity-50"
-        chosen-class="ring-2 ring-[var(--cyan)]"
-        drag-class="shadow-xl"
-        :animation="200"
-        :force-fallback="true"
-        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-        @start="onDragStart"
-        @end="handleDragEnd"
-      >
-        <template #item="{ element: client }">
-          <div
-            class="ios-card p-5 cursor-pointer hover:ring-1 hover:ring-white/10 transition-all relative"
-            @click="viewClient(client)"
+    <!-- ═══════════ KANBAN BOARD ═══════════ -->
+    <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+      <!-- ── Active Column ──────────────────────────────────────────────── -->
+      <div class="flex flex-col">
+        <div class="flex items-center gap-2 mb-3 px-1">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+          <h2 class="text-sm font-semibold uppercase tracking-wide">Active</h2>
+          <span class="text-xs bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full font-medium">
+            {{ activeClientsList.length }}
+          </span>
+        </div>
+
+        <div class="rounded-xl border border-dashed border-emerald-500/20 bg-emerald-500/[0.02] p-3 min-h-[200px] flex-1">
+          <VueDraggable
+            v-model="activeClientsList"
+            item-key="id"
+            group="clients"
+            handle=".drag-handle"
+            ghost-class="opacity-40"
+            chosen-class="ring-2 ring-emerald-500/40"
+            drag-class="shadow-xl"
+            :animation="200"
+            :force-fallback="true"
+            class="space-y-3 min-h-[120px]"
+            @start="onDragStart"
+            @end="handleDragEnd"
+            @change="handleActiveChange"
           >
-            <div class="flex items-start gap-3 mb-3">
-              <!-- Drag Handle -->
+            <template #item="{ element: client }">
               <div
-                v-if="isCustomOrder"
-                class="drag-handle shrink-0 flex items-center justify-center w-5 self-stretch -ml-2 cursor-grab active:cursor-grabbing text-muted-foreground/30 hover:text-muted-foreground transition-colors"
-                @click.stop.prevent
-                @mousedown.stop
-              >
-                <Icon name="lucide:grip-vertical" class="w-4 h-4" />
-              </div>
-
-              <!-- Logo / Initial -->
-              <div class="shrink-0">
-                <img
-                  v-if="getLogoUrl(client)"
-                  :src="getLogoUrl(client)!"
-                  :alt="client.name"
-                  class="w-10 h-10 rounded-lg object-contain bg-white"
-                />
-                <div
-                  v-else
-                  class="w-10 h-10 rounded-lg bg-muted/60 flex items-center justify-center text-sm font-semibold text-muted-foreground"
-                >
-                  {{ getInitial(client.name) }}
-                </div>
-              </div>
-              <div class="min-w-0 flex-1">
-                <h3 class="text-sm font-medium truncate">{{ client.name }}</h3>
-                <span
-                  v-if="client.status === 'prospect'"
-                  class="inline-block text-[9px] uppercase tracking-wider font-medium text-amber-500 mt-0.5"
-                >
-                  Prospect
-                </span>
-              </div>
-              <StatusSwitch
-                :model-value="client.status || 'inactive'"
-                :loading="togglingIds.has(client.id)"
-                @update:model-value="toggleStatus(client, $event)"
-              />
-            </div>
-
-            <!-- Details -->
-            <div class="space-y-1.5 text-xs text-muted-foreground">
-              <div v-if="getPrimaryContactName(client)" class="flex items-center gap-1.5">
-                <Icon name="lucide:user" class="w-3.5 h-3.5 shrink-0" />
-                <span class="truncate">{{ getPrimaryContactName(client) }}</span>
-              </div>
-              <div v-if="client.website" class="flex items-center gap-1.5">
-                <Icon name="lucide:globe" class="w-3.5 h-3.5 shrink-0" />
-                <a
-                  :href="client.website"
-                  target="_blank"
-                  class="truncate hover:text-foreground transition-colors"
-                  @click.stop
-                >
-                  {{ client.website.replace(/^https?:\/\//, '') }}
-                </a>
-              </div>
-            </div>
-
-            <!-- Tags -->
-            <div v-if="client.tags?.length" class="flex flex-wrap gap-1 mt-3">
-              <span
-                v-for="tag in client.tags.slice(0, 3)"
-                :key="tag"
-                class="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-[10px] text-muted-foreground"
-              >
-                {{ tag }}
-              </span>
-              <span v-if="client.tags.length > 3" class="text-[10px] text-muted-foreground/60 self-center">
-                +{{ client.tags.length - 3 }}
-              </span>
-            </div>
-
-            <!-- Activity Indicators -->
-            <div
-              v-if="getClientActivity(client.id).projects > 0 || getClientActivity(client.id).tickets > 0"
-              class="flex items-center gap-3 mt-3 pt-3 border-t border-border/30"
-            >
-              <div
-                class="flex items-center gap-1 text-[10px]"
-                :class="activityColors[getActivityLevel(client.id)]"
-                :title="`${getClientActivity(client.id).projects} projects`"
-              >
-                <Icon name="lucide:folder" class="w-3 h-3" />
-                <span class="font-medium">{{ getClientActivity(client.id).projects }}</span>
-              </div>
-              <div
-                class="flex items-center gap-1 text-[10px]"
-                :class="activityColors[getActivityLevel(client.id)]"
-                :title="`${getClientActivity(client.id).tickets} tickets`"
-              >
-                <Icon name="lucide:ticket" class="w-3 h-3" />
-                <span class="font-medium">{{ getClientActivity(client.id).tickets }}</span>
-              </div>
-            </div>
-          </div>
-        </template>
-      </VueDraggable>
-
-      <!-- No active clients message (when search returns only inactive) -->
-      <div v-else-if="inactiveClients.length" class="text-center py-12">
-        <p class="text-sm text-muted-foreground">No active clients match your search.</p>
-      </div>
-
-      <!-- ═══════════ INACTIVE / CHURNED CLIENTS ═══════════ -->
-      <div v-if="inactiveClients.length" class="mt-8">
-        <button
-          class="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4 group"
-          @click="showInactive = !showInactive"
-        >
-          <Icon
-            name="lucide:chevron-right"
-            class="w-4 h-4 transition-transform duration-200"
-            :class="{ 'rotate-90': showInactive }"
-          />
-          <span class="font-medium">Inactive &amp; Churned</span>
-          <span class="text-xs bg-muted/60 px-2 py-0.5 rounded-full">{{ inactiveClients.length }}</span>
-        </button>
-
-        <Transition
-          enter-active-class="transition-all duration-300 ease-out"
-          enter-from-class="opacity-0 -translate-y-2 max-h-0"
-          enter-to-class="opacity-100 translate-y-0 max-h-[2000px]"
-          leave-active-class="transition-all duration-200 ease-in"
-          leave-from-class="opacity-100 translate-y-0 max-h-[2000px]"
-          leave-to-class="opacity-0 -translate-y-2 max-h-0"
-        >
-          <div v-show="showInactive" class="overflow-hidden">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div
-                v-for="client in inactiveClients"
-                :key="client.id"
-                class="ios-card p-5 cursor-pointer hover:ring-1 hover:ring-white/10 transition-all opacity-60 hover:opacity-90"
+                class="ios-card p-4 cursor-pointer hover:ring-1 hover:ring-white/10 transition-all relative group"
                 @click="viewClient(client)"
               >
-                <div class="flex items-start gap-3 mb-3">
+                <div class="flex items-start gap-3">
+                  <!-- Drag Handle -->
+                  <div
+                    class="drag-handle shrink-0 flex items-center justify-center w-5 self-stretch -ml-1 cursor-grab active:cursor-grabbing text-muted-foreground/20 hover:text-muted-foreground/60 transition-colors"
+                    @click.stop.prevent
+                    @mousedown.stop
+                  >
+                    <Icon name="lucide:grip-vertical" class="w-4 h-4" />
+                  </div>
+
+                  <!-- Logo / Initial -->
+                  <div class="shrink-0">
+                    <img
+                      v-if="getLogoUrl(client)"
+                      :src="getLogoUrl(client)!"
+                      :alt="client.name"
+                      class="w-10 h-10 rounded-lg object-contain bg-white"
+                    />
+                    <div
+                      v-else
+                      class="w-10 h-10 rounded-lg bg-muted/60 flex items-center justify-center text-sm font-semibold text-muted-foreground"
+                    >
+                      {{ getInitial(client.name) }}
+                    </div>
+                  </div>
+
+                  <div class="min-w-0 flex-1">
+                    <h3 class="text-sm font-medium truncate">{{ client.name }}</h3>
+                    <span
+                      v-if="client.status === 'prospect'"
+                      class="inline-block text-[9px] uppercase tracking-wider font-medium text-amber-500 mt-0.5"
+                    >
+                      Prospect
+                    </span>
+                    <div v-if="getPrimaryContactName(client)" class="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground">
+                      <Icon name="lucide:user" class="w-3 h-3 shrink-0" />
+                      <span class="truncate">{{ getPrimaryContactName(client) }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Tags -->
+                <div v-if="client.tags?.length" class="flex flex-wrap gap-1 mt-2.5 ml-8">
+                  <span
+                    v-for="tag in client.tags.slice(0, 3)"
+                    :key="tag"
+                    class="inline-flex items-center rounded-full bg-muted/60 px-2 py-0.5 text-[10px] text-muted-foreground"
+                  >
+                    {{ tag }}
+                  </span>
+                  <span v-if="client.tags.length > 3" class="text-[10px] text-muted-foreground/60 self-center">
+                    +{{ client.tags.length - 3 }}
+                  </span>
+                </div>
+
+                <!-- Activity Indicators -->
+                <div
+                  v-if="getClientActivity(client.id).projects > 0 || getClientActivity(client.id).tickets > 0"
+                  class="flex items-center gap-3 mt-2.5 ml-8"
+                >
+                  <div
+                    class="flex items-center gap-1 text-[10px]"
+                    :class="activityColors[getActivityLevel(client.id)]"
+                  >
+                    <Icon name="lucide:folder" class="w-3 h-3" />
+                    <span class="font-medium">{{ getClientActivity(client.id).projects }}</span>
+                  </div>
+                  <div
+                    class="flex items-center gap-1 text-[10px]"
+                    :class="activityColors[getActivityLevel(client.id)]"
+                  >
+                    <Icon name="lucide:ticket" class="w-3 h-3" />
+                    <span class="font-medium">{{ getClientActivity(client.id).tickets }}</span>
+                  </div>
+                </div>
+              </div>
+            </template>
+          </VueDraggable>
+
+          <!-- Empty active column -->
+          <div v-if="!activeClientsList.length" class="flex flex-col items-center justify-center py-12 text-muted-foreground/50">
+            <Icon name="lucide:arrow-left-right" class="w-8 h-8 mb-2" />
+            <p class="text-xs">Drag clients here to activate</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Inactive Column ────────────────────────────────────────────── -->
+      <div class="flex flex-col">
+        <div class="flex items-center gap-2 mb-3 px-1">
+          <span class="w-2.5 h-2.5 rounded-full bg-neutral-400 dark:bg-neutral-500"></span>
+          <h2 class="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Inactive</h2>
+          <span class="text-xs bg-muted/60 text-muted-foreground px-2 py-0.5 rounded-full font-medium">
+            {{ inactiveClientsList.length }}
+          </span>
+        </div>
+
+        <div class="rounded-xl border border-dashed border-border/40 bg-muted/[0.02] p-3 min-h-[200px] flex-1">
+          <VueDraggable
+            v-model="inactiveClientsList"
+            item-key="id"
+            group="clients"
+            handle=".drag-handle"
+            ghost-class="opacity-40"
+            chosen-class="ring-2 ring-neutral-400/40"
+            drag-class="shadow-xl"
+            :animation="200"
+            :force-fallback="true"
+            class="space-y-3 min-h-[120px]"
+            @start="onDragStart"
+            @end="handleDragEnd"
+            @change="handleInactiveChange"
+          >
+            <template #item="{ element: client }">
+              <div
+                class="ios-card p-4 cursor-pointer hover:ring-1 hover:ring-white/10 transition-all opacity-60 hover:opacity-90 group"
+                @click="viewClient(client)"
+              >
+                <div class="flex items-start gap-3">
+                  <!-- Drag Handle -->
+                  <div
+                    class="drag-handle shrink-0 flex items-center justify-center w-5 self-stretch -ml-1 cursor-grab active:cursor-grabbing text-muted-foreground/20 hover:text-muted-foreground/60 transition-colors"
+                    @click.stop.prevent
+                    @mousedown.stop
+                  >
+                    <Icon name="lucide:grip-vertical" class="w-4 h-4" />
+                  </div>
+
                   <!-- Logo / Initial -->
                   <div class="shrink-0">
                     <img
@@ -495,32 +489,32 @@ onMounted(() => {
                       {{ getInitial(client.name) }}
                     </div>
                   </div>
+
                   <div class="min-w-0 flex-1">
                     <h3 class="text-sm font-medium truncate text-muted-foreground">{{ client.name }}</h3>
                     <span class="inline-block text-[9px] uppercase tracking-wider font-medium text-muted-foreground/60 mt-0.5">
                       {{ getStatusLabel(client.status || 'inactive') }}
                     </span>
                   </div>
-                  <StatusSwitch
-                    :model-value="client.status || 'inactive'"
-                    :loading="togglingIds.has(client.id)"
-                    @update:model-value="toggleStatus(client, $event)"
-                  />
                 </div>
 
-                <!-- Details -->
-                <div class="space-y-1.5 text-xs text-muted-foreground/60">
-                  <div v-if="getPrimaryContactName(client)" class="flex items-center gap-1.5">
-                    <Icon name="lucide:user" class="w-3.5 h-3.5 shrink-0" />
-                    <span class="truncate">{{ getPrimaryContactName(client) }}</span>
-                  </div>
+                <!-- Contact -->
+                <div v-if="getPrimaryContactName(client)" class="flex items-center gap-1.5 mt-2 ml-8 text-xs text-muted-foreground/60">
+                  <Icon name="lucide:user" class="w-3 h-3 shrink-0" />
+                  <span class="truncate">{{ getPrimaryContactName(client) }}</span>
                 </div>
               </div>
-            </div>
+            </template>
+          </VueDraggable>
+
+          <!-- Empty inactive column -->
+          <div v-if="!inactiveClientsList.length" class="flex flex-col items-center justify-center py-12 text-muted-foreground/30">
+            <Icon name="lucide:archive" class="w-8 h-8 mb-2" />
+            <p class="text-xs">No inactive clients</p>
           </div>
-        </Transition>
+        </div>
       </div>
-    </template>
+    </div>
 
     <!-- Create Modal -->
     <Teleport to="body">

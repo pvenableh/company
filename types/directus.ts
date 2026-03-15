@@ -905,6 +905,8 @@ export interface Client {
 	organization: Organization | string;
 	logo?: string | null;
 	primary_contact?: Contact | string | null;
+	folder?: DirectusFolder | string | null;
+	billing_contacts?: { name: string; email: string }[] | null;
 }
 
 export interface ClientTestimonial {

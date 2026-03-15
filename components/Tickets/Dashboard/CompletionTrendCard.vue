@@ -14,7 +14,7 @@
 							<div class="p-4 max-w-sm">
 								<p class="text-xs text-gray-600">
 									This chart shows the number of tickets created versus completed over time. The completion rate (shown
-									in tooltips) is calculated as (completed tickets ÷ created tickets) x 100%. Higher rates indicate more
+									in tooltips) is calculated as (completed tickets / created tickets) x 100%. Higher rates indicate more
 									efficient ticket processing.
 								</p>
 							</div>
@@ -25,7 +25,27 @@
 			</div>
 		</template>
 		<div class="h-80">
-			<LineChart v-if="data && data.length" :data="chartData" :options="chartOptions" />
+			<template v-if="data && data.length">
+				<ChartContainer :config="chartConfig" class="h-full">
+					<VisXYContainer :data="chartData" :padding="{ top: 10 }">
+						<VisLine :x="(d: any) => d.index" :y="(d: any) => d.completed" color="var(--color-completed)" :curve-type="'monotone'" />
+						<VisLine :x="(d: any) => d.index" :y="(d: any) => d.created" color="var(--color-created)" :curve-type="'monotone'" />
+						<VisAxis type="x" :tick-format="(i: number) => chartData[i]?.name || ''" :grid-line="false" />
+						<VisAxis type="y" :grid-line="true" />
+						<VisTooltip />
+					</VisXYContainer>
+				</ChartContainer>
+				<div class="flex items-center justify-center gap-6 mt-2 text-xs text-muted-foreground">
+					<span class="flex items-center gap-1.5">
+						<span class="w-3 h-0.5 rounded-full bg-emerald-400"></span>
+						Completed
+					</span>
+					<span class="flex items-center gap-1.5">
+						<span class="w-3 h-0.5 rounded-full" style="background: rgba(0, 191, 255, 1)"></span>
+						Created
+					</span>
+				</div>
+			</template>
 			<div v-else class="h-full flex items-center justify-center text-muted-foreground">No trend data available</div>
 		</div>
 	</UCard>
@@ -33,22 +53,8 @@
 
 <script setup>
 import { computed } from 'vue';
-
-// Import vue-chartjs components
-import { Line as LineChart } from 'vue-chartjs';
-import {
-	Chart as ChartJS,
-	CategoryScale,
-	LinearScale,
-	PointElement,
-	LineElement,
-	Title,
-	Tooltip,
-	Legend,
-} from 'chart.js';
-
-// Register ChartJS components
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
+import { ChartContainer } from '~/components/ui/chart';
+import { VisXYContainer, VisLine, VisAxis, VisTooltip } from '@unovis/vue';
 
 const props = defineProps({
 	data: {
@@ -61,72 +67,17 @@ const props = defineProps({
 	},
 });
 
-// Prepare chart data
-const chartData = computed(() => {
-	return {
-		labels: props.data.map((item) => item.name),
-		datasets: [
-			{
-				label: 'Completed',
-				backgroundColor: 'rgba(14, 246, 45, 0.5)',
-				borderColor: 'rgba(14, 246, 45, 1)',
-				data: props.data.map((item) => item.completed),
-				tension: 0.2,
-			},
-			{
-				label: 'Created',
-				backgroundColor: 'rgba(0, 191, 255, 0.5)',
-				borderColor: 'rgba(0, 191, 255, 1)',
-				data: props.data.map((item) => item.created),
-				tension: 0.2,
-			},
-		],
-	};
-});
-
-// Calculate completion rates
-const completionRates = computed(() => {
-	return props.data.map((item) => {
-		if (item.created === 0) return 0;
-		return Math.round((item.completed / item.created) * 100);
-	});
-});
-
-// Chart options
-const chartOptions = {
-	responsive: true,
-	maintainAspectRatio: false,
-	scales: {
-		y: {
-			beginAtZero: true,
-			ticks: {
-				precision: 0,
-			},
-		},
-	},
-	plugins: {
-		legend: {
-			position: 'top',
-		},
-		tooltip: {
-			callbacks: {
-				afterLabel: function (context) {
-					const datasetIndex = context.datasetIndex;
-					const index = context.dataIndex;
-					const data = context.chart.data;
-
-					// Skip calculation for Created dataset
-					if (datasetIndex === 1) return;
-
-					const completed = data.datasets[0].data[index];
-					const created = data.datasets[1].data[index];
-
-					if (created === 0) return 'Completion rate: 0%';
-					const rate = Math.round((completed / created) * 100);
-					return `Completion rate: ${rate}%`;
-				},
-			},
-		},
-	},
+const chartConfig = {
+	completed: { label: 'Completed', color: 'rgba(14, 246, 45, 0.8)' },
+	created: { label: 'Created', color: 'rgba(0, 191, 255, 0.8)' },
 };
+
+const chartData = computed(() => {
+	return props.data.map((item, i) => ({
+		index: i,
+		name: item.name,
+		completed: item.completed,
+		created: item.created,
+	}));
+});
 </script>

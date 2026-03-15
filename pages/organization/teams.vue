@@ -60,7 +60,9 @@
 				>
 					<template #header>
 						<div class="flex items-center justify-between">
-							<h3 class="text-lg font-medium">{{ team.name }}</h3>
+							<NuxtLink :to="`/teams/${team.id}`" class="text-lg font-medium hover:text-primary transition-colors">
+								{{ team.name }}
+							</NuxtLink>
 							<div class="flex gap-1">
 								<UBadge v-if="isTeamManager(team.id)" color="green" class="text-[9px] uppercase">Manager</UBadge>
 								<UBadge v-if="isOnTeam(team)" color="blue" class="text-[9px] uppercase">Member</UBadge>

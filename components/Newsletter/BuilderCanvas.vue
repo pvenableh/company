@@ -55,16 +55,23 @@ const emit = defineEmits<{
 const dragging = ref(false);
 const focusedBlock = ref<string | null>(null);
 
-// Keep a local copy for draggable to mutate
-const localBlocks = computed({
-  get: () => [...props.blocks],
-  set: () => {}, // handled by handleDragEnd
-});
+// Mutable local copy for vuedraggable to reorder in-place
+const localBlocks = ref<CanvasBlock[]>([]);
+
+// Sync from props when blocks change externally (add/remove/move)
+watch(
+  () => props.blocks,
+  (newBlocks) => {
+    if (!dragging.value) {
+      localBlocks.value = [...newBlocks];
+    }
+  },
+  { immediate: true },
+);
 
 function handleDragEnd() {
   dragging.value = false;
-  // Emit the new order
-  emit('reorder', localBlocks.value);
+  emit('reorder', [...localBlocks.value]);
 }
 </script>
 

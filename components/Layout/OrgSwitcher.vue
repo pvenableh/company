@@ -45,7 +45,7 @@ const handleSelectOrg = (orgId) => {
 
 const handleRegisterOrg = () => {
 	isOpen.value = false;
-	navigateTo('/register');
+	navigateTo('/organization/new');
 };
 </script>
 

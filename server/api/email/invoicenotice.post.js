@@ -119,7 +119,15 @@ export default defineEventHandler(async (event) => {
 				return Array.isArray(emails) ? emails : [emails];
 			};
 
-			const emails = formatEmails(organization.bill_to?.emails || organization.emails);
+			// Build recipient list: prefer client billing_contacts, fall back to org emails
+			// billing_contacts come from the invoice's client record: [{ name, email }, ...]
+			const billingContacts = invoices[0]?.billing_contacts || invoices[0]?.client?.billing_contacts || [];
+			let emails;
+			if (billingContacts.length > 0) {
+				emails = billingContacts.filter((c) => c.email?.trim()).map((c) => c.email.trim());
+			} else {
+				emails = formatEmails(organization.bill_to?.emails || organization.emails);
+			}
 			const [primaryEmail, ...ccEmails] = emails;
 
 			const personalization = {
