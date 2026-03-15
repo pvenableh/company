@@ -107,11 +107,25 @@ const apps: AppItem[] = [
 		description: 'Phone system',
 	},
 	{
+		name: 'Time Tracker',
+		icon: 'i-heroicons-clock',
+		route: '/time-tracker',
+		color: 'bg-lime-600',
+		description: 'Track your time',
+	},
+	{
 		name: 'AI Chat',
 		icon: 'i-heroicons-sparkles',
 		route: '/command-center/ai',
 		color: 'bg-gradient-to-br from-violet-500 to-purple-600',
 		description: 'AI assistant',
+	},
+	{
+		name: 'Guide',
+		icon: 'i-heroicons-book-open',
+		route: '/guide',
+		color: 'bg-gradient-to-br from-cyan-500 to-blue-500',
+		description: 'Setup tutorial',
 	},
 ];
 

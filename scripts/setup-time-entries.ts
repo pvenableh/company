@@ -61,6 +61,24 @@ async function createField(collection: string, field: Record<string, any>) {
   return true
 }
 
+async function createRelation(relation: Record<string, any>) {
+  const { collection, field } = relation
+  console.log(`  Creating relation: ${collection}.${field}`)
+  const { error } = await directusRequest('/relations', 'POST', relation)
+  if (error === 'already_exists' || error?.includes('already exists') || error?.includes('already has')) { console.log(`    -> Already exists`); return true }
+  if (error) { console.error(`    -> Error: ${error}`); return false }
+  console.log(`    -> Created`)
+  return true
+}
+
+async function patchFieldMeta(collection: string, fieldName: string, meta: Record<string, any>) {
+  console.log(`  Patching field meta: ${collection}.${fieldName}`)
+  const { error } = await directusRequest(`/fields/${collection}/${fieldName}`, 'PATCH', { meta })
+  if (error) { console.error(`    -> Error: ${error}`); return false }
+  console.log(`    -> Patched`)
+  return true
+}
+
 // ─── time_entries ─────────────────────────────────────────────────────────────
 
 async function setup() {
@@ -260,6 +278,42 @@ async function setup() {
     schema: { is_nullable: true },
     meta: { interface: 'datetime', special: ['date-updated'], readonly: true, hidden: true, width: 'half' },
   })
+
+  // ─── Create M2O Relations ──────────────────────────────────────────────────
+  console.log('\n--- Creating M2O relations ---')
+
+  const m2oRelations = [
+    { field: 'organization', related_collection: 'organizations' },
+    { field: 'user', related_collection: 'directus_users' },
+    { field: 'client', related_collection: 'clients' },
+    { field: 'project', related_collection: 'projects' },
+    { field: 'ticket', related_collection: 'tickets' },
+    { field: 'task', related_collection: 'tasks' },
+    { field: 'invoice', related_collection: 'invoices' },
+    { field: 'user_created', related_collection: 'directus_users' },
+    { field: 'user_updated', related_collection: 'directus_users' },
+  ]
+
+  for (const rel of m2oRelations) {
+    await createRelation({
+      collection: 'time_entries',
+      field: rel.field,
+      related_collection: rel.related_collection,
+      meta: { sort_field: null },
+      schema: { on_delete: 'SET NULL' },
+    })
+  }
+
+  // ─── Repair M2O Interface (fix "Interface not found" errors) ───────────────
+  console.log('\n--- Repairing M2O field interfaces ---')
+
+  const m2oFields = ['organization', 'user', 'client', 'project', 'ticket', 'task', 'invoice']
+  for (const fieldName of m2oFields) {
+    await patchFieldMeta('time_entries', fieldName, {
+      interface: 'select-dropdown-m2o',
+      special: ['m2o'],
+    })
+  }
 
   console.log('\n✅ time_entries collection setup complete!')
   console.log('Run `pnpm generate:types` to regenerate TypeScript types.\n')

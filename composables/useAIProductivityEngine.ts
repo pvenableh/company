@@ -382,13 +382,18 @@ export const useAIProductivityEngine = () => {
 		const results: TaskSuggestion[] = [];
 
 		try {
+			// Invoices use `bill_to` (not `organization`) for the org reference
+			const invoiceFilter: Record<string, any> = {
+				status: { _in: ['pending', 'processing'] },
+				...clientFilter(),
+			};
+			if (selectedOrg.value) {
+				invoiceFilter.bill_to = { _eq: selectedOrg.value };
+			}
+
 			const invoices = await invoiceItems.list({
 				fields: ['id', 'invoice_code', 'status', 'due_date', 'total_amount', 'bill_to.name'],
-				filter: {
-					status: { _in: ['pending', 'processing'] },
-					...orgFilter(),
-					...clientFilter(),
-				},
+				filter: invoiceFilter,
 				sort: ['due_date'],
 				limit: 50,
 			});

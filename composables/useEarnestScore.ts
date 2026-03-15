@@ -546,13 +546,22 @@ export const useEarnestScore = () => {
 				return;
 			}
 
-			const myIndex = allScores.findIndex((s: any) => {
+			// Deduplicate by user: keep highest EP per user for accurate ranking
+			const userBest = new Map<string, { userId: string; totalEP: number }>();
+			for (const s of allScores as any[]) {
 				const sUserId = typeof s.user_created === 'object' ? s.user_created?.id : s.user_created;
-				return sUserId === userId;
-			});
+				if (!sUserId) continue;
+				const existing = userBest.get(sUserId);
+				if (!existing || (s.total_ep || 0) > existing.totalEP) {
+					userBest.set(sUserId, { userId: sUserId, totalEP: s.total_ep || 0 });
+				}
+			}
+			const ranked = Array.from(userBest.values()).sort((a, b) => b.totalEP - a.totalEP);
+
+			const myIndex = ranked.findIndex((r) => r.userId === userId);
 
 			state.value.teamRank = myIndex >= 0 ? myIndex + 1 : null;
-			state.value.teamSize = allScores.length;
+			state.value.teamSize = ranked.length;
 		} catch (e: any) {
 			console.warn('[Earnest] Ranking fetch failed:', e);
 		}
@@ -571,7 +580,8 @@ export const useEarnestScore = () => {
 				limit: -1,
 			}).catch(() => []);
 
-			const results: TeamMemberScore[] = (allScores || []).map((s: any) => {
+			// Map scores and deduplicate by userId (keep highest EP entry per user)
+			const mapped: TeamMemberScore[] = (allScores || []).map((s: any) => {
 				const u = s.user_created || {};
 				return {
 					userId: u.id || '',
@@ -586,6 +596,17 @@ export const useEarnestScore = () => {
 					dimensions: s.dimension_scores || null,
 				};
 			});
+
+			// Deduplicate: keep only the highest-EP record per user
+			const seen = new Map<string, TeamMemberScore>();
+			for (const m of mapped) {
+				if (!m.userId) continue;
+				const existing = seen.get(m.userId);
+				if (!existing || m.totalEP > existing.totalEP) {
+					seen.set(m.userId, m);
+				}
+			}
+			const results = Array.from(seen.values()).sort((a, b) => b.totalEP - a.totalEP);
 
 			teamScores.value = results;
 			return results;

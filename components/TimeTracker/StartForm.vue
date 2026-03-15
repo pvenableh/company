@@ -98,16 +98,22 @@ const emit = defineEmits<{
 }>();
 
 const { startTimer } = useTimeTracker();
-const { getClientOptions } = useClients();
+const { getClientOptions, selectedClient } = useClients();
 
 const starting = ref(false);
 const clients = ref<{ label: string; value: string }[]>([]);
 const projectOptions = ref<{ id: string; title: string }[]>([]);
 const ticketOptions = ref<{ id: string; title: string }[]>([]);
 
+// Auto-select client from header (skip 'org' sentinel value)
+const initialClient = computed(() => {
+	const c = selectedClient.value;
+	return c && c !== 'org' ? c : null;
+});
+
 const form = reactive({
 	description: '',
-	client: null as string | null,
+	client: initialClient.value as string | null,
 	project: null as string | null,
 	ticket: null as string | null,
 	billable: true,
@@ -202,6 +208,11 @@ async function handleStart() {
 		starting.value = false;
 	}
 }
+
+// Sync form client when header client changes
+watch(initialClient, (newClient) => {
+	form.client = newClient;
+});
 
 onMounted(() => {
 	loadClients();

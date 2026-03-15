@@ -10,6 +10,8 @@ const { user } = useDirectusAuth();
 const config = useRuntimeConfig();
 const messageItems = useDirectusItems('messages');
 const channelItems = useDirectusItems('channels');
+const { selectedOrg } = useOrganization();
+const { selectedTeam } = useTeams();
 
 const messages = ref<any[]>([]);
 const newMessage = ref('');
@@ -125,11 +127,12 @@ const sendMessage = async () => {
 	if (!content || !selectedChannel.value) return;
 
 	isSending.value = true;
+	const savedContent = newMessage.value;
 	newMessage.value = '';
 
 	try {
 		await messageItems.create({
-			text: content,
+			text: savedContent,
 			channel: selectedChannel.value,
 			status: 'published',
 		});
@@ -137,10 +140,15 @@ const sendMessage = async () => {
 		scrollToBottom();
 	} catch (e) {
 		console.error('[Chat] Failed to send message:', e);
-		newMessage.value = content; // restore on failure
+		newMessage.value = savedContent; // restore on failure
 	} finally {
 		isSending.value = false;
 	}
+};
+
+// Handle submit from Tiptap enter key
+const handleTiptapSubmit = () => {
+	sendMessage();
 };
 
 const scrollToBottom = () => {
@@ -175,12 +183,6 @@ const formatDate = (dateStr: string) => {
 	return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
 };
 
-const handleKeydown = (e: KeyboardEvent) => {
-	if (e.key === 'Enter' && !e.shiftKey) {
-		e.preventDefault();
-		sendMessage();
-	}
-};
 
 // Watch channel changes
 watch(selectedChannel, () => {
@@ -270,17 +272,26 @@ onUnmounted(() => {
 			</template>
 		</div>
 
-		<!-- Input -->
+		<!-- Input with @mentions support -->
 		<div class="border-t border-gray-100 dark:border-gray-700 p-3">
 			<div class="flex items-end gap-2">
-				<textarea
-					v-model="newMessage"
-					@keydown="handleKeydown"
-					:disabled="!selectedChannel || isSending"
-					placeholder="Type a message..."
-					rows="1"
-					class="flex-1 resize-none text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 bg-transparent dark:text-white focus:outline-none focus:ring-1 focus:ring-primary placeholder:text-gray-400"
-				/>
+				<div class="flex-1 chat-tiptap-wrapper">
+					<FormTiptap
+						v-model="newMessage"
+						:show-toolbar="false"
+						:show-char-count="false"
+						:allow-uploads="false"
+						:enter-to-send="true"
+						:disabled="!selectedChannel || isSending"
+						:character-limit="2000"
+						:organization-id="selectedOrg"
+						:team-id="selectedTeam"
+						height="min-h-9 max-h-24"
+						custom-classes="px-3 py-1.5 text-sm"
+						:context="{ collection: 'messages', itemId: selectedChannel }"
+						@submit="handleTiptapSubmit"
+					/>
+				</div>
 				<button
 					@click="sendMessage"
 					:disabled="!newMessage.trim() || !selectedChannel || isSending"
@@ -293,3 +304,28 @@ onUnmounted(() => {
 		</div>
 	</div>
 </template>
+
+<style scoped>
+/* Keep Tiptap compact inside the chat input */
+.chat-tiptap-wrapper :deep(.tiptap-wrapper) {
+	position: relative;
+}
+.chat-tiptap-wrapper :deep(.tiptap-container) {
+	border-radius: 0.5rem;
+	border-color: var(--color-gray-200);
+	font-size: 0.875rem;
+	overflow-y: auto;
+}
+.chat-tiptap-wrapper :deep(.tiptap-container .ProseMirror) {
+	min-height: 2.25rem;
+	max-height: 6rem;
+	padding: 0.375rem 0;
+}
+.chat-tiptap-wrapper :deep(.tiptap-container .ProseMirror p.is-editor-empty:first-child::before) {
+	content: 'Type a message... (@ to mention)';
+	color: var(--color-gray-400);
+	pointer-events: none;
+	float: left;
+	height: 0;
+}
+</style>
