@@ -108,7 +108,7 @@ export function useInvoices() {
 
   /**
    * Generate the next invoice code for a client.
-   * Format: {CLIENT_CODE}-{PADDED_NUMBER} (e.g. ABC-0001)
+   * Format: {CLIENT_CODE}-{YEAR}-{PADDED_NUMBER} (e.g. AGC-2026-0001)
    */
   const generateInvoiceCode = async (clientId: string): Promise<string | null> => {
     const clientItems = useDirectusItems('clients');
@@ -119,10 +119,18 @@ export function useInvoices() {
       const code = (client as any)?.code;
       if (!code) return null;
 
-      // Count existing invoices for this client to determine next number
+      const year = new Date().getFullYear();
+      const prefix = `${code.toUpperCase()}-${year}-`;
+
+      // Find the highest numbered invoice for this client+year
       const existing = await items.list({
         fields: ['invoice_code'],
-        filter: { client: { _eq: clientId } },
+        filter: {
+          _and: [
+            { client: { _eq: clientId } },
+            { invoice_code: { _starts_with: prefix } },
+          ],
+        },
         sort: ['-invoice_code'],
         limit: 1,
       });
@@ -130,14 +138,14 @@ export function useInvoices() {
       let nextNum = 1;
 
       if (existing.length > 0 && existing[0].invoice_code) {
-        // Try to extract the number from the last invoice code
+        // Extract the number from the last invoice code (after the year)
         const match = existing[0].invoice_code.match(/-(\d+)$/);
         if (match) {
           nextNum = parseInt(match[1], 10) + 1;
         }
       }
 
-      return `${code.toUpperCase()}-${String(nextNum).padStart(4, '0')}`;
+      return `${prefix}${String(nextNum).padStart(4, '0')}`;
     } catch (e) {
       console.warn('Could not generate invoice code:', e);
       return null;
