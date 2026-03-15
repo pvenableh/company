@@ -20,6 +20,20 @@ definePageMeta({
 const newMessage = ref('');
 const channelId = ref(null);
 const messagesContainer = ref(null);
+const enterToSend = ref(false);
+
+// Persist enterToSend in localStorage
+if (import.meta.client) {
+	const saved = localStorage.getItem('earnest_enter_to_send');
+	if (saved !== null) {
+		enterToSend.value = saved === 'true';
+	}
+}
+watch(enterToSend, (val) => {
+	if (import.meta.client) {
+		localStorage.setItem('earnest_enter_to_send', String(val));
+	}
+});
 const channelFilter = computed(() => {
 	const filter = {
 		_and: [{ name: { _eq: params.channel } }, selectedOrg.value ? { organization: { _eq: selectedOrg.value } } : {}],
@@ -150,7 +164,7 @@ onMounted(() => {
 
 // Handle keyboard shortcuts
 const handleKeyboard = (event) => {
-	// Ctrl/Cmd + Enter to send
+	// Ctrl/Cmd + Enter to send (always works)
 	if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
 		event.preventDefault();
 		sendMessage();
@@ -266,7 +280,7 @@ const handleKeyboard = (event) => {
 
 		<!-- Message Input -->
 		<div
-			class="w-screen fixed bottom-[60px] border-t shadow-lg border-border bg-muted p-4 z-100"
+			class="w-screen fixed bottom-[60px] border-t shadow-lg border-border bg-card p-4 z-100"
 		>
 			<div class="max-w-5xl mx-auto">
 				<div class="flex space-x-2">
@@ -276,7 +290,9 @@ const handleKeyboard = (event) => {
 						:disabled="!channelId"
 						:organization-id="selectedOrg"
 						:context="{ collection: 'messages', itemId: channelId }"
+						:enter-to-send="enterToSend"
 						@keydown="handleKeyboard"
+						@submit="sendMessage"
 					/>
 					<UButton
 						color="primary"
@@ -284,11 +300,20 @@ const handleKeyboard = (event) => {
 						:disabled="!newMessage?.trim() || !channelId"
 						@click="sendMessage"
 					>
+						<Icon name="lucide:send" class="w-4 h-4" />
 						Send
 					</UButton>
 				</div>
-				<p v-if="!channelId" class="text-xs text-red-500 mt-1">Channel not found or still loading...</p>
-				<p v-else class="text-xs text-muted-foreground mt-1">Press Ctrl + Enter to send</p>
+				<div class="flex items-center justify-between mt-1.5">
+					<p v-if="!channelId" class="text-xs text-red-500">Channel not found or still loading...</p>
+					<p v-else class="text-xs text-muted-foreground">
+						{{ enterToSend ? 'Press Enter to send' : 'Press Ctrl + Enter to send' }}
+					</p>
+					<div class="flex items-center gap-1.5 text-xs text-muted-foreground">
+						<Switch v-model:checked="enterToSend" class="scale-75" />
+						<span>Enter to send</span>
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>

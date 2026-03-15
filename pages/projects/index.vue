@@ -76,7 +76,7 @@ definePageMeta({
 </script>
 
 <template>
-	<div class="p-4 md:p-6 max-w-7xl mx-auto">
+	<div class="p-4 md:p-6 mx-auto">
 		<!-- Header -->
 		<div class="flex items-center justify-between mb-6">
 			<div>

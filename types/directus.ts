@@ -2540,6 +2540,48 @@ export interface Ticket {
 	tasks?: Task[] | string[];
 }
 
+export interface TimeEntry {
+	/** @primaryKey */
+	id: string;
+	status?: 'running' | 'completed' | 'archived';
+	sort?: number | null;
+	user_created?: DirectusUser | string | null;
+	date_created?: string | null;
+	user_updated?: DirectusUser | string | null;
+	date_updated?: string | null;
+	/** @required */
+	organization: Organization | string;
+	/** @description The user who performed the work @required */
+	user: DirectusUser | string;
+	/** @description Optional client association */
+	client?: Client | string | null;
+	/** @description Optional project association */
+	project?: Project | string | null;
+	/** @description Optional ticket association */
+	ticket?: Ticket | string | null;
+	/** @description Optional task association */
+	task?: Task | string | null;
+	/** @description What was worked on */
+	description?: string | null;
+	/** @required */
+	start_time: string;
+	end_time?: string | null;
+	/** @description Duration in minutes — stored, not computed, to allow manual adjustments */
+	duration_minutes?: number | null;
+	/** @description Calendar date for this entry (from start_time), used for reporting */
+	date?: string | null;
+	/** @description Is this time billable? */
+	billable?: boolean | null;
+	/** @description Hourly rate snapshot at time of entry */
+	hourly_rate?: number | null;
+	/** @description Has this entry been billed on an invoice? */
+	billed?: boolean | null;
+	/** @description The invoice this was billed on */
+	invoice?: Invoice | string | null;
+	/** @description Optional tags for categorization */
+	tags?: string[] | null;
+}
+
 export interface TicketsComment {
 	/** @primaryKey */
 	id: number;

@@ -73,6 +73,12 @@ const links = ref([
 		icon: 'i-heroicons-document-text',
 	},
 	{
+		name: 'Time Tracker',
+		type: ['header', 'footer', 'drawer'],
+		to: '/time-tracker',
+		icon: 'i-heroicons-clock',
+	},
+	{
 		name: 'Social',
 		type: ['header', 'footer', 'drawer'],
 		to: '/social/dashboard',
@@ -101,6 +107,18 @@ const links = ref([
 		type: ['footer', 'drawer'],
 		to: '/clients',
 		icon: 'i-heroicons-building-office-2',
+	},
+	{
+		name: 'Teams',
+		type: ['header', 'footer', 'drawer'],
+		to: '/organization/teams',
+		icon: 'i-heroicons-user-group',
+	},
+	{
+		name: 'Files',
+		type: ['header', 'footer', 'drawer'],
+		to: '/files',
+		icon: 'i-heroicons-folder',
 	},
 ]);
 </script>

@@ -20,6 +20,11 @@
 		<ClientOnly>
 			<CommandCenterAITray :is-open="aiTrayOpen" @close="aiTrayOpen = false" />
 		</ClientOnly>
+
+		<!-- Floating time tracker indicator -->
+		<ClientOnly>
+			<TimeTrackerFloatingIndicator />
+		</ClientOnly>
 	</div>
 </template>
 
