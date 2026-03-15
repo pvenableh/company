@@ -56,6 +56,9 @@ const { selectedOrg } = useOrganization();
 const { selectedTeam } = useTeams();
 const { selectedClient } = useClients();
 
+// Show leaderboard when a team is selected
+const showLeaderboard = computed(() => !!selectedTeam.value);
+
 watch([selectedOrg, selectedClient, selectedTeam], () => {
 	if (user.value) {
 		runAnalysis();
@@ -148,6 +151,11 @@ watch([selectedOrg, selectedClient, selectedTeam], () => {
 							View all {{ suggestions.length }} suggestions &rarr;
 						</button>
 					</div>
+				</div>
+
+				<!-- Team Leaderboard (shown when a team is selected) -->
+				<div v-if="showLeaderboard" class="ios-card p-5">
+					<EarnestTeamLeaderboard />
 				</div>
 
 				<!-- Bottom Section: Chat + CardDesk + Financials -->
