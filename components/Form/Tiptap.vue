@@ -192,6 +192,10 @@ const props = defineProps({
 		type: Boolean,
 		default: true,
 	},
+	enterToSend: {
+		type: Boolean,
+		default: false,
+	},
 });
 
 // Modal state
@@ -212,6 +216,7 @@ const emit = defineEmits([
 	'mention',
 	'blur',
 	'enter',
+	'submit',
 	'upload-start',
 	'upload-complete',
 	'upload-error',
@@ -693,6 +698,12 @@ onMounted(() => {
 			if (event.key === 'Enter' && !event.shiftKey && props.singleLine) {
 				event.preventDefault();
 				emit('enter', event);
+				return true;
+			}
+			// Enter to send: when enabled, plain Enter emits submit (Shift+Enter still creates newline)
+			if (event.key === 'Enter' && !event.shiftKey && props.enterToSend) {
+				event.preventDefault();
+				emit('submit');
 				return true;
 			}
 		},

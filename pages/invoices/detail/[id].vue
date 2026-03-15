@@ -118,7 +118,7 @@ onMounted(loadInvoice);
             <Icon name="lucide:arrow-left" class="w-5 h-5" />
           </NuxtLink>
           <div>
-            <h1 class="text-xl font-semibold">{{ invoice.invoice_code || 'Invoice' }}</h1>
+            <h1 class="text-xl font-semibold text-foreground">{{ invoice.invoice_code || 'Invoice' }}</h1>
             <p class="text-sm text-muted-foreground">{{ getBillToName(invoice) }}</p>
           </div>
           <span

@@ -34,11 +34,15 @@ const fileCount = computed(() => props.event.files?.length || 0);
 </script>
 
 <template>
-  <div class="event-detail space-y-6 py-4">
-    <!-- Date and milestone badge -->
-    <div class="flex items-center gap-2">
-      <span class="text-xs text-gray-500">{{ formattedDate }}</span>
-      <Badge v-if="event.is_milestone" variant="outline" class="text-[9px] uppercase tracking-wider">
+  <div class="event-detail space-y-5 py-4">
+    <!-- Date and badges -->
+    <div class="flex flex-wrap items-center gap-2">
+      <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Icon name="lucide:calendar" class="w-3.5 h-3.5" />
+        {{ formattedDate }}
+      </div>
+      <Badge v-if="event.is_milestone" variant="outline" class="text-[9px] uppercase tracking-wider font-semibold">
+        <Icon name="lucide:diamond" class="w-3 h-3 mr-1" />
         Milestone
       </Badge>
       <Badge
@@ -47,26 +51,27 @@ const fileCount = computed(() => props.event.files?.length || 0);
           backgroundColor: event.category_id.color,
           color: event.category_id.text_color,
         }"
-        class="text-[9px] uppercase tracking-wider"
+        class="text-[9px] uppercase tracking-wider font-semibold"
       >
         {{ event.category_id.name }}
       </Badge>
     </div>
 
     <!-- Description -->
-    <div v-if="event.description" class="prose prose-sm max-w-none dark:prose-invert">
-      <div v-html="event.description" />
+    <div v-if="event.description" class="ios-card p-4">
+      <h4 class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">Description</h4>
+      <div class="prose prose-sm max-w-none dark:prose-invert text-sm" v-html="event.description" />
     </div>
 
-    <!-- Task progress bar -->
-    <div v-if="taskStats.total > 0" class="space-y-2">
+    <!-- Task progress -->
+    <div v-if="taskStats.total > 0" class="ios-card p-4 space-y-3">
       <div class="flex items-center justify-between">
-        <span class="text-xs font-bold uppercase tracking-wider text-gray-500">Tasks</span>
-        <span class="text-xs text-gray-400">
-          {{ taskStats.completed }}/{{ taskStats.total }} completed ({{ taskStats.percent }}%)
+        <h4 class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Tasks</h4>
+        <span class="text-[10px] font-medium text-muted-foreground tabular-nums">
+          {{ taskStats.completed }}/{{ taskStats.total }} ({{ taskStats.percent }}%)
         </span>
       </div>
-      <div class="h-1.5 w-full rounded-full bg-gray-100 dark:bg-gray-800">
+      <div class="h-1.5 w-full rounded-full bg-muted overflow-hidden">
         <div
           class="h-full rounded-full transition-all duration-500"
           :style="{
@@ -75,33 +80,35 @@ const fileCount = computed(() => props.event.files?.length || 0);
           }"
         />
       </div>
+
+      <!-- Task list -->
+      <ProjectTimelineTaskList
+        :tasks="event.tasks || []"
+        :project-color="project.color"
+        @updated="emit('updated')"
+      />
     </div>
 
-    <!-- Task list -->
-    <ProjectTimelineTaskList
-      v-if="taskStats.total > 0"
-      :tasks="event.tasks || []"
-      :project-color="project.color"
-      @updated="emit('updated')"
-    />
-
     <!-- Files -->
-    <ProjectTimelineFileList
-      v-if="fileCount > 0"
-      :files="event.files || []"
-    />
+    <div v-if="fileCount > 0" class="ios-card p-4">
+      <h4 class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-3">
+        Files ({{ fileCount }})
+      </h4>
+      <ProjectTimelineFileList :files="event.files || []" />
+    </div>
 
-    <!-- Comments section -->
-    <div class="space-y-3">
+    <!-- Comments -->
+    <div class="ios-card p-4">
+      <h4 class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-3">Comments</h4>
       <CommentsSystem
         collection="project_events"
         :item-id="String(event.id)"
       />
     </div>
 
-    <!-- Reactions section -->
-    <div class="space-y-3">
-      <h4 class="text-xs font-bold uppercase tracking-wider text-gray-500">Reactions</h4>
+    <!-- Reactions -->
+    <div class="ios-card p-4">
+      <h4 class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-3">Reactions</h4>
       <ReactionsBar
         :item-id="String(event.id)"
         collection="project_events"

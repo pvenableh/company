@@ -132,13 +132,14 @@ const isActive = computed(() => project.value.status === 'In Progress');
 
     <!-- Event nodes -->
     <ProjectTimelineEventNode
-      v-for="event in events"
+      v-for="(event, index) in events"
       :key="event.id"
       :event="event"
       :x="layout.getXPosition(getEventTimelineDate(event))"
       :y="y"
       :color="project.color"
       :selected="event.id === selectedEventId"
+      :index="index"
       @click="emit('eventClick', event.id)"
     />
 

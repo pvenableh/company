@@ -51,12 +51,19 @@ const items = [
 </script>
 <template>
 	<div class="page__content">
-		<h1 class="page__title">Project</h1>
-		<div class="max-w-screen-xl mx-auto page_inner">
-			<nuxt-link to="/projects" class="t-label text-muted-foreground px-4 2xl:px-0">
-				<UIcon name="i-heroicons-arrow-left" class="-mb-0.5" />
-				Back to Projects
-			</nuxt-link>
+		<div class="max-w-screen-xl mx-auto page_inner px-4 2xl:px-0">
+			<div class="flex items-center gap-3 mb-4">
+				<NuxtLink
+					to="/projects"
+					class="flex items-center justify-center w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+				>
+					<Icon name="lucide:arrow-left" class="w-5 h-5" />
+				</NuxtLink>
+				<div>
+					<h1 class="text-xl font-semibold text-foreground">{{ project?.title || 'Project' }}</h1>
+					<p class="text-sm text-muted-foreground">{{ project?.organization?.name || 'Project Details' }}</p>
+				</div>
+			</div>
 		</div>
 		<div class="w-full my-4 px-4 2xl:px-0">
 			<UTabs

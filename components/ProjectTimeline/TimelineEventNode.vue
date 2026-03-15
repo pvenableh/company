@@ -7,6 +7,7 @@ const props = defineProps<{
   y: number;
   color: string;
   selected: boolean;
+  index: number;
 }>();
 
 const emit = defineEmits<{
@@ -29,6 +30,10 @@ const categoryTextColor = computed(() => {
   }
   return '#FFFFFF';
 });
+
+// Alternate label positions: even index = above, odd index = below
+const isAbove = computed(() => props.index % 2 === 0);
+const labelDirection = computed(() => isAbove.value ? -1 : 1);
 </script>
 
 <template>
@@ -93,34 +98,11 @@ const categoryTextColor = computed(() => {
       :transform="`rotate(45 ${x} ${y})`"
     />
 
-    <!-- Event title -->
-    <text
-      :x="x"
-      :y="y + nodeRadius + 14"
-      text-anchor="middle"
-      class="fill-gray-700 dark:fill-gray-300"
-      font-size="9"
-      font-weight="600"
-    >
-      {{ (event.title || '').length > 20 ? (event.title || '').slice(0, 18) + '...' : (event.title || '') }}
-    </text>
-
-    <!-- Date label -->
-    <text
-      :x="x"
-      :y="y + nodeRadius + 25"
-      text-anchor="middle"
-      class="fill-gray-400 dark:fill-gray-500"
-      font-size="7"
-    >
-      {{ new Date(event.event_date || event.date || '').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }}
-    </text>
-
-    <!-- Category badge -->
+    <!-- Category badge (same side as title/date) -->
     <g v-if="hasCategory && typeof event.category_id === 'object' && event.category_id">
       <rect
         :x="x - 20"
-        :y="y - nodeRadius - 18"
+        :y="isAbove ? y - nodeRadius - 30 : y + nodeRadius + 26"
         width="40"
         height="12"
         rx="6"
@@ -128,7 +110,7 @@ const categoryTextColor = computed(() => {
       />
       <text
         :x="x"
-        :y="y - nodeRadius - 10"
+        :y="isAbove ? y - nodeRadius - 22 : y + nodeRadius + 34"
         text-anchor="middle"
         :fill="categoryTextColor"
         font-size="6"
@@ -139,40 +121,63 @@ const categoryTextColor = computed(() => {
       </text>
     </g>
 
-    <!-- Task progress indicator -->
+    <!-- Event title -->
+    <text
+      :x="x"
+      :y="isAbove ? y - nodeRadius - 10 : y + nodeRadius + 12"
+      text-anchor="middle"
+      class="fill-gray-700 dark:fill-gray-300"
+      font-size="8"
+      font-weight="600"
+    >
+      {{ (event.title || '').length > 15 ? (event.title || '').slice(0, 13) + '...' : (event.title || '') }}
+    </text>
+
+    <!-- Date label -->
+    <text
+      :x="x"
+      :y="isAbove ? y - nodeRadius - 2 : y + nodeRadius + 22"
+      text-anchor="middle"
+      class="fill-gray-400 dark:fill-gray-500"
+      font-size="6.5"
+    >
+      {{ new Date(event.event_date || event.date || '').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }}
+    </text>
+
+    <!-- Task progress indicator (opposite side from title) -->
     <g v-if="taskCount > 0">
       <rect
-        :x="x + nodeRadius + 4"
-        :y="y - 5"
+        :x="x - 14"
+        :y="isAbove ? y + nodeRadius + 4 : y - nodeRadius - 16"
         width="28"
         height="10"
         rx="5"
         class="fill-gray-100 dark:fill-gray-700"
       />
       <text
-        :x="x + nodeRadius + 18"
-        :y="y + 2"
+        :x="x"
+        :y="isAbove ? y + nodeRadius + 11 : y - nodeRadius - 9"
         text-anchor="middle"
         class="fill-gray-500 dark:fill-gray-400"
-        font-size="7"
+        font-size="6.5"
         font-weight="600"
       >
         {{ completedTasks }}/{{ taskCount }}
       </text>
     </g>
 
-    <!-- Comment/reaction counts -->
+    <!-- Comment/reaction counts (opposite side from title, below task progress) -->
     <g v-if="(event.comment_count || 0) > 0 || (event.reaction_count || 0) > 0">
       <text
         :x="x"
-        :y="y + nodeRadius + 36"
+        :y="isAbove ? y + nodeRadius + 22 : y - nodeRadius - 20"
         text-anchor="middle"
         class="fill-gray-400"
-        font-size="7"
+        font-size="6.5"
       >
-        <tspan v-if="(event.comment_count || 0) > 0">{{ event.comment_count }} comments</tspan>
-        <tspan v-if="(event.comment_count || 0) > 0 && (event.reaction_count || 0) > 0"> · </tspan>
-        <tspan v-if="(event.reaction_count || 0) > 0">{{ event.reaction_count }} reactions</tspan>
+        <tspan v-if="(event.comment_count || 0) > 0">{{ event.comment_count }}💬</tspan>
+        <tspan v-if="(event.comment_count || 0) > 0 && (event.reaction_count || 0) > 0"> </tspan>
+        <tspan v-if="(event.reaction_count || 0) > 0">{{ event.reaction_count }}👍</tspan>
       </text>
     </g>
   </g>

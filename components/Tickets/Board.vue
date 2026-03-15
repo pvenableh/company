@@ -120,7 +120,7 @@
 		<!-- Mobile Column Navigation -->
 		<div
 			v-if="isMobile"
-			class="flex items-center justify-between mb-4 mx-4 rounded bg-gray-500 px-4 gap-4 py-3 text-white"
+			class="flex items-center justify-between mb-4 mx-4 rounded-xl bg-card border border-border px-4 gap-4 py-3 text-foreground shadow-sm"
 		>
 			<UIcon name="i-heroicons-chevron-left" class="w-5 h-5" @click="previousColumn" />
 			<h3 class="text-sm font-medium uppercase tracking-wide">
@@ -145,14 +145,15 @@
 				}"
 			>
 				<div class="tickets-board__board-col-header">
-					<div class="flex items-center justify-between">
-						<h3 class="text-xs font-bold uppercase tracking-wide">{{ column.name }}</h3>
-						<UBadge
-							class="ml-2 w-6 h-6 text-center inline-block text-[var(--darkBlue)]"
-							:style="{ backgroundColor: `var(--${column.color})` }"
+					<div class="flex items-center gap-3">
+						<div class="h-5 w-1 rounded-full" :style="{ backgroundColor: `var(--${column.color})` }" />
+						<h3 class="text-xs font-semibold uppercase tracking-wider text-foreground flex-1">{{ column.name }}</h3>
+						<span
+							class="text-[10px] font-bold tabular-nums min-w-[20px] h-5 flex items-center justify-center rounded-full px-1.5"
+							:style="{ backgroundColor: `var(--${column.color})`, color: 'var(--darkBlue)' }"
 						>
 							{{ localTickets[column.id]?.length || 0 }}
-						</UBadge>
+						</span>
 					</div>
 				</div>
 
@@ -1048,16 +1049,16 @@ watch(
 		@apply max-w-[2000px];
 	}
 	.tickets-board__board-col {
-		@apply border-gray-50 border-r border-l shadow-inner;
+		@apply border-border/50 border-r;
 	}
 	.tickets-board__board-col-header {
-		@apply relative shadow-2xl py-5 px-4 backdrop-blur-lg mt-1 border-border border-b;
+		@apply relative py-4 px-4 bg-card/80 backdrop-blur-sm border-b border-border sticky top-0 z-10;
 		@media (min-width: 1600px) {
 			@apply px-8;
 		}
 	}
 	.tickets-board__board-col-content {
-		@apply min-h-screen lg:h-svh h-full py-2 bg-gray-50/15 dark:bg-gray-800 overflow-y-auto px-2;
+		@apply min-h-screen lg:h-svh h-full py-3 bg-muted/20 dark:bg-card/30 overflow-y-auto px-3;
 		scrollbar-width: none;
 		-ms-overflow-style: none;
 		&::-webkit-scrollbar {
@@ -1075,7 +1076,7 @@ watch(
 		width: 100%;
 		height: 1px;
 		z-index: 10;
-		background: linear-gradient(90deg, var(--cyan), var(--green));
+		background: hsl(var(--border));
 	}
 	.tickets-board__board::after {
 		content: '';
@@ -1085,7 +1086,7 @@ watch(
 		width: 100%;
 		height: 1px;
 		z-index: 10;
-		background: linear-gradient(90deg, var(--cyan), var(--green));
+		background: hsl(var(--border));
 	}
 }
 

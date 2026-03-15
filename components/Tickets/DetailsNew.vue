@@ -18,20 +18,17 @@
 				<div class="flex items-center justify-between">
 					<h2 class="mt-6 mb-2 text-[22px] leading-5 lg:text-[32px] lg:mb-4 font-bold">{{ localElement.title }}</h2>
 				</div>
-				<div class="text-xs uppercase" v-if="localElement.due_date">
-					<span class="opacity-50 inline-block mr-2">Due date:</span>
-
-					{{ formatDate(localElement.due_date) }}
+				<div class="flex items-center gap-2 text-xs text-muted-foreground" v-if="localElement.due_date">
+					<Icon name="lucide:calendar" class="w-3.5 h-3.5" />
+					<span class="uppercase tracking-wider">Due {{ formatDate(localElement.due_date) }}</span>
 				</div>
-				<div class="flex flex-wrap gap-2 mt-2">
-					<UBadge size="sm" class="uppercase !text-[10px] font-bold" :class="getStatusColor(currentStatus)">
+				<div class="flex flex-wrap items-center gap-2 mt-3">
+					<span class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white" :class="getStatusColor(currentStatus)">
 						{{ currentStatus }}
-					</UBadge>
-					<UBadge :class="getPriorityColor(currentPriority)" size="sm" class="uppercase !text-[10px] font-bold">
+					</span>
+					<span class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white" :class="getPriorityColor(currentPriority)">
 						{{ currentPriority }}
-					</UBadge>
-
-					<!-- Show share button on mobile -->
+					</span>
 					<Share :url="shareUrl" :title="shareTitle" :description="shareDescription" @share="handleShare" />
 				</div>
 			</div>
@@ -44,21 +41,21 @@
 
 		<!-- Priority slider in header -->
 
-		<div class="mb-4 border-b border-border">
-			<div class="flex flex-wrap -mb-px">
+		<div class="mb-6">
+			<div class="inline-flex items-center gap-1 rounded-xl bg-muted/50 p-1 border border-border">
 				<button
 					v-for="tab in tabs"
 					:key="tab.id"
-					class="flex items-center justify-center p-4 border-t-2 border-x-gray-100 border-x text-sm uppercase tracking-wide font-medium w-1/3 md:w-auto md:px-12 shadow-inner"
+					class="flex items-center gap-2 px-4 py-2 rounded-lg text-[11px] uppercase tracking-wider font-semibold transition-all duration-200"
 					:class="
 						activeTab === tab.id
-							? 'border-[var(--cyan)] text-[var(--cyan)] dark:text-[var(--cyan)] bg-white shadow-sm transition'
-							: 'border-transparent hover:border-gray-300 bg-gray-50'
+							? 'bg-card text-foreground shadow-sm'
+							: 'text-muted-foreground hover:text-foreground'
 					"
 					@click="setActiveTab(tab.id)"
 				>
-					<UIcon :name="tab.icon" class="w-5 h-5 mr-2 inline-block" />
-					<span class="inline-block text-[10px]">{{ tab.name }}</span>
+					<UIcon :name="tab.icon" class="w-4 h-4" />
+					{{ tab.name }}
 				</button>
 			</div>
 		</div>
@@ -67,15 +64,15 @@
 			v-if="activeTab === 'work'"
 			class="flex items-start justify-between flex-col lg:flex-row flex-wrap animate-fadein"
 		>
-			<div v-if="displayDescription" class="w-full py-4 mb-10">
-				<h5
-					class="w-full uppercase block font-medium text-muted-foreground tracking-wider text-[12px] leading-3 mb-1"
-				>
-					Description:
-				</h5>
-				<div v-html="displayDescription" class="text-sm w-full lg:pr-20 ticket__description" />
+			<div v-if="displayDescription" class="w-full mb-6">
+				<div class="ios-card p-4 lg:p-5">
+					<h5 class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
+						Description
+					</h5>
+					<div v-html="displayDescription" class="text-sm w-full ticket__description" />
+				</div>
 			</div>
-			<div class="flex items-start justify-between flex-col lg:flex-row flex-wrap w-full">
+			<div class="flex items-start justify-between flex-col lg:flex-row flex-wrap w-full gap-6">
 				<div class="w-full lg:w-1/2 lg:sticky lg:top-20">
 					<CommentsSystem
 						ref="commentsSystemRef"
@@ -87,10 +84,10 @@
 					/>
 				</div>
 				<div
-					class="w-full lg:w-[500px] border-gray-50 lg:border lg:shadow py-6 lg:p-6 lg:sticky lg:top-20 mt-12 lg:mt-0 ticket__tasks"
+					class="w-full lg:w-[500px] ios-card lg:p-5 lg:sticky lg:top-20 ticket__tasks"
 				>
-					<h4 class="w-full uppercase block font-medium text-gray-700 dark:text-gray-200 tracking-wider">Tasks</h4>
-					<TicketsTasks ref="tasksRef" :ticket-id="localElement.id" class="mt-4 pb-12" />
+					<h4 class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-3">Tasks</h4>
+					<TicketsTasks ref="tasksRef" :ticket-id="localElement.id" class="pb-6" />
 				</div>
 			</div>
 		</div>
