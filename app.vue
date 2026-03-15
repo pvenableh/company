@@ -74,7 +74,7 @@ const links = ref([
 	},
 	{
 		name: 'Social',
-		type: ['header', 'footer', 'toolbar', 'drawer'],
+		type: ['header', 'footer', 'drawer'],
 		to: '/social/dashboard',
 		icon: 'i-heroicons-share',
 	},
@@ -87,7 +87,7 @@ const links = ref([
 	{
 		name: 'Financials',
 		type: ['footer', 'toolbar', 'drawer'],
-		to: '/command-center/financials',
+		to: '/financials',
 		icon: 'i-heroicons-banknotes',
 	},
 	{

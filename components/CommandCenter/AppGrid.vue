@@ -79,6 +79,13 @@ const apps: AppItem[] = [
 		description: 'Support tickets',
 	},
 	{
+		name: 'Files',
+		icon: 'i-heroicons-folder-open',
+		route: '/files',
+		color: 'bg-sky-500',
+		description: 'File manager',
+	},
+	{
 		name: 'CardDesk',
 		icon: 'i-heroicons-identification',
 		route: '/carddesk',
@@ -88,7 +95,7 @@ const apps: AppItem[] = [
 	{
 		name: 'Financials',
 		icon: 'i-heroicons-chart-bar',
-		route: '/command-center/financials',
+		route: '/financials',
 		color: 'bg-green-600',
 		description: 'Financial reports',
 	},

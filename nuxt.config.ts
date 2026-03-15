@@ -332,6 +332,6 @@ export default defineNuxtConfig({
 	},
 
 	build: {
-		transpile: ['@sendgrid/mail', 'swiper', 'gsap', '@vueuse/core', 'vue-chartjs', 'mjml', 'handlebars'],
+		transpile: ['@sendgrid/mail', 'swiper', 'gsap', '@vueuse/core', 'mjml', 'handlebars'],
 	},
 });

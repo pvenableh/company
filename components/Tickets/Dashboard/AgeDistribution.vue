@@ -24,21 +24,36 @@
 			</div>
 		</template>
 		<div class="h-80">
-			<Bar v-if="chartData.labels && chartData.labels.length > 0" :data="chartData" :options="chartOptions" />
+			<template v-if="data && data.length">
+				<ChartContainer :config="chartConfig" class="h-full">
+					<VisXYContainer :data="chartData" :padding="{ top: 10 }">
+						<VisGroupedBar
+							:x="(d: any) => d.index"
+							:y="[(d: any) => d.count]"
+							:color="() => 'var(--color-tickets)'"
+							:bar-padding="0.2"
+						/>
+						<VisAxis type="x" :tick-format="(i: number) => chartData[i]?.name || ''" :grid-line="false" />
+						<VisAxis type="y" :grid-line="true" />
+						<VisTooltip />
+					</VisXYContainer>
+				</ChartContainer>
+				<div class="flex items-center justify-center gap-6 mt-2 text-xs text-muted-foreground">
+					<span class="flex items-center gap-1.5">
+						<span class="w-3 h-3 rounded-sm" style="background: rgba(92, 214, 254, 0.7)"></span>
+						Number of Tickets
+					</span>
+				</div>
+			</template>
 			<div v-else class="h-full flex items-center justify-center text-muted-foreground">No data available</div>
 		</div>
 	</UCard>
 </template>
 
 <script setup>
-import { computed, watchEffect } from 'vue';
-
-// Import chart.js
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
-import { Bar } from 'vue-chartjs';
-
-// Register ChartJS components
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+import { computed } from 'vue';
+import { ChartContainer } from '~/components/ui/chart';
+import { VisXYContainer, VisGroupedBar, VisAxis, VisTooltip } from '@unovis/vue';
 
 const props = defineProps({
 	data: {
@@ -47,53 +62,16 @@ const props = defineProps({
 	},
 });
 
-// Debug: log data when it changes
-watchEffect(() => {
-	console.log('Age Distribution Data:', props.data);
-});
-
-// Prepare chart data
-const chartData = computed(() => {
-	if (!props.data || props.data.length === 0) {
-		return { labels: [], datasets: [] };
-	}
-
-	return {
-		labels: props.data.map((item) => item.name),
-		datasets: [
-			{
-				label: 'Number of Tickets',
-				backgroundColor: 'rgba(92, 214, 254, 0.7)',
-				data: props.data.map((item) => item.count),
-			},
-		],
-	};
-});
-
-// Chart options
-const chartOptions = {
-	responsive: true,
-	maintainAspectRatio: false,
-	scales: {
-		y: {
-			beginAtZero: true,
-			ticks: {
-				precision: 0,
-			},
-		},
-	},
-	plugins: {
-		legend: {
-			display: true,
-			position: 'top',
-		},
-		tooltip: {
-			callbacks: {
-				label: function (context) {
-					return `${context.dataset.label}: ${context.raw} ticket${context.raw !== 1 ? 's' : ''}`;
-				},
-			},
-		},
-	},
+const chartConfig = {
+	tickets: { label: 'Number of Tickets', color: 'rgba(92, 214, 254, 0.7)' },
 };
+
+const chartData = computed(() => {
+	if (!props.data || props.data.length === 0) return [];
+	return props.data.map((item, i) => ({
+		index: i,
+		name: item.name,
+		count: item.count,
+	}));
+});
 </script>

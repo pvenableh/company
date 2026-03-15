@@ -1,310 +1,367 @@
-<script setup>
-definePageMeta({
-	middleware: ['auth'],
-});
+<script setup lang="ts">
+import type { Invoice } from '~/types/directus';
+import { Button } from '~/components/ui/button';
+import { useDebounceFn } from '@vueuse/core';
+
+definePageMeta({ middleware: ['auth'] });
 
 const router = useRouter();
-const { user: sessionUser, loggedIn } = useUserSession();
-const user = computed(() => {
-	return loggedIn.value ? sessionUser.value ?? null : null;
-});
-const invoiceItems = useDirectusItems('invoices');
-const { selectedOrg, hasMultipleOrgs, organizations, organizationOptions, setOrganization, getOrganizationFilter } = useOrganization();
-const { user: directusUser } = useDirectusAuth();
+const { getInvoices, createInvoice, deleteInvoice } = useInvoices();
+const { selectedClient } = useClients();
 const { canAccess } = useRole();
 const isAdmin = computed(() => canAccess('invoices'));
 
-const columns = [
-	{
-		key: 'status',
-		label: '',
-		sortable: true,
-	},
-	{
-		key: 'invoice_code',
-		label: 'Invoice',
-		sortable: true,
-	},
+const allInvoices = ref<Invoice[]>([]);
+const total = ref(0);
+const loading = ref(true);
+const search = ref('');
+const showCreateModal = ref(false);
+const creating = ref(false);
+const statusFilter = ref('all');
+const showPaid = ref(false);
 
-	{
-		key: 'due_date',
-		label: 'Due Date',
-		sortable: true,
-	},
-	{
-		key: 'total_amount',
-		label: 'Amount',
-	},
-	{
-		key: 'bill_to.name',
-		label: 'Organization',
-		sortable: true,
-	},
-
-	{
-		key: 'actions',
-	},
+const sortBy = ref('-due_date');
+const sortOptions = [
+  { label: 'Due Date (Newest)', value: '-due_date' },
+  { label: 'Due Date (Oldest)', value: 'due_date' },
+  { label: 'Amount (High\u2192Low)', value: '-total_amount' },
+  { label: 'Amount (Low\u2192High)', value: 'total_amount' },
+  { label: 'Recently Created', value: '-date_created' },
+  { label: 'Invoice Code', value: 'invoice_code' },
 ];
 
-const items = (row) => [
-	[
-		{
-			label: 'Edit',
-			icon: 'i-heroicons-pencil-square-20-solid',
-			click: () => router.push('/tickets/' + row.id),
-		},
-		{
-			label: 'Archive',
-			icon: 'i-heroicons-archive-box-20-solid',
-		},
-	],
-	[
-		{
-			label: 'Delete',
-			icon: 'i-heroicons-trash-20-solid',
-		},
-	],
+const statusOptions = [
+  { label: 'All', value: 'all' },
+  { label: 'Pending', value: 'pending' },
+  { label: 'Processing', value: 'processing' },
+  { label: 'Paid', value: 'paid' },
+  { label: 'Archived', value: 'archived' },
 ];
 
-const filterRef = computed(() => {
-	const baseFilter = {
-		_and: [],
-	};
-
-	// Add organization filter if a specific org is selected
-	const orgFilter = getOrganizationFilter();
-	if (Object.keys(orgFilter).length > 0) {
-		baseFilter._and.push({
-			bill_to: orgFilter.organization,
-		});
-	}
-
-	// If no organization is selected:
-	// - Admins see all invoices (no bill_to filter)
-	// - Non-admins see only invoices for their organizations
-	if (!selectedOrg.value && !isAdmin.value && organizations.value?.length) {
-		const userOrganizationIds = organizations.value.map((org) => org.id);
-		baseFilter._and.push({
-			bill_to: {
-				id: {
-					_in: userOrganizationIds,
-				},
-			},
-		});
-	}
-
-	// Remove _and if empty
-	if (baseFilter._and.length === 0) {
-		delete baseFilter._and;
-	}
-
-	return baseFilter;
-});
-
-// Use watchEffect to fetch invoices when the filter changes
-const invoices = ref([]);
-watchEffect(async () => {
-	try {
-		const results = await invoiceItems.list({
-			fields: [
-				'id,status,due_date,invoice_date,invoice_code,note,memo,total_amount,bill_to.id,bill_to.name,bill_to.email,bill_to.stripe_customer_id,line_items.id,line_items.description,line_items.quantity,line_items.rate,line_items.amount,line_items.product.name',
-			],
-			sort: 'due_date',
-			filter: filterRef.value,
-		});
-		invoices.value = results;
-	} catch (error) {
-		console.error('Error fetching invoices:', error);
-	}
-});
-
-const isPastDue = (dateString, status) => {
-	const dueDate = new Date(dateString);
-	const today = new Date();
-	return dueDate < today && status === 'pending';
+const statusColors: Record<string, string> = {
+  pending: 'bg-yellow-500/15 text-yellow-400',
+  processing: 'bg-blue-500/15 text-blue-400',
+  paid: 'bg-emerald-500/15 text-emerald-400',
+  archived: 'bg-neutral-500/15 text-neutral-400',
 };
 
-const isProcessing = (dateString, status) => {
-	const dueDate = new Date(dateString);
-	const today = new Date();
-	return dueDate < today && status === 'processing';
-};
+// Active invoices (pending + processing)
+const activeInvoices = computed(() =>
+  allInvoices.value.filter(inv => inv.status === 'pending' || inv.status === 'processing')
+);
 
-const classedInvoices = computed(() => {
-	return invoices.value.map((item) => ({
-		...item,
-		class: isPastDue(item.due_date, item.status)
-			? 'bg-red-200/50 dark:bg-red-400/50 animate-pulse'
-			: isProcessing(item.due_date, item.status)
-				? 'bg-yellow-100/50 dark:bg-yellow-400/50'
-				: '',
-	}));
-});
+// Paid + archived invoices
+const completedInvoices = computed(() =>
+  allInvoices.value.filter(inv => inv.status === 'paid' || inv.status === 'archived')
+);
 
-const expand = ref({
-	openedRows: [],
-	row: null,
-});
+// Stats
+const totalBilled = computed(() =>
+  allInvoices.value.reduce((sum, inv) => sum + (Number(inv.total_amount) || 0), 0)
+);
 
-const q = ref('');
+const totalUnpaid = computed(() =>
+  allInvoices.value
+    .filter(inv => inv.status !== 'paid')
+    .reduce((sum, inv) => sum + (Number(inv.total_amount) || 0), 0)
+);
 
-const filteredInvoices = computed(() => {
-	if (!q.value) {
-		return classedInvoices.value;
-	}
-
-	return classedInvoices.value.filter((item) => {
-		return Object.values(item).some((value) => {
-			return String(value).toLowerCase().includes(q.value.toLowerCase());
-		});
-	});
-});
-
-const totalAmount = computed(() => {
-	const total = filteredInvoices.value.reduce((acc, invoice) => {
-		const amount = Number(invoice.total_amount);
-		return acc + (isNaN(amount) ? 0 : amount); // Only add if it's a valid number
-	}, 0);
-	return new Intl.NumberFormat().format(total); // Format the total with commas
-});
-
-const unpaidTotalAmount = computed(() => {
-	const total = filteredInvoices.value.reduce((acc, invoice) => {
-		// Only include invoices that are not "paid"
-		if (invoice.status !== 'paid') {
-			const amount = Number(invoice.total_amount);
-			return acc + (isNaN(amount) ? 0 : amount); // Only add valid numbers
-		}
-		return acc;
-	}, 0);
-	return new Intl.NumberFormat().format(total); // Format the total with commas
-});
-
-const formatNumber = (value) => {
-	return new Intl.NumberFormat('en-US', {
-		minimumFractionDigits: 2,
-		maximumFractionDigits: 2,
-	}).format(value);
-};
-</script>
-<template>
-	<div class="md:px-6 mx-auto flex items-center justify-center flex-col relative tickets">
-		<h1 class="page__title">Invoices</h1>
-
-		<div class="w-full flex flex-row items-center justify-between max-w-6xl my-12">
-			<UInput v-model="q" placeholder="Filter..." />
-			<div class="flex flex-row uppercase text-[10px]">
-				<p class="mr-6">
-					<span class="">Total Billed:</span>
-					${{ totalAmount }}
-				</p>
-				<p>
-					<span class="">Total Unpaid:</span>
-					${{ unpaidTotalAmount }}
-				</p>
-			</div>
-		</div>
-		<UTable
-			:rows="filteredInvoices"
-			:columns="columns"
-			class="w-full mx-0 px-0 shadow-lg border overflow-x-auto max-w-6xl"
-		>
-			<template #status-data="{ row }">
-				<UBadge
-					size="xs"
-					class="inline-block w-12 text-center uppercase text-[8px] p-0"
-					:color="row.status === 'paid' ? 'black' : 'primary'"
-					:variant="row.status === 'paid' ? 'subtle' : 'solid'"
-				>
-					{{ row.status }}
-				</UBadge>
-			</template>
-			<template #invoice_code-data="{ row }">
-				<nuxt-link :to="'/invoices/' + row.id">{{ row.invoice_code }}</nuxt-link>
-			</template>
-
-			<template #due_date-data="{ row }">
-				<p class="text-[12px] leading-3 max-w-32 whitespace-pre-wrap uppercase font-bold">
-					{{ getFriendlyDateThree(row.due_date) }}
-				</p>
-				<p
-					v-if="row.status !== 'paid'"
-					class="text-[9px] leading-3 max-w-20 whitespace-pre-wrap uppercase font-bold hidden"
-				>
-					{{ formatDueDate(row.due_date) }}
-				</p>
-			</template>
-			<template #total_amount-data="{ row }">${{ formatNumber(row.total_amount) }}</template>
-			<template #bill_to.name-data="{ row }" class="uppercase">
-				<p class="text-[12px] leading-3 max-w-32 whitespace-pre-wrap uppercase font-bold">
-					{{ row.bill_to.name }}
-				</p>
-			</template>
-			<template #actions-data="{ row }">
-				<UButton
-					v-if="row.status === 'pending'"
-					size="xs"
-					color="primary"
-					:to="'/invoices/' + row.id"
-					:ui="{ rounded: 'rounded-full' }"
-					class="inline-block text-center w-12 tracking-wide text-[10px] p-0"
-				>
-					Pay
-				</UButton>
-				<UButton
-					v-else
-					size="xs"
-					color="primary"
-					variant="outline"
-					:to="'/invoices/' + row.id"
-					:ui="{ rounded: 'rounded-full' }"
-					class="inline-block text-center w-12 tracking-wide text-[10px] p-0"
-				>
-					View
-				</UButton>
-
-				<!-- <UDropdown :items="items(row)">
-					<UButton color="gray" variant="ghost" icon="i-heroicons-ellipsis-horizontal-20-solid" />
-				</UDropdown> -->
-			</template>
-
-			<template #expand="{ row }">
-				<div class="p-8 w-full">
-					<h5 v-if="row.note" class="uppercase tracking-wide text-[9px]">Note:</h5>
-					<div v-if="row.note" class="" v-html="row.note"></div>
-					<div v-if="row.line_items.length > 0" class="w-full mt-6">
-						<h5 class="uppercase tracking-wide text-[9px] mb-6">Line Items:</h5>
-						<div
-							v-for="(item, index) in row.line_items"
-							:key="index"
-							class="lg:pl-3 my-1 flex flex-row items-center justify-between"
-						>
-							<div class="">
-								<p class="uppercase tracking-wide text-[12px]">{{ item.product.name }}</p>
-								<p v-if="item.description" class="text-[9px]">{{ item.description }}</p>
-							</div>
-							<div class="mx-3 grow border-b border-gray-200 dark:border-gray-700"></div>
-							<p class="tracking-wide text-[12px]">${{ item.rate }} x {{ item.quantity }} = ${{ item.amount }}</p>
-						</div>
-						<div class="lg:ml-3 flex flex-row items-center justify-between border-t mt-6 pt-6">
-							<p class="uppercase tracking-wide text-[12px] font-bold">Total:</p>
-							<p class="tracking-wide text-[12px]">${{ row.total_amount }}</p>
-						</div>
-					</div>
-				</div>
-			</template>
-		</UTable>
-	</div>
-</template>
-<style>
-@reference "~/assets/css/tailwind.css";
-.tickets {
-	th {
-		font-size: 10px !important;
-		@apply uppercase font-bold tracking-wide;
-		button {
-			font-size: 10px !important;
-		}
-	}
+function getDueDateUrgency(inv: Invoice): 'past' | 'urgent' | 'normal' {
+  if (!inv.due_date || inv.status === 'paid' || inv.status === 'archived') return 'normal';
+  const due = new Date(inv.due_date);
+  const now = new Date();
+  const diffDays = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays < 0) return 'past';
+  if (diffDays <= 7) return 'urgent';
+  return 'normal';
 }
-</style>
+
+const dueDateColors: Record<string, string> = {
+  past: 'text-red-400',
+  urgent: 'text-amber-400',
+  normal: 'text-muted-foreground',
+};
+
+const fetchData = async () => {
+  loading.value = true;
+  try {
+    const result = await getInvoices({
+      search: search.value || undefined,
+      status: statusFilter.value !== 'all' ? statusFilter.value : undefined,
+      sort: [sortBy.value],
+      limit: 200,
+    });
+    allInvoices.value = result.data;
+    total.value = result.total;
+  } catch (err) {
+    console.error('Failed to fetch invoices:', err);
+  } finally {
+    loading.value = false;
+  }
+};
+
+const debouncedFetch = useDebounceFn(fetchData, 300);
+
+function viewInvoice(invoice: Invoice) {
+  router.push(`/invoices/detail/${invoice.id}`);
+}
+
+async function handleCreate(data: any) {
+  creating.value = true;
+  try {
+    await createInvoice(data);
+    showCreateModal.value = false;
+    await fetchData();
+  } catch (err) {
+    console.error('Failed to create invoice:', err);
+  } finally {
+    creating.value = false;
+  }
+}
+
+function formatAmount(value: number | null | undefined): string {
+  return formatCurrency(Number(value) || 0);
+}
+
+function getBillToName(inv: Invoice): string {
+  if (!inv.bill_to) return '\u2014';
+  if (typeof inv.bill_to === 'string') return inv.bill_to;
+  return (inv.bill_to as any).name || '\u2014';
+}
+
+function getLineItemCount(inv: Invoice): number {
+  if (!inv.line_items) return 0;
+  return Array.isArray(inv.line_items) ? inv.line_items.length : 0;
+}
+
+onMounted(fetchData);
+
+watch(() => selectedClient.value, () => {
+  fetchData();
+});
+</script>
+
+<template>
+  <div class="p-6 max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h1 class="text-xl font-semibold">Invoices</h1>
+        <p class="text-sm text-muted-foreground">
+          {{ total }} total<span v-if="activeInvoices.length">, {{ activeInvoices.length }} active</span>
+        </p>
+      </div>
+      <Button v-if="isAdmin" size="sm" @click="showCreateModal = true">
+        <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
+        New Invoice
+      </Button>
+    </div>
+
+    <!-- Stats -->
+    <div class="flex gap-4 mb-6">
+      <div class="ios-card px-4 py-3 flex-1">
+        <p class="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Total Billed</p>
+        <p class="text-lg font-semibold">{{ formatAmount(totalBilled) }}</p>
+      </div>
+      <div class="ios-card px-4 py-3 flex-1">
+        <p class="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Total Unpaid</p>
+        <p class="text-lg font-semibold" :class="totalUnpaid > 0 ? 'text-amber-400' : ''">{{ formatAmount(totalUnpaid) }}</p>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="flex gap-3 mb-6 flex-wrap">
+      <input
+        v-model="search"
+        type="search"
+        placeholder="Search invoices..."
+        class="flex-1 min-w-48 rounded-md border bg-background px-3 py-2 text-sm"
+        @input="debouncedFetch"
+      />
+      <select
+        v-model="statusFilter"
+        @change="fetchData"
+        class="rounded-md border bg-background px-3 py-2 text-sm w-36"
+      >
+        <option v-for="opt in statusOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+      </select>
+      <select
+        v-model="sortBy"
+        @change="fetchData"
+        class="rounded-md border bg-background px-3 py-2 text-sm w-48"
+      >
+        <option v-for="opt in sortOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+      </select>
+    </div>
+
+    <!-- Loading State -->
+    <div v-if="loading" class="flex flex-col items-center justify-center py-24 gap-3">
+      <Icon name="lucide:loader-2" class="w-8 h-8 text-muted-foreground animate-spin" />
+      <p class="text-sm text-muted-foreground">Loading invoices...</p>
+    </div>
+
+    <!-- Empty State -->
+    <div v-else-if="!allInvoices.length" class="flex flex-col items-center justify-center py-24 gap-4">
+      <Icon name="lucide:file-text" class="w-12 h-12 text-muted-foreground/40" />
+      <div class="text-center">
+        <p class="text-sm font-medium text-muted-foreground">No invoices found</p>
+        <p class="text-xs text-muted-foreground/70 mt-1">
+          {{ search ? 'Try adjusting your search.' : 'Create your first invoice to get started.' }}
+        </p>
+      </div>
+      <Button v-if="!search && isAdmin" size="sm" @click="showCreateModal = true">
+        <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
+        New Invoice
+      </Button>
+    </div>
+
+    <template v-else>
+      <!-- Active Invoices -->
+      <div v-if="activeInvoices.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div
+          v-for="inv in activeInvoices"
+          :key="inv.id"
+          class="ios-card p-5 cursor-pointer hover:ring-1 hover:ring-white/10 transition-all"
+          @click="viewInvoice(inv)"
+        >
+          <div class="flex items-start justify-between mb-3">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2 mb-1">
+                <h3 class="text-sm font-medium truncate">{{ inv.invoice_code || 'No Code' }}</h3>
+                <span
+                  class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize shrink-0"
+                  :class="statusColors[inv.status || 'pending']"
+                >
+                  {{ inv.status }}
+                </span>
+              </div>
+              <p class="text-xs text-muted-foreground truncate">{{ getBillToName(inv) }}</p>
+            </div>
+            <p class="text-sm font-semibold ml-3 shrink-0">{{ formatAmount(inv.total_amount) }}</p>
+          </div>
+
+          <div class="space-y-1.5 text-xs text-muted-foreground">
+            <div class="flex items-center gap-1.5">
+              <Icon name="lucide:calendar" class="w-3.5 h-3.5 shrink-0" />
+              <span :class="dueDateColors[getDueDateUrgency(inv)]">
+                Due {{ inv.due_date ? getFriendlyDateThree(inv.due_date) : '\u2014' }}
+              </span>
+              <span
+                v-if="getDueDateUrgency(inv) === 'past'"
+                class="text-[9px] uppercase font-semibold text-red-400 ml-1"
+              >
+                Past due
+              </span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <Icon name="lucide:list" class="w-3.5 h-3.5 shrink-0" />
+              <span>{{ getLineItemCount(inv) }} line item{{ getLineItemCount(inv) !== 1 ? 's' : '' }}</span>
+            </div>
+          </div>
+
+          <!-- Actions row -->
+          <div class="flex items-center gap-2 mt-3 pt-3 border-t border-border/30">
+            <NuxtLink
+              v-if="inv.status === 'pending'"
+              :to="`/invoices/${inv.id}`"
+              @click.stop
+            >
+              <Button variant="outline" size="sm" class="h-7 text-xs">
+                <Icon name="lucide:credit-card" class="w-3.5 h-3.5 mr-1" />
+                Pay
+              </Button>
+            </NuxtLink>
+            <NuxtLink :to="`/invoices/detail/${inv.id}`" @click.stop>
+              <Button variant="ghost" size="sm" class="h-7 text-xs">
+                <Icon name="lucide:pencil" class="w-3.5 h-3.5 mr-1" />
+                Edit
+              </Button>
+            </NuxtLink>
+          </div>
+        </div>
+      </div>
+
+      <!-- No active invoices message -->
+      <div v-else-if="completedInvoices.length" class="text-center py-12">
+        <p class="text-sm text-muted-foreground">No active invoices match your filters.</p>
+      </div>
+
+      <!-- Paid / Archived Section -->
+      <div v-if="completedInvoices.length" class="mt-8">
+        <button
+          class="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4 group"
+          @click="showPaid = !showPaid"
+        >
+          <Icon
+            name="lucide:chevron-right"
+            class="w-4 h-4 transition-transform duration-200"
+            :class="{ 'rotate-90': showPaid }"
+          />
+          <span class="font-medium">Paid &amp; Archived</span>
+          <span class="text-xs bg-muted/60 px-2 py-0.5 rounded-full">{{ completedInvoices.length }}</span>
+        </button>
+
+        <Transition
+          enter-active-class="transition-all duration-300 ease-out"
+          enter-from-class="opacity-0 -translate-y-2 max-h-0"
+          enter-to-class="opacity-100 translate-y-0 max-h-[2000px]"
+          leave-active-class="transition-all duration-200 ease-in"
+          leave-from-class="opacity-100 translate-y-0 max-h-[2000px]"
+          leave-to-class="opacity-0 -translate-y-2 max-h-0"
+        >
+          <div v-show="showPaid" class="overflow-hidden">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div
+                v-for="inv in completedInvoices"
+                :key="inv.id"
+                class="ios-card p-5 cursor-pointer hover:ring-1 hover:ring-white/10 transition-all opacity-60 hover:opacity-90"
+                @click="viewInvoice(inv)"
+              >
+                <div class="flex items-start justify-between mb-3">
+                  <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-2 mb-1">
+                      <h3 class="text-sm font-medium truncate text-muted-foreground">{{ inv.invoice_code || 'No Code' }}</h3>
+                      <span
+                        class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize shrink-0"
+                        :class="statusColors[inv.status || 'archived']"
+                      >
+                        {{ inv.status }}
+                      </span>
+                    </div>
+                    <p class="text-xs text-muted-foreground/60 truncate">{{ getBillToName(inv) }}</p>
+                  </div>
+                  <p class="text-sm font-medium text-muted-foreground ml-3 shrink-0">{{ formatAmount(inv.total_amount) }}</p>
+                </div>
+
+                <div class="space-y-1.5 text-xs text-muted-foreground/60">
+                  <div class="flex items-center gap-1.5">
+                    <Icon name="lucide:calendar" class="w-3.5 h-3.5 shrink-0" />
+                    <span>{{ inv.due_date ? getFriendlyDateThree(inv.due_date) : '\u2014' }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Transition>
+      </div>
+    </template>
+
+    <!-- Create Modal -->
+    <Teleport to="body">
+      <div
+        v-if="showCreateModal"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+        @click.self="showCreateModal = false"
+      >
+        <div class="ios-card shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto p-6">
+          <h2 class="font-semibold mb-4">New Invoice</h2>
+          <InvoicesInvoiceForm
+            :saving="creating"
+            @save="handleCreate"
+            @cancel="showCreateModal = false"
+          />
+        </div>
+      </div>
+    </Teleport>
+  </div>
+</template>

@@ -10,8 +10,14 @@ const { selectedOrg, getOrganizationFilter } = useOrganization();
 
 const isAdmin = computed(() => canAccess('projects'));
 
-// Non-admins default to table view; admins default to timeline
-const activeView = ref(isAdmin.value ? 'timeline' : 'table');
+// Defer activeView to client so SSR doesn't mismatch on isAdmin
+const activeView = ref('table');
+
+if (import.meta.client) {
+	onMounted(() => {
+		activeView.value = isAdmin.value ? 'timeline' : 'table';
+	});
+}
 
 // Table view data
 const projectItems = useDirectusItems('projects');
@@ -70,65 +76,81 @@ definePageMeta({
 </script>
 
 <template>
-	<div class="page__content">
-		<h1 class="page__title">
-			Projects
-			<span class="block">
-				{{ activeView === 'timeline' ? 'Timeline' : activeView === 'board' ? 'Board' : 'Overview' }}
-			</span>
-		</h1>
-
-		<!-- View switcher -->
-		<div class="flex items-center gap-1 px-4 2xl:px-0 mb-4">
-			<button
-				v-if="isAdmin"
-				class="px-3 py-1.5 t-label rounded-md transition-colors"
-				:class="activeView === 'timeline'
-					? 'bg-primary text-primary-foreground'
-					: 'text-muted-foreground hover:text-foreground'"
-				@click="activeView = 'timeline'"
-			>
-				<Icon name="i-heroicons-map" class="h-3.5 w-3.5 inline -mt-0.5 mr-1" />
-				Timeline
-			</button>
-			<button
-				v-if="isAdmin"
-				class="px-3 py-1.5 t-label rounded-md transition-colors"
-				:class="activeView === 'board'
-					? 'bg-primary text-primary-foreground'
-					: 'text-muted-foreground hover:text-foreground'"
-				@click="activeView = 'board'"
-			>
-				<Icon name="i-heroicons-view-columns" class="h-3.5 w-3.5 inline -mt-0.5 mr-1" />
-				Board
-			</button>
-			<button
-				class="px-3 py-1.5 t-label rounded-md transition-colors"
-				:class="activeView === 'table'
-					? 'bg-primary text-primary-foreground'
-					: 'text-muted-foreground hover:text-foreground'"
-				@click="activeView = 'table'"
-			>
-				<Icon name="i-heroicons-table-cells" class="h-3.5 w-3.5 inline -mt-0.5 mr-1" />
-				Table
-			</button>
-		</div>
-
-		<!-- Timeline view (admin only) -->
-		<div v-if="isAdmin && activeView === 'timeline'" class="z-10 min-h-svh page__inner">
-			<ProjectTimelineTimeline />
-		</div>
-
-		<!-- Board view (admin only) -->
-		<div v-else-if="isAdmin && activeView === 'board'" class="xl:flex xl:items-center xl:justify-center z-10 min-h-svh overflow-x-auto page__inner">
-			<ProjectsBoard />
-		</div>
-
-		<!-- Table view (all users) -->
-		<div v-else-if="activeView === 'table'" class="z-10 page__inner px-4 2xl:px-0">
-			<div class="ios-card p-5">
-				<ProjectsTable :projects="tableProjects" :loading="tableLoading" />
+	<div class="p-4 md:p-6 max-w-7xl mx-auto">
+		<!-- Header -->
+		<div class="flex items-center justify-between mb-6">
+			<div>
+				<h1 class="text-xl font-semibold">Projects</h1>
+				<p class="text-sm text-muted-foreground">
+					{{ tableProjects.length }} project{{ tableProjects.length !== 1 ? 's' : '' }}
+				</p>
 			</div>
 		</div>
+
+		<!-- View switcher -->
+		<ClientOnly>
+			<div class="flex items-center gap-1 mb-5">
+				<button
+					v-if="isAdmin"
+					class="px-3 py-1.5 text-xs font-medium rounded-md transition-colors"
+					:class="activeView === 'timeline'
+						? 'bg-primary text-primary-foreground'
+						: 'text-muted-foreground hover:text-foreground'"
+					@click="activeView = 'timeline'"
+				>
+					<Icon name="lucide:map" class="h-3.5 w-3.5 inline -mt-0.5 mr-1" />
+					Timeline
+				</button>
+				<button
+					v-if="isAdmin"
+					class="px-3 py-1.5 text-xs font-medium rounded-md transition-colors"
+					:class="activeView === 'board'
+						? 'bg-primary text-primary-foreground'
+						: 'text-muted-foreground hover:text-foreground'"
+					@click="activeView = 'board'"
+				>
+					<Icon name="lucide:columns-3" class="h-3.5 w-3.5 inline -mt-0.5 mr-1" />
+					Board
+				</button>
+				<button
+					class="px-3 py-1.5 text-xs font-medium rounded-md transition-colors"
+					:class="activeView === 'table'
+						? 'bg-primary text-primary-foreground'
+						: 'text-muted-foreground hover:text-foreground'"
+					@click="activeView = 'table'"
+				>
+					<Icon name="lucide:table" class="h-3.5 w-3.5 inline -mt-0.5 mr-1" />
+					Table
+				</button>
+			</div>
+		</ClientOnly>
+
+		<ClientOnly>
+			<!-- Timeline view (admin only) -->
+			<div v-if="isAdmin && activeView === 'timeline'" class="min-h-svh">
+				<ProjectTimeline />
+			</div>
+
+			<!-- Board view (admin only) -->
+			<div v-else-if="isAdmin && activeView === 'board'" class="xl:flex xl:items-center xl:justify-center min-h-svh overflow-x-auto">
+				<ProjectsBoard />
+			</div>
+
+			<!-- Table view (all users) -->
+			<div v-else-if="activeView === 'table'">
+				<div class="ios-card p-5">
+					<ProjectsTable :projects="tableProjects" :loading="tableLoading" />
+				</div>
+			</div>
+
+			<template #fallback>
+				<div class="flex items-center justify-center min-h-[400px]">
+					<div class="flex flex-col items-center gap-3">
+						<Icon name="lucide:loader-2" class="w-8 h-8 text-muted-foreground animate-spin" />
+						<span class="text-sm text-muted-foreground">Loading...</span>
+					</div>
+				</div>
+			</template>
+		</ClientOnly>
 	</div>
 </template>

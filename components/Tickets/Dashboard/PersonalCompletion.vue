@@ -26,7 +26,31 @@
 			</div>
 		</template>
 		<div class="h-80">
-			<BarChart v-if="data && data.length" :data="chartData" :options="chartOptions" />
+			<template v-if="data && data.length">
+				<ChartContainer :config="chartConfig" class="h-full">
+					<VisXYContainer :data="chartData" :padding="{ top: 10 }">
+						<VisGroupedBar
+							:x="(d: any) => d.index"
+							:y="[(d: any) => d.rate, (d: any) => d.tickets]"
+							:color="(d: any, i: number) => i === 0 ? 'var(--color-rate)' : 'var(--color-tickets)'"
+							:bar-padding="0.2"
+						/>
+						<VisAxis type="x" :tick-format="(i: number) => chartData[i]?.name || ''" :grid-line="false" />
+						<VisAxis type="y" :tick-format="(v: number) => v + '%'" :grid-line="true" />
+						<VisTooltip />
+					</VisXYContainer>
+				</ChartContainer>
+				<div class="flex items-center justify-center gap-6 mt-2 text-xs text-muted-foreground">
+					<span class="flex items-center gap-1.5">
+						<span class="w-3 h-3 rounded-sm" style="background: rgba(92, 214, 254, 0.9)"></span>
+						Completion Rate %
+					</span>
+					<span class="flex items-center gap-1.5">
+						<span class="w-3 h-3 rounded-sm" style="background: rgba(4, 148, 197, 0.9)"></span>
+						Tickets Completed
+					</span>
+				</div>
+			</template>
 			<div v-else class="h-full flex items-center justify-center text-muted-foreground">
 				No personal completion data available
 			</div>
@@ -36,13 +60,8 @@
 
 <script setup>
 import { computed } from 'vue';
-
-// Import vue-chartjs components
-import { Bar as BarChart } from 'vue-chartjs';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
-
-// Register ChartJS components
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+import { ChartContainer } from '~/components/ui/chart';
+import { VisXYContainer, VisGroupedBar, VisAxis, VisTooltip } from '@unovis/vue';
 
 const props = defineProps({
 	data: {
@@ -55,89 +74,17 @@ const props = defineProps({
 	},
 });
 
-// 'rgba(92, 214, 254, 0.7)', //
-// 	'rgba(56, 204, 254, 0.7)', //
-// 	'rgba(21, 194, 252, 0.7)', //
-// 	'rgba(3, 176, 233, 0.7)', //
-// 	'rgba(4, 148, 197, 0.7)', //
-// 	'rgba(4, 121, 160, 0.7)', //
-// 	'rgba(3, 94, 124, 0.7)', //
-
-// Prepare chart data
-const chartData = computed(() => {
-	return {
-		labels: props.data.map((item) => item.name),
-		datasets: [
-			{
-				label: 'Completion Rate %',
-				backgroundColor: 'rgba(92, 214, 254, 0.9)',
-				borderColor: 'rgba(92, 214, 254, 1)',
-				borderWidth: 1,
-				data: props.data.map((item) => item.rate),
-			},
-			{
-				label: 'Tickets Completed',
-				backgroundColor: 'rgba(4, 148, 197, 0.9)',
-				borderColor: 'rgba(4, 148, 197, 1)',
-				borderWidth: 1,
-				data: props.data.map((item) => item.tickets),
-				yAxisID: 'tickets',
-			},
-		],
-	};
-});
-
-// Chart options
-const chartOptions = {
-	responsive: true,
-	maintainAspectRatio: false,
-	scales: {
-		y: {
-			beginAtZero: true,
-			title: {
-				display: true,
-				text: 'Completion Rate (%)',
-			},
-			max: 100,
-			ticks: {
-				callback: function (value) {
-					return value + '%';
-				},
-			},
-		},
-		tickets: {
-			position: 'right',
-			beginAtZero: true,
-			title: {
-				display: true,
-				text: 'Number of Tickets',
-			},
-			grid: {
-				drawOnChartArea: false,
-			},
-			ticks: {
-				precision: 0,
-			},
-		},
-	},
-	plugins: {
-		legend: {
-			position: 'top',
-		},
-		tooltip: {
-			callbacks: {
-				label: function (context) {
-					const label = context.dataset.label || '';
-					const value = context.raw || 0;
-
-					if (label.includes('Rate')) {
-						return `${label}: ${value}%`;
-					} else {
-						return `${label}: ${value}`;
-					}
-				},
-			},
-		},
-	},
+const chartConfig = {
+	rate: { label: 'Completion Rate %', color: 'rgba(92, 214, 254, 0.9)' },
+	tickets: { label: 'Tickets Completed', color: 'rgba(4, 148, 197, 0.9)' },
 };
+
+const chartData = computed(() => {
+	return props.data.map((item, i) => ({
+		index: i,
+		name: item.name,
+		rate: item.rate,
+		tickets: item.tickets,
+	}));
+});
 </script>

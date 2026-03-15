@@ -240,12 +240,42 @@ export function useClients() {
     });
   };
 
+  const folderItems = useDirectusItems('directus_folders');
+
   const createClient = async (payload: Partial<Client>): Promise<Client> => {
+    const orgId = payload.organization || selectedOrg.value;
+
     const result = await items.create({
       ...payload,
-      organization: payload.organization || selectedOrg.value,
+      organization: orgId,
       status: payload.status || 'active',
     } as any);
+
+    // Auto-create a folder for this client under the org folder
+    if (result && (result as any).id && payload.name) {
+      try {
+        // Find org's folder
+        let parentFolderId: string | null = null;
+        if (orgId && currentOrg.value?.folder) {
+          parentFolderId = typeof currentOrg.value.folder === 'object'
+            ? (currentOrg.value.folder as any).id
+            : currentOrg.value.folder;
+        }
+
+        const folder = await folderItems.create({
+          name: payload.name,
+          parent: parentFolderId,
+        } as any);
+
+        // Link folder to client
+        if (folder && (folder as any).id) {
+          await items.update((result as any).id, { folder: (folder as any).id } as any);
+        }
+      } catch (e) {
+        console.warn('Failed to create client folder:', e);
+      }
+    }
+
     await fetchActiveClients();
     return result;
   };

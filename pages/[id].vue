@@ -4,6 +4,10 @@ const ticketItems = useDirectusItems('tickets');
 
 definePageMeta({
 	middleware: ['auth'],
+	validate: (route) => {
+		// Only match UUID-like ticket IDs — prevents catching static routes like /files, /tasks, etc.
+		return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(route.params.id));
+	},
 });
 
 const ticket = await ticketItems.get(params.id, {

@@ -1,10 +1,14 @@
 <template>
-	<div class="w-full relative">
-		<h1 class="page__title">
-			Tickets
-			<span class="block">Board</span>
-		</h1>
-		<div class="xl:flex xl:items-center xl:justify-center z-10 w-full page__inner !mt-0 min-h-svh">
+	<div class="p-4 md:p-6 max-w-7xl mx-auto">
+		<!-- Header -->
+		<div class="flex items-center justify-between mb-6">
+			<div>
+				<h1 class="text-xl font-semibold">Tickets</h1>
+				<p class="text-sm text-muted-foreground">Board</p>
+			</div>
+		</div>
+
+		<div class="xl:flex xl:items-center xl:justify-center w-full min-h-svh">
 			<TicketsBoard />
 		</div>
 	</div>

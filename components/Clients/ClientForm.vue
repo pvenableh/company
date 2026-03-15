@@ -71,6 +71,47 @@
       </div>
     </div>
 
+    <!-- Billing Contacts -->
+    <div>
+      <label class="block text-sm font-medium mb-1">Billing Contacts</label>
+      <p class="text-xs text-muted-foreground mb-2">Invoice recipients — these emails receive payment links and invoice notifications.</p>
+      <div class="space-y-2 mb-2">
+        <div
+          v-for="(contact, i) in formData.billing_contacts"
+          :key="i"
+          class="flex gap-2 items-center"
+        >
+          <input
+            v-model="contact.name"
+            class="flex-1 rounded-md border bg-background px-3 py-2 text-sm"
+            placeholder="Name"
+          />
+          <input
+            v-model="contact.email"
+            type="email"
+            class="flex-1 rounded-md border bg-background px-3 py-2 text-sm"
+            placeholder="email@example.com"
+          />
+          <button
+            type="button"
+            class="p-1.5 text-muted-foreground/40 hover:text-destructive transition-colors"
+            @click="formData.billing_contacts.splice(i, 1)"
+          >
+            <Icon name="lucide:trash-2" class="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        @click="formData.billing_contacts.push({ name: '', email: '' })"
+      >
+        <Icon name="lucide:plus" class="w-3 h-3 mr-1" />
+        Add Contact
+      </Button>
+    </div>
+
     <div>
       <label class="block text-sm font-medium mb-1">Notes</label>
       <textarea
@@ -119,6 +160,7 @@ const formData = reactive({
   industry: props.client?.industry || '',
   notes: props.client?.notes || '',
   tags: [...(props.client?.tags || [])] as string[],
+  billing_contacts: [...(props.client?.billing_contacts || [])] as { name: string; email: string }[],
 });
 
 const newTag = ref('');
@@ -144,6 +186,9 @@ function handleSubmit() {
     industry: formData.industry || undefined,
     notes: formData.notes || undefined,
     tags: formData.tags.length ? formData.tags : undefined,
+    billing_contacts: formData.billing_contacts.filter(c => c.email?.trim()).length
+      ? formData.billing_contacts.filter(c => c.email?.trim())
+      : undefined,
   });
 }
 </script>

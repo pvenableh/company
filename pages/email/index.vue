@@ -94,9 +94,9 @@ onMounted(async () => {
 <template>
 	<div class="p-6 max-w-7xl mx-auto">
 		<!-- Header -->
-		<div class="flex items-center justify-between mb-8">
+		<div class="flex items-center justify-between mb-6">
 			<div>
-				<h1 class="text-2xl font-bold text-gray-900 dark:text-white">Email</h1>
+				<h1 class="text-xl font-semibold">Email</h1>
 				<p class="text-sm text-muted-foreground">Create campaigns, manage templates and mailing lists</p>
 			</div>
 			<div class="flex gap-2">
@@ -145,7 +145,7 @@ onMounted(async () => {
 				<div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-rose-50 dark:bg-rose-900/20 flex items-center justify-center">
 					<Icon name="lucide:mail-plus" class="w-8 h-8 text-rose-400" />
 				</div>
-				<h3 class="font-semibold text-gray-900 dark:text-white mb-1">No email templates yet</h3>
+				<h3 class="font-semibold text-foreground mb-1">No email templates yet</h3>
 				<p class="text-sm text-muted-foreground mb-4">Create your first email template to start sending campaigns</p>
 				<Button @click="showNewTemplate = true">
 					<Icon name="lucide:plus" class="w-4 h-4 mr-1" />
@@ -174,7 +174,7 @@ onMounted(async () => {
 							{{ tpl.status || 'draft' }}
 						</span>
 					</div>
-					<h3 class="font-semibold text-gray-900 dark:text-white mb-1 group-hover:text-primary transition-colors">{{ tpl.name }}</h3>
+					<h3 class="font-semibold text-foreground mb-1 group-hover:text-primary transition-colors">{{ tpl.name }}</h3>
 					<p class="text-xs text-muted-foreground capitalize">{{ tpl.type || 'newsletter' }}</p>
 				</div>
 
@@ -202,7 +202,7 @@ onMounted(async () => {
 				<div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
 					<Icon name="lucide:list" class="w-8 h-8 text-blue-400" />
 				</div>
-				<h3 class="font-semibold text-gray-900 dark:text-white mb-1">No mailing lists yet</h3>
+				<h3 class="font-semibold text-foreground mb-1">No mailing lists yet</h3>
 				<p class="text-sm text-muted-foreground mb-4">Create a mailing list to organize your contacts for campaigns</p>
 				<NuxtLink to="/lists">
 					<Button variant="outline">Create Mailing List</Button>
@@ -220,7 +220,7 @@ onMounted(async () => {
 							<Icon name="lucide:users" class="w-5 h-5 text-blue-500" />
 						</div>
 						<div class="flex-1 min-w-0">
-							<h3 class="font-semibold text-gray-900 dark:text-white truncate">{{ list.name }}</h3>
+							<h3 class="font-semibold text-foreground truncate">{{ list.name }}</h3>
 							<p class="text-xs text-muted-foreground">{{ list.subscriber_count || 0 }} subscribers</p>
 						</div>
 					</div>
@@ -302,10 +302,10 @@ onMounted(async () => {
 		<!-- New Template Modal -->
 		<div v-if="showNewTemplate" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="showNewTemplate = false">
 			<div class="bg-background rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
-				<h2 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Create Email Template</h2>
+				<h2 class="text-lg font-semibold mb-4 text-foreground">Create Email Template</h2>
 				<div class="space-y-4">
 					<div>
-						<label class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Template Name</label>
+						<label class="text-sm font-medium text-foreground/80 mb-1.5 block">Template Name</label>
 						<input
 							v-model="newTemplateName"
 							type="text"
@@ -315,7 +315,7 @@ onMounted(async () => {
 						/>
 					</div>
 					<div>
-						<label class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 block">Type</label>
+						<label class="text-sm font-medium text-foreground/80 mb-1.5 block">Type</label>
 						<div class="grid grid-cols-2 gap-3">
 							<button
 								class="p-3 rounded-lg border-2 text-left transition-all"
