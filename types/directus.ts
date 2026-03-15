@@ -2580,13 +2580,13 @@ export interface TimeEntry {
 	status?: 'running' | 'completed' | 'archived' | null;
 	sort?: number | null;
 	/** @required */
-	organization: string;
+	organization: Organization | string;
 	/** @required */
-	user: string;
-	client?: string | null;
-	project?: string | null;
-	ticket?: string | null;
-	task?: string | null;
+	user: DirectusUser | string;
+	client?: Client | string | null;
+	project?: Project | string | null;
+	ticket?: Ticket | string | null;
+	task?: Task | string | null;
 	description?: string | null;
 	/** @required */
 	start_time: string;
@@ -2599,11 +2599,11 @@ export interface TimeEntry {
 	/** @description Rate snapshot at time of entry */
 	hourly_rate?: number | null;
 	billed?: boolean | null;
-	invoice?: string | null;
+	invoice?: Invoice | string | null;
 	tags?: string[] | null;
-	user_created?: string | null;
+	user_created?: DirectusUser | string | null;
 	date_created?: string | null;
-	user_updated?: string | null;
+	user_updated?: DirectusUser | string | null;
 	date_updated?: string | null;
 }
 
