@@ -18,6 +18,8 @@ import type {
 
 export function useProjectTimeline() {
   const { user } = useDirectusAuth();
+  const { getOrganizationFilter } = useOrganization();
+  const { getClientFilter } = useClients();
   const projects = useDirectusItems<Project>('projects');
   const events = useDirectusItems<ProjectEvent>('project_events');
   const tasks = useDirectusItems<ProjectTask>('project_tasks');
@@ -89,9 +91,21 @@ export function useProjectTimeline() {
     error.value = null;
 
     try {
+      const filter: Record<string, any> = { _and: [{ status: { _in: TIMELINE_VISIBLE_STATUSES } }] };
+
+      const orgFilter = getOrganizationFilter();
+      if (Object.keys(orgFilter).length > 0) {
+        filter._and.push(orgFilter);
+      }
+
+      const clientFilter = getClientFilter();
+      if (Object.keys(clientFilter).length > 0) {
+        filter._and.push(clientFilter);
+      }
+
       const result = await projects.list({
         fields: projectFields,
-        filter: { status: { _in: TIMELINE_VISIBLE_STATUSES } },
+        filter,
         sort: ['sort', 'start_date'],
         limit: -1,
       });

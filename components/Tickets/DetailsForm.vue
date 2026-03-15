@@ -143,7 +143,7 @@ const currentUser = computed(() => {
 });
 const toast = useToast();
 const { hasMultipleOrgs, organizationOptions } = useOrganization();
-const { teams, loading: teamsLoading, fetchTeams, setTeam, ADMIN_ROLE_ID, CLIENT_MANAGER_ROLE_ID } = useTeams();
+const { teams, visibleTeams, loading: teamsLoading, fetchTeams, setTeam, ADMIN_ROLE_ID, CLIENT_MANAGER_ROLE_ID } = useTeams();
 
 // Local state for teams - decoupled from global state
 const localTeamId = ref(null);

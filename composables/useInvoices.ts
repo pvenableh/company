@@ -106,6 +106,44 @@ export function useInvoices() {
     });
   };
 
+  /**
+   * Generate the next invoice code for a client.
+   * Format: {CLIENT_CODE}-{PADDED_NUMBER} (e.g. ABC-0001)
+   */
+  const generateInvoiceCode = async (clientId: string): Promise<string | null> => {
+    const clientItems = useDirectusItems('clients');
+
+    try {
+      // Fetch the client's code
+      const client = await clientItems.get(clientId, { fields: ['id', 'code'] });
+      const code = (client as any)?.code;
+      if (!code) return null;
+
+      // Count existing invoices for this client to determine next number
+      const existing = await items.list({
+        fields: ['invoice_code'],
+        filter: { client: { _eq: clientId } },
+        sort: ['-invoice_code'],
+        limit: 1,
+      });
+
+      let nextNum = 1;
+
+      if (existing.length > 0 && existing[0].invoice_code) {
+        // Try to extract the number from the last invoice code
+        const match = existing[0].invoice_code.match(/-(\d+)$/);
+        if (match) {
+          nextNum = parseInt(match[1], 10) + 1;
+        }
+      }
+
+      return `${code.toUpperCase()}-${String(nextNum).padStart(4, '0')}`;
+    } catch (e) {
+      console.warn('Could not generate invoice code:', e);
+      return null;
+    }
+  };
+
   return {
     getInvoices,
     getInvoice,
@@ -113,5 +151,6 @@ export function useInvoices() {
     updateInvoice,
     deleteInvoice,
     getProducts,
+    generateInvoiceCode,
   };
 }

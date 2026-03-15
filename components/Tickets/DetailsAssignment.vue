@@ -228,7 +228,7 @@ watch(
 		if (newOrgId !== oldOrgId || newTeamId !== oldTeamId) {
 			console.log('Organization or team changed, refreshing users');
 
-			if (newOrgId && newTeamId) {
+			if (newOrgId) {
 				await fetchFilteredUsers(newOrgId, newTeamId);
 			}
 		}

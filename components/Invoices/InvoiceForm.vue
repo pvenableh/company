@@ -177,7 +177,7 @@ const statusOptions = [
 // --- Fetch dropdown data ---
 const { organizations } = useOrganization();
 const { getClientOptions } = useClients();
-const { getProducts } = useInvoices();
+const { getProducts, generateInvoiceCode } = useInvoices();
 const projectItems = useDirectusItems('projects');
 
 const orgs = computed(() => organizations.value || []);
@@ -329,6 +329,22 @@ function handleSubmit() {
 
   emit('save', payload);
 }
+
+// --- Auto-generate invoice code when client changes (new invoices only) ---
+watch(
+  () => formData.client,
+  async (newClientId) => {
+    if (!newClientId || props.invoice) return; // Only for new invoices
+    try {
+      const code = await generateInvoiceCode(newClientId);
+      if (code) {
+        formData.invoice_code = code;
+      }
+    } catch (e) {
+      // Silently fail — user can still enter manually
+    }
+  },
+);
 
 // --- Fetch dropdown data on mount ---
 onMounted(async () => {

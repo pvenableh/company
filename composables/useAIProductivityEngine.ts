@@ -86,9 +86,11 @@ export const useAIProductivityEngine = () => {
 	const { user } = useDirectusAuth();
 	const { selectedOrg } = useOrganization();
 	const { selectedTeam } = useTeams();
+	const { selectedClient, getClientFilter } = useClients();
 
-	// Build org/team filter fragments for Directus queries
+	// Build org/team/client filter fragments for Directus queries
 	const orgFilter = () => selectedOrg.value ? { organization: { _eq: selectedOrg.value } } : {};
+	const clientFilter = () => getClientFilter();
 
 	// ─── Helpers ──────────────────────────────────────────────────────────────
 
@@ -146,6 +148,7 @@ export const useAIProductivityEngine = () => {
 				filter: {
 					status: { _nin: ['completed', 'archived'] },
 					...orgFilter(),
+					...clientFilter(),
 				},
 				sort: ['due_date'],
 				limit: 50,
@@ -193,6 +196,7 @@ export const useAIProductivityEngine = () => {
 
 			// Count completed today for metrics
 			try {
+				const cFilter = clientFilter();
 				const completedTickets = await ticketItems.list({
 					fields: ['id'],
 					filter: {
@@ -200,6 +204,7 @@ export const useAIProductivityEngine = () => {
 							{ status: { _eq: 'completed' } },
 							{ date_updated: { _gte: todayISO() } },
 							...(selectedOrg.value ? [{ organization: { _eq: selectedOrg.value } }] : []),
+							...(Object.keys(cFilter).length > 0 ? [cFilter] : []),
 						],
 					},
 					limit: 100,
@@ -227,6 +232,7 @@ export const useAIProductivityEngine = () => {
 				filter: {
 					status: { _nin: ['completed', 'Archived'] },
 					...orgFilter(),
+					...clientFilter(),
 				},
 				sort: ['due_date'],
 				limit: 50,
@@ -381,6 +387,7 @@ export const useAIProductivityEngine = () => {
 				filter: {
 					status: { _in: ['pending', 'processing'] },
 					...orgFilter(),
+					...clientFilter(),
 				},
 				sort: ['due_date'],
 				limit: 50,
@@ -448,7 +455,7 @@ export const useAIProductivityEngine = () => {
 			// Get channels the user has access to
 			const channels = await channelItems.list({
 				fields: ['id', 'name'],
-				filter: { status: { _eq: 'published' }, ...orgFilter() },
+				filter: { status: { _eq: 'published' }, ...orgFilter(), ...clientFilter() },
 				limit: 50,
 			});
 
@@ -1131,6 +1138,15 @@ export const useAIProductivityEngine = () => {
 	function setModuleCache(module: string, data: TaskSuggestion[]): void {
 		_moduleCache.set(module, { data, expiresAt: Date.now() + MODULE_CACHE_TTL });
 	}
+
+	function clearCache(): void {
+		_moduleCache.clear();
+	}
+
+	// Invalidate cache when org/client/team changes so next analysis uses fresh data
+	watch([selectedOrg, selectedClient, selectedTeam], () => {
+		clearCache();
+	});
 
 	// ─── Main Analysis ────────────────────────────────────────────────────────
 

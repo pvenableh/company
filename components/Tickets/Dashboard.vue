@@ -1046,9 +1046,10 @@ watch(
 	{ deep: true },
 );
 
-// Watch for organization changes which should trigger an immediate refresh
+// Watch for organization or client changes which should trigger an immediate refresh
+const { selectedClient } = useClients();
 watch(
-	[selectedOrg],
+	[selectedOrg, selectedClient],
 	() => {
 		applyFilters();
 	},

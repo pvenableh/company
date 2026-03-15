@@ -1,6 +1,7 @@
 <script setup>
 import updateAvatarSource from '~~/composables/useAvatar';
 import { Toaster } from 'vue-sonner';
+import 'vue-sonner/style.css';
 
 const { user } = useDirectusAuth();
 const runtimeConfig = useRuntimeConfig();
