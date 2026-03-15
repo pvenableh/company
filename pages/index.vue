@@ -51,11 +51,12 @@ watch(user, (newUser) => {
 	}
 });
 
-// Re-run analysis when org/team changes
+// Re-run analysis when org/client/team changes
 const { selectedOrg } = useOrganization();
 const { selectedTeam } = useTeams();
+const { selectedClient } = useClients();
 
-watch([selectedOrg, selectedTeam], () => {
+watch([selectedOrg, selectedClient, selectedTeam], () => {
 	if (user.value) {
 		runAnalysis();
 	}

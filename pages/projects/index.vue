@@ -7,6 +7,7 @@ const user = computed(() => {
 const { user: directusUser } = useDirectusAuth();
 const { canAccess } = useRole();
 const { selectedOrg, getOrganizationFilter } = useOrganization();
+const { selectedClient, getClientFilter } = useClients();
 
 const isAdmin = computed(() => canAccess('projects'));
 
@@ -31,6 +32,11 @@ const fetchTableProjects = async () => {
 		const orgFilter = getOrganizationFilter();
 		if (Object.keys(orgFilter).length > 0) {
 			Object.assign(filter, orgFilter);
+		}
+
+		const clientFilter = getClientFilter();
+		if (Object.keys(clientFilter).length > 0) {
+			Object.assign(filter, clientFilter);
 		}
 
 		tableProjects.value = await projectItems.list({
@@ -58,7 +64,7 @@ const fetchTableProjects = async () => {
 };
 
 // Fetch table data when view switches to table or org changes
-watch([() => activeView.value, selectedOrg], ([view]) => {
+watch([() => activeView.value, selectedOrg, selectedClient], ([view]) => {
 	if (view === 'table') {
 		fetchTableProjects();
 	}

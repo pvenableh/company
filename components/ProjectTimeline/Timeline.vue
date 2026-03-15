@@ -50,6 +50,13 @@ function handleZoomReset() {
 
 // Watch for user becoming available (session hydration may not be complete at mount)
 const { user: authUser } = useDirectusAuth();
+const { selectedOrg } = useOrganization();
+const { selectedClient } = useClients();
+
+// Re-fetch when organization or client changes
+watch([selectedOrg, selectedClient], () => {
+    fetchProjects();
+});
 
 watch(
   () => authUser.value?.id,

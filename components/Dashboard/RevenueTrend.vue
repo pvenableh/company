@@ -20,7 +20,7 @@
           <VisAxis type="x" :tick-format="(i: number) => chartData[i]?.label || ''" :grid-line="false" />
           <VisAxis type="y" :tick-format="(v: number) => '$' + (v >= 1000 ? (v/1000).toFixed(0) + 'k' : v.toString())" :grid-line="true" />
           <VisTooltip />
-          <VisCrosshair template="" />
+          <VisCrosshair :template="(d: any) => ''" :hide-when-far-from-pointer="false" />
         </VisXYContainer>
       </ChartContainer>
     </div>

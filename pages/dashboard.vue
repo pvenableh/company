@@ -67,15 +67,29 @@ const invoiceStats = computed(() => {
 	};
 });
 
-onMounted(async () => {
+const { selectedClient } = useClients();
+const { selectedOrg } = useOrganization();
+
+const loadInvoices = async () => {
+	invoiceLoading.value = true;
 	try {
 		const result = await getInvoices({ limit: 500 });
-		invoices.value = result.data;
+		invoices.value = result?.data || [];
 	} catch (e) {
 		console.error('Failed to load invoice data for dashboard:', e);
+		invoices.value = [];
 	} finally {
 		invoiceLoading.value = false;
 	}
+};
+
+onMounted(() => {
+	loadInvoices();
+});
+
+// Re-fetch when client or org changes
+watch([selectedClient, selectedOrg], () => {
+	loadInvoices();
 });
 </script>
 

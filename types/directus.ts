@@ -907,6 +907,8 @@ export interface Client {
 	primary_contact?: Contact | string | null;
 	folder?: DirectusFolder | string | null;
 	billing_contacts?: { name: string; email: string }[] | null;
+	/** @description Short code for invoice numbering (e.g., ABC, XYZ) */
+	code?: string | null;
 }
 
 export interface ClientTestimonial {

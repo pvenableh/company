@@ -212,6 +212,7 @@ const projectItems = useDirectusItems('projects');
 const { user } = useDirectusAuth();
 const { selectedOrg, hasMultipleOrgs, organizationOptions, setOrganization, clearOrganization, getOrganizationFilter } =
 	useOrganization();
+const { selectedClient, getClientFilter } = useClients();
 
 const columns = [
 	{ id: 'Pending', name: 'Pending', color: 'cyan' },
@@ -356,6 +357,12 @@ const getFilter = () => {
 		filter._and.push(orgFilter);
 	}
 
+	// Client filter
+	const clientFilter = getClientFilter();
+	if (Object.keys(clientFilter).length > 0) {
+		filter._and.push(clientFilter);
+	}
+
 	// Service filter
 	if (selectedService.value) {
 		filter._and.push({
@@ -400,7 +407,7 @@ const {
 	refresh,
 } = useRealtimeSubscription('projects', fields, filterRef.value, '-date_updated');
 
-watch([() => projects.value, selectedOrg, selectedService, filterByAssignedTo], ([newProjects]) => {
+watch([() => projects.value, selectedOrg, selectedClient, selectedService, filterByAssignedTo], ([newProjects]) => {
 	if (!newProjects) return;
 
 	const filtered = newProjects.filter((project) => {
@@ -410,7 +417,8 @@ watch([() => projects.value, selectedOrg, selectedService, filterByAssignedTo], 
 		if (filterByAssignedTo.value && user.value) {
 			assignmentMatch = project.assigned_to?.some((assignment) => assignment.directus_users_id?.id === user.value.id);
 		}
-		return orgMatch && serviceMatch && assignmentMatch;
+		const clientMatch = true; // Client filtering is handled server-side via subscription
+		return orgMatch && clientMatch && serviceMatch && assignmentMatch;
 	});
 
 	columns.forEach((column) => {
@@ -422,6 +430,14 @@ watch(
 	() => selectedOrg.value,
 	async (newOrg) => {
 		console.log('Organization changed:', newOrg);
+		refresh();
+	},
+);
+
+watch(
+	() => selectedClient.value,
+	() => {
+		console.log('Client changed, refreshing projects');
 		refresh();
 	},
 );

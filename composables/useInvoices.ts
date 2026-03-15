@@ -106,6 +106,56 @@ export function useInvoices() {
     });
   };
 
+  /**
+   * Generate the next invoice code for a client.
+   * Format: INV-{CLIENT_CODE}-{YEAR}-{PADDED_NUMBER} (e.g. INV-AGC-2026-0001)
+   * Year is derived from invoiceDate (falls back to current date).
+   * Count is based on all invoices for this client in that year (by invoice_date).
+   */
+  const generateInvoiceCode = async (clientId: string, invoiceDate?: string): Promise<string | null> => {
+    const clientItems = useDirectusItems('clients');
+
+    try {
+      // Fetch the client's code
+      const client = await clientItems.get(clientId, { fields: ['id', 'code'] });
+      const code = (client as any)?.code;
+      if (!code) return null;
+
+      // Derive year from invoice date or current date
+      let year = new Date().getFullYear();
+      if (invoiceDate) {
+        const parsed = new Date(invoiceDate);
+        if (!isNaN(parsed.getTime())) {
+          year = parsed.getFullYear();
+        }
+      }
+
+      // Count existing invoices for this client in the same year (by invoice_date)
+      const yearStart = `${year}-01-01`;
+      const yearEnd = `${year}-12-31`;
+
+      const yearInvoices = await items.list({
+        fields: ['id'],
+        filter: {
+          _and: [
+            { client: { _eq: clientId } },
+            { invoice_date: { _gte: yearStart } },
+            { invoice_date: { _lte: yearEnd } },
+          ],
+        },
+        limit: -1,
+      });
+
+      const nextNum = yearInvoices.length + 1;
+      const clientCode = code.toUpperCase();
+
+      return `INV-${clientCode}-${year}-${String(nextNum).padStart(4, '0')}`;
+    } catch (e) {
+      console.warn('Could not generate invoice code:', e);
+      return null;
+    }
+  };
+
   return {
     getInvoices,
     getInvoice,
@@ -113,5 +163,6 @@ export function useInvoices() {
     updateInvoice,
     deleteInvoice,
     getProducts,
+    generateInvoiceCode,
   };
 }
