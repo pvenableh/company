@@ -108,9 +108,11 @@ export function useInvoices() {
 
   /**
    * Generate the next invoice code for a client.
-   * Format: {CLIENT_CODE}-{YEAR}-{PADDED_NUMBER} (e.g. AGC-2026-0001)
+   * Format: INV-{CLIENT_CODE}-{YEAR}-{PADDED_NUMBER} (e.g. INV-AGC-2026-0001)
+   * Year is derived from invoiceDate (falls back to current date).
+   * Count is based on all invoices for this client in that year (by invoice_date).
    */
-  const generateInvoiceCode = async (clientId: string): Promise<string | null> => {
+  const generateInvoiceCode = async (clientId: string, invoiceDate?: string): Promise<string | null> => {
     const clientItems = useDirectusItems('clients');
 
     try {
@@ -119,33 +121,35 @@ export function useInvoices() {
       const code = (client as any)?.code;
       if (!code) return null;
 
-      const year = new Date().getFullYear();
-      const prefix = `${code.toUpperCase()}-${year}-`;
-
-      // Find the highest numbered invoice for this client+year
-      const existing = await items.list({
-        fields: ['invoice_code'],
-        filter: {
-          _and: [
-            { client: { _eq: clientId } },
-            { invoice_code: { _starts_with: prefix } },
-          ],
-        },
-        sort: ['-invoice_code'],
-        limit: 1,
-      });
-
-      let nextNum = 1;
-
-      if (existing.length > 0 && existing[0].invoice_code) {
-        // Extract the number from the last invoice code (after the year)
-        const match = existing[0].invoice_code.match(/-(\d+)$/);
-        if (match) {
-          nextNum = parseInt(match[1], 10) + 1;
+      // Derive year from invoice date or current date
+      let year = new Date().getFullYear();
+      if (invoiceDate) {
+        const parsed = new Date(invoiceDate);
+        if (!isNaN(parsed.getTime())) {
+          year = parsed.getFullYear();
         }
       }
 
-      return `${prefix}${String(nextNum).padStart(4, '0')}`;
+      // Count existing invoices for this client in the same year (by invoice_date)
+      const yearStart = `${year}-01-01`;
+      const yearEnd = `${year}-12-31`;
+
+      const yearInvoices = await items.list({
+        fields: ['id'],
+        filter: {
+          _and: [
+            { client: { _eq: clientId } },
+            { invoice_date: { _gte: yearStart } },
+            { invoice_date: { _lte: yearEnd } },
+          ],
+        },
+        limit: -1,
+      });
+
+      const nextNum = yearInvoices.length + 1;
+      const clientCode = code.toUpperCase();
+
+      return `INV-${clientCode}-${year}-${String(nextNum).padStart(4, '0')}`;
     } catch (e) {
       console.warn('Could not generate invoice code:', e);
       return null;

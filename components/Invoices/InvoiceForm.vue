@@ -330,21 +330,21 @@ function handleSubmit() {
   emit('save', payload);
 }
 
-// --- Auto-generate invoice code when client changes (new invoices only) ---
-watch(
-  () => formData.client,
-  async (newClientId) => {
-    if (!newClientId || props.invoice) return; // Only for new invoices
-    try {
-      const code = await generateInvoiceCode(newClientId);
-      if (code) {
-        formData.invoice_code = code;
-      }
-    } catch (e) {
-      // Silently fail — user can still enter manually
+// --- Auto-generate invoice code when client or invoice_date changes (new invoices only) ---
+const autoGenerateCode = async () => {
+  if (!formData.client || props.invoice) return; // Only for new invoices
+  try {
+    const code = await generateInvoiceCode(formData.client, formData.invoice_date);
+    if (code) {
+      formData.invoice_code = code;
     }
-  },
-);
+  } catch (e) {
+    // Silently fail — user can still enter manually
+  }
+};
+
+watch(() => formData.client, autoGenerateCode);
+watch(() => formData.invoice_date, autoGenerateCode);
 
 // --- Fetch dropdown data on mount ---
 onMounted(async () => {
