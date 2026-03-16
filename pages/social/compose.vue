@@ -12,6 +12,21 @@
 import { format, addHours, roundToNearestMinutes } from 'date-fns';
 import type { SocialAccountPublic, SocialPostTarget, PostType, SocialClient, SocialPlatform } from '~/types/social';
 
+const showAIWizard = ref(false);
+
+function handleAICreated(posts: { platform: SocialPlatform; caption: string }[]) {
+	showAIWizard.value = false;
+	if (posts.length > 0) {
+		caption.value = posts[0].caption;
+	}
+	toast.add({
+		title: 'AI content generated',
+		description: `Created ${posts.length} draft post${posts.length !== 1 ? 's' : ''}`,
+		icon: 'i-lucide-check-circle',
+		color: 'green',
+	});
+}
+
 definePageMeta({
 	layout: 'default',
 	middleware: ['auth'],
@@ -281,10 +296,18 @@ async function submitPost() {
 		<!-- Header -->
 		<div class="flex items-center gap-4 mb-8">
 			<UButton to="/social/dashboard" variant="ghost" icon="i-lucide-arrow-left" size="sm" />
-			<div>
+			<div class="flex-1">
 				<h1 class="text-2xl font-bold text-gray-900 dark:text-white">Create Post</h1>
 				<p class="text-gray-500 dark:text-gray-400 mt-0.5">Schedule content across multiple accounts</p>
 			</div>
+			<UButton
+				variant="soft"
+				color="violet"
+				icon="i-lucide-sparkles"
+				@click="showAIWizard = true"
+			>
+				AI Generate
+			</UButton>
 		</div>
 
 		<div class="grid lg:grid-cols-5 gap-8">
@@ -539,6 +562,13 @@ async function submitPost() {
 				</div>
 			</div>
 		</div>
+
+		<!-- AI Social Wizard -->
+		<SocialAISocialWizard
+			v-if="showAIWizard"
+			@close="showAIWizard = false"
+			@created="handleAICreated"
+		/>
 
 		<!-- New Client Modal -->
 		<UModal v-model="showNewClientModal">

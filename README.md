@@ -12,8 +12,8 @@ A multi-tenant SaaS business management platform built with [Nuxt 3](https://nux
 - **Invoicing & Payments** — Stripe-powered billing, invoice creation and editing, PDF generation (html2canvas + jsPDF), payment tracking, payout management, and public payment links
 - **Scheduling & Video Meetings** — Calendar with public booking links, availability management, Google Calendar and Outlook sync, and built-in Twilio video conferencing
 - **Team Communication** — Slack-style channels per organization with threaded comments, @mentions, emoji reactions, and WebSocket-powered real-time messaging
-- **Social Media Management** — Compose, schedule, and publish to Instagram, TikTok, LinkedIn, Facebook Pages, and Threads; content calendar, engagement analytics, multi-client management, and OAuth account connections
-- **Email Marketing & Newsletters** — Block-based MJML newsletter builder with 17+ reusable blocks, drag-and-drop assembly, live preview, mailing list management with deduplication, CSV contact import, merge-tag personalization via Handlebars, editable header/footer partials, one-click unsubscribe, "View in Browser" web links, and campaign send tracking via SendGrid
+- **Social Media Management** — Compose, schedule, and publish to Instagram, TikTok, LinkedIn, Facebook Pages, and Threads; AI-powered content wizard generates platform-optimized posts with tailored copy, hashtags, and image suggestions; content calendar, engagement analytics, multi-client management, and OAuth account connections
+- **Email Marketing & Newsletters** — Block-based MJML newsletter builder with 17+ reusable blocks, drag-and-drop assembly, live preview, AI email wizard that generates complete templates from a brief description, mailing list management with deduplication, CSV contact import, merge-tag personalization via Handlebars, editable header/footer partials, one-click unsubscribe, "View in Browser" web links, and campaign send tracking via SendGrid
 - **Client Management** — Track the companies your organization serves with status workflows (active, prospect, inactive, churned), industry tagging, primary contact assignment, and linked contacts/projects/tickets/invoices per client
 - **Contact CRM** — Contact management with tagging, custom fields, mailing list membership, subscription tracking, client association, and CSV import/export
 - **AI Command Center** — AI-powered productivity engine that analyzes tickets, projects, tasks, invoices, contacts, deals, channels, social media, scheduling, and phone activity to generate prioritized action items, reminders, insights, and follow-ups; includes productivity scoring (0-100), customizable AI module preferences, team chat, and financial analysis; supports Claude (Anthropic), GPT (OpenAI), and Gemini (Google) backends
@@ -133,7 +133,7 @@ The app will be available at `http://localhost:3000`.
 │   ├── Newsletter/     # Block builder, canvas, variable editor, partials
 │   ├── Contacts/       # Contact forms, tables, merge tag reference
 │   ├── Import/         # CSV column mapper
-│   ├── Social/         # Social media date pickers
+│   ├── Social/         # Social media components, AI content wizard
 │   ├── ProjectTimeline/# Canvas-based timeline visualization
 │   ├── Comments/       # Threaded comment system
 │   ├── Reactions/      # Emoji reactions
@@ -251,7 +251,7 @@ The system is designed for backward compatibility. The legacy `organizations_dir
 
 ## AI Command Center
 
-The platform includes an AI-powered command center that acts as a productivity co-pilot. It analyzes data across every module and generates a prioritized, actionable task list — so your team always knows what to focus on next.
+The platform includes an AI-powered command center that acts as a productivity co-pilot. Because all business data — projects, contacts, invoices, social media, emails, scheduling, and communications — lives in one system, AI can see the full picture and generate insights that isolated tools never could. It analyzes data across every module and generates a prioritized, actionable task list — so your team always knows what to focus on next.
 
 ### How It Works
 
@@ -305,6 +305,25 @@ The AI Productivity Engine (`useAIProductivityEngine.ts`) scans 9 business modul
    - `ai_openai_api_key` — OpenAI API key (optional)
    - `ai_google_api_key` — Google Gemini API key (optional)
 
+## AI Content Generation
+
+Beyond the Command Center's strategic analysis, the platform includes AI-powered content wizards that turn a brief description into ready-to-use marketing assets. Because contacts, projects, brand context, and campaign history all live in one system, AI generates content with real business awareness — not generic copy from a disconnected tool.
+
+### AI Email Wizard
+
+A 3-step modal (`components/Newsletter/AIEmailWizard.vue`) that generates complete email templates from a topic description. Select an email type, describe your message, choose tone and audience, and Claude generates a full multi-section email with subject line, copy, layout suggestions, and image recommendations — all mapped to your existing newsletter block library.
+
+### AI Social Content Wizard
+
+A 3-step modal (`components/Social/AISocialWizard.vue`) that generates platform-optimized social media posts. Select target platforms (LinkedIn, Facebook, Threads, Instagram), describe your content, set tone and audience preferences, and Claude generates uniquely tailored posts for each platform with appropriate character limits, hashtag strategies, calls-to-action, and image suggestions. Posts are saved as drafts — no connected social accounts required.
+
+### LLM Architecture
+
+Both wizards use a provider-agnostic LLM layer:
+- `server/utils/llm/factory.ts` — `getLLMProvider()` factory with provider caching
+- `server/utils/llm/claude.ts` — Anthropic Claude provider (default)
+- `server/utils/llm/types.ts` — `LLMProvider` interface supporting chat, streaming, and multi-model selection
+
 ## Email Marketing System
 
 The platform includes a full email marketing system (MailChimp replacement) built on MJML for responsive emails, Handlebars for personalization, and SendGrid for delivery.
@@ -353,6 +372,16 @@ pnpm tsx scripts/seed-newsletter-blocks.mjs
 ## Social Media Module
 
 The platform includes a full social media management system supporting Instagram, TikTok, LinkedIn, Facebook Pages, and Threads. All platform adapters implement a shared `PlatformAdapter` interface (`server/adapters/types.ts`) for consistent OAuth, publishing, analytics, and comment handling.
+
+### AI Content Generation
+
+The social media module includes an AI-powered content wizard (`components/Social/AISocialWizard.vue`) that generates platform-optimized posts. The 3-step wizard collects topic, content type, tone, audience, and optional CTA preferences, then calls Claude to generate tailored content for each selected platform with appropriate character limits, hashtag strategies, and image suggestions.
+
+**Works without connected accounts** — the AI wizard is a pure content generation tool that creates draft posts. Users can connect social accounts later to schedule and publish. This makes it useful as a standalone copywriting tool even before any OAuth setup.
+
+Key files:
+- `components/Social/AISocialWizard.vue` — 3-step wizard modal (platform selection, tone/audience, review/create)
+- `server/api/social/ai-generate.post.ts` — Server endpoint using `getLLMProvider()` with platform-specific system prompts
 
 ### Architecture
 

@@ -5,12 +5,26 @@
  */
 
 import { format, startOfWeek, endOfWeek, isToday } from 'date-fns'
-import type { SocialPost, SocialAccountPublic, SocialDashboardStats } from '~/types/social'
+import type { SocialPost, SocialAccountPublic, SocialDashboardStats, SocialPlatform } from '~/types/social'
 
 definePageMeta({
   layout: 'default',
   middleware: ['auth'],
 })
+
+const showAIWizard = ref(false)
+const toast = useToast()
+
+function handleAICreated(posts: { platform: SocialPlatform; caption: string }[]) {
+  showAIWizard.value = false
+  toast.add({
+    title: `${posts.length} draft${posts.length !== 1 ? 's' : ''} created`,
+    description: `AI-generated drafts for ${posts.map((p) => p.platform).join(', ')}`,
+    icon: 'i-lucide-check-circle',
+    color: 'green',
+  })
+  refreshNuxtData()
+}
 
 // Fetch data (lazy to avoid blocking page render on Directus errors)
 const { data: accountsData } = useLazyFetch('/api/social/accounts')
@@ -246,6 +260,15 @@ const statusColor = (status: string) => {
               Create Post
             </UButton>
             <UButton
+              block
+              variant="soft"
+              color="violet"
+              icon="i-lucide-sparkles"
+              @click="showAIWizard = true"
+            >
+              AI Generate
+            </UButton>
+            <UButton
               to="/social/calendar"
               block
               variant="soft"
@@ -336,5 +359,12 @@ const statusColor = (status: string) => {
         </UCard>
       </div>
     </div>
+
+    <!-- AI Social Wizard -->
+    <SocialAISocialWizard
+      v-if="showAIWizard"
+      @close="showAIWizard = false"
+      @created="handleAICreated"
+    />
   </div>
 </template>

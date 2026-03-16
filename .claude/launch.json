@@ -4,7 +4,7 @@
     {
       "name": "earnest-dev",
       "runtimeExecutable": "/bin/zsh",
-      "runtimeArgs": ["-c", "source ~/.zshrc && pnpm dev --host localhost"],
+      "runtimeArgs": ["-c", "source ~/.zshrc && pnpm dev --host 0.0.0.0"],
       "port": 3000,
       "autoPort": true
     }

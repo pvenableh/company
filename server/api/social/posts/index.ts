@@ -7,6 +7,13 @@ import { z } from 'zod';
 import { getSocialPosts, createSocialPost, logSocialActivity } from '~/server/utils/social-directus';
 import type { SocialPostTarget } from '~/types/social';
 
+const platformTargetSchema = z.object({
+	platform: z.enum(['instagram', 'tiktok', 'linkedin', 'facebook', 'threads']),
+	account_id: z.string().uuid().optional(),
+	account_name: z.string().optional(),
+	options: z.record(z.unknown()).optional(),
+});
+
 const createPostSchema = z.object({
 	caption: z.string().min(1).max(4000),
 	media_urls: z.array(z.string().url()).max(10).default([]),
@@ -15,20 +22,21 @@ const createPostSchema = z.object({
 		.max(10)
 		.default([]),
 	thumbnail_url: z.string().url().optional(),
-	platforms: z
-		.array(
-			z.object({
-				platform: z.enum(['instagram', 'tiktok', 'linkedin', 'facebook', 'threads']),
-				account_id: z.string().uuid(),
-				account_name: z.string(),
-				options: z.record(z.unknown()).optional(),
-			}),
-		)
-		.min(1),
+	platforms: z.array(platformTargetSchema).default([]),
 	post_type: z.enum(['image', 'video', 'carousel', 'reel', 'story', 'text', 'article']),
-	scheduled_at: z.string().datetime(),
-	status: z.enum(['draft', 'scheduled']).default('scheduled'),
-});
+	scheduled_at: z.string().datetime().optional(),
+	status: z.enum(['draft', 'scheduled']).default('draft'),
+}).refine(
+	(data) => {
+		if (data.status === 'scheduled') {
+			return data.platforms.length >= 1
+				&& data.platforms.every((p) => p.account_id && p.account_name)
+				&& !!data.scheduled_at;
+		}
+		return true;
+	},
+	{ message: 'Scheduled posts require at least one account and a schedule time' },
+);
 
 export default defineEventHandler(async (event) => {
 	const method = getMethod(event);
@@ -74,7 +82,7 @@ export default defineEventHandler(async (event) => {
 			thumbnail_url: data.thumbnail_url || null,
 			platforms: data.platforms as SocialPostTarget[],
 			post_type: data.post_type,
-			scheduled_at: data.scheduled_at,
+			scheduled_at: data.scheduled_at || new Date().toISOString(),
 			status: data.status,
 			publish_results: null,
 			published_at: null,

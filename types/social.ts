@@ -150,3 +150,47 @@ export interface ThreadsMetrics {
 	replies?: number;
 	reposts?: number;
 }
+
+// ── AI Content Generation ──
+
+export type SocialContentType =
+	| 'announcement'
+	| 'behind-the-scenes'
+	| 'promotion'
+	| 'thought-leadership'
+	| 'event'
+	| 'case-study'
+	| 'team-spotlight'
+	| 'industry-news';
+
+export type SocialTone = 'professional' | 'casual' | 'playful' | 'urgent' | 'inspirational';
+
+export type SocialAudience = 'clients' | 'prospects' | 'industry-peers' | 'general-public' | 'team';
+
+export type SocialCTAType = 'visit-website' | 'book-a-call' | 'learn-more' | 'shop-now';
+
+export interface SocialAIGenerateRequest {
+	platforms: SocialPlatform[];
+	contentType: SocialContentType;
+	topic: string;
+	keyPoints?: string;
+	tone: SocialTone;
+	audience: SocialAudience;
+	brandVoice?: string;
+	ctaType?: SocialCTAType;
+}
+
+export interface SocialAIGeneratedPost {
+	platform: SocialPlatform;
+	content: string;
+	hashtags: string[];
+	cta?: string;
+	imageSuggestion: {
+		description: string;
+		searchTerms: string[];
+	};
+}
+
+export interface SocialAIGenerateResponse {
+	posts: SocialAIGeneratedPost[];
+}
