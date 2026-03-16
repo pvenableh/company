@@ -13,7 +13,7 @@
 
 		<!-- iOS Bottom Sheet (nav drawer) -->
 		<ClientOnly>
-			<LayoutNavDrawer :links="drawerLinks" @edit-apps="navEditorOpen = true" />
+			<LayoutNavDrawer @edit-apps="navEditorOpen = true" />
 		</ClientOnly>
 
 		<!-- Nav Editor (edit apps sheet) -->
@@ -39,6 +39,8 @@ interface Link {
 	type: string[];
 	to: string;
 	icon: string;
+	color: string;
+	description: string;
 }
 
 const props = defineProps({
@@ -55,7 +57,6 @@ const navEditorOpen = ref(false);
 const headerLinks = computed(() => props.links.filter((link) => link.type.includes('header')));
 const footerLinks = computed(() => props.links.filter((link) => link.type.includes('footer')));
 const toolbarLinks = computed(() => props.links.filter((link) => link.type.includes('toolbar')));
-const drawerLinks = computed(() => props.links.filter((link) => link.type.includes('drawer')));
 </script>
 
 <style>

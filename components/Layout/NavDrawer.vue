@@ -26,75 +26,64 @@
 
 			<!-- Sheet content -->
 			<div class="sheet-content">
-				<!-- Navigation links -->
-				<div class="ios-group mx-4 mb-4">
+				<!-- App Grid — iPhone home screen style -->
+				<div class="app-grid">
 					<nuxt-link
-						v-for="(link, index) in links"
-						:key="index"
+						v-for="link in links"
+						:key="link.to"
 						:to="link.to"
-						class="sheet-row"
-						:class="{ 'sheet-row-active': route.path === link.to }"
+						class="app-item"
 						@click="closeSheet"
 					>
-						<UIcon :name="link.icon" class="w-5 h-5" />
-						<span class="flex-1">{{ link.name }}</span>
-						<UIcon name="i-heroicons-chevron-right" class="w-4 h-4 text-muted-foreground/40" />
+						<div class="app-icon-wrap">
+							<div
+								:class="[link.color, 'app-icon', { 'app-icon-active': route.path === link.to }]"
+							>
+								<UIcon :name="link.icon" class="icon-inner" />
+							</div>
+						</div>
+						<span class="app-label" :class="{ 'app-label-active': route.path === link.to }">{{ link.name }}</span>
 					</nuxt-link>
 				</div>
 
-				<!-- Edit apps -->
-				<div class="ios-group mx-4 mb-4">
-					<a
-						class="sheet-row cursor-pointer"
-						@click.prevent="handleEditApps"
-					>
-						<UIcon name="i-heroicons-pencil-square" class="w-5 h-5" />
-						<span class="flex-1">Edit Apps</span>
-						<UIcon name="i-heroicons-chevron-right" class="w-4 h-4 text-muted-foreground/40" />
-					</a>
-				</div>
+				<!-- Divider -->
+				<div class="sheet-divider" />
 
-				<!-- Account section -->
-				<div class="ios-group mx-4 mb-4">
-					<nuxt-link
-						v-if="user"
-						to="/organization"
-						class="sheet-row"
-						@click="closeSheet"
-					>
-						<UIcon name="i-heroicons-building-office-2" class="w-5 h-5" />
-						<span class="flex-1">Organization</span>
-						<UIcon name="i-heroicons-chevron-right" class="w-4 h-4 text-muted-foreground/40" />
-					</nuxt-link>
-					<nuxt-link
-						v-if="user"
-						to="/account"
-						class="sheet-row"
-						@click="closeSheet"
-					>
-						<UIcon name="i-heroicons-user-circle" class="w-5 h-5" />
-						<span class="flex-1">Account</span>
-						<UIcon name="i-heroicons-chevron-right" class="w-4 h-4 text-muted-foreground/40" />
-					</nuxt-link>
-				</div>
-
-				<!-- Dark mode + Logout -->
-				<div class="ios-group mx-4 mb-6">
-					<div class="sheet-row">
-						<UIcon name="i-heroicons-moon" class="w-5 h-5" />
-						<span class="flex-1">Dark Mode</span>
-						<DarkModeToggle />
+				<!-- Bottom bar — pill buttons matching TeamSelect / ClientSelect UX -->
+				<div class="bottom-bar">
+					<!-- Left: Account avatar pill + auth pill -->
+					<div class="bar-group">
+						<nuxt-link v-if="user" to="/account" class="pill-btn" @click="closeSheet">
+							<div class="pill-avatar">
+								<img v-if="avatarUrl" :src="avatarUrl" :alt="user?.first_name" class="pill-avatar-img" />
+								<span v-else class="pill-avatar-initials">{{ initials }}</span>
+							</div>
+							<span class="pill-text">Account</span>
+						</nuxt-link>
+						<template v-if="user">
+							<button class="pill-btn pill-destructive" @click="handleLogout">
+								<UIcon name="i-heroicons-arrow-right-start-on-rectangle" class="pill-icon" />
+								<span class="pill-text">Sign Out</span>
+							</button>
+						</template>
+						<nuxt-link v-else to="/auth/signin" class="pill-btn" @click="closeSheet">
+							<UIcon name="i-heroicons-arrow-right-end-on-rectangle" class="pill-icon" />
+							<span class="pill-text">Sign In</span>
+						</nuxt-link>
 					</div>
-					<template v-if="user">
-						<a class="sheet-row cursor-pointer text-destructive" @click.prevent="handleLogout">
-							<UIcon name="i-heroicons-arrow-right-start-on-rectangle" class="w-5 h-5" />
-							<span class="flex-1">Sign Out</span>
-						</a>
-					</template>
-					<nuxt-link v-else to="/auth/signin" class="sheet-row" @click="closeSheet">
-						<UIcon name="i-heroicons-arrow-right-end-on-rectangle" class="w-5 h-5" />
-						<span class="flex-1">Sign In</span>
-					</nuxt-link>
+
+					<!-- Right: Dark mode + Edit pill -->
+					<div class="bar-group">
+						<ClientOnly>
+							<button class="pill-btn pill-icon-only" @click="toggleDark" :aria-label="isDark ? 'Light mode' : 'Dark mode'">
+								<UIcon :name="isDark ? 'i-heroicons-moon' : 'i-heroicons-sun'" class="pill-icon" />
+							</button>
+						</ClientOnly>
+						<button class="pill-btn" @click="handleEditApps">
+							<UIcon name="i-heroicons-pencil-square" class="pill-icon" />
+							<span class="pill-text">Edit</span>
+						</button>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -102,18 +91,18 @@
 </template>
 
 <script setup>
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+
 const route = useRoute();
+const config = useRuntimeConfig();
 const { user } = useDirectusAuth();
 const { logout } = useLogout();
 const { triggerHaptic } = useHaptic();
+const { visibleLinks } = useNavPreferences();
 import { sheetOpen, closeSheet as closeSheetState } from '~~/composables/useScreen';
 
-const props = defineProps({
-	links: {
-		type: Array,
-		default: () => [],
-	},
-});
+// Use composable directly for reactivity — props through NuxtLayout don't propagate changes
+const links = computed(() => visibleLinks.value.filter((l) => l.type.includes('drawer')));
 
 const emit = defineEmits(['edit-apps']);
 
@@ -123,6 +112,26 @@ let startY = 0;
 let isDragging = false;
 
 const isOpen = sheetOpen;
+
+// Avatar
+const avatarUrl = computed(() => {
+	if (!user.value?.avatar) return null;
+	return `${config.public.assetsUrl}${user.value.avatar}?key=avatar`;
+});
+
+const initials = computed(() => {
+	if (!user.value) return 'U';
+	const first = user.value.first_name?.[0] ?? '';
+	const last = user.value.last_name?.[0] ?? '';
+	return (first + last).toUpperCase() || 'U';
+});
+
+// Dark mode
+const colorMode = useColorMode();
+const isDark = computed(() => colorMode.value === 'dark');
+function toggleDark() {
+	colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark';
+}
 
 function closeSheet() {
 	closeSheetState();
@@ -199,12 +208,6 @@ function onTouchEnd() {
 	overscroll-behavior: contain;
 	-webkit-overflow-scrolling: touch;
 	transition: transform 0.15s ease;
-
-	/* iOS sheet material */
-	background: hsl(var(--card));
-}
-
-:is(.dark) .ios-sheet {
 	background: hsl(var(--card));
 }
 
@@ -223,7 +226,7 @@ function onTouchEnd() {
 .sheet-handle-area {
 	display: flex;
 	justify-content: center;
-	padding: 10px 0 6px;
+	padding: 8px 0 4px;
 	cursor: grab;
 }
 
@@ -235,29 +238,215 @@ function onTouchEnd() {
 }
 
 .sheet-content {
-	padding: 8px 0;
+	padding: 0 0 6px;
 }
 
-/* Row items — iOS settings style */
-.sheet-row {
+/* ── App Grid — iPhone home screen ── */
+.app-grid {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 2px 0;
+	padding: 4px 8px 10px;
+}
+
+@media (min-width: 640px) {
+	.app-grid {
+		grid-template-columns: repeat(5, 1fr);
+		gap: 6px 0;
+		padding: 6px 12px 14px;
+	}
+}
+
+.app-item {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 3px;
+	padding: 5px 2px;
+	border-radius: 14px;
+	text-decoration: none;
+	-webkit-tap-highlight-color: transparent;
+	transition: transform 0.15s ease;
+}
+
+@media (min-width: 640px) {
+	.app-item {
+		gap: 5px;
+		padding: 6px 4px;
+	}
+}
+
+.app-item:active {
+	transform: scale(0.9);
+}
+
+.app-icon-wrap {
+	position: relative;
+}
+
+.app-icon {
+	width: 44px;
+	height: 44px;
+	border-radius: 12px;
 	display: flex;
 	align-items: center;
-	gap: 12px;
-	padding: 13px 16px;
-	font-size: 15px;
-	font-weight: 400;
-	color: hsl(var(--foreground));
-	transition: background 0.15s ease;
+	justify-content: center;
+	transition: box-shadow 0.2s ease, transform 0.2s ease;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
+}
+
+@media (min-width: 640px) {
+	.app-icon {
+		width: 52px;
+		height: 52px;
+		border-radius: 14px;
+	}
+}
+
+.icon-inner {
+	width: 20px;
+	height: 20px;
+	color: white;
+}
+
+@media (min-width: 640px) {
+	.icon-inner {
+		width: 24px;
+		height: 24px;
+	}
+}
+
+.app-icon-active {
+	box-shadow: 0 0 0 2.5px hsl(var(--primary)), 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.app-label {
+	font-size: 9px;
+	font-weight: 500;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: hsl(var(--foreground) / 0.7);
+	text-align: center;
+	line-height: 1.1;
+	max-width: 72px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	white-space: normal;
+	word-break: break-word;
+}
+
+@media (min-width: 640px) {
+	.app-label {
+		font-size: 10px;
+		line-height: 1.15;
+		max-width: 80px;
+	}
+}
+
+.app-label-active {
+	color: hsl(var(--primary));
+	font-weight: 600;
+}
+
+/* ── Divider ── */
+.sheet-divider {
+	height: 0.5px;
+	margin: 0 12px;
+	background: hsl(var(--border) / 0.5);
+}
+
+/* ── Bottom bar — pill buttons ── */
+.bottom-bar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 8px 10px 4px;
+	gap: 6px;
+}
+
+.bar-group {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+/* Pill button — matches TeamSelect / ClientSelect pattern */
+.pill-btn {
+	display: flex;
+	align-items: center;
+	gap: 3px;
+	padding: 4px 8px;
+	border-radius: 9999px;
+	background: hsl(var(--background));
+	border: 1px solid hsl(var(--border));
+	font-size: 9px;
+	font-weight: 500;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: hsl(var(--foreground) / 0.7);
+	white-space: nowrap;
+	cursor: pointer;
+	transition: border-color 0.2s ease, color 0.2s ease;
 	-webkit-tap-highlight-color: transparent;
 	text-decoration: none;
+	flex-shrink: 0;
 }
 
-.sheet-row:active {
-	background: hsl(var(--muted) / 0.6);
+.pill-btn:hover,
+.pill-btn:active {
+	border-color: hsl(var(--primary));
+	color: hsl(var(--foreground));
 }
 
-.sheet-row-active {
-	color: hsl(var(--primary));
-	font-weight: 500;
+.pill-destructive {
+	color: hsl(var(--destructive));
+}
+.pill-destructive:hover,
+.pill-destructive:active {
+	border-color: hsl(var(--destructive));
+	color: hsl(var(--destructive));
+}
+
+.pill-icon-only {
+	padding: 4px 6px;
+}
+
+.pill-icon {
+	width: 12px;
+	height: 12px;
+	flex-shrink: 0;
+}
+
+.pill-text {
+	line-height: 1;
+}
+
+/* Avatar inside pill */
+.pill-avatar {
+	width: 16px;
+	height: 16px;
+	border-radius: 9999px;
+	background: hsl(var(--muted));
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
+	flex-shrink: 0;
+}
+
+.pill-avatar-img {
+	width: 16px;
+	height: 16px;
+	object-fit: cover;
+	border-radius: 9999px;
+}
+
+.pill-avatar-initials {
+	font-size: 7px;
+	font-weight: 600;
+	color: hsl(var(--foreground) / 0.6);
 }
 </style>

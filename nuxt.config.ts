@@ -81,6 +81,23 @@ export default defineNuxtConfig({
 				clientSecret: process.env.TIKTOK_CLIENT_SECRET || '',
 				redirectUri: process.env.TIKTOK_REDIRECT_URI || '',
 			},
+			linkedin: {
+				clientId: process.env.LINKEDIN_CLIENT_ID || '',
+				clientSecret: process.env.LINKEDIN_CLIENT_SECRET || '',
+				redirectUri: process.env.LINKEDIN_REDIRECT_URI || '',
+			},
+			facebook: {
+				// Same Meta app as Instagram — falls back to Instagram credentials
+				appId: process.env.FACEBOOK_APP_ID || process.env.INSTAGRAM_APP_ID || '',
+				appSecret: process.env.FACEBOOK_APP_SECRET || process.env.INSTAGRAM_APP_SECRET || '',
+				redirectUri: process.env.FACEBOOK_REDIRECT_URI || '',
+			},
+			threads: {
+				// Same Meta app — falls back to Instagram credentials
+				appId: process.env.THREADS_APP_ID || process.env.INSTAGRAM_APP_ID || '',
+				appSecret: process.env.THREADS_APP_SECRET || process.env.INSTAGRAM_APP_SECRET || '',
+				redirectUri: process.env.THREADS_REDIRECT_URI || '',
+			},
 			encryptionKey: process.env.SOCIAL_ENCRYPTION_KEY || '',
 		},
 		// Directus (server-side - NEVER expose to client)

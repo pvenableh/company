@@ -11,8 +11,8 @@ export type {
 // Re-export SocialClient and SocialPost with augmented fields for frontend use
 export type { SocialClient } from './directus';
 
-export type SocialPlatform = 'instagram' | 'tiktok';
-export type PostType = 'image' | 'video' | 'carousel' | 'reel' | 'story';
+export type SocialPlatform = 'instagram' | 'tiktok' | 'linkedin' | 'facebook' | 'threads';
+export type PostType = 'image' | 'video' | 'carousel' | 'reel' | 'story' | 'text' | 'article';
 export type PostStatus = 'draft' | 'scheduled' | 'publishing' | 'published' | 'failed';
 export type AccountStatus = 'active' | 'expired' | 'revoked';
 
@@ -81,7 +81,7 @@ export interface SocialPostTarget {
 	platform: SocialPlatform;
 	account_id: string;
 	account_name: string;
-	options?: TikTokPostOptions;
+	options?: TikTokPostOptions | LinkedInPostOptions;
 }
 
 export interface TikTokPostOptions {
@@ -90,6 +90,12 @@ export interface TikTokPostOptions {
 	disable_stitch: boolean;
 	disable_comment: boolean;
 	post_mode: 'DIRECT_POST' | 'MEDIA_UPLOAD';
+}
+
+export interface LinkedInPostOptions {
+	visibility: 'PUBLIC' | 'CONNECTIONS';
+	/** LinkedIn author URN — person or organization */
+	author_urn?: string;
 }
 
 export interface PublishResult {
@@ -117,4 +123,30 @@ export interface TikTokMetrics {
 	following_count: number;
 	likes_count: number;
 	video_count: number;
+}
+
+export interface LinkedInMetrics {
+	followers_count: number;
+	connections_count?: number;
+	post_count: number;
+	impressions?: number;
+	clicks?: number;
+	engagement_rate?: number;
+}
+
+export interface FacebookMetrics {
+	followers_count: number;
+	page_likes: number;
+	post_count: number;
+	reach?: number;
+	impressions?: number;
+	engagement_rate?: number;
+}
+
+export interface ThreadsMetrics {
+	followers_count: number;
+	post_count: number;
+	likes?: number;
+	replies?: number;
+	reposts?: number;
 }
