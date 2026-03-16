@@ -3048,6 +3048,8 @@ export interface DirectusUser {
 	text_direction?: 'auto' | 'ltr' | 'rtl';
 	industry?: string | null;
 	networking_goal?: string | null;
+	/** @description JSON preferences for nav visibility and order */
+	nav_preferences?: Record<string, any> | null;
 	organizations?: OrganizationsDirectusUser[] | string[];
 	teams?: JunctionDirectusUsersTeam[] | string[];
 	policies?: DirectusAccess[] | string[];
