@@ -9,23 +9,23 @@ import type { SocialPostTarget } from '~/types/social';
 
 const createPostSchema = z.object({
 	caption: z.string().min(1).max(4000),
-	media_urls: z.array(z.string().url()).min(1).max(10),
+	media_urls: z.array(z.string().url()).max(10).default([]),
 	media_types: z
 		.array(z.enum(['image', 'video']))
-		.min(1)
-		.max(10),
+		.max(10)
+		.default([]),
 	thumbnail_url: z.string().url().optional(),
 	platforms: z
 		.array(
 			z.object({
-				platform: z.enum(['instagram', 'tiktok']),
+				platform: z.enum(['instagram', 'tiktok', 'linkedin', 'facebook', 'threads']),
 				account_id: z.string().uuid(),
 				account_name: z.string(),
 				options: z.record(z.unknown()).optional(),
 			}),
 		)
 		.min(1),
-	post_type: z.enum(['image', 'video', 'carousel', 'reel', 'story']),
+	post_type: z.enum(['image', 'video', 'carousel', 'reel', 'story', 'text', 'article']),
 	scheduled_at: z.string().datetime(),
 	status: z.enum(['draft', 'scheduled']).default('scheduled'),
 });

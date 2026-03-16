@@ -1,108 +1,189 @@
 // composables/useNavPreferences.ts
 // Manages user nav visibility and order preferences.
-// Persists to localStorage per-user so each team member can customize
-// which nav items they see and in what order.
+// Single source of truth for all app entries — used by NavDrawer, NavEditor, and CommandCenter AppGrid.
+// Persists to Directus user profile (nav_preferences field) for cross-device consistency,
+// with localStorage as immediate cache to avoid loading flicker.
 
 export interface NavLink {
 	name: string;
 	type: string[];
 	to: string;
 	icon: string;
+	color: string;
+	description: string;
 }
 
 const STORAGE_KEY = 'nav-preferences';
 
-// Default link definitions — single source of truth
+// Default link definitions — single source of truth for all navigation and app grid UIs
 const DEFAULT_LINKS: NavLink[] = [
 	{
 		name: 'Command Center',
-		type: ['header', 'footer', 'toolbar', 'drawer'],
+		type: ['header', 'toolbar'],
 		to: '/',
 		icon: 'i-heroicons-sparkles',
+		color: 'bg-gradient-to-br from-violet-500 to-purple-600',
+		description: 'AI productivity hub',
 	},
 	{
 		name: 'Statistics',
 		type: ['footer', 'drawer'],
 		to: '/dashboard',
 		icon: 'i-heroicons-squares-2x2',
+		color: 'bg-slate-600',
+		description: 'Analytics overview',
 	},
 	{
 		name: 'Tickets',
 		type: ['header', 'footer', 'toolbar', 'drawer'],
 		to: '/tickets',
 		icon: 'i-heroicons-queue-list',
+		color: 'bg-indigo-500',
+		description: 'Support tickets',
 	},
 	{
 		name: 'Projects',
 		type: ['header', 'footer', 'toolbar', 'drawer'],
 		to: '/projects',
 		icon: 'i-heroicons-square-3-stack-3d',
+		color: 'bg-purple-500',
+		description: 'Track projects',
 	},
 	{
 		name: 'Scheduler',
 		type: ['header', 'footer', 'drawer'],
 		to: '/scheduler',
 		icon: 'i-heroicons-calendar-date-range',
+		color: 'bg-amber-500',
+		description: 'Book meetings',
 	},
 	{
 		name: 'Channels',
 		type: ['header', 'footer', 'drawer'],
 		to: '/channels',
-		icon: 'i-heroicons-square-3-stack-3d',
+		icon: 'i-heroicons-chat-bubble-left-right',
+		color: 'bg-cyan-500',
+		description: 'Team messaging',
 	},
 	{
 		name: 'Invoices',
 		type: ['header', 'footer', 'toolbar', 'drawer'],
 		to: '/invoices',
 		icon: 'i-heroicons-document-text',
+		color: 'bg-emerald-500',
+		description: 'Billing & payments',
 	},
 	{
 		name: 'Time Tracker',
 		type: ['header', 'footer', 'drawer'],
 		to: '/time-tracker',
 		icon: 'i-heroicons-clock',
+		color: 'bg-lime-600',
+		description: 'Track your time',
 	},
 	{
 		name: 'Social',
 		type: ['header', 'footer', 'drawer'],
 		to: '/social/dashboard',
 		icon: 'i-heroicons-share',
+		color: 'bg-pink-500',
+		description: 'Social media',
 	},
 	{
 		name: 'Email',
 		type: ['header', 'footer', 'drawer'],
 		to: '/email',
 		icon: 'i-heroicons-envelope',
+		color: 'bg-rose-500',
+		description: 'Campaigns & lists',
 	},
 	{
 		name: 'Financials',
 		type: ['footer', 'toolbar', 'drawer'],
 		to: '/financials',
-		icon: 'i-heroicons-banknotes',
+		icon: 'i-heroicons-chart-bar',
+		color: 'bg-green-600',
+		description: 'Financial reports',
 	},
 	{
 		name: 'Contacts',
 		type: ['footer', 'drawer'],
 		to: '/contacts',
 		icon: 'i-heroicons-user-group',
+		color: 'bg-orange-500',
+		description: 'Manage contacts',
 	},
 	{
 		name: 'Clients',
 		type: ['footer', 'drawer'],
 		to: '/clients',
 		icon: 'i-heroicons-building-office-2',
+		color: 'bg-gradient-to-br from-orange-400 to-red-500',
+		description: 'Client management',
 	},
 	{
 		name: 'Teams',
 		type: ['header', 'footer', 'drawer'],
 		to: '/organization/teams',
 		icon: 'i-heroicons-user-group',
+		color: 'bg-blue-500',
+		description: 'Team management',
 	},
 	{
 		name: 'Files',
 		type: ['header', 'footer', 'drawer'],
 		to: '/files',
-		icon: 'i-heroicons-folder',
+		icon: 'i-heroicons-folder-open',
+		color: 'bg-sky-500',
+		description: 'File manager',
+	},
+	{
+		name: 'Tasks',
+		type: ['drawer'],
+		to: '/tasks',
+		icon: 'i-heroicons-clipboard-document-check',
+		color: 'bg-blue-500',
+		description: 'Manage your tasks',
+	},
+	{
+		name: 'CardDesk',
+		type: ['drawer'],
+		to: '/carddesk',
+		icon: 'i-heroicons-identification',
+		color: 'bg-gradient-to-br from-orange-400 to-red-500',
+		description: 'Networking CRM',
+	},
+	{
+		name: 'Phone',
+		type: ['drawer'],
+		to: '/phone-settings',
+		icon: 'i-heroicons-phone',
+		color: 'bg-teal-500',
+		description: 'Phone system',
+	},
+	{
+		name: 'AI Chat',
+		type: ['drawer'],
+		to: '/command-center/ai',
+		icon: 'i-heroicons-sparkles',
+		color: 'bg-gradient-to-br from-violet-500 to-purple-600',
+		description: 'AI assistant',
+	},
+	{
+		name: 'Organization',
+		type: ['drawer'],
+		to: '/organization',
+		icon: 'i-heroicons-building-office-2',
+		color: 'bg-gray-700',
+		description: 'Organization settings',
+	},
+	{
+		name: 'Guide',
+		type: ['drawer'],
+		to: '/guide',
+		icon: 'i-heroicons-book-open',
+		color: 'bg-gradient-to-br from-cyan-500 to-blue-500',
+		description: 'Setup tutorial',
 	},
 ];
 
@@ -115,33 +196,49 @@ interface NavPreferencesData {
 const visible = ref<Set<string>>(new Set(DEFAULT_LINKS.map((l) => l.to)));
 const order = ref<string[]>(DEFAULT_LINKS.map((l) => l.to));
 const isLoaded = ref(false);
+let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 
 export const useNavPreferences = () => {
 	const { user } = useDirectusAuth();
+	const { updateMe } = useDirectusUsers();
 
 	const storageKey = computed(() => {
 		const userId = user.value?.id || 'anonymous';
 		return `${STORAGE_KEY}-${userId}`;
 	});
 
+	const applyPreferences = (parsed: NavPreferencesData) => {
+		const allRoutes = DEFAULT_LINKS.map((l) => l.to);
+		const newRoutes = allRoutes.filter((r) => !parsed.order.includes(r));
+		const merged = [
+			...parsed.order.filter((r) => allRoutes.includes(r)),
+			...newRoutes,
+		];
+		order.value = merged;
+		// Auto-show newly added links that weren't in the user's saved preferences
+		visible.value = new Set([...parsed.visible, ...newRoutes]);
+	};
+
 	const load = () => {
 		if (import.meta.server) return;
 		try {
-			const saved = localStorage.getItem(storageKey.value);
-			if (saved) {
-				const parsed = JSON.parse(saved) as NavPreferencesData;
-				visible.value = new Set(parsed.visible);
-				// Merge: saved order first, then any new links not in saved order
-				const allRoutes = DEFAULT_LINKS.map((l) => l.to);
-				const merged = [
-					...parsed.order.filter((r) => allRoutes.includes(r)),
-					...allRoutes.filter((r) => !parsed.order.includes(r)),
-				];
-				order.value = merged;
+			// Try Directus user profile first
+			const directusPrefs = user.value?.nav_preferences as NavPreferencesData | null;
+			if (directusPrefs?.visible && directusPrefs?.order) {
+				applyPreferences(directusPrefs);
+				// Sync to localStorage as cache
+				localStorage.setItem(storageKey.value, JSON.stringify(directusPrefs));
 			} else {
-				// Defaults
-				visible.value = new Set(DEFAULT_LINKS.map((l) => l.to));
-				order.value = DEFAULT_LINKS.map((l) => l.to);
+				// Fall back to localStorage
+				const saved = localStorage.getItem(storageKey.value);
+				if (saved) {
+					const parsed = JSON.parse(saved) as NavPreferencesData;
+					applyPreferences(parsed);
+				} else {
+					// Defaults
+					visible.value = new Set(DEFAULT_LINKS.map((l) => l.to));
+					order.value = DEFAULT_LINKS.map((l) => l.to);
+				}
 			}
 		} catch {
 			visible.value = new Set(DEFAULT_LINKS.map((l) => l.to));
@@ -152,13 +249,21 @@ export const useNavPreferences = () => {
 
 	const save = () => {
 		if (import.meta.server) return;
+		const data: NavPreferencesData = {
+			visible: [...visible.value],
+			order: order.value,
+		};
+		// Save to localStorage immediately (cache)
 		try {
-			const data: NavPreferencesData = {
-				visible: [...visible.value],
-				order: order.value,
-			};
 			localStorage.setItem(storageKey.value, JSON.stringify(data));
 		} catch {}
+		// Debounce Directus save to avoid hammering the API during rapid reordering
+		if (saveTimeout) clearTimeout(saveTimeout);
+		saveTimeout = setTimeout(() => {
+			if (user.value?.id) {
+				updateMe({ nav_preferences: data }).catch(() => {});
+			}
+		}, 500);
 	};
 
 	const toggle = (route: string) => {

@@ -52,5 +52,6 @@ export interface User {
 	email_notifications: boolean | null;
 	company_info: string;
 	preferences_divider: string;
+	nav_preferences: { visible: string[]; order: string[] } | null;
 	admin_divider: string;
 }

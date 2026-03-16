@@ -16,8 +16,9 @@ A step-by-step guide to setting up your organization, building your team, managi
 8. [Step 7: Add Contacts](#step-7-add-contacts)
 9. [Step 8: Invite Clients to the Platform](#step-8-invite-clients-to-the-platform)
 10. [Step 9: Organize Your Workflow](#step-9-organize-your-workflow)
-11. [How It All Connects](#how-it-all-connects)
-12. [FAQ](#faq)
+11. [Step 10: Connect Social Media Accounts](#step-10-connect-social-media-accounts)
+12. [How It All Connects](#how-it-all-connects)
+13. [FAQ](#faq)
 
 ---
 
@@ -326,6 +327,7 @@ With your organization, teams, clients, and contacts set up, here's how to get t
 7. Set primary contacts for each client
 8. Create projects (assign to teams and/or clients)
 9. Invite key client contacts to the platform
+10. Connect social media accounts (Instagram, TikTok, LinkedIn, Facebook, Threads)
 ```
 
 ### Using the Client Filter
@@ -343,6 +345,54 @@ Similarly, you can filter by team to see only the projects and work assigned to 
 - Team standups and check-ins
 - Reviewing a team's workload
 - Assigning new work to the right group
+
+---
+
+## Step 10: Connect Social Media Accounts
+
+If your organization manages social media, connect your accounts to compose, schedule, and publish posts directly from Earnest.
+
+### Supported Platforms
+
+| Platform | Account Type | Notes |
+|----------|-------------|-------|
+| **Instagram** | Business/Creator accounts | Must be linked to a Facebook Page |
+| **TikTok** | Creator/Business accounts | Posts go to inbox as drafts unless audit-approved |
+| **LinkedIn** | Personal profiles + Company Pages | Connects your profile and any pages you manage |
+| **Facebook** | Pages only | Personal profiles are not supported |
+| **Threads** | Personal accounts | Linked to your Instagram identity |
+
+### Connecting an Account
+
+1. Go to **Social Settings** (`/social/settings`).
+2. Find the platform you want to connect.
+3. Click **Connect** — you'll be redirected to the platform's authorization page.
+4. Grant the requested permissions and you'll be returned to Earnest.
+5. Your connected account will appear with an **Active** status badge.
+
+### Managing Accounts
+
+From the Social Settings page you can:
+- **Reconnect** an account if the token has expired (look for the amber/red status badge)
+- **Disconnect** an account you no longer want to post to
+- See how many accounts are connected per platform
+
+### Composing Posts
+
+Once accounts are connected:
+1. Go to **Social Compose** (`/social/compose`).
+2. Select which accounts to post to.
+3. Write your caption, attach media, and choose a post type.
+4. Schedule for a future date/time or save as a draft.
+
+### Platform-Specific Options
+
+- **TikTok** — Set privacy level and toggle comments/duets/stitch
+- **LinkedIn** — Choose visibility (Public or Connections only)
+- **Caption limits** — Instagram: 2,200 chars, LinkedIn: 3,000 chars, TikTok: 4,000 chars
+- **Post types** — Image, video, carousel, reel, story, text (Threads/LinkedIn), article (LinkedIn)
+
+> **Tip:** You can post to multiple platforms simultaneously. Each platform receives the post with its native formatting.
 
 ---
 
@@ -373,6 +423,9 @@ Organization
 │   ├── Linked to Clients (optional)
 │   ├── Mailing Lists (for email campaigns)
 │   └── Email Engagement Tracking
+│
+├── Social Accounts (connected platforms)
+│   └── Posts (scheduled and published content)
 │
 └── Projects
     ├── Assigned to Team (optional)

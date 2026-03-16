@@ -12,7 +12,7 @@ A multi-tenant SaaS business management platform built with [Nuxt 3](https://nux
 - **Invoicing & Payments** — Stripe-powered billing, invoice creation and editing, PDF generation (html2canvas + jsPDF), payment tracking, payout management, and public payment links
 - **Scheduling & Video Meetings** — Calendar with public booking links, availability management, Google Calendar and Outlook sync, and built-in Twilio video conferencing
 - **Team Communication** — Slack-style channels per organization with threaded comments, @mentions, emoji reactions, and WebSocket-powered real-time messaging
-- **Social Media Management** — Compose, schedule, and publish to Instagram and TikTok; content calendar, engagement analytics, multi-client management, and OAuth account connections
+- **Social Media Management** — Compose, schedule, and publish to Instagram, TikTok, LinkedIn, Facebook Pages, and Threads; content calendar, engagement analytics, multi-client management, and OAuth account connections
 - **Email Marketing & Newsletters** — Block-based MJML newsletter builder with 17+ reusable blocks, drag-and-drop assembly, live preview, mailing list management with deduplication, CSV contact import, merge-tag personalization via Handlebars, editable header/footer partials, one-click unsubscribe, "View in Browser" web links, and campaign send tracking via SendGrid
 - **Client Management** — Track the companies your organization serves with status workflows (active, prospect, inactive, churned), industry tagging, primary contact assignment, and linked contacts/projects/tickets/invoices per client
 - **Contact CRM** — Contact management with tagging, custom fields, mailing list membership, subscription tracking, client association, and CSV import/export
@@ -30,6 +30,7 @@ A multi-tenant SaaS business management platform built with [Nuxt 3](https://nux
 - **PWA** — Install as a native-feeling progressive web app on any device
 - **Theme System** — Semantic `t-*` CSS utility classes that adapt to light and dark mode
 - **Marketing Sell Sheet** — Design-forward landing page shown to unauthenticated visitors at `/`
+- **Branded Error Pages** — Earnest-styled error pages (404, 403, 401, 500) with status-specific messaging, editorial typography, and graceful recovery actions
 
 ## Tech Stack
 
@@ -45,7 +46,7 @@ A multi-tenant SaaS business management platform built with [Nuxt 3](https://nux
 | Email | SendGrid, MJML, Handlebars |
 | Video / SMS | Twilio |
 | Calendar | Google Calendar API, Microsoft Outlook (Azure) |
-| Social | Instagram Graph API, TikTok API |
+| Social | Instagram Graph API, TikTok API, LinkedIn API, Facebook Pages API, Threads API |
 | Storage | AWS S3 |
 | Charts | Chart.js, Unovis |
 | Animations | GSAP, VueUse Motion |
@@ -145,7 +146,7 @@ The app will be available at `http://localhost:3000`.
 ├── composables/        # Vue composables (auth, data fetching, real-time, etc.)
 ├── server/
 │   ├── api/            # API routes (auth, directus, stripe, email, social, org, etc.)
-│   ├── adapters/       # Social media platform adapters (Instagram, TikTok)
+│   ├── adapters/       # Social media platform adapters (Instagram, TikTok, LinkedIn, Facebook, Threads)
 │   ├── plugins/        # Nitro plugins (session hooks)
 │   └── utils/          # Server utilities (Directus client, crypto, logging)
 ├── middleware/          # Route middleware (auth, guest)
@@ -180,6 +181,7 @@ The app will be available at `http://localhost:3000`.
 | Social Calendar | `/social/calendar` | Visual content calendar |
 | Social Analytics | `/social/analytics` | Engagement and growth metrics |
 | Social Clients | `/social/clients` | Agency client management |
+| Social Settings | `/social/settings` | Connect and manage platform accounts |
 | Clients | `/clients` | Client list with status filters and search |
 | Client Detail | `/clients/[id]` | Client overview with linked contacts, projects, and tickets |
 | Organizations | `/organization` | Organization and member management |
@@ -350,7 +352,16 @@ pnpm tsx scripts/seed-newsletter-blocks.mjs
 
 ## Social Media Module
 
-The platform includes a full social media management system for Instagram and TikTok. See the in-app setup guide at `/social/setup` for detailed configuration steps.
+The platform includes a full social media management system supporting Instagram, TikTok, LinkedIn, Facebook Pages, and Threads. All platform adapters implement a shared `PlatformAdapter` interface (`server/adapters/types.ts`) for consistent OAuth, publishing, analytics, and comment handling.
+
+### Architecture
+
+Each platform has a dedicated adapter in `server/adapters/` that implements:
+- **OAuth 2.0** — Authorization URL generation, code exchange, token refresh
+- **Account discovery** — Fetch connected profiles, pages, or organizations
+- **Publishing** — Platform-native post creation (text, image, video, carousel, articles)
+- **Analytics** — Account-level metrics and post insights (where supported)
+- **Comments** — Read and reply to comments/replies (where supported)
 
 ### Quick Setup
 
@@ -371,6 +382,21 @@ The platform includes a full social media management system for Instagram and Ti
    TIKTOK_CLIENT_SECRET=
    TIKTOK_REDIRECT_URI=https://your-domain.com/api/social/oauth/tiktok/callback
 
+   # LinkedIn
+   LINKEDIN_CLIENT_ID=
+   LINKEDIN_CLIENT_SECRET=
+   LINKEDIN_REDIRECT_URI=https://your-domain.com/api/social/oauth/linkedin/callback
+
+   # Facebook Pages
+   FACEBOOK_APP_ID=
+   FACEBOOK_APP_SECRET=
+   FACEBOOK_REDIRECT_URI=https://your-domain.com/api/social/oauth/facebook/callback
+
+   # Threads
+   THREADS_APP_ID=
+   THREADS_APP_SECRET=
+   THREADS_REDIRECT_URI=https://your-domain.com/api/social/oauth/threads/callback
+
    # Token encryption (required, min 32 chars)
    SOCIAL_ENCRYPTION_KEY=
    ```
@@ -380,12 +406,15 @@ The platform includes a full social media management system for Instagram and Ti
    pnpm generate:types
    ```
 
-4. **Connect accounts** — navigate to `/social/settings` and click Connect for Instagram or TikTok.
+4. **Connect accounts** — navigate to `/social/settings` and click Connect for any platform.
 
 ### Platform Requirements
 
 - **Instagram**: Requires a Facebook Developer app with Instagram Graph API, and an Instagram Business/Creator account linked to a Facebook Page.
 - **TikTok**: Requires a TikTok Developer app with Login Kit and Content Posting API. Direct posting requires TikTok audit approval; otherwise posts go to inbox as drafts.
+- **LinkedIn**: Requires a LinkedIn Developer app with Community Management API access. Scopes: `openid`, `profile`, `w_member_social`, `r_organization_social`, `w_organization_social`. Connects personal profiles and managed Company Pages. 60-day tokens with refresh support.
+- **Facebook Pages**: Requires a Meta Developer app with Pages API access. Scopes: `pages_manage_posts`, `pages_read_engagement`, `pages_manage_engagement`. Only Facebook Pages you manage can be connected (personal profiles are not supported).
+- **Threads**: Requires a Meta Developer app with Threads API access. Scopes: `threads_basic`, `threads_content_publish`, `threads_manage_insights`, `threads_manage_replies`. Uses container-based publishing similar to Instagram. 60-day long-lived tokens.
 
 ## Theme System
 

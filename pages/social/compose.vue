@@ -10,12 +10,21 @@
  */
 
 import { format, addHours, roundToNearestMinutes } from 'date-fns';
-import type { SocialAccountPublic, SocialPostTarget, PostType, SocialClient } from '~/types/social';
+import type { SocialAccountPublic, SocialPostTarget, PostType, SocialClient, SocialPlatform } from '~/types/social';
 
 definePageMeta({
 	layout: 'default',
 	middleware: ['auth'],
 });
+
+// Platform icon mapping
+const platformIcons: Record<SocialPlatform, string> = {
+	instagram: 'i-lucide-instagram',
+	tiktok: 'i-lucide-music',
+	linkedin: 'i-lucide-linkedin',
+	facebook: 'i-lucide-facebook',
+	threads: 'i-lucide-at-sign',
+};
 
 // Fetch data (lazy to avoid blocking page render on Directus errors)
 const { data: accountsData } = useLazyFetch('/api/social/accounts');
@@ -34,6 +43,9 @@ const scheduledAt = ref(
 	format(roundToNearestMinutes(addHours(new Date(), 1), { nearestTo: 15 }), "yyyy-MM-dd'T'HH:mm"),
 );
 const isDraft = ref(false);
+
+// LinkedIn-specific options
+const linkedInVisibility = ref<'PUBLIC' | 'CONNECTIONS'>('PUBLIC');
 
 // Filter state
 const selectedClientId = ref<string | null>(null);
@@ -70,18 +82,23 @@ const selectedAccountDetails = computed(() => {
 	return accounts.value.filter((a) => selectedAccounts.value.includes(a.id));
 });
 
-const instagramSelected = computed(() => {
-	return selectedAccountDetails.value.some((a) => a.platform === 'instagram');
-});
+// Platform selection detection
+function hasPlatformSelected(platform: SocialPlatform) {
+	return selectedAccountDetails.value.some((a) => a.platform === platform);
+}
 
-const tiktokSelected = computed(() => {
-	return selectedAccountDetails.value.some((a) => a.platform === 'tiktok');
-});
+const instagramSelected = computed(() => hasPlatformSelected('instagram'));
+const tiktokSelected = computed(() => hasPlatformSelected('tiktok'));
+const linkedinSelected = computed(() => hasPlatformSelected('linkedin'));
+const threadsSelected = computed(() => hasPlatformSelected('threads'));
 
 const captionLength = computed(() => caption.value.length);
 const captionWarning = computed(() => {
 	if (instagramSelected.value && captionLength.value > 2200) {
 		return 'Instagram captions max 2,200 characters';
+	}
+	if (linkedinSelected.value && captionLength.value > 3000) {
+		return 'LinkedIn posts max 3,000 characters';
 	}
 	if (tiktokSelected.value && captionLength.value > 4000) {
 		return 'TikTok captions max 4,000 characters';
@@ -89,21 +106,32 @@ const captionWarning = computed(() => {
 	return null;
 });
 
+const captionLimit = computed(() => {
+	if (instagramSelected.value) return '2,200';
+	if (linkedinSelected.value) return '3,000';
+	return '4,000';
+});
+
 const postTypeOptions = [
+	{ value: 'text', label: 'Text', icon: 'i-lucide-type' },
 	{ value: 'image', label: 'Image', icon: 'i-lucide-image' },
 	{ value: 'video', label: 'Video', icon: 'i-lucide-video' },
 	{ value: 'carousel', label: 'Carousel', icon: 'i-lucide-images' },
 	{ value: 'reel', label: 'Reel', icon: 'i-lucide-clapperboard' },
 	{ value: 'story', label: 'Story', icon: 'i-lucide-clock' },
+	{ value: 'article', label: 'Article', icon: 'i-lucide-newspaper' },
 ];
 
 const canSubmit = computed(() => {
-	return (
-		caption.value.trim().length > 0 &&
-		mediaUrls.value.length > 0 &&
-		selectedAccounts.value.length > 0 &&
-		!captionWarning.value
-	);
+	const hasCaption = caption.value.trim().length > 0;
+	const hasMedia = mediaUrls.value.length > 0;
+	const hasAccounts = selectedAccounts.value.length > 0;
+	const noWarning = !captionWarning.value;
+
+	// Text and article posts don't require media
+	const isTextType = postType.value === 'text' || postType.value === 'article';
+
+	return hasCaption && (hasMedia || isTextType) && hasAccounts && noWarning;
 });
 
 const minDateTime = computed(() => format(new Date(), "yyyy-MM-dd'T'HH:mm"));
@@ -200,7 +228,11 @@ async function submitPost() {
 							disable_comment: false,
 							post_mode: 'MEDIA_UPLOAD',
 						}
-					: undefined,
+					: account.platform === 'linkedin'
+						? {
+								visibility: linkedInVisibility.value,
+							}
+						: undefined,
 		}));
 
 		await $fetch('/api/social/posts', {
@@ -264,7 +296,7 @@ async function submitPost() {
 						<div class="flex items-center justify-between">
 							<h2 class="font-semibold text-gray-900 dark:text-white">Caption</h2>
 							<span class="text-xs font-mono" :class="captionWarning ? 'text-red-500' : 'text-gray-400'">
-								{{ captionLength }} / {{ instagramSelected ? '2,200' : '4,000' }}
+								{{ captionLength }} / {{ captionLimit }}
 							</span>
 						</div>
 					</template>
@@ -276,7 +308,10 @@ async function submitPost() {
 				<!-- Media -->
 				<UCard>
 					<template #header>
-						<h2 class="font-semibold text-gray-900 dark:text-white">Media</h2>
+						<div class="flex items-center justify-between">
+							<h2 class="font-semibold text-gray-900 dark:text-white">Media</h2>
+							<span v-if="postType === 'text' || postType === 'article'" class="text-xs text-gray-400">Optional for {{ postType }} posts</span>
+						</div>
 					</template>
 
 					<div v-if="mediaUrls.length > 0" class="grid grid-cols-3 gap-3 mb-4">
@@ -327,6 +362,42 @@ async function submitPost() {
 						>
 							{{ option.label }}
 						</UButton>
+					</div>
+				</UCard>
+
+				<!-- LinkedIn Options -->
+				<UCard v-if="linkedinSelected">
+					<template #header>
+						<div class="flex items-center gap-2">
+							<UIcon name="i-lucide-linkedin" class="w-4 h-4 text-[#0A66C2]" />
+							<h2 class="font-semibold text-gray-900 dark:text-white">LinkedIn Options</h2>
+						</div>
+					</template>
+
+					<div class="space-y-4">
+						<div>
+							<label class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Visibility</label>
+							<div class="flex gap-2">
+								<UButton
+									:variant="linkedInVisibility === 'PUBLIC' ? 'solid' : 'soft'"
+									:color="linkedInVisibility === 'PUBLIC' ? 'primary' : 'gray'"
+									size="sm"
+									icon="i-lucide-globe"
+									@click="linkedInVisibility = 'PUBLIC'"
+								>
+									Public
+								</UButton>
+								<UButton
+									:variant="linkedInVisibility === 'CONNECTIONS' ? 'solid' : 'soft'"
+									:color="linkedInVisibility === 'CONNECTIONS' ? 'primary' : 'gray'"
+									size="sm"
+									icon="i-lucide-users"
+									@click="linkedInVisibility = 'CONNECTIONS'"
+								>
+									Connections Only
+								</UButton>
+							</div>
+						</div>
 					</div>
 				</UCard>
 			</div>
@@ -416,7 +487,7 @@ async function submitPost() {
 												</p>
 												<p class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
 													<UIcon
-														:name="account.platform === 'instagram' ? 'i-lucide-instagram' : 'i-lucide-music'"
+														:name="platformIcons[account.platform] || 'i-lucide-globe'"
 														class="w-3 h-3"
 													/>
 													@{{ account.account_handle }}

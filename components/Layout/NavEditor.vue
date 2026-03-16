@@ -2,7 +2,7 @@
 	<Transition name="sheet-backdrop">
 		<div
 			v-if="isOpen"
-			class="nav-editor-backdrop"
+			class="editor-backdrop"
 			@click="close"
 		/>
 	</Transition>
@@ -11,7 +11,7 @@
 		<div
 			v-if="isOpen"
 			ref="sheetRef"
-			class="nav-editor-sheet"
+			class="editor-sheet"
 			@touchstart="onTouchStart"
 			@touchmove="onTouchMove"
 			@touchend="onTouchEnd"
@@ -23,45 +23,52 @@
 			</div>
 
 			<!-- Header -->
-			<div class="nav-editor-header">
-				<button class="nav-editor-reset" @click="handleReset">Reset</button>
-				<span class="nav-editor-title">Edit Apps</span>
-				<button class="nav-editor-done" @click="close">Done</button>
+			<div class="editor-header">
+				<button class="editor-btn-reset" @click="handleReset">Reset</button>
+				<span class="editor-title">Edit Apps</span>
+				<button class="editor-btn-done" @click="close">Done</button>
 			</div>
 
-			<!-- Draggable list -->
-			<div class="nav-editor-list">
+			<p class="editor-hint">Drag to reorder. Toggle to show or hide apps.</p>
+
+			<!-- Grid editor -->
+			<div class="editor-grid-wrap">
 				<VueDraggable
 					v-model="localOrder"
 					item-key="to"
-					handle=".drag-handle"
-					:animation="200"
-					ghost-class="nav-item-ghost"
-					drag-class="nav-item-drag"
+					:animation="250"
+					ghost-class="grid-item-ghost"
+					drag-class="grid-item-drag"
+					class="editor-grid"
 					@end="onDragEnd"
 				>
 					<template #item="{ element }">
 						<div
-							class="nav-editor-item"
-							:class="{ 'nav-item-hidden': !isVisible(element.to), 'nav-item-jiggle': true }"
+							class="grid-item"
+							:class="{ 'grid-item-hidden': !isVisible(element.to) }"
 						>
-							<!-- Drag handle -->
-							<div class="drag-handle">
-								<UIcon name="i-heroicons-bars-3" class="w-4 h-4 text-muted-foreground" />
+							<!-- Visibility toggle pill — top right corner -->
+							<button
+								class="grid-toggle"
+								:class="isVisible(element.to) ? 'grid-toggle-on' : 'grid-toggle-off'"
+								@click.stop="handleToggle(element.to)"
+							>
+								<UIcon
+									:name="isVisible(element.to) ? 'i-heroicons-check' : 'i-heroicons-minus'"
+									class="w-3 h-3"
+								/>
+							</button>
+
+							<!-- App icon tile -->
+							<div
+								:class="[element.color]"
+								class="grid-icon"
+							>
+								<UIcon :name="element.icon" class="w-6 h-6 text-white" />
 							</div>
 
-							<!-- Icon + name -->
-							<UIcon :name="element.icon" class="w-5 h-5 shrink-0" />
-							<span class="flex-1 text-[15px]">{{ element.name }}</span>
-
-							<!-- Toggle -->
-							<button
-								class="nav-toggle-btn"
-								:class="isVisible(element.to) ? 'nav-toggle-on' : 'nav-toggle-off'"
-								@click="handleToggle(element.to)"
-							>
-								<span class="nav-toggle-knob" />
-							</button>
+							<!-- Label -->
+							<span class="grid-label">{{ element.name }}</span>
 						</div>
 					</template>
 				</VueDraggable>
@@ -145,7 +152,7 @@ function onTouchEnd() {
 @reference "~/assets/css/tailwind.css";
 
 /* Backdrop */
-.nav-editor-backdrop {
+.editor-backdrop {
 	position: fixed;
 	inset: 0;
 	z-index: 52;
@@ -163,7 +170,7 @@ function onTouchEnd() {
 }
 
 /* Sheet */
-.nav-editor-sheet {
+.editor-sheet {
 	position: fixed;
 	bottom: 0;
 	left: 0;
@@ -205,21 +212,21 @@ function onTouchEnd() {
 	background: hsl(var(--muted-foreground) / 0.3);
 }
 
-/* Header bar */
-.nav-editor-header {
+/* Header */
+.editor-header {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	padding: 4px 16px 12px;
+	padding: 4px 16px 4px;
 }
 
-.nav-editor-title {
+.editor-title {
 	font-size: 17px;
 	font-weight: 600;
 	color: hsl(var(--foreground));
 }
 
-.nav-editor-done {
+.editor-btn-done {
 	font-size: 15px;
 	font-weight: 600;
 	color: hsl(var(--primary));
@@ -230,7 +237,7 @@ function onTouchEnd() {
 	-webkit-tap-highlight-color: transparent;
 }
 
-.nav-editor-reset {
+.editor-btn-reset {
 	font-size: 15px;
 	font-weight: 400;
 	color: hsl(var(--muted-foreground));
@@ -241,112 +248,119 @@ function onTouchEnd() {
 	-webkit-tap-highlight-color: transparent;
 }
 
-/* List */
-.nav-editor-list {
-	padding: 0 16px 16px;
+.editor-hint {
+	font-size: 12px;
+	color: hsl(var(--muted-foreground));
+	text-align: center;
+	padding: 0 16px 12px;
 }
 
-/* Item row */
-.nav-editor-item {
+/* ── Grid editor ── */
+.editor-grid-wrap {
+	padding: 0 12px 16px;
+}
+
+.editor-grid {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 4px 0;
+}
+
+@media (min-width: 640px) {
+	.editor-grid {
+		grid-template-columns: repeat(5, 1fr);
+	}
+}
+
+.grid-item {
+	position: relative;
 	display: flex;
+	flex-direction: column;
 	align-items: center;
-	gap: 12px;
-	padding: 12px;
-	margin-bottom: 1px;
-	border-radius: 12px;
-	background: hsl(var(--background));
-	color: hsl(var(--foreground));
-	transition: opacity 0.2s ease, background 0.15s ease;
+	gap: 6px;
+	padding: 10px 4px 8px;
+	border-radius: 16px;
+	cursor: grab;
+	transition: opacity 0.25s ease, transform 0.15s ease;
 	-webkit-tap-highlight-color: transparent;
 }
 
-.nav-editor-item + .nav-editor-item {
-	margin-top: 4px;
-}
-
-.nav-item-hidden {
-	opacity: 0.4;
-}
-
-.nav-item-ghost {
-	opacity: 0.3;
-}
-
-.nav-item-drag {
-	background: hsl(var(--card));
-	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-	border-radius: 12px;
-}
-
-/* Drag handle */
-.drag-handle {
-	cursor: grab;
-	padding: 4px;
-	touch-action: none;
-}
-
-.drag-handle:active {
+.grid-item:active {
 	cursor: grabbing;
 }
 
-/* iOS-style toggle */
-.nav-toggle-btn {
-	position: relative;
-	width: 46px;
-	height: 28px;
-	border-radius: 14px;
+.grid-item-hidden {
+	opacity: 0.35;
+}
+
+.grid-item-ghost {
+	opacity: 0.2;
+}
+
+.grid-item-drag {
+	opacity: 1;
+	z-index: 10;
+	transform: scale(1.08);
+}
+
+.grid-item-drag .grid-icon {
+	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+/* Toggle button — positioned top-right of icon */
+.grid-toggle {
+	position: absolute;
+	top: 4px;
+	right: calc(50% - 32px);
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 	border: none;
 	cursor: pointer;
-	transition: background 0.25s ease;
+	z-index: 2;
+	transition: background 0.2s ease, transform 0.15s ease;
 	-webkit-tap-highlight-color: transparent;
-	flex-shrink: 0;
 }
 
-.nav-toggle-on {
+.grid-toggle:active {
+	transform: scale(0.85);
+}
+
+.grid-toggle-on {
 	background: hsl(var(--primary));
+	color: hsl(var(--primary-foreground));
 }
 
-.nav-toggle-off {
-	background: hsl(var(--muted-foreground) / 0.25);
+.grid-toggle-off {
+	background: hsl(var(--muted-foreground) / 0.35);
+	color: white;
 }
 
-.nav-toggle-knob {
-	position: absolute;
-	top: 2px;
-	width: 24px;
-	height: 24px;
-	border-radius: 12px;
-	background: white;
-	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-	transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+/* Icon tile */
+.grid-icon {
+	width: 52px;
+	height: 52px;
+	border-radius: 14px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
+	transition: box-shadow 0.2s ease;
 }
 
-.nav-toggle-on .nav-toggle-knob {
-	transform: translateX(20px);
-}
-
-.nav-toggle-off .nav-toggle-knob {
-	transform: translateX(2px);
-}
-
-/* iOS jiggle animation */
-@keyframes jiggle {
-	0% { transform: rotate(0deg); }
-	25% { transform: rotate(-0.7deg); }
-	50% { transform: rotate(0deg); }
-	75% { transform: rotate(0.7deg); }
-	100% { transform: rotate(0deg); }
-}
-
-.nav-item-jiggle {
-	animation: jiggle 0.3s ease-in-out infinite;
-}
-
-.nav-item-jiggle:nth-child(even) {
-	animation-delay: 0.15s;
-}
-
-.nav-item-jiggle:nth-child(3n) {
-	animation-duration: 0.35s;
+/* Label */
+.grid-label {
+	font-size: 11px;
+	font-weight: 500;
+	color: hsl(var(--foreground) / 0.7);
+	text-align: center;
+	line-height: 1.2;
+	max-width: 72px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 </style>
