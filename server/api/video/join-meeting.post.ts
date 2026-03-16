@@ -27,7 +27,7 @@ export default defineEventHandler(async (event) => {
 
 	try {
 		// Use admin client since guests may not be authenticated
-		const directus = getTypedDirectus();
+		const directus = getServerDirectus();
 
 		// Get the meeting
 		const meetings = await directus.request(

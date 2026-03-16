@@ -122,10 +122,11 @@ export function useTemplateBuilder(templateId: Ref<number>) {
     if (idx === -1) return;
     const newIdx = direction === 'up' ? idx - 1 : idx + 1;
     if (newIdx < 0 || newIdx >= canvas.value.length) return;
-    const temp = canvas.value[idx];
-    canvas.value[idx] = canvas.value[newIdx];
-    canvas.value[newIdx] = temp;
-    reindex();
+    // Create a new array to trigger watchers in BuilderCanvas
+    const arr = [...canvas.value];
+    [arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]];
+    arr.forEach((b, i) => (b.sort = i));
+    canvas.value = arr;
     isDirty.value = true;
   };
 
@@ -362,6 +363,75 @@ ${sections.join('\n')}
     isDirty.value = true;
   };
 
+  // ── AI Populate ─────────────────────────────────────────────────────
+  /**
+   * Populate the canvas from AI-generated sections.
+   * Matches each section to a real block from the library, then fills its variables.
+   */
+  const populateFromAI = (
+    sections: Array<{ blockCategory: string; blockName: string; variables: Record<string, any> }>,
+    blockLibrary: Record<string, NewsletterBlock[]>,
+  ) => {
+    // Flatten library into a single array for matching
+    const allBlocks = Object.values(blockLibrary).flat();
+
+    const newCanvas: CanvasBlock[] = [];
+
+    for (const section of sections) {
+      // Try exact name + category match first, then name-only, then category fallback
+      const block =
+        allBlocks.find(
+          (b) => b.name?.toLowerCase() === section.blockName?.toLowerCase()
+            && b.category === section.blockCategory,
+        )
+        || allBlocks.find(
+          (b) => b.name?.toLowerCase() === section.blockName?.toLowerCase(),
+        )
+        || allBlocks.find(
+          (b) => b.category === section.blockCategory,
+        );
+
+      if (!block) continue;
+
+      // Get schema defaults, then overlay AI-generated content
+      const defaults = getDefaultVariables(block);
+      const variables = { ...defaults };
+
+      // Map AI variables to block schema keys
+      const schema = parseVariablesSchema(block.variables_schema, block.mjml_source);
+      for (const [key, value] of Object.entries(section.variables)) {
+        // Direct key match
+        if (schema.find((s) => s.key === key)) {
+          variables[key] = value;
+        } else {
+          // Try fuzzy matching (AI might use slightly different key names)
+          const lowerKey = key.toLowerCase();
+          const match = schema.find((s) =>
+            s.key.toLowerCase() === lowerKey
+            || s.key.toLowerCase().includes(lowerKey)
+            || lowerKey.includes(s.key.toLowerCase()),
+          );
+          if (match) {
+            variables[match.key] = value;
+          }
+        }
+      }
+
+      newCanvas.push({
+        instanceId: nanoid(8),
+        blockId: block.id,
+        block,
+        variables,
+        sort: newCanvas.length,
+      });
+    }
+
+    if (newCanvas.length > 0) {
+      canvas.value = newCanvas;
+      isDirty.value = true;
+    }
+  };
+
   return {
     canvas,
     previewHtml,
@@ -382,6 +452,7 @@ ${sections.join('\n')}
     togglePartial,
     getPartialOptions,
     updatePartialVariables,
+    populateFromAI,
     assembleMjml,
     refreshPreview,
     save,

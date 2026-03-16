@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const directus = getTypedDirectus();
+    const directus = getServerDirectus();
 
     const memberships = await directus.request(
       readItems('org_memberships', {

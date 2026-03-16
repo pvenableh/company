@@ -21,34 +21,34 @@ export default defineEventHandler(async (event) => {
 
   sgMail.setApiKey(apiKey);
 
-  // Fetch the template from Directus
-  const directus = getTypedDirectus();
-  const templates = await directus.request(
-    readItems('email_templates', {
-      filter: { id: { _eq: template_id } },
-      limit: 1,
-    })
-  );
-
-  const template = (templates as any[])?.[0];
-  if (!template) {
-    return { success: false, error: 'Template not found' };
-  }
-
-  const variables = {
-    first_name: 'Test',
-    last_name: 'User',
-    email: to_email,
-    year: new Date().getFullYear(),
-    app_name: config.public?.companyName || 'Your Organization',
-    unsubscribe_url: '#',
-    ...sample_variables,
-  };
-
   try {
+    // Fetch the template from Directus using the user's session
+    const directus = await getUserDirectus(event);
+    const templates = await directus.request(
+      readItems('email_templates', {
+        filter: { id: { _eq: template_id } },
+        limit: 1,
+      })
+    );
+
+    const template = (templates as any[])?.[0];
+    if (!template) {
+      return { success: false, error: 'Template not found' };
+    }
+
     if (!template.mjml_source) {
       return { success: false, error: 'Template has no compiled MJML. Save the template first.' };
     }
+
+    const variables = {
+      first_name: 'Test',
+      last_name: 'User',
+      email: to_email,
+      year: new Date().getFullYear(),
+      app_name: config.public?.companyName || 'Your Organization',
+      unsubscribe_url: '#',
+      ...sample_variables,
+    };
 
     const result = compileMjml(template.mjml_source, variables);
     if (!result.html) {
@@ -74,7 +74,7 @@ export default defineEventHandler(async (event) => {
 
     return { success: true, message: `Test email sent to ${to_email}` };
   } catch (err: any) {
-    console.error('[email/test-send] Error:', err.message);
-    return { success: false, error: err.message };
+    console.error('[email/test-send] Error:', err.message, err.response?.body || '');
+    return { success: false, error: err.message || 'Failed to send test email' };
   }
 });

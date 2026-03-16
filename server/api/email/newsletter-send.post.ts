@@ -39,7 +39,7 @@ export default defineEventHandler(async (event) => {
   }
 
   sgMail.setApiKey(apiKey as string);
-  const directus = getTypedDirectus();
+  const directus = getServerDirectus();
 
   // Fetch the template
   const template = (await directus.request(readItem('email_templates', template_id))) as any;

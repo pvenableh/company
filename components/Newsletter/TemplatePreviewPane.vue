@@ -103,7 +103,7 @@
             transformOrigin: 'top center',
           }"
           style="min-height: 600px; transition: all 0.3s ease"
-          sandbox="allow-same-origin allow-scripts"
+          sandbox="allow-same-origin"
         />
       </div>
     </div>

@@ -33,6 +33,7 @@ const listsLoading = ref(true);
 const showNewTemplate = ref(false);
 const newTemplateName = ref('');
 const newTemplateType = ref<'newsletter' | 'transactional'>('newsletter');
+const useAIAssist = ref(true);
 const creatingTemplate = ref(false);
 
 const fetchTemplates = async () => {
@@ -77,7 +78,8 @@ const handleCreateTemplate = async () => {
 		showNewTemplate.value = false;
 		newTemplateName.value = '';
 		await fetchTemplates();
-		router.push(`/email/templates/${tpl.id}`);
+		const path = `/email/templates/${tpl.id}`;
+		router.push(useAIAssist.value ? `${path}?ai=1` : path);
 	} catch {
 		await fetchTemplates();
 		showNewTemplate.value = false;
@@ -300,9 +302,14 @@ onMounted(async () => {
 		</div>
 
 		<!-- New Template Modal -->
-		<div v-if="showNewTemplate" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="showNewTemplate = false">
-			<div class="bg-background rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
-				<h2 class="text-lg font-semibold mb-4 text-foreground">Create Email Template</h2>
+		<div v-if="showNewTemplate" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" @click.self="showNewTemplate = false">
+			<div class="bg-background rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 border">
+				<div class="flex items-center justify-between mb-5">
+					<h2 class="text-lg font-semibold text-foreground">Create Email Template</h2>
+					<button class="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" @click="showNewTemplate = false">
+						<Icon name="lucide:x" class="w-4 h-4" />
+					</button>
+				</div>
 				<div class="space-y-4">
 					<div>
 						<label class="text-sm font-medium text-foreground/80 mb-1.5 block">Template Name</label>
@@ -310,7 +317,7 @@ onMounted(async () => {
 							v-model="newTemplateName"
 							type="text"
 							placeholder="e.g. March Newsletter, Welcome Email..."
-							class="w-full rounded-lg border bg-background px-3 py-2.5 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
+							class="w-full rounded-xl border bg-background px-3 py-2.5 text-sm focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all"
 							@keyup.enter="handleCreateTemplate"
 						/>
 					</div>
@@ -318,7 +325,7 @@ onMounted(async () => {
 						<label class="text-sm font-medium text-foreground/80 mb-1.5 block">Type</label>
 						<div class="grid grid-cols-2 gap-3">
 							<button
-								class="p-3 rounded-lg border-2 text-left transition-all"
+								class="p-3 rounded-xl border-2 text-left transition-all"
 								:class="newTemplateType === 'newsletter' ? 'border-primary bg-primary/5' : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'"
 								@click="newTemplateType = 'newsletter'"
 							>
@@ -327,7 +334,7 @@ onMounted(async () => {
 								<p class="text-xs text-muted-foreground">Campaign emails</p>
 							</button>
 							<button
-								class="p-3 rounded-lg border-2 text-left transition-all"
+								class="p-3 rounded-xl border-2 text-left transition-all"
 								:class="newTemplateType === 'transactional' ? 'border-primary bg-primary/5' : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'"
 								@click="newTemplateType = 'transactional'"
 							>
@@ -337,11 +344,34 @@ onMounted(async () => {
 							</button>
 						</div>
 					</div>
+
+					<!-- AI-Assisted toggle -->
+					<div class="rounded-xl border-2 border-violet-200 dark:border-violet-800/50 bg-gradient-to-r from-violet-50/50 to-pink-50/30 dark:from-violet-900/10 dark:to-pink-900/5 p-3">
+						<label class="flex items-center gap-3 cursor-pointer">
+							<input
+								v-model="useAIAssist"
+								type="checkbox"
+								class="rounded border-violet-300 text-violet-600 focus:ring-violet-500/20 h-4 w-4"
+							/>
+							<div class="flex-1">
+								<div class="flex items-center gap-1.5">
+									<Icon name="lucide:sparkles" class="w-4 h-4 text-violet-500" />
+									<span class="text-sm font-medium text-foreground">Start with AI</span>
+								</div>
+								<p class="text-xs text-muted-foreground mt-0.5">AI will help you generate content and layout</p>
+							</div>
+						</label>
+					</div>
 				</div>
 				<div class="flex justify-end gap-3 mt-6">
 					<Button variant="ghost" @click="showNewTemplate = false">Cancel</Button>
-					<Button :disabled="!newTemplateName.trim() || creatingTemplate" @click="handleCreateTemplate">
-						{{ creatingTemplate ? 'Creating...' : 'Create Template' }}
+					<Button
+						:disabled="!newTemplateName.trim() || creatingTemplate"
+						:class="useAIAssist ? 'bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-700 hover:to-pink-700 text-white border-0' : ''"
+						@click="handleCreateTemplate"
+					>
+						<Icon v-if="useAIAssist" name="lucide:sparkles" class="w-4 h-4 mr-1" />
+						{{ creatingTemplate ? 'Creating...' : useAIAssist ? 'Create & Generate' : 'Create Template' }}
 					</Button>
 				</div>
 			</div>

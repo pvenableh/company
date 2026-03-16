@@ -26,7 +26,7 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const directus = getTypedDirectus();
+    const directus = getServerDirectus();
     const config = useRuntimeConfig();
 
     // Get the current user from session
