@@ -142,19 +142,21 @@ const deviceWidthLabel = computed(() => {
 
 watch(
   () => props.html,
-  (html) => {
-    if (!iframeRef.value || !html) return;
+  async (html) => {
+    if (!html) return;
+    // Wait for Vue to render the iframe (v-else branch) before writing
+    await nextTick();
+    if (!iframeRef.value) return;
     const doc = iframeRef.value.contentDocument;
     if (doc) {
       doc.open();
       doc.write(html);
       doc.close();
-      nextTick(() => {
-        if (iframeRef.value?.contentDocument) {
-          iframeRef.value.style.height =
-            (iframeRef.value.contentDocument.documentElement.scrollHeight || 600) + 'px';
-        }
-      });
+      await nextTick();
+      if (iframeRef.value?.contentDocument) {
+        iframeRef.value.style.height =
+          (iframeRef.value.contentDocument.documentElement.scrollHeight || 600) + 'px';
+      }
     }
   },
   { immediate: true }

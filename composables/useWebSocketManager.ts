@@ -61,17 +61,25 @@ function _ensureConnection() {
 	if (_ws && _ws.readyState < 2) return; // CONNECTING or OPEN
 
 	try {
-		_ws = new WebSocket(_wsUrl);
+		const ws = new WebSocket(_wsUrl);
+		_ws = ws;
 
-		_ws.addEventListener('open', () => {
+		// Guard handlers against stale WebSocket instances to prevent
+		// double-connections when close fires on a replaced socket
+		ws.addEventListener('open', () => {
+			if (_ws !== ws) return; // stale — a newer connection replaced us
 			_connected.value = true;
 			_reconnectAttempts = 0;
 			_authenticate();
 		});
 
-		_ws.addEventListener('message', _onMessage);
+		ws.addEventListener('message', (e) => {
+			if (_ws !== ws) return;
+			_onMessage(e);
+		});
 
-		_ws.addEventListener('close', (e) => {
+		ws.addEventListener('close', (e) => {
+			if (_ws !== ws) return;
 			_connected.value = false;
 			_authenticated = false;
 			_authenticating = false;
@@ -82,7 +90,8 @@ function _ensureConnection() {
 			}
 		});
 
-		_ws.addEventListener('error', () => {
+		ws.addEventListener('error', () => {
+			if (_ws !== ws) return;
 			_connected.value = false;
 			if (_loggedIn?.value && _subscriptions.size > 0) {
 				_scheduleReconnect();

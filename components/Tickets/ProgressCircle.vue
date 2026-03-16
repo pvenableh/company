@@ -9,9 +9,12 @@ const props = defineProps({
 });
 
 const animatedProgress = ref(0); // Displayed animated value
+let currentTween = null;
 
 const animateProgress = (newVal) => {
-	gsap.to(animatedProgress, {
+	// Kill previous tween to prevent accumulation (memory leak fix)
+	if (currentTween) currentTween.kill();
+	currentTween = gsap.to(animatedProgress, {
 		duration: 0.3,
 		value: newVal,
 		ease: 'power2.out',
@@ -26,6 +29,10 @@ watch(
 	},
 	{ immediate: true }, // Animate on initial render
 );
+
+onBeforeUnmount(() => {
+	if (currentTween) currentTween.kill();
+});
 
 const circleProgress = computed(() => {
 	const radius = 50;

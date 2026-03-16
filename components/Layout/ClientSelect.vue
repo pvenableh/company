@@ -76,7 +76,7 @@ onUnmounted(() => {
 			@click="hasMultipleOrgs ? emit('open-org-switcher') : null"
 		>
 			<Avatar class="size-7">
-				<AvatarImage :src="getIconUrl(currentOrg)" :alt="currentOrg?.name" />
+				<AvatarImage v-if="getIconUrl(currentOrg)" :src="getIconUrl(currentOrg)" :alt="currentOrg?.name" />
 				<AvatarFallback class="text-xs font-medium">
 					{{ getInitials(currentOrg) }}
 				</AvatarFallback>
@@ -136,7 +136,7 @@ onUnmounted(() => {
 						<template v-else-if="option.id === 'org'">
 							<div class="shrink-0" :class="{ 'ring-2 ring-[var(--cyan)] rounded-full': selectedClient === 'org' }">
 								<Avatar class="size-6">
-									<AvatarImage :src="getIconUrl(option)" :alt="option.name" />
+									<AvatarImage v-if="getIconUrl(option)" :src="getIconUrl(option)" :alt="option.name" />
 									<AvatarFallback class="text-[10px] font-medium">
 										{{ getInitials(option) }}
 									</AvatarFallback>
@@ -153,7 +153,7 @@ onUnmounted(() => {
 								:class="{ 'ring-2 ring-[var(--cyan)]': selectedClient === option.id }"
 							>
 								<Avatar class="size-6">
-									<AvatarImage :src="getIconUrl(option)" :alt="option.name" />
+									<AvatarImage v-if="getIconUrl(option)" :src="getIconUrl(option)" :alt="option.name" />
 									<AvatarFallback class="text-[10px] font-medium">
 										{{ getInitials(option) }}
 									</AvatarFallback>
