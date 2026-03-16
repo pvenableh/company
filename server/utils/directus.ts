@@ -41,6 +41,10 @@ export function getTypedDirectus(): DirectusAuthClient {
     throw new Error("DIRECTUS_URL not configured");
   }
 
+  if (!staticToken) {
+    console.warn("[directus] DIRECTUS_STATIC_TOKEN not configured — admin client will be unauthenticated");
+  }
+
   const client = createDirectus(directusUrl)
     .with(rest())
     .with(authentication("json"));

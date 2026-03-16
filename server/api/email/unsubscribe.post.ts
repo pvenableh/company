@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
     return { success: false, error: 'Missing token' };
   }
 
-  const directus = getTypedDirectus();
+  const directus = getServerDirectus();
 
   // Find contact by unsubscribe token
   const contacts = await directus.request(

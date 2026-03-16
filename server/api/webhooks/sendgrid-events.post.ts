@@ -46,7 +46,7 @@ export default defineEventHandler(async (event) => {
       return { ok: true, processed: 0 };
     }
 
-    const directus = getTypedDirectus();
+    const directus = getServerDirectus();
     let processed = 0;
     let failed = 0;
 

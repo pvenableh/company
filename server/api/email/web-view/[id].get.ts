@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Invalid email ID' });
   }
 
-  const directus = getTypedDirectus();
+  const directus = getServerDirectus();
 
   try {
     const email = (await directus.request(

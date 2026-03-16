@@ -42,6 +42,17 @@
           <span class="hidden sm:inline ml-1">Blocks</span>
         </Button>
 
+        <!-- AI Generate button -->
+        <Button
+          variant="ghost"
+          size="sm"
+          class="text-violet-600 hover:text-violet-700 hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-900/20"
+          @click="showAIWizard = true"
+        >
+          <Icon name="lucide:sparkles" class="w-3.5 h-3.5" />
+          <span class="hidden sm:inline ml-1">AI Generate</span>
+        </Button>
+
         <Button variant="ghost" size="sm" @click="showTestModal = true">
           <Icon name="lucide:send" class="w-3.5 h-3.5" />
           <span class="hidden sm:inline ml-1">Send Test</span>
@@ -174,25 +185,49 @@
             @reorder="handleReorder($event)"
           />
 
-          <!-- Empty state -->
-          <div
-            v-else
-            class="flex flex-col items-center justify-center py-12 sm:py-24 text-muted-foreground border-2 border-dashed rounded-xl bg-background/50"
-          >
-            <div class="w-16 h-16 rounded-2xl bg-primary/5 flex items-center justify-center mb-4">
-              <Icon name="lucide:layout-template" class="w-8 h-8 text-primary/40" />
+          <!-- Empty state — choose AI or manual -->
+          <div v-else class="py-8 sm:py-16">
+            <div class="text-center mb-8">
+              <h2 class="text-lg font-semibold text-foreground mb-1">How would you like to start?</h2>
+              <p class="text-sm text-muted-foreground">Choose a starting point for your email template</p>
             </div>
-            <p class="text-base font-medium text-foreground mb-1">Start building your email</p>
-            <p class="text-sm max-w-xs text-center px-4">
-              <span class="lg:hidden">Tap <strong>Blocks</strong> to add content</span>
-              <span class="hidden lg:inline">Choose blocks from the library on the left to build your email template</span>
-            </p>
-            <div class="flex items-center gap-1 mt-4 text-xs text-muted-foreground/60">
-              <Icon name="lucide:grip-vertical" class="w-3 h-3" />
-              <span>Drag blocks to reorder</span>
-              <span class="mx-1">•</span>
-              <Icon name="lucide:settings-2" class="w-3 h-3" />
-              <span>Click gear to customize</span>
+
+            <div class="grid sm:grid-cols-2 gap-4 max-w-lg mx-auto">
+              <!-- AI Generate option (primary) -->
+              <button
+                class="group relative flex flex-col items-center text-center p-6 rounded-2xl border-2 border-violet-200 dark:border-violet-800/50 bg-gradient-to-b from-violet-50/80 to-white dark:from-violet-900/20 dark:to-background hover:border-violet-400 dark:hover:border-violet-600 hover:shadow-lg hover:shadow-violet-500/10 transition-all duration-300"
+                @click="showAIWizard = true"
+              >
+                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center mb-4 shadow-lg shadow-violet-500/20 group-hover:scale-105 transition-transform">
+                  <Icon name="lucide:sparkles" class="w-6 h-6 text-white" />
+                </div>
+                <h3 class="font-semibold text-foreground mb-1">Start with AI</h3>
+                <p class="text-xs text-muted-foreground leading-relaxed">
+                  Describe your email and AI will generate the layout, content, and images
+                </p>
+                <span class="mt-3 inline-flex items-center gap-1 text-xs font-medium text-violet-600 dark:text-violet-400">
+                  Recommended
+                  <Icon name="lucide:arrow-right" class="w-3 h-3" />
+                </span>
+              </button>
+
+              <!-- Manual build option -->
+              <button
+                class="group flex flex-col items-center text-center p-6 rounded-2xl border-2 border-dashed border-muted-foreground/20 bg-background/50 hover:border-muted-foreground/40 hover:bg-muted/30 transition-all duration-300"
+                @click="showSidebar = true"
+              >
+                <div class="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center mb-4 group-hover:bg-primary/10 transition-colors">
+                  <Icon name="lucide:layout-template" class="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
+                </div>
+                <h3 class="font-semibold text-foreground mb-1">Build Manually</h3>
+                <p class="text-xs text-muted-foreground leading-relaxed">
+                  Drag and drop blocks from the library to create your layout
+                </p>
+                <span class="mt-3 inline-flex items-center gap-1 text-xs text-muted-foreground">
+                  <Icon name="lucide:grip-vertical" class="w-3 h-3" />
+                  Drag & drop
+                </span>
+              </button>
             </div>
           </div>
         </div>
@@ -247,6 +282,13 @@
       @close="editingPartialType = null"
       @saved="debouncedPreview()"
     />
+
+    <!-- AI Email Wizard -->
+    <NewsletterAIEmailWizard
+      v-if="showAIWizard"
+      @close="showAIWizard = false"
+      @apply="handleAIApply"
+    />
   </div>
 </template>
 
@@ -260,6 +302,7 @@ import { parseVariablesSchema } from '~/types/email/blocks';
 const props = defineProps<{
   templateId: number;
   template?: any;
+  autoOpenAi?: boolean;
 }>();
 
 const { getBlockLibrary } = useNewsletterBlocks();
@@ -271,6 +314,7 @@ const showPreview = ref(true);
 const showSidebar = ref(false);
 const showTestModal = ref(false);
 const showCustomBlockModal = ref(false);
+const showAIWizard = ref(false);
 const editingPartialType = ref<'header' | 'footer' | 'web_version_bar' | null>(null);
 const justSaved = ref(false);
 
@@ -279,7 +323,12 @@ const debouncedPreview = useDebounceFn(() => builder.refreshPreview(), 600);
 onMounted(async () => {
   blockLibrary.value = await getBlockLibrary();
   await builder.loadBlocks();
-  if (builder.canvas.value.length > 0) await builder.refreshPreview();
+  if (builder.canvas.value.length > 0) {
+    await builder.refreshPreview();
+  } else if (props.autoOpenAi) {
+    // Auto-open AI wizard when coming from "Create & Generate"
+    showAIWizard.value = true;
+  }
 });
 
 // ── Keyboard shortcuts ────────────────────────────────────────────
@@ -366,6 +415,15 @@ async function handleCustomBlockCreated(block: NewsletterBlock) {
   debouncedPreview();
   // Refresh the block library so the new block appears in the sidebar
   blockLibrary.value = await getBlockLibrary();
+}
+
+async function handleAIApply(result: { subject: string; previewText: string; sections: any[] }) {
+  showAIWizard.value = false;
+  // Populate canvas from AI output
+  builder.populateFromAI(result.sections, blockLibrary.value);
+  // Auto-open preview to show the result
+  showPreview.value = true;
+  await builder.refreshPreview();
 }
 </script>
 

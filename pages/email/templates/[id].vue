@@ -8,6 +8,7 @@ definePageMeta({
 
 const route = useRoute();
 const templateId = Number(route.params.id);
+const autoOpenAI = route.query.ai === '1';
 
 const { getTemplate } = useEmailTemplates();
 const { getBlockLibrary } = useNewsletterBlocks();
@@ -53,5 +54,6 @@ onMounted(async () => {
 		:template-id="templateId"
 		:template="template"
 		:block-library="blockLibrary"
+		:auto-open-ai="autoOpenAI"
 	/>
 </template>

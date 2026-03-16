@@ -25,7 +25,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Organization name is required' });
   }
 
-  const directus = getTypedDirectus();
+  const directus = getServerDirectus();
 
   try {
     // 1. Create the organization

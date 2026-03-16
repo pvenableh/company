@@ -45,7 +45,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Use admin client to create notifications (this is a server-to-server call)
-    const directus = getTypedDirectus();
+    const directus = getServerDirectus();
 
     // Resolve notification targets
     const targets = await resolveNotificationTargets(directus, {

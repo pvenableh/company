@@ -51,7 +51,7 @@
         @input="debouncedEmit(field.key, ($event.target as HTMLTextAreaElement).value)"
       />
 
-      <!-- URL input -->
+      <!-- URL / Image input -->
       <div v-else-if="field.type === 'url' || field.type === 'image'" class="space-y-1.5">
         <div class="relative flex items-center gap-1">
           <div class="relative flex-1">
@@ -70,58 +70,11 @@
             v-if="field.type === 'image'"
             type="button"
             class="shrink-0 flex items-center gap-1 px-2 py-1.5 rounded-md border text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-            title="Browse or upload image"
-            @click="toggleFilePicker(field.key)"
+            title="Browse organization images"
+            @click="openImageBrowser(field.key)"
           >
             <Icon name="lucide:folder-open" class="w-3.5 h-3.5" />
           </button>
-        </div>
-
-        <!-- File picker dropdown for image fields -->
-        <div
-          v-if="field.type === 'image' && activePickerField === field.key"
-          class="rounded-md border bg-background shadow-md overflow-hidden"
-        >
-          <!-- Upload button -->
-          <div class="p-2 border-b">
-            <label
-              class="flex items-center justify-center gap-1.5 w-full px-2 py-1.5 rounded-md border border-dashed text-xs text-muted-foreground hover:text-foreground hover:border-foreground/30 cursor-pointer transition-colors"
-            >
-              <Icon name="lucide:upload" class="w-3.5 h-3.5" />
-              <span>{{ isUploading ? 'Uploading...' : 'Upload image' }}</span>
-              <input
-                type="file"
-                accept="image/*"
-                class="hidden"
-                :disabled="isUploading"
-                @change="handleImageUpload(field.key, $event)"
-              />
-            </label>
-          </div>
-
-          <!-- Recent files list -->
-          <div class="max-h-40 overflow-y-auto">
-            <div v-if="isLoadingFiles" class="p-3 text-center text-xs text-muted-foreground">
-              Loading files...
-            </div>
-            <div v-else-if="recentImageFiles.length === 0" class="p-3 text-center text-xs text-muted-foreground">
-              No image files found
-            </div>
-            <button
-              v-for="file in recentImageFiles"
-              :key="file.id"
-              type="button"
-              class="w-full flex items-center gap-2 px-2 py-1.5 text-left text-xs hover:bg-muted transition-colors"
-              @click="selectFile(field.key, file)"
-            >
-              <img
-                :src="getFileThumbnail(file.id)"
-                :alt="file.title || file.filename_download"
-                class="w-8 h-8 rounded object-cover bg-muted shrink-0"
-              />
-              <span class="truncate text-foreground">{{ file.title || file.filename_download }}</span>
-            </button>
-          </div>
         </div>
 
         <!-- Image preview thumbnail -->
@@ -156,6 +109,14 @@
     <div v-if="!schema?.length" class="text-xs text-muted-foreground py-2">
       This block has no configurable variables.
     </div>
+
+    <!-- Image Browser Modal -->
+    <NewsletterImageBrowserModal
+      v-if="showImageBrowser && orgFolderId"
+      :org-folder-id="orgFolderId"
+      @select="handleImageSelect"
+      @close="showImageBrowser = false"
+    />
   </div>
 </template>
 
@@ -172,90 +133,41 @@ const emit = defineEmits<{
   update: [key: string, value: any];
 }>();
 
-const config = useRuntimeConfig();
-const { list: listFiles, upload: uploadFile, getUrl: getFileUrl } = useDirectusFiles();
+const { currentOrg } = useOrganization();
 
-/** File picker state */
-const activePickerField = ref<string | null>(null);
-const recentImageFiles = ref<any[]>([]);
-const isLoadingFiles = ref(false);
-const isUploading = ref(false);
+// Image browser state
+const showImageBrowser = ref(false);
+const activeImageField = ref<string | null>(null);
 
-/** Toggle file picker for a given field */
-async function toggleFilePicker(fieldKey: string) {
-  if (activePickerField.value === fieldKey) {
-    activePickerField.value = null;
+// Get the org's root folder ID
+const orgFolderId = computed(() => {
+  const folder = currentOrg.value?.folder;
+  if (!folder) return null;
+  return typeof folder === 'object' ? (folder as any).id : folder;
+});
+
+function openImageBrowser(fieldKey: string) {
+  if (!orgFolderId.value) {
+    // Fallback: if no org folder, show an alert
+    console.warn('No organization folder configured');
     return;
   }
-  activePickerField.value = fieldKey;
-  await fetchRecentImages();
+  activeImageField.value = fieldKey;
+  showImageBrowser.value = true;
 }
 
-/** Fetch recent image files from Directus */
-async function fetchRecentImages() {
-  isLoadingFiles.value = true;
-  try {
-    const files = await listFiles({
-      filter: { type: { _starts_with: 'image/' } },
-      fields: ['id', 'title', 'filename_download', 'type'],
-      sort: ['-uploaded_on'],
-      limit: 20,
-    });
-    recentImageFiles.value = Array.isArray(files) ? files : [];
-  } catch (err) {
-    console.error('Failed to fetch files:', err);
-    recentImageFiles.value = [];
-  } finally {
-    isLoadingFiles.value = false;
+function handleImageSelect(url: string) {
+  if (activeImageField.value) {
+    emit('update', activeImageField.value, url);
   }
-}
-
-/** Get a small thumbnail URL for a Directus file */
-function getFileThumbnail(fileId: string): string {
-  return `${config.public.directus.url}/assets/${fileId}?width=64&height=64&fit=cover&quality=70`;
-}
-
-/** Select a file from the picker */
-function selectFile(fieldKey: string, file: any) {
-  const url = `${config.public.directus.url}/assets/${file.id}`;
-  emit('update', fieldKey, url);
-  activePickerField.value = null;
-}
-
-/** Handle image upload from the file input */
-async function handleImageUpload(fieldKey: string, event: Event) {
-  const input = event.target as HTMLInputElement;
-  const file = input.files?.[0];
-  if (!file) return;
-
-  isUploading.value = true;
-  try {
-    const uploaded = await uploadFile(file, {
-      title: file.name,
-    }) as any;
-    if (uploaded?.id) {
-      const url = `${config.public.directus.url}/assets/${uploaded.id}`;
-      emit('update', fieldKey, url);
-      // Refresh the file list so the new file appears
-      await fetchRecentImages();
-    }
-  } catch (err) {
-    console.error('Image upload failed:', err);
-  } finally {
-    isUploading.value = false;
-    input.value = '';
-  }
+  showImageBrowser.value = false;
+  activeImageField.value = null;
 }
 
 /** Debounced emit for text-heavy inputs to avoid lag */
 const debouncedEmit = useDebounceFn((key: string, value: any) => {
   emit('update', key, value);
 }, 300);
-
-/** Immediate emit for discrete inputs (color picker, checkboxes) */
-function emitImmediate(key: string, value: any) {
-  emit('update', key, value);
-}
 
 /** Get a valid hex color for the native color picker (transparent → #000000). */
 function getColorValue(field: BlockVariableDefinition): string {
@@ -273,7 +185,7 @@ function getColorDisplay(field: BlockVariableDefinition): string {
 
 /** Handle color picker input — never emit empty strings. */
 function handleColorInput(key: string, value: string) {
-  emitImmediate(key, value || 'transparent');
+  emit('update', key, value || 'transparent');
 }
 
 /** Handle color text input — fall back to transparent for empty. */

@@ -28,7 +28,7 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const directus = getTypedDirectus();
+    const directus = getServerDirectus();
 
     // Fetch the membership with related data
     const memberships = await directus.request(

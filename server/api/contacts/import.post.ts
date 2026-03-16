@@ -49,7 +49,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const listId = listIdStr ? parseInt(listIdStr) : null;
-  const directus = getTypedDirectus();
+  const directus = getServerDirectus();
 
   let rows: Record<string, string>[];
 
