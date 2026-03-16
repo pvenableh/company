@@ -1,4 +1,8 @@
 <script setup>
+definePageMeta({
+	layout: 'auth',
+});
+
 import { jwtDecode } from 'jwt-decode';
 import { useForm, useField } from 'vee-validate';
 import * as yup from 'yup';
@@ -76,7 +80,7 @@ const togglePassword = () => {
 </script>
 
 <template>
-	<div class="flex items-center justify-center flex-col min-h-[90svh]">
+	<div class="w-full max-w-sm">
 		<transition name="fade" mode="out-in">
 			<div v-if="expired">
 				<h3>Reset password for {{ decoded.email }}.</h3>

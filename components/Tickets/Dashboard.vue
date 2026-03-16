@@ -58,10 +58,10 @@
 					<TicketsDashboardOldestList :tickets="oldestTickets" @view-ticket="navigateToTicket" />
 
 					<!-- Ticket Age Distribution -->
-					<TicketsDashboardAgeDistribution :data="ticketAgeData" />
+					<LazyTicketsDashboardAgeDistribution :data="ticketAgeData" />
 
 					<!-- Your Completion Rate (Only when showing user's tickets) -->
-					<TicketsDashboardPersonalCompletion
+					<LazyTicketsDashboardPersonalCompletion
 						v-if="showOnlyMyTickets"
 						:data="personalCompletionData"
 						:time-period-label="timePeriodLabel"
@@ -71,10 +71,10 @@
 				<!-- Right Column -->
 				<div class="space-y-8">
 					<!-- Completion Rate Trend -->
-					<TicketsDashboardCompletionTrendCard :data="completionTrendData" :time-period-label="timePeriodLabel" />
+					<LazyTicketsDashboardCompletionTrendCard :data="completionTrendData" :time-period-label="timePeriodLabel" />
 
 					<!-- Team Activity Distribution -->
-					<TicketsDashboardActivityDistribution :data="activityDistributionData" :team-filter="teamFilter" />
+					<LazyTicketsDashboardActivityDistribution :data="activityDistributionData" :team-filter="teamFilter" />
 
 					<!-- Recently Completed Tickets -->
 					<TicketsDashboardRecentList :tickets="recentTickets" @view-ticket="navigateToTicket" />

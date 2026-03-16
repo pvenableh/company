@@ -30,101 +30,10 @@ const avatar = computed(() => {
 
 updateAvatarSource(avatar.value);
 
-const links = ref([
-	{
-		name: 'Command Center',
-		type: ['header', 'footer', 'toolbar', 'drawer'],
-		to: '/',
-		icon: 'i-heroicons-sparkles',
-	},
-	{
-		name: 'Statistics',
-		type: ['footer', 'drawer'],
-		to: '/dashboard',
-		icon: 'i-heroicons-squares-2x2',
-	},
-	{
-		name: 'Tickets',
-		type: ['header', 'footer', 'toolbar', 'drawer'],
-		to: '/tickets',
-		icon: 'i-heroicons-queue-list',
-	},
-	{
-		name: 'Projects',
-		type: ['header', 'footer', 'toolbar', 'drawer'],
-		to: '/projects',
-		icon: 'i-heroicons-square-3-stack-3d',
-	},
-	{
-		name: 'Scheduler',
-		type: ['header', 'footer', 'drawer'],
-		to: '/scheduler',
-		icon: 'i-heroicons-calendar-date-range',
-	},
-	{
-		name: 'Channels',
-		type: ['header', 'footer', 'drawer'],
-		to: '/channels',
-		icon: 'i-heroicons-square-3-stack-3d',
-	},
-	{
-		name: 'Invoices',
-		type: ['header', 'footer', 'toolbar', 'drawer'],
-		to: '/invoices',
-		icon: 'i-heroicons-document-text',
-	},
-	{
-		name: 'Time Tracker',
-		type: ['header', 'footer', 'drawer'],
-		to: '/time-tracker',
-		icon: 'i-heroicons-clock',
-	},
-	{
-		name: 'Social',
-		type: ['header', 'footer', 'drawer'],
-		to: '/social/dashboard',
-		icon: 'i-heroicons-share',
-	},
-	{
-		name: 'Email',
-		type: ['header', 'footer', 'drawer'],
-		to: '/email',
-		icon: 'i-heroicons-envelope',
-	},
-	{
-		name: 'Financials',
-		type: ['footer', 'toolbar', 'drawer'],
-		to: '/financials',
-		icon: 'i-heroicons-banknotes',
-	},
-	{
-		name: 'Contacts',
-		type: ['footer', 'drawer'],
-		to: '/contacts',
-		icon: 'i-heroicons-user-group',
-	},
-	{
-		name: 'Clients',
-		type: ['footer', 'drawer'],
-		to: '/clients',
-		icon: 'i-heroicons-building-office-2',
-	},
-	{
-		name: 'Teams',
-		type: ['header', 'footer', 'drawer'],
-		to: '/organization/teams',
-		icon: 'i-heroicons-user-group',
-	},
-	{
-		name: 'Files',
-		type: ['header', 'footer', 'drawer'],
-		to: '/files',
-		icon: 'i-heroicons-folder',
-	},
-]);
+const { visibleLinks } = useNavPreferences();
 </script>
 <template>
-	<NuxtLayout :links="links">
+	<NuxtLayout :links="visibleLinks">
 		<NuxtPage />
 	</NuxtLayout>
 	<NuxtLoadingIndicator

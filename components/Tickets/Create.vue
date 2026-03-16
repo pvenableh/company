@@ -187,7 +187,7 @@
 								</div>
 
 								<UFormGroup label="Description" required>
-									<FormTiptap
+									<LazyFormTiptap
 										v-model="form.description"
 										placeholder="Enter ticket description"
 										:editor-props="{

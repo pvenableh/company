@@ -2,7 +2,7 @@
 import { toast } from 'vue-sonner';
 
 definePageMeta({
-	layout: 'blank',
+	layout: 'auth',
 	middleware: 'guest',
 });
 
@@ -37,41 +37,29 @@ async function handleForgotPassword(values: { email: string }) {
 </script>
 
 <template>
-	<div class="flex min-h-svh items-center justify-center px-4">
-		<div class="w-full max-w-sm">
-			<p
-				v-motion="{
-					initial: { y: -30, opacity: 0 },
-					enter: { y: 0, opacity: 1 },
-				}"
-				class="text-xs uppercase tracking-wide mb-4 text-center text-muted-foreground"
-			>
-				This platform is accessible by invitation only.
-			</p>
-
-			<Transition
-				enter-active-class="transition-all duration-300 ease-out"
-				leave-active-class="transition-all duration-200 ease-in"
-				enter-from-class="opacity-0 translate-y-2"
-				enter-to-class="opacity-100 translate-y-0"
-				leave-from-class="opacity-100 translate-y-0"
-				leave-to-class="opacity-0 -translate-y-2"
-				mode="out-in"
-			>
-				<AuthLoginForm
-					v-if="panel === 'login'"
-					ref="loginFormRef"
-					:is-loading="isLoading"
-					@submit="handleLogin"
-					@forgot-password="panel = 'forgot-password'"
-					@register="navigateTo('/register')"
-				/>
-				<AuthPasswordResetRequestForm
-					v-else
-					@submit="handleForgotPassword"
-					@back="panel = 'login'"
-				/>
-			</Transition>
-		</div>
+	<div class="w-full max-w-sm">
+		<Transition
+			enter-active-class="transition-all duration-300 ease-out"
+			leave-active-class="transition-all duration-200 ease-in"
+			enter-from-class="opacity-0 translate-y-2"
+			enter-to-class="opacity-100 translate-y-0"
+			leave-from-class="opacity-100 translate-y-0"
+			leave-to-class="opacity-0 -translate-y-2"
+			mode="out-in"
+		>
+			<AuthLoginForm
+				v-if="panel === 'login'"
+				ref="loginFormRef"
+				:is-loading="isLoading"
+				@submit="handleLogin"
+				@forgot-password="panel = 'forgot-password'"
+				@register="navigateTo('/register')"
+			/>
+			<AuthPasswordResetRequestForm
+				v-else
+				@submit="handleForgotPassword"
+				@back="panel = 'login'"
+			/>
+		</Transition>
 	</div>
 </template>

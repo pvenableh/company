@@ -579,40 +579,84 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- Files -->
-      <div
-        v-for="file in filteredFiles"
-        :key="file.id"
-        class="grid grid-cols-1 md:grid-cols-[1fr_100px_120px_80px] gap-2 md:gap-4 items-center px-4 py-3 rounded-lg hover:bg-muted/20 cursor-pointer transition-colors group"
-        @click="openFile(file)"
+      <!-- Files (virtualized for large lists) -->
+      <VirtualList
+        v-if="filteredFiles.length > 50"
+        :items="filteredFiles"
+        :estimate-size="52"
+        class="max-h-[calc(100vh-280px)]"
       >
-        <div class="flex items-center gap-3">
-          <img
-            v-if="isImage(file.type)"
-            :src="getThumbnailUrl(file.id)"
-            class="w-8 h-8 rounded object-cover shrink-0"
-            loading="lazy"
-          />
-          <Icon v-else :name="getFileIcon(file.type)" :class="[getFileIconColor(file.type), 'w-5 h-5 shrink-0']" />
-          <span class="text-sm truncate">{{ getFileName(file) }}</span>
-        </div>
-        <span class="text-xs text-muted-foreground hidden md:block">{{ formatFileSize(file.filesize) }}</span>
-        <span class="text-xs text-muted-foreground hidden md:block">{{ formatDate(file.modified_on || file.uploaded_on) }}</span>
-        <div class="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            class="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
-            @click.stop="startRename(file, 'file')"
+        <template #item="{ item: file }">
+          <div
+            class="grid grid-cols-1 md:grid-cols-[1fr_100px_120px_80px] gap-2 md:gap-4 items-center px-4 py-3 rounded-lg hover:bg-muted/20 cursor-pointer transition-colors group"
+            @click="openFile(file)"
           >
-            <Icon name="lucide:pencil" class="w-3.5 h-3.5" />
-          </button>
-          <button
-            class="p-1.5 text-muted-foreground hover:text-destructive transition-colors"
-            @click.stop="handleDeleteFile(file)"
-          >
-            <Icon name="lucide:trash-2" class="w-3.5 h-3.5" />
-          </button>
+            <div class="flex items-center gap-3">
+              <img
+                v-if="isImage(file.type)"
+                :src="getThumbnailUrl(file.id)"
+                class="w-8 h-8 rounded object-cover shrink-0"
+                loading="lazy"
+              />
+              <Icon v-else :name="getFileIcon(file.type)" :class="[getFileIconColor(file.type), 'w-5 h-5 shrink-0']" />
+              <span class="text-sm truncate">{{ getFileName(file) }}</span>
+            </div>
+            <span class="text-xs text-muted-foreground hidden md:block">{{ formatFileSize(file.filesize) }}</span>
+            <span class="text-xs text-muted-foreground hidden md:block">{{ formatDate(file.modified_on || file.uploaded_on) }}</span>
+            <div class="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                class="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+                @click.stop="startRename(file, 'file')"
+              >
+                <Icon name="lucide:pencil" class="w-3.5 h-3.5" />
+              </button>
+              <button
+                class="p-1.5 text-muted-foreground hover:text-destructive transition-colors"
+                @click.stop="handleDeleteFile(file)"
+              >
+                <Icon name="lucide:trash-2" class="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </template>
+      </VirtualList>
+
+      <!-- Files (standard rendering for small lists) -->
+      <template v-else>
+        <div
+          v-for="file in filteredFiles"
+          :key="file.id"
+          class="grid grid-cols-1 md:grid-cols-[1fr_100px_120px_80px] gap-2 md:gap-4 items-center px-4 py-3 rounded-lg hover:bg-muted/20 cursor-pointer transition-colors group"
+          @click="openFile(file)"
+        >
+          <div class="flex items-center gap-3">
+            <img
+              v-if="isImage(file.type)"
+              :src="getThumbnailUrl(file.id)"
+              class="w-8 h-8 rounded object-cover shrink-0"
+              loading="lazy"
+            />
+            <Icon v-else :name="getFileIcon(file.type)" :class="[getFileIconColor(file.type), 'w-5 h-5 shrink-0']" />
+            <span class="text-sm truncate">{{ getFileName(file) }}</span>
+          </div>
+          <span class="text-xs text-muted-foreground hidden md:block">{{ formatFileSize(file.filesize) }}</span>
+          <span class="text-xs text-muted-foreground hidden md:block">{{ formatDate(file.modified_on || file.uploaded_on) }}</span>
+          <div class="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              class="p-1.5 text-muted-foreground hover:text-foreground transition-colors"
+              @click.stop="startRename(file, 'file')"
+            >
+              <Icon name="lucide:pencil" class="w-3.5 h-3.5" />
+            </button>
+            <button
+              class="p-1.5 text-muted-foreground hover:text-destructive transition-colors"
+              @click.stop="handleDeleteFile(file)"
+            >
+              <Icon name="lucide:trash-2" class="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
-      </div>
+      </template>
     </template>
 
     <!-- ═══════════ MODALS ═══════════ -->

@@ -42,6 +42,18 @@
 					</nuxt-link>
 				</div>
 
+				<!-- Edit apps -->
+				<div class="ios-group mx-4 mb-4">
+					<a
+						class="sheet-row cursor-pointer"
+						@click.prevent="handleEditApps"
+					>
+						<UIcon name="i-heroicons-pencil-square" class="w-5 h-5" />
+						<span class="flex-1">Edit Apps</span>
+						<UIcon name="i-heroicons-chevron-right" class="w-4 h-4 text-muted-foreground/40" />
+					</a>
+				</div>
+
 				<!-- Account section -->
 				<div class="ios-group mx-4 mb-4">
 					<nuxt-link
@@ -103,6 +115,8 @@ const props = defineProps({
 	},
 });
 
+const emit = defineEmits(['edit-apps']);
+
 const sheetRef = ref(null);
 const dragOffset = ref(0);
 let startY = 0;
@@ -118,6 +132,12 @@ function closeSheet() {
 function handleLogout() {
 	closeSheet();
 	logout();
+}
+
+function handleEditApps() {
+	triggerHaptic(10);
+	closeSheet();
+	emit('edit-apps');
 }
 
 function onTouchStart(e) {
