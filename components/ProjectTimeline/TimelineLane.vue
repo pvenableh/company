@@ -76,16 +76,31 @@ const isActive = computed(() => project.value.status === 'In Progress');
       {{ project.status.toUpperCase() }}
     </text>
 
-    <!-- Main timeline line -->
+    <!-- Main timeline line (subway track) -->
     <line
       :x1="lineStart"
       :y1="y"
       :x2="lineEnd"
       :y2="y"
       :stroke="project.color"
-      stroke-width="3"
+      stroke-width="6"
       stroke-linecap="round"
-      :opacity="project.status === 'completed' ? 0.5 : 0.8"
+      :opacity="project.status === 'completed' ? 0.5 : 0.85"
+    />
+
+    <!-- Start station cap -->
+    <circle
+      :cx="lineStart"
+      :cy="y"
+      r="8"
+      :fill="project.color"
+    />
+    <circle
+      :cx="lineStart"
+      :cy="y"
+      r="4"
+      fill="white"
+      class="dark:fill-gray-900"
     />
 
     <!-- Active project pulsing indicator -->
@@ -93,13 +108,13 @@ const isActive = computed(() => project.value.status === 'In Progress');
       v-if="isActive"
       :cx="layout.todayX.value"
       :cy="y"
-      r="6"
+      r="8"
       :fill="project.color"
       opacity="0.3"
     >
       <animate
         attributeName="r"
-        values="6;10;6"
+        values="8;14;8"
         dur="2s"
         repeatCount="indefinite"
       />
@@ -114,19 +129,26 @@ const isActive = computed(() => project.value.status === 'In Progress');
       v-if="isActive"
       :cx="layout.todayX.value"
       :cy="y"
-      r="4"
+      r="5"
       :fill="project.color"
     />
 
-    <!-- End marker for completed projects -->
-    <rect
+    <!-- End station cap for completed projects -->
+    <circle
       v-if="project.status === 'completed'"
-      :x="lineEnd - 4"
-      :y="y - 4"
-      width="8"
-      height="8"
-      rx="2"
+      :cx="lineEnd"
+      :cy="y"
+      r="8"
       :fill="project.color"
+      opacity="0.6"
+    />
+    <circle
+      v-if="project.status === 'completed'"
+      :cx="lineEnd"
+      :cy="y"
+      r="4"
+      fill="white"
+      class="dark:fill-gray-900"
       opacity="0.6"
     />
 

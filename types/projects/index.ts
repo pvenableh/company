@@ -65,6 +65,10 @@ export interface CreateEventPayload {
   date?: string;
   category_id?: string | null;
   is_milestone?: boolean;
+  duration_days?: number | null;
+  end_date?: string | null;
+  assigned_to?: string | null;
+  depends_on?: string | null;
 }
 
 export interface CreateTaskPayload {
@@ -120,3 +124,16 @@ export interface TimelineLane {
 export function getEventTimelineDate(event: ProjectEvent | ProjectEventWithRelations): string {
   return event.event_date || event.date || '';
 }
+
+// Re-export timeline generator types
+export type {
+  TemplateMilestone,
+  TemplateTask,
+  ProjectTemplate,
+  TimelineGeneratorForm,
+  ProposedEvent,
+  ProposedTask,
+  GenerateTimelineRequest,
+  GenerateTimelineResponse,
+  SaveEventsRequest,
+} from './timeline-generator';

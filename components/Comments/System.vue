@@ -44,7 +44,7 @@
 				:organization-id="organizationId"
 				:client-id="clientId"
 			/>
-			<div class="w-full flex items-start justify-start">
+			<div v-if="!hideSort" class="w-full flex items-start justify-start">
 				<USelect
 					v-model="sortOrder"
 					:options="[
@@ -108,6 +108,10 @@ const props = defineProps({
 		type: String,
 		default: null,
 	},
+	hideSort: {
+		type: Boolean,
+		default: false,
+	},
 });
 
 const emit = defineEmits(['update:commentCount']);
@@ -127,8 +131,10 @@ const error = ref(null);
 
 const toggleComment = ref(false);
 
-// Generate collection-specific field name for relation
+// Generate collection-specific field name for relation (only if field exists in schema)
 const collectionIdField = `${props.collection}_id`;
+const knownRelationFields = ['tickets_id'];
+const hasRelationField = knownRelationFields.includes(collectionIdField);
 
 // Fields to request from the comments collection
 const fields = [
@@ -138,7 +144,7 @@ const fields = [
 	'parent_id',
 	'collection',
 	'item',
-	`${collectionIdField}`,
+	...(hasRelationField ? [collectionIdField] : []),
 	'user.id',
 	'user.first_name',
 	'user.last_name',
@@ -260,15 +266,18 @@ async function handleCommentSubmit(commentHtml, parentId = null) {
 	isSubmitting.value = true;
 	try {
 		const effectiveParentId = parentId || replyingTo.value?.id || null;
-		const comment = await commentItems.create({
+		const createPayload = {
 			status: 'published',
 			comment: commentHtml,
 			user: user.value.id,
 			parent_id: effectiveParentId ? effectiveParentId.toString() : null,
 			collection: props.collection,
 			item: props.itemId.toString(),
-			[collectionIdField]: props.itemId.toString(),
-		});
+		};
+		if (hasRelationField) {
+			createPayload[collectionIdField] = props.itemId.toString();
+		}
+		const comment = await commentItems.create(createPayload);
 
 		localComments.value = [
 			...localComments.value,
@@ -279,7 +288,6 @@ async function handleCommentSubmit(commentHtml, parentId = null) {
 				parent_id: effectiveParentId,
 				collection: props.collection,
 				item: props.itemId.toString(),
-				[collectionIdField]: props.itemId.toString(),
 				user: {
 					id: user.value.id,
 					first_name: user.value.first_name,

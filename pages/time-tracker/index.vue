@@ -199,14 +199,14 @@ watch(() => selectedClient.value, () => {
     <TimeTrackerStats :entries="allEntries" class="mb-6" />
 
     <!-- Tab Bar -->
-    <div class="flex gap-1 mb-6 bg-muted/30 rounded-lg p-1 w-fit">
+    <div class="inline-flex items-center gap-1 rounded-xl bg-muted/50 p-1 border border-border mb-6">
       <button
         v-for="tab in tabs"
         :key="tab.key"
-        class="text-sm px-3 py-1.5 rounded-lg transition-colors"
+        class="flex items-center gap-2 px-4 py-2 rounded-lg text-[11px] uppercase tracking-wider font-semibold transition-all duration-200"
         :class="
           activeTab === tab.key
-            ? 'bg-primary text-primary-foreground'
+            ? 'bg-card text-foreground shadow-sm'
             : 'text-muted-foreground hover:text-foreground'
         "
         @click="switchTab(tab.key)"

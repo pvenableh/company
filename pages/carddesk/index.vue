@@ -192,14 +192,14 @@ onMounted(async () => {
 					<div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
 						<!-- Tabs + Search -->
 						<div class="p-4 border-b border-gray-100 dark:border-gray-700">
-							<div class="flex flex-wrap items-center gap-2 mb-3">
+							<div class="inline-flex items-center gap-1 rounded-xl bg-muted/50 p-1 border border-border mb-3">
 								<button
 									v-for="tab in tabs"
 									:key="tab.key"
-									class="px-3 py-1.5 text-xs font-medium rounded-full transition-colors"
+									class="flex items-center gap-2 px-4 py-2 rounded-lg text-[11px] uppercase tracking-wider font-semibold transition-all duration-200"
 									:class="activeTab === tab.key
-										? 'bg-primary text-white'
-										: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'"
+										? 'bg-card text-foreground shadow-sm'
+										: 'text-muted-foreground hover:text-foreground'"
 									@click="activeTab = tab.key"
 								>
 									{{ tab.label }}

@@ -25,23 +25,21 @@ const emit = defineEmits<{
   (e: 'change', value: boolean): void
 }>()
 
-const checked = computed({
-  get: () => props.modelValue,
-  set: (value: boolean) => {
-    emit('update:modelValue', value)
-    emit('change', value)
-  },
-})
+function handleUpdate(value: boolean) {
+  emit('update:modelValue', value)
+  emit('change', value)
+}
 </script>
 
 <template>
   <div class="flex items-center gap-2">
     <Checkbox
       :id="name"
-      v-model:checked="checked"
+      :model-value="modelValue"
       :disabled="disabled"
       :name="name"
       :class="props.class"
+      @update:model-value="handleUpdate"
     />
     <label v-if="label" :for="name" class="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
       {{ label }}

@@ -1,7 +1,7 @@
 <template>
 	<form
 		@submit.prevent="handleSubmit"
-		class="w-full space-y-6 lg:space-y-0 relative flex flex-col lg:flex-row flex-wrap items-start justify-between"
+		class="w-full space-y-6 lg:space-y-0 relative flex flex-col lg:flex-row flex-wrap items-start justify-between gap-y-6"
 	>
 		<transition name="fade">
 			<a
@@ -12,7 +12,7 @@
 				You need to save your edits.
 			</a>
 		</transition>
-		<div class="w-full lg:w-1/2 lg:pr-4 lg:space-y-2">
+		<div class="w-full lg:w-1/2 lg:pr-4 space-y-4">
 			<div class="w-full max-w-96 pb-1">
 				<TicketsDetailsPriority v-model="form.priority" animationDuration="0.2" />
 			</div>
@@ -69,7 +69,9 @@
 			</div>
 
 			<!-- Due Date & Time -->
-			<TicketsDetailsDateTime v-model="form.due_date" />
+			<div class="max-w-xs">
+				<TicketsDetailsDateTime v-model="form.due_date" />
+			</div>
 
 			<!-- User Assignment -->
 			<TicketsDetailsAssignment
@@ -260,7 +262,7 @@ const loadTeamsForOrg = async (orgId) => {
 
 	try {
 		// First fetch teams using the composable
-		await fetchTeams(orgId, { disableTeamRestoration: true });
+		await fetchTeams(orgId, { force: true });
 
 		// Regular users should only see teams they belong to
 		// Copy the appropriate teams to our local state based on user role

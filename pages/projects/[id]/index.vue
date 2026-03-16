@@ -68,19 +68,6 @@ const items = [
 		<div class="w-full my-4 px-4 2xl:px-0">
 			<UTabs
 				:items="items"
-				:ui="{
-					base: 'focus:outline-none',
-					list: {
-						background: 'bg-card',
-						marker: {
-							background: 'bg-muted',
-						},
-						tab: {
-							base: 'uppercase relative inline-flex items-center justify-center flex-shrink-0 w-full ui-focus-visible:outline-0 ui-focus-visible:ring-2 ui-focus-visible:ring-primary ui-not-focus-visible:outline-none focus:outline-none disabled:cursor-not-allowed disabled:opacity-75 transition-colors duration-200 ease-out',
-							size: 'text-[8px] font-bold tracking-wider',
-						},
-					},
-				}"
 				class="mt-6"
 			>
 				<template #overview="{ item }">

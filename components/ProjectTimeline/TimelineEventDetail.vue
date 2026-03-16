@@ -103,6 +103,7 @@ const fileCount = computed(() => props.event.files?.length || 0);
       <CommentsSystem
         collection="project_events"
         :item-id="String(event.id)"
+        hide-sort
       />
     </div>
 

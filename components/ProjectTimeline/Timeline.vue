@@ -1,13 +1,31 @@
 <script setup lang="ts">
 import type { ProjectWithRelations, ProjectEventWithRelations } from '~/types/projects';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '~/components/ui/sheet';
 
 const { projects, loading, error, refresh, fetchProjects } = useProjectTimeline();
-const zoom = ref(1);
+const zoom = ref(1.5);
 const selectedEventId = ref<string | null>(null);
 const showEventDetail = ref(false);
+const scrollContainer = ref<HTMLElement | null>(null);
 
 const layout = useTimelineLayout(projects, zoom);
+
+// Scroll to today marker when data loads
+function scrollToToday() {
+  nextTick(() => {
+    if (!scrollContainer.value) return;
+    const todayPos = layout.todayX.value;
+    const containerWidth = scrollContainer.value.clientWidth;
+    // Center today marker in the viewport
+    scrollContainer.value.scrollLeft = Math.max(0, todayPos - containerWidth / 3);
+  });
+}
+
+watch(
+  () => projects.value.length,
+  (len) => {
+    if (len > 0) scrollToToday();
+  },
+);
 
 const selectedEvent = computed<ProjectEventWithRelations | null>(() => {
   if (!selectedEventId.value) return null;
@@ -41,11 +59,11 @@ function handleZoomIn() {
 }
 
 function handleZoomOut() {
-  zoom.value = Math.max(zoom.value - 0.25, 0.5);
+  zoom.value = Math.max(zoom.value - 0.25, 1.5);
 }
 
 function handleZoomReset() {
-  zoom.value = 1;
+  zoom.value = 1.5;
 }
 
 // Watch for user becoming available (session hydration may not be complete at mount)
@@ -115,7 +133,7 @@ onMounted(() => {
     </div>
 
     <!-- Canvas -->
-    <div v-else class="overflow-x-auto overflow-y-auto">
+    <div v-else ref="scrollContainer" class="overflow-x-auto overflow-y-auto">
       <ProjectTimelineCanvas
         :projects="projects"
         :layout="layout"
@@ -128,22 +146,25 @@ onMounted(() => {
       <ProjectTimelineLegend :projects="projects" />
     </div>
 
-    <!-- Event Detail Sheet -->
-    <Sheet :open="showEventDetail" @update:open="(val: boolean) => { if (!val) handleCloseDetail() }">
-      <SheetContent side="right" class="w-full sm:max-w-lg overflow-y-auto">
-        <SheetHeader>
-          <SheetTitle class="uppercase text-sm tracking-wider">
-            {{ selectedEvent?.title || 'Event Detail' }}
-          </SheetTitle>
-          <SheetDescription v-if="selectedEventProject">
+    <!-- Event Detail Modal -->
+    <UModal v-model="showEventDetail" class="sm:max-w-xl">
+      <template #header>
+        <div class="flex items-center justify-between w-full">
+          <div class="flex items-center gap-2">
             <span
-              class="inline-block h-2 w-2 rounded-full mr-1"
+              v-if="selectedEventProject"
+              class="inline-block h-2.5 w-2.5 rounded-full"
               :style="{ backgroundColor: selectedEventProject.color }"
             />
-            {{ selectedEventProject.title }}
-          </SheetDescription>
-        </SheetHeader>
+            <h3 class="t-label">{{ selectedEvent?.title || 'Event Detail' }}</h3>
+          </div>
+          <Button variant="ghost" size="icon-sm" @click="handleCloseDetail">
+            <Icon name="i-heroicons-x-mark" class="h-4 w-4" />
+          </Button>
+        </div>
+      </template>
 
+      <div class="max-h-[70vh] overflow-y-auto px-4 pb-4">
         <ProjectTimelineEventDetail
           v-if="selectedEvent && selectedEventProject"
           :event="selectedEvent"
@@ -151,7 +172,7 @@ onMounted(() => {
           @close="handleCloseDetail"
           @updated="refresh"
         />
-      </SheetContent>
-    </Sheet>
+      </div>
+    </UModal>
   </div>
 </template>
