@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-vue-next';
 
 definePageMeta({
-	layout: 'blank',
+	layout: 'auth',
 	middleware: 'guest',
 });
 
@@ -106,7 +106,7 @@ const togglePassword = () => {
 </script>
 
 <template>
-	<div class="flex items-center justify-center flex-col min-h-svh px-4">
+	<div class="w-full max-w-md">
 		<Card v-if="!loading" class="w-full max-w-md">
 			<CardHeader class="text-center">
 				<h3 class="text-lg font-medium" v-if="!expired && decoded">Accept Invitation</h3>

@@ -276,7 +276,7 @@ onUnmounted(() => {
 		<div class="border-t border-gray-100 dark:border-gray-700 p-3">
 			<div class="flex items-end gap-2">
 				<div class="flex-1 chat-tiptap-wrapper">
-					<FormTiptap
+					<LazyFormTiptap
 						v-model="newMessage"
 						:show-toolbar="false"
 						:show-char-count="false"

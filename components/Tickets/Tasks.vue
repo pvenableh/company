@@ -412,7 +412,7 @@ onUnmounted(() => {
 			<p class="text-[12px] text-gray-700 dark:text-gray-300">{{ motivationalMessage }}</p>
 		</div>
 		<div class="flex items-center space-x-2">
-			<FormTiptap
+			<LazyFormTiptap
 				:showToolbar="false"
 				v-model="newTask"
 				placeholder="Add a new task..."
@@ -446,7 +446,7 @@ onUnmounted(() => {
 					/>
 					<UCheckbox :model-value="task.status === 'completed'" @update:model-value="() => toggleTask(task)" />
 					<div class="relative flex-1">
-						<FormTiptap
+						<LazyFormTiptap
 							v-if="editingTaskId === task.id"
 							:showToolbar="false"
 							v-model="task.description"

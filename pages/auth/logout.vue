@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-vue-next';
 
 definePageMeta({
-	layout: 'blank',
+	layout: 'auth',
 });
 
 const { signOut } = useDirectusAuth();
@@ -23,7 +23,7 @@ onMounted(async () => {
 </script>
 
 <template>
-	<div class="flex items-center justify-center h-screen">
+	<div>
 		<Card class="w-full max-w-xs">
 			<CardHeader class="text-center">
 				<h3 class="text-lg font-medium">Logging out...</h3>

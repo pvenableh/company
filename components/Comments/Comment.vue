@@ -9,7 +9,7 @@
 		<!-- Comment Input -->
 		<div class="flex gap-2 relative">
 			<div class="flex-grow">
-				<FormTiptap
+				<LazyFormTiptap
 					v-model="editorContent"
 					:disabled="loading"
 					:show-toolbar="toolbar"

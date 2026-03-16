@@ -108,7 +108,7 @@ watch([selectedClient, selectedOrg], () => {
 					>
 						Ticket Activity:
 					</h5>
-					<TicketsDashboard />
+					<LazyTicketsDashboard />
 				</div>
 
 				<!-- Invoice Activity -->
@@ -125,7 +125,7 @@ watch([selectedClient, selectedOrg], () => {
 
 					<div v-else class="space-y-6">
 						<DashboardInvoiceStats :stats="invoiceStats" />
-						<DashboardRevenueTrend :invoices="invoices" />
+						<LazyDashboardRevenueTrend :invoices="invoices" />
 						<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 							<DashboardClientBreakdown :invoices="invoices" />
 							<DashboardProjectProfitability :invoices="invoices" />

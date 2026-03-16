@@ -201,7 +201,7 @@
 				</UFormGroup>
 
 				<UFormGroup label="Description">
-					<FormTiptap v-model="teamForm.description" placeholder="Describe the purpose of this team" />
+					<LazyFormTiptap v-model="teamForm.description" placeholder="Describe the purpose of this team" />
 				</UFormGroup>
 
 				<UFormGroup label="Active">

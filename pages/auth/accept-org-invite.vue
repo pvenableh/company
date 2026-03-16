@@ -2,7 +2,7 @@
 import { jwtDecode } from 'jwt-decode';
 
 definePageMeta({
-	layout: 'blank',
+	layout: 'auth',
 });
 
 const route = useRoute();
@@ -122,7 +122,7 @@ async function acceptInvite() {
 </script>
 
 <template>
-	<div class="flex items-center justify-center flex-col min-h-svh px-4">
+	<div class="w-full max-w-md">
 		<!-- Loading -->
 		<div v-if="loading" class="text-center">
 			<UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-gray-400 mx-auto mb-2" />

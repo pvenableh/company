@@ -256,16 +256,6 @@ useHead({
 	position: relative;
 	background: var(--paper);
 }
-.earnest-hero::before,
-.earnest-hero::after {
-	content: '';
-	position: absolute;
-	left: 48px; right: 48px;
-	height: 1px;
-	background: var(--rule);
-}
-.earnest-hero::before { top: 100px; }
-.earnest-hero::after  { bottom: 60px; }
 
 .hero-kicker {
 	font-family: var(--font-proxima-light);
@@ -277,7 +267,7 @@ useHead({
 }
 .hero-wordmark {
 	font-family: var(--font-bauer-bodoni);
-	font-size: clamp(96px, 18vw, 200px);
+	font-size: clamp(56px, 18vw, 200px);
 	font-weight: 600;
 	letter-spacing: -0.02em;
 	line-height: 0.9;

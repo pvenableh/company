@@ -2,7 +2,7 @@
 	<div class="relative bg-background text-foreground transition duration-150 lg:overflow-visible ios-safe-area">
 		<LayoutHeader :links="headerLinks" />
 
-		<div class="page pb-safe">
+		<div class="page pb-safe min-h-page">
 			<slot />
 		</div>
 
@@ -13,7 +13,12 @@
 
 		<!-- iOS Bottom Sheet (nav drawer) -->
 		<ClientOnly>
-			<LayoutNavDrawer :links="drawerLinks" />
+			<LayoutNavDrawer :links="drawerLinks" @edit-apps="navEditorOpen = true" />
+		</ClientOnly>
+
+		<!-- Nav Editor (edit apps sheet) -->
+		<ClientOnly>
+			<LayoutNavEditor :is-open="navEditorOpen" @close="navEditorOpen = false" />
 		</ClientOnly>
 
 		<!-- AI Tray -->
@@ -45,11 +50,12 @@ const props = defineProps({
 
 const { user } = useDirectusAuth();
 const aiTrayOpen = ref(false);
+const navEditorOpen = ref(false);
 
-const headerLinks = props.links.filter((link) => link.type.includes('header'));
-const footerLinks = props.links.filter((link) => link.type.includes('footer'));
-const toolbarLinks = props.links.filter((link) => link.type.includes('toolbar'));
-const drawerLinks = props.links.filter((link) => link.type.includes('drawer'));
+const headerLinks = computed(() => props.links.filter((link) => link.type.includes('header')));
+const footerLinks = computed(() => props.links.filter((link) => link.type.includes('footer')));
+const toolbarLinks = computed(() => props.links.filter((link) => link.type.includes('toolbar')));
+const drawerLinks = computed(() => props.links.filter((link) => link.type.includes('drawer')));
 </script>
 
 <style>
@@ -60,6 +66,16 @@ const drawerLinks = props.links.filter((link) => link.type.includes('drawer'));
 @media (min-width: 768px) {
 	.pb-safe {
 		padding-bottom: 0;
+	}
+}
+
+/* Prevent footer jump when content is shorter than viewport */
+.min-h-page {
+	min-height: calc(100vh - 56px - 56px - env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 768px) {
+	.min-h-page {
+		min-height: calc(100vh - 56px);
 	}
 }
 </style>

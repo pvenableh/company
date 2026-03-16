@@ -216,7 +216,7 @@ watch(() => selectedClient.value, () => {
     </div>
 
     <!-- Reports Tab -->
-    <TimeTrackerReport v-if="activeTab === 'reports'" />
+    <LazyTimeTrackerReport v-if="activeTab === 'reports'" />
 
     <!-- Loading State -->
     <div v-else-if="loading" class="flex flex-col items-center justify-center py-24 gap-3">

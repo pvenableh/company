@@ -55,7 +55,7 @@
 				<UInput v-model="form.title" placeholder="Appointment title" :disabled="isLoading" />
 			</UFormGroup>
 			<UFormGroup label="Description">
-				<FormTiptap v-model="form.description" placeholder="Add description" :disabled="isLoading" rows="3" />
+				<LazyFormTiptap v-model="form.description" placeholder="Add description" :disabled="isLoading" rows="3" />
 			</UFormGroup>
 
 			<UFormGroup label="Attendees">

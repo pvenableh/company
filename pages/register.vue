@@ -2,7 +2,7 @@
 import { toast } from 'vue-sonner';
 
 definePageMeta({
-	layout: 'blank',
+	layout: 'auth',
 	middleware: 'guest',
 });
 
@@ -39,12 +39,10 @@ async function handleRegister(values: {
 </script>
 
 <template>
-	<div class="flex min-h-svh items-center justify-center px-4">
-		<div class="w-full max-w-md">
-			<AuthRegisterForm
-				@submit="handleRegister"
-				@login="navigateTo('/auth/signin')"
-			/>
-		</div>
+	<div class="w-full max-w-md">
+		<AuthRegisterForm
+			@submit="handleRegister"
+			@login="navigateTo('/auth/signin')"
+		/>
 	</div>
 </template>

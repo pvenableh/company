@@ -83,7 +83,7 @@
 		<div class="w-full lg:w-1/2 lg:pl-4">
 			<!-- Description -->
 			<UFormGroup label="Description" required>
-				<FormTiptap
+				<LazyFormTiptap
 					v-model="form.description"
 					placeholder="Enter ticket description"
 					@mention="handleMention"

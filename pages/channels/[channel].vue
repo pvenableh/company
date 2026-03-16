@@ -284,7 +284,7 @@ const handleKeyboard = (event) => {
 		>
 			<div class="max-w-5xl mx-auto">
 				<div class="flex space-x-2">
-					<FormTiptap
+					<LazyFormTiptap
 						v-model="newMessage"
 						class="flex-1"
 						:disabled="!channelId"
