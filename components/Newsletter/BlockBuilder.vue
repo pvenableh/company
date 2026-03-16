@@ -1,135 +1,168 @@
 <template>
   <div class="block-builder h-screen flex flex-col overflow-hidden">
     <!-- Top bar -->
-    <div class="flex items-center justify-between px-4 py-2 border-b bg-background/95 backdrop-blur-sm sticky top-0 z-10">
-      <div class="flex items-center gap-3">
+    <div class="flex items-center justify-between px-2 sm:px-4 py-2 border-b bg-background/95 backdrop-blur-sm sticky top-0 z-10 gap-2">
+      <div class="flex items-center gap-1.5 sm:gap-3 min-w-0">
         <NuxtLink
           to="/email"
-          class="text-muted-foreground hover:text-foreground text-sm transition-colors"
+          class="text-muted-foreground hover:text-foreground text-sm transition-colors shrink-0"
         >
           <Icon name="lucide:arrow-left" class="w-4 h-4 inline mr-1" />
-          Email
+          <span class="hidden sm:inline">Email</span>
         </NuxtLink>
-        <span class="text-muted-foreground/30">|</span>
-        <h1 class="font-semibold text-sm">{{ template?.name || 'Template Builder' }}</h1>
+        <span class="text-muted-foreground/30 hidden sm:inline">|</span>
+        <h1 class="font-semibold text-sm truncate">{{ template?.name || 'Template Builder' }}</h1>
 
         <!-- Save status indicator -->
         <Transition name="fade" mode="out-in">
-          <span v-if="builder.saving.value" class="flex items-center gap-1 text-xs text-muted-foreground">
+          <span v-if="builder.saving.value" class="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
             <Icon name="lucide:loader-2" class="w-3 h-3 animate-spin" />
-            Saving…
+            <span class="hidden sm:inline">Saving…</span>
           </span>
-          <span v-else-if="justSaved" class="flex items-center gap-1 text-xs text-green-600">
+          <span v-else-if="justSaved" class="flex items-center gap-1 text-xs text-green-600 shrink-0">
             <Icon name="lucide:check" class="w-3 h-3" />
-            Saved
+            <span class="hidden sm:inline">Saved</span>
           </span>
-          <span v-else-if="builder.isDirty.value" class="flex items-center gap-1 text-xs text-amber-500">
+          <span v-else-if="builder.isDirty.value" class="flex items-center gap-1 text-xs text-amber-500 shrink-0">
             <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-            Unsaved
+            <span class="hidden sm:inline">Unsaved</span>
           </span>
         </Transition>
       </div>
 
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-1 sm:gap-2 shrink-0">
         <!-- Block count -->
-        <span v-if="builder.canvas.value.length" class="text-[11px] text-muted-foreground tabular-nums mr-1">
+        <span v-if="builder.canvas.value.length" class="text-[11px] text-muted-foreground tabular-nums mr-1 hidden sm:inline">
           {{ builder.canvas.value.length }} {{ builder.canvas.value.length === 1 ? 'block' : 'blocks' }}
         </span>
 
+        <!-- Sidebar toggle (visible on < lg) -->
+        <Button variant="ghost" size="sm" class="lg:hidden" @click="showSidebar = !showSidebar">
+          <Icon name="lucide:layout-list" class="w-3.5 h-3.5" />
+          <span class="hidden sm:inline ml-1">Blocks</span>
+        </Button>
+
         <Button variant="ghost" size="sm" @click="showTestModal = true">
-          <Icon name="lucide:send" class="w-3.5 h-3.5 mr-1" />
-          Send Test
+          <Icon name="lucide:send" class="w-3.5 h-3.5" />
+          <span class="hidden sm:inline ml-1">Send Test</span>
         </Button>
         <Button variant="outline" size="sm" @click="showPreview = !showPreview">
-          <Icon :name="showPreview ? 'lucide:panel-right-close' : 'lucide:panel-right-open'" class="w-3.5 h-3.5 mr-1" />
-          Preview
+          <Icon :name="showPreview ? 'lucide:panel-right-close' : 'lucide:panel-right-open'" class="w-3.5 h-3.5" />
+          <span class="hidden sm:inline ml-1">Preview</span>
         </Button>
         <Button size="sm" :disabled="builder.saving.value || !builder.isDirty.value" @click="handleSave">
-          <Icon name="lucide:save" class="w-3.5 h-3.5 mr-1" />
-          Save
+          <Icon name="lucide:save" class="w-3.5 h-3.5" />
+          <span class="hidden sm:inline ml-1">Save</span>
         </Button>
       </div>
     </div>
 
-    <div class="flex flex-1 overflow-hidden">
-      <!-- Block Library Sidebar -->
-      <div class="w-64 shrink-0 border-r overflow-y-auto flex flex-col bg-background">
-        <NewsletterBlockLibrarySidebar
-          :library="blockLibrary"
-          class="flex-1"
-          @add-block="handleAddBlock($event)"
+    <div class="flex flex-1 overflow-hidden relative">
+      <!-- Sidebar backdrop (visible on < lg when sidebar is open) -->
+      <Transition name="fade">
+        <div
+          v-if="showSidebar"
+          class="fixed inset-0 bg-black/20 z-20 lg:hidden"
+          @click="showSidebar = false"
         />
+      </Transition>
 
-        <!-- Custom Block Button -->
-        <div class="border-t p-3">
-          <button
-            class="w-full flex items-center justify-center gap-1.5 rounded-md border border-dashed border-primary/30 px-3 py-2 text-xs font-medium text-primary hover:bg-primary/5 hover:border-primary/50 transition-all"
-            @click="showCustomBlockModal = true"
-          >
-            <Icon name="lucide:code-2" class="w-3.5 h-3.5" />
-            Custom MJML Block
-          </button>
-        </div>
-
-        <!-- Partial Toggles + Edit -->
-        <div class="border-t p-3 space-y-2 bg-muted/30">
-          <p class="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Email Sections</p>
-
-          <!-- Web version bar -->
-          <div class="flex items-center gap-2 text-xs">
-            <input
-              type="checkbox"
-              :checked="builder.includeWebVersionBar.value"
-              class="rounded border-border h-3.5 w-3.5 cursor-pointer"
-              @change="handlePartialToggle('web_version_bar', ($event.target as HTMLInputElement).checked)"
-            />
-            <span class="flex-1 cursor-pointer" @click="builder.includeWebVersionBar.value = !builder.includeWebVersionBar.value; handlePartialToggle('web_version_bar', builder.includeWebVersionBar.value)">Web version bar</span>
-          </div>
-
-          <!-- Header -->
-          <div class="flex items-center gap-2 text-xs">
-            <input
-              type="checkbox"
-              :checked="builder.includeHeader.value"
-              class="rounded border-border h-3.5 w-3.5 cursor-pointer"
-              @change="handlePartialToggle('header', ($event.target as HTMLInputElement).checked)"
-            />
-            <span class="flex-1">Header</span>
-            <button
-              v-if="builder.headerPartial.value"
-              class="text-[10px] text-primary hover:underline flex items-center gap-0.5"
-              title="Edit header variables (logo, colors, etc.)"
-              @click="editingPartialType = 'header'"
-            >
-              <Icon name="lucide:pencil" class="w-3 h-3" />
-              Edit
+      <!-- Block Library Sidebar -->
+      <Transition name="slide-left">
+        <div
+          v-if="showSidebar || isLg"
+          class="
+            w-64 shrink-0 border-r overflow-y-auto flex flex-col bg-background
+            fixed inset-y-0 left-0 z-30 lg:relative lg:z-auto
+            shadow-xl lg:shadow-none
+          "
+          :class="{ 'top-0': !isLg }"
+        >
+          <!-- Mobile sidebar header -->
+          <div class="flex items-center justify-between px-3 py-2 border-b lg:hidden">
+            <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Block Library</span>
+            <button class="p-1 rounded hover:bg-muted" @click="showSidebar = false">
+              <Icon name="lucide:x" class="w-4 h-4" />
             </button>
           </div>
 
-          <!-- Footer -->
-          <div class="flex items-center gap-2 text-xs">
-            <input
-              type="checkbox"
-              :checked="builder.includeFooter.value"
-              class="rounded border-border h-3.5 w-3.5 cursor-pointer"
-              @change="handlePartialToggle('footer', ($event.target as HTMLInputElement).checked)"
-            />
-            <span class="flex-1">Footer</span>
+          <NewsletterBlockLibrarySidebar
+            :library="blockLibrary"
+            class="flex-1"
+            @add-block="handleAddBlock($event); showSidebar = false"
+          />
+
+          <!-- Custom Block Button -->
+          <div class="border-t p-3">
             <button
-              v-if="builder.footerPartial.value"
-              class="text-[10px] text-primary hover:underline flex items-center gap-0.5"
-              title="Edit footer variables (address, links, etc.)"
-              @click="editingPartialType = 'footer'"
+              class="w-full flex items-center justify-center gap-1.5 rounded-md border border-dashed border-primary/30 px-3 py-2 text-xs font-medium text-primary hover:bg-primary/5 hover:border-primary/50 transition-all"
+              @click="showCustomBlockModal = true"
             >
-              <Icon name="lucide:pencil" class="w-3 h-3" />
-              Edit
+              <Icon name="lucide:code-2" class="w-3.5 h-3.5" />
+              Custom MJML Block
             </button>
           </div>
+
+          <!-- Partial Toggles + Edit -->
+          <div class="border-t p-3 space-y-2 bg-muted/30">
+            <p class="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Email Sections</p>
+
+            <!-- Web version bar -->
+            <div class="flex items-center gap-2 text-xs">
+              <input
+                type="checkbox"
+                :checked="builder.includeWebVersionBar.value"
+                class="rounded border-border h-3.5 w-3.5 cursor-pointer"
+                @change="handlePartialToggle('web_version_bar', ($event.target as HTMLInputElement).checked)"
+              />
+              <span class="flex-1 cursor-pointer" @click="builder.includeWebVersionBar.value = !builder.includeWebVersionBar.value; handlePartialToggle('web_version_bar', builder.includeWebVersionBar.value)">Web version bar</span>
+            </div>
+
+            <!-- Header -->
+            <div class="flex items-center gap-2 text-xs">
+              <input
+                type="checkbox"
+                :checked="builder.includeHeader.value"
+                class="rounded border-border h-3.5 w-3.5 cursor-pointer"
+                @change="handlePartialToggle('header', ($event.target as HTMLInputElement).checked)"
+              />
+              <span class="flex-1">Header</span>
+              <button
+                v-if="builder.headerPartial.value"
+                class="text-[10px] text-primary hover:underline flex items-center gap-0.5"
+                title="Edit header variables (logo, colors, etc.)"
+                @click="editingPartialType = 'header'"
+              >
+                <Icon name="lucide:pencil" class="w-3 h-3" />
+                Edit
+              </button>
+            </div>
+
+            <!-- Footer -->
+            <div class="flex items-center gap-2 text-xs">
+              <input
+                type="checkbox"
+                :checked="builder.includeFooter.value"
+                class="rounded border-border h-3.5 w-3.5 cursor-pointer"
+                @change="handlePartialToggle('footer', ($event.target as HTMLInputElement).checked)"
+              />
+              <span class="flex-1">Footer</span>
+              <button
+                v-if="builder.footerPartial.value"
+                class="text-[10px] text-primary hover:underline flex items-center gap-0.5"
+                title="Edit footer variables (address, links, etc.)"
+                @click="editingPartialType = 'footer'"
+              >
+                <Icon name="lucide:pencil" class="w-3 h-3" />
+                Edit
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+      </Transition>
 
       <!-- Canvas -->
-      <div class="flex-1 overflow-y-auto bg-muted/20 p-6">
+      <div class="flex-1 overflow-y-auto bg-muted/20 p-3 sm:p-6">
         <div class="max-w-2xl mx-auto">
           <NewsletterBuilderCanvas
             v-if="builder.canvas.value.length"
@@ -144,14 +177,15 @@
           <!-- Empty state -->
           <div
             v-else
-            class="flex flex-col items-center justify-center py-24 text-muted-foreground border-2 border-dashed rounded-xl bg-background/50"
+            class="flex flex-col items-center justify-center py-12 sm:py-24 text-muted-foreground border-2 border-dashed rounded-xl bg-background/50"
           >
             <div class="w-16 h-16 rounded-2xl bg-primary/5 flex items-center justify-center mb-4">
               <Icon name="lucide:layout-template" class="w-8 h-8 text-primary/40" />
             </div>
             <p class="text-base font-medium text-foreground mb-1">Start building your email</p>
-            <p class="text-sm max-w-xs text-center">
-              Choose blocks from the library on the left to build your email template
+            <p class="text-sm max-w-xs text-center px-4">
+              <span class="lg:hidden">Tap <strong>Blocks</strong> to add content</span>
+              <span class="hidden lg:inline">Choose blocks from the library on the left to build your email template</span>
             </p>
             <div class="flex items-center gap-1 mt-4 text-xs text-muted-foreground/60">
               <Icon name="lucide:grip-vertical" class="w-3 h-3" />
@@ -164,14 +198,29 @@
         </div>
       </div>
 
-      <!-- Preview Pane — flexible width, grows to show 600px email + padding -->
+      <!-- Preview Pane -->
       <Transition name="slide-right">
-        <NewsletterTemplatePreviewPane
+        <div
           v-if="showPreview"
-          :html="builder.previewHtml.value"
-          :errors="builder.previewErrors.value"
-          class="w-[680px] shrink-0 border-l"
-        />
+          class="
+            fixed inset-0 z-20
+            lg:relative lg:inset-auto lg:z-auto lg:w-[680px] lg:shrink-0 lg:border-l
+            flex flex-col bg-background
+          "
+        >
+          <!-- Mobile preview close bar -->
+          <div class="flex items-center justify-between px-3 py-2 border-b lg:hidden">
+            <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Preview</span>
+            <button class="p-1 rounded hover:bg-muted" @click="showPreview = false">
+              <Icon name="lucide:x" class="w-4 h-4" />
+            </button>
+          </div>
+          <NewsletterTemplatePreviewPane
+            :html="builder.previewHtml.value"
+            :errors="builder.previewErrors.value"
+            class="flex-1"
+          />
+        </div>
       </Transition>
     </div>
 
@@ -203,7 +252,7 @@
 
 <script setup lang="ts">
 import { Button } from '~/components/ui/button';
-import { useDebounceFn } from '@vueuse/core';
+import { useDebounceFn, useMediaQuery } from '@vueuse/core';
 import type { CanvasBlock, NewsletterBlock } from '~/types/email/blocks';
 import { nanoid } from 'nanoid';
 import { parseVariablesSchema } from '~/types/email/blocks';
@@ -216,8 +265,10 @@ const props = defineProps<{
 const { getBlockLibrary } = useNewsletterBlocks();
 const builder = useTemplateBuilder(toRef(props, 'templateId'));
 
+const isLg = useMediaQuery('(min-width: 1024px)');
 const blockLibrary = ref<Record<string, any>>({});
 const showPreview = ref(true);
+const showSidebar = ref(false);
 const showTestModal = ref(false);
 const showCustomBlockModal = ref(false);
 const editingPartialType = ref<'header' | 'footer' | 'web_version_bar' | null>(null);
@@ -336,5 +387,23 @@ async function handleCustomBlockCreated(block: NewsletterBlock) {
 .slide-right-leave-to {
   transform: translateX(100%);
   opacity: 0;
+}
+
+.slide-left-enter-active,
+.slide-left-leave-active {
+  transition: all 0.3s ease;
+}
+.slide-left-enter-from,
+.slide-left-leave-to {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+
+@media (min-width: 1024px) {
+  .slide-left-enter-from,
+  .slide-left-leave-to {
+    transform: none;
+    opacity: 1;
+  }
 }
 </style>

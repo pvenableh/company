@@ -66,6 +66,12 @@ const themes: ThemeDefinition[] = [
 		description: 'One hue, every shade — your color',
 		swatches: [], // dynamically generated
 	},
+	{
+		id: 'chromatic',
+		name: 'Chromatic',
+		description: 'Rich multi-hue palette from one base color',
+		swatches: [], // dynamically generated
+	},
 ];
 
 /** Curated mono presets — hues that look great monochromatic */
@@ -233,19 +239,156 @@ function removeMonoPalette() {
 	if (styleEl) styleEl.remove();
 }
 
+/**
+ * Generate a chromatic (multi-hue) palette from a single base hue.
+ * Unlike mono which uses ONE hue everywhere, chromatic spreads colors
+ * across the color wheel using color theory relationships:
+ *   - Primary:   base hue
+ *   - Accent:    split-complementary (+150°)
+ *   - Secondary: analogous (+30°)
+ *   - Charts:    triadic & tetradic positions for visual variety
+ */
+function generateChromaticPalette(hue: number) {
+	const h = Math.round(hue % 360);
+	const complement = (h + 150) % 360;  // split-complementary
+	const analogous = (h + 30) % 360;
+	const triadic1 = (h + 120) % 360;
+	const triadic2 = (h + 240) % 360;
+	const tetradic = (h + 90) % 360;
+
+	const light = {
+		background: `${h} 18% 98%`,
+		foreground: `${h} 12% 10%`,
+		card: `${h} 8% 100%`,
+		'card-foreground': `${h} 12% 10%`,
+		popover: `${h} 8% 100%`,
+		'popover-foreground': `${h} 12% 10%`,
+		primary: `${h} 65% 42%`,
+		'primary-foreground': `0 0% 100%`,
+		secondary: `${analogous} 25% 92%`,
+		'secondary-foreground': `${analogous} 20% 14%`,
+		muted: `${h} 14% 93%`,
+		'muted-foreground': `${h} 8% 46%`,
+		accent: `${complement} 45% 92%`,
+		'accent-foreground': `${complement} 30% 14%`,
+		destructive: `0 72% 51%`,
+		'destructive-foreground': `0 0% 100%`,
+		border: `${h} 12% 88%`,
+		input: `${h} 12% 88%`,
+		ring: `${h} 65% 42%`,
+		'chart-1': `${h} 65% 42%`,
+		'chart-2': `${complement} 55% 48%`,
+		'chart-3': `${triadic1} 50% 52%`,
+		'chart-4': `${triadic2} 45% 46%`,
+		'chart-5': `${tetradic} 50% 50%`,
+		'sidebar-background': `${h} 12% 96%`,
+		'sidebar-foreground': `${h} 12% 12%`,
+		'sidebar-primary': `${h} 65% 42%`,
+		'sidebar-primary-foreground': `0 0% 100%`,
+		'sidebar-accent': `${complement} 20% 93%`,
+		'sidebar-accent-foreground': `${complement} 20% 14%`,
+		'sidebar-border': `${h} 12% 88%`,
+		'sidebar-ring': `${h} 65% 42%`,
+		success: `142 76% 36%`,
+		'success-foreground': `0 0% 100%`,
+		warning: `38 92% 50%`,
+		'warning-foreground': `0 0% 0%`,
+	};
+
+	const dark = {
+		background: `${h} 12% 7%`,
+		foreground: `${h} 10% 92%`,
+		card: `${h} 10% 10%`,
+		'card-foreground': `${h} 10% 92%`,
+		popover: `${h} 10% 10%`,
+		'popover-foreground': `${h} 10% 92%`,
+		primary: `${h} 60% 60%`,
+		'primary-foreground': `${h} 12% 7%`,
+		secondary: `${analogous} 12% 16%`,
+		'secondary-foreground': `${analogous} 15% 90%`,
+		muted: `${h} 8% 16%`,
+		'muted-foreground': `${h} 6% 55%`,
+		accent: `${complement} 15% 16%`,
+		'accent-foreground': `${complement} 12% 90%`,
+		destructive: `0 62.8% 30.6%`,
+		'destructive-foreground': `${h} 10% 92%`,
+		border: `${h} 8% 18%`,
+		input: `${h} 8% 18%`,
+		ring: `${h} 60% 60%`,
+		'chart-1': `${h} 60% 60%`,
+		'chart-2': `${complement} 50% 55%`,
+		'chart-3': `${triadic1} 45% 55%`,
+		'chart-4': `${triadic2} 40% 50%`,
+		'chart-5': `${tetradic} 45% 55%`,
+		'sidebar-background': `${h} 12% 8%`,
+		'sidebar-foreground': `${h} 10% 92%`,
+		'sidebar-primary': `${h} 60% 60%`,
+		'sidebar-primary-foreground': `${h} 12% 7%`,
+		'sidebar-accent': `${complement} 10% 14%`,
+		'sidebar-accent-foreground': `${complement} 10% 90%`,
+		'sidebar-border': `${h} 8% 18%`,
+		'sidebar-ring': `${h} 60% 60%`,
+	};
+
+	return { light, dark };
+}
+
+/**
+ * Inject generated chromatic CSS variables into the document.
+ */
+function applyChromaticPalette(hue: number) {
+	if (!import.meta.client) return;
+
+	const { light, dark } = generateChromaticPalette(hue);
+
+	let styleEl = document.getElementById('chromatic-theme-vars') as HTMLStyleElement | null;
+	if (!styleEl) {
+		styleEl = document.createElement('style');
+		styleEl.id = 'chromatic-theme-vars';
+		document.head.appendChild(styleEl);
+	}
+
+	const lightVars = Object.entries(light)
+		.map(([k, v]) => `  --${k}: ${v};`)
+		.join('\n');
+	const darkVars = Object.entries(dark)
+		.map(([k, v]) => `  --${k}: ${v};`)
+		.join('\n');
+
+	styleEl.textContent = `
+[data-theme='chromatic'] {
+  --radius: 0.75rem;
+${lightVars}
+}
+[data-theme='chromatic'] .dark {
+${darkVars}
+}`;
+}
+
+/** Remove injected chromatic CSS */
+function removeChromaticPalette() {
+	if (!import.meta.client) return;
+	const styleEl = document.getElementById('chromatic-theme-vars');
+	if (styleEl) styleEl.remove();
+}
+
 export function useTheme() {
 	const currentTheme = useState<string>('earnest-theme', () => 'earnest');
 	const currentStyle = useState<string>('earnest-style', () => 'modern');
 	const monoHue = useState<number>('earnest-mono-hue', () => 215);
 
+	/** Dynamic themes that generate CSS from a hue value */
+	const dynamicThemes = ['mono', 'chromatic'];
+
 	const setTheme = (themeId: string) => {
-		// For mono, accept without registry check
-		if (themeId !== 'mono') {
+		if (!dynamicThemes.includes(themeId)) {
 			const exists = themes.find((t) => t.id === themeId);
 			if (!exists) return;
-			// Switching away from mono — clean up injected styles
-			removeMonoPalette();
 		}
+
+		// Clean up any previously injected dynamic styles
+		removeMonoPalette();
+		removeChromaticPalette();
 
 		currentTheme.value = themeId;
 
@@ -253,9 +396,11 @@ export function useTheme() {
 			document.documentElement.setAttribute('data-theme', themeId);
 			localStorage.setItem(THEME_KEY, themeId);
 
-			// If switching to mono, apply the current hue
+			// Apply dynamic palette if needed
 			if (themeId === 'mono') {
 				applyMonoPalette(monoHue.value);
+			} else if (themeId === 'chromatic') {
+				applyChromaticPalette(monoHue.value);
 			}
 		}
 	};
@@ -266,9 +411,11 @@ export function useTheme() {
 		if (import.meta.client) {
 			localStorage.setItem(MONO_HUE_KEY, String(monoHue.value));
 
-			// If currently on mono theme, update palette live
+			// Update palette live for whichever dynamic theme is active
 			if (currentTheme.value === 'mono') {
 				applyMonoPalette(monoHue.value);
+			} else if (currentTheme.value === 'chromatic') {
+				applyChromaticPalette(monoHue.value);
 			}
 		}
 	};
@@ -297,9 +444,11 @@ export function useTheme() {
 		currentTheme.value = savedTheme;
 		document.documentElement.setAttribute('data-theme', savedTheme);
 
-		// If mono, inject the CSS palette
+		// If dynamic theme, inject the CSS palette
 		if (savedTheme === 'mono') {
 			applyMonoPalette(monoHue.value);
+		} else if (savedTheme === 'chromatic') {
+			applyChromaticPalette(monoHue.value);
 		}
 
 		const savedStyle = localStorage.getItem(STYLE_KEY) || 'modern';
@@ -319,5 +468,6 @@ export function useTheme() {
 		setMonoHue,
 		initTheme,
 		generateMonoPalette,
+		generateChromaticPalette,
 	};
 }

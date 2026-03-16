@@ -87,9 +87,10 @@ onMounted(() => {
 	loadInvoices();
 });
 
-// Re-fetch when client or org changes
+// Re-fetch when client or org changes (debounced to prevent double-fires)
+const debouncedLoadInvoices = useDebounceFn(() => loadInvoices(), 300);
 watch([selectedClient, selectedOrg], () => {
-	loadInvoices();
+	debouncedLoadInvoices();
 });
 </script>
 

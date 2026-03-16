@@ -76,7 +76,7 @@ const handleRegisterOrg = () => {
 					@click="handleSelectOrg(org.id)"
 				>
 					<Avatar class="size-10">
-						<AvatarImage :src="getIconUrl(org)" :alt="org.name" />
+						<AvatarImage v-if="getIconUrl(org)" :src="getIconUrl(org)" :alt="org.name" />
 						<AvatarFallback class="text-sm font-medium">
 							{{ getInitials(org) }}
 						</AvatarFallback>

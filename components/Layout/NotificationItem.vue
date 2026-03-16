@@ -12,7 +12,7 @@
 		<div class="flex items-start gap-3">
 			<!-- Sender Avatar -->
 			<Avatar :class="compact ? 'size-7' : 'size-9'">
-				<AvatarImage :src="getAvatarUrl(notification.sender)" :alt="getSenderName()" />
+				<AvatarImage v-if="getAvatarUrl(notification.sender)" :src="getAvatarUrl(notification.sender)" :alt="getSenderName()" />
 				<AvatarFallback class="text-xs">{{ getSenderInitials() }}</AvatarFallback>
 			</Avatar>
 

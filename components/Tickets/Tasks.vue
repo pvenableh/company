@@ -117,7 +117,6 @@ async function notifyMentionedUsers(commentText, collection, itemId) {
 			sender: currentUser.value.id,
 		});
 
-		console.log(currentUser.value.id);
 	}
 }
 
@@ -131,8 +130,6 @@ async function addTask() {
 			status: 'active',
 			sort: localTasks.value.length,
 		});
-
-		console.log(newTaskId);
 
 		if (mentionedUsers.value.size > 0) {
 			await notifyMentionedUsers(newTask.value, 'tasks', newTaskId.id);
@@ -172,7 +169,6 @@ async function toggleTask(task) {
 			localTasks.value[index] = { ...localTasks.value[index], status: newStatus };
 		}
 		if (newStatus === 'completed') {
-			console.log(progress.value);
 			if (progress.value === 100) {
 				startConfetti();
 				toast.add({
@@ -355,11 +351,6 @@ watch(
 const motivationalMessage = computed(() => {
 	const totalTasks = localTasks.value.length;
 	const completedTasks = completedTasksCount.value;
-	console.log(completedTasks.length);
-	console.log(previousCompletedTasks.value);
-	console.log(completedTasks < previousCompletedTasks.value);
-	console.log(previousCompletedTasks.value !== null);
-	console.log(previousCompletedTasks.value !== null && completedTasks < previousCompletedTasks.value);
 	let message = '';
 	if (isLoading.value) {
 		message = 'Loading tasks...';
@@ -445,7 +436,7 @@ onUnmounted(() => {
 			@end="handleDragEnd"
 		>
 			<template #item="{ element: task }">
-				<div class="flex items-center space-x-3 group bg-card p-2 rounded-lg shadow-sm">
+				<div class="flex items-center space-x-3 group p-2 rounded-lg hover:bg-muted/50 transition-colors">
 					<UButton
 						color="gray"
 						variant="ghost"

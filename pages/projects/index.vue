@@ -63,10 +63,11 @@ const fetchTableProjects = async () => {
 	}
 };
 
-// Fetch table data when view switches to table or org changes
+// Fetch table data when view switches to table or org changes (debounced)
+const debouncedFetchTable = useDebounceFn(() => fetchTableProjects(), 300);
 watch([() => activeView.value, selectedOrg, selectedClient], ([view]) => {
 	if (view === 'table') {
-		fetchTableProjects();
+		debouncedFetchTable();
 	}
 });
 

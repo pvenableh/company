@@ -5,7 +5,7 @@
 			<h4 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Color Theme</h4>
 
 			<!-- Pantone-style theme chips -->
-			<div class="grid grid-cols-5 gap-2.5">
+			<div class="grid grid-cols-3 gap-2.5">
 				<button
 					v-for="theme in themes"
 					:key="theme.id"
@@ -16,11 +16,20 @@
 					<!-- Color block -->
 					<div class="pantone-chip__color">
 						<template v-if="theme.id === 'mono'">
-							<!-- Mono: gradient from the current hue -->
+							<!-- Mono: single-hue gradient -->
 							<div
 								class="absolute inset-0 rounded-t-[5px]"
 								:style="{
 									background: `linear-gradient(135deg, hsl(${monoHue}, 55%, 65%), hsl(${monoHue}, 55%, 35%))`,
+								}"
+							/>
+						</template>
+						<template v-else-if="theme.id === 'chromatic'">
+							<!-- Chromatic: multi-hue gradient showing color relationships -->
+							<div
+								class="absolute inset-0 rounded-t-[5px]"
+								:style="{
+									background: `linear-gradient(135deg, hsl(${monoHue}, 65%, 50%), hsl(${(monoHue + 150) % 360}, 55%, 50%), hsl(${(monoHue + 30) % 360}, 50%, 55%))`,
 								}"
 							/>
 						</template>
@@ -51,11 +60,13 @@
 			</div>
 		</div>
 
-		<!-- Mono Customization Panel -->
+		<!-- Color Customization Panel (Mono or Chromatic) -->
 		<transition name="slide">
-			<div v-if="currentTheme === 'mono'" class="space-y-4 rounded-xl border bg-card/50 p-4">
+			<div v-if="currentTheme === 'mono' || currentTheme === 'chromatic'" class="space-y-4 rounded-xl border bg-card/50 p-4">
 				<div class="flex items-center justify-between">
-					<h4 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Customize Color</h4>
+					<h4 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+						{{ currentTheme === 'chromatic' ? 'Base Color' : 'Customize Color' }}
+					</h4>
 					<span class="text-[10px] text-muted-foreground font-mono tabular-nums bg-muted px-1.5 py-0.5 rounded">{{ monoHue }}°</span>
 				</div>
 
@@ -103,8 +114,37 @@
 					</button>
 				</div>
 
-				<!-- Generated palette as Pantone strip -->
-				<div>
+				<!-- Chromatic: Kigen-inspired shade grid showing color relationships -->
+				<div v-if="currentTheme === 'chromatic'">
+					<p class="text-[10px] text-muted-foreground mb-2 font-medium">Color Channels</p>
+					<div class="space-y-1.5">
+						<div v-for="channel in chromaticChannels" :key="channel.label" class="space-y-0.5">
+							<div class="flex items-center gap-1.5 mb-0.5">
+								<span
+									class="w-2 h-2 rounded-full shrink-0"
+									:style="{ backgroundColor: `hsl(${channel.hue}, 60%, 50%)` }"
+								/>
+								<span class="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">{{ channel.label }}</span>
+								<span class="text-[8px] text-muted-foreground/60 font-mono">{{ channel.hue }}°</span>
+							</div>
+							<div class="flex rounded-md overflow-hidden border border-black/5 dark:border-white/5">
+								<div
+									v-for="(shade, i) in channel.shades"
+									:key="i"
+									class="flex-1 h-7 transition-colors duration-200 relative group/shade"
+									:style="{ backgroundColor: shade.color }"
+								>
+									<span class="absolute inset-0 flex items-center justify-center text-[7px] font-mono opacity-0 group-hover/shade:opacity-100 transition-opacity"
+										:class="shade.light > 60 ? 'text-black/50' : 'text-white/60'"
+									>{{ shade.step }}</span>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Mono: generated palette strip -->
+				<div v-else>
 					<p class="text-[10px] text-muted-foreground mb-1.5 font-medium">Generated Palette</p>
 					<div class="flex rounded-lg overflow-hidden shadow-sm border border-black/5 dark:border-white/5">
 						<div
@@ -125,7 +165,7 @@
 					<p class="text-[10px] text-muted-foreground mb-1.5 font-medium">Semantic Tokens</p>
 					<div class="flex flex-wrap gap-1.5">
 						<span
-							v-for="token in semanticTokens"
+							v-for="token in activeSemanticTokens"
 							:key="token.label"
 							class="inline-flex items-center gap-1.5 text-[10px] px-2 py-1 rounded-full border bg-background"
 						>
@@ -186,7 +226,7 @@ const activePresetName = computed(() => {
 	return match?.name || null;
 });
 
-/** Palette preview steps from light to dark */
+/** Palette preview steps from light to dark (mono) */
 const paletteSteps = computed(() => {
 	const h = monoHue.value;
 	return [98, 92, 82, 70, 55, 42, 30, 18, 10, 5].map(
@@ -194,8 +234,45 @@ const paletteSteps = computed(() => {
 	);
 });
 
-/** Semantic token pills showing how the mono hue maps to roles */
-const semanticTokens = computed(() => {
+/** Kigen-inspired shade steps for chromatic channels */
+const shadeSteps = [
+	{ step: '50', light: 97 },
+	{ step: '100', light: 92 },
+	{ step: '200', light: 82 },
+	{ step: '300', light: 70 },
+	{ step: '400', light: 58 },
+	{ step: '500', light: 45 },
+	{ step: '600', light: 37 },
+	{ step: '700', light: 28 },
+	{ step: '800', light: 18 },
+	{ step: '900', light: 12 },
+	{ step: '950', light: 6 },
+];
+
+/** Chromatic color channels — shows how the base hue spreads across the wheel */
+const chromaticChannels = computed(() => {
+	const h = monoHue.value;
+	const complement = (h + 150) % 360;
+	const analogous = (h + 30) % 360;
+	const triadic = (h + 120) % 360;
+
+	const makeShades = (hue: number, sat: number) =>
+		shadeSteps.map((s) => ({
+			step: s.step,
+			light: s.light,
+			color: `hsl(${hue}, ${s.light > 80 ? sat * 0.4 : s.light < 20 ? sat * 0.6 : sat}%, ${s.light}%)`,
+		}));
+
+	return [
+		{ label: 'Primary', hue: h, shades: makeShades(h, 65) },
+		{ label: 'Complement', hue: complement, shades: makeShades(complement, 55) },
+		{ label: 'Analogous', hue: analogous, shades: makeShades(analogous, 50) },
+		{ label: 'Triadic', hue: triadic, shades: makeShades(triadic, 50) },
+	];
+});
+
+/** Mono semantic tokens */
+const monoSemanticTokens = computed(() => {
 	const h = monoHue.value;
 	return [
 		{ label: 'Primary', color: `hsl(${h}, 55%, 42%)` },
@@ -206,6 +283,26 @@ const semanticTokens = computed(() => {
 		{ label: 'Accent', color: `hsl(${h}, 50%, 60%)` },
 	];
 });
+
+/** Chromatic semantic tokens — shows multi-hue roles */
+const chromaticSemanticTokens = computed(() => {
+	const h = monoHue.value;
+	const complement = (h + 150) % 360;
+	const analogous = (h + 30) % 360;
+	return [
+		{ label: 'Primary', color: `hsl(${h}, 65%, 42%)` },
+		{ label: 'Accent', color: `hsl(${complement}, 45%, 48%)` },
+		{ label: 'Secondary', color: `hsl(${analogous}, 30%, 50%)` },
+		{ label: 'Background', color: `hsl(${h}, 18%, 98%)` },
+		{ label: 'Foreground', color: `hsl(${h}, 12%, 10%)` },
+		{ label: 'Muted', color: `hsl(${h}, 14%, 93%)` },
+	];
+});
+
+/** Active semantic tokens based on current theme */
+const activeSemanticTokens = computed(() =>
+	currentTheme.value === 'chromatic' ? chromaticSemanticTokens.value : monoSemanticTokens.value
+);
 
 /** Get a preview font class for each style variant */
 function getStylePreviewClass(styleId: string): string {
