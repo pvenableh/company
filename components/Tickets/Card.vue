@@ -18,7 +18,7 @@
 
 			<!-- Ticket Title -->
 			<nuxt-link :to="`/tickets/${element.id}`">
-				<h4 class="t-title font-bold text-[16px] line-clamp-2 mt-2 text-foreground">
+				<h4 class="t-title text-[16px] line-clamp-2 mt-2 text-foreground">
 					{{ element?.title }}
 					<UIcon
 						name="i-heroicons-arrow-right"

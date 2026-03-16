@@ -192,19 +192,19 @@ onMounted(loadClient);
 
           <!-- Related Items Tabs -->
           <div class="ios-card p-6">
-            <div class="flex items-center gap-1 border-b border-border mb-4">
+            <div class="inline-flex items-center gap-1 rounded-xl bg-muted/50 p-1 border border-border mb-4">
               <button
                 v-for="tab in tabs"
                 :key="tab.key"
-                class="flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors"
+                class="flex items-center gap-2 px-4 py-2 rounded-lg text-[11px] uppercase tracking-wider font-semibold transition-all duration-200"
                 :class="activeTab === tab.key
-                  ? 'border-foreground text-foreground'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'"
+                  ? 'bg-card text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'"
                 @click="activeTab = tab.key"
               >
                 <Icon :name="tab.icon" class="w-4 h-4" />
                 {{ tab.label }}
-                <span class="text-xs text-muted-foreground/60 ml-0.5">
+                <span class="text-[9px] text-muted-foreground/60 ml-0.5">
                   ({{ (client as any)[tab.key]?.length || 0 }})
                 </span>
               </button>

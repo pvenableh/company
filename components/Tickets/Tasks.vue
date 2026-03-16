@@ -161,40 +161,49 @@ const launchConfetti = () => {
 
 async function toggleTask(task) {
 	const newStatus = task.status === 'completed' ? 'active' : 'completed';
+	const oldStatus = task.status;
+
+	// Optimistic update BEFORE API call for instant UI feedback
+	const index = localTasks.value.findIndex((t) => t.id === task.id);
+	if (index !== -1) {
+		localTasks.value[index] = { ...localTasks.value[index], status: newStatus };
+	}
+
+	// Fire confetti immediately after optimistic update so progress is current
+	if (newStatus === 'completed') {
+		if (progress.value === 100) {
+			startConfetti();
+			toast.add({
+				title: 'Set status to completed?',
+				timeout: 7000,
+				actions: [
+					{
+						label: 'Yes',
+						click: async () => {
+							await ticketItems.update(props.ticketId, { status: 'Completed' });
+							router.push('/tickets');
+						},
+					},
+					{
+						label: 'No',
+						click: () => {
+							toast.remove();
+						},
+					},
+				],
+			});
+		} else {
+			launchConfetti();
+		}
+	}
+
 	try {
 		await taskItems.update(task.id, { status: newStatus });
-
-		const index = localTasks.value.findIndex((t) => t.id === task.id);
-		if (index !== -1) {
-			localTasks.value[index] = { ...localTasks.value[index], status: newStatus };
-		}
-		if (newStatus === 'completed') {
-			if (progress.value === 100) {
-				startConfetti();
-				toast.add({
-					title: 'Set status to completed?',
-					timeout: 7000,
-					actions: [
-						{
-							label: 'Yes',
-							click: async () => {
-								await ticketItems.update(props.ticketId, { status: 'Completed' });
-								router.push('/tickets');
-							},
-						},
-						{
-							label: 'No',
-							click: () => {
-								toast.remove();
-							},
-						},
-					],
-				});
-			} else {
-				launchConfetti();
-			}
-		}
 	} catch (error) {
+		// Rollback on failure
+		if (index !== -1) {
+			localTasks.value[index] = { ...localTasks.value[index], status: oldStatus };
+		}
 		console.error('Error toggling task:', error);
 		toast.add({
 			title: 'Error Toggling Task',
@@ -444,7 +453,7 @@ onUnmounted(() => {
 						size="xs"
 						class="drag-handle cursor-move opacity-0 group-hover:opacity-100 transition-opacity"
 					/>
-					<UCheckbox :model-value="task.status === 'completed'" @update:model-value="() => toggleTask(task)" />
+					<UCheckbox :key="`cb-${task.id}-${task.status}`" :model-value="task.status === 'completed'" @update:model-value="() => toggleTask(task)" />
 					<div class="relative flex-1">
 						<LazyFormTiptap
 							v-if="editingTaskId === task.id"

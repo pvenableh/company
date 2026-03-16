@@ -1907,6 +1907,14 @@ export interface ProjectEvent {
 	event_date?: string | null;
 	is_milestone?: boolean | null;
 	category_id?: ProjectEventCategory | string | null;
+	/** @description Number of business days for this phase */
+	duration_days?: number | null;
+	/** @description Calculated end date of the phase */
+	end_date?: string | null;
+	/** @description Team member assigned to this event */
+	assigned_to?: DirectusUser | string | null;
+	/** @description Dependency on another event */
+	depends_on?: ProjectEvent | string | null;
 	comments?: ProjectEventsComment[] | string[];
 	spawned_projects?: Project[] | string[];
 	tasks?: ProjectTask[] | string[];

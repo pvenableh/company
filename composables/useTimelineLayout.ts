@@ -8,9 +8,9 @@ export function useTimelineLayout(
   projects: Ref<ProjectWithRelations[]>,
   zoom: Ref<number>
 ) {
-  const laneHeight = 220;
+  const laneHeight = 140;
   const headerHeight = 60;
-  const padding = 100;
+  const padding = 140;
 
   const dateRange = computed(() => {
     let min = Infinity;
@@ -53,7 +53,7 @@ export function useTimelineLayout(
     };
   });
 
-  const canvasWidth = computed(() => 1200 * zoom.value);
+  const canvasWidth = computed(() => 1600 * zoom.value);
 
   const getXPosition = (dateString: string): number => {
     const time = new Date(dateString || new Date().toISOString()).getTime();

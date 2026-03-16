@@ -24,7 +24,7 @@ const emit = defineEmits<{
         variant="ghost"
         size="sm"
         class="h-7 w-7 p-0"
-        :disabled="zoom <= 0.5"
+        :disabled="zoom <= 1.5"
         @click="emit('zoomOut')"
       >
         <Icon name="i-heroicons-minus" class="h-3.5 w-3.5" />

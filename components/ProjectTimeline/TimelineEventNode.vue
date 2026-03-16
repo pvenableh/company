@@ -14,7 +14,7 @@ const emit = defineEmits<{
   click: [];
 }>();
 
-const nodeRadius = computed(() => props.event.is_milestone ? 10 : 7);
+const nodeRadius = computed(() => props.event.is_milestone ? 18 : 10);
 const taskCount = computed(() => props.event.tasks?.length || 0);
 const completedTasks = computed(() => props.event.tasks?.filter((t) => t.completed).length || 0);
 const hasCategory = computed(() => !!props.event.category_id);
@@ -74,46 +74,53 @@ const labelDirection = computed(() => isAbove.value ? -1 : 1);
       class="transition-opacity duration-200 hover:opacity-40"
     />
 
-    <!-- Main node -->
+    <!-- Main node (subway station style) -->
     <circle
       :cx="x"
       :cy="y"
       :r="nodeRadius"
       :fill="color"
       :stroke="selected ? '#fff' : 'none'"
-      :stroke-width="selected ? 2 : 0"
+      :stroke-width="selected ? 3 : 0"
       class="transition-all duration-200"
     />
-
-    <!-- Milestone diamond overlay -->
-    <rect
-      v-if="event.is_milestone"
-      :x="x - 5"
-      :y="y - 5"
-      width="10"
-      height="10"
-      rx="1"
+    <!-- Inner white circle (subway station ring) -->
+    <circle
+      :cx="x"
+      :cy="y"
+      :r="nodeRadius - 3"
       fill="white"
+      class="dark:fill-gray-900"
+      :opacity="event.is_milestone ? 0 : 1"
+    />
+    <!-- Milestone: star/shine accent -->
+    <circle
+      v-if="event.is_milestone"
+      :cx="x"
+      :cy="y"
+      :r="nodeRadius + 4"
+      fill="none"
+      :stroke="color"
+      stroke-width="1"
       opacity="0.3"
-      :transform="`rotate(45 ${x} ${y})`"
     />
 
     <!-- Category badge (same side as title/date) -->
     <g v-if="hasCategory && typeof event.category_id === 'object' && event.category_id">
       <rect
-        :x="x - 20"
-        :y="isAbove ? y - nodeRadius - 30 : y + nodeRadius + 26"
-        width="40"
-        height="12"
-        rx="6"
+        :x="x - 22"
+        :y="isAbove ? y - nodeRadius - 32 : y + nodeRadius + 28"
+        width="44"
+        height="14"
+        rx="7"
         :fill="categoryColor"
       />
       <text
         :x="x"
-        :y="isAbove ? y - nodeRadius - 22 : y + nodeRadius + 34"
+        :y="isAbove ? y - nodeRadius - 22 : y + nodeRadius + 38"
         text-anchor="middle"
         :fill="categoryTextColor"
-        font-size="6"
+        font-size="7"
         font-weight="700"
         letter-spacing="0.05em"
       >
@@ -124,22 +131,22 @@ const labelDirection = computed(() => isAbove.value ? -1 : 1);
     <!-- Event title -->
     <text
       :x="x"
-      :y="isAbove ? y - nodeRadius - 10 : y + nodeRadius + 12"
+      :y="isAbove ? y - nodeRadius - 8 : y + nodeRadius + 14"
       text-anchor="middle"
       class="fill-gray-700 dark:fill-gray-300"
-      font-size="8"
-      font-weight="600"
+      font-size="9"
+      font-weight="700"
     >
-      {{ (event.title || '').length > 15 ? (event.title || '').slice(0, 13) + '...' : (event.title || '') }}
+      {{ (event.title || '').length > 18 ? (event.title || '').slice(0, 16) + '...' : (event.title || '') }}
     </text>
 
     <!-- Date label -->
     <text
       :x="x"
-      :y="isAbove ? y - nodeRadius - 2 : y + nodeRadius + 22"
+      :y="isAbove ? y - nodeRadius - 20 : y + nodeRadius + 24"
       text-anchor="middle"
       class="fill-gray-400 dark:fill-gray-500"
-      font-size="6.5"
+      font-size="7.5"
     >
       {{ new Date(event.event_date || event.date || '').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }}
     </text>
@@ -147,19 +154,19 @@ const labelDirection = computed(() => isAbove.value ? -1 : 1);
     <!-- Task progress indicator (opposite side from title) -->
     <g v-if="taskCount > 0">
       <rect
-        :x="x - 14"
-        :y="isAbove ? y + nodeRadius + 4 : y - nodeRadius - 16"
-        width="28"
-        height="10"
-        rx="5"
+        :x="x - 16"
+        :y="isAbove ? y + nodeRadius + 6 : y - nodeRadius - 18"
+        width="32"
+        height="12"
+        rx="6"
         class="fill-gray-100 dark:fill-gray-700"
       />
       <text
         :x="x"
-        :y="isAbove ? y + nodeRadius + 11 : y - nodeRadius - 9"
+        :y="isAbove ? y + nodeRadius + 14 : y - nodeRadius - 10"
         text-anchor="middle"
         class="fill-gray-500 dark:fill-gray-400"
-        font-size="6.5"
+        font-size="7"
         font-weight="600"
       >
         {{ completedTasks }}/{{ taskCount }}
@@ -170,10 +177,10 @@ const labelDirection = computed(() => isAbove.value ? -1 : 1);
     <g v-if="(event.comment_count || 0) > 0 || (event.reaction_count || 0) > 0">
       <text
         :x="x"
-        :y="isAbove ? y + nodeRadius + 22 : y - nodeRadius - 20"
+        :y="isAbove ? y + nodeRadius + 26 : y - nodeRadius - 24"
         text-anchor="middle"
         class="fill-gray-400"
-        font-size="6.5"
+        font-size="7"
       >
         <tspan v-if="(event.comment_count || 0) > 0">{{ event.comment_count }}💬</tspan>
         <tspan v-if="(event.comment_count || 0) > 0 && (event.reaction_count || 0) > 0"> </tspan>

@@ -201,6 +201,54 @@
 				</div>
 			</template>
 		</UModal>
+
+		<!-- Post-Creation Timeline Prompt -->
+		<UModal v-model="showTimelinePrompt" title="Generate Timeline?">
+			<template #header>
+				<div class="flex items-center justify-between w-full">
+					<div class="flex items-center gap-2">
+						<div class="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
+							<UIcon name="i-heroicons-sparkles" class="h-3.5 w-3.5 text-white" />
+						</div>
+						<h3 class="text-sm font-bold uppercase tracking-wide">Generate Timeline?</h3>
+					</div>
+					<Button variant="ghost" size="icon-sm" @click="showTimelinePrompt = false">
+						<UIcon name="i-heroicons-x-mark" class="h-4 w-4" />
+					</Button>
+				</div>
+			</template>
+
+			<div class="p-4 space-y-3">
+				<p class="text-sm text-foreground">
+					<span class="font-semibold">"{{ lastCreatedProject?.title }}"</span> has been created.
+				</p>
+				<p class="text-sm text-muted-foreground">
+					Would you like AI to generate a project timeline with milestones and tasks?
+				</p>
+			</div>
+
+			<template #footer>
+				<div class="flex justify-end gap-3 w-full">
+					<Button variant="outline" size="sm" @click="showTimelinePrompt = false">Not Now</Button>
+					<Button
+						size="sm"
+						class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white border-0"
+						@click="showTimelinePrompt = false; showTimelineWizard = true"
+					>
+						<UIcon name="i-heroicons-sparkles" class="h-3 w-3 mr-1" />
+						Generate Timeline
+					</Button>
+				</div>
+			</template>
+		</UModal>
+
+		<!-- Timeline Generator Wizard -->
+		<ProjectsAITimelineWizard
+			v-if="showTimelineWizard && lastCreatedProject"
+			:project="lastCreatedProject"
+			@close="showTimelineWizard = false"
+			@created="handleTimelineCreated"
+		/>
 	</div>
 </template>
 
@@ -240,6 +288,15 @@ const newProjectForm = reactive({
 	start_date: '',
 });
 
+// Post-creation timeline prompt state
+const showTimelinePrompt = ref(false);
+const showTimelineWizard = ref(false);
+const lastCreatedProject = ref(null);
+
+const handleTimelineCreated = () => {
+	refresh();
+};
+
 const resetNewProjectForm = () => {
 	newProjectForm.title = '';
 	newProjectForm.description = '';
@@ -275,8 +332,17 @@ const handleCreateProject = async () => {
 			data.start_date = newProjectForm.start_date;
 		}
 
-		await projectItems.create(data);
+		const created = await projectItems.create(data);
 		await refresh();
+
+		// Build project data for timeline wizard
+		const service = serviceOptions.value.find((s) => s.id === newProjectForm.service);
+		lastCreatedProject.value = {
+			id: created.id,
+			title: newProjectForm.title.trim(),
+			service: service && service.id ? { name: service.name, color: service.color } : null,
+			start_date: newProjectForm.start_date || null,
+		};
 
 		useToast().add({
 			title: 'Project Created',
@@ -286,6 +352,7 @@ const handleCreateProject = async () => {
 
 		showNewProjectModal.value = false;
 		resetNewProjectForm();
+		showTimelinePrompt.value = true;
 	} catch (error) {
 		console.error('Error creating project:', error);
 		useToast().add({

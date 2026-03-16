@@ -34,14 +34,18 @@ const emit = defineEmits<{
   (e: 'change', index: number): void
 }>()
 
+// Internal state for uncontrolled mode (when no v-model is provided)
+const internalValue = ref<string>('')
+
 const activeTab = computed({
   get: () => {
     if (props.modelValue != null) return String(props.modelValue)
+    if (internalValue.value) return internalValue.value
     if (props.items.length > 0) return props.items[0].key || '0'
     return '0'
   },
   set: (value: string) => {
-    // Try to emit as number if it was originally a number
+    internalValue.value = value
     const idx = props.items.findIndex((item, i) => (item.key || String(i)) === value)
     if (typeof props.modelValue === 'number') {
       emit('update:modelValue', idx >= 0 ? idx : parseInt(value) || 0)
