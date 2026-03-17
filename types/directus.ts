@@ -1748,6 +1748,56 @@ export interface People {
 	last_name?: string | null;
 	title?: string | null;
 	url?: string | null;
+	/** @description Where this record originated */
+	source?: 'earnest' | 'carddesk' | 'import' | 'manual' | null;
+	/** @description ID in the original collection (contacts.id or cd_contacts.id) */
+	source_id?: string | null;
+	/** @description Original collection name (contacts, cd_contacts) */
+	source_collection?: string | null;
+	prefix?: `Mr.` | `Ms.` | `Mrs.` | `Dr.` | `Prof.` | `Mx.` | null;
+	/** @description Full display name (auto-generated from first + last if blank) */
+	display_name?: string | null;
+	photo?: string | null;
+	/** @description Company name (free text) */
+	company?: string | null;
+	industry?: 'Technology' | 'Finance' | 'Healthcare' | `Real Estate` | 'Legal' | 'Marketing' | 'Education' | 'Hospitality' | `Non-Profit` | 'Government' | `Venture Capital` | 'Other' | null;
+	website?: string | null;
+	linkedin_url?: string | null;
+	instagram_handle?: string | null;
+	mailing_address?: string | null;
+	timezone?: string | null;
+	category?: 'client' | 'prospect' | 'partner' | 'vendor' | 'media' | 'networking' | 'other' | null;
+	/** @description Lead temperature (from CardDesk or manual) */
+	rating?: 'hot' | 'warm' | 'nurture' | 'cold' | null;
+	tags?: string[] | null;
+	/** @description Arbitrary key-value metadata */
+	custom_fields?: Record<string, any> | null;
+	notes?: string | null;
+	/** @description Where/when first met (from CardDesk) */
+	met_at?: string | null;
+	/** @description CardDesk conversion flag */
+	is_client?: boolean | null;
+	/** @description When converted to client in CardDesk */
+	client_at?: string | null;
+	/** @description Soft-paused in CardDesk (no deletion) */
+	hibernated?: boolean | null;
+	email_subscribed?: boolean | null;
+	unsubscribe_token?: string | null;
+	email_bounced?: boolean | null;
+	total_emails_sent?: number | null;
+	total_opens?: number | null;
+	total_clicks?: number | null;
+	client?: Client | string | null;
+	user?: DirectusUser | string | null;
+	organizations?: PeopleOrganization[] | string[];
+}
+
+export interface PeopleOrganization {
+	/** @primaryKey */
+	id: number;
+	people_id?: People | string | null;
+	organizations_id?: Organization | string | null;
+	sort?: number | null;
 }
 
 export interface PhoneSetting {
@@ -3342,6 +3392,7 @@ export interface Schema {
 	page_services_content_blocks: PageServicesContentBlock[];
 	payments_received: PaymentsReceived[];
 	people: People[];
+	people_organizations: PeopleOrganization[];
 	phone_settings: PhoneSetting[];
 	portfolio: Portfolio[];
 	portfolio_before_and_afters: PortfolioBeforeAndAfter[];
@@ -3526,6 +3577,7 @@ export enum CollectionNames {
 	page_services_content_blocks = 'page_services_content_blocks',
 	payments_received = 'payments_received',
 	people = 'people',
+	people_organizations = 'people_organizations',
 	phone_settings = 'phone_settings',
 	portfolio = 'portfolio',
 	portfolio_before_and_afters = 'portfolio_before_and_afters',
