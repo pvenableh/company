@@ -98,6 +98,14 @@ const DEFAULT_LINKS: NavLink[] = [
 		description: 'Campaigns & lists',
 	},
 	{
+		name: 'Marketing',
+		type: ['header', 'footer', 'drawer'],
+		to: '/marketing',
+		icon: 'i-lucide-bar-chart-3',
+		color: 'bg-gradient-to-br from-blue-500 to-cyan-500',
+		description: 'AI marketing insights',
+	},
+	{
 		name: 'Financials',
 		type: ['footer', 'toolbar', 'drawer'],
 		to: '/financials',
