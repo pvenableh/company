@@ -5,7 +5,7 @@
 			<p class="hero-kicker opacity-0">The business operating system</p>
 			<h1 class="hero-wordmark opacity-0">Earnest<span class="hero-period">.</span></h1>
 			<p class="hero-tagline opacity-0">Do <span class="hero-cycle-wrap"><span ref="heroCycleRef" class="hero-cycle">good</span></span> work<span class="bp">.</span></p>
-			<p class="hero-sub opacity-0">One platform<span class="bp">.</span> Every signal<span class="bp">.</span> AI that sees the whole picture<span class="bp">.</span></p>
+			<p class="hero-sub opacity-0">Radically simple<span class="bp">.</span> One platform<span class="bp">.</span> AI that sees everything<span class="bp">.</span></p>
 			<div class="hero-actions opacity-0">
 				<nuxt-link to="/register" class="btn-ink">Start for free</nuxt-link>
 				<nuxt-link to="#features" class="btn-ghost">See how it works</nuxt-link>
@@ -29,13 +29,29 @@
 		<section ref="truthRef" class="truth-section">
 			<div class="truth-label opacity-0">The honest case</div>
 			<div class="truth-body">
-				<h2 class="truth-title opacity-0">Your business runs on <em>eight tools<span class="bp">.</span></em><br/>It should run on one<span class="bp">.</span></h2>
-				<p class="truth-text opacity-0">You have a project tool. An invoice tool. A social tool. A phone system. A shared inbox. A calendar. A document editor. And Slack to hold it all together.</p>
-				<p class="truth-text opacity-0"><strong>None of them talk to each other.</strong> You pay for all of them. You lose hours between them every week.</p>
-				<p class="truth-text opacity-0">EARNEST is the one place where the work actually lives &mdash; from the first brief to the final invoice. No integrations to maintain. No context to re-explain. No tab-switching at 11pm before a client call.</p>
-				<p class="truth-text opacity-0">And because everything is in one place, <strong>AI can actually think about your business</strong> &mdash; generating social content, writing email campaigns, and surfacing strategy that isolated apps never could.</p>
-				<p class="truth-text opacity-0">Just the work. Done well.</p>
+				<h2 class="truth-title opacity-0">Simplicity is the <em>strategy<span class="bp">.</span></em></h2>
+				<p class="truth-text opacity-0">You have a project tool. An invoice tool. A social tool. A phone system. A shared inbox. A calendar. And Slack to hold it all together. Eight tools. Eight logins. Zero cohesion.</p>
+				<p class="truth-text opacity-0"><strong>EARNEST replaces the pile.</strong> One platform, one login, one place where the work actually lives &mdash; from the first brief to the final invoice. Nothing to integrate. Nothing to re-explain.</p>
+				<p class="truth-text opacity-0">And because everything is in one place, <strong>AI can actually think about your business</strong> &mdash; analyzing contacts, clients, revenue, and campaigns together to build marketing strategies that isolated apps never could.</p>
+				<p class="truth-text opacity-0">Simple to use. Powerful underneath. That&rsquo;s the point.</p>
 			</div>
+		</section>
+
+		<!-- Replaces Section -->
+		<section ref="replacesRef" class="replaces-section">
+			<p class="replaces-kicker opacity-0">One platform replaces</p>
+			<div class="replaces-grid">
+				<div
+					v-for="(app, index) in replacedApps"
+					:key="index"
+					class="replaces-item opacity-0"
+				>
+					<img :src="app.logo" :alt="app.name" class="replaces-logo" loading="lazy" />
+					<span class="replaces-name">{{ app.name }}</span>
+					<span class="replaces-for">{{ app.replaces }}</span>
+				</div>
+			</div>
+			<p class="replaces-cta opacity-0">All of this. <em>One login<span class="bp">.</span></em></p>
 		</section>
 
 		<!-- AI Reveal -->
@@ -43,7 +59,7 @@
 			<div class="ai-reveal-inner">
 				<p class="ai-kicker opacity-0">What one platform makes possible</p>
 				<h2 class="ai-headline opacity-0">Your data talks<span class="bp">.</span><br/><em>AI listens<span class="bp">.</span></em></h2>
-				<p class="ai-lede opacity-0">Most tools add AI to one channel. EARNEST connects AI to your entire business &mdash; clients, projects, revenue, conversations, campaigns &mdash; and turns the full picture into strategy.</p>
+				<p class="ai-lede opacity-0">Most tools bolt AI onto one channel. EARNEST connects AI to your entire business &mdash; clients, projects, revenue, conversations, and campaigns &mdash; then turns the full picture into marketing strategy, health scores, and campaign plans.</p>
 
 				<div class="ai-capabilities">
 					<div class="ai-cap opacity-0">
@@ -59,7 +75,7 @@
 					<div class="ai-cap opacity-0">
 						<span class="ai-cap-number">03</span>
 						<h3 class="ai-cap-title">Thinks in campaigns</h3>
-						<p class="ai-cap-desc">Not just posts or emails &mdash; full multi-channel strategies with timelines, audience targeting, and performance tracking built from your real data.</p>
+						<p class="ai-cap-desc">Not just posts or emails &mdash; full multi-channel strategies with timelines, audience targeting, health scores, and campaign plans built from your real data.</p>
 					</div>
 				</div>
 			</div>
@@ -136,11 +152,13 @@ const truthRef = ref(null);
 const aiRef = ref(null);
 const featuresRef = ref(null);
 const pricingRef = ref(null);
+const replacesRef = ref(null);
 const heroCycleRef = ref(null);
 
 const cycleWords = ['good', 'great', 'impossible', 'possible', 'simple', 'good'];
 
 const marqueeItems = [
+	{ label: 'Marketing Intelligence', icon: 'i-lucide-bar-chart-3' },
 	{ label: 'AI Strategy Engine', icon: 'i-lucide-brain' },
 	{ label: 'AI Content Generation', icon: 'i-lucide-sparkles' },
 	{ label: 'Projects', icon: 'i-lucide-folder-kanban' },
@@ -154,8 +172,22 @@ const marqueeItems = [
 	{ label: 'Contacts & CRM', icon: 'i-lucide-users' },
 ];
 
+const replacedApps = [
+	{ name: 'Slack', replaces: 'Team messaging', logo: 'https://logo.clearbit.com/slack.com' },
+	{ name: 'Asana', replaces: 'Project management', logo: 'https://logo.clearbit.com/asana.com' },
+	{ name: 'Mailchimp', replaces: 'Email marketing', logo: 'https://logo.clearbit.com/mailchimp.com' },
+	{ name: 'Hootsuite', replaces: 'Social scheduling', logo: 'https://logo.clearbit.com/hootsuite.com' },
+	{ name: 'QuickBooks', replaces: 'Invoicing', logo: 'https://logo.clearbit.com/quickbooks.intuit.com' },
+	{ name: 'HubSpot', replaces: 'CRM & contacts', logo: 'https://logo.clearbit.com/hubspot.com' },
+	{ name: 'Zoom', replaces: 'Video meetings', logo: 'https://logo.clearbit.com/zoom.us' },
+	{ name: 'Calendly', replaces: 'Scheduling', logo: 'https://logo.clearbit.com/calendly.com' },
+	{ name: 'Google Meet', replaces: 'Video calls', logo: 'https://logo.clearbit.com/meet.google.com' },
+	{ name: 'Twilio', replaces: 'Phone system', logo: 'https://logo.clearbit.com/twilio.com' },
+];
+
 const features = [
-	{ name: 'AI Strategy Engine', desc: 'Your data becomes your strategist. AI analyzes clients, revenue, content performance, and conversations to generate campaigns, spot opportunities, and surface insights no isolated tool can see.' },
+	{ name: 'Marketing Intelligence', desc: 'AI scans your entire business \u2014 contacts, social, email, clients, revenue \u2014 and returns a marketing health score, actionable insights, and multi-channel campaign plans. One click.' },
+	{ name: 'AI Strategy Engine', desc: 'Your data becomes your strategist. AI connects the dots across every module to generate campaigns, spot opportunities, and surface insights no isolated tool can see.' },
 	{ name: 'Social Media & AI Content', desc: 'Schedule to Instagram, LinkedIn, Facebook, and Threads. AI generates platform-optimized posts, hashtags, and image suggestions in seconds.' },
 	{ name: 'Email Marketing & AI', desc: 'Block-based newsletter builder with AI-powered content generation. Describe your email and get a complete template \u2014 subject line, sections, and images.' },
 	{ name: 'Project Management', desc: 'Kanban boards, task lists, timelines, and file attachments. Your team always knows what\'s next.' },
@@ -179,7 +211,7 @@ const plans = [
 		price: '89',
 		desc: 'For the team that means business.',
 		featured: true,
-		features: ['Up to 10 users', 'Everything in Solo', 'Team channels & video', 'Phone system (Twilio)', 'Social scheduling (10 accounts)', 'AI email & social content wizards', 'AI marketing insights', 'Priority support', '25GB storage'],
+		features: ['Up to 10 users', 'Everything in Solo', 'Team channels & video', 'Phone system (Twilio)', 'Social scheduling (10 accounts)', 'AI email & social content wizards', 'Marketing Intelligence dashboard', 'Priority support', '25GB storage'],
 		cta: { label: 'Start free trial', to: '/register' },
 	},
 	{
@@ -187,7 +219,7 @@ const plans = [
 		price: '189',
 		desc: 'For the business that\'s grown into something real.',
 		featured: false,
-		features: ['Up to 25 users', 'Everything in Team', 'Custom domain', 'White-label client portal', 'Unlimited social accounts', 'AI Strategy Engine (full suite)', 'Campaign planner & reports', '100GB storage'],
+		features: ['Up to 25 users', 'Everything in Team', 'Custom domain', 'White-label client portal', 'Unlimited social accounts', 'AI Strategy Engine (full suite)', 'Marketing Intelligence & campaign planner', '100GB storage'],
 		cta: { label: 'Talk to us', to: '/register' },
 	},
 ];
@@ -255,6 +287,9 @@ onMounted(() => {
 
 		// Truth section
 		revealElements(truthRef, '.truth-label, .truth-title, .truth-text');
+
+		// Replaces section
+		revealElements(replacesRef, '.replaces-kicker, .replaces-item, .replaces-cta');
 
 		// AI reveal section
 		revealElements(aiRef, '.ai-kicker, .ai-headline, .ai-lede, .ai-cap');
@@ -519,6 +554,89 @@ useHead({
 	font-weight: 400;
 }
 .truth-text strong { color: var(--ink); font-weight: 600; }
+
+/* ─── REPLACES ─── */
+.replaces-section {
+	padding: 100px 48px;
+	max-width: 860px;
+	margin: 0 auto;
+	text-align: center;
+	background: var(--paper);
+}
+@media (max-width: 700px) { .replaces-section { padding: 80px 24px; } }
+.replaces-kicker {
+	font-family: var(--font-proxima-light);
+	font-style: italic;
+	font-size: 13px;
+	color: var(--accent);
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	margin-bottom: 48px;
+}
+.replaces-grid {
+	display: grid;
+	grid-template-columns: repeat(5, 1fr);
+	gap: 1px;
+	background: var(--rule);
+	border: 1px solid var(--rule);
+}
+@media (max-width: 700px) { .replaces-grid { grid-template-columns: repeat(2, 1fr); } }
+.replaces-item {
+	background: var(--paper);
+	padding: 28px 16px;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 10px;
+	transition: background 0.2s;
+	position: relative;
+}
+.replaces-item:hover { background: var(--paper-2); }
+.replaces-item::after {
+	content: '';
+	position: absolute;
+	top: 8px;
+	right: 8px;
+	width: 16px;
+	height: 16px;
+	background: var(--accent);
+	mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'/%3E%3Cline x1='6' y1='6' x2='18' y2='18'/%3E%3C/svg%3E");
+	mask-size: contain;
+	opacity: 0.25;
+}
+.replaces-logo {
+	width: 36px;
+	height: 36px;
+	border-radius: 8px;
+	object-fit: contain;
+	filter: grayscale(1) opacity(0.6);
+	transition: filter 0.2s;
+}
+.replaces-item:hover .replaces-logo { filter: grayscale(0) opacity(1); }
+.replaces-name {
+	font-family: var(--font-bauer-bodoni);
+	font-size: 15px;
+	font-weight: 600;
+	color: var(--ink);
+	letter-spacing: 0.01em;
+}
+.replaces-for {
+	font-family: var(--font-proxima-light);
+	font-size: 11px;
+	color: var(--muted);
+	letter-spacing: 0.04em;
+}
+.replaces-cta {
+	font-family: var(--font-bauer-bodoni);
+	font-size: clamp(24px, 4vw, 36px);
+	font-weight: 500;
+	color: var(--ink);
+	margin-top: 48px;
+}
+.replaces-cta em {
+	font-style: italic;
+	color: var(--accent);
+}
 
 /* ─── AI REVEAL ─── */
 .ai-reveal {

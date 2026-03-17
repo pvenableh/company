@@ -1,6 +1,6 @@
 # Earnest
 
-A multi-tenant SaaS business management platform built with [Nuxt 3](https://nuxt.com), [Vue 3](https://vuejs.org), and [Directus](https://directus.io). Designed for creative agencies, consultancies, and growing SMBs that need project delivery, client management, financials, team collaboration, social media management, email marketing, and AI-powered productivity intelligence under one roof. Organizations serve as the tenant boundary, with per-org roles, customizable permissions, and subscription plan gating.
+A radically simple, multi-tenant SaaS business operating system built with [Nuxt 3](https://nuxt.com), [Vue 3](https://vuejs.org), and [Directus](https://directus.io). One platform replaces the eight tools your business runs on today — projects, invoicing, CRM, social media, email marketing, team channels, scheduling, and AI-powered marketing intelligence — all in one login. Because everything lives in one place, AI can see your entire business and generate strategies that isolated apps never could. Organizations serve as the tenant boundary, with per-org roles, customizable permissions, and subscription plan gating.
 
 ## Features
 
@@ -16,6 +16,7 @@ A multi-tenant SaaS business management platform built with [Nuxt 3](https://nux
 - **Email Marketing & Newsletters** — Block-based MJML newsletter builder with 17+ reusable blocks, drag-and-drop assembly, live preview, AI email wizard that generates complete templates from a brief description, mailing list management with deduplication, CSV contact import, merge-tag personalization via Handlebars, editable header/footer partials, one-click unsubscribe, "View in Browser" web links, and campaign send tracking via SendGrid
 - **Client Management** — Track the companies your organization serves with status workflows (active, prospect, inactive, churned), industry tagging, primary contact assignment, and linked contacts/projects/tickets/invoices per client
 - **Contact CRM** — Contact management with tagging, custom fields, mailing list membership, subscription tracking, client association, and CSV import/export
+- **Marketing Intelligence** — AI-powered marketing dashboard (`/marketing`) that aggregates data across contacts, social media, email campaigns, clients, revenue, projects, and tickets to generate a marketing health score (0-100), actionable insights, content velocity metrics, audience growth tracking, and AI-generated multi-channel campaign plans with email sequences, social posts, and KPIs
 - **AI Command Center** — AI-powered productivity engine that analyzes tickets, projects, tasks, invoices, contacts, deals, channels, social media, scheduling, and phone activity to generate prioritized action items, reminders, insights, and follow-ups; includes productivity scoring (0-100), customizable AI module preferences, team chat, and financial analysis; supports Claude (Anthropic), GPT (OpenAI), and Gemini (Google) backends
 - **Organizations & Multi-Tenancy** — Multi-organization support with per-org roles (Owner, Admin, Manager, Member, Client), customizable permission matrices per role, team structures, member invitations, subscription plan tiers, and cross-tab state sync
 
@@ -129,6 +130,7 @@ The app will be available at `http://localhost:3000`.
 │   ├── Channels/       # Real-time messaging
 │   ├── Clients/        # Client forms, cards
 │   ├── Scheduler/      # Calendar, booking, video meetings
+│   ├── Marketing/     # Marketing intelligence dashboard, health score, campaign timeline
 │   ├── CommandCenter/  # AI tray, suggestion cards, productivity meter, preferences
 │   ├── Newsletter/     # Block builder, canvas, variable editor, partials
 │   ├── Contacts/       # Contact forms, tables, merge tag reference
@@ -168,6 +170,7 @@ The app will be available at `http://localhost:3000`.
 | Invoices | `/invoices` | Invoice list, creation, and payment tracking |
 | Scheduler | `/scheduler` | Calendar, booking, and video meeting management |
 | Channels | `/channels` | Real-time team messaging |
+| Marketing Intelligence | `/marketing` | AI-powered marketing health scores, insights, and campaign planner |
 | Command Center | `/command-center` | AI productivity dashboard and task analyzer |
 | Command Center Chat | `/command-center/chat` | AI-powered team chat |
 | Financials | `/command-center/financials` | Financial analysis and quarterly goals |
