@@ -38,11 +38,13 @@
       </div>
       <div>
         <label class="block text-sm font-medium mb-1">Industry</label>
-        <input
+        <select
           v-model="formData.industry"
           class="w-full rounded-md border bg-background px-3 py-2 text-sm"
-          placeholder="e.g. Technology"
-        />
+        >
+          <option value="">Select industry...</option>
+          <option v-for="ind in industries" :key="ind.id" :value="ind.id">{{ ind.name }}</option>
+        </select>
       </div>
     </div>
 
@@ -201,12 +203,26 @@ const statusOptions = [
   { label: 'Churned', value: 'churned' },
 ];
 
+const industryItems = useDirectusItems('industries');
+const industries = ref<Array<{ id: string; name: string }>>([]);
+
+onMounted(async () => {
+  try {
+    industries.value = await industryItems.list({
+      fields: ['id', 'name'],
+      filter: { status: { _eq: 'published' } },
+      sort: ['name'],
+      limit: -1,
+    }) as any;
+  } catch { /* industries may not be accessible */ }
+});
+
 const formData = reactive({
   name: props.client?.name || '',
   slug: props.client?.slug || '',
   status: props.client?.status || 'active',
   website: props.client?.website || '',
-  industry: props.client?.industry || '',
+  industry: (typeof props.client?.industry === 'object' ? (props.client?.industry as any)?.id : props.client?.industry) || '',
   notes: props.client?.notes || '',
   tags: [...(props.client?.tags || [])] as string[],
   billing_contacts: [...(props.client?.billing_contacts || [])] as { name: string; email: string }[],

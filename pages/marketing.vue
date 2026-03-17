@@ -92,6 +92,18 @@
 
 		<!-- Dashboard content -->
 		<div v-else-if="dashboard" class="space-y-6">
+			<!-- Save button -->
+			<div class="flex justify-end">
+				<Button
+					variant="outline"
+					size="sm"
+					:disabled="savingDashboard"
+					@click="saveDashboard"
+				>
+					<Icon :name="savedDashboard ? 'lucide:check' : savingDashboard ? 'lucide:loader-2' : 'lucide:save'" class="w-4 h-4 mr-1" :class="{ 'animate-spin': savingDashboard }" />
+					{{ savedDashboard ? 'Saved' : savingDashboard ? 'Saving...' : 'Save Analysis' }}
+				</Button>
+			</div>
 			<!-- Top row: Health Score + Velocity + Audience -->
 			<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
 				<!-- Health Score -->
@@ -250,6 +262,17 @@
 
 			<!-- Campaign result -->
 			<div v-if="campaign && !generatingCampaign" class="mt-6">
+				<div class="flex justify-end mb-3">
+					<Button
+						variant="outline"
+						size="sm"
+						:disabled="savingCampaign"
+						@click="saveCampaign"
+					>
+						<Icon :name="savedCampaign ? 'lucide:check' : savingCampaign ? 'lucide:loader-2' : 'lucide:save'" class="w-4 h-4 mr-1" :class="{ 'animate-spin': savingCampaign }" />
+						{{ savedCampaign ? 'Saved' : savingCampaign ? 'Saving...' : 'Save Plan' }}
+					</Button>
+				</div>
 				<MarketingCampaignTimeline
 					:campaign="campaign"
 					@create="handleCampaignCreate"
@@ -282,6 +305,11 @@ const campaignGoal = ref('');
 const generatingCampaign = ref(false);
 const campaignError = ref('');
 const campaign = ref<CampaignAnalysis | null>(null);
+
+const savingDashboard = ref(false);
+const savedDashboard = ref(false);
+const savingCampaign = ref(false);
+const savedCampaign = ref(false);
 
 async function runDashboardAnalysis() {
 	if (!selectedOrg.value) {
@@ -332,6 +360,49 @@ async function runCampaignAnalysis() {
 		campaignError.value = err?.data?.message || err?.message || 'Failed to generate campaign plan.';
 	} finally {
 		generatingCampaign.value = false;
+	}
+}
+
+async function saveDashboard() {
+	if (!dashboard.value) return;
+	savingDashboard.value = true;
+	try {
+		await $fetch('/api/marketing/save-plan', {
+			method: 'POST',
+			body: {
+				type: 'dashboard',
+				title: `Marketing Analysis — ${new Date().toLocaleDateString()}`,
+				data: dashboard.value,
+			},
+		});
+		savedDashboard.value = true;
+		setTimeout(() => { savedDashboard.value = false; }, 3000);
+	} catch (err: any) {
+		console.error('Failed to save analysis:', err);
+	} finally {
+		savingDashboard.value = false;
+	}
+}
+
+async function saveCampaign() {
+	if (!campaign.value) return;
+	savingCampaign.value = true;
+	try {
+		await $fetch('/api/marketing/save-plan', {
+			method: 'POST',
+			body: {
+				type: 'campaign',
+				title: (campaign.value as any).campaignName || 'Campaign Plan',
+				data: campaign.value,
+				goal: campaignGoal.value,
+			},
+		});
+		savedCampaign.value = true;
+		setTimeout(() => { savedCampaign.value = false; }, 3000);
+	} catch (err: any) {
+		console.error('Failed to save campaign plan:', err);
+	} finally {
+		savingCampaign.value = false;
 	}
 }
 

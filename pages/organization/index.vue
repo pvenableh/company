@@ -62,6 +62,48 @@ const canManageOrg = computed(() => {
 	return canAccess('org_settings');
 });
 
+// --- Inline Brand Editing ---
+const editingBrand = ref(false);
+const savingBrand = ref(false);
+const brandForm = ref({
+	brand_direction: '',
+	goals: '',
+	target_audience: '',
+	location: '',
+});
+
+const startEditBrand = () => {
+	brandForm.value = {
+		brand_direction: org.value?.brand_direction || '',
+		goals: org.value?.goals || '',
+		target_audience: org.value?.target_audience || '',
+		location: org.value?.location || '',
+	};
+	editingBrand.value = true;
+};
+
+const saveBrand = async () => {
+	if (!org.value?.id) return;
+	savingBrand.value = true;
+	try {
+		await organizationItems.update(org.value.id, {
+			brand_direction: brandForm.value.brand_direction || null,
+			goals: brandForm.value.goals || null,
+			target_audience: brandForm.value.target_audience || null,
+			location: brandForm.value.location || null,
+		});
+		toast.add({ title: 'Success', description: 'Brand & strategy updated', color: 'green' });
+		editingBrand.value = false;
+		await fetchOrganizationData();
+		await fetchOrganizationDetails();
+	} catch (error) {
+		console.error('Error updating brand:', error);
+		toast.add({ title: 'Error', description: 'Failed to update brand & strategy', color: 'red' });
+	} finally {
+		savingBrand.value = false;
+	}
+};
+
 const openEditModal = () => {
 	if (!org.value) return;
 	editForm.value = {
@@ -414,10 +456,15 @@ const formatDate = (dateString) => {
 	});
 };
 
-// Get organization logo URL
+// Get organization logo URL — try logo first, fall back to icon
 const getIconUrl = computed(() => {
-	if (!org.value?.icon) return null;
-	return `${config.public.directusUrl}/assets/${org.value.icon}?key=avatar`;
+	const logoId = org.value?.logo
+		? (typeof org.value.logo === 'object' ? org.value.logo?.id : org.value.logo)
+		: org.value?.icon
+			? (typeof org.value.icon === 'object' ? org.value.icon?.id : org.value.icon)
+			: null;
+	if (!logoId) return null;
+	return `${config.public.directusUrl}/assets/${logoId}?key=medium-contain`;
 });
 
 // Debounced search
@@ -542,121 +589,178 @@ watch(searchEmail, (val) => {
 				<!-- Tabs -->
 				<UTabs v-model="activeTab" :items="tabItems">
 					<template #overview>
-						<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-							<!-- Contact Information Card -->
-							<UCard>
-								<template #header>
-									<div class="flex items-center">
-										<UIcon name="i-heroicons-information-circle" class="w-5 h-5 mr-2" />
-										<h3 class="text-lg font-medium">Contact Information</h3>
-									</div>
-								</template>
+						<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
+							<!-- Main content — 2 columns -->
+							<div class="lg:col-span-2 space-y-6">
+								<!-- Brand & Strategy — editable inline like client details -->
+								<UCard>
+									<template #header>
+										<div class="flex items-center justify-between">
+											<div class="flex items-center">
+												<UIcon name="i-heroicons-paint-brush" class="w-5 h-5 mr-2" />
+												<h3 class="text-lg font-medium">Brand & Strategy</h3>
+											</div>
+											<UButton
+												v-if="canManageOrg && !editingBrand"
+												color="gray"
+												variant="ghost"
+												icon="i-heroicons-pencil-square"
+												size="xs"
+												@click="startEditBrand"
+											/>
+										</div>
+									</template>
 
-								<div class="space-y-4">
-									<div v-if="org.address">
-										<h4 class="text-sm font-medium text-gray-500 mb-1">Address</h4>
-										<p class="text-gray-700 dark:text-gray-300">{{ org.address }}</p>
-									</div>
+									<!-- View mode -->
+									<div v-if="!editingBrand" class="space-y-4">
+										<div>
+											<h4 class="text-sm font-medium text-gray-500 mb-1">Brand Direction</h4>
+											<p v-if="org.brand_direction" class="text-gray-700 dark:text-gray-300 whitespace-pre-line">{{ org.brand_direction }}</p>
+											<p v-else class="text-sm text-muted-foreground italic">Not set — click edit to add brand direction</p>
+										</div>
 
-									<div v-if="org.phone">
-										<h4 class="text-sm font-medium text-gray-500 mb-1">Phone</h4>
-										<p class="text-gray-700 dark:text-gray-300">{{ org.phone }}</p>
-									</div>
+										<div>
+											<h4 class="text-sm font-medium text-gray-500 mb-1">Goals</h4>
+											<p v-if="org.goals" class="text-gray-700 dark:text-gray-300 whitespace-pre-line">{{ org.goals }}</p>
+											<p v-else class="text-sm text-muted-foreground italic">Not set</p>
+										</div>
 
-									<div v-if="org.emails && org.emails.length">
-										<h4 class="text-sm font-medium text-gray-500 mb-1">Email Addresses</h4>
-										<div class="flex flex-wrap gap-2">
-											<UBadge
-												v-for="(email, index) in Array.isArray(org.emails) ? org.emails : [org.emails]"
-												:key="index"
-												color="primary"
-												variant="soft"
-											>
-												{{ email }}
-											</UBadge>
+										<div>
+											<h4 class="text-sm font-medium text-gray-500 mb-1">Target Audience</h4>
+											<p v-if="org.target_audience" class="text-gray-700 dark:text-gray-300">{{ org.target_audience }}</p>
+											<p v-else class="text-sm text-muted-foreground italic">Not set</p>
+										</div>
+
+										<div>
+											<h4 class="text-sm font-medium text-gray-500 mb-1">Location</h4>
+											<p v-if="org.location" class="text-gray-700 dark:text-gray-300">{{ org.location }}</p>
+											<p v-else class="text-sm text-muted-foreground italic">Not set</p>
 										</div>
 									</div>
 
-									<div v-if="org.website">
-										<h4 class="text-sm font-medium text-gray-500 mb-1">Website</h4>
-										<p class="text-gray-700 dark:text-gray-300">
+									<!-- Edit mode -->
+									<div v-else class="space-y-4">
+										<BrandAIFieldSuggest
+											v-model="brandForm.brand_direction"
+											label="Brand Direction"
+											field="brand_direction"
+											placeholder="Brand positioning, voice, visual style, and messaging strategy..."
+											entity-type="organization"
+											:entity-id="org?.id || ''"
+											:organization-id="org?.id || ''"
+										/>
+
+										<BrandAIFieldSuggest
+											v-model="brandForm.goals"
+											label="Goals"
+											field="goals"
+											placeholder="Business goals and objectives..."
+											entity-type="organization"
+											:entity-id="org?.id || ''"
+											:organization-id="org?.id || ''"
+										/>
+
+										<BrandAIFieldSuggest
+											v-model="brandForm.target_audience"
+											label="Target Audience"
+											field="target_audience"
+											placeholder="Ideal customer profile, demographics, psychographics..."
+											entity-type="organization"
+											:entity-id="org?.id || ''"
+											:organization-id="org?.id || ''"
+										/>
+
+										<UFormGroup label="Location">
+											<UInput v-model="brandForm.location" placeholder="City, region, or Remote/Global" />
+										</UFormGroup>
+
+										<div class="flex justify-end gap-2 pt-2">
+											<UButton color="gray" variant="ghost" @click="editingBrand = false">Cancel</UButton>
+											<UButton color="primary" :loading="savingBrand" @click="saveBrand">Save</UButton>
+										</div>
+									</div>
+								</UCard>
+							</div>
+
+							<!-- Sidebar -->
+							<div class="space-y-4">
+								<!-- Quick Info -->
+								<UCard>
+									<template #header>
+										<div class="flex items-center">
+											<UIcon name="i-heroicons-information-circle" class="w-5 h-5 mr-2" />
+											<h3 class="text-sm font-medium">Info</h3>
+										</div>
+									</template>
+
+									<div class="space-y-3 text-sm">
+										<div class="flex justify-between">
+											<span class="text-gray-500">Industry</span>
+											<span>{{ org.industry?.name || '—' }}</span>
+										</div>
+										<div v-if="org.industry?.class" class="flex justify-between">
+											<span class="text-gray-500">Classification</span>
+											<span>{{ org.industry.class }}</span>
+										</div>
+										<div class="flex justify-between">
+											<span class="text-gray-500">Website</span>
 											<a
+												v-if="org.website"
 												:href="org.website.startsWith('http') ? org.website : 'https://' + org.website"
 												target="_blank"
-												rel="noopener noreferrer"
-												class="text-primary"
+												class="text-primary truncate max-w-[140px]"
 											>
-												{{ org.website }}
+												{{ org.website.replace(/^https?:\/\//, '') }}
 											</a>
-										</p>
-									</div>
-
-									<div v-if="org.brand_color">
-										<h4 class="text-sm font-medium text-gray-500 mb-1">Brand Color</h4>
-										<div class="flex items-center">
-											<div
-												class="w-6 h-6 rounded mr-2 border border-gray-200"
-												:style="{ backgroundColor: org.brand_color }"
-											></div>
-											<span class="text-gray-700 dark:text-gray-300">{{ org.brand_color }}</span>
+											<span v-else>—</span>
+										</div>
+										<div class="flex justify-between">
+											<span class="text-gray-500">Phone</span>
+											<span>{{ org.phone || '—' }}</span>
+										</div>
+										<div v-if="org.address" class="flex justify-between">
+											<span class="text-gray-500">Address</span>
+											<span class="text-right max-w-[160px]">{{ org.address }}</span>
+										</div>
+										<div v-if="org.brand_color" class="flex justify-between items-center">
+											<span class="text-gray-500">Brand Color</span>
+											<div class="flex items-center gap-1.5">
+												<div class="w-4 h-4 rounded border border-gray-200" :style="{ backgroundColor: org.brand_color }"></div>
+												<span>{{ org.brand_color }}</span>
+											</div>
+										</div>
+										<div class="flex justify-between">
+											<span class="text-gray-500">Member Since</span>
+											<span>{{ org.origin_date ? formatDate(org.origin_date) : '—' }}</span>
+										</div>
+										<div class="flex justify-between">
+											<span class="text-gray-500">Created</span>
+											<span>{{ org.date_created ? formatDate(org.date_created) : '—' }}</span>
 										</div>
 									</div>
-								</div>
-							</UCard>
+								</UCard>
 
-							<!-- Industry Information -->
-							<UCard v-if="org.industry">
-								<template #header>
-									<div class="flex items-center">
-										<UIcon name="i-heroicons-building-office-2" class="w-5 h-5 mr-2" />
-										<h3 class="text-lg font-medium">Industry Information</h3>
+								<!-- Emails -->
+								<UCard v-if="org.emails?.length">
+									<template #header>
+										<div class="flex items-center">
+											<UIcon name="i-heroicons-envelope" class="w-5 h-5 mr-2" />
+											<h3 class="text-sm font-medium">Emails</h3>
+										</div>
+									</template>
+									<div class="flex flex-wrap gap-1.5">
+										<UBadge
+											v-for="(email, index) in Array.isArray(org.emails) ? org.emails : [org.emails]"
+											:key="index"
+											color="primary"
+											variant="soft"
+											size="xs"
+										>
+											{{ email }}
+										</UBadge>
 									</div>
-								</template>
-
-								<div class="space-y-4">
-									<div v-if="org.industry.name">
-										<h4 class="text-sm font-medium text-gray-500 mb-1">Industry</h4>
-										<p class="text-gray-700 dark:text-gray-300">{{ org.industry.name }}</p>
-									</div>
-
-									<div v-if="org.industry.class">
-										<h4 class="text-sm font-medium text-gray-500 mb-1">Classification</h4>
-										<p class="text-gray-700 dark:text-gray-300">{{ org.industry.class }}</p>
-									</div>
-								</div>
-							</UCard>
-
-							<!-- Brand & Strategy -->
-							<UCard v-if="org.brand_direction || org.goals || org.target_audience || org.location">
-								<template #header>
-									<div class="flex items-center">
-										<UIcon name="i-heroicons-paint-brush" class="w-5 h-5 mr-2" />
-										<h3 class="text-lg font-medium">Brand & Strategy</h3>
-									</div>
-								</template>
-
-								<div class="space-y-4">
-									<div v-if="org.brand_direction">
-										<h4 class="text-sm font-medium text-gray-500 mb-1">Brand Direction</h4>
-										<p class="text-gray-700 dark:text-gray-300 whitespace-pre-line">{{ org.brand_direction }}</p>
-									</div>
-
-									<div v-if="org.goals">
-										<h4 class="text-sm font-medium text-gray-500 mb-1">Goals</h4>
-										<p class="text-gray-700 dark:text-gray-300 whitespace-pre-line">{{ org.goals }}</p>
-									</div>
-
-									<div v-if="org.target_audience">
-										<h4 class="text-sm font-medium text-gray-500 mb-1">Target Audience</h4>
-										<p class="text-gray-700 dark:text-gray-300">{{ org.target_audience }}</p>
-									</div>
-
-									<div v-if="org.location">
-										<h4 class="text-sm font-medium text-gray-500 mb-1">Location</h4>
-										<p class="text-gray-700 dark:text-gray-300">{{ org.location }}</p>
-									</div>
-								</div>
-							</UCard>
+								</UCard>
+							</div>
 						</div>
 					</template>
 

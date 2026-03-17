@@ -397,12 +397,20 @@ ${sections.join('\n')}
       const defaults = getDefaultVariables(block);
       const variables = { ...defaults };
 
-      // Map AI variables to block schema keys
+      // Map AI variables to block schema keys, validating types
+      const colorRegex = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
       const schema = parseVariablesSchema(block.variables_schema, block.mjml_source);
       for (const [key, value] of Object.entries(section.variables)) {
         // Direct key match
-        if (schema.find((s) => s.key === key)) {
-          variables[key] = value;
+        const schemaDef = schema.find((s) => s.key === key);
+        if (schemaDef) {
+          // Validate color values — AI sometimes puts text content in color fields
+          if (schemaDef.type === 'color' && typeof value === 'string'
+            && !colorRegex.test(value) && !['transparent', 'inherit', 'currentColor'].includes(value)) {
+            variables[key] = schemaDef.default || '#333333';
+          } else {
+            variables[key] = value;
+          }
         } else {
           // Try fuzzy matching (AI might use slightly different key names)
           const lowerKey = key.toLowerCase();

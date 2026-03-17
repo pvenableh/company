@@ -317,6 +317,40 @@ function getClientManagerPermissions(): PermissionRule[] {
       presets: null,
       fields: ['*'],
     },
+
+    // ── team_goals ──
+    {
+      collection: 'team_goals',
+      action: 'create',
+      permissions: null,
+      validation: null,
+      presets: null,
+      fields: ['*'],
+    },
+    {
+      collection: 'team_goals',
+      action: 'read',
+      permissions: null,
+      validation: null,
+      presets: null,
+      fields: ['*'],
+    },
+    {
+      collection: 'team_goals',
+      action: 'update',
+      permissions: null,
+      validation: null,
+      presets: null,
+      fields: ['*'],
+    },
+    {
+      collection: 'team_goals',
+      action: 'delete',
+      permissions: null,
+      validation: null,
+      presets: null,
+      fields: ['*'],
+    },
   ]
 }
 
@@ -418,6 +452,40 @@ function getUserPermissions(): PermissionRule[] {
     {
       collection: 'financial_goals',
       action: 'read',
+      permissions: null,
+      validation: null,
+      presets: null,
+      fields: ['*'],
+    },
+
+    // ── team_goals ──
+    {
+      collection: 'team_goals',
+      action: 'create',
+      permissions: null,
+      validation: null,
+      presets: null,
+      fields: ['*'],
+    },
+    {
+      collection: 'team_goals',
+      action: 'read',
+      permissions: null,
+      validation: null,
+      presets: null,
+      fields: ['*'],
+    },
+    {
+      collection: 'team_goals',
+      action: 'update',
+      permissions: null,
+      validation: null,
+      presets: null,
+      fields: ['*'],
+    },
+    {
+      collection: 'team_goals',
+      action: 'delete',
       permissions: null,
       validation: null,
       presets: null,
