@@ -911,15 +911,15 @@ export interface Client {
 	billing_contacts?: Array<{ name: string; email: string }> | null;
 	/** @description Short code for invoice numbering (e.g., ABC, XYZ) */
 	code?: string | null;
-	/** @description Brand positioning, voice, and visual style */
+	/** @description Voice, visual style, positioning for this client */
 	brand_direction?: string | null;
-	/** @description Business goals and objectives */
+	/** @description Business objectives for this client */
 	goals?: string | null;
-	/** @description Ideal customer or audience profile */
+	/** @description Who the client is trying to reach */
 	target_audience?: string | null;
-	/** @description Geographic market focus */
+	/** @description Primary market or location */
 	location?: string | null;
-	/** @description Services provided to this client */
+	/** @description Services we provide to this client */
 	services?: string[] | null;
 }
 
@@ -1524,18 +1524,18 @@ export interface Organization {
 	active?: boolean | null;
 	/** @description Subscription plan tier */
 	plan?: 'free' | 'starter' | 'pro' | 'enterprise' | null;
+	/** @description Voice, visual style, and brand positioning */
+	brand_direction?: string | null;
+	/** @description Business objectives and growth targets */
+	goals?: string | null;
+	/** @description Primary target audience or market segment */
+	target_audience?: string | null;
+	/** @description Primary market or geographic location */
+	location?: string | null;
 	users?: OrganizationsDirectusUser[] | string[];
 	projects?: Project[] | string[];
 	tickets?: Ticket[] | string[];
 	teams?: Team[] | string[];
-	/** @description Brand positioning, voice, and visual style */
-	brand_direction?: string | null;
-	/** @description Business goals and objectives */
-	goals?: string | null;
-	/** @description Ideal customer or audience profile */
-	target_audience?: string | null;
-	/** @description Geographic market focus */
-	location?: string | null;
 }
 
 export interface OrganizationsDirectusUser {
@@ -1930,9 +1930,9 @@ export interface ProjectEvent {
 	/** @description Calculated end date of the phase */
 	end_date?: string | null;
 	/** @description Team member assigned to this event */
-	assigned_to?: DirectusUser | string | null;
+	assigned_to?: string | null;
 	/** @description Dependency on another event */
-	depends_on?: ProjectEvent | string | null;
+	depends_on?: string | null;
 	comments?: ProjectEventsComment[] | string[];
 	spawned_projects?: Project[] | string[];
 	tasks?: ProjectTask[] | string[];
@@ -2529,6 +2529,10 @@ export interface Team {
 	organization?: Organization | string | null;
 	icon?: DirectusFile | string | null;
 	active?: boolean | null;
+	/** @description What this team specializes in */
+	focus?: string | null;
+	/** @description Current objectives for this team */
+	goals?: string | null;
 	users?: JunctionDirectusUsersTeam[] | string[];
 	projects?: Project[] | string[];
 }

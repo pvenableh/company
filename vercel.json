@@ -1,0 +1,11 @@
+{
+  "framework": "nuxtjs",
+  "buildCommand": "pnpm build",
+  "installCommand": "pnpm install",
+  "github": {
+    "enabled": true,
+    "autoAlias": true,
+    "silent": true
+  },
+  "ignoreCommand": "[ \"$VERCEL_ENV\" != \"production\" ]"
+}
