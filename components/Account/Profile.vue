@@ -143,10 +143,10 @@ async function updatePerson() {
 		<!-- Avatar Management -->
 		<div class="flex items-center gap-5 mb-8">
 			<div class="relative group">
-				<Avatar class="w-20 h-20">
+				<UserAvatar class="w-20 h-20">
 					<AvatarImage v-if="avatarUrl" :src="avatarUrl" :alt="user?.first_name" />
 					<AvatarFallback class="text-xl">{{ initials }}</AvatarFallback>
-				</Avatar>
+				</UserAvatar>
 				<button
 					type="button"
 					@click="avatarInput?.click()"

@@ -11,10 +11,10 @@
 	>
 		<div class="flex items-start gap-3">
 			<!-- Sender Avatar -->
-			<Avatar :class="compact ? 'size-7' : 'size-9'">
+			<UserAvatar :class="compact ? 'size-7' : 'size-9'">
 				<AvatarImage v-if="getAvatarUrl(notification.sender)" :src="getAvatarUrl(notification.sender)" :alt="getSenderName()" />
 				<AvatarFallback class="text-xs">{{ getSenderInitials() }}</AvatarFallback>
-			</Avatar>
+			</UserAvatar>
 
 			<!-- Content -->
 			<div class="flex-grow min-w-0">

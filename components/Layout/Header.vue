@@ -68,10 +68,10 @@ onUnmounted(() => {
 		<div class="account-controls">
 			<template v-if="user">
 				<nuxt-link to="/account" class="flex items-center justify-self-center">
-					<Avatar class="size-8 mr-2">
+					<UserAvatar class="size-8 mr-2">
 						<AvatarImage v-if="avatarUrl" :src="avatarUrl" :alt="user?.first_name" />
 						<AvatarFallback>{{ initials }}</AvatarFallback>
-					</Avatar>
+					</UserAvatar>
 				</nuxt-link>
 				<LayoutNotificationsMenu class="mr-2" />
 			</template>

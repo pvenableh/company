@@ -102,7 +102,7 @@ function formatDueDate(dateStr: string | null) {
 
           <!-- Assignee -->
           <div v-if="task.assignee_id && typeof task.assignee_id === 'object'" class="flex items-center gap-1">
-            <Avatar class="h-4 w-4">
+            <UserAvatar class="h-4 w-4">
               <AvatarImage
                 v-if="task.assignee_id.avatar"
                 :src="`${config.public.directusUrl}/assets/${task.assignee_id.avatar}`"
@@ -111,7 +111,7 @@ function formatDueDate(dateStr: string | null) {
               <AvatarFallback class="text-[6px]">
                 {{ (task.assignee_id.first_name?.[0] || '') + (task.assignee_id.last_name?.[0] || '') }}
               </AvatarFallback>
-            </Avatar>
+            </UserAvatar>
             <span class="text-[9px] text-gray-400">
               {{ task.assignee_id.first_name }}
             </span>

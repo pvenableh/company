@@ -25,33 +25,33 @@
 			</div>
 		</div>
 
+		<!-- Replaces Section (before Truth) -->
+		<section ref="replacesRef" class="replaces-section">
+			<p class="replaces-kicker opacity-0">One platform replaces</p>
+			<div class="replaces-grid">
+				<div
+					v-for="(tool, index) in replacedTools"
+					:key="index"
+					class="replaces-item opacity-0"
+				>
+					<UIcon :name="tool.icon" class="replaces-icon" />
+					<span class="replaces-name">{{ tool.name }}</span>
+					<span class="replaces-for">{{ tool.replaces }}</span>
+				</div>
+			</div>
+			<p class="replaces-cta opacity-0">All of this. <em>One login<span class="bp">.</span></em></p>
+		</section>
+
 		<!-- Truth Section -->
 		<section ref="truthRef" class="truth-section">
 			<div class="truth-label opacity-0">The honest case</div>
 			<div class="truth-body">
-				<h2 class="truth-title opacity-0">Simplicity is the <em>strategy<span class="bp">.</span></em></h2>
+				<h2 class="truth-title opacity-0">Your business runs on {{ toolCountWord }} tools. It should run on <span class="truth-one">one</span><span class="bp">.</span></h2>
 				<p class="truth-text opacity-0">You have a project tool. An invoice tool. A social tool. A phone system. A shared inbox. A calendar. And Slack to hold it all together. Eight tools. Eight logins. Zero cohesion.</p>
 				<p class="truth-text opacity-0"><strong>EARNEST replaces the pile.</strong> One platform, one login, one place where the work actually lives &mdash; from the first brief to the final invoice. Nothing to integrate. Nothing to re-explain.</p>
 				<p class="truth-text opacity-0">And because everything is in one place, <strong>AI can actually think about your business</strong> &mdash; analyzing contacts, clients, revenue, and campaigns together to build marketing strategies that isolated apps never could.</p>
 				<p class="truth-text opacity-0">Simple to use. Powerful underneath. That&rsquo;s the point.</p>
 			</div>
-		</section>
-
-		<!-- Replaces Section -->
-		<section ref="replacesRef" class="replaces-section">
-			<p class="replaces-kicker opacity-0">One platform replaces</p>
-			<div class="replaces-grid">
-				<div
-					v-for="(app, index) in replacedApps"
-					:key="index"
-					class="replaces-item opacity-0"
-				>
-					<img :src="app.logo" :alt="app.name" class="replaces-logo" loading="lazy" />
-					<span class="replaces-name">{{ app.name }}</span>
-					<span class="replaces-for">{{ app.replaces }}</span>
-				</div>
-			</div>
-			<p class="replaces-cta opacity-0">All of this. <em>One login<span class="bp">.</span></em></p>
 		</section>
 
 		<!-- AI Reveal -->
@@ -74,8 +74,8 @@
 					</div>
 					<div class="ai-cap opacity-0">
 						<span class="ai-cap-number">03</span>
-						<h3 class="ai-cap-title">Thinks in campaigns</h3>
-						<p class="ai-cap-desc">Not just posts or emails &mdash; full multi-channel strategies with timelines, audience targeting, health scores, and campaign plans built from your real data.</p>
+						<h3 class="ai-cap-title">Thinks ahead</h3>
+						<p class="ai-cap-desc">Not just posts or emails &mdash; full multi-channel strategies with timelines, audience targeting, health scores, and plans built from your real data.</p>
 					</div>
 				</div>
 			</div>
@@ -141,7 +141,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
@@ -172,29 +172,36 @@ const marqueeItems = [
 	{ label: 'Contacts & CRM', icon: 'i-lucide-users' },
 ];
 
-const replacedApps = [
-	{ name: 'Slack', replaces: 'Team messaging', logo: 'https://logo.clearbit.com/slack.com' },
-	{ name: 'Asana', replaces: 'Project management', logo: 'https://logo.clearbit.com/asana.com' },
-	{ name: 'Mailchimp', replaces: 'Email marketing', logo: 'https://logo.clearbit.com/mailchimp.com' },
-	{ name: 'Hootsuite', replaces: 'Social scheduling', logo: 'https://logo.clearbit.com/hootsuite.com' },
-	{ name: 'QuickBooks', replaces: 'Invoicing', logo: 'https://logo.clearbit.com/quickbooks.intuit.com' },
-	{ name: 'HubSpot', replaces: 'CRM & contacts', logo: 'https://logo.clearbit.com/hubspot.com' },
-	{ name: 'Zoom', replaces: 'Video meetings', logo: 'https://logo.clearbit.com/zoom.us' },
-	{ name: 'Calendly', replaces: 'Scheduling', logo: 'https://logo.clearbit.com/calendly.com' },
-	{ name: 'Google Meet', replaces: 'Video calls', logo: 'https://logo.clearbit.com/meet.google.com' },
-	{ name: 'Twilio', replaces: 'Phone system', logo: 'https://logo.clearbit.com/twilio.com' },
+const replacedTools = [
+	{ name: 'Asana', replaces: 'Project management', icon: 'i-lucide-folder-kanban' },
+	{ name: 'Xero', replaces: 'Invoicing', icon: 'i-lucide-receipt' },
+	{ name: 'Mailchimp', replaces: 'Email marketing', icon: 'i-lucide-mail' },
+	{ name: 'Hootsuite', replaces: 'Social scheduling', icon: 'i-lucide-calendar-clock' },
+	{ name: 'Slack', replaces: 'Team messaging', icon: 'i-lucide-message-square' },
+	{ name: 'Twilio', replaces: 'Phone system', icon: 'i-lucide-phone' },
+	{ name: 'Zoom', replaces: 'Video meetings', icon: 'i-lucide-video' },
+	{ name: 'Calendly', replaces: 'Scheduling', icon: 'i-lucide-calendar' },
+	{ name: 'HubSpot', replaces: 'CRM & contacts', icon: 'i-lucide-users' },
+	{ name: 'ChatGPT', replaces: 'AI assistant', icon: 'i-lucide-sparkles' },
 ];
 
+const numberWords = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
+const toolCountWord = computed(() => {
+	const count = replacedTools.length;
+	return numberWords[count] || String(count);
+});
+
 const features = [
-	{ name: 'Marketing Intelligence', desc: 'AI scans your entire business \u2014 contacts, social, email, clients, revenue \u2014 and returns a marketing health score, actionable insights, and multi-channel campaign plans. One click.' },
+	{ name: 'Marketing Intelligence', desc: 'AI scans your entire business — contacts, social, email, clients, revenue — and returns a marketing health score, actionable insights, and multi-channel campaign plans. One click.' },
 	{ name: 'AI Strategy Engine', desc: 'Your data becomes your strategist. AI connects the dots across every module to generate campaigns, spot opportunities, and surface insights no isolated tool can see.' },
 	{ name: 'Social Media & AI Content', desc: 'Schedule to Instagram, LinkedIn, Facebook, and Threads. AI generates platform-optimized posts, hashtags, and image suggestions in seconds.' },
-	{ name: 'Email Marketing & AI', desc: 'Block-based newsletter builder with AI-powered content generation. Describe your email and get a complete template \u2014 subject line, sections, and images.' },
+	{ name: 'Email Marketing & AI', desc: 'Block-based newsletter builder with AI-powered content generation. Describe your email and get a complete template — subject line, sections, and images.' },
 	{ name: 'Project Management', desc: 'Kanban boards, task lists, timelines, and file attachments. Your team always knows what\'s next.' },
 	{ name: 'Client & Contact CRM', desc: 'Every client, prospect, and partner in one place. With the full history of every conversation and project.' },
 	{ name: 'Invoicing & Billing', desc: 'Stripe-powered invoices, proposals, payment tracking, and PDF generation. Get paid on time.' },
 	{ name: 'Team Channels', desc: 'Slack-style messaging built into your workspace. Conversations stay with the work they\'re about.' },
-	{ name: 'Phone, Video & Calendar', desc: 'Twilio-powered calling, video meetings, public booking links, and Google/Outlook calendar sync. Everything connected.' },
+	{ name: 'Phone & Video', desc: 'Twilio-powered calling and video meetings. Click-to-call contacts, record calls, and host team video — all without leaving Earnest.' },
+	{ name: 'Calendar & Scheduling', desc: 'Public booking links, Google/Outlook calendar sync, and team availability. Everything connected to your clients and projects.' },
 ];
 
 const plans = [
@@ -239,23 +246,23 @@ onMounted(() => {
 			.fromTo('.hero-actions', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' }, '-=0.5')
 			.fromTo('.hero-scroll', { opacity: 0 }, { opacity: 1, duration: 0.6, ease: 'power3.out' }, '-=0.2');
 
-		// Hero word cycle — animate width smoothly between words
+		// Hero word cycle — faster timing, "good" visible initially
 		if (heroCycleRef.value) {
 			const wrap = heroCycleRef.value.parentElement;
 			// Set initial width
 			wrap.style.width = heroCycleRef.value.offsetWidth + 'px';
 
-			const cycleTl = gsap.timeline({ delay: 3, repeat: -1, repeatDelay: 4 });
+			const cycleTl = gsap.timeline({ delay: 1.5, repeat: -1, repeatDelay: 1 });
 			cycleWords.forEach((word, i) => {
 				if (i === 0) return;
 				cycleTl
-					.to(heroCycleRef.value, { opacity: 0, y: -12, duration: 0.3, ease: 'power2.in' })
+					.to(heroCycleRef.value, { opacity: 0, y: -12, duration: 0.2, ease: 'power2.in' })
 					.call(() => {
 						heroCycleRef.value.textContent = word;
-						gsap.to(wrap, { width: heroCycleRef.value.offsetWidth, duration: 0.3, ease: 'power2.out' });
+						gsap.to(wrap, { width: heroCycleRef.value.offsetWidth, duration: 0.2, ease: 'power2.out' });
 					})
-					.fromTo(heroCycleRef.value, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.4, ease: 'power2.out' })
-					.to({}, { duration: 2 });
+					.fromTo(heroCycleRef.value, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.3, ease: 'power2.out' })
+					.to({}, { duration: 0.8 });
 			});
 		}
 
@@ -269,27 +276,27 @@ onMounted(() => {
 			ease: 'power2.inOut',
 		});
 
-		// Section reveal helper
+		// Section reveal helper — faster animations, earlier trigger
 		const revealElements = (sectionRef, selector) => {
 			if (!sectionRef.value) return;
 			const els = sectionRef.value.querySelectorAll(selector);
 			els.forEach((el, i) => {
 				gsap.fromTo(el,
-					{ opacity: 0, y: 30 },
+					{ opacity: 0, y: 20 },
 					{
-						opacity: 1, y: 0, duration: 0.8, ease: 'power3.out',
-						scrollTrigger: { trigger: el, start: 'top 95%', toggleActions: 'play none none none' },
-						delay: i * 0.08,
+						opacity: 1, y: 0, duration: 0.6, ease: 'power3.out',
+						scrollTrigger: { trigger: el, start: 'top 98%', toggleActions: 'play none none none' },
+						delay: i * 0.05,
 					}
 				);
 			});
 		};
 
-		// Truth section
-		revealElements(truthRef, '.truth-label, .truth-title, .truth-text');
-
 		// Replaces section
 		revealElements(replacesRef, '.replaces-kicker, .replaces-item, .replaces-cta');
+
+		// Truth section
+		revealElements(truthRef, '.truth-label, .truth-title, .truth-text');
 
 		// AI reveal section
 		revealElements(aiRef, '.ai-kicker, .ai-headline, .ai-lede, .ai-cap');
@@ -298,19 +305,19 @@ onMounted(() => {
 		revealElements(featuresRef, '.features-hero-word, .features-title, .features-sub, .feature-item');
 
 		// Quote
-		gsap.fromTo('.quote-text', { opacity: 0, y: 30 }, {
-			opacity: 1, y: 0, duration: 1, ease: 'power3.out',
-			scrollTrigger: { trigger: '.quote-break', start: 'top 90%' },
+		gsap.fromTo('.quote-text', { opacity: 0, y: 20 }, {
+			opacity: 1, y: 0, duration: 0.6, ease: 'power3.out',
+			scrollTrigger: { trigger: '.quote-break', start: 'top 98%' },
 		});
 		gsap.fromTo('.quote-attr', { opacity: 0 }, {
-			opacity: 1, duration: 0.8, ease: 'power3.out',
-			scrollTrigger: { trigger: '.quote-break', start: 'top 90%' },
-			delay: 0.3,
+			opacity: 1, duration: 0.6, ease: 'power3.out',
+			scrollTrigger: { trigger: '.quote-break', start: 'top 98%' },
+			delay: 0.15,
 		});
 		gsap.fromTo('.quote-earnest', { opacity: 0, y: 16 }, {
-			opacity: 1, y: 0, duration: 0.8, ease: 'power3.out',
-			scrollTrigger: { trigger: '.quote-break', start: 'top 90%' },
-			delay: 0.6,
+			opacity: 1, y: 0, duration: 0.6, ease: 'power3.out',
+			scrollTrigger: { trigger: '.quote-break', start: 'top 98%' },
+			delay: 0.3,
 		});
 
 		// Pricing
@@ -379,6 +386,7 @@ useHead({
 	letter-spacing: -0.02em;
 	line-height: 0.9;
 	color: var(--ink);
+	white-space: nowrap;
 }
 .hero-period {
 	color: var(--accent);
@@ -483,7 +491,7 @@ useHead({
 .marquee-track {
 	display: flex;
 	white-space: nowrap;
-	animation: marquee 30s linear infinite;
+	animation: marquee 15s linear infinite;
 }
 .marquee-item {
 	font-family: var(--font-proxima-light);
@@ -510,51 +518,6 @@ useHead({
 	to   { transform: translateX(-50%); }
 }
 
-/* ─── TRUTH ─── */
-.truth-section {
-	padding: 120px 48px;
-	max-width: 860px;
-	margin: 0 auto;
-	display: grid;
-	grid-template-columns: 1fr 2fr;
-	gap: 80px;
-	align-items: start;
-	background: var(--paper);
-}
-@media (max-width: 700px) {
-	.truth-section { grid-template-columns: 1fr; gap: 40px; padding: 80px 24px; }
-}
-.truth-label {
-	font-family: var(--font-proxima-light);
-	font-style: italic;
-	font-size: 13px;
-	color: var(--accent);
-	letter-spacing: 0.08em;
-	padding-top: 6px;
-	position: sticky;
-	top: 100px;
-}
-.truth-title {
-	font-family: var(--font-bauer-bodoni);
-	font-size: clamp(36px, 5vw, 58px);
-	font-weight: 500;
-	line-height: 1.15;
-	letter-spacing: -0.01em;
-	margin-bottom: 32px;
-}
-.truth-title em {
-	font-style: italic;
-	color: var(--accent);
-}
-.truth-text {
-	font-size: 17px;
-	line-height: 1.85;
-	color: var(--ink-2);
-	margin-bottom: 20px;
-	font-weight: 400;
-}
-.truth-text strong { color: var(--ink); font-weight: 600; }
-
 /* ─── REPLACES ─── */
 .replaces-section {
 	padding: 100px 48px;
@@ -563,7 +526,7 @@ useHead({
 	text-align: center;
 	background: var(--paper);
 }
-@media (max-width: 700px) { .replaces-section { padding: 80px 24px; } }
+@media (max-width: 700px) { .replaces-section { padding: 60px 16px; } }
 .replaces-kicker {
 	font-family: var(--font-proxima-light);
 	font-style: italic;
@@ -591,6 +554,9 @@ useHead({
 	transition: background 0.2s;
 	position: relative;
 }
+@media (max-width: 700px) {
+	.replaces-item { padding: 16px 10px; gap: 6px; }
+}
 .replaces-item:hover { background: var(--paper-2); }
 .replaces-item::after {
 	content: '';
@@ -604,15 +570,20 @@ useHead({
 	mask-size: contain;
 	opacity: 0.25;
 }
-.replaces-logo {
+@media (max-width: 700px) {
+	.replaces-item::after { width: 12px; height: 12px; top: 5px; right: 5px; }
+}
+.replaces-icon {
 	width: 36px;
 	height: 36px;
-	border-radius: 8px;
-	object-fit: contain;
-	filter: grayscale(1) opacity(0.6);
-	transition: filter 0.2s;
+	color: var(--ink);
+	opacity: 0.6;
+	transition: opacity 0.2s;
 }
-.replaces-item:hover .replaces-logo { filter: grayscale(0) opacity(1); }
+@media (max-width: 700px) {
+	.replaces-icon { width: 24px; height: 24px; }
+}
+.replaces-item:hover .replaces-icon { opacity: 1; }
 .replaces-name {
 	font-family: var(--font-bauer-bodoni);
 	font-size: 15px;
@@ -620,11 +591,17 @@ useHead({
 	color: var(--ink);
 	letter-spacing: 0.01em;
 }
+@media (max-width: 700px) {
+	.replaces-name { font-size: 12px; }
+}
 .replaces-for {
 	font-family: var(--font-proxima-light);
 	font-size: 11px;
 	color: var(--muted);
 	letter-spacing: 0.04em;
+}
+@media (max-width: 700px) {
+	.replaces-for { font-size: 9px; }
 }
 .replaces-cta {
 	font-family: var(--font-bauer-bodoni);
@@ -637,6 +614,62 @@ useHead({
 	font-style: italic;
 	color: var(--accent);
 }
+
+/* ─── TRUTH ─── */
+.truth-section {
+	padding: 120px 48px;
+	max-width: 860px;
+	margin: 0 auto;
+	display: grid;
+	grid-template-columns: 1fr 2fr;
+	gap: 80px;
+	align-items: start;
+	background: var(--paper);
+}
+@media (max-width: 700px) {
+	.truth-section { grid-template-columns: 1fr; gap: 40px; padding: 80px 24px; }
+}
+.truth-label {
+	font-family: var(--font-proxima-light);
+	font-style: italic;
+	font-size: 13px;
+	color: var(--accent);
+	letter-spacing: 0.08em;
+	padding-top: 6px;
+	position: sticky;
+	top: 100px;
+}
+@media (max-width: 700px) {
+	.truth-label { position: static; }
+}
+.truth-title {
+	font-family: var(--font-bauer-bodoni);
+	font-size: clamp(36px, 5vw, 58px);
+	font-weight: 500;
+	line-height: 1.15;
+	letter-spacing: -0.01em;
+	margin-bottom: 32px;
+}
+.truth-title em {
+	font-style: italic;
+	color: var(--accent);
+}
+.truth-one {
+	color: var(--accent);
+	text-decoration: underline;
+	text-decoration-color: var(--accent);
+	text-underline-offset: 4px;
+	text-decoration-thickness: 2px;
+	font-style: italic;
+}
+.truth-text {
+	font-size: 17px;
+	line-height: 1.85;
+	color: var(--ink-2);
+	margin-bottom: 20px;
+	font-weight: 400;
+}
+.truth-text strong { color: var(--ink); font-weight: 600; }
 
 /* ─── AI REVEAL ─── */
 .ai-reveal {

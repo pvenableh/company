@@ -215,6 +215,11 @@ export default defineNuxtConfig({
 	// Vite plugins - Tailwind CSS v4
 	vite: {
 		plugins: [tailwindcss()],
+		server: {
+			watch: {
+				ignored: ['**/.claude/worktrees/**'],
+			},
+		},
 	},
 
 	// Ensure all component directories are scanned with path prefixes

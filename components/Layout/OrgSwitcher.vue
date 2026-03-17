@@ -75,12 +75,12 @@ const handleRegisterOrg = () => {
 					"
 					@click="handleSelectOrg(org.id)"
 				>
-					<Avatar class="size-10">
+					<UserAvatar class="size-10">
 						<AvatarImage v-if="getIconUrl(org)" :src="getIconUrl(org)" :alt="org.name" />
 						<AvatarFallback class="text-sm font-medium">
 							{{ getInitials(org) }}
 						</AvatarFallback>
-					</Avatar>
+					</UserAvatar>
 
 					<div class="flex-1 text-left min-w-0">
 						<p class="text-sm font-medium text-gray-900 truncate">{{ org.name }}</p>

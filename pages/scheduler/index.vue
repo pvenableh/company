@@ -249,7 +249,7 @@
 						<div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
 							<!-- Calendar takes up 3 columns -->
 							<div class="lg:col-span-3">
-								<CalendarView />
+								<CalendarBookingCalendar />
 							</div>
 
 							<!-- Sidebar -->
