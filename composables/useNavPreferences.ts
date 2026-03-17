@@ -114,20 +114,12 @@ const DEFAULT_LINKS: NavLink[] = [
 		description: 'Financial reports',
 	},
 	{
-		name: 'Contacts',
+		name: 'People',
 		type: ['footer', 'drawer'],
-		to: '/contacts',
+		to: '/people',
 		icon: 'i-heroicons-user-group',
-		color: 'bg-orange-500',
-		description: 'Manage contacts',
-	},
-	{
-		name: 'Clients',
-		type: ['footer', 'drawer'],
-		to: '/clients',
-		icon: 'i-heroicons-building-office-2',
 		color: 'bg-gradient-to-br from-orange-400 to-red-500',
-		description: 'Client management',
+		description: 'Contacts, clients & networking',
 	},
 	{
 		name: 'Teams',
@@ -152,14 +144,6 @@ const DEFAULT_LINKS: NavLink[] = [
 		icon: 'i-heroicons-clipboard-document-check',
 		color: 'bg-blue-500',
 		description: 'Manage your tasks',
-	},
-	{
-		name: 'CardDesk',
-		type: ['drawer'],
-		to: '/carddesk',
-		icon: 'i-heroicons-identification',
-		color: 'bg-gradient-to-br from-orange-400 to-red-500',
-		description: 'Networking CRM',
 	},
 	{
 		name: 'Phone',

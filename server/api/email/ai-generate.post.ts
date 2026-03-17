@@ -81,8 +81,9 @@ RULES:
 - Return ONLY valid JSON, no markdown fences, no extra text
 - Use only block names from the list above (exact match)
 - Fill in ALL variables for each block with compelling, relevant content
+- CRITICAL: Pay close attention to the variable TYPE shown in parentheses. Variables marked "(color)" MUST receive a valid hex color value like "#333333" or "#6366f1" — NEVER put text content into a color variable. Variables marked "(text)" or "(richtext)" receive text content. Variables marked "(image)" receive image URLs.
 - For image variables, set to empty string "" and provide an imageSuggestion instead
-- For color variables, use the brand color if provided, otherwise use professional defaults
+- For color variables, ONLY use valid hex color codes (e.g. "#ffffff", "#333333"). Use the brand color if provided, otherwise use professional defaults. NEVER put text content in a color variable.
 - For URL variables, use "#" as placeholder
 - For boolean variables, use "true" or "false"
 - Create 4-7 sections for a complete email
@@ -152,6 +153,26 @@ Return this exact JSON structure:
         );
 
         if (!match) return null;
+
+        // Sanitize color variables — the AI sometimes puts text into color fields
+        const schema = match.variables_schema;
+        let parsedSchema: Array<{ key: string; type: string }> = [];
+        try {
+          parsedSchema = typeof schema === 'string' ? JSON.parse(schema) : (schema || []);
+        } catch { /* ignore */ }
+
+        if (Array.isArray(parsedSchema) && section.variables) {
+          const colorRegex = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
+          for (const def of parsedSchema) {
+            if (def.type === 'color' && section.variables[def.key]) {
+              const val = section.variables[def.key];
+              if (!colorRegex.test(val) && !['transparent', 'inherit', 'currentColor'].includes(val)) {
+                // Replace invalid color with brand color or default
+                section.variables[def.key] = body.brandColor || '#333333';
+              }
+            }
+          }
+        }
 
         return {
           ...section,

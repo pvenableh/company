@@ -76,10 +76,9 @@ export default defineEventHandler(async (event) => {
       content: m.content,
     }));
 
-    // 5. Get org context for system prompt
+    // 5. Get org context + task context for system prompt
     let orgContext: any = {};
     try {
-      // Try to get the user's org info from session
       const userData = (session as any).user;
       orgContext = {
         userName: userData?.first_name
@@ -90,7 +89,37 @@ export default defineEventHandler(async (event) => {
       // Continue without org context
     }
 
-    const systemPrompt = buildSystemPrompt(orgContext);
+    // Fetch user's tasks so the AI has awareness of their workload
+    let taskContext = '';
+    try {
+      const tasks = await directus.request(
+        readItems('project_tasks', {
+          filter: { assignee_id: { _eq: userId } },
+          fields: ['id', 'title', 'status', 'completed', 'due_date', 'priority'],
+          sort: ['-due_date'],
+          limit: 30,
+        }),
+      ) as Array<{ id: string; title: string; status: string; completed: boolean; due_date: string; priority: string }>;
+
+      if (tasks.length > 0) {
+        const pending = tasks.filter(t => !t.completed);
+        const overdue = pending.filter(t => t.due_date && new Date(t.due_date) < new Date());
+        const completed = tasks.filter(t => t.completed);
+
+        taskContext = `\n\nUSER'S CURRENT TASKS (${tasks.length} total, ${pending.length} pending, ${completed.length} completed${overdue.length ? `, ${overdue.length} overdue` : ''}):\n`;
+        taskContext += pending.slice(0, 15).map(t =>
+          `- [${t.completed ? 'x' : ' '}] ${t.title}${t.due_date ? ` (due: ${t.due_date})` : ''}${t.priority ? ` [${t.priority}]` : ''}${t.status ? ` — ${t.status}` : ''}`,
+        ).join('\n');
+        if (overdue.length > 0) {
+          taskContext += `\n\nOVERDUE TASKS:\n`;
+          taskContext += overdue.map(t => `- ${t.title} (was due: ${t.due_date})`).join('\n');
+        }
+      }
+    } catch {
+      // Tasks collection may not be accessible — continue without
+    }
+
+    const systemPrompt = buildSystemPrompt(orgContext) + taskContext;
 
     // 6. Stream response via SSE
     const provider = getLLMProvider();

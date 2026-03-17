@@ -144,7 +144,7 @@ onMounted(loadClient);
           </div>
           <div>
             <h1 class="text-xl font-semibold">{{ client.name }}</h1>
-            <p v-if="client.industry" class="text-sm text-muted-foreground">{{ client.industry }}</p>
+            <p v-if="client.industry" class="text-sm text-muted-foreground">{{ typeof client.industry === 'object' ? client.industry.name : client.industry }}</p>
           </div>
           <span
             v-if="client.status"
@@ -326,7 +326,7 @@ onMounted(loadClient);
               </div>
               <div class="flex justify-between">
                 <span class="text-muted-foreground">Industry</span>
-                <span>{{ client.industry || '\u2014' }}</span>
+                <span>{{ (typeof client.industry === 'object' ? client.industry?.name : client.industry) || '\u2014' }}</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-muted-foreground">Created</span>
