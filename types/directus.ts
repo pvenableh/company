@@ -911,6 +911,16 @@ export interface Client {
 	billing_contacts?: Array<{ name: string; email: string }> | null;
 	/** @description Short code for invoice numbering (e.g., ABC, XYZ) */
 	code?: string | null;
+	/** @description Brand positioning, voice, and visual style */
+	brand_direction?: string | null;
+	/** @description Business goals and objectives */
+	goals?: string | null;
+	/** @description Ideal customer or audience profile */
+	target_audience?: string | null;
+	/** @description Geographic market focus */
+	location?: string | null;
+	/** @description Services provided to this client */
+	services?: string[] | null;
 }
 
 export interface ClientTestimonial {
@@ -1518,6 +1528,14 @@ export interface Organization {
 	projects?: Project[] | string[];
 	tickets?: Ticket[] | string[];
 	teams?: Team[] | string[];
+	/** @description Brand positioning, voice, and visual style */
+	brand_direction?: string | null;
+	/** @description Business goals and objectives */
+	goals?: string | null;
+	/** @description Ideal customer or audience profile */
+	target_audience?: string | null;
+	/** @description Geographic market focus */
+	location?: string | null;
 }
 
 export interface OrganizationsDirectusUser {
