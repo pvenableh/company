@@ -1,10 +1,5 @@
 <script setup lang="ts">
-import type { CRMOverviewAnalysis } from '~/types/crm-intelligence';
-
-const { user: sessionUser, loggedIn } = useUserSession();
-const user = computed(() => {
-	return loggedIn.value ? sessionUser.value ?? null : null;
-});
+const { user } = useDirectusAuth();
 
 // ── Productivity Engine (existing) ──
 const { suggestions, metrics, isAnalyzing, greeting, analyze } = useAIProductivityEngine();
@@ -146,7 +141,7 @@ const navigateTo = (route: string) => {
 </script>
 
 <template>
-	<div class="min-h-screen t-bg t-text">
+	<div class="min-h-screen" :class="user ? 't-bg t-text' : ''">
 		<!-- Marketing Page: shown when user is NOT logged in -->
 		<PagesSellSheet v-if="!user" />
 

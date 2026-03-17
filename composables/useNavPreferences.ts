@@ -21,7 +21,7 @@ const DEFAULT_LINKS: NavLink[] = [
 		name: 'Command Center',
 		type: ['header', 'toolbar'],
 		to: '/',
-		icon: 'i-heroicons-sparkles',
+		icon: 'i-heroicons-command-line',
 		color: 'bg-gradient-to-br from-violet-500 to-purple-600',
 		description: 'AI productivity hub',
 	},

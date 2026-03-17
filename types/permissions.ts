@@ -6,6 +6,7 @@ export type FeatureKey =
   | 'tickets'
   | 'tasks'
   | 'contacts'
+  | 'people'
   | 'clients'
   | 'channels'
   | 'comments'
@@ -47,6 +48,7 @@ export const FEATURE_KEYS: FeatureKey[] = [
   'tickets',
   'tasks',
   'contacts',
+  'people',
   'clients',
   'channels',
   'comments',
@@ -69,6 +71,7 @@ export const FEATURE_LABELS: Record<FeatureKey, string> = {
   tickets: 'Tickets',
   tasks: 'Tasks',
   contacts: 'Contacts',
+  people: 'People',
   clients: 'Clients',
   channels: 'Channels',
   comments: 'Comments',
@@ -131,6 +134,7 @@ const OWNER_PERMISSIONS: PermissionMatrix = {
   tickets: full(),
   tasks: full(),
   contacts: full(),
+  people: full(),
   clients: full(),
   channels: full(),
   comments: full(),
@@ -154,6 +158,7 @@ const ADMIN_PERMISSIONS: PermissionMatrix = {
   tickets: full(),
   tasks: full(),
   contacts: full(),
+  people: full(),
   clients: full(),
   channels: full(),
   comments: full(),
@@ -177,6 +182,7 @@ const MANAGER_PERMISSIONS: PermissionMatrix = {
   tickets: full(),
   tasks: full(),
   contacts: full(),
+  people: full(),
   clients: full(),
   channels: full(),
   comments: full(),
@@ -200,6 +206,7 @@ const MEMBER_PERMISSIONS: PermissionMatrix = {
   tickets: custom({ access: true, create: true, read: true, update: true }),
   tasks: custom({ access: true, create: true, read: true, update: true, delete: true }),
   contacts: custom({ access: true, create: true, read: true, update: true }),
+  people: custom({ access: true, create: true, read: true, update: true }),
   clients: custom({ access: true, read: true }),
   channels: custom({ access: true, create: true, read: true, update: true }),
   comments: custom({ access: true, create: true, read: true, update: true, delete: true }),
@@ -223,6 +230,7 @@ const CLIENT_PERMISSIONS: PermissionMatrix = {
   tickets: custom({ access: true, create: true, read: true, update: true }),
   tasks: readOnly(),
   contacts: noAccess(),
+  people: noAccess(),
   clients: noAccess(),
   channels: readOnly(),
   comments: custom({ access: true, create: true, read: true, update: true, delete: true }),

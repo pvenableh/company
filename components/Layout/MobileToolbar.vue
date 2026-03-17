@@ -23,6 +23,10 @@ const rightLinks = computed(() => {
 	return props.links.slice(half);
 });
 
+// Short names for toolbar display (keeps canonical names intact elsewhere)
+const shortNames = { 'Command Center': 'Commander' };
+const displayName = (link) => shortNames[link.name] || link.name;
+
 const handleNavigation = (link) => {
 	triggerHaptic(10);
 };
@@ -41,13 +45,16 @@ const handleAI = () => {
 			:to="link.to"
 			role="tab"
 			class="ios-tab-item"
-			:class="{ active: route.path === link.to }"
+			:class="[
+				{ active: route.path === link.to },
+				index >= 2 ? 'hidden sm:flex' : '',
+			]"
 			@click="handleNavigation(link)"
 		>
 			<div class="ios-tab-icon-wrap">
 				<UIcon :name="link.icon" class="ios-tab-icon" />
 			</div>
-			<span class="ios-tab-label">{{ link.name }}</span>
+			<span class="ios-tab-label">{{ displayName(link) }}</span>
 		</nuxt-link>
 
 		<!-- AI Assistant center button -->
@@ -65,13 +72,16 @@ const handleAI = () => {
 			:to="link.to"
 			role="tab"
 			class="ios-tab-item"
-			:class="{ active: route.path === link.to }"
+			:class="[
+				{ active: route.path === link.to },
+				index >= 1 ? 'hidden sm:flex' : '',
+			]"
 			@click="handleNavigation(link)"
 		>
 			<div class="ios-tab-icon-wrap">
 				<UIcon :name="link.icon" class="ios-tab-icon" />
 			</div>
-			<span class="ios-tab-label">{{ link.name }}</span>
+			<span class="ios-tab-label">{{ displayName(link) }}</span>
 		</nuxt-link>
 
 		<!-- Menu button -->
@@ -158,8 +168,9 @@ const handleAI = () => {
 .ios-tab-label {
 	font-size: 10px;
 	font-weight: 500;
-	letter-spacing: 0.01em;
+	letter-spacing: 0.04em;
 	line-height: 1;
+	text-transform: uppercase;
 }
 
 /* AI center button — raised circle overflowing top */

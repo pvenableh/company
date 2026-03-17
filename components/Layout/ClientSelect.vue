@@ -75,12 +75,12 @@ onUnmounted(() => {
 			:title="hasMultipleOrgs ? 'Switch organization' : currentOrg?.name"
 			@click="hasMultipleOrgs ? emit('open-org-switcher') : null"
 		>
-			<UserAvatar class="size-7">
+			<Avatar class="size-7">
 				<AvatarImage v-if="getIconUrl(currentOrg)" :src="getIconUrl(currentOrg)" :alt="currentOrg?.name" />
 				<AvatarFallback class="text-xs font-medium">
 					{{ getInitials(currentOrg) }}
 				</AvatarFallback>
-			</UserAvatar>
+			</Avatar>
 		</button>
 
 		<!-- Client dropdown -->
@@ -135,12 +135,12 @@ onUnmounted(() => {
 						<!-- "Organization" option -->
 						<template v-else-if="option.id === 'org'">
 							<div class="shrink-0" :class="{ 'ring-2 ring-[var(--cyan)] rounded-full': selectedClient === 'org' }">
-								<UserAvatar class="size-6">
+								<Avatar class="size-6">
 									<AvatarImage v-if="getIconUrl(option)" :src="getIconUrl(option)" :alt="option.name" />
 									<AvatarFallback class="text-[10px] font-medium">
 										{{ getInitials(option) }}
 									</AvatarFallback>
-								</UserAvatar>
+								</Avatar>
 							</div>
 							<span class="text-[9px] uppercase leading-3 flex-1">{{ option.name }}</span>
 							<span class="text-[7px] text-[var(--cyan)] uppercase">Internal</span>
@@ -152,12 +152,12 @@ onUnmounted(() => {
 								class="shrink-0 rounded-full"
 								:class="{ 'ring-2 ring-[var(--cyan)]': selectedClient === option.id }"
 							>
-								<UserAvatar class="size-6">
+								<Avatar class="size-6">
 									<AvatarImage v-if="getIconUrl(option)" :src="getIconUrl(option)" :alt="option.name" />
 									<AvatarFallback class="text-[10px] font-medium">
 										{{ getInitials(option) }}
 									</AvatarFallback>
-								</UserAvatar>
+								</Avatar>
 							</div>
 							<span class="text-[9px] uppercase leading-3 flex-1">{{ option.name }}</span>
 						</template>
