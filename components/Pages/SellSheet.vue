@@ -49,7 +49,7 @@
 				<h2 class="truth-title opacity-0">Your business runs on {{ toolCountWord }} tools. It should run on <span class="truth-one">one</span><span class="bp">.</span></h2>
 				<p class="truth-text opacity-0">You have a project tool. An invoice tool. A social tool. A phone system. A shared inbox. A calendar. And Slack to hold it all together. Eight tools. Eight logins. Zero cohesion.</p>
 				<p class="truth-text opacity-0"><strong>EARNEST replaces the pile.</strong> One platform, one login, one place where the work actually lives &mdash; from the first brief to the final invoice. Nothing to integrate. Nothing to re-explain.</p>
-				<p class="truth-text opacity-0">And because everything is in one place, <strong>AI can actually think about your business</strong> &mdash; analyzing contacts, clients, revenue, and campaigns together to build marketing strategies that isolated apps never could.</p>
+				<p class="truth-text opacity-0">And because everything is in one place, <strong>AI can actually think about your business</strong> &mdash; analyzing contacts, clients, revenue, deals, and campaigns together, layered with your brand direction and goals, to build CRM strategies, pipeline forecasts, and growth plans that isolated apps never could.</p>
 				<p class="truth-text opacity-0">Simple to use. Powerful underneath. That&rsquo;s the point.</p>
 			</div>
 		</section>
@@ -59,23 +59,23 @@
 			<div class="ai-reveal-inner">
 				<p class="ai-kicker opacity-0">What one platform makes possible</p>
 				<h2 class="ai-headline opacity-0">Your data talks<span class="bp">.</span><br/><em>AI listens<span class="bp">.</span></em></h2>
-				<p class="ai-lede opacity-0">Most tools bolt AI onto one channel. EARNEST connects AI to your entire business &mdash; clients, projects, revenue, conversations, and campaigns &mdash; then turns the full picture into marketing strategy, health scores, and campaign plans.</p>
+				<p class="ai-lede opacity-0">Most tools bolt AI onto one channel. EARNEST connects AI to your entire business &mdash; clients, projects, revenue, conversations, and campaigns &mdash; then layers in your brand direction, goals, and target audience to generate CRM health scores, pipeline forecasts, growth plans, and marketing strategies that are uniquely yours.</p>
 
 				<div class="ai-capabilities">
 					<div class="ai-cap opacity-0">
 						<span class="ai-cap-number">01</span>
 						<h3 class="ai-cap-title">Sees everything</h3>
-						<p class="ai-cap-desc">Contacts, projects, invoices, emails, social posts, phone calls, and team channels. One brain across every module.</p>
+						<p class="ai-cap-desc">Contacts, clients, projects, invoices, deals, tickets, social posts, and team channels. One brain reading across every module in real time.</p>
 					</div>
 					<div class="ai-cap opacity-0">
 						<span class="ai-cap-number">02</span>
-						<h3 class="ai-cap-title">Connects the dots</h3>
-						<p class="ai-cap-desc">A churning client triggers a re-engagement email, a social campaign, and a follow-up call. Automatically. Strategically.</p>
+						<h3 class="ai-cap-title">Knows your brand</h3>
+						<p class="ai-cap-desc">Brand direction, goals, target audience, and services &mdash; per client, per team, per organization. AI doesn't guess. It knows who you are and who you serve.</p>
 					</div>
 					<div class="ai-cap opacity-0">
 						<span class="ai-cap-number">03</span>
 						<h3 class="ai-cap-title">Thinks ahead</h3>
-						<p class="ai-cap-desc">Not just posts or emails &mdash; full multi-channel strategies with timelines, audience targeting, health scores, and plans built from your real data.</p>
+						<p class="ai-cap-desc">CRM health scores, pipeline forecasts, 4-week growth plans, contact re-engagement strategies, and campaign plans &mdash; all built from your real data and brand context.</p>
 					</div>
 				</div>
 			</div>
@@ -158,6 +158,7 @@ const heroCycleRef = ref(null);
 const cycleWords = ['good', 'great', 'impossible', 'possible', 'simple', 'good'];
 
 const marqueeItems = [
+	{ label: 'CRM Intelligence', icon: 'i-lucide-scan-search' },
 	{ label: 'Marketing Intelligence', icon: 'i-lucide-bar-chart-3' },
 	{ label: 'AI Strategy Engine', icon: 'i-lucide-brain' },
 	{ label: 'AI Content Generation', icon: 'i-lucide-sparkles' },
@@ -192,12 +193,14 @@ const toolCountWord = computed(() => {
 });
 
 const features = [
+	{ name: 'CRM Intelligence Engine', desc: 'AI reads across your entire business — contacts, clients, projects, tickets, invoices, and deals — then generates health scores, pipeline forecasts, growth plans, and contact strategies tailored to your brand positioning and goals.' },
 	{ name: 'Marketing Intelligence', desc: 'AI scans your entire business — contacts, social, email, clients, revenue — and returns a marketing health score, actionable insights, and multi-channel campaign plans. One click.' },
 	{ name: 'AI Strategy Engine', desc: 'Your data becomes your strategist. AI connects the dots across every module to generate campaigns, spot opportunities, and surface insights no isolated tool can see.' },
+	{ name: 'Brand-Aware AI', desc: 'Set brand direction, goals, target audience, and services per client. AI uses this context to generate suggestions aligned with your positioning — not generic advice from a tool that doesn\'t know your business.' },
 	{ name: 'Social Media & AI Content', desc: 'Schedule to Instagram, LinkedIn, Facebook, and Threads. AI generates platform-optimized posts, hashtags, and image suggestions in seconds.' },
 	{ name: 'Email Marketing & AI', desc: 'Block-based newsletter builder with AI-powered content generation. Describe your email and get a complete template — subject line, sections, and images.' },
 	{ name: 'Project Management', desc: 'Kanban boards, task lists, timelines, and file attachments. Your team always knows what\'s next.' },
-	{ name: 'Client & Contact CRM', desc: 'Every client, prospect, and partner in one place. With the full history of every conversation and project.' },
+	{ name: 'Client & Contact CRM', desc: 'Every client, prospect, and partner in one place. Brand context, goals, services, and the full history of every conversation and project.' },
 	{ name: 'Invoicing & Billing', desc: 'Stripe-powered invoices, proposals, payment tracking, and PDF generation. Get paid on time.' },
 	{ name: 'Team Channels', desc: 'Slack-style messaging built into your workspace. Conversations stay with the work they\'re about.' },
 	{ name: 'Phone & Video', desc: 'Twilio-powered calling and video meetings. Click-to-call contacts, record calls, and host team video — all without leaving Earnest.' },
@@ -218,7 +221,7 @@ const plans = [
 		price: '89',
 		desc: 'For the team that means business.',
 		featured: true,
-		features: ['Up to 10 users', 'Everything in Solo', 'Team channels & video', 'Phone system (Twilio)', 'Social scheduling (10 accounts)', 'AI email & social content wizards', 'Marketing Intelligence dashboard', 'Priority support', '25GB storage'],
+		features: ['Up to 10 users', 'Everything in Solo', 'Team channels & video', 'Phone system (Twilio)', 'Social scheduling (10 accounts)', 'AI email & social content wizards', 'Marketing Intelligence dashboard', 'CRM Intelligence (overview + contacts)', 'Priority support', '25GB storage'],
 		cta: { label: 'Start free trial', to: '/register' },
 	},
 	{
@@ -226,7 +229,7 @@ const plans = [
 		price: '189',
 		desc: 'For the business that\'s grown into something real.',
 		featured: false,
-		features: ['Up to 25 users', 'Everything in Team', 'Custom domain', 'White-label client portal', 'Unlimited social accounts', 'AI Strategy Engine (full suite)', 'Marketing Intelligence & campaign planner', '100GB storage'],
+		features: ['Up to 25 users', 'Everything in Team', 'Custom domain', 'White-label client portal', 'Unlimited social accounts', 'AI Strategy Engine (full suite)', 'CRM Intelligence (all 4 modes)', 'Brand-aware AI per client & team', '100GB storage'],
 		cta: { label: 'Talk to us', to: '/register' },
 	},
 ];

@@ -122,6 +122,55 @@
       />
     </div>
 
+    <!-- Brand & Strategy -->
+    <div v-if="client?.id" class="border-t pt-4 mt-2">
+      <h3 class="text-sm font-semibold mb-3 flex items-center gap-2">
+        <Icon name="lucide:palette" class="w-4 h-4 text-muted-foreground" />
+        Brand & Strategy
+      </h3>
+
+      <div class="space-y-4">
+        <BrandAIFieldSuggest
+          v-model="formData.brand_direction"
+          label="Brand Direction"
+          field="brand_direction"
+          placeholder="Brand positioning, voice, visual style, and messaging strategy..."
+          entity-type="client"
+          :entity-id="client.id"
+          :organization-id="typeof client.organization === 'string' ? client.organization : client.organization?.id || ''"
+        />
+
+        <BrandAIFieldSuggest
+          v-model="formData.goals"
+          label="Goals"
+          field="goals"
+          placeholder="Business goals and objectives..."
+          entity-type="client"
+          :entity-id="client.id"
+          :organization-id="typeof client.organization === 'string' ? client.organization : client.organization?.id || ''"
+        />
+
+        <BrandAIFieldSuggest
+          v-model="formData.target_audience"
+          label="Target Audience"
+          field="target_audience"
+          placeholder="Ideal customer profile, demographics, psychographics..."
+          entity-type="client"
+          :entity-id="client.id"
+          :organization-id="typeof client.organization === 'string' ? client.organization : client.organization?.id || ''"
+        />
+
+        <div>
+          <label class="block text-sm font-medium mb-1">Location</label>
+          <input
+            v-model="formData.location"
+            class="w-full rounded-md border bg-background px-3 py-2 text-sm"
+            placeholder="City, region, or Remote/Global"
+          />
+        </div>
+      </div>
+    </div>
+
     <div class="flex justify-end gap-2 pt-2">
       <Button type="button" variant="outline" @click="$emit('cancel')">Cancel</Button>
       <Button type="submit" :disabled="saving">
@@ -161,6 +210,10 @@ const formData = reactive({
   notes: props.client?.notes || '',
   tags: [...(props.client?.tags || [])] as string[],
   billing_contacts: [...(props.client?.billing_contacts || [])] as { name: string; email: string }[],
+  brand_direction: props.client?.brand_direction || '',
+  goals: props.client?.goals || '',
+  target_audience: props.client?.target_audience || '',
+  location: props.client?.location || '',
 });
 
 const newTag = ref('');
@@ -189,6 +242,10 @@ function handleSubmit() {
     billing_contacts: formData.billing_contacts.filter(c => c.email?.trim()).length
       ? formData.billing_contacts.filter(c => c.email?.trim())
       : undefined,
+    brand_direction: formData.brand_direction || undefined,
+    goals: formData.goals || undefined,
+    target_audience: formData.target_audience || undefined,
+    location: formData.location || undefined,
   });
 }
 </script>

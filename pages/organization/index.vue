@@ -50,6 +50,10 @@ const editForm = ref({
 	notes: '',
 	brand_color: '',
 	active: true,
+	brand_direction: '',
+	goals: '',
+	target_audience: '',
+	location: '',
 });
 const savingOrg = ref(false);
 
@@ -67,6 +71,10 @@ const openEditModal = () => {
 		notes: org.value.notes || '',
 		brand_color: org.value.brand_color || '',
 		active: org.value.active !== false,
+		brand_direction: org.value.brand_direction || '',
+		goals: org.value.goals || '',
+		target_audience: org.value.target_audience || '',
+		location: org.value.location || '',
 	};
 	showEditOrgModal.value = true;
 };
@@ -82,6 +90,10 @@ const saveOrganization = async () => {
 			notes: editForm.value.notes,
 			brand_color: editForm.value.brand_color,
 			active: editForm.value.active,
+			brand_direction: editForm.value.brand_direction || null,
+			goals: editForm.value.goals || null,
+			target_audience: editForm.value.target_audience || null,
+			location: editForm.value.location || null,
 		});
 		toast.add({ title: 'Success', description: 'Organization updated successfully', color: 'green' });
 		showEditOrgModal.value = false;
@@ -354,6 +366,10 @@ const fetchOrganizationData = async () => {
 				'origin_date',
 				'icon',
 				'active',
+				'brand_direction',
+				'goals',
+				'target_audience',
+				'location',
 			],
 			limit: 1,
 		});
@@ -609,6 +625,38 @@ watch(searchEmail, (val) => {
 									</div>
 								</div>
 							</UCard>
+
+							<!-- Brand & Strategy -->
+							<UCard v-if="org.brand_direction || org.goals || org.target_audience || org.location">
+								<template #header>
+									<div class="flex items-center">
+										<UIcon name="i-heroicons-paint-brush" class="w-5 h-5 mr-2" />
+										<h3 class="text-lg font-medium">Brand & Strategy</h3>
+									</div>
+								</template>
+
+								<div class="space-y-4">
+									<div v-if="org.brand_direction">
+										<h4 class="text-sm font-medium text-gray-500 mb-1">Brand Direction</h4>
+										<p class="text-gray-700 dark:text-gray-300 whitespace-pre-line">{{ org.brand_direction }}</p>
+									</div>
+
+									<div v-if="org.goals">
+										<h4 class="text-sm font-medium text-gray-500 mb-1">Goals</h4>
+										<p class="text-gray-700 dark:text-gray-300 whitespace-pre-line">{{ org.goals }}</p>
+									</div>
+
+									<div v-if="org.target_audience">
+										<h4 class="text-sm font-medium text-gray-500 mb-1">Target Audience</h4>
+										<p class="text-gray-700 dark:text-gray-300">{{ org.target_audience }}</p>
+									</div>
+
+									<div v-if="org.location">
+										<h4 class="text-sm font-medium text-gray-500 mb-1">Location</h4>
+										<p class="text-gray-700 dark:text-gray-300">{{ org.location }}</p>
+									</div>
+								</div>
+							</UCard>
 						</div>
 					</template>
 
@@ -776,6 +824,50 @@ watch(searchEmail, (val) => {
 						</span>
 					</div>
 				</UFormGroup>
+
+				<!-- Brand & Strategy -->
+				<div class="border-t pt-4 mt-2">
+					<h3 class="text-sm font-semibold mb-3 flex items-center gap-2">
+						<UIcon name="i-heroicons-paint-brush" class="w-4 h-4 text-muted-foreground" />
+						Brand & Strategy
+					</h3>
+
+					<div class="space-y-4">
+						<BrandAIFieldSuggest
+							v-model="editForm.brand_direction"
+							label="Brand Direction"
+							field="brand_direction"
+							placeholder="Brand positioning, voice, visual style, and messaging strategy..."
+							entity-type="organization"
+							:entity-id="org?.id || ''"
+							:organization-id="org?.id || ''"
+						/>
+
+						<BrandAIFieldSuggest
+							v-model="editForm.goals"
+							label="Goals"
+							field="goals"
+							placeholder="Business goals and objectives..."
+							entity-type="organization"
+							:entity-id="org?.id || ''"
+							:organization-id="org?.id || ''"
+						/>
+
+						<BrandAIFieldSuggest
+							v-model="editForm.target_audience"
+							label="Target Audience"
+							field="target_audience"
+							placeholder="Ideal customer profile, demographics, psychographics..."
+							entity-type="organization"
+							:entity-id="org?.id || ''"
+							:organization-id="org?.id || ''"
+						/>
+
+						<UFormGroup label="Location">
+							<UInput v-model="editForm.location" placeholder="City, region, or Remote/Global" />
+						</UFormGroup>
+					</div>
+				</div>
 			</form>
 
 			<div class="flex justify-end gap-2 p-4 border-t border-gray-200 dark:border-gray-700">

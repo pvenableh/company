@@ -78,6 +78,11 @@
 
 					<div class="text-sm text-gray-500" v-html="team.description || 'No description provided'" />
 
+					<div v-if="team.focus" class="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+						<UIcon name="i-heroicons-light-bulb" class="w-3.5 h-3.5 shrink-0" />
+						<span>{{ team.focus }}</span>
+					</div>
+
 					<div class="mt-4 flex items-center justify-between">
 						<span class="text-xs font-medium text-gray-500">{{ getTeamMembers(team).length }} Members</span>
 
@@ -202,6 +207,14 @@
 
 				<UFormGroup label="Description">
 					<LazyFormTiptap v-model="teamForm.description" placeholder="Describe the purpose of this team" />
+				</UFormGroup>
+
+				<UFormGroup label="Focus" hint="What this team specializes in">
+					<UInput v-model="teamForm.focus" placeholder="e.g. Brand strategy, Web development, Social media" />
+				</UFormGroup>
+
+				<UFormGroup label="Goals" hint="Current objectives for this team">
+					<UTextarea v-model="teamForm.goals" placeholder="e.g. Launch 3 client websites by Q2, grow social accounts by 25%" :rows="2" />
 				</UFormGroup>
 
 				<UFormGroup label="Active">
@@ -336,6 +349,8 @@ const teamForm = ref({
 	active: true,
 	icon: null,
 	iconPreview: null,
+	focus: '',
+	goals: '',
 });
 const isEditing = ref(false);
 const submittingTeam = ref(false);
@@ -470,12 +485,14 @@ const editTeam = (team) => {
 	teamForm.value.active = team.active !== false;
 	teamForm.value.icon = team.icon || null;
 	teamForm.value.iconPreview = team.icon ? getTeamIconUrl(team.icon) : null;
+	teamForm.value.focus = team.focus || '';
+	teamForm.value.goals = team.goals || '';
 	isEditing.value = true;
 	showCreateTeamModal.value = true;
 };
 
 const cancelTeamForm = () => {
-	teamForm.value = { name: '', description: '', active: true, icon: null, iconPreview: null };
+	teamForm.value = { name: '', description: '', active: true, icon: null, iconPreview: null, focus: '', goals: '' };
 	isEditing.value = false;
 	currentEditTeam.value = null;
 	showCreateTeamModal.value = false;

@@ -14,11 +14,12 @@ A radically simple, multi-tenant SaaS business operating system built with [Nuxt
 - **Team Communication** — Slack-style channels per organization with threaded comments, @mentions, emoji reactions, and WebSocket-powered real-time messaging
 - **Social Media Management** — Compose, schedule, and publish to Instagram, TikTok, LinkedIn, Facebook Pages, and Threads; AI-powered content wizard generates platform-optimized posts with tailored copy, hashtags, and image suggestions; content calendar, engagement analytics, multi-client management, and OAuth account connections
 - **Email Marketing & Newsletters** — Block-based MJML newsletter builder with 17+ reusable blocks, drag-and-drop assembly, live preview, AI email wizard that generates complete templates from a brief description, mailing list management with deduplication, CSV contact import, merge-tag personalization via Handlebars, editable header/footer partials, one-click unsubscribe, "View in Browser" web links, and campaign send tracking via SendGrid
-- **Client Management** — Track the companies your organization serves with status workflows (active, prospect, inactive, churned), industry tagging, primary contact assignment, and linked contacts/projects/tickets/invoices per client
+- **Client Management** — Track the companies your organization serves with status workflows (active, prospect, inactive, churned), industry tagging, primary contact assignment, brand direction, goals, target audience, location, services per client, and linked contacts/projects/tickets/invoices per client
 - **Contact CRM** — Contact management with tagging, custom fields, mailing list membership, subscription tracking, client association, and CSV import/export
 - **Marketing Intelligence** — AI-powered marketing dashboard (`/marketing`) that aggregates data across contacts, social media, email campaigns, clients, revenue, projects, and tickets to generate a marketing health score (0-100), actionable insights, content velocity metrics, audience growth tracking, and AI-generated multi-channel campaign plans with email sequences, social posts, and KPIs
 - **AI Command Center** — AI-powered productivity engine that analyzes tickets, projects, tasks, invoices, contacts, deals, channels, social media, scheduling, and phone activity to generate prioritized action items, reminders, insights, and follow-ups; includes productivity scoring (0-100), customizable AI module preferences, team chat, and financial analysis; supports Claude (Anthropic), GPT (OpenAI), and Gemini (Google) backends
-- **Organizations & Multi-Tenancy** — Multi-organization support with per-org roles (Owner, Admin, Manager, Member, Client), customizable permission matrices per role, team structures, member invitations, subscription plan tiers, and cross-tab state sync
+- **CRM Intelligence Engine** — AI-powered CRM analysis (`POST /api/crm/ai-intelligence`) that aggregates data across contacts, CardDesk networking contacts, clients, projects, tasks, tickets, invoices, and deals pipeline — enriched with brand context (brand direction, goals, target audience, services) from organizations, clients, and teams. Four analysis modes: overview (health scores + actions), contact-strategy (segmentation + outreach cadence), growth-plan (targets + 4-week plan), and pipeline-review (deal analysis + revenue forecast)
+- **Organizations & Multi-Tenancy** — Multi-organization support with per-org roles (Owner, Admin, Manager, Member, Client), customizable permission matrices per role, team structures with focus and goals, member invitations, brand direction and strategy fields, subscription plan tiers, and cross-tab state sync
 
 ### Supporting Features
 
@@ -307,6 +308,41 @@ The AI Productivity Engine (`useAIProductivityEngine.ts`) scans 9 business modul
    - `ai_anthropic_api_key` — Anthropic/Claude API key
    - `ai_openai_api_key` — OpenAI API key (optional)
    - `ai_google_api_key` — Google Gemini API key (optional)
+
+## CRM Intelligence Engine
+
+The platform includes an AI-powered CRM Intelligence Engine that reads across all business data and generates smart suggestions, actions, and growth ideas. Because contacts, clients, projects, invoices, deals, and brand context all live in one system, AI can deliver strategic recommendations that isolated CRM tools never could.
+
+### How It Works
+
+The CRM data aggregation utility (`server/utils/crm-intelligence.ts`) fetches data from 8+ collections in parallel and builds a structured context snapshot. This snapshot — enriched with brand direction, goals, target audience, and services from the organization, individual clients, and teams — is passed to Claude for analysis.
+
+### Analysis Modes
+
+| Mode | What It Returns |
+|---|---|
+| **Overview** | CRM health score (0-100) with 5 category breakdowns, prioritized actions, insights (strengths/risks/trends/opportunities), and growth opportunities |
+| **Contact Strategy** | Segment strategies with outreach cadence, re-engagement targets with message templates, conversion-ready contacts, and networking tips |
+| **Growth Plan** | Current state assessment, measurable targets with timeframes, strategies with tactics, a 4-week action plan, and KPIs |
+| **Pipeline Review** | Stage-by-stage deal analysis, at-risk deals with urgency levels, recommendations, and a revenue forecast with confidence rating |
+
+### Brand-Aware AI
+
+The engine incorporates brand context at three levels:
+- **Organization** — brand direction, goals, target audience, location
+- **Clients** — per-client brand direction, goals, target audience, location, and services provided
+- **Teams** — focus area and goals per team
+
+This context is injected into every AI prompt so suggestions align with the organization's actual positioning, market, and service offerings rather than generic CRM advice.
+
+### Key Files
+
+| File | Purpose |
+|---|---|
+| `types/crm-intelligence.ts` | TypeScript types for CRM context, analysis requests, and all 4 response shapes |
+| `server/utils/crm-intelligence.ts` | Data aggregation utility — parallel queries across 8+ collections + brand context |
+| `server/api/crm/ai-intelligence.post.ts` | API endpoint with 4 analysis-specific prompt builders |
+| `composables/useCRMIntelligence.ts` | Client composable with typed getters, 5-minute caching, and auto org-scope |
 
 ## AI Content Generation
 
