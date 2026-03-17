@@ -49,7 +49,7 @@
 				<h2 class="truth-title opacity-0">Your business runs on {{ toolCountWord }} tools. It should run on <span class="truth-one">one</span><span class="bp">.</span></h2>
 				<p class="truth-text opacity-0">You have a project tool. An invoice tool. A social tool. A phone system. A shared inbox. A calendar. And Slack to hold it all together. Eight tools. Eight logins. Zero cohesion.</p>
 				<p class="truth-text opacity-0"><strong>EARNEST replaces the pile.</strong> One platform, one login, one place where the work actually lives &mdash; from the first brief to the final invoice. Nothing to integrate. Nothing to re-explain.</p>
-				<p class="truth-text opacity-0">And because everything is in one place, <strong>AI can actually think about your business</strong> &mdash; analyzing contacts, clients, revenue, deals, and campaigns together, layered with your brand direction and goals, to build CRM strategies, pipeline forecasts, and growth plans that isolated apps never could.</p>
+				<p class="truth-text opacity-0">And because everything is in one place, <strong>AI can actually think about your business</strong> &mdash; analyzing people, companies, revenue, deals, and campaigns together, layered with your brand direction and goals, to build CRM strategies, pipeline forecasts, and growth plans that isolated apps never could. Two companion apps &mdash; CardDesk for networking and E&sup2; for mobile &mdash; keep everything connected on the go.</p>
 				<p class="truth-text opacity-0">Simple to use. Powerful underneath. That&rsquo;s the point.</p>
 			</div>
 		</section>
@@ -59,7 +59,7 @@
 			<div class="ai-reveal-inner">
 				<p class="ai-kicker opacity-0">What one platform makes possible</p>
 				<h2 class="ai-headline opacity-0">Your data talks<span class="bp">.</span><br/><em>AI listens<span class="bp">.</span></em></h2>
-				<p class="ai-lede opacity-0">Most tools bolt AI onto one channel. EARNEST connects AI to your entire business &mdash; clients, projects, revenue, conversations, and campaigns &mdash; then layers in your brand direction, goals, and target audience to generate CRM health scores, pipeline forecasts, growth plans, and marketing strategies that are uniquely yours.</p>
+				<p class="ai-lede opacity-0">Most tools bolt AI onto one channel. EARNEST connects AI to your entire business &mdash; people, companies, projects, revenue, conversations, and campaigns &mdash; then layers in your brand direction, goals, and target audience to generate CRM health scores, pipeline forecasts, growth plans, and marketing strategies that are uniquely yours.</p>
 
 				<div class="ai-capabilities">
 					<div class="ai-cap opacity-0">
@@ -164,13 +164,13 @@ const marqueeItems = [
 	{ label: 'AI Content Generation', icon: 'i-lucide-sparkles' },
 	{ label: 'Projects', icon: 'i-lucide-folder-kanban' },
 	{ label: 'Invoicing', icon: 'i-lucide-receipt' },
-	{ label: 'Client Management', icon: 'i-lucide-building-2' },
+	{ label: 'People & Companies', icon: 'i-lucide-building-2' },
 	{ label: 'Social Scheduling', icon: 'i-lucide-calendar-clock' },
 	{ label: 'Team Channels', icon: 'i-lucide-message-square' },
 	{ label: 'Video & Phone', icon: 'i-lucide-video' },
 	{ label: 'Email Analytics', icon: 'i-lucide-mail' },
 	{ label: 'Proposals & Billing', icon: 'i-lucide-file-text' },
-	{ label: 'Contacts & CRM', icon: 'i-lucide-users' },
+	{ label: 'Companion Apps', icon: 'i-lucide-smartphone' },
 ];
 
 const replacedTools = [
@@ -182,7 +182,7 @@ const replacedTools = [
 	{ name: 'Twilio', replaces: 'Phone system', icon: 'i-lucide-phone' },
 	{ name: 'Zoom', replaces: 'Video meetings', icon: 'i-lucide-video' },
 	{ name: 'Calendly', replaces: 'Scheduling', icon: 'i-lucide-calendar' },
-	{ name: 'HubSpot', replaces: 'CRM & contacts', icon: 'i-lucide-users' },
+	{ name: 'HubSpot', replaces: 'Unified CRM', icon: 'i-lucide-users' },
 	{ name: 'ChatGPT', replaces: 'AI assistant', icon: 'i-lucide-sparkles' },
 ];
 
@@ -200,11 +200,13 @@ const features = [
 	{ name: 'Social Media & AI Content', desc: 'Schedule to Instagram, LinkedIn, Facebook, and Threads. AI generates platform-optimized posts, hashtags, and image suggestions in seconds.' },
 	{ name: 'Email Marketing & AI', desc: 'Block-based newsletter builder with AI-powered content generation. Describe your email and get a complete template — subject line, sections, and images.' },
 	{ name: 'Project Management', desc: 'Kanban boards, task lists, timelines, and file attachments. Your team always knows what\'s next.' },
-	{ name: 'Client & Contact CRM', desc: 'Every client, prospect, and partner in one place. Brand context, goals, services, and the full history of every conversation and project.' },
+	{ name: 'People & Companies', desc: 'Every person and company in one unified CRM — clients, contacts, prospects, and networking connections from CardDesk. Brand context, goals, services, and the full history of every conversation and project.' },
 	{ name: 'Invoicing & Billing', desc: 'Stripe-powered invoices, proposals, payment tracking, and PDF generation. Get paid on time.' },
 	{ name: 'Team Channels', desc: 'Slack-style messaging built into your workspace. Conversations stay with the work they\'re about.' },
 	{ name: 'Phone & Video', desc: 'Twilio-powered calling and video meetings. Click-to-call contacts, record calls, and host team video — all without leaving Earnest.' },
 	{ name: 'Calendar & Scheduling', desc: 'Public booking links, Google/Outlook calendar sync, and team availability. Everything connected to your clients and projects.' },
+	{ name: 'CardDesk', desc: 'Turn every business card and networking event into a CRM relationship. Scan cards with AI vision, track follow-ups, and gamify your networking with XP, levels, and badges.' },
+	{ name: 'Earnest Companion (E²)', desc: 'Your business in your pocket. Tasks, messages, contacts, and AI on the go — a mobile-first companion that keeps you connected to everything in Earnest.' },
 ];
 
 const plans = [
@@ -213,7 +215,7 @@ const plans = [
 		price: '29',
 		desc: 'For the one-person shop doing serious work.',
 		featured: false,
-		features: ['1 user', 'Unlimited projects', 'Invoicing & Stripe billing', 'Social scheduling (2 accounts)', 'AI content generation', 'Contact CRM', '5GB storage'],
+		features: ['1 user', 'Unlimited projects', 'Invoicing & Stripe billing', 'Social scheduling (2 accounts)', 'AI content generation', 'People & Companies CRM', 'CardDesk & E\u00B2 companion apps', '5GB storage'],
 		cta: { label: 'Get started', to: '/register' },
 	},
 	{
@@ -363,13 +365,13 @@ useHead({
 
 /* ─── HERO ─── */
 .earnest-hero {
-	min-height: 100vh;
+	min-height: 100svh;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
 	text-align: center;
-	padding: 120px 24px 80px;
+	padding: 80px 24px 80px;
 	position: relative;
 	background: var(--paper);
 }
@@ -564,27 +566,24 @@ useHead({
 .replaces-item::after {
 	content: '';
 	position: absolute;
-	top: 8px;
-	right: 8px;
-	width: 16px;
-	height: 16px;
+	top: 50%;
+	left: 12%;
+	right: 12%;
+	height: 2px;
 	background: var(--accent);
-	mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'/%3E%3Cline x1='6' y1='6' x2='18' y2='18'/%3E%3C/svg%3E");
-	mask-size: contain;
-	opacity: 0.25;
-}
-@media (max-width: 700px) {
-	.replaces-item::after { width: 12px; height: 12px; top: 5px; right: 5px; }
+	transform: rotate(-12deg);
+	opacity: 0.35;
+	pointer-events: none;
 }
 .replaces-icon {
-	width: 36px;
-	height: 36px;
+	width: 24px;
+	height: 24px;
 	color: var(--ink);
-	opacity: 0.6;
+	opacity: 0.4;
 	transition: opacity 0.2s;
 }
 @media (max-width: 700px) {
-	.replaces-icon { width: 24px; height: 24px; }
+	.replaces-icon { width: 18px; height: 18px; }
 }
 .replaces-item:hover .replaces-icon { opacity: 1; }
 .replaces-name {

@@ -1,13 +1,11 @@
 <!-- layouts/auth.vue — Earnest-branded auth layout -->
 <template>
 	<div class="auth-layout">
-		<header class="auth-header">
+		<main class="auth-content">
 			<nuxt-link to="/" class="auth-brand">
-				<LogoEarnest size="md" />
+				<LogoEarnest size="lg" />
 				<span class="auth-tagline">Do good work.</span>
 			</nuxt-link>
-		</header>
-		<main class="auth-content">
 			<slot />
 		</main>
 		<footer class="auth-footer">
@@ -57,11 +55,12 @@
 	-webkit-font-smoothing: antialiased;
 }
 
-.auth-header {
+.auth-content {
+	flex: 1;
 	display: flex;
+	flex-direction: column;
 	align-items: center;
-	justify-content: center;
-	padding: 24px 24px 0;
+	padding: 48px 16px 24px;
 }
 
 .auth-brand {
@@ -70,23 +69,16 @@
 	align-items: center;
 	text-decoration: none;
 	color: var(--ink);
+	margin-bottom: 32px;
 }
 
 .auth-tagline {
 	font-family: var(--font-proxima-light);
 	font-style: italic;
-	font-size: 9px;
+	font-size: 11px;
 	letter-spacing: 0.06em;
 	color: var(--muted);
-	margin-top: 1px;
-}
-
-.auth-content {
-	flex: 1;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	padding: 24px 16px;
+	margin-top: 4px;
 }
 
 .auth-footer {

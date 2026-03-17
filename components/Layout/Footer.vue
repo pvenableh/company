@@ -110,7 +110,6 @@ const props = defineProps({
 @reference "~/assets/css/tailwind.css";
 
 .site-footer {
-	border-top: 1px solid hsl(var(--border) / 0.4);
 	max-width: 1200px;
 	margin: 60px auto 0;
 	width: 100%;

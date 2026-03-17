@@ -2,6 +2,8 @@
 
 A radically simple, multi-tenant SaaS business operating system built with [Nuxt 3](https://nuxt.com), [Vue 3](https://vuejs.org), and [Directus](https://directus.io). One platform replaces the eight tools your business runs on today — projects, invoicing, CRM, social media, email marketing, team channels, scheduling, and AI-powered marketing intelligence — all in one login. Because everything lives in one place, AI can see your entire business and generate strategies that isolated apps never could. Organizations serve as the tenant boundary, with per-org roles, customizable permissions, and subscription plan gating.
 
+Earnest ships with two companion apps: **CardDesk** — a networking CRM that turns business cards and events into relationships — and **Earnest Companion (E²)** — a mobile-first experience for tasks, messages, and AI on the go.
+
 ## Features
 
 ### Core Modules
@@ -14,11 +16,10 @@ A radically simple, multi-tenant SaaS business operating system built with [Nuxt
 - **Team Communication** — Slack-style channels per organization with threaded comments, @mentions, emoji reactions, and WebSocket-powered real-time messaging
 - **Social Media Management** — Compose, schedule, and publish to Instagram, TikTok, LinkedIn, Facebook Pages, and Threads; AI-powered content wizard generates platform-optimized posts with tailored copy, hashtags, and image suggestions; content calendar, engagement analytics, multi-client management, and OAuth account connections
 - **Email Marketing & Newsletters** — Block-based MJML newsletter builder with 17+ reusable blocks, drag-and-drop assembly, live preview, AI email wizard that generates complete templates from a brief description, mailing list management with deduplication, CSV contact import, merge-tag personalization via Handlebars, editable header/footer partials, one-click unsubscribe, "View in Browser" web links, and campaign send tracking via SendGrid
-- **Client Management** — Track the companies your organization serves with status workflows (active, prospect, inactive, churned), industry tagging, primary contact assignment, brand direction, goals, target audience, location, services per client, and linked contacts/projects/tickets/invoices per client
-- **Contact CRM** — Contact management with tagging, custom fields, mailing list membership, subscription tracking, client association, and CSV import/export
+- **People & Companies (Unified CRM)** — Every person and company in one place. The `people` collection unifies contacts, clients, and CardDesk networking connections with a single relationship graph. Companies (formerly "clients") track the organizations you serve with status workflows (active, prospect, inactive, churned), industry tagging, brand direction, goals, target audience, services, and linked people/projects/tickets/invoices. People have tagging, custom fields, mailing list membership, subscription tracking, company associations, and CSV import/export
 - **Marketing Intelligence** — AI-powered marketing dashboard (`/marketing`) that aggregates data across contacts, social media, email campaigns, clients, revenue, projects, and tickets to generate a marketing health score (0-100), actionable insights, content velocity metrics, audience growth tracking, and AI-generated multi-channel campaign plans with email sequences, social posts, and KPIs
 - **AI Command Center** — AI-powered productivity engine that analyzes tickets, projects, tasks, invoices, contacts, deals, channels, social media, scheduling, and phone activity to generate prioritized action items, reminders, insights, and follow-ups; includes productivity scoring (0-100), customizable AI module preferences, team chat, and financial analysis; supports Claude (Anthropic), GPT (OpenAI), and Gemini (Google) backends
-- **CRM Intelligence Engine** — AI-powered CRM analysis (`POST /api/crm/ai-intelligence`) that aggregates data across contacts, CardDesk networking contacts, clients, projects, tasks, tickets, invoices, and deals pipeline — enriched with brand context (brand direction, goals, target audience, services) from organizations, clients, and teams. Four analysis modes: overview (health scores + actions), contact-strategy (segmentation + outreach cadence), growth-plan (targets + 4-week plan), and pipeline-review (deal analysis + revenue forecast)
+- **CRM Intelligence Engine** — AI-powered CRM analysis (`POST /api/crm/ai-intelligence`) that aggregates data across the unified People CRM (contacts, CardDesk networking connections, companies), projects, tasks, tickets, invoices, and deals pipeline — enriched with brand context (brand direction, goals, target audience, services) from organizations, companies, and teams. Four analysis modes: overview (health scores + actions), contact-strategy (segmentation + outreach cadence), growth-plan (targets + 4-week plan), and pipeline-review (deal analysis + revenue forecast)
 - **Organizations & Multi-Tenancy** — Multi-organization support with per-org roles (Owner, Admin, Manager, Member, Client), customizable permission matrices per role, team structures with focus and goals, member invitations, brand direction and strategy fields, subscription plan tiers, and cross-tab state sync
 
 ### Supporting Features
@@ -33,6 +34,11 @@ A radically simple, multi-tenant SaaS business operating system built with [Nuxt
 - **Theme System** — Semantic `t-*` CSS utility classes that adapt to light and dark mode
 - **Marketing Sell Sheet** — Design-forward landing page shown to unauthenticated visitors at `/`
 - **Branded Error Pages** — Earnest-styled error pages (404, 403, 401, 500) with status-specific messaging, editorial typography, and graceful recovery actions
+
+### Companion Apps
+
+- **CardDesk** — Gamified networking CRM companion app (Nuxt 4 + Directus 11). Scan business cards via Claude Vision, log follow-up activities (email, call, meeting, LinkedIn), track lead ratings (hot/warm/nurture/cold), and convert contacts to clients — all wrapped in an XP/level/badge system. Uses `cd_`-prefixed Directus collections (`cd_contacts`, `cd_activities`, `cd_xp_state`) on the shared Directus instance, feeding into the unified People CRM
+- **Earnest Companion (E²)** — Mobile-first companion app for managing your business on the go. Quick access to tasks, team messages, AI assistant, and key metrics from your phone
 
 ## Tech Stack
 
@@ -228,7 +234,11 @@ Organizations have a `plan` field (free, starter, pro, enterprise) that hooks in
 | Collection | Purpose |
 |---|---|
 | `organizations` | Tenant boundary with plan tier |
+| `people` | Unified CRM — contacts, clients, and CardDesk networking connections |
 | `clients` | Companies an organization serves (active, prospect, inactive, churned) |
+| `cd_contacts` | CardDesk networking contacts with lead ratings, conversion flags, and activity timelines |
+| `cd_activities` | CardDesk touchpoints (email, call, meeting, LinkedIn, card scan, client conversion) |
+| `cd_xp_state` | CardDesk per-user gamification state (XP, level, streak, badges) |
 | `org_roles` | Per-org role definitions with permission matrices |
 | `org_memberships` | User-to-org membership with role, status, client scope, and invitation tracking |
 | `organizations_directus_users` | Legacy junction (kept for backward compatibility) |
@@ -315,7 +325,7 @@ The platform includes an AI-powered CRM Intelligence Engine that reads across al
 
 ### How It Works
 
-The CRM data aggregation utility (`server/utils/crm-intelligence.ts`) fetches data from 8+ collections in parallel and builds a structured context snapshot. This snapshot — enriched with brand direction, goals, target audience, and services from the organization, individual clients, and teams — is passed to Claude for analysis.
+The CRM data aggregation utility (`server/utils/crm-intelligence.ts`) fetches data from 8+ collections in parallel — including the unified People CRM and CardDesk networking data (`cd_contacts`, `cd_activities`) — and builds a structured context snapshot. This snapshot — enriched with brand direction, goals, target audience, and services from the organization, companies, and teams — is passed to Claude for analysis.
 
 ### Analysis Modes
 
@@ -386,7 +396,7 @@ The platform includes a full email marketing system (MailChimp replacement) buil
 | `email_template_blocks` | Junction: blocks assigned to templates with sort order and variable overrides |
 | `email_partials` | Shared header/footer partials |
 | `emails` | Sent campaign records with status tracking |
-| `contacts` | Contact CRM with subscription and custom fields |
+| `contacts` | Contact records (migrating to unified `people` collection) |
 | `mailing_lists` | Named mailing lists |
 | `mailing_list_contacts` | Junction: list membership with per-member custom fields |
 

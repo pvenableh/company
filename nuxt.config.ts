@@ -351,6 +351,12 @@ export default defineNuxtConfig({
 				'parse5-htmlparser2-tree-adapter',
 			],
 		},
+		// Increase Vercel function timeout (default 10s is too short for LLM calls)
+		vercel: {
+			functions: {
+				maxDuration: 60,
+			},
+		},
 	},
 
 	build: {
