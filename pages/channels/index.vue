@@ -1,5 +1,6 @@
 <script setup>
 const { selectedOrg, organizationOptions } = useOrganization();
+const { selectedClient } = useClients();
 const { user } = useDirectusAuth();
 const { canAccess, canCreate: canCreateFeature } = useRole();
 
@@ -20,16 +21,30 @@ const availableTickets = ref([]);
 
 const fetchSelectOptions = async () => {
 	try {
+		const projectFilter = {
+			_and: [
+				{ status: { _nin: ['Archived', 'completed'] } },
+				...(selectedOrg.value ? [{ organization: { _eq: selectedOrg.value } }] : []),
+				...(selectedClient.value && selectedClient.value !== 'org' ? [{ client: { _eq: selectedClient.value } }] : []),
+			],
+		};
+		const ticketFilter = {
+			_and: [
+				{ status: { _nin: ['completed', 'archived'] } },
+				...(selectedOrg.value ? [{ organization: { _eq: selectedOrg.value } }] : []),
+				...(selectedClient.value && selectedClient.value !== 'org' ? [{ client: { _eq: selectedClient.value } }] : []),
+			],
+		};
 		const [projects, tickets] = await Promise.all([
 			projectItems.list({
 				fields: ['id', 'title'],
-				filter: { status: { _nin: ['Archived', 'completed'] }, ...(selectedOrg.value ? { organization: { _eq: selectedOrg.value } } : {}) },
+				filter: projectFilter,
 				sort: ['title'],
 				limit: 100,
 			}),
 			ticketItems.list({
 				fields: ['id', 'title'],
-				filter: { status: { _nin: ['completed', 'archived'] }, ...(selectedOrg.value ? { organization: { _eq: selectedOrg.value } } : {}) },
+				filter: ticketFilter,
 				sort: ['-date_created'],
 				limit: 100,
 			}),
@@ -56,6 +71,7 @@ const createChannel = async () => {
 		};
 		if (newChannelProject.value) data.project = newChannelProject.value;
 		if (newChannelTicket.value) data.ticket = newChannelTicket.value;
+		if (selectedClient.value && selectedClient.value !== 'org') data.client = selectedClient.value;
 
 		await channelItems.create(data);
 		toast.add({ title: 'Channel created', color: 'green' });
@@ -87,9 +103,16 @@ const currentFilter = computed(() => {
 				_in: organizationOptions.value.filter((org) => org.id !== null).map((org) => org.id),
 			};
 
-	return {
-		_and: [{ status: { _in: ['published', 'draft'] } }, { organization: orgFilter }],
-	};
+	const filters = [{ status: { _in: ['published', 'draft'] } }, { organization: orgFilter }];
+
+	// Filter by selected client
+	if (selectedClient.value && selectedClient.value !== 'org') {
+		filters.push({ client: { _eq: selectedClient.value } });
+	} else if (selectedClient.value === 'org') {
+		filters.push({ client: { _null: true } });
+	}
+
+	return { _and: filters };
 });
 // Real-time subscription
 const {
@@ -110,6 +133,7 @@ const {
 		'project.title',
 		'ticket.id',
 		'ticket.title',
+		'client',
 		'messages.id',
 		'messages.status',
 		'messages.date_created',
@@ -126,13 +150,20 @@ watch(currentFilter, (newFilter) => {
 const localChannels = ref([]);
 
 watch(
-	[() => channels.value, selectedOrg],
+	[() => channels.value, selectedOrg, selectedClient],
 	([newChannels]) => {
 		if (!newChannels) return;
 
-		localChannels.value = newChannels.filter(
-			(channel) => !selectedOrg.value || channel.organization?.id === selectedOrg.value,
-		);
+		localChannels.value = newChannels.filter((channel) => {
+			if (selectedOrg.value && channel.organization?.id !== selectedOrg.value) return false;
+			if (selectedClient.value && selectedClient.value !== 'org') {
+				return channel.client === selectedClient.value;
+			}
+			if (selectedClient.value === 'org') {
+				return !channel.client;
+			}
+			return true;
+		});
 	},
 	{ immediate: true },
 );
@@ -178,6 +209,8 @@ const sortedChannels = computed(() => {
 						value-attribute="id"
 						placeholder="Select a project..."
 						clearable
+						searchable
+						searchable-placeholder="Search projects..."
 						:disabled="creatingChannel"
 					/>
 				</UFormGroup>
@@ -189,6 +222,8 @@ const sortedChannels = computed(() => {
 						value-attribute="id"
 						placeholder="Select a ticket..."
 						clearable
+						searchable
+						searchable-placeholder="Search tickets..."
 						:disabled="creatingChannel"
 					/>
 				</UFormGroup>

@@ -19,6 +19,7 @@ const showCreateModal = ref(false);
 const creating = ref(false);
 const statusFilter = ref('all');
 const showPaid = ref(false);
+const viewMode = ref<'cards' | 'table'>('cards');
 
 const sortBy = ref('-due_date');
 const sortOptions = [
@@ -170,7 +171,7 @@ watch(() => selectedClient.value, () => {
     </div>
 
     <!-- Filters -->
-    <div class="flex gap-3 mb-6 flex-wrap">
+    <div class="flex gap-3 mb-6 flex-wrap items-center">
       <input
         v-model="search"
         type="search"
@@ -192,6 +193,23 @@ watch(() => selectedClient.value, () => {
       >
         <option v-for="opt in sortOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
       </select>
+      <!-- View Toggle -->
+      <div class="flex gap-0.5 p-0.5 bg-muted/40 rounded-lg">
+        <button
+          @click="viewMode = 'cards'"
+          class="p-1.5 rounded-md transition-all"
+          :class="viewMode === 'cards' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'"
+        >
+          <Icon name="lucide:layout-grid" class="w-4 h-4" />
+        </button>
+        <button
+          @click="viewMode = 'table'"
+          class="p-1.5 rounded-md transition-all"
+          :class="viewMode === 'table' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'"
+        >
+          <Icon name="lucide:list" class="w-4 h-4" />
+        </button>
+      </div>
     </div>
 
     <!-- Loading State -->
@@ -216,8 +234,73 @@ watch(() => selectedClient.value, () => {
     </div>
 
     <template v-else>
+      <!-- TABLE VIEW -->
+      <div v-if="viewMode === 'table'" class="ios-card overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-border/50">
+                <th class="text-left py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Invoice</th>
+                <th class="text-left py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Bill To</th>
+                <th class="text-left py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Status</th>
+                <th class="text-right py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Amount</th>
+                <th class="text-left py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Due Date</th>
+                <th class="text-center py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Items</th>
+                <th class="text-right py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wider w-24"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="inv in allInvoices"
+                :key="inv.id"
+                class="border-b border-border/30 last:border-b-0 hover:bg-muted/20 cursor-pointer transition-colors"
+                :class="{ 'opacity-50': inv.status === 'paid' || inv.status === 'archived' }"
+                @click="viewInvoice(inv)"
+              >
+                <td class="py-3 px-4">
+                  <span class="font-medium">{{ inv.invoice_code || 'No Code' }}</span>
+                </td>
+                <td class="py-3 px-4 text-muted-foreground">{{ getBillToName(inv) }}</td>
+                <td class="py-3 px-4">
+                  <span
+                    class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize"
+                    :class="statusColors[inv.status || 'pending']"
+                  >
+                    {{ inv.status }}
+                  </span>
+                </td>
+                <td class="py-3 px-4 text-right font-medium tabular-nums">{{ formatAmount(inv.total_amount) }}</td>
+                <td class="py-3 px-4">
+                  <span :class="dueDateColors[getDueDateUrgency(inv)]">
+                    {{ inv.due_date ? getFriendlyDateThree(inv.due_date) : '\u2014' }}
+                  </span>
+                  <span
+                    v-if="getDueDateUrgency(inv) === 'past'"
+                    class="text-[9px] uppercase font-semibold text-red-400 ml-1"
+                  >
+                    Past due
+                  </span>
+                </td>
+                <td class="py-3 px-4 text-center text-muted-foreground">{{ getLineItemCount(inv) }}</td>
+                <td class="py-3 px-4 text-right" @click.stop>
+                  <div class="flex items-center justify-end gap-1">
+                    <NuxtLink v-if="inv.status === 'pending'" :to="`/invoices/${inv.id}`">
+                      <Button variant="outline" size="sm" class="h-7 text-xs">Pay</Button>
+                    </NuxtLink>
+                    <NuxtLink :to="`/invoices/detail/${inv.id}`">
+                      <Button variant="ghost" size="sm" class="h-7 text-xs">Edit</Button>
+                    </NuxtLink>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CARD VIEW -->
       <!-- Active Invoices -->
-      <div v-if="activeInvoices.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div v-else-if="activeInvoices.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div
           v-for="inv in activeInvoices"
           :key="inv.id"
@@ -281,13 +364,13 @@ watch(() => selectedClient.value, () => {
         </div>
       </div>
 
-      <!-- No active invoices message -->
-      <div v-else-if="completedInvoices.length" class="text-center py-12">
+      <!-- No active invoices message (card view only) -->
+      <div v-else-if="viewMode !== 'table' && completedInvoices.length" class="text-center py-12">
         <p class="text-sm text-muted-foreground">No active invoices match your filters.</p>
       </div>
 
-      <!-- Paid / Archived Section -->
-      <div v-if="completedInvoices.length" class="mt-8">
+      <!-- Paid / Archived Section (card view only) -->
+      <div v-if="viewMode !== 'table' && completedInvoices.length" class="mt-8">
         <button
           class="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4 group"
           @click="showPaid = !showPaid"

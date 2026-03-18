@@ -171,9 +171,16 @@ const debouncedEmit = useDebounceFn((key: string, value: any) => {
 
 /** Get a valid hex color for the native color picker (transparent → #000000). */
 function getColorValue(field: BlockVariableDefinition): string {
-  const val = props.variables[field.key] || field.default || '';
+  const raw = props.variables[field.key] || field.default || '';
+  const val = typeof raw === 'string' ? raw.trim() : '';
   if (!val || val === 'transparent') return '#000000';
-  return val;
+  // Ensure valid hex format for native color input
+  if (/^#[0-9a-fA-F]{6}$/.test(val)) return val;
+  if (/^#[0-9a-fA-F]{3}$/.test(val)) {
+    // Expand shorthand #abc → #aabbcc
+    return `#${val[1]}${val[1]}${val[2]}${val[2]}${val[3]}${val[3]}`;
+  }
+  return '#000000';
 }
 
 /** Get the text display for the color text input. */

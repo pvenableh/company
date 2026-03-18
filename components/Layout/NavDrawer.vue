@@ -43,36 +43,15 @@
 								<UIcon name="i-heroicons-sparkles" class="ai-callout-icon" />
 							</div>
 						</div>
-						<span class="ai-callout-title">Earnest AI</span>
+						<span class="ai-callout-title">EARNEST AI</span>
 						<span class="ai-callout-desc">Chat with your AI assistant</span>
 					</nuxt-link>
 				</div>
 
-				<!-- Primary Apps -->
-				<div v-if="primaryLinks.length" class="app-grid">
+				<!-- All Apps -->
+				<div v-if="allAppLinks.length" class="app-grid">
 					<nuxt-link
-						v-for="link in primaryLinks"
-						:key="link.to"
-						:to="link.to"
-						class="app-item"
-						@click="handleAppClick($event)"
-					>
-						<div class="app-icon-wrap">
-							<div
-								:class="[link.color, 'app-icon', { 'app-icon-active': route.path === link.to }]"
-							>
-								<UIcon :name="link.icon" class="icon-inner" />
-							</div>
-						</div>
-						<span class="app-label" :class="{ 'app-label-active': route.path === link.to }">{{ link.name }}</span>
-					</nuxt-link>
-				</div>
-
-				<!-- Secondary Apps (spacing only, no header) -->
-				<div v-if="secondaryLinks.length" class="section-spacer" />
-				<div v-if="secondaryLinks.length" class="app-grid">
-					<nuxt-link
-						v-for="link in secondaryLinks"
+						v-for="link in allAppLinks"
 						:key="link.to"
 						:to="link.to"
 						class="app-item"
@@ -180,6 +159,7 @@ const links = computed(() => visibleLinks.value.filter((l) => l.type.includes('d
 // Grouped links for sectioned drawer
 const primaryLinks = computed(() => links.value.filter((l) => l.section === 'primary'));
 const secondaryLinks = computed(() => links.value.filter((l) => l.section === 'secondary'));
+const allAppLinks = computed(() => [...primaryLinks.value, ...secondaryLinks.value]);
 const toolLinks = computed(() => links.value.filter((l) => l.section === 'tools'));
 const aiChatLink = computed(() => visibleLinks.value.find((l) => l.to === '/command-center/ai'));
 
@@ -451,15 +431,15 @@ function onTouchEnd() {
 
 /* ── App Grid — iPhone home screen ── */
 .app-grid {
-	display: grid;
-	grid-template-columns: repeat(4, 1fr);
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
 	gap: 2px 0;
 	padding: 4px 8px 6px;
 }
 
 @media (min-width: 640px) {
 	.app-grid {
-		grid-template-columns: repeat(5, 1fr);
 		gap: 6px 0;
 		padding: 6px 12px 8px;
 	}
@@ -467,7 +447,6 @@ function onTouchEnd() {
 
 /* On desktop side-sheet, constrain to 5 cols */
 .side-sheet .app-grid {
-	grid-template-columns: repeat(5, 1fr);
 	gap: 6px 0;
 	padding: 6px 12px 8px;
 }
@@ -478,6 +457,7 @@ function onTouchEnd() {
 	align-items: center;
 	gap: 3px;
 	padding: 5px 2px;
+	width: 25%;
 	border-radius: 14px;
 	text-decoration: none;
 	-webkit-tap-highlight-color: transparent;
@@ -488,6 +468,7 @@ function onTouchEnd() {
 	.app-item {
 		gap: 5px;
 		padding: 6px 4px;
+		width: 20%;
 	}
 }
 
@@ -536,7 +517,7 @@ function onTouchEnd() {
 }
 
 .app-label {
-	font-size: 9px;
+	font-size: 8px;
 	font-weight: 500;
 	text-transform: uppercase;
 	letter-spacing: 0.04em;

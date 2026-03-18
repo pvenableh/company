@@ -25,39 +25,41 @@
 			</div>
 		</template>
 		<div class="h-80">
-			<template v-if="data && data.length">
-				<ChartContainer :config="chartConfig" class="h-full">
-					<VisDonut
-						:data="donutData"
-						:value="(d: any) => d.count"
-						:arc-width="80"
-						:pad-angle="0.02"
-						:corner-radius="4"
-						:color="(d: any, i: number) => chartColors[i % chartColors.length]"
-						:central-label="totalCount.toString()"
-						:central-sub-label="'total'"
-					/>
-				</ChartContainer>
-				<div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 mt-2 text-xs text-muted-foreground">
-					<span
-						v-for="(item, i) in data"
-						:key="item.type"
-						class="flex items-center gap-1.5"
-					>
-						<span class="w-2.5 h-2.5 rounded-full shrink-0" :style="{ background: chartColors[i % chartColors.length] }"></span>
-						{{ item.type }} ({{ item.count }})
-					</span>
+			<ClientOnly>
+				<div v-if="data && data.length && totalCount > 0" class="h-full flex flex-col">
+					<div class="flex-1 min-h-0">
+						<VisSingleContainer :data="donutData" :height="240">
+							<VisDonut
+								:value="(d: any) => d.count"
+								:arc-width="80"
+								:pad-angle="0.02"
+								:corner-radius="4"
+								:color="(d: any, i: number) => chartColors[i % chartColors.length]"
+								:central-label="totalCount.toString()"
+								:central-sub-label="'total'"
+							/>
+						</VisSingleContainer>
+					</div>
+					<div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 mt-2 text-xs text-muted-foreground">
+						<span
+							v-for="(item, i) in data"
+							:key="item.type"
+							class="flex items-center gap-1.5"
+						>
+							<span class="w-2.5 h-2.5 rounded-full shrink-0" :style="{ background: chartColors[i % chartColors.length] }"></span>
+							{{ item.type }} ({{ item.count }})
+						</span>
+					</div>
 				</div>
-			</template>
-			<div v-else class="h-full flex items-center justify-center text-muted-foreground">No activity data available</div>
+				<div v-else class="h-full flex items-center justify-center text-muted-foreground">No activity data available</div>
+			</ClientOnly>
 		</div>
 	</UCard>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { ChartContainer } from '~/components/ui/chart';
-import { VisDonut } from '@unovis/vue';
+import { VisSingleContainer, VisDonut } from '@unovis/vue';
 
 const props = defineProps({
 	data: {
@@ -79,17 +81,6 @@ const chartColors = [
 	'rgba(4, 121, 160, 0.8)',
 	'rgba(3, 94, 124, 0.8)',
 ];
-
-const chartConfig = computed(() => {
-	const config = {};
-	props.data.forEach((item, i) => {
-		config[`segment_${i}`] = {
-			label: item.type,
-			color: chartColors[i % chartColors.length],
-		};
-	});
-	return config;
-});
 
 const donutData = computed(() => {
 	return props.data.map((item) => ({

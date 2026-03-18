@@ -207,10 +207,10 @@ onUnmounted(() => {
 	<div class="flex flex-col h-full bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
 		<!-- Header -->
 		<div class="flex items-center justify-between p-3 border-b border-gray-100 dark:border-gray-700">
-			<div class="flex items-center gap-2">
+			<NuxtLink to="/channels" class="flex items-center gap-2 hover:opacity-80 transition-opacity">
 				<UIcon name="i-heroicons-chat-bubble-bottom-center-text" class="w-5 h-5 text-violet-500" />
-				<h3 class="text-sm font-semibold uppercase tracking-wide">Chat</h3>
-			</div>
+				<h3 class="text-sm font-semibold uppercase tracking-wide">Channels</h3>
+			</NuxtLink>
 			<select
 				v-model="selectedChannel"
 				class="text-xs border border-gray-200 dark:border-gray-600 rounded-md px-2 py-1 bg-transparent dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"
@@ -255,7 +255,7 @@ onUnmounted(() => {
 						class="w-7 h-7 rounded-full flex-shrink-0 mt-0.5"
 					/>
 					<div
-						class="max-w-[75%] rounded-lg px-3 py-2 text-sm"
+						class="max-w-[75%] rounded-lg px-3 py-2 text-sm overflow-visible"
 						:class="
 							isOwnMessage(msg)
 								? 'bg-primary/10 text-gray-900 dark:text-white'
@@ -265,7 +265,7 @@ onUnmounted(() => {
 						<p v-if="!isOwnMessage(msg)" class="text-[10px] font-semibold text-gray-500 mb-0.5">
 							{{ msg.user_created?.first_name }}
 						</p>
-						<p class="whitespace-pre-wrap break-words" v-html="msg.text"></p>
+						<p class="whitespace-pre-wrap break-words overflow-wrap-anywhere" v-html="msg.text"></p>
 						<p class="text-[10px] text-gray-400 mt-1 text-right">{{ formatTime(msg.date_created) }}</p>
 					</div>
 				</div>
@@ -306,6 +306,13 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+/* Ensure @mention tags in messages are visible and not clipped */
+:deep(.mention) {
+	color: var(--color-primary, #6366f1);
+	font-weight: 600;
+	white-space: nowrap;
+}
+
 /* Keep Tiptap compact inside the chat input */
 .chat-tiptap-wrapper :deep(.tiptap-wrapper) {
 	position: relative;
