@@ -921,6 +921,28 @@ export interface Client {
 	location?: string | null;
 	/** @description Services we provide to this client */
 	services?: string[] | null;
+	/** @description Teams assigned to this client */
+	assigned_teams?: ClientsTeam[] | string[];
+	/** @description Individual users with direct access to this client */
+	assigned_users?: ClientsDirectusUser[] | string[];
+}
+
+export interface ClientsDirectusUser {
+	/** @primaryKey */
+	id: number;
+	clients_id?: Client | string | null;
+	directus_users_id?: DirectusUser | string | null;
+	sort?: number | null;
+	date_created?: string | null;
+}
+
+export interface ClientsTeam {
+	/** @primaryKey */
+	id: number;
+	clients_id?: Client | string | null;
+	teams_id?: Team | string | null;
+	sort?: number | null;
+	date_created?: string | null;
 }
 
 export interface ClientTestimonial {
@@ -1523,7 +1545,7 @@ export interface Organization {
 	short_name?: string | null;
 	active?: boolean | null;
 	/** @description Subscription plan tier */
-	plan?: 'solo' | 'team' | 'studio' | null;
+	plan?: 'free' | 'starter' | 'pro' | 'enterprise' | null;
 	/** @description Voice, visual style, and brand positioning */
 	brand_direction?: string | null;
 	/** @description Business objectives and growth targets */
@@ -2585,6 +2607,8 @@ export interface Team {
 	goals?: string | null;
 	users?: JunctionDirectusUsersTeam[] | string[];
 	projects?: Project[] | string[];
+	/** @description Clients assigned to this team */
+	assigned_clients?: ClientsTeam[] | string[];
 }
 
 export interface TemplateBlock {
@@ -3344,6 +3368,8 @@ export interface Schema {
 	cd_xp_state: CdXpState[];
 	channels: Channel[];
 	clients: Client[];
+	clients_directus_users: ClientsDirectusUser[];
+	clients_teams: ClientsTeam[];
 	client_testimonials: ClientTestimonial[];
 	comments: Comment[];
 	contacts: Contact[];
@@ -3529,6 +3555,8 @@ export enum CollectionNames {
 	cd_xp_state = 'cd_xp_state',
 	channels = 'channels',
 	clients = 'clients',
+	clients_directus_users = 'clients_directus_users',
+	clients_teams = 'clients_teams',
 	client_testimonials = 'client_testimonials',
 	comments = 'comments',
 	contacts = 'contacts',
