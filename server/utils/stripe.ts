@@ -25,24 +25,25 @@ export function useStripe(): Stripe {
 	return _stripe;
 }
 
-// Subscription plan definitions
+// Subscription plan definitions — must match SellSheet pricing
 export const EARNEST_PLANS = {
-	free: {
-		name: 'Earnest Free',
-		stripePriceId: process.env.STRIPE_PRICE_FREE || null,
-		features: { members: 1, storage_gb: 1, ai_credits: 10 },
-	},
-	pro: {
-		name: 'Earnest Pro',
-		stripePriceId: process.env.STRIPE_PRICE_PRO || null,
+	solo: {
+		name: 'Solo',
+		stripePriceId: process.env.STRIPE_PRICE_SOLO || null,
 		monthlyAmount: 2900, // $29.00
-		features: { members: 'Unlimited', storage_gb: 100, ai_credits: 'Unlimited' },
+		features: { members: 1, storage_gb: 5, ai_credits: 'Limited' },
 	},
 	team: {
-		name: 'Earnest Team',
+		name: 'Team',
 		stripePriceId: process.env.STRIPE_PRICE_TEAM || null,
-		monthlyAmount: 7900, // $79.00
-		features: { members: 'Unlimited', storage_gb: 500, ai_credits: 'Unlimited' },
+		monthlyAmount: 8900, // $89.00
+		features: { members: 10, storage_gb: 25, ai_credits: 'Unlimited' },
+	},
+	studio: {
+		name: 'Studio',
+		stripePriceId: process.env.STRIPE_PRICE_STUDIO || null,
+		monthlyAmount: 18900, // $189.00
+		features: { members: 25, storage_gb: 100, ai_credits: 'Unlimited' },
 	},
 } as const;
 

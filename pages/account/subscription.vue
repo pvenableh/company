@@ -32,7 +32,7 @@ onMounted(async () => {
 	// Handle return from Stripe Checkout
 	if (route.query.session_id) {
 		toast.success('Subscription activated!', {
-			description: 'Your Earnest Pro subscription is now active.',
+			description: 'Your subscription is now active.',
 		});
 		navigateTo('/account/subscription', { replace: true });
 	}
@@ -58,7 +58,7 @@ const planName = computed(() => {
 	if (!currentPlan.value) return 'No active plan';
 	const product = currentPlan.value.product;
 	if (typeof product === 'object' && product?.name) return product.name;
-	return 'Earnest Pro';
+	return 'Unknown Plan';
 });
 
 const planPrice = computed(() => {
@@ -165,16 +165,16 @@ async function handleManageBilling() {
 
 				<div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
 					<div>
-						<p class="text-muted-foreground">Members</p>
-						<p class="font-medium">Unlimited</p>
+						<p class="text-muted-foreground">Plan</p>
+						<p class="font-medium">{{ planName }}</p>
 					</div>
 					<div>
-						<p class="text-muted-foreground">AI Credits</p>
-						<p class="font-medium">Unlimited</p>
+						<p class="text-muted-foreground">Price</p>
+						<p class="font-medium">{{ planPrice || '—' }}</p>
 					</div>
 					<div>
-						<p class="text-muted-foreground">Storage</p>
-						<p class="font-medium">100 GB</p>
+						<p class="text-muted-foreground">Status</p>
+						<p class="font-medium capitalize">{{ subscriptionData?.subscription?.status || '—' }}</p>
 					</div>
 					<div>
 						<p class="text-muted-foreground">Next Billing</p>
@@ -307,7 +307,7 @@ async function handleManageBilling() {
 							<p class="text-sm text-muted-foreground mt-2">
 								Your subscription will remain active until the end of your current billing period
 								<strong v-if="periodEnd">({{ format(periodEnd, 'MMMM d, yyyy') }})</strong>.
-								After that, you'll lose access to Pro features.
+								After that, you'll lose access to your plan's features.
 							</p>
 							<div class="flex items-center gap-2 mt-6">
 								<UButton color="red" :loading="loading" @click="handleCancel">

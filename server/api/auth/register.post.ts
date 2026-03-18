@@ -64,7 +64,7 @@ export default defineEventHandler(async (event) => {
             name: organization_name.trim(),
             status: 'published',
             active: true,
-            plan: 'pro',
+            plan: 'solo',
           })
         ) as any;
 

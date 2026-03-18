@@ -34,7 +34,7 @@ export default defineEventHandler(async (event) => {
         name: name.trim(),
         status: 'published',
         active: true,
-        plan: 'pro',
+        plan: 'solo',
       })
     ) as any;
 
