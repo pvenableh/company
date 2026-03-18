@@ -1,19 +1,28 @@
 import type { Client } from '~/types/directus';
 
 /**
- * useClients — Client CRUD + selection state
+ * useClients — Client CRUD + selection state + role-based access control
  *
  * Provides full CRUD operations for the clients collection, plus
  * a selectedClient state for filtering data throughout the app.
  *
+ * Access model:
+ *   - Owner/Admin       → all clients in org
+ *   - Manager/Member    → union of (team-assigned clients + individually-assigned clients)
+ *   - Client-role user  → their scoped client only
+ *
  * The client dropdown in the header offers three modes:
- *   1. null   → "All" — no client filter, shows everything
+ *   1. null   → "All" — no client filter, shows everything the user can see
  *   2. "org"  → Organization's own work (items with no client assigned)
  *   3. UUID   → Specific client
  */
 export function useClients() {
   const items = useDirectusItems<Client>('clients');
+  const clientTeamsItems = useDirectusItems('clients_teams');
+  const clientUsersItems = useDirectusItems('clients_directus_users');
   const { selectedOrg, getOrganizationFilter, currentOrg } = useOrganization();
+  const { isOrgAdminOrAbove, clientScope } = useOrgRole();
+  const { user } = useDirectusAuth();
 
   // ── Selection state ───────────────────────────────────────────────────────
   const selectedClient = useState<string | null>('selectedClient', () => null);
@@ -74,6 +83,81 @@ export function useClients() {
     return { client: { _eq: id } };
   }
 
+  // ── Accessible client IDs cache (for role-based filtering) ────────────────
+  const accessibleClientIds = useState<string[] | null>('accessibleClientIds', () => null);
+
+  /**
+   * Fetch the set of client IDs the current user can access.
+   * Returns null if user has full access (owner/admin), otherwise returns an array of IDs.
+   */
+  async function fetchAccessibleClientIds(): Promise<string[] | null> {
+    // Owner/Admin always sees all
+    if (isOrgAdminOrAbove.value) {
+      accessibleClientIds.value = null;
+      return null;
+    }
+
+    // Client-role user: scoped to their single client
+    if (clientScope.value) {
+      accessibleClientIds.value = [clientScope.value];
+      return [clientScope.value];
+    }
+
+    const userId = user.value?.id;
+    if (!userId) {
+      accessibleClientIds.value = [];
+      return [];
+    }
+
+    const ids = new Set<string>();
+
+    try {
+      // 1. Get clients assigned to user's teams
+      // First get user's team IDs
+      const junctionItems = useDirectusItems('junction_directus_users_teams');
+      const userTeams = await junctionItems.list({
+        filter: { directus_users_id: { _eq: userId } },
+        fields: ['teams_id'],
+        limit: -1,
+      });
+      const teamIds = userTeams
+        .map((j: any) => typeof j.teams_id === 'object' ? j.teams_id?.id : j.teams_id)
+        .filter(Boolean);
+
+      if (teamIds.length > 0) {
+        // Get clients assigned to those teams
+        const teamClients = await clientTeamsItems.list({
+          filter: { teams_id: { _in: teamIds } },
+          fields: ['clients_id'],
+          limit: -1,
+        });
+        for (const tc of teamClients) {
+          const cid = typeof tc.clients_id === 'object' ? tc.clients_id?.id : tc.clients_id;
+          if (cid) ids.add(cid);
+        }
+      }
+
+      // 2. Get clients assigned directly to this user
+      const userClients = await clientUsersItems.list({
+        filter: { directus_users_id: { _eq: userId } },
+        fields: ['clients_id'],
+        limit: -1,
+      });
+      for (const uc of userClients) {
+        const cid = typeof uc.clients_id === 'object' ? uc.clients_id?.id : uc.clients_id;
+        if (cid) ids.add(cid);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch accessible client IDs, falling back to all:', err);
+      accessibleClientIds.value = null;
+      return null;
+    }
+
+    const result = [...ids];
+    accessibleClientIds.value = result;
+    return result;
+  }
+
   // ── Fetch active clients for the dropdown ─────────────────────────────────
   async function fetchActiveClients() {
     if (!selectedOrg.value) {
@@ -83,12 +167,26 @@ export function useClients() {
 
     clientsLoading.value = true;
     try {
+      // First resolve which clients this user can see
+      const allowedIds = await fetchAccessibleClientIds();
+
       const filter: any = {
         _and: [
           { status: { _eq: 'active' } },
           { organization: { _eq: selectedOrg.value } },
         ],
       };
+
+      // If user has restricted access, add an ID filter
+      if (allowedIds !== null) {
+        if (allowedIds.length === 0) {
+          // User has no client assignments — show empty list
+          clientList.value = [];
+          clientsLoading.value = false;
+          return;
+        }
+        filter._and.push({ id: { _in: allowedIds } });
+      }
 
       const data = await items.list({
         fields: ['id', 'name', 'logo', 'status'],
@@ -173,6 +271,15 @@ export function useClients() {
     const orgFilter = getOrganizationFilter();
     if (orgFilter?.organization) {
       filter._and.push({ organization: orgFilter.organization });
+    }
+
+    // Role-based access control: restrict to assigned clients for non-admins
+    const allowedIds = accessibleClientIds.value;
+    if (allowedIds !== null) {
+      if (allowedIds.length === 0) {
+        return { data: [], total: 0 };
+      }
+      filter._and.push({ id: { _in: allowedIds } });
     }
 
     if (params?.status) {
@@ -303,6 +410,13 @@ export function useClients() {
       filter._and.push({ organization: orgFilter.organization });
     }
 
+    // Role-based access control
+    const allowedIds = accessibleClientIds.value;
+    if (allowedIds !== null) {
+      if (allowedIds.length === 0) return [];
+      filter._and.push({ id: { _in: allowedIds } });
+    }
+
     const data = await items.list({
       fields: ['id', 'name', 'status'],
       filter,
@@ -329,6 +443,10 @@ export function useClients() {
     getClientFilter,
     fetchActiveClients,
     setupClientListeners,
+
+    // Access control
+    accessibleClientIds: readonly(accessibleClientIds),
+    fetchAccessibleClientIds,
 
     // CRUD
     getClients,

@@ -21,10 +21,11 @@ Earnest ships with two companion apps: **CardDesk** — a networking CRM that tu
 - **AI Command Center** — AI-powered productivity engine that analyzes tickets, projects, tasks, invoices, contacts, deals, channels, social media, scheduling, and phone activity to generate prioritized action items, reminders, insights, and follow-ups; includes productivity scoring (0-100), customizable AI module preferences, team chat, and financial analysis; supports Claude (Anthropic), GPT (OpenAI), and Gemini (Google) backends
 - **CRM Intelligence Engine** — AI-powered CRM analysis (`POST /api/crm/ai-intelligence`) that aggregates data across the unified People CRM (contacts, CardDesk networking connections, companies), projects, tasks, tickets, invoices, and deals pipeline — enriched with brand context (brand direction, goals, target audience, services) from organizations, companies, and teams. Four analysis modes: overview (health scores + actions), contact-strategy (segmentation + outreach cadence), growth-plan (targets + 4-week plan), and pipeline-review (deal analysis + revenue forecast)
 - **Organizations & Multi-Tenancy** — Multi-organization support with per-org roles (Owner, Admin, Manager, Member, Client), customizable permission matrices per role, team structures with focus and goals, member invitations, brand direction and strategy fields, subscription plan tiers, and cross-tab state sync
+- **Client Access Control** — Hybrid team-based and individual user access to clients. Owner/Admin roles see all clients; Manager/Member roles see only clients assigned to their teams plus any individual user overrides. Uses `clients_teams` and `clients_directus_users` junction tables with assignment UIs on the team detail and client detail pages
 
 ### Supporting Features
 
-- **Task Management** — Personal task lists tied to projects and organizations
+- **Quick Tasks** — AI-powered personal task lists with day/week scheduling (Today, This Week, Later), priority levels, motivational progress messages, confetti celebrations, and optional links to tickets or project events; AI endpoint generates contextual task suggestions; Command Center widget shows top 10 tasks or a quick generator for new users
 - **Real-Time Collaboration** — WebSocket multiplexing for live updates, user presence indicators, and instant notifications
 - **Email Notifications** — Transactional emails via SendGrid for invoices, appointments, password resets, and team invitations
 - **Email Templates** — MJML-powered responsive email templates with block-based composition, design-time variables (`{{{triple braces}}}`), and runtime personalization (`{{double braces}}`)
@@ -135,10 +136,10 @@ The app will be available at `http://localhost:3000`.
 │   ├── Projects/       # Timeline, board, overview
 │   ├── Invoices/       # Invoice forms, PDF generation
 │   ├── Channels/       # Real-time messaging
-│   ├── Clients/        # Client forms, cards
+│   ├── Clients/        # Client forms, cards, user access assignment
 │   ├── Scheduler/      # Calendar, booking, video meetings
 │   ├── Marketing/     # Marketing intelligence dashboard, health score, campaign timeline
-│   ├── CommandCenter/  # AI tray, suggestion cards, productivity meter, preferences
+│   ├── CommandCenter/  # AI tray, suggestion cards, productivity meter, preferences, quick tasks widget
 │   ├── Newsletter/     # Block builder, canvas, variable editor, partials
 │   ├── Contacts/       # Contact forms, tables, merge tag reference
 │   ├── Import/         # CSV column mapper
@@ -150,7 +151,8 @@ The app will be available at `http://localhost:3000`.
 │   ├── Auth/           # Login, register, password reset forms
 │   ├── Form/           # Reusable form components (TipTap, uploads)
 │   ├── Payment/        # Stripe card and payment UI
-│   ├── Teams/          # Team management cards and modals
+│   ├── Tasks/          # Quick task generator with AI suggestions and schedule grouping
+│   ├── Teams/          # Team management cards, modals, client assignment
 │   └── ui/             # shadcn-vue base components
 ├── composables/        # Vue composables (auth, data fetching, real-time, etc.)
 ├── server/
@@ -172,6 +174,7 @@ The app will be available at `http://localhost:3000`.
 | Page | Route | Description |
 |---|---|---|
 | Home | `/` | Sell sheet (unauthenticated) or dashboard (authenticated) |
+| Tasks | `/tasks` | Personal quick tasks with AI suggestions, schedule grouping, and project task views |
 | Tickets | `/tickets` | Kanban board for task management |
 | Projects | `/projects` | Timeline and board views for project management |
 | Invoices | `/invoices` | Invoice list, creation, and payment tracking |
@@ -242,6 +245,8 @@ Organizations have a `plan` field (free, starter, pro, enterprise) that hooks in
 | `org_roles` | Per-org role definitions with permission matrices |
 | `org_memberships` | User-to-org membership with role, status, client scope, and invitation tracking |
 | `organizations_directus_users` | Legacy junction (kept for backward compatibility) |
+| `clients_teams` | Junction: team-to-client assignments for role-based client access |
+| `clients_directus_users` | Junction: individual user-to-client access overrides |
 
 ### Key Composables
 
@@ -250,7 +255,8 @@ Organizations have a `plan` field (free, starter, pro, enterprise) that hooks in
 | `useOrganization()` | Org context: selected org, org list with membership data, org-scoped filters |
 | `useOrgRole()` | Per-org role: role booleans, permission checks, client scope, plan gating |
 | `useRole()` | Legacy global role checks (bridge to `useOrgRole` in progress) |
-| `useClients()` | Client CRUD with org-scoping, search, status filters |
+| `useClients()` | Client CRUD with org-scoping, role-based access filtering (team + individual assignments), search, status filters |
+| `useQuickTasks()` | Personal task management with localStorage persistence, schedule grouping, motivational messages, and progress tracking |
 
 ### Server Endpoints
 
@@ -258,6 +264,7 @@ Organizations have a `plan` field (free, starter, pro, enterprise) that hooks in
 |---|---|
 | `POST /api/org/seed-roles` | Creates 5 system roles for an organization (idempotent) |
 | `POST /api/org/migrate-memberships` | Converts legacy junction entries to `org_memberships` |
+| `POST /api/ai/task-suggestions` | AI-generated task suggestions based on user prompt and existing tasks |
 
 ### Migration Path
 
@@ -318,6 +325,48 @@ The AI Productivity Engine (`useAIProductivityEngine.ts`) scans 9 business modul
    - `ai_anthropic_api_key` — Anthropic/Claude API key
    - `ai_openai_api_key` — OpenAI API key (optional)
    - `ai_google_api_key` — Google Gemini API key (optional)
+
+## Client Access Control
+
+The platform implements a hybrid client access control system that combines team-based assignments with individual user overrides. This ensures members only see the clients relevant to their work while giving admins full visibility.
+
+### How It Works
+
+| Role | Client Visibility |
+|---|---|
+| **Owner / Admin** | All clients in the organization |
+| **Manager / Member** | Clients assigned to their teams + individually assigned clients |
+| **Client** | Only their scoped client record |
+
+### Directus Collections
+
+| Collection | Purpose |
+|---|---|
+| `clients_teams` | Junction: assigns clients to teams (M2M) |
+| `clients_directus_users` | Junction: assigns clients directly to individual users (M2M override) |
+
+### Setup
+
+1. **Create junction collections:**
+   ```bash
+   pnpm tsx scripts/setup-client-access.ts
+   ```
+
+2. **Regenerate types:**
+   ```bash
+   pnpm generate:types
+   ```
+
+3. **Configure Directus permissions** for the new junction collections to allow appropriate CRUD access per role.
+
+### Key Files
+
+| File | Purpose |
+|---|---|
+| `scripts/setup-client-access.ts` | Directus schema setup for junction collections and M2M relations |
+| `composables/useClients.ts` | Client queries filtered by `accessibleClientIds` based on role + assignments |
+| `components/Teams/ClientAssignment.vue` | UI for assigning clients to teams (team detail page sidebar) |
+| `components/Clients/UserAssignment.vue` | UI for assigning individual users to clients (client detail page sidebar) |
 
 ## CRM Intelligence Engine
 

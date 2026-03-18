@@ -73,6 +73,8 @@ const tabs = [
   { key: 'tickets', label: 'Tickets', icon: 'lucide:ticket' },
 ] as const;
 
+const { isOrgAdminOrAbove } = useOrgRole();
+
 const statusColors: Record<string, string> = {
   active: 'bg-emerald-500/15 text-emerald-400',
   prospect: 'bg-blue-500/15 text-blue-400',
@@ -377,6 +379,11 @@ onMounted(loadClient);
               </div>
             </template>
             <p v-else class="text-sm text-muted-foreground">No primary contact set.</p>
+          </div>
+
+          <!-- User Access Overrides -->
+          <div class="ios-card p-5">
+            <ClientsUserAssignment :clientId="clientId" :canManage="isOrgAdminOrAbove" />
           </div>
         </div>
       </div>

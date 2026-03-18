@@ -356,6 +356,9 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 							</div>
 						</div>
 
+						<!-- Quick Tasks Widget -->
+						<CommandCenterQuickTasksWidget />
+
 						<!-- Earnest Score Mini -->
 						<EarnestScoreWidget
 							:current-score="earnestState.currentScore"
