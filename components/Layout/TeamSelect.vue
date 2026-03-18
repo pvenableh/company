@@ -32,7 +32,12 @@
 				</DropdownMenuTrigger>
 
 				<DropdownMenuContent align="start" class="w-64">
-					<DropdownMenuLabel class="text-xs uppercase text-muted-foreground">Teams</DropdownMenuLabel>
+					<DropdownMenuLabel class="text-xs uppercase text-muted-foreground flex items-center justify-between">
+						<span>Teams</span>
+						<NuxtLink to="/organization/teams" class="text-[10px] text-primary hover:text-primary/80 flex items-center gap-0.5 normal-case tracking-normal font-normal">
+							View All <ArrowRight class="size-3" />
+						</NuxtLink>
+					</DropdownMenuLabel>
 					<DropdownMenuSeparator />
 
 					<!-- Loading State -->
@@ -106,7 +111,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Users, ChevronDown, Loader2, Eye } from 'lucide-vue-next'
+import { Users, ChevronDown, Loader2, Eye, ArrowRight } from 'lucide-vue-next'
 
 const props = defineProps({
 	containerClass: {

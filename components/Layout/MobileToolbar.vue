@@ -78,7 +78,7 @@ const handleAI = () => {
 			<div class="ios-tab-ai-btn">
 				<UIcon name="i-heroicons-sparkles" class="ios-tab-ai-icon" />
 			</div>
-			<span class="ios-tab-label">AI</span>
+			<span class="ios-tab-label">EARNEST AI</span>
 		</button>
 
 		<!-- Right nav links -->

@@ -21,7 +21,7 @@ export function useClients() {
   const clientTeamsItems = useDirectusItems('clients_teams');
   const clientUsersItems = useDirectusItems('clients_directus_users');
   const { selectedOrg, getOrganizationFilter, currentOrg } = useOrganization();
-  const { isOrgAdminOrAbove, clientScope } = useOrgRole();
+  const { isOrgAdminOrAbove, clientScope, loading: roleLoading, fetchMembership } = useOrgRole();
   const { user } = useDirectusAuth();
 
   // ── Selection state ───────────────────────────────────────────────────────
@@ -91,6 +91,18 @@ export function useClients() {
    * Returns null if user has full access (owner/admin), otherwise returns an array of IDs.
    */
   async function fetchAccessibleClientIds(): Promise<string[] | null> {
+    // Wait for org role to finish loading before checking permissions
+    if (roleLoading.value) {
+      await new Promise<void>((resolve) => {
+        const stop = watch(roleLoading, (val) => {
+          if (!val) {
+            stop();
+            resolve();
+          }
+        }, { immediate: true });
+      });
+    }
+
     // Owner/Admin always sees all
     if (isOrgAdminOrAbove.value) {
       accessibleClientIds.value = null;

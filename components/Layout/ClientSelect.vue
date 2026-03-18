@@ -8,7 +8,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Building2, Users, ChevronDown } from 'lucide-vue-next'
+import { Building2, Users, ChevronDown, ArrowRight } from 'lucide-vue-next'
 
 const props = defineProps({
 	user: {
@@ -107,8 +107,11 @@ onUnmounted(() => {
 			</DropdownMenuTrigger>
 
 			<DropdownMenuContent align="start" class="w-64 client-select-dropdown">
-				<DropdownMenuLabel class="text-xs uppercase text-muted-foreground">
-					Filter by Client
+				<DropdownMenuLabel class="text-xs uppercase text-muted-foreground flex items-center justify-between">
+					<span>Filter by Client</span>
+					<NuxtLink to="/clients" class="text-[10px] text-primary hover:text-primary/80 flex items-center gap-0.5 normal-case tracking-normal font-normal">
+						View All <ArrowRight class="size-3" />
+					</NuxtLink>
 				</DropdownMenuLabel>
 				<DropdownMenuSeparator />
 

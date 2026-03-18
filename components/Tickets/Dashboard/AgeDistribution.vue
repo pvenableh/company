@@ -24,28 +24,30 @@
 			</div>
 		</template>
 		<div class="h-80">
-			<template v-if="data && data.length">
-				<ChartContainer :config="chartConfig" class="h-full">
-					<VisXYContainer :data="chartData" :padding="{ top: 10 }">
-						<VisGroupedBar
-							:x="(d: any) => d.index"
-							:y="[(d: any) => d.count]"
-							:color="() => 'var(--color-tickets)'"
-							:bar-padding="0.2"
-						/>
-						<VisAxis type="x" :tick-format="(i: number) => chartData[i]?.name || ''" :grid-line="false" />
-						<VisAxis type="y" :grid-line="true" />
-						<VisTooltip />
-					</VisXYContainer>
-				</ChartContainer>
-				<div class="flex items-center justify-center gap-6 mt-2 text-xs text-muted-foreground">
-					<span class="flex items-center gap-1.5">
-						<span class="w-3 h-3 rounded-sm" style="background: rgba(92, 214, 254, 0.7)"></span>
-						Number of Tickets
-					</span>
-				</div>
-			</template>
-			<div v-else class="h-full flex items-center justify-center text-muted-foreground">No data available</div>
+			<ClientOnly>
+				<template v-if="data && data.length && chartData.length > 0">
+					<ChartContainer :config="chartConfig" class="h-full">
+						<VisXYContainer :key="chartData.length" :data="chartData" :padding="{ top: 10 }">
+							<VisGroupedBar
+								:x="(d: any) => d.index"
+								:y="[(d: any) => d.count]"
+								:color="() => 'var(--color-tickets)'"
+								:bar-padding="0.2"
+							/>
+							<VisAxis type="x" :tick-format="(i: number) => chartData[i]?.name || ''" :grid-line="false" />
+							<VisAxis type="y" :grid-line="true" />
+							<VisTooltip />
+						</VisXYContainer>
+					</ChartContainer>
+					<div class="flex items-center justify-center gap-6 mt-2 text-xs text-muted-foreground">
+						<span class="flex items-center gap-1.5">
+							<span class="w-3 h-3 rounded-sm" style="background: rgba(92, 214, 254, 0.7)"></span>
+							Number of Tickets
+						</span>
+					</div>
+				</template>
+				<div v-else class="h-full flex items-center justify-center text-muted-foreground">No data available</div>
+			</ClientOnly>
 		</div>
 	</UCard>
 </template>

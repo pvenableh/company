@@ -146,7 +146,8 @@
                 <div class="flex items-center gap-3">
                   <input
                     type="color"
-                    v-model="form.brandColor"
+                    :value="form.brandColor || '#6366f1'"
+                    @input="form.brandColor = ($event.target as HTMLInputElement).value"
                     class="w-10 h-10 rounded-lg border cursor-pointer shrink-0"
                   />
                   <input

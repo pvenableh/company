@@ -26,34 +26,36 @@
 			</div>
 		</template>
 		<div class="h-80">
-			<template v-if="data && data.length">
-				<ChartContainer :config="chartConfig" class="h-full">
-					<VisXYContainer :data="chartData" :padding="{ top: 10 }">
-						<VisGroupedBar
-							:x="(d: any) => d.index"
-							:y="[(d: any) => d.rate, (d: any) => d.tickets]"
-							:color="(d: any, i: number) => i === 0 ? 'var(--color-rate)' : 'var(--color-tickets)'"
-							:bar-padding="0.2"
-						/>
-						<VisAxis type="x" :tick-format="(i: number) => chartData[i]?.name || ''" :grid-line="false" />
-						<VisAxis type="y" :tick-format="(v: number) => v + '%'" :grid-line="true" />
-						<VisTooltip />
-					</VisXYContainer>
-				</ChartContainer>
-				<div class="flex items-center justify-center gap-6 mt-2 text-xs text-muted-foreground">
-					<span class="flex items-center gap-1.5">
-						<span class="w-3 h-3 rounded-sm" style="background: rgba(92, 214, 254, 0.9)"></span>
-						Completion Rate %
-					</span>
-					<span class="flex items-center gap-1.5">
-						<span class="w-3 h-3 rounded-sm" style="background: rgba(4, 148, 197, 0.9)"></span>
-						Tickets Completed
-					</span>
+			<ClientOnly>
+				<template v-if="data && data.length && chartData.length > 0">
+					<ChartContainer :config="chartConfig" class="h-full">
+						<VisXYContainer :key="chartData.length" :data="chartData" :padding="{ top: 10 }">
+							<VisGroupedBar
+								:x="(d: any) => d.index"
+								:y="[(d: any) => d.rate, (d: any) => d.tickets]"
+								:color="(d: any, i: number) => i === 0 ? 'var(--color-rate)' : 'var(--color-tickets)'"
+								:bar-padding="0.2"
+							/>
+							<VisAxis type="x" :tick-format="(i: number) => chartData[i]?.name || ''" :grid-line="false" />
+							<VisAxis type="y" :tick-format="(v: number) => v + '%'" :grid-line="true" />
+							<VisTooltip />
+						</VisXYContainer>
+					</ChartContainer>
+					<div class="flex items-center justify-center gap-6 mt-2 text-xs text-muted-foreground">
+						<span class="flex items-center gap-1.5">
+							<span class="w-3 h-3 rounded-sm" style="background: rgba(92, 214, 254, 0.9)"></span>
+							Completion Rate %
+						</span>
+						<span class="flex items-center gap-1.5">
+							<span class="w-3 h-3 rounded-sm" style="background: rgba(4, 148, 197, 0.9)"></span>
+							Tickets Completed
+						</span>
+					</div>
+				</template>
+				<div v-else class="h-full flex items-center justify-center text-muted-foreground">
+					No personal completion data available
 				</div>
-			</template>
-			<div v-else class="h-full flex items-center justify-center text-muted-foreground">
-				No personal completion data available
-			</div>
+			</ClientOnly>
 		</div>
 	</UCard>
 </template>
