@@ -107,11 +107,8 @@
 					</div>
 				</div>
 
-				<!-- Divider -->
-				<div class="sheet-divider" />
-
 				<!-- Bottom bar — pill buttons matching TeamSelect / ClientSelect UX -->
-				<div class="bottom-bar">
+				<div class="bottom-bar bottom-bar-spaced">
 					<!-- Left: Account avatar pill + auth pill -->
 					<div class="bar-group">
 						<nuxt-link v-if="user" to="/account" class="pill-btn" @click="handleAppClick($event)">
@@ -397,11 +394,11 @@ function onTouchEnd() {
 	gap: 4px;
 	padding: 10px 16px;
 	border-radius: 16px;
-	background: linear-gradient(135deg, hsl(var(--primary) / 0.06), hsl(var(--primary) / 0.12));
-	border: 1px solid hsl(var(--primary) / 0.15);
+	background: transparent;
+	border: none;
 	text-decoration: none;
 	-webkit-tap-highlight-color: transparent;
-	transition: transform 0.15s ease, background 0.2s;
+	transition: transform 0.15s ease;
 	min-width: 120px;
 }
 
@@ -641,6 +638,10 @@ function onTouchEnd() {
 	justify-content: space-between;
 	padding: 8px 10px 4px;
 	gap: 6px;
+}
+
+.bottom-bar-spaced {
+	margin-top: 16px;
 }
 
 .bar-group {

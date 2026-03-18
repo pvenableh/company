@@ -1,11 +1,5 @@
 <template>
 	<div class="task-list-container">
-		<div class="bg-yellow-100 p-4 rounded-lg mt-4">
-			<h3>Debug API Test</h3>
-			<button @click="testApiCall" class="bg-blue-500 text-white py-2 px-4 rounded">Run Test API Call</button>
-			<pre v-if="apiTestResult">{{ JSON.stringify(apiTestResult, null, 2) }}</pre>
-			<p v-if="apiTestError" class="text-red-500">{{ apiTestError }}</p>
-		</div>
 		<ClientOnly>
 			<transition name="fade">
 				<div
@@ -44,17 +38,13 @@
 
 					<div class="flex space-x-2">
 						<USelectMenu
-							v-model="activeFilter"
-							:options="[
-								{ label: 'All Tasks', value: 'all' },
-								{ label: 'Active Tasks', value: 'active' },
-								{ label: 'Completed Tasks', value: 'completed' },
-								{ label: 'Due Today', value: 'today' },
-								{ label: 'Overdue', value: 'overdue' },
-							]"
+							:model-value="filterOptions.find(o => o.value === activeFilter)"
+							:options="filterOptions"
+							option-attribute="label"
+							value-attribute="value"
 							size="xs"
 							class="w-40"
-							@update:modelValue="applyFilter($event)"
+							@update:model-value="applyFilter($event)"
 						/>
 					</div>
 				</div>
@@ -178,11 +168,17 @@ const totalTaskCount = ref(0);
 const currentLimit = ref(props.limit);
 const activeFilter = ref('all');
 
+const filterOptions = [
+	{ label: 'All Tasks', value: 'all' },
+	{ label: 'Active Tasks', value: 'active' },
+	{ label: 'Completed Tasks', value: 'completed' },
+	{ label: 'Due Today', value: 'today' },
+	{ label: 'Overdue', value: 'overdue' },
+];
+
 // Get global context (these are now only used for reacting to changes)
 const { selectedOrg } = useOrganization();
 const { selectedTeam } = useTeams();
-
-const ticketItems = useDirectusItems('tickets');
 
 // Setup tasks list with the composable, passing initial filter params
 const {
@@ -220,38 +216,18 @@ defineExpose({
 	effectiveTeamId,
 });
 
-// Watch for changes in props and update filter parameters
+// Watch for changes in props and refresh tasks
 watch(
-	() => ({
-		organizationId: props.organizationId,
-		teamId: props.teamId,
-		projectId: props.projectId,
-		userId: props.userId,
-		limit: props.limit,
-	}),
-	(newFilterParams) => {
-		console.log('Props changed, updating filterParams:', newFilterParams);
-		// Update filterParams object with new prop values
-		Object.assign(filterParams, newFilterParams);
+	() => [props.organizationId, props.teamId, props.projectId, props.userId],
+	() => {
+		refreshTasks();
 	},
-	{ deep: true },
-);
-
-// Watch for changes in global organization and team
-watch(
-	[selectedOrg, selectedTeam],
-	([newOrg, newTeam]) => {
-		console.log('Global organization or team changed:', { org: newOrg, team: newTeam });
-		// No need to refresh here, useTasksList handles it now
-	},
-	{ deep: true },
 );
 
 // Watch for tasks updates to emit stats
 watch(
 	tasks,
 	(newTasks) => {
-		console.log('Tasks updated in TasksList, emitting stats-update');
 		emit('stats-update', newTasks);
 	},
 	{ deep: true },
@@ -262,7 +238,6 @@ watch(
 	isLoading,
 	(loading) => {
 		if (loading === false) {
-			console.log('Tasks finished loading, emitting stats-update');
 			nextTick(() => {
 				emit('stats-update', tasks.value);
 			});
@@ -271,18 +246,13 @@ watch(
 	{ immediate: true },
 );
 
-// Apply filter and refresh data
+// Apply filter
 const applyFilter = (filterValue) => {
-	console.log('Applying filter:', filterValue);
-	activeFilter.value = filterValue;
-	refreshTasks();
+	activeFilter.value = typeof filterValue === 'object' ? filterValue.value : filterValue;
 };
 
 // Filtered tasks based on active filter
 const filteredTasks = computed(() => {
-	console.log('Computing filtered tasks with filter:', activeFilter.value);
-	console.log('Current tasks:', tasks.value?.length);
-
 	if (!tasks.value || tasks.value.length === 0) return [];
 
 	const today = new Date();
@@ -290,42 +260,28 @@ const filteredTasks = computed(() => {
 	const tomorrow = new Date(today);
 	tomorrow.setDate(tomorrow.getDate() + 1);
 
-	let result = [];
-
 	switch (activeFilter.value) {
 		case 'active':
-			result = tasks.value.filter((task) => task.status !== 'completed');
-			break;
-
+			return tasks.value.filter((task) => task.status !== 'completed');
 		case 'completed':
-			result = tasks.value.filter((task) => task.status === 'completed');
-			break;
-
+			return tasks.value.filter((task) => task.status === 'completed');
 		case 'today':
-			result = tasks.value.filter((task) => {
+			return tasks.value.filter((task) => {
 				if (!task.ticketContext?.due_date) return false;
 				const dueDate = new Date(task.ticketContext.due_date);
 				dueDate.setHours(0, 0, 0, 0);
 				return dueDate >= today && dueDate < tomorrow;
 			});
-			break;
-
 		case 'overdue':
-			result = tasks.value.filter((task) => {
+			return tasks.value.filter((task) => {
 				if (!task.ticketContext?.due_date) return false;
 				const dueDate = new Date(task.ticketContext.due_date);
 				dueDate.setHours(0, 0, 0, 0);
 				return dueDate < today && task.status !== 'completed';
 			});
-			break;
-
-		default: // 'all'
-			result = tasks.value;
-			break;
+		default:
+			return tasks.value;
 	}
-
-	console.log('Filtered tasks result:', result.length);
-	return result;
 });
 
 // Function to check if a task is overdue
@@ -376,34 +332,10 @@ const getStatusColor = (status) => {
 	return statusColors[status] || 'gray';
 };
 
-const apiTestResult = ref(null);
-const apiTestError = ref(null);
-
-const testApiCall = async () => {
-	apiTestResult.value = null;
-	apiTestError.value = null;
-	const filterToTest = useTasksList().generateFilter(); // Use the composable to generate filter
-	console.log('Testing API call with filter:', filterToTest);
-
-	try {
-		const response = await ticketItems.list({
-			filter: filterToTest,
-			// Add any other necessary parameters like fields, sort, etc.
-		});
-		apiTestResult.value = response.data;
-		console.log('Test API call result:', response);
-	} catch (error) {
-		console.error('Error during test API call:', error);
-		apiTestError.value = error.message || 'An error occurred during the test API call.';
-	}
-};
-
 onMounted(() => {
-	// Update total count when data changes
 	watch(
 		totalCount,
 		(newCount) => {
-			console.log('Total task count updated:', newCount);
 			totalTaskCount.value = newCount;
 		},
 		{ immediate: true },
