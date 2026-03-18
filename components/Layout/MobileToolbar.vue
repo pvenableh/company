@@ -1,8 +1,11 @@
 <script setup>
 import { toggleSheet } from '~~/composables/useScreen';
+import { toast } from 'vue-sonner';
 
 const route = useRoute();
+const router = useRouter();
 const { triggerHaptic } = useHaptic();
+const { user } = useDirectusAuth();
 
 const props = defineProps({
 	links: {
@@ -27,11 +30,24 @@ const rightLinks = computed(() => {
 const shortNames = { 'Command Center': 'Commander' };
 const displayName = (link) => shortNames[link.name] || link.name;
 
-const handleNavigation = (link) => {
+const requireAuth = () => {
+	if (user.value) return true;
+	triggerHaptic(10);
+	toast.warning('You need to be logged in with an active account for this feature.');
+	router.push({ path: '/register', query: { redirect: route.fullPath } });
+	return false;
+};
+
+const handleNavigation = (link, e) => {
+	if (!requireAuth()) {
+		e.preventDefault();
+		return;
+	}
 	triggerHaptic(10);
 };
 
 const handleAI = () => {
+	if (!requireAuth()) return;
 	triggerHaptic(10);
 	emit('open-ai');
 };
@@ -49,7 +65,7 @@ const handleAI = () => {
 				{ active: route.path === link.to },
 				index >= 2 ? 'hidden sm:flex' : '',
 			]"
-			@click="handleNavigation(link)"
+			@click="handleNavigation(link, $event)"
 		>
 			<div class="ios-tab-icon-wrap">
 				<UIcon :name="link.icon" class="ios-tab-icon" />
@@ -76,7 +92,7 @@ const handleAI = () => {
 				{ active: route.path === link.to },
 				index >= 1 ? 'hidden sm:flex' : '',
 			]"
-			@click="handleNavigation(link)"
+			@click="handleNavigation(link, $event)"
 		>
 			<div class="ios-tab-icon-wrap">
 				<UIcon :name="link.icon" class="ios-tab-icon" />

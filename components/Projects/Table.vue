@@ -87,8 +87,23 @@
 			</tbody>
 		</table>
 		<div v-if="!loading && !projects.length" class="text-center py-16 text-muted-foreground">
-			<Icon name="lucide:folder-open" class="w-10 h-10 mx-auto mb-3 opacity-40" />
-			<p class="text-sm">No projects found.</p>
+			<Icon name="lucide:folder-open" class="w-12 h-12 mx-auto mb-4 opacity-30" />
+			<h3 class="text-base font-semibold text-foreground mb-1">No projects yet</h3>
+			<p class="text-sm max-w-md mx-auto mb-6">Projects help you organize work for your clients. Create your first project to start tracking tasks, timelines, and progress.</p>
+			<div class="flex flex-col items-center gap-3 text-xs">
+				<div class="flex items-start gap-2 text-left max-w-sm">
+					<Icon name="i-heroicons-plus-circle" class="w-4 h-4 text-primary shrink-0 mt-0.5" />
+					<span><strong>Create a project</strong> — assign a client, service, and team members</span>
+				</div>
+				<div class="flex items-start gap-2 text-left max-w-sm">
+					<Icon name="i-heroicons-clipboard-document-check" class="w-4 h-4 text-primary shrink-0 mt-0.5" />
+					<span><strong>Add tasks</strong> — break work into manageable steps with due dates</span>
+				</div>
+				<div class="flex items-start gap-2 text-left max-w-sm">
+					<Icon name="i-heroicons-chart-bar" class="w-4 h-4 text-primary shrink-0 mt-0.5" />
+					<span><strong>Track progress</strong> — use Board or Timeline views to stay on top of delivery</span>
+				</div>
+			</div>
 		</div>
 	</div>
 </template>

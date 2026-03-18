@@ -61,6 +61,32 @@
 			</NuxtLink>
 		</div>
 
+		<!-- Getting started (shown when no data) -->
+		<div v-if="!contactCount && !clientCount && !networkCount && !search" class="rounded-xl border bg-card p-8 mb-8 text-center">
+			<Icon name="i-heroicons-user-group" class="w-12 h-12 mx-auto mb-4 text-muted-foreground/30" />
+			<h3 class="text-base font-semibold text-foreground mb-1">Get started with People</h3>
+			<p class="text-sm text-muted-foreground max-w-lg mx-auto mb-6">
+				People is your unified CRM — manage contacts, clients, and networking connections in one place. Here's how to get started:
+			</p>
+			<div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-left max-w-2xl mx-auto">
+				<NuxtLink to="/clients?new=true" class="group rounded-lg border p-4 hover:border-primary/30 hover:bg-primary/5 transition-all">
+					<Icon name="i-heroicons-building-office-2" class="w-5 h-5 text-red-500 mb-2" />
+					<h4 class="text-sm font-medium text-foreground mb-1">Add your first client</h4>
+					<p class="text-xs text-muted-foreground">Create a client profile to start organizing work and building your CRM.</p>
+				</NuxtLink>
+				<NuxtLink to="/contacts?new=true" class="group rounded-lg border p-4 hover:border-primary/30 hover:bg-primary/5 transition-all">
+					<Icon name="i-heroicons-user-plus" class="w-5 h-5 text-orange-500 mb-2" />
+					<h4 class="text-sm font-medium text-foreground mb-1">Add a contact</h4>
+					<p class="text-xs text-muted-foreground">Add individual contacts and link them to clients for easy management.</p>
+				</NuxtLink>
+				<NuxtLink to="/contacts/import" class="group rounded-lg border p-4 hover:border-primary/30 hover:bg-primary/5 transition-all">
+					<Icon name="i-heroicons-arrow-up-tray" class="w-5 h-5 text-blue-500 mb-2" />
+					<h4 class="text-sm font-medium text-foreground mb-1">Import contacts</h4>
+					<p class="text-xs text-muted-foreground">Upload a CSV to quickly populate your CRM with existing contacts.</p>
+				</NuxtLink>
+			</div>
+		</div>
+
 		<!-- Unified search -->
 		<div class="relative mb-6">
 			<Icon name="i-heroicons-magnifying-glass" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />

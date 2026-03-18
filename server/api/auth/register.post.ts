@@ -110,7 +110,34 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // 3. Auto-login the new user
+    // 3. Create Stripe customer for billing
+    try {
+      const stripe = useStripe();
+      const stripeCustomer = await stripe.customers.create({
+        email,
+        name: `${first_name} ${last_name}`,
+        metadata: {
+          directus_user_id: newUser.id,
+          organization_id: organizationId || '',
+          source: 'earnest_registration',
+        },
+      });
+
+      // Save stripe_customer_id to user profile
+      const { updateUser } = await import('@directus/sdk');
+      await directus.request(
+        updateUser(newUser.id, {
+          stripe_customer_id: stripeCustomer.id,
+        })
+      );
+
+      console.log(`[Registration] Stripe customer created: ${stripeCustomer.id} for user ${newUser.id}`);
+    } catch (stripeError: any) {
+      // Don't fail registration if Stripe fails — user can link later
+      console.error('[Registration] Stripe customer creation failed (non-fatal):', stripeError.message);
+    }
+
+    // 4. Auto-login the new user
     const tokens = await directusLogin(email, password);
     const userData = await directusGetMe(tokens.access_token, [
       '*',
