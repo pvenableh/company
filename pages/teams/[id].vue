@@ -160,6 +160,8 @@ const projectStatusColors: Record<string, string> = {
   archived: 'bg-neutral-500/15 text-neutral-400',
 };
 
+const { isOrgManagerOrAbove } = useOrgRole();
+
 const goalProgress = computed(() => {
   if (!goals.value.length) return 0;
   return Math.round(goals.value.reduce((sum, g) => sum + (g.progress || 0), 0) / goals.value.length);
@@ -354,6 +356,11 @@ onMounted(loadTeam);
                 </span>
               </div>
             </div>
+          </div>
+
+          <!-- Client Assignments -->
+          <div class="ios-card p-5">
+            <TeamsClientAssignment :teamId="teamId" :canManage="isOrgManagerOrAbove" />
           </div>
 
           <!-- Projects -->

@@ -24,92 +24,91 @@
 			</div>
 		</div>
 
-		<div v-if="debug" class="mb-4 p-2 bg-yellow-100 dark:bg-yellow-800 rounded text-xs">
-			<div>
-				<strong>Debug:</strong>
-				Active Tab: {{ activeTab }} ({{ tabs[activeTab]?.content }})
-			</div>
-			<div>Global Organization ID: {{ selectedOrg }}</div>
-			<div>Global Team ID: {{ selectedTeam }}</div>
-			<div>Computed Organization ID: {{ getTasksOrganizationId }}</div>
-			<div>Computed Team ID: {{ getTasksTeamId }}</div>
-			<div>Computed User ID: {{ getTasksUserId }}</div>
-			<div>Task Stats: {{ JSON.stringify(taskStats) }}</div>
-		</div>
-
-		<UTabs v-model="activeTab" :items="tabs" class="mb-6" />
-
-		<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-			<div class="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
-				<h2 class="text-lg font-medium mb-4">{{ tabs[activeTab]?.label }} Tasks</h2>
-
-				<ClientOnly>
-					<TicketsTasksList
-						:organizationId="getTasksOrganizationId"
-						:teamId="getTasksTeamId"
-						:projectId="getTasksProjectId"
-						:userId="getTasksUserId"
-						:limit="20"
-						:debug="debug"
-						ref="tasksList"
-						@stats-update="handleTasksUpdate"
-					/>
-
-					<template #fallback>
-						<div class="p-4 flex justify-center">
-							<UIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin text-gray-400" />
-						</div>
-					</template>
-				</ClientOnly>
+		<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+			<!-- Quick Task Generator (left column) -->
+			<div class="lg:col-span-1">
+				<div class="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
+					<TasksQuickTaskGenerator />
+				</div>
 			</div>
 
-			<div class="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
-				<h2 class="text-lg font-medium mb-4">Task Summary</h2>
-				<div class="grid grid-cols-2 gap-4">
-					<div class="bg-white dark:bg-gray-700 rounded p-4 shadow-sm">
-						<div class="flex items-center space-x-2">
-							<div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-								<UIcon name="i-heroicons-clipboard-document-list" class="w-5 h-5 text-blue-500" />
-							</div>
-							<div>
-								<div class="text-2xl font-semibold">{{ taskStats.active }}</div>
-								<div class="text-xs text-gray-500 uppercase">Active</div>
-							</div>
-						</div>
+			<!-- Project Tasks + Stats (right columns) -->
+			<div class="lg:col-span-2 space-y-8">
+				<UTabs v-model="activeTab" :items="tabs" class="mb-2" />
+
+				<div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+					<div class="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
+						<h2 class="text-lg font-medium mb-4">{{ tabs[activeTab]?.label }} Tasks</h2>
+
+						<ClientOnly>
+							<TicketsTasksList
+								:organizationId="getTasksOrganizationId"
+								:teamId="getTasksTeamId"
+								:projectId="getTasksProjectId"
+								:userId="getTasksUserId"
+								:limit="20"
+								:debug="debug"
+								ref="tasksList"
+								@stats-update="handleTasksUpdate"
+							/>
+
+							<template #fallback>
+								<div class="p-4 flex justify-center">
+									<UIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin text-gray-400" />
+								</div>
+							</template>
+						</ClientOnly>
 					</div>
 
-					<div class="bg-white dark:bg-gray-700 rounded p-4 shadow-sm">
-						<div class="flex items-center space-x-2">
-							<div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-								<UIcon name="i-heroicons-check-circle" class="w-5 h-5 text-green-500" />
+					<div class="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
+						<h2 class="text-lg font-medium mb-4">Task Summary</h2>
+						<div class="grid grid-cols-2 gap-4">
+							<div class="bg-white dark:bg-gray-700 rounded p-4 shadow-sm">
+								<div class="flex items-center space-x-2">
+									<div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+										<UIcon name="i-heroicons-clipboard-document-list" class="w-5 h-5 text-blue-500" />
+									</div>
+									<div>
+										<div class="text-2xl font-semibold">{{ taskStats.active }}</div>
+										<div class="text-xs text-gray-500 uppercase">Active</div>
+									</div>
+								</div>
 							</div>
-							<div>
-								<div class="text-2xl font-semibold">{{ taskStats.completed }}</div>
-								<div class="text-xs text-gray-500 uppercase">Completed</div>
-							</div>
-						</div>
-					</div>
 
-					<div class="bg-white dark:bg-gray-700 rounded p-4 shadow-sm">
-						<div class="flex items-center space-x-2">
-							<div class="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
-								<UIcon name="i-heroicons-clock" class="w-5 h-5 text-yellow-500" />
+							<div class="bg-white dark:bg-gray-700 rounded p-4 shadow-sm">
+								<div class="flex items-center space-x-2">
+									<div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+										<UIcon name="i-heroicons-check-circle" class="w-5 h-5 text-green-500" />
+									</div>
+									<div>
+										<div class="text-2xl font-semibold">{{ taskStats.completed }}</div>
+										<div class="text-xs text-gray-500 uppercase">Completed</div>
+									</div>
+								</div>
 							</div>
-							<div>
-								<div class="text-2xl font-semibold">{{ taskStats.dueToday }}</div>
-								<div class="text-xs text-gray-500 uppercase">Due Today</div>
-							</div>
-						</div>
-					</div>
 
-					<div class="bg-white dark:bg-gray-700 rounded p-4 shadow-sm">
-						<div class="flex items-center space-x-2">
-							<div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-								<UIcon name="i-heroicons-exclamation-circle" class="w-5 h-5 text-red-500" />
+							<div class="bg-white dark:bg-gray-700 rounded p-4 shadow-sm">
+								<div class="flex items-center space-x-2">
+									<div class="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
+										<UIcon name="i-heroicons-clock" class="w-5 h-5 text-yellow-500" />
+									</div>
+									<div>
+										<div class="text-2xl font-semibold">{{ taskStats.dueToday }}</div>
+										<div class="text-xs text-gray-500 uppercase">Due Today</div>
+									</div>
+								</div>
 							</div>
-							<div>
-								<div class="text-2xl font-semibold">{{ taskStats.overdue }}</div>
-								<div class="text-xs text-gray-500 uppercase">Overdue</div>
+
+							<div class="bg-white dark:bg-gray-700 rounded p-4 shadow-sm">
+								<div class="flex items-center space-x-2">
+									<div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+										<UIcon name="i-heroicons-exclamation-circle" class="w-5 h-5 text-red-500" />
+									</div>
+									<div>
+										<div class="text-2xl font-semibold">{{ taskStats.overdue }}</div>
+										<div class="text-xs text-gray-500 uppercase">Overdue</div>
+									</div>
+								</div>
 							</div>
 						</div>
 					</div>
@@ -225,8 +224,6 @@ const getTasksProjectId = computed(() => {
 });
 
 const handleTasksUpdate = (tasksList) => {
-	console.log('Received stats-update event with', tasksList?.length || 0, 'tasks');
-
 	// Process tasks and update stats
 	if (!tasksList || !Array.isArray(tasksList) || tasksList.length === 0) {
 		// Reset stats if no tasks
@@ -270,20 +267,15 @@ const handleTasksUpdate = (tasksList) => {
 			}
 		}
 	});
-
-	console.log('Stats updated via event:', taskStats);
 };
 
 // Add a manual stats update function
 const updateStats = () => {
 	if (tasksList.value) {
 		if (typeof tasksList.value.updateParentStats === 'function') {
-			console.log('Calling updateParentStats method');
 			tasksList.value.updateParentStats();
 		} else {
-			console.log('Accessing tasks directly');
 			const tasks = tasksList.value.getTasks ? tasksList.value.getTasks() : tasksList.value.tasks?.value || [];
-
 			handleTasksUpdate(tasks);
 		}
 	}
@@ -291,9 +283,8 @@ const updateStats = () => {
 
 // Function to refresh all data
 const refreshData = () => {
-	console.log('Refreshing data');
 	if (tasksList.value) {
-		tasksList.value.refresh(); //  Use the exposed refresh function
+		tasksList.value.refresh();
 
 		// We'll update stats after a short delay to allow data to load
 		setTimeout(() => {
@@ -311,15 +302,13 @@ watch(tabs, (newTabs) => {
 
 // Watch for tab changes
 watch(activeTab, () => {
-	console.log('Active tab changed to:', activeTab.value);
 	refreshData();
 });
 
 // Watch for organization or team changes from the global context
 watch([selectedOrg, selectedTeam], () => {
-	console.log('Global context changed:', { org: selectedOrg.value, team: selectedTeam.value });
 	if (tasksList.value) {
-		tasksList.value.refresh(); // Call the exposed refreshTasks method
+		tasksList.value.refresh();
 	}
 });
 
@@ -328,9 +317,6 @@ onMounted(() => {
 	setupTeamListeners();
 	// Initial update after mount with retry logic
 	nextTick(() => {
-		console.log('Component mounted, scheduling stats update');
-
-		// Try multiple times with increasing delays
 		setTimeout(() => updateStats(), 500);
 		setTimeout(() => updateStats(), 1500);
 		setTimeout(() => updateStats(), 3000);

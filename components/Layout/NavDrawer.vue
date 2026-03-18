@@ -8,44 +8,48 @@
 		/>
 	</Transition>
 
-	<!-- Bottom Sheet -->
-	<Transition name="sheet">
+	<!-- Sheet / Drawer -->
+	<Transition :name="isDesktop ? 'side-sheet' : 'sheet'">
 		<div
 			v-if="isOpen"
 			ref="sheetRef"
-			class="ios-sheet"
+			:class="isDesktop ? 'side-sheet' : 'ios-sheet'"
 			@touchstart="onTouchStart"
 			@touchmove="onTouchMove"
 			@touchend="onTouchEnd"
-			:style="{ transform: dragOffset > 0 ? `translateY(${dragOffset}px)` : undefined }"
+			:style="!isDesktop && dragOffset > 0 ? { transform: `translateY(${dragOffset}px)` } : undefined"
 		>
-			<!-- Drag handle -->
-			<div class="sheet-handle-area">
+			<!-- Drag handle (mobile only) -->
+			<div v-if="!isDesktop" class="sheet-handle-area">
 				<div class="sheet-handle" />
 			</div>
 
+			<!-- Close button (desktop only) -->
+			<button v-if="isDesktop" class="side-sheet-close" @click="closeSheet" aria-label="Close menu">
+				<UIcon name="i-heroicons-x-mark" class="w-5 h-5" />
+			</button>
+
 			<!-- Sheet content -->
 			<div class="sheet-content">
-				<!-- AI Chat Callout -->
-				<nuxt-link
-					v-if="aiChatLink"
-					:to="aiChatLink.to"
-					class="ai-chat-callout"
-					@click="handleAppClick($event)"
-				>
-					<div class="ai-chat-icon-wrap">
-						<UIcon name="i-heroicons-sparkles" class="ai-chat-icon" />
-					</div>
-					<div class="ai-chat-text">
-						<span class="ai-chat-title">Earnest AI</span>
-						<span class="ai-chat-desc">Chat with your AI assistant</span>
-					</div>
-					<UIcon name="i-heroicons-chevron-right" class="ai-chat-arrow" />
-				</nuxt-link>
+				<!-- AI Chat Callout — centered app-style -->
+				<div v-if="aiChatLink" class="ai-callout-wrap">
+					<nuxt-link
+						:to="aiChatLink.to"
+						class="ai-callout-item"
+						@click="handleAppClick($event)"
+					>
+						<div class="ai-callout-icon-wrap">
+							<div class="ai-callout-icon-bg">
+								<UIcon name="i-heroicons-sparkles" class="ai-callout-icon" />
+							</div>
+						</div>
+						<span class="ai-callout-title">Earnest AI</span>
+						<span class="ai-callout-desc">Chat with your AI assistant</span>
+					</nuxt-link>
+				</div>
 
-				<!-- Primary Apps — AI-powered core -->
-				<div v-if="primaryLinks.length" class="section-header">Apps</div>
-				<div class="app-grid">
+				<!-- Primary Apps -->
+				<div v-if="primaryLinks.length" class="app-grid">
 					<nuxt-link
 						v-for="link in primaryLinks"
 						:key="link.to"
@@ -64,9 +68,9 @@
 					</nuxt-link>
 				</div>
 
-				<!-- Secondary Apps -->
-				<div v-if="secondaryLinks.length" class="section-header">More</div>
-				<div class="app-grid">
+				<!-- Secondary Apps (spacing only, no header) -->
+				<div v-if="secondaryLinks.length" class="section-spacer" />
+				<div v-if="secondaryLinks.length" class="app-grid">
 					<nuxt-link
 						v-for="link in secondaryLinks"
 						:key="link.to"
@@ -85,19 +89,22 @@
 					</nuxt-link>
 				</div>
 
-				<!-- Tools -->
-				<div v-if="toolLinks.length" class="section-header">Tools</div>
-				<div class="tools-grid">
-					<nuxt-link
-						v-for="link in toolLinks"
-						:key="link.to"
-						:to="link.to"
-						class="tool-item"
-						@click="handleAppClick($event)"
-					>
-						<UIcon :name="link.icon" class="tool-icon" />
-						<span class="tool-label">{{ link.name }}</span>
-					</nuxt-link>
+				<!-- Tools — centered, uppercase -->
+				<div v-if="toolLinks.length" class="section-spacer" />
+				<div v-if="toolLinks.length" class="tools-section">
+					<div class="tools-title">Tools</div>
+					<div class="tools-grid">
+						<nuxt-link
+							v-for="link in toolLinks"
+							:key="link.to"
+							:to="link.to"
+							class="tool-item"
+							@click="handleAppClick($event)"
+						>
+							<UIcon :name="link.icon" class="tool-icon" />
+							<span class="tool-label">{{ link.name }}</span>
+						</nuxt-link>
+					</div>
 				</div>
 
 				<!-- Divider -->
@@ -156,6 +163,19 @@ const { logout } = useLogout();
 const { triggerHaptic } = useHaptic();
 const { visibleLinks } = useNavPreferences();
 import { sheetOpen, closeSheet as closeSheetState } from '~~/composables/useScreen';
+
+// Responsive: detect desktop for side-sheet vs bottom-sheet
+const isDesktop = ref(false);
+function updateDesktop() {
+	isDesktop.value = window.matchMedia('(min-width: 1024px)').matches;
+}
+onMounted(() => {
+	updateDesktop();
+	window.addEventListener('resize', updateDesktop);
+});
+onUnmounted(() => {
+	window.removeEventListener('resize', updateDesktop);
+});
 
 // Use composable directly for reactivity — props through NuxtLayout don't propagate changes
 const links = computed(() => visibleLinks.value.filter((l) => l.type.includes('drawer')));
@@ -267,7 +287,7 @@ function onTouchEnd() {
 	opacity: 0;
 }
 
-/* Bottom Sheet */
+/* ── Bottom Sheet (mobile) ── */
 .ios-sheet {
 	position: fixed;
 	bottom: 0;
@@ -295,6 +315,55 @@ function onTouchEnd() {
 	transform: translateY(100%) !important;
 }
 
+/* ── Side Sheet (desktop lg+) ── */
+.side-sheet {
+	position: fixed;
+	top: 0;
+	left: 0;
+	bottom: 0;
+	z-index: 51;
+	width: 360px;
+	max-width: 90vw;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	background: hsl(var(--card));
+	border-right: 1px solid hsl(var(--border) / 0.5);
+	box-shadow: 4px 0 24px rgba(0, 0, 0, 0.08);
+	padding-top: 16px;
+}
+
+.side-sheet-enter-active {
+	transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.side-sheet-leave-active {
+	transition: transform 0.25s cubic-bezier(0.4, 0, 1, 1);
+}
+.side-sheet-enter-from,
+.side-sheet-leave-to {
+	transform: translateX(-100%) !important;
+}
+
+.side-sheet-close {
+	position: absolute;
+	top: 12px;
+	right: 12px;
+	width: 32px;
+	height: 32px;
+	border-radius: 8px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	color: hsl(var(--muted-foreground));
+	background: transparent;
+	border: none;
+	cursor: pointer;
+	transition: background 0.15s, color 0.15s;
+}
+.side-sheet-close:hover {
+	background: hsl(var(--muted) / 0.5);
+	color: hsl(var(--foreground));
+}
+
 /* Drag handle */
 .sheet-handle-area {
 	display: flex;
@@ -314,76 +383,73 @@ function onTouchEnd() {
 	padding: 0 0 6px;
 }
 
-/* ── AI Chat Callout ── */
-.ai-chat-callout {
+/* ── AI Chat Callout — centered app-style ── */
+.ai-callout-wrap {
 	display: flex;
+	justify-content: center;
+	padding: 8px 10px 4px;
+}
+
+.ai-callout-item {
+	display: flex;
+	flex-direction: column;
 	align-items: center;
-	gap: 10px;
-	margin: 4px 10px 6px;
-	padding: 10px 12px;
-	border-radius: 14px;
-	background: linear-gradient(135deg, hsl(var(--primary) / 0.08), hsl(var(--primary) / 0.15));
-	border: 1px solid hsl(var(--primary) / 0.2);
+	gap: 4px;
+	padding: 10px 16px;
+	border-radius: 16px;
+	background: linear-gradient(135deg, hsl(var(--primary) / 0.06), hsl(var(--primary) / 0.12));
+	border: 1px solid hsl(var(--primary) / 0.15);
 	text-decoration: none;
 	-webkit-tap-highlight-color: transparent;
 	transition: transform 0.15s ease, background 0.2s;
+	min-width: 120px;
 }
 
-.ai-chat-callout:active {
-	transform: scale(0.98);
+.ai-callout-item:active {
+	transform: scale(0.96);
 }
 
-.ai-chat-icon-wrap {
-	width: 36px;
-	height: 36px;
-	border-radius: 10px;
+.ai-callout-icon-wrap {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.ai-callout-icon-bg {
+	width: 52px;
+	height: 52px;
+	border-radius: 14px;
 	background: hsl(var(--primary));
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	flex-shrink: 0;
+	box-shadow: 0 2px 8px hsl(var(--primary) / 0.3);
 }
 
-.ai-chat-icon {
-	width: 18px;
-	height: 18px;
+.ai-callout-icon {
+	width: 24px;
+	height: 24px;
 	color: hsl(var(--primary-foreground));
 }
 
-.ai-chat-text {
-	display: flex;
-	flex-direction: column;
-	gap: 1px;
-	flex: 1;
-	min-width: 0;
-}
-
-.ai-chat-title {
-	font-size: 13px;
+.ai-callout-title {
+	font-size: 12px;
 	font-weight: 600;
 	color: hsl(var(--foreground));
+	text-align: center;
+	line-height: 1.2;
 }
 
-.ai-chat-desc {
-	font-size: 10px;
-	color: hsl(var(--muted-foreground));
-}
-
-.ai-chat-arrow {
-	width: 14px;
-	height: 14px;
-	color: hsl(var(--muted-foreground));
-	flex-shrink: 0;
-}
-
-/* ── Section Headers ── */
-.section-header {
+.ai-callout-desc {
 	font-size: 9px;
-	font-weight: 600;
-	text-transform: uppercase;
-	letter-spacing: 0.1em;
 	color: hsl(var(--muted-foreground));
-	padding: 6px 14px 2px;
+	text-align: center;
+	line-height: 1.2;
+}
+
+/* ── Section spacer (replaces headers) ── */
+.section-spacer {
+	height: 8px;
 }
 
 /* ── App Grid — iPhone home screen ── */
@@ -391,15 +457,22 @@ function onTouchEnd() {
 	display: grid;
 	grid-template-columns: repeat(4, 1fr);
 	gap: 2px 0;
-	padding: 4px 8px 10px;
+	padding: 4px 8px 6px;
 }
 
 @media (min-width: 640px) {
 	.app-grid {
 		grid-template-columns: repeat(5, 1fr);
 		gap: 6px 0;
-		padding: 6px 12px 14px;
+		padding: 6px 12px 8px;
 	}
+}
+
+/* On desktop side-sheet, constrain to 5 cols */
+.side-sheet .app-grid {
+	grid-template-columns: repeat(5, 1fr);
+	gap: 6px 0;
+	padding: 6px 12px 8px;
 }
 
 .app-item {
@@ -496,12 +569,29 @@ function onTouchEnd() {
 	font-weight: 600;
 }
 
-/* ── Tools Grid — compact pill style ── */
+/* ── Tools — centered with title ── */
+.tools-section {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	padding: 0 10px 10px;
+}
+
+.tools-title {
+	font-size: 9px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.12em;
+	color: hsl(var(--muted-foreground));
+	text-align: center;
+	padding: 0 0 6px;
+}
+
 .tools-grid {
 	display: flex;
 	flex-wrap: wrap;
+	justify-content: center;
 	gap: 6px;
-	padding: 4px 10px 10px;
 }
 
 .tool-item {
@@ -531,6 +621,8 @@ function onTouchEnd() {
 .tool-label {
 	font-size: 10px;
 	font-weight: 500;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
 	color: hsl(var(--foreground) / 0.8);
 	white-space: nowrap;
 }

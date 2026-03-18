@@ -201,6 +201,8 @@ const features = [
 	{ name: 'Email Marketing & AI', desc: 'Block-based newsletter builder with AI-powered content generation. Describe your email and get a complete template — subject line, sections, and images.' },
 	{ name: 'Project Management', desc: 'Kanban boards, task lists, timelines, and file attachments. Your team always knows what\'s next.' },
 	{ name: 'People & Companies', desc: 'Every person and company in one unified CRM — clients, contacts, prospects, and networking connections from CardDesk. Brand context, goals, services, and the full history of every conversation and project.' },
+	{ name: 'Quick Tasks & AI To-Dos', desc: 'Personal task lists with AI-powered suggestions, day and week scheduling, motivational progress tracking, and confetti celebrations. AI generates task ideas based on your workload so nothing falls through the cracks.' },
+	{ name: 'Client Access Control', desc: 'Role-based client visibility with team assignments and individual overrides. Owners and admins see everything. Managers and members see only the clients assigned to their teams — plus any individual access grants.' },
 	{ name: 'Invoicing & Billing', desc: 'Stripe-powered invoices, proposals, payment tracking, and PDF generation. Get paid on time.' },
 	{ name: 'Team Channels', desc: 'Slack-style messaging built into your workspace. Conversations stay with the work they\'re about.' },
 	{ name: 'Phone & Video', desc: 'Twilio-powered calling and video meetings. Click-to-call contacts, record calls, and host team video — all without leaving Earnest.' },
@@ -215,7 +217,7 @@ const plans = [
 		price: '29',
 		desc: 'For the one-person shop doing serious work.',
 		featured: false,
-		features: ['1 user', 'Unlimited projects', 'Invoicing & Stripe billing', 'Social scheduling (2 accounts)', 'AI content generation', 'People & Companies CRM', 'CardDesk & E\u00B2 companion apps', '5GB storage'],
+		features: ['1 user', 'Unlimited projects', 'Invoicing & Stripe billing', 'Social scheduling (2 accounts)', 'AI content generation', 'People & Companies CRM', 'Quick Tasks with AI suggestions', 'CardDesk & E\u00B2 companion apps', '5GB storage'],
 		cta: { label: 'Get started', to: '/register' },
 	},
 	{
@@ -223,7 +225,7 @@ const plans = [
 		price: '89',
 		desc: 'For the team that means business.',
 		featured: true,
-		features: ['Up to 10 users', 'Everything in Solo', 'Team channels & video', 'Phone system (Twilio)', 'Social scheduling (10 accounts)', 'AI email & social content wizards', 'Marketing Intelligence dashboard', 'CRM Intelligence (overview + contacts)', 'Priority support', '25GB storage'],
+		features: ['Up to 10 users', 'Everything in Solo', 'Team channels & video', 'Phone system (Twilio)', 'Social scheduling (10 accounts)', 'AI email & social content wizards', 'Marketing Intelligence dashboard', 'CRM Intelligence (overview + contacts)', 'Team-based client access control', 'Priority support', '25GB storage'],
 		cta: { label: 'Start free trial', to: '/register' },
 	},
 	{
@@ -231,7 +233,7 @@ const plans = [
 		price: '189',
 		desc: 'For the business that\'s grown into something real.',
 		featured: false,
-		features: ['Up to 25 users', 'Everything in Team', 'Custom domain', 'White-label client portal', 'Unlimited social accounts', 'AI Strategy Engine (full suite)', 'CRM Intelligence (all 4 modes)', 'Brand-aware AI per client & team', '100GB storage'],
+		features: ['Up to 25 users', 'Everything in Team', 'Custom domain', 'White-label client portal', 'Unlimited social accounts', 'AI Strategy Engine (full suite)', 'CRM Intelligence (all 4 modes)', 'Brand-aware AI per client & team', 'Granular client access with user overrides', '100GB storage'],
 		cta: { label: 'Talk to us', to: '/register' },
 	},
 ];
