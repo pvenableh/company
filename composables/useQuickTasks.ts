@@ -43,7 +43,7 @@ const MOTIVATIONAL_PROGRESS = [
 	"You're on a roll!",
 	'One down — you make it look easy.',
 	'Progress feels good, right?',
-	'That just got done. What's next?',
+	"That just got done. What's next?",
 	'Crushing it!',
 	'Every checkmark is a win.',
 ];
