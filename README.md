@@ -559,13 +559,14 @@ STRIPE_PUBLIC_KEY_TEST=pk_test_xxx
 STRIPE_WEBHOOK_SECRET=whsec_xxx
 
 # Subscription Price IDs (from Stripe Dashboard > Products)
-STRIPE_PRICE_PRO=price_xxx
+STRIPE_PRICE_SOLO=price_xxx
 STRIPE_PRICE_TEAM=price_xxx
+STRIPE_PRICE_STUDIO=price_xxx
 ```
 
 ### Stripe Dashboard Setup
 
-1. **Create Products** — In Stripe Dashboard > Products, create "Earnest Pro" and "Earnest Team" products with recurring monthly prices. Copy the price IDs to your `.env`.
+1. **Create Products** — In Stripe Dashboard > Products, create "Solo" ($29/mo), "Team" ($89/mo), and "Studio" ($189/mo) products with recurring monthly prices. Copy the price IDs to your `.env`.
 
 2. **Configure Customer Portal** — Go to Settings > Billing > Customer Portal and enable it. This lets users self-manage payment methods, view invoices, and cancel subscriptions.
 

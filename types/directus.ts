@@ -1523,7 +1523,7 @@ export interface Organization {
 	short_name?: string | null;
 	active?: boolean | null;
 	/** @description Subscription plan tier */
-	plan?: 'free' | 'starter' | 'pro' | 'enterprise' | null;
+	plan?: 'solo' | 'team' | 'studio' | null;
 	/** @description Voice, visual style, and brand positioning */
 	brand_direction?: string | null;
 	/** @description Business objectives and growth targets */
