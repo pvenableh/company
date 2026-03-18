@@ -390,10 +390,18 @@ async function main() {
   console.log(`║  Directus: ${DIRECTUS_URL.padEnd(41)}║`)
   console.log('╚══════════════════════════════════════════════════════╝')
 
-  // Verify connection
-  const { error: pingError } = await directusRequest('/server/ping')
-  if (pingError) {
-    console.error(`\nCannot reach Directus at ${DIRECTUS_URL}: ${pingError}`)
+  // Verify connection (ping returns plain text "pong", not JSON)
+  try {
+    const pingRes = await fetch(`${DIRECTUS_URL}/server/ping`, {
+      headers: { Authorization: `Bearer ${DIRECTUS_TOKEN}` },
+    })
+    const pingText = await pingRes.text()
+    if (!pingRes.ok || !pingText.includes('pong')) {
+      console.error(`\nCannot reach Directus at ${DIRECTUS_URL}: ${pingText}`)
+      process.exit(1)
+    }
+  } catch (err: any) {
+    console.error(`\nCannot reach Directus at ${DIRECTUS_URL}: ${err.message}`)
     process.exit(1)
   }
   console.log('\n✓ Connected to Directus')
