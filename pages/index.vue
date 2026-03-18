@@ -138,6 +138,9 @@ const showLeaderboard = computed(() => !!selectedTeam.value);
 const navigateTo = (route: string) => {
 	router.push(route);
 };
+
+// ── Tabs: Command Center / Statistics ──
+const activeTab = ref<'commander' | 'statistics'>('commander');
 </script>
 
 <template>
@@ -162,6 +165,37 @@ const navigateTo = (route: string) => {
 						<span class="hidden sm:inline">Assistant</span>
 					</button>
 				</div>
+
+				<!-- Tab Switcher -->
+				<div class="flex gap-1 p-1 bg-muted/40 rounded-xl w-fit">
+					<button
+						@click="activeTab = 'commander'"
+						class="px-4 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
+						:class="activeTab === 'commander'
+							? 'bg-background text-foreground shadow-sm'
+							: 'text-muted-foreground hover:text-foreground'"
+					>
+						<span class="flex items-center gap-1.5">
+							<UIcon name="i-heroicons-command-line" class="w-3.5 h-3.5" />
+							Command Center
+						</span>
+					</button>
+					<button
+						@click="activeTab = 'statistics'"
+						class="px-4 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
+						:class="activeTab === 'statistics'
+							? 'bg-background text-foreground shadow-sm'
+							: 'text-muted-foreground hover:text-foreground'"
+					>
+						<span class="flex items-center gap-1.5">
+							<UIcon name="i-heroicons-squares-2x2" class="w-3.5 h-3.5" />
+							Statistics
+						</span>
+					</button>
+				</div>
+
+				<!-- ═══ Command Center Tab ═══ -->
+				<div v-show="activeTab === 'commander'" class="space-y-6">
 
 				<!-- Smart Prompt -->
 				<div class="ios-card p-1">
@@ -469,6 +503,13 @@ const navigateTo = (route: string) => {
 					</div>
 					<CommandCenterCardDeskPipeline />
 					<CommandCenterFinancialQuarter />
+				</div>
+
+				</div><!-- /Commander tab -->
+
+				<!-- ═══ Statistics Tab ═══ -->
+				<div v-show="activeTab === 'statistics'" class="space-y-6">
+					<LazyDashboardStatisticsEmbed />
 				</div>
 			</div>
 

@@ -151,13 +151,22 @@ export function useTemplateBuilder(templateId: Ref<number>) {
    */
   function resolveVariableValue(value: any, type?: string): string {
     const str = String(value ?? '');
-    if (str.trim() !== '') return str;
-    // Type-aware fallbacks for empty values
-    switch (type) {
-      case 'color': return 'transparent';
-      case 'boolean': return 'false';
-      default: return '';
+    if (str.trim() === '') {
+      // Type-aware fallbacks for empty values
+      switch (type) {
+        case 'color': return 'transparent';
+        case 'boolean': return 'false';
+        default: return '';
+      }
     }
+    // Safety net: validate color values even when non-empty — prevents text leaking into color attrs
+    if (type === 'color') {
+      const colorRegex = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
+      if (!colorRegex.test(str) && !['transparent', 'inherit', 'currentColor'].includes(str)) {
+        return '#333333';
+      }
+    }
+    return str;
   }
 
   const resolvePartialMjml = (partial: EmailPartial | null): string => {
@@ -420,7 +429,13 @@ ${sections.join('\n')}
             || lowerKey.includes(s.key.toLowerCase()),
           );
           if (match) {
-            variables[match.key] = value;
+            // Apply same color validation as direct key match
+            if (match.type === 'color' && typeof value === 'string'
+              && !colorRegex.test(value) && !['transparent', 'inherit', 'currentColor'].includes(value)) {
+              variables[match.key] = match.default || '#333333';
+            } else {
+              variables[match.key] = value;
+            }
           }
         }
       }

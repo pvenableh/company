@@ -28,7 +28,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event);
-  const { sessionId, message, model } = body;
+  const { sessionId, message, model, clientId, organizationId } = body;
 
   if (!message?.trim()) {
     throw createError({ statusCode: 400, message: 'Message is required' });
@@ -119,7 +119,43 @@ export default defineEventHandler(async (event) => {
       // Tasks collection may not be accessible — continue without
     }
 
-    const systemPrompt = buildSystemPrompt(orgContext) + taskContext;
+    // 5b. Fetch brand context for the selected client or organization
+    let brandContext = '';
+    try {
+      if (clientId) {
+        const client = await directus.request(
+          readItem('clients', clientId, {
+            fields: ['name', 'brand_direction', 'goals', 'target_audience', 'location'],
+          }),
+        ) as any;
+        if (client) {
+          const parts: string[] = [`\n\nSELECTED CLIENT: ${client.name}`];
+          if (client.brand_direction) parts.push(`Brand Direction: ${client.brand_direction}`);
+          if (client.goals) parts.push(`Goals: ${client.goals}`);
+          if (client.target_audience) parts.push(`Target Audience: ${client.target_audience}`);
+          if (client.location) parts.push(`Location: ${client.location}`);
+          brandContext = parts.join('\n');
+        }
+      } else if (organizationId) {
+        const org = await directus.request(
+          readItem('organizations', organizationId, {
+            fields: ['name', 'brand_direction', 'goals', 'target_audience', 'location'],
+          }),
+        ) as any;
+        if (org) {
+          const parts: string[] = [`\n\nORGANIZATION CONTEXT: ${org.name}`];
+          if (org.brand_direction) parts.push(`Brand Direction: ${org.brand_direction}`);
+          if (org.goals) parts.push(`Goals: ${org.goals}`);
+          if (org.target_audience) parts.push(`Target Audience: ${org.target_audience}`);
+          if (org.location) parts.push(`Location: ${org.location}`);
+          brandContext = parts.join('\n');
+        }
+      }
+    } catch {
+      // Brand context is non-critical — continue without
+    }
+
+    const systemPrompt = buildSystemPrompt(orgContext) + taskContext + brandContext;
 
     // 6. Stream response via SSE
     const provider = getLLMProvider();

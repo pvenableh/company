@@ -54,6 +54,7 @@ const editForm = ref({
 	goals: '',
 	target_audience: '',
 	location: '',
+	billing_contacts: [],
 });
 const savingOrg = ref(false);
 
@@ -117,6 +118,9 @@ const openEditModal = () => {
 		goals: org.value.goals || '',
 		target_audience: org.value.target_audience || '',
 		location: org.value.location || '',
+		billing_contacts: org.value.billing_contacts?.length
+			? [...org.value.billing_contacts]
+			: [],
 	};
 	showEditOrgModal.value = true;
 };
@@ -136,6 +140,9 @@ const saveOrganization = async () => {
 			goals: editForm.value.goals || null,
 			target_audience: editForm.value.target_audience || null,
 			location: editForm.value.location || null,
+			billing_contacts: editForm.value.billing_contacts.length
+				? editForm.value.billing_contacts.filter(c => c.email)
+				: null,
 		});
 		toast.add({ title: 'Success', description: 'Organization updated successfully', color: 'green' });
 		showEditOrgModal.value = false;
@@ -404,6 +411,7 @@ const fetchOrganizationData = async () => {
 				'industry.class',
 				'brand_color',
 				'emails',
+				'billing_contacts',
 				'date_created',
 				'origin_date',
 				'icon',
@@ -740,6 +748,29 @@ watch(searchEmail, (val) => {
 									</div>
 								</UCard>
 
+								<!-- Billing Contacts -->
+								<UCard v-if="org.billing_contacts?.length">
+									<template #header>
+										<div class="flex items-center">
+											<UIcon name="i-heroicons-credit-card" class="w-5 h-5 mr-2" />
+											<h3 class="text-sm font-medium">Billing Contacts</h3>
+										</div>
+									</template>
+									<div class="space-y-2 text-sm">
+										<div
+											v-for="(contact, index) in org.billing_contacts"
+											:key="index"
+											class="flex items-center gap-2"
+										>
+											<UIcon name="i-heroicons-user" class="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+											<div class="min-w-0">
+												<span v-if="contact.name" class="font-medium">{{ contact.name }} — </span>
+												<a :href="`mailto:${contact.email}`" class="text-primary truncate">{{ contact.email }}</a>
+											</div>
+										</div>
+									</div>
+								</UCard>
+
 								<!-- Emails -->
 								<UCard v-if="org.emails?.length">
 									<template #header>
@@ -758,6 +789,32 @@ watch(searchEmail, (val) => {
 										>
 											{{ email }}
 										</UBadge>
+									</div>
+								</UCard>
+							<!-- Subscription & Plan -->
+								<UCard v-if="canManageOrg">
+									<template #header>
+										<div class="flex items-center">
+											<UIcon name="i-heroicons-credit-card" class="w-5 h-5 mr-2" />
+											<h3 class="text-sm font-medium">Earnest Subscription</h3>
+										</div>
+									</template>
+									<div class="space-y-3 text-sm">
+										<div class="flex justify-between">
+											<span class="text-gray-500">Plan</span>
+											<UBadge color="primary" variant="soft" size="xs">Pro</UBadge>
+										</div>
+										<div class="flex justify-between">
+											<span class="text-gray-500">Status</span>
+											<UBadge color="green" variant="soft" size="xs">Active</UBadge>
+										</div>
+										<NuxtLink
+											to="/account/subscription"
+											class="flex items-center justify-center gap-1.5 w-full mt-2 px-3 py-1.5 text-xs font-medium text-primary border border-primary/20 rounded-lg hover:bg-primary/5 transition-colors"
+										>
+											<UIcon name="i-heroicons-cog-6-tooth" class="w-3.5 h-3.5" />
+											Manage Subscription
+										</NuxtLink>
 									</div>
 								</UCard>
 							</div>
@@ -928,6 +985,53 @@ watch(searchEmail, (val) => {
 						</span>
 					</div>
 				</UFormGroup>
+
+				<!-- Billing Contacts -->
+				<div class="border-t pt-4 mt-2">
+					<h3 class="text-sm font-semibold mb-1 flex items-center gap-2">
+						<UIcon name="i-heroicons-credit-card" class="w-4 h-4 text-muted-foreground" />
+						Billing Contacts
+					</h3>
+					<p class="text-xs text-muted-foreground mb-3">Invoice recipients — these emails receive payment links and invoice notifications.</p>
+
+					<div class="space-y-2">
+						<div
+							v-for="(contact, index) in editForm.billing_contacts"
+							:key="index"
+							class="flex items-center gap-2"
+						>
+							<UInput
+								v-model="contact.name"
+								placeholder="Name"
+								size="sm"
+								class="flex-1"
+							/>
+							<UInput
+								v-model="contact.email"
+								type="email"
+								placeholder="email@example.com"
+								size="sm"
+								class="flex-1"
+							/>
+							<UButton
+								color="gray"
+								variant="ghost"
+								icon="i-heroicons-trash"
+								size="xs"
+								@click="editForm.billing_contacts.splice(index, 1)"
+							/>
+						</div>
+						<UButton
+							color="gray"
+							variant="soft"
+							icon="i-heroicons-plus"
+							size="xs"
+							@click="editForm.billing_contacts.push({ name: '', email: '' })"
+						>
+							Add Contact
+						</UButton>
+					</div>
+				</div>
 
 				<!-- Brand & Strategy -->
 				<div class="border-t pt-4 mt-2">

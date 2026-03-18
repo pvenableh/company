@@ -54,7 +54,7 @@
 	</UCard>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed } from 'vue';
 import { ChartContainer } from '~/components/ui/chart';
 import { VisDonut } from '@unovis/vue';

@@ -100,17 +100,31 @@ const statusColor = (status: string) => {
 
     <!-- Onboarding Banner (no accounts connected) -->
     <div v-if="accounts.length === 0" class="mb-8 p-6 bg-gradient-to-r from-pink-50 to-violet-50 dark:from-pink-900/20 dark:to-violet-900/20 rounded-2xl border border-pink-100 dark:border-pink-800/30">
-      <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
         <div class="p-3 bg-white dark:bg-gray-800 rounded-xl shadow-sm">
           <UIcon name="i-lucide-share-2" class="w-8 h-8 text-pink-500" />
         </div>
         <div class="flex-1">
           <h2 class="font-semibold text-gray-900 dark:text-white mb-1">Get started with Social Media</h2>
-          <p class="text-sm text-gray-600 dark:text-gray-400">Connect your Instagram or TikTok accounts to start scheduling and publishing content.</p>
+          <p class="text-sm text-gray-600 dark:text-gray-400">Connect your social accounts to start scheduling and publishing content with AI assistance.</p>
         </div>
         <div class="flex gap-2">
           <UButton to="/social/setup" variant="ghost" size="sm">Setup Guide</UButton>
           <UButton to="/social/settings" icon="i-lucide-plug" size="sm">Connect Accounts</UButton>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div class="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
+          <UIcon name="i-lucide-plug" class="w-4 h-4 text-pink-500 shrink-0 mt-0.5" />
+          <span><strong class="text-foreground">Connect</strong> your Instagram, TikTok, LinkedIn, or Facebook accounts</span>
+        </div>
+        <div class="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
+          <UIcon name="i-lucide-sparkles" class="w-4 h-4 text-violet-500 shrink-0 mt-0.5" />
+          <span><strong class="text-foreground">Generate</strong> posts with AI tailored to your brand and audience</span>
+        </div>
+        <div class="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
+          <UIcon name="i-lucide-calendar-clock" class="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+          <span><strong class="text-foreground">Schedule</strong> content across platforms from one calendar</span>
         </div>
       </div>
     </div>

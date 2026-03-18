@@ -4,6 +4,37 @@ import { nextTick } from 'vue';
 const { user: sessionUser } = useUserSession();
 const user = computed(() => sessionUser.value ?? null);
 const config = useRuntimeConfig();
+const { selectedClient, clients } = useClients();
+const { selectedOrg, organization } = useOrganization();
+
+// ── Brand Completeness Check ──
+const brandIncomplete = computed(() => {
+	// Check whichever entity is currently selected (client or org)
+	if (selectedClient.value && selectedClient.value !== 'org') {
+		const client = (clients.value || []).find((c: any) => c.id === selectedClient.value) as any;
+		if (!client) return false;
+		return !client.brand_direction || !client.goals || !client.target_audience || !client.location;
+	}
+	// Fall back to org
+	const org = organization.value as any;
+	if (!org) return false;
+	return !org.brand_direction || !org.goals || !org.target_audience || !org.location;
+});
+
+const brandEntityName = computed(() => {
+	if (selectedClient.value && selectedClient.value !== 'org') {
+		const client = (clients.value || []).find((c: any) => c.id === selectedClient.value) as any;
+		return client?.name || 'your client';
+	}
+	return (organization.value as any)?.name || 'your organization';
+});
+
+const brandSetupRoute = computed(() => {
+	if (selectedClient.value && selectedClient.value !== 'org') {
+		return `/clients/${selectedClient.value}`;
+	}
+	return '/organization';
+});
 
 // ── State ──
 const sessions = ref<any[]>([]);
@@ -102,6 +133,8 @@ const sendMessage = async () => {
 			body: JSON.stringify({
 				sessionId: activeSessionId.value || undefined,
 				message: content,
+				clientId: selectedClient.value && selectedClient.value !== 'org' ? selectedClient.value : undefined,
+				organizationId: (selectedOrg.value as any)?.id || undefined,
 			}),
 		});
 
@@ -356,6 +389,22 @@ onMounted(() => {
 
 			<!-- Messages -->
 			<div ref="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-4">
+				<!-- Brand completeness prompt -->
+				<NuxtLink
+					v-if="brandIncomplete"
+					:to="brandSetupRoute"
+					class="flex items-start gap-3 p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/30 rounded-xl text-sm transition-colors hover:bg-amber-100 dark:hover:bg-amber-900/20"
+				>
+					<UIcon name="i-heroicons-light-bulb" class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+					<div>
+						<p class="font-medium text-foreground">Complete your brand profile for {{ brandEntityName }}</p>
+						<p class="text-xs text-muted-foreground mt-0.5">
+							Fill in brand direction, goals, target audience, and location to get personalized AI responses from Earnest.
+						</p>
+					</div>
+					<UIcon name="i-heroicons-chevron-right" class="w-4 h-4 text-muted-foreground flex-shrink-0 mt-1" />
+				</NuxtLink>
+
 				<!-- Empty state -->
 				<div
 					v-if="messages.length === 0 && !isLoadingMessages"

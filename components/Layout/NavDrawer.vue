@@ -26,14 +26,32 @@
 
 			<!-- Sheet content -->
 			<div class="sheet-content">
-				<!-- App Grid — iPhone home screen style -->
+				<!-- AI Chat Callout -->
+				<nuxt-link
+					v-if="aiChatLink"
+					:to="aiChatLink.to"
+					class="ai-chat-callout"
+					@click="handleAppClick($event)"
+				>
+					<div class="ai-chat-icon-wrap">
+						<UIcon name="i-heroicons-sparkles" class="ai-chat-icon" />
+					</div>
+					<div class="ai-chat-text">
+						<span class="ai-chat-title">Earnest AI</span>
+						<span class="ai-chat-desc">Chat with your AI assistant</span>
+					</div>
+					<UIcon name="i-heroicons-chevron-right" class="ai-chat-arrow" />
+				</nuxt-link>
+
+				<!-- Primary Apps — AI-powered core -->
+				<div v-if="primaryLinks.length" class="section-header">Apps</div>
 				<div class="app-grid">
 					<nuxt-link
-						v-for="link in links"
+						v-for="link in primaryLinks"
 						:key="link.to"
 						:to="link.to"
 						class="app-item"
-						@click="closeSheet"
+						@click="handleAppClick($event)"
 					>
 						<div class="app-icon-wrap">
 							<div
@@ -46,6 +64,42 @@
 					</nuxt-link>
 				</div>
 
+				<!-- Secondary Apps -->
+				<div v-if="secondaryLinks.length" class="section-header">More</div>
+				<div class="app-grid">
+					<nuxt-link
+						v-for="link in secondaryLinks"
+						:key="link.to"
+						:to="link.to"
+						class="app-item"
+						@click="handleAppClick($event)"
+					>
+						<div class="app-icon-wrap">
+							<div
+								:class="[link.color, 'app-icon', { 'app-icon-active': route.path === link.to }]"
+							>
+								<UIcon :name="link.icon" class="icon-inner" />
+							</div>
+						</div>
+						<span class="app-label" :class="{ 'app-label-active': route.path === link.to }">{{ link.name }}</span>
+					</nuxt-link>
+				</div>
+
+				<!-- Tools -->
+				<div v-if="toolLinks.length" class="section-header">Tools</div>
+				<div class="tools-grid">
+					<nuxt-link
+						v-for="link in toolLinks"
+						:key="link.to"
+						:to="link.to"
+						class="tool-item"
+						@click="handleAppClick($event)"
+					>
+						<UIcon :name="link.icon" class="tool-icon" />
+						<span class="tool-label">{{ link.name }}</span>
+					</nuxt-link>
+				</div>
+
 				<!-- Divider -->
 				<div class="sheet-divider" />
 
@@ -53,7 +107,7 @@
 				<div class="bottom-bar">
 					<!-- Left: Account avatar pill + auth pill -->
 					<div class="bar-group">
-						<nuxt-link v-if="user" to="/account" class="pill-btn" @click="closeSheet">
+						<nuxt-link v-if="user" to="/account" class="pill-btn" @click="handleAppClick($event)">
 							<div class="pill-avatar">
 								<img v-if="avatarUrl" :src="avatarUrl" :alt="user?.first_name" class="pill-avatar-img" />
 								<span v-else class="pill-avatar-initials">{{ initials }}</span>
@@ -66,7 +120,7 @@
 								<span class="pill-text">Sign Out</span>
 							</button>
 						</template>
-						<nuxt-link v-else to="/auth/signin" class="pill-btn" @click="closeSheet">
+						<nuxt-link v-else to="/auth/signin" class="pill-btn" @click="handleAppClick($event)">
 							<UIcon name="i-heroicons-arrow-right-end-on-rectangle" class="pill-icon" />
 							<span class="pill-text">Sign In</span>
 						</nuxt-link>
@@ -92,8 +146,10 @@
 
 <script setup>
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { toast } from 'vue-sonner';
 
 const route = useRoute();
+const router = useRouter();
 const config = useRuntimeConfig();
 const { user } = useDirectusAuth();
 const { logout } = useLogout();
@@ -103,6 +159,12 @@ import { sheetOpen, closeSheet as closeSheetState } from '~~/composables/useScre
 
 // Use composable directly for reactivity — props through NuxtLayout don't propagate changes
 const links = computed(() => visibleLinks.value.filter((l) => l.type.includes('drawer')));
+
+// Grouped links for sectioned drawer
+const primaryLinks = computed(() => links.value.filter((l) => l.section === 'primary'));
+const secondaryLinks = computed(() => links.value.filter((l) => l.section === 'secondary'));
+const toolLinks = computed(() => links.value.filter((l) => l.section === 'tools'));
+const aiChatLink = computed(() => visibleLinks.value.find((l) => l.to === '/command-center/ai'));
 
 const emit = defineEmits(['edit-apps']);
 
@@ -136,6 +198,17 @@ function toggleDark() {
 function closeSheet() {
 	closeSheetState();
 	dragOffset.value = 0;
+}
+
+function handleAppClick(e) {
+	if (!user.value) {
+		e.preventDefault();
+		closeSheet();
+		toast.warning('You need to be logged in with an active account for this feature.');
+		router.push({ path: '/register', query: { redirect: route.fullPath } });
+		return;
+	}
+	closeSheet();
 }
 
 function handleLogout() {
@@ -239,6 +312,78 @@ function onTouchEnd() {
 
 .sheet-content {
 	padding: 0 0 6px;
+}
+
+/* ── AI Chat Callout ── */
+.ai-chat-callout {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin: 4px 10px 6px;
+	padding: 10px 12px;
+	border-radius: 14px;
+	background: linear-gradient(135deg, hsl(var(--primary) / 0.08), hsl(var(--primary) / 0.15));
+	border: 1px solid hsl(var(--primary) / 0.2);
+	text-decoration: none;
+	-webkit-tap-highlight-color: transparent;
+	transition: transform 0.15s ease, background 0.2s;
+}
+
+.ai-chat-callout:active {
+	transform: scale(0.98);
+}
+
+.ai-chat-icon-wrap {
+	width: 36px;
+	height: 36px;
+	border-radius: 10px;
+	background: hsl(var(--primary));
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+}
+
+.ai-chat-icon {
+	width: 18px;
+	height: 18px;
+	color: hsl(var(--primary-foreground));
+}
+
+.ai-chat-text {
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+	flex: 1;
+	min-width: 0;
+}
+
+.ai-chat-title {
+	font-size: 13px;
+	font-weight: 600;
+	color: hsl(var(--foreground));
+}
+
+.ai-chat-desc {
+	font-size: 10px;
+	color: hsl(var(--muted-foreground));
+}
+
+.ai-chat-arrow {
+	width: 14px;
+	height: 14px;
+	color: hsl(var(--muted-foreground));
+	flex-shrink: 0;
+}
+
+/* ── Section Headers ── */
+.section-header {
+	font-size: 9px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.1em;
+	color: hsl(var(--muted-foreground));
+	padding: 6px 14px 2px;
 }
 
 /* ── App Grid — iPhone home screen ── */
@@ -349,6 +494,45 @@ function onTouchEnd() {
 .app-label-active {
 	color: hsl(var(--primary));
 	font-weight: 600;
+}
+
+/* ── Tools Grid — compact pill style ── */
+.tools-grid {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	padding: 4px 10px 10px;
+}
+
+.tool-item {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	padding: 6px 10px;
+	border-radius: 10px;
+	background: hsl(var(--muted) / 0.5);
+	border: 1px solid hsl(var(--border) / 0.5);
+	text-decoration: none;
+	-webkit-tap-highlight-color: transparent;
+	transition: transform 0.15s ease, background 0.2s;
+}
+
+.tool-item:active {
+	transform: scale(0.95);
+	background: hsl(var(--muted));
+}
+
+.tool-icon {
+	width: 14px;
+	height: 14px;
+	color: hsl(var(--muted-foreground));
+}
+
+.tool-label {
+	font-size: 10px;
+	font-weight: 500;
+	color: hsl(var(--foreground) / 0.8);
+	white-space: nowrap;
 }
 
 /* ── Divider ── */

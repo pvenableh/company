@@ -530,4 +530,65 @@ The following features are planned for upcoming development phases:
 - **SendGrid Email Activity Tracking** — Webhook endpoint to receive SendGrid events (opens, clicks, bounces, spam reports); `email_activity` collection for per-recipient event history; automatic bounce handling and contact status updates
 - **Chat Widget** — Frontend UI for the existing `ai_chat_sessions` / `ai_chat_messages` Directus collections; `useAIChat` composable; streaming AI responses; persistent conversation history
 - **Notification Email Pipeline** — Unified transactional email handler for form submissions, sign-ups, ticket updates, and appointment confirmations using the existing MJML compiler + Handlebars system
-- **Subscription Plan Billing** — Stripe subscription integration; `subscription_plans` collection with feature caps and usage limits; plan-gated feature availability via `planAllows()`
+- **Subscription Plan Gating** — `subscription_plans` collection with feature caps and usage limits; plan-gated feature availability via `planAllows()`
+
+## Stripe Subscription Setup
+
+The platform includes full Stripe subscription management. New users get a Stripe customer created during registration. The subscription page (`/account/subscription`) shows real-time plan status, payment methods, and billing history — all pulled from Stripe.
+
+### Required Directus User Fields
+
+Add these fields to the `directus_users` collection:
+
+| Field | Type | Notes |
+|---|---|---|
+| `stripe_customer_id` | String | Stripe customer ID (cus_xxx) |
+| `stripe_subscription_id` | String | Active subscription ID (sub_xxx) |
+| `subscription_status` | String | active, trialing, past_due, canceled, etc. |
+
+### Environment Variables
+
+Add to `.env`:
+
+```env
+# Stripe keys (existing)
+STRIPE_SECRET_KEY=sk_live_xxx
+STRIPE_SECRET_KEY_TEST=sk_test_xxx
+STRIPE_PUBLIC_KEY=pk_live_xxx
+STRIPE_PUBLIC_KEY_TEST=pk_test_xxx
+STRIPE_WEBHOOK_SECRET=whsec_xxx
+
+# Subscription Price IDs (from Stripe Dashboard > Products)
+STRIPE_PRICE_PRO=price_xxx
+STRIPE_PRICE_TEAM=price_xxx
+```
+
+### Stripe Dashboard Setup
+
+1. **Create Products** — In Stripe Dashboard > Products, create "Earnest Pro" and "Earnest Team" products with recurring monthly prices. Copy the price IDs to your `.env`.
+
+2. **Configure Customer Portal** — Go to Settings > Billing > Customer Portal and enable it. This lets users self-manage payment methods, view invoices, and cancel subscriptions.
+
+3. **Register Webhook** — In Developers > Webhooks, add an endpoint pointing to `https://yourdomain.com/api/stripe/paymentchange` with these events:
+   - `payment_intent.succeeded`
+   - `payment_intent.payment_failed`
+   - `customer.subscription.created`
+   - `customer.subscription.updated`
+   - `customer.subscription.deleted`
+   - `invoice.payment_succeeded`
+   - `invoice.payment_failed`
+   - `checkout.session.completed`
+
+### Key Files
+
+| File | Purpose |
+|---|---|
+| `server/utils/stripe.ts` | Shared Stripe instance factory and plan definitions |
+| `server/api/stripe/subscription/checkout.post.ts` | Creates Stripe Checkout Session for new subscriptions |
+| `server/api/stripe/subscription/status.get.ts` | Returns subscription status, payment methods, invoices |
+| `server/api/stripe/subscription/cancel.post.ts` | Cancels subscription (end of period or immediate) |
+| `server/api/stripe/subscription/resume.post.ts` | Resumes a canceling subscription |
+| `server/api/stripe/subscription/portal.post.ts` | Opens Stripe Customer Portal for self-service |
+| `server/api/stripe/paymentchange.ts` | Webhook handler for payment + subscription events |
+| `composables/useSubscription.ts` | Client-side subscription state composable |
+| `pages/account/subscription.vue` | Subscription management UI |
