@@ -54,7 +54,6 @@ onUnmounted(() => {
 		<div class="filter-controls">
 			<client-only>
 				<LayoutClientSelect v-if="user" :user="user" @open-org-switcher="showOrgSwitcher = true" />
-				<LayoutTeamSelect v-if="user" class="ml-2" />
 			</client-only>
 		</div>
 

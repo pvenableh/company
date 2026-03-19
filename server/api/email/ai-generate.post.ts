@@ -17,6 +17,7 @@ interface GenerateRequest {
   tone?: string;
   brandColor?: string;
   colorScheme?: string;
+  colorCount?: number;
 }
 
 export interface AIGeneratedSection {
@@ -95,6 +96,7 @@ RULES:
   * "warm": Earthy oranges, terracotta, cream. Text: #2d3436, Backgrounds: #ffeaa7/#ffffff, Accent: #e17055
   * "corporate": Professional blues, greens, light grays. Text: #2c3e50, Backgrounds: #ecf0f1/#ffffff, Accent: #2980b9
   If a brand color is provided, use it as the primary accent color, adapting the scheme's other colors to complement it.
+- COLOR COUNT: The user may specify how many distinct colors to use (2 or 3). If 2 colors, use only the primary text color and one accent color. If 3 colors, add a secondary/background accent. Default to 3 if not specified. Keep the palette cohesive and limited.
 - For URL variables, use "#" as placeholder
 - For boolean variables, use "true" or "false"
 - Create 4-7 sections for a complete email
@@ -175,12 +177,17 @@ Return this exact JSON structure:
         if (Array.isArray(parsedSchema) && section.variables) {
           const colorRegex = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
           for (const def of parsedSchema) {
-            if (def.type === 'color' && section.variables[def.key]) {
-              const val = section.variables[def.key];
+            const val = section.variables[def.key];
+            if (!val) continue;
+
+            if (def.type === 'color') {
+              // Color field with non-color value — replace with brand color or default
               if (!colorRegex.test(val) && !['transparent', 'inherit', 'currentColor'].includes(val)) {
-                // Replace invalid color with brand color or default
                 section.variables[def.key] = body.brandColor || '#333333';
               }
+            } else if ((def.type === 'text' || def.type === 'richtext') && colorRegex.test(val)) {
+              // Text/richtext field with a hex color value — clear it
+              section.variables[def.key] = '';
             }
           }
         }
@@ -231,6 +238,10 @@ function buildUserMessage(body: GenerateRequest): string {
 
   if (body.colorScheme) {
     parts.push(`Color scheme: ${body.colorScheme}`);
+  }
+
+  if (body.colorCount) {
+    parts.push(`Number of colors: ${body.colorCount} (limit the palette to exactly ${body.colorCount} distinct colors)`);
   }
 
   if (body.brandColor) {

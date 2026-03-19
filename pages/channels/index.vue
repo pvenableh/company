@@ -1,11 +1,35 @@
 <script setup>
 const { selectedOrg, organizationOptions } = useOrganization();
 const { selectedClient } = useClients();
+const { visibleTeams, fetchTeams, selectedTeam: globalSelectedTeam } = useTeams();
 const { user } = useDirectusAuth();
 const { canAccess, canCreate: canCreateFeature } = useRole();
 
 const isAdmin = computed(() => canAccess('channels'));
 const showCreateChannel = ref(false);
+
+// Local team filter for channels page
+const channelTeamFilter = ref(null);
+const teamClientIds = ref([]);
+const clientsTeamsItems = useDirectusItems('clients_teams');
+
+// Fetch team's assigned clients when team filter changes
+watch(channelTeamFilter, async (teamId) => {
+	if (!teamId) {
+		teamClientIds.value = [];
+		return;
+	}
+	try {
+		const junctions = await clientsTeamsItems.list({
+			filter: { teams_id: { _eq: teamId } },
+			fields: ['clients_id'],
+		});
+		teamClientIds.value = junctions.map(j => j.clients_id).filter(Boolean);
+	} catch (e) {
+		console.warn('Could not fetch team clients:', e);
+		teamClientIds.value = [];
+	}
+});
 const newChannelName = ref('');
 const newChannelProject = ref(null);
 const newChannelTicket = ref(null);
@@ -112,6 +136,11 @@ const currentFilter = computed(() => {
 		filters.push({ client: { _null: true } });
 	}
 
+	// Filter by team (through team→client relationship)
+	if (channelTeamFilter.value && teamClientIds.value.length > 0) {
+		filters.push({ client: { _in: teamClientIds.value } });
+	}
+
 	return { _and: filters };
 });
 // Real-time subscription
@@ -150,7 +179,7 @@ watch(currentFilter, (newFilter) => {
 const localChannels = ref([]);
 
 watch(
-	[() => channels.value, selectedOrg, selectedClient],
+	[() => channels.value, selectedOrg, selectedClient, channelTeamFilter, teamClientIds],
 	([newChannels]) => {
 		if (!newChannels) return;
 
@@ -161,6 +190,10 @@ watch(
 			}
 			if (selectedClient.value === 'org') {
 				return !channel.client;
+			}
+			// Team filter: only show channels from team's clients
+			if (channelTeamFilter.value && teamClientIds.value.length > 0) {
+				return teamClientIds.value.includes(channel.client);
 			}
 			return true;
 		});
@@ -186,9 +219,22 @@ const sortedChannels = computed(() => {
 				<h1 class="text-2xl font-bold text-gray-900 dark:text-white">Messages</h1>
 				<p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Team channels and conversations</p>
 			</div>
-			<UButton v-if="isAdmin" icon="i-heroicons-plus" size="sm" @click="showCreateChannel = true">
-				New Channel
-			</UButton>
+			<div class="flex items-center gap-2">
+				<!-- Team filter -->
+				<USelectMenu
+					v-if="visibleTeams.length > 0"
+					v-model="channelTeamFilter"
+					:options="[{ id: null, name: 'All Teams' }, ...visibleTeams]"
+					value-attribute="id"
+					option-attribute="name"
+					placeholder="Filter by team"
+					size="sm"
+					class="w-40"
+				/>
+				<UButton v-if="isAdmin" icon="i-heroicons-plus" size="sm" @click="showCreateChannel = true">
+					New Channel
+				</UButton>
+			</div>
 		</div>
 
 		<!-- Create Channel Modal -->

@@ -121,7 +121,7 @@ export const useCardDesk = () => {
 			const [contacts, activities, xpState] = await Promise.all([
 				contactItems.list({
 					fields: ['id', 'name', 'first_name', 'last_name', 'company', 'rating', 'hibernated', 'is_client', 'client_at', 'date_created'],
-					filter: { _and: [{ status: { _eq: 'published' } }, { user_created: { _eq: userId } }] },
+					filter: { _and: [{ status: { _in: ['published', 'draft'] } }, { user_created: { _eq: userId } }] },
 					limit: -1,
 				}).catch(() => []),
 				activityItems.list({
@@ -218,7 +218,7 @@ export const useCardDesk = () => {
 	// Fetch contacts list with pagination
 	const fetchContacts = async (opts?: { rating?: string; hibernated?: boolean; isClient?: boolean; search?: string; page?: number; limit?: number }) => {
 		const userId = authUser.value?.id;
-		const filter: any = { status: { _eq: 'published' } };
+		const filter: any = { status: { _in: ['published', 'draft'] } };
 		const conditions: any[] = [filter];
 		if (userId) conditions.push({ user_created: { _eq: userId } });
 
