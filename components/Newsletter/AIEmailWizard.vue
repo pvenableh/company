@@ -163,6 +163,34 @@
                 </div>
               </div>
 
+              <!-- Custom color pickers (shown when "Custom" scheme is selected) -->
+              <div v-if="form.colorScheme === 'custom'" class="space-y-3">
+                <label class="text-sm font-medium text-foreground block">Pick your colors</label>
+                <div class="flex gap-4">
+                  <div class="flex-1">
+                    <label class="text-xs text-muted-foreground mb-1 block">Text</label>
+                    <div class="flex items-center gap-2">
+                      <input type="color" v-model="customColors.text" class="w-8 h-8 rounded border cursor-pointer" />
+                      <input type="text" v-model="customColors.text" class="flex-1 rounded-lg border px-2 py-1.5 text-xs font-mono bg-background" />
+                    </div>
+                  </div>
+                  <div class="flex-1">
+                    <label class="text-xs text-muted-foreground mb-1 block">Accent</label>
+                    <div class="flex items-center gap-2">
+                      <input type="color" v-model="customColors.accent" class="w-8 h-8 rounded border cursor-pointer" />
+                      <input type="text" v-model="customColors.accent" class="flex-1 rounded-lg border px-2 py-1.5 text-xs font-mono bg-background" />
+                    </div>
+                  </div>
+                  <div v-if="form.colorCount === 3" class="flex-1">
+                    <label class="text-xs text-muted-foreground mb-1 block">Background</label>
+                    <div class="flex items-center gap-2">
+                      <input type="color" v-model="customColors.background" class="w-8 h-8 rounded border cursor-pointer" />
+                      <input type="text" v-model="customColors.background" class="flex-1 rounded-lg border px-2 py-1.5 text-xs font-mono bg-background" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <!-- Number of colors -->
               <div>
                 <label class="text-sm font-medium text-foreground mb-2.5 block">How many colors?</label>
@@ -391,6 +419,9 @@ const form = reactive({
 });
 
 const selectedSchemeColors = computed(() => {
+  if (form.colorScheme === 'custom') {
+    return [customColors.text, customColors.accent, customColors.background];
+  }
   const scheme = colorSchemes.find(s => s.value === form.colorScheme);
   return scheme?.colors || [];
 });
@@ -421,6 +452,7 @@ const tones = [
 ];
 
 const colorSchemes = [
+  { value: 'custom', label: 'Custom', emoji: '🎨', colors: ['#333333', '#f97316', '#ffffff', '#f5f5f5'] },
   { value: 'classic', label: 'Classic', emoji: '🏛️', colors: ['#1a1a2e', '#16213e', '#e94560', '#f5f5f5'] },
   { value: 'modern', label: 'Modern', emoji: '✨', colors: ['#2d3436', '#6c5ce7', '#00cec9', '#f8f9fa'] },
   { value: 'casual', label: 'Casual', emoji: '🌊', colors: ['#2d3436', '#fd79a8', '#fdcb6e', '#ffeaa7'] },
@@ -431,6 +463,13 @@ const colorSchemes = [
   { value: 'corporate', label: 'Corporate', emoji: '💼', colors: ['#2c3e50', '#2980b9', '#27ae60', '#ecf0f1'] },
 ];
 
+// Custom color state for "Custom" scheme
+const customColors = reactive({
+  text: '#333333',
+  accent: '#f97316',
+  background: '#ffffff',
+});
+
 const presetColors = ['#6366f1', '#ec4899', '#14b8a6', '#f59e0b', '#ef4444', '#3b82f6'];
 
 async function generate() {
@@ -440,6 +479,8 @@ async function generate() {
   result.value = null;
 
   try {
+    // When using custom colors, pass them as the color scheme description and brand color
+    const isCustom = form.colorScheme === 'custom';
     const data = await $fetch('/api/email/ai-generate', {
       method: 'POST',
       body: {
@@ -448,9 +489,16 @@ async function generate() {
         keyPoints: form.keyPoints,
         audience: form.audience,
         tone: form.tone,
-        brandColor: form.brandColor,
-        colorScheme: form.colorScheme,
+        brandColor: isCustom ? customColors.accent : form.brandColor,
+        colorScheme: isCustom ? 'custom' : form.colorScheme,
         colorCount: form.colorCount,
+        ...(isCustom && {
+          customColors: {
+            text: customColors.text,
+            accent: customColors.accent,
+            background: customColors.background,
+          },
+        }),
       },
     });
     result.value = data as any;

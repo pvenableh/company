@@ -265,11 +265,10 @@ watch(
 	{ immediate: true },
 );
 
-// Apply filter and refresh data
+// Apply filter (client-side only — no server refresh needed)
 const applyFilter = (filterValue) => {
 	console.log('Applying filter:', filterValue);
 	activeFilter.value = filterValue;
-	refreshTasks();
 };
 
 // Filtered tasks based on active filter

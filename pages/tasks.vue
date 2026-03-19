@@ -410,9 +410,15 @@ watch(tabs, (newTabs) => {
 	}
 });
 
-// Watch for tab changes
+// Watch for tab changes — reactive props update the subscription filter automatically,
+// so we only need to refresh stats after the data settles
 watch(activeTab, () => {
-	refreshData();
+	// Reset the user filter when switching to "Assigned to Me" tab
+	if (tabs.value?.[activeTab.value]?.content === 'assigned') {
+		filterUserId.value = null;
+	}
+	// Stats update after subscription filter settles
+	setTimeout(() => updateStats(), 800);
 });
 
 // Watch for organization or team changes from the global context

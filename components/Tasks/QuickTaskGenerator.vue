@@ -306,7 +306,7 @@
 						</div>
 					</button>
 					<div class="flex-1 min-w-0">
-						<span class="text-sm leading-snug line-through text-muted-foreground">{{ task.title }}</span>
+						<span class="text-sm leading-snug line-through text-muted-foreground" v-html="task.title" />
 						<div v-if="task.assignee" class="flex items-center gap-1 mt-0.5 text-[9px] text-muted-foreground/60">
 							<span class="w-3.5 h-3.5 rounded-full bg-muted flex items-center justify-center text-[7px] font-bold uppercase">{{ (task.assignee.first_name?.[0] || '') + (task.assignee.last_name?.[0] || '') }}</span>
 							{{ task.assignee.first_name }} {{ task.assignee.last_name?.charAt(0) || '' }}.
@@ -554,7 +554,7 @@ const TaskRow = defineComponent({
 					h('div', { class: 'task-check-box' }),
 				]),
 				h('div', { class: 'flex-1 min-w-0' }, [
-					h('span', { class: 'text-sm leading-snug' }, props.task.title),
+					h('span', { class: 'text-sm leading-snug', innerHTML: props.task.title }),
 					h('div', { class: 'flex items-center gap-2 mt-0.5' }, [
 						props.task.priority !== 'medium'
 							? h('span', {

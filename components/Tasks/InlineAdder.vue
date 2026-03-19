@@ -96,9 +96,8 @@
 				<span
 					class="flex-1 text-xs truncate"
 					:class="task.completed ? 'line-through text-muted-foreground' : ''"
-				>
-					{{ task.title }}
-				</span>
+					v-html="task.title"
+				/>
 				<span
 					v-if="task.priority !== 'medium' && !task.completed"
 					class="text-[8px] uppercase font-semibold"
