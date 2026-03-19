@@ -221,80 +221,86 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 					</form>
 				</div>
 
-				<!-- Priority Actions + Health Score -->
+				<!-- Priority Actions + Quick Tasks | CRM Health + Earnest Score -->
 				<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-					<!-- Priority Actions (2/3 width) -->
-					<div class="lg:col-span-2 space-y-4">
-						<div class="flex items-center justify-between">
-							<div class="flex items-center gap-2">
-								<UIcon name="i-heroicons-bolt" class="w-5 h-5 text-primary" />
-								<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70">
-									Priority Actions
-								</h3>
+					<!-- Left Column: Priority Actions + Quick Tasks (2/3 width) -->
+					<div class="lg:col-span-2 space-y-6">
+						<!-- Priority Actions -->
+						<div class="space-y-4">
+							<div class="flex items-center justify-between">
+								<div class="flex items-center gap-2">
+									<UIcon name="i-heroicons-bolt" class="w-5 h-5 text-primary" />
+									<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70">
+										Priority Actions
+									</h3>
+								</div>
+								<button
+									@click="runAnalysis"
+									:disabled="isAnalyzing"
+									class="text-xs text-primary hover:underline disabled:opacity-50"
+								>
+									Refresh
+								</button>
 							</div>
-							<button
-								@click="runAnalysis"
-								:disabled="isAnalyzing"
-								class="text-xs text-primary hover:underline disabled:opacity-50"
-							>
-								Refresh
-							</button>
-						</div>
 
-						<!-- Loading State -->
-						<div v-if="isAnalyzing && topActions.length === 0" class="space-y-2">
-							<div v-for="n in 4" :key="n" class="h-16 bg-muted rounded-xl animate-pulse" />
-						</div>
+							<!-- Loading State -->
+							<div v-if="isAnalyzing && topActions.length === 0" class="space-y-2">
+								<div v-for="n in 4" :key="n" class="h-16 bg-muted rounded-xl animate-pulse" />
+							</div>
 
-						<!-- Empty State -->
-						<div v-else-if="topActions.length === 0 && !isAnalyzing" class="ios-card p-8 text-center">
-							<UIcon name="i-heroicons-check-circle" class="w-12 h-12 mx-auto mb-3 text-green-500" />
-							<p class="text-sm font-medium text-foreground">You're all caught up!</p>
-							<p class="text-xs text-muted-foreground mt-1">No urgent or high-priority items need your attention right now.</p>
-						</div>
+							<!-- Empty State -->
+							<div v-else-if="topActions.length === 0 && !isAnalyzing" class="ios-card p-8 text-center">
+								<UIcon name="i-heroicons-check-circle" class="w-12 h-12 mx-auto mb-3 text-green-500" />
+								<p class="text-sm font-medium text-foreground">You're all caught up!</p>
+								<p class="text-xs text-muted-foreground mt-1">No urgent or high-priority items need your attention right now.</p>
+							</div>
 
-						<!-- Action Cards -->
-						<div v-else class="space-y-2">
-							<div
-								v-for="action in topActions"
-								:key="action.id"
-								:class="[priorityBg[action.priority] || priorityBg.low]"
-								class="relative rounded-lg p-3 pl-5 border-l-[3px] hover:shadow-md transition-all duration-200 cursor-pointer group overflow-hidden ios-card"
-								@click="action.actionRoute && navigateTo(action.actionRoute)"
-							>
-								<div class="flex items-start gap-3">
-									<div class="flex-shrink-0 mt-0.5">
-										<UIcon
-											:name="action.icon"
-											class="w-5 h-5"
-											:class="priorityIconColor[action.priority] || priorityIconColor.low"
-										/>
-									</div>
-									<div class="flex-1 min-w-0">
-										<p class="text-sm font-medium text-foreground truncate">{{ action.title }}</p>
-										<p class="text-xs text-muted-foreground mt-0.5 line-clamp-2">{{ action.description }}</p>
-									</div>
-									<div class="flex-shrink-0 flex items-center gap-2">
-										<span class="text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded-full"
-											:class="{
-												'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400': action.priority === 'urgent',
-												'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400': action.priority === 'high',
-											}"
-										>
-											{{ action.priority }}
-										</span>
-										<span class="text-xs font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-											{{ action.actionLabel }} &rarr;
-										</span>
+							<!-- Action Cards -->
+							<div v-else class="space-y-2">
+								<div
+									v-for="action in topActions"
+									:key="action.id"
+									:class="[priorityBg[action.priority] || priorityBg.low]"
+									class="relative rounded-lg p-3 pl-5 border-l-[3px] hover:shadow-md transition-all duration-200 cursor-pointer group overflow-hidden ios-card"
+									@click="action.actionRoute && navigateTo(action.actionRoute)"
+								>
+									<div class="flex items-start gap-3">
+										<div class="flex-shrink-0 mt-0.5">
+											<UIcon
+												:name="action.icon"
+												class="w-5 h-5"
+												:class="priorityIconColor[action.priority] || priorityIconColor.low"
+											/>
+										</div>
+										<div class="flex-1 min-w-0">
+											<p class="text-sm font-medium text-foreground truncate">{{ action.title }}</p>
+											<p class="text-xs text-muted-foreground mt-0.5 line-clamp-2">{{ action.description }}</p>
+										</div>
+										<div class="flex-shrink-0 flex items-center gap-2">
+											<span class="text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded-full"
+												:class="{
+													'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400': action.priority === 'urgent',
+													'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400': action.priority === 'high',
+												}"
+											>
+												{{ action.priority }}
+											</span>
+											<span class="text-xs font-medium text-primary opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+												{{ action.actionLabel }} &rarr;
+											</span>
+										</div>
 									</div>
 								</div>
 							</div>
 						</div>
+
+						<!-- Quick Tasks Widget (full width under Priority Actions) -->
+						<CommandCenterQuickTasksWidget />
 					</div>
 
-					<!-- Health Score Card (1/3 width) -->
-					<div class="space-y-4">
-						<div :class="healthBg" class="ios-card p-5 text-center">
+					<!-- Right Column: CRM Health + Earnest Score (1/3 width, stretch to match) -->
+					<div class="space-y-4 flex flex-col">
+						<div :class="healthBg" class="ios-card p-5 text-center flex-1">
 							<h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">CRM Health</h3>
 
 							<!-- Loading -->
@@ -356,10 +362,7 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 							</div>
 						</div>
 
-						<!-- Quick Tasks Widget -->
-						<CommandCenterQuickTasksWidget />
-
-						<!-- Earnest Score Mini -->
+						<!-- Earnest Score -->
 						<EarnestScoreWidget
 							:current-score="earnestState.currentScore"
 							:level="earnestState.level"
