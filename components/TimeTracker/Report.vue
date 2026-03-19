@@ -90,13 +90,16 @@
 							<VisStackedBar
 								:x="(d: any) => d.index"
 								:y="[(d: any) => d.billable, (d: any) => d.nonBillable]"
-								:color="[(d: any, i: number) => 'var(--color-billable)', (d: any, i: number) => 'var(--color-nonBillable)']"
+								:color="['var(--color-billable)', 'var(--color-nonBillable)']"
 								:bar-padding="0.35"
 								:rounded-corners="4"
 							/>
 							<VisAxis type="x" :tick-format="formatDayTick" :grid-line="false" :num-ticks="Math.min(dailyData.length, 14)" />
 							<VisAxis type="y" :tick-format="(v: number) => v + 'h'" :grid-line="true" />
-							<VisTooltip />
+							<ChartCrosshair
+								:template="crosshairTemplate"
+								:color="['var(--color-billable)', 'var(--color-nonBillable)']"
+							/>
 						</VisXYContainer>
 					</ChartContainer>
 				</div>
@@ -197,8 +200,8 @@
 <script setup lang="ts">
 import type { TimeEntry } from '~/types/directus';
 import type { ChartConfig } from '~/components/ui/chart';
-import { ChartContainer } from '~/components/ui/chart';
-import { VisXYContainer, VisStackedBar, VisAxis, VisTooltip } from '@unovis/vue';
+import { ChartContainer, ChartCrosshair, ChartTooltipContent, componentToString } from '~/components/ui/chart';
+import { VisXYContainer, VisStackedBar, VisAxis } from '@unovis/vue';
 import { format, subDays, subMonths, eachDayOfInterval, parseISO } from 'date-fns';
 
 const { getTimeEntries, formatDuration } = useTimeTracker();
@@ -252,6 +255,8 @@ const chartConfig: ChartConfig = {
 	billable: { label: 'Billable', color: 'hsl(142, 71%, 45%)' },
 	nonBillable: { label: 'Non-billable', color: 'hsl(217, 91%, 70%)' },
 };
+
+const crosshairTemplate = componentToString(chartConfig, ChartTooltipContent, { hideLabel: true });
 
 // ── Computed: Summary stats ─────────────────────────────────
 const totalMinutes = computed(() =>

@@ -33,12 +33,15 @@
 							<VisGroupedBar
 								:x="(d: any) => d.index"
 								:y="[(d: any) => d.rate, (d: any) => d.tickets]"
-								:color="(d: any, i: number) => i === 0 ? 'var(--color-rate)' : 'var(--color-tickets)'"
+								:color="['var(--color-rate)', 'var(--color-tickets)']"
 								:bar-padding="0.2"
 							/>
-							<VisAxis type="x" :tick-format="(i: number) => chartData[i]?.name || ''" :grid-line="false" />
+							<VisAxis type="x" :tick-format="(i: number) => chartData.value[Math.round(i)]?.name || ''" :grid-line="false" />
 							<VisAxis type="y" :tick-format="(v: number) => v + '%'" :grid-line="true" />
-							<VisTooltip />
+							<ChartCrosshair
+								:template="crosshairTemplate"
+								:color="['var(--color-rate)', 'var(--color-tickets)']"
+							/>
 						</VisXYContainer>
 					</ChartContainer>
 					<div class="flex items-center justify-center gap-6 mt-2 text-xs text-muted-foreground">
@@ -62,8 +65,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { ChartContainer } from '~/components/ui/chart';
-import { VisXYContainer, VisGroupedBar, VisAxis, VisTooltip } from '@unovis/vue';
+import { ChartContainer, ChartCrosshair, ChartTooltipContent, componentToString } from '~/components/ui/chart';
+import { VisXYContainer, VisGroupedBar, VisAxis } from '@unovis/vue';
 
 const props = defineProps({
 	data: {
@@ -80,6 +83,8 @@ const chartConfig = {
 	rate: { label: 'Completion Rate %', color: 'rgba(92, 214, 254, 0.9)' },
 	tickets: { label: 'Tickets Completed', color: 'rgba(4, 148, 197, 0.9)' },
 };
+
+const crosshairTemplate = componentToString(chartConfig, ChartTooltipContent, { hideLabel: true });
 
 const chartData = computed(() => {
 	return props.data.map((item, i) => ({
