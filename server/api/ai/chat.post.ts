@@ -46,6 +46,8 @@ export default defineEventHandler(async (event) => {
             user: userId,
             title: message.trim().substring(0, 100),
             status: 'active',
+          }, {
+            fields: ['id'],
           }),
         );
         chatSessionId = (newSession as any).id;
@@ -62,6 +64,8 @@ export default defineEventHandler(async (event) => {
           session: chatSessionId,
           role: 'user',
           content: message.trim(),
+        }, {
+          fields: ['id'],
         }),
       );
     } catch (msgError: any) {
@@ -234,6 +238,8 @@ export default defineEventHandler(async (event) => {
           session: chatSessionId,
           role: 'assistant',
           content: fullResponse,
+        }, {
+          fields: ['id'],
         }),
       );
 
