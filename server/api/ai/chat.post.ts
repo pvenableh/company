@@ -40,25 +40,34 @@ export default defineEventHandler(async (event) => {
     // 1. Get or create session
     let chatSessionId = sessionId;
     if (!chatSessionId) {
-      // Create new session
-      const newSession = await directus.request(
-        createItem('ai_chat_sessions', {
-          user: userId,
-          title: message.trim().substring(0, 100),
-          status: 'active',
-        }),
-      );
-      chatSessionId = (newSession as any).id;
+      try {
+        const newSession = await directus.request(
+          createItem('ai_chat_sessions', {
+            user: userId,
+            title: message.trim().substring(0, 100),
+            status: 'active',
+          }),
+        );
+        chatSessionId = (newSession as any).id;
+      } catch (sessionError: any) {
+        console.error('[ai/chat] Failed to create session:', sessionError.message, sessionError.errors || '');
+        throw createError({ statusCode: 500, message: `Failed to create chat session: ${sessionError.message}` });
+      }
     }
 
     // 2. Store user message
-    await directus.request(
-      createItem('ai_chat_messages', {
-        session: chatSessionId,
-        role: 'user',
-        content: message.trim(),
-      }),
-    );
+    try {
+      await directus.request(
+        createItem('ai_chat_messages', {
+          session: chatSessionId,
+          role: 'user',
+          content: message.trim(),
+        }),
+      );
+    } catch (msgError: any) {
+      console.error('[ai/chat] Failed to store user message:', msgError.message, msgError.errors || '');
+      throw createError({ statusCode: 500, message: `Failed to store message: ${msgError.message}` });
+    }
 
     // 3. Load conversation history
     const previousMessages = await directus.request(
@@ -66,7 +75,7 @@ export default defineEventHandler(async (event) => {
         filter: { session: { _eq: chatSessionId } },
         fields: ['role', 'content'],
         sort: ['date_created'],
-        limit: 50, // Keep last 50 messages for context
+        limit: 50,
       }),
     ) as Array<{ role: string; content: string }>;
 
@@ -188,7 +197,13 @@ export default defineEventHandler(async (event) => {
     const systemPrompt = buildSystemPrompt(orgContext) + taskContext + brandContext + styleContext;
 
     // 6. Stream response via SSE
-    const provider = getLLMProvider();
+    let provider;
+    try {
+      provider = getLLMProvider();
+    } catch (llmError: any) {
+      console.error('[ai/chat] LLM provider init failed:', llmError.message);
+      throw createError({ statusCode: 500, message: `LLM provider error: ${llmError.message}` });
+    }
 
     // Set SSE headers
     setResponseHeaders(event, {
