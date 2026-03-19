@@ -137,11 +137,37 @@
                 </div>
               </div>
 
+              <!-- Color Scheme -->
+              <div>
+                <label class="text-sm font-medium text-foreground mb-2.5 block">Color scheme</label>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <button
+                    v-for="s in colorSchemes"
+                    :key="s.value"
+                    class="flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl border-2 transition-all text-center"
+                    :class="form.colorScheme === s.value
+                      ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/20 shadow-sm'
+                      : 'border-transparent bg-muted/50 hover:bg-muted hover:border-muted-foreground/20'"
+                    @click="form.colorScheme = s.value"
+                  >
+                    <div class="flex gap-0.5">
+                      <span
+                        v-for="(c, ci) in s.colors"
+                        :key="ci"
+                        class="w-4 h-4 rounded-full border border-black/10"
+                        :style="{ backgroundColor: c }"
+                      />
+                    </div>
+                    <span class="text-xs font-medium" :class="form.colorScheme === s.value ? 'text-violet-700 dark:text-violet-300' : 'text-foreground'">{{ s.label }}</span>
+                  </button>
+                </div>
+              </div>
+
               <!-- Brand color (optional) -->
               <div>
                 <label class="text-sm font-medium text-foreground mb-1.5 block">
                   Brand color
-                  <span class="text-muted-foreground font-normal">(optional)</span>
+                  <span class="text-muted-foreground font-normal">(optional — overrides scheme accent)</span>
                 </label>
                 <div class="flex items-center gap-3">
                   <input
@@ -334,6 +360,7 @@ const form = reactive({
   audience: 'customers',
   tone: 'professional',
   brandColor: '#6366f1',
+  colorScheme: 'modern',
 });
 
 const emailTypes = [
@@ -361,6 +388,17 @@ const tones = [
   { value: 'inspirational', label: 'Inspiring', emoji: '✨' },
 ];
 
+const colorSchemes = [
+  { value: 'classic', label: 'Classic', emoji: '🏛️', colors: ['#1a1a2e', '#16213e', '#e94560', '#f5f5f5'] },
+  { value: 'modern', label: 'Modern', emoji: '✨', colors: ['#2d3436', '#6c5ce7', '#00cec9', '#f8f9fa'] },
+  { value: 'casual', label: 'Casual', emoji: '🌊', colors: ['#2d3436', '#fd79a8', '#fdcb6e', '#ffeaa7'] },
+  { value: 'clean', label: 'Clean', emoji: '🤍', colors: ['#333333', '#555555', '#0984e3', '#ffffff'] },
+  { value: 'bright', label: 'Bright', emoji: '🌈', colors: ['#2d3436', '#e17055', '#00b894', '#ffeaa7'] },
+  { value: 'dark', label: 'Dark', emoji: '🌙', colors: ['#f5f5f5', '#dfe6e9', '#a29bfe', '#2d3436'] },
+  { value: 'warm', label: 'Warm', emoji: '🔥', colors: ['#2d3436', '#e17055', '#fab1a0', '#ffeaa7'] },
+  { value: 'corporate', label: 'Corporate', emoji: '💼', colors: ['#2c3e50', '#2980b9', '#27ae60', '#ecf0f1'] },
+];
+
 const presetColors = ['#6366f1', '#ec4899', '#14b8a6', '#f59e0b', '#ef4444', '#3b82f6'];
 
 async function generate() {
@@ -379,6 +417,7 @@ async function generate() {
         audience: form.audience,
         tone: form.tone,
         brandColor: form.brandColor,
+        colorScheme: form.colorScheme,
       },
     });
     result.value = data as any;

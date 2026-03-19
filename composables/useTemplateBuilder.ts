@@ -149,12 +149,18 @@ export function useTemplateBuilder(templateId: Ref<number>) {
    * Prevents empty strings from producing invalid MJML attributes like
    * background-color="" or width="".
    */
-  function resolveVariableValue(value: any, type?: string): string {
+  function resolveVariableValue(value: any, type?: string, key?: string): string {
     const str = String(value ?? '');
     if (str.trim() === '') {
       // Type-aware fallbacks for empty values
       switch (type) {
-        case 'color': return 'transparent';
+        case 'color': {
+          // Use sensible defaults: text/font colors default to dark, backgrounds to transparent
+          const lowerKey = (key || '').toLowerCase();
+          if (lowerKey.includes('background') || lowerKey.includes('bg')) return 'transparent';
+          if (lowerKey.includes('text') || lowerKey.includes('font') || lowerKey.includes('color')) return '#333333';
+          return '#333333'; // Default to visible dark color
+        }
         case 'boolean': return 'false';
         default: return '';
       }
@@ -178,7 +184,7 @@ export function useTemplateBuilder(templateId: Ref<number>) {
     if (schema.length) {
       for (const def of schema) {
         const raw = vars[def.key] ?? def.default ?? '';
-        const value = resolveVariableValue(raw, def.type);
+        const value = resolveVariableValue(raw, def.type, def.key);
         source = source.replaceAll(`{{{${def.key}}}}`, value);
       }
     }
@@ -220,7 +226,7 @@ export function useTemplateBuilder(templateId: Ref<number>) {
       const schema = parseVariablesSchema(cb.block.variables_schema, cb.block.mjml_source);
       for (const [key, value] of Object.entries(cb.variables)) {
         const def = schema.find((s) => s.key === key);
-        const resolved = resolveVariableValue(value, def?.type);
+        const resolved = resolveVariableValue(value, def?.type, key);
         source = source.replaceAll(`{{{${key}}}}`, resolved);
       }
       sections.push(source);
@@ -253,17 +259,23 @@ ${sections.join('\n')}
 
   // ── Preview ────────────────────────────────────────────────────────
   const refreshPreview = async () => {
-    const mjml = assembleMjml();
-    const result = await previewNewsletter(mjml, {
-      first_name: 'Jane',
-      last_name: 'Smith',
-      email: 'jane@example.com',
-      year: new Date().getFullYear(),
-      app_name: 'Your Organization',
-      unsubscribe_url: '#unsubscribe',
-    });
-    previewHtml.value = result.html;
-    previewErrors.value = result.errors;
+    try {
+      const mjml = assembleMjml();
+      const result = await previewNewsletter(mjml, {
+        first_name: 'Jane',
+        last_name: 'Smith',
+        email: 'jane@example.com',
+        year: new Date().getFullYear(),
+        app_name: 'Your Organization',
+        unsubscribe_url: '#unsubscribe',
+      });
+      previewHtml.value = result.html;
+      previewErrors.value = result.errors;
+    } catch (err: any) {
+      console.error('[TemplateBuilder] Preview failed:', err);
+      previewHtml.value = '';
+      previewErrors.value = [err.message || 'Failed to compile MJML preview'];
+    }
   };
 
   // ── Save ───────────────────────────────────────────────────────────
@@ -318,9 +330,13 @@ ${sections.join('\n')}
   // ── Helpers ────────────────────────────────────────────────────────
 
   /** Return a safe default value for a variable type (prevents empty MJML attrs). */
-  function getTypeDefault(type: string): any {
+  function getTypeDefault(type: string, key?: string): any {
     switch (type) {
-      case 'color': return 'transparent';
+      case 'color': {
+        const lowerKey = (key || '').toLowerCase();
+        if (lowerKey.includes('background') || lowerKey.includes('bg')) return 'transparent';
+        return '#333333';
+      }
       case 'boolean': return false;
       default: return '';
     }
@@ -330,7 +346,7 @@ ${sections.join('\n')}
     const schema = parseVariablesSchema(block.variables_schema, block.mjml_source);
     if (!schema.length) return {};
     return Object.fromEntries(
-      schema.map((v) => [v.key, v.default ?? getTypeDefault(v.type)])
+      schema.map((v) => [v.key, v.default ?? getTypeDefault(v.type, v.key)])
     );
   }
 
@@ -353,7 +369,7 @@ ${sections.join('\n')}
       if (savedVal !== undefined && savedVal !== null && savedVal !== '') {
         result[def.key] = savedVal;
       } else {
-        result[def.key] = def.default ?? getTypeDefault(def.type);
+        result[def.key] = def.default ?? getTypeDefault(def.type, def.key);
       }
     }
     // Preserve any extra saved variables not in current schema

@@ -16,6 +16,7 @@ interface GenerateRequest {
   audience?: string;
   tone?: string;
   brandColor?: string;
+  colorScheme?: string;
 }
 
 export interface AIGeneratedSection {
@@ -83,7 +84,17 @@ RULES:
 - Fill in ALL variables for each block with compelling, relevant content
 - CRITICAL: Pay close attention to the variable TYPE shown in parentheses. Variables marked "(color)" MUST receive a valid hex color value like "#333333" or "#6366f1" — NEVER put text content into a color variable. Variables marked "(text)" or "(richtext)" receive text content. Variables marked "(image)" receive image URLs.
 - For image variables, set to empty string "" and provide an imageSuggestion instead
-- For color variables, ONLY use valid hex color codes (e.g. "#ffffff", "#333333"). Use the brand color if provided, otherwise use professional defaults. NEVER put text content in a color variable.
+- For color variables, ONLY use valid hex color codes (e.g. "#ffffff", "#333333"). Use the brand color and color scheme guidelines if provided, otherwise use professional defaults. NEVER put text content in a color variable.
+- COLOR SCHEME GUIDELINES (apply to all color variables):
+  * "classic": Deep navy, burgundy, gold accents. Text: #1a1a2e, Backgrounds: #f5f5f5/#ffffff, Accent: #e94560
+  * "modern": Clean contrast with purple/teal pops. Text: #2d3436, Backgrounds: #f8f9fa/#ffffff, Accent: #6c5ce7
+  * "casual": Playful pinks, yellows, soft tones. Text: #2d3436, Backgrounds: #ffeaa7/#ffffff, Accent: #fd79a8
+  * "clean": Minimal, mostly grayscale with one blue accent. Text: #333333, Backgrounds: #ffffff, Accent: #0984e3
+  * "bright": Bold, saturated complementary colors. Text: #2d3436, Backgrounds: #ffffff/#ffeaa7, Accent: #e17055
+  * "dark": Light text on dark backgrounds. Text: #f5f5f5, Backgrounds: #2d3436/#1e272e, Accent: #a29bfe
+  * "warm": Earthy oranges, terracotta, cream. Text: #2d3436, Backgrounds: #ffeaa7/#ffffff, Accent: #e17055
+  * "corporate": Professional blues, greens, light grays. Text: #2c3e50, Backgrounds: #ecf0f1/#ffffff, Accent: #2980b9
+  If a brand color is provided, use it as the primary accent color, adapting the scheme's other colors to complement it.
 - For URL variables, use "#" as placeholder
 - For boolean variables, use "true" or "false"
 - Create 4-7 sections for a complete email
@@ -218,8 +229,12 @@ function buildUserMessage(body: GenerateRequest): string {
     parts.push(`Tone: ${body.tone}`);
   }
 
+  if (body.colorScheme) {
+    parts.push(`Color scheme: ${body.colorScheme}`);
+  }
+
   if (body.brandColor) {
-    parts.push(`Brand color: ${body.brandColor}`);
+    parts.push(`Brand/accent color: ${body.brandColor} (use this as the primary accent, adapt other colors from the color scheme to complement it)`);
   }
 
   return parts.join('\n\n');

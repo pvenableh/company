@@ -90,6 +90,7 @@
         </div>
         <iframe
           ref="iframeRef"
+          :srcdoc="html"
           :style="{
             width: '100%',
             maxWidth: deviceWidth,
@@ -103,7 +104,7 @@
             transformOrigin: 'top center',
           }"
           style="min-height: 600px; transition: all 0.3s ease"
-          sandbox="allow-same-origin allow-scripts"
+          @load="resizeIframe"
         />
       </div>
     </div>
@@ -140,27 +141,19 @@ const deviceWidthLabel = computed(() => {
   }
 });
 
-watch(
-  () => props.html,
-  async (html) => {
-    if (!html) return;
-    // Wait for Vue to render the iframe (v-else branch) before writing
-    await nextTick();
-    if (!iframeRef.value) return;
+function resizeIframe() {
+  if (!iframeRef.value) return;
+  try {
     const doc = iframeRef.value.contentDocument;
-    if (doc) {
-      doc.open();
-      doc.write(html);
-      doc.close();
-      await nextTick();
-      if (iframeRef.value?.contentDocument) {
-        iframeRef.value.style.height =
-          (iframeRef.value.contentDocument.documentElement.scrollHeight || 600) + 'px';
-      }
+    if (doc?.documentElement) {
+      iframeRef.value.style.height =
+        (doc.documentElement.scrollHeight || 600) + 'px';
     }
-  },
-  { immediate: true }
-);
+  } catch {
+    // Cross-origin restriction — use fallback height
+    iframeRef.value.style.height = '600px';
+  }
+}
 </script>
 
 <style scoped>
