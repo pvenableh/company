@@ -105,6 +105,11 @@ const styles: StyleDefinition[] = [
 		name: 'Casual',
 		description: 'Handwritten headers (Gaegu), relaxed spacing — friendly & approachable',
 	},
+	{
+		id: 'bold',
+		name: 'Bold',
+		description: 'Sans-serif, heavy weight, sentence case — strong & confident',
+	},
 ];
 
 const THEME_KEY = 'earnest-theme';
