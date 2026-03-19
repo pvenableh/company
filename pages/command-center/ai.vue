@@ -16,7 +16,14 @@ definePageMeta({
 			</div>
 		</div>
 		<div class="h-[calc(100vh-180px)]">
-			<CommandCenterAIChat />
+			<ClientOnly>
+				<CommandCenterAIChat />
+				<template #fallback>
+					<div class="flex items-center justify-center h-full">
+						<UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground" />
+					</div>
+				</template>
+			</ClientOnly>
 		</div>
 	</div>
 </template>

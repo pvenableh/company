@@ -9,6 +9,7 @@ const emit = defineEmits<{
 
 const { suggestions, metrics, isAnalyzing, greeting, analyze } = useAIProductivityEngine();
 const { enabledModules } = useAIPreferences();
+const { personas, selectedPersona, activePersona } = useAIPersona();
 const router = useRouter();
 
 const filterCategory = ref('all');
@@ -79,24 +80,46 @@ watch(
 			class="fixed right-0 top-0 h-full w-full max-w-sm bg-white dark:bg-gray-800 shadow-2xl z-50 flex flex-col overflow-hidden border-l border-gray-200 dark:border-gray-700"
 		>
 			<!-- Header -->
-			<div class="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-700 bg-gradient-to-r from-primary/5 to-violet-500/5">
-				<div>
-					<h2 class="text-sm font-bold text-gray-900 dark:text-white">AI Assistant</h2>
-					<p class="text-xs text-gray-500 mt-0.5">{{ greeting }}</p>
+			<div class="border-b border-gray-100 dark:border-gray-700">
+				<div class="flex items-center justify-between p-4 bg-gradient-to-r from-primary/5 to-violet-500/5">
+					<div class="flex items-center gap-2">
+						<div class="w-8 h-8 rounded-lg flex items-center justify-center" :class="activePersona.iconBg">
+							<UIcon :name="activePersona.icon" class="w-4 h-4" :class="activePersona.iconColor" />
+						</div>
+						<div>
+							<h2 class="text-sm font-bold text-gray-900 dark:text-white">{{ activePersona.label }}</h2>
+							<p class="text-[10px] text-gray-500 italic">"{{ activePersona.greeting }}"</p>
+						</div>
+					</div>
+					<div class="flex items-center gap-1">
+						<button
+							@click="showPreferences = !showPreferences"
+							class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+							:class="showPreferences ? 'bg-primary/10 text-primary' : ''"
+						>
+							<UIcon name="i-heroicons-cog-6-tooth" class="w-4 h-4" :class="showPreferences ? 'text-primary' : 'text-gray-500'" />
+						</button>
+						<button
+							@click="emit('close')"
+							class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+						>
+							<UIcon name="i-heroicons-x-mark" class="w-5 h-5 text-gray-500" />
+						</button>
+					</div>
 				</div>
-				<div class="flex items-center gap-1">
+				<!-- Persona Picker -->
+				<div class="flex gap-1 px-4 py-2 bg-muted/20">
 					<button
-						@click="showPreferences = !showPreferences"
-						class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-						:class="showPreferences ? 'bg-primary/10 text-primary' : ''"
+						v-for="p in personas"
+						:key="p.value"
+						@click="selectedPersona = p.value"
+						class="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-medium transition-all flex-1 justify-center"
+						:class="selectedPersona === p.value
+							? p.bgClass + ' border ' + (p.iconColor)
+							: 'text-muted-foreground hover:bg-muted/50'"
 					>
-						<UIcon name="i-heroicons-cog-6-tooth" class="w-4 h-4" :class="showPreferences ? 'text-primary' : 'text-gray-500'" />
-					</button>
-					<button
-						@click="emit('close')"
-						class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-					>
-						<UIcon name="i-heroicons-x-mark" class="w-5 h-5 text-gray-500" />
+						<UIcon :name="p.icon" class="w-3 h-3" :class="selectedPersona === p.value ? p.iconColor : ''" />
+						<span class="hidden sm:inline">{{ p.label.replace('The ', '') }}</span>
 					</button>
 				</div>
 			</div>
