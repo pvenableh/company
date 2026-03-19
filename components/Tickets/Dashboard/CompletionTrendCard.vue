@@ -32,12 +32,15 @@
 							<VisLine
 								:x="xAccessor"
 								:y="yAccessors"
-								:color="colorAccessor"
-								:curve-type="'monotone'"
+								:color="[chartConfig.completed.color, chartConfig.created.color]"
+								:curve-type="CurveType.MonotoneX"
 							/>
 							<VisAxis type="x" :x="xAccessor" :tick-format="xTickFormat" :grid-line="false" :tick-line="false" :domain-line="false" />
 							<VisAxis type="y" :grid-line="true" :tick-line="false" :domain-line="false" />
-							<ChartTooltip />
+							<ChartCrosshair
+								:template="crosshairTemplate"
+								:color="[chartConfig.completed.color, chartConfig.created.color]"
+							/>
 						</VisXYContainer>
 					</ChartContainer>
 					<div class="flex items-center justify-center gap-6 mt-2 text-xs text-muted-foreground">
@@ -59,8 +62,9 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { ChartContainer, ChartTooltip } from '~/components/ui/chart';
+import { ChartContainer, ChartCrosshair, ChartTooltipContent, componentToString } from '~/components/ui/chart';
 import { VisXYContainer, VisLine, VisAxis } from '@unovis/vue';
+import { CurveType } from '@unovis/ts';
 
 const props = defineProps({
 	data: {
@@ -80,8 +84,9 @@ const chartConfig = {
 
 const xAccessor = (d: any) => d.index;
 const yAccessors = [(d: any) => d.completed, (d: any) => d.created];
-const colorAccessor = (_d: any, i: number) => [chartConfig.completed.color, chartConfig.created.color][i];
 const xTickFormat = (i: number) => chartData.value[Math.round(i)]?.name || '';
+
+const crosshairTemplate = componentToString(chartConfig, ChartTooltipContent, { hideLabel: true });
 
 const chartData = computed(() => {
 	return props.data.map((item, i) => ({

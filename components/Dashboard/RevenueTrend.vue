@@ -24,8 +24,8 @@
               <VisLine
                 :x="xAccessor"
                 :y="yAccessors"
-                :color="colorAccessor"
-                :curve-type="'monotone'"
+                :color="[chartConfig.billed.color!, chartConfig.paid.color!]"
+                :curve-type="CurveType.MonotoneX"
               />
               <VisAxis
                 type="x"
@@ -42,7 +42,10 @@
                 :tick-line="false"
                 :domain-line="false"
               />
-              <ChartTooltip />
+              <ChartCrosshair
+                :template="crosshairTemplate"
+                :color="[chartConfig.billed.color!, chartConfig.paid.color!]"
+              />
             </VisXYContainer>
           </ChartContainer>
         </template>
@@ -68,8 +71,9 @@
 <script setup lang="ts">
 import type { Invoice } from '~/types/directus';
 import type { ChartConfig } from '~/components/ui/chart';
-import { ChartContainer, ChartTooltip } from '~/components/ui/chart';
+import { ChartContainer, ChartCrosshair, ChartTooltipContent, componentToString } from '~/components/ui/chart';
 import { VisXYContainer, VisLine, VisAxis } from '@unovis/vue';
+import { CurveType } from '@unovis/ts';
 
 const props = defineProps<{
   invoices: Invoice[];
@@ -86,12 +90,17 @@ type DataPoint = { date: Date; billed: number; paid: number };
 
 const xAccessor = (d: DataPoint) => d.date;
 const yAccessors = [(d: DataPoint) => d.billed, (d: DataPoint) => d.paid];
-const colorAccessor = (_d: DataPoint, i: number) => [chartConfig.billed.color!, chartConfig.paid.color!][i];
 const xTickFormat = (d: number) => {
   const date = new Date(d);
   return date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
 };
 const yTickFormat = (v: number) => '$' + (v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v.toString());
+
+const crosshairTemplate = componentToString(chartConfig, ChartTooltipContent, {
+  labelFormatter(d: number | Date) {
+    return new Date(d).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  },
+});
 
 const chartData = computed(() => {
   const now = new Date();
