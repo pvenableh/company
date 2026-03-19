@@ -310,6 +310,7 @@ function getStylePreviewClass(styleId: string): string {
 		case 'modern': return 'font-sans font-bold tracking-tight';
 		case 'classic': return 'font-serif font-semibold';
 		case 'casual': return 'font-casual';
+		case 'bold': return 'font-sans font-extrabold';
 		default: return 'font-sans';
 	}
 }

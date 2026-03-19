@@ -609,3 +609,58 @@
 	letter-spacing: 0.01em;
 	font-weight: 500;
 }
+
+/* ── Bold ──
+   Sans-serif, heavy weight, sentence case,
+   normal tracking — strong, confident, direct  */
+[data-style='bold'] {
+	--title-font: var(--font-proxima-regular);
+	--title-transform: none;
+	--title-tracking: 0;
+	--title-weight: 800;
+	--body-font: var(--font-proxima-regular);
+	--label-transform: none;
+	--label-tracking: 0.02em;
+	--label-weight: 700;
+	--label-size: 0.75rem;
+	--card-border-width: 1px;
+	--card-shadow: 0 1px 3px rgba(0,0,0,0.06);
+	--card-hover-shadow: 0 4px 14px rgba(0,0,0,0.1);
+	--btn-transform: none;
+	--btn-tracking: 0.01em;
+	--btn-weight: 700;
+}
+
+[data-style='bold'] h1,
+[data-style='bold'] h2,
+[data-style='bold'] h3 {
+	font-family: var(--font-proxima-regular);
+	text-transform: none;
+	letter-spacing: 0;
+	font-weight: 800;
+}
+[data-style='bold'] h1 { font-size: 1.75rem; }
+[data-style='bold'] h4,
+[data-style='bold'] h5,
+[data-style='bold'] h6 {
+	font-family: var(--font-proxima-regular);
+	text-transform: none;
+	letter-spacing: 0.01em;
+	font-weight: 700;
+}
+
+[data-style='bold'] .t-label,
+[data-style='bold'] label {
+	text-transform: none;
+	letter-spacing: 0.02em;
+	font-size: 0.75rem;
+	font-weight: 700;
+}
+
+[data-style='bold'] button,
+[data-style='bold'] .btn,
+[data-style='bold'] [class*="Button"] {
+	text-transform: none;
+	letter-spacing: 0.01em;
+	font-weight: 700;
+}

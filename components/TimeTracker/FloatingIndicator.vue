@@ -1,9 +1,9 @@
 <template>
 	<Transition name="float">
-		<NuxtLink
+		<button
 			v-if="isTimerRunning && activeTimer"
-			to="/time-tracker"
 			class="floating-indicator"
+			@click="openTimeTrackerModal()"
 		>
 			<span class="pulsing-dot-sm" />
 			<span class="text-xs font-mono font-semibold tabular-nums text-foreground">
@@ -15,11 +15,14 @@
 			>
 				{{ activeTimer.description }}
 			</span>
-		</NuxtLink>
+		</button>
 	</Transition>
+
 </template>
 
 <script setup lang="ts">
+import { openTimeTrackerModal } from '~~/composables/useTimeTrackerModal';
+
 const {
 	activeTimer,
 	elapsed,
@@ -49,7 +52,6 @@ const {
 		0 1px 3px rgb(0 0 0 / 0.08),
 		0 4px 12px rgb(0 0 0 / 0.04);
 	cursor: pointer;
-	text-decoration: none;
 	transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 

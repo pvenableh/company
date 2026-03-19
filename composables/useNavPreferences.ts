@@ -19,14 +19,15 @@ const STORAGE_KEY = 'nav-preferences';
 // Default link definitions — single source of truth for all navigation and app grid UIs
 // Sections: primary = AI-powered core apps, secondary = supporting apps, tools = utilities
 const DEFAULT_LINKS: NavLink[] = [
-	// ── Command Center (always in header, not in drawer grid) ──
+	// ── Command Center ──
 	{
 		name: 'Command Center',
-		type: ['header'],
+		type: ['header', 'toolbar', 'drawer'],
 		to: '/',
 		icon: 'i-heroicons-command-line',
 		color: 'bg-gradient-to-br from-violet-500 to-purple-600',
 		description: 'AI productivity hub',
+		section: 'primary',
 	},
 	// ── Primary AI Apps (toolbar + drawer) ──
 	{

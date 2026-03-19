@@ -9,7 +9,7 @@ const { user: sessionUser, loggedIn } = useUserSession();
 const user = computed(() => {
 	return loggedIn.value ? sessionUser.value ?? null : null;
 });
-const { selectedOrg, fetchOrganizationDetails } = useOrganization();
+const { selectedOrg, fetchOrganizationDetails, isInitialized: orgIsInitialized, isLoading: orgInitLoading } = useOrganization();
 const { filteredUsers, fetchFilteredUsers } = useFilteredUsers();
 const { fetchTeams, visibleTeams, loading: teamsLoading, setupStorageListener } = useTeams();
 const config = useRuntimeConfig();
@@ -454,6 +454,16 @@ watch(
 	{ immediate: true },
 );
 
+// Also watch for org initialization completing (handles case where selectedOrg is set after init)
+watch(
+	() => orgIsInitialized.value,
+	(initialized) => {
+		if (initialized && selectedOrg.value && !org.value && !isLoading.value) {
+			fetchOrganizationData();
+		}
+	},
+);
+
 // Format date helper
 const formatDate = (dateString) => {
 	if (!dateString) return 'N/A';
@@ -491,14 +501,14 @@ watch(searchEmail, (val) => {
 	<div class="w-full relative">
 		<h1 class="page__title">Company</h1>
 		<div class="flex items-center justify-start flex-col z-10 w-full page__inner">
-			<!-- Loading state -->
-			<div v-if="isLoading" class="flex justify-center items-center min-h-[300px]">
+			<!-- Loading state (wait for both org initialization and page data) -->
+			<div v-if="isLoading || (!orgIsInitialized && orgInitLoading)" class="flex justify-center items-center min-h-[300px]">
 				<UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-gray-500" />
 			</div>
 
-			<!-- No organization selected -->
+			<!-- No organization selected (only show after init completes) -->
 			<UAlert
-				v-else-if="!selectedOrg || !org"
+				v-else-if="orgIsInitialized && (!selectedOrg || !org)"
 				title="No Organization Selected"
 				description="Please select an organization from the dropdown in the navigation bar."
 				color="blue"

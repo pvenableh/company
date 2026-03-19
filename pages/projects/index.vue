@@ -77,6 +77,16 @@ onMounted(() => {
 	}
 });
 
+const showProjectForm = ref(false);
+const router = useRouter();
+
+function handleProjectCreated(project) {
+	fetchTableProjects();
+	if (project?.id) {
+		router.push(`/projects/${project.id}`);
+	}
+}
+
 definePageMeta({
 	middleware: ['auth'],
 });
@@ -92,7 +102,19 @@ definePageMeta({
 					{{ tableProjects.length }} project{{ tableProjects.length !== 1 ? 's' : '' }}
 				</p>
 			</div>
+			<button
+				class="h-9 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors flex items-center gap-2"
+				@click="showProjectForm = true"
+			>
+				<UIcon name="i-heroicons-plus" class="w-4 h-4" />
+				New Project
+			</button>
 		</div>
+
+		<!-- Create Project Modal -->
+		<ClientOnly>
+			<ProjectsFormModal v-model="showProjectForm" @created="handleProjectCreated" />
+		</ClientOnly>
 
 		<!-- View switcher -->
 		<ClientOnly>

@@ -38,13 +38,17 @@
 
 					<div class="flex space-x-2">
 						<USelectMenu
-							:model-value="filterOptions.find(o => o.value === activeFilter)"
-							:options="filterOptions"
-							option-attribute="label"
-							value-attribute="value"
+							v-model="activeFilter"
+							:options="[
+								{ label: 'All Tasks', value: 'all' },
+								{ label: 'Active Tasks', value: 'active' },
+								{ label: 'Completed Tasks', value: 'completed' },
+								{ label: 'Due Today', value: 'today' },
+								{ label: 'Overdue', value: 'overdue' },
+							]"
 							size="xs"
 							class="w-40"
-							@update:model-value="applyFilter($event)"
+							@update:modelValue="applyFilter($event)"
 						/>
 					</div>
 				</div>
@@ -168,17 +172,11 @@ const totalTaskCount = ref(0);
 const currentLimit = ref(props.limit);
 const activeFilter = ref('all');
 
-const filterOptions = [
-	{ label: 'All Tasks', value: 'all' },
-	{ label: 'Active Tasks', value: 'active' },
-	{ label: 'Completed Tasks', value: 'completed' },
-	{ label: 'Due Today', value: 'today' },
-	{ label: 'Overdue', value: 'overdue' },
-];
-
 // Get global context (these are now only used for reacting to changes)
 const { selectedOrg } = useOrganization();
 const { selectedTeam } = useTeams();
+
+const ticketItems = useDirectusItems('tickets');
 
 // Setup tasks list with the composable, passing initial filter params
 const {
@@ -218,16 +216,34 @@ defineExpose({
 
 // Watch for changes in props and refresh tasks
 watch(
-	() => [props.organizationId, props.teamId, props.projectId, props.userId],
+	() => ({
+		organizationId: props.organizationId,
+		teamId: props.teamId,
+		projectId: props.projectId,
+		userId: props.userId,
+		limit: props.limit,
+	}),
 	() => {
 		refreshTasks();
 	},
+	{ deep: true },
+);
+
+// Watch for changes in global organization and team
+watch(
+	[selectedOrg, selectedTeam],
+	([newOrg, newTeam]) => {
+		console.log('Global organization or team changed:', { org: newOrg, team: newTeam });
+		// No need to refresh here, useTasksList handles it now
+	},
+	{ deep: true },
 );
 
 // Watch for tasks updates to emit stats
 watch(
 	tasks,
 	(newTasks) => {
+		console.log('Tasks updated in TasksList, emitting stats-update');
 		emit('stats-update', newTasks);
 	},
 	{ deep: true },
@@ -238,6 +254,7 @@ watch(
 	isLoading,
 	(loading) => {
 		if (loading === false) {
+			console.log('Tasks finished loading, emitting stats-update');
 			nextTick(() => {
 				emit('stats-update', tasks.value);
 			});
@@ -246,13 +263,18 @@ watch(
 	{ immediate: true },
 );
 
-// Apply filter
+// Apply filter and refresh data
 const applyFilter = (filterValue) => {
-	activeFilter.value = typeof filterValue === 'object' ? filterValue.value : filterValue;
+	console.log('Applying filter:', filterValue);
+	activeFilter.value = filterValue;
+	refreshTasks();
 };
 
 // Filtered tasks based on active filter
 const filteredTasks = computed(() => {
+	console.log('Computing filtered tasks with filter:', activeFilter.value);
+	console.log('Current tasks:', tasks.value?.length);
+
 	if (!tasks.value || tasks.value.length === 0) return [];
 
 	const today = new Date();
@@ -260,28 +282,42 @@ const filteredTasks = computed(() => {
 	const tomorrow = new Date(today);
 	tomorrow.setDate(tomorrow.getDate() + 1);
 
+	let result = [];
+
 	switch (activeFilter.value) {
 		case 'active':
-			return tasks.value.filter((task) => task.status !== 'completed');
+			result = tasks.value.filter((task) => task.status !== 'completed');
+			break;
+
 		case 'completed':
-			return tasks.value.filter((task) => task.status === 'completed');
+			result = tasks.value.filter((task) => task.status === 'completed');
+			break;
+
 		case 'today':
-			return tasks.value.filter((task) => {
+			result = tasks.value.filter((task) => {
 				if (!task.ticketContext?.due_date) return false;
 				const dueDate = new Date(task.ticketContext.due_date);
 				dueDate.setHours(0, 0, 0, 0);
 				return dueDate >= today && dueDate < tomorrow;
 			});
+			break;
+
 		case 'overdue':
-			return tasks.value.filter((task) => {
+			result = tasks.value.filter((task) => {
 				if (!task.ticketContext?.due_date) return false;
 				const dueDate = new Date(task.ticketContext.due_date);
 				dueDate.setHours(0, 0, 0, 0);
 				return dueDate < today && task.status !== 'completed';
 			});
-		default:
-			return tasks.value;
+			break;
+
+		default: // 'all'
+			result = tasks.value;
+			break;
 	}
+
+	console.log('Filtered tasks result:', result.length);
+	return result;
 });
 
 // Function to check if a task is overdue
@@ -333,9 +369,11 @@ const getStatusColor = (status) => {
 };
 
 onMounted(() => {
+	// Update total count when data changes
 	watch(
 		totalCount,
 		(newCount) => {
+			console.log('Total task count updated:', newCount);
 			totalTaskCount.value = newCount;
 		},
 		{ immediate: true },

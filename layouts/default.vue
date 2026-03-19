@@ -26,9 +26,19 @@
 			<CommandCenterAITray :is-open="aiTrayOpen" @close="aiTrayOpen = false" />
 		</ClientOnly>
 
-		<!-- Floating time tracker indicator -->
+		<!-- Floating Dock: Tasks + Time Tracker (desktop) -->
 		<ClientOnly>
-			<TimeTrackerFloatingIndicator />
+			<LayoutFloatingDock />
+		</ClientOnly>
+
+		<!-- Floating time tracker indicator (mobile fallback) -->
+		<ClientOnly>
+			<TimeTrackerFloatingIndicator class="md:hidden" />
+		</ClientOnly>
+
+		<!-- Time Tracker Modal (global, triggered from anywhere) -->
+		<ClientOnly>
+			<TimeTrackerModal v-model="timeTrackerModalVisible" />
 		</ClientOnly>
 	</div>
 </template>
@@ -50,9 +60,12 @@ const props = defineProps({
 	},
 });
 
+import { timeTrackerModalOpen } from '~~/composables/useTimeTrackerModal';
+
 const { user } = useDirectusAuth();
 const aiTrayOpen = ref(false);
 const navEditorOpen = ref(false);
+const timeTrackerModalVisible = timeTrackerModalOpen;
 
 const headerLinks = computed(() => props.links.filter((link) => link.type.includes('header')));
 const footerLinks = computed(() => props.links.filter((link) => link.type.includes('footer')));

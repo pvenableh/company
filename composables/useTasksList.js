@@ -29,9 +29,11 @@ export function useTasksList({
 
 	const updatingTasks = ref(new Set());
 
-	const effectiveOrgId = computed(() => organizationId || selectedOrg.value?.id);
+	const effectiveOrgId = computed(() => {
+		return organizationId || selectedOrg.value;
+	});
 
-	const effectiveTeamId = computed(() => (teamId !== undefined ? teamId : selectedTeam.value?.id));
+	const effectiveTeamId = computed(() => (teamId !== undefined ? teamId : selectedTeam.value));
 
 	const generateFilter = () => {
 		const filter = { _and: [] };
@@ -66,6 +68,7 @@ export function useTasksList({
 			return {};
 		}
 
+		console.log('Generated task filter:', JSON.stringify(filter));
 		return filter;
 	};
 
@@ -103,8 +106,12 @@ export function useTasksList({
 			return [];
 		}
 
+		console.log('Processing', ticketsData.length, 'tickets');
+
 		ticketsData.forEach((ticket) => {
 			if (ticket && ticket.tasks && Array.isArray(ticket.tasks) && ticket.tasks.length > 0) {
+				console.log(`Ticket ${ticket.id} has ${ticket.tasks.length} tasks`);
+
 				const tasksWithContext = ticket.tasks
 					.filter((task) => task)
 					.map((task) => ({
@@ -121,9 +128,12 @@ export function useTasksList({
 					}));
 
 				processedTasks.push(...tasksWithContext);
+			} else {
+				console.log(`Ticket ${ticket?.id || 'unknown'} has no tasks`);
 			}
 		});
 
+		console.log('Total processed tasks:', processedTasks.length);
 		totalCount.value = processedTasks.length;
 
 		processedTasks.sort((a, b) => {
@@ -175,6 +185,7 @@ export function useTasksList({
 		}
 
 		const filter = generateFilter();
+		console.log('Setting up task subscription with filter:', filter);
 
 		const {
 			data: ticketsData,
@@ -210,11 +221,16 @@ export function useTasksList({
 		);
 	};
 
-	watch([effectiveOrgId, effectiveTeamId], () => {
+	watch([effectiveOrgId, effectiveTeamId], ([newOrgId, newTeamId], [oldOrgId, oldTeamId]) => {
+		console.log('Effective filter values changed:', { organization: newOrgId, team: newTeamId });
+
 		if (subscriptionInitialized && updateFilterFunc) {
 			isLoading.value = true;
 			const newFilter = generateFilter();
+			console.log('Updating subscription filter:', newFilter);
 			updateFilterFunc(newFilter);
+		} else {
+			console.warn('updateFilter function not available yet. Will update on setup.');
 		}
 	});
 
@@ -226,9 +242,11 @@ export function useTasksList({
 		}
 
 		updatingTasks.value.add(taskId);
+		console.log('Toggling task status:', taskId);
 
 		try {
 			const newStatus = task.status === 'completed' ? 'active' : 'completed';
+			console.log('New status will be:', newStatus);
 
 			await taskItemsApi.update(taskId, {
 				status: newStatus,
@@ -292,18 +310,22 @@ export function useTasksList({
 
 	const navigateToTicket = (ticketId) => {
 		if (!ticketId) return;
+		console.log('Navigating to ticket:', ticketId);
 		router.push(`/tickets/${ticketId}`);
 	};
 
 	const refreshTasks = () => {
+		console.log('Refreshing tasks data');
 		isLoading.value = true;
 		if (refresh) {
 			refresh();
 		} else {
+			console.log('Refresh function not available, re-setting up subscription');
 			setupSubscription();
 		}
 		setTimeout(() => {
 			if (isLoading.value) {
+				console.log('Force ending loading state after timeout');
 				isLoading.value = false;
 			}
 		}, 5000);
@@ -311,6 +333,7 @@ export function useTasksList({
 
 	onMounted(() => {
 		if (import.meta.client) {
+			console.log('Component mounted, setting up subscription');
 			setupSubscription();
 			if (connect) {
 				connect();
@@ -340,12 +363,13 @@ export function useTasksList({
 		effectiveOrgId,
 		effectiveTeamId,
 		generateFilter,
-		refresh: refreshTasks,
+		refresh,
 		toggleTaskStatus,
 		navigateToTicket,
 		refreshTasks,
 		cleanup: () => {
 			if (disconnect) {
+				console.log('Cleaning up and disconnecting WebSocket');
 				disconnect();
 			}
 		},

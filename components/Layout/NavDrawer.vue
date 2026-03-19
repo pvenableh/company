@@ -68,6 +68,17 @@
 					</nuxt-link>
 				</div>
 
+				<!-- Time Tracker — colored pill above tools (opens modal) -->
+				<div v-if="timeTrackerLink" class="time-tracker-wrap">
+					<button
+						class="time-tracker-pill"
+						@click="openTimeTrackerModal"
+					>
+						<UIcon :name="timeTrackerLink.icon" class="time-tracker-pill-icon" />
+						<span class="time-tracker-pill-label">{{ timeTrackerLink.name }}</span>
+					</button>
+				</div>
+
 				<!-- Tools — centered, uppercase -->
 				<div v-if="toolLinks.length" class="section-spacer" />
 				<div v-if="toolLinks.length" class="tools-section">
@@ -139,6 +150,7 @@ const { logout } = useLogout();
 const { triggerHaptic } = useHaptic();
 const { visibleLinks } = useNavPreferences();
 import { sheetOpen, closeSheet as closeSheetState } from '~~/composables/useScreen';
+import { timeTrackerModalOpen } from '~~/composables/useTimeTrackerModal';
 
 // Responsive: detect desktop for side-sheet vs bottom-sheet
 const isDesktop = ref(false);
@@ -160,10 +172,20 @@ const links = computed(() => visibleLinks.value.filter((l) => l.type.includes('d
 const primaryLinks = computed(() => links.value.filter((l) => l.section === 'primary'));
 const secondaryLinks = computed(() => links.value.filter((l) => l.section === 'secondary'));
 const allAppLinks = computed(() => [...primaryLinks.value, ...secondaryLinks.value]);
-const toolLinks = computed(() => links.value.filter((l) => l.section === 'tools'));
+const timeTrackerLink = computed(() => links.value.find((l) => l.to === '/time-tracker'));
+const toolLinks = computed(() => links.value.filter((l) => l.section === 'tools' && l.to !== '/time-tracker'));
 const aiChatLink = computed(() => visibleLinks.value.find((l) => l.to === '/command-center/ai'));
 
 const emit = defineEmits(['edit-apps']);
+
+// Time tracker modal (shared state from composable)
+const showTimeTrackerModal = timeTrackerModalOpen;
+function openTimeTrackerModal() {
+	closeSheet();
+	nextTick(() => {
+		showTimeTrackerModal.value = true;
+	});
+}
 
 const sheetRef = ref(null);
 const dragOffset = ref(0);
@@ -424,6 +446,43 @@ function onTouchEnd() {
 	line-height: 1.2;
 }
 
+/* ── Time Tracker pill — colored, above tools ── */
+.time-tracker-wrap {
+	display: flex;
+	justify-content: center;
+	padding: 8px 10px 2px;
+}
+
+.time-tracker-pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 8px 16px;
+	border-radius: 9999px;
+	background: hsl(var(--primary));
+	color: hsl(var(--primary-foreground));
+	text-decoration: none;
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	transition: transform 0.15s ease, box-shadow 0.2s;
+	-webkit-tap-highlight-color: transparent;
+	box-shadow: 0 2px 8px hsl(var(--primary) / 0.3);
+}
+
+.time-tracker-pill:active {
+	transform: scale(0.95);
+}
+
+.time-tracker-pill-icon {
+	width: 14px;
+	height: 14px;
+}
+
+.time-tracker-pill-label {
+	line-height: 1;
+}
+
 /* ── Section spacer (replaces headers) ── */
 .section-spacer {
 	height: 8px;
@@ -528,15 +587,14 @@ function onTouchEnd() {
 	overflow: hidden;
 	text-overflow: ellipsis;
 	display: -webkit-box;
-	-webkit-line-clamp: 2;
+	-webkit-line-clamp: 1;
 	-webkit-box-orient: vertical;
-	white-space: normal;
-	word-break: break-word;
+	white-space: nowrap;
 }
 
 @media (min-width: 640px) {
 	.app-label {
-		font-size: 10px;
+		font-size: 9px;
 		line-height: 1.15;
 		max-width: 80px;
 	}

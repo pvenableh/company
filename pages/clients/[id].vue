@@ -37,6 +37,7 @@ async function handleUpdate(data: Partial<Client>) {
   try {
     await updateClient(clientId, data);
     client.value = await getClient(clientId);
+    await resolveIndustryName();
   } catch (e: any) {
     error.value = e?.message || 'Failed to update client';
   } finally {
@@ -75,6 +76,58 @@ const tabs = [
 
 const { isOrgAdminOrAbove } = useOrgRole();
 
+// Resolve industry name (handles both expanded object and raw ID)
+const industryItems = useDirectusItems('industries');
+const industryName = ref<string | null>(null);
+
+async function resolveIndustryName() {
+  if (!client.value?.industry) { industryName.value = null; return; }
+  if (typeof client.value.industry === 'object' && (client.value.industry as any)?.name) {
+    industryName.value = (client.value.industry as any).name;
+    return;
+  }
+  // It's a raw ID string — fetch the name
+  try {
+    const ind = await industryItems.get(client.value.industry as string, { fields: ['id', 'name'] });
+    industryName.value = (ind as any)?.name || null;
+  } catch { industryName.value = null; }
+}
+
+// Primary contact editing
+const showContactPicker = ref(false);
+const contactItems = useDirectusItems('clients');
+
+async function setPrimaryContact(contactId: string | null) {
+  saving.value = true;
+  try {
+    await updateClient(clientId, { primary_contact: contactId } as any);
+    client.value = await getClient(clientId);
+    showContactPicker.value = false;
+  } catch (e: any) {
+    error.value = e?.message || 'Failed to update primary contact';
+  } finally {
+    saving.value = false;
+  }
+}
+
+// Tag management from sidebar
+const newSidebarTag = ref('');
+async function addSidebarTag() {
+  const tag = newSidebarTag.value.trim().toLowerCase();
+  if (!tag || !client.value) return;
+  const currentTags = [...(client.value.tags || [])];
+  if (currentTags.includes(tag)) { newSidebarTag.value = ''; return; }
+  currentTags.push(tag);
+  await handleUpdate({ tags: currentTags } as any);
+  newSidebarTag.value = '';
+}
+
+async function removeSidebarTag(tag: string) {
+  if (!client.value) return;
+  const currentTags = (client.value.tags || []).filter((t: string) => t !== tag);
+  await handleUpdate({ tags: currentTags } as any);
+}
+
 const statusColors: Record<string, string> = {
   active: 'bg-emerald-500/15 text-emerald-400',
   prospect: 'bg-blue-500/15 text-blue-400',
@@ -90,7 +143,10 @@ const statusColors: Record<string, string> = {
   archived: 'bg-neutral-500/15 text-neutral-400',
 };
 
-onMounted(loadClient);
+onMounted(async () => {
+  await loadClient();
+  await resolveIndustryName();
+});
 </script>
 
 <template>
@@ -146,7 +202,7 @@ onMounted(loadClient);
           </div>
           <div>
             <h1 class="text-xl font-semibold">{{ client.name }}</h1>
-            <p v-if="client.industry" class="text-sm text-muted-foreground">{{ typeof client.industry === 'object' ? client.industry.name : client.industry }}</p>
+            <p v-if="client.industry" class="text-sm text-muted-foreground">{{ industryName || 'Loading...' }}</p>
           </div>
           <span
             v-if="client.status"
@@ -328,7 +384,7 @@ onMounted(loadClient);
               </div>
               <div class="flex justify-between">
                 <span class="text-muted-foreground">Industry</span>
-                <span>{{ (typeof client.industry === 'object' ? client.industry?.name : client.industry) || '\u2014' }}</span>
+                <span>{{ industryName || '\u2014' }}</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-muted-foreground">Created</span>
@@ -347,23 +403,47 @@ onMounted(loadClient);
               <Icon name="lucide:tags" class="w-4 h-4 text-muted-foreground" />
               Tags
             </h3>
-            <div v-if="client.tags?.length" class="flex flex-wrap gap-1.5">
+            <div class="flex flex-wrap gap-1.5 mb-2">
               <span
-                v-for="tag in client.tags"
+                v-for="tag in (client.tags || [])"
                 :key="tag"
-                class="inline-flex items-center rounded-full bg-muted/60 px-2.5 py-0.5 text-xs text-muted-foreground"
+                class="group inline-flex items-center rounded-full bg-muted/60 px-2.5 py-0.5 text-xs text-muted-foreground"
               >
                 {{ tag }}
+                <button
+                  class="ml-1 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground/60 hover:text-destructive"
+                  @click="removeSidebarTag(tag)"
+                >
+                  <Icon name="lucide:x" class="w-3 h-3" />
+                </button>
               </span>
             </div>
-            <p v-else class="text-sm text-muted-foreground">No tags.</p>
+            <form class="flex gap-1.5" @submit.prevent="addSidebarTag">
+              <input
+                v-model="newSidebarTag"
+                type="text"
+                placeholder="Add tag..."
+                class="flex-1 h-7 px-2.5 text-xs rounded-lg border border-border bg-transparent placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/30"
+              />
+              <Button type="submit" variant="ghost" size="sm" class="h-7 w-7 p-0" :disabled="!newSidebarTag.trim()">
+                <Icon name="lucide:plus" class="w-3.5 h-3.5" />
+              </Button>
+            </form>
           </div>
 
           <!-- Primary Contact -->
           <div class="ios-card p-5">
-            <h3 class="font-medium text-sm mb-3 flex items-center gap-2">
-              <Icon name="lucide:user" class="w-4 h-4 text-muted-foreground" />
-              Primary Contact
+            <h3 class="font-medium text-sm mb-3 flex items-center justify-between">
+              <span class="flex items-center gap-2">
+                <Icon name="lucide:user" class="w-4 h-4 text-muted-foreground" />
+                Primary Contact
+              </span>
+              <button
+                class="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                @click="showContactPicker = !showContactPicker"
+              >
+                {{ client.primary_contact ? 'Change' : 'Set' }}
+              </button>
             </h3>
             <template v-if="client.primary_contact && typeof client.primary_contact !== 'string'">
               <div class="space-y-2 text-sm">
@@ -379,6 +459,33 @@ onMounted(loadClient);
               </div>
             </template>
             <p v-else class="text-sm text-muted-foreground">No primary contact set.</p>
+
+            <!-- Contact Picker Dropdown -->
+            <div v-if="showContactPicker" class="mt-3 border border-border rounded-lg overflow-hidden">
+              <div v-if="client.contacts?.length" class="max-h-[200px] overflow-y-auto">
+                <button
+                  v-if="client.primary_contact"
+                  class="flex items-center gap-2 w-full px-3 py-2 text-xs hover:bg-muted/50 transition-colors text-muted-foreground"
+                  @click="setPrimaryContact(null)"
+                >
+                  <Icon name="lucide:x" class="w-3.5 h-3.5" />
+                  Remove primary contact
+                </button>
+                <button
+                  v-for="contact in client.contacts"
+                  :key="(contact as any).id"
+                  class="flex items-center gap-2 w-full px-3 py-2 text-xs hover:bg-muted/50 transition-colors"
+                  :class="{ 'text-primary font-medium': (client.primary_contact as any)?.id === (contact as any).id }"
+                  @click="setPrimaryContact((contact as any).id)"
+                >
+                  <div class="w-5 h-5 rounded-full bg-muted/60 flex items-center justify-center text-[9px] font-medium shrink-0">
+                    {{ ((contact as any).first_name || '?').charAt(0) }}{{ ((contact as any).last_name || '').charAt(0) }}
+                  </div>
+                  {{ (contact as any).first_name }} {{ (contact as any).last_name }}
+                </button>
+              </div>
+              <p v-else class="px-3 py-2 text-xs text-muted-foreground">No contacts to choose from. Add contacts first.</p>
+            </div>
           </div>
 
           <!-- User Access Overrides -->
