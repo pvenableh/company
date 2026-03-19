@@ -36,13 +36,81 @@ const brandSetupRoute = computed(() => {
 	return '/organization';
 });
 
-// ── Response Styles ──
+// ── Response Styles (Personas) ──
 const responseStyles = [
-	{ value: 'default', label: 'Default', icon: 'i-heroicons-sparkles', description: 'Balanced and helpful' },
-	{ value: 'director', label: 'Director', icon: 'i-heroicons-clipboard-document-check', description: 'Clear direction, actionable steps' },
-	{ value: 'buddy', label: 'Buddy', icon: 'i-heroicons-face-smile', description: 'Casual, jokes, friendly' },
-	{ value: 'motivator', label: 'Motivator', icon: 'i-heroicons-fire', description: 'Inspiring, uplifting energy' },
+	{
+		value: 'default',
+		label: 'Earnest',
+		icon: 'i-heroicons-sparkles',
+		description: 'Balanced and helpful',
+		greeting: 'Hey! What can I help you with today?',
+		iconColor: 'text-primary',
+		bgClass: 'bg-primary/10 border-primary/20',
+		activeClass: 'bg-primary/15 ring-2 ring-primary/40 shadow-md shadow-primary/10',
+		iconBg: 'bg-primary/20',
+		prompts: [
+			'Summarize my overdue tasks',
+			'Help draft an invoice',
+			'Project status overview',
+			'Suggest priorities for today',
+		],
+	},
+	{
+		value: 'director',
+		label: 'The Director',
+		icon: 'i-heroicons-clipboard-document-check',
+		description: 'No fluff. Just what needs to happen.',
+		greeting: 'Let\'s cut to it. What\'s the priority?',
+		iconColor: 'text-indigo-500',
+		bgClass: 'bg-indigo-500/10 border-indigo-500/20',
+		activeClass: 'bg-indigo-500/15 ring-2 ring-indigo-500/40 shadow-md shadow-indigo-500/10',
+		iconBg: 'bg-indigo-500/20',
+		prompts: [
+			'What should I tackle first today?',
+			'Give me a game plan for this week',
+			'Help me prioritize these tasks',
+			'Break down this project into steps',
+		],
+	},
+	{
+		value: 'buddy',
+		label: 'The Buddy',
+		icon: 'i-heroicons-face-smile',
+		description: 'Your work bestie who keeps it real.',
+		greeting: 'Heyyy! How\'s it going? What are we working on?',
+		iconColor: 'text-amber-500',
+		bgClass: 'bg-amber-500/10 border-amber-500/20',
+		activeClass: 'bg-amber-500/15 ring-2 ring-amber-500/40 shadow-md shadow-amber-500/10',
+		iconBg: 'bg-amber-500/20',
+		prompts: [
+			'What\'s everyone working on?',
+			'Help me word this email nicely',
+			'I\'m overthinking this, help me out',
+			'Can you check my work on this?',
+		],
+	},
+	{
+		value: 'motivator',
+		label: 'The Motivator',
+		icon: 'i-heroicons-fire',
+		description: 'Believes in you more than you do.',
+		greeting: 'You showed up today — that already matters. Let\'s go!',
+		iconColor: 'text-rose-500',
+		bgClass: 'bg-rose-500/10 border-rose-500/20',
+		activeClass: 'bg-rose-500/15 ring-2 ring-rose-500/40 shadow-md shadow-rose-500/10',
+		iconBg: 'bg-rose-500/20',
+		prompts: [
+			'I\'m stuck and unmotivated, help me',
+			'Remind me what I\'ve accomplished',
+			'Help me get unstuck on a project',
+			'I need some energy today',
+		],
+	},
 ];
+
+const activePersona = computed(() =>
+	responseStyles.find((s) => s.value === responseStyle.value) || responseStyles[0],
+);
 
 // ── State ──
 const sessions = ref<any[]>([]);
@@ -384,16 +452,16 @@ onMounted(() => {
 							class="w-4 h-4"
 						/>
 					</button>
-					<UIcon name="i-heroicons-sparkles" class="w-5 h-5 text-primary" />
-					<h3 class="text-sm font-semibold">AI Assistant</h3>
+					<UIcon :name="activePersona.icon" class="w-5 h-5 text-primary" />
+					<h3 class="text-sm font-semibold">{{ activePersona.label }}</h3>
 				</div>
-				<!-- Response Style Picker -->
-				<div class="flex items-center gap-0.5 bg-muted/40 rounded-lg p-0.5">
+				<!-- Compact persona switcher (visible during conversation) -->
+				<div v-if="messages.length > 0" class="flex items-center gap-0.5 bg-muted/40 rounded-lg p-0.5">
 					<button
 						v-for="style in responseStyles"
 						:key="style.value"
 						@click="responseStyle = style.value"
-						:title="style.description"
+						:title="`${style.label} — ${style.description}`"
 						class="flex items-center gap-1 px-2 py-1 rounded-md transition-all text-[10px] font-medium"
 						:class="responseStyle === style.value
 							? 'bg-background text-primary shadow-sm'
@@ -432,34 +500,68 @@ onMounted(() => {
 					<UIcon name="i-heroicons-chevron-right" class="w-4 h-4 text-muted-foreground flex-shrink-0 mt-1" />
 				</NuxtLink>
 
-				<!-- Empty state -->
+				<!-- Empty state: Persona Selection Experience -->
 				<div
 					v-if="messages.length === 0 && !isLoadingMessages"
-					class="flex flex-col items-center justify-center h-full text-center"
+					class="flex flex-col items-center justify-center h-full px-4"
 				>
-					<div class="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
-						<UIcon name="i-heroicons-sparkles" class="w-8 h-8 text-primary" />
+					<!-- Greeting -->
+					<div class="text-center mb-6">
+						<h3 class="text-lg font-bold text-foreground mb-1">Who do you want to talk to?</h3>
+						<p class="text-sm text-muted-foreground">Pick a vibe. You can switch anytime.</p>
 					</div>
-					<h3 class="text-lg font-semibold text-foreground mb-1">AI Assistant</h3>
-					<p class="text-sm text-muted-foreground max-w-sm">
-						Ask me anything about your projects, tasks, invoices, or get help with your work.
-					</p>
-					<div class="flex flex-wrap gap-2 mt-4 max-w-md justify-center">
+
+					<!-- Persona Cards -->
+					<div class="grid grid-cols-2 gap-3 w-full max-w-lg mb-6">
 						<button
-							v-for="prompt in [
-								'Summarize my overdue tasks',
-								'Help draft an invoice',
-								'Project status overview',
-								'Suggest priorities for today',
-								'I need some motivation today',
-								'Help me get unstuck on a project',
-							]"
-							:key="prompt"
-							@click="newMessage = prompt"
-							class="px-3 py-1.5 bg-muted hover:bg-muted/80 rounded-full text-xs text-muted-foreground hover:text-foreground transition-colors"
+							v-for="style in responseStyles"
+							:key="style.value"
+							@click="responseStyle = style.value"
+							class="relative p-4 rounded-xl border text-left transition-all duration-200 hover:scale-[1.02]"
+							:class="responseStyle === style.value ? style.activeClass : style.bgClass + ' hover:border-foreground/20'"
 						>
-							{{ prompt }}
+							<div class="flex items-center gap-2.5 mb-2">
+								<div
+									class="w-9 h-9 rounded-xl flex items-center justify-center"
+									:class="style.iconBg"
+								>
+									<UIcon :name="style.icon" class="w-5 h-5" :class="style.iconColor" />
+								</div>
+								<div>
+									<p class="text-sm font-bold text-foreground leading-tight">{{ style.label }}</p>
+								</div>
+							</div>
+							<p class="text-xs text-muted-foreground leading-relaxed">{{ style.description }}</p>
+							<!-- Active indicator -->
+							<div
+								v-if="responseStyle === style.value"
+								class="absolute top-2.5 right-2.5 w-2 h-2 rounded-full bg-primary animate-pulse"
+							/>
 						</button>
+					</div>
+
+					<!-- Active persona greeting + prompts -->
+					<div class="text-center max-w-md">
+						<div class="flex items-center justify-center gap-2 mb-3">
+							<div
+								class="w-8 h-8 rounded-lg flex items-center justify-center"
+								:class="activePersona.iconBg"
+							>
+								<UIcon :name="activePersona.icon" class="w-4 h-4" :class="activePersona.iconColor" />
+							</div>
+							<p class="text-sm font-medium text-foreground italic">"{{ activePersona.greeting }}"</p>
+						</div>
+						<div class="flex flex-wrap gap-2 justify-center">
+							<button
+								v-for="prompt in activePersona.prompts"
+								:key="prompt"
+								@click="newMessage = prompt"
+								class="px-3 py-1.5 rounded-full text-xs transition-all hover:scale-105"
+								:class="activePersona.bgClass + ' text-foreground hover:shadow-sm'"
+							>
+								{{ prompt }}
+							</button>
+						</div>
 					</div>
 				</div>
 
