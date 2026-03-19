@@ -143,7 +143,7 @@ watch(isTimerRunning, (running) => {
 
 .floating-dock {
 	position: fixed;
-	bottom: 1.5rem;
+	bottom: 5rem;
 	right: 1.5rem;
 	z-index: 40;
 	flex-direction: column;

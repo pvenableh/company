@@ -2576,19 +2576,19 @@ export interface Task {
 	description?: string | null;
 	ticket_id?: Ticket | string | null;
 	title?: string | null;
-	assigned_to?: TasksDirectusUser[] | string[];
 	priority?: 'low' | 'medium' | 'high' | 'urgent' | null;
 	schedule?: 'today' | 'this_week' | 'later' | 'unscheduled' | null;
 	due_date?: string | null;
 	date_completed?: string | null;
-	project_id?: string | null;
-	project_event_id?: string | null;
-	channel_id?: string | null;
-	team_id?: string | null;
-	organization_id?: string | null;
-	client_id?: string | null;
-	category?: 'quick' | 'ticket' | 'project' | 'event' | 'channel' | 'team' | string | null;
+	project_id?: Project | string | null;
+	project_event_id?: ProjectEvent | string | null;
+	channel_id?: Channel | string | null;
+	team_id?: Team | string | null;
+	organization_id?: Organization | string | null;
+	category?: 'quick' | 'ticket' | 'project' | 'event' | 'channel' | 'team' | null;
 	ai_suggested?: boolean | null;
+	client_id?: Client | string | null;
+	assigned_to?: TasksDirectusUser[] | string[];
 }
 
 export interface TasksDirectusUser {

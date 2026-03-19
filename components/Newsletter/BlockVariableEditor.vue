@@ -1,5 +1,30 @@
 <template>
   <div class="space-y-3 p-3">
+    <!-- Quick color presets (shown when block has 2+ color variables) -->
+    <div v-if="colorFields.length >= 2" class="space-y-1.5">
+      <label class="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Quick Colors</label>
+      <div class="flex flex-wrap gap-1.5">
+        <button
+          v-for="preset in colorPresets"
+          :key="preset.name"
+          type="button"
+          class="group flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[11px] font-medium transition-all hover:shadow-sm hover:border-foreground/20"
+          :title="`Apply ${preset.name} palette`"
+          @click="applyColorPreset(preset)"
+        >
+          <span class="flex gap-0.5">
+            <span
+              v-for="(c, ci) in preset.preview"
+              :key="ci"
+              class="w-3 h-3 rounded-full border border-black/10"
+              :style="{ backgroundColor: c }"
+            />
+          </span>
+          <span class="text-muted-foreground group-hover:text-foreground">{{ preset.name }}</span>
+        </button>
+      </div>
+    </div>
+
     <div v-for="field in schema" :key="field.key" class="space-y-1">
       <label class="text-xs font-medium text-foreground">
         {{ field.label }}
@@ -134,6 +159,83 @@ const emit = defineEmits<{
 }>();
 
 const { currentOrg } = useOrganization();
+
+// Color preset system
+interface ColorPreset {
+  name: string;
+  preview: string[];
+  mapping: Record<string, string>; // pattern → color
+}
+
+const colorFields = computed(() =>
+  (props.schema || []).filter((f) => f.type === 'color'),
+);
+
+const colorPresets: ColorPreset[] = [
+  {
+    name: 'Classic',
+    preview: ['#1a1a2e', '#e94560', '#f5f5f5'],
+    mapping: { text: '#1a1a2e', background: '#f5f5f5', bg: '#f5f5f5', accent: '#e94560', button: '#e94560', link: '#e94560', heading: '#1a1a2e', border: '#dddddd' },
+  },
+  {
+    name: 'Modern',
+    preview: ['#2d3436', '#6c5ce7', '#f8f9fa'],
+    mapping: { text: '#2d3436', background: '#f8f9fa', bg: '#f8f9fa', accent: '#6c5ce7', button: '#6c5ce7', link: '#6c5ce7', heading: '#2d3436', border: '#e0e0e0' },
+  },
+  {
+    name: 'Casual',
+    preview: ['#2d3436', '#fd79a8', '#ffeaa7'],
+    mapping: { text: '#2d3436', background: '#ffffff', bg: '#ffeaa7', accent: '#fd79a8', button: '#fd79a8', link: '#e84393', heading: '#2d3436', border: '#fdcb6e' },
+  },
+  {
+    name: 'Clean',
+    preview: ['#333333', '#0984e3', '#ffffff'],
+    mapping: { text: '#333333', background: '#ffffff', bg: '#ffffff', accent: '#0984e3', button: '#0984e3', link: '#0984e3', heading: '#333333', border: '#e8e8e8' },
+  },
+  {
+    name: 'Bright',
+    preview: ['#2d3436', '#e17055', '#00b894'],
+    mapping: { text: '#2d3436', background: '#ffffff', bg: '#ffffff', accent: '#e17055', button: '#00b894', link: '#e17055', heading: '#2d3436', border: '#dfe6e9' },
+  },
+  {
+    name: 'Dark',
+    preview: ['#f5f5f5', '#a29bfe', '#2d3436'],
+    mapping: { text: '#f5f5f5', background: '#2d3436', bg: '#1e272e', accent: '#a29bfe', button: '#a29bfe', link: '#74b9ff', heading: '#ffffff', border: '#636e72' },
+  },
+  {
+    name: 'Warm',
+    preview: ['#2d3436', '#e17055', '#fab1a0'],
+    mapping: { text: '#2d3436', background: '#ffffff', bg: '#ffeaa7', accent: '#e17055', button: '#e17055', link: '#d63031', heading: '#2d3436', border: '#fab1a0' },
+  },
+  {
+    name: 'Corporate',
+    preview: ['#2c3e50', '#2980b9', '#ecf0f1'],
+    mapping: { text: '#2c3e50', background: '#ecf0f1', bg: '#ffffff', accent: '#2980b9', button: '#27ae60', link: '#2980b9', heading: '#2c3e50', border: '#bdc3c7' },
+  },
+];
+
+function applyColorPreset(preset: ColorPreset) {
+  for (const field of colorFields.value) {
+    const key = field.key.toLowerCase();
+    // Match field key against preset mapping patterns
+    let matched = false;
+    for (const [pattern, color] of Object.entries(preset.mapping)) {
+      if (key.includes(pattern)) {
+        emit('update', field.key, color);
+        matched = true;
+        break;
+      }
+    }
+    // Fallback: if no pattern matched, use text color for text-like, accent for others
+    if (!matched) {
+      if (key.includes('color') || key.includes('font')) {
+        emit('update', field.key, preset.mapping.text);
+      } else {
+        emit('update', field.key, preset.mapping.accent);
+      }
+    }
+  }
+}
 
 // Image browser state
 const showImageBrowser = ref(false);
