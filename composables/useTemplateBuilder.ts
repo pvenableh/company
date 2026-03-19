@@ -425,17 +425,26 @@ ${sections.join('\n')}
       // Map AI variables to block schema keys, validating types
       const colorRegex = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
       const schema = parseVariablesSchema(block.variables_schema, block.mjml_source);
+
+      // Helper to validate and assign a value based on field type
+      const assignValidated = (targetKey: string, schemaDef: { type: string; default?: string }, val: any) => {
+        if (typeof val !== 'string') { variables[targetKey] = val; return; }
+        if (schemaDef.type === 'color') {
+          // Color field must get a valid hex — reject text content
+          variables[targetKey] = colorRegex.test(val) ? val : (schemaDef.default || '#333333');
+        } else if (schemaDef.type === 'text' || schemaDef.type === 'richtext') {
+          // Text field must NOT get a bare hex color — keep the default instead
+          variables[targetKey] = colorRegex.test(val) ? (schemaDef.default || '') : val;
+        } else {
+          variables[targetKey] = val;
+        }
+      };
+
       for (const [key, value] of Object.entries(section.variables)) {
         // Direct key match
         const schemaDef = schema.find((s) => s.key === key);
         if (schemaDef) {
-          // Validate color values — AI sometimes puts text content in color fields
-          if (schemaDef.type === 'color' && typeof value === 'string'
-            && !colorRegex.test(value) && !['transparent', 'inherit', 'currentColor'].includes(value)) {
-            variables[key] = schemaDef.default || '#333333';
-          } else {
-            variables[key] = value;
-          }
+          assignValidated(key, schemaDef, value);
         } else {
           // Try fuzzy matching (AI might use slightly different key names)
           const lowerKey = key.toLowerCase();
@@ -445,13 +454,7 @@ ${sections.join('\n')}
             || lowerKey.includes(s.key.toLowerCase()),
           );
           if (match) {
-            // Apply same color validation as direct key match
-            if (match.type === 'color' && typeof value === 'string'
-              && !colorRegex.test(value) && !['transparent', 'inherit', 'currentColor'].includes(value)) {
-              variables[match.key] = match.default || '#333333';
-            } else {
-              variables[match.key] = value;
-            }
+            assignValidated(match.key, match, value);
           }
         }
       }

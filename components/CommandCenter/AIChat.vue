@@ -388,18 +388,19 @@ onMounted(() => {
 					<h3 class="text-sm font-semibold">AI Assistant</h3>
 				</div>
 				<!-- Response Style Picker -->
-				<div class="flex items-center gap-1">
+				<div class="flex items-center gap-0.5 bg-muted/40 rounded-lg p-0.5">
 					<button
 						v-for="style in responseStyles"
 						:key="style.value"
 						@click="responseStyle = style.value"
 						:title="style.description"
-						class="p-1.5 rounded-md transition-colors text-xs"
+						class="flex items-center gap-1 px-2 py-1 rounded-md transition-all text-[10px] font-medium"
 						:class="responseStyle === style.value
-							? 'bg-primary/10 text-primary'
-							: 'text-muted-foreground hover:text-foreground hover:bg-muted'"
+							? 'bg-background text-primary shadow-sm'
+							: 'text-muted-foreground hover:text-foreground'"
 					>
-						<UIcon :name="style.icon" class="w-3.5 h-3.5" />
+						<UIcon :name="style.icon" class="w-3 h-3" />
+						<span class="hidden sm:inline">{{ style.label }}</span>
 					</button>
 				</div>
 

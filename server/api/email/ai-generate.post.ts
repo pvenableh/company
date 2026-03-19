@@ -18,6 +18,11 @@ interface GenerateRequest {
   brandColor?: string;
   colorScheme?: string;
   colorCount?: number;
+  customColors?: {
+    text: string;
+    accent: string;
+    background: string;
+  };
 }
 
 export interface AIGeneratedSection {
@@ -67,7 +72,7 @@ export default defineEventHandler(async (event) => {
         ? JSON.parse(b.variables_schema)
         : b.variables_schema;
       if (Array.isArray(schema)) {
-        vars = schema.map((v: any) => `${v.key} (${v.type})`);
+        vars = schema.map((v: any) => `${v.key} [TYPE=${v.type.toUpperCase()}]`);
       }
     } catch { /* ignore */ }
     return `- [${b.category}] "${b.name}"${b.description ? ` — ${b.description}` : ''}${vars.length ? `\n  Variables: ${vars.join(', ')}` : ''}`;
@@ -83,9 +88,13 @@ RULES:
 - Return ONLY valid JSON, no markdown fences, no extra text
 - Use only block names from the list above (exact match)
 - Fill in ALL variables for each block with compelling, relevant content
-- CRITICAL: Pay close attention to the variable TYPE shown in parentheses. Variables marked "(color)" MUST receive a valid hex color value like "#333333" or "#6366f1" — NEVER put text content into a color variable. Variables marked "(text)" or "(richtext)" receive text content. Variables marked "(image)" receive image URLs.
-- For image variables, set to empty string "" and provide an imageSuggestion instead
-- For color variables, ONLY use valid hex color codes (e.g. "#ffffff", "#333333"). Use the brand color and color scheme guidelines if provided, otherwise use professional defaults. NEVER put text content in a color variable.
+- CRITICAL: Each variable has a TYPE label in brackets like [TYPE=COLOR] or [TYPE=TEXT]. You MUST respect the type:
+  * [TYPE=COLOR] → ONLY a valid hex color code like "#333333" or "#6366f1". NEVER put text/sentences here.
+  * [TYPE=TEXT] or [TYPE=RICHTEXT] → ONLY text content (headings, paragraphs, etc.). NEVER put hex color codes here.
+  * [TYPE=IMAGE] → Set to empty string "" and provide an imageSuggestion instead.
+  * [TYPE=BOOLEAN] → "true" or "false" only.
+- Double-check every variable: if its type is COLOR, the value must start with "#" and be a valid hex. If its type is TEXT, the value must be readable words, not a color code.
+- For color variables, use the brand color and color scheme guidelines if provided, otherwise use professional defaults.
 - COLOR SCHEME GUIDELINES (apply to all color variables):
   * "classic": Deep navy, burgundy, gold accents. Text: #1a1a2e, Backgrounds: #f5f5f5/#ffffff, Accent: #e94560
   * "modern": Clean contrast with purple/teal pops. Text: #2d3436, Backgrounds: #f8f9fa/#ffffff, Accent: #6c5ce7
@@ -95,6 +104,7 @@ RULES:
   * "dark": Light text on dark backgrounds. Text: #f5f5f5, Backgrounds: #2d3436/#1e272e, Accent: #a29bfe
   * "warm": Earthy oranges, terracotta, cream. Text: #2d3436, Backgrounds: #ffeaa7/#ffffff, Accent: #e17055
   * "corporate": Professional blues, greens, light grays. Text: #2c3e50, Backgrounds: #ecf0f1/#ffffff, Accent: #2980b9
+  * "custom": User-specified custom colors — use EXACTLY the colors provided in the user message below. Do not deviate.
   If a brand color is provided, use it as the primary accent color, adapting the scheme's other colors to complement it.
 - COLOR COUNT: The user may specify how many distinct colors to use (2 or 3). If 2 colors, use only the primary text color and one accent color. If 3 colors, add a secondary/background accent. Default to 3 if not specified. Keep the palette cohesive and limited.
 - For URL variables, use "#" as placeholder
@@ -246,6 +256,14 @@ function buildUserMessage(body: GenerateRequest): string {
 
   if (body.brandColor) {
     parts.push(`Brand/accent color: ${body.brandColor} (use this as the primary accent, adapt other colors from the color scheme to complement it)`);
+  }
+
+  if (body.customColors) {
+    parts.push(`CUSTOM COLORS (use these EXACT hex values for all color variables):
+- Text color: ${body.customColors.text}
+- Accent/highlight color: ${body.customColors.accent}
+- Background color: ${body.customColors.background}
+Do NOT use any other colors. All [TYPE=COLOR] variables must use one of these three hex values.`);
   }
 
   return parts.join('\n\n');
