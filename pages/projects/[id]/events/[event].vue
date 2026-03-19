@@ -39,7 +39,7 @@ const handleStatusChanged = async (newStatus) => {
 						<span class="text-[10px] text-muted-foreground uppercase tracking-wider">{{ event.project.organization.name }}</span>
 					</div>
 					<h1 class="text-lg font-semibold text-foreground">{{ event.title }}</h1>
-					<p v-if="event.description" class="text-sm text-muted-foreground mt-1 max-w-xl">{{ event.description }}</p>
+					<p v-if="event.description" class="text-sm text-muted-foreground mt-1 max-w-xl prose prose-sm" v-html="event.description" />
 				</div>
 			</div>
 			<div class="flex items-center gap-3">
