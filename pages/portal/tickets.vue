@@ -250,9 +250,7 @@ watch(filter, () => loadTickets());
 							</span>
 						</div>
 
-						<p v-if="ticket.description" class="text-xs text-muted-foreground mt-1 line-clamp-2">
-							{{ ticket.description }}
-						</p>
+						<p v-if="ticket.description" class="text-xs text-muted-foreground mt-1 line-clamp-2" v-html="ticket.description" />
 
 						<div class="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
 							<span v-if="ticket.project?.title" class="flex items-center gap-1">

@@ -145,9 +145,7 @@ watch(() => selectedOrg.value, () => loadProjects());
 								</span>
 							</div>
 
-							<p v-if="project.description" class="text-xs text-muted-foreground line-clamp-2 mb-3">
-								{{ project.description }}
-							</p>
+							<p v-if="project.description" class="text-xs text-muted-foreground line-clamp-2 mb-3" v-html="project.description" />
 
 							<div class="flex items-center justify-between">
 								<!-- Assigned users -->
@@ -225,7 +223,7 @@ watch(() => selectedOrg.value, () => loadProjects());
 							<!-- Description -->
 							<div v-if="selectedProject.description">
 								<p class="text-xs text-muted-foreground mb-1">Description</p>
-								<p class="text-sm whitespace-pre-wrap">{{ selectedProject.description }}</p>
+								<div class="text-sm prose prose-sm" v-html="selectedProject.description" />
 							</div>
 
 							<!-- Assigned Team -->
