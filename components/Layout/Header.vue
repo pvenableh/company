@@ -1,8 +1,15 @@
 <script setup>
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { User } from 'lucide-vue-next'
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { User, ChevronDown } from 'lucide-vue-next'
 
 const { user } = useDirectusAuth();
+const { personas, selectedPersona, activePersona } = useAIPersona();
 const config = useRuntimeConfig();
 
 const props = defineProps({
@@ -66,6 +73,49 @@ onUnmounted(() => {
 		</nuxt-link>
 		<div class="account-controls">
 			<template v-if="user">
+				<!-- AI Persona Selector -->
+				<client-only>
+				<DropdownMenu>
+					<DropdownMenuTrigger as-child>
+						<button
+							class="flex items-center gap-1 px-2 py-1 rounded-full border border-gray-200 dark:border-gray-600 hover:border-primary/50 transition-colors text-[9px] uppercase tracking-wider font-medium text-gray-700 dark:text-gray-300 mr-2"
+						>
+							<div class="size-5 rounded-full flex items-center justify-center shrink-0" :class="activePersona.iconBg">
+								<UIcon :name="activePersona.icon" class="w-3 h-3" :class="activePersona.iconColor" />
+							</div>
+							<span class="hidden sm:inline truncate max-w-[80px]">{{ activePersona.label.replace('The ', '') }}</span>
+							<ChevronDown class="size-3 text-gray-400 shrink-0" />
+						</button>
+					</DropdownMenuTrigger>
+					<DropdownMenuContent align="end" class="w-56">
+						<DropdownMenuItem
+							v-for="p in personas"
+							:key="p.value"
+							class="flex items-center gap-3 cursor-pointer"
+							:class="{ 'bg-accent': selectedPersona === p.value }"
+							@click="selectedPersona = p.value"
+						>
+							<div class="size-7 rounded-full flex items-center justify-center shrink-0" :class="p.iconBg">
+								<UIcon :name="p.icon" class="w-3.5 h-3.5" :class="p.iconColor" />
+							</div>
+							<div class="flex-1 min-w-0">
+								<p class="text-xs font-medium">{{ p.label }}</p>
+								<p class="text-[10px] text-muted-foreground truncate">{{ p.description }}</p>
+							</div>
+							<UIcon v-if="selectedPersona === p.value" name="i-heroicons-check" class="w-4 h-4 text-primary shrink-0" />
+						</DropdownMenuItem>
+						<div class="border-t border-border mt-1 pt-1">
+							<DropdownMenuItem as-child>
+								<NuxtLink to="/command-center/ai" class="flex items-center gap-2 cursor-pointer text-primary">
+									<UIcon name="i-heroicons-chat-bubble-left-right" class="w-4 h-4" />
+									<span class="text-xs font-medium">Open AI Chat</span>
+								</NuxtLink>
+							</DropdownMenuItem>
+						</div>
+					</DropdownMenuContent>
+				</DropdownMenu>
+				</client-only>
+
 				<nuxt-link to="/account" class="flex items-center justify-self-center">
 					<UserAvatar class="size-8 mr-2">
 						<AvatarImage v-if="avatarUrl" :src="avatarUrl" :alt="user?.first_name" />

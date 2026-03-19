@@ -22,13 +22,20 @@ const router = useRouter();
 const promptInput = ref('');
 const promptFocused = ref(false);
 const aiTrayOpen = ref(false);
+const aiTrayPrompt = ref('');
 
 const handlePromptSubmit = () => {
 	const query = promptInput.value.trim();
 	if (!query) return;
-	// Open AI tray with the prompt pre-filled
+	// Open AI tray and send the prompt
+	aiTrayPrompt.value = query;
 	aiTrayOpen.value = true;
 	promptInput.value = '';
+};
+
+const handleTrayClose = () => {
+	aiTrayOpen.value = false;
+	aiTrayPrompt.value = '';
 };
 
 // ── Prioritized Actions ──
@@ -158,11 +165,11 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 						<p class="text-[15px] text-muted-foreground mt-0.5">Here's what needs your attention</p>
 					</div>
 					<button
-						@click="aiTrayOpen = true"
+						@click="aiTrayPrompt = ''; aiTrayOpen = true"
 						class="flex items-center gap-1.5 px-3.5 py-2 bg-primary text-primary-foreground rounded-full shadow-sm transition-all duration-200 text-[13px] font-medium ios-press"
 					>
 						<UIcon name="i-heroicons-sparkles" class="w-4 h-4" />
-						<span class="hidden sm:inline">Assistant</span>
+						<span class="hidden sm:inline">Earnest AI</span>
 					</button>
 				</div>
 
@@ -481,7 +488,7 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 						</div>
 						<button
 							v-if="suggestions.length > 10"
-							@click="aiTrayOpen = true"
+							@click="aiTrayPrompt = ''; aiTrayOpen = true"
 							class="text-xs text-primary hover:underline"
 						>
 							View all {{ suggestions.length }} &rarr;
@@ -520,7 +527,7 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 			</div>
 
 			<!-- AI Tray -->
-			<CommandCenterAITray :is-open="aiTrayOpen" @close="aiTrayOpen = false" />
+			<CommandCenterAITray :is-open="aiTrayOpen" :initial-prompt="aiTrayPrompt" @close="handleTrayClose" />
 		</div>
 	</div>
 </template>
