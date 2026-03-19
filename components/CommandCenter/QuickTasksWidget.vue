@@ -153,9 +153,8 @@
 				<span
 					class="flex-1 text-xs truncate"
 					:class="task.completed ? 'line-through text-muted-foreground' : 'text-foreground'"
-				>
-					{{ task.title }}
-				</span>
+					v-html="stripHtml(task.title)"
+				/>
 				<span v-if="!task.completed && task.schedule" class="text-[8px] text-muted-foreground uppercase tracking-wider flex-shrink-0 px-1.5 py-0.5 bg-muted/40 rounded">
 					{{ scheduleLabel(task.schedule) }}
 				</span>
@@ -210,9 +209,8 @@
 						<span
 							class="flex-1 text-xs truncate"
 							:class="task.completed ? 'line-through text-muted-foreground' : 'text-foreground'"
-						>
-							{{ task.title }}
-						</span>
+							v-html="stripHtml(task.title)"
+						/>
 						<button
 							class="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
 							@click="removeTask(task.id)"
@@ -245,9 +243,8 @@
 						<span
 							class="flex-1 text-xs truncate"
 							:class="task.completed ? 'line-through text-muted-foreground' : 'text-foreground'"
-						>
-							{{ task.title }}
-						</span>
+							v-html="stripHtml(task.title)"
+						/>
 						<button
 							class="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
 							@click="removeTask(task.id)"
@@ -277,7 +274,7 @@
 							</div>
 							<div v-else class="w-4 h-4 rounded-[5px] border-2 border-border hover:border-primary transition-colors" />
 						</button>
-						<span class="flex-1 text-xs truncate text-foreground">{{ task.title }}</span>
+						<span class="flex-1 text-xs truncate text-foreground" v-html="stripHtml(task.title)" />
 						<button
 							class="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
 							@click="removeTask(task.id)"
@@ -328,6 +325,11 @@
 
 <script setup>
 import confetti from 'canvas-confetti';
+
+function stripHtml(html) {
+	if (!html || typeof html !== 'string') return '';
+	return html.replace(/<[^>]*>/g, '').trim();
+}
 
 const {
 	tasks,

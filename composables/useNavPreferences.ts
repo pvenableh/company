@@ -59,12 +59,12 @@ const DEFAULT_LINKS: NavLink[] = [
 	},
 	{
 		name: 'Teams',
-		type: ['header', 'footer', 'toolbar', 'drawer'],
+		type: ['drawer'],
 		to: '/organization/teams',
 		icon: 'i-heroicons-user-group',
 		color: 'bg-blue-500',
 		description: 'Team management',
-		section: 'primary',
+		section: 'secondary',
 	},
 	{
 		name: 'Tickets',
