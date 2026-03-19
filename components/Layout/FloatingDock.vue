@@ -56,6 +56,16 @@
 					<!-- Tasks Panel -->
 					<div v-if="activePanel === 'tasks'" class="h-full overflow-y-auto hide-scrollbar px-4 py-3">
 						<TasksQuickTaskGenerator />
+
+						<!-- Link to full page -->
+						<NuxtLink
+							to="/tasks"
+							class="mt-4 flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors py-2"
+							@click="activePanel = null"
+						>
+							See all tasks
+							<Icon name="lucide:arrow-right" class="w-3 h-3" />
+						</NuxtLink>
 					</div>
 
 					<!-- Timer Panel -->

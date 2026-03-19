@@ -36,11 +36,20 @@ const brandSetupRoute = computed(() => {
 	return '/organization';
 });
 
+// ── Response Styles ──
+const responseStyles = [
+	{ value: 'default', label: 'Default', icon: 'i-heroicons-sparkles', description: 'Balanced and helpful' },
+	{ value: 'director', label: 'Director', icon: 'i-heroicons-clipboard-document-check', description: 'Clear direction, actionable steps' },
+	{ value: 'buddy', label: 'Buddy', icon: 'i-heroicons-face-smile', description: 'Casual, jokes, friendly' },
+	{ value: 'motivator', label: 'Motivator', icon: 'i-heroicons-fire', description: 'Inspiring, uplifting energy' },
+];
+
 // ── State ──
 const sessions = ref<any[]>([]);
 const activeSessionId = ref<string | null>(null);
 const messages = ref<any[]>([]);
 const newMessage = ref('');
+const responseStyle = ref('default');
 const isLoadingSessions = ref(false);
 const isLoadingMessages = ref(false);
 const isSending = ref(false);
@@ -135,6 +144,7 @@ const sendMessage = async () => {
 				message: content,
 				clientId: selectedClient.value && selectedClient.value !== 'org' ? selectedClient.value : undefined,
 				organizationId: (selectedOrg.value as any)?.id || undefined,
+				responseStyle: responseStyle.value !== 'default' ? responseStyle.value : undefined,
 			}),
 		});
 
@@ -377,6 +387,22 @@ onMounted(() => {
 					<UIcon name="i-heroicons-sparkles" class="w-5 h-5 text-primary" />
 					<h3 class="text-sm font-semibold">AI Assistant</h3>
 				</div>
+				<!-- Response Style Picker -->
+				<div class="flex items-center gap-1">
+					<button
+						v-for="style in responseStyles"
+						:key="style.value"
+						@click="responseStyle = style.value"
+						:title="style.description"
+						class="p-1.5 rounded-md transition-colors text-xs"
+						:class="responseStyle === style.value
+							? 'bg-primary/10 text-primary'
+							: 'text-muted-foreground hover:text-foreground hover:bg-muted'"
+					>
+						<UIcon :name="style.icon" class="w-3.5 h-3.5" />
+					</button>
+				</div>
+
 				<div v-if="isStreaming" class="flex items-center gap-1.5 text-xs text-muted-foreground">
 					<span class="flex gap-0.5">
 						<span class="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style="animation-delay: 0ms"></span>
@@ -424,6 +450,8 @@ onMounted(() => {
 								'Help draft an invoice',
 								'Project status overview',
 								'Suggest priorities for today',
+								'I need some motivation today',
+								'Help me get unstuck on a project',
 							]"
 							:key="prompt"
 							@click="newMessage = prompt"

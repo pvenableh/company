@@ -46,6 +46,8 @@
 								{ label: 'Due Today', value: 'today' },
 								{ label: 'Overdue', value: 'overdue' },
 							]"
+							value-attribute="value"
+							option-attribute="label"
 							size="xs"
 							class="w-40"
 							@update:modelValue="applyFilter($event)"
@@ -193,6 +195,7 @@ const {
 	effectiveOrgId,
 	effectiveTeamId,
 	cleanup,
+	updateParams,
 } = useTasksList({
 	organizationId: props.organizationId,
 	teamId: props.teamId,
@@ -214,17 +217,16 @@ defineExpose({
 	effectiveTeamId,
 });
 
-// Watch for changes in props and refresh tasks
+// Watch for changes in props and update composable params reactively
 watch(
 	() => ({
 		organizationId: props.organizationId,
 		teamId: props.teamId,
 		projectId: props.projectId,
 		userId: props.userId,
-		limit: props.limit,
 	}),
-	() => {
-		refreshTasks();
+	(newParams) => {
+		updateParams(newParams);
 	},
 	{ deep: true },
 );

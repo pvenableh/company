@@ -163,6 +163,32 @@
                 </div>
               </div>
 
+              <!-- Number of colors -->
+              <div>
+                <label class="text-sm font-medium text-foreground mb-2.5 block">How many colors?</label>
+                <div class="flex gap-2">
+                  <button
+                    v-for="n in [2, 3]"
+                    :key="n"
+                    class="flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 transition-all"
+                    :class="form.colorCount === n
+                      ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/20 shadow-sm'
+                      : 'border-transparent bg-muted/50 hover:bg-muted hover:border-muted-foreground/20'"
+                    @click="form.colorCount = n"
+                  >
+                    <div class="flex gap-0.5">
+                      <span
+                        v-for="i in n"
+                        :key="i"
+                        class="w-3.5 h-3.5 rounded-full"
+                        :style="{ backgroundColor: selectedSchemeColors[i - 1] || '#ccc' }"
+                      />
+                    </div>
+                    <span class="text-xs font-medium" :class="form.colorCount === n ? 'text-violet-700 dark:text-violet-300' : 'text-foreground'">{{ n }} colors</span>
+                  </button>
+                </div>
+              </div>
+
               <!-- Brand color (optional) -->
               <div>
                 <label class="text-sm font-medium text-foreground mb-1.5 block">
@@ -361,6 +387,12 @@ const form = reactive({
   tone: 'professional',
   brandColor: '#6366f1',
   colorScheme: 'modern',
+  colorCount: 3,
+});
+
+const selectedSchemeColors = computed(() => {
+  const scheme = colorSchemes.find(s => s.value === form.colorScheme);
+  return scheme?.colors || [];
 });
 
 const emailTypes = [
@@ -418,6 +450,7 @@ async function generate() {
         tone: form.tone,
         brandColor: form.brandColor,
         colorScheme: form.colorScheme,
+        colorCount: form.colorCount,
       },
     });
     result.value = data as any;

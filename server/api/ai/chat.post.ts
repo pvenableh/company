@@ -28,7 +28,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event);
-  const { sessionId, message, model, clientId, organizationId } = body;
+  const { sessionId, message, model, clientId, organizationId, responseStyle } = body;
 
   if (!message?.trim()) {
     throw createError({ statusCode: 400, message: 'Message is required' });
@@ -155,7 +155,17 @@ export default defineEventHandler(async (event) => {
       // Brand context is non-critical — continue without
     }
 
-    const systemPrompt = buildSystemPrompt(orgContext) + taskContext + brandContext;
+    // Build response style instruction
+    let styleContext = '';
+    if (responseStyle === 'director') {
+      styleContext = '\n\nRESPONSE STYLE: Director — Be clear, direct, and action-oriented. Give step-by-step instructions and clear priorities. Cut the fluff and focus on what needs to happen next. Use a confident, decisive tone.';
+    } else if (responseStyle === 'buddy') {
+      styleContext = '\n\nRESPONSE STYLE: Buddy — Be casual, warm, and friendly. Use humor and light jokes where appropriate. Talk like a supportive coworker grabbing coffee together. Keep things relaxed but still helpful.';
+    } else if (responseStyle === 'motivator') {
+      styleContext = '\n\nRESPONSE STYLE: Motivator — Be uplifting, inspiring, and energizing. Celebrate wins (even small ones), reframe challenges as opportunities, and help the user feel capable and driven. Use encouraging language.';
+    }
+
+    const systemPrompt = buildSystemPrompt(orgContext) + taskContext + brandContext + styleContext;
 
     // 6. Stream response via SSE
     const provider = getLLMProvider();

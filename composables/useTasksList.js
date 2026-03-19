@@ -29,11 +29,17 @@ export function useTasksList({
 
 	const updatingTasks = ref(new Set());
 
+	// Store params as refs so they can be updated reactively
+	const orgIdParam = ref(organizationId);
+	const teamIdParam = ref(teamId);
+	const projectIdParam = ref(projectId);
+	const userIdParam = ref(userId);
+
 	const effectiveOrgId = computed(() => {
-		return organizationId || selectedOrg.value;
+		return orgIdParam.value || selectedOrg.value;
 	});
 
-	const effectiveTeamId = computed(() => (teamId !== undefined ? teamId : selectedTeam.value));
+	const effectiveTeamId = computed(() => (teamIdParam.value !== undefined ? teamIdParam.value : selectedTeam.value));
 
 	const generateFilter = () => {
 		const filter = { _and: [] };
@@ -52,14 +58,14 @@ export function useTasksList({
 			}
 		}
 
-		if (projectId) {
-			filter._and.push({ project: { _eq: projectId } });
+		if (projectIdParam.value) {
+			filter._and.push({ project: { _eq: projectIdParam.value } });
 		}
 
-		if (userId) {
+		if (userIdParam.value) {
 			filter._and.push({
 				assigned_to: {
-					directus_users_id: { _eq: userId },
+					directus_users_id: { _eq: userIdParam.value },
 				},
 			});
 		}
@@ -221,8 +227,13 @@ export function useTasksList({
 		);
 	};
 
-	watch([effectiveOrgId, effectiveTeamId], ([newOrgId, newTeamId], [oldOrgId, oldTeamId]) => {
-		console.log('Effective filter values changed:', { organization: newOrgId, team: newTeamId });
+	watch([effectiveOrgId, effectiveTeamId, projectIdParam, userIdParam], () => {
+		console.log('Effective filter values changed:', {
+			organization: effectiveOrgId.value,
+			team: effectiveTeamId.value,
+			project: projectIdParam.value,
+			user: userIdParam.value,
+		});
 
 		if (subscriptionInitialized && updateFilterFunc) {
 			isLoading.value = true;
@@ -233,6 +244,14 @@ export function useTasksList({
 			console.warn('updateFilter function not available yet. Will update on setup.');
 		}
 	});
+
+	// Allow external callers to update filter params reactively
+	const updateParams = (newParams = {}) => {
+		if ('organizationId' in newParams) orgIdParam.value = newParams.organizationId;
+		if ('teamId' in newParams) teamIdParam.value = newParams.teamId;
+		if ('projectId' in newParams) projectIdParam.value = newParams.projectId;
+		if ('userId' in newParams) userIdParam.value = newParams.userId;
+	};
 
 	const toggleTaskStatus = async (taskId) => {
 		const task = tasks.value.find((t) => t.id === taskId);
@@ -367,6 +386,7 @@ export function useTasksList({
 		toggleTaskStatus,
 		navigateToTicket,
 		refreshTasks,
+		updateParams,
 		cleanup: () => {
 			if (disconnect) {
 				console.log('Cleaning up and disconnecting WebSocket');
