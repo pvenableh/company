@@ -41,8 +41,19 @@ export function compileMjml(
   variables: Record<string, any> = {}
 ): CompileResult {
   try {
-    // First, compile Handlebars runtime variables
-    const template = Handlebars.compile(mjmlSource, { noEscape: true });
+    // Strip any remaining design-time triple-brace variables {{{...}}} that weren't
+    // resolved by the template builder. These would otherwise be treated as unescaped
+    // Handlebars expressions and resolve to empty strings, causing blank content.
+    const source = mjmlSource.replace(/\{\{\{(?!#|\/|>)([^}]+)\}\}\}/g, (_match, key) => {
+      const trimmedKey = key.trim();
+      // If this variable exists in the provided context, convert to double-brace
+      if (trimmedKey in variables) return `{{${trimmedKey}}}`;
+      // Otherwise remove it entirely (it's a leftover design-time variable)
+      return '';
+    });
+
+    // Compile Handlebars runtime variables
+    const template = Handlebars.compile(source, { noEscape: true });
     const renderedMjml = template(variables);
 
     // Strip any remaining empty/invalid MJML attributes as a safety net

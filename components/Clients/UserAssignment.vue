@@ -107,20 +107,21 @@ async function fetchAssignedUsers() {
 	}
 }
 
-// Fetch all org users for the picker
+// Fetch all org users for the picker (uses readUsers which has proper permissions)
 async function fetchAllOrgUsers() {
 	if (!selectedOrg.value) return;
 	try {
-		const userItems = useDirectusItems('directus_users');
-		const data = await userItems.list({
+		const { readUsers } = useDirectusUsers();
+		const data = await readUsers({
 			filter: {
 				organizations: {
-					organizations_id: { _eq: selectedOrg.value },
+					organizations_id: {
+						id: { _eq: selectedOrg.value },
+					},
 				},
 			},
 			fields: ['id', 'first_name', 'last_name', 'email', 'avatar'],
 			sort: ['first_name'],
-			limit: -1,
 		});
 		allOrgUsers.value = data;
 	} catch (err) {

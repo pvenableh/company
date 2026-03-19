@@ -38,14 +38,74 @@
 
 		<!-- Add task input -->
 		<div class="flex gap-2 mb-3">
-			<input
-				ref="inputRef"
-				v-model="newTaskTitle"
-				type="text"
-				placeholder="Add a task..."
-				class="flex-1 h-9 rounded-lg border border-border bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-				@keydown.enter="handleAddTask"
-			/>
+			<div class="relative flex-1">
+				<input
+					ref="inputRef"
+					v-model="newTaskTitle"
+					type="text"
+					placeholder="Add a task..."
+					class="w-full h-9 rounded-lg border border-border bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
+					:class="{ 'pr-8': !selectedAssignee, 'pr-[120px]': selectedAssignee }"
+					@keydown.enter="handleAddTask"
+					@input="handleInputChange"
+					@keydown.escape="showMentionDropdown = false"
+					@keydown.down.prevent="navigateMention(1)"
+					@keydown.up.prevent="navigateMention(-1)"
+				/>
+				<!-- Selected assignee chip inside input -->
+				<button
+					v-if="selectedAssignee"
+					class="absolute right-8 top-1/2 -translate-y-1/2 flex items-center gap-1 pl-1.5 pr-1 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-medium hover:bg-primary/20 transition-colors"
+					@click="selectedAssignee = null"
+				>
+					<span>{{ selectedAssignee.first_name }} {{ selectedAssignee.last_name?.charAt(0) }}.</span>
+					<UIcon name="i-heroicons-x-mark" class="w-3 h-3" />
+				</button>
+				<!-- @ button -->
+				<button
+					class="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-muted-foreground hover:text-primary transition-colors"
+					title="Assign to someone"
+					@click="toggleMentionDropdown"
+				>
+					<UIcon name="i-heroicons-at-symbol" class="w-4 h-4" />
+				</button>
+				<!-- Mention dropdown -->
+				<div v-if="showMentionDropdown" class="mention-dropdown">
+					<input
+						ref="mentionSearchRef"
+						v-model="mentionSearch"
+						type="text"
+						placeholder="Search people..."
+						class="w-full h-7 px-2 text-xs bg-transparent border-b border-border placeholder:text-muted-foreground focus:outline-none"
+						@keydown.escape="showMentionDropdown = false"
+						@keydown.down.prevent="navigateMention(1)"
+						@keydown.up.prevent="navigateMention(-1)"
+						@keydown.enter.prevent="selectHighlightedMention"
+					/>
+					<div v-if="mentionUsersLoading" class="px-3 py-2 text-xs text-muted-foreground">Loading...</div>
+					<div v-else-if="!mentionResults.length" class="px-3 py-2 text-xs text-muted-foreground">No people found</div>
+					<div v-else class="max-h-[160px] overflow-y-auto py-1">
+						<button
+							v-for="(user, i) in mentionResults"
+							:key="user.id"
+							:class="[
+								'mention-option',
+								mentionHighlight === i ? 'bg-primary/10 text-primary' : ''
+							]"
+							@click="selectAssignee(user)"
+							@mouseenter="mentionHighlight = i"
+						>
+							<div class="w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[9px] font-bold uppercase flex-shrink-0">
+								{{ (user.first_name?.[0] || '') + (user.last_name?.[0] || '') }}
+							</div>
+							<div class="flex-1 min-w-0">
+								<span class="text-xs font-medium truncate">{{ user.label }}</span>
+								<span v-if="user.type === 'client'" class="ml-1 text-[9px] text-muted-foreground">(client)</span>
+							</div>
+						</button>
+					</div>
+				</div>
+			</div>
 			<button
 				class="h-9 px-3 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
 				:disabled="!newTaskTitle.trim()"
@@ -83,6 +143,25 @@
 					@click="newTaskPriority = p.value"
 				>
 					{{ p.label }}
+				</button>
+			</div>
+			<div class="flex items-center gap-2 text-xs">
+				<span class="text-muted-foreground uppercase tracking-wide text-[9px] w-14">Assign:</span>
+				<button
+					v-if="!selectedAssignee"
+					class="px-2 py-0.5 rounded-full text-xs font-medium transition-colors border border-border text-muted-foreground hover:text-foreground hover:border-primary/30"
+					@click="toggleMentionDropdown"
+				>
+					<UIcon name="i-heroicons-at-symbol" class="w-3 h-3 inline-block mr-0.5 -mt-px" />
+					Mention
+				</button>
+				<button
+					v-else
+					class="px-2 py-0.5 rounded-full text-xs font-medium transition-colors border border-primary/30 bg-primary/10 text-primary flex items-center gap-1"
+					@click="selectedAssignee = null"
+				>
+					{{ selectedAssignee.first_name }} {{ selectedAssignee.last_name?.charAt(0) || '' }}.
+					<UIcon name="i-heroicons-x-mark" class="w-3 h-3" />
 				</button>
 			</div>
 		</div>
@@ -228,6 +307,10 @@
 					</button>
 					<div class="flex-1 min-w-0">
 						<span class="text-sm leading-snug line-through text-muted-foreground">{{ task.title }}</span>
+						<div v-if="task.assignee" class="flex items-center gap-1 mt-0.5 text-[9px] text-muted-foreground/60">
+							<span class="w-3.5 h-3.5 rounded-full bg-muted flex items-center justify-center text-[7px] font-bold uppercase">{{ (task.assignee.first_name?.[0] || '') + (task.assignee.last_name?.[0] || '') }}</span>
+							{{ task.assignee.first_name }} {{ task.assignee.last_name?.charAt(0) || '' }}.
+						</div>
 					</div>
 					<button
 						class="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-muted-foreground hover:text-destructive"
@@ -268,9 +351,14 @@ const {
 } = useQuickTasks();
 
 const inputRef = ref(null);
+const mentionSearchRef = ref(null);
 const newTaskTitle = ref('');
 const newTaskPriority = ref('medium');
 const newTaskSchedule = ref('today');
+const selectedAssignee = ref(null);
+const showMentionDropdown = ref(false);
+const mentionSearch = ref('');
+const mentionHighlight = ref(0);
 const showAiPrompt = ref(false);
 const aiPrompt = ref('');
 const aiSuggestions = ref([]);
@@ -278,6 +366,77 @@ const aiLoading = ref(false);
 const aiError = ref('');
 const motivationalText = ref('');
 let motivationalTimeout = null;
+
+// Mention / assignee logic
+const { filteredUsers, fetchFilteredUsers, loading: mentionUsersLoading } = useFilteredUsers();
+
+const mentionResults = computed(() => {
+	const q = mentionSearch.value.toLowerCase().trim();
+	if (!q) return filteredUsers.value.slice(0, 8);
+	return filteredUsers.value
+		.filter((u) => u.label.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q))
+		.slice(0, 8);
+});
+
+function toggleMentionDropdown() {
+	showMentionDropdown.value = !showMentionDropdown.value;
+	if (showMentionDropdown.value) {
+		mentionSearch.value = '';
+		mentionHighlight.value = 0;
+		fetchFilteredUsers();
+		nextTick(() => mentionSearchRef.value?.focus());
+	}
+}
+
+function handleInputChange() {
+	// Detect @ typed in the input
+	const val = newTaskTitle.value;
+	const atIdx = val.lastIndexOf('@');
+	if (atIdx >= 0 && (atIdx === 0 || val[atIdx - 1] === ' ')) {
+		const query = val.slice(atIdx + 1);
+		if (!query.includes(' ')) {
+			showMentionDropdown.value = true;
+			mentionSearch.value = query;
+			mentionHighlight.value = 0;
+			if (!filteredUsers.value.length) fetchFilteredUsers();
+			return;
+		}
+	}
+}
+
+function selectAssignee(user) {
+	selectedAssignee.value = { id: user.id, first_name: user.first_name, last_name: user.last_name, avatar: user.avatar || null };
+	showMentionDropdown.value = false;
+	// Remove @query from input if present
+	const val = newTaskTitle.value;
+	const atIdx = val.lastIndexOf('@');
+	if (atIdx >= 0 && (atIdx === 0 || val[atIdx - 1] === ' ')) {
+		newTaskTitle.value = val.slice(0, atIdx).trimEnd();
+	}
+	nextTick(() => inputRef.value?.focus());
+}
+
+function selectHighlightedMention() {
+	if (mentionResults.value[mentionHighlight.value]) {
+		selectAssignee(mentionResults.value[mentionHighlight.value]);
+	}
+}
+
+function navigateMention(dir) {
+	if (!showMentionDropdown.value) return;
+	mentionHighlight.value = Math.max(0, Math.min(mentionResults.value.length - 1, mentionHighlight.value + dir));
+}
+
+// Close mention dropdown on outside click
+onMounted(() => {
+	const handler = (e) => {
+		if (showMentionDropdown.value && !e.target.closest('.mention-dropdown') && !e.target.closest('[title="Assign to someone"]')) {
+			showMentionDropdown.value = false;
+		}
+	};
+	document.addEventListener('click', handler);
+	onUnmounted(() => document.removeEventListener('click', handler));
+});
 
 const schedules = [
 	{ value: 'today', label: 'Today' },
@@ -305,20 +464,22 @@ onUnmounted(() => {
 	if (motivationalTimeout) clearTimeout(motivationalTimeout);
 });
 
-function handleAddTask() {
+async function handleAddTask() {
 	if (!newTaskTitle.value.trim()) return;
-	addTask(newTaskTitle.value, {
+	await addTask(newTaskTitle.value, {
 		priority: newTaskPriority.value,
 		schedule: newTaskSchedule.value,
+		assignee: selectedAssignee.value || undefined,
 	});
 	newTaskTitle.value = '';
 	newTaskPriority.value = 'medium';
 	newTaskSchedule.value = 'today';
+	selectedAssignee.value = null;
 	nextTick(() => inputRef.value?.focus());
 }
 
-function handleToggle(id) {
-	const result = toggleTask(id);
+async function handleToggle(id) {
+	const result = await toggleTask(id);
 
 	if (result.completed) {
 		// Fire confetti
@@ -344,8 +505,8 @@ function fireConfetti() {
 	});
 }
 
-function addAiSuggestion(suggestion) {
-	addTask(suggestion, { aiSuggested: true, schedule: 'today' });
+async function addAiSuggestion(suggestion) {
+	await addTask(suggestion, { aiSuggested: true, schedule: 'today' });
 	aiSuggestions.value = aiSuggestions.value.filter((s) => s !== suggestion);
 }
 
@@ -402,6 +563,16 @@ const TaskRow = defineComponent({
 									props.task.priority === 'high' ? 'text-red-500' : 'text-blue-400',
 								].join(' '),
 							}, props.task.priority)
+							: null,
+						props.task.assignee
+							? h('span', {
+								class: 'flex items-center gap-1 text-[9px] text-primary/70 font-medium',
+							}, [
+								h('span', {
+									class: 'w-3.5 h-3.5 rounded-full bg-primary/15 flex items-center justify-center text-[7px] font-bold uppercase',
+								}, (props.task.assignee.first_name?.[0] || '') + (props.task.assignee.last_name?.[0] || '')),
+								`${props.task.assignee.first_name} ${props.task.assignee.last_name?.charAt(0) || ''}.`,
+							])
 							: null,
 						props.task.aiSuggested
 							? h(resolveComponent('UIcon'), { name: 'i-heroicons-sparkles', class: 'w-3 h-3 text-violet-400' })
@@ -543,5 +714,34 @@ const TaskRow = defineComponent({
 .task-check-done {
 	background: hsl(var(--primary));
 	border-color: hsl(var(--primary));
+}
+
+/* Mention dropdown */
+.mention-dropdown {
+	position: absolute;
+	top: calc(100% + 4px);
+	left: 0;
+	right: 0;
+	z-index: 50;
+	background: hsl(var(--card));
+	border: 1px solid hsl(var(--border));
+	border-radius: 10px;
+	box-shadow: 0 4px 16px hsl(0 0% 0% / 0.12);
+	overflow: hidden;
+}
+
+.mention-option {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	padding: 5px 10px;
+	text-align: left;
+	transition: background 0.1s;
+	cursor: pointer;
+}
+
+.mention-option:hover {
+	background: hsl(var(--muted) / 0.5);
 }
 </style>

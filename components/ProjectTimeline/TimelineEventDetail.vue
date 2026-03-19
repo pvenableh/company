@@ -34,27 +34,34 @@ const fileCount = computed(() => props.event.files?.length || 0);
 </script>
 
 <template>
-  <div class="event-detail space-y-5 py-4">
-    <!-- Date and badges -->
-    <div class="flex flex-wrap items-center gap-2">
-      <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
-        <Icon name="lucide:calendar" class="w-3.5 h-3.5" />
-        {{ formattedDate }}
+  <div class="event-detail space-y-4 py-4">
+    <!-- Header: Date, badges, and inline reactions -->
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <div class="flex flex-wrap items-center gap-2">
+        <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Icon name="lucide:calendar" class="w-3.5 h-3.5" />
+          {{ formattedDate }}
+        </div>
+        <Badge v-if="event.is_milestone" variant="outline" class="text-[9px] uppercase tracking-wider font-semibold">
+          <Icon name="lucide:diamond" class="w-3 h-3 mr-1" />
+          Milestone
+        </Badge>
+        <Badge
+          v-if="typeof event.category_id === 'object' && event.category_id"
+          :style="{
+            backgroundColor: event.category_id.color,
+            color: event.category_id.text_color,
+          }"
+          class="text-[9px] uppercase tracking-wider font-semibold"
+        >
+          {{ event.category_id.name }}
+        </Badge>
       </div>
-      <Badge v-if="event.is_milestone" variant="outline" class="text-[9px] uppercase tracking-wider font-semibold">
-        <Icon name="lucide:diamond" class="w-3 h-3 mr-1" />
-        Milestone
-      </Badge>
-      <Badge
-        v-if="typeof event.category_id === 'object' && event.category_id"
-        :style="{
-          backgroundColor: event.category_id.color,
-          color: event.category_id.text_color,
-        }"
-        class="text-[9px] uppercase tracking-wider font-semibold"
-      >
-        {{ event.category_id.name }}
-      </Badge>
+      <!-- Reactions inline with header -->
+      <ReactionsBar
+        :item-id="String(event.id)"
+        collection="project_events"
+      />
     </div>
 
     <!-- Description -->
@@ -80,8 +87,6 @@ const fileCount = computed(() => props.event.files?.length || 0);
           }"
         />
       </div>
-
-      <!-- Task list -->
       <ProjectTimelineTaskList
         :tasks="event.tasks || []"
         :project-color="project.color"
@@ -97,22 +102,13 @@ const fileCount = computed(() => props.event.files?.length || 0);
       <ProjectTimelineFileList :files="event.files || []" />
     </div>
 
-    <!-- Comments -->
-    <div class="ios-card p-4">
-      <h4 class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-3">Comments</h4>
+    <!-- Discussion: comments with border separator instead of card -->
+    <div class="pt-3 border-t border-border">
+      <h4 class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-3">Discussion</h4>
       <CommentsSystem
         collection="project_events"
         :item-id="String(event.id)"
         hide-sort
-      />
-    </div>
-
-    <!-- Reactions -->
-    <div class="ios-card p-4">
-      <h4 class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-3">Reactions</h4>
-      <ReactionsBar
-        :item-id="String(event.id)"
-        collection="project_events"
       />
     </div>
   </div>

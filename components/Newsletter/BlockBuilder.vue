@@ -53,6 +53,54 @@
           <span class="hidden sm:inline ml-1">AI Generate</span>
         </Button>
 
+        <!-- Import/Export dropdown -->
+        <div class="relative" ref="importExportRef">
+          <Button variant="ghost" size="sm" @click="showImportExport = !showImportExport">
+            <Icon name="lucide:file-code-2" class="w-3.5 h-3.5" />
+            <span class="hidden sm:inline ml-1">HTML</span>
+            <Icon name="lucide:chevron-down" class="w-3 h-3 ml-0.5" />
+          </Button>
+          <Transition name="fade">
+            <div
+              v-if="showImportExport"
+              class="absolute right-0 top-full mt-1 w-48 bg-card border border-border rounded-lg shadow-lg z-50 py-1"
+            >
+              <button
+                class="flex items-center gap-2 w-full px-3 py-2 text-xs hover:bg-muted/50 transition-colors text-left"
+                @click="showImportExport = false; showPasteModal = true"
+              >
+                <Icon name="lucide:clipboard-paste" class="w-3.5 h-3.5 text-muted-foreground" />
+                Paste HTML / MJML
+              </button>
+              <button
+                class="flex items-center gap-2 w-full px-3 py-2 text-xs hover:bg-muted/50 transition-colors text-left"
+                :disabled="!builder.previewHtml.value"
+                :class="{ 'opacity-40 cursor-not-allowed': !builder.previewHtml.value }"
+                @click="showImportExport = false; copyHtmlToClipboard()"
+              >
+                <Icon name="lucide:copy" class="w-3.5 h-3.5 text-muted-foreground" />
+                Copy HTML to Clipboard
+              </button>
+              <button
+                class="flex items-center gap-2 w-full px-3 py-2 text-xs hover:bg-muted/50 transition-colors text-left"
+                :disabled="!builder.previewHtml.value"
+                :class="{ 'opacity-40 cursor-not-allowed': !builder.previewHtml.value }"
+                @click="showImportExport = false; downloadHtml()"
+              >
+                <Icon name="lucide:download" class="w-3.5 h-3.5 text-muted-foreground" />
+                Download HTML File
+              </button>
+              <button
+                class="flex items-center gap-2 w-full px-3 py-2 text-xs hover:bg-muted/50 transition-colors text-left"
+                @click="showImportExport = false; copyMjmlToClipboard()"
+              >
+                <Icon name="lucide:braces" class="w-3.5 h-3.5 text-muted-foreground" />
+                Copy MJML Source
+              </button>
+            </div>
+          </Transition>
+        </div>
+
         <Button variant="ghost" size="sm" @click="showTestModal = true">
           <Icon name="lucide:send" class="w-3.5 h-3.5" />
           <span class="hidden sm:inline ml-1">Send Test</span>
@@ -289,6 +337,45 @@
       @close="showAIWizard = false"
       @apply="handleAIApply"
     />
+
+    <!-- Paste HTML/MJML Modal -->
+    <Teleport to="body">
+      <div
+        v-if="showPasteModal"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+        @click.self="showPasteModal = false"
+      >
+        <div class="ios-card w-full max-w-2xl mx-4 p-6 shadow-xl">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold">Paste HTML or MJML</h3>
+            <button class="p-1 rounded hover:bg-muted" @click="showPasteModal = false">
+              <Icon name="lucide:x" class="w-4 h-4" />
+            </button>
+          </div>
+          <p class="text-xs text-muted-foreground mb-3">
+            Paste generated HTML from an MJML app or any email HTML. This will replace the current template MJML source and update the preview.
+          </p>
+          <textarea
+            v-model="pastedHtmlContent"
+            rows="12"
+            placeholder="Paste your HTML or MJML here..."
+            class="w-full rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/30 resize-y"
+          />
+          <div class="flex items-center justify-between mt-4">
+            <span class="text-[10px] text-muted-foreground">
+              {{ pastedHtmlContent.includes('<mjml') ? 'Detected: MJML' : pastedHtmlContent.includes('<html') || pastedHtmlContent.includes('<table') ? 'Detected: HTML' : 'Paste content above' }}
+            </span>
+            <div class="flex gap-2">
+              <Button variant="outline" size="sm" @click="showPasteModal = false">Cancel</Button>
+              <Button size="sm" :disabled="!pastedHtmlContent.trim()" @click="handlePasteImport">
+                <Icon name="lucide:check" class="w-3.5 h-3.5 mr-1" />
+                Import
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -317,6 +404,11 @@ const showCustomBlockModal = ref(false);
 const showAIWizard = ref(false);
 const editingPartialType = ref<'header' | 'footer' | 'web_version_bar' | null>(null);
 const justSaved = ref(false);
+const showImportExport = ref(false);
+const showPasteModal = ref(false);
+const pastedHtmlContent = ref('');
+const importExportRef = ref<HTMLElement | null>(null);
+const copyFeedback = ref('');
 
 const debouncedPreview = useDebounceFn(() => builder.refreshPreview(), 600);
 
@@ -425,6 +517,111 @@ async function handleAIApply(result: { subject: string; previewText: string; sec
   showPreview.value = true;
   await builder.refreshPreview();
 }
+
+// ── HTML Import/Export ─────────────────────────────────────────────
+async function handlePasteImport() {
+  const content = pastedHtmlContent.value.trim();
+  if (!content) return;
+
+  const isMjml = content.includes('<mjml');
+
+  if (isMjml) {
+    // Save the MJML directly to the template and refresh preview
+    const emailTemplateItems = useDirectusItems('email_templates');
+    await emailTemplateItems.update(props.templateId, {
+      mjml_source: content,
+      mjml_assembled_at: new Date().toISOString(),
+    });
+    // Reload blocks and preview
+    await builder.loadBlocks();
+    await builder.refreshPreview();
+  } else {
+    // It's raw HTML — wrap in MJML raw block structure and save
+    const wrappedMjml = `<mjml>
+  <mj-head>
+    <mj-attributes>
+      <mj-all font-family="Arial, Helvetica, sans-serif" />
+      <mj-text font-size="15px" color="#333333" line-height="1.7" />
+      <mj-section padding="0" />
+    </mj-attributes>
+  </mj-head>
+  <mj-body>
+    <mj-section>
+      <mj-column>
+        <mj-raw>${content}</mj-raw>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>`;
+    const emailTemplateItems = useDirectusItems('email_templates');
+    await emailTemplateItems.update(props.templateId, {
+      mjml_source: wrappedMjml,
+      mjml_assembled_at: new Date().toISOString(),
+    });
+    await builder.loadBlocks();
+    await builder.refreshPreview();
+  }
+
+  showPasteModal.value = false;
+  pastedHtmlContent.value = '';
+}
+
+async function copyHtmlToClipboard() {
+  if (!builder.previewHtml.value) return;
+  try {
+    await navigator.clipboard.writeText(builder.previewHtml.value);
+    copyFeedback.value = 'html';
+    setTimeout(() => { copyFeedback.value = ''; }, 2000);
+  } catch {
+    // Fallback for older browsers
+    const textarea = document.createElement('textarea');
+    textarea.value = builder.previewHtml.value;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+  }
+}
+
+async function copyMjmlToClipboard() {
+  const mjml = builder.assembleMjml();
+  try {
+    await navigator.clipboard.writeText(mjml);
+    copyFeedback.value = 'mjml';
+    setTimeout(() => { copyFeedback.value = ''; }, 2000);
+  } catch {
+    const textarea = document.createElement('textarea');
+    textarea.value = mjml;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+  }
+}
+
+function downloadHtml() {
+  if (!builder.previewHtml.value) return;
+  const blob = new Blob([builder.previewHtml.value], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${props.template?.name || 'email-template'}.html`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// Close import/export dropdown on outside click
+onMounted(() => {
+  const handler = (e: MouseEvent) => {
+    if (showImportExport.value && importExportRef.value && !importExportRef.value.contains(e.target as Node)) {
+      showImportExport.value = false;
+    }
+  };
+  document.addEventListener('click', handler);
+  onUnmounted(() => document.removeEventListener('click', handler));
+});
 </script>
 
 <style scoped>
