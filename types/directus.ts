@@ -54,6 +54,28 @@ export interface AiPreference {
 	user_created?: DirectusUser | string | null;
 }
 
+export interface AiUsageLog {
+	/** @primaryKey */
+	id: number;
+	/** @required */
+	user: DirectusUser | string;
+	organization?: Organization | string | null;
+	/** @description e.g. ai/chat, marketing/ai-analyze @required */
+	endpoint: string;
+	/** @description LLM model used */
+	model?: string | null;
+	input_tokens?: number | null;
+	output_tokens?: number | null;
+	total_tokens?: number | null;
+	/** @description Estimated cost in USD */
+	estimated_cost?: number | null;
+	/** @description Related ai_chat_sessions ID (nullable) */
+	session_id?: string | null;
+	/** @description Extra context: client_id, analysis_type, etc. */
+	metadata?: Record<string, any> | null;
+	date_created?: string | null;
+}
+
 export interface AnimationPreset {
 	/** @primaryKey */
 	id: number;
@@ -882,7 +904,7 @@ export interface Channel {
 	description?: string | null;
 	ticket?: Ticket | string | null;
 	/** @description The client this channel belongs to */
-	client?: string | null;
+	client?: Client | string | null;
 	messages?: Message[] | string[];
 }
 
@@ -1426,6 +1448,25 @@ export interface MailingList {
 	/** @description Organization this list belongs to */
 	organization?: Organization | string | null;
 	contacts?: MailingListContact[] | string[];
+}
+
+export interface MarketingCampaign {
+	/** @primaryKey */
+	id: number;
+	/** @description Campaign or analysis title @required */
+	title: string;
+	/** @description User-stated campaign goal */
+	goal?: string | null;
+	status?: 'draft' | 'active' | 'paused' | 'completed' | 'archived' | null;
+	type?: 'campaign' | 'dashboard' | null;
+	/** @description Full AI-generated plan (CampaignAnalysis or DashboardAnalysis) */
+	plan_data?: Record<string, any> | null;
+	organization?: Organization | string | null;
+	start_date?: string | null;
+	end_date?: string | null;
+	user_created?: DirectusUser | string | null;
+	date_created?: string | null;
+	date_updated?: string | null;
 }
 
 export interface MeetingRequest {
@@ -3335,6 +3376,7 @@ export interface Schema {
 	ai_chat_messages: AiChatMessage[];
 	ai_chat_sessions: AiChatSession[];
 	ai_preferences: AiPreference[];
+	ai_usage_logs: AiUsageLog[];
 	animation_presets: AnimationPreset[];
 	appointments: Appointment[];
 	appointments_directus_users: AppointmentsDirectusUser[];
@@ -3408,6 +3450,7 @@ export interface Schema {
 	line_items: LineItem[];
 	mailing_list_contacts: MailingListContact[];
 	mailing_lists: MailingList[];
+	marketing_campaigns: MarketingCampaign[];
 	meeting_requests: MeetingRequest[];
 	menus: Menu[];
 	messages: Message[];
@@ -3522,6 +3565,7 @@ export enum CollectionNames {
 	ai_chat_messages = 'ai_chat_messages',
 	ai_chat_sessions = 'ai_chat_sessions',
 	ai_preferences = 'ai_preferences',
+	ai_usage_logs = 'ai_usage_logs',
 	animation_presets = 'animation_presets',
 	appointments = 'appointments',
 	appointments_directus_users = 'appointments_directus_users',
@@ -3595,6 +3639,7 @@ export enum CollectionNames {
 	line_items = 'line_items',
 	mailing_list_contacts = 'mailing_list_contacts',
 	mailing_lists = 'mailing_lists',
+	marketing_campaigns = 'marketing_campaigns',
 	meeting_requests = 'meeting_requests',
 	menus = 'menus',
 	messages = 'messages',
