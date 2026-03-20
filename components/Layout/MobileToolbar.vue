@@ -53,7 +53,7 @@ const handleAI = () => {
 };
 </script>
 <template>
-	<nav class="ios-tab-bar xl:hidden" role="tablist">
+	<nav class="ios-tab-bar" role="tablist">
 		<!-- Left nav links -->
 		<nuxt-link
 			v-for="(link, index) in leftLinks"
@@ -117,12 +117,12 @@ const handleAI = () => {
 @reference "~/assets/css/tailwind.css";
 
 .ios-tab-bar {
+	display: flex;
 	position: fixed;
 	bottom: 0;
 	left: 0;
 	right: 0;
 	z-index: 40;
-	display: flex;
 	align-items: flex-end;
 	justify-content: space-around;
 	height: calc(56px + env(safe-area-inset-bottom, 0px));
@@ -134,6 +134,12 @@ const handleAI = () => {
 	background: rgba(255, 255, 255, 0.78);
 	backdrop-filter: saturate(180%) blur(20px);
 	-webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+
+@media (min-width: 1280px) {
+	.ios-tab-bar {
+		display: none;
+	}
 }
 
 :is(.dark) .ios-tab-bar {
@@ -182,11 +188,18 @@ const handleAI = () => {
 }
 
 .ios-tab-label {
-	font-size: 10px;
+	font-size: 8px;
 	font-weight: 500;
 	letter-spacing: 0.04em;
 	line-height: 1;
 	text-transform: uppercase;
+	text-align: center;
+}
+
+@media (min-width: 400px) {
+	.ios-tab-label {
+		font-size: 10px;
+	}
 }
 
 /* AI center button — raised circle overflowing top */

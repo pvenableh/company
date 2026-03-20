@@ -36,7 +36,7 @@
 								:color="['var(--color-rate)', 'var(--color-tickets)']"
 								:bar-padding="0.2"
 							/>
-							<VisAxis type="x" :tick-format="(i: number) => chartData.value[Math.round(i)]?.name || ''" :grid-line="false" />
+							<VisAxis type="x" :tick-format="(i: number) => { const idx = Math.round(i); return idx >= 0 && idx < chartData.value.length ? chartData.value[idx]?.name || '' : ''; }" :grid-line="false" />
 							<VisAxis type="y" :tick-format="(v: number) => v + '%'" :grid-line="true" />
 							<ChartCrosshair
 								:template="crosshairTemplate"

@@ -39,6 +39,15 @@
 				<Icon name="lucide:timer" class="w-4 h-4" />
 				<span v-if="isTimerRunning" class="dock-recording-dot" />
 			</button>
+
+			<!-- Earnest AI button -->
+			<button
+				class="dock-btn dock-btn-ai"
+				title="Earnest AI"
+				@click="emit('open-ai')"
+			>
+				<Icon name="heroicons:sparkles" class="w-4 h-4" />
+			</button>
 		</div>
 
 		<!-- Expanded panel -->
@@ -145,6 +154,7 @@ const {
 	discardTimer,
 } = useTimeTracker();
 
+const emit = defineEmits(['open-ai']);
 const activePanel = ref<'tasks' | 'timer' | null>(null);
 
 const taskCount = computed(() => activeTasks.value.length);
@@ -195,7 +205,7 @@ const cornerStyles = computed(() => {
 	const style: Record<string, string> = {};
 
 	if (c.includes('bottom')) {
-		style.bottom = '5rem';
+		style.bottom = '1.5rem';
 		style.top = 'auto';
 	} else {
 		style.top = `${TOP_OFFSET}px`;
@@ -336,7 +346,6 @@ function snapToNearestCorner() {
 	flex-direction: column;
 	gap: 8px;
 	user-select: none;
-	touch-action: none;
 }
 
 .floating-dock.dock-transitioning {
@@ -365,6 +374,7 @@ function snapToNearestCorner() {
 		0 1px 3px hsl(var(--primary) / 0.1),
 		0 4px 16px hsl(var(--primary) / 0.06);
 	cursor: grab;
+	touch-action: none;
 }
 
 .dock-dragging .dock-bar {
@@ -400,6 +410,15 @@ function snapToNearestCorner() {
 
 .dock-btn-recording {
 	color: hsl(var(--destructive));
+}
+
+.dock-btn-ai {
+	color: hsl(var(--primary));
+}
+
+.dock-btn-ai:hover {
+	background: hsl(var(--primary) / 0.2);
+	color: hsl(var(--primary));
 }
 
 .dock-badge {
@@ -485,7 +504,7 @@ function snapToNearestCorner() {
 .dock-panel-body {
 	flex: 1;
 	min-height: 0;
-	overflow: hidden;
+	overflow-y: auto;
 }
 
 /* Panel transition */

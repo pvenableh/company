@@ -6,16 +6,16 @@
 			<DropdownMenu>
 				<DropdownMenuTrigger as-child>
 					<button
-						class="flex items-center gap-1 px-2 py-1 rounded-full bg-white border border-gray-200 hover:border-[var(--cyan)] transition-colors text-[9px] uppercase tracking-wider font-medium text-gray-700 max-w-[180px]"
+						class="flex items-center gap-1 rounded-full bg-white border border-gray-200 hover:border-[var(--cyan)] transition-colors text-[9px] uppercase tracking-wider font-medium text-gray-700 p-0.5 sm:px-2 sm:py-1 max-w-[180px]"
 					>
 						<!-- Team Avatar -->
-						<div class="size-5 rounded-full bg-gray-100 flex items-center justify-center shrink-0 overflow-hidden">
+						<div class="size-6 sm:size-5 rounded-full bg-gray-100 flex items-center justify-center shrink-0 overflow-hidden">
 							<template v-if="selectedTeam && currentTeam">
 								<img
 									v-if="currentTeam.icon"
 									:src="`${$config.public.directusUrl}/assets/${currentTeam.icon}?key=avatar`"
 									alt="Team Icon"
-									class="size-5 object-cover rounded-full"
+									class="size-6 sm:size-5 object-cover rounded-full"
 								/>
 								<span v-else class="font-medium text-gray-700 text-[8px]">{{ getTeamInitials(currentTeam) }}</span>
 							</template>
@@ -23,11 +23,11 @@
 						</div>
 
 						<!-- Team Name -->
-						<span class="truncate">
+						<span class="truncate hidden sm:inline">
 							{{ currentTeamName }}
 						</span>
 
-						<ChevronDown class="size-3 text-gray-400 shrink-0" />
+						<ChevronDown class="size-3 text-gray-400 shrink-0 hidden sm:block" />
 					</button>
 				</DropdownMenuTrigger>
 

@@ -78,7 +78,16 @@ export default defineEventHandler(async (event) => {
       daily,
     };
   } catch (error: any) {
-    console.error('[ai/usage/stats] Error:', error.message);
-    throw createError({ statusCode: 500, message: 'Failed to fetch usage stats' });
+    console.warn('[ai/usage/stats] Could not fetch (collection may not exist):', error.message);
+    return {
+      totalRequests: 0,
+      totalTokens: 0,
+      totalInput: 0,
+      totalOutput: 0,
+      totalCost: 0,
+      activeUsers: 0,
+      period,
+      daily: [],
+    };
   }
 });

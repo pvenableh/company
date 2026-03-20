@@ -83,7 +83,7 @@ export default defineEventHandler(async (event) => {
 
     return { users };
   } catch (error: any) {
-    console.error('[ai/usage/by-user] Error:', error.message);
-    throw createError({ statusCode: 500, message: 'Failed to fetch usage by user' });
+    console.warn('[ai/usage/by-user] Could not fetch (collection may not exist):', error.message);
+    return { users: [] };
   }
 });

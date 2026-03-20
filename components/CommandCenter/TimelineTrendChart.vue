@@ -61,7 +61,11 @@ const chartData = computed(() => {
 	}));
 });
 
-const xTickFormat = (i: number) => chartData.value[Math.round(i)]?.name || '';
+const xTickFormat = (i: number) => {
+	const idx = Math.round(i);
+	if (idx < 0 || idx >= chartData.value.length) return '';
+	return chartData.value[idx]?.name || '';
+};
 
 const crosshairTemplate = componentToString(chartConfig, ChartTooltipContent, { hideLabel: true });
 

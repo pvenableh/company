@@ -72,7 +72,7 @@ export default defineEventHandler(async (event) => {
 
     return { endpoints };
   } catch (error: any) {
-    console.error('[ai/usage/by-endpoint] Error:', error.message);
-    throw createError({ statusCode: 500, message: 'Failed to fetch usage by endpoint' });
+    console.warn('[ai/usage/by-endpoint] Could not fetch (collection may not exist):', error.message);
+    return { endpoints: [] };
   }
 });

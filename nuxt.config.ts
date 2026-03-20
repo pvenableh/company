@@ -327,7 +327,7 @@ export default defineNuxtConfig({
 			installPrompt: true,
 		},
 		devOptions: {
-			enabled: true,
+			enabled: false,
 			suppressWarnings: true,
 			type: 'module',
 		},

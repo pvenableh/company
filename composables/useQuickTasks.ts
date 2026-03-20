@@ -233,7 +233,13 @@ export const useQuickTasks = () => {
 			payload.assigned_to = [{ directus_users_id: options.assignee.id }];
 		}
 
-		const record = await taskItems.create(payload);
+		let record;
+		try {
+			record = await taskItems.create(payload);
+		} catch (err: any) {
+			console.error('[useQuickTasks] Failed to create task:', err);
+			throw err;
+		}
 
 		// Optimistically add to local state
 		const task = directusToQuickTask({

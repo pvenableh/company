@@ -35,7 +35,7 @@
 
 		<!-- Floating Dock: Tasks + Time Tracker (desktop) -->
 		<ClientOnly>
-			<LayoutFloatingDock />
+			<LayoutFloatingDock @open-ai="aiTrayOpen = true" />
 		</ClientOnly>
 
 		<!-- Floating time tracker indicator (mobile fallback) -->
