@@ -25,7 +25,7 @@
 		<div
 			class="w-full flex flex-col md:flex-row items-end justify-between mb-4 xl:mb-8 xl:mt-2 px-4 gap-4 pt-4 tickets-board__filters"
 		>
-			<TicketsCreate :columns="columns" @ticketCreated="handleTicketCreated" class="mb-4 xl:mb-0" />
+			<TicketsCreate :columns="columns" :default-project="projectId" :default-organization="organizationId" @ticketCreated="handleTicketCreated" class="mb-4 xl:mb-0" />
 
 			<div v-if="!projectId" class="hidden md:flex items-center flex-col xl:flex-row relative mb-4 xl:mb-0">
 				<div class="w-full flex flex-row items-center justify-end gap-4 mb-2 xl:mb-0 xl:mr-2">
@@ -229,6 +229,10 @@ const {
 
 const props = defineProps({
 	projectId: {
+		type: String,
+		default: null,
+	},
+	organizationId: {
 		type: String,
 		default: null,
 	},

@@ -160,6 +160,7 @@ import { Button } from '~/components/ui/button';
 const props = defineProps<{
   invoice?: Invoice | null;
   saving?: boolean;
+  defaults?: { project?: string | null; bill_to?: string | null } | null;
 }>();
 
 const emit = defineEmits<{
@@ -197,9 +198,9 @@ function extractId(val: any): string | null {
 
 // --- Form state ---
 const formData = reactive({
-  bill_to: extractId(props.invoice?.bill_to) || '',
+  bill_to: extractId(props.invoice?.bill_to) || props.defaults?.bill_to || '',
   client: extractId(props.invoice?.client) || null,
-  project: extractId(props.invoice?.project) || null,
+  project: extractId(props.invoice?.project) || props.defaults?.project || null,
   invoice_code: props.invoice?.invoice_code || '',
   invoice_date: props.invoice?.invoice_date?.split('T')[0] || todayString(),
   due_date: props.invoice?.due_date?.split('T')[0] || '',

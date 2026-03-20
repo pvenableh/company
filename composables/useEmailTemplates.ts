@@ -31,6 +31,7 @@ export function useEmailTemplates() {
   const createTemplate = async (data: Partial<EmailTemplate>): Promise<EmailTemplate> => {
     // Auto-set organization on create
     return items.create({
+      status: 'published',
       ...data,
       organization: selectedOrg.value || undefined,
     } as any);

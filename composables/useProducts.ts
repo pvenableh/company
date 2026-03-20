@@ -50,7 +50,7 @@ export function useProducts() {
   };
 
   const createProduct = async (payload: Partial<Product>): Promise<Product> => {
-    return items.create(payload as any);
+    return items.create({ status: 'published', ...payload } as any);
   };
 
   const updateProduct = async (id: string, payload: Partial<Product>): Promise<Product> => {

@@ -15,6 +15,9 @@ import {
   deleteItems,
   aggregate as directusAggregate,
   readNotifications,
+  readActivities,
+  readComments,
+  createComment,
 } from "@directus/sdk";
 
 /**
@@ -47,6 +50,12 @@ async function executeOperation(
         if (collection === "directus_notifications") {
           return await directus.request(readNotifications(query || {}));
         }
+        if (collection === "directus_activity") {
+          return await directus.request(readActivities(query || {}));
+        }
+        if (collection === "directus_comments") {
+          return await directus.request(readComments(query || {}));
+        }
         return await directus.request(readItems(collection, query || {}));
 
       case "get":
@@ -55,6 +64,9 @@ async function executeOperation(
 
       case "create":
         if (!data) throw new Error("Data required for create operation");
+        if (collection === "directus_comments") {
+          return await directus.request(createComment(data, query));
+        }
         return await directus.request(createItem(collection, data, query));
 
       case "update":

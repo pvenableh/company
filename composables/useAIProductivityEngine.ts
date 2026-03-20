@@ -75,6 +75,7 @@ export const useAIProductivityEngine = () => {
 	});
 	const isAnalyzing = ref(false);
 	const greeting = ref('');
+	const subtitle = ref("Here's what needs your attention");
 
 	const ticketItems = useDirectusItems('tickets');
 	const invoiceItems = useDirectusItems('invoices');
@@ -149,6 +150,42 @@ export const useAIProductivityEngine = () => {
 		// Pick a pseudo-random one based on the day of year so it feels fresh but stable
 		const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
 		return pool[dayOfYear % pool.length];
+	};
+
+	// Persona-aware subtitle for the Command Center
+	const getSubtitle = (): string => {
+		const { activePersona } = useAIPersona();
+		const persona = activePersona.value?.value || 'default';
+		const hour = new Date().getHours();
+		const period = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
+
+		const subtitles: Record<string, Record<string, string[]>> = {
+			default: {
+				morning: ["Here's what needs your attention today", 'Your priorities are lined up and ready', "Let's see what's on the radar"],
+				afternoon: ["Here's where things stand right now", "Let's keep the momentum going", 'A quick look at your open items'],
+				evening: ["Here's what's still on your plate", 'Wrapping up? Here are the loose ends', "Let's close out the day strong"],
+			},
+			director: {
+				morning: ['Your daily ops briefing is ready', 'Mission priorities loaded', 'Intel report: here are the open items'],
+				afternoon: ['Midday status — here are the action items', 'Time-sensitive items flagged below', 'Operational update incoming'],
+				evening: ['End-of-day debrief — review the status', 'Final items requiring sign-off', "Tomorrow's blockers start here"],
+			},
+			buddy: {
+				morning: ["Let's see what we're working with today!", "I pulled together your stuff — take a peek", "Here's your vibe check for the day"],
+				afternoon: ["Here's the scoop on what's going on", "Quick update on all the things!", "Keeping you in the loop — here's what's up"],
+				evening: ["Almost there! Here's what's left", "You crushed it today — just a few more things", "Winding down? Let me show you what's open"],
+			},
+			motivator: {
+				morning: ["Every task you tackle today is a step forward!", "Your potential is unlimited — here's where to start", "Today's challenges are tomorrow's achievements!"],
+				afternoon: ["You're making incredible progress!", "Look at you go — here's what's next", "Keep that energy flowing!"],
+				evening: ["What a productive day — here's the final stretch!", "You've done so much today! Just a few items left", "Finish strong — you've got this!"],
+			},
+		};
+
+		const pool = subtitles[persona]?.[period] || subtitles.default[period];
+		const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
+		// Offset by +1 so subtitle differs from greeting on the same day
+		return pool[(dayOfYear + 1) % pool.length];
 	};
 
 	// Score calculation: higher = more urgent/important
@@ -1189,6 +1226,7 @@ export const useAIProductivityEngine = () => {
 	const analyze = async (enabledModules?: Set<string>) => {
 		isAnalyzing.value = true;
 		greeting.value = getGreeting();
+		subtitle.value = getSubtitle();
 
 		// Default: all modules enabled
 		const modules = enabledModules || new Set([
@@ -1267,6 +1305,7 @@ export const useAIProductivityEngine = () => {
 		metrics: readonly(metrics),
 		isAnalyzing: readonly(isAnalyzing),
 		greeting,
+		subtitle,
 		analyze,
 	};
 };

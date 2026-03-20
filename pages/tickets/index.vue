@@ -1,15 +1,19 @@
 <template>
-	<div class="p-4 md:p-6 mx-auto">
-		<!-- Header -->
-		<div class="flex items-center justify-between mb-6">
-			<div>
-				<h1 class="text-xl font-semibold">Tickets</h1>
-				<p class="text-sm text-muted-foreground">Board</p>
+	<div class="page__content pt-20">
+		<div class="max-w-screen-xl mx-auto page_inner px-4 2xl:px-0">
+			<!-- Header -->
+			<div class="flex items-center justify-between mb-6">
+				<div>
+					<h1 class="text-xl font-semibold">Tickets</h1>
+					<p class="text-sm text-muted-foreground">Board</p>
+				</div>
 			</div>
 		</div>
 
-		<div class="xl:flex xl:items-center xl:justify-center w-full min-h-svh">
-			<TicketsBoard />
+		<div class="max-w-screen-xl mx-auto px-4 2xl:px-0">
+			<div class="xl:flex xl:items-center xl:justify-center w-full min-h-svh">
+				<TicketsBoard />
+			</div>
 		</div>
 	</div>
 </template>

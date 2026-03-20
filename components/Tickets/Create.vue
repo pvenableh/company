@@ -103,19 +103,20 @@
 								</div>
 								<div class="grid grid-cols-2 gap-4">
 									<UFormGroup label="Due Date">
-										<UPopover>
-											<UInput
-												class="w-full"
-												:model-value="formatDisplayDate(form.due_date)"
-												:readonly="true"
-												:placeholder="formatDisplayDate(new Date())"
-												icon="i-heroicons-calendar"
-											/>
+										<UPopover v-model:open="calendarOpen" class="w-full">
+											<button type="button" class="w-full flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-sm text-left hover:bg-muted/50 transition-colors">
+												<UIcon name="i-heroicons-calendar" class="w-4 h-4 text-muted-foreground flex-shrink-0" />
+												<span :class="form.due_date ? 'text-foreground' : 'text-muted-foreground'">
+													{{ formatDisplayDate(form.due_date) || formatDisplayDate(new Date()) }}
+												</span>
+											</button>
 											<template #panel>
-												<Calendar
-													:model-value="calendarDateValue"
-													@update:model-value="handleCalendarSelect"
-												/>
+												<div class="p-0">
+													<Calendar
+														:model-value="calendarDateValue"
+														@update:model-value="(val) => { handleCalendarSelect(val); calendarOpen = false; }"
+													/>
+												</div>
 											</template>
 										</UPopover>
 									</UFormGroup>
@@ -216,10 +217,18 @@
 import { CalendarDate } from '@internationalized/date';
 import { Calendar } from '~/components/ui/calendar';
 
-defineProps({
+const props = defineProps({
 	columns: {
 		type: Array,
 		required: true,
+	},
+	defaultProject: {
+		type: String,
+		default: null,
+	},
+	defaultOrganization: {
+		type: String,
+		default: null,
 	},
 });
 
@@ -243,6 +252,7 @@ const isLoading = ref(false);
 const selectedUser = ref(null);
 const selectedDate = ref(new Date());
 const selectedTime = ref('17:00');
+const calendarOpen = ref(false);
 const mentionedUsers = ref(new Set());
 const showTitleError = ref(false);
 
@@ -521,6 +531,7 @@ const openForm = async () => {
 	document.body.style.overflow = 'hidden';
 
 	// Initialize form with current org and default values
+	const orgId = props.defaultOrganization || selectedOrg.value;
 	form.value = {
 		title: '',
 		description: '',
@@ -528,22 +539,22 @@ const openForm = async () => {
 		priority: 'medium',
 		due_date: new Date().toISOString(),
 		assigned_to: [],
-		organization: selectedOrg.value,
-		project: null,
+		organization: orgId,
+		project: props.defaultProject || null,
 		team: undefined,
 	};
 
 	// Set up initial data
 	try {
 		// Fetch teams for the current organization
-		if (selectedOrg.value) {
-			await fetchTeams(selectedOrg.value);
+		if (orgId) {
+			await fetchTeams(orgId);
 
 			// Load projects for the organization
-			await fetchProjects(selectedOrg.value);
+			await fetchProjects(orgId);
 
 			// Fetch all users in the organization for initial view
-			await fetchAllOrganizationUsers(selectedOrg.value);
+			await fetchAllOrganizationUsers(orgId);
 		}
 	} catch (error) {
 		console.error('Error initializing form:', error);
