@@ -93,7 +93,8 @@ definePageMeta({
 </script>
 
 <template>
-	<div class="p-4 md:p-6 mx-auto">
+	<div class="page__content pt-20">
+		<div class="max-w-screen-xl mx-auto page_inner px-4 2xl:px-0">
 		<!-- Header -->
 		<div class="flex items-center justify-between mb-6">
 			<div>
@@ -181,5 +182,6 @@ definePageMeta({
 				</div>
 			</template>
 		</ClientOnly>
+		</div>
 	</div>
 </template>

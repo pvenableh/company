@@ -30,13 +30,23 @@ const DEFAULT_LINKS: NavLink[] = [
 		section: 'primary',
 	},
 	// ── Primary AI Apps (toolbar + drawer) ──
+	// Toolbar order: Command Center, Projects, Tickets | Earnest AI | People, Marketing, Menu
 	{
-		name: 'Marketing',
+		name: 'Projects',
 		type: ['header', 'footer', 'toolbar', 'drawer'],
-		to: '/marketing',
-		icon: 'i-lucide-bar-chart-3',
-		color: 'bg-gradient-to-br from-blue-500 to-cyan-500',
-		description: 'AI marketing insights',
+		to: '/projects',
+		icon: 'i-heroicons-square-3-stack-3d',
+		color: 'bg-purple-500',
+		description: 'Track projects',
+		section: 'primary',
+	},
+	{
+		name: 'Tickets',
+		type: ['header', 'footer', 'toolbar', 'drawer'],
+		to: '/tickets',
+		icon: 'i-heroicons-queue-list',
+		color: 'bg-indigo-500',
+		description: 'Support tickets',
 		section: 'primary',
 	},
 	{
@@ -49,12 +59,12 @@ const DEFAULT_LINKS: NavLink[] = [
 		section: 'primary',
 	},
 	{
-		name: 'Projects',
+		name: 'Marketing',
 		type: ['header', 'footer', 'toolbar', 'drawer'],
-		to: '/projects',
-		icon: 'i-heroicons-square-3-stack-3d',
-		color: 'bg-purple-500',
-		description: 'Track projects',
+		to: '/marketing',
+		icon: 'i-lucide-bar-chart-3',
+		color: 'bg-gradient-to-br from-blue-500 to-cyan-500',
+		description: 'AI marketing insights',
 		section: 'primary',
 	},
 	{
@@ -65,15 +75,6 @@ const DEFAULT_LINKS: NavLink[] = [
 		color: 'bg-blue-500',
 		description: 'Team management',
 		section: 'secondary',
-	},
-	{
-		name: 'Tickets',
-		type: ['header', 'footer', 'toolbar', 'drawer'],
-		to: '/tickets',
-		icon: 'i-heroicons-queue-list',
-		color: 'bg-indigo-500',
-		description: 'Support tickets',
-		section: 'primary',
 	},
 	// ── Secondary Apps ──
 	{

@@ -26,7 +26,7 @@ export function useNewsletterBlocks() {
   };
 
   const createBlock = async (payload: Partial<NewsletterBlock>): Promise<NewsletterBlock> => {
-    return items.create(payload);
+    return items.create({ status: 'published', ...payload });
   };
 
   const updateBlock = async (id: number, payload: Partial<NewsletterBlock>): Promise<NewsletterBlock> => {

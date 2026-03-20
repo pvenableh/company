@@ -153,6 +153,30 @@ const taskProgress = computed(() => {
 // ── Quick Actions ──
 const showQuickInvoice = ref(false);
 const showQuickChannel = ref(false);
+const savingInvoice = ref(false);
+const toast = useToast();
+
+const handleInvoiceSave = async (payload) => {
+	savingInvoice.value = true;
+	try {
+		await invoiceItems.create(payload);
+		toast.add({ title: 'Invoice created', color: 'green' });
+		showQuickInvoice.value = false;
+		loadInvoices();
+		loadStats();
+	} catch (err) {
+		console.error('Error creating invoice:', err);
+		toast.add({ title: 'Failed to create invoice', description: err.message, color: 'red' });
+	} finally {
+		savingInvoice.value = false;
+	}
+};
+
+// Defaults for new invoice form (project + org pre-selected)
+const invoiceDefaults = computed(() => ({
+	project: params.id,
+	bill_to: project?.organization?.id || null,
+}));
 
 // ── Documents ──
 const documents = ref([]);
@@ -357,7 +381,7 @@ const formatCurrency = (amount) => {
 };
 </script>
 <template>
-	<div class="page__content">
+	<div class="page__content pt-20">
 		<div class="max-w-screen-xl mx-auto page_inner px-4 2xl:px-0">
 			<!-- Header -->
 			<div class="flex items-center justify-between mb-4">
@@ -462,7 +486,7 @@ const formatCurrency = (amount) => {
 		</div>
 
 		<!-- Tabs -->
-		<div class="w-full my-4 px-4 2xl:px-0">
+		<div class="max-w-screen-xl mx-auto page_inner px-4 2xl:px-0 my-4">
 			<UTabs
 				:items="items"
 				class="mt-2"
@@ -479,7 +503,7 @@ const formatCurrency = (amount) => {
 					</div>
 				</template>
 				<template #tickets="{ item }">
-					<TicketsBoard :projectId="project.id" />
+					<TicketsBoard :projectId="project.id" :organizationId="project.organization?.id" />
 				</template>
 				<template #activity="{ item }">
 					<div class="max-w-2xl mx-auto py-6">
@@ -547,12 +571,10 @@ const formatCurrency = (amount) => {
 						<div class="w-full max-w-2xl">
 							<div class="flex items-center justify-between mb-4">
 								<h2 class="t-label text-muted-foreground">Invoices</h2>
-								<NuxtLink :to="`/invoices?project=${params.id}`">
-									<Button size="sm" variant="outline" class="uppercase text-[10px] tracking-wide">
-										<UIcon name="i-heroicons-plus" class="h-3 w-3 mr-1" />
-										New Invoice
-									</Button>
-								</NuxtLink>
+								<Button size="sm" variant="outline" class="uppercase text-[10px] tracking-wide" @click="showQuickInvoice = true">
+									<UIcon name="i-heroicons-plus" class="h-3 w-3 mr-1" />
+									New Invoice
+								</Button>
 							</div>
 
 							<div v-if="loadingInvoices" class="space-y-2">
@@ -595,15 +617,28 @@ const formatCurrency = (amount) => {
 									<Icon name="lucide:receipt" class="h-6 w-6 text-muted-foreground/60" />
 								</div>
 								<p class="text-sm text-muted-foreground">No invoices for this project.</p>
-								<NuxtLink :to="`/invoices?project=${params.id}`">
-									<Button size="sm" variant="outline" class="mt-4 uppercase text-[10px] tracking-wide">
-										<UIcon name="i-heroicons-plus" class="h-3 w-3 mr-1" />
-										Create Invoice
-									</Button>
-								</NuxtLink>
+								<Button size="sm" variant="outline" class="mt-4 uppercase text-[10px] tracking-wide" @click="showQuickInvoice = true">
+									<UIcon name="i-heroicons-plus" class="h-3 w-3 mr-1" />
+									Create Invoice
+								</Button>
 							</div>
 						</div>
 					</div>
+
+					<!-- Invoice Create Modal -->
+					<ClientOnly>
+						<UModal v-model="showQuickInvoice" class="sm:max-w-2xl">
+							<div class="p-6">
+								<h3 class="text-lg font-semibold mb-4">Create Invoice</h3>
+								<InvoicesInvoiceForm
+									:defaults="invoiceDefaults"
+									:saving="savingInvoice"
+									@save="handleInvoiceSave"
+									@cancel="showQuickInvoice = false"
+								/>
+							</div>
+						</UModal>
+					</ClientOnly>
 				</template>
 			</UTabs>
 		</div>

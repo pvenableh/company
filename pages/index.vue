@@ -2,7 +2,7 @@
 const { user } = useDirectusAuth();
 
 // ── Productivity Engine (existing) ──
-const { suggestions, metrics, isAnalyzing, greeting, analyze } = useAIProductivityEngine();
+const { suggestions, metrics, isAnalyzing, greeting, subtitle, analyze } = useAIProductivityEngine();
 const { enabledModules } = useAIPreferences();
 const { selectedPersona } = useAIPersona();
 
@@ -168,7 +168,7 @@ const activeTab = ref<'commander' | 'timeline' | 'statistics'>('commander');
 				<div class="flex items-end justify-between pt-2">
 					<div>
 						<h1 class="text-[28px] font-bold text-foreground tracking-tight leading-tight">{{ greeting }}</h1>
-						<p class="text-[15px] text-muted-foreground mt-0.5">Here's what needs your attention</p>
+						<p class="text-[15px] text-muted-foreground mt-0.5">{{ subtitle }}</p>
 					</div>
 					<button
 						@click="aiTrayPrompt = ''; aiTrayOpen = true"

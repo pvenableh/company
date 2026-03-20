@@ -90,7 +90,7 @@ export function useEmailPartials() {
   };
 
   const createPartial = async (data: Partial<EmailPartial>): Promise<EmailPartial> => {
-    return items.create(data);
+    return items.create({ status: 'published', ...data });
   };
 
   const updatePartial = async (id: number, data: Partial<EmailPartial>): Promise<EmailPartial> => {

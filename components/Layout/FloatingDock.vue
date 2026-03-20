@@ -1,8 +1,20 @@
 <template>
 	<!-- Desktop-only floating dock (hidden on mobile where tab bar exists) -->
-	<div v-if="user" class="floating-dock hidden md:flex">
+	<div
+		v-if="user"
+		ref="dockRef"
+		class="floating-dock hidden md:flex"
+		:class="[
+			{ 'dock-dragging': isDragging, 'dock-transitioning': isSnapping },
+			currentCorner.includes('right') ? 'items-end' : 'items-start',
+		]"
+		:style="dockStyle"
+	>
 		<!-- Dock buttons (always visible) -->
-		<div class="dock-bar">
+		<div
+			class="dock-bar"
+			@pointerdown="onDragStart"
+		>
 			<!-- Tasks button -->
 			<button
 				class="dock-btn"
@@ -34,6 +46,7 @@
 			<div
 				v-if="activePanel"
 				class="dock-panel"
+				:class="panelPositionClass"
 			>
 				<!-- Panel header -->
 				<div class="dock-panel-header">
@@ -146,6 +159,172 @@ watch(isTimerRunning, (running) => {
 		// Don't auto-open, just let the badge show
 	}
 });
+
+// ── Drag-and-drop with snap-to-corner ──
+type Corner = 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+
+const DOCK_STORAGE_KEY = 'dock-position';
+const MARGIN = 24; // px from edge
+const TOP_OFFSET = 80; // header clearance for top positions
+
+const dockRef = ref<HTMLElement | null>(null);
+const isDragging = ref(false);
+const isSnapping = ref(false);
+const currentCorner = ref<Corner>('bottom-right');
+
+// Drag state (not reactive for perf)
+let dragStartX = 0;
+let dragStartY = 0;
+let dockStartX = 0;
+let dockStartY = 0;
+let currentX = 0;
+let currentY = 0;
+
+// Load saved position
+if (import.meta.client) {
+	try {
+		const saved = localStorage.getItem(DOCK_STORAGE_KEY);
+		if (saved && ['bottom-right', 'bottom-left', 'top-right', 'top-left'].includes(saved)) {
+			currentCorner.value = saved as Corner;
+		}
+	} catch {}
+}
+
+const cornerStyles = computed(() => {
+	const c = currentCorner.value;
+	const style: Record<string, string> = {};
+
+	if (c.includes('bottom')) {
+		style.bottom = '5rem';
+		style.top = 'auto';
+	} else {
+		style.top = `${TOP_OFFSET}px`;
+		style.bottom = 'auto';
+	}
+
+	if (c.includes('right')) {
+		style.right = `${MARGIN}px`;
+		style.left = 'auto';
+	} else {
+		style.left = `${MARGIN}px`;
+		style.right = 'auto';
+	}
+
+	return style;
+});
+
+const dockStyle = computed(() => {
+	if (isDragging.value) {
+		return {
+			position: 'fixed' as const,
+			left: `${currentX}px`,
+			top: `${currentY}px`,
+			right: 'auto',
+			bottom: 'auto',
+			zIndex: 40,
+		};
+	}
+
+	return {
+		...cornerStyles.value,
+		zIndex: 40,
+	};
+});
+
+// Panel opens toward screen center depending on corner
+const panelPositionClass = computed(() => {
+	const c = currentCorner.value;
+	if (c === 'bottom-right') return 'panel-bottom-right';
+	if (c === 'bottom-left') return 'panel-bottom-left';
+	if (c === 'top-right') return 'panel-top-right';
+	if (c === 'top-left') return 'panel-top-left';
+	return 'panel-bottom-right';
+});
+
+// Align items to the correct side
+const alignClass = computed(() => {
+	return currentCorner.value.includes('right') ? 'align-end' : 'align-start';
+});
+
+function onDragStart(e: PointerEvent) {
+	// Only primary button
+	if (e.button !== 0) return;
+
+	const el = dockRef.value;
+	if (!el) return;
+
+	const rect = el.getBoundingClientRect();
+	dragStartX = e.clientX;
+	dragStartY = e.clientY;
+	dockStartX = rect.left;
+	dockStartY = rect.top;
+	currentX = rect.left;
+	currentY = rect.top;
+
+	// Use a small threshold before committing to drag (to not block clicks)
+	const onMove = (ev: PointerEvent) => {
+		const dx = ev.clientX - dragStartX;
+		const dy = ev.clientY - dragStartY;
+
+		if (!isDragging.value && Math.abs(dx) + Math.abs(dy) < 6) return;
+
+		if (!isDragging.value) {
+			isDragging.value = true;
+			activePanel.value = null; // close panel while dragging
+		}
+
+		currentX = dockStartX + dx;
+		currentY = dockStartY + dy;
+
+		// Force reactivity update for position
+		dockRef.value!.style.left = `${currentX}px`;
+		dockRef.value!.style.top = `${currentY}px`;
+		dockRef.value!.style.right = 'auto';
+		dockRef.value!.style.bottom = 'auto';
+	};
+
+	const onUp = () => {
+		document.removeEventListener('pointermove', onMove);
+		document.removeEventListener('pointerup', onUp);
+
+		if (isDragging.value) {
+			isDragging.value = false;
+			snapToNearestCorner();
+		}
+	};
+
+	document.addEventListener('pointermove', onMove);
+	document.addEventListener('pointerup', onUp);
+}
+
+function snapToNearestCorner() {
+	const el = dockRef.value;
+	if (!el) return;
+
+	const rect = el.getBoundingClientRect();
+	const centerX = rect.left + rect.width / 2;
+	const centerY = rect.top + rect.height / 2;
+	const vw = window.innerWidth;
+	const vh = window.innerHeight;
+
+	// Determine nearest corner by comparing center position to screen quadrants
+	const isRight = centerX > vw / 2;
+	const isBottom = centerY > vh / 2;
+
+	const corner: Corner = `${isBottom ? 'bottom' : 'top'}-${isRight ? 'right' : 'left'}` as Corner;
+	currentCorner.value = corner;
+
+	// Animate to final position
+	isSnapping.value = true;
+	setTimeout(() => {
+		isSnapping.value = false;
+	}, 300);
+
+	// Persist
+	try {
+		localStorage.setItem(DOCK_STORAGE_KEY, corner);
+	} catch {}
+}
 </script>
 
 <style scoped>
@@ -153,12 +332,22 @@ watch(isTimerRunning, (running) => {
 
 .floating-dock {
 	position: fixed;
-	bottom: 5rem;
-	right: 1.5rem;
 	z-index: 40;
 	flex-direction: column;
-	align-items: flex-end;
 	gap: 8px;
+	user-select: none;
+	touch-action: none;
+}
+
+.floating-dock.dock-transitioning {
+	transition: top 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+		bottom 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+		left 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+		right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.floating-dock.dock-dragging {
+	opacity: 0.85;
 }
 
 /* Dock bar with buttons */
@@ -166,15 +355,20 @@ watch(isTimerRunning, (running) => {
 	display: flex;
 	align-items: center;
 	gap: 2px;
-	padding: 4px;
-	border-radius: 14px;
-	border: 1px solid hsl(var(--border));
-	background: hsl(var(--card) / 0.9);
+	padding: 4px 8px;
+	border-radius: 100px;
+	border: 1px solid hsl(var(--primary) / 0.2);
+	background: hsl(var(--primary) / 0.08);
 	backdrop-filter: saturate(180%) blur(20px);
 	-webkit-backdrop-filter: saturate(180%) blur(20px);
 	box-shadow:
-		0 1px 3px rgb(0 0 0 / 0.08),
-		0 4px 16px rgb(0 0 0 / 0.06);
+		0 1px 3px hsl(var(--primary) / 0.1),
+		0 4px 16px hsl(var(--primary) / 0.06);
+	cursor: grab;
+}
+
+.dock-dragging .dock-bar {
+	cursor: grabbing;
 }
 
 .dock-btn {
@@ -190,7 +384,7 @@ watch(isTimerRunning, (running) => {
 }
 
 .dock-btn:hover {
-	background: hsl(var(--muted) / 0.6);
+	background: hsl(var(--primary) / 0.15);
 	color: hsl(var(--foreground));
 	transform: translateY(-1px);
 }
@@ -245,8 +439,6 @@ watch(isTimerRunning, (running) => {
 /* Expanded panel */
 .dock-panel {
 	position: absolute;
-	bottom: 52px;
-	right: 0;
 	width: 360px;
 	max-height: min(70vh, 560px);
 	border-radius: 16px;
@@ -258,6 +450,27 @@ watch(isTimerRunning, (running) => {
 	display: flex;
 	flex-direction: column;
 	overflow: hidden;
+}
+
+/* Panel positioning per corner */
+.panel-bottom-right {
+	bottom: 52px;
+	right: 0;
+}
+
+.panel-bottom-left {
+	bottom: 52px;
+	left: 0;
+}
+
+.panel-top-right {
+	top: 52px;
+	right: 0;
+}
+
+.panel-top-left {
+	top: 52px;
+	left: 0;
 }
 
 .dock-panel-header {

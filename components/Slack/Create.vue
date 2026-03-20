@@ -47,8 +47,10 @@
 
 <script setup>
 const props = defineProps({
-	project: Object,
-	default: () => null,
+	project: {
+		type: Object,
+		default: () => null,
+	},
 });
 // State variables
 const channelName = ref('');
@@ -73,10 +75,14 @@ const createChannel = async () => {
 
 	try {
 		// Create a new channel using the Directus API
-		await channelItems.create({
+		const data = {
 			name: channelSlug.value,
-			project: props.project.id,
-		});
+			status: 'published',
+		};
+		if (props.project?.id) data.project = props.project.id;
+		if (props.project?.organization?.id) data.organization = props.project.organization.id;
+		if (props.project?.client) data.client = typeof props.project.client === 'object' ? props.project.client.id : props.project.client;
+		await channelItems.create(data);
 
 		// Show success message
 		successMessage.value = `Channel "${channelName.value}" has been created successfully.`;

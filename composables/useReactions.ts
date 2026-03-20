@@ -115,6 +115,7 @@ export function useReactions() {
     }
 
     await reactions.create({
+      status: 'published',
       item: payload.item,
       table: payload.collection,
       user: user.value.id,
