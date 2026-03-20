@@ -53,7 +53,7 @@ const handleAI = () => {
 };
 </script>
 <template>
-	<nav class="ios-tab-bar md:hidden" role="tablist">
+	<nav class="ios-tab-bar flex md:hidden" role="tablist">
 		<!-- Left nav links -->
 		<nuxt-link
 			v-for="(link, index) in leftLinks"
@@ -61,10 +61,7 @@ const handleAI = () => {
 			:to="link.to"
 			role="tab"
 			class="ios-tab-item"
-			:class="[
-				{ active: route.path === link.to },
-				index >= 2 ? 'hidden sm:flex' : '',
-			]"
+			:class="[{ active: route.path === link.to }, index >= 2 ? 'hidden sm:flex' : '']"
 			@click="handleNavigation(link, $event)"
 		>
 			<div class="ios-tab-icon-wrap">
@@ -88,10 +85,7 @@ const handleAI = () => {
 			:to="link.to"
 			role="tab"
 			class="ios-tab-item"
-			:class="[
-				{ active: route.path === link.to },
-				index >= 1 ? 'hidden sm:flex' : '',
-			]"
+			:class="[{ active: route.path === link.to }, index >= 1 ? 'hidden sm:flex' : '']"
 			@click="handleNavigation(link, $event)"
 		>
 			<div class="ios-tab-icon-wrap">
@@ -103,7 +97,12 @@ const handleAI = () => {
 		<!-- Menu button -->
 		<button
 			class="ios-tab-item"
-			@click="() => { triggerHaptic(10); toggleSheet(); }"
+			@click="
+				() => {
+					triggerHaptic(10);
+					toggleSheet();
+				}
+			"
 		>
 			<div class="ios-tab-icon-wrap">
 				<UIcon name="i-heroicons-bars-3" class="ios-tab-icon" />
@@ -122,7 +121,6 @@ const handleAI = () => {
 	left: 0;
 	right: 0;
 	z-index: 40;
-	display: flex;
 	align-items: flex-end;
 	justify-content: space-around;
 	height: calc(56px + env(safe-area-inset-bottom, 0px));
@@ -203,7 +201,9 @@ const handleAI = () => {
 	border-radius: 50%;
 	background: hsl(var(--primary));
 	color: hsl(var(--primary-foreground));
-	transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s;
+	transition:
+		transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+		box-shadow 0.2s;
 	box-shadow: 0 2px 12px hsl(var(--primary) / 0.35);
 	margin-top: -10px;
 }
