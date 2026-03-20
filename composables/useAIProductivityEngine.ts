@@ -1224,6 +1224,13 @@ export const useAIProductivityEngine = () => {
 	// ─── Main Analysis ────────────────────────────────────────────────────────
 
 	const analyze = async (enabledModules?: Set<string>) => {
+		// Don't make any API calls without active authentication
+		if (!user.value) {
+			greeting.value = getGreeting();
+			subtitle.value = getSubtitle();
+			return;
+		}
+
 		isAnalyzing.value = true;
 		greeting.value = getGreeting();
 		subtitle.value = getSubtitle();

@@ -1,14 +1,21 @@
 <template>
 	<div class="relative bg-background text-foreground transition duration-150 lg:overflow-visible ios-safe-area">
-		<LayoutHeader :links="headerLinks" />
+		<!-- Desktop Sidebar -->
+		<ClientOnly>
+			<LayoutSidebar v-if="user" />
+		</ClientOnly>
 
-		<div class="page pb-safe min-h-page">
-			<slot />
+		<div class="lg:pl-60">
+			<LayoutHeader :links="headerLinks" />
+
+			<div class="page pb-safe min-h-page">
+				<slot />
+			</div>
+
+			<LayoutFooter :links="footerLinks" :class="user ? 'hidden md:flex lg:hidden' : 'flex'" />
 		</div>
 
-		<LayoutFooter :links="footerLinks" :class="user ? 'hidden md:flex' : 'flex'" />
-
-		<!-- iOS Tab Bar (mobile) -->
+		<!-- iOS Tab Bar (mobile, hidden on lg+ where sidebar exists) -->
 		<LayoutMobileToolbar :links="toolbarLinks" @open-ai="aiTrayOpen = true" />
 
 		<!-- iOS Bottom Sheet (nav drawer) -->
