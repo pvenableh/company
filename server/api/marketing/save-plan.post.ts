@@ -8,6 +8,7 @@ interface SavePlanRequest {
   title: string;
   data: Record<string, any>;
   goal?: string;
+  organizationId?: string;
 }
 
 export default defineEventHandler(async (event) => {
@@ -58,8 +59,28 @@ export default defineEventHandler(async (event) => {
     }),
   );
 
+  // Also save to marketing_campaigns collection for the campaigns dashboard
+  let campaignId = null;
+  try {
+    const campaign = await directus.request(
+      createItem('marketing_campaigns', {
+        title: body.title || `Marketing ${body.type === 'dashboard' ? 'Analysis' : 'Campaign Plan'}`,
+        goal: body.goal || null,
+        status: 'draft',
+        type: body.type,
+        plan_data: body.data,
+        organization: body.organizationId || null,
+      }),
+    ) as any;
+    campaignId = campaign?.id;
+  } catch (err) {
+    // Non-critical — campaigns collection may not exist yet
+    console.warn('[save-plan] Could not save to marketing_campaigns:', (err as Error).message);
+  }
+
   return {
     sessionId: chatSession.id,
+    campaignId,
     message: `${body.type === 'dashboard' ? 'Analysis' : 'Campaign plan'} saved successfully`,
   };
 });

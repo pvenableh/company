@@ -7,6 +7,7 @@
  */
 import { readItems } from '@directus/sdk';
 import { getLLMProvider } from '~/server/utils/llm/factory';
+import { logAIUsage } from '~/server/utils/ai-usage';
 import type { ChatMessage } from '~/server/utils/llm/types';
 
 interface GenerateRequest {
@@ -209,6 +210,18 @@ Return this exact JSON structure:
         };
       })
       .filter(Boolean);
+
+    // Log AI usage
+    if (response.usage) {
+      logAIUsage({
+        event,
+        endpoint: 'email/ai-generate',
+        model: response.model,
+        inputTokens: response.usage.inputTokens,
+        outputTokens: response.usage.outputTokens,
+        metadata: { emailType: body.emailType },
+      }).catch(() => {});
+    }
 
     return {
       subject: generated.subject,

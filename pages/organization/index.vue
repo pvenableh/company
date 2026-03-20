@@ -27,6 +27,7 @@ const tabItems = [
 	{ slot: 'overview', label: 'Overview', icon: 'i-heroicons-home' },
 	{ slot: 'members', label: 'Members', icon: 'i-heroicons-users' },
 	{ slot: 'teams', label: 'Teams', icon: 'i-heroicons-user-group' },
+	{ slot: 'ai-usage', label: 'AI Usage', icon: 'i-heroicons-sparkles' },
 ];
 
 definePageMeta({
@@ -946,6 +947,12 @@ watch(searchEmail, (val) => {
 								:initial-teams="visibleTeams"
 								:external-loading="teamsLoading"
 							/>
+						</div>
+					</template>
+
+					<template #ai-usage>
+						<div class="mt-6">
+							<OrganizationAIUsage :organization-id="selectedOrg" />
 						</div>
 					</template>
 				</UTabs>

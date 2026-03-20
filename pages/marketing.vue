@@ -215,6 +215,105 @@
 			</div>
 		</div>
 
+		<!-- Saved Campaigns -->
+		<div v-if="savedCampaigns.length > 0 || loadingCampaigns" class="mt-10 pt-8 border-t">
+			<div class="flex items-center justify-between mb-4">
+				<div class="flex items-center gap-3">
+					<div class="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+						<Icon name="lucide:folder-open" class="w-4.5 h-4.5 text-white" />
+					</div>
+					<div>
+						<h2 class="text-lg font-semibold text-foreground">Saved Campaigns</h2>
+						<p class="text-xs text-muted-foreground">{{ savedCampaigns.length }} campaign{{ savedCampaigns.length !== 1 ? 's' : '' }}</p>
+					</div>
+				</div>
+				<div class="flex items-center gap-1.5">
+					<button
+						v-for="f in campaignFilters"
+						:key="f.value"
+						class="px-2.5 py-1 text-xs font-medium rounded-lg transition-colors"
+						:class="campaignFilter === f.value
+							? 'bg-primary/10 text-primary'
+							: 'text-muted-foreground hover:bg-muted/50'"
+						@click="campaignFilter = f.value"
+					>
+						{{ f.label }}
+					</button>
+				</div>
+			</div>
+
+			<div v-if="loadingCampaigns" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+				<div v-for="i in 3" :key="i" class="rounded-xl border bg-card p-4 animate-pulse">
+					<div class="h-4 bg-muted/40 rounded w-2/3 mb-2" />
+					<div class="h-3 bg-muted/40 rounded w-full mb-3" />
+					<div class="h-3 bg-muted/40 rounded w-1/4" />
+				</div>
+			</div>
+
+			<div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+				<div
+					v-for="c in filteredCampaigns"
+					:key="c.id"
+					class="rounded-xl border bg-card p-4 hover:shadow-md transition-all cursor-pointer group"
+					@click="expandedCampaign = expandedCampaign === c.id ? null : c.id"
+				>
+					<div class="flex items-start justify-between mb-2">
+						<div class="flex-1 min-w-0">
+							<div class="flex items-center gap-2 mb-1">
+								<Icon
+									:name="c.type === 'campaign' ? 'lucide:rocket' : 'lucide:bar-chart-2'"
+									class="w-3.5 h-3.5 text-muted-foreground flex-shrink-0"
+								/>
+								<h4 class="text-sm font-semibold text-foreground truncate">{{ c.title }}</h4>
+							</div>
+							<p v-if="c.goal" class="text-xs text-muted-foreground line-clamp-2">{{ c.goal }}</p>
+						</div>
+						<span
+							class="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full flex-shrink-0 ml-2"
+							:class="statusBadgeClass(c.status)"
+						>
+							{{ c.status }}
+						</span>
+					</div>
+
+					<div class="flex items-center justify-between mt-3">
+						<span class="text-[10px] text-muted-foreground">
+							{{ new Date(c.date_created).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) }}
+						</span>
+						<div class="flex items-center gap-1">
+							<button
+								v-if="c.status === 'draft'"
+								class="text-[10px] px-2 py-0.5 rounded-lg bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors"
+								@click.stop="updateCampaignStatus(c.id, 'active')"
+							>
+								Activate
+							</button>
+							<button
+								v-if="c.status === 'active'"
+								class="text-[10px] px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 transition-colors"
+								@click.stop="updateCampaignStatus(c.id, 'paused')"
+							>
+								Pause
+							</button>
+							<button
+								v-if="c.status === 'active' || c.status === 'paused'"
+								class="text-[10px] px-2 py-0.5 rounded-lg bg-green-500/10 text-green-600 hover:bg-green-500/20 transition-colors"
+								@click.stop="updateCampaignStatus(c.id, 'completed')"
+							>
+								Complete
+							</button>
+							<button
+								class="text-[10px] px-2 py-0.5 rounded-lg bg-red-500/10 text-red-600 hover:bg-red-500/20 transition-colors opacity-0 group-hover:opacity-100 transition-opacity"
+								@click.stop="deleteCampaign(c.id)"
+							>
+								Archive
+							</button>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
 		<!-- Campaign Planner -->
 		<div class="mt-10 pt-8 border-t">
 			<div class="flex items-center gap-3 mb-4">
@@ -311,6 +410,70 @@ const savedDashboard = ref(false);
 const savingCampaign = ref(false);
 const savedCampaign = ref(false);
 
+// Campaign history
+const savedCampaigns = ref<any[]>([]);
+const loadingCampaigns = ref(false);
+const campaignFilter = ref('all');
+const expandedCampaign = ref<string | null>(null);
+
+const campaignFilters = [
+	{ label: 'All', value: 'all' },
+	{ label: 'Active', value: 'active' },
+	{ label: 'Completed', value: 'completed' },
+	{ label: 'Drafts', value: 'draft' },
+];
+
+const filteredCampaigns = computed(() => {
+	if (campaignFilter.value === 'all') return savedCampaigns.value.filter(c => c.status !== 'archived');
+	return savedCampaigns.value.filter(c => c.status === campaignFilter.value);
+});
+
+function statusBadgeClass(status: string): string {
+	switch (status) {
+		case 'active': return 'bg-blue-500/10 text-blue-600';
+		case 'completed': return 'bg-green-500/10 text-green-600';
+		case 'paused': return 'bg-amber-500/10 text-amber-600';
+		case 'archived': return 'bg-muted text-muted-foreground';
+		default: return 'bg-muted/50 text-muted-foreground';
+	}
+}
+
+async function fetchCampaigns() {
+	if (!selectedOrg.value) return;
+	loadingCampaigns.value = true;
+	try {
+		const data = await $fetch(`/api/marketing/campaigns?organizationId=${selectedOrg.value}`);
+		savedCampaigns.value = (data as any).campaigns || [];
+	} catch {
+		// Campaign collection may not exist yet
+		savedCampaigns.value = [];
+	} finally {
+		loadingCampaigns.value = false;
+	}
+}
+
+async function updateCampaignStatus(id: string, status: string) {
+	try {
+		await $fetch(`/api/marketing/campaigns/${id}`, {
+			method: 'PATCH',
+			body: { status },
+		});
+		const idx = savedCampaigns.value.findIndex(c => c.id === id);
+		if (idx !== -1) savedCampaigns.value[idx].status = status;
+	} catch (err) {
+		console.error('Failed to update campaign:', err);
+	}
+}
+
+async function deleteCampaign(id: string) {
+	try {
+		await $fetch(`/api/marketing/campaigns/${id}`, { method: 'DELETE' });
+		savedCampaigns.value = savedCampaigns.value.filter(c => c.id !== id);
+	} catch (err) {
+		console.error('Failed to archive campaign:', err);
+	}
+}
+
 async function runDashboardAnalysis() {
 	if (!selectedOrg.value) {
 		error.value = 'Please select an organization first.';
@@ -373,10 +536,12 @@ async function saveDashboard() {
 				type: 'dashboard',
 				title: `Marketing Analysis — ${new Date().toLocaleDateString()}`,
 				data: dashboard.value,
+				organizationId: selectedOrg.value,
 			},
 		});
 		savedDashboard.value = true;
 		setTimeout(() => { savedDashboard.value = false; }, 3000);
+		fetchCampaigns(); // Refresh list
 	} catch (err: any) {
 		console.error('Failed to save analysis:', err);
 	} finally {
@@ -395,10 +560,12 @@ async function saveCampaign() {
 				title: (campaign.value as any).campaignName || 'Campaign Plan',
 				data: campaign.value,
 				goal: campaignGoal.value,
+				organizationId: selectedOrg.value,
 			},
 		});
 		savedCampaign.value = true;
 		setTimeout(() => { savedCampaign.value = false; }, 3000);
+		fetchCampaigns(); // Refresh list
 	} catch (err: any) {
 		console.error('Failed to save campaign plan:', err);
 	} finally {
@@ -452,4 +619,14 @@ function impactColor(level: string): string {
 	if (level === 'low') return 'text-red-600 dark:text-red-400';
 	return 'text-amber-600 dark:text-amber-400';
 }
+
+// Load saved campaigns on mount
+onMounted(() => {
+	fetchCampaigns();
+});
+
+// Reload when org changes
+watch(selectedOrg, () => {
+	fetchCampaigns();
+});
 </script>

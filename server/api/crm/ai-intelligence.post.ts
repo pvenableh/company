@@ -13,6 +13,7 @@
  */
 import { getLLMProvider } from '~/server/utils/llm/factory';
 import { getCRMContext } from '~/server/utils/crm-intelligence';
+import { logAIUsage } from '~/server/utils/ai-usage';
 import type { ChatMessage } from '~/server/utils/llm/types';
 import type {
 	CRMIntelligenceRequest,
@@ -82,6 +83,19 @@ export default defineEventHandler(async (event) => {
 				statusCode: 502,
 				message: 'AI returned an invalid response. Please try again.',
 			});
+		}
+
+		// Log AI usage
+		if (response.usage) {
+			logAIUsage({
+				event,
+				endpoint: 'crm/ai-intelligence',
+				model: response.model,
+				inputTokens: response.usage.inputTokens,
+				outputTokens: response.usage.outputTokens,
+				organizationId: body.organizationId,
+				metadata: { analysisType: body.analysisType },
+			}).catch(() => {});
 		}
 
 		return parsed;

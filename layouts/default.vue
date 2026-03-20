@@ -12,7 +12,7 @@
 				<slot />
 			</div>
 
-			<LayoutFooter :links="footerLinks" :class="user ? 'hidden md:flex lg:hidden' : 'flex'" />
+			<LayoutFooter :links="footerLinks" :class="user ? 'hidden md:flex' : 'flex'" />
 		</div>
 
 		<!-- iOS Tab Bar (mobile, hidden on lg+ where sidebar exists) -->
@@ -84,7 +84,7 @@ const toolbarLinks = computed(() => props.links.filter((link) => link.type.inclu
 .pb-safe {
 	padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 16px);
 }
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
 	.pb-safe {
 		padding-bottom: 0;
 	}
