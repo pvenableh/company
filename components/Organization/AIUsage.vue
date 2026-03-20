@@ -81,7 +81,7 @@
 									:color="[lineChartConfig.input.color, lineChartConfig.output.color]"
 									:curve-type="CurveType.MonotoneX"
 								/>
-								<VisAxis type="x" :x="(d) => d.index" :tick-format="(i) => dailyChartData[Math.round(i)]?.label || ''" :grid-line="false" :tick-line="false" :domain-line="false" />
+								<VisAxis type="x" :x="(d) => d.index" :tick-format="(i) => { const idx = Math.round(i); return idx >= 0 && idx < dailyChartData.length ? dailyChartData[idx]?.label || '' : ''; }" :grid-line="false" :tick-line="false" :domain-line="false" />
 								<VisAxis type="y" :grid-line="true" :tick-line="false" :domain-line="false" />
 								<ChartCrosshair
 									:template="lineTooltip"

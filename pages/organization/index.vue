@@ -496,9 +496,9 @@ watch(searchEmail, (val) => {
 </script>
 
 <template>
-	<div class="w-full relative">
-		<h1 class="page__title">Company</h1>
-		<div class="flex items-center justify-start flex-col z-10 w-full page__inner">
+	<div class="max-w-screen-xl mx-auto px-4 py-6">
+		<h1 class="text-2xl font-semibold mb-6">Company</h1>
+		<div class="w-full">
 			<!-- Loading state (wait for both org initialization and page data) -->
 			<div v-if="isLoading || (!orgIsInitialized && orgInitLoading)" class="flex justify-center items-center min-h-[300px]">
 				<UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-gray-500" />

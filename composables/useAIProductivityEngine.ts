@@ -618,7 +618,7 @@ export const useAIProductivityEngine = () => {
 			// Check connected accounts
 			const accounts = await socialAccountItems.list({
 				fields: ['id', 'platform', 'account_name', 'status'],
-				filter: { status: { _eq: 'active' } },
+				filter: { status: { _eq: 'published' } },
 				limit: 20,
 			});
 
@@ -641,9 +641,9 @@ export const useAIProductivityEngine = () => {
 
 			// Check scheduled posts
 			const posts = await socialPostItems.list({
-				fields: ['id', 'status', 'scheduled_at', 'platform', 'caption'],
+				fields: ['id', 'post_status', 'scheduled_at', 'platforms', 'caption'],
 				filter: {
-					status: { _in: ['scheduled', 'draft', 'failed'] },
+					post_status: { _in: ['scheduled', 'draft', 'failed'] },
 				},
 				sort: ['scheduled_at'],
 				limit: 50,
@@ -654,7 +654,7 @@ export const useAIProductivityEngine = () => {
 			let draftCount = 0;
 
 			for (const post of posts) {
-				if (post.status === 'failed') {
+				if (post.post_status === 'failed') {
 					failedCount++;
 					results.push({
 						id: `social-failed-${post.id}`,
@@ -662,16 +662,16 @@ export const useAIProductivityEngine = () => {
 						priority: 'high',
 						icon: 'i-heroicons-exclamation-circle',
 						title: `Failed Post: ${(post.caption || '').substring(0, 40)}...`,
-						description: `This ${post.platform || 'social'} post failed to publish`,
+						description: `This social post failed to publish`,
 						actionLabel: 'Fix & Retry',
 						actionRoute: `/social/posts/${post.id}/edit`,
 						category: 'social',
 						timestamp: new Date(),
 						score: 65,
 					});
-				} else if (post.status === 'scheduled') {
+				} else if (post.post_status === 'scheduled') {
 					scheduledCount++;
-				} else if (post.status === 'draft') {
+				} else if (post.post_status === 'draft') {
 					draftCount++;
 				}
 			}
@@ -683,7 +683,7 @@ export const useAIProductivityEngine = () => {
 			const weekFromNow = new Date();
 			weekFromNow.setDate(weekFromNow.getDate() + 7);
 			const upcomingScheduled = posts.filter(
-				(p: any) => p.status === 'scheduled' && p.scheduled_at && new Date(p.scheduled_at) <= weekFromNow,
+				(p: any) => p.post_status === 'scheduled' && p.scheduled_at && new Date(p.scheduled_at) <= weekFromNow,
 			);
 
 			if (upcomingScheduled.length === 0 && accounts.length > 0) {

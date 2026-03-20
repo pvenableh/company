@@ -75,7 +75,7 @@ export default defineEventHandler(async (event) => {
 
     return { activity };
   } catch (error: any) {
-    console.error('[ai/usage/recent] Error:', error.message);
-    throw createError({ statusCode: 500, message: 'Failed to fetch recent activity' });
+    console.warn('[ai/usage/recent] Could not fetch (collection may not exist):', error.message);
+    return { activity: [] };
   }
 });

@@ -1,13 +1,7 @@
 <template>
 	<nav class="sidebar hidden xl:flex" :class="{ 'sidebar--collapsed': collapsed }" v-if="user">
-		<!-- Logo / Brand -->
-		<div class="sidebar-header">
-			<NuxtLink to="/" class="flex items-center gap-2.5 px-2 ios-press rounded-xl" :class="{ 'justify-center px-0': collapsed }">
-				<div class="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-					<UIcon name="i-heroicons-command-line" class="w-4 h-4 text-primary" />
-				</div>
-				<span v-if="!collapsed" class="text-sm font-semibold text-foreground">Command Center</span>
-			</NuxtLink>
+		<!-- Collapse / Expand -->
+		<div class="sidebar-collapse-row">
 			<button
 				class="sidebar-collapse-btn"
 				:title="collapsed ? 'Expand sidebar' : 'Collapse sidebar'"
@@ -15,6 +9,16 @@
 			>
 				<UIcon :name="collapsed ? 'i-heroicons-chevron-right' : 'i-heroicons-chevron-left'" class="w-3.5 h-3.5" />
 			</button>
+		</div>
+
+		<!-- Logo / Brand -->
+		<div class="sidebar-header">
+			<NuxtLink to="/" class="flex items-center gap-2.5 px-2 ios-press rounded-xl" :class="{ 'justify-center px-0': collapsed }">
+				<div class="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+					<UIcon name="i-heroicons-command-line" class="w-4 h-4 text-primary" />
+				</div>
+				<span v-if="!collapsed" class="text-[11px] font-semibold text-foreground uppercase tracking-wider">Command Center</span>
+			</NuxtLink>
 		</div>
 
 		<!-- Nav Links -->
@@ -33,12 +37,13 @@
 					]"
 					:title="collapsed ? link.name : undefined"
 				>
-					<UIcon
-						:name="link.icon"
-						class="w-5 h-5 flex-shrink-0"
-						:class="!isActive(link.to) ? getIconColor(link) : ''"
-					/>
-					<span v-if="!collapsed">{{ link.name }}</span>
+					<div
+						class="sidebar-icon-box flex-shrink-0"
+						:class="[link.color || 'bg-gray-500', isActive(link.to) ? 'ring-2 ring-primary/30' : '']"
+					>
+						<UIcon :name="link.icon" class="w-3.5 h-3.5 text-white" />
+					</div>
+					<span v-if="!collapsed" class="sidebar-link-label">{{ link.name }}</span>
 				</NuxtLink>
 			</div>
 
@@ -56,12 +61,13 @@
 					]"
 					:title="collapsed ? link.name : undefined"
 				>
-					<UIcon
-						:name="link.icon"
-						class="w-5 h-5 flex-shrink-0"
-						:class="!isActive(link.to) ? getIconColor(link) : ''"
-					/>
-					<span v-if="!collapsed">{{ link.name }}</span>
+					<div
+						class="sidebar-icon-box flex-shrink-0"
+						:class="[link.color || 'bg-gray-500', isActive(link.to) ? 'ring-2 ring-primary/30' : '']"
+					>
+						<UIcon :name="link.icon" class="w-3.5 h-3.5 text-white" />
+					</div>
+					<span v-if="!collapsed" class="sidebar-link-label">{{ link.name }}</span>
 				</NuxtLink>
 			</div>
 
@@ -79,12 +85,13 @@
 					]"
 					:title="collapsed ? link.name : undefined"
 				>
-					<UIcon
-						:name="link.icon"
-						class="w-5 h-5 flex-shrink-0"
-						:class="!isActive(link.to) ? getIconColor(link) : ''"
-					/>
-					<span v-if="!collapsed">{{ link.name }}</span>
+					<div
+						class="sidebar-icon-box flex-shrink-0"
+						:class="[link.color || 'bg-gray-500', isActive(link.to) ? 'ring-2 ring-primary/30' : '']"
+					>
+						<UIcon :name="link.icon" class="w-3.5 h-3.5 text-white" />
+					</div>
+					<span v-if="!collapsed" class="sidebar-link-label">{{ link.name }}</span>
 				</NuxtLink>
 			</div>
 		</div>
@@ -117,8 +124,6 @@
 </template>
 
 <script setup lang="ts">
-import type { NavLink } from '~/composables/useNavPreferences';
-
 defineEmits(['edit-apps']);
 
 const { user } = useDirectusAuth();
@@ -136,7 +141,7 @@ const secondaryLinks = computed(() =>
 );
 
 const toolLinks = computed(() =>
-	visibleLinks.value.filter(l => l.section === 'tools' && l.to !== '/organization'),
+	visibleLinks.value.filter(l => l.section === 'tools'),
 );
 
 const isActive = (to: string) => {
@@ -144,13 +149,6 @@ const isActive = (to: string) => {
 	return route.path.startsWith(to);
 };
 
-/** Extract a text-color class from a link's bg color string */
-const getIconColor = (link: NavLink): string => {
-	if (!link.color) return '';
-	// Match "from-X-NNN" (gradient) or "bg-X-NNN" (solid)
-	const match = link.color.match(/(?:from-|bg-)(\w+-\d+)/);
-	return match ? `text-${match[1]}` : '';
-};
 </script>
 
 <style scoped>
@@ -175,20 +173,28 @@ const getIconColor = (link: NavLink): string => {
 	width: 64px;
 }
 
+.sidebar-collapse-row {
+	display: flex;
+	justify-content: flex-end;
+	padding: 64px 12px 0;
+}
+
+.sidebar--collapsed .sidebar-collapse-row {
+	justify-content: center;
+	padding: 64px 8px 0;
+}
+
 .sidebar-header {
 	position: relative;
-	padding: 72px 16px 12px;
+	padding: 8px 16px 12px;
 	border-bottom: 1px solid hsl(var(--border) / 0.3);
 }
 
 .sidebar--collapsed .sidebar-header {
-	padding: 72px 8px 12px;
+	padding: 8px 8px 12px;
 }
 
 .sidebar-collapse-btn {
-	position: absolute;
-	top: 72px;
-	right: 8px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -205,8 +211,7 @@ const getIconColor = (link: NavLink): string => {
 }
 
 .sidebar--collapsed .sidebar-collapse-btn {
-	position: static;
-	margin: 4px auto 0;
+	margin: 0 auto;
 }
 
 .sidebar-nav {
@@ -255,8 +260,25 @@ const getIconColor = (link: NavLink): string => {
 
 .sidebar-link--collapsed {
 	justify-content: center;
-	padding: 10px 8px;
+	padding: 10px 10px;
 	gap: 0;
+}
+
+.sidebar-icon-box {
+	width: 28px;
+	height: 28px;
+	border-radius: 8px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: all 0.15s ease;
+}
+
+.sidebar-link-label {
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
 }
 
 .sidebar-link-active {

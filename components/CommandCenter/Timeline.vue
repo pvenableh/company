@@ -74,6 +74,18 @@ const collectionColors = {
 	clients: 'text-orange-500',
 };
 
+const collectionTagColors = {
+	projects: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+	tickets: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+	invoices: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+	project_tasks: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+	emails: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400',
+	cd_contacts: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
+	cd_activities: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400',
+	contacts: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
+	clients: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+};
+
 const actionLabels = {
 	create: 'created',
 	update: 'updated',
@@ -454,7 +466,7 @@ watch(selectedOrg, () => {
 		</div>
 
 		<!-- Timeline feed -->
-		<div v-else ref="scrollContainer" class="space-y-3 max-w-2xl mx-auto">
+		<div v-else ref="scrollContainer" class="space-y-3">
 			<div
 				v-for="item in timeline"
 				:key="item.id"
@@ -480,7 +492,9 @@ watch(selectedOrg, () => {
 						</div>
 						<div class="flex items-center gap-2 flex-shrink-0">
 							<!-- Collection tag (upper-right) -->
-							<span class="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+							<span class="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full"
+								:class="collectionTagColors[item.collection] || 'bg-muted text-muted-foreground'"
+							>
 								<UIcon :name="collectionIcons[item.collection] || 'i-heroicons-document'" class="w-3 h-3" />
 								{{ collectionLabels[item.collection] || item.collection }}
 							</span>
@@ -595,7 +609,18 @@ watch(selectedOrg, () => {
 					</div>
 				</div>
 
-				<!-- Combined action bar: reactions + comment + view -->
+				<!-- View link -->
+				<div v-if="getItemRoute(item)" class="px-4 pb-3 flex justify-end">
+					<NuxtLink
+						:to="getItemRoute(item)"
+						class="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/50 hover:text-primary transition-colors"
+					>
+						View
+						<UIcon name="i-heroicons-chevron-right" class="w-3 h-3" />
+					</NuxtLink>
+				</div>
+
+				<!-- Combined action bar: reactions + comment -->
 				<div class="border-t border-border/50 px-4 py-2 flex items-center gap-2">
 					<!-- Reactions inline -->
 					<div class="flex items-center gap-1 flex-wrap">
@@ -639,14 +664,6 @@ watch(selectedOrg, () => {
 							<span v-if="item.comments.length > 0">{{ item.comments.length }}</span>
 							<span v-else>Comment</span>
 						</button>
-						<NuxtLink
-							v-if="getItemRoute(item)"
-							:to="getItemRoute(item)"
-							class="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-						>
-							<UIcon name="i-heroicons-arrow-top-right-on-square" class="w-3.5 h-3.5" />
-							View
-						</NuxtLink>
 					</div>
 				</div>
 

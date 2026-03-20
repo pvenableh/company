@@ -164,7 +164,7 @@ const activeTab = ref<'commander' | 'timeline' | 'statistics'>('commander');
 
 		<!-- Action Board: shown when user IS logged in -->
 		<div v-else class="min-h-screen bg-background">
-			<div class="max-w-7xl mx-auto px-4 pt-16 pb-8 sm:px-6 lg:px-8 space-y-6">
+			<div class="max-w-screen-xl mx-auto px-4 pt-16 pb-8 sm:px-6 lg:px-8 space-y-6">
 				<!-- Greeting + Assistant Button -->
 				<div class="flex items-end justify-between pt-2">
 					<div>
@@ -181,41 +181,43 @@ const activeTab = ref<'commander' | 'timeline' | 'statistics'>('commander');
 				</div>
 
 				<!-- Tab Switcher -->
-				<div class="flex gap-1 p-1 bg-muted/40 rounded-xl w-fit">
+				<div class="flex gap-1 p-1 bg-muted/40 rounded-xl w-full sm:w-fit">
 					<button
 						@click="activeTab = 'commander'"
-						class="px-4 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
+						class="flex-1 sm:flex-none px-3 sm:px-4 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
 						:class="activeTab === 'commander'
 							? 'bg-background text-foreground shadow-sm'
 							: 'text-muted-foreground hover:text-foreground'"
 					>
-						<span class="flex items-center gap-1.5">
+						<span class="flex items-center justify-center gap-1.5">
 							<UIcon name="i-heroicons-command-line" class="w-3.5 h-3.5" />
-							Command Center
+							<span class="hidden sm:inline">Command Center</span>
+							<span class="sm:hidden">Command</span>
 						</span>
 					</button>
 					<button
 						@click="activeTab = 'timeline'"
-						class="px-4 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
+						class="flex-1 sm:flex-none px-3 sm:px-4 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
 						:class="activeTab === 'timeline'
 							? 'bg-background text-foreground shadow-sm'
 							: 'text-muted-foreground hover:text-foreground'"
 					>
-						<span class="flex items-center gap-1.5">
+						<span class="flex items-center justify-center gap-1.5">
 							<UIcon name="i-heroicons-clock" class="w-3.5 h-3.5" />
 							Timeline
 						</span>
 					</button>
 					<button
 						@click="activeTab = 'statistics'"
-						class="px-4 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
+						class="flex-1 sm:flex-none px-3 sm:px-4 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
 						:class="activeTab === 'statistics'
 							? 'bg-background text-foreground shadow-sm'
 							: 'text-muted-foreground hover:text-foreground'"
 					>
-						<span class="flex items-center gap-1.5">
+						<span class="flex items-center justify-center gap-1.5">
 							<UIcon name="i-heroicons-squares-2x2" class="w-3.5 h-3.5" />
-							Statistics
+							<span class="hidden sm:inline">Statistics</span>
+							<span class="sm:hidden">Stats</span>
 						</span>
 					</button>
 				</div>
@@ -540,12 +542,16 @@ const activeTab = ref<'commander' | 'timeline' | 'statistics'>('commander');
 				</div><!-- /Commander tab -->
 
 				<!-- ═══ Timeline Tab ═══ -->
-				<div v-show="activeTab === 'timeline'" class="lg:grid lg:grid-cols-[1fr_320px] lg:gap-6">
+				<div v-show="activeTab === 'timeline'" class="lg:grid lg:grid-cols-[1fr_380px] lg:gap-6 lg:items-start">
 					<div class="space-y-6">
 						<CommandCenterTimeline />
 					</div>
 					<div class="hidden lg:block">
 						<div class="lg:sticky lg:top-20 lg:self-start space-y-4">
+							<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70 flex items-center gap-2">
+								<UIcon name="i-heroicons-chart-bar-square" class="w-4 h-4 text-primary" />
+								Insights
+							</h3>
 							<CommandCenterTimelineMotivation
 								:greeting="greeting"
 								:tasks-completed="metrics?.tasksCompletedToday ?? 0"

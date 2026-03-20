@@ -87,22 +87,22 @@ onUnmounted(() => {
 		<DropdownMenu>
 			<DropdownMenuTrigger as-child>
 				<button
-					class="flex items-center gap-1 px-2 py-1 rounded-full bg-white border border-gray-200 hover:border-[var(--cyan)] transition-colors text-[9px] uppercase tracking-wider font-medium text-gray-700 max-w-[180px]"
+					class="flex items-center gap-1 rounded-full bg-white border border-gray-200 hover:border-[var(--cyan)] transition-colors text-[9px] uppercase tracking-wider font-medium text-gray-700 p-0.5 sm:px-2 sm:py-1 max-w-[180px]"
 				>
-					<div class="size-5 rounded-full bg-gray-100 flex items-center justify-center shrink-0 overflow-hidden">
+					<div class="size-6 sm:size-5 rounded-full bg-gray-100 flex items-center justify-center shrink-0 overflow-hidden">
 						<template v-if="currentClient && currentClient.id !== 'org'">
 							<img
 								v-if="getIconUrl(currentClient)"
 								:src="getIconUrl(currentClient)"
 								:alt="currentClient.name"
-								class="size-5 object-contain rounded-full"
+								class="size-6 sm:size-5 object-contain rounded-full"
 							/>
 							<span v-else class="font-medium text-gray-700 text-[8px]">{{ getInitials(currentClient) }}</span>
 						</template>
 						<Building2 v-else class="size-3 text-gray-400" />
 					</div>
-					<span class="truncate">{{ displayLabel }}</span>
-					<ChevronDown class="size-3 text-gray-400 shrink-0" />
+					<span class="truncate hidden sm:inline">{{ displayLabel }}</span>
+					<ChevronDown class="size-3 text-gray-400 shrink-0 hidden sm:block" />
 				</button>
 			</DropdownMenuTrigger>
 

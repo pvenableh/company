@@ -298,10 +298,10 @@
 				<div
 					v-for="task in completedTasks"
 					:key="task.id"
-					class="task-row group"
+					class="flex items-start gap-2 px-2 py-1.5 rounded-lg hover:bg-[hsl(var(--muted)/0.3)] transition-[background] group"
 				>
-					<button class="task-check" @click="handleToggle(task.id)">
-						<div class="task-check-box task-check-done">
+					<button class="flex-shrink-0 pt-0.5" @click="handleToggle(task.id)">
+						<div class="w-[18px] h-[18px] rounded-[6px] bg-[hsl(var(--primary))] border-2 border-[hsl(var(--primary))] flex items-center justify-center">
 							<UIcon name="i-heroicons-check" class="w-3 h-3 text-white" />
 						</div>
 					</button>
@@ -466,16 +466,21 @@ onUnmounted(() => {
 
 async function handleAddTask() {
 	if (!newTaskTitle.value.trim()) return;
-	await addTask(newTaskTitle.value, {
-		priority: newTaskPriority.value,
-		schedule: newTaskSchedule.value,
-		assignee: selectedAssignee.value || undefined,
-	});
-	newTaskTitle.value = '';
-	newTaskPriority.value = 'medium';
-	newTaskSchedule.value = 'today';
-	selectedAssignee.value = null;
-	nextTick(() => inputRef.value?.focus());
+	try {
+		await addTask(newTaskTitle.value, {
+			priority: newTaskPriority.value,
+			schedule: newTaskSchedule.value,
+			assignee: selectedAssignee.value || undefined,
+		});
+		newTaskTitle.value = '';
+		newTaskPriority.value = 'medium';
+		newTaskSchedule.value = 'today';
+		selectedAssignee.value = null;
+		nextTick(() => inputRef.value?.focus());
+	} catch (err: any) {
+		const msg = err?.message || err?.statusMessage || 'Failed to create task';
+		console.error('[QuickTasks] Error creating task:', msg);
+	}
 }
 
 async function handleToggle(id) {
@@ -549,9 +554,9 @@ const TaskRow = defineComponent({
 		];
 
 		return () =>
-			h('div', { class: 'task-row group' }, [
-				h('button', { class: 'task-check', onClick: () => emit('toggle') }, [
-					h('div', { class: 'task-check-box' }),
+			h('div', { class: 'flex items-start gap-2 px-2 py-1.5 rounded-lg hover:bg-[hsl(var(--muted)/0.3)] transition-[background] group' }, [
+				h('button', { class: 'flex-shrink-0 pt-0.5', onClick: () => emit('toggle') }, [
+					h('div', { class: 'w-[18px] h-[18px] rounded-[6px] border-2 border-[hsl(var(--border))] hover:border-[hsl(var(--primary))] transition-colors flex items-center justify-center' }),
 				]),
 				h('div', { class: 'flex-1 min-w-0' }, [
 					h('span', { class: 'text-sm leading-snug', innerHTML: props.task.title }),
