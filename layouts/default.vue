@@ -1,11 +1,11 @@
 <template>
-	<div class="relative bg-background text-foreground transition duration-150 lg:overflow-visible ios-safe-area">
+	<div class="relative bg-background text-foreground transition duration-150 xl:overflow-visible ios-safe-area">
 		<!-- Desktop Sidebar -->
 		<ClientOnly>
 			<LayoutSidebar v-if="user" />
 		</ClientOnly>
 
-		<div class="lg:pl-60">
+		<div :class="user ? 'xl:pl-60' : ''">
 			<LayoutHeader :links="headerLinks" />
 
 			<div class="page pb-safe min-h-page">
@@ -84,7 +84,7 @@ const toolbarLinks = computed(() => props.links.filter((link) => link.type.inclu
 .pb-safe {
 	padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 16px);
 }
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
 	.pb-safe {
 		padding-bottom: 0;
 	}

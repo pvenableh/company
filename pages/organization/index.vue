@@ -391,44 +391,41 @@ const pendingInvites = computed(() => {
 });
 
 // Function to fetch organization data with correct fields
+const ORG_DETAIL_FIELDS = [
+	'id', 'name', 'logo', 'category', 'notes', 'website', 'phone', 'address',
+	'industry.name', 'industry.class', 'brand_color', 'emails', 'billing_contacts',
+	'date_created', 'origin_date', 'icon', 'active', 'brand_direction',
+	'goals', 'target_audience', 'location',
+];
+const ORG_BASIC_FIELDS = ['id', 'name', 'logo', 'icon', 'active', 'date_created', 'website', 'phone', 'brand_color'];
+
 const fetchOrganizationData = async () => {
 	if (!selectedOrg.value) return;
 
 	try {
 		isLoading.value = true;
 
-		const orgs = await organizationItems.list({
-			filter: { id: { _eq: selectedOrg.value } },
-			fields: [
-				'id',
-				'name',
-				'logo',
-				'category',
-				'notes',
-				'website',
-				'phone',
-				'address',
-				'industry.name',
-				'industry.class',
-				'brand_color',
-				'emails',
-				'billing_contacts',
-				'date_created',
-				'origin_date',
-				'icon',
-				'active',
-				'brand_direction',
-				'goals',
-				'target_audience',
-				'location',
-			],
-			limit: 1,
-		});
+		// Try full fields first, fall back to basic fields if permission denied
+		let orgs;
+		try {
+			orgs = await organizationItems.list({
+				filter: { id: { _eq: selectedOrg.value } },
+				fields: ORG_DETAIL_FIELDS,
+				limit: 1,
+			});
+		} catch (fieldErr) {
+			console.warn('Org detail fields failed, retrying with basic fields:', fieldErr.message);
+			orgs = await organizationItems.list({
+				filter: { id: { _eq: selectedOrg.value } },
+				fields: ORG_BASIC_FIELDS,
+				limit: 1,
+			});
+		}
 
 		org.value = orgs?.[0] || null;
 
-		// Run these in parallel for better performance
-		await Promise.all([
+		// Run these in parallel, each with its own error handling
+		await Promise.allSettled([
 			fetchFilteredUsers(selectedOrg.value),
 			fetchTeams(selectedOrg.value),
 			fetchOrgRoles(),

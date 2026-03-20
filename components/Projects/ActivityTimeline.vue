@@ -4,7 +4,7 @@ const props = defineProps({
 });
 
 const activityItems = useDirectusItems('directus_activity');
-const commentItems = useDirectusItems('comments');
+const commentItems = useDirectusItems('directus_comments');
 const ticketItems = useDirectusItems('tickets');
 const taskItems = useDirectusItems('project_tasks');
 
@@ -48,7 +48,7 @@ const loadActivity = async () => {
 		const ticketIds = (projectTickets || []).map((t) => t.id);
 		const taskIds = (projectTasks || []).map((t) => t.id);
 
-		// Fetch activity scoped to this project's items
+		// Fetch activity scoped to this project's items (each isolated so one failure doesn't block all)
 		const activityFields = ['id', 'action', 'timestamp', 'collection', 'item', 'user.id', 'user.first_name', 'user.last_name', 'user.avatar'];
 		const [projectAct, ticketAct, taskAct, comments] = await Promise.all([
 			activityItems.list({
@@ -56,25 +56,25 @@ const loadActivity = async () => {
 				filter: { _and: [{ collection: { _eq: 'projects' } }, { item: { _eq: props.projectId } }] },
 				sort: ['-timestamp'],
 				limit: 20,
-			}),
+			}).catch(() => []),
 			ticketIds.length > 0 ? activityItems.list({
 				fields: activityFields,
 				filter: { _and: [{ collection: { _eq: 'tickets' } }, { item: { _in: ticketIds } }] },
 				sort: ['-timestamp'],
 				limit: 20,
-			}) : Promise.resolve([]),
+			}).catch(() => []) : Promise.resolve([]),
 			taskIds.length > 0 ? activityItems.list({
 				fields: activityFields,
 				filter: { _and: [{ collection: { _eq: 'project_tasks' } }, { item: { _in: taskIds } }] },
 				sort: ['-timestamp'],
 				limit: 20,
-			}) : Promise.resolve([]),
+			}).catch(() => []) : Promise.resolve([]),
 			commentItems.list({
-				fields: ['id', 'comment', 'date_created', 'user.id', 'user.first_name', 'user.last_name', 'user.avatar', 'collection', 'item'],
+				fields: ['id', 'comment', 'date_created', 'user_created.id', 'user_created.first_name', 'user_created.last_name', 'user_created.avatar', 'collection', 'item'],
 				filter: { _and: [{ collection: { _eq: 'projects' } }, { item: { _eq: props.projectId } }] },
 				sort: ['-date_created'],
 				limit: 20,
-			}),
+			}).catch(() => []),
 		]);
 
 		// Merge and sort
@@ -88,7 +88,7 @@ const loadActivity = async () => {
 				action: 'comment',
 				collection: 'comments',
 				timestamp: c.date_created,
-				user: c.user,
+				user: c.user_created || c.user,
 				content: c.comment,
 			})),
 		];

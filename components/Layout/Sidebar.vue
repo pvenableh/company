@@ -1,5 +1,5 @@
 <template>
-	<nav class="sidebar hidden lg:flex" v-if="user">
+	<nav class="sidebar hidden xl:flex" v-if="user">
 		<!-- Logo / Brand -->
 		<div class="sidebar-header">
 			<NuxtLink to="/" class="flex items-center gap-2.5 px-2 ios-press rounded-xl">
@@ -114,7 +114,7 @@ const isActive = (to: string) => {
 }
 
 .sidebar-header {
-	padding: 16px 16px 12px;
+	padding: 72px 16px 12px;
 	border-bottom: 1px solid hsl(var(--border) / 0.3);
 }
 

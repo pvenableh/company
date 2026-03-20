@@ -213,24 +213,24 @@ export const useQuickTasks = () => {
 			status: 'new',
 			priority: options?.priority || 'medium',
 			schedule: options?.schedule || 'today',
-			due_date: options?.dueDate || null,
-			ticket_id: options?.ticketId || null,
-			project_id: options?.projectId || null,
-			project_event_id: options?.projectEventId || null,
-			channel_id: options?.channelId || null,
-			team_id: options?.teamId || null,
-			client_id: options?.clientId || null,
-			organization_id: selectedOrg.value || null,
 			category,
 			ai_suggested: options?.aiSuggested || false,
-			description: options?.description || null,
 		};
+
+		// Only include optional relational/nullable fields if they have values
+		if (options?.dueDate) payload.due_date = options.dueDate;
+		if (options?.ticketId) payload.ticket_id = options.ticketId;
+		if (options?.projectId) payload.project_id = options.projectId;
+		if (options?.projectEventId) payload.project_event_id = options.projectEventId;
+		if (options?.channelId) payload.channel_id = options.channelId;
+		if (options?.teamId) payload.team_id = options.teamId;
+		if (options?.clientId) payload.client_id = options.clientId;
+		if (selectedOrg.value) payload.organization_id = selectedOrg.value;
+		if (options?.description) payload.description = options.description;
 
 		// Handle assignee via M2M junction
 		if (options?.assignee) {
-			payload.assigned_to = {
-				create: [{ directus_users_id: options.assignee.id }],
-			};
+			payload.assigned_to = [{ directus_users_id: options.assignee.id }];
 		}
 
 		const record = await taskItems.create(payload);

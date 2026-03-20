@@ -116,25 +116,27 @@
 			<button
 				class="w-full flex items-center justify-center gap-2 h-9 rounded-lg bg-gradient-to-r from-violet-500/10 to-purple-600/10 border border-primary/15 text-xs font-medium text-primary hover:from-violet-500/15 hover:to-purple-600/15 transition-all disabled:opacity-50"
 				:disabled="aiLoading"
-				@click="fetchAiSuggestions"
+				@click="showAiSuggestions ? (showAiSuggestions = false) : fetchAiSuggestions()"
 			>
 				<UIcon v-if="aiLoading" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
 				<UIcon v-else name="i-heroicons-sparkles" class="w-3.5 h-3.5" />
-				{{ aiLoading ? 'Generating...' : 'Generate tasks with AI' }}
+				{{ aiLoading ? 'Generating...' : showAiSuggestions ? 'Hide suggestions' : 'Generate tasks with AI' }}
 			</button>
 
-			<!-- AI suggestions -->
-			<div v-if="aiSuggestions.length" class="space-y-1.5">
-				<button
-					v-for="(suggestion, i) in aiSuggestions"
-					:key="i"
-					class="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg bg-primary/5 border border-primary/10 text-xs hover:bg-primary/10 hover:border-primary/20 transition-colors group"
-					@click="addAiSuggestion(suggestion)"
-				>
-					<UIcon name="i-heroicons-plus-circle" class="w-4 h-4 text-primary/60 group-hover:text-primary flex-shrink-0" />
-					<span class="flex-1 text-foreground/80">{{ suggestion }}</span>
-				</button>
-			</div>
+			<!-- AI suggestions (collapsible) -->
+			<Transition name="widget-motivate">
+				<div v-if="showAiSuggestions && aiSuggestions.length" class="space-y-1.5">
+					<button
+						v-for="(suggestion, i) in aiSuggestions"
+						:key="i"
+						class="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg bg-primary/5 border border-primary/10 text-xs hover:bg-primary/10 hover:border-primary/20 transition-colors group"
+						@click="addAiSuggestion(suggestion)"
+					>
+						<UIcon name="i-heroicons-plus-circle" class="w-4 h-4 text-primary/60 group-hover:text-primary flex-shrink-0" />
+						<span class="flex-1 text-foreground/80 line-clamp-2">{{ suggestion }}</span>
+					</button>
+				</div>
+			</Transition>
 		</div>
 
 		<!-- Task List: List View -->
@@ -300,25 +302,27 @@
 			<button
 				class="w-full flex items-center justify-center gap-2 h-8 rounded-lg text-[11px] font-medium text-muted-foreground hover:text-primary hover:bg-primary/5 transition-all disabled:opacity-50"
 				:disabled="aiLoading"
-				@click="fetchAiSuggestions"
+				@click="showAiSuggestions ? (showAiSuggestions = false) : fetchAiSuggestions()"
 			>
 				<UIcon v-if="aiLoading" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
 				<UIcon v-else name="i-heroicons-sparkles" class="w-3.5 h-3.5" />
-				{{ aiLoading ? 'Generating...' : 'Suggest tasks with AI' }}
+				{{ aiLoading ? 'Generating...' : showAiSuggestions ? 'Hide suggestions' : 'Suggest tasks with AI' }}
 			</button>
 
-			<!-- AI suggestions -->
-			<div v-if="aiSuggestions.length" class="space-y-1.5 mt-2">
-				<button
-					v-for="(suggestion, i) in aiSuggestions"
-					:key="i"
-					class="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg bg-primary/5 border border-primary/10 text-xs hover:bg-primary/10 hover:border-primary/20 transition-colors group"
-					@click="addAiSuggestion(suggestion)"
-				>
-					<UIcon name="i-heroicons-plus-circle" class="w-4 h-4 text-primary/60 group-hover:text-primary flex-shrink-0" />
-					<span class="flex-1 text-foreground/80">{{ suggestion }}</span>
-				</button>
-			</div>
+			<!-- AI suggestions (collapsible) -->
+			<Transition name="widget-motivate">
+				<div v-if="showAiSuggestions && aiSuggestions.length" class="space-y-1.5 mt-2">
+					<button
+						v-for="(suggestion, i) in aiSuggestions"
+						:key="i"
+						class="flex items-center gap-2 w-full text-left px-3 py-2 rounded-lg bg-primary/5 border border-primary/10 text-xs hover:bg-primary/10 hover:border-primary/20 transition-colors group"
+						@click="addAiSuggestion(suggestion)"
+					>
+						<UIcon name="i-heroicons-plus-circle" class="w-4 h-4 text-primary/60 group-hover:text-primary flex-shrink-0" />
+						<span class="flex-1 text-foreground/80 line-clamp-2">{{ suggestion }}</span>
+					</button>
+				</div>
+			</Transition>
 		</div>
 	</div>
 </template>
@@ -347,6 +351,7 @@ const newTaskTitle = ref('');
 const newTaskSchedule = ref('today');
 const aiLoading = ref(false);
 const aiSuggestions = ref([]);
+const showAiSuggestions = ref(false);
 const motivationalText = ref('');
 let motivationalTimeout = null;
 
@@ -435,6 +440,7 @@ function addAiSuggestion(suggestion) {
 
 async function fetchAiSuggestions() {
 	aiLoading.value = true;
+	showAiSuggestions.value = true;
 	aiSuggestions.value = [];
 	try {
 		const response = await $fetch('/api/ai/task-suggestions', {
@@ -444,6 +450,7 @@ async function fetchAiSuggestions() {
 		aiSuggestions.value = response.suggestions || [];
 	} catch (err) {
 		console.error('AI suggestions error:', err);
+		showAiSuggestions.value = false;
 	} finally {
 		aiLoading.value = false;
 	}
