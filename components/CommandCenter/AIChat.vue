@@ -38,6 +38,8 @@ const brandSetupRoute = computed(() => {
 
 // ── Persona (shared state) ──
 const { personas: responseStyles, selectedPersona: responseStyle, activePersona } = useAIPersona();
+const { responseVerbosity, setVerbosity } = useAIPreferences();
+const { trackUsage } = useAIUsage();
 
 // ── State ──
 const sessions = ref<any[]>([]);
@@ -52,6 +54,7 @@ const streamingContent = ref('');
 const messagesContainer = ref<HTMLElement | null>(null);
 const showSidebar = ref(true);
 const error = ref<string | null>(null);
+const abortController = ref<AbortController | null>(null);
 
 // ── Sessions ──
 const loadSessions = async () => {
@@ -130,15 +133,18 @@ const sendMessage = async () => {
 	scrollToBottom();
 
 	try {
+		abortController.value = new AbortController();
 		const response = await fetch('/api/ai/chat', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
+			signal: abortController.value.signal,
 			body: JSON.stringify({
 				sessionId: activeSessionId.value || undefined,
 				message: content,
 				clientId: selectedClient.value && selectedClient.value !== 'org' ? selectedClient.value : undefined,
 				organizationId: (selectedOrg.value as any)?.id || undefined,
 				responseStyle: responseStyle.value !== 'default' ? responseStyle.value : undefined,
+				verbosity: responseVerbosity.value,
 			}),
 		});
 
@@ -181,6 +187,8 @@ const sendMessage = async () => {
 							content: data.content,
 							date_created: new Date().toISOString(),
 						});
+						// Track AI usage
+						trackUsage(content.length, (data.content || '').length, undefined, responseStyle.value);
 						streamingContent.value = '';
 					} else if (data.type === 'error') {
 						error.value = data.error;
@@ -199,6 +207,7 @@ const sendMessage = async () => {
 		isSending.value = false;
 		isStreaming.value = false;
 		streamingContent.value = '';
+		abortController.value = null;
 	}
 };
 
@@ -274,8 +283,13 @@ const renderMarkdown = (text: string): string => {
 	// Ordered lists
 	html = html.replace(/^\d+\. (.+)$/gm, '<li class="ml-4 list-decimal text-sm">$1</li>');
 
-	// Links
-	html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" class="text-primary underline hover:text-primary/80">$1</a>');
+	// Links (only allow http/https URLs to prevent XSS via javascript: URIs)
+	html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_m: string, text: string, url: string) => {
+		if (/^https?:\/\//i.test(url)) {
+			return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-primary underline hover:text-primary/80">${text}</a>`;
+		}
+		return text;
+	});
 
 	// Line breaks (double newline = paragraph)
 	html = html.replace(/\n\n/g, '</p><p class="my-2">');
@@ -295,6 +309,10 @@ const getUserAvatar = computed(() => {
 // ── Lifecycle ──
 onMounted(() => {
 	loadSessions();
+});
+
+onUnmounted(() => {
+	abortController.value?.abort();
 });
 </script>
 
@@ -395,6 +413,32 @@ onMounted(() => {
 					>
 						<UIcon :name="style.icon" class="w-3 h-3" />
 						<span class="hidden sm:inline">{{ style.label }}</span>
+					</button>
+				</div>
+
+				<!-- Verbosity toggle -->
+				<div class="flex items-center gap-0.5 bg-muted/40 rounded-lg p-0.5">
+					<button
+						@click="setVerbosity('concise')"
+						title="Concise responses"
+						class="flex items-center gap-1 px-2 py-1 rounded-md transition-all text-[10px] font-medium"
+						:class="responseVerbosity === 'concise'
+							? 'bg-background text-primary shadow-sm'
+							: 'text-muted-foreground hover:text-foreground'"
+					>
+						<UIcon name="i-heroicons-bars-3-bottom-left" class="w-3 h-3" />
+						<span class="hidden sm:inline">Concise</span>
+					</button>
+					<button
+						@click="setVerbosity('regular')"
+						title="Regular responses"
+						class="flex items-center gap-1 px-2 py-1 rounded-md transition-all text-[10px] font-medium"
+						:class="responseVerbosity === 'regular'
+							? 'bg-background text-primary shadow-sm'
+							: 'text-muted-foreground hover:text-foreground'"
+					>
+						<UIcon name="i-heroicons-bars-3" class="w-3 h-3" />
+						<span class="hidden sm:inline">Regular</span>
 					</button>
 				</div>
 

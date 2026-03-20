@@ -84,7 +84,14 @@ const AI_MODULES: AIModule[] = [
 	},
 ];
 
+// ── Response Verbosity ──
+export type ResponseVerbosity = 'concise' | 'regular';
+
 const STORAGE_KEY = 'ai-tray-preferences';
+const VERBOSITY_KEY = 'ai-response-verbosity';
+
+// Shared reactive state for verbosity
+const _verbosity = ref<ResponseVerbosity>('regular');
 
 export const useAIPreferences = () => {
 	const { user } = useDirectusAuth();
@@ -145,11 +152,38 @@ export const useAIPreferences = () => {
 		save();
 	};
 
+	// ── Verbosity ──
+	const verbosityKey = computed(() => {
+		const userId = user.value?.id || 'anonymous';
+		return `${VERBOSITY_KEY}-${userId}`;
+	});
+
+	const responseVerbosity = _verbosity;
+
+	const loadVerbosity = () => {
+		if (import.meta.server) return;
+		try {
+			const saved = localStorage.getItem(verbosityKey.value);
+			if (saved === 'concise' || saved === 'regular') {
+				responseVerbosity.value = saved;
+			}
+		} catch {}
+	};
+
+	const setVerbosity = (v: ResponseVerbosity) => {
+		responseVerbosity.value = v;
+		if (import.meta.server) return;
+		try {
+			localStorage.setItem(verbosityKey.value, v);
+		} catch {}
+	};
+
 	// Load on init
 	load();
+	loadVerbosity();
 
 	// Reload when user changes
-	watch(storageKey, () => load());
+	watch(storageKey, () => { load(); loadVerbosity(); });
 
 	return {
 		modules: AI_MODULES,
@@ -158,5 +192,7 @@ export const useAIPreferences = () => {
 		isEnabled,
 		enableAll,
 		disableAll,
+		responseVerbosity: readonly(responseVerbosity),
+		setVerbosity,
 	};
 };

@@ -27,7 +27,7 @@ const rightLinks = computed(() => {
 });
 
 // Short names for toolbar display (keeps canonical names intact elsewhere)
-const shortNames = { 'Command Center': 'Commander' };
+const shortNames = {};
 const displayName = (link) => shortNames[link.name] || link.name;
 
 const requireAuth = () => {

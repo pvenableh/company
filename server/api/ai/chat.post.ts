@@ -28,7 +28,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event);
-  const { sessionId, message, model, clientId, organizationId, responseStyle } = body;
+  const { sessionId, message, model, clientId, organizationId, responseStyle, verbosity } = body;
 
   if (!message?.trim()) {
     throw createError({ statusCode: 400, message: 'Message is required' });
@@ -198,7 +198,17 @@ export default defineEventHandler(async (event) => {
 - If they share frustration or struggle, validate it before redirecting to possibility`;
     }
 
-    const systemPrompt = buildSystemPrompt(orgContext) + taskContext + brandContext + styleContext;
+    // Build verbosity instruction
+    let verbosityContext = '';
+    if (verbosity === 'concise') {
+      verbosityContext = `\n\nRESPONSE LENGTH: Concise — Keep responses short and to the point.
+- Use bullet points and short sentences
+- Maximum 2-3 paragraphs per response
+- Skip pleasantries and get straight to the answer
+- Only include essential details`;
+    }
+
+    const systemPrompt = buildSystemPrompt(orgContext) + taskContext + brandContext + styleContext + verbosityContext;
 
     // 6. Stream response via SSE
     let provider;

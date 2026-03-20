@@ -10,7 +10,7 @@ Earnest ships with two companion apps: **CardDesk** — a networking CRM that tu
 
 - **Dashboard** — Personalized activity overview with ticket analytics and quick-access links
 - **Ticket Management** — Kanban board with drag-and-drop, custom statuses, service tagging, organization filtering, assignment modal, and detailed activity logs
-- **Project Management** — Visual Gantt-style timeline with milestones, Kanban board view, sub-tasks, event scheduling, file attachments, threaded conversations, and emoji reactions
+- **Project Management** — Visual Gantt-style timeline with milestones, Kanban board view, sub-tasks, event scheduling, file attachments, threaded conversations, emoji reactions, and a command-center–style project detail page with stats dashboard (ticket counts, task progress, billing totals, timeline), document uploads, invoice management, and project-scoped activity feed
 - **Invoicing & Payments** — Stripe-powered billing, invoice creation and editing, PDF generation (html2canvas + jsPDF), payment tracking, payout management, and public payment links
 - **Scheduling & Video Meetings** — Calendar with public booking links, availability management, Google Calendar and Outlook sync, and built-in Twilio video conferencing
 - **Team Communication** — Slack-style channels per organization with threaded comments, @mentions, emoji reactions, and WebSocket-powered real-time messaging
@@ -18,7 +18,7 @@ Earnest ships with two companion apps: **CardDesk** — a networking CRM that tu
 - **Email Marketing & Newsletters** — Block-based MJML newsletter builder with 17+ reusable blocks, drag-and-drop assembly, live preview, AI email wizard that generates complete templates from a brief description, mailing list management with deduplication, CSV contact import, merge-tag personalization via Handlebars, editable header/footer partials, one-click unsubscribe, "View in Browser" web links, and campaign send tracking via SendGrid
 - **People & Companies (Unified CRM)** — Every person and company in one place. The `people` collection unifies contacts, clients, and CardDesk networking connections with a single relationship graph. Companies (formerly "clients") track the organizations you serve with status workflows (active, prospect, inactive, churned), industry tagging, brand direction, goals, target audience, services, and linked people/projects/tickets/invoices. People have tagging, custom fields, mailing list membership, subscription tracking, company associations, and CSV import/export
 - **Marketing Intelligence** — AI-powered marketing dashboard (`/marketing`) that aggregates data across contacts, social media, email campaigns, clients, revenue, projects, and tickets to generate a marketing health score (0-100), actionable insights, content velocity metrics, audience growth tracking, and AI-generated multi-channel campaign plans with email sequences, social posts, and KPIs
-- **AI Command Center** — AI-powered productivity engine that analyzes tickets, projects, tasks, invoices, contacts, deals, channels, social media, scheduling, and phone activity to generate prioritized action items, reminders, insights, and follow-ups; includes productivity scoring (0-100), customizable AI module preferences, team chat, and financial analysis; supports Claude (Anthropic), GPT (OpenAI), and Gemini (Google) backends
+- **AI Command Center** — AI-powered productivity engine that analyzes tickets, projects, tasks, invoices, contacts, deals, channels, social media, scheduling, and phone activity to generate prioritized action items, reminders, insights, and follow-ups; includes productivity scoring (0-100), customizable AI module preferences, team chat, financial analysis, social media–style activity timeline with reactions and comments, AI usage monitoring, concise/regular response verbosity toggle, and persona-aware time-of-day greetings; supports Claude (Anthropic), GPT (OpenAI), and Gemini (Google) backends
 - **CRM Intelligence Engine** — AI-powered CRM analysis (`POST /api/crm/ai-intelligence`) that aggregates data across the unified People CRM (contacts, CardDesk networking connections, companies), projects, tasks, tickets, invoices, and deals pipeline — enriched with brand context (brand direction, goals, target audience, services) from organizations, companies, and teams. Four analysis modes: overview (health scores + actions), contact-strategy (segmentation + outreach cadence), growth-plan (targets + 4-week plan), and pipeline-review (deal analysis + revenue forecast)
 - **Organizations & Multi-Tenancy** — Multi-organization support with per-org roles (Owner, Admin, Manager, Member, Client), customizable permission matrices per role, team structures with focus and goals, member invitations, brand direction and strategy fields, subscription plan tiers, and cross-tab state sync
 - **Client Access Control** — Hybrid team-based and individual user access to clients. Owner/Admin roles see all clients; Manager/Member roles see only clients assigned to their teams plus any individual user overrides. Uses `clients_teams` and `clients_directus_users` junction tables with assignment UIs on the team detail and client detail pages
@@ -139,7 +139,7 @@ The app will be available at `http://localhost:3000`.
 │   ├── Clients/        # Client forms, cards, user access assignment
 │   ├── Scheduler/      # Calendar, booking, video meetings
 │   ├── Marketing/     # Marketing intelligence dashboard, health score, campaign timeline
-│   ├── CommandCenter/  # AI tray, suggestion cards, productivity meter, preferences, quick tasks widget
+│   ├── CommandCenter/  # AI tray, suggestion cards, productivity meter, preferences, quick tasks widget, activity timeline, AI chat
 │   ├── Newsletter/     # Block builder, canvas, variable editor, partials
 │   ├── Contacts/       # Contact forms, tables, merge tag reference
 │   ├── Import/         # CSV column mapper
@@ -257,6 +257,9 @@ Organizations have a `plan` field (free, starter, pro, enterprise) that hooks in
 | `useRole()` | Legacy global role checks (bridge to `useOrgRole` in progress) |
 | `useClients()` | Client CRUD with org-scoping, role-based access filtering (team + individual assignments), search, status filters |
 | `useQuickTasks()` | Personal task management with localStorage persistence, schedule grouping, motivational messages, and progress tracking |
+| `useAIUsage()` | Client-side AI usage tracking with per-user localStorage, token estimation, and usage summaries |
+| `useAIPreferences()` | Per-user AI response verbosity preference (concise/regular) with localStorage persistence |
+| `useEarnestChat()` | Shared module-level AI chat state for tray quick-chat with SSE streaming and abort support |
 
 ### Server Endpoints
 
@@ -299,6 +302,10 @@ The AI Productivity Engine (`useAIProductivityEngine.ts`) scans 9 business modul
 - **Multi-Provider AI** — Supports Anthropic Claude, OpenAI GPT, and Google Gemini backends (configurable in Directus settings)
 - **Chat Sessions** — Persistent AI assistant conversations with context awareness
 - **Financial Analysis** — Quarterly revenue goals and financial health dashboard
+- **Activity Timeline** — Social media–style feed tracking activity across projects, tickets, tasks, invoices, emails, CardDesk contacts, clients, and contacts with emoji reactions, inline comments, "new items" indicator, infinite scroll, and pull-to-refresh
+- **AI Usage Monitoring** — Client-side tracking of AI message counts and estimated token usage (input/output) with today/week/month breakdowns, stored per-user in localStorage
+- **Response Verbosity** — Toggle between concise and regular AI response modes; concise mode instructs the LLM to give shorter, bullet-point answers
+- **Persona-Aware Greetings** — Time-of-day–aware greeting algorithm (morning/afternoon/evening) with 3 greetings per persona (default, director, buddy, motivator) that rotate daily using a JS algorithm (no AI call)
 
 ### Directus Collections
 
