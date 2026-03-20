@@ -148,7 +148,23 @@ export const useQuickTasks = () => {
 		try {
 			const filter: any = {
 				_and: [
-					{ user_created: { _eq: user.value.id } },
+					// Show tasks the user created (and didn't assign away) OR tasks assigned to them
+					{
+						_or: [
+							{
+								_and: [
+									{ user_created: { _eq: user.value.id } },
+									{
+										_or: [
+											{ assigned_to: { _null: true } },
+											{ assigned_to: { directus_users_id: { _eq: user.value.id } } },
+										],
+									},
+								],
+							},
+							{ assigned_to: { directus_users_id: { _eq: user.value.id } } },
+						],
+					},
 				],
 			};
 			// Optionally scope to org

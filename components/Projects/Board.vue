@@ -55,7 +55,7 @@
 
 		<!-- Board Layout -->
 		<div
-			class="bg-muted/20 border-b border-border w-full flex min-h-svh overflow-x-auto overflow-hidden-scrollbar projects-board__board"
+			class="bg-muted/20 border border-border/50 rounded-2xl w-full flex min-h-svh overflow-x-auto overflow-hidden overflow-hidden-scrollbar projects-board__board"
 			@touchstart="handleTouchStart"
 			@touchend="handleTouchEnd"
 		>
@@ -611,26 +611,6 @@ function checkMobile() {
 		@media (min-width: 1600px) {
 			@apply px-6;
 		}
-	}
-	.projects-board__board::before {
-		content: '';
-		position: absolute;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 1px;
-		z-index: 10;
-		background: hsl(var(--border));
-	}
-	.projects-board__board::after {
-		content: '';
-		position: absolute;
-		bottom: 0;
-		left: 0;
-		width: 100%;
-		height: 1px;
-		z-index: 10;
-		background: hsl(var(--border));
 	}
 }
 /* Hide scrollbar for Webkit browsers */

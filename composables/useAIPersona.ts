@@ -88,15 +88,54 @@ const personas: AIPersona[] = [
 
 // Shared state across components
 const selectedPersona = ref('default');
+const PERSONA_STORAGE_KEY = 'ai-persona';
+let personaLoaded = false;
 
 export function useAIPersona() {
+	const { user } = useDirectusAuth();
+
+	const storageKey = computed(() => {
+		const userId = user.value?.id || 'anonymous';
+		return `${PERSONA_STORAGE_KEY}-${userId}`;
+	});
+
+	const load = () => {
+		if (import.meta.server) return;
+		try {
+			const saved = localStorage.getItem(storageKey.value);
+			if (saved && personas.some((p) => p.value === saved)) {
+				selectedPersona.value = saved;
+			}
+		} catch {}
+		personaLoaded = true;
+	};
+
+	const save = () => {
+		if (import.meta.server) return;
+		try {
+			localStorage.setItem(storageKey.value, selectedPersona.value);
+		} catch {}
+	};
+
 	const activePersona = computed<AIPersona>(() =>
 		personas.find((p) => p.value === selectedPersona.value) || personas[0],
 	);
 
 	const setPersona = (value: string) => {
 		selectedPersona.value = value;
+		save();
 	};
+
+	// Load on init
+	if (!personaLoaded) {
+		load();
+	}
+
+	// Reload when user changes
+	watch(storageKey, () => {
+		personaLoaded = false;
+		load();
+	});
 
 	return {
 		personas,

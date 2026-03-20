@@ -116,7 +116,7 @@ onUpdated(() => {
 </script>
 
 <template>
-	<div class="w-full max-w-3xl mx-auto p-6 space-y-6">
+	<div class="w-full max-w-3xl mx-auto p-6 space-y-6 bg-card rounded-2xl border border-border/50 shadow-sm">
 		<!-- Dates Section -->
 		<div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
 			<template

@@ -1,17 +1,188 @@
 <template>
-	<div class="w-full px-4 py-10 min-h-[50vh] flex items-center justify-start flex-col">
-		<div class="w-full max-w-2xl">
-			<h1 class="t-label border-b border-border">Overview</h1>
-			<div class="uppercase mt-6">
-				<h1 class="tracking-wide font-bold">{{ project.title }}</h1>
-				<h5 class="text-[9px]">
-					<span class="h-2 w-2 inline-block mr-0.5" :style="'background:' + project.service.color"></span>
-					{{ project.service.name }}
-				</h5>
+	<div class="w-full py-6 space-y-6">
+		<!-- Stats Row -->
+		<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+			<!-- Tickets -->
+			<div class="ios-card p-4">
+				<div class="flex items-center gap-2 mb-2">
+					<div class="h-8 w-8 rounded-xl bg-amber-500/10 flex items-center justify-center">
+						<UIcon name="i-heroicons-square-3-stack-3d" class="w-4 h-4 text-amber-500" />
+					</div>
+					<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tickets</span>
+				</div>
+				<p class="text-2xl font-bold text-foreground">{{ stats.openTickets }}</p>
+				<p class="text-xs text-muted-foreground mt-0.5">{{ stats.ticketCount }} total</p>
 			</div>
-			<div class="flex items-center justify-between mt-12 border-b border-border">
-				<h1 class="uppercase trackine text-[10px] font-bold">Project Events:</h1>
-				<div class="flex items-center gap-2 mb-1">
+
+			<!-- Tasks -->
+			<div class="ios-card p-4">
+				<div class="flex items-center gap-2 mb-2">
+					<div class="h-8 w-8 rounded-xl bg-purple-500/10 flex items-center justify-center">
+						<UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-purple-500" />
+					</div>
+					<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tasks</span>
+				</div>
+				<p class="text-2xl font-bold text-foreground">{{ stats.completedTasks }}/{{ stats.taskCount }}</p>
+				<div class="mt-1.5 h-1.5 bg-muted/30 rounded-full overflow-hidden">
+					<div class="h-full rounded-full bg-purple-500 transition-all duration-500" :style="{ width: `${taskProgress}%` }" />
+				</div>
+			</div>
+
+			<!-- Billing -->
+			<div class="ios-card p-4">
+				<div class="flex items-center gap-2 mb-2">
+					<div class="h-8 w-8 rounded-xl bg-green-500/10 flex items-center justify-center">
+						<UIcon name="i-heroicons-currency-dollar" class="w-4 h-4 text-green-500" />
+					</div>
+					<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Billed</span>
+				</div>
+				<p class="text-2xl font-bold text-foreground">{{ formatCurrency(stats.invoiceTotal) }}</p>
+				<p class="text-xs text-muted-foreground mt-0.5">{{ formatCurrency(stats.paidTotal) }} paid</p>
+			</div>
+
+			<!-- Timeline -->
+			<div class="ios-card p-4">
+				<div class="flex items-center gap-2 mb-2">
+					<div class="h-8 w-8 rounded-xl bg-blue-500/10 flex items-center justify-center">
+						<UIcon name="i-heroicons-calendar-days" class="w-4 h-4 text-blue-500" />
+					</div>
+					<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Timeline</span>
+				</div>
+				<p v-if="daysRemaining !== null" class="text-2xl font-bold" :class="daysRemaining < 0 ? 'text-red-500' : 'text-foreground'">
+					{{ daysRemaining < 0 ? Math.abs(daysRemaining) : daysRemaining }}
+				</p>
+				<p v-else class="text-2xl font-bold text-muted-foreground/40">—</p>
+				<p class="text-xs text-muted-foreground mt-0.5">{{ daysRemaining !== null ? (daysRemaining < 0 ? 'days overdue' : 'days remaining') : 'no due date' }}</p>
+			</div>
+		</div>
+
+		<!-- Info Widgets Row -->
+		<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+			<!-- Project Details Widget -->
+			<div class="ios-card p-5">
+				<div class="flex items-center gap-2 mb-4">
+					<div class="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center">
+						<UIcon name="i-heroicons-information-circle" class="w-4 h-4 text-primary" />
+					</div>
+					<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Project Details</span>
+				</div>
+				<div class="space-y-3">
+					<div class="flex items-center justify-between">
+						<span class="text-xs text-muted-foreground">Status</span>
+						<span class="text-xs font-medium text-foreground px-2 py-0.5 rounded-full bg-muted">{{ project.status || 'Unknown' }}</span>
+					</div>
+					<div v-if="project.service" class="flex items-center justify-between">
+						<span class="text-xs text-muted-foreground">Service</span>
+						<span class="flex items-center gap-1.5 text-xs font-medium text-foreground">
+							<span class="h-2 w-2 rounded-full inline-block" :style="{ backgroundColor: project.service.color }" />
+							{{ project.service.name }}
+						</span>
+					</div>
+					<div v-if="project.organization" class="flex items-center justify-between">
+						<span class="text-xs text-muted-foreground">Organization</span>
+						<span class="text-xs font-medium text-foreground">{{ project.organization.name }}</span>
+					</div>
+					<div v-if="project.start_date" class="flex items-center justify-between">
+						<span class="text-xs text-muted-foreground">Start Date</span>
+						<span class="text-xs font-medium text-foreground">{{ formatDate(project.start_date) }}</span>
+					</div>
+					<div v-if="project.due_date" class="flex items-center justify-between">
+						<span class="text-xs text-muted-foreground">Due Date</span>
+						<span class="text-xs font-medium text-foreground">{{ formatDate(project.due_date) }}</span>
+					</div>
+					<div v-if="project.contract_value" class="flex items-center justify-between">
+						<span class="text-xs text-muted-foreground">Contract Value</span>
+						<span class="text-xs font-medium text-foreground">{{ formatCurrency(project.contract_value) }}</span>
+					</div>
+				</div>
+				<p v-if="project.description" class="text-xs text-muted-foreground mt-4 line-clamp-3">{{ project.description }}</p>
+			</div>
+
+			<!-- Team Widget -->
+			<div class="ios-card p-5">
+				<div class="flex items-center gap-2 mb-4">
+					<div class="h-8 w-8 rounded-xl bg-indigo-500/10 flex items-center justify-center">
+						<UIcon name="i-heroicons-user-group" class="w-4 h-4 text-indigo-500" />
+					</div>
+					<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Team</span>
+					<span v-if="project.assigned_to?.length" class="text-[10px] text-muted-foreground ml-auto">{{ project.assigned_to.length }} member{{ project.assigned_to.length !== 1 ? 's' : '' }}</span>
+				</div>
+				<div v-if="project.assigned_to?.length" class="space-y-2.5">
+					<div
+						v-for="assignment in project.assigned_to"
+						:key="assignment.directus_users_id?.id"
+						class="flex items-center gap-3"
+					>
+						<UAvatar
+							:src="assignment.directus_users_id?.avatar ? `${runtimeConfig.public.directusUrl}/assets/${assignment.directus_users_id.avatar}?width=64&height=64&fit=cover` : undefined"
+							:alt="`${assignment.directus_users_id?.first_name || ''} ${assignment.directus_users_id?.last_name || ''}`"
+							size="xs"
+						/>
+						<div class="min-w-0">
+							<p class="text-sm font-medium text-foreground truncate">
+								{{ assignment.directus_users_id?.first_name }} {{ assignment.directus_users_id?.last_name }}
+							</p>
+							<p v-if="assignment.directus_users_id?.email" class="text-[10px] text-muted-foreground truncate">{{ assignment.directus_users_id.email }}</p>
+						</div>
+					</div>
+				</div>
+				<div v-else class="flex flex-col items-center justify-center py-8 text-center">
+					<UIcon name="i-heroicons-user-group" class="w-8 h-8 text-muted-foreground/30 mb-2" />
+					<p class="text-xs text-muted-foreground">No team members assigned</p>
+				</div>
+			</div>
+
+			<!-- Financial Summary Widget -->
+			<div class="ios-card p-5">
+				<div class="flex items-center gap-2 mb-4">
+					<div class="h-8 w-8 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+						<UIcon name="i-heroicons-banknotes" class="w-4 h-4 text-emerald-500" />
+					</div>
+					<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Financials</span>
+				</div>
+				<div class="space-y-3">
+					<div v-if="project.contract_value" class="flex items-center justify-between">
+						<span class="text-xs text-muted-foreground">Contract</span>
+						<span class="text-xs font-bold text-foreground">{{ formatCurrency(project.contract_value) }}</span>
+					</div>
+					<div class="flex items-center justify-between">
+						<span class="text-xs text-muted-foreground">Invoiced</span>
+						<span class="text-xs font-medium text-foreground">{{ formatCurrency(stats.invoiceTotal) }}</span>
+					</div>
+					<div class="flex items-center justify-between">
+						<span class="text-xs text-muted-foreground">Paid</span>
+						<span class="text-xs font-medium text-green-600">{{ formatCurrency(stats.paidTotal) }}</span>
+					</div>
+					<div class="flex items-center justify-between">
+						<span class="text-xs text-muted-foreground">Outstanding</span>
+						<span class="text-xs font-medium" :class="stats.invoiceTotal - stats.paidTotal > 0 ? 'text-amber-500' : 'text-foreground'">
+							{{ formatCurrency(stats.invoiceTotal - stats.paidTotal) }}
+						</span>
+					</div>
+					<div v-if="project.contract_value && stats.invoiceTotal > 0" class="pt-2">
+						<div class="flex items-center justify-between mb-1">
+							<span class="text-[10px] text-muted-foreground">Invoiced vs Contract</span>
+							<span class="text-[10px] font-medium text-foreground">{{ Math.round((stats.invoiceTotal / project.contract_value) * 100) }}%</span>
+						</div>
+						<div class="h-1.5 bg-muted/30 rounded-full overflow-hidden">
+							<div class="h-full rounded-full bg-emerald-500 transition-all duration-500" :style="{ width: `${Math.min(100, (stats.invoiceTotal / project.contract_value) * 100)}%` }" />
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<!-- Events Section -->
+		<div class="ios-card p-5">
+			<div class="flex items-center justify-between mb-4">
+				<div class="flex items-center gap-2">
+					<div class="h-8 w-8 rounded-xl bg-cyan-500/10 flex items-center justify-center">
+						<UIcon name="i-heroicons-calendar" class="w-4 h-4 text-cyan-500" />
+					</div>
+					<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Project Events</span>
+					<span v-if="allEvents.length" class="text-[10px] text-muted-foreground">({{ allEvents.length }})</span>
+				</div>
+				<div class="flex items-center gap-2">
 					<Button size="sm" variant="outline" class="uppercase text-[10px] tracking-wide" @click="showTimelineWizard = true">
 						<Icon name="lucide:sparkles" class="h-3 w-3 mr-1" />
 						Generate Timeline
@@ -24,11 +195,11 @@
 			</div>
 
 			<!-- Events list -->
-			<div v-if="allEvents.length > 0" class="space-y-3 mt-4">
+			<div v-if="allEvents.length > 0" class="space-y-2">
 				<button
 					v-for="event in allEvents"
 					:key="event.id"
-					class="ios-card w-full text-left p-4 ios-press"
+					class="w-full text-left p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors ios-press"
 					@click="openEventDetail(event)"
 				>
 					<div class="flex items-center justify-between">
@@ -66,11 +237,9 @@
 			</div>
 
 			<!-- Empty state -->
-			<div v-else class="flex flex-col items-center justify-center py-16 text-center">
-				<div class="h-12 w-12 rounded-full bg-muted/60 flex items-center justify-center mb-4">
-					<Icon name="lucide:calendar-days" class="h-6 w-6 text-muted-foreground/60" />
-				</div>
-				<p class="text-sm text-muted-foreground">There are no events for this project.</p>
+			<div v-else class="flex flex-col items-center justify-center py-12 text-center">
+				<UIcon name="i-heroicons-calendar" class="w-8 h-8 text-muted-foreground/30 mb-2" />
+				<p class="text-sm text-muted-foreground">No events yet</p>
 				<p class="text-xs text-muted-foreground/60 mt-1">Create events manually or generate a timeline with AI.</p>
 			</div>
 		</div>
@@ -87,43 +256,24 @@
 			</template>
 
 			<form @submit.prevent="handleCreateEvent" class="space-y-4 p-4">
-				<!-- Title -->
 				<div class="space-y-1">
 					<label class="t-label text-muted-foreground">Title *</label>
 					<UInput v-model="newEventForm.title" placeholder="Event title" />
 				</div>
-
-				<!-- Description -->
 				<div class="space-y-1">
 					<label class="t-label text-muted-foreground">Description</label>
 					<UTextarea v-model="newEventForm.description" placeholder="Event description..." :rows="3" />
 				</div>
-
-				<!-- Type & Status -->
 				<div class="grid grid-cols-2 gap-4">
 					<div class="space-y-1">
 						<label class="t-label text-muted-foreground">Type</label>
-						<USelectMenu
-							v-model="newEventForm.type"
-							:options="eventTypeOptions"
-							option-attribute="label"
-							value-attribute="value"
-							placeholder="Select type"
-						/>
+						<USelectMenu v-model="newEventForm.type" :options="eventTypeOptions" option-attribute="label" value-attribute="value" placeholder="Select type" />
 					</div>
 					<div class="space-y-1">
 						<label class="t-label text-muted-foreground">Status</label>
-						<USelectMenu
-							v-model="newEventForm.status"
-							:options="eventStatusOptions"
-							option-attribute="label"
-							value-attribute="value"
-							placeholder="Select status"
-						/>
+						<USelectMenu v-model="newEventForm.status" :options="eventStatusOptions" option-attribute="label" value-attribute="value" placeholder="Select status" />
 					</div>
 				</div>
-
-				<!-- Date & Priority -->
 				<div class="grid grid-cols-2 gap-4">
 					<div class="space-y-1">
 						<label class="t-label text-muted-foreground">Date</label>
@@ -131,17 +281,9 @@
 					</div>
 					<div class="space-y-1">
 						<label class="t-label text-muted-foreground">Priority</label>
-						<USelectMenu
-							v-model="newEventForm.priority"
-							:options="priorityOptions"
-							option-attribute="label"
-							value-attribute="value"
-							placeholder="Select priority"
-						/>
+						<USelectMenu v-model="newEventForm.priority" :options="priorityOptions" option-attribute="label" value-attribute="value" placeholder="Select priority" />
 					</div>
 				</div>
-
-				<!-- Prototype Link -->
 				<div class="space-y-1">
 					<label class="t-label text-muted-foreground">Prototype Link</label>
 					<UInput v-model="newEventForm.prototype_link" placeholder="https://..." />
@@ -172,10 +314,7 @@
 			<template #header>
 				<div class="flex items-center justify-between w-full">
 					<div class="flex items-center gap-2">
-						<span
-							class="inline-block h-2.5 w-2.5 rounded-full"
-							:style="{ backgroundColor: project.service?.color || '#888' }"
-						/>
+						<span class="inline-block h-2.5 w-2.5 rounded-full" :style="{ backgroundColor: project.service?.color || '#888' }" />
 						<h3 class="t-label">{{ selectedEventFull?.title || 'Event Detail' }}</h3>
 					</div>
 					<Button variant="ghost" size="icon-sm" @click="closeEventDetail">
@@ -188,7 +327,6 @@
 				<div v-if="loadingEventDetail" class="flex items-center justify-center py-20">
 					<div class="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-primary" />
 				</div>
-
 				<ProjectTimelineEventDetail
 					v-else-if="selectedEventFull"
 					:event="selectedEventFull"
@@ -214,9 +352,78 @@ const emit = defineEmits(['eventCreated']);
 
 const { user } = useDirectusAuth();
 const { canAccess } = useRole();
+const runtimeConfig = useRuntimeConfig();
 const eventItems = useDirectusItems('project_events');
+const ticketItems = useDirectusItems('tickets');
+const taskItems = useDirectusItems('project_tasks');
+const invoiceItems = useDirectusItems('invoices');
 
 const isAdmin = computed(() => canAccess('projects'));
+
+// ── Stats ──
+const stats = ref({
+	ticketCount: 0,
+	openTickets: 0,
+	taskCount: 0,
+	completedTasks: 0,
+	invoiceTotal: 0,
+	paidTotal: 0,
+});
+
+const loadStats = async () => {
+	try {
+		const projectFilter = { project: { _eq: props.project.id } };
+		const [tickets, tasks, invoices] = await Promise.all([
+			ticketItems.list({ fields: ['id', 'status'], filter: projectFilter, limit: 200 }),
+			taskItems.list({ fields: ['id', 'completed', 'status'], filter: projectFilter, limit: 200 }),
+			invoiceItems.list({ fields: ['id', 'status', 'line_items'], filter: projectFilter, limit: 100 }),
+		]);
+
+		stats.value.ticketCount = tickets?.length || 0;
+		stats.value.openTickets = tickets?.filter(t => t.status !== 'Completed').length || 0;
+		stats.value.taskCount = tasks?.length || 0;
+		stats.value.completedTasks = tasks?.filter(t => t.completed || t.status === 'completed').length || 0;
+
+		let total = 0;
+		let paid = 0;
+		for (const inv of (invoices || [])) {
+			const lineItems = inv.line_items || [];
+			const invTotal = lineItems.reduce((sum, li) => sum + ((li.quantity || 0) * (li.rate || 0)), 0);
+			total += invTotal;
+			if (inv.status === 'paid') paid += invTotal;
+		}
+		stats.value.invoiceTotal = total;
+		stats.value.paidTotal = paid;
+	} catch (err) {
+		console.warn('Could not load project stats:', err);
+	}
+};
+
+const taskProgress = computed(() => {
+	if (!stats.value.taskCount) return 0;
+	return Math.round((stats.value.completedTasks / stats.value.taskCount) * 100);
+});
+
+const daysRemaining = computed(() => {
+	if (!props.project?.due_date) return null;
+	const due = new Date(props.project.due_date);
+	const now = new Date();
+	return Math.ceil((due - now) / (1000 * 60 * 60 * 24));
+});
+
+const formatCurrency = (amount) => {
+	if (!amount && amount !== 0) return '$0';
+	return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
+};
+
+const formatDate = (dateStr) => {
+	if (!dateStr) return '';
+	return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+};
+
+onMounted(() => {
+	loadStats();
+});
 
 // Timeline wizard state
 const showTimelineWizard = ref(false);
@@ -269,11 +476,7 @@ const resetNewEventForm = () => {
 
 const handleCreateEvent = async () => {
 	if (!newEventForm.title.trim()) {
-		useToast().add({
-			title: 'Error',
-			description: 'Event title is required',
-			color: 'red',
-		});
+		useToast().add({ title: 'Error', description: 'Event title is required', color: 'red' });
 		return;
 	}
 
@@ -287,34 +490,18 @@ const handleCreateEvent = async () => {
 			project: props.project.id,
 		};
 
-		if (newEventForm.description?.trim()) {
-			data.description = newEventForm.description.trim();
-		}
-		if (newEventForm.date) {
-			data.date = newEventForm.date;
-		}
-		if (newEventForm.prototype_link?.trim()) {
-			data.prototype_link = newEventForm.prototype_link.trim();
-		}
+		if (newEventForm.description?.trim()) data.description = newEventForm.description.trim();
+		if (newEventForm.date) data.date = newEventForm.date;
+		if (newEventForm.prototype_link?.trim()) data.prototype_link = newEventForm.prototype_link.trim();
 
 		await eventItems.create(data);
-
-		useToast().add({
-			title: 'Event Created',
-			description: `"${data.title}" has been created`,
-			color: 'green',
-		});
-
+		useToast().add({ title: 'Event Created', description: `"${data.title}" has been created`, color: 'green' });
 		emit('eventCreated');
 		showNewEventModal.value = false;
 		resetNewEventForm();
 	} catch (error) {
 		console.error('Error creating event:', error);
-		useToast().add({
-			title: 'Error',
-			description: 'Failed to create event',
-			color: 'red',
-		});
+		useToast().add({ title: 'Error', description: 'Failed to create event', color: 'red' });
 	} finally {
 		creatingEvent.value = false;
 	}
@@ -336,7 +523,6 @@ const showEventDetail = ref(false);
 const selectedEventFull = ref(null);
 const loadingEventDetail = ref(false);
 
-// Proxy object to pass to ProjectTimelineEventDetail
 const eventProjectProxy = computed(() => ({
 	id: props.project.id,
 	title: props.project.title,
@@ -348,17 +534,11 @@ const openEventDetail = async (event) => {
 	loadingEventDetail.value = true;
 	try {
 		const fullEvent = await eventItems.get(event.id, {
-			fields: [
-				'*',
-				'tasks.*',
-				'files.directus_files_id.*',
-				'category_id.id,category_id.name,category_id.color,category_id.text_color',
-			],
+			fields: ['*', 'tasks.*', 'files.directus_files_id.*', 'category_id.id,category_id.name,category_id.color,category_id.text_color'],
 		});
 		selectedEventFull.value = fullEvent;
 	} catch (err) {
 		console.error('Error fetching event details:', err);
-		// Fall back to the basic event data
 		selectedEventFull.value = event;
 	} finally {
 		loadingEventDetail.value = false;
