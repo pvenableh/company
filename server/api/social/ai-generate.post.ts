@@ -6,6 +6,7 @@
  * hashtags, and image suggestions.
  */
 import { getLLMProvider } from '~/server/utils/llm/factory';
+import { logAIUsage } from '~/server/utils/ai-usage';
 import type { ChatMessage } from '~/server/utils/llm/types';
 import type { SocialAIGenerateRequest, SocialAIGenerateResponse } from '~/types/social';
 
@@ -70,6 +71,18 @@ export default defineEventHandler(async (event) => {
 			post.hashtags = post.hashtags.map((tag) =>
 				tag.startsWith('#') ? tag : `#${tag}`,
 			);
+		}
+
+		// Log AI usage
+		if (response.usage) {
+			logAIUsage({
+				event,
+				endpoint: 'social/ai-generate',
+				model: response.model,
+				inputTokens: response.usage.inputTokens,
+				outputTokens: response.usage.outputTokens,
+				metadata: { platforms: body.platforms, contentType: body.contentType },
+			}).catch(() => {});
 		}
 
 		return generated;

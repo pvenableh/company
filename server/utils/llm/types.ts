@@ -48,11 +48,13 @@ export interface LLMProvider {
   /**
    * Send a chat completion request with streaming.
    * Yields partial text chunks as they arrive.
+   * The generator's return value (from `stream.return()` or iteration end)
+   * contains usage metadata (model, tokens) when available.
    */
   chatStream(
     messages: ChatMessage[],
     options?: LLMOptions,
-  ): AsyncGenerator<string, void, unknown>;
+  ): AsyncGenerator<string, LLMResponse | undefined, unknown>;
 
   /**
    * List available models for this provider.

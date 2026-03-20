@@ -16,6 +16,7 @@
 import { createItem, readItems, readItem, updateItem } from '@directus/sdk';
 import { getLLMProvider } from '~/server/utils/llm/factory';
 import { buildSystemPrompt } from '~/server/utils/llm/context';
+import { logAIUsage } from '~/server/utils/ai-usage';
 import type { ChatMessage } from '~/server/utils/llm/types';
 
 export default defineEventHandler(async (event) => {
@@ -236,10 +237,31 @@ export default defineEventHandler(async (event) => {
         maxTokens: 4096,
       });
 
-      for await (const chunk of stream) {
-        fullResponse += chunk;
-        // Send SSE data event
-        responseWriter.write(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\n\n`);
+      // Iterate manually to capture the generator's return value (usage metadata)
+      let streamResult: any;
+      let iterResult = await stream.next();
+      while (!iterResult.done) {
+        fullResponse += iterResult.value;
+        responseWriter.write(`data: ${JSON.stringify({ type: 'chunk', content: iterResult.value })}\n\n`);
+        iterResult = await stream.next();
+      }
+      // The return value from the generator contains usage info
+      if (iterResult.value) {
+        streamResult = iterResult.value;
+      }
+
+      // Log AI usage (fire-and-forget)
+      if (streamResult?.usage) {
+        logAIUsage({
+          event,
+          endpoint: 'ai/chat',
+          model: streamResult.model || model || 'claude-sonnet-4-20250514',
+          inputTokens: streamResult.usage.inputTokens,
+          outputTokens: streamResult.usage.outputTokens,
+          sessionId: String(chatSessionId),
+          organizationId: organizationId,
+          metadata: { responseStyle, verbosity },
+        }).catch(() => {});
       }
 
       // 7. Store assistant response

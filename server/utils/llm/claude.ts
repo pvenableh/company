@@ -51,7 +51,7 @@ export class ClaudeProvider implements LLMProvider {
   async *chatStream(
     messages: ChatMessage[],
     options?: LLMOptions,
-  ): AsyncGenerator<string, void, unknown> {
+  ): AsyncGenerator<string, LLMResponse | undefined, unknown> {
     const systemPrompt = options?.systemPrompt || this.extractSystemPrompt(messages);
     const userMessages = this.toAnthropicMessages(messages);
 
@@ -70,6 +70,22 @@ export class ClaudeProvider implements LLMProvider {
       ) {
         yield (event.delta as any).text;
       }
+    }
+
+    // After stream completes, return usage from the final message
+    try {
+      const finalMessage = await stream.finalMessage();
+      return {
+        content: '',
+        model: finalMessage.model,
+        usage: {
+          inputTokens: finalMessage.usage.input_tokens,
+          outputTokens: finalMessage.usage.output_tokens,
+        },
+        stopReason: finalMessage.stop_reason || undefined,
+      };
+    } catch {
+      return undefined;
     }
   }
 

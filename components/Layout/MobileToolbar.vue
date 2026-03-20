@@ -53,7 +53,7 @@ const handleAI = () => {
 };
 </script>
 <template>
-	<nav class="ios-tab-bar md:hidden" role="tablist">
+	<nav class="ios-tab-bar lg:hidden" role="tablist">
 		<!-- Left nav links -->
 		<nuxt-link
 			v-for="(link, index) in leftLinks"
