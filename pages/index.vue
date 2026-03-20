@@ -15,7 +15,7 @@ watch(selectedPersona, () => {
 const { analyze: crmAnalyze, overview: crmOverview, isLoading: crmLoading } = useCRMIntelligence();
 
 // ── Earnest Score ──
-const { state: earnestState, syncState, fetchState, fetchTeamRanking, newBadges, leveledUp } = useEarnestScore();
+const { state: earnestState, syncState, fetchState, fetchTeamRanking, fetchHistory, newBadges, leveledUp } = useEarnestScore();
 const { celebrate } = useConfetti();
 
 // ── Context ──
@@ -128,6 +128,7 @@ onMounted(async () => {
 		await fetchState();
 		runAnalysis();
 		runCRMAnalysis();
+		fetchHistory(7);
 	}
 });
 
@@ -539,8 +540,22 @@ const activeTab = ref<'commander' | 'timeline' | 'statistics'>('commander');
 				</div><!-- /Commander tab -->
 
 				<!-- ═══ Timeline Tab ═══ -->
-				<div v-show="activeTab === 'timeline'" class="space-y-6">
-					<CommandCenterTimeline />
+				<div v-show="activeTab === 'timeline'" class="lg:grid lg:grid-cols-[1fr_320px] lg:gap-6">
+					<div class="space-y-6">
+						<CommandCenterTimeline />
+					</div>
+					<div class="hidden lg:block">
+						<div class="lg:sticky lg:top-20 lg:self-start space-y-4">
+							<CommandCenterTimelineMotivation
+								:greeting="greeting"
+								:tasks-completed="metrics?.tasksCompletedToday ?? 0"
+								:current-score="earnestState.currentScore"
+								:streak="earnestState.streak"
+							/>
+							<CommandCenterTimelineQuickStats :metrics="metrics" />
+							<CommandCenterTimelineTrendChart :history="earnestState.history" />
+						</div>
+					</div>
 				</div>
 
 				<!-- ═══ Statistics Tab ═══ -->

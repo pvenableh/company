@@ -1,81 +1,130 @@
 <template>
-	<nav class="sidebar hidden xl:flex" v-if="user">
+	<nav class="sidebar hidden xl:flex" :class="{ 'sidebar--collapsed': collapsed }" v-if="user">
 		<!-- Logo / Brand -->
 		<div class="sidebar-header">
-			<NuxtLink to="/" class="flex items-center gap-2.5 px-2 ios-press rounded-xl">
-				<div class="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center">
+			<NuxtLink to="/" class="flex items-center gap-2.5 px-2 ios-press rounded-xl" :class="{ 'justify-center px-0': collapsed }">
+				<div class="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
 					<UIcon name="i-heroicons-command-line" class="w-4 h-4 text-primary" />
 				</div>
-				<span class="text-sm font-semibold text-foreground">Command Center</span>
+				<span v-if="!collapsed" class="text-sm font-semibold text-foreground">Command Center</span>
 			</NuxtLink>
+			<button
+				class="sidebar-collapse-btn"
+				:title="collapsed ? 'Expand sidebar' : 'Collapse sidebar'"
+				@click="toggle"
+			>
+				<UIcon :name="collapsed ? 'i-heroicons-chevron-right' : 'i-heroicons-chevron-left'" class="w-3.5 h-3.5" />
+			</button>
 		</div>
 
 		<!-- Nav Links -->
 		<div class="sidebar-nav">
 			<!-- Primary Section -->
 			<div v-if="primaryLinks.length" class="sidebar-section">
-				<span class="sidebar-section-label">Apps</span>
+				<span v-if="!collapsed" class="sidebar-section-label">Apps</span>
 				<NuxtLink
 					v-for="link in primaryLinks"
 					:key="link.to"
 					:to="link.to"
 					class="sidebar-link"
-					:class="isActive(link.to) ? 'sidebar-link-active' : 'sidebar-link-inactive'"
+					:class="[
+						isActive(link.to) ? 'sidebar-link-active' : 'sidebar-link-inactive',
+						collapsed ? 'sidebar-link--collapsed' : '',
+					]"
+					:title="collapsed ? link.name : undefined"
 				>
-					<UIcon :name="link.icon" class="w-5 h-5 flex-shrink-0" />
-					<span>{{ link.name }}</span>
+					<UIcon
+						:name="link.icon"
+						class="w-5 h-5 flex-shrink-0"
+						:class="!isActive(link.to) ? getIconColor(link) : ''"
+					/>
+					<span v-if="!collapsed">{{ link.name }}</span>
 				</NuxtLink>
 			</div>
 
 			<!-- Secondary Section -->
 			<div v-if="secondaryLinks.length" class="sidebar-section">
-				<span class="sidebar-section-label">More</span>
+				<span v-if="!collapsed" class="sidebar-section-label">More</span>
 				<NuxtLink
 					v-for="link in secondaryLinks"
 					:key="link.to"
 					:to="link.to"
 					class="sidebar-link"
-					:class="isActive(link.to) ? 'sidebar-link-active' : 'sidebar-link-inactive'"
+					:class="[
+						isActive(link.to) ? 'sidebar-link-active' : 'sidebar-link-inactive',
+						collapsed ? 'sidebar-link--collapsed' : '',
+					]"
+					:title="collapsed ? link.name : undefined"
 				>
-					<UIcon :name="link.icon" class="w-5 h-5 flex-shrink-0" />
-					<span>{{ link.name }}</span>
+					<UIcon
+						:name="link.icon"
+						class="w-5 h-5 flex-shrink-0"
+						:class="!isActive(link.to) ? getIconColor(link) : ''"
+					/>
+					<span v-if="!collapsed">{{ link.name }}</span>
 				</NuxtLink>
 			</div>
 
 			<!-- Tools Section -->
 			<div v-if="toolLinks.length" class="sidebar-section">
-				<span class="sidebar-section-label">Tools</span>
+				<span v-if="!collapsed" class="sidebar-section-label">Tools</span>
 				<NuxtLink
 					v-for="link in toolLinks"
 					:key="link.to"
 					:to="link.to"
 					class="sidebar-link"
-					:class="isActive(link.to) ? 'sidebar-link-active' : 'sidebar-link-inactive'"
+					:class="[
+						isActive(link.to) ? 'sidebar-link-active' : 'sidebar-link-inactive',
+						collapsed ? 'sidebar-link--collapsed' : '',
+					]"
+					:title="collapsed ? link.name : undefined"
 				>
-					<UIcon :name="link.icon" class="w-5 h-5 flex-shrink-0" />
-					<span>{{ link.name }}</span>
+					<UIcon
+						:name="link.icon"
+						class="w-5 h-5 flex-shrink-0"
+						:class="!isActive(link.to) ? getIconColor(link) : ''"
+					/>
+					<span v-if="!collapsed">{{ link.name }}</span>
 				</NuxtLink>
 			</div>
 		</div>
 
 		<!-- Bottom area -->
-		<div class="sidebar-footer">
+		<div class="sidebar-footer" :class="{ 'sidebar-footer--collapsed': collapsed }">
 			<NuxtLink
 				to="/organization"
 				class="sidebar-link"
-				:class="isActive('/organization') ? 'sidebar-link-active' : 'sidebar-link-inactive'"
+				:class="[
+					isActive('/organization') ? 'sidebar-link-active' : 'sidebar-link-inactive',
+					collapsed ? 'sidebar-link--collapsed' : '',
+				]"
+				:title="collapsed ? 'Settings' : undefined"
 			>
 				<UIcon name="i-heroicons-cog-6-tooth" class="w-5 h-5 flex-shrink-0" />
-				<span>Settings</span>
+				<span v-if="!collapsed">Settings</span>
 			</NuxtLink>
+			<button
+				class="sidebar-link sidebar-link-inactive"
+				:class="collapsed ? 'sidebar-link--collapsed' : ''"
+				:title="collapsed ? 'Edit Apps' : undefined"
+				@click="$emit('edit-apps')"
+			>
+				<UIcon name="i-heroicons-pencil-square" class="w-5 h-5 flex-shrink-0" />
+				<span v-if="!collapsed">Edit Apps</span>
+			</button>
 		</div>
 	</nav>
 </template>
 
 <script setup lang="ts">
+import type { NavLink } from '~/composables/useNavPreferences';
+
+defineEmits(['edit-apps']);
+
 const { user } = useDirectusAuth();
 const route = useRoute();
 const { visibleLinks } = useNavPreferences();
+const { collapsed, toggle } = useSidebarCollapsed();
 
 // Filter links by section, excluding Command Center (shown as logo) and AI Chat (separate)
 const primaryLinks = computed(() =>
@@ -94,6 +143,14 @@ const isActive = (to: string) => {
 	if (to === '/') return route.path === '/';
 	return route.path.startsWith(to);
 };
+
+/** Extract a text-color class from a link's bg color string */
+const getIconColor = (link: NavLink): string => {
+	if (!link.color) return '';
+	// Match "from-X-NNN" (gradient) or "bg-X-NNN" (solid)
+	const match = link.color.match(/(?:from-|bg-)(\w+-\d+)/);
+	return match ? `text-${match[1]}` : '';
+};
 </script>
 
 <style scoped>
@@ -111,11 +168,45 @@ const isActive = (to: string) => {
 	background: hsl(var(--card) / 0.95);
 	backdrop-filter: saturate(180%) blur(20px);
 	-webkit-backdrop-filter: saturate(180%) blur(20px);
+	transition: width 0.2s ease;
+}
+
+.sidebar--collapsed {
+	width: 64px;
 }
 
 .sidebar-header {
+	position: relative;
 	padding: 72px 16px 12px;
 	border-bottom: 1px solid hsl(var(--border) / 0.3);
+}
+
+.sidebar--collapsed .sidebar-header {
+	padding: 72px 8px 12px;
+}
+
+.sidebar-collapse-btn {
+	position: absolute;
+	top: 72px;
+	right: 8px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 24px;
+	height: 24px;
+	border-radius: 6px;
+	color: hsl(var(--muted-foreground) / 0.6);
+	transition: all 0.15s ease;
+	cursor: pointer;
+}
+.sidebar-collapse-btn:hover {
+	background: hsl(var(--muted) / 0.5);
+	color: hsl(var(--foreground));
+}
+
+.sidebar--collapsed .sidebar-collapse-btn {
+	position: static;
+	margin: 4px auto 0;
 }
 
 .sidebar-nav {
@@ -128,8 +219,16 @@ const isActive = (to: string) => {
 	display: none;
 }
 
+.sidebar--collapsed .sidebar-nav {
+	padding: 8px 6px;
+}
+
 .sidebar-section {
 	margin-bottom: 16px;
+}
+
+.sidebar--collapsed .sidebar-section {
+	margin-bottom: 8px;
 }
 
 .sidebar-section-label {
@@ -154,6 +253,12 @@ const isActive = (to: string) => {
 	cursor: pointer;
 }
 
+.sidebar-link--collapsed {
+	justify-content: center;
+	padding: 10px 8px;
+	gap: 0;
+}
+
 .sidebar-link-active {
 	background: hsl(var(--primary) / 0.1);
 	color: hsl(var(--primary));
@@ -171,5 +276,12 @@ const isActive = (to: string) => {
 .sidebar-footer {
 	padding: 12px;
 	border-top: 1px solid hsl(var(--border) / 0.3);
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.sidebar-footer--collapsed {
+	padding: 8px 6px;
 }
 </style>

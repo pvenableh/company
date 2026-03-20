@@ -2,10 +2,10 @@
 	<div class="relative bg-background text-foreground transition duration-150 xl:overflow-visible ios-safe-area">
 		<!-- Desktop Sidebar -->
 		<ClientOnly>
-			<LayoutSidebar v-if="user" />
+			<LayoutSidebar v-if="user" @edit-apps="navEditorOpen = true" />
 		</ClientOnly>
 
-		<div :class="user ? 'xl:pl-60' : ''">
+		<div :class="user ? (sidebarCollapsed ? 'xl:pl-16' : 'xl:pl-60') : ''" class="transition-[padding-left] duration-200">
 			<LayoutHeader :links="headerLinks" />
 
 			<div class="page pb-safe min-h-page">
@@ -70,6 +70,7 @@ const props = defineProps({
 import { timeTrackerModalOpen } from '~~/composables/useTimeTrackerModal';
 
 const { user } = useDirectusAuth();
+const { collapsed: sidebarCollapsed } = useSidebarCollapsed();
 const aiTrayOpen = ref(false);
 const navEditorOpen = ref(false);
 const timeTrackerModalVisible = timeTrackerModalOpen;
