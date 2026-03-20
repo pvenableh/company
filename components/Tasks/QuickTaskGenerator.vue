@@ -478,7 +478,7 @@ async function handleAddTask() {
 		selectedAssignee.value = null;
 		nextTick(() => inputRef.value?.focus());
 	} catch (err) {
-		const msg = (err as any)?.message || (err as any)?.statusMessage || 'Failed to create task';
+		const msg = err?.message || err?.statusMessage || 'Failed to create task';
 		console.error('[QuickTasks] Error creating task:', msg);
 	}
 }
