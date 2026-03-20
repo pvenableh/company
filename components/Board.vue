@@ -128,12 +128,16 @@ const onEnd = (event) => {
 	<div class="flex gap-4 overflow-x-auto p-4 min-h-[calc(100vh-200px)]">
 		<div v-for="column in columns" :key="column.id" class="flex-shrink-0 w-72">
 			<!-- Column Header -->
-			<div class="rounded-t-lg p-3 font-medium" :class="`bg-${column.color}-100 dark:bg-${column.color}-900`">
-				<div class="flex items-center justify-between">
-					<h3 class="text-sm font-semibold">{{ column.name }}</h3>
-					<UBadge :color="column.color" class="ml-2">
+			<div class="board-col-header">
+				<div class="flex items-center gap-3">
+					<div class="board-col-accent" :style="{ backgroundColor: `var(--${column.color}, ${column.color})` }" />
+					<h3 class="board-col-title">{{ column.name }}</h3>
+					<span
+						class="board-col-count"
+						:style="{ backgroundColor: `var(--${column.color}, ${column.color})`, color: 'var(--darkBlue)' }"
+					>
 						{{ groupedItems[column.id].length }}
-					</UBadge>
+					</span>
 				</div>
 			</div>
 
@@ -161,6 +165,26 @@ const onEnd = (event) => {
 
 <style scoped>
 @reference "~/assets/css/tailwind.css";
+
+.board-col-header {
+	@apply relative py-4 px-4 border-b border-border sticky top-0 z-10;
+	background: rgba(255, 255, 255, 0.78);
+	backdrop-filter: saturate(180%) blur(20px);
+	-webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+:is(.dark) .board-col-header {
+	background: rgba(20, 20, 20, 0.78);
+}
+.board-col-accent {
+	@apply w-1 h-5 rounded-full flex-shrink-0;
+}
+.board-col-title {
+	@apply text-xs font-semibold uppercase tracking-wider text-foreground flex-1;
+}
+.board-col-count {
+	@apply text-[10px] font-bold tabular-nums min-w-[20px] h-5 flex items-center justify-center rounded-full px-1.5;
+}
+
 .draggable-ghost {
 	@apply opacity-50 border-2 border-dashed border-gray-400;
 }

@@ -17,6 +17,7 @@ const isQuickSending = ref(false);
 const isQuickStreaming = ref(false);
 const quickStreamingContent = ref('');
 const quickError = ref<string | null>(null);
+let quickAbortController: AbortController | null = null;
 
 export function useEarnestChat() {
 	const { selectedClient } = useClients();
@@ -41,15 +42,18 @@ export function useEarnestChat() {
 		quickMessages.value.push(userMsg);
 
 		try {
+			quickAbortController = new AbortController();
 			const response = await fetch('/api/ai/chat', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
+				signal: quickAbortController.signal,
 				body: JSON.stringify({
 					sessionId: quickSessionId.value || undefined,
 					message: content.trim(),
 					clientId: selectedClient.value && selectedClient.value !== 'org' ? selectedClient.value : undefined,
 					organizationId: (selectedOrg.value as any)?.id || undefined,
 					responseStyle: selectedPersona.value !== 'default' ? selectedPersona.value : undefined,
+					verbosity: useAIPreferences().responseVerbosity.value,
 				}),
 			});
 
@@ -104,10 +108,16 @@ export function useEarnestChat() {
 			isQuickSending.value = false;
 			isQuickStreaming.value = false;
 			quickStreamingContent.value = '';
+			quickAbortController = null;
 		}
 	};
 
+	const cancelQuickStream = () => {
+		quickAbortController?.abort();
+	};
+
 	const clearQuickChat = () => {
+		quickAbortController?.abort();
 		quickMessages.value = [];
 		quickSessionId.value = null;
 		quickStreamingContent.value = '';
@@ -122,6 +132,7 @@ export function useEarnestChat() {
 		quickStreamingContent,
 		quickError,
 		sendQuickMessage,
+		cancelQuickStream,
 		clearQuickChat,
 	};
 }

@@ -1052,10 +1052,16 @@ watch(
 		@apply border-border/50 border-r;
 	}
 	.tickets-board__board-col-header {
-		@apply relative py-4 px-4 bg-card/80 backdrop-blur-sm border-b border-border sticky top-0 z-10;
+		@apply relative py-4 px-4 border-b border-border sticky top-0 z-10;
+		background: rgba(255, 255, 255, 0.78);
+		backdrop-filter: saturate(180%) blur(20px);
+		-webkit-backdrop-filter: saturate(180%) blur(20px);
 		@media (min-width: 1600px) {
 			@apply px-8;
 		}
+	}
+	:is(.dark) .tickets-board__board-col-header {
+		background: rgba(20, 20, 20, 0.78);
 	}
 	.tickets-board__board-col-content {
 		@apply min-h-screen lg:h-svh h-full py-3 bg-muted/20 dark:bg-card/30 overflow-y-auto px-3;

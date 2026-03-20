@@ -49,6 +49,10 @@ export interface ProductivityMetrics {
 	dealsPipelineValue: number;
 }
 
+// Module-level cache — persists across composable calls for 60s TTL
+const MODULE_CACHE_TTL = 60_000;
+const _moduleCache = new Map<string, { data: TaskSuggestion[]; expiresAt: number }>();
+
 export const useAIProductivityEngine = () => {
 	const suggestions = ref<TaskSuggestion[]>([]);
 	const metrics = ref<ProductivityMetrics>({
@@ -107,13 +111,44 @@ export const useAIProductivityEngine = () => {
 		return Math.floor((d.getTime() - today().getTime()) / 86400000);
 	};
 
-	// Time-aware greeting
+	// Time-aware, persona-aware greeting
 	const getGreeting = (): string => {
 		const hour = new Date().getHours();
 		const name = user.value?.first_name || 'there';
-		if (hour < 12) return `Good morning, ${name}`;
-		if (hour < 17) return `Good afternoon, ${name}`;
-		return `Good evening, ${name}`;
+		const { activePersona } = useAIPersona();
+		const persona = activePersona.value?.value || 'default';
+
+		// Time period
+		const period = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
+
+		// Persona-specific greetings by time of day
+		const greetings: Record<string, Record<string, string[]>> = {
+			default: {
+				morning: [`Good morning, ${name}`, `Rise and shine, ${name}`, `Morning, ${name} — let's make today count`],
+				afternoon: [`Good afternoon, ${name}`, `Afternoon, ${name} — how's it going?`, `Hey ${name}, keeping the momentum going`],
+				evening: [`Good evening, ${name}`, `Evening, ${name} — winding down?`, `Hey ${name}, finishing strong tonight`],
+			},
+			director: {
+				morning: [`Morning, ${name}. Time to execute.`, `Let's get to work, ${name}.`, `${name}, here's your mission briefing.`],
+				afternoon: [`${name}, status check. What's the priority?`, `Afternoon, ${name}. Stay focused.`, `Halfway through, ${name}. Let's push.`],
+				evening: [`${name}, final push. What needs to close today?`, `Evening, ${name}. Any blockers before we wrap?`, `Let's tie up loose ends, ${name}.`],
+			},
+			buddy: {
+				morning: [`Heyyy ${name}! Ready to crush it? ☕`, `Morning, ${name}! Let's do this 🙌`, `What's good, ${name}? New day, new wins!`],
+				afternoon: [`How's your day going, ${name}?`, `${name}! Still going strong? 💪`, `Hey ${name}, need a hand with anything?`],
+				evening: [`${name}! Almost done for the day 🌅`, `Hey ${name}, nice work today!`, `Wrapping up, ${name}? You earned it!`],
+			},
+			motivator: {
+				morning: [`${name}, today is YOUR day! Let's go! 🔥`, `You showed up, ${name} — that's already a win!`, `New day, new possibilities, ${name}!`],
+				afternoon: [`You're doing amazing, ${name}! Keep going! 🚀`, `${name}, look how far you've come today!`, `Halfway there and crushing it, ${name}!`],
+				evening: [`${name}, what a day! Be proud of yourself! ⭐`, `You made it through, ${name} — incredible!`, `${name}, you've earned this evening. Great work!`],
+			},
+		};
+
+		const pool = greetings[persona]?.[period] || greetings.default[period];
+		// Pick a pseudo-random one based on the day of year so it feels fresh but stable
+		const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
+		return pool[dayOfYear % pool.length];
 	};
 
 	// Score calculation: higher = more urgent/important
@@ -1124,11 +1159,7 @@ export const useAIProductivityEngine = () => {
 		};
 	}
 
-	// ─── Per-module cache ────────────────────────────────────────────────────
-	// Prevents re-fetching on repeated dashboard visits within 60s
-
-	const MODULE_CACHE_TTL = 60_000; // 60 seconds
-	const _moduleCache = new Map<string, { data: TaskSuggestion[]; expiresAt: number }>();
+	// ─── Per-module cache (map is at module scope for cross-call persistence) ──
 
 	function getModuleCache(module: string): TaskSuggestion[] | null {
 		const entry = _moduleCache.get(module);

@@ -4,6 +4,12 @@ const { user } = useDirectusAuth();
 // ── Productivity Engine (existing) ──
 const { suggestions, metrics, isAnalyzing, greeting, analyze } = useAIProductivityEngine();
 const { enabledModules } = useAIPreferences();
+const { selectedPersona } = useAIPersona();
+
+// Update greeting when persona changes
+watch(selectedPersona, () => {
+	if (user.value) runAnalysis();
+});
 
 // ── CRM Intelligence Engine ──
 const { analyze: crmAnalyze, overview: crmOverview, isLoading: crmLoading } = useCRMIntelligence();
@@ -146,8 +152,8 @@ const navigateTo = (route: string) => {
 	router.push(route);
 };
 
-// ── Tabs: Command Center / Statistics ──
-const activeTab = ref<'commander' | 'statistics'>('commander');
+// ── Tabs: Command Center / Timeline / Statistics ──
+const activeTab = ref<'commander' | 'timeline' | 'statistics'>('commander');
 </script>
 
 <template>
@@ -185,6 +191,18 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 						<span class="flex items-center gap-1.5">
 							<UIcon name="i-heroicons-command-line" class="w-3.5 h-3.5" />
 							Command Center
+						</span>
+					</button>
+					<button
+						@click="activeTab = 'timeline'"
+						class="px-4 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
+						:class="activeTab === 'timeline'
+							? 'bg-background text-foreground shadow-sm'
+							: 'text-muted-foreground hover:text-foreground'"
+					>
+						<span class="flex items-center gap-1.5">
+							<UIcon name="i-heroicons-clock" class="w-3.5 h-3.5" />
+							Timeline
 						</span>
 					</button>
 					<button
@@ -519,6 +537,11 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 				</div>
 
 				</div><!-- /Commander tab -->
+
+				<!-- ═══ Timeline Tab ═══ -->
+				<div v-show="activeTab === 'timeline'" class="space-y-6">
+					<CommandCenterTimeline />
+				</div>
 
 				<!-- ═══ Statistics Tab ═══ -->
 				<div v-show="activeTab === 'statistics'" class="space-y-6">

@@ -29,13 +29,17 @@
 
 		<template v-if="!isLoading">
 			<!-- Column Headers -->
-			<div class="absolute top-4 w-full px-4 flex justify-between">
-				<h3 v-for="column in columns" :key="column.id" class="text-sm font-medium text-gray-600 dark:text-gray-300">
-					{{ column.name }}
-					<UBadge :color="getColumnColor(column.id)" class="ml-2">
+			<div class="absolute top-0 w-full px-4 flex justify-between z-10" style="background: rgba(255, 255, 255, 0.78); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px);">
+				<div v-for="column in columns" :key="column.id" class="flex items-center gap-2 py-3 px-2">
+					<div class="w-1 h-5 rounded-full" :style="{ backgroundColor: `var(--${column.color || getColumnColor(column.id)})` }" />
+					<h3 class="text-xs font-semibold uppercase tracking-wider text-foreground">{{ column.name }}</h3>
+					<span
+						class="text-[10px] font-bold tabular-nums min-w-[20px] h-5 flex items-center justify-center rounded-full px-1.5"
+						:style="{ backgroundColor: `var(--${column.color || getColumnColor(column.id)})`, color: 'var(--darkBlue)' }"
+					>
 						{{ ticketsByStatus[column.id]?.length || 0 }}
-					</UBadge>
-				</h3>
+					</span>
+				</div>
 			</div>
 
 			<!-- Main Container -->
