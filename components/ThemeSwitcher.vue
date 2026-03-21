@@ -180,6 +180,46 @@
 			</div>
 		</transition>
 
+		<!-- Timeline Icon Theme Section -->
+		<div class="space-y-3">
+			<h4 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Timeline Icons</h4>
+			<p class="text-[10px] text-muted-foreground -mt-1">Choose an icon theme for your activity timeline cards</p>
+
+			<div class="grid grid-cols-3 gap-2">
+				<button
+					v-for="theme in timelineThemes"
+					:key="theme.id"
+					@click="setTimelineTheme(theme.id)"
+					class="group relative flex flex-col items-center gap-1.5 rounded-xl border px-2 py-3 text-center transition-all duration-200 ios-press"
+					:class="
+						currentTimelineThemeId === theme.id
+							? 'border-primary bg-primary/5 ring-1 ring-primary/20 shadow-sm'
+							: 'border-border hover:border-primary/30 hover:bg-muted/20'
+					"
+				>
+					<!-- Preview icon grid (2x2) -->
+					<div class="grid grid-cols-2 gap-1">
+						<Icon
+							v-for="(icon, idx) in getThemePreviewIcons(theme)"
+							:key="idx"
+							:name="icon"
+							class="w-5 h-5"
+						/>
+					</div>
+					<span class="text-[10px] font-semibold text-foreground">{{ theme.name }}</span>
+					<span class="text-[8px] text-muted-foreground leading-tight">{{ theme.description }}</span>
+
+					<!-- Active check -->
+					<div
+						v-if="currentTimelineThemeId === theme.id"
+						class="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-primary flex items-center justify-center"
+					>
+						<Icon name="lucide:check" class="w-2.5 h-2.5 text-primary-foreground" />
+					</div>
+				</button>
+			</div>
+		</div>
+
 		<!-- Style Section -->
 		<div class="space-y-3">
 			<h4 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Typography Style</h4>
@@ -216,6 +256,13 @@
 
 <script setup lang="ts">
 const { themes, styles, monoPresets, currentTheme, currentStyle, monoHue, setTheme, setStyle, setMonoHue } = useTheme();
+const { themes: timelineThemes, currentThemeId: currentTimelineThemeId, setTheme: setTimelineTheme } = useTimelineTheme();
+
+/** Get 4 preview icons from a timeline theme for the grid */
+function getThemePreviewIcons(theme: typeof timelineThemes[0]): string[] {
+	const keys = ['projects', 'tickets', 'invoices', 'tasks'];
+	return keys.map((k) => theme.collectionIcons[k] || theme.preview);
+}
 
 const handleThemeClick = (themeId: string) => {
 	setTheme(themeId);
