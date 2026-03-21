@@ -1115,6 +1115,43 @@ export interface FinancialGoal {
 	organization?: Organization | string | null;
 	user_created?: DirectusUser | string | null;
 }
+export interface Goal {
+	/** @primaryKey */
+	id: string;
+	status?: 'draft' | 'active' | 'paused' | 'completed' | 'archived' | null;
+	sort?: number | null;
+	user_created?: DirectusUser | string | null;
+	date_created?: string | null;
+	user_updated?: DirectusUser | string | null;
+	date_updated?: string | null;
+	organization?: Organization | string | null;
+	/** @required */
+	title: string;
+	description?: string | null;
+	type?: 'financial' | 'networking' | 'performance' | 'marketing' | 'custom' | null;
+	target_value?: number | null;
+	target_unit?: string | null;
+	current_value?: number | null;
+	start_date?: string | null;
+	end_date?: string | null;
+	timeframe?: 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom' | null;
+	priority?: 'low' | 'medium' | 'high' | null;
+	assigned_to?: DirectusUser | string | null;
+	team?: Team | string | null;
+	client?: Client | string | null;
+	tags?: string[] | null;
+	metadata?: Record<string, any> | null;
+	snapshots?: GoalSnapshot[] | string[];
+}
+export interface GoalSnapshot {
+	/** @primaryKey */
+	id: number;
+	goal?: Goal | string | null;
+	value?: number | null;
+	notes?: string | null;
+	date_created?: string | null;
+	user_created?: DirectusUser | string | null;
+}
 export interface Hero {
 	/** @primaryKey */
 	id: number;
@@ -3115,6 +3152,8 @@ export interface Schema {
 	emails: Email[];
 	email_templates: EmailTemplate[];
 	financial_goals: FinancialGoal[];
+	goal_snapshots: GoalSnapshot[];
+	goals: Goal[];
 	heros: Hero[];
 	home: Home;
 	home_files: HomeFile[];
@@ -3303,6 +3342,8 @@ export enum CollectionNames {
 	emails = 'emails',
 	email_templates = 'email_templates',
 	financial_goals = 'financial_goals',
+	goal_snapshots = 'goal_snapshots',
+	goals = 'goals',
 	heros = 'heros',
 	home = 'home',
 	home_files = 'home_files',

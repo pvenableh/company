@@ -78,6 +78,15 @@ const DEFAULT_LINKS: NavLink[] = [
 	},
 	// ── Secondary Apps ──
 	{
+		name: 'Goals',
+		type: ['drawer'],
+		to: '/goals',
+		icon: 'i-heroicons-flag',
+		color: 'bg-amber-500',
+		description: 'Track your goals',
+		section: 'secondary',
+	},
+	{
 		name: 'Tasks',
 		type: ['drawer'],
 		to: '/tasks',

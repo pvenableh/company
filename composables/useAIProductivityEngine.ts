@@ -24,7 +24,8 @@ export interface TaskSuggestion {
 		| 'scheduling'
 		| 'social'
 		| 'phone'
-		| 'carddesk';
+		| 'carddesk'
+		| 'goals';
 	timestamp: Date;
 	score: number;
 }
@@ -87,6 +88,7 @@ export const useAIProductivityEngine = () => {
 	const socialAccountItems = useDirectusItems('social_accounts');
 	const callLogItems = useDirectusItems('call_logs');
 	const dealItems = useDirectusItems('leads');
+	const goalItems = useDirectusItems('goals');
 	const appointmentItems = useDirectusItems('appointments');
 	const { user } = useDirectusAuth();
 	const { selectedOrg } = useOrganization();
@@ -1221,6 +1223,81 @@ export const useAIProductivityEngine = () => {
 		clearCache();
 	});
 
+	// ─── Goals Analysis ──────────────────────────────────────────────────────
+
+	const analyzeGoals = async (): Promise<TaskSuggestion[]> => {
+		const results: TaskSuggestion[] = [];
+
+		try {
+			const goals = await goalItems.list({
+				fields: ['id', 'title', 'type', 'status', 'target_value', 'target_unit', 'current_value', 'end_date', 'priority'],
+				filter: {
+					status: { _in: ['active', 'draft'] },
+					...orgFilter(),
+				},
+				limit: 50,
+			});
+
+			const t = today();
+
+			for (const goal of goals) {
+				const endDate = goal.end_date ? new Date(goal.end_date) : null;
+				const isOverdue = endDate && endDate < t && goal.status === 'active';
+				const daysLeft = endDate ? Math.ceil((endDate.getTime() - t.getTime()) / 86400000) : null;
+				const progress = goal.target_value ? Math.min(100, ((goal.current_value || 0) / goal.target_value) * 100) : 0;
+
+				if (isOverdue) {
+					const daysOver = Math.abs(daysLeft!);
+					results.push({
+						id: `goal-overdue-${goal.id}`,
+						type: 'action',
+						priority: 'urgent',
+						icon: 'i-heroicons-flag',
+						title: `Overdue Goal: ${goal.title}`,
+						description: `${daysOver} day${daysOver > 1 ? 's' : ''} past deadline — ${Math.round(progress)}% complete`,
+						actionLabel: 'Update Progress',
+						actionRoute: '/goals',
+						category: 'goals',
+						timestamp: new Date(),
+						score: calculateScore({ type: 'action', daysOverdue: daysOver }),
+					});
+				} else if (daysLeft !== null && daysLeft <= 7 && daysLeft >= 0 && progress < 80) {
+					results.push({
+						id: `goal-deadline-${goal.id}`,
+						type: 'reminder',
+						priority: daysLeft <= 3 ? 'high' : 'medium',
+						icon: 'i-heroicons-clock',
+						title: `Goal deadline in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}: ${goal.title}`,
+						description: `Currently ${Math.round(progress)}% complete — needs attention`,
+						actionLabel: 'Update Progress',
+						actionRoute: '/goals',
+						category: 'goals',
+						timestamp: new Date(),
+						score: calculateScore({ type: 'reminder', isToday: daysLeft === 0, isTomorrow: daysLeft === 1 }),
+					});
+				} else if (goal.status === 'active' && progress === 0 && goal.target_value) {
+					results.push({
+						id: `goal-nostart-${goal.id}`,
+						type: 'insight',
+						priority: 'low',
+						icon: 'i-heroicons-flag',
+						title: `No progress on: ${goal.title}`,
+						description: `This ${goal.type || 'custom'} goal hasn't been started yet`,
+						actionLabel: 'Get Started',
+						actionRoute: '/goals',
+						category: 'goals',
+						timestamp: new Date(),
+						score: 30,
+					});
+				}
+			}
+		} catch (e) {
+			console.warn('[AI Engine] Could not analyze goals:', e);
+		}
+
+		return results;
+	};
+
 	// ─── Main Analysis ────────────────────────────────────────────────────────
 
 	const analyze = async (enabledModules?: Set<string>) => {
@@ -1238,12 +1315,12 @@ export const useAIProductivityEngine = () => {
 		// Default: all modules enabled
 		const modules = enabledModules || new Set([
 			'tickets', 'projects', 'tasks', 'invoices',
-			'channels', 'social', 'scheduling', 'phone', 'deals', 'carddesk',
+			'channels', 'social', 'scheduling', 'phone', 'deals', 'carddesk', 'goals',
 		]);
 
 		// Priority modules run first, secondary modules deferred
 		const priorityModules = ['tickets', 'projects', 'tasks', 'invoices', 'channels'];
-		const secondaryModules = ['social', 'scheduling', 'phone', 'deals', 'carddesk'];
+		const secondaryModules = ['social', 'scheduling', 'phone', 'deals', 'carddesk', 'goals'];
 
 		const analyzers: Record<string, () => Promise<TaskSuggestion[]>> = {
 			tickets: analyzeTickets,
@@ -1256,6 +1333,7 @@ export const useAIProductivityEngine = () => {
 			phone: analyzePhone,
 			deals: analyzeDeals,
 			carddesk: analyzeCardDesk,
+			goals: analyzeGoals,
 		};
 
 		// Limit to 3 concurrent API requests
