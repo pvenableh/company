@@ -7,6 +7,9 @@ const projectItems = useDirectusItems('projects');
 const ticketItems = useDirectusItems('tickets');
 const invoiceItems = useDirectusItems('invoices');
 
+// ── Timeline icon theme ──
+const { collectionIcons: themedCollectionIcons, actionIcons: themedActionIcons } = useTimelineTheme();
+
 // ── State ──
 const timeline = ref([]);
 const loading = ref(true);
@@ -42,18 +45,8 @@ const collectionLabels = {
 	tasks: 'Quick Task',
 };
 
-const collectionIcons = {
-	projects: 'i-heroicons-folder',
-	tickets: 'i-heroicons-square-3-stack-3d',
-	invoices: 'i-heroicons-document-currency-dollar',
-	project_tasks: 'i-heroicons-check-circle',
-	emails: 'i-heroicons-envelope',
-	cd_contacts: 'i-heroicons-identification',
-	cd_activities: 'i-heroicons-phone-arrow-up-right',
-	contacts: 'i-heroicons-user-plus',
-	clients: 'i-heroicons-building-office',
-	tasks: 'i-heroicons-clipboard-document-check',
-};
+// Collection icons now driven by useTimelineTheme() — see themedCollectionIcons above
+const collectionIcons = themedCollectionIcons;
 
 const collectionColors = {
 	projects: 'text-blue-500',
@@ -87,11 +80,8 @@ const actionLabels = {
 	delete: 'deleted',
 };
 
-const actionIcons = {
-	create: 'i-heroicons-plus-circle',
-	update: 'i-heroicons-pencil-square',
-	delete: 'i-heroicons-trash',
-};
+// Action icons now driven by useTimelineTheme() — see themedActionIcons above
+const actionIcons = themedActionIcons;
 
 // ── Load last seen ──
 onMounted(() => {
