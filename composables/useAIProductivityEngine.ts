@@ -114,47 +114,43 @@ export const useAIProductivityEngine = () => {
 		return Math.floor((d.getTime() - today().getTime()) / 86400000);
 	};
 
-	// Time-aware, persona-aware greeting
+	// Time-aware, persona-aware greeting (expanded arrays for more variety)
 	const getGreeting = (): string => {
 		const hour = new Date().getHours();
 		const name = user.value?.first_name || 'there';
 		const { activePersona } = useAIPersona();
 		const persona = activePersona.value?.value || 'default';
-
-		// Time period
 		const period = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
 
-		// Persona-specific greetings by time of day
 		const greetings: Record<string, Record<string, string[]>> = {
 			default: {
-				morning: [`Good morning, ${name}`, `Rise and shine, ${name}`, `Morning, ${name} — let's make today count`],
-				afternoon: [`Good afternoon, ${name}`, `Afternoon, ${name} — how's it going?`, `Hey ${name}, keeping the momentum going`],
-				evening: [`Good evening, ${name}`, `Evening, ${name} — winding down?`, `Hey ${name}, finishing strong tonight`],
+				morning: [`Good morning, ${name}`, `Rise and shine, ${name}`, `Morning, ${name} — let's make today count`, `Welcome back, ${name}`, `Ready to start the day, ${name}?`, `A fresh start awaits, ${name}`],
+				afternoon: [`Good afternoon, ${name}`, `Afternoon, ${name} — how's it going?`, `Hey ${name}, keeping the momentum going`, `Still at it, ${name}? Nice work`, `${name}, the afternoon is yours`, `What's next on the list, ${name}?`],
+				evening: [`Good evening, ${name}`, `Evening, ${name} — winding down?`, `Hey ${name}, finishing strong tonight`, `Almost there, ${name}`, `${name}, wrapping up the day`, `Evening check-in, ${name}`],
 			},
 			director: {
-				morning: [`Morning, ${name}. Time to execute.`, `Let's get to work, ${name}.`, `${name}, here's your mission briefing.`],
-				afternoon: [`${name}, status check. What's the priority?`, `Afternoon, ${name}. Stay focused.`, `Halfway through, ${name}. Let's push.`],
-				evening: [`${name}, final push. What needs to close today?`, `Evening, ${name}. Any blockers before we wrap?`, `Let's tie up loose ends, ${name}.`],
+				morning: [`Morning, ${name}. Time to execute.`, `Let's get to work, ${name}.`, `${name}, here's your mission briefing.`, `${name}. Priorities first.`, `Briefing ready, ${name}. Let's move.`, `${name}, the clock is ticking.`],
+				afternoon: [`${name}, status check. What's the priority?`, `Afternoon, ${name}. Stay focused.`, `Halfway through, ${name}. Let's push.`, `${name}, where do we stand?`, `Time check, ${name}. What needs closing?`, `${name}, keep the pressure on.`],
+				evening: [`${name}, final push. What needs to close today?`, `Evening, ${name}. Any blockers before we wrap?`, `Let's tie up loose ends, ${name}.`, `${name}, debrief time.`, `End of day, ${name}. Status report.`, `${name}, close it out strong.`],
 			},
 			buddy: {
-				morning: [`Heyyy ${name}! Ready to crush it? ☕`, `Morning, ${name}! Let's do this 🙌`, `What's good, ${name}? New day, new wins!`],
-				afternoon: [`How's your day going, ${name}?`, `${name}! Still going strong? 💪`, `Hey ${name}, need a hand with anything?`],
-				evening: [`${name}! Almost done for the day 🌅`, `Hey ${name}, nice work today!`, `Wrapping up, ${name}? You earned it!`],
+				morning: [`Heyyy ${name}! Ready to crush it? ☕`, `Morning, ${name}! Let's do this 🙌`, `What's good, ${name}? New day, new wins!`, `Hey hey, ${name}! Coffee time ☕`, `${name}! Another beautiful day to be awesome`, `Let's gooo ${name}! Fresh start 🌟`],
+				afternoon: [`How's your day going, ${name}?`, `${name}! Still going strong? 💪`, `Hey ${name}, need a hand with anything?`, `What's the vibe, ${name}?`, `${name}, you're doing great today!`, `Afternoon check-in, ${name}! All good? 👋`],
+				evening: [`${name}! Almost done for the day 🌅`, `Hey ${name}, nice work today!`, `Wrapping up, ${name}? You earned it!`, `${name}, great job today! 🎉`, `Time to wind down, ${name} — you killed it`, `${name}! Calling it a day? Well deserved 🙏`],
 			},
 			motivator: {
-				morning: [`${name}, today is YOUR day! Let's go! 🔥`, `You showed up, ${name} — that's already a win!`, `New day, new possibilities, ${name}!`],
-				afternoon: [`You're doing amazing, ${name}! Keep going! 🚀`, `${name}, look how far you've come today!`, `Halfway there and crushing it, ${name}!`],
-				evening: [`${name}, what a day! Be proud of yourself! ⭐`, `You made it through, ${name} — incredible!`, `${name}, you've earned this evening. Great work!`],
+				morning: [`${name}, today is YOUR day! Let's go! 🔥`, `You showed up, ${name} — that's already a win!`, `New day, new possibilities, ${name}!`, `${name}, greatness starts now! 💫`, `The world needs what you bring, ${name}!`, `Every morning is a chance to be amazing, ${name}! 🌅`],
+				afternoon: [`You're doing amazing, ${name}! Keep going! 🚀`, `${name}, look how far you've come today!`, `Halfway there and crushing it, ${name}!`, `Don't stop now, ${name}! You're on fire! 🔥`, `${name}, your momentum is unstoppable!`, `Keep pushing, ${name}! Excellence is a habit! 💪`],
+				evening: [`${name}, what a day! Be proud of yourself! ⭐`, `You made it through, ${name} — incredible!`, `${name}, you've earned this evening. Great work!`, `Reflect on your wins today, ${name}! 🏆`, `${name}, tomorrow will be even better!`, `Rest up, ${name}. Champions need recovery too! 🌟`],
 			},
 		};
 
 		const pool = greetings[persona]?.[period] || greetings.default[period];
-		// Pick a pseudo-random one based on the day of year so it feels fresh but stable
 		const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
 		return pool[dayOfYear % pool.length];
 	};
 
-	// Persona-aware subtitle for the Command Center
+	// Persona-aware subtitle
 	const getSubtitle = (): string => {
 		const { activePersona } = useAIPersona();
 		const persona = activePersona.value?.value || 'default';
@@ -163,31 +159,59 @@ export const useAIProductivityEngine = () => {
 
 		const subtitles: Record<string, Record<string, string[]>> = {
 			default: {
-				morning: ["Here's what needs your attention today", 'Your priorities are lined up and ready', "Let's see what's on the radar"],
-				afternoon: ["Here's where things stand right now", "Let's keep the momentum going", 'A quick look at your open items'],
-				evening: ["Here's what's still on your plate", 'Wrapping up? Here are the loose ends', "Let's close out the day strong"],
+				morning: ["Here's what needs your attention today", 'Your priorities are lined up and ready', "Let's see what's on the radar", 'Time to tackle the day ahead', "Here's your morning snapshot", 'Your dashboard is ready'],
+				afternoon: ["Here's where things stand right now", "Let's keep the momentum going", 'A quick look at your open items', "Midday update — here's the rundown", 'Status check on your priorities', 'Your afternoon overview is ready'],
+				evening: ["Here's what's still on your plate", 'Wrapping up? Here are the loose ends', "Let's close out the day strong", "Final items before you sign off", "Here's where things landed today", 'Evening review of your priorities'],
 			},
 			director: {
-				morning: ['Your daily ops briefing is ready', 'Mission priorities loaded', 'Intel report: here are the open items'],
-				afternoon: ['Midday status — here are the action items', 'Time-sensitive items flagged below', 'Operational update incoming'],
-				evening: ['End-of-day debrief — review the status', 'Final items requiring sign-off', "Tomorrow's blockers start here"],
+				morning: ['Your daily ops briefing is ready', 'Mission priorities loaded', 'Intel report: here are the open items', 'Status: action items queued', 'Today\'s targets are locked in', 'Operations dashboard is live'],
+				afternoon: ['Midday status — here are the action items', 'Time-sensitive items flagged below', 'Operational update incoming', 'Priority queue updated', 'Action items require your attention', 'Afternoon briefing ready'],
+				evening: ['End-of-day debrief — review the status', 'Final items requiring sign-off', "Tomorrow's blockers start here", 'Close-of-business status report', 'Outstanding items need resolution', 'Wrap-up briefing loaded'],
 			},
 			buddy: {
-				morning: ["Let's see what we're working with today!", "I pulled together your stuff — take a peek", "Here's your vibe check for the day"],
-				afternoon: ["Here's the scoop on what's going on", "Quick update on all the things!", "Keeping you in the loop — here's what's up"],
-				evening: ["Almost there! Here's what's left", "You crushed it today — just a few more things", "Winding down? Let me show you what's open"],
+				morning: ["Let's see what we're working with today!", "I pulled together your stuff — take a peek", "Here's your vibe check for the day", "Got your back today — here's the scoop", "Let me catch you up on everything!", "Here's the daily rundown, friend"],
+				afternoon: ["Here's the scoop on what's going on", "Quick update on all the things!", "Keeping you in the loop — here's what's up", "Just checking in — here's where we're at", "Let me fill you in on the latest", "Here's what's been happening"],
+				evening: ["Almost there! Here's what's left", "You crushed it today — just a few more things", "Winding down? Let me show you what's open", "You're so close to being done!", "Just a handful of things left", "Finish line is in sight!"],
 			},
 			motivator: {
-				morning: ["Every task you tackle today is a step forward!", "Your potential is unlimited — here's where to start", "Today's challenges are tomorrow's achievements!"],
-				afternoon: ["You're making incredible progress!", "Look at you go — here's what's next", "Keep that energy flowing!"],
-				evening: ["What a productive day — here's the final stretch!", "You've done so much today! Just a few items left", "Finish strong — you've got this!"],
+				morning: ["Every task you tackle today is a step forward!", "Your potential is unlimited — here's where to start", "Today's challenges are tomorrow's achievements!", "You have the power to make today extraordinary!", "Small steps lead to big victories!", "Your best work is ahead of you!"],
+				afternoon: ["You're making incredible progress!", "Look at you go — here's what's next", "Keep that energy flowing!", "You're building something amazing!", "Each completed task is a victory!", "The momentum is all yours!"],
+				evening: ["What a productive day — here's the final stretch!", "You've done so much today! Just a few items left", "Finish strong — you've got this!", "Celebrate your wins today!", "You've earned every bit of progress!", "Tomorrow starts with today's momentum!"],
 			},
 		};
 
 		const pool = subtitles[persona]?.[period] || subtitles.default[period];
 		const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
-		// Offset by +1 so subtitle differs from greeting on the same day
 		return pool[(dayOfYear + 1) % pool.length];
+	};
+
+	// Fetch AI-generated greeting if personalizations are enabled
+	const fetchAIGreeting = async () => {
+		if (import.meta.server) return;
+		try {
+			const { personalizationsEnabled, lowUsageMode } = useAIPreferences();
+			if (!personalizationsEnabled.value || lowUsageMode.value) return;
+
+			const { activePersona } = useAIPersona();
+			const hour = new Date().getHours();
+			const result = await $fetch('/api/ai/greeting', {
+				params: {
+					persona: activePersona.value?.value || 'default',
+					hour,
+					tasks: metrics.value.pendingTasks || 0,
+					overdue: metrics.value.overdueItems || 0,
+				},
+			});
+
+			if (result?.greeting) {
+				greeting.value = result.greeting;
+			}
+			if (result?.subtitle) {
+				subtitle.value = result.subtitle;
+			}
+		} catch {
+			// Silently fail — hardcoded greeting is already displayed
+		}
 	};
 
 	// Score calculation: higher = more urgent/important
@@ -1361,6 +1385,9 @@ export const useAIProductivityEngine = () => {
 
 			const priorityResults = await Promise.all(priorityTasks);
 			allResults.push(...priorityResults);
+
+			// Fetch AI greeting after priority modules (metrics now populated)
+			fetchAIGreeting();
 
 			// Run secondary modules (deferred, non-blocking for initial render)
 			const secondaryTasks = secondaryModules

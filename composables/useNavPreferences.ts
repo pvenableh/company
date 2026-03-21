@@ -4,6 +4,8 @@
 // Persists to Directus user profile (nav_preferences field) for cross-device consistency,
 // with localStorage as immediate cache to avoid loading flicker.
 
+import type { FeatureKey } from '~/types/permissions';
+
 export interface NavLink {
 	name: string;
 	type: string[];
@@ -12,6 +14,7 @@ export interface NavLink {
 	color: string;
 	description: string;
 	section?: 'primary' | 'secondary' | 'tools';
+	featureKey?: FeatureKey;
 }
 
 const STORAGE_KEY = 'nav-preferences';
@@ -39,6 +42,7 @@ const DEFAULT_LINKS: NavLink[] = [
 		color: 'bg-purple-500',
 		description: 'Track projects',
 		section: 'primary',
+		featureKey: 'projects',
 	},
 	{
 		name: 'Tickets',
@@ -48,6 +52,7 @@ const DEFAULT_LINKS: NavLink[] = [
 		color: 'bg-indigo-500',
 		description: 'Support tickets',
 		section: 'primary',
+		featureKey: 'tickets',
 	},
 	{
 		name: 'People',
@@ -57,6 +62,7 @@ const DEFAULT_LINKS: NavLink[] = [
 		color: 'bg-gradient-to-br from-orange-400 to-red-500',
 		description: 'Contacts, clients & networking',
 		section: 'primary',
+		featureKey: 'people',
 	},
 	{
 		name: 'Marketing',
@@ -66,6 +72,7 @@ const DEFAULT_LINKS: NavLink[] = [
 		color: 'bg-gradient-to-br from-blue-500 to-cyan-500',
 		description: 'AI marketing insights',
 		section: 'primary',
+		featureKey: 'email_campaigns',
 	},
 	{
 		name: 'Teams',
@@ -75,6 +82,7 @@ const DEFAULT_LINKS: NavLink[] = [
 		color: 'bg-blue-500',
 		description: 'Team management',
 		section: 'secondary',
+		featureKey: 'team_management',
 	},
 	// ── Secondary Apps ──
 	{
@@ -94,6 +102,7 @@ const DEFAULT_LINKS: NavLink[] = [
 		color: 'bg-blue-500',
 		description: 'Manage your tasks',
 		section: 'secondary',
+		featureKey: 'tasks',
 	},
 	{
 		name: 'Invoices',
@@ -103,6 +112,7 @@ const DEFAULT_LINKS: NavLink[] = [
 		color: 'bg-emerald-500',
 		description: 'Billing & payments',
 		section: 'secondary',
+		featureKey: 'invoices',
 	},
 	{
 		name: 'Email',
@@ -112,6 +122,7 @@ const DEFAULT_LINKS: NavLink[] = [
 		color: 'bg-rose-500',
 		description: 'Campaigns & lists',
 		section: 'secondary',
+		featureKey: 'email_campaigns',
 	},
 	{
 		name: 'Channels',
@@ -121,6 +132,7 @@ const DEFAULT_LINKS: NavLink[] = [
 		color: 'bg-cyan-500',
 		description: 'Team messaging',
 		section: 'secondary',
+		featureKey: 'channels',
 	},
 	{
 		name: 'Social',
@@ -130,6 +142,7 @@ const DEFAULT_LINKS: NavLink[] = [
 		color: 'bg-pink-500',
 		description: 'Social media',
 		section: 'secondary',
+		featureKey: 'email_campaigns',
 	},
 	// ── Tools ──
 	{
@@ -186,6 +199,7 @@ const DEFAULT_LINKS: NavLink[] = [
 		color: 'bg-green-600',
 		description: 'Financial reports',
 		section: 'secondary',
+		featureKey: 'invoices',
 	},
 	{
 		name: 'Scheduler',
@@ -195,6 +209,7 @@ const DEFAULT_LINKS: NavLink[] = [
 		color: 'bg-amber-500',
 		description: 'Book meetings',
 		section: 'secondary',
+		featureKey: 'appointments',
 	},
 	{
 		name: 'Organization',
@@ -204,6 +219,7 @@ const DEFAULT_LINKS: NavLink[] = [
 		color: 'bg-gray-700',
 		description: 'Organization settings',
 		section: 'tools',
+		featureKey: 'org_settings',
 	},
 ];
 
@@ -310,15 +326,27 @@ export const useNavPreferences = () => {
 
 	const isVisible = (route: string) => visible.value.has(route);
 
+	/** Check if a link is blocked by the user's org role permissions */
+	const isGatedByRole = (link: NavLink): boolean => {
+		if (!link.featureKey) return false;
+		const { canAccess } = useOrgRole();
+		return !canAccess(link.featureKey);
+	};
+
 	// All links sorted by user order
 	const allLinks = computed<NavLink[]>(() => {
 		const linkMap = new Map(DEFAULT_LINKS.map((l) => [l.to, l]));
 		return order.value.map((route) => linkMap.get(route)!).filter(Boolean);
 	});
 
-	// Only visible links sorted by user order
+	// Only visible links sorted by user order, filtered by org role permissions
 	const visibleLinks = computed<NavLink[]>(() => {
-		return allLinks.value.filter((l) => visible.value.has(l.to));
+		const { canAccess } = useOrgRole();
+		return allLinks.value.filter((l) => {
+			if (!visible.value.has(l.to)) return false;
+			if (l.featureKey && !canAccess(l.featureKey)) return false;
+			return true;
+		});
 	});
 
 	// Load on init
@@ -339,5 +367,6 @@ export const useNavPreferences = () => {
 		reorder,
 		resetToDefault,
 		isVisible,
+		isGatedByRole,
 	};
 };

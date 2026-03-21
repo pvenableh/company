@@ -32,6 +32,13 @@ const sections = [
     route: '/invoices/payments',
     color: 'text-purple-400',
   },
+  {
+    name: 'Expenses',
+    description: 'Track and manage business expenses',
+    icon: 'lucide:receipt',
+    route: '/expenses',
+    color: 'text-red-400',
+  },
 ];
 </script>
 

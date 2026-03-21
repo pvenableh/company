@@ -1,7 +1,6 @@
 // composables/useAIPreferences.ts
 // Manages user-selectable AI tray module preferences.
-// Persists to localStorage per-user so each team member can customize
-// which data sources feed into their AI suggestions.
+// Persists to Directus ai_preferences with localStorage as offline cache.
 
 export interface AIModule {
 	key: string;
@@ -34,10 +33,24 @@ const AI_MODULES: AIModule[] = [
 		category: 'Work',
 	},
 	{
+		key: 'goals',
+		label: 'Goals',
+		icon: 'i-heroicons-flag',
+		description: 'Track goal progress and suggestions',
+		category: 'Work',
+	},
+	{
 		key: 'invoices',
 		label: 'Invoices',
 		icon: 'i-heroicons-document-text',
 		description: 'Unpaid invoices and cash flow',
+		category: 'Finance',
+	},
+	{
+		key: 'expenses',
+		label: 'Expenses',
+		icon: 'i-heroicons-receipt-percent',
+		description: 'Expense tracking and financial insights',
 		category: 'Finance',
 	},
 	{
@@ -59,6 +72,13 @@ const AI_MODULES: AIModule[] = [
 		label: 'Social Media',
 		icon: 'i-heroicons-share',
 		description: 'Scheduled posts, drafts, and failed posts',
+		category: 'Marketing',
+	},
+	{
+		key: 'marketing_campaigns',
+		label: 'Marketing Campaigns',
+		icon: 'i-heroicons-megaphone',
+		description: 'Campaign performance and suggestions',
 		category: 'Marketing',
 	},
 	{
@@ -90,11 +110,16 @@ export type ResponseVerbosity = 'concise' | 'regular';
 const STORAGE_KEY = 'ai-tray-preferences';
 const VERBOSITY_KEY = 'ai-response-verbosity';
 
-// Shared reactive state for verbosity
+// Shared reactive state
 const _verbosity = ref<ResponseVerbosity>('regular');
+const _personalizationsEnabled = ref(true);
+const _lowUsageMode = ref(false);
+let _prefRecordId: number | null = null;
+let _directusSynced = false;
 
 export const useAIPreferences = () => {
 	const { user } = useDirectusAuth();
+	const prefItems = useDirectusItems('ai_preferences');
 
 	// Build a per-user storage key
 	const storageKey = computed(() => {
@@ -105,8 +130,8 @@ export const useAIPreferences = () => {
 	// Enabled modules (all enabled by default)
 	const enabledModules = ref<Set<string>>(new Set(AI_MODULES.map((m) => m.key)));
 
-	// Load from localStorage
-	const load = () => {
+	// Load from localStorage (instant)
+	const loadLocal = () => {
 		if (import.meta.server) return;
 		try {
 			const saved = localStorage.getItem(storageKey.value);
@@ -114,17 +139,77 @@ export const useAIPreferences = () => {
 				const parsed = JSON.parse(saved) as string[];
 				enabledModules.value = new Set(parsed);
 			}
-		} catch {
-			// Use defaults on error
-		}
+		} catch {}
 	};
 
 	// Save to localStorage
-	const save = () => {
+	const saveLocal = () => {
 		if (import.meta.server) return;
 		try {
 			localStorage.setItem(storageKey.value, JSON.stringify([...enabledModules.value]));
 		} catch {}
+	};
+
+	// Sync from Directus
+	const syncFromDirectus = async () => {
+		if (import.meta.server || !user.value?.id) return;
+		try {
+			const records = await prefItems.list({
+				fields: ['id', 'enabled_modules', 'personalizations_enabled', 'low_usage_mode'],
+				filter: { user: { _eq: user.value.id } },
+				limit: 1,
+			}) as any[];
+
+			if (records?.[0]) {
+				_prefRecordId = records[0].id;
+
+				// Sync enabled modules
+				if (records[0].enabled_modules && Array.isArray(records[0].enabled_modules)) {
+					enabledModules.value = new Set(records[0].enabled_modules);
+					saveLocal(); // Update localStorage cache
+				}
+
+				// Sync personalizations
+				if (records[0].personalizations_enabled !== null && records[0].personalizations_enabled !== undefined) {
+					_personalizationsEnabled.value = records[0].personalizations_enabled;
+				}
+
+				// Sync low usage mode
+				if (records[0].low_usage_mode !== null && records[0].low_usage_mode !== undefined) {
+					_lowUsageMode.value = records[0].low_usage_mode;
+				}
+			}
+			_directusSynced = true;
+		} catch (err) {
+			console.warn('[useAIPreferences] Could not sync from Directus:', err);
+		}
+	};
+
+	// Save to Directus (debounced)
+	let _saveTimeout: ReturnType<typeof setTimeout> | null = null;
+	const saveToDirectus = () => {
+		if (_saveTimeout) clearTimeout(_saveTimeout);
+		_saveTimeout = setTimeout(async () => {
+			if (!user.value?.id) return;
+			try {
+				const payload = {
+					enabled_modules: [...enabledModules.value],
+					personalizations_enabled: _personalizationsEnabled.value,
+					low_usage_mode: _lowUsageMode.value,
+				};
+				if (_prefRecordId) {
+					await prefItems.update(_prefRecordId, payload);
+				} else {
+					const record = await prefItems.create({
+						user: user.value.id,
+						...payload,
+					}) as any;
+					_prefRecordId = record?.id || null;
+				}
+			} catch (err) {
+				console.warn('[useAIPreferences] Could not save to Directus:', err);
+			}
+		}, 500);
 	};
 
 	const toggle = (moduleKey: string) => {
@@ -135,7 +220,8 @@ export const useAIPreferences = () => {
 			set.add(moduleKey);
 		}
 		enabledModules.value = set;
-		save();
+		saveLocal();
+		saveToDirectus();
 	};
 
 	const isEnabled = (moduleKey: string) => {
@@ -144,13 +230,33 @@ export const useAIPreferences = () => {
 
 	const enableAll = () => {
 		enabledModules.value = new Set(AI_MODULES.map((m) => m.key));
-		save();
+		saveLocal();
+		saveToDirectus();
 	};
 
 	const disableAll = () => {
 		enabledModules.value = new Set();
-		save();
+		saveLocal();
+		saveToDirectus();
 	};
+
+	// ── Personalizations ──
+	const personalizationsEnabled = computed({
+		get: () => _personalizationsEnabled.value,
+		set: (val: boolean) => {
+			_personalizationsEnabled.value = val;
+			saveToDirectus();
+		},
+	});
+
+	// ── Low Usage Mode ──
+	const lowUsageMode = computed({
+		get: () => _lowUsageMode.value,
+		set: (val: boolean) => {
+			_lowUsageMode.value = val;
+			saveToDirectus();
+		},
+	});
 
 	// ── Verbosity ──
 	const verbosityKey = computed(() => {
@@ -179,11 +285,20 @@ export const useAIPreferences = () => {
 	};
 
 	// Load on init
-	load();
+	loadLocal();
 	loadVerbosity();
+	if (!_directusSynced) {
+		syncFromDirectus();
+	}
 
 	// Reload when user changes
-	watch(storageKey, () => { load(); loadVerbosity(); });
+	watch(storageKey, () => {
+		_directusSynced = false;
+		_prefRecordId = null;
+		loadLocal();
+		loadVerbosity();
+		syncFromDirectus();
+	});
 
 	return {
 		modules: AI_MODULES,
@@ -192,6 +307,8 @@ export const useAIPreferences = () => {
 		isEnabled,
 		enableAll,
 		disableAll,
+		personalizationsEnabled,
+		lowUsageMode,
 		responseVerbosity: readonly(responseVerbosity),
 		setVerbosity,
 	};

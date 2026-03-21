@@ -18,6 +18,57 @@
 			</div>
 		</div>
 
+		<!-- Token Balance & Limits -->
+		<div v-if="orgTokenInfo" class="ios-card p-4">
+			<div class="flex items-center justify-between mb-3">
+				<h4 class="text-sm font-semibold text-foreground">Token Balance</h4>
+				<span v-if="orgTokenInfo.billingPeriodStart" class="text-[10px] text-muted-foreground">
+					Billing period started {{ new Date(orgTokenInfo.billingPeriodStart).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }}
+				</span>
+			</div>
+			<div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+				<!-- Balance -->
+				<div>
+					<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Balance</span>
+					<p class="text-xl font-bold" :class="orgTokenInfo.balance !== null && orgTokenInfo.balance <= 0 ? 'text-red-400' : 'text-foreground'">
+						{{ orgTokenInfo.balance !== null ? formatNumber(orgTokenInfo.balance) : 'Unlimited' }}
+					</p>
+				</div>
+				<!-- Monthly Limit -->
+				<div>
+					<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Monthly Limit</span>
+					<p class="text-xl font-bold text-foreground">
+						{{ orgTokenInfo.limit !== null ? formatNumber(orgTokenInfo.limit) : 'Unlimited' }}
+					</p>
+				</div>
+				<!-- Used This Period -->
+				<div>
+					<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Used This Period</span>
+					<p class="text-xl font-bold text-foreground">{{ formatNumber(orgTokenInfo.used) }}</p>
+				</div>
+			</div>
+			<!-- Usage bar -->
+			<div v-if="orgTokenInfo.limit" class="mt-3">
+				<div class="w-full h-2 bg-muted/30 rounded-full overflow-hidden">
+					<div
+						class="h-full rounded-full transition-all"
+						:class="orgTokenInfo.used / orgTokenInfo.limit > 0.8 ? 'bg-red-500' : orgTokenInfo.used / orgTokenInfo.limit > 0.6 ? 'bg-amber-500' : 'bg-primary'"
+						:style="{ width: Math.min(100, (orgTokenInfo.used / orgTokenInfo.limit) * 100) + '%' }"
+					/>
+				</div>
+				<p class="text-[10px] text-muted-foreground mt-1">
+					{{ formatNumber(orgTokenInfo.used) }} / {{ formatNumber(orgTokenInfo.limit) }} tokens used
+					({{ Math.round((orgTokenInfo.used / orgTokenInfo.limit) * 100) }}%)
+				</p>
+			</div>
+			<!-- Depleted warning -->
+			<div v-if="orgTokenInfo.balance !== null && orgTokenInfo.balance <= 0" class="mt-3 p-2.5 rounded-lg bg-red-500/10 border border-red-500/20">
+				<p class="text-[11px] text-red-400">
+					Token balance depleted. AI features are disabled until more tokens are purchased.
+				</p>
+			</div>
+		</div>
+
 		<!-- Loading -->
 		<div v-if="loading" class="grid grid-cols-2 lg:grid-cols-4 gap-3">
 			<div v-for="i in 4" :key="i" class="ios-card p-4 animate-pulse">
@@ -147,6 +198,35 @@
 				</div>
 			</div>
 
+			<!-- Per-user budgets (admin only) -->
+			<div v-if="userBudgets.length" class="ios-card p-4">
+				<h4 class="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Per-User Token Budgets</h4>
+				<div class="space-y-2">
+					<div v-for="ub in userBudgets" :key="ub.userId" class="flex items-center gap-3 p-2 rounded-lg bg-muted/10">
+						<div class="w-8 h-8 rounded-full bg-muted/50 flex items-center justify-center text-xs font-semibold text-muted-foreground flex-shrink-0">
+							{{ ub.name?.charAt(0)?.toUpperCase() || '?' }}
+						</div>
+						<div class="flex-1 min-w-0">
+							<span class="text-sm font-medium text-foreground truncate">{{ ub.name }}</span>
+							<div v-if="ub.budget" class="mt-1">
+								<div class="w-full h-1.5 bg-muted/30 rounded-full overflow-hidden">
+									<div
+										class="h-full rounded-full transition-all"
+										:class="ub.used / ub.budget > 0.8 ? 'bg-red-500' : 'bg-primary'"
+										:style="{ width: Math.min(100, (ub.used / ub.budget) * 100) + '%' }"
+									/>
+								</div>
+								<p class="text-[10px] text-muted-foreground mt-0.5">
+									{{ formatNumber(ub.used) }} / {{ formatNumber(ub.budget) }}
+								</p>
+							</div>
+							<p v-else class="text-[10px] text-muted-foreground">No budget set</p>
+						</div>
+						<span v-if="ub.isLowUsage" class="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 font-medium">Low Usage</span>
+					</div>
+				</div>
+			</div>
+
 			<!-- Recent activity -->
 			<div v-if="recentData?.activity?.length" class="ios-card p-4">
 				<h4 class="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Recent Activity</h4>
@@ -199,6 +279,8 @@ const stats = ref<any>(null);
 const endpointData = ref<any>(null);
 const userData = ref<any>(null);
 const recentData = ref<any>(null);
+const orgTokenInfo = ref<{ balance: number | null; limit: number | null; used: number; billingPeriodStart: string | null } | null>(null);
+const userBudgets = ref<{ userId: string; name: string; budget: number | null; used: number; isLowUsage: boolean }[]>([]);
 
 const periods = [
 	{ label: '24h', value: 'day' },
@@ -246,6 +328,63 @@ function formatTimeAgo(dateStr: string): string {
 	return `${days}d ago`;
 }
 
+const orgItems = useDirectusItems('organizations');
+const prefItems = useDirectusItems('ai_preferences');
+
+async function loadOrgTokenInfo() {
+	if (!props.organizationId) return;
+	try {
+		const org = await orgItems.get(props.organizationId, {
+			fields: ['ai_token_balance', 'ai_token_limit_monthly', 'ai_tokens_used_this_period', 'ai_billing_period_start'],
+		}) as any;
+		if (org) {
+			orgTokenInfo.value = {
+				balance: org.ai_token_balance ?? null,
+				limit: org.ai_token_limit_monthly ?? null,
+				used: Number(org.ai_tokens_used_this_period) || 0,
+				billingPeriodStart: org.ai_billing_period_start ?? null,
+			};
+		}
+	} catch {
+		// Org may not have token fields yet
+	}
+}
+
+async function loadUserBudgets() {
+	if (!props.organizationId) return;
+	try {
+		const prefs = await prefItems.list({
+			fields: ['user.id', 'user.first_name', 'user.last_name', 'token_budget_monthly', 'low_usage_mode'],
+			filter: { organization: { _eq: props.organizationId } },
+			limit: 50,
+		}) as any[];
+
+		if (!prefs?.length) return;
+
+		// Get user usage this month
+		const monthStart = new Date();
+		monthStart.setDate(1);
+		monthStart.setHours(0, 0, 0, 0);
+
+		userBudgets.value = prefs
+			.filter((p: any) => p.user)
+			.map((p: any) => {
+				const u = p.user;
+				// Match with userData for usage info
+				const userUsage = userData.value?.users?.find((ud: any) => ud.id === u.id);
+				return {
+					userId: u.id,
+					name: [u.first_name, u.last_name].filter(Boolean).join(' ') || 'Unknown',
+					budget: p.token_budget_monthly ?? null,
+					used: userUsage?.totalTokens || 0,
+					isLowUsage: p.low_usage_mode === true,
+				};
+			});
+	} catch {
+		// Silently fail
+	}
+}
+
 async function refresh() {
 	loading.value = true;
 	const params: Record<string, string> = { period: period.value };
@@ -263,6 +402,9 @@ async function refresh() {
 		endpointData.value = endpointRes;
 		userData.value = userRes;
 		recentData.value = recentRes;
+
+		// Load token info after main data (userBudgets needs userData)
+		await Promise.all([loadOrgTokenInfo(), loadUserBudgets()]);
 	} catch (err) {
 		console.error('[AIUsage] Failed to load:', err);
 	} finally {

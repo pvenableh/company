@@ -45,10 +45,19 @@
 					<template #item="{ element }">
 						<div
 							class="grid-item"
-							:class="{ 'grid-item-hidden': !isVisible(element.to) }"
+							:class="{ 'grid-item-hidden': !isVisible(element.to) || isGatedByRole(element) }"
 						>
+							<!-- Lock icon for role-gated apps -->
+							<div
+								v-if="isGatedByRole(element)"
+								class="grid-toggle grid-toggle-off opacity-50 cursor-not-allowed"
+								title="Restricted by your organization role"
+							>
+								<UIcon name="i-heroicons-lock-closed" class="w-3 h-3" />
+							</div>
 							<!-- Visibility toggle pill — top right corner -->
 							<button
+								v-else
 								class="grid-toggle"
 								:class="isVisible(element.to) ? 'grid-toggle-on' : 'grid-toggle-off'"
 								@click.stop="handleToggle(element.to)"
@@ -61,7 +70,7 @@
 
 							<!-- App icon tile -->
 							<div
-								:class="[element.color]"
+								:class="[element.color, { 'opacity-30': isGatedByRole(element) }]"
 								class="grid-icon"
 							>
 								<UIcon :name="element.icon" class="w-6 h-6 text-white" />
@@ -80,7 +89,7 @@
 <script setup>
 import VueDraggable from 'vuedraggable';
 
-const { allLinks, toggle, reorder, resetToDefault, isVisible } = useNavPreferences();
+const { allLinks, toggle, reorder, resetToDefault, isVisible, isGatedByRole } = useNavPreferences();
 const { triggerHaptic } = useHaptic();
 
 const props = defineProps({

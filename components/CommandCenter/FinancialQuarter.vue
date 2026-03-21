@@ -1,5 +1,6 @@
 <script setup lang="ts">
 const invoiceItems = useDirectusItems('invoices');
+const expenseItems = useDirectusItems('expenses');
 const { selectedOrg } = useOrganization();
 
 const isLoading = ref(true);
@@ -14,6 +15,8 @@ interface QuarterData {
 	pending: number;
 	invoiceCount: number;
 	paidCount: number;
+	expenses: number;
+	net: number;
 }
 
 const quarters = ref<QuarterData[]>([]);
@@ -29,28 +32,44 @@ const getQuarterRange = (q: number, year: number) => {
 	return { start: starts[q], end: ends[q] };
 };
 
-// Load and analyze invoice data
+// Load and analyze invoice + expense data
 const loadFinancials = async () => {
 	isLoading.value = true;
 
 	try {
-		const filter: any = {
+		const invoiceFilter: any = {
 			_and: [
 				{ invoice_date: { _gte: `${selectedYear.value}-01-01` } },
 				{ invoice_date: { _lte: `${selectedYear.value}-12-31` } },
 			],
 		};
+		const expenseFilter: any = {
+			_and: [
+				{ date: { _gte: `${selectedYear.value}-01-01` } },
+				{ date: { _lte: `${selectedYear.value}-12-31` } },
+			],
+		};
 
 		if (selectedOrg.value) {
-			filter._and.push({ bill_to: { _eq: selectedOrg.value } });
+			invoiceFilter._and.push({ bill_to: { _eq: selectedOrg.value } });
+			expenseFilter._and.push({ organization: { _eq: selectedOrg.value } });
 		}
 
-		const invoices = await invoiceItems.list({
-			fields: ['id', 'status', 'invoice_date', 'due_date', 'total_amount', 'bill_to.name'],
-			filter,
-			sort: ['invoice_date'],
-			limit: 500,
-		});
+		// Fetch invoices and expenses in parallel
+		const [invoices, expenseRecords] = await Promise.all([
+			invoiceItems.list({
+				fields: ['id', 'status', 'invoice_date', 'due_date', 'total_amount', 'bill_to.name'],
+				filter: invoiceFilter,
+				sort: ['invoice_date'],
+				limit: 500,
+			}),
+			expenseItems.list({
+				fields: ['id', 'amount', 'date'],
+				filter: expenseFilter,
+				sort: ['date'],
+				limit: 1000,
+			}),
+		]);
 
 		// Process by quarter
 		const qData: QuarterData[] = [];
@@ -71,6 +90,13 @@ const loadFinancials = async () => {
 			const paidTotal = paidInvoices.reduce((sum: number, inv: any) => sum + (Number(inv.total_amount) || 0), 0);
 			const pendingTotal = total - paidTotal;
 
+			// Calculate expenses for this quarter
+			const quarterExpenses = (expenseRecords as any[]).filter((exp: any) => {
+				const d = new Date(exp.date);
+				return d >= startDate && d <= endDate;
+			});
+			const expenseTotal = quarterExpenses.reduce((sum: number, exp: any) => sum + (Number(exp.amount) || 0), 0);
+
 			qData.push({
 				label: labels[q],
 				goal: goalInputs.value[q] || 0,
@@ -79,6 +105,8 @@ const loadFinancials = async () => {
 				pending: pendingTotal,
 				invoiceCount: quarterInvoices.length,
 				paidCount: paidInvoices.length,
+				expenses: expenseTotal,
+				net: paidTotal - expenseTotal,
 			});
 		}
 
@@ -94,6 +122,27 @@ const loadFinancials = async () => {
 const yearlyActual = computed(() => quarters.value.reduce((sum, q) => sum + q.actual, 0));
 const yearlyPaid = computed(() => quarters.value.reduce((sum, q) => sum + q.paid, 0));
 const yearlyPending = computed(() => quarters.value.reduce((sum, q) => sum + q.pending, 0));
+const yearlyExpenses = computed(() => quarters.value.reduce((sum, q) => sum + q.expenses, 0));
+const yearlyNet = computed(() => yearlyPaid.value - yearlyExpenses.value);
+
+// Projections (current year only, trailing average)
+const projection = computed(() => {
+	if (selectedYear.value !== currentYear) return null;
+
+	const now = new Date();
+	const completedMonths = now.getMonth(); // 0-indexed, so Jan=0 means 0 completed
+	if (completedMonths < 2) return null; // Need at least 2 months
+
+	const avgMonthlyIncome = yearlyPaid.value / completedMonths;
+	const avgMonthlyExpenses = yearlyExpenses.value / completedMonths;
+	const remainingMonths = 12 - completedMonths;
+
+	return {
+		projectedIncome: yearlyPaid.value + (remainingMonths * avgMonthlyIncome),
+		projectedExpenses: yearlyExpenses.value + (remainingMonths * avgMonthlyExpenses),
+		projectedNet: yearlyNet.value + (remainingMonths * (avgMonthlyIncome - avgMonthlyExpenses)),
+	};
+});
 
 const formatCurrency = (val: number) => {
 	return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(val);
@@ -114,7 +163,6 @@ const getProgressColor = (actual: number, goal: number) => {
 
 const saveGoals = () => {
 	editingGoals.value = false;
-	// Persist goals to localStorage
 	if (import.meta.client) {
 		localStorage.setItem(`financial-goals-${selectedYear.value}`, JSON.stringify(goalInputs.value));
 	}
@@ -208,12 +256,12 @@ onMounted(() => {
 		<div v-if="showHelp" class="p-4 bg-gray-50/80 dark:bg-gray-700/30 border-b border-gray-100 dark:border-gray-700 text-xs text-gray-600 dark:text-gray-400 space-y-2">
 			<p class="font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide text-[10px] mb-2">How financials are calculated</p>
 			<ul class="space-y-1.5 list-none">
-				<li><span class="font-medium text-gray-700 dark:text-gray-300">Total Billed</span> &mdash; The sum of all invoice amounts (total_amount) for the selected year, filtered by invoice date and organization.</li>
-				<li><span class="font-medium text-green-600">Collected</span> &mdash; The sum of invoices with a status of "paid." This is actual revenue received.</li>
-				<li><span class="font-medium text-amber-600">Outstanding</span> &mdash; Total Billed minus Collected. These are invoices that have been sent but not yet paid.</li>
+				<li><span class="font-medium text-gray-700 dark:text-gray-300">Total Billed</span> &mdash; The sum of all invoice amounts for the selected year.</li>
+				<li><span class="font-medium text-green-600">Collected</span> &mdash; Invoices with status "paid." This is actual revenue received.</li>
+				<li><span class="font-medium text-amber-600">Outstanding</span> &mdash; Total Billed minus Collected.</li>
+				<li><span class="font-medium text-red-500">Expenses</span> &mdash; Total expenses recorded for the period.</li>
+				<li><span class="font-medium text-emerald-600">Net Income</span> &mdash; Collected minus Expenses.</li>
 			</ul>
-			<p class="pt-1"><span class="font-medium text-gray-700 dark:text-gray-300">Quarterly breakdown:</span> Invoices are grouped by invoice date into Q1 (Jan&ndash;Mar), Q2 (Apr&ndash;Jun), Q3 (Jul&ndash;Sep), and Q4 (Oct&ndash;Dec).</p>
-			<p><span class="font-medium text-gray-700 dark:text-gray-300">Progress bar:</span> When goals are set, the bar shows the percentage of paid invoices relative to your quarterly goal. Colors indicate progress &mdash; red (&lt;50%), amber (50&ndash;74%), blue (75&ndash;99%), green (100%+).</p>
 		</div>
 
 		<div v-if="isLoading" class="p-8 flex items-center justify-center">
@@ -222,7 +270,7 @@ onMounted(() => {
 
 		<div v-else class="p-4">
 			<!-- Yearly Summary -->
-			<div class="grid grid-cols-3 gap-4 mb-6 text-center">
+			<div class="grid grid-cols-5 gap-3 mb-6 text-center">
 				<div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
 					<p class="text-lg font-bold text-gray-900 dark:text-white">{{ formatCurrency(yearlyActual) }}</p>
 					<p class="text-[10px] uppercase tracking-wide text-gray-500">Total Billed</p>
@@ -234,6 +282,33 @@ onMounted(() => {
 				<div class="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3">
 					<p class="text-lg font-bold text-amber-600">{{ formatCurrency(yearlyPending) }}</p>
 					<p class="text-[10px] uppercase tracking-wide text-gray-500">Outstanding</p>
+				</div>
+				<div class="bg-red-50 dark:bg-red-900/20 rounded-lg p-3">
+					<p class="text-lg font-bold text-red-500">{{ formatCurrency(yearlyExpenses) }}</p>
+					<p class="text-[10px] uppercase tracking-wide text-gray-500">Expenses</p>
+				</div>
+				<div class="rounded-lg p-3" :class="yearlyNet >= 0 ? 'bg-emerald-50 dark:bg-emerald-900/20' : 'bg-red-50 dark:bg-red-900/20'">
+					<p class="text-lg font-bold" :class="yearlyNet >= 0 ? 'text-emerald-600' : 'text-red-600'">{{ formatCurrency(yearlyNet) }}</p>
+					<p class="text-[10px] uppercase tracking-wide text-gray-500">Net Income</p>
+				</div>
+			</div>
+
+			<!-- Projection (current year only) -->
+			<div v-if="projection" class="mb-6 p-3 bg-blue-50/50 dark:bg-blue-900/10 rounded-lg border border-blue-200/30 dark:border-blue-800/30">
+				<p class="text-[10px] font-semibold uppercase tracking-wider text-blue-500 mb-2">Year-End Projection</p>
+				<div class="grid grid-cols-3 gap-3 text-center">
+					<div>
+						<p class="text-sm font-bold text-green-600">{{ formatCurrency(projection.projectedIncome) }}</p>
+						<p class="text-[10px] text-gray-500">Projected Income</p>
+					</div>
+					<div>
+						<p class="text-sm font-bold text-red-500">{{ formatCurrency(projection.projectedExpenses) }}</p>
+						<p class="text-[10px] text-gray-500">Projected Expenses</p>
+					</div>
+					<div>
+						<p class="text-sm font-bold" :class="projection.projectedNet >= 0 ? 'text-emerald-600' : 'text-red-600'">{{ formatCurrency(projection.projectedNet) }}</p>
+						<p class="text-[10px] text-gray-500">Projected Net</p>
+					</div>
 				</div>
 			</div>
 
@@ -266,8 +341,8 @@ onMounted(() => {
 						/>
 					</div>
 
-					<!-- Paid vs Pending breakdown -->
-					<div class="flex items-center gap-4 text-[10px]">
+					<!-- Paid vs Pending vs Expenses breakdown -->
+					<div class="flex items-center gap-4 text-[10px] flex-wrap">
 						<div class="flex items-center gap-1">
 							<span class="w-2 h-2 rounded-full bg-green-500"></span>
 							<span class="text-gray-500">Paid: {{ formatCurrency(q.paid) }} ({{ q.paidCount }})</span>
@@ -275,6 +350,15 @@ onMounted(() => {
 						<div class="flex items-center gap-1">
 							<span class="w-2 h-2 rounded-full bg-amber-500"></span>
 							<span class="text-gray-500">Pending: {{ formatCurrency(q.pending) }}</span>
+						</div>
+						<div class="flex items-center gap-1">
+							<span class="w-2 h-2 rounded-full bg-red-500"></span>
+							<span class="text-gray-500">Expenses: {{ formatCurrency(q.expenses) }}</span>
+						</div>
+						<div class="flex items-center gap-1 ml-auto">
+							<span class="font-bold" :class="q.net >= 0 ? 'text-emerald-500' : 'text-red-500'">
+								Net: {{ formatCurrency(q.net) }}
+							</span>
 						</div>
 						<div v-if="q.goal" class="ml-auto">
 							<span

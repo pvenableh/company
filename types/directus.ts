@@ -48,6 +48,14 @@ export interface AiPreference {
 	/** @required */
 	user: DirectusUser | string;
 	user_created?: DirectusUser | string | null;
+	/** @description Selected AI persona: default, director, buddy, motivator */
+	persona?: 'default' | 'director' | 'buddy' | 'motivator' | null;
+	/** @description Enable AI-generated personalized greetings */
+	personalizations_enabled?: boolean | null;
+	/** @description Reduce AI token usage */
+	low_usage_mode?: boolean | null;
+	/** @description Optional personal monthly token cap (null = unlimited) */
+	token_budget_monthly?: number | null;
 }
 export interface AiUsageLog {
 	/** @primaryKey */
@@ -1031,6 +1039,31 @@ export interface EarnestScore {
 	badges_unlocked?: Record<string, any> | null;
 	dimension_scores?: Record<string, any> | null;
 }
+export interface Expense {
+	/** @primaryKey */
+	id: string;
+	status?: 'draft' | 'submitted' | 'approved' | 'paid' | 'rejected' | null;
+	sort?: number | null;
+	user_created?: DirectusUser | string | null;
+	date_created?: string | null;
+	user_updated?: DirectusUser | string | null;
+	date_updated?: string | null;
+	/** @required */
+	name: string;
+	category?: string | null;
+	/** @required */
+	amount: number;
+	/** @required */
+	date: string;
+	description?: string | null;
+	receipt?: DirectusFile | string | null;
+	project?: Project | string | null;
+	is_billable?: boolean | null;
+	is_reimbursable?: boolean | null;
+	vendor?: string | null;
+	payment_method?: string | null;
+	organization?: Organization | string | null;
+}
 export interface EmailPartial {
 	/** @primaryKey */
 	id: number;
@@ -1491,6 +1524,14 @@ export interface Organization {
 	projects?: Project[] | string[];
 	tickets?: Ticket[] | string[];
 	teams?: Team[] | string[];
+	/** @description Remaining AI token balance (null = unlimited) */
+	ai_token_balance?: number | null;
+	/** @description Monthly AI token allotment (null = unlimited) */
+	ai_token_limit_monthly?: number | null;
+	/** @description Tokens consumed in current billing period */
+	ai_tokens_used_this_period?: number | null;
+	/** @description Start of current AI billing period */
+	ai_billing_period_start?: string | null;
 }
 export interface OrganizationsDirectusUser {
 	/** @primaryKey */
@@ -3151,6 +3192,7 @@ export interface Schema {
 	email_partials: EmailPartial[];
 	emails: Email[];
 	email_templates: EmailTemplate[];
+	expenses: Expense[];
 	financial_goals: FinancialGoal[];
 	goal_snapshots: GoalSnapshot[];
 	goals: Goal[];
@@ -3341,6 +3383,7 @@ export enum CollectionNames {
 	email_partials = 'email_partials',
 	emails = 'emails',
 	email_templates = 'email_templates',
+	expenses = 'expenses',
 	financial_goals = 'financial_goals',
 	goal_snapshots = 'goal_snapshots',
 	goals = 'goals',
