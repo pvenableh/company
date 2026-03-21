@@ -87,6 +87,7 @@ const toggleReaction = async () => {
 		const existingReaction = await reactionItems.list({
 			filter: {
 				item: { _eq: props.itemId },
+				table: { _eq: props.collection },
 				user: { _eq: user.value.id },
 				reaction: { _eq: props.reaction },
 			},
@@ -106,6 +107,7 @@ const toggleReaction = async () => {
 			const userReactions = await reactionItems.list({
 				filter: {
 					item: { _eq: props.itemId },
+					table: { _eq: props.collection },
 					user: { _eq: user.value.id },
 				},
 			});

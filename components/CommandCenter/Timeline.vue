@@ -222,6 +222,36 @@ const enrichActivities = async (activities) => {
 		}
 	});
 
+	// Batch fetch comments for these activities
+	const activityIds = activities.map((act) => String(act.id));
+	let commentsCache = {};
+	fetchPromises.push(
+		(async () => {
+			try {
+				const comments = await commentItems.list({
+					fields: ['id', 'comment', 'item', 'date_created', 'user_created.id', 'user_created.first_name', 'user_created.last_name', 'user_created.avatar', 'user_created.email'],
+					filter: {
+						collection: { _eq: 'directus_activity' },
+						item: { _in: activityIds },
+					},
+					sort: ['date_created'],
+					limit: -1,
+				});
+				for (const c of (comments || [])) {
+					if (!commentsCache[c.item]) commentsCache[c.item] = [];
+					commentsCache[c.item].push({
+						id: c.id,
+						text: (c.comment || '').replace(/<[^>]*>/g, ''),
+						user: c.user_created,
+						timestamp: c.date_created,
+					});
+				}
+			} catch (err) {
+				console.warn('Timeline: Could not fetch comments', err);
+			}
+		})(),
+	);
+
 	await Promise.all(fetchPromises);
 
 	// Build enriched timeline entries
@@ -240,6 +270,7 @@ const enrichActivities = async (activities) => {
 
 		return {
 			id: `activity-${act.id}`,
+			activityId: String(act.id),
 			type: 'activity',
 			action: act.action,
 			collection: act.collection,
@@ -248,7 +279,7 @@ const enrichActivities = async (activities) => {
 			itemData,
 			timestamp: act.timestamp,
 			user: act.user,
-			comments: [],
+			comments: commentsCache[String(act.id)] || [],
 		};
 	});
 };
@@ -309,8 +340,8 @@ const postComment = async (item) => {
 	try {
 		await commentItems.create({
 			comment: `<p>${text}</p>`,
-			collection: item.collection,
-			item: item.itemId,
+			collection: 'directus_activity',
+			item: item.activityId,
 		});
 		commentInputs.value[item.id] = '';
 		// Add optimistic comment to the card
@@ -594,8 +625,8 @@ watch(selectedOrg, () => {
 
 				<!-- Combined action bar: reactions + comment -->
 				<div class="border-t border-border/50 px-4 py-2 flex items-center gap-2">
-					<!-- Reactions (persisted to Directus) -->
-					<ReactionsBar :item-id="item.itemId" :collection="item.collection" />
+					<!-- Reactions (persisted to Directus, scoped to the activity) -->
+					<ReactionsBar :item-id="item.activityId" collection="directus_activity" />
 
 					<!-- Comment + View (right side) -->
 					<div class="flex items-center gap-4 ml-auto">
