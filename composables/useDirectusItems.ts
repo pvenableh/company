@@ -47,6 +47,8 @@ const COLLECTION_TTL: Record<string, number> = {
   organizations: 30_000,   // 30s
   teams: 30_000,           // 30s
   org_memberships: 30_000, // 30s
+  goals: 10_000,           // 10s — user-managed goals
+  goal_snapshots: 10_000,  // 10s
   // High-churn collections — shorter TTL
   messages: 2_000,         // 2s — real-time chat
   notifications: 2_000,    // 2s — need near-instant updates

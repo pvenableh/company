@@ -2,7 +2,7 @@
 	<div class="sell-sheet">
 		<!-- Hero -->
 		<section ref="heroRef" class="earnest-hero">
-			<p class="hero-kicker opacity-0">The business operating system</p>
+			<p class="hero-kicker opacity-0">The AI-powered business operating system</p>
 			<h1 class="hero-wordmark opacity-0">Earnest<span class="hero-period">.</span></h1>
 			<p class="hero-tagline opacity-0">Do <span class="hero-cycle-wrap"><span ref="heroCycleRef" class="hero-cycle">good</span></span> work<span class="bp">.</span></p>
 			<p class="hero-sub opacity-0">Radically simple<span class="bp">.</span> One platform<span class="bp">.</span> AI that sees everything<span class="bp">.</span></p>
@@ -47,9 +47,9 @@
 			<div class="truth-label opacity-0">The honest case</div>
 			<div class="truth-body">
 				<h2 class="truth-title opacity-0">Your business runs on {{ toolCountWord }} tools. It should run on <span class="truth-one">one</span><span class="bp">.</span></h2>
-				<p class="truth-text opacity-0">You have a project tool. An invoice tool. A social tool. A phone system. A shared inbox. A calendar. And Slack to hold it all together. Eight tools. Eight logins. Zero cohesion.</p>
+				<p class="truth-text opacity-0">You have a project tool. An invoice tool. A social tool. A phone system. A shared inbox. A calendar. A goal tracker. And Slack to hold it all together. Eleven tools. Eleven logins. Zero cohesion.</p>
 				<p class="truth-text opacity-0"><strong>EARNEST replaces the pile.</strong> One platform, one login, one place where the work actually lives &mdash; from the first brief to the final invoice. Nothing to integrate. Nothing to re-explain.</p>
-				<p class="truth-text opacity-0">And because everything is in one place, <strong>AI can actually think about your business</strong> &mdash; analyzing people, companies, revenue, deals, and campaigns together, layered with your brand direction and goals, to build CRM strategies, pipeline forecasts, and growth plans that isolated apps never could. Two companion apps &mdash; CardDesk for networking and E&sup2; for mobile &mdash; keep everything connected on the go.</p>
+				<p class="truth-text opacity-0">And because everything is in one place, <strong>AI can actually think about your business</strong> &mdash; analyzing people, companies, revenue, deals, goals, and campaigns together, layered with your brand direction and target audience, to build CRM strategies, pipeline forecasts, goal suggestions, and growth plans that isolated apps never could. Two companion apps &mdash; CardDesk for networking and E&sup2; for mobile &mdash; keep everything connected on the go.</p>
 				<p class="truth-text opacity-0">Simple to use. Powerful underneath. That&rsquo;s the point.</p>
 			</div>
 		</section>
@@ -59,13 +59,13 @@
 			<div class="ai-reveal-inner">
 				<p class="ai-kicker opacity-0">What one platform makes possible</p>
 				<h2 class="ai-headline opacity-0">Your data talks<span class="bp">.</span><br/><em>AI listens<span class="bp">.</span></em></h2>
-				<p class="ai-lede opacity-0">Most tools bolt AI onto one channel. EARNEST connects AI to your entire business &mdash; people, companies, projects, revenue, conversations, and campaigns &mdash; then layers in your brand direction, goals, and target audience to generate CRM health scores, pipeline forecasts, growth plans, and marketing strategies that are uniquely yours.</p>
+				<p class="ai-lede opacity-0">Most tools bolt AI onto one channel. EARNEST connects AI to your entire business &mdash; people, companies, projects, revenue, conversations, campaigns, financials, and goals &mdash; then layers in your brand direction and target audience to generate CRM health scores, pipeline forecasts, growth plans, goal suggestions, and marketing strategies that are uniquely yours.</p>
 
 				<div class="ai-capabilities">
 					<div class="ai-cap opacity-0">
 						<span class="ai-cap-number">01</span>
 						<h3 class="ai-cap-title">Sees everything</h3>
-						<p class="ai-cap-desc">Contacts, clients, projects, invoices, deals, tickets, social posts, and team channels. One brain reading across every module in real time.</p>
+						<p class="ai-cap-desc">Contacts, clients, projects, invoices, deals, tickets, goals, social posts, and team channels. One brain reading across every module in real time.</p>
 					</div>
 					<div class="ai-cap opacity-0">
 						<span class="ai-cap-number">02</span>
@@ -75,7 +75,7 @@
 					<div class="ai-cap opacity-0">
 						<span class="ai-cap-number">03</span>
 						<h3 class="ai-cap-title">Thinks ahead</h3>
-						<p class="ai-cap-desc">CRM health scores, pipeline forecasts, 4-week growth plans, contact re-engagement strategies, and campaign plans &mdash; all built from your real data and brand context.</p>
+						<p class="ai-cap-desc">CRM health scores, pipeline forecasts, 4-week growth plans, AI-powered goal suggestions, contact re-engagement strategies, and campaign plans &mdash; all built from your real data and brand context.</p>
 					</div>
 				</div>
 			</div>
@@ -169,6 +169,7 @@ const marqueeItems = [
 	{ label: 'Team Channels', icon: 'i-lucide-message-square' },
 	{ label: 'Video & Phone', icon: 'i-lucide-video' },
 	{ label: 'Email Analytics', icon: 'i-lucide-mail' },
+	{ label: 'Goals & Tracking', icon: 'i-lucide-target' },
 	{ label: 'Proposals & Billing', icon: 'i-lucide-file-text' },
 	{ label: 'Companion Apps', icon: 'i-lucide-smartphone' },
 ];
@@ -183,6 +184,7 @@ const replacedTools = [
 	{ name: 'Zoom', replaces: 'Video meetings', icon: 'i-lucide-video' },
 	{ name: 'Calendly', replaces: 'Scheduling', icon: 'i-lucide-calendar' },
 	{ name: 'HubSpot', replaces: 'Unified CRM', icon: 'i-lucide-users' },
+	{ name: 'Lattice', replaces: 'Goal tracking', icon: 'i-lucide-target' },
 	{ name: 'ChatGPT', replaces: 'AI assistant', icon: 'i-lucide-sparkles' },
 ];
 
@@ -193,7 +195,7 @@ const toolCountWord = computed(() => {
 });
 
 const features = [
-	{ name: 'CRM Intelligence Engine', desc: 'AI reads across your entire business — contacts, clients, projects, tickets, invoices, and deals — then generates health scores, pipeline forecasts, growth plans, and contact strategies tailored to your brand positioning and goals.' },
+	{ name: 'CRM Intelligence Engine', desc: 'AI reads across your entire business — contacts, clients, projects, tickets, invoices, deals, and goals — then generates health scores, pipeline forecasts, growth plans, and contact strategies tailored to your brand positioning and objectives.' },
 	{ name: 'Marketing Intelligence', desc: 'AI scans your entire business — contacts, social, email, clients, revenue — and returns a marketing health score, actionable insights, and multi-channel campaign plans. One click.' },
 	{ name: 'AI Strategy Engine', desc: 'Your data becomes your strategist. AI connects the dots across every module to generate campaigns, spot opportunities, and surface insights no isolated tool can see.' },
 	{ name: 'Brand-Aware AI', desc: 'Set brand direction, goals, target audience, and services per client. AI uses this context to generate suggestions aligned with your positioning — not generic advice from a tool that doesn\'t know your business.' },
@@ -201,6 +203,7 @@ const features = [
 	{ name: 'Email Marketing & AI', desc: 'Block-based newsletter builder with AI-powered content generation. Describe your email and get a complete template — subject line, sections, and images.' },
 	{ name: 'Project Management', desc: 'Kanban boards, task lists, timelines, file attachments, and a command-center project dashboard with stats, document uploads, invoices, and activity feeds. Your team always knows what\'s next.' },
 	{ name: 'People & Companies', desc: 'Every person and company in one unified CRM — clients, contacts, prospects, and networking connections from CardDesk. Brand context, goals, services, and the full history of every conversation and project.' },
+	{ name: 'Goals & Progress Tracking', desc: 'Set financial, networking, performance, marketing, or custom goals. AI suggests goals based on your data and role. Track progress with periodic snapshots and let the AI productivity engine factor your goals into daily priorities.' },
 	{ name: 'Quick Tasks & AI To-Dos', desc: 'Personal task lists with AI-powered suggestions, day and week scheduling, motivational progress tracking, and confetti celebrations. AI generates task ideas based on your workload so nothing falls through the cracks. A social-media-style activity timeline keeps the whole team in sync.' },
 	{ name: 'Client Access Control', desc: 'Role-based client visibility with team assignments and individual overrides. Owners and admins see everything. Managers and members see only the clients assigned to their teams — plus any individual access grants.' },
 	{ name: 'Invoicing & Billing', desc: 'Stripe-powered invoices, proposals, payment tracking, and PDF generation. Get paid on time.' },
@@ -217,7 +220,7 @@ const plans = [
 		price: '29',
 		desc: 'For the one-person shop doing serious work.',
 		featured: false,
-		features: ['1 user', 'Unlimited projects', 'Invoicing & Stripe billing', 'Social scheduling (2 accounts)', 'AI content generation', 'People & Companies CRM', 'Quick Tasks with AI suggestions', 'CardDesk & E\u00B2 companion apps', '5GB storage'],
+		features: ['1 user', 'Unlimited projects', 'Invoicing & Stripe billing', 'Social scheduling (2 accounts)', 'AI content generation', 'People & Companies CRM', 'Goals with AI suggestions & tracking', 'Quick Tasks with AI suggestions', 'CardDesk & E\u00B2 companion apps', '5GB storage'],
 		cta: { label: 'Get started', to: '/register' },
 	},
 	{
@@ -341,7 +344,7 @@ useHead({
 	meta: [
 		{
 			name: 'description',
-			content: 'Earnest is the one platform where your work actually lives. Projects, invoicing, social scheduling, team channels, phone & video, CRM, and more.',
+			content: 'Earnest is the AI-powered platform where your work actually lives. Projects, invoicing, goals, social scheduling, team channels, phone & video, CRM, and AI that sees everything.',
 		},
 	],
 });

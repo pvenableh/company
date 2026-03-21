@@ -1,10 +1,8 @@
 <script setup>
-const { user } = useDirectusAuth();
 const { selectedOrg, getOrganizationFilter } = useOrganization();
 const { readRevisions } = useDirectusRevisions();
 
 const activityItems = useDirectusItems('directus_activity');
-const commentItems = useDirectusItems('comments');
 const projectItems = useDirectusItems('projects');
 const ticketItems = useDirectusItems('tickets');
 const invoiceItems = useDirectusItems('invoices');
@@ -22,9 +20,8 @@ const newItemCount = ref(0);
 const scrollContainer = ref(null);
 
 // ── Comment state ──
-const commentInputs = ref({});
 const expandedComments = ref(new Set());
-const postingComment = ref(null);
+const commentCounts = ref({});
 
 // ── Collections we care about ──
 const trackedCollections = [
@@ -222,36 +219,6 @@ const enrichActivities = async (activities) => {
 		}
 	});
 
-	// Batch fetch comments for these activities
-	const activityIds = activities.map((act) => String(act.id));
-	let commentsCache = {};
-	fetchPromises.push(
-		(async () => {
-			try {
-				const comments = await commentItems.list({
-					fields: ['id', 'comment', 'item', 'date_created', 'user_created.id', 'user_created.first_name', 'user_created.last_name', 'user_created.avatar', 'user_created.email'],
-					filter: {
-						collection: { _eq: 'directus_activity' },
-						item: { _in: activityIds },
-					},
-					sort: ['date_created'],
-					limit: -1,
-				});
-				for (const c of (comments || [])) {
-					if (!commentsCache[c.item]) commentsCache[c.item] = [];
-					commentsCache[c.item].push({
-						id: c.id,
-						text: (c.comment || '').replace(/<[^>]*>/g, ''),
-						user: c.user_created,
-						timestamp: c.date_created,
-					});
-				}
-			} catch (err) {
-				console.warn('Timeline: Could not fetch comments', err);
-			}
-		})(),
-	);
-
 	await Promise.all(fetchPromises);
 
 	// Build enriched timeline entries
@@ -279,7 +246,6 @@ const enrichActivities = async (activities) => {
 			itemData,
 			timestamp: act.timestamp,
 			user: act.user,
-			comments: commentsCache[String(act.id)] || [],
 		};
 	});
 };
@@ -332,30 +298,8 @@ const toggleComments = (itemId) => {
 	expandedComments.value = next;
 };
 
-const postComment = async (item) => {
-	const text = commentInputs.value[item.id]?.trim();
-	if (!text) return;
-
-	postingComment.value = item.id;
-	try {
-		await commentItems.create({
-			comment: `<p>${text}</p>`,
-			collection: 'directus_activity',
-			item: item.activityId,
-		});
-		commentInputs.value[item.id] = '';
-		// Add optimistic comment to the card
-		item.comments.push({
-			id: Date.now(),
-			text,
-			user: user.value,
-			timestamp: new Date().toISOString(),
-		});
-	} catch (err) {
-		console.error('Timeline: Error posting comment', err);
-	} finally {
-		postingComment.value = null;
-	}
+const updateCommentCount = (itemId, count) => {
+	commentCounts.value[itemId] = count;
 };
 
 // ── Formatting helpers ──
@@ -635,7 +579,7 @@ watch(selectedOrg, () => {
 							class="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
 						>
 							<UIcon name="i-heroicons-chat-bubble-left" class="w-4 h-4" />
-							<span v-if="item.comments.length > 0">{{ item.comments.length }}</span>
+							<span v-if="commentCounts[item.id] > 0">{{ commentCounts[item.id] }}</span>
 							<span v-else>Comment</span>
 						</button>
 					</div>
@@ -643,53 +587,13 @@ watch(selectedOrg, () => {
 
 				<!-- Expanded comments section -->
 				<Transition name="slide-down">
-					<div v-if="expandedComments.has(item.id)" class="border-t border-border/50 bg-muted/20 p-4 space-y-3">
-						<!-- Existing comments -->
-						<div
-							v-for="comment in item.comments"
-							:key="comment.id"
-							class="flex items-start gap-2"
-						>
-							<UAvatar
-								:src="getUserAvatar(comment.user)"
-								:alt="getUserName(comment.user)"
-								size="2xs"
-								class="flex-shrink-0 mt-0.5"
-							/>
-							<div class="flex-1 min-w-0">
-								<div class="flex items-center gap-2">
-									<span class="text-xs font-medium text-foreground">{{ getUserName(comment.user) }}</span>
-									<span class="text-[10px] text-muted-foreground">{{ formatTimestamp(comment.timestamp) }}</span>
-								</div>
-								<p class="text-sm text-foreground/80 mt-0.5">{{ comment.text }}</p>
-							</div>
-						</div>
-
-						<!-- Comment input -->
-						<div class="flex items-center gap-2">
-							<UAvatar
-								:src="getUserAvatar(user)"
-								:alt="getUserName(user)"
-								size="2xs"
-								class="flex-shrink-0"
-							/>
-							<form @submit.prevent="postComment(item)" class="flex-1 flex items-center gap-2">
-								<input
-									v-model="commentInputs[item.id]"
-									type="text"
-									placeholder="Write a comment..."
-									class="flex-1 bg-card border border-border rounded-lg px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/30"
-								/>
-								<button
-									type="submit"
-									:disabled="!commentInputs[item.id]?.trim() || postingComment === item.id"
-									class="px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-medium disabled:opacity-50 ios-press"
-								>
-									<UIcon v-if="postingComment === item.id" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
-									<span v-else>Post</span>
-								</button>
-							</form>
-						</div>
+					<div v-if="expandedComments.has(item.id)" class="border-t border-border/50 bg-muted/20 p-4">
+						<CommentsSystem
+							:item-id="item.activityId"
+							collection="directus_activity"
+							hide-sort
+							@update:comment-count="(count) => updateCommentCount(item.id, count)"
+						/>
 					</div>
 				</Transition>
 			</div>

@@ -498,6 +498,9 @@ const activeTab = ref<'commander' | 'timeline' | 'statistics'>('commander');
 					</div>
 				</div>
 
+				<!-- Goals Summary -->
+				<GoalsSummaryWidget />
+
 				<!-- Other Suggestions (lower priority) -->
 				<div v-if="otherSuggestions.length > 0" class="ios-card p-5">
 					<div class="flex items-center justify-between mb-4">
