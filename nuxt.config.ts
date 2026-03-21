@@ -274,66 +274,64 @@ export default defineNuxtConfig({
 	},
 
 	// PWA — native iOS & Android app experience (disabled in development — uncomment to re-enable)
-	/*
-	pwa: {
-		registerType: 'autoUpdate',
-		manifest: {
-			name: 'Earnest. Do good work.',
-			short_name: 'Earnest',
-			description: 'A platform that means it.',
-			theme_color: '#faf7f4',
-			background_color: '#faf7f4',
-			display: 'standalone',
-			orientation: 'portrait',
-			start_url: '/',
-			scope: '/',
-			categories: ['business', 'productivity'],
-			icons: [
-				{
-					src: 'android-icon-192x192.png',
-					sizes: '192x192',
-					type: 'image/png',
-				},
-				{
-					src: 'icon-512x512.png',
-					sizes: '512x512',
-					type: 'image/png',
-				},
-				{
-					src: 'icon-512x512.png',
-					sizes: '512x512',
-					type: 'image/png',
-					purpose: 'any maskable',
-				},
-			],
-		},
-		workbox: {
-			navigateFallback: '/',
-			globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
-			runtimeCaching: [
-				{
-					urlPattern: new RegExp('^https://admin.huestudios.company/assets/'),
-					handler: 'CacheFirst',
-					options: {
-						cacheName: 'directus-images',
-						expiration: {
-							maxEntries: 100,
-							maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
-						},
-					},
-				},
-			],
-		},
-		client: {
-			installPrompt: true,
-		},
-		devOptions: {
-			enabled: false,
-			suppressWarnings: true,
-			type: 'module',
-		},
-	},
-	*/
+	// pwa: {
+	// 	registerType: 'autoUpdate',
+	// 	manifest: {
+	// 		name: 'Earnest. Do good work.',
+	// 		short_name: 'Earnest',
+	// 		description: 'A platform that means it.',
+	// 		theme_color: '#faf7f4',
+	// 		background_color: '#faf7f4',
+	// 		display: 'standalone',
+	// 		orientation: 'portrait',
+	// 		start_url: '/',
+	// 		scope: '/',
+	// 		categories: ['business', 'productivity'],
+	// 		icons: [
+	// 			{
+	// 				src: 'android-icon-192x192.png',
+	// 				sizes: '192x192',
+	// 				type: 'image/png',
+	// 			},
+	// 			{
+	// 				src: 'icon-512x512.png',
+	// 				sizes: '512x512',
+	// 				type: 'image/png',
+	// 			},
+	// 			{
+	// 				src: 'icon-512x512.png',
+	// 				sizes: '512x512',
+	// 				type: 'image/png',
+	// 				purpose: 'any maskable',
+	// 			},
+	// 		],
+	// 	},
+	// 	workbox: {
+	// 		navigateFallback: '/',
+	// 		globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
+	// 		runtimeCaching: [
+	// 			{
+	// 				urlPattern: new RegExp('^https://admin.huestudios.company/assets/'),
+	// 				handler: 'CacheFirst',
+	// 				options: {
+	// 					cacheName: 'directus-images',
+	// 					expiration: {
+	// 						maxEntries: 100,
+	// 						maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+	// 					},
+	// 				},
+	// 			},
+	// 		],
+	// 	},
+	// 	client: {
+	// 		installPrompt: true,
+	// 	},
+	// 	devOptions: {
+	// 		enabled: false,
+	// 		suppressWarnings: true,
+	// 		type: 'module',
+	// 	},
+	// },
 
 	devtools: { enabled: true },
 
