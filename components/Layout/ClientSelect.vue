@@ -19,6 +19,7 @@ const props = defineProps({
 
 const emit = defineEmits(['open-org-switcher']);
 
+const router = useRouter();
 const { currentOrg, hasMultipleOrgs } = useOrganization();
 const {
 	selectedClient,
@@ -71,9 +72,9 @@ onUnmounted(() => {
 		<!-- Org icon (clickable for multi-org users to open switcher) -->
 		<button
 			class="flex items-center rounded-full border-2 border-[var(--cyan)] p-0.5 shadow-inner overflow-hidden transition-opacity"
-			:class="hasMultipleOrgs ? 'cursor-pointer hover:opacity-80' : 'cursor-default'"
+			:class="'cursor-pointer hover:opacity-80'"
 			:title="hasMultipleOrgs ? 'Switch organization' : currentOrg?.name"
-			@click="hasMultipleOrgs ? emit('open-org-switcher') : null"
+			@click="hasMultipleOrgs ? emit('open-org-switcher') : router.push('/organization')"
 		>
 			<Avatar class="size-7">
 				<AvatarImage v-if="getIconUrl(currentOrg)" :src="getIconUrl(currentOrg)" :alt="currentOrg?.name" />

@@ -1,6 +1,6 @@
 # Earnest
 
-A radically simple, multi-tenant SaaS business operating system built with [Nuxt 3](https://nuxt.com), [Vue 3](https://vuejs.org), and [Directus](https://directus.io). One platform replaces the eight tools your business runs on today — projects, invoicing, CRM, social media, email marketing, team channels, scheduling, and AI-powered marketing intelligence — all in one login. Because everything lives in one place, AI can see your entire business and generate strategies that isolated apps never could. Organizations serve as the tenant boundary, with per-org roles, customizable permissions, and subscription plan gating.
+**Do good work.** A radically simple, AI-powered business operating system built with [Nuxt 3](https://nuxt.com), [Vue 3](https://vuejs.org), and [Directus](https://directus.io) — for motivated professionals and business owners who want to be organized and work earnestly, honestly, effectively, and with purpose. One platform replaces the tools your business runs on today — projects, invoicing, CRM, social media, email marketing, team channels, scheduling, goals, and AI-powered intelligence — all in one login. Because everything lives in one place, AI harnesses your organization data, projects, events, tasks, tickets, contacts, clients, marketing campaigns, meetings, CRM, financials, and goals to provide accurate, brand-aware suggestions and analysis that isolated apps never could. Organizations serve as the tenant boundary, with per-org roles, customizable permissions, and subscription plan gating.
 
 Earnest ships with two companion apps: **CardDesk** — a networking CRM that turns business cards and events into relationships — and **Earnest Companion (E²)** — a mobile-first experience for tasks, messages, and AI on the go.
 
@@ -20,6 +20,7 @@ Earnest ships with two companion apps: **CardDesk** — a networking CRM that tu
 - **Marketing Intelligence** — AI-powered marketing dashboard (`/marketing`) that aggregates data across contacts, social media, email campaigns, clients, revenue, projects, and tickets to generate a marketing health score (0-100), actionable insights, content velocity metrics, audience growth tracking, and AI-generated multi-channel campaign plans with email sequences, social posts, and KPIs
 - **AI Command Center** — AI-powered productivity engine that analyzes tickets, projects, tasks, invoices, contacts, deals, channels, social media, scheduling, and phone activity to generate prioritized action items, reminders, insights, and follow-ups; includes productivity scoring (0-100), customizable AI module preferences, team chat, financial analysis, social media–style activity timeline with reactions and comments, AI usage monitoring, concise/regular response verbosity toggle, and persona-aware time-of-day greetings; supports Claude (Anthropic), GPT (OpenAI), and Gemini (Google) backends
 - **CRM Intelligence Engine** — AI-powered CRM analysis (`POST /api/crm/ai-intelligence`) that aggregates data across the unified People CRM (contacts, CardDesk networking connections, companies), projects, tasks, tickets, invoices, and deals pipeline — enriched with brand context (brand direction, goals, target audience, services) from organizations, companies, and teams. Four analysis modes: overview (health scores + actions), contact-strategy (segmentation + outreach cadence), growth-plan (targets + 4-week plan), and pipeline-review (deal analysis + revenue forecast)
+- **Goals** — Structured goal-setting system with five goal types (financial, networking, performance, marketing, custom), AI-powered goal suggestions from the productivity engine, progress tracking with periodic snapshots, and integration with the AI Command Center for goal-aware prioritization and insights
 - **Organizations & Multi-Tenancy** — Multi-organization support with per-org roles (Owner, Admin, Manager, Member, Client), customizable permission matrices per role, team structures with focus and goals, member invitations, brand direction and strategy fields, subscription plan tiers, and cross-tab state sync
 - **Client Access Control** — Hybrid team-based and individual user access to clients. Owner/Admin roles see all clients; Manager/Member roles see only clients assigned to their teams plus any individual user overrides. Uses `clients_teams` and `clients_directus_users` junction tables with assignment UIs on the team detail and client detail pages
 
@@ -259,6 +260,7 @@ Organizations have a `plan` field (free, starter, pro, enterprise) that hooks in
 | `useQuickTasks()` | Personal task management with localStorage persistence, schedule grouping, motivational messages, and progress tracking |
 | `useAIUsage()` | Client-side AI usage tracking with per-user localStorage, token estimation, and usage summaries |
 | `useAIPreferences()` | Per-user AI response verbosity preference (concise/regular) with localStorage persistence |
+| `useGoals()` | Goal CRUD with type filtering, progress snapshots, AI-powered goal suggestions, and org-scoping |
 | `useEarnestChat()` | Shared module-level AI chat state for tray quick-chat with SSE streaming and abort support |
 
 ### Server Endpoints
@@ -268,6 +270,7 @@ Organizations have a `plan` field (free, starter, pro, enterprise) that hooks in
 | `POST /api/org/seed-roles` | Creates 5 system roles for an organization (idempotent) |
 | `POST /api/org/migrate-memberships` | Converts legacy junction entries to `org_memberships` |
 | `POST /api/ai/task-suggestions` | AI-generated task suggestions based on user prompt and existing tasks |
+| `POST /api/ai/goal-suggestions` | AI-generated goal suggestions based on user role, projects, financials, and existing goals |
 
 ### Migration Path
 
@@ -315,6 +318,8 @@ The AI Productivity Engine (`useAIProductivityEngine.ts`) scans 9 business modul
 | `ai_chat_sessions` | AI assistant chat session history with context |
 | `ai_chat_messages` | Individual messages (user/assistant/system roles) |
 | `financial_goals` | Quarterly revenue goals per organization |
+| `goals` | User and org goals with type (financial, networking, performance, marketing, custom), targets, and progress |
+| `goal_snapshots` | Periodic progress snapshots for goal tracking over time |
 
 ### Setup
 
