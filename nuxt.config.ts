@@ -205,8 +205,8 @@ export default defineNuxtConfig({
 		// Analytics
 		'nuxt-gtag',
 
-		// PWA
-		'@vite-pwa/nuxt',
+		// PWA (disabled in development — uncomment to re-enable)
+		// '@vite-pwa/nuxt',
 
 		// Dev tools
 		'@nuxt/devtools',
@@ -273,7 +273,8 @@ export default defineNuxtConfig({
 		},
 	},
 
-	// PWA — native iOS & Android app experience
+	// PWA — native iOS & Android app experience (disabled in development — uncomment to re-enable)
+	/*
 	pwa: {
 		registerType: 'autoUpdate',
 		manifest: {
@@ -332,6 +333,7 @@ export default defineNuxtConfig({
 			type: 'module',
 		},
 	},
+	*/
 
 	devtools: { enabled: true },
 

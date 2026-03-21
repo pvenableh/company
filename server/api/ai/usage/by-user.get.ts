@@ -43,7 +43,7 @@ export default defineEventHandler(async (event) => {
     // Group by user
     const userMap = new Map<string, { totalTokens: number; requests: number; cost: number; lastActive: string }>();
     for (const log of logs) {
-      const uid = log.user;
+      const uid = typeof log.user === 'object' && log.user !== null ? log.user.id : log.user;
       const existing = userMap.get(uid) || { totalTokens: 0, requests: 0, cost: 0, lastActive: '' };
       existing.totalTokens += log.total_tokens || 0;
       existing.requests += 1;
@@ -83,7 +83,7 @@ export default defineEventHandler(async (event) => {
 
     return { users };
   } catch (error: any) {
-    console.warn('[ai/usage/by-user] Could not fetch (collection may not exist):', error.message);
+    console.error('[ai/usage/by-user] Failed to fetch usage logs:', error);
     return { users: [] };
   }
 });

@@ -127,6 +127,7 @@ const loadTimeline = async () => {
 		const items = await fetchActivityPage(1);
 		timeline.value = items;
 		updateNewItemCount();
+		fetchCommentCounts(items);
 	} catch (err) {
 		console.error('Timeline: Error loading activity', err);
 	} finally {
@@ -143,6 +144,7 @@ const loadMore = async () => {
 		const items = await fetchActivityPage(page.value);
 		if (items.length < pageSize) hasMore.value = false;
 		timeline.value.push(...items);
+		fetchCommentCounts(items);
 	} catch (err) {
 		console.error('Timeline: Error loading more', err);
 	} finally {
@@ -300,6 +302,33 @@ const toggleComments = (itemId) => {
 
 const updateCommentCount = (itemId, count) => {
 	commentCounts.value[itemId] = count;
+};
+
+const fetchCommentCounts = async (items) => {
+	const activityIds = items.map(item => String(item.activityId)).filter(Boolean);
+	if (!activityIds.length) return;
+	try {
+		const commentItems = useDirectusItems('comments');
+		const results = await commentItems.aggregate({
+			aggregate: { count: ['*'] },
+			groupBy: ['item'],
+			filter: {
+				collection: { _eq: 'directus_activity' },
+				item: { _in: activityIds },
+			},
+		});
+		// Map activityId back to timeline item.id
+		const activityToId = {};
+		for (const item of items) {
+			activityToId[String(item.activityId)] = item.id;
+		}
+		for (const row of (results || [])) {
+			const timelineId = activityToId[row.item];
+			if (timelineId) commentCounts.value[timelineId] = Number(row.count);
+		}
+	} catch (err) {
+		console.warn('Timeline: Could not fetch comment counts', err);
+	}
 };
 
 // ── Formatting helpers ──

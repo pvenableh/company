@@ -47,7 +47,7 @@ export default defineEventHandler(async (event) => {
     const totalRequests = logs.length;
     const totalTokens = logs.reduce((sum, l) => sum + (l.total_tokens || 0), 0);
     const totalCost = logs.reduce((sum, l) => sum + (l.estimated_cost || 0), 0);
-    const uniqueUsers = new Set(logs.map(l => l.user)).size;
+    const uniqueUsers = new Set(logs.map(l => (typeof l.user === 'object' && l.user !== null ? l.user.id : l.user))).size;
     const totalInput = logs.reduce((sum, l) => sum + (l.input_tokens || 0), 0);
     const totalOutput = logs.reduce((sum, l) => sum + (l.output_tokens || 0), 0);
 
