@@ -19,7 +19,8 @@ export type FeatureKey =
   | 'org_settings'
   | 'team_management'
   | 'member_management'
-  | 'ar_clients';
+  | 'ar_clients'
+  | 'expenses';
 
 // ── Feature Permission ────────────────────────────────────────────────────────
 // Each feature can be toggled on/off and have CRUD flags.
@@ -62,6 +63,7 @@ export const FEATURE_KEYS: FeatureKey[] = [
   'team_management',
   'member_management',
   'ar_clients',
+  'expenses',
 ];
 
 // ── Human-readable labels for features ───────────────────────────────────────
@@ -85,6 +87,7 @@ export const FEATURE_LABELS: Record<FeatureKey, string> = {
   team_management: 'Team Management',
   member_management: 'Member Management',
   ar_clients: 'AR Clients',
+  expenses: 'Expenses',
 };
 
 // ── Helper: full CRUD access ─────────────────────────────────────────────────
@@ -148,6 +151,7 @@ const OWNER_PERMISSIONS: PermissionMatrix = {
   team_management: full(),
   member_management: full(),
   ar_clients: full(),
+  expenses: full(),
 };
 
 // ── Admin ─────────────────────────────────────────────────────────────────────
@@ -172,6 +176,7 @@ const ADMIN_PERMISSIONS: PermissionMatrix = {
   team_management: full(),
   member_management: full(),
   ar_clients: full(),
+  expenses: full(),
 };
 
 // ── Manager ───────────────────────────────────────────────────────────────────
@@ -196,6 +201,7 @@ const MANAGER_PERMISSIONS: PermissionMatrix = {
   team_management: custom({ access: true, read: true, update: true }),
   member_management: readOnly(),
   ar_clients: custom({ access: true, create: true, read: true, update: true }),
+  expenses: custom({ access: true, create: true, read: true, update: true }),
 };
 
 // ── Member ────────────────────────────────────────────────────────────────────
@@ -220,6 +226,7 @@ const MEMBER_PERMISSIONS: PermissionMatrix = {
   team_management: noAccess(),
   member_management: noAccess(),
   ar_clients: noAccess(),
+  expenses: custom({ access: true, create: true, read: true, update: true }),
 };
 
 // ── Client ────────────────────────────────────────────────────────────────────
@@ -244,6 +251,7 @@ const CLIENT_PERMISSIONS: PermissionMatrix = {
   team_management: noAccess(),
   member_management: noAccess(),
   ar_clients: noAccess(),
+  expenses: noAccess(),
 };
 
 // ── Exported map ──────────────────────────────────────────────────────────────

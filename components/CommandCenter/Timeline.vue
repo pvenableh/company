@@ -25,7 +25,7 @@ const commentCounts = ref({});
 
 // ── Collections we care about ──
 const trackedCollections = [
-	'projects', 'tickets', 'invoices', 'project_tasks',
+	'projects', 'tickets', 'invoices', 'project_tasks', 'tasks',
 	'emails', 'cd_contacts', 'cd_activities', 'contacts', 'clients',
 ];
 
@@ -39,6 +39,7 @@ const collectionLabels = {
 	cd_activities: 'CardDesk Activity',
 	contacts: 'Contact',
 	clients: 'Client',
+	tasks: 'Quick Task',
 };
 
 const collectionIcons = {
@@ -51,6 +52,7 @@ const collectionIcons = {
 	cd_activities: 'i-heroicons-phone-arrow-up-right',
 	contacts: 'i-heroicons-user-plus',
 	clients: 'i-heroicons-building-office',
+	tasks: 'i-heroicons-clipboard-document-check',
 };
 
 const collectionColors = {
@@ -63,6 +65,7 @@ const collectionColors = {
 	cd_activities: 'text-teal-500',
 	contacts: 'text-indigo-500',
 	clients: 'text-orange-500',
+	tasks: 'text-violet-500',
 };
 
 const collectionTagColors = {
@@ -75,6 +78,7 @@ const collectionTagColors = {
 	cd_activities: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400',
 	contacts: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
 	clients: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+	tasks: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400',
 };
 
 const actionLabels = {
@@ -200,6 +204,7 @@ const enrichActivities = async (activities) => {
 			let fields = ['id', 'title'];
 			if (collection === 'invoices') fields = ['id', 'invoice_code', 'status'];
 			if (collection === 'project_tasks') fields = ['id', 'title', 'completed', 'status'];
+			if (collection === 'tasks') fields = ['id', 'title', 'status', 'date_completed'];
 			if (collection === 'emails') fields = ['id', 'name', 'subject', 'status', 'total_recipients', 'sent_at'];
 			if (collection === 'cd_contacts') fields = ['id', 'name', 'first_name', 'last_name', 'company', 'rating', 'is_client'];
 			if (collection === 'cd_activities') fields = ['id', 'type', 'label', 'note', 'contact'];
@@ -518,6 +523,11 @@ watch(selectedOrg, () => {
 					<div class="flex flex-col items-end gap-1.5 pt-1">
 						<!-- Task completion badge -->
 						<span v-if="item.collection === 'project_tasks' && item.itemData?.completed" class="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+							<UIcon name="i-heroicons-check" class="w-3 h-3" />
+							Completed
+						</span>
+						<!-- Quick task completion badge -->
+						<span v-if="item.collection === 'tasks' && item.itemData?.status === 'completed'" class="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
 							<UIcon name="i-heroicons-check" class="w-3 h-3" />
 							Completed
 						</span>

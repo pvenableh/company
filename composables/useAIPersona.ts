@@ -1,5 +1,6 @@
 /**
  * Shared AI persona state — used by AIChat, AITray, and other Earnest AI components.
+ * Persists to Directus ai_preferences with localStorage as offline cache.
  */
 
 export interface AIPersona {
@@ -90,31 +91,79 @@ const personas: AIPersona[] = [
 const selectedPersona = ref('default');
 const PERSONA_STORAGE_KEY = 'ai-persona';
 let personaLoaded = false;
+let _prefRecordId: number | null = null;
 
 export function useAIPersona() {
 	const { user } = useDirectusAuth();
+	const prefItems = useDirectusItems('ai_preferences');
 
 	const storageKey = computed(() => {
 		const userId = user.value?.id || 'anonymous';
 		return `${PERSONA_STORAGE_KEY}-${userId}`;
 	});
 
-	const load = () => {
+	/** Load persona from Directus, fallback to localStorage. */
+	const load = async () => {
 		if (import.meta.server) return;
+
+		// Try localStorage first for instant display
 		try {
 			const saved = localStorage.getItem(storageKey.value);
 			if (saved && personas.some((p) => p.value === saved)) {
 				selectedPersona.value = saved;
 			}
 		} catch {}
+
+		// Then sync from Directus
+		if (user.value?.id) {
+			try {
+				const records = await prefItems.list({
+					fields: ['id', 'persona'],
+					filter: { user: { _eq: user.value.id } },
+					limit: 1,
+				}) as any[];
+
+				if (records?.[0]) {
+					_prefRecordId = records[0].id;
+					if (records[0].persona && personas.some((p) => p.value === records[0].persona)) {
+						selectedPersona.value = records[0].persona;
+						// Update localStorage cache
+						try { localStorage.setItem(storageKey.value, records[0].persona); } catch {}
+					}
+				}
+			} catch (err) {
+				console.warn('[useAIPersona] Could not load from Directus:', err);
+			}
+		}
+
 		personaLoaded = true;
 	};
 
-	const save = () => {
+	/** Save persona to Directus + localStorage. */
+	const save = async () => {
 		if (import.meta.server) return;
+
+		// Always save to localStorage for offline cache
 		try {
 			localStorage.setItem(storageKey.value, selectedPersona.value);
 		} catch {}
+
+		// Save to Directus
+		if (user.value?.id) {
+			try {
+				if (_prefRecordId) {
+					await prefItems.update(_prefRecordId, { persona: selectedPersona.value });
+				} else {
+					const record = await prefItems.create({
+						user: user.value.id,
+						persona: selectedPersona.value,
+					}) as any;
+					_prefRecordId = record?.id || null;
+				}
+			} catch (err) {
+				console.warn('[useAIPersona] Could not save to Directus:', err);
+			}
+		}
 	};
 
 	const activePersona = computed<AIPersona>(() =>
@@ -134,6 +183,7 @@ export function useAIPersona() {
 	// Reload when user changes
 	watch(storageKey, () => {
 		personaLoaded = false;
+		_prefRecordId = null;
 		load();
 	});
 
