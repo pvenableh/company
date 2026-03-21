@@ -21,11 +21,6 @@ const lastSeenTimestamp = ref(null);
 const newItemCount = ref(0);
 const scrollContainer = ref(null);
 
-// ── Reactions state (local, keyed by activity id) ──
-const reactions = ref({});
-
-// Available reaction emojis
-const reactionOptions = ['👍', '❤️', '🎉', '🚀', '👏', '💯'];
 
 // ── Comment state ──
 const commentInputs = ref({});
@@ -296,27 +291,6 @@ onMounted(() => {
 	onUnmounted(() => observer.disconnect());
 });
 
-// ── Reactions ──
-const toggleReaction = (itemId, emoji) => {
-	if (!reactions.value[itemId]) reactions.value[itemId] = {};
-	if (!reactions.value[itemId][emoji]) reactions.value[itemId][emoji] = { count: 0, reacted: false };
-
-	const r = reactions.value[itemId][emoji];
-	if (r.reacted) {
-		r.count--;
-		r.reacted = false;
-	} else {
-		r.count++;
-		r.reacted = true;
-	}
-};
-
-const getReactions = (itemId) => {
-	if (!reactions.value[itemId]) return [];
-	return Object.entries(reactions.value[itemId])
-		.filter(([_, v]) => v.count > 0)
-		.map(([emoji, v]) => ({ emoji, count: v.count, reacted: v.reacted }));
-};
 
 // ── Comments on timeline cards ──
 const toggleComments = (itemId) => {
@@ -622,37 +596,8 @@ watch(selectedOrg, () => {
 
 				<!-- Combined action bar: reactions + comment -->
 				<div class="border-t border-border/50 px-4 py-2 flex items-center gap-2">
-					<!-- Reactions inline -->
-					<div class="flex items-center gap-1 flex-wrap">
-						<button
-							v-for="reaction in getReactions(item.id)"
-							:key="reaction.emoji"
-							@click="toggleReaction(item.id, reaction.emoji)"
-							class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs transition-colors"
-							:class="reaction.reacted
-								? 'bg-primary/10 border border-primary/30 text-primary'
-								: 'bg-muted hover:bg-muted/80 text-muted-foreground'"
-						>
-							{{ reaction.emoji }} {{ reaction.count }}
-						</button>
-						<UPopover>
-							<button class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-muted/50 hover:bg-muted text-muted-foreground transition-colors">
-								<UIcon name="i-heroicons-face-smile" class="w-3.5 h-3.5" />
-							</button>
-							<template #panel>
-								<div class="flex gap-1 p-2">
-									<button
-										v-for="emoji in reactionOptions"
-										:key="emoji"
-										@click="toggleReaction(item.id, emoji)"
-										class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted transition-colors text-base"
-									>
-										{{ emoji }}
-									</button>
-								</div>
-							</template>
-						</UPopover>
-					</div>
+					<!-- Reactions (persisted to Directus) -->
+					<ReactionsBar :item-id="item.itemId" :collection="item.collection" />
 
 					<!-- Comment + View (right side) -->
 					<div class="flex items-center gap-4 ml-auto">
