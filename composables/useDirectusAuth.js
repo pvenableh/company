@@ -102,8 +102,10 @@ export const useDirectusAuth = () => {
 				}
 			}
 		} catch {
-			// BroadcastChannel unsupported – fall back to storage events
-			window.addEventListener('storage', async (e) => {
+			// BroadcastChannel unsupported – fall back to storage events.
+			// Store the handler so it can be referenced (module-level singleton
+			// means this only runs once, matching the _initialized guard).
+			const storageHandler = async (e) => {
 				if (e.key === 'auth-logout') {
 					clearRefreshTimer()
 					await clearSession()
@@ -112,7 +114,8 @@ export const useDirectusAuth = () => {
 					await fetchSession()
 					scheduleRefresh()
 				}
-			})
+			}
+			window.addEventListener('storage', storageHandler)
 		}
 	}
 

@@ -116,9 +116,27 @@ export function useNotifications() {
 		});
 	};
 
-	// Register unlock listeners once
+	// Register unlock listeners once. The handler removes all three on
+	// successful unlock. We keep { passive: true } to avoid scroll jank.
 	if (import.meta.client && !_unlockListenersAdded) {
 		_unlockListenersAdded = true;
+
+		const _removeUnlockListeners = () => {
+			document.removeEventListener('click', unlockAudio);
+			document.removeEventListener('touchstart', unlockAudio);
+			document.removeEventListener('keydown', unlockAudio);
+		};
+
+		// Auto-cleanup on logout to prevent leaks across sessions
+		watch(loggedIn, (isLoggedIn) => {
+			if (!isLoggedIn) {
+				_removeUnlockListeners();
+				_unlockListenersAdded = false;
+				_audioUnlocked = false;
+				_notificationAudio = null;
+			}
+		});
+
 		document.addEventListener('click', unlockAudio, { passive: true });
 		document.addEventListener('touchstart', unlockAudio, { passive: true });
 		document.addEventListener('keydown', unlockAudio, { passive: true });
@@ -580,6 +598,17 @@ export function useNotifications() {
 	if (getCurrentInstance()) {
 		onUnmounted(() => {
 			markInstanceInactive();
+		});
+	}
+
+	// Also cleanup on logout to prevent stale subscriptions across sessions
+	if (import.meta.client) {
+		watch(loggedIn, (isLoggedIn) => {
+			if (!isLoggedIn) {
+				markInstanceInactive();
+				data.value = [];
+				previousCount.value = 0;
+			}
 		});
 	}
 

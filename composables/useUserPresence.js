@@ -1,9 +1,21 @@
 // composables/useUserPresence.js
+/**
+ * Per-page user presence — shows which users are viewing the same page.
+ *
+ * Creates a Directus `user_presence` record for the current user's location
+ * and subscribes to real-time updates for the same location. When the user
+ * navigates, the old record is removed and a new one is created, and the
+ * subscription filter is updated so only co-viewers of the new page appear.
+ *
+ * Improvements over previous version:
+ * - Subscription filter updates on route change (was a static snapshot)
+ * - Debounced route-change handler to avoid thrashing on rapid navigation
+ * - Visibility change pauses/resumes heartbeat (saves API calls when tab hidden)
+ * - Proper cleanup of all listeners in onBeforeUnmount
+ */
 export function useUserPresence() {
 	const { user: sessionUser, loggedIn } = useUserSession();
-	const user = computed(() => {
-		return loggedIn.value ? sessionUser.value ?? null : null;
-	});
+	const user = computed(() => (loggedIn.value ? sessionUser.value ?? null : null));
 	const route = useRoute();
 	const presenceItems = useDirectusItems('user_presence');
 	const location = ref(route.fullPath);
@@ -12,20 +24,26 @@ export function useUserPresence() {
 	const HEARTBEAT_INTERVAL = 30000; // 30 seconds
 	const STALE_THRESHOLD = 60000; // 1 minute
 
-	// Subscribe to user presence updates with enhanced filtering
-	const { data: allUserPresence } = useRealtimeSubscription(
+	// Debounce timer for route changes
+	let _routeChangeTimer = null;
+
+	// Build the subscription filter for a given location
+	const buildFilter = (loc) => ({
+		_and: [
+			{ location: { _eq: loc } },
+			{
+				last_seen: {
+					_gt: new Date(Date.now() - STALE_THRESHOLD).toISOString(),
+				},
+			},
+		],
+	});
+
+	// Subscribe to user presence updates
+	const { data: allUserPresence, updateFilter } = useRealtimeSubscription(
 		'user_presence',
 		['id', 'user_id.id', 'user_id.first_name', 'user_id.last_name', 'user_id.avatar', 'location', 'last_seen'],
-		{
-			_and: [
-				{ location: { _eq: location.value } },
-				{
-					last_seen: {
-						_gt: new Date(Date.now() - STALE_THRESHOLD).toISOString(),
-					},
-				},
-			],
-		},
+		buildFilter(location.value),
 	);
 
 	// Filter out current user and stale presence records
@@ -35,7 +53,7 @@ export function useUserPresence() {
 		const now = Date.now();
 		return allUserPresence.value.filter((p) => {
 			const isStale = now - new Date(p.last_seen).getTime() > STALE_THRESHOLD;
-			return p.user_id.id !== user.value.id && !isStale;
+			return p.user_id?.id !== user.value.id && !isStale;
 		});
 	});
 
@@ -48,6 +66,7 @@ export function useUserPresence() {
 				// Update existing presence record
 				await presenceItems.update(presenceId.value, {
 					last_seen: new Date().toISOString(),
+					location: location.value,
 				});
 			} else {
 				// Check for existing records first
@@ -76,12 +95,13 @@ export function useUserPresence() {
 			}
 		} catch (err) {
 			console.error('Error updating presence:', err);
+			// If record was deleted server-side, clear local ID and retry
+			if (err?.response?.status === 403 || err?.response?.status === 404) {
+				presenceId.value = null;
+			}
 			if (retryCount > 0) {
-				// Exponential backoff retry
 				setTimeout(
-					() => {
-						updatePresence(retryCount - 1);
-					},
+					() => updatePresence(retryCount - 1),
 					Math.pow(2, 3 - retryCount) * 1000,
 				);
 			}
@@ -97,7 +117,7 @@ export function useUserPresence() {
 				await presenceItems.remove(presenceId.value);
 				presenceId.value = null;
 			} else {
-				// Cleanup any orphaned records
+				// Cleanup any orphaned records for this location
 				const orphaned = await presenceItems.list({
 					filter: {
 						user_id: { _eq: user.value.id },
@@ -105,10 +125,11 @@ export function useUserPresence() {
 					},
 					fields: ['id'],
 				});
-				if (orphaned.length) await presenceItems.remove(orphaned.map(r => r.id));
+				if (orphaned.length) await presenceItems.remove(orphaned.map((r) => r.id));
 			}
 		} catch (err) {
-			console.error('Error removing presence:', err);
+			// Best effort — record may already be expired/removed
+			presenceId.value = null;
 		}
 	};
 
@@ -126,35 +147,45 @@ export function useUserPresence() {
 		}
 	};
 
-	// Handle visibility changes
+	// Handle visibility changes — pause when hidden, resume when visible
 	const handleVisibilityChange = () => {
 		if (document.hidden) {
 			stopHeartbeat();
-			removePresence();
-		} else {
+		} else if (user.value) {
 			updatePresence();
 			startHeartbeat();
 		}
 	};
 
-	// Watch for route changes
+	// Watch for route changes with debounce to avoid thrashing on rapid navigation
 	watch(
 		() => route.fullPath,
-		async (newPath) => {
-			await removePresence();
-			location.value = newPath;
-			await updatePresence();
+		(newPath) => {
+			if (newPath === location.value) return;
+
+			if (_routeChangeTimer) clearTimeout(_routeChangeTimer);
+			_routeChangeTimer = setTimeout(async () => {
+				await removePresence();
+				location.value = newPath;
+
+				// Update the subscription filter so we see co-viewers on the new page
+				updateFilter(buildFilter(newPath));
+
+				await updatePresence();
+			}, 150); // 150ms debounce — fast enough to feel instant, avoids thrashing
 		},
 	);
 
 	// Lifecycle hooks
 	onMounted(async () => {
+		if (!user.value) return;
 		await updatePresence();
 		startHeartbeat();
 		document.addEventListener('visibilitychange', handleVisibilityChange);
 	});
 
 	onBeforeUnmount(() => {
+		if (_routeChangeTimer) clearTimeout(_routeChangeTimer);
 		stopHeartbeat();
 		removePresence();
 		document.removeEventListener('visibilitychange', handleVisibilityChange);
