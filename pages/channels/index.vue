@@ -3,7 +3,7 @@ const { selectedOrg, organizationOptions } = useOrganization();
 const { selectedClient } = useClients();
 const { visibleTeams, fetchTeams, selectedTeam: globalSelectedTeam } = useTeams();
 const { user } = useDirectusAuth();
-const { canAccess, canCreate: canCreateFeature } = useRole();
+const { canAccess, canCreate: canCreateFeature } = useOrgRole();
 
 const isAdmin = computed(() => canAccess('channels'));
 const showCreateChannel = ref(false);
@@ -115,6 +115,7 @@ const createChannel = async () => {
 definePageMeta({
 	middleware: ['auth'],
 });
+useHead({ title: 'Channels | Earnest' });
 
 // Reactive filter
 
@@ -213,7 +214,7 @@ const sortedChannels = computed(() => {
 </script>
 
 <template>
-	<div class="page__content pt-20">
+	<div class="page__content">
 		<div class="max-w-screen-xl mx-auto page_inner px-4 2xl:px-0">
 			<!-- Header -->
 			<div class="flex items-center justify-between mb-6">

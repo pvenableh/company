@@ -8,8 +8,9 @@ import { DEFAULT_ROLE_PERMISSIONS } from '~/types/permissions';
  * Fetches the current user's membership in the selected org and exposes
  * role info, permission checks, and computed role booleans.
  *
- * Works alongside `useRole.ts` which bridges legacy Directus global roles
- * with this per-org system. `useRole.ts` delegates to this composable first.
+ * When no org_membership exists (pre-migration users), a fallback maps
+ * the user's Directus global role to a default org role so the permission
+ * system remains functional.
  */
 export function useOrgRole() {
   const membershipItems = useDirectusItems<OrgMembership>('org_memberships');
@@ -70,8 +71,10 @@ export function useOrgRole() {
   /**
    * Check if the current user can access a feature at all.
    * Owner/Admin always returns true.
+   * When no user is logged in, returns true to avoid blocking pre-auth UI.
    */
   function canAccess(feature: FeatureKey): boolean {
+    if (!user.value) return true;
     if (isOrgAdminOrAbove.value) return true;
     if (!permissions.value) return false;
     return permissions.value[feature]?.access ?? false;
@@ -104,14 +107,6 @@ export function useOrgRole() {
 
   function canDelete(feature: FeatureKey): boolean {
     return hasPermission(feature, 'delete');
-  }
-
-  // ── Plan gating placeholder ────────────────────────────────────────────────
-  // Always returns true for now. In a future sprint this will check the org's
-  // subscription plan tier against feature availability.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  function planAllows(_feature: FeatureKey): boolean {
-    return true;
   }
 
   // ── Directus role → org role fallback ────────────────────────────────────────
@@ -247,7 +242,6 @@ export function useOrgRole() {
     canCreate,
     canEdit,
     canDelete,
-    planAllows,
 
     // Actions
     fetchMembership,

@@ -5,7 +5,7 @@ export function useInvoices() {
   const productItems = useDirectusItems<Product>('products');
   const { selectedOrg, getOrganizationFilter, organizations } = useOrganization();
   const { getClientFilter } = useClients();
-  const { canAccess } = useRole();
+  const { canAccess } = useOrgRole();
 
   const getInvoices = async (params?: {
     status?: string;

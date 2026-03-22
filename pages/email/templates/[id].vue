@@ -5,6 +5,7 @@ definePageMeta({
 	layout: 'email',
 	middleware: ['auth'],
 });
+useHead({ title: 'Email Template | Earnest' });
 
 const route = useRoute();
 const templateId = Number(route.params.id);

@@ -3,6 +3,7 @@ import type { Contact, MailingList } from '~/types/email/contacts';
 import { Button } from '~/components/ui/button';
 
 definePageMeta({ middleware: ['auth'] });
+useHead({ title: 'List Details | Earnest' });
 
 const route = useRoute();
 const listId = Number(route.params.id);

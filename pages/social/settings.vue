@@ -11,6 +11,7 @@ definePageMeta({
   layout: 'default',
   middleware: ['auth'],
 })
+useHead({ title: 'Social Settings | Earnest' })
 
 const route = useRoute()
 const toast = useToast()

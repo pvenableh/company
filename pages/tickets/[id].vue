@@ -5,6 +5,7 @@ const ticketItems = useDirectusItems('tickets');
 definePageMeta({
 	middleware: ['auth'],
 });
+useHead({ title: 'Ticket Details | Earnest' });
 
 const ticket = await ticketItems.get(params.id, {
 	fields: [

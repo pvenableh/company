@@ -1,4 +1,6 @@
 <script setup>
+useHead({ title: 'Invoice | Earnest' });
+
 const { params } = useRoute();
 const invoiceItems = useDirectusItems('invoices');
 const { user: sessionUser, loggedIn } = useUserSession();
@@ -59,10 +61,6 @@ const handleAnonymousSubmit = async (formData) => {
 </script>
 <template>
 	<div class="w-full flex flex-col items-center justify-center">
-		<h1 class="page__title">
-			Invoice
-			<span class="block">Payment</span>
-		</h1>
 		<div v-if="user" class="w-full max-w-screen-xl mx-auto z-10">
 			<nuxt-link to="/invoices" class="uppercase text-[10px] text-gray-400 px-4 2xl:px-0">
 				<UIcon name="i-heroicons-arrow-left" class="-mb-0.5" />

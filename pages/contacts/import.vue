@@ -3,6 +3,7 @@ import type { CsvImportResult, MailingList } from '~/types/email/contacts';
 import { Button } from '~/components/ui/button';
 
 definePageMeta({ middleware: ['auth'] });
+useHead({ title: 'Import Contacts | Earnest' });
 
 const { getLists } = useMailingLists();
 const { downloadTemplate } = useCsvTemplate();

@@ -1,14 +1,20 @@
 <template>
 	<UModal :model-value="isOpen" @update:model-value="$emit('update:isOpen', $event)">
 		<UCard>
-			<div class="flex items-center justify-between mb-8">
-				<h3 class="text-2xl leading-5 font-thin uppercase tracking-wide">Unsaved Changes</h3>
-			</div>
+			<template #header>
+				<div class="flex items-center justify-between">
+					<h3 class="text-lg font-semibold">Unsaved Changes</h3>
+				</div>
+			</template>
+
 			<p class="text-sm text-muted-foreground">You have unsaved changes. Would you like to save them before leaving?</p>
-			<div class="flex justify-end space-x-2 mt-8">
-				<UButton variant="soft" color="gray" @click="handleDiscard">Discard</UButton>
-				<UButton color="primary" :loading="isLoading" @click="handleSave">Save</UButton>
-			</div>
+
+			<template #footer>
+				<div class="flex justify-end gap-2">
+					<UButton variant="soft" color="gray" @click="handleDiscard">Discard</UButton>
+					<UButton color="primary" :loading="isLoading" @click="handleSave">Save</UButton>
+				</div>
+			</template>
 		</UCard>
 	</UModal>
 </template>

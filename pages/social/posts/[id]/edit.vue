@@ -12,6 +12,7 @@ definePageMeta({
   layout: 'default',
   middleware: ['auth'],
 })
+useHead({ title: 'Edit Post | Earnest' })
 
 const route = useRoute()
 const router = useRouter()

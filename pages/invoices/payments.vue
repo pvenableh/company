@@ -4,8 +4,9 @@ import { Button } from '~/components/ui/button';
 definePageMeta({
 	middleware: ['auth'],
 });
+useHead({ title: 'Payments | Earnest' });
 
-const { canAccess } = useRole();
+const { canAccess } = useOrgRole();
 const paymentsReceivedItems = useDirectusItems('payments_received');
 
 const payments = ref<any[]>([]);

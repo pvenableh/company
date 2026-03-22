@@ -213,9 +213,14 @@ export const useExpenses = () => {
 		load();
 	}
 
-	// Reload when user changes
-	watch(() => user.value?.id, () => {
+	// Reload when user changes; clear state on logout
+	watch(() => user.value?.id, (newId) => {
 		isLoaded.value = false;
+		if (!newId) {
+			expenses.value = [];
+			isLoading.value = false;
+			return;
+		}
 		load();
 	});
 

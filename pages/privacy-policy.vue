@@ -8,9 +8,10 @@ definePageMeta({
 	layout: 'default',
 });
 
+useHead({ title: 'Privacy Policy | Earnest' });
 useSeoMeta({
-	title: 'Privacy Policy | Business Connect',
-	description: 'Privacy policy for Business Connect social media management platform.',
+	title: 'Privacy Policy | Earnest',
+	description: 'Privacy policy for Earnest business management platform.',
 });
 
 const lastUpdated = 'February 6, 2026';

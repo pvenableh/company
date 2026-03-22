@@ -3,6 +3,7 @@ import { toast } from 'vue-sonner';
 import { Button } from '~/components/ui/button';
 
 definePageMeta({ middleware: ['auth'] });
+useHead({ title: 'New Organization | Earnest' });
 
 const { initializeOrganizations } = useOrganization();
 const router = useRouter();

@@ -295,7 +295,7 @@ const props = defineProps({
 const emit = defineEmits(['eventCreated']);
 
 const { user } = useDirectusAuth();
-const { canAccess } = useRole();
+const { canAccess } = useOrgRole();
 const runtimeConfig = useRuntimeConfig();
 const eventItems = useDirectusItems('project_events');
 const ticketItems = useDirectusItems('tickets');

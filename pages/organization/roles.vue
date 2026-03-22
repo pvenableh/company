@@ -173,6 +173,7 @@ import { FEATURE_KEYS, FEATURE_LABELS, ROLE_METADATA } from '~/types/permissions
 definePageMeta({
 	middleware: ['auth'],
 });
+useHead({ title: 'Roles | Earnest' });
 
 const roleItems = useDirectusItems('org_roles');
 const membershipItems = useDirectusItems('org_memberships');

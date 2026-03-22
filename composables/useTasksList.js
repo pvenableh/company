@@ -291,6 +291,7 @@ export function useTasksList({
 				const toast = useToast();
 				toast.add({
 					title: newStatus === 'completed' ? 'Task completed' : 'Task reopened',
+					color: newStatus === 'completed' ? 'success' : 'info',
 					timeout: 2000,
 				});
 			}

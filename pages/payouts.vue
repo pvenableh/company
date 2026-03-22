@@ -2,11 +2,13 @@
 definePageMeta({
 	middleware: ['auth'],
 });
+useHead({ title: 'Payouts | Earnest' });
+
 const { user: sessionUser, loggedIn } = useUserSession();
 const user = computed(() => {
 	return loggedIn.value ? sessionUser.value ?? null : null;
 });
-const { canAccess } = useRole();
+const { canAccess } = useOrgRole();
 
 const admin = computed(() => {
 	return canAccess('invoices');
@@ -32,7 +34,6 @@ const fetchPayoutDetails = async (payoutId) => {
 
 <template>
 	<div class="w-full relative">
-		<h1 class="page__title">Stripe</h1>
 		<div class="grid gap-6 grid-cols-1 md:grid-cols-2 page__inner">
 			<div class="" v-if="admin">
 				<ul>

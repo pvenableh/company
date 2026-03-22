@@ -31,7 +31,7 @@ const props = defineProps({
 	},
 });
 const { user } = useDirectusAuth();
-const { canAccess } = useRole();
+const { canAccess } = useOrgRole();
 
 const isAdmin = computed(() => canAccess('invoices'));
 

@@ -186,6 +186,7 @@
 definePageMeta({
 	middleware: ['auth'],
 });
+useHead({ title: 'Tasks | Earnest' });
 
 // Enable debug mode (set to false in production)
 const debug = ref(false);

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 definePageMeta({ middleware: ['auth'] });
+useHead({ title: 'Goals | Earnest' });
 
 const { goals, activeGoals, completedGoals, goalsByType, overdueGoals, isLoading, createGoal, updateGoal, deleteGoal, recordSnapshot, goalProgress, refresh } = useGoals();
 

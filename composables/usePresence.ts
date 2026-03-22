@@ -18,6 +18,7 @@ interface PresenceEntry {
 // Module-level singleton state
 let _heartbeatTimer: ReturnType<typeof setInterval> | null = null;
 let _fetchTimer: ReturnType<typeof setInterval> | null = null;
+let _visibilityHandler: (() => void) | null = null;
 let _initialized = false;
 
 const HEARTBEAT_INTERVAL = 30_000;  // Send heartbeat every 30s
@@ -75,6 +76,23 @@ export function usePresence() {
 
   // ─── Start / Stop ─────────────────────────────────────────────────────────
 
+  const startTimers = () => {
+    if (_heartbeatTimer) return; // Already running
+    _heartbeatTimer = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
+    _fetchTimer = setInterval(fetchOnlineUsers, FETCH_INTERVAL);
+  };
+
+  const stopTimers = () => {
+    if (_heartbeatTimer) {
+      clearInterval(_heartbeatTimer);
+      _heartbeatTimer = null;
+    }
+    if (_fetchTimer) {
+      clearInterval(_fetchTimer);
+      _fetchTimer = null;
+    }
+  };
+
   const start = () => {
     if (_initialized || import.meta.server) return;
     _initialized = true;
@@ -85,19 +103,30 @@ export function usePresence() {
     fetchOnlineUsers();
 
     // Set up intervals
-    _heartbeatTimer = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL);
-    _fetchTimer = setInterval(fetchOnlineUsers, FETCH_INTERVAL);
+    startTimers();
+
+    // Pause heartbeat when tab is hidden, resume when visible
+    _visibilityHandler = () => {
+      if (document.hidden) {
+        stopTimers();
+      } else if (loggedIn.value) {
+        // Send immediate heartbeat on tab focus, then resume intervals
+        sendHeartbeat();
+        fetchOnlineUsers();
+        startTimers();
+      }
+    };
+    document.addEventListener('visibilitychange', _visibilityHandler);
   };
 
   const stop = () => {
-    if (_heartbeatTimer) {
-      clearInterval(_heartbeatTimer);
-      _heartbeatTimer = null;
+    stopTimers();
+
+    if (_visibilityHandler) {
+      document.removeEventListener('visibilitychange', _visibilityHandler);
+      _visibilityHandler = null;
     }
-    if (_fetchTimer) {
-      clearInterval(_fetchTimer);
-      _fetchTimer = null;
-    }
+
     _initialized = false;
     _isTracking.value = false;
   };
@@ -126,7 +155,7 @@ export function usePresence() {
   /** Count of online users */
   const onlineCount = computed(() => onlineUserIds.value.size);
 
-  // Auto-start when user logs in, stop on logout
+  // Auto-start when user logs in, stop + clear on logout
   if (import.meta.client) {
     watch(loggedIn, (isLoggedIn) => {
       if (isLoggedIn) {
@@ -136,14 +165,6 @@ export function usePresence() {
         _onlineUsers.value = new Map();
       }
     }, { immediate: true });
-  }
-
-  // Cleanup on scope dispose
-  if (getCurrentScope()) {
-    onScopeDispose(() => {
-      // Don't stop globally — other components may still need presence
-      // The singleton will be cleaned up when user logs out
-    });
   }
 
   return {

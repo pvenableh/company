@@ -1,6 +1,6 @@
 <template>
 	<div class="container mx-auto py-12">
-		<h1 class="text-3xl font-bold mb-8">Admin Tools</h1>
+		<h1 class="text-xl font-semibold text-foreground">Admin Tools</h1>
 
 		<div v-if="isAdmin">
 			<p class="text-gray-500">No tools available.</p>
@@ -12,7 +12,9 @@
 </template>
 
 <script setup>
-const { canAccess } = useRole();
+useHead({ title: 'Admin Tools | Earnest' });
+
+const { canAccess } = useOrgRole();
 
 const isAdmin = computed(() => {
 	return canAccess('org_settings');

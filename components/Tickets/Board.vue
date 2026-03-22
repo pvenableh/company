@@ -131,7 +131,7 @@
 
 		<!-- Main Board -->
 		<div
-			class="bg-muted/30 border-b border-border w-full flex min-h-svh overflow-x-auto overflow-hidden-scrollbar tickets-board__board"
+			class="bg-muted/20 border border-border/50 rounded-2xl w-full flex min-h-svh overflow-x-auto overflow-hidden overflow-hidden-scrollbar tickets-board__board"
 			@touchstart="handleTouchStart"
 			@touchend="handleTouchEnd"
 		>
@@ -802,12 +802,16 @@ const debouncedUpdateSubscription = debounce(async () => {
 }, 300);
 
 // Drag and drop handlers
+const { feedback: triggerFeedback } = useFeedback();
+
 const onDragStart = () => {
 	isDragging.value = true;
+	triggerFeedback('drag');
 };
 
 const onDragEnd = () => {
 	isDragging.value = false;
+	triggerFeedback('drop');
 };
 
 const updateTicketStatus = async (columnId, event) => {
@@ -1078,25 +1082,18 @@ watch(
 			@apply px-6;
 		}
 	}
-	.tickets-board__board::before {
-		content: '';
-		position: absolute;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 1px;
-		z-index: 10;
-		background: hsl(var(--border));
+	/* Rounded corners on first/last columns to match container */
+	.tickets-board__board > div:first-child .tickets-board__board-col-header {
+		border-top-left-radius: 1rem;
 	}
-	.tickets-board__board::after {
-		content: '';
-		position: absolute;
-		bottom: 0;
-		left: 0;
-		width: 100%;
-		height: 1px;
-		z-index: 10;
-		background: hsl(var(--border));
+	.tickets-board__board > div:first-child .tickets-board__board-col-content {
+		border-bottom-left-radius: 1rem;
+	}
+	.tickets-board__board > div:last-child .tickets-board__board-col-header {
+		border-top-right-radius: 1rem;
+	}
+	.tickets-board__board > div:last-child .tickets-board__board-col-content {
+		border-bottom-right-radius: 1rem;
 	}
 }
 

@@ -145,7 +145,8 @@ const currentUser = computed(() => {
 });
 const toast = useToast();
 const { hasMultipleOrgs, organizationOptions } = useOrganization();
-const { teams, visibleTeams, loading: teamsLoading, fetchTeams, setTeam, ADMIN_ROLE_ID, CLIENT_MANAGER_ROLE_ID } = useTeams();
+const { teams, visibleTeams, loading: teamsLoading, fetchTeams, setTeam } = useTeams();
+const { isOrgManagerOrAbove } = useOrgRole();
 
 // Local state for teams - decoupled from global state
 const localTeamId = ref(null);
@@ -153,10 +154,7 @@ const localTeams = ref([]);
 const localTeamOptions = ref([]);
 const noTeamSelected = ref(false);
 
-const isAdminOrManager = computed(() => {
-	if (!currentUser.value || !currentUser.value.role) return false;
-	return [ADMIN_ROLE_ID, CLIENT_MANAGER_ROLE_ID].includes(currentUser.value.role);
-});
+const isAdminOrManager = computed(() => isOrgManagerOrAbove.value);
 
 // Local state for form
 const form = ref({

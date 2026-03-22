@@ -47,6 +47,8 @@
 </template>
 
 <script setup>
+useHead({ title: 'Payment | Earnest' });
+
 const name = ref('');
 const address = ref('');
 const email = ref('');

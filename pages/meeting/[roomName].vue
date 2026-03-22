@@ -420,6 +420,7 @@ definePageMeta({
 	layout: 'blank', // Use a blank layout without nav
 	auth: false, // Disable auth requirement for this page
 });
+useHead({ title: 'Meeting | Earnest' });
 
 const route = useRoute();
 const router = useRouter();

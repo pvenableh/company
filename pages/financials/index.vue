@@ -1,5 +1,6 @@
 <script setup lang="ts">
 definePageMeta({ middleware: ['auth'] });
+useHead({ title: 'Financials | Earnest' });
 
 const router = useRouter();
 

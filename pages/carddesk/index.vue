@@ -2,6 +2,7 @@
 definePageMeta({
 	middleware: ['auth'],
 });
+useHead({ title: 'Card Desk | Earnest' });
 
 const { stats, isLoading, error, fetchStats, fetchContacts, fetchContactActivities } = useCardDesk();
 

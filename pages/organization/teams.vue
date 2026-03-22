@@ -204,6 +204,8 @@
 </template>
 
 <script setup>
+useHead({ title: 'Teams | Earnest' });
+
 // Get composables
 const {
 	teams,
@@ -220,8 +222,6 @@ const {
 	isTeamManager,
 	canManageTeam,
 	hasAdminAccess,
-	ADMIN_ROLE_ID,
-	CLIENT_MANAGER_ROLE_ID,
 } = useTeams();
 
 const { selectedOrg, currentOrg } = useOrganization();

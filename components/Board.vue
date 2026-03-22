@@ -119,8 +119,10 @@ const onMove = async (event) => {
 	}
 };
 
+const { feedback: triggerFeedback } = useFeedback();
+
 const onEnd = (event) => {
-	// ... existing onEnd logic ...
+	triggerFeedback('drop');
 };
 </script>
 

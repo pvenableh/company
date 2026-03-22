@@ -107,11 +107,15 @@ const handleSave = async () => {
 
 <template>
 	<UModal v-model="modelValue">
-		<div class="space-y-5 p-1">
-			<div>
-				<h2 class="text-lg font-semibold text-foreground">{{ isEditing ? 'Edit Goal' : 'New Goal' }}</h2>
-				<p class="text-sm text-muted-foreground mt-0.5">Set a target to track your progress</p>
-			</div>
+		<UCard>
+			<template #header>
+				<div>
+					<h3 class="text-lg font-semibold">{{ isEditing ? 'Edit Goal' : 'New Goal' }}</h3>
+					<p class="text-sm text-muted-foreground mt-0.5">Set a target to track your progress</p>
+				</div>
+			</template>
+
+			<div class="space-y-5">
 
 			<!-- Type selector -->
 			<div>
@@ -226,22 +230,16 @@ const handleSave = async () => {
 				</div>
 			</div>
 
-			<!-- Actions -->
-			<div class="flex justify-end gap-2 pt-2">
-				<button
-					@click="modelValue = false"
-					class="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg"
-				>
-					Cancel
-				</button>
-				<button
-					@click="handleSave"
-					:disabled="!form.title.trim() || saving"
-					class="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
-				>
-					{{ saving ? 'Saving...' : isEditing ? 'Update Goal' : 'Create Goal' }}
-				</button>
 			</div>
-		</div>
+
+			<template #footer>
+				<div class="flex justify-end gap-2">
+					<UButton variant="soft" color="gray" @click="modelValue = false">Cancel</UButton>
+					<UButton color="primary" :loading="saving" :disabled="!form.title.trim()" @click="handleSave">
+						{{ isEditing ? 'Update Goal' : 'Create Goal' }}
+					</UButton>
+				</div>
+			</template>
+		</UCard>
 	</UModal>
 </template>

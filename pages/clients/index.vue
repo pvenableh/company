@@ -5,6 +5,7 @@ import { useDebounceFn } from '@vueuse/core';
 import VueDraggable from 'vuedraggable';
 
 definePageMeta({ middleware: ['auth'] });
+useHead({ title: 'Clients | Earnest' });
 
 const router = useRouter();
 const config = useRuntimeConfig();

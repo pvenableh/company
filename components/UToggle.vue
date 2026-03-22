@@ -26,9 +26,12 @@ const emit = defineEmits<{
   (e: 'change', value: boolean): void
 }>()
 
+const { haptic } = useFeedback()
+
 const checked = computed({
   get: () => props.modelValue,
   set: (value: boolean) => {
+    haptic('tap')
     emit('update:modelValue', value)
     emit('change', value)
   },

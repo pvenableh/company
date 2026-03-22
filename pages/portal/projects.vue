@@ -3,6 +3,7 @@ definePageMeta({
 	layout: 'client-portal',
 	middleware: ['auth'],
 });
+useHead({ title: 'Portal Projects | Earnest' });
 
 const { selectedOrg } = useOrganization();
 const { clientScope } = useOrgRole();

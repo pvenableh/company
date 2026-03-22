@@ -11,6 +11,7 @@ definePageMeta({
   layout: 'default',
   middleware: ['auth'],
 })
+useHead({ title: 'Social Media | Earnest' })
 
 const showAIWizard = ref(false)
 const toast = useToast()

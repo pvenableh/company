@@ -2,6 +2,7 @@
 definePageMeta({
 	middleware: ['auth'],
 });
+useHead({ title: 'Command Center | Earnest' });
 
 // Redirect command-center to home page (command center is now at /)
 await navigateTo('/', { replace: true, redirectCode: 301 });

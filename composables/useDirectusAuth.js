@@ -102,8 +102,10 @@ export const useDirectusAuth = () => {
 				}
 			}
 		} catch {
-			// BroadcastChannel unsupported – fall back to storage events
-			window.addEventListener('storage', async (e) => {
+			// BroadcastChannel unsupported – fall back to storage events.
+			// Store the handler so it can be referenced (module-level singleton
+			// means this only runs once, matching the _initialized guard).
+			const storageHandler = async (e) => {
 				if (e.key === 'auth-logout') {
 					clearRefreshTimer()
 					await clearSession()
@@ -112,7 +114,8 @@ export const useDirectusAuth = () => {
 					await fetchSession()
 					scheduleRefresh()
 				}
-			})
+			}
+			window.addEventListener('storage', storageHandler)
 		}
 	}
 
@@ -230,10 +233,8 @@ export const useDirectusAuth = () => {
 		})
 
 		initCrossTabSync()
-	}
 
-	// Per-instance watcher to start/stop scheduling when auth state changes
-	if (import.meta.client) {
+		// Single global watcher to start/stop refresh scheduling on auth changes
 		watch(
 			loggedIn,
 			(isLoggedIn) => {

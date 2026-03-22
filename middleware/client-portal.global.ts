@@ -11,10 +11,14 @@
 
 export default defineNuxtRouteMiddleware((to) => {
   const { loggedIn } = useUserSession();
+
+  // Skip entirely when not logged in — avoids triggering useOrgRole API calls
+  if (!loggedIn.value) return;
+
   const { isOrgClient, hasMembership } = useOrgRole();
 
   // Only applies to logged-in client-role users with an active membership
-  if (!loggedIn.value || !hasMembership.value || !isOrgClient.value) {
+  if (!hasMembership.value || !isOrgClient.value) {
     return;
   }
 

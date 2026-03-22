@@ -237,6 +237,12 @@ let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 export const useNavPreferences = () => {
 	const { user } = useDirectusAuth();
 	const { updateMe } = useDirectusUsers();
+	// Lazy-init: only resolve useOrgRole when user is authenticated
+	let _orgRole: ReturnType<typeof useOrgRole> | null = null;
+	const getOrgRole = () => {
+		if (!_orgRole && user.value) _orgRole = useOrgRole();
+		return _orgRole;
+	};
 
 	const storageKey = computed(() => {
 		const userId = user.value?.id || 'anonymous';
@@ -329,8 +335,9 @@ export const useNavPreferences = () => {
 	/** Check if a link is blocked by the user's org role permissions */
 	const isGatedByRole = (link: NavLink): boolean => {
 		if (!link.featureKey) return false;
-		const { canAccess } = useOrgRole();
-		return !canAccess(link.featureKey);
+		const role = getOrgRole();
+		if (!role) return false;
+		return !role.canAccess(link.featureKey);
 	};
 
 	// All links sorted by user order
@@ -341,10 +348,11 @@ export const useNavPreferences = () => {
 
 	// Only visible links sorted by user order, filtered by org role permissions
 	const visibleLinks = computed<NavLink[]>(() => {
-		const { canAccess } = useOrgRole();
+		const role = getOrgRole();
 		return allLinks.value.filter((l) => {
 			if (!visible.value.has(l.to)) return false;
-			if (l.featureKey && !canAccess(l.featureKey)) return false;
+			// Only apply role-based gating when logged in
+			if (role && l.featureKey && !role.canAccess(l.featureKey)) return false;
 			return true;
 		});
 	});
@@ -354,8 +362,12 @@ export const useNavPreferences = () => {
 		load();
 	}
 
-	// Reload when user changes
-	watch(storageKey, () => load());
+	// Reload when user changes; clear pending saves and cached role on logout
+	watch(storageKey, () => {
+		if (saveTimeout) { clearTimeout(saveTimeout); saveTimeout = null; }
+		_orgRole = null;
+		load();
+	});
 
 	return {
 		defaultLinks: DEFAULT_LINKS,

@@ -15,6 +15,7 @@ definePageMeta({
 	middleware: ['auth'],
 	layout: 'default',
 });
+useHead({ title: 'Channel | Earnest' });
 
 // Setup state
 const newMessage = ref('');

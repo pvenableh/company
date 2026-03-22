@@ -10,6 +10,7 @@ definePageMeta({
   layout: 'default',
   middleware: ['auth'],
 })
+useHead({ title: 'Social Setup | Earnest' })
 
 const expandedSections = ref<Record<string, boolean>>({
   overview: true,

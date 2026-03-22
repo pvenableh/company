@@ -291,10 +291,20 @@ export const useAIPreferences = () => {
 		syncFromDirectus();
 	}
 
-	// Reload when user changes
+	// Reload when user changes; clear state on logout
 	watch(storageKey, () => {
+		// Clear pending save to avoid writing to wrong user
+		if (_saveTimeout) { clearTimeout(_saveTimeout); _saveTimeout = null; }
 		_directusSynced = false;
 		_prefRecordId = null;
+		if (!user.value?.id) {
+			// Reset to defaults on logout
+			enabledModules.value = new Set(AI_MODULES.map((m) => m.key));
+			_personalizationsEnabled.value = true;
+			_lowUsageMode.value = false;
+			_verbosity.value = 'regular';
+			return;
+		}
 		loadLocal();
 		loadVerbosity();
 		syncFromDirectus();

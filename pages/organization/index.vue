@@ -1,4 +1,6 @@
 <script setup>
+useHead({ title: 'Organization | Earnest' });
+
 import { ROLE_METADATA } from '~/types/permissions';
 
 const organizationItems = useDirectusItems('organizations');
@@ -59,7 +61,7 @@ const editForm = ref({
 });
 const savingOrg = ref(false);
 
-const { canAccess } = useRole();
+const { canAccess } = useOrgRole();
 const canManageOrg = computed(() => {
 	return canAccess('org_settings');
 });

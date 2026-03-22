@@ -1,6 +1,7 @@
 <!-- pages/scheduler/settings.vue -->
 <script setup>
 definePageMeta({ middleware: ['auth'] });
+useHead({ title: 'Scheduler Settings | Earnest' });
 
 const { user } = useDirectusAuth();
 const toast = useToast();

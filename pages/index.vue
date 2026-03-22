@@ -1,4 +1,6 @@
 <script setup lang="ts">
+useHead({ title: 'Home | Earnest' });
+
 const { user } = useDirectusAuth();
 
 // ── Productivity Engine (existing) ──
@@ -164,7 +166,7 @@ const activeTab = ref<'commander' | 'timeline' | 'statistics'>('commander');
 
 		<!-- Action Board: shown when user IS logged in -->
 		<div v-else class="min-h-screen bg-background">
-			<div class="max-w-screen-xl mx-auto px-4 pt-16 pb-8 sm:px-6 lg:px-8 space-y-6">
+			<div class="max-w-screen-xl mx-auto px-4 pb-8 sm:px-6 lg:px-8 space-y-6">
 				<!-- Greeting + Assistant Button -->
 				<div class="flex items-end justify-between pt-2">
 					<div>

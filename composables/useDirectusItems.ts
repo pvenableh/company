@@ -105,6 +105,27 @@ function invalidateCollection(collection: string): void {
   }
 }
 
+// ─── Periodic cache sweep ─────────────────────────────────────────────────────
+// Evict expired entries every 30s to prevent unbounded Map growth from
+// varied query filters (pagination, search, date ranges).
+const SWEEP_INTERVAL = 30_000;
+const MAX_CACHE_SIZE = 500;
+
+if (typeof setInterval !== 'undefined') {
+  setInterval(() => {
+    const now = Date.now();
+    for (const [key, entry] of _cache) {
+      if (now > entry.expiresAt) _cache.delete(key);
+    }
+    // Hard cap: if still too large after expiry sweep, drop oldest entries
+    if (_cache.size > MAX_CACHE_SIZE) {
+      const entries = [..._cache.entries()].sort((a, b) => a[1].expiresAt - b[1].expiresAt);
+      const toRemove = entries.slice(0, _cache.size - MAX_CACHE_SIZE);
+      for (const [key] of toRemove) _cache.delete(key);
+    }
+  }, SWEEP_INTERVAL);
+}
+
 // ─── Optimistic update event bus ──────────────────────────────────────────────
 // Emits events when optimistic mutations happen, so realtime subscriptions
 // can avoid double-applying the same change when the server confirms it.

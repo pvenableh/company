@@ -6,6 +6,7 @@ definePageMeta({
 	layout: 'blank',
 	auth: false,
 });
+useHead({ title: 'Book Appointment | Earnest' });
 
 const route = useRoute();
 const toast = useToast();

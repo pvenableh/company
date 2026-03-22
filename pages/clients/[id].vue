@@ -3,6 +3,7 @@ import type { Client } from '~/types/directus';
 import { Button } from '~/components/ui/button';
 
 definePageMeta({ middleware: ['auth'] });
+useHead({ title: 'Client Details | Earnest' });
 
 const route = useRoute();
 const router = useRouter();
