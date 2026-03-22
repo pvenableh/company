@@ -108,14 +108,6 @@ export function useOrgRole() {
     return hasPermission(feature, 'delete');
   }
 
-  // ── Plan gating placeholder ────────────────────────────────────────────────
-  // Always returns true for now. In a future sprint this will check the org's
-  // subscription plan tier against feature availability.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  function planAllows(_feature: FeatureKey): boolean {
-    return true;
-  }
-
   // ── Directus role → org role fallback ────────────────────────────────────────
   // When no org_membership exists (pre-migration), map the user's Directus
   // global role to a default org role so the permission system still works.
@@ -249,7 +241,6 @@ export function useOrgRole() {
     canCreate,
     canEdit,
     canDelete,
-    planAllows,
 
     // Actions
     fetchMembership,
