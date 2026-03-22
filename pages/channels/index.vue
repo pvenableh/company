@@ -3,7 +3,7 @@ const { selectedOrg, organizationOptions } = useOrganization();
 const { selectedClient } = useClients();
 const { visibleTeams, fetchTeams, selectedTeam: globalSelectedTeam } = useTeams();
 const { user } = useDirectusAuth();
-const { canAccess, canCreate: canCreateFeature } = useRole();
+const { canAccess, canCreate: canCreateFeature } = useOrgRole();
 
 const isAdmin = computed(() => canAccess('channels'));
 const showCreateChannel = ref(false);

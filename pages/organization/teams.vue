@@ -220,8 +220,6 @@ const {
 	isTeamManager,
 	canManageTeam,
 	hasAdminAccess,
-	ADMIN_ROLE_ID,
-	CLIENT_MANAGER_ROLE_ID,
 } = useTeams();
 
 const { selectedOrg, currentOrg } = useOrganization();

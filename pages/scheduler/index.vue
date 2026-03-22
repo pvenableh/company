@@ -351,7 +351,7 @@ import { format, parseISO, isAfter, addDays } from 'date-fns';
 definePageMeta({ middleware: ['auth'] });
 
 const { user } = useDirectusAuth();
-const { canAccess } = useRole();
+const { canAccess } = useOrgRole();
 
 const isAdmin = computed(() => canAccess('appointments'));
 const toast = useToast();

@@ -8,7 +8,7 @@ definePageMeta({ middleware: ['auth'] });
 const router = useRouter();
 const { getInvoices, createInvoice, deleteInvoice } = useInvoices();
 const { selectedClient } = useClients();
-const { canAccess } = useRole();
+const { canAccess } = useOrgRole();
 const isAdmin = computed(() => canAccess('invoices'));
 
 const allInvoices = ref<Invoice[]>([]);

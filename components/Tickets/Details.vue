@@ -208,7 +208,7 @@ const deleteTicket = async () => {
 		isLoading.value = true;
 
 		// Check if admin (can permanently delete) or just archive
-		if (useRole().isAdmin(currentUser.value)) {
+		if (useOrgRole().isOrgAdminOrAbove.value) {
 			await ticketItems.remove(props.element.id);
 		} else {
 			await ticketItems.update(props.element.id, {

@@ -6,7 +6,7 @@ const { user: sessionUser, loggedIn } = useUserSession();
 const user = computed(() => {
 	return loggedIn.value ? sessionUser.value ?? null : null;
 });
-const { canAccess } = useRole();
+const { canAccess } = useOrgRole();
 
 const admin = computed(() => {
 	return canAccess('invoices');

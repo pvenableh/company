@@ -298,8 +298,6 @@ const {
 	isOnTeam,
 	getTeamMembers,
 	setupStorageListener,
-	ADMIN_ROLE_ID,
-	CLIENT_MANAGER_ROLE_ID,
 } = useTeams();
 
 const { selectedOrg, currentOrg } = useOrganization();

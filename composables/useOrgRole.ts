@@ -8,8 +8,9 @@ import { DEFAULT_ROLE_PERMISSIONS } from '~/types/permissions';
  * Fetches the current user's membership in the selected org and exposes
  * role info, permission checks, and computed role booleans.
  *
- * Works alongside `useRole.ts` which bridges legacy Directus global roles
- * with this per-org system. `useRole.ts` delegates to this composable first.
+ * When no org_membership exists (pre-migration users), a fallback maps
+ * the user's Directus global role to a default org role so the permission
+ * system remains functional.
  */
 export function useOrgRole() {
   const membershipItems = useDirectusItems<OrgMembership>('org_memberships');

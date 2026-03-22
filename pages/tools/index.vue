@@ -12,7 +12,7 @@
 </template>
 
 <script setup>
-const { canAccess } = useRole();
+const { canAccess } = useOrgRole();
 
 const isAdmin = computed(() => {
 	return canAccess('org_settings');

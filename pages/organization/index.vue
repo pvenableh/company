@@ -59,7 +59,7 @@ const editForm = ref({
 });
 const savingOrg = ref(false);
 
-const { canAccess } = useRole();
+const { canAccess } = useOrgRole();
 const canManageOrg = computed(() => {
 	return canAccess('org_settings');
 });

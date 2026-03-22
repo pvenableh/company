@@ -5,8 +5,8 @@ export const useTeams = () => {
 	const { readUsers } = useDirectusUsers();
 	const nuxtApp = useNuxtApp();
 
-	// Role IDs and helpers from shared composable
-	const { ADMIN_ROLE_ID, CLIENT_MANAGER_ROLE_ID, hasAdminAccess: _hasAdminAccess, getRoleId } = useRole();
+	// Per-org role composable — source of truth for all permission checks
+	const { isOrgManagerOrAbove } = useOrgRole();
 	const DEFAULT_TEAM_ID = 'org-default'; // Virtual team ID for "Default Team"
 
 	// State — use useState for cross-component shared state
@@ -71,12 +71,12 @@ export const useTeams = () => {
 		}
 	};
 
-	// Check if user has admin or client manager role
-	const hasAdminAccess = (user) => _hasAdminAccess(user);
+	// Check if user has admin or manager-level org role
+	const hasAdminAccess = () => isOrgManagerOrAbove.value;
 
 	// Get teams for an organization with full user details
 	const fetchTeams = async (organizationId, { force = false } = {}) => {
-		if (organizationId === null && hasAdminAccess(user.value)) {
+		if (organizationId === null && hasAdminAccess()) {
 			// console.log('useTeams: Admin in "All Organizations" mode, clearing teams');
 			teams.value = [];
 			visibleTeams.value = [];
@@ -140,7 +140,7 @@ export const useTeams = () => {
 			teams.value = response || [];
 
 			// Filter teams based on user role and membership
-			if (hasAdminAccess(user.value)) {
+			if (hasAdminAccess()) {
 				// Admin or client manager sees all teams
 				visibleTeams.value = [...teams.value];
 			} else {
@@ -215,7 +215,7 @@ export const useTeams = () => {
 			}
 
 			// For regular users, restore saved team or default to first team
-			if (!hasAdminAccess(user.value)) {
+			if (!hasAdminAccess()) {
 				if (savedTeam && isValidTeamForOrg(savedTeam)) {
 					// console.log('useTeams: Restoring saved team for regular user:', savedTeam);
 					selectedTeam.value = savedTeam;
@@ -261,7 +261,7 @@ export const useTeams = () => {
 
 		// For regular users, apply team filter even when no team is explicitly selected
 		// This ensures they only see content from their teams
-		if (!selectedTeam.value && !hasAdminAccess(user.value) && visibleTeams.value.length > 0) {
+		if (!selectedTeam.value && !hasAdminAccess() && visibleTeams.value.length > 0) {
 			// Create a filter for all teams they're a member of
 			const teamUserIds = visibleTeams.value.flatMap((team) => team.users?.map((u) => u.directus_users_id.id) || []);
 
@@ -329,7 +329,7 @@ export const useTeams = () => {
 
 	// Check if user can manage a team (is manager or has admin role)
 	const canManageTeam = (teamId) => {
-		if (hasAdminAccess(user.value)) return true;
+		if (hasAdminAccess()) return true;
 		return isTeamManager(teamId);
 	};
 
@@ -472,7 +472,7 @@ export const useTeams = () => {
 
 	// Should the UI show the "All Teams" option
 	const showAllTeamsOption = () => {
-		return hasAdminAccess(user.value);
+		return hasAdminAccess();
 	};
 
 	// --- Cross-Tab Synchronization ---
@@ -602,10 +602,6 @@ export const useTeams = () => {
 		getTeamMembers,
 		isValidTeamForOrg,
 		showAllTeamsOption,
-
-		// Role constants
-		ADMIN_ROLE_ID,
-		CLIENT_MANAGER_ROLE_ID,
 
 		// Computed values
 		currentTeam,

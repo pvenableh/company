@@ -2,7 +2,7 @@
 definePageMeta({ middleware: ['auth'] });
 
 const { user } = useDirectusAuth();
-const { canAccess } = useRole();
+const { canAccess } = useOrgRole();
 const isAdmin = computed(() => canAccess('org_settings'));
 const phoneItems = useDirectusItems('phone_settings');
 const businessHourItems = useDirectusItems('business_hours');

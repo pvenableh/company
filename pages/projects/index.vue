@@ -5,7 +5,7 @@ const user = computed(() => {
 });
 
 const { user: directusUser } = useDirectusAuth();
-const { canAccess } = useRole();
+const { canAccess } = useOrgRole();
 const { selectedOrg, getOrganizationFilter } = useOrganization();
 const { selectedClient, getClientFilter } = useClients();
 
