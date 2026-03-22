@@ -70,8 +70,10 @@ export function useOrgRole() {
   /**
    * Check if the current user can access a feature at all.
    * Owner/Admin always returns true.
+   * When no user is logged in, returns true to avoid blocking pre-auth UI.
    */
   function canAccess(feature: FeatureKey): boolean {
+    if (!user.value) return true;
     if (isOrgAdminOrAbove.value) return true;
     if (!permissions.value) return false;
     return permissions.value[feature]?.access ?? false;

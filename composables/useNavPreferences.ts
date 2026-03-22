@@ -329,6 +329,7 @@ export const useNavPreferences = () => {
 	/** Check if a link is blocked by the user's org role permissions */
 	const isGatedByRole = (link: NavLink): boolean => {
 		if (!link.featureKey) return false;
+		if (!user.value) return false;
 		const { canAccess } = useOrgRole();
 		return !canAccess(link.featureKey);
 	};
@@ -341,10 +342,13 @@ export const useNavPreferences = () => {
 
 	// Only visible links sorted by user order, filtered by org role permissions
 	const visibleLinks = computed<NavLink[]>(() => {
-		const { canAccess } = useOrgRole();
 		return allLinks.value.filter((l) => {
 			if (!visible.value.has(l.to)) return false;
-			if (l.featureKey && !canAccess(l.featureKey)) return false;
+			// Only apply role-based gating when logged in
+			if (user.value && l.featureKey) {
+				const { canAccess } = useOrgRole();
+				if (!canAccess(l.featureKey)) return false;
+			}
 			return true;
 		});
 	});
