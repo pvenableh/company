@@ -1,5 +1,5 @@
 <template>
-	<div class="md:px-6 mx-auto flex items-start justify-center flex-col md:flex-row relative px-4 pt-20 account">
+	<div class="md:px-6 mx-auto flex items-start justify-center flex-col md:flex-row relative px-4 account">
 		<div class="md:top-4 flex md:items-end md:justify-end flex-col w-full md:mr-6 lg:mr account__navigation">
 			<UserAvatar size="md" />
 
@@ -190,6 +190,7 @@ const { user } = useDirectusAuth();
 definePageMeta({
 	middleware: ['auth'],
 });
+useHead({ title: 'Account Settings | Earnest' });
 
 const panel = ref(1);
 

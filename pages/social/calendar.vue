@@ -18,6 +18,7 @@ definePageMeta({
   layout: 'default',
   middleware: ['auth'],
 })
+useHead({ title: 'Social Calendar | Earnest' })
 
 const toast = useToast()
 

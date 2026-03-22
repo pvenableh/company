@@ -31,6 +31,7 @@ definePageMeta({
 	layout: 'default',
 	middleware: ['auth'],
 });
+useHead({ title: 'Compose Post | Earnest' });
 
 // Platform icon mapping
 const platformIcons: Record<SocialPlatform, string> = {

@@ -5,6 +5,7 @@ definePageMeta({
 	layout: 'auth',
 	middleware: 'guest',
 });
+useHead({ title: 'Register | Earnest' });
 
 const { register } = useDirectusAuth();
 const route = useRoute();

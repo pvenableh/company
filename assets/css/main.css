@@ -130,10 +130,6 @@ a {
   min-height: calc(100svh - 56px);
   @apply relative z-10;
 }
-.page__title {
-  font-weight: 200 !important;
-  @apply font-proxima-thin absolute top-0 left-0 w-full uppercase leading-[0.7em] text-8xl mt-2 opacity-[0.05] z-0;
-}
 .page__inner {
   min-height: calc(90vh - 175px);
   @apply relative z-10 mt-12;

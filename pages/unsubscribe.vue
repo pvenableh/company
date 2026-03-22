@@ -1,4 +1,6 @@
 <script setup lang="ts">
+useHead({ title: 'Unsubscribe | Earnest' });
+
 const route = useRoute();
 const token = route.query.token as string;
 

@@ -6,6 +6,7 @@ definePageMeta({
 	layout: 'client-portal',
 	middleware: ['auth'],
 });
+useHead({ title: 'Portal Tickets | Earnest' });
 
 const { selectedOrg } = useOrganization();
 const { clientScope, hasPermission } = useOrgRole();

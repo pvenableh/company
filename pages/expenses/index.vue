@@ -1,5 +1,6 @@
 <script setup lang="ts">
 definePageMeta({ middleware: ['auth'] });
+useHead({ title: 'Expenses | Earnest' });
 
 const { expenses, isLoading, totalExpenses, expensesByCategory, billableExpenses, reimbursableExpenses, createExpense, updateExpense, deleteExpense, refresh } = useExpenses();
 const { EXPENSE_CATEGORIES } = await import('~/composables/useExpenses');

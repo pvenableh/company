@@ -1,4 +1,6 @@
 <script setup>
+useHead({ title: 'Projects | Earnest' });
+
 const { user: sessionUser, loggedIn } = useUserSession();
 const user = computed(() => {
 	return loggedIn.value ? sessionUser.value ?? null : null;
@@ -93,7 +95,7 @@ definePageMeta({
 </script>
 
 <template>
-	<div class="page__content pt-20">
+	<div class="page__content">
 		<div class="max-w-screen-xl mx-auto page_inner px-4 2xl:px-0">
 		<!-- Header -->
 		<div class="flex items-center justify-between mb-6">

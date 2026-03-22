@@ -19,6 +19,7 @@ definePageMeta({
   layout: 'default',
   middleware: ['auth'],
 })
+useHead({ title: 'Social Analytics | Earnest' })
 
 // Date range
 const dateRangePresets = [

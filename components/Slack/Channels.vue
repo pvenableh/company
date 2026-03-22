@@ -80,8 +80,6 @@ const refreshAll = () => {
 			</UAlert>
 		</div>
 
-		<h1 class="page__title">Channels</h1>
-
 		<div class="w-full flex flex-col lg:flex-row items-center lg:items-start justify-center z-10 page__inner">
 			<!-- Loading State -->
 			<div v-if="isLoading" class="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

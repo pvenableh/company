@@ -5,6 +5,7 @@ definePageMeta({
 	layout: 'client-portal',
 	middleware: ['auth'],
 });
+useHead({ title: 'Portal Messages | Earnest' });
 
 const { selectedOrg, getOrganizationFilter } = useOrganization();
 const { clientScope } = useOrgRole();

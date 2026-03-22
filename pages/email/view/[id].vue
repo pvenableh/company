@@ -30,6 +30,7 @@
 definePageMeta({
   layout: false,
 });
+useHead({ title: 'View Email | Earnest' });
 
 const route = useRoute();
 const emailId = Number(route.params.id);

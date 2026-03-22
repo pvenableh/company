@@ -8,7 +8,7 @@
 		<div :class="user ? (sidebarCollapsed ? 'xl:pl-16' : 'xl:pl-60') : ''" class="transition-[padding-left] duration-200">
 			<LayoutHeader :links="headerLinks" />
 
-			<div class="page pb-safe min-h-page">
+			<div class="page pt-16 pb-safe min-h-page">
 				<slot />
 			</div>
 

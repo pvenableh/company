@@ -1,5 +1,6 @@
 <script setup lang="ts">
 definePageMeta({ middleware: ['auth'] });
+useHead({ title: 'Phone Settings | Earnest' });
 
 const { user } = useDirectusAuth();
 const { canAccess } = useOrgRole();
@@ -287,11 +288,6 @@ onMounted(() => {
 
 <template>
 	<div class="page__content">
-		<h1 class="page__title">
-			Phone System
-			<span class="block">Settings</span>
-		</h1>
-
 		<div v-if="!isAdmin" class="flex flex-col items-center justify-center z-10 min-h-[60vh] page__inner">
 			<h2 class="text-2xl font-proxima-light uppercase tracking-widest text-muted-foreground">Admin Only</h2>
 			<p class="text-sm text-muted-foreground mt-2">You need admin access to manage phone settings.</p>

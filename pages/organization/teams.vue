@@ -204,6 +204,8 @@
 </template>
 
 <script setup>
+useHead({ title: 'Teams | Earnest' });
+
 // Get composables
 const {
 	teams,

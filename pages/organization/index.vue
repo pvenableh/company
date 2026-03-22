@@ -1,4 +1,6 @@
 <script setup>
+useHead({ title: 'Organization | Earnest' });
+
 import { ROLE_METADATA } from '~/types/permissions';
 
 const organizationItems = useDirectusItems('organizations');

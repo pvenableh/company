@@ -2,6 +2,7 @@
 definePageMeta({
 	title: 'Setup Guide',
 });
+useHead({ title: 'Setup Guide | Earnest' });
 
 const { user } = useDirectusAuth();
 const activeSection = ref('overview');
@@ -32,7 +33,7 @@ const goPrev = () => {
 
 <template>
 	<div class="min-h-screen bg-background">
-		<div class="max-w-7xl mx-auto px-4 pt-16 pb-12 sm:px-6 lg:px-8">
+		<div class="max-w-7xl mx-auto px-4 pb-12 sm:px-6 lg:px-8">
 			<!-- Header -->
 			<div class="flex items-center justify-between mb-8">
 				<div>

@@ -1,4 +1,6 @@
 <script setup>
+useHead({ title: 'Invoice Preview | Earnest' });
+
 const { params } = useRoute();
 const invoiceItems = useDirectusItems('invoices');
 
@@ -10,10 +12,6 @@ const invoice = await invoiceItems.get(params.id, {
 </script>
 <template>
 	<div class="w-full flex flex-col items-center justify-start">
-		<h1 class="page__title">
-			Invoice
-			<span class="block">Preview</span>
-		</h1>
 		<div class="w-full flex flex-col items-center justify-center z-10 page__inner">
 			<InvoicesInvoice :invoice="invoice" />
 			<nuxt-link v-if="invoice.status !== 'paid'" :to="'/invoices/' + invoice.id" class="mt-12">

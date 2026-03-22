@@ -1,5 +1,5 @@
 <template>
-	<div class="relative flex items-center justify-center flex-col px-6 pt-12 pb-24 min-h-screen">
+	<div class="relative flex items-center justify-center flex-col px-6 pb-24 min-h-screen">
 		<!-- Loading State -->
 		<div v-if="isLoading" class="w-full flex flex-col items-center justify-center">
 			<p class="mt-4 text-sm text-gray-600 dark:text-gray-400">Processing your payment...</p>
@@ -93,6 +93,7 @@
 definePageMeta({
 	middleware: [],
 });
+useHead({ title: 'Confirmation | Earnest' });
 
 import { loadStripe } from '@stripe/stripe-js';
 

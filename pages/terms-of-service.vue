@@ -8,9 +8,10 @@ definePageMeta({
 	layout: 'default',
 });
 
+useHead({ title: 'Terms of Service | Earnest' });
 useSeoMeta({
-	title: 'Terms of Service | Business Connect',
-	description: 'Terms of service for Business Connect social media management platform.',
+	title: 'Terms of Service | Earnest',
+	description: 'Terms of service for Earnest business management platform.',
 });
 
 const lastUpdated = 'February 6, 2026';

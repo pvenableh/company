@@ -2,6 +2,7 @@
 import { Button } from '~/components/ui/button';
 
 definePageMeta({ middleware: ['auth'] });
+useHead({ title: 'Files | Earnest' });
 
 const config = useRuntimeConfig();
 const { list: listFiles, upload: uploadFile, remove: removeFile, getUrl } = useDirectusFiles();

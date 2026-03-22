@@ -3,6 +3,7 @@ import type { Contact, CreateContactPayload } from '~/types/email/contacts';
 import { Button } from '~/components/ui/button';
 
 definePageMeta({ middleware: ['auth'] });
+useHead({ title: 'Contact Details | Earnest' });
 
 const route = useRoute();
 const router = useRouter();

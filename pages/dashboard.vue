@@ -4,6 +4,7 @@ import type { Invoice } from '~/types/directus';
 definePageMeta({
 	middleware: ['auth'],
 });
+useHead({ title: 'Dashboard | Earnest' });
 
 const { user } = useDirectusAuth();
 const { getInvoices } = useInvoices();
@@ -95,8 +96,7 @@ watch([selectedClient, selectedOrg], () => {
 </script>
 
 <template>
-	<div class="md:px-6 mx-auto flex items-start justify-center flex-col relative px-4 pt-20">
-		<h1 class="page__title">Statistics</h1>
+	<div class="md:px-6 mx-auto flex items-start justify-center flex-col relative px-4">
 		<div class="w-full flex flex-col items-center min-h-svh z-10 !mt-0 justify-start page__inner">
 			<div class="w-full max-w-[1200px] space-y-12">
 				<h2 class="text-lg uppercase tracking-wide mb-2 font-thin">{{ greetUser() }} {{ user?.first_name }}.</h2>

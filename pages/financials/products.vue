@@ -4,6 +4,7 @@ import { Button } from '~/components/ui/button';
 import { useDebounceFn } from '@vueuse/core';
 
 definePageMeta({ middleware: ['auth'] });
+useHead({ title: 'Products | Earnest' });
 
 const { getProducts, createProduct, updateProduct, deleteProduct } = useProducts();
 

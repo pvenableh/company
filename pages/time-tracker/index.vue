@@ -10,6 +10,7 @@ import {
 } from 'date-fns';
 
 definePageMeta({ middleware: ['auth'] });
+useHead({ title: 'Time Tracker | Earnest' });
 
 const {
   isTimerRunning,

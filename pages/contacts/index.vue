@@ -4,6 +4,7 @@ import { Button } from '~/components/ui/button';
 import { useDebounceFn } from '@vueuse/core';
 
 definePageMeta({ middleware: ['auth'] });
+useHead({ title: 'Contacts | Earnest' });
 
 const router = useRouter();
 const { getContacts, deleteContact: doDelete, unsubscribeContact: doUnsubscribe } = useContacts();

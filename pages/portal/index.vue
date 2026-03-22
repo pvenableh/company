@@ -3,6 +3,7 @@ definePageMeta({
 	layout: 'client-portal',
 	middleware: ['auth'],
 });
+useHead({ title: 'Client Portal | Earnest' });
 
 const { user } = useDirectusAuth();
 const { selectedOrg } = useOrganization();

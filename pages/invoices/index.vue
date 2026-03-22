@@ -4,6 +4,7 @@ import { Button } from '~/components/ui/button';
 import { useDebounceFn } from '@vueuse/core';
 
 definePageMeta({ middleware: ['auth'] });
+useHead({ title: 'Invoices | Earnest' });
 
 const router = useRouter();
 const { getInvoices, createInvoice, deleteInvoice } = useInvoices();

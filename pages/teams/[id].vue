@@ -3,6 +3,7 @@ import type { Team } from '~/types/directus';
 import { Button } from '~/components/ui/button';
 
 definePageMeta({ middleware: ['auth'] });
+useHead({ title: 'Team Details | Earnest' });
 
 const route = useRoute();
 const router = useRouter();

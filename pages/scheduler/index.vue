@@ -179,7 +179,7 @@
 		<template v-else>
 		<!-- Header -->
 		<div class="border-b border-border bg-background">
-			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pt-20">
+			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
 				<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 					<div>
 						<h1 class="text-2xl font-bold text-foreground">Scheduler</h1>
@@ -349,6 +349,7 @@
 import { format, parseISO, isAfter, addDays } from 'date-fns';
 
 definePageMeta({ middleware: ['auth'] });
+useHead({ title: 'Scheduler | Earnest' });
 
 const { user } = useDirectusAuth();
 const { canAccess } = useOrgRole();

@@ -10,6 +10,7 @@ const user = computed(() => {
 definePageMeta({
 	middleware: ['auth'],
 });
+useHead({ title: 'Project Event | Earnest' });
 
 const event = await projectEventItems.get(params.event, {
 	fields: [
