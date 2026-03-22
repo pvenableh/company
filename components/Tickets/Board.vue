@@ -802,12 +802,16 @@ const debouncedUpdateSubscription = debounce(async () => {
 }, 300);
 
 // Drag and drop handlers
+const { feedback: triggerFeedback } = useFeedback();
+
 const onDragStart = () => {
 	isDragging.value = true;
+	triggerFeedback('drag');
 };
 
 const onDragEnd = () => {
 	isDragging.value = false;
+	triggerFeedback('drop');
 };
 
 const updateTicketStatus = async (columnId, event) => {

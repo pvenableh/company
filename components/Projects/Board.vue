@@ -517,12 +517,16 @@ const handleServiceChange = (value) => {
 // 	refresh();
 // };
 
+const { feedback: triggerFeedback } = useFeedback();
+
 const onDragStart = () => {
 	isDragging.value = true;
+	triggerFeedback('drag');
 };
 
 const onDragEnd = () => {
 	isDragging.value = false;
+	triggerFeedback('drop');
 };
 
 const updateProjectStatus = async (columnId, event) => {

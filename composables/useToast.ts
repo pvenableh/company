@@ -12,6 +12,7 @@
  */
 
 import { toast as sonnerToast } from "vue-sonner";
+import type { FeedbackType } from "~/composables/useFeedback";
 
 interface ToastOptions {
   title?: string;
@@ -19,18 +20,30 @@ interface ToastOptions {
   color?: "green" | "red" | "yellow" | "blue" | "gray" | "primary" | "success" | "warning" | "error" | "info";
   icon?: string;
   duration?: number;
+  /** Set to false to suppress haptic/sound feedback for this toast */
+  feedback?: boolean;
   action?: {
     label: string;
     onClick: () => void;
   };
 }
 
+// Map sonner types to feedback types
+const FEEDBACK_MAP: Record<string, FeedbackType> = {
+  success: "success",
+  error: "error",
+  warning: "warning",
+};
+
 export function useToast() {
+  const { feedback: triggerFeedback } = useFeedback();
+
   /**
    * Add a toast notification (NuxtUI-compatible API)
+   * Automatically triggers haptic + sound feedback based on toast type.
    */
   const add = (options: ToastOptions) => {
-    const { title, description, color, duration = 5000, action } = options;
+    const { title, description, color, duration = 5000, action, feedback: wantFeedback = true } = options;
 
     // Map NuxtUI colors to sonner types
     const colorMap: Record<string, "success" | "error" | "warning" | "info" | "default"> = {
@@ -59,6 +72,14 @@ export function useToast() {
         label: action.label,
         onClick: action.onClick,
       };
+    }
+
+    // Trigger haptic + sound feedback
+    if (wantFeedback) {
+      const feedbackType = FEEDBACK_MAP[type];
+      if (feedbackType) {
+        triggerFeedback(feedbackType);
+      }
     }
 
     switch (type) {

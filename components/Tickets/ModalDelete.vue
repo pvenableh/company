@@ -30,8 +30,10 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update:isOpen', 'delete', 'cancel']);
+const { feedback } = useFeedback();
 
 function handleDelete() {
+	feedback('heavy');
 	emit('delete');
 }
 

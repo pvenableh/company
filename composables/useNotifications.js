@@ -309,6 +309,8 @@ export function useNotifications() {
 				if (newNotification) {
 					showToastNotification(newNotification);
 					playSound();
+					// Haptic pulse for incoming notification (sound handled above)
+					useFeedback().haptic('success');
 
 					// Show desktop notification when tab is not focused
 					if (desktopNotifications && userPreferences.value.desktopEnabled) {
