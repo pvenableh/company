@@ -230,10 +230,8 @@ export const useDirectusAuth = () => {
 		})
 
 		initCrossTabSync()
-	}
 
-	// Per-instance watcher to start/stop scheduling when auth state changes
-	if (import.meta.client) {
+		// Single global watcher to start/stop refresh scheduling on auth changes
 		watch(
 			loggedIn,
 			(isLoggedIn) => {

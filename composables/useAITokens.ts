@@ -111,9 +111,13 @@ export const useAITokens = () => {
 		loadUsageSummary();
 	}
 
-	// Reload when user/org changes
-	watch([() => user.value?.id, selectedOrg], () => {
+	// Reload when user/org changes; clear state on logout
+	watch([() => user.value?.id, selectedOrg], ([newUser]) => {
 		_loaded.value = false;
+		if (!newUser) {
+			_usageSummary.value = null;
+			return;
+		}
 		loadUsageSummary();
 	});
 
