@@ -123,11 +123,11 @@ a {
    ============================================ */
 
 .page {
-  @apply pt-[56px];
+  @apply pt-20;
 }
 .page__content {
   transition: all 0.25s var(--spring);
-  min-height: calc(100svh - 56px);
+  min-height: calc(100svh - 80px);
   @apply relative z-10;
 }
 .page__inner {

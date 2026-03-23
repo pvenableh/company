@@ -44,6 +44,20 @@ const selectedEventProject = computed<ProjectWithRelations | null>(() => {
   return null;
 });
 
+// Human-readable title for the detail modal (avoids showing raw UUIDs)
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const selectedEventTitle = computed(() => {
+  const ev = selectedEvent.value;
+  if (!ev) return 'Event Detail';
+  const title = ev.title || '';
+  if (!UUID_RE.test(title.trim())) return title;
+  if (typeof ev.category_id === 'object' && ev.category_id?.name) return ev.category_id.name;
+  if (ev.type) return ev.type.replace(/[_-]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
+  const d = ev.event_date || ev.date;
+  if (d) return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' Event';
+  return 'Event Detail';
+});
+
 function handleEventClick(eventId: string) {
   selectedEventId.value = eventId;
   showEventDetail.value = true;
@@ -156,7 +170,7 @@ onMounted(() => {
               class="inline-block h-2.5 w-2.5 rounded-full"
               :style="{ backgroundColor: selectedEventProject.color }"
             />
-            <h3 class="t-label">{{ selectedEvent?.title || 'Event Detail' }}</h3>
+            <h3 class="t-label">{{ selectedEventTitle }}</h3>
           </div>
           <Button variant="ghost" size="icon-sm" @click="handleCloseDetail">
             <Icon name="i-heroicons-x-mark" class="h-4 w-4" />

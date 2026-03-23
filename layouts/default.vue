@@ -8,7 +8,7 @@
 		<div :class="user ? (sidebarCollapsed ? 'xl:pl-16' : 'xl:pl-60') : ''" class="transition-[padding-left] duration-200">
 			<LayoutHeader :links="headerLinks" />
 
-			<div class="page pt-16 pb-safe min-h-page">
+			<div class="page pt-20 pb-safe min-h-page">
 				<slot />
 			</div>
 
@@ -93,11 +93,11 @@ const toolbarLinks = computed(() => props.links.filter((link) => link.type.inclu
 
 /* Prevent footer jump when content is shorter than viewport */
 .min-h-page {
-	min-height: calc(100vh - 56px - 56px - env(safe-area-inset-bottom, 0px));
+	min-height: calc(100vh - 80px - 56px - env(safe-area-inset-bottom, 0px));
 }
 @media (min-width: 768px) {
 	.min-h-page {
-		min-height: calc(100vh - 56px);
+		min-height: calc(100vh - 80px);
 	}
 }
 </style>

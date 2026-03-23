@@ -256,15 +256,16 @@ onMounted(() => {
 			.fromTo('.hero-actions', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' }, '-=0.5')
 			.fromTo('.hero-scroll', { opacity: 0 }, { opacity: 1, duration: 0.6, ease: 'power3.out' }, '-=0.2');
 
-		// Hero word cycle — faster timing, "good" visible initially
+		// Hero word cycle — "Do good work." stays visible longer as the hero statement
 		if (heroCycleRef.value) {
 			const wrap = heroCycleRef.value.parentElement;
 			// Set initial width
 			wrap.style.width = heroCycleRef.value.offsetWidth + 'px';
 
-			const cycleTl = gsap.timeline({ delay: 1.5, repeat: -1, repeatDelay: 1 });
+			const cycleTl = gsap.timeline({ delay: 2.5, repeat: -1, repeatDelay: 4 });
 			cycleWords.forEach((word, i) => {
 				if (i === 0) return;
+				const isLastWord = i === cycleWords.length - 1;
 				cycleTl
 					.to(heroCycleRef.value, { opacity: 0, y: -12, duration: 0.2, ease: 'power2.in' })
 					.call(() => {
@@ -272,7 +273,7 @@ onMounted(() => {
 						gsap.to(wrap, { width: heroCycleRef.value.offsetWidth, duration: 0.2, ease: 'power2.out' });
 					})
 					.fromTo(heroCycleRef.value, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.3, ease: 'power2.out' })
-					.to({}, { duration: 0.8 });
+					.to({}, { duration: isLastWord ? 2 : 0.8 });
 			});
 		}
 

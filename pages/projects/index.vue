@@ -13,14 +13,8 @@ const { selectedClient, getClientFilter } = useClients();
 
 const isAdmin = computed(() => canAccess('projects'));
 
-// Defer activeView to client so SSR doesn't mismatch on isAdmin
+// Default to table view for all users
 const activeView = ref('table');
-
-if (import.meta.client) {
-	onMounted(() => {
-		activeView.value = isAdmin.value ? 'timeline' : 'table';
-	});
-}
 
 // Table view data
 const projectItems = useDirectusItems('projects');

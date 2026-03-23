@@ -31,6 +31,27 @@ const categoryTextColor = computed(() => {
   return '#FFFFFF';
 });
 
+// Detect UUID strings and provide a human-readable fallback
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const displayTitle = computed(() => {
+  const title = props.event.title || '';
+  if (!UUID_RE.test(title.trim())) return title;
+
+  // Fallback priority: category name → event type → formatted date → "Event"
+  if (typeof props.event.category_id === 'object' && props.event.category_id?.name) {
+    return props.event.category_id.name;
+  }
+  if (props.event.type) {
+    // Capitalise and replace underscores/hyphens with spaces
+    return props.event.type.replace(/[_-]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
+  }
+  const d = props.event.event_date || props.event.date;
+  if (d) {
+    return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' Event';
+  }
+  return 'Event';
+});
+
 // Alternate label positions: even index = above, odd index = below
 const isAbove = computed(() => props.index % 2 === 0);
 const labelDirection = computed(() => isAbove.value ? -1 : 1);
@@ -137,7 +158,7 @@ const labelDirection = computed(() => isAbove.value ? -1 : 1);
       font-size="9"
       font-weight="700"
     >
-      {{ (event.title || '').length > 18 ? (event.title || '').slice(0, 16) + '...' : (event.title || '') }}
+      {{ displayTitle.length > 18 ? displayTitle.slice(0, 16) + '...' : displayTitle }}
     </text>
 
     <!-- Date label -->
