@@ -176,6 +176,18 @@ type Corner = 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
 const DOCK_STORAGE_KEY = 'dock-position';
 const MARGIN = 24; // px from edge
 const TOP_OFFSET = 80; // header clearance for top positions
+const TOOLBAR_BOTTOM_OFFSET = '5rem'; // bottom offset when mobile toolbar is visible (md–xl)
+const DEFAULT_BOTTOM_OFFSET = '1.5rem'; // bottom offset when toolbar is hidden (xl+)
+
+// Track whether the mobile toolbar is visible (below xl breakpoint)
+const mobileToolbarVisible = ref(true);
+if (import.meta.client) {
+	const mql = window.matchMedia('(min-width: 1280px)');
+	mobileToolbarVisible.value = !mql.matches;
+	mql.addEventListener('change', (e) => {
+		mobileToolbarVisible.value = !e.matches;
+	});
+}
 
 const dockRef = ref<HTMLElement | null>(null);
 const isDragging = ref(false);
@@ -205,7 +217,7 @@ const cornerStyles = computed(() => {
 	const style: Record<string, string> = {};
 
 	if (c.includes('bottom')) {
-		style.bottom = '1.5rem';
+		style.bottom = mobileToolbarVisible.value ? TOOLBAR_BOTTOM_OFFSET : DEFAULT_BOTTOM_OFFSET;
 		style.top = 'auto';
 	} else {
 		style.top = `${TOP_OFFSET}px`;
