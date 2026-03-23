@@ -34,7 +34,12 @@ export function convertIconName(name: string): string {
     "ph",
     "carbon",
     "tabler",
+    "material-symbols-light",
     "material-symbols",
+    "fluent-emoji-flat",
+    "meteocons",
+    "wi",
+    "logos",
   ];
 
   for (const collection of collections) {
