@@ -105,7 +105,7 @@ export default defineEventHandler(async (event) => {
 });
 
 function buildDashboardPrompt(context: any): string {
-	return `You are an expert marketing strategist analyzing a business's marketing performance across all channels. You have access to their full business data — contacts, social media, email campaigns, clients, revenue, projects, and support tickets.
+	return `You are an expert marketing strategist analyzing a business's marketing performance across all channels. You have access to their full business data — contacts, social media, email campaigns, clients, revenue, projects, and support tickets — PLUS their brand direction, goals, target audience, and location for the organization and each client.
 
 BUSINESS DATA SNAPSHOT:
 ${JSON.stringify(context, null, 2)}
@@ -117,6 +117,7 @@ RULES:
 - Insights should be specific and reference actual data points
 - Recommendations should be actionable with clear next steps
 - If data is sparse, note it as an opportunity rather than just a weakness
+- Use the brandContext section to tailor insights and recommendations to the organization's specific brand positioning, target audience, goals, and location — make suggestions that align with their stated direction
 
 Return this exact JSON structure:
 {
@@ -164,7 +165,7 @@ Generate 4-6 insights and 3-5 recommendations.`;
 }
 
 function buildCampaignPrompt(context: any, goal: string, timeframe?: string): string {
-	return `You are an expert marketing strategist creating a multi-channel campaign plan. You have access to the business's full data to create a realistic, data-informed plan.
+	return `You are an expert marketing strategist creating a multi-channel campaign plan. You have access to the business's full data — including their brand direction, goals, target audience, and location for the organization and each client — to create a realistic, data-informed plan.
 
 BUSINESS DATA SNAPSHOT:
 ${JSON.stringify(context, null, 2)}
@@ -179,6 +180,7 @@ RULES:
 - Social posts should be platform-appropriate and ready to adapt
 - Email sequences should have compelling subject lines and clear segmentation
 - KPIs should be realistic given their current metrics
+- Use the brandContext section to align campaign messaging with their brand direction, target audience, and goals — make content recommendations specific to their positioning and market
 
 Return this exact JSON structure:
 {

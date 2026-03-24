@@ -7,7 +7,7 @@
  * Keeps output under ~4000 tokens when serialized.
  */
 
-import { readItems, aggregate } from '@directus/sdk';
+import { readItems, readItem, aggregate } from '@directus/sdk';
 import type { MarketingContext } from '~/types/marketing';
 
 type DirectusClient = Awaited<ReturnType<typeof getUserDirectus>>;
@@ -119,6 +119,26 @@ export async function getMarketingContext(
 			},
 			fields: ['id', 'title', 'status'],
 			limit: 100,
+		})).catch(() => [] as any[]),
+	]);
+
+	// ─── Fetch Brand Context (org + clients with brand data) ───
+	const [orgBrand, clientsBrand] = await Promise.all([
+		directus.request(readItem('organizations', orgId, {
+			fields: ['name', 'brand_direction', 'goals', 'target_audience', 'location'],
+		})).catch(() => null as any),
+
+		directus.request(readItems('clients', {
+			filter: {
+				organization: { _eq: orgId },
+				_or: [
+					{ brand_direction: { _nnull: true } },
+					{ goals: { _nnull: true } },
+					{ target_audience: { _nnull: true } },
+				],
+			},
+			fields: ['name', 'brand_direction', 'goals', 'target_audience', 'location', 'services'],
+			limit: 50,
 		})).catch(() => [] as any[]),
 	]);
 
@@ -253,6 +273,23 @@ export async function getMarketingContext(
 		tickets: {
 			totalLast30Days: (tickets as any[]).length,
 			byStatus: ticketsByStatus,
+		},
+		brandContext: {
+			organization: {
+				name: orgBrand?.name || null,
+				brandDirection: orgBrand?.brand_direction || null,
+				goals: orgBrand?.goals || null,
+				targetAudience: orgBrand?.target_audience || null,
+				location: orgBrand?.location || null,
+			},
+			clients: (clientsBrand as any[]).map((c: any) => ({
+				name: c.name,
+				brandDirection: c.brand_direction || null,
+				goals: c.goals || null,
+				targetAudience: c.target_audience || null,
+				location: c.location || null,
+				services: Array.isArray(c.services) ? c.services : [],
+			})),
 		},
 	};
 }
