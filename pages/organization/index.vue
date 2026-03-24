@@ -57,7 +57,6 @@ const editForm = ref({
 	goals: '',
 	target_audience: '',
 	location: '',
-	billing_contacts: [],
 });
 const savingOrg = ref(false);
 
@@ -122,9 +121,6 @@ const openEditModal = () => {
 		goals: org.value.goals || '',
 		target_audience: org.value.target_audience || '',
 		location: org.value.location || '',
-		billing_contacts: org.value.billing_contacts?.length
-			? [...org.value.billing_contacts]
-			: [],
 	};
 	showEditOrgModal.value = true;
 };
@@ -144,9 +140,6 @@ const saveOrganization = async () => {
 			goals: editForm.value.goals || null,
 			target_audience: editForm.value.target_audience || null,
 			location: editForm.value.location || null,
-			billing_contacts: editForm.value.billing_contacts.length
-				? editForm.value.billing_contacts.filter(c => c.email)
-				: null,
 		});
 		toast.add({ title: 'Success', description: 'Organization updated successfully', color: 'green' });
 		showEditOrgModal.value = false;
@@ -397,11 +390,11 @@ const pendingInvites = computed(() => {
 // Function to fetch organization data with correct fields
 const ORG_DETAIL_FIELDS = [
 	'id', 'name', 'logo', 'category', 'notes', 'website', 'phone', 'address',
-	'industry.name', 'industry.class', 'brand_color', 'emails', 'billing_contacts',
+	'industry.name', 'industry.class', 'brand_color', 'emails',
 	'date_created', 'origin_date', 'icon', 'active', 'brand_direction',
 	'goals', 'target_audience', 'location',
 ];
-const ORG_BASIC_FIELDS = ['id', 'name', 'logo', 'icon', 'active', 'date_created', 'website', 'phone', 'brand_color', 'brand_direction', 'goals', 'target_audience', 'location', 'notes', 'billing_contacts'];
+const ORG_BASIC_FIELDS = ['id', 'name', 'logo', 'icon', 'active', 'date_created', 'website', 'phone', 'brand_color', 'brand_direction', 'goals', 'target_audience', 'location', 'notes'];
 
 const fetchOrganizationData = async () => {
 	if (!selectedOrg.value) return;
@@ -760,29 +753,6 @@ watch(searchEmail, (val) => {
 									</div>
 								</UCard>
 
-								<!-- Billing Contacts -->
-								<UCard v-if="org.billing_contacts?.length">
-									<template #header>
-										<div class="flex items-center">
-											<UIcon name="i-heroicons-credit-card" class="w-5 h-5 mr-2" />
-											<h3 class="text-sm font-medium">Billing Contacts</h3>
-										</div>
-									</template>
-									<div class="space-y-2 text-sm">
-										<div
-											v-for="(contact, index) in org.billing_contacts"
-											:key="index"
-											class="flex items-center gap-2"
-										>
-											<UIcon name="i-heroicons-user" class="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
-											<div class="min-w-0">
-												<span v-if="contact.name" class="font-medium">{{ contact.name }} — </span>
-												<a :href="`mailto:${contact.email}`" class="text-primary truncate">{{ contact.email }}</a>
-											</div>
-										</div>
-									</div>
-								</UCard>
-
 								<!-- Emails -->
 								<UCard v-if="org.emails?.length">
 									<template #header>
@@ -1004,52 +974,6 @@ watch(searchEmail, (val) => {
 					</div>
 				</UFormGroup>
 
-				<!-- Billing Contacts -->
-				<div class="border-t pt-4 mt-2">
-					<h3 class="text-sm font-semibold mb-1 flex items-center gap-2">
-						<UIcon name="i-heroicons-credit-card" class="w-4 h-4 text-muted-foreground" />
-						Billing Contacts
-					</h3>
-					<p class="text-xs text-muted-foreground mb-3">Invoice recipients — these emails receive payment links and invoice notifications.</p>
-
-					<div class="space-y-2">
-						<div
-							v-for="(contact, index) in editForm.billing_contacts"
-							:key="index"
-							class="flex items-center gap-2"
-						>
-							<UInput
-								v-model="contact.name"
-								placeholder="Name"
-								size="sm"
-								class="flex-1"
-							/>
-							<UInput
-								v-model="contact.email"
-								type="email"
-								placeholder="email@example.com"
-								size="sm"
-								class="flex-1"
-							/>
-							<UButton
-								color="gray"
-								variant="ghost"
-								icon="i-heroicons-trash"
-								size="xs"
-								@click="editForm.billing_contacts.splice(index, 1)"
-							/>
-						</div>
-						<UButton
-							color="gray"
-							variant="soft"
-							icon="i-heroicons-plus"
-							size="xs"
-							@click="editForm.billing_contacts.push({ name: '', email: '' })"
-						>
-							Add Contact
-						</UButton>
-					</div>
-				</div>
 
 				<!-- Brand & Strategy -->
 				<div class="border-t pt-4 mt-2">

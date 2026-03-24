@@ -2,34 +2,25 @@
  * AI Usage by User — Per-user token and request breakdown.
  *
  * Query params:
- *   organizationId: string (optional)
+ *   organizationId: string (required)
  *   period: 'week' | 'month' | 'all' (default: 'month')
  */
 import { readItems } from '@directus/sdk';
+import type { AiUsagePeriod } from '~/server/utils/ai-date-range';
 
 export default defineEventHandler(async (event) => {
-  const session = await requireUserSession(event);
-  const userId = (session as any).user?.id;
-  if (!userId) {
-    throw createError({ statusCode: 401, message: 'Authentication required' });
-  }
-
   const query = getQuery(event);
-  const organizationId = query.organizationId as string | undefined;
-  const period = (query.period as string) || 'month';
+  const organizationId = query.organizationId as string;
+  const period = (query.period as AiUsagePeriod) || 'month';
 
-  const directus = await getUserDirectus(event);
+  if (!organizationId) {
+    throw createError({ statusCode: 400, message: 'organizationId is required' });
+  }
 
-  const filter: any = {};
-  if (period !== 'all') {
-    const startDate = new Date();
-    if (period === 'week') startDate.setDate(startDate.getDate() - 7);
-    else startDate.setMonth(startDate.getMonth() - 1);
-    filter.date_created = { _gte: startDate.toISOString() };
-  }
-  if (organizationId) {
-    filter.organization = { _eq: organizationId };
-  }
+  await requireOrgPermission(event, organizationId, 'ai_usage', 'read');
+
+  const directus = getTypedDirectus();
+  const filter = buildAiUsageFilter(organizationId, period);
 
   try {
     const logs = await directus.request(
@@ -44,12 +35,20 @@ export default defineEventHandler(async (event) => {
     const userMap = new Map<string, { totalTokens: number; requests: number; cost: number; lastActive: string }>();
     for (const log of logs) {
       const uid = typeof log.user === 'object' && log.user !== null ? log.user.id : log.user;
-      const existing = userMap.get(uid) || { totalTokens: 0, requests: 0, cost: 0, lastActive: '' };
-      existing.totalTokens += log.total_tokens || 0;
-      existing.requests += 1;
-      existing.cost += log.estimated_cost || 0;
-      if (log.date_created > existing.lastActive) existing.lastActive = log.date_created;
-      userMap.set(uid, existing);
+      const existing = userMap.get(uid);
+      if (existing) {
+        existing.totalTokens += log.total_tokens || 0;
+        existing.requests += 1;
+        existing.cost += log.estimated_cost || 0;
+        if (log.date_created > existing.lastActive) existing.lastActive = log.date_created;
+      } else {
+        userMap.set(uid, {
+          totalTokens: log.total_tokens || 0,
+          requests: 1,
+          cost: log.estimated_cost || 0,
+          lastActive: log.date_created || '',
+        });
+      }
     }
 
     // Fetch user details

@@ -111,7 +111,7 @@ function invalidateCollection(collection: string): void {
 const SWEEP_INTERVAL = 30_000;
 const MAX_CACHE_SIZE = 500;
 
-if (typeof setInterval !== 'undefined') {
+if (import.meta.client) {
   setInterval(() => {
     const now = Date.now();
     for (const [key, entry] of _cache) {

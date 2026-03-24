@@ -2,41 +2,36 @@
  * AI Usage Recent Activity — Latest AI API calls.
  *
  * Query params:
- *   organizationId: string (optional)
- *   limit: number (default: 20)
+ *   organizationId: string (required)
+ *   limit: number (default: 20, max: 100)
  */
 import { readItems } from '@directus/sdk';
 
 export default defineEventHandler(async (event) => {
-  const session = await requireUserSession(event);
-  const userId = (session as any).user?.id;
-  if (!userId) {
-    throw createError({ statusCode: 401, message: 'Authentication required' });
-  }
-
   const query = getQuery(event);
-  const organizationId = query.organizationId as string | undefined;
+  const organizationId = query.organizationId as string;
   const limit = Math.min(Number(query.limit) || 20, 100);
 
-  const directus = await getUserDirectus(event);
-
-  const filter: any = {};
-  if (organizationId) {
-    filter.organization = { _eq: organizationId };
+  if (!organizationId) {
+    throw createError({ statusCode: 400, message: 'organizationId is required' });
   }
+
+  await requireOrgPermission(event, organizationId, 'ai_usage', 'read');
+
+  const directus = getTypedDirectus();
 
   try {
     const logs = await directus.request(
       readItems('ai_usage_logs', {
-        filter,
+        filter: { organization: { _eq: organizationId } },
         fields: ['id', 'user', 'endpoint', 'model', 'total_tokens', 'estimated_cost', 'date_created'],
         sort: ['-date_created'],
         limit,
       }),
     ) as any[];
 
-    // Fetch user details for the logs
-    const userIds = [...new Set(logs.map(l => l.user))];
+    // Collect unique user IDs and fetch details in one query
+    const userIds = [...new Set(logs.map(l => typeof l.user === 'object' && l.user !== null ? l.user.id : l.user).filter(Boolean))];
     let usersInfo: any[] = [];
     if (userIds.length > 0) {
       usersInfo = await directus.request(
@@ -59,7 +54,8 @@ export default defineEventHandler(async (event) => {
     };
 
     const activity = logs.map(log => {
-      const user = userLookup.get(log.user);
+      const uid = typeof log.user === 'object' && log.user !== null ? log.user.id : log.user;
+      const user = userLookup.get(uid);
       return {
         id: log.id,
         userName: user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() : 'Unknown',

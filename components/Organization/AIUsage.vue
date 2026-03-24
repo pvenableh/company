@@ -1,5 +1,17 @@
 <template>
 	<div class="space-y-6">
+		<!-- Permission gate -->
+		<div v-if="!canViewUsage" class="flex flex-col items-center justify-center py-16">
+			<div class="w-14 h-14 rounded-2xl bg-red-500/10 flex items-center justify-center mb-4">
+				<UIcon name="i-heroicons-lock-closed" class="w-6 h-6 text-red-400" />
+			</div>
+			<h3 class="font-semibold text-foreground mb-1">Access Restricted</h3>
+			<p class="text-sm text-muted-foreground text-center max-w-sm">
+				You don't have permission to view AI usage data. Contact your organization admin to request access.
+			</p>
+		</div>
+
+		<template v-else>
 		<!-- Period selector -->
 		<div class="flex items-center justify-between">
 			<h3 class="text-lg font-semibold text-foreground">AI Usage</h3>
@@ -278,6 +290,7 @@
 				AI usage will appear here as your team uses AI features like Chat, Marketing Intelligence, Social, and Email generators.
 			</p>
 		</div>
+		</template>
 	</div>
 </template>
 
@@ -303,9 +316,10 @@ const orgTokenInfo = ref<{ balance: number | null; limit: number | null; used: n
 const userBudgets = ref<{ userId: string; name: string; budget: number | null; used: number; isLowUsage: boolean }[]>([]);
 const showManagement = ref(false);
 
-// Check if current user can manage AI settings (owner/admin)
-const { canAccess } = useOrgRole();
+// Check if current user can manage AI settings (owner/admin) and view usage
+const { canAccess, hasPermission } = useOrgRole();
 const canManageAI = computed(() => canAccess('org_settings'));
+const canViewUsage = computed(() => hasPermission('ai_usage', 'read'));
 
 const periods = [
 	{ label: '24h', value: 'day' },
@@ -411,6 +425,7 @@ async function loadUserBudgets() {
 }
 
 async function refresh() {
+	if (!canViewUsage.value) return;
 	loading.value = true;
 	const params: Record<string, string> = { period: period.value };
 	if (props.organizationId) params.organizationId = props.organizationId;
