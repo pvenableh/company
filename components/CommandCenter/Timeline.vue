@@ -177,6 +177,50 @@ const fetchActivityPage = async (pageNum) => {
 	return enriched;
 };
 
+// ── UUID detection ──
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isUUID = (str) => typeof str === 'string' && UUID_RE.test(str.trim());
+
+// ── Build a human-readable title when the raw title is missing or a UUID ──
+const humanizeItemTitle = (act, itemData) => {
+	const raw = itemData?.title || itemData?.invoice_code || itemData?.name || itemData?.subject || '';
+	if (raw && !isUUID(raw)) return raw;
+
+	const label = collectionLabels[act.collection] || act.collection;
+
+	// Quick tasks – try description first, then contextual phrase
+	if (act.collection === 'tasks' && itemData) {
+		if (itemData.description && !isUUID(itemData.description)) {
+			// Truncate long descriptions to a readable length
+			const desc = itemData.description.length > 60
+				? itemData.description.slice(0, 57) + '…'
+				: itemData.description;
+			return desc;
+		}
+		const parts = [];
+		if (itemData.status === 'completed') parts.push('Completed');
+		if (itemData.priority && itemData.priority !== 'medium') {
+			parts.push(itemData.priority.charAt(0).toUpperCase() + itemData.priority.slice(1) + ' Priority');
+		}
+		if (itemData.schedule && itemData.schedule !== 'unscheduled') {
+			const scheduleLabels = { today: 'Today', week: 'This Week', later: 'Later' };
+			parts.push(scheduleLabels[itemData.schedule] || itemData.schedule);
+		}
+		if (parts.length > 0) return `${label} · ${parts.join(' · ')}`;
+		return label;
+	}
+
+	// Contacts – already handled elsewhere, but guard here too
+	if ((act.collection === 'contacts' || act.collection === 'cd_contacts') && itemData) {
+		const fullName = [itemData.first_name, itemData.last_name].filter(Boolean).join(' ');
+		if (fullName) return fullName;
+	}
+
+	// Generic fallback: use the collection label + action
+	const actionWord = actionLabels[act.action] || act.action;
+	return `${actionWord.charAt(0).toUpperCase() + actionWord.slice(1)} ${label}`;
+};
+
 // ── Enrich activities with item context ──
 const enrichActivities = async (activities) => {
 	// Group items by collection for batch lookup
@@ -194,7 +238,7 @@ const enrichActivities = async (activities) => {
 			let fields = ['id', 'title'];
 			if (collection === 'invoices') fields = ['id', 'invoice_code', 'status'];
 			if (collection === 'project_tasks') fields = ['id', 'title', 'completed', 'status'];
-			if (collection === 'tasks') fields = ['id', 'title', 'status', 'date_completed'];
+			if (collection === 'tasks') fields = ['id', 'title', 'description', 'status', 'priority', 'schedule', 'date_completed'];
 			if (collection === 'emails') fields = ['id', 'name', 'subject', 'status', 'total_recipients', 'sent_at'];
 			if (collection === 'cd_contacts') fields = ['id', 'name', 'first_name', 'last_name', 'company', 'rating', 'is_client'];
 			if (collection === 'cd_activities') fields = ['id', 'type', 'label', 'note', 'contact'];
@@ -221,12 +265,7 @@ const enrichActivities = async (activities) => {
 	// Build enriched timeline entries
 	return activities.map((act) => {
 		const itemData = itemCache[`${act.collection}:${act.item}`];
-		let itemTitle = itemData?.title || itemData?.invoice_code || itemData?.name || itemData?.subject || `#${act.item}`;
-		// Build display name for contacts
-		if ((act.collection === 'contacts' || act.collection === 'cd_contacts') && itemData) {
-			const fullName = [itemData.first_name, itemData.last_name].filter(Boolean).join(' ');
-			if (fullName) itemTitle = fullName;
-		}
+		let itemTitle = humanizeItemTitle(act, itemData);
 		// CardDesk activity label
 		if (act.collection === 'cd_activities' && itemData?.label) {
 			itemTitle = itemData.label;
