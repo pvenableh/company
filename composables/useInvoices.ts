@@ -74,7 +74,7 @@ export function useInvoices() {
       fields: [
         '*',
         'bill_to.*',
-        'client.id', 'client.name',
+        'client.id', 'client.name', 'client.billing_email', 'client.billing_name', 'client.billing_address',
         'project.id', 'project.title',
         'line_items.*', 'line_items.product.*',
         'payments.*',
@@ -83,6 +83,37 @@ export function useInvoices() {
   };
 
   const createInvoice = async (payload: any): Promise<Invoice> => {
+    // Auto-snapshot billing fields from client if not already provided
+    if (payload.client && !payload.billing_email) {
+      try {
+        const clientItems = useDirectusItems('clients');
+        const client = await clientItems.get(payload.client, {
+          fields: ['billing_email', 'billing_name', 'billing_address', 'billing_contacts', 'name', 'organization'],
+        }) as any;
+
+        if (client) {
+          // Resolve billing email: billing_email → billing_contacts[0] → skip
+          payload.billing_email = client.billing_email
+            || (client.billing_contacts?.[0]?.email)
+            || null;
+          payload.billing_name = client.billing_name
+            || (client.billing_contacts?.[0]?.name)
+            || client.name
+            || null;
+          payload.billing_address = client.billing_address || null;
+
+          // Auto-set bill_to from client's organization if not set
+          if (!payload.bill_to && client.organization) {
+            payload.bill_to = typeof client.organization === 'object'
+              ? client.organization.id
+              : client.organization;
+          }
+        }
+      } catch {
+        // Non-fatal — billing snapshot is optional
+      }
+    }
+
     const result = await items.create(payload);
     // Re-fetch to get flow-calculated amounts
     return getInvoice((result as any).id);

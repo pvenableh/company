@@ -119,11 +119,20 @@ export default defineEventHandler(async (event) => {
 				return Array.isArray(emails) ? emails : [emails];
 			};
 
-			// Build recipient list: prefer client billing_contacts, fall back to org emails
-			// billing_contacts come from the invoice's client record: [{ name, email }, ...]
-			const billingContacts = invoices[0]?.billing_contacts || invoices[0]?.client?.billing_contacts || [];
+			// Build recipient list — resolution chain:
+			// 1. Invoice snapshot billing_email (frozen at creation)
+			// 2. Client billing_email (current)
+			// 3. Client billing_contacts JSON (legacy)
+			// 4. Organization emails (fallback)
+			const firstInvoice = invoices[0];
+			const billingContacts = firstInvoice?.billing_contacts || firstInvoice?.client?.billing_contacts || [];
 			let emails;
-			if (billingContacts.length > 0) {
+
+			if (firstInvoice?.billing_email) {
+				emails = [firstInvoice.billing_email];
+			} else if (firstInvoice?.client?.billing_email) {
+				emails = [firstInvoice.client.billing_email];
+			} else if (billingContacts.length > 0) {
 				emails = billingContacts.filter((c) => c.email?.trim()).map((c) => c.email.trim());
 			} else {
 				emails = formatEmails(organization.bill_to?.emails || organization.emails);

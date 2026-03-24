@@ -1,20 +1,21 @@
 <template>
   <form @submit.prevent="handleSubmit" class="space-y-5">
-    <!-- Row 1: Bill To + Client -->
+    <!-- Row 1: Client (primary billing target) -->
     <div class="grid grid-cols-2 gap-4">
       <div>
-        <label class="block text-sm font-medium mb-1">Bill To *</label>
-        <select v-model="formData.bill_to" required class="w-full rounded-md border bg-background px-3 py-2 text-sm">
-          <option value="">Select organization...</option>
-          <option v-for="org in orgs" :key="org.id" :value="org.id">{{ org.name }}</option>
+        <label class="block text-sm font-medium mb-1">Client *</label>
+        <select v-model="formData.client" required class="w-full rounded-md border bg-background px-3 py-2 text-sm">
+          <option :value="null" disabled>Select client...</option>
+          <option v-for="c in clientOptions" :key="c.value" :value="c.value">{{ c.label }}</option>
         </select>
       </div>
       <div>
-        <label class="block text-sm font-medium mb-1">Client</label>
-        <select v-model="formData.client" class="w-full rounded-md border bg-background px-3 py-2 text-sm">
-          <option :value="null">None</option>
-          <option v-for="c in clientOptions" :key="c.value" :value="c.value">{{ c.label }}</option>
+        <label class="block text-sm font-medium mb-1">Organization</label>
+        <select v-model="formData.bill_to" class="w-full rounded-md border bg-background px-3 py-2 text-sm" :disabled="!!formData.client">
+          <option value="">Auto (from client)</option>
+          <option v-for="org in orgs" :key="org.id" :value="org.id">{{ org.name }}</option>
         </select>
+        <p v-if="formData.client" class="text-[10px] text-muted-foreground mt-0.5">Auto-set from client</p>
       </div>
     </div>
 
@@ -177,7 +178,7 @@ const statusOptions = [
 
 // --- Fetch dropdown data ---
 const { organizations } = useOrganization();
-const { getClientOptions } = useClients();
+const { getClientOptions, getClients } = useClients();
 const { getProducts, generateInvoiceCode } = useInvoices();
 const projectItems = useDirectusItems('projects');
 
@@ -344,14 +345,23 @@ const autoGenerateCode = async () => {
   }
 };
 
-watch(() => formData.client, autoGenerateCode);
+// Auto-derive bill_to from client's organization
+const clientLookup = ref<Map<string, string>>(new Map());
+
+watch(() => formData.client, (clientId) => {
+  autoGenerateCode();
+  if (clientId && clientLookup.value.has(clientId)) {
+    formData.bill_to = clientLookup.value.get(clientId) || '';
+  }
+});
 watch(() => formData.invoice_date, autoGenerateCode);
 
 // --- Fetch dropdown data on mount ---
 onMounted(async () => {
   try {
-    const [clientOpts, prods, projs] = await Promise.all([
+    const [clientOpts, allClients, prods, projs] = await Promise.all([
       getClientOptions(),
+      getClients({ limit: 500 }),
       getProducts(),
       projectItems.list({
         fields: ['id', 'title'],
@@ -362,6 +372,17 @@ onMounted(async () => {
     clientOptions.value = clientOpts;
     productsList.value = prods;
     projects.value = projs;
+
+    // Build client → organization lookup for auto-deriving bill_to
+    for (const c of allClients || []) {
+      const orgId = typeof c.organization === 'object' ? c.organization?.id : c.organization;
+      if (orgId) clientLookup.value.set(c.id, orgId);
+    }
+
+    // Auto-set bill_to if client is already selected (edit mode)
+    if (formData.client && clientLookup.value.has(formData.client)) {
+      formData.bill_to = clientLookup.value.get(formData.client) || formData.bill_to;
+    }
   } catch (err) {
     console.error('Failed to load form data:', err);
   }
