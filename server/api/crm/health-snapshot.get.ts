@@ -140,6 +140,8 @@ export default defineEventHandler(async (event) => {
       overdueProjects: ctx.projects.overdue.slice(0, 5),
       outstandingInvoices: ctx.invoices.outstanding.slice(0, 5),
       overdueFollowUps: ctx.deals.overdueFollowUps.slice(0, 5),
+      // Include brand context so the UI can display org/client brand info
+      brandContext: ctx.brandContext || null,
     };
   } catch (error: any) {
     console.error('[crm/health-snapshot] Failed:', error.message);

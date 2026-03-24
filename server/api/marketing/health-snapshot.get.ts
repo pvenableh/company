@@ -126,6 +126,7 @@ export default defineEventHandler(async (event) => {
         totalClients: ctx.clients.total,
       },
       topTags: ctx.contacts.topTags,
+      brandContext: (ctx as any).brandContext || null,
     };
   } catch (error: any) {
     console.error('[marketing/health-snapshot] Failed:', error.message);
