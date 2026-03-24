@@ -47,10 +47,13 @@
 			<div class="truth-label opacity-0">The honest case</div>
 			<div class="truth-body">
 				<h2 class="truth-title opacity-0">Your business runs on {{ toolCountWord }} tools. It should run on <span class="truth-one">one</span><span class="bp">.</span></h2>
-				<p class="truth-text opacity-0">You have a project tool. An invoice tool. A social tool. A phone system. A shared inbox. A calendar. A goal tracker. And Slack to hold it all together. Eleven tools. Eleven logins. Zero cohesion.</p>
-				<p class="truth-text opacity-0"><strong>EARNEST replaces the pile.</strong> One platform, one login, one place where the work actually lives &mdash; from the first brief to the final invoice. Nothing to integrate. Nothing to re-explain.</p>
-				<p class="truth-text opacity-0">And because everything is in one place, <strong>AI can actually think about your business</strong> &mdash; analyzing people, companies, revenue, deals, goals, and campaigns together, layered with your brand direction and target audience, to build CRM strategies, pipeline forecasts, goal suggestions, and growth plans that isolated apps never could. Two companion apps &mdash; CardDesk for networking and E&sup2; for mobile &mdash; keep everything connected on the go.</p>
-				<p class="truth-text opacity-0">Simple to use. Powerful underneath. That&rsquo;s the point.</p>
+			<p class="truth-text opacity-0">You have a project tool. An invoice tool. A social tool. A phone system. A shared inbox. A calendar. A goal tracker. And Slack to hold it all together. {{ toolCountWord }} tools. {{ toolCountWord }} logins. Zero cohesion.</p>
+
+<p class="truth-text opacity-0"><strong>EARNEST replaces the pile.</strong> One platform, one login, one place where the work actually lives &mdash; from the first conversation to the final payment. Nothing to integrate. Nothing to re-explain.</p>
+
+<p class="truth-text opacity-0">And because everything is in one place, <strong>AI can see the whole business</strong> &mdash; not just a slice of it. It reads your contacts, clients, projects, revenue, deals, goals, campaigns, and brand direction together, then connects the dots to build strategies, forecasts, and plans that no isolated tool can produce. Your marketing plan knows your pipeline. Your CRM analysis knows your brand voice. Your goal suggestions know your financials. <em>That</em> is the difference.</p>
+
+<p class="truth-text opacity-0">Two companion apps &mdash; CardDesk for networking and E&sup2; for mobile &mdash; keep everything connected on the go. Simple to use. Powerful underneath. That&rsquo;s the point.</p>
 			</div>
 		</section>
 
@@ -59,25 +62,28 @@
 			<div class="ai-reveal-inner">
 				<p class="ai-kicker opacity-0">What one platform makes possible</p>
 				<h2 class="ai-headline opacity-0">Your data talks<span class="bp">.</span><br/><em>AI listens<span class="bp">.</span></em></h2>
-				<p class="ai-lede opacity-0">Most tools bolt AI onto one channel. EARNEST connects AI to your entire business &mdash; people, companies, projects, revenue, conversations, campaigns, financials, and goals &mdash; then layers in your brand direction and target audience to generate CRM Intelligence reports, Health Snapshots, Goal Suggestions, and Marketing AI plans that are uniquely yours.</p>
+				<p class="ai-lede opacity-0">Most tools bolt AI onto one channel. EARNEST gives AI the full picture &mdash; people, companies, projects, revenue, conversations, campaigns, financials, and goals &mdash; layered with brand direction and target audience for every client. The result is CRM intelligence, marketing plans, pipeline forecasts, and goal suggestions that are uniquely yours. Not generic advice. Your business, analyzed whole.</p>
 
-				<div class="ai-capabilities">
-					<div class="ai-cap opacity-0">
-						<span class="ai-cap-number">01</span>
-						<h3 class="ai-cap-title">Productivity Engine</h3>
-						<p class="ai-cap-desc">Scans every module in real time &mdash; tickets, projects, tasks, invoices, deals, channels, social, and goals &mdash; then surfaces prioritized actions instantly. No AI tokens. Pure algorithmic intelligence.</p>
-					</div>
-					<div class="ai-cap opacity-0">
-						<span class="ai-cap-number">02</span>
-						<h3 class="ai-cap-title">Brand Awareness AI</h3>
-						<p class="ai-cap-desc">Brand direction, goals, target audience, and location &mdash; per client, per team, per organization. Every AI feature uses this context: Social AI Generate, Email Marketing AI, CRM Intelligence, Marketing AI Analyze, and Goal Suggestions all speak your language.</p>
-					</div>
-					<div class="ai-cap opacity-0">
-						<span class="ai-cap-number">03</span>
-						<h3 class="ai-cap-title">Health Snapshots + Deep Analysis</h3>
-						<p class="ai-cap-desc">Instant Health Snapshots give you CRM and marketing scores from pure data &mdash; no tokens, no waiting. When you need more, CRM Intelligence and Marketing AI Analyze deliver deep analysis, pipeline forecasts, growth plans, and campaign strategies on demand.</p>
-					</div>
-				</div>
+				<div class="ai-cap opacity-0">
+  <span class="ai-cap-number">01</span>
+  <h3 class="ai-cap-title">Connected intelligence</h3>
+  <p class="ai-cap-desc">Every other platform analyzes its own data in isolation. EARNEST connects AI to your entire operation — people, companies, projects, revenue, conversations, campaigns, and goals — simultaneously. The result is insight no single-purpose tool can produce.</p>
+</div>
+<div class="ai-cap opacity-0">
+  <span class="ai-cap-number">02</span>
+  <h3 class="ai-cap-title">Brand awareness</h3>
+  <p class="ai-cap-desc">Set brand direction, goals, target audience, and positioning per client, per team, per organization. Every AI feature reads this context. Social posts, email campaigns, CRM strategies, and marketing plans all sound like your business &mdash; not a generic template.</p>
+</div>
+<div class="ai-cap opacity-0">
+  <span class="ai-cap-number">03</span>
+  <h3 class="ai-cap-title">Marketing intelligence</h3>
+  <p class="ai-cap-desc">Feed EARNEST a client. It reads their brand direction, pipeline stage, contact history, email and social performance, and stated goals &mdash; then generates a complete multi-channel marketing plan with email sequences, social cadence, content themes, KPIs, and a 4-week action calendar. Written in their voice.</p>
+</div>
+<div class="ai-cap opacity-0">
+  <span class="ai-cap-number">04</span>
+  <h3 class="ai-cap-title">Productivity engine</h3>
+  <p class="ai-cap-desc">Scans every module in real time &mdash; tickets, projects, tasks, invoices, deals, channels, social, and goals &mdash; then surfaces prioritized actions instantly. No AI tokens. Pure algorithmic intelligence that loads the moment you open EARNEST.</p>
+</div>
 			</div>
 		</section>
 
@@ -183,12 +189,12 @@ const replacedTools = [
 	{ name: 'Mailchimp', replaces: 'Email marketing', icon: 'i-lucide-mail' },
 	{ name: 'Hootsuite', replaces: 'Social scheduling', icon: 'i-lucide-calendar-clock' },
 	{ name: 'Slack', replaces: 'Team messaging', icon: 'i-lucide-message-square' },
-	{ name: 'Twilio', replaces: 'Phone system', icon: 'i-lucide-phone' },
+	{ name: 'Ooma', replaces: 'Phone system', icon: 'i-lucide-phone' },
 	{ name: 'Zoom', replaces: 'Video meetings', icon: 'i-lucide-video' },
 	{ name: 'Calendly', replaces: 'Scheduling', icon: 'i-lucide-calendar' },
 	{ name: 'HubSpot', replaces: 'Unified CRM', icon: 'i-lucide-users' },
 	{ name: 'Lattice', replaces: 'Goal tracking', icon: 'i-lucide-target' },
-	{ name: 'ChatGPT', replaces: 'AI assistant', icon: 'i-lucide-sparkles' },
+	{ name: 'Isolated AI', replaces: 'AI assistant', icon: 'i-lucide-sparkles' },
 ];
 
 const numberWords = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
@@ -221,30 +227,66 @@ const features = [
 ];
 
 const plans = [
-	{
-		name: 'Solo',
-		price: '29',
-		desc: 'For the one-person shop doing serious work.',
-		featured: false,
-		features: ['1 user', 'Unlimited projects', 'Invoicing & Stripe billing', 'Social scheduling (2 accounts)', 'Productivity Engine', 'Health Snapshots (CRM & Marketing)', 'Social AI Generate', 'Goal Suggestions', 'People & Companies CRM', 'CardDesk & E\u00B2 companion apps', '500K AI tokens/month', '5GB storage'],
-		cta: { label: 'Get started', to: '/register' },
-	},
-	{
-		name: 'Team',
-		price: '89',
-		desc: 'For the team that means business.',
-		featured: true,
-		features: ['Up to 10 users', 'Everything in Solo', 'Team channels & video', 'Phone system (Twilio)', 'Social scheduling (10 accounts)', 'Marketing AI Analyze', 'CRM Intelligence (overview + contacts)', 'Email Marketing AI', 'Brand Awareness AI per client', 'AI Token Management (admin controls)', 'Team-based client access control', '5M AI tokens/month', '25GB storage'],
-		cta: { label: 'Start free trial', to: '/register' },
-	},
-	{
-		name: 'Studio',
-		price: '189',
-		desc: 'For the business that\'s grown into something real.',
-		featured: false,
-		features: ['Up to 25 users', 'Everything in Team', 'Custom domain', 'White-label client portal', 'Unlimited social accounts', 'AI Strategy Engine (full suite)', 'CRM Intelligence (all 4 modes)', 'Brand Awareness AI per client & team', 'Comprehensive client data analysis', 'Granular client access with user overrides', '25M AI tokens/month', '100GB storage'],
-		cta: { label: 'Talk to us', to: '/register' },
-	},
+  {
+    name: 'Solo',
+    price: '49',
+    desc: 'For the one-person shop doing serious work.',
+    featured: false,
+    features: [
+      '1 user',
+      'All platform features',
+      'Invoicing & Stripe billing',
+      'Social scheduling',
+      'Productivity Engine',
+      'Health Snapshots (CRM & Marketing)',
+      'Brand Awareness AI',
+      'People & Companies CRM',
+      'CardDesk & E\u00B2 companion apps',
+      '100K AI tokens/month',
+      '25 card scans/month',
+    ],
+    cta: { label: 'Get started', to: '/register' },
+  },
+  {
+    name: 'Studio',
+    price: '149',
+    desc: 'For the team that means business.',
+    featured: true,
+    features: [
+      'Up to 8 users',
+      'Everything in Solo',
+      'Team channels & video',
+      'Phone system',
+      'Marketing AI Analyze',
+      'CRM Intelligence (all modes)',
+      'Email Marketing AI',
+      'Brand Awareness AI per client',
+      'AI Token Management',
+      'Client portal (5 seats)',
+      '400K AI tokens/month',
+      '150 card scans/month',
+    ],
+    cta: { label: 'Start free trial', to: '/register' },
+  },
+  {
+    name: 'Agency',
+    price: '299',
+    desc: 'For the business that has grown into something real.',
+    featured: false,
+    features: [
+      'Up to 15 users',
+      'Everything in Studio',
+      'White-label Companion app',
+      'Unlimited card scans',
+      'Client portal (20 seats)',
+      'AI Strategy Engine (full suite)',
+      'CRM Intelligence (all 4 modes)',
+      'Comprehensive client AI analysis',
+      'Priority support + onboarding call',
+      '1,000,000 AI tokens/month',
+    ],
+    cta: { label: 'Talk to us', to: '/register' },
+  },
 ];
 
 let ctx;
@@ -739,11 +781,11 @@ useHead({
 	margin-bottom: 64px;
 }
 .ai-capabilities {
-	display: grid;
-	grid-template-columns: repeat(3, 1fr);
-	gap: 1px;
-	background: rgba(246,241,231,0.08);
-	border: 1px solid rgba(246,241,231,0.08);
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1px;
+  background: rgba(246,241,231,0.08);
+  border: 1px solid rgba(246,241,231,0.08);
 }
 @media (max-width: 700px) { .ai-capabilities { grid-template-columns: 1fr; } }
 .ai-cap {
