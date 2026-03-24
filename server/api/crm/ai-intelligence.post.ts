@@ -14,6 +14,7 @@
 import { getLLMProvider } from '~/server/utils/llm/factory';
 import { getCRMContext } from '~/server/utils/crm-intelligence';
 import { logAIUsage } from '~/server/utils/ai-usage';
+import { enforceTokenLimits } from '~/server/utils/ai-token-enforcement';
 import type { ChatMessage } from '~/server/utils/llm/types';
 import type {
 	CRMIntelligenceRequest,
@@ -48,6 +49,12 @@ export default defineEventHandler(async (event) => {
 	}
 	if (!body.organizationId) {
 		throw createError({ statusCode: 400, message: 'organizationId is required' });
+	}
+
+	// Enforce AI token limits
+	const tokenCheck = await enforceTokenLimits(event, body.organizationId);
+	if (!tokenCheck.allowed) {
+		throw createError({ statusCode: 429, message: tokenCheck.reason || 'AI token limit reached' });
 	}
 
 	const directus = await getUserDirectus(event);

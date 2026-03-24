@@ -248,8 +248,28 @@
 			</div>
 		</template>
 
+		<!-- Admin Token Management -->
+		<div v-if="canManageAI">
+			<div class="flex items-center justify-between mb-4">
+				<h4 class="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Token Management</h4>
+				<UButton
+					color="gray"
+					variant="ghost"
+					size="xs"
+					:icon="showManagement ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'"
+					@click="showManagement = !showManagement"
+				>
+					{{ showManagement ? 'Hide' : 'Manage' }}
+				</UButton>
+			</div>
+			<OrganizationAITokenManagement
+				v-if="showManagement"
+				:organization-id="organizationId"
+			/>
+		</div>
+
 		<!-- Empty state -->
-		<div v-else class="flex flex-col items-center justify-center py-16">
+		<div v-else-if="!stats" class="flex flex-col items-center justify-center py-16">
 			<div class="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
 				<UIcon name="i-heroicons-sparkles" class="w-6 h-6 text-primary" />
 			</div>
@@ -281,6 +301,11 @@ const userData = ref<any>(null);
 const recentData = ref<any>(null);
 const orgTokenInfo = ref<{ balance: number | null; limit: number | null; used: number; billingPeriodStart: string | null } | null>(null);
 const userBudgets = ref<{ userId: string; name: string; budget: number | null; used: number; isLowUsage: boolean }[]>([]);
+const showManagement = ref(false);
+
+// Check if current user can manage AI settings (owner/admin)
+const { canAccess } = useOrgRole();
+const canManageAI = computed(() => canAccess('org_settings'));
 
 const periods = [
 	{ label: '24h', value: 'day' },

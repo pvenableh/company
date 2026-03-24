@@ -17,6 +17,7 @@ import { createItem, readItems, readItem, updateItem } from '@directus/sdk';
 import { getLLMProvider } from '~/server/utils/llm/factory';
 import { buildSystemPrompt } from '~/server/utils/llm/context';
 import { logAIUsage } from '~/server/utils/ai-usage';
+import { enforceTokenLimits, deductOrgTokens } from '~/server/utils/ai-token-enforcement';
 import type { ChatMessage } from '~/server/utils/llm/types';
 
 export default defineEventHandler(async (event) => {
@@ -33,6 +34,12 @@ export default defineEventHandler(async (event) => {
 
   if (!message?.trim()) {
     throw createError({ statusCode: 400, message: 'Message is required' });
+  }
+
+  // Enforce AI token limits before proceeding
+  const tokenCheck = await enforceTokenLimits(event, organizationId);
+  if (!tokenCheck.allowed) {
+    throw createError({ statusCode: 429, message: tokenCheck.reason || 'AI token limit reached' });
   }
 
   const directus = await getUserDirectus(event);
@@ -262,6 +269,12 @@ export default defineEventHandler(async (event) => {
           organizationId: organizationId,
           metadata: { responseStyle, verbosity },
         }).catch(() => {});
+
+        // Deduct tokens from org balance
+        if (organizationId) {
+          const totalTokens = (streamResult.usage.inputTokens || 0) + (streamResult.usage.outputTokens || 0);
+          deductOrgTokens(organizationId, totalTokens).catch(() => {});
+        }
       }
 
       // 7. Store assistant response
