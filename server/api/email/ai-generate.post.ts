@@ -9,6 +9,7 @@ import { readItems } from '@directus/sdk';
 import { getLLMProvider } from '~/server/utils/llm/factory';
 import { logAIUsage } from '~/server/utils/ai-usage';
 import { enforceTokenLimits } from '~/server/utils/ai-token-enforcement';
+import { getBrandContext } from '~/server/utils/brand-context';
 import type { ChatMessage } from '~/server/utils/llm/types';
 
 interface GenerateRequest {
@@ -142,46 +143,10 @@ Return this exact JSON structure:
 }`;
 
   // Fetch brand context: selected client if provided, otherwise organization
-  let brandContext = '';
-  const clientId = (body as any).clientId;
-  if (body.organizationId || clientId) {
-    try {
-      const parts: string[] = [];
-
-      if (clientId) {
-        const client = await directus.request(readItem('clients', clientId, {
-          fields: ['name', 'brand_direction', 'goals', 'target_audience', 'location'],
-        })).catch(() => null as any);
-        if (client && (client.brand_direction || client.goals || client.target_audience)) {
-          parts.push(`BRAND CONTEXT (Client: ${client.name}):`);
-          if (client.brand_direction) parts.push(`Brand Direction: ${client.brand_direction}`);
-          if (client.goals) parts.push(`Goals: ${client.goals}`);
-          if (client.target_audience) parts.push(`Target Audience: ${client.target_audience}`);
-          if (client.location) parts.push(`Location: ${client.location}`);
-        }
-      }
-
-      // Fall back to org brand if no client brand data
-      if (parts.length === 0 && body.organizationId) {
-        const org = await directus.request(readItem('organizations', body.organizationId, {
-          fields: ['name', 'brand_direction', 'goals', 'target_audience', 'location'],
-        })).catch(() => null as any);
-        if (org && (org.brand_direction || org.goals || org.target_audience)) {
-          parts.push(`BRAND CONTEXT (${org.name || 'Organization'}):`);
-          if (org.brand_direction) parts.push(`Brand Direction: ${org.brand_direction}`);
-          if (org.goals) parts.push(`Goals: ${org.goals}`);
-          if (org.target_audience) parts.push(`Target Audience: ${org.target_audience}`);
-          if (org.location) parts.push(`Location: ${org.location}`);
-        }
-      }
-
-      if (parts.length > 0) {
-        brandContext = '\n\n' + parts.join('\n');
-      }
-    } catch {
-      // Brand context is non-critical
-    }
-  }
+  const brandContext = await getBrandContext(event, {
+    clientId: body.clientId,
+    organizationId: body.organizationId,
+  });
 
   const userMessage = buildUserMessage(body) + brandContext;
 

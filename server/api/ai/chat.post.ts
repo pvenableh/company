@@ -13,11 +13,12 @@
  * Final event includes the full response and session metadata.
  */
 
-import { createItem, readItems, readItem, updateItem } from '@directus/sdk';
+import { createItem, readItems, updateItem } from '@directus/sdk';
 import { getLLMProvider } from '~/server/utils/llm/factory';
 import { buildSystemPrompt } from '~/server/utils/llm/context';
 import { logAIUsage } from '~/server/utils/ai-usage';
 import { enforceTokenLimits, deductOrgTokens } from '~/server/utils/ai-token-enforcement';
+import { getBrandContext } from '~/server/utils/brand-context';
 import type { ChatMessage } from '~/server/utils/llm/types';
 
 export default defineEventHandler(async (event) => {
@@ -141,40 +142,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // 5b. Fetch brand context for the selected client or organization
-    let brandContext = '';
-    try {
-      if (clientId) {
-        const client = await directus.request(
-          readItem('clients', clientId, {
-            fields: ['name', 'brand_direction', 'goals', 'target_audience', 'location'],
-          }),
-        ) as any;
-        if (client) {
-          const parts: string[] = [`\n\nSELECTED CLIENT: ${client.name}`];
-          if (client.brand_direction) parts.push(`Brand Direction: ${client.brand_direction}`);
-          if (client.goals) parts.push(`Goals: ${client.goals}`);
-          if (client.target_audience) parts.push(`Target Audience: ${client.target_audience}`);
-          if (client.location) parts.push(`Location: ${client.location}`);
-          brandContext = parts.join('\n');
-        }
-      } else if (organizationId) {
-        const org = await directus.request(
-          readItem('organizations', organizationId, {
-            fields: ['name', 'brand_direction', 'goals', 'target_audience', 'location'],
-          }),
-        ) as any;
-        if (org) {
-          const parts: string[] = [`\n\nORGANIZATION CONTEXT: ${org.name}`];
-          if (org.brand_direction) parts.push(`Brand Direction: ${org.brand_direction}`);
-          if (org.goals) parts.push(`Goals: ${org.goals}`);
-          if (org.target_audience) parts.push(`Target Audience: ${org.target_audience}`);
-          if (org.location) parts.push(`Location: ${org.location}`);
-          brandContext = parts.join('\n');
-        }
-      }
-    } catch {
-      // Brand context is non-critical — continue without
-    }
+    const brandContext = await getBrandContext(event, { clientId, organizationId });
 
     // Build response style instruction
     let styleContext = '';
