@@ -269,6 +269,23 @@ const isUUID = (str) => typeof str === 'string' && UUID_RE.test(str.trim());
 // ── Build a human-readable title when the raw title is missing or a UUID ──
 const truncate = (str, max = 60) => str.length > max ? str.slice(0, max - 3) + '…' : str;
 
+// ── HTML detection + sanitization for rich-text fields ──
+const containsHtml = (str) => /<[a-z][\s\S]*>/i.test(str);
+
+const sanitizeHtml = (html) => {
+	if (!html) return '';
+	try {
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(html, 'text/html');
+		for (const tag of ['script', 'iframe', 'object', 'embed', 'style']) {
+			doc.querySelectorAll(tag).forEach((el) => el.remove());
+		}
+		return doc.body.innerHTML;
+	} catch {
+		return '';
+	}
+};
+
 const humanizeItemTitle = (act, itemData) => {
 	const raw = itemData?.title || itemData?.invoice_code || itemData?.name || itemData?.subject || '';
 	if (raw && !isUUID(raw)) return raw;
@@ -656,16 +673,18 @@ watch(selectedOrg, () => {
 							</span>
 						</div>
 
-						<!-- Item title (clickable) -->
+						<!-- Item title (clickable) — render HTML when present (e.g. rich-text descriptions) -->
 						<NuxtLink
 							v-if="getItemRoute(item)"
 							:to="getItemRoute(item)"
 							class="text-[15px] font-semibold text-foreground hover:text-primary transition-colors leading-snug"
 						>
-							{{ item.itemTitle }}
+							<span v-if="containsHtml(item.itemTitle)" v-html="sanitizeHtml(item.itemTitle)" />
+							<template v-else>{{ item.itemTitle }}</template>
 						</NuxtLink>
 						<p v-else class="text-[15px] font-semibold text-foreground leading-snug">
-							{{ item.itemTitle }}
+							<span v-if="containsHtml(item.itemTitle)" v-html="sanitizeHtml(item.itemTitle)" />
+							<template v-else>{{ item.itemTitle }}</template>
 						</p>
 
 						<!-- Motivational flavor text for milestones -->
@@ -674,7 +693,10 @@ watch(selectedOrg, () => {
 						</p>
 
 						<!-- CardDesk activity note (left column, text content) -->
-						<p v-if="item.collection === 'cd_activities' && item.itemData?.note" class="text-xs text-muted-foreground mt-1 line-clamp-2">{{ item.itemData.note }}</p>
+						<p v-if="item.collection === 'cd_activities' && item.itemData?.note" class="text-xs text-muted-foreground mt-1 line-clamp-2">
+							<span v-if="containsHtml(item.itemData.note)" v-html="sanitizeHtml(item.itemData.note)" />
+							<template v-else>{{ item.itemData.note }}</template>
+						</p>
 					</div>
 
 					<!-- Right column: detail badges -->
