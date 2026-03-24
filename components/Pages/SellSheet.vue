@@ -25,10 +25,6 @@
 				<nuxt-link to="/register" class="btn-ink">Start for free</nuxt-link>
 				<nuxt-link to="#features" class="btn-ghost">See how it works</nuxt-link>
 			</div>
-			<div class="hero-scroll opacity-0">
-				<div class="scroll-line"></div>
-				<span class="scroll-label">scroll</span>
-			</div>
 		</section>
 
 		<!-- Marquee -->
@@ -287,7 +283,7 @@ const replacedTools = [
 	{ name: 'Mailchimp', replaces: 'Email marketing', icon: 'i-lucide-mail' },
 	{ name: 'Hootsuite', replaces: 'Social scheduling', icon: 'i-lucide-calendar-clock' },
 	{ name: 'Slack', replaces: 'Team messaging', icon: 'i-lucide-message-square' },
-	{ name: 'Ooma', replaces: 'Phone system', icon: 'i-lucide-phone' },
+	{ name: 'Dialpad', replaces: 'Phone system', icon: 'i-lucide-phone' },
 	{ name: 'Zoom', replaces: 'Video meetings', icon: 'i-lucide-video' },
 	{ name: 'Calendly', replaces: 'Scheduling', icon: 'i-lucide-calendar' },
 	{ name: 'HubSpot', replaces: 'Unified CRM', icon: 'i-lucide-users' },
@@ -478,8 +474,7 @@ onMounted(() => {
 			)
 			.fromTo('.hero-tagline', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' }, '-=0.3')
 			.fromTo('.hero-sub', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' }, '-=0.5')
-			.fromTo('.hero-actions', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' }, '-=0.5')
-			.fromTo('.hero-scroll', { opacity: 0 }, { opacity: 1, duration: 0.6, ease: 'power3.out' }, '-=0.2');
+			.fromTo('.hero-actions', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' }, '-=0.5');
 
 		// Hero word cycle — "Do good work." stays visible longer as the hero statement
 		if (heroCycleRef.value) {
@@ -501,16 +496,6 @@ onMounted(() => {
 					.to({}, { duration: isLastWord ? 2 : 0.8 });
 			});
 		}
-
-		// Scroll line pulse
-		gsap.to('.scroll-line', {
-			scaleY: 0.6,
-			opacity: 0.3,
-			duration: 2,
-			repeat: -1,
-			yoyo: true,
-			ease: 'power2.inOut',
-		});
 
 		// Section reveal helper — faster animations, earlier trigger
 		const revealElements = (sectionRef, selector) => {
@@ -616,6 +601,7 @@ useHead({
 	color: var(--ink);
 	font-family: var(--font-proxima-light);
 	-webkit-font-smoothing: antialiased;
+	margin-top: -5rem;
 }
 .bp {
 	color: var(--accent);
@@ -625,13 +611,13 @@ useHead({
 
 /* ─── HERO ─── */
 .earnest-hero {
-	min-height: 100svh;
+	min-height: calc(100svh - 70px);
 	display: flex;
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
 	text-align: center;
-	padding: 80px 24px 80px;
+	padding: 140px 24px 80px;
 	position: relative;
 	background: var(--paper);
 }
@@ -726,29 +712,6 @@ useHead({
 	color: var(--ink);
 }
 
-.hero-scroll {
-	position: absolute;
-	bottom: 80px;
-	left: 50%;
-	transform: translateX(-50%);
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: 8px;
-}
-.scroll-line {
-	width: 1px;
-	height: 48px;
-	background: var(--muted);
-	transform-origin: top;
-}
-.scroll-label {
-	font-family: var(--font-proxima-light);
-	font-style: italic;
-	font-size: 11px;
-	color: var(--muted);
-	letter-spacing: 0.1em;
-}
 
 /* ─── MARQUEE ─── */
 .marquee-wrap {
@@ -824,9 +787,15 @@ useHead({
 	background: var(--rule);
 	border: 1px solid var(--rule);
 }
+.replaces-item:last-child {
+	grid-column: 1 / -1;
+}
 @media (max-width: 700px) {
 	.replaces-grid {
 		grid-template-columns: repeat(2, 1fr);
+	}
+	.replaces-item:last-child {
+		grid-column: auto;
 	}
 }
 .replaces-item {
