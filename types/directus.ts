@@ -940,6 +940,14 @@ export interface Client {
 	folder?: string | null;
 	/** @description Billing contact emails for invoice delivery */
 	billing_contacts?: Array<{ name: string; email: string }> | null;
+	/** @description Primary billing email for invoice delivery */
+	billing_email?: string | null;
+	/** @description Billing contact name (AP department, accounts payable contact) */
+	billing_name?: string | null;
+	/** @description Billing/mailing address */
+	billing_address?: string | null;
+	/** @description Payment terms for invoices (e.g., net_30, net_15, due_on_receipt) */
+	payment_terms?: 'due_on_receipt' | 'net_15' | 'net_30' | 'net_45' | 'net_60' | null;
 	/** @description Short code for invoice numbering (e.g., ABC, XYZ) */
 	code?: string | null;
 	/** @description Voice, visual style, positioning for this client */
@@ -1399,6 +1407,12 @@ export interface Invoice {
 	melio?: string | null;
 	/** @description The client this invoice is for */
 	client?: Client | string | null;
+	/** @description Snapshot: billing email at time of invoicing */
+	billing_email?: string | null;
+	/** @description Snapshot: billing contact name at time of invoicing */
+	billing_name?: string | null;
+	/** @description Snapshot: billing address at time of invoicing */
+	billing_address?: string | null;
 	/** @required */
 	line_items: LineItem[] | string[];
 	payments?: PaymentsReceived[] | string[];

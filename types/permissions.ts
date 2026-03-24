@@ -20,7 +20,8 @@ export type FeatureKey =
   | 'team_management'
   | 'member_management'
   | 'ar_clients'
-  | 'expenses';
+  | 'expenses'
+  | 'ai_usage';
 
 // ── Feature Permission ────────────────────────────────────────────────────────
 // Each feature can be toggled on/off and have CRUD flags.
@@ -64,6 +65,7 @@ export const FEATURE_KEYS: FeatureKey[] = [
   'member_management',
   'ar_clients',
   'expenses',
+  'ai_usage',
 ];
 
 // ── Human-readable labels for features ───────────────────────────────────────
@@ -88,6 +90,7 @@ export const FEATURE_LABELS: Record<FeatureKey, string> = {
   member_management: 'Member Management',
   ar_clients: 'AR Clients',
   expenses: 'Expenses',
+  ai_usage: 'AI Usage',
 };
 
 // ── Helper: full CRUD access ─────────────────────────────────────────────────
@@ -152,6 +155,7 @@ const OWNER_PERMISSIONS: PermissionMatrix = {
   member_management: full(),
   ar_clients: full(),
   expenses: full(),
+  ai_usage: full(),
 };
 
 // ── Admin ─────────────────────────────────────────────────────────────────────
@@ -177,6 +181,7 @@ const ADMIN_PERMISSIONS: PermissionMatrix = {
   member_management: full(),
   ar_clients: full(),
   expenses: full(),
+  ai_usage: full(),
 };
 
 // ── Manager ───────────────────────────────────────────────────────────────────
@@ -202,6 +207,7 @@ const MANAGER_PERMISSIONS: PermissionMatrix = {
   member_management: readOnly(),
   ar_clients: custom({ access: true, create: true, read: true, update: true }),
   expenses: custom({ access: true, create: true, read: true, update: true }),
+  ai_usage: readOnly(),
 };
 
 // ── Member ────────────────────────────────────────────────────────────────────
@@ -227,6 +233,7 @@ const MEMBER_PERMISSIONS: PermissionMatrix = {
   member_management: noAccess(),
   ar_clients: noAccess(),
   expenses: custom({ access: true, create: true, read: true, update: true }),
+  ai_usage: noAccess(),
 };
 
 // ── Client ────────────────────────────────────────────────────────────────────
@@ -252,6 +259,7 @@ const CLIENT_PERMISSIONS: PermissionMatrix = {
   member_management: noAccess(),
   ar_clients: noAccess(),
   expenses: noAccess(),
+  ai_usage: noAccess(),
 };
 
 // ── Exported map ──────────────────────────────────────────────────────────────

@@ -125,7 +125,12 @@ function formatAmount(value: number | null | undefined): string {
   return formatCurrency(Number(value) || 0);
 }
 
-function getBillToName(inv: Invoice): string {
+function getDisplayName(inv: Invoice): string {
+  // Prefer client name (the actual billing target), fall back to bill_to org
+  const client = inv.client;
+  if (client && typeof client === 'object' && (client as any).name) {
+    return (client as any).name;
+  }
   if (!inv.bill_to) return '\u2014';
   if (typeof inv.bill_to === 'string') return inv.bill_to;
   return (inv.bill_to as any).name || '\u2014';
@@ -261,7 +266,7 @@ watch(() => selectedClient.value, () => {
                 <td class="py-3 px-4">
                   <span class="font-medium">{{ inv.invoice_code || 'No Code' }}</span>
                 </td>
-                <td class="py-3 px-4 text-muted-foreground">{{ getBillToName(inv) }}</td>
+                <td class="py-3 px-4 text-muted-foreground">{{ getDisplayName(inv) }}</td>
                 <td class="py-3 px-4">
                   <span
                     class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize"
@@ -319,7 +324,7 @@ watch(() => selectedClient.value, () => {
                   {{ inv.status }}
                 </span>
               </div>
-              <p class="text-xs text-muted-foreground truncate">{{ getBillToName(inv) }}</p>
+              <p class="text-xs text-muted-foreground truncate">{{ getDisplayName(inv) }}</p>
             </div>
             <p class="text-sm font-semibold ml-3 shrink-0">{{ formatAmount(inv.total_amount) }}</p>
           </div>
@@ -412,7 +417,7 @@ watch(() => selectedClient.value, () => {
                         {{ inv.status }}
                       </span>
                     </div>
-                    <p class="text-xs text-muted-foreground/60 truncate">{{ getBillToName(inv) }}</p>
+                    <p class="text-xs text-muted-foreground/60 truncate">{{ getDisplayName(inv) }}</p>
                   </div>
                   <p class="text-sm font-medium text-muted-foreground ml-3 shrink-0">{{ formatAmount(inv.total_amount) }}</p>
                 </div>

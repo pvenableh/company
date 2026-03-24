@@ -3,39 +3,27 @@
  *
  * Query params:
  *   period: 'day' | 'week' | 'month' (default: 'month')
- *   organizationId: string (optional)
+ *   organizationId: string (required)
  */
-import { readItems, aggregate } from '@directus/sdk';
+import { readItems } from '@directus/sdk';
+import type { AiUsagePeriod } from '~/server/utils/ai-date-range';
 
 export default defineEventHandler(async (event) => {
-  const session = await requireUserSession(event);
-  const userId = (session as any).user?.id;
-  if (!userId) {
-    throw createError({ statusCode: 401, message: 'Authentication required' });
-  }
-
   const query = getQuery(event);
-  const period = (query.period as string) || 'month';
-  const organizationId = query.organizationId as string | undefined;
+  const period = (query.period as AiUsagePeriod) || 'month';
+  const organizationId = query.organizationId as string;
 
-  const directus = await getUserDirectus(event);
-
-  // Calculate date range
-  const now = new Date();
-  const startDate = new Date();
-  if (period === 'day') startDate.setDate(now.getDate() - 1);
-  else if (period === 'week') startDate.setDate(now.getDate() - 7);
-  else startDate.setMonth(now.getMonth() - 1);
-
-  const filter: any = {
-    date_created: { _gte: startDate.toISOString() },
-  };
-  if (organizationId) {
-    filter.organization = { _eq: organizationId };
+  if (!organizationId) {
+    throw createError({ statusCode: 400, message: 'organizationId is required' });
   }
+
+  // Permission gate — user must have ai_usage:read for this org
+  await requireOrgPermission(event, organizationId, 'ai_usage', 'read');
+
+  const directus = getTypedDirectus();
+  const filter = buildAiUsageFilter(organizationId, period);
 
   try {
-    // Get all logs for the period
     const logs = await directus.request(
       readItems('ai_usage_logs', {
         filter,
@@ -45,22 +33,30 @@ export default defineEventHandler(async (event) => {
     ) as any[];
 
     const totalRequests = logs.length;
+    const totalInput = logs.reduce((sum, l) => sum + (l.input_tokens || 0), 0);
+    const totalOutput = logs.reduce((sum, l) => sum + (l.output_tokens || 0), 0);
     const totalTokens = logs.reduce((sum, l) => sum + (l.total_tokens || 0), 0);
     const totalCost = logs.reduce((sum, l) => sum + (l.estimated_cost || 0), 0);
     const uniqueUsers = new Set(logs.map(l => (typeof l.user === 'object' && l.user !== null ? l.user.id : l.user))).size;
-    const totalInput = logs.reduce((sum, l) => sum + (l.input_tokens || 0), 0);
-    const totalOutput = logs.reduce((sum, l) => sum + (l.output_tokens || 0), 0);
 
     // Daily breakdown for charts
     const dailyMap = new Map<string, { input: number; output: number; requests: number; cost: number }>();
     for (const log of logs) {
       const day = log.date_created?.substring(0, 10) || 'unknown';
-      const existing = dailyMap.get(day) || { input: 0, output: 0, requests: 0, cost: 0 };
-      existing.input += log.input_tokens || 0;
-      existing.output += log.output_tokens || 0;
-      existing.requests += 1;
-      existing.cost += log.estimated_cost || 0;
-      dailyMap.set(day, existing);
+      const existing = dailyMap.get(day);
+      if (existing) {
+        existing.input += log.input_tokens || 0;
+        existing.output += log.output_tokens || 0;
+        existing.requests += 1;
+        existing.cost += log.estimated_cost || 0;
+      } else {
+        dailyMap.set(day, {
+          input: log.input_tokens || 0,
+          output: log.output_tokens || 0,
+          requests: 1,
+          cost: log.estimated_cost || 0,
+        });
+      }
     }
 
     const daily = Array.from(dailyMap.entries())

@@ -2,34 +2,25 @@
  * AI Usage by Endpoint — Per-feature token breakdown.
  *
  * Query params:
- *   organizationId: string (optional)
+ *   organizationId: string (required)
  *   period: 'week' | 'month' | 'all' (default: 'month')
  */
 import { readItems } from '@directus/sdk';
+import type { AiUsagePeriod } from '~/server/utils/ai-date-range';
 
 export default defineEventHandler(async (event) => {
-  const session = await requireUserSession(event);
-  const userId = (session as any).user?.id;
-  if (!userId) {
-    throw createError({ statusCode: 401, message: 'Authentication required' });
-  }
-
   const query = getQuery(event);
-  const organizationId = query.organizationId as string | undefined;
-  const period = (query.period as string) || 'month';
+  const organizationId = query.organizationId as string;
+  const period = (query.period as AiUsagePeriod) || 'month';
 
-  const directus = await getUserDirectus(event);
+  if (!organizationId) {
+    throw createError({ statusCode: 400, message: 'organizationId is required' });
+  }
 
-  const filter: any = {};
-  if (period !== 'all') {
-    const startDate = new Date();
-    if (period === 'week') startDate.setDate(startDate.getDate() - 7);
-    else startDate.setMonth(startDate.getMonth() - 1);
-    filter.date_created = { _gte: startDate.toISOString() };
-  }
-  if (organizationId) {
-    filter.organization = { _eq: organizationId };
-  }
+  await requireOrgPermission(event, organizationId, 'ai_usage', 'read');
+
+  const directus = getTypedDirectus();
+  const filter = buildAiUsageFilter(organizationId, period);
 
   try {
     const logs = await directus.request(
@@ -40,7 +31,6 @@ export default defineEventHandler(async (event) => {
       }),
     ) as any[];
 
-    // Friendly endpoint labels
     const endpointLabels: Record<string, string> = {
       'ai/chat': 'AI Chat',
       'marketing/ai-analyze': 'Marketing Intelligence',
@@ -52,13 +42,22 @@ export default defineEventHandler(async (event) => {
     const endpointMap = new Map<string, { totalTokens: number; inputTokens: number; outputTokens: number; requests: number; cost: number }>();
     for (const log of logs) {
       const ep = log.endpoint;
-      const existing = endpointMap.get(ep) || { totalTokens: 0, inputTokens: 0, outputTokens: 0, requests: 0, cost: 0 };
-      existing.totalTokens += log.total_tokens || 0;
-      existing.inputTokens += log.input_tokens || 0;
-      existing.outputTokens += log.output_tokens || 0;
-      existing.requests += 1;
-      existing.cost += log.estimated_cost || 0;
-      endpointMap.set(ep, existing);
+      const existing = endpointMap.get(ep);
+      if (existing) {
+        existing.totalTokens += log.total_tokens || 0;
+        existing.inputTokens += log.input_tokens || 0;
+        existing.outputTokens += log.output_tokens || 0;
+        existing.requests += 1;
+        existing.cost += log.estimated_cost || 0;
+      } else {
+        endpointMap.set(ep, {
+          totalTokens: log.total_tokens || 0,
+          inputTokens: log.input_tokens || 0,
+          outputTokens: log.output_tokens || 0,
+          requests: 1,
+          cost: log.estimated_cost || 0,
+        });
+      }
     }
 
     const endpoints = Array.from(endpointMap.entries())

@@ -1,20 +1,21 @@
 <template>
   <form @submit.prevent="handleSubmit" class="space-y-5">
-    <!-- Row 1: Bill To + Client -->
+    <!-- Row 1: Client (primary billing target) -->
     <div class="grid grid-cols-2 gap-4">
       <div>
-        <label class="block text-sm font-medium mb-1">Bill To *</label>
-        <select v-model="formData.bill_to" required class="w-full rounded-md border bg-background px-3 py-2 text-sm">
-          <option value="">Select organization...</option>
-          <option v-for="org in orgs" :key="org.id" :value="org.id">{{ org.name }}</option>
+        <label class="block text-sm font-medium mb-1">Client *</label>
+        <select v-model="formData.client" required class="w-full rounded-md border bg-background px-3 py-2 text-sm">
+          <option :value="null" disabled>Select client...</option>
+          <option v-for="c in clientOptions" :key="c.value" :value="c.value">{{ c.label }}</option>
         </select>
       </div>
       <div>
-        <label class="block text-sm font-medium mb-1">Client</label>
-        <select v-model="formData.client" class="w-full rounded-md border bg-background px-3 py-2 text-sm">
-          <option :value="null">None</option>
-          <option v-for="c in clientOptions" :key="c.value" :value="c.value">{{ c.label }}</option>
+        <label class="block text-sm font-medium mb-1">Organization</label>
+        <select v-model="formData.bill_to" class="w-full rounded-md border bg-background px-3 py-2 text-sm" :disabled="!!formData.client">
+          <option value="">Auto (from client)</option>
+          <option v-for="org in orgs" :key="org.id" :value="org.id">{{ org.name }}</option>
         </select>
+        <p v-if="formData.client" class="text-[10px] text-muted-foreground mt-0.5">Auto-set from client</p>
       </div>
     </div>
 
@@ -99,6 +100,32 @@
       />
     </div>
 
+    <!-- CC / Additional Recipients -->
+    <div>
+      <label class="block text-sm font-medium mb-1">Email Recipients (CC)</label>
+      <div class="flex flex-wrap gap-1.5 min-h-[38px] w-full rounded-md border bg-background px-3 py-2 text-sm items-center">
+        <span
+          v-for="(email, i) in ccEmails"
+          :key="i"
+          class="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2.5 py-0.5 text-xs"
+        >
+          {{ email }}
+          <button type="button" class="hover:text-destructive" @click="removeCcEmail(i)">
+            <Icon name="lucide:x" class="w-3 h-3" />
+          </button>
+        </span>
+        <input
+          v-model="ccInput"
+          class="flex-1 min-w-[160px] bg-transparent outline-none text-sm placeholder:text-muted-foreground"
+          placeholder="Add email and press Enter..."
+          @keydown.enter.prevent="addCcEmail"
+          @keydown.tab.prevent="addCcEmail"
+          @blur="addCcEmail"
+        />
+      </div>
+      <p class="text-[10px] text-muted-foreground mt-0.5">Additional people to CC when the invoice is sent</p>
+    </div>
+
     <!-- Line Items -->
     <div>
       <div class="flex items-center justify-between mb-3">
@@ -177,7 +204,7 @@ const statusOptions = [
 
 // --- Fetch dropdown data ---
 const { organizations } = useOrganization();
-const { getClientOptions } = useClients();
+const { getClientOptions, getClients } = useClients();
 const { getProducts, generateInvoiceCode } = useInvoices();
 const projectItems = useDirectusItems('projects');
 
@@ -209,6 +236,29 @@ const formData = reactive({
   memo: props.invoice?.memo || '',
   melio: props.invoice?.melio || '',
 });
+
+// --- CC emails state ---
+const ccEmails = ref<string[]>(
+  Array.isArray(props.invoice?.emails) ? [...props.invoice.emails] : []
+);
+const ccInput = ref('');
+
+function addCcEmail() {
+  const raw = ccInput.value.trim().toLowerCase();
+  if (!raw) return;
+  // Support comma/semicolon-separated paste
+  const parts = raw.split(/[,;\s]+/).filter(Boolean);
+  for (const part of parts) {
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(part) && !ccEmails.value.includes(part)) {
+      ccEmails.value.push(part);
+    }
+  }
+  ccInput.value = '';
+}
+
+function removeCcEmail(index: number) {
+  ccEmails.value.splice(index, 1);
+}
 
 // --- Line items state ---
 let keyCounter = 0;
@@ -284,6 +334,7 @@ function handleSubmit() {
     melio: formData.melio || undefined,
     client: formData.client || undefined,
     project: formData.project || undefined,
+    emails: ccEmails.value.length ? ccEmails.value : [],
   };
 
   if (props.invoice) {
@@ -344,14 +395,23 @@ const autoGenerateCode = async () => {
   }
 };
 
-watch(() => formData.client, autoGenerateCode);
+// Auto-derive bill_to from client's organization
+const clientLookup = ref<Map<string, string>>(new Map());
+
+watch(() => formData.client, (clientId) => {
+  autoGenerateCode();
+  if (clientId && clientLookup.value.has(clientId)) {
+    formData.bill_to = clientLookup.value.get(clientId) || '';
+  }
+});
 watch(() => formData.invoice_date, autoGenerateCode);
 
 // --- Fetch dropdown data on mount ---
 onMounted(async () => {
   try {
-    const [clientOpts, prods, projs] = await Promise.all([
+    const [clientOpts, allClients, prods, projs] = await Promise.all([
       getClientOptions(),
+      getClients({ limit: 500 }),
       getProducts(),
       projectItems.list({
         fields: ['id', 'title'],
@@ -362,6 +422,17 @@ onMounted(async () => {
     clientOptions.value = clientOpts;
     productsList.value = prods;
     projects.value = projs;
+
+    // Build client → organization lookup for auto-deriving bill_to
+    for (const c of allClients || []) {
+      const orgId = typeof c.organization === 'object' ? c.organization?.id : c.organization;
+      if (orgId) clientLookup.value.set(c.id, orgId);
+    }
+
+    // Auto-set bill_to if client is already selected (edit mode)
+    if (formData.client && clientLookup.value.has(formData.client)) {
+      formData.bill_to = clientLookup.value.get(formData.client) || formData.bill_to;
+    }
   } catch (err) {
     console.error('Failed to load form data:', err);
   }
