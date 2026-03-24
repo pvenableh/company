@@ -80,6 +80,91 @@ const actionLabels = {
 	delete: 'deleted',
 };
 
+// ── Fun, collection-aware action phrases ──
+const actionPhrases = {
+	projects:      { create: 'Kicked off',      update: 'Made progress on' },
+	tickets:       { create: 'Opened',           update: 'Moved forward on' },
+	project_tasks: { create: 'Lined up',         update: 'Worked on' },
+	tasks:         { create: 'Added',            update: 'Tackled' },
+	invoices:      { create: 'Drafted',          update: 'Updated' },
+	emails:        { create: 'Composed',         update: 'Refined' },
+	contacts:      { create: 'Connected with',   update: 'Updated' },
+	cd_contacts:   { create: 'Connected with',   update: 'Updated' },
+	cd_activities: { create: 'Logged',           update: 'Updated' },
+	clients:       { create: 'Welcomed',         update: 'Updated' },
+};
+
+const getActionPhrase = (item) => {
+	const phrase = actionPhrases[item.collection]?.[item.action];
+	if (phrase) return phrase;
+	return (actionLabels[item.action] || item.action).replace(/^\w/, (c) => c.toUpperCase());
+};
+
+// ── Milestone flavor text – short motivational one-liners ──
+const flavorTexts = {
+	taskCompleted: [
+		'Another one done — nice work!',
+		'Checked off and crushing it!',
+		'One less thing on the list!',
+		'Progress feels good, right?',
+		'That\'s momentum right there!',
+	],
+	projectCreated: [
+		'New adventures ahead!',
+		'Fresh canvas, let\'s go!',
+		'Big things start here.',
+	],
+	clientCreated: [
+		'Growing the network!',
+		'New relationship unlocked!',
+		'Welcome to the crew!',
+	],
+	invoiceCreated: [
+		'Money moves!',
+		'Get that bread!',
+		'Cha-ching incoming!',
+	],
+	emailSent: [
+		'Message delivered!',
+		'Sent and sealed!',
+		'Off it goes!',
+	],
+	contactCreated: [
+		'New connection made!',
+		'Building bridges!',
+	],
+	ticketCreated: [
+		'On it!',
+		'Tracked and ready to roll!',
+	],
+};
+
+const pickFlavor = (pool, seed) => {
+	if (!pool || pool.length === 0) return '';
+	// Use a simple hash of the seed for consistent but varied picks
+	let hash = 0;
+	for (let i = 0; i < seed.length; i++) hash = ((hash << 5) - hash + seed.charCodeAt(i)) | 0;
+	return pool[Math.abs(hash) % pool.length];
+};
+
+const getFlavorText = (item) => {
+	const id = item.id || '';
+	// Task completed
+	if (item.collection === 'tasks' && item.itemData?.status === 'completed') return pickFlavor(flavorTexts.taskCompleted, id);
+	if (item.collection === 'project_tasks' && item.itemData?.completed) return pickFlavor(flavorTexts.taskCompleted, id);
+	// Creates
+	if (item.action === 'create') {
+		if (item.collection === 'projects') return pickFlavor(flavorTexts.projectCreated, id);
+		if (item.collection === 'clients') return pickFlavor(flavorTexts.clientCreated, id);
+		if (item.collection === 'invoices') return pickFlavor(flavorTexts.invoiceCreated, id);
+		if (item.collection === 'tickets') return pickFlavor(flavorTexts.ticketCreated, id);
+		if (item.collection === 'contacts' || item.collection === 'cd_contacts') return pickFlavor(flavorTexts.contactCreated, id);
+	}
+	// Email sent
+	if (item.collection === 'emails' && item.itemData?.status === 'sent') return pickFlavor(flavorTexts.emailSent, id);
+	return '';
+};
+
 // Action icons now driven by useTimelineTheme() — see themedActionIcons above
 const actionIcons = themedActionIcons;
 
@@ -177,6 +262,90 @@ const fetchActivityPage = async (pageNum) => {
 	return enriched;
 };
 
+// ── UUID detection ──
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isUUID = (str) => typeof str === 'string' && UUID_RE.test(str.trim());
+
+// ── Build a human-readable title when the raw title is missing or a UUID ──
+const truncate = (str, max = 60) => str.length > max ? str.slice(0, max - 3) + '…' : str;
+
+const humanizeItemTitle = (act, itemData) => {
+	const raw = itemData?.title || itemData?.invoice_code || itemData?.name || itemData?.subject || '';
+	if (raw && !isUUID(raw)) return raw;
+
+	const label = collectionLabels[act.collection] || act.collection;
+
+	// ── Quick tasks ──
+	if (act.collection === 'tasks' && itemData) {
+		if (itemData.description && !isUUID(itemData.description)) return truncate(itemData.description);
+		const parts = [];
+		if (itemData.status === 'completed') parts.push('Completed');
+		if (itemData.priority && itemData.priority !== 'medium') {
+			parts.push(itemData.priority.charAt(0).toUpperCase() + itemData.priority.slice(1) + ' Priority');
+		}
+		if (itemData.schedule && itemData.schedule !== 'unscheduled') {
+			const scheduleMap = { today: 'Today', week: 'This Week', later: 'Later' };
+			parts.push(scheduleMap[itemData.schedule] || itemData.schedule);
+		}
+		if (parts.length > 0) return `${label} · ${parts.join(' · ')}`;
+		return label;
+	}
+
+	// ── Project tasks ──
+	if (act.collection === 'project_tasks' && itemData) {
+		if (itemData.completed) return `${label} · Done`;
+		if (itemData.status) return `${label} · ${itemData.status.replace(/[_-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}`;
+		return label;
+	}
+
+	// ── Contacts ──
+	if ((act.collection === 'contacts' || act.collection === 'cd_contacts') && itemData) {
+		const fullName = [itemData.first_name, itemData.last_name].filter(Boolean).join(' ');
+		if (fullName) return fullName;
+		if (itemData.email) return itemData.email;
+		if (itemData.company) return `Contact at ${itemData.company}`;
+		return act.action === 'create' ? 'New Contact' : label;
+	}
+
+	// ── Clients ──
+	if (act.collection === 'clients' && itemData) {
+		if (itemData.industry) return `${label} · ${itemData.industry}`;
+		return act.action === 'create' ? 'New Client' : label;
+	}
+
+	// ── Invoices ──
+	if (act.collection === 'invoices' && itemData) {
+		if (itemData.status) return `Invoice · ${itemData.status.replace(/\b\w/g, c => c.toUpperCase())}`;
+		return act.action === 'create' ? 'New Invoice' : 'Invoice';
+	}
+
+	// ── Emails ──
+	if (act.collection === 'emails' && itemData) {
+		if (itemData.status === 'sent') return 'Sent Email';
+		if (itemData.status === 'draft') return 'Draft Email';
+		return act.action === 'create' ? 'New Email' : 'Email';
+	}
+
+	// ── CardDesk activities ──
+	if (act.collection === 'cd_activities' && itemData) {
+		if (itemData.type) return itemData.type.replace(/[_-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+		return act.action === 'create' ? 'New Activity' : 'Activity';
+	}
+
+	// ── Projects ──
+	if (act.collection === 'projects') {
+		return act.action === 'create' ? 'New Project' : 'Project';
+	}
+
+	// ── Tickets ──
+	if (act.collection === 'tickets') {
+		return act.action === 'create' ? 'New Ticket' : 'Ticket';
+	}
+
+	// ── Generic fallback ──
+	return act.action === 'create' ? `New ${label}` : label;
+};
+
 // ── Enrich activities with item context ──
 const enrichActivities = async (activities) => {
 	// Group items by collection for batch lookup
@@ -194,7 +363,7 @@ const enrichActivities = async (activities) => {
 			let fields = ['id', 'title'];
 			if (collection === 'invoices') fields = ['id', 'invoice_code', 'status'];
 			if (collection === 'project_tasks') fields = ['id', 'title', 'completed', 'status'];
-			if (collection === 'tasks') fields = ['id', 'title', 'status', 'date_completed'];
+			if (collection === 'tasks') fields = ['id', 'title', 'description', 'status', 'priority', 'schedule', 'date_completed'];
 			if (collection === 'emails') fields = ['id', 'name', 'subject', 'status', 'total_recipients', 'sent_at'];
 			if (collection === 'cd_contacts') fields = ['id', 'name', 'first_name', 'last_name', 'company', 'rating', 'is_client'];
 			if (collection === 'cd_activities') fields = ['id', 'type', 'label', 'note', 'contact'];
@@ -221,12 +390,7 @@ const enrichActivities = async (activities) => {
 	// Build enriched timeline entries
 	return activities.map((act) => {
 		const itemData = itemCache[`${act.collection}:${act.item}`];
-		let itemTitle = itemData?.title || itemData?.invoice_code || itemData?.name || itemData?.subject || `#${act.item}`;
-		// Build display name for contacts
-		if ((act.collection === 'contacts' || act.collection === 'cd_contacts') && itemData) {
-			const fullName = [itemData.first_name, itemData.last_name].filter(Boolean).join(' ');
-			if (fullName) itemTitle = fullName;
-		}
+		let itemTitle = humanizeItemTitle(act, itemData);
 		// CardDesk activity label
 		if (act.collection === 'cd_activities' && itemData?.label) {
 			itemTitle = itemData.label;
@@ -488,8 +652,7 @@ watch(selectedOrg, () => {
 								:class="collectionColors[item.collection] || 'text-muted-foreground'"
 							/>
 							<span class="text-xs text-muted-foreground">
-								{{ actionLabels[item.action] || item.action }}
-								a {{ collectionLabels[item.collection] || item.collection }}
+								{{ getActionPhrase(item) }} a {{ collectionLabels[item.collection] || item.collection }}
 							</span>
 						</div>
 
@@ -503,6 +666,11 @@ watch(selectedOrg, () => {
 						</NuxtLink>
 						<p v-else class="text-[15px] font-semibold text-foreground leading-snug">
 							{{ item.itemTitle }}
+						</p>
+
+						<!-- Motivational flavor text for milestones -->
+						<p v-if="getFlavorText(item)" class="text-xs text-primary/70 font-medium mt-1 italic">
+							{{ getFlavorText(item) }}
 						</p>
 
 						<!-- CardDesk activity note (left column, text content) -->
