@@ -1,3 +1,4 @@
+
 export interface ExtensionSeoMetadata {
     title?: string;
     meta_description?: string;
@@ -10,6 +11,7 @@ export interface ExtensionSeoMetadata {
     no_index?: boolean;
     no_follow?: boolean;
 }
+
 export interface AiChatMessage {
 	/** @primaryKey */
 	id: number;
@@ -24,6 +26,7 @@ export interface AiChatMessage {
 	/** @required */
 	session: AiChatSession | string;
 }
+
 export interface AiChatSession {
 	/** @primaryKey */
 	id: number;
@@ -38,6 +41,7 @@ export interface AiChatSession {
 	user_created?: DirectusUser | string | null;
 	messages?: string;
 }
+
 export interface AiPreference {
 	/** @primaryKey */
 	id: number;
@@ -48,7 +52,6 @@ export interface AiPreference {
 	/** @required */
 	user: DirectusUser | string;
 	user_created?: DirectusUser | string | null;
-	/** @description Selected AI persona: default, director, buddy, motivator */
 	persona?: 'default' | 'director' | 'buddy' | 'motivator' | null;
 	/** @description Enable AI-generated personalized greetings */
 	personalizations_enabled?: boolean | null;
@@ -56,11 +59,10 @@ export interface AiPreference {
 	low_usage_mode?: boolean | null;
 	/** @description Optional personal monthly token cap (null = unlimited) */
 	token_budget_monthly?: number | null;
-	/** @description Whether AI access is enabled for this user (admin-controlled) */
 	ai_enabled?: boolean | null;
-	/** @description Organization this preference belongs to */
 	organization?: Organization | string | null;
 }
+
 export interface AiUsageLog {
 	/** @primaryKey */
 	id: number;
@@ -82,6 +84,7 @@ export interface AiUsageLog {
 	metadata?: Record<string, any> | null;
 	date_created?: string | null;
 }
+
 export interface AnimationPreset {
 	/** @primaryKey */
 	id: number;
@@ -97,6 +100,7 @@ export interface AnimationPreset {
 	scroll_config?: Record<string, any> | null;
 	mobile_optimized?: boolean | null;
 }
+
 export interface Appointment {
 	/** @primaryKey */
 	id: string;
@@ -124,12 +128,14 @@ export interface Appointment {
 	room_name?: string | null;
 	attendees?: AppointmentsDirectusUser[] | string[];
 }
+
 export interface AppointmentsDirectusUser {
 	/** @primaryKey */
 	id: number;
 	appointments_id?: Appointment | string | null;
 	directus_users_id?: DirectusUser | string | null;
 }
+
 export interface ArAnalytic {
 	/** @primaryKey */
 	id: string;
@@ -149,6 +155,7 @@ export interface ArAnalytic {
 	referrer?: string | null;
 	user_agent?: string | null;
 }
+
 export interface ArClient {
 	/** @primaryKey */
 	id: string;
@@ -202,6 +209,7 @@ export interface ArClient {
 	logo_svg?: DirectusFile | string | null;
 	ar_hotspots?: ArHotspot[] | string[];
 }
+
 export interface ArHotspot {
 	/** @primaryKey */
 	id: string;
@@ -237,6 +245,7 @@ export interface ArHotspot {
 	/** @required */
 	ar_client: ArClient | string;
 }
+
 export interface AugmentedReality {
 	/** @primaryKey */
 	id: string;
@@ -283,6 +292,7 @@ export interface AugmentedReality {
 	/** @description SEO metadata for this product page */
 	seo?: ExtensionSeoMetadata | null;
 }
+
 export interface Availability {
 	/** @primaryKey */
 	id: string;
@@ -304,6 +314,7 @@ export interface Availability {
 	/** @description Break end time */
 	break_end?: string | null;
 }
+
 export interface BeforeAndAfter {
 	/** @primaryKey */
 	id: number;
@@ -318,6 +329,7 @@ export interface BeforeAndAfter {
 	title?: string | null;
 	caption?: string | null;
 }
+
 export interface BlockCallout {
 	/** @primaryKey */
 	id: number;
@@ -326,9 +338,10 @@ export interface BlockCallout {
 	date_created?: string | null;
 	user_updated?: DirectusUser | string | null;
 	date_updated?: string | null;
-	type?: 'process condensed' | 'process expanded' | 'know thyself' | 'narrow the focus' | 'service boxes' | null;
+	type?: `process condensed` | `process expanded` | `know thyself` | `narrow the focus` | `service boxes` | null;
 	status?: 'published' | 'draft' | 'archived';
 }
+
 export interface BlockCapabilitiesShowcase {
 	/** @primaryKey */
 	id: number;
@@ -340,7 +353,7 @@ export interface BlockCapabilitiesShowcase {
 	show_all_capabilities?: boolean | null;
 	/** @description Animation intensity level */
 	animation_style?: 'minimal' | 'standard' | 'dramatic' | 'custom' | null;
-	entrance_animation?: 'fade' | 'slide-up' | 'slide-left' | 'slide-right' | 'scale' | 'rotate' | null;
+	entrance_animation?: 'fade' | `slide-up` | `slide-left` | `slide-right` | 'scale' | 'rotate' | null;
 	/** @description When animation triggers */
 	scroll_trigger_start?: string | null;
 	animation_delay?: number | null;
@@ -352,6 +365,7 @@ export interface BlockCapabilitiesShowcase {
 	status?: 'published' | 'draft' | 'archived';
 	selected_capabilities?: BlockCapabilitiesShowcaseCapability[] | string[];
 }
+
 export interface BlockCapabilitiesShowcaseCapability {
 	/** @primaryKey */
 	id: number;
@@ -359,6 +373,7 @@ export interface BlockCapabilitiesShowcaseCapability {
 	capabilities_id?: Capability | string | null;
 	sort?: number | null;
 }
+
 export interface BlockCard {
 	/** @primaryKey */
 	id: number;
@@ -366,11 +381,11 @@ export interface BlockCard {
 	/** @description Cards section title */
 	title?: string | null;
 	card_style?: 'feature' | 'capability' | 'testimonial' | 'metric' | null;
-	layout?: 'grid-2' | 'grid-3' | 'grid-4' | null;
+	layout?: `grid-2` | `grid-3` | `grid-4` | null;
 	cards?: Array<{ title: string; description: string; icon: string }> | null;
 	/** @description Animation intensity level */
 	animation_style?: 'minimal' | 'standard' | 'dramatic' | 'custom' | null;
-	entrance_animation?: 'fade' | 'slide-up' | 'slide-left' | 'slide-right' | 'scale' | 'rotate' | null;
+	entrance_animation?: 'fade' | `slide-up` | `slide-left` | `slide-right` | 'scale' | 'rotate' | null;
 	/** @description When animation triggers */
 	scroll_trigger_start?: string | null;
 	animation_delay?: number | null;
@@ -381,6 +396,7 @@ export interface BlockCard {
 	animation_preset?: AnimationPreset | string | null;
 	status?: 'published' | 'draft' | 'archived';
 }
+
 export interface BlockClientSuccess {
 	/** @primaryKey */
 	id: number;
@@ -392,7 +408,7 @@ export interface BlockClientSuccess {
 	metrics?: Array<{ value: string; label: string }> | null;
 	/** @description Animation intensity level */
 	animation_style?: 'minimal' | 'standard' | 'dramatic' | 'custom' | null;
-	entrance_animation?: 'fade' | 'slide-up' | 'slide-left' | 'slide-right' | 'scale' | 'rotate' | null;
+	entrance_animation?: 'fade' | `slide-up` | `slide-left` | `slide-right` | 'scale' | 'rotate' | null;
 	/** @description When animation triggers */
 	scroll_trigger_start?: string | null;
 	animation_delay?: number | null;
@@ -404,6 +420,7 @@ export interface BlockClientSuccess {
 	status?: 'published' | 'draft' | 'archived';
 	testimonials?: BlockClientSuccessClientTestimonial[] | string[];
 }
+
 export interface BlockClientSuccessClientTestimonial {
 	/** @primaryKey */
 	id: number;
@@ -411,6 +428,7 @@ export interface BlockClientSuccessClientTestimonial {
 	client_testimonials_id?: ClientTestimonial | string | null;
 	sort?: number | null;
 }
+
 export interface BlockCta {
 	/** @primaryKey */
 	id: number;
@@ -422,7 +440,7 @@ export interface BlockCta {
 	primary_button_link?: string | null;
 	/** @description Animation intensity level */
 	animation_style?: 'minimal' | 'standard' | 'dramatic' | 'custom' | null;
-	entrance_animation?: 'fade' | 'slide-up' | 'slide-left' | 'slide-right' | 'scale' | 'rotate' | null;
+	entrance_animation?: 'fade' | `slide-up` | `slide-left` | `slide-right` | 'scale' | 'rotate' | null;
 	/** @description When animation triggers */
 	scroll_trigger_start?: string | null;
 	animation_delay?: number | null;
@@ -435,6 +453,7 @@ export interface BlockCta {
 	drawer_button_text?: string | null;
 	status?: 'published' | 'draft' | 'archived';
 }
+
 export interface BlockHero {
 	/** @primaryKey */
 	id: number;
@@ -451,7 +470,7 @@ export interface BlockHero {
 	show_scroll_indicator?: boolean | null;
 	/** @description Animation intensity level */
 	animation_style?: 'minimal' | 'standard' | 'dramatic' | 'custom' | null;
-	entrance_animation?: 'fade' | 'slide-up' | 'slide-left' | 'slide-right' | 'scale' | 'rotate' | null;
+	entrance_animation?: 'fade' | `slide-up` | `slide-left` | `slide-right` | 'scale' | 'rotate' | null;
 	/** @description When animation triggers */
 	scroll_trigger_start?: string | null;
 	animation_delay?: number | null;
@@ -464,6 +483,7 @@ export interface BlockHero {
 	foreground_image?: DirectusFile | string | null;
 	status?: 'published' | 'draft' | 'archived';
 }
+
 export interface BlockItemSlideshow {
 	/** @primaryKey */
 	id: number;
@@ -476,6 +496,7 @@ export interface BlockItemSlideshow {
 	thumbnail_navigation?: boolean | null;
 	portfolio?: Portfolio | string | null;
 }
+
 export interface BlockItemsSlideshow {
 	/** @primaryKey */
 	id: number;
@@ -490,9 +511,10 @@ export interface BlockItemsSlideshow {
 	subtitle?: string | null;
 	link?: string | null;
 	link_text?: string | null;
-	style?: 'full width' | 'carousel' | null;
+	style?: `full width` | 'carousel' | null;
 	portfolio?: BlockItemsSlideshowPortfolio[] | string[];
 }
+
 export interface BlockItemsSlideshowPortfolio {
 	/** @primaryKey */
 	id: number;
@@ -500,6 +522,7 @@ export interface BlockItemsSlideshowPortfolio {
 	portfolio_id?: Portfolio | string | null;
 	sort?: number | null;
 }
+
 export interface BlockMasonry {
 	/** @primaryKey */
 	id: number;
@@ -513,6 +536,7 @@ export interface BlockMasonry {
 	title?: string | null;
 	portfolio?: BlockMasonryPortfolio[] | string[];
 }
+
 export interface BlockMasonryPortfolio {
 	/** @primaryKey */
 	id: number;
@@ -520,6 +544,7 @@ export interface BlockMasonryPortfolio {
 	portfolio_id?: Portfolio | string | null;
 	sort?: number | null;
 }
+
 export interface BlockParallaxGrid {
 	/** @primaryKey */
 	id: number;
@@ -534,6 +559,7 @@ export interface BlockParallaxGrid {
 	grid_height?: number | null;
 	images?: BlockParallaxGridFile[] | string[];
 }
+
 export interface BlockParallaxGridFile {
 	/** @primaryKey */
 	id: number;
@@ -541,6 +567,7 @@ export interface BlockParallaxGridFile {
 	directus_files_id?: DirectusFile | string | null;
 	sort?: number | null;
 }
+
 export interface BlockPortfolioShowcase {
 	/** @primaryKey */
 	id: number;
@@ -553,7 +580,7 @@ export interface BlockPortfolioShowcase {
 	filter_by_service?: boolean | null;
 	/** @description Animation intensity level */
 	animation_style?: 'minimal' | 'standard' | 'dramatic' | 'custom' | null;
-	entrance_animation?: 'fade' | 'slide-up' | 'slide-left' | 'slide-right' | 'scale' | 'rotate' | null;
+	entrance_animation?: 'fade' | `slide-up` | `slide-left` | `slide-right` | 'scale' | 'rotate' | null;
 	/** @description When animation triggers */
 	scroll_trigger_start?: string | null;
 	animation_delay?: number | null;
@@ -568,6 +595,7 @@ export interface BlockPortfolioShowcase {
 	link_text?: string | null;
 	portfolio_items?: BlockPortfolioShowcasePortfolio[] | string[];
 }
+
 export interface BlockPortfolioShowcasePortfolio {
 	/** @primaryKey */
 	id: number;
@@ -575,6 +603,7 @@ export interface BlockPortfolioShowcasePortfolio {
 	portfolio_id?: Portfolio | string | null;
 	sort?: number | null;
 }
+
 export interface BlockProcess {
 	/** @primaryKey */
 	id: number;
@@ -585,7 +614,7 @@ export interface BlockProcess {
 	steps?: Array<{ title: string; description: string; icon: string }> | null;
 	/** @description Animation intensity level */
 	animation_style?: 'minimal' | 'standard' | 'dramatic' | 'custom' | null;
-	entrance_animation?: 'fade' | 'slide-up' | 'slide-left' | 'slide-right' | 'scale' | 'rotate' | null;
+	entrance_animation?: 'fade' | `slide-up` | `slide-left` | `slide-right` | 'scale' | 'rotate' | null;
 	/** @description When animation triggers */
 	scroll_trigger_start?: string | null;
 	animation_delay?: number | null;
@@ -596,6 +625,7 @@ export interface BlockProcess {
 	animation_preset?: AnimationPreset | string | null;
 	status?: 'published' | 'draft' | 'archived';
 }
+
 export interface BlockReveal {
 	/** @primaryKey */
 	id: number;
@@ -607,6 +637,7 @@ export interface BlockReveal {
 	date_updated?: string | null;
 	sections?: BlockRevealRevealBlock[] | string[];
 }
+
 export interface BlockRevealRevealBlock {
 	/** @primaryKey */
 	id: number;
@@ -614,6 +645,7 @@ export interface BlockRevealRevealBlock {
 	reveal_blocks_id?: RevealBlock | string | null;
 	sort?: number | null;
 }
+
 export interface BlockStickyText {
 	/** @primaryKey */
 	id: number;
@@ -629,6 +661,7 @@ export interface BlockStickyText {
 	text_style?: 'default' | 'large' | 'small' | null;
 	text_mode?: 'progressive' | 'individual' | null;
 }
+
 export interface BlockText {
 	/** @primaryKey */
 	id: number;
@@ -640,7 +673,7 @@ export interface BlockText {
 	text_style?: 'standard' | 'large' | 'quote' | 'highlighted' | null;
 	/** @description Animation intensity level */
 	animation_style?: 'minimal' | 'standard' | 'dramatic' | 'custom' | null;
-	entrance_animation?: 'fade' | 'slide-up' | 'slide-left' | 'slide-right' | 'scale' | 'rotate' | null;
+	entrance_animation?: 'fade' | `slide-up` | `slide-left` | `slide-right` | 'scale' | 'rotate' | null;
 	/** @description When animation triggers */
 	scroll_trigger_start?: string | null;
 	animation_delay?: number | null;
@@ -651,6 +684,7 @@ export interface BlockText {
 	animation_preset?: AnimationPreset | string | null;
 	status?: 'published' | 'draft' | 'archived';
 }
+
 export interface Blog {
 	/** @primaryKey */
 	id: number;
@@ -666,12 +700,14 @@ export interface Blog {
 	content?: 'json' | null;
 	editor?: 'json' | null;
 }
+
 export interface BlogFile {
 	/** @primaryKey */
 	id: number;
 	blog_id?: Blog | string | null;
 	directus_files_id?: DirectusFile | string | null;
 }
+
 export interface BusinessHour {
 	/** @primaryKey */
 	id: number;
@@ -688,6 +724,7 @@ export interface BusinessHour {
 	open_time?: string | null;
 	close_time?: string | null;
 }
+
 export interface CallLog {
 	/** @primaryKey */
 	id: number;
@@ -697,18 +734,25 @@ export interface CallLog {
 	date_created?: string | null;
 	user_updated?: DirectusUser | string | null;
 	date_updated?: string | null;
+	/** @description Twilio call SID (unique identifier like CA1234...) */
 	call_id?: string | null;
 	event_type?: 'incoming' | 'outgoing' | 'missed' | 'voicemail' | null;
 	call_duration?: number | null;
 	transcription?: string | null;
 	related_contact?: Contact | string | null;
 	related_lead?: Lead | string | null;
+	/** @description Caller's phone number (e.g., +15551234567) */
 	from_number?: string | null;
+	/** @description Your Twilio phone number that received the call */
 	to_number?: string | null;
+	/** @description Menu key pressed by caller (e.g., '1', '2', '3') */
 	selected_option?: string | null;
+	/** @description Partner's phone number where call was routed */
 	routed_to?: string | null;
+	/** @description When the call occurred (auto-populated) */
 	timestamp?: string | null;
 }
+
 export interface CallRoute {
 	/** @primaryKey */
 	id: string;
@@ -722,12 +766,13 @@ export interface CallRoute {
 	phone_settings_id: PhoneSetting | string;
 	/** @required */
 	department: string;
-	/** @required */
+	/** @description Press 1, 2, etc. @required */
 	menu_key: string;
-	/** @required */
+	/** @description Routed to phone number @required */
 	phone_number: string;
 	active?: boolean | null;
 }
+
 export interface Capability {
 	/** @primaryKey */
 	id: number;
@@ -740,11 +785,13 @@ export interface Capability {
 	title?: string | null;
 	description?: string | null;
 	icon?: string | null;
+	/** @description Which icon library contains this icon name */
 	icon_family?: 'heroicons' | 'lucide' | null;
 	features?: string | null;
 	focus?: string | null;
 	url?: string | null;
 }
+
 export interface CaseStudy {
 	/** @primaryKey */
 	id: string;
@@ -756,21 +803,25 @@ export interface CaseStudy {
 	date_updated?: string | null;
 	title?: string | null;
 	url?: string | null;
+	/** @description Short description for listings and previews */
 	excerpt?: string | null;
 	featured_image?: DirectusFile | string | null;
 	organization?: Organization | string | null;
 	challenge?: string | null;
 	solution?: string | null;
 	results?: string | null;
+	/** @description Client name if different than organization */
 	client?: string | null;
 	project_duration?: string | null;
 	project_year?: string | null;
 	project_url?: string | null;
+	/** @description Keywords and tags for categorization */
 	tags?: string[] | null;
 	featured?: boolean | null;
 	gallery?: CaseStudiesFile[] | string[];
 	services?: CaseStudiesService[] | string[];
 }
+
 export interface CaseStudiesFile {
 	/** @primaryKey */
 	id: number;
@@ -778,6 +829,7 @@ export interface CaseStudiesFile {
 	directus_files_id?: DirectusFile | string | null;
 	sort?: number | null;
 }
+
 export interface CaseStudiesService {
 	/** @primaryKey */
 	id: number;
@@ -785,6 +837,7 @@ export interface CaseStudiesService {
 	services_id?: Service | string | null;
 	sort?: number | null;
 }
+
 export interface CdActivity {
 	/** @primaryKey */
 	id: string;
@@ -798,6 +851,7 @@ export interface CdActivity {
 	is_response?: boolean | null;
 	response_note?: string | null;
 }
+
 export interface CdContact {
 	/** @primaryKey */
 	id: string;
@@ -814,7 +868,7 @@ export interface CdContact {
 	company?: string | null;
 	email?: string | null;
 	phone?: string | null;
-	industry?: 'Technology' | 'Finance' | 'Healthcare' | 'Real Estate' | 'Legal' | 'Marketing' | 'Venture Capital' | null;
+	industry?: 'Technology' | 'Finance' | 'Healthcare' | `Real Estate` | 'Legal' | 'Marketing' | `Venture Capital` | null;
 	met_at?: string | null;
 	rating?: 'hot' | 'warm' | 'nurture' | 'cold' | null;
 	hibernated?: boolean | null;
@@ -823,6 +877,7 @@ export interface CdContact {
 	is_client?: boolean | null;
 	client_at?: string | null;
 }
+
 export interface CdXpState {
 	/** @primaryKey */
 	id: string;
@@ -842,6 +897,7 @@ export interface CdXpState {
 	missions_date?: string | null;
 	total_clients?: number | null;
 }
+
 export interface Channel {
 	/** @primaryKey */
 	id: string;
@@ -856,9 +912,11 @@ export interface Channel {
 	organization?: Organization | string | null;
 	description?: string | null;
 	ticket?: Ticket | string | null;
+	/** @description The client this channel belongs to */
 	client?: Client | string | null;
 	messages?: Message[] | string[];
 }
+
 export interface Client {
 	/** @primaryKey */
 	id: string;
@@ -878,17 +936,28 @@ export interface Client {
 	organization: Organization | string;
 	logo?: string | null;
 	primary_contact?: Contact | string | null;
+	/** @description File storage folder for this client */
 	folder?: string | null;
+	/** @description Billing contact emails for invoice delivery */
 	billing_contacts?: Array<{ name: string; email: string }> | null;
+	/** @description Short code for invoice numbering (e.g., ABC, XYZ) */
 	code?: string | null;
+	/** @description Voice, visual style, positioning for this client */
 	brand_direction?: string | null;
+	/** @description Business objectives for this client */
 	goals?: string | null;
+	/** @description Who the client is trying to reach */
 	target_audience?: string | null;
+	/** @description Primary market or location */
 	location?: string | null;
+	/** @description Services we provide to this client */
 	services?: string[] | null;
+	/** @description Teams assigned to this client */
 	assigned_teams?: ClientsTeam[] | string[];
+	/** @description Individual users with direct access to this client */
 	assigned_users?: ClientsDirectusUser[] | string[];
 }
+
 export interface ClientsDirectusUser {
 	/** @primaryKey */
 	id: number;
@@ -897,6 +966,7 @@ export interface ClientsDirectusUser {
 	sort?: number | null;
 	date_created?: string | null;
 }
+
 export interface ClientsTeam {
 	/** @primaryKey */
 	id: number;
@@ -905,25 +975,34 @@ export interface ClientsTeam {
 	sort?: number | null;
 	date_created?: string | null;
 }
+
 export interface ClientTestimonial {
 	/** @primaryKey */
 	id: number;
 	sort?: number | null;
-	/** @required */
+	/** @description Client testimonial quote @required */
 	quote: string;
 	/** @required */
 	client_name: string;
+	/** @description Job title */
 	client_title?: string | null;
 	/** @required */
 	client_company: string;
+	/** @description Company logo */
 	client_logo?: string | null;
+	/** @description Client headshot (optional) */
 	client_photo?: string | null;
+	/** @description Brief context about the project */
 	project_context?: string | null;
+	/** @description Star rating (1-5) */
 	rating?: number | null;
+	/** @description Feature this testimonial */
 	featured?: boolean | null;
+	/** @description Related portfolio item from your existing portfolio collection */
 	related_portfolio?: Portfolio | string | null;
 	service_category?: 'brand_design' | 'web_design' | 'digital_marketing' | 'strategy' | null;
 }
+
 export interface Comment {
 	/** @primaryKey */
 	id: number;
@@ -942,6 +1021,7 @@ export interface Comment {
 	is_edited?: boolean | null;
 	is_resolved?: boolean | null;
 }
+
 export interface Contact {
 	/** @primaryKey */
 	id: string;
@@ -958,16 +1038,24 @@ export interface Contact {
 	title?: string | null;
 	user?: DirectusUser | string | null;
 	notes?: string | null;
+	/** @description Company name (separate from organization relation) */
 	company?: string | null;
+	/** @description Streamlined categories focused on Hue's target market */
 	category?: 'client' | 'prospect' | 'architect' | 'developer' | 'hospitality' | 'partner' | 'media' | null;
+	/** @description Contact photo or headshot */
 	photo?: string | null;
+	/** @description Personal or company website */
 	website?: string | null;
+	/** @description LinkedIn profile URL */
 	linkedin_url?: string | null;
+	/** @description Instagram handle (without @) */
 	instagram_handle?: string | null;
+	/** @description Custom tags for flexible categorization (e.g., VIP, Speaker, Budget-Conscious) */
 	tags?: string[] | null;
+	/** @description Mailing address for sending materials */
 	mailing_address?: string | null;
-	prefix?: 'Mr.' | 'Ms.' | 'Mrs.' | 'Dr.' | 'Prof.' | 'Mx.' | null;
-	industry?: 'Technology' | 'Healthcare' | 'Finance' | 'Education' | 'Real Estate' | 'Hospitality' | 'Legal' | 'Non-Profit' | 'Government' | null;
+	prefix?: `Mr.` | `Ms.` | `Mrs.` | `Dr.` | `Prof.` | `Mx.` | null;
+	industry?: 'Technology' | 'Healthcare' | 'Finance' | 'Education' | `Real Estate` | 'Hospitality' | 'Legal' | `Non-Profit` | 'Government' | null;
 	email_subscribed?: boolean | null;
 	email_unsubscribed_at?: string | null;
 	unsubscribe_token?: string | null;
@@ -982,10 +1070,12 @@ export interface Contact {
 	custom_fields?: string | null;
 	source?: string | null;
 	timezone?: string | null;
+	/** @description The client company this contact belongs to */
 	client?: Client | string | null;
 	organizations?: ContactsOrganization[] | string[];
 	lists?: MailingListContact[] | string[];
 }
+
 export interface ContactsOrganization {
 	/** @primaryKey */
 	id: number;
@@ -993,6 +1083,7 @@ export interface ContactsOrganization {
 	organizations_id?: Organization | string | null;
 	sort?: number | null;
 }
+
 export interface Course {
 	/** @primaryKey */
 	id: string;
@@ -1007,19 +1098,23 @@ export interface Course {
 	menu_id?: Menu | string | null;
 	options?: Option[] | string[];
 }
+
 export interface EarnestHistory {
 	/** @primaryKey */
 	id: string;
 	user_created?: DirectusUser | string | null;
 	date_created?: string | null;
 	organization?: Organization | string | null;
-	/** @required */
+	/** @description The day this snapshot represents @required */
 	date: string;
+	/** @description Earnest score 0-100 */
 	score?: number | null;
 	ep_earned?: number | null;
 	streak?: number | null;
+	/** @description Five dimension breakdown */
 	dimensions?: Record<string, any> | null;
 }
+
 export interface EarnestScore {
 	/** @primaryKey */
 	id: string;
@@ -1029,6 +1124,7 @@ export interface EarnestScore {
 	organization?: Organization | string | null;
 	total_ep?: number | null;
 	level?: number | null;
+	/** @description Todays earnest score 0-100 */
 	current_score?: number | null;
 	streak?: number | null;
 	best_streak?: number | null;
@@ -1041,33 +1137,10 @@ export interface EarnestScore {
 	consecutive_responsive_days?: number | null;
 	consecutive_top_rank_days?: number | null;
 	badges_unlocked?: Record<string, any> | null;
+	/** @description Five dimension breakdown */
 	dimension_scores?: Record<string, any> | null;
 }
-export interface Expense {
-	/** @primaryKey */
-	id: string;
-	status?: 'draft' | 'submitted' | 'approved' | 'paid' | 'rejected' | null;
-	sort?: number | null;
-	user_created?: DirectusUser | string | null;
-	date_created?: string | null;
-	user_updated?: DirectusUser | string | null;
-	date_updated?: string | null;
-	/** @required */
-	name: string;
-	category?: string | null;
-	/** @required */
-	amount: number;
-	/** @required */
-	date: string;
-	description?: string | null;
-	receipt?: DirectusFile | string | null;
-	project?: Project | string | null;
-	is_billable?: boolean | null;
-	is_reimbursable?: boolean | null;
-	vendor?: string | null;
-	payment_method?: string | null;
-	organization?: Organization | string | null;
-}
+
 export interface EmailPartial {
 	/** @primaryKey */
 	id: number;
@@ -1085,8 +1158,10 @@ export interface EmailPartial {
 	variables_schema?: Record<string, any> | null;
 	instance_variables?: Record<string, any> | null;
 	is_default?: boolean | null;
+	/** @description Organization that owns this partial. Null = system default. */
 	organization?: Organization | string | null;
 }
+
 export interface Email {
 	/** @primaryKey */
 	id: number;
@@ -1112,6 +1187,7 @@ export interface Email {
 	send_errors?: Record<string, any> | null;
 	preview_html?: string | null;
 }
+
 export interface EmailTemplate {
 	/** @primaryKey */
 	id: number;
@@ -1135,37 +1211,72 @@ export interface EmailTemplate {
 	include_web_version_bar?: boolean | null;
 	header_partial_id?: EmailPartial | string | null;
 	footer_partial_id?: EmailPartial | string | null;
+	/** @description Organization this template belongs to */
 	organization?: Organization | string | null;
 	blocks?: TemplateBlock[] | string[];
 }
+
+export interface Expense {
+	/** @primaryKey */
+	id: string;
+	status?: 'draft' | 'submitted' | 'approved' | 'paid' | 'rejected' | null;
+	/** @description Expense description @required */
+	name: string;
+	category?: 'software' | 'hardware' | 'travel' | 'marketing' | 'office' | 'contractor' | 'hosting' | 'insurance' | 'legal' | 'other' | null;
+	/** @description Expense amount in USD @required */
+	amount: number;
+	/** @required */
+	date: string;
+	description?: string | null;
+	is_billable?: boolean | null;
+	is_reimbursable?: boolean | null;
+	/** @description Vendor or payee name */
+	vendor?: string | null;
+	payment_method?: 'cash' | 'credit_card' | 'bank_transfer' | 'check' | 'other' | null;
+	sort?: number | null;
+	user_created?: string | null;
+	date_created?: string | null;
+	user_updated?: string | null;
+	date_updated?: string | null;
+	/** @required */
+	organization: Organization | string;
+	project?: Project | string | null;
+	/** @description Receipt or supporting document */
+	receipt?: DirectusFile | string | null;
+}
+
 export interface FinancialGoal {
 	/** @primaryKey */
 	id: number;
 	/** @required */
 	year: number;
+	/** @description Q1 revenue target */
 	q1_goal?: number | null;
+	/** @description Q2 revenue target */
 	q2_goal?: number | null;
+	/** @description Q3 revenue target */
 	q3_goal?: number | null;
+	/** @description Q4 revenue target */
 	q4_goal?: number | null;
 	date_created?: string | null;
 	date_updated?: string | null;
 	organization?: Organization | string | null;
 	user_created?: DirectusUser | string | null;
 }
+
 export interface Goal {
 	/** @primaryKey */
 	id: string;
-	status?: 'draft' | 'active' | 'paused' | 'completed' | 'archived' | null;
+	status?: 'active' | 'draft' | 'completed' | 'paused' | 'archived';
 	sort?: number | null;
-	user_created?: DirectusUser | string | null;
+	user_created?: string | null;
 	date_created?: string | null;
-	user_updated?: DirectusUser | string | null;
+	user_updated?: string | null;
 	date_updated?: string | null;
-	organization?: Organization | string | null;
 	/** @required */
 	title: string;
 	description?: string | null;
-	type?: 'financial' | 'networking' | 'performance' | 'marketing' | 'custom' | null;
+	type?: 'financial' | 'networking' | 'performance' | 'marketing' | 'custom';
 	target_value?: number | null;
 	target_unit?: string | null;
 	current_value?: number | null;
@@ -1173,22 +1284,26 @@ export interface Goal {
 	end_date?: string | null;
 	timeframe?: 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom' | null;
 	priority?: 'low' | 'medium' | 'high' | null;
-	assigned_to?: DirectusUser | string | null;
-	team?: Team | string | null;
-	client?: Client | string | null;
+	assigned_to?: string | null;
+	team?: string | null;
+	client?: string | null;
 	tags?: string[] | null;
 	metadata?: Record<string, any> | null;
+	organization?: string | null;
 	snapshots?: GoalSnapshot[] | string[];
 }
+
 export interface GoalSnapshot {
 	/** @primaryKey */
-	id: number;
-	goal?: Goal | string | null;
-	value?: number | null;
+	id: string;
+	goal?: Goal | string;
+	/** @required */
+	value: number;
 	notes?: string | null;
+	user_created?: string | null;
 	date_created?: string | null;
-	user_created?: DirectusUser | string | null;
 }
+
 export interface Hero {
 	/** @primaryKey */
 	id: number;
@@ -1207,14 +1322,17 @@ export interface Hero {
 	background_size?: 'Fill' | 'Contain' | null;
 	foreground_position?: 'Center' | 'Left' | 'Right' | null;
 	foreground_size?: 'Fill' | 'Contain' | null;
+	/** @description This is for internal identification. */
 	internal_description?: string | null;
 }
+
 export interface Home {
 	/** @primaryKey */
 	id: number;
 	portfolio?: HomeFile[] | string[];
 	hero_slides?: HomeSlide[] | string[];
 }
+
 export interface HomeFile {
 	/** @primaryKey */
 	id: number;
@@ -1222,12 +1340,14 @@ export interface HomeFile {
 	directus_files_id?: DirectusFile | string | null;
 	sort?: number | null;
 }
+
 export interface HomeSlide {
 	/** @primaryKey */
 	id: number;
 	home_id?: Home | string | null;
 	slides_id?: Slide | string | null;
 }
+
 export interface Industry {
 	/** @primaryKey */
 	id: string;
@@ -1244,6 +1364,7 @@ export interface Industry {
 	portfolio?: PortfolioIndustry[] | string[];
 	content_blocks?: IndustriesContentBlock[] | string[];
 }
+
 export interface IndustriesContentBlock {
 	/** @primaryKey */
 	id: number;
@@ -1252,6 +1373,7 @@ export interface IndustriesContentBlock {
 	collection?: string | null;
 	sort?: number | null;
 }
+
 export interface Invoice {
 	/** @primaryKey */
 	id: string;
@@ -1270,21 +1392,25 @@ export interface Invoice {
 	invoice_date: string;
 	note?: string | null;
 	memo?: string | null;
+	/** @description This is automatically calculated once you create and save line items. */
 	total_amount?: number | null;
 	emails?: string[] | null;
 	project?: Project | string | null;
 	melio?: string | null;
+	/** @description The client this invoice is for */
 	client?: Client | string | null;
 	/** @required */
 	line_items: LineItem[] | string[];
 	payments?: PaymentsReceived[] | string[];
 }
+
 export interface InvoicesProduct {
 	/** @primaryKey */
 	id: number;
 	invoices_id?: Invoice | string | null;
 	products_id?: Product | string | null;
 }
+
 export interface JunctionDirectusUsersTeam {
 	/** @primaryKey */
 	id: number;
@@ -1293,6 +1419,7 @@ export interface JunctionDirectusUsersTeam {
 	sort?: number | null;
 	is_manager?: boolean | null;
 }
+
 export interface LeadActivity {
 	/** @primaryKey */
 	id: number;
@@ -1302,11 +1429,11 @@ export interface LeadActivity {
 	date_created?: string | null;
 	user_updated?: DirectusUser | string | null;
 	date_updated?: string | null;
-	activity_type?: 'business card scan' | 'phone call' | 'email sent' | 'email received' | 'meeting' | 'proposal sent' | 'follow up' | 'note' | null;
+	activity_type?: `business card scan` | `phone call` | `email sent` | `email received` | 'meeting' | `proposal sent` | `follow up` | 'note' | null;
 	activity_date?: string | null;
 	subject?: string | null;
 	description?: string | null;
-	outcome?: 'positive' | 'neutral' | 'negative' | 'no response' | null;
+	outcome?: 'positive' | 'neutral' | 'negative' | `no response` | null;
 	duration_minutes?: number | null;
 	next_action?: string | null;
 	next_action_date?: string | null;
@@ -1314,12 +1441,14 @@ export interface LeadActivity {
 	contact?: Contact | string | null;
 	attachments?: LeadActivitiesFile[] | string[];
 }
+
 export interface LeadActivitiesFile {
 	/** @primaryKey */
 	id: number;
 	lead_activities_id?: LeadActivity | string | null;
 	directus_files_id?: DirectusFile | string | null;
 }
+
 export interface Lead {
 	/** @primaryKey */
 	id: number;
@@ -1331,19 +1460,20 @@ export interface Lead {
 	date_updated?: string | null;
 	priority?: 'low' | 'medium' | 'high' | 'urgent' | null;
 	lead_score?: number | null;
-	source?: 'business card' | 'call' | 'website' | 'referral' | 'event' | null;
+	source?: `business card` | 'call' | 'website' | 'referral' | 'event' | null;
 	estimated_value?: number | null;
 	related_contact?: Contact | string | null;
 	source_details?: string | null;
 	next_follow_up?: string | null;
 	project_type?: string | null;
-	timeline?: 'urgent' | '1-3 months' | '3-6 months' | 'flexible' | null;
+	timeline?: 'urgent' | `1-3 months` | `3-6 months` | 'flexible' | null;
 	notes?: string | null;
 	converted_to_customer?: boolean | null;
 	actual_value?: number | null;
 	lost_reason?: string | null;
 	closed_date?: string | null;
 }
+
 export interface LineItem {
 	/** @primaryKey */
 	id: string;
@@ -1362,6 +1492,7 @@ export interface LineItem {
 	rate: number;
 	amount?: number | null;
 }
+
 export interface MailingListContact {
 	/** @primaryKey */
 	id: number;
@@ -1375,6 +1506,7 @@ export interface MailingListContact {
 	source?: string | null;
 	custom_fields?: string | null;
 }
+
 export interface MailingList {
 	/** @primaryKey */
 	id: number;
@@ -1391,17 +1523,21 @@ export interface MailingList {
 	is_default?: boolean | null;
 	double_opt_in?: boolean | null;
 	subscriber_count?: number | null;
+	/** @description Organization this list belongs to */
 	organization?: Organization | string | null;
 	contacts?: MailingListContact[] | string[];
 }
+
 export interface MarketingCampaign {
 	/** @primaryKey */
 	id: number;
-	/** @required */
+	/** @description Campaign or analysis title @required */
 	title: string;
+	/** @description User-stated campaign goal */
 	goal?: string | null;
 	status?: 'draft' | 'active' | 'paused' | 'completed' | 'archived' | null;
 	type?: 'campaign' | 'dashboard' | null;
+	/** @description Full AI-generated plan (CampaignAnalysis or DashboardAnalysis) */
 	plan_data?: Record<string, any> | null;
 	organization?: Organization | string | null;
 	start_date?: string | null;
@@ -1410,6 +1546,7 @@ export interface MarketingCampaign {
 	date_created?: string | null;
 	date_updated?: string | null;
 }
+
 export interface MeetingRequest {
 	/** @primaryKey */
 	id: string;
@@ -1430,6 +1567,7 @@ export interface MeetingRequest {
 	request_status?: 'pending' | 'approved' | 'rejected' | null;
 	admin_notes?: string | null;
 }
+
 export interface Menu {
 	/** @primaryKey */
 	id: string;
@@ -1444,6 +1582,7 @@ export interface Menu {
 	price?: string | null;
 	courses?: Course[] | string[];
 }
+
 export interface Message {
 	/** @primaryKey */
 	id: string;
@@ -1456,6 +1595,7 @@ export interface Message {
 	channel?: Channel | string | null;
 	parent_id?: string | null;
 }
+
 export interface NewsletterBlock {
 	/** @primaryKey */
 	id: number;
@@ -1468,13 +1608,14 @@ export interface NewsletterBlock {
 	mjml_source?: string | null;
 	thumbnail?: DirectusFile | string | null;
 	is_system?: boolean | null;
-	category?: 'header' | 'hero' | 'content' | 'two-column' | 'three-column' | 'cta' | 'image' | 'stats' | 'quote' | 'list' | 'divider' | 'social' | 'footer' | null;
+	category?: 'header' | 'hero' | 'content' | `two-column` | `three-column` | 'cta' | 'image' | 'stats' | 'quote' | 'list' | 'divider' | 'social' | 'footer' | null;
 	date_created?: string | null;
 	date_updated?: string | null;
 	user_created?: DirectusUser | string | null;
 	user_updated?: DirectusUser | string | null;
 	variables_schema?: string | null;
 }
+
 export interface Option {
 	/** @primaryKey */
 	id: string;
@@ -1488,6 +1629,7 @@ export interface Option {
 	description?: string | null;
 	course_id?: Course | string | null;
 }
+
 export interface Organization {
 	/** @primaryKey */
 	id: string;
@@ -1502,15 +1644,17 @@ export interface Organization {
 	logo?: DirectusFile | string | null;
 	brand_color?: string | null;
 	folder?: DirectusFolder | string | null;
-	category?: 'Client' | 'Vendor' | 'Sub-Brand' | null;
+	category?: 'Client' | 'Vendor' | `Sub-Brand` | null;
 	tags?: string[] | null;
 	notes?: string | null;
 	stripe_customer_id?: string | null;
 	phone?: string | null;
+	/** @description Three letter code for organization identity. */
 	code?: string | null;
 	address?: string | null;
 	/** @required */
 	industry: Industry | string;
+	/** @description These emails will be notified for this organization. */
 	emails?: string[] | null;
 	origin_date?: string | null;
 	icon?: DirectusFile | string | null;
@@ -1519,15 +1663,16 @@ export interface Organization {
 	email?: string | null;
 	short_name?: string | null;
 	active?: boolean | null;
+	/** @description Subscription plan tier */
 	plan?: 'free' | 'starter' | 'pro' | 'enterprise' | null;
+	/** @description Voice, visual style, and brand positioning */
 	brand_direction?: string | null;
+	/** @description Business objectives and growth targets */
 	goals?: string | null;
+	/** @description Primary target audience or market segment */
 	target_audience?: string | null;
+	/** @description Primary market or geographic location */
 	location?: string | null;
-	users?: OrganizationsDirectusUser[] | string[];
-	projects?: Project[] | string[];
-	tickets?: Ticket[] | string[];
-	teams?: Team[] | string[];
 	/** @description Remaining AI token balance (null = unlimited) */
 	ai_token_balance?: number | null;
 	/** @description Monthly AI token allotment (null = unlimited) */
@@ -1536,7 +1681,12 @@ export interface Organization {
 	ai_tokens_used_this_period?: number | null;
 	/** @description Start of current AI billing period */
 	ai_billing_period_start?: string | null;
+	users?: OrganizationsDirectusUser[] | string[];
+	projects?: Project[] | string[];
+	tickets?: Ticket[] | string[];
+	teams?: Team[] | string[];
 }
+
 export interface OrganizationsDirectusUser {
 	/** @primaryKey */
 	id: number;
@@ -1544,6 +1694,7 @@ export interface OrganizationsDirectusUser {
 	directus_users_id?: DirectusUser | string | null;
 	sort?: number | null;
 }
+
 export interface OrgMembership {
 	/** @primaryKey */
 	id: string;
@@ -1558,9 +1709,11 @@ export interface OrgMembership {
 	user: DirectusUser | string;
 	/** @required */
 	role: OrgRole | string;
+	/** @description Only set for client-role users — scopes their access */
 	client?: Client | string | null;
 	invited_by?: DirectusUser | string | null;
 }
+
 export interface OrgRole {
 	/** @primaryKey */
 	id: string;
@@ -1569,13 +1722,16 @@ export interface OrgRole {
 	date_updated?: string | null;
 	/** @required */
 	name: string;
-	/** @required */
+	/** @description owner, admin, manager, member, client @required */
 	slug: string;
+	/** @description System roles cannot be deleted */
 	is_system?: boolean | null;
+	/** @description Feature CRUD permission matrix */
 	permissions?: Record<string, any> | null;
 	/** @required */
 	organization: Organization | string;
 }
+
 export interface PageAgency {
 	/** @primaryKey */
 	id: number;
@@ -1590,6 +1746,7 @@ export interface PageAgency {
 	slug?: string | null;
 	content_blocks?: PageAgencyContentBlock[] | string[];
 }
+
 export interface PageAgencyContentBlock {
 	/** @primaryKey */
 	id: number;
@@ -1598,6 +1755,7 @@ export interface PageAgencyContentBlock {
 	collection?: string | null;
 	sort?: number | null;
 }
+
 export interface PageHome {
 	/** @primaryKey */
 	id: number;
@@ -1612,6 +1770,7 @@ export interface PageHome {
 	seo?: ExtensionSeoMetadata | null;
 	content_blocks?: PageHomeContentBlock[] | string[];
 }
+
 export interface PageHomeContentBlock {
 	/** @primaryKey */
 	id: number;
@@ -1620,6 +1779,7 @@ export interface PageHomeContentBlock {
 	collection?: string | null;
 	sort?: number | null;
 }
+
 export interface PageIndustries {
 	/** @primaryKey */
 	id: number;
@@ -1634,14 +1794,16 @@ export interface PageIndustries {
 	slug?: string | null;
 	content_blocks?: PageIndustriesContentBlock[] | string[];
 }
+
 export interface PageIndustriesContentBlock {
 	/** @primaryKey */
 	id: number;
-	page_industries_id?: PageIndustries | string | null;
+	page_industries_id?: PageIndustry | string | null;
 	item?: BlockHero | BlockText | BlockCard | BlockProcess | BlockCta | BlockCapabilitiesShowcase | BlockPortfolioShowcase | BlockClientSuccess | BlockMasonry | BlockStickyText | BlockReveal | BlockItemSlideshow | BlockItemsSlideshow | string | null;
 	collection?: string | null;
 	sort?: number | null;
 }
+
 export interface PagePortfolio {
 	/** @primaryKey */
 	id: number;
@@ -1656,6 +1818,7 @@ export interface PagePortfolio {
 	seo?: ExtensionSeoMetadata | null;
 	content_blocks?: PagePortfolioContentBlock[] | string[];
 }
+
 export interface PagePortfolioContentBlock {
 	/** @primaryKey */
 	id: number;
@@ -1664,12 +1827,14 @@ export interface PagePortfolioContentBlock {
 	collection?: string | null;
 	sort?: number | null;
 }
+
 export interface PagesContentBlock {
 	/** @primaryKey */
 	id: number;
 	item?: BlockHero | BlockText | BlockCard | BlockProcess | BlockCta | BlockCapabilitiesShowcase | BlockPortfolioShowcase | BlockClientSuccess | BlockMasonry | BlockStickyText | BlockReveal | BlockItemSlideshow | BlockItemsSlideshow | string | null;
 	collection?: string | null;
 }
+
 export interface PageServices {
 	/** @primaryKey */
 	id: number;
@@ -1684,14 +1849,16 @@ export interface PageServices {
 	slug?: string | null;
 	content_blocks?: PageServicesContentBlock[] | string[];
 }
+
 export interface PageServicesContentBlock {
 	/** @primaryKey */
 	id: number;
-	page_services_id?: PageServices | string | null;
+	page_services_id?: PageService | string | null;
 	item?: BlockHero | BlockText | BlockCard | BlockProcess | BlockCta | BlockCapabilitiesShowcase | BlockPortfolioShowcase | BlockClientSuccess | BlockMasonry | BlockStickyText | BlockReveal | BlockItemSlideshow | BlockItemsSlideshow | BlockCallout | string | null;
 	collection?: string | null;
 	sort?: number | null;
 }
+
 export interface PaymentsReceived {
 	/** @primaryKey */
 	id: string;
@@ -1712,6 +1879,7 @@ export interface PaymentsReceived {
 	organization?: Organization | string | null;
 	payment_method?: string | null;
 }
+
 export interface People {
 	/** @primaryKey */
 	id: number;
@@ -1729,27 +1897,38 @@ export interface People {
 	last_name?: string | null;
 	title?: string | null;
 	url?: string | null;
+	/** @description Where this record originated */
 	source?: 'earnest' | 'carddesk' | 'import' | 'manual' | null;
+	/** @description ID in the original collection (contacts.id or cd_contacts.id) */
 	source_id?: string | null;
+	/** @description Original collection name (contacts, cd_contacts) */
 	source_collection?: string | null;
-	prefix?: 'Mr.' | 'Ms.' | 'Mrs.' | 'Dr.' | 'Prof.' | 'Mx.' | null;
+	prefix?: `Mr.` | `Ms.` | `Mrs.` | `Dr.` | `Prof.` | `Mx.` | null;
+	/** @description Full display name (auto-generated from first + last if blank) */
 	display_name?: string | null;
 	photo?: string | null;
+	/** @description Company name (free text) */
 	company?: string | null;
-	industry?: 'Technology' | 'Finance' | 'Healthcare' | 'Real Estate' | 'Legal' | 'Marketing' | 'Education' | 'Hospitality' | 'Non-Profit' | 'Government' | 'Venture Capital' | 'Other' | null;
+	industry?: 'Technology' | 'Finance' | 'Healthcare' | `Real Estate` | 'Legal' | 'Marketing' | 'Education' | 'Hospitality' | `Non-Profit` | 'Government' | `Venture Capital` | 'Other' | null;
 	website?: string | null;
 	linkedin_url?: string | null;
 	instagram_handle?: string | null;
 	mailing_address?: string | null;
 	timezone?: string | null;
 	category?: 'client' | 'prospect' | 'partner' | 'vendor' | 'media' | 'networking' | 'other' | null;
+	/** @description Lead temperature (from CardDesk or manual) */
 	rating?: 'hot' | 'warm' | 'nurture' | 'cold' | null;
 	tags?: string[] | null;
+	/** @description Arbitrary key-value metadata */
 	custom_fields?: Record<string, any> | null;
 	notes?: string | null;
+	/** @description Where/when first met (from CardDesk) */
 	met_at?: string | null;
+	/** @description CardDesk conversion flag */
 	is_client?: boolean | null;
+	/** @description When converted to client in CardDesk */
 	client_at?: string | null;
+	/** @description Soft-paused in CardDesk (no deletion) */
 	hibernated?: boolean | null;
 	email_subscribed?: boolean | null;
 	unsubscribe_token?: string | null;
@@ -1761,6 +1940,7 @@ export interface People {
 	user?: DirectusUser | string | null;
 	organizations?: PeopleOrganization[] | string[];
 }
+
 export interface PeopleOrganization {
 	/** @primaryKey */
 	id: number;
@@ -1768,6 +1948,7 @@ export interface PeopleOrganization {
 	organizations_id?: Organization | string | null;
 	sort?: number | null;
 }
+
 export interface PhoneSetting {
 	/** @primaryKey */
 	id: string;
@@ -1777,24 +1958,31 @@ export interface PhoneSetting {
 	date_created?: string | null;
 	user_updated?: DirectusUser | string | null;
 	date_updated?: string | null;
-	/** @required */
+	/** @description e.g., 'Main Office', 'Support Hotline', 'Sales Line' @required */
 	line_name: string;
-	/** @required */
+	/** @description Unique slug (e.g., 'main', 'support', 'sales') @required */
 	line_identifier: string;
+	/** @description The Twilio number for this line (e.g., +15551234567) */
 	twilio_phone_number?: string | null;
 	/** @required */
 	company_name: string;
+	/** @description Text greeting (if no audio) */
 	greeting_text?: string | null;
+	/** @description Audio greeting (overrides text if provided) */
 	greeting_audio?: DirectusFile | string | null;
 	business_hours_enabled?: boolean | null;
-	timezone?: 'America/New_York' | 'America/Chicago' | 'America/Denver' | 'America/Phoenix' | 'America/Los_Angeles' | null;
+	timezone?: `America/New_York` | `America/Chicago` | `America/Denver` | `America/Phoenix` | `America/Los_Angeles` | null;
+	/** @description Text message when outside business hours (if no audio) */
 	after_hours_message?: string | null;
+	/** @description Audio message for after hours (overrides text if provided) */
 	after_hours_audio?: DirectusFile | string | null;
 	active?: boolean | null;
-	voice?: 'Polly.Joanna-Neural' | 'Polly.Matthew-Neural' | 'Polly.Ruth-Neural' | 'Polly.Stephen-Neural' | 'Polly.Salli-Neural' | 'Polly.Joey-Neural' | 'Polly.Kendra-Neural' | 'Polly.Kimberly-Neural' | 'Google.en-US-Wavenet-F' | 'Google.en-US-Wavenet-D' | 'alice' | 'man' | 'woman' | null;
+	/** @description Text-to-speech voice for automated messages */
+	voice?: `Polly.Joanna-Neural` | `Polly.Matthew-Neural` | `Polly.Ruth-Neural` | `Polly.Stephen-Neural` | `Polly.Salli-Neural` | `Polly.Joey-Neural` | `Polly.Kendra-Neural` | `Polly.Kimberly-Neural` | `Google.en-US-Wavenet-F` | `Google.en-US-Wavenet-D` | 'alice' | 'man' | 'woman' | null;
 	business_hours?: BusinessHour[] | string[];
 	call_routes?: CallRoute[] | string[];
 }
+
 export interface Portfolio {
 	/** @primaryKey */
 	id: string;
@@ -1805,6 +1993,7 @@ export interface Portfolio {
 	user_updated?: DirectusUser | string | null;
 	date_updated?: string | null;
 	name?: string | null;
+	/** @description Client description. */
 	description?: string | null;
 	logo?: DirectusFile | string | null;
 	synopsis?: string | null;
@@ -1814,6 +2003,7 @@ export interface Portfolio {
 	client?: Organization | string | null;
 	caption?: string | null;
 	slug?: string | null;
+	/** @description Image featured on details page.  If blank, will use first image in images. */
 	featured_image?: DirectusFile | string | null;
 	parent_id?: Portfolio | string | null;
 	hero?: Hero | string | null;
@@ -1826,6 +2016,7 @@ export interface Portfolio {
 	before_and_afters?: PortfolioBeforeAndAfter[] | string[];
 	capabilities?: PortfolioCapability[] | string[];
 }
+
 export interface PortfolioBeforeAndAfter {
 	/** @primaryKey */
 	id: number;
@@ -1833,12 +2024,14 @@ export interface PortfolioBeforeAndAfter {
 	before_and_afters_id?: BeforeAndAfter | string | null;
 	sort?: number | null;
 }
+
 export interface PortfolioCapability {
 	/** @primaryKey */
 	id: number;
 	portfolio_id?: Portfolio | string | null;
 	capabilities_id?: Capability | string | null;
 }
+
 export interface PortfolioFile {
 	/** @primaryKey */
 	id: number;
@@ -1846,6 +2039,7 @@ export interface PortfolioFile {
 	directus_files_id?: DirectusFile | string | null;
 	sort?: number | null;
 }
+
 export interface PortfolioIndustry {
 	/** @primaryKey */
 	id: number;
@@ -1853,6 +2047,7 @@ export interface PortfolioIndustry {
 	industries_id?: Industry | string | null;
 	sort?: number | null;
 }
+
 export interface Product {
 	/** @primaryKey */
 	id: string;
@@ -1869,6 +2064,7 @@ export interface Product {
 	price?: number | null;
 	description?: string | null;
 }
+
 export interface ProjectCategory {
 	/** @primaryKey */
 	id: string;
@@ -1879,6 +2075,7 @@ export interface ProjectCategory {
 	color?: string | null;
 	icon?: string | null;
 }
+
 export interface ProjectEventCategory {
 	/** @primaryKey */
 	id: string;
@@ -1891,6 +2088,7 @@ export interface ProjectEventCategory {
 	text_color?: string | null;
 	icon?: string | null;
 }
+
 export interface ProjectEventFile {
 	/** @primaryKey */
 	id: number;
@@ -1898,6 +2096,7 @@ export interface ProjectEventFile {
 	project_event_id?: ProjectEvent | string | null;
 	directus_files_id?: DirectusFile | string | null;
 }
+
 export interface ProjectEvent {
 	/** @primaryKey */
 	id: string;
@@ -1908,7 +2107,7 @@ export interface ProjectEvent {
 	user_updated?: DirectusUser | string | null;
 	date_updated?: string | null;
 	type?: 'General' | 'Design' | 'Content' | 'Timeline' | 'Financial' | 'Hours' | null;
-	approval?: 'No Approval Necessary' | 'Need Approval' | 'Approved' | null;
+	approval?: `No Approval Necessary` | `Need Approval` | 'Approved' | null;
 	priority?: 'Normal' | 'Urgent' | null;
 	hours?: string | null;
 	payment_amount?: string | null;
@@ -1925,15 +2124,20 @@ export interface ProjectEvent {
 	event_date?: string | null;
 	is_milestone?: boolean | null;
 	category_id?: ProjectEventCategory | string | null;
+	/** @description Number of business days for this phase */
 	duration_days?: number | null;
+	/** @description Calculated end date of the phase */
 	end_date?: string | null;
+	/** @description Team member assigned to this event */
 	assigned_to?: string | null;
+	/** @description Dependency on another event */
 	depends_on?: string | null;
 	comments?: ProjectEventsComment[] | string[];
 	spawned_projects?: Project[] | string[];
 	tasks?: ProjectTask[] | string[];
 	files?: ProjectEventFile[] | string[];
 }
+
 export interface ProjectEventsComment {
 	/** @primaryKey */
 	id: number;
@@ -1941,10 +2145,11 @@ export interface ProjectEventsComment {
 	comments_id?: Comment | string | null;
 	sort?: number | null;
 }
+
 export interface Project {
 	/** @primaryKey */
 	id: string;
-	status?: 'Pending' | 'Scheduled' | 'In Progress' | 'completed' | 'Archived';
+	status?: 'Pending' | 'Scheduled' | `In Progress` | 'completed' | 'Archived';
 	sort?: number | null;
 	user_created?: DirectusUser | string | null;
 	date_created?: string | null;
@@ -1956,25 +2161,29 @@ export interface Project {
 	url?: string | null;
 	tags?: string[] | null;
 	organization?: Organization | string | null;
-	template?: 'web-project' | 'branding-project' | null;
+	template?: `web-project` | `branding-project` | null;
 	contract_value?: number | null;
 	start_date?: string | null;
 	due_date?: string | null;
 	completion_date?: string | null;
 	projected_date?: string | null;
 	team?: Team | string | null;
+	/** @description Timeline line color */
 	color?: string | null;
+	/** @description Optional icon identifier */
 	icon?: string | null;
 	parent_id?: Project | string | null;
 	parent_event_id?: ProjectEvent | string | null;
 	member_visible?: boolean | null;
 	category_id?: ProjectCategory | string | null;
+	/** @description The client this project is for */
 	client?: Client | string | null;
 	events?: ProjectEvent[] | string[];
 	assigned_to?: ProjectsDirectusUser[] | string[];
 	tickets?: Ticket[] | string[];
 	children?: Project[] | string[];
 }
+
 export interface ProjectsDirectusUser {
 	/** @primaryKey */
 	id: number;
@@ -1982,6 +2191,7 @@ export interface ProjectsDirectusUser {
 	directus_users_id?: DirectusUser | string | null;
 	sort?: number | null;
 }
+
 export interface ProjectTask {
 	/** @primaryKey */
 	id: string;
@@ -2001,6 +2211,7 @@ export interface ProjectTask {
 	priority?: 'low' | 'medium' | 'high' | null;
 	watchers?: ProjectTasksWatcher[] | string[];
 }
+
 export interface ProjectTasksWatcher {
 	/** @primaryKey */
 	id: number;
@@ -2009,6 +2220,7 @@ export interface ProjectTasksWatcher {
 	user_id?: DirectusUser | string | null;
 	sort?: number | null;
 }
+
 export interface Prompt {
 	/** @primaryKey */
 	id: number;
@@ -2021,6 +2233,7 @@ export interface Prompt {
 	description?: string | null;
 	content?: string | null;
 }
+
 export interface Proposal {
 	/** @primaryKey */
 	id: string;
@@ -2035,12 +2248,14 @@ export interface Proposal {
 	notes?: string | null;
 	file?: DirectusFile | string | null;
 }
+
 export interface ProposalsFile {
 	/** @primaryKey */
 	id: number;
 	proposals_id?: string | null;
 	directus_files_id?: string | null;
 }
+
 export interface Reaction {
 	/** @primaryKey */
 	id: string;
@@ -2056,6 +2271,7 @@ export interface Reaction {
 	table?: string | null;
 	date_added?: string | null;
 }
+
 export interface Request {
 	/** @primaryKey */
 	id: string;
@@ -2065,7 +2281,7 @@ export interface Request {
 	date_created?: string | null;
 	user_updated?: DirectusUser | string | null;
 	date_updated?: string | null;
-	project?: 'Branding / Strategy' | 'Digital / Web' | 'Corporate / Data Design' | 'Reputation Management' | 'Print / Graphic Design' | 'Video / Audio' | 'Other' | null;
+	project?: `Branding / Strategy` | `Digital / Web` | `Corporate / Data Design` | `Reputation Management` | `Print / Graphic Design` | `Video / Audio` | 'Other' | null;
 	explanation?: string | null;
 	budget?: string | null;
 	first_name?: string | null;
@@ -2080,6 +2296,7 @@ export interface Request {
 	ip_address?: string | null;
 	date_submitted?: string | null;
 }
+
 export interface Restaurant {
 	/** @primaryKey */
 	id: string;
@@ -2101,6 +2318,7 @@ export interface Restaurant {
 	longitude?: number | null;
 	menus?: Menu[] | string[];
 }
+
 export interface RevealBlock {
 	/** @primaryKey */
 	id: number;
@@ -2113,6 +2331,7 @@ export interface RevealBlock {
 	title?: string | null;
 	content?: string | null;
 }
+
 export interface SchedulerSetting {
 	/** @primaryKey */
 	id: string;
@@ -2123,13 +2342,18 @@ export interface SchedulerSetting {
 	user_id: DirectusUser | string;
 	default_duration?: 15 | 30 | 45 | 60 | null;
 	default_meeting_type?: 'consultation' | 'discovery' | 'general' | null;
+	/** @description Minutes buffer before meetings */
 	buffer_before?: number | null;
+	/** @description Minutes buffer after meetings */
 	buffer_after?: number | null;
 	send_confirmations?: boolean | null;
 	send_reminders?: boolean | null;
 	reminder_time?: 15 | 30 | 60 | 1440 | null;
+	/** @description Allow public booking */
 	public_booking_enabled?: boolean | null;
+	/** @description Custom URL slug for booking page */
 	booking_page_slug?: string | null;
+	/** @description Title shown on booking page */
 	booking_page_title?: string | null;
 	booking_page_description?: string | null;
 	google_calendar_enabled?: boolean | null;
@@ -2137,8 +2361,9 @@ export interface SchedulerSetting {
 	google_calendar_id?: string | null;
 	outlook_calendar_enabled?: boolean | null;
 	outlook_refresh_token?: string | null;
-	timezone?: 'America/New_York' | 'America/Chicago' | 'America/Denver' | 'America/Los_Angeles' | null;
+	timezone?: `America/New_York` | `America/Chicago` | `America/Denver` | `America/Los_Angeles` | null;
 }
+
 export interface Service {
 	/** @primaryKey */
 	id: string;
@@ -2166,6 +2391,7 @@ export interface Service {
 	portfolio?: Portfolio[] | string[];
 	capabilities?: ServicesCapability[] | string[];
 }
+
 export interface ServicesCapability {
 	/** @primaryKey */
 	id: number;
@@ -2173,6 +2399,7 @@ export interface ServicesCapability {
 	capabilities_id?: Capability | string | null;
 	sort?: number | null;
 }
+
 export interface ServicesContentBlock {
 	/** @primaryKey */
 	id: number;
@@ -2182,6 +2409,7 @@ export interface ServicesContentBlock {
 	sort?: number | null;
 	status?: 'draft' | 'published' | 'archived' | null;
 }
+
 export interface ShopCategory {
 	/** @primaryKey */
 	id: string;
@@ -2196,6 +2424,7 @@ export interface ShopCategory {
 	slug: string;
 	icon?: string | null;
 }
+
 export interface ShopOrderItem {
 	/** @primaryKey */
 	id: string;
@@ -2212,6 +2441,7 @@ export interface ShopOrderItem {
 	unit_price?: number | null;
 	total_price?: number | null;
 }
+
 export interface ShopOrder {
 	/** @primaryKey */
 	id: string;
@@ -2221,6 +2451,7 @@ export interface ShopOrder {
 	date_created?: string | null;
 	user_updated?: DirectusUser | string | null;
 	date_updated?: string | null;
+	/** @description Auto-generated order number */
 	order_number?: string | null;
 	payment_method?: 'terminal' | 'tap_to_pay' | 'qr_code' | 'online' | null;
 	subtotal?: number | null;
@@ -2231,6 +2462,7 @@ export interface ShopOrder {
 	notes?: string | null;
 	items?: ShopOrderItem[] | string[];
 }
+
 export interface ShopProduct {
 	/** @primaryKey */
 	id: string;
@@ -2250,12 +2482,14 @@ export interface ShopProduct {
 	images?: ShopProductsFile[] | string[];
 	variants?: ShopVariant[] | string[];
 }
+
 export interface ShopProductsFile {
 	/** @primaryKey */
 	id: number;
 	shop_products_id?: ShopProduct | string | null;
 	directus_files_id?: DirectusFile | string | null;
 }
+
 export interface ShopSettings {
 	/** @primaryKey */
 	id: string;
@@ -2276,6 +2510,7 @@ export interface ShopSettings {
 	return_policy_days?: number | null;
 	low_stock_threshold?: number | null;
 }
+
 export interface ShopShippingOption {
 	/** @primaryKey */
 	id: string;
@@ -2290,6 +2525,7 @@ export interface ShopShippingOption {
 	price?: number | null;
 	estimated_days?: string | null;
 }
+
 export interface ShopVariant {
 	/** @primaryKey */
 	id: string;
@@ -2304,6 +2540,7 @@ export interface ShopVariant {
 	sku?: string | null;
 	stock?: number | null;
 }
+
 export interface Slide {
 	/** @primaryKey */
 	id: number;
@@ -2316,6 +2553,7 @@ export interface Slide {
 	title?: string | null;
 	slides_id?: string | null;
 }
+
 export interface SocialAccount {
 	/** @primaryKey */
 	id: string;
@@ -2327,22 +2565,28 @@ export interface SocialAccount {
 	date_updated?: string | null;
 	/** @required */
 	platform: 'instagram' | 'tiktok';
-	/** @required */
+	/** @description Unique ID from the platform @required */
 	platform_user_id: string;
-	/** @required */
+	/** @description Display name on the platform @required */
 	account_name: string;
-	/** @required */
+	/** @description The @username handle @required */
 	account_handle: string;
+	/** @description Profile picture URL from platform */
 	profile_picture_url?: string | null;
-	/** @required */
+	/** @description Encrypted OAuth access token @required */
 	access_token: string;
+	/** @description Encrypted OAuth refresh token */
 	refresh_token?: string | null;
-	/** @required */
+	/** @description When the access token expires @required */
 	token_expires_at: string;
+	/** @description Connection status of this account */
 	account_status?: 'active' | 'expired' | 'revoked';
+	/** @description Platform-specific data (page_id, scopes, etc.) */
 	metadata?: Record<string, any> | null;
+	/** @description Which agency client this account belongs to */
 	client_id?: SocialClient | string | null;
 }
+
 export interface SocialActivityLog {
 	/** @primaryKey */
 	id: string;
@@ -2353,6 +2597,7 @@ export interface SocialActivityLog {
 	user_updated?: DirectusUser | string | null;
 	date_updated?: string | null;
 }
+
 export interface SocialAnalyticsSnapshot {
 	/** @primaryKey */
 	id: string;
@@ -2362,16 +2607,18 @@ export interface SocialAnalyticsSnapshot {
 	date_created?: string | null;
 	user_updated?: DirectusUser | string | null;
 	date_updated?: string | null;
-	/** @required */
+	/** @description The social account this snapshot belongs to @required */
 	social_account: SocialAccount | string;
+	/** @description Linked post for post-level metrics (null for account-level) */
 	social_post?: SocialPost | string | null;
 	/** @required */
 	snapshot_type: 'account' | 'post';
-	/** @required */
+	/** @description When these metrics were captured @required */
 	captured_at: string;
-	/** @required */
+	/** @description Platform-specific metrics object (followers, likes, impressions, etc.) @required */
 	metrics: Record<string, any>;
 }
+
 export interface SocialClient {
 	/** @primaryKey */
 	id: string;
@@ -2383,11 +2630,14 @@ export interface SocialClient {
 	date_updated?: string | null;
 	/** @required */
 	name: string;
+	/** @description URL to client logo image */
 	logo_url?: string | null;
+	/** @description Primary contact email */
 	contact_email?: string | null;
 	brand_color?: string | null;
 	notes?: string | null;
 }
+
 export interface SocialComment {
 	/** @primaryKey */
 	id: string;
@@ -2397,17 +2647,18 @@ export interface SocialComment {
 	date_created?: string | null;
 	user_updated?: DirectusUser | string | null;
 	date_updated?: string | null;
-	/** @required */
+	/** @description The post this comment belongs to @required */
 	social_post: SocialPost | string;
-	/** @required */
+	/** @description The account this comment was made on @required */
 	social_account: SocialAccount | string;
-	/** @required */
+	/** @description Comment ID from the platform @required */
 	platform_comment_id: string;
-	/** @required */
+	/** @description User ID of the commenter on the platform @required */
 	platform_user_id: string;
-	/** @required */
+	/** @description Commenter username @required */
 	username: string;
 }
+
 export interface SocialPost {
 	/** @primaryKey */
 	id: string;
@@ -2417,23 +2668,29 @@ export interface SocialPost {
 	date_created?: string | null;
 	user_updated?: DirectusUser | string | null;
 	date_updated?: string | null;
-	/** @required */
+	/** @description Post caption / text content @required */
 	caption: string;
-	/** @required */
+	/** @description Array of media URLs @required */
 	media_urls: Record<string, any>;
-	/** @required */
+	/** @description Array of media types — "image" or "video" per URL @required */
 	media_types: Record<string, any>;
+	/** @description Preview thumbnail URL */
 	thumbnail_url?: string | null;
 	post_type?: 'image' | 'video' | 'carousel' | 'reel' | 'story';
-	/** @required */
+	/** @description Array of target accounts with platform-specific options @required */
 	platforms: Record<string, any>;
-	/** @required */
+	/** @description When to publish this post @required */
 	scheduled_at: string;
+	/** @description Publishing workflow status */
 	post_status?: 'draft' | 'scheduled' | 'publishing' | 'published' | 'failed';
+	/** @description Results per platform after publishing (post IDs, URLs, etc.) */
 	publish_results?: Record<string, any> | null;
+	/** @description When the post was actually published */
 	published_at?: string | null;
+	/** @description Error details if publishing failed */
 	error_message?: string | null;
 }
+
 export interface Task {
 	/** @primaryKey */
 	id: string;
@@ -2460,6 +2717,7 @@ export interface Task {
 	client_id?: Client | string | null;
 	assigned_to?: TasksDirectusUser[] | string[];
 }
+
 export interface TasksDirectusUser {
 	/** @primaryKey */
 	id: number;
@@ -2467,6 +2725,7 @@ export interface TasksDirectusUser {
 	directus_users_id?: DirectusUser | string | null;
 	sort?: number | null;
 }
+
 export interface Team {
 	/** @primaryKey */
 	id: string;
@@ -2481,12 +2740,16 @@ export interface Team {
 	organization?: Organization | string | null;
 	icon?: DirectusFile | string | null;
 	active?: boolean | null;
+	/** @description What this team specializes in */
 	focus?: string | null;
+	/** @description Current objectives for this team */
 	goals?: string | null;
 	users?: JunctionDirectusUsersTeam[] | string[];
 	projects?: Project[] | string[];
+	/** @description Clients assigned to this team */
 	assigned_clients?: ClientsTeam[] | string[];
 }
+
 export interface TemplateBlock {
 	/** @primaryKey */
 	id: number;
@@ -2498,10 +2761,11 @@ export interface TemplateBlock {
 	block_id: NewsletterBlock | string;
 	instance_variables?: Record<string, any> | null;
 }
+
 export interface Ticket {
 	/** @primaryKey */
 	id: string;
-	status?: 'Pending' | 'Scheduled' | 'In Progress' | 'Completed';
+	status?: 'Pending' | 'Scheduled' | `In Progress` | 'Completed';
 	sort?: number | null;
 	user_created?: DirectusUser | string | null;
 	date_created?: string | null;
@@ -2515,12 +2779,14 @@ export interface Ticket {
 	priority?: 'low' | 'medium' | 'high' | null;
 	project?: Project | string | null;
 	team?: Team | string | null;
+	/** @description The client this ticket is for */
 	client?: Client | string | null;
 	files?: TicketsFile[] | string[];
 	services?: TicketsService[] | string[];
 	assigned_to?: TicketsDirectusUser[] | string[];
 	tasks?: Task[] | string[];
 }
+
 export interface TicketsComment {
 	/** @primaryKey */
 	id: number;
@@ -2528,18 +2794,21 @@ export interface TicketsComment {
 	comments_id?: Comment | string | null;
 	sort?: number | null;
 }
+
 export interface TicketsDirectusUser {
 	/** @primaryKey */
 	id: number;
 	tickets_id?: Ticket | string | null;
 	directus_users_id?: DirectusUser | string | null;
 }
+
 export interface TicketsFile {
 	/** @primaryKey */
 	id: number;
 	tickets_id?: Ticket | string | null;
 	directus_files_id?: DirectusFile | string | null;
 }
+
 export interface TicketsService {
 	/** @primaryKey */
 	id: number;
@@ -2547,6 +2816,7 @@ export interface TicketsService {
 	services_id?: Service | string | null;
 	sort?: number | null;
 }
+
 export interface TimeEntry {
 	/** @primaryKey */
 	id: number;
@@ -2564,9 +2834,12 @@ export interface TimeEntry {
 	/** @required */
 	start_time: string;
 	end_time?: string | null;
+	/** @description Stored duration in minutes (allows manual adjustment) */
 	duration_minutes?: number | null;
+	/** @description Calendar date derived from start_time */
 	date?: string | null;
 	billable?: boolean | null;
+	/** @description Rate snapshot at time of entry */
 	hourly_rate?: number | null;
 	billed?: boolean | null;
 	invoice?: Invoice | string | null;
@@ -2576,6 +2849,7 @@ export interface TimeEntry {
 	user_updated?: DirectusUser | string | null;
 	date_updated?: string | null;
 }
+
 export interface UserPresence {
 	/** @primaryKey */
 	id: string;
@@ -2589,13 +2863,16 @@ export interface UserPresence {
 	location?: string | null;
 	last_seen?: string | null;
 }
+
 export interface VideoMeetingAttendee {
 	/** @primaryKey */
 	id: number;
 	video_meeting?: VideoMeeting | string;
 	attendee_type?: 'user' | 'guest';
 	directus_user?: DirectusUser | string | null;
+	/** @description Name for external guests */
 	guest_name?: string | null;
+	/** @description Email for external guests */
 	guest_email?: string | null;
 	guest_phone?: string | null;
 	status?: 'invited' | 'waiting' | 'admitted' | 'rejected' | 'in_meeting' | 'left';
@@ -2606,6 +2883,7 @@ export interface VideoMeetingAttendee {
 	date_created?: string | null;
 	date_updated?: string | null;
 }
+
 export interface VideoMeeting {
 	/** @primaryKey */
 	id: string;
@@ -2615,29 +2893,40 @@ export interface VideoMeeting {
 	date_created?: string | null;
 	user_updated?: DirectusUser | string | null;
 	date_updated?: string | null;
-	/** @required */
+	/** @description Unique room identifier @required */
 	room_name: string;
+	/** @description Twilio Room SID */
 	room_sid?: string | null;
-	/** @required */
+	/** @description Meeting title @required */
 	title: string;
+	/** @description Meeting description or agenda */
 	description?: string | null;
 	meeting_type?: 'consultation' | 'discovery' | 'project_review' | 'presentation' | 'followup' | 'general' | null;
 	duration_minutes?: 15 | 30 | 45 | 60 | 90 | 120 | null;
+	/** @description Scheduled start time */
 	scheduled_start?: string | null;
+	/** @description Scheduled end time */
 	scheduled_end?: string | null;
 	actual_start?: string | null;
 	actual_end?: string | null;
 	actual_duration_minutes?: number | null;
+	/** @description Host display name */
 	host_identity?: string | null;
+	/** @description Host user (staff member) */
 	host_user?: DirectusUser | string | null;
 	max_participants?: number | null;
+	/** @description Peak concurrent participants */
 	participant_count?: number | null;
 	recording_enabled?: boolean | null;
 	recording_url?: string | null;
 	meeting_url?: string | null;
+	/** @description Optional password protection */
 	password?: string | null;
+	/** @description Guest name */
 	invitee_name?: string | null;
+	/** @description Guest email for invite */
 	invitee_email?: string | null;
+	/** @description Guest phone for SMS invite */
 	invitee_phone?: string | null;
 	invite_method?: 'email' | 'sms' | 'both' | 'none' | null;
 	invite_sent?: boolean | null;
@@ -2646,19 +2935,23 @@ export interface VideoMeeting {
 	reminder_sent_at?: string | null;
 	reminder_minutes_before?: 0 | 15 | 30 | 60 | 1440 | null;
 	booked_via?: 'direct' | 'public' | 'phone' | 'api' | null;
+	/** @description Notes from booking form */
 	booking_notes?: string | null;
 	related_contact?: Contact | string | null;
 	related_organization?: Organization | string | null;
 	related_appointment?: Appointment | string | null;
+	/** @description JSON log of participant events */
 	participants_log?: Record<string, any> | null;
 	notes?: string | null;
 	follow_up_required?: boolean | null;
 	follow_up_notes?: string | null;
 	google_event_id?: string | null;
 	outlook_event_id?: string | null;
+	/** @description Require host to admit guests before they can join */
 	waiting_room_enabled?: boolean;
 	attendees?: VideoMeetingAttendee[] | string[];
 }
+
 export interface Video {
 	/** @primaryKey */
 	id: string;
@@ -2675,6 +2968,7 @@ export interface Video {
 	title?: string | null;
 	description?: string | null;
 }
+
 export interface DirectusAccess {
 	/** @primaryKey */
 	id: string;
@@ -2683,6 +2977,7 @@ export interface DirectusAccess {
 	policy?: DirectusPolicy | string;
 	sort?: number | null;
 }
+
 export interface DirectusActivity {
 	/** @primaryKey */
 	id: number;
@@ -2696,6 +2991,7 @@ export interface DirectusActivity {
 	origin?: string | null;
 	revisions?: DirectusRevision[] | string[];
 }
+
 export interface DirectusCollection {
 	/** @primaryKey */
 	collection: string;
@@ -2710,7 +3006,7 @@ export interface DirectusCollection {
 	archive_value?: string | null;
 	unarchive_value?: string | null;
 	sort_field?: string | null;
-	accountability?: 'all' | 'activity' | null;
+	accountability?: 'all' | 'activity' | null | null;
 	color?: string | null;
 	item_duplication_fields?: 'json' | null;
 	sort?: number | null;
@@ -2719,6 +3015,7 @@ export interface DirectusCollection {
 	preview_url?: string | null;
 	versioning?: boolean;
 }
+
 export interface DirectusComment {
 	/** @primaryKey */
 	id: string;
@@ -2730,6 +3027,7 @@ export interface DirectusComment {
 	user_created?: DirectusUser | string | null;
 	user_updated?: DirectusUser | string | null;
 }
+
 export interface DirectusField {
 	/** @primaryKey */
 	id: number;
@@ -2753,6 +3051,7 @@ export interface DirectusField {
 	validation_message?: string | null;
 	searchable?: boolean;
 }
+
 export interface DirectusFile {
 	/** @primaryKey */
 	id: string;
@@ -2785,18 +3084,21 @@ export interface DirectusFile {
 	portfolio_title?: string | null;
 	status?: 'draft' | 'published' | null;
 }
+
 export interface DirectusFolder {
 	/** @primaryKey */
 	id: string;
 	name?: string;
 	parent?: DirectusFolder | string | null;
 }
+
 export interface DirectusMigration {
 	/** @primaryKey */
 	version: string;
 	name?: string;
 	timestamp?: string | null;
 }
+
 export interface DirectusPermission {
 	/** @primaryKey */
 	id: number;
@@ -2808,6 +3110,7 @@ export interface DirectusPermission {
 	fields?: string[] | null;
 	policy?: DirectusPolicy | string;
 }
+
 export interface DirectusPolicy {
 	/** @primaryKey */
 	id: string;
@@ -2823,6 +3126,7 @@ export interface DirectusPolicy {
 	users?: DirectusAccess[] | string[];
 	roles?: DirectusAccess[] | string[];
 }
+
 export interface DirectusPreset {
 	/** @primaryKey */
 	id: number;
@@ -2839,6 +3143,7 @@ export interface DirectusPreset {
 	icon?: string | null;
 	color?: string | null;
 }
+
 export interface DirectusRelation {
 	/** @primaryKey */
 	id: number;
@@ -2852,6 +3157,7 @@ export interface DirectusRelation {
 	sort_field?: string | null;
 	one_deselect_action?: string;
 }
+
 export interface DirectusRevision {
 	/** @primaryKey */
 	id: number;
@@ -2863,6 +3169,7 @@ export interface DirectusRevision {
 	parent?: DirectusRevision | string | null;
 	version?: DirectusVersion | string | null;
 }
+
 export interface DirectusRole {
 	/** @primaryKey */
 	id: string;
@@ -2875,6 +3182,7 @@ export interface DirectusRole {
 	policies?: DirectusAccess[] | string[];
 	users?: DirectusUser[] | string[];
 }
+
 export interface DirectusSession {
 	/** @primaryKey */
 	token: string;
@@ -2886,6 +3194,7 @@ export interface DirectusSession {
 	origin?: string | null;
 	next_token?: string | null;
 }
+
 export interface DirectusSettings {
 	/** @primaryKey */
 	id: number;
@@ -2897,7 +3206,7 @@ export interface DirectusSettings {
 	public_background?: DirectusFile | string | null;
 	public_note?: string | null;
 	auth_login_attempts?: number | null;
-	auth_password_policy?: string | null;
+	auth_password_policy?: null | `/^.{8,}$/` | `/(?=^.{8,}$)(?=.*\\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*()_+}{';'?>.<,])(?!.*\\s).*$/` | null;
 	storage_asset_transform?: 'all' | 'none' | 'presets' | null;
 	storage_asset_presets?: Array<{ key: string; fit: 'contain' | 'cover' | 'inside' | 'outside'; width: number; height: number; quality: number; withoutEnlargement: boolean; format: 'auto' | 'jpeg' | 'png' | 'webp' | 'tiff' | 'avif'; transforms: 'json' }> | null;
 	custom_css?: string | null;
@@ -2943,11 +3252,12 @@ export interface DirectusSettings {
 	ai_openai_compatible_name?: string | null;
 	ai_openai_compatible_models?: Array<{ id: string; name: string; context: number; output: number; attachment: boolean; reasoning: boolean; providerOptions: Record<string, any> }> | null;
 	ai_openai_compatible_headers?: Array<{ header: string; value: string }> | null;
-	ai_openai_allowed_models?: string[] | null;
-	ai_anthropic_allowed_models?: string[] | null;
-	ai_google_allowed_models?: string[] | null;
+	ai_openai_allowed_models?: Array<`gpt-4o-mini` | `gpt-4.1-nano` | `gpt-4.1-mini` | `gpt-4.1` | `gpt-5-nano` | `gpt-5-mini` | `gpt-5` | `gpt-5.2` | `gpt-5.2-chat-latest` | `gpt-5.2-pro`> | null;
+	ai_anthropic_allowed_models?: Array<`claude-haiku-4-5` | `claude-sonnet-4-5` | `claude-opus-4-5`> | null;
+	ai_google_allowed_models?: Array<`gemini-3-pro-preview` | `gemini-3-flash-preview` | `gemini-2.5-pro` | `gemini-2.5-flash`> | null;
 	collaborative_editing_enabled?: boolean;
 }
+
 export interface DirectusUser {
 	/** @primaryKey */
 	id: string;
@@ -2971,7 +3281,7 @@ export interface DirectusUser {
 	external_identifier?: string | null;
 	auth_data?: 'json' | null;
 	email_notifications?: boolean | null;
-	appearance?: 'auto' | 'light' | 'dark' | null;
+	appearance?: null | 'auto' | 'light' | 'dark' | null;
 	theme_dark?: string | null;
 	theme_light?: string | null;
 	theme_light_overrides?: 'json' | null;
@@ -2981,11 +3291,13 @@ export interface DirectusUser {
 	text_direction?: 'auto' | 'ltr' | 'rtl';
 	industry?: string | null;
 	networking_goal?: string | null;
+	/** @description JSON preferences for nav visibility and order */
 	nav_preferences?: Record<string, any> | null;
 	organizations?: OrganizationsDirectusUser[] | string[];
 	teams?: JunctionDirectusUsersTeam[] | string[];
 	policies?: DirectusAccess[] | string[];
 }
+
 export interface DirectusDashboard {
 	/** @primaryKey */
 	id: string;
@@ -2997,6 +3309,7 @@ export interface DirectusDashboard {
 	color?: string | null;
 	panels?: DirectusPanel[] | string[];
 }
+
 export interface DirectusPanel {
 	/** @primaryKey */
 	id: string;
@@ -3015,6 +3328,7 @@ export interface DirectusPanel {
 	date_created?: string | null;
 	user_created?: DirectusUser | string | null;
 }
+
 export interface DirectusNotification {
 	/** @primaryKey */
 	id: number;
@@ -3027,6 +3341,7 @@ export interface DirectusNotification {
 	collection?: string | null;
 	item?: string | null;
 }
+
 export interface DirectusShare {
 	/** @primaryKey */
 	id: string;
@@ -3042,6 +3357,7 @@ export interface DirectusShare {
 	times_used?: number | null;
 	max_uses?: number | null;
 }
+
 export interface DirectusFlow {
 	/** @primaryKey */
 	id: string;
@@ -3058,6 +3374,7 @@ export interface DirectusFlow {
 	user_created?: DirectusUser | string | null;
 	operations?: DirectusOperation[] | string[];
 }
+
 export interface DirectusOperation {
 	/** @primaryKey */
 	id: string;
@@ -3073,6 +3390,7 @@ export interface DirectusOperation {
 	date_created?: string | null;
 	user_created?: DirectusUser | string | null;
 }
+
 export interface DirectusTranslation {
 	/** @primaryKey */
 	id: string;
@@ -3083,6 +3401,7 @@ export interface DirectusTranslation {
 	/** @required */
 	value: string;
 }
+
 export interface DirectusVersion {
 	/** @primaryKey */
 	id: string;
@@ -3097,6 +3416,7 @@ export interface DirectusVersion {
 	user_updated?: DirectusUser | string | null;
 	delta?: 'json' | null;
 }
+
 export interface DirectusExtension {
 	enabled?: boolean;
 	/** @primaryKey */
@@ -3105,6 +3425,7 @@ export interface DirectusExtension {
 	source?: string;
 	bundle?: string | null;
 }
+
 export interface DirectusDeployment {
 	/** @primaryKey */
 	id: string;
@@ -3115,6 +3436,7 @@ export interface DirectusDeployment {
 	user_created?: DirectusUser | string | null;
 	projects?: DirectusDeploymentProject[] | string[];
 }
+
 export interface DirectusDeploymentProject {
 	/** @primaryKey */
 	id: string;
@@ -3125,6 +3447,7 @@ export interface DirectusDeploymentProject {
 	user_created?: DirectusUser | string | null;
 	runs?: DirectusDeploymentRun[] | string[];
 }
+
 export interface DirectusDeploymentRun {
 	/** @primaryKey */
 	id: string;
@@ -3134,6 +3457,7 @@ export interface DirectusDeploymentRun {
 	date_created?: string | null;
 	user_created?: DirectusUser | string | null;
 }
+
 export interface Schema {
 	ai_chat_messages: AiChatMessage[];
 	ai_chat_sessions: AiChatSession[];
@@ -3198,8 +3522,8 @@ export interface Schema {
 	email_templates: EmailTemplate[];
 	expenses: Expense[];
 	financial_goals: FinancialGoal[];
-	goal_snapshots: GoalSnapshot[];
 	goals: Goal[];
+	goal_snapshots: GoalSnapshot[];
 	heros: Hero[];
 	home: Home;
 	home_files: HomeFile[];
@@ -3325,6 +3649,7 @@ export interface Schema {
 	directus_deployment_projects: DirectusDeploymentProject[];
 	directus_deployment_runs: DirectusDeploymentRun[];
 }
+
 export enum CollectionNames {
 	ai_chat_messages = 'ai_chat_messages',
 	ai_chat_sessions = 'ai_chat_sessions',
@@ -3389,8 +3714,8 @@ export enum CollectionNames {
 	email_templates = 'email_templates',
 	expenses = 'expenses',
 	financial_goals = 'financial_goals',
-	goal_snapshots = 'goal_snapshots',
 	goals = 'goals',
+	goal_snapshots = 'goal_snapshots',
 	heros = 'heros',
 	home = 'home',
 	home_files = 'home_files',
