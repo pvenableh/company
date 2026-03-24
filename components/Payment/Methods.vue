@@ -32,6 +32,8 @@ if (props.email) {
 	email.value = props.email;
 } else if (props.user?.email) {
 	email.value = props.user.email;
+} else if (props.invoice?.billing_email) {
+	email.value = props.invoice.billing_email;
 } else if (props.bill_to?.email) {
 	email.value = props.bill_to.email;
 }
