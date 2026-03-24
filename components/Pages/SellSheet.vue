@@ -794,9 +794,6 @@ useHead({
 	.replaces-grid {
 		grid-template-columns: repeat(2, 1fr);
 	}
-	.replaces-item:last-child {
-		grid-column: auto;
-	}
 }
 .replaces-item {
 	background: var(--paper);
