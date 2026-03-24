@@ -151,6 +151,11 @@ export function useFeedback() {
     ? window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false
     : false;
 
+  /** Whether the device supports the Vibration API (false on iOS Safari) */
+  const hapticSupported = import.meta.client
+    ? typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function'
+    : false;
+
   /**
    * Trigger combined haptic + sound feedback.
    *
@@ -199,6 +204,7 @@ export function useFeedback() {
   return {
     feedback,
     haptic,
+    hapticSupported,
     preferences: _prefs,
     setPreferences,
   };

@@ -131,8 +131,8 @@
 					<h3 class="text-sm font-semibold text-foreground mt-5 mb-3">Interaction Feedback</h3>
 
 					<div class="space-y-5">
-						<!-- Haptic Feedback -->
-						<div class="flex items-center justify-between">
+						<!-- Haptic Feedback (hidden on devices without Vibration API, e.g. iOS Safari) -->
+						<div v-if="hapticSupported" class="flex items-center justify-between">
 							<div>
 								<p class="text-sm font-medium">Haptic Feedback</p>
 								<p class="text-xs text-muted-foreground">Vibration on interactions (mobile devices)</p>
@@ -203,7 +203,7 @@ const { userPreferences, savePreferences } = useNotifications();
 const desktopNotifs = useDesktopNotifications();
 
 // ── Feedback preferences ────────────────────────────────────────────────────
-const { feedback, preferences: feedbackPrefs, setPreferences: setFeedbackPrefs } = useFeedback();
+const { feedback, hapticSupported, preferences: feedbackPrefs, setPreferences: setFeedbackPrefs } = useFeedback();
 
 function toggleFeedbackPref(key: 'hapticEnabled' | 'soundEnabled') {
 	setFeedbackPrefs({ [key]: !feedbackPrefs.value[key] });

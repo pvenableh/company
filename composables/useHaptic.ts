@@ -1,8 +1,10 @@
 /**
  * iOS-style haptic feedback patterns.
  *
- * On devices with vibration support these map to real haptics.
- * On iOS Safari PWA they trigger the Taptic Engine via short vibrations.
+ * On devices with vibration support (Android, some desktop browsers)
+ * these map to real haptics via the Vibration API.
+ * Note: iOS Safari does not support the Vibration API — haptics are
+ * silently skipped on iOS devices.
  */
 
 /** Predefined iOS-like haptic intensities (ms) */

@@ -80,24 +80,27 @@ const actionLabels = {
 	delete: 'deleted',
 };
 
-// ── Fun, collection-aware action phrases ──
+// ── Fun, collection-aware action phrases (article included where needed) ──
 const actionPhrases = {
-	projects:      { create: 'Kicked off',      update: 'Made progress on' },
-	tickets:       { create: 'Opened',           update: 'Moved forward on' },
-	project_tasks: { create: 'Lined up',         update: 'Worked on' },
-	tasks:         { create: 'Added',            update: 'Tackled' },
-	invoices:      { create: 'Drafted',          update: 'Updated' },
-	emails:        { create: 'Composed',         update: 'Refined' },
-	contacts:      { create: 'Connected with',   update: 'Updated' },
-	cd_contacts:   { create: 'Connected with',   update: 'Updated' },
-	cd_activities: { create: 'Logged',           update: 'Updated' },
-	clients:       { create: 'Welcomed',         update: 'Updated' },
+	projects:      { create: 'Kicked off a',     update: 'Made progress on a',  delete: 'Removed a' },
+	tickets:       { create: 'Opened a',          update: 'Moved forward on a',  delete: 'Closed out a' },
+	project_tasks: { create: 'Queued up a',       update: 'Worked on a',         delete: 'Cleared a' },
+	tasks:         { create: 'Added a',           update: 'Tackled a',           delete: 'Cleared a' },
+	invoices:      { create: 'Drafted an',        update: 'Updated an',          delete: 'Voided an' },
+	emails:        { create: 'Composed an',       update: 'Edited an',           delete: 'Discarded an' },
+	contacts:      { create: 'Added a',           update: 'Updated a',           delete: 'Removed a' },
+	cd_contacts:   { create: 'Added a',           update: 'Updated a',           delete: 'Removed a' },
+	cd_activities: { create: 'Logged an',         update: 'Updated an',          delete: 'Removed an' },
+	clients:       { create: 'Welcomed a',        update: 'Updated a',           delete: 'Removed a' },
 };
 
 const getActionPhrase = (item) => {
 	const phrase = actionPhrases[item.collection]?.[item.action];
 	if (phrase) return phrase;
-	return (actionLabels[item.action] || item.action).replace(/^\w/, (c) => c.toUpperCase());
+	const label = collectionLabels[item.collection] || item.collection;
+	const verb = (actionLabels[item.action] || item.action).replace(/^\w/, (c) => c.toUpperCase());
+	const article = /^[aeiou]/i.test(label) ? 'an' : 'a';
+	return `${verb} ${article}`;
 };
 
 // ── Milestone flavor text – short motivational one-liners ──
@@ -108,34 +111,51 @@ const flavorTexts = {
 		'One less thing on the list!',
 		'Progress feels good, right?',
 		'That\'s momentum right there!',
+		'Steady progress pays off!',
+		'Knock \'em out one by one!',
+		'Moving right along!',
 	],
 	projectCreated: [
 		'New adventures ahead!',
 		'Fresh canvas, let\'s go!',
 		'Big things start here.',
+		'And so it begins!',
+		'Off to a great start!',
 	],
 	clientCreated: [
 		'Growing the network!',
-		'New relationship unlocked!',
+		'Another client on board!',
 		'Welcome to the crew!',
+		'The roster keeps growing!',
+		'Great partnerships start here.',
 	],
 	invoiceCreated: [
-		'Money moves!',
-		'Get that bread!',
-		'Cha-ching incoming!',
+		'Invoice on the way!',
+		'Billing in motion.',
+		'Another one out the door!',
+		'Keeping the books tidy!',
+		'Time to get paid!',
 	],
 	emailSent: [
 		'Message delivered!',
 		'Sent and sealed!',
 		'Off it goes!',
+		'Another one in the outbox!',
+		'Communication is key!',
 	],
 	contactCreated: [
 		'New connection made!',
 		'Building bridges!',
+		'The network grows!',
+		'Another name in the book!',
+		'Connections drive progress.',
 	],
 	ticketCreated: [
 		'On it!',
 		'Tracked and ready to roll!',
+		'Logged and on the radar!',
+		'Nothing slips through the cracks!',
+		'Let\'s get this sorted!',
 	],
 };
 
@@ -268,6 +288,23 @@ const isUUID = (str) => typeof str === 'string' && UUID_RE.test(str.trim());
 
 // ── Build a human-readable title when the raw title is missing or a UUID ──
 const truncate = (str, max = 60) => str.length > max ? str.slice(0, max - 3) + '…' : str;
+
+// ── HTML detection + sanitization for rich-text fields ──
+const containsHtml = (str) => /<[a-z][\s\S]*>/i.test(str);
+
+const sanitizeHtml = (html) => {
+	if (!html) return '';
+	try {
+		const parser = new DOMParser();
+		const doc = parser.parseFromString(html, 'text/html');
+		for (const tag of ['script', 'iframe', 'object', 'embed', 'style']) {
+			doc.querySelectorAll(tag).forEach((el) => el.remove());
+		}
+		return doc.body.innerHTML;
+	} catch {
+		return '';
+	}
+};
 
 const humanizeItemTitle = (act, itemData) => {
 	const raw = itemData?.title || itemData?.invoice_code || itemData?.name || itemData?.subject || '';
@@ -652,20 +689,22 @@ watch(selectedOrg, () => {
 								:class="collectionColors[item.collection] || 'text-muted-foreground'"
 							/>
 							<span class="text-xs text-muted-foreground">
-								{{ getActionPhrase(item) }} a {{ collectionLabels[item.collection] || item.collection }}
+								{{ getActionPhrase(item) }} {{ collectionLabels[item.collection] || item.collection }}
 							</span>
 						</div>
 
-						<!-- Item title (clickable) -->
+						<!-- Item title (clickable) — render HTML when present (e.g. rich-text descriptions) -->
 						<NuxtLink
 							v-if="getItemRoute(item)"
 							:to="getItemRoute(item)"
 							class="text-[15px] font-semibold text-foreground hover:text-primary transition-colors leading-snug"
 						>
-							{{ item.itemTitle }}
+							<span v-if="containsHtml(item.itemTitle)" v-html="sanitizeHtml(item.itemTitle)" />
+							<template v-else>{{ item.itemTitle }}</template>
 						</NuxtLink>
 						<p v-else class="text-[15px] font-semibold text-foreground leading-snug">
-							{{ item.itemTitle }}
+							<span v-if="containsHtml(item.itemTitle)" v-html="sanitizeHtml(item.itemTitle)" />
+							<template v-else>{{ item.itemTitle }}</template>
 						</p>
 
 						<!-- Motivational flavor text for milestones -->
@@ -674,7 +713,10 @@ watch(selectedOrg, () => {
 						</p>
 
 						<!-- CardDesk activity note (left column, text content) -->
-						<p v-if="item.collection === 'cd_activities' && item.itemData?.note" class="text-xs text-muted-foreground mt-1 line-clamp-2">{{ item.itemData.note }}</p>
+						<p v-if="item.collection === 'cd_activities' && item.itemData?.note" class="text-xs text-muted-foreground mt-1 line-clamp-2">
+							<span v-if="containsHtml(item.itemData.note)" v-html="sanitizeHtml(item.itemData.note)" />
+							<template v-else>{{ item.itemData.note }}</template>
+						</p>
 					</div>
 
 					<!-- Right column: detail badges -->
