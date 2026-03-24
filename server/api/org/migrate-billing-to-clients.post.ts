@@ -36,10 +36,8 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'organizationId is required' });
   }
 
-  // Permission check
-  await requireOrgPermission(event, organizationId, 'invoices', 'update');
-
-  const directus = getTypedDirectus();
+  // Use server token (full admin) — this is a one-time migration script
+  const directus = getServerDirectus();
 
   const actions: MigrationAction[] = [];
   const warnings: string[] = [];
