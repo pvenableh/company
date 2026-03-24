@@ -139,14 +139,19 @@ export default defineEventHandler(async (event) => {
 			}
 			const [primaryEmail, ...ccEmails] = emails;
 
+			// Merge per-invoice CC recipients from the emails array field
+			const invoiceExtraEmails = Array.isArray(firstInvoice?.emails) ? firstInvoice.emails : [];
+			const allCcEmails = [...new Set([...ccEmails, ...invoiceExtraEmails])]
+				.filter((e) => e && e !== primaryEmail);
+
 			const personalization = {
 				to: [{ email: primaryEmail || organization.email }],
 				bcc: [{ email: 'huestudios.com@gmail.com' }, { email: 'camila@huestudios.com' }],
 			};
 
 			// Add additional CC recipients if they exist
-			if (ccEmails.length > 0) {
-				personalization.cc = ccEmails.map((email) => ({ email }));
+			if (allCcEmails.length > 0) {
+				personalization.cc = allCcEmails.map((email) => ({ email }));
 			}
 
 			const message = {

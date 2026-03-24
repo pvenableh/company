@@ -201,6 +201,12 @@ onMounted(loadInvoice);
                 <span class="text-muted-foreground">Billing Contact</span>
                 <span class="truncate ml-2">{{ invoice.billing_name }}</span>
               </div>
+              <div v-if="invoice.emails?.length" class="flex justify-between">
+                <span class="text-muted-foreground">CC</span>
+                <div class="flex flex-col items-end gap-0.5">
+                  <span v-for="(e, i) in invoice.emails" :key="i" class="text-xs truncate ml-2">{{ e }}</span>
+                </div>
+              </div>
               <div class="flex justify-between">
                 <span class="text-muted-foreground">Project</span>
                 <span>{{ getProjectTitle(invoice) }}</span>

@@ -37,6 +37,9 @@ const formatNumber = (value) => {
 				<p>{{ invoice.billing_name || invoice.client?.name || invoice.bill_to?.name }}</p>
 				<p v-if="invoice.billing_email || invoice.bill_to?.email">{{ invoice.billing_email || invoice.bill_to?.email }}</p>
 				<p v-if="invoice.billing_address || invoice.bill_to?.address">{{ invoice.billing_address || invoice.bill_to?.address }}</p>
+			<template v-if="invoice.emails?.length">
+				<p v-for="(e, i) in invoice.emails" :key="i" class="opacity-50">cc: {{ e }}</p>
+			</template>
 			</h5>
 
 			<h5 v-if="invoice.note" class="uppercase tracking-wide text-[9px] mt-6">Note:</h5>

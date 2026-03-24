@@ -100,6 +100,32 @@
       />
     </div>
 
+    <!-- CC / Additional Recipients -->
+    <div>
+      <label class="block text-sm font-medium mb-1">Email Recipients (CC)</label>
+      <div class="flex flex-wrap gap-1.5 min-h-[38px] w-full rounded-md border bg-background px-3 py-2 text-sm items-center">
+        <span
+          v-for="(email, i) in ccEmails"
+          :key="i"
+          class="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2.5 py-0.5 text-xs"
+        >
+          {{ email }}
+          <button type="button" class="hover:text-destructive" @click="removeCcEmail(i)">
+            <Icon name="lucide:x" class="w-3 h-3" />
+          </button>
+        </span>
+        <input
+          v-model="ccInput"
+          class="flex-1 min-w-[160px] bg-transparent outline-none text-sm placeholder:text-muted-foreground"
+          placeholder="Add email and press Enter..."
+          @keydown.enter.prevent="addCcEmail"
+          @keydown.tab.prevent="addCcEmail"
+          @blur="addCcEmail"
+        />
+      </div>
+      <p class="text-[10px] text-muted-foreground mt-0.5">Additional people to CC when the invoice is sent</p>
+    </div>
+
     <!-- Line Items -->
     <div>
       <div class="flex items-center justify-between mb-3">
@@ -211,6 +237,29 @@ const formData = reactive({
   melio: props.invoice?.melio || '',
 });
 
+// --- CC emails state ---
+const ccEmails = ref<string[]>(
+  Array.isArray(props.invoice?.emails) ? [...props.invoice.emails] : []
+);
+const ccInput = ref('');
+
+function addCcEmail() {
+  const raw = ccInput.value.trim().toLowerCase();
+  if (!raw) return;
+  // Support comma/semicolon-separated paste
+  const parts = raw.split(/[,;\s]+/).filter(Boolean);
+  for (const part of parts) {
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(part) && !ccEmails.value.includes(part)) {
+      ccEmails.value.push(part);
+    }
+  }
+  ccInput.value = '';
+}
+
+function removeCcEmail(index: number) {
+  ccEmails.value.splice(index, 1);
+}
+
 // --- Line items state ---
 let keyCounter = 0;
 
@@ -285,6 +334,7 @@ function handleSubmit() {
     melio: formData.melio || undefined,
     client: formData.client || undefined,
     project: formData.project || undefined,
+    emails: ccEmails.value.length ? ccEmails.value : [],
   };
 
   if (props.invoice) {
