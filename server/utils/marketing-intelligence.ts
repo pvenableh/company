@@ -7,15 +7,21 @@
  * Keeps output under ~4000 tokens when serialized.
  */
 
-import { readItems, aggregate } from '@directus/sdk';
+import { readItems, readItem, aggregate } from '@directus/sdk';
 import type { MarketingContext } from '~/types/marketing';
 
 type DirectusClient = Awaited<ReturnType<typeof getUserDirectus>>;
 
+/**
+ * @param clientId - If provided, focuses brand context on this specific client
+ * @param includeClients - If true (and no clientId), includes all clients' brand data for comprehensive analysis
+ */
 export async function getMarketingContext(
 	directus: DirectusClient,
 	orgId: string,
-): Promise<MarketingContext> {
+	clientId?: string,
+	includeClients?: boolean,
+): Promise<MarketingContext & { brandContext?: any }> {
 	const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 	const sixMonthsAgo = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString();
 
@@ -121,6 +127,47 @@ export async function getMarketingContext(
 			limit: 100,
 		})).catch(() => [] as any[]),
 	]);
+
+	// ─── Fetch Brand Context ───
+	// Three modes:
+	// 1. clientId provided → focus on that specific client's brand data
+	// 2. includeClients=true → org brand + all clients' brand data (comprehensive)
+	// 3. Default → org brand only
+	let orgBrand: any = null;
+	let clientsBrand: any[] = [];
+
+	if (clientId) {
+		// Mode 1: Client-specific — just the selected client
+		const clientData = await directus.request(readItem('clients', clientId, {
+			fields: ['name', 'brand_direction', 'goals', 'target_audience', 'location', 'services'],
+		})).catch(() => null as any);
+		if (clientData) clientsBrand = [clientData];
+	} else if (includeClients) {
+		// Mode 2: Comprehensive — org brand + all branded clients
+		[orgBrand, clientsBrand] = await Promise.all([
+			directus.request(readItem('organizations', orgId, {
+				fields: ['name', 'brand_direction', 'goals', 'target_audience', 'location'],
+			})).catch(() => null as any),
+
+			directus.request(readItems('clients', {
+				filter: {
+					organization: { _eq: orgId },
+					_or: [
+						{ brand_direction: { _nnull: true } },
+						{ goals: { _nnull: true } },
+						{ target_audience: { _nnull: true } },
+					],
+				},
+				fields: ['name', 'brand_direction', 'goals', 'target_audience', 'location', 'services'],
+				limit: 50,
+			})).catch(() => [] as any[]),
+		]);
+	} else {
+		// Mode 3: Org-only
+		orgBrand = await directus.request(readItem('organizations', orgId, {
+			fields: ['name', 'brand_direction', 'goals', 'target_audience', 'location'],
+		})).catch(() => null as any);
+	}
 
 	// ─── Summarize Contacts ───
 	const allTags = (contacts as any[])
@@ -253,6 +300,23 @@ export async function getMarketingContext(
 		tickets: {
 			totalLast30Days: (tickets as any[]).length,
 			byStatus: ticketsByStatus,
+		},
+		brandContext: {
+			organization: {
+				name: orgBrand?.name || null,
+				brandDirection: orgBrand?.brand_direction || null,
+				goals: orgBrand?.goals || null,
+				targetAudience: orgBrand?.target_audience || null,
+				location: orgBrand?.location || null,
+			},
+			clients: (clientsBrand as any[]).map((c: any) => ({
+				name: c.name,
+				brandDirection: c.brand_direction || null,
+				goals: c.goals || null,
+				targetAudience: c.target_audience || null,
+				location: c.location || null,
+				services: Array.isArray(c.services) ? c.services : [],
+			})),
 		},
 	};
 }

@@ -8,6 +8,7 @@
 import { getLLMProvider } from '~/server/utils/llm/factory';
 import { getMarketingContext } from '~/server/utils/marketing-intelligence';
 import { logAIUsage } from '~/server/utils/ai-usage';
+import { enforceTokenLimits } from '~/server/utils/ai-token-enforcement';
 import type { ChatMessage } from '~/server/utils/llm/types';
 import type {
 	MarketingAnalyzeRequest,
@@ -30,17 +31,23 @@ export default defineEventHandler(async (event) => {
 	if (!body.organizationId) {
 		throw createError({ statusCode: 400, message: 'organizationId is required' });
 	}
+
+	// Enforce AI token limits
+	const tokenCheck = await enforceTokenLimits(event, body.organizationId);
+	if (!tokenCheck.allowed) {
+		throw createError({ statusCode: 429, message: tokenCheck.reason || 'AI token limit reached' });
+	}
 	if (body.analysisType === 'campaign' && !body.goal?.trim()) {
 		throw createError({ statusCode: 400, message: 'A goal is required for campaign analysis' });
 	}
 
 	const directus = await getUserDirectus(event);
-	const context = await getMarketingContext(directus, body.organizationId);
+	const context = await getMarketingContext(directus, body.organizationId, body.clientId, body.includeClients);
 
 	const provider = getLLMProvider();
 	const systemPrompt = body.analysisType === 'dashboard'
-		? buildDashboardPrompt(context)
-		: buildCampaignPrompt(context, body.goal!, body.timeframe);
+		? buildDashboardPrompt(context, body.clientId)
+		: buildCampaignPrompt(context, body.goal!, body.timeframe, body.clientId);
 
 	const messages: ChatMessage[] = [
 		{
@@ -97,8 +104,12 @@ export default defineEventHandler(async (event) => {
 	}
 });
 
-function buildDashboardPrompt(context: any): string {
-	return `You are an expert marketing strategist analyzing a business's marketing performance across all channels. You have access to their full business data — contacts, social media, email campaigns, clients, revenue, projects, and support tickets.
+function buildDashboardPrompt(context: any, clientId?: string): string {
+	const scope = clientId
+		? `You are an expert marketing strategist analyzing marketing performance for a SPECIFIC CLIENT. Focus your analysis and recommendations entirely on this client's brand, goals, target audience, and market positioning. Use the brandContext to tailor every insight.`
+		: `You are an expert marketing strategist analyzing a business's marketing performance across all channels. You have access to their full business data — contacts, social media, email campaigns, clients, revenue, projects, and support tickets — PLUS their brand direction, goals, target audience, and location for the organization and each client.`;
+
+	return `${scope}
 
 BUSINESS DATA SNAPSHOT:
 ${JSON.stringify(context, null, 2)}
@@ -110,6 +121,7 @@ RULES:
 - Insights should be specific and reference actual data points
 - Recommendations should be actionable with clear next steps
 - If data is sparse, note it as an opportunity rather than just a weakness
+- Use the brandContext section to tailor insights and recommendations to the ${clientId ? "client's" : "organization's"} specific brand positioning, target audience, goals, and location — make suggestions that align with their stated direction
 
 Return this exact JSON structure:
 {
@@ -156,8 +168,12 @@ Return this exact JSON structure:
 Generate 4-6 insights and 3-5 recommendations.`;
 }
 
-function buildCampaignPrompt(context: any, goal: string, timeframe?: string): string {
-	return `You are an expert marketing strategist creating a multi-channel campaign plan. You have access to the business's full data to create a realistic, data-informed plan.
+function buildCampaignPrompt(context: any, goal: string, timeframe?: string, clientId?: string): string {
+	const scope = clientId
+		? `You are an expert marketing strategist creating a multi-channel campaign plan for a SPECIFIC CLIENT. Use their brand direction, goals, target audience, and location to create a campaign that's perfectly aligned with their positioning. All content should reflect this client's unique voice and market.`
+		: `You are an expert marketing strategist creating a multi-channel campaign plan. You have access to the business's full data — including their brand direction, goals, target audience, and location for the organization and each client — to create a realistic, data-informed plan.`;
+
+	return `${scope}
 
 BUSINESS DATA SNAPSHOT:
 ${JSON.stringify(context, null, 2)}
@@ -172,6 +188,7 @@ RULES:
 - Social posts should be platform-appropriate and ready to adapt
 - Email sequences should have compelling subject lines and clear segmentation
 - KPIs should be realistic given their current metrics
+- Use the brandContext section to align campaign messaging with the ${clientId ? "client's" : "organization's"} brand direction, target audience, and goals — make content recommendations specific to their positioning and market
 
 Return this exact JSON structure:
 {

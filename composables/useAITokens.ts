@@ -8,6 +8,7 @@ const _usageSummary = ref<{
 	orgBalance: number | null;
 	orgLimit: number | null;
 	isLowUsage: boolean;
+	aiEnabled: boolean;
 } | null>(null);
 
 const _loaded = ref(false);
@@ -26,7 +27,7 @@ export const useAITokens = () => {
 		try {
 			// Fetch user preferences
 			const prefs = await prefItems.list({
-				fields: ['low_usage_mode', 'token_budget_monthly'],
+				fields: ['low_usage_mode', 'token_budget_monthly', 'ai_enabled'],
 				filter: { user: { _eq: user.value.id } },
 				limit: 1,
 			}) as any[];
@@ -66,6 +67,7 @@ export const useAITokens = () => {
 				orgBalance: orgData?.ai_token_balance ?? null,
 				orgLimit: orgData?.ai_token_limit_monthly ?? null,
 				isLowUsage: userPref?.low_usage_mode === true,
+				aiEnabled: userPref?.ai_enabled !== false,
 			};
 			_loaded.value = true;
 		} catch (err) {
@@ -76,28 +78,33 @@ export const useAITokens = () => {
 	/** Check if user/org can make an AI call. */
 	const checkTokenBudget = computed(() => {
 		const s = _usageSummary.value;
-		if (!s) return { canUse: true, remaining: null, isLowUsage: false };
+		if (!s) return { canUse: true, remaining: null, isLowUsage: false, reason: null };
+
+		// Check if AI is disabled by admin
+		if (!s.aiEnabled) {
+			return { canUse: false, remaining: 0, isLowUsage: s.isLowUsage, reason: 'AI access has been disabled by your organization admin.' };
+		}
 
 		// Check user personal budget
 		if (s.userBudget !== null && s.userTokensUsed >= s.userBudget) {
-			return { canUse: false, remaining: 0, isLowUsage: s.isLowUsage };
+			return { canUse: false, remaining: 0, isLowUsage: s.isLowUsage, reason: 'Your personal AI token budget has been exhausted for this month.' };
 		}
 
 		// Check org balance
 		if (s.orgBalance !== null && s.orgBalance <= 0) {
-			return { canUse: false, remaining: 0, isLowUsage: s.isLowUsage };
+			return { canUse: false, remaining: 0, isLowUsage: s.isLowUsage, reason: 'Organization AI token balance is depleted.' };
 		}
 
 		// Check org monthly limit
 		if (s.orgLimit !== null && s.orgTokensUsed >= s.orgLimit) {
-			return { canUse: false, remaining: 0, isLowUsage: s.isLowUsage };
+			return { canUse: false, remaining: 0, isLowUsage: s.isLowUsage, reason: 'Organization monthly AI token limit has been reached.' };
 		}
 
 		const remaining = s.userBudget !== null
 			? s.userBudget - s.userTokensUsed
 			: s.orgBalance ?? null;
 
-		return { canUse: true, remaining, isLowUsage: s.isLowUsage };
+		return { canUse: true, remaining, isLowUsage: s.isLowUsage, reason: null };
 	});
 
 	/** Whether the user is in low-usage mode. */

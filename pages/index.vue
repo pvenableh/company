@@ -14,7 +14,9 @@ watch(selectedPersona, () => {
 });
 
 // ── CRM Intelligence Engine ──
-const { analyze: crmAnalyze, overview: crmOverview, isLoading: crmLoading } = useCRMIntelligence();
+// snapshot = instant algorithmic data (no AI, loads on mount)
+// analyze = on-demand AI deep analysis (user clicks button)
+const { snapshot: crmSnapshot, snapshotLoading: crmSnapshotLoading, analyze: crmAnalyze, overview: crmOverview, isLoading: crmLoading, lastAIAnalysis: crmLastAI } = useCRMIntelligence();
 
 // ── Earnest Score ──
 const { state: earnestState, syncState, fetchState, fetchTeamRanking, fetchHistory, newBadges, leveledUp } = useEarnestScore();
@@ -55,12 +57,13 @@ const otherSuggestions = computed(() => {
 	return suggestions.value.filter(s => s.priority !== 'urgent' && s.priority !== 'high').slice(0, 4);
 });
 
-// ── CRM Health ──
-const healthScore = computed(() => crmOverview.value?.healthScore ?? null);
-const healthBreakdown = computed(() => crmOverview.value?.healthBreakdown ?? null);
+// ── CRM Health (prefer AI result if available, otherwise use algorithmic snapshot) ──
+const healthScore = computed(() => crmOverview.value?.healthScore ?? crmSnapshot.value?.healthScore ?? null);
+const healthBreakdown = computed(() => crmOverview.value?.healthBreakdown ?? crmSnapshot.value?.breakdown ?? null);
 const crmInsights = computed(() => crmOverview.value?.insights?.slice(0, 4) ?? []);
 const growthOpportunities = computed(() => crmOverview.value?.growthOpportunities?.slice(0, 3) ?? []);
 const crmActions = computed(() => crmOverview.value?.topActions?.slice(0, 4) ?? []);
+const crmAlerts = computed(() => crmSnapshot.value?.alerts ?? []);
 
 // ── Health Score Color ──
 const healthColor = computed(() => {
@@ -119,6 +122,8 @@ const runAnalysis = async () => {
 	}
 };
 
+// CRM AI analysis is now on-demand only (user clicks "Run AI Analysis")
+// The algorithmic snapshot loads automatically via the composable
 const runCRMAnalysis = () => {
 	if (selectedOrg.value) {
 		crmAnalyze('overview');
@@ -129,7 +134,7 @@ onMounted(async () => {
 	if (user.value) {
 		await fetchState();
 		runAnalysis();
-		runCRMAnalysis();
+		// CRM snapshot loads automatically via useCRMIntelligence — no AI call here
 		fetchHistory(7);
 	}
 });
@@ -137,14 +142,12 @@ onMounted(async () => {
 watch(user, (newUser) => {
 	if (newUser) {
 		runAnalysis();
-		runCRMAnalysis();
 	}
 });
 
 watch([selectedOrg, selectedClient, selectedTeam], () => {
 	if (user.value) {
 		runAnalysis();
-		runCRMAnalysis();
 	}
 });
 
@@ -333,8 +336,8 @@ const activeTab = ref<'commander' | 'timeline' | 'statistics'>('commander');
 						<div :class="healthBg" class="ios-card p-5 text-center flex-1">
 							<h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">CRM Health</h3>
 
-							<!-- Loading -->
-							<div v-if="crmLoading && healthScore === null" class="py-4">
+							<!-- Loading (snapshot) -->
+							<div v-if="crmSnapshotLoading && healthScore === null" class="py-4">
 								<div class="w-20 h-20 mx-auto bg-muted rounded-full animate-pulse" />
 								<div class="w-24 h-3 mx-auto bg-muted rounded mt-3 animate-pulse" />
 							</div>
@@ -377,6 +380,37 @@ const activeTab = ref<'commander' | 'timeline' | 'statistics'>('commander');
 										<span class="text-[10px] font-medium text-muted-foreground w-6 text-right">{{ value }}</span>
 									</div>
 								</div>
+
+								<!-- Algorithmic alerts (shown when no AI insights) -->
+								<div v-if="crmAlerts.length > 0 && crmInsights.length === 0" class="mt-4 space-y-1.5 text-left">
+									<div
+										v-for="(alert, i) in crmAlerts.slice(0, 4)"
+										:key="i"
+										class="flex items-start gap-1.5 text-[10px]"
+									>
+										<UIcon
+											:name="alert.type === 'danger' ? 'i-heroicons-exclamation-triangle' : alert.type === 'warning' ? 'i-heroicons-exclamation-circle' : alert.type === 'success' ? 'i-heroicons-check-circle' : 'i-heroicons-information-circle'"
+											:class="alert.type === 'danger' ? 'text-red-500' : alert.type === 'warning' ? 'text-amber-500' : alert.type === 'success' ? 'text-green-500' : 'text-blue-500'"
+											class="w-3.5 h-3.5 flex-shrink-0 mt-0.5"
+										/>
+										<span class="text-muted-foreground leading-tight">{{ alert.message }}</span>
+									</div>
+								</div>
+
+								<!-- On-demand AI Analysis button -->
+								<button
+									v-if="!crmOverview"
+									@click="runCRMAnalysis"
+									:disabled="crmLoading"
+									class="mt-3 inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-medium rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
+								>
+									<UIcon v-if="crmLoading" name="i-heroicons-arrow-path" class="w-3 h-3 animate-spin" />
+									<UIcon v-else name="i-heroicons-sparkles" class="w-3 h-3" />
+									{{ crmLoading ? 'Analyzing...' : 'Run AI Analysis' }}
+								</button>
+								<p v-if="crmLastAI" class="text-[9px] text-muted-foreground mt-1">
+									AI analysis {{ new Date(crmLastAI).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
+								</p>
 							</div>
 
 							<!-- No data state -->

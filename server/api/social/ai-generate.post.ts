@@ -7,6 +7,8 @@
  */
 import { getLLMProvider } from '~/server/utils/llm/factory';
 import { logAIUsage } from '~/server/utils/ai-usage';
+import { enforceTokenLimits } from '~/server/utils/ai-token-enforcement';
+import { getBrandContext } from '~/server/utils/brand-context';
 import type { ChatMessage } from '~/server/utils/llm/types';
 import type { SocialAIGenerateRequest, SocialAIGenerateResponse } from '~/types/social';
 
@@ -19,6 +21,12 @@ export default defineEventHandler(async (event) => {
 
 	const body = await readBody<SocialAIGenerateRequest>(event);
 
+	// Enforce AI token limits
+	const tokenCheck = await enforceTokenLimits(event, (body as any).organizationId);
+	if (!tokenCheck.allowed) {
+		throw createError({ statusCode: 429, message: tokenCheck.reason || 'AI token limit reached' });
+	}
+
 	if (!body.topic?.trim()) {
 		throw createError({ statusCode: 400, message: 'Topic is required' });
 	}
@@ -26,8 +34,14 @@ export default defineEventHandler(async (event) => {
 		throw createError({ statusCode: 400, message: 'At least one platform is required' });
 	}
 
+	// Fetch brand context: selected client if provided, otherwise organization
+	const brandContext = await getBrandContext(event, {
+		clientId: (body as any).clientId,
+		organizationId: (body as any).organizationId,
+	});
+
 	const systemPrompt = buildSystemPrompt(body.platforms);
-	const userMessage = buildUserMessage(body);
+	const userMessage = buildUserMessage(body) + brandContext;
 
 	const messages: ChatMessage[] = [
 		{ role: 'user', content: userMessage },

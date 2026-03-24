@@ -1235,6 +1235,8 @@ export const useAIProductivityEngine = () => {
 	}
 
 	function setModuleCache(module: string, data: TaskSuggestion[]): void {
+		// Prevent unbounded growth — 20 modules is far more than we'll ever need
+		if (_moduleCache.size > 20) _moduleCache.clear();
 		_moduleCache.set(module, { data, expiresAt: Date.now() + MODULE_CACHE_TTL });
 	}
 

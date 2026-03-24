@@ -1,4 +1,5 @@
 import { getLLMProvider } from '~/server/utils/llm/factory';
+import { getBrandContext } from '~/server/utils/brand-context';
 import type { ChatMessage } from '~/server/utils/llm/types';
 
 export default defineEventHandler(async (event) => {
@@ -10,11 +11,13 @@ export default defineEventHandler(async (event) => {
 	}
 
 	const body = await readBody(event);
-	const { existingGoals, context } = body;
+	const { existingGoals, context, organizationId, clientId } = body;
+
+	const brandInfo = await getBrandContext(event, { clientId, organizationId });
 
 	const provider = getLLMProvider();
 
-	const systemPrompt = `You are a business strategy assistant for a creative agency / small business platform called Earnest. Generate smart, actionable goal suggestions based on the user's context.
+	const systemPrompt = `You are a business strategy assistant for a creative agency / small business platform called Earnest. Generate smart, actionable goal suggestions based on the user's context and brand information.
 
 Each goal should include:
 - title: A clear, measurable goal title (under 60 chars)
@@ -24,6 +27,8 @@ Each goal should include:
 - target_unit: One of "USD", "percent", "contacts", "projects", "tasks", "campaigns"
 - timeframe: One of "weekly", "monthly", "quarterly", "yearly"
 - priority: One of "low", "medium", "high"
+
+If brand context is provided, tailor goals to align with the brand direction, target audience, and stated objectives.
 
 Return ONLY a JSON array of goal objects. No other text.`;
 
@@ -36,6 +41,8 @@ Return ONLY a JSON array of goal objects. No other text.`;
 	if (existingGoals?.length) {
 		userMessage += `\n\nThey already have these goals (avoid duplicates): ${existingGoals.map((g: any) => g.title).join(', ')}`;
 	}
+
+	userMessage += brandInfo;
 
 	const messages: ChatMessage[] = [
 		{ role: 'user', content: userMessage },

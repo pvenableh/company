@@ -13,6 +13,7 @@
  */
 
 import { getLLMProvider } from '~/server/utils/llm/factory';
+import { getBrandContext } from '~/server/utils/brand-context';
 import type { ChatMessage } from '~/server/utils/llm/types';
 
 export default defineEventHandler(async (event) => {
@@ -24,11 +25,13 @@ export default defineEventHandler(async (event) => {
 	}
 
 	const body = await readBody(event);
-	const { prompt, existingTasks } = body;
+	const { prompt, existingTasks, organizationId, clientId } = body;
+
+	const brandInfo = await getBrandContext(event, { clientId, organizationId });
 
 	const provider = getLLMProvider();
 
-	const systemPrompt = `You are a productivity assistant. Generate a concise list of actionable tasks based on the user's request. Each task should be specific, actionable, and brief (under 80 characters). Return ONLY a JSON array of strings, no other text. Example: ["Review Q1 report", "Send follow-up email to client", "Update project timeline"]`;
+	const systemPrompt = `You are a productivity assistant. Generate a concise list of actionable tasks based on the user's request. Each task should be specific, actionable, and brief (under 80 characters). If brand or organization context is provided, tailor tasks to be relevant to their brand direction, goals, and target audience. Return ONLY a JSON array of strings, no other text. Example: ["Review Q1 report", "Send follow-up email to client", "Update project timeline"]`;
 
 	let userMessage = prompt?.trim()
 		? `Generate 5 task suggestions for: ${prompt}`
@@ -37,6 +40,8 @@ export default defineEventHandler(async (event) => {
 	if (existingTasks?.length) {
 		userMessage += `\n\nAvoid duplicating these existing tasks: ${existingTasks.join(', ')}`;
 	}
+
+	userMessage += brandInfo;
 
 	const messages: ChatMessage[] = [
 		{ role: 'user', content: userMessage },

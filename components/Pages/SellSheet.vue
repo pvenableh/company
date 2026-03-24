@@ -59,23 +59,23 @@
 			<div class="ai-reveal-inner">
 				<p class="ai-kicker opacity-0">What one platform makes possible</p>
 				<h2 class="ai-headline opacity-0">Your data talks<span class="bp">.</span><br/><em>AI listens<span class="bp">.</span></em></h2>
-				<p class="ai-lede opacity-0">Most tools bolt AI onto one channel. EARNEST connects AI to your entire business &mdash; people, companies, projects, revenue, conversations, campaigns, financials, and goals &mdash; then layers in your brand direction and target audience to generate CRM health scores, pipeline forecasts, growth plans, goal suggestions, and marketing strategies that are uniquely yours.</p>
+				<p class="ai-lede opacity-0">Most tools bolt AI onto one channel. EARNEST connects AI to your entire business &mdash; people, companies, projects, revenue, conversations, campaigns, financials, and goals &mdash; then layers in your brand direction and target audience to generate CRM Intelligence reports, Health Snapshots, Goal Suggestions, and Marketing AI plans that are uniquely yours.</p>
 
 				<div class="ai-capabilities">
 					<div class="ai-cap opacity-0">
 						<span class="ai-cap-number">01</span>
-						<h3 class="ai-cap-title">Sees everything</h3>
-						<p class="ai-cap-desc">Contacts, clients, projects, invoices, deals, tickets, goals, social posts, and team channels. One brain reading across every module in real time.</p>
+						<h3 class="ai-cap-title">Productivity Engine</h3>
+						<p class="ai-cap-desc">Scans every module in real time &mdash; tickets, projects, tasks, invoices, deals, channels, social, and goals &mdash; then surfaces prioritized actions instantly. No AI tokens. Pure algorithmic intelligence.</p>
 					</div>
 					<div class="ai-cap opacity-0">
 						<span class="ai-cap-number">02</span>
-						<h3 class="ai-cap-title">Knows your brand</h3>
-						<p class="ai-cap-desc">Brand direction, goals, target audience, and services &mdash; per client, per team, per organization. AI doesn't guess. It knows who you are and who you serve.</p>
+						<h3 class="ai-cap-title">Brand Awareness AI</h3>
+						<p class="ai-cap-desc">Brand direction, goals, target audience, and location &mdash; per client, per team, per organization. Every AI feature uses this context: Social AI Generate, Email Marketing AI, CRM Intelligence, Marketing AI Analyze, and Goal Suggestions all speak your language.</p>
 					</div>
 					<div class="ai-cap opacity-0">
 						<span class="ai-cap-number">03</span>
-						<h3 class="ai-cap-title">Thinks ahead</h3>
-						<p class="ai-cap-desc">CRM health scores, pipeline forecasts, 4-week growth plans, AI-powered goal suggestions, contact re-engagement strategies, and campaign plans &mdash; all built from your real data and brand context.</p>
+						<h3 class="ai-cap-title">Health Snapshots + Deep Analysis</h3>
+						<p class="ai-cap-desc">Instant Health Snapshots give you CRM and marketing scores from pure data &mdash; no tokens, no waiting. When you need more, CRM Intelligence and Marketing AI Analyze deliver deep analysis, pipeline forecasts, growth plans, and campaign strategies on demand.</p>
 					</div>
 				</div>
 			</div>
@@ -161,16 +161,19 @@ const marqueeItems = [
 	{ label: 'CRM Intelligence', icon: 'i-lucide-scan-search' },
 	{ label: 'Marketing Intelligence', icon: 'i-lucide-bar-chart-3' },
 	{ label: 'AI Strategy Engine', icon: 'i-lucide-brain' },
-	{ label: 'AI Content Generation', icon: 'i-lucide-sparkles' },
+	{ label: 'Productivity Engine', icon: 'i-lucide-zap' },
+	{ label: 'Health Snapshots', icon: 'i-lucide-activity' },
+	{ label: 'Social AI Generate', icon: 'i-lucide-sparkles' },
+	{ label: 'Goal Suggestions', icon: 'i-lucide-target' },
+	{ label: 'Brand Awareness AI', icon: 'i-lucide-palette' },
 	{ label: 'Projects', icon: 'i-lucide-folder-kanban' },
 	{ label: 'Invoicing', icon: 'i-lucide-receipt' },
 	{ label: 'People & Companies', icon: 'i-lucide-building-2' },
 	{ label: 'Social Scheduling', icon: 'i-lucide-calendar-clock' },
 	{ label: 'Team Channels', icon: 'i-lucide-message-square' },
 	{ label: 'Video & Phone', icon: 'i-lucide-video' },
-	{ label: 'Email Analytics', icon: 'i-lucide-mail' },
+	{ label: 'Email Marketing AI', icon: 'i-lucide-mail' },
 	{ label: 'Goals & Tracking', icon: 'i-lucide-target' },
-	{ label: 'Proposals & Billing', icon: 'i-lucide-file-text' },
 	{ label: 'Companion Apps', icon: 'i-lucide-smartphone' },
 ];
 
@@ -195,23 +198,26 @@ const toolCountWord = computed(() => {
 });
 
 const features = [
-	{ name: 'CRM Intelligence Engine', desc: 'AI reads across your entire business — contacts, clients, projects, tickets, invoices, deals, and goals — then generates health scores, pipeline forecasts, growth plans, and contact strategies tailored to your brand positioning and objectives.' },
-	{ name: 'Marketing Intelligence', desc: 'AI scans your entire business — contacts, social, email, clients, revenue — and returns a marketing health score, actionable insights, and multi-channel campaign plans. One click.' },
+	{ name: 'Productivity Engine', desc: 'Your command center. Scans tickets, projects, tasks, invoices, channels, social, deals, and goals — then surfaces prioritized actions, urgent items, and intelligent suggestions. No AI tokens needed — pure algorithmic intelligence that loads instantly every time you open Earnest.' },
+	{ name: 'CRM Intelligence', desc: 'AI reads across your entire business — contacts, clients, projects, tickets, invoices, deals, and goals — then generates health scores, pipeline forecasts, growth plans, and contact strategies tailored to your brand positioning and objectives.' },
+	{ name: 'Health Snapshots', desc: 'Instant CRM and marketing health scores computed from your real data — no AI tokens, no waiting. Algorithmic analysis of contacts, revenue trends, overdue items, and pipeline health gives you a live pulse on your business the moment you open the dashboard.' },
+	{ name: 'Marketing AI Analyze', desc: 'AI scans your entire business — contacts, social, email, clients, revenue — and returns a marketing health score, actionable insights, and multi-channel campaign plans. Analyze for a specific client or your whole organization. One click.' },
 	{ name: 'AI Strategy Engine', desc: 'Your data becomes your strategist. AI connects the dots across every module to generate campaigns, spot opportunities, and surface insights no isolated tool can see.' },
-	{ name: 'Brand-Aware AI', desc: 'Set brand direction, goals, target audience, and services per client. AI uses this context to generate suggestions aligned with your positioning — not generic advice from a tool that doesn\'t know your business.' },
-	{ name: 'Social Media & AI Content', desc: 'Schedule to Instagram, LinkedIn, Facebook, and Threads. AI generates platform-optimized posts, hashtags, and image suggestions in seconds.' },
-	{ name: 'Email Marketing & AI', desc: 'Block-based newsletter builder with AI-powered content generation. Describe your email and get a complete template — subject line, sections, and images.' },
+	{ name: 'Brand Awareness AI', desc: 'Set brand direction, goals, target audience, and location per client. Every AI feature — from CRM analysis to social posts to email campaigns — uses this context to generate suggestions aligned with your positioning. Not generic advice. Your brand, your voice, your market.' },
+	{ name: 'Social AI Generate', desc: 'Schedule to Instagram, LinkedIn, Facebook, and Threads. AI generates platform-optimized posts, hashtags, and image suggestions — all informed by your brand direction and target audience — in seconds.' },
+	{ name: 'Email Marketing AI', desc: 'Block-based newsletter builder with AI-powered content generation. Describe your email and get a complete template — subject line, sections, images, and copy — all tuned to your brand voice and audience.' },
+	{ name: 'Goal Suggestions', desc: 'AI suggests strategic goals based on your actual data, brand direction, and business objectives — financial, networking, performance, marketing, or custom. Track progress with periodic snapshots and let the productivity engine factor your goals into daily priorities.' },
 	{ name: 'Project Management', desc: 'Kanban boards, task lists, timelines, file attachments, and a command-center project dashboard with stats, document uploads, invoices, and activity feeds. Your team always knows what\'s next.' },
 	{ name: 'People & Companies', desc: 'Every person and company in one unified CRM — clients, contacts, prospects, and networking connections from CardDesk. Brand context, goals, services, and the full history of every conversation and project.' },
-	{ name: 'Goals & Progress Tracking', desc: 'Set financial, networking, performance, marketing, or custom goals. AI suggests goals based on your data and role. Track progress with periodic snapshots and let the AI productivity engine factor your goals into daily priorities.' },
-	{ name: 'Quick Tasks & AI To-Dos', desc: 'Personal task lists with AI-powered suggestions, day and week scheduling, motivational progress tracking, and confetti celebrations. AI generates task ideas based on your workload so nothing falls through the cracks. A social-media-style activity timeline keeps the whole team in sync.' },
+	{ name: 'Quick Tasks & AI To-Dos', desc: 'Personal task lists with AI-powered suggestions, day and week scheduling, motivational progress tracking, and confetti celebrations. AI generates task ideas based on your workload and brand context so nothing falls through the cracks.' },
+	{ name: 'AI Token Management', desc: 'Admins control AI usage per member — set monthly budgets, toggle access on and off, monitor usage across the team. Purchase token add-on packages when you need more. Full visibility into who uses what.' },
 	{ name: 'Client Access Control', desc: 'Role-based client visibility with team assignments and individual overrides. Owners and admins see everything. Managers and members see only the clients assigned to their teams — plus any individual access grants.' },
 	{ name: 'Invoicing & Billing', desc: 'Stripe-powered invoices, proposals, payment tracking, and PDF generation. Get paid on time.' },
 	{ name: 'Team Channels', desc: 'Slack-style messaging built into your workspace. Conversations stay with the work they\'re about.' },
 	{ name: 'Phone & Video', desc: 'Twilio-powered calling and video meetings. Click-to-call contacts, record calls, and host team video — all without leaving Earnest.' },
 	{ name: 'Calendar & Scheduling', desc: 'Public booking links, Google/Outlook calendar sync, and team availability. Everything connected to your clients and projects.' },
 	{ name: 'CardDesk', desc: 'Turn every business card and networking event into a CRM relationship. Scan cards with AI vision, track follow-ups, and gamify your networking with XP, levels, and badges.' },
-	{ name: 'Earnest Companion (E²)', desc: 'Your business in your pocket. Tasks, messages, contacts, and AI on the go — a mobile-first companion that keeps you connected to everything in Earnest.' },
+	{ name: 'Earnest Companion (E\u00B2)', desc: 'Your business in your pocket. Tasks, messages, contacts, and AI on the go — a mobile-first companion that keeps you connected to everything in Earnest.' },
 ];
 
 const plans = [
@@ -220,7 +226,7 @@ const plans = [
 		price: '29',
 		desc: 'For the one-person shop doing serious work.',
 		featured: false,
-		features: ['1 user', 'Unlimited projects', 'Invoicing & Stripe billing', 'Social scheduling (2 accounts)', 'AI content generation', 'People & Companies CRM', 'Goals with AI suggestions & tracking', 'Quick Tasks with AI suggestions', 'CardDesk & E\u00B2 companion apps', '5GB storage'],
+		features: ['1 user', 'Unlimited projects', 'Invoicing & Stripe billing', 'Social scheduling (2 accounts)', 'Productivity Engine', 'Health Snapshots (CRM & Marketing)', 'Social AI Generate', 'Goal Suggestions', 'People & Companies CRM', 'CardDesk & E\u00B2 companion apps', '500K AI tokens/month', '5GB storage'],
 		cta: { label: 'Get started', to: '/register' },
 	},
 	{
@@ -228,7 +234,7 @@ const plans = [
 		price: '89',
 		desc: 'For the team that means business.',
 		featured: true,
-		features: ['Up to 10 users', 'Everything in Solo', 'Team channels & video', 'Phone system (Twilio)', 'Social scheduling (10 accounts)', 'AI email & social content wizards', 'Marketing Intelligence dashboard', 'CRM Intelligence (overview + contacts)', 'Team-based client access control', 'Priority support', '25GB storage'],
+		features: ['Up to 10 users', 'Everything in Solo', 'Team channels & video', 'Phone system (Twilio)', 'Social scheduling (10 accounts)', 'Marketing AI Analyze', 'CRM Intelligence (overview + contacts)', 'Email Marketing AI', 'Brand Awareness AI per client', 'AI Token Management (admin controls)', 'Team-based client access control', '5M AI tokens/month', '25GB storage'],
 		cta: { label: 'Start free trial', to: '/register' },
 	},
 	{
@@ -236,7 +242,7 @@ const plans = [
 		price: '189',
 		desc: 'For the business that\'s grown into something real.',
 		featured: false,
-		features: ['Up to 25 users', 'Everything in Team', 'Custom domain', 'White-label client portal', 'Unlimited social accounts', 'AI Strategy Engine (full suite)', 'CRM Intelligence (all 4 modes)', 'Brand-aware AI per client & team', 'Granular client access with user overrides', '100GB storage'],
+		features: ['Up to 25 users', 'Everything in Team', 'Custom domain', 'White-label client portal', 'Unlimited social accounts', 'AI Strategy Engine (full suite)', 'CRM Intelligence (all 4 modes)', 'Brand Awareness AI per client & team', 'Comprehensive client data analysis', 'Granular client access with user overrides', '25M AI tokens/month', '100GB storage'],
 		cta: { label: 'Talk to us', to: '/register' },
 	},
 ];

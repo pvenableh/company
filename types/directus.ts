@@ -56,6 +56,10 @@ export interface AiPreference {
 	low_usage_mode?: boolean | null;
 	/** @description Optional personal monthly token cap (null = unlimited) */
 	token_budget_monthly?: number | null;
+	/** @description Whether AI access is enabled for this user (admin-controlled) */
+	ai_enabled?: boolean | null;
+	/** @description Organization this preference belongs to */
+	organization?: Organization | string | null;
 }
 export interface AiUsageLog {
 	/** @primaryKey */

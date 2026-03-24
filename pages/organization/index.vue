@@ -102,7 +102,8 @@ const saveBrand = async () => {
 		await fetchOrganizationDetails();
 	} catch (error) {
 		console.error('Error updating brand:', error);
-		toast.add({ title: 'Error', description: 'Failed to update brand & strategy', color: 'red' });
+		const msg = error?.data?.message || error?.message || 'Failed to update brand & strategy';
+		toast.add({ title: 'Error', description: msg, color: 'red' });
 	} finally {
 		savingBrand.value = false;
 	}
@@ -152,8 +153,9 @@ const saveOrganization = async () => {
 		await fetchOrganizationData();
 		await fetchOrganizationDetails();
 	} catch (error) {
-		console.error('Error updating organization:', error);
-		toast.add({ title: 'Error', description: 'Failed to update organization', color: 'red' });
+		console.error('Error saving organization:', error);
+		const msg = error?.data?.message || error?.message || 'Failed to update organization';
+		toast.add({ title: 'Error', description: msg, color: 'red' });
 	} finally {
 		savingOrg.value = false;
 	}
@@ -399,7 +401,7 @@ const ORG_DETAIL_FIELDS = [
 	'date_created', 'origin_date', 'icon', 'active', 'brand_direction',
 	'goals', 'target_audience', 'location',
 ];
-const ORG_BASIC_FIELDS = ['id', 'name', 'logo', 'icon', 'active', 'date_created', 'website', 'phone', 'brand_color'];
+const ORG_BASIC_FIELDS = ['id', 'name', 'logo', 'icon', 'active', 'date_created', 'website', 'phone', 'brand_color', 'brand_direction', 'goals', 'target_audience', 'location', 'notes', 'billing_contacts'];
 
 const fetchOrganizationData = async () => {
 	if (!selectedOrg.value) return;

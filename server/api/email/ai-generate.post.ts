@@ -8,6 +8,8 @@
 import { readItems } from '@directus/sdk';
 import { getLLMProvider } from '~/server/utils/llm/factory';
 import { logAIUsage } from '~/server/utils/ai-usage';
+import { enforceTokenLimits } from '~/server/utils/ai-token-enforcement';
+import { getBrandContext } from '~/server/utils/brand-context';
 import type { ChatMessage } from '~/server/utils/llm/types';
 
 interface GenerateRequest {
@@ -24,6 +26,8 @@ interface GenerateRequest {
     accent: string;
     background: string;
   };
+  organizationId?: string;
+  clientId?: string;
 }
 
 export interface AIGeneratedSection {
@@ -52,6 +56,12 @@ export default defineEventHandler(async (event) => {
   const body = await readBody<GenerateRequest>(event);
   if (!body.topic?.trim()) {
     throw createError({ statusCode: 400, message: 'Topic is required' });
+  }
+
+  // Enforce AI token limits
+  const tokenCheck = await enforceTokenLimits(event, body.organizationId);
+  if (!tokenCheck.allowed) {
+    throw createError({ statusCode: 429, message: tokenCheck.reason || 'AI token limit reached' });
   }
 
   const directus = await getUserDirectus(event);
@@ -132,7 +142,13 @@ Return this exact JSON structure:
   ]
 }`;
 
-  const userMessage = buildUserMessage(body);
+  // Fetch brand context: selected client if provided, otherwise organization
+  const brandContext = await getBrandContext(event, {
+    clientId: body.clientId,
+    organizationId: body.organizationId,
+  });
+
+  const userMessage = buildUserMessage(body) + brandContext;
 
   const messages: ChatMessage[] = [
     { role: 'user', content: userMessage },

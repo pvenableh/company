@@ -5,22 +5,47 @@
 			<div>
 				<h1 class="text-2xl font-bold text-foreground">Marketing Intelligence</h1>
 				<p class="text-sm text-muted-foreground mt-1">
-					AI-powered insights across your entire business
+					Create marketing for <span class="font-medium text-foreground">{{ analysisScope }}</span>
 				</p>
+				<!-- Scope indicator -->
+				<div class="flex items-center gap-3 mt-2">
+					<span v-if="currentClient" class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+						<Icon name="lucide:user" class="w-3 h-3" />
+						Client: {{ currentClient.name }}
+					</span>
+					<span v-else class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
+						<Icon name="lucide:building-2" class="w-3 h-3" />
+						{{ currentOrg?.name || 'Organization' }}
+					</span>
+					<!-- Include clients toggle (only when in org-wide mode) -->
+					<label v-if="!currentClient" class="inline-flex items-center gap-1.5 text-xs cursor-pointer select-none">
+						<input
+							type="checkbox"
+							v-model="includeClients"
+							class="rounded border-border text-primary focus:ring-primary/50 w-3.5 h-3.5"
+						/>
+						<span class="text-muted-foreground">Include all client data</span>
+					</label>
+				</div>
 			</div>
-			<div class="flex items-center gap-3">
-				<span v-if="lastAnalyzed" class="text-xs text-muted-foreground">
-					Last analyzed {{ timeAgo(lastAnalyzed) }}
-				</span>
-				<Button
-					:disabled="analyzing"
-					class="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white border-0 shadow-lg shadow-blue-500/20"
-					@click="runDashboardAnalysis"
-				>
-					<Icon v-if="!analyzing" name="lucide:sparkles" class="w-4 h-4 mr-1.5" />
-					<Icon v-else name="lucide:loader-2" class="w-4 h-4 mr-1.5 animate-spin" />
-					{{ analyzing ? 'Analyzing...' : 'Analyze' }}
-				</Button>
+			<div class="flex flex-col items-end gap-2">
+				<div class="flex items-center gap-3">
+					<span v-if="lastAnalyzed" class="text-xs text-muted-foreground">
+						Last analyzed {{ timeAgo(lastAnalyzed) }}
+					</span>
+					<Button
+						:disabled="analyzing"
+						class="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white border-0 shadow-lg shadow-blue-500/20"
+						@click="runDashboardAnalysis"
+					>
+						<Icon v-if="!analyzing" name="lucide:sparkles" class="w-4 h-4 mr-1.5" />
+						<Icon v-else name="lucide:loader-2" class="w-4 h-4 mr-1.5 animate-spin" />
+						{{ analyzing ? 'Analyzing...' : `Analyze ${currentClient ? currentClient.name : ''}` }}
+					</Button>
+				</div>
+				<p v-if="currentClient" class="text-[10px] text-muted-foreground">
+					Select "All Clients" in the header for org-wide analysis
+				</p>
 			</div>
 		</div>
 
@@ -64,16 +89,19 @@
 			<div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500/10 to-cyan-500/10 flex items-center justify-center mb-4">
 				<Icon name="lucide:brain" class="w-8 h-8 text-blue-500" />
 			</div>
-			<h2 class="text-lg font-semibold text-foreground mb-1">Ready to analyze</h2>
+			<h2 class="text-lg font-semibold text-foreground mb-1">Ready to analyze {{ analysisScope }}</h2>
 			<p class="text-sm text-muted-foreground text-center max-w-md mb-6">
-				Click Analyze to scan your contacts, social media, email campaigns, clients, and revenue data for AI-powered marketing insights.
+				{{ currentClient
+					? `Generate AI-powered marketing insights tailored to ${currentClient.name}'s brand, goals, and target audience.`
+					: 'Click Analyze to scan your contacts, social media, email campaigns, clients, and revenue data for AI-powered marketing insights.'
+				}}
 			</p>
 			<Button
 				class="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white border-0 shadow-lg shadow-blue-500/20"
 				@click="runDashboardAnalysis"
 			>
 				<Icon name="lucide:sparkles" class="w-4 h-4 mr-1.5" />
-				Run First Analysis
+				{{ currentClient ? `Analyze ${currentClient.name}` : 'Run First Analysis' }}
 			</Button>
 		</div>
 
@@ -393,7 +421,15 @@ useHead({
 	title: 'Marketing Intelligence | Earnest',
 });
 
-const { selectedOrg } = useOrganization();
+const { selectedOrg, currentOrg } = useOrganization();
+const { selectedClient, currentClient } = useClients();
+const includeClients = ref(false);
+
+// Computed scope label for UI feedback
+const analysisScope = computed(() => {
+	if (currentClient.value) return currentClient.value.name;
+	return currentOrg.value?.name || 'your organization';
+});
 
 const analyzing = ref(false);
 const error = ref('');
@@ -422,6 +458,13 @@ const campaignFilters = [
 	{ label: 'Completed', value: 'completed' },
 	{ label: 'Drafts', value: 'draft' },
 ];
+
+// Clear analysis when client/org changes so stale results don't persist
+watch([selectedOrg, selectedClient], () => {
+	dashboard.value = null;
+	campaign.value = null;
+	lastAnalyzed.value = null;
+});
 
 const filteredCampaigns = computed(() => {
 	if (campaignFilter.value === 'all') return savedCampaigns.value.filter(c => c.status !== 'archived');
@@ -484,11 +527,14 @@ async function runDashboardAnalysis() {
 	error.value = '';
 
 	try {
+		const clientId = selectedClient.value && selectedClient.value !== 'org' ? selectedClient.value : undefined;
 		const data = await $fetch('/api/marketing/ai-analyze', {
 			method: 'POST',
 			body: {
 				analysisType: 'dashboard',
 				organizationId: selectedOrg.value,
+				clientId,
+				includeClients: !clientId && includeClients.value,
 			},
 		});
 
@@ -509,11 +555,14 @@ async function runCampaignAnalysis() {
 	campaign.value = null;
 
 	try {
+		const clientId = selectedClient.value && selectedClient.value !== 'org' ? selectedClient.value : undefined;
 		const data = await $fetch('/api/marketing/ai-analyze', {
 			method: 'POST',
 			body: {
 				analysisType: 'campaign',
 				organizationId: selectedOrg.value,
+				clientId,
+				includeClients: !clientId && includeClients.value,
 				goal: campaignGoal.value,
 			},
 		});
