@@ -11,14 +11,15 @@ Earnest ships with two companion apps: **CardDesk** — a networking CRM that tu
 - **Dashboard** — Personalized activity overview with ticket analytics and quick-access links
 - **Ticket Management** — Kanban board with drag-and-drop, custom statuses, service tagging, organization filtering, assignment modal, and detailed activity logs
 - **Project Management** — Visual Gantt-style timeline with milestones, Kanban board view, sub-tasks, event scheduling, file attachments, threaded conversations, emoji reactions, and a command-center–style project detail page with stats dashboard (ticket counts, task progress, billing totals, timeline), document uploads, invoice management, and project-scoped activity feed
-- **Invoicing & Payments** — Stripe-powered billing, invoice creation and editing, PDF generation (html2canvas + jsPDF), payment tracking, payout management, and public payment links
+- **Expenses** — Full expense tracking with 10 categories (Software & SaaS, Hardware & Equipment, Travel, Marketing & Ads, Office & Supplies, Contractor & Freelance, Hosting & Infrastructure, Insurance, Legal & Accounting, Other), billable/reimbursable flags, receipt attachments, vendor tracking, approval workflow (draft/submitted/approved/paid/rejected), project linking, advanced filtering (category, status, date range, billable-only), monthly comparison widget with top spending categories, and quarterly projections
+- **Invoicing & Payments** — Stripe-powered billing, invoice creation and editing, PDF generation (html2canvas + jsPDF), payment tracking, payout management, public payment links, and per-client billing fields (billing email, name, address, payment terms) with invoice-level billing snapshots for historical accuracy
 - **Scheduling & Video Meetings** — Calendar with public booking links, availability management, Google Calendar and Outlook sync, and built-in Twilio video conferencing
 - **Team Communication** — Slack-style channels per organization with threaded comments, @mentions, emoji reactions, and WebSocket-powered real-time messaging
 - **Social Media Management** — Compose, schedule, and publish to Instagram, TikTok, LinkedIn, Facebook Pages, and Threads; AI-powered content wizard generates platform-optimized posts with tailored copy, hashtags, and image suggestions; content calendar, engagement analytics, multi-client management, and OAuth account connections
 - **Email Marketing & Newsletters** — Block-based MJML newsletter builder with 17+ reusable blocks, drag-and-drop assembly, live preview, AI email wizard that generates complete templates from a brief description, mailing list management with deduplication, CSV contact import, merge-tag personalization via Handlebars, editable header/footer partials, one-click unsubscribe, "View in Browser" web links, and campaign send tracking via SendGrid
 - **People & Companies (Unified CRM)** — Every person and company in one place. The `people` collection unifies contacts, clients, and CardDesk networking connections with a single relationship graph. Companies (formerly "clients") track the organizations you serve with status workflows (active, prospect, inactive, churned), industry tagging, brand direction, goals, target audience, services, and linked people/projects/tickets/invoices. People have tagging, custom fields, mailing list membership, subscription tracking, company associations, and CSV import/export
 - **Marketing Intelligence** — AI-powered marketing dashboard (`/marketing`) that aggregates data across contacts, social media, email campaigns, clients, revenue, projects, and tickets to generate a marketing health score (0-100), actionable insights, content velocity metrics, audience growth tracking, and AI-generated multi-channel campaign plans with email sequences, social posts, and KPIs
-- **AI Command Center** — AI-powered productivity engine that analyzes tickets, projects, tasks, invoices, contacts, deals, channels, social media, scheduling, and phone activity to generate prioritized action items, reminders, insights, and follow-ups; includes productivity scoring (0-100), customizable AI module preferences, team chat, financial analysis, social media–style activity timeline with reactions and comments, AI usage monitoring, concise/regular response verbosity toggle, and persona-aware time-of-day greetings; supports Claude (Anthropic), GPT (OpenAI), and Gemini (Google) backends
+- **AI Command Center** — AI-powered productivity engine that analyzes tickets, projects, tasks, invoices, contacts, deals, channels, social media, scheduling, and phone activity to generate prioritized action items, reminders, insights, and follow-ups; includes productivity scoring (0-100), customizable AI module preferences, team chat, financial analysis, social media–style activity timeline with reactions and comments, AI usage monitoring with server-side token enforcement and Stripe-powered token purchases, concise/regular response verbosity toggle, and persona-aware time-of-day greetings; supports Claude (Anthropic), GPT (OpenAI), and Gemini (Google) backends
 - **CRM Intelligence Engine** — AI-powered CRM analysis (`POST /api/crm/ai-intelligence`) that aggregates data across the unified People CRM (contacts, CardDesk networking connections, companies), projects, tasks, tickets, invoices, and deals pipeline — enriched with brand context (brand direction, goals, target audience, services) from organizations, companies, and teams. Four analysis modes: overview (health scores + actions), contact-strategy (segmentation + outreach cadence), growth-plan (targets + 4-week plan), and pipeline-review (deal analysis + revenue forecast)
 - **Goals** — Structured goal-setting system with five goal types (financial, networking, performance, marketing, custom), AI-powered goal suggestions from the productivity engine, progress tracking with periodic snapshots, and integration with the AI Command Center for goal-aware prioritization and insights
 - **Organizations & Multi-Tenancy** — Multi-organization support with per-org roles (Owner, Admin, Manager, Member, Client), customizable permission matrices per role, team structures with focus and goals, member invitations, brand direction and strategy fields, subscription plan tiers, and cross-tab state sync
@@ -33,6 +34,7 @@ Earnest ships with two companion apps: **CardDesk** — a networking CRM that tu
 - **File Storage** — AWS S3 integration with presigned URLs for secure uploads
 - **Dark Mode** — System-aware dark/light theme with manual toggle
 - **PWA** — Install as a native-feeling progressive web app on any device
+- **Timeline Icon Themes** — Six swappable icon theme packs for the activity timeline (Classic/Heroicons, Animals, Food, Travel, Objects, Nature) using Fluent Emoji Flat, with per-user persistence and live-swapping via Account > Appearance settings
 - **Theme System** — Semantic `t-*` CSS utility classes that adapt to light and dark mode
 - **Marketing Sell Sheet** — Design-forward landing page shown to unauthenticated visitors at `/`
 - **Branded Error Pages** — Earnest-styled error pages (404, 403, 401, 500) with status-specific messaging, editorial typography, and graceful recovery actions
@@ -140,6 +142,7 @@ The app will be available at `http://localhost:3000`.
 │   ├── Clients/        # Client forms, cards, user access assignment
 │   ├── Scheduler/      # Calendar, booking, video meetings
 │   ├── Marketing/     # Marketing intelligence dashboard, health score, campaign timeline
+│   ├── Expenses/       # Expense summary widget
 │   ├── CommandCenter/  # AI tray, suggestion cards, productivity meter, preferences, quick tasks widget, activity timeline, AI chat
 │   ├── Newsletter/     # Block builder, canvas, variable editor, partials
 │   ├── Contacts/       # Contact forms, tables, merge tag reference
@@ -153,6 +156,7 @@ The app will be available at `http://localhost:3000`.
 │   ├── Form/           # Reusable form components (TipTap, uploads)
 │   ├── Payment/        # Stripe card and payment UI
 │   ├── Tasks/          # Quick task generator with AI suggestions and schedule grouping
+│   ├── Organization/   # Org settings, AI token management
 │   ├── Teams/          # Team management cards, modals, client assignment
 │   └── ui/             # shadcn-vue base components
 ├── composables/        # Vue composables (auth, data fetching, real-time, etc.)
@@ -178,6 +182,7 @@ The app will be available at `http://localhost:3000`.
 | Tasks | `/tasks` | Personal quick tasks with AI suggestions, schedule grouping, and project task views |
 | Tickets | `/tickets` | Kanban board for task management |
 | Projects | `/projects` | Timeline and board views for project management |
+| Expenses | `/expenses` | Expense tracking with category filters, approval workflow, and summary analytics |
 | Invoices | `/invoices` | Invoice list, creation, and payment tracking |
 | Scheduler | `/scheduler` | Calendar, booking, and video meeting management |
 | Channels | `/channels` | Real-time team messaging |
@@ -231,7 +236,7 @@ Admins can customize permissions per-role via the organization settings page. Th
 
 ### Subscription Plan Gating
 
-Organizations have a `plan` field (free, starter, pro, enterprise) that hooks into the permission system. The `planAllows(feature)` function in `useOrgRole()` is a placeholder that currently returns `true` for all features. When subscription tiers are implemented, it becomes a two-layer check: role permissions AND plan availability.
+Organizations have a `plan` field (free, starter, pro, enterprise) that hooks into the permission system. The `planAllows(feature)` function in `useOrgRole()` is a placeholder that currently returns `true` for all features. AI token limits are enforced per subscription tier: Solo (500K tokens/month), Team (5M tokens/month), Studio (25M tokens/month), with per-member budget caps and Stripe-powered top-up purchases.
 
 ### Directus Collections
 
@@ -246,6 +251,8 @@ Organizations have a `plan` field (free, starter, pro, enterprise) that hooks in
 | `org_roles` | Per-org role definitions with permission matrices |
 | `org_memberships` | User-to-org membership with role, status, client scope, and invitation tracking |
 | `organizations_directus_users` | Legacy junction (kept for backward compatibility) |
+| `expenses` | Organization-scoped expense records with categories, approval status, and project links |
+| `ai_usage_log` | Server-side AI usage logging: endpoint, model, token counts, cost, session ID |
 | `clients_teams` | Junction: team-to-client assignments for role-based client access |
 | `clients_directus_users` | Junction: individual user-to-client access overrides |
 
@@ -261,6 +268,9 @@ Organizations have a `plan` field (free, starter, pro, enterprise) that hooks in
 | `useAIUsage()` | Client-side AI usage tracking with per-user localStorage, token estimation, and usage summaries |
 | `useAIPreferences()` | Per-user AI response verbosity preference (concise/regular) with localStorage persistence |
 | `useGoals()` | Goal CRUD with type filtering, progress snapshots, AI-powered goal suggestions, and org-scoping |
+| `useExpenses()` | Expense CRUD with org-scoping, category/status/date filtering, aggregations, and quarterly projections |
+| `useTimelineTheme()` | Activity timeline icon theme management with 6 theme packs and localStorage persistence |
+| `useAITokens()` | Client-side AI token usage summary: monthly usage, budget, org balance/limit, and low-usage mode |
 | `useEarnestChat()` | Shared module-level AI chat state for tray quick-chat with SSE streaming and abort support |
 
 ### Server Endpoints
@@ -271,6 +281,11 @@ Organizations have a `plan` field (free, starter, pro, enterprise) that hooks in
 | `POST /api/org/migrate-memberships` | Converts legacy junction entries to `org_memberships` |
 | `POST /api/ai/task-suggestions` | AI-generated task suggestions based on user prompt and existing tasks |
 | `POST /api/ai/goal-suggestions` | AI-generated goal suggestions based on user role, projects, financials, and existing goals |
+| `GET /api/ai/manage/members` | List org members with AI-enabled status, token budgets, and monthly usage |
+| `POST /api/ai/manage/members` | Toggle AI access, set per-member token budgets |
+| `POST /api/stripe/tokens/checkout` | Create Stripe Checkout session for token package purchase (500K/2M/10M) |
+| `POST /api/stripe/tokens/fulfill` | Stripe webhook to fulfill token purchases with idempotency |
+| `POST /api/org/migrate-billing-to-clients` | Migrate billing data from organizations to client-level fields (supports dryRun) |
 
 ### Migration Path
 
@@ -306,7 +321,7 @@ The AI Productivity Engine (`useAIProductivityEngine.ts`) scans 9 business modul
 - **Chat Sessions** — Persistent AI assistant conversations with context awareness
 - **Financial Analysis** — Quarterly revenue goals and financial health dashboard
 - **Activity Timeline** — Social media–style feed tracking activity across projects, tickets, tasks, invoices, emails, CardDesk contacts, clients, and contacts with emoji reactions, inline comments, "new items" indicator, infinite scroll, and pull-to-refresh
-- **AI Usage Monitoring** — Client-side tracking of AI message counts and estimated token usage (input/output) with today/week/month breakdowns, stored per-user in localStorage
+- **AI Usage Monitoring** — Server-side token enforcement with per-member monthly budgets and org-level balance tracking; Stripe-powered token purchases (500K/$4.99, 2M/$14.99, 10M/$49.99); subscription tier defaults (Solo 500K/mo, Team 5M/mo, Studio 25M/mo); admin UI for toggling AI access and budgets per member; client-side usage summaries with today/week/month breakdowns
 - **Response Verbosity** — Toggle between concise and regular AI response modes; concise mode instructs the LLM to give shorter, bullet-point answers
 - **Persona-Aware Greetings** — Time-of-day–aware greeting algorithm (morning/afternoon/evening) with 3 greetings per persona (default, director, buddy, motivator) that rotate daily using a JS algorithm (no AI call)
 
