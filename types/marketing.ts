@@ -66,6 +66,7 @@ export type MarketingAnalysisType = 'dashboard' | 'campaign';
 export interface MarketingAnalyzeRequest {
 	analysisType: MarketingAnalysisType;
 	organizationId: string;
+	clientId?: string;
 	goal?: string;
 	timeframe?: string;
 }

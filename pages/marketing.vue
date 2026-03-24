@@ -5,7 +5,11 @@
 			<div>
 				<h1 class="text-2xl font-bold text-foreground">Marketing Intelligence</h1>
 				<p class="text-sm text-muted-foreground mt-1">
-					AI-powered insights across your entire business
+					{{ currentClient ? `Analyzing for ${currentClient.name}` : 'AI-powered insights across your entire business' }}
+				</p>
+				<p v-if="currentClient" class="text-xs text-primary mt-0.5 flex items-center gap-1">
+					<Icon name="lucide:user" class="w-3 h-3" />
+					Client-specific mode — select "All Clients" in the header to analyze org-wide
 				</p>
 			</div>
 			<div class="flex items-center gap-3">
@@ -394,6 +398,7 @@ useHead({
 });
 
 const { selectedOrg } = useOrganization();
+const { selectedClient, currentClient } = useClients();
 
 const analyzing = ref(false);
 const error = ref('');
@@ -422,6 +427,13 @@ const campaignFilters = [
 	{ label: 'Completed', value: 'completed' },
 	{ label: 'Drafts', value: 'draft' },
 ];
+
+// Clear analysis when client/org changes so stale results don't persist
+watch([selectedOrg, selectedClient], () => {
+	dashboard.value = null;
+	campaign.value = null;
+	lastAnalyzed.value = null;
+});
 
 const filteredCampaigns = computed(() => {
 	if (campaignFilter.value === 'all') return savedCampaigns.value.filter(c => c.status !== 'archived');
@@ -484,11 +496,14 @@ async function runDashboardAnalysis() {
 	error.value = '';
 
 	try {
+		// Use selected client if one is chosen, otherwise org-wide
+		const clientId = selectedClient.value && selectedClient.value !== 'org' ? selectedClient.value : undefined;
 		const data = await $fetch('/api/marketing/ai-analyze', {
 			method: 'POST',
 			body: {
 				analysisType: 'dashboard',
 				organizationId: selectedOrg.value,
+				clientId,
 			},
 		});
 
@@ -509,11 +524,13 @@ async function runCampaignAnalysis() {
 	campaign.value = null;
 
 	try {
+		const clientId = selectedClient.value && selectedClient.value !== 'org' ? selectedClient.value : undefined;
 		const data = await $fetch('/api/marketing/ai-analyze', {
 			method: 'POST',
 			body: {
 				analysisType: 'campaign',
 				organizationId: selectedOrg.value,
+				clientId,
 				goal: campaignGoal.value,
 			},
 		});

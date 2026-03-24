@@ -15,7 +15,8 @@ type DirectusClient = Awaited<ReturnType<typeof getUserDirectus>>;
 export async function getMarketingContext(
 	directus: DirectusClient,
 	orgId: string,
-): Promise<MarketingContext> {
+	clientId?: string,
+): Promise<MarketingContext & { brandContext?: any }> {
 	const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 	const sixMonthsAgo = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString();
 
@@ -122,25 +123,39 @@ export async function getMarketingContext(
 		})).catch(() => [] as any[]),
 	]);
 
-	// ─── Fetch Brand Context (org + clients with brand data) ───
-	const [orgBrand, clientsBrand] = await Promise.all([
-		directus.request(readItem('organizations', orgId, {
-			fields: ['name', 'brand_direction', 'goals', 'target_audience', 'location'],
-		})).catch(() => null as any),
+	// ─── Fetch Brand Context ───
+	// If clientId is provided, fetch that specific client's brand data.
+	// Otherwise, fetch org brand + all clients with brand data.
+	let orgBrand: any = null;
+	let clientsBrand: any[] = [];
 
-		directus.request(readItems('clients', {
-			filter: {
-				organization: { _eq: orgId },
-				_or: [
-					{ brand_direction: { _nnull: true } },
-					{ goals: { _nnull: true } },
-					{ target_audience: { _nnull: true } },
-				],
-			},
+	if (clientId) {
+		// Client-specific mode: just the selected client
+		const clientData = await directus.request(readItem('clients', clientId, {
 			fields: ['name', 'brand_direction', 'goals', 'target_audience', 'location', 'services'],
-			limit: 50,
-		})).catch(() => [] as any[]),
-	]);
+		})).catch(() => null as any);
+		if (clientData) clientsBrand = [clientData];
+	} else {
+		// Org-wide mode: org brand + all branded clients
+		[orgBrand, clientsBrand] = await Promise.all([
+			directus.request(readItem('organizations', orgId, {
+				fields: ['name', 'brand_direction', 'goals', 'target_audience', 'location'],
+			})).catch(() => null as any),
+
+			directus.request(readItems('clients', {
+				filter: {
+					organization: { _eq: orgId },
+					_or: [
+						{ brand_direction: { _nnull: true } },
+						{ goals: { _nnull: true } },
+						{ target_audience: { _nnull: true } },
+					],
+				},
+				fields: ['name', 'brand_direction', 'goals', 'target_audience', 'location', 'services'],
+				limit: 50,
+			})).catch(() => [] as any[]),
+		]);
+	}
 
 	// ─── Summarize Contacts ───
 	const allTags = (contacts as any[])
