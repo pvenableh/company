@@ -2,10 +2,12 @@
 /**
  * CRM Intelligence Engine composable.
  *
- * Client-side interface for the AI CRM Intelligence endpoint.
- * Fetches cross-module analysis (contacts, cd_contacts, clients,
- * projects, tasks, tickets, invoices, deals) and returns
- * smart suggestions, actions, and growth ideas.
+ * Two modes:
+ * 1. Algorithmic snapshot (instant, no AI) — loads on mount via fetchSnapshot()
+ * 2. AI deep analysis (on-demand) — only when user clicks "Run AI Analysis"
+ *
+ * AI results are cached in localStorage with a 30-minute TTL to avoid
+ * repeated calls. The cache is cleared when the org changes.
  */
 
 import type {
@@ -27,28 +29,44 @@ interface CachedResult {
 	expiresAt: number;
 }
 
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+// Cache TTL: 30 minutes for AI results (persisted in localStorage)
+const AI_CACHE_TTL = 30 * 60 * 1000;
+
+// Module-level state to avoid duplicated requests across component instances
+const _snapshot = ref<any>(null);
+const _snapshotLoading = ref(false);
+const _aiResult = ref<AnalysisResult | null>(null);
+const _aiLoading = ref(false);
+const _aiError = ref<string | null>(null);
+const _lastAIAnalysis = ref<string | null>(null);
+let _currentOrgId: string | null = null;
 
 export const useCRMIntelligence = () => {
 	const { selectedOrg } = useOrganization();
 
-	const result = ref<AnalysisResult | null>(null);
-	const isLoading = ref(false);
-	const error = ref<string | null>(null);
+	/**
+	 * Fetch algorithmic snapshot (no AI, instant).
+	 * Safe to call on page load — uses zero tokens.
+	 */
+	const fetchSnapshot = async () => {
+		const orgId = selectedOrg.value;
+		if (!orgId) return;
 
-	// Per-type cache so switching tabs doesn't re-fetch
-	const cache = new Map<string, CachedResult>();
-
-	const getCacheKey = (type: CRMAnalysisType, focus?: string) =>
-		`${selectedOrg.value || ''}:${type}:${focus || ''}`;
+		_snapshotLoading.value = true;
+		try {
+			_snapshot.value = await $fetch('/api/crm/health-snapshot', {
+				params: { organizationId: orgId },
+			});
+		} catch (e: any) {
+			console.warn('[CRM Intelligence] Snapshot failed:', e?.message);
+		} finally {
+			_snapshotLoading.value = false;
+		}
+	};
 
 	/**
-	 * Run AI analysis on the CRM data.
-	 *
-	 * @param type - Analysis type: overview, contact-strategy, growth-plan, pipeline-review
-	 * @param options - Optional focus area or target ID
-	 * @param options.focus - Free-text focus area (e.g., "improve client retention")
-	 * @param options.skipCache - Force fresh analysis
+	 * Run full AI analysis (on-demand only).
+	 * Checks localStorage cache first; only calls API if stale/missing.
 	 */
 	const analyze = async (
 		type: CRMAnalysisType,
@@ -56,22 +74,32 @@ export const useCRMIntelligence = () => {
 	) => {
 		const orgId = selectedOrg.value;
 		if (!orgId) {
-			error.value = 'No organization selected';
+			_aiError.value = 'No organization selected';
 			return;
 		}
 
-		// Check cache
-		const cacheKey = getCacheKey(type, options?.focus);
-		if (!options?.skipCache) {
-			const cached = cache.get(cacheKey);
-			if (cached && Date.now() < cached.expiresAt) {
-				result.value = cached.data;
-				return;
+		const cacheKey = `crm-ai:${orgId}:${type}:${options?.focus || ''}`;
+
+		// Check localStorage cache unless explicitly skipping
+		if (!options?.skipCache && !import.meta.server) {
+			try {
+				const cached = localStorage.getItem(cacheKey);
+				if (cached) {
+					const parsed: CachedResult = JSON.parse(cached);
+					if (Date.now() < parsed.expiresAt) {
+						_aiResult.value = parsed.data;
+						_lastAIAnalysis.value = new Date(parsed.expiresAt - AI_CACHE_TTL).toISOString();
+						return;
+					}
+					localStorage.removeItem(cacheKey);
+				}
+			} catch {
+				// Corrupted cache — proceed with fresh request
 			}
 		}
 
-		isLoading.value = true;
-		error.value = null;
+		_aiLoading.value = true;
+		_aiError.value = null;
 
 		try {
 			const data = await $fetch<AnalysisResult>('/api/crm/ai-intelligence', {
@@ -83,60 +111,107 @@ export const useCRMIntelligence = () => {
 				},
 			});
 
-			result.value = data;
-			cache.set(cacheKey, { data, expiresAt: Date.now() + CACHE_TTL });
+			_aiResult.value = data;
+			_lastAIAnalysis.value = new Date().toISOString();
+
+			// Persist to localStorage
+			if (!import.meta.server) {
+				try {
+					localStorage.setItem(cacheKey, JSON.stringify({
+						data,
+						expiresAt: Date.now() + AI_CACHE_TTL,
+					}));
+				} catch {
+					// localStorage full — continue without caching
+				}
+			}
 		} catch (e: any) {
 			const message = e?.data?.message || e?.message || 'Analysis failed';
-			error.value = message;
+			_aiError.value = message;
 			console.error('[CRM Intelligence]', message);
 		} finally {
-			isLoading.value = false;
+			_aiLoading.value = false;
 		}
 	};
 
 	/** Typed getter for overview analysis */
 	const overview = computed(() =>
-		result.value && 'healthScore' in result.value
-			? result.value as CRMOverviewAnalysis
+		_aiResult.value && 'healthScore' in _aiResult.value
+			? _aiResult.value as CRMOverviewAnalysis
 			: null,
 	);
 
 	/** Typed getter for contact strategy analysis */
 	const contactStrategy = computed(() =>
-		result.value && 'segmentStrategies' in result.value
-			? result.value as CRMContactStrategyAnalysis
+		_aiResult.value && 'segmentStrategies' in _aiResult.value
+			? _aiResult.value as CRMContactStrategyAnalysis
 			: null,
 	);
 
 	/** Typed getter for growth plan analysis */
 	const growthPlan = computed(() =>
-		result.value && 'targets' in result.value
-			? result.value as CRMGrowthPlanAnalysis
+		_aiResult.value && 'targets' in _aiResult.value
+			? _aiResult.value as CRMGrowthPlanAnalysis
 			: null,
 	);
 
 	/** Typed getter for pipeline review analysis */
 	const pipelineReview = computed(() =>
-		result.value && 'stageAnalysis' in result.value
-			? result.value as CRMPipelineReviewAnalysis
+		_aiResult.value && 'stageAnalysis' in _aiResult.value
+			? _aiResult.value as CRMPipelineReviewAnalysis
 			: null,
 	);
 
-	/** Clear cache (e.g., when org changes) */
+	/** Clear all cached data */
 	const clearCache = () => {
-		cache.clear();
-		result.value = null;
+		_aiResult.value = null;
+		_snapshot.value = null;
+		_lastAIAnalysis.value = null;
+
+		// Clear localStorage cache for this org
+		if (!import.meta.server && _currentOrgId) {
+			try {
+				const prefix = `crm-ai:${_currentOrgId}:`;
+				for (let i = localStorage.length - 1; i >= 0; i--) {
+					const key = localStorage.key(i);
+					if (key?.startsWith(prefix)) {
+						localStorage.removeItem(key);
+					}
+				}
+			} catch {
+				// Silent
+			}
+		}
 	};
 
-	// Invalidate cache when org changes
-	watch(() => selectedOrg.value, () => {
-		clearCache();
+	// Track org changes — clear cache and reload snapshot
+	watch(() => selectedOrg.value, (newOrg) => {
+		if (newOrg !== _currentOrgId) {
+			clearCache();
+			_currentOrgId = newOrg || null;
+			if (newOrg) fetchSnapshot();
+		}
 	});
 
+	// Initialize
+	if (selectedOrg.value && selectedOrg.value !== _currentOrgId) {
+		_currentOrgId = selectedOrg.value;
+		fetchSnapshot();
+	}
+
 	return {
-		result: readonly(result),
-		isLoading: readonly(isLoading),
-		error: readonly(error),
+		// Algorithmic snapshot (instant, no AI)
+		snapshot: readonly(_snapshot),
+		snapshotLoading: readonly(_snapshotLoading),
+
+		// AI analysis (on-demand)
+		result: readonly(_aiResult),
+		isLoading: readonly(_aiLoading),
+		error: readonly(_aiError),
+		lastAIAnalysis: readonly(_lastAIAnalysis),
+
+		// Methods
+		fetchSnapshot,
 		analyze,
 		overview,
 		contactStrategy,
