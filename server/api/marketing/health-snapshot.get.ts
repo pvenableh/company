@@ -17,6 +17,8 @@ export default defineEventHandler(async (event) => {
 
   const query = getQuery(event);
   const organizationId = query.organizationId as string;
+  const clientId = query.clientId as string | undefined;
+  const includeClients = query.includeClients === 'true';
   if (!organizationId) {
     throw createError({ statusCode: 400, message: 'organizationId is required' });
   }
@@ -24,7 +26,7 @@ export default defineEventHandler(async (event) => {
   const directus = await getUserDirectus(event);
 
   try {
-    const ctx = await getMarketingContext(directus, organizationId);
+    const ctx = await getMarketingContext(directus, organizationId, clientId, includeClients);
 
     // --- Compute marketing health score (0-100) ---
     const scores: number[] = [];

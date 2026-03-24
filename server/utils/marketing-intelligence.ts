@@ -12,10 +12,15 @@ import type { MarketingContext } from '~/types/marketing';
 
 type DirectusClient = Awaited<ReturnType<typeof getUserDirectus>>;
 
+/**
+ * @param clientId - If provided, focuses brand context on this specific client
+ * @param includeClients - If true (and no clientId), includes all clients' brand data for comprehensive analysis
+ */
 export async function getMarketingContext(
 	directus: DirectusClient,
 	orgId: string,
 	clientId?: string,
+	includeClients?: boolean,
 ): Promise<MarketingContext & { brandContext?: any }> {
 	const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 	const sixMonthsAgo = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString();
@@ -124,19 +129,21 @@ export async function getMarketingContext(
 	]);
 
 	// ─── Fetch Brand Context ───
-	// If clientId is provided, fetch that specific client's brand data.
-	// Otherwise, fetch org brand + all clients with brand data.
+	// Three modes:
+	// 1. clientId provided → focus on that specific client's brand data
+	// 2. includeClients=true → org brand + all clients' brand data (comprehensive)
+	// 3. Default → org brand only
 	let orgBrand: any = null;
 	let clientsBrand: any[] = [];
 
 	if (clientId) {
-		// Client-specific mode: just the selected client
+		// Mode 1: Client-specific — just the selected client
 		const clientData = await directus.request(readItem('clients', clientId, {
 			fields: ['name', 'brand_direction', 'goals', 'target_audience', 'location', 'services'],
 		})).catch(() => null as any);
 		if (clientData) clientsBrand = [clientData];
-	} else {
-		// Org-wide mode: org brand + all branded clients
+	} else if (includeClients) {
+		// Mode 2: Comprehensive — org brand + all branded clients
 		[orgBrand, clientsBrand] = await Promise.all([
 			directus.request(readItem('organizations', orgId, {
 				fields: ['name', 'brand_direction', 'goals', 'target_audience', 'location'],
@@ -155,6 +162,11 @@ export async function getMarketingContext(
 				limit: 50,
 			})).catch(() => [] as any[]),
 		]);
+	} else {
+		// Mode 3: Org-only
+		orgBrand = await directus.request(readItem('organizations', orgId, {
+			fields: ['name', 'brand_direction', 'goals', 'target_audience', 'location'],
+		})).catch(() => null as any);
 	}
 
 	// ─── Summarize Contacts ───

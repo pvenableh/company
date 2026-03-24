@@ -67,6 +67,7 @@ export interface MarketingAnalyzeRequest {
 	analysisType: MarketingAnalysisType;
 	organizationId: string;
 	clientId?: string;
+	includeClients?: boolean;
 	goal?: string;
 	timeframe?: string;
 }

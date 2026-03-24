@@ -42,7 +42,7 @@ export default defineEventHandler(async (event) => {
 	}
 
 	const directus = await getUserDirectus(event);
-	const context = await getMarketingContext(directus, body.organizationId, body.clientId);
+	const context = await getMarketingContext(directus, body.organizationId, body.clientId, body.includeClients);
 
 	const provider = getLLMProvider();
 	const systemPrompt = body.analysisType === 'dashboard'
