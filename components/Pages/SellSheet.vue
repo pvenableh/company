@@ -3,9 +3,24 @@
 		<!-- Hero -->
 		<section ref="heroRef" class="earnest-hero">
 			<p class="hero-kicker opacity-0">The AI-powered business operating system</p>
-			<h1 class="hero-wordmark opacity-0">Earnest<span class="hero-period">.</span></h1>
-			<p class="hero-tagline opacity-0">Do <span class="hero-cycle-wrap"><span ref="heroCycleRef" class="hero-cycle">good</span></span> work<span class="bp">.</span></p>
-			<p class="hero-sub opacity-0">Radically simple<span class="bp">.</span> One platform<span class="bp">.</span> AI that sees everything<span class="bp">.</span></p>
+			<h1 class="hero-wordmark opacity-0">
+				Earnest
+				<span class="hero-period">.</span>
+			</h1>
+			<p class="hero-tagline opacity-0">
+				Do
+				<span class="hero-cycle-wrap"><span ref="heroCycleRef" class="hero-cycle">good</span></span>
+				work
+				<span class="bp">.</span>
+			</p>
+			<p class="hero-sub opacity-0">
+				Radically simple
+				<span class="bp">.</span>
+				One platform
+				<span class="bp">.</span>
+				AI that sees everything
+				<span class="bp">.</span>
+			</p>
 			<div class="hero-actions opacity-0">
 				<nuxt-link to="/register" class="btn-ink">Start for free</nuxt-link>
 				<nuxt-link to="#features" class="btn-ghost">See how it works</nuxt-link>
@@ -20,7 +35,9 @@
 		<div class="marquee-wrap" aria-hidden="true">
 			<div class="marquee-track">
 				<span v-for="(item, i) in [...marqueeItems, ...marqueeItems]" :key="i" class="marquee-item">
-					<UIcon :name="item.icon" class="marquee-icon" /> {{ item.label }} <span class="marquee-dot">&middot;</span>
+					<UIcon :name="item.icon" class="marquee-icon" />
+					{{ item.label }}
+					<span class="marquee-dot">&middot;</span>
 				</span>
 			</div>
 		</div>
@@ -29,31 +46,57 @@
 		<section ref="replacesRef" class="replaces-section">
 			<p class="replaces-kicker opacity-0">One platform replaces</p>
 			<div class="replaces-grid">
-				<div
-					v-for="(tool, index) in replacedTools"
-					:key="index"
-					class="replaces-item opacity-0"
-				>
+				<div v-for="(tool, index) in replacedTools" :key="index" class="replaces-item opacity-0">
 					<UIcon :name="tool.icon" class="replaces-icon" />
 					<span class="replaces-name">{{ tool.name }}</span>
 					<span class="replaces-for">{{ tool.replaces }}</span>
 				</div>
 			</div>
-			<p class="replaces-cta opacity-0">All of this. <em>One login<span class="bp">.</span></em></p>
+			<p class="replaces-cta opacity-0">
+				All of this.
+				<em>
+					One login
+					<span class="bp">.</span>
+				</em>
+			</p>
 		</section>
 
 		<!-- Truth Section -->
 		<section ref="truthRef" class="truth-section">
 			<div class="truth-label opacity-0">The honest case</div>
 			<div class="truth-body">
-				<h2 class="truth-title opacity-0">Your business runs on {{ toolCountWord }} tools. It should run on <span class="truth-one">one</span><span class="bp">.</span></h2>
-			<p class="truth-text opacity-0">You have a project tool. An invoice tool. A social tool. A phone system. A shared inbox. A calendar. A goal tracker. And Slack to hold it all together. {{ toolCountWord }} tools. {{ toolCountWord }} logins. Zero cohesion.</p>
+				<h2 class="truth-title opacity-0">
+					Your business runs on {{ toolCountWord }} tools. It should run on
+					<span class="truth-one">one</span>
+					<span class="bp">.</span>
+				</h2>
+				<p class="truth-text opacity-0">
+					You have a project tool. An invoice tool. A social tool. A phone system. A shared inbox. A calendar. A goal
+					tracker. And Slack to hold it all together. {{ toolCountWord }} tools. {{ toolCountWord }} logins. Zero
+					cohesion.
+				</p>
 
-<p class="truth-text opacity-0"><strong>EARNEST replaces the pile.</strong> One platform, one login, one place where the work actually lives &mdash; from the first conversation to the final payment. Nothing to integrate. Nothing to re-explain.</p>
+				<p class="truth-text opacity-0">
+					<strong>EARNEST replaces the pile.</strong>
+					One platform, one login, one place where the work actually lives &mdash; from the first conversation to the
+					final payment. Nothing to integrate. Nothing to re-explain.
+				</p>
 
-<p class="truth-text opacity-0">And because everything is in one place, <strong>AI can see the whole business</strong> &mdash; not just a slice of it. It reads your contacts, clients, projects, revenue, deals, goals, campaigns, and brand direction together, then connects the dots to build strategies, forecasts, and plans that no isolated tool can produce. Your marketing plan knows your pipeline. Your CRM analysis knows your brand voice. Your goal suggestions know your financials. <em>That</em> is the difference.</p>
+				<p class="truth-text opacity-0">
+					And because everything is in one place,
+					<strong>AI can see the whole business</strong>
+					&mdash; not just a slice of it. It reads your contacts, clients, projects, revenue, deals, goals, campaigns,
+					and brand direction together, then connects the dots to build strategies, forecasts, and plans that no
+					isolated tool can produce. Your marketing plan knows your pipeline. Your CRM analysis knows your brand voice.
+					Your goal suggestions know your financials.
+					<em>That</em>
+					is the difference.
+				</p>
 
-<p class="truth-text opacity-0">Two companion apps &mdash; CardDesk for networking and E&sup2; for mobile &mdash; keep everything connected on the go. Simple to use. Powerful underneath. That&rsquo;s the point.</p>
+				<p class="truth-text opacity-0">
+					Two companion apps &mdash; CardDesk for networking and E&sup2; for mobile &mdash; keep everything connected on
+					the go. Simple to use. Powerful underneath. That&rsquo;s the point.
+				</p>
 			</div>
 		</section>
 
@@ -61,29 +104,58 @@
 		<section ref="aiRef" class="ai-reveal">
 			<div class="ai-reveal-inner">
 				<p class="ai-kicker opacity-0">What one platform makes possible</p>
-				<h2 class="ai-headline opacity-0">Your data talks<span class="bp">.</span><br/><em>AI listens<span class="bp">.</span></em></h2>
-				<p class="ai-lede opacity-0">Most tools bolt AI onto one channel. EARNEST gives AI the full picture &mdash; people, companies, projects, revenue, conversations, campaigns, financials, and goals &mdash; layered with brand direction and target audience for every client. The result is CRM intelligence, marketing plans, pipeline forecasts, and goal suggestions that are uniquely yours. Not generic advice. Your business, analyzed whole.</p>
+				<h2 class="ai-headline opacity-0">
+					Your data talks
+					<span class="bp">.</span>
+					<br />
+					<em>
+						AI listens
+						<span class="bp">.</span>
+					</em>
+				</h2>
+				<p class="ai-lede opacity-0">
+					Most tools bolt AI onto one channel. EARNEST gives AI the full picture &mdash; people, companies, projects,
+					revenue, conversations, campaigns, financials, and goals &mdash; layered with brand direction and target
+					audience for every client. The result is CRM intelligence, marketing plans, pipeline forecasts, and goal
+					suggestions that are uniquely yours. Not generic advice. Your business, analyzed whole.
+				</p>
 
 				<div class="ai-cap opacity-0">
-  <span class="ai-cap-number">01</span>
-  <h3 class="ai-cap-title">Connected intelligence</h3>
-  <p class="ai-cap-desc">Every other platform analyzes its own data in isolation. EARNEST connects AI to your entire operation — people, companies, projects, revenue, conversations, campaigns, and goals — simultaneously. The result is insight no single-purpose tool can produce.</p>
-</div>
-<div class="ai-cap opacity-0">
-  <span class="ai-cap-number">02</span>
-  <h3 class="ai-cap-title">Brand awareness</h3>
-  <p class="ai-cap-desc">Set brand direction, goals, target audience, and positioning per client, per team, per organization. Every AI feature reads this context. Social posts, email campaigns, CRM strategies, and marketing plans all sound like your business &mdash; not a generic template.</p>
-</div>
-<div class="ai-cap opacity-0">
-  <span class="ai-cap-number">03</span>
-  <h3 class="ai-cap-title">Marketing intelligence</h3>
-  <p class="ai-cap-desc">Feed EARNEST a client. It reads their brand direction, pipeline stage, contact history, email and social performance, and stated goals &mdash; then generates a complete multi-channel marketing plan with email sequences, social cadence, content themes, KPIs, and a 4-week action calendar. Written in their voice.</p>
-</div>
-<div class="ai-cap opacity-0">
-  <span class="ai-cap-number">04</span>
-  <h3 class="ai-cap-title">Productivity engine</h3>
-  <p class="ai-cap-desc">Scans every module in real time &mdash; tickets, projects, tasks, invoices, deals, channels, social, and goals &mdash; then surfaces prioritized actions instantly. No AI tokens. Pure algorithmic intelligence that loads the moment you open EARNEST.</p>
-</div>
+					<span class="ai-cap-number">01</span>
+					<h3 class="ai-cap-title">Connected intelligence</h3>
+					<p class="ai-cap-desc">
+						Every other platform analyzes its own data in isolation. EARNEST connects AI to your entire operation —
+						people, companies, projects, revenue, conversations, campaigns, and goals — simultaneously. The result is
+						insight no single-purpose tool can produce.
+					</p>
+				</div>
+				<div class="ai-cap opacity-0">
+					<span class="ai-cap-number">02</span>
+					<h3 class="ai-cap-title">Brand awareness</h3>
+					<p class="ai-cap-desc">
+						Set brand direction, goals, target audience, and positioning per client, per team, per organization. Every
+						AI feature reads this context. Social posts, email campaigns, CRM strategies, and marketing plans all sound
+						like your business &mdash; not a generic template.
+					</p>
+				</div>
+				<div class="ai-cap opacity-0">
+					<span class="ai-cap-number">03</span>
+					<h3 class="ai-cap-title">Marketing intelligence</h3>
+					<p class="ai-cap-desc">
+						Feed EARNEST a client. It reads their brand direction, pipeline stage, contact history, email and social
+						performance, and stated goals &mdash; then generates a complete multi-channel marketing plan with email
+						sequences, social cadence, content themes, KPIs, and a 4-week action calendar. Written in their voice.
+					</p>
+				</div>
+				<div class="ai-cap opacity-0">
+					<span class="ai-cap-number">04</span>
+					<h3 class="ai-cap-title">Productivity engine</h3>
+					<p class="ai-cap-desc">
+						Scans every module in real time &mdash; tickets, projects, tasks, invoices, deals, channels, social, and
+						goals &mdash; then surfaces prioritized actions instantly. No AI tokens. Pure algorithmic intelligence that
+						loads the moment you open EARNEST.
+					</p>
+				</div>
 			</div>
 		</section>
 
@@ -94,16 +166,22 @@
 		<section ref="featuresRef" id="features" class="features-section">
 			<div class="features-header">
 				<p class="features-hero-word opacity-0">Everything</p>
-				<h2 class="features-title opacity-0">your business needs<span class="bp">.</span><br/><em class="features-nothing">Nothing</em> it doesn't<span class="bp">.</span></h2>
-				<p class="features-sub opacity-0">Built for teams who are serious about their work<span class="bp">.</span></p>
+				<h2 class="features-title opacity-0">
+					your business needs
+					<span class="bp">.</span>
+					<br />
+					<em class="features-nothing">Nothing</em>
+					it doesn't
+					<span class="bp">.</span>
+				</h2>
+				<p class="features-sub opacity-0">
+					Built for teams who are serious about their work
+					<span class="bp">.</span>
+				</p>
 			</div>
 
 			<div class="feature-list">
-				<div
-					v-for="(feature, index) in features"
-					:key="index"
-					class="feature-item opacity-0"
-				>
+				<div v-for="(feature, index) in features" :key="index" class="feature-item opacity-0">
 					<span class="feature-number">{{ String(index + 1).padStart(2, '0') }}</span>
 					<div class="feature-name">{{ feature.name }}</div>
 					<div class="feature-desc">{{ feature.desc }}</div>
@@ -113,16 +191,33 @@
 
 		<!-- Quote Break -->
 		<div class="quote-break">
-			<p class="quote-text opacity-0">&ldquo;Design is so simple. That&rsquo;s why it is so <em>complicated.</em>&rdquo;</p>
+			<p class="quote-text opacity-0">
+				&ldquo;Design is so simple. That&rsquo;s why it is so
+				<em>complicated.</em>
+				&rdquo;
+			</p>
 			<p class="quote-attr opacity-0">&mdash; Paul Rand</p>
-		<p class="quote-earnest opacity-0"><span class="quote-earnest-brand">EARNEST</span> applies the same standard for your business<span class="bp">.</span></p>
+			<p class="quote-earnest opacity-0">
+				<span class="quote-earnest-brand">EARNEST</span>
+				applies the same standard for your business
+				<span class="bp">.</span>
+			</p>
 		</div>
 
 		<!-- Pricing -->
 		<section ref="pricingRef" id="pricing" class="pricing-section">
 			<div class="pricing-header">
-				<h2 class="pricing-title opacity-0"><em class="pricing-honest">Honest</em> pricing<span class="bp">.</span><br/>No surprises<span class="bp">.</span></h2>
-				<p class="pricing-sub opacity-0">One price. Your whole team. Cancel any time &mdash; we'd rather earn your business than trap it.</p>
+				<h2 class="pricing-title opacity-0">
+					<em class="pricing-honest">Honest</em>
+					pricing
+					<span class="bp">.</span>
+					<br />
+					No surprises
+					<span class="bp">.</span>
+				</h2>
+				<p class="pricing-sub opacity-0">
+					One price. Your whole team. Cancel any time &mdash; we'd rather earn your business than trap it.
+				</p>
 			</div>
 
 			<div class="plans-grid">
@@ -133,7 +228,11 @@
 					:class="{ 'plan-featured': plan.featured }"
 				>
 					<div class="plan-name">{{ plan.name }}</div>
-					<div class="plan-price"><sup>$</sup>{{ plan.price }}<span> / mo</span></div>
+					<div class="plan-price">
+						<sup>$</sup>
+						{{ plan.price }}
+						<span>/ mo</span>
+					</div>
 					<div class="plan-desc">{{ plan.desc }}</div>
 					<ul class="plan-features">
 						<li v-for="(feat, fi) in plan.features" :key="fi">{{ feat }}</li>
@@ -142,7 +241,6 @@
 				</div>
 			</div>
 		</section>
-
 	</div>
 </template>
 
@@ -197,96 +295,170 @@ const replacedTools = [
 	{ name: 'Isolated AI', replaces: 'AI assistant', icon: 'i-lucide-sparkles' },
 ];
 
-const numberWords = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
+const numberWords = [
+	'zero',
+	'one',
+	'two',
+	'three',
+	'four',
+	'five',
+	'six',
+	'seven',
+	'eight',
+	'nine',
+	'ten',
+	'eleven',
+	'twelve',
+];
 const toolCountWord = computed(() => {
 	const count = replacedTools.length;
 	return numberWords[count] || String(count);
 });
 
 const features = [
-	{ name: 'Productivity Engine', desc: 'Your command center. Scans tickets, projects, tasks, invoices, channels, social, deals, and goals — then surfaces prioritized actions, urgent items, and intelligent suggestions. No AI tokens needed — pure algorithmic intelligence that loads instantly every time you open Earnest.' },
-	{ name: 'CRM Intelligence', desc: 'AI reads across your entire business — contacts, clients, projects, tickets, invoices, deals, and goals — then generates health scores, pipeline forecasts, growth plans, and contact strategies tailored to your brand positioning and objectives.' },
-	{ name: 'Health Snapshots', desc: 'Instant CRM and marketing health scores computed from your real data — no AI tokens, no waiting. Algorithmic analysis of contacts, revenue trends, overdue items, and pipeline health gives you a live pulse on your business the moment you open the dashboard.' },
-	{ name: 'Marketing AI Analyze', desc: 'AI scans your entire business — contacts, social, email, clients, revenue — and returns a marketing health score, actionable insights, and multi-channel campaign plans. Analyze for a specific client or your whole organization. One click.' },
-	{ name: 'AI Strategy Engine', desc: 'Your data becomes your strategist. AI connects the dots across every module to generate campaigns, spot opportunities, and surface insights no isolated tool can see.' },
-	{ name: 'Brand Awareness AI', desc: 'Set brand direction, goals, target audience, and location per client. Every AI feature — from CRM analysis to social posts to email campaigns — uses this context to generate suggestions aligned with your positioning. Not generic advice. Your brand, your voice, your market.' },
-	{ name: 'Social AI Generate', desc: 'Schedule to Instagram, LinkedIn, Facebook, and Threads. AI generates platform-optimized posts, hashtags, and image suggestions — all informed by your brand direction and target audience — in seconds.' },
-	{ name: 'Email Marketing AI', desc: 'Block-based newsletter builder with AI-powered content generation. Describe your email and get a complete template — subject line, sections, images, and copy — all tuned to your brand voice and audience.' },
-	{ name: 'Goal Suggestions', desc: 'AI suggests strategic goals based on your actual data, brand direction, and business objectives — financial, networking, performance, marketing, or custom. Track progress with periodic snapshots and let the productivity engine factor your goals into daily priorities.' },
-	{ name: 'Project Management', desc: 'Kanban boards, task lists, timelines, file attachments, and a command-center project dashboard with stats, document uploads, invoices, and activity feeds. Your team always knows what\'s next.' },
-	{ name: 'People & Companies', desc: 'Every person and company in one unified CRM — clients, contacts, prospects, and networking connections from CardDesk. Brand context, goals, services, and the full history of every conversation and project.' },
-	{ name: 'Quick Tasks & AI To-Dos', desc: 'Personal task lists with AI-powered suggestions, day and week scheduling, motivational progress tracking, and confetti celebrations. AI generates task ideas based on your workload and brand context so nothing falls through the cracks.' },
-	{ name: 'AI Token Management', desc: 'Admins control AI usage per member — set monthly budgets, toggle access on and off, monitor usage across the team. Purchase token add-on packages when you need more. Full visibility into who uses what.' },
-	{ name: 'Client Access Control', desc: 'Role-based client visibility with team assignments and individual overrides. Owners and admins see everything. Managers and members see only the clients assigned to their teams — plus any individual access grants.' },
-	{ name: 'Invoicing & Billing', desc: 'Stripe-powered invoices, proposals, payment tracking, and PDF generation. Get paid on time.' },
-	{ name: 'Team Channels', desc: 'Slack-style messaging built into your workspace. Conversations stay with the work they\'re about.' },
-	{ name: 'Phone & Video', desc: 'Twilio-powered calling and video meetings. Click-to-call contacts, record calls, and host team video — all without leaving Earnest.' },
-	{ name: 'Calendar & Scheduling', desc: 'Public booking links, Google/Outlook calendar sync, and team availability. Everything connected to your clients and projects.' },
-	{ name: 'CardDesk', desc: 'Turn every business card and networking event into a CRM relationship. Scan cards with AI vision, track follow-ups, and gamify your networking with XP, levels, and badges.' },
-	{ name: 'Earnest Companion (E\u00B2)', desc: 'Your business in your pocket. Tasks, messages, contacts, and AI on the go — a mobile-first companion that keeps you connected to everything in Earnest.' },
+	{
+		name: 'Productivity Engine',
+		desc: 'Your command center. Scans tickets, projects, tasks, invoices, channels, social, deals, and goals — then surfaces prioritized actions, urgent items, and intelligent suggestions. No AI tokens needed — pure algorithmic intelligence that loads instantly every time you open Earnest.',
+	},
+	{
+		name: 'CRM Intelligence',
+		desc: 'AI reads across your entire business — contacts, clients, projects, tickets, invoices, deals, and goals — then generates health scores, pipeline forecasts, growth plans, and contact strategies tailored to your brand positioning and objectives.',
+	},
+	{
+		name: 'Health Snapshots',
+		desc: 'Instant CRM and marketing health scores computed from your real data — no AI tokens, no waiting. Algorithmic analysis of contacts, revenue trends, overdue items, and pipeline health gives you a live pulse on your business the moment you open the dashboard.',
+	},
+	{
+		name: 'Marketing AI Analyze',
+		desc: 'AI scans your entire business — contacts, social, email, clients, revenue — and returns a marketing health score, actionable insights, and multi-channel campaign plans. Analyze for a specific client or your whole organization. One click.',
+	},
+	{
+		name: 'AI Strategy Engine',
+		desc: 'Your data becomes your strategist. AI connects the dots across every module to generate campaigns, spot opportunities, and surface insights no isolated tool can see.',
+	},
+	{
+		name: 'Brand Awareness AI',
+		desc: 'Set brand direction, goals, target audience, and location per client. Every AI feature — from CRM analysis to social posts to email campaigns — uses this context to generate suggestions aligned with your positioning. Not generic advice. Your brand, your voice, your market.',
+	},
+	{
+		name: 'Social AI Generate',
+		desc: 'Schedule to Instagram, LinkedIn, Facebook, and Threads. AI generates platform-optimized posts, hashtags, and image suggestions — all informed by your brand direction and target audience — in seconds.',
+	},
+	{
+		name: 'Email Marketing AI',
+		desc: 'Block-based newsletter builder with AI-powered content generation. Describe your email and get a complete template — subject line, sections, images, and copy — all tuned to your brand voice and audience.',
+	},
+	{
+		name: 'Goal Suggestions',
+		desc: 'AI suggests strategic goals based on your actual data, brand direction, and business objectives — financial, networking, performance, marketing, or custom. Track progress with periodic snapshots and let the productivity engine factor your goals into daily priorities.',
+	},
+	{
+		name: 'Project Management',
+		desc: "Kanban boards, task lists, timelines, file attachments, and a command-center project dashboard with stats, document uploads, invoices, and activity feeds. Your team always knows what's next.",
+	},
+	{
+		name: 'People & Companies',
+		desc: 'Every person and company in one unified CRM — clients, contacts, prospects, and networking connections from CardDesk. Brand context, goals, services, and the full history of every conversation and project.',
+	},
+	{
+		name: 'Quick Tasks & AI To-Dos',
+		desc: 'Personal task lists with AI-powered suggestions, day and week scheduling, motivational progress tracking, and confetti celebrations. AI generates task ideas based on your workload and brand context so nothing falls through the cracks.',
+	},
+	{
+		name: 'AI Token Management',
+		desc: 'Admins control AI usage per member — set monthly budgets, toggle access on and off, monitor usage across the team. Purchase token add-on packages when you need more. Full visibility into who uses what.',
+	},
+	{
+		name: 'Client Access Control',
+		desc: 'Role-based client visibility with team assignments and individual overrides. Owners and admins see everything. Managers and members see only the clients assigned to their teams — plus any individual access grants.',
+	},
+	{
+		name: 'Invoicing & Billing',
+		desc: 'Stripe-powered invoices, proposals, payment tracking, and PDF generation. Get paid on time.',
+	},
+	{
+		name: 'Team Channels',
+		desc: "Slack-style messaging built into your workspace. Conversations stay with the work they're about.",
+	},
+	{
+		name: 'Phone & Video',
+		desc: 'Twilio-powered calling and video meetings. Click-to-call contacts, record calls, and host team video — all without leaving Earnest.',
+	},
+	{
+		name: 'Calendar & Scheduling',
+		desc: 'Public booking links, Google/Outlook calendar sync, and team availability. Everything connected to your clients and projects.',
+	},
+	{
+		name: 'CardDesk',
+		desc: 'Turn every business card and networking event into a CRM relationship. Scan cards with AI vision, track follow-ups, and gamify your networking with XP, levels, and badges.',
+	},
+	{
+		name: 'Earnest Companion (E\u00B2)',
+		desc: 'Your business in your pocket. Tasks, messages, contacts, and AI on the go — a mobile-first companion that keeps you connected to everything in Earnest.',
+	},
 ];
 
 const plans = [
-  {
-    name: 'Solo',
-    price: '49',
-    desc: 'For the one-person shop doing serious work.',
-    featured: false,
-    features: [
-      '1 user',
-      'All platform features',
-      'Invoicing & Stripe billing',
-      'Social scheduling',
-      'Productivity Engine',
-      'Health Snapshots (CRM & Marketing)',
-      'Brand Awareness AI',
-      'People & Companies CRM',
-      'CardDesk & E\u00B2 companion apps',
-      '100K AI tokens/month',
-      '25 card scans/month',
-    ],
-    cta: { label: 'Get started', to: '/register' },
-  },
-  {
-    name: 'Studio',
-    price: '149',
-    desc: 'For the team that means business.',
-    featured: true,
-    features: [
-      'Up to 8 users',
-      'Everything in Solo',
-      'Team channels & video',
-      'Phone system',
-      'Marketing AI Analyze',
-      'CRM Intelligence (all modes)',
-      'Email Marketing AI',
-      'Brand Awareness AI per client',
-      'AI Token Management',
-      'Client portal (5 seats)',
-      '400K AI tokens/month',
-      '150 card scans/month',
-    ],
-    cta: { label: 'Start free trial', to: '/register' },
-  },
-  {
-    name: 'Agency',
-    price: '299',
-    desc: 'For the business that has grown into something real.',
-    featured: false,
-    features: [
-      'Up to 15 users',
-      'Everything in Studio',
-      'White-label Companion app',
-      'Unlimited card scans',
-      'Client portal (20 seats)',
-      'AI Strategy Engine (full suite)',
-      'CRM Intelligence (all 4 modes)',
-      'Comprehensive client AI analysis',
-      'Priority support + onboarding call',
-      '1,000,000 AI tokens/month',
-    ],
-    cta: { label: 'Talk to us', to: '/register' },
-  },
+	{
+		name: 'Solo',
+		price: '49',
+		desc: 'For the one-person shop doing serious work.',
+		featured: false,
+		features: [
+			'1 user',
+			'All platform features',
+			'Invoicing & Stripe billing',
+			'Social scheduling',
+			'Productivity Engine',
+			'Health Snapshots (CRM & Marketing)',
+			'Brand Awareness AI',
+			'People & Companies CRM',
+			'CardDesk & E\u00B2 companion apps',
+			'100K AI tokens/month',
+			'25 card scans/month',
+		],
+		cta: { label: 'Get started', to: '/register' },
+	},
+	{
+		name: 'Studio',
+		price: '149',
+		desc: 'For the team that means business.',
+		featured: true,
+		features: [
+			'Up to 8 users',
+			'Everything in Solo',
+			'Team channels & video',
+			'Phone system',
+			'Marketing AI Analyze',
+			'CRM Intelligence (all modes)',
+			'Email Marketing AI',
+			'Brand Awareness AI per client',
+			'AI Token Management',
+			'Client portal (5 seats)',
+			'400K AI tokens/month',
+			'150 card scans/month',
+		],
+		cta: { label: 'Start free trial', to: '/register' },
+	},
+	{
+		name: 'Agency',
+		price: '299',
+		desc: 'For the business that has grown into something real.',
+		featured: false,
+		features: [
+			'Up to 15 users',
+			'Everything in Studio',
+			'White-label Companion app',
+			'Unlimited card scans',
+			'Client portal (20 seats)',
+			'AI Strategy Engine (full suite)',
+			'CRM Intelligence (all 4 modes)',
+			'Comprehensive client AI analysis',
+			'Priority support + onboarding call',
+			'1,000,000 AI tokens/month',
+		],
+		cta: { label: 'Talk to us', to: '/register' },
+	},
 ];
 
 let ctx;
@@ -298,7 +470,12 @@ onMounted(() => {
 		heroTl
 			.fromTo('.hero-kicker', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' })
 			.fromTo('.hero-wordmark', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.9, ease: 'power3.out' }, '-=0.5')
-			.fromTo('.hero-period', { opacity: 0, y: -20 }, { opacity: 1, y: 0, duration: 0.5, ease: 'back.out(1.5)' }, '-=0.3')
+			.fromTo(
+				'.hero-period',
+				{ opacity: 0, y: -20 },
+				{ opacity: 1, y: 0, duration: 0.5, ease: 'back.out(1.5)' },
+				'-=0.3',
+			)
 			.fromTo('.hero-tagline', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' }, '-=0.3')
 			.fromTo('.hero-sub', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' }, '-=0.5')
 			.fromTo('.hero-actions', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' }, '-=0.5')
@@ -340,13 +517,17 @@ onMounted(() => {
 			if (!sectionRef.value) return;
 			const els = sectionRef.value.querySelectorAll(selector);
 			els.forEach((el, i) => {
-				gsap.fromTo(el,
+				gsap.fromTo(
+					el,
 					{ opacity: 0, y: 20 },
 					{
-						opacity: 1, y: 0, duration: 0.6, ease: 'power3.out',
+						opacity: 1,
+						y: 0,
+						duration: 0.6,
+						ease: 'power3.out',
 						scrollTrigger: { trigger: el, start: 'top 98%', toggleActions: 'play none none none' },
 						delay: i * 0.05,
-					}
+					},
 				);
 			});
 		};
@@ -364,20 +545,40 @@ onMounted(() => {
 		revealElements(featuresRef, '.features-hero-word, .features-title, .features-sub, .feature-item');
 
 		// Quote
-		gsap.fromTo('.quote-text', { opacity: 0, y: 20 }, {
-			opacity: 1, y: 0, duration: 0.6, ease: 'power3.out',
-			scrollTrigger: { trigger: '.quote-break', start: 'top 98%' },
-		});
-		gsap.fromTo('.quote-attr', { opacity: 0 }, {
-			opacity: 1, duration: 0.6, ease: 'power3.out',
-			scrollTrigger: { trigger: '.quote-break', start: 'top 98%' },
-			delay: 0.15,
-		});
-		gsap.fromTo('.quote-earnest', { opacity: 0, y: 16 }, {
-			opacity: 1, y: 0, duration: 0.6, ease: 'power3.out',
-			scrollTrigger: { trigger: '.quote-break', start: 'top 98%' },
-			delay: 0.3,
-		});
+		gsap.fromTo(
+			'.quote-text',
+			{ opacity: 0, y: 20 },
+			{
+				opacity: 1,
+				y: 0,
+				duration: 0.6,
+				ease: 'power3.out',
+				scrollTrigger: { trigger: '.quote-break', start: 'top 98%' },
+			},
+		);
+		gsap.fromTo(
+			'.quote-attr',
+			{ opacity: 0 },
+			{
+				opacity: 1,
+				duration: 0.6,
+				ease: 'power3.out',
+				scrollTrigger: { trigger: '.quote-break', start: 'top 98%' },
+				delay: 0.15,
+			},
+		);
+		gsap.fromTo(
+			'.quote-earnest',
+			{ opacity: 0, y: 16 },
+			{
+				opacity: 1,
+				y: 0,
+				duration: 0.6,
+				ease: 'power3.out',
+				scrollTrigger: { trigger: '.quote-break', start: 'top 98%' },
+				delay: 0.3,
+			},
+		);
 
 		// Pricing
 		revealElements(pricingRef, '.pricing-title, .pricing-sub, .plan');
@@ -393,7 +594,8 @@ useHead({
 	meta: [
 		{
 			name: 'description',
-			content: 'Earnest is the AI-powered platform where your work actually lives. Projects, invoicing, goals, social scheduling, team channels, phone & video, CRM, and AI that sees everything.',
+			content:
+				'Earnest is the AI-powered platform where your work actually lives. Projects, invoicing, goals, social scheduling, team channels, phone & video, CRM, and AI that sees everything.',
 		},
 	],
 });
@@ -402,20 +604,24 @@ useHead({
 <style scoped>
 /* ─── Earnest Brand Tokens ─── */
 .sell-sheet {
-	--paper:   #F6F1E7;
-	--paper-2: #EDE7D9;
-	--ink:     #1C1812;
-	--ink-2:   #3D3529;
-	--muted:   #8C7B6B;
-	--accent:  #B85C2C;
-	--rule:    rgba(28,24,18,0.12);
+	--paper: #f6f1e7;
+	--paper-2: #ede7d9;
+	--ink: #1c1812;
+	--ink-2: #3d3529;
+	--muted: #8c7b6b;
+	--accent: #b85c2c;
+	--rule: rgba(28, 24, 18, 0.12);
 
 	background: var(--paper);
 	color: var(--ink);
 	font-family: var(--font-proxima-light);
 	-webkit-font-smoothing: antialiased;
 }
-.bp { color: var(--accent); font-size: 1.3em; line-height: 0; }
+.bp {
+	color: var(--accent);
+	font-size: 1.3em;
+	line-height: 0;
+}
 
 /* ─── HERO ─── */
 .earnest-hero {
@@ -499,7 +705,9 @@ useHead({
 	text-decoration: none;
 	text-transform: uppercase;
 }
-.btn-ink:hover { background: var(--accent); }
+.btn-ink:hover {
+	background: var(--accent);
+}
 .btn-ghost {
 	background: transparent;
 	color: var(--muted);
@@ -513,7 +721,10 @@ useHead({
 	text-decoration: none;
 	text-transform: uppercase;
 }
-.btn-ghost:hover { border-color: var(--ink); color: var(--ink); }
+.btn-ghost:hover {
+	border-color: var(--ink);
+	color: var(--ink);
+}
 
 .hero-scroll {
 	position: absolute;
@@ -556,7 +767,7 @@ useHead({
 	font-family: var(--font-proxima-light);
 	font-style: normal;
 	font-size: 13px;
-	color: rgba(246,241,231,1);
+	color: rgba(246, 241, 231, 1);
 	padding: 0 32px;
 	flex-shrink: 0;
 	display: inline-flex;
@@ -571,10 +782,17 @@ useHead({
 	color: var(--accent);
 	flex-shrink: 0;
 }
-.marquee-dot { color: var(--accent); margin: 0 4px; }
+.marquee-dot {
+	color: var(--accent);
+	margin: 0 4px;
+}
 @keyframes marquee {
-	from { transform: translateX(0); }
-	to   { transform: translateX(-50%); }
+	from {
+		transform: translateX(0);
+	}
+	to {
+		transform: translateX(-50%);
+	}
 }
 
 /* ─── REPLACES ─── */
@@ -585,7 +803,11 @@ useHead({
 	text-align: center;
 	background: var(--paper);
 }
-@media (max-width: 700px) { .replaces-section { padding: 60px 16px; } }
+@media (max-width: 700px) {
+	.replaces-section {
+		padding: 60px 16px;
+	}
+}
 .replaces-kicker {
 	font-family: var(--font-proxima-light);
 	font-style: italic;
@@ -602,7 +824,11 @@ useHead({
 	background: var(--rule);
 	border: 1px solid var(--rule);
 }
-@media (max-width: 700px) { .replaces-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 700px) {
+	.replaces-grid {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
 .replaces-item {
 	background: var(--paper);
 	padding: 28px 16px;
@@ -614,9 +840,14 @@ useHead({
 	position: relative;
 }
 @media (max-width: 700px) {
-	.replaces-item { padding: 16px 10px; gap: 6px; }
+	.replaces-item {
+		padding: 16px 10px;
+		gap: 6px;
+	}
 }
-.replaces-item:hover { background: var(--paper-2); }
+.replaces-item:hover {
+	background: var(--paper-2);
+}
 .replaces-item::after {
 	content: '';
 	position: absolute;
@@ -637,9 +868,14 @@ useHead({
 	transition: opacity 0.2s;
 }
 @media (max-width: 700px) {
-	.replaces-icon { width: 18px; height: 18px; }
+	.replaces-icon {
+		width: 18px;
+		height: 18px;
+	}
 }
-.replaces-item:hover .replaces-icon { opacity: 1; }
+.replaces-item:hover .replaces-icon {
+	opacity: 1;
+}
 .replaces-name {
 	font-family: var(--font-bauer-bodoni);
 	font-size: 15px;
@@ -648,7 +884,9 @@ useHead({
 	letter-spacing: 0.01em;
 }
 @media (max-width: 700px) {
-	.replaces-name { font-size: 12px; }
+	.replaces-name {
+		font-size: 12px;
+	}
 }
 .replaces-for {
 	font-family: var(--font-proxima-light);
@@ -657,7 +895,9 @@ useHead({
 	letter-spacing: 0.04em;
 }
 @media (max-width: 700px) {
-	.replaces-for { font-size: 9px; }
+	.replaces-for {
+		font-size: 9px;
+	}
 }
 .replaces-cta {
 	font-family: var(--font-bauer-bodoni);
@@ -683,7 +923,11 @@ useHead({
 	background: var(--paper);
 }
 @media (max-width: 700px) {
-	.truth-section { grid-template-columns: 1fr; gap: 40px; padding: 80px 24px; }
+	.truth-section {
+		grid-template-columns: 1fr;
+		gap: 40px;
+		padding: 80px 24px;
+	}
 }
 .truth-label {
 	font-family: var(--font-proxima-light);
@@ -696,7 +940,9 @@ useHead({
 	top: 100px;
 }
 @media (max-width: 700px) {
-	.truth-label { position: static; }
+	.truth-label {
+		position: static;
+	}
 }
 .truth-title {
 	font-family: var(--font-bauer-bodoni);
@@ -725,7 +971,10 @@ useHead({
 	margin-bottom: 20px;
 	font-weight: 400;
 }
-.truth-text strong { color: var(--ink); font-weight: 600; }
+.truth-text strong {
+	color: var(--ink);
+	font-weight: 600;
+}
 
 /* ─── AI REVEAL ─── */
 .ai-reveal {
@@ -741,7 +990,7 @@ useHead({
 	left: 0;
 	right: 0;
 	bottom: 0;
-	background: radial-gradient(ellipse at 50% 0%, rgba(184,92,44,0.08) 0%, transparent 70%);
+	background: radial-gradient(ellipse at 50% 0%, rgba(184, 92, 44, 0.08) 0%, transparent 70%);
 	pointer-events: none;
 }
 .ai-reveal-inner {
@@ -776,24 +1025,30 @@ useHead({
 	font-family: var(--font-proxima-light);
 	font-size: 18px;
 	line-height: 1.8;
-	color: rgba(246,241,231,0.6);
+	color: rgba(246, 241, 231, 0.6);
 	max-width: 600px;
 	margin-bottom: 64px;
 }
 .ai-capabilities {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1px;
-  background: rgba(246,241,231,0.08);
-  border: 1px solid rgba(246,241,231,0.08);
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 1px;
+	background: rgba(246, 241, 231, 0.08);
+	border: 1px solid rgba(246, 241, 231, 0.08);
 }
-@media (max-width: 700px) { .ai-capabilities { grid-template-columns: 1fr; } }
+@media (max-width: 700px) {
+	.ai-capabilities {
+		grid-template-columns: 1fr;
+	}
+}
 .ai-cap {
 	padding: 36px 32px;
 	background: var(--ink);
 	transition: background 0.2s;
 }
-.ai-cap:hover { background: rgba(246,241,231,0.03); }
+.ai-cap:hover {
+	background: rgba(246, 241, 231, 0.03);
+}
 .ai-cap-number {
 	font-family: var(--font-bauer-bodoni);
 	font-size: 11px;
@@ -814,7 +1069,7 @@ useHead({
 .ai-cap-desc {
 	font-size: 14px;
 	line-height: 1.7;
-	color: rgba(246,241,231,0.5);
+	color: rgba(246, 241, 231, 0.5);
 }
 
 /* ─── DIVIDER ─── */
@@ -839,7 +1094,11 @@ useHead({
 	margin: 0 auto;
 	background: var(--paper);
 }
-@media (max-width: 700px) { .features-section { padding: 60px 24px 80px; } }
+@media (max-width: 700px) {
+	.features-section {
+		padding: 60px 24px 80px;
+	}
+}
 
 .features-header {
 	margin-bottom: 64px;
@@ -883,7 +1142,11 @@ useHead({
 	gap: 0;
 	border: 1px solid var(--rule);
 }
-@media (max-width: 600px) { .feature-list { grid-template-columns: 1fr; } }
+@media (max-width: 600px) {
+	.feature-list {
+		grid-template-columns: 1fr;
+	}
+}
 
 .feature-item {
 	padding: 36px 32px;
@@ -892,8 +1155,12 @@ useHead({
 	transition: background 0.2s;
 	cursor: default;
 }
-.feature-item:hover { background: var(--paper-2); }
-.feature-item:nth-child(2n) { border-right: none; }
+.feature-item:hover {
+	background: var(--paper-2);
+}
+.feature-item:nth-child(2n) {
+	border-right: none;
+}
 
 .feature-number {
 	font-family: var(--font-bauer-bodoni);
@@ -929,11 +1196,12 @@ useHead({
 .quote-break::before {
 	content: '\201C';
 	position: absolute;
-	top: -40px; left: 50%;
+	top: -40px;
+	left: 50%;
 	transform: translateX(-50%);
 	font-family: var(--font-bauer-bodoni);
 	font-size: 300px;
-	color: rgba(246,241,231,0.04);
+	color: rgba(246, 241, 231, 0.04);
 	line-height: 1;
 	pointer-events: none;
 }
@@ -956,7 +1224,7 @@ useHead({
 .quote-attr {
 	font-family: var(--font-proxima-light);
 	font-size: 13px;
-	color: rgba(246,241,231,0.35);
+	color: rgba(246, 241, 231, 0.35);
 	letter-spacing: 0.1em;
 	margin-top: 32px;
 	text-transform: uppercase;
@@ -965,7 +1233,7 @@ useHead({
 	font-family: var(--font-proxima-light);
 	font-style: normal;
 	font-size: clamp(18px, 3vw, 24px);
-	color: rgba(246,241,231,0.85);
+	color: rgba(246, 241, 231, 0.85);
 	margin-top: 20px;
 	letter-spacing: 0.01em;
 	position: relative;
@@ -984,7 +1252,11 @@ useHead({
 	margin: 0 auto;
 	background: var(--paper);
 }
-@media (max-width: 700px) { .pricing-section { padding: 80px 24px; } }
+@media (max-width: 700px) {
+	.pricing-section {
+		padding: 80px 24px;
+	}
+}
 
 .pricing-header {
 	margin-bottom: 64px;
@@ -993,7 +1265,11 @@ useHead({
 	gap: 40px;
 	align-items: end;
 }
-@media (max-width: 600px) { .pricing-header { grid-template-columns: 1fr; } }
+@media (max-width: 600px) {
+	.pricing-header {
+		grid-template-columns: 1fr;
+	}
+}
 .pricing-title {
 	font-family: var(--font-bauer-bodoni);
 	font-size: clamp(28px, 4vw, 42px);
@@ -1022,20 +1298,28 @@ useHead({
 	background: var(--rule);
 	border: 1px solid var(--rule);
 }
-@media (max-width: 600px) { .plans-grid { grid-template-columns: 1fr; } }
+@media (max-width: 600px) {
+	.plans-grid {
+		grid-template-columns: 1fr;
+	}
+}
 
 .plan {
 	background: var(--paper);
 	padding: 40px 32px;
 	transition: background 0.2s;
 }
-.plan:hover { background: var(--paper-2); }
+.plan:hover {
+	background: var(--paper-2);
+}
 
 .plan-featured {
 	background: var(--ink) !important;
 	color: var(--paper);
 }
-.plan-featured:hover { background: var(--ink) !important; }
+.plan-featured:hover {
+	background: var(--ink) !important;
+}
 
 .plan-name {
 	font-family: var(--font-bauer-bodoni);
@@ -1043,7 +1327,9 @@ useHead({
 	font-weight: 600;
 	letter-spacing: 0.02em;
 }
-.plan-featured .plan-name { color: var(--paper); }
+.plan-featured .plan-name {
+	color: var(--paper);
+}
 
 .plan-price {
 	font-family: var(--font-bauer-bodoni);
@@ -1054,7 +1340,9 @@ useHead({
 	letter-spacing: -0.02em;
 	color: var(--ink);
 }
-.plan-featured .plan-price { color: var(--paper); }
+.plan-featured .plan-price {
+	color: var(--paper);
+}
 .plan-price sup {
 	font-size: 22px;
 	vertical-align: super;
@@ -1066,7 +1354,9 @@ useHead({
 	font-weight: 400;
 	color: var(--muted);
 }
-.plan-featured .plan-price span { color: rgba(246,241,231,0.5); }
+.plan-featured .plan-price span {
+	color: rgba(246, 241, 231, 0.5);
+}
 
 .plan-desc {
 	font-family: var(--font-proxima-light);
@@ -1078,7 +1368,10 @@ useHead({
 	padding-bottom: 28px;
 	border-bottom: 1px solid var(--rule);
 }
-.plan-featured .plan-desc { color: rgba(246,241,231,0.4); border-bottom-color: rgba(246,241,231,0.1); }
+.plan-featured .plan-desc {
+	color: rgba(246, 241, 231, 0.4);
+	border-bottom-color: rgba(246, 241, 231, 0.1);
+}
 
 .plan-features {
 	list-style: none;
@@ -1096,7 +1389,9 @@ useHead({
 	gap: 10px;
 	line-height: 1.4;
 }
-.plan-featured .plan-features li { color: rgba(246,241,231,0.75); }
+.plan-featured .plan-features li {
+	color: rgba(246, 241, 231, 0.75);
+}
 .plan-features li::before {
 	content: '\2014';
 	color: var(--accent);
@@ -1121,13 +1416,19 @@ useHead({
 	text-decoration: none;
 	text-transform: uppercase;
 }
-.plan-btn:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.plan-btn:hover {
+	background: var(--ink);
+	color: var(--paper);
+	border-color: var(--ink);
+}
 .plan-featured .plan-btn {
 	background: var(--accent);
 	border-color: var(--accent);
 	color: white;
 }
-.plan-featured .plan-btn:hover { filter: brightness(1.1); }
+.plan-featured .plan-btn:hover {
+	filter: brightness(1.1);
+}
 
 /* ─── FOOTER ─── */
 </style>
