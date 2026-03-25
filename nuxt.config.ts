@@ -173,6 +173,9 @@ export default defineNuxtConfig({
 			siteUrl: process.env.SITE_URL || 'https://huestudios.company',
 			appUrl: process.env.APP_URL || process.env.SITE_URL || 'https://huestudios.company',
 
+			// SSO provider flags (controls which buttons appear on login)
+			appleClientId: process.env.APPLE_CLIENT_ID || '',
+
 			// Default team
 			defaultTeamId: process.env.NUXT_PUBLIC_DEFAULT_TEAM_ID || 'org-default',
 		},

@@ -7,15 +7,40 @@ by Directus — our Nuxt app just redirects to Directus and receives tokens back
 
 ## Architecture
 
+### Login Flow (existing users)
 ```
-User clicks "Sign in with Google"
+User clicks "Sign in with Google" on login page
   → Redirect to: DIRECTUS_URL/auth/login/google?redirect=APP_URL/auth/sso-callback
   → Directus handles full OAuth exchange with Google
   → Google authenticates user, returns to Directus
-  → Directus creates/matches user account
+  → Directus matches user by email (ALLOW_PUBLIC_REGISTRATION=false)
   → Directus redirects to: APP_URL/auth/sso-callback#access_token=xxx&refresh_token=xxx
   → Our callback page captures tokens, POSTs to /api/auth/sso-callback
-  → Server validates tokens, creates session (same as email/password login)
+  → Server validates tokens, creates session
+```
+
+### Registration Flow (new users — hybrid)
+```
+User fills in name + email + org name on register page
+User clicks "Sign up with Google"
+  → POST to /api/auth/google-register with { email, first_name, last_name, organization_name }
+  → Server creates directus_users record (no password, provider: 'google')
+  → Server creates organization + seeds roles + owner membership
+  → Server creates Stripe customer
+  → Server returns Google SSO URL
+  → Client redirects to DIRECTUS_URL/auth/login/google?redirect=...
+  → Directus matches user by email (record already exists from step above)
+  → Normal SSO callback flow creates session
+```
+
+**Why this order?** With `ALLOW_PUBLIC_REGISTRATION=false`, Directus rejects unknown emails.
+By creating the user record first, we ensure Directus can match them when Google returns.
+The user gets a proper org, roles, and Stripe customer — same as email/password registration.
+
+### Invited Users
+```
+Admin invites user via /api/org/invite-member → creates directus_users + org_membership
+Invited user clicks "Sign in with Google" → Directus matches by email → works
 ```
 
 ## Directus Server Environment Variables
@@ -32,7 +57,7 @@ AUTH_GOOGLE_DRIVER="openid"
 AUTH_GOOGLE_CLIENT_ID="<your Google OAuth Client ID>"
 AUTH_GOOGLE_CLIENT_SECRET="<your Google OAuth Client Secret>"
 AUTH_GOOGLE_ISSUER_URL="https://accounts.google.com/.well-known/openid-configuration"
-AUTH_GOOGLE_ALLOW_PUBLIC_REGISTRATION=true
+AUTH_GOOGLE_ALLOW_PUBLIC_REGISTRATION=false
 AUTH_GOOGLE_DEFAULT_ROLE_ID="<UUID of default user role in Directus>"
 AUTH_GOOGLE_REDIRECT_URL="https://admin.huestudios.company/auth/login/google/callback"
 AUTH_GOOGLE_IDENTIFIER_KEY="email"
