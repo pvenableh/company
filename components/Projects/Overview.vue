@@ -229,8 +229,28 @@
 					</div>
 				</div>
 				<div class="space-y-1">
-					<label class="t-label text-muted-foreground">Prototype Link</label>
-					<UInput v-model="newEventForm.prototype_link" placeholder="https://..." />
+					<label class="t-label text-muted-foreground">Figma / Prototype Link</label>
+					<UInput v-model="newEventForm.prototype_link" placeholder="https://figma.com/..." />
+				</div>
+				<div class="space-y-1">
+					<label class="t-label text-muted-foreground">Images / Files</label>
+					<div
+						class="border-2 border-dashed border-border rounded-lg p-4 text-center cursor-pointer hover:border-primary/40 transition-colors"
+						@click="eventFileInput?.click()"
+					>
+						<UIcon name="i-heroicons-arrow-up-tray" class="w-5 h-5 mx-auto mb-1 text-muted-foreground/50" />
+						<p class="text-xs text-muted-foreground">Click to upload images or files</p>
+						<input ref="eventFileInput" type="file" multiple accept="image/*,.pdf,.fig" class="hidden" @change="handleEventFiles" />
+					</div>
+					<div v-if="pendingFiles.length" class="space-y-1 mt-2">
+						<div v-for="(file, i) in pendingFiles" :key="i" class="flex items-center gap-2 text-xs text-foreground bg-muted/30 rounded-lg px-3 py-1.5">
+							<UIcon name="i-heroicons-document" class="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+							<span class="truncate flex-1">{{ file.name }}</span>
+							<button @click.prevent="removeEventFile(i)" class="text-muted-foreground hover:text-red-500 flex-shrink-0">
+								<UIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5" />
+							</button>
+						</div>
+					</div>
 				</div>
 			</form>
 
@@ -298,9 +318,11 @@ const { user } = useDirectusAuth();
 const { canAccess } = useOrgRole();
 const runtimeConfig = useRuntimeConfig();
 const eventItems = useDirectusItems('project_events');
+const eventFileItems = useDirectusItems('project_events_files');
 const ticketItems = useDirectusItems('tickets');
 const taskItems = useDirectusItems('project_tasks');
 const invoiceItems = useDirectusItems('invoices');
+const { upload: uploadFile } = useDirectusFiles();
 
 const isAdmin = computed(() => canAccess('projects'));
 
@@ -388,6 +410,9 @@ const newEventForm = reactive({
 	prototype_link: '',
 	priority: 'medium',
 });
+const pendingFiles = ref([]);
+const uploadingFiles = ref(false);
+const eventFileInput = ref(null);
 
 const eventTypeOptions = [
 	{ label: 'Design', value: 'design' },
@@ -416,6 +441,17 @@ const resetNewEventForm = () => {
 	newEventForm.date = '';
 	newEventForm.prototype_link = '';
 	newEventForm.priority = 'medium';
+	pendingFiles.value = [];
+};
+
+const handleEventFiles = (e) => {
+	const files = Array.from(e.target.files || []);
+	pendingFiles.value.push(...files);
+	if (eventFileInput.value) eventFileInput.value.value = '';
+};
+
+const removeEventFile = (index) => {
+	pendingFiles.value.splice(index, 1);
 };
 
 const handleCreateEvent = async () => {
@@ -438,7 +474,27 @@ const handleCreateEvent = async () => {
 		if (newEventForm.date) data.date = newEventForm.date;
 		if (newEventForm.prototype_link?.trim()) data.prototype_link = newEventForm.prototype_link.trim();
 
-		await eventItems.create(data);
+		const created = await eventItems.create(data);
+
+		// Upload and link files if any
+		if (pendingFiles.value.length > 0 && created?.id) {
+			uploadingFiles.value = true;
+			for (const file of pendingFiles.value) {
+				try {
+					const uploaded = await uploadFile(file, { title: `${data.title} - ${file.name}` });
+					if (uploaded?.id) {
+						await eventFileItems.create({
+							project_events_id: created.id,
+							directus_files_id: uploaded.id,
+						});
+					}
+				} catch (fileErr) {
+					console.warn('Failed to upload file:', fileErr);
+				}
+			}
+			uploadingFiles.value = false;
+		}
+
 		useToast().add({ title: 'Event Created', description: `"${data.title}" has been created`, color: 'green' });
 		emit('eventCreated');
 		showNewEventModal.value = false;

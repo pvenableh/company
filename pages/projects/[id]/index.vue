@@ -341,7 +341,7 @@ const loadInvoices = async () => {
 	loadingInvoices.value = true;
 	try {
 		const invs = await invoiceItems.list({
-			fields: ['id', 'invoice_code', 'status', 'invoice_date', 'due_date', 'line_items', 'bill_to.name'],
+			fields: ['id', 'invoice_code', 'status', 'invoice_date', 'due_date', 'total_amount', 'client.id', 'client.name', 'bill_to.name'],
 			filter: { project: { _eq: params.id } },
 			sort: ['-date_created'],
 		});
@@ -354,7 +354,7 @@ const loadInvoices = async () => {
 };
 
 const getInvoiceTotal = (inv) => {
-	return (inv.line_items || []).reduce((sum, li) => sum + ((li.quantity || 0) * (li.rate || 0)), 0);
+	return parseFloat(inv.total_amount) || 0;
 };
 
 // ── Refresh ──
@@ -508,7 +508,7 @@ const formatCurrency = (amount) => {
 				</template>
 				<template #activity="{ item }">
 					<div class="max-w-2xl mx-auto py-6">
-						<ProjectActivityTimeline :project-id="params.id" />
+						<ProjectsActivityTimeline :project-id="params.id" />
 					</div>
 				</template>
 				<template #documents="{ item }">
@@ -593,7 +593,7 @@ const formatCurrency = (amount) => {
 										<UIcon name="i-heroicons-document-currency-dollar" class="w-5 h-5 text-green-500 flex-shrink-0" />
 										<div class="min-w-0">
 											<p class="text-sm font-medium text-foreground">{{ inv.invoice_code || `Invoice #${inv.id}` }}</p>
-											<p class="text-[10px] text-muted-foreground">{{ inv.bill_to?.name || '' }}</p>
+											<p class="text-[10px] text-muted-foreground">{{ inv.client?.name || inv.bill_to?.name || '' }}</p>
 										</div>
 									</div>
 									<div class="text-right flex-shrink-0 ml-2">

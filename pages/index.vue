@@ -573,12 +573,14 @@ const activeTab = ref<'commander' | 'timeline' | 'statistics'>('commander');
 				</div>
 
 				<!-- Bottom Section: Chat + CardDesk + Financials -->
-				<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+				<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 					<div class="h-[500px]">
 						<CommandCenterRealtimeChat />
 					</div>
-					<CommandCenterCardDeskPipeline />
-					<CommandCenterFinancialQuarter />
+					<div class="space-y-6">
+						<CommandCenterCardDeskPipeline />
+						<CommandCenterFinancialQuarter />
+					</div>
 				</div>
 
 				</div><!-- /Commander tab -->

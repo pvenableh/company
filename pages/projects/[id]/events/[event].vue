@@ -1,6 +1,7 @@
 <script setup>
 const { params } = useRoute();
 const projectEventItems = useDirectusItems('project_events');
+const { getUrl } = useDirectusFiles();
 
 const { user: sessionUser, loggedIn } = useUserSession();
 const user = computed(() => {
@@ -14,7 +15,7 @@ useHead({ title: 'Project Event | Earnest' });
 
 const event = await projectEventItems.get(params.event, {
 	fields: [
-		'*,project.id,project.title,project.service.color,project.organization.id,project.organization.name,project.organization.logo,project.client',
+		'*,files.directus_files_id.id,files.directus_files_id.title,files.directus_files_id.type,files.directus_files_id.width,files.directus_files_id.height,files.directus_files_id.filename_download,project.id,project.title,project.service.color,project.organization.id,project.organization.name,project.organization.logo,project.client',
 	],
 });
 
@@ -22,6 +23,31 @@ const handleStatusChanged = async (newStatus) => {
 	await projectEventItems.update(event.id, {
 		status: newStatus,
 	});
+};
+
+// Separate images from other files
+const eventImages = computed(() => {
+	return (event.files || [])
+		.filter(f => f.directus_files_id?.type?.startsWith('image/'))
+		.map(f => f.directus_files_id);
+});
+
+const eventFiles = computed(() => {
+	return (event.files || [])
+		.filter(f => !f.directus_files_id?.type?.startsWith('image/'))
+		.map(f => f.directus_files_id);
+});
+
+const hasVisualContent = computed(() => {
+	return event.prototype_link || eventImages.value.length > 0;
+});
+
+// Lightbox
+const lightboxOpen = ref(false);
+const lightboxIndex = ref(0);
+const openLightbox = (index) => {
+	lightboxIndex.value = index;
+	lightboxOpen.value = true;
 };
 </script>
 <template>
@@ -58,22 +84,77 @@ const handleStatusChanged = async (newStatus) => {
 
 		<!-- Main content -->
 		<div class="grid grid-cols-1 lg:grid-cols-[1fr_380px] min-h-[calc(100vh-140px)] relative">
-			<!-- Prototype column -->
+			<!-- Visual content column -->
 			<div class="relative overflow-y-auto hide-scrollbar">
-				<div v-if="event.prototype_link" class="w-full h-full p-4">
-					<div class="w-full h-full border border-border rounded-lg overflow-hidden">
+				<!-- Figma / Prototype embed -->
+				<div v-if="event.prototype_link" class="w-full p-4" :class="{ 'h-full': !eventImages.length }">
+					<div class="flex items-center gap-2 mb-2">
+						<UIcon name="i-heroicons-link" class="w-3.5 h-3.5 text-muted-foreground" />
+						<span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Figma / Prototype</span>
+						<a :href="event.prototype_link" target="_blank" class="text-[10px] text-primary hover:underline ml-auto">Open in new tab</a>
+					</div>
+					<div class="w-full border border-border rounded-lg overflow-hidden" :class="eventImages.length ? 'h-[500px]' : 'h-[calc(100vh-240px)]'">
 						<iframe
 							:title="event.title + ' Prototype'"
 							:src="event.prototype_link"
-							class="w-full h-full min-h-[calc(100vh-200px)]"
+							class="w-full h-full"
 							allowfullscreen
 						/>
 					</div>
 				</div>
-				<div v-else class="flex items-center justify-center h-full min-h-[400px]">
+
+				<!-- Image gallery -->
+				<div v-if="eventImages.length" class="p-4">
+					<div class="flex items-center gap-2 mb-3">
+						<UIcon name="i-heroicons-photo" class="w-3.5 h-3.5 text-muted-foreground" />
+						<span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Images</span>
+						<span class="text-[10px] text-muted-foreground/60">{{ eventImages.length }}</span>
+					</div>
+					<div class="grid gap-3" :class="eventImages.length === 1 ? 'grid-cols-1' : 'grid-cols-2'">
+						<button
+							v-for="(img, i) in eventImages"
+							:key="img.id"
+							class="relative group rounded-lg overflow-hidden border border-border hover:border-primary/40 transition-colors cursor-pointer"
+							@click="openLightbox(i)"
+						>
+							<img
+								:src="getUrl(img.id, { width: 800, quality: 80, format: 'webp' })"
+								:alt="img.title || img.filename_download"
+								class="w-full h-auto object-cover"
+								loading="lazy"
+							/>
+							<div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+								<UIcon name="i-heroicons-magnifying-glass-plus" class="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
+							</div>
+						</button>
+					</div>
+				</div>
+
+				<!-- Attached files (non-image) -->
+				<div v-if="eventFiles.length" class="p-4 pt-0">
+					<div class="flex items-center gap-2 mb-2">
+						<UIcon name="i-heroicons-paper-clip" class="w-3.5 h-3.5 text-muted-foreground" />
+						<span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Files</span>
+					</div>
+					<div class="space-y-1">
+						<a
+							v-for="file in eventFiles"
+							:key="file.id"
+							:href="getUrl(file.id)"
+							target="_blank"
+							class="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors text-sm text-foreground"
+						>
+							<UIcon name="i-heroicons-document-arrow-down" class="w-4 h-4 text-muted-foreground flex-shrink-0" />
+							<span class="truncate">{{ file.title || file.filename_download }}</span>
+						</a>
+					</div>
+				</div>
+
+				<!-- Empty state -->
+				<div v-if="!hasVisualContent" class="flex items-center justify-center h-full min-h-[400px]">
 					<div class="text-center">
 						<Icon name="lucide:layout" class="w-10 h-10 mx-auto mb-3 text-muted-foreground/30" />
-						<p class="text-sm text-muted-foreground">No prototype link attached</p>
+						<p class="text-sm text-muted-foreground">No Figma link or images attached</p>
 					</div>
 				</div>
 			</div>
@@ -98,6 +179,26 @@ const handleStatusChanged = async (newStatus) => {
 				</div>
 			</div>
 		</div>
+
+		<!-- Lightbox -->
+		<Teleport to="body">
+			<div v-if="lightboxOpen" class="fixed inset-0 z-50 bg-black/90 flex items-center justify-center" @click.self="lightboxOpen = false">
+				<button class="absolute top-4 right-4 text-white/70 hover:text-white" @click="lightboxOpen = false">
+					<UIcon name="i-heroicons-x-mark" class="w-8 h-8" />
+				</button>
+				<button v-if="eventImages.length > 1 && lightboxIndex > 0" class="absolute left-4 text-white/70 hover:text-white" @click="lightboxIndex--">
+					<UIcon name="i-heroicons-chevron-left" class="w-8 h-8" />
+				</button>
+				<button v-if="eventImages.length > 1 && lightboxIndex < eventImages.length - 1" class="absolute right-16 text-white/70 hover:text-white" @click="lightboxIndex++">
+					<UIcon name="i-heroicons-chevron-right" class="w-8 h-8" />
+				</button>
+				<img
+					:src="getUrl(eventImages[lightboxIndex]?.id, { width: 1600, quality: 90 })"
+					:alt="eventImages[lightboxIndex]?.title"
+					class="max-w-[90vw] max-h-[90vh] object-contain rounded-lg"
+				/>
+			</div>
+		</Teleport>
 	</div>
 </template>
 

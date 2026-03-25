@@ -7,6 +7,7 @@ const activityItems = useDirectusItems('directus_activity');
 const commentItems = useDirectusItems('directus_comments');
 const ticketItems = useDirectusItems('tickets');
 const taskItems = useDirectusItems('project_tasks');
+const eventItems = useDirectusItems('project_events');
 
 const activities = ref([]);
 const loading = ref(true);
@@ -15,6 +16,7 @@ const collectionLabels = {
 	projects: 'project',
 	tickets: 'ticket',
 	project_tasks: 'task',
+	project_events: 'event',
 	invoices: 'invoice',
 	comments: 'comment',
 };
@@ -23,6 +25,7 @@ const collectionIcons = {
 	projects: 'i-heroicons-folder',
 	tickets: 'i-heroicons-square-3-stack-3d',
 	project_tasks: 'i-heroicons-check-circle',
+	project_events: 'i-heroicons-calendar-days',
 	invoices: 'i-heroicons-document-currency-dollar',
 	comments: 'i-heroicons-chat-bubble-left',
 };
@@ -31,6 +34,7 @@ const collectionColors = {
 	projects: 'text-blue-500 bg-blue-50 dark:bg-blue-900/20',
 	tickets: 'text-amber-500 bg-amber-50 dark:bg-amber-900/20',
 	project_tasks: 'text-purple-500 bg-purple-50 dark:bg-purple-900/20',
+	project_events: 'text-cyan-500 bg-cyan-50 dark:bg-cyan-900/20',
 	invoices: 'text-green-500 bg-green-50 dark:bg-green-900/20',
 	comments: 'text-pink-500 bg-pink-50 dark:bg-pink-900/20',
 };
@@ -40,17 +44,19 @@ const actionLabels = { create: 'Created', update: 'Updated', delete: 'Deleted' }
 const loadActivity = async () => {
 	loading.value = true;
 	try {
-		// First, get ticket and task IDs belonging to this project
-		const [projectTickets, projectTasks] = await Promise.all([
+		// First, get ticket, task, and event IDs belonging to this project
+		const [projectTickets, projectTasks, projectEvents] = await Promise.all([
 			ticketItems.list({ fields: ['id'], filter: { project: { _eq: props.projectId } }, limit: 200 }),
 			taskItems.list({ fields: ['id'], filter: { project: { _eq: props.projectId } }, limit: 200 }),
+			eventItems.list({ fields: ['id'], filter: { project: { _eq: props.projectId } }, limit: 200 }),
 		]);
 		const ticketIds = (projectTickets || []).map((t) => t.id);
 		const taskIds = (projectTasks || []).map((t) => t.id);
+		const eventIds = (projectEvents || []).map((e) => e.id);
 
 		// Fetch activity scoped to this project's items (each isolated so one failure doesn't block all)
 		const activityFields = ['id', 'action', 'timestamp', 'collection', 'item', 'user.id', 'user.first_name', 'user.last_name', 'user.avatar'];
-		const [projectAct, ticketAct, taskAct, comments] = await Promise.all([
+		const [projectAct, ticketAct, taskAct, eventAct, comments] = await Promise.all([
 			activityItems.list({
 				fields: activityFields,
 				filter: { _and: [{ collection: { _eq: 'projects' } }, { item: { _eq: props.projectId } }] },
@@ -69,6 +75,12 @@ const loadActivity = async () => {
 				sort: ['-timestamp'],
 				limit: 20,
 			}).catch(() => []) : Promise.resolve([]),
+			eventIds.length > 0 ? activityItems.list({
+				fields: activityFields,
+				filter: { _and: [{ collection: { _eq: 'project_events' } }, { item: { _in: eventIds } }] },
+				sort: ['-timestamp'],
+				limit: 20,
+			}).catch(() => []) : Promise.resolve([]),
 			commentItems.list({
 				fields: ['id', 'comment', 'date_created', 'user_created.id', 'user_created.first_name', 'user_created.last_name', 'user_created.avatar', 'collection', 'item'],
 				filter: { _and: [{ collection: { _eq: 'projects' } }, { item: { _eq: props.projectId } }] },
@@ -82,6 +94,7 @@ const loadActivity = async () => {
 			...(projectAct || []).map(a => ({ ...a, type: 'activity' })),
 			...(ticketAct || []).map(a => ({ ...a, type: 'activity' })),
 			...(taskAct || []).map(a => ({ ...a, type: 'activity' })),
+			...(eventAct || []).map(a => ({ ...a, type: 'activity' })),
 			...(comments || []).map(c => ({
 				id: `comment-${c.id}`,
 				type: 'comment',

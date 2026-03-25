@@ -66,7 +66,8 @@ const tabItems = computed(() =>
 
 <template>
   <Tabs v-model="activeTab" :class="cn(props.class)" :orientation="orientation">
-    <TabsList :class="cn(orientation === 'vertical' ? 'flex-col h-auto' : '', props.ui?.list)">
+    <div :class="cn(orientation !== 'vertical' ? 'overflow-x-auto -mx-1 px-1 scrollbar-hide' : '')">
+    <TabsList :class="cn(orientation === 'vertical' ? 'flex-col h-auto' : 'w-max min-w-full', props.ui?.list)">
       <TabsTrigger
         v-for="item in tabItems"
         :key="item.key"
@@ -78,6 +79,7 @@ const tabItems = computed(() =>
         {{ item.label }}
       </TabsTrigger>
     </TabsList>
+    </div>
 
     <template v-for="item in tabItems" :key="item.key">
       <TabsContent :value="item.key!" :class="props.ui?.content">
