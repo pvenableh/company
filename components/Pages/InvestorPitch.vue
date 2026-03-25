@@ -338,6 +338,8 @@
 			<div class="footer-brand">EARNEST</div>
 			<p class="footer-tagline">Do good work<span class="bp">.</span></p>
 			<p class="footer-url">earnest.guru</p>
+			<div class="footer-divider"></div>
+			<p class="footer-parent">HUE <span class="footer-parent-tagline">&mdash; "We personalize the modern world."</span></p>
 		</section>
 	</div>
 </template>
@@ -535,7 +537,7 @@ onMounted(() => {
 		// Section reveals — include dark sections too
 		const sections = document.querySelectorAll('.pitch-section, .pitch-section-dark, .pitch-footer');
 		sections.forEach((section) => {
-			const els = section.querySelectorAll('.section-label, .section-label-light, .section-title, .section-title-light, .section-text, .section-text-light, .stat, .stat-light, .ai-mode, .market-item, .plan, .addon-title, .addon-item, .calc-row, .calc-card, .calc-chart, .breakdown-table, .chart-legend, .score-dim, .footer-brand, .footer-tagline, .footer-url');
+			const els = section.querySelectorAll('.section-label, .section-label-light, .section-title, .section-title-light, .section-text, .section-text-light, .stat, .stat-light, .ai-mode, .market-item, .plan, .addon-title, .addon-item, .calc-row, .calc-card, .calc-chart, .breakdown-table, .chart-legend, .score-dim, .footer-brand, .footer-tagline, .footer-url, .footer-divider, .footer-parent');
 			els.forEach((el, i) => {
 				gsap.fromTo(el, { opacity: 0, y: 20 }, {
 					opacity: 1, y: 0, duration: 0.6, ease: 'power3.out',
@@ -595,20 +597,21 @@ useHead({
 }
 .pitch-tagline {
 	font-family: var(--font-bauer-bodoni);
-	font-size: clamp(20px, 4vw, 36px); font-weight: 300; font-style: italic;
-	color: var(--ink-2); margin-top: 24px;
+	font-size: clamp(28px, 5vw, 52px); font-weight: 300; font-style: italic;
+	color: var(--ink-2); margin-top: 24px; letter-spacing: 0.01em;
 }
 .pitch-sub {
+	font-family: var(--font-proxima-light);
 	font-size: 16px; color: var(--muted); letter-spacing: 0.04em; margin-top: 16px;
 }
 
 /* ─── WORD CYCLER ─── */
 .pitch-cycle-wrap {
-	display: inline-block; position: relative; min-width: 3ch;
-	text-align: center; overflow: hidden; vertical-align: baseline;
+	display: inline-block; position: relative;
+	text-align: center; vertical-align: bottom;
 }
 .pitch-cycle {
-	display: inline-block; color: var(--accent); font-style: italic;
+	display: inline-block; color: var(--accent); vertical-align: bottom;
 }
 
 /* ─── MARQUEE ─── */
@@ -789,5 +792,15 @@ useHead({
 }
 .footer-url {
 	font-size: 14px; color: var(--accent); letter-spacing: 0.06em; margin-top: 24px;
+}
+.footer-divider {
+	width: 48px; height: 1px; background: rgba(246,241,231,0.15); margin: 40px auto;
+}
+.footer-parent {
+	font-family: var(--font-proxima); font-size: 13px; font-weight: 600;
+	letter-spacing: 0.15em; color: rgba(246,241,231,0.4);
+}
+.footer-parent-tagline {
+	font-weight: 300; font-style: italic; letter-spacing: 0.02em;
 }
 </style>
