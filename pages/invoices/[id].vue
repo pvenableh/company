@@ -21,7 +21,7 @@ const emailSchema = yup.object({
 
 const invoice = await invoiceItems.get(params.id, {
 	fields: [
-		'id,status,due_date,invoice_date,invoice_code,note,memo,total_amount,billing_email,billing_name,billing_address,emails,bill_to.id,bill_to.name,bill_to.email,bill_to.emails,bill_to.stripe_customer_id,bill_to.address,client.id,client.name,line_items.id,line_items.description,line_items.quantity,line_items.rate,line_items.amount,line_items.product.name,payments.*,melio',
+		'id,status,due_date,invoice_date,invoice_code,note,memo,total_amount,billing_email,billing_name,billing_address,emails,bill_to.id,bill_to.name,bill_to.email,bill_to.emails,bill_to.stripe_customer_id,bill_to.address,client.id,client.name,client.billing_name,client.billing_email,client.billing_address,line_items.id,line_items.description,line_items.quantity,line_items.rate,line_items.amount,line_items.product.name,payments.*,melio',
 	],
 });
 
@@ -31,7 +31,7 @@ const showAnonymousForm = computed(() => {
 });
 
 const defaultEmail = computed(() => {
-	return invoice.billing_email || invoice.bill_to?.emails?.[0] || '';
+	return invoice.billing_email || invoice.client?.billing_email || invoice.bill_to?.emails?.[0] || '';
 });
 
 // const handleAnonymousSubmit = async (formData) => {
