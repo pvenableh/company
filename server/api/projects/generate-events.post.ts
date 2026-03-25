@@ -5,6 +5,7 @@
  * Uses predefined templates for structure, then AI adjusts for project specifics.
  */
 import { getLLMProvider } from '~/server/utils/llm/factory';
+import { enforceTokenLimits } from '~/server/utils/ai-token-enforcement';
 import type { ChatMessage } from '~/server/utils/llm/types';
 import {
   PROJECT_TEMPLATES,
@@ -23,6 +24,13 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody<GenerateTimelineRequest>(event);
+
+  // Token enforcement
+  const tokenCheck = await enforceTokenLimits(event, (body as any).organizationId);
+  if (!tokenCheck.allowed) {
+    throw createError({ statusCode: tokenCheck.statusCode || 402, message: tokenCheck.reason || 'Token limit reached' });
+  }
+
   if (!body.projectType) {
     throw createError({ statusCode: 400, message: 'Project type is required' });
   }

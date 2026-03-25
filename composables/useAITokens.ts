@@ -1,5 +1,11 @@
 // composables/useAITokens.ts
 // Token usage management — checks budgets, records usage, and enforces limits.
+//
+// Fail-safe design:
+// - Always sets _usageSummary (even on partial fetch failure) so the TokenMeter renders
+// - Retries when selectedOrg changes (not gated by _loaded)
+// - Catches individual fetch failures independently so one bad query doesn't block all data
+// - Logs warnings for debugging but never leaves _usageSummary as null after an attempt
 
 const _usageSummary = ref<{
 	userTokensUsed: number;
@@ -11,7 +17,7 @@ const _usageSummary = ref<{
 	aiEnabled: boolean;
 } | null>(null);
 
-const _loaded = ref(false);
+const _loading = ref(false);
 
 export const useAITokens = () => {
 	const { user } = useDirectusAuth();
@@ -23,9 +29,21 @@ export const useAITokens = () => {
 	/** Load usage summary for the current user + org. */
 	const loadUsageSummary = async () => {
 		if (import.meta.server || !user.value?.id) return;
+		if (_loading.value) return; // Prevent concurrent fetches
 
+		_loading.value = true;
+
+		// Defaults — always produce a valid summary even if every fetch fails
+		let userTokensUsed = 0;
+		let userBudget: number | null = null;
+		let orgTokensUsed = 0;
+		let orgBalance: number | null = null;
+		let orgLimit: number | null = null;
+		let isLowUsage = false;
+		let aiEnabled = true;
+
+		// 1. Fetch user preferences (independent — failure doesn't block other data)
 		try {
-			// Fetch user preferences
 			const prefs = await prefItems.list({
 				fields: ['low_usage_mode', 'token_budget_monthly', 'ai_enabled'],
 				filter: { user: { _eq: user.value.id } },
@@ -33,16 +51,34 @@ export const useAITokens = () => {
 			}) as any[];
 
 			const userPref = prefs?.[0];
-
-			// Fetch org token info
-			let orgData: any = null;
-			if (selectedOrg.value) {
-				orgData = await orgItems.get(selectedOrg.value, {
-					fields: ['ai_token_balance', 'ai_token_limit_monthly', 'ai_tokens_used_this_period', 'ai_billing_period_start'],
-				});
+			if (userPref) {
+				userBudget = userPref.token_budget_monthly ?? null;
+				isLowUsage = userPref.low_usage_mode === true;
+				aiEnabled = userPref.ai_enabled !== false;
 			}
+		} catch (err) {
+			console.warn('[useAITokens] Failed to load user preferences:', err);
+		}
 
-			// Count user's tokens this month
+		// 2. Fetch org token info (independent — failure doesn't block other data)
+		if (selectedOrg.value) {
+			try {
+				const orgData = await orgItems.get(selectedOrg.value, {
+					fields: ['ai_token_balance', 'ai_token_limit_monthly', 'ai_tokens_used_this_period', 'ai_billing_period_start'],
+				}) as any;
+
+				if (orgData) {
+					orgTokensUsed = Number(orgData.ai_tokens_used_this_period) || 0;
+					orgBalance = orgData.ai_token_balance ?? null;
+					orgLimit = orgData.ai_token_limit_monthly ?? null;
+				}
+			} catch (err) {
+				console.warn('[useAITokens] Failed to load org token info:', err);
+			}
+		}
+
+		// 3. Count user's tokens this month (independent — failure doesn't block other data)
+		try {
 			const monthStart = new Date();
 			monthStart.setDate(1);
 			monthStart.setHours(0, 0, 0, 0);
@@ -58,21 +94,23 @@ export const useAITokens = () => {
 				limit: 5000,
 			}) as any[];
 
-			const userTokensUsed = (userUsage || []).reduce((sum: number, log: any) => sum + (Number(log.total_tokens) || 0), 0);
-
-			_usageSummary.value = {
-				userTokensUsed,
-				userBudget: userPref?.token_budget_monthly ?? null,
-				orgTokensUsed: Number(orgData?.ai_tokens_used_this_period) || 0,
-				orgBalance: orgData?.ai_token_balance ?? null,
-				orgLimit: orgData?.ai_token_limit_monthly ?? null,
-				isLowUsage: userPref?.low_usage_mode === true,
-				aiEnabled: userPref?.ai_enabled !== false,
-			};
-			_loaded.value = true;
+			userTokensUsed = (userUsage || []).reduce((sum: number, log: any) => sum + (Number(log.total_tokens) || 0), 0);
 		} catch (err) {
-			console.warn('[useAITokens] Failed to load usage summary:', err);
+			console.warn('[useAITokens] Failed to load user usage logs:', err);
 		}
+
+		// Always set the summary — even with partial/default data
+		_usageSummary.value = {
+			userTokensUsed,
+			userBudget,
+			orgTokensUsed,
+			orgBalance,
+			orgLimit,
+			isLowUsage,
+			aiEnabled,
+		};
+
+		_loading.value = false;
 	};
 
 	/** Check if user/org can make an AI call. */
@@ -113,20 +151,23 @@ export const useAITokens = () => {
 	/** Get the full usage summary. */
 	const usageSummary = readonly(_usageSummary);
 
-	// Load on init
-	if (!_loaded.value) {
-		loadUsageSummary();
+	// Reload when user or org changes — always re-fetch (no _loaded gate)
+	if (import.meta.client) {
+		watch(
+			[() => user.value?.id, () => selectedOrg.value],
+			([newUser, newOrg], [oldUser, oldOrg]) => {
+				if (!newUser) {
+					_usageSummary.value = null;
+					return;
+				}
+				// Re-fetch when user or org actually changed, or on first load
+				if (newUser !== oldUser || newOrg !== oldOrg || !_usageSummary.value) {
+					loadUsageSummary();
+				}
+			},
+			{ immediate: true },
+		);
 	}
-
-	// Reload when user/org changes; clear state on logout
-	watch([() => user.value?.id, selectedOrg], ([newUser]) => {
-		_loaded.value = false;
-		if (!newUser) {
-			_usageSummary.value = null;
-			return;
-		}
-		loadUsageSummary();
-	});
 
 	return {
 		usageSummary,

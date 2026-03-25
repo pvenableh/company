@@ -1,11 +1,22 @@
 # Task 3 — Server-Side Token Enforcement
 
-## Context
-Currently `useAIUsage.ts` tracks usage in localStorage only — it's client-side and has no
+## Status: ✅ COMPLETED
+
+Implementation file: `server/utils/ai-token-enforcement.ts` (note: the filename differs from
+the original plan which called it `tokenEnforcer.ts`).
+
+All 10 AI endpoints now enforce token limits. The file provides:
+- `enforceTokenLimits(event, organizationId)` — checks AI access, member budgets, and org limits
+- `deductOrgTokens(organizationId, tokensUsed)` — deducts from org balance after AI calls
+- `enforceScanLimits(organizationId)` — checks scan credit balance before CardDesk scans
+- `deductScanCredit(organizationId)` — deducts one scan credit after a scan
+
+## Original Context
+Previously `useAIUsage.ts` tracked usage in localStorage only — it was client-side and had no
 enforcement power. `useAITokens.ts` reads org token fields correctly but is also client-side.
 
-The actual AI calls in `server/utils/llm/factory.ts` and `server/utils/llm/claude.ts` do NOT
-check budgets before firing. This means users can exceed their token limits freely.
+The actual AI calls in `server/utils/llm/factory.ts` and `server/utils/llm/claude.ts` did NOT
+check budgets before firing. This has been fixed.
 
 This task adds server-side enforcement. Every AI call must:
 1. Check remaining tokens before calling the LLM

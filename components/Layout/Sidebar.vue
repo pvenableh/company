@@ -96,7 +96,7 @@
 			</div>
 		</div>
 
-		<!-- Token Meter — only when org has a token limit -->
+		<!-- Token Meter — shows when org has a tracked limit OR admin is in "view as" mode -->
 		<OrganizationTokenMeter
 			v-if="!collapsed && showTokenMeter"
 			compact
@@ -138,9 +138,20 @@ const route = useRoute();
 const { visibleLinks } = useNavPreferences();
 const { collapsed, toggle } = useSidebarCollapsed();
 const { usageSummary } = useAITokens();
+const { isOrgAdminOrAbove } = useOrgRole();
+const { isDirectusAdmin } = useViewAsOrgAdmin();
 
-// Show token meter only when org has a tracked limit (not unlimited/null)
-const showTokenMeter = computed(() => usageSummary.value?.orgLimit !== null && usageSummary.value?.orgLimit !== undefined);
+// Show token meter:
+// - Directus admins: always (they admin every org)
+// - Org admins/owners: always (they manage their org's usage)
+// - Regular members: only when the org has an explicit token limit set
+const showTokenMeter = computed(() => {
+	if (isDirectusAdmin.value) return true;
+	if (isOrgAdminOrAbove.value) return true;
+	const s = usageSummary.value;
+	if (!s) return false;
+	return s.orgLimit !== null && s.orgLimit !== undefined;
+});
 
 // Filter links by section, excluding Command Center (shown as logo) and AI Chat (separate)
 const primaryLinks = computed(() =>

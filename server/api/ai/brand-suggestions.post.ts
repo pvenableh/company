@@ -6,6 +6,7 @@
  */
 import { readItem, readItems } from '@directus/sdk';
 import { getLLMProvider } from '~/server/utils/llm/factory';
+import { enforceTokenLimits } from '~/server/utils/ai-token-enforcement';
 import type { ChatMessage } from '~/server/utils/llm/types';
 
 interface BrandSuggestionsRequest {
@@ -43,6 +44,12 @@ export default defineEventHandler(async (event) => {
 	}
 	if (!body.field || !['brand_direction', 'goals', 'target_audience', 'location', 'all'].includes(body.field)) {
 		throw createError({ statusCode: 400, message: 'field must be one of: brand_direction, goals, target_audience, location, all' });
+	}
+
+	// Token enforcement
+	const tokenCheck = await enforceTokenLimits(event, body.organizationId);
+	if (!tokenCheck.allowed) {
+		throw createError({ statusCode: tokenCheck.statusCode || 402, message: tokenCheck.reason || 'Token limit reached' });
 	}
 
 	const directus = await getUserDirectus(event);

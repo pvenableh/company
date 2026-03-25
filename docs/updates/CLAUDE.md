@@ -93,7 +93,9 @@ export default defineEventHandler(async (event) => {
 | `server/api/stripe/tokens/fulfill.ts` | Webhook fulfillment for token purchases |
 | `composables/useAITokens.ts` | Org-level token balance/limit checks |
 | `composables/useAIUsage.ts` | Client-side usage tracking (localStorage) |
-| `composables/useOrgRole.ts` | Permission checks, planAllows() stub |
+| `composables/useOrgRole.ts` | Permission checks, planAllows(), hasAddon() |
+| `composables/useViewAsOrgAdmin.ts` | "View as Org Admin" toggle for Directus admins |
+| `server/utils/ai-token-enforcement.ts` | Server-side token/scan enforcement for AI endpoints |
 | `composables/useOrganization.ts` | Selected org context |
 | `server/utils/crm-intelligence.ts` | CRM AI data aggregation |
 | `server/utils/llm/factory.ts` | getLLMProvider() — all AI calls go through here |
@@ -108,21 +110,16 @@ export default defineEventHandler(async (event) => {
 | `ai_preferences` | `user`, `ai_enabled`, `token_budget_monthly`, `low_usage_mode` |
 | `earnest_scores` | `organization`, `total_ep`, `streak`, `dimension_scores`, `badges_unlocked`, `current_score`, `level` |
 | `earnest_history` | `organization`, `date`, `score`, `ep_earned`, `streak`, `dimensions` |
-| `video_meetings` | `room_name`, `room_sid` (Twilio), `status`, `host_user` |
-| `phone_settings` | `twilio_phone_number`, `line_name` — NOTE: `organization` field is MISSING, must be added via MCP (Task 6) |
+| `video_meetings` | `room_name`, `room_sid` (Daily room ID), `status`, `host_user` |
+| `phone_settings` | `twilio_phone_number`, `line_name`, `organization` (M2O) |
 
-## Current plan tiers (before pricing update — Task 1 will change these)
+## Current plan tiers (IMPLEMENTED — Task 1)
 
 ```typescript
-// CURRENT values in stripe.ts:
-solo:   $29/mo  — 1 seat,  500K tokens/mo
-team:   $89/mo  — 10 seats, 5M tokens/mo
-studio: $189/mo — 25 seats, 25M tokens/mo
-
-// TARGET values after Task 1:
+// Current values in stripe.ts:
 solo:   $49/mo  — 1 seat,  100K tokens/mo,  25 scans/mo
-studio: $149/mo — 8 seats, 400K tokens/mo, 150 scans/mo  (replaces 'team')
-agency: $299/mo — 15 seats, 1M tokens/mo,  unlimited scans  (replaces old 'studio')
+studio: $149/mo — 8 seats, 400K tokens/mo, 150 scans/mo
+agency: $299/mo — 15 seats, 1M tokens/mo,  unlimited scans
 ```
 
 ## What planAllows() should gate
@@ -133,7 +130,8 @@ and scans only. The only feature gate is:
 white_label: agency/enterprise only
 ```
 
-Resource limits (tokens, scans, seats) are enforced server-side by Task 3, not by planAllows().
+Resource limits (tokens, scans, seats) are enforced server-side by `server/utils/ai-token-enforcement.ts`
+(Task 3), not by planAllows(). All 10 AI endpoints now have token enforcement.
 
 ## Add-ons (billed separately — see Task 8)
 
@@ -159,6 +157,7 @@ Key files:
 - `server/api/video/token.post.ts` — generates Daily meeting tokens
 - `server/api/video/webhook.post.ts` — receives Daily webhook events (JSON)
 - `server/api/video/setup-webhook.post.ts` — one-time registration of webhook URL
+- `pages/meeting/[roomName].vue` — Meeting page using Daily.co prebuilt iframe (replaces Twilio Video SDK)
 
 **Daily.co webhook setup:** Webhooks are registered via REST API, not the dashboard.
 Run `POST /api/video/setup-webhook` once after deploy. It registers
@@ -223,6 +222,7 @@ STRIPE_PRICE_SCANS_100 / STRIPE_PRICE_SCANS_500
 
 # Daily.co (video)
 DAILY_API_KEY                   ← get from https://dashboard.daily.co/developers
+DAILY_DOMAIN                    ← your Daily.co subdomain (e.g. "huestudios" for huestudios.daily.co)
 
 # Twilio (master account — sub-account creds stored in organizations table)
 TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN

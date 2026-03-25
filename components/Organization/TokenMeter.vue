@@ -1,11 +1,23 @@
 <template>
-	<!-- Compact mode: sidebar widget -->
-	<div v-if="compact" class="px-3 py-2 cursor-pointer group" @click="navigateToBilling">
+	<!-- Loading state: summary not yet fetched -->
+	<div v-if="!summary && compact" class="px-3 py-2">
 		<div class="flex items-center justify-between mb-1.5">
 			<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">AI Tokens</span>
-			<span class="text-[10px] font-medium" :class="colorClass">{{ usagePercent }}% used</span>
+			<span class="text-[10px] font-medium text-muted-foreground">Loading...</span>
 		</div>
-		<div class="h-1.5 rounded-full bg-muted/50 overflow-hidden">
+		<div class="h-1.5 rounded-full bg-muted/30 animate-pulse" />
+	</div>
+
+	<!-- Compact mode: sidebar widget -->
+	<div v-else-if="compact" class="px-3 py-2 cursor-pointer group" @click="navigateToBilling">
+		<div class="flex items-center justify-between mb-1.5">
+			<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">AI Tokens</span>
+			<span v-if="isUnlimited" class="text-[10px] font-medium text-muted-foreground">
+				{{ formatTokens(summary?.orgTokensUsed ?? 0) }} used
+			</span>
+			<span v-else class="text-[10px] font-medium" :class="colorClass">{{ usagePercent }}% used</span>
+		</div>
+		<div v-if="!isUnlimited" class="h-1.5 rounded-full bg-muted/50 overflow-hidden">
 			<div
 				class="h-full rounded-full transition-all duration-500"
 				:class="barColorClass"
@@ -18,13 +30,16 @@
 	<div v-else class="ios-card p-4 space-y-4">
 		<div class="flex items-center justify-between">
 			<h4 class="text-sm font-semibold text-foreground">Token Usage</h4>
-			<span class="text-[10px] font-medium px-2 py-0.5 rounded-full" :class="badgeClass">
+			<span v-if="isUnlimited" class="text-[10px] font-medium px-2 py-0.5 rounded-full bg-muted/20 text-muted-foreground">
+				Unlimited
+			</span>
+			<span v-else class="text-[10px] font-medium px-2 py-0.5 rounded-full" :class="badgeClass">
 				{{ usagePercent }}% used
 			</span>
 		</div>
 
-		<!-- Progress bar -->
-		<div class="h-2.5 rounded-full bg-muted/50 overflow-hidden">
+		<!-- Progress bar (only when limit is set) -->
+		<div v-if="!isUnlimited" class="h-2.5 rounded-full bg-muted/50 overflow-hidden">
 			<div
 				class="h-full rounded-full transition-all duration-500"
 				:class="barColorClass"
@@ -40,7 +55,7 @@
 			</div>
 			<div>
 				<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Balance</span>
-				<p class="text-sm font-bold" :class="colorClass">{{ formatTokens(summary?.orgBalance) }}</p>
+				<p class="text-sm font-bold" :class="isUnlimited ? 'text-muted-foreground' : colorClass">{{ formatTokens(summary?.orgBalance) }}</p>
 			</div>
 			<div>
 				<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Used This Period</span>
@@ -86,9 +101,16 @@ const { usageSummary } = useAITokens();
 
 const summary = computed(() => usageSummary.value);
 
+/** True when no limit is set (admin org, unlimited, etc.) */
+const isUnlimited = computed(() => {
+	const s = summary.value;
+	return s?.orgLimit === null || s?.orgLimit === undefined;
+});
+
 const usagePercent = computed(() => {
 	const s = summary.value;
-	if (!s || s.orgLimit === null || s.orgLimit === 0) return 0;
+	if (!s || isUnlimited.value) return 0; // No bar to fill when unlimited
+	if (s.orgLimit === 0) return 0;
 	const used = s.orgTokensUsed ?? 0;
 	return Math.round((used / s.orgLimit) * 100);
 });

@@ -14,6 +14,7 @@
 
 import { getLLMProvider } from '~/server/utils/llm/factory';
 import { getBrandContext } from '~/server/utils/brand-context';
+import { enforceTokenLimits } from '~/server/utils/ai-token-enforcement';
 import type { ChatMessage } from '~/server/utils/llm/types';
 
 export default defineEventHandler(async (event) => {
@@ -26,6 +27,12 @@ export default defineEventHandler(async (event) => {
 
 	const body = await readBody(event);
 	const { prompt, existingTasks, organizationId, clientId } = body;
+
+	// Token enforcement
+	const tokenCheck = await enforceTokenLimits(event, organizationId);
+	if (!tokenCheck.allowed) {
+		throw createError({ statusCode: tokenCheck.statusCode || 402, message: tokenCheck.reason || 'Token limit reached' });
+	}
 
 	const brandInfo = await getBrandContext(event, { clientId, organizationId });
 

@@ -1,4 +1,5 @@
 import { getLLMProvider } from '~/server/utils/llm/factory';
+import { enforceTokenLimits } from '~/server/utils/ai-token-enforcement';
 import type { ChatMessage } from '~/server/utils/llm/types';
 
 // Simple in-memory cache: userId -> { greeting, subtitle, expiresAt }
@@ -14,7 +15,20 @@ export default defineEventHandler(async (event) => {
 		throw createError({ statusCode: 401, message: 'Authentication required' });
 	}
 
+	// Token enforcement
 	const query = getQuery(event);
+	const organizationId = query.organizationId as string | undefined;
+	const tokenCheck = await enforceTokenLimits(event, organizationId);
+	if (!tokenCheck.allowed) {
+		// Degrade gracefully for greetings instead of blocking
+		return {
+			greeting: `Hey ${firstName}, ready to go?`,
+			subtitle: "Here's what needs your attention",
+			cached: false,
+			fallback: true,
+		};
+	}
+
 	const persona = (query.persona as string) || 'default';
 	const hour = Number(query.hour) || new Date().getHours();
 	const taskCount = Number(query.tasks) || 0;
