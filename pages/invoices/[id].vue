@@ -2,7 +2,7 @@
 useHead({ title: 'Invoice | Earnest' });
 
 const { params } = useRoute();
-const invoiceItems = useDirectusItems('invoices');
+const invoiceItems = useDirectusItems('invoices', { requireAuth: false });
 const { user: sessionUser, loggedIn } = useUserSession();
 const user = computed(() => {
 	return loggedIn.value ? sessionUser.value ?? null : null;
