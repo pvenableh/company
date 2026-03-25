@@ -59,13 +59,7 @@ const handleAction = () => {
 			<div class="flex-shrink-0 mt-0.5">
 				<UIcon
 					:name="suggestion.icon"
-					class="w-5 h-5"
-					:class="{
-						'text-red-500': suggestion.priority === 'urgent',
-						'text-amber-500': suggestion.priority === 'high',
-						'text-blue-500': suggestion.priority === 'medium',
-						'text-gray-400': suggestion.priority === 'low',
-					}"
+					:class="'w-5 h-5 ' + (suggestion.priority === 'urgent' ? 'text-red-500' : suggestion.priority === 'high' ? 'text-amber-500' : suggestion.priority === 'medium' ? 'text-blue-500' : 'text-gray-400')"
 				/>
 			</div>
 			<div class="flex-1 min-w-0">

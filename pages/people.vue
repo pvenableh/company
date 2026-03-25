@@ -1,88 +1,58 @@
 <template>
 	<div class="p-4 md:p-6 max-w-7xl mx-auto">
 		<!-- Header -->
-		<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-			<div>
-				<h1 class="text-2xl font-bold text-foreground">People</h1>
-				<p class="text-sm text-muted-foreground mt-1">
-					Your unified CRM — contacts, clients, and networking connections
-				</p>
+		<div class="flex items-center justify-between mb-6">
+			<h1 class="text-xl font-semibold">People</h1>
+			<div class="flex items-center gap-2">
+				<NuxtLink to="/contacts?new=true" class="flex items-center gap-1.5 px-3 py-2 text-sm font-medium border border-border rounded-lg hover:bg-muted/50 transition-colors">
+					<Icon name="lucide:plus" class="w-4 h-4" /> Contact
+				</NuxtLink>
+				<NuxtLink to="/clients?new=true" class="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors">
+					<Icon name="lucide:plus" class="w-4 h-4" /> Client
+				</NuxtLink>
 			</div>
 		</div>
 
-		<!-- Quick stats -->
-		<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-			<NuxtLink
-				to="/contacts"
-				class="group rounded-xl border bg-card p-5 hover:shadow-md hover:border-orange-500/30 transition-all"
-			>
-				<div class="flex items-center gap-3 mb-3">
-					<div class="w-10 h-10 rounded-xl bg-orange-500 flex items-center justify-center">
-						<Icon name="i-heroicons-user-group" class="w-5 h-5 text-white" />
-					</div>
-					<div>
-						<h3 class="font-semibold text-foreground group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">Contacts</h3>
-						<p class="text-xs text-muted-foreground">{{ contactCount }} total</p>
-					</div>
-				</div>
-				<p class="text-xs text-muted-foreground">Manage contacts, lists, and email subscribers</p>
+		<!-- Compact stat bar -->
+		<div class="grid grid-cols-3 gap-3 mb-6">
+			<NuxtLink to="/contacts" class="ios-card p-4 hover:ring-1 hover:ring-white/10 transition-all">
+				<p class="text-2xl font-bold">{{ contactCount }}</p>
+				<p class="text-[10px] uppercase tracking-wide text-muted-foreground">Contacts</p>
 			</NuxtLink>
-
-			<NuxtLink
-				to="/clients"
-				class="group rounded-xl border bg-card p-5 hover:shadow-md hover:border-red-500/30 transition-all"
-			>
-				<div class="flex items-center gap-3 mb-3">
-					<div class="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center">
-						<Icon name="i-heroicons-building-office-2" class="w-5 h-5 text-white" />
-					</div>
-					<div>
-						<h3 class="font-semibold text-foreground group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">Clients</h3>
-						<p class="text-xs text-muted-foreground">{{ clientCount }} total</p>
-					</div>
-				</div>
-				<p class="text-xs text-muted-foreground">Active clients, prospects, and companies</p>
+			<NuxtLink to="/clients" class="ios-card p-4 hover:ring-1 hover:ring-white/10 transition-all">
+				<p class="text-2xl font-bold">{{ clientCount }}</p>
+				<p class="text-[10px] uppercase tracking-wide text-muted-foreground">Clients</p>
 			</NuxtLink>
-
-			<NuxtLink
-				to="/carddesk"
-				class="group rounded-xl border bg-card p-5 hover:shadow-md hover:border-orange-500/30 transition-all"
-			>
-				<div class="flex items-center gap-3 mb-3">
-					<div class="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center">
-						<Icon name="i-heroicons-identification" class="w-5 h-5 text-white" />
-					</div>
-					<div>
-						<h3 class="font-semibold text-foreground group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">Networking</h3>
-						<p class="text-xs text-muted-foreground">{{ networkCount }} connections</p>
-					</div>
-				</div>
-				<p class="text-xs text-muted-foreground">CardDesk networking contacts and activities</p>
+			<NuxtLink to="/carddesk" class="ios-card p-4 hover:ring-1 hover:ring-white/10 transition-all">
+				<p class="text-2xl font-bold">{{ networkCount }}</p>
+				<p class="text-[10px] uppercase tracking-wide text-muted-foreground">Network</p>
 			</NuxtLink>
 		</div>
 
-		<!-- Getting started (shown when no data) -->
-		<div v-if="!contactCount && !clientCount && !networkCount && !search" class="rounded-xl border bg-card p-8 mb-8 text-center">
-			<Icon name="i-heroicons-user-group" class="w-12 h-12 mx-auto mb-4 text-muted-foreground/30" />
-			<h3 class="text-base font-semibold text-foreground mb-1">Get started with People</h3>
-			<p class="text-sm text-muted-foreground max-w-lg mx-auto mb-6">
-				People is your unified CRM — manage contacts, clients, and networking connections in one place. Here's how to get started:
-			</p>
-			<div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-left max-w-2xl mx-auto">
-				<NuxtLink to="/clients?new=true" class="group rounded-lg border p-4 hover:border-primary/30 hover:bg-primary/5 transition-all">
-					<Icon name="i-heroicons-building-office-2" class="w-5 h-5 text-red-500 mb-2" />
-					<h4 class="text-sm font-medium text-foreground mb-1">Add your first client</h4>
-					<p class="text-xs text-muted-foreground">Create a client profile to start organizing work and building your CRM.</p>
-				</NuxtLink>
-				<NuxtLink to="/contacts?new=true" class="group rounded-lg border p-4 hover:border-primary/30 hover:bg-primary/5 transition-all">
-					<Icon name="i-heroicons-user-plus" class="w-5 h-5 text-orange-500 mb-2" />
-					<h4 class="text-sm font-medium text-foreground mb-1">Add a contact</h4>
-					<p class="text-xs text-muted-foreground">Add individual contacts and link them to clients for easy management.</p>
-				</NuxtLink>
-				<NuxtLink to="/contacts/import" class="group rounded-lg border p-4 hover:border-primary/30 hover:bg-primary/5 transition-all">
-					<Icon name="i-heroicons-arrow-up-tray" class="w-5 h-5 text-blue-500 mb-2" />
-					<h4 class="text-sm font-medium text-foreground mb-1">Import contacts</h4>
-					<p class="text-xs text-muted-foreground">Upload a CSV to quickly populate your CRM with existing contacts.</p>
+		<!-- Needs Attention -->
+		<div v-if="needsAttention.length" class="ios-card p-5 mb-6">
+			<h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+				Needs Attention
+				<span class="text-amber-400 ml-1">({{ needsAttention.length }})</span>
+			</h3>
+			<div class="space-y-0.5">
+				<NuxtLink
+					v-for="item in needsAttention"
+					:key="item.id"
+					:to="item.route"
+					class="flex items-center justify-between py-2.5 px-2 -mx-2 rounded-md hover:bg-muted/30 transition-colors"
+				>
+					<div class="flex items-center gap-3 min-w-0 flex-1">
+						<span
+							class="w-2 h-2 rounded-full shrink-0"
+							:class="item.urgency === 'high' ? 'bg-red-500' : 'bg-amber-500'"
+						/>
+						<div class="min-w-0">
+							<p class="text-sm font-medium truncate">{{ item.name }}</p>
+							<p class="text-[11px] text-muted-foreground">{{ item.reason }}</p>
+						</div>
+					</div>
+					<span class="text-xs font-medium text-primary shrink-0 ml-3">{{ item.action }}</span>
 				</NuxtLink>
 			</div>
 		</div>
@@ -93,44 +63,29 @@
 			<input
 				v-model="search"
 				type="text"
-				placeholder="Search across all contacts, clients, and connections..."
-				class="w-full rounded-xl border bg-background pl-10 pr-4 py-3 text-sm focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none transition-all placeholder:text-muted-foreground/60"
+				placeholder="Search contacts, clients, and connections..."
+				class="w-full rounded-lg border bg-background pl-10 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all placeholder:text-muted-foreground/60"
 			/>
 		</div>
 
-		<!-- Recent activity or search results -->
-		<div v-if="!search" class="space-y-4">
-			<h3 class="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Quick Actions</h3>
-			<div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-				<NuxtLink
-					to="/contacts?new=true"
-					class="flex items-center gap-2 rounded-lg border p-3 text-sm hover:bg-muted/50 transition-colors"
-				>
-					<Icon name="i-heroicons-plus" class="w-4 h-4 text-orange-500" />
-					New Contact
-				</NuxtLink>
-				<NuxtLink
-					to="/clients?new=true"
-					class="flex items-center gap-2 rounded-lg border p-3 text-sm hover:bg-muted/50 transition-colors"
-				>
-					<Icon name="i-heroicons-plus" class="w-4 h-4 text-red-500" />
-					New Client
-				</NuxtLink>
-				<NuxtLink
-					to="/contacts/import"
-					class="flex items-center gap-2 rounded-lg border p-3 text-sm hover:bg-muted/50 transition-colors"
-				>
-					<Icon name="i-heroicons-arrow-up-tray" class="w-4 h-4 text-blue-500" />
-					Import Contacts
-				</NuxtLink>
-				<NuxtLink
-					to="/carddesk"
-					class="flex items-center gap-2 rounded-lg border p-3 text-sm hover:bg-muted/50 transition-colors"
-				>
-					<Icon name="i-heroicons-identification" class="w-4 h-4 text-purple-500" />
-					Scan Card
-				</NuxtLink>
-			</div>
+		<!-- Quick links (compact, only when not searching) -->
+		<div v-if="!search" class="flex gap-2 mb-6 overflow-x-auto pb-1">
+			<NuxtLink to="/contacts/import" class="flex items-center gap-1.5 px-3 py-2 ios-card hover:ring-1 hover:ring-white/10 transition-all shrink-0">
+				<Icon name="lucide:upload" class="w-4 h-4 text-blue-400" />
+				<span class="text-xs font-medium">Import CSV</span>
+			</NuxtLink>
+			<NuxtLink to="/carddesk" class="flex items-center gap-1.5 px-3 py-2 ios-card hover:ring-1 hover:ring-white/10 transition-all shrink-0">
+				<Icon name="lucide:scan" class="w-4 h-4 text-purple-400" />
+				<span class="text-xs font-medium">Scan Card</span>
+			</NuxtLink>
+			<NuxtLink to="/contacts" class="flex items-center gap-1.5 px-3 py-2 ios-card hover:ring-1 hover:ring-white/10 transition-all shrink-0">
+				<Icon name="lucide:list" class="w-4 h-4 text-muted-foreground" />
+				<span class="text-xs font-medium">All Contacts</span>
+			</NuxtLink>
+			<NuxtLink to="/clients" class="flex items-center gap-1.5 px-3 py-2 ios-card hover:ring-1 hover:ring-white/10 transition-all shrink-0">
+				<Icon name="lucide:building-2" class="w-4 h-4 text-muted-foreground" />
+				<span class="text-xs font-medium">All Clients</span>
+			</NuxtLink>
 		</div>
 
 		<!-- Search results -->
@@ -190,8 +145,9 @@ const searchResults = ref<Array<{
 const contactCount = ref(0);
 const clientCount = ref(0);
 const networkCount = ref(0);
+const needsAttention = ref<Array<{ id: string; name: string; reason: string; urgency: 'high' | 'medium'; route: string; action: string }>>([]);
 
-// Load counts
+// Load counts + attention items
 onMounted(async () => {
 	try {
 		const [contacts, clients] = await Promise.all([
@@ -200,6 +156,57 @@ onMounted(async () => {
 		]);
 		contactCount.value = contacts.total;
 		clientCount.value = clients.total;
+
+		// Find clients that need attention — recently inactive or with overdue invoices
+		const allClients = await getClients({ limit: 50, page: 1 });
+		const invoiceItems = useDirectusItems('invoices');
+		const unpaidInvoices = await invoiceItems.list({
+			filter: { status: { _in: ['pending', 'processing'] } },
+			fields: ['id', 'total_amount', 'due_date', 'client.id', 'client.name'],
+			limit: 50,
+		});
+
+		// Group overdue invoices by client
+		const clientInvoiceMap = new Map<string, any[]>();
+		for (const inv of unpaidInvoices) {
+			const clientId = typeof inv.client === 'object' ? inv.client?.id : inv.client;
+			if (!clientId) continue;
+			if (!clientInvoiceMap.has(clientId)) clientInvoiceMap.set(clientId, []);
+			clientInvoiceMap.get(clientId)!.push(inv);
+		}
+
+		const items: typeof needsAttention.value = [];
+		for (const [clientId, invs] of clientInvoiceMap) {
+			const overdueInvs = invs.filter((inv: any) => inv.due_date && new Date(inv.due_date) < new Date());
+			const clientName = typeof invs[0]?.client === 'object' ? invs[0].client?.name : 'Unknown';
+			if (overdueInvs.length > 0) {
+				const total = overdueInvs.reduce((s: number, inv: any) => s + (Number(inv.total_amount) || 0), 0);
+				items.push({
+					id: clientId,
+					name: clientName || 'Unknown',
+					reason: `$${total.toLocaleString()} overdue (${overdueInvs.length} invoice${overdueInvs.length > 1 ? 's' : ''})`,
+					urgency: 'high',
+					route: `/clients/${clientId}`,
+					action: 'Follow up',
+				});
+			} else if (invs.length > 0) {
+				const total = invs.reduce((s: number, inv: any) => s + (Number(inv.total_amount) || 0), 0);
+				const soonest = invs.sort((a: any, b: any) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())[0];
+				const daysUntil = soonest?.due_date ? Math.ceil((new Date(soonest.due_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) : 99;
+				if (daysUntil <= 7) {
+					items.push({
+						id: clientId,
+						name: clientName || 'Unknown',
+						reason: `$${total.toLocaleString()} due in ${daysUntil}d`,
+						urgency: 'medium',
+						route: `/clients/${clientId}`,
+						action: 'Review',
+					});
+				}
+			}
+		}
+
+		needsAttention.value = items.sort((a, b) => (a.urgency === 'high' ? -1 : 1) - (b.urgency === 'high' ? -1 : 1)).slice(0, 5);
 	} catch { /* counts are non-critical */ }
 
 	try {

@@ -62,7 +62,7 @@
 						<div class="flex items-center justify-between">
 							<div class="flex items-center gap-2.5">
 								<div v-if="team.icon" class="w-8 h-8 rounded-lg overflow-hidden shrink-0">
-									<img :src="getTeamIconUrl(team.icon)" :alt="team.name" class="w-full h-full object-cover" />
+									<img :src="getTeamIconUrl(team.icon)" :alt="team.name" loading="lazy" class="w-full h-full object-cover" />
 								</div>
 								<div v-else class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
 									<span class="text-sm font-semibold text-primary">{{ team.name?.charAt(0)?.toUpperCase() }}</span>

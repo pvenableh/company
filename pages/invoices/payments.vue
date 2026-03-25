@@ -51,7 +51,7 @@ const statusColors: Record<string, string> = {
 };
 
 const totalReceived = computed(() => {
-	return payments.value.reduce((sum, p) => sum + (p.amount || 0), 0);
+	return payments.value.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
 });
 </script>
 
@@ -141,7 +141,7 @@ const totalReceived = computed(() => {
 						<td class="px-4 py-3 text-sm">
 							{{ payment.invoice_id?.client?.name || '—' }}
 						</td>
-						<td class="px-4 py-3 text-sm font-medium">{{ formatCurrency(payment.amount) }}</td>
+						<td class="px-4 py-3 text-sm font-medium">{{ formatCurrency(Number(payment.amount) || 0) }}</td>
 						<td class="px-4 py-3 text-sm text-muted-foreground capitalize">
 							{{ payment.payment_method || payment.method || '—' }}
 						</td>

@@ -14,9 +14,9 @@
 				<span class="bp">.</span>
 			</p>
 			<p class="hero-sub opacity-0">
-				Radically simple
+				Intuitive movement
 				<span class="bp">.</span>
-				One platform
+				Actionable experiences
 				<span class="bp">.</span>
 				AI that sees everything
 				<span class="bp">.</span>
@@ -75,7 +75,7 @@
 				<p class="truth-text opacity-0">
 					<strong>EARNEST replaces the pile.</strong>
 					One platform, one login, one source of truth where the work actually lives &mdash; from the first conversation to the
-					final payment. Nothing to integrate. Nothing to re-explain.
+					final payment. Nothing to integrate. Nothing to re-explain. Every page is an actionable experience &mdash; not a report you read, but a surface you work from.
 				</p>
 
 				<p class="truth-text opacity-0">
@@ -90,8 +90,7 @@
 				</p>
 
 				<p class="truth-text opacity-0">
-					Two companion apps &mdash; CardDesk for networking and E&sup2; for mobile &mdash; keep everything connected on
-					the go. Simple to use. Powerful underneath. That&rsquo;s the point.
+					Intuitive movement between every module. Financials surface who owes you money. Your CRM shows who needs attention. Goals show you one number &mdash; your progress &mdash; and what to do next. Two companion apps &mdash; CardDesk for networking and E&sup2; for mobile &mdash; keep everything connected on the go.
 				</p>
 			</div>
 		</section>
@@ -277,7 +276,7 @@
 				<div v-for="t in testimonials" :key="t.id" class="testimonial opacity-0">
 					<p class="testimonial-quote">&ldquo;{{ t.quote }}&rdquo;</p>
 					<div class="testimonial-author">
-						<img v-if="t.avatarUrl" :src="t.avatarUrl" :alt="t.name" class="testimonial-avatar" />
+						<img v-if="t.avatarUrl" :src="t.avatarUrl" :alt="t.name" loading="lazy" class="testimonial-avatar" />
 						<div>
 							<div class="testimonial-name">{{ t.name }}</div>
 							<div class="testimonial-role">{{ t.role }}</div>

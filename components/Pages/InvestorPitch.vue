@@ -7,14 +7,30 @@
 				Earnest
 				<span class="bp">.</span>
 			</h1>
-			<p class="pitch-tagline opacity-0">The AI-powered business operating system</p>
+			<p class="pitch-tagline opacity-0">
+				Do
+				<span class="pitch-cycle-wrap"><span ref="pitchCycleRef" class="pitch-cycle">good</span></span>
+				work<span class="bp">.</span>
+			</p>
 			<p class="pitch-sub opacity-0">
-				One platform replaces 8&ndash;12 tools
+				Actionable experiences
+				<span class="bp">.</span>
+				Intuitive movement
 				<span class="bp">.</span>
 				AI that sees the whole business
 				<span class="bp">.</span>
 			</p>
 		</section>
+
+		<!-- Marquee -->
+		<div class="marquee-wrap" aria-hidden="true">
+			<div class="marquee-track">
+				<span v-for="(item, i) in [...marqueeItems, ...marqueeItems]" :key="i" class="marquee-item">
+					{{ item }}
+					<span class="marquee-dot">&middot;</span>
+				</span>
+			</div>
+		</div>
 
 		<!-- Problem -->
 		<section class="pitch-section">
@@ -26,7 +42,7 @@
 					<span class="bp">.</span>
 				</h2>
 				<p class="section-text">
-					A typical 5&ndash;15 person agency juggles 8&ndash;12 separate subscriptions: project management, invoicing, CRM, social media scheduling, email marketing, team chat, phone system, calendar, and more. Total cost: $400&ndash;$800/month. Zero cohesion. No shared intelligence.
+					A typical 5&ndash;15 person agency juggles 8&ndash;12 separate subscriptions: project management, invoicing, CRM, social media scheduling, email marketing, team chat, phone system, calendar, and more. Total cost: $400&ndash;$800/month. Zero cohesion. No shared intelligence. Every tool is a dead end &mdash; data goes in, nothing actionable comes out.
 				</p>
 				<div class="stat-row">
 					<div class="stat">
@@ -59,7 +75,7 @@
 					<span class="bp">.</span>
 				</h2>
 				<p class="section-text-light">
-					Earnest replaces the entire stack. Projects, invoicing, CRM, team channels, social media, email marketing, scheduling, phone &amp; video, goals, and CardDesk networking &mdash; all in one place. Because everything lives together, the AI sees your whole business and produces insight that isolated tools never could.
+					Earnest replaces the entire stack with actionable experiences &mdash; not dashboards you stare at, but surfaces you work from. Projects, invoicing, CRM, team channels, social media, email marketing, scheduling, phone &amp; video, goals, and CardDesk networking &mdash; all in one place with intuitive movement between every module. Because everything lives together, the AI sees your whole business and produces insight that isolated tools never could.
 				</p>
 				<div class="ai-modes">
 					<div v-for="mode in aiModes" :key="mode.name" class="ai-mode">
@@ -337,6 +353,17 @@ import { CurveType } from '@unovis/ts';
 
 gsap.registerPlugin(ScrollTrigger);
 
+// ── Word cycler ──
+const pitchCycleRef = ref<HTMLElement | null>(null);
+const cycleWords = ['good', 'honest', 'real', 'smart', 'great'];
+
+// ── Marquee data ──
+const marqueeItems = [
+	'Projects', 'Invoicing', 'CRM', 'Social Media', 'Email Marketing',
+	'Scheduling', 'Phone & Video', 'Team Chat', 'CardDesk', 'Goals',
+	'AI Command Center', 'Client Portal', 'Expenses',
+];
+
 // ── Static data ──
 
 const aiModes = [
@@ -478,6 +505,7 @@ function formatK(v: number): string {
 // ── GSAP animations ──
 
 let ctx: any = null;
+let cycleTimer: ReturnType<typeof setInterval> | null = null;
 
 onMounted(() => {
 	ctx = gsap.context(() => {
@@ -487,10 +515,27 @@ onMounted(() => {
 			.fromTo('.pitch-tagline', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.8 }, '-=0.5')
 			.fromTo('.pitch-sub', { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.8 }, '-=0.5');
 
-		// Section reveals
-		const sections = document.querySelectorAll('.pitch-section, .pitch-footer');
+		// Word cycler
+		if (pitchCycleRef.value) {
+			let idx = 0;
+			cycleTimer = setInterval(() => {
+				idx = (idx + 1) % cycleWords.length;
+				gsap.to(pitchCycleRef.value, {
+					opacity: 0, y: -12, duration: 0.3,
+					onComplete: () => {
+						if (pitchCycleRef.value) {
+							pitchCycleRef.value.textContent = cycleWords[idx];
+							gsap.fromTo(pitchCycleRef.value, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.3 });
+						}
+					},
+				});
+			}, 2400);
+		}
+
+		// Section reveals — include dark sections too
+		const sections = document.querySelectorAll('.pitch-section, .pitch-section-dark, .pitch-footer');
 		sections.forEach((section) => {
-			const els = section.querySelectorAll('.section-label, .section-label-light, .section-title, .section-title-light, .section-text, .section-text-light, .stat, .stat-light, .ai-mode, .market-item, .plan, .addon-title, .addon-item, .calc-row, .calc-card, .calc-chart, .breakdown-table, .score-dim, .footer-brand, .footer-tagline, .footer-url');
+			const els = section.querySelectorAll('.section-label, .section-label-light, .section-title, .section-title-light, .section-text, .section-text-light, .stat, .stat-light, .ai-mode, .market-item, .plan, .addon-title, .addon-item, .calc-row, .calc-card, .calc-chart, .breakdown-table, .chart-legend, .score-dim, .footer-brand, .footer-tagline, .footer-url');
 			els.forEach((el, i) => {
 				gsap.fromTo(el, { opacity: 0, y: 20 }, {
 					opacity: 1, y: 0, duration: 0.6, ease: 'power3.out',
@@ -502,7 +547,10 @@ onMounted(() => {
 	});
 });
 
-onUnmounted(() => { if (ctx) ctx.revert(); });
+onUnmounted(() => {
+	if (cycleTimer) clearInterval(cycleTimer);
+	if (ctx) ctx.revert();
+});
 
 useHead({
 	title: 'Earnest — Investor Overview',
@@ -553,6 +601,31 @@ useHead({
 .pitch-sub {
 	font-size: 16px; color: var(--muted); letter-spacing: 0.04em; margin-top: 16px;
 }
+
+/* ─── WORD CYCLER ─── */
+.pitch-cycle-wrap {
+	display: inline-block; position: relative; min-width: 3ch;
+	text-align: center; overflow: hidden; vertical-align: baseline;
+}
+.pitch-cycle {
+	display: inline-block; color: var(--accent); font-style: italic;
+}
+
+/* ─── MARQUEE ─── */
+.marquee-wrap {
+	overflow: hidden; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+	padding: 14px 0; background: var(--paper-2);
+}
+.marquee-track {
+	display: flex; gap: 0; white-space: nowrap; width: max-content;
+	animation: marquee-scroll 40s linear infinite;
+}
+.marquee-item {
+	font-size: 13px; letter-spacing: 0.06em; color: var(--muted);
+	font-family: var(--font-proxima-light);
+}
+.marquee-dot { margin: 0 16px; color: var(--accent); }
+@keyframes marquee-scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 
 /* ─── SECTIONS ─── */
 .pitch-section {

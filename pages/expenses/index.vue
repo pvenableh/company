@@ -12,6 +12,7 @@ const searchQuery = ref('');
 const filterCategory = ref('');
 const filterStatus = ref('');
 const showBillableOnly = ref(false);
+const viewMode = ref<'cards' | 'table'>('table');
 
 const filteredExpenses = computed(() => {
 	let result = [...expenses.value];
@@ -48,7 +49,7 @@ const defaultForm = () => ({
 	name: '',
 	category: 'other',
 	amount: null as number | null,
-	date: new Date().toISOString().split('T')[0],
+	date: new Date().toISOString().split('T')[0] as string,
 	description: '',
 	vendor: '',
 	payment_method: '',
@@ -66,7 +67,7 @@ watch(showModal, (open) => {
 			name: editingExpense.value.name || '',
 			category: editingExpense.value.category || 'other',
 			amount: editingExpense.value.amount,
-			date: editingExpense.value.date || new Date().toISOString().split('T')[0],
+			date: editingExpense.value.date || (new Date().toISOString().split('T')[0] as string),
 			description: editingExpense.value.description || '',
 			vendor: editingExpense.value.vendor || '',
 			payment_method: editingExpense.value.payment_method || '',
@@ -223,6 +224,23 @@ const statusOptions = [
 			>
 				Billable
 			</button>
+			<!-- View Toggle -->
+			<div class="flex gap-0.5 p-0.5 bg-muted/40 rounded-lg ml-auto">
+				<button
+					@click="viewMode = 'table'"
+					class="p-1.5 rounded-md transition-all"
+					:class="viewMode === 'table' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'"
+				>
+					<Icon name="lucide:list" class="w-4 h-4" />
+				</button>
+				<button
+					@click="viewMode = 'cards'"
+					class="p-1.5 rounded-md transition-all"
+					:class="viewMode === 'cards' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'"
+				>
+					<Icon name="lucide:layout-grid" class="w-4 h-4" />
+				</button>
+			</div>
 		</div>
 
 		<!-- Loading -->
@@ -243,7 +261,74 @@ const statusOptions = [
 			</button>
 		</div>
 
-		<!-- Expense Cards -->
+		<!-- TABLE VIEW -->
+		<div v-else-if="viewMode === 'table'" class="ios-card overflow-hidden">
+			<div class="overflow-x-auto">
+				<table class="w-full text-sm">
+					<thead>
+						<tr class="border-b border-border/50">
+							<th class="text-left py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Expense</th>
+							<th class="text-left py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Category</th>
+							<th class="text-left py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Vendor</th>
+							<th class="text-left py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Date</th>
+							<th class="text-left py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Status</th>
+							<th class="text-right py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Amount</th>
+							<th class="text-center py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Flags</th>
+							<th class="text-right py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wider w-20"></th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr
+							v-for="expense in filteredExpenses"
+							:key="expense.id"
+							class="border-b border-border/30 last:border-b-0 hover:bg-muted/20 cursor-pointer transition-colors"
+							@click="openEdit(expense)"
+						>
+							<td class="py-3 px-4">
+								<span class="font-medium">{{ expense.name }}</span>
+							</td>
+							<td class="py-3 px-4">
+								<div class="flex items-center gap-1.5">
+									<UIcon
+										:name="getCategoryConfig(expense.category || 'other')?.icon ?? 'i-heroicons-tag'"
+										class="w-3.5 h-3.5"
+										:class="getCategoryConfig(expense.category || 'other')?.color ?? 'text-muted-foreground'"
+									/>
+									<span class="text-muted-foreground text-xs">{{ getCategoryConfig(expense.category || 'other')?.label ?? 'Other' }}</span>
+								</div>
+							</td>
+							<td class="py-3 px-4 text-muted-foreground">{{ expense.vendor || '\u2014' }}</td>
+							<td class="py-3 px-4 text-muted-foreground">{{ formatDate(expense.date) }}</td>
+							<td class="py-3 px-4">
+								<span
+									class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize"
+									:class="statusColors[expense.status || 'draft']"
+								>
+									{{ expense.status || 'draft' }}
+								</span>
+							</td>
+							<td class="py-3 px-4 text-right font-medium tabular-nums">{{ formatCurrency(Number(expense.amount) || 0) }}</td>
+							<td class="py-3 px-4 text-center">
+								<div class="flex items-center justify-center gap-1">
+									<span v-if="expense.is_billable" class="px-1.5 py-0.5 rounded text-[9px] font-medium bg-blue-500/20 text-blue-400">B</span>
+									<span v-if="expense.is_reimbursable" class="px-1.5 py-0.5 rounded text-[9px] font-medium bg-purple-500/20 text-purple-400">R</span>
+								</div>
+							</td>
+							<td class="py-3 px-4 text-right" @click.stop>
+								<button
+									@click="handleDelete(expense)"
+									class="p-1 rounded text-muted-foreground hover:text-red-500 transition-colors"
+								>
+									<UIcon name="i-heroicons-trash" class="w-3.5 h-3.5" />
+								</button>
+							</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+
+		<!-- CARD VIEW -->
 		<div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
 			<div
 				v-for="expense in filteredExpenses"
@@ -255,9 +340,9 @@ const statusOptions = [
 					<!-- Category Icon -->
 					<div class="w-9 h-9 rounded-lg bg-muted/40 flex items-center justify-center flex-shrink-0">
 						<UIcon
-							:name="getCategoryConfig(expense.category || 'other').icon"
+							:name="getCategoryConfig(expense.category || 'other')?.icon ?? 'i-heroicons-tag'"
 							class="w-4.5 h-4.5"
-							:class="getCategoryConfig(expense.category || 'other').color"
+							:class="getCategoryConfig(expense.category || 'other')?.color ?? 'text-muted-foreground'"
 						/>
 					</div>
 
@@ -283,7 +368,7 @@ const statusOptions = [
 							<span
 								class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-muted/40 text-muted-foreground"
 							>
-								{{ getCategoryConfig(expense.category || 'other').label }}
+								{{ getCategoryConfig(expense.category || 'other')?.label ?? 'Other' }}
 							</span>
 							<span v-if="expense.is_billable" class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-500/20 text-blue-400">
 								Billable

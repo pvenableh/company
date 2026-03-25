@@ -4,8 +4,8 @@ import { nextTick } from 'vue';
 const { user: sessionUser } = useUserSession();
 const user = computed(() => sessionUser.value ?? null);
 const config = useRuntimeConfig();
-const { selectedClient, clients } = useClients();
-const { selectedOrg, organization } = useOrganization();
+const { selectedClient, clientList: clients } = useClients();
+const { selectedOrg, currentOrg: organization } = useOrganization();
 
 // ── Brand Completeness Check ──
 const brandIncomplete = computed(() => {

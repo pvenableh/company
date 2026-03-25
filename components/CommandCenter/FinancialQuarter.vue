@@ -29,7 +29,7 @@ const showHelp = ref(false);
 const getQuarterRange = (q: number, year: number) => {
 	const starts = [`${year}-01-01`, `${year}-04-01`, `${year}-07-01`, `${year}-10-01`];
 	const ends = [`${year}-03-31`, `${year}-06-30`, `${year}-09-30`, `${year}-12-31`];
-	return { start: starts[q], end: ends[q] };
+	return { start: starts[q]!, end: ends[q]! };
 };
 
 // Load and analyze invoice + expense data
@@ -98,7 +98,7 @@ const loadFinancials = async () => {
 			const expenseTotal = quarterExpenses.reduce((sum: number, exp: any) => sum + (Number(exp.amount) || 0), 0);
 
 			qData.push({
-				label: labels[q],
+				label: labels[q]!,
 				goal: goalInputs.value[q] || 0,
 				actual: total,
 				paid: paidTotal,

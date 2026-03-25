@@ -58,8 +58,7 @@ const dismissOptions = () => {
 			>
 				<UIcon
 					:name="isGenerating ? 'i-heroicons-arrow-path' : 'i-heroicons-sparkles'"
-					class="w-3.5 h-3.5"
-					:class="{ 'animate-spin': isGenerating }"
+					:class="isGenerating ? 'w-3.5 h-3.5 animate-spin' : 'w-3.5 h-3.5'"
 				/>
 				{{ isGenerating ? 'Generating...' : 'AI Suggest' }}
 			</button>

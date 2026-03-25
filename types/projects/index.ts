@@ -80,7 +80,7 @@ export interface CreateTaskPayload {
   priority?: ProjectTask['priority'];
 }
 
-export interface ProjectWithRelations extends Omit<Project, 'user_created' | 'user_updated' | 'category_id' | 'parent_id' | 'parent_event_id'> {
+export interface ProjectWithRelations extends Omit<Project, 'user_created' | 'user_updated' | 'category_id' | 'parent_id' | 'parent_event_id' | 'events' | 'children'> {
   user_created: User | null;
   user_updated: User | null;
   category_id: ProjectCategory | null;
@@ -90,7 +90,7 @@ export interface ProjectWithRelations extends Omit<Project, 'user_created' | 'us
   children: ProjectWithRelations[];
 }
 
-export interface ProjectEventWithRelations extends Omit<ProjectEvent, 'user_created' | 'project' | 'category_id'> {
+export interface ProjectEventWithRelations extends Omit<ProjectEvent, 'user_created' | 'project' | 'category_id' | 'tasks' | 'files'> {
   user_created: User | null;
   project: Project;
   category_id: ProjectEventCategory | null;

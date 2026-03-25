@@ -96,22 +96,32 @@ onMounted(() => {
 });
 
 // GSAP animation on progress bar and markers
+let activeTweens = [];
+
 onUpdated(() => {
-	gsap.to('.progress-bar', {
+	// Kill previous tweens to prevent accumulation
+	activeTweens.forEach(t => t.kill());
+	activeTweens = [];
+
+	activeTweens.push(gsap.to('.progress-bar', {
 		width: `${positions.value.today}%`,
 		duration: 0.6,
 		ease: 'power2.out',
-	});
+	}));
 
 	Object.entries(positions.value).forEach(([type, position]) => {
 		if (position !== null) {
-			gsap.to(`.marker-${type}`, {
+			activeTweens.push(gsap.to(`.marker-${type}`, {
 				left: `${position}%`,
 				duration: 0.6,
 				ease: 'power2.out',
-			});
+			}));
 		}
 	});
+});
+
+onUnmounted(() => {
+	activeTweens.forEach(t => t.kill());
 });
 </script>
 

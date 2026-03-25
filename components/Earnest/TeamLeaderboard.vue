@@ -36,7 +36,7 @@
 				<!-- Avatar + Name -->
 				<div class="flex items-center gap-2 flex-1 min-w-0">
 					<div v-if="member.avatar" class="w-8 h-8 rounded-full overflow-hidden shrink-0">
-						<img :src="getAvatarUrl(member.avatar)" :alt="member.firstName" class="w-full h-full object-cover" />
+						<img :src="getAvatarUrl(member.avatar)" :alt="member.firstName" loading="lazy" class="w-full h-full object-cover" />
 					</div>
 					<div v-else class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
 						<span class="text-xs font-semibold text-primary">{{ (member.firstName || '?').charAt(0).toUpperCase() }}</span>

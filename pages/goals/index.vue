@@ -208,10 +208,7 @@ const saveProgress = async () => {
 	<div class="p-4 md:p-6 max-w-7xl mx-auto">
 		<!-- Header -->
 		<div class="flex items-center justify-between mb-6">
-			<div>
-				<h1 class="text-xl font-semibold">Goals</h1>
-				<p class="text-sm text-muted-foreground">Track your financial, networking, and performance goals</p>
-			</div>
+			<h1 class="text-xl font-semibold">Goals</h1>
 			<div class="flex items-center gap-2">
 				<button
 					@click="fetchAISuggestions"
@@ -301,37 +298,51 @@ const saveProgress = async () => {
 			</div>
 		</Transition>
 
-		<!-- Stats Row -->
-		<div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6" v-if="goals.length">
-			<div class="ios-card p-3.5">
-				<p class="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Active</p>
-				<p class="text-lg font-semibold mt-0.5">{{ stats.active }}</p>
+		<!-- Overall Progress + AI Nudge -->
+		<div v-if="goals.length" class="mb-6">
+			<!-- Big progress bar -->
+			<div class="ios-card p-5 mb-3">
+				<div class="flex items-center justify-between mb-2">
+					<span class="text-sm font-medium">Overall Progress</span>
+					<span class="text-2xl font-bold" :class="stats.avgProgress >= 80 ? 'text-emerald-400' : stats.avgProgress >= 50 ? 'text-blue-400' : 'text-amber-400'">{{ stats.avgProgress }}%</span>
+				</div>
+				<div class="w-full h-3 bg-muted/40 rounded-full overflow-hidden">
+					<div
+						class="h-full rounded-full transition-all duration-700"
+						:class="stats.avgProgress >= 80 ? 'bg-emerald-500' : stats.avgProgress >= 50 ? 'bg-blue-500' : 'bg-amber-500'"
+						:style="{ width: stats.avgProgress + '%' }"
+					/>
+				</div>
+				<div class="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+					<span>{{ stats.active }} active</span>
+					<span>{{ stats.completed }} completed</span>
+				</div>
 			</div>
-			<div class="ios-card p-3.5">
-				<p class="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Avg Progress</p>
-				<p class="text-lg font-semibold mt-0.5">{{ stats.avgProgress }}%</p>
-			</div>
-			<div class="ios-card p-3.5">
-				<p class="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Completed</p>
-				<p class="text-lg font-semibold mt-0.5 text-emerald-500">{{ stats.completed }}</p>
-			</div>
-			<div class="ios-card p-3.5">
-				<p class="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Overdue</p>
-				<p class="text-lg font-semibold mt-0.5" :class="stats.overdue ? 'text-red-500' : ''">{{ stats.overdue }}</p>
-			</div>
-		</div>
 
-		<!-- Tabs -->
-		<div class="flex gap-1 mb-5 overflow-x-auto pb-1 -mx-1 px-1" v-if="goals.length">
-			<button
-				v-for="tab in tabs"
-				:key="tab.value"
-				@click="activeTab = tab.value"
-				class="px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors"
-				:class="activeTab === tab.value ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted'"
-			>
-				{{ tab.label }}
-			</button>
+			<!-- AI nudge for overdue -->
+			<div v-if="stats.overdue > 0" class="ios-card p-4 mb-3 border-l-2 border-amber-500">
+				<div class="flex items-start gap-2">
+					<UIcon name="i-heroicons-sparkles" class="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+					<p class="text-sm text-foreground">
+						<span class="font-medium">{{ stats.overdue }} goal{{ stats.overdue > 1 ? 's are' : ' is' }} past due.</span>
+						<span class="text-muted-foreground"> Update your progress or adjust the deadline to stay on track.</span>
+					</p>
+				</div>
+			</div>
+
+			<!-- Simple filter pills -->
+			<div class="flex gap-1.5">
+				<button
+					v-for="tab in [{ label: 'Active', value: 'active' }, { label: 'Completed', value: 'completed' }, { label: 'All', value: 'all' }]"
+					:key="tab.value"
+					@click="activeTab = tab.value"
+					class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+					:class="activeTab === tab.value ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted'"
+				>
+					{{ tab.label }}
+					<span v-if="tab.value === 'active'" class="ml-1 opacity-60">{{ stats.active }}</span>
+				</button>
+			</div>
 		</div>
 
 		<!-- Loading -->

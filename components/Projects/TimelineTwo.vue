@@ -110,22 +110,27 @@ const getStatusColor = computed(
 watch(() => props.project, calculateTimelineData, { immediate: true });
 
 // Handle GSAP animations when positions change
+let activeTweens = [];
+
 watch(
 	positions,
 	(newPositions) => {
-		gsap.to('.progress-bar', {
+		activeTweens.forEach(t => t.kill());
+		activeTweens = [];
+
+		activeTweens.push(gsap.to('.progress-bar', {
 			width: `${newPositions.today}%`,
 			duration: 0.6,
 			ease: 'power2.out',
-		});
+		}));
 
 		Object.entries(newPositions).forEach(([type, position]) => {
 			if (position !== null && type !== 'events') {
-				gsap.to(`.marker-${type}`, {
+				activeTweens.push(gsap.to(`.marker-${type}`, {
 					left: `${position}%`,
 					duration: 0.6,
 					ease: 'power2.out',
-				});
+				}));
 			}
 		});
 	},
@@ -135,6 +140,10 @@ watch(
 // Initialize on mount
 onMounted(() => {
 	calculateTimelineData();
+});
+
+onUnmounted(() => {
+	activeTweens.forEach(t => t.kill());
 });
 </script>
 

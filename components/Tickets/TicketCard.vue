@@ -174,6 +174,7 @@ if (props.ticket.category === 'Completed') {
 				<img
 					:src="`https://admin.1033lenox.com/assets/${state.file}?key=large`"
 					:alt="'ticket: ' + state.title"
+					loading="lazy"
 					class=""
 				/>
 			</div>

@@ -2,6 +2,7 @@
 import type { Invoice } from '~/types/directus';
 import { Button } from '~/components/ui/button';
 import { useDebounceFn } from '@vueuse/core';
+import { getFriendlyDateThree } from '~/utils/dates';
 
 definePageMeta({ middleware: ['auth'] });
 useHead({ title: 'Invoices | Earnest' });
@@ -20,7 +21,7 @@ const showCreateModal = ref(false);
 const creating = ref(false);
 const statusFilter = ref('all');
 const showPaid = ref(false);
-const viewMode = ref<'cards' | 'table'>('cards');
+const viewMode = ref<'cards' | 'table'>('table');
 
 const sortBy = ref('-due_date');
 const sortOptions = [
@@ -143,9 +144,7 @@ function getLineItemCount(inv: Invoice): number {
 
 onMounted(fetchData);
 
-watch(() => selectedClient.value, () => {
-  fetchData();
-});
+watch(() => selectedClient.value, debouncedFetch);
 </script>
 
 <template>
