@@ -156,6 +156,9 @@ export default defineNuxtConfig({
 			// Stripe public key
 			stripePublic: isProduction ? process.env.STRIPE_PUBLIC_KEY : process.env.STRIPE_PUBLIC_KEY_TEST,
 
+			// Daily.co domain (your-domain.daily.co)
+			dailyDomain: process.env.DAILY_DOMAIN || '',
+
 			// Company
 			companyName: process.env.COMPANY_NAME,
 
