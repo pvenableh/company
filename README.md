@@ -623,6 +623,59 @@ The platform uses a semantic theme system via `t-*` CSS utility classes defined 
 | `t-btn` | Primary button styling |
 | `t-heading`, `t-body` | Typography classes |
 
+## Authentication & SSO
+
+The platform supports email/password login and SSO (Sign in with Google, Sign in with Apple). All authentication flows go through **Directus** as the identity provider.
+
+### Email/Password Login
+- Standard login via `server/api/auth/login.post.ts`
+- Registration via `server/api/auth/register.post.ts` (creates user + org + Stripe customer)
+- Tokens stored server-side in secure HTTP-only session cookies (`nuxt-auth-utils`)
+- Proactive token refresh 2 minutes before expiry, cross-tab sync via BroadcastChannel
+
+### SSO (Google & Apple)
+SSO is handled by Directus's built-in SSO support. The Nuxt app redirects to Directus, which handles the full OAuth exchange, then redirects back with tokens.
+
+**Flow:** User clicks "Sign in with Google" → Directus OAuth → callback with tokens → session created
+
+**Key files:**
+- `components/Auth/LoginForm.vue` — SSO buttons with graceful fallback (hidden when not configured)
+- `pages/auth/sso-callback.vue` — Captures tokens from Directus redirect
+- `server/api/auth/sso-callback.post.ts` — Validates tokens, creates session
+
+**Setup:** SSO requires environment variables on the **Directus server** (not the Nuxt app). See `docs/directus-sso-setup.md` for complete configuration including Apple Developer Portal setup.
+
+**Graceful degradation:** If Directus SSO is not configured, the login page shows only the email/password form. The SSO buttons appear automatically once `DIRECTUS_URL` is set and the Directus server has SSO providers configured.
+
+## Calendar Integrations
+
+The scheduler module supports syncing meetings to Google Calendar and Outlook Calendar.
+
+### Google Calendar
+- OAuth flow: `server/api/calendar/google/auth-url.get.ts` → `callback.get.ts`
+- Event creation: `server/api/calendar/google/create-event.post.ts`
+- Disconnect: `server/api/calendar/google/disconnect.post.ts`
+- Tokens stored in `scheduler_settings.google_refresh_token` (encrypted)
+- Scopes: `calendar`, `calendar.events`
+
+### Outlook Calendar
+- OAuth flow: `server/api/calendar/outlook/auth-url.get.ts` → `callback.get.ts`
+- Event creation: `server/api/calendar/outlook/create-event.post.ts`
+- Disconnect: `server/api/calendar/outlook/disconnect.post.ts`
+- Tokens stored in `scheduler_settings.outlook_refresh_token` (encrypted)
+- Scopes: `openid`, `profile`, `offline_access`, `Calendars.ReadWrite`
+
+### Timezone Handling
+Calendar events use a timezone fallback chain: request body `timezone` → user's `scheduler_settings.timezone` → `America/New_York` default. Users set their timezone in scheduler settings (`pages/scheduler/settings.vue`).
+
+### Apple Calendar
+Not implemented. Apple Calendar uses CalDAV (not a REST API), which requires significantly more infrastructure. Documented as a future consideration.
+
+### Daily.co Video (replacing Twilio Video)
+Video meetings use Daily.co for room creation and participant tokens. See `server/api/video/` for the API routes and `server/utils/daily.ts` for the client utility. Requires `DAILY_API_KEY` in `.env`.
+
+**Note on Daily.co webhooks:** Daily.co configures webhooks via API, not through their dashboard. The webhook endpoint is registered programmatically when creating rooms — see `server/utils/daily.ts` for the `configureWebhook()` function.
+
 ## Deployment
 
 The app is configured for deployment on **Vercel**. Make sure all required environment variables are set in your Vercel project settings, especially `NUXT_SESSION_PASSWORD`.
@@ -647,6 +700,11 @@ The following features are planned for upcoming development phases:
 - **Chat Widget** — Frontend UI for the existing `ai_chat_sessions` / `ai_chat_messages` Directus collections; `useAIChat` composable; streaming AI responses; persistent conversation history
 - **Notification Email Pipeline** — Unified transactional email handler for form submissions, sign-ups, ticket updates, and appointment confirmations using the existing MJML compiler + Handlebars system
 - **~~Subscription Plan Gating~~** — ✅ Implemented: `planAllows()`, `hasAddon()`, server-side token/scan enforcement, add-on billing
+- **~~SSO (Google & Apple Sign-In)~~** — ✅ Implemented: Directus-based SSO with graceful fallback; see `docs/directus-sso-setup.md`
+- **~~Calendar Timezone Fix~~** — ✅ Fixed: Dynamic timezone from user settings instead of hardcoded America/New_York
+- **~~Daily.co Video~~** — ✅ Implemented: Replaced Twilio Video with Daily.co; `server/utils/daily.ts`
+- **Apple Calendar (CalDAV)** — Future: requires CalDAV client implementation, not a REST API
+- **Domain Migration** — Migrate from `huestudios.company` to `earnest.guru`; update all OAuth redirect URIs, Directus SSO config, and Stripe webhook endpoints
 
 ## Stripe Subscription Setup
 

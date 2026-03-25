@@ -42,7 +42,7 @@ export default defineEventHandler(async (event) => {
 
 		const settings = await client.request(
 			readItems('scheduler_settings', {
-				fields: ['outlook_refresh_token'],
+				fields: ['outlook_refresh_token', 'timezone'],
 				filter: { user_id: { _eq: userId } },
 				limit: 1,
 			})
@@ -73,6 +73,9 @@ export default defineEventHandler(async (event) => {
 		const tokens = tokenResponse as any;
 		const accessToken = tokens.access_token;
 
+		// Use timezone from request body, scheduler settings, or fallback
+		const tz = body.timezone || (settings[0] as any).timezone || 'America/New_York';
+
 		// Create calendar event
 		const eventData: any = {
 			subject: title,
@@ -82,11 +85,11 @@ export default defineEventHandler(async (event) => {
 			},
 			start: {
 				dateTime: new Date(startTime).toISOString(),
-				timeZone: 'America/New_York',
+				timeZone: tz,
 			},
 			end: {
 				dateTime: new Date(endTime).toISOString(),
-				timeZone: 'America/New_York',
+				timeZone: tz,
 			},
 			isReminderOn: true,
 			reminderMinutesBeforeStart: 15,

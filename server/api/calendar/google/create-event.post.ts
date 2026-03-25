@@ -42,7 +42,7 @@ export default defineEventHandler(async (event) => {
 
 		const settings = await client.request(
 			readItems('scheduler_settings', {
-				fields: ['google_refresh_token', 'google_calendar_id'],
+				fields: ['google_refresh_token', 'google_calendar_id', 'timezone'],
 				filter: { user_id: { _eq: userId } },
 				limit: 1,
 			})
@@ -69,16 +69,19 @@ export default defineEventHandler(async (event) => {
 
 		const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
+		// Use timezone from request body, scheduler settings, or fallback
+		const tz = body.timezone || (settings[0] as any).timezone || 'America/New_York';
+
 		const eventData: any = {
 			summary: title,
 			description,
 			start: {
 				dateTime: new Date(startTime).toISOString(),
-				timeZone: 'America/New_York',
+				timeZone: tz,
 			},
 			end: {
 				dateTime: new Date(endTime).toISOString(),
-				timeZone: 'America/New_York',
+				timeZone: tz,
 			},
 			reminders: {
 				useDefault: false,
