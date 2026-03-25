@@ -38,10 +38,10 @@ The webhook receives a Stripe customer ID. The existing code already looks up th
 
 After finding `userId`, look up their primary organization:
 ```typescript
-// IMPORTANT: Use getAdminDirectus() here, not the user-scoped directus client.
+// IMPORTANT: Use getTypedDirectus() here, not the user-scoped directus client.
 // The relational filter on role.slug requires reading the org_roles collection,
 // which the user-scoped client may not have permission to do in a webhook context.
-const adminDirectus = getAdminDirectus()
+const adminDirectus = getTypedDirectus()
 
 const memberships = await adminDirectus.request(
   readItems('org_memberships', {
@@ -66,7 +66,7 @@ if (orgId) {
   const planId = planFromPriceId(subscription.items.data[0]?.price?.id || '')
   const plan = EARNEST_PLANS[planId]
 
-  await directus.request(
+  await adminDirectus.request(
     updateItem('organizations', orgId, {
       plan: earnestPlanToOrgPlan(planId),
       ai_token_limit_monthly: plan?.aiTokens.monthlyAllotment ?? null,
@@ -78,7 +78,7 @@ if (orgId) {
 
 When deleted, reset the org to free:
 ```typescript
-await directus.request(
+await adminDirectus.request(
   updateItem('organizations', orgId, {
     plan: 'free',
     ai_token_limit_monthly: 0,
@@ -89,14 +89,15 @@ await directus.request(
 
 ### 3. Update handleSubscriptionInvoicePaid()
 
-This is where the monthly reset happens. Currently this function is a stub (just logs).
-Implement it:
+This is where the monthly reset happens. Currently this function exists but needs real
+implementation. Implement it:
 
 ```typescript
 async function handleSubscriptionInvoicePaid(invoice: Stripe.Invoice) {
   // Find customer → user → org (same pattern as above)
+  const adminDirectus = getTypedDirectus()
   // Then reset the org's token counters for the new billing period:
-  await directus.request(
+  await adminDirectus.request(
     updateItem('organizations', orgId, {
       ai_tokens_used_this_period: 0,
       ai_billing_period_start: new Date().toISOString(),
@@ -115,7 +116,7 @@ Reuse the same org-lookup and plan-update logic.
 ## Imports needed
 ```typescript
 import { EARNEST_PLANS, planFromPriceId } from '~/server/utils/stripe'
-import { getAdminDirectus } from '~/server/utils/directus'
+// getTypedDirectus is auto-imported by Nuxt from server/utils/directus.ts
 // updateItem, readItems are already imported from @directus/sdk
 ```
 

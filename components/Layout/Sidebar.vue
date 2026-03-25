@@ -96,6 +96,13 @@
 			</div>
 		</div>
 
+		<!-- Token Meter — only when org has a token limit -->
+		<OrganizationTokenMeter
+			v-if="!collapsed && showTokenMeter"
+			compact
+			@topup="$router.push('/account/billing')"
+		/>
+
 		<!-- Bottom area -->
 		<div class="sidebar-footer" :class="{ 'sidebar-footer--collapsed': collapsed }">
 			<NuxtLink
@@ -130,6 +137,10 @@ const { user } = useDirectusAuth();
 const route = useRoute();
 const { visibleLinks } = useNavPreferences();
 const { collapsed, toggle } = useSidebarCollapsed();
+const { usageSummary } = useAITokens();
+
+// Show token meter only when org has a tracked limit (not unlimited/null)
+const showTokenMeter = computed(() => usageSummary.value?.orgLimit !== null && usageSummary.value?.orgLimit !== undefined);
 
 // Filter links by section, excluding Command Center (shown as logo) and AI Chat (separate)
 const primaryLinks = computed(() =>

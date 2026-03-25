@@ -2,7 +2,9 @@
 // Stripe webhook handler for payment and subscription events
 import { defineEventHandler, getHeader, readBody } from 'h3';
 import Stripe from 'stripe';
-import { updateItems, readItems, createItem } from '@directus/sdk';
+import { updateItems, updateItem, readItems, createItem } from '@directus/sdk';
+import { EARNEST_PLANS, EARNEST_ADDONS, planFromPriceId, addonFromPriceId, earnestPlanToOrgPlan } from '~/server/utils/stripe';
+import type { EarnestPlanId, EarnestAddonId } from '~/server/utils/stripe';
 
 export default defineEventHandler(async (event) => {
 	try {
@@ -136,6 +138,62 @@ async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent) {
 	}
 }
 
+// ── Shared Helpers ──
+
+/** Find the primary org for a Stripe customer by looking up their user → org_membership */
+async function findOrgForCustomer(
+	directus: ReturnType<typeof getTypedDirectus>,
+	customerId: string
+): Promise<{ userId: string; orgId: string | null }> {
+	// Find user by stripe_customer_id
+	const users = await directus.request(
+		readItems('directus_users', {
+			filter: { stripe_customer_id: { _eq: customerId } },
+			fields: ['id', 'email'],
+			limit: 1,
+		})
+	);
+
+	if (users.length === 0 || !users[0]) {
+		console.warn(`[Stripe] No user found for customer: ${customerId}`);
+		return { userId: '', orgId: null };
+	}
+
+	const userId = users[0].id;
+
+	// Find user's primary org (where they are owner or admin)
+	const memberships = await directus.request(
+		readItems('org_memberships', {
+			filter: {
+				user: { _eq: userId },
+				status: { _eq: 'active' },
+				role: { slug: { _in: ['owner', 'admin'] } },
+			},
+			fields: ['organization'],
+			limit: 1,
+		})
+	);
+
+	const orgId = memberships[0]?.organization
+		? (typeof memberships[0].organization === 'string'
+			? memberships[0].organization
+			: (memberships[0].organization as any).id)
+		: null;
+
+	return { userId, orgId };
+}
+
+/** Resolve the Earnest plan from a subscription's first line item */
+function resolvePlanFromSubscription(subscription: Stripe.Subscription): {
+	planId: EarnestPlanId | null;
+	plan: typeof EARNEST_PLANS[EarnestPlanId] | null;
+} {
+	const priceId = subscription.items.data[0]?.price?.id || '';
+	const planId = planFromPriceId(priceId);
+	const plan = planId ? EARNEST_PLANS[planId] : null;
+	return { planId, plan };
+}
+
 // ── Subscription Handlers ──
 
 async function handleSubscriptionChange(
@@ -148,21 +206,10 @@ async function handleSubscriptionChange(
 			? subscription.customer
 			: subscription.customer.id;
 
-		// Find user by stripe_customer_id
-		const users = await directus.request(
-			readItems('directus_users', {
-				filter: { stripe_customer_id: { _eq: customerId } },
-				fields: ['id', 'email'],
-				limit: 1,
-			})
-		);
+		const { userId, orgId } = await findOrgForCustomer(directus, customerId);
+		if (!userId) return;
 
-		if (users.length === 0) {
-			console.warn(`[Stripe] No user found for customer: ${customerId}`);
-			return;
-		}
-
-		const userId = users[0].id;
+		// ── Update user record ──
 		const subscriptionData: Record<string, any> = {
 			stripe_subscription_id: subscription.id,
 			subscription_status: subscription.status,
@@ -179,7 +226,49 @@ async function handleSubscriptionChange(
 			updateItems('directus_users', [userId], subscriptionData)
 		);
 
-		console.log(`[Stripe] Subscription ${action} for user ${userId}: ${subscription.status}`);
+		// ── Sync organization plan & limits ──
+		if (orgId) {
+			if (action === 'deleted') {
+				await directus.request(
+					updateItem('organizations', orgId, {
+						plan: 'free',
+						ai_token_limit_monthly: 0,
+						ai_token_balance: 0,
+						scan_credits_limit_monthly: 0,
+						scan_credits_balance: 0,
+						active_addons: null,
+					})
+				);
+			} else {
+				const { planId, plan } = resolvePlanFromSubscription(subscription);
+				const orgUpdate: Record<string, any> = {};
+
+				if (planId && plan) {
+					orgUpdate.plan = earnestPlanToOrgPlan(planId);
+					orgUpdate.ai_token_limit_monthly = plan.aiTokens.monthlyAllotment;
+					orgUpdate.scan_credits_limit_monthly = plan.scanCredits;
+				}
+
+				// Detect add-on line items on the subscription
+				const addons: Record<string, any> = {};
+				for (const item of subscription.items.data) {
+					const addonId = addonFromPriceId(item.price.id);
+					if (addonId) {
+						addons[addonId] = {
+							stripe_subscription_item_id: item.id,
+							active_since: new Date((item as any).created * 1000).toISOString(),
+						};
+					}
+				}
+				orgUpdate.active_addons = Object.keys(addons).length > 0 ? addons : null;
+
+				await directus.request(
+					updateItem('organizations', orgId, orgUpdate)
+				);
+			}
+		}
+
+		console.log(`[Stripe] Subscription ${action} for user ${userId} (org: ${orgId ?? 'none'}): ${subscription.status}`);
 	} catch (error) {
 		console.error(`[Stripe] Error handling subscription ${action}:`, error);
 	}
@@ -187,8 +276,50 @@ async function handleSubscriptionChange(
 
 async function handleSubscriptionInvoicePaid(invoice: Stripe.Invoice) {
 	try {
-		console.log(`[Stripe] Subscription invoice paid: ${invoice.id} for subscription ${invoice.subscription}`);
-		// The subscription.updated event will handle status updates
+		const directus = getTypedDirectus();
+		const customerId = typeof invoice.customer === 'string'
+			? invoice.customer
+			: (invoice.customer as Stripe.Customer)?.id;
+
+		if (!customerId) {
+			console.warn(`[Stripe] No customer ID on invoice: ${invoice.id}`);
+			return;
+		}
+
+		const { userId, orgId } = await findOrgForCustomer(directus, customerId);
+		if (!userId || !orgId) {
+			console.warn(`[Stripe] Invoice paid but no org found for customer: ${customerId}`);
+			return;
+		}
+
+		// Resolve plan from the subscription attached to this invoice
+		const stripe = useStripe();
+		const subscriptionId = typeof invoice.subscription === 'string'
+			? invoice.subscription
+			: (invoice.subscription as Stripe.Subscription)?.id;
+
+		if (!subscriptionId) return;
+
+		const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+		const { plan } = resolvePlanFromSubscription(subscription);
+
+		if (!plan) {
+			console.warn(`[Stripe] Invoice paid but could not resolve plan for subscription: ${subscriptionId}`);
+			return;
+		}
+
+		// Reset usage counters for the new billing period
+		await directus.request(
+			updateItem('organizations', orgId, {
+				ai_tokens_used_this_period: 0,
+				ai_token_balance: plan.aiTokens.monthlyAllotment,
+				ai_billing_period_start: new Date().toISOString(),
+				scans_used_this_period: 0,
+				scan_credits_balance: plan.scanCredits,
+			})
+		);
+
+		console.log(`[Stripe] Billing period reset for org ${orgId}: ${plan.aiTokens.monthlyAllotment} tokens, ${plan.scanCredits} scans`);
 	} catch (error) {
 		console.error('[Stripe] Error handling subscription invoice paid:', error);
 	}
@@ -236,15 +367,42 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 			);
 		}
 
-		if (users.length > 0) {
+		if (users.length > 0 && users[0]) {
+			const userId = users[0].id;
+
+			// Link subscription to user
 			await directus.request(
-				updateItems('directus_users', [users[0].id], {
+				updateItems('directus_users', [userId], {
 					stripe_customer_id: customerId,
 					stripe_subscription_id: subscriptionId,
 					subscription_status: 'active',
 				})
 			);
-			console.log(`[Stripe] Checkout completed — linked subscription ${subscriptionId} to user ${users[0].id}`);
+
+			// Set initial plan & token allocation on the org
+			const { orgId } = await findOrgForCustomer(directus, customerId);
+			if (orgId) {
+				const stripe = useStripe();
+				const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+				const { planId, plan } = resolvePlanFromSubscription(subscription);
+
+				if (planId && plan) {
+					await directus.request(
+						updateItem('organizations', orgId, {
+							plan: earnestPlanToOrgPlan(planId),
+							ai_token_limit_monthly: plan.aiTokens.monthlyAllotment,
+							ai_token_balance: plan.aiTokens.monthlyAllotment,
+							ai_tokens_used_this_period: 0,
+							ai_billing_period_start: new Date().toISOString(),
+							scan_credits_limit_monthly: plan.scanCredits,
+							scan_credits_balance: plan.scanCredits,
+							scans_used_this_period: 0,
+						})
+					);
+				}
+			}
+
+			console.log(`[Stripe] Checkout completed — linked subscription ${subscriptionId} to user ${userId} (org: ${orgId ?? 'none'})`);
 		}
 	} catch (error) {
 		console.error('[Stripe] Error handling checkout completed:', error);

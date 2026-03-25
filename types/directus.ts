@@ -1123,6 +1123,20 @@ export interface EarnestHistory {
 	dimensions?: Record<string, any> | null;
 }
 
+export interface EarnestScanCredit {
+	/** @primaryKey */
+	id: string;
+	/** @description Organization this pool belongs to @required */
+	account_id: Organization | string;
+	/** @description Monthly allotment from plan */
+	scans_monthly?: number | null;
+	/** @description Purchased bonus scans */
+	scans_banked?: number | null;
+	scans_used_this_month?: number | null;
+	last_reset_at?: string | null;
+	date_created?: string | null;
+}
+
 export interface EarnestScore {
 	/** @primaryKey */
 	id: string;
@@ -1147,6 +1161,25 @@ export interface EarnestScore {
 	badges_unlocked?: Record<string, any> | null;
 	/** @description Five dimension breakdown */
 	dimension_scores?: Record<string, any> | null;
+}
+
+export interface EarnestTokenPool {
+	/** @primaryKey */
+	id: string;
+	/** @description Organization this pool belongs to @required */
+	account_id: Organization | string;
+	/** @required */
+	pool_type: 'agency' | 'client';
+	/** @description Monthly allotment from plan */
+	tokens_monthly?: number | null;
+	/** @description Purchased/bonus tokens available */
+	tokens_banked?: number | null;
+	tokens_used_this_month?: number | null;
+	last_reset_at?: string | null;
+	stripe_subscription_id?: string | null;
+	/** @description Earnest plan ID at time of pool creation */
+	plan_tier?: string | null;
+	date_created?: string | null;
 }
 
 export interface EmailPartial {
@@ -1695,6 +1728,20 @@ export interface Organization {
 	ai_tokens_used_this_period?: number | null;
 	/** @description Start of current AI billing period */
 	ai_billing_period_start?: string | null;
+	/** @description Remaining scan credits (null = unlimited, -1 sentinel from plan = unlimited) */
+	scan_credits_balance?: number | null;
+	/** @description Monthly scan credit allotment from plan (null = no plan set) */
+	scan_credits_limit_monthly?: number | null;
+	/** @description Scans consumed in current billing period */
+	scans_used_this_period?: number | null;
+	/** @description Twilio sub-account SID — provisioned when Communications add-on is activated */
+	twilio_subaccount_sid?: string | null;
+	/** @description Twilio sub-account auth token — treat as secret */
+	twilio_subaccount_token?: string | null;
+	/** @description active | suspended */
+	twilio_subaccount_status?: 'active' | 'suspended' | null;
+	/** @description Active add-on subscriptions — managed by Stripe webhooks. Keys are addon IDs, values have stripe_subscription_item_id and active_since. */
+	active_addons?: Record<string, any> | null;
 	users?: OrganizationsDirectusUser[] | string[];
 	projects?: Project[] | string[];
 	tickets?: Ticket[] | string[];
@@ -1873,6 +1920,20 @@ export interface PageServicesContentBlock {
 	sort?: number | null;
 }
 
+export interface PartnerLogo {
+	/** @primaryKey */
+	id: string;
+	sort?: number | null;
+	/** @description Company name @required */
+	name: string;
+	/** @description Logo image (SVG or PNG preferred) @required */
+	logo: DirectusFile | string;
+	/** @description Company website URL */
+	url?: string | null;
+	active?: boolean | null;
+	date_created?: string | null;
+}
+
 export interface PaymentsReceived {
 	/** @primaryKey */
 	id: string;
@@ -1993,6 +2054,8 @@ export interface PhoneSetting {
 	active?: boolean | null;
 	/** @description Text-to-speech voice for automated messages */
 	voice?: `Polly.Joanna-Neural` | `Polly.Matthew-Neural` | `Polly.Ruth-Neural` | `Polly.Stephen-Neural` | `Polly.Salli-Neural` | `Polly.Joey-Neural` | `Polly.Kendra-Neural` | `Polly.Kimberly-Neural` | `Google.en-US-Wavenet-F` | `Google.en-US-Wavenet-D` | 'alice' | 'man' | 'woman' | null;
+	/** @description Owning organization */
+	organization?: Organization | string | null;
 	business_hours?: BusinessHour[] | string[];
 	call_routes?: CallRoute[] | string[];
 }
@@ -2776,6 +2839,22 @@ export interface TemplateBlock {
 	instance_variables?: Record<string, any> | null;
 }
 
+export interface Testimonial {
+	/** @primaryKey */
+	id: string;
+	sort?: number | null;
+	/** @required */
+	name: string;
+	role?: string | null;
+	/** @required */
+	quote: string;
+	rating?: number | null;
+	featured?: boolean | null;
+	date_created?: string | null;
+	/** @description Headshot photo */
+	avatar?: DirectusFile | string | null;
+}
+
 export interface Ticket {
 	/** @primaryKey */
 	id: string;
@@ -3530,7 +3609,9 @@ export interface Schema {
 	contacts_organizations: ContactsOrganization[];
 	courses: Course[];
 	earnest_history: EarnestHistory[];
+	earnest_scan_credits: EarnestScanCredit[];
 	earnest_scores: EarnestScore[];
+	earnest_token_pools: EarnestTokenPool[];
 	email_partials: EmailPartial[];
 	emails: Email[];
 	email_templates: EmailTemplate[];
@@ -3574,6 +3655,7 @@ export interface Schema {
 	pages_content_blocks: PagesContentBlock[];
 	page_services: PageServices;
 	page_services_content_blocks: PageServicesContentBlock[];
+	partner_logos: PartnerLogo[];
 	payments_received: PaymentsReceived[];
 	people: People[];
 	people_organizations: PeopleOrganization[];
@@ -3623,6 +3705,7 @@ export interface Schema {
 	tasks_directus_users: TasksDirectusUser[];
 	teams: Team[];
 	template_blocks: TemplateBlock[];
+	testimonials: Testimonial[];
 	tickets: Ticket[];
 	tickets_comments: TicketsComment[];
 	tickets_directus_users: TicketsDirectusUser[];
@@ -3722,7 +3805,9 @@ export enum CollectionNames {
 	contacts_organizations = 'contacts_organizations',
 	courses = 'courses',
 	earnest_history = 'earnest_history',
+	earnest_scan_credits = 'earnest_scan_credits',
 	earnest_scores = 'earnest_scores',
+	earnest_token_pools = 'earnest_token_pools',
 	email_partials = 'email_partials',
 	emails = 'emails',
 	email_templates = 'email_templates',
@@ -3766,6 +3851,7 @@ export enum CollectionNames {
 	pages_content_blocks = 'pages_content_blocks',
 	page_services = 'page_services',
 	page_services_content_blocks = 'page_services_content_blocks',
+	partner_logos = 'partner_logos',
 	payments_received = 'payments_received',
 	people = 'people',
 	people_organizations = 'people_organizations',
@@ -3815,6 +3901,7 @@ export enum CollectionNames {
 	tasks_directus_users = 'tasks_directus_users',
 	teams = 'teams',
 	template_blocks = 'template_blocks',
+	testimonials = 'testimonials',
 	tickets = 'tickets',
 	tickets_comments = 'tickets_comments',
 	tickets_directus_users = 'tickets_directus_users',

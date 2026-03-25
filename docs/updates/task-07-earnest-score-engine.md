@@ -2,8 +2,17 @@
 
 ## Context
 The `earnest_scores` and `earnest_history` collections exist in Directus with the correct field
-names. The Score page in the Companion app reads from `earnest_scores`. What's missing is the
-server-side engine that populates these records when events happen.
+names (verified against live schema). The Score page in the Companion app reads from
+`earnest_scores`. What's missing is the server-side engine that populates these records when
+events happen.
+
+### Important: admin Directus client
+The server-side admin client is `getTypedDirectus()` from `server/utils/directus.ts`.
+It is auto-imported by Nuxt. There is no `getAdminDirectus()` function.
+
+### Business model note (Section 08)
+The Earnest Score is described as "the most important churn-reduction mechanism in the platform.
+It makes switching feel like starting over." Scores are org-level — collective team performance.
 
 ## Step 1 — Read existing score data first
 
@@ -84,7 +93,7 @@ export async function awardEP(
   const award = EP_AWARDS[eventType]
   if (!award) return
 
-  const directus = getAdminDirectus()
+  const directus = getTypedDirectus()
 
   // Get or create the score record for this org
   let scoreRecords = await directus.request(

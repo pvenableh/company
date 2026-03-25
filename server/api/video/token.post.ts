@@ -1,5 +1,5 @@
 // server/api/video/token.post.ts
-import twilio from 'twilio';
+// Generates a Daily.co meeting token for a participant.
 
 interface TokenRequestBody {
 	roomName: string;
@@ -8,8 +8,6 @@ interface TokenRequestBody {
 
 export default defineEventHandler(async (event) => {
 	try {
-		const config = useRuntimeConfig();
-
 		// Get session to identify current user (optional for guests)
 		let session = null;
 		try {
@@ -28,22 +26,35 @@ export default defineEventHandler(async (event) => {
 			});
 		}
 
-		// Validate Twilio credentials
-		if (!config.twilioAccountSid || !config.twilioApiKey || !config.twilioApiSecret) {
-			throw createError({
-				statusCode: 500,
-				message: 'Video service is not configured',
-			});
-		}
-
-		// Determine identity
+		// Determine identity and whether this is the owner
 		let identity: string;
+		let userId: string | undefined;
+		let isOwner = false;
 
 		if (session?.user) {
 			// Authenticated user
+			userId = session.user.id;
 			identity = `${session.user.first_name || ''} ${session.user.last_name || ''}`.trim();
 			if (!identity) {
 				identity = session.user.email?.split('@')[0] || `user-${session.user.id.substring(0, 8)}`;
+			}
+
+			// Check if this user is the host of the meeting
+			try {
+				const directus = getTypedDirectus();
+				const { readItems } = await import('@directus/sdk');
+				const meetings = await directus.request(
+					readItems('video_meetings', {
+						filter: { room_name: { _eq: body.roomName } },
+						fields: ['host_user'],
+						limit: 1,
+					}),
+				);
+				if (meetings.length > 0 && (meetings[0] as any)?.host_user === userId) {
+					isOwner = true;
+				}
+			} catch {
+				// If we can't check host status, default to non-owner
 			}
 		} else if (body.identity) {
 			// Guest with provided identity
@@ -53,26 +64,18 @@ export default defineEventHandler(async (event) => {
 			identity = `Guest-${Math.random().toString(36).substring(2, 8)}`;
 		}
 
-		// Create access token
-		const AccessToken = twilio.jwt.AccessToken;
-		const VideoGrant = AccessToken.VideoGrant;
-
-		const token = new AccessToken(config.twilioAccountSid, config.twilioApiKey, config.twilioApiSecret, {
-			identity,
-			ttl: 3600, // Token valid for 1 hour
+		// Generate Daily.co meeting token
+		const token = await createDailyMeetingToken({
+			roomName: body.roomName,
+			userId,
+			userName: identity,
+			isOwner,
 		});
-
-		// Create video grant for the specific room
-		const videoGrant = new VideoGrant({
-			room: body.roomName,
-		});
-
-		token.addGrant(videoGrant);
 
 		return {
 			success: true,
 			data: {
-				token: token.toJwt(),
+				token,
 				identity,
 				roomName: body.roomName,
 			},

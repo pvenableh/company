@@ -13,6 +13,16 @@ This task adds server-side enforcement. Every AI call must:
 3. Write a record to `ai_usage_logs`
 4. Update `organizations.ai_tokens_used_this_period` and `ai_token_balance`
 
+### Important: admin Directus client
+The server-side admin client is `getTypedDirectus()` from `server/utils/directus.ts`.
+It is auto-imported by Nuxt. There is no `getAdminDirectus()` function.
+
+### Business model note — client portal token pools
+The business model requires that client portal AI usage is billed from a **separate** token
+pool, never from the agency's own allocation. The `earnest_token_pools` collection below has
+a `pool_type` field (`agency` | `client`) to support this. For this task, implement the agency
+pool only. Client pool enforcement will be added in Task 8 alongside client pack billing.
+
 ## Step 0 — Create Directus collections via MCP
 
 Before writing any code, use the Directus MCP connection to create the two required collections
@@ -114,7 +124,7 @@ export interface TokenDeductParams {
  * Returns { allowed: true } if the org has no limit set (null = unlimited).
  */
 export async function checkOrgTokenBudget(orgId: string): Promise<TokenCheckResult> {
-  const directus = getAdminDirectus() // server-side admin client
+  const directus = getTypedDirectus()
   
   const org = await directus.request(
     readItem('organizations', orgId, {
@@ -145,7 +155,7 @@ export async function checkOrgTokenBudget(orgId: string): Promise<TokenCheckResu
  * Updates org balance and writes to ai_usage_logs.
  */
 export async function deductOrgTokens(params: TokenDeductParams): Promise<void> {
-  const directus = getAdminDirectus()
+  const directus = getTypedDirectus()
   const totalTokens = params.inputTokens + params.outputTokens
   const estimatedCost = params.estimatedCostUsd
     ?? ((params.inputTokens * 0.000003) + (params.outputTokens * 0.000015)) // Claude Sonnet rates
@@ -247,10 +257,17 @@ When the server returns a 402, the client-side code should show a token top-up p
 a generic error. Find where AI errors are caught in the CommandCenter components and add a
 check for `error.statusCode === 402`. Show the existing upgrade/top-up UI path.
 
+## Important schema notes
+- `ai_usage_logs.id` is an **integer** (auto-increment), not UUID. The `createItem()` call
+  does not need to provide an ID — it will be auto-generated.
+- `organizations` already has `ai_token_balance`, `ai_token_limit_monthly`,
+  `ai_tokens_used_this_period`, and `ai_billing_period_start` fields (verified in live schema).
+
 ## Do NOT do in this task
 - Do not modify `useAIUsage.ts` (localStorage tracking is fine as a secondary client-side display)
 - Do not modify `useAITokens.ts`
 - Do not add enforcement to CardDesk scan calls yet (that's a separate task)
+- Do not implement client portal token pool separation (that's Task 8)
 
 ## After making changes
 Run `pnpm typecheck`. Test by temporarily setting `ai_token_balance: 0` on a test org and

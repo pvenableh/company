@@ -3,6 +3,8 @@
  *
  * Checks org-level token limits, per-member budgets, and member AI-enabled status
  * before allowing an AI API call to proceed.
+ *
+ * Also provides scan credit enforcement for CardDesk endpoints.
  */
 import { readItems, readItem, updateItem } from '@directus/sdk';
 import type { H3Event } from 'h3';
@@ -10,8 +12,17 @@ import type { H3Event } from 'h3';
 export interface TokenEnforcementResult {
   allowed: boolean;
   reason?: string;
+  /** HTTP status to return: 402 (payment required) or 429 (rate limited) */
+  statusCode?: number;
   orgTokensRemaining?: number | null;
   memberBudgetRemaining?: number | null;
+}
+
+export interface ScanEnforcementResult {
+  allowed: boolean;
+  reason?: string;
+  statusCode?: number;
+  scansRemaining?: number | null;
 }
 
 /**
@@ -100,7 +111,8 @@ export async function enforceTokenLimits(event: H3Event, organizationId?: string
       if (org.ai_token_balance != null && org.ai_token_balance <= 0) {
         return {
           allowed: false,
-          reason: 'Organization AI token balance is depleted. An admin can purchase more tokens.',
+          statusCode: 402,
+          reason: 'Your AI token balance is depleted. Purchase more tokens to continue.',
           orgTokensRemaining: 0,
         };
       }
@@ -112,7 +124,8 @@ export async function enforceTokenLimits(event: H3Event, organizationId?: string
         if (remaining <= 0) {
           return {
             allowed: false,
-            reason: 'Organization monthly AI token limit has been reached. An admin can purchase more tokens or wait until the next billing period.',
+            statusCode: 402,
+            reason: 'Your monthly AI token limit has been reached. Purchase more tokens or wait until the next billing period.',
             orgTokensRemaining: 0,
           };
         }
@@ -151,5 +164,70 @@ export async function deductOrgTokens(organizationId: string, tokensUsed: number
     await directus.request(updateItem('organizations', organizationId, updates));
   } catch (err) {
     console.error('[ai-token-enforcement] Failed to deduct tokens:', (err as Error).message);
+  }
+}
+
+/**
+ * Check whether the org has scan credits before a CardDesk scan.
+ * scan_credits_limit_monthly of -1 = unlimited (agency plan sentinel).
+ */
+export async function enforceScanLimits(organizationId: string): Promise<ScanEnforcementResult> {
+  try {
+    const directus = getTypedDirectus();
+
+    const org = await directus.request(
+      readItem('organizations', organizationId, {
+        fields: ['scan_credits_balance', 'scan_credits_limit_monthly', 'scans_used_this_period'],
+      }),
+    ) as any;
+
+    // No limit set or unlimited sentinel = allow
+    if (org.scan_credits_limit_monthly == null || org.scan_credits_limit_monthly === -1) {
+      return { allowed: true, scansRemaining: null };
+    }
+
+    const balance = org.scan_credits_balance ?? 0;
+
+    if (balance <= 0) {
+      return {
+        allowed: false,
+        statusCode: 402,
+        reason: 'Your scan credit balance is depleted. Purchase more scans to continue.',
+        scansRemaining: 0,
+      };
+    }
+
+    return { allowed: true, scansRemaining: balance };
+  } catch {
+    // If we can't check, allow through rather than blocking
+    return { allowed: true };
+  }
+}
+
+/**
+ * Deduct one scan credit from org balance after a successful scan.
+ * Fire-and-forget — does not block the response.
+ */
+export async function deductScanCredit(organizationId: string): Promise<void> {
+  try {
+    const directus = getTypedDirectus();
+
+    const org = await directus.request(
+      readItem('organizations', organizationId, {
+        fields: ['scan_credits_balance', 'scans_used_this_period'],
+      }),
+    ) as any;
+
+    const updates: Record<string, any> = {
+      scans_used_this_period: (Number(org.scans_used_this_period) || 0) + 1,
+    };
+
+    if (org.scan_credits_balance != null) {
+      updates.scan_credits_balance = Math.max(0, (Number(org.scan_credits_balance) || 0) - 1);
+    }
+
+    await directus.request(updateItem('organizations', organizationId, updates));
+  } catch (err) {
+    console.error('[ai-token-enforcement] Failed to deduct scan credit:', (err as Error).message);
   }
 }

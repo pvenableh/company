@@ -1,6 +1,5 @@
 // server/api/video/create-room.post.ts
 import { createItem, updateItem } from '@directus/sdk';
-import twilio from 'twilio';
 
 interface AttendeeInput {
 	name?: string;
@@ -52,14 +51,6 @@ export default defineEventHandler(async (event) => {
 			});
 		}
 
-		// Validate Twilio credentials
-		if (!config.twilioAccountSid || !config.twilioApiKey || !config.twilioApiSecret) {
-			throw createError({
-				statusCode: 500,
-				message: 'Video service is not configured. Please contact support.',
-			});
-		}
-
 		// Generate unique room name
 		const roomName = `meeting-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
 
@@ -77,40 +68,34 @@ export default defineEventHandler(async (event) => {
 		const durationMinutes = Number(body.duration) || 30;
 		const scheduledEnd = new Date(scheduledStart.getTime() + durationMinutes * 60 * 1000);
 
-		// Initialize Twilio client
-		const twilioClient = twilio(config.twilioAccountSid, config.twilioAuthToken);
-
-		// Create Twilio video room
-		let twilioRoom;
+		// Create Daily.co video room
+		let dailyRoom;
 		try {
-			twilioRoom = await twilioClient.video.v1.rooms.create({
-				uniqueName: roomName,
-				type: 'group',
-				maxParticipants: 10,
-				statusCallback: `${config.public.siteUrl || 'https://huestudios.company'}/api/video/webhook`,
-				statusCallbackMethod: 'POST',
-				emptyRoomTimeout: 60,
-				unusedRoomTimeout: 60,
+			dailyRoom = await createDailyRoom({
+				name: roomName,
+				expiresAt: new Date(scheduledEnd.getTime() + 60 * 60 * 1000), // 1hr buffer after scheduled end
+				maxParticipants: 25,
+				enableRecording: body.recording_enabled ?? false,
 			});
-		} catch (twilioError: any) {
-			console.error('Twilio room creation error:', twilioError);
+		} catch (dailyError: any) {
+			console.error('Daily.co room creation error:', dailyError);
 			throw createError({
 				statusCode: 500,
-				message: `Failed to create video room: ${twilioError.message}`,
+				message: `Failed to create video room: ${dailyError.message}`,
 			});
 		}
 
 		// Get Directus client with user's session token
 		const directus = await getUserDirectus(event);
 
-		// Generate meeting URL
-		const meetingUrl = `${config.public.siteUrl || 'https://huestudios.company'}/meeting/${roomName}`;
+		// Use the Daily.co room URL as the meeting URL (iframe-based prebuilt UI)
+		const meetingUrl = dailyRoom.url;
 
 		// Create video meeting record in Directus
 		const videoMeeting = await directus.request(
 			createItem('video_meetings', {
 				room_name: roomName,
-				room_sid: twilioRoom.sid,
+				room_sid: dailyRoom.id, // Daily room ID stored in the existing room_sid field
 				title: body.title,
 				description: body.description || null,
 				meeting_type: body.meeting_type || 'general',
@@ -207,19 +192,25 @@ export default defineEventHandler(async (event) => {
 					inviteSent = true;
 				}
 
-				// Send SMS invitation
+				// Send SMS invitation (uses Twilio messaging, not video)
 				if ((method === 'sms' || method === 'both') && attendeeInput.phone) {
-					await sendSmsInvitation({
-						to: attendeeInput.phone,
-						guestName: attendeeInput.name || 'Guest',
-						hostName: userName,
-						meetingTitle: body.title,
-						meetingUrl,
-						scheduledStart,
-						twilioClient,
-						fromNumber: config.twilioPhoneNumber,
-					});
-					inviteSent = true;
+					try {
+						const twilio = await import('twilio');
+						const twilioClient = twilio.default(config.twilioAccountSid, config.twilioAuthToken);
+						await sendSmsInvitation({
+							to: attendeeInput.phone,
+							guestName: attendeeInput.name || 'Guest',
+							hostName: userName,
+							meetingTitle: body.title,
+							meetingUrl,
+							scheduledStart,
+							twilioClient,
+							fromNumber: config.twilioPhoneNumber,
+						});
+						inviteSent = true;
+					} catch (smsError) {
+						console.error('Failed to send SMS invitation:', smsError);
+					}
 				}
 			} catch (attendeeError) {
 				console.error('Failed to process attendee:', attendeeInput.email, attendeeError);
@@ -246,7 +237,7 @@ export default defineEventHandler(async (event) => {
 				meetingId: videoMeeting.id,
 				appointmentId: appointment.id,
 				roomName,
-				roomSid: twilioRoom.sid,
+				roomSid: dailyRoom.id,
 				meetingLink: meetingUrl,
 				scheduledStart: scheduledStart.toISOString(),
 				scheduledEnd: scheduledEnd.toISOString(),

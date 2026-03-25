@@ -2,6 +2,20 @@ import type { OrgMembership, OrgRole } from '~/types/directus';
 import type { FeatureKey, CrudAction, PermissionMatrix, RoleSlug } from '~/types/permissions';
 import { DEFAULT_ROLE_PERMISSIONS } from '~/types/permissions';
 
+// Plan hierarchy for tier comparisons (values from organizations.plan field)
+const PLAN_HIERARCHY: Record<string, number> = {
+  free: 0,
+  starter: 1,    // maps to 'solo' Earnest plan
+  pro: 2,        // maps to 'studio' Earnest plan
+  enterprise: 3, // maps to 'agency' Earnest plan
+};
+
+// Features that are truly plan-restricted (not resource-limited).
+// Per business model: all features available on all plans except white-label.
+const PLAN_GATED_FEATURES: Record<string, string> = {
+  white_label: 'enterprise', // Agency only — $19/mo add-on gates the UI, this gates the plan tier
+};
+
 /**
  * useOrgRole — Per-org role + permission composable
  *
@@ -198,6 +212,37 @@ export function useOrgRole() {
     }
   }
 
+  // ── Plan gating ───────────────────────────────────────────────────────────
+  const { currentOrg } = useOrganization();
+
+  /**
+   * Check if the org's plan allows a specific feature.
+   * Per business model: all features are available on all paid plans.
+   * Only white-label is gated to agency/enterprise tier.
+   * Resource limits (tokens, scans, seats) are enforced server-side.
+   */
+  function planAllows(feature: string): boolean {
+    const orgPlan = (currentOrg.value as any)?.plan ?? 'free';
+    const requiredPlan = PLAN_GATED_FEATURES[feature];
+    if (!requiredPlan) return true; // Not gated = allowed on all plans
+    const orgLevel = PLAN_HIERARCHY[orgPlan] ?? 0;
+    const requiredLevel = PLAN_HIERARCHY[requiredPlan] ?? 0;
+    return orgLevel >= requiredLevel;
+  }
+
+  /** The org's current plan tier string (e.g. 'free', 'starter', 'pro', 'enterprise') */
+  const orgPlan = computed(() => (currentOrg.value as any)?.plan ?? 'free');
+
+  /**
+   * Check if the org has an active add-on subscription.
+   * Add-ons are managed by Stripe webhooks and stored in organizations.active_addons.
+   */
+  function hasAddon(addonId: string): boolean {
+    const addons = (currentOrg.value as any)?.active_addons;
+    if (!addons || typeof addons !== 'object') return false;
+    return !!addons[addonId];
+  }
+
   // ── Auto-fetch when org or user changes ────────────────────────────────────
   if (import.meta.client) {
     watch(
@@ -242,6 +287,11 @@ export function useOrgRole() {
     canCreate,
     canEdit,
     canDelete,
+
+    // Plan gating & add-ons
+    planAllows,
+    orgPlan,
+    hasAddon,
 
     // Actions
     fetchMembership,

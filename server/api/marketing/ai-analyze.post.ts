@@ -35,7 +35,7 @@ export default defineEventHandler(async (event) => {
 	// Enforce AI token limits
 	const tokenCheck = await enforceTokenLimits(event, body.organizationId);
 	if (!tokenCheck.allowed) {
-		throw createError({ statusCode: 429, message: tokenCheck.reason || 'AI token limit reached' });
+		throw createError({ statusCode: tokenCheck.statusCode || 402, message: tokenCheck.reason || 'AI token limit reached' });
 	}
 	if (body.analysisType === 'campaign' && !body.goal?.trim()) {
 		throw createError({ statusCode: 400, message: 'A goal is required for campaign analysis' });

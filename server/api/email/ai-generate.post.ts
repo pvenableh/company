@@ -61,7 +61,7 @@ export default defineEventHandler(async (event) => {
   // Enforce AI token limits
   const tokenCheck = await enforceTokenLimits(event, body.organizationId);
   if (!tokenCheck.allowed) {
-    throw createError({ statusCode: 429, message: tokenCheck.reason || 'AI token limit reached' });
+    throw createError({ statusCode: tokenCheck.statusCode || 402, message: tokenCheck.reason || 'AI token limit reached' });
   }
 
   const directus = await getUserDirectus(event);

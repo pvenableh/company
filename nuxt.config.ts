@@ -109,7 +109,10 @@ export default defineNuxtConfig({
 		directusServerToken: process.env.DIRECTUS_SERVER_TOKEN,
 		directusStaticToken: process.env.DIRECTUS_STATIC_TOKEN,
 
-		// Twilio
+		// Daily.co video conferencing
+		dailyApiKey: process.env.DAILY_API_KEY || '',
+
+		// Twilio (SMS/voice — video migrated to Daily.co)
 		twilioAccountSid: process.env.TWILIO_ACCOUNT_SID,
 		twilioAuthToken: process.env.TWILIO_AUTH_TOKEN,
 		twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER,

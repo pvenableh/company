@@ -7,11 +7,19 @@ Daily.co is cheaper (~4x) and has a simpler API. The collection shape stays the 
 
 The existing Twilio video components and API routes need to be replaced with Daily.co equivalents.
 
+### Current state (verified)
+- Video API routes are at `server/api/video/` (NOT `server/api/meetings/`):
+  `create-room.post.ts`, `join-meeting.post.ts`, `meeting-info.get.ts`,
+  `send-email-invite.post.ts`, `send-invite.post.ts`, `token.post.ts`, `webhook.post.ts`
+- Scheduler components: `components/Scheduler/VideoMeetings.vue`,
+  `VideoMeetingsList.vue`, `NewMeetingModal.vue`, `InstantMeetingButton.vue`
+- `room_sid` field is labeled "Twilio Room SID" and is readonly in Directus
+
 ## Step 1 — Read existing implementation first
 
 Before writing any code:
-1. Read all files in `server/api/` that contain 'video' or 'meeting' in the path
-2. Read `components/Scheduler/` files related to video meetings
+1. Read all 7 files in `server/api/video/`
+2. Read `components/Scheduler/VideoMeetings.vue` and related components
 3. Read the `VideoMeeting` type in `types/directus.ts` — do not change this type
 4. Note the exact field names used: `room_name`, `room_sid`, `meeting_url`, `status`
 

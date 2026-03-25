@@ -63,18 +63,18 @@
 			<div class="truth-body">
 				<h2 class="truth-title opacity-0">
 					Your business runs on {{ toolCountWord }} tools. It should run on
-					<span class="truth-one">one</span>
+					<span class="truth-one">one source of truth</span>
 					<span class="bp">.</span>
 				</h2>
 				<p class="truth-text opacity-0">
 					You have a project tool. An invoice tool. A social tool. A phone system. A shared inbox. A calendar. A goal
 					tracker. And Slack to hold it all together. {{ toolCountWord }} tools. {{ toolCountWord }} logins. Zero
-					cohesion.
+					collective knowledge.
 				</p>
 
 				<p class="truth-text opacity-0">
 					<strong>EARNEST replaces the pile.</strong>
-					One platform, one login, one place where the work actually lives &mdash; from the first conversation to the
+					One platform, one login, one source of truth where the work actually lives &mdash; from the first conversation to the
 					final payment. Nothing to integrate. Nothing to re-explain.
 				</p>
 
@@ -200,6 +200,109 @@
 			</p>
 		</div>
 
+		<!-- Savings Calculator -->
+		<section ref="calcRef" class="calc-section">
+			<div class="calc-header">
+				<h2 class="calc-title opacity-0">
+					What are you
+					<em class="calc-italic">spending</em>
+					today
+					<span class="bp">?</span>
+				</h2>
+				<p class="calc-sub opacity-0">Drag to see how Earnest compares to your current tool stack.</p>
+			</div>
+			<div class="calc-widget opacity-0">
+				<div class="calc-input-row">
+					<label class="calc-input-label">
+						<span>Number of tools</span>
+						<span class="calc-input-value">{{ toolCount }}</span>
+					</label>
+					<input type="range" :min="3" :max="15" v-model.number="toolCount" class="calc-range" />
+				</div>
+				<div class="calc-input-row">
+					<label class="calc-input-label">
+						<span>Avg. cost per tool</span>
+						<span class="calc-input-value">${{ avgToolCost }}/mo</span>
+					</label>
+					<input type="range" :min="10" :max="100" :step="5" v-model.number="avgToolCost" class="calc-range" />
+				</div>
+				<div class="calc-result">
+					<div class="calc-result-current">
+						<span class="calc-result-label">Current stack cost</span>
+						<span class="calc-result-amount">${{ currentStackCost }}<small>/mo</small></span>
+					</div>
+					<div class="calc-result-arrow">&rarr;</div>
+					<div class="calc-result-earnest">
+						<span class="calc-result-label">Earnest Studio</span>
+						<span class="calc-result-amount">$149<small>/mo</small></span>
+					</div>
+				</div>
+				<div class="calc-savings" v-if="savings > 0">
+					You save <strong>${{ savings }}/mo</strong> &mdash; that&rsquo;s <strong>${{ savings * 12 }}/yr</strong> back in your pocket.
+				</div>
+				<div class="calc-savings calc-savings-plus" v-else>
+					And you get connected AI intelligence that {{ toolCount }} separate tools can never provide.
+				</div>
+			</div>
+		</section>
+
+		<!-- Token Preview -->
+		<section class="token-preview-section">
+			<div class="token-preview-inner">
+				<h3 class="token-preview-title opacity-0">
+					Transparent AI costs
+					<span class="bp">.</span>
+				</h3>
+				<p class="token-preview-sub opacity-0">Every feature shows its token cost before you use it. No surprises.</p>
+				<div class="token-preview-grid">
+					<div v-for="item in tokenCosts" :key="item.name" class="token-item opacity-0">
+						<div class="token-item-name">{{ item.name }}</div>
+						<div class="token-item-cost">{{ item.tokens }}</div>
+						<div class="token-item-real">~{{ item.cost }}</div>
+					</div>
+				</div>
+				<p class="token-preview-note opacity-0">
+					Studio plan (400K tokens/mo) supports ~50 marketing reports or ~250 email drafts per month. Need more? Instant self-serve refills.
+				</p>
+			</div>
+		</section>
+
+		<!-- Testimonials -->
+		<section ref="testimonialsRef" v-if="testimonials.length" class="testimonials-section">
+			<h3 class="testimonials-title opacity-0">
+				What people are saying
+				<span class="bp">.</span>
+			</h3>
+			<div class="testimonials-grid">
+				<div v-for="t in testimonials" :key="t.id" class="testimonial opacity-0">
+					<p class="testimonial-quote">&ldquo;{{ t.quote }}&rdquo;</p>
+					<div class="testimonial-author">
+						<img v-if="t.avatarUrl" :src="t.avatarUrl" :alt="t.name" class="testimonial-avatar" />
+						<div>
+							<div class="testimonial-name">{{ t.name }}</div>
+							<div class="testimonial-role">{{ t.role }}</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<!-- Logo Carousel -->
+		<section v-if="logos.length" class="logos-section">
+			<p class="logos-label opacity-0">Trusted by</p>
+			<div class="logos-track">
+				<div class="logos-scroll">
+					<img
+						v-for="(logo, i) in [...logos, ...logos]"
+						:key="i"
+						:src="logo.url"
+						:alt="logo.name"
+						class="logo-img"
+					/>
+				</div>
+			</div>
+		</section>
+
 		<!-- Pricing -->
 		<section ref="pricingRef" id="pricing" class="pricing-section">
 			<div class="pricing-header">
@@ -254,6 +357,75 @@ const featuresRef = ref(null);
 const pricingRef = ref(null);
 const replacesRef = ref(null);
 const heroCycleRef = ref(null);
+const calcRef = ref(null);
+const testimonialsRef = ref(null);
+
+// ── A/B Testing ──
+const { trackPageView, trackEvent } = useABTest();
+
+// ── Savings Calculator ──
+const toolCount = ref(8);
+const avgToolCost = ref(40);
+const currentStackCost = computed(() => toolCount.value * avgToolCost.value);
+const savings = computed(() => currentStackCost.value - 149);
+
+// ── Token Cost Preview ──
+const tokenCosts = [
+	{ name: 'AI chat reply', tokens: '~500', cost: '$0.001' },
+	{ name: 'Social caption', tokens: '~600', cost: '$0.001' },
+	{ name: 'Email draft', tokens: '~1,500', cost: '$0.004' },
+	{ name: 'Card scan (vision)', tokens: '~2,500', cost: '$0.007' },
+	{ name: 'CRM analysis', tokens: '~3,000', cost: '$0.008' },
+	{ name: 'Command Center', tokens: '~5,000', cost: '$0.013' },
+	{ name: 'Marketing plan', tokens: '~8K–15K', cost: '$0.03–0.06' },
+];
+
+// ── Testimonials & Logos (from Directus) ──
+const directusUrl = useRuntimeConfig().public.directusUrl || 'https://admin.huestudios.company';
+
+const testimonials = ref([]);
+const logos = ref([]);
+
+async function fetchTestimonials() {
+	try {
+		const items = useDirectusItems('testimonials');
+		const data = await items.list({
+			filter: { featured: { _eq: true } },
+			fields: ['id', 'name', 'role', 'quote', 'avatar', 'rating'],
+			sort: ['sort'],
+			limit: 6,
+		});
+		testimonials.value = data.map((t) => ({
+			...t,
+			avatarUrl: t.avatar ? `${directusUrl}/assets/${t.avatar}?width=80&height=80&fit=cover` : null,
+		}));
+	} catch {
+		// Testimonials not available — hide section
+	}
+}
+
+async function fetchLogos() {
+	try {
+		const items = useDirectusItems('partner_logos');
+		const data = await items.list({
+			filter: { active: { _eq: true } },
+			fields: ['id', 'name', 'logo', 'url'],
+			sort: ['sort'],
+			limit: 12,
+		});
+		logos.value = data.map((l) => ({
+			...l,
+			url: `${directusUrl}/assets/${l.logo}?width=160&height=60&fit=contain`,
+		}));
+	} catch {
+		// Logos not available — hide section
+	}
+}
+
+if (import.meta.client) {
+	fetchTestimonials();
+	fetchLogos();
+}
 
 const cycleWords = ['good', 'great', 'impossible', 'possible', 'simple', 'good'];
 
@@ -401,15 +573,13 @@ const plans = [
 		desc: 'For the one-person shop doing serious work.',
 		featured: false,
 		features: [
-			'1 user',
-			'All platform features',
-			'Invoicing & Stripe billing',
-			'Social scheduling',
-			'Productivity Engine',
-			'Health Snapshots (CRM & Marketing)',
-			'Brand Awareness AI',
-			'People & Companies CRM',
-			'CardDesk & E\u00B2 companion apps',
+			'1 team seat',
+			'Every feature included',
+			'Projects, tickets & invoicing',
+			'CRM, social & email marketing',
+			'AI Command Center & Intelligence',
+			'CardDesk & Companion apps',
+			'5 client portal seats',
 			'100K AI tokens/month',
 			'25 card scans/month',
 		],
@@ -421,18 +591,14 @@ const plans = [
 		desc: 'For the team that means business.',
 		featured: true,
 		features: [
-			'Up to 8 users',
+			'8 team seats',
 			'Everything in Solo',
-			'Team channels & video',
-			'Phone system',
-			'Marketing AI Analyze',
-			'CRM Intelligence (all modes)',
-			'Email Marketing AI',
-			'Brand Awareness AI per client',
+			'Team channels & video meetings',
 			'AI Token Management',
-			'Client portal (5 seats)',
+			'15 client portal seats',
 			'400K AI tokens/month',
 			'150 card scans/month',
+			'$408/yr if billed annually',
 		],
 		cta: { label: 'Start free trial', to: '/register' },
 	},
@@ -442,16 +608,13 @@ const plans = [
 		desc: 'For the business that has grown into something real.',
 		featured: false,
 		features: [
-			'Up to 15 users',
+			'15 team seats',
 			'Everything in Studio',
-			'White-label Companion app',
-			'Unlimited card scans',
-			'Client portal (20 seats)',
-			'AI Strategy Engine (full suite)',
-			'CRM Intelligence (all 4 modes)',
-			'Comprehensive client AI analysis',
+			'Unlimited client portal seats',
 			'Priority support + onboarding call',
-			'1,000,000 AI tokens/month',
+			'1M AI tokens/month',
+			'500 card scans/month',
+			'$2,491/yr if billed annually',
 		],
 		cta: { label: 'Talk to us', to: '/register' },
 	},
@@ -565,8 +728,25 @@ onMounted(() => {
 			},
 		);
 
+		// Savings calculator
+		revealElements(calcRef, '.calc-title, .calc-sub, .calc-widget');
+
+		// Token preview
+		revealElements({ value: document.querySelector('.token-preview-section') }, '.token-preview-title, .token-preview-sub, .token-item, .token-preview-note');
+
+		// Testimonials
+		if (testimonialsRef.value) {
+			revealElements(testimonialsRef, '.testimonials-title, .testimonial');
+		}
+
+		// Logos
+		revealElements({ value: document.querySelector('.logos-section') }, '.logos-label');
+
 		// Pricing
 		revealElements(pricingRef, '.pricing-title, .pricing-sub, .plan');
+
+		// A/B tracking
+		trackPageView('sellsheet');
 	});
 });
 
@@ -1209,6 +1389,275 @@ useHead({
 	font-family: var(--font-bauer-bodoni);
 	font-style: normal;
 	font-weight: 400;
+}
+
+/* ─── SAVINGS CALCULATOR ─── */
+.calc-section {
+	padding: 100px 48px;
+	max-width: 860px;
+	margin: 0 auto;
+	background: var(--paper);
+}
+@media (max-width: 700px) { .calc-section { padding: 60px 24px; } }
+
+.calc-header { margin-bottom: 48px; }
+.calc-title {
+	font-family: var(--font-bauer-bodoni);
+	font-size: clamp(28px, 4vw, 42px);
+	font-weight: 500;
+	line-height: 1.1;
+}
+.calc-italic {
+	font-style: italic;
+	text-decoration: underline;
+	text-decoration-color: var(--accent);
+	text-underline-offset: 4px;
+	text-decoration-thickness: 2px;
+}
+.calc-sub {
+	font-size: 15px;
+	color: var(--muted);
+	margin-top: 12px;
+}
+
+.calc-widget {
+	background: var(--paper-2);
+	padding: 40px;
+	border: 1px solid var(--rule);
+}
+@media (max-width: 700px) { .calc-widget { padding: 24px; } }
+
+.calc-input-row { margin-bottom: 28px; }
+.calc-input-label {
+	display: flex;
+	justify-content: space-between;
+	font-size: 14px;
+	color: var(--ink-2);
+	margin-bottom: 10px;
+}
+.calc-input-value {
+	font-family: var(--font-bauer-bodoni);
+	font-weight: 600;
+	color: var(--accent);
+}
+.calc-range {
+	-webkit-appearance: none;
+	width: 100%;
+	height: 4px;
+	background: var(--rule);
+	border-radius: 2px;
+	outline: none;
+}
+.calc-range::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	width: 20px;
+	height: 20px;
+	background: var(--ink);
+	border-radius: 50%;
+	cursor: pointer;
+	transition: background 0.15s;
+}
+.calc-range::-webkit-slider-thumb:hover { background: var(--accent); }
+
+.calc-result {
+	display: grid;
+	grid-template-columns: 1fr auto 1fr;
+	gap: 20px;
+	align-items: center;
+	margin-top: 40px;
+	padding-top: 32px;
+	border-top: 1px solid var(--rule);
+}
+@media (max-width: 500px) { .calc-result { grid-template-columns: 1fr; text-align: center; } }
+.calc-result-label {
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var(--muted);
+}
+.calc-result-amount {
+	font-family: var(--font-bauer-bodoni);
+	font-size: 40px;
+	font-weight: 600;
+	line-height: 1;
+	display: block;
+	margin-top: 6px;
+}
+.calc-result-amount small {
+	font-family: var(--font-proxima-light);
+	font-size: 14px;
+	color: var(--muted);
+}
+.calc-result-arrow {
+	font-size: 28px;
+	color: var(--accent);
+}
+.calc-result-earnest .calc-result-amount { color: var(--accent); }
+.calc-result-current { text-decoration: line-through; text-decoration-color: var(--accent); text-decoration-thickness: 2px; }
+
+.calc-savings {
+	font-size: 15px;
+	color: var(--ink-2);
+	margin-top: 24px;
+	text-align: center;
+	font-style: italic;
+}
+.calc-savings strong { color: var(--accent); font-style: normal; }
+.calc-savings-plus { color: var(--muted); }
+
+/* ─── TOKEN PREVIEW ─── */
+.token-preview-section {
+	background: var(--ink);
+	padding: 80px 48px;
+}
+@media (max-width: 700px) { .token-preview-section { padding: 60px 24px; } }
+.token-preview-inner {
+	max-width: 860px;
+	margin: 0 auto;
+}
+.token-preview-title {
+	font-family: var(--font-bauer-bodoni);
+	font-size: clamp(22px, 3vw, 32px);
+	font-weight: 500;
+	color: var(--paper);
+}
+.token-preview-sub {
+	font-size: 14px;
+	color: rgba(246, 241, 231, 0.5);
+	margin-top: 8px;
+	margin-bottom: 32px;
+}
+.token-preview-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+	gap: 1px;
+	background: rgba(246, 241, 231, 0.08);
+}
+.token-item {
+	background: var(--ink);
+	padding: 20px;
+	transition: background 0.2s;
+}
+.token-item:hover { background: var(--ink-2); }
+.token-item-name {
+	font-size: 13px;
+	color: rgba(246, 241, 231, 0.7);
+	margin-bottom: 8px;
+}
+.token-item-cost {
+	font-family: var(--font-bauer-bodoni);
+	font-size: 20px;
+	font-weight: 600;
+	color: var(--paper);
+}
+.token-item-real {
+	font-size: 11px;
+	color: rgba(246, 241, 231, 0.3);
+	margin-top: 4px;
+}
+.token-preview-note {
+	font-size: 13px;
+	font-style: italic;
+	color: rgba(246, 241, 231, 0.35);
+	margin-top: 24px;
+	text-align: center;
+}
+
+/* ─── TESTIMONIALS ─── */
+.testimonials-section {
+	padding: 100px 48px;
+	max-width: 860px;
+	margin: 0 auto;
+}
+@media (max-width: 700px) { .testimonials-section { padding: 60px 24px; } }
+.testimonials-title {
+	font-family: var(--font-bauer-bodoni);
+	font-size: clamp(22px, 3vw, 32px);
+	font-weight: 500;
+	margin-bottom: 40px;
+}
+.testimonials-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+	gap: 1px;
+	background: var(--rule);
+	border: 1px solid var(--rule);
+}
+.testimonial {
+	background: var(--paper);
+	padding: 32px;
+	transition: background 0.2s;
+}
+.testimonial:hover { background: var(--paper-2); }
+.testimonial-quote {
+	font-family: var(--font-bauer-bodoni);
+	font-size: 15px;
+	font-style: italic;
+	line-height: 1.6;
+	color: var(--ink-2);
+	margin-bottom: 20px;
+}
+.testimonial-author {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+.testimonial-avatar {
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+	object-fit: cover;
+}
+.testimonial-name {
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--ink);
+}
+.testimonial-role {
+	font-size: 11px;
+	color: var(--muted);
+}
+
+/* ─── LOGO CAROUSEL ─── */
+.logos-section {
+	padding: 48px;
+	text-align: center;
+	overflow: hidden;
+}
+.logos-label {
+	font-family: var(--font-proxima-light);
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 0.12em;
+	color: var(--muted);
+	margin-bottom: 24px;
+}
+.logos-track {
+	overflow: hidden;
+	mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+	-webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+}
+.logos-scroll {
+	display: flex;
+	gap: 48px;
+	align-items: center;
+	animation: scrollLogos 30s linear infinite;
+	width: max-content;
+}
+.logo-img {
+	height: 32px;
+	width: auto;
+	opacity: 0.4;
+	filter: grayscale(1);
+	transition: opacity 0.3s, filter 0.3s;
+}
+.logo-img:hover {
+	opacity: 1;
+	filter: grayscale(0);
+}
+@keyframes scrollLogos {
+	0% { transform: translateX(0); }
+	100% { transform: translateX(-50%); }
 }
 
 /* ─── PRICING ─── */

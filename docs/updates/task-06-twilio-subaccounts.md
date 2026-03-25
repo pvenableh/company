@@ -7,7 +7,34 @@ in `phone_settings.twilio_phone_number`. There is no per-org isolation.
 The target: each organization gets a Twilio sub-account provisioned automatically when they
 activate the Communications add-on. Sub-accounts isolate usage and billing per org.
 
-## Step 1 — Add fields to organizations via Directus MCP
+### Important: admin Directus client
+The server-side admin client is `getTypedDirectus()` from `server/utils/directus.ts`.
+It is auto-imported by Nuxt. There is no `getAdminDirectus()` function.
+
+### Business model note
+Communications (Twilio phone/video/SMS) is a **$49/mo add-on** per the business model,
+due to per-minute pass-through costs. The add-on billing is handled in Task 8, but this
+task should check for the add-on before provisioning sub-accounts.
+
+### Current state (verified)
+- `phone_settings` collection **exists** in Directus with fields: `line_name`, `line_identifier`,
+  `twilio_phone_number`, `company_name`, `greeting_text`, etc.
+- `phone_settings` does **NOT** have an `organization` field — must be added via MCP.
+- `server/api/phone/` directory does **NOT exist**. Phone API routes may not be built yet.
+  Search the project for existing Twilio usage before assuming a directory structure.
+- The `organizations` collection does NOT yet have `twilio_subaccount_sid/token/status` fields.
+
+## Step 1 — Add fields via Directus MCP
+
+### 1a. Add `organization` field to `phone_settings`
+
+The `phone_settings` collection is missing an org FK. Add it first:
+```json
+{ "field": "organization", "type": "uuid", "meta": { "interface": "select-dropdown-m2o", "special": ["m2o"], "note": "Owning organization" }, "schema": { "is_nullable": true } }
+```
+Then create the M2O relation from `phone_settings.organization` → `organizations`.
+
+### 1b. Add sub-account fields to `organizations`
 
 Use the Directus MCP connection to add the three new fields to the `organizations` collection
 directly. Do this before writing any code so types are correct.
@@ -60,7 +87,7 @@ export async function getOrCreateSubAccount(orgId: string, orgName: string): Pro
   accountSid: string
   authToken: string
 }> {
-  const directus = getAdminDirectus()
+  const directus = getTypedDirectus()
   
   // Check if org already has a sub-account
   const org = await directus.request(
@@ -172,13 +199,19 @@ In the phone settings page, add a "Port a number" section with:
 - A link or button: "Contact support to port your number"
 - This links to `mailto:support@earnest.guru?subject=Number Port Request`
 
-## Step 5 — Update existing phone routes
+## Step 5 — Update existing phone routes (if they exist)
 
-Find all existing Twilio calls in `server/api/phone/` or similar. Read each one.
+Search the project for all existing Twilio calls:
+```bash
+grep -r "twilio" --include='*.ts' server/
+```
 
-For routes that make outbound calls or send SMS, replace the direct Twilio client initialization
-with `twilioSubaccount(orgId, orgName)`. The org context should be available from the user's
-session and their active organization.
+Note: `server/api/phone/` does NOT currently exist. If phone API routes are found elsewhere,
+read each one. For routes that make outbound calls or send SMS, replace the direct Twilio
+client initialization with `twilioSubaccount(orgId, orgName)`.
+
+If no phone routes exist yet, create the initial routes as described in Step 3 above. The org
+context should be available from the user's session and their active organization.
 
 ## Environment variables to add
 

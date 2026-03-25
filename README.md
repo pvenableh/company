@@ -13,7 +13,7 @@ Earnest ships with two companion apps: **CardDesk** — a networking CRM that tu
 - **Project Management** — Visual Gantt-style timeline with milestones, Kanban board view, sub-tasks, event scheduling, file attachments, threaded conversations, emoji reactions, and a command-center–style project detail page with stats dashboard (ticket counts, task progress, billing totals, timeline), document uploads, invoice management, and project-scoped activity feed
 - **Expenses** — Full expense tracking with 10 categories (Software & SaaS, Hardware & Equipment, Travel, Marketing & Ads, Office & Supplies, Contractor & Freelance, Hosting & Infrastructure, Insurance, Legal & Accounting, Other), billable/reimbursable flags, receipt attachments, vendor tracking, approval workflow (draft/submitted/approved/paid/rejected), project linking, advanced filtering (category, status, date range, billable-only), monthly comparison widget with top spending categories, and quarterly projections
 - **Invoicing & Payments** — Stripe-powered billing, invoice creation and editing, PDF generation (html2canvas + jsPDF), payment tracking, payout management, public payment links, and per-client billing fields (billing email, name, address, payment terms) with invoice-level billing snapshots for historical accuracy
-- **Scheduling & Video Meetings** — Calendar with public booking links, availability management, Google Calendar and Outlook sync, and built-in Twilio video conferencing
+- **Scheduling & Video Meetings** — Calendar with public booking links, availability management, Google Calendar and Outlook sync, and built-in Daily.co video conferencing (iframe-based prebuilt UI)
 - **Team Communication** — Slack-style channels per organization with threaded comments, @mentions, emoji reactions, and WebSocket-powered real-time messaging
 - **Social Media Management** — Compose, schedule, and publish to Instagram, TikTok, LinkedIn, Facebook Pages, and Threads; AI-powered content wizard generates platform-optimized posts with tailored copy, hashtags, and image suggestions; content calendar, engagement analytics, multi-client management, and OAuth account connections
 - **Email Marketing & Newsletters** — Block-based MJML newsletter builder with 17+ reusable blocks, drag-and-drop assembly, live preview, AI email wizard that generates complete templates from a brief description, mailing list management with deduplication, CSV contact import, merge-tag personalization via Handlebars, editable header/footer partials, one-click unsubscribe, "View in Browser" web links, and campaign send tracking via SendGrid
@@ -56,7 +56,8 @@ Earnest ships with two companion apps: **CardDesk** — a networking CRM that tu
 | Payments | Stripe |
 | AI | Anthropic Claude, OpenAI GPT, Google Gemini |
 | Email | SendGrid, MJML, Handlebars |
-| Video / SMS | Twilio |
+| Video | Daily.co (prebuilt iframe UI) |
+| Voice / SMS | Twilio (per-org sub-accounts) |
 | Calendar | Google Calendar API, Microsoft Outlook (Azure) |
 | Social | Instagram Graph API, TikTok API, LinkedIn API, Facebook Pages API, Threads API |
 | Storage | AWS S3 |
@@ -234,9 +235,30 @@ Each role has a customizable **permission matrix** stored as JSON in `org_roles.
 
 Admins can customize permissions per-role via the organization settings page. The `useOrgRole()` composable exposes `canAccess(feature)`, `hasPermission(feature, action)`, `canView()`, `canCreate()`, `canEdit()`, and `canDelete()` helpers.
 
-### Subscription Plan Gating
+### Subscription Plans & Add-Ons
 
-Organizations have a `plan` field (free, starter, pro, enterprise) that hooks into the permission system. The `planAllows(feature)` function in `useOrgRole()` is a placeholder that currently returns `true` for all features. AI token limits are enforced per subscription tier: Solo (500K tokens/month), Team (5M tokens/month), Studio (25M tokens/month), with per-member budget caps and Stripe-powered top-up purchases.
+All plans get all features. Differentiation is seats, AI tokens, and scan credits. White-label is the one exception (agency tier + $19/mo add-on).
+
+| Plan | Monthly | Annual | Seats | Client Portal Seats | AI Tokens/mo | Scans/mo |
+|------|---------|--------|-------|---------------------|-------------|----------|
+| **Solo** | $49 | $408/yr | 1 | 5 | 100K | 25 |
+| **Studio** | $149 | $1,241/yr | 8 | 15 | 400K | 150 |
+| **Agency** | $299 | $2,491/yr | 15 | Unlimited | 1M | 500 |
+
+**Add-Ons** (monthly, alongside base subscription):
+
+| Add-On | Price | What it provides |
+|--------|-------|-----------------|
+| Extra Seats (5-pack) | $15/mo | 5 additional team seats |
+| Communications | $49/mo | Phone, SMS, video, live chat (Twilio sub-account) |
+| Client Pack Starter | $29/mo | 5 client portal seats + 50K client tokens |
+| Client Pack Pro | $59/mo | 10 client portal seats + 150K client tokens |
+| Client Pack Unlimited | $129/mo | Unlimited client seats + 500K client tokens |
+| Companion White-Label | $19/mo | Branded subdomain on earnest.guru |
+
+**One-time purchases:** Token refills (100K/$9, 500K/$39, 1.5M/$99), Scan credits (100/$12, 500/$49).
+
+The `planAllows(feature)` function in `useOrgRole()` gates only white-label by plan tier. Resource limits (tokens, scans, seats) are enforced server-side via `ai-token-enforcement.ts`. Add-on access is checked via `hasAddon(addonId)` in `useOrgRole()`.
 
 ### Directus Collections
 
@@ -261,7 +283,7 @@ Organizations have a `plan` field (free, starter, pro, enterprise) that hooks in
 | Composable | Purpose |
 |---|---|
 | `useOrganization()` | Org context: selected org, org list with membership data, org-scoped filters |
-| `useOrgRole()` | Per-org role: role booleans, permission checks, client scope, plan gating |
+| `useOrgRole()` | Per-org role: role booleans, permission checks, client scope, `planAllows()`, `hasAddon()` |
 | `useRole()` | Legacy global role checks (bridge to `useOrgRole` in progress) |
 | `useClients()` | Client CRUD with org-scoping, role-based access filtering (team + individual assignments), search, status filters |
 | `useQuickTasks()` | Personal task management with localStorage persistence, schedule grouping, motivational messages, and progress tracking |
@@ -283,8 +305,16 @@ Organizations have a `plan` field (free, starter, pro, enterprise) that hooks in
 | `POST /api/ai/goal-suggestions` | AI-generated goal suggestions based on user role, projects, financials, and existing goals |
 | `GET /api/ai/manage/members` | List org members with AI-enabled status, token budgets, and monthly usage |
 | `POST /api/ai/manage/members` | Toggle AI access, set per-member token budgets |
-| `POST /api/stripe/tokens/checkout` | Create Stripe Checkout session for token package purchase (500K/2M/10M) |
+| `POST /api/stripe/tokens/checkout` | Create Stripe Checkout session for token/scan package purchase |
 | `POST /api/stripe/tokens/fulfill` | Stripe webhook to fulfill token purchases with idempotency |
+| `POST /api/stripe/addons/subscribe` | Add a recurring add-on to the org's Stripe subscription |
+| `POST /api/stripe/addons/cancel` | Remove an add-on from the org's Stripe subscription |
+| `GET /api/score/me` | Current org's Earnest Score (EP, level, streak, dimensions) |
+| `POST /api/score/checkin` | Daily login check-in (awards daily_login EP) |
+| `GET /api/score/history` | Score history for charts (up to 90 days) |
+| `GET /api/phone/numbers/search` | Search available Twilio phone numbers by area code |
+| `POST /api/phone/numbers/purchase` | Purchase a phone number for an org via Twilio sub-account |
+| `POST /api/video/setup-webhook` | One-time Daily.co webhook registration |
 | `POST /api/org/migrate-billing-to-clients` | Migrate billing data from organizations to client-level fields (supports dryRun) |
 
 ### Migration Path
@@ -606,7 +636,7 @@ The following features are planned for upcoming development phases:
 - **SendGrid Email Activity Tracking** — Webhook endpoint to receive SendGrid events (opens, clicks, bounces, spam reports); `email_activity` collection for per-recipient event history; automatic bounce handling and contact status updates
 - **Chat Widget** — Frontend UI for the existing `ai_chat_sessions` / `ai_chat_messages` Directus collections; `useAIChat` composable; streaming AI responses; persistent conversation history
 - **Notification Email Pipeline** — Unified transactional email handler for form submissions, sign-ups, ticket updates, and appointment confirmations using the existing MJML compiler + Handlebars system
-- **Subscription Plan Gating** — `subscription_plans` collection with feature caps and usage limits; plan-gated feature availability via `planAllows()`
+- **~~Subscription Plan Gating~~** — ✅ Implemented: `planAllows()`, `hasAddon()`, server-side token/scan enforcement, add-on billing
 
 ## Stripe Subscription Setup
 
@@ -627,22 +657,40 @@ Add these fields to the `directus_users` collection:
 Add to `.env`:
 
 ```env
-# Stripe keys (existing)
+# Stripe keys
 STRIPE_SECRET_KEY=sk_live_xxx
 STRIPE_SECRET_KEY_TEST=sk_test_xxx
 STRIPE_PUBLIC_KEY=pk_live_xxx
 STRIPE_PUBLIC_KEY_TEST=pk_test_xxx
 STRIPE_WEBHOOK_SECRET=whsec_xxx
 
-# Subscription Price IDs (from Stripe Dashboard > Products)
+# Subscription Price IDs (monthly + annual)
 STRIPE_PRICE_SOLO=price_xxx
-STRIPE_PRICE_TEAM=price_xxx
+STRIPE_PRICE_SOLO_ANNUAL=price_xxx
 STRIPE_PRICE_STUDIO=price_xxx
+STRIPE_PRICE_STUDIO_ANNUAL=price_xxx
+STRIPE_PRICE_AGENCY=price_xxx
+STRIPE_PRICE_AGENCY_ANNUAL=price_xxx
+
+# Token & Scan Credit Packages
+STRIPE_PRICE_TOKENS_100K=price_xxx
+STRIPE_PRICE_TOKENS_500K=price_xxx
+STRIPE_PRICE_TOKENS_1_5M=price_xxx
+STRIPE_PRICE_SCANS_100=price_xxx
+STRIPE_PRICE_SCANS_500=price_xxx
+
+# Add-On Price IDs
+STRIPE_PRICE_ADDON_SEATS_5=price_xxx
+STRIPE_PRICE_ADDON_COMMS=price_xxx
+STRIPE_PRICE_ADDON_CLIENT_STARTER=price_xxx
+STRIPE_PRICE_ADDON_CLIENT_PRO=price_xxx
+STRIPE_PRICE_ADDON_CLIENT_UNLIMITED=price_xxx
+STRIPE_PRICE_ADDON_WHITE_LABEL=price_xxx
 ```
 
 ### Stripe Dashboard Setup
 
-1. **Create Products** — In Stripe Dashboard > Products, create "Solo" ($29/mo), "Team" ($89/mo), and "Studio" ($189/mo) products with recurring monthly prices. Copy the price IDs to your `.env`.
+1. **Create Products** — In Stripe Dashboard > Products, create three base plans: "Solo" ($49/mo, $408/yr), "Studio" ($149/mo, $1,241/yr), and "Agency" ($299/mo, $2,491/yr). Create each with monthly and annual recurring prices. Then create products for each add-on, token package, and scan pack. Copy all price IDs to your `.env`.
 
 2. **Configure Customer Portal** — Go to Settings > Billing > Customer Portal and enable it. This lets users self-manage payment methods, view invoices, and cancel subscriptions.
 
@@ -660,12 +708,20 @@ STRIPE_PRICE_STUDIO=price_xxx
 
 | File | Purpose |
 |---|---|
-| `server/utils/stripe.ts` | Shared Stripe instance factory and plan definitions |
+| `server/utils/stripe.ts` | Stripe client, `EARNEST_PLANS`, `EARNEST_ADDONS`, `TOKEN_PACKAGES`, `SCAN_PACKAGES`, plan/addon resolvers |
+| `server/api/stripe/paymentchange.ts` | Webhook: syncs plan + token/scan limits + active add-ons to org |
 | `server/api/stripe/subscription/checkout.post.ts` | Creates Stripe Checkout Session for new subscriptions |
 | `server/api/stripe/subscription/status.get.ts` | Returns subscription status, payment methods, invoices |
 | `server/api/stripe/subscription/cancel.post.ts` | Cancels subscription (end of period or immediate) |
 | `server/api/stripe/subscription/resume.post.ts` | Resumes a canceling subscription |
 | `server/api/stripe/subscription/portal.post.ts` | Opens Stripe Customer Portal for self-service |
-| `server/api/stripe/paymentchange.ts` | Webhook handler for payment + subscription events |
+| `server/api/stripe/addons/subscribe.post.ts` | Adds a recurring add-on to the org's subscription |
+| `server/api/stripe/addons/cancel.post.ts` | Removes an add-on from the org's subscription |
+| `server/utils/ai-token-enforcement.ts` | Server-side token + scan credit enforcement (pre-call gate, post-call deduct) |
+| `server/utils/ai-usage.ts` | AI usage logging to `ai_usage_logs` |
+| `server/utils/earnestScore.ts` | Earnest Score engine: `awardEP()`, level calc, streak tracking |
+| `server/utils/daily.ts` | Daily.co REST API client for video meetings |
+| `server/utils/twilioMaster.ts` | Twilio master account: sub-account provisioning, phone number purchase |
 | `composables/useSubscription.ts` | Client-side subscription state composable |
-| `pages/account/subscription.vue` | Subscription management UI |
+| `composables/useOrgRole.ts` | Role checks + `planAllows()` + `hasAddon()` |
+| `components/Organization/TokenMeter.vue` | Live token usage bar (compact for sidebar, full for billing page) |

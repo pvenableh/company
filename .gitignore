@@ -7,6 +7,8 @@ logs/
 .cache
 .output
 .env
+.env.*
+!.env.example
 dist
 .DS_Store
 .vscode/*
@@ -19,7 +21,6 @@ dist
 .directus/data
 .directus/uploads
 node-compile-cache/
-.env.local
 
 # Claude Code
 .claude/worktrees/

@@ -53,7 +53,7 @@ export function useOrganization() {
 					users: { directus_users_id: { _eq: user.value.id } },
 					active: { _neq: false },
 				},
-				fields: ['id', 'name', 'logo', 'icon', 'plan', 'folder'],
+				fields: ['id', 'name', 'logo', 'icon', 'plan', 'folder', 'active_addons'],
 			});
 
 			// Fetch memberships for the current user across all their orgs
@@ -111,6 +111,7 @@ export function useOrganization() {
 					icon: org.icon ?? null,
 					plan: org.plan ?? null,
 					folder: org.folder ?? null,
+					active_addons: org.active_addons ?? null,
 					ticketsCount: tc,
 					projectsCount: pc,
 					totalActivity: tc + pc,
