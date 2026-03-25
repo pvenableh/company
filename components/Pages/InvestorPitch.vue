@@ -46,7 +46,8 @@
 		</section>
 
 		<!-- Solution -->
-		<section class="pitch-section pitch-section-dark">
+		<section class="pitch-section-dark">
+			<div class="pitch-section-dark-inner">
 			<div class="section-label-light">The solution</div>
 			<div class="section-body">
 				<h2 class="section-title-light">
@@ -66,6 +67,7 @@
 						<div class="ai-mode-desc">{{ mode.desc }}</div>
 					</div>
 				</div>
+			</div>
 			</div>
 		</section>
 
@@ -135,7 +137,8 @@
 		</section>
 
 		<!-- Unit Economics -->
-		<section class="pitch-section pitch-section-dark">
+		<section class="pitch-section-dark">
+			<div class="pitch-section-dark-inner">
 			<div class="section-label-light">Unit economics</div>
 			<div class="section-body">
 				<h2 class="section-title-light">
@@ -160,6 +163,7 @@
 						<div class="stat-label">Margin on AI costs alone</div>
 					</div>
 				</div>
+			</div>
 			</div>
 		</section>
 
@@ -428,11 +432,26 @@ const chartConfig: ChartConfig = {
 	arr: { label: 'ARR', color: 'hsl(142, 71%, 45%)' },
 };
 
-const crosshairTemplate = componentToString(chartConfig, ChartTooltipContent, {
-	labelFormatter(d: number | Date) {
-		return `Month ${d}`;
-	},
-});
+const crosshairTemplate = (d: any) => {
+	if (!d || !d[0]) return '';
+	const point = d[0];
+	const month = point.month ?? '';
+	const mrr = point.mrr ?? 0;
+	const arr = point.arr ?? 0;
+	return `<div style="background:hsl(var(--background));border:1px solid hsl(var(--border)/0.5);border-radius:8px;padding:8px 12px;font-size:12px;box-shadow:0 4px 12px rgba(0,0,0,0.1);min-width:140px">
+		<div style="font-weight:600;margin-bottom:6px">Month ${month}</div>
+		<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">
+			<span style="width:8px;height:8px;border-radius:2px;background:hsl(217,91%,60%)"></span>
+			<span style="color:hsl(var(--muted-foreground))">MRR</span>
+			<span style="margin-left:auto;font-weight:600;font-variant-numeric:tabular-nums">$${formatK(mrr)}</span>
+		</div>
+		<div style="display:flex;align-items:center;gap:6px">
+			<span style="width:8px;height:8px;border-radius:2px;background:hsl(142,71%,45%)"></span>
+			<span style="color:hsl(var(--muted-foreground))">ARR</span>
+			<span style="margin-left:auto;font-weight:600;font-variant-numeric:tabular-nums">$${formatK(arr)}</span>
+		</div>
+	</div>`;
+};
 
 type ProjectionPoint = { month: number; mrr: number; arr: number };
 
@@ -508,7 +527,7 @@ useHead({
 	-webkit-font-smoothing: antialiased;
 	margin-top: -5rem;
 }
-.bp { color: var(--accent); font-size: 1.3em; line-height: 0; }
+.bp { color: var(--accent); font-size: 1.3em; line-height: 0; margin-left: -0.15em; }
 .accent { color: var(--accent); }
 
 /* ─── HERO ─── */
@@ -541,12 +560,16 @@ useHead({
 	display: grid; grid-template-columns: 160px 1fr; gap: 60px; align-items: start;
 }
 .pitch-section-dark {
-	background: var(--ink); max-width: 100%; padding: 100px 48px;
+	background: var(--ink); padding: 100px 48px;
 }
-.pitch-section-dark .section-body { max-width: 720px; }
+.pitch-section-dark-inner {
+	max-width: 920px; margin: 0 auto;
+	display: grid; grid-template-columns: 160px 1fr; gap: 60px; align-items: start;
+}
 @media (max-width: 700px) {
 	.pitch-section { grid-template-columns: 1fr; gap: 24px; padding: 60px 24px; }
 	.pitch-section-dark { padding: 60px 24px; }
+	.pitch-section-dark-inner { grid-template-columns: 1fr; gap: 24px; }
 }
 
 .section-label {
@@ -565,7 +588,11 @@ useHead({
 	font-size: clamp(24px, 4vw, 36px); font-weight: 500; line-height: 1.2;
 	margin-bottom: 20px;
 }
-.section-title-light { composes: section-title; color: var(--paper); font-family: var(--font-bauer-bodoni); font-size: clamp(24px, 4vw, 36px); font-weight: 500; line-height: 1.2; margin-bottom: 20px; }
+.section-title-light {
+	font-family: var(--font-bauer-bodoni);
+	font-size: clamp(24px, 4vw, 36px); font-weight: 500; line-height: 1.2;
+	margin-bottom: 20px; color: var(--paper);
+}
 .section-text { font-size: 15px; line-height: 1.8; color: var(--ink-2); margin-bottom: 40px; }
 .section-text-light { font-size: 15px; line-height: 1.8; color: rgba(246,241,231,0.65); margin-bottom: 40px; }
 

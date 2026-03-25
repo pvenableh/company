@@ -787,6 +787,7 @@ useHead({
 	color: var(--accent);
 	font-size: 1.3em;
 	line-height: 0;
+	margin-left: -0.15em;
 }
 
 /* ─── HERO ─── */

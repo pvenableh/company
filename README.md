@@ -36,7 +36,8 @@ Earnest ships with two companion apps: **CardDesk** — a networking CRM that tu
 - **PWA** — Install as a native-feeling progressive web app on any device
 - **Timeline Icon Themes** — Six swappable icon theme packs for the activity timeline (Classic/Heroicons, Animals, Food, Travel, Objects, Nature) using Fluent Emoji Flat, with per-user persistence and live-swapping via Account > Appearance settings
 - **Theme System** — Semantic `t-*` CSS utility classes that adapt to light and dark mode
-- **Marketing Sell Sheet** — Design-forward landing page shown to unauthenticated visitors at `/`
+- **Marketing Sell Sheet** — Design-forward landing page at `/` with interactive savings calculator, token cost transparency grid, CMS-backed testimonials and logo carousel, and A/B testing infrastructure (cookie-based variant assignment with GA event tracking)
+- **Investor Pitch Page** — Public page at `/pitch` with interactive revenue projection calculator (24-month forecast with adjustable growth rate), plan/add-on overview, unit economics, and Earnest Score breakdown
 - **Branded Error Pages** — Earnest-styled error pages (404, 403, 401, 500) with status-specific messaging, editorial typography, and graceful recovery actions
 
 ### Companion Apps
@@ -277,6 +278,12 @@ The `planAllows(feature)` function in `useOrgRole()` gates only white-label by p
 | `ai_usage_log` | Server-side AI usage logging: endpoint, model, token counts, cost, session ID |
 | `clients_teams` | Junction: team-to-client assignments for role-based client access |
 | `clients_directus_users` | Junction: individual user-to-client access overrides |
+| `earnest_scores` | Org-level Earnest Score: total EP, level, streak, 5 dimension scores, badges |
+| `earnest_history` | Daily score snapshots for charts (date, score, EP earned, streak, dimensions) |
+| `earnest_token_pools` | AI token pools per org with agency/client separation |
+| `earnest_scan_credits` | CardDesk scan credit pools per org |
+| `testimonials` | Customer testimonials for the marketing site (CMS-managed) |
+| `partner_logos` | Partner/client logos for the SellSheet carousel (CMS-managed) |
 
 ### Key Composables
 
@@ -294,6 +301,8 @@ The `planAllows(feature)` function in `useOrgRole()` gates only white-label by p
 | `useTimelineTheme()` | Activity timeline icon theme management with 6 theme packs and localStorage persistence |
 | `useAITokens()` | Client-side AI token usage summary: monthly usage, budget, org balance/limit, and low-usage mode |
 | `useEarnestChat()` | Shared module-level AI chat state for tray quick-chat with SSE streaming and abort support |
+| `useABTest()` | A/B variant assignment (cookie-based), variant booleans, GA event tracking for conversion segmentation |
+| `useAITokens()` | Org-level token balance/limit/usage with `checkTokenBudget` and `usageSummary` |
 
 ### Server Endpoints
 
