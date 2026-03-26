@@ -74,7 +74,7 @@ export function useInvoices() {
       fields: [
         '*',
         'bill_to.*',
-        'client.id', 'client.name', 'client.billing_email', 'client.billing_name', 'client.billing_address',
+        'client.id', 'client.name', 'client.billing_email', 'client.billing_name', 'client.billing_address', 'client.billing_contacts',
         'project.id', 'project.title',
         'line_items.*', 'line_items.product.*',
         'payments.*',

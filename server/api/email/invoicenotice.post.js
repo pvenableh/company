@@ -125,7 +125,12 @@ export default defineEventHandler(async (event) => {
 			// 3. Client billing_contacts JSON (legacy)
 			// 4. Organization emails (fallback)
 			const firstInvoice = invoices[0];
-			const billingContacts = firstInvoice?.billing_contacts || firstInvoice?.client?.billing_contacts || [];
+			// Parse billing_contacts — may be a JSON string or already an array
+			let rawContacts = firstInvoice?.billing_contacts || firstInvoice?.client?.billing_contacts || [];
+			if (typeof rawContacts === 'string') {
+				try { rawContacts = JSON.parse(rawContacts); } catch { rawContacts = []; }
+			}
+			const billingContacts = Array.isArray(rawContacts) ? rawContacts : [];
 			let emails;
 
 			if (firstInvoice?.billing_email) {

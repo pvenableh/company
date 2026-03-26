@@ -34,8 +34,8 @@ const formatNumber = (value) => {
 			</h5>
 			<h5 class="font-bold uppercase text-xs mt-6">
 				<span class="opacity-30">Bill to:</span>
-				<p>{{ invoice.billing_name || invoice.client?.name || invoice.bill_to?.name }}</p>
-				<p v-if="invoice.billing_email || invoice.client?.billing_email || invoice.bill_to?.email">{{ invoice.billing_email || invoice.client?.billing_email || invoice.bill_to?.email }}</p>
+				<p>{{ invoice.billing_name || invoice.client?.billing_name || invoice.client?.billing_contacts?.[0]?.name || invoice.client?.name || invoice.bill_to?.name }}</p>
+				<p v-if="invoice.billing_email || invoice.client?.billing_email || invoice.client?.billing_contacts?.[0]?.email || invoice.bill_to?.email">{{ invoice.billing_email || invoice.client?.billing_email || invoice.client?.billing_contacts?.[0]?.email || invoice.bill_to?.email }}</p>
 				<p v-if="invoice.billing_address || invoice.client?.billing_address || invoice.bill_to?.address">{{ invoice.billing_address || invoice.client?.billing_address || invoice.bill_to?.address }}</p>
 			<template v-if="invoice.emails?.length">
 				<p v-for="(e, i) in invoice.emails" :key="i" class="opacity-50">cc: {{ e }}</p>

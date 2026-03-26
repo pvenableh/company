@@ -120,7 +120,7 @@ onMounted(loadInvoice);
           </NuxtLink>
           <div>
             <h1 class="text-xl font-semibold text-foreground">{{ invoice.invoice_code || 'Invoice' }}</h1>
-            <p class="text-sm text-muted-foreground">{{ getBillToName(invoice) }}</p>
+            <p class="text-sm text-muted-foreground">{{ getClientName(invoice) }}</p>
           </div>
           <span
             v-if="invoice.status"
@@ -169,63 +169,28 @@ onMounted(loadInvoice);
 
         <!-- Sidebar -->
         <div class="space-y-4">
-          <!-- Info -->
+          <!-- Summary -->
           <div class="ios-card p-5">
             <h3 class="font-medium text-sm mb-3 flex items-center gap-2">
               <Icon name="lucide:info" class="w-4 h-4 text-muted-foreground" />
-              Info
+              Summary
             </h3>
             <div class="space-y-2.5 text-sm">
-              <div class="flex justify-between">
-                <span class="text-muted-foreground">Status</span>
-                <span
-                  class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium capitalize"
-                  :class="statusColors[invoice.status || 'pending'] || 'bg-muted text-muted-foreground'"
-                >
-                  {{ invoice.status }}
-                </span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-muted-foreground">Client</span>
-                <span>{{ getClientName(invoice) }}</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-muted-foreground">Organization</span>
-                <span>{{ getBillToName(invoice) }}</span>
-              </div>
-              <div v-if="invoice.billing_email" class="flex justify-between">
-                <span class="text-muted-foreground">Billing Email</span>
-                <span class="truncate ml-2">{{ invoice.billing_email }}</span>
-              </div>
-              <div v-if="invoice.billing_name" class="flex justify-between">
-                <span class="text-muted-foreground">Billing Contact</span>
-                <span class="truncate ml-2">{{ invoice.billing_name }}</span>
-              </div>
-              <div v-if="invoice.emails?.length" class="flex justify-between">
-                <span class="text-muted-foreground">CC</span>
-                <div class="flex flex-col items-end gap-0.5">
-                  <span v-for="(e, i) in invoice.emails" :key="i" class="text-xs truncate ml-2">{{ e }}</span>
-                </div>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-muted-foreground">Project</span>
-                <span>{{ getProjectTitle(invoice) }}</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-muted-foreground">Invoice Date</span>
-                <span>{{ invoice.invoice_date ? getFriendlyDateThree(invoice.invoice_date) : '\u2014' }}</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-muted-foreground">Due Date</span>
-                <span>{{ invoice.due_date ? getFriendlyDateThree(invoice.due_date) : '\u2014' }}</span>
-              </div>
               <div class="flex justify-between">
                 <span class="text-muted-foreground">Total</span>
                 <span class="font-semibold">{{ formatCurrency(invoice.total_amount || 0) }}</span>
               </div>
               <div class="flex justify-between">
+                <span class="text-muted-foreground">Due</span>
+                <span>{{ invoice.due_date ? getFriendlyDateThree(invoice.due_date) : '\u2014' }}</span>
+              </div>
+              <div class="flex justify-between">
                 <span class="text-muted-foreground">Created</span>
                 <span>{{ invoice.date_created ? new Date(invoice.date_created).toLocaleDateString() : '\u2014' }}</span>
+              </div>
+              <div v-if="getBillToName(invoice) !== '\u2014'" class="flex justify-between">
+                <span class="text-muted-foreground">Org</span>
+                <span class="text-xs text-muted-foreground">{{ getBillToName(invoice) }}</span>
               </div>
             </div>
           </div>
