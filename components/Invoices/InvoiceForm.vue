@@ -100,6 +100,42 @@
       />
     </div>
 
+    <!-- Billing Contact Details -->
+    <div class="border-t pt-4 mt-2">
+      <h3 class="text-sm font-semibold mb-3 flex items-center gap-2">
+        <Icon name="lucide:contact" class="w-4 h-4 text-muted-foreground" />
+        Billing Contact
+      </h3>
+      <p class="text-xs text-muted-foreground mb-3">These details appear on the invoice. Auto-filled from the client's billing contacts when creating a new invoice.</p>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium mb-1">Billing Name</label>
+          <input
+            v-model="formData.billing_name"
+            class="w-full rounded-md border bg-background px-3 py-2 text-sm"
+            placeholder="Contact name"
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Billing Email</label>
+          <input
+            v-model="formData.billing_email"
+            type="email"
+            class="w-full rounded-md border bg-background px-3 py-2 text-sm"
+            placeholder="billing@example.com"
+          />
+        </div>
+      </div>
+      <div class="mt-3">
+        <label class="block text-sm font-medium mb-1">Billing Address</label>
+        <input
+          v-model="formData.billing_address"
+          class="w-full rounded-md border bg-background px-3 py-2 text-sm"
+          placeholder="Billing address"
+        />
+      </div>
+    </div>
+
     <!-- CC / Additional Recipients -->
     <div>
       <label class="block text-sm font-medium mb-1">Email Recipients (CC)</label>
@@ -235,6 +271,9 @@ const formData = reactive({
   note: props.invoice?.note || '',
   memo: props.invoice?.memo || '',
   melio: props.invoice?.melio || '',
+  billing_name: props.invoice?.billing_name || '',
+  billing_email: props.invoice?.billing_email || '',
+  billing_address: props.invoice?.billing_address || '',
 });
 
 // --- CC emails state ---
@@ -332,6 +371,9 @@ function handleSubmit() {
     note: formData.note || undefined,
     memo: formData.memo || undefined,
     melio: formData.melio || undefined,
+    billing_name: formData.billing_name || undefined,
+    billing_email: formData.billing_email || undefined,
+    billing_address: formData.billing_address || undefined,
     client: formData.client || undefined,
     project: formData.project || undefined,
     emails: ccEmails.value.length ? ccEmails.value : [],
@@ -395,13 +437,21 @@ const autoGenerateCode = async () => {
   }
 };
 
-// Auto-derive bill_to from client's organization
+// Auto-derive bill_to and billing contact from client's organization
 const clientLookup = ref<Map<string, string>>(new Map());
+const clientBillingLookup = ref<Map<string, { billing_name?: string; billing_email?: string; billing_address?: string; billing_contacts?: Array<{ name: string; email: string }> }>>(new Map());
 
 watch(() => formData.client, (clientId) => {
   autoGenerateCode();
   if (clientId && clientLookup.value.has(clientId)) {
     formData.bill_to = clientLookup.value.get(clientId) || '';
+  }
+  // Auto-populate billing fields from client (new invoices only)
+  if (clientId && !props.invoice && clientBillingLookup.value.has(clientId)) {
+    const billing = clientBillingLookup.value.get(clientId)!;
+    formData.billing_email = billing.billing_email || billing.billing_contacts?.[0]?.email || '';
+    formData.billing_name = billing.billing_name || billing.billing_contacts?.[0]?.name || '';
+    formData.billing_address = billing.billing_address || '';
   }
 });
 watch(() => formData.invoice_date, autoGenerateCode);
@@ -423,10 +473,17 @@ onMounted(async () => {
     productsList.value = prods;
     projects.value = projs;
 
-    // Build client → organization lookup for auto-deriving bill_to
-    for (const c of allClients || []) {
+    // Build client → organization and billing lookups
+    const clientList = Array.isArray(allClients) ? allClients : allClients?.data || [];
+    for (const c of clientList) {
       const orgId = typeof c.organization === 'object' ? c.organization?.id : c.organization;
       if (orgId) clientLookup.value.set(c.id, orgId);
+      clientBillingLookup.value.set(c.id, {
+        billing_name: c.billing_name || undefined,
+        billing_email: c.billing_email || undefined,
+        billing_address: c.billing_address || undefined,
+        billing_contacts: c.billing_contacts || undefined,
+      });
     }
 
     // Auto-set bill_to if client is already selected (edit mode)
