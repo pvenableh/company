@@ -73,7 +73,7 @@ export function useInvoices() {
     return items.get(id, {
       fields: [
         '*',
-        'bill_to.*',
+        'bill_to.*', 'bill_to.owner.email',
         'client.id', 'client.name', 'client.billing_email', 'client.billing_name', 'client.billing_address', 'client.billing_contacts',
         'project.id', 'project.title',
         'line_items.*', 'line_items.product.*',
@@ -92,12 +92,15 @@ export function useInvoices() {
         }) as any;
 
         if (client) {
-          // Resolve billing email: billing_email → billing_contacts[0] → skip
-          payload.billing_email = client.billing_email
-            || (client.billing_contacts?.[0]?.email)
+          // Resolve billing: prefer billing_contacts (UI-managed) → separate fields → skip
+          const primaryContact = Array.isArray(client.billing_contacts)
+            ? client.billing_contacts.find((c: any) => c.email?.trim())
+            : null;
+          payload.billing_email = primaryContact?.email
+            || client.billing_email
             || null;
-          payload.billing_name = client.billing_name
-            || (client.billing_contacts?.[0]?.name)
+          payload.billing_name = primaryContact?.name
+            || client.billing_name
             || client.name
             || null;
           payload.billing_address = client.billing_address || null;

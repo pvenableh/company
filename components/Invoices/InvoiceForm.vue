@@ -106,7 +106,23 @@
         <Icon name="lucide:contact" class="w-4 h-4 text-muted-foreground" />
         Billing Contact
       </h3>
-      <p class="text-xs text-muted-foreground mb-3">These details appear on the invoice. Auto-filled from the client's billing contacts when creating a new invoice.</p>
+      <p class="text-xs text-muted-foreground mb-3">These details appear on the invoice. Auto-filled from the client's billing contacts.</p>
+
+      <!-- Contact selector when client has multiple billing contacts -->
+      <div v-if="availableBillingContacts.length > 1" class="mb-3">
+        <label class="block text-sm font-medium mb-1">Select Contact</label>
+        <select
+          class="w-full rounded-md border bg-background px-3 py-2 text-sm"
+          :value="selectedContactIndex"
+          @change="selectBillingContact(Number(($event.target as HTMLSelectElement).value))"
+        >
+          <option v-for="(contact, i) in availableBillingContacts" :key="i" :value="i">
+            {{ contact.name || 'Unnamed' }} — {{ contact.email }}
+          </option>
+          <option :value="-1">Custom...</option>
+        </select>
+      </div>
+
       <div class="grid grid-cols-2 gap-4">
         <div>
           <label class="block text-sm font-medium mb-1">Billing Name</label>
@@ -441,16 +457,40 @@ const autoGenerateCode = async () => {
 const clientLookup = ref<Map<string, string>>(new Map());
 const clientBillingLookup = ref<Map<string, { billing_name?: string; billing_email?: string; billing_address?: string; billing_contacts?: Array<{ name: string; email: string }> }>>(new Map());
 
+// Billing contact selector — shows client's billing_contacts for picking
+const availableBillingContacts = computed(() => {
+  if (!formData.client) return [];
+  const billing = clientBillingLookup.value.get(formData.client);
+  return billing?.billing_contacts?.filter(c => c.email?.trim()) || [];
+});
+
+const selectedContactIndex = computed(() => {
+  const contacts = availableBillingContacts.value;
+  if (!contacts.length) return -1;
+  const idx = contacts.findIndex(c => c.email === formData.billing_email);
+  return idx >= 0 ? idx : -1;
+});
+
+function selectBillingContact(index: number) {
+  if (index < 0) return; // "Custom" selected — leave fields as-is
+  const contact = availableBillingContacts.value[index];
+  if (contact) {
+    formData.billing_email = contact.email || '';
+    formData.billing_name = contact.name || '';
+  }
+}
+
 watch(() => formData.client, (clientId) => {
   autoGenerateCode();
   if (clientId && clientLookup.value.has(clientId)) {
     formData.bill_to = clientLookup.value.get(clientId) || '';
   }
-  // Auto-populate billing fields from client (new invoices only)
+  // Auto-populate billing fields from client — prefer billing_contacts (UI-managed source of truth)
   if (clientId && !props.invoice && clientBillingLookup.value.has(clientId)) {
     const billing = clientBillingLookup.value.get(clientId)!;
-    formData.billing_email = billing.billing_email || billing.billing_contacts?.[0]?.email || '';
-    formData.billing_name = billing.billing_name || billing.billing_contacts?.[0]?.name || '';
+    const primaryContact = billing.billing_contacts?.find(c => c.email?.trim());
+    formData.billing_email = primaryContact?.email || billing.billing_email || '';
+    formData.billing_name = primaryContact?.name || billing.billing_name || '';
     formData.billing_address = billing.billing_address || '';
   }
 });
