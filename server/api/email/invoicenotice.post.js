@@ -119,34 +119,43 @@ export default defineEventHandler(async (event) => {
 				return Array.isArray(emails) ? emails : [emails];
 			};
 
-			// Build recipient list — resolution chain:
-			// 1. Invoice snapshot billing_email (frozen at creation)
-			// 2. Client billing_email (current)
-			// 3. Client billing_contacts JSON (legacy)
-			// 4. Organization emails (fallback)
+			// Build recipient list:
+			// - All client billing_contacts get the email (first = TO, rest = CC)
+			// - Invoice snapshot billing_email overrides TO if set
+			// - Organization owner is always CC'd
+			// - Organization emails are fallback if no billing contacts exist
 			const firstInvoice = invoices[0];
+
 			// Parse billing_contacts — may be a JSON string or already an array
-			let rawContacts = firstInvoice?.billing_contacts || firstInvoice?.client?.billing_contacts || [];
+			let rawContacts = firstInvoice?.client?.billing_contacts || firstInvoice?.billing_contacts || [];
 			if (typeof rawContacts === 'string') {
 				try { rawContacts = JSON.parse(rawContacts); } catch { rawContacts = []; }
 			}
 			const billingContacts = Array.isArray(rawContacts) ? rawContacts : [];
-			let emails;
+			const contactEmails = billingContacts.filter((c) => c.email?.trim()).map((c) => c.email.trim());
 
+			// Determine primary recipient (TO)
+			let primaryEmail;
 			if (firstInvoice?.billing_email) {
-				emails = [firstInvoice.billing_email];
+				primaryEmail = firstInvoice.billing_email;
+			} else if (contactEmails.length > 0) {
+				primaryEmail = contactEmails[0];
 			} else if (firstInvoice?.client?.billing_email) {
-				emails = [firstInvoice.client.billing_email];
-			} else if (billingContacts.length > 0) {
-				emails = billingContacts.filter((c) => c.email?.trim()).map((c) => c.email.trim());
+				primaryEmail = firstInvoice.client.billing_email;
 			} else {
-				emails = formatEmails(organization.bill_to?.emails || organization.emails);
+				const orgEmails = formatEmails(organization.bill_to?.emails || organization.emails);
+				primaryEmail = orgEmails[0] || organization.email;
 			}
-			const [primaryEmail, ...ccEmails] = emails;
 
-			// Merge per-invoice CC recipients from the emails array field
+			// Build CC list: remaining billing contacts + invoice CC field + org owner
+			const remainingContacts = contactEmails.slice(1).filter((e) => e !== primaryEmail);
 			const invoiceExtraEmails = Array.isArray(firstInvoice?.emails) ? firstInvoice.emails : [];
-			const allCcEmails = [...new Set([...ccEmails, ...invoiceExtraEmails])]
+
+			// Resolve organization owner email
+			const orgOwner = organization.owner;
+			const ownerEmail = typeof orgOwner === 'object' ? orgOwner?.email : null;
+
+			const allCcEmails = [...new Set([...remainingContacts, ...invoiceExtraEmails, ...(ownerEmail ? [ownerEmail] : [])])]
 				.filter((e) => e && e !== primaryEmail);
 
 			const personalization = {

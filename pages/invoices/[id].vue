@@ -31,7 +31,7 @@ const showAnonymousForm = computed(() => {
 });
 
 const defaultEmail = computed(() => {
-	return invoice.billing_email || invoice.client?.billing_email || invoice.client?.billing_contacts?.[0]?.email || invoice.bill_to?.emails?.[0] || '';
+	return invoice.billing_email || invoice.client?.billing_contacts?.[0]?.email || invoice.client?.billing_email || invoice.bill_to?.emails?.[0] || '';
 });
 
 // const handleAnonymousSubmit = async (formData) => {
