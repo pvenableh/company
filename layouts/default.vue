@@ -5,7 +5,7 @@
 			<LayoutSidebar v-if="user" @edit-apps="navEditorOpen = true" />
 		</ClientOnly>
 
-		<div :class="user ? (sidebarCollapsed ? 'xl:pl-16' : 'xl:pl-60') : ''" class="transition-[padding-left] duration-200">
+		<div :class="user ? (sidebarCollapsed ? 'xl:pl-14' : 'xl:pl-[220px]') : ''" class="transition-[padding-left] duration-200">
 			<LayoutHeader :links="headerLinks" />
 
 			<div class="page pt-20 pb-safe min-h-page">
@@ -47,6 +47,11 @@
 		<ClientOnly>
 			<TimeTrackerModal v-model="timeTrackerModalVisible" />
 		</ClientOnly>
+
+		<!-- Spotlight Search (Cmd+K) -->
+		<ClientOnly>
+			<LayoutSpotlightSearch :open="spotlightOpen" @close="spotlightOpen = false" />
+		</ClientOnly>
 	</div>
 </template>
 
@@ -73,11 +78,26 @@ const { user } = useDirectusAuth();
 const { collapsed: sidebarCollapsed } = useSidebarCollapsed();
 const aiTrayOpen = ref(false);
 const navEditorOpen = ref(false);
+const spotlightOpen = ref(false);
 const timeTrackerModalVisible = timeTrackerModalOpen;
 
 const headerLinks = computed(() => props.links.filter((link) => link.type.includes('header')));
 const footerLinks = computed(() => props.links.filter((link) => link.type.includes('footer')));
 const toolbarLinks = computed(() => props.links.filter((link) => link.type.includes('toolbar')));
+
+// Cmd+K / Ctrl+K spotlight shortcut
+if (import.meta.client) {
+	onMounted(() => {
+		const handler = (e: KeyboardEvent) => {
+			if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+				e.preventDefault();
+				spotlightOpen.value = !spotlightOpen.value;
+			}
+		};
+		window.addEventListener('keydown', handler);
+		onBeforeUnmount(() => window.removeEventListener('keydown', handler));
+	});
+}
 </script>
 
 <style>

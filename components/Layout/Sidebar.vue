@@ -17,15 +17,14 @@
 				<div class="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
 					<UIcon name="i-heroicons-command-line" class="w-4 h-4 text-primary" />
 				</div>
-				<span v-if="!collapsed" class="text-[11px] font-semibold text-foreground uppercase tracking-wider">Command Center</span>
+				<span v-if="!collapsed" class="text-sm font-semibold text-foreground">Earnest</span>
 			</NuxtLink>
 		</div>
 
 		<!-- Nav Links -->
 		<div class="sidebar-nav">
-			<!-- Primary Section -->
+			<!-- Primary (no label) -->
 			<div v-if="primaryLinks.length" class="sidebar-section">
-				<span v-if="!collapsed" class="sidebar-section-label">Apps</span>
 				<NuxtLink
 					v-for="link in primaryLinks"
 					:key="link.to"
@@ -37,19 +36,18 @@
 					]"
 					:title="collapsed ? link.name : undefined"
 				>
-					<div
-						class="sidebar-icon-box flex-shrink-0"
-						:class="[link.color || 'bg-gray-500', isActive(link.to) ? 'ring-2 ring-primary/30' : '']"
-					>
-						<UIcon :name="link.icon" class="w-3.5 h-3.5 text-white" />
-					</div>
+					<UIcon
+						:name="link.icon"
+						class="w-[18px] h-[18px] flex-shrink-0 transition-colors"
+						:class="isActive(link.to) ? 'text-primary' : 'text-muted-foreground'"
+					/>
 					<span v-if="!collapsed" class="sidebar-link-label">{{ link.name }}</span>
 				</NuxtLink>
 			</div>
 
-			<!-- Secondary Section -->
+			<!-- Secondary (subtle divider) -->
 			<div v-if="secondaryLinks.length" class="sidebar-section">
-				<span v-if="!collapsed" class="sidebar-section-label">More</span>
+				<div v-if="!collapsed" class="sidebar-divider" />
 				<NuxtLink
 					v-for="link in secondaryLinks"
 					:key="link.to"
@@ -61,49 +59,29 @@
 					]"
 					:title="collapsed ? link.name : undefined"
 				>
-					<div
-						class="sidebar-icon-box flex-shrink-0"
-						:class="[link.color || 'bg-gray-500', isActive(link.to) ? 'ring-2 ring-primary/30' : '']"
-					>
-						<UIcon :name="link.icon" class="w-3.5 h-3.5 text-white" />
-					</div>
-					<span v-if="!collapsed" class="sidebar-link-label">{{ link.name }}</span>
-				</NuxtLink>
-			</div>
-
-			<!-- Tools Section -->
-			<div v-if="toolLinks.length" class="sidebar-section">
-				<span v-if="!collapsed" class="sidebar-section-label">Tools</span>
-				<NuxtLink
-					v-for="link in toolLinks"
-					:key="link.to"
-					:to="link.to"
-					class="sidebar-link"
-					:class="[
-						isActive(link.to) ? 'sidebar-link-active' : 'sidebar-link-inactive',
-						collapsed ? 'sidebar-link--collapsed' : '',
-					]"
-					:title="collapsed ? link.name : undefined"
-				>
-					<div
-						class="sidebar-icon-box flex-shrink-0"
-						:class="[link.color || 'bg-gray-500', isActive(link.to) ? 'ring-2 ring-primary/30' : '']"
-					>
-						<UIcon :name="link.icon" class="w-3.5 h-3.5 text-white" />
-					</div>
+					<UIcon
+						:name="link.icon"
+						class="w-[18px] h-[18px] flex-shrink-0 transition-colors"
+						:class="isActive(link.to) ? 'text-primary' : 'text-muted-foreground'"
+					/>
 					<span v-if="!collapsed" class="sidebar-link-label">{{ link.name }}</span>
 				</NuxtLink>
 			</div>
 		</div>
 
-		<!-- Token Meter — shows when org has a tracked limit OR admin is in "view as" mode -->
+		<!-- Hat Picker -->
+		<div class="px-2 pb-1">
+			<LayoutHatPicker :collapsed="collapsed" />
+		</div>
+
+		<!-- Token Meter -->
 		<OrganizationTokenMeter
 			v-if="!collapsed && showTokenMeter"
 			compact
 			@topup="$router.push('/account/billing')"
 		/>
 
-		<!-- Bottom area -->
+		<!-- Footer -->
 		<div class="sidebar-footer" :class="{ 'sidebar-footer--collapsed': collapsed }">
 			<NuxtLink
 				to="/organization"
@@ -114,8 +92,8 @@
 				]"
 				:title="collapsed ? 'Settings' : undefined"
 			>
-				<UIcon name="i-heroicons-cog-6-tooth" class="w-5 h-5 flex-shrink-0" />
-				<span v-if="!collapsed">Settings</span>
+				<UIcon name="i-heroicons-cog-6-tooth" class="w-[18px] h-[18px] flex-shrink-0" :class="isActive('/organization') ? 'text-primary' : 'text-muted-foreground'" />
+				<span v-if="!collapsed" class="sidebar-link-label">Settings</span>
 			</NuxtLink>
 			<button
 				class="sidebar-link sidebar-link-inactive"
@@ -123,8 +101,8 @@
 				:title="collapsed ? 'Edit Apps' : undefined"
 				@click="$emit('edit-apps')"
 			>
-				<UIcon name="i-heroicons-pencil-square" class="w-5 h-5 flex-shrink-0" />
-				<span v-if="!collapsed">Edit Apps</span>
+				<UIcon name="i-heroicons-pencil-square" class="w-[18px] h-[18px] flex-shrink-0 text-muted-foreground" />
+				<span v-if="!collapsed" class="sidebar-link-label">Edit Apps</span>
 			</button>
 		</div>
 	</nav>
@@ -141,10 +119,6 @@ const { usageSummary } = useAITokens();
 const { isOrgAdminOrAbove } = useOrgRole();
 const { isDirectusAdmin } = useViewAsOrgAdmin();
 
-// Show token meter:
-// - Directus admins: always (they admin every org)
-// - Org admins/owners: always (they manage their org's usage)
-// - Regular members: only when the org has an explicit token limit set
 const showTokenMeter = computed(() => {
 	if (isDirectusAdmin.value) return true;
 	if (isOrgAdminOrAbove.value) return true;
@@ -153,7 +127,6 @@ const showTokenMeter = computed(() => {
 	return s.orgLimit !== null && s.orgLimit !== undefined;
 });
 
-// Filter links by section, excluding Command Center (shown as logo) and AI Chat (separate)
 const primaryLinks = computed(() =>
 	visibleLinks.value.filter(l => l.section === 'primary' && l.to !== '/'),
 );
@@ -162,15 +135,10 @@ const secondaryLinks = computed(() =>
 	visibleLinks.value.filter(l => l.section === 'secondary'),
 );
 
-const toolLinks = computed(() =>
-	visibleLinks.value.filter(l => l.section === 'tools'),
-);
-
 const isActive = (to: string) => {
 	if (to === '/') return route.path === '/';
 	return route.path.startsWith(to);
 };
-
 </script>
 
 <style scoped>
@@ -181,49 +149,49 @@ const isActive = (to: string) => {
 	top: 0;
 	left: 0;
 	bottom: 0;
-	width: 240px;
+	width: 220px;
 	z-index: 30;
 	flex-direction: column;
-	border-right: 1px solid hsl(var(--border) / 0.5);
-	background: hsl(var(--card) / 0.95);
+	border-right: 1px solid hsl(var(--border) / 0.4);
+	background: hsl(var(--card) / 0.97);
 	backdrop-filter: saturate(180%) blur(20px);
 	-webkit-backdrop-filter: saturate(180%) blur(20px);
 	transition: width 0.2s ease;
 }
 
 .sidebar--collapsed {
-	width: 64px;
+	width: 56px;
 }
 
 .sidebar-collapse-row {
 	display: flex;
 	justify-content: flex-end;
-	padding: 64px 12px 0;
+	padding: 56px 10px 0;
 }
 
 .sidebar--collapsed .sidebar-collapse-row {
 	justify-content: center;
-	padding: 64px 8px 0;
+	padding: 56px 6px 0;
 }
 
 .sidebar-header {
 	position: relative;
-	padding: 8px 16px 12px;
-	border-bottom: 1px solid hsl(var(--border) / 0.3);
+	padding: 8px 14px 10px;
+	border-bottom: 1px solid hsl(var(--border) / 0.25);
 }
 
 .sidebar--collapsed .sidebar-header {
-	padding: 8px 8px 12px;
+	padding: 8px 6px 10px;
 }
 
 .sidebar-collapse-btn {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 24px;
-	height: 24px;
+	width: 22px;
+	height: 22px;
 	border-radius: 6px;
-	color: hsl(var(--muted-foreground) / 0.6);
+	color: hsl(var(--muted-foreground) / 0.5);
 	transition: all 0.15s ease;
 	cursor: pointer;
 }
@@ -239,7 +207,7 @@ const isActive = (to: string) => {
 .sidebar-nav {
 	flex: 1;
 	overflow-y: auto;
-	padding: 8px 12px;
+	padding: 6px 10px;
 	scrollbar-width: none;
 }
 .sidebar-nav::-webkit-scrollbar {
@@ -247,33 +215,29 @@ const isActive = (to: string) => {
 }
 
 .sidebar--collapsed .sidebar-nav {
-	padding: 8px 6px;
+	padding: 6px 4px;
 }
 
 .sidebar-section {
-	margin-bottom: 16px;
+	margin-bottom: 4px;
 }
 
 .sidebar--collapsed .sidebar-section {
-	margin-bottom: 8px;
+	margin-bottom: 2px;
 }
 
-.sidebar-section-label {
-	display: block;
-	padding: 4px 12px 6px;
-	font-size: 10px;
-	font-weight: 600;
-	text-transform: uppercase;
-	letter-spacing: 0.05em;
-	color: hsl(var(--muted-foreground) / 0.6);
+.sidebar-divider {
+	height: 1px;
+	background: hsl(var(--border) / 0.3);
+	margin: 6px 10px 8px;
 }
 
 .sidebar-link {
 	display: flex;
 	align-items: center;
-	gap: 12px;
-	padding: 8px 12px;
-	border-radius: 12px;
+	gap: 10px;
+	padding: 6px 10px;
+	border-radius: 10px;
 	font-size: 13px;
 	font-weight: 500;
 	transition: all 0.15s ease;
@@ -282,29 +246,18 @@ const isActive = (to: string) => {
 
 .sidebar-link--collapsed {
 	justify-content: center;
-	padding: 10px 10px;
+	padding: 8px;
 	gap: 0;
 }
 
-.sidebar-icon-box {
-	width: 28px;
-	height: 28px;
-	border-radius: 8px;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	transition: all 0.15s ease;
-}
-
 .sidebar-link-label {
-	font-size: 11px;
-	font-weight: 600;
-	text-transform: uppercase;
-	letter-spacing: 0.04em;
+	font-size: 13px;
+	font-weight: 500;
+	color: inherit;
 }
 
 .sidebar-link-active {
-	background: hsl(var(--primary) / 0.1);
+	background: hsl(var(--primary) / 0.08);
 	color: hsl(var(--primary));
 }
 
@@ -313,19 +266,19 @@ const isActive = (to: string) => {
 }
 
 .sidebar-link-inactive:hover {
-	background: hsl(var(--muted) / 0.5);
+	background: hsl(var(--muted) / 0.4);
 	color: hsl(var(--foreground));
 }
 
 .sidebar-footer {
-	padding: 12px;
-	border-top: 1px solid hsl(var(--border) / 0.3);
+	padding: 10px;
+	border-top: 1px solid hsl(var(--border) / 0.25);
 	display: flex;
 	flex-direction: column;
-	gap: 2px;
+	gap: 1px;
 }
 
 .sidebar-footer--collapsed {
-	padding: 8px 6px;
+	padding: 6px 4px;
 }
 </style>
