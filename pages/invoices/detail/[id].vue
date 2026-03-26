@@ -15,7 +15,9 @@ const loading = ref(true);
 const saving = ref(false);
 const deleting = ref(false);
 const showDeleteConfirm = ref(false);
+const sendingEmail = ref(false);
 const error = ref<string | null>(null);
+const toast = useToast();
 
 const statusColors: Record<string, string> = {
   pending: 'bg-yellow-500/15 text-yellow-400',
@@ -76,6 +78,26 @@ function getProjectTitle(inv: Invoice): string {
   if (!inv.project) return '\u2014';
   if (typeof inv.project === 'string') return inv.project;
   return (inv.project as any).title || '\u2014';
+}
+
+async function handleSendEmail() {
+  if (!invoice.value) return;
+  sendingEmail.value = true;
+  try {
+    await $fetch('/api/email/invoicenotice', {
+      method: 'POST',
+      body: invoice.value,
+    });
+    toast.add({ title: 'Invoice email sent', color: 'green' });
+  } catch (e: any) {
+    toast.add({
+      title: 'Failed to send email',
+      description: e?.message || 'Something went wrong',
+      color: 'red',
+    });
+  } finally {
+    sendingEmail.value = false;
+  }
 }
 
 onMounted(loadInvoice);
@@ -202,6 +224,20 @@ onMounted(loadInvoice);
               Actions
             </h3>
             <div class="flex flex-col gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                class="w-full justify-start"
+                :disabled="sendingEmail"
+                @click="handleSendEmail"
+              >
+                <Icon
+                  :name="sendingEmail ? 'lucide:loader-2' : 'lucide:send'"
+                  class="w-4 h-4 mr-2"
+                  :class="{ 'animate-spin': sendingEmail }"
+                />
+                {{ sendingEmail ? 'Sending...' : 'Send Invoice Email' }}
+              </Button>
               <NuxtLink :to="`/invoices/${invoice.id}`" target="_blank" class="block">
                 <Button variant="outline" size="sm" class="w-full justify-start">
                   <Icon name="lucide:credit-card" class="w-4 h-4 mr-2" />

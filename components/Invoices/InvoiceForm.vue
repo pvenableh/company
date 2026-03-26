@@ -104,23 +104,36 @@
     <div class="border-t pt-4 mt-2">
       <h3 class="text-sm font-semibold mb-3 flex items-center gap-2">
         <Icon name="lucide:contact" class="w-4 h-4 text-muted-foreground" />
-        Billing Contact
+        Billing Contacts
       </h3>
-      <p class="text-xs text-muted-foreground mb-3">These details appear on the invoice. Auto-filled from the client's billing contacts.</p>
+      <p class="text-xs text-muted-foreground mb-3">Select recipients for this invoice. First selected = primary (TO), others = CC.</p>
 
-      <!-- Contact selector when client has multiple billing contacts -->
-      <div v-if="availableBillingContacts.length > 1" class="mb-3">
-        <label class="block text-sm font-medium mb-1">Select Contact</label>
-        <select
-          class="w-full rounded-md border bg-background px-3 py-2 text-sm"
-          :value="selectedContactIndex"
-          @change="selectBillingContact(Number(($event.target as HTMLSelectElement).value))"
+      <!-- Multi-select billing contacts -->
+      <div v-if="availableBillingContacts.length > 0" class="space-y-1.5 mb-3">
+        <label
+          v-for="(contact, i) in availableBillingContacts"
+          :key="i"
+          class="flex items-center gap-2.5 p-2.5 rounded-lg border cursor-pointer transition-colors"
+          :class="selectedContactEmails.has(contact.email) ? 'border-primary/40 bg-primary/5' : 'border-border hover:bg-muted/40'"
         >
-          <option v-for="(contact, i) in availableBillingContacts" :key="i" :value="i">
-            {{ contact.name || 'Unnamed' }} — {{ contact.email }}
-          </option>
-          <option :value="-1">Custom...</option>
-        </select>
+          <input
+            type="checkbox"
+            :checked="selectedContactEmails.has(contact.email)"
+            class="rounded border-border"
+            @change="toggleBillingContact(contact)"
+          />
+          <div class="flex-1 min-w-0">
+            <span class="text-sm font-medium">{{ contact.name || 'Unnamed' }}</span>
+            <span class="text-xs text-muted-foreground ml-1.5">{{ contact.email }}</span>
+          </div>
+          <span
+            v-if="selectedContactEmails.has(contact.email)"
+            class="text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded-full shrink-0"
+            :class="contact.email === formData.billing_email ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground'"
+          >
+            {{ contact.email === formData.billing_email ? 'TO' : 'CC' }}
+          </span>
+        </label>
       </div>
 
       <div class="grid grid-cols-2 gap-4">
@@ -379,7 +392,7 @@ function formatAmount(value: number): string {
 
 function handleSubmit() {
   const payload: any = {
-    bill_to: formData.bill_to,
+    bill_to: formData.bill_to || undefined,
     invoice_code: formData.invoice_code || undefined,
     invoice_date: formData.invoice_date,
     due_date: formData.due_date,
@@ -457,26 +470,58 @@ const autoGenerateCode = async () => {
 const clientLookup = ref<Map<string, string>>(new Map());
 const clientBillingLookup = ref<Map<string, { billing_name?: string; billing_email?: string; billing_address?: string; billing_contacts?: Array<{ name: string; email: string }> }>>(new Map());
 
-// Billing contact selector — shows client's billing_contacts for picking
+// Billing contact multi-select — shows client's billing_contacts for picking
 const availableBillingContacts = computed(() => {
   if (!formData.client) return [];
   const billing = clientBillingLookup.value.get(formData.client);
   return billing?.billing_contacts?.filter(c => c.email?.trim()) || [];
 });
 
-const selectedContactIndex = computed(() => {
-  const contacts = availableBillingContacts.value;
-  if (!contacts.length) return -1;
-  const idx = contacts.findIndex(c => c.email === formData.billing_email);
-  return idx >= 0 ? idx : -1;
+// Track which contacts are selected (by email)
+const selectedContactEmails = computed(() => {
+  const selected = new Set<string>();
+  // Primary is always selected
+  if (formData.billing_email) selected.add(formData.billing_email);
+  // CC'd contacts from billing_contacts are also selected
+  for (const contact of availableBillingContacts.value) {
+    if (ccEmails.value.includes(contact.email)) selected.add(contact.email);
+  }
+  return selected;
 });
 
-function selectBillingContact(index: number) {
-  if (index < 0) return; // "Custom" selected — leave fields as-is
-  const contact = availableBillingContacts.value[index];
-  if (contact) {
-    formData.billing_email = contact.email || '';
-    formData.billing_name = contact.name || '';
+function toggleBillingContact(contact: { name: string; email: string }) {
+  const email = contact.email.trim();
+  if (!email) return;
+
+  if (selectedContactEmails.value.has(email)) {
+    // Deselecting — remove from primary or CC
+    if (formData.billing_email === email) {
+      // Deselecting primary: promote next selected CC contact to primary, or clear
+      const nextCc = availableBillingContacts.value.find(
+        c => c.email !== email && ccEmails.value.includes(c.email)
+      );
+      if (nextCc) {
+        formData.billing_email = nextCc.email;
+        formData.billing_name = nextCc.name || '';
+        ccEmails.value = ccEmails.value.filter(e => e !== nextCc.email);
+      } else {
+        formData.billing_email = '';
+        formData.billing_name = '';
+      }
+    } else {
+      // Deselecting a CC contact
+      ccEmails.value = ccEmails.value.filter(e => e !== email);
+    }
+  } else {
+    // Selecting — if no primary yet, set as primary; otherwise add to CC
+    if (!formData.billing_email) {
+      formData.billing_email = email;
+      formData.billing_name = contact.name || '';
+    } else {
+      if (!ccEmails.value.includes(email)) {
+        ccEmails.value.push(email);
+      }
+    }
   }
 }
 
@@ -485,12 +530,25 @@ watch(() => formData.client, (clientId) => {
   if (clientId && clientLookup.value.has(clientId)) {
     formData.bill_to = clientLookup.value.get(clientId) || '';
   }
-  // Auto-populate billing fields from client — prefer billing_contacts (UI-managed source of truth)
+  // Auto-populate billing fields from client — select all billing contacts
   if (clientId && !props.invoice && clientBillingLookup.value.has(clientId)) {
     const billing = clientBillingLookup.value.get(clientId)!;
-    const primaryContact = billing.billing_contacts?.find(c => c.email?.trim());
-    formData.billing_email = primaryContact?.email || billing.billing_email || '';
-    formData.billing_name = primaryContact?.name || billing.billing_name || '';
+    const contacts = billing.billing_contacts?.filter(c => c.email?.trim()) || [];
+    if (contacts.length > 0) {
+      // First contact = primary (TO)
+      formData.billing_email = contacts[0].email;
+      formData.billing_name = contacts[0].name || '';
+      // Remaining contacts = CC
+      const extraEmails = contacts.slice(1).map(c => c.email);
+      for (const email of extraEmails) {
+        if (!ccEmails.value.includes(email)) {
+          ccEmails.value.push(email);
+        }
+      }
+    } else {
+      formData.billing_email = billing.billing_email || '';
+      formData.billing_name = billing.billing_name || '';
+    }
     formData.billing_address = billing.billing_address || '';
   }
 });
