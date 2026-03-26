@@ -247,6 +247,9 @@ function removeTag(tag: string) {
 }
 
 function handleSubmit() {
+  const validContacts = formData.billing_contacts.filter(c => c.email?.trim());
+  const primaryContact = validContacts[0];
+
   emit('save', {
     name: formData.name,
     slug: formData.slug || undefined,
@@ -255,9 +258,10 @@ function handleSubmit() {
     industry: formData.industry || undefined,
     notes: formData.notes || undefined,
     tags: formData.tags.length ? formData.tags : undefined,
-    billing_contacts: formData.billing_contacts.filter(c => c.email?.trim()).length
-      ? formData.billing_contacts.filter(c => c.email?.trim())
-      : undefined,
+    billing_contacts: validContacts.length ? validContacts : undefined,
+    // Keep billing_email/billing_name in sync with primary billing contact
+    billing_email: primaryContact?.email?.trim() || undefined,
+    billing_name: primaryContact?.name?.trim() || undefined,
     brand_direction: formData.brand_direction || undefined,
     goals: formData.goals || undefined,
     target_audience: formData.target_audience || undefined,
