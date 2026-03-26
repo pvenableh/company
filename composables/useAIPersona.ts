@@ -95,14 +95,13 @@ let _prefRecordId: number | null = null;
 
 export function useAIPersona() {
 	const { user } = useDirectusAuth();
-	const prefItems = useDirectusItems('ai_preferences');
 
 	const storageKey = computed(() => {
 		const userId = user.value?.id || 'anonymous';
 		return `${PERSONA_STORAGE_KEY}-${userId}`;
 	});
 
-	/** Load persona from Directus, fallback to localStorage. */
+	/** Load persona from server API, fallback to localStorage. */
 	const load = async () => {
 		if (import.meta.server) return;
 
@@ -114,32 +113,27 @@ export function useAIPersona() {
 			}
 		} catch {}
 
-		// Then sync from Directus
+		// Then sync from server (uses server token — no Directus permission issues)
 		if (user.value?.id) {
 			try {
-				const records = await prefItems.list({
-					fields: ['id', 'persona'],
-					filter: { user: { _eq: user.value.id } },
-					limit: 1,
-				}) as any[];
-
-				if (records?.[0]) {
-					_prefRecordId = records[0].id;
-					if (records[0].persona && personas.some((p) => p.value === records[0].persona)) {
-						selectedPersona.value = records[0].persona;
-						// Update localStorage cache
-						try { localStorage.setItem(storageKey.value, records[0].persona); } catch {}
+				const res = await $fetch('/api/ai/preferences') as any;
+				const record = res?.data;
+				if (record) {
+					_prefRecordId = record.id;
+					if (record.persona && personas.some((p) => p.value === record.persona)) {
+						selectedPersona.value = record.persona;
+						try { localStorage.setItem(storageKey.value, record.persona); } catch {}
 					}
 				}
 			} catch (err) {
-				console.warn('[useAIPersona] Could not load from Directus:', err);
+				console.warn('[useAIPersona] Could not load from server:', err);
 			}
 		}
 
 		personaLoaded = true;
 	};
 
-	/** Save persona to Directus + localStorage. */
+	/** Save persona via server API + localStorage. */
 	const save = async () => {
 		if (import.meta.server) return;
 
@@ -148,20 +142,18 @@ export function useAIPersona() {
 			localStorage.setItem(storageKey.value, selectedPersona.value);
 		} catch {}
 
-		// Save to Directus
+		// Save via server API (upserts — no permission issues)
 		if (user.value?.id) {
 			try {
-				if (_prefRecordId) {
-					await prefItems.update(_prefRecordId, { persona: selectedPersona.value });
-				} else {
-					const record = await prefItems.create({
-						user: user.value.id,
-						persona: selectedPersona.value,
-					}) as any;
-					_prefRecordId = record?.id || null;
+				const res = await $fetch('/api/ai/preferences', {
+					method: 'POST',
+					body: { persona: selectedPersona.value },
+				}) as any;
+				if (res?.data?.id) {
+					_prefRecordId = res.data.id;
 				}
 			} catch (err) {
-				console.warn('[useAIPersona] Could not save to Directus:', err);
+				console.warn('[useAIPersona] Could not save to server:', err);
 			}
 		}
 	};
@@ -175,17 +167,27 @@ export function useAIPersona() {
 		save();
 	};
 
-	// Load on init
-	if (!personaLoaded) {
-		load();
+	// Load when user becomes available or changes — always re-fetch
+	if (import.meta.client) {
+		watch(
+			() => user.value?.id,
+			(newId, oldId) => {
+				if (!newId) {
+					// Logged out — reset to default
+					selectedPersona.value = 'default';
+					personaLoaded = false;
+					_prefRecordId = null;
+					return;
+				}
+				if (newId !== oldId || !personaLoaded) {
+					personaLoaded = false;
+					_prefRecordId = null;
+					load();
+				}
+			},
+			{ immediate: true },
+		);
 	}
-
-	// Reload when user changes
-	watch(storageKey, () => {
-		personaLoaded = false;
-		_prefRecordId = null;
-		load();
-	});
 
 	return {
 		personas,

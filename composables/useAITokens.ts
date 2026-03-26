@@ -22,7 +22,6 @@ const _loading = ref(false);
 export const useAITokens = () => {
 	const { user } = useDirectusAuth();
 	const { selectedOrg } = useOrganization();
-	const prefItems = useDirectusItems('ai_preferences');
 	const orgItems = useDirectusItems('organizations');
 	const usageItems = useDirectusItems('ai_usage_logs');
 
@@ -42,15 +41,10 @@ export const useAITokens = () => {
 		let isLowUsage = false;
 		let aiEnabled = true;
 
-		// 1. Fetch user preferences (independent — failure doesn't block other data)
+		// 1. Fetch user preferences via server API (bypasses Directus permissions)
 		try {
-			const prefs = await prefItems.list({
-				fields: ['low_usage_mode', 'token_budget_monthly', 'ai_enabled'],
-				filter: { user: { _eq: user.value.id } },
-				limit: 1,
-			}) as any[];
-
-			const userPref = prefs?.[0];
+			const res = await $fetch('/api/ai/preferences') as any;
+			const userPref = res?.data;
 			if (userPref) {
 				userBudget = userPref.token_budget_monthly ?? null;
 				isLowUsage = userPref.low_usage_mode === true;

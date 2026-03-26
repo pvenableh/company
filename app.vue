@@ -12,6 +12,17 @@ onMounted(() => {
 	initTheme();
 });
 
+// Inline head script: apply theme BEFORE first paint to prevent flash of wrong theme.
+// This runs synchronously before Vue hydrates, reading from localStorage.
+useHead({
+	script: [
+		{
+			innerHTML: `(function(){try{var t=localStorage.getItem('earnest-theme')||'earnest';var s=localStorage.getItem('earnest-style')||'modern';document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-style',s);}catch(e){}})()`,
+			tagPosition: 'head',
+		},
+	],
+});
+
 const avatar = computed(() => {
 	if (user.value) {
 		if (user.value.avatar) {
