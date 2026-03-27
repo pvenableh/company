@@ -83,8 +83,8 @@ export function useInvoices() {
   };
 
   const createInvoice = async (payload: any): Promise<Invoice> => {
-    // Auto-snapshot billing fields from client if not already provided
-    if (payload.client && !payload.billing_email) {
+    // Auto-snapshot billing fields and bill_to from client if not already provided
+    if (payload.client) {
       try {
         const clientItems = useDirectusItems('clients');
         const client = await clientItems.get(payload.client, {
@@ -92,24 +92,26 @@ export function useInvoices() {
         }) as any;
 
         if (client) {
-          // Resolve billing: prefer billing_contacts (UI-managed) → separate fields → skip
-          const primaryContact = Array.isArray(client.billing_contacts)
-            ? client.billing_contacts.find((c: any) => c.email?.trim())
-            : null;
-          payload.billing_email = primaryContact?.email
-            || client.billing_email
-            || null;
-          payload.billing_name = primaryContact?.name
-            || client.billing_name
-            || client.name
-            || null;
-          payload.billing_address = client.billing_address || null;
-
           // Auto-set bill_to from client's organization if not set
           if (!payload.bill_to && client.organization) {
             payload.bill_to = typeof client.organization === 'object'
               ? client.organization.id
               : client.organization;
+          }
+
+          // Resolve billing: prefer billing_contacts (UI-managed) → separate fields → skip
+          if (!payload.billing_email) {
+            const primaryContact = Array.isArray(client.billing_contacts)
+              ? client.billing_contacts.find((c: any) => c.email?.trim())
+              : null;
+            payload.billing_email = primaryContact?.email
+              || client.billing_email
+              || null;
+            payload.billing_name = primaryContact?.name
+              || client.billing_name
+              || client.name
+              || null;
+            payload.billing_address = client.billing_address || null;
           }
         }
       } catch {
@@ -164,26 +166,30 @@ export function useInvoices() {
         }
       }
 
-      // Count existing invoices for this client in the same year (by invoice_date)
-      const yearStart = `${year}-01-01`;
-      const yearEnd = `${year}-12-31`;
+      // Find the highest existing invoice number for this client code + year
+      const clientCode = code.toUpperCase();
+      const prefix = `INV-${clientCode}-${year}-`;
 
-      const yearInvoices = await items.list({
-        fields: ['id'],
+      const existingInvoices = await items.list({
+        fields: ['invoice_code'],
         filter: {
-          _and: [
-            { client: { _eq: clientId } },
-            { invoice_date: { _gte: yearStart } },
-            { invoice_date: { _lte: yearEnd } },
-          ],
+          invoice_code: { _starts_with: prefix },
         },
         limit: -1,
       });
 
-      const nextNum = yearInvoices.length + 1;
-      const clientCode = code.toUpperCase();
+      // Extract the max number from existing codes
+      let maxNum = 0;
+      for (const inv of existingInvoices) {
+        const match = (inv as any).invoice_code?.match(new RegExp(`^${prefix}(\\d+)$`));
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (num > maxNum) maxNum = num;
+        }
+      }
 
-      return `INV-${clientCode}-${year}-${String(nextNum).padStart(4, '0')}`;
+      const nextNum = maxNum + 1;
+      return `${prefix}${String(nextNum).padStart(4, '0')}`;
     } catch (e) {
       console.warn('Could not generate invoice code:', e);
       return null;

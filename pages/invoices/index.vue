@@ -8,7 +8,7 @@ definePageMeta({ middleware: ['auth'] });
 useHead({ title: 'Invoices | Earnest' });
 
 const router = useRouter();
-const { getInvoices, createInvoice, deleteInvoice } = useInvoices();
+const { getInvoices, createInvoice, updateInvoice, deleteInvoice } = useInvoices();
 const { selectedClient } = useClients();
 const { canAccess } = useOrgRole();
 const isAdmin = computed(() => canAccess('invoices'));
@@ -22,6 +22,7 @@ const creating = ref(false);
 const statusFilter = ref('all');
 const showPaid = ref(false);
 const viewMode = ref<'cards' | 'table'>('table');
+const deleteTarget = ref<Invoice | null>(null);
 
 const sortBy = ref('-due_date');
 const sortOptions = [
@@ -135,6 +136,28 @@ function getDisplayName(inv: Invoice): string {
   if (!inv.bill_to) return '\u2014';
   if (typeof inv.bill_to === 'string') return inv.bill_to;
   return (inv.bill_to as any).name || '\u2014';
+}
+
+async function confirmDelete() {
+  if (!deleteTarget.value) return;
+  try {
+    await deleteInvoice(deleteTarget.value.id);
+    allInvoices.value = allInvoices.value.filter(i => i.id !== deleteTarget.value!.id);
+    total.value = Math.max(0, total.value - 1);
+  } catch (err) {
+    console.error('Failed to delete invoice:', err);
+  } finally {
+    deleteTarget.value = null;
+  }
+}
+
+async function updateStatus(inv: Invoice, newStatus: string) {
+  try {
+    await updateInvoice(inv.id, { status: newStatus });
+    inv.status = newStatus;
+  } catch (err) {
+    console.error('Failed to update status:', err);
+  }
 }
 
 function getLineItemCount(inv: Invoice): number {
@@ -266,8 +289,19 @@ watch(() => selectedClient.value, debouncedFetch);
                   <span class="font-medium">{{ inv.invoice_code || 'No Code' }}</span>
                 </td>
                 <td class="py-3 px-4 text-muted-foreground">{{ getDisplayName(inv) }}</td>
-                <td class="py-3 px-4">
+                <td class="py-3 px-4" @click.stop>
+                  <select
+                    v-if="isAdmin"
+                    :value="inv.status"
+                    @change="updateStatus(inv, ($event.target as HTMLSelectElement).value)"
+                    class="appearance-none rounded-full px-2 py-0.5 text-[10px] font-medium capitalize border-0 cursor-pointer pr-5 bg-no-repeat bg-[right_4px_center] bg-[length:10px]"
+                    :class="statusColors[inv.status || 'pending']"
+                    :style="{ backgroundImage: `url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 20 20%22 fill=%22currentColor%22><path fill-rule=%22evenodd%22 d=%22M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z%22 clip-rule=%22evenodd%22/></svg>')` }"
+                  >
+                    <option v-for="s in statusOptions.slice(1)" :key="s.value" :value="s.value">{{ s.label }}</option>
+                  </select>
                   <span
+                    v-else
                     class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize"
                     :class="statusColors[inv.status || 'pending']"
                   >
@@ -295,6 +329,14 @@ watch(() => selectedClient.value, debouncedFetch);
                     <NuxtLink :to="`/invoices/detail/${inv.id}`">
                       <Button variant="ghost" size="sm" class="h-7 text-xs">Edit</Button>
                     </NuxtLink>
+                    <button
+                      v-if="isAdmin"
+                      class="p-1.5 rounded-md text-muted-foreground/50 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                      title="Delete invoice"
+                      @click="deleteTarget = inv"
+                    >
+                      <Icon name="lucide:trash-2" class="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -448,6 +490,34 @@ watch(() => selectedClient.value, debouncedFetch);
             @save="handleCreate"
             @cancel="showCreateModal = false"
           />
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Delete Confirmation Dialog -->
+    <Teleport to="body">
+      <div
+        v-if="deleteTarget"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+        @click.self="deleteTarget = null"
+      >
+        <div class="ios-card shadow-xl w-full max-w-sm mx-4 p-6">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 rounded-full bg-red-500/15 flex items-center justify-center shrink-0">
+              <Icon name="lucide:trash-2" class="w-5 h-5 text-red-400" />
+            </div>
+            <div>
+              <h2 class="font-semibold">Delete Invoice</h2>
+              <p class="text-sm text-muted-foreground">{{ deleteTarget.invoice_code || 'Untitled' }}</p>
+            </div>
+          </div>
+          <p class="text-sm text-muted-foreground mb-5">
+            This will permanently delete the invoice and its line items. This action cannot be undone.
+          </p>
+          <div class="flex justify-end gap-2">
+            <Button variant="outline" size="sm" @click="deleteTarget = null">Cancel</Button>
+            <Button variant="destructive" size="sm" @click="confirmDelete">Delete</Button>
+          </div>
         </div>
       </div>
     </Teleport>

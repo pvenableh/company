@@ -27,6 +27,8 @@ const DEFAULT_LINKS: NavLink[] = [
 	{ name: 'Command Center', type: ['header', 'toolbar', 'drawer'], to: '/', icon: 'i-heroicons-command-line', color: 'bg-gradient-to-br from-violet-500 to-purple-600', description: 'AI productivity hub', section: 'primary' },
 	{ name: 'Projects', type: ['header', 'footer', 'toolbar', 'drawer'], to: '/projects', icon: 'i-heroicons-square-3-stack-3d', color: 'bg-purple-500', description: 'Track projects', section: 'primary', featureKey: 'projects' },
 	{ name: 'People', type: ['footer', 'toolbar', 'drawer'], to: '/people', icon: 'i-heroicons-user-group', color: 'bg-gradient-to-br from-orange-400 to-red-500', description: 'Contacts & clients', section: 'primary', featureKey: 'people' },
+	{ name: 'Leads', type: ['header', 'footer', 'drawer'], to: '/leads', icon: 'i-heroicons-funnel', color: 'bg-gradient-to-br from-amber-500 to-orange-500', description: 'Lead pipeline', section: 'primary', featureKey: 'leads' },
+	{ name: 'Proposals', type: ['header', 'footer', 'drawer'], to: '/proposals', icon: 'i-heroicons-document-check', color: 'bg-gradient-to-br from-teal-500 to-emerald-500', description: 'Proposals & estimates', section: 'primary', featureKey: 'proposals' },
 	{ name: 'Invoices', type: ['header', 'footer', 'drawer'], to: '/invoices', icon: 'i-heroicons-document-text', color: 'bg-emerald-500', description: 'Billing & payments', section: 'primary', featureKey: 'invoices' },
 	{ name: 'Marketing', type: ['header', 'footer', 'toolbar', 'drawer'], to: '/marketing', icon: 'i-lucide-bar-chart-3', color: 'bg-gradient-to-br from-blue-500 to-cyan-500', description: 'Campaigns & insights', section: 'primary', featureKey: 'email_campaigns' },
 	// ── More (sidebar bottom — subtle "More" divider) ──
@@ -106,8 +108,8 @@ const HATS: Hat[] = [
 		id: 'sales',
 		icon: 'i-fluent-emoji-flat-rocket',
 		name: 'Sales',
-		description: 'Clients, invoicing & meetings',
-		routes: ['/', '/people', '/invoices', '/scheduler', '/channels', '/email'],
+		description: 'Leads, proposals, invoicing & meetings',
+		routes: ['/', '/leads', '/proposals', '/people', '/invoices', '/scheduler', '/channels', '/email'],
 	},
 	{
 		id: 'focus',
