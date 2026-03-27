@@ -1,5 +1,83 @@
 <template>
 	<div class="w-full py-6 space-y-6">
+		<!-- Status Update Section -->
+		<div class="ios-card p-5">
+			<div class="flex items-center justify-between mb-3">
+				<div class="flex items-center gap-2">
+					<Icon name="lucide:flag" class="w-4 h-4 text-muted-foreground" />
+					<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Project Status</span>
+				</div>
+				<button
+					v-if="isAdmin && !showUpdateForm"
+					class="text-[10px] font-medium text-primary hover:text-primary/80 transition-colors"
+					@click="showUpdateForm = true"
+				>
+					Post Update
+				</button>
+			</div>
+
+			<!-- Post Update Form -->
+			<div v-if="showUpdateForm" class="space-y-3 mb-4 p-3 rounded-xl bg-muted/20 border border-border/50">
+				<div class="flex gap-2">
+					<button
+						v-for="(cfg, key) in statusUpdateColors"
+						:key="key"
+						class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors"
+						:class="newStatus === key ? `${cfg.bg} ${cfg.text}` : 'text-muted-foreground hover:bg-muted/40'"
+						@click="newStatus = key"
+					>
+						<span class="w-2 h-2 rounded-full" :class="cfg.dot" />
+						{{ cfg.label }}
+					</button>
+				</div>
+				<textarea
+					v-model="newStatusText"
+					rows="2"
+					class="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs placeholder:text-muted-foreground/40 resize-none"
+					placeholder="What's the latest on this project?"
+				/>
+				<div class="flex justify-end gap-2">
+					<button class="text-xs text-muted-foreground hover:text-foreground" @click="showUpdateForm = false">Cancel</button>
+					<button
+						class="px-3 py-1 rounded-lg text-xs bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40"
+						:disabled="!newStatusText.trim() || postingUpdate"
+						@click="postStatusUpdate"
+					>
+						{{ postingUpdate ? 'Posting...' : 'Post' }}
+					</button>
+				</div>
+			</div>
+
+			<!-- Latest Status -->
+			<div v-if="statusUpdates.length" class="space-y-3">
+				<div
+					v-for="update in statusUpdates.slice(0, 3)"
+					:key="update.id"
+					class="flex items-start gap-3"
+				>
+					<span
+						class="w-2.5 h-2.5 rounded-full mt-1.5 shrink-0"
+						:class="statusUpdateColors[update.status]?.dot || 'bg-muted'"
+					/>
+					<div class="flex-1 min-w-0">
+						<div class="flex items-center gap-2">
+							<span
+								class="text-[10px] font-medium px-1.5 py-0.5 rounded-full"
+								:class="`${statusUpdateColors[update.status]?.bg || 'bg-muted'} ${statusUpdateColors[update.status]?.text || 'text-muted-foreground'}`"
+							>
+								{{ statusUpdateColors[update.status]?.label || update.status }}
+							</span>
+							<span class="text-[10px] text-muted-foreground">
+								{{ update.user_created?.first_name }} · {{ getFriendlyDate(update.date_created) }}
+							</span>
+						</div>
+						<p class="text-xs text-foreground mt-1">{{ update.text }}</p>
+					</div>
+				</div>
+			</div>
+			<p v-else class="text-xs text-muted-foreground/50 text-center py-2">No status updates yet</p>
+		</div>
+
 		<!-- Info Widgets Row -->
 		<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
 			<!-- Project Details Widget -->
@@ -326,6 +404,53 @@ const { upload: uploadFile } = useDirectusFiles();
 
 const isAdmin = computed(() => canAccess('projects'));
 
+// ── Status Updates ──
+const statusUpdateItems = useDirectusItems('project_status_updates');
+const statusUpdates = ref([]);
+const showUpdateForm = ref(false);
+const newStatus = ref('on_track');
+const newStatusText = ref('');
+const postingUpdate = ref(false);
+
+const statusUpdateColors = {
+	on_track: { bg: 'bg-emerald-500/15', text: 'text-emerald-400', dot: 'bg-emerald-500', label: 'On Track' },
+	at_risk: { bg: 'bg-amber-500/15', text: 'text-amber-400', dot: 'bg-amber-500', label: 'At Risk' },
+	off_track: { bg: 'bg-red-500/15', text: 'text-red-400', dot: 'bg-red-500', label: 'Off Track' },
+};
+
+async function loadStatusUpdates() {
+	try {
+		const data = await statusUpdateItems.list({
+			fields: ['id', 'status', 'text', 'date_created', 'user_created.id', 'user_created.first_name', 'user_created.last_name'],
+			filter: { project: { _eq: props.project.id } },
+			sort: ['-date_created'],
+			limit: 10,
+		});
+		statusUpdates.value = data || [];
+	} catch {
+		// Collection may not have data yet
+	}
+}
+
+async function postStatusUpdate() {
+	if (!newStatusText.value.trim()) return;
+	postingUpdate.value = true;
+	try {
+		await statusUpdateItems.create({
+			project: props.project.id,
+			status: newStatus.value,
+			text: newStatusText.value,
+		});
+		newStatusText.value = '';
+		showUpdateForm.value = false;
+		await loadStatusUpdates();
+	} catch (err) {
+		console.error('Failed to post status update:', err);
+	} finally {
+		postingUpdate.value = false;
+	}
+}
+
 // ── Stats ──
 const stats = ref({
 	ticketCount: 0,
@@ -389,6 +514,7 @@ const formatDate = (dateStr) => {
 
 onMounted(() => {
 	loadStats();
+	loadStatusUpdates();
 });
 
 // Timeline wizard state

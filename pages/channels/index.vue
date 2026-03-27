@@ -303,51 +303,47 @@ const sortedChannels = computed(() => {
 			<!-- Admin content -->
 			<template v-else>
 				<!-- Loading -->
-				<div v-if="channelsLoading" class="space-y-3">
-					<div v-for="n in 6" :key="n" class="h-[72px] bg-muted rounded-2xl animate-pulse" />
+				<div v-if="channelsLoading" class="ios-card overflow-hidden">
+					<div v-for="n in 6" :key="n" class="h-12 border-b border-border/30 last:border-0 animate-pulse bg-muted/20" />
 				</div>
 
 				<!-- Channels List -->
-				<div v-else-if="sortedChannels.length" class="space-y-2">
+				<div v-else-if="sortedChannels.length" class="ios-card overflow-hidden divide-y divide-border/30">
 					<NuxtLink
 						v-for="channel in sortedChannels"
 						:key="channel.id"
 						:to="'/channels/' + channel.name"
-						class="ios-card p-4 flex items-center gap-3 ios-press block"
+						class="flex items-center gap-3 px-4 py-3 hover:bg-muted/20 transition-colors"
 					>
-						<div class="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center flex-shrink-0">
-							<UIcon name="i-heroicons-chat-bubble-left-right" class="w-5 h-5 text-cyan-500" />
-						</div>
+						<span class="text-muted-foreground/40 text-sm">#</span>
 						<div class="flex-1 min-w-0">
 							<div class="flex items-center gap-2">
-								<h3 class="text-sm font-semibold text-foreground truncate">#{{ channel.name }}</h3>
-								<span v-if="channel.messageCount" class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
+								<span class="text-sm font-medium text-foreground truncate">{{ channel.name }}</span>
+								<span
+									v-if="channel.messageCount"
+									class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary"
+								>
 									{{ channel.messageCount }}
 								</span>
 							</div>
-							<div class="flex items-center gap-2 mt-0.5">
-								<span v-if="channel.project?.title" class="text-[10px] text-muted-foreground truncate">
-									<UIcon name="i-heroicons-square-3-stack-3d" class="w-3 h-3 inline -mt-0.5 mr-0.5" />
-									{{ channel.project.title }}
-								</span>
-								<span v-if="channel.ticket?.title" class="text-[10px] text-muted-foreground truncate">
-									<UIcon name="i-heroicons-ticket" class="w-3 h-3 inline -mt-0.5 mr-0.5" />
-									{{ channel.ticket.title }}
-								</span>
-								<span v-if="!channel.project?.title && !channel.ticket?.title" class="text-[10px] text-muted-foreground/60">
-									{{ channel.organization?.name || 'General' }}
-								</span>
-							</div>
 						</div>
-						<UIcon name="i-heroicons-chevron-right" class="w-4 h-4 text-muted-foreground/30 flex-shrink-0" />
+						<div class="flex items-center gap-3 text-[10px] text-muted-foreground/60 shrink-0">
+							<span v-if="channel.project?.title" class="flex items-center gap-1 truncate max-w-[140px]">
+								<Icon name="lucide:folder" class="w-3 h-3 shrink-0" />
+								{{ channel.project.title }}
+							</span>
+							<span v-if="channel.ticket?.title" class="flex items-center gap-1 truncate max-w-[140px]">
+								<Icon name="lucide:ticket" class="w-3 h-3 shrink-0" />
+								{{ channel.ticket.title }}
+							</span>
+						</div>
+						<Icon name="lucide:chevron-right" class="w-4 h-4 text-muted-foreground/20 shrink-0" />
 					</NuxtLink>
 				</div>
 
 				<!-- Empty State -->
 				<div v-else class="flex flex-col items-center justify-center py-16 text-center">
-					<div class="h-12 w-12 rounded-full bg-muted/60 flex items-center justify-center mb-4">
-						<UIcon name="i-heroicons-chat-bubble-left-right" class="w-6 h-6 text-muted-foreground/40" />
-					</div>
+					<Icon name="lucide:hash" class="w-10 h-10 text-muted-foreground/30 mb-3" />
 					<p class="text-sm text-muted-foreground">No channels yet</p>
 					<p class="text-xs text-muted-foreground/60 mt-1">Create a channel to start team conversations.</p>
 					<button
@@ -355,7 +351,7 @@ const sortedChannels = computed(() => {
 						class="mt-4 h-8 px-3 rounded-lg border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors flex items-center gap-1.5"
 						@click="showCreateChannel = true"
 					>
-						<UIcon name="i-heroicons-plus" class="w-3.5 h-3.5" />
+						<Icon name="lucide:plus" class="w-3.5 h-3.5" />
 						New Channel
 					</button>
 				</div>

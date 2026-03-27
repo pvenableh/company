@@ -95,6 +95,15 @@
 				<UIcon name="i-heroicons-cog-6-tooth" class="w-[18px] h-[18px] flex-shrink-0" :class="isActive('/organization') ? 'text-primary' : 'text-muted-foreground'" />
 				<span v-if="!collapsed" class="sidebar-link-label">Settings</span>
 			</NuxtLink>
+			<NuxtLink
+				to="/account#appearance"
+				class="sidebar-link sidebar-link-inactive"
+				:class="collapsed ? 'sidebar-link--collapsed' : ''"
+				:title="collapsed ? 'Appearance' : undefined"
+			>
+				<UIcon name="i-heroicons-paint-brush" class="w-[18px] h-[18px] flex-shrink-0 text-muted-foreground" />
+				<span v-if="!collapsed" class="sidebar-link-label">Appearance</span>
+			</NuxtLink>
 			<button
 				class="sidebar-link sidebar-link-inactive"
 				:class="collapsed ? 'sidebar-link--collapsed' : ''"

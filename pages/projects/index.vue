@@ -1,4 +1,5 @@
 <script setup>
+import { useDebounceFn } from '@vueuse/core';
 useHead({ title: 'Projects | Earnest' });
 
 const { user: sessionUser, loggedIn } = useUserSession();
@@ -16,8 +17,14 @@ const isAdmin = computed(() => canAccess('projects'));
 // Default to table view for all users
 const activeView = ref('table');
 
+// Filters
+const statusFilter = ref('active');
+const searchQuery = ref('');
+const debouncedSearch = useDebounceFn(() => fetchTableProjects(), 300);
+
 // Table view data
 const projectItems = useDirectusItems('projects');
+const taskItems = useDirectusItems('project_tasks');
 const tableProjects = ref([]);
 const tableLoading = ref(false);
 
@@ -35,23 +42,68 @@ const fetchTableProjects = async () => {
 			Object.assign(filter, clientFilter);
 		}
 
-		tableProjects.value = await projectItems.list({
+		const rawProjects = await projectItems.list({
 			fields: [
 				'id', 'title', 'status', 'due_date', 'date_updated',
 				'service.id', 'service.name', 'service.color',
-				'organization.id', 'organization.name',
+				'client.id', 'client.name',
 				'assigned_to.id',
 				'assigned_to.directus_users_id.id',
 				'assigned_to.directus_users_id.first_name',
 				'assigned_to.directus_users_id.last_name',
 			],
+			search: searchQuery.value || undefined,
 			filter: {
-				status: { _nin: ['Archived'] },
+				...(statusFilter.value === 'active'
+					? { status: { _nin: ['Archived', 'completed'] } }
+					: statusFilter.value === 'completed'
+						? { status: { _in: ['completed'] } }
+						: statusFilter.value === 'archived'
+							? { status: { _eq: 'Archived' } }
+							: { status: { _nin: ['Archived'] } }),
 				...filter,
 			},
 			sort: ['-date_updated'],
 			limit: 200,
 		});
+
+		// Enrich projects with task progress
+		const projectIds = rawProjects.map(p => p.id);
+		if (projectIds.length) {
+			try {
+				const tasks = await taskItems.list({
+					fields: ['id', 'project', 'completed', 'status', 'event_id.project'],
+					filter: {
+						_or: [
+							{ project: { _in: projectIds } },
+							{ event_id: { project: { _in: projectIds } } },
+						],
+					},
+					limit: -1,
+				});
+
+				const progressMap = {};
+				for (const task of (tasks || [])) {
+					const pid = task.project || task.event_id?.project;
+					if (!pid) continue;
+					if (!progressMap[pid]) progressMap[pid] = { total: 0, completed: 0 };
+					progressMap[pid].total++;
+					if (task.completed || task.status === 'done') progressMap[pid].completed++;
+				}
+
+				tableProjects.value = rawProjects.map(p => ({
+					...p,
+					taskCount: progressMap[p.id]?.total || 0,
+					taskProgress: progressMap[p.id]?.total
+						? Math.round((progressMap[p.id].completed / progressMap[p.id].total) * 100)
+						: 0,
+				}));
+			} catch {
+				tableProjects.value = rawProjects;
+			}
+		} else {
+			tableProjects.value = rawProjects;
+		}
 	} catch (e) {
 		console.error('Error fetching projects:', e);
 	} finally {
@@ -150,6 +202,28 @@ definePageMeta({
 				</button>
 			</div>
 		</ClientOnly>
+
+		<!-- Filters -->
+		<div v-if="activeView === 'table'" class="flex gap-3 mb-5 flex-wrap items-center">
+			<input
+				v-model="searchQuery"
+				type="search"
+				placeholder="Search projects..."
+				class="flex-1 min-w-48 rounded-md border bg-background px-3 py-2 text-sm"
+				@input="debouncedSearch"
+			/>
+			<div class="flex gap-1 p-0.5 bg-muted/30 rounded-lg">
+				<button
+					v-for="s in [{ label: 'Active', value: 'active' }, { label: 'Completed', value: 'completed' }, { label: 'Archived', value: 'archived' }, { label: 'All', value: 'all' }]"
+					:key="s.value"
+					class="px-2.5 py-1 text-[10px] font-medium rounded-md transition-all"
+					:class="statusFilter === s.value ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'"
+					@click="statusFilter = s.value; fetchTableProjects()"
+				>
+					{{ s.label }}
+				</button>
+			</div>
+		</div>
 
 		<ClientOnly>
 			<!-- Timeline view (admin only) -->

@@ -8,39 +8,20 @@ const user = computed(() => {
 	return loggedIn.value ? sessionUser.value ?? null : null;
 });
 
-const { selectedOrg, hasMultipleOrgs, organizationOptions, setOrganization, clearOrganization, getOrganizationFilter } =
-	useOrganization();
+const { selectedOrg } = useOrganization();
 
 definePageMeta({
 	middleware: ['auth'],
 	layout: 'default',
 });
-useHead({ title: 'Channel | Earnest' });
+useHead({ title: `#${params.channel} | Earnest` });
 
 // Setup state
 const newMessage = ref('');
 const channelId = ref(null);
 const messagesContainer = ref(null);
-const enterToSend = ref(false);
-
-// Persist enterToSend in localStorage
-if (import.meta.client) {
-	const saved = localStorage.getItem('earnest_enter_to_send');
-	if (saved !== null) {
-		enterToSend.value = saved === 'true';
-	}
-}
-watch(enterToSend, (val) => {
-	if (import.meta.client) {
-		localStorage.setItem('earnest_enter_to_send', String(val));
-	}
-});
-const channelFilter = computed(() => {
-	const filter = {
-		_and: [{ name: { _eq: params.channel } }, selectedOrg.value ? { organization: { _eq: selectedOrg.value } } : {}],
-	};
-	return filter;
-});
+const textareaRef = ref(null);
+const sending = ref(false);
 
 // Define fields for messages
 const messageFields = [
@@ -89,7 +70,6 @@ watch(
 	(newChannels) => {
 		if (newChannels?.length) {
 			channelId.value = newChannels[0].id;
-			console.log('Channel ID set:', channelId.value);
 		}
 	},
 	{ immediate: true },
@@ -97,29 +77,24 @@ watch(
 
 // Send message function
 const sendMessage = async () => {
-	const messageText = newMessage.value?.replace(/<[^>]*>/g, '').trim();
+	const messageText = newMessage.value?.trim();
+	if (!messageText || !channelId.value || sending.value) return;
 
-	if (!messageText || !channelId.value || messagesLoading.value) {
-		return;
-	}
-
+	sending.value = true;
 	try {
-		const messageData = {
+		await messageItems.create({
 			text: newMessage.value,
 			channel: channelId.value,
 			status: 'published',
 			user_created: user.value.id,
-		};
-
-		await messageItems.create(messageData);
+		});
 		newMessage.value = '';
+		nextTick(() => autoResizeTextarea());
 	} catch (error) {
 		console.error('Error sending message:', error);
-		useToast().add({
-			title: 'Error',
-			description: 'Failed to send message',
-			color: 'red',
-		});
+		useToast().add({ title: 'Failed to send message', color: 'red' });
+	} finally {
+		sending.value = false;
 	}
 };
 
@@ -127,20 +102,26 @@ const sendMessage = async () => {
 const deleteMessage = async (id) => {
 	try {
 		await messageItems.remove(id);
-		useToast().add({
-			title: 'Success',
-			description: 'Message deleted',
-			color: 'green',
-		});
 	} catch (error) {
 		console.error('Error deleting message:', error);
-		useToast().add({
-			title: 'Error',
-			description: 'Failed to delete message',
-			color: 'red',
-		});
 	}
 };
+
+// Auto-resize textarea
+function autoResizeTextarea() {
+	const el = textareaRef.value;
+	if (!el) return;
+	el.style.height = 'auto';
+	el.style.height = Math.min(el.scrollHeight, 160) + 'px';
+}
+
+// Handle keyboard in textarea
+function handleTextareaKeydown(e) {
+	if (e.key === 'Enter' && !e.shiftKey) {
+		e.preventDefault();
+		sendMessage();
+	}
+}
 
 // Scroll management
 const scrollToBottom = () => {
@@ -151,209 +132,136 @@ const scrollToBottom = () => {
 	}
 };
 
-// Watch messages for changes and scroll
 watch(messages, (newMessages, oldMessages) => {
 	if (newMessages?.length > (oldMessages?.length || 0)) {
 		scrollToBottom();
 	}
 });
 
-// Initial scroll on mount
 onMounted(() => {
 	scrollToBottom();
 });
-
-// Handle keyboard shortcuts
-const handleKeyboard = (event) => {
-	// Ctrl/Cmd + Enter to send (always works)
-	if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
-		event.preventDefault();
-		sendMessage();
-	}
-};
 </script>
 
 <template>
-	<div class="flex flex-col h-svh bg-card">
+	<div class="flex flex-col h-[calc(100vh-64px)]">
 		<!-- Header -->
-		<div
-			class="flex items-center justify-between p-4 border-b border-border bg-card sticky top-0 z-10"
-		>
-			<div class="flex items-center space-x-4">
-				<NuxtLink to="/channels" class="text-muted-foreground hover:text-foreground">
-					<UIcon name="i-heroicons-chevron-left" class="w-5 h-5" />
+		<div class="flex items-center justify-between px-5 py-3 border-b border-border/50 shrink-0">
+			<div class="flex items-center gap-3">
+				<NuxtLink to="/channels" class="text-muted-foreground hover:text-foreground transition-colors">
+					<Icon name="lucide:arrow-left" class="w-4 h-4" />
 				</NuxtLink>
-				<div>
-					<h1 class="text-xl font-bold">#{{ params.channel }}</h1>
-					<p class="text-sm text-muted-foreground">
-						{{ channelsLoading ? 'Loading...' : channels?.[0]?.name || 'Channel not found' }}
-					</p>
+				<div class="flex items-center gap-2">
+					<h1 class="text-base font-semibold">#{{ params.channel }}</h1>
+					<span
+						class="w-2 h-2 rounded-full shrink-0"
+						:class="isConnected ? 'bg-emerald-500' : 'bg-red-400'"
+						:title="isConnected ? 'Connected' : 'Disconnected'"
+					/>
 				</div>
-			</div>
-			<div class="flex items-center space-x-2">
-				<UBadge :color="isConnected ? 'green' : 'red'" variant="subtle" class="hidden sm:inline-flex">
-					{{ isConnected ? 'Connected' : 'Disconnected' }}
-				</UBadge>
-				<UDropdown :items="[{ label: 'Channel Settings', icon: 'i-heroicons-cog-6-tooth' }]">
-					<UButton color="gray" variant="ghost" icon="i-heroicons-ellipsis-horizontal" />
-				</UDropdown>
 			</div>
 		</div>
 
 		<!-- Connection Error -->
-		<UAlert
-			v-if="messagesError || channelsError"
-			color="red"
-			title="Connection Error"
-			:description="messagesError || channelsError"
-			class="m-4"
-		>
-			<template #footer>
-				<UButton
-					color="red"
-					variant="ghost"
-					icon="i-heroicons-arrow-path"
-					:loading="messagesLoading"
-					@click="refreshMessages"
-				>
-					Retry
-				</UButton>
-			</template>
-		</UAlert>
+		<div v-if="messagesError || channelsError" class="px-5 py-3 bg-red-500/10 border-b border-red-500/20">
+			<div class="flex items-center justify-between">
+				<p class="text-sm text-red-400">Connection error. Messages may not be up to date.</p>
+				<button class="text-xs text-red-400 hover:text-red-300 font-medium" @click="refreshMessages">Retry</button>
+			</div>
+		</div>
 
 		<!-- Messages -->
-		<div ref="messagesContainer" class="flex-1 overflow-y-auto space-y-3 px-4 py-2">
+		<div ref="messagesContainer" class="flex-1 overflow-y-auto px-5 py-4 messages-scroll">
 			<!-- Loading State -->
 			<div v-if="messagesLoading || channelsLoading" class="space-y-4">
-				<USkeleton v-for="n in 5" :key="n" class="h-16" />
+				<div v-for="n in 5" :key="n" class="flex items-start gap-3">
+					<div class="w-8 h-8 rounded-full bg-muted/60 animate-pulse shrink-0" />
+					<div class="flex-1 space-y-1.5">
+						<div class="h-3 bg-muted/40 rounded w-24 animate-pulse" />
+						<div class="h-4 bg-muted/40 rounded w-3/4 animate-pulse" />
+					</div>
+				</div>
 			</div>
 
 			<!-- Messages List -->
-			<template v-else-if="messages?.length">
+			<div v-else-if="messages?.length" class="space-y-1">
 				<div
 					v-for="message in messages"
 					:key="message.id"
-					class="group flex items-start space-x-3 p-2 rounded-lg hover:bg-muted/50 transition-colors"
+					class="group flex items-start gap-3 py-1.5 px-2 -mx-2 rounded-lg hover:bg-muted/30 transition-colors"
 				>
 					<ChannelsMessage :channel="message.channel" :message="message" />
-
-					<!-- 			
-					<UAvatar
-						:src="message.user_created?.avatar ? `/assets/${message.user_created.avatar}` : undefined"
-						:alt="message.user_created?.first_name"
-						size="sm"
-					/>
-
-					<div class="flex-1 min-w-0">
-						<div class="flex items-center space-x-2">
-							<span class="font-medium">
-								{{ message.user_created?.first_name }} {{ message.user_created?.last_name }}
-							</span>
-							<span class="text-xs text-gray-500">
-								{{ getRelativeTime(message.date_created) }}
-							</span>
-						</div>
-						<div class="prose prose-sm dark:prose-invert max-w-none mt-1" v-html="message.text" />
-					</div>
-
-					<div
-						v-if="message.user_created?.id === user?.id"
-						class="opacity-0 group-hover:opacity-100 transition-opacity"
-					>
-						<UButton
-							color="gray"
-							variant="ghost"
-							icon="i-heroicons-trash"
-							size="xs"
-							@click="deleteMessage(message.id)"
-						/>
-					</div> -->
 				</div>
-			</template>
+			</div>
 
 			<!-- Empty State -->
-			<div v-else class="flex flex-col items-center justify-center h-full text-muted-foreground">
-				<UIcon name="i-heroicons-chat-bubble-left-right" class="w-12 h-12 mb-4" />
-				<p>No messages yet</p>
-				<p class="text-sm">Be the first to send a message!</p>
+			<div v-else class="flex flex-col items-center justify-center h-full">
+				<div class="w-12 h-12 rounded-2xl bg-muted/40 flex items-center justify-center mb-3">
+					<Icon name="lucide:hash" class="w-6 h-6 text-muted-foreground/40" />
+				</div>
+				<p class="text-sm font-medium text-muted-foreground">This is the start of #{{ params.channel }}</p>
+				<p class="text-xs text-muted-foreground/60 mt-1">Send a message to get the conversation going.</p>
 			</div>
 		</div>
 
 		<!-- Message Input -->
-		<div
-			class="w-screen fixed bottom-[60px] border-t shadow-lg border-border bg-card p-4 z-100"
-		>
-			<div class="max-w-5xl mx-auto">
-				<div class="flex space-x-2">
-					<LazyFormTiptap
-						v-model="newMessage"
-						class="flex-1"
-						:disabled="!channelId"
-						:organization-id="selectedOrg"
-						:context="{ collection: 'messages', itemId: channelId }"
-						:enter-to-send="enterToSend"
-						@keydown="handleKeyboard"
-						@submit="sendMessage"
-					/>
-					<UButton
-						color="primary"
-						:loading="messagesLoading"
-						:disabled="!newMessage?.trim() || !channelId"
-						@click="sendMessage"
-					>
-						<Icon name="lucide:send" class="w-4 h-4" />
-						Send
-					</UButton>
-				</div>
-				<div class="flex items-center justify-between mt-1.5">
-					<p v-if="!channelId" class="text-xs text-red-500">Channel not found or still loading...</p>
-					<p v-else class="text-xs text-muted-foreground">
-						{{ enterToSend ? 'Press Enter to send' : 'Press Ctrl + Enter to send' }}
-					</p>
-					<div class="flex items-center gap-1.5 text-xs text-muted-foreground">
-						<Switch v-model:checked="enterToSend" class="scale-75" />
-						<span>Enter to send</span>
-					</div>
-				</div>
+		<div class="px-5 pb-4 pt-2 shrink-0">
+			<div
+				class="flex items-end gap-2 rounded-2xl border border-border/60 bg-muted/20 px-4 py-2.5 focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20 transition-all"
+			>
+				<textarea
+					ref="textareaRef"
+					v-model="newMessage"
+					rows="1"
+					:placeholder="`Message #${params.channel}`"
+					:disabled="!channelId"
+					class="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/50 outline-none resize-none leading-relaxed max-h-[160px]"
+					@input="autoResizeTextarea"
+					@keydown="handleTextareaKeydown"
+				/>
+				<button
+					v-if="newMessage?.trim()"
+					class="shrink-0 w-7 h-7 rounded-full bg-primary flex items-center justify-center hover:bg-primary/90 transition-colors mb-0.5"
+					:disabled="sending || !channelId"
+					@click="sendMessage"
+				>
+					<Icon name="lucide:arrow-up" class="w-4 h-4 text-primary-foreground" />
+				</button>
 			</div>
+			<p class="text-[10px] text-muted-foreground/40 mt-1.5 px-1">
+				<kbd class="px-1 py-0.5 rounded bg-muted/40 text-[9px] font-mono">Enter</kbd> to send,
+				<kbd class="px-1 py-0.5 rounded bg-muted/40 text-[9px] font-mono">Shift + Enter</kbd> for new line
+			</p>
 		</div>
 	</div>
 </template>
 
 <style scoped>
 @reference "~/assets/css/tailwind.css";
-.prose :deep(p) {
-	margin: 0;
-}
 
-.prose :deep(ul) {
-	margin: 0.5em 0;
-}
-
-.prose :deep(.mention) {
-	@apply bg-muted rounded px-2 py-0.5 font-medium;
-}
-
-/* Hide scrollbar but maintain functionality */
-.messages-container {
+.messages-scroll {
 	scrollbar-width: thin;
 	scrollbar-color: transparent transparent;
+	scroll-behavior: smooth;
 }
 
-.messages-container::-webkit-scrollbar {
+.messages-scroll:hover {
+	scrollbar-color: var(--border) transparent;
+}
+
+.messages-scroll::-webkit-scrollbar {
 	width: 6px;
 }
 
-.messages-container::-webkit-scrollbar-track {
+.messages-scroll::-webkit-scrollbar-track {
 	background: transparent;
 }
 
-.messages-container::-webkit-scrollbar-thumb {
-	@apply bg-border rounded;
+.messages-scroll::-webkit-scrollbar-thumb {
+	@apply bg-transparent rounded-full;
 }
 
-/* Smooth scrolling */
-.messages-container {
-	scroll-behavior: smooth;
+.messages-scroll:hover::-webkit-scrollbar-thumb {
+	@apply bg-border;
 }
 </style>

@@ -23,7 +23,7 @@ const showEditModal = ref(false);
 
 const project = await projectItems.get(params.id, {
 	fields: [
-		'id,status,service.name,service.color,title,description,contract_value,start_date,due_date,projected_date,completion_date,organization.id,organization.name,organization.logo,events.id,events.status,events.type,events.approval,events.priority,events.hours,events.title,events.description,events.date,events.link,events.prototype_link,events.amount,events.payment_amount,events.file,assigned_to.directus_users_id.id,assigned_to.directus_users_id.first_name,assigned_to.directus_users_id.last_name,assigned_to.directus_users_id.avatar,assigned_to.directus_users_id.email,assigned_to.directus_users_id.phone',
+		'id,status,service.name,service.color,title,description,contract_value,start_date,due_date,projected_date,completion_date,organization.id,organization.name,organization.logo,client.id,client.name,events.id,events.status,events.type,events.approval,events.priority,events.hours,events.title,events.description,events.date,events.link,events.prototype_link,events.amount,events.payment_amount,events.file,assigned_to.directus_users_id.id,assigned_to.directus_users_id.first_name,assigned_to.directus_users_id.last_name,assigned_to.directus_users_id.avatar,assigned_to.directus_users_id.email,assigned_to.directus_users_id.phone',
 	],
 });
 
@@ -149,6 +149,15 @@ const daysRemaining = computed(() => {
 const taskProgress = computed(() => {
 	if (stats.value.taskCount === 0) return 0;
 	return Math.round((stats.value.completedTasks / stats.value.taskCount) * 100);
+});
+
+// ── Task View Mode ──
+const taskViewMode = ref('board');
+const projectTeamMembers = computed(() => {
+	return (project?.assigned_to || [])
+		.map(a => a.directus_users_id)
+		.filter(u => u && typeof u === 'object')
+		.map(u => ({ id: u.id, first_name: u.first_name || '', last_name: u.last_name || '', avatar: u.avatar }));
 });
 
 // ── Quick Actions ──
@@ -362,7 +371,7 @@ async function refreshProject() {
 	try {
 		const updated = await projectItems.get(params.id, {
 			fields: [
-				'id,status,service.id,service.name,service.color,title,description,contract_value,start_date,due_date,projected_date,completion_date,organization.id,organization.name,organization.logo,client,url,template,events.id,events.status,events.type,events.approval,events.priority,events.hours,events.title,events.description,events.date,events.link,events.prototype_link,events.amount,events.payment_amount,events.file,assigned_to.directus_users_id.id,assigned_to.directus_users_id.first_name,assigned_to.directus_users_id.last_name,assigned_to.directus_users_id.avatar,assigned_to.directus_users_id.email,assigned_to.directus_users_id.phone',
+				'id,status,service.id,service.name,service.color,title,description,contract_value,start_date,due_date,projected_date,completion_date,organization.id,organization.name,organization.logo,client.id,client.name,url,template,events.id,events.status,events.type,events.approval,events.priority,events.hours,events.title,events.description,events.date,events.link,events.prototype_link,events.amount,events.payment_amount,events.file,assigned_to.directus_users_id.id,assigned_to.directus_users_id.first_name,assigned_to.directus_users_id.last_name,assigned_to.directus_users_id.avatar,assigned_to.directus_users_id.email,assigned_to.directus_users_id.phone',
 			],
 		});
 		Object.assign(project, updated);
@@ -403,7 +412,7 @@ const formatCurrency = (amount) => {
 								<span class="h-2 w-2 inline-block rounded-full" :style="{ backgroundColor: project.service.color }" />
 								{{ project.service.name }}
 							</span>
-							<span class="text-xs text-muted-foreground">{{ project?.organization?.name }}</span>
+							<span class="text-xs text-muted-foreground">{{ project?.client?.name || project?.organization?.name }}</span>
 						</div>
 					</div>
 				</div>
@@ -499,8 +508,36 @@ const formatCurrency = (amount) => {
 					<ProjectsConversations :project="project" />
 				</template>
 				<template #tasks="{ item }">
-					<div class="max-w-xl mx-auto py-6">
-						<TasksInlineAdder context="project" :context-id="project.id" :organization-id="project.organization?.id" />
+					<div class="py-6">
+						<!-- View Toggle -->
+						<div class="flex items-center justify-between mb-4 px-1">
+							<div class="flex gap-0.5 p-0.5 bg-muted/40 rounded-lg">
+								<button
+									class="px-3 py-1 text-[10px] font-medium rounded-md transition-all"
+									:class="taskViewMode === 'board' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'"
+									@click="taskViewMode = 'board'"
+								>
+									<Icon name="lucide:columns-3" class="w-3.5 h-3.5 inline mr-1" />Board
+								</button>
+								<button
+									class="px-3 py-1 text-[10px] font-medium rounded-md transition-all"
+									:class="taskViewMode === 'list' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'"
+									@click="taskViewMode = 'list'"
+								>
+									<Icon name="lucide:list" class="w-3.5 h-3.5 inline mr-1" />List
+								</button>
+							</div>
+						</div>
+						<TasksBoard
+							v-if="taskViewMode === 'board'"
+							:project-id="project.id"
+							:organization-id="project.organization?.id"
+							:team-members="projectTeamMembers"
+							@stats-changed="loadStats"
+						/>
+						<div v-else class="max-w-xl mx-auto">
+							<TasksInlineAdder context="project" :context-id="project.id" :organization-id="project.organization?.id" />
+						</div>
 					</div>
 				</template>
 				<template #tickets="{ item }">

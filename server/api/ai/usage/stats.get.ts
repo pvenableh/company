@@ -17,8 +17,24 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'organizationId is required' });
   }
 
-  // Permission gate — user must have ai_usage:read for this org
-  await requireOrgPermission(event, organizationId, 'ai_usage', 'read');
+  const empty = {
+    totalRequests: 0,
+    totalTokens: 0,
+    totalInput: 0,
+    totalOutput: 0,
+    totalCost: 0,
+    activeUsers: 0,
+    period,
+    daily: [],
+  };
+
+  try {
+    await requireOrgPermission(event, organizationId, 'ai_usage', 'read');
+  } catch (error: any) {
+    if (error?.statusCode && error.statusCode < 500) throw error;
+    console.error('[ai/usage/stats] Permission check failed:', error?.message || error);
+    return empty;
+  }
 
   const directus = getTypedDirectus();
   const filter = buildAiUsageFilter(organizationId, period);
@@ -33,10 +49,10 @@ export default defineEventHandler(async (event) => {
     ) as any[];
 
     const totalRequests = logs.length;
-    const totalInput = logs.reduce((sum, l) => sum + (l.input_tokens || 0), 0);
-    const totalOutput = logs.reduce((sum, l) => sum + (l.output_tokens || 0), 0);
-    const totalTokens = logs.reduce((sum, l) => sum + (l.total_tokens || 0), 0);
-    const totalCost = logs.reduce((sum, l) => sum + (l.estimated_cost || 0), 0);
+    const totalInput = logs.reduce((sum, l) => sum + (Number(l.input_tokens) || 0), 0);
+    const totalOutput = logs.reduce((sum, l) => sum + (Number(l.output_tokens) || 0), 0);
+    const totalTokens = logs.reduce((sum, l) => sum + (Number(l.total_tokens) || 0), 0);
+    const totalCost = logs.reduce((sum, l) => sum + (Number(l.estimated_cost) || 0), 0);
     const uniqueUsers = new Set(logs.map(l => (typeof l.user === 'object' && l.user !== null ? l.user.id : l.user))).size;
 
     // Daily breakdown for charts
@@ -45,16 +61,16 @@ export default defineEventHandler(async (event) => {
       const day = log.date_created?.substring(0, 10) || 'unknown';
       const existing = dailyMap.get(day);
       if (existing) {
-        existing.input += log.input_tokens || 0;
-        existing.output += log.output_tokens || 0;
+        existing.input += Number(log.input_tokens) || 0;
+        existing.output += Number(log.output_tokens) || 0;
         existing.requests += 1;
-        existing.cost += log.estimated_cost || 0;
+        existing.cost += Number(log.estimated_cost) || 0;
       } else {
         dailyMap.set(day, {
-          input: log.input_tokens || 0,
-          output: log.output_tokens || 0,
+          input: Number(log.input_tokens) || 0,
+          output: Number(log.output_tokens) || 0,
           requests: 1,
-          cost: log.estimated_cost || 0,
+          cost: Number(log.estimated_cost) || 0,
         });
       }
     }
@@ -74,16 +90,7 @@ export default defineEventHandler(async (event) => {
       daily,
     };
   } catch (error: any) {
-    console.warn('[ai/usage/stats] Could not fetch (collection may not exist):', error.message);
-    return {
-      totalRequests: 0,
-      totalTokens: 0,
-      totalInput: 0,
-      totalOutput: 0,
-      totalCost: 0,
-      activeUsers: 0,
-      period,
-      daily: [],
-    };
+    console.error('[ai/usage/stats] Failed to fetch:', error?.message || error);
+    return empty;
   }
 });

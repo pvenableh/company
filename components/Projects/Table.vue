@@ -13,8 +13,9 @@
 						Due Date
 						<Icon v-if="sortBy === 'due_date'" :name="sortDir === 'asc' ? 'lucide:arrow-up' : 'lucide:arrow-down'" class="w-3 h-3 inline ml-1" />
 					</th>
-					<th class="pb-3 pr-4 font-medium">Organization</th>
-					<th class="pb-3 pr-4 font-medium">Assigned To</th>
+					<th class="pb-3 pr-4 font-medium">Client</th>
+					<th class="pb-3 pr-4 font-medium">Progress</th>
+				<th class="pb-3 pr-4 font-medium">Assigned To</th>
 					<th class="pb-3 font-medium cursor-pointer hover:text-foreground" @click="toggleSort('date_updated')">
 						Updated
 						<Icon v-if="sortBy === 'date_updated'" :name="sortDir === 'asc' ? 'lucide:arrow-up' : 'lucide:arrow-down'" class="w-3 h-3 inline ml-1" />
@@ -53,7 +54,20 @@
 						{{ project.due_date ? new Date(project.due_date).toLocaleDateString() : '—' }}
 					</td>
 					<td class="py-3 pr-4 text-muted-foreground">
-						{{ project.organization?.name || '—' }}
+						{{ project.client?.name || '—' }}
+					</td>
+					<td class="py-3 pr-4">
+						<div v-if="project.taskCount" class="flex items-center gap-2">
+							<div class="w-16 h-1.5 bg-muted/30 rounded-full overflow-hidden">
+								<div
+									class="h-full rounded-full transition-all"
+									:class="project.taskProgress > 75 ? 'bg-emerald-500' : project.taskProgress > 25 ? 'bg-amber-500' : 'bg-primary'"
+									:style="{ width: `${project.taskProgress || 0}%` }"
+								/>
+							</div>
+							<span class="text-[10px] text-muted-foreground">{{ project.taskProgress || 0 }}%</span>
+						</div>
+						<span v-else class="text-muted-foreground/40 text-xs">—</span>
 					</td>
 					<td class="py-3 pr-4">
 						<div class="flex -space-x-1">

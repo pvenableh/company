@@ -17,7 +17,13 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'organizationId is required' });
   }
 
-  await requireOrgPermission(event, organizationId, 'ai_usage', 'read');
+  try {
+    await requireOrgPermission(event, organizationId, 'ai_usage', 'read');
+  } catch (error: any) {
+    if (error?.statusCode && error.statusCode < 500) throw error;
+    console.error('[ai/usage/by-endpoint] Permission check failed:', error?.message || error);
+    return { endpoints: [] };
+  }
 
   const directus = getTypedDirectus();
   const filter = buildAiUsageFilter(organizationId, period);
@@ -44,18 +50,18 @@ export default defineEventHandler(async (event) => {
       const ep = log.endpoint;
       const existing = endpointMap.get(ep);
       if (existing) {
-        existing.totalTokens += log.total_tokens || 0;
-        existing.inputTokens += log.input_tokens || 0;
-        existing.outputTokens += log.output_tokens || 0;
+        existing.totalTokens += Number(log.total_tokens) || 0;
+        existing.inputTokens += Number(log.input_tokens) || 0;
+        existing.outputTokens += Number(log.output_tokens) || 0;
         existing.requests += 1;
-        existing.cost += log.estimated_cost || 0;
+        existing.cost += Number(log.estimated_cost) || 0;
       } else {
         endpointMap.set(ep, {
-          totalTokens: log.total_tokens || 0,
-          inputTokens: log.input_tokens || 0,
-          outputTokens: log.output_tokens || 0,
+          totalTokens: Number(log.total_tokens) || 0,
+          inputTokens: Number(log.input_tokens) || 0,
+          outputTokens: Number(log.output_tokens) || 0,
           requests: 1,
-          cost: log.estimated_cost || 0,
+          cost: Number(log.estimated_cost) || 0,
         });
       }
     }

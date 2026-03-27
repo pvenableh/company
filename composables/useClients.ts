@@ -203,7 +203,7 @@ export function useClients() {
       const data = await items.list({
         fields: ['id', 'name', 'logo', 'status'],
         filter,
-        sort: ['name'],
+        sort: ['sort', 'name'],
         limit: -1,
       });
 
@@ -432,7 +432,7 @@ export function useClients() {
     const data = await items.list({
       fields: ['id', 'name', 'status'],
       filter,
-      sort: ['name'],
+      sort: ['sort', 'name'],
       limit: -1,
     });
 

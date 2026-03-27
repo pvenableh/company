@@ -12,7 +12,7 @@
 					<span class="text-[9px] uppercase font-bold">
 						<UTooltip :text="new Date(comment.date_created).toLocaleString()">
 							<span class="lowercase">
-								{{ getTimeAgoShort(new Date(comment.date_created).toLocaleString()) }}
+								{{ getFriendlyDate(comment.date_created) }}
 							</span>
 						</UTooltip>
 					</span>

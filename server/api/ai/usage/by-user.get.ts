@@ -17,7 +17,13 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'organizationId is required' });
   }
 
-  await requireOrgPermission(event, organizationId, 'ai_usage', 'read');
+  try {
+    await requireOrgPermission(event, organizationId, 'ai_usage', 'read');
+  } catch (error: any) {
+    if (error?.statusCode && error.statusCode < 500) throw error;
+    console.error('[ai/usage/by-user] Permission check failed:', error?.message || error);
+    return { users: [] };
+  }
 
   const directus = getTypedDirectus();
   const filter = buildAiUsageFilter(organizationId, period);
@@ -37,15 +43,15 @@ export default defineEventHandler(async (event) => {
       const uid = typeof log.user === 'object' && log.user !== null ? log.user.id : log.user;
       const existing = userMap.get(uid);
       if (existing) {
-        existing.totalTokens += log.total_tokens || 0;
+        existing.totalTokens += Number(log.total_tokens) || 0;
         existing.requests += 1;
-        existing.cost += log.estimated_cost || 0;
+        existing.cost += Number(log.estimated_cost) || 0;
         if (log.date_created > existing.lastActive) existing.lastActive = log.date_created;
       } else {
         userMap.set(uid, {
-          totalTokens: log.total_tokens || 0,
+          totalTokens: Number(log.total_tokens) || 0,
           requests: 1,
-          cost: log.estimated_cost || 0,
+          cost: Number(log.estimated_cost) || 0,
           lastActive: log.date_created || '',
         });
       }

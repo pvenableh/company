@@ -200,7 +200,7 @@ const statusOptions = [
   { label: 'Active', value: 'active' },
   { label: 'Prospect', value: 'prospect' },
   { label: 'Inactive', value: 'inactive' },
-  { label: 'Churned', value: 'churned' },
+  { label: 'Archived', value: 'archived' },
 ];
 
 const industryItems = useDirectusItems('industries');

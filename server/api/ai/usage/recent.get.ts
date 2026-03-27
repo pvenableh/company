@@ -3,27 +3,37 @@
  *
  * Query params:
  *   organizationId: string (required)
+ *   period: 'day' | 'week' | 'month' | 'all' (default: 'month')
  *   limit: number (default: 20, max: 100)
  */
 import { readItems } from '@directus/sdk';
+import type { AiUsagePeriod } from '~/server/utils/ai-date-range';
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event);
   const organizationId = query.organizationId as string;
+  const period = (query.period as AiUsagePeriod) || 'month';
   const limit = Math.min(Number(query.limit) || 20, 100);
 
   if (!organizationId) {
     throw createError({ statusCode: 400, message: 'organizationId is required' });
   }
 
-  await requireOrgPermission(event, organizationId, 'ai_usage', 'read');
+  try {
+    await requireOrgPermission(event, organizationId, 'ai_usage', 'read');
+  } catch (error: any) {
+    if (error?.statusCode && error.statusCode < 500) throw error;
+    console.error('[ai/usage/recent] Permission check failed:', error?.message || error);
+    return { activity: [] };
+  }
 
   const directus = getTypedDirectus();
+  const filter = buildAiUsageFilter(organizationId, period);
 
   try {
     const logs = await directus.request(
       readItems('ai_usage_logs', {
-        filter: { organization: { _eq: organizationId } },
+        filter,
         fields: ['id', 'user', 'endpoint', 'model', 'total_tokens', 'estimated_cost', 'date_created'],
         sort: ['-date_created'],
         limit,
