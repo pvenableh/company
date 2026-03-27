@@ -28,9 +28,10 @@ export default defineEventHandler(async (event) => {
   // Save as an AI chat session with the plan data stored in messages
   const chatSession = await directus.request(
     createItem('ai_chat_sessions', {
+      user: userId,
       title: body.title || `Marketing ${body.type === 'dashboard' ? 'Analysis' : 'Campaign Plan'}`,
       status: 'active',
-      context: 'marketing',
+      context: { page: 'marketing', type: body.type },
     }),
   ) as any;
 

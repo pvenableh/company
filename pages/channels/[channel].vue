@@ -20,7 +20,6 @@ useHead({ title: `#${params.channel} | Earnest` });
 const newMessage = ref('');
 const channelId = ref(null);
 const messagesContainer = ref(null);
-const textareaRef = ref(null);
 const sending = ref(false);
 
 // Define fields for messages
@@ -89,7 +88,6 @@ const sendMessage = async () => {
 			user_created: user.value.id,
 		});
 		newMessage.value = '';
-		nextTick(() => autoResizeTextarea());
 	} catch (error) {
 		console.error('Error sending message:', error);
 		useToast().add({ title: 'Failed to send message', color: 'red' });
@@ -106,22 +104,6 @@ const deleteMessage = async (id) => {
 		console.error('Error deleting message:', error);
 	}
 };
-
-// Auto-resize textarea
-function autoResizeTextarea() {
-	const el = textareaRef.value;
-	if (!el) return;
-	el.style.height = 'auto';
-	el.style.height = Math.min(el.scrollHeight, 160) + 'px';
-}
-
-// Handle keyboard in textarea
-function handleTextareaKeydown(e) {
-	if (e.key === 'Enter' && !e.shiftKey) {
-		e.preventDefault();
-		sendMessage();
-	}
-}
 
 // Scroll management
 const scrollToBottom = () => {
@@ -206,22 +188,25 @@ onMounted(() => {
 
 		<!-- Message Input -->
 		<div class="px-5 pb-4 pt-2 shrink-0">
-			<div
-				class="flex items-end gap-2 rounded-2xl border border-border/60 bg-muted/20 px-4 py-2.5 focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20 transition-all"
-			>
-				<textarea
-					ref="textareaRef"
+			<div class="channel-input flex items-end gap-2 rounded-2xl border border-border/60 bg-muted/20 px-2 py-1 focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20 transition-all">
+				<LazyFormTiptap
 					v-model="newMessage"
-					rows="1"
-					:placeholder="`Message #${params.channel}`"
+					:show-toolbar="false"
 					:disabled="!channelId"
-					class="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground/50 outline-none resize-none leading-relaxed max-h-[160px]"
-					@input="autoResizeTextarea"
-					@keydown="handleTextareaKeydown"
+					:organization-id="selectedOrg"
+					:enter-to-send="true"
+					height="min-h-[36px]"
+					custom-classes="px-2 py-1.5"
+					:character-limit="0"
+					:show-char-count="false"
+					:allow-uploads="false"
+					:context="{ collection: 'messages', itemId: channelId }"
+					class="flex-1 channel-tiptap"
+					@submit="sendMessage"
 				/>
 				<button
 					v-if="newMessage?.trim()"
-					class="shrink-0 w-7 h-7 rounded-full bg-primary flex items-center justify-center hover:bg-primary/90 transition-colors mb-0.5"
+					class="shrink-0 w-7 h-7 rounded-full bg-primary flex items-center justify-center hover:bg-primary/90 transition-colors mb-1"
 					:disabled="sending || !channelId"
 					@click="sendMessage"
 				>
@@ -230,7 +215,8 @@ onMounted(() => {
 			</div>
 			<p class="text-[10px] text-muted-foreground/40 mt-1.5 px-1">
 				<kbd class="px-1 py-0.5 rounded bg-muted/40 text-[9px] font-mono">Enter</kbd> to send,
-				<kbd class="px-1 py-0.5 rounded bg-muted/40 text-[9px] font-mono">Shift + Enter</kbd> for new line
+				<kbd class="px-1 py-0.5 rounded bg-muted/40 text-[9px] font-mono">Shift + Enter</kbd> for new line.
+				Type <kbd class="px-1 py-0.5 rounded bg-muted/40 text-[9px] font-mono">@</kbd> to mention someone.
 			</p>
 		</div>
 	</div>
@@ -263,5 +249,27 @@ onMounted(() => {
 
 .messages-scroll:hover::-webkit-scrollbar-thumb {
 	@apply bg-border;
+}
+
+/* Strip Tiptap default borders/chrome so it looks like the original textarea */
+.channel-tiptap :deep(.tiptap-wrapper) {
+	border: none !important;
+}
+
+.channel-tiptap :deep(.tiptap-container) {
+	border: none !important;
+	background: transparent !important;
+	max-height: 160px;
+}
+
+.channel-tiptap :deep(.tiptap-container .ProseMirror) {
+	font-size: 0.875rem;
+	line-height: 1.625;
+	min-height: 24px;
+}
+
+.channel-tiptap :deep(.tiptap-container .ProseMirror p.is-editor-empty:first-child::before) {
+	color: var(--muted-foreground);
+	opacity: 0.5;
 }
 </style>
