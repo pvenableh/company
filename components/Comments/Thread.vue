@@ -1,5 +1,5 @@
 <template>
-	<div class="comment-thread">
+	<div class="comment-thread" :class="{ 'opacity-40': isHidden }">
 		<div class="flex gap-3">
 			<UAvatar
 				:src="comment.user?.avatar ? `${useRuntimeConfig().public.directusUrl}/assets/${comment.user.avatar}` : null"
@@ -8,13 +8,16 @@
 			/>
 
 			<div class="w-auto">
-				<div class="flex flex-row ml-2">
+				<div class="flex flex-row ml-2 items-center gap-1">
 					<span class="text-[9px] uppercase font-bold">
 						<UTooltip :text="new Date(comment.date_created).toLocaleString()">
 							<span class="lowercase">
 								{{ getTimeAgoShort(new Date(comment.date_created).toLocaleString()) }}
 							</span>
 						</UTooltip>
+					</span>
+					<span v-if="isHidden" class="text-[9px] text-red-400 font-medium flex items-center gap-0.5">
+						<Icon name="i-heroicons-eye-slash" class="w-3 h-3" /> Hidden
 					</span>
 				</div>
 				<div class="bg-gray-100 dark:bg-gray-800 rounded-lg p-3">
@@ -23,29 +26,67 @@
 							{{ comment.user?.first_name }}
 							{{ comment.user?.last_name }}
 						</span>
-						<UButton
-							v-if="comment.user?.id === currentUser?.id"
-							size="xs"
-							color="primary"
-							variant="ghost"
-							icon="i-heroicons-x-circle-solid"
-							class="absolute -right-2"
-							:loading="deleteLoading"
-							@click="handleDelete"
-						/>
+						<div class="absolute -right-2 flex items-center gap-0.5">
+							<!-- Delete (own comment) -->
+							<UButton
+								v-if="isOwnComment && !confirmingDelete"
+								size="xs"
+								color="primary"
+								variant="ghost"
+								icon="i-heroicons-x-circle-solid"
+								@click="confirmingDelete = true"
+							/>
+							<!-- Delete confirmation -->
+							<template v-if="confirmingDelete">
+								<span class="text-[9px] text-red-500 mr-1">Delete?</span>
+								<UButton size="xs" color="red" variant="ghost" icon="i-heroicons-check" :loading="deleteLoading" @click="handleDelete" />
+								<UButton size="xs" variant="ghost" icon="i-heroicons-x-mark" @click="confirmingDelete = false" />
+							</template>
+						</div>
 					</div>
 					<div class="text-sm comment" v-html="comment.comment" />
 					<CommentsImageModal />
 				</div>
 
 				<div class="w-full flex gap-2 mt-1">
-					<div class="flex-grow flex flex-row justify-between">
+					<div class="flex-grow flex flex-row justify-between items-center">
 						<ReactionsBar :item-id="String(comment.id)" collection="comments" />
-						<UButton v-if="depth < 4" variant="ghost" size="xs" class="text-[10px]" @click="handleReplyClick">
-							Reply
-						</UButton>
+						<div class="flex items-center gap-1">
+							<!-- Report -->
+							<UButton
+								v-if="!isOwnComment"
+								variant="ghost"
+								size="xs"
+								class="text-[10px]"
+								icon="i-heroicons-flag"
+								color="gray"
+								@click="showReportDialog = true"
+							/>
+							<!-- Admin: hide/unhide -->
+							<UButton
+								v-if="isAdmin"
+								variant="ghost"
+								size="xs"
+								class="text-[10px]"
+								:icon="isHidden ? 'i-heroicons-eye' : 'i-heroicons-eye-slash'"
+								color="gray"
+								:loading="hideLoading"
+								@click="handleToggleHide"
+							/>
+							<!-- Reply -->
+							<UButton v-if="depth < 4" variant="ghost" size="xs" class="text-[10px]" @click="handleReplyClick">
+								Reply
+							</UButton>
+						</div>
 					</div>
 				</div>
+
+				<!-- Report Dialog -->
+				<CommentsReportDialog
+					v-model="showReportDialog"
+					:comment-id="comment.id"
+					@reported="handleReported"
+				/>
 
 				<div v-if="showReplyForm" class="mt-2">
 					<CommentsComment
@@ -134,9 +175,18 @@ const currentUser = computed(() => {
 	return loggedIn.value ? sessionUser.value ?? null : null;
 });
 const commentItems = useDirectusItems('comments');
+const { hideComment, unhideComment, isCommentHidden } = useComments();
+const { isOrgAdminOrAbove } = useOrgRole();
 const deleteLoading = ref(false);
+const hideLoading = ref(false);
+const confirmingDelete = ref(false);
 const showReplyForm = ref(false);
+const showReportDialog = ref(false);
 const activeReplyId = ref(null);
+
+const isOwnComment = computed(() => currentUser.value?.id === props.comment.user?.id);
+const isAdmin = computed(() => isOrgAdminOrAbove.value);
+const isHidden = computed(() => isCommentHidden(props.comment));
 
 function handleReplyClick() {
 	showReplyForm.value = true;
@@ -168,6 +218,7 @@ async function handleDelete() {
 	try {
 		deleteLoading.value = true;
 		await commentItems.remove(props.comment.id);
+		confirmingDelete.value = false;
 		emit('delete', props.comment.id);
 		props.refresh();
 	} catch (error) {
@@ -175,6 +226,26 @@ async function handleDelete() {
 	} finally {
 		deleteLoading.value = false;
 	}
+}
+
+async function handleToggleHide() {
+	try {
+		hideLoading.value = true;
+		if (isHidden.value) {
+			await unhideComment(props.comment.id);
+		} else {
+			await hideComment(props.comment.id);
+		}
+		props.refresh();
+	} catch (error) {
+		console.error('Error toggling comment visibility:', error);
+	} finally {
+		hideLoading.value = false;
+	}
+}
+
+function handleReported() {
+	showReportDialog.value = false;
 }
 
 // Reset state when isActive changes

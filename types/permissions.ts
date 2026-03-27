@@ -13,6 +13,8 @@ export type FeatureKey =
   | 'reactions'
   | 'messages'
   | 'invoices'
+  | 'leads'
+  | 'proposals'
   | 'email_campaigns'
   | 'mailing_lists'
   | 'appointments'
@@ -57,6 +59,8 @@ export const FEATURE_KEYS: FeatureKey[] = [
   'reactions',
   'messages',
   'invoices',
+  'leads',
+  'proposals',
   'email_campaigns',
   'mailing_lists',
   'appointments',
@@ -82,6 +86,8 @@ export const FEATURE_LABELS: Record<FeatureKey, string> = {
   reactions: 'Reactions',
   messages: 'Messages',
   invoices: 'Invoices',
+  leads: 'Leads',
+  proposals: 'Proposals',
   email_campaigns: 'Email Campaigns',
   mailing_lists: 'Mailing Lists',
   appointments: 'Appointments',
@@ -147,6 +153,8 @@ const OWNER_PERMISSIONS: PermissionMatrix = {
   reactions: full(),
   messages: full(),
   invoices: full(),
+  leads: full(),
+  proposals: full(),
   email_campaigns: full(),
   mailing_lists: full(),
   appointments: full(),
@@ -173,6 +181,8 @@ const ADMIN_PERMISSIONS: PermissionMatrix = {
   reactions: full(),
   messages: full(),
   invoices: full(),
+  leads: full(),
+  proposals: full(),
   email_campaigns: full(),
   mailing_lists: full(),
   appointments: full(),
@@ -199,6 +209,8 @@ const MANAGER_PERMISSIONS: PermissionMatrix = {
   reactions: full(),
   messages: full(),
   invoices: custom({ access: true, create: true, read: true, update: true }),
+  leads: full(),
+  proposals: full(),
   email_campaigns: full(),
   mailing_lists: full(),
   appointments: full(),
@@ -225,6 +237,8 @@ const MEMBER_PERMISSIONS: PermissionMatrix = {
   reactions: custom({ access: true, create: true, read: true, delete: true }),
   messages: custom({ access: true, create: true, read: true, update: true }),
   invoices: readOnly(),
+  leads: custom({ access: true, read: true, update: true }),
+  proposals: readOnly(),
   email_campaigns: noAccess(),
   mailing_lists: noAccess(),
   appointments: custom({ access: true, create: true, read: true, update: true }),
@@ -251,6 +265,8 @@ const CLIENT_PERMISSIONS: PermissionMatrix = {
   reactions: custom({ access: true, create: true, read: true, delete: true }),
   messages: custom({ access: true, create: true, read: true, update: true }),
   invoices: readOnly(),
+  leads: noAccess(),
+  proposals: noAccess(),
   email_campaigns: noAccess(),
   mailing_lists: noAccess(),
   appointments: readOnly(),

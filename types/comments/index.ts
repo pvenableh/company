@@ -15,6 +15,8 @@ export interface CommentWithRelations extends Omit<Comment, 'user'> {
   user: User | null;
   replies: CommentWithRelations[];
   reply_count?: number;
+  hidden_by?: string | User | null;
+  hidden_at?: string | null;
 }
 
 export interface CreateCommentPayload {
@@ -27,6 +29,14 @@ export interface CreateCommentPayload {
 export interface UpdateCommentPayload {
   comment: string;
   is_resolved?: boolean;
+}
+
+export type CommentReportReason = 'spam' | 'inappropriate' | 'harassment' | 'off_topic' | 'other';
+
+export interface ReportCommentPayload {
+  comment: number;
+  reason: CommentReportReason;
+  details?: string;
 }
 
 export interface CommentCountInfo {
