@@ -820,6 +820,7 @@ export interface CaseStudy {
 	featured?: boolean | null;
 	gallery?: CaseStudiesFile[] | string[];
 	services?: CaseStudiesService[] | string[];
+	portfolio_items?: CaseStudiesPortfolio[] | string[];
 }
 
 export interface CaseStudiesFile {
@@ -827,6 +828,14 @@ export interface CaseStudiesFile {
 	id: number;
 	case_studies_id?: CaseStudy | string | null;
 	directus_files_id?: DirectusFile | string | null;
+	sort?: number | null;
+}
+
+export interface CaseStudiesPortfolio {
+	/** @primaryKey */
+	id: number;
+	case_studies_id?: CaseStudy | string | null;
+	portfolio_id?: Portfolio | string | null;
 	sort?: number | null;
 }
 
@@ -1011,6 +1020,23 @@ export interface ClientTestimonial {
 	service_category?: 'brand_design' | 'web_design' | 'digital_marketing' | 'strategy' | null;
 }
 
+export interface CommentReport {
+	/** @primaryKey */
+	id: number;
+	status?: 'pending' | 'reviewed' | 'dismissed';
+	date_created?: string | null;
+	user_created?: DirectusUser | string | null;
+	/** @description The reported comment @required */
+	comment: Comment | string;
+	/** @required */
+	reason: 'spam' | 'inappropriate' | 'harassment' | 'off_topic' | 'other';
+	/** @description Optional explanation */
+	details?: string | null;
+	/** @description Admin who reviewed this report */
+	reviewed_by?: DirectusUser | string | null;
+	reviewed_at?: string | null;
+}
+
 export interface Comment {
 	/** @primaryKey */
 	id: number;
@@ -1028,6 +1054,10 @@ export interface Comment {
 	item?: string | null;
 	is_edited?: boolean | null;
 	is_resolved?: boolean | null;
+	/** @description Admin who hid this comment */
+	hidden_by?: DirectusUser | string | null;
+	/** @description When the comment was hidden */
+	hidden_at?: string | null;
 }
 
 export interface Contact {
@@ -1123,6 +1153,34 @@ export interface EarnestHistory {
 	dimensions?: Record<string, any> | null;
 }
 
+export interface EarnestReview {
+	/** @primaryKey */
+	id: string;
+	status?: 'published' | 'draft' | 'archived';
+	sort?: number | null;
+	user_created?: DirectusUser | string | null;
+	date_created?: string | null;
+	/** @description The user who submitted this review */
+	user?: DirectusUser | string | null;
+	/** @description The review text @required */
+	quote: string;
+	/** @description Star rating 1-5 @required */
+	rating: number;
+	/** @description How the reviewer appears publicly */
+	display_name?: string | null;
+	/** @description Job title for public display */
+	display_title?: string | null;
+	/** @description Company for public display */
+	display_company?: string | null;
+	/** @description Photo for public display */
+	display_photo?: DirectusFile | string | null;
+	/** @description User opted in to share publicly */
+	is_public?: boolean | null;
+	/** @description Admin curated for prominent display */
+	featured?: boolean | null;
+	source?: 'companion' | 'website' | 'manual' | null;
+}
+
 export interface EarnestScanCredit {
 	/** @primaryKey */
 	id: string;
@@ -1161,6 +1219,21 @@ export interface EarnestScore {
 	badges_unlocked?: Record<string, any> | null;
 	/** @description Five dimension breakdown */
 	dimension_scores?: Record<string, any> | null;
+}
+
+export interface EarnestShowcaseBrand {
+	/** @primaryKey */
+	id: string;
+	status?: 'published' | 'draft' | 'archived';
+	sort?: number | null;
+	/** @description Brand name @required */
+	name: string;
+	/** @description Brand logo @required */
+	logo: DirectusFile | string;
+	/** @description Optional website URL */
+	url?: string | null;
+	/** @description Show prominently */
+	featured?: boolean | null;
 }
 
 export interface EarnestTokenPool {
@@ -1519,6 +1592,12 @@ export interface Lead {
 	actual_value?: number | null;
 	lost_reason?: string | null;
 	closed_date?: string | null;
+	/** @description Team member assigned to this lead */
+	assigned_to?: DirectusUser | string | null;
+	/** @description Pipeline stage */
+	stage?: 'new' | 'contacted' | 'qualified' | 'proposal_sent' | 'negotiating' | 'won' | 'lost' | null;
+	/** @description Associated organization */
+	organization?: Organization | string | null;
 }
 
 export interface LineItem {
@@ -1613,6 +1692,16 @@ export interface MeetingRequest {
 	meeting_type?: 'consultation' | 'discovery' | 'project_review' | 'presentation' | 'general' | null;
 	request_status?: 'pending' | 'approved' | 'rejected' | null;
 	admin_notes?: string | null;
+	/** @description Guest name (for external/website requests) */
+	guest_name?: string | null;
+	/** @description Guest email (for external/website requests) */
+	guest_email?: string | null;
+	/** @description Guest phone (optional) */
+	guest_phone?: string | null;
+	/** @description Guest company (optional) */
+	guest_company?: string | null;
+	/** @description Where this request originated */
+	source?: 'website' | 'internal' | 'phone' | 'referral' | null;
 }
 
 export interface Menu {
@@ -2086,6 +2175,14 @@ export interface Portfolio {
 	hero?: Hero | string | null;
 	/** @required */
 	url: string;
+	/** @description Business outcomes and results — used on case study pages (e.g. market perception, new business won, team impact) */
+	results?: string | null;
+	/** @description Feature this item as a case study on the homepage and portfolio page */
+	featured?: boolean | null;
+	/** @description Year the project was completed (e.g. 2024) */
+	project_year?: string | null;
+	/** @description How long the project took (e.g. 8 weeks, 3 months) */
+	project_duration?: string | null;
 	images?: PortfolioFile[] | string[];
 	projects?: Portfolio[] | string[];
 	videos?: Video[] | string[];
@@ -2324,6 +2421,18 @@ export interface Proposal {
 	date_sent?: string | null;
 	notes?: string | null;
 	file?: DirectusFile | string | null;
+	/** @description Proposal name/title @required */
+	title: string;
+	/** @description Originating lead */
+	lead?: Lead | string | null;
+	/** @description Primary contact */
+	contact?: Contact | string | null;
+	/** @description Proposal dollar value */
+	total_value?: number | null;
+	/** @description Proposal expiration date */
+	valid_until?: string | null;
+	/** @description Current proposal status */
+	proposal_status?: 'draft' | 'sent' | 'viewed' | 'accepted' | 'rejected' | 'expired' | null;
 }
 
 export interface ProposalsFile {
@@ -3370,7 +3479,7 @@ export interface DirectusUser {
 	token?: string | null;
 	last_access?: string | null;
 	last_page?: string | null;
-	provider?: string;
+	provider?: 'google';
 	external_identifier?: string | null;
 	auth_data?: 'json' | null;
 	email_notifications?: boolean | null;
@@ -3595,6 +3704,7 @@ export interface Schema {
 	capabilities: Capability[];
 	case_studies: CaseStudy[];
 	case_studies_files: CaseStudiesFile[];
+	case_studies_portfolio: CaseStudiesPortfolio[];
 	case_studies_services: CaseStudiesService[];
 	cd_activities: CdActivity[];
 	cd_contacts: CdContact[];
@@ -3604,13 +3714,16 @@ export interface Schema {
 	clients_directus_users: ClientsDirectusUser[];
 	clients_teams: ClientsTeam[];
 	client_testimonials: ClientTestimonial[];
+	comment_reports: CommentReport[];
 	comments: Comment[];
 	contacts: Contact[];
 	contacts_organizations: ContactsOrganization[];
 	courses: Course[];
 	earnest_history: EarnestHistory[];
+	earnest_reviews: EarnestReview[];
 	earnest_scan_credits: EarnestScanCredit[];
 	earnest_scores: EarnestScore[];
+	earnest_showcase_brands: EarnestShowcaseBrand[];
 	earnest_token_pools: EarnestTokenPool[];
 	email_partials: EmailPartial[];
 	emails: Email[];
@@ -3791,6 +3904,7 @@ export enum CollectionNames {
 	capabilities = 'capabilities',
 	case_studies = 'case_studies',
 	case_studies_files = 'case_studies_files',
+	case_studies_portfolio = 'case_studies_portfolio',
 	case_studies_services = 'case_studies_services',
 	cd_activities = 'cd_activities',
 	cd_contacts = 'cd_contacts',
@@ -3800,13 +3914,16 @@ export enum CollectionNames {
 	clients_directus_users = 'clients_directus_users',
 	clients_teams = 'clients_teams',
 	client_testimonials = 'client_testimonials',
+	comment_reports = 'comment_reports',
 	comments = 'comments',
 	contacts = 'contacts',
 	contacts_organizations = 'contacts_organizations',
 	courses = 'courses',
 	earnest_history = 'earnest_history',
+	earnest_reviews = 'earnest_reviews',
 	earnest_scan_credits = 'earnest_scan_credits',
 	earnest_scores = 'earnest_scores',
+	earnest_showcase_brands = 'earnest_showcase_brands',
 	earnest_token_pools = 'earnest_token_pools',
 	email_partials = 'email_partials',
 	emails = 'emails',
