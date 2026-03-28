@@ -1,49 +1,59 @@
 <template>
-	<div class="space-y-6">
-		<!-- Color Theme Section -->
+	<div class="space-y-8">
+		<!-- Layout Mode Section -->
 		<div class="space-y-3">
-			<h4 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Color Theme</h4>
+			<h4 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Layout</h4>
+			<p class="text-[10px] text-muted-foreground -mt-1">Choose how you navigate Earnest</p>
+
+			<div class="grid grid-cols-3 gap-2.5">
+				<button
+					v-for="mode in modes"
+					:key="mode.id"
+					@click="setMode(mode.id)"
+					class="group relative flex flex-col items-center gap-2 rounded-xl border px-3 py-4 text-center transition-all duration-200 ios-press"
+					:class="
+						currentMode === mode.id
+							? 'border-primary bg-primary/5 ring-1 ring-primary/20 shadow-sm'
+							: 'border-border hover:border-primary/30 hover:bg-muted/20'
+					"
+				>
+					<Icon :name="mode.icon" class="w-6 h-6 text-foreground/70" />
+					<div>
+						<p class="text-xs font-semibold text-foreground">{{ mode.name }}</p>
+						<p class="text-[9px] text-muted-foreground leading-tight mt-0.5">{{ mode.description }}</p>
+					</div>
+					<div
+						v-if="currentMode === mode.id"
+						class="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-primary flex items-center justify-center"
+					>
+						<Icon name="lucide:check" class="w-2.5 h-2.5 text-primary-foreground" />
+					</div>
+				</button>
+			</div>
+		</div>
+
+		<!-- Color Scheme Section -->
+		<div class="space-y-3">
+			<h4 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Color Scheme</h4>
 
 			<!-- Pantone-style theme chips -->
-			<div class="grid grid-cols-3 gap-2.5">
+			<div class="grid grid-cols-2 gap-3">
 				<button
 					v-for="theme in themes"
 					:key="theme.id"
+					v-show="theme.id !== 'mono' && theme.id !== 'chromatic'"
 					@click="handleThemeClick(theme.id)"
 					class="pantone-chip group"
 					:class="currentTheme === theme.id ? 'pantone-chip--active' : ''"
 				>
 					<!-- Color block -->
 					<div class="pantone-chip__color">
-						<template v-if="theme.id === 'mono'">
-							<!-- Mono: single-hue gradient -->
-							<div
-								class="absolute inset-0 rounded-t-[5px]"
-								:style="{
-									background: `linear-gradient(135deg, hsl(${monoHue}, 55%, 65%), hsl(${monoHue}, 55%, 35%))`,
-								}"
-							/>
-						</template>
-						<template v-else-if="theme.id === 'chromatic'">
-							<!-- Chromatic: multi-hue gradient showing color relationships -->
-							<div
-								class="absolute inset-0 rounded-t-[5px]"
-								:style="{
-									background: `linear-gradient(135deg, hsl(${monoHue}, 65%, 50%), hsl(${(monoHue + 150) % 360}, 55%, 50%), hsl(${(monoHue + 30) % 360}, 50%, 55%))`,
-								}"
-							/>
-						</template>
-						<template v-else>
-							<!-- Named themes: diagonal gradient from swatches -->
-							<div
-								class="absolute inset-0 rounded-t-[5px]"
-								:style="{
-									background: `linear-gradient(135deg, ${theme.swatches[0]}, ${theme.swatches[2] || theme.swatches[1]})`,
-								}"
-							/>
-						</template>
-
-						<!-- Active check -->
+						<div
+							class="absolute inset-0 rounded-t-[5px]"
+							:style="{
+								background: `linear-gradient(135deg, ${theme.swatches[0]}, ${theme.swatches[2] || theme.swatches[1]})`,
+							}"
+						/>
 						<div
 							v-if="currentTheme === theme.id"
 							class="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-white/90 flex items-center justify-center shadow-sm"
@@ -51,134 +61,102 @@
 							<Icon name="lucide:check" class="w-2.5 h-2.5 text-gray-900" />
 						</div>
 					</div>
-
-					<!-- White label strip -->
 					<div class="pantone-chip__label">
 						<span class="text-[9px] font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300 truncate">{{ theme.name }}</span>
+						<span class="text-[8px] text-gray-500 dark:text-gray-400 block truncate">{{ theme.description }}</span>
 					</div>
 				</button>
 			</div>
-		</div>
 
-		<!-- Color Customization Panel (Mono or Chromatic) -->
-		<transition name="slide">
-			<div v-if="currentTheme === 'mono' || currentTheme === 'chromatic'" class="space-y-4 rounded-xl border bg-card/50 p-4">
-				<div class="flex items-center justify-between">
-					<h4 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-						{{ currentTheme === 'chromatic' ? 'Base Color' : 'Customize Color' }}
-					</h4>
-					<span class="text-[10px] text-muted-foreground font-mono tabular-nums bg-muted px-1.5 py-0.5 rounded">{{ monoHue }}°</span>
-				</div>
+			<!-- Advanced: Mono/Chromatic toggle -->
+			<button
+				@click="showAdvancedColors = !showAdvancedColors"
+				class="flex items-center gap-1.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+			>
+				<Icon :name="showAdvancedColors ? 'lucide:chevron-down' : 'lucide:chevron-right'" class="w-3 h-3" />
+				<span>Custom color</span>
+			</button>
 
-				<!-- Hue gradient slider -->
-				<div class="relative h-10 rounded-xl overflow-hidden shadow-inner">
-					<div class="absolute inset-0 hue-gradient rounded-xl" />
-					<input
-						type="range"
-						:value="monoHue"
-						min="0"
-						max="359"
-						step="1"
-						class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-						@input="setMonoHue(Number(($event.target as HTMLInputElement).value))"
-					/>
-					<div
-						class="absolute top-1/2 -translate-y-1/2 w-6 h-6 rounded-full border-[3px] border-white shadow-lg pointer-events-none transition-[left] duration-75"
-						:style="{
-							left: `calc(${(monoHue / 359) * 100}% - 12px)`,
-							backgroundColor: `hsl(${monoHue}, 55%, 50%)`,
-						}"
-					/>
-				</div>
-
-				<!-- Pantone-style preset chips -->
-				<div class="grid grid-cols-5 gap-2">
-					<button
-						v-for="preset in monoPresets"
-						:key="preset.hue"
-						@click="setMonoHue(preset.hue)"
-						class="pantone-chip pantone-chip--sm group/swatch"
-						:class="monoHue === preset.hue ? 'pantone-chip--active' : ''"
-					>
-						<div class="pantone-chip__color" :style="{ backgroundColor: preset.color }">
-							<div
-								v-if="monoHue === preset.hue"
-								class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-white/90 flex items-center justify-center shadow-sm"
-							>
-								<Icon name="lucide:check" class="w-2 h-2 text-gray-900" />
-							</div>
-						</div>
-						<div class="pantone-chip__label">
-							<span class="text-[8px] font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">{{ preset.name }}</span>
-						</div>
-					</button>
-				</div>
-
-				<!-- Chromatic: Kigen-inspired shade grid showing color relationships -->
-				<div v-if="currentTheme === 'chromatic'">
-					<p class="text-[10px] text-muted-foreground mb-2 font-medium">Color Channels</p>
-					<div class="space-y-1.5">
-						<div v-for="channel in chromaticChannels" :key="channel.label" class="space-y-0.5">
-							<div class="flex items-center gap-1.5 mb-0.5">
-								<span
-									class="w-2 h-2 rounded-full shrink-0"
-									:style="{ backgroundColor: `hsl(${channel.hue}, 60%, 50%)` }"
-								/>
-								<span class="text-[9px] font-semibold text-muted-foreground uppercase tracking-wider">{{ channel.label }}</span>
-								<span class="text-[8px] text-muted-foreground/60 font-mono">{{ channel.hue }}°</span>
-							</div>
-							<div class="flex rounded-md overflow-hidden border border-black/5 dark:border-white/5">
+			<transition name="slide">
+				<div v-if="showAdvancedColors" class="space-y-3">
+					<div class="grid grid-cols-2 gap-3">
+						<button
+							v-for="theme in themes.filter(t => t.id === 'mono' || t.id === 'chromatic')"
+							:key="theme.id"
+							@click="handleThemeClick(theme.id)"
+							class="pantone-chip group"
+							:class="currentTheme === theme.id ? 'pantone-chip--active' : ''"
+						>
+							<div class="pantone-chip__color">
 								<div
-									v-for="(shade, i) in channel.shades"
-									:key="i"
-									class="flex-1 h-7 transition-colors duration-200 relative group/shade"
-									:style="{ backgroundColor: shade.color }"
+									v-if="theme.id === 'mono'"
+									class="absolute inset-0 rounded-t-[5px]"
+									:style="{ background: `linear-gradient(135deg, hsl(${monoHue}, 55%, 65%), hsl(${monoHue}, 55%, 35%))` }"
+								/>
+								<div
+									v-else
+									class="absolute inset-0 rounded-t-[5px]"
+									:style="{ background: `linear-gradient(135deg, hsl(${monoHue}, 65%, 50%), hsl(${(monoHue + 150) % 360}, 55%, 50%), hsl(${(monoHue + 30) % 360}, 50%, 55%))` }"
+								/>
+								<div
+									v-if="currentTheme === theme.id"
+									class="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-white/90 flex items-center justify-center shadow-sm"
 								>
-									<span class="absolute inset-0 flex items-center justify-center text-[7px] font-mono opacity-0 group-hover/shade:opacity-100 transition-opacity"
-										:class="shade.light > 60 ? 'text-black/50' : 'text-white/60'"
-									>{{ shade.step }}</span>
+									<Icon name="lucide:check" class="w-2.5 h-2.5 text-gray-900" />
 								</div>
 							</div>
+							<div class="pantone-chip__label">
+								<span class="text-[9px] font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300 truncate">{{ theme.name }}</span>
+							</div>
+						</button>
+					</div>
+
+					<!-- Hue slider for mono/chromatic -->
+					<transition name="slide">
+						<div v-if="currentTheme === 'mono' || currentTheme === 'chromatic'" class="space-y-3 rounded-xl border bg-card/50 p-3">
+							<div class="flex items-center justify-between">
+								<span class="text-[10px] text-muted-foreground font-medium">Hue</span>
+								<span class="text-[10px] text-muted-foreground font-mono tabular-nums bg-muted px-1.5 py-0.5 rounded">{{ monoHue }}°</span>
+							</div>
+							<div class="relative h-8 rounded-lg overflow-hidden shadow-inner">
+								<div class="absolute inset-0 hue-gradient rounded-lg" />
+								<input
+									type="range"
+									:value="monoHue"
+									min="0"
+									max="359"
+									step="1"
+									class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+									@input="setMonoHue(Number(($event.target as HTMLInputElement).value))"
+								/>
+								<div
+									class="absolute top-1/2 -translate-y-1/2 w-5 h-5 rounded-full border-[2px] border-white shadow-lg pointer-events-none transition-[left] duration-75"
+									:style="{
+										left: `calc(${(monoHue / 359) * 100}% - 10px)`,
+										backgroundColor: `hsl(${monoHue}, 55%, 50%)`,
+									}"
+								/>
+							</div>
+							<div class="grid grid-cols-5 gap-1.5">
+								<button
+									v-for="preset in monoPresets"
+									:key="preset.hue"
+									@click="setMonoHue(preset.hue)"
+									class="flex flex-col items-center gap-1 group/swatch"
+								>
+									<div
+										class="w-6 h-6 rounded-full ring-1 ring-black/5 dark:ring-white/10 transition-transform group-hover/swatch:scale-110"
+										:class="monoHue === preset.hue ? 'ring-2 ring-primary scale-110' : ''"
+										:style="{ backgroundColor: preset.color }"
+									/>
+									<span class="text-[7px] text-muted-foreground">{{ preset.name }}</span>
+								</button>
+							</div>
 						</div>
-					</div>
+					</transition>
 				</div>
-
-				<!-- Mono: generated palette strip -->
-				<div v-else>
-					<p class="text-[10px] text-muted-foreground mb-1.5 font-medium">Generated Palette</p>
-					<div class="flex rounded-lg overflow-hidden shadow-sm border border-black/5 dark:border-white/5">
-						<div
-							v-for="(step, i) in paletteSteps"
-							:key="i"
-							class="flex-1 h-10 transition-colors duration-200"
-							:style="{ backgroundColor: step }"
-						/>
-					</div>
-					<div class="flex justify-between mt-1">
-						<span class="text-[9px] text-muted-foreground">50</span>
-						<span class="text-[9px] text-muted-foreground">950</span>
-					</div>
-				</div>
-
-				<!-- Semantic tokens -->
-				<div>
-					<p class="text-[10px] text-muted-foreground mb-1.5 font-medium">Semantic Tokens</p>
-					<div class="flex flex-wrap gap-1.5">
-						<span
-							v-for="token in activeSemanticTokens"
-							:key="token.label"
-							class="inline-flex items-center gap-1.5 text-[10px] px-2 py-1 rounded-full border bg-background"
-						>
-							<span
-								class="w-3 h-3 rounded-full ring-1 ring-black/5 dark:ring-white/10 shrink-0"
-								:style="{ backgroundColor: token.color }"
-							/>
-							<span class="text-muted-foreground font-medium">{{ token.label }}</span>
-						</span>
-					</div>
-				</div>
-			</div>
-		</transition>
+			</transition>
+		</div>
 
 		<!-- Timeline Icon Theme Section -->
 		<div class="space-y-3">
@@ -197,7 +175,6 @@
 							: 'border-border hover:border-primary/30 hover:bg-muted/20'
 					"
 				>
-					<!-- Preview icon grid (2x2) -->
 					<div class="grid grid-cols-2 gap-1">
 						<Icon
 							v-for="(icon, idx) in getThemePreviewIcons(theme)"
@@ -208,8 +185,6 @@
 					</div>
 					<span class="text-[10px] font-semibold text-foreground">{{ theme.name }}</span>
 					<span class="text-[8px] text-muted-foreground leading-tight">{{ theme.description }}</span>
-
-					<!-- Active check -->
 					<div
 						v-if="currentTimelineThemeId === theme.id"
 						class="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-primary flex items-center justify-center"
@@ -257,8 +232,10 @@
 <script setup lang="ts">
 const { themes, styles, monoPresets, currentTheme, currentStyle, monoHue, setTheme, setStyle, setMonoHue } = useTheme();
 const { themes: timelineThemes, currentThemeId: currentTimelineThemeId, setTheme: setTimelineTheme } = useTimelineTheme();
+const { modes, currentMode, setMode } = useLayoutMode();
 
-/** Get 4 preview icons from a timeline theme for the grid */
+const showAdvancedColors = ref(false);
+
 function getThemePreviewIcons(theme: typeof timelineThemes[0]): string[] {
 	const keys = ['projects', 'tickets', 'invoices', 'tasks'];
 	return keys.map((k) => theme.collectionIcons[k] || theme.preview);
@@ -268,90 +245,6 @@ const handleThemeClick = (themeId: string) => {
 	setTheme(themeId);
 };
 
-const activePresetName = computed(() => {
-	const match = monoPresets.find((p) => p.hue === monoHue.value);
-	return match?.name || null;
-});
-
-/** Palette preview steps from light to dark (mono) */
-const paletteSteps = computed(() => {
-	const h = monoHue.value;
-	return [98, 92, 82, 70, 55, 42, 30, 18, 10, 5].map(
-		(l) => `hsl(${h}, ${l > 80 ? 18 : l < 20 ? 12 : 50}%, ${l}%)`
-	);
-});
-
-/** Kigen-inspired shade steps for chromatic channels */
-const shadeSteps = [
-	{ step: '50', light: 97 },
-	{ step: '100', light: 92 },
-	{ step: '200', light: 82 },
-	{ step: '300', light: 70 },
-	{ step: '400', light: 58 },
-	{ step: '500', light: 45 },
-	{ step: '600', light: 37 },
-	{ step: '700', light: 28 },
-	{ step: '800', light: 18 },
-	{ step: '900', light: 12 },
-	{ step: '950', light: 6 },
-];
-
-/** Chromatic color channels — shows how the base hue spreads across the wheel */
-const chromaticChannels = computed(() => {
-	const h = monoHue.value;
-	const complement = (h + 150) % 360;
-	const analogous = (h + 30) % 360;
-	const triadic = (h + 120) % 360;
-
-	const makeShades = (hue: number, sat: number) =>
-		shadeSteps.map((s) => ({
-			step: s.step,
-			light: s.light,
-			color: `hsl(${hue}, ${s.light > 80 ? sat * 0.4 : s.light < 20 ? sat * 0.6 : sat}%, ${s.light}%)`,
-		}));
-
-	return [
-		{ label: 'Primary', hue: h, shades: makeShades(h, 65) },
-		{ label: 'Complement', hue: complement, shades: makeShades(complement, 55) },
-		{ label: 'Analogous', hue: analogous, shades: makeShades(analogous, 50) },
-		{ label: 'Triadic', hue: triadic, shades: makeShades(triadic, 50) },
-	];
-});
-
-/** Mono semantic tokens */
-const monoSemanticTokens = computed(() => {
-	const h = monoHue.value;
-	return [
-		{ label: 'Primary', color: `hsl(${h}, 55%, 42%)` },
-		{ label: 'Background', color: `hsl(${h}, 20%, 98%)` },
-		{ label: 'Foreground', color: `hsl(${h}, 15%, 10%)` },
-		{ label: 'Muted', color: `hsl(${h}, 18%, 92%)` },
-		{ label: 'Border', color: `hsl(${h}, 14%, 88%)` },
-		{ label: 'Accent', color: `hsl(${h}, 50%, 60%)` },
-	];
-});
-
-/** Chromatic semantic tokens — shows multi-hue roles */
-const chromaticSemanticTokens = computed(() => {
-	const h = monoHue.value;
-	const complement = (h + 150) % 360;
-	const analogous = (h + 30) % 360;
-	return [
-		{ label: 'Primary', color: `hsl(${h}, 65%, 42%)` },
-		{ label: 'Accent', color: `hsl(${complement}, 45%, 48%)` },
-		{ label: 'Secondary', color: `hsl(${analogous}, 30%, 50%)` },
-		{ label: 'Background', color: `hsl(${h}, 18%, 98%)` },
-		{ label: 'Foreground', color: `hsl(${h}, 12%, 10%)` },
-		{ label: 'Muted', color: `hsl(${h}, 14%, 93%)` },
-	];
-});
-
-/** Active semantic tokens based on current theme */
-const activeSemanticTokens = computed(() =>
-	currentTheme.value === 'chromatic' ? chromaticSemanticTokens.value : monoSemanticTokens.value
-);
-
-/** Get a preview font class for each style variant */
 function getStylePreviewClass(styleId: string): string {
 	switch (styleId) {
 		case 'modern': return 'font-sans font-bold tracking-tight';
@@ -384,50 +277,30 @@ function getStylePreviewClass(styleId: string): string {
 .pantone-chip--active:hover {
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12), 0 0 0 2px hsl(var(--primary));
 }
-
-/* Color block — tall rectangle */
 .pantone-chip__color {
 	position: relative;
 	width: 100%;
-	aspect-ratio: 1 / 1.15;
+	aspect-ratio: 2 / 1;
 }
-
-/* White label strip at bottom */
 .pantone-chip__label {
-	padding: 4px 5px 5px;
+	padding: 6px 8px 7px;
 	background: white;
 	text-align: center;
-	line-height: 1;
+	line-height: 1.3;
 }
 :root.dark .pantone-chip__label,
 .dark .pantone-chip__label {
 	background: hsl(var(--card));
 }
 
-/* Smaller variant for preset chips */
-.pantone-chip--sm .pantone-chip__color {
-	aspect-ratio: 1 / 1;
-}
-.pantone-chip--sm .pantone-chip__label {
-	padding: 3px 2px 4px;
-}
-
 /* ── Hue gradient ──────────────────────────────────────────── */
 .hue-gradient {
 	background: linear-gradient(
 		to right,
-		hsl(0, 60%, 50%),
-		hsl(30, 60%, 50%),
-		hsl(60, 60%, 50%),
-		hsl(90, 60%, 50%),
-		hsl(120, 60%, 50%),
-		hsl(150, 60%, 50%),
-		hsl(180, 60%, 50%),
-		hsl(210, 60%, 50%),
-		hsl(240, 60%, 50%),
-		hsl(270, 60%, 50%),
-		hsl(300, 60%, 50%),
-		hsl(330, 60%, 50%),
+		hsl(0, 60%, 50%), hsl(30, 60%, 50%), hsl(60, 60%, 50%),
+		hsl(90, 60%, 50%), hsl(120, 60%, 50%), hsl(150, 60%, 50%),
+		hsl(180, 60%, 50%), hsl(210, 60%, 50%), hsl(240, 60%, 50%),
+		hsl(270, 60%, 50%), hsl(300, 60%, 50%), hsl(330, 60%, 50%),
 		hsl(359, 60%, 50%)
 	);
 }

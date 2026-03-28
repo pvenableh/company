@@ -6,10 +6,12 @@ import 'vue-sonner/style.css';
 const { user } = useDirectusAuth();
 const runtimeConfig = useRuntimeConfig();
 
-// Initialize universal theme system
+// Initialize universal theme system + layout mode
 const { initTheme } = useTheme();
+const { initLayoutMode } = useLayoutMode();
 onMounted(() => {
 	initTheme();
+	initLayoutMode();
 });
 
 // Inline head script: apply theme BEFORE first paint to prevent flash of wrong theme.
@@ -17,7 +19,7 @@ onMounted(() => {
 useHead({
 	script: [
 		{
-			innerHTML: `(function(){try{var t=localStorage.getItem('earnest-theme')||'earnest';var s=localStorage.getItem('earnest-style')||'modern';document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-style',s);}catch(e){}})()`,
+			innerHTML: `(function(){try{var t=localStorage.getItem('earnest-theme')||'glass';var s=localStorage.getItem('earnest-style')||'modern';document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-style',s);}catch(e){}})()`,
 			tagPosition: 'head',
 		},
 	],
@@ -44,7 +46,7 @@ updateAvatarSource(avatar.value);
 const { visibleLinks } = useNavPreferences();
 </script>
 <template>
-	<NuxtLayout :links="visibleLinks">
+	<NuxtLayout>
 		<NuxtPage />
 	</NuxtLayout>
 	<NuxtLoadingIndicator
