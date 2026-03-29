@@ -37,28 +37,16 @@ export interface MonoPreset {
 /** Registry of available color themes. CSS lives in assets/css/themes.css */
 const themes: ThemeDefinition[] = [
 	{
-		id: 'earnest',
-		name: 'Earnest',
-		description: 'Warm neutrals with a quiet confidence',
-		swatches: ['#1a1a1a', '#e8e4df', '#3d3d3d', '#c4a882'],
+		id: 'glass',
+		name: 'Glass',
+		description: 'White-on-white with frosted translucency',
+		swatches: ['#fafafa', '#ffffff', '#1f1f1f', '#e5e5e5'],
 	},
 	{
-		id: 'midnight',
-		name: 'Midnight',
-		description: 'Deep blues for late-night focus',
-		swatches: ['#0f172a', '#1e293b', '#3b82f6', '#60a5fa'],
-	},
-	{
-		id: 'dawn',
-		name: 'Dawn',
-		description: 'Soft peach tones for a fresh start',
-		swatches: ['#fffbf5', '#fef0e3', '#e67e45', '#d4a27f'],
-	},
-	{
-		id: 'ocean',
-		name: 'Ocean',
-		description: 'Cool teals inspired by deep water',
-		swatches: ['#f0fdfa', '#ccfbf1', '#0d9488', '#14b8a6'],
+		id: 'ink',
+		name: 'Ink',
+		description: 'Warm paper with rich dark ink',
+		swatches: ['#f9f6f2', '#fdfcfa', '#2b2520', '#e8e3dc'],
 	},
 	{
 		id: 'mono',
@@ -378,7 +366,7 @@ function removeChromaticPalette() {
 }
 
 export function useTheme() {
-	const currentTheme = useState<string>('earnest-theme', () => 'earnest');
+	const currentTheme = useState<string>('earnest-theme', () => 'glass');
 	const currentStyle = useState<string>('earnest-style', () => 'modern');
 	const monoHue = useState<number>('earnest-mono-hue', () => 215);
 
@@ -445,7 +433,7 @@ export function useTheme() {
 		const savedHue = localStorage.getItem(MONO_HUE_KEY);
 		if (savedHue) monoHue.value = parseInt(savedHue, 10) || 215;
 
-		const savedTheme = localStorage.getItem(THEME_KEY) || 'earnest';
+		const savedTheme = localStorage.getItem(THEME_KEY) || 'glass';
 		currentTheme.value = savedTheme;
 		document.documentElement.setAttribute('data-theme', savedTheme);
 

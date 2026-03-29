@@ -1,51 +1,29 @@
 <template>
-	<div class="relative bg-background text-foreground transition duration-150 xl:overflow-visible ios-safe-area">
-		<!-- Desktop Sidebar -->
-		<ClientOnly>
-			<LayoutSidebar v-if="user" @edit-apps="navEditorOpen = true" />
-		</ClientOnly>
+	<div class="relative bg-background text-foreground transition duration-150 ios-safe-area">
+		<!-- Dynamic layout based on user's selected mode -->
+		<component
+			:is="activeLayoutComponent"
+			:user="user"
+			@open-spotlight="spotlightOpen = true"
+			@open-ai-tray="aiTrayOpen = true"
+			@open-timer="timeTrackerModalVisible = true"
+		>
+			<slot />
+		</component>
 
-		<div :class="user ? (sidebarCollapsed ? 'xl:pl-14' : 'xl:pl-[220px]') : ''" class="transition-[padding-left] duration-200">
-			<LayoutHeader :links="headerLinks" />
-
-			<div class="page pt-20 pb-safe min-h-page">
-				<slot />
-			</div>
-
-			<LayoutFooter :links="footerLinks" :class="user ? 'hidden md:flex' : 'flex'" />
-		</div>
-
-		<!-- iOS Tab Bar (mobile, hidden on lg+ where sidebar exists) -->
-		<LayoutMobileToolbar :links="toolbarLinks" @open-ai="aiTrayOpen = true" />
-
-		<!-- iOS Bottom Sheet (nav drawer) -->
-		<ClientOnly>
-			<LayoutNavDrawer @edit-apps="navEditorOpen = true" />
-		</ClientOnly>
-
-		<!-- Nav Editor (edit apps sheet) -->
-		<ClientOnly>
-			<LayoutNavEditor :is-open="navEditorOpen" @close="navEditorOpen = false" />
-		</ClientOnly>
-
-		<!-- AI Tray -->
+		<!-- AI Tray (shared across all modes) -->
 		<ClientOnly>
 			<CommandCenterAITray :is-open="aiTrayOpen" @close="aiTrayOpen = false" />
-		</ClientOnly>
-
-		<!-- Floating Dock: Tasks + Time Tracker (desktop) -->
-		<ClientOnly>
-			<LayoutFloatingDock @open-ai="aiTrayOpen = true" />
-		</ClientOnly>
-
-		<!-- Floating time tracker indicator (mobile fallback) -->
-		<ClientOnly>
-			<TimeTrackerFloatingIndicator class="md:hidden" />
 		</ClientOnly>
 
 		<!-- Time Tracker Modal (global, triggered from anywhere) -->
 		<ClientOnly>
 			<TimeTrackerModal v-model="timeTrackerModalVisible" />
+		</ClientOnly>
+
+		<!-- Floating time tracker indicator (mobile fallback) -->
+		<ClientOnly>
+			<TimeTrackerFloatingIndicator class="md:hidden" />
 		</ClientOnly>
 
 		<!-- Spotlight Search (Cmd+K) -->
@@ -56,34 +34,27 @@
 </template>
 
 <script setup lang="ts">
-interface Link {
-	name: string;
-	type: string[];
-	to: string;
-	icon: string;
-	color: string;
-	description: string;
-}
-
-const props = defineProps({
-	links: {
-		type: Array as PropType<Link[]>,
-		default: () => [],
-	},
-});
-
 import { timeTrackerModalOpen } from '~~/composables/useTimeTrackerModal';
 
 const { user } = useDirectusAuth();
-const { collapsed: sidebarCollapsed } = useSidebarCollapsed();
+const { currentMode } = useLayoutMode();
+
 const aiTrayOpen = ref(false);
-const navEditorOpen = ref(false);
 const spotlightOpen = ref(false);
 const timeTrackerModalVisible = timeTrackerModalOpen;
 
-const headerLinks = computed(() => props.links.filter((link) => link.type.includes('header')));
-const footerLinks = computed(() => props.links.filter((link) => link.type.includes('footer')));
-const toolbarLinks = computed(() => props.links.filter((link) => link.type.includes('toolbar')));
+// Resolve layout component based on current mode
+const activeLayoutComponent = computed(() => {
+	switch (currentMode.value) {
+		case 'tabs':
+			return resolveComponent('LayoutModesTabsLayout');
+		case 'home':
+			return resolveComponent('LayoutModesHomeLayout');
+		case 'spaces':
+		default:
+			return resolveComponent('LayoutModesSpacesLayout');
+	}
+});
 
 // Cmd+K / Ctrl+K spotlight shortcut
 if (import.meta.client) {
@@ -99,25 +70,3 @@ if (import.meta.client) {
 	});
 }
 </script>
-
-<style>
-/* Safe area padding for bottom content (above tab bar) */
-.pb-safe {
-	padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 16px);
-}
-@media (min-width: 1280px) {
-	.pb-safe {
-		padding-bottom: 0;
-	}
-}
-
-/* Prevent footer jump when content is shorter than viewport */
-.min-h-page {
-	min-height: calc(100vh - 80px - 56px - env(safe-area-inset-bottom, 0px));
-}
-@media (min-width: 768px) {
-	.min-h-page {
-		min-height: calc(100vh - 80px);
-	}
-}
-</style>
