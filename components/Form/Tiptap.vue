@@ -3,20 +3,20 @@
 		<!-- Drop zone overlay that appears when dragging files -->
 		<div
 			v-if="isDragging"
-			class="absolute inset-0 bg-cyan-50 dark:bg-cyan-900/20 border-2 border-dashed border-cyan-300 dark:border-cyan-600 rounded z-10 flex items-center justify-center pointer-events-none"
+			class="absolute inset-0 bg-primary/5 border-2 border-dashed border-primary/30 rounded z-10 flex items-center justify-center pointer-events-none"
 		>
 			<div class="text-center">
-				<UIcon name="i-heroicons-arrow-down-tray" class="w-12 h-12 text-cyan-500 mb-2" />
-				<p class="text-cyan-600 dark:text-cyan-300 font-medium">Drop files to upload</p>
+				<UIcon name="i-heroicons-arrow-down-tray" class="w-12 h-12 text-primary/60 mb-2" />
+				<p class="text-primary font-medium">Drop files to upload</p>
 			</div>
 		</div>
 
 		<editor-content
 			:editor="editor"
-			class="border-gray-300 border-t border-r border-l dark:text-white text-[14px] transition-all duration-200 overflow-y-scroll focus:border focus:border-cyan-200 relative tiptap-container rounded-t"
+			class="border-border border-t border-r border-l dark:text-white text-[14px] transition-all duration-200 overflow-y-scroll relative tiptap-container rounded-t"
 			:class="[
 				{ 'px-0 pt-0 border-none': disabled },
-				{ ' !border-cyan-200': editor.isFocused },
+				{ '!border-primary/40': editor.isFocused },
 				{ 'border-b rounded-b': !showToolbar },
 				height,
 				customClasses,
@@ -29,8 +29,8 @@
 
 		<div
 			v-if="showToolbar"
-			class="w-full flex flex-row justify-between border-gray-300 border-r border-l border-b toolbar rounded-b"
-			:class="{ ' !border-cyan-200': editor.isFocused }"
+			class="w-full flex flex-row justify-between border-border border-r border-l border-b toolbar rounded-b"
+			:class="{ '!border-primary/40': editor.isFocused }"
 		>
 			<div class="flex items-center flex-row">
 				<UButton
@@ -51,30 +51,14 @@
 					:class="{ 'is-active': editor.isActive(button.command) }"
 					@click="button.action"
 				/>
-				<UPopover :popper="{ placement: 'bottom-start' }" mode="click">
-					<UButton
-						size="xs"
-						variant="ghost"
-						:icon="'i-heroicons-link'"
-						class="transform scale-75"
-						:class="{ 'is-active': editor.isActive('link') }"
-					/>
-					<template #panel="{ close }">
-						<div class="p-2 w-72 space-y-4">
-							<UFormGroup label="URL">
-								<UInput v-model="linkUrl" placeholder="https://example.com" @keyup.enter="setLink(close)" />
-							</UFormGroup>
-							<div class="flex justify-end space-x-2">
-								<UButton v-if="editor.isActive('link')" size="xs" color="red" variant="soft" @click="removeLink(close)">
-									Remove
-								</UButton>
-								<UButton size="xs" color="primary" @click="setLink(close)">
-									{{ editor.isActive('link') ? 'Update' : 'Add' }}
-								</UButton>
-							</div>
-						</div>
-					</template>
-				</UPopover>
+				<button
+					type="button"
+					class="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground h-8 w-8 transform scale-75"
+					:class="{ 'is-active': editor.isActive('link') }"
+					@click="linkPopoverOpen = !linkPopoverOpen; initLinkUrl()"
+				>
+					<UIcon name="i-heroicons-link" class="w-4 h-4" />
+				</button>
 			</div>
 			<div v-if="showCharCount" class="absolute -bottom-[20px] right-0">
 				<!-- Character count display -->
@@ -89,6 +73,41 @@
 				</span>
 			</div>
 		</div>
+
+		<!-- Inline link panel -->
+		<div v-if="linkPopoverOpen" class="flex items-center gap-2 px-3 py-2 border-t border-border/30 bg-muted/10">
+			<UIcon name="i-heroicons-link" class="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+			<input
+				v-model="linkUrl"
+				type="url"
+				placeholder="https://example.com"
+				class="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-muted-foreground/50"
+				@keyup.enter="setLink(() => { linkPopoverOpen = false })"
+				@keyup.esc="linkPopoverOpen = false"
+			/>
+			<button
+				v-if="editor && editor.isActive('link')"
+				class="text-[10px] font-medium text-destructive hover:underline shrink-0"
+				@click="removeLink(() => { linkPopoverOpen = false })"
+			>
+				Remove
+			</button>
+			<button
+				class="text-[10px] font-medium text-primary hover:underline shrink-0"
+				@click="setLink(() => { linkPopoverOpen = false })"
+			>
+				{{ editor && editor.isActive('link') ? 'Update' : 'Add' }}
+			</button>
+			<button
+				class="text-muted-foreground hover:text-foreground shrink-0"
+				@click="linkPopoverOpen = false"
+			>
+				<UIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5" />
+			</button>
+		</div>
+
+		<!-- Footer slot (used by parent components for send buttons, hints, etc.) -->
+		<slot name="footer" />
 
 		<!-- Upload Progress Bar -->
 		<div v-if="isUploading" class="mt-2">
@@ -155,7 +174,7 @@ const props = defineProps({
 	},
 	focusRingClasses: {
 		type: String,
-		default: 'ring-2 ring-primary ring-offset-2 dark:ring-offset-gray-900 border-[var(--cyan)]',
+		default: 'ring-2 ring-primary ring-offset-2 dark:ring-offset-gray-900 border-primary/40',
 	},
 	disabled: {
 		type: Boolean,
@@ -226,6 +245,7 @@ const emit = defineEmits([
 const editor = ref(null);
 const fileInput = ref(null);
 const linkUrl = ref('');
+const linkPopoverOpen = ref(false);
 const { uploadFiles, updateFile } = useDirectusFiles();
 const { notify } = useNotifications();
 const { user: sessionUser, loggedIn } = useUserSession();
@@ -309,6 +329,13 @@ const removeLink = (close) => {
 	editor.value.chain().focus().unsetLink().run();
 	linkUrl.value = '';
 	close();
+};
+
+const initLinkUrl = () => {
+	if (editor.value) {
+		const link = editor.value.getAttributes('link');
+		linkUrl.value = link?.href || '';
+	}
 };
 
 // Update linkUrl when a link is selected
@@ -960,7 +987,7 @@ const handleFiles = async (files) => {
 
 	/* Optional: Add a subtle hover effect */
 	&:not(.ProseMirror-focused):hover {
-		border-color: var(--cyan-200);
+		border-color: hsl(var(--primary) / 0.3);
 	}
 	.toolbar {
 		button {
@@ -983,7 +1010,7 @@ const handleFiles = async (files) => {
 
 /* Ensure proper contrast in dark mode */
 .dark .tiptap-container:focus-within {
-	@apply border-cyan-200;
+	border-color: hsl(var(--primary) / 0.4);
 }
 
 .is-active {

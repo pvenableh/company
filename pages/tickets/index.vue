@@ -7,6 +7,7 @@
 					<h1 class="text-xl font-semibold">Tickets</h1>
 					<p class="text-sm text-muted-foreground">Board</p>
 				</div>
+				<LayoutShareButton title="Tickets | Earnest" />
 			</div>
 		</div>
 

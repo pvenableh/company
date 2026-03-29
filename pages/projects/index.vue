@@ -14,8 +14,8 @@ const { selectedClient, getClientFilter } = useClients();
 
 const isAdmin = computed(() => canAccess('projects'));
 
-// Default to table view for all users
-const activeView = ref('table');
+// Default to timeline view for admin, table for others
+const activeView = ref('timeline');
 
 // Filters
 const statusFilter = ref('active');
@@ -151,6 +151,8 @@ definePageMeta({
 					{{ tableProjects.length }} project{{ tableProjects.length !== 1 ? 's' : '' }}
 				</p>
 			</div>
+			<div class="flex items-center gap-2">
+			<LayoutShareButton title="Projects | Earnest" />
 			<button
 				class="h-9 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors flex items-center gap-2"
 				@click="showProjectForm = true"
@@ -158,6 +160,7 @@ definePageMeta({
 				<UIcon name="i-heroicons-plus" class="w-4 h-4" />
 				New Project
 			</button>
+			</div>
 		</div>
 
 		<!-- Create Project Modal -->
@@ -226,9 +229,10 @@ definePageMeta({
 		</div>
 
 		<ClientOnly>
-			<!-- Timeline view (admin only) -->
+			<!-- Timeline view — Unified Gantt (admin only) -->
 			<div v-if="isAdmin && activeView === 'timeline'" class="min-h-svh">
-				<ProjectTimeline />
+				<ProjectTimelineUnifiedGantt />
+				<!-- Old subway-map timeline hidden, not deleted: <ProjectTimeline /> -->
 			</div>
 
 			<!-- Board view (admin only) -->

@@ -77,9 +77,15 @@ function isActive(tabId: string): boolean {
     <header
       class="glass hidden md:flex items-center justify-between border-b border-border/40 px-4 lg:px-6 h-14 shrink-0 z-40"
     >
-      <!-- Left: Context pill -->
+      <!-- Left: Context pill (mobile) / inline selects (desktop) -->
       <div class="flex items-center min-w-0 w-48">
-        <LayoutContextPill />
+        <LayoutContextPill class="lg:hidden" />
+        <ClientOnly>
+          <div class="hidden lg:flex items-center gap-1">
+            <LayoutClientSelect v-if="user" :user="user" />
+            <LayoutTeamSelect v-if="user" />
+          </div>
+        </ClientOnly>
       </div>
 
       <!-- Center: Tab bar -->

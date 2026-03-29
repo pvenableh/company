@@ -26,6 +26,11 @@
 			<TimeTrackerFloatingIndicator class="md:hidden" />
 		</ClientOnly>
 
+		<!-- Floating dock (tasks, timer, AI) — desktop only -->
+		<ClientOnly>
+			<LayoutFloatingDock @open-ai="aiTrayOpen = true" />
+		</ClientOnly>
+
 		<!-- Spotlight Search (Cmd+K) -->
 		<ClientOnly>
 			<LayoutSpotlightSearch :open="spotlightOpen" @close="spotlightOpen = false" />

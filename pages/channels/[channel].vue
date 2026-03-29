@@ -63,6 +63,13 @@ const {
 	name: { _eq: params.channel },
 });
 
+// Filter to top-level messages: no parent_id, OR parent not in this channel's messages (orphaned replies show at top)
+const topLevelMessages = computed(() => {
+	if (!messages.value) return [];
+	const messageIds = new Set(messages.value.map(m => m.id));
+	return messages.value.filter(m => !m.parent_id || !messageIds.has(m.parent_id));
+});
+
 // Watch for channel data to set channelId
 watch(
 	channels,
@@ -114,7 +121,7 @@ const scrollToBottom = () => {
 	}
 };
 
-watch(messages, (newMessages, oldMessages) => {
+watch(topLevelMessages, (newMessages, oldMessages) => {
 	if (newMessages?.length > (oldMessages?.length || 0)) {
 		scrollToBottom();
 	}
@@ -142,6 +149,7 @@ onMounted(() => {
 					/>
 				</div>
 			</div>
+			<LayoutShareButton :title="`#${params.channel} | Earnest`" />
 		</div>
 
 		<!-- Connection Error -->
@@ -165,15 +173,13 @@ onMounted(() => {
 				</div>
 			</div>
 
-			<!-- Messages List -->
-			<div v-else-if="messages?.length" class="space-y-1">
-				<div
-					v-for="message in messages"
+			<!-- Messages List (top-level only — replies show threaded under their parent) -->
+			<div v-else-if="topLevelMessages.length" class="space-y-3">
+				<ChannelsMessage
+					v-for="message in topLevelMessages"
 					:key="message.id"
-					class="group flex items-start gap-3 py-1.5 px-2 -mx-2 rounded-lg hover:bg-muted/30 transition-colors"
-				>
-					<ChannelsMessage :channel="message.channel" :message="message" />
-				</div>
+					:message="message"
+				/>
 			</div>
 
 			<!-- Empty State -->
@@ -188,10 +194,10 @@ onMounted(() => {
 
 		<!-- Message Input -->
 		<div class="px-5 pb-4 pt-2 shrink-0">
-			<div class="channel-input flex items-end gap-2 rounded-2xl border border-border/60 bg-muted/20 px-2 py-1 focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20 transition-all">
+			<div class="channel-input flex items-end gap-2 rounded-2xl border border-border/60 bg-muted/20 px-2 py-1 focus-within:border-primary/40 focus-within:ring-1 focus-within:ring-primary/20 transition-all max-w-3xl">
 				<LazyFormTiptap
 					v-model="newMessage"
-					:show-toolbar="false"
+					:show-toolbar="true"
 					:disabled="!channelId"
 					:organization-id="selectedOrg"
 					:enter-to-send="true"
@@ -199,7 +205,7 @@ onMounted(() => {
 					custom-classes="px-2 py-1.5"
 					:character-limit="0"
 					:show-char-count="false"
-					:allow-uploads="false"
+					:allow-uploads="true"
 					:context="{ collection: 'messages', itemId: channelId }"
 					class="flex-1 channel-tiptap"
 					@submit="sendMessage"
@@ -258,8 +264,15 @@ onMounted(() => {
 
 .channel-tiptap :deep(.tiptap-container) {
 	border: none !important;
+	border-radius: 0 !important;
 	background: transparent !important;
 	max-height: 160px;
+}
+
+.channel-tiptap :deep(.toolbar) {
+	border: none !important;
+	border-top: 1px solid hsl(var(--border) / 0.2) !important;
+	border-radius: 0 !important;
 }
 
 .channel-tiptap :deep(.tiptap-container .ProseMirror) {

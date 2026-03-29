@@ -94,7 +94,7 @@
 						:loading="loading"
 						:depth="depth"
 						:refresh="refresh"
-						:toolbar="false"
+						:toolbar="true"
 						@submit="handleReplySubmit"
 						@cancel="handleReplyCancel"
 						:comment="comment"

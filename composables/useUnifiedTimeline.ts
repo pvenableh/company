@@ -42,7 +42,9 @@ export interface UnifiedTimelineData {
 }
 
 export function useUnifiedTimeline() {
-	const { fetchDirectus } = useDirectusItems();
+	const projectItems = useDirectusItems('projects');
+	const ticketItems = useDirectusItems('tickets');
+	const taskItems = useDirectusItems('tasks');
 	const { selectedOrg } = useOrganization();
 
 	const viewMode = ref<TimelineViewMode>('nested');
@@ -79,7 +81,7 @@ export function useUnifiedTimeline() {
 			const orgId = selectedOrg.value;
 
 			// Fetch projects with events and tasks
-			const projects = await fetchDirectus('projects', {
+			const projects = await projectItems.list({
 				filter: { organization: { _eq: orgId } },
 				fields: [
 					'*',
@@ -94,7 +96,7 @@ export function useUnifiedTimeline() {
 			});
 
 			// Fetch tickets
-			const tickets = await fetchDirectus('tickets', {
+			const tickets = await ticketItems.list({
 				filter: { organization: { _eq: orgId } },
 				fields: ['*', 'tasks.*', 'assigned_to.directus_users_id.*'],
 				sort: ['-date_created'],
@@ -102,10 +104,10 @@ export function useUnifiedTimeline() {
 			});
 
 			// Fetch quick tasks (personal tasks with due dates)
-			const tasks = await fetchDirectus('tasks', {
+			const tasks = await taskItems.list({
 				filter: {
 					_and: [
-						{ organization: { _eq: orgId } },
+						{ organization_id: { _eq: orgId } },
 						{ category: { _in: ['quick', 'project', 'event', 'ticket'] } },
 					],
 				},

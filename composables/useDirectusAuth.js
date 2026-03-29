@@ -220,13 +220,35 @@ export const useDirectusAuth = () => {
 	if (import.meta.client && !_initialized) {
 		_initialized = true
 
-		// Re-check token when tab becomes visible again
+		// Track when tab was hidden to detect long sleeps
+		let _hiddenAt = 0
 		document.addEventListener('visibilitychange', async () => {
-			if (document.visibilityState !== 'visible' || !loggedIn.value) return
+			if (document.visibilityState === 'hidden') {
+				_hiddenAt = Date.now()
+				return
+			}
 
+			// Tab became visible again
+			if (!loggedIn.value) return
+
+			const hiddenDuration = _hiddenAt ? Date.now() - _hiddenAt : 0
 			const expiresAt = session.value?.expiresAt
-			if (expiresAt && Date.now() >= expiresAt - 120_000) {
-				await refreshSession()
+
+			// Always refresh if hidden for >5 minutes (covers laptop sleep scenarios)
+			// or if token is within 2 minutes of expiry
+			if (hiddenDuration > 300_000 || (expiresAt && Date.now() >= expiresAt - 120_000)) {
+				const result = await refreshSession()
+				if (!result && loggedIn.value) {
+					// Refresh failed but user was logged in — show toast before redirecting
+					try {
+						const { toast } = await import('vue-sonner')
+						toast.error('Your session has expired. Please sign in again.')
+					} catch {}
+					// Wait briefly so the toast is visible
+					setTimeout(() => {
+						navigateTo('/auth/signin')
+					}, 1500)
+				}
 			} else {
 				scheduleRefresh()
 			}

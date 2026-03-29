@@ -14,8 +14,8 @@ const route = useRoute()
 const config = useRuntimeConfig()
 const { currentContext } = useContextualHat()
 
-// ── Sidebar state ──
-const sidebarCollapsed = ref(false)
+// ── Sidebar state (default collapsed on desktop) ──
+const sidebarCollapsed = ref(true)
 const mobileDrawerOpen = ref(false)
 
 // ── Collapsible space sections ──
@@ -50,8 +50,7 @@ interface NavItem {
 }
 
 const workItems: NavItem[] = [
-	{ name: 'Timeline', to: '/projects', icon: 'lucide:gantt-chart' },
-	{ name: 'Projects', to: '/projects', icon: 'heroicons:square-3-stack-3d' },
+	{ name: 'Projects', to: '/projects', icon: 'lucide:gantt-chart' },
 	{ name: 'Tickets', to: '/tickets', icon: 'heroicons:queue-list' },
 	{ name: 'Tasks', to: '/tasks', icon: 'heroicons:clipboard-document-check' },
 	{ name: 'Scheduler', to: '/scheduler', icon: 'heroicons:calendar-date-range' },
@@ -100,45 +99,43 @@ watch(() => route.path, () => {
 	<div class="flex h-screen bg-background">
 		<!-- ─── Desktop Sidebar ─── -->
 		<aside
-			class="hidden xl:flex flex-col border-r border-border/40 bg-sidebar-background shrink-0 transition-[width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-hidden z-30"
-			:class="sidebarCollapsed ? 'w-14' : 'w-60'"
+			class="hidden xl:flex flex-col border-r border-border/40 bg-sidebar-background shrink-0 transition-[width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] z-30"
+			:class="sidebarCollapsed ? 'w-14 overflow-visible' : 'w-60 overflow-hidden'"
 		>
-			<!-- Search -->
-			<div class="p-3 shrink-0">
-				<button
-					@click="emit('open-spotlight')"
-					class="flex items-center gap-2 w-full rounded-lg px-2.5 py-2 text-muted-foreground hover:bg-muted/50 transition-colors"
+			<!-- Command Center link (top of sidebar) -->
+			<div class="p-3 pb-1 shrink-0">
+				<NuxtLink
+					to="/"
+					class="nav-item w-full"
+					:class="{ 'nav-item-active': route.path === '/', 'justify-center': sidebarCollapsed, 'has-tooltip': sidebarCollapsed }"
+					:data-tooltip="sidebarCollapsed ? 'Command Center' : undefined"
 				>
-					<Icon name="lucide:search" class="w-4 h-4 shrink-0" />
-					<span v-if="!sidebarCollapsed" class="text-xs">Search</span>
-					<span v-if="!sidebarCollapsed" class="ml-auto text-[10px] text-muted-foreground/50 font-mono">⌘K</span>
-				</button>
+					<Icon name="heroicons:command-line" class="w-4 h-4 shrink-0" />
+					<span v-if="!sidebarCollapsed" class="text-[13px] font-medium">Command Center</span>
+				</NuxtLink>
 			</div>
 
 			<!-- Scrollable nav -->
-			<nav class="flex-1 overflow-y-auto px-3 space-y-1">
+			<nav class="flex-1 px-3 space-y-1" :class="sidebarCollapsed ? 'overflow-visible' : 'overflow-y-auto'">
 				<!-- WORK -->
 				<div>
 					<button
+						v-if="!sidebarCollapsed"
 						@click="toggleSpace('work')"
 						class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 hover:text-muted-foreground transition-colors"
-						:class="sidebarCollapsed ? 'justify-center' : ''"
 					>
-						<Icon
-							:name="spacesCollapsed.work ? 'lucide:chevron-right' : 'lucide:chevron-down'"
-							class="w-3 h-3 shrink-0"
-							v-if="!sidebarCollapsed"
-						/>
-						<span v-if="!sidebarCollapsed">Work</span>
-						<Icon v-else name="lucide:briefcase" class="w-4 h-4" />
+						<Icon :name="spacesCollapsed.work ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="w-3 h-3 shrink-0" />
+						<span>Work</span>
 					</button>
-					<div v-show="!spacesCollapsed.work" class="space-y-0.5 mt-0.5">
+					<div v-if="sidebarCollapsed" class="h-2" />
+					<div v-show="!spacesCollapsed.work || sidebarCollapsed" class="space-y-0.5 mt-0.5">
 						<NuxtLink
 							v-for="item in workItems"
 							:key="item.to + item.name"
 							:to="item.to"
 							class="nav-item"
-							:class="{ 'nav-item-active': isActiveItem(item.to), 'justify-center': sidebarCollapsed }"
+							:class="{ 'nav-item-active': isActiveItem(item.to), 'justify-center': sidebarCollapsed, 'has-tooltip': sidebarCollapsed }"
+							:data-tooltip="sidebarCollapsed ? item.name : undefined"
 						>
 							<Icon :name="item.icon" class="w-4 h-4 shrink-0" />
 							<span v-if="!sidebarCollapsed" class="text-[13px]">{{ item.name }}</span>
@@ -149,25 +146,22 @@ watch(() => route.path, () => {
 				<!-- RELATIONSHIPS -->
 				<div class="pt-2">
 					<button
+						v-if="!sidebarCollapsed"
 						@click="toggleSpace('relationships')"
 						class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 hover:text-muted-foreground transition-colors"
-						:class="sidebarCollapsed ? 'justify-center' : ''"
 					>
-						<Icon
-							:name="spacesCollapsed.relationships ? 'lucide:chevron-right' : 'lucide:chevron-down'"
-							class="w-3 h-3 shrink-0"
-							v-if="!sidebarCollapsed"
-						/>
-						<span v-if="!sidebarCollapsed">Relationships</span>
-						<Icon v-else name="heroicons:user-group" class="w-4 h-4" />
+						<Icon :name="spacesCollapsed.relationships ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="w-3 h-3 shrink-0" />
+						<span>Relationships</span>
 					</button>
-					<div v-show="!spacesCollapsed.relationships" class="space-y-0.5 mt-0.5">
+					<div v-if="sidebarCollapsed" class="h-2" />
+					<div v-show="!spacesCollapsed.relationships || sidebarCollapsed" class="space-y-0.5 mt-0.5">
 						<NuxtLink
 							v-for="item in relationshipItems"
 							:key="item.to"
 							:to="item.to"
 							class="nav-item"
-							:class="{ 'nav-item-active': isActiveItem(item.to), 'justify-center': sidebarCollapsed }"
+							:class="{ 'nav-item-active': isActiveItem(item.to), 'justify-center': sidebarCollapsed, 'has-tooltip': sidebarCollapsed }"
+							:data-tooltip="sidebarCollapsed ? item.name : undefined"
 						>
 							<Icon :name="item.icon" class="w-4 h-4 shrink-0" />
 							<span v-if="!sidebarCollapsed" class="text-[13px]">{{ item.name }}</span>
@@ -178,25 +172,22 @@ watch(() => route.path, () => {
 				<!-- BUSINESS -->
 				<div class="pt-2">
 					<button
+						v-if="!sidebarCollapsed"
 						@click="toggleSpace('business')"
 						class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 hover:text-muted-foreground transition-colors"
-						:class="sidebarCollapsed ? 'justify-center' : ''"
 					>
-						<Icon
-							:name="spacesCollapsed.business ? 'lucide:chevron-right' : 'lucide:chevron-down'"
-							class="w-3 h-3 shrink-0"
-							v-if="!sidebarCollapsed"
-						/>
-						<span v-if="!sidebarCollapsed">Business</span>
-						<Icon v-else name="heroicons:banknotes" class="w-4 h-4" />
+						<Icon :name="spacesCollapsed.business ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="w-3 h-3 shrink-0" />
+						<span>Business</span>
 					</button>
-					<div v-show="!spacesCollapsed.business" class="space-y-0.5 mt-0.5">
+					<div v-if="sidebarCollapsed" class="h-2" />
+					<div v-show="!spacesCollapsed.business || sidebarCollapsed" class="space-y-0.5 mt-0.5">
 						<NuxtLink
 							v-for="item in businessItems"
 							:key="item.to"
 							:to="item.to"
 							class="nav-item"
-							:class="{ 'nav-item-active': isActiveItem(item.to), 'justify-center': sidebarCollapsed }"
+							:class="{ 'nav-item-active': isActiveItem(item.to), 'justify-center': sidebarCollapsed, 'has-tooltip': sidebarCollapsed }"
+							:data-tooltip="sidebarCollapsed ? item.name : undefined"
 						>
 							<Icon :name="item.icon" class="w-4 h-4 shrink-0" />
 							<span v-if="!sidebarCollapsed" class="text-[13px]">{{ item.name }}</span>
@@ -209,24 +200,19 @@ watch(() => route.path, () => {
 			<div class="p-3 border-t border-border/30 space-y-0.5 shrink-0">
 				<button
 					class="nav-item w-full"
-					:class="sidebarCollapsed ? 'justify-center' : ''"
+					:class="{ 'justify-center': sidebarCollapsed, 'has-tooltip': sidebarCollapsed }"
+					:data-tooltip="sidebarCollapsed ? 'Earnest AI' : undefined"
 					@click="emit('open-ai-tray')"
 				>
 					<Icon name="heroicons:sparkles" class="w-4 h-4 shrink-0" />
 					<span v-if="!sidebarCollapsed" class="text-[13px]">AI</span>
 				</button>
-				<NuxtLink
-					to="/time-tracker"
-					class="nav-item"
-					:class="{ 'nav-item-active': isActiveItem('/time-tracker'), 'justify-center': sidebarCollapsed }"
-				>
-					<Icon name="heroicons:clock" class="w-4 h-4 shrink-0" />
-					<span v-if="!sidebarCollapsed" class="text-[13px]">Timer</span>
-				</NuxtLink>
+				<!-- Timer omitted from desktop sidebar — floating dock provides quick timer access -->
 				<NuxtLink
 					to="/organization"
 					class="nav-item"
-					:class="{ 'nav-item-active': isActiveItem('/organization'), 'justify-center': sidebarCollapsed }"
+					:class="{ 'nav-item-active': isActiveItem('/organization'), 'justify-center': sidebarCollapsed, 'has-tooltip': sidebarCollapsed }"
+					:data-tooltip="sidebarCollapsed ? 'Settings' : undefined"
 				>
 					<Icon name="lucide:settings" class="w-4 h-4 shrink-0" />
 					<span v-if="!sidebarCollapsed" class="text-[13px]">Settings</span>
@@ -236,7 +222,8 @@ watch(() => route.path, () => {
 				<button
 					@click="sidebarCollapsed = !sidebarCollapsed"
 					class="nav-item w-full mt-1"
-					:class="sidebarCollapsed ? 'justify-center' : ''"
+					:class="{ 'justify-center': sidebarCollapsed, 'has-tooltip': sidebarCollapsed }"
+					:data-tooltip="sidebarCollapsed ? 'Expand' : undefined"
 				>
 					<Icon :name="sidebarCollapsed ? 'lucide:panel-left-open' : 'lucide:panel-left-close'" class="w-4 h-4 shrink-0" />
 					<span v-if="!sidebarCollapsed" class="text-[13px]">Collapse</span>
@@ -256,12 +243,21 @@ watch(() => route.path, () => {
 					>
 						<Icon name="lucide:menu" class="w-5 h-5" />
 					</button>
-					<LayoutContextPill />
+					<!-- Mobile: compact context pill -->
+					<LayoutContextPill class="lg:hidden" />
+					<!-- Desktop: inline client & team selects -->
+					<ClientOnly>
+						<div class="hidden lg:flex items-center gap-1">
+							<LayoutClientSelect v-if="user" :user="user" />
+							<LayoutTeamSelect v-if="user" />
+						</div>
+					</ClientOnly>
 				</div>
 
-				<!-- Center: Logo -->
-				<NuxtLink to="/" class="flex flex-col items-center">
+				<!-- Center: Logo + tagline -->
+				<NuxtLink to="/" class="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
 					<LogoEarnest size="sm" />
+					<span class="header-tagline">Do good work.</span>
 				</NuxtLink>
 
 				<!-- Right: Notifications + Avatar -->
@@ -395,6 +391,16 @@ watch(() => route.path, () => {
 <style scoped>
 @reference "~/assets/css/tailwind.css";
 
+/* ── Header tagline ── */
+.header-tagline {
+	font-family: var(--font-proxima-light);
+	font-style: italic;
+	font-size: 9px;
+	letter-spacing: 0.06em;
+	color: hsl(var(--muted-foreground));
+	margin-top: 1px;
+}
+
 /* ── Nav items ── */
 .nav-item {
 	display: flex;
@@ -417,6 +423,34 @@ watch(() => route.path, () => {
 	background: hsl(var(--primary) / 0.08);
 	color: hsl(var(--foreground));
 	font-weight: 500;
+}
+
+/* ── CSS Tooltips for collapsed sidebar ── */
+.has-tooltip {
+	position: relative;
+}
+
+.has-tooltip::after {
+	content: attr(data-tooltip);
+	position: absolute;
+	left: calc(100% + 10px);
+	top: 50%;
+	transform: translateY(-50%);
+	padding: 4px 10px;
+	border-radius: 6px;
+	background: hsl(var(--foreground));
+	color: hsl(var(--background));
+	font-size: 11px;
+	font-weight: 500;
+	white-space: nowrap;
+	pointer-events: none;
+	opacity: 0;
+	transition: opacity 0.15s ease;
+	z-index: 100;
+}
+
+.has-tooltip:hover::after {
+	opacity: 1;
 }
 
 /* ── Mobile bottom bar buttons ── */

@@ -88,9 +88,9 @@
 			</button>
 		</div>
 
-		<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-			<!-- Quick Task Generator (left column) -->
-			<div class="lg:col-span-1">
+		<div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+			<!-- Quick Task Generator (left column, sticky on large screens) -->
+			<div class="lg:col-span-1 lg:sticky lg:top-20 lg:self-start">
 				<div class="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
 					<TasksQuickTaskGenerator />
 				</div>

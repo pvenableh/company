@@ -180,10 +180,13 @@ watch(() => selectedClient.value, debouncedFetch);
           {{ total }} total<span v-if="activeInvoices.length">, {{ activeInvoices.length }} active</span>
         </p>
       </div>
-      <Button v-if="isAdmin" size="sm" @click="showCreateModal = true">
-        <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
-        New Invoice
-      </Button>
+      <div class="flex items-center gap-2">
+        <LayoutShareButton title="Invoices | Earnest" />
+        <Button v-if="isAdmin" size="sm" @click="showCreateModal = true">
+          <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
+          New Invoice
+        </Button>
+      </div>
     </div>
 
     <!-- Stats -->

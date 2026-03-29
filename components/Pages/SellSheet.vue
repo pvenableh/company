@@ -1,5 +1,15 @@
 <template>
 	<div class="sell-sheet">
+		<!-- Top Nav -->
+		<nav class="sell-nav">
+			<nuxt-link to="/" class="sell-nav-brand">
+				<LogoEarnest size="sm" />
+			</nuxt-link>
+			<nuxt-link to="/auth/signin" class="sell-nav-login">
+				Sign In
+			</nuxt-link>
+		</nav>
+
 		<!-- Hero -->
 		<section ref="heroRef" class="earnest-hero">
 			<p class="hero-kicker opacity-0">The AI-powered business operating system</p>
@@ -437,6 +447,8 @@ const marqueeItems = [
 	{ label: 'Social AI Generate', icon: 'i-lucide-sparkles' },
 	{ label: 'Goal Suggestions', icon: 'i-lucide-target' },
 	{ label: 'Brand Awareness AI', icon: 'i-lucide-palette' },
+	{ label: 'Unified Gantt Timeline', icon: 'i-lucide-gantt-chart' },
+	{ label: 'Spaces · Tabs · Home', icon: 'i-lucide-layout-grid' },
 	{ label: 'Projects', icon: 'i-lucide-folder-kanban' },
 	{ label: 'Invoicing', icon: 'i-lucide-receipt' },
 	{ label: 'People & Companies', icon: 'i-lucide-building-2' },
@@ -780,8 +792,49 @@ useHead({
 	color: var(--ink);
 	font-family: var(--font-proxima-light);
 	-webkit-font-smoothing: antialiased;
-	margin-top: -5rem;
+	margin-top: 0;
 }
+/* ─── TOP NAV ─── */
+.sell-nav {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	z-index: 50;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 16px 24px;
+	background: transparent;
+	transition: background 0.3s ease;
+}
+
+.sell-nav-brand {
+	color: var(--ink);
+	text-decoration: none;
+}
+
+.sell-nav-login {
+	display: inline-flex;
+	align-items: center;
+	padding: 8px 20px;
+	border: 1px solid var(--ink);
+	border-radius: 100px;
+	font-family: var(--font-proxima-light);
+	font-size: 11px;
+	font-weight: 500;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+	color: var(--ink);
+	text-decoration: none;
+	transition: all 0.25s ease;
+}
+
+.sell-nav-login:hover {
+	background: var(--ink);
+	color: var(--paper);
+}
+
 .bp {
 	color: var(--accent);
 	font-size: 1.3em;
@@ -791,7 +844,7 @@ useHead({
 
 /* ─── HERO ─── */
 .earnest-hero {
-	min-height: calc(100svh - 70px);
+	min-height: 100svh;
 	display: flex;
 	flex-direction: column;
 	align-items: center;

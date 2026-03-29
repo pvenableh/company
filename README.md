@@ -32,10 +32,13 @@ Earnest ships with two companion apps: **CardDesk** — a networking CRM that tu
 - **Email Notifications** — Transactional emails via SendGrid for invoices, appointments, password resets, and team invitations
 - **Email Templates** — MJML-powered responsive email templates with block-based composition, design-time variables (`{{{triple braces}}}`), and runtime personalization (`{{double braces}}`)
 - **File Storage** — AWS S3 integration with presigned URLs for secure uploads
+- **Three Navigation Modes** — Choose your preferred workspace layout: **Spaces** (macOS-style sidebar with collapsible Work/Relationships/Business sections), **Tabs** (iPadOS-style 5-tab top bar: Work, People, Money, Engage, AI), or **Home** (Apple TV-style card grid with breadcrumb drill-down). Mode persists per user via localStorage
+- **Unified Gantt Timeline** — Asana-style Gantt chart combining projects, project events, tickets, and personal tasks in a single interactive timeline. Supports nested (grouped by project) and flat (separate swimlanes) view modes, zoom controls, scroll-to-today, event selection, and expand/collapse — shown at the top of the Command Center and on the Projects page
+- **Floating Dock** — Draggable desktop toolbar with quick access to Tasks, Time Tracker, and AI assistant. Snaps to any screen corner with position persistence. Shows active task count badge and live timer display
+- **Theme System** — Four color themes (Glass, Ink, Mono, Chromatic) combined with four style variants (Modern, Classic, Casual, Bold). Mono and Chromatic themes generate full palettes from a single hue value. All combinations persist to localStorage with flash-of-unstyled-content prevention
 - **Dark Mode** — System-aware dark/light theme with manual toggle
 - **PWA** — Install as a native-feeling progressive web app on any device
 - **Timeline Icon Themes** — Six swappable icon theme packs for the activity timeline (Classic/Heroicons, Animals, Food, Travel, Objects, Nature) using Fluent Emoji Flat, with per-user persistence and live-swapping via Account > Appearance settings
-- **Theme System** — Semantic `t-*` CSS utility classes that adapt to light and dark mode
 - **Marketing Sell Sheet** — Design-forward landing page at `/` showcasing actionable experiences and intuitive movement; interactive savings calculator, token cost transparency grid, CMS-backed testimonials and logo carousel, and A/B testing infrastructure (cookie-based variant assignment with GA event tracking)
 - **Investor Pitch Page** — Public page at `/pitch` with interactive revenue projection calculator (24-month forecast with adjustable growth rate), plan/add-on overview, unit economics, and Earnest Score breakdown
 - **Branded Error Pages** — Earnest-styled error pages (404, 403, 401, 500) with status-specific messaging, editorial typography, and graceful recovery actions

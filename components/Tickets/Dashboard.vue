@@ -256,15 +256,15 @@ const fetchTickets = async () => {
 						},
 					],
 				},
-				...(selectedOrg.value ? [{ organization: { id: { _eq: selectedOrg.value } } }] : []),
-				...(teamFilter.value ? [{ team: { id: { _eq: teamFilter.value } } }] : []),
+				...(selectedOrg.value ? [{ organization: { _eq: selectedOrg.value } }] : []),
+				...(teamFilter.value ? [{ team: { _eq: teamFilter.value } }] : []),
 				...(showOnlyMyTickets.value && user.value
-					? [{ assigned_to: { directus_users_id: { id: { _eq: user.value.id } } } }]
+					? [{ assigned_to: { directus_users_id: { _eq: user.value.id } } }]
 					: []),
 			],
 		};
 
-		// Fetch tickets with this filter
+		// Fetch tickets — avoid deeply nested O2M fields in initial query to prevent Directus 500 errors
 		const tickets = await ticketItems.list({
 			fields: [
 				'id',
@@ -283,14 +283,59 @@ const fetchTickets = async () => {
 				'organization.name',
 				'team.id',
 				'team.name',
-				'comments.id',
-				'comments.date_created',
-				'tasks.id',
-				'tasks.status',
 			],
 			filter,
 			sort: ['-date_created'],
 		});
+
+		// Enrich tickets with comment and task counts separately (avoids Directus 500 on deep O2M + filter combos)
+		if (tickets?.length) {
+			try {
+				const ticketIds = tickets.map(t => t.id);
+				const commentItems = useDirectusItems('directus_comments');
+				const taskItemsLocal = useDirectusItems('tasks');
+
+				// Fetch comment counts per ticket
+				const [comments, tasks] = await Promise.all([
+					commentItems.list({
+						fields: ['id', 'collection', 'item'],
+						filter: { collection: { _eq: 'tickets' }, item: { _in: ticketIds } },
+						limit: -1,
+					}).catch(() => []),
+					taskItemsLocal.list({
+						fields: ['id', 'status', 'ticket_id'],
+						filter: { ticket_id: { _in: ticketIds } },
+						limit: -1,
+					}).catch(() => []),
+				]);
+
+				// Attach counts to tickets
+				const commentCountMap = {};
+				for (const c of (comments || [])) {
+					const tid = c.item;
+					commentCountMap[tid] = (commentCountMap[tid] || 0) + 1;
+				}
+				const taskMap = {};
+				for (const t of (tasks || [])) {
+					const tid = typeof t.ticket_id === 'object' ? t.ticket_id?.id : t.ticket_id;
+					if (!tid) continue;
+					if (!taskMap[tid]) taskMap[tid] = [];
+					taskMap[tid].push(t);
+				}
+
+				for (const ticket of tickets) {
+					ticket.comments = Array(commentCountMap[ticket.id] || 0).fill({ id: 'placeholder' });
+					ticket.tasks = taskMap[ticket.id] || [];
+				}
+			} catch (enrichErr) {
+				console.warn('[Dashboard] Failed to enrich tickets with comments/tasks:', enrichErr);
+				// Proceed without enrichment — dashboard will still work with basic data
+				for (const ticket of tickets) {
+					ticket.comments = [];
+					ticket.tasks = [];
+				}
+			}
+		}
 
 		// Store all tickets
 		allTickets.value = tickets || [];

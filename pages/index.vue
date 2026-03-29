@@ -1,7 +1,14 @@
 <script setup lang="ts">
+definePageMeta({ layout: false });
 useHead({ title: 'Home | Earnest' });
 
 const { user } = useDirectusAuth();
+
+// Use blank layout for marketing page, default layout for authenticated users
+const layout = computed(() => user.value ? 'default' : 'blank');
+
+// ── Layout mode ──
+const { currentMode } = useLayoutMode();
 
 // ── Hats ──
 const { hats, activeHat, setHat } = useNavPreferences();
@@ -166,8 +173,9 @@ const activeTab = ref<'commander' | 'timeline' | 'statistics'>('commander');
 </script>
 
 <template>
+	<NuxtLayout :name="layout">
 	<div class="min-h-screen" :class="user ? 't-bg t-text' : ''">
-		<!-- Marketing Page: shown when user is NOT logged in -->
+		<!-- Marketing Page: shown when user is NOT logged in (no navigation chrome) -->
 		<PagesSellSheet v-if="!user" />
 
 		<!-- Action Board: shown when user IS logged in -->
@@ -257,8 +265,8 @@ const activeTab = ref<'commander' | 'timeline' | 'statistics'>('commander');
 					</form>
 				</div>
 
-				<!-- Hat Modes -->
-				<div class="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+				<!-- Hat Modes (hidden in Spaces layout — sidebar provides navigation) -->
+				<div v-if="currentMode !== 'spaces'" class="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
 					<button
 						v-for="hat in hats"
 						:key="hat.id"
@@ -272,6 +280,17 @@ const activeTab = ref<'commander' | 'timeline' | 'statistics'>('commander');
 						<span>{{ hat.name }}</span>
 					</button>
 				</div>
+
+				<!-- Unified Gantt Timeline -->
+				<ClientOnly>
+					<div class="ios-card p-4 overflow-hidden">
+						<div class="flex items-center gap-2 mb-3">
+							<UIcon name="i-heroicons-chart-bar" class="w-5 h-5 text-primary" />
+							<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70">Project Timeline</h3>
+						</div>
+						<ProjectTimelineUnifiedGantt />
+					</div>
+				</ClientOnly>
 
 				<!-- Priority Actions + Quick Tasks | CRM Health + Earnest Score -->
 				<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -604,17 +623,21 @@ const activeTab = ref<'commander' | 'timeline' | 'statistics'>('commander');
 
 				</div><!-- /Commander tab -->
 
-				<!-- ═══ Timeline Tab ═══ -->
-				<div v-show="activeTab === 'timeline'" class="lg:grid lg:grid-cols-[1fr_380px] lg:gap-6 lg:items-start">
+				<!-- ═══ Timeline Tab (Unified Gantt) ═══ -->
+				<div v-show="activeTab === 'timeline'" class="space-y-6">
+					<ClientOnly>
+						<ProjectTimelineUnifiedGantt />
+					</ClientOnly>
+				</div>
+
+				<!-- ═══ Activity Feed (hidden — kept for future use) ═══ -->
+				<!--
+				<div v-show="false" class="lg:grid lg:grid-cols-[1fr_380px] lg:gap-6 lg:items-start">
 					<div class="space-y-6">
 						<CommandCenterTimeline />
 					</div>
 					<div class="hidden lg:block">
 						<div class="lg:sticky lg:top-20 lg:self-start space-y-4">
-							<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70 flex items-center gap-2">
-								<UIcon name="i-heroicons-chart-bar-square" class="w-4 h-4 text-primary" />
-								Insights
-							</h3>
 							<CommandCenterTimelineMotivation
 								:greeting="greeting"
 								:tasks-completed="metrics?.tasksCompletedToday ?? 0"
@@ -626,6 +649,7 @@ const activeTab = ref<'commander' | 'timeline' | 'statistics'>('commander');
 						</div>
 					</div>
 				</div>
+				-->
 
 				<!-- ═══ Statistics Tab ═══ -->
 				<div v-show="activeTab === 'statistics'" class="space-y-6">
@@ -637,6 +661,7 @@ const activeTab = ref<'commander' | 'timeline' | 'statistics'>('commander');
 			<CommandCenterAITray :is-open="aiTrayOpen" :initial-prompt="aiTrayPrompt" @close="handleTrayClose" />
 		</div>
 	</div>
+	</NuxtLayout>
 </template>
 
 <style>
