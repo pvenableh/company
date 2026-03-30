@@ -10,6 +10,44 @@
 			</template>
 
 			<form @submit.prevent="createMeeting" class="space-y-6">
+				<!-- Lead Selector -->
+				<UFormGroup label="Link to Lead" hint="Optional — links meeting to CRM pipeline">
+					<div class="relative">
+						<UInput
+							v-model="leadSearch"
+							placeholder="Search leads by contact name..."
+							size="sm"
+							icon="i-heroicons-funnel"
+							@input="debouncedSearchLeads"
+							@focus="showLeadDropdown = true"
+						/>
+						<!-- Lead dropdown -->
+						<div
+							v-if="showLeadDropdown && leadResults.length > 0"
+							class="absolute z-50 mt-1 w-full bg-card border border-border/50 rounded-xl shadow-lg overflow-hidden"
+						>
+							<div
+								v-for="lead in leadResults"
+								:key="lead.id"
+								class="flex items-center gap-2 px-3 py-2 hover:bg-muted/40 cursor-pointer transition-colors text-sm"
+								@click="selectLead(lead)"
+							>
+								<span class="w-2 h-2 rounded-full flex-shrink-0" :style="{ backgroundColor: getLeadStageColor(lead.stage) }" />
+								<span class="font-medium text-foreground">{{ getLeadContactName(lead) }}</span>
+								<span class="text-xs text-muted-foreground">{{ lead.related_contact?.company || '' }}</span>
+							</div>
+						</div>
+						<!-- Selected lead badge -->
+						<div v-if="form.related_lead" class="flex items-center gap-2 mt-2 px-2.5 py-1.5 bg-muted/30 rounded-lg">
+							<span class="w-2 h-2 rounded-full" :style="{ backgroundColor: getLeadStageColor(form.related_lead.stage) }" />
+							<span class="text-xs font-medium text-foreground">{{ getLeadContactName(form.related_lead) }}</span>
+							<button type="button" class="ml-auto text-muted-foreground hover:text-foreground" @click="clearLead">
+								<UIcon name="i-heroicons-x-mark" class="w-3 h-3" />
+							</button>
+						</div>
+					</div>
+				</UFormGroup>
+
 				<!-- Title -->
 				<UFormGroup label="Meeting Title" required>
 					<UInput v-model="form.title" placeholder="Project discussion" size="lg" />
@@ -89,16 +127,74 @@
 
 <script setup lang="ts">
 import { format } from 'date-fns';
+import { LEAD_STAGE_COLORS } from '~/types/leads';
 
 const props = defineProps<{
 	modelValue: boolean;
 	selectedDate?: Date;
+	leadId?: number | string;
+	leadData?: any;
 }>();
 
 const emit = defineEmits(['update:modelValue', 'created']);
 
 const toast = useToast();
 const creating = ref(false);
+
+// ── Lead search ──
+const { getLeads } = useLeads();
+const leadSearch = ref('');
+const leadResults = ref<any[]>([]);
+const showLeadDropdown = ref(false);
+let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+
+const debouncedSearchLeads = () => {
+	if (searchTimeout) clearTimeout(searchTimeout);
+	searchTimeout = setTimeout(async () => {
+		if (!leadSearch.value.trim()) {
+			leadResults.value = [];
+			return;
+		}
+		try {
+			const results = await getLeads({ search: leadSearch.value });
+			leadResults.value = (results || []).slice(0, 8);
+		} catch { leadResults.value = []; }
+	}, 300);
+};
+
+const getLeadContactName = (lead: any) => {
+	if (!lead?.related_contact) return 'Unknown Lead';
+	return `${lead.related_contact.first_name || ''} ${lead.related_contact.last_name || ''}`.trim() || 'Unknown';
+};
+
+const getLeadStageColor = (stage: string) => {
+	return LEAD_STAGE_COLORS[stage as keyof typeof LEAD_STAGE_COLORS] || '#9CA3AF';
+};
+
+const selectLead = (lead: any) => {
+	form.related_lead = lead;
+	leadSearch.value = '';
+	showLeadDropdown.value = false;
+	leadResults.value = [];
+	// Auto-fill attendee from lead contact
+	if (lead.related_contact && form.attendees.length > 0) {
+		const first = form.attendees[0];
+		if (!first.name && !first.email) {
+			first.name = getLeadContactName(lead);
+			first.email = lead.related_contact.email || '';
+			first.phone = lead.related_contact.phone || '';
+		}
+	}
+};
+
+const clearLead = () => {
+	form.related_lead = null;
+};
+
+// Close dropdown on outside click
+if (import.meta.client) {
+	document.addEventListener('click', () => { showLeadDropdown.value = false; });
+}
 
 const isOpen = computed({
 	get: () => props.modelValue,
@@ -128,6 +224,7 @@ const form = reactive({
 	description: '',
 	waiting_room_enabled: true,
 	custom_message: '',
+	related_lead: null as any,
 	attendees: [] as Array<{
 		name: string;
 		email: string;
@@ -172,7 +269,9 @@ const resetForm = () => {
 	form.description = '';
 	form.waiting_room_enabled = true;
 	form.custom_message = '';
+	form.related_lead = null;
 	form.attendees = [];
+	leadSearch.value = '';
 };
 
 const close = () => {
@@ -199,6 +298,7 @@ const createMeeting = async () => {
 				duration: form.duration,
 				waiting_room_enabled: form.waiting_room_enabled,
 				custom_message: form.custom_message,
+				related_lead: form.related_lead?.id || null,
 				attendees: form.attendees.filter((a) => a.name || a.email),
 			},
 		});

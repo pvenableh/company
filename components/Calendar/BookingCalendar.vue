@@ -311,6 +311,12 @@ import {
 	CalendarPrevButton,
 } from '~/components/ui/calendar';
 
+const props = defineProps({
+	externalEvents: { type: Array, default: () => [] },
+});
+
+const emit = defineEmits(['date-selected']);
+
 const { user } = useDirectusAuth();
 const appointmentItems = useDirectusItems('appointments');
 const toast = useToast();
@@ -361,6 +367,8 @@ function isOutsideMonth(dateValue, monthValue) {
 function dayClickedFromCalendar(dateValue) {
 	selectedAppointmentId.value = null;
 	selectedDate.value = dateValueToNative(dateValue);
+	const d = dateValueToNative(dateValue);
+	emit('date-selected', format(d, 'yyyy-MM-dd'));
 }
 
 function handleDayDoubleClickFromCalendar(dateValue) {

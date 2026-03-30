@@ -32,6 +32,7 @@ const DEFAULT_LINKS: NavLink[] = [
 	{ name: 'Invoices', type: ['header', 'footer', 'drawer'], to: '/invoices', icon: 'i-heroicons-document-text', color: 'bg-emerald-500', description: 'Billing & payments', section: 'primary', featureKey: 'invoices' },
 	{ name: 'Marketing', type: ['header', 'footer', 'toolbar', 'drawer'], to: '/marketing', icon: 'i-lucide-bar-chart-3', color: 'bg-gradient-to-br from-blue-500 to-cyan-500', description: 'Campaigns & insights', section: 'primary', featureKey: 'email_campaigns' },
 	// ── More (sidebar bottom — subtle "More" divider) ──
+	{ name: 'Activity', type: ['header', 'footer', 'drawer'], to: '/activity', icon: 'i-heroicons-clock', color: 'bg-violet-500', description: 'Activity timeline', section: 'secondary' },
 	{ name: 'Channels', type: ['header', 'footer', 'drawer'], to: '/channels', icon: 'i-heroicons-chat-bubble-left-right', color: 'bg-cyan-500', description: 'Team messaging', section: 'secondary', featureKey: 'channels' },
 	{ name: 'Scheduler', type: ['header', 'footer', 'drawer'], to: '/scheduler', icon: 'i-heroicons-calendar-date-range', color: 'bg-amber-500', description: 'Book meetings', section: 'secondary', featureKey: 'appointments' },
 	{ name: 'Tasks', type: ['drawer'], to: '/tasks', icon: 'i-heroicons-clipboard-document-check', color: 'bg-blue-500', description: 'Manage tasks', section: 'secondary', featureKey: 'tasks' },
@@ -51,7 +52,7 @@ const DEFAULT_LINKS: NavLink[] = [
 ];
 
 // Default sidebar visibility — first 9 items (Command Center + 4 primary + 4 secondary)
-const DEFAULT_VISIBLE_ROUTES = new Set(DEFAULT_LINKS.slice(0, 9).map(l => l.to));
+const DEFAULT_VISIBLE_ROUTES = new Set(DEFAULT_LINKS.slice(0, 10).map(l => l.to));
 
 // ── Hats ────────────────────────────────────────────────────────────────────
 // Hats are workspace presets that pre-fill sidebar visibility.
@@ -95,7 +96,7 @@ const HATS: Hat[] = [
 		icon: 'i-fluent-emoji-flat-necktie',
 		name: 'Manager',
 		description: 'Teams, tickets, tasks & scheduling',
-		routes: ['/', '/projects', '/tickets', '/tasks', '/organization/teams', '/scheduler', '/channels'],
+		routes: ['/', '/projects', '/tickets', '/tasks', '/organization/teams', '/scheduler', '/channels', '/activity'],
 	},
 	{
 		id: 'marketing',

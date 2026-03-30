@@ -22,6 +22,7 @@ interface CreateRoomBody {
 	recording_enabled?: boolean;
 	attendees?: AttendeeInput[];
 	custom_message?: string;
+	related_lead?: number | string | null;
 }
 
 export default defineEventHandler(async (event) => {
@@ -92,44 +93,56 @@ export default defineEventHandler(async (event) => {
 		const meetingUrl = dailyRoom.url;
 
 		// Create video meeting record in Directus
+		const videoMeetingData: Record<string, any> = {
+			room_name: roomName,
+			room_sid: dailyRoom.id,
+			title: body.title,
+			description: body.description || null,
+			meeting_type: body.meeting_type || 'general',
+			duration_minutes: durationMinutes,
+			scheduled_start: scheduledStart.toISOString(),
+			scheduled_end: scheduledEnd.toISOString(),
+			status: 'scheduled',
+			host_identity: userName,
+			host_user: userId,
+			meeting_url: meetingUrl,
+			invitee_name: body.invitee_name || null,
+			invitee_email: body.invitee_email || null,
+			invitee_phone: body.invitee_phone || null,
+			invite_method: body.invite_method || 'none',
+			invite_sent: false,
+			waiting_room_enabled: body.waiting_room_enabled ?? false,
+			recording_enabled: body.recording_enabled ?? false,
+			booked_via: 'direct',
+		};
+
+		if (body.related_lead) {
+			videoMeetingData.related_lead = body.related_lead;
+		}
+
 		const videoMeeting = await directus.request(
-			createItem('video_meetings', {
-				room_name: roomName,
-				room_sid: dailyRoom.id, // Daily room ID stored in the existing room_sid field
-				title: body.title,
-				description: body.description || null,
-				meeting_type: body.meeting_type || 'general',
-				duration_minutes: durationMinutes,
-				scheduled_start: scheduledStart.toISOString(),
-				scheduled_end: scheduledEnd.toISOString(),
-				status: 'scheduled',
-				host_identity: userName,
-				host_user: userId,
-				meeting_url: meetingUrl,
-				invitee_name: body.invitee_name || null,
-				invitee_email: body.invitee_email || null,
-				invitee_phone: body.invitee_phone || null,
-				invite_method: body.invite_method || 'none',
-				invite_sent: false,
-				waiting_room_enabled: body.waiting_room_enabled ?? false,
-				recording_enabled: body.recording_enabled ?? false,
-				booked_via: 'direct',
-			}),
+			createItem('video_meetings', videoMeetingData),
 		);
 
 		// Create corresponding appointment record
+		const appointmentData: Record<string, any> = {
+			title: body.title,
+			description: body.description || null,
+			start_time: scheduledStart.toISOString(),
+			end_time: scheduledEnd.toISOString(),
+			status: 'confirmed',
+			is_video: true,
+			video_meeting: videoMeeting.id,
+			meeting_link: meetingUrl,
+			room_name: roomName,
+		};
+
+		if (body.related_lead) {
+			appointmentData.related_lead = body.related_lead;
+		}
+
 		const appointment = await directus.request(
-			createItem('appointments', {
-				title: body.title,
-				description: body.description || null,
-				start_time: scheduledStart.toISOString(),
-				end_time: scheduledEnd.toISOString(),
-				status: 'confirmed',
-				is_video: true,
-				video_meeting: videoMeeting.id,
-				meeting_link: meetingUrl,
-				room_name: roomName,
-			}),
+			createItem('appointments', appointmentData),
 		);
 
 		// Link video meeting back to the appointment via related_appointment
@@ -141,6 +154,25 @@ export default defineEventHandler(async (event) => {
 			);
 		} catch (linkError) {
 			console.error('Failed to link video meeting to appointment:', linkError);
+		}
+
+		// Auto-create lead activity if linked to a lead
+		if (body.related_lead) {
+			try {
+				await directus.request(
+					createItem('lead_activities', {
+						activity_type: 'meeting',
+						activity_date: scheduledStart.toISOString(),
+						subject: body.title,
+						description: `Video meeting scheduled: ${body.title}`,
+						lead: body.related_lead,
+						related_video_meeting: videoMeeting.id,
+						status: 'published',
+					}),
+				);
+			} catch (activityError) {
+				console.error('Failed to auto-create lead activity:', activityError);
+			}
 		}
 
 		// Create attendee records and send invitations

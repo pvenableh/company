@@ -76,7 +76,41 @@ async function handleAddActivity() {
 
 const stageOptions = Object.entries(LEAD_STAGE_LABELS).map(([value, label]) => ({ value, label }));
 
-onMounted(fetchData);
+// ── Meeting integration ──
+const showMeetingModal = ref(false);
+const upcomingMeetings = ref<any[]>([]);
+const upcomingMeetingsLoading = ref(false);
+const videoMeetingItems = useDirectusItems('video_meetings');
+
+async function fetchUpcomingMeetings() {
+	upcomingMeetingsLoading.value = true;
+	try {
+		const results = await videoMeetingItems.list({
+			fields: ['id', 'title', 'scheduled_start', 'meeting_url', 'status', 'room_name'],
+			filter: {
+				related_lead: { _eq: leadId.value },
+				status: { _eq: 'scheduled' },
+				scheduled_start: { _gte: new Date().toISOString() },
+			},
+			sort: ['scheduled_start'],
+			limit: 10,
+		});
+		upcomingMeetings.value = results || [];
+	} catch { upcomingMeetings.value = []; }
+	finally { upcomingMeetingsLoading.value = false; }
+}
+
+const handleMeetingCreated = () => {
+	showMeetingModal.value = false;
+	fetchUpcomingMeetings();
+	// Refresh activities to show the auto-logged meeting
+	getActivitiesForLead(leadId.value).then((r) => { activities.value = r as any[]; });
+};
+
+onMounted(() => {
+	fetchData();
+	fetchUpcomingMeetings();
+});
 </script>
 
 <template>
@@ -103,6 +137,13 @@ onMounted(fetchData);
 						</p>
 					</div>
 					<div class="flex items-center gap-2">
+						<button
+							@click="showMeetingModal = true"
+							class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-600 text-[11px] font-medium hover:bg-emerald-500/20 transition-colors ios-press"
+						>
+							<UIcon name="i-heroicons-video-camera" class="w-3.5 h-3.5" />
+							Schedule Meeting
+						</button>
 						<NuxtLink
 							:to="`/proposals/new?lead=${lead.id}`"
 							class="text-xs"
@@ -177,6 +218,50 @@ onMounted(fetchData);
 						<p class="text-[10px] uppercase font-semibold t-text-muted tracking-wider mb-2">Notes</p>
 						<p class="text-sm t-text-secondary whitespace-pre-wrap">{{ lead.notes }}</p>
 					</div>
+
+					<!-- Upcoming Meetings -->
+					<div class="ios-card p-4">
+						<div class="flex items-center justify-between mb-3">
+							<p class="text-[10px] uppercase font-semibold t-text-muted tracking-wider">Upcoming Meetings</p>
+							<button
+								@click="showMeetingModal = true"
+								class="text-[10px] text-primary hover:underline"
+							>
+								+ Schedule
+							</button>
+						</div>
+
+						<div v-if="upcomingMeetingsLoading" class="space-y-2">
+							<div v-for="n in 2" :key="n" class="h-10 bg-muted/30 rounded-lg animate-pulse" />
+						</div>
+						<div v-else-if="upcomingMeetings.length === 0" class="text-center py-3">
+							<p class="text-[11px] text-muted-foreground">No upcoming meetings</p>
+						</div>
+						<div v-else class="space-y-1.5">
+							<div
+								v-for="meeting in upcomingMeetings"
+								:key="meeting.id"
+								class="flex items-center gap-2.5 px-2 py-1.5 rounded-lg bg-emerald-50/50 dark:bg-emerald-900/10 border-l-[3px] border-l-emerald-500"
+							>
+								<UIcon name="i-heroicons-video-camera" class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+								<div class="flex-1 min-w-0">
+									<p class="text-[12px] font-medium text-foreground truncate">{{ meeting.title }}</p>
+									<p class="text-[10px] text-muted-foreground">
+										{{ new Date(meeting.scheduled_start).toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) }}
+										{{ new Date(meeting.scheduled_start).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) }}
+									</p>
+								</div>
+								<NuxtLink
+									v-if="meeting.meeting_url"
+									:to="meeting.meeting_url"
+									target="_blank"
+									class="p-1 rounded-md bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 transition-colors"
+								>
+									<UIcon name="i-heroicons-arrow-top-right-on-square" class="w-3 h-3" />
+								</NuxtLink>
+							</div>
+						</div>
+					</div>
 				</div>
 
 				<!-- Right: Activity Timeline -->
@@ -234,6 +319,14 @@ onMounted(fetchData);
 					<LeadsActivityTimeline :activities="activities" />
 				</div>
 			</div>
+
+			<!-- Schedule Meeting Modal -->
+			<SchedulerNewMeetingModal
+				v-model="showMeetingModal"
+				:lead-id="lead?.id"
+				:lead-data="lead"
+				@created="handleMeetingCreated"
+			/>
 		</template>
 	</div>
 </template>

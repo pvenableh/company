@@ -13,7 +13,7 @@ Earnest ships with two companion apps: **CardDesk** — a networking CRM that tu
 - **Project Management** — Visual Gantt-style timeline with milestones, Kanban board view, sub-tasks, event scheduling, file attachments, threaded conversations, emoji reactions, and a command-center–style project detail page with stats dashboard (ticket counts, task progress, billing totals, timeline), document uploads, invoice management, and project-scoped activity feed
 - **Expenses** — Full expense tracking with table and card views, 10 categories (Software & SaaS, Hardware & Equipment, Travel, Marketing & Ads, Office & Supplies, Contractor & Freelance, Hosting & Infrastructure, Insurance, Legal & Accounting, Other), billable/reimbursable flags, receipt attachments, vendor tracking, approval workflow (draft/submitted/approved/paid/rejected), project linking, advanced filtering (category, status, date range, billable-only), monthly comparison widget with top spending categories, and quarterly projections
 - **Invoicing & Payments** — Stripe-powered billing with table-first layout (default), invoice creation and editing, PDF generation (html2canvas + jsPDF), payment tracking, payout management, public payment links, and per-client billing fields (billing email, name, address, payment terms) with invoice-level billing snapshots for historical accuracy
-- **Scheduling & Video Meetings** — Calendar with public booking links, availability management, Google Calendar and Outlook sync, and built-in Daily.co video conferencing (iframe-based prebuilt UI)
+- **Calendar-First CRM Hub** — Unified scheduling experience with three-column layout: CRM sidebar (today's agenda, lead follow-ups with stage colors, pipeline summary, pending requests, booking link) | interactive calendar (Reka UI) with color-coded event chips (green = video, blue = appointment, orange = follow-up) | day detail panel with quick actions. Deep lead integration: link meetings to pipeline leads, auto-fill invitee info from contacts, auto-create lead activities on meeting creation. Filter toggles for event types. Public booking links, availability management, Google Calendar and Outlook OAuth sync, iCal feed for subscribing from any calendar app, and built-in Daily.co video conferencing
 - **Team Communication** — Slack-style channels per organization with threaded comments, @mentions, emoji reactions, and WebSocket-powered real-time messaging
 - **Social Media Management** — Compose, schedule, and publish to Instagram, TikTok, LinkedIn, Facebook Pages, and Threads; AI-powered content wizard generates platform-optimized posts with tailored copy, hashtags, and image suggestions; content calendar, engagement analytics, multi-client management, and OAuth account connections
 - **Email Marketing & Newsletters** — Block-based MJML newsletter builder with 17+ reusable blocks, drag-and-drop assembly, live preview, AI email wizard that generates complete templates from a brief description, mailing list management with deduplication, CSV contact import, merge-tag personalization via Handlebars, editable header/footer partials, one-click unsubscribe, "View in Browser" web links, and campaign send tracking via SendGrid
@@ -28,6 +28,7 @@ Earnest ships with two companion apps: **CardDesk** — a networking CRM that tu
 ### Supporting Features
 
 - **Quick Tasks** — AI-powered personal task lists with day/week scheduling (Today, This Week, Later), priority levels, motivational progress messages, confetti celebrations, and optional links to tickets or project events; AI endpoint generates contextual task suggestions; Command Center widget shows top 10 tasks or a quick generator for new users
+- **Activity Timeline** — Workspace-wide activity feed (`/activity`) tracking changes across projects, tickets, invoices, contacts, clients, tasks, and emails with collection-aware icons and color themes
 - **Real-Time Collaboration** — WebSocket multiplexing for live updates, user presence indicators, and instant notifications
 - **Email Notifications** — Transactional emails via SendGrid for invoices, appointments, password resets, and team invitations
 - **Email Templates** — MJML-powered responsive email templates with block-based composition, design-time variables (`{{{triple braces}}}`), and runtime personalization (`{{double braces}}`)
@@ -62,7 +63,7 @@ Earnest ships with two companion apps: **CardDesk** — a networking CRM that tu
 | Email | SendGrid, MJML, Handlebars |
 | Video | Daily.co (prebuilt iframe UI) |
 | Voice / SMS | Twilio (per-org sub-accounts) |
-| Calendar | Google Calendar API, Microsoft Outlook (Azure) |
+| Calendar | Google Calendar API, Microsoft Outlook (Azure), iCal feed |
 | Social | Instagram Graph API, TikTok API, LinkedIn API, Facebook Pages API, Threads API |
 | Storage | AWS S3 |
 | Charts | Chart.js, Unovis |
@@ -145,7 +146,7 @@ The app will be available at `http://localhost:3000`.
 │   ├── Invoices/       # Invoice forms, PDF generation
 │   ├── Channels/       # Real-time messaging
 │   ├── Clients/        # Client forms, cards, user access assignment
-│   ├── Scheduler/      # Calendar, booking, video meetings
+│   ├── Scheduler/      # CRM sidebar, day detail panel, event chips, meeting modals, booking
 │   ├── Marketing/     # Marketing intelligence dashboard, health score, campaign timeline
 │   ├── Expenses/       # Expense summary widget
 │   ├── CommandCenter/  # AI tray, suggestion cards, productivity meter, preferences, quick tasks widget, activity timeline, AI chat
@@ -189,7 +190,8 @@ The app will be available at `http://localhost:3000`.
 | Projects | `/projects` | Timeline and board views for project management |
 | Expenses | `/expenses` | Expense tracking with category filters, approval workflow, and summary analytics |
 | Invoices | `/invoices` | Invoice list, creation, and payment tracking |
-| Scheduler | `/scheduler` | Calendar, booking, and video meeting management |
+| Activity | `/activity` | Workspace-wide activity timeline across all modules |
+| Scheduler | `/scheduler` | Calendar-first CRM hub with unified events, lead integration, and video meetings |
 | Channels | `/channels` | Real-time team messaging |
 | Marketing Intelligence | `/marketing` | AI-powered marketing health scores, insights, and campaign planner |
 | Command Center | `/command-center` | AI productivity dashboard and task analyzer |
@@ -209,7 +211,7 @@ The app will be available at `http://localhost:3000`.
 | Social Settings | `/social/settings` | Connect and manage platform accounts |
 | Clients | `/clients` | Client list with status filters and search |
 | Client Detail | `/clients/[id]` | Client overview with linked contacts, projects, and tickets |
-| Organizations | `/organization` | Organization and member management |
+| Organization | `/organization` | Organization settings and member management |
 | Teams | `/organization/teams` | Team structure and roles |
 | Account | `/account` | User profile and settings |
 | Public Booking | `/book/[userId]` | Client-facing scheduling page |
@@ -286,6 +288,14 @@ The `planAllows(feature)` function in `useOrgRole()` gates only white-label by p
 | `earnest_history` | Daily score snapshots for charts (date, score, EP earned, streak, dimensions) |
 | `earnest_token_pools` | AI token pools per org with agency/client separation |
 | `earnest_scan_credits` | CardDesk scan credit pools per org |
+| `appointments` | Calendar events with `related_lead` M2O to leads for CRM tracking |
+| `video_meetings` | Daily.co video meetings with `related_lead` M2O to leads |
+| `video_meeting_attendees` | Meeting participant tracking (user or guest) with status |
+| `meeting_requests` | Client-to-admin meeting request workflow with approval |
+| `scheduler_settings` | Per-user scheduler config: availability, booking page, calendar sync, `ical_feed_token` |
+| `availability` | Per-user weekly availability slots with break times |
+| `leads` | CRM pipeline: stages, scoring, `next_follow_up`, contact/org relations |
+| `lead_activities` | Lead activity log with `related_video_meeting` M2O to video_meetings |
 | `testimonials` | Customer testimonials for the marketing site (CMS-managed) |
 | `partner_logos` | Partner/client logos for the SellSheet carousel (CMS-managed) |
 

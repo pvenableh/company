@@ -127,6 +127,8 @@ export interface Appointment {
 	/** @description Twilio room name (if video meeting) */
 	room_name?: string | null;
 	attendees?: AppointmentsDirectusUser[] | string[];
+	/** @description Linked lead for CRM tracking */
+	related_lead?: Lead | string | null;
 }
 
 export interface AppointmentsDirectusUser {
@@ -1560,6 +1562,8 @@ export interface LeadActivity {
 	lead?: Lead | string | null;
 	contact?: Contact | string | null;
 	attachments?: LeadActivitiesFile[] | string[];
+	/** @description Linked video meeting record */
+	related_video_meeting?: VideoMeeting | string | null;
 }
 
 export interface LeadActivitiesFile {
@@ -3152,6 +3156,8 @@ export interface VideoMeeting {
 	/** @description Require host to admit guests before they can join */
 	waiting_room_enabled?: boolean;
 	attendees?: VideoMeetingAttendee[] | string[];
+	/** @description Linked lead for CRM tracking */
+	related_lead?: Lead | string | null;
 }
 
 export interface Video {

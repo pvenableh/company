@@ -99,6 +99,7 @@ const form = reactive({
 	google_calendar_enabled: false,
 	google_calendar_id: '',
 	outlook_calendar_enabled: false,
+	ical_feed_token: '',
 });
 
 // Computed
@@ -112,6 +113,24 @@ const bookingUrl = computed(() => {
 	const slug = form.booking_page_slug || user.value?.id;
 	return `${baseUrl}/book/${slug}`;
 });
+
+const icalFeedUrl = computed(() => {
+	const baseUrl = useRuntimeConfig().public.siteUrl || (import.meta.client ? window.location.origin : '');
+	const token = form.ical_feed_token || 'no-token';
+	return `${baseUrl}/api/calendar/ical/${user.value?.id}?token=${token}`;
+});
+
+const copyICalUrl = async () => {
+	await navigator.clipboard.writeText(icalFeedUrl.value);
+	toast.add({ title: 'iCal feed URL copied!', color: 'green', icon: 'i-heroicons-clipboard-document-check' });
+};
+
+const regenerateICalToken = async () => {
+	const newToken = crypto.randomUUID();
+	form.ical_feed_token = newToken;
+	await saveSettings();
+	toast.add({ title: 'Feed token regenerated', description: 'Share the new URL with your calendar apps.', color: 'green' });
+};
 
 // Watch for settings changes and update form
 watch(
@@ -475,6 +494,34 @@ onMounted(() => {
 							<UButton v-if="!form.outlook_calendar_enabled" color="gray" @click="connectOutlook">Connect</UButton>
 							<UButton v-else color="red" variant="soft" @click="disconnectOutlook">Disconnect</UButton>
 						</div>
+					</div>
+
+					<!-- iCal Feed -->
+					<div class="p-4 border border-border rounded-lg">
+						<div class="flex items-center justify-between mb-3">
+							<div class="flex items-center gap-3">
+								<div class="w-10 h-10 bg-violet-50 dark:bg-violet-900/20 rounded-lg flex items-center justify-center">
+									<UIcon name="i-heroicons-rss" class="w-5 h-5 text-violet-500" />
+								</div>
+								<div>
+									<div class="font-medium">iCal Feed</div>
+									<div class="text-sm text-muted-foreground">Subscribe from any calendar app</div>
+								</div>
+							</div>
+						</div>
+						<p class="text-xs text-muted-foreground mb-3">
+							Use this URL to subscribe to your Earnest calendar from Apple Calendar, Google Calendar, or any other app that supports iCal feeds.
+						</p>
+						<div class="flex gap-2 mb-2">
+							<UInput :model-value="icalFeedUrl" readonly size="sm" class="flex-1 text-xs font-mono" />
+							<UButton size="sm" color="gray" icon="i-heroicons-clipboard" @click="copyICalUrl">Copy</UButton>
+						</div>
+						<UButton size="xs" color="gray" variant="soft" @click="regenerateICalToken">
+							Regenerate Token
+						</UButton>
+						<p class="text-[10px] text-muted-foreground mt-2">
+							Regenerating the token will invalidate the previous URL. Anyone subscribed with the old URL will need the new one.
+						</p>
 					</div>
 				</div>
 

@@ -457,6 +457,8 @@ const marqueeItems = [
 	{ label: 'Video & Phone', icon: 'i-lucide-video' },
 	{ label: 'Email Marketing AI', icon: 'i-lucide-mail' },
 	{ label: 'Goals & Tracking', icon: 'i-lucide-target' },
+	{ label: 'Activity Timeline', icon: 'i-lucide-activity' },
+	{ label: 'iCal Sync', icon: 'i-lucide-rss' },
 	{ label: 'Companion Apps', icon: 'i-lucide-smartphone' },
 ];
 
@@ -468,7 +470,7 @@ const replacedTools = [
 	{ name: 'Slack', replaces: 'Team messaging', icon: 'i-lucide-message-square' },
 	{ name: 'Dialpad', replaces: 'Phone system', icon: 'i-lucide-phone' },
 	{ name: 'Zoom', replaces: 'Video meetings', icon: 'i-lucide-video' },
-	{ name: 'Calendly', replaces: 'Scheduling', icon: 'i-lucide-calendar' },
+	{ name: 'Calendly', replaces: 'CRM scheduling', icon: 'i-lucide-calendar' },
 	{ name: 'HubSpot', replaces: 'Unified CRM', icon: 'i-lucide-users' },
 	{ name: 'Lattice', replaces: 'Goal tracking', icon: 'i-lucide-target' },
 	{ name: 'Isolated AI', replaces: 'AI assistant', icon: 'i-lucide-sparkles' },
@@ -561,11 +563,11 @@ const features = [
 	},
 	{
 		name: 'Phone & Video',
-		desc: 'Twilio-powered calling and video meetings. Click-to-call contacts, record calls, and host team video — all without leaving Earnest.',
+		desc: 'Twilio-powered calling and Daily.co video meetings linked to your CRM pipeline. Click-to-call contacts, record calls, host team video, and auto-log meetings as lead activities — all without leaving Earnest.',
 	},
 	{
-		name: 'Calendar & Scheduling',
-		desc: 'Public booking links, Google/Outlook calendar sync, and team availability. Everything connected to your clients and projects.',
+		name: 'Calendar & CRM Hub',
+		desc: 'Calendar-first scheduling with meetings, follow-ups, and lead touchpoints on one view. Link meetings to your pipeline, auto-log CRM activities, and schedule directly from lead profiles. Google/Outlook sync, iCal feeds, public booking pages, and Daily.co video built in.',
 	},
 	{
 		name: 'CardDesk',

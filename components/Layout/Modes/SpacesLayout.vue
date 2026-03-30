@@ -212,10 +212,10 @@ watch(() => route.path, () => {
 					to="/organization"
 					class="nav-item"
 					:class="{ 'nav-item-active': isActiveItem('/organization'), 'justify-center': sidebarCollapsed, 'has-tooltip': sidebarCollapsed }"
-					:data-tooltip="sidebarCollapsed ? 'Settings' : undefined"
+					:data-tooltip="sidebarCollapsed ? 'Organization' : undefined"
 				>
-					<Icon name="lucide:settings" class="w-4 h-4 shrink-0" />
-					<span v-if="!sidebarCollapsed" class="text-[13px]">Settings</span>
+					<Icon name="lucide:building-2" class="w-4 h-4 shrink-0" />
+					<span v-if="!sidebarCollapsed" class="text-[13px]">Organization</span>
 				</NuxtLink>
 
 				<!-- Collapse toggle -->
@@ -359,8 +359,8 @@ watch(() => route.path, () => {
 							<span class="text-[13px]">Timer</span>
 						</NuxtLink>
 						<NuxtLink to="/organization" class="nav-item" :class="{ 'nav-item-active': isActiveItem('/organization') }">
-							<Icon name="lucide:settings" class="w-4 h-4 shrink-0" />
-							<span class="text-[13px]">Settings</span>
+							<Icon name="lucide:building-2" class="w-4 h-4 shrink-0" />
+							<span class="text-[13px]">Organization</span>
 						</NuxtLink>
 					</div>
 				</aside>

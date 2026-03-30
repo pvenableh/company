@@ -44,7 +44,8 @@ const domainMap: Record<string, { parent?: { label: string; to: string }; label:
 	'/marketing': { label: 'Marketing' },
 	'/command-center': { label: 'Command Center' },
 	'/account': { label: 'Account' },
-	'/organization': { label: 'Settings' },
+	'/activity': { label: 'Activity' },
+	'/organization': { label: 'Organization' },
 	'/time-tracker': { label: 'Time Tracker' },
 }
 

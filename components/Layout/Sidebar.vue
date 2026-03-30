@@ -90,10 +90,10 @@
 					isActive('/organization') ? 'sidebar-link-active' : 'sidebar-link-inactive',
 					collapsed ? 'sidebar-link--collapsed' : '',
 				]"
-				:title="collapsed ? 'Settings' : undefined"
+				:title="collapsed ? 'Organization' : undefined"
 			>
-				<UIcon name="i-heroicons-cog-6-tooth" class="w-[18px] h-[18px] flex-shrink-0" :class="isActive('/organization') ? 'text-primary' : 'text-muted-foreground'" />
-				<span v-if="!collapsed" class="sidebar-link-label">Settings</span>
+				<UIcon name="i-heroicons-building-office-2" class="w-[18px] h-[18px] flex-shrink-0" :class="isActive('/organization') ? 'text-primary' : 'text-muted-foreground'" />
+				<span v-if="!collapsed" class="sidebar-link-label">Organization</span>
 			</NuxtLink>
 			<NuxtLink
 				to="/account#appearance"

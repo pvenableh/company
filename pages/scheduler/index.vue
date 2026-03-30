@@ -1,128 +1,131 @@
 <template>
 	<div class="min-h-screen">
-		<!-- Client scheduler view -->
+		<!-- Client scheduler view (non-admin users) -->
 		<div v-if="!isAdmin" class="min-h-screen">
 			<!-- Client Header -->
-			<div class="border-b border-border bg-background">
-				<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-					<h1 class="text-2xl font-bold">Schedule a Meeting</h1>
-					<p class="text-sm text-muted-foreground mt-1">View availability and request a meeting</p>
-				</div>
+			<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-2 pb-6">
+				<h1 class="text-[28px] font-bold text-foreground tracking-tight leading-tight">Schedule a Meeting</h1>
+				<p class="text-[15px] text-muted-foreground mt-0.5">View availability and request a meeting</p>
 			</div>
 
-			<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-				<UTabs :items="clientTabs" v-model="clientActiveTab" class="w-full">
-					<template #item="{ item }">
-						<!-- Request a Meeting Tab -->
-						<div v-if="item.key === 'request'" class="py-4">
-							<!-- Available Hosts -->
-							<div v-if="loadingHosts" class="flex justify-center py-8">
-								<UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground" />
-							</div>
+			<div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+				<!-- Client Tab Pills -->
+				<div class="flex gap-1 p-1 bg-muted/40 rounded-xl w-fit mb-6">
+					<button
+						v-for="tab in clientTabs"
+						:key="tab.key"
+						@click="clientActiveTab = tab.key"
+						class="px-4 py-1.5 rounded-lg text-xs font-medium transition-all duration-200"
+						:class="clientActiveTab === tab.key
+							? 'bg-background text-foreground shadow-sm'
+							: 'text-muted-foreground hover:text-foreground'"
+					>
+						<span class="flex items-center gap-1.5">
+							<UIcon :name="tab.icon" class="w-3.5 h-3.5" />
+							{{ tab.label }}
+						</span>
+					</button>
+				</div>
 
-							<div v-else-if="availableHosts.length === 0" class="text-center py-12">
-								<UIcon name="i-heroicons-calendar" class="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-								<h3 class="text-lg font-medium text-muted-foreground">No Hosts Available</h3>
-								<p class="text-sm text-muted-foreground mt-1">No team members have booking enabled at this time.</p>
-							</div>
+				<!-- Request a Meeting -->
+				<div v-show="clientActiveTab === 'request'">
+					<div v-if="loadingHosts" class="space-y-3">
+						<div v-for="n in 3" :key="n" class="h-20 bg-muted/30 rounded-xl animate-pulse" />
+					</div>
 
-							<div v-else class="space-y-6">
-								<div v-for="host in availableHosts" :key="host.id" class="space-y-4">
-									<UCard>
-										<div class="flex items-center gap-4 mb-4">
-											<UAvatar :alt="`${host.first_name} ${host.last_name}`" size="lg" />
-											<div>
-												<h3 class="font-semibold text-lg">{{ host.first_name }} {{ host.last_name }}</h3>
-												<p v-if="host.booking_page_title" class="text-sm text-muted-foreground">{{ host.booking_page_title }}</p>
-												<p v-if="host.booking_page_description" class="text-sm text-muted-foreground">{{ host.booking_page_description }}</p>
-											</div>
-										</div>
+					<div v-else-if="availableHosts.length === 0" class="ios-card p-8 text-center">
+						<UIcon name="i-heroicons-calendar" class="w-10 h-10 text-muted-foreground/40 mx-auto mb-2" />
+						<p class="text-sm font-medium text-muted-foreground">No hosts available</p>
+						<p class="text-xs text-muted-foreground/60 mt-1">No team members have booking enabled at this time</p>
+					</div>
 
-										<div class="flex items-center gap-3">
-											<UButton
-												color="primary"
-												size="sm"
-												icon="i-heroicons-calendar-days"
-												@click="openRequestModal(host)"
-											>
-												Request Meeting
-											</UButton>
-											<UButton
-												v-if="host.booking_page_slug"
-												color="gray"
-												variant="soft"
-												size="sm"
-												icon="i-heroicons-arrow-top-right-on-square"
-												:to="`/book/${host.booking_page_slug || host.id}`"
-												target="_blank"
-											>
-												Book Directly
-											</UButton>
-										</div>
-									</UCard>
+					<div v-else class="space-y-3">
+						<div
+							v-for="host in availableHosts"
+							:key="host.id"
+							class="ios-card p-4"
+						>
+							<div class="flex items-center gap-4">
+								<UAvatar :alt="`${host.first_name} ${host.last_name}`" size="lg" />
+								<div class="flex-1 min-w-0">
+									<h3 class="text-sm font-semibold text-foreground">{{ host.first_name }} {{ host.last_name }}</h3>
+									<p v-if="host.booking_page_title" class="text-xs text-muted-foreground mt-0.5">{{ host.booking_page_title }}</p>
+								</div>
+								<div class="flex items-center gap-2">
+									<button
+										@click="openRequestModal(host)"
+										class="px-3 py-1.5 bg-primary text-primary-foreground rounded-full text-[11px] font-medium ios-press transition-all"
+									>
+										Request Meeting
+									</button>
+									<NuxtLink
+										v-if="host.booking_page_slug"
+										:to="`/book/${host.booking_page_slug || host.id}`"
+										target="_blank"
+										class="p-1.5 rounded-lg bg-muted/30 hover:bg-muted/60 transition-colors"
+									>
+										<UIcon name="i-heroicons-arrow-top-right-on-square" class="w-4 h-4 text-muted-foreground" />
+									</NuxtLink>
 								</div>
 							</div>
 						</div>
+					</div>
+				</div>
 
-						<!-- My Requests Tab -->
-						<div v-else-if="item.key === 'my-requests'" class="py-4">
-							<div v-if="loadingClientRequests" class="flex justify-center py-8">
-								<UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-muted-foreground" />
-							</div>
+				<!-- My Requests -->
+				<div v-show="clientActiveTab === 'my-requests'">
+					<div v-if="loadingClientRequests" class="space-y-3">
+						<div v-for="n in 3" :key="n" class="h-16 bg-muted/30 rounded-xl animate-pulse" />
+					</div>
 
-							<div v-else-if="clientRequests.length === 0" class="text-center py-12 border-2 border-dashed rounded-lg">
-								<UIcon name="i-heroicons-inbox" class="w-10 h-10 text-muted-foreground mx-auto mb-2" />
-								<p class="text-muted-foreground">No meeting requests yet</p>
-								<p class="text-sm text-muted-foreground mt-1">Request a meeting to get started</p>
-							</div>
+					<div v-else-if="clientRequests.length === 0" class="ios-card p-8 text-center">
+						<UIcon name="i-heroicons-inbox" class="w-10 h-10 text-muted-foreground/40 mx-auto mb-2" />
+						<p class="text-sm font-medium text-muted-foreground">No meeting requests yet</p>
+						<p class="text-xs text-muted-foreground/60 mt-1">Request a meeting to get started</p>
+					</div>
 
-							<div v-else class="space-y-3">
-								<UCard v-for="request in clientRequests" :key="request.id">
-									<div class="flex items-start justify-between">
-										<div>
-											<div class="flex items-center gap-2 mb-1">
-												<p class="font-medium">
-													Meeting with {{ getHostName(request) }}
-												</p>
-												<UBadge
-													:color="request.request_status === 'approved' ? 'green' : request.request_status === 'rejected' ? 'red' : 'yellow'"
-													variant="soft"
-													size="xs"
-													class="capitalize"
-												>
-													{{ request.request_status || 'pending' }}
-												</UBadge>
-											</div>
-											<div class="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-												<span class="flex items-center gap-1">
-													<UIcon name="i-heroicons-calendar" class="w-4 h-4" />
-													{{ clientFormatDate(request.requested_date) }}
-												</span>
-												<span v-if="request.preferred_time" class="flex items-center gap-1">
-													<UIcon name="i-heroicons-clock" class="w-4 h-4" />
-													{{ clientFormatTime(request.preferred_time) }}
-												</span>
-												<span v-if="request.duration_minutes">{{ request.duration_minutes }} min</span>
-											</div>
-											<p v-if="request.notes" class="text-sm text-muted-foreground mt-2 italic">"{{ request.notes }}"</p>
-											<p v-if="request.admin_notes" class="text-sm text-blue-500 mt-1">Response: {{ request.admin_notes }}</p>
-										</div>
-										<div v-if="request.request_status === 'approved' && request.linked_appointment">
-											<UButton
-												size="xs"
-												color="green"
-												variant="soft"
-												icon="i-heroicons-video-camera"
-											>
-												Join Meeting
-											</UButton>
-										</div>
+					<div v-else class="space-y-2">
+						<div v-for="request in clientRequests" :key="request.id" class="ios-card p-4">
+							<div class="flex items-start justify-between">
+								<div class="flex-1 min-w-0">
+									<div class="flex items-center gap-2 mb-1">
+										<p class="text-sm font-medium text-foreground">Meeting with {{ getHostName(request) }}</p>
+										<span
+											class="text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded-full"
+											:class="{
+												'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400': request.request_status === 'approved',
+												'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400': request.request_status === 'rejected',
+												'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400': request.request_status === 'pending' || !request.request_status,
+											}"
+										>
+											{{ request.request_status || 'pending' }}
+										</span>
 									</div>
-								</UCard>
+									<div class="flex items-center gap-3 text-[11px] text-muted-foreground">
+										<span class="flex items-center gap-1">
+											<UIcon name="i-heroicons-calendar" class="w-3 h-3" />
+											{{ clientFormatDate(request.requested_date) }}
+										</span>
+										<span v-if="request.preferred_time" class="flex items-center gap-1">
+											<UIcon name="i-heroicons-clock" class="w-3 h-3" />
+											{{ clientFormatTime(request.preferred_time) }}
+										</span>
+										<span v-if="request.duration_minutes">{{ request.duration_minutes }}min</span>
+									</div>
+									<p v-if="request.notes" class="text-[11px] text-muted-foreground mt-1.5 italic">"{{ request.notes }}"</p>
+									<p v-if="request.admin_notes" class="text-[11px] text-primary mt-1">Response: {{ request.admin_notes }}</p>
+								</div>
+								<button
+									v-if="request.request_status === 'approved' && request.linked_appointment"
+									class="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-500/10 text-emerald-600 rounded-lg text-[11px] font-medium ios-press"
+								>
+									<UIcon name="i-heroicons-video-camera" class="w-3 h-3" />
+									Join
+								</button>
 							</div>
 						</div>
-					</template>
-				</UTabs>
+					</div>
+				</div>
 			</div>
 
 			<!-- Meeting Request Modal -->
@@ -136,30 +139,26 @@
 					</template>
 
 					<div v-if="selectedHost" class="space-y-4">
-						<div class="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+						<div class="flex items-center gap-3 p-3 bg-muted/30 rounded-xl">
 							<UAvatar :alt="`${selectedHost.first_name} ${selectedHost.last_name}`" size="sm" />
 							<div>
-								<p class="font-medium">{{ selectedHost.first_name }} {{ selectedHost.last_name }}</p>
-								<p class="text-sm text-muted-foreground">{{ selectedHost.email }}</p>
+								<p class="text-sm font-medium">{{ selectedHost.first_name }} {{ selectedHost.last_name }}</p>
+								<p class="text-xs text-muted-foreground">{{ selectedHost.email }}</p>
 							</div>
 						</div>
 
 						<UFormGroup label="Preferred Date" required>
 							<UInput v-model="requestForm.date" type="date" :min="minDate" />
 						</UFormGroup>
-
 						<UFormGroup label="Preferred Time">
 							<UInput v-model="requestForm.time" type="time" />
 						</UFormGroup>
-
 						<UFormGroup label="Duration">
 							<USelect v-model="requestForm.duration" :options="durationOptions" />
 						</UFormGroup>
-
 						<UFormGroup label="Meeting Type">
 							<USelect v-model="requestForm.meetingType" :options="meetingTypeOptions" />
 						</UFormGroup>
-
 						<UFormGroup label="Notes (optional)">
 							<UTextarea v-model="requestForm.notes" placeholder="Describe what you'd like to discuss..." rows="3" />
 						</UFormGroup>
@@ -175,189 +174,265 @@
 			</UModal>
 		</div>
 
-		<!-- Full scheduler for admin users -->
+		<!-- ═══ Admin: Calendar-First CRM Hub ═══ -->
 		<template v-else>
-		<!-- Header -->
-		<div class="border-b border-border bg-background">
-			<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-				<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+			<div class="max-w-screen-xl mx-auto px-4 pb-8 sm:px-6 lg:px-8">
+				<!-- Header -->
+				<div class="flex items-center justify-between pt-2 mb-5">
 					<div>
-						<h1 class="text-2xl font-bold text-foreground">Scheduler</h1>
-						<p class="text-sm text-muted-foreground mt-1">Manage appointments and video meetings</p>
+						<h1 class="text-[28px] font-bold text-foreground tracking-tight leading-tight">Calendar</h1>
+						<p class="text-[15px] text-muted-foreground mt-0.5">Meetings, follow-ups, and CRM touchpoints</p>
 					</div>
-					<div class="flex items-center gap-3">
-						<SchedulerNewMeetingButton @created="refreshVideoMeetings" />
-						<UButton to="/scheduler/settings" color="gray" variant="ghost" icon="i-heroicons-cog-6-tooth" />
+					<div class="flex items-center gap-2">
+						<SchedulerNewMeetingButton @created="handleMeetingCreated" />
+						<NuxtLink
+							to="/scheduler/settings"
+							class="p-2 rounded-xl bg-muted/30 hover:bg-muted/60 transition-colors ios-press"
+						>
+							<UIcon name="i-heroicons-cog-6-tooth" class="w-4.5 h-4.5 text-muted-foreground" />
+						</NuxtLink>
+					</div>
+				</div>
+
+				<!-- Stats Row -->
+				<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+					<div class="ios-card p-3.5 flex items-center gap-3">
+						<div class="p-2 rounded-xl bg-blue-100/60 dark:bg-blue-900/20">
+							<UIcon name="i-heroicons-calendar" class="w-4 h-4 text-blue-500" />
+						</div>
+						<div>
+							<p class="text-lg font-bold text-foreground tabular-nums">{{ stats.upcoming }}</p>
+							<p class="text-[10px] text-muted-foreground uppercase tracking-wide">Upcoming</p>
+						</div>
+					</div>
+					<div class="ios-card p-3.5 flex items-center gap-3">
+						<div class="p-2 rounded-xl bg-emerald-100/60 dark:bg-emerald-900/20">
+							<UIcon name="i-heroicons-video-camera" class="w-4 h-4 text-emerald-500" />
+						</div>
+						<div>
+							<p class="text-lg font-bold text-foreground tabular-nums">{{ stats.videoMeetings }}</p>
+							<p class="text-[10px] text-muted-foreground uppercase tracking-wide">Video</p>
+						</div>
+					</div>
+					<div class="ios-card p-3.5 flex items-center gap-3">
+						<div class="p-2 rounded-xl bg-amber-100/60 dark:bg-amber-900/20">
+							<UIcon name="i-heroicons-arrow-path" class="w-4 h-4 text-amber-500" />
+						</div>
+						<div>
+							<p class="text-lg font-bold text-foreground tabular-nums">{{ stats.followUps }}</p>
+							<p class="text-[10px] text-muted-foreground uppercase tracking-wide">Follow-ups</p>
+						</div>
+					</div>
+					<div class="ios-card p-3.5 flex items-center gap-3">
+						<div class="p-2 rounded-xl bg-muted/60">
+							<UIcon name="i-heroicons-inbox" class="w-4 h-4 text-muted-foreground" />
+						</div>
+						<div>
+							<p class="text-lg font-bold text-foreground tabular-nums">{{ stats.pending }}</p>
+							<p class="text-[10px] text-muted-foreground uppercase tracking-wide">Requests</p>
+						</div>
+					</div>
+				</div>
+
+				<!-- Filter toggles -->
+				<div class="flex items-center gap-2 mb-4">
+					<button
+						v-for="filter in eventFilters"
+						:key="filter.key"
+						@click="toggleFilter(filter.key)"
+						class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium transition-all duration-200 ios-press"
+						:class="activeFilters.has(filter.key)
+							? `${filter.activeBg} ${filter.activeText}`
+							: 'bg-muted/30 text-muted-foreground hover:bg-muted/50'"
+					>
+						<span class="w-1.5 h-1.5 rounded-full" :class="filter.dot" />
+						{{ filter.label }}
+					</button>
+				</div>
+
+				<!-- Main Layout: Sidebar + Calendar + Day Detail -->
+				<div class="grid grid-cols-1 lg:grid-cols-[260px_1fr_320px] gap-5">
+					<!-- Left: CRM Sidebar -->
+					<div class="hidden lg:block">
+						<SchedulerCrmSidebar
+							:today-events="calendarEvents.todayEvents.value"
+							:upcoming-follow-ups="calendarEvents.upcomingFollowUps.value"
+							:settings="settings"
+							:pending-requests="pendingRequestCount"
+							@open-requests="showRequestsModal = true"
+							@open-settings="$router.push('/scheduler/settings')"
+						/>
+					</div>
+
+					<!-- Center: Calendar -->
+					<div class="ios-card p-4 overflow-hidden">
+						<CalendarBookingCalendar
+							:external-events="filteredEvents"
+							@date-selected="handleDateSelect"
+						/>
+					</div>
+
+					<!-- Right: Day Detail Panel -->
+					<div>
+						<SchedulerDayDetailPanel
+							:date="selectedDate"
+							:events="selectedDateEvents"
+							@new-event="handleNewEvent"
+							@new-meeting="handleNewVideoMeeting"
+							@edit-event="handleEditEvent"
+						/>
 					</div>
 				</div>
 			</div>
-		</div>
 
-		<!-- Stats Cards -->
-		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-			<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+			<!-- Requests Modal (slide-out) -->
+			<UModal v-model="showRequestsModal" :ui="{ width: 'max-w-lg' }">
 				<UCard>
-					<div class="flex items-center gap-3">
-						<div class="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-							<UIcon name="i-heroicons-calendar" class="w-5 h-5 text-blue-600 dark:text-blue-400" />
+					<template #header>
+						<div class="flex items-center justify-between">
+							<h3 class="font-semibold">Meeting Requests</h3>
+							<UButton color="gray" variant="ghost" icon="i-heroicons-x-mark" @click="showRequestsModal = false" />
 						</div>
-						<div>
-							<p class="text-2xl font-bold">{{ stats.upcoming }}</p>
-							<p class="text-xs text-muted-foreground">Upcoming</p>
-						</div>
-					</div>
+					</template>
+					<SchedulerMeetingRequests />
 				</UCard>
-				<UCard>
-					<div class="flex items-center gap-3">
-						<div class="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-							<UIcon name="i-heroicons-video-camera" class="w-5 h-5 text-green-600 dark:text-green-400" />
-						</div>
-						<div>
-							<p class="text-2xl font-bold">{{ stats.videoMeetings }}</p>
-							<p class="text-xs text-muted-foreground">Video Meetings</p>
-						</div>
-					</div>
-				</UCard>
-				<UCard>
-					<div class="flex items-center gap-3">
-						<div class="p-2 bg-yellow-100 dark:bg-yellow-900 rounded-lg">
-							<UIcon name="i-heroicons-clock" class="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
-						</div>
-						<div>
-							<p class="text-2xl font-bold">{{ stats.pending }}</p>
-							<p class="text-xs text-muted-foreground">Pending</p>
-						</div>
-					</div>
-				</UCard>
-				<UCard>
-					<div class="flex items-center gap-3">
-						<div class="p-2 bg-muted rounded-lg">
-							<UIcon name="i-heroicons-check-circle" class="w-5 h-5 text-muted-foreground dark:text-muted-foreground" />
-						</div>
-						<div>
-							<p class="text-2xl font-bold">{{ stats.completed }}</p>
-							<p class="text-xs text-muted-foreground">Completed</p>
-						</div>
-					</div>
-				</UCard>
-			</div>
-
-			<!-- Tabs -->
-			<UTabs :items="tabs" v-model="activeTab" class="w-full">
-				<template #item="{ item }">
-					<div v-if="item.key === 'calendar'" class="py-4">
-						<div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-							<!-- Calendar takes up 3 columns -->
-							<div class="lg:col-span-3">
-								<CalendarBookingCalendar />
-							</div>
-
-							<!-- Sidebar -->
-							<div class="space-y-6">
-								<!-- Booking Link Card -->
-								<UCard v-if="settings?.public_booking_enabled">
-									<template #header>
-										<h3 class="font-semibold text-sm">Your Booking Link</h3>
-									</template>
-									<div class="space-y-3">
-										<p class="text-xs text-muted-foreground">Share this link for clients to book meetings with you</p>
-										<div class="flex gap-2">
-											<UInput :model-value="bookingUrl" readonly size="sm" class="flex-1 text-xs" />
-											<UButton size="sm" color="gray" icon="i-heroicons-clipboard" @click="copyBookingLink" />
-										</div>
-									</div>
-								</UCard>
-
-								<!-- Upcoming Video Meetings -->
-								<UCard>
-									<template #header>
-										<div class="flex items-center justify-between">
-											<h3 class="font-semibold text-sm">Upcoming Video Meetings</h3>
-											<UBadge v-if="upcomingVideoMeetings.length" color="green" variant="soft" size="xs">
-												{{ upcomingVideoMeetings.length }}
-											</UBadge>
-										</div>
-									</template>
-									<div v-if="loadingVideoMeetings" class="text-center py-4">
-										<UIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin text-muted-foreground" />
-									</div>
-									<div v-else-if="upcomingVideoMeetings.length === 0" class="text-center py-4">
-										<p class="text-sm text-muted-foreground">No upcoming video meetings</p>
-									</div>
-									<div v-else class="space-y-3">
-										<div
-											v-for="meeting in upcomingVideoMeetings.slice(0, 5)"
-											:key="meeting.id"
-											class="p-3 bg-muted/50 rounded-lg"
-										>
-											<div class="flex items-start justify-between">
-												<div class="flex-1 min-w-0">
-													<p class="font-medium text-sm truncate">{{ meeting.title }}</p>
-													<p class="text-xs text-muted-foreground">{{ formatMeetingTime(meeting.scheduled_start) }}</p>
-													<p v-if="meeting.invitee_name" class="text-xs text-muted-foreground">
-														with {{ meeting.invitee_name }}
-													</p>
-												</div>
-												<UButton
-													size="xs"
-													color="green"
-													variant="soft"
-													icon="i-heroicons-video-camera"
-													:to="`/meeting/${meeting.room_name}`"
-													target="_blank"
-												/>
-											</div>
-										</div>
-									</div>
-								</UCard>
-
-								<!-- Quick Actions -->
-								<UCard>
-									<template #header>
-										<h3 class="font-semibold text-sm">Quick Actions</h3>
-									</template>
-									<div class="space-y-2">
-										<SchedulerInstantMeetingButton @created="refreshVideoMeetings" />
-										<UButton block color="gray" variant="soft" icon="i-heroicons-cog-6-tooth" to="/scheduler/settings">
-											Settings
-										</UButton>
-									</div>
-								</UCard>
-							</div>
-						</div>
-					</div>
-
-					<div v-else-if="item.key === 'video'" class="py-4">
-						<SchedulerVideoMeetingsList :meetings="videoMeetings" @refresh="refreshVideoMeetings" />
-					</div>
-
-					<div v-else-if="item.key === 'requests'" class="py-4">
-						<SchedulerMeetingRequests />
-					</div>
-
-					<div v-else-if="item.key === 'history'" class="py-4">
-						<SchedulerHistory />
-					</div>
-				</template>
-			</UTabs>
-		</div>
+			</UModal>
 		</template>
 	</div>
 </template>
 
 <script setup lang="ts">
 import { format, parseISO, isAfter, addDays } from 'date-fns';
+import type { CalendarEvent } from '~/composables/useCalendarEvents';
 
 definePageMeta({ middleware: ['auth'] });
-useHead({ title: 'Scheduler | Earnest' });
+useHead({ title: 'Calendar | Earnest' });
 
 const { user } = useDirectusAuth();
 const { canAccess } = useOrgRole();
-
 const isAdmin = computed(() => canAccess('appointments'));
 const toast = useToast();
+const router = useRouter();
 
-// ===== Client-side state (for non-admin users) =====
+// ═══ Calendar Events (unified) ═══
+const calendarEvents = useCalendarEvents();
+
+// ═══ Admin state ═══
+const settings = ref<any>(null);
+const videoMeetings = ref<any[]>([]);
+const loadingVideoMeetings = ref(true);
+const meetingRequests = ref<any[]>([]);
+const showRequestsModal = ref(false);
+const selectedDate = ref(new Date().toISOString().substring(0, 10));
+
+// ── Filters ──
+const activeFilters = ref(new Set(['appointments', 'video', 'follow_ups']));
+
+const eventFilters = [
+	{ key: 'appointments', label: 'Appointments', dot: 'bg-blue-500', activeBg: 'bg-blue-100/60 dark:bg-blue-900/20', activeText: 'text-blue-700 dark:text-blue-300' },
+	{ key: 'video', label: 'Video', dot: 'bg-emerald-500', activeBg: 'bg-emerald-100/60 dark:bg-emerald-900/20', activeText: 'text-emerald-700 dark:text-emerald-300' },
+	{ key: 'follow_ups', label: 'Follow-ups', dot: 'bg-amber-500', activeBg: 'bg-amber-100/60 dark:bg-amber-900/20', activeText: 'text-amber-700 dark:text-amber-300' },
+];
+
+const toggleFilter = (key: string) => {
+	const set = new Set(activeFilters.value);
+	if (set.has(key)) set.delete(key);
+	else set.add(key);
+	activeFilters.value = set;
+};
+
+const filteredEvents = computed(() => {
+	return calendarEvents.events.value.filter(e => {
+		if (e.type === 'video_meeting' && !activeFilters.value.has('video')) return false;
+		if (e.type === 'appointment' && !activeFilters.value.has('appointments')) return false;
+		if (e.type === 'follow_up' && !activeFilters.value.has('follow_ups')) return false;
+		return true;
+	});
+});
+
+const selectedDateEvents = computed(() => {
+	return filteredEvents.value
+		.filter(e => e.start_time?.substring(0, 10) === selectedDate.value)
+		.sort((a, b) => a.start_time.localeCompare(b.start_time));
+});
+
+// ── Stats ──
+const pendingRequestCount = computed(() =>
+	meetingRequests.value.filter(r => r.request_status === 'pending').length
+);
+
+const stats = computed(() => {
+	const now = new Date();
+	const upcoming = calendarEvents.events.value.filter(
+		e => (e.type === 'appointment' || e.type === 'video_meeting') && new Date(e.start_time) > now
+	);
+	return {
+		upcoming: upcoming.length,
+		videoMeetings: upcoming.filter(e => e.type === 'video_meeting').length,
+		followUps: calendarEvents.upcomingFollowUps.value.length,
+		pending: pendingRequestCount.value,
+	};
+});
+
+// ── Event handlers ──
+const handleDateSelect = (dateStr: string) => {
+	selectedDate.value = dateStr;
+};
+
+const handleNewEvent = (dateStr: string) => {
+	// The BookingCalendar's internal appointment form handles this
+	// We trigger a double-click on the date
+};
+
+const handleNewVideoMeeting = (dateStr: string) => {
+	// Opens the NewMeetingModal with the date pre-selected
+};
+
+const handleEditEvent = (event: CalendarEvent) => {
+	// Navigate or open edit modal based on event type
+};
+
+const handleMeetingCreated = () => {
+	calendarEvents.refresh();
+	fetchVideoMeetings();
+};
+
+// ── Data fetching ──
+const fetchVideoMeetings = async () => {
+	loadingVideoMeetings.value = true;
+	try {
+		const response = await $fetch('/api/scheduler/video-meetings');
+		videoMeetings.value = (response as any).data || [];
+	} catch (error) {
+		console.error('Error fetching video meetings:', error);
+	} finally {
+		loadingVideoMeetings.value = false;
+	}
+};
+
+const fetchSettings = async () => {
+	try {
+		const response = await $fetch('/api/scheduler/settings');
+		settings.value = (response as any).data;
+	} catch {}
+};
+
+const fetchMeetingRequests = async () => {
+	try {
+		const response = await $fetch('/api/scheduler/meeting-requests');
+		meetingRequests.value = (response as any).data || [];
+	} catch {}
+};
+
+// Provide data to child components
+provide('schedulerData', {
+	videoMeetings,
+	settings,
+	user,
+	refreshVideoMeetings: fetchVideoMeetings,
+});
+
+// ═══ Client state (non-admin) ═══
 const clientActiveTab = ref('request');
 const availableHosts = ref<any[]>([]);
 const loadingHosts = ref(true);
@@ -435,7 +510,6 @@ const submitRequest = async () => {
 		toast.add({ title: 'Please select a preferred date', color: 'red' });
 		return;
 	}
-
 	submittingRequest.value = true;
 	try {
 		await $fetch('/api/scheduler/meeting-requests', {
@@ -449,7 +523,6 @@ const submitRequest = async () => {
 				notes: requestForm.notes,
 			},
 		});
-
 		toast.add({ title: 'Meeting request sent!', description: 'You will be notified once it is reviewed.', color: 'green' });
 		showRequestModal.value = false;
 		await fetchClientRequests();
@@ -468,11 +541,8 @@ const getHostName = (request: any) => {
 
 const clientFormatDate = (dateStr: string) => {
 	if (!dateStr) return 'No date specified';
-	try {
-		return format(parseISO(dateStr), 'EEE, MMM d, yyyy');
-	} catch {
-		return dateStr;
-	}
+	try { return format(parseISO(dateStr), 'EEE, MMM d, yyyy'); }
+	catch { return dateStr; }
 };
 
 const clientFormatTime = (timeStr: string) => {
@@ -484,109 +554,7 @@ const clientFormatTime = (timeStr: string) => {
 	return `${displayHour}:${m} ${ampm}`;
 };
 
-// ===== Admin-side state =====
-const activeTab = ref('calendar');
-const videoMeetings = ref<any[]>([]);
-const settings = ref<any>(null);
-const loadingVideoMeetings = ref(true);
-
-// Meeting requests
-const meetingRequests = ref<any[]>([]);
-const loadingRequests = ref(true);
-
-const fetchMeetingRequests = async () => {
-	loadingRequests.value = true;
-	try {
-		const response = await $fetch('/api/scheduler/meeting-requests');
-		meetingRequests.value = (response as any).data || [];
-	} catch (error) {
-		console.error('Error fetching meeting requests:', error);
-	} finally {
-		loadingRequests.value = false;
-	}
-};
-
-const pendingRequestCount = computed(() =>
-	meetingRequests.value.filter((r) => r.request_status === 'pending').length
-);
-
-// Tabs
-const tabs = computed(() => [
-	{ key: 'calendar', label: 'Calendar', icon: 'i-heroicons-calendar' },
-	{ key: 'video', label: 'Video Meetings', icon: 'i-heroicons-video-camera' },
-	{ key: 'requests', label: `Requests${pendingRequestCount.value ? ` (${pendingRequestCount.value})` : ''}`, icon: 'i-heroicons-inbox' },
-	{ key: 'history', label: 'History', icon: 'i-heroicons-clock' },
-]);
-
-// Computed
-const bookingUrl = computed(() => {
-	const baseUrl = useRuntimeConfig().public.siteUrl || window.location.origin;
-	const slug = settings.value?.booking_page_slug || user.value?.id;
-	return `${baseUrl}/book/${slug}`;
-});
-
-const upcomingVideoMeetings = computed(() => {
-	const now = new Date();
-	return videoMeetings.value
-		.filter((m) => m.status === 'scheduled' && isAfter(parseISO(m.scheduled_start), now))
-		.sort((a, b) => new Date(a.scheduled_start).getTime() - new Date(b.scheduled_start).getTime());
-});
-
-const stats = computed(() => {
-	const now = new Date();
-	return {
-		upcoming: upcomingVideoMeetings.value.length,
-		videoMeetings: videoMeetings.value.filter((m) => m.status === 'scheduled').length,
-		pending: videoMeetings.value.filter((m) => m.status === 'scheduled').length,
-		completed: videoMeetings.value.filter((m) => m.status === 'completed').length,
-	};
-});
-
-// Methods
-const formatMeetingTime = (dateStr: string) => {
-	if (!dateStr) return '';
-	return format(parseISO(dateStr), 'EEE, MMM d · h:mm a');
-};
-
-const copyBookingLink = async () => {
-	await navigator.clipboard.writeText(bookingUrl.value);
-	toast.add({ title: 'Booking link copied!', color: 'green', icon: 'i-heroicons-clipboard-document-check' });
-};
-
-const fetchVideoMeetings = async () => {
-	loadingVideoMeetings.value = true;
-	try {
-		const response = await $fetch('/api/scheduler/video-meetings');
-		videoMeetings.value = (response as any).data || [];
-	} catch (error) {
-		console.error('Error fetching video meetings:', error);
-	} finally {
-		loadingVideoMeetings.value = false;
-	}
-};
-
-const fetchSettings = async () => {
-	try {
-		const response = await $fetch('/api/scheduler/settings');
-		settings.value = (response as any).data;
-	} catch (error) {
-		console.error('Error fetching settings:', error);
-	}
-};
-
-const refreshVideoMeetings = () => {
-	fetchVideoMeetings();
-};
-
-// Provide data to child components
-provide('schedulerData', {
-	videoMeetings,
-	settings,
-	user,
-	refreshVideoMeetings,
-});
-
-// Lifecycle
+// ═══ Lifecycle ═══
 onMounted(() => {
 	if (isAdmin.value) {
 		fetchVideoMeetings();
