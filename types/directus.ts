@@ -328,6 +328,8 @@ export interface BeforeAndAfter {
 	after_image?: DirectusFile | string | null;
 	title?: string | null;
 	caption?: string | null;
+	/** @description Enable for logo before/afters (keeps images small and contained). Disable for website or full-width comparisons (images fill more of the frame). */
+	is_logo?: boolean | null;
 }
 
 export interface BlockCallout {
