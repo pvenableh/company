@@ -127,8 +127,6 @@ export interface Appointment {
 	/** @description Twilio room name (if video meeting) */
 	room_name?: string | null;
 	attendees?: AppointmentsDirectusUser[] | string[];
-	/** @description Linked lead for CRM tracking */
-	related_lead?: Lead | string | null;
 }
 
 export interface AppointmentsDirectusUser {
@@ -701,6 +699,41 @@ export interface Blog {
 	seo?: ExtensionSeoMetadata | null;
 	content?: 'json' | null;
 	editor?: 'json' | null;
+	/** @description Short description for listings and SEO meta */
+	excerpt?: string | null;
+	/** @description Main article content */
+	body?: string | null;
+	featured_image?: DirectusFile | string | null;
+	author?: People | string | null;
+	/** @description When to publish (can be future-dated) */
+	date_published?: string | null;
+	/** @description Estimated reading time in minutes */
+	reading_time?: number | null;
+	/** @description Feature on magazine cover */
+	featured?: boolean | null;
+	categories?: BlogBlogCategory[] | string[];
+	services?: BlogService[] | string[];
+	industries?: BlogIndustry[] | string[];
+}
+
+export interface BlogBlogCategory {
+	/** @primaryKey */
+	id: number;
+	blog_id?: Blog | string | null;
+	blog_categories_id?: BlogCategory | string | null;
+	sort?: number | null;
+}
+
+export interface BlogCategory {
+	/** @primaryKey */
+	id: string;
+	status?: 'published' | 'draft' | 'archived';
+	sort?: number | null;
+	/** @required */
+	name: string;
+	slug?: string | null;
+	description?: string | null;
+	color?: string | null;
 }
 
 export interface BlogFile {
@@ -708,6 +741,22 @@ export interface BlogFile {
 	id: number;
 	blog_id?: Blog | string | null;
 	directus_files_id?: DirectusFile | string | null;
+}
+
+export interface BlogIndustry {
+	/** @primaryKey */
+	id: number;
+	blog_id?: Blog | string | null;
+	industries_id?: Industry | string | null;
+	sort?: number | null;
+}
+
+export interface BlogService {
+	/** @primaryKey */
+	id: number;
+	blog_id?: Blog | string | null;
+	services_id?: Service | string | null;
+	sort?: number | null;
 }
 
 export interface BusinessHour {
@@ -812,17 +861,17 @@ export interface CaseStudy {
 	challenge?: string | null;
 	solution?: string | null;
 	results?: string | null;
-	/** @description Client name if different than organization */
-	client?: string | null;
 	project_duration?: string | null;
 	project_year?: string | null;
 	project_url?: string | null;
 	/** @description Keywords and tags for categorization */
 	tags?: string[] | null;
 	featured?: boolean | null;
+	client?: Client | string | null;
 	gallery?: CaseStudiesFile[] | string[];
 	services?: CaseStudiesService[] | string[];
 	portfolio_items?: CaseStudiesPortfolio[] | string[];
+	industries?: CaseStudiesIndustry[] | string[];
 }
 
 export interface CaseStudiesFile {
@@ -830,6 +879,14 @@ export interface CaseStudiesFile {
 	id: number;
 	case_studies_id?: CaseStudy | string | null;
 	directus_files_id?: DirectusFile | string | null;
+	sort?: number | null;
+}
+
+export interface CaseStudiesIndustry {
+	/** @primaryKey */
+	id: number;
+	case_studies_id?: CaseStudy | string | null;
+	industries_id?: Industry | string | null;
 	sort?: number | null;
 }
 
@@ -1477,8 +1534,13 @@ export interface Industry {
 	class?: string | null;
 	color?: string | null;
 	url?: string | null;
+	/** @description Short tagline for the industry hero section (e.g. 'Mission-driven brands for the organizations shaping communities.') */
+	headline?: string | null;
+	/** @description Fuller description of how Hue serves this industry. Appears below the headline on the industry detail page. */
+	description?: string | null;
 	portfolio?: PortfolioIndustry[] | string[];
 	content_blocks?: IndustriesContentBlock[] | string[];
+	case_studies?: CaseStudiesIndustry[] | string[];
 }
 
 export interface IndustriesContentBlock {
@@ -1499,8 +1561,7 @@ export interface Invoice {
 	date_created?: string | null;
 	user_updated?: DirectusUser | string | null;
 	date_updated?: string | null;
-	/** @required */
-	bill_to: Organization | string;
+	bill_to?: Organization | string | null;
 	/** @required */
 	due_date: string;
 	invoice_code?: string | null;
@@ -1513,8 +1574,8 @@ export interface Invoice {
 	emails?: string[] | null;
 	project?: Project | string | null;
 	melio?: string | null;
-	/** @description The client this invoice is for */
-	client?: Client | string | null;
+	/** @description The client this invoice is for @required */
+	client: Client | string;
 	/** @description Snapshot: billing email at time of invoicing */
 	billing_email?: string | null;
 	/** @description Snapshot: billing contact name at time of invoicing */
@@ -1562,8 +1623,6 @@ export interface LeadActivity {
 	lead?: Lead | string | null;
 	contact?: Contact | string | null;
 	attachments?: LeadActivitiesFile[] | string[];
-	/** @description Linked video meeting record */
-	related_video_meeting?: VideoMeeting | string | null;
 }
 
 export interface LeadActivitiesFile {
@@ -1835,6 +1894,8 @@ export interface Organization {
 	twilio_subaccount_status?: 'active' | 'suspended' | null;
 	/** @description Active add-on subscriptions — managed by Stripe webhooks. Keys are addon IDs, values have stripe_subscription_item_id and active_since. */
 	active_addons?: Record<string, any> | null;
+	/** @description Default hourly rate for time tracking billable entries */
+	default_hourly_rate?: number | null;
 	users?: OrganizationsDirectusUser[] | string[];
 	projects?: Project[] | string[];
 	tickets?: Ticket[] | string[];
@@ -2106,6 +2167,18 @@ export interface People {
 	total_clicks?: number | null;
 	client?: Client | string | null;
 	user?: DirectusUser | string | null;
+	/** @description Flag this person as a Hue team member */
+	is_team_member?: boolean | null;
+	/** @description One-line tagline for profile page */
+	headline?: string | null;
+	/** @description Full biography for profile page */
+	extended_bio?: string | null;
+	/** @description Career highlights */
+	resume_highlights?: Array<{ year: string; role: string; company: string; description: string }> | null;
+	/** @description Education history */
+	education?: Array<{ degree: string; school: string; year: string }> | null;
+	/** @description Skills and specialties */
+	specialties?: string[] | null;
 	organizations?: PeopleOrganization[] | string[];
 }
 
@@ -2170,7 +2243,6 @@ export interface Portfolio {
 	challenge?: string | null;
 	creation?: string | null;
 	service?: Service | string | null;
-	client?: Organization | string | null;
 	caption?: string | null;
 	slug?: string | null;
 	/** @description Image featured on details page.  If blank, will use first image in images. */
@@ -2187,12 +2259,13 @@ export interface Portfolio {
 	project_year?: string | null;
 	/** @description How long the project took (e.g. 8 weeks, 3 months) */
 	project_duration?: string | null;
+	client?: Client | string | null;
 	images?: PortfolioFile[] | string[];
-	projects?: Portfolio[] | string[];
 	videos?: Video[] | string[];
 	industries?: PortfolioIndustry[] | string[];
-	before_and_afters?: PortfolioBeforeAndAfter[] | string[];
 	capabilities?: PortfolioCapability[] | string[];
+	projects?: Portfolio[] | string[];
+	before_and_afters?: PortfolioBeforeAndAfter[] | string[];
 }
 
 export interface PortfolioBeforeAndAfter {
@@ -2370,6 +2443,18 @@ export interface ProjectsDirectusUser {
 	sort?: number | null;
 }
 
+export interface ProjectStatusUpdate {
+	/** @primaryKey */
+	id: string;
+	/** @required */
+	project: Project | string;
+	/** @required */
+	status: 'on_track' | 'at_risk' | 'off_track';
+	text?: string | null;
+	user_created?: DirectusUser | string | null;
+	date_created?: string | null;
+}
+
 export interface ProjectTask {
 	/** @primaryKey */
 	id: string;
@@ -2387,6 +2472,8 @@ export interface ProjectTask {
 	completed_by?: DirectusUser | string | null;
 	due_date?: string | null;
 	priority?: 'low' | 'medium' | 'high' | null;
+	/** @description Direct link to project (tasks can exist without an event) */
+	project?: Project | string | null;
 	watchers?: ProjectTasksWatcher[] | string[];
 }
 
@@ -3156,8 +3243,6 @@ export interface VideoMeeting {
 	/** @description Require host to admit guests before they can join */
 	waiting_room_enabled?: boolean;
 	attendees?: VideoMeetingAttendee[] | string[];
-	/** @description Linked lead for CRM tracking */
-	related_lead?: Lead | string | null;
 }
 
 export interface Video {
@@ -3703,13 +3788,18 @@ export interface Schema {
 	block_sticky_text: BlockStickyText[];
 	block_text: BlockText[];
 	blog: Blog[];
+	blog_blog_categories: BlogBlogCategory[];
+	blog_categories: BlogCategory[];
 	blog_files: BlogFile[];
+	blog_industries: BlogIndustry[];
+	blog_services: BlogService[];
 	business_hours: BusinessHour[];
 	call_logs: CallLog[];
 	call_routes: CallRoute[];
 	capabilities: Capability[];
 	case_studies: CaseStudy[];
 	case_studies_files: CaseStudiesFile[];
+	case_studies_industries: CaseStudiesIndustry[];
 	case_studies_portfolio: CaseStudiesPortfolio[];
 	case_studies_services: CaseStudiesService[];
 	cd_activities: CdActivity[];
@@ -3792,6 +3882,7 @@ export interface Schema {
 	project_events_comments: ProjectEventsComment[];
 	projects: Project[];
 	projects_directus_users: ProjectsDirectusUser[];
+	project_status_updates: ProjectStatusUpdate[];
 	project_tasks: ProjectTask[];
 	project_tasks_watchers: ProjectTasksWatcher[];
 	prompts: Prompt[];
@@ -3903,13 +3994,18 @@ export enum CollectionNames {
 	block_sticky_text = 'block_sticky_text',
 	block_text = 'block_text',
 	blog = 'blog',
+	blog_blog_categories = 'blog_blog_categories',
+	blog_categories = 'blog_categories',
 	blog_files = 'blog_files',
+	blog_industries = 'blog_industries',
+	blog_services = 'blog_services',
 	business_hours = 'business_hours',
 	call_logs = 'call_logs',
 	call_routes = 'call_routes',
 	capabilities = 'capabilities',
 	case_studies = 'case_studies',
 	case_studies_files = 'case_studies_files',
+	case_studies_industries = 'case_studies_industries',
 	case_studies_portfolio = 'case_studies_portfolio',
 	case_studies_services = 'case_studies_services',
 	cd_activities = 'cd_activities',
@@ -3992,6 +4088,7 @@ export enum CollectionNames {
 	project_events_comments = 'project_events_comments',
 	projects = 'projects',
 	projects_directus_users = 'projects_directus_users',
+	project_status_updates = 'project_status_updates',
 	project_tasks = 'project_tasks',
 	project_tasks_watchers = 'project_tasks_watchers',
 	prompts = 'prompts',

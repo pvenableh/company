@@ -8,7 +8,7 @@
  * The membership is scoped to the client record via the `client` FK.
  */
 
-import { createItem, readItems, readUsers, inviteUser } from '@directus/sdk';
+import { createItem, readItems, readUsers, readRoles, inviteUser } from '@directus/sdk';
 
 export default defineEventHandler(async (event) => {
   try {
@@ -139,11 +139,37 @@ export default defineEventHandler(async (event) => {
     } else {
       isNewUser = true;
 
-      const defaultRoleId = config.public.directusRoleUser || null;
+      // Resolve the Directus system role for the new user
+      let directusRoleId = config.public.directusRoleUser || null;
+
+      if (!directusRoleId) {
+        // Env var not set — query Directus for a non-admin role to assign
+        try {
+          const roles = await directus.request(
+            readRoles({
+              filter: { admin_access: { _eq: false } },
+              fields: ['id', 'name'],
+              limit: 1,
+            })
+          ) as any[];
+          if (roles.length) {
+            directusRoleId = roles[0].id;
+          }
+        } catch (roleErr: any) {
+          console.warn('Failed to query Directus roles:', roleErr?.message);
+        }
+      }
+
+      if (!directusRoleId) {
+        throw createError({
+          statusCode: 500,
+          message: 'No default user role configured. Set NUXT_PUBLIC_DIRECTUS_ROLE_USER or create a non-admin role in Directus.',
+        });
+      }
 
       try {
         await directus.request(
-          inviteUser(email, defaultRoleId, {
+          inviteUser(email, directusRoleId, {
             invite_url: `${config.public.appUrl || ''}/auth/accept-org-invite`,
           })
         );

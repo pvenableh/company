@@ -349,6 +349,17 @@
 				</div>
 			</div>
 		</section>
+
+		<!-- Footer -->
+		<footer class="sell-footer">
+			<div class="sell-footer-inner">
+				<span class="sell-footer-copy">&copy; {{ new Date().getFullYear() }} Earnest</span>
+				<nav class="sell-footer-links">
+					<nuxt-link to="/privacy-policy">Privacy Policy</nuxt-link>
+					<nuxt-link to="/terms-of-service">Terms of Service</nuxt-link>
+				</nav>
+			</div>
+		</footer>
 	</div>
 </template>
 
@@ -1901,4 +1912,34 @@ useHead({
 }
 
 /* ─── FOOTER ─── */
+.sell-footer {
+	border-top: 1px solid rgba(255, 255, 255, 0.08);
+	padding: 2rem 1.5rem;
+}
+.sell-footer-inner {
+	max-width: 960px;
+	margin: 0 auto;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	flex-wrap: wrap;
+}
+.sell-footer-copy {
+	font-size: 0.8rem;
+	color: rgba(255, 255, 255, 0.35);
+}
+.sell-footer-links {
+	display: flex;
+	gap: 1.25rem;
+}
+.sell-footer-links a {
+	font-size: 0.8rem;
+	color: rgba(255, 255, 255, 0.45);
+	text-decoration: none;
+	transition: color 0.2s;
+}
+.sell-footer-links a:hover {
+	color: rgba(255, 255, 255, 0.8);
+}
 </style>

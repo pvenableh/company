@@ -51,7 +51,7 @@
 				</div>
 			</div>
 
-			<!-- Ticket + Billable -->
+			<!-- Ticket + Task -->
 			<div class="grid grid-cols-2 gap-3">
 				<div>
 					<label class="block text-xs font-medium text-muted-foreground mb-1">Ticket</label>
@@ -69,14 +69,44 @@
 						</option>
 					</select>
 				</div>
+				<div>
+					<label class="block text-xs font-medium text-muted-foreground mb-1">Task</label>
+					<select
+						v-model="form.task"
+						class="w-full rounded-md border bg-background px-3 py-2 text-sm"
+					>
+						<option :value="null">No task</option>
+						<option
+							v-for="task in taskOptions"
+							:key="task.id"
+							:value="task.id"
+						>
+							{{ task.title }}
+						</option>
+					</select>
+				</div>
+			</div>
+
+			<!-- Billable + Rate -->
+			<div class="grid grid-cols-2 gap-3">
 				<div class="flex items-end pb-0.5">
 					<label class="flex items-center gap-2 cursor-pointer">
 						<Switch
-							:checked="form.billable"
-							@update:checked="form.billable = $event"
+							v-model="form.billable"
 						/>
 						<span class="text-sm font-medium text-foreground">Billable</span>
 					</label>
+				</div>
+				<div v-if="form.billable">
+					<label class="block text-xs font-medium text-muted-foreground mb-1">Hourly Rate</label>
+					<input
+						v-model.number="form.hourly_rate"
+						type="number"
+						min="0"
+						step="0.01"
+						class="w-full rounded-md border bg-background px-3 py-2 text-sm"
+						placeholder="0.00"
+					/>
 				</div>
 			</div>
 
@@ -99,11 +129,13 @@ const emit = defineEmits<{
 
 const { startTimer } = useTimeTracker();
 const { getClientOptions, selectedClient } = useClients();
+const { selectedOrg, getOrganizationFilter, currentOrg } = useOrganization();
 
 const starting = ref(false);
 const clients = ref<{ label: string; value: string }[]>([]);
 const projectOptions = ref<{ id: string; title: string }[]>([]);
 const ticketOptions = ref<{ id: string; title: string }[]>([]);
+const taskOptions = ref<{ id: string; title: string }[]>([]);
 
 // Auto-select client from header (skip 'org' sentinel value)
 const initialClient = computed(() => {
@@ -111,17 +143,29 @@ const initialClient = computed(() => {
 	return c && c !== 'org' ? c : null;
 });
 
+const defaultRate = computed(() => currentOrg.value?.default_hourly_rate || null);
+
 const form = reactive({
 	description: '',
 	client: initialClient.value as string | null,
 	project: null as string | null,
 	ticket: null as string | null,
+	task: null as string | null,
 	billable: true,
+	hourly_rate: null as number | null,
 });
+
+// Auto-populate hourly rate from org default when it becomes available
+watch(defaultRate, (rate) => {
+	if (rate && !form.hourly_rate) {
+		form.hourly_rate = rate;
+	}
+}, { immediate: true });
 
 // Load client options
 const projectItems = useDirectusItems('projects');
 const ticketItems = useDirectusItems('tickets');
+const taskItems = useDirectusItems('tasks');
 
 async function loadClients() {
 	try {
@@ -131,23 +175,32 @@ async function loadClients() {
 	}
 }
 
-// Load projects when client changes
+// ── Load projects: by client if selected, otherwise internal org projects ──
 watch(
 	() => form.client,
 	async (clientId) => {
 		form.project = null;
 		form.ticket = null;
+		form.task = null;
 		ticketOptions.value = [];
-
-		if (!clientId) {
-			projectOptions.value = [];
-			return;
-		}
+		taskOptions.value = [];
 
 		try {
+			const filter: any = { status: { _in: ['Pending', 'Scheduled', 'In Progress'] } };
+			if (clientId) {
+				filter.client = { _eq: clientId };
+			} else {
+				// Internal org projects (no client)
+				const orgFilter = getOrganizationFilter();
+				if (orgFilter?.organization) {
+					filter.organization = orgFilter.organization;
+				}
+				filter.client = { _null: true };
+			}
+
 			const data = await projectItems.list({
 				fields: ['id', 'title'],
-				filter: { client: { _eq: clientId }, status: { _in: ['active', 'in_progress'] } },
+				filter,
 				sort: ['title'],
 				limit: -1,
 			});
@@ -156,31 +209,77 @@ watch(
 			projectOptions.value = [];
 		}
 	},
+	{ immediate: true },
 );
 
-// Load tickets when project changes
+// ── Load tickets: by project if selected, by client if selected, otherwise org tickets ──
 watch(
-	() => form.project,
-	async (projectId) => {
+	[() => form.client, () => form.project],
+	async ([clientId, projectId]) => {
 		form.ticket = null;
 
-		if (!projectId) {
-			ticketOptions.value = [];
-			return;
-		}
-
 		try {
+			const filter: any = { status: { _nin: ['Completed'] } };
+
+			if (projectId) {
+				filter.project = { _eq: projectId };
+			} else if (clientId) {
+				filter.client = { _eq: clientId };
+			} else {
+				const orgFilter = getOrganizationFilter();
+				if (orgFilter?.organization) {
+					filter.organization = orgFilter.organization;
+				}
+			}
+
 			const data = await ticketItems.list({
 				fields: ['id', 'title'],
-				filter: { project: { _eq: projectId }, status: { _nin: ['completed', 'archived'] } },
+				filter,
 				sort: ['title'],
-				limit: -1,
+				limit: 50,
 			});
 			ticketOptions.value = data;
 		} catch {
 			ticketOptions.value = [];
 		}
 	},
+	{ immediate: true },
+);
+
+// ── Load tasks: by ticket, by project, or org-level quick tasks ──
+watch(
+	[() => form.client, () => form.project, () => form.ticket],
+	async ([clientId, projectId, ticketId]) => {
+		form.task = null;
+
+		try {
+			const filter: any = { status: { _nin: ['completed'] } };
+
+			if (ticketId) {
+				filter.ticket_id = { _eq: ticketId };
+			} else if (projectId) {
+				filter.project_id = { _eq: projectId };
+			} else if (clientId) {
+				filter.client_id = { _eq: clientId };
+			} else {
+				const orgFilter = getOrganizationFilter();
+				if (orgFilter?.organization) {
+					filter.organization_id = orgFilter.organization;
+				}
+			}
+
+			const data = await taskItems.list({
+				fields: ['id', 'title'],
+				filter,
+				sort: ['title'],
+				limit: 50,
+			});
+			taskOptions.value = data;
+		} catch {
+			taskOptions.value = [];
+		}
+	},
+	{ immediate: true },
 );
 
 async function handleStart() {
@@ -191,7 +290,9 @@ async function handleStart() {
 			client: form.client,
 			project: form.project,
 			ticket: form.ticket,
+			task: form.task,
 			billable: form.billable,
+			hourly_rate: form.billable ? form.hourly_rate : null,
 		});
 
 		// Reset form
@@ -199,7 +300,9 @@ async function handleStart() {
 		form.client = null;
 		form.project = null;
 		form.ticket = null;
+		form.task = null;
 		form.billable = true;
+		form.hourly_rate = defaultRate.value;
 
 		emit('started');
 	} catch (error) {
@@ -209,12 +312,69 @@ async function handleStart() {
 	}
 }
 
+// Refresh all dropdown options (called when form becomes visible)
+async function refreshOptions() {
+	await loadClients();
+	// Auto-populate hourly rate from org default if not already set
+	if (!form.hourly_rate && defaultRate.value) {
+		form.hourly_rate = defaultRate.value;
+	}
+	const clientId = form.client;
+	const projectId = form.project;
+	const ticketId = form.ticket;
+
+	try {
+		// Reload projects
+		const projFilter: any = { status: { _in: ['Pending', 'Scheduled', 'In Progress'] } };
+		if (clientId) {
+			projFilter.client = { _eq: clientId };
+		} else {
+			const orgFilter = getOrganizationFilter();
+			if (orgFilter?.organization) projFilter.organization = orgFilter.organization;
+			projFilter.client = { _null: true };
+		}
+		projectOptions.value = await projectItems.list({ fields: ['id', 'title'], filter: projFilter, sort: ['title'], limit: -1 });
+	} catch { projectOptions.value = []; }
+
+	try {
+		// Reload tickets
+		const tickFilter: any = { status: { _nin: ['Completed'] } };
+		if (projectId) tickFilter.project = { _eq: projectId };
+		else if (clientId) tickFilter.client = { _eq: clientId };
+		else {
+			const orgFilter = getOrganizationFilter();
+			if (orgFilter?.organization) tickFilter.organization = orgFilter.organization;
+		}
+		ticketOptions.value = await ticketItems.list({ fields: ['id', 'title'], filter: tickFilter, sort: ['title'], limit: 50 });
+	} catch { ticketOptions.value = []; }
+
+	try {
+		// Reload tasks
+		const taskFilter: any = { status: { _nin: ['completed'] } };
+		if (ticketId) taskFilter.ticket_id = { _eq: ticketId };
+		else if (projectId) taskFilter.project_id = { _eq: projectId };
+		else if (clientId) taskFilter.client_id = { _eq: clientId };
+		else {
+			const orgFilter = getOrganizationFilter();
+			if (orgFilter?.organization) taskFilter.organization_id = orgFilter.organization;
+		}
+		taskOptions.value = await taskItems.list({ fields: ['id', 'title'], filter: taskFilter, sort: ['title'], limit: 50 });
+	} catch { taskOptions.value = []; }
+}
+
 // Sync form client when header client changes
 watch(initialClient, (newClient) => {
 	form.client = newClient;
 });
 
 onMounted(() => {
-	loadClients();
+	refreshOptions();
 });
+
+// Re-fetch options each time the component is activated (e.g. modal reopened)
+onActivated(() => {
+	refreshOptions();
+});
+
+defineExpose({ refreshOptions });
 </script>

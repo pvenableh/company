@@ -23,6 +23,7 @@ export type FeatureKey =
   | 'member_management'
   | 'ar_clients'
   | 'expenses'
+  | 'time_tracking'
   | 'ai_usage';
 
 // ── Feature Permission ────────────────────────────────────────────────────────
@@ -69,6 +70,7 @@ export const FEATURE_KEYS: FeatureKey[] = [
   'member_management',
   'ar_clients',
   'expenses',
+  'time_tracking',
   'ai_usage',
 ];
 
@@ -96,6 +98,7 @@ export const FEATURE_LABELS: Record<FeatureKey, string> = {
   member_management: 'Member Management',
   ar_clients: 'AR Clients',
   expenses: 'Expenses',
+  time_tracking: 'Time Tracking',
   ai_usage: 'AI Usage',
 };
 
@@ -163,6 +166,7 @@ const OWNER_PERMISSIONS: PermissionMatrix = {
   member_management: full(),
   ar_clients: full(),
   expenses: full(),
+  time_tracking: full(),
   ai_usage: full(),
 };
 
@@ -191,6 +195,7 @@ const ADMIN_PERMISSIONS: PermissionMatrix = {
   member_management: full(),
   ar_clients: full(),
   expenses: full(),
+  time_tracking: full(),
   ai_usage: full(),
 };
 
@@ -219,6 +224,7 @@ const MANAGER_PERMISSIONS: PermissionMatrix = {
   member_management: readOnly(),
   ar_clients: custom({ access: true, create: true, read: true, update: true }),
   expenses: custom({ access: true, create: true, read: true, update: true }),
+  time_tracking: custom({ access: true, create: true, read: true, update: true }),
   ai_usage: readOnly(),
 };
 
@@ -247,6 +253,7 @@ const MEMBER_PERMISSIONS: PermissionMatrix = {
   member_management: noAccess(),
   ar_clients: noAccess(),
   expenses: custom({ access: true, create: true, read: true, update: true }),
+  time_tracking: custom({ access: true, create: true, read: true, update: true }),
   ai_usage: noAccess(),
 };
 
@@ -275,6 +282,7 @@ const CLIENT_PERMISSIONS: PermissionMatrix = {
   member_management: noAccess(),
   ar_clients: noAccess(),
   expenses: noAccess(),
+  time_tracking: noAccess(),
   ai_usage: noAccess(),
 };
 

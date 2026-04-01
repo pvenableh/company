@@ -57,6 +57,7 @@ const editForm = ref({
 	goals: '',
 	target_audience: '',
 	location: '',
+	default_hourly_rate: null,
 });
 const savingOrg = ref(false);
 
@@ -121,6 +122,7 @@ const openEditModal = () => {
 		goals: org.value.goals || '',
 		target_audience: org.value.target_audience || '',
 		location: org.value.location || '',
+		default_hourly_rate: org.value.default_hourly_rate || null,
 	};
 	showEditOrgModal.value = true;
 };
@@ -140,6 +142,7 @@ const saveOrganization = async () => {
 			goals: editForm.value.goals || null,
 			target_audience: editForm.value.target_audience || null,
 			location: editForm.value.location || null,
+			default_hourly_rate: editForm.value.default_hourly_rate || null,
 		});
 		toast.add({ title: 'Success', description: 'Organization updated successfully', color: 'green' });
 		showEditOrgModal.value = false;
@@ -392,7 +395,7 @@ const ORG_DETAIL_FIELDS = [
 	'id', 'name', 'logo', 'category', 'notes', 'website', 'phone', 'address',
 	'industry.name', 'industry.class', 'brand_color', 'emails',
 	'date_created', 'origin_date', 'icon', 'active', 'brand_direction',
-	'goals', 'target_audience', 'location',
+	'goals', 'target_audience', 'location', 'default_hourly_rate',
 ];
 const ORG_BASIC_FIELDS = ['id', 'name', 'logo', 'icon', 'active', 'date_created', 'website', 'phone', 'brand_color', 'brand_direction', 'goals', 'target_audience', 'location', 'notes'];
 
@@ -1015,6 +1018,10 @@ watch(searchEmail, (val) => {
 
 						<UFormGroup label="Location">
 							<UInput v-model="editForm.location" placeholder="City, region, or Remote/Global" />
+						</UFormGroup>
+
+						<UFormGroup label="Default Hourly Rate" help="Auto-populated in time tracking when billable is enabled">
+							<UInput v-model="editForm.default_hourly_rate" type="number" placeholder="0.00" step="0.01" min="0" icon="i-heroicons-currency-dollar" />
 						</UFormGroup>
 					</div>
 				</div>

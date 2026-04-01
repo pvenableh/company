@@ -12,7 +12,7 @@
  * 5. Also creates the legacy junction entry for backward compat
  */
 
-import { createItem, readItems, readUsers, inviteUser, createUser } from '@directus/sdk';
+import { createItem, readItems, readUsers, readRoles, inviteUser, createUser } from '@directus/sdk';
 
 export default defineEventHandler(async (event) => {
   try {
@@ -136,12 +136,38 @@ export default defineEventHandler(async (event) => {
       // User doesn't exist — create via Directus invite
       isNewUser = true;
 
-      const defaultRoleId = config.public.directusRoleUser || null;
+      // Resolve the Directus system role for the new user
+      let directusRoleId = config.public.directusRoleUser || null;
+
+      if (!directusRoleId) {
+        // Env var not set — query Directus for a non-admin role to assign
+        try {
+          const roles = await directus.request(
+            readRoles({
+              filter: { admin_access: { _eq: false } },
+              fields: ['id', 'name'],
+              limit: 1,
+            })
+          ) as any[];
+          if (roles.length) {
+            directusRoleId = roles[0].id;
+          }
+        } catch (roleErr: any) {
+          console.warn('Failed to query Directus roles:', roleErr?.message);
+        }
+      }
+
+      if (!directusRoleId) {
+        throw createError({
+          statusCode: 500,
+          message: 'No default user role configured. Set NUXT_PUBLIC_DIRECTUS_ROLE_USER or create a non-admin role in Directus.',
+        });
+      }
 
       // Use Directus SDK invite to create the user with an invitation
       try {
         await directus.request(
-          inviteUser(email, defaultRoleId, {
+          inviteUser(email, directusRoleId, {
             invite_url: `${config.public.appUrl || ''}/auth/accept-org-invite`,
           })
         );

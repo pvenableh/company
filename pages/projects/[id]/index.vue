@@ -54,6 +54,11 @@ const items = [
 		icon: 'i-heroicons-clock',
 	},
 	{
+		slot: 'time',
+		label: 'Time',
+		icon: 'i-heroicons-clock',
+	},
+	{
 		slot: 'documents',
 		label: 'Documents',
 		icon: 'i-heroicons-document-text',
@@ -547,6 +552,9 @@ const formatCurrency = (amount) => {
 					<div class="max-w-2xl mx-auto py-6">
 						<ProjectsActivityTimeline :project-id="params.id" />
 					</div>
+				</template>
+				<template #time="{ item }">
+					<ProjectsTimeEntries :project-id="params.id" :client-id="project?.client?.id" />
 				</template>
 				<template #documents="{ item }">
 					<div class="w-full px-4 py-6 min-h-[50vh] flex items-start justify-center">

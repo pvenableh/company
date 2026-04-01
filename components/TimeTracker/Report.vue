@@ -20,6 +20,19 @@
 					</button>
 				</div>
 
+				<!-- User filter (team mode) -->
+				<select
+					v-if="teamMode"
+					v-model="selectedUserId"
+					class="rounded-md border bg-background px-2.5 py-1 text-xs min-w-[140px]"
+					@change="fetchReport()"
+				>
+					<option value="">All Members</option>
+					<option v-for="m in orgMembers" :key="m.id" :value="m.id">
+						{{ m.label }}
+					</option>
+				</select>
+
 				<!-- Custom range -->
 				<div class="flex items-center gap-2 ml-auto">
 					<input
@@ -193,6 +206,37 @@
 					</div>
 				</div>
 			</div>
+			<!-- Team Member Breakdown (team mode only) -->
+			<div v-if="teamMode && teamBreakdown.length" class="ios-card rounded-2xl border border-border bg-card p-5">
+				<h3 class="font-medium text-sm flex items-center gap-2 mb-4">
+					<Icon name="lucide:users" class="w-4 h-4 text-muted-foreground" />
+					Hours by Team Member
+				</h3>
+				<div class="space-y-3">
+					<div
+						v-for="item in teamBreakdown.slice(0, 15)"
+						:key="item.name"
+						class="flex items-center gap-3"
+					>
+						<div class="flex-1 min-w-0">
+							<div class="flex items-center justify-between mb-1">
+								<span class="text-sm font-medium truncate">{{ item.name }}</span>
+								<span class="text-sm font-semibold ml-2 tabular-nums">{{ formatDuration(item.totalMinutes) }}</span>
+							</div>
+							<div class="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+								<div
+									class="h-full rounded-full transition-all bg-violet-500"
+									:style="{ width: maxTeamMinutes > 0 ? `${(item.totalMinutes / maxTeamMinutes) * 100}%` : '0%' }"
+								/>
+							</div>
+							<div class="flex justify-between mt-0.5 text-[10px] text-muted-foreground">
+								<span>{{ item.count }} {{ item.count === 1 ? 'entry' : 'entries' }}</span>
+								<span v-if="item.revenue > 0" class="text-emerald-500">${{ formatCurrency(item.revenue) }}</span>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
 		</template>
 	</div>
 </template>
@@ -204,8 +248,18 @@ import { ChartContainer, ChartCrosshair, ChartTooltipContent, componentToString 
 import { VisXYContainer, VisStackedBar, VisAxis } from '@unovis/vue';
 import { format, subDays, subMonths, eachDayOfInterval, parseISO } from 'date-fns';
 
-const { getTimeEntries, formatDuration } = useTimeTracker();
+const props = withDefaults(defineProps<{
+	teamMode?: boolean;
+}>(), {
+	teamMode: false,
+});
+
+const { getTimeEntries, getOrgMembers, formatDuration } = useTimeTracker();
 const { selectedClient } = useClients();
+
+// ── Team mode state ────────────────────────────────────────
+const orgMembers = ref<any[]>([]);
+const selectedUserId = ref('');
 
 // ── Date range state ────────────────────────────────────────
 const dateFrom = ref(format(subDays(new Date(), 30), 'yyyy-MM-dd'));
@@ -235,12 +289,17 @@ const loading = ref(true);
 async function fetchReport() {
 	loading.value = true;
 	try {
+		if (props.teamMode) {
+			orgMembers.value = await getOrgMembers();
+		}
 		const result = await getTimeEntries({
 			dateFrom: dateFrom.value,
 			dateTo: dateTo.value,
 			status: 'completed',
 			sort: ['-date', '-start_time'],
 			limit: 2000,
+			teamView: props.teamMode,
+			userId: selectedUserId.value || undefined,
 		});
 		entries.value = result.data;
 	} catch (err) {
@@ -401,6 +460,34 @@ const projectBreakdown = computed<BreakdownItem[]>(() => {
 const maxProjectMinutes = computed(() => {
 	if (!projectBreakdown.value.length) return 0;
 	return projectBreakdown.value[0].totalMinutes;
+});
+
+// ── Computed: Team member breakdown ───────────────────────
+const teamBreakdown = computed<BreakdownItem[]>(() => {
+	const map = new Map<string, BreakdownItem>();
+
+	for (const entry of entries.value) {
+		const u = entry.user as any;
+		const name = u && typeof u === 'object'
+			? [u.first_name, u.last_name].filter(Boolean).join(' ') || 'Unknown'
+			: 'Unknown';
+
+		const existing = map.get(name) || { name, totalMinutes: 0, count: 0, revenue: 0 };
+		existing.totalMinutes += entry.duration_minutes || 0;
+		existing.count++;
+		if (entry.billable) {
+			const hours = (entry.duration_minutes || 0) / 60;
+			existing.revenue += hours * (entry.hourly_rate || 0);
+		}
+		map.set(name, existing);
+	}
+
+	return Array.from(map.values()).sort((a, b) => b.totalMinutes - a.totalMinutes);
+});
+
+const maxTeamMinutes = computed(() => {
+	if (!teamBreakdown.value.length) return 0;
+	return teamBreakdown.value[0].totalMinutes;
 });
 
 // ── Formatting helpers ──────────────────────────────────────

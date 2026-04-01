@@ -61,7 +61,7 @@
 
 			<!-- Start form (when no timer running) -->
 			<div v-else>
-				<TimeTrackerStartForm @started="isOpen = false" />
+				<TimeTrackerStartForm ref="startFormRef" @started="isOpen = false" />
 			</div>
 		</div>
 	</UModal>
@@ -69,6 +69,14 @@
 
 <script setup lang="ts">
 const isOpen = defineModel<boolean>({ default: false });
+const startFormRef = ref<any>(null);
+
+// Refresh form options whenever modal opens
+watch(isOpen, (open) => {
+	if (open && startFormRef.value?.refreshOptions) {
+		startFormRef.value.refreshOptions();
+	}
+});
 
 const {
 	activeTimer,

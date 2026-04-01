@@ -148,8 +148,7 @@
 							<div class="flex items-end pb-0.5">
 								<label class="flex items-center gap-2 cursor-pointer">
 									<Switch
-										:checked="form.billable"
-										@update:checked="form.billable = $event"
+										v-model="form.billable"
 									/>
 									<span class="text-sm font-medium text-foreground">Billable</span>
 								</label>
@@ -200,6 +199,9 @@ const emit = defineEmits<{
 
 const { createManualEntry, updateTimeEntry } = useTimeTracker();
 const { getClientOptions, selectedClient } = useClients();
+const { getOrganizationFilter, currentOrg } = useOrganization();
+
+const defaultRate = computed(() => currentOrg.value?.default_hourly_rate || null);
 
 // Auto-select client from header (skip 'org' sentinel value)
 const headerClient = computed(() => {
@@ -246,7 +248,7 @@ watch(
 			form.project = typeof entry.project === 'object' ? entry.project?.id || null : entry.project || null;
 			form.ticket = typeof entry.ticket === 'object' ? entry.ticket?.id || null : entry.ticket || null;
 			form.task = typeof entry.task === 'object' ? entry.task?.id || null : entry.task || null;
-			form.billable = entry.billable ?? true;
+			form.billable = !!entry.billable;
 			form.hourly_rate = entry.hourly_rate ?? null;
 		} else {
 			form.date = new Date().toISOString().split('T')[0];
@@ -258,7 +260,7 @@ watch(
 			form.ticket = null;
 			form.task = null;
 			form.billable = true;
-			form.hourly_rate = null;
+			form.hourly_rate = defaultRate.value;
 		}
 	},
 	{ immediate: true },
@@ -273,7 +275,7 @@ async function loadClients() {
 	}
 }
 
-// Load projects when client changes
+// ── Load projects: by client if selected, otherwise internal org projects ──
 watch(
 	() => form.client,
 	async (clientId) => {
@@ -285,15 +287,21 @@ watch(
 		ticketOptions.value = [];
 		taskOptions.value = [];
 
-		if (!clientId) {
-			projectOptions.value = [];
-			return;
-		}
-
 		try {
+			const filter: any = { status: { _in: ['Pending', 'Scheduled', 'In Progress'] } };
+			if (clientId) {
+				filter.client = { _eq: clientId };
+			} else {
+				const orgFilter = getOrganizationFilter();
+				if (orgFilter?.organization) {
+					filter.organization = orgFilter.organization;
+				}
+				filter.client = { _null: true };
+			}
+
 			const data = await projectItems.list({
 				fields: ['id', 'title'],
-				filter: { client: { _eq: clientId }, status: { _in: ['active', 'in_progress'] } },
+				filter,
 				sort: ['title'],
 				limit: -1,
 			});
@@ -304,27 +312,33 @@ watch(
 	},
 );
 
-// Load tickets when project changes
+// ── Load tickets: by project, by client, or org-level ──
 watch(
-	() => form.project,
-	async (projectId) => {
+	[() => form.client, () => form.project],
+	async ([clientId, projectId]) => {
 		if (!props.entry) {
 			form.ticket = null;
-			form.task = null;
-		}
-		taskOptions.value = [];
-
-		if (!projectId) {
-			ticketOptions.value = [];
-			return;
 		}
 
 		try {
+			const filter: any = { status: { _nin: ['Completed'] } };
+
+			if (projectId) {
+				filter.project = { _eq: projectId };
+			} else if (clientId) {
+				filter.client = { _eq: clientId };
+			} else {
+				const orgFilter = getOrganizationFilter();
+				if (orgFilter?.organization) {
+					filter.organization = orgFilter.organization;
+				}
+			}
+
 			const data = await ticketItems.list({
 				fields: ['id', 'title'],
-				filter: { project: { _eq: projectId } },
+				filter,
 				sort: ['title'],
-				limit: -1,
+				limit: 50,
 			});
 			ticketOptions.value = data;
 		} catch {
@@ -333,25 +347,35 @@ watch(
 	},
 );
 
-// Load tasks when ticket changes
+// ── Load tasks: by ticket, by project, by client, or org-level ──
 watch(
-	() => form.ticket,
-	async (ticketId) => {
+	[() => form.client, () => form.project, () => form.ticket],
+	async ([clientId, projectId, ticketId]) => {
 		if (!props.entry) {
 			form.task = null;
 		}
 
-		if (!ticketId) {
-			taskOptions.value = [];
-			return;
-		}
-
 		try {
+			const filter: any = { status: { _nin: ['completed'] } };
+
+			if (ticketId) {
+				filter.ticket_id = { _eq: ticketId };
+			} else if (projectId) {
+				filter.project_id = { _eq: projectId };
+			} else if (clientId) {
+				filter.client_id = { _eq: clientId };
+			} else {
+				const orgFilter = getOrganizationFilter();
+				if (orgFilter?.organization) {
+					filter.organization_id = orgFilter.organization;
+				}
+			}
+
 			const data = await taskItems.list({
 				fields: ['id', 'title'],
-				filter: { ticket: { _eq: ticketId } },
+				filter,
 				sort: ['title'],
-				limit: -1,
+				limit: 50,
 			});
 			taskOptions.value = data;
 		} catch {
@@ -399,11 +423,51 @@ async function handleSave() {
 	}
 }
 
+// Refresh all options when form becomes visible
 watch(
 	() => props.show,
-	(visible) => {
+	async (visible) => {
 		if (visible) {
-			loadClients();
+			await loadClients();
+			// Re-fetch dependent options based on current form values
+			const clientId = form.client;
+			const projectId = form.project;
+			const ticketId = form.ticket;
+
+			try {
+				const projFilter: any = { status: { _in: ['Pending', 'Scheduled', 'In Progress'] } };
+				if (clientId) {
+					projFilter.client = { _eq: clientId };
+				} else {
+					const orgFilter = getOrganizationFilter();
+					if (orgFilter?.organization) projFilter.organization = orgFilter.organization;
+					projFilter.client = { _null: true };
+				}
+				projectOptions.value = await projectItems.list({ fields: ['id', 'title'], filter: projFilter, sort: ['title'], limit: -1 });
+			} catch { projectOptions.value = []; }
+
+			try {
+				const tickFilter: any = { status: { _nin: ['Completed'] } };
+				if (projectId) tickFilter.project = { _eq: projectId };
+				else if (clientId) tickFilter.client = { _eq: clientId };
+				else {
+					const orgFilter = getOrganizationFilter();
+					if (orgFilter?.organization) tickFilter.organization = orgFilter.organization;
+				}
+				ticketOptions.value = await ticketItems.list({ fields: ['id', 'title'], filter: tickFilter, sort: ['title'], limit: 50 });
+			} catch { ticketOptions.value = []; }
+
+			try {
+				const taskFilter: any = { status: { _nin: ['completed'] } };
+				if (ticketId) taskFilter.ticket_id = { _eq: ticketId };
+				else if (projectId) taskFilter.project_id = { _eq: projectId };
+				else if (clientId) taskFilter.client_id = { _eq: clientId };
+				else {
+					const orgFilter = getOrganizationFilter();
+					if (orgFilter?.organization) taskFilter.organization_id = orgFilter.organization;
+				}
+				taskOptions.value = await taskItems.list({ fields: ['id', 'title'], filter: taskFilter, sort: ['title'], limit: 50 });
+			} catch { taskOptions.value = []; }
 		}
 	},
 	{ immediate: true },

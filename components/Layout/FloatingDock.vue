@@ -155,7 +155,7 @@ const {
 } = useTimeTracker();
 
 const emit = defineEmits(['open-ai']);
-const activePanel = ref<'tasks' | 'timer' | null>(null);
+const activePanel = activeDockPanel;
 
 const taskCount = computed(() => activeTasks.value.length);
 
