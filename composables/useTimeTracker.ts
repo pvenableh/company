@@ -37,6 +37,7 @@ interface ActiveTimerState {
 	ticket?: string | null;
 	task?: string | null;
 	billable: boolean;
+	pausedElapsed?: number | null; // seconds accumulated when paused
 }
 
 export function useTimeTracker() {
@@ -49,10 +50,12 @@ export function useTimeTracker() {
 	const activeTimer = useState<ActiveTimerState | null>('activeTimer', () => null);
 	const elapsed = useState<number>('timerElapsed', () => 0);
 	const isTimerRunning = computed(() => !!activeTimer.value);
+	const isTimerPaused = computed(() => !!activeTimer.value && activeTimer.value.pausedElapsed != null);
 
 	let _timerInterval: ReturnType<typeof setInterval> | null = null;
 
 	function _startInterval() {
+		if (!import.meta.client) return;
 		_stopInterval();
 		_updateElapsed();
 		_timerInterval = setInterval(_updateElapsed, 1000);
@@ -140,13 +143,21 @@ export function useTimeTracker() {
 		if (!activeTimer.value) return null;
 
 		const now = new Date().toISOString();
-		const durationMinutes = Math.max(1, Math.round(elapsed.value / 60));
+		const currentElapsed = activeTimer.value.pausedElapsed ?? elapsed.value;
+		const durationMinutes = Math.max(1, Math.round(currentElapsed / 60));
 
-		const entry = await items.update(activeTimer.value.entryId, {
-			end_time: now,
-			duration_minutes: durationMinutes,
-			status: 'completed',
-		} as any);
+		let entry: TimeEntry | null = null;
+		try {
+			entry = await items.update(activeTimer.value.entryId, {
+				end_time: now,
+				duration_minutes: durationMinutes,
+				status: 'completed',
+			} as any);
+		} catch {
+			// API failed — still clear local state so user isn't stuck.
+			// The entry remains 'running' in Directus and can be cleaned up later.
+			console.warn('[TimeTracker] Failed to update entry on stop — clearing local timer state');
+		}
 
 		activeTimer.value = null;
 		elapsed.value = 0;
@@ -171,18 +182,69 @@ export function useTimeTracker() {
 		_stopInterval();
 	}
 
-	function restoreTimer(): void {
+	function pauseTimer(): void {
+		if (!activeTimer.value || activeTimer.value.pausedElapsed != null) return;
+
+		activeTimer.value = {
+			...activeTimer.value,
+			pausedElapsed: elapsed.value,
+		};
+
+		_stopInterval();
+		_persistTimer();
+	}
+
+	function resumeTimer(): void {
+		if (!activeTimer.value || activeTimer.value.pausedElapsed == null) return;
+
+		// Adjust startTime so elapsed calculation picks up from where we left off
+		const resumedStart = new Date(Date.now() - activeTimer.value.pausedElapsed * 1000).toISOString();
+
+		activeTimer.value = {
+			...activeTimer.value,
+			startTime: resumedStart,
+			pausedElapsed: null,
+		};
+
+		_persistTimer();
+		_startInterval();
+	}
+
+	async function restoreTimer(): Promise<void> {
 		if (!import.meta.client) return;
 
 		const saved = localStorage.getItem(ACTIVE_TIMER_KEY);
 		if (!saved) return;
 
+		let state: ActiveTimerState;
 		try {
-			const state: ActiveTimerState = JSON.parse(saved);
-			activeTimer.value = state;
-			_startInterval();
+			state = JSON.parse(saved);
 		} catch {
 			localStorage.removeItem(ACTIVE_TIMER_KEY);
+			return;
+		}
+
+		// Validate the entry still exists in Directus (handles expired tokens, deleted entries)
+		try {
+			const entry = await items.get(state.entryId, { fields: ['id', 'status'] });
+			if (!entry || (entry as any).status !== 'running') {
+				// Entry was completed/deleted elsewhere — clean up local state
+				localStorage.removeItem(ACTIVE_TIMER_KEY);
+				return;
+			}
+		} catch {
+			// API unreachable or token expired — keep local state so user doesn't lose work,
+			// but show the timer as paused until connectivity is restored
+			state = { ...state, pausedElapsed: state.pausedElapsed ?? Math.floor((Date.now() - new Date(state.startTime).getTime()) / 1000) };
+		}
+
+		activeTimer.value = state;
+
+		if (state.pausedElapsed != null) {
+			// Restore paused — show frozen elapsed, don't start interval
+			elapsed.value = state.pausedElapsed;
+		} else {
+			_startInterval();
 		}
 	}
 
@@ -606,10 +668,13 @@ export function useTimeTracker() {
 		activeTimer: readonly(activeTimer),
 		elapsed: readonly(elapsed),
 		isTimerRunning,
+		isTimerPaused,
 
 		// Timer controls
 		startTimer,
 		stopTimer,
+		pauseTimer,
+		resumeTimer,
 		discardTimer,
 		restoreTimer,
 

@@ -5,12 +5,15 @@
 			class="floating-indicator"
 			@click="openTimeTrackerModal()"
 		>
-			<span class="pulsing-dot-sm" />
-			<span class="text-xs font-mono font-semibold tabular-nums text-foreground">
+			<span :class="isTimerPaused ? 'paused-dot-sm' : 'pulsing-dot-sm'" />
+			<span class="text-xs font-mono font-semibold tabular-nums" :class="isTimerPaused ? 'text-muted-foreground' : 'text-foreground'">
 				{{ formatElapsed(elapsed) }}
 			</span>
+			<span v-if="isTimerPaused" class="text-xs text-amber-600 font-medium">
+				Paused
+			</span>
 			<span
-				v-if="activeTimer.description"
+				v-else-if="activeTimer.description"
 				class="text-xs text-muted-foreground truncate max-w-[120px]"
 			>
 				{{ activeTimer.description }}
@@ -27,6 +30,7 @@ const {
 	activeTimer,
 	elapsed,
 	isTimerRunning,
+	isTimerPaused,
 	formatElapsed,
 } = useTimeTracker();
 </script>
@@ -73,6 +77,16 @@ const {
 	border-radius: 50%;
 	background-color: hsl(var(--destructive));
 	animation: pulse-dot-sm 1.5s ease-in-out infinite;
+	flex-shrink: 0;
+}
+
+.paused-dot-sm {
+	display: inline-block;
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background-color: #d97706;
+	opacity: 0.6;
 	flex-shrink: 0;
 }
 

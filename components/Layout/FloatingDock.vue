@@ -31,13 +31,15 @@
 				class="dock-btn"
 				:class="{
 					'dock-btn-active': activePanel === 'timer',
-					'dock-btn-recording': isTimerRunning,
+					'dock-btn-recording': isTimerRunning && !isTimerPaused,
+					'dock-btn-paused': isTimerPaused,
 				}"
 				title="Time Tracker"
 				@click="togglePanel('timer')"
 			>
 				<Icon name="lucide:timer" class="w-4 h-4" />
-				<span v-if="isTimerRunning" class="dock-recording-dot" />
+				<span v-if="isTimerRunning && !isTimerPaused" class="dock-recording-dot" />
+				<span v-else-if="isTimerPaused" class="dock-paused-dot" />
 			</button>
 
 			<!-- Earnest AI button -->
@@ -95,8 +97,9 @@
 						<!-- Active timer display -->
 						<div v-if="isTimerRunning && activeTimer" class="space-y-3">
 							<div class="flex items-center gap-2">
-								<span class="pulsing-dot" />
-								<span class="text-2xl font-mono font-bold tabular-nums">{{ formatElapsed(elapsed) }}</span>
+								<span :class="isTimerPaused ? 'paused-dot' : 'pulsing-dot'" />
+								<span class="text-2xl font-mono font-bold tabular-nums" :class="isTimerPaused ? 'text-muted-foreground' : ''">{{ formatElapsed(elapsed) }}</span>
+								<span v-if="isTimerPaused" class="text-xs text-amber-600 font-medium">Paused</span>
 							</div>
 							<p v-if="activeTimer.description" class="text-sm text-muted-foreground">{{ activeTimer.description }}</p>
 							<div class="flex items-center gap-2">
@@ -106,6 +109,20 @@
 								<span v-if="activeTimer.billable" class="text-xs bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded-full">Billable</span>
 							</div>
 							<div class="flex gap-2 pt-2">
+								<button
+									v-if="isTimerPaused"
+									class="flex-1 h-8 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
+									@click="resumeTimer()"
+								>
+									Resume
+								</button>
+								<button
+									v-else
+									class="flex-1 h-8 rounded-lg border border-border text-xs font-medium text-foreground hover:bg-muted/60 transition-colors"
+									@click="pauseTimer()"
+								>
+									Pause
+								</button>
 								<button
 									class="flex-1 h-8 rounded-lg bg-destructive text-destructive-foreground text-xs font-medium hover:bg-destructive/90 transition-colors"
 									@click="stopTimer()"
@@ -149,8 +166,11 @@ const {
 	activeTimer,
 	elapsed,
 	isTimerRunning,
+	isTimerPaused,
 	formatElapsed,
 	stopTimer,
+	pauseTimer,
+	resumeTimer,
 	discardTimer,
 } = useTimeTracker();
 
@@ -424,6 +444,21 @@ function snapToNearestCorner() {
 	color: hsl(var(--destructive));
 }
 
+.dock-btn-paused {
+	color: #d97706;
+}
+
+.dock-paused-dot {
+	position: absolute;
+	top: 4px;
+	right: 4px;
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: #d97706;
+	opacity: 0.7;
+}
+
 .dock-btn-ai {
 	color: hsl(var(--primary));
 }
@@ -546,6 +581,16 @@ function snapToNearestCorner() {
 	border-radius: 50%;
 	background-color: hsl(var(--destructive));
 	animation: pulse-recording 1.5s ease-in-out infinite;
+	flex-shrink: 0;
+}
+
+.paused-dot {
+	display: inline-block;
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	background-color: #d97706;
+	opacity: 0.6;
 	flex-shrink: 0;
 }
 

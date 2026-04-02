@@ -5,15 +5,18 @@
 	>
 		<!-- Accent border left edge -->
 		<div class="flex">
-			<div class="w-1 shrink-0 bg-red-500 animate-pulse" />
+			<div class="w-1 shrink-0" :class="isTimerPaused ? 'bg-amber-500' : 'bg-red-500 animate-pulse'" />
 
 			<div class="flex-1 p-5 space-y-4">
 				<!-- Timer display -->
 				<div class="flex items-center gap-3">
-					<span class="pulsing-dot" />
-					<span class="text-4xl md:text-5xl font-mono font-semibold tabular-nums text-foreground tracking-tight">
+					<span :class="isTimerPaused ? 'paused-dot' : 'pulsing-dot'" />
+					<span class="text-4xl md:text-5xl font-mono font-semibold tabular-nums tracking-tight" :class="isTimerPaused ? 'text-muted-foreground' : 'text-foreground'">
 						{{ formatElapsed(elapsed) }}
 					</span>
+					<Badge v-if="isTimerPaused" variant="outline" class="text-xs text-amber-600 border-amber-300 dark:border-amber-700">
+						Paused
+					</Badge>
 				</div>
 
 				<!-- Description + pills -->
@@ -43,9 +46,17 @@
 
 				<!-- Actions -->
 				<div class="flex items-center gap-2 pt-1">
+					<Button v-if="isTimerPaused" class="flex-1" @click="handleResume">
+						<Icon name="lucide:play" class="w-4 h-4" />
+						Resume
+					</Button>
+					<Button v-else variant="outline" class="flex-1" @click="handlePause">
+						<Icon name="lucide:pause" class="w-4 h-4" />
+						Pause
+					</Button>
 					<Button class="flex-1" @click="handleStop">
 						<Icon name="lucide:square" class="w-4 h-4" />
-						Stop Timer
+						Stop
 					</Button>
 					<Button variant="ghost" class="text-destructive hover:text-destructive hover:bg-destructive/10" @click="handleDiscard">
 						<Icon name="lucide:trash-2" class="w-4 h-4" />
@@ -65,7 +76,10 @@ const {
 	activeTimer,
 	elapsed,
 	isTimerRunning,
+	isTimerPaused,
 	stopTimer,
+	pauseTimer,
+	resumeTimer,
 	discardTimer,
 	formatElapsed,
 } = useTimeTracker();
@@ -89,6 +103,14 @@ async function handleStop() {
 	await stopTimer();
 }
 
+function handlePause() {
+	pauseTimer();
+}
+
+function handleResume() {
+	resumeTimer();
+}
+
 async function handleDiscard() {
 	await discardTimer();
 }
@@ -104,6 +126,15 @@ async function handleDiscard() {
 	border-radius: 50%;
 	background-color: hsl(var(--destructive));
 	animation: pulse-dot 1.5s ease-in-out infinite;
+}
+
+.paused-dot {
+	display: inline-block;
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	background-color: #d97706;
+	opacity: 0.6;
 }
 
 @keyframes pulse-dot {
