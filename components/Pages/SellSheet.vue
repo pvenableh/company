@@ -1,13 +1,11 @@
 <template>
-	<div class="sell-sheet">
+	<div class="sell-sheet" :data-sell-theme="theme">
 		<!-- Top Nav -->
 		<nav class="sell-nav">
 			<nuxt-link to="/" class="sell-nav-brand">
 				<LogoEarnest size="sm" />
 			</nuxt-link>
-			<nuxt-link to="/auth/signin" class="sell-nav-login">
-				Sign In
-			</nuxt-link>
+			<nuxt-link to="/auth/signin" class="sell-nav-login">Sign In</nuxt-link>
 		</nav>
 
 		<!-- Hero -->
@@ -84,8 +82,9 @@
 
 				<p class="truth-text opacity-0">
 					<strong>EARNEST replaces the pile.</strong>
-					One platform, one login, one source of truth where the work actually lives &mdash; from the first conversation to the
-					final payment. Nothing to integrate. Nothing to re-explain. Every page is an actionable experience &mdash; not a report you read, but a surface you work from.
+					One platform, one login, one source of truth where the work actually lives &mdash; from the first conversation
+					to the final payment. Nothing to integrate. Nothing to re-explain. Every page is an actionable experience
+					&mdash; not a report you read, but a surface you work from.
 				</p>
 
 				<p class="truth-text opacity-0">
@@ -100,7 +99,9 @@
 				</p>
 
 				<p class="truth-text opacity-0">
-					Intuitive movement between every module. Financials surface who owes you money. Your CRM shows who needs attention. Goals show you one number &mdash; your progress &mdash; and what to do next. Two companion apps &mdash; CardDesk for networking and E&sup2; for mobile &mdash; keep everything connected on the go.
+					Intuitive movement between every module. Financials surface who owes you money. Your CRM shows who needs
+					attention. Goals show you one number &mdash; your progress &mdash; and what to do next. Two companion apps
+					&mdash; CardDesk for networking and E&sup2; for mobile &mdash; keep everything connected on the go.
 				</p>
 			</div>
 		</section>
@@ -238,16 +239,26 @@
 				<div class="calc-result">
 					<div class="calc-result-current">
 						<span class="calc-result-label">Current stack cost</span>
-						<span class="calc-result-amount">${{ currentStackCost }}<small>/mo</small></span>
+						<span class="calc-result-amount">
+							${{ currentStackCost }}
+							<small>/mo</small>
+						</span>
 					</div>
 					<div class="calc-result-arrow">&rarr;</div>
 					<div class="calc-result-earnest">
 						<span class="calc-result-label">Earnest Studio</span>
-						<span class="calc-result-amount">$149<small>/mo</small></span>
+						<span class="calc-result-amount">
+							$149
+							<small>/mo</small>
+						</span>
 					</div>
 				</div>
 				<div class="calc-savings" v-if="savings > 0">
-					You save <strong>${{ savings }}/mo</strong> &mdash; that&rsquo;s <strong>${{ savings * 12 }}/yr</strong> back in your pocket.
+					You save
+					<strong>${{ savings }}/mo</strong>
+					&mdash; that&rsquo;s
+					<strong>${{ savings * 12 }}/yr</strong>
+					back in your pocket.
 				</div>
 				<div class="calc-savings calc-savings-plus" v-else>
 					And you get connected AI intelligence that {{ toolCount }} separate tools can never provide.
@@ -271,7 +282,8 @@
 					</div>
 				</div>
 				<p class="token-preview-note opacity-0">
-					Studio plan (400K tokens/mo) supports ~50 marketing reports or ~250 email drafts per month. Need more? Instant self-serve refills.
+					Studio plan (400K tokens/mo) supports ~50 marketing reports or ~250 email drafts per month. Need more? Instant
+					self-serve refills.
 				</p>
 			</div>
 		</section>
@@ -301,13 +313,7 @@
 			<p class="logos-label opacity-0">Trusted by</p>
 			<div class="logos-track">
 				<div class="logos-scroll">
-					<img
-						v-for="(logo, i) in [...logos, ...logos]"
-						:key="i"
-						:src="logo.url"
-						:alt="logo.name"
-						class="logo-img"
-					/>
+					<img v-for="(logo, i) in [...logos, ...logos]" :key="i" :src="logo.url" :alt="logo.name" class="logo-img" />
 				</div>
 			</div>
 		</section>
@@ -369,6 +375,11 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 gsap.registerPlugin(ScrollTrigger);
+
+// ── Theme ──
+const props = defineProps({
+	theme: { type: String, default: 'studio' }, // 'ink' | 'studio'
+});
 
 const heroRef = ref(null);
 const truthRef = ref(null);
@@ -756,7 +767,10 @@ onMounted(() => {
 		revealElements(calcRef, '.calc-title, .calc-sub, .calc-widget');
 
 		// Token preview
-		revealElements({ value: document.querySelector('.token-preview-section') }, '.token-preview-title, .token-preview-sub, .token-item, .token-preview-note');
+		revealElements(
+			{ value: document.querySelector('.token-preview-section') },
+			'.token-preview-title, .token-preview-sub, .token-item, .token-preview-note',
+		);
 
 		// Testimonials
 		if (testimonialsRef.value) {
@@ -807,6 +821,201 @@ useHead({
 	-webkit-font-smoothing: antialiased;
 	margin-top: 0;
 }
+
+/* ─── Theme: Studio ─── */
+/* Clean, modern, younger feel — sky-blue accent, sans-serif dominant */
+.sell-sheet[data-sell-theme='studio'] {
+	--paper: #fafafa;
+	--paper-2: #f0f0f0;
+	--ink: #111111;
+	--ink-2: #333333;
+	--muted: #888888;
+	--accent: #0ea5e9;
+	--rule: rgba(0, 0, 0, 0.08);
+	font-family: var(--font-proxima-regular);
+}
+
+/* Studio — typography: sans-serif everywhere except the wordmark */
+.sell-sheet[data-sell-theme='studio'] .hero-kicker {
+	font-family: var(--font-proxima-regular);
+	font-style: normal;
+	font-weight: 400;
+	text-transform: uppercase;
+	font-size: 12px;
+	letter-spacing: 0.14em;
+}
+.sell-sheet[data-sell-theme='studio'] .hero-wordmark {
+	/* keep Bauer Bodoni for the wordmark */
+	font-weight: 400;
+}
+.sell-sheet[data-sell-theme='studio'] .hero-tagline {
+	font-family: var(--font-proxima-regular);
+	font-style: normal;
+	font-weight: 300;
+}
+.sell-sheet[data-sell-theme='studio'] .hero-sub {
+	font-family: var(--font-proxima-regular);
+	font-weight: 400;
+	letter-spacing: 0.02em;
+}
+
+/* Studio — buttons: pill-shaped, lighter feel */
+.sell-sheet[data-sell-theme='studio'] .btn-ink {
+	border-radius: 100px;
+	font-family: var(--font-proxima-regular);
+	font-weight: 500;
+	font-size: 13px;
+	letter-spacing: 0.04em;
+	padding: 14px 32px;
+}
+.sell-sheet[data-sell-theme='studio'] .btn-ghost {
+	border-radius: 100px;
+	font-family: var(--font-proxima-regular);
+	font-weight: 500;
+	font-size: 13px;
+	letter-spacing: 0.04em;
+	padding: 14px 32px;
+}
+
+/* Studio — marquee */
+.sell-sheet[data-sell-theme='studio'] .marquee-item {
+	font-family: var(--font-proxima-regular);
+	font-weight: 500;
+	letter-spacing: 0.06em;
+}
+
+/* Studio — section labels: clean sans-serif tags */
+.sell-sheet[data-sell-theme='studio'] .replaces-kicker,
+.sell-sheet[data-sell-theme='studio'] .truth-label,
+.sell-sheet[data-sell-theme='studio'] .ai-kicker {
+	font-family: var(--font-proxima-regular);
+	font-style: normal;
+	font-weight: 600;
+	font-size: 11px;
+	letter-spacing: 0.12em;
+}
+
+/* Studio — section headings: sans-serif */
+.sell-sheet[data-sell-theme='studio'] .replaces-name,
+.sell-sheet[data-sell-theme='studio'] .truth-title,
+.sell-sheet[data-sell-theme='studio'] .ai-headline,
+.sell-sheet[data-sell-theme='studio'] .features-title,
+.sell-sheet[data-sell-theme='studio'] .calc-title,
+.sell-sheet[data-sell-theme='studio'] .token-preview-title,
+.sell-sheet[data-sell-theme='studio'] .testimonials-title,
+.sell-sheet[data-sell-theme='studio'] .pricing-title {
+	font-family: var(--font-proxima-regular);
+	font-weight: 600;
+	letter-spacing: -0.02em;
+}
+.sell-sheet[data-sell-theme='studio'] .replaces-cta {
+	font-family: var(--font-proxima-regular);
+	font-weight: 600;
+}
+.sell-sheet[data-sell-theme='studio'] .replaces-cta em {
+	font-style: normal;
+	font-weight: 700;
+}
+
+/* Studio — features: sans-serif numbering + names */
+.sell-sheet[data-sell-theme='studio'] .features-hero-word {
+	font-family: var(--font-proxima-regular);
+	font-style: normal;
+	font-weight: 700;
+	text-transform: none;
+	letter-spacing: -0.03em;
+}
+.sell-sheet[data-sell-theme='studio'] .feature-number,
+.sell-sheet[data-sell-theme='studio'] .ai-cap-number {
+	font-family: var(--font-proxima-regular);
+	font-weight: 600;
+}
+.sell-sheet[data-sell-theme='studio'] .feature-name,
+.sell-sheet[data-sell-theme='studio'] .ai-cap-title {
+	font-family: var(--font-proxima-regular);
+	font-weight: 600;
+	letter-spacing: -0.01em;
+}
+
+/* Studio — quote break: sans-serif */
+.sell-sheet[data-sell-theme='studio'] .quote-text {
+	font-family: var(--font-proxima-regular);
+	font-weight: 300;
+	font-style: normal;
+}
+.sell-sheet[data-sell-theme='studio'] .quote-break::before {
+	font-family: var(--font-proxima-regular);
+}
+
+/* Studio — calculator widget */
+.sell-sheet[data-sell-theme='studio'] .calc-input-value,
+.sell-sheet[data-sell-theme='studio'] .calc-result-amount {
+	font-family: var(--font-proxima-regular);
+	font-weight: 700;
+}
+.sell-sheet[data-sell-theme='studio'] .calc-widget {
+	border-radius: 12px;
+}
+
+/* Studio — token preview */
+.sell-sheet[data-sell-theme='studio'] .token-item-cost {
+	font-family: var(--font-proxima-regular);
+	font-weight: 700;
+}
+
+/* Studio — testimonials */
+.sell-sheet[data-sell-theme='studio'] .testimonial-quote {
+	font-family: var(--font-proxima-regular);
+	font-style: normal;
+	font-weight: 400;
+}
+
+/* Studio — pricing cards */
+.sell-sheet[data-sell-theme='studio'] .plan-name {
+	font-family: var(--font-proxima-regular);
+	font-weight: 700;
+	letter-spacing: 0;
+}
+.sell-sheet[data-sell-theme='studio'] .plan-price {
+	font-family: var(--font-proxima-regular);
+	font-weight: 700;
+}
+.sell-sheet[data-sell-theme='studio'] .plan-desc {
+	font-family: var(--font-proxima-regular);
+	font-style: normal;
+}
+.sell-sheet[data-sell-theme='studio'] .plan-btn {
+	border-radius: 100px;
+	font-family: var(--font-proxima-regular);
+	font-weight: 500;
+}
+.sell-sheet[data-sell-theme='studio'] .plan-features li::before {
+	font-family: var(--font-proxima-regular);
+}
+
+/* Studio — softer grid borders */
+.sell-sheet[data-sell-theme='studio'] .replaces-grid,
+.sell-sheet[data-sell-theme='studio'] .feature-list,
+.sell-sheet[data-sell-theme='studio'] .plans-grid,
+.sell-sheet[data-sell-theme='studio'] .testimonials-grid {
+	border-radius: 12px;
+	overflow: hidden;
+}
+
+/* Studio — strikethrough uses accent */
+.sell-sheet[data-sell-theme='studio'] .replaces-item::after {
+	background: var(--accent);
+	opacity: 0.25;
+}
+
+/* Studio — login button */
+.sell-sheet[data-sell-theme='studio'] .sell-nav-login {
+	font-family: var(--font-proxima-regular);
+	font-weight: 500;
+	font-size: 12px;
+	letter-spacing: 0.06em;
+}
+
 /* ─── TOP NAV ─── */
 .sell-nav {
 	position: fixed;
@@ -957,7 +1166,6 @@ useHead({
 	border-color: var(--ink);
 	color: var(--ink);
 }
-
 
 /* ─── MARQUEE ─── */
 .marquee-wrap {
@@ -1464,9 +1672,15 @@ useHead({
 	margin: 0 auto;
 	background: var(--paper);
 }
-@media (max-width: 700px) { .calc-section { padding: 60px 24px; } }
+@media (max-width: 700px) {
+	.calc-section {
+		padding: 60px 24px;
+	}
+}
 
-.calc-header { margin-bottom: 48px; }
+.calc-header {
+	margin-bottom: 48px;
+}
 .calc-title {
 	font-family: var(--font-bauer-bodoni);
 	font-size: clamp(28px, 4vw, 42px);
@@ -1491,9 +1705,15 @@ useHead({
 	padding: 40px;
 	border: 1px solid var(--rule);
 }
-@media (max-width: 700px) { .calc-widget { padding: 24px; } }
+@media (max-width: 700px) {
+	.calc-widget {
+		padding: 24px;
+	}
+}
 
-.calc-input-row { margin-bottom: 28px; }
+.calc-input-row {
+	margin-bottom: 28px;
+}
 .calc-input-label {
 	display: flex;
 	justify-content: space-between;
@@ -1523,7 +1743,9 @@ useHead({
 	cursor: pointer;
 	transition: background 0.15s;
 }
-.calc-range::-webkit-slider-thumb:hover { background: var(--accent); }
+.calc-range::-webkit-slider-thumb:hover {
+	background: var(--accent);
+}
 
 .calc-result {
 	display: grid;
@@ -1534,7 +1756,12 @@ useHead({
 	padding-top: 32px;
 	border-top: 1px solid var(--rule);
 }
-@media (max-width: 500px) { .calc-result { grid-template-columns: 1fr; text-align: center; } }
+@media (max-width: 500px) {
+	.calc-result {
+		grid-template-columns: 1fr;
+		text-align: center;
+	}
+}
 .calc-result-label {
 	font-size: 11px;
 	text-transform: uppercase;
@@ -1558,8 +1785,14 @@ useHead({
 	font-size: 28px;
 	color: var(--accent);
 }
-.calc-result-earnest .calc-result-amount { color: var(--accent); }
-.calc-result-current { text-decoration: line-through; text-decoration-color: var(--accent); text-decoration-thickness: 2px; }
+.calc-result-earnest .calc-result-amount {
+	color: var(--accent);
+}
+.calc-result-current {
+	text-decoration: line-through;
+	text-decoration-color: var(--accent);
+	text-decoration-thickness: 2px;
+}
 
 .calc-savings {
 	font-size: 15px;
@@ -1568,15 +1801,24 @@ useHead({
 	text-align: center;
 	font-style: italic;
 }
-.calc-savings strong { color: var(--accent); font-style: normal; }
-.calc-savings-plus { color: var(--muted); }
+.calc-savings strong {
+	color: var(--accent);
+	font-style: normal;
+}
+.calc-savings-plus {
+	color: var(--muted);
+}
 
 /* ─── TOKEN PREVIEW ─── */
 .token-preview-section {
 	background: var(--ink);
 	padding: 80px 48px;
 }
-@media (max-width: 700px) { .token-preview-section { padding: 60px 24px; } }
+@media (max-width: 700px) {
+	.token-preview-section {
+		padding: 60px 24px;
+	}
+}
 .token-preview-inner {
 	max-width: 860px;
 	margin: 0 auto;
@@ -1604,7 +1846,9 @@ useHead({
 	padding: 20px;
 	transition: background 0.2s;
 }
-.token-item:hover { background: var(--ink-2); }
+.token-item:hover {
+	background: var(--ink-2);
+}
 .token-item-name {
 	font-size: 13px;
 	color: rgba(246, 241, 231, 0.7);
@@ -1635,7 +1879,11 @@ useHead({
 	max-width: 860px;
 	margin: 0 auto;
 }
-@media (max-width: 700px) { .testimonials-section { padding: 60px 24px; } }
+@media (max-width: 700px) {
+	.testimonials-section {
+		padding: 60px 24px;
+	}
+}
 .testimonials-title {
 	font-family: var(--font-bauer-bodoni);
 	font-size: clamp(22px, 3vw, 32px);
@@ -1654,7 +1902,9 @@ useHead({
 	padding: 32px;
 	transition: background 0.2s;
 }
-.testimonial:hover { background: var(--paper-2); }
+.testimonial:hover {
+	background: var(--paper-2);
+}
 .testimonial-quote {
 	font-family: var(--font-bauer-bodoni);
 	font-size: 15px;
@@ -1715,15 +1965,21 @@ useHead({
 	width: auto;
 	opacity: 0.4;
 	filter: grayscale(1);
-	transition: opacity 0.3s, filter 0.3s;
+	transition:
+		opacity 0.3s,
+		filter 0.3s;
 }
 .logo-img:hover {
 	opacity: 1;
 	filter: grayscale(0);
 }
 @keyframes scrollLogos {
-	0% { transform: translateX(0); }
-	100% { transform: translateX(-50%); }
+	0% {
+		transform: translateX(0);
+	}
+	100% {
+		transform: translateX(-50%);
+	}
 }
 
 /* ─── PRICING ─── */

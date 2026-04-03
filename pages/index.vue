@@ -176,7 +176,7 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 	<NuxtLayout :name="layout">
 	<div class="min-h-screen" :class="user ? 't-bg t-text' : ''">
 		<!-- Marketing Page: shown when user is NOT logged in (no navigation chrome) -->
-		<PagesSellSheet v-if="!user" />
+		<PagesSellSheetModern v-if="!user" />
 
 		<!-- Action Board: shown when user IS logged in -->
 		<div v-else class="min-h-screen bg-background">

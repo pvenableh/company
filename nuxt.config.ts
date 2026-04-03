@@ -34,7 +34,22 @@ export default defineNuxtConfig({
 			],
 			link: [
 				{ rel: 'apple-touch-icon', href: '/android-icon-192x192.png' },
-				],
+				// Preload critical above-the-fold fonts
+				{
+					rel: 'preload',
+					as: 'font',
+					type: 'font/woff2',
+					href: '/_nuxt/assets/css/fonts/proxima-nova-regular.woff2',
+					crossorigin: 'anonymous',
+				},
+				{
+					rel: 'preload',
+					as: 'font',
+					type: 'font/woff2',
+					href: '/_nuxt/assets/css/fonts/bauer-bodoni-roman.woff2',
+					crossorigin: 'anonymous',
+				},
+			],
 		},
 	},
 

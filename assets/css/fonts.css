@@ -1,35 +1,59 @@
+/* ═══════════════════════════════════════════
+   Font Loading — Optimized
+   ═══════════════════════════════════════════
+   - font-display: swap prevents render-blocking
+   - woff2-first with woff fallback
+   - Gaegu subsetted to Latin (3MB → 17KB)
+   - Explicit weight/style descriptors
+   ═══════════════════════════════════════════ */
+
+/* ── Bauer Bodoni Pro (Display Serif) ── */
 @font-face {
 	font-family: 'Bauer Bodoni Pro_1 W05 Roman';
 	src:
-		url('fonts/6f3fed9b-35a6-421e-804d-af9573e695dd.woff2') format('woff2'),
-		url('fonts/53e1fe4c-fb2e-4939-baf2-03539bd1ea27.woff') format('woff');
-	-webkit-font-smoothing: antialiased;
+		url('fonts/bauer-bodoni-roman.woff2') format('woff2'),
+		url('fonts/bauer-bodoni-roman.woff') format('woff');
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+
+/* ── Proxima Nova (Sans-Serif Family) ── */
+@font-face {
+	font-family: 'Proxima Nova W01 Thin';
+	src:
+		url('fonts/proxima-nova-thin.woff2') format('woff2'),
+		url('fonts/proxima-nova-thin.woff') format('woff');
+	font-weight: 100;
+	font-style: normal;
+	font-display: swap;
 }
 
 @font-face {
 	font-family: 'Proxima Nova W01 Light';
 	src:
-		url('fonts/122f8a1b-fa6b-4246-8d37-911edb4ac556.woff2') format('woff2'),
-		url('fonts/0f51d8b8-bda2-4557-9b56-0a4e94ab63d9.woff') format('woff');
-	-webkit-font-smoothing: antialiased;
-}
-
-@font-face {
-	font-family: 'Proxima Nova W01 Thin';
-	src:
-		url('fonts/ad4a2691-471a-4c43-b88f-0d144d680661.woff2') format('woff2'),
-		url('fonts/1da53474-ed78-41a6-872b-7397556eceee.woff') format('woff');
-	-webkit-font-smoothing: antialiased;
+		url('fonts/proxima-nova-light.woff2') format('woff2'),
+		url('fonts/proxima-nova-light.woff') format('woff');
+	font-weight: 300;
+	font-style: normal;
+	font-display: swap;
 }
 
 @font-face {
 	font-family: 'Proxima Nova W01 Regular';
 	src:
-		url('fonts/b38b8bd9-d96f-4bf9-add1-adbd2b08b802.woff2') format('woff2'),
-		url('fonts/52ed7b2d-8a31-4b18-a1d5-8685608b0889.woff') format('woff');
-	-webkit-font-smoothing: antialiased;
+		url('fonts/proxima-nova-regular.woff2') format('woff2'),
+		url('fonts/proxima-nova-regular.woff') format('woff');
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
 }
+
+/* ── Gaegu (Handwritten — Latin subset, woff2) ── */
 @font-face {
 	font-family: 'Gaegu';
-	src: url('fonts/Gaegu-Regular.ttf') format('truetype');
+	src: url('fonts/Gaegu-Regular.woff2') format('woff2');
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
 }
