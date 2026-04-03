@@ -36,43 +36,58 @@
 					<a href="#features" class="sm-btn-ghost">See how it works</a>
 				</div>
 			</div>
-			<!-- Floating glass cards (desktop only) -->
-			<!-- Orbiting Widget Cloud -->
-			<div class="sm-orbit-cloud" aria-hidden="true">
-				<!-- Widget 1: Revenue sparkline -->
-				<div class="sm-orbit sm-orbit-1 opacity-0">
-					<div class="sm-float-card glass-thin">
-						<div class="sm-float-header">
-							<span class="sm-float-label">Revenue</span>
-							<span class="sm-float-trend sm-float-trend-up">+12%</span>
+			<!-- Background Widget Cloud — 5 ambient outcome widgets -->
+			<div class="sm-hero-widgets" aria-hidden="true">
+				<div class="sm-hw sm-hw-ai-top">
+					<div class="sm-float-card sm-float-card-compact">
+						<div class="sm-float-ai-chip">
+							<UIcon name="i-lucide-sparkles" style="width:12px;height:12px" />
+							<span ref="aiChipTextRef">AI analyzing 142 contacts...</span>
 						</div>
+					</div>
+				</div>
+				<div class="sm-hw sm-hw-1">
+					<div class="sm-float-card">
+						<div class="sm-float-header"><span class="sm-float-label">Revenue</span><span class="sm-float-trend sm-float-trend-up">+12%</span></div>
 						<div class="sm-float-big">$24.8k</div>
-						<svg class="sm-float-spark" viewBox="0 0 100 24" fill="none">
-							<path d="M0,20 L12,17 L25,19 L38,13 L50,15 L63,9 L75,6 L88,8 L100,3" stroke="var(--sm-text)" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-						</svg>
+						<svg class="sm-float-spark" viewBox="0 0 100 24" fill="none"><path d="M0,20 L12,17 L25,19 L38,13 L50,15 L63,9 L75,6 L88,8 L100,3" stroke="var(--sm-text)" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
 					</div>
 				</div>
-				<!-- Widget 2: Tasks -->
-				<div class="sm-orbit sm-orbit-2 opacity-0">
-					<div class="sm-float-card glass-thin">
-						<div class="sm-float-header"><span class="sm-float-label">Tasks</span></div>
-						<div class="sm-float-checks">
-							<div class="sm-check"><span class="sm-check-box sm-check-done"></span><span class="sm-check-text">Brand audit</span></div>
-							<div class="sm-check"><span class="sm-check-box sm-check-done"></span><span class="sm-check-text">Social campaign</span></div>
-							<div class="sm-check"><span class="sm-check-box"></span><span class="sm-check-text">Email sequence</span></div>
-						</div>
-					</div>
-				</div>
-				<!-- Widget 3: Score -->
-				<div class="sm-orbit sm-orbit-3 opacity-0">
-					<div class="sm-float-card glass-thin sm-float-card-compact">
+				<div class="sm-hw sm-hw-2">
+					<div class="sm-float-card sm-float-card-compact">
 						<div class="sm-float-score">87</div>
 						<div class="sm-float-score-label">Health</div>
 					</div>
 				</div>
-				<!-- Widget 4: Mini pipeline -->
-				<div class="sm-orbit sm-orbit-4 opacity-0">
-					<div class="sm-float-card glass-thin sm-float-card-compact">
+				<div class="sm-hw sm-hw-3">
+					<div class="sm-float-card">
+						<div class="sm-float-header"><span class="sm-float-label">Goals</span></div>
+						<div class="sm-hw-goals">
+							<div class="sm-hw-goal">
+								<span class="sm-hw-goal-label">Revenue</span>
+								<div class="sm-hw-goal-bar"><div class="sm-hw-goal-fill" style="width:72%"></div></div>
+								<span class="sm-hw-goal-pct">72%</span>
+							</div>
+							<div class="sm-hw-goal">
+								<span class="sm-hw-goal-label">Clients</span>
+								<div class="sm-hw-goal-bar"><div class="sm-hw-goal-fill sm-hw-goal-done" style="width:100%"></div></div>
+								<span class="sm-hw-goal-pct">100%</span>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="sm-hw sm-hw-4">
+					<div class="sm-float-card">
+						<div class="sm-float-header"><span class="sm-float-label">Channels</span></div>
+						<div class="sm-hw-chat">
+							<div class="sm-hw-chat-bubble sm-hw-chat-them"></div>
+							<div class="sm-hw-chat-bubble sm-hw-chat-me"></div>
+							<div class="sm-hw-chat-bubble sm-hw-chat-them sm-hw-chat-short"></div>
+						</div>
+					</div>
+				</div>
+				<div class="sm-hw sm-hw-5">
+					<div class="sm-float-card sm-float-card-compact">
 						<div class="sm-float-header"><span class="sm-float-label">Pipeline</span></div>
 						<div class="sm-float-pipe">
 							<div class="sm-float-pipe-bar" style="width:100%"></div>
@@ -82,17 +97,129 @@
 						<div class="sm-float-pipe-val">$84k</div>
 					</div>
 				</div>
-				<!-- Widget 5: AI chip -->
-				<div class="sm-orbit sm-orbit-5 opacity-0">
-					<div class="sm-float-card glass-thin sm-float-card-compact">
-						<div class="sm-float-ai-chip">
-							<UIcon name="i-lucide-sparkles" style="width:12px;height:12px" />
-							<span>AI analyzing 142 contacts...</span>
-						</div>
-					</div>
-				</div>
 			</div>
 		</section>
+
+		<!-- ─── Widget Carousel ─── -->
+		<div class="sm-widget-carousel" aria-hidden="true">
+			<div class="sm-carousel-track">
+				<!-- Duplicate set for seamless loop -->
+				<template v-for="pass in 2" :key="'pass-' + pass">
+					<div class="sm-carousel-card">
+						<div class="sm-float-header"><span class="sm-float-label">Projects</span><span class="sm-float-badge">Q2</span></div>
+						<div class="sm-hw-gantt">
+							<div class="sm-hw-gantt-bar" style="width:60%;margin-left:0"></div>
+							<div class="sm-hw-gantt-bar" style="width:45%;margin-left:20%"></div>
+							<div class="sm-hw-gantt-bar sm-hw-gantt-accent" style="width:35%;margin-left:40%"></div>
+							<div class="sm-hw-gantt-bar" style="width:50%;margin-left:30%"></div>
+						</div>
+					</div>
+					<div class="sm-carousel-card">
+						<div class="sm-float-header"><span class="sm-float-label">CRM Intelligence</span></div>
+						<div class="sm-hw-crm">
+							<div class="sm-hw-crm-contact">
+								<span class="sm-hw-contact-dot" style="background:#6366f1;margin:0"></span>
+								<div class="sm-hw-crm-info"><span class="sm-hw-crm-name">Acme Corp</span><span class="sm-hw-crm-stage">Proposal &middot; Score 92</span></div>
+								<span class="sm-hw-crm-val">$12k</span>
+							</div>
+							<div class="sm-hw-crm-contact">
+								<span class="sm-hw-contact-dot" style="background:#f59e0b;margin:0"></span>
+								<div class="sm-hw-crm-info"><span class="sm-hw-crm-name">Nova Labs</span><span class="sm-hw-crm-stage">Follow-up &middot; Score 67</span></div>
+								<span class="sm-hw-crm-val">$8k</span>
+							</div>
+						</div>
+					</div>
+					<div class="sm-carousel-card">
+						<div class="sm-float-header"><span class="sm-float-label">Tickets</span><span class="sm-float-badge">5 open</span></div>
+						<div class="sm-hw-tickets">
+							<div class="sm-hw-ticket"><span class="sm-hw-ticket-dot" style="background:#f59e0b"></span><span class="sm-hw-ticket-title">Fix checkout flow</span><span class="sm-hw-ticket-pri sm-hw-pri-high">High</span></div>
+							<div class="sm-hw-ticket"><span class="sm-hw-ticket-dot" style="background:#10b981"></span><span class="sm-hw-ticket-title">Update brand assets</span><span class="sm-hw-ticket-pri sm-hw-pri-med">Med</span></div>
+						</div>
+					</div>
+					<div class="sm-carousel-card">
+						<div class="sm-float-header"><span class="sm-float-label">Email Campaign</span><span class="sm-float-trend sm-float-trend-up">42% open</span></div>
+						<div class="sm-hw-email">
+							<div class="sm-hw-email-preview">
+								<div class="sm-hw-email-subject"></div>
+								<div class="sm-hw-email-body"></div>
+								<div class="sm-hw-email-body sm-hw-email-body-short"></div>
+							</div>
+							<div class="sm-hw-email-stats"><span class="sm-hw-email-stat">Sent: 1,240</span><span class="sm-hw-email-stat">Clicked: 318</span></div>
+						</div>
+					</div>
+					<div class="sm-carousel-card">
+						<div class="sm-float-header"><span class="sm-float-label">People</span><span class="sm-float-badge">142</span></div>
+						<div class="sm-hw-people">
+							<div class="sm-hw-person"><span class="sm-hw-contact-dot" style="background:#6366f1;margin:0"></span><span class="sm-hw-person-name">Sarah Kim</span><span class="sm-hw-person-role">Client</span></div>
+							<div class="sm-hw-person"><span class="sm-hw-contact-dot" style="background:#f59e0b;margin:0"></span><span class="sm-hw-person-name">James Cole</span><span class="sm-hw-person-role">Lead</span></div>
+						</div>
+					</div>
+					<div class="sm-carousel-card">
+						<div class="sm-float-header"><span class="sm-float-label">Meetings</span></div>
+						<div class="sm-hw-video">
+							<div class="sm-hw-video-screen"><UIcon name="i-lucide-video" style="width:14px;height:14px;color:var(--sm-pop)" /></div>
+							<div class="sm-hw-video-bar"><span class="sm-hw-video-dot" style="background:#10b981"></span><span class="sm-hw-video-text">Live &middot; 3 participants</span></div>
+						</div>
+					</div>
+					<div class="sm-carousel-card">
+						<div class="sm-float-header"><span class="sm-float-label">Team</span></div>
+						<div class="sm-hw-team">
+							<div class="sm-hw-team-member"><span class="sm-hw-contact-dot" style="background:#6366f1;margin:0"></span><span class="sm-hw-team-name">Sarah K.</span><span class="sm-hw-team-status" style="background:#10b981"></span></div>
+							<div class="sm-hw-team-member"><span class="sm-hw-contact-dot" style="background:#f59e0b;margin:0"></span><span class="sm-hw-team-name">Mike R.</span><span class="sm-hw-team-status" style="background:#10b981"></span></div>
+						</div>
+					</div>
+					<div class="sm-carousel-card">
+						<div class="sm-float-header"><span class="sm-float-label">Calendar</span></div>
+						<div class="sm-hw-cal">
+							<div class="sm-hw-cal-row"><span></span><span></span><span class="sm-hw-cal-today"></span><span></span><span></span></div>
+							<div class="sm-hw-cal-row"><span></span><span></span><span></span><span class="sm-hw-cal-event"></span><span></span></div>
+						</div>
+					</div>
+					<div class="sm-carousel-card">
+						<div class="sm-float-header"><span class="sm-float-label">Invoicing</span></div>
+						<div class="sm-hw-invoices">
+							<div class="sm-hw-inv-row"><span class="sm-hw-inv-name"></span><span class="sm-hw-inv-amt">$2,400</span><span class="sm-hw-inv-status sm-hw-inv-paid">Paid</span></div>
+							<div class="sm-hw-inv-row"><span class="sm-hw-inv-name"></span><span class="sm-hw-inv-amt">$1,800</span><span class="sm-hw-inv-status sm-hw-inv-pending">Due</span></div>
+						</div>
+					</div>
+					<!-- Hero widgets shown in carousel on lg and below -->
+					<div class="sm-carousel-card sm-carousel-lg-only">
+						<div class="sm-float-header"><span class="sm-float-label">Revenue</span><span class="sm-float-trend sm-float-trend-up">+12%</span></div>
+						<div class="sm-float-big">$24.8k</div>
+						<svg class="sm-float-spark" viewBox="0 0 100 24" fill="none"><path d="M0,20 L12,17 L25,19 L38,13 L50,15 L63,9 L75,6 L88,8 L100,3" stroke="var(--sm-text)" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+					</div>
+					<div class="sm-carousel-card sm-carousel-lg-only">
+						<div class="sm-float-header"><span class="sm-float-label">Health</span></div>
+						<div class="sm-float-score">87</div>
+						<div class="sm-float-score-label">Excellent</div>
+					</div>
+					<div class="sm-carousel-card sm-carousel-lg-only">
+						<div class="sm-float-header"><span class="sm-float-label">Goals</span></div>
+						<div class="sm-hw-goals">
+							<div class="sm-hw-goal"><span class="sm-hw-goal-label">Revenue</span><div class="sm-hw-goal-bar"><div class="sm-hw-goal-fill" style="width:72%"></div></div><span class="sm-hw-goal-pct">72%</span></div>
+							<div class="sm-hw-goal"><span class="sm-hw-goal-label">Clients</span><div class="sm-hw-goal-bar"><div class="sm-hw-goal-fill sm-hw-goal-done" style="width:100%"></div></div><span class="sm-hw-goal-pct">100%</span></div>
+						</div>
+					</div>
+					<div class="sm-carousel-card sm-carousel-lg-only">
+						<div class="sm-float-header"><span class="sm-float-label">Pipeline</span></div>
+						<div class="sm-float-pipe">
+							<div class="sm-float-pipe-bar" style="width:100%"></div>
+							<div class="sm-float-pipe-bar" style="width:65%;opacity:0.6"></div>
+							<div class="sm-float-pipe-bar" style="width:35%;opacity:0.3"></div>
+						</div>
+						<div class="sm-float-pipe-val">$84k</div>
+					</div>
+					<div class="sm-carousel-card sm-carousel-lg-only">
+						<div class="sm-float-header"><span class="sm-float-label">Channels</span></div>
+						<div class="sm-hw-chat">
+							<div class="sm-hw-chat-bubble sm-hw-chat-them"></div>
+							<div class="sm-hw-chat-bubble sm-hw-chat-me"></div>
+							<div class="sm-hw-chat-bubble sm-hw-chat-them sm-hw-chat-short"></div>
+						</div>
+					</div>
+				</template>
+			</div>
+		</div>
 
 		<!-- ─── Marquee ─── -->
 		<div class="sm-marquee" aria-hidden="true">
@@ -108,21 +235,57 @@
 		<!-- ─── Replaces ─── -->
 		<section ref="replacesRef" class="sm-replaces">
 			<p class="sm-kicker opacity-0">One platform replaces</p>
-			<div class="sm-replaces-grid">
-				<div v-for="(tool, i) in replacedTools" :key="i" class="sm-replaces-card ios-card opacity-0">
-					<UIcon :name="tool.icon" class="sm-replaces-icon" />
-					<span class="sm-replaces-name">{{ tool.name }}</span>
-					<span class="sm-replaces-for">{{ tool.replaces }}</span>
-					<div class="sm-replaces-strike" aria-hidden="true"></div>
+			<!-- Orbit layout: Earnest center + tools with connector lines (static) -->
+			<div class="sm-orbit-ring opacity-0" :class="{ 'sm-orbit-active': hoveredOrbit >= 0, 'sm-orbit-pull-all': hoveredOrbit === -2 }">
+				<!-- Connector lines -->
+				<svg class="sm-orbit-lines" :viewBox="`0 0 600 600`" fill="none">
+					<line
+						v-for="(tool, i) in replacedTools"
+						:key="'line-' + i"
+						x1="300" y1="300"
+						:x2="300 + Math.cos((i * (360 / replacedTools.length) - 90) * Math.PI / 180) * 250"
+						:y2="300 + Math.sin((i * (360 / replacedTools.length) - 90) * Math.PI / 180) * 250"
+						:stroke="hoveredOrbit === i || hoveredOrbit === -2 ? '#00bfff' : 'rgba(0,0,0,0.08)'"
+						:stroke-width="hoveredOrbit === i || hoveredOrbit === -2 ? 2 : 1"
+						stroke-dasharray="4 3"
+						style="transition: stroke 0.3s, stroke-width 0.3s"
+					/>
+				</svg>
+				<div class="sm-orbit-center" @mouseenter="hoveredOrbit = -2" @mouseleave="hoveredOrbit = -1">
+					<img src="/icon.png" alt="Earnest" class="sm-orbit-e" />
+					<div class="sm-orbit-center-text">
+						<span class="sm-orbit-center-label"><span class="sm-brand">Earnest</span></span>
+						<span class="sm-orbit-center-tagline">Do good work.</span>
+					</div>
+					<div class="sm-orbit-center-hover-text"><span class="sm-orbit-hover-pill glass-thin"><span class="sm-brand">Earnest</span> work. = Good work.</span></div>
+				</div>
+				<div
+					v-for="(tool, i) in replacedTools"
+					:key="i"
+					class="sm-orbit-tool"
+					:class="{ 'sm-orbit-tool-hovered': hoveredOrbit === i }"
+					@mouseenter="hoveredOrbit = i"
+					@mouseleave="hoveredOrbit = -1"
+					:style="{
+						'--orbit-x': Math.cos((i * (360 / replacedTools.length) - 90) * Math.PI / 180) * 250 + 'px',
+						'--orbit-y': Math.sin((i * (360 / replacedTools.length) - 90) * Math.PI / 180) * 250 + 'px',
+					}"
+				>
+					<div class="sm-orbit-tool-inner">
+						<UIcon :name="tool.icon" class="sm-orbit-tool-icon" />
+						<span class="sm-orbit-tooltip">{{ tool.replaces }}</span>
+					</div>
+					<span class="sm-orbit-tool-name">{{ tool.name }}</span>
 				</div>
 			</div>
 			<p class="sm-replaces-cta opacity-0">
-				All of this. <strong>One login<span class="sm-accent-dot">.</span></strong>
+				All of this. <strong>One source of truth<span class="sm-accent-dot">.</span></strong>
 			</p>
 		</section>
 
-		<!-- Parallax truth background (full-width, outside constrained section) -->
-		<div class="sm-parallax-truth-wrap">
+		<!-- ─── Truth ─── -->
+		<section ref="truthRef" class="sm-truth">
+			<!-- Sticky background chart (full viewport width) -->
 			<div class="sm-parallax-chart sm-parallax-truth" aria-hidden="true">
 				<svg viewBox="0 0 600 200" fill="none" preserveAspectRatio="none">
 					<path d="M0,180 C60,170 100,140 150,130 C200,120 230,125 280,100 C330,75 370,80 420,55 C470,30 520,40 560,25 C580,18 590,20 600,15" stroke="rgba(0,0,0,0.04)" stroke-width="2" fill="none" stroke-linecap="round"/>
@@ -130,41 +293,69 @@
 					<path d="M0,190 C80,185 140,165 200,158 C260,150 300,155 360,135 C420,115 460,120 520,100 C560,88 580,90 600,82" stroke="rgba(0,0,0,0.025)" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-dasharray="4 4"/>
 				</svg>
 			</div>
-		</div>
-		<!-- ─── Truth ─── -->
-		<section ref="truthRef" class="sm-truth">
-			<div class="sm-truth-sidebar">
-				<div class="sm-truth-label opacity-0">The honest case</div>
-			</div>
-			<div class="sm-truth-body">
+			<div class="sm-truth-inner">
+				<div class="sm-truth-sidebar">
+					<div class="sm-section-label opacity-0">The honest case</div>
+				</div>
+				<div class="sm-truth-body">
 				<h2 class="sm-truth-title opacity-0">
-					Your business runs on {{ toolCountWord }} tools. It should run on
-					<span class="sm-truth-highlight">one source of truth</span><span class="sm-accent-dot">.</span>
+					Your business runs on multiple tools. It should run on
+					<span class="sm-truth-highlight">one</span><span class="sm-accent-dot">.</span>
 				</h2>
+
+				<!-- Block 1: The problem -->
 				<p class="sm-truth-text opacity-0">
-					You have a project tool. An invoice tool. A social tool. A phone system. A shared inbox. A calendar. A goal
-					tracker. And Slack to hold it all together. {{ toolCountWord }} tools. {{ toolCountWord }} logins. Zero
-					collective knowledge.
+					Multiple tools. Multiple logins. <strong>Zero collective knowledge.</strong>
 				</p>
+
+				<!-- Visual: tool stack illustration -->
+				<div class="sm-truth-visual opacity-0" aria-hidden="true">
+					<div class="sm-truth-stack">
+						<div class="sm-truth-stack-item" v-for="n in 5" :key="n" :style="{ opacity: 1 - (n * 0.15) }">
+							<div class="sm-truth-stack-bar"></div>
+							<div class="sm-truth-stack-bar sm-truth-stack-bar-short"></div>
+						</div>
+					</div>
+					<div class="sm-truth-arrow" aria-hidden="true">&rarr;</div>
+					<div class="sm-truth-unified">
+						<img src="/icon.png" alt="Earnest" class="sm-truth-unified-icon" />
+					</div>
+				</div>
+
+				<!-- Block 2: The solution -->
 				<p class="sm-truth-text opacity-0">
-					<strong>EARNEST replaces the pile.</strong>
-					One platform, one login, one source of truth where the work actually lives &mdash; from the first conversation to the
-					final payment. Nothing to integrate. Nothing to re-explain. Every page is an actionable experience &mdash; not a report you read, but a surface you work from.
+					<strong><span class="sm-brand">Earnest</span> replaces the pile.</strong>
+					One platform, one login &mdash; from first conversation to final payment. Every page is a surface you work from, <strong>not a report you read.</strong>
 				</p>
-				<p class="sm-truth-text opacity-0">
-					And because everything is in one place,
-					<strong>AI can see the whole business</strong>
-					&mdash; not just a slice of it. It reads your contacts, clients, projects, revenue, deals, goals, campaigns,
-					and brand direction together, then connects the dots to build strategies, forecasts, and plans that no
-					isolated tool can produce. Your marketing plan knows your pipeline. Your CRM analysis knows your brand voice.
-					Your goal suggestions know your financials.
-					<em>That</em> is the difference.
-				</p>
-				<p class="sm-truth-text opacity-0">
-					Intuitive movement between every module. Financials surface who owes you money. Your CRM shows who needs attention. Goals show you one number &mdash; your progress &mdash; and what to do next. Two companion apps &mdash; CardDesk for networking and E&sup2; for mobile &mdash; keep everything connected on the go.
-				</p>
+
+			</div>
 			</div>
 		</section>
+
+		<!-- ─── Insight Cards ─── -->
+		<div class="sm-insight-row">
+			<div class="sm-truth-card opacity-0">
+				<UIcon name="i-lucide-brain" class="sm-truth-card-icon" />
+				<div>
+					<div class="sm-truth-card-title">AI sees everything</div>
+					<div class="sm-truth-card-desc">Contacts, revenue, goals, campaigns &mdash; connected</div>
+				</div>
+			</div>
+			<div class="sm-truth-card opacity-0">
+				<UIcon name="i-lucide-target" class="sm-truth-card-icon" />
+				<div>
+					<div class="sm-truth-card-title">Your plans know your data</div>
+					<div class="sm-truth-card-desc">Marketing knows your pipeline. Goals know your financials.</div>
+				</div>
+			</div>
+			<div class="sm-truth-card opacity-0">
+				<UIcon name="i-lucide-smartphone" class="sm-truth-card-icon" />
+				<div>
+					<div class="sm-truth-card-title">Works everywhere</div>
+					<div class="sm-truth-card-desc">CardDesk + E&sup2; companion apps keep you connected on the go</div>
+				</div>
+			</div>
+		</div>
 
 		<!-- ─── AI Capabilities ─── -->
 		<section ref="aiRef" class="sm-ai">
@@ -183,39 +374,52 @@
 					<line x1="0" y1="228" x2="800" y2="228" stroke="rgba(255,255,255,0.02)" stroke-width="0.5"/>
 					<line x1="0" y1="285" x2="800" y2="285" stroke="rgba(255,255,255,0.02)" stroke-width="0.5"/>
 					<line x1="0" y1="342" x2="800" y2="342" stroke="rgba(255,255,255,0.02)" stroke-width="0.5"/>
-					<!-- Gantt bars -->
-					<rect x="40" y="30" width="280" height="18" rx="9" fill="rgba(255,255,255,0.06)"/>
-					<rect x="120" y="87" width="360" height="18" rx="9" fill="rgba(255,255,255,0.04)"/>
-					<rect x="200" y="144" width="240" height="18" rx="9" fill="rgba(255,255,255,0.05)"/>
-					<rect x="320" y="201" width="300" height="18" rx="9" fill="rgba(255,255,255,0.03)"/>
-					<rect x="80" y="258" width="200" height="18" rx="9" fill="rgba(255,255,255,0.04)"/>
-					<rect x="440" y="315" width="260" height="18" rx="9" fill="rgba(255,255,255,0.05)"/>
-					<rect x="520" y="372" width="180" height="18" rx="9" fill="rgba(255,255,255,0.03)"/>
-					<!-- Dependency connectors -->
+					<!-- Gantt bars (animated fill) -->
+					<!-- Track backgrounds -->
+					<rect x="40" y="30" width="600" height="18" rx="9" fill="rgba(255,255,255,0.02)"/>
+					<rect x="40" y="87" width="600" height="18" rx="9" fill="rgba(255,255,255,0.02)"/>
+					<rect x="40" y="144" width="600" height="18" rx="9" fill="rgba(255,255,255,0.02)"/>
+					<rect x="40" y="201" width="600" height="18" rx="9" fill="rgba(255,255,255,0.02)"/>
+					<rect x="40" y="258" width="600" height="18" rx="9" fill="rgba(255,255,255,0.02)"/>
+					<rect x="40" y="315" width="600" height="18" rx="9" fill="rgba(255,255,255,0.02)"/>
+					<rect x="40" y="372" width="600" height="18" rx="9" fill="rgba(255,255,255,0.02)"/>
+					<!-- Progress fills -->
+					<rect class="sm-ai-gantt-fill" x="40" y="30" width="280" height="18" rx="9" fill="rgba(255,255,255,0.07)" style="animation-delay:0s"/>
+					<rect class="sm-ai-gantt-fill" x="160" y="87" width="320" height="18" rx="9" fill="rgba(255,255,255,0.05)" style="animation-delay:1.5s"/>
+					<rect class="sm-ai-gantt-fill" x="80" y="144" width="240" height="18" rx="9" fill="rgba(255,255,255,0.06)" style="animation-delay:3s"/>
+					<rect class="sm-ai-gantt-fill" x="280" y="201" width="340" height="18" rx="9" fill="rgba(255,255,255,0.04)" style="animation-delay:4.5s"/>
+					<rect class="sm-ai-gantt-fill" x="200" y="258" width="180" height="18" rx="9" fill="rgba(255,255,255,0.05)" style="animation-delay:6s"/>
+					<rect class="sm-ai-gantt-fill" x="120" y="315" width="440" height="18" rx="9" fill="rgba(255,255,255,0.06)" style="animation-delay:7.5s"/>
+					<rect class="sm-ai-gantt-fill" x="360" y="372" width="260" height="18" rx="9" fill="rgba(255,255,255,0.04)" style="animation-delay:9s"/>
+						<!-- Dependency connectors -->
 					<path d="M320,48 L320,60 L200,60 L200,87" stroke="rgba(255,255,255,0.04)" stroke-width="1" fill="none"/>
 					<path d="M440,105 L440,120 L320,120 L320,144" stroke="rgba(255,255,255,0.04)" stroke-width="1" fill="none"/>
 					<path d="M620,210 L620,240 L440,240 L440,258" stroke="rgba(255,255,255,0.04)" stroke-width="1" fill="none"/>
-					<!-- Today marker -->
-					<line x1="380" y1="0" x2="380" y2="400" stroke="rgba(0,191,255,0.08)" stroke-width="1.5" stroke-dasharray="6 4"/>
+					<!-- Today marker (animated drift) -->
+					<line class="sm-ai-today-marker" x1="380" y1="0" x2="380" y2="400" stroke="rgba(0,191,255,0.1)" stroke-width="1.5" stroke-dasharray="6 4"/>
 				</svg>
 			</div>
 			<div class="sm-ai-inner">
-				<p class="sm-kicker sm-kicker-light opacity-0">What one platform makes possible</p>
-				<h2 class="sm-ai-headline opacity-0">
-					Your data talks<span class="sm-accent-dot">.</span><br />
-					<span class="sm-ai-em">AI listens<span class="sm-accent-dot">.</span></span>
-				</h2>
-				<p class="sm-ai-lede opacity-0">
-					Most tools bolt AI onto one channel. EARNEST gives AI the full picture &mdash; people, companies, projects,
-					revenue, conversations, campaigns, financials, and goals &mdash; layered with brand direction and target
-					audience for every client. The result is CRM intelligence, marketing plans, pipeline forecasts, and goal
-					suggestions that are uniquely yours.
-				</p>
-				<div class="sm-ai-grid">
-					<div v-for="(cap, i) in aiCapabilities" :key="i" class="sm-ai-card opacity-0">
-						<span class="sm-ai-num">{{ String(i + 1).padStart(2, '0') }}</span>
-						<h3 class="sm-ai-card-title">{{ cap.title }}</h3>
-						<p class="sm-ai-card-desc">{{ cap.desc }}</p>
+				<div class="sm-ai-sidebar">
+					<div class="sm-section-label sm-section-label-light opacity-0">What one platform makes possible</div>
+				</div>
+				<div class="sm-ai-body">
+					<h2 class="sm-ai-headline opacity-0">
+						Your data talks<span class="sm-accent-dot">.</span><br />
+						<span class="sm-ai-em">AI listens<span class="sm-accent-dot">.</span></span>
+					</h2>
+					<p class="sm-ai-lede opacity-0">
+						Most tools bolt AI onto one channel. <span class="sm-brand">Earnest</span> gives AI the full picture &mdash; people, companies, projects,
+						revenue, conversations, campaigns, financials, and goals &mdash; layered with brand direction and target
+						audience for every client. The result is CRM intelligence, marketing plans, pipeline forecasts, and goal
+						suggestions that are uniquely yours.
+					</p>
+					<div class="sm-ai-grid">
+						<div v-for="(cap, i) in aiCapabilities" :key="i" class="sm-ai-card opacity-0">
+							<span class="sm-ai-num">{{ String(i + 1).padStart(2, '0') }}</span>
+							<h3 class="sm-ai-card-title">{{ cap.title }}</h3>
+							<p class="sm-ai-card-desc">{{ cap.desc }}</p>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -243,32 +447,38 @@
 					<rect x="300" y="70" width="40" height="230" rx="4" fill="rgba(0,0,0,0.02)"/>
 				</svg>
 			</div>
-			<div class="sm-features-header">
-				<p class="sm-features-big opacity-0">Everything</p>
-				<h2 class="sm-features-title opacity-0">
-					your business needs<span class="sm-accent-dot">.</span><br />
-					<em class="sm-features-em">Nothing</em> it doesn't<span class="sm-accent-dot">.</span>
-				</h2>
-				<p class="sm-features-sub opacity-0">Built for teams who are serious about their work<span class="sm-accent-dot">.</span></p>
-			</div>
-			<div class="sm-features-hero-grid">
-				<div v-for="(f, i) in features.slice(0, 4)" :key="i" class="sm-feature-card sm-feature-hero ios-card opacity-0">
-					<div class="sm-feature-top">
-						<UIcon :name="f.icon" class="sm-feature-icon" />
-						<span class="sm-feature-num">{{ String(i + 1).padStart(2, '0') }}</span>
-					</div>
-					<div class="sm-feature-name">{{ f.name }}</div>
-					<div class="sm-feature-desc">{{ f.desc }}</div>
+			<div class="sm-features-layout">
+				<!-- Sticky left: label + title -->
+				<div class="sm-features-header">
+					<div class="sm-section-label opacity-0">The full platform</div>
+					<p class="sm-features-big opacity-0">Everything</p>
+					<h2 class="sm-features-title opacity-0">
+						your business needs<span class="sm-accent-dot">.</span><br />
+						<em class="sm-features-em">Nothing</em> it doesn't<span class="sm-accent-dot">.</span>
+					</h2>
+					<p class="sm-features-sub opacity-0">Built for teams who are serious about their work<span class="sm-accent-dot">.</span></p>
+					<p class="sm-features-count opacity-0">{{ features.length }} features included</p>
 				</div>
-			</div>
-			<div class="sm-features-grid">
-				<div v-for="(f, i) in features.slice(4)" :key="i + 4" class="sm-feature-card ios-card opacity-0">
-					<div class="sm-feature-top">
-						<UIcon :name="f.icon" class="sm-feature-icon" />
-						<span class="sm-feature-num">{{ String(i + 5).padStart(2, '0') }}</span>
+				<!-- Right: collapsible feature list -->
+				<div class="sm-features-list">
+					<div
+						v-for="(f, i) in features"
+						:key="i"
+						class="sm-feature-accordion opacity-0"
+						:class="{ 'sm-feature-open': expandedFeature === i }"
+						@click="expandedFeature = expandedFeature === i ? -1 : i"
+					>
+						<div class="sm-feature-acc-header">
+							<UIcon :name="f.icon" class="sm-feature-icon" />
+							<span class="sm-feature-acc-name">{{ f.name }}</span>
+							<span class="sm-feature-acc-toggle">
+								<UIcon :name="expandedFeature === i ? 'i-lucide-minus' : 'i-lucide-plus'" class="sm-feature-acc-chevron" />
+							</span>
+						</div>
+						<div class="sm-feature-acc-body">
+							<p class="sm-feature-acc-desc">{{ f.desc }}</p>
+						</div>
 					</div>
-					<div class="sm-feature-name">{{ f.name }}</div>
-					<div class="sm-feature-desc">{{ f.desc }}</div>
 				</div>
 			</div>
 		</section>
@@ -577,6 +787,87 @@
 							</div>
 						</div>
 					</div>
+				<!-- Goals + Calendar row -->
+					<div class="sm-showcase-cell sm-showcase-small opacity-0" aria-hidden="true">
+						<div class="sm-mock-widget">
+							<div class="sm-mock-header">
+								<span class="sm-mock-title">Goals</span>
+							</div>
+							<div class="sm-hw-goals">
+								<div class="sm-hw-goal"><span class="sm-hw-goal-label">Revenue Target</span><div class="sm-hw-goal-bar"><div class="sm-hw-goal-fill" style="width:72%"></div></div><span class="sm-hw-goal-pct">72%</span></div>
+								<div class="sm-hw-goal"><span class="sm-hw-goal-label">New Clients</span><div class="sm-hw-goal-bar"><div class="sm-hw-goal-fill sm-hw-goal-done" style="width:100%"></div></div><span class="sm-hw-goal-pct">100%</span></div>
+								<div class="sm-hw-goal"><span class="sm-hw-goal-label">Retention</span><div class="sm-hw-goal-bar"><div class="sm-hw-goal-fill" style="width:89%"></div></div><span class="sm-hw-goal-pct">89%</span></div>
+							</div>
+						</div>
+					</div>
+					<div class="sm-showcase-cell sm-showcase-small opacity-0" aria-hidden="true">
+						<div class="sm-mock-widget">
+							<div class="sm-mock-header">
+								<span class="sm-mock-title">Invoicing</span>
+								<span class="sm-mock-pill">3 pending</span>
+							</div>
+							<div class="sm-hw-invoices">
+								<div class="sm-hw-inv-row"><span class="sm-hw-inv-name"></span><span class="sm-hw-inv-amt">$4,200</span><span class="sm-hw-inv-status sm-hw-inv-paid">Paid</span></div>
+								<div class="sm-hw-inv-row"><span class="sm-hw-inv-name"></span><span class="sm-hw-inv-amt">$2,800</span><span class="sm-hw-inv-status sm-hw-inv-pending">Due</span></div>
+								<div class="sm-hw-inv-row"><span class="sm-hw-inv-name"></span><span class="sm-hw-inv-amt">$1,600</span><span class="sm-hw-inv-status sm-hw-inv-paid">Paid</span></div>
+							</div>
+						</div>
+					</div>
+			<!-- Marketing Plan -->
+					<div class="sm-showcase-cell sm-showcase-wide opacity-0" aria-hidden="true">
+						<div class="sm-mock-widget">
+							<div class="sm-mock-header"><span class="sm-mock-title">Marketing Plan</span><span class="sm-mock-pill">AI Generated</span></div>
+							<div class="sm-mock-mktg">
+								<div class="sm-mock-mktg-channels">
+									<div class="sm-mock-mktg-ch"><span class="sm-mock-mktg-icon" style="background:#E4405F">IG</span><div class="sm-mock-mktg-info"><span class="sm-mock-mktg-name">Instagram</span><span class="sm-mock-mktg-cadence">3x/week</span></div></div>
+									<div class="sm-mock-mktg-ch"><span class="sm-mock-mktg-icon" style="background:#0A66C2">in</span><div class="sm-mock-mktg-info"><span class="sm-mock-mktg-name">LinkedIn</span><span class="sm-mock-mktg-cadence">2x/week</span></div></div>
+									<div class="sm-mock-mktg-ch"><span class="sm-mock-mktg-icon" style="background:var(--sm-text)">@</span><div class="sm-mock-mktg-info"><span class="sm-mock-mktg-name">Email</span><span class="sm-mock-mktg-cadence">Weekly newsletter</span></div></div>
+								</div>
+								<div class="sm-mock-mktg-timeline">
+									<div class="sm-mock-mktg-week"><span class="sm-mock-mktg-wk-label">Wk 1</span><div class="sm-mock-mktg-wk-bar" style="width:100%"></div></div>
+									<div class="sm-mock-mktg-week"><span class="sm-mock-mktg-wk-label">Wk 2</span><div class="sm-mock-mktg-wk-bar" style="width:85%"></div></div>
+									<div class="sm-mock-mktg-week"><span class="sm-mock-mktg-wk-label">Wk 3</span><div class="sm-mock-mktg-wk-bar" style="width:70%"></div></div>
+									<div class="sm-mock-mktg-week"><span class="sm-mock-mktg-wk-label">Wk 4</span><div class="sm-mock-mktg-wk-bar" style="width:60%"></div></div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<!-- CRM + Team row -->
+					<div class="sm-showcase-cell sm-showcase-small opacity-0" aria-hidden="true">
+						<div class="sm-mock-widget">
+							<div class="sm-mock-header"><span class="sm-mock-title">CRM Intelligence</span></div>
+							<div class="sm-hw-crm">
+								<div class="sm-hw-crm-contact"><span class="sm-hw-contact-dot" style="background:#6366f1;margin:0"></span><div class="sm-hw-crm-info"><span class="sm-hw-crm-name">Acme Corp</span><span class="sm-hw-crm-stage">Proposal &middot; Score 92</span></div><span class="sm-hw-crm-val">$12k</span></div>
+								<div class="sm-hw-crm-contact"><span class="sm-hw-contact-dot" style="background:#f59e0b;margin:0"></span><div class="sm-hw-crm-info"><span class="sm-hw-crm-name">Nova Labs</span><span class="sm-hw-crm-stage">Follow-up &middot; Score 67</span></div><span class="sm-hw-crm-val">$8k</span></div>
+								<div class="sm-hw-crm-contact"><span class="sm-hw-contact-dot" style="background:#10b981;margin:0"></span><div class="sm-hw-crm-info"><span class="sm-hw-crm-name">Bright Studio</span><span class="sm-hw-crm-stage">Active &middot; Score 88</span></div><span class="sm-hw-crm-val">$6k</span></div>
+								<div class="sm-hw-crm-health"><span class="sm-hw-crm-health-label">Pipeline Health</span><div class="sm-hw-goal-bar"><div class="sm-hw-goal-fill" style="width:82%"></div></div></div>
+							</div>
+						</div>
+					</div>
+					<div class="sm-showcase-cell sm-showcase-small opacity-0" aria-hidden="true">
+						<div class="sm-mock-widget">
+							<div class="sm-mock-header"><span class="sm-mock-title">Team</span><span class="sm-mock-pill">6 members</span></div>
+							<div class="sm-hw-team">
+								<div class="sm-hw-team-member"><span class="sm-hw-contact-dot" style="background:#6366f1;margin:0"></span><span class="sm-hw-team-name">Sarah Kim</span><span class="sm-hw-team-status" style="background:#10b981"></span></div>
+								<div class="sm-hw-team-member"><span class="sm-hw-contact-dot" style="background:#f59e0b;margin:0"></span><span class="sm-hw-team-name">Mike Rodriguez</span><span class="sm-hw-team-status" style="background:#10b981"></span></div>
+								<div class="sm-hw-team-member"><span class="sm-hw-contact-dot" style="background:#ec4899;margin:0"></span><span class="sm-hw-team-name">Jess Turner</span><span class="sm-hw-team-status" style="background:#a1a1aa"></span></div>
+								<div class="sm-hw-team-member"><span class="sm-hw-contact-dot" style="background:#10b981;margin:0"></span><span class="sm-hw-team-name">Alex Chen</span><span class="sm-hw-team-status" style="background:#10b981"></span></div>
+							</div>
+						</div>
+					</div>
+					<!-- Scheduler -->
+					<div class="sm-showcase-cell sm-showcase-wide opacity-0" aria-hidden="true">
+						<div class="sm-mock-widget">
+							<div class="sm-mock-header"><span class="sm-mock-title">Scheduler</span><span class="sm-mock-pill">This week</span></div>
+							<div class="sm-mock-scheduler">
+								<div class="sm-mock-sched-day"><span class="sm-mock-sched-label">Mon</span><div class="sm-mock-sched-slots"><div class="sm-mock-sched-event sm-mock-sched-meeting">Team standup<span>9 AM</span></div><div class="sm-mock-sched-event sm-mock-sched-task">Client review<span>2 PM</span></div></div></div>
+								<div class="sm-mock-sched-day"><span class="sm-mock-sched-label">Tue</span><div class="sm-mock-sched-slots"><div class="sm-mock-sched-event sm-mock-sched-call">Sales call — Acme<span>10:30 AM</span></div></div></div>
+								<div class="sm-mock-sched-day sm-mock-sched-today"><span class="sm-mock-sched-label">Wed</span><div class="sm-mock-sched-slots"><div class="sm-mock-sched-event sm-mock-sched-meeting">Design review<span>11 AM</span></div><div class="sm-mock-sched-event sm-mock-sched-task">Send proposal<span>3 PM</span></div></div></div>
+								<div class="sm-mock-sched-day"><span class="sm-mock-sched-label">Thu</span><div class="sm-mock-sched-slots"><div class="sm-mock-sched-event sm-mock-sched-call">Onboarding — Nova<span>9 AM</span></div></div></div>
+								<div class="sm-mock-sched-day"><span class="sm-mock-sched-label">Fri</span><div class="sm-mock-sched-slots"><div class="sm-mock-sched-event sm-mock-sched-meeting">Sprint retro<span>4 PM</span></div></div></div>
+							</div>
+						</div>
+					</div>
 				</div>
 			</div>
 		</section>
@@ -589,7 +880,7 @@
 			</p>
 			<p class="sm-quote-attr opacity-0">&mdash; Paul Rand</p>
 			<p class="sm-quote-earnest opacity-0">
-				<strong>EARNEST</strong> applies the same standard for your business<span class="sm-accent-dot">.</span>
+				<strong><span class="sm-brand">Earnest</span></strong> applies the same standard for your business<span class="sm-accent-dot">.</span>
 			</p>
 		</div>
 
@@ -599,7 +890,7 @@
 				<h2 class="sm-calc-title opacity-0">
 					What are you <em>spending</em> today<span class="sm-accent-dot">?</span>
 				</h2>
-				<p class="sm-calc-sub opacity-0">Drag to see how Earnest compares to your current tool stack.</p>
+				<p class="sm-calc-sub opacity-0">Drag to see how <span class="sm-brand">Earnest</span> compares to your current tool stack.</p>
 			</div>
 			<div class="sm-calc-widget opacity-0">
 				<div class="sm-calc-row">
@@ -623,7 +914,7 @@
 					</div>
 					<div class="sm-calc-arrow">&rarr;</div>
 					<div class="sm-calc-earnest">
-						<span class="sm-calc-result-label">Earnest Studio</span>
+						<span class="sm-calc-result-label"><span class="sm-brand">Earnest</span> Studio</span>
 						<span class="sm-calc-amount sm-calc-amount-accent">$149<small>/mo</small></span>
 					</div>
 				</div>
@@ -639,18 +930,23 @@
 		<!-- ─── Token Costs ─── -->
 		<section class="sm-tokens">
 			<div class="sm-tokens-inner">
-				<h3 class="sm-tokens-title opacity-0">Transparent AI costs<span class="sm-accent-dot">.</span></h3>
-				<p class="sm-tokens-sub opacity-0">Every feature shows its token cost before you use it. No surprises.</p>
-				<div class="sm-tokens-grid">
-					<div v-for="item in tokenCosts" :key="item.name" class="sm-token-card opacity-0">
-						<div class="sm-token-name">{{ item.name }}</div>
-						<div class="sm-token-cost">{{ item.tokens }}</div>
-						<div class="sm-token-real">~{{ item.cost }}</div>
-					</div>
+				<div class="sm-tokens-sidebar">
+					<div class="sm-section-label sm-section-label-light opacity-0">AI transparency</div>
+					<h3 class="sm-tokens-title opacity-0">Transparent AI costs<span class="sm-accent-dot">.</span></h3>
+					<p class="sm-tokens-sub opacity-0">Every feature shows its token cost before you use it. No surprises.</p>
 				</div>
-				<p class="sm-tokens-note opacity-0">
-					Studio plan (400K tokens/mo) supports ~50 marketing reports or ~250 email drafts per month. Need more? Instant self-serve refills.
-				</p>
+				<div class="sm-tokens-body">
+					<div class="sm-tokens-list">
+						<div v-for="item in tokenCosts" :key="item.name" class="sm-token-row opacity-0">
+							<span class="sm-token-name">{{ item.name }}</span>
+							<span class="sm-token-cost">{{ item.tokens }}</span>
+							<span class="sm-token-real">~{{ item.cost }}</span>
+						</div>
+					</div>
+					<p class="sm-tokens-note opacity-0">
+						Studio plan (400K tokens/mo) supports ~50 marketing reports or ~250 email drafts per month. Need more? Instant self-serve refills.
+					</p>
+				</div>
 			</div>
 		</section>
 
@@ -716,7 +1012,7 @@
 		<!-- ─── Footer ─── -->
 		<footer class="sm-footer">
 			<div class="sm-footer-inner">
-				<span class="sm-footer-copy">&copy; {{ new Date().getFullYear() }} Earnest</span>
+				<span class="sm-footer-copy">&copy; {{ new Date().getFullYear() }} <span class="sm-brand">Earnest</span></span>
 				<nav class="sm-footer-links">
 					<nuxt-link to="/privacy-policy">Privacy Policy</nuxt-link>
 					<nuxt-link to="/terms-of-service">Terms of Service</nuxt-link>
@@ -730,6 +1026,7 @@
 import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import '~/assets/css/sellsheet-modern.css';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -747,6 +1044,22 @@ const testimonialsRef = ref(null);
 
 // ── Scroll-aware nav ──
 const navScrolled = ref(false);
+const hoveredOrbit = ref(-1);
+const expandedFeature = ref(-1);
+const aiChipTextRef = ref(null);
+const aiChipTexts = [
+	'AI analyzing 142 contacts...',
+	'AI scanning revenue trends...',
+	'AI drafting social posts...',
+	'AI scoring CRM health...',
+	'AI building marketing plan...',
+	'AI generating email campaign...',
+	'AI forecasting pipeline...',
+	'AI suggesting goals...',
+	'AI reviewing project timelines...',
+	'AI composing newsletters...',
+	'AI optimizing brand strategy...',
+];
 function onScroll() {
 	navScrolled.value = window.scrollY > 80;
 }
@@ -950,15 +1263,42 @@ onMounted(() => {
 			.fromTo('.sm-hero-tagline', { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' }, '-=0.3')
 			.fromTo('.sm-hero-sub', { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' }, '-=0.4')
 			.fromTo('.sm-hero-actions', { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' }, '-=0.4')
-			.fromTo('.sm-orbit', { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 1, ease: 'power3.out', stagger: 0.12 }, '-=0.3');
-
-		// Orbit widgets parallax
-		document.querySelectorAll('.sm-orbit').forEach((el, i) => {
+		// Hero background widgets — subtle entrance, gentle float
+		const hwEls = document.querySelectorAll('.sm-hw');
+		hwEls.forEach((el, i) => {
+			gsap.fromTo(el,
+				{ opacity: 0, y: 10 },
+				{ opacity: 1, y: 0, duration: 0.6, ease: 'power2.out', delay: 0.4 + (i * 0.1) }
+			);
 			gsap.to(el, {
-				y: -30 - (i * 15),
-				scrollTrigger: { trigger: '.sm-hero', start: 'top top', end: 'bottom top', scrub: true },
+				y: `random(-5, 5)`,
+				duration: `random(6, 10)`,
+				ease: 'sine.inOut',
+				repeat: -1,
+				yoyo: true,
+				delay: i * 0.8,
 			});
 		});
+
+		gsap.to('.sm-hero-widgets', {
+			y: -60,
+			scrollTrigger: { trigger: '.sm-hero', start: 'top top', end: 'bottom top', scrub: true },
+		});
+
+		// AI chip text cycler
+		if (aiChipTextRef.value) {
+			let aiIdx = 0;
+			setInterval(() => {
+				aiIdx = (aiIdx + 1) % aiChipTexts.length;
+				gsap.to(aiChipTextRef.value, {
+					opacity: 0, duration: 0.25, ease: 'power2.in',
+					onComplete: () => {
+						aiChipTextRef.value.textContent = aiChipTexts[aiIdx];
+						gsap.to(aiChipTextRef.value, { opacity: 1, duration: 0.25, ease: 'power2.out' });
+					}
+				});
+			}, 3000);
+		}
 
 		// Word cycler
 		if (heroCycleRef.value) {
@@ -1002,16 +1342,28 @@ onMounted(() => {
 		};
 
 		// Reveal all sections
-		reveal(replacesRef, '.sm-kicker, .sm-replaces-card, .sm-replaces-cta');
-		reveal(truthRef, '.sm-truth-label, .sm-truth-title, .sm-truth-text');
-		reveal(aiRef, '.sm-kicker-light, .sm-ai-headline, .sm-ai-lede, .sm-ai-card', { from: { scale: 0.97 }, to: { scale: 1 } });
-		reveal(featuresRef, '.sm-features-big, .sm-features-title, .sm-features-sub, .sm-feature-card', { start: 'top 95%', stagger: 0.05 });
+		reveal(replacesRef, '.sm-kicker, .sm-orbit-ring, .sm-replaces-cta');
+		reveal(truthRef, '.sm-section-label, .sm-truth-title, .sm-truth-text, .sm-truth-visual');
+		// Insight cards (standalone row)
+		reveal({ value: document.querySelector('.sm-insight-row') }, '.sm-truth-card', { stagger: 0.08 });
+		reveal(aiRef, '.sm-ai-headline, .sm-ai-lede, .sm-ai-card', { from: { scale: 0.97 }, to: { scale: 1 } });
+		// Header elements — staggered as a group
+		reveal(featuresRef, '.sm-section-label, .sm-features-big, .sm-features-title, .sm-features-sub, .sm-features-count', { start: 'top 95%', stagger: 0.08 });
+		// Accordion items — each triggers individually when it enters viewport, no stagger
+		// Accordion items — each triggers individually, fast and smooth
+		if (featuresRef.value) {
+			featuresRef.value.querySelectorAll('.sm-feature-accordion').forEach((el) => {
+				gsap.fromTo(el,
+					{ opacity: 0, y: 10 },
+					{ opacity: 1, y: 0, duration: 0.25, ease: 'power2.out',
+						scrollTrigger: { trigger: el, start: 'top 99%', toggleActions: 'play none none none' }
+					}
+				);
+			});
+		}
 
 		// Parallax background charts
-		gsap.to('.sm-parallax-truth', {
-			y: -60,
-			scrollTrigger: { trigger: '.sm-parallax-truth-wrap', start: 'top bottom', end: 'bottom top', scrub: true },
-		});
+		// Truth chart is sticky — no GSAP parallax needed
 		// Features chart is sticky — no GSAP parallax needed
 		gsap.to('.sm-parallax-ai', {
 			y: -50,
@@ -1019,7 +1371,8 @@ onMounted(() => {
 		});
 
 		// Showcase
-		reveal(showcaseRef, '.sm-kicker, .sm-showcase-title, .sm-showcase-cell', { stagger: 0.1, from: { scale: 0.96 }, to: { scale: 1 } });
+		reveal(showcaseRef, '.sm-kicker, .sm-showcase-title', { stagger: 0.08 });
+		reveal(showcaseRef, '.sm-showcase-cell', { stagger: 0, duration: 0.4, start: 'top 95%' });
 
 		// Quote
 		gsap.fromTo('.sm-quote-text', { opacity: 0, y: 24, scale: 0.98 }, { opacity: 1, y: 0, scale: 1, duration: 0.7, ease: 'power3.out', scrollTrigger: { trigger: '.sm-quote', start: 'top 88%' } });
@@ -1028,7 +1381,7 @@ onMounted(() => {
 
 		// Calculator, tokens, testimonials, logos, pricing
 		reveal(calcRef, '.sm-calc-title, .sm-calc-sub, .sm-calc-widget');
-		reveal({ value: document.querySelector('.sm-tokens') }, '.sm-tokens-title, .sm-tokens-sub, .sm-token-card, .sm-tokens-note');
+		reveal({ value: document.querySelector('.sm-tokens') }, '.sm-section-label-light, .sm-tokens-title, .sm-tokens-sub, .sm-token-row, .sm-tokens-note', { start: 'top 98%', stagger: 0, duration: 0.3, from: { y: 12 } });
 		if (testimonialsRef.value) reveal(testimonialsRef, '.sm-testimonials-title, .sm-testimonial');
 		reveal({ value: document.querySelector('.sm-logos') }, '.sm-logos-label');
 		reveal(pricingRef, '.sm-pricing-title, .sm-pricing-sub, .sm-plan');
@@ -1053,1927 +1406,3 @@ useHead({
 });
 </script>
 
-<style scoped>
-/* ═══════════════════════════════════════════
-   SellSheetModern — Stripe × iOS
-   ═══════════════════════════════════════════ */
-
-.sell-modern {
-	--sm-bg: #ffffff;
-	--sm-bg-alt: #f7f7f8;
-	--sm-dark: #0a0a0a;
-	--sm-text: #0a0a0a;
-	--sm-text-2: #52525b;
-	--sm-muted: #a1a1aa;
-	--sm-accent: #0a0a0a;
-	--sm-accent-light: #f4f4f5;
-	--sm-border: rgba(0, 0, 0, 0.06);
-	--sm-pop: #00bfff;
-
-	background: var(--sm-bg);
-	color: var(--sm-text);
-	font-family: var(--font-proxima-regular);
-	-webkit-font-smoothing: antialiased;
-	margin-top: 0;
-	overflow-x: hidden;
-}
-
-.sm-accent-dot {
-	color: var(--sm-pop);
-	font-size: 1.2em;
-	line-height: 0;
-	margin-left: 0.02em;
-}
-
-/* ─── GLASS NAV ─── */
-.sm-nav {
-	position: fixed;
-	top: 0;
-	left: 0;
-	right: 0;
-	z-index: 50;
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	padding: 14px 28px;
-	background: transparent;
-	transition: background 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-		border-color 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-		backdrop-filter 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-	border-bottom: 1px solid transparent;
-}
-.sm-nav-scrolled {
-	background: rgba(255, 255, 255, 0.82);
-	backdrop-filter: saturate(180%) blur(20px);
-	-webkit-backdrop-filter: saturate(180%) blur(20px);
-	border-bottom-color: rgba(0, 0, 0, 0.06);
-}
-.sm-nav-brand {
-	color: var(--sm-text);
-	text-decoration: none;
-	display: flex;
-	flex-direction: column;
-	align-items: flex-start;
-	gap: 0;
-	line-height: 1;
-}
-.sm-nav-tagline {
-	font-family: var(--font-signature);
-	font-size: 10px;
-	color: var(--sm-muted);
-	white-space: nowrap;
-	margin-top: 2px;
-}
-.sm-nav-links {
-	display: flex;
-	gap: 32px;
-}
-@media (max-width: 700px) {
-	.sm-nav-links { display: none; }
-}
-.sm-nav-link {
-	font-size: 12px;
-	font-weight: 500;
-	text-transform: uppercase;
-	letter-spacing: 0.1em;
-	color: var(--sm-muted);
-	text-decoration: none;
-	transition: color 0.2s;
-}
-.sm-nav-link:hover { color: var(--sm-text); }
-.sm-nav-signin {
-	display: inline-flex;
-	align-items: center;
-	padding: 8px 24px;
-	border: 1px solid var(--sm-border);
-	border-radius: 100px;
-	font-size: 12px;
-	font-weight: 500;
-	letter-spacing: 0.06em;
-	text-transform: uppercase;
-	color: var(--sm-text);
-	text-decoration: none;
-	transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.sm-nav-signin:hover {
-	background: var(--sm-text);
-	color: white;
-	border-color: var(--sm-text);
-}
-
-/* ─── HERO ─── */
-.sm-hero {
-	min-height: 100svh;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	text-align: center;
-	padding: 140px 24px 100px;
-	position: relative;
-	overflow: hidden;
-}
-.sm-hero-mesh {
-	position: absolute;
-	inset: 0;
-	background:
-		radial-gradient(ellipse at 20% 50%, rgba(0, 0, 0, 0.03), transparent 50%),
-		radial-gradient(ellipse at 80% 20%, rgba(16, 185, 129, 0.04), transparent 50%),
-		radial-gradient(ellipse at 50% 80%, rgba(0, 0, 0, 0.02), transparent 50%);
-	background-size: 200% 200%;
-	animation: meshDrift 20s ease-in-out infinite alternate;
-}
-@keyframes meshDrift {
-	0% { background-position: 0% 0%; }
-	50% { background-position: 100% 50%; }
-	100% { background-position: 50% 100%; }
-}
-.sm-hero-content {
-	position: relative;
-	z-index: 1;
-	max-width: 800px;
-}
-.sm-hero-kicker {
-	font-size: 12px;
-	font-weight: 500;
-	text-transform: uppercase;
-	letter-spacing: 0.14em;
-	color: var(--sm-muted);
-	margin-bottom: 40px;
-}
-.sm-hero-wordmark {
-	font-family: var(--font-bauer-bodoni);
-	font-size: clamp(64px, 16vw, 180px);
-	font-weight: 400;
-	letter-spacing: -0.02em;
-	line-height: 0.9;
-	color: var(--sm-text);
-	white-space: nowrap;
-}
-.sm-hero-period {
-	color: var(--sm-accent);
-	display: inline-block;
-}
-.sm-hero-tagline {
-	font-family: var(--font-signature);
-	font-size: clamp(28px, 4.5vw, 50px);
-	font-weight: 400;
-	color: var(--sm-text-2);
-	margin-top: 20px;
-}
-.sm-cycle-wrap {
-	display: inline-block;
-	position: relative;
-	text-align: center;
-	vertical-align: bottom;
-}
-.sm-cycle {
-	display: inline-block;
-	color: var(--sm-pop);
-	vertical-align: bottom;
-}
-.sm-hero-sub {
-	font-size: 15px;
-	color: var(--sm-muted);
-	margin-top: 16px;
-	letter-spacing: 0.02em;
-}
-.sm-hero-actions {
-	display: flex;
-	gap: 14px;
-	margin-top: 48px;
-	justify-content: center;
-	flex-wrap: wrap;
-}
-
-/* Buttons */
-.sm-btn-primary {
-	background: var(--sm-accent);
-	color: white;
-	border: none;
-	padding: 14px 32px;
-	border-radius: 100px;
-	font-size: 14px;
-	font-weight: 500;
-	letter-spacing: 0.02em;
-	cursor: pointer;
-	transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-	text-decoration: none;
-}
-.sm-btn-primary:hover {
-	transform: translateY(-1px);
-	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
-}
-.sm-btn-ghost {
-	background: transparent;
-	color: var(--sm-muted);
-	border: 1px solid var(--sm-border);
-	padding: 14px 32px;
-	border-radius: 100px;
-	font-size: 14px;
-	font-weight: 500;
-	letter-spacing: 0.02em;
-	cursor: pointer;
-	transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-	text-decoration: none;
-}
-.sm-btn-ghost:hover {
-	border-color: var(--sm-text);
-	color: var(--sm-text);
-}
-
-/* Orbiting widget cloud */
-.sm-orbit-cloud {
-	position: absolute;
-	inset: 0;
-	z-index: 2;
-	pointer-events: none;
-}
-@media (max-width: 1100px) {
-	.sm-orbit-cloud { display: none; }
-}
-.sm-orbit {
-	position: absolute;
-}
-.sm-orbit-1 {
-	left: 3%;
-	top: 38%;
-	animation: smDrift1 8s ease-in-out infinite alternate;
-}
-.sm-orbit-2 {
-	right: 4%;
-	top: 28%;
-	animation: smDrift2 9s ease-in-out infinite alternate;
-}
-.sm-orbit-3 {
-	left: 8%;
-	top: 18%;
-	animation: smDrift3 7s ease-in-out infinite alternate;
-}
-.sm-orbit-4 {
-	right: 6%;
-	top: 62%;
-	animation: smDrift4 10s ease-in-out infinite alternate;
-}
-.sm-orbit-5 {
-	left: 15%;
-	top: 72%;
-	animation: smDrift5 8.5s ease-in-out infinite alternate;
-}
-@keyframes smDrift1 { 0% { transform: translate(0, 0); } 100% { transform: translate(12px, -18px); } }
-@keyframes smDrift2 { 0% { transform: translate(0, 0); } 100% { transform: translate(-15px, 12px); } }
-@keyframes smDrift3 { 0% { transform: translate(0, 0); } 100% { transform: translate(8px, 14px); } }
-@keyframes smDrift4 { 0% { transform: translate(0, 0); } 100% { transform: translate(-10px, -16px); } }
-@keyframes smDrift5 { 0% { transform: translate(0, 0); } 100% { transform: translate(14px, -8px); } }
-.sm-float-card {
-	padding: 20px 24px;
-	border-radius: 20px;
-	border: 1px solid rgba(0, 0, 0, 0.06);
-	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
-	min-width: 180px;
-}
-.sm-float-header {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	margin-bottom: 8px;
-}
-.sm-float-label {
-	font-size: 10px;
-	font-weight: 600;
-	text-transform: uppercase;
-	letter-spacing: 0.1em;
-	color: var(--sm-muted);
-}
-.sm-float-trend {
-	font-size: 10px;
-	font-weight: 600;
-	letter-spacing: 0.02em;
-}
-.sm-float-trend-up { color: #10b981; }
-.sm-float-big {
-	font-size: 22px;
-	font-weight: 700;
-	color: var(--sm-text);
-	margin-bottom: 6px;
-}
-.sm-float-spark {
-	width: 100%;
-	height: 28px;
-	display: block;
-}
-.sm-float-legend {
-	display: flex;
-	gap: 12px;
-	margin-top: 8px;
-}
-.sm-float-legend-item {
-	font-size: 9px;
-	color: var(--sm-muted);
-	display: flex;
-	align-items: center;
-	gap: 4px;
-}
-.sm-float-dot {
-	width: 6px;
-	height: 6px;
-	border-radius: 50%;
-	flex-shrink: 0;
-}
-.sm-float-badge {
-	font-size: 9px;
-	font-weight: 500;
-	color: var(--sm-muted);
-	background: var(--sm-bg-alt);
-	padding: 2px 8px;
-	border-radius: 100px;
-}
-
-/* Mini Kanban (hero float) */
-.sm-mini-kanban {
-	display: flex;
-	gap: 6px;
-	margin-top: 4px;
-}
-.sm-mini-col {
-	flex: 1;
-	display: flex;
-	flex-direction: column;
-	gap: 4px;
-}
-.sm-mini-col-head {
-	font-size: 8px;
-	font-weight: 600;
-	text-transform: uppercase;
-	letter-spacing: 0.06em;
-	color: var(--sm-muted);
-	padding-bottom: 4px;
-	border-bottom: 2px solid;
-}
-.sm-mini-col-cyan { border-color: #06b6d4; }
-.sm-mini-col-green { border-color: #22c55e; }
-.sm-mini-col-emerald { border-color: #10b981; }
-.sm-mini-task {
-	height: 10px;
-	background: var(--sm-bg-alt);
-	border-radius: 3px;
-	border: 1px solid var(--sm-border);
-}
-.sm-mini-task-accent { border-left: 2px solid var(--sm-accent); }
-.sm-mini-task-done { opacity: 0.4; }
-
-/* Compact float card variant */
-.sm-float-card-compact {
-	padding: 14px 18px;
-	min-width: auto;
-}
-.sm-float-score {
-	font-size: 28px;
-	font-weight: 700;
-	color: #10b981;
-	line-height: 1;
-}
-.sm-float-score-label {
-	font-size: 9px;
-	font-weight: 600;
-	text-transform: uppercase;
-	letter-spacing: 0.08em;
-	color: var(--sm-muted);
-	margin-top: 2px;
-}
-.sm-float-pipe {
-	display: flex;
-	flex-direction: column;
-	gap: 3px;
-	margin-top: 6px;
-}
-.sm-float-pipe-bar {
-	height: 4px;
-	background: var(--sm-text);
-	border-radius: 2px;
-}
-.sm-float-pipe-val {
-	font-size: 14px;
-	font-weight: 700;
-	color: var(--sm-text);
-	margin-top: 4px;
-}
-.sm-float-ai-chip {
-	display: flex;
-	align-items: center;
-	gap: 6px;
-	font-size: 10px;
-	color: var(--sm-text-2);
-}
-.sm-float-checks {
-	display: flex;
-	flex-direction: column;
-	gap: 6px;
-}
-.sm-check {
-	display: flex;
-	align-items: center;
-	gap: 6px;
-}
-.sm-check-box {
-	width: 12px;
-	height: 12px;
-	border-radius: 3px;
-	border: 1.5px solid var(--sm-border);
-	flex-shrink: 0;
-}
-.sm-check-done {
-	background: var(--sm-text);
-	border-color: var(--sm-text);
-}
-.sm-check-text {
-	font-size: 10px;
-	color: var(--sm-text-2);
-}
-
-/* ─── MARQUEE ─── */
-.sm-marquee {
-	border-top: 1px solid var(--sm-border);
-	border-bottom: 1px solid var(--sm-border);
-	padding: 12px 0;
-	background: var(--sm-dark);
-	overflow: hidden;
-}
-.sm-marquee-track {
-	display: flex;
-	white-space: nowrap;
-	animation: smMarquee 18s linear infinite;
-}
-.sm-marquee-item {
-	font-size: 12px;
-	font-weight: 500;
-	color: rgba(255, 255, 255, 0.85);
-	padding: 0 28px;
-	flex-shrink: 0;
-	display: inline-flex;
-	align-items: center;
-	gap: 8px;
-	letter-spacing: 0.06em;
-	text-transform: uppercase;
-}
-.sm-marquee-icon {
-	width: 13px;
-	height: 13px;
-	color: var(--sm-accent);
-	flex-shrink: 0;
-}
-.sm-marquee-dot {
-	width: 4px;
-	height: 4px;
-	border-radius: 50%;
-	background: var(--sm-accent);
-	margin: 0 4px;
-	flex-shrink: 0;
-}
-@keyframes smMarquee {
-	from { transform: translateX(0); }
-	to { transform: translateX(-50%); }
-}
-
-/* ─── KICKER (reusable) ─── */
-.sm-kicker {
-	font-size: 11px;
-	font-weight: 600;
-	text-transform: uppercase;
-	letter-spacing: 0.12em;
-	color: var(--sm-muted);
-	margin-bottom: 40px;
-	text-align: center;
-}
-.sm-kicker-light {
-	font-size: 11px;
-	font-weight: 600;
-	text-transform: uppercase;
-	letter-spacing: 0.12em;
-	color: var(--sm-muted);
-	margin-bottom: 32px;
-}
-
-/* ─── REPLACES ─── */
-.sm-replaces {
-	padding: 140px 32px;
-	max-width: 1100px;
-	margin: 0 auto;
-	text-align: center;
-}
-@media (max-width: 700px) { .sm-replaces { padding: 80px 16px; } }
-.sm-replaces-grid {
-	display: grid;
-	grid-template-columns: repeat(4, 1fr);
-	gap: 16px;
-	margin-bottom: 48px;
-}
-@media (max-width: 900px) { .sm-replaces-grid { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 600px) { .sm-replaces-grid { grid-template-columns: repeat(2, 1fr); } }
-.sm-replaces-card {
-	padding: 24px 16px;
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: 8px;
-	position: relative;
-	transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-	cursor: default;
-}
-.sm-replaces-card:hover {
-	transform: translateY(-3px);
-	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-}
-.sm-replaces-card:active {
-	transform: scale(0.97);
-}
-.sm-replaces-strike {
-	position: absolute;
-	top: 50%;
-	left: 15%;
-	right: 15%;
-	height: 2px;
-	background: var(--sm-accent);
-	opacity: 0.2;
-	transform: rotate(-12deg);
-	pointer-events: none;
-}
-.sm-replaces-icon {
-	width: 22px;
-	height: 22px;
-	color: var(--sm-muted);
-	transition: color 0.2s;
-}
-.sm-replaces-card:hover .sm-replaces-icon { color: var(--sm-accent); }
-.sm-replaces-name {
-	font-size: 14px;
-	font-weight: 600;
-	color: var(--sm-text);
-}
-.sm-replaces-for {
-	font-size: 11px;
-	color: var(--sm-muted);
-	letter-spacing: 0.02em;
-}
-.sm-replaces-cta {
-	font-size: clamp(24px, 4vw, 36px);
-	font-weight: 500;
-	color: var(--sm-text);
-}
-.sm-replaces-cta strong {
-	font-weight: 700;
-	color: var(--sm-text);
-}
-
-/* ─── PARALLAX BACKGROUND CHARTS ─── */
-.sm-parallax-chart {
-	position: absolute;
-	pointer-events: none;
-	z-index: 0;
-	opacity: 1;
-}
-.sm-parallax-chart svg {
-	width: 100%;
-	height: 100%;
-}
-.sm-parallax-truth-wrap {
-	position: relative;
-	width: 100%;
-	height: 0;
-	overflow: visible;
-	pointer-events: none;
-}
-.sm-parallax-truth {
-	position: absolute;
-	top: 0;
-	left: 0;
-	width: 100%;
-	height: 400px;
-}
-.sm-parallax-features {
-	position: sticky;
-	top: 0;
-	width: 100%;
-	height: 100vh;
-	margin-bottom: -100vh;
-	z-index: 0;
-	pointer-events: none;
-}
-.sm-parallax-ai {
-	left: 0;
-	right: 0;
-	top: 0;
-	bottom: 0;
-	width: 100%;
-	height: 100%;
-}
-
-/* ─── TRUTH ─── */
-.sm-truth {
-	position: relative;
-	overflow: visible;
-	padding: 140px 32px;
-	max-width: 1100px;
-	margin: 0 auto;
-	display: grid;
-	grid-template-columns: 200px 1fr;
-	gap: 80px;
-	align-items: start;
-}
-@media (max-width: 700px) {
-	.sm-truth { grid-template-columns: 1fr; gap: 32px; padding: 80px 24px; }
-}
-.sm-truth-sidebar {
-	position: sticky;
-	top: 100px;
-	z-index: 1;
-}
-.sm-truth-body {
-	position: relative;
-	z-index: 1;
-}
-@media (max-width: 700px) { .sm-truth-sidebar { position: static; } }
-.sm-truth-label {
-	font-size: 11px;
-	font-weight: 600;
-	text-transform: uppercase;
-	letter-spacing: 0.12em;
-	color: var(--sm-text);
-	padding-left: 16px;
-	border-left: 2px solid var(--sm-text);
-}
-.sm-truth-title {
-	font-size: clamp(32px, 4vw, 52px);
-	font-weight: 600;
-	line-height: 1.15;
-	letter-spacing: -0.02em;
-	margin-bottom: 32px;
-}
-.sm-truth-highlight {
-	color: var(--sm-text);
-	text-decoration: underline;
-	text-decoration-color: var(--sm-pop);
-	text-underline-offset: 4px;
-	text-decoration-thickness: 2px;
-}
-.sm-truth-text {
-	font-size: 17px;
-	line-height: 1.85;
-	color: var(--sm-text-2);
-	margin-bottom: 20px;
-}
-.sm-truth-text strong {
-	color: var(--sm-text);
-	font-weight: 600;
-}
-
-/* ─── AI CAPABILITIES ─── */
-.sm-ai {
-	background: var(--sm-dark);
-	padding: 140px 32px;
-	position: relative;
-	overflow: hidden;
-}
-.sm-ai::before {
-	content: '';
-	position: absolute;
-	inset: 0;
-	background: radial-gradient(ellipse at 30% 0%, rgba(16, 185, 129, 0.08) 0%, transparent 60%);
-	pointer-events: none;
-}
-.sm-ai-inner {
-	max-width: 1100px;
-	margin: 0 auto;
-	position: relative;
-	z-index: 1;
-}
-.sm-ai-headline {
-	font-size: clamp(36px, 6vw, 64px);
-	font-weight: 600;
-	line-height: 1.1;
-	letter-spacing: -0.02em;
-	color: white;
-	margin-bottom: 28px;
-}
-.sm-ai-em {
-	color: var(--sm-pop);
-}
-.sm-ai-lede {
-	font-family: var(--font-proxima-light);
-	font-size: 18px;
-	line-height: 1.8;
-	color: rgba(255, 255, 255, 0.55);
-	max-width: 620px;
-	margin-bottom: 64px;
-}
-.sm-ai-grid {
-	display: grid;
-	grid-template-columns: repeat(2, 1fr);
-	gap: 20px;
-}
-@media (max-width: 700px) { .sm-ai-grid { grid-template-columns: 1fr; } }
-.sm-ai-card {
-	background: rgba(255, 255, 255, 0.04);
-	border: 1px solid rgba(255, 255, 255, 0.08);
-	border-radius: 20px;
-	padding: 36px 32px;
-	transition: box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1), background 0.35s;
-}
-.sm-ai-card:hover {
-	background: rgba(255, 255, 255, 0.06);
-	box-shadow: 0 0 40px rgba(0, 0, 0, 0.04);
-}
-.sm-ai-num {
-	font-size: 11px;
-	font-weight: 600;
-	letter-spacing: 0.15em;
-	color: var(--sm-accent);
-	margin-bottom: 16px;
-	display: block;
-}
-.sm-ai-card-title {
-	font-size: 22px;
-	font-weight: 600;
-	color: white;
-	margin-bottom: 10px;
-	letter-spacing: -0.01em;
-}
-.sm-ai-card-desc {
-	font-size: 14px;
-	line-height: 1.7;
-	color: rgba(255, 255, 255, 0.45);
-}
-
-/* ─── FEATURES ─── */
-.sm-features {
-	position: relative;
-	overflow: visible;
-	padding: 140px 32px;
-	max-width: 1200px;
-	margin: 0 auto;
-}
-@media (max-width: 700px) { .sm-features { padding: 80px 16px; } }
-.sm-features-header {
-	margin-bottom: 64px;
-	position: relative;
-	z-index: 1;
-}
-.sm-features-hero-grid,
-.sm-features-grid {
-	position: relative;
-	z-index: 1;
-}
-.sm-features-big {
-	font-size: clamp(48px, 7vw, 80px);
-	font-weight: 700;
-	letter-spacing: -0.03em;
-	line-height: 0.9;
-	color: var(--sm-text);
-	margin-bottom: 8px;
-}
-.sm-features-title {
-	font-size: clamp(28px, 4vw, 44px);
-	font-weight: 600;
-	letter-spacing: -0.02em;
-	line-height: 1.2;
-}
-.sm-features-em {
-	font-style: italic;
-	text-decoration: underline;
-	text-decoration-color: var(--sm-pop);
-	text-underline-offset: 4px;
-	text-decoration-thickness: 2px;
-}
-.sm-features-sub {
-	font-size: 16px;
-	color: var(--sm-muted);
-	margin-top: 12px;
-}
-.sm-features-hero-grid {
-	display: grid;
-	grid-template-columns: repeat(2, 1fr);
-	gap: 16px;
-	margin-bottom: 16px;
-}
-@media (max-width: 700px) { .sm-features-hero-grid { grid-template-columns: 1fr; } }
-.sm-features-grid {
-	display: grid;
-	grid-template-columns: repeat(3, 1fr);
-	gap: 16px;
-}
-@media (max-width: 900px) { .sm-features-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 600px) { .sm-features-grid { grid-template-columns: 1fr; } }
-.sm-feature-card {
-	padding: 32px;
-	transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-	cursor: default;
-}
-.sm-feature-card:hover {
-	transform: translateY(-3px);
-	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-}
-.sm-feature-card:active { transform: scale(0.97); }
-.sm-feature-hero { padding: 40px 36px; }
-.sm-feature-top {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	margin-bottom: 14px;
-}
-.sm-feature-icon {
-	width: 20px;
-	height: 20px;
-	color: var(--sm-muted);
-	transition: color 0.2s;
-}
-.sm-feature-card:hover .sm-feature-icon {
-	color: var(--sm-pop);
-}
-.sm-feature-hero .sm-feature-icon {
-	width: 24px;
-	height: 24px;
-}
-.sm-feature-num {
-	font-size: 11px;
-	font-weight: 600;
-	letter-spacing: 0.15em;
-	color: var(--sm-muted);
-}
-.sm-feature-name {
-	font-size: 20px;
-	font-weight: 600;
-	color: var(--sm-text);
-	margin-bottom: 10px;
-	letter-spacing: -0.01em;
-}
-.sm-feature-hero .sm-feature-name { font-size: 24px; }
-.sm-feature-desc {
-	font-size: 14px;
-	line-height: 1.7;
-	color: var(--sm-muted);
-}
-
-/* ─── SHOWCASE ─── */
-.sm-showcase {
-	background: var(--sm-bg-alt);
-	padding: 140px 32px;
-}
-@media (max-width: 700px) { .sm-showcase { padding: 80px 16px; } }
-.sm-showcase-inner {
-	max-width: 1200px;
-	margin: 0 auto;
-}
-.sm-showcase-title {
-	font-size: clamp(32px, 4vw, 48px);
-	font-weight: 600;
-	letter-spacing: -0.02em;
-	margin-bottom: 56px;
-	text-align: center;
-}
-.sm-showcase-grid {
-	display: grid;
-	grid-template-columns: 1fr 1fr;
-	grid-template-rows: auto auto;
-	gap: 16px;
-}
-@media (max-width: 900px) { .sm-showcase-grid { grid-template-columns: 1fr; } }
-.sm-showcase-cell {
-	animation: smFloat 6s ease-in-out infinite alternate;
-}
-.sm-showcase-cell:nth-child(2) { animation-delay: -1s; }
-.sm-showcase-cell:nth-child(3) { animation-delay: -2s; }
-.sm-showcase-cell:nth-child(4) { animation-delay: -3s; }
-.sm-showcase-cell:nth-child(5) { animation-delay: -4s; }
-.sm-showcase-cell:nth-child(6) { animation-delay: -5s; }
-@keyframes smFloat {
-	0% { transform: translateY(0); }
-	100% { transform: translateY(-4px); }
-}
-.sm-showcase-large {
-	grid-column: span 1;
-}
-.sm-showcase-small {
-	/* Bottom 4 cells share the bottom two rows */
-}
-/* Bottom row: 4 items across both columns */
-.sm-showcase-grid > .sm-showcase-small:nth-child(3) { grid-column: 1; }
-.sm-showcase-grid > .sm-showcase-small:nth-child(4) { grid-column: 2; }
-.sm-showcase-grid > .sm-showcase-small:nth-child(5) { grid-column: 1; }
-.sm-showcase-grid > .sm-showcase-small:nth-child(6) { grid-column: 2; }
-
-/* Widget base */
-.sm-mock-widget {
-	background: white;
-	border: 1px solid var(--sm-border);
-	border-radius: 20px;
-	padding: 24px;
-	height: 100%;
-	box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-}
-.sm-mock-widget-dark {
-	background: var(--sm-dark);
-	border-color: rgba(255, 255, 255, 0.08);
-}
-.sm-mock-header {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	margin-bottom: 16px;
-}
-.sm-mock-title {
-	font-size: 12px;
-	font-weight: 600;
-	text-transform: uppercase;
-	letter-spacing: 0.08em;
-	color: var(--sm-text);
-}
-.sm-mock-pill {
-	font-size: 9px;
-	font-weight: 500;
-	color: var(--sm-muted);
-	background: var(--sm-bg-alt);
-	padding: 3px 10px;
-	border-radius: 100px;
-	border: 1px solid var(--sm-border);
-}
-
-/* Revenue Chart Mock */
-.sm-mock-chart {
-	width: 100%;
-	height: 110px;
-	display: block;
-	margin-bottom: 8px;
-}
-.sm-mock-legend {
-	display: flex;
-	gap: 16px;
-	justify-content: center;
-}
-.sm-mock-legend-item {
-	font-size: 10px;
-	color: var(--sm-muted);
-	display: flex;
-	align-items: center;
-	gap: 5px;
-}
-.sm-mock-dot {
-	width: 7px;
-	height: 7px;
-	border-radius: 50%;
-	flex-shrink: 0;
-}
-
-/* Stats Row Mock */
-.sm-mock-stats {
-	display: grid;
-	grid-template-columns: repeat(4, 1fr);
-	gap: 12px;
-	margin-top: 16px;
-}
-@media (max-width: 500px) { .sm-mock-stats { grid-template-columns: repeat(2, 1fr); } }
-.sm-mock-stat {
-	background: white;
-	border: 1px solid var(--sm-border);
-	border-radius: 14px;
-	padding: 14px;
-	text-align: center;
-}
-.sm-mock-stat-label {
-	display: block;
-	font-size: 9px;
-	font-weight: 600;
-	text-transform: uppercase;
-	letter-spacing: 0.08em;
-	color: var(--sm-muted);
-	margin-bottom: 4px;
-}
-.sm-mock-stat-value {
-	display: block;
-	font-size: 20px;
-	font-weight: 700;
-	color: var(--sm-text);
-	line-height: 1.1;
-}
-.sm-mock-stat-trend {
-	display: block;
-	font-size: 10px;
-	font-weight: 600;
-	margin-top: 2px;
-}
-
-/* Kanban Mock */
-.sm-mock-kanban {
-	display: flex;
-	gap: 10px;
-}
-.sm-mock-kan-col {
-	flex: 1;
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
-}
-.sm-mock-kan-head {
-	font-size: 10px;
-	font-weight: 600;
-	text-transform: uppercase;
-	letter-spacing: 0.06em;
-	color: var(--sm-muted);
-	padding-bottom: 8px;
-	border-bottom: 2px solid;
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-}
-.sm-mock-kan-count {
-	font-size: 9px;
-	font-weight: 500;
-	background: var(--sm-bg-alt);
-	padding: 1px 6px;
-	border-radius: 100px;
-}
-.sm-mock-kan-card {
-	background: var(--sm-bg-alt);
-	border: 1px solid var(--sm-border);
-	border-radius: 10px;
-	padding: 10px 12px;
-}
-.sm-mock-kan-active {
-	border-left: 2px solid var(--sm-accent);
-}
-.sm-mock-kan-done {
-	opacity: 0.5;
-}
-.sm-mock-kan-title {
-	font-size: 11px;
-	font-weight: 500;
-	color: var(--sm-text);
-	margin-bottom: 6px;
-	line-height: 1.3;
-}
-.sm-mock-kan-meta {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-}
-.sm-mock-kan-tag {
-	font-size: 8px;
-	font-weight: 600;
-	padding: 2px 7px;
-	border-radius: 100px;
-	text-transform: uppercase;
-	letter-spacing: 0.04em;
-}
-.sm-mock-kan-avatars {
-	display: flex;
-	margin-left: auto;
-}
-.sm-mock-avatar {
-	width: 16px;
-	height: 16px;
-	border-radius: 50%;
-	background: var(--sm-accent);
-	border: 1.5px solid white;
-	margin-left: -4px;
-}
-.sm-mock-avatar:first-child { margin-left: 0; }
-
-/* Productivity Meter Mock */
-.sm-mock-meter {
-	text-align: center;
-	margin-bottom: 16px;
-}
-.sm-mock-score {
-	font-size: 40px;
-	font-weight: 700;
-	color: #10b981;
-	line-height: 1;
-}
-.sm-mock-score-bar {
-	height: 6px;
-	background: var(--sm-bg-alt);
-	border-radius: 3px;
-	margin: 10px 0 6px;
-	overflow: hidden;
-}
-.sm-mock-score-fill {
-	height: 100%;
-	background: linear-gradient(to right, #10b981, #34d399);
-	border-radius: 3px;
-}
-.sm-mock-score-label {
-	font-size: 10px;
-	font-weight: 600;
-	color: #10b981;
-	text-transform: uppercase;
-	letter-spacing: 0.08em;
-}
-.sm-mock-meter-stats {
-	display: flex;
-	justify-content: center;
-	gap: 20px;
-}
-.sm-mock-meter-stat {
-	text-align: center;
-}
-.sm-mock-meter-num {
-	display: block;
-	font-size: 16px;
-	font-weight: 700;
-	line-height: 1;
-}
-.sm-mock-meter-lbl {
-	display: block;
-	font-size: 9px;
-	color: var(--sm-muted);
-	margin-top: 2px;
-	text-transform: uppercase;
-	letter-spacing: 0.04em;
-}
-
-/* Social Queue Mock */
-.sm-mock-social {
-	display: flex;
-	flex-direction: column;
-	gap: 10px;
-}
-.sm-mock-social-post {
-	display: flex;
-	align-items: center;
-	gap: 10px;
-	padding: 8px 10px;
-	background: var(--sm-bg-alt);
-	border-radius: 10px;
-	border: 1px solid var(--sm-border);
-}
-.sm-mock-social-icon {
-	width: 24px;
-	height: 24px;
-	border-radius: 6px;
-	color: white;
-	font-size: 9px;
-	font-weight: 700;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	flex-shrink: 0;
-}
-.sm-mock-social-body { flex: 1; min-width: 0; }
-.sm-mock-social-text {
-	font-size: 11px;
-	font-weight: 500;
-	color: var(--sm-text);
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-.sm-mock-social-time {
-	font-size: 9px;
-	color: var(--sm-muted);
-	margin-top: 1px;
-}
-.sm-mock-social-status {
-	font-size: 8px;
-	font-weight: 600;
-	padding: 2px 8px;
-	border-radius: 100px;
-	text-transform: uppercase;
-	letter-spacing: 0.04em;
-	flex-shrink: 0;
-}
-.sm-mock-status-ready { background: #d1fae5; color: #065f46; }
-.sm-mock-status-scheduled { background: #e0f2fe; color: #0369a1; }
-.sm-mock-status-draft { background: #f5f5f5; color: #737373; }
-
-/* CRM Pipeline Mock */
-.sm-mock-pipeline {
-	display: flex;
-	flex-direction: column;
-	gap: 10px;
-}
-.sm-mock-pipe-stage {
-	position: relative;
-	padding: 8px 12px;
-	border-radius: 8px;
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	overflow: hidden;
-}
-.sm-mock-pipe-bar {
-	position: absolute;
-	left: 0;
-	top: 0;
-	bottom: 0;
-	border-radius: 8px;
-}
-.sm-mock-pipe-name {
-	font-size: 11px;
-	font-weight: 500;
-	color: var(--sm-text);
-	position: relative;
-	z-index: 1;
-}
-.sm-mock-pipe-count {
-	font-size: 12px;
-	font-weight: 700;
-	color: var(--sm-text);
-	position: relative;
-	z-index: 1;
-}
-
-/* AI Insight Mock */
-.sm-mock-ai-insight {
-	text-align: center;
-}
-.sm-mock-ai-score {
-	margin-bottom: 4px;
-}
-.sm-mock-ai-num {
-	font-size: 36px;
-	font-weight: 700;
-	color: #10b981;
-	line-height: 1;
-}
-.sm-mock-ai-of {
-	font-size: 14px;
-	color: rgba(255, 255, 255, 0.3);
-}
-.sm-mock-ai-label {
-	font-size: 10px;
-	font-weight: 600;
-	color: var(--sm-pop);
-	text-transform: uppercase;
-	letter-spacing: 0.08em;
-	margin-bottom: 10px;
-}
-.sm-mock-ai-rec {
-	font-size: 11px;
-	line-height: 1.5;
-	color: rgba(255, 255, 255, 0.45);
-}
-
-/* Wide showcase cell (full grid width) */
-.sm-showcase-wide {
-	grid-column: 1 / -1;
-}
-
-/* Chat / Channels Mock */
-.sm-mock-chat {
-	display: flex;
-	flex-direction: column;
-	gap: 14px;
-}
-.sm-mock-msg {
-	display: flex;
-	gap: 10px;
-	align-items: flex-start;
-}
-.sm-mock-msg .sm-mock-avatar {
-	margin-left: 0;
-	width: 28px;
-	height: 28px;
-	border-radius: 8px;
-	flex-shrink: 0;
-	border: none;
-}
-.sm-mock-msg-body {
-	flex: 1;
-	min-width: 0;
-}
-.sm-mock-msg-head {
-	display: flex;
-	align-items: center;
-	gap: 6px;
-	margin-bottom: 3px;
-}
-.sm-mock-msg-name {
-	font-size: 11px;
-	font-weight: 600;
-	color: var(--sm-text);
-}
-.sm-mock-msg-time {
-	font-size: 9px;
-	color: var(--sm-muted);
-}
-.sm-mock-msg-ai-badge {
-	font-size: 8px;
-	font-weight: 700;
-	background: var(--sm-text);
-	color: white;
-	padding: 1px 5px;
-	border-radius: 4px;
-	text-transform: uppercase;
-	letter-spacing: 0.04em;
-}
-.sm-mock-msg-text {
-	font-size: 12px;
-	line-height: 1.5;
-	color: var(--sm-text-2);
-}
-.sm-mock-reactions {
-	display: flex;
-	gap: 6px;
-	margin-top: 6px;
-}
-.sm-mock-reaction {
-	font-size: 11px;
-	background: var(--sm-bg-alt);
-	border: 1px solid var(--sm-border);
-	border-radius: 100px;
-	padding: 2px 8px;
-	cursor: default;
-}
-.sm-mock-comment-thread {
-	margin-top: 8px;
-	padding-left: 12px;
-	border-left: 2px solid var(--sm-border);
-}
-.sm-mock-comment {
-	display: flex;
-	align-items: flex-start;
-	gap: 6px;
-}
-.sm-mock-comment-avatar {
-	width: 16px;
-	height: 16px;
-	border-radius: 4px;
-	flex-shrink: 0;
-}
-.sm-mock-comment-text {
-	font-size: 11px;
-	color: var(--sm-text-2);
-	line-height: 1.4;
-}
-.sm-mock-comment-text strong {
-	color: var(--sm-text);
-	font-weight: 600;
-}
-
-/* Gantt Chart Mock */
-.sm-mock-gantt {
-	display: flex;
-	flex-direction: column;
-	gap: 0;
-}
-.sm-mock-gantt-header {
-	display: grid;
-	grid-template-columns: 120px repeat(4, 1fr);
-	gap: 0;
-	padding-bottom: 8px;
-	border-bottom: 1px solid var(--sm-border);
-	margin-bottom: 4px;
-}
-@media (max-width: 600px) { .sm-mock-gantt-header { grid-template-columns: 80px repeat(4, 1fr); } }
-.sm-mock-gantt-header span {
-	font-size: 9px;
-	font-weight: 600;
-	text-transform: uppercase;
-	letter-spacing: 0.08em;
-	color: var(--sm-muted);
-	text-align: center;
-}
-.sm-mock-gantt-header span:first-child { text-align: left; }
-.sm-mock-gantt-row {
-	display: grid;
-	grid-template-columns: 120px 1fr;
-	gap: 0;
-	align-items: center;
-	padding: 6px 0;
-	border-bottom: 1px solid rgba(0,0,0,0.03);
-}
-@media (max-width: 600px) { .sm-mock-gantt-row { grid-template-columns: 80px 1fr; } }
-.sm-mock-gantt-label {
-	font-size: 11px;
-	font-weight: 500;
-	color: var(--sm-text);
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-}
-.sm-mock-gantt-track {
-	position: relative;
-	height: 12px;
-	background: rgba(0,0,0,0.02);
-	border-radius: 6px;
-}
-.sm-mock-gantt-bar {
-	position: absolute;
-	top: 0;
-	height: 100%;
-	border-radius: 6px;
-}
-
-/* ─── QUOTE ─── */
-.sm-quote {
-	background: var(--sm-dark);
-	padding: 120px 32px;
-	text-align: center;
-	position: relative;
-	overflow: hidden;
-}
-.sm-quote-mark {
-	position: absolute;
-	top: -40px;
-	left: 50%;
-	transform: translateX(-50%);
-	font-size: 300px;
-	color: rgba(255, 255, 255, 0.03);
-	line-height: 1;
-	pointer-events: none;
-}
-.sm-quote-text {
-	font-family: var(--font-proxima-light);
-	font-size: clamp(28px, 5vw, 48px);
-	font-weight: 300;
-	color: white;
-	line-height: 1.3;
-	max-width: 800px;
-	margin: 0 auto;
-	position: relative;
-	z-index: 1;
-}
-.sm-quote-text em {
-	font-style: normal;
-	color: var(--sm-pop);
-}
-.sm-quote-attr {
-	font-size: 13px;
-	color: rgba(255, 255, 255, 0.35);
-	letter-spacing: 0.1em;
-	margin-top: 32px;
-	text-transform: uppercase;
-	position: relative;
-	z-index: 1;
-}
-.sm-quote-earnest {
-	font-size: clamp(18px, 3vw, 24px);
-	color: rgba(255, 255, 255, 0.85);
-	margin-top: 20px;
-	position: relative;
-	z-index: 1;
-}
-
-/* ─── CALCULATOR ─── */
-.sm-calc {
-	padding: 140px 32px;
-	max-width: 800px;
-	margin: 0 auto;
-	background: var(--sm-bg);
-}
-@media (max-width: 700px) { .sm-calc { padding: 80px 16px; } }
-.sm-calc-header { margin-bottom: 48px; }
-.sm-calc-title {
-	font-size: clamp(28px, 4vw, 42px);
-	font-weight: 600;
-	line-height: 1.1;
-	letter-spacing: -0.02em;
-}
-.sm-calc-title em {
-	font-style: italic;
-	text-decoration: underline;
-	text-decoration-color: var(--sm-pop);
-	text-underline-offset: 4px;
-	text-decoration-thickness: 2px;
-}
-.sm-calc-sub {
-	font-size: 15px;
-	color: var(--sm-muted);
-	margin-top: 12px;
-}
-.sm-calc-widget {
-	background: rgba(255, 255, 255, 0.85);
-	backdrop-filter: saturate(200%) blur(30px);
-	-webkit-backdrop-filter: saturate(200%) blur(30px);
-	padding: 44px;
-	border-radius: 24px;
-	border: 1px solid var(--sm-border);
-	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
-}
-@media (max-width: 700px) { .sm-calc-widget { padding: 24px; border-radius: 16px; } }
-.sm-calc-row { margin-bottom: 28px; }
-.sm-calc-label {
-	display: flex;
-	justify-content: space-between;
-	font-size: 14px;
-	color: var(--sm-text-2);
-	margin-bottom: 10px;
-}
-.sm-calc-value {
-	font-weight: 700;
-	color: var(--sm-accent);
-}
-.sm-range {
-	-webkit-appearance: none;
-	width: 100%;
-	height: 4px;
-	background: var(--sm-border);
-	border-radius: 2px;
-	outline: none;
-}
-.sm-range::-webkit-slider-thumb {
-	-webkit-appearance: none;
-	width: 22px;
-	height: 22px;
-	background: var(--sm-accent);
-	border-radius: 50%;
-	cursor: pointer;
-	transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.15s;
-}
-.sm-range::-webkit-slider-thumb:hover {
-	transform: scale(1.15);
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-.sm-range::-webkit-slider-thumb:active {
-	transform: scale(0.95);
-}
-.sm-calc-result {
-	display: grid;
-	grid-template-columns: 1fr auto 1fr;
-	gap: 20px;
-	align-items: center;
-	margin-top: 36px;
-	padding-top: 28px;
-	border-top: 1px solid var(--sm-border);
-}
-@media (max-width: 500px) { .sm-calc-result { grid-template-columns: 1fr; text-align: center; } }
-.sm-calc-result-label {
-	font-size: 11px;
-	text-transform: uppercase;
-	letter-spacing: 0.06em;
-	color: var(--sm-muted);
-}
-.sm-calc-amount {
-	font-size: 40px;
-	font-weight: 700;
-	line-height: 1;
-	display: block;
-	margin-top: 6px;
-}
-.sm-calc-amount small {
-	font-family: var(--font-proxima-light);
-	font-size: 14px;
-	color: var(--sm-muted);
-	font-weight: 400;
-}
-.sm-calc-amount-accent { color: var(--sm-pop); }
-.sm-calc-current { text-decoration: line-through; text-decoration-color: var(--sm-pop); text-decoration-thickness: 2px; }
-.sm-calc-arrow {
-	font-size: 28px;
-	color: var(--sm-accent);
-}
-.sm-calc-savings {
-	font-size: 15px;
-	color: var(--sm-text-2);
-	margin-top: 24px;
-	text-align: center;
-	font-style: italic;
-}
-.sm-calc-savings strong { color: var(--sm-pop); font-style: normal; }
-.sm-calc-savings-muted { color: var(--sm-muted); }
-
-/* ─── TOKEN COSTS ─── */
-.sm-tokens {
-	background: var(--sm-dark);
-	padding: 100px 32px;
-}
-@media (max-width: 700px) { .sm-tokens { padding: 60px 16px; } }
-.sm-tokens-inner {
-	max-width: 1100px;
-	margin: 0 auto;
-}
-.sm-tokens-title {
-	font-size: clamp(22px, 3vw, 32px);
-	font-weight: 600;
-	color: white;
-}
-.sm-tokens-sub {
-	font-size: 14px;
-	color: rgba(255, 255, 255, 0.5);
-	margin-top: 8px;
-	margin-bottom: 32px;
-}
-.sm-tokens-grid {
-	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-	gap: 12px;
-}
-.sm-token-card {
-	background: rgba(255, 255, 255, 0.04);
-	border: 1px solid rgba(255, 255, 255, 0.08);
-	border-radius: 16px;
-	padding: 20px;
-	transition: background 0.25s;
-}
-.sm-token-card:hover { background: rgba(255, 255, 255, 0.08); }
-.sm-token-name {
-	font-size: 13px;
-	color: rgba(255, 255, 255, 0.65);
-	margin-bottom: 8px;
-}
-.sm-token-cost {
-	font-size: 20px;
-	font-weight: 700;
-	color: white;
-}
-.sm-token-real {
-	font-size: 11px;
-	color: rgba(255, 255, 255, 0.3);
-	margin-top: 4px;
-}
-.sm-tokens-note {
-	font-size: 13px;
-	font-style: italic;
-	color: rgba(255, 255, 255, 0.3);
-	margin-top: 24px;
-	text-align: center;
-}
-
-/* ─── TESTIMONIALS ─── */
-.sm-testimonials {
-	padding: 120px 32px;
-	max-width: 1100px;
-	margin: 0 auto;
-}
-@media (max-width: 700px) { .sm-testimonials { padding: 60px 16px; } }
-.sm-testimonials-title {
-	font-size: clamp(22px, 3vw, 32px);
-	font-weight: 600;
-	margin-bottom: 40px;
-}
-.sm-testimonials-grid {
-	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-	gap: 16px;
-}
-.sm-testimonial {
-	padding: 28px;
-	transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s;
-	cursor: default;
-}
-.sm-testimonial:hover {
-	transform: translateY(-2px);
-	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-}
-.sm-testimonial:active { transform: scale(0.97); }
-.sm-testimonial-quote {
-	font-size: 15px;
-	line-height: 1.65;
-	color: var(--sm-text-2);
-	margin-bottom: 20px;
-}
-.sm-testimonial-author {
-	display: flex;
-	align-items: center;
-	gap: 12px;
-}
-.sm-testimonial-avatar {
-	width: 36px;
-	height: 36px;
-	border-radius: 50%;
-	object-fit: cover;
-}
-.sm-testimonial-name {
-	font-size: 13px;
-	font-weight: 600;
-	color: var(--sm-text);
-}
-.sm-testimonial-role {
-	font-size: 11px;
-	color: var(--sm-muted);
-}
-
-/* ─── LOGOS ─── */
-.sm-logos {
-	padding: 64px 32px;
-	text-align: center;
-	overflow: hidden;
-}
-.sm-logos-label {
-	font-size: 11px;
-	text-transform: uppercase;
-	letter-spacing: 0.12em;
-	color: var(--sm-muted);
-	margin-bottom: 24px;
-}
-.sm-logos-track {
-	overflow: hidden;
-	mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
-	-webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
-}
-.sm-logos-scroll {
-	display: flex;
-	gap: 48px;
-	align-items: center;
-	animation: smLogos 30s linear infinite;
-	width: max-content;
-}
-.sm-logo-img {
-	height: 32px;
-	width: auto;
-	opacity: 0.35;
-	filter: grayscale(1);
-	transition: opacity 0.3s, filter 0.3s;
-}
-.sm-logo-img:hover {
-	opacity: 1;
-	filter: grayscale(0);
-}
-@keyframes smLogos {
-	0% { transform: translateX(0); }
-	100% { transform: translateX(-50%); }
-}
-
-/* ─── PRICING ─── */
-.sm-pricing {
-	padding: 140px 32px;
-	max-width: 1100px;
-	margin: 0 auto;
-	background: var(--sm-bg-alt);
-}
-@media (max-width: 700px) { .sm-pricing { padding: 80px 16px; } }
-.sm-pricing-header {
-	margin-bottom: 64px;
-	max-width: 600px;
-}
-.sm-pricing-title {
-	font-size: clamp(28px, 4vw, 42px);
-	font-weight: 600;
-	line-height: 1.1;
-	letter-spacing: -0.02em;
-}
-.sm-pricing-title em {
-	font-style: italic;
-	text-decoration: underline;
-	text-decoration-color: var(--sm-pop);
-	text-underline-offset: 4px;
-	text-decoration-thickness: 2px;
-}
-.sm-pricing-sub {
-	font-size: 15px;
-	line-height: 1.7;
-	color: var(--sm-muted);
-	margin-top: 16px;
-}
-
-.sm-plans-grid {
-	display: grid;
-	grid-template-columns: repeat(3, 1fr);
-	gap: 20px;
-	align-items: start;
-}
-@media (max-width: 800px) { .sm-plans-grid { grid-template-columns: 1fr; max-width: 400px; } }
-
-.sm-plan {
-	background: white;
-	border: 1px solid var(--sm-border);
-	border-radius: 20px;
-	padding: 40px 32px;
-	position: relative;
-	transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s;
-}
-.sm-plan:hover {
-	transform: translateY(-3px);
-	box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08);
-}
-.sm-plan-featured {
-	background: linear-gradient(to bottom, rgba(0, 0, 0, 0.02), white);
-	border-color: rgba(0, 0, 0, 0.1);
-	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
-}
-.sm-plan-badge {
-	position: absolute;
-	top: -12px;
-	left: 50%;
-	transform: translateX(-50%);
-	background: var(--sm-accent);
-	color: white;
-	font-size: 10px;
-	font-weight: 600;
-	text-transform: uppercase;
-	letter-spacing: 0.08em;
-	padding: 5px 16px;
-	border-radius: 100px;
-	white-space: nowrap;
-}
-.sm-plan-name {
-	font-size: 22px;
-	font-weight: 700;
-}
-.sm-plan-price {
-	font-size: 52px;
-	font-weight: 700;
-	line-height: 1;
-	margin-top: 16px;
-	letter-spacing: -0.02em;
-}
-.sm-plan-price sup {
-	font-size: 22px;
-	vertical-align: super;
-	font-weight: 400;
-}
-.sm-plan-price span {
-	font-family: var(--font-proxima-light);
-	font-size: 14px;
-	font-weight: 400;
-	color: var(--sm-muted);
-}
-.sm-plan-desc {
-	font-size: 13px;
-	color: var(--sm-muted);
-	margin-top: 8px;
-	margin-bottom: 28px;
-	padding-bottom: 28px;
-	border-bottom: 1px solid var(--sm-border);
-}
-.sm-plan-features {
-	list-style: none;
-	display: flex;
-	flex-direction: column;
-	gap: 12px;
-	padding: 0;
-	margin: 0;
-}
-.sm-plan-features li {
-	font-size: 13px;
-	color: var(--sm-text-2);
-	display: flex;
-	align-items: flex-start;
-	gap: 10px;
-	line-height: 1.4;
-}
-.sm-plan-check {
-	width: 16px;
-	height: 16px;
-	color: var(--sm-accent);
-	flex-shrink: 0;
-	margin-top: 1px;
-}
-.sm-plan-btn {
-	display: block;
-	width: 100%;
-	margin-top: 32px;
-	padding: 14px;
-	text-align: center;
-	font-size: 13px;
-	font-weight: 500;
-	letter-spacing: 0.04em;
-	cursor: pointer;
-	transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-	border: 1px solid var(--sm-border);
-	border-radius: 100px;
-	background: transparent;
-	color: var(--sm-text);
-	text-decoration: none;
-	text-transform: uppercase;
-}
-.sm-plan-btn:hover {
-	background: var(--sm-text);
-	color: white;
-	border-color: var(--sm-text);
-}
-.sm-plan-btn-accent {
-	background: var(--sm-accent);
-	border-color: var(--sm-accent);
-	color: white;
-}
-.sm-plan-btn-accent:hover {
-	background: var(--sm-accent);
-	filter: brightness(1.1);
-	transform: translateY(-1px);
-	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-	color: white;
-	border-color: var(--sm-accent);
-}
-
-/* ─── FOOTER ─── */
-.sm-footer {
-	background: var(--sm-dark);
-	border-top: 1px solid rgba(255, 255, 255, 0.06);
-	padding: 32px 24px;
-}
-.sm-footer-inner {
-	max-width: 1100px;
-	margin: 0 auto;
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 1rem;
-	flex-wrap: wrap;
-}
-.sm-footer-copy {
-	font-size: 13px;
-	color: rgba(255, 255, 255, 0.35);
-}
-.sm-footer-links {
-	display: flex;
-	gap: 20px;
-}
-.sm-footer-links a {
-	font-size: 13px;
-	color: rgba(255, 255, 255, 0.45);
-	text-decoration: none;
-	transition: color 0.2s;
-}
-.sm-footer-links a:hover {
-	color: rgba(255, 255, 255, 0.8);
-}
-</style>
