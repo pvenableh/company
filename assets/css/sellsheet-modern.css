@@ -23,6 +23,7 @@
 	font-family: var(--sm-font-body);
 	-webkit-font-smoothing: antialiased;
 	margin-top: 0;
+	overflow-x: hidden;
 }
 
 .sm-brand {
@@ -121,11 +122,13 @@
 	text-align: center;
 	padding: 140px 24px 100px;
 	position: relative;
-	overflow: hidden;
 }
 .sm-hero-mesh {
 	position: absolute;
-	inset: 0;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: -150px;
 	background:
 		radial-gradient(ellipse at 20% 50%, rgba(0, 0, 0, 0.03), transparent 50%),
 		radial-gradient(ellipse at 80% 20%, rgba(16, 185, 129, 0.04), transparent 50%),
@@ -241,10 +244,21 @@
 	inset: 0;
 	z-index: 0;
 	pointer-events: none;
-	overflow: hidden;
+	overflow: visible;
 }
-/* Hide background widgets below xl, but keep AI chip */
-@media (max-width: 1280px) {
+
+/* Hide background widgets below xl, but keep some on tablet */
+@media (max-width: 1280px) and (min-width: 670px) {
+	.sm-hw:not(.sm-hw-ai-top):not(.sm-hw-1):not(.sm-hw-2):not(.sm-hw-3):not(.sm-hw-4):not(.sm-hw-5) { display: none; }
+	/* Reposition — allow overflow off edges, both sides */
+	.sm-hw-1 { left: -8%; top: 22%; }
+	.sm-hw-2 { right: -4%; top: 14%; }
+	.sm-hw-3 { left: -32%; top: 56%; }
+	.sm-hw-4 { right: -5%; top: 55%; }
+	.sm-hw-5 { left: 6%; right: auto !important; top: 72%; }
+	.sm-hw .sm-float-card { opacity: 0.3; transform: scale(0.75); }
+}
+@media (max-width: 669px) {
 	.sm-hw:not(.sm-hw-ai-top) { display: none; }
 }
 .sm-hw {
@@ -814,7 +828,7 @@
 .sm-widget-carousel {
 	padding: 24px 0;
 	overflow: hidden;
-	background: transparent;
+	position: relative;
 	border-bottom: 1px solid var(--sm-border);
 	mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
 	-webkit-mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
@@ -1042,13 +1056,11 @@
 	transform: translateX(-50%) translateY(-4px);
 }
 
-/* Tool nodes (static, positioned via CSS translate) */
+/* Tool nodes (positioned via inline left/top %) */
 .sm-orbit-tool {
 	position: absolute;
-	top: 50%;
-	left: 50%;
 	z-index: 1;
-	transform: translate(calc(-50% + var(--orbit-x)), calc(-50% + var(--orbit-y)));
+	transform: translate(-50%, -50%);
 	display: flex;
 	flex-direction: column;
 	align-items: center;
@@ -1143,13 +1155,24 @@
 	transition: opacity 0.3s;
 }
 
-/* Mobile: smaller orbit */
+/* Tablet: slightly smaller orbit */
+@media (max-width: 768px) {
+	.sm-orbit-ring { width: min(500px, 90vw); height: min(500px, 90vw); }
+}
+/* Mobile: fluid orbit filling most of the screen */
 @media (max-width: 600px) {
-	.sm-orbit-ring { width: 340px; height: 340px; }
+	.sm-replaces { padding: 60px 8px; }
+	.sm-orbit-ring { width: 92vw; height: 92vw; margin-bottom: 32px; }
 	.sm-orbit-e { width: 52px; height: 52px; font-size: 24px; }
 	.sm-orbit-tool-inner { width: 34px; height: 34px; border-radius: 9px; }
 	.sm-orbit-tool-icon { width: 15px; height: 15px; }
 	.sm-orbit-tool-name { font-size: 7px; }
+}
+@media (max-width: 400px) {
+	.sm-orbit-e { width: 44px; height: 44px; }
+	.sm-orbit-tool-inner { width: 30px; height: 30px; border-radius: 8px; }
+	.sm-orbit-tool-icon { width: 13px; height: 13px; }
+	.sm-orbit-tool-name { display: none; }
 }
 
 .sm-replaces-cta {
@@ -1287,7 +1310,11 @@
 	border: 1px solid var(--sm-border);
 	border-radius: 16px;
 }
-@media (max-width: 500px) { .sm-truth-visual { gap: 20px; padding: 24px 16px; } }
+@media (max-width: 500px) {
+	.sm-truth-visual { gap: 20px; padding: 24px 16px; flex-wrap: nowrap; }
+	.sm-truth-unified-icon { width: 44px; height: 44px; border-radius: 11px; }
+	.sm-truth-arrow { font-size: 22px; }
+}
 .sm-truth-stack {
 	display: flex;
 	flex-direction: column;
@@ -1320,16 +1347,13 @@
 }
 
 /* Truth visual: insight cards */
-/* Insight cards — standalone row */
-.sm-insight-row {
-	display: grid;
-	grid-template-columns: repeat(3, 1fr);
+/* Insight cards — inline within truth body */
+.sm-insight-row-inline {
+	display: flex;
+	flex-direction: column;
 	gap: 16px;
-	max-width: 1100px;
-	margin: 0 auto;
-	padding: 0 32px 80px;
+	margin-top: 32px;
 }
-@media (max-width: 900px) { .sm-insight-row { grid-template-columns: 1fr; padding: 0 16px 60px; } }
 .sm-truth-card {
 	display: flex;
 	align-items: flex-start;
@@ -1401,7 +1425,7 @@
 	font-family: var(--sm-font-light);
 	font-size: 18px;
 	line-height: 1.8;
-	color: rgba(255, 255, 255, 0.55);
+	color: rgba(255, 255, 255, 0.8);
 	max-width: 620px;
 	margin-bottom: 64px;
 }
@@ -1428,7 +1452,7 @@
 	font-size: 11px;
 	font-weight: 600;
 	letter-spacing: 0.15em;
-	color: var(--sm-accent);
+	color: var(--sm-pop);
 	margin-bottom: 16px;
 	display: block;
 }
@@ -1663,7 +1687,6 @@
 	border: 1px solid var(--sm-border);
 	border-radius: 20px;
 	padding: 24px;
-	height: 100%;
 	box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
 }
 .sm-mock-widget-dark {
@@ -2871,7 +2894,9 @@
 	.sm-truth-inner { padding: 80px 16px; }
 	.sm-truth-title { font-size: 26px; }
 	.sm-truth-text { font-size: 15px; }
-	.sm-truth-visual { flex-direction: column; padding: 20px; }
+	.sm-truth-visual { flex-direction: row; padding: 20px; gap: 16px; }
+	.sm-truth-unified-icon { width: 40px; height: 40px; border-radius: 10px; }
+	.sm-truth-arrow { font-size: 20px; }
 	.sm-truth-card { padding: 14px 16px; }
 	.sm-truth-card-title { font-size: 12px; }
 	.sm-truth-card-desc { font-size: 11px; }
@@ -2953,4 +2978,87 @@
 	.sm-ai-headline { font-size: 26px; }
 	.sm-features-big { font-size: 32px; }
 	.sm-plan-price { font-size: 34px; }
+}
+
+/* ─── COMING SOON DIALOG ─── */
+.sm-coming-soon-dialog {
+	font-family: var(--sm-font-body);
+	text-align: center;
+	max-width: 420px !important;
+}
+.sm-cs-title {
+	font-size: clamp(24px, 4vw, 32px);
+	font-weight: 600;
+	letter-spacing: -0.02em;
+	color: var(--sm-text);
+	margin-bottom: 4px;
+}
+.sm-cs-desc {
+	font-size: 15px;
+	line-height: 1.6;
+	color: var(--sm-text-2);
+	margin-top: 8px;
+}
+.sm-cs-rocket {
+	width: 16px;
+	height: 16px;
+	display: inline-block;
+	vertical-align: -2px;
+	color: var(--sm-pop);
+}
+.sm-cs-form {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	margin-top: 24px;
+}
+.sm-cs-input {
+	width: 100%;
+	padding: 12px 16px;
+	font-size: 14px;
+	font-family: var(--sm-font-body);
+	border: 1px solid rgba(0, 0, 0, 0.12);
+	border-radius: 10px;
+	background: var(--sm-bg-alt);
+	color: var(--sm-text);
+	outline: none;
+	transition: border-color 0.2s;
+}
+.sm-cs-input:focus {
+	border-color: var(--sm-pop);
+}
+.sm-cs-input::placeholder {
+	color: var(--sm-muted);
+}
+.sm-cs-error {
+	font-size: 13px;
+	color: #ef4444;
+	margin: 0;
+}
+.sm-cs-submit {
+	margin-top: 4px;
+	width: 100%;
+	text-align: center;
+	justify-content: center;
+}
+.sm-cs-submit:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+.sm-cs-success {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 8px;
+	padding: 24px 0;
+	text-align: center;
+}
+.sm-cs-success-icon {
+	width: 48px;
+	height: 48px;
+	color: #10b981;
+	margin-bottom: 8px;
+}
+.sm-cs-close {
+	margin-top: 16px;
 }

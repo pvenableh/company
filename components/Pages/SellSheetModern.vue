@@ -32,7 +32,7 @@
 					AI that sees everything<span class="sm-accent-dot">.</span>
 				</p>
 				<div class="sm-hero-actions opacity-0">
-					<nuxt-link to="/register" class="sm-btn-primary">Start for free</nuxt-link>
+					<button class="sm-btn-primary" @click="showComingSoon = true">Start for free</button>
 					<a href="#features" class="sm-btn-ghost">See how it works</a>
 				</div>
 			</div>
@@ -251,7 +251,7 @@
 						style="transition: stroke 0.3s, stroke-width 0.3s"
 					/>
 				</svg>
-				<div class="sm-orbit-center" @mouseenter="hoveredOrbit = -2" @mouseleave="hoveredOrbit = -1">
+				<div class="sm-orbit-center" @mouseenter="pauseOrbitAutoRotate(); hoveredOrbit = -2" @mouseleave="hoveredOrbit = -1; resumeOrbitAutoRotate()">
 					<img src="/icon.png" alt="Earnest" class="sm-orbit-e" />
 					<div class="sm-orbit-center-text">
 						<span class="sm-orbit-center-label"><span class="sm-brand">Earnest</span></span>
@@ -264,11 +264,11 @@
 					:key="i"
 					class="sm-orbit-tool"
 					:class="{ 'sm-orbit-tool-hovered': hoveredOrbit === i }"
-					@mouseenter="hoveredOrbit = i"
-					@mouseleave="hoveredOrbit = -1"
+					@mouseenter="pauseOrbitAutoRotate(); hoveredOrbit = i"
+					@mouseleave="hoveredOrbit = -1; resumeOrbitAutoRotate()"
 					:style="{
-						'--orbit-x': Math.cos((i * (360 / replacedTools.length) - 90) * Math.PI / 180) * 250 + 'px',
-						'--orbit-y': Math.sin((i * (360 / replacedTools.length) - 90) * Math.PI / 180) * 250 + 'px',
+						left: (50 + Math.cos((i * (360 / replacedTools.length) - 90) * Math.PI / 180) * 250 / 600 * 100) + '%',
+						top: (50 + Math.sin((i * (360 / replacedTools.length) - 90) * Math.PI / 180) * 250 / 600 * 100) + '%',
 					}"
 				>
 					<div class="sm-orbit-tool-inner">
@@ -328,34 +328,34 @@
 					One platform, one login &mdash; from first conversation to final payment. Every page is a surface you work from, <strong>not a report you read.</strong>
 				</p>
 
+				<!-- Insight Cards (inside truth body so sidebar stays sticky alongside) -->
+				<div class="sm-insight-row-inline">
+					<div class="sm-truth-card opacity-0">
+						<UIcon name="i-lucide-brain" class="sm-truth-card-icon" />
+						<div>
+							<div class="sm-truth-card-title">AI sees everything</div>
+							<div class="sm-truth-card-desc">Contacts, revenue, goals, campaigns &mdash; connected</div>
+						</div>
+					</div>
+					<div class="sm-truth-card opacity-0">
+						<UIcon name="i-lucide-target" class="sm-truth-card-icon" />
+						<div>
+							<div class="sm-truth-card-title">Your plans know your data</div>
+							<div class="sm-truth-card-desc">Marketing knows your pipeline. Goals know your financials.</div>
+						</div>
+					</div>
+					<div class="sm-truth-card opacity-0">
+						<UIcon name="i-lucide-smartphone" class="sm-truth-card-icon" />
+						<div>
+							<div class="sm-truth-card-title">Works everywhere</div>
+							<div class="sm-truth-card-desc">CardDesk + E&sup2; companion apps keep you connected on the go</div>
+						</div>
+					</div>
+				</div>
+
 			</div>
 			</div>
 		</section>
-
-		<!-- ─── Insight Cards ─── -->
-		<div class="sm-insight-row">
-			<div class="sm-truth-card opacity-0">
-				<UIcon name="i-lucide-brain" class="sm-truth-card-icon" />
-				<div>
-					<div class="sm-truth-card-title">AI sees everything</div>
-					<div class="sm-truth-card-desc">Contacts, revenue, goals, campaigns &mdash; connected</div>
-				</div>
-			</div>
-			<div class="sm-truth-card opacity-0">
-				<UIcon name="i-lucide-target" class="sm-truth-card-icon" />
-				<div>
-					<div class="sm-truth-card-title">Your plans know your data</div>
-					<div class="sm-truth-card-desc">Marketing knows your pipeline. Goals know your financials.</div>
-				</div>
-			</div>
-			<div class="sm-truth-card opacity-0">
-				<UIcon name="i-lucide-smartphone" class="sm-truth-card-icon" />
-				<div>
-					<div class="sm-truth-card-title">Works everywhere</div>
-					<div class="sm-truth-card-desc">CardDesk + E&sup2; companion apps keep you connected on the go</div>
-				</div>
-			</div>
-		</div>
 
 		<!-- ─── AI Capabilities ─── -->
 		<section ref="aiRef" class="sm-ai">
@@ -1002,9 +1002,9 @@
 							{{ feat }}
 						</li>
 					</ul>
-					<nuxt-link :to="plan.cta.to" class="sm-plan-btn" :class="{ 'sm-plan-btn-accent': plan.featured }">
+					<button class="sm-plan-btn" :class="{ 'sm-plan-btn-accent': plan.featured }" @click="showComingSoon = true">
 						{{ plan.cta.label }}
-					</nuxt-link>
+					</button>
 				</div>
 			</div>
 		</section>
@@ -1019,6 +1019,47 @@
 				</nav>
 			</div>
 		</footer>
+		<!-- ─── Coming Soon Dialog ─── -->
+		<Dialog :open="showComingSoon" @update:open="(v) => { showComingSoon = v; if (!v) resetComingSoon(); }">
+			<DialogContent class="sm-coming-soon-dialog">
+				<template v-if="!comingSoonSuccess">
+					<DialogHeader>
+						<DialogTitle class="sm-cs-title">Coming soon<span class="sm-accent-dot">.</span></DialogTitle>
+						<DialogDescription class="sm-cs-desc">
+							We are preparing to launch by May of 2026. Join the list to stay updated. <UIcon name="i-lucide-rocket" class="sm-cs-rocket" />
+						</DialogDescription>
+					</DialogHeader>
+					<form class="sm-cs-form" @submit.prevent="submitComingSoon">
+						<input
+							v-model="comingSoonName"
+							type="text"
+							placeholder="Your name"
+							class="sm-cs-input"
+							autocomplete="name"
+						/>
+						<input
+							v-model="comingSoonEmail"
+							type="email"
+							placeholder="Email address"
+							class="sm-cs-input"
+							autocomplete="email"
+						/>
+						<p v-if="comingSoonError" class="sm-cs-error">{{ comingSoonError }}</p>
+						<button type="submit" class="sm-btn-primary sm-cs-submit" :disabled="comingSoonSubmitting">
+							{{ comingSoonSubmitting ? 'Joining...' : 'Stay updated' }}
+						</button>
+					</form>
+				</template>
+				<template v-else>
+					<div class="sm-cs-success">
+						<UIcon name="i-lucide-check-circle" class="sm-cs-success-icon" />
+						<h3 class="sm-cs-title">You're on the list<span class="sm-accent-dot">.</span></h3>
+						<p class="sm-cs-desc">We'll let you know when <span class="sm-brand">Earnest</span> is ready.</p>
+						<button class="sm-btn-ghost sm-cs-close" @click="showComingSoon = false; resetComingSoon()">Close</button>
+					</div>
+				</template>
+			</DialogContent>
+		</Dialog>
 	</div>
 </template>
 
@@ -1045,7 +1086,85 @@ const testimonialsRef = ref(null);
 // ── Scroll-aware nav ──
 const navScrolled = ref(false);
 const hoveredOrbit = ref(-1);
+const orbitAutoActive = ref(true);
+let orbitInterval = null;
+let orbitResumeTimeout = null;
+
+function startOrbitAutoRotate() {
+	if (orbitInterval) return;
+	orbitAutoActive.value = true;
+	let idx = 0;
+	orbitInterval = setInterval(() => {
+		if (!orbitAutoActive.value) return;
+		hoveredOrbit.value = idx;
+		idx = (idx + 1) % replacedTools.length;
+	}, 2000);
+}
+
+function pauseOrbitAutoRotate() {
+	orbitAutoActive.value = false;
+	if (orbitResumeTimeout) clearTimeout(orbitResumeTimeout);
+}
+
+function resumeOrbitAutoRotate() {
+	if (orbitResumeTimeout) clearTimeout(orbitResumeTimeout);
+	orbitResumeTimeout = setTimeout(() => {
+		orbitAutoActive.value = true;
+	}, 3000);
+}
+
 const expandedFeature = ref(-1);
+
+// ── Coming Soon dialog ──
+const showComingSoon = ref(false);
+const comingSoonName = ref('');
+const comingSoonEmail = ref('');
+const comingSoonSubmitting = ref(false);
+const comingSoonSuccess = ref(false);
+const comingSoonError = ref('');
+
+async function submitComingSoon() {
+	comingSoonError.value = '';
+	if (!comingSoonName.value.trim() || !comingSoonEmail.value.trim()) {
+		comingSoonError.value = 'Please fill in both fields.';
+		return;
+	}
+	if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(comingSoonEmail.value)) {
+		comingSoonError.value = 'Please enter a valid email address.';
+		return;
+	}
+	comingSoonSubmitting.value = true;
+	try {
+		const contacts = useDirectusItems('contacts');
+		const contact = await contacts.create({
+			first_name: comingSoonName.value.trim(),
+			email: comingSoonEmail.value.trim(),
+			source: 'sellsheet-coming-soon',
+			email_subscribed: true,
+			status: 'published',
+		});
+		if (contact?.id) {
+			const listContacts = useDirectusItems('mailing_list_contacts');
+			await listContacts.create({
+				list_id: 1,
+				contact_id: contact.id,
+				subscribed: true,
+			});
+		}
+		comingSoonSuccess.value = true;
+	} catch (e) {
+		comingSoonError.value = 'Something went wrong. Please try again.';
+	} finally {
+		comingSoonSubmitting.value = false;
+	}
+}
+
+function resetComingSoon() {
+	comingSoonName.value = '';
+	comingSoonEmail.value = '';
+	comingSoonSuccess.value = false;
+	comingSoonError.value = '';
+}
 const aiChipTextRef = ref(null);
 const aiChipTexts = [
 	'AI analyzing 142 contacts...',
@@ -1252,6 +1371,7 @@ let ctx;
 onMounted(() => {
 	window.addEventListener('scroll', onScroll, { passive: true });
 	onScroll();
+	startOrbitAutoRotate();
 
 	ctx = gsap.context(() => {
 		// Hero timeline
@@ -1344,8 +1464,8 @@ onMounted(() => {
 		// Reveal all sections
 		reveal(replacesRef, '.sm-kicker, .sm-orbit-ring, .sm-replaces-cta');
 		reveal(truthRef, '.sm-section-label, .sm-truth-title, .sm-truth-text, .sm-truth-visual');
-		// Insight cards (standalone row)
-		reveal({ value: document.querySelector('.sm-insight-row') }, '.sm-truth-card', { stagger: 0.08 });
+		// Insight cards (inside truth body)
+		reveal(truthRef, '.sm-truth-card', { stagger: 0.08 });
 		reveal(aiRef, '.sm-ai-headline, .sm-ai-lede, .sm-ai-card', { from: { scale: 0.97 }, to: { scale: 1 } });
 		// Header elements — staggered as a group
 		reveal(featuresRef, '.sm-section-label, .sm-features-big, .sm-features-title, .sm-features-sub, .sm-features-count', { start: 'top 95%', stagger: 0.08 });
@@ -1393,6 +1513,8 @@ onMounted(() => {
 onUnmounted(() => {
 	window.removeEventListener('scroll', onScroll);
 	if (ctx) ctx.revert();
+	if (orbitInterval) clearInterval(orbitInterval);
+	if (orbitResumeTimeout) clearTimeout(orbitResumeTimeout);
 });
 
 useHead({
