@@ -74,7 +74,7 @@ onUnmounted(() => {
 			class="flex items-center rounded-full border-2 border-[var(--cyan)] p-0.5 shadow-inner overflow-hidden transition-opacity"
 			:class="'cursor-pointer hover:opacity-80'"
 			:title="hasMultipleOrgs ? 'Switch organization' : currentOrg?.name"
-			@click="hasMultipleOrgs ? emit('open-org-switcher') : router.push('/organization')"
+			@click="navigateTo('/organizations')"
 		>
 			<Avatar class="size-7">
 				<AvatarImage v-if="getIconUrl(currentOrg)" :src="getIconUrl(currentOrg)" :alt="currentOrg?.name" />

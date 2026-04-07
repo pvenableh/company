@@ -21,6 +21,23 @@ interface QuarterData {
 
 const quarters = ref<QuarterData[]>([]);
 const yearlyGoal = ref(0);
+
+interface MonthlyPoint { month: string; income: number; expenses: number; }
+interface CategoryItem { category: string; label: string; amount: number; color: string; percent: number; }
+
+const monthlyData = ref<MonthlyPoint[]>([]);
+const expenseCategories = ref<CategoryItem[]>([]);
+
+const CATEGORY_LABELS: Record<string, string> = {
+	software: 'Software', hardware: 'Hardware', travel: 'Travel', marketing: 'Marketing',
+	office: 'Office', contractor: 'Contractors', hosting: 'Hosting', insurance: 'Insurance',
+	legal: 'Legal', other: 'Other',
+};
+const CATEGORY_COLORS: Record<string, string> = {
+	software: '#6366f1', hardware: '#8b5cf6', travel: '#f59e0b', marketing: '#3b82f6',
+	office: '#64748b', contractor: '#ef4444', hosting: '#06b6d4', insurance: '#10b981',
+	legal: '#f97316', other: '#9ca3af',
+};
 const editingGoals = ref(false);
 const goalInputs = ref<number[]>([0, 0, 0, 0]);
 const showHelp = ref(false);
@@ -51,7 +68,12 @@ const loadFinancials = async () => {
 		};
 
 		if (selectedOrg.value) {
-			invoiceFilter._and.push({ bill_to: { _eq: selectedOrg.value } });
+			invoiceFilter._and.push({
+				_or: [
+					{ bill_to: { _eq: selectedOrg.value } },
+					{ client: { organization: { _eq: selectedOrg.value } } },
+				],
+			});
 			expenseFilter._and.push({ organization: { _eq: selectedOrg.value } });
 		}
 
@@ -64,7 +86,7 @@ const loadFinancials = async () => {
 				limit: 500,
 			}),
 			expenseItems.list({
-				fields: ['id', 'amount', 'date'],
+				fields: ['id', 'amount', 'date', 'category'],
 				filter: expenseFilter,
 				sort: ['date'],
 				limit: 1000,
@@ -112,12 +134,60 @@ const loadFinancials = async () => {
 
 		quarters.value = qData;
 		yearlyGoal.value = goalInputs.value.reduce((sum, g) => sum + g, 0);
+
+		// Build monthly trend (income vs expenses)
+		const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+		const incomeByMonth = new Map<number, number>();
+		const expenseByMonth = new Map<number, number>();
+		for (let m = 0; m < 12; m++) { incomeByMonth.set(m, 0); expenseByMonth.set(m, 0); }
+
+		for (const inv of (invoices as any[])) {
+			if (inv.status === 'paid' && inv.invoice_date) {
+				const m = new Date(inv.invoice_date).getMonth();
+				incomeByMonth.set(m, (incomeByMonth.get(m) || 0) + (Number(inv.total_amount) || 0));
+			}
+		}
+		for (const exp of (expenseRecords as any[])) {
+			if (exp.date) {
+				const m = new Date(exp.date).getMonth();
+				expenseByMonth.set(m, (expenseByMonth.get(m) || 0) + (Number(exp.amount) || 0));
+			}
+		}
+
+		const now = new Date();
+		const maxMonth = selectedYear.value === currentYear ? now.getMonth() : 11;
+		monthlyData.value = Array.from({ length: maxMonth + 1 }, (_, m) => ({
+			month: monthNames[m]!,
+			income: incomeByMonth.get(m) || 0,
+			expenses: expenseByMonth.get(m) || 0,
+		}));
+
+		// Build expense category breakdown
+		const catMap = new Map<string, number>();
+		for (const exp of (expenseRecords as any[])) {
+			const cat = exp.category || 'other';
+			catMap.set(cat, (catMap.get(cat) || 0) + (Number(exp.amount) || 0));
+		}
+		const catTotal = Array.from(catMap.values()).reduce((s, v) => s + v, 0);
+		expenseCategories.value = Array.from(catMap.entries())
+			.map(([cat, amount]) => ({
+				category: cat,
+				label: CATEGORY_LABELS[cat] || cat,
+				amount,
+				color: CATEGORY_COLORS[cat] || '#9ca3af',
+				percent: catTotal > 0 ? (amount / catTotal) * 100 : 0,
+			}))
+			.sort((a, b) => b.amount - a.amount);
 	} catch (e) {
 		console.warn('[Financials] Could not load data:', e);
 	} finally {
 		isLoading.value = false;
 	}
 };
+
+const maxMonthValue = computed(() => Math.max(...monthlyData.value.map(m => Math.max(m.income, m.expenses)), 1));
+const maxCatAmount = computed(() => Math.max(...expenseCategories.value.map(c => c.amount), 1));
+const maxQuarterActual = computed(() => Math.max(...quarters.value.map(q => q.actual), 1));
 
 const yearlyActual = computed(() => quarters.value.reduce((sum, q) => sum + q.actual, 0));
 const yearlyPaid = computed(() => quarters.value.reduce((sum, q) => sum + q.paid, 0));
@@ -293,6 +363,36 @@ onMounted(() => {
 				</div>
 			</div>
 
+			<!-- Monthly Income vs Expenses Chart -->
+			<div v-if="monthlyData.length > 0" class="mb-6">
+				<p class="text-[10px] text-gray-500 uppercase tracking-wider mb-3 font-semibold">Monthly Income vs Expenses</p>
+				<div class="flex items-end gap-1" style="height: 80px">
+					<div
+						v-for="m in monthlyData"
+						:key="m.month"
+						class="flex-1 flex flex-col items-center justify-end gap-0.5"
+					>
+						<div class="w-full flex gap-px justify-center" :style="{ height: '64px' }" style="align-items: flex-end">
+							<div
+								class="flex-1 rounded-t-[2px] bg-emerald-500/60"
+								:style="{ height: `${Math.max((m.income / maxMonthValue) * 60, 1)}px` }"
+								:title="`Income: ${formatCurrency(m.income)}`"
+							/>
+							<div
+								class="flex-1 rounded-t-[2px] bg-slate-700/50"
+								:style="{ height: `${Math.max((m.expenses / maxMonthValue) * 60, 1)}px` }"
+								:title="`Expenses: ${formatCurrency(m.expenses)}`"
+							/>
+						</div>
+						<span class="text-[8px] text-gray-400">{{ m.month }}</span>
+					</div>
+				</div>
+				<div class="flex items-center gap-4 mt-2 justify-end">
+					<div class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-emerald-500/60"></span><span class="text-[9px] text-gray-400">Income</span></div>
+					<div class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-slate-700/50"></span><span class="text-[9px] text-gray-400">Expenses</span></div>
+				</div>
+			</div>
+
 			<!-- Projection (current year only) -->
 			<div v-if="projection" class="mb-6 p-3 bg-blue-50/50 dark:bg-blue-900/10 rounded-lg border border-blue-200/30 dark:border-blue-800/30">
 				<p class="text-[10px] font-semibold uppercase tracking-wider text-blue-500 mb-2">Year-End Projection</p>
@@ -341,6 +441,13 @@ onMounted(() => {
 						/>
 					</div>
 
+					<!-- Visual stacked bar: paid | pending | expenses -->
+					<div class="flex h-2 rounded-full overflow-hidden mb-2" v-if="q.actual > 0 || q.expenses > 0">
+						<div class="bg-green-500/70 transition-all" :style="{ width: `${(q.paid / (q.actual + q.expenses || 1)) * 100}%` }" />
+						<div class="bg-amber-400/70 transition-all" :style="{ width: `${(q.pending / (q.actual + q.expenses || 1)) * 100}%` }" />
+						<div class="bg-red-400/60 transition-all" :style="{ width: `${(q.expenses / (q.actual + q.expenses || 1)) * 100}%` }" />
+					</div>
+
 					<!-- Paid vs Pending vs Expenses breakdown -->
 					<div class="flex items-center gap-4 text-[10px] flex-wrap">
 						<div class="flex items-center gap-1">
@@ -368,6 +475,37 @@ onMounted(() => {
 								{{ getProgressPercent(q.paid, q.goal) }}%
 							</span>
 						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Expense Category Breakdown -->
+			<div v-if="expenseCategories.length > 0" class="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
+				<div class="flex items-center justify-between mb-3">
+					<p class="text-[10px] text-gray-500 uppercase tracking-wider font-semibold">Expenses by Category</p>
+					<p class="text-xs font-semibold text-foreground">{{ formatCurrency(yearlyExpenses) }}</p>
+				</div>
+
+				<!-- Stacked bar -->
+				<div class="flex h-2.5 rounded-full overflow-hidden mb-4">
+					<div
+						v-for="cat in expenseCategories"
+						:key="cat.category"
+						class="transition-all"
+						:style="{ width: `${cat.percent}%`, backgroundColor: cat.color }"
+						:title="`${cat.label}: ${formatCurrency(cat.amount)}`"
+					/>
+				</div>
+
+				<!-- Category list -->
+				<div class="space-y-2">
+					<div v-for="cat in expenseCategories" :key="cat.category" class="flex items-center gap-3">
+						<span class="w-2 h-2 rounded-full shrink-0" :style="{ backgroundColor: cat.color }" />
+						<span class="text-xs text-foreground/80 flex-1">{{ cat.label }}</span>
+						<div class="w-20 h-1.5 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden">
+							<div class="h-full rounded-full transition-all" :style="{ width: `${(cat.amount / maxCatAmount) * 100}%`, backgroundColor: cat.color }" />
+						</div>
+						<span class="text-xs font-medium text-foreground tabular-nums w-16 text-right">{{ formatCurrency(cat.amount) }}</span>
 					</div>
 				</div>
 			</div>

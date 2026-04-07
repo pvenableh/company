@@ -320,7 +320,7 @@ const saveProgress = async () => {
 			</div>
 
 			<!-- AI nudge for overdue -->
-			<div v-if="stats.overdue > 0" class="ios-card p-4 mb-3 border-l-2 border-amber-500">
+			<AccentCard v-if="stats.overdue > 0" accent="bg-amber-500" class="ios-card mb-3">
 				<div class="flex items-start gap-2">
 					<UIcon name="i-heroicons-sparkles" class="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
 					<p class="text-sm text-foreground">
@@ -328,7 +328,7 @@ const saveProgress = async () => {
 						<span class="text-muted-foreground"> Update your progress or adjust the deadline to stay on track.</span>
 					</p>
 				</div>
-			</div>
+			</AccentCard>
 
 			<!-- Simple filter pills -->
 			<div class="flex gap-1.5">

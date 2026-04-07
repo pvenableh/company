@@ -109,10 +109,17 @@ const insightColors: Record<string, string> = {
 
 // ── Priority Styles ──
 const priorityBg: Record<string, string> = {
-	urgent: 'bg-red-50/50 dark:bg-red-900/10 border-l-red-500',
-	high: 'bg-amber-50/50 dark:bg-amber-900/10 border-l-amber-500',
-	medium: 'bg-blue-50/30 dark:bg-blue-900/10 border-l-blue-500',
-	low: 'bg-gray-50/30 dark:bg-gray-800/30 border-l-gray-300',
+	urgent: 'bg-red-50/50 dark:bg-red-900/10',
+	high: 'bg-amber-50/50 dark:bg-amber-900/10',
+	medium: 'bg-blue-50/30 dark:bg-blue-900/10',
+	low: 'bg-gray-50/30 dark:bg-gray-800/30',
+};
+
+const priorityAccent: Record<string, string> = {
+	urgent: 'bg-red-500',
+	high: 'bg-amber-500',
+	medium: 'bg-blue-500',
+	low: 'bg-gray-300',
 };
 
 const priorityIconColor: Record<string, string> = {
@@ -320,7 +327,9 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 									v-for="action in topActions"
 									:key="action.id"
 									:class="[priorityBg[action.priority] || priorityBg.low]"
-									class="relative rounded-lg p-3 pl-5 border-l-[3px] hover:shadow-md transition-all duration-200 cursor-pointer group overflow-hidden ios-card"
+									is="AccentCard"
+									:accent="priorityAccent[action.priority] || priorityAccent.low"
+									class="hover:shadow-md transition-all duration-200 cursor-pointer group ios-card"
 									@click="action.actionRoute && navigateTo(action.actionRoute)"
 								>
 									<div class="flex items-start gap-3">
@@ -563,9 +572,7 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 				<!-- Goals Summary -->
 				<GoalsSummaryWidget />
 
-				<!-- Expenses Summary -->
-				<ExpensesSummaryWidget />
-
+	
 				<!-- Other Suggestions (lower priority) -->
 				<div v-if="otherSuggestions.length > 0" class="ios-card p-5">
 					<div class="flex items-center justify-between mb-4">

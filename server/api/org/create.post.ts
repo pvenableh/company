@@ -19,23 +19,32 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event);
-  const { name } = body;
+  const { name, plan, industry, location, website, brand_color } = body;
 
   if (!name?.trim()) {
     throw createError({ statusCode: 400, message: 'Organization name is required' });
   }
 
+  const validPlans = ['solo', 'pro', 'enterprise'];
+  const orgPlan = validPlans.includes(plan) ? plan : 'solo';
+
   const directus = getServerDirectus();
 
   try {
     // 1. Create the organization
+    const orgData: Record<string, any> = {
+      name: name.trim(),
+      status: 'published',
+      active: true,
+      plan: orgPlan,
+    };
+    if (industry) orgData.industry = industry;
+    if (location) orgData.location = location.trim();
+    if (website) orgData.website = website.trim();
+    if (brand_color) orgData.brand_color = brand_color.trim();
+
     const org = await directus.request(
-      createItem('organizations', {
-        name: name.trim(),
-        status: 'published',
-        active: true,
-        plan: 'solo',
-      })
+      createItem('organizations', orgData)
     ) as any;
 
     // 2. Link user to org via legacy junction

@@ -1408,19 +1408,16 @@ onMounted(() => {
 		// AI chip text cycler
 		if (aiChipTextRef.value) {
 			let aiIdx = 0;
-			const aiInterval = setInterval(() => {
-				if (!aiChipTextRef.value) return;
+			setInterval(() => {
 				aiIdx = (aiIdx + 1) % aiChipTexts.length;
 				gsap.to(aiChipTextRef.value, {
 					opacity: 0, duration: 0.25, ease: 'power2.in',
 					onComplete: () => {
-						if (!aiChipTextRef.value) return;
 						aiChipTextRef.value.textContent = aiChipTexts[aiIdx];
 						gsap.to(aiChipTextRef.value, { opacity: 1, duration: 0.25, ease: 'power2.out' });
 					}
 				});
 			}, 3000);
-			onUnmounted(() => clearInterval(aiInterval));
 		}
 
 		// Word cycler
@@ -1435,14 +1432,12 @@ onMounted(() => {
 				cycleTl
 					.to(heroCycleRef.value, { opacity: 0, y: -12, duration: 0.2, ease: 'power2.in' })
 					.call(() => {
-						if (!heroCycleRef.value) return;
 						heroCycleRef.value.textContent = word;
 						gsap.to(wrap, { width: heroCycleRef.value.offsetWidth, duration: 0.2, ease: 'power2.out' });
 					})
 					.fromTo(heroCycleRef.value, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.3, ease: 'power2.out' })
 					.to({}, { duration: isLastWord ? 2 : 0.8 });
 			});
-			onUnmounted(() => cycleTl.kill());
 		}
 
 		// Section reveal helper

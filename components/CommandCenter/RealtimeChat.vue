@@ -24,9 +24,13 @@ const channels = ref<any[]>([]);
 // Load available channels
 const loadChannels = async () => {
 	try {
+		const filter: any = { _and: [{ status: { _eq: 'published' } }] };
+		if (selectedOrg.value) {
+			filter._and.push({ organization: { _eq: selectedOrg.value } });
+		}
 		const result = await channelItems.list({
 			fields: ['id', 'name', 'organization.name'],
-			filter: { status: { _eq: 'published' } },
+			filter,
 			sort: ['name'],
 			limit: 50,
 		});
@@ -188,6 +192,17 @@ const formatDate = (dateStr: string) => {
 watch(selectedChannel, () => {
 	loadMessages();
 	setupRealtimeSubscription();
+});
+
+// Reload channels when org changes
+watch(selectedOrg, async () => {
+	selectedChannel.value = null;
+	messages.value = [];
+	await loadChannels();
+	if (selectedChannel.value) {
+		await loadMessages();
+		setupRealtimeSubscription();
+	}
 });
 
 onMounted(async () => {

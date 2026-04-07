@@ -169,8 +169,13 @@ export const useGoals = () => {
 		load();
 	}
 
-	// Reload when user changes
+	// Reload when user or organization changes
 	watch(() => user.value?.id, () => {
+		isLoaded.value = false;
+		load();
+	});
+
+	watch(() => selectedOrg.value, () => {
 		isLoaded.value = false;
 		load();
 	});

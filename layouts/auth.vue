@@ -1,6 +1,11 @@
-<!-- layouts/auth.vue — Earnest-branded auth layout -->
+<!-- layouts/auth.vue — Clean white auth layout with animated chart background -->
 <template>
 	<div class="auth-layout">
+		<!-- Animated chart background (client-only to avoid SSR issues) -->
+		<ClientOnly>
+			<AuthAnimatedChartBg />
+		</ClientOnly>
+
 		<main class="auth-content">
 			<nuxt-link to="/" class="auth-brand">
 				<LogoEarnest size="lg" />
@@ -20,46 +25,40 @@
 @reference "~/assets/css/tailwind.css";
 
 .auth-layout {
-	/* ── Earnest Sellsheet Palette ── */
-	--paper: #F6F1E7;
-	--paper-2: #EDE7D9;
-	--ink: #1C1812;
-	--ink-2: #3D3529;
-	--muted: #8C7B6B;
-	--accent: #B85C2C;
-	--rule: rgba(28, 24, 18, 0.12);
+	--background: 0 0% 100%;
+	--foreground: 0 0% 9%;
+	--card: 0 0% 100%;
+	--card-foreground: 0 0% 9%;
+	--primary: 0 0% 9%;
+	--primary-foreground: 0 0% 98%;
+	--secondary: 0 0% 96%;
+	--secondary-foreground: 0 0% 9%;
+	--muted: 0 0% 96%;
+	--muted-foreground: 0 0% 45%;
+	--accent: 0 0% 96%;
+	--accent-foreground: 0 0% 9%;
+	--border: 0 0% 90%;
+	--input: 0 0% 90%;
+	--ring: 180 50% 50%;
 
-	/* ── Override shadcn/ui tokens so child components inherit the Earnest theme ── */
-	--background: 40 46% 93%;        /* paper */
-	--foreground: 36 22% 9%;         /* ink */
-	--card: 39 33% 95%;              /* slightly lighter than paper */
-	--card-foreground: 36 22% 9%;    /* ink */
-	--primary: 21 61% 45%;           /* accent — warm terracotta */
-	--primary-foreground: 40 46% 96%; /* light cream on accent */
-	--secondary: 39 35% 89%;         /* paper-2 */
-	--secondary-foreground: 36 17% 20%; /* ink-2 */
-	--muted: 39 35% 89%;             /* paper-2 */
-	--muted-foreground: 29 14% 48%;  /* muted brown */
-	--accent: 39 35% 89%;
-	--accent-foreground: 36 17% 20%;
-	--border: 34 20% 82%;            /* warm border */
-	--input: 34 20% 82%;             /* warm input border */
-	--ring: 21 61% 45%;              /* accent for focus ring */
-
+	position: relative;
 	min-height: 100svh;
 	display: flex;
 	flex-direction: column;
-	background: var(--paper);
-	color: var(--ink);
-	font-family: var(--font-proxima-light);
+	background: hsl(var(--background));
+	color: hsl(var(--foreground));
 	-webkit-font-smoothing: antialiased;
+	overflow: hidden;
 }
 
 .auth-content {
+	position: relative;
+	z-index: 1;
 	flex: 1;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
+	justify-content: center;
 	padding: 48px 16px 24px;
 }
 
@@ -68,8 +67,8 @@
 	flex-direction: column;
 	align-items: center;
 	text-decoration: none;
-	color: var(--ink);
-	margin-bottom: 32px;
+	color: hsl(var(--foreground));
+	margin-bottom: 40px;
 }
 
 .auth-tagline {
@@ -77,11 +76,13 @@
 	font-style: italic;
 	font-size: 11px;
 	letter-spacing: 0.06em;
-	color: var(--muted);
+	color: hsl(var(--muted-foreground));
 	margin-top: 4px;
 }
 
 .auth-footer {
+	position: relative;
+	z-index: 1;
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -89,20 +90,20 @@
 	padding: 16px 24px;
 	font-size: 11px;
 	letter-spacing: 0.04em;
-	color: var(--muted);
+	color: hsl(var(--muted-foreground));
 }
 
 .auth-footer a {
-	color: var(--muted);
+	color: hsl(var(--muted-foreground));
 	text-decoration: none;
 	transition: color 0.15s;
 }
 
 .auth-footer a:hover {
-	color: var(--ink);
+	color: hsl(var(--foreground));
 }
 
 .auth-footer-sep {
-	opacity: 0.5;
+	opacity: 0.4;
 }
 </style>

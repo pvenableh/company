@@ -17,6 +17,7 @@ const { currentContext } = useContextualHat()
 // ── Sidebar state (default collapsed on desktop) ──
 const sidebarCollapsed = ref(true)
 const mobileDrawerOpen = ref(false)
+const showOrgSwitcher = ref(false)
 
 // ── Collapsible space sections ──
 const SPACE_STORAGE_KEY = 'earnest-spaces-collapsed'
@@ -248,7 +249,7 @@ watch(() => route.path, () => {
 					<!-- Desktop: inline client & team selects -->
 					<ClientOnly>
 						<div class="hidden lg:flex items-center gap-1">
-							<LayoutClientSelect v-if="user" :user="user" />
+							<LayoutClientSelect v-if="user" :user="user" @open-org-switcher="showOrgSwitcher = true" />
 							<LayoutTeamSelect v-if="user" />
 						</div>
 					</ClientOnly>
@@ -385,6 +386,9 @@ watch(() => route.path, () => {
 				<span class="text-[9px]">Search</span>
 			</button>
 		</nav>
+
+		<!-- Org Switcher Modal -->
+		<LayoutOrgSwitcher v-model="showOrgSwitcher" />
 	</div>
 </template>
 

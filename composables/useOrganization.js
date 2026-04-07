@@ -47,8 +47,8 @@ export function useOrganization() {
 		error.value = null;
 
 		try {
-			// Fetch org list without nested ticket/project arrays (performance fix)
-			const data = await orgItems.list({
+			// Fetch orgs via legacy junction (organizations_directus_users)
+			const junctionOrgs = await orgItems.list({
 				filter: {
 					users: { directus_users_id: { _eq: user.value.id } },
 					active: { _neq: false },
@@ -75,6 +75,28 @@ export function useOrganization() {
 				const orgId = typeof m.organization === 'object' ? m.organization?.id : m.organization;
 				if (orgId) membershipByOrg[orgId] = m;
 			}
+
+			// Fetch any membership-only orgs not already in junction results
+			const junctionOrgIds = new Set(junctionOrgs.map((org) => org.id));
+			const membershipOnlyOrgIds = Object.keys(membershipByOrg).filter((id) => !junctionOrgIds.has(id));
+
+			let membershipOrgs = [];
+			if (membershipOnlyOrgIds.length > 0) {
+				try {
+					membershipOrgs = await orgItems.list({
+						filter: {
+							id: { _in: membershipOnlyOrgIds },
+							active: { _neq: false },
+						},
+						fields: ['id', 'name', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'default_hourly_rate'],
+					});
+				} catch {
+					// Continue if membership-only orgs can't be fetched
+				}
+			}
+
+			// Merge both sources
+			const data = [...junctionOrgs, ...membershipOrgs];
 
 			// Fetch counts per org using aggregate queries (avoids transferring full arrays)
 			const orgIds = data.map((org) => org.id);

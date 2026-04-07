@@ -43,6 +43,15 @@ const typeIconColor = computed(() => {
 	}
 });
 
+const typeAccent = computed(() => {
+	switch (props.event.type) {
+		case 'video_meeting': return 'bg-emerald-500';
+		case 'follow_up': return 'bg-amber-500';
+		case 'external': return 'bg-gray-400';
+		default: return 'bg-blue-500';
+	}
+});
+
 const timeDisplay = computed(() => {
 	if (!props.event.start_time) return '';
 	try {
@@ -60,7 +69,8 @@ const leadStageColor = computed(() => {
 <template>
 	<div
 		:class="[typeBg, typeColor, compact ? 'px-1.5 py-0.5' : 'px-2 py-1.5']"
-		class="rounded-md border-l-[3px] transition-all duration-200 cursor-pointer group hover:shadow-sm"
+		is="AccentCard" :accent="typeAccent"
+		class="!p-1.5 !pl-3 transition-all duration-200 cursor-pointer group hover:shadow-sm !rounded-md"
 	>
 		<div class="flex items-center gap-1.5 min-w-0">
 			<UIcon :name="typeIcon" :class="typeIconColor" class="w-3 h-3 flex-shrink-0" />

@@ -167,14 +167,9 @@ export const useQuickTasks = () => {
 					},
 				],
 			};
-			// Optionally scope to org
+			// Scope to selected org
 			if (selectedOrg.value) {
-				filter._and.push({
-					_or: [
-						{ organization_id: { _eq: selectedOrg.value } },
-						{ organization_id: { _null: true } },
-					],
-				});
+				filter._and.push({ organization_id: { _eq: selectedOrg.value } });
 			}
 
 			const records = await taskItems.list({
@@ -400,8 +395,13 @@ export const useQuickTasks = () => {
 		load();
 	}
 
-	// Reload when user changes
+	// Reload when user or organization changes
 	watch(() => user.value?.id, () => {
+		isLoaded.value = false;
+		load();
+	});
+
+	watch(() => selectedOrg.value, () => {
 		isLoaded.value = false;
 		load();
 	});

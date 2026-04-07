@@ -46,15 +46,11 @@ const handleAction = () => {
 </script>
 
 <template>
-	<div
-		:class="[priorityColors[suggestion.priority] || priorityColors.low]"
-		class="relative rounded-lg p-3 pl-5 hover:shadow-md transition-all duration-200 cursor-pointer group overflow-hidden"
+	<AccentCard
+		:accent="priorityLineColors[suggestion.priority] || priorityLineColors.low"
+		:class="[priorityColors[suggestion.priority] || priorityColors.low, 'hover:shadow-md transition-all duration-200 cursor-pointer group']"
 		@click="handleAction"
 	>
-		<span
-			:class="[priorityLineColors[suggestion.priority] || priorityLineColors.low]"
-			class="absolute left-0 top-0 bottom-0 w-1"
-		/>
 		<div class="flex items-start gap-3">
 			<div class="flex-shrink-0 mt-0.5">
 				<UIcon
@@ -78,5 +74,5 @@ const handleAction = () => {
 				</span>
 			</div>
 		</div>
-	</div>
+	</AccentCard>
 </template>

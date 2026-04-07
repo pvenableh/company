@@ -1,6 +1,6 @@
 <script setup>
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Building2, Plus, Check } from 'lucide-vue-next'
+import { Building2, Plus, Check, Settings } from 'lucide-vue-next'
 
 const props = defineProps({
 	modelValue: {
@@ -97,6 +97,14 @@ const handleRegisterOrg = () => {
 						</div>
 					</div>
 
+					<NuxtLink
+						:to="`/organization`"
+						class="p-1.5 rounded-lg hover:bg-gray-100 transition-colors shrink-0"
+						title="Organization settings"
+						@click.stop="isOpen = false; setOrganization(org.id)"
+					>
+						<Settings class="size-4 text-gray-400 hover:text-gray-600" />
+					</NuxtLink>
 					<Check
 						v-if="selectedOrg === org.id"
 						class="size-5 text-[var(--cyan)] shrink-0"

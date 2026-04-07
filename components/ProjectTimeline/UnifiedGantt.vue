@@ -288,35 +288,6 @@ function hasBar(row: GanttRow) {
 	return row.startDate || row.endDate || row.dueDate;
 }
 
-// ── Dependency lines (project → events/tickets) ──
-const dependencies = computed(() => {
-	const deps: { fromId: string; toId: string }[] = [];
-	for (const row of rows.value) {
-		if (row.projectId && row.type !== 'project') {
-			deps.push({ fromId: row.projectId, toId: row.id });
-		}
-	}
-	return deps;
-});
-
-function getRowY(id: string): number {
-	const idx = rows.value.findIndex(r => r.id === id);
-	return idx >= 0 ? idx * ROW_HEIGHT + HEADER_HEIGHT + ROW_HEIGHT / 2 : 0;
-}
-
-function getRowEndX(id: string): number {
-	const row = rows.value.find(r => r.id === id);
-	if (!row) return 0;
-	const style = getBarStyle(row);
-	return parseFloat(style.left) + parseFloat(style.width);
-}
-
-function getRowStartX(id: string): number {
-	const row = rows.value.find(r => r.id === id);
-	if (!row) return 0;
-	return parseFloat(getBarStyle(row).left);
-}
-
 // ── Scroll sync ──
 function syncScroll(e: Event) {
 	const target = e.target as HTMLElement;
@@ -454,35 +425,40 @@ function handleCloseDetail() {
 						v-for="row in rows"
 						:key="'side-' + row.id"
 						class="gantt-sidebar-row"
-						:class="{ 'gantt-sidebar-row-project': row.type === 'project' }"
-						:style="{ paddingLeft: `${12 + row.depth * 20}px` }"
+						:class="{
+							'gantt-sidebar-row-project': row.type === 'project',
+							'gantt-sidebar-row-child': row.depth > 0,
+						}"
+						:style="{ paddingLeft: `${12 + row.depth * 16}px` }"
 					>
+						<!-- Left color bar for nested children -->
+						<span
+							v-if="row.depth > 0"
+							class="gantt-sidebar-color-bar"
+							:style="{ backgroundColor: row.color }"
+						/>
+
 						<!-- Expand/collapse for projects -->
 						<button
 							v-if="row.hasChildren && row.type === 'project' && row.id !== 'tasks-section'"
-							class="w-4 h-4 flex items-center justify-center shrink-0 text-muted-foreground hover:text-foreground"
+							class="w-4 h-4 flex items-center justify-center shrink-0 text-muted-foreground/60 hover:text-foreground transition-colors"
 							@click.stop="toggleProject(row.id)"
 						>
 							<Icon :name="row.expanded ? 'lucide:chevron-down' : 'lucide:chevron-right'" class="w-3 h-3" />
 						</button>
-						<span v-else class="w-4 shrink-0" />
+						<span v-else-if="row.type === 'project'" class="w-4 shrink-0" />
 
-						<!-- Color dot -->
+						<!-- Color dot (projects only) -->
 						<span
+							v-if="row.type === 'project'"
 							class="w-2 h-2 rounded-full shrink-0"
 							:style="{ backgroundColor: row.color }"
-						/>
-
-						<!-- Type icon -->
-						<Icon
-							:name="row.type === 'project' ? 'lucide:folder' : row.type === 'event' ? 'lucide:calendar' : row.type === 'ticket' ? 'lucide:ticket' : 'lucide:check-square'"
-							class="w-3 h-3 shrink-0 text-muted-foreground"
 						/>
 
 						<!-- Label -->
 						<span
 							class="text-[12px] truncate flex-1"
-							:class="row.type === 'project' ? 'font-semibold text-foreground' : 'text-foreground/80'"
+							:class="row.type === 'project' ? 'font-semibold text-foreground' : 'text-foreground/70'"
 							:title="row.label"
 						>
 							{{ row.label }}
@@ -561,23 +537,6 @@ function handleCloseDetail() {
 						</div>
 					</div>
 
-					<!-- Dependency arrows -->
-					<svg class="gantt-deps" :width="chartWidth" :height="rows.length * ROW_HEIGHT">
-						<defs>
-							<marker id="arrowhead" markerWidth="6" markerHeight="4" refX="5" refY="2" orient="auto">
-								<polygon points="0 0, 6 2, 0 4" fill="hsl(var(--muted-foreground) / 0.3)" />
-							</marker>
-						</defs>
-						<path
-							v-for="dep in dependencies"
-							:key="dep.fromId + '-' + dep.toId"
-							:d="`M ${getRowEndX(dep.fromId)} ${getRowY(dep.fromId)} C ${getRowEndX(dep.fromId) + 30} ${getRowY(dep.fromId)}, ${getRowStartX(dep.toId) - 30} ${getRowY(dep.toId)}, ${getRowStartX(dep.toId)} ${getRowY(dep.toId)}`"
-							fill="none"
-							stroke="hsl(var(--muted-foreground) / 0.2)"
-							stroke-width="1.5"
-							marker-end="url(#arrowhead)"
-						/>
-					</svg>
 				</div>
 			</div>
 		</div>
@@ -680,14 +639,29 @@ function handleCloseDetail() {
 	align-items: center;
 	gap: 6px;
 	padding-right: 12px;
-	border-bottom: 1px solid hsl(var(--border) / 0.15);
+	border-bottom: 1px solid hsl(var(--border) / 0.1);
 	cursor: default;
 	transition: background 0.1s;
+	position: relative;
 }
-.gantt-sidebar-row:hover { background: hsl(var(--muted) / 0.2); }
+.gantt-sidebar-row:hover { background: hsl(var(--muted) / 0.15); }
 
 .gantt-sidebar-row-project {
-	background: hsl(var(--muted) / 0.08);
+	background: hsl(var(--muted) / 0.06);
+}
+
+.gantt-sidebar-row-child {
+	background: transparent;
+}
+
+.gantt-sidebar-color-bar {
+	position: absolute;
+	left: 0;
+	top: 4px;
+	bottom: 4px;
+	width: 2px;
+	border-radius: 1px;
+	opacity: 0.5;
 }
 
 /* ── Chart area ── */
@@ -736,7 +710,7 @@ function handleCloseDetail() {
 	top: 0;
 	bottom: 0;
 	width: 1px;
-	background: hsl(var(--border) / 0.15);
+	background: hsl(var(--border) / 0.08);
 	pointer-events: none;
 }
 
@@ -754,13 +728,14 @@ function handleCloseDetail() {
 	top: -44px;
 	left: 50%;
 	transform: translateX(-50%);
-	font-size: 9px;
+	font-size: 8px;
 	font-weight: 700;
-	letter-spacing: 0.05em;
-	color: white;
-	background: hsl(var(--primary));
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: hsl(var(--primary));
+	background: hsl(var(--primary) / 0.08);
 	padding: 2px 8px;
-	border-radius: 10px;
+	border-radius: 999px;
 	white-space: nowrap;
 }
 
@@ -769,9 +744,9 @@ function handleCloseDetail() {
 	top: 0;
 	bottom: 0;
 	left: 0;
-	width: 2px;
+	width: 1px;
 	background: hsl(var(--primary));
-	opacity: 0.5;
+	opacity: 0.35;
 }
 
 /* ── Rows ── */
@@ -779,41 +754,42 @@ function handleCloseDetail() {
 	position: absolute;
 	left: 0;
 	right: 0;
-	border-bottom: 1px solid hsl(var(--border) / 0.1);
+	border-bottom: 1px solid hsl(var(--border) / 0.06);
 }
-.gantt-row-alt { background: hsl(var(--muted) / 0.04); }
-.gantt-row-project { background: hsl(var(--muted) / 0.08); }
+.gantt-row-alt { background: hsl(var(--muted) / 0.02); }
+.gantt-row-project { background: hsl(var(--muted) / 0.05); }
 
 /* ── Bars ── */
 .gantt-bar {
 	position: absolute;
 	top: 50%;
 	transform: translateY(-50%);
-	height: 22px;
-	border-radius: 6px;
+	height: 20px;
+	border-radius: 999px;
 	display: flex;
 	align-items: center;
-	padding: 0 8px;
+	padding: 0 10px;
 	cursor: pointer;
-	opacity: 0.85;
-	transition: opacity 0.15s, transform 0.15s;
+	opacity: 0.8;
+	transition: opacity 0.15s;
 	overflow: hidden;
 	min-width: 8px;
+	box-shadow: inset 0 1px 0 rgba(255,255,255,0.15);
 }
 .gantt-bar:hover {
 	opacity: 1;
-	transform: translateY(-50%) scale(1.02);
 	z-index: 2;
 }
 
 .gantt-bar-project {
-	height: 26px;
-	border-radius: 8px;
+	height: 24px;
 	font-weight: 600;
 	opacity: 0.9;
 }
 
-.gantt-bar-completed { opacity: 0.45; }
+.gantt-bar-completed {
+	opacity: 0.35;
+}
 
 .gantt-bar-label {
 	font-size: 10px;
@@ -822,7 +798,7 @@ function handleCloseDetail() {
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
-	text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+	text-shadow: 0 1px 2px rgba(0,0,0,0.15);
 }
 
 /* ── Milestones (diamond) ── */
@@ -841,12 +817,4 @@ function handleCloseDetail() {
 	opacity: 0.8;
 }
 
-/* ── Dependency arrows ── */
-.gantt-deps {
-	position: absolute;
-	top: 0;
-	left: 0;
-	pointer-events: none;
-	z-index: 3;
-}
 </style>

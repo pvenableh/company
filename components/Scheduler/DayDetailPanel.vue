@@ -44,10 +44,10 @@ const formatDuration = (minutes: number | null | undefined) => {
 
 const typeStyles = (event: CalendarEvent) => {
 	switch (event.type) {
-		case 'video_meeting': return { bg: 'bg-emerald-50/50 dark:bg-emerald-900/10', border: 'border-l-emerald-500', icon: 'i-heroicons-video-camera', iconColor: 'text-emerald-500', label: 'Video Meeting' };
-		case 'follow_up': return { bg: 'bg-amber-50/50 dark:bg-amber-900/10', border: 'border-l-amber-500', icon: 'i-heroicons-arrow-path', iconColor: 'text-amber-500', label: 'Follow-up' };
-		case 'external': return { bg: 'bg-gray-50/50 dark:bg-gray-800/30', border: 'border-l-gray-400', icon: 'i-heroicons-globe-alt', iconColor: 'text-gray-400', label: 'External' };
-		default: return { bg: 'bg-blue-50/50 dark:bg-blue-900/10', border: 'border-l-blue-500', icon: 'i-heroicons-calendar', iconColor: 'text-blue-500', label: 'Appointment' };
+		case 'video_meeting': return { bg: 'bg-emerald-50/50 dark:bg-emerald-900/10', accent: 'bg-emerald-500', icon: 'i-heroicons-video-camera', iconColor: 'text-emerald-500', label: 'Video Meeting' };
+		case 'follow_up': return { bg: 'bg-amber-50/50 dark:bg-amber-900/10', accent: 'bg-amber-500', icon: 'i-heroicons-arrow-path', iconColor: 'text-amber-500', label: 'Follow-up' };
+		case 'external': return { bg: 'bg-gray-50/50 dark:bg-gray-800/30', accent: 'bg-gray-400', icon: 'i-heroicons-globe-alt', iconColor: 'text-gray-400', label: 'External' };
+		default: return { bg: 'bg-blue-50/50 dark:bg-blue-900/10', accent: 'bg-blue-500', icon: 'i-heroicons-calendar', iconColor: 'text-blue-500', label: 'Appointment' };
 	}
 };
 
@@ -100,11 +100,12 @@ const handleEventClick = (event: CalendarEvent) => {
 				<div
 					v-for="event in events"
 					:key="event.id"
-					:class="[typeStyles(event).bg, typeStyles(event).border]"
-					class="rounded-lg border-l-[3px] p-3 cursor-pointer hover:shadow-md transition-all duration-200 ios-press group"
+					:class="[typeStyles(event).bg]"
+					is="AccentCard" :accent="typeStyles(event).accent"
+					class="cursor-pointer hover:shadow-md transition-all duration-200 ios-press group"
 					@click="handleEventClick(event)"
 				>
-					<div class="flex items-start gap-3">
+										<div class="flex items-start gap-3">
 						<div class="flex-shrink-0 mt-0.5">
 							<UIcon :name="typeStyles(event).icon" :class="typeStyles(event).iconColor" class="w-4 h-4" />
 						</div>
