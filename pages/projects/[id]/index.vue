@@ -194,17 +194,16 @@ const openAttachInvoice = async () => {
 	showAttachInvoice.value = true;
 	loadingUnattached.value = true;
 	try {
+		const { selectedClient } = useClients();
 		const filter = {
 			_and: [
 				{ project: { _null: true } },
 				{ status: { _nin: ['archived'] } },
 			],
 		};
-		// Scope to project's client if available, otherwise org
-		if (project?.client?.id) {
-			filter._and.push({ client: { _eq: project.client.id } });
-		} else if (project?.organization?.id) {
-			filter._and.push({ organization: { _eq: project.organization.id } });
+		// Filter by selected client if one is chosen in the header
+		if (selectedClient.value && selectedClient.value !== 'org') {
+			filter._and.push({ client: { _eq: selectedClient.value } });
 		}
 		const invs = await invoiceItems.list({
 			fields: ['id', 'invoice_code', 'status', 'total_amount', 'client.id', 'client.name', 'bill_to.name', 'date_created'],
