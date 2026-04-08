@@ -154,12 +154,19 @@ ${jsonRules}`;
     let generated: GenerateTimelineResponse;
     try {
       let content = response.content.trim();
+      // Strip markdown fences
       if (content.startsWith('```')) {
-        content = content.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+        content = content.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?\s*```\s*$/, '');
+      }
+      // Extract JSON object if there's surrounding text
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        content = jsonMatch[0];
       }
       generated = JSON.parse(content);
-    } catch {
+    } catch (parseError) {
       console.error('[generate-events] Failed to parse LLM response:', response.content.substring(0, 500));
+      console.error('[generate-events] Parse error:', parseError);
       throw createError({
         statusCode: 502,
         message: 'AI returned an invalid response. Please try again.',
@@ -204,10 +211,11 @@ ${jsonRules}`;
     } satisfies GenerateTimelineResponse;
   } catch (error: any) {
     if (error.statusCode) throw error;
-    console.error('[generate-events] LLM error:', error);
+    console.error('[generate-events] LLM error:', error?.message || error);
+    console.error('[generate-events] Error details:', error?.status, error?.error?.type);
     throw createError({
       statusCode: 500,
-      message: 'Failed to generate timeline. Please try again.',
+      message: `Failed to generate timeline: ${error?.message || 'Unknown error'}. Please try again.`,
     });
   }
 });

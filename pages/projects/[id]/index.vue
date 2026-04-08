@@ -196,15 +196,15 @@ const openAttachInvoice = async () => {
 	try {
 		const filter = {
 			_and: [
-				{ _or: [{ project: { _null: true } }, { project: { _eq: '' } }] },
+				{ project: { _null: true } },
 				{ status: { _nin: ['archived'] } },
 			],
 		};
 		// Scope to project's client if available, otherwise org
-		if (project.value?.client?.id) {
-			filter._and.push({ client: { _eq: project.value.client.id } });
-		} else if (project.value?.organization?.id) {
-			filter._and.push({ organization: { _eq: project.value.organization.id } });
+		if (project?.client?.id) {
+			filter._and.push({ client: { _eq: project.client.id } });
+		} else if (project?.organization?.id) {
+			filter._and.push({ organization: { _eq: project.organization.id } });
 		}
 		const invs = await invoiceItems.list({
 			fields: ['id', 'invoice_code', 'status', 'total_amount', 'client.id', 'client.name', 'bill_to.name', 'date_created'],
@@ -245,6 +245,10 @@ const documents = ref([]);
 const loadingDocs = ref(false);
 const uploadingDoc = ref(false);
 const fileInput = ref(null);
+const showAttachFile = ref(false);
+const existingFiles = ref([]);
+const loadingExistingFiles = ref(false);
+const fileSearchQuery = ref('');
 
 const loadDocuments = async () => {
 	loadingDocs.value = true;
@@ -324,6 +328,62 @@ const formatFileSize = (bytes) => {
 	if (bytes < 1024) return `${bytes} B`;
 	if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
 	return `${(bytes / 1048576).toFixed(1)} MB`;
+};
+
+const openAttachFile = async () => {
+	showAttachFile.value = true;
+	fileSearchQuery.value = '';
+	loadingExistingFiles.value = true;
+	try {
+		// Get IDs of files already linked to this project
+		const linkedIds = documents.value.map((d) => d.directus_files_id?.id).filter(Boolean);
+
+		const filter = { _and: [] };
+		// Exclude already-linked files
+		if (linkedIds.length > 0) {
+			filter._and.push({ id: { _nin: linkedIds } });
+		}
+		// Only show common document types
+		filter._and.push({
+			type: { _nin: ['application/octet-stream'] },
+		});
+
+		const files = await fileItems.list({
+			fields: ['id', 'title', 'filename_download', 'type', 'filesize', 'uploaded_on'],
+			filter: filter._and.length > 0 ? filter : undefined,
+			sort: ['-uploaded_on'],
+			limit: 50,
+		});
+		existingFiles.value = files || [];
+	} catch (err) {
+		console.error('Error fetching existing files:', err);
+		existingFiles.value = [];
+	} finally {
+		loadingExistingFiles.value = false;
+	}
+};
+
+const filteredExistingFiles = computed(() => {
+	if (!fileSearchQuery.value.trim()) return existingFiles.value;
+	const q = fileSearchQuery.value.toLowerCase();
+	return existingFiles.value.filter((f) =>
+		(f.title || f.filename_download || '').toLowerCase().includes(q)
+	);
+});
+
+const attachFile = async (fileId) => {
+	try {
+		await projectFilesItems.create({
+			projects_id: params.id,
+			directus_files_id: fileId,
+		});
+		existingFiles.value = existingFiles.value.filter((f) => f.id !== fileId);
+		toast.add({ title: 'File attached to project', color: 'green' });
+		loadDocuments();
+	} catch (err) {
+		console.error('Error attaching file:', err);
+		toast.add({ title: 'Failed to attach file', color: 'red' });
+	}
 };
 
 // ── Activity for this project ──
@@ -597,11 +657,17 @@ const formatCurrency = (amount) => {
 					<div class="w-full py-6">
 						<div class="flex items-center justify-between mb-4">
 							<h2 class="t-label text-muted-foreground">Documents</h2>
-							<Button size="sm" variant="outline" class="uppercase text-[10px] tracking-wide" @click="triggerFileUpload" :disabled="uploadingDoc">
-								<UIcon v-if="uploadingDoc" name="i-heroicons-arrow-path" class="h-3 w-3 mr-1 animate-spin" />
-								<UIcon v-else name="i-heroicons-arrow-up-tray" class="h-3 w-3 mr-1" />
-								Upload
-							</Button>
+							<div class="flex items-center gap-2">
+								<Button size="sm" variant="outline" class="uppercase text-[10px] tracking-wide" @click="openAttachFile">
+									<UIcon name="i-heroicons-link" class="h-3 w-3 mr-1" />
+									Attach Existing
+								</Button>
+								<Button size="sm" variant="outline" class="uppercase text-[10px] tracking-wide" @click="triggerFileUpload" :disabled="uploadingDoc">
+									<UIcon v-if="uploadingDoc" name="i-heroicons-arrow-path" class="h-3 w-3 mr-1 animate-spin" />
+									<UIcon v-else name="i-heroicons-arrow-up-tray" class="h-3 w-3 mr-1" />
+									Upload
+								</Button>
+							</div>
 							<input ref="fileInput" type="file" multiple class="hidden" @change="handleFileUpload" />
 						</div>
 
@@ -644,6 +710,64 @@ const formatCurrency = (amount) => {
 							</Button>
 						</div>
 						</transition>
+
+						<!-- Attach Existing File Modal -->
+						<ClientOnly>
+							<UModal v-model="showAttachFile">
+								<div class="p-6">
+									<h3 class="text-lg font-semibold mb-4">Attach Existing File</h3>
+
+									<UInput
+										v-model="fileSearchQuery"
+										icon="i-heroicons-magnifying-glass"
+										placeholder="Search files..."
+										size="sm"
+										class="mb-4"
+									/>
+
+									<div v-if="loadingExistingFiles" class="space-y-2 py-4">
+										<div v-for="n in 3" :key="n" class="h-14 bg-muted rounded-xl animate-pulse" />
+									</div>
+
+									<div v-else-if="filteredExistingFiles.length === 0" class="text-center py-8 text-muted-foreground">
+										<UIcon name="i-heroicons-document-magnifying-glass" class="w-8 h-8 mx-auto mb-2 opacity-40" />
+										<p class="text-sm">{{ fileSearchQuery ? 'No matching files found.' : 'No files available to attach.' }}</p>
+									</div>
+
+									<div v-else class="space-y-2 max-h-[60vh] overflow-y-auto">
+										<div
+											v-for="file in filteredExistingFiles"
+											:key="file.id"
+											class="ios-card p-3 flex items-center justify-between"
+										>
+											<div class="flex items-center gap-3 min-w-0">
+												<UIcon :name="getFileIcon(file.type)" class="w-4 h-4 text-muted-foreground flex-shrink-0" />
+												<div class="min-w-0">
+													<p class="text-sm font-medium text-foreground truncate">{{ file.title || file.filename_download }}</p>
+													<p class="text-[10px] text-muted-foreground">
+														{{ formatFileSize(file.filesize) }}
+														<span v-if="file.uploaded_on"> &middot; {{ getFriendlyDate(file.uploaded_on) }}</span>
+													</p>
+												</div>
+											</div>
+											<UButton
+												icon="i-heroicons-link"
+												size="xs"
+												color="primary"
+												variant="soft"
+												@click="attachFile(file.id)"
+											>
+												Attach
+											</UButton>
+										</div>
+									</div>
+
+									<div class="flex justify-end mt-4 pt-4 border-t border-border/40">
+										<UButton color="gray" variant="ghost" @click="showAttachFile = false">Close</UButton>
+									</div>
+								</div>
+							</UModal>
+						</ClientOnly>
 					</div>
 				</template>
 				<template #billing="{ item }">
