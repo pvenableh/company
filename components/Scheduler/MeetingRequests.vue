@@ -51,8 +51,6 @@ const formatDate = (dateStr: string) => {
 
 // Uses formatTimeFromString from utils/dates.ts
 const formatTime = (timeStr: string) => formatTimeFromString(timeStr);
-	return `${displayHour}:${m} ${ampm}`;
-};
 
 const getRequesterName = (request: any) => {
 	const r = request.requester_id;
