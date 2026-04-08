@@ -69,12 +69,9 @@ const xTickFormat = (i: number) => {
 
 const crosshairTemplate = componentToString(chartConfig, ChartTooltipContent, { hideLabel: true });
 
+// Uses formatWeekday from utils/dates.ts (adds T00:00:00 to avoid timezone shift)
 const formatDate = (dateStr: string) => {
-	try {
-		const d = new Date(dateStr + 'T00:00:00');
-		return d.toLocaleDateString('en-US', { weekday: 'short' });
-	} catch {
-		return dateStr;
-	}
+	if (!dateStr) return '';
+	return formatWeekday(dateStr + 'T00:00:00') || dateStr;
 };
 </script>

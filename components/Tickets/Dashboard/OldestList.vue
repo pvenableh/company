@@ -54,7 +54,7 @@
 </template>
 
 <script setup>
-import { differenceInHours, format } from 'date-fns';
+import { differenceInHours } from 'date-fns';
 
 const props = defineProps({
 	tickets: {
@@ -89,10 +89,8 @@ const getTicketAge = (ticket) => {
 	return differenceInHours(now, createdDate);
 };
 
-const formatDate = (dateString) => {
-	const date = new Date(dateString);
-	return format(date, 'MMM d, yyyy');
-};
+// Uses getFriendlyDateThree from utils/dates.ts
+const formatDate = (dateString) => getFriendlyDateThree(dateString);
 
 const formatDuration = (hours) => {
 	if (hours === 0) return 'N/A';

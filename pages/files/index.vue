@@ -133,13 +133,9 @@ function formatFileSize(bytes: number | null | undefined): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
+// Uses getFriendlyDateThree from utils/dates.ts
 function formatDate(dateStr: string | null): string {
-  if (!dateStr) return '';
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
+  return getFriendlyDateThree(dateStr);
 }
 
 function getFileName(file: any): string {

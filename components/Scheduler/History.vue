@@ -110,9 +110,10 @@ const getStatusColor = (status) => {
 	return colors[status] || 'gray';
 };
 
+// Uses formatDateWithTime from utils/dates.ts
 const formatDateTime = (dateStr) => {
 	if (!dateStr) return '';
-	return format(new Date(dateStr), 'MMM d, yyyy · h:mm a');
+	return formatDateWithTime(dateStr);
 };
 
 const formatDuration = (minutes) => {

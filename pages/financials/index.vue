@@ -36,9 +36,7 @@ const netChange = computed(() => lastMonthNet.value !== 0 ? Math.round(((thisMon
 
 const totalUnpaid = computed(() => unpaidInvoices.value.reduce((s, inv) => s + (Number(inv.total_amount) || 0), 0));
 
-function getDaysUntilDue(dueDate: string): number {
-  return Math.ceil((new Date(dueDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-}
+// getDaysUntilDue is auto-imported from utils/dates.ts
 
 async function loadDashboard() {
   isLoadingCharts.value = true;

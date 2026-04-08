@@ -183,7 +183,7 @@
 </template>
 
 <script setup>
-import { formatDistanceToNow } from 'date-fns';
+// date-fns formatDistanceToNow replaced by getRelativeTime from utils/dates.ts
 
 // Add a props option to enable debug mode directly in the template
 const props = defineProps({
@@ -832,36 +832,12 @@ const loadMore = async () => {
 	await fetchActivity(false);
 };
 
-// Format date with option for full date display
+// Format date: relative time by default, full date+time when fullFormat=true
+// Uses getRelativeTime and formatDateWithTime from utils/dates.ts
 const formatDate = (timestamp, fullFormat = false) => {
 	if (!timestamp) return 'Unknown date';
-
-	try {
-		// Ensure we're working with a proper date object
-		const date = new Date(timestamp);
-
-		// Check if date is valid
-		if (isNaN(date.getTime())) {
-			return 'Invalid date';
-		}
-
-		// Return full date format if requested
-		if (fullFormat) {
-			return date.toLocaleString(undefined, {
-				year: 'numeric',
-				month: 'short',
-				day: 'numeric',
-				hour: '2-digit',
-				minute: '2-digit',
-			});
-		}
-
-		// Otherwise return relative time
-		return formatDistanceToNow(date, { addSuffix: true });
-	} catch (e) {
-		console.error('Date formatting error:', e);
-		return String(timestamp);
-	}
+	if (fullFormat) return formatDateWithTime(timestamp) || 'Invalid date';
+	return getRelativeTime(timestamp) || 'Invalid date';
 };
 
 const getUserName = (user) => {

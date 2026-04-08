@@ -277,9 +277,9 @@ function updateTime(type, timeString) {
 	}
 }
 
+// Uses getFriendlyDateThree from utils/dates.ts
 function formatDate(date) {
-	if (!date) return '';
-	return format(date, 'MMM d, yyyy');
+	return getFriendlyDateThree(date);
 }
 
 function getAvatarUrl(user) {

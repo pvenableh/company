@@ -3060,7 +3060,7 @@ export interface Testimonial {
 export interface Ticket {
 	/** @primaryKey */
 	id: string;
-	status?: 'Pending' | 'Scheduled' | `In Progress` | 'Completed';
+	status?: 'Pending' | 'Scheduled' | `In Progress` | 'Completed' | 'Archived';
 	sort?: number | null;
 	user_created?: DirectusUser | string | null;
 	date_created?: string | null;

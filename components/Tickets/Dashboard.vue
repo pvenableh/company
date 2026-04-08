@@ -968,11 +968,8 @@ const getTicketTimeToComplete = (ticket) => {
 	return differenceInHours(completedDate, createdDate);
 };
 
-// Format date for display
-const formatDate = (dateString) => {
-	const date = new Date(dateString);
-	return format(date, 'MMM d, yyyy');
-};
+// Uses getFriendlyDateThree from utils/dates.ts
+const formatDate = (dateString) => getFriendlyDateThree(dateString);
 
 // Format duration for display
 const formatDuration = (hours) => {

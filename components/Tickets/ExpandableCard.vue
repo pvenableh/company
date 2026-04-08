@@ -2,7 +2,7 @@
 	<div ref="cardRef" class="w-full relative flex flex-col lg:flex-row flex-wrap items-center justify-center">
 		<!-- Card Preview -->
 		<div class="w-full cursor-pointer transition-transform duration-300" :class="{ 'pointer-events-none': isExpanded }">
-			<TicketsCard :element="element" @expand="expand" />
+			<TicketsCard :element="element" @expand="expand" @archive="archiveTicket" />
 		</div>
 
 		<!-- Teleported Fullscreen Overlay -->
@@ -51,6 +51,8 @@
 </template>
 
 <script setup>
+const ticketItems = useDirectusItems('tickets');
+const toast = useToast();
 const { triggerRefresh } = useTicketsStore();
 
 const props = defineProps({
@@ -108,6 +110,17 @@ const tasksCount = computed(() => {
 const cardRef = ref(null);
 const isExpanded = ref(false);
 const canClose = ref(true);
+
+const archiveTicket = async (id) => {
+	try {
+		await ticketItems.update(id, { status: 'Archived', date_updated: new Date() });
+		toast.add({ title: 'Ticket archived', color: 'green' });
+		triggerRefresh();
+	} catch (err) {
+		console.error('Failed to archive ticket:', err);
+		toast.add({ title: 'Failed to archive ticket', color: 'red' });
+	}
+};
 
 const expand = () => {
 	isExpanded.value = true;

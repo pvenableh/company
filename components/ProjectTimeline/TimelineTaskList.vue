@@ -42,18 +42,9 @@ function getPriorityColor(priority: string | null) {
   }
 }
 
+// Uses formatDueDateDetail from utils/dates.ts
 function formatDueDate(dateStr: string | null) {
-  if (!dateStr) return null;
-  const date = new Date(dateStr);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const diff = date.getTime() - today.getTime();
-  const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
-
-  if (days < 0) return { text: `${Math.abs(days)}d overdue`, class: 'text-red-500' };
-  if (days === 0) return { text: 'Due today', class: 'text-yellow-500' };
-  if (days === 1) return { text: 'Due tomorrow', class: 'text-yellow-400' };
-  return { text: `${days}d left`, class: 'text-gray-400' };
+  return formatDueDateDetail(dateStr);
 }
 </script>
 

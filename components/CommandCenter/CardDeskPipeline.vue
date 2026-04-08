@@ -25,16 +25,8 @@ const activityIcons: Record<string, string> = {
 	other: 'i-heroicons-ellipsis-horizontal',
 };
 
-const formatDate = (dateStr: string) => {
-	const d = new Date(dateStr);
-	const now = new Date();
-	const diffMs = now.getTime() - d.getTime();
-	const diffDays = Math.floor(diffMs / 86400000);
-	if (diffDays === 0) return 'Today';
-	if (diffDays === 1) return 'Yesterday';
-	if (diffDays < 7) return `${diffDays}d ago`;
-	return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
-};
+// Uses formatRelativeDay from utils/dates.ts
+const formatDate = (dateStr: string) => formatRelativeDay(dateStr);
 
 const { user: authUser } = useDirectusAuth();
 

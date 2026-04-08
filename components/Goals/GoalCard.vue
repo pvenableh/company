@@ -62,10 +62,8 @@ const formatValue = (val) => {
 	return `${Number(val).toLocaleString()} ${unit || ''}`.trim();
 };
 
-const formatDate = (dateStr) => {
-	if (!dateStr) return '';
-	return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-};
+// Uses getFriendlyDateThree from utils/dates.ts
+const formatDate = (dateStr) => getFriendlyDateThree(dateStr);
 </script>
 
 <template>

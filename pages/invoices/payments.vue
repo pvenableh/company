@@ -34,13 +34,9 @@ function formatCurrency(amount: number | null | undefined): string {
 	return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
 }
 
+// Uses getFriendlyDateThree from utils/dates.ts
 function formatDate(dateStr: string | null | undefined): string {
-	if (!dateStr) return '—';
-	return new Date(dateStr).toLocaleDateString('en-US', {
-		year: 'numeric',
-		month: 'short',
-		day: 'numeric',
-	});
+	return getFriendlyDateThree(dateStr) || '—';
 }
 
 const statusColors: Record<string, string> = {

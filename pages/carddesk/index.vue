@@ -81,24 +81,9 @@ const closeDetail = () => {
 	contactActivities.value = [];
 };
 
-const formatDate = (dateStr: string) => {
-	if (!dateStr) return '';
-	const d = new Date(dateStr);
-	return d.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
-};
-
-const formatRelative = (dateStr: string) => {
-	if (!dateStr) return '';
-	const d = new Date(dateStr);
-	const now = new Date();
-	const diffMs = now.getTime() - d.getTime();
-	const diffDays = Math.floor(diffMs / 86400000);
-	if (diffDays === 0) return 'Today';
-	if (diffDays === 1) return 'Yesterday';
-	if (diffDays < 7) return `${diffDays}d ago`;
-	if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
-	return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
-};
+// Uses getFriendlyDateThree and getFriendlyDate from utils/dates.ts
+const formatDate = (dateStr: string) => getFriendlyDateThree(dateStr);
+const formatRelative = (dateStr: string) => getFriendlyDate(dateStr);
 
 const contactDisplayName = (c: any) => {
 	return c.name || `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Unknown';

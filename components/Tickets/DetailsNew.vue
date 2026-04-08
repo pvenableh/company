@@ -350,25 +350,10 @@ const refreshTabContent = (tabId) => {
 };
 
 // Methods
+// Uses getFriendlyDateThree and formatDateWithTime from utils/dates.ts
 const formatDate = (dateString, includeTime = false) => {
 	if (!dateString) return '';
-	const date = new Date(dateString);
-
-	if (includeTime) {
-		return date.toLocaleString('en-US', {
-			year: 'numeric',
-			month: 'short',
-			day: 'numeric',
-			hour: '2-digit',
-			minute: '2-digit',
-		});
-	}
-
-	return date.toLocaleDateString('en-US', {
-		year: 'numeric',
-		month: 'short',
-		day: 'numeric',
-	});
+	return includeTime ? formatDateWithTime(dateString) : getFriendlyDateThree(dateString);
 };
 
 const getStatusColor = (status) => {
@@ -567,7 +552,7 @@ const deleteTicket = async () => {
 			await ticketItems.remove(props.element.id);
 		} else {
 			await ticketItems.update(props.element.id, {
-				status: 'archived',
+				status: 'Archived',
 			});
 		}
 

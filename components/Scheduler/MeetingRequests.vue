@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { format, parseISO } from 'date-fns';
+// date-fns imports removed — using utils/dates.ts
 
 const toast = useToast();
 const loading = ref(true);
@@ -41,21 +41,16 @@ const handleRequest = async (requestId: string, status: 'approved' | 'rejected',
 	}
 };
 
+// Uses native formatting for weekday+date display
 const formatDate = (dateStr: string) => {
 	if (!dateStr) return 'No date specified';
-	try {
-		return format(parseISO(dateStr), 'EEE, MMM d, yyyy');
-	} catch {
-		return dateStr;
-	}
+	const d = new Date(dateStr);
+	if (isNaN(d.getTime())) return dateStr;
+	return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 };
 
-const formatTime = (timeStr: string) => {
-	if (!timeStr) return '';
-	const [h, m] = timeStr.split(':');
-	const hour = parseInt(h);
-	const ampm = hour >= 12 ? 'PM' : 'AM';
-	const displayHour = hour % 12 || 12;
+// Uses formatTimeFromString from utils/dates.ts
+const formatTime = (timeStr: string) => formatTimeFromString(timeStr);
 	return `${displayHour}:${m} ${ampm}`;
 };
 

@@ -2,7 +2,7 @@
 import type { Invoice } from '~/types/directus';
 import { Button } from '~/components/ui/button';
 import { useDebounceFn } from '@vueuse/core';
-import { getFriendlyDateThree } from '~/utils/dates';
+// getFriendlyDateThree is auto-imported from utils/dates.ts
 
 definePageMeta({ middleware: ['auth'] });
 useHead({ title: 'Invoices | Earnest' });
@@ -70,13 +70,12 @@ const totalUnpaid = computed(() =>
     .reduce((sum, inv) => sum + (Number(inv.total_amount) || 0), 0)
 );
 
+// Uses formatDueDateStatus from utils/dates.ts
 function getDueDateUrgency(inv: Invoice): 'past' | 'urgent' | 'normal' {
   if (!inv.due_date || inv.status === 'paid' || inv.status === 'archived') return 'normal';
-  const due = new Date(inv.due_date);
-  const now = new Date();
-  const diffDays = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  if (diffDays < 0) return 'past';
-  if (diffDays <= 7) return 'urgent';
+  const status = formatDueDateStatus(inv.due_date);
+  if (status === 'past') return 'past';
+  if (status === 'urgent' || status === 'medium') return 'urgent';
   return 'normal';
 }
 

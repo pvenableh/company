@@ -243,24 +243,10 @@ async function handleDragEnd() {
 	}
 }
 
-const formatCompletionDate = (date) => {
-	return new Date(date).toLocaleDateString('en-US', {
-		month: 'short',
-		day: 'numeric',
-		hour: '2-digit',
-		minute: '2-digit',
-	});
-};
-
-const formatDate = (date) => {
-	return new Date(date).toLocaleDateString('en-US', {
-		month: 'short',
-		day: 'numeric',
-		year: 'numeric',
-		hour: '2-digit',
-		minute: '2-digit',
-	});
-};
+// formatDateTimeCompact ("Mar 24, 2:30 PM") and formatDateWithTime ("Mar 24, 2026, 2:30 PM")
+// are auto-imported from utils/dates.ts
+const formatCompletionDate = (date) => formatDateTimeCompact(date);
+const formatDate = (date) => formatDateWithTime(date);
 
 const getCreatorInfo = (task) => {
 	if (!task.user_created) return 'Unknown user';

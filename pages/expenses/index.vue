@@ -124,9 +124,10 @@ const handleDelete = async (expense: any) => {
 const formatCurrency = (val: number) =>
 	new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(val);
 
+// Uses getFriendlyDateThree from utils/dates.ts (adds T00:00:00 to avoid timezone shift)
 const formatDate = (dateStr: string) => {
 	if (!dateStr) return '';
-	return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+	return getFriendlyDateThree(dateStr + 'T00:00:00');
 };
 
 const getCategoryConfig = (cat: string) =>

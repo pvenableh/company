@@ -172,20 +172,8 @@ const getAvatar = (msg: any) => {
 	return `https://ui-avatars.com/api/?name=${u.first_name}+${u.last_name}&background=6366f1&color=fff&size=32`;
 };
 
-const formatTime = (dateStr: string) => {
-	const d = new Date(dateStr);
-	return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-};
-
-const formatDate = (dateStr: string) => {
-	const d = new Date(dateStr);
-	const today = new Date();
-	if (d.toDateString() === today.toDateString()) return 'Today';
-	const yesterday = new Date(today);
-	yesterday.setDate(yesterday.getDate() - 1);
-	if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
-	return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
-};
+// formatTime and formatRelativeDay are auto-imported from utils/dates.ts
+const formatDate = (dateStr: string) => formatRelativeDay(dateStr);
 
 
 // Watch channel changes

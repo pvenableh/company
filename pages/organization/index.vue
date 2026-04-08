@@ -463,14 +463,8 @@ watch(
 );
 
 // Format date helper
-const formatDate = (dateString) => {
-	if (!dateString) return 'N/A';
-	return new Date(dateString).toLocaleDateString('en-US', {
-		year: 'numeric',
-		month: 'long',
-		day: 'numeric',
-	});
-};
+// Uses formatDateLong from utils/dates.ts
+const formatDate = (dateString) => formatDateLong(dateString) || 'N/A';
 
 // Get organization logo URL — try logo first, fall back to icon
 const getIconUrl = computed(() => {

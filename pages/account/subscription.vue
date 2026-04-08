@@ -68,8 +68,9 @@ const planPrice = computed(() => {
 	return `$${amount.toFixed(2)}/${interval}`;
 });
 
+// Uses formatDateWithTime from utils/dates.ts (timestamp is unix seconds)
 function formatDate(timestamp: number) {
-	return format(new Date(timestamp * 1000), 'MMM d, yyyy');
+	return getFriendlyDateThree(new Date(timestamp * 1000));
 }
 
 function formatCurrency(cents: number) {

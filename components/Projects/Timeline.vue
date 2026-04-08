@@ -36,8 +36,8 @@ const positions = computed(() => {
 	};
 });
 
-const formatDate = (date) =>
-	date ? date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+// Uses getFriendlyDateThree from utils/dates.ts
+const formatDate = (date) => getFriendlyDateThree(date);
 
 const calculateTimelineData = () => {
 	if (!props.project.start_date || !props.project.due_date) return;

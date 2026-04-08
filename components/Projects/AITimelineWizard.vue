@@ -691,10 +691,10 @@ function toggleExpanded(eventId: string) {
   }
 }
 
+// Uses getFriendlyDateTwo from utils/dates.ts (adds T12:00:00 to avoid timezone shift)
 function formatDate(dateStr: string): string {
   if (!dateStr) return '';
-  const date = new Date(dateStr + 'T12:00:00');
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return getFriendlyDateTwo(dateStr + 'T12:00:00');
 }
 
 function getTypeBadgeStyle(type: string): string {

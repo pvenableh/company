@@ -12,9 +12,8 @@ const loading = ref(true);
 const error = ref(null);
 const paymentIntent = ref(null);
 
-const formatDate = (timestamp) => {
-	return new Date(timestamp * 1000).toLocaleString();
-};
+// Uses formatDateWithTime from utils/dates.ts (timestamp is unix seconds)
+const formatDate = (timestamp) => formatDateWithTime(timestamp);
 
 const statusColorClass = (status) => {
 	const colors = {

@@ -108,8 +108,8 @@
 
 								<span v-if="task.ticketContext.due_date" class="mr-2 inline-flex items-center">
 									<UIcon name="i-heroicons-calendar" class="w-3 h-3 mr-1" />
-									<span :class="{ 'text-red-500': isOverdue(task) }">
-										{{ formatDate(task.ticketContext.due_date) }}
+									<span :class="{ 'text-red-500': isTaskOverdue(task) }">
+										{{ getFriendlyDateTwo(task.ticketContext.due_date) }}
 									</span>
 								</span>
 
@@ -321,14 +321,10 @@ const filteredTasks = computed(() => {
 	return result;
 });
 
-// Function to check if a task is overdue
-const isOverdue = (task) => {
+// Check if a task is overdue (uses isOverdue from utils/dates.ts for the date check)
+const isTaskOverdue = (task) => {
 	if (!task.ticketContext?.due_date) return false;
-	const today = new Date();
-	today.setHours(0, 0, 0, 0);
-	const dueDate = new Date(task.ticketContext.due_date);
-	dueDate.setHours(0, 0, 0, 0);
-	return dueDate < today && task.status !== 'completed';
+	return isOverdue(task.ticketContext.due_date) && task.status !== 'completed';
 };
 
 // Load more tasks
@@ -337,24 +333,8 @@ const loadMore = () => {
 	refreshTasks();
 };
 
-// Format date for display
-const formatDate = (date) => {
-	if (!date) return '';
-	try {
-		const options = { month: 'short', day: 'numeric' };
-		return new Date(date).toLocaleDateString(undefined, options);
-	} catch (error) {
-		console.error('Error formatting date:', error);
-		return 'Invalid date';
-	}
-};
-
-// Format completion date
-const formatCompletionDate = (date) => {
-	if (!date) return '';
-	const options = { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
-	return new Date(date).toLocaleDateString(undefined, options);
-};
+// getFriendlyDateTwo and formatDateTimeCompact are auto-imported from utils/dates.ts
+const formatCompletionDate = (date) => formatDateTimeCompact(date);
 
 // Get color for status badge
 const getStatusColor = (status) => {

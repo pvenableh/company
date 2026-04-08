@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { format, parseISO, isAfter, isBefore, addDays } from 'date-fns';
+// date-fns imports removed — using utils/dates.ts
 import type { CalendarEvent } from '~/composables/useCalendarEvents';
 import { LEAD_STAGE_LABELS, LEAD_STAGE_COLORS } from '~/types/leads';
 import type { LeadStage } from '~/types/leads';
@@ -62,11 +62,12 @@ const formatEventTime = (event: CalendarEvent) => {
 	} catch { return ''; }
 };
 
+// Uses native formatting for weekday+date display
 const formatFollowUpDate = (event: CalendarEvent) => {
 	if (!event.start_time) return '';
-	try {
-		return format(parseISO(event.start_time), 'EEE, MMM d');
-	} catch { return ''; }
+	const d = new Date(event.start_time);
+	if (isNaN(d.getTime())) return '';
+	return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 };
 
 const eventTypeIcon = (event: CalendarEvent) => {

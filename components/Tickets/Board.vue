@@ -25,35 +25,50 @@
 		<div
 			class="w-full flex flex-col md:flex-row items-end justify-between mb-4 xl:mb-8 xl:mt-2 px-4 gap-4 pt-4 tickets-board__filters"
 		>
-			<TicketsCreate :columns="columns" :default-project="projectId" :default-organization="organizationId" @ticketCreated="handleTicketCreated" class="mb-4 xl:mb-0" />
+			<div class="flex items-center gap-3 mb-4 xl:mb-0">
+				<TicketsCreate :columns="columns" :default-project="projectId" :default-organization="organizationId" @ticketCreated="handleTicketCreated" />
+				<UButton
+					v-if="!projectId"
+					icon="i-heroicons-x-mark"
+					size="xs"
+					color="gray"
+					variant="ghost"
+					@click="clearFilters"
+					class="uppercase text-[10px] transition-opacity duration-500 p-0"
+					:class="hasActiveFilters ? 'opacity-100' : 'opacity-0 pointer-events-none'"
+				>
+					Clear Filters
+				</UButton>
+			</div>
 
-			<div v-if="!projectId" class="hidden md:flex items-center flex-col xl:flex-row relative mb-4 xl:mb-0">
-				<div class="w-full flex flex-row items-center justify-end gap-4 mb-2 xl:mb-0 xl:mr-2">
-					<UButton
-						icon="i-heroicons-x-mark"
-						size="xs"
-						color="gray"
-						variant="ghost"
-						@click="clearFilters"
-						class="uppercase text-[10px] transition-opacity duration-500 p-0"
-						:class="hasActiveFilters ? 'opacity-100' : 'opacity-0'"
+			<div v-if="!projectId" class="hidden md:flex flex-col items-end gap-2 relative mb-4 xl:mb-0 shrink-0">
+				<!-- Row 1: Toggles -->
+				<div class="flex flex-row items-center gap-4">
+					<button
+						class="flex flex-row items-center space-x-2 cursor-pointer"
+						@click="filterByAssignedTo = !filterByAssignedTo"
 					>
-						Clear Filters
-					</UButton>
-					<div class="flex flex-row items-center justify-center space-x-2">
-						<UToggle v-model="filterByAssignedTo" />
-						<span class="text-[10px] text-muted-foreground uppercase">
+						<UToggle :model-value="filterByAssignedTo" />
+						<span class="text-[10px] uppercase select-none whitespace-nowrap" :class="filterByAssignedTo ? 'text-foreground font-semibold' : 'text-muted-foreground'">
 							{{ filterByAssignedTo ? 'My Tickets' : 'All Tickets' }}
 						</span>
-					</div>
-					<div class="flex flex-row items-center justify-center space-x-2">
-						<UToggle v-model="filterUnassigned" :disabled="filterByAssignedTo" />
-						<span class="text-[10px] text-muted-foreground uppercase">
-							{{ filterUnassigned ? 'Unassigned' : 'All Assignments' }}
+					</button>
+					<button
+						class="flex flex-row items-center space-x-2 cursor-pointer"
+						:disabled="filterByAssignedTo"
+						@click="!filterByAssignedTo && (filterUnassigned = !filterUnassigned)"
+					>
+						<UToggle :model-value="filterUnassigned" :disabled="filterByAssignedTo" />
+						<span class="text-[10px] uppercase select-none whitespace-nowrap" :class="filterUnassigned ? 'text-foreground font-semibold' : 'text-muted-foreground'">
+							{{ filterUnassigned ? 'Unassigned Only' : 'All Assignments' }}
 						</span>
-					</div>
+					</button>
+					<transition name="fade">
+						<UIcon v-if="isFetching" name="i-heroicons-arrow-path" class="w-4 h-4 text-muted-foreground animate-spin" />
+					</transition>
 				</div>
-				<div class="w-full flex flex-row items-center justify-end gap-4">
+				<!-- Row 2: Due Date, Project, Archive -->
+				<div class="flex flex-row items-center gap-4">
 					<div class="flex items-center space-x-2 relative">
 						<USelectMenu
 							v-model="filterDueDate"
@@ -110,6 +125,16 @@
 							</template>
 						</USelectMenu>
 					</div>
+					<UButton
+						icon="i-heroicons-archive-box"
+						size="xs"
+						:color="showArchived ? 'primary' : 'gray'"
+						:variant="showArchived ? 'soft' : 'outline'"
+						@click="toggleArchived"
+						class="uppercase text-[10px] border border-border/60"
+					>
+						{{ showArchived ? 'View Board' : 'Archived' }}
+					</UButton>
 				</div>
 				<div v-if="lastUpdated" class="-bottom-[22.5px] text-[9px] right-0 text-muted-foreground absolute font-bold uppercase">
 					Last updated: {{ formatLastUpdated(lastUpdated) }}
@@ -117,9 +142,68 @@
 			</div>
 		</div>
 
+		<!-- Archived Tickets View -->
+		<div v-if="showArchived" class="px-4">
+			<div class="bg-card border border-border rounded-2xl p-6">
+				<div class="flex items-center justify-between mb-6">
+					<h3 class="text-sm font-semibold uppercase tracking-wider text-foreground flex items-center gap-2">
+						<UIcon name="i-heroicons-archive-box" class="w-4 h-4" />
+						Archived Tickets
+						<span v-if="archivedTickets.length" class="text-xs font-normal text-muted-foreground">({{ archivedTickets.length }})</span>
+					</h3>
+				</div>
+
+				<div v-if="isLoadingArchived" class="flex items-center justify-center py-12">
+					<LayoutLoader text="Loading archived tickets" />
+				</div>
+
+				<div v-else-if="!archivedTickets.length" class="text-center py-12 text-muted-foreground">
+					<UIcon name="i-heroicons-archive-box" class="w-8 h-8 mx-auto mb-2 opacity-40" />
+					<p class="text-sm">No archived tickets</p>
+				</div>
+
+				<div v-else class="space-y-2">
+					<div
+						v-for="ticket in archivedTickets"
+						:key="ticket.id"
+						class="flex items-center justify-between p-3 rounded-xl bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors"
+					>
+						<div class="flex-1 min-w-0">
+							<nuxt-link :to="`/tickets/${ticket.id}`" class="text-sm font-medium text-foreground hover:underline truncate block">
+								{{ ticket.title }}
+							</nuxt-link>
+							<div class="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground uppercase">
+								<span v-if="ticket.organization?.name" class="flex items-center gap-1">
+									<UIcon name="i-heroicons-building-office" class="w-3 h-3" />
+									{{ ticket.organization.name }}
+								</span>
+								<span v-if="ticket.date_updated" class="flex items-center gap-1">
+									<UIcon name="i-heroicons-clock" class="w-3 h-3" />
+									Archived {{ getFriendlyDate(ticket.date_updated) }}
+								</span>
+								<span v-if="ticket.priority" class="flex items-center gap-1">
+									Priority: {{ ticket.priority }}
+								</span>
+							</div>
+						</div>
+						<UTooltip text="Restore to Pending" :popper="{ arrow: true }">
+							<UButton
+								icon="i-heroicons-arrow-uturn-left"
+								size="xs"
+								color="gray"
+								variant="soft"
+								@click="restoreTicket(ticket.id)"
+								class="ml-3"
+							/>
+						</UTooltip>
+					</div>
+				</div>
+			</div>
+		</div>
+
 		<!-- Mobile Column Navigation -->
 		<div
-			v-if="isMobile"
+			v-if="isMobile && !showArchived"
 			class="flex items-center justify-between mb-4 mx-4 rounded-xl bg-card border border-border px-4 gap-4 py-3 text-foreground shadow-sm"
 		>
 			<UIcon name="i-heroicons-chevron-left" class="w-5 h-5" @click="previousColumn" />
@@ -131,6 +215,7 @@
 
 		<!-- Main Board -->
 		<div
+			v-if="!showArchived"
 			class="bg-muted/20 border border-border/50 rounded-2xl w-full flex min-h-svh overflow-x-auto overflow-hidden overflow-hidden-scrollbar tickets-board__board"
 			@touchstart="handleTouchStart"
 			@touchend="handleTouchEnd"
@@ -266,6 +351,9 @@ const {
 });
 
 // Component state
+const showArchived = ref(false);
+const archivedTickets = ref([]);
+const isLoadingArchived = ref(false);
 const updatingTickets = ref(new Set());
 const isDragging = ref(false);
 const selectedProject = ref(props.projectId || null);
@@ -350,6 +438,8 @@ const fields = [
 	'tasks.status',
 	'team.id',
 	'team.name',
+	'client.id',
+	'client.name',
 ];
 
 // Generate filter based on current state
@@ -363,7 +453,7 @@ const generateFilter = () => {
 		dueDate: activeDueDateFilter.value,
 	});
 
-	const filter = { _and: [] };
+	const filter = { _and: [{ status: { _neq: 'Archived' } }] };
 
 	// Handle "All Organizations" (null) state for admins
 	if (selectedOrg.value === null) {
@@ -401,12 +491,13 @@ const generateFilter = () => {
 
 	// Assigned to filter
 	if (filterByAssignedTo.value && user.value) {
-		console.log('trying to filter by assignment');
 		filter._and.push({
-			assigned_to: { directus_users_id: { id: { _eq: user.value.id } } },
+			assigned_to: { _some: { directus_users_id: { id: { _eq: user.value.id } } } },
 		});
 	} else if (filterUnassigned.value) {
-		filter._and.push({ assigned_to: { _empty: true } });
+		filter._and.push({
+			assigned_to: { _none: {} },
+		});
 	}
 
 	// Due date filter
@@ -800,6 +891,54 @@ const debouncedUpdateSubscription = debounce(async () => {
 		setupRealtimeOnly(filter, tickets || []);
 	}
 }, 300);
+
+// Archive functions
+const toggleArchived = async () => {
+	showArchived.value = !showArchived.value;
+	if (showArchived.value) {
+		await fetchArchivedTickets();
+	}
+};
+
+const fetchArchivedTickets = async () => {
+	isLoadingArchived.value = true;
+	try {
+		const filter = { _and: [{ status: { _eq: 'Archived' } }] };
+
+		// Add org filter if not admin viewing all
+		if (selectedOrg.value) {
+			filter._and.push({ organization: { _eq: selectedOrg.value } });
+		}
+
+		const result = await ticketItems.list({
+			fields: [
+				'id', 'title', 'status', 'priority', 'date_updated',
+				'organization.id', 'organization.name',
+			],
+			filter,
+			sort: ['-date_updated'],
+			limit: 100,
+		});
+		archivedTickets.value = result || [];
+	} catch (err) {
+		console.error('Failed to fetch archived tickets:', err);
+		archivedTickets.value = [];
+	} finally {
+		isLoadingArchived.value = false;
+	}
+};
+
+const restoreTicket = async (ticketId) => {
+	try {
+		await ticketItems.update(ticketId, { status: 'Pending', date_updated: new Date() });
+		archivedTickets.value = archivedTickets.value.filter((t) => t.id !== ticketId);
+		toast.add({ title: 'Ticket restored to Pending', color: 'green' });
+		await refreshData();
+	} catch (err) {
+		console.error('Failed to restore ticket:', err);
+		toast.add({ title: 'Failed to restore ticket', color: 'red' });
+	}
+};
 
 // Drag and drop handlers
 const { feedback: triggerFeedback } = useFeedback();

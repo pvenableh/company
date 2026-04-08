@@ -212,7 +212,7 @@ const deleteTicket = async () => {
 			await ticketItems.remove(props.element.id);
 		} else {
 			await ticketItems.update(props.element.id, {
-				status: 'archived',
+				status: 'Archived',
 			});
 		}
 

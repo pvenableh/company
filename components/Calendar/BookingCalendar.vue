@@ -607,13 +607,11 @@ async function copyMeetingLink(link) {
 	toast.add({ title: 'Meeting link copied!', color: 'green' });
 }
 
+// Uses formatDateLong and formatTime from utils/dates.ts
 function formatDate(date) {
-	return format(date, 'MMMM d, yyyy');
+	return formatDateLong(date);
 }
-
-function formatTime(dateTime) {
-	return format(parseISO(dateTime), 'h:mm a');
-}
+// Note: formatTime is auto-imported from utils/dates.ts — template calls use it directly
 
 onUnmounted(() => {
 	selectedAppointmentId.value = null;

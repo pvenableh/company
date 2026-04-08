@@ -14,15 +14,8 @@ const { getCharge } = useStripeCharge();
 const { getPayout } = useStripePayout();
 const toast = useToast();
 
-const formatDate = (dateString) => {
-	return new Date(dateString).toLocaleDateString('en-US', {
-		year: 'numeric',
-		month: 'short',
-		day: 'numeric',
-		hour: '2-digit',
-		minute: '2-digit',
-	});
-};
+// Uses formatDateWithTime from utils/dates.ts
+const formatDate = (dateString) => formatDateWithTime(dateString);
 
 const formatAmount = (amount) => {
 	return new Intl.NumberFormat('en-US', {

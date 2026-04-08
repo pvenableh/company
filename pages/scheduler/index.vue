@@ -302,7 +302,7 @@
 </template>
 
 <script setup lang="ts">
-import { format, parseISO, isAfter, addDays } from 'date-fns';
+import { format, isAfter, addDays } from 'date-fns';
 import type { CalendarEvent } from '~/composables/useCalendarEvents';
 
 definePageMeta({ middleware: ['auth'] });
@@ -539,20 +539,16 @@ const getHostName = (request: any) => {
 	return typeof host === 'object' ? `${host.first_name || ''} ${host.last_name || ''}`.trim() : host;
 };
 
+// Uses utils/dates.ts helpers
 const clientFormatDate = (dateStr: string) => {
 	if (!dateStr) return 'No date specified';
-	try { return format(parseISO(dateStr), 'EEE, MMM d, yyyy'); }
-	catch { return dateStr; }
+	const d = new Date(dateStr);
+	if (isNaN(d.getTime())) return dateStr;
+	return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 };
 
-const clientFormatTime = (timeStr: string) => {
-	if (!timeStr) return '';
-	const [h, m] = timeStr.split(':');
-	const hour = parseInt(h);
-	const ampm = hour >= 12 ? 'PM' : 'AM';
-	const displayHour = hour % 12 || 12;
-	return `${displayHour}:${m} ${ampm}`;
-};
+// Uses formatTimeFromString from utils/dates.ts
+const clientFormatTime = (timeStr: string) => formatTimeFromString(timeStr);
 
 // ═══ Lifecycle ═══
 onMounted(() => {

@@ -544,16 +544,8 @@ const formatTimestamp = (ts) => {
 	return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined });
 };
 
-const formatFullDate = (ts) => {
-	if (!ts) return '';
-	return new Date(ts).toLocaleString('en-US', {
-		weekday: 'short',
-		month: 'short',
-		day: 'numeric',
-		hour: 'numeric',
-		minute: '2-digit',
-	});
-};
+// Uses formatDateTimeFull from utils/dates.ts
+const formatFullDate = (ts) => formatDateTimeFull(ts);
 
 const getUserName = (u) => {
 	if (!u) return 'System';

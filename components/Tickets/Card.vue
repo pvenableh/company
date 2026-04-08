@@ -1,140 +1,148 @@
 <template>
-	<div class="w-full mb-4 transition-all ticket-card">
-		<div class="ios-card transition-all w-full p-4 relative">
-			<div class="flex items-start justify-between my-2 h-8">
-				<div v-if="element?.status !== 'Completed'" class="w-full relative flex flex-row items-center justify-start">
-					<p class="t-label leading-[16px]">
-						<span class="text-muted-foreground">Priority:</span>
-						<span class="font-bold ml-1" :class="`text-${getPriorityColor(element.priority)}-500`">
-							{{ element?.priority }}
-						</span>
-					</p>
-				</div>
-
-				<div class="transform scale-[0.45] absolute -right-[15px] -top-[25px]">
-					<TicketsProgressCircle :progressPercentage="progress" />
-				</div>
-			</div>
-
-			<!-- Ticket Title -->
-			<nuxt-link :to="`/tickets/${element.id}`">
-				<h4 class="t-title text-[16px] line-clamp-2 mt-2 text-foreground">
-					{{ element?.title }}
-					<UIcon
-						name="i-heroicons-arrow-right"
-						size="xs"
-						class="inline-block ml-0.5 -mb-[3px] p-0 scale-75 opacity-50"
-					/>
-				</h4>
-			</nuxt-link>
-			<h5 v-if="element?.team" class="t-label text-muted-foreground mt-0 mb-2">
-				<UIcon name="i-heroicons-user-group" />
-				{{ element?.team?.name }}
-			</h5>
-			<h5 v-if="element?.organization" class="t-label text-muted-foreground mt-0 mb-2">
-				<UIcon name="i-heroicons-building-office" />
-				{{ element?.organization?.name }}
-			</h5>
-
-			<!-- Assigned Users -->
-			<div class="w-full flex flex-col items-center justify-between text-xs text-muted-foreground my-4">
-				<h5 v-if="assignedUsers.length" class="t-label text-muted-foreground w-full">
-					Assigned to:
-				</h5>
-				<div class="w-full flex items-center">
-					<!-- Avatar Stack -->
-					<div class="flex -space-x-1">
-						<template v-if="assignedUsers.length">
-							<UTooltip v-for="(user, index) in displayUsers" :key="index" :text="getUserFullName(user)">
-								<UAvatar
-									:src="getAvatarUrl(user)"
-									:alt="getUserFullName(user)"
-									size="xs"
-									:class="{
-										'ring-2 ring-cyan-500 ring-offset-2 scale-90 shadow-lg ring-offset-card':
-											isCurrentUser(user),
-										'-ml-1': true,
-									}"
-								/>
-							</UTooltip>
-
-							<!-- Additional users count -->
-							<UTooltip v-if="additionalUsersCount > 0" :text="getAdditionalUsersTooltip">
-								<div
-									class="-ml-2 flex items-center justify-center w-6 h-6 text-xs font-medium text-muted-foreground bg-muted/40 rounded-full border-2 border-card"
-								>
-									+{{ additionalUsersCount }}
-								</div>
-							</UTooltip>
-						</template>
-
-						<span v-else class="">
-							<UTooltip text="Unassigned">
-								<UAvatar icon="i-heroicons-user" size="xs" />
-							</UTooltip>
-						</span>
-					</div>
-				</div>
-			</div>
-			<div v-if="element?.due_date && element?.status !== 'Completed'" class="">
-				<h5 v-if="assignedUsers.length" class="t-label text-muted-foreground w-full">
-					Due Date:
-				</h5>
-				<p class="uppercase text-[10px]" :class="formatDueDateStatus(element?.due_date)">
+	<div class="w-full mb-3 transition-all group ios-press">
+		<div class="ticket-card p-4 relative">
+			<!-- Header: Priority + Progress -->
+			<div class="flex items-center justify-between mb-3">
+				<div class="flex items-center gap-2">
 					<span
-						v-if="
-							formatDueDateStatus(element?.due_date) === 'urgent' || formatDueDateStatus(element?.due_date) === 'past'
-						"
-						class="h-[7px] w-[15px] inline-block bg-red-500"
-					></span>
-					{{ formatDueDate(element?.due_date) }}
-					<!-- <UIcon
-						name="i-heroicons-exclamation-triangle-solid"
-						class="w-4 h-4 inline-block mr-1 -mb-1.5"
-						v-if="
-							formatDueDateStatus(element?.due_date) === 'urgent' || formatDueDateStatus(element?.due_date) === 'past'
-						"
-					/> -->
-				</p>
-			</div>
-			<div v-else class="">
-				<h5 class="t-label text-muted-foreground w-full">Date Completed:</h5>
-				<p class="uppercase text-[10px]">
-					{{ getFriendlyDate(element?.date_updated) }}
-				</p>
-			</div>
-			<div class="absolute bottom-2 right-4">
-				<div class="flex flex-row items-center relative">
+						v-if="element?.status !== 'Completed'"
+						class="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md"
+						:class="priorityStyle"
+					>
+						{{ element?.priority }}
+					</span>
+					<span
+						v-else
+						class="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md text-emerald-500 bg-emerald-500/10"
+					>
+						Completed
+					</span>
+				</div>
+				<!-- Action buttons -->
+				<div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity" @click.stop>
+					<UTooltip text="Archive" :popper="{ arrow: true }">
+						<UButton
+							color="gray"
+							variant="ghost"
+							icon="i-heroicons-archive-box-arrow-down"
+							size="xs"
+							@click="$emit('archive', element?.id)"
+						/>
+					</UTooltip>
 					<UPopover mode="click" :popper="{ placement: 'left', offsetDistance: 3 }">
 						<UButton color="gray" variant="ghost" icon="i-heroicons-information-circle" size="xs" />
 						<template #panel>
-							<div class="p-2 text-muted-foreground font-medium text-[10px]">
+							<div class="p-2.5 text-muted-foreground font-medium text-[10px] leading-relaxed">
 								<span v-html="getTicketInfo"></span>
 							</div>
 						</template>
 					</UPopover>
-					<!-- <UButton color="gray" variant="ghost" icon="i-heroicons-trash" size="xs" @click="deleteTicket(element?.id)" /> -->
 				</div>
 			</div>
-		</div>
-		<div
-			class="w-full ios-card mt-1 flex flex-row items-center justify-between transition-all"
-		>
-			<!-- Ticket Footer -->
 
-			<ReactionsBar :item-id="element.id" collection="tickets" />
-			<div class="flex flex-row text-xs text-muted-foreground mr-3">
-				<div v-if="commentsCount > 0" class="flex items-center gap-1">
-					<UTooltip :text="commentsCount + (commentsCount === 1 ? ' Comment' : ' Comments')" :popper="{ arrow: true }">
-						<UIcon name="i-heroicons-chat-bubble-left-right" class="w-4 h-4 inline-block mr-1" />
-						{{ commentsCount }}
+			<!-- Title -->
+			<nuxt-link :to="`/tickets/${element.id}`" class="block mb-3">
+				<h4 class="text-sm font-semibold text-foreground line-clamp-2 leading-snug">
+					{{ element?.title }}
+					<UIcon
+						name="i-heroicons-arrow-right"
+						size="xs"
+						class="inline-block ml-0.5 -mb-[2px] scale-75 opacity-0 group-hover:opacity-50 transition-opacity"
+					/>
+				</h4>
+			</nuxt-link>
+
+			<!-- Meta: Client/Organization & Team -->
+			<div v-if="element?.client || element?.organization || element?.team" class="flex flex-col gap-1 mb-3">
+				<div v-if="element?.client || element?.organization" class="flex items-center gap-1.5 text-xs text-muted-foreground">
+					<UIcon name="i-heroicons-building-office" class="w-3.5 h-3.5 flex-shrink-0" />
+					<span class="truncate">{{ element?.client?.name || element?.organization?.name }}</span>
+				</div>
+				<div v-if="element?.team" class="flex items-center gap-1.5 text-xs text-muted-foreground">
+					<UIcon name="i-heroicons-user-group" class="w-3.5 h-3.5 flex-shrink-0" />
+					<span class="truncate">{{ element?.team?.name }}</span>
+				</div>
+			</div>
+
+			<!-- Progress Bar (tasks) -->
+			<div v-if="progress > 0" class="mb-3">
+				<div class="flex items-center justify-between text-[10px] mb-1">
+					<span class="text-muted-foreground">Tasks</span>
+					<span class="font-semibold" :class="progress >= 90 ? 'text-emerald-500' : progress >= 50 ? 'text-blue-500' : 'text-muted-foreground'">
+						{{ progress }}%
+					</span>
+				</div>
+				<div class="h-1 bg-muted rounded-full overflow-hidden">
+					<div
+						class="h-full rounded-full transition-all duration-500"
+						:class="progress >= 90 ? 'bg-emerald-500' : progress >= 50 ? 'bg-blue-500' : progress >= 25 ? 'bg-amber-500' : 'bg-red-500'"
+						:style="{ width: progress + '%' }"
+					/>
+				</div>
+			</div>
+
+			<!-- Assigned Users -->
+			<div class="flex items-center justify-between mb-3">
+				<div class="flex -space-x-1.5">
+					<template v-if="assignedUsers.length">
+						<UTooltip v-for="(user, index) in displayUsers" :key="index" :text="getUserFullName(user)">
+							<UAvatar
+								:src="getAvatarUrl(user)"
+								:alt="getUserFullName(user)"
+								size="xs"
+								:class="{
+									'ring-2 ring-primary/30 ring-offset-1 ring-offset-card': isCurrentUser(user),
+								}"
+							/>
+						</UTooltip>
+						<UTooltip v-if="additionalUsersCount > 0" :text="getAdditionalUsersTooltip">
+							<div
+								class="flex items-center justify-center w-6 h-6 text-[10px] font-semibold text-muted-foreground bg-muted/60 rounded-full border-2 border-card"
+							>
+								+{{ additionalUsersCount }}
+							</div>
+						</UTooltip>
+					</template>
+					<UTooltip v-else text="Unassigned">
+						<UAvatar icon="i-heroicons-user" size="xs" class="opacity-40" />
 					</UTooltip>
 				</div>
 
-				<div v-if="tasksCount > 0" class="ml-2 flex items-center gap-1">
-					<UTooltip :text="tasksCount + ' tasks'" :popper="{ arrow: true }">
-						<UIcon name="i-heroicons-check-circle" class="w-4 h-4 inline-block mr-1" />
-						{{ tasksCount }}
+				<!-- Due Date / Completed Date -->
+				<div v-if="element?.due_date && element?.status !== 'Completed'">
+					<span
+						class="text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded-md inline-flex items-center gap-1"
+						:class="dueDateStyle"
+					>
+						<UIcon
+							v-if="dueDateUrgency === 'past' || dueDateUrgency === 'urgent'"
+							name="i-heroicons-exclamation-triangle"
+							class="w-3 h-3"
+						/>
+						<UIcon v-else name="i-heroicons-calendar" class="w-3 h-3" />
+						{{ formatDueDate(element?.due_date) }}
+					</span>
+				</div>
+				<div v-else-if="element?.status === 'Completed'" class="text-[10px] text-muted-foreground">
+					{{ getFriendlyDate(element?.date_updated) }}
+				</div>
+			</div>
+
+			<!-- Footer: Reactions + Counts -->
+			<div class="flex items-center justify-between pt-3 border-t border-border/40">
+				<ReactionsBar :item-id="element.id" collection="tickets" />
+				<div class="flex items-center gap-3 text-xs text-muted-foreground">
+					<UTooltip v-if="commentsCount > 0" :text="commentsCount + (commentsCount === 1 ? ' Comment' : ' Comments')" :popper="{ arrow: true }">
+						<div class="flex items-center gap-1">
+							<UIcon name="i-heroicons-chat-bubble-left-right" class="w-3.5 h-3.5" />
+							<span class="text-[11px]">{{ commentsCount }}</span>
+						</div>
+					</UTooltip>
+					<UTooltip v-if="tasksCount > 0" :text="tasksCount + ' tasks'" :popper="{ arrow: true }">
+						<div class="flex items-center gap-1">
+							<UIcon name="i-heroicons-check-circle" class="w-3.5 h-3.5" />
+							<span class="text-[11px]">{{ tasksCount }}</span>
+						</div>
 					</UTooltip>
 				</div>
 			</div>
@@ -150,66 +158,59 @@ const props = defineProps({
 	},
 });
 
-// const emit = defineEmits(['expand']);
+const emit = defineEmits(['archive']);
 
 const { user } = useDirectusAuth();
 
+// Priority styling
+const priorityStyle = computed(() => {
+	const styles = {
+		low: 'text-gray-500 bg-gray-500/10',
+		medium: 'text-blue-500 bg-blue-500/10',
+		high: 'text-orange-500 bg-orange-500/10',
+		urgent: 'text-red-500 bg-red-500/10',
+	};
+	return styles[props.element?.priority] || styles.low;
+});
+
+// Due date urgency
+const dueDateUrgency = computed(() => formatDueDateStatus(props.element?.due_date));
+
+const dueDateStyle = computed(() => {
+	const styles = {
+		past: 'text-red-500 bg-red-500/10',
+		urgent: 'text-orange-500 bg-orange-500/10',
+		medium: 'text-yellow-600 bg-yellow-500/10',
+	};
+	return styles[dueDateUrgency.value] || 'text-muted-foreground bg-muted/40';
+});
+
 const commentsCount = computed(() => {
-	// If element.commentsCount exists, use it (this is our explicitly set number)
-
-	// If comments is a number, return it directly
-	if (typeof props.element.comments === 'number') {
-		return props.element.comments;
-	}
-
-	// If comments is an array, return its length
-	if (Array.isArray(props.element.comments)) {
-		return props.element.comments.length;
-	}
-
-	// Default to 0 if undefined or null
+	if (typeof props.element.comments === 'number') return props.element.comments;
+	if (Array.isArray(props.element.comments)) return props.element.comments.length;
 	return 0;
 });
 
 const tasksCount = computed(() => {
-	if (typeof props.element.tasks === 'number') {
-		return props.element.tasks;
-	}
-	if (Array.isArray(props.element.tasks)) {
-		return props.element.tasks.length;
-	}
+	if (typeof props.element.tasks === 'number') return props.element.tasks;
+	if (Array.isArray(props.element.tasks)) return props.element.tasks.length;
 	return 0;
 });
 
-// Get all assigned users
 const assignedUsers = computed(() => {
 	return props.element?.assigned_to?.map((assignment) => assignment.directus_users_id) || [];
 });
 
 const progress = computed(() => {
-	// If tasks is a number, we can't calculate progress (no task status data)
-	if (typeof props.element.tasks === 'number') {
-		return 0;
-	}
-
-	// If there are no tasks, return 0
-	if (!props.element.tasks || !Array.isArray(props.element.tasks) || props.element.tasks.length === 0) {
-		return 0;
-	}
-
-	// Count completed tasks
+	if (typeof props.element.tasks === 'number') return 0;
+	if (!props.element.tasks || !Array.isArray(props.element.tasks) || props.element.tasks.length === 0) return 0;
 	const completedTasks = props.element.tasks.filter((task) => task && task.status === 'completed').length;
-
-	// Calculate percentage
 	return Math.round((completedTasks / props.element.tasks.length) * 100);
 });
 
-// Maximum number of avatars to display
 const MAX_DISPLAYED_USERS = 3;
 
-// Users to display in the avatar stack
 const displayUsers = computed(() => {
-	// Sort array to put current user first if they're assigned
 	return [...assignedUsers.value]
 		.sort((a, b) => {
 			if (isCurrentUser(a)) return -1;
@@ -219,12 +220,10 @@ const displayUsers = computed(() => {
 		.slice(0, MAX_DISPLAYED_USERS);
 });
 
-// Count of additional users not shown
 const additionalUsersCount = computed(() => {
 	return Math.max(0, assignedUsers.value.length - MAX_DISPLAYED_USERS);
 });
 
-// Tooltip text for additional users
 const getAdditionalUsersTooltip = computed(() => {
 	const additionalUsers = assignedUsers.value
 		.slice(MAX_DISPLAYED_USERS)
@@ -233,19 +232,12 @@ const getAdditionalUsersTooltip = computed(() => {
 	return `Also assigned: ${additionalUsers}`;
 });
 
-// Check if a user is the current authenticated user
 const isCurrentUser = (assignedUser) => {
 	return assignedUser?.id === user?.value?.id;
 };
 
-// Utility functions
 const getPriorityColor = (priority) => {
-	const colors = {
-		low: 'gray',
-		medium: 'blue',
-		high: 'red',
-		urgent: 'red',
-	};
+	const colors = { low: 'gray', medium: 'blue', high: 'red', urgent: 'red' };
 	return colors[priority] || 'gray';
 };
 
@@ -260,16 +252,6 @@ const getUserFullName = (assignedUser) => {
 	return `${assignedUser.first_name} ${assignedUser.last_name}`.trim();
 };
 
-// const formatDate = (date) => {
-// 	if (!date) return '';
-// 	return new Date(date).toLocaleDateString('en-US', {
-// 		month: 'short',
-// 		day: 'numeric',
-// 		hour: '2-digit',
-// 		minute: '2-digit',
-// 	});
-// };
-
 const getTicketInfo = computed(() => {
 	if (!props.element) return '';
 
@@ -283,21 +265,8 @@ const getTicketInfo = computed(() => {
 			? `${props.element.user_updated.first_name} ${props.element.user_updated.last_name}`
 			: 'Unknown';
 
-	const created = new Date(props.element.date_created).toLocaleDateString('en-US', {
-		month: 'short',
-		day: 'numeric',
-		year: 'numeric',
-		hour: '2-digit',
-		minute: '2-digit',
-	});
-
-	const updated = new Date(props.element.date_updated).toLocaleDateString('en-US', {
-		month: 'short',
-		day: 'numeric',
-		year: 'numeric',
-		hour: '2-digit',
-		minute: '2-digit',
-	});
+	const created = formatDateWithTime(props.element.date_created);
+	const updated = formatDateWithTime(props.element.date_updated);
 
 	const person = creator === updater ? `Created by: ${creator}` : `Updated by: ${updater}`;
 	const time = creator === updater ? `Created on: ${created}` : `Updated on: ${updated}`;
@@ -308,21 +277,15 @@ const getTicketInfo = computed(() => {
 
 <style scoped>
 @reference "~/assets/css/tailwind.css";
-/* Smooth transitions for avatar highlighting */
-.u-avatar {
-	transition: all 0.2s ease-in-out;
-}
 
-/* Optional: Add hover effect for avatars */
-.u-avatar:hover {
-	transform: translateY(-2px);
-	z-index: 10;
+.ticket-card {
+	background: hsl(var(--card));
+	border: 1px solid hsl(var(--border) / 0.5);
+	border-radius: 16px;
+	transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.urgent,
-.past {
-	@apply text-red-500;
-}
-.medium {
-	@apply text-yellow-500;
+.ticket-card:hover {
+	border-color: hsl(var(--border));
+	box-shadow: 0 2px 12px hsl(var(--foreground) / 0.04);
 }
 </style>

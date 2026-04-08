@@ -135,13 +135,8 @@ const isHost = computed(() => {
 });
 
 // Format helpers
-const formatDateTime = (dateStr) => {
-	if (!dateStr) return '';
-	return new Date(dateStr).toLocaleString('en-US', {
-		weekday: 'short', month: 'short', day: 'numeric',
-		hour: 'numeric', minute: '2-digit',
-	});
-};
+// Uses formatDateTimeFull from utils/dates.ts
+const formatDateTime = (dateStr) => formatDateTimeFull(dateStr);
 
 // Fetch meeting info
 const fetchMeeting = async () => {

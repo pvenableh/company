@@ -272,9 +272,7 @@ async function handleTaskDelete(taskId: string) {
 	}
 }
 
-function formatDueDate(d: string) {
-	return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
+// formatDueDate is auto-imported from utils/dates.ts
 
 function getAssignee(id: string) {
 	return props.teamMembers?.find(m => m.id === id);

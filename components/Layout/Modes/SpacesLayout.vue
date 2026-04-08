@@ -238,19 +238,11 @@ watch(() => route.path, () => {
 			<header class="glass flex items-center justify-between border-b border-border/40 px-4 lg:px-6 h-12 shrink-0 z-40">
 				<!-- Left: Menu button (mobile) + sidebar toggle (desktop) + context -->
 				<div class="flex items-center gap-2 min-w-0">
-					<button
-						class="xl:hidden flex items-center justify-center w-8 h-8 rounded-lg hover:bg-muted/50 text-muted-foreground"
-						@click="mobileDrawerOpen = true"
-					>
-						<Icon name="lucide:menu" class="w-5 h-5" />
-					</button>
-					<!-- Mobile: compact context pill -->
-					<LayoutContextPill class="lg:hidden" />
-					<!-- Desktop: inline client & team selects -->
+					<!-- Client & team selects (always visible) -->
 					<ClientOnly>
-						<div class="hidden lg:flex items-center gap-1">
+						<div class="flex items-center gap-1">
 							<LayoutClientSelect v-if="user" :user="user" @open-org-switcher="showOrgSwitcher = true" />
-							<LayoutTeamSelect v-if="user" />
+							<LayoutTeamSelect v-if="user" class="hidden lg:block" />
 						</div>
 					</ClientOnly>
 				</div>

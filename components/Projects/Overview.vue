@@ -507,10 +507,8 @@ const formatCurrency = (amount) => {
 	return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
 };
 
-const formatDate = (dateStr) => {
-	if (!dateStr) return '';
-	return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-};
+// Uses getFriendlyDateThree from utils/dates.ts
+const formatDate = (dateStr) => getFriendlyDateThree(dateStr);
 
 onMounted(() => {
 	loadStats();
@@ -639,10 +637,8 @@ const allEvents = computed(() => {
 		.sort((a, b) => new Date(a.date || a.event_date || 0) - new Date(b.date || b.event_date || 0));
 });
 
-const formatEventDate = (dateStr) => {
-	if (!dateStr) return '';
-	return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-};
+// Uses getFriendlyDateTwo from utils/dates.ts
+const formatEventDate = (dateStr) => getFriendlyDateTwo(dateStr);
 
 // Event detail sheet
 const showEventDetail = ref(false);

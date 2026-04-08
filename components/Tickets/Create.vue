@@ -350,18 +350,8 @@ function handleCalendarSelect(val) {
 	updateDateTime();
 }
 
-// Helper function to format date display
-const formatDisplayDate = (date) => {
-	if (!date) return '';
-	// Create date in local timezone
-	const localDate = new Date(date);
-	return localDate.toLocaleDateString('en-US', {
-		month: 'short',
-		day: 'numeric',
-		year: 'numeric',
-		timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-	});
-};
+// Uses getFriendlyDateThree from utils/dates.ts
+const formatDisplayDate = (date) => getFriendlyDateThree(date);
 
 // Update due date and time when either changes
 const updateDateTime = () => {
