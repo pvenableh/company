@@ -167,8 +167,11 @@ const projectTeamMembers = computed(() => {
 
 // ── Quick Actions ──
 const showQuickInvoice = ref(false);
+const showAttachInvoice = ref(false);
 const showQuickChannel = ref(false);
 const savingInvoice = ref(false);
+const unattachedInvoices = ref([]);
+const loadingUnattached = ref(false);
 const toast = useToast();
 
 const handleInvoiceSave = async (payload) => {
@@ -184,6 +187,50 @@ const handleInvoiceSave = async (payload) => {
 		toast.add({ title: 'Failed to create invoice', description: err.message, color: 'red' });
 	} finally {
 		savingInvoice.value = false;
+	}
+};
+
+const openAttachInvoice = async () => {
+	showAttachInvoice.value = true;
+	loadingUnattached.value = true;
+	try {
+		const filter = {
+			_and: [
+				{ _or: [{ project: { _null: true } }, { project: { _eq: '' } }] },
+				{ status: { _nin: ['archived'] } },
+			],
+		};
+		// Scope to project's client if available, otherwise org
+		if (project.value?.client?.id) {
+			filter._and.push({ client: { _eq: project.value.client.id } });
+		} else if (project.value?.organization?.id) {
+			filter._and.push({ organization: { _eq: project.value.organization.id } });
+		}
+		const invs = await invoiceItems.list({
+			fields: ['id', 'invoice_code', 'status', 'total_amount', 'client.id', 'client.name', 'bill_to.name', 'date_created'],
+			filter,
+			sort: ['-date_created'],
+			limit: 50,
+		});
+		unattachedInvoices.value = invs || [];
+	} catch (err) {
+		console.error('Error fetching unattached invoices:', err);
+		unattachedInvoices.value = [];
+	} finally {
+		loadingUnattached.value = false;
+	}
+};
+
+const attachInvoice = async (invoiceId) => {
+	try {
+		await invoiceItems.update(invoiceId, { project: params.id });
+		unattachedInvoices.value = unattachedInvoices.value.filter((i) => i.id !== invoiceId);
+		toast.add({ title: 'Invoice attached to project', color: 'green' });
+		loadInvoices();
+		loadStats();
+	} catch (err) {
+		console.error('Error attaching invoice:', err);
+		toast.add({ title: 'Failed to attach invoice', color: 'red' });
 	}
 };
 
@@ -369,8 +416,10 @@ async function refreshProject() {
 		});
 		Object.assign(project, updated);
 		loadStats();
+		toast.add({ title: 'Project updated', color: 'green' });
 	} catch (err) {
 		console.error('Error refreshing project:', err);
+		toast.add({ title: 'Failed to refresh project', color: 'red' });
 	}
 }
 
@@ -492,7 +541,7 @@ const formatCurrency = (amount) => {
 		<div class="max-w-screen-xl mx-auto page_inner px-4 2xl:px-0 my-4">
 			<UTabs
 				:items="items"
-				class="mt-2"
+				class="mt-2 w-full"
 			>
 				<template #overview="{ item }">
 					<ProjectsOverview :project="project" @eventCreated="refreshProject" />
@@ -528,7 +577,7 @@ const formatCurrency = (amount) => {
 							:team-members="projectTeamMembers"
 							@stats-changed="loadStats"
 						/>
-						<div v-else class="max-w-xl mx-auto">
+						<div v-else>
 							<TasksInlineAdder context="project" :context-id="project.id" :organization-id="project.organization?.id" />
 						</div>
 					</div>
@@ -537,7 +586,7 @@ const formatCurrency = (amount) => {
 					<TicketsBoard :projectId="project.id" :organizationId="project.organization?.id" />
 				</template>
 				<template #activity="{ item }">
-					<div class="max-w-2xl mx-auto py-6">
+					<div class="w-full py-6">
 						<ProjectsActivityTimeline :project-id="params.id" />
 					</div>
 				</template>
@@ -545,118 +594,137 @@ const formatCurrency = (amount) => {
 					<ProjectsTimeEntries :project-id="params.id" :client-id="project?.client?.id" />
 				</template>
 				<template #documents="{ item }">
-					<div class="w-full px-4 py-6 min-h-[50vh] flex items-start justify-center">
-						<div class="w-full max-w-2xl">
-							<div class="flex items-center justify-between mb-4">
-								<h2 class="t-label text-muted-foreground">Documents</h2>
-								<Button size="sm" variant="outline" class="uppercase text-[10px] tracking-wide" @click="triggerFileUpload" :disabled="uploadingDoc">
-									<UIcon v-if="uploadingDoc" name="i-heroicons-arrow-path" class="h-3 w-3 mr-1 animate-spin" />
-									<UIcon v-else name="i-heroicons-arrow-up-tray" class="h-3 w-3 mr-1" />
-									Upload
-								</Button>
-								<input ref="fileInput" type="file" multiple class="hidden" @change="handleFileUpload" />
-							</div>
-
-							<!-- Loading -->
-							<div v-if="loadingDocs" class="space-y-2">
-								<div v-for="n in 3" :key="n" class="h-16 bg-muted rounded-xl animate-pulse" />
-							</div>
-
-							<!-- Documents list -->
-							<div v-else-if="documents.length > 0" class="space-y-2">
-								<a
-									v-for="doc in documents"
-									:key="doc.id"
-									:href="`${useRuntimeConfig().public.directusUrl}/assets/${doc.directus_files_id?.id}`"
-									target="_blank"
-									class="ios-card p-4 flex items-center gap-3 ios-press block"
-								>
-									<UIcon :name="getFileIcon(doc.directus_files_id?.type)" class="w-5 h-5 text-muted-foreground flex-shrink-0" />
-									<div class="flex-1 min-w-0">
-										<p class="text-sm font-medium text-foreground truncate">{{ doc.directus_files_id?.title || doc.directus_files_id?.filename_download }}</p>
-										<div class="flex items-center gap-2 mt-0.5">
-											<span class="text-[10px] text-muted-foreground">{{ formatFileSize(doc.directus_files_id?.filesize) }}</span>
-											<span v-if="doc.directus_files_id?.uploaded_on" class="text-[10px] text-muted-foreground">
-												{{ new Date(doc.directus_files_id.uploaded_on).toLocaleDateString() }}
-											</span>
-										</div>
-									</div>
-									<UIcon name="i-heroicons-arrow-down-tray" class="w-4 h-4 text-muted-foreground/50 flex-shrink-0" />
-								</a>
-							</div>
-
-							<!-- Empty state -->
-							<div v-else class="flex flex-col items-center justify-center py-16 text-center">
-								<div class="h-12 w-12 rounded-full bg-muted/60 flex items-center justify-center mb-4">
-									<Icon name="lucide:file-text" class="h-6 w-6 text-muted-foreground/60" />
-								</div>
-								<p class="text-sm text-muted-foreground">No documents yet</p>
-								<p class="text-xs text-muted-foreground/60 mt-1">Upload files to keep everything organized.</p>
-								<Button size="sm" variant="outline" class="mt-4 uppercase text-[10px] tracking-wide" @click="triggerFileUpload">
-									<UIcon name="i-heroicons-arrow-up-tray" class="h-3 w-3 mr-1" />
-									Upload Files
-								</Button>
-							</div>
+					<div class="w-full py-6">
+						<div class="flex items-center justify-between mb-4">
+							<h2 class="t-label text-muted-foreground">Documents</h2>
+							<Button size="sm" variant="outline" class="uppercase text-[10px] tracking-wide" @click="triggerFileUpload" :disabled="uploadingDoc">
+								<UIcon v-if="uploadingDoc" name="i-heroicons-arrow-path" class="h-3 w-3 mr-1 animate-spin" />
+								<UIcon v-else name="i-heroicons-arrow-up-tray" class="h-3 w-3 mr-1" />
+								Upload
+							</Button>
+							<input ref="fileInput" type="file" multiple class="hidden" @change="handleFileUpload" />
 						</div>
+
+						<transition name="fade" mode="out-in">
+						<div v-if="loadingDocs" key="docs-loading" class="space-y-2">
+							<div v-for="n in 3" :key="n" class="h-16 bg-muted/30 rounded-2xl animate-pulse" />
+						</div>
+
+						<div v-else-if="documents.length > 0" key="docs-list" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+							<a
+								v-for="doc in documents"
+								:key="doc.id"
+								:href="`${useRuntimeConfig().public.directusUrl}/assets/${doc.directus_files_id?.id}`"
+								target="_blank"
+								class="ios-card p-4 flex items-center gap-3 ios-press block stagger-item"
+							>
+								<UIcon :name="getFileIcon(doc.directus_files_id?.type)" class="w-5 h-5 text-muted-foreground flex-shrink-0" />
+								<div class="flex-1 min-w-0">
+									<p class="text-sm font-medium text-foreground truncate">{{ doc.directus_files_id?.title || doc.directus_files_id?.filename_download }}</p>
+									<div class="flex items-center gap-2 mt-0.5">
+										<span class="text-[10px] text-muted-foreground">{{ formatFileSize(doc.directus_files_id?.filesize) }}</span>
+										<span v-if="doc.directus_files_id?.uploaded_on" class="text-[10px] text-muted-foreground">
+											{{ getFriendlyDate(doc.directus_files_id.uploaded_on) }}
+										</span>
+									</div>
+								</div>
+								<UIcon name="i-heroicons-arrow-down-tray" class="w-4 h-4 text-muted-foreground/50 flex-shrink-0" />
+							</a>
+						</div>
+
+						<div v-else key="docs-empty" class="flex flex-col items-center justify-center py-16 text-center">
+							<div class="h-12 w-12 rounded-full bg-muted/60 flex items-center justify-center mb-4">
+								<Icon name="lucide:file-text" class="h-6 w-6 text-muted-foreground/60" />
+							</div>
+							<p class="text-sm text-muted-foreground">No documents yet</p>
+							<p class="text-xs text-muted-foreground/60 mt-1">Upload files to keep everything organized.</p>
+							<Button size="sm" variant="outline" class="mt-4 uppercase text-[10px] tracking-wide" @click="triggerFileUpload">
+								<UIcon name="i-heroicons-arrow-up-tray" class="h-3 w-3 mr-1" />
+								Upload Files
+							</Button>
+						</div>
+						</transition>
 					</div>
 				</template>
 				<template #billing="{ item }">
-					<div class="w-full px-4 py-6 min-h-[50vh] flex items-start justify-center">
-						<div class="w-full max-w-2xl">
-							<div class="flex items-center justify-between mb-4">
-								<h2 class="t-label text-muted-foreground">Invoices</h2>
+					<div class="w-full py-6">
+						<div class="flex items-center justify-between mb-4">
+							<h2 class="t-label text-muted-foreground">Invoices</h2>
+							<div class="flex items-center gap-2">
+								<Button size="sm" variant="outline" class="uppercase text-[10px] tracking-wide" @click="openAttachInvoice">
+									<UIcon name="i-heroicons-link" class="h-3 w-3 mr-1" />
+									Attach Existing
+								</Button>
 								<Button size="sm" variant="outline" class="uppercase text-[10px] tracking-wide" @click="showQuickInvoice = true">
 									<UIcon name="i-heroicons-plus" class="h-3 w-3 mr-1" />
 									New Invoice
 								</Button>
 							</div>
-
-							<div v-if="loadingInvoices" class="space-y-2">
-								<div v-for="n in 3" :key="n" class="h-16 bg-muted rounded-xl animate-pulse" />
-							</div>
-
-							<div v-else-if="projectInvoices.length > 0" class="space-y-2">
-								<NuxtLink
-									v-for="inv in projectInvoices"
-									:key="inv.id"
-									:to="`/invoices/${inv.id}`"
-									class="ios-card p-4 flex items-center justify-between ios-press block"
-								>
-									<div class="flex items-center gap-3 min-w-0">
-										<UIcon name="i-heroicons-document-currency-dollar" class="w-5 h-5 text-green-500 flex-shrink-0" />
-										<div class="min-w-0">
-											<p class="text-sm font-medium text-foreground">{{ inv.invoice_code || `Invoice #${inv.id}` }}</p>
-											<p class="text-[10px] text-muted-foreground">{{ inv.client?.name || inv.bill_to?.name || '' }}</p>
-										</div>
-									</div>
-									<div class="text-right flex-shrink-0 ml-2">
-										<p class="text-sm font-semibold text-foreground">{{ formatCurrency(getInvoiceTotal(inv)) }}</p>
-										<span
-											class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full"
-											:class="{
-												'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400': inv.status === 'paid',
-												'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400': inv.status === 'pending',
-												'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400': inv.status === 'processing',
-												'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400': inv.status === 'archived',
-											}"
-										>
-											{{ inv.status }}
-										</span>
-									</div>
-								</NuxtLink>
-							</div>
-
-							<div v-else class="flex flex-col items-center justify-center py-16 text-center">
-								<div class="h-12 w-12 rounded-full bg-muted/60 flex items-center justify-center mb-4">
-									<Icon name="lucide:receipt" class="h-6 w-6 text-muted-foreground/60" />
-								</div>
-								<p class="text-sm text-muted-foreground">No invoices for this project.</p>
-								<Button size="sm" variant="outline" class="mt-4 uppercase text-[10px] tracking-wide" @click="showQuickInvoice = true">
-									<UIcon name="i-heroicons-plus" class="h-3 w-3 mr-1" />
-									Create Invoice
-								</Button>
-							</div>
 						</div>
+
+						<transition name="fade" mode="out-in">
+						<div v-if="loadingInvoices" key="inv-loading" class="space-y-2">
+							<div v-for="n in 3" :key="n" class="h-16 bg-muted/30 rounded-2xl animate-pulse" />
+						</div>
+
+						<div v-else-if="projectInvoices.length > 0" key="inv-list" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+							<NuxtLink
+								v-for="inv in projectInvoices"
+								:key="inv.id"
+								:to="`/invoices/${inv.id}`"
+								class="ios-card p-4 flex items-center justify-between ios-press block stagger-item"
+							>
+								<div class="flex items-center gap-3 min-w-0">
+									<div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+										:class="{
+											'bg-green-500/10': inv.status === 'paid',
+											'bg-amber-500/10': inv.status === 'pending',
+											'bg-blue-500/10': inv.status === 'processing',
+											'bg-muted/60': inv.status === 'archived',
+										}"
+									>
+										<UIcon name="i-heroicons-document-currency-dollar" class="w-4 h-4"
+											:class="{
+												'text-green-500': inv.status === 'paid',
+												'text-amber-500': inv.status === 'pending',
+												'text-blue-500': inv.status === 'processing',
+												'text-muted-foreground': inv.status === 'archived',
+											}"
+										/>
+									</div>
+									<div class="min-w-0">
+										<p class="text-sm font-medium text-foreground">{{ inv.invoice_code || `Invoice #${inv.id}` }}</p>
+										<p class="text-[10px] text-muted-foreground">{{ inv.client?.name || inv.bill_to?.name || '' }}</p>
+									</div>
+								</div>
+								<div class="text-right flex-shrink-0 ml-2">
+									<p class="text-sm font-semibold text-foreground">{{ formatCurrency(getInvoiceTotal(inv)) }}</p>
+									<span
+										class="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-md"
+										:class="{
+											'text-green-500 bg-green-500/10': inv.status === 'paid',
+											'text-amber-500 bg-amber-500/10': inv.status === 'pending',
+											'text-blue-500 bg-blue-500/10': inv.status === 'processing',
+											'text-muted-foreground bg-muted/40': inv.status === 'archived',
+										}"
+									>
+										{{ inv.status }}
+									</span>
+								</div>
+							</NuxtLink>
+						</div>
+
+						<div v-else key="inv-empty" class="flex flex-col items-center justify-center py-16 text-center">
+							<div class="h-12 w-12 rounded-full bg-muted/60 flex items-center justify-center mb-4">
+								<Icon name="lucide:receipt" class="h-6 w-6 text-muted-foreground/60" />
+							</div>
+							<p class="text-sm text-muted-foreground">No invoices for this project.</p>
+							<Button size="sm" variant="outline" class="mt-4 uppercase text-[10px] tracking-wide" @click="showQuickInvoice = true">
+								<UIcon name="i-heroicons-plus" class="h-3 w-3 mr-1" />
+								Create Invoice
+							</Button>
+						</div>
+						</transition>
 					</div>
 
 					<!-- Invoice Create Modal -->
@@ -670,6 +738,51 @@ const formatCurrency = (amount) => {
 									@save="handleInvoiceSave"
 									@cancel="showQuickInvoice = false"
 								/>
+							</div>
+						</UModal>
+
+						<!-- Attach Existing Invoice Modal -->
+						<UModal v-model="showAttachInvoice">
+							<div class="p-6">
+								<h3 class="text-lg font-semibold mb-4">Attach Existing Invoice</h3>
+
+								<div v-if="loadingUnattached" class="space-y-2 py-4">
+									<div v-for="n in 3" :key="n" class="h-14 bg-muted rounded-xl animate-pulse" />
+								</div>
+
+								<div v-else-if="unattachedInvoices.length === 0" class="text-center py-8 text-muted-foreground">
+									<UIcon name="i-heroicons-document-magnifying-glass" class="w-8 h-8 mx-auto mb-2 opacity-40" />
+									<p class="text-sm">No unattached invoices found for this organization.</p>
+								</div>
+
+								<div v-else class="space-y-2 max-h-[60vh] overflow-y-auto">
+									<div
+										v-for="inv in unattachedInvoices"
+										:key="inv.id"
+										class="ios-card p-3 flex items-center justify-between"
+									>
+										<div class="min-w-0">
+											<p class="text-sm font-medium text-foreground">{{ inv.invoice_code || `Invoice #${inv.id.slice(0, 8)}` }}</p>
+											<p class="text-[10px] text-muted-foreground">
+												{{ inv.client?.name || inv.bill_to?.name || 'No client' }}
+												<span v-if="inv.total_amount"> &middot; {{ formatCurrency(parseFloat(inv.total_amount) || 0) }}</span>
+											</p>
+										</div>
+										<UButton
+											icon="i-heroicons-link"
+											size="xs"
+											color="primary"
+											variant="soft"
+											@click="attachInvoice(inv.id)"
+										>
+											Attach
+										</UButton>
+									</div>
+								</div>
+
+								<div class="flex justify-end mt-4 pt-4 border-t border-border/40">
+									<UButton color="gray" variant="ghost" @click="showAttachInvoice = false">Close</UButton>
+								</div>
 							</div>
 						</UModal>
 					</ClientOnly>

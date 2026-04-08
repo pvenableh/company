@@ -207,10 +207,9 @@ async function loadOptions() {
 	} catch { clients.value = []; }
 
 	try {
-		const svcFilter = selectedOrg.value ? { organization: { _eq: selectedOrg.value } } : {};
 		services.value = await serviceItems.list({
 			fields: ['id', 'name', 'color'],
-			filter: svcFilter,
+			filter: { status: { _eq: 'published' } },
 			sort: ['name'],
 			limit: -1,
 		});

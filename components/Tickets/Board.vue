@@ -143,7 +143,8 @@
 		</div>
 
 		<!-- Archived Tickets View -->
-		<div v-if="showArchived" class="px-4">
+		<transition name="fade" mode="out-in">
+		<div v-if="showArchived" key="archived-view" class="px-4">
 			<div class="bg-card border border-border rounded-2xl p-6">
 				<div class="flex items-center justify-between mb-6">
 					<h3 class="text-sm font-semibold uppercase tracking-wider text-foreground flex items-center gap-2">
@@ -166,7 +167,7 @@
 					<div
 						v-for="ticket in archivedTickets"
 						:key="ticket.id"
-						class="flex items-center justify-between p-3 rounded-xl bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors"
+						class="flex items-center justify-between p-3 rounded-xl bg-muted/30 border border-border/50 hover:bg-muted/50 transition-colors stagger-item"
 					>
 						<div class="flex-1 min-w-0">
 							<nuxt-link :to="`/tickets/${ticket.id}`" class="text-sm font-medium text-foreground hover:underline truncate block">
@@ -201,9 +202,10 @@
 			</div>
 		</div>
 
+		<div v-else key="board-view">
 		<!-- Mobile Column Navigation -->
 		<div
-			v-if="isMobile && !showArchived"
+			v-if="isMobile"
 			class="flex items-center justify-between mb-4 mx-4 rounded-xl bg-card border border-border px-4 gap-4 py-3 text-foreground shadow-sm"
 		>
 			<UIcon name="i-heroicons-chevron-left" class="w-5 h-5" @click="previousColumn" />
@@ -215,7 +217,6 @@
 
 		<!-- Main Board -->
 		<div
-			v-if="!showArchived"
 			class="bg-muted/20 border border-border/50 rounded-2xl w-full flex min-h-svh overflow-x-auto overflow-hidden overflow-hidden-scrollbar tickets-board__board"
 			@touchstart="handleTouchStart"
 			@touchend="handleTouchEnd"
@@ -268,7 +269,7 @@
 					@change="(event) => updateTicketStatus(column.id, event)"
 				>
 					<template #item="{ element }">
-						<div :id="element.id" class="ticket-wrapper">
+						<div :id="element.id" class="ticket-wrapper stagger-item">
 							<div class="relative">
 								<div
 									v-if="updatingTickets.has(element.id)"
@@ -284,6 +285,8 @@
 				</VueDraggable>
 			</div>
 		</div>
+		</div>
+		</transition>
 	</div>
 </template>
 

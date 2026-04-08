@@ -66,6 +66,22 @@
 						class="relative"
 					/>
 				</UFormGroup>
+				<UFormGroup v-if="clientOptions.length > 0" label="Client">
+					<USelectMenu
+						searchable
+						v-model="form.client"
+						:options="clientOptions"
+						option-attribute="label"
+						value-attribute="value"
+						placeholder="Select client"
+						:loading="loadingClients"
+						class="relative"
+					>
+						<template #option="{ option }">
+							{{ option.label }}
+						</template>
+					</USelectMenu>
+				</UFormGroup>
 			</div>
 
 			<!-- Due Date & Time -->
@@ -138,6 +154,7 @@ const emit = defineEmits(['update', 'delete-click', 'comment-count-update', 'sha
 
 // Composables
 const projectItems = useDirectusItems('projects');
+const { getClientOptions } = useClients();
 const { notify } = useNotifications();
 const { user: sessionUser, loggedIn } = useUserSession();
 const currentUser = computed(() => {
@@ -168,9 +185,12 @@ const form = ref({
 	team: props.ticket.team?.id || null, // This will be synced with localTeamId
 	assigned_to: props.ticket.assigned_to?.map((a) => a.directus_users_id.id) || [],
 	due_date: props.ticket.due_date || new Date().toISOString(),
+	client: props.ticket.client?.id || null,
 });
 
 const initialFormState = ref({});
+const clientOptions = ref([]);
+const loadingClients = ref(false);
 const isDirty = ref(false);
 const projectOptions = ref([]);
 const loadingProjects = ref(false);
@@ -221,6 +241,7 @@ const initializeFormState = () => {
 		category: form.value.category,
 		assigned_to: [...form.value.assigned_to],
 		due_date: form.value.due_date,
+		client: form.value.client,
 	};
 	isDirty.value = false;
 	emit('dirty-state-change', false);
@@ -239,6 +260,7 @@ const trackChanges = () => {
 		category: form.value.category,
 		assigned_to: [...form.value.assigned_to],
 		due_date: form.value.due_date,
+		client: form.value.client,
 	};
 
 	const isDifferent = JSON.stringify(currentState) !== JSON.stringify(initialFormState.value);
@@ -508,6 +530,7 @@ watch(
 			team: ticketTeamId, // Use original team value without defaulting
 			assigned_to: newTicket.assigned_to?.map((a) => a.directus_users_id.id) || [],
 			due_date: newTicket.due_date || new Date().toISOString(),
+			client: newTicket.client?.id || null,
 		};
 
 		// Update local team state and no team checkbox
@@ -547,6 +570,13 @@ onMounted(async () => {
 		await fetchProjects(props.ticket.organization.id);
 	}
 
+	// Load client options
+	loadingClients.value = true;
+	try {
+		clientOptions.value = await getClientOptions();
+	} catch { clientOptions.value = []; }
+	finally { loadingClients.value = false; }
+
 	// Initialize form state
 	initializeFormState();
 });
@@ -565,6 +595,7 @@ const updateFormData = (newData) => {
 		team: newData.team?.id || null,
 		assigned_to: newData.assigned_to?.map((a) => a.directus_users_id?.id) || [],
 		due_date: newData.due_date || new Date().toISOString(),
+		client: newData.client?.id || null,
 	};
 
 	// Reset the form's initial state to prevent it from being marked as dirty
