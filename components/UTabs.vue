@@ -82,7 +82,7 @@ const tabItems = computed(() =>
     </div>
 
     <template v-for="item in tabItems" :key="item.key">
-      <TabsContent :value="item.key!" :class="cn('tab-content-animate', props.ui?.content)">
+      <TabsContent :value="item.key!" :class="props.ui?.content">
         <slot :name="item.slot || item.key" :item="item">
           <slot name="item" :item="item" />
         </slot>

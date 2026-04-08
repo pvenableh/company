@@ -9,11 +9,16 @@ const { selectedOrg } = useOrganization();
 const { clientScope } = useOrgRole();
 
 const projectItems = useDirectusItems('projects');
+const eventItems = useDirectusItems('project_events');
+const toast = useToast();
 
 const loading = ref(true);
 const projects = ref<any[]>([]);
 const selectedProject = ref<any | null>(null);
 const showDetail = ref(false);
+const projectEvents = ref<any[]>([]);
+const loadingEvents = ref(false);
+const approvingEventId = ref<string | null>(null);
 
 async function loadProjects() {
 	if (!selectedOrg.value) return;
@@ -53,10 +58,55 @@ async function loadProjects() {
 	}
 }
 
-function openProject(project: any) {
+async function openProject(project: any) {
 	selectedProject.value = project;
 	showDetail.value = true;
+	await loadProjectEvents(project.id);
 }
+
+async function loadProjectEvents(projectId: string) {
+	loadingEvents.value = true;
+	try {
+		projectEvents.value = await eventItems.list({
+			fields: ['id', 'title', 'type', 'status', 'approval', 'approved_at', 'event_date', 'end_date', 'description'],
+			filter: {
+				project: { _eq: projectId },
+				status: { _neq: 'archived' },
+			},
+			sort: ['sort', 'event_date'],
+			limit: 100,
+		});
+	} catch (err) {
+		console.error('Error loading project events:', err);
+		projectEvents.value = [];
+	} finally {
+		loadingEvents.value = false;
+	}
+}
+
+async function approveEventFromPortal(eventId: string) {
+	approvingEventId.value = eventId;
+	try {
+		await eventItems.update(eventId, {
+			approval: 'Approved',
+			approved_at: new Date().toISOString(),
+		});
+		const evt = projectEvents.value.find(e => e.id === eventId);
+		if (evt) {
+			evt.approval = 'Approved';
+			evt.approved_at = new Date().toISOString();
+		}
+		toast.add({ title: 'Event approved', color: 'green' });
+	} catch (err) {
+		console.error('Error approving event:', err);
+		toast.add({ title: 'Failed to approve', color: 'red' });
+	} finally {
+		approvingEventId.value = null;
+	}
+}
+
+const pendingEvents = computed(() => projectEvents.value.filter(e => e.approval === 'Need Approval'));
+const otherEvents = computed(() => projectEvents.value.filter(e => e.approval !== 'Need Approval'));
 
 const statusGroups = computed(() => {
 	const groups: Record<string, any[]> = {
@@ -252,15 +302,86 @@ watch(() => selectedOrg.value, () => loadProjects());
 								</div>
 							</div>
 
+							<!-- Pending Approvals -->
+							<div v-if="pendingEvents.length > 0">
+								<p class="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+									<UIcon name="i-heroicons-exclamation-circle" class="w-3.5 h-3.5 text-amber-500" />
+									Pending Your Approval ({{ pendingEvents.length }})
+								</p>
+								<div class="space-y-2">
+									<div
+										v-for="evt in pendingEvents"
+										:key="evt.id"
+										class="ios-card p-3"
+									>
+										<div class="flex items-start justify-between gap-2">
+											<div class="min-w-0">
+												<p class="text-sm font-medium truncate">{{ evt.title }}</p>
+												<p class="text-[10px] text-muted-foreground mt-0.5">
+													{{ evt.type }}
+													<span v-if="evt.event_date"> &middot; {{ getFriendlyDateTwo(evt.event_date) }}</span>
+												</p>
+												<p v-if="evt.description" class="text-xs text-muted-foreground mt-1 line-clamp-2">{{ evt.description }}</p>
+											</div>
+											<UButton
+												size="xs"
+												color="green"
+												variant="soft"
+												icon="i-heroicons-check"
+												:loading="approvingEventId === evt.id"
+												@click="approveEventFromPortal(evt.id)"
+											>
+												Approve
+											</UButton>
+										</div>
+									</div>
+								</div>
+							</div>
+
+							<!-- Project Events -->
+							<div v-if="otherEvents.length > 0">
+								<p class="text-xs text-muted-foreground mb-2">Events & Milestones</p>
+								<div class="space-y-1.5">
+									<div
+										v-for="evt in otherEvents"
+										:key="evt.id"
+										class="flex items-center justify-between p-2.5 rounded-xl bg-muted/30"
+									>
+										<div class="flex items-center gap-2 min-w-0">
+											<div class="h-2 w-2 rounded-full shrink-0"
+												:class="{
+													'bg-green-500': evt.approval === 'Approved',
+													'bg-gray-400': evt.approval !== 'Approved',
+												}"
+											/>
+											<span class="text-xs truncate">{{ evt.title }}</span>
+										</div>
+										<span
+											v-if="evt.approval === 'Approved'"
+											class="text-[8px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-md text-green-500 bg-green-500/10 shrink-0"
+										>
+											Approved
+										</span>
+										<span v-if="evt.event_date" class="text-[9px] text-muted-foreground shrink-0 ml-2">
+											{{ getFriendlyDateTwo(evt.event_date) }}
+										</span>
+									</div>
+								</div>
+							</div>
+
+							<div v-if="loadingEvents" class="py-4">
+								<div v-for="n in 3" :key="n" class="h-12 bg-muted/30 rounded-xl animate-pulse mb-2" />
+							</div>
+
 							<!-- Dates -->
 							<div class="flex gap-6">
 								<div>
 									<p class="text-xs text-muted-foreground mb-1">Created</p>
-									<p class="text-sm">{{ selectedProject.date_created ? new Date(selectedProject.date_created).toLocaleDateString() : '—' }}</p>
+									<p class="text-sm">{{ selectedProject.date_created ? getFriendlyDateThree(selectedProject.date_created) : '—' }}</p>
 								</div>
 								<div>
 									<p class="text-xs text-muted-foreground mb-1">Last Updated</p>
-									<p class="text-sm">{{ selectedProject.date_updated ? new Date(selectedProject.date_updated).toLocaleDateString() : '—' }}</p>
+									<p class="text-sm">{{ selectedProject.date_updated ? getFriendlyDate(selectedProject.date_updated) : '—' }}</p>
 								</div>
 							</div>
 						</div>

@@ -253,8 +253,9 @@ watch(() => route.path, () => {
 					<span class="header-tagline">Do good work.</span>
 				</NuxtLink>
 
-				<!-- Right: Notifications + Avatar -->
+				<!-- Right: Help + Search + Notifications + Avatar -->
 				<div class="flex items-center gap-2">
+					<WalkthroughHelpMenu />
 					<button
 						class="flex items-center justify-center w-8 h-8 rounded-full hover:bg-muted/50 text-muted-foreground"
 						@click="emit('open-spotlight')"
@@ -275,6 +276,11 @@ watch(() => route.path, () => {
 			<main class="flex-1 overflow-auto">
 				<slot />
 			</main>
+
+			<!-- Walkthrough overlay (global) -->
+			<ClientOnly>
+				<WalkthroughManager />
+			</ClientOnly>
 		</div>
 
 		<!-- ─── Mobile Drawer Overlay ─── -->

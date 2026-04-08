@@ -2389,6 +2389,12 @@ export interface ProjectEvent {
 	spawned_projects?: Project[] | string[];
 	tasks?: ProjectTask[] | string[];
 	files?: ProjectEventFile[] | string[];
+	/** @description User who approved this event */
+	approved_by?: DirectusUser | string | null;
+	/** @description When this event was approved */
+	approved_at?: string | null;
+	/** @description Unique token for shareable approval links */
+	approval_token?: string | null;
 }
 
 export interface ProjectEventsComment {

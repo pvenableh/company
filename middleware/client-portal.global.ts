@@ -29,6 +29,7 @@ export default defineNuxtRouteMiddleware((to) => {
     '/portal',         // Client portal pages
     '/account',        // User account settings
     '/auth',           // Auth pages (login, register, etc.)
+    '/approve',        // Public approval pages
   ];
 
   const allowedExact = [

@@ -79,6 +79,7 @@ const stats = ref({
 	invoiceTotal: 0,
 	paidTotal: 0,
 	eventCount: 0,
+	pendingApprovals: 0,
 });
 
 const loadStats = async () => {
@@ -92,8 +93,13 @@ const loadStats = async () => {
 			}),
 			taskItems.list({
 				fields: ['id', 'completed', 'status'],
-				filter: projectFilter,
-				limit: 200,
+				filter: {
+					_or: [
+						{ project: { _eq: params.id } },
+						{ event_id: { project: { _eq: params.id } } },
+					],
+				},
+				limit: 500,
 			}),
 			invoiceItems.list({
 				fields: ['id', 'status', 'line_items'],
@@ -105,8 +111,9 @@ const loadStats = async () => {
 		stats.value.ticketCount = tickets?.length || 0;
 		stats.value.openTickets = tickets?.filter(t => t.status !== 'Completed').length || 0;
 		stats.value.taskCount = tasks?.length || 0;
-		stats.value.completedTasks = tasks?.filter(t => t.completed || t.status === 'completed').length || 0;
+		stats.value.completedTasks = tasks?.filter(t => t.completed || t.status === 'done').length || 0;
 		stats.value.eventCount = project?.events?.length || 0;
+		stats.value.pendingApprovals = project?.events?.filter(e => e.approval === 'Need Approval').length || 0;
 
 		// Invoice totals
 		let total = 0;
@@ -527,7 +534,7 @@ const formatCurrency = (amount) => {
 			</div>
 
 			<!-- Stats Row -->
-			<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+			<div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 mb-6">
 				<!-- Open Tickets -->
 				<div class="ios-card p-4">
 					<div class="flex items-center gap-2 mb-1">
@@ -548,6 +555,17 @@ const formatCurrency = (amount) => {
 					<div class="mt-1 h-1.5 bg-muted/30 rounded-full overflow-hidden">
 						<div class="h-full rounded-full bg-purple-500 transition-all duration-500" :style="{ width: `${taskProgress}%` }" />
 					</div>
+				</div>
+
+				<!-- Events -->
+				<div class="ios-card p-4">
+					<div class="flex items-center gap-2 mb-1">
+						<UIcon name="i-heroicons-calendar-days" class="w-4 h-4 text-cyan-500" />
+						<span class="t-label text-muted-foreground">Events</span>
+					</div>
+					<p class="text-2xl font-bold text-foreground">{{ stats.eventCount }}</p>
+					<p v-if="stats.pendingApprovals > 0" class="text-[10px] text-amber-500 font-medium">{{ stats.pendingApprovals }} pending approval</p>
+					<p v-else class="text-[10px] text-muted-foreground">milestones & phases</p>
 				</div>
 
 				<!-- Billing -->

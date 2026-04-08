@@ -4,9 +4,9 @@
 		<div class="flex items-center justify-between mb-4">
 			<div class="flex items-center gap-3">
 				<span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-					{{ completedCount }}/{{ allTasks.length }} complete
+					{{ completedCount }}/{{ allTasksCount }} complete
 				</span>
-				<div v-if="allTasks.length" class="w-24 h-1.5 bg-muted/30 rounded-full overflow-hidden">
+				<div v-if="allTasksCount" class="w-24 h-1.5 bg-muted/30 rounded-full overflow-hidden">
 					<div
 						class="h-full rounded-full transition-all duration-500"
 						:class="progressPercent > 75 ? 'bg-emerald-500' : progressPercent > 25 ? 'bg-amber-500' : 'bg-primary'"
@@ -40,7 +40,7 @@
 					:class="col.borderColor"
 				>
 					<VueDraggable
-						:model-value="getColumnTasks(col.key)"
+						v-model="columnTasks[col.key]"
 						item-key="id"
 						:group="{ name: 'tasks' }"
 						ghost-class="opacity-40"
@@ -151,21 +151,39 @@ const columns = [
 	{ key: 'done', label: 'Done', dotColor: 'bg-emerald-500', borderColor: 'border-emerald-500/20' },
 ];
 
-const completedCount = computed(() => allTasks.value.filter(t => t.completed || t.status === 'done').length);
+// Per-column reactive arrays for drag-and-drop
+const columnTasks = reactive<Record<string, any[]>>({ todo: [], in_progress: [], done: [] });
+
+const completedCount = computed(() => columnTasks.done.length);
+const allTasksCount = computed(() => columnTasks.todo.length + columnTasks.in_progress.length + columnTasks.done.length);
 const progressPercent = computed(() => {
-	if (!allTasks.value.length) return 0;
-	return Math.round((completedCount.value / allTasks.value.length) * 100);
+	if (!allTasksCount.value) return 0;
+	return Math.round((completedCount.value / allTasksCount.value) * 100);
 });
 
-function getColumnTasks(status: string) {
-	return allTasks.value.filter(t => {
-		// Map legacy statuses
+function distributeTasksToColumns() {
+	const todo: any[] = [];
+	const in_progress: any[] = [];
+	const done: any[] = [];
+
+	for (const t of allTasks.value) {
 		const s = t.status || 'todo';
-		if (status === 'done') return s === 'done' || t.completed;
-		if (status === 'todo') return (s === 'todo' || s === 'published' || s === 'draft') && !t.completed;
-		if (status === 'in_progress') return s === 'in_progress' && !t.completed;
-		return false;
-	});
+		if (s === 'done' || t.completed) {
+			done.push(t);
+		} else if (s === 'in_progress') {
+			in_progress.push(t);
+		} else {
+			todo.push(t);
+		}
+	}
+
+	columnTasks.todo = todo;
+	columnTasks.in_progress = in_progress;
+	columnTasks.done = done;
+}
+
+function getColumnTasks(status: string) {
+	return columnTasks[status] || [];
 }
 
 async function fetchTasks() {
@@ -183,9 +201,11 @@ async function fetchTasks() {
 			limit: -1,
 		});
 		allTasks.value = data || [];
+		distributeTasksToColumns();
 	} catch (err) {
 		console.error('Failed to load project tasks:', err);
 		allTasks.value = [];
+		distributeTasksToColumns();
 	} finally {
 		loading.value = false;
 	}
@@ -204,6 +224,7 @@ async function quickAdd(columnStatus: string) {
 			priority: 'medium',
 		});
 		allTasks.value.push(newTask);
+		columnTasks[columnStatus].push(newTask);
 		newTaskTitles[columnStatus] = '';
 		emit('statsChanged');
 	} catch (err) {
@@ -215,6 +236,7 @@ async function toggleComplete(task: any) {
 	const wasCompleted = task.completed;
 	task.completed = !wasCompleted;
 	task.status = wasCompleted ? 'todo' : 'done';
+	distributeTasksToColumns();
 	try {
 		await taskItems.update(task.id, {
 			completed: task.completed,
@@ -226,6 +248,7 @@ async function toggleComplete(task: any) {
 		// Revert
 		task.completed = wasCompleted;
 		task.status = wasCompleted ? 'done' : 'todo';
+		distributeTasksToColumns();
 	}
 }
 
@@ -255,6 +278,7 @@ async function handleTaskUpdate(taskId: string, payload: any) {
 		await taskItems.update(taskId, payload);
 		const idx = allTasks.value.findIndex(t => t.id === taskId);
 		if (idx !== -1) Object.assign(allTasks.value[idx], payload);
+		if ('status' in payload || 'completed' in payload) distributeTasksToColumns();
 		emit('statsChanged');
 	} catch (err) {
 		console.error('Failed to update task:', err);
@@ -265,6 +289,7 @@ async function handleTaskDelete(taskId: string) {
 	try {
 		await taskItems.remove(taskId);
 		allTasks.value = allTasks.value.filter(t => t.id !== taskId);
+		distributeTasksToColumns();
 		selectedTask.value = null;
 		emit('statsChanged');
 	} catch (err) {

@@ -242,12 +242,27 @@
 							<span v-if="event.date" class="text-[9px] text-muted-foreground">
 								{{ formatEventDate(event.date || event.event_date) }}
 							</span>
+							<!-- Approval badge -->
 							<span
-								class="text-[8px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-full"
+								v-if="event.approval === 'Need Approval'"
+								class="text-[8px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-md text-amber-500 bg-amber-500/10"
+							>
+								Needs Approval
+							</span>
+							<span
+								v-else-if="event.approval === 'Approved'"
+								class="text-[8px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-md text-green-500 bg-green-500/10"
+							>
+								Approved
+							</span>
+							<!-- Status badge -->
+							<span
+								class="text-[8px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-md"
 								:class="{
-									'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400': event.status === 'Active',
-									'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400': event.status === 'Completed',
-									'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400': event.status === 'Cancelled',
+									'text-blue-500 bg-blue-500/10': event.status === 'Active',
+									'text-green-500 bg-green-500/10': event.status === 'Completed',
+									'text-muted-foreground bg-muted/40': event.status === 'draft' || event.status === 'archived',
+									'text-cyan-500 bg-cyan-500/10': event.status === 'Scheduled',
 								}"
 							>
 								{{ event.status }}
@@ -359,9 +374,44 @@
 						<span class="inline-block h-2.5 w-2.5 rounded-full" :style="{ backgroundColor: project.service?.color || '#888' }" />
 						<h3 class="t-label">{{ selectedEventFull?.title || 'Event Detail' }}</h3>
 					</div>
-					<Button variant="ghost" size="icon-sm" @click="closeEventDetail">
-						<UIcon name="i-heroicons-x-mark" class="h-4 w-4" />
-					</Button>
+					<div class="flex items-center gap-2">
+						<!-- Approval actions -->
+						<template v-if="selectedEventFull?.approval === 'Need Approval'">
+							<UButton
+								size="xs"
+								color="green"
+								variant="soft"
+								icon="i-heroicons-check"
+								@click="approveEvent(selectedEventFull)"
+								:loading="approvingEvent"
+							>
+								Approve
+							</UButton>
+							<UButton
+								size="xs"
+								color="gray"
+								variant="outline"
+								icon="i-heroicons-link"
+								@click="generateApprovalLink(selectedEventFull)"
+								:loading="generatingLink"
+							>
+								Send Link
+							</UButton>
+						</template>
+						<span
+							v-else-if="selectedEventFull?.approval === 'Approved'"
+							class="text-[9px] uppercase tracking-wider font-semibold px-2 py-1 rounded-md text-green-500 bg-green-500/10 flex items-center gap-1"
+						>
+							<UIcon name="i-heroicons-check-circle" class="w-3 h-3" />
+							Approved
+							<span v-if="selectedEventFull?.approved_at" class="text-muted-foreground font-normal">
+								{{ getFriendlyDate(selectedEventFull.approved_at) }}
+							</span>
+						</span>
+						<Button variant="ghost" size="icon-sm" @click="closeEventDetail">
+							<UIcon name="i-heroicons-x-mark" class="h-4 w-4" />
+						</Button>
+					</div>
 				</div>
 			</template>
 
@@ -382,6 +432,8 @@
 </template>
 <script setup>
 import { Button } from '~/components/ui/button';
+
+const toast = useToast();
 
 const props = defineProps({
 	project: {
@@ -674,5 +726,46 @@ const closeEventDetail = () => {
 
 const handleEventUpdated = () => {
 	emit('eventCreated');
+};
+
+// ── Approval functions ──
+const approvingEvent = ref(false);
+const generatingLink = ref(false);
+
+const approveEvent = async (event) => {
+	approvingEvent.value = true;
+	try {
+		await eventItems.update(event.id, {
+			approval: 'Approved',
+			approved_at: new Date().toISOString(),
+		});
+		event.approval = 'Approved';
+		event.approved_at = new Date().toISOString();
+		toast.add({ title: 'Event approved', color: 'green' });
+		emit('eventCreated'); // refresh parent
+	} catch (err) {
+		console.error('Error approving event:', err);
+		toast.add({ title: 'Failed to approve event', color: 'red' });
+	} finally {
+		approvingEvent.value = false;
+	}
+};
+
+const generateApprovalLink = async (event) => {
+	generatingLink.value = true;
+	try {
+		const result = await $fetch('/api/projects/generate-approval-link', {
+			method: 'POST',
+			body: { eventId: event.id },
+		});
+		const link = `${window.location.origin}/approve/${result.token}`;
+		await navigator.clipboard.writeText(link);
+		toast.add({ title: 'Approval link copied to clipboard', color: 'green' });
+	} catch (err) {
+		console.error('Error generating approval link:', err);
+		toast.add({ title: 'Failed to generate link', color: 'red' });
+	} finally {
+		generatingLink.value = false;
+	}
 };
 </script>
