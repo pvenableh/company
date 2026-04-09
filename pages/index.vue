@@ -8,7 +8,7 @@ const config = useRuntimeConfig();
 // Redirect unauthenticated users to the marketing site
 if (!user.value) {
 	const marketingUrl = config.public.marketingUrl || 'https://earnest.guru';
-	navigateTo(marketingUrl, { external: true });
+	await navigateTo(marketingUrl, { external: true });
 }
 
 const layout = 'default';
@@ -177,7 +177,7 @@ watch([selectedOrg, selectedClient, selectedTeam], () => {
 // Show leaderboard when a team is selected
 const showLeaderboard = computed(() => !!selectedTeam.value);
 
-const navigateTo = (route: string) => {
+const goTo = (route: string) => {
 	router.push(route);
 };
 
@@ -330,7 +330,7 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 									v-for="action in topActions"
 									:key="action.id"
 									class="ios-card p-4 hover:shadow-md transition-all duration-200 cursor-pointer group"
-									@click="action.actionRoute && navigateTo(action.actionRoute)"
+									@click="action.actionRoute && goTo(action.actionRoute)"
 								>
 									<div class="flex items-start gap-3">
 										<div
@@ -556,7 +556,7 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 								v-for="(action, i) in crmActions"
 								:key="i"
 								class="flex items-start gap-3 p-3 rounded-lg bg-muted/20 hover:bg-muted/40 transition-colors cursor-pointer"
-								@click="action.link && navigateTo(action.link)"
+								@click="action.link && goTo(action.link)"
 							>
 								<div class="flex-1 min-w-0">
 									<div class="flex items-center gap-2">
