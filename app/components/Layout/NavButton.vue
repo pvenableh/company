@@ -9,7 +9,7 @@
 	</div>
 </template>
 <script setup>
-import { toggleSheet } from '~~/composables/useScreen';
+import { toggleSheet } from '~/composables/useScreen';
 
 function sideMenuToggle() {
 	toggleSheet();

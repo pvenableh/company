@@ -149,8 +149,8 @@ const { user } = useDirectusAuth();
 const { logout } = useLogout();
 const { triggerHaptic } = useHaptic();
 const { visibleLinks } = useNavPreferences();
-import { sheetOpen, closeSheet as closeSheetState } from '~~/composables/useScreen';
-import { timeTrackerModalOpen } from '~~/composables/useTimeTrackerModal';
+import { sheetOpen, closeSheet as closeSheetState } from '~/composables/useScreen';
+import { timeTrackerModalOpen } from '~/composables/useTimeTrackerModal';
 
 // Responsive: detect desktop for side-sheet vs bottom-sheet
 const isDesktop = ref(false);

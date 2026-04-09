@@ -1,5 +1,5 @@
 <script setup>
-import updateAvatarSource from '~~/composables/useAvatar';
+import updateAvatarSource from '~/composables/useAvatar';
 import { Toaster } from 'vue-sonner';
 import 'vue-sonner/style.css';
 

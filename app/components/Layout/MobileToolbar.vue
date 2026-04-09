@@ -1,5 +1,5 @@
 <script setup>
-import { toggleSheet } from '~~/composables/useScreen';
+import { toggleSheet } from '~/composables/useScreen';
 import { toast } from 'vue-sonner';
 
 const route = useRoute();

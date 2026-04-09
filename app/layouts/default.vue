@@ -39,7 +39,7 @@
 </template>
 
 <script setup lang="ts">
-import { timeTrackerModalOpen } from '~~/composables/useTimeTrackerModal';
+import { timeTrackerModalOpen } from '~/composables/useTimeTrackerModal';
 
 const { user } = useDirectusAuth();
 const { currentMode } = useLayoutMode();
