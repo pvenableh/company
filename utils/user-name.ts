@@ -23,7 +23,7 @@ export function userName(user: Partial<User>): string {
 export function userAvatar(user: Partial<User>): string {
 	if (user) {
 		if (user.avatar) {
-			return `https://admin.huestudios.company/assets/${user.avatar}?key=medium`;
+			return `https://admin.earnest.guru/assets/${user.avatar}?key=medium`;
 		}
 
 		if (user.first_name && user.last_name) {

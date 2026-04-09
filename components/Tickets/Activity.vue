@@ -239,7 +239,7 @@ const toggleDebugInfo = () => {
 };
 
 // Computed values
-const baseDirectusUrl = computed(() => config.public.directusUrl || 'https://admin.huestudios.company');
+const baseDirectusUrl = computed(() => config.public.directusUrl || 'https://admin.earnest.guru');
 
 // Fetch teams for name lookup
 const fetchTeams = async () => {

@@ -40,7 +40,6 @@ Earnest ships with two companion apps: **CardDesk** — a networking CRM that tu
 - **Dark Mode** — System-aware dark/light theme with manual toggle
 - **PWA** — Install as a native-feeling progressive web app on any device
 - **Timeline Icon Themes** — Six swappable icon theme packs for the activity timeline (Classic/Heroicons, Animals, Food, Travel, Objects, Nature) using Fluent Emoji Flat, with per-user persistence and live-swapping via Account > Appearance settings
-- **Marketing Sell Sheet** — Design-forward landing page at `/` showcasing actionable experiences and intuitive movement; interactive savings calculator, token cost transparency grid, CMS-backed testimonials and logo carousel, and A/B testing infrastructure (cookie-based variant assignment with GA event tracking)
 - **Investor Pitch Page** — Public page at `/pitch` with interactive revenue projection calculator (24-month forecast with adjustable growth rate), plan/add-on overview, unit economics, and Earnest Score breakdown
 - **Branded Error Pages** — Earnest-styled error pages (404, 403, 401, 500) with status-specific messaging, editorial typography, and graceful recovery actions
 
@@ -73,6 +72,18 @@ Earnest ships with two companion apps: **CardDesk** — a networking CRM that tu
 | Tables | TanStack Vue Table |
 | Analytics | Google Analytics (nuxt-gtag) |
 | Package Manager | pnpm |
+
+## Domain Architecture
+
+| Domain | Purpose |
+|---|---|
+| `earnest.guru` | Marketing site (separate repo: `earnest-marketing`) |
+| `app.earnest.guru` | Main application platform (this repo) |
+| `admin.earnest.guru` | Directus admin / CMS backend |
+| `companion.earnest.guru` | Default Companion PWA |
+| `{orgslug}.earnest.guru` | White-labeled Companion (add-on) |
+
+Reserved subdomains: `app`, `companion`, `admin`, `api`, `www`, `mail`, `status`
 
 ## Prerequisites
 
@@ -184,7 +195,7 @@ The app will be available at `http://localhost:3000`.
 
 | Page | Route | Description |
 |---|---|---|
-| Home | `/` | Sell sheet (unauthenticated) or dashboard (authenticated) |
+| Home | `/` | Dashboard (authenticated) — redirects to login if unauthenticated |
 | Tasks | `/tasks` | Personal quick tasks with AI suggestions, schedule grouping, and project task views |
 | Tickets | `/tickets` | Kanban board for task management |
 | Projects | `/projects` | Timeline and board views for project management |
@@ -296,8 +307,8 @@ The `planAllows(feature)` function in `useOrgRole()` gates only white-label by p
 | `availability` | Per-user weekly availability slots with break times |
 | `leads` | CRM pipeline: stages, scoring, `next_follow_up`, contact/org relations |
 | `lead_activities` | Lead activity log with `related_video_meeting` M2O to video_meetings |
-| `testimonials` | Customer testimonials for the marketing site (CMS-managed) |
-| `partner_logos` | Partner/client logos for the SellSheet carousel (CMS-managed) |
+| `testimonials` | Customer testimonials for the marketing site (CMS-managed, used by earnest-marketing) |
+| `partner_logos` | Partner/client logos for the marketing site carousel (CMS-managed, used by earnest-marketing) |
 
 ### Key Composables
 
@@ -717,7 +728,7 @@ The following features are planned for upcoming development phases:
 - **~~Calendar Timezone Fix~~** — ✅ Fixed: Dynamic timezone from user settings instead of hardcoded America/New_York
 - **~~Daily.co Video~~** — ✅ Implemented: Replaced Twilio Video with Daily.co; `server/utils/daily.ts`
 - **Apple Calendar (CalDAV)** — Future: requires CalDAV client implementation, not a REST API
-- **Domain Migration** — Migrate from `huestudios.company` to `earnest.guru`; update all OAuth redirect URIs, Directus SSO config, and Stripe webhook endpoints
+- **~~Domain Migration~~** — ✅ Completed: Migrated from `huestudios.company` to `earnest.guru`; app at `app.earnest.guru`, admin at `admin.earnest.guru`, marketing at `earnest.guru` (separate repo)
 
 ## Stripe Subscription Setup
 

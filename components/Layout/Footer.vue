@@ -61,7 +61,7 @@
 		<div class="my-12 flex w-full flex-col items-center justify-center">
 			<h5 class="web-designer !font-[var(--theme-body-font)]">
 				<a
-					href="mailto:contact@huestudios.com"
+					href="mailto:hello@earnest.guru"
 					target="_blank"
 					rel="noopener"
 					class="columns body-font shrink !text-white !font-[var(--theme-body-font)]"

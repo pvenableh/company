@@ -59,8 +59,8 @@ export default defineEventHandler(async (event) => {
       ? compileSubject(template.subject_template, variables)
       : `[TEST] ${template.name}`;
 
-    const fromEmail = config.sendgridFromEmail || config.FROM_EMAIL || 'hello@huestudios.company';
-    const fromName = config.sendgridFromName || 'Hue Creative Agency';
+    const fromEmail = config.sendgridFromEmail || config.FROM_EMAIL || 'hello@earnest.guru';
+    const fromName = config.sendgridFromName || 'Earnest';
 
     await sgMail.send({
       to: to_email,

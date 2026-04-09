@@ -37,21 +37,21 @@ export default defineEventHandler(async (event) => {
 				to: formatRecipients(body.emails || body.email),
 				bcc: [
 					{
-						email: 'huestudios.com@gmail.com',
+						email: 'hello@earnest.guru',
 					},
 				],
 			},
 		],
 		from: {
-			email: 'mail@huestudios.company',
-			name: 'hue: company',
+			email: 'hello@earnest.guru',
+			name: 'Earnest',
 		},
 		template_id: 'd-838d5fc9a36a422bb6d8ecef57c8f5d6',
 		replyTo: {
-			email: 'contact@huestudios.com',
-			name: 'hue',
+			email: 'hello@earnest.guru',
+			name: 'Earnest',
 		},
-		subject: 'Payment Received on huestudios.company',
+		subject: 'Payment Received — Earnest',
 		content: [
 			{
 				type: 'text/html',

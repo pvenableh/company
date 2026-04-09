@@ -14,7 +14,7 @@ export function useNotificationHelper() {
 	const taskItemsApi = useDirectusItems('tasks');
 
 	// Get base URL for constructing item links
-	const baseUrl = import.meta.client ? window.location.origin : config.public.appUrl || 'https://huestudios.company';
+	const baseUrl = import.meta.client ? window.location.origin : config.public.appUrl || 'https://app.earnest.guru';
 
 	/**
 	 * Handle ticket status changes - notifies all assigned users

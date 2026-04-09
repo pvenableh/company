@@ -16,7 +16,7 @@ const route = useRoute();
 const config = useRuntimeConfig();
 
 const fullUrl = computed(() => {
-	const base = config.public.siteUrl || 'https://huestudios.company';
+	const base = config.public.siteUrl || 'https://app.earnest.guru';
 	return `${base}${route.fullPath}`;
 });
 

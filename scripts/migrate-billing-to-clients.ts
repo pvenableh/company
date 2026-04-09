@@ -14,7 +14,7 @@ import { config } from 'dotenv';
 
 config(); // load .env
 
-const DIRECTUS_URL = process.env.DIRECTUS_URL || 'https://admin.huestudios.company';
+const DIRECTUS_URL = process.env.DIRECTUS_URL || 'https://admin.earnest.guru';
 const DIRECTUS_SERVER_TOKEN = process.env.DIRECTUS_SERVER_TOKEN;
 
 if (!DIRECTUS_SERVER_TOKEN) {

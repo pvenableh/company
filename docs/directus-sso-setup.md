@@ -45,7 +45,7 @@ Invited user clicks "Sign in with Google" → Directus matches by email → work
 
 ## Directus Server Environment Variables
 
-Add these to your Directus server's `.env` file (at admin.huestudios.company):
+Add these to your Directus server's `.env` file (at admin.earnest.guru):
 
 ### Google Sign-In
 
@@ -59,7 +59,7 @@ AUTH_GOOGLE_CLIENT_SECRET="<your Google OAuth Client Secret>"
 AUTH_GOOGLE_ISSUER_URL="https://accounts.google.com/.well-known/openid-configuration"
 AUTH_GOOGLE_ALLOW_PUBLIC_REGISTRATION=false
 AUTH_GOOGLE_DEFAULT_ROLE_ID="<UUID of default user role in Directus>"
-AUTH_GOOGLE_REDIRECT_URL="https://admin.huestudios.company/auth/login/google/callback"
+AUTH_GOOGLE_REDIRECT_URL="https://admin.earnest.guru/auth/login/google/callback"
 AUTH_GOOGLE_IDENTIFIER_KEY="email"
 AUTH_GOOGLE_ICON="google"
 AUTH_GOOGLE_LABEL="Google"
@@ -79,7 +79,7 @@ AUTH_APPLE_CLIENT_SECRET="<generated JWT — see Apple setup below>"
 AUTH_APPLE_ISSUER_URL="https://appleid.apple.com/.well-known/openid-configuration"
 AUTH_APPLE_ALLOW_PUBLIC_REGISTRATION=true
 AUTH_APPLE_DEFAULT_ROLE_ID="<same UUID as Google>"
-AUTH_APPLE_REDIRECT_URL="https://admin.huestudios.company/auth/login/apple/callback"
+AUTH_APPLE_REDIRECT_URL="https://admin.earnest.guru/auth/login/apple/callback"
 AUTH_APPLE_IDENTIFIER_KEY="email"
 AUTH_APPLE_ICON="apple"
 AUTH_APPLE_LABEL="Apple"
@@ -106,8 +106,8 @@ Apple Sign-In requires a paid Apple Developer account ($99/yr).
 - Identifier: `guru.earnest.auth`
 - Enable "Sign In with Apple"
 - Configure:
-  - Domains: `admin.huestudios.company` (later: `admin.earnest.guru`)
-  - Return URLs: `https://admin.huestudios.company/auth/login/apple/callback`
+  - Domains: `admin.earnest.guru` (later: `admin.earnest.guru`)
+  - Return URLs: `https://admin.earnest.guru/auth/login/apple/callback`
 - Save
 
 ### 3. Create a Key
@@ -167,12 +167,12 @@ for Sign-In:
 2. Edit the existing OAuth 2.0 Client ID
 3. Under "Authorized redirect URIs", add:
    ```
-   https://admin.huestudios.company/auth/login/google/callback
+   https://admin.earnest.guru/auth/login/google/callback
    ```
 4. Under "Authorized JavaScript origins", add:
    ```
-   https://admin.huestudios.company
-   https://huestudios.company
+   https://admin.earnest.guru
+   https://app.earnest.guru
    ```
 5. Save
 
@@ -195,17 +195,14 @@ GET /roles?filter[name][_eq]=User&fields=id
 After configuring Directus:
 
 1. Restart the Directus server to pick up new env vars
-2. Visit: `https://admin.huestudios.company/auth/login/google?redirect=https://huestudios.company/auth/sso-callback`
+2. Visit: `https://admin.earnest.guru/auth/login/google?redirect=https://app.earnest.guru/auth/sso-callback`
 3. You should see the Google consent screen
 4. After authenticating, you should be redirected back to the app
 
-## Domain Migration Notes
+## Domain Setup
 
-When migrating from `huestudios.company` to `earnest.guru`:
-
-1. Update `AUTH_GOOGLE_REDIRECT_URL` and `AUTH_APPLE_REDIRECT_URL` on Directus
-2. Update Google Cloud Console redirect URIs
-3. Update Apple Developer Portal return URLs and domains
-4. Update the `SITE_URL` env var in Nuxt
-
-The Nuxt-side code uses `config.public.siteUrl` dynamically, so no code changes needed.
+```
+earnest.guru          → marketing site (Vercel)
+app.earnest.guru      → Nuxt app (Vercel)
+admin.earnest.guru    → Directus CMS (Docker/VPS)
+```

@@ -128,7 +128,7 @@ const baseUrl = computed(() => {
 		return 'http://localhost:3000';
 	}
 	// Production URL
-	return 'https://huestudios.company';
+	return 'https://app.earnest.guru';
 });
 
 const receiptUrl = computed(() => {

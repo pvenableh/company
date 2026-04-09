@@ -15,10 +15,10 @@ useSeoMeta({
 });
 
 const lastUpdated = 'February 6, 2026';
-const contactEmail = 'contact@huestudios.com';
+const contactEmail = 'hello@earnest.guru';
 const businessName = 'Hue Studios LLC';
 const businessAddress = '605 Lincoln Road Suite 200, Miami Beach, FL';
-const websiteUrl = 'https://huestudios.com';
+const websiteUrl = 'https://earnest.guru';
 </script>
 
 <template>

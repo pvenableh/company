@@ -97,9 +97,9 @@ export default defineEventHandler(async (event) => {
 			: null;
 
 		// Build email content
-		const fromEmail = config.sendgridFromEmail || 'hello@huestudios.company';
-		const fromName = config.sendgridFromName || 'Hue Creative Agency';
-		const meetingHost = hostName || meeting?.host_identity || 'Hue Creative Agency';
+		const fromEmail = config.sendgridFromEmail || 'hello@earnest.guru';
+		const fromName = config.sendgridFromName || 'Earnest';
+		const meetingHost = hostName || meeting?.host_identity || 'Earnest';
 
 		const emailSubject = subject || `Video Meeting Invitation: ${meetingTitle}`;
 

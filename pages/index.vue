@@ -3,9 +3,15 @@ definePageMeta({ layout: false });
 useHead({ title: 'Home | Earnest' });
 
 const { user } = useDirectusAuth();
+const config = useRuntimeConfig();
 
-// Use blank layout for marketing page, default layout for authenticated users
-const layout = computed(() => user.value ? 'default' : 'blank');
+// Redirect unauthenticated users to the marketing site
+if (!user.value) {
+	const marketingUrl = config.public.marketingUrl || 'https://earnest.guru';
+	navigateTo(marketingUrl, { external: true });
+}
+
+const layout = 'default';
 
 // ── Layout mode ──
 const { currentMode } = useLayoutMode();
@@ -181,12 +187,9 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 
 <template>
 	<NuxtLayout :name="layout">
-	<div class="min-h-screen" :class="user ? 't-bg t-text' : ''">
-		<!-- Marketing Page: shown when user is NOT logged in (no navigation chrome) -->
-		<PagesSellSheetModern v-if="!user" />
-
+	<div class="min-h-screen t-bg t-text">
 		<!-- Action Board: shown when user IS logged in -->
-		<div v-else class="min-h-screen bg-background">
+		<div v-if="user" class="min-h-screen bg-background">
 			<div class="max-w-screen-xl mx-auto px-4 pb-8 sm:px-6 lg:px-8 space-y-6">
 				<!-- Greeting + Assistant Button -->
 				<div class="flex items-end justify-between pt-2">

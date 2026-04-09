@@ -6,7 +6,7 @@ Directus 11 (headless CMS/backend), and Stripe. It targets small creative agenci
 
 ## Directus MCP connection
 
-Claude has a live MCP connection to the Directus instance at `admin.huestudios.company`.
+Claude has a live MCP connection to the Directus instance at `admin.earnest.guru`.
 This means Claude can:
 - Create new collections and fields directly via the Directus REST API
 - Read the live schema to verify field names before writing code
@@ -192,18 +192,22 @@ Key files:
 is Directus Flows (event triggers) or adding awardEP() calls as routes are modernized.
 Currently wired: daily_login via checkin endpoint.
 
-## Domain migration notes
+## Domain architecture
 
-Current domain: `huestudios.company`
-Target domain: `earnest.guru`
+Domain: `earnest.guru`
 
-Planned structure:
+Structure:
 ```
-earnest.guru                    → marketing site
-app.earnest.guru                → main platform
+earnest.guru                    → marketing site (separate repo: ~/Sites/earnest/earnest-marketing)
+app.earnest.guru                → main platform (THIS repo)
+admin.earnest.guru              → Directus admin / CMS backend
 companion.earnest.guru          → default Companion PWA
 {orgslug}.earnest.guru          → white-labeled Companion (add-on)
 ```
+
+The marketing sell sheet and landing pages have been moved to the `earnest-marketing` project
+(`~/Sites/earnest/earnest-marketing`), which deploys to `earnest.guru`. This repo (the app platform)
+deploys to `app.earnest.guru`. The Directus admin lives at `admin.earnest.guru`.
 
 White-label uses wildcard SSL on `*.earnest.guru`. Reserved subdomains:
 `app`, `companion`, `admin`, `api`, `www`, `mail`, `status`
@@ -222,7 +226,7 @@ STRIPE_PRICE_SCANS_100 / STRIPE_PRICE_SCANS_500
 
 # Daily.co (video)
 DAILY_API_KEY                   ← get from https://dashboard.daily.co/developers
-DAILY_DOMAIN                    ← your Daily.co subdomain (e.g. "huestudios" for huestudios.daily.co)
+DAILY_DOMAIN                    ← your Daily.co subdomain (e.g. "earnest" for earnest.daily.co)
 
 # Twilio (master account — sub-account creds stored in organizations table)
 TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN

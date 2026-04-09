@@ -121,10 +121,10 @@ export default defineEventHandler(async (event) => {
     return { success: false, error: 'No eligible recipients found', sent: 0 };
   }
 
-  const fromEmail = config.sendgridFromEmail || config.FROM_EMAIL || 'hello@huestudios.company';
-  const fromName = config.sendgridFromName || 'Hue Creative Agency';
+  const fromEmail = config.sendgridFromEmail || config.FROM_EMAIL || 'hello@earnest.guru';
+  const fromName = config.sendgridFromName || 'Earnest';
   const appName = (config.public?.companyName as string) || fromName;
-  const siteUrl = (config.public?.siteUrl as string) || 'https://huestudios.company';
+  const siteUrl = (config.public?.siteUrl as string) || 'https://app.earnest.guru';
 
   // ── Pre-create / update email record as "sending" to get an ID ──────
   let recordedEmailId = email_id;

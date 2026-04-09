@@ -176,7 +176,7 @@ const isUpdatingStatus = ref(false);
 
 const shareUrl = computed(() => {
 	// For demo, use the site URL + tickets + ID
-	const baseUrl = config.public.appUrl || 'https://huestudios.company';
+	const baseUrl = config.public.appUrl || 'https://app.earnest.guru';
 	return `${baseUrl}/tickets/${props.element.id}`;
 });
 

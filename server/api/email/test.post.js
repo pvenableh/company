@@ -33,7 +33,7 @@ export default defineEventHandler(async (event) => {
 
 	sgMail.setApiKey(apiKey);
 
-	const fromEmail = config.sendgridFromEmail || config.FROM_EMAIL || 'mail@huestudios.company';
+	const fromEmail = config.sendgridFromEmail || config.FROM_EMAIL || 'hello@earnest.guru';
 	const fromName = config.sendgridFromName || 'Earnest';
 
 	try {

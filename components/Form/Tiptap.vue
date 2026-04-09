@@ -369,7 +369,8 @@ const handleUserMention = async (mentionedUser) => {
 	console.log('Sending mention notification to:', mentionedUser);
 
 	const route = useRoute();
-	const currentUrl = `https://huestudios.company/${route.fullPath}`;
+	const config = useRuntimeConfig();
+	const currentUrl = `${config.public.appUrl || 'https://app.earnest.guru'}/${route.fullPath}`;
 
 	try {
 		const contextInfo = {

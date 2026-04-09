@@ -73,7 +73,7 @@ export default defineNuxtConfig({
 
 		// SendGrid
 		sendgridApiKey: process.env.SENDGRID_API_KEY,
-		sendgridFromEmail: process.env.SENDGRID_FROM_EMAIL || 'hello@huestudios.company',
+		sendgridFromEmail: process.env.SENDGRID_FROM_EMAIL || 'hello@earnest.guru',
 		sendgridFromName: process.env.SENDGRID_FROM_NAME || 'Earnest',
 		SENDGRID_API_KEY: process.env.SENDGRID_API_KEY,
 		FROM_EMAIL: process.env.SENDGRID_FROM_EMAIL,
@@ -117,7 +117,7 @@ export default defineNuxtConfig({
 		},
 		// Directus (server-side - NEVER expose to client)
 		directus: {
-			url: process.env.DIRECTUS_URL || 'https://admin.huestudios.company',
+			url: process.env.DIRECTUS_URL || 'https://admin.earnest.guru',
 			staticToken: process.env.DIRECTUS_STATIC_TOKEN,
 			serverToken: process.env.DIRECTUS_SERVER_TOKEN,
 		},
@@ -179,17 +179,18 @@ export default defineNuxtConfig({
 
 			// Directus URLs (public)
 			directus: {
-				url: process.env.DIRECTUS_URL || 'https://admin.huestudios.company',
-				websocketUrl: process.env.DIRECTUS_WEBSOCKET_URL || 'wss://admin.huestudios.company/websocket',
+				url: process.env.DIRECTUS_URL || 'https://admin.earnest.guru',
+				websocketUrl: process.env.DIRECTUS_WEBSOCKET_URL || 'wss://admin.earnest.guru/websocket',
 			},
-			directusUrl: process.env.DIRECTUS_URL || 'https://admin.huestudios.company',
-			assetsUrl: process.env.DIRECTUS_ASSETS_URL || 'https://admin.huestudios.company/assets/',
-			websocketUrl: process.env.DIRECTUS_WEBSOCKET_URL || 'wss://admin.huestudios.company/websocket',
-			adminUrl: process.env.DIRECTUS_URL || 'https://admin.huestudios.company',
+			directusUrl: process.env.DIRECTUS_URL || 'https://admin.earnest.guru',
+			assetsUrl: process.env.DIRECTUS_ASSETS_URL || 'https://admin.earnest.guru/assets/',
+			websocketUrl: process.env.DIRECTUS_WEBSOCKET_URL || 'wss://admin.earnest.guru/websocket',
+			adminUrl: process.env.DIRECTUS_URL || 'https://admin.earnest.guru',
 
 			// Site
-			siteUrl: process.env.SITE_URL || 'https://huestudios.company',
-			appUrl: process.env.APP_URL || process.env.SITE_URL || 'https://huestudios.company',
+			siteUrl: process.env.SITE_URL || 'https://app.earnest.guru',
+			appUrl: process.env.APP_URL || process.env.SITE_URL || 'https://app.earnest.guru',
+			marketingUrl: process.env.MARKETING_URL || 'https://earnest.guru',
 
 			// SSO provider flags (controls which buttons appear on login)
 			appleClientId: process.env.APPLE_CLIENT_ID || '',
@@ -221,7 +222,7 @@ export default defineNuxtConfig({
 			{
 				provider: 'directus',
 				directus: {
-					baseURL: `${process.env.DIRECTUS_URL || 'https://admin.huestudios.company'}/assets/`,
+					baseURL: `${process.env.DIRECTUS_URL || 'https://admin.earnest.guru'}/assets/`,
 				},
 			},
 		],
@@ -335,7 +336,7 @@ export default defineNuxtConfig({
 	// 		globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
 	// 		runtimeCaching: [
 	// 			{
-	// 				urlPattern: new RegExp('^https://admin.huestudios.company/assets/'),
+	// 				urlPattern: new RegExp('^https://admin.earnest.guru/assets/'),
 	// 				handler: 'CacheFirst',
 	// 				options: {
 	// 					cacheName: 'directus-images',

@@ -166,7 +166,7 @@ const messageUrls = computed(() => {
 	while ((match = urlRegex.exec(text)) !== null) {
 		// Skip internal links and asset URLs
 		const url = match[1];
-		if (!url.includes('huestudios.company') && !url.includes('127.0.0.1') && !url.includes('localhost')) {
+		if (!url.includes('earnest.guru') && !url.includes('127.0.0.1') && !url.includes('localhost')) {
 			urls.push(url);
 		}
 	}

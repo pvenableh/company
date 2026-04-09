@@ -28,7 +28,7 @@ const generatePDF = async () => {
 		const header = document.createElement('div');
 		header.innerHTML = `
       <div style="display: flex; align-items: flex-start; margin-bottom: 32px; border-bottom: 1px solid #e5e7eb; padding-bottom: 24px;">
-        <img src="https://admin.huestudios.company/assets/cf9d5f4f-9a30-418d-b48e-acb037c3c2c9" 
+        <img src="https://admin.earnest.guru/assets/cf9d5f4f-9a30-418d-b48e-acb037c3c2c9" 
              alt="hue logo" 
              style="height: 48px; width: auto; margin-right: 16px;" />
         <div style="font-size: 9px; text-transform: uppercase; line-height: 1; margin-top: -8px;">
@@ -37,7 +37,7 @@ const generatePDF = async () => {
           <p>Suite 314</p>
           <p>Miami Beach, FL 33139</p>
           <p>305.680.0485</p>
-          <p>contact@huestudios.com</p>
+          <p>hello@earnest.guru</p>
         </div>
       </div>`;
 

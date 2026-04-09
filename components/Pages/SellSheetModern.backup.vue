@@ -1204,7 +1204,7 @@ const tokenCosts = [
 ];
 
 // ── Directus data ──
-const directusUrl = useRuntimeConfig().public.directusUrl || 'https://admin.huestudios.company';
+const directusUrl = useRuntimeConfig().public.directusUrl || 'https://admin.earnest.guru';
 const testimonials = ref([]);
 const logos = ref([]);
 

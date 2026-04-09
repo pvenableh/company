@@ -160,7 +160,7 @@ export default defineEventHandler(async (event) => {
 
 			const personalization = {
 				to: [{ email: primaryEmail || organization.email }],
-				bcc: [{ email: 'huestudios.com@gmail.com' }, { email: 'camila@huestudios.com' }],
+				bcc: [{ email: 'hello@earnest.guru' }],
 			};
 
 			// Add additional CC recipients if they exist
@@ -171,15 +171,15 @@ export default defineEventHandler(async (event) => {
 			const message = {
 				personalizations: [personalization],
 				from: {
-					email: 'mail@huestudios.company',
-					name: 'hue: company',
+					email: 'hello@earnest.guru',
+					name: 'Earnest',
 				},
 				template_id: 'd-fc7fc838e55e41ebbf64aac386092efd',
 				replyTo: {
-					email: 'contact@huestudios.com',
-					name: 'hue',
+					email: 'hello@earnest.guru',
+					name: 'Earnest',
 				},
-				subject: 'Invoice Notice from huestudios.company',
+				subject: 'Invoice Notice — Earnest',
 				content: [
 					{
 						type: 'text/html',

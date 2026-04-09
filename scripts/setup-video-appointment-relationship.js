@@ -1,7 +1,7 @@
 // scripts/setup-video-appointment-relationship.js
 // Run with: DIRECTUS_SERVER_TOKEN=your-token node scripts/setup-video-appointment-relationship.js
 
-const DIRECTUS_URL = process.env.DIRECTUS_URL || 'https://admin.huestudios.company';
+const DIRECTUS_URL = process.env.DIRECTUS_URL || 'https://admin.earnest.guru';
 const DIRECTUS_TOKEN = process.env.DIRECTUS_SERVER_TOKEN;
 
 if (!DIRECTUS_TOKEN) {
