@@ -393,16 +393,6 @@ const filteredRows = computed(() => {
 	});
 });
 
-// ── Status colors ──
-function statusColor(status?: string) {
-	if (!status) return '';
-	const s = status.toLowerCase().replace(/\s+/g, '');
-	if (s === 'completed' || s === 'done') return 'text-green-600';
-	if (s === 'inprogress' || s === 'active') return 'text-blue-600';
-	if (s === 'scheduled') return 'text-amber-600';
-	return 'text-muted-foreground';
-}
-
 // ── Event detail ──
 const selectedEvent = computed<ProjectEventWithRelations | null>(() => {
 	if (!selectedEventId.value) return null;
