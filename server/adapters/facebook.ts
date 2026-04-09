@@ -15,7 +15,7 @@
  * Docs: https://developers.facebook.com/docs/pages-api
  */
 
-import type { FacebookMetrics } from '~/types/social'
+import type { FacebookMetrics } from '~~/types/social'
 import type {
   PlatformAdapter,
   OAuthTokenResult,

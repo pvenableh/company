@@ -8,7 +8,7 @@
  */
 
 import { readItems, readItem, aggregate } from '@directus/sdk';
-import type { MarketingContext } from '~/types/marketing';
+import type { MarketingContext } from '~~/types/marketing';
 
 type DirectusClient = Awaited<ReturnType<typeof getUserDirectus>>;
 

@@ -13,7 +13,7 @@
  * Docs: https://developers.facebook.com/docs/threads
  */
 
-import type { ThreadsMetrics } from '~/types/social'
+import type { ThreadsMetrics } from '~~/types/social'
 import type {
   PlatformAdapter,
   OAuthTokenResult,

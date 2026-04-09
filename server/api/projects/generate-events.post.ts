@@ -14,7 +14,7 @@ import {
   type GenerateTimelineResponse,
   type ProposedEvent,
   type ProposedTask,
-} from '~/types/projects/timeline-generator';
+} from '~~/types/projects/timeline-generator';
 
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event);

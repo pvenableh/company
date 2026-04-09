@@ -5,7 +5,7 @@
  */
 import { z } from 'zod';
 import { getSocialPosts, createSocialPost, logSocialActivity } from '~/server/utils/social-directus';
-import type { SocialPostTarget } from '~/types/social';
+import type { SocialPostTarget } from '~~/types/social';
 
 const platformTargetSchema = z.object({
 	platform: z.enum(['instagram', 'tiktok', 'linkedin', 'facebook', 'threads']),

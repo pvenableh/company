@@ -14,7 +14,7 @@ import type {
 	MarketingAnalyzeRequest,
 	DashboardAnalysis,
 	CampaignAnalysis,
-} from '~/types/marketing';
+} from '~~/types/marketing';
 
 export default defineEventHandler(async (event) => {
 	const session = await requireUserSession(event);

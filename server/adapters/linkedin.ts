@@ -13,7 +13,7 @@
  * Docs: https://learn.microsoft.com/en-us/linkedin/marketing/
  */
 
-import type { LinkedInMetrics } from '~/types/social'
+import type { LinkedInMetrics } from '~~/types/social'
 import type {
   PlatformAdapter,
   OAuthTokenResult,

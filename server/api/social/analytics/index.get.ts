@@ -4,7 +4,7 @@
  */
 
 import { getAnalyticsSnapshots, getSocialAccounts } from '~/server/utils/social-directus'
-import type { SocialPlatform } from '~/types/social'
+import type { SocialPlatform } from '~~/types/social'
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)

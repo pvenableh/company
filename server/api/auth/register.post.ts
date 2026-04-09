@@ -10,8 +10,8 @@
  */
 
 import { createUser, createItem, readItems } from '@directus/sdk';
-import { DEFAULT_ROLE_PERMISSIONS, ROLE_METADATA } from '~/types/permissions';
-import type { RoleSlug } from '~/types/permissions';
+import { DEFAULT_ROLE_PERMISSIONS, ROLE_METADATA } from '~~/types/permissions';
+import type { RoleSlug } from '~~/types/permissions';
 
 const SYSTEM_ROLES: RoleSlug[] = ['owner', 'admin', 'manager', 'member', 'client'];
 

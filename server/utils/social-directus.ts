@@ -12,8 +12,8 @@ import type {
   SocialAction,
   SocialPlatform,
   SocialPost,
-} from '~/types/social'
-import type { SocialPost as DirectusSocialPost } from '~/types/directus'
+} from '~~/types/social'
+import type { SocialPost as DirectusSocialPost } from '~~/types/directus'
 import { encryptSocialToken, safeDecryptSocialToken } from './social-crypto'
 
 // ══════════════════════════════════════════════════════════════════════════════

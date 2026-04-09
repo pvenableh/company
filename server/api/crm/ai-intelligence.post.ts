@@ -22,7 +22,7 @@ import type {
 	CRMContactStrategyAnalysis,
 	CRMGrowthPlanAnalysis,
 	CRMPipelineReviewAnalysis,
-} from '~/types/crm-intelligence';
+} from '~~/types/crm-intelligence';
 
 type AnalysisResult =
 	| CRMOverviewAnalysis

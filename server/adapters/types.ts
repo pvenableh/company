@@ -6,7 +6,7 @@
  * Existing adapters (Instagram, TikTok) can be migrated in a follow-up.
  */
 
-import type { SocialPlatform } from '~/types/social'
+import type { SocialPlatform } from '~~/types/social'
 
 // ══════════════════════════════════════════════════════════════════════════════
 // SHARED TYPES
