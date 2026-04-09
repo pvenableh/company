@@ -103,12 +103,14 @@ const rows = computed<GanttRow[]>(() => {
 			const tickets = ticketsByProject.value.get(project.id) || [];
 			const childCount = events.length + tickets.length;
 
+			const projectColor = project.service?.color || '#d4d4d8';
+
 			result.push({
 				id: project.id,
 				label: project.title || 'Untitled Project',
 				type: 'project',
 				depth: 0,
-				color: project.color || '#6366f1',
+				color: projectColor,
 				status: project.status,
 				startDate: project.start_date,
 				endDate: project.completion_date,
@@ -125,7 +127,7 @@ const rows = computed<GanttRow[]>(() => {
 						label: event.title || event.name || 'Event',
 						type: 'event',
 						depth: 1,
-						color: project.color || '#6366f1',
+						color: projectColor,
 						startDate: eventDate,
 						endDate: event.end_date || eventDate,
 						projectId: project.id,
@@ -138,7 +140,7 @@ const rows = computed<GanttRow[]>(() => {
 						label: ticket.title || 'Untitled Ticket',
 						type: 'ticket',
 						depth: 1,
-						color: '#3b82f6',
+						color: projectColor,
 						status: ticket.status,
 						startDate: ticket.date_created,
 						dueDate: ticket.due_date,
@@ -157,7 +159,7 @@ const rows = computed<GanttRow[]>(() => {
 				label: project.title || 'Untitled Project',
 				type: 'project',
 				depth: 0,
-				color: project.color || '#6366f1',
+				color: project.service?.color || '#d4d4d8',
 				status: project.status,
 				startDate: project.start_date,
 				endDate: project.completion_date,
@@ -235,7 +237,7 @@ const dateRange = computed(() => {
 });
 
 const chartWidth = computed(() => Math.max(1200, 1400 * zoom.value));
-const chartHeight = computed(() => rows.value.length * ROW_HEIGHT + HEADER_HEIGHT);
+const chartHeight = computed(() => filteredRows.value.length * ROW_HEIGHT + HEADER_HEIGHT);
 
 function dateToX(dateStr: string | undefined): number {
 	if (!dateStr) return 0;
@@ -316,6 +318,52 @@ watch(() => projects.value.length, (len) => {
 function handleZoomIn() { zoom.value = Math.min(zoom.value + 0.5, 5); }
 function handleZoomOut() { zoom.value = Math.max(zoom.value - 0.5, 1); }
 
+// ── Type filters ──
+const activeTypeFilters = ref<Set<string>>(new Set(['project', 'event', 'ticket', 'task']));
+
+const typeFilterOptions = [
+	{ key: 'project', label: 'Projects', icon: 'lucide:folder', color: 'text-primary', bg: 'bg-primary/10', activeBg: 'bg-primary/15' },
+	{ key: 'event', label: 'Events', icon: 'lucide:calendar', color: 'text-cyan-500', bg: 'bg-cyan-500/10', activeBg: 'bg-cyan-500/15' },
+	{ key: 'ticket', label: 'Tickets', icon: 'lucide:ticket', color: 'text-amber-500', bg: 'bg-amber-500/10', activeBg: 'bg-amber-500/15' },
+	{ key: 'task', label: 'Tasks', icon: 'lucide:check-square', color: 'text-purple-500', bg: 'bg-purple-500/10', activeBg: 'bg-purple-500/15' },
+];
+
+function toggleTypeFilter(type: string) {
+	const s = new Set(activeTypeFilters.value);
+	if (s.has(type)) {
+		// Don't allow deselecting all
+		if (s.size > 1) s.delete(type);
+	} else {
+		s.add(type);
+	}
+	activeTypeFilters.value = s;
+}
+
+const typeCounts = computed(() => {
+	const counts: Record<string, number> = { project: 0, event: 0, ticket: 0, task: 0 };
+	for (const row of rows.value) {
+		if (counts[row.type] !== undefined) counts[row.type]++;
+	}
+	return counts;
+});
+
+const filteredRows = computed(() => {
+	const filters = activeTypeFilters.value;
+	// If all filters are active, skip filtering
+	if (filters.size === 4) return rows.value;
+
+	return rows.value.filter(row => {
+		// Always show projects if any of their children are visible
+		if (row.type === 'project' && filters.has('project')) return true;
+		if (row.type === 'project' && !filters.has('project')) {
+			// Still show project header if it has visible children
+			if (row.expanded && (filters.has('event') || filters.has('ticket'))) return true;
+			return false;
+		}
+		return filters.has(row.type);
+	});
+});
+
 // ── Status colors ──
 function statusColor(status?: string) {
 	if (!status) return '';
@@ -344,6 +392,11 @@ const selectedEventProject = computed<ProjectWithRelations | null>(() => {
 	return null;
 });
 
+function getProjectServiceName(projectId: string): string {
+	const project = projects.value.find(p => p.id === projectId);
+	return project?.service?.name || 'No service';
+}
+
 function handleRowClick(row: GanttRow) {
 	if (row.type === 'event') {
 		selectedEventId.value = row.id;
@@ -364,7 +417,6 @@ function handleCloseDetail() {
 		<!-- Toolbar -->
 		<div class="gantt-toolbar">
 			<div class="flex items-center gap-3">
-				<h2 class="text-sm font-semibold">Timeline</h2>
 				<div class="flex items-center rounded-lg bg-muted/40 p-0.5">
 					<button
 						@click="setViewMode('nested')"
@@ -376,6 +428,24 @@ function handleCloseDetail() {
 						class="px-3 py-1 text-[11px] font-medium rounded-md transition-all"
 						:class="viewMode === 'flat' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
 					>Flat</button>
+				</div>
+				<!-- Type filters -->
+				<div class="flex items-center gap-1 ml-1">
+					<button
+						v-for="filter in typeFilterOptions"
+						:key="filter.key"
+						class="gantt-type-filter"
+						:class="activeTypeFilters.has(filter.key) ? filter.activeBg : 'bg-transparent hover:bg-muted/30'"
+						@click="toggleTypeFilter(filter.key)"
+					>
+						<Icon :name="filter.icon" class="w-3 h-3" :class="activeTypeFilters.has(filter.key) ? filter.color : 'text-muted-foreground/50'" />
+						<span :class="activeTypeFilters.has(filter.key) ? filter.color : 'text-muted-foreground/50'">{{ filter.label }}</span>
+						<span
+							v-if="typeCounts[filter.key]"
+							class="gantt-type-count"
+							:class="activeTypeFilters.has(filter.key) ? filter.bg : 'bg-muted/40'"
+						>{{ typeCounts[filter.key] }}</span>
+					</button>
 				</div>
 			</div>
 			<div class="flex items-center gap-1">
@@ -422,14 +492,15 @@ function handleCloseDetail() {
 				<!-- Sidebar rows -->
 				<div ref="sidebarScroll" class="gantt-sidebar-rows">
 					<div
-						v-for="row in rows"
+						v-for="row in filteredRows"
 						:key="'side-' + row.id"
 						class="gantt-sidebar-row"
 						:class="{
 							'gantt-sidebar-row-project': row.type === 'project',
 							'gantt-sidebar-row-child': row.depth > 0,
 						}"
-						:style="{ paddingLeft: `${12 + row.depth * 16}px` }"
+						:style="{ paddingLeft: `${12 + row.depth * 20}px` }"
+						@click="handleRowClick(row)"
 					>
 						<!-- Left color bar for nested children -->
 						<span
@@ -446,26 +517,67 @@ function handleCloseDetail() {
 						>
 							<Icon :name="row.expanded ? 'lucide:chevron-down' : 'lucide:chevron-right'" class="w-3 h-3" />
 						</button>
-						<span v-else-if="row.type === 'project'" class="w-4 shrink-0" />
+						<span v-else-if="row.type === 'project' && !row.hasChildren" class="w-4 shrink-0" />
 
-						<!-- Color dot (projects only) -->
-						<span
-							v-if="row.type === 'project'"
-							class="w-2 h-2 rounded-full shrink-0"
-							:style="{ backgroundColor: row.color }"
-						/>
+						<!-- Type icon with tooltip -->
+						<UTooltip
+							:text="row.type === 'project' ? 'Project' : row.type === 'event' ? 'Event' : row.type === 'ticket' ? 'Ticket' : 'Task'"
+							:popper="{ placement: 'right', offsetDistance: 6 }"
+						>
+							<span
+								class="w-5 h-5 rounded-md flex items-center justify-center shrink-0"
+								:class="{
+									'bg-primary/10': row.type === 'project',
+									'bg-cyan-500/10': row.type === 'event',
+									'bg-amber-500/10': row.type === 'ticket',
+									'bg-purple-500/10': row.type === 'task',
+								}"
+							>
+								<Icon
+									:name="row.type === 'project' ? 'lucide:folder' : row.type === 'event' ? 'lucide:calendar' : row.type === 'ticket' ? 'lucide:ticket' : 'lucide:check-square'"
+									class="w-3 h-3"
+									:class="{
+										'text-primary': row.type === 'project',
+										'text-cyan-500': row.type === 'event',
+										'text-amber-500': row.type === 'ticket',
+										'text-purple-500': row.type === 'task',
+									}"
+								/>
+							</span>
+						</UTooltip>
+
+						<!-- Service color dot with tooltip (projects only) -->
+						<UTooltip
+							v-if="row.type === 'project' && row.id !== 'tasks-section'"
+							:text="getProjectServiceName(row.id)"
+							:popper="{ placement: 'right', offsetDistance: 6 }"
+						>
+							<span
+								class="w-2.5 h-2.5 rounded-full shrink-0 ring-1 ring-border/30"
+								:style="{ backgroundColor: row.color }"
+							/>
+						</UTooltip>
 
 						<!-- Label -->
 						<span
-							class="text-[12px] truncate flex-1"
-							:class="row.type === 'project' ? 'font-semibold text-foreground' : 'text-foreground/70'"
+							class="text-[11px] truncate flex-1 cursor-pointer"
+							:class="row.type === 'project' ? 'font-semibold text-foreground' : 'text-foreground/80'"
 							:title="row.label"
 						>
 							{{ row.label }}
 						</span>
 
-						<!-- Status -->
-						<span v-if="row.status" class="text-[9px] font-medium shrink-0" :class="statusColor(row.status)">
+						<!-- Status pill -->
+						<span
+							v-if="row.status"
+							class="text-[8px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-md shrink-0"
+							:class="{
+								'text-green-500 bg-green-500/10': row.status?.toLowerCase().replace(/\s+/g, '') === 'completed' || row.status?.toLowerCase() === 'done',
+								'text-blue-500 bg-blue-500/10': row.status?.toLowerCase().replace(/\s+/g, '') === 'inprogress' || row.status?.toLowerCase() === 'active',
+								'text-amber-500 bg-amber-500/10': row.status?.toLowerCase() === 'scheduled' || row.status?.toLowerCase() === 'pending',
+								'text-muted-foreground bg-muted/40': !['completed', 'done', 'inprogress', 'active', 'scheduled', 'pending'].includes(row.status?.toLowerCase().replace(/\s+/g, '') || ''),
+							}"
+						>
 							{{ row.status }}
 						</span>
 					</div>
@@ -488,7 +600,7 @@ function handleCloseDetail() {
 				</div>
 
 				<!-- Chart rows -->
-				<div class="gantt-chart-rows" :style="{ width: chartWidth + 'px', height: (rows.length * ROW_HEIGHT) + 'px' }">
+				<div class="gantt-chart-rows" :style="{ width: chartWidth + 'px', height: (filteredRows.length * ROW_HEIGHT) + 'px' }">
 					<!-- Grid lines (per month) -->
 					<div
 						v-for="label in monthLabels"
@@ -505,26 +617,30 @@ function handleCloseDetail() {
 
 					<!-- Row stripes + bars -->
 					<div
-						v-for="(row, i) in rows"
+						v-for="(row, i) in filteredRows"
 						:key="'row-' + row.id"
 						class="gantt-row"
 						:class="{ 'gantt-row-alt': i % 2 === 1, 'gantt-row-project': row.type === 'project' }"
 						:style="{ top: (i * ROW_HEIGHT) + 'px', height: ROW_HEIGHT + 'px' }"
 					>
 						<!-- Bar -->
-						<div
+						<UTooltip
 							v-if="hasBar(row)"
-							class="gantt-bar"
-							:class="[
-								`gantt-bar-${row.type}`,
-								{ 'gantt-bar-completed': row.status?.toLowerCase().replace(/\s+/g, '') === 'completed' },
-							]"
-							:style="{ ...getBarStyle(row), backgroundColor: row.color }"
-							:title="`${row.label}${row.startDate ? ' — ' + new Date(row.startDate).toLocaleDateString() : ''}`"
-							@click="handleRowClick(row)"
+							:text="`${row.label}${row.startDate ? ' · ' + getFriendlyDateTwo(row.startDate) : ''}${row.endDate && row.endDate !== row.startDate ? ' → ' + getFriendlyDateTwo(row.endDate) : ''}`"
+							:popper="{ placement: 'top', offsetDistance: 4 }"
 						>
-							<span class="gantt-bar-label">{{ row.label }}</span>
-						</div>
+							<div
+								class="gantt-bar"
+								:class="[
+									`gantt-bar-${row.type}`,
+									{ 'gantt-bar-completed': row.status?.toLowerCase().replace(/\s+/g, '') === 'completed' },
+								]"
+								:style="{ ...getBarStyle(row), backgroundColor: row.color }"
+								@click="handleRowClick(row)"
+							>
+								<span class="gantt-bar-label">{{ row.label }}</span>
+							</div>
+						</UTooltip>
 
 						<!-- Due date diamond for items with only a due date -->
 						<div
@@ -598,6 +714,31 @@ function handleCloseDetail() {
 }
 .gantt-ctrl-btn:hover { background: hsl(var(--muted) / 0.5); }
 .gantt-ctrl-btn:disabled { opacity: 0.3; }
+
+.gantt-type-filter {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 3px 8px;
+	border-radius: 8px;
+	font-size: 10px;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+	user-select: none;
+}
+
+.gantt-type-count {
+	font-size: 9px;
+	font-weight: 700;
+	min-width: 16px;
+	height: 16px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: 999px;
+	padding: 0 4px;
+}
 
 /* ── Body: sidebar + chart ── */
 .gantt-body {
@@ -785,10 +926,28 @@ function handleCloseDetail() {
 	height: 24px;
 	font-weight: 600;
 	opacity: 0.9;
+	border-radius: 6px;
+}
+
+.gantt-bar-event {
+	height: 18px;
+	opacity: 0.75;
+}
+
+.gantt-bar-ticket {
+	height: 16px;
+	opacity: 0.7;
+	border-radius: 4px;
+}
+
+.gantt-bar-task {
+	height: 14px;
+	opacity: 0.65;
+	border-radius: 4px;
 }
 
 .gantt-bar-completed {
-	opacity: 0.35;
+	opacity: 0.3;
 }
 
 .gantt-bar-label {

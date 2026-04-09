@@ -240,10 +240,11 @@ const attachInvoice = async (invoiceId) => {
 	}
 };
 
-// Defaults for new invoice form (project + org pre-selected)
+// Defaults for new invoice form (project + client + org pre-selected)
 const invoiceDefaults = computed(() => ({
 	project: params.id,
 	bill_to: project?.organization?.id || null,
+	client: project?.client?.id || null,
 }));
 
 // ── Documents ──
@@ -534,61 +535,61 @@ const formatCurrency = (amount) => {
 			</div>
 
 			<!-- Stats Row -->
-			<div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 mb-6">
+			<div class="grid grid-cols-5 gap-2 md:gap-3 mb-6">
 				<!-- Open Tickets -->
-				<div class="ios-card p-4">
-					<div class="flex items-center gap-2 mb-1">
-						<UIcon name="i-heroicons-square-3-stack-3d" class="w-4 h-4 text-amber-500" />
-						<span class="t-label text-muted-foreground">Tickets</span>
+				<div class="ios-card p-2 md:p-4">
+					<div class="flex items-center gap-1 md:gap-2 mb-0.5 md:mb-1">
+						<UIcon name="i-heroicons-square-3-stack-3d" class="w-3 h-3 md:w-4 md:h-4 text-amber-500" />
+						<span class="text-[6px] md:text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tickets</span>
 					</div>
-					<p class="text-2xl font-bold text-foreground">{{ stats.openTickets }}</p>
-					<p class="text-[10px] text-muted-foreground">{{ stats.ticketCount }} total</p>
+					<p class="text-sm md:text-2xl font-bold text-foreground">{{ stats.openTickets }}</p>
+					<p class="text-[8px] md:text-[10px] text-muted-foreground hidden sm:block">{{ stats.ticketCount }} total</p>
 				</div>
 
 				<!-- Tasks -->
-				<div class="ios-card p-4">
-					<div class="flex items-center gap-2 mb-1">
-						<UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-purple-500" />
-						<span class="t-label text-muted-foreground">Tasks</span>
+				<div class="ios-card p-2 md:p-4">
+					<div class="flex items-center gap-1 md:gap-2 mb-0.5 md:mb-1">
+						<UIcon name="i-heroicons-check-circle" class="w-3 h-3 md:w-4 md:h-4 text-purple-500" />
+						<span class="text-[6px] md:text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tasks</span>
 					</div>
-					<p class="text-2xl font-bold text-foreground">{{ stats.completedTasks }}/{{ stats.taskCount }}</p>
-					<div class="mt-1 h-1.5 bg-muted/30 rounded-full overflow-hidden">
+					<p class="text-sm md:text-2xl font-bold text-foreground">{{ stats.completedTasks }}/{{ stats.taskCount }}</p>
+					<div class="mt-0.5 md:mt-1 h-1 md:h-1.5 bg-muted/30 rounded-full overflow-hidden">
 						<div class="h-full rounded-full bg-purple-500 transition-all duration-500" :style="{ width: `${taskProgress}%` }" />
 					</div>
 				</div>
 
 				<!-- Events -->
-				<div class="ios-card p-4">
-					<div class="flex items-center gap-2 mb-1">
-						<UIcon name="i-heroicons-calendar-days" class="w-4 h-4 text-cyan-500" />
-						<span class="t-label text-muted-foreground">Events</span>
+				<div class="ios-card p-2 md:p-4">
+					<div class="flex items-center gap-1 md:gap-2 mb-0.5 md:mb-1">
+						<UIcon name="i-heroicons-calendar-days" class="w-3 h-3 md:w-4 md:h-4 text-cyan-500" />
+						<span class="text-[6px] md:text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Events</span>
 					</div>
-					<p class="text-2xl font-bold text-foreground">{{ stats.eventCount }}</p>
-					<p v-if="stats.pendingApprovals > 0" class="text-[10px] text-amber-500 font-medium">{{ stats.pendingApprovals }} pending approval</p>
-					<p v-else class="text-[10px] text-muted-foreground">milestones & phases</p>
+					<p class="text-sm md:text-2xl font-bold text-foreground">{{ stats.eventCount }}</p>
+					<p v-if="stats.pendingApprovals > 0" class="text-[8px] md:text-[10px] text-amber-500 font-medium hidden sm:block">{{ stats.pendingApprovals }} pending</p>
+					<p v-else class="text-[8px] md:text-[10px] text-muted-foreground hidden sm:block">phases</p>
 				</div>
 
 				<!-- Billing -->
-				<div class="ios-card p-4">
-					<div class="flex items-center gap-2 mb-1">
-						<UIcon name="i-heroicons-currency-dollar" class="w-4 h-4 text-green-500" />
-						<span class="t-label text-muted-foreground">Billed</span>
+				<div class="ios-card p-2 md:p-4">
+					<div class="flex items-center gap-1 md:gap-2 mb-0.5 md:mb-1">
+						<UIcon name="i-heroicons-currency-dollar" class="w-3 h-3 md:w-4 md:h-4 text-green-500" />
+						<span class="text-[6px] md:text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Billed</span>
 					</div>
-					<p class="text-2xl font-bold text-foreground">{{ formatCurrency(stats.invoiceTotal) }}</p>
-					<p class="text-[10px] text-muted-foreground">{{ formatCurrency(stats.paidTotal) }} paid</p>
+					<p class="text-sm md:text-2xl font-bold text-foreground">{{ formatCurrency(stats.invoiceTotal) }}</p>
+					<p class="text-[8px] md:text-[10px] text-muted-foreground hidden sm:block">{{ formatCurrency(stats.paidTotal) }} paid</p>
 				</div>
 
 				<!-- Timeline -->
-				<div class="ios-card p-4">
-					<div class="flex items-center gap-2 mb-1">
-						<UIcon name="i-heroicons-calendar-days" class="w-4 h-4 text-blue-500" />
-						<span class="t-label text-muted-foreground">Timeline</span>
+				<div class="ios-card p-2 md:p-4">
+					<div class="flex items-center gap-1 md:gap-2 mb-0.5 md:mb-1">
+						<UIcon name="i-heroicons-calendar-days" class="w-3 h-3 md:w-4 md:h-4 text-blue-500" />
+						<span class="text-[6px] md:text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Timeline</span>
 					</div>
-					<p v-if="daysRemaining !== null" class="text-2xl font-bold text-foreground" :class="{ 'text-red-500': daysRemaining < 0 }">
+					<p v-if="daysRemaining !== null" class="text-sm md:text-2xl font-bold text-foreground" :class="{ 'text-red-500': daysRemaining < 0 }">
 						{{ daysRemaining < 0 ? Math.abs(daysRemaining) : daysRemaining }}
 					</p>
-					<p v-else class="text-2xl font-bold text-muted-foreground/40">—</p>
-					<p class="text-[10px] text-muted-foreground">{{ daysRemaining !== null ? (daysRemaining < 0 ? 'days overdue' : 'days remaining') : 'no due date' }}</p>
+					<p v-else class="text-sm md:text-2xl font-bold text-muted-foreground/40">—</p>
+					<p class="text-[8px] md:text-[10px] text-muted-foreground hidden sm:block">{{ daysRemaining !== null ? (daysRemaining < 0 ? 'overdue' : 'days left') : 'no date' }}</p>
 				</div>
 			</div>
 
@@ -654,9 +655,13 @@ const formatCurrency = (amount) => {
 							:team-members="projectTeamMembers"
 							@stats-changed="loadStats"
 						/>
-						<div v-else>
-							<TasksInlineAdder context="project" :context-id="project.id" :organization-id="project.organization?.id" />
-						</div>
+						<TasksListView
+							v-else
+							:project-id="project.id"
+							:organization-id="project.organization?.id"
+							:team-members="projectTeamMembers"
+							@stats-changed="loadStats"
+						/>
 					</div>
 				</template>
 				<template #tickets="{ item }">
@@ -871,7 +876,7 @@ const formatCurrency = (amount) => {
 					<!-- Invoice Create Modal -->
 					<ClientOnly>
 						<UModal v-model="showQuickInvoice" class="sm:max-w-2xl">
-							<div class="p-6">
+							<div class="p-6 max-h-[85vh] overflow-y-auto">
 								<h3 class="text-lg font-semibold mb-4">Create Invoice</h3>
 								<InvoicesInvoiceForm
 									:defaults="invoiceDefaults"

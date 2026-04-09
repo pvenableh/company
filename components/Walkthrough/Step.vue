@@ -121,21 +121,34 @@ watch(() => props.target, () => nextTick(() => updatePosition()));
 
 <template>
   <Teleport to="body">
-    <!-- Spotlight overlay -->
+    <!-- Spotlight overlay with tinted dim -->
     <svg
       class="fixed inset-0 pointer-events-none"
       style="z-index: 10000; width: 100vw; height: 100vh;"
     >
+      <defs>
+        <!-- Glow filter for spotlight cutout -->
+        <filter id="wt-glow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="6" result="blur" />
+          <feFlood flood-color="#00bfff" flood-opacity="0.35" result="color" />
+          <feComposite in="color" in2="blur" operator="in" result="glow" />
+          <feMerge>
+            <feMergeNode in="glow" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
       <path
         v-if="maskPath"
         :d="maskPath"
-        fill="rgba(0,0,0,0.5)"
+        fill="rgba(0, 18, 35, 0.55)"
         fill-rule="evenodd"
+        filter="url(#wt-glow)"
         class="transition-all duration-300"
       />
     </svg>
 
-    <!-- Click blocker (except on target) -->
+    <!-- Click blocker -->
     <div
       class="fixed inset-0"
       style="z-index: 10001;"
@@ -148,8 +161,16 @@ watch(() => props.target, () => nextTick(() => updatePosition()));
       :style="popoverStyle"
       class="walkthrough-popover"
     >
+      <!-- Top accent bar -->
+      <div class="walkthrough-accent" />
+
       <div class="flex items-start justify-between gap-2 mb-2">
-        <h3 class="text-sm font-semibold text-foreground">{{ title }}</h3>
+        <div class="flex items-center gap-2">
+          <span class="w-5 h-5 rounded-md bg-[#00bfff]/15 flex items-center justify-center">
+            <UIcon name="i-heroicons-light-bulb" class="w-3 h-3 text-[#00bfff]" />
+          </span>
+          <h3 class="text-sm font-semibold text-foreground">{{ title }}</h3>
+        </div>
         <button
           class="p-0.5 rounded-md hover:bg-muted/60 text-muted-foreground shrink-0"
           @click="$emit('skip')"
@@ -160,7 +181,7 @@ watch(() => props.target, () => nextTick(() => updatePosition()));
       <p class="text-xs text-muted-foreground leading-relaxed mb-4">{{ description }}</p>
 
       <div class="flex items-center justify-between">
-        <span class="text-[10px] text-muted-foreground/60">{{ stepNumber }} of {{ totalSteps }}</span>
+        <span class="text-[10px] text-[#0093c6]/60 font-medium">{{ stepNumber }} / {{ totalSteps }}</span>
         <div class="flex items-center gap-2">
           <button
             v-if="stepNumber > 1"
@@ -170,21 +191,23 @@ watch(() => props.target, () => nextTick(() => updatePosition()));
             Back
           </button>
           <button
-            class="text-xs font-medium bg-primary text-primary-foreground px-3 py-1.5 rounded-lg hover:bg-primary/90 transition-colors"
+            class="walkthrough-next-btn"
             @click="$emit('next')"
           >
             {{ stepNumber === totalSteps ? 'Done' : 'Next' }}
+            <UIcon v-if="stepNumber < totalSteps" name="i-heroicons-arrow-right" class="w-3 h-3" />
+            <UIcon v-else name="i-heroicons-check" class="w-3 h-3" />
           </button>
         </div>
       </div>
 
       <!-- Progress dots -->
-      <div class="flex items-center justify-center gap-1 mt-3">
+      <div class="flex items-center justify-center gap-1.5 mt-3">
         <div
           v-for="n in totalSteps"
           :key="n"
-          class="h-1 rounded-full transition-all duration-200"
-          :class="n === stepNumber ? 'w-4 bg-primary' : 'w-1 bg-muted-foreground/20'"
+          class="h-1.5 rounded-full transition-all duration-300"
+          :class="n === stepNumber ? 'w-5 bg-[#00bfff]' : n < stepNumber ? 'w-1.5 bg-[#00bfff]/40' : 'w-1.5 bg-muted-foreground/15'"
         />
       </div>
     </div>
@@ -196,11 +219,55 @@ watch(() => props.target, () => nextTick(() => updatePosition()));
 
 .walkthrough-popover {
   background: hsl(var(--card));
-  border: 1px solid hsl(var(--border) / 0.5);
+  border: 1px solid rgba(0, 191, 255, 0.2);
   border-radius: 16px;
   padding: 16px;
-  box-shadow: 0 8px 32px hsl(var(--foreground) / 0.12);
-  animation: walkthrough-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
+  padding-top: 20px;
+  box-shadow:
+    0 8px 32px rgba(0, 18, 35, 0.15),
+    0 0 0 1px rgba(0, 191, 255, 0.08),
+    0 0 24px rgba(0, 191, 255, 0.06);
+  animation: walkthrough-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+  position: relative;
+  overflow: hidden;
+}
+
+.walkthrough-accent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #00bfff, #0093c6, #00bfff);
+  background-size: 200% 100%;
+  animation: walkthrough-shimmer 3s ease-in-out infinite;
+}
+
+.walkthrough-next-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, #00bfff, #0093c6);
+  padding: 5px 14px;
+  border-radius: 10px;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0, 191, 255, 0.25);
+}
+.walkthrough-next-btn:hover {
+  background: linear-gradient(135deg, #00ace7, #0078a1);
+  box-shadow: 0 4px 12px rgba(0, 191, 255, 0.35);
+  transform: translateY(-1px);
+}
+
+:is(.dark) .walkthrough-popover {
+  border-color: rgba(0, 191, 255, 0.15);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(0, 191, 255, 0.1),
+    0 0 32px rgba(0, 191, 255, 0.08);
 }
 
 @keyframes walkthrough-in {
@@ -212,5 +279,10 @@ watch(() => props.target, () => nextTick(() => updatePosition()));
     opacity: 1;
     transform: translateY(0) scale(1);
   }
+}
+
+@keyframes walkthrough-shimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
 }
 </style>

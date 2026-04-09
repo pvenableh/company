@@ -84,7 +84,11 @@ const chartConfig = {
 
 const xAccessor = (d: any) => d.index;
 const yAccessors = [(d: any) => d.completed, (d: any) => d.created];
-const xTickFormat = (i: number) => chartData.value[Math.round(i)]?.name || '';
+const xTickFormat = (i: number) => {
+	if (!chartData.value?.length) return '';
+	const idx = Math.round(i);
+	return chartData.value[idx]?.name || '';
+};
 
 const crosshairTemplate = componentToString(chartConfig, ChartTooltipContent, { hideLabel: true });
 

@@ -18,6 +18,7 @@ import {
   readActivities,
   readComments,
   createComment,
+  readFiles,
 } from "@directus/sdk";
 
 /**
@@ -55,6 +56,9 @@ async function executeOperation(
         }
         if (collection === "directus_comments") {
           return await directus.request(readComments(query || {}));
+        }
+        if (collection === "directus_files") {
+          return await directus.request(readFiles(query || {}));
         }
         return await directus.request(readItems(collection, query || {}));
 

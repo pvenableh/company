@@ -252,7 +252,7 @@ import { Button } from '~/components/ui/button';
 const props = defineProps<{
   invoice?: Invoice | null;
   saving?: boolean;
-  defaults?: { project?: string | null; bill_to?: string | null } | null;
+  defaults?: { project?: string | null; bill_to?: string | null; client?: string | null } | null;
 }>();
 
 const emit = defineEmits<{
@@ -291,7 +291,7 @@ function extractId(val: any): string | null {
 // --- Form state ---
 const formData = reactive({
   bill_to: extractId(props.invoice?.bill_to) || props.defaults?.bill_to || '',
-  client: extractId(props.invoice?.client) || null,
+  client: extractId(props.invoice?.client) || props.defaults?.client || null,
   project: extractId(props.invoice?.project) || props.defaults?.project || null,
   invoice_code: props.invoice?.invoice_code || '',
   invoice_date: props.invoice?.invoice_date?.split('T')[0] || todayString(),
@@ -572,21 +572,62 @@ onMounted(async () => {
     projects.value = projs;
 
     // Build client → organization and billing lookups
+    // For sub-brands with no billing details, fall back to parent_client
     const clientList = Array.isArray(allClients) ? allClients : allClients?.data || [];
+    // First pass: index all clients
+    const clientMap = new Map<string, any>();
+    for (const c of clientList) {
+      clientMap.set(c.id, c);
+    }
     for (const c of clientList) {
       const orgId = typeof c.organization === 'object' ? c.organization?.id : c.organization;
       if (orgId) clientLookup.value.set(c.id, orgId);
+
+      const hasBilling = c.billing_email || (Array.isArray(c.billing_contacts) && c.billing_contacts.some((bc: any) => bc.email?.trim()));
+      const parentId = typeof c.parent_client === 'object' ? c.parent_client?.id : c.parent_client;
+      const parent = parentId ? clientMap.get(parentId) : null;
+
+      // Use client's own billing if present, otherwise fall back to parent
+      const source = hasBilling ? c : (parent || c);
+
+      // For org lookup: sub-brands without their own org inherit from parent
+      if (!orgId && parent) {
+        const parentOrgId = typeof parent.organization === 'object' ? parent.organization?.id : parent.organization;
+        if (parentOrgId) clientLookup.value.set(c.id, parentOrgId);
+      }
+
       clientBillingLookup.value.set(c.id, {
-        billing_name: c.billing_name || undefined,
-        billing_email: c.billing_email || undefined,
-        billing_address: c.billing_address || undefined,
-        billing_contacts: c.billing_contacts || undefined,
+        billing_name: source.billing_name || undefined,
+        billing_email: source.billing_email || undefined,
+        billing_address: source.billing_address || undefined,
+        billing_contacts: source.billing_contacts || undefined,
       });
     }
 
-    // Auto-set bill_to if client is already selected (edit mode)
+    // Auto-set bill_to and billing info if client is already selected (from defaults or edit mode)
     if (formData.client && clientLookup.value.has(formData.client)) {
       formData.bill_to = clientLookup.value.get(formData.client) || formData.bill_to;
+
+      // Auto-populate billing fields if this is a new invoice (not editing)
+      if (!props.invoice && clientBillingLookup.value.has(formData.client)) {
+        const billing = clientBillingLookup.value.get(formData.client)!;
+        const contacts = billing.billing_contacts?.filter(c => c.email?.trim()) || [];
+        if (contacts.length > 0) {
+          formData.billing_email = contacts[0].email;
+          formData.billing_name = contacts[0].name || '';
+          const extraEmails = contacts.slice(1).map(c => c.email);
+          for (const email of extraEmails) {
+            if (!ccEmails.value.includes(email)) ccEmails.value.push(email);
+          }
+        } else {
+          formData.billing_email = billing.billing_email || '';
+          formData.billing_name = billing.billing_name || '';
+        }
+        formData.billing_address = billing.billing_address || '';
+      }
+
+      // Auto-generate invoice code
+      autoGenerateCode();
     }
   } catch (err) {
     console.error('Failed to load form data:', err);

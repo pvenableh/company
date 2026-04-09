@@ -322,21 +322,26 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 							</div>
 
 							<!-- Action Cards -->
-							<div v-else class="space-y-2">
+							<div v-else class="space-y-3">
 								<div
 									v-for="action in topActions"
 									:key="action.id"
-									:class="[priorityBg[action.priority] || priorityBg.low]"
-									is="AccentCard"
-									:accent="priorityAccent[action.priority] || priorityAccent.low"
-									class="hover:shadow-md transition-all duration-200 cursor-pointer group ios-card"
+									class="ios-card p-4 hover:shadow-md transition-all duration-200 cursor-pointer group"
 									@click="action.actionRoute && navigateTo(action.actionRoute)"
 								>
 									<div class="flex items-start gap-3">
-										<div class="flex-shrink-0 mt-0.5">
+										<div
+											class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
+											:class="{
+												'bg-red-500/10': action.priority === 'urgent',
+												'bg-amber-500/10': action.priority === 'high',
+												'bg-blue-500/10': action.priority === 'medium',
+												'bg-muted/60': action.priority === 'low',
+											}"
+										>
 											<UIcon
 												:name="action.icon"
-												class="w-5 h-5"
+												class="w-4 h-4"
 												:class="priorityIconColor[action.priority] || priorityIconColor.low"
 											/>
 										</div>
@@ -345,10 +350,13 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 											<p class="text-xs text-muted-foreground mt-0.5 line-clamp-2">{{ action.description }}</p>
 										</div>
 										<div class="flex-shrink-0 flex items-center gap-2">
-											<span class="text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded-full"
+											<span
+												class="text-[8px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-md"
 												:class="{
-													'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400': action.priority === 'urgent',
-													'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400': action.priority === 'high',
+													'text-red-500 bg-red-500/10': action.priority === 'urgent',
+													'text-amber-500 bg-amber-500/10': action.priority === 'high',
+													'text-blue-500 bg-blue-500/10': action.priority === 'medium',
+													'text-muted-foreground bg-muted/40': action.priority === 'low',
 												}"
 											>
 												{{ action.priority }}

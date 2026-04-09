@@ -74,7 +74,7 @@ export function useInvoices() {
       fields: [
         '*',
         'bill_to.*', 'bill_to.owner.email',
-        'client.id', 'client.name', 'client.billing_email', 'client.billing_name', 'client.billing_address', 'client.billing_contacts',
+        'client.id', 'client.name', 'client.billing_email', 'client.billing_name', 'client.billing_address', 'client.billing_contacts', 'client.parent_client.id', 'client.parent_client.name', 'client.parent_client.billing_email', 'client.parent_client.billing_name', 'client.parent_client.billing_address', 'client.parent_client.billing_contacts',
         'project.id', 'project.title',
         'line_items.*', 'line_items.product.*',
         'payments.*',
@@ -84,34 +84,52 @@ export function useInvoices() {
 
   const createInvoice = async (payload: any): Promise<Invoice> => {
     // Auto-snapshot billing fields and bill_to from client if not already provided
+    // For sub-brands: falls back to parent_client billing details when the client has none
     if (payload.client) {
       try {
         const clientItems = useDirectusItems('clients');
         const client = await clientItems.get(payload.client, {
-          fields: ['billing_email', 'billing_name', 'billing_address', 'billing_contacts', 'name', 'organization'],
+          fields: [
+            'billing_email', 'billing_name', 'billing_address', 'billing_contacts', 'name', 'organization',
+            'parent_client.id', 'parent_client.billing_email', 'parent_client.billing_name',
+            'parent_client.billing_address', 'parent_client.billing_contacts', 'parent_client.name',
+            'parent_client.organization',
+          ],
         }) as any;
 
         if (client) {
-          // Auto-set bill_to from client's organization if not set
-          if (!payload.bill_to && client.organization) {
-            payload.bill_to = typeof client.organization === 'object'
-              ? client.organization.id
-              : client.organization;
+          const parent = client.parent_client;
+
+          // Auto-set bill_to from client's organization (or parent's organization for sub-brands)
+          if (!payload.bill_to) {
+            const org = client.organization || parent?.organization;
+            if (org) {
+              payload.bill_to = typeof org === 'object' ? org.id : org;
+            }
           }
 
-          // Resolve billing: prefer billing_contacts (UI-managed) → separate fields → skip
+          // Resolve billing: client fields → parent_client fields → skip
           if (!payload.billing_email) {
-            const primaryContact = Array.isArray(client.billing_contacts)
+            const clientContacts = Array.isArray(client.billing_contacts)
               ? client.billing_contacts.find((c: any) => c.email?.trim())
               : null;
+            const parentContacts = Array.isArray(parent?.billing_contacts)
+              ? parent.billing_contacts.find((c: any) => c.email?.trim())
+              : null;
+
+            const hasBilling = clientContacts || client.billing_email;
+
+            const source = hasBilling ? client : (parent || client);
+            const primaryContact = hasBilling ? clientContacts : parentContacts;
+
             payload.billing_email = primaryContact?.email
-              || client.billing_email
+              || source.billing_email
               || null;
             payload.billing_name = primaryContact?.name
-              || client.billing_name
-              || client.name
+              || source.billing_name
+              || source.name
               || null;
-            payload.billing_address = client.billing_address || null;
+            payload.billing_address = source.billing_address || null;
           }
         }
       } catch {

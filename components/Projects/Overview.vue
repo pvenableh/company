@@ -197,16 +197,16 @@
 		<!-- Events Section -->
 		<div class="ios-card p-5">
 			<div class="flex items-center justify-between mb-4">
-				<div class="flex items-center gap-2">
+				<div class="flex items-center gap-3">
 					<div class="h-8 w-8 rounded-xl bg-cyan-500/10 flex items-center justify-center">
 						<UIcon name="i-heroicons-calendar" class="w-4 h-4 text-cyan-500" />
 					</div>
-					<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Project Events</span>
-					<span v-if="allEvents.length" class="text-[10px] text-muted-foreground">({{ allEvents.length }})</span>
+					<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Events</span>
+					<span v-if="allEvents.length" class="text-[10px] text-muted-foreground/50">({{ allEvents.length }})</span>
 				</div>
 				<div class="flex items-center gap-2">
 					<Button size="sm" variant="outline" class="uppercase text-[10px] tracking-wide" @click="showTimelineWizard = true">
-						<Icon name="lucide:sparkles" class="h-3 w-3 mr-1" />
+						<UIcon name="i-heroicons-sparkles" class="h-3 w-3 mr-1" />
 						Generate Timeline
 					</Button>
 					<Button size="sm" variant="outline" class="uppercase text-[10px] tracking-wide" @click="showNewEventModal = true">
@@ -216,69 +216,72 @@
 				</div>
 			</div>
 
-			<!-- Events list -->
-			<div v-if="allEvents.length > 0" class="space-y-2">
-				<button
-					v-for="event in allEvents"
-					:key="event.id"
-					class="w-full text-left p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors ios-press"
-					@click="openEventDetail(event)"
-				>
-					<div class="flex items-center justify-between">
-						<div class="flex items-center gap-2 min-w-0">
-							<div
-								class="h-2.5 w-2.5 rounded-full shrink-0"
-								:class="{
-									'bg-blue-500': event.type === 'design',
-									'bg-green-500': event.type === 'payment',
-									'bg-orange-500': event.type === 'review',
-									'bg-purple-500': event.type === 'meeting',
-									'bg-gray-400': !['design', 'payment', 'review', 'meeting'].includes(event.type),
-								}"
-							/>
-							<h5 class="uppercase tracking-wide font-bold text-xs truncate">{{ event.title }}</h5>
-						</div>
-						<div class="flex items-center gap-2 shrink-0 ml-2">
-							<span v-if="event.date" class="text-[9px] text-muted-foreground">
-								{{ formatEventDate(event.date || event.event_date) }}
-							</span>
-							<!-- Approval badge -->
-							<span
-								v-if="event.approval === 'Need Approval'"
-								class="text-[8px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-md text-amber-500 bg-amber-500/10"
-							>
-								Needs Approval
-							</span>
-							<span
-								v-else-if="event.approval === 'Approved'"
-								class="text-[8px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-md text-green-500 bg-green-500/10"
-							>
-								Approved
-							</span>
-							<!-- Status badge -->
-							<span
-								class="text-[8px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-md"
-								:class="{
-									'text-blue-500 bg-blue-500/10': event.status === 'Active',
-									'text-green-500 bg-green-500/10': event.status === 'Completed',
-									'text-muted-foreground bg-muted/40': event.status === 'draft' || event.status === 'archived',
-									'text-cyan-500 bg-cyan-500/10': event.status === 'Scheduled',
-								}"
-							>
-								{{ event.status }}
-							</span>
-							<Icon name="lucide:chevron-right" class="h-3.5 w-3.5 text-muted-foreground/50" />
-						</div>
-					</div>
-				</button>
-			</div>
-
-			<!-- Empty state -->
-			<div v-else class="flex flex-col items-center justify-center py-12 text-center">
+			<div v-if="allEvents.length === 0" class="flex flex-col items-center justify-center py-12 text-center">
 				<UIcon name="i-heroicons-calendar" class="w-8 h-8 text-muted-foreground/30 mb-2" />
 				<p class="text-sm text-muted-foreground">No events yet</p>
 				<p class="text-xs text-muted-foreground/60 mt-1">Create events manually or generate a timeline with AI.</p>
 			</div>
+
+			<UTabs v-else :items="eventTabs">
+				<template #timeline>
+					<ProjectsMiniGantt :project="project" class="mt-2" @event-click="openEventDetail" />
+				</template>
+				<template #list>
+					<div class="space-y-2 mt-2">
+						<button
+							v-for="event in allEvents"
+							:key="event.id"
+							class="w-full text-left p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors ios-press"
+							@click="openEventDetail(event)"
+						>
+							<div class="flex items-center justify-between">
+								<div class="flex items-center gap-2 min-w-0">
+									<div
+										class="h-2.5 w-2.5 rounded-full shrink-0"
+										:class="{
+											'bg-blue-500': event.type === 'design',
+											'bg-green-500': event.type === 'payment',
+											'bg-orange-500': event.type === 'review',
+											'bg-purple-500': event.type === 'meeting',
+											'bg-gray-400': !['design', 'payment', 'review', 'meeting'].includes(event.type),
+										}"
+									/>
+									<h5 class="uppercase tracking-wide font-bold text-xs truncate">{{ event.title }}</h5>
+								</div>
+								<div class="flex items-center gap-2 shrink-0 ml-2">
+									<span v-if="event.date" class="text-[9px] text-muted-foreground">
+										{{ formatEventDate(event.date || event.event_date) }}
+									</span>
+									<span
+										v-if="event.approval === 'Need Approval'"
+										class="text-[8px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-md text-amber-500 bg-amber-500/10"
+									>
+										Needs Approval
+									</span>
+									<span
+										v-else-if="event.approval === 'Approved'"
+										class="text-[8px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-md text-green-500 bg-green-500/10"
+									>
+										Approved
+									</span>
+									<span
+										class="text-[8px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-md"
+										:class="{
+											'text-blue-500 bg-blue-500/10': event.status === 'Active',
+											'text-green-500 bg-green-500/10': event.status === 'Completed',
+											'text-muted-foreground bg-muted/40': event.status === 'draft' || event.status === 'archived',
+											'text-cyan-500 bg-cyan-500/10': event.status === 'Scheduled',
+										}"
+									>
+										{{ event.status }}
+									</span>
+									<UIcon name="i-heroicons-chevron-right" class="h-3.5 w-3.5 text-muted-foreground/50" />
+								</div>
+							</div>
+						</button>
+					</div>
+				</template>
+			</UTabs>
 		</div>
 
 		<!-- New Event Modal -->
@@ -569,6 +572,11 @@ onMounted(() => {
 
 // Timeline wizard state
 const showTimelineWizard = ref(false);
+
+const eventTabs = [
+	{ slot: 'timeline', label: 'Timeline', icon: 'i-heroicons-chart-bar' },
+	{ slot: 'list', label: 'List', icon: 'i-heroicons-list-bullet' },
+];
 
 const handleTimelineCreated = (count) => {
 	emit('eventCreated');

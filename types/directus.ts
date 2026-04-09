@@ -1030,10 +1030,14 @@ export interface Client {
 	billing_address?: string | null;
 	/** @description Default payment terms for new invoices */
 	payment_terms?: 'due_on_receipt' | 'net_15' | 'net_30' | 'net_45' | 'net_60' | null;
+	/** @description Parent client for sub-brands. Billing falls back to parent if not set on this client. */
+	parent_client?: Client | string | null;
 	/** @description Teams assigned to this client */
 	assigned_teams?: ClientsTeam[] | string[];
 	/** @description Individual users with direct access to this client */
 	assigned_users?: ClientsDirectusUser[] | string[];
+	/** @description Sub-brands that bill through this client */
+	sub_brands?: Client[] | string[];
 }
 
 export interface ClientsDirectusUser {
@@ -1439,6 +1443,29 @@ export interface FinancialGoal {
 	user_created?: DirectusUser | string | null;
 }
 
+export interface GbpPost {
+	/** @primaryKey */
+	id: string;
+	/** @description Has this been posted to GBP? */
+	post_status?: 'draft' | 'posted' | 'skipped';
+	/** @description Blog post title for reference */
+	title?: string | null;
+	/** @description GBP post body — copy this to Google Business Profile (1500 char max) */
+	caption?: string | null;
+	/** @description Direct URL to featured image — open in browser to download for GBP */
+	image_url?: string | null;
+	/** @description Full URL to the magazine article */
+	link?: string | null;
+	/** @description Original blog post this was generated from */
+	source_post?: string | null;
+	/** @description Optional edits or notes before posting */
+	notes?: string | null;
+	date_created?: string | null;
+	user_created?: string | null;
+	/** @description Original blog post this was generated from */
+	source_blog_post?: Blog | string | null;
+}
+
 export interface Goal {
 	/** @primaryKey */
 	id: string;
@@ -1584,6 +1611,10 @@ export interface Invoice {
 	billing_name?: string | null;
 	/** @description Snapshot: billing address at time of invoicing */
 	billing_address?: string | null;
+	/** @description Photo of check received */
+	check_image?: DirectusFile | string | null;
+	/** @description Date the client mailed the check */
+	date_mailed?: string | null;
 	/** @required */
 	line_items: LineItem[] | string[];
 	payments?: PaymentsReceived[] | string[];
@@ -2385,16 +2416,16 @@ export interface ProjectEvent {
 	assigned_to?: string | null;
 	/** @description Dependency on another event */
 	depends_on?: string | null;
-	comments?: ProjectEventsComment[] | string[];
-	spawned_projects?: Project[] | string[];
-	tasks?: ProjectTask[] | string[];
-	files?: ProjectEventFile[] | string[];
 	/** @description User who approved this event */
 	approved_by?: DirectusUser | string | null;
 	/** @description When this event was approved */
 	approved_at?: string | null;
 	/** @description Unique token for shareable approval links */
 	approval_token?: string | null;
+	comments?: ProjectEventsComment[] | string[];
+	spawned_projects?: Project[] | string[];
+	tasks?: ProjectTask[] | string[];
+	files?: ProjectEventFile[] | string[];
 }
 
 export interface ProjectEventsComment {
@@ -2441,6 +2472,7 @@ export interface Project {
 	assigned_to?: ProjectsDirectusUser[] | string[];
 	tickets?: Ticket[] | string[];
 	children?: Project[] | string[];
+	files?: ProjectsFile[] | string[];
 }
 
 export interface ProjectsDirectusUser {
@@ -2449,6 +2481,13 @@ export interface ProjectsDirectusUser {
 	projects_id?: Project | string | null;
 	directus_users_id?: DirectusUser | string | null;
 	sort?: number | null;
+}
+
+export interface ProjectsFile {
+	/** @primaryKey */
+	id: number;
+	projects_id?: Project | string | null;
+	directus_files_id?: DirectusFile | string | null;
 }
 
 export interface ProjectStatusUpdate {
@@ -3834,6 +3873,7 @@ export interface Schema {
 	email_templates: EmailTemplate[];
 	expenses: Expense[];
 	financial_goals: FinancialGoal[];
+	gbp_posts: GbpPost[];
 	goals: Goal[];
 	goal_snapshots: GoalSnapshot[];
 	heros: Hero[];
@@ -3890,6 +3930,7 @@ export interface Schema {
 	project_events_comments: ProjectEventsComment[];
 	projects: Project[];
 	projects_directus_users: ProjectsDirectusUser[];
+	projects_files: ProjectsFile[];
 	project_status_updates: ProjectStatusUpdate[];
 	project_tasks: ProjectTask[];
 	project_tasks_watchers: ProjectTasksWatcher[];
@@ -4040,6 +4081,7 @@ export enum CollectionNames {
 	email_templates = 'email_templates',
 	expenses = 'expenses',
 	financial_goals = 'financial_goals',
+	gbp_posts = 'gbp_posts',
 	goals = 'goals',
 	goal_snapshots = 'goal_snapshots',
 	heros = 'heros',
@@ -4096,6 +4138,7 @@ export enum CollectionNames {
 	project_events_comments = 'project_events_comments',
 	projects = 'projects',
 	projects_directus_users = 'projects_directus_users',
+	projects_files = 'projects_files',
 	project_status_updates = 'project_status_updates',
 	project_tasks = 'project_tasks',
 	project_tasks_watchers = 'project_tasks_watchers',

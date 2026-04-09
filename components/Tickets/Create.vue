@@ -17,42 +17,77 @@
 			>
 				<div
 					v-if="isExpanded"
-					class="fixed inset-0 z-[50] overflow-auto flex flex-col items-center justify-center backdrop-blur-lg bg-white/75 dark:bg-gray-800"
+					class="fixed inset-0 z-[50] overflow-auto backdrop-blur-lg bg-white/75 dark:bg-gray-900/90"
 				>
-					<div class="w-full p-4 lg:p-12">
+					<div class="w-full max-w-xl mx-auto p-4 lg:p-8 py-8">
 						<!-- Header -->
-						<div class="w-full max-w-2xl mx-auto py-3">
-							<div class="flex items-center justify-between">
-								<h3 class="text-2xl leading-5 font-thin uppercase tracking-wide">
-									Create
-									<br />
-									New Ticket
-								</h3>
-								<UButton color="gray" variant="ghost" icon="i-heroicons-x-mark-20-solid" @click="closeForm" />
+						<div class="flex items-center justify-between mb-6">
+							<div>
+								<h3 class="text-lg font-semibold text-foreground">New Ticket</h3>
+								<p class="text-xs text-muted-foreground mt-0.5">Create a new work item</p>
 							</div>
+							<button
+								class="w-8 h-8 rounded-full flex items-center justify-center hover:bg-muted/50 transition-colors"
+								@click="closeForm"
+							>
+								<UIcon name="i-heroicons-x-mark" class="w-5 h-5 text-muted-foreground" />
+							</button>
 						</div>
 
 						<!-- Form -->
-						<div class="w-full mt-4 max-w-2xl mx-auto">
-							<form @submit.prevent="createTicket" class="space-y-6">
+						<form @submit.prevent="createTicket" class="space-y-4">
+							<div class="ios-card p-4 space-y-4">
 								<UFormGroup label="Title" required>
 									<UInput
 										v-model="form.title"
-										placeholder="Enter ticket title"
+										placeholder="What needs to be done?"
 										required
+										size="lg"
 										:ui="{ error: showTitleError }"
 									/>
 									<template v-if="showTitleError" #error>Title is required</template>
 								</UFormGroup>
 
-								<div class="grid grid-cols-2 gap-4">
+								<div class="grid grid-cols-2 gap-3">
 									<UFormGroup label="Status">
 										<USelect v-model="form.status" :options="columns" option-attribute="name" value-attribute="id" />
 									</UFormGroup>
-
 									<UFormGroup label="Priority">
 										<USelect v-model="form.priority" :options="priorities" />
 									</UFormGroup>
+								</div>
+							</div>
+
+							<div class="ios-card p-4 space-y-4">
+								<div class="grid grid-cols-2 gap-3">
+									<UFormGroup v-if="clientOptions.length > 0" label="Client">
+										<USelectMenu
+											searchable
+											v-model="form.client"
+											:options="clientOptions"
+											option-attribute="label"
+											value-attribute="value"
+											placeholder="Select client"
+											:loading="loadingClients"
+											class="relative"
+										/>
+									</UFormGroup>
+
+									<UFormGroup v-if="form.organization" label="Project">
+										<USelectMenu
+											searchable
+											v-model="form.project"
+											:options="projectOptions"
+											option-attribute="title"
+											value-attribute="id"
+											placeholder="Select project"
+											:loading="loadingProjects"
+											class="relative"
+										/>
+									</UFormGroup>
+								</div>
+
+								<div class="grid grid-cols-2 gap-3">
 									<UFormGroup v-if="hasMultipleOrgs" label="Organization">
 										<USelectMenu
 											searchable
@@ -75,52 +110,30 @@
 											:loading="teamsLoading"
 											@update:modelValue="handleTeamChange"
 											:nullable="true"
-										>
-											<template #option="{ option }">
-												<div class="flex flex-col">
-													<span class="font-medium">{{ option.name }}</span>
-													<span v-if="option.id === null" class="text-xs text-muted-foreground">
-														Ticket will not be assigned to any team
-													</span>
-													<span v-else-if="option.is_default" class="text-xs text-green-500">Default team</span>
-												</div>
-											</template>
-										</USelect>
-									</UFormGroup>
-
-									<UFormGroup v-if="form.organization" label="Project">
-										<USelectMenu
-											searchable
-											v-model="form.project"
-											:options="projectOptions"
-											option-attribute="title"
-											value-attribute="id"
-											placeholder="Select project"
-											:loading="loadingProjects"
-											class="relative"
 										/>
 									</UFormGroup>
 								</div>
-								<div class="grid grid-cols-2 gap-4">
+							</div>
+
+							<div class="ios-card p-4 space-y-4">
+								<div class="grid grid-cols-2 gap-3">
 									<UFormGroup label="Due Date">
 										<UPopover v-model:open="calendarOpen" class="w-full">
-											<button type="button" class="w-full flex items-center gap-2 rounded-md border bg-background px-3 py-2 text-sm text-left hover:bg-muted/50 transition-colors">
+											<button type="button" class="w-full flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm text-left hover:bg-muted/50 transition-colors">
 												<UIcon name="i-heroicons-calendar" class="w-4 h-4 text-muted-foreground flex-shrink-0" />
 												<span :class="form.due_date ? 'text-foreground' : 'text-muted-foreground'">
 													{{ formatDisplayDate(form.due_date) || formatDisplayDate(new Date()) }}
 												</span>
 											</button>
 											<template #panel>
-												<div class="p-0">
-													<Calendar
-														:model-value="calendarDateValue"
-														@update:model-value="(val) => { handleCalendarSelect(val); calendarOpen = false; }"
-													/>
-												</div>
+												<Calendar
+													:model-value="calendarDateValue"
+													@update:model-value="(val) => { handleCalendarSelect(val); calendarOpen = false; }"
+												/>
 											</template>
 										</UPopover>
 									</UFormGroup>
-									<UFormGroup label="Due Time">
+									<UFormGroup label="Time">
 										<USelect
 											v-model="selectedTime"
 											:options="timeOptions"
@@ -130,82 +143,67 @@
 									</UFormGroup>
 								</div>
 
-								<!-- User Assignment -->
-								<div class="grid grid-cols-2 gap-4">
-									<UFormGroup label="Assign To">
-										<USelectMenu
-											v-model="selectedUser"
-											:options="availableUsers"
-											placeholder="Select users..."
-											searchable
-											:loading="loadingUsers"
-											:disabled="filteredUsers.length === 0"
-											@update:modelValue="handleUserSelect"
-										>
-											<template #label>
-												<div class="flex items-center gap-2">
-													<UIcon name="i-heroicons-user-plus" class="w-4 h-4 text-muted-foreground" />
-													<span class="text-muted-foreground">{{ selectedUser ? selectedUser.label : 'Add user...' }}</span>
+								<UFormGroup label="Assign To">
+									<USelectMenu
+										v-model="selectedUser"
+										:options="availableUsers"
+										placeholder="Add team members..."
+										searchable
+										:loading="loadingUsers"
+										:disabled="filteredUsers.length === 0"
+										@update:modelValue="handleUserSelect"
+									>
+										<template #label>
+											<div class="flex items-center gap-2">
+												<UIcon name="i-heroicons-user-plus" class="w-4 h-4 text-muted-foreground" />
+												<span class="text-muted-foreground">{{ selectedUser ? selectedUser.label : 'Add member...' }}</span>
+											</div>
+										</template>
+										<template #option="{ option: user }">
+											<div class="flex items-center gap-2 py-1">
+												<UAvatar :src="getAvatarUrl(user)" :alt="user.label" size="xs" />
+												<div>
+													<span class="text-sm font-medium">{{ user.label }}</span>
+													<span class="text-[10px] text-muted-foreground ml-1">{{ user.email }}</span>
 												</div>
-											</template>
-
-											<template #option="{ option: user }">
-												<div class="flex items-center gap-2 py-1">
-													<UAvatar :src="getAvatarUrl(user)" :alt="user.label" size="sm" />
-													<div class="flex flex-col">
-														<span class="font-medium">{{ user.label }}</span>
-														<span class="text-xs text-muted-foreground">{{ user.email }}</span>
-													</div>
-												</div>
-											</template>
-										</USelectMenu>
-									</UFormGroup>
-
-									<div v-if="form.assigned_to.length" class="flex flex-wrap flex-row gap-2 mt-6">
-										<UBadge
-											v-for="userId in form.assigned_to"
-											:key="userId"
-											:color="isCurrentUserBadge(userId) ? 'primary' : 'gray'"
-											class="flex items-center gap-2"
-										>
-											<UAvatar
-												:src="getAvatarUrl(getUserById(userId))"
-												:alt="getUserFullName(getUserById(userId))"
-												size="2xs"
-											/>
-											{{ getUserFullName(getUserById(userId)) }}
-											<UButton
-												color="white"
-												variant="ghost"
-												icon="i-heroicons-x-mark-20-solid"
-												size="2xs"
-												class="-mr-1"
-												:ui="{ rounded: 'rounded-full' }"
-												@click="removeUser(userId)"
-											/>
-										</UBadge>
-									</div>
+											</div>
+										</template>
+									</USelectMenu>
+								</UFormGroup>
+								<div v-if="form.assigned_to.length" class="flex flex-wrap gap-1.5">
+									<span
+										v-for="userId in form.assigned_to"
+										:key="userId"
+										class="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-lg"
+										:class="isCurrentUserBadge(userId) ? 'bg-primary/10 text-primary' : 'bg-muted/60 text-foreground'"
+									>
+										<UAvatar :src="getAvatarUrl(getUserById(userId))" :alt="getUserFullName(getUserById(userId))" size="2xs" />
+										{{ getUserFullName(getUserById(userId)) }}
+										<button type="button" class="hover:text-red-500 transition-colors" @click="removeUser(userId)">
+											<UIcon name="i-heroicons-x-mark" class="w-3 h-3" />
+										</button>
+									</span>
 								</div>
+							</div>
 
-								<UFormGroup label="Description" required>
+							<div class="ios-card p-4">
+								<UFormGroup label="Description">
 									<LazyFormTiptap
 										v-model="form.description"
-										placeholder="Enter ticket description"
-										:editor-props="{
-											content: form.description,
-										}"
+										placeholder="Describe the work..."
+										:editor-props="{ content: form.description }"
 										@mention="handleMention"
 										:organization-id="form.organization"
-										:client-id="typeof form.client === 'object' ? form.client?.id : form.client"
+										:client-id="form.client"
 									/>
 								</UFormGroup>
+							</div>
 
-								<div class="flex justify-end space-x-2">
-									<UButton color="gray" variant="soft" @click="closeForm">Cancel</UButton>
-									<UButton type="submit" color="primary" :loading="isLoading">Create Ticket</UButton>
-								</div>
-							</form>
-						</div>
+							<div class="flex items-center justify-end gap-2 pt-2">
+								<UButton color="gray" variant="ghost" @click="closeForm">Cancel</UButton>
+								<UButton type="submit" color="primary" :loading="isLoading">Create Ticket</UButton>
+							</div>
+						</form>
 					</div>
 				</div>
 			</Transition>
@@ -235,6 +233,7 @@ const props = defineProps({
 const { selectedOrg, organizations, hasMultipleOrgs, organizationOptions } = useOrganization();
 const { teams, visibleTeams, loading: teamsLoading, fetchTeams, selectedTeam, setTeam, hasAdminAccess } = useTeams();
 const { filteredUsers, fetchFilteredUsers, loading: loadingUsers, DEFAULT_TEAM_ID } = useFilteredUsers();
+const { getClientOptions } = useClients();
 const ticketItems = useDirectusItems('tickets');
 const ticketsDirectusUsersItems = useDirectusItems('tickets_directus_users');
 const projectItems = useDirectusItems('projects');
@@ -319,6 +318,8 @@ const timeOptions = Array.from({ length: 48 }, (_, i) => {
 
 const projectOptions = ref([]);
 const loadingProjects = ref(false);
+const clientOptions = ref([]);
+const loadingClients = ref(false);
 
 const form = ref({
 	title: '',
@@ -329,7 +330,8 @@ const form = ref({
 	assigned_to: [],
 	organization: selectedOrg.value,
 	project: null,
-	team: null, // Initially null, will be set after teams are loaded
+	team: null,
+	client: null,
 });
 
 const priorities = [
@@ -532,19 +534,24 @@ const openForm = async () => {
 		organization: orgId,
 		project: props.defaultProject || null,
 		team: undefined,
+		client: null,
 	};
 
 	// Set up initial data
 	try {
-		// Fetch teams for the current organization
+		// Fetch teams, projects, clients for the current organization
 		if (orgId) {
-			await fetchTeams(orgId);
-
-			// Load projects for the organization
-			await fetchProjects(orgId);
-
-			// Fetch all users in the organization for initial view
-			await fetchAllOrganizationUsers(orgId);
+			await Promise.all([
+				fetchTeams(orgId),
+				fetchProjects(orgId),
+				fetchAllOrganizationUsers(orgId),
+				(async () => {
+					loadingClients.value = true;
+					try { clientOptions.value = await getClientOptions(); }
+					catch { clientOptions.value = []; }
+					finally { loadingClients.value = false; }
+				})(),
+			]);
 		}
 	} catch (error) {
 		console.error('Error initializing form:', error);
