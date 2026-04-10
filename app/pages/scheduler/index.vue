@@ -130,19 +130,19 @@
 
 			<!-- Meeting Request Modal -->
 			<UModal v-model="showRequestModal">
-				<UCard>
-					<template #header>
-						<div class="flex items-center justify-between">
-							<h3 class="font-semibold">Request a Meeting</h3>
-							<UButton color="gray" variant="ghost" icon="i-heroicons-x-mark" @click="showRequestModal = false" />
-						</div>
-					</template>
+				<div class="ios-card overflow-hidden !rounded-2xl">
+					<div class="px-5 py-4 border-b border-border/30 flex items-center justify-between">
+						<h3 class="text-sm font-semibold text-foreground">Request a Meeting</h3>
+						<button @click="showRequestModal = false" class="p-1.5 rounded-lg hover:bg-muted/30 transition-colors">
+							<UIcon name="i-heroicons-x-mark" class="w-4 h-4 text-muted-foreground" />
+						</button>
+					</div>
 
-					<div v-if="selectedHost" class="space-y-4">
-						<div class="flex items-center gap-3 p-3 bg-muted/30 rounded-xl">
+					<div v-if="selectedHost" class="p-5 space-y-4">
+						<div class="flex items-center gap-3 p-3 bg-muted/20 rounded-xl">
 							<UAvatar :alt="`${selectedHost.first_name} ${selectedHost.last_name}`" size="sm" />
 							<div>
-								<p class="text-sm font-medium">{{ selectedHost.first_name }} {{ selectedHost.last_name }}</p>
+								<p class="text-sm font-medium text-foreground">{{ selectedHost.first_name }} {{ selectedHost.last_name }}</p>
 								<p class="text-xs text-muted-foreground">{{ selectedHost.email }}</p>
 							</div>
 						</div>
@@ -162,15 +162,24 @@
 						<UFormGroup label="Notes (optional)">
 							<UTextarea v-model="requestForm.notes" placeholder="Describe what you'd like to discuss..." rows="3" />
 						</UFormGroup>
-					</div>
 
-					<template #footer>
-						<div class="flex justify-end gap-2">
-							<UButton color="gray" variant="soft" @click="showRequestModal = false">Cancel</UButton>
-							<UButton color="primary" :loading="submittingRequest" @click="submitRequest">Send Request</UButton>
+						<div class="flex justify-end gap-2 pt-2">
+							<button
+								@click="showRequestModal = false"
+								class="px-4 py-2 rounded-xl bg-muted/30 hover:bg-muted/60 text-sm font-medium text-foreground transition-colors ios-press"
+							>
+								Cancel
+							</button>
+							<button
+								@click="submitRequest"
+								:disabled="submittingRequest"
+								class="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium transition-colors ios-press disabled:opacity-50"
+							>
+								{{ submittingRequest ? 'Sending...' : 'Send Request' }}
+							</button>
 						</div>
-					</template>
-				</UCard>
+					</div>
+				</div>
 			</UModal>
 		</div>
 
@@ -197,7 +206,7 @@
 				<!-- Stats Row -->
 				<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
 					<div class="ios-card p-3.5 flex items-center gap-3">
-						<div class="p-2 rounded-xl bg-blue-100/60 dark:bg-blue-900/20">
+						<div class="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-xl bg-blue-100/60 dark:bg-blue-900/20">
 							<UIcon name="i-heroicons-calendar" class="w-4 h-4 text-blue-500" />
 						</div>
 						<div>
@@ -206,7 +215,7 @@
 						</div>
 					</div>
 					<div class="ios-card p-3.5 flex items-center gap-3">
-						<div class="p-2 rounded-xl bg-emerald-100/60 dark:bg-emerald-900/20">
+						<div class="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-xl bg-emerald-100/60 dark:bg-emerald-900/20">
 							<UIcon name="i-heroicons-video-camera" class="w-4 h-4 text-emerald-500" />
 						</div>
 						<div>
@@ -215,7 +224,7 @@
 						</div>
 					</div>
 					<div class="ios-card p-3.5 flex items-center gap-3">
-						<div class="p-2 rounded-xl bg-amber-100/60 dark:bg-amber-900/20">
+						<div class="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-xl bg-amber-100/60 dark:bg-amber-900/20">
 							<UIcon name="i-heroicons-arrow-path" class="w-4 h-4 text-amber-500" />
 						</div>
 						<div>
@@ -224,7 +233,7 @@
 						</div>
 					</div>
 					<div class="ios-card p-3.5 flex items-center gap-3">
-						<div class="p-2 rounded-xl bg-muted/60">
+						<div class="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-xl bg-muted/60">
 							<UIcon name="i-heroicons-inbox" class="w-4 h-4 text-muted-foreground" />
 						</div>
 						<div>
@@ -240,7 +249,7 @@
 						v-for="filter in eventFilters"
 						:key="filter.key"
 						@click="toggleFilter(filter.key)"
-						class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-medium transition-all duration-200 ios-press"
+						class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wide transition-all duration-200 ios-press"
 						:class="activeFilters.has(filter.key)
 							? `${filter.activeBg} ${filter.activeText}`
 							: 'bg-muted/30 text-muted-foreground hover:bg-muted/50'"
@@ -251,11 +260,10 @@
 				</div>
 
 				<!-- Main Layout: Sidebar + Calendar + Day Detail -->
-				<div class="grid grid-cols-1 lg:grid-cols-[260px_1fr_320px] gap-5">
+				<div class="grid grid-cols-1 md:grid-cols-[1fr_320px] lg:grid-cols-[260px_1fr_320px] gap-5">
 					<!-- Left: CRM Sidebar -->
 					<div class="hidden lg:block">
 						<SchedulerCrmSidebar
-							:today-events="calendarEvents.todayEvents.value"
 							:upcoming-follow-ups="calendarEvents.upcomingFollowUps.value"
 							:settings="settings"
 							:pending-requests="pendingRequestCount"
@@ -285,24 +293,33 @@
 				</div>
 			</div>
 
-			<!-- Requests Modal (slide-out) -->
+			<!-- Unified Event/Meeting Modal -->
+			<SchedulerUnifiedEventModal
+				v-model="showEventModal"
+				:selected-date="eventModalDate"
+				:default-video="eventModalDefaultVideo"
+				@created="handleEventCreated"
+				@saved="handleEventCreated"
+			/>
+
+			<!-- Requests Modal -->
 			<UModal v-model="showRequestsModal" :ui="{ width: 'max-w-lg' }">
-				<UCard>
-					<template #header>
-						<div class="flex items-center justify-between">
-							<h3 class="font-semibold">Meeting Requests</h3>
-							<UButton color="gray" variant="ghost" icon="i-heroicons-x-mark" @click="showRequestsModal = false" />
-						</div>
-					</template>
+				<div class="ios-card overflow-hidden !rounded-2xl">
+					<div class="px-5 py-4 border-b border-border/30 flex items-center justify-between">
+						<h3 class="text-sm font-semibold text-foreground">Meeting Requests</h3>
+						<button @click="showRequestsModal = false" class="p-1.5 rounded-lg hover:bg-muted/30 transition-colors">
+							<UIcon name="i-heroicons-x-mark" class="w-4 h-4 text-muted-foreground" />
+						</button>
+					</div>
 					<SchedulerMeetingRequests />
-				</UCard>
+				</div>
 			</UModal>
 		</template>
 	</div>
 </template>
 
 <script setup lang="ts">
-import { format, isAfter, addDays } from 'date-fns';
+import { format, isAfter, addDays, parseISO } from 'date-fns';
 import type { CalendarEvent } from '~/composables/useCalendarEvents';
 
 definePageMeta({ middleware: ['auth'] });
@@ -374,22 +391,39 @@ const stats = computed(() => {
 	};
 });
 
+// ── Unified Event Modal ──
+const showEventModal = ref(false);
+const eventModalDate = ref<Date | undefined>(undefined);
+const eventModalDefaultVideo = ref(true);
+
 // ── Event handlers ──
 const handleDateSelect = (dateStr: string) => {
 	selectedDate.value = dateStr;
 };
 
 const handleNewEvent = (dateStr: string) => {
-	// The BookingCalendar's internal appointment form handles this
-	// We trigger a double-click on the date
+	eventModalDate.value = parseISO(dateStr);
+	eventModalDefaultVideo.value = false;
+	showEventModal.value = true;
 };
 
 const handleNewVideoMeeting = (dateStr: string) => {
-	// Opens the NewMeetingModal with the date pre-selected
+	eventModalDate.value = parseISO(dateStr);
+	eventModalDefaultVideo.value = true;
+	showEventModal.value = true;
 };
 
 const handleEditEvent = (event: CalendarEvent) => {
-	// Navigate or open edit modal based on event type
+	if (event.type === 'video_meeting' && event.room_name) {
+		router.push(`/meeting/${event.room_name}`);
+	} else if (event.type === 'follow_up' && event.lead?.id) {
+		router.push(`/leads/${event.lead.id}`);
+	}
+};
+
+const handleEventCreated = () => {
+	calendarEvents.refresh();
+	fetchVideoMeetings();
 };
 
 const handleMeetingCreated = () => {
@@ -403,8 +437,8 @@ const fetchVideoMeetings = async () => {
 	try {
 		const response = await $fetch('/api/scheduler/video-meetings');
 		videoMeetings.value = (response as any).data || [];
-	} catch (error) {
-		console.error('Error fetching video meetings:', error);
+	} catch {
+		// silently fail — video meetings list is non-critical
 	} finally {
 		loadingVideoMeetings.value = false;
 	}
@@ -476,8 +510,8 @@ const fetchAvailableHosts = async () => {
 	try {
 		const response = await $fetch('/api/scheduler/available-hosts');
 		availableHosts.value = (response as any).data || [];
-	} catch (error) {
-		console.error('Error fetching available hosts:', error);
+	} catch {
+		// silently fail
 	} finally {
 		loadingHosts.value = false;
 	}
@@ -488,8 +522,8 @@ const fetchClientRequests = async () => {
 	try {
 		const response = await $fetch('/api/scheduler/meeting-requests');
 		clientRequests.value = (response as any).data || [];
-	} catch (error) {
-		console.error('Error fetching client requests:', error);
+	} catch {
+		// silently fail
 	} finally {
 		loadingClientRequests.value = false;
 	}

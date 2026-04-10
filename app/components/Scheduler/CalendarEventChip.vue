@@ -7,15 +7,6 @@ const props = defineProps<{
 	compact?: boolean;
 }>();
 
-const typeColor = computed(() => {
-	switch (props.event.type) {
-		case 'video_meeting': return 'border-l-emerald-500';
-		case 'follow_up': return 'border-l-amber-500';
-		case 'external': return 'border-l-gray-400';
-		default: return 'border-l-blue-500';
-	}
-});
-
 const typeBg = computed(() => {
 	switch (props.event.type) {
 		case 'video_meeting': return 'bg-emerald-50/50 dark:bg-emerald-900/10';
@@ -68,10 +59,14 @@ const leadStageColor = computed(() => {
 
 <template>
 	<div
-		:class="[typeBg, typeColor, compact ? 'px-1.5 py-0.5' : 'px-2 py-1.5']"
-		is="AccentCard" :accent="typeAccent"
-		class="!p-1.5 !pl-3 transition-all duration-200 cursor-pointer group hover:shadow-sm !rounded-md"
+		:class="[typeBg]"
+		class="relative rounded-md transition-all duration-200 cursor-pointer group hover:shadow-sm"
+		:style="compact ? 'padding: 2px 6px 2px 12px' : 'padding: 6px 8px 6px 14px'"
 	>
+		<span
+			class="absolute left-1 top-1 bottom-1 w-[2px] rounded-full"
+			:class="typeAccent"
+		/>
 		<div class="flex items-center gap-1.5 min-w-0">
 			<UIcon :name="typeIcon" :class="typeIconColor" class="w-3 h-3 flex-shrink-0" />
 

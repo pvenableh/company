@@ -1,90 +1,133 @@
 <!-- pages/meeting/[roomName].vue -->
-<!-- Daily.co prebuilt iframe integration (replaces Twilio Video) -->
+<!-- Daily.co prebuilt iframe integration -->
 <template>
-	<div class="min-h-screen bg-gray-900 text-white">
+	<div class="min-h-screen t-bg t-text">
 		<!-- Loading State -->
 		<div v-if="loading" class="flex items-center justify-center min-h-screen">
 			<div class="text-center">
-				<UIcon name="i-lucide-loader-2" class="w-12 h-12 animate-spin mx-auto text-gray-400" />
-				<p class="mt-4 text-gray-400">Loading meeting...</p>
+				<div class="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center mx-auto mb-4">
+					<UIcon name="i-heroicons-video-camera" class="w-7 h-7 text-emerald-500 animate-pulse" />
+				</div>
+				<p class="text-[13px] text-muted-foreground">Loading meeting...</p>
 			</div>
 		</div>
 
 		<!-- Meeting Not Found -->
-		<div v-else-if="!meeting" class="flex items-center justify-center min-h-screen">
-			<div class="text-center max-w-md">
-				<UIcon name="i-lucide-video-off" class="w-16 h-16 mx-auto text-gray-500" />
-				<h1 class="text-2xl font-bold mt-4">Meeting Not Found</h1>
-				<p class="text-gray-400 mt-2">This meeting doesn't exist or has ended.</p>
-				<UButton to="/" class="mt-6" color="gray">Go Home</UButton>
+		<div v-else-if="!meeting" class="flex items-center justify-center min-h-screen p-4">
+			<div class="ios-card p-8 text-center max-w-sm w-full">
+				<div class="w-14 h-14 rounded-2xl bg-muted/30 flex items-center justify-center mx-auto mb-4">
+					<UIcon name="i-heroicons-video-camera" class="w-7 h-7 text-muted-foreground" />
+				</div>
+				<h1 class="text-lg font-semibold text-foreground">Meeting Not Found</h1>
+				<p class="text-sm text-muted-foreground mt-2">This meeting doesn't exist or has ended.</p>
+				<NuxtLink
+					to="/"
+					class="mt-6 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-muted/30 hover:bg-muted/60 text-sm font-medium text-foreground transition-colors ios-press"
+				>
+					Go Home
+				</NuxtLink>
 			</div>
 		</div>
 
 		<!-- Meeting Ended -->
-		<div v-else-if="meetingEnded" class="flex items-center justify-center min-h-screen">
-			<div class="text-center max-w-md">
-				<UIcon name="i-lucide-check-circle-2" class="w-16 h-16 mx-auto text-green-500" />
-				<h1 class="text-2xl font-bold mt-4">Meeting Ended</h1>
-				<p class="text-gray-400 mt-2">Thanks for joining!</p>
-				<UButton to="/" class="mt-6" color="gray">Go Home</UButton>
+		<div v-else-if="meetingEnded" class="flex items-center justify-center min-h-screen p-4">
+			<div class="ios-card p-8 text-center max-w-sm w-full">
+				<div class="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center mx-auto mb-4">
+					<UIcon name="i-heroicons-check-circle" class="w-7 h-7 text-emerald-500" />
+				</div>
+				<h1 class="text-lg font-semibold text-foreground">Meeting Ended</h1>
+				<p class="text-sm text-muted-foreground mt-2">Thanks for joining!</p>
+				<NuxtLink
+					to="/"
+					class="mt-6 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-muted/30 hover:bg-muted/60 text-sm font-medium text-foreground transition-colors ios-press"
+				>
+					Go Home
+				</NuxtLink>
 			</div>
 		</div>
 
-		<!-- Guest Entry Form (not joined yet, not host) -->
+		<!-- Guest Entry Form -->
 		<div v-else-if="!hasJoined && !isHost" class="flex items-center justify-center min-h-screen p-4">
-			<UCard class="w-full max-w-md bg-gray-800 border-gray-700">
-				<div class="text-center mb-6">
-					<UIcon name="i-lucide-video" class="w-12 h-12 mx-auto text-green-500" />
-					<h1 class="text-xl font-bold mt-4">{{ meeting.title }}</h1>
-					<p class="text-gray-400 text-sm mt-1">Hosted by {{ meeting.host_user?.first_name || 'Host' }}</p>
-					<p v-if="meeting.scheduled_start" class="text-gray-500 text-xs mt-2">
+			<div class="ios-card p-6 w-full max-w-md">
+				<!-- Meeting info header -->
+				<div class="text-center mb-6 pb-5 border-b border-border/30">
+					<div class="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center mx-auto mb-4">
+						<UIcon name="i-heroicons-video-camera" class="w-6 h-6 text-emerald-500" />
+					</div>
+					<h1 class="text-lg font-semibold text-foreground">{{ meeting.title }}</h1>
+					<p class="text-[13px] text-muted-foreground mt-1">
+						Hosted by {{ meeting.host_user?.first_name || 'Host' }}
+					</p>
+					<p v-if="meeting.scheduled_start" class="text-[11px] text-muted-foreground/60 mt-1.5">
 						{{ formatDateTime(meeting.scheduled_start) }}
 					</p>
 				</div>
 
 				<form @submit.prevent="joinMeeting" class="space-y-4">
 					<UFormGroup label="Your Name" required>
-						<UInput v-model="guestName" placeholder="Enter your name" size="lg" :disabled="joining" />
+						<UInput v-model="guestName" placeholder="Enter your name" :disabled="joining" />
 					</UFormGroup>
 
 					<UFormGroup label="Email" required>
-						<UInput v-model="guestEmail" type="email" placeholder="your@email.com" size="lg" :disabled="joining" required />
+						<UInput v-model="guestEmail" type="email" placeholder="your@email.com" :disabled="joining" required />
 					</UFormGroup>
 
-					<UButton type="submit" color="green" size="lg" block :loading="joining" icon="i-lucide-video">
+					<button
+						type="submit"
+						:disabled="joining"
+						class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-medium text-sm transition-colors ios-press disabled:opacity-50"
+					>
+						<UIcon v-if="!joining" name="i-heroicons-video-camera" class="w-4 h-4" />
+						<UIcon v-else name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin" />
 						{{ meeting.waiting_room_enabled ? 'Ask to Join' : 'Join Meeting' }}
-					</UButton>
+					</button>
 				</form>
-			</UCard>
+			</div>
 		</div>
 
 		<!-- Waiting Room -->
 		<div v-else-if="inWaitingRoom && !isHost" class="flex items-center justify-center min-h-screen p-4">
-			<UCard class="w-full max-w-md bg-gray-800 border-gray-700 text-center">
-				<UIcon name="i-lucide-clock" class="w-16 h-16 mx-auto text-yellow-500 animate-pulse" />
-				<h1 class="text-xl font-bold mt-4">Waiting to be admitted</h1>
-				<p class="text-gray-400 mt-2">The host will let you in soon...</p>
-				<p class="text-gray-500 text-sm mt-4">{{ meeting.title }}</p>
-				<UButton color="gray" variant="soft" class="mt-6" @click="leaveWaitingRoom">Leave</UButton>
-			</UCard>
+			<div class="ios-card p-8 text-center max-w-sm w-full">
+				<div class="w-14 h-14 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-4">
+					<UIcon name="i-heroicons-clock" class="w-7 h-7 text-amber-500 animate-pulse" />
+				</div>
+				<h1 class="text-lg font-semibold text-foreground">Waiting to be admitted</h1>
+				<p class="text-sm text-muted-foreground mt-2">The host will let you in soon...</p>
+				<p class="text-[11px] text-muted-foreground/60 mt-3 pb-5 border-b border-border/20">{{ meeting.title }}</p>
+				<button
+					@click="leaveWaitingRoom"
+					class="mt-5 px-4 py-2 rounded-xl bg-muted/30 hover:bg-muted/60 text-sm font-medium text-foreground transition-colors ios-press"
+				>
+					Leave
+				</button>
+			</div>
 		</div>
 
 		<!-- Rejected -->
 		<div v-else-if="wasRejected" class="flex items-center justify-center min-h-screen p-4">
-			<UCard class="w-full max-w-md bg-gray-800 border-gray-700 text-center">
-				<UIcon name="i-lucide-x-circle" class="w-16 h-16 mx-auto text-red-500" />
-				<h1 class="text-xl font-bold mt-4">Unable to Join</h1>
-				<p class="text-gray-400 mt-2">The host did not admit you to this meeting.</p>
-				<UButton to="/" color="gray" class="mt-6">Go Home</UButton>
-			</UCard>
+			<div class="ios-card p-8 text-center max-w-sm w-full">
+				<div class="w-14 h-14 rounded-2xl bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+					<UIcon name="i-heroicons-x-circle" class="w-7 h-7 text-red-500" />
+				</div>
+				<h1 class="text-lg font-semibold text-foreground">Unable to Join</h1>
+				<p class="text-sm text-muted-foreground mt-2">The host did not admit you to this meeting.</p>
+				<NuxtLink
+					to="/"
+					class="mt-6 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-muted/30 hover:bg-muted/60 text-sm font-medium text-foreground transition-colors ios-press"
+				>
+					Go Home
+				</NuxtLink>
+			</div>
 		</div>
 
 		<!-- In Meeting — Daily.co Prebuilt Iframe -->
-		<div v-else class="h-screen w-screen">
+		<div v-else class="fixed inset-0 z-50">
 			<div v-if="loadingToken" class="flex items-center justify-center h-full">
 				<div class="text-center">
-					<UIcon name="i-lucide-loader-2" class="w-10 h-10 animate-spin mx-auto text-gray-400" />
-					<p class="mt-3 text-gray-400">Connecting to meeting...</p>
+					<div class="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center mx-auto mb-3">
+						<UIcon name="i-heroicons-video-camera" class="w-6 h-6 text-emerald-500 animate-pulse" />
+					</div>
+					<p class="text-[13px] text-muted-foreground">Connecting to meeting...</p>
 				</div>
 			</div>
 			<iframe
@@ -96,10 +139,17 @@
 				allowfullscreen
 			/>
 		</div>
+
+		<!-- Floating dock (tasks, timer, AI) -->
+		<ClientOnly>
+			<LayoutFloatingDock />
+		</ClientOnly>
 	</div>
 </template>
 
 <script setup>
+definePageMeta({ layout: 'blank' });
+
 const route = useRoute();
 const toast = useToast();
 const roomName = computed(() => route.params.roomName);
@@ -135,7 +185,6 @@ const isHost = computed(() => {
 });
 
 // Format helpers
-// Uses formatDateTimeFull from utils/dates.ts
 const formatDateTime = (dateStr) => formatDateTimeFull(dateStr);
 
 // Fetch meeting info
@@ -164,9 +213,7 @@ const fetchMeeting = async () => {
 					},
 				});
 				myAttendeeId.value = joinResponse.attendeeId;
-			} catch (e) {
-				console.error('Error registering host as attendee:', e);
-			}
+			} catch {}
 
 			hasJoined.value = true;
 			await connectToDaily();
@@ -197,12 +244,10 @@ const fetchMeeting = async () => {
 					await connectToDaily();
 				}
 			} catch (e) {
-				console.error('Error auto-joining:', e);
 				toast.add({ title: 'Failed to join meeting', description: e.message, color: 'red' });
 			}
 		}
-	} catch (error) {
-		console.error('Error fetching meeting:', error);
+	} catch {
 		meeting.value = null;
 	}
 	loading.value = false;
@@ -235,7 +280,6 @@ const joinMeeting = async () => {
 			await connectToDaily();
 		}
 	} catch (error) {
-		console.error('Error joining meeting:', error);
 		toast.add({ title: 'Failed to join meeting', description: error.message, color: 'red' });
 	}
 	joining.value = false;
@@ -267,7 +311,6 @@ const connectToDaily = async () => {
 
 		dailyUrl.value = `${baseUrl}?t=${token}`;
 	} catch (error) {
-		console.error('Error connecting to Daily.co:', error);
 		toast.add({ title: 'Failed to connect', description: error.message, color: 'red' });
 	}
 	loadingToken.value = false;
@@ -299,9 +342,7 @@ const startStatusPolling = () => {
 				inWaitingRoom.value = false;
 				wasRejected.value = true;
 			}
-		} catch (e) {
-			console.error('Status poll error:', e);
-		}
+		} catch {}
 	}, 3000);
 };
 

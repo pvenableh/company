@@ -16,15 +16,39 @@ const emit = defineEmits<{
 
 const router = useRouter();
 
-const formattedDate = computed(() => {
+const dayName = computed(() => {
 	if (!props.date) return '';
-	try {
-		return format(parseISO(props.date), 'EEEE, MMMM d');
-	} catch { return props.date; }
+	try { return format(parseISO(props.date), 'EEEE'); } catch { return ''; }
 });
 
-const isToday = computed(() => {
-	return props.date === new Date().toISOString().substring(0, 10);
+const dateLabel = computed(() => {
+	if (!props.date) return '';
+	try { return format(parseISO(props.date), 'MMMM d'); } catch { return props.date; }
+});
+
+const todayStr = computed(() => new Date().toISOString().substring(0, 10));
+
+const relativeDay = computed(() => {
+	if (!props.date) return null;
+	const today = new Date();
+	const yesterday = new Date(today);
+	yesterday.setDate(yesterday.getDate() - 1);
+	const tomorrow = new Date(today);
+	tomorrow.setDate(tomorrow.getDate() + 1);
+
+	if (props.date === todayStr.value) return 'Today';
+	if (props.date === tomorrow.toISOString().substring(0, 10)) return 'Tomorrow';
+	if (props.date === yesterday.toISOString().substring(0, 10)) return 'Yesterday';
+	return null;
+});
+
+const relativeDayColor = computed(() => {
+	switch (relativeDay.value) {
+		case 'Today': return 'text-primary bg-primary/10';
+		case 'Tomorrow': return 'text-blue-500 bg-blue-500/10';
+		case 'Yesterday': return 'text-muted-foreground bg-muted/30';
+		default: return '';
+	}
 });
 
 const formatTime = (timeStr: string) => {
@@ -63,13 +87,19 @@ const handleEventClick = (event: CalendarEvent) => {
 <template>
 	<div class="ios-card overflow-hidden">
 		<!-- Header -->
-		<div class="px-4 py-3 border-b border-border/30">
+		<div class="px-4 pt-1 pb-2.5 border-b border-border/30">
+			<div class="h-[26px]">
+				<span
+					class="inline-block text-[7px] font-semibold uppercase tracking-[0.1em] px-1.5 py-0.5 rounded-full leading-none transition-all duration-200"
+					:class="relativeDay ? [relativeDayColor, 'opacity-100 translate-y-0'] : 'opacity-0 -translate-y-1'"
+				>{{ relativeDay || '&nbsp;' }}</span>
+			</div>
 			<div class="flex items-center justify-between">
 				<div>
-					<h3 class="text-sm font-semibold text-foreground">{{ formattedDate }}</h3>
-					<p v-if="isToday" class="text-[10px] text-primary font-medium">Today</p>
+					<h3 class="text-[11px] font-semibold text-foreground leading-none">{{ dayName }}</h3>
+					<p class="text-[8px] font-medium uppercase tracking-wide text-muted-foreground leading-none mt-1">{{ dateLabel }}</p>
 				</div>
-				<div class="flex items-center gap-1.5">
+				<div class="flex items-center gap-1.5 -mt-[10px]">
 					<button
 						@click="$emit('new-meeting', date)"
 						class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 text-[11px] font-medium hover:bg-emerald-500/20 transition-colors ios-press"
@@ -97,15 +127,14 @@ const handleEventClick = (event: CalendarEvent) => {
 			</div>
 
 			<div v-else class="space-y-2">
-				<div
+				<AccentCard
 					v-for="event in events"
 					:key="event.id"
-					:class="[typeStyles(event).bg]"
-					is="AccentCard" :accent="typeStyles(event).accent"
-					class="cursor-pointer hover:shadow-md transition-all duration-200 ios-press group"
+					:accent="typeStyles(event).accent"
+					:class="`${typeStyles(event).bg} cursor-pointer hover:shadow-sm transition-all duration-200 ios-press group`"
 					@click="handleEventClick(event)"
 				>
-										<div class="flex items-start gap-3">
+					<div class="flex items-start gap-3">
 						<div class="flex-shrink-0 mt-0.5">
 							<UIcon :name="typeStyles(event).icon" :class="typeStyles(event).iconColor" class="w-4 h-4" />
 						</div>
@@ -162,7 +191,7 @@ const handleEventClick = (event: CalendarEvent) => {
 							</button>
 						</div>
 					</div>
-				</div>
+				</AccentCard>
 			</div>
 		</div>
 	</div>

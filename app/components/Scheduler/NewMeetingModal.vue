@@ -83,7 +83,7 @@
 					<div
 						v-for="(attendee, index) in form.attendees"
 						:key="index"
-						class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+						class="flex items-start gap-3 p-3 bg-muted/20 rounded-xl"
 					>
 						<div class="flex-1 grid grid-cols-2 gap-3">
 							<UFormGroup label="Name">
@@ -317,7 +317,6 @@ const createMeeting = async () => {
 		emit('created', response.data);
 		close();
 	} catch (error: any) {
-		console.error('Error creating meeting:', error);
 		toast.add({
 			title: 'Error creating meeting',
 			description: error.message,

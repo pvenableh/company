@@ -5,7 +5,6 @@ import { LEAD_STAGE_LABELS, LEAD_STAGE_COLORS } from '~~/shared/leads';
 import type { LeadStage } from '~~/shared/leads';
 
 const props = defineProps<{
-	todayEvents: CalendarEvent[];
 	upcomingFollowUps: CalendarEvent[];
 	settings?: any;
 	pendingRequests: number;
@@ -53,82 +52,19 @@ const copyBookingLink = async () => {
 	toast.add({ title: 'Booking link copied!', color: 'green', icon: 'i-heroicons-clipboard-document-check' });
 };
 
-// ── Time formatting ──
-const formatEventTime = (event: CalendarEvent) => {
-	if (!event.start_time) return '';
-	try {
-		const d = new Date(event.start_time);
-		return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-	} catch { return ''; }
-};
-
-// Uses native formatting for weekday+date display
+// ── Date formatting ──
 const formatFollowUpDate = (event: CalendarEvent) => {
 	if (!event.start_time) return '';
 	const d = new Date(event.start_time);
 	if (isNaN(d.getTime())) return '';
 	return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 };
-
-const eventTypeIcon = (event: CalendarEvent) => {
-	switch (event.type) {
-		case 'video_meeting': return 'i-heroicons-video-camera';
-		case 'follow_up': return 'i-heroicons-arrow-path';
-		default: return 'i-heroicons-calendar';
-	}
-};
-
-const eventTypeColor = (event: CalendarEvent) => {
-	switch (event.type) {
-		case 'video_meeting': return 'text-emerald-500';
-		case 'follow_up': return 'text-amber-500';
-		default: return 'text-blue-500';
-	}
-};
 </script>
 
 <template>
 	<div class="space-y-4">
-		<!-- Today's Agenda -->
-		<div class="ios-card p-4">
-			<div class="flex items-center gap-2 mb-3">
-				<UIcon name="i-heroicons-sun" class="w-4 h-4 text-amber-500" />
-				<h3 class="text-xs font-semibold uppercase tracking-wide text-foreground/70">Today's Agenda</h3>
-				<span v-if="todayEvents.length" class="text-[10px] font-medium text-muted-foreground bg-muted/50 px-1.5 py-0.5 rounded-full">
-					{{ todayEvents.length }}
-				</span>
-			</div>
-
-			<div v-if="todayEvents.length === 0" class="text-center py-4">
-				<UIcon name="i-heroicons-check-circle" class="w-8 h-8 mx-auto text-emerald-400/60 mb-1.5" />
-				<p class="text-[11px] text-muted-foreground">No events today</p>
-			</div>
-
-			<div v-else class="space-y-1.5">
-				<div
-					v-for="event in todayEvents.slice(0, 6)"
-					:key="event.id"
-					class="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-muted/30 transition-colors cursor-pointer ios-press"
-					@click="event.type === 'follow_up' ? router.push(`/leads/${event.lead?.id}`) : undefined"
-				>
-					<UIcon :name="eventTypeIcon(event)" :class="eventTypeColor(event)" class="w-3.5 h-3.5 flex-shrink-0" />
-					<div class="flex-1 min-w-0">
-						<p class="text-[12px] font-medium text-foreground truncate">{{ event.title }}</p>
-						<p class="text-[10px] text-muted-foreground">{{ formatEventTime(event) }}</p>
-					</div>
-					<UButton
-						v-if="event.is_video && event.meeting_link"
-						size="xs"
-						color="green"
-						variant="soft"
-						icon="i-heroicons-video-camera"
-						class="flex-shrink-0"
-						:to="event.meeting_link"
-						target="_blank"
-					/>
-				</div>
-			</div>
-		</div>
+		<!-- Instant Meeting -->
+		<SchedulerInstantMeetingButton />
 
 		<!-- Upcoming Follow-ups -->
 		<div class="ios-card p-4">
