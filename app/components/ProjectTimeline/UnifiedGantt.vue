@@ -610,25 +610,25 @@ function handleCloseDetail() {
 // ── Task completion toggle ──
 const projectTaskItems = useDirectusItems('project_tasks');
 const standaloneTaskItems = useDirectusItems('tasks');
-const togglingTask = ref(false);
 // Optimistic toggles — tracks IDs whose completion state is flipped locally before server confirms
 const optimisticToggles = ref(new Set<string>());
+// Per-task lock to prevent double-clicking the same task
+const togglingTasks = ref(new Set<string>());
 
 function isTaskDoneEffective(row: GanttRow): boolean {
 	const serverDone = isTaskDone(row);
-	// If optimistically toggled, flip the server state
 	if (optimisticToggles.value.has(row.id)) return !serverDone;
 	return serverDone;
 }
 
 async function toggleTaskCompleted(row: GanttRow) {
-	if (row.type !== 'task' || togglingTask.value) return;
-	togglingTask.value = true;
+	if (row.type !== 'task' || togglingTasks.value.has(row.id)) return;
+	togglingTasks.value.add(row.id);
 	const wasCompleted = isTaskDoneEffective(row);
 
 	// Optimistic — flip instantly in UI
 	optimisticToggles.value.add(row.id);
-	optimisticToggles.value = new Set(optimisticToggles.value); // trigger reactivity
+	optimisticToggles.value = new Set(optimisticToggles.value);
 
 	try {
 		if (row.projectId) {
@@ -642,10 +642,11 @@ async function toggleTaskCompleted(row: GanttRow) {
 			});
 		}
 		toast.add({ title: wasCompleted ? 'Task reopened' : 'Task completed', color: wasCompleted ? 'blue' : 'green' });
-		// Background refetch — clears optimistic state when done
-		await fetchAllData();
-		optimisticToggles.value.delete(row.id);
-		optimisticToggles.value = new Set(optimisticToggles.value);
+		// Background refetch — don't await, let it sync in the background
+		fetchAllData().then(() => {
+			optimisticToggles.value.delete(row.id);
+			optimisticToggles.value = new Set(optimisticToggles.value);
+		});
 	} catch (e) {
 		// Revert optimistic toggle
 		optimisticToggles.value.delete(row.id);
@@ -653,7 +654,7 @@ async function toggleTaskCompleted(row: GanttRow) {
 		toast.add({ title: 'Failed to update task', color: 'red' });
 		console.warn('Failed to toggle task:', e);
 	} finally {
-		togglingTask.value = false;
+		togglingTasks.value.delete(row.id);
 	}
 }
 
