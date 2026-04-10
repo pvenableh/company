@@ -65,7 +65,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Product } from '~~/types/directus';
+import type { Product } from '~~/shared/directus';
 
 export interface LineItemFormData {
   id?: string;

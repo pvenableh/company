@@ -3,8 +3,8 @@
  * GET /api/social/analytics — Get analytics overview with optional filters
  */
 
-import { getAnalyticsSnapshots, getSocialAccounts } from '~/server/utils/social-directus'
-import type { SocialPlatform } from '~~/types/social'
+import { getAnalyticsSnapshots, getSocialAccounts } from '~~/server/utils/social-directus'
+import type { SocialPlatform } from '~~/shared/social'
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)

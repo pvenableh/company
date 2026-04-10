@@ -5,12 +5,12 @@
  * platform-optimized social media posts with tailored copy,
  * hashtags, and image suggestions.
  */
-import { getLLMProvider } from '~/server/utils/llm/factory';
-import { logAIUsage } from '~/server/utils/ai-usage';
-import { enforceTokenLimits } from '~/server/utils/ai-token-enforcement';
-import { getBrandContext } from '~/server/utils/brand-context';
-import type { ChatMessage } from '~/server/utils/llm/types';
-import type { SocialAIGenerateRequest, SocialAIGenerateResponse } from '~~/types/social';
+import { getLLMProvider } from '~~/server/utils/llm/factory';
+import { logAIUsage } from '~~/server/utils/ai-usage';
+import { enforceTokenLimits } from '~~/server/utils/ai-token-enforcement';
+import { getBrandContext } from '~~/server/utils/brand-context';
+import type { ChatMessage } from '~~/server/utils/llm/types';
+import type { SocialAIGenerateRequest, SocialAIGenerateResponse } from '~~/shared/social';
 
 export default defineEventHandler(async (event) => {
 	const session = await requireUserSession(event);

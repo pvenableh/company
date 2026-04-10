@@ -2,7 +2,7 @@
 // Manages goals persisted to Directus `goals` collection.
 // Supports snapshots for tracking progress over time.
 
-import type { Goal, GoalSnapshot } from '~~/types/directus';
+import type { Goal, GoalSnapshot } from '~~/shared/directus';
 
 // Shared reactive state (singleton across composable instances)
 const goals = ref<Goal[]>([]);

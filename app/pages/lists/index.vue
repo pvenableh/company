@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { MailingList } from '~~/types/email/contacts';
+import type { MailingList } from '~~/shared/email/contacts';
 import { Button } from '~/components/ui/button';
 
 definePageMeta({ middleware: ['auth'] });

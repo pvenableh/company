@@ -11,7 +11,7 @@ import {
 	updateSocialPost,
 	deleteSocialPost,
 	logSocialActivity,
-} from '~/server/utils/social-directus';
+} from '~~/server/utils/social-directus';
 
 const updatePostSchema = z.object({
 	caption: z.string().min(1).max(2200).optional(),

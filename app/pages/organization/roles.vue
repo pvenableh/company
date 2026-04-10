@@ -168,7 +168,7 @@
 </template>
 
 <script setup>
-import { FEATURE_KEYS, FEATURE_LABELS, ROLE_METADATA } from '~~/types/permissions';
+import { FEATURE_KEYS, FEATURE_LABELS, ROLE_METADATA } from '~~/shared/permissions';
 
 definePageMeta({
 	middleware: ['auth'],

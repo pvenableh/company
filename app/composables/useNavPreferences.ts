@@ -4,7 +4,7 @@
 // Persists to Directus user profile (nav_preferences field) for cross-device consistency,
 // with localStorage as immediate cache to avoid loading flicker.
 
-import type { FeatureKey } from '~~/types/permissions';
+import type { FeatureKey } from '~~/shared/permissions';
 
 export interface NavLink {
 	name: string;

@@ -54,7 +54,7 @@
 </template>
 
 <script setup>
-import { ROLE_METADATA } from '~~/types/permissions';
+import { ROLE_METADATA } from '~~/shared/permissions';
 
 const props = defineProps({
 	modelValue: { type: Boolean, default: false },

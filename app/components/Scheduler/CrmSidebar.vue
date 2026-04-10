@@ -1,8 +1,8 @@
 <script setup lang="ts">
 // date-fns imports removed — using utils/dates.ts
 import type { CalendarEvent } from '~/composables/useCalendarEvents';
-import { LEAD_STAGE_LABELS, LEAD_STAGE_COLORS } from '~~/types/leads';
-import type { LeadStage } from '~~/types/leads';
+import { LEAD_STAGE_LABELS, LEAD_STAGE_COLORS } from '~~/shared/leads';
+import type { LeadStage } from '~~/shared/leads';
 
 const props = defineProps<{
 	todayEvents: CalendarEvent[];

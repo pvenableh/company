@@ -6,7 +6,7 @@
  * Manage agency contacts and assign social accounts
  */
 
-import type { SocialClient, SocialAccountPublic } from '~~/types/social'
+import type { SocialClient, SocialAccountPublic } from '~~/shared/social'
 
 definePageMeta({
   layout: 'default',

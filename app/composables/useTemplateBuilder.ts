@@ -4,8 +4,8 @@ import type {
   EmailPartial,
   NewsletterBlock,
   TemplateBlockWithBlock,
-} from '~~/types/email/blocks';
-import { parseVariablesSchema } from '~~/types/email/blocks';
+} from '~~/shared/email/blocks';
+import { parseVariablesSchema } from '~~/shared/email/blocks';
 
 export function useTemplateBuilder(templateId: Ref<number>) {
   const { previewNewsletter } = useEmailTemplates();

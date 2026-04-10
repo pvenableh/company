@@ -1,4 +1,4 @@
-import type { EmailTemplate, MjmlCompileResult } from '~~/types/email/blocks';
+import type { EmailTemplate, MjmlCompileResult } from '~~/shared/email/blocks';
 
 export function useEmailTemplates() {
   const items = useDirectusItems<EmailTemplate>('email_templates');

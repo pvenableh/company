@@ -8,7 +8,7 @@
  */
 
 import { readItem, readItems } from '@directus/sdk';
-import type { CRMContext } from '~~/types/crm-intelligence';
+import type { CRMContext } from '~~/shared/crm-intelligence';
 
 type DirectusClient = Awaited<ReturnType<typeof getUserDirectus>>;
 

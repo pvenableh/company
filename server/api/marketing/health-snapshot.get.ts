@@ -6,7 +6,7 @@
  *
  * Query: organizationId (required)
  */
-import { getMarketingContext } from '~/server/utils/marketing-intelligence';
+import { getMarketingContext } from '~~/server/utils/marketing-intelligence';
 
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event);

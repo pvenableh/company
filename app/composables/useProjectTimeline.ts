@@ -14,7 +14,7 @@ import type {
   CreateProjectPayload,
   CreateEventPayload,
   CreateTaskPayload,
-} from '~~/types/projects';
+} from '~~/shared/projects';
 
 export function useProjectTimeline() {
   const { user } = useDirectusAuth();

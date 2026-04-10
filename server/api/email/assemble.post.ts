@@ -2,7 +2,7 @@
  * Assembles template blocks into compiled MJML and validates.
  * Called by the builder UI on save for server-side validation.
  */
-import { compileMjml, stripEmptyMjmlAttributes } from '~/server/utils/mjml-compiler';
+import { compileMjml, stripEmptyMjmlAttributes } from '~~/server/utils/mjml-compiler';
 
 export default defineEventHandler(async (event) => {
   const { canvas_blocks } = await readBody(event);

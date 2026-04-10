@@ -5,9 +5,9 @@
  * suggestions for organizations or clients based on existing data.
  */
 import { readItem, readItems } from '@directus/sdk';
-import { getLLMProvider } from '~/server/utils/llm/factory';
-import { enforceTokenLimits } from '~/server/utils/ai-token-enforcement';
-import type { ChatMessage } from '~/server/utils/llm/types';
+import { getLLMProvider } from '~~/server/utils/llm/factory';
+import { enforceTokenLimits } from '~~/server/utils/ai-token-enforcement';
+import type { ChatMessage } from '~~/server/utils/llm/types';
 
 interface BrandSuggestionsRequest {
 	/** 'organization' or 'client' */

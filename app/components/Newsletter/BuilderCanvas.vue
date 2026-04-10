@@ -38,7 +38,7 @@
 
 <script setup lang="ts">
 import draggable from 'vuedraggable';
-import type { CanvasBlock } from '~~/types/email/blocks';
+import type { CanvasBlock } from '~~/shared/email/blocks';
 
 const props = defineProps<{
   blocks: CanvasBlock[];

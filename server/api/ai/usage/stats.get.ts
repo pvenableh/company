@@ -6,7 +6,7 @@
  *   organizationId: string (required)
  */
 import { readItems } from '@directus/sdk';
-import type { AiUsagePeriod } from '~/server/utils/ai-date-range';
+import type { AiUsagePeriod } from '~~/server/utils/ai-date-range';
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event);

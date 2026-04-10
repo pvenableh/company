@@ -24,7 +24,7 @@
 </template>
 
 <script setup lang="ts">
-import type { LeadStats } from '~~/types/leads';
+import type { LeadStats } from '~~/shared/leads';
 
 defineProps<{ stats: LeadStats }>();
 </script>

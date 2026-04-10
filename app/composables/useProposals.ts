@@ -2,7 +2,7 @@
  * useProposals - Proposal management composable
  */
 
-import type { ProposalFilters, ProposalStatus } from '~~/types/proposals-enhanced';
+import type { ProposalFilters, ProposalStatus } from '~~/shared/proposals-enhanced';
 
 export function useProposals() {
   const proposals = useDirectusItems('proposals');

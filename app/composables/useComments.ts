@@ -12,7 +12,7 @@ import type {
   UpdateCommentPayload,
   ReportCommentPayload,
   CommentCountInfo,
-} from '~~/types/comments';
+} from '~~/shared/comments';
 
 export function useComments() {
   const comments = useDirectusItems<TimelineComment>('comments');

@@ -69,7 +69,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Invoice } from '~~/types/directus';
+import type { Invoice } from '~~/shared/directus';
 import type { ChartConfig } from '~/components/ui/chart';
 import { ChartContainer, ChartCrosshair, ChartTooltipContent, componentToString } from '~/components/ui/chart';
 import { VisXYContainer, VisLine, VisAxis } from '@unovis/vue';

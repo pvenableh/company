@@ -7,8 +7,8 @@
  * (handles migration of new feature keys to existing orgs without data changes).
  */
 import { readItems } from '@directus/sdk';
-import type { CrudAction, FeatureKey, PermissionMatrix, RoleSlug } from '~~/types/permissions';
-import { DEFAULT_ROLE_PERMISSIONS } from '~~/types/permissions';
+import type { CrudAction, FeatureKey, PermissionMatrix, RoleSlug } from '~~/shared/permissions';
+import { DEFAULT_ROLE_PERMISSIONS } from '~~/shared/permissions';
 
 export interface OrgPermissionResult {
   userId: string;

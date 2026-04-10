@@ -1,4 +1,4 @@
-import type { Client } from '~~/types/directus';
+import type { Client } from '~~/shared/directus';
 
 /**
  * useClients — Client CRUD + selection state + role-based access control

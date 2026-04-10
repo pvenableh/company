@@ -1,4 +1,4 @@
-import type { EmailPartial, EmailPartialType } from '~~/types/email/blocks';
+import type { EmailPartial, EmailPartialType } from '~~/shared/email/blocks';
 
 export function useEmailPartials() {
   const items = useDirectusItems<EmailPartial>('email_partials');

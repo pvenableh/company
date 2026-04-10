@@ -91,7 +91,7 @@
 </template>
 
 <script setup lang="ts">
-import type { TimeEntry } from '~~/types/directus';
+import type { TimeEntry } from '~~/shared/directus';
 import { Button } from '~/components/ui/button';
 import { Badge } from '~/components/ui/badge';
 

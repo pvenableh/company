@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { TimelineLane, ProjectEventWithRelations } from '~~/types/projects';
-import { getEventTimelineDate } from '~~/types/projects';
+import type { TimelineLane, ProjectEventWithRelations } from '~~/shared/projects';
+import { getEventTimelineDate } from '~~/shared/projects';
 
 const props = defineProps<{
   lane: TimelineLane;

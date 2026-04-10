@@ -4,8 +4,8 @@
  * Supports list-based targeting with deduplication.
  */
 import sgMail from '@sendgrid/mail';
-import { compileMjml, compileSubject } from '~/server/utils/mjml-compiler';
-import { buildContactVariableMap } from '~/server/utils/contact-variables';
+import { compileMjml, compileSubject } from '~~/server/utils/mjml-compiler';
+import { buildContactVariableMap } from '~~/server/utils/contact-variables';
 import { readItems, readItem, createItem, updateItem } from '@directus/sdk';
 
 export default defineEventHandler(async (event) => {

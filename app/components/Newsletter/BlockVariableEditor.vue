@@ -147,7 +147,7 @@
 
 <script setup lang="ts">
 import { useDebounceFn } from '@vueuse/core';
-import type { BlockVariableDefinition } from '~~/types/email/blocks';
+import type { BlockVariableDefinition } from '~~/shared/email/blocks';
 
 const props = defineProps<{
   schema: BlockVariableDefinition[] | null;

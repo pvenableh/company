@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { ProjectEventFile } from '~~/types/projects';
-import type { File as DirectusFile } from '~~/types/system';
+import type { ProjectEventFile } from '~~/shared/projects';
+import type { File as DirectusFile } from '~~/shared/system';
 
 const props = defineProps<{
   files: (Omit<ProjectEventFile, 'directus_files_id'> & { directus_files_id: DirectusFile })[];

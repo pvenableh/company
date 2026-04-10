@@ -6,7 +6,7 @@
 
 import { format, parseISO } from 'date-fns'
 import { CalendarDate, getLocalTimeZone, parseDate, today } from '@internationalized/date'
-import type { SocialPost, SocialAccountPublic, SocialPostTarget, PostType } from '~~/types/social'
+import type { SocialPost, SocialAccountPublic, SocialPostTarget, PostType } from '~~/shared/social'
 
 definePageMeta({
   layout: 'default',

@@ -4,7 +4,7 @@
  *
  * Body: { email, customerId?, packageId, organizationId, successUrl?, cancelUrl? }
  */
-import { TOKEN_PACKAGES } from '~/server/utils/stripe';
+import { TOKEN_PACKAGES } from '~~/server/utils/stripe';
 
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event);

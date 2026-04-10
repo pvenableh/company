@@ -72,7 +72,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Invoice } from '~~/types/directus';
+import type { Invoice } from '~~/shared/directus';
 
 const props = defineProps<{
   invoices: Invoice[];

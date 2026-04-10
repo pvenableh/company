@@ -3,7 +3,7 @@
  * Used by the template editor "Send Test" button.
  */
 import sgMail from '@sendgrid/mail';
-import { compileMjml, compileSubject } from '~/server/utils/mjml-compiler';
+import { compileMjml, compileSubject } from '~~/server/utils/mjml-compiler';
 import { readItems } from '@directus/sdk';
 
 export default defineEventHandler(async (event) => {

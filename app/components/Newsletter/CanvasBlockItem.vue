@@ -86,8 +86,8 @@
 </template>
 
 <script setup lang="ts">
-import type { CanvasBlock } from '~~/types/email/blocks';
-import { parseVariablesSchema } from '~~/types/email/blocks';
+import type { CanvasBlock } from '~~/shared/email/blocks';
+import { parseVariablesSchema } from '~~/shared/email/blocks';
 
 const props = defineProps<{
   canvasBlock: CanvasBlock;

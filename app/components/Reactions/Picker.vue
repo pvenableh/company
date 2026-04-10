@@ -1,5 +1,5 @@
 <script setup>
-import { EMOJI_CATEGORIES, isLegacyReaction, getReactionIcon } from '~~/types/reactions';
+import { EMOJI_CATEGORIES, isLegacyReaction, getReactionIcon } from '~~/shared/reactions';
 
 const emit = defineEmits(['select']);
 

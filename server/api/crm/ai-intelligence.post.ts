@@ -11,18 +11,18 @@
  * - growth-plan: Growth targets, strategies, and weekly plans
  * - pipeline-review: Deal pipeline analysis with forecasting
  */
-import { getLLMProvider } from '~/server/utils/llm/factory';
-import { getCRMContext } from '~/server/utils/crm-intelligence';
-import { logAIUsage } from '~/server/utils/ai-usage';
-import { enforceTokenLimits } from '~/server/utils/ai-token-enforcement';
-import type { ChatMessage } from '~/server/utils/llm/types';
+import { getLLMProvider } from '~~/server/utils/llm/factory';
+import { getCRMContext } from '~~/server/utils/crm-intelligence';
+import { logAIUsage } from '~~/server/utils/ai-usage';
+import { enforceTokenLimits } from '~~/server/utils/ai-token-enforcement';
+import type { ChatMessage } from '~~/server/utils/llm/types';
 import type {
 	CRMIntelligenceRequest,
 	CRMOverviewAnalysis,
 	CRMContactStrategyAnalysis,
 	CRMGrowthPlanAnalysis,
 	CRMPipelineReviewAnalysis,
-} from '~~/types/crm-intelligence';
+} from '~~/shared/crm-intelligence';
 
 type AnalysisResult =
 	| CRMOverviewAnalysis

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { CalendarEvent } from '~/composables/useCalendarEvents';
-import { LEAD_STAGE_COLORS } from '~~/types/leads';
+import { LEAD_STAGE_COLORS } from '~~/shared/leads';
 
 const props = defineProps<{
 	event: CalendarEvent;

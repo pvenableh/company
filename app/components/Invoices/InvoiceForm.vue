@@ -245,7 +245,7 @@
 </template>
 
 <script setup lang="ts">
-import type { Invoice, Product } from '~~/types/directus';
+import type { Invoice, Product } from '~~/shared/directus';
 import type { LineItemFormData } from '~/components/Invoices/LineItemRow.vue';
 import { Button } from '~/components/ui/button';
 

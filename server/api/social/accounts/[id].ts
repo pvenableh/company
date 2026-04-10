@@ -6,7 +6,7 @@
  */
 
 import { z } from 'zod'
-import { logSocialActivity } from '~/server/utils/social-directus'
+import { logSocialActivity } from '~~/server/utils/social-directus'
 
 const updateAccountSchema = z.object({
   client_id: z.string().uuid().nullable().optional(),

@@ -3,13 +3,13 @@
  * GET /api/social/oauth/linkedin/callback
  */
 
-import { exchangeLinkedInCode, getLinkedInProfile, getLinkedInOrganizations } from '~/server/adapters/linkedin'
+import { exchangeLinkedInCode, getLinkedInProfile, getLinkedInOrganizations } from '~~/server/adapters/linkedin'
 import {
   getSocialAccountByPlatformId,
   createSocialAccount,
   updateSocialAccount,
   logSocialActivity,
-} from '~/server/utils/social-directus'
+} from '~~/server/utils/social-directus'
 import { addDays } from 'date-fns'
 
 export default defineEventHandler(async (event) => {

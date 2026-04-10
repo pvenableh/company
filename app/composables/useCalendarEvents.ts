@@ -5,7 +5,7 @@
  * into a single CalendarEvent[] for the scheduler CRM hub.
  */
 
-import type { LeadStage } from '~~/types/leads';
+import type { LeadStage } from '~~/shared/leads';
 
 export interface CalendarEvent {
 	id: string;

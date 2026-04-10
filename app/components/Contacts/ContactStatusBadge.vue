@@ -8,7 +8,7 @@
 </template>
 
 <script setup lang="ts">
-import type { ContactStatus } from '~~/types/email/contacts';
+import type { ContactStatus } from '~~/shared/email/contacts';
 
 defineProps<{ status: ContactStatus }>();
 

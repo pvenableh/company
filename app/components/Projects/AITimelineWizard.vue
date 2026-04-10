@@ -459,8 +459,8 @@
 
 <script setup lang="ts">
 import { Button } from '~/components/ui/button';
-import { PROJECT_TEMPLATES, matchServiceToTemplate } from '~~/types/projects/timeline-generator';
-import type { ProposedEvent, ProposedTask } from '~~/types/projects/timeline-generator';
+import { PROJECT_TEMPLATES, matchServiceToTemplate } from '~~/shared/projects/timeline-generator';
+import type { ProposedEvent, ProposedTask } from '~~/shared/projects/timeline-generator';
 
 const props = defineProps<{
   project: {

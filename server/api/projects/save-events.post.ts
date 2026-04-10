@@ -5,7 +5,7 @@
  * in Directus as project_events and project_tasks records.
  */
 import { createItem, readItem } from '@directus/sdk';
-import type { SaveEventsRequest } from '~~/types/projects/timeline-generator';
+import type { SaveEventsRequest } from '~~/shared/projects/timeline-generator';
 
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event);

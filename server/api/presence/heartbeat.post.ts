@@ -5,7 +5,7 @@
  * Called every ~30s by the client-side usePresence composable.
  */
 
-import { _presenceStore } from '~/server/utils/presenceStore';
+import { _presenceStore } from '~~/server/utils/presenceStore';
 
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event);

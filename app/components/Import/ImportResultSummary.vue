@@ -50,7 +50,7 @@
 </template>
 
 <script setup lang="ts">
-import type { CsvImportResult } from '~~/types/email/contacts';
+import type { CsvImportResult } from '~~/shared/email/contacts';
 
 defineProps<{ result: CsvImportResult }>();
 </script>

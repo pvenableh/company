@@ -3,11 +3,11 @@
  * GET /api/social/accounts/connect/:platform — Redirect to platform OAuth
  */
 
-import { getInstagramAuthUrl } from '~/server/adapters/instagram'
-import { getTikTokAuthUrl } from '~/server/adapters/tiktok'
-import { getLinkedInAuthUrl } from '~/server/adapters/linkedin'
-import { getFacebookAuthUrl } from '~/server/adapters/facebook'
-import { getThreadsAuthUrl } from '~/server/adapters/threads'
+import { getInstagramAuthUrl } from '~~/server/adapters/instagram'
+import { getTikTokAuthUrl } from '~~/server/adapters/tiktok'
+import { getLinkedInAuthUrl } from '~~/server/adapters/linkedin'
+import { getFacebookAuthUrl } from '~~/server/adapters/facebook'
+import { getThreadsAuthUrl } from '~~/server/adapters/threads'
 import { randomUUID } from 'node:crypto'
 
 const authUrlGenerators: Record<string, (state: string) => string> = {

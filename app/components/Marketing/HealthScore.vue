@@ -47,7 +47,7 @@
 </template>
 
 <script setup lang="ts">
-import type { MarketingHealthBreakdown } from '~~/types/marketing';
+import type { MarketingHealthBreakdown } from '~~/shared/marketing';
 
 const props = defineProps<{
 	score: number;

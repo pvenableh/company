@@ -1,6 +1,6 @@
-import type { OrgMembership, OrgRole } from '~~/types/directus';
-import type { FeatureKey, CrudAction, PermissionMatrix, RoleSlug } from '~~/types/permissions';
-import { DEFAULT_ROLE_PERMISSIONS } from '~~/types/permissions';
+import type { OrgMembership, OrgRole } from '~~/shared/directus';
+import type { FeatureKey, CrudAction, PermissionMatrix, RoleSlug } from '~~/shared/permissions';
+import { DEFAULT_ROLE_PERMISSIONS } from '~~/shared/permissions';
 
 // Plan hierarchy for tier comparisons (values from organizations.plan field)
 const PLAN_HIERARCHY: Record<string, number> = {

@@ -5,7 +5,7 @@
  */
 
 import { format, startOfWeek, endOfWeek, isToday } from 'date-fns'
-import type { SocialPost, SocialAccountPublic, SocialDashboardStats, SocialPlatform } from '~~/types/social'
+import type { SocialPost, SocialAccountPublic, SocialDashboardStats, SocialPlatform } from '~~/shared/social'
 
 definePageMeta({
   layout: 'default',

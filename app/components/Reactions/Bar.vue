@@ -1,5 +1,5 @@
 <script setup>
-import { LEGACY_REACTION_TYPES } from '~~/types/reactions';
+import { LEGACY_REACTION_TYPES } from '~~/shared/reactions';
 
 const props = defineProps({
 	itemId: {

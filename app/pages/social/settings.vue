@@ -5,7 +5,7 @@
  */
 
 import { differenceInDays } from 'date-fns'
-import type { SocialAccountPublic, SocialPlatform } from '~~/types/social'
+import type { SocialAccountPublic, SocialPlatform } from '~~/shared/social'
 
 definePageMeta({
   layout: 'default',

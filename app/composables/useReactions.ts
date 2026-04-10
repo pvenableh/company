@@ -14,7 +14,7 @@ import type {
   ReactionGroup,
   ReactionSummary,
   CreateReactionPayload,
-} from '~~/types/reactions';
+} from '~~/shared/reactions';
 
 export function useReactions() {
   const reactions = useDirectusItems<ReactionRecord>('reactions');

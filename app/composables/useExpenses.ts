@@ -2,7 +2,7 @@
 // Manages expenses persisted to Directus `expenses` collection.
 // Singleton reactive state for org-scoped expense tracking.
 
-import type { Expense } from '~~/types/directus';
+import type { Expense } from '~~/shared/directus';
 
 // Shared reactive state (singleton across composable instances)
 const expenses = ref<Expense[]>([]);

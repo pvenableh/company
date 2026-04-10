@@ -19,7 +19,7 @@
  */
 
 import { createNotification } from '@directus/sdk';
-import { resolveNotificationTargets } from '~/server/utils/notificationRecipients';
+import { resolveNotificationTargets } from '~~/server/utils/notificationRecipients';
 
 export default defineEventHandler(async (event) => {
   try {

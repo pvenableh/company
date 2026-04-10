@@ -411,7 +411,7 @@
 
 <script setup lang="ts">
 import { Button } from '~/components/ui/button';
-import type { DashboardAnalysis, CampaignAnalysis, CampaignActivity } from '~~/types/marketing';
+import type { DashboardAnalysis, CampaignAnalysis, CampaignActivity } from '~~/shared/marketing';
 
 definePageMeta({
 	middleware: ['auth'],

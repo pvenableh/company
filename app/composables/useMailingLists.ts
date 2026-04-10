@@ -1,4 +1,4 @@
-import type { MailingList, Contact } from '~~/types/email/contacts';
+import type { MailingList, Contact } from '~~/shared/email/contacts';
 
 export function useMailingLists() {
   const items = useDirectusItems<MailingList>('mailing_lists');

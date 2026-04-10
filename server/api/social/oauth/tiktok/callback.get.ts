@@ -3,13 +3,13 @@
  * GET /api/social/oauth/tiktok/callback
  */
 
-import { exchangeTikTokCode, getTikTokUserInfo } from '~/server/adapters/tiktok'
+import { exchangeTikTokCode, getTikTokUserInfo } from '~~/server/adapters/tiktok'
 import {
   getSocialAccountByPlatformId,
   createSocialAccount,
   updateSocialAccount,
   logSocialActivity,
-} from '~/server/utils/social-directus'
+} from '~~/server/utils/social-directus'
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)

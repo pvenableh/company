@@ -14,7 +14,7 @@
  * Docs: https://developers.facebook.com/docs/instagram-api
  */
 
-import type { InstagramMetrics } from '~~/types/social'
+import type { InstagramMetrics } from '~~/shared/social'
 
 // ══════════════════════════════════════════════════════════════════════════════
 // CONFIGURATION

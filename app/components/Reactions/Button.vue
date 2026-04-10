@@ -1,6 +1,6 @@
 <script setup>
 import { gsap } from 'gsap';
-import { getReactionIcon } from '~~/types/reactions';
+import { getReactionIcon } from '~~/shared/reactions';
 
 const props = defineProps({
 	itemId: {

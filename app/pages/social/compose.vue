@@ -10,7 +10,7 @@
  */
 
 import { format, addHours, roundToNearestMinutes } from 'date-fns';
-import type { SocialAccountPublic, SocialPostTarget, PostType, SocialClient, SocialPlatform } from '~~/types/social';
+import type { SocialAccountPublic, SocialPostTarget, PostType, SocialClient, SocialPlatform } from '~~/shared/social';
 
 const showAIWizard = ref(false);
 

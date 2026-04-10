@@ -4,7 +4,7 @@
  *
  * Query: organizationId (optional)
  */
-import { EARNEST_PLANS, TOKEN_PACKAGES } from '~/server/utils/stripe';
+import { EARNEST_PLANS, TOKEN_PACKAGES } from '~~/server/utils/stripe';
 
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event);

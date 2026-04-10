@@ -89,8 +89,8 @@
 
 <script setup lang="ts">
 import { Button } from '~/components/ui/button';
-import type { EmailPartial, EmailPartialType } from '~~/types/email/blocks';
-import { parseVariablesSchema } from '~~/types/email/blocks';
+import type { EmailPartial, EmailPartialType } from '~~/shared/email/blocks';
+import { parseVariablesSchema } from '~~/shared/email/blocks';
 
 const props = defineProps<{
   type: EmailPartialType;

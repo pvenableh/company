@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ProjectWithRelations, ProjectEventWithRelations } from '~~/types/projects';
+import type { ProjectWithRelations, ProjectEventWithRelations } from '~~/shared/projects';
 
 const props = defineProps<{
   event: ProjectEventWithRelations;

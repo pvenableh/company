@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Product } from '~~/types/directus';
+import type { Product } from '~~/shared/directus';
 import { Button } from '~/components/ui/button';
 import { useDebounceFn } from '@vueuse/core';
 

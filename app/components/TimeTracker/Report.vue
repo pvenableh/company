@@ -242,7 +242,7 @@
 </template>
 
 <script setup lang="ts">
-import type { TimeEntry } from '~~/types/directus';
+import type { TimeEntry } from '~~/shared/directus';
 import type { ChartConfig } from '~/components/ui/chart';
 import { ChartContainer, ChartCrosshair, ChartTooltipContent, componentToString } from '~/components/ui/chart';
 import { VisXYContainer, VisStackedBar, VisAxis } from '@unovis/vue';

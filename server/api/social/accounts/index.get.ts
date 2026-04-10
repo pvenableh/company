@@ -3,7 +3,7 @@
  * GET /api/social/accounts — List all accounts (with optional client filter)
  */
 
-import type { SocialAccountPublic, SocialPlatform } from '~~/types/social'
+import type { SocialAccountPublic, SocialPlatform } from '~~/shared/social'
 import { differenceInHours } from 'date-fns'
 
 async function directusFetch<T>(

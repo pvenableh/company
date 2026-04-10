@@ -81,7 +81,7 @@
 </template>
 
 <script setup lang="ts">
-import type { TimeEntry } from '~~/types/directus';
+import type { TimeEntry } from '~~/shared/directus';
 import {
 	format,
 	subDays,

@@ -16,7 +16,7 @@ import type {
 	CRMContactStrategyAnalysis,
 	CRMGrowthPlanAnalysis,
 	CRMPipelineReviewAnalysis,
-} from '~~/types/crm-intelligence';
+} from '~~/shared/crm-intelligence';
 
 type AnalysisResult =
 	| CRMOverviewAnalysis

@@ -7,7 +7,7 @@
  *   - 'flat': Separate swimlanes for Projects, Tickets, and My Tasks
  */
 
-import type { ProjectWithRelations } from '~~/types/projects';
+import type { ProjectWithRelations } from '~~/shared/projects';
 
 export type TimelineViewMode = 'nested' | 'flat';
 

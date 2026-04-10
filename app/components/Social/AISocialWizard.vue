@@ -398,7 +398,7 @@ import type {
   SocialCTAType,
   SocialAIGeneratedPost,
   SocialAIGenerateResponse,
-} from '~~/types/social';
+} from '~~/shared/social';
 
 const emit = defineEmits<{
   close: [];

@@ -13,7 +13,7 @@
  * Docs: https://developers.tiktok.com/doc/content-posting-api-get-started
  */
 
-import type { TikTokMetrics, TikTokPostOptions } from '~~/types/social'
+import type { TikTokMetrics, TikTokPostOptions } from '~~/shared/social'
 
 // ══════════════════════════════════════════════════════════════════════════════
 // CONFIGURATION

@@ -32,7 +32,7 @@
 </template>
 
 <script setup lang="ts">
-import type { TimeEntry } from '~~/types/directus';
+import type { TimeEntry } from '~~/shared/directus';
 import { isToday, startOfWeek, isWithinInterval, endOfWeek } from 'date-fns';
 
 const props = defineProps<{

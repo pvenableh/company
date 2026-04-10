@@ -1,4 +1,4 @@
-import type { TimeEntry, Invoice } from '~~/types/directus';
+import type { TimeEntry, Invoice } from '~~/shared/directus';
 
 const ACTIVE_TIMER_KEY = 'earnest_active_timer';
 

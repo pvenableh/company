@@ -382,9 +382,9 @@
 <script setup lang="ts">
 import { Button } from '~/components/ui/button';
 import { useDebounceFn, useMediaQuery } from '@vueuse/core';
-import type { CanvasBlock, NewsletterBlock } from '~~/types/email/blocks';
+import type { CanvasBlock, NewsletterBlock } from '~~/shared/email/blocks';
 import { nanoid } from 'nanoid';
-import { parseVariablesSchema } from '~~/types/email/blocks';
+import { parseVariablesSchema } from '~~/shared/email/blocks';
 
 const props = defineProps<{
   templateId: number;

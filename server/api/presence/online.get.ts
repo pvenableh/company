@@ -4,7 +4,7 @@
  * Used by the client-side usePresence composable to display green dots.
  */
 
-import { _presenceStore, PRESENCE_TTL } from '~/server/utils/presenceStore';
+import { _presenceStore, PRESENCE_TTL } from '~~/server/utils/presenceStore';
 
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event);

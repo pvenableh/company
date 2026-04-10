@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { CsvImportResult, MailingList } from '~~/types/email/contacts';
+import type { CsvImportResult, MailingList } from '~~/shared/email/contacts';
 import { Button } from '~/components/ui/button';
 
 definePageMeta({ middleware: ['auth'] });

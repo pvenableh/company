@@ -5,16 +5,16 @@
  * to generate marketing health scores, insights, recommendations,
  * and multi-channel campaign plans.
  */
-import { getLLMProvider } from '~/server/utils/llm/factory';
-import { getMarketingContext } from '~/server/utils/marketing-intelligence';
-import { logAIUsage } from '~/server/utils/ai-usage';
-import { enforceTokenLimits } from '~/server/utils/ai-token-enforcement';
-import type { ChatMessage } from '~/server/utils/llm/types';
+import { getLLMProvider } from '~~/server/utils/llm/factory';
+import { getMarketingContext } from '~~/server/utils/marketing-intelligence';
+import { logAIUsage } from '~~/server/utils/ai-usage';
+import { enforceTokenLimits } from '~~/server/utils/ai-token-enforcement';
+import type { ChatMessage } from '~~/server/utils/llm/types';
 import type {
 	MarketingAnalyzeRequest,
 	DashboardAnalysis,
 	CampaignAnalysis,
-} from '~~/types/marketing';
+} from '~~/shared/marketing';
 
 export default defineEventHandler(async (event) => {
 	const session = await requireUserSession(event);

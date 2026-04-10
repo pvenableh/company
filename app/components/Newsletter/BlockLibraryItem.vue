@@ -24,7 +24,7 @@
 </template>
 
 <script setup lang="ts">
-import type { NewsletterBlock } from '~~/types/email/blocks';
+import type { NewsletterBlock } from '~~/shared/email/blocks';
 
 const props = defineProps<{ block: NewsletterBlock }>();
 defineEmits<{ add: [block: NewsletterBlock] }>();

@@ -2,7 +2,7 @@
  * Preview an MJML template with sample variables.
  * Used by the block builder for live preview.
  */
-import { compileMjml } from '~/server/utils/mjml-compiler';
+import { compileMjml } from '~~/server/utils/mjml-compiler';
 
 export default defineEventHandler(async (event) => {
   const { mjml_source, variables = {} } = await readBody(event);

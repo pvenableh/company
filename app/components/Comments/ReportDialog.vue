@@ -39,7 +39,7 @@
 </template>
 
 <script setup lang="ts">
-import type { CommentReportReason } from '~~/types/comments';
+import type { CommentReportReason } from '~~/shared/comments';
 
 const props = defineProps<{
 	commentId: number;

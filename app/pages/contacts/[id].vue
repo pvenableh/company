@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Contact, CreateContactPayload } from '~~/types/email/contacts';
+import type { Contact, CreateContactPayload } from '~~/shared/email/contacts';
 import { Button } from '~/components/ui/button';
 
 definePageMeta({ middleware: ['auth'] });

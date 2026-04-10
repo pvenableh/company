@@ -4,7 +4,7 @@
  */
 import { parse } from 'csv-parse/sync';
 import { readItems, createItem, updateItem } from '@directus/sdk';
-import { generateUnsubscribeToken } from '~/server/utils/unsubscribe';
+import { generateUnsubscribeToken } from '~~/server/utils/unsubscribe';
 
 // Standard column name mappings (handles common variations)
 const COLUMN_MAP: Record<string, string> = {

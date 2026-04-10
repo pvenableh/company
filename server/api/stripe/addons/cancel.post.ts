@@ -2,8 +2,8 @@
 // Remove a recurring add-on from the org's Stripe subscription.
 
 import { readItem } from '@directus/sdk';
-import { EARNEST_ADDONS } from '~/server/utils/stripe';
-import type { EarnestAddonId } from '~/server/utils/stripe';
+import { EARNEST_ADDONS } from '~~/server/utils/stripe';
+import type { EarnestAddonId } from '~~/server/utils/stripe';
 
 interface CancelBody {
 	addonId: EarnestAddonId;

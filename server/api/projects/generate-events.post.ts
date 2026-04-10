@@ -4,9 +4,9 @@
  * Takes project parameters and returns a proposed timeline of events with tasks.
  * Uses predefined templates for structure, then AI adjusts for project specifics.
  */
-import { getLLMProvider } from '~/server/utils/llm/factory';
-import { enforceTokenLimits } from '~/server/utils/ai-token-enforcement';
-import type { ChatMessage } from '~/server/utils/llm/types';
+import { getLLMProvider } from '~~/server/utils/llm/factory';
+import { enforceTokenLimits } from '~~/server/utils/ai-token-enforcement';
+import type { ChatMessage } from '~~/server/utils/llm/types';
 import {
   PROJECT_TEMPLATES,
   SCOPE_MULTIPLIERS,
@@ -14,7 +14,7 @@ import {
   type GenerateTimelineResponse,
   type ProposedEvent,
   type ProposedTask,
-} from '~~/types/projects/timeline-generator';
+} from '~~/shared/projects/timeline-generator';
 
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event);

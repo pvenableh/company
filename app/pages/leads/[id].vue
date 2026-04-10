@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { LEAD_STAGE_LABELS, LEAD_STAGE_COLORS } from '~~/types/leads';
-import type { LeadStage } from '~~/types/leads';
+import { LEAD_STAGE_LABELS, LEAD_STAGE_COLORS } from '~~/shared/leads';
+import type { LeadStage } from '~~/shared/leads';
 
 definePageMeta({ middleware: ['auth'] });
 

@@ -1,4 +1,4 @@
-import type { Contact, CreateContactPayload } from '~~/types/email/contacts';
+import type { Contact, CreateContactPayload } from '~~/shared/email/contacts';
 
 export function useContacts() {
   const items = useDirectusItems<Contact>('contacts');

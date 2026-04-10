@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { LeadStage } from '~~/types/leads';
+import type { LeadStage } from '~~/shared/leads';
 import { useDebounceFn } from '@vueuse/core';
 
 definePageMeta({ middleware: ['auth'] });

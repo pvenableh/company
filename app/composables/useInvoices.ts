@@ -1,4 +1,4 @@
-import type { Invoice, Product } from '~~/types/directus';
+import type { Invoice, Product } from '~~/shared/directus';
 
 export function useInvoices() {
   const items = useDirectusItems<Invoice>('invoices');

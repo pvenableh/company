@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Invoice } from '~~/types/directus';
+import type { Invoice } from '~~/shared/directus';
 import { Button } from '~/components/ui/button';
 import { useDebounceFn } from '@vueuse/core';
 // getFriendlyDateThree is auto-imported from utils/dates.ts

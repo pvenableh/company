@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Invoice } from '~~/types/directus';
+import type { Invoice } from '~~/shared/directus';
 
 const { user } = useDirectusAuth();
 const { getInvoices } = useInvoices();

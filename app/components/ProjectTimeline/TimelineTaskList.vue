@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ProjectTaskWithRelations } from '~~/types/projects';
+import type { ProjectTaskWithRelations } from '~~/shared/projects';
 
 const props = defineProps<{
   tasks: ProjectTaskWithRelations[];

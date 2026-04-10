@@ -7,7 +7,7 @@
  *
  * Query: organizationId (required)
  */
-import { getCRMContext } from '~/server/utils/crm-intelligence';
+import { getCRMContext } from '~~/server/utils/crm-intelligence';
 
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event);

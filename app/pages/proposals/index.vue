@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { ProposalStatus } from '~~/types/proposals-enhanced';
-import { PROPOSAL_STATUS_LABELS } from '~~/types/proposals-enhanced';
+import type { ProposalStatus } from '~~/shared/proposals-enhanced';
+import { PROPOSAL_STATUS_LABELS } from '~~/shared/proposals-enhanced';
 import { useDebounceFn } from '@vueuse/core';
 
 definePageMeta({ middleware: ['auth'] });

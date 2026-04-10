@@ -1,7 +1,7 @@
 <script setup>
 useHead({ title: 'Organization | Earnest' });
 
-import { ROLE_METADATA } from '~~/types/permissions';
+import { ROLE_METADATA } from '~~/shared/permissions';
 
 const organizationItems = useDirectusItems('organizations');
 const orgUserJunction = useDirectusItems('organizations_directus_users');

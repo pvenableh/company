@@ -5,7 +5,7 @@
  * the lead pipeline dashboard.
  */
 
-import type { LeadFilters, LeadStage, LeadStats } from '~~/types/leads';
+import type { LeadFilters, LeadStage, LeadStats } from '~~/shared/leads';
 
 export function useLeads() {
   const leads = useDirectusItems('leads');

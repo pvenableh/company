@@ -2,7 +2,7 @@
  * useTimelineLayout - Timeline positioning and layout calculations
  */
 
-import type { ProjectWithRelations, TimelineLane } from '~~/types/projects';
+import type { ProjectWithRelations, TimelineLane } from '~~/shared/projects';
 
 export function useTimelineLayout(
   projects: Ref<ProjectWithRelations[]>,

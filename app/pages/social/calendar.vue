@@ -12,7 +12,7 @@
 
 import { CalendarDate, DateFormatter, getLocalTimeZone, today } from '@internationalized/date'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addMonths, subMonths } from 'date-fns'
-import type { SocialPost, SocialClient, SocialAccountPublic } from '~~/types/social'
+import type { SocialPost, SocialClient, SocialAccountPublic } from '~~/shared/social'
 
 definePageMeta({
   layout: 'default',

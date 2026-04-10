@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Contact } from '~~/types/email/contacts';
+import type { Contact } from '~~/shared/email/contacts';
 import { Button } from '~/components/ui/button';
 import { useDebounceFn } from '@vueuse/core';
 

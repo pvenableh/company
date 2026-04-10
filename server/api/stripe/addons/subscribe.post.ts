@@ -2,8 +2,8 @@
 // Add a recurring add-on to the org's existing Stripe subscription.
 
 import { readItems } from '@directus/sdk';
-import { EARNEST_ADDONS } from '~/server/utils/stripe';
-import type { EarnestAddonId } from '~/server/utils/stripe';
+import { EARNEST_ADDONS } from '~~/server/utils/stripe';
+import type { EarnestAddonId } from '~~/server/utils/stripe';
 
 interface SubscribeBody {
 	addonId: EarnestAddonId;

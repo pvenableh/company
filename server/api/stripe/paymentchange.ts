@@ -3,8 +3,8 @@
 import { defineEventHandler, getHeader, readBody } from 'h3';
 import Stripe from 'stripe';
 import { updateItems, updateItem, readItems, createItem } from '@directus/sdk';
-import { EARNEST_PLANS, EARNEST_ADDONS, planFromPriceId, addonFromPriceId, earnestPlanToOrgPlan } from '~/server/utils/stripe';
-import type { EarnestPlanId, EarnestAddonId } from '~/server/utils/stripe';
+import { EARNEST_PLANS, EARNEST_ADDONS, planFromPriceId, addonFromPriceId, earnestPlanToOrgPlan } from '~~/server/utils/stripe';
+import type { EarnestPlanId, EarnestAddonId } from '~~/server/utils/stripe';
 
 export default defineEventHandler(async (event) => {
 	try {

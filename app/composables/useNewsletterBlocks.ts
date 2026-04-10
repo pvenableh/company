@@ -1,4 +1,4 @@
-import type { NewsletterBlock, BlockCategory } from '~~/types/email/blocks';
+import type { NewsletterBlock, BlockCategory } from '~~/shared/email/blocks';
 
 export function useNewsletterBlocks() {
   const items = useDirectusItems<NewsletterBlock>('newsletter_blocks');

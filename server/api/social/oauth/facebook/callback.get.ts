@@ -3,13 +3,13 @@
  * GET /api/social/oauth/facebook/callback
  */
 
-import { exchangeFacebookCode, getFacebookPages } from '~/server/adapters/facebook'
+import { exchangeFacebookCode, getFacebookPages } from '~~/server/adapters/facebook'
 import {
   getSocialAccountByPlatformId,
   createSocialAccount,
   updateSocialAccount,
   logSocialActivity,
-} from '~/server/utils/social-directus'
+} from '~~/server/utils/social-directus'
 import { addDays } from 'date-fns'
 
 export default defineEventHandler(async (event) => {

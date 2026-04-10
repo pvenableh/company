@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ProjectWithRelations, ProjectEventWithRelations } from '~~/types/projects';
+import type { ProjectWithRelations, ProjectEventWithRelations } from '~~/shared/projects';
 
 const { projects, loading, error, refresh, fetchProjects } = useProjectTimeline();
 const zoom = ref(1.5);

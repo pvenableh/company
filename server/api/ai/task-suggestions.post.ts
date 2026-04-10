@@ -12,10 +12,10 @@
  * Response: { suggestions: string[] }
  */
 
-import { getLLMProvider } from '~/server/utils/llm/factory';
-import { getBrandContext } from '~/server/utils/brand-context';
-import { enforceTokenLimits } from '~/server/utils/ai-token-enforcement';
-import type { ChatMessage } from '~/server/utils/llm/types';
+import { getLLMProvider } from '~~/server/utils/llm/factory';
+import { getBrandContext } from '~~/server/utils/brand-context';
+import { enforceTokenLimits } from '~~/server/utils/ai-token-enforcement';
+import type { ChatMessage } from '~~/server/utils/llm/types';
 
 export default defineEventHandler(async (event) => {
 	const session = await requireUserSession(event);

@@ -197,7 +197,7 @@
 
 <script setup lang="ts">
 import { Button } from '~/components/ui/button';
-import type { NewsletterBlock, BlockCategory, BlockVariableDefinition } from '~~/types/email/blocks';
+import type { NewsletterBlock, BlockCategory, BlockVariableDefinition } from '~~/shared/email/blocks';
 
 const emit = defineEmits<{
   close: [];

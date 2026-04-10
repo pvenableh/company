@@ -127,7 +127,7 @@
 
 <script setup lang="ts">
 import { format } from 'date-fns';
-import { LEAD_STAGE_COLORS } from '~~/types/leads';
+import { LEAD_STAGE_COLORS } from '~~/shared/leads';
 
 const props = defineProps<{
 	modelValue: boolean;

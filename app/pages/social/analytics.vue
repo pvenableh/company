@@ -13,7 +13,7 @@
 
 import { format, subDays, subWeeks, subMonths, startOfDay, endOfDay } from 'date-fns'
 import { CalendarDate, getLocalTimeZone, today } from '@internationalized/date'
-import type { SocialClient, SocialAccountPublic, SocialAnalyticsSnapshot, InstagramMetrics, TikTokMetrics } from '~~/types/social'
+import type { SocialClient, SocialAccountPublic, SocialAnalyticsSnapshot, InstagramMetrics, TikTokMetrics } from '~~/shared/social'
 
 definePageMeta({
   layout: 'default',

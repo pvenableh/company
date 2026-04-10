@@ -147,7 +147,7 @@
 
 <script setup lang="ts">
 import { Button } from '~/components/ui/button';
-import type { CampaignAnalysis, CampaignActivity } from '~~/types/marketing';
+import type { CampaignAnalysis, CampaignActivity } from '~~/shared/marketing';
 
 const props = defineProps<{
 	campaign: CampaignAnalysis;

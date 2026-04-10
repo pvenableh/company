@@ -16,7 +16,7 @@
 		"test": "vitest run",
 		"test:watch": "vitest",
 		"generate:icons": "node scripts/generate-icons.js",
-		"generate:types": "dotenv -- sh -c 'directus-sdk-typegen -u $DIRECTUS_URL -t $DIRECTUS_SERVER_TOKEN -o ./types/directus.ts'"
+		"generate:types": "dotenv -- sh -c 'directus-sdk-typegen -u $DIRECTUS_URL -t $DIRECTUS_SERVER_TOKEN -o ./shared/directus.ts'"
 	},
 	"devDependencies": {
 		"@iconify-icons/wi": "^1.2.3",

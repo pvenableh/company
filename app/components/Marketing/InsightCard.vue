@@ -35,7 +35,7 @@
 </template>
 
 <script setup lang="ts">
-import type { MarketingInsight } from '~~/types/marketing';
+import type { MarketingInsight } from '~~/shared/marketing';
 
 const props = defineProps<{
 	insight: MarketingInsight;

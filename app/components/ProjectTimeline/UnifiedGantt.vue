@@ -7,8 +7,8 @@
  *   - Today marker, zoom, expand/collapse
  */
 
-import type { ProjectWithRelations, ProjectEventWithRelations } from '~~/types/projects';
-import { getEventTimelineDate } from '~~/types/projects';
+import type { ProjectWithRelations, ProjectEventWithRelations } from '~~/shared/projects';
+import { getEventTimelineDate } from '~~/shared/projects';
 
 const {
 	viewMode,

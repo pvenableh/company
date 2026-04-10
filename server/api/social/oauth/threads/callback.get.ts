@@ -3,13 +3,13 @@
  * GET /api/social/oauth/threads/callback
  */
 
-import { exchangeThreadsCode, getThreadsProfile } from '~/server/adapters/threads'
+import { exchangeThreadsCode, getThreadsProfile } from '~~/server/adapters/threads'
 import {
   getSocialAccountByPlatformId,
   createSocialAccount,
   updateSocialAccount,
   logSocialActivity,
-} from '~/server/utils/social-directus'
+} from '~~/server/utils/social-directus'
 import { addDays } from 'date-fns'
 
 export default defineEventHandler(async (event) => {

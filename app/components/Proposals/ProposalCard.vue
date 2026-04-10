@@ -28,7 +28,7 @@
 </template>
 
 <script setup lang="ts">
-import { PROPOSAL_STATUS_LABELS, PROPOSAL_STATUS_COLORS } from '~~/types/proposals-enhanced';
+import { PROPOSAL_STATUS_LABELS, PROPOSAL_STATUS_COLORS } from '~~/shared/proposals-enhanced';
 
 const props = defineProps<{ proposal: any }>();
 defineEmits<{ click: [proposal: any] }>();

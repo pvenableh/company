@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Team } from '~~/types/directus';
+import type { Team } from '~~/shared/directus';
 import { Button } from '~/components/ui/button';
 
 definePageMeta({ middleware: ['auth'] });
