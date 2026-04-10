@@ -10,46 +10,71 @@
 		]"
 		:style="dockStyle"
 	>
-		<!-- Dock buttons (always visible) -->
+		<!-- Single morphing container: collapsed pill or full bar -->
 		<div
-			class="dock-bar"
-			@pointerdown="onDragStart"
+			class="dock-morph"
+			:class="isCollapsed ? 'dock-morph-collapsed' : 'dock-morph-expanded'"
+			@pointerdown="!isCollapsed && onDragStart($event)"
 		>
-			<!-- Tasks button -->
+			<!-- Collapsed: edge pill -->
 			<button
-				class="dock-btn"
-				:class="{ 'dock-btn-active': activePanel === 'tasks' }"
-				title="Tasks"
-				@click="togglePanel('tasks')"
+				v-if="isCollapsed"
+				class="dock-edge-trigger"
+				:class="currentCorner.includes('right') ? 'dock-edge-right' : 'dock-edge-left'"
+				title="Expand dock"
+				@click="isCollapsed = false"
 			>
-				<Icon name="lucide:check-square" class="w-4 h-4" />
-				<span v-if="taskCount > 0" class="dock-badge">{{ taskCount }}</span>
+				<Icon name="lucide:grip-vertical" class="w-3 h-3" />
+				<span v-if="taskCount > 0 || isTimerRunning" class="dock-edge-indicator" />
 			</button>
 
-			<!-- Time Tracker button -->
-			<button
-				class="dock-btn"
-				:class="{
-					'dock-btn-active': activePanel === 'timer',
-					'dock-btn-recording': isTimerRunning && !isTimerPaused,
-					'dock-btn-paused': isTimerPaused,
-				}"
-				title="Time Tracker"
-				@click="togglePanel('timer')"
-			>
-				<Icon name="lucide:timer" class="w-4 h-4" />
-				<span v-if="isTimerRunning && !isTimerPaused" class="dock-recording-dot" />
-				<span v-else-if="isTimerPaused" class="dock-paused-dot" />
-			</button>
+			<!-- Expanded: full bar buttons -->
+			<template v-else>
+				<!-- Tasks button -->
+				<button
+					class="dock-btn"
+					:class="{ 'dock-btn-active': activePanel === 'tasks' }"
+					title="Tasks"
+					@click="togglePanel('tasks')"
+				>
+					<Icon name="lucide:check-square" class="w-4 h-4" />
+					<span v-if="taskCount > 0" class="dock-badge">{{ taskCount }}</span>
+				</button>
 
-			<!-- Earnest AI button -->
-			<button
-				class="dock-btn dock-btn-ai"
-				title="Earnest AI"
-				@click="emit('open-ai')"
-			>
-				<Icon name="heroicons:sparkles" class="w-4 h-4" />
-			</button>
+				<!-- Time Tracker button -->
+				<button
+					class="dock-btn"
+					:class="{
+						'dock-btn-active': activePanel === 'timer',
+						'dock-btn-recording': isTimerRunning && !isTimerPaused,
+						'dock-btn-paused': isTimerPaused,
+					}"
+					title="Time Tracker"
+					@click="togglePanel('timer')"
+				>
+					<Icon name="lucide:timer" class="w-4 h-4" />
+					<span v-if="isTimerRunning && !isTimerPaused" class="dock-recording-dot" />
+					<span v-else-if="isTimerPaused" class="dock-paused-dot" />
+				</button>
+
+				<!-- Earnest AI button -->
+				<button
+					class="dock-btn dock-btn-ai"
+					title="Earnest AI"
+					@click="emit('open-ai')"
+				>
+					<Icon name="heroicons:sparkles" class="w-4 h-4" />
+				</button>
+
+				<!-- Collapse button -->
+				<button
+					class="dock-btn dock-btn-collapse"
+					title="Minimize dock"
+					@click.stop="collapseDock"
+				>
+					<Icon name="lucide:chevrons-right" class="w-3.5 h-3.5" :class="currentCorner.includes('left') ? 'rotate-180' : ''" />
+				</button>
+			</template>
 		</div>
 
 		<!-- Expanded panel -->
@@ -177,6 +202,32 @@ const {
 const emit = defineEmits(['open-ai']);
 const activePanel = activeDockPanel;
 
+const COLLAPSED_KEY = 'dock-collapsed';
+const isCollapsed = ref(false);
+
+// Load collapsed state
+if (import.meta.client) {
+	try {
+		isCollapsed.value = localStorage.getItem(COLLAPSED_KEY) === 'true';
+	} catch {}
+}
+
+function collapseDock() {
+	activePanel.value = null;
+	isSnapping.value = true;
+	isCollapsed.value = true;
+	try { localStorage.setItem(COLLAPSED_KEY, 'true'); } catch {}
+	setTimeout(() => { isSnapping.value = false; }, 350);
+}
+
+watch(isCollapsed, (collapsed) => {
+	if (!collapsed) {
+		isSnapping.value = true;
+		try { localStorage.setItem(COLLAPSED_KEY, 'false'); } catch {}
+		setTimeout(() => { isSnapping.value = false; }, 350);
+	}
+});
+
 const taskCount = computed(() => activeTasks.value.length);
 
 function togglePanel(panel: 'tasks' | 'timer') {
@@ -244,11 +295,12 @@ const cornerStyles = computed(() => {
 		style.bottom = 'auto';
 	}
 
+	const edgeMargin = isCollapsed.value ? 0 : MARGIN;
 	if (c.includes('right')) {
-		style.right = `${MARGIN}px`;
+		style.right = `${edgeMargin}px`;
 		style.left = 'auto';
 	} else {
-		style.left = `${MARGIN}px`;
+		style.left = `${edgeMargin}px`;
 		style.right = 'auto';
 	}
 
@@ -391,13 +443,18 @@ function snapToNearestCorner() {
 	opacity: 0.85;
 }
 
-/* Dock bar with buttons */
-.dock-bar {
+/* Morphing dock container — smooth transition between collapsed/expanded */
+.dock-morph {
 	display: flex;
 	align-items: center;
-	gap: 2px;
-	padding: 4px 8px;
 	border-radius: 100px;
+	transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+	touch-action: none;
+}
+
+.dock-morph-expanded {
+	gap: 1px;
+	padding: 3px 6px;
 	border: 1px solid hsl(var(--primary) / 0.2);
 	background: hsl(var(--primary) / 0.08);
 	backdrop-filter: saturate(180%) blur(20px);
@@ -406,10 +463,28 @@ function snapToNearestCorner() {
 		0 1px 3px hsl(var(--primary) / 0.1),
 		0 4px 16px hsl(var(--primary) / 0.06);
 	cursor: grab;
-	touch-action: none;
 }
 
-.dock-dragging .dock-bar {
+.dock-morph-collapsed {
+	padding: 0;
+	background: hsl(var(--primary));
+	border: none;
+	box-shadow:
+		0 2px 8px hsl(var(--primary) / 0.3),
+		0 1px 3px hsl(var(--primary) / 0.15);
+}
+
+/* Flat on the edge side, pill on the outward side */
+.floating-dock[style*="right: 0"] .dock-morph-collapsed,
+.floating-dock .dock-morph-collapsed:has(.dock-edge-right) {
+	border-radius: 100px 0 0 100px;
+}
+
+.floating-dock .dock-morph-collapsed:has(.dock-edge-left) {
+	border-radius: 0 100px 100px 0;
+}
+
+.dock-dragging .dock-morph {
 	cursor: grabbing;
 }
 
@@ -418,9 +493,9 @@ function snapToNearestCorner() {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: 36px;
-	height: 36px;
-	border-radius: 10px;
+	width: 30px;
+	height: 30px;
+	border-radius: 8px;
 	color: hsl(var(--muted-foreground));
 	transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -520,22 +595,22 @@ function snapToNearestCorner() {
 
 /* Panel positioning per corner */
 .panel-bottom-right {
-	bottom: 52px;
+	bottom: 44px;
 	right: 0;
 }
 
 .panel-bottom-left {
-	bottom: 52px;
+	bottom: 44px;
 	left: 0;
 }
 
 .panel-top-right {
-	top: 52px;
+	top: 44px;
 	right: 0;
 }
 
 .panel-top-left {
-	top: 52px;
+	top: 44px;
 	left: 0;
 }
 
@@ -593,6 +668,64 @@ function snapToNearestCorner() {
 	opacity: 0.6;
 	flex-shrink: 0;
 }
+
+/* Edge trigger (collapsed state) — pill shape, contrast color */
+.dock-edge-trigger {
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px;
+	height: 36px;
+	background: transparent;
+	color: hsl(var(--primary-foreground));
+	cursor: pointer;
+	transition: all 0.2s ease;
+	border: none;
+	border-radius: 100px;
+}
+
+.dock-edge-trigger:hover {
+	opacity: 0.85;
+	transform: scale(1.05);
+}
+
+.dock-edge-right {
+	border-radius: 100px 0 0 100px;
+	padding-left: 6px;
+	padding-right: 2px;
+}
+
+.dock-edge-left {
+	border-radius: 0 100px 100px 0;
+	padding-right: 6px;
+	padding-left: 2px;
+}
+
+.dock-edge-indicator {
+	position: absolute;
+	top: 6px;
+	right: 4px;
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: hsl(var(--primary-foreground));
+	box-shadow: 0 0 0 2px hsl(var(--primary));
+}
+
+/* Collapse button in the dock bar */
+.dock-btn-collapse {
+	width: 20px;
+	height: 30px;
+	color: hsl(var(--muted-foreground) / 0.5);
+}
+
+.dock-btn-collapse:hover {
+	color: hsl(var(--muted-foreground));
+	background: transparent;
+	transform: none;
+}
+
 
 .hide-scrollbar {
 	scrollbar-width: none;

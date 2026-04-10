@@ -121,7 +121,7 @@
 		</div>
 
 		<!-- In Meeting — Daily.co Prebuilt Iframe -->
-		<div v-else class="fixed inset-0 z-50">
+		<div v-else class="fixed inset-0 z-10">
 			<div v-if="loadingToken" class="flex items-center justify-center h-full">
 				<div class="text-center">
 					<div class="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center mx-auto mb-3">
@@ -140,9 +140,12 @@
 			/>
 		</div>
 
-		<!-- Floating dock (tasks, timer, AI) -->
+		<!-- Floating dock (tasks, timer, AI) — opaque bg for video overlay -->
 		<ClientOnly>
-			<LayoutFloatingDock />
+			<div class="meeting-dock-override">
+				<LayoutFloatingDock @open-ai="aiTrayOpen = true" />
+			</div>
+			<CommandCenterAITray :is-open="aiTrayOpen" @close="aiTrayOpen = false" />
 		</ClientOnly>
 	</div>
 </template>
@@ -172,6 +175,7 @@ const guestEmail = ref('');
 const myAttendeeId = ref(null);
 const loadingToken = ref(false);
 const dailyUrl = ref(null);
+const aiTrayOpen = ref(false);
 
 let statusPollInterval = null;
 
@@ -371,3 +375,14 @@ onBeforeUnmount(() => {
 	window.removeEventListener('message', handleDailyMessage);
 });
 </script>
+
+<style scoped>
+/* Override the floating dock glass background to be opaque over the video iframe */
+.meeting-dock-override :deep(.dock-bar) {
+	background: hsl(var(--background));
+	backdrop-filter: none;
+	-webkit-backdrop-filter: none;
+	border-color: hsl(var(--border));
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+</style>
