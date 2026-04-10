@@ -217,7 +217,7 @@
 
 		<!-- Main Board -->
 		<div
-			class="bg-muted/20 border border-border/50 rounded-2xl w-full flex min-h-svh overflow-x-auto overflow-hidden overflow-hidden-scrollbar tickets-board__board"
+			class="ios-card !p-0 w-full flex min-h-svh overflow-x-auto scrollbar-hide tickets-board__board"
 			@touchstart="handleTouchStart"
 			@touchend="handleTouchEnd"
 		>
@@ -233,7 +233,7 @@
 				<div class="tickets-board__board-col-header">
 					<div class="flex items-center gap-3">
 						<div class="h-5 w-1 rounded-full" :style="{ backgroundColor: `var(--${column.color})` }" />
-						<h3 class="text-xs font-semibold uppercase tracking-wider text-foreground flex-1">{{ column.name }}</h3>
+						<h3 class="cg-text-header text-foreground flex-1">{{ column.name }}</h3>
 						<span
 							class="text-[10px] font-bold tabular-nums min-w-[20px] h-5 flex items-center justify-center rounded-full px-1.5"
 							:style="{ backgroundColor: `var(--${column.color})`, color: 'var(--darkBlue)' }"
@@ -1210,20 +1210,7 @@ watch(
 	}
 }
 
-/* Hide scrollbar for Webkit browsers */
-.overflow-hidden-scrollbar::-webkit-scrollbar {
-	display: none;
-}
-
-/* Optional: Hide scrollbar for Firefox */
-.overflow-hidden-scrollbar {
-	scrollbar-width: none;
-}
-
-/* Maintain smooth scrolling */
-.overflow-hidden-scrollbar {
-	-ms-overflow-style: none; /* IE and Edge */
-}
+/* scrollbar-hide utility from tailwind.css handles hidden scrollbars */
 
 @media (max-width: 768px) {
 	.column-transition-enter-active,

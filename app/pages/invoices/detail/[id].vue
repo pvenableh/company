@@ -9,6 +9,7 @@ const route = useRoute();
 const router = useRouter();
 const invoiceId = route.params.id as string;
 const { getInvoice, updateInvoice, deleteInvoice } = useInvoices();
+const { getUrl: getFileUrl } = useDirectusFiles();
 
 const invoice = ref<Invoice | null>(null);
 const loading = ref(true);
@@ -19,12 +20,7 @@ const sendingEmail = ref(false);
 const error = ref<string | null>(null);
 const toast = useToast();
 
-const statusColors: Record<string, string> = {
-  pending: 'bg-yellow-500/15 text-yellow-400',
-  processing: 'bg-blue-500/15 text-blue-400',
-  paid: 'bg-emerald-500/15 text-emerald-400',
-  archived: 'bg-neutral-500/15 text-neutral-400',
-};
+const { getStatusBadgeClasses } = useStatusStyle();
 
 async function loadInvoice() {
   loading.value = true;
@@ -72,6 +68,14 @@ function getClientName(inv: Invoice): string {
   if (!inv.client) return '\u2014';
   if (typeof inv.client === 'string') return inv.client;
   return (inv.client as any).name || '\u2014';
+}
+
+function getCheckImageUrl(inv: Invoice): string | null {
+  const ci = inv.check_image;
+  if (!ci) return null;
+  const fileId = typeof ci === 'string' ? ci : (ci as any).id;
+  if (!fileId) return null;
+  return getFileUrl(fileId, { width: 400, format: 'webp' });
 }
 
 function getProjectTitle(inv: Invoice): string {
@@ -147,7 +151,7 @@ onMounted(loadInvoice);
           <span
             v-if="invoice.status"
             class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize"
-            :class="statusColors[invoice.status] || 'bg-muted text-muted-foreground'"
+            :class="getStatusBadgeClasses(invoice.status)"
           >
             {{ invoice.status }}
           </span>
@@ -214,6 +218,21 @@ onMounted(loadInvoice);
                 <span class="text-muted-foreground">Org</span>
                 <span class="text-xs text-muted-foreground">{{ getBillToName(invoice) }}</span>
               </div>
+              <div v-if="invoice.date_mailed" class="flex justify-between">
+                <span class="text-muted-foreground">Mailed</span>
+                <span>{{ getFriendlyDateThree(invoice.date_mailed) }}</span>
+              </div>
+            </div>
+            <!-- Check Image -->
+            <div v-if="getCheckImageUrl(invoice)" class="mt-3 pt-3 border-t border-border/30">
+              <p class="text-xs text-muted-foreground mb-2">Check Image</p>
+              <a :href="getCheckImageUrl(invoice)!" target="_blank">
+                <img
+                  :src="getCheckImageUrl(invoice)!"
+                  alt="Check"
+                  class="w-full rounded-lg border object-cover max-h-40"
+                />
+              </a>
             </div>
           </div>
 

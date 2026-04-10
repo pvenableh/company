@@ -42,12 +42,7 @@ const statusOptions = [
   { label: 'Archived', value: 'archived' },
 ];
 
-const statusColors: Record<string, string> = {
-  pending: 'bg-yellow-500/15 text-yellow-400',
-  processing: 'bg-blue-500/15 text-blue-400',
-  paid: 'bg-emerald-500/15 text-emerald-400',
-  archived: 'bg-neutral-500/15 text-neutral-400',
-};
+const { getStatusBadgeClasses } = useStatusStyle();
 
 // Active invoices (pending + processing)
 const activeInvoices = computed(() =>
@@ -190,14 +185,8 @@ watch(() => selectedClient.value, debouncedFetch);
 
     <!-- Stats -->
     <div class="flex gap-4 mb-6">
-      <div class="ios-card px-4 py-3 flex-1">
-        <p class="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Total Billed</p>
-        <p class="text-lg font-semibold">{{ formatAmount(totalBilled) }}</p>
-      </div>
-      <div class="ios-card px-4 py-3 flex-1">
-        <p class="text-[10px] uppercase tracking-wider text-muted-foreground font-medium">Total Unpaid</p>
-        <p class="text-lg font-semibold" :class="totalUnpaid > 0 ? 'text-amber-400' : ''">{{ formatAmount(totalUnpaid) }}</p>
-      </div>
+      <UiStatCard class="flex-1" label="Total Billed" :value="formatAmount(totalBilled)" />
+      <UiStatCard class="flex-1" label="Total Unpaid" :value="formatAmount(totalUnpaid)" :value-class="totalUnpaid > 0 ? 'text-amber-400' : ''" />
     </div>
 
     <!-- Filters -->
@@ -297,7 +286,7 @@ watch(() => selectedClient.value, debouncedFetch);
                     :value="inv.status"
                     @change="updateStatus(inv, ($event.target as HTMLSelectElement).value)"
                     class="appearance-none rounded-full px-2 py-0.5 text-[10px] font-medium capitalize border-0 cursor-pointer pr-5 bg-no-repeat bg-[right_4px_center] bg-[length:10px]"
-                    :class="statusColors[inv.status || 'pending']"
+                    :class="getStatusBadgeClasses(inv.status)"
                     :style="{ backgroundImage: `url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 20 20%22 fill=%22currentColor%22><path fill-rule=%22evenodd%22 d=%22M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z%22 clip-rule=%22evenodd%22/></svg>')` }"
                   >
                     <option v-for="s in statusOptions.slice(1)" :key="s.value" :value="s.value">{{ s.label }}</option>
@@ -305,7 +294,7 @@ watch(() => selectedClient.value, debouncedFetch);
                   <span
                     v-else
                     class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize"
-                    :class="statusColors[inv.status || 'pending']"
+                    :class="getStatusBadgeClasses(inv.status)"
                   >
                     {{ inv.status }}
                   </span>
@@ -362,7 +351,7 @@ watch(() => selectedClient.value, debouncedFetch);
                 <h3 class="text-sm font-medium truncate">{{ inv.invoice_code || 'No Code' }}</h3>
                 <span
                   class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize shrink-0"
-                  :class="statusColors[inv.status || 'pending']"
+                  :class="getStatusBadgeClasses(inv.status)"
                 >
                   {{ inv.status }}
                 </span>
@@ -455,7 +444,7 @@ watch(() => selectedClient.value, debouncedFetch);
                       <h3 class="text-sm font-medium truncate text-muted-foreground">{{ inv.invoice_code || 'No Code' }}</h3>
                       <span
                         class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize shrink-0"
-                        :class="statusColors[inv.status || 'archived']"
+                        :class="getStatusBadgeClasses(inv.status)"
                       >
                         {{ inv.status }}
                       </span>

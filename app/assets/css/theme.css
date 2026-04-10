@@ -173,3 +173,77 @@
   transform: scale(0.97);
   opacity: 0.85;
 }
+
+/* ============================================
+   Clean Gantt Design System Utilities
+   Unified typography, status, and layout
+   classes for consistent UX across all widgets.
+   ============================================ */
+
+/* ---- Typography scale ---- */
+.cg-text-primary {
+  font-size: 11px;
+  font-weight: 600;
+}
+.cg-text-child {
+  font-size: 10px;
+  font-weight: 400;
+}
+.cg-text-grandchild {
+  font-size: 9px;
+  font-weight: 400;
+}
+.cg-text-header {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: hsl(var(--muted-foreground));
+}
+.cg-text-stat {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+.cg-text-label {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: hsl(var(--muted-foreground));
+}
+
+/* ---- Status opacity (Clean Gantt pattern) ---- */
+.cg-status-active {
+  opacity: 1.0;
+}
+.cg-status-scheduled {
+  opacity: 0.6;
+}
+.cg-status-completed {
+  opacity: 0.3;
+}
+
+/* ---- Standard row height ---- */
+.cg-row {
+  height: 32px;
+  display: flex;
+  align-items: center;
+}
+
+/* ---- Card padding standards ---- */
+.cg-card {
+  @apply bg-card rounded-2xl border border-border/50 shadow-sm;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  padding: 20px;
+}
+.cg-card:hover {
+  @apply shadow-md;
+}
+.cg-card-compact {
+  @apply bg-card rounded-2xl border border-border/50 shadow-sm;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  padding: 14px;
+}
+.cg-card-compact:hover {
+  @apply shadow-md;
+}

@@ -713,6 +713,8 @@ export interface Blog {
 	reading_time?: number | null;
 	/** @description Feature on magazine cover */
 	featured?: boolean | null;
+	/** @description Which brand/organization this post belongs to */
+	organization?: Organization | string | null;
 	categories?: BlogBlogCategory[] | string[];
 	services?: BlogService[] | string[];
 	industries?: BlogIndustry[] | string[];
@@ -736,6 +738,8 @@ export interface BlogCategory {
 	slug?: string | null;
 	description?: string | null;
 	color?: string | null;
+	/** @description Which brand/organization this category belongs to */
+	organization?: Organization | string | null;
 }
 
 export interface BlogFile {
@@ -3617,7 +3621,7 @@ export interface DirectusUser {
 	token?: string | null;
 	last_access?: string | null;
 	last_page?: string | null;
-	provider?: 'google';
+	provider?: string;
 	external_identifier?: string | null;
 	auth_data?: 'json' | null;
 	email_notifications?: boolean | null;

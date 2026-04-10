@@ -91,7 +91,7 @@
 		<div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
 			<!-- Quick Task Generator (left column, sticky on large screens) -->
 			<div class="lg:col-span-1 lg:sticky lg:top-20 lg:self-start">
-				<div class="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
+				<div class="ios-card p-5">
 					<TasksQuickTaskGenerator />
 				</div>
 			</div>
@@ -101,7 +101,7 @@
 				<UTabs v-model="activeTab" :items="tabs" class="mb-2" />
 
 				<div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
-					<div class="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
+					<div class="ios-card p-5">
 						<h2 class="text-lg font-medium mb-4">{{ tabs[activeTab]?.label }} Tasks</h2>
 
 						<ClientOnly>
@@ -124,56 +124,13 @@
 						</ClientOnly>
 					</div>
 
-					<div class="bg-gray-50 dark:bg-gray-800/50 p-4 rounded-lg">
+					<div class="ios-card p-5">
 						<h2 class="text-lg font-medium mb-4">Task Summary</h2>
-						<div class="grid grid-cols-2 gap-4">
-							<div class="bg-white dark:bg-gray-700 rounded p-4 shadow-sm">
-								<div class="flex items-center space-x-2">
-									<div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-										<UIcon name="i-heroicons-clipboard-document-list" class="w-5 h-5 text-blue-500" />
-									</div>
-									<div>
-										<div class="text-2xl font-semibold">{{ taskStats.active }}</div>
-										<div class="text-xs text-gray-500 uppercase">Active</div>
-									</div>
-								</div>
-							</div>
-
-							<div class="bg-white dark:bg-gray-700 rounded p-4 shadow-sm">
-								<div class="flex items-center space-x-2">
-									<div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-										<UIcon name="i-heroicons-check-circle" class="w-5 h-5 text-green-500" />
-									</div>
-									<div>
-										<div class="text-2xl font-semibold">{{ taskStats.completed }}</div>
-										<div class="text-xs text-gray-500 uppercase">Completed</div>
-									</div>
-								</div>
-							</div>
-
-							<div class="bg-white dark:bg-gray-700 rounded p-4 shadow-sm">
-								<div class="flex items-center space-x-2">
-									<div class="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
-										<UIcon name="i-heroicons-clock" class="w-5 h-5 text-yellow-500" />
-									</div>
-									<div>
-										<div class="text-2xl font-semibold">{{ taskStats.dueToday }}</div>
-										<div class="text-xs text-gray-500 uppercase">Due Today</div>
-									</div>
-								</div>
-							</div>
-
-							<div class="bg-white dark:bg-gray-700 rounded p-4 shadow-sm">
-								<div class="flex items-center space-x-2">
-									<div class="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-										<UIcon name="i-heroicons-exclamation-circle" class="w-5 h-5 text-red-500" />
-									</div>
-									<div>
-										<div class="text-2xl font-semibold">{{ taskStats.overdue }}</div>
-										<div class="text-xs text-gray-500 uppercase">Overdue</div>
-									</div>
-								</div>
-							</div>
+						<div class="grid grid-cols-2 gap-3">
+							<UiStatCard label="Active" :value="taskStats.active" />
+							<UiStatCard label="Completed" :value="taskStats.completed" />
+							<UiStatCard label="Due Today" :value="taskStats.dueToday" />
+							<UiStatCard label="Overdue" :value="taskStats.overdue" :value-class="taskStats.overdue > 0 ? 'text-destructive' : ''" />
 						</div>
 					</div>
 				</div>

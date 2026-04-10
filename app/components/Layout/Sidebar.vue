@@ -113,6 +113,15 @@
 				<UIcon name="i-heroicons-pencil-square" class="w-[18px] h-[18px] flex-shrink-0 text-muted-foreground" />
 				<span v-if="!collapsed" class="sidebar-link-label">Edit Apps</span>
 			</button>
+			<button
+				class="sidebar-link sidebar-link-inactive"
+				:class="collapsed ? 'sidebar-link--collapsed' : ''"
+				:title="collapsed ? 'Logout' : undefined"
+				@click="logout"
+			>
+				<UIcon name="i-heroicons-arrow-right-on-rectangle" class="w-[18px] h-[18px] flex-shrink-0 text-muted-foreground" />
+				<span v-if="!collapsed" class="sidebar-link-label">Logout</span>
+			</button>
 		</div>
 	</nav>
 </template>
@@ -121,6 +130,7 @@
 defineEmits(['edit-apps']);
 
 const { user } = useDirectusAuth();
+const { logout } = useLogout();
 const route = useRoute();
 const { visibleLinks } = useNavPreferences();
 const { collapsed, toggle } = useSidebarCollapsed();

@@ -137,16 +137,9 @@ onMounted(() => {
 	loadInvoices();
 });
 
-// ── Status color ──
-const statusColor = computed(() => {
-	const map = {
-		Pending: 'var(--cyan)',
-		Scheduled: 'var(--cyan2)',
-		'In Progress': 'var(--green2)',
-		Completed: 'var(--green)',
-	};
-	return map[project?.status] || 'var(--cyan)';
-});
+// ── Status styling ──
+const { getStatusAccent, getStatusBadgeClasses: getProjectStatusClasses } = useStatusStyle();
+const statusColor = computed(() => getStatusAccent(project?.status));
 
 // ── Days remaining ──
 const daysRemaining = computed(() => {
@@ -509,12 +502,7 @@ const formatCurrency = (amount) => {
 					<div>
 						<div class="flex items-center gap-2">
 							<h1 class="text-xl font-semibold text-foreground">{{ project?.title || 'Project' }}</h1>
-							<span
-								class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
-								:style="{ backgroundColor: statusColor, color: 'var(--darkBlue)' }"
-							>
-								{{ project?.status }}
-							</span>
+							<UiStatusBadge :status="project?.status" />
 						</div>
 						<div class="flex items-center gap-2 mt-0.5">
 							<span v-if="project?.service" class="flex items-center gap-1 text-xs text-muted-foreground">
@@ -536,60 +524,32 @@ const formatCurrency = (amount) => {
 
 			<!-- Stats Row -->
 			<div class="grid grid-cols-5 gap-2 md:gap-3 mb-6">
-				<!-- Open Tickets -->
-				<div class="ios-card p-2 md:p-4">
-					<div class="flex items-center gap-1 md:gap-2 mb-0.5 md:mb-1">
-						<UIcon name="i-heroicons-square-3-stack-3d" class="w-3 h-3 md:w-4 md:h-4 text-amber-500" />
-						<span class="text-[6px] md:text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tickets</span>
-					</div>
-					<p class="text-sm md:text-2xl font-bold text-foreground">{{ stats.openTickets }}</p>
-					<p class="text-[8px] md:text-[10px] text-muted-foreground hidden sm:block">{{ stats.ticketCount }} total</p>
-				</div>
+				<UiStatCard label="Tickets" :value="stats.openTickets" :detail="`${stats.ticketCount} total`" />
 
-				<!-- Tasks -->
-				<div class="ios-card p-2 md:p-4">
-					<div class="flex items-center gap-1 md:gap-2 mb-0.5 md:mb-1">
-						<UIcon name="i-heroicons-check-circle" class="w-3 h-3 md:w-4 md:h-4 text-purple-500" />
-						<span class="text-[6px] md:text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tasks</span>
-					</div>
-					<p class="text-sm md:text-2xl font-bold text-foreground">{{ stats.completedTasks }}/{{ stats.taskCount }}</p>
-					<div class="mt-0.5 md:mt-1 h-1 md:h-1.5 bg-muted/30 rounded-full overflow-hidden">
+				<div class="cg-card-compact">
+					<p class="cg-text-label mb-1">Tasks</p>
+					<p class="cg-text-stat text-foreground">{{ stats.completedTasks }}/{{ stats.taskCount }}</p>
+					<div class="mt-1 h-1.5 bg-muted/30 rounded-full overflow-hidden">
 						<div class="h-full rounded-full bg-purple-500 transition-all duration-500" :style="{ width: `${taskProgress}%` }" />
 					</div>
 				</div>
 
-				<!-- Events -->
-				<div class="ios-card p-2 md:p-4">
-					<div class="flex items-center gap-1 md:gap-2 mb-0.5 md:mb-1">
-						<UIcon name="i-heroicons-calendar-days" class="w-3 h-3 md:w-4 md:h-4 text-cyan-500" />
-						<span class="text-[6px] md:text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Events</span>
-					</div>
-					<p class="text-sm md:text-2xl font-bold text-foreground">{{ stats.eventCount }}</p>
-					<p v-if="stats.pendingApprovals > 0" class="text-[8px] md:text-[10px] text-amber-500 font-medium hidden sm:block">{{ stats.pendingApprovals }} pending</p>
-					<p v-else class="text-[8px] md:text-[10px] text-muted-foreground hidden sm:block">phases</p>
-				</div>
+				<UiStatCard label="Events" :value="stats.eventCount">
+					<template #detail>
+						<span v-if="stats.pendingApprovals > 0" class="text-amber-500 font-medium">{{ stats.pendingApprovals }} pending</span>
+						<span v-else>phases</span>
+					</template>
+				</UiStatCard>
 
-				<!-- Billing -->
-				<div class="ios-card p-2 md:p-4">
-					<div class="flex items-center gap-1 md:gap-2 mb-0.5 md:mb-1">
-						<UIcon name="i-heroicons-currency-dollar" class="w-3 h-3 md:w-4 md:h-4 text-green-500" />
-						<span class="text-[6px] md:text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Billed</span>
-					</div>
-					<p class="text-sm md:text-2xl font-bold text-foreground">{{ formatCurrency(stats.invoiceTotal) }}</p>
-					<p class="text-[8px] md:text-[10px] text-muted-foreground hidden sm:block">{{ formatCurrency(stats.paidTotal) }} paid</p>
-				</div>
+				<UiStatCard label="Billed" :value="formatCurrency(stats.invoiceTotal)" :detail="`${formatCurrency(stats.paidTotal)} paid`" />
 
-				<!-- Timeline -->
-				<div class="ios-card p-2 md:p-4">
-					<div class="flex items-center gap-1 md:gap-2 mb-0.5 md:mb-1">
-						<UIcon name="i-heroicons-calendar-days" class="w-3 h-3 md:w-4 md:h-4 text-blue-500" />
-						<span class="text-[6px] md:text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Timeline</span>
-					</div>
-					<p v-if="daysRemaining !== null" class="text-sm md:text-2xl font-bold text-foreground" :class="{ 'text-red-500': daysRemaining < 0 }">
+				<div class="cg-card-compact">
+					<p class="cg-text-label mb-1">Timeline</p>
+					<p v-if="daysRemaining !== null" class="cg-text-stat text-foreground" :class="{ 'text-destructive': daysRemaining < 0 }">
 						{{ daysRemaining < 0 ? Math.abs(daysRemaining) : daysRemaining }}
 					</p>
-					<p v-else class="text-sm md:text-2xl font-bold text-muted-foreground/40">—</p>
-					<p class="text-[8px] md:text-[10px] text-muted-foreground hidden sm:block">{{ daysRemaining !== null ? (daysRemaining < 0 ? 'overdue' : 'days left') : 'no date' }}</p>
+					<p v-else class="cg-text-stat text-muted-foreground/40">—</p>
+					<p class="cg-text-child text-muted-foreground mt-0.5">{{ daysRemaining !== null ? (daysRemaining < 0 ? 'overdue' : 'days left') : 'no date' }}</p>
 				</div>
 			</div>
 

@@ -78,6 +78,34 @@
       </div>
     </div>
 
+    <!-- Check / Mailing -->
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium mb-1">Date Mailed</label>
+        <input
+          v-model="formData.date_mailed"
+          type="date"
+          class="w-full rounded-md border bg-background px-3 py-2 text-sm"
+        />
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Check Image</label>
+        <div v-if="checkImagePreview" class="mb-2 flex items-center gap-2">
+          <a :href="checkImagePreview" target="_blank" class="flex items-center gap-2 text-xs text-primary hover:underline">
+            <img :src="checkImagePreview" alt="Check" class="h-10 w-16 object-cover rounded border" />
+            <span>{{ checkImageFilename || 'View' }}</span>
+          </a>
+          <button type="button" class="text-xs text-destructive hover:underline" @click="removeCheckImage">Remove</button>
+        </div>
+        <input
+          type="file"
+          accept="image/*"
+          class="w-full rounded-md border bg-background px-3 py-2 text-sm file:mr-2 file:rounded file:border-0 file:bg-primary/10 file:px-2 file:py-1 file:text-xs file:text-primary"
+          @change="handleCheckImageUpload"
+        />
+      </div>
+    </div>
+
     <!-- Note -->
     <div>
       <label class="block text-sm font-medium mb-1">Note</label>
@@ -271,6 +299,7 @@ const statusOptions = [
 const { organizations } = useOrganization();
 const { getClientOptions, getClients } = useClients();
 const { getProducts, generateInvoiceCode } = useInvoices();
+const { upload: uploadFile, getUrl: getFileUrl } = useDirectusFiles();
 const projectItems = useDirectusItems('projects');
 
 const orgs = computed(() => organizations.value || []);
@@ -300,6 +329,8 @@ const formData = reactive({
   note: props.invoice?.note || '',
   memo: props.invoice?.memo || '',
   melio: props.invoice?.melio || '',
+  date_mailed: props.invoice?.date_mailed?.split('T')[0] || '',
+  check_image: extractId(props.invoice?.check_image) || null,
   billing_name: props.invoice?.billing_name || '',
   billing_email: props.invoice?.billing_email || '',
   billing_address: props.invoice?.billing_address || '',
@@ -326,6 +357,34 @@ function addCcEmail() {
 
 function removeCcEmail(index: number) {
   ccEmails.value.splice(index, 1);
+}
+
+// --- Check image ---
+const checkImagePreview = computed(() => {
+  if (!formData.check_image) return null;
+  return getFileUrl(formData.check_image, { width: 200, format: 'webp' });
+});
+
+const checkImageFilename = computed(() => {
+  const ci = props.invoice?.check_image;
+  if (ci && typeof ci === 'object' && 'filename_download' in ci) return ci.filename_download;
+  return null;
+});
+
+async function handleCheckImageUpload(e: Event) {
+  const input = e.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
+  try {
+    const uploaded = await uploadFile(file, { title: `Check - ${formData.invoice_code || 'invoice'}` });
+    formData.check_image = (uploaded as any)?.id || null;
+  } catch (err) {
+    console.warn('Check image upload failed:', err);
+  }
+}
+
+function removeCheckImage() {
+  formData.check_image = null;
 }
 
 // --- Line items state ---
@@ -400,6 +459,8 @@ function handleSubmit() {
     note: formData.note || undefined,
     memo: formData.memo || undefined,
     melio: formData.melio || undefined,
+    date_mailed: formData.date_mailed || null,
+    check_image: formData.check_image || null,
     billing_name: formData.billing_name || undefined,
     billing_email: formData.billing_email || undefined,
     billing_address: formData.billing_address || undefined,
@@ -457,7 +518,7 @@ function handleSubmit() {
 const autoGenerateCode = async () => {
   if (!formData.client || props.invoice) return; // Only for new invoices
   try {
-    const code = await generateInvoiceCode(formData.client, formData.invoice_date);
+    const code = await generateInvoiceCode(formData.client, formData.invoice_date, formData.bill_to || undefined);
     if (code) {
       formData.invoice_code = code;
     }

@@ -73,7 +73,7 @@ export function useInvoices() {
     return items.get(id, {
       fields: [
         '*',
-        'bill_to.*', 'bill_to.owner.email',
+        'bill_to.*', 'bill_to.owner.email', 'check_image.id', 'check_image.filename_download', 'check_image.type',
         'client.id', 'client.name', 'client.billing_email', 'client.billing_name', 'client.billing_address', 'client.billing_contacts', 'client.parent_client.id', 'client.parent_client.name', 'client.parent_client.billing_email', 'client.parent_client.billing_name', 'client.parent_client.billing_address', 'client.parent_client.billing_contacts',
         'project.id', 'project.title',
         'line_items.*', 'line_items.product.*',
@@ -166,14 +166,23 @@ export function useInvoices() {
    * Year is derived from invoiceDate (falls back to current date).
    * Count is based on all invoices for this client in that year (by invoice_date).
    */
-  const generateInvoiceCode = async (clientId: string, invoiceDate?: string): Promise<string | null> => {
+  const generateInvoiceCode = async (clientId: string, invoiceDate?: string, organizationId?: string): Promise<string | null> => {
     const clientItems = useDirectusItems('clients');
+    const orgItems = useDirectusItems('organizations');
 
     try {
-      // Fetch the client's code
-      const client = await clientItems.get(clientId, { fields: ['id', 'code'] });
-      const code = (client as any)?.code;
-      if (!code) return null;
+      // Fetch the client's code and org code
+      const client = await clientItems.get(clientId, { fields: ['id', 'code', 'organization'] });
+      const clientCode = ((client as any)?.code || '').toUpperCase();
+      if (!clientCode) return null;
+
+      // Resolve org ID: explicit param > client's organization
+      const orgId = organizationId || (typeof (client as any)?.organization === 'string' ? (client as any).organization : (client as any)?.organization?.id);
+      let orgCode = '';
+      if (orgId) {
+        const org = await orgItems.get(orgId, { fields: ['id', 'code'] });
+        orgCode = ((org as any)?.code || '').toUpperCase();
+      }
 
       // Derive year from invoice date or current date
       let year = new Date().getFullYear();
@@ -184,30 +193,35 @@ export function useInvoices() {
         }
       }
 
-      // Find the highest existing invoice number for this client code + year
-      const clientCode = code.toUpperCase();
-      const prefix = `INV-${clientCode}-${year}-`;
+      // New format: INV-{ORG}-{CLIENT}-{YEAR}-{NNNN}
+      // Legacy format: INV-{CLIENT}-{YEAR}-{NNNN}
+      const newPrefix = orgCode ? `INV-${orgCode}-${clientCode}-${year}-` : `INV-${clientCode}-${year}-`;
+      const legacyPrefix = `INV-${clientCode}-${year}-`;
 
-      const existingInvoices = await items.list({
-        fields: ['invoice_code'],
-        filter: {
-          invoice_code: { _starts_with: prefix },
-        },
-        limit: -1,
-      });
-
-      // Extract the max number from existing codes
+      // Search both new and legacy prefixes to ensure continuity
+      const prefixesToSearch = orgCode ? [newPrefix, legacyPrefix] : [legacyPrefix];
       let maxNum = 0;
-      for (const inv of existingInvoices) {
-        const match = (inv as any).invoice_code?.match(new RegExp(`^${prefix}(\\d+)$`));
-        if (match) {
-          const num = parseInt(match[1], 10);
-          if (num > maxNum) maxNum = num;
+
+      for (const prefix of prefixesToSearch) {
+        const existingInvoices = await items.list({
+          fields: ['invoice_code'],
+          filter: {
+            invoice_code: { _starts_with: prefix },
+          },
+          limit: -1,
+        });
+
+        for (const inv of existingInvoices) {
+          const match = (inv as any).invoice_code?.match(/(\d+)$/);
+          if (match) {
+            const num = parseInt(match[1], 10);
+            if (num > maxNum) maxNum = num;
+          }
         }
       }
 
       const nextNum = maxNum + 1;
-      return `${prefix}${String(nextNum).padStart(4, '0')}`;
+      return `${newPrefix}${String(nextNum).padStart(4, '0')}`;
     } catch (e) {
       console.warn('Could not generate invoice code:', e);
       return null;

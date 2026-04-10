@@ -29,6 +29,7 @@ const { user: authUser } = useDirectusAuth();
 const { selectedOrg } = useOrganization();
 const { selectedClient } = useClients();
 const { canEdit } = useOrgRole();
+const toast = useToast();
 
 const canEditProjects = computed(() => canEdit('projects'));
 const canEditEvents = computed(() => canEdit('projects')); // events are part of projects
@@ -52,14 +53,9 @@ const quarterLabel = computed(() => {
 	return `Q${q} ${now.getFullYear()}`;
 });
 
-// ── Status helpers ──
-function getBarOpacity(status?: string): number {
-	const s = status?.toLowerCase().replace(/\s+/g, '') || '';
-	if (s === 'completed' || s === 'done' || s === 'archived') return 0.3;
-	if (s === 'inprogress' || s === 'active') return 1;
-	if (s === 'scheduled' || s === 'pending') return 0.6;
-	return 0.7;
-}
+// ── Status helpers (uses shared composable) ──
+const { getStatusOpacity } = useStatusStyle();
+const getBarOpacity = (status?: string) => getStatusOpacity(status);
 
 function statusLabel(status?: string): string {
 	const s = status?.toLowerCase().replace(/\s+/g, '') || '';
@@ -225,7 +221,7 @@ const rows = computed<GanttRow[]>(() => {
 						label: event.title || event.name || 'Event',
 						type: 'event',
 						depth: 1,
-						color: projectColor,
+						color: '#06b6d4', // cyan — matches label icon
 						startDate: eventDate,
 						endDate: event.end_date || eventDate,
 						projectId: project.id,
@@ -239,7 +235,7 @@ const rows = computed<GanttRow[]>(() => {
 							label: task.title || 'Task',
 							type: 'task',
 							depth: 2,
-							color: projectColor,
+							color: '#8b5cf6', // purple — matches label icon
 							status: task.completed ? 'Completed' : 'In Progress',
 							dueDate: task.due_date,
 							projectId: project.id,
@@ -252,7 +248,7 @@ const rows = computed<GanttRow[]>(() => {
 						label: ticket.title || 'Untitled Ticket',
 						type: 'ticket',
 						depth: 1,
-						color: projectColor,
+						color: '#f59e0b', // amber — matches label icon
 						status: ticket.status,
 						startDate: ticket.date_created,
 						dueDate: ticket.due_date,
@@ -282,7 +278,7 @@ const rows = computed<GanttRow[]>(() => {
 				label: ticket.title || 'Untitled Ticket',
 				type: 'ticket',
 				depth: 0,
-				color: '#3b82f6',
+				color: '#f59e0b', // amber — matches label icon
 				status: ticket.status,
 				startDate: ticket.date_created,
 				dueDate: ticket.due_date,
@@ -434,7 +430,23 @@ function getBarStyle(row: GanttRow) {
 }
 
 function hasBar(row: GanttRow) {
+	// Tasks only have dueDate — render as checkboxes, not bars
+	if (row.type === 'task') return false;
 	return row.startDate || row.endDate || row.dueDate;
+}
+
+function isTask(row: GanttRow) {
+	return row.type === 'task';
+}
+
+function getTaskX(row: GanttRow): number {
+	if (row.dueDate) return dateToX(row.dueDate);
+	// No due date — position at today
+	return todayX.value;
+}
+
+function isTaskDone(row: GanttRow) {
+	return row.status?.toLowerCase() === 'completed' || row.status?.toLowerCase() === 'done';
 }
 
 // ── Overflow bar: grey extension showing child dates outside project dates ──
@@ -595,6 +607,56 @@ function handleCloseDetail() {
 	selectedEventId.value = null;
 }
 
+// ── Task completion toggle ──
+const projectTaskItems = useDirectusItems('project_tasks');
+const standaloneTaskItems = useDirectusItems('tasks');
+const togglingTask = ref(false);
+// Optimistic toggles — tracks IDs whose completion state is flipped locally before server confirms
+const optimisticToggles = ref(new Set<string>());
+
+function isTaskDoneEffective(row: GanttRow): boolean {
+	const serverDone = isTaskDone(row);
+	// If optimistically toggled, flip the server state
+	if (optimisticToggles.value.has(row.id)) return !serverDone;
+	return serverDone;
+}
+
+async function toggleTaskCompleted(row: GanttRow) {
+	if (row.type !== 'task' || togglingTask.value) return;
+	togglingTask.value = true;
+	const wasCompleted = isTaskDoneEffective(row);
+
+	// Optimistic — flip instantly in UI
+	optimisticToggles.value.add(row.id);
+	optimisticToggles.value = new Set(optimisticToggles.value); // trigger reactivity
+
+	try {
+		if (row.projectId) {
+			await projectTaskItems.update(row.id, {
+				completed: !wasCompleted,
+				completed_at: !wasCompleted ? new Date().toISOString() : null,
+			});
+		} else {
+			await standaloneTaskItems.update(row.id, {
+				status: wasCompleted ? 'in_progress' : 'completed',
+			});
+		}
+		toast.add({ title: wasCompleted ? 'Task reopened' : 'Task completed', color: wasCompleted ? 'blue' : 'green' });
+		// Background refetch — clears optimistic state when done
+		await fetchAllData();
+		optimisticToggles.value.delete(row.id);
+		optimisticToggles.value = new Set(optimisticToggles.value);
+	} catch (e) {
+		// Revert optimistic toggle
+		optimisticToggles.value.delete(row.id);
+		optimisticToggles.value = new Set(optimisticToggles.value);
+		toast.add({ title: 'Failed to update task', color: 'red' });
+		console.warn('Failed to toggle task:', e);
+	} finally {
+		togglingTask.value = false;
+	}
+}
+
 // ── Editable event fields ──
 const eventItems = useDirectusItems('project_events');
 const eventForm = reactive({ title: '', description: '', start_date: '', end_date: '', status: '' });
@@ -622,8 +684,10 @@ async function saveEventChanges() {
 			status: eventForm.status || undefined,
 		});
 		await fetchAllData();
+		toast.add({ title: 'Event updated', color: 'green' });
 		handleCloseDetail();
 	} catch (err) {
+		toast.add({ title: 'Failed to update event', color: 'red' });
 		console.error('Failed to update event:', err);
 	} finally {
 		savingEvent.value = false;
@@ -632,7 +696,18 @@ async function saveEventChanges() {
 
 // ── Editable project fields ──
 const projectItems = useDirectusItems('projects');
-const projectForm = reactive({ title: '', description: '', start_date: '', completion_date: '', status: '' });
+const projectForm = reactive({ title: '', description: '', start_date: '', completion_date: '', status: '', service: '' as string | null });
+const serviceItems = useDirectusItems('services');
+const servicesList = ref<{ id: string; name: string; color?: string }[]>([]);
+
+onMounted(async () => {
+	try {
+		const results = await serviceItems.list({ fields: ['id', 'name', 'color'], filter: { status: { _eq: 'published' } }, sort: ['name'], limit: 100 });
+		servicesList.value = (results || []) as any[];
+	} catch (e) {
+		console.warn('Failed to load services:', e);
+	}
+});
 const savingProject = ref(false);
 
 watch(selectedProject, (p) => {
@@ -642,6 +717,7 @@ watch(selectedProject, (p) => {
 		projectForm.start_date = p.start_date?.split('T')[0] || '';
 		projectForm.completion_date = p.completion_date?.split('T')[0] || '';
 		projectForm.status = p.status || '';
+		projectForm.service = typeof p.service === 'string' ? p.service : p.service?.id || null;
 	}
 });
 
@@ -655,10 +731,13 @@ async function saveProjectChanges() {
 			start_date: projectForm.start_date || undefined,
 			completion_date: projectForm.completion_date || undefined,
 			status: projectForm.status || undefined,
+			service: projectForm.service || null,
 		});
 		await fetchAllData();
+		toast.add({ title: 'Project updated', color: 'green' });
 		closeProjectPreview();
 	} catch (err) {
+		toast.add({ title: 'Failed to update project', color: 'red' });
 		console.error('Failed to update project:', err);
 	} finally {
 		savingProject.value = false;
@@ -850,21 +929,29 @@ const showUndated = ref(false);
 						>
 							<Icon :name="row.expanded ? 'lucide:minus' : 'lucide:plus'" class="w-2.5 h-2.5" />
 						</button>
-						<!-- Type icon (depth > 0 only) -->
+						<!-- Type icon (depth > 0, non-task) -->
 						<Icon
-							v-if="row.depth > 0"
-							:name="row.type === 'event' ? 'lucide:calendar' : row.type === 'ticket' ? 'lucide:ticket' : 'lucide:check-square'"
+							v-if="row.depth > 0 && row.type !== 'task'"
+							:name="row.type === 'event' ? 'lucide:calendar' : 'lucide:ticket'"
 							class="w-3 h-3 shrink-0"
 							:class="{
 								'text-cyan-500': row.type === 'event',
 								'text-amber-500': row.type === 'ticket',
-								'text-purple-500': row.type === 'task',
 							}"
+							:style="{ marginLeft: `${16 + row.depth * 16}px` }"
+						/>
+						<!-- Task status icon -->
+						<Icon
+							v-if="row.type === 'task'"
+							:name="isTaskDoneEffective(row) ? 'lucide:check-circle-2' : 'lucide:circle'"
+							class="w-3 h-3 shrink-0"
+							:class="isTaskDoneEffective(row) ? 'text-emerald-500' : 'text-purple-500'"
 							:style="{ marginLeft: `${16 + row.depth * 16}px` }"
 						/>
 						<!-- Label text -->
 						<span
 							class="gantt__label-text"
+							:class="{ 'gantt__label-text--done': row.type === 'task' && isTaskDoneEffective(row) }"
 							:style="{ paddingLeft: row.depth === 0 ? '20px' : '4px' }"
 							:title="row.label"
 						>{{ row.label }}</span>
@@ -895,14 +982,36 @@ const showUndated = ref(false);
 								/>
 							</UTooltip>
 
-							<!-- Milestone diamond -->
+							<!-- Milestone diamond (events/tickets without date range) -->
 							<div
-								v-if="!row.startDate && !row.endDate && row.dueDate"
+								v-if="!row.startDate && !row.endDate && row.dueDate && row.type !== 'task'"
 								class="gantt__milestone"
 								:style="{ left: dateToX(row.dueDate) + 'px' }"
 								:title="`Due: ${getFriendlyDate(row.dueDate)}`"
 							>
 								<div class="gantt__diamond" :style="{ backgroundColor: row.color }" />
+							</div>
+
+							<!-- Task checkbox -->
+							<div
+								v-if="isTask(row)"
+								class="gantt__task-check"
+								:style="{ left: getTaskX(row) + 'px' }"
+								:title="`${row.label} — ${isTaskDoneEffective(row) ? 'Done' : 'Incomplete'}${row.dueDate ? ' · Due: ' + getFriendlyDate(row.dueDate) : ''}`"
+								@click.stop="toggleTaskCompleted(row)"
+							>
+								<div
+									class="gantt__task-circle"
+									:class="{ 'gantt__task-circle--done': isTaskDoneEffective(row) }"
+									:style="{
+										borderColor: row.color,
+										backgroundColor: isTaskDoneEffective(row) ? row.color : 'transparent',
+									}"
+								>
+									<svg v-if="isTaskDoneEffective(row)" class="w-[7px] h-[7px] text-white" viewBox="0 0 12 12" fill="none">
+										<path d="M2 6l3 3 5-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+									</svg>
+								</div>
 							</div>
 						</div>
 					</div>
@@ -1034,17 +1143,31 @@ const showUndated = ref(false);
 							<p v-else class="text-xs text-foreground">{{ getFriendlyDate(projectForm.completion_date) || '—' }}</p>
 						</div>
 					</div>
-					<div>
-						<label class="gantt-modal-label">Status</label>
-						<select v-if="canEditProjects" v-model="projectForm.status" class="gantt-modal-input">
-							<option value="">None</option>
-							<option value="Pending">Pending</option>
-							<option value="Scheduled">Scheduled</option>
-							<option value="In Progress">In Progress</option>
-							<option value="Completed">Completed</option>
-							<option value="Archived">Archived</option>
-						</select>
-						<p v-else class="text-xs text-foreground">{{ projectForm.status || '—' }}</p>
+					<div class="grid grid-cols-2 gap-3">
+						<div>
+							<label class="gantt-modal-label">Status</label>
+							<select v-if="canEditProjects" v-model="projectForm.status" class="gantt-modal-input">
+								<option value="">None</option>
+								<option value="Pending">Pending</option>
+								<option value="Scheduled">Scheduled</option>
+								<option value="In Progress">In Progress</option>
+								<option value="Completed">Completed</option>
+								<option value="Archived">Archived</option>
+							</select>
+							<p v-else class="text-xs text-foreground">{{ projectForm.status || '—' }}</p>
+						</div>
+						<div>
+							<label class="gantt-modal-label">Service</label>
+							<select v-if="canEditProjects" v-model="projectForm.service" class="gantt-modal-input">
+								<option :value="null">None</option>
+								<option v-for="svc in servicesList" :key="svc.id" :value="svc.id">
+									{{ svc.name }}
+								</option>
+							</select>
+							<p v-else class="text-xs text-foreground">
+								{{ servicesList.find(s => s.id === projectForm.service)?.name || selectedProject?.service?.name || '—' }}
+							</p>
+						</div>
 					</div>
 					<div>
 						<label class="gantt-modal-label">Description</label>
@@ -1254,7 +1377,7 @@ const showUndated = ref(false);
 	position: absolute;
 	top: 0;
 	width: 1px;
-	background: hsl(var(--border) / 0.3);
+	background: hsl(var(--border) / 0.5);
 	z-index: 0;
 	pointer-events: none;
 }
@@ -1308,12 +1431,12 @@ const showUndated = ref(false);
 }
 .gantt__label--child {
 	font-weight: 400;
-	color: hsl(var(--foreground) / 0.45);
+	color: hsl(var(--foreground) / 0.7);
 	font-size: 10px;
 }
 .gantt__label--depth2 {
 	font-weight: 400;
-	color: hsl(var(--foreground) / 0.35);
+	color: hsl(var(--foreground) / 0.6);
 	font-size: 9px;
 }
 
@@ -1402,6 +1525,36 @@ const showUndated = ref(false);
 	transform: rotate(45deg);
 	border-radius: 1px;
 	opacity: 0.8;
+}
+
+.gantt__label-text--done {
+	text-decoration: line-through;
+	opacity: 0.4;
+}
+
+/* ── Task checkbox in track (for tasks with due dates) ── */
+.gantt__task-check {
+	position: absolute;
+	top: 50%;
+	transform: translate(-50%, -50%);
+	z-index: 2;
+	cursor: pointer;
+}
+.gantt__task-circle {
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	border: 2px solid;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: all 0.15s ease;
+}
+.gantt__task-circle:hover {
+	transform: scale(1.3);
+}
+.gantt__task-circle--done {
+	opacity: 0.5;
 }
 
 /* ── Today line ── */

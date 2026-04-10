@@ -12,6 +12,7 @@ const emit = defineEmits<{
 
 const route = useRoute()
 const config = useRuntimeConfig()
+const { logout } = useLogout()
 const { currentContext } = useContextualHat()
 
 // ── Sidebar state (default collapsed on desktop) ──
@@ -218,6 +219,17 @@ watch(() => route.path, () => {
 					<Icon name="lucide:building-2" class="w-4 h-4 shrink-0" />
 					<span v-if="!sidebarCollapsed" class="text-[13px]">Organization</span>
 				</NuxtLink>
+
+				<!-- Logout -->
+				<button
+					@click="logout"
+					class="nav-item w-full"
+					:class="{ 'justify-center': sidebarCollapsed, 'has-tooltip': sidebarCollapsed }"
+					:data-tooltip="sidebarCollapsed ? 'Logout' : undefined"
+				>
+					<Icon name="lucide:log-out" class="w-4 h-4 shrink-0" />
+					<span v-if="!sidebarCollapsed" class="text-[13px]">Logout</span>
+				</button>
 
 				<!-- Collapse toggle -->
 				<button

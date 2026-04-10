@@ -266,9 +266,9 @@ onMounted(() => {
 </script>
 
 <template>
-	<div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+	<div class="ios-card overflow-hidden">
 		<!-- Header -->
-		<div class="flex items-center justify-between p-4 border-b border-gray-100 dark:border-gray-700">
+		<div class="flex items-center justify-between p-4 border-b border-border/30">
 			<div class="flex items-center gap-2">
 				<UIcon name="i-heroicons-chart-bar" class="w-5 h-5 text-green-500" />
 				<h3 class="text-sm font-semibold uppercase tracking-wide">Financial Analysis</h3>
@@ -299,7 +299,7 @@ onMounted(() => {
 		</div>
 
 		<!-- Goal Editor -->
-		<div v-if="editingGoals" class="p-4 bg-blue-50/50 dark:bg-blue-900/10 border-b border-gray-100 dark:border-gray-700">
+		<div v-if="editingGoals" class="p-4 bg-blue-50/50 dark:bg-blue-900/10 border-b border-border/30">
 			<p class="text-xs text-gray-500 mb-3">Set quarterly revenue goals:</p>
 			<div class="grid grid-cols-4 gap-3">
 				<div v-for="(_, idx) in goalInputs" :key="idx">
@@ -323,7 +323,7 @@ onMounted(() => {
 		</div>
 
 		<!-- How It Works -->
-		<div v-if="showHelp" class="p-4 bg-gray-50/80 dark:bg-gray-700/30 border-b border-gray-100 dark:border-gray-700 text-xs text-gray-600 dark:text-gray-400 space-y-2">
+		<div v-if="showHelp" class="p-4 bg-gray-50/80 dark:bg-gray-700/30 border-b border-border/30 text-xs text-gray-600 dark:text-gray-400 space-y-2">
 			<p class="font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide text-[10px] mb-2">How financials are calculated</p>
 			<ul class="space-y-1.5 list-none">
 				<li><span class="font-medium text-gray-700 dark:text-gray-300">Total Billed</span> &mdash; The sum of all invoice amounts for the selected year.</li>
@@ -339,7 +339,7 @@ onMounted(() => {
 		</div>
 
 		<div v-else class="p-4">
-			<!-- Yearly Summary -->
+			<!-- Yearly Summary (full width) -->
 			<div class="grid grid-cols-5 gap-3 mb-6 text-center">
 				<div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
 					<p class="text-lg font-bold text-gray-900 dark:text-white">{{ formatCurrency(yearlyActual) }}</p>
@@ -363,6 +363,9 @@ onMounted(() => {
 				</div>
 			</div>
 
+			<!-- Two-column layout: Chart+Projection | Quarters+Expenses -->
+			<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+			<div>
 			<!-- Monthly Income vs Expenses Chart -->
 			<div v-if="monthlyData.length > 0" class="mb-6">
 				<p class="text-[10px] text-gray-500 uppercase tracking-wider mb-3 font-semibold">Monthly Income vs Expenses</p>
@@ -412,6 +415,8 @@ onMounted(() => {
 				</div>
 			</div>
 
+			</div><!-- /left column -->
+			<div>
 			<!-- Quarter Breakdown -->
 			<div class="space-y-4">
 				<div
@@ -509,6 +514,8 @@ onMounted(() => {
 					</div>
 				</div>
 			</div>
+			</div><!-- /right column -->
+			</div><!-- /two-column grid -->
 		</div>
 	</div>
 </template>

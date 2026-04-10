@@ -90,16 +90,7 @@
 								<div class="flex-1 min-w-0">
 									<div class="flex items-center gap-2 mb-1">
 										<p class="text-sm font-medium text-foreground">Meeting with {{ getHostName(request) }}</p>
-										<span
-											class="text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded-full"
-											:class="{
-												'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400': request.request_status === 'approved',
-												'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400': request.request_status === 'rejected',
-												'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400': request.request_status === 'pending' || !request.request_status,
-											}"
-										>
-											{{ request.request_status || 'pending' }}
-										</span>
+										<UiStatusBadge :status="request.request_status || 'pending'" />
 									</div>
 									<div class="flex items-center gap-3 text-[11px] text-muted-foreground">
 										<span class="flex items-center gap-1">
@@ -205,42 +196,10 @@
 
 				<!-- Stats Row -->
 				<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-					<div class="ios-card p-3.5 flex items-center gap-3">
-						<div class="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-xl bg-blue-100/60 dark:bg-blue-900/20">
-							<UIcon name="i-heroicons-calendar" class="w-4 h-4 text-blue-500" />
-						</div>
-						<div>
-							<p class="text-lg font-bold text-foreground tabular-nums">{{ stats.upcoming }}</p>
-							<p class="text-[10px] text-muted-foreground uppercase tracking-wide">Upcoming</p>
-						</div>
-					</div>
-					<div class="ios-card p-3.5 flex items-center gap-3">
-						<div class="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-xl bg-emerald-100/60 dark:bg-emerald-900/20">
-							<UIcon name="i-heroicons-video-camera" class="w-4 h-4 text-emerald-500" />
-						</div>
-						<div>
-							<p class="text-lg font-bold text-foreground tabular-nums">{{ stats.videoMeetings }}</p>
-							<p class="text-[10px] text-muted-foreground uppercase tracking-wide">Video</p>
-						</div>
-					</div>
-					<div class="ios-card p-3.5 flex items-center gap-3">
-						<div class="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-xl bg-amber-100/60 dark:bg-amber-900/20">
-							<UIcon name="i-heroicons-arrow-path" class="w-4 h-4 text-amber-500" />
-						</div>
-						<div>
-							<p class="text-lg font-bold text-foreground tabular-nums">{{ stats.followUps }}</p>
-							<p class="text-[10px] text-muted-foreground uppercase tracking-wide">Follow-ups</p>
-						</div>
-					</div>
-					<div class="ios-card p-3.5 flex items-center gap-3">
-						<div class="w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-xl bg-muted/60">
-							<UIcon name="i-heroicons-inbox" class="w-4 h-4 text-muted-foreground" />
-						</div>
-						<div>
-							<p class="text-lg font-bold text-foreground tabular-nums">{{ stats.pending }}</p>
-							<p class="text-[10px] text-muted-foreground uppercase tracking-wide">Requests</p>
-						</div>
-					</div>
+					<UiStatCard label="Upcoming" :value="stats.upcoming" />
+					<UiStatCard label="Video" :value="stats.videoMeetings" />
+					<UiStatCard label="Follow-ups" :value="stats.followUps" />
+					<UiStatCard label="Requests" :value="stats.pending" />
 				</div>
 
 				<!-- Filter toggles -->

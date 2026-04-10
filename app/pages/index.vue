@@ -616,16 +616,16 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 					<EarnestTeamLeaderboard />
 				</div>
 
-				<!-- Bottom Section: Chat + CardDesk + Financials -->
+				<!-- Bottom Section: Chat + CardDesk -->
 				<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 					<div class="h-[500px]">
 						<CommandCenterRealtimeChat />
 					</div>
-					<div class="space-y-6">
-						<CommandCenterCardDeskPipeline />
-						<CommandCenterFinancialQuarter />
-					</div>
+					<CommandCenterCardDeskPipeline />
 				</div>
+
+				<!-- Financial Analysis (full width) -->
+				<CommandCenterFinancialQuarter />
 
 				</div><!-- /Commander tab -->
 
