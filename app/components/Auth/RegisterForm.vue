@@ -148,7 +148,7 @@ const inputClass = "w-full rounded-lg border bg-background px-3 py-2.5 text-sm f
                 id="firstName"
                 type="text"
                 v-bind="field"
-                :class="[inputClass, errors.length ? 'border-red-300' : 'border-border']"
+                :class="[inputClass, errors.length ? 'border-red-300 dark:border-red-700' : 'border-border']"
               />
               <p v-if="errors.length" class="text-xs text-red-500">{{ errors[0] }}</p>
             </div>
@@ -161,7 +161,7 @@ const inputClass = "w-full rounded-lg border bg-background px-3 py-2.5 text-sm f
                 id="lastName"
                 type="text"
                 v-bind="field"
-                :class="[inputClass, errors.length ? 'border-red-300' : 'border-border']"
+                :class="[inputClass, errors.length ? 'border-red-300 dark:border-red-700' : 'border-border']"
               />
               <p v-if="errors.length" class="text-xs text-red-500">{{ errors[0] }}</p>
             </div>
@@ -176,7 +176,7 @@ const inputClass = "w-full rounded-lg border bg-background px-3 py-2.5 text-sm f
               type="email"
               placeholder="you@example.com"
               v-bind="field"
-              :class="[inputClass, errors.length ? 'border-red-300' : 'border-border']"
+              :class="[inputClass, errors.length ? 'border-red-300 dark:border-red-700' : 'border-border']"
             />
             <p v-if="errors.length" class="text-xs text-red-500">{{ errors[0] }}</p>
           </div>
@@ -205,7 +205,7 @@ const inputClass = "w-full rounded-lg border bg-background px-3 py-2.5 text-sm f
               id="reg-password"
               type="password"
               v-bind="field"
-              :class="[inputClass, errors.length ? 'border-red-300' : 'border-border']"
+              :class="[inputClass, errors.length ? 'border-red-300 dark:border-red-700' : 'border-border']"
             />
             <p v-if="errors.length" class="text-xs text-red-500">{{ errors[0] }}</p>
 
@@ -215,7 +215,7 @@ const inputClass = "w-full rounded-lg border bg-background px-3 py-2.5 text-sm f
                   v-for="req in passwordRequirements"
                   :key="req.label"
                   class="flex items-center gap-1.5 text-[11px]"
-                  :class="req.met ? 'text-green-600' : 'text-muted-foreground'"
+                  :class="req.met ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'"
                 >
                   <Check v-if="req.met" class="h-3 w-3" />
                   <X v-else class="h-3 w-3" />
@@ -233,7 +233,7 @@ const inputClass = "w-full rounded-lg border bg-background px-3 py-2.5 text-sm f
               id="confirmPassword"
               type="password"
               v-bind="field"
-              :class="[inputClass, errors.length ? 'border-red-300' : 'border-border']"
+              :class="[inputClass, errors.length ? 'border-red-300 dark:border-red-700' : 'border-border']"
             />
             <p v-if="errors.length" class="text-xs text-red-500">{{ errors[0] }}</p>
           </div>
@@ -256,13 +256,13 @@ const inputClass = "w-full rounded-lg border bg-background px-3 py-2.5 text-sm f
                 <span class="w-full border-t border-border/50" />
               </div>
               <div class="relative flex justify-center text-xs">
-                <span class="bg-white/80 px-3 text-muted-foreground rounded">or</span>
+                <span class="bg-white/80 dark:bg-card/80 px-3 text-muted-foreground rounded">or</span>
               </div>
             </div>
 
             <div
               v-if="googleRegError"
-              class="flex items-center gap-2 p-3 text-sm text-red-700 bg-red-50 border border-red-200/50 rounded-lg"
+              class="flex items-center gap-2 p-3 text-sm text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/40 border border-red-200/50 dark:border-red-800/50 rounded-lg"
             >
               <X class="h-4 w-4 flex-shrink-0" />
               <span>{{ googleRegError }}</span>
@@ -271,7 +271,7 @@ const inputClass = "w-full rounded-lg border bg-background px-3 py-2.5 text-sm f
             <button
               type="button"
               :disabled="isGoogleRegistering || isSubmitting"
-              class="w-full flex items-center justify-center gap-2 rounded-lg border border-border bg-white px-4 py-2.5 text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-40"
+              class="w-full flex items-center justify-center gap-2 rounded-lg border border-border bg-white dark:bg-card px-4 py-2.5 text-sm font-medium hover:bg-gray-50 dark:hover:bg-muted transition-colors disabled:opacity-40"
               @click="registerWithGoogle"
             >
               <Loader2 v-if="isGoogleRegistering" class="h-4 w-4 animate-spin" />

@@ -107,7 +107,7 @@ const onSubmit = handleSubmit(async (values) => {
         >
           <div
             v-if="formError"
-            class="flex items-center gap-2 p-3 text-sm text-red-700 bg-red-50 border border-red-200/50 rounded-lg"
+            class="flex items-center gap-2 p-3 text-sm text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/40 border border-red-200/50 dark:border-red-800/50 rounded-lg"
           >
             <AlertCircle class="h-4 w-4 flex-shrink-0" />
             <span>{{ formError }}</span>
@@ -171,14 +171,14 @@ const onSubmit = handleSubmit(async (values) => {
                 <span class="w-full border-t border-border/50" />
               </div>
               <div class="relative flex justify-center text-xs">
-                <span class="bg-white/80 px-3 text-muted-foreground rounded">or</span>
+                <span class="bg-white/80 dark:bg-card/80 px-3 text-muted-foreground rounded">or</span>
               </div>
             </div>
 
             <div :class="ssoProviders.apple ? 'grid grid-cols-2 gap-2' : ''">
               <a
                 :href="ssoProviders.google"
-                class="flex items-center justify-center gap-2 rounded-lg border border-border bg-white px-4 py-2.5 text-sm font-medium hover:bg-gray-50 transition-colors"
+                class="flex items-center justify-center gap-2 rounded-lg border border-border bg-white dark:bg-card px-4 py-2.5 text-sm font-medium hover:bg-gray-50 dark:hover:bg-muted transition-colors"
               >
                 <svg class="h-4 w-4" viewBox="0 0 24 24">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
@@ -191,7 +191,7 @@ const onSubmit = handleSubmit(async (values) => {
               <a
                 v-if="ssoProviders.apple"
                 :href="ssoProviders.apple"
-                class="flex items-center justify-center gap-2 rounded-lg border border-border bg-white px-4 py-2.5 text-sm font-medium hover:bg-gray-50 transition-colors"
+                class="flex items-center justify-center gap-2 rounded-lg border border-border bg-white dark:bg-card px-4 py-2.5 text-sm font-medium hover:bg-gray-50 dark:hover:bg-muted transition-colors"
               >
                 <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>

@@ -39,7 +39,7 @@ const onSubmit = handleSubmit(async (values) => {
 
 <template>
   <div :class="cn('flex flex-col gap-6 w-full max-w-sm', props.class)">
-    <div class="glass rounded-2xl border border-white/40 shadow-lg backdrop-blur-xl p-8">
+    <div class="glass rounded-2xl border border-white/40 dark:border-white/10 shadow-lg backdrop-blur-xl p-8">
       <!-- Header -->
       <div class="text-center mb-6">
         <h3 class="text-xl font-semibold">Reset password</h3>
@@ -51,8 +51,8 @@ const onSubmit = handleSubmit(async (values) => {
       <!-- Success state -->
       <template v-if="isSuccess">
         <div class="flex flex-col items-center justify-center py-6 text-center">
-          <div class="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center mb-4">
-            <CheckCircle2 class="h-6 w-6 text-green-500" />
+          <div class="w-12 h-12 rounded-full bg-green-50 dark:bg-green-950/40 flex items-center justify-center mb-4">
+            <CheckCircle2 class="h-6 w-6 text-green-500 dark:text-green-400" />
           </div>
           <h4 class="text-base font-semibold mb-1">Check your email</h4>
           <p class="text-sm text-muted-foreground mb-6">

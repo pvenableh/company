@@ -183,7 +183,7 @@ const onSubmit = handleSubmit(async (values) => {
                         v-for="req in passwordRequirements"
                         :key="req.label"
                         class="flex items-center gap-1"
-                        :class="req.met ? 'text-green-600' : 'text-muted-foreground'"
+                        :class="req.met ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'"
                       >
                         <Check v-if="req.met" class="h-3 w-3" />
                         <X v-else class="h-3 w-3" />

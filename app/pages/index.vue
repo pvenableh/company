@@ -5,10 +5,9 @@ useHead({ title: 'Home | Earnest' });
 const { user } = useDirectusAuth();
 const config = useRuntimeConfig();
 
-// Redirect unauthenticated users to the marketing site
+// Redirect unauthenticated users to login
 if (!user.value) {
-	const marketingUrl = config.public.marketingUrl || 'https://earnest.guru';
-	await navigateTo(marketingUrl, { external: true });
+	await navigateTo('/auth/signin');
 }
 
 const layout = 'default';
@@ -287,7 +286,7 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 							<UIcon name="i-heroicons-chart-bar" class="w-5 h-5 text-primary" />
 							<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70">Project Timeline</h3>
 						</div>
-						<ProjectTimelineUnifiedGantt />
+						<ProjectTimelineUnifiedGantt compact />
 					</div>
 				</ClientOnly>
 

@@ -1,15 +1,19 @@
 <script setup lang="ts">
 /**
- * UnifiedGantt — Asana-style Gantt chart with:
- *   - Left sidebar: project/event/ticket/task list
- *   - Right panel: horizontal bars on time grid
- *   - Dependency arrows between related items
- *   - Today marker, zoom, expand/collapse
+ * UnifiedGantt — Clean, minimal project timeline
+ * Fixed label column + horizontally scrollable track.
+ * Labels stay pinned left, scroll vertically with chart.
  */
 
 import type { ProjectWithRelations, ProjectEventWithRelations } from '~~/shared/projects';
 import { getEventTimelineDate } from '~~/shared/projects';
 
+// ── Props ──
+const props = defineProps<{
+	compact?: boolean;
+}>();
+
+// ── Data composables ──
 const {
 	viewMode,
 	setViewMode,
@@ -18,41 +22,43 @@ const {
 	fetchAll,
 	ticketsByProject,
 	personalTasks,
-	unassignedTickets,
 } = useUnifiedTimeline();
 
 const { projects, loading: projectsLoading, error, fetchProjects } = useProjectTimeline();
+const { user: authUser } = useDirectusAuth();
+const { selectedOrg } = useOrganization();
+const { selectedClient } = useClients();
+const { canEdit } = useOrgRole();
 
-const ROW_HEIGHT = 36;
-const HEADER_HEIGHT = 48;
-const SIDEBAR_WIDTH = 280;
+const canEditProjects = computed(() => canEdit('projects'));
+const canEditEvents = computed(() => canEdit('projects')); // events are part of projects
 
-const zoom = ref(2);
-const scrollContainer = ref<HTMLElement | null>(null);
-const sidebarScroll = ref<HTMLElement | null>(null);
+// ── Constants ──
+const ROW_HEIGHT = 32;
+const HEADER_HEIGHT = 52; // 24px quarter row + 28px month row
+const LABEL_WIDTH = 180;
+
+const scrollWrapper = ref<HTMLElement | null>(null);
 const expandedProjects = ref<Set<string>>(new Set());
 const selectedEventId = ref<string | null>(null);
 const showEventDetail = ref(false);
 
-// ── Sidebar toggle (hidden by default, persisted) ──
-const SIDEBAR_STORAGE_KEY = 'earnest-gantt-sidebar';
-const showSidebar = ref(false);
-if (import.meta.client) {
-	const stored = localStorage.getItem(SIDEBAR_STORAGE_KEY);
-	if (stored !== null) showSidebar.value = stored === 'true';
-}
-function toggleSidebar() {
-	showSidebar.value = !showSidebar.value;
-	if (import.meta.client) localStorage.setItem(SIDEBAR_STORAGE_KEY, String(showSidebar.value));
-}
+const loading = computed(() => projectsLoading.value || unifiedLoading.value);
 
-// ── Status color helpers ──
-function statusColor(status?: string): string {
+// ── Quarter label ──
+const quarterLabel = computed(() => {
+	const now = new Date();
+	const q = Math.ceil((now.getMonth() + 1) / 3);
+	return `Q${q} ${now.getFullYear()}`;
+});
+
+// ── Status helpers ──
+function getBarOpacity(status?: string): number {
 	const s = status?.toLowerCase().replace(/\s+/g, '') || '';
-	if (s === 'completed' || s === 'done') return '#22c55e';
-	if (s === 'inprogress' || s === 'active') return '#3b82f6';
-	if (s === 'scheduled' || s === 'pending') return '#f59e0b';
-	return '#9ca3af';
+	if (s === 'completed' || s === 'done' || s === 'archived') return 0.3;
+	if (s === 'inprogress' || s === 'active') return 1;
+	if (s === 'scheduled' || s === 'pending') return 0.6;
+	return 0.7;
 }
 
 function statusLabel(status?: string): string {
@@ -64,12 +70,6 @@ function statusLabel(status?: string): string {
 }
 
 // ── Data fetching ──
-const { user: authUser } = useDirectusAuth();
-const { selectedOrg } = useOrganization();
-const { selectedClient } = useClients();
-
-const loading = computed(() => projectsLoading.value || unifiedLoading.value);
-
 async function fetchAllData() {
 	await Promise.all([fetchProjects(), fetchAll()]);
 }
@@ -86,10 +86,9 @@ watch(
 
 onMounted(() => {
 	if (authUser.value?.id) fetchAllData();
-	// Auto-expand all projects initially
-	nextTick(() => {
-		for (const p of projects.value) expandedProjects.value.add(p.id);
-	});
+	// Start in nested mode
+	setViewMode('nested');
+	// Start collapsed — don't add to expandedProjects
 });
 
 // ── Expand / collapse ──
@@ -101,6 +100,72 @@ function toggleProject(id: string) {
 
 function expandAll() {
 	expandedProjects.value = new Set(projects.value.map(p => p.id));
+}
+
+// ── Sort helper: earliest date for a project ──
+function getEarliestDate(project: ProjectWithRelations): number {
+	const dates: number[] = [];
+	if (project.start_date) dates.push(new Date(project.start_date).getTime());
+	if (project.completion_date) dates.push(new Date(project.completion_date).getTime());
+	const events = (project.events || []) as ProjectEventWithRelations[];
+	for (const e of events) {
+		const d = getEventTimelineDate(e);
+		if (d) dates.push(new Date(d).getTime());
+	}
+	return dates.length > 0 ? Math.min(...dates) : Infinity;
+}
+
+// ── Filter out dateless projects, sort the rest ──
+function projectHasDates(project: ProjectWithRelations): boolean {
+	if (project.start_date || project.completion_date) return true;
+	const events = (project.events || []) as ProjectEventWithRelations[];
+	for (const e of events) {
+		if (getEventTimelineDate(e) || e.end_date) return true;
+	}
+	const tickets = ticketsByProject.value.get(project.id) || [];
+	for (const t of tickets) {
+		if (t.date_created || t.due_date) return true;
+	}
+	return false;
+}
+
+const sortedProjects = computed(() => {
+	return [...projects.value]
+		.filter(p => projectHasDates(p))
+		.filter(p => {
+			if (showCompleted.value) return true;
+			const s = p.status?.toLowerCase().replace(/\s+/g, '') || '';
+			return s !== 'completed' && s !== 'done' && s !== 'archived';
+		})
+		.sort((a, b) => {
+			const sp = statusPriority(a.status) - statusPriority(b.status);
+			if (sp !== 0) return sp;
+			return getEarliestDate(b) - getEarliestDate(a); // newest first within group
+		});
+});
+
+const undatedProjects = computed(() => {
+	return projects.value.filter(p => !projectHasDates(p));
+});
+
+const showCompleted = ref(false);
+
+const completedProjectCount = computed(() => {
+	return projects.value.filter(p => {
+		if (!projectHasDates(p)) return false;
+		const s = p.status?.toLowerCase().replace(/\s+/g, '') || '';
+		return s === 'completed' || s === 'done' || s === 'archived';
+	}).length;
+});
+
+// ── Status priority for sorting (active first, completed last) ──
+function statusPriority(status?: string): number {
+	const s = status?.toLowerCase().replace(/\s+/g, '') || '';
+	if (s === 'inprogress' || s === 'active') return 0;
+	if (s === 'scheduled' || s === 'pending' || s === 'planned') return 1;
+	if (s === 'completed' || s === 'done') return 2;
+	if (s === 'archived') return 3;
+	return 1; // default to scheduled-level
 }
 
 // ── Build flat row list ──
@@ -125,13 +190,11 @@ const rows = computed<GanttRow[]>(() => {
 	const isNested = viewMode.value === 'nested';
 
 	if (isNested) {
-		// ── NESTED: Projects as parents, events/tickets as expandable children ──
-		for (const project of projects.value) {
+		for (const project of sortedProjects.value) {
 			const isExpanded = expandedProjects.value.has(project.id);
 			const events = (project.events || []) as ProjectEventWithRelations[];
 			const tickets = ticketsByProject.value.get(project.id) || [];
 			const childCount = events.length + tickets.length;
-
 			const projectColor = project.service?.color || '#d4d4d8';
 
 			result.push({
@@ -149,7 +212,13 @@ const rows = computed<GanttRow[]>(() => {
 			});
 
 			if (isExpanded) {
-				for (const event of events) {
+				// Sort events by date
+				const sortedEvents = [...events].sort((a, b) => {
+					const aDate = getEventTimelineDate(a);
+					const bDate = getEventTimelineDate(b);
+					return (aDate ? new Date(aDate).getTime() : 0) - (bDate ? new Date(bDate).getTime() : 0);
+				});
+				for (const event of sortedEvents) {
 					const eventDate = getEventTimelineDate(event);
 					result.push({
 						id: event.id,
@@ -162,6 +231,20 @@ const rows = computed<GanttRow[]>(() => {
 						projectId: project.id,
 						status: event.status,
 					});
+					// Tasks under this event (depth 2)
+					const eventTasks = (event as any).tasks || [];
+					for (const task of eventTasks) {
+						result.push({
+							id: task.id,
+							label: task.title || 'Task',
+							type: 'task',
+							depth: 2,
+							color: projectColor,
+							status: task.completed ? 'Completed' : 'In Progress',
+							dueDate: task.due_date,
+							projectId: project.id,
+						});
+					}
 				}
 				for (const ticket of tickets) {
 					result.push({
@@ -180,9 +263,7 @@ const rows = computed<GanttRow[]>(() => {
 			}
 		}
 	} else {
-		// ── FLAT: All items at the same level, grouped by type ──
-		// Projects
-		for (const project of projects.value) {
+		for (const project of sortedProjects.value) {
 			result.push({
 				id: project.id,
 				label: project.title || 'Untitled Project',
@@ -195,7 +276,6 @@ const rows = computed<GanttRow[]>(() => {
 				link: `/projects/${project.id}`,
 			});
 		}
-		// All tickets (flat, not grouped by project)
 		for (const ticket of timelineData.value.tickets) {
 			result.push({
 				id: ticket.id,
@@ -211,7 +291,6 @@ const rows = computed<GanttRow[]>(() => {
 		}
 	}
 
-	// Personal tasks (both views)
 	if (personalTasks.value.length > 0) {
 		result.push({
 			id: 'tasks-section',
@@ -239,6 +318,8 @@ const rows = computed<GanttRow[]>(() => {
 	return result;
 });
 
+const filteredRows = computed(() => rows.value);
+
 // ── Date range ──
 const dateRange = computed(() => {
 	let min = Infinity;
@@ -265,8 +346,7 @@ const dateRange = computed(() => {
 	return { start: new Date(min - padding), end: new Date(max + padding) };
 });
 
-const chartWidth = computed(() => Math.max(1200, 1400 * zoom.value));
-const chartHeight = computed(() => filteredRows.value.length * ROW_HEIGHT + HEADER_HEIGHT);
+const chartWidth = computed(() => 2200);
 
 function dateToX(dateStr: string | undefined): number {
 	if (!dateStr) return 0;
@@ -294,10 +374,48 @@ const monthLabels = computed(() => {
 		labels.push({
 			x,
 			width: x2 - x,
-			text: current.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+			text: current.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
 			isCurrentMonth: current.getMonth() === now.getMonth() && current.getFullYear() === now.getFullYear(),
 		});
 		current.setMonth(current.getMonth() + 1);
+	}
+	return labels;
+});
+
+// ── Quarter labels ──
+const quarterLabels = computed(() => {
+	const labels: { x: number; width: number; text: string; isCurrent: boolean }[] = [];
+	const now = new Date();
+	const currentQ = Math.ceil((now.getMonth() + 1) / 3);
+	const currentYear = now.getFullYear();
+
+	// Start from the quarter containing dateRange.start
+	const startMonth = dateRange.value.start.getMonth();
+	const startYear = dateRange.value.start.getFullYear();
+	const firstQ = Math.ceil((startMonth + 1) / 3);
+
+	let q = firstQ;
+	let y = startYear;
+
+	while (true) {
+		const qStartMonth = (q - 1) * 3; // 0, 3, 6, 9
+		const qStart = new Date(y, qStartMonth, 1);
+		const qEnd = new Date(y, qStartMonth + 3, 1);
+
+		if (qStart > dateRange.value.end) break;
+
+		const x = dateToX(qStart.toISOString());
+		const x2 = dateToX(qEnd.toISOString());
+
+		labels.push({
+			x,
+			width: x2 - x,
+			text: `Q${q} ${y}`,
+			isCurrent: q === currentQ && y === currentYear,
+		});
+
+		q++;
+		if (q > 4) { q = 1; y++; }
 	}
 	return labels;
 });
@@ -319,79 +437,73 @@ function hasBar(row: GanttRow) {
 	return row.startDate || row.endDate || row.dueDate;
 }
 
-// ── Scroll sync ──
-function syncScroll(e: Event) {
-	const target = e.target as HTMLElement;
-	if (sidebarScroll.value) {
-		sidebarScroll.value.scrollTop = target.scrollTop;
+// ── Overflow bar: grey extension showing child dates outside project dates ──
+function getOverflowStyle(row: GanttRow): { left: string; width: string } | null {
+	if (row.type !== 'project' || row.depth !== 0) return null;
+	if (!row.startDate && !row.endDate) return null;
+
+	const project = projects.value.find(p => p.id === row.id);
+	if (!project) return null;
+
+	const events = (project.events || []) as ProjectEventWithRelations[];
+	const tickets = ticketsByProject.value.get(project.id) || [];
+
+	let childMin = Infinity;
+	let childMax = -Infinity;
+
+	for (const e of events) {
+		const d = getEventTimelineDate(e);
+		if (d) { const t = new Date(d).getTime(); if (t < childMin) childMin = t; if (t > childMax) childMax = t; }
+		if (e.end_date) { const t = new Date(e.end_date).getTime(); if (t > childMax) childMax = t; }
 	}
+	for (const tk of tickets) {
+		if (tk.date_created) { const t = new Date(tk.date_created).getTime(); if (t < childMin) childMin = t; }
+		if (tk.due_date) { const t = new Date(tk.due_date).getTime(); if (t > childMax) childMax = t; }
+	}
+
+	if (childMin === Infinity || childMax === -Infinity) return null;
+
+	const projStart = row.startDate ? new Date(row.startDate).getTime() : Infinity;
+	const projEnd = row.endDate ? new Date(row.endDate).getTime() : -Infinity;
+
+	// Only show overflow if children extend beyond project dates
+	const overflowStart = Math.min(childMin, projStart);
+	const overflowEnd = Math.max(childMax, projEnd);
+
+	if (overflowStart >= projStart && overflowEnd <= projEnd) return null; // no overflow
+
+	const left = dateToX(new Date(overflowStart).toISOString());
+	const right = dateToX(new Date(overflowEnd).toISOString());
+	const width = Math.max(right - left, 4);
+
+	return { left: `${left}px`, width: `${width}px` };
 }
 
 // ── Scroll to today ──
 function scrollToToday() {
 	nextTick(() => {
-		if (!scrollContainer.value) return;
-		const containerWidth = scrollContainer.value.clientWidth;
-		scrollContainer.value.scrollLeft = Math.max(0, todayX.value - containerWidth / 3);
+		if (!scrollWrapper.value) return;
+		const containerWidth = scrollWrapper.value.clientWidth;
+		scrollWrapper.value.scrollTo({
+			left: Math.max(0, todayX.value - containerWidth / 3),
+			behavior: 'smooth',
+		});
 	});
 }
 
 watch(() => projects.value.length, (len) => {
 	if (len > 0) {
-		expandAll();
+		// Start collapsed — just scroll to today
 		scrollToToday();
 	}
 });
 
-// ── Zoom ──
-function handleZoomIn() { zoom.value = Math.min(zoom.value + 0.5, 5); }
-function handleZoomOut() { zoom.value = Math.max(zoom.value - 0.5, 1); }
-
-// ── Type filters ──
-const activeTypeFilters = ref<Set<string>>(new Set(['project', 'event', 'ticket', 'task']));
-
-const typeFilterOptions = [
-	{ key: 'project', label: 'Projects', icon: 'lucide:folder', color: 'text-primary', bg: 'bg-primary/10', activeBg: 'bg-primary/15' },
-	{ key: 'event', label: 'Events', icon: 'lucide:calendar', color: 'text-cyan-500', bg: 'bg-cyan-500/10', activeBg: 'bg-cyan-500/15' },
-	{ key: 'ticket', label: 'Tickets', icon: 'lucide:ticket', color: 'text-amber-500', bg: 'bg-amber-500/10', activeBg: 'bg-amber-500/15' },
-	{ key: 'task', label: 'Tasks', icon: 'lucide:check-square', color: 'text-purple-500', bg: 'bg-purple-500/10', activeBg: 'bg-purple-500/15' },
-];
-
-function toggleTypeFilter(type: string) {
-	const s = new Set(activeTypeFilters.value);
-	if (s.has(type)) {
-		// Don't allow deselecting all
-		if (s.size > 1) s.delete(type);
-	} else {
-		s.add(type);
-	}
-	activeTypeFilters.value = s;
+// ── Friendly date ──
+function getFriendlyDate(dateStr?: string): string {
+	if (!dateStr) return '';
+	const d = new Date(dateStr);
+	return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
-
-const typeCounts = computed(() => {
-	const counts: Record<string, number> = { project: 0, event: 0, ticket: 0, task: 0 };
-	for (const row of rows.value) {
-		if (counts[row.type] !== undefined) counts[row.type]++;
-	}
-	return counts;
-});
-
-const filteredRows = computed(() => {
-	const filters = activeTypeFilters.value;
-	// If all filters are active, skip filtering
-	if (filters.size === 4) return rows.value;
-
-	return rows.value.filter(row => {
-		// Always show projects if any of their children are visible
-		if (row.type === 'project' && filters.has('project')) return true;
-		if (row.type === 'project' && !filters.has('project')) {
-			// Still show project header if it has visible children
-			if (row.expanded && (filters.has('event') || filters.has('ticket'))) return true;
-			return false;
-		}
-		return filters.has(row.type);
-	});
-});
 
 // ── Event detail ──
 const selectedEvent = computed<ProjectEventWithRelations | null>(() => {
@@ -411,13 +523,61 @@ const selectedEventProject = computed<ProjectWithRelations | null>(() => {
 	return null;
 });
 
-function getProjectServiceName(projectId: string): string {
-	const project = projects.value.find(p => p.id === projectId);
-	return project?.service?.name || 'No service';
-}
+// ── Project preview modal ──
+const showProjectPreview = ref(false);
+const selectedProjectId = ref<string | null>(null);
+
+const selectedProject = computed<ProjectWithRelations | null>(() => {
+	if (!selectedProjectId.value) return null;
+	return projects.value.find(p => p.id === selectedProjectId.value) || null;
+});
+
+const selectedProjectChildCount = computed(() => {
+	if (!selectedProject.value) return { events: 0, tickets: 0 };
+	const events = (selectedProject.value.events || []).length;
+	const tickets = (ticketsByProject.value.get(selectedProject.value.id) || []).length;
+	return { events, tickets };
+});
+
+const selectedProjectChildren = computed(() => {
+	if (!selectedProject.value) return [];
+	const items: { id: string; label: string; type: 'event' | 'ticket'; date?: string; status?: string; link?: string }[] = [];
+	const events = (selectedProject.value.events || []) as ProjectEventWithRelations[];
+	for (const e of events) {
+		items.push({
+			id: e.id,
+			label: e.title || e.name || 'Event',
+			type: 'event',
+			date: getEventTimelineDate(e) || undefined,
+			status: e.status,
+		});
+	}
+	const tickets = ticketsByProject.value.get(selectedProject.value.id) || [];
+	for (const t of tickets) {
+		items.push({
+			id: t.id,
+			label: t.title || 'Ticket',
+			type: 'ticket',
+			date: t.due_date || t.date_created,
+			status: t.status,
+			link: `/tickets/${t.id}`,
+		});
+	}
+	// Sort by date
+	items.sort((a, b) => {
+		if (!a.date) return 1;
+		if (!b.date) return -1;
+		return new Date(a.date).getTime() - new Date(b.date).getTime();
+	});
+	return items;
+});
 
 function handleRowClick(row: GanttRow) {
-	if (row.type === 'event') {
+	if (row.type === 'project' && row.depth === 0 && row.id !== 'tasks-section') {
+		// Open project preview modal
+		selectedProjectId.value = row.id;
+		showProjectPreview.value = true;
+	} else if (row.type === 'event') {
 		selectedEventId.value = row.id;
 		showEventDetail.value = true;
 	} else if (row.link) {
@@ -425,655 +585,873 @@ function handleRowClick(row: GanttRow) {
 	}
 }
 
+function closeProjectPreview() {
+	showProjectPreview.value = false;
+	selectedProjectId.value = null;
+}
+
 function handleCloseDetail() {
 	showEventDetail.value = false;
 	selectedEventId.value = null;
 }
+
+// ── Editable event fields ──
+const eventItems = useDirectusItems('project_events');
+const eventForm = reactive({ title: '', description: '', start_date: '', end_date: '', status: '' });
+const savingEvent = ref(false);
+
+watch(selectedEvent, (e) => {
+	if (e) {
+		eventForm.title = e.title || e.name || '';
+		eventForm.description = e.description || '';
+		eventForm.start_date = e.start_date?.split('T')[0] || '';
+		eventForm.end_date = e.end_date?.split('T')[0] || '';
+		eventForm.status = e.status || '';
+	}
+});
+
+async function saveEventChanges() {
+	if (!selectedEventId.value) return;
+	savingEvent.value = true;
+	try {
+		await eventItems.update(selectedEventId.value, {
+			title: eventForm.title || undefined,
+			description: eventForm.description || undefined,
+			start_date: eventForm.start_date || undefined,
+			end_date: eventForm.end_date || undefined,
+			status: eventForm.status || undefined,
+		});
+		await fetchAllData();
+		handleCloseDetail();
+	} catch (err) {
+		console.error('Failed to update event:', err);
+	} finally {
+		savingEvent.value = false;
+	}
+}
+
+// ── Editable project fields ──
+const projectItems = useDirectusItems('projects');
+const projectForm = reactive({ title: '', description: '', start_date: '', completion_date: '', status: '' });
+const savingProject = ref(false);
+
+watch(selectedProject, (p) => {
+	if (p) {
+		projectForm.title = p.title || '';
+		projectForm.description = p.description || '';
+		projectForm.start_date = p.start_date?.split('T')[0] || '';
+		projectForm.completion_date = p.completion_date?.split('T')[0] || '';
+		projectForm.status = p.status || '';
+	}
+});
+
+async function saveProjectChanges() {
+	if (!selectedProjectId.value) return;
+	savingProject.value = true;
+	try {
+		await projectItems.update(selectedProjectId.value, {
+			title: projectForm.title || undefined,
+			description: projectForm.description || undefined,
+			start_date: projectForm.start_date || undefined,
+			completion_date: projectForm.completion_date || undefined,
+			status: projectForm.status || undefined,
+		});
+		await fetchAllData();
+		closeProjectPreview();
+	} catch (err) {
+		console.error('Failed to update project:', err);
+	} finally {
+		savingProject.value = false;
+	}
+}
+
+const showUndated = ref(false);
 </script>
 
 <template>
-	<div class="gantt-container">
+	<div class="gantt" :class="{ 'gantt--compact': compact }">
 		<!-- Toolbar -->
-		<div class="gantt-toolbar">
-			<div class="flex items-center gap-3">
+		<div class="gantt__toolbar">
+			<div class="flex items-center gap-2">
 				<div class="flex items-center rounded-lg bg-muted/40 p-0.5">
 					<button
 						@click="setViewMode('nested')"
-						class="px-3 py-1 text-[11px] font-medium rounded-md transition-all"
+						class="px-2.5 py-1 text-[10px] font-medium rounded-md transition-all"
 						:class="viewMode === 'nested' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
 					>Nested</button>
 					<button
 						@click="setViewMode('flat')"
-						class="px-3 py-1 text-[11px] font-medium rounded-md transition-all"
+						class="px-2.5 py-1 text-[10px] font-medium rounded-md transition-all"
 						:class="viewMode === 'flat' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
 					>Flat</button>
 				</div>
-				<!-- Type filters -->
-				<div class="flex items-center gap-1 ml-1">
-					<button
-						v-for="filter in typeFilterOptions"
-						:key="filter.key"
-						class="gantt-type-filter"
-						:class="activeTypeFilters.has(filter.key) ? filter.activeBg : 'bg-transparent hover:bg-muted/30'"
-						@click="toggleTypeFilter(filter.key)"
-					>
-						<Icon :name="filter.icon" class="w-3 h-3" :class="activeTypeFilters.has(filter.key) ? filter.color : 'text-muted-foreground/50'" />
-						<span :class="activeTypeFilters.has(filter.key) ? filter.color : 'text-muted-foreground/50'">{{ filter.label }}</span>
-						<span
-							v-if="typeCounts[filter.key]"
-							class="gantt-type-count"
-							:class="activeTypeFilters.has(filter.key) ? filter.bg : 'bg-muted/40'"
-						>{{ typeCounts[filter.key] }}</span>
-					</button>
-				</div>
+				<button @click="scrollToToday" class="px-2 h-6 rounded-md text-[10px] font-medium text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors">
+					Today
+				</button>
+				<button @click="fetchAllData" class="w-6 h-6 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors">
+					<Icon :name="loading ? 'lucide:loader-2' : 'lucide:refresh-cw'" class="w-3 h-3" :class="loading ? 'animate-spin' : ''" />
+				</button>
 			</div>
-			<div class="flex items-center gap-1">
-				<Icon v-if="loading" name="lucide:loader-2" class="w-3.5 h-3.5 animate-spin text-primary mr-1" />
-				<UTooltip :text="showSidebar ? 'Hide sidebar' : 'Show sidebar'" :popper="{ placement: 'bottom' }">
-					<button @click="toggleSidebar" class="gantt-ctrl-btn" :class="showSidebar ? 'bg-primary/10 text-primary' : ''">
-						<Icon name="lucide:panel-left" class="w-3.5 h-3.5" />
-					</button>
-				</UTooltip>
-				<button @click="handleZoomOut" class="gantt-ctrl-btn" :disabled="zoom <= 1"><Icon name="lucide:minus" class="w-3.5 h-3.5" /></button>
-				<button @click="scrollToToday" class="px-2 h-7 rounded-lg text-[10px] font-medium text-muted-foreground hover:bg-muted/50 transition-colors">Today</button>
-				<button @click="handleZoomIn" class="gantt-ctrl-btn" :disabled="zoom >= 5"><Icon name="lucide:plus" class="w-3.5 h-3.5" /></button>
-				<button @click="fetchAllData" class="gantt-ctrl-btn ml-1"><Icon :name="loading ? 'lucide:loader-2' : 'lucide:refresh-cw'" class="w-3.5 h-3.5" :class="loading ? 'animate-spin' : ''" /></button>
+			<div class="flex items-center gap-2">
+				<button
+					v-if="completedProjectCount > 0"
+					@click="showCompleted = !showCompleted"
+					class="flex items-center gap-1 text-[9px] font-medium px-2 py-0.5 rounded-full transition-colors"
+					:class="showCompleted
+						? 'text-foreground bg-muted/60'
+						: 'text-muted-foreground/60 bg-muted/20 hover:bg-muted/40'"
+				>
+					<Icon :name="showCompleted ? 'lucide:eye' : 'lucide:eye-off'" class="w-2.5 h-2.5" />
+					{{ completedProjectCount }} completed
+				</button>
+				<button
+					v-if="undatedProjects.length > 0"
+					@click="showUndated = !showUndated"
+					class="flex items-center gap-1 text-[9px] font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/15 px-2 py-0.5 rounded-full transition-colors"
+				>
+					<Icon name="lucide:calendar-off" class="w-2.5 h-2.5" />
+					{{ undatedProjects.length }} undated
+				</button>
+				<span class="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground/60 border border-border/40 px-2 py-0.5 rounded-full">
+					{{ quarterLabel }}
+				</span>
 			</div>
 		</div>
 
-		<!-- Loading -->
-		<div v-if="loading && projects.length === 0" class="flex items-center justify-center min-h-[300px]">
-			<div class="flex flex-col items-center gap-3">
-				<div class="h-8 w-8 animate-spin rounded-full border-2 border-muted border-t-primary" />
-				<span class="text-xs text-muted-foreground">Loading timeline...</span>
+		<!-- Undated projects panel -->
+		<Transition name="fade">
+			<div v-if="showUndated && undatedProjects.length > 0" class="mb-4 rounded-xl border border-border/50 bg-muted/20 p-3">
+				<div class="flex items-center justify-between mb-2">
+					<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Projects without dates</span>
+					<button @click="showUndated = false" class="text-muted-foreground hover:text-foreground">
+						<Icon name="lucide:x" class="w-3 h-3" />
+					</button>
+				</div>
+				<div class="space-y-1">
+					<nuxt-link
+						v-for="project in undatedProjects"
+						:key="project.id"
+						:to="`/projects/${project.id}`"
+						class="flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs text-foreground/70 hover:text-foreground hover:bg-muted/40 transition-colors"
+					>
+						<span
+							class="w-2 h-2 rounded-full shrink-0"
+							:style="{ backgroundColor: project.service?.color || '#d4d4d8' }"
+						/>
+						<span class="truncate">{{ project.title || 'Untitled Project' }}</span>
+						<span v-if="project.status" class="text-[8px] uppercase font-medium text-muted-foreground ml-auto shrink-0">{{ project.status }}</span>
+					</nuxt-link>
+				</div>
 			</div>
+		</Transition>
+
+		<!-- Loading (no data yet) -->
+		<div v-if="loading && rows.length === 0" class="gantt__empty">
+			<div class="h-6 w-6 animate-spin rounded-full border-2 border-muted border-t-primary" />
+			<span class="text-[10px] text-muted-foreground mt-2">Loading timeline...</span>
 		</div>
 
 		<!-- Error -->
-		<div v-else-if="error" class="flex items-center justify-center min-h-[300px]">
-			<div class="text-center">
-				<p class="text-sm text-destructive">{{ error }}</p>
-				<button class="mt-2 text-xs text-muted-foreground hover:text-foreground" @click="fetchAllData">Try again</button>
-			</div>
+		<div v-else-if="error" class="gantt__empty">
+			<p class="text-xs text-destructive">{{ error }}</p>
+			<button class="mt-2 text-[10px] text-muted-foreground hover:text-foreground" @click="fetchAllData">Try again</button>
 		</div>
 
-		<!-- Empty: no projects at all -->
-		<div v-else-if="projects.length === 0 && !loading" class="flex items-center justify-center min-h-[300px]">
-			<div class="text-center max-w-sm">
-				<Icon name="lucide:gantt-chart" class="h-14 w-14 text-muted-foreground/25 mx-auto mb-4" />
-				<p class="text-base font-medium text-foreground">No projects on the timeline</p>
-				<p class="text-sm text-muted-foreground mt-1.5">
-					{{ selectedClient ? 'No projects for this client yet.' : 'Create your first project to see it here.' }}
-				</p>
-			</div>
+		<!-- Empty -->
+		<div v-else-if="rows.length === 0 && !loading" class="gantt__empty">
+			<Icon name="lucide:gantt-chart" class="h-10 w-10 text-muted-foreground/20 mb-3" />
+			<template v-if="undatedProjects.length > 0">
+				<p class="text-sm font-medium text-foreground">All projects need dates</p>
+				<p class="text-xs text-muted-foreground mt-1">Add start or end dates to your projects to see them on the timeline.</p>
+				<button @click="showUndated = true" class="mt-3 text-xs text-primary hover:underline">
+					View {{ undatedProjects.length }} undated project{{ undatedProjects.length > 1 ? 's' : '' }}
+				</button>
+			</template>
+			<template v-else>
+				<p class="text-sm font-medium text-foreground">No projects on the timeline</p>
+				<p class="text-xs text-muted-foreground mt-1">{{ selectedClient ? 'No projects for this client.' : 'Create a project to see it here.' }}</p>
+			</template>
 		</div>
 
-		<!-- Empty: projects exist but all filtered out -->
-		<div v-else-if="filteredRows.length === 0 && !loading" class="flex items-center justify-center min-h-[300px]">
-			<div class="text-center max-w-sm">
-				<Icon name="lucide:filter-x" class="h-14 w-14 text-muted-foreground/25 mx-auto mb-4" />
-				<p class="text-base font-medium text-foreground">No items match your filters</p>
-				<p class="text-sm text-muted-foreground mt-1.5">Try adjusting the type filters above.</p>
-			</div>
-		</div>
-
-		<!-- Gantt body -->
-		<div v-else class="gantt-body relative">
-			<!-- Loading overlay (shown when refreshing with existing data) -->
+		<!-- Gantt body: outer scroll container -->
+		<div v-else class="gantt__body relative" ref="scrollWrapper">
+			<!-- Loading overlay -->
 			<Transition name="fade">
-				<div v-if="loading && filteredRows.length > 0" class="absolute inset-0 bg-background/60 z-30 flex items-center justify-center backdrop-blur-[1px]">
-					<div class="flex flex-col items-center gap-2">
-						<div class="h-6 w-6 animate-spin rounded-full border-2 border-muted border-t-primary" />
-						<span class="text-[10px] text-muted-foreground">Updating...</span>
-					</div>
+				<div v-if="loading && rows.length > 0" class="absolute inset-0 bg-background/50 z-30 flex items-center justify-center backdrop-blur-[1px] rounded-xl">
+					<div class="h-5 w-5 animate-spin rounded-full border-2 border-muted border-t-primary" />
 				</div>
 			</Transition>
 
-			<!-- Left sidebar (toggleable) -->
-			<div v-if="showSidebar" class="gantt-sidebar">
-				<!-- Sidebar header -->
-				<div class="gantt-sidebar-header">
-					<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Name</span>
-				</div>
-				<!-- Sidebar rows -->
-				<div ref="sidebarScroll" class="gantt-sidebar-rows">
-					<div
-						v-for="row in filteredRows"
-						:key="'side-' + row.id"
-						class="gantt-sidebar-row"
-						:class="{
-							'gantt-sidebar-row-project': row.type === 'project',
-							'gantt-sidebar-row-child': row.depth > 0,
-						}"
-						:style="{ paddingLeft: `${12 + row.depth * 20}px` }"
-						@click="handleRowClick(row)"
-					>
-						<!-- Left color bar for nested children -->
-						<span
-							v-if="row.depth > 0"
-							class="gantt-sidebar-color-bar"
-							:style="{ backgroundColor: row.color }"
-						/>
+			<!-- Inner scroll area (horizontal scroll here) -->
+			<div class="gantt__scroll" :style="{ width: `${LABEL_WIDTH + chartWidth}px` }">
 
-						<!-- Expand/collapse for projects -->
-						<button
-							v-if="row.hasChildren && row.type === 'project' && row.id !== 'tasks-section'"
-							class="w-4 h-4 flex items-center justify-center shrink-0 text-muted-foreground/60 hover:text-foreground transition-colors"
-							@click.stop="toggleProject(row.id)"
-						>
-							<Icon :name="row.expanded ? 'lucide:chevron-down' : 'lucide:chevron-right'" class="w-3 h-3" />
-						</button>
-						<span v-else-if="row.type === 'project' && !row.hasChildren" class="w-4 shrink-0" />
-
-						<!-- Type icon with tooltip -->
-						<UTooltip
-							:text="row.type === 'project' ? 'Project' : row.type === 'event' ? 'Event' : row.type === 'ticket' ? 'Ticket' : 'Task'"
-							:popper="{ placement: 'right', offsetDistance: 6 }"
-						>
-							<span
-								class="w-5 h-5 rounded-md flex items-center justify-center shrink-0"
-								:class="{
-									'bg-primary/10': row.type === 'project',
-									'bg-cyan-500/10': row.type === 'event',
-									'bg-amber-500/10': row.type === 'ticket',
-									'bg-purple-500/10': row.type === 'task',
-								}"
-							>
-								<Icon
-									:name="row.type === 'project' ? 'lucide:folder' : row.type === 'event' ? 'lucide:calendar' : row.type === 'ticket' ? 'lucide:ticket' : 'lucide:check-square'"
-									class="w-3 h-3"
-									:class="{
-										'text-primary': row.type === 'project',
-										'text-cyan-500': row.type === 'event',
-										'text-amber-500': row.type === 'ticket',
-										'text-purple-500': row.type === 'task',
-									}"
-								/>
-							</span>
-						</UTooltip>
-
-						<!-- Service color dot with tooltip (projects only) -->
-						<UTooltip
-							v-if="row.type === 'project' && row.id !== 'tasks-section'"
-							:text="getProjectServiceName(row.id)"
-							:popper="{ placement: 'right', offsetDistance: 6 }"
-						>
-							<span
-								class="w-2.5 h-2.5 rounded-full shrink-0 ring-1 ring-border/30"
-								:style="{ backgroundColor: row.color }"
-							/>
-						</UTooltip>
-
-						<!-- Label -->
-						<span
-							class="text-[11px] truncate flex-1 cursor-pointer"
-							:class="row.type === 'project' ? 'font-semibold text-foreground' : 'text-foreground/80'"
-							:title="row.label"
-						>
-							{{ row.label }}
-						</span>
-
-						<!-- Status pill -->
-						<span
-							v-if="row.status"
-							class="text-[8px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-md shrink-0"
-							:class="{
-								'text-green-500 bg-green-500/10': row.status?.toLowerCase().replace(/\s+/g, '') === 'completed' || row.status?.toLowerCase() === 'done',
-								'text-blue-500 bg-blue-500/10': row.status?.toLowerCase().replace(/\s+/g, '') === 'inprogress' || row.status?.toLowerCase() === 'active',
-								'text-amber-500 bg-amber-500/10': row.status?.toLowerCase() === 'scheduled' || row.status?.toLowerCase() === 'pending',
-								'text-muted-foreground bg-muted/40': !['completed', 'done', 'inprogress', 'active', 'scheduled', 'pending'].includes(row.status?.toLowerCase().replace(/\s+/g, '') || ''),
-							}"
-						>
-							{{ row.status }}
-						</span>
-					</div>
-				</div>
-			</div>
-
-			<!-- Right chart area -->
-			<div ref="scrollContainer" class="gantt-chart" @scroll="syncScroll">
-				<!-- Chart header (month labels) -->
-				<div class="gantt-chart-header" :style="{ width: chartWidth + 'px' }">
-					<div
-						v-for="label in monthLabels"
-						:key="label.text"
-						class="gantt-month-label"
-						:class="{ 'gantt-month-current': label.isCurrentMonth }"
-						:style="{ left: label.x + 'px', width: label.width + 'px' }"
-					>
-						{{ label.text }}
-					</div>
-				</div>
-
-				<!-- Chart rows -->
-				<div class="gantt-chart-rows" :style="{ width: chartWidth + 'px', height: (filteredRows.length * ROW_HEIGHT) + 'px' }">
-					<!-- Grid lines (per month) -->
-					<div
-						v-for="label in monthLabels"
-						:key="'grid-' + label.text"
-						class="gantt-grid-line"
-						:style="{ left: label.x + 'px' }"
-					/>
-
-					<!-- Today line -->
-					<div class="gantt-today" :style="{ left: todayX + 'px' }">
-						<div class="gantt-today-label">Today</div>
-						<div class="gantt-today-line" />
-					</div>
-
-					<!-- Row stripes + bars -->
-					<div
-						v-for="(row, i) in filteredRows"
-						:key="'row-' + row.id"
-						class="gantt-row"
-						:class="{ 'gantt-row-alt': i % 2 === 1, 'gantt-row-project': row.type === 'project' }"
-						:style="{ top: (i * ROW_HEIGHT) + 'px', height: ROW_HEIGHT + 'px' }"
-					>
-						<!-- Inline label (shown when sidebar is hidden) -->
-						<span
-							v-if="!showSidebar && hasBar(row)"
-							class="gantt-inline-label"
-							:style="{ left: getBarStyle(row).left }"
-						>
-							<button
-								v-if="row.hasChildren && row.type === 'project'"
-								class="w-3.5 h-3.5 flex items-center justify-center shrink-0 text-muted-foreground/60 hover:text-foreground transition-colors"
-								@click.stop="toggleProject(row.id)"
-							>
-								<Icon :name="row.expanded ? 'lucide:chevron-down' : 'lucide:chevron-right'" class="w-2.5 h-2.5" />
-							</button>
-							<Icon
-								:name="row.type === 'project' ? 'lucide:folder' : row.type === 'event' ? 'lucide:calendar' : row.type === 'ticket' ? 'lucide:ticket' : 'lucide:check-square'"
-								class="w-3 h-3 shrink-0"
-								:class="{
-									'text-primary': row.type === 'project',
-									'text-cyan-500': row.type === 'event',
-									'text-amber-500': row.type === 'ticket',
-									'text-purple-500': row.type === 'task',
-								}"
-							/>
-							<span
-								class="truncate"
-								:class="row.type === 'project' ? 'font-semibold text-[13px]' : 'text-[11px]'"
-							>{{ row.label }}</span>
-							<span
-								class="w-1.5 h-1.5 rounded-full shrink-0"
-								:style="{ backgroundColor: statusColor(row.status) }"
-							/>
-						</span>
-
-						<!-- Bar -->
-						<UTooltip
-							v-if="hasBar(row)"
-							:text="`${row.label}${row.status ? ' — ' + statusLabel(row.status) : ''}${row.startDate ? ' · ' + getFriendlyDateTwo(row.startDate) : ''}${row.endDate && row.endDate !== row.startDate ? ' → ' + getFriendlyDateTwo(row.endDate) : ''}`"
-							:popper="{ placement: 'top', offsetDistance: 4 }"
-						>
-							<div
-								class="gantt-bar"
-								:class="[
-									`gantt-bar-${row.type}`,
-									{ 'gantt-bar-completed': row.status?.toLowerCase().replace(/\s+/g, '') === 'completed' },
-								]"
-								:style="{ ...getBarStyle(row), backgroundColor: row.color, borderLeft: `3px solid ${statusColor(row.status)}` }"
-								@click="handleRowClick(row)"
-							>
-								<span class="gantt-bar-label">{{ row.label }}</span>
-							</div>
-						</UTooltip>
-
-						<!-- Due date diamond for items with only a due date -->
+				<!-- Header: Quarter row -->
+				<div class="gantt__header gantt__header--quarters">
+					<div class="gantt__header-label" />
+					<div class="gantt__header-track">
 						<div
-							v-if="!row.startDate && !row.endDate && row.dueDate"
-							class="gantt-milestone"
-							:style="{ left: dateToX(row.dueDate) + 'px' }"
-							:title="`Due: ${new Date(row.dueDate).toLocaleDateString()}`"
+							v-for="ql in quarterLabels"
+							:key="ql.text"
+							class="gantt__quarter"
+							:class="{ 'gantt__quarter--current': ql.isCurrent }"
+							:style="{ left: ql.x + 'px', width: ql.width + 'px' }"
 						>
-							<div class="gantt-diamond" :style="{ backgroundColor: row.color }" />
+							<span class="gantt__quarter-pill">{{ ql.text }}</span>
 						</div>
 					</div>
+				</div>
 
+				<!-- Header: Month row -->
+				<div class="gantt__header gantt__header--months">
+					<div class="gantt__header-label">Project</div>
+					<div class="gantt__header-track">
+						<div
+							v-for="label in monthLabels"
+							:key="label.text"
+							class="gantt__month"
+							:class="{ 'gantt__month--current': label.isCurrentMonth }"
+							:style="{ left: label.x + 'px', width: label.width + 'px' }"
+						>
+							{{ label.text }}
+						</div>
+					</div>
+				</div>
+
+				<!-- Quarter grid lines (behind bars) -->
+				<div
+					v-for="ql in quarterLabels"
+					:key="'qline-' + ql.text"
+					class="gantt__quarter-line"
+					:style="{ left: `${LABEL_WIDTH + ql.x}px`, height: `${HEADER_HEIGHT + filteredRows.length * ROW_HEIGHT}px` }"
+				/>
+
+				<!-- Data rows -->
+				<div
+					v-for="(row, i) in filteredRows"
+					:key="row.id"
+					class="gantt__row"
+					:class="{ 'gantt__row--alt': i % 2 === 1 }"
+				>
+					<!-- Label (sticky left) -->
+					<div
+						class="gantt__label"
+						:class="{
+							'gantt__label--project': row.depth === 0 && row.type === 'project',
+							'gantt__label--child': row.depth === 1,
+							'gantt__label--depth2': row.depth >= 2,
+						}"
+						@click="handleRowClick(row)"
+					>
+						<!-- Absolute toggle button for projects -->
+						<button
+							v-if="row.hasChildren && row.type === 'project' && row.id !== 'tasks-section'"
+							class="gantt__toggle"
+							@click.stop="toggleProject(row.id)"
+						>
+							<Icon :name="row.expanded ? 'lucide:minus' : 'lucide:plus'" class="w-2.5 h-2.5" />
+						</button>
+						<!-- Type icon (depth > 0 only) -->
+						<Icon
+							v-if="row.depth > 0"
+							:name="row.type === 'event' ? 'lucide:calendar' : row.type === 'ticket' ? 'lucide:ticket' : 'lucide:check-square'"
+							class="w-3 h-3 shrink-0"
+							:class="{
+								'text-cyan-500': row.type === 'event',
+								'text-amber-500': row.type === 'ticket',
+								'text-purple-500': row.type === 'task',
+							}"
+							:style="{ marginLeft: `${16 + row.depth * 16}px` }"
+						/>
+						<!-- Label text -->
+						<span
+							class="gantt__label-text"
+							:style="{ paddingLeft: row.depth === 0 ? '20px' : '4px' }"
+							:title="row.label"
+						>{{ row.label }}</span>
+					</div>
+
+					<!-- Track -->
+					<div class="gantt__track">
+						<div class="gantt__track-bg">
+							<!-- Overflow bar (grey extension for child dates outside project range) -->
+							<div
+								v-if="getOverflowStyle(row)"
+								class="gantt__overflow"
+								:style="getOverflowStyle(row)!"
+							/>
+							<UTooltip
+								v-if="hasBar(row)"
+								:text="`${row.label}${row.status ? ' — ' + statusLabel(row.status) : ''}${row.startDate ? ' · ' + getFriendlyDate(row.startDate) : ''}${row.endDate && row.endDate !== row.startDate ? ' → ' + getFriendlyDate(row.endDate) : ''}`"
+								:popper="{ placement: 'top', offsetDistance: 6 }"
+							>
+								<div
+									class="gantt__bar"
+									:style="{
+										...getBarStyle(row),
+										backgroundColor: row.color,
+										opacity: getBarOpacity(row.status),
+									}"
+									@click="handleRowClick(row)"
+								/>
+							</UTooltip>
+
+							<!-- Milestone diamond -->
+							<div
+								v-if="!row.startDate && !row.endDate && row.dueDate"
+								class="gantt__milestone"
+								:style="{ left: dateToX(row.dueDate) + 'px' }"
+								:title="`Due: ${getFriendlyDate(row.dueDate)}`"
+							>
+								<div class="gantt__diamond" :style="{ backgroundColor: row.color }" />
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Today line -->
+				<div
+					class="gantt__today"
+					:style="{ left: `${LABEL_WIDTH + todayX}px`, top: '0', height: `${HEADER_HEIGHT + filteredRows.length * ROW_HEIGHT}px` }"
+				>
+					<div class="gantt__today-pip" />
 				</div>
 			</div>
 		</div>
 
-		<!-- Event Detail Modal -->
+		<!-- Event Modal (editable if permitted, read-only otherwise) -->
 		<UModal v-model="showEventDetail" class="sm:max-w-xl">
 			<template #header>
 				<div class="flex items-center justify-between w-full">
 					<div class="flex items-center gap-2">
-						<span v-if="selectedEventProject" class="inline-block h-2.5 w-2.5 rounded-full" :style="{ backgroundColor: selectedEventProject.color }" />
-						<h3 class="t-label">Event Detail</h3>
+						<Icon name="lucide:calendar" class="w-4 h-4 text-cyan-500" />
+						<span class="text-sm font-semibold">{{ selectedEvent?.title || selectedEvent?.name }}</span>
 					</div>
-					<Button variant="ghost" size="icon-sm" @click="handleCloseDetail">
-						<Icon name="i-heroicons-x-mark" class="h-4 w-4" />
-					</Button>
+					<button @click="handleCloseDetail" class="p-1 text-muted-foreground hover:text-foreground">
+						<Icon name="lucide:x" class="w-4 h-4" />
+					</button>
 				</div>
 			</template>
-			<div class="max-h-[70vh] overflow-y-auto px-4 pb-4">
-				<ProjectTimelineEventDetail
-					v-if="selectedEvent && selectedEventProject"
-					:event="selectedEvent"
-					:project="selectedEventProject"
-					@close="handleCloseDetail"
-					@updated="fetchAllData"
-				/>
+			<div v-if="selectedEvent" class="p-4 space-y-3 text-sm">
+				<div v-if="selectedEventProject" class="flex items-center gap-2 text-muted-foreground mb-1">
+					<Icon name="lucide:folder" class="w-3.5 h-3.5" />
+					<span>{{ selectedEventProject.title }}</span>
+				</div>
+
+				<!-- Editable fields (or read-only) -->
+				<div class="space-y-3">
+					<div>
+						<label class="gantt-modal-label">Title</label>
+						<input v-if="canEditEvents" v-model="eventForm.title" type="text" class="gantt-modal-input" />
+						<p v-else class="text-sm text-foreground">{{ eventForm.title }}</p>
+					</div>
+					<div class="grid grid-cols-2 gap-3">
+						<div>
+							<label class="gantt-modal-label">Start Date</label>
+							<input v-if="canEditEvents" v-model="eventForm.start_date" type="date" class="gantt-modal-input" />
+							<p v-else class="text-xs text-foreground">{{ getFriendlyDate(eventForm.start_date) || '—' }}</p>
+						</div>
+						<div>
+							<label class="gantt-modal-label">End Date</label>
+							<input v-if="canEditEvents" v-model="eventForm.end_date" type="date" class="gantt-modal-input" />
+							<p v-else class="text-xs text-foreground">{{ getFriendlyDate(eventForm.end_date) || '—' }}</p>
+						</div>
+					</div>
+					<div>
+						<label class="gantt-modal-label">Status</label>
+						<select v-if="canEditEvents" v-model="eventForm.status" class="gantt-modal-input">
+							<option value="">None</option>
+							<option value="Pending">Pending</option>
+							<option value="Scheduled">Scheduled</option>
+							<option value="In Progress">In Progress</option>
+							<option value="Completed">Completed</option>
+						</select>
+						<p v-else class="text-xs text-foreground">{{ eventForm.status || '—' }}</p>
+					</div>
+					<div>
+						<label class="gantt-modal-label">Description</label>
+						<textarea v-if="canEditEvents" v-model="eventForm.description" rows="3" class="gantt-modal-input !h-auto py-2 resize-none" />
+						<p v-else class="text-xs text-foreground/70 leading-relaxed">{{ eventForm.description || '—' }}</p>
+					</div>
+				</div>
+
+				<!-- Save button (editors only) -->
+				<div v-if="canEditEvents" class="flex justify-end pt-2">
+					<button
+						@click="saveEventChanges"
+						:disabled="savingEvent"
+						class="px-4 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+					>{{ savingEvent ? 'Saving...' : 'Save Changes' }}</button>
+				</div>
+			</div>
+		</UModal>
+
+		<!-- Project Modal (editable if permitted, read-only otherwise) -->
+		<UModal v-model="showProjectPreview" class="sm:max-w-md">
+			<template #header>
+				<div class="flex items-center justify-between w-full">
+					<div class="flex items-center gap-2">
+						<span
+							class="w-3 h-3 rounded-full shrink-0"
+							:style="{ backgroundColor: selectedProject?.service?.color || '#d4d4d8' }"
+						/>
+						<span class="text-sm font-semibold">{{ selectedProject?.title }}</span>
+					</div>
+					<button @click="closeProjectPreview" class="p-1 text-muted-foreground hover:text-foreground">
+						<Icon name="lucide:x" class="w-4 h-4" />
+					</button>
+				</div>
+			</template>
+			<div v-if="selectedProject" class="p-4 space-y-3 text-sm">
+				<!-- Service & child counts (always read-only context info) -->
+				<div class="flex items-center gap-3 flex-wrap">
+					<span v-if="selectedProject.service?.name" class="text-[10px] text-muted-foreground bg-muted/30 px-2 py-0.5 rounded-md">{{ selectedProject.service.name }}</span>
+					<span v-if="selectedProjectChildCount.events > 0" class="text-[10px] text-muted-foreground flex items-center gap-1">
+						<Icon name="lucide:calendar-days" class="w-2.5 h-2.5 text-cyan-500" />
+						{{ selectedProjectChildCount.events }} event{{ selectedProjectChildCount.events > 1 ? 's' : '' }}
+					</span>
+					<span v-if="selectedProjectChildCount.tickets > 0" class="text-[10px] text-muted-foreground flex items-center gap-1">
+						<Icon name="lucide:ticket" class="w-2.5 h-2.5 text-amber-500" />
+						{{ selectedProjectChildCount.tickets }} ticket{{ selectedProjectChildCount.tickets > 1 ? 's' : '' }}
+					</span>
+				</div>
+
+				<!-- Editable fields (or read-only) -->
+				<div class="space-y-3">
+					<div>
+						<label class="gantt-modal-label">Title</label>
+						<input v-if="canEditProjects" v-model="projectForm.title" type="text" class="gantt-modal-input" />
+						<p v-else class="text-sm text-foreground">{{ projectForm.title }}</p>
+					</div>
+					<div class="grid grid-cols-2 gap-3">
+						<div>
+							<label class="gantt-modal-label">Start Date</label>
+							<input v-if="canEditProjects" v-model="projectForm.start_date" type="date" class="gantt-modal-input" />
+							<p v-else class="text-xs text-foreground">{{ getFriendlyDate(projectForm.start_date) || '—' }}</p>
+						</div>
+						<div>
+							<label class="gantt-modal-label">End Date</label>
+							<input v-if="canEditProjects" v-model="projectForm.completion_date" type="date" class="gantt-modal-input" />
+							<p v-else class="text-xs text-foreground">{{ getFriendlyDate(projectForm.completion_date) || '—' }}</p>
+						</div>
+					</div>
+					<div>
+						<label class="gantt-modal-label">Status</label>
+						<select v-if="canEditProjects" v-model="projectForm.status" class="gantt-modal-input">
+							<option value="">None</option>
+							<option value="Pending">Pending</option>
+							<option value="Scheduled">Scheduled</option>
+							<option value="In Progress">In Progress</option>
+							<option value="Completed">Completed</option>
+							<option value="Archived">Archived</option>
+						</select>
+						<p v-else class="text-xs text-foreground">{{ projectForm.status || '—' }}</p>
+					</div>
+					<div>
+						<label class="gantt-modal-label">Description</label>
+						<textarea v-if="canEditProjects" v-model="projectForm.description" rows="3" class="gantt-modal-input !h-auto py-2 resize-none" />
+						<p v-else class="text-xs text-foreground/70 leading-relaxed">{{ projectForm.description || '—' }}</p>
+					</div>
+				</div>
+
+				<!-- Children list (events, tickets) -->
+				<div v-if="selectedProjectChildren.length > 0" class="pt-2 border-t border-border/30">
+					<span class="gantt-modal-label">Events &amp; Tickets</span>
+					<div class="space-y-0.5 max-h-[160px] overflow-y-auto">
+						<component
+							v-for="child in selectedProjectChildren"
+							:key="child.id"
+							:is="child.link ? 'nuxt-link' : 'div'"
+							:to="child.link || undefined"
+							class="flex items-center gap-2 px-2 py-1.5 rounded-md text-xs transition-colors"
+							:class="child.link ? 'hover:bg-muted/40 cursor-pointer' : ''"
+							@click="child.type === 'event' ? (closeProjectPreview(), selectedEventId = child.id, showEventDetail = true) : undefined"
+						>
+							<Icon
+								:name="child.type === 'event' ? 'lucide:calendar' : 'lucide:ticket'"
+								class="w-3 h-3 shrink-0"
+								:class="child.type === 'event' ? 'text-cyan-500' : 'text-amber-500'"
+							/>
+							<span class="truncate flex-1 text-foreground/70">{{ child.label }}</span>
+							<span v-if="child.date" class="text-[9px] text-muted-foreground shrink-0">{{ getFriendlyDate(child.date) }}</span>
+							<span
+								v-if="child.status"
+								class="text-[8px] uppercase font-medium shrink-0"
+								:class="{
+									'text-green-500': child.status?.toLowerCase().replace(/\s+/g, '') === 'completed',
+									'text-blue-500': child.status?.toLowerCase().replace(/\s+/g, '') === 'inprogress',
+									'text-amber-500': child.status?.toLowerCase() === 'scheduled' || child.status?.toLowerCase() === 'pending',
+									'text-muted-foreground': !['completed', 'inprogress', 'scheduled', 'pending'].includes(child.status?.toLowerCase().replace(/\s+/g, '') || ''),
+								}"
+							>{{ child.status }}</span>
+						</component>
+					</div>
+				</div>
+
+				<!-- Actions -->
+				<div class="flex items-center gap-2 pt-2 border-t border-border/40">
+					<nuxt-link
+						:to="`/projects/${selectedProject.id}`"
+						class="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground border border-border/50 rounded-lg hover:bg-muted/30 transition-colors"
+						@click="closeProjectPreview"
+					>
+						Open Project
+						<Icon name="lucide:arrow-right" class="w-3 h-3" />
+					</nuxt-link>
+					<button
+						v-if="canEditProjects"
+						@click="saveProjectChanges"
+						:disabled="savingProject"
+						class="ml-auto px-4 py-2 text-xs font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+					>{{ savingProject ? 'Saving...' : 'Save Changes' }}</button>
+				</div>
 			</div>
 		</UModal>
 	</div>
 </template>
 
 <style scoped>
-@reference "~/assets/css/tailwind.css";
-
-.gantt-container {
-	border: 1px solid hsl(var(--border) / 0.5);
-	border-radius: 12px;
-	overflow: hidden;
+/* ── Container ── */
+.gantt {
 	background: hsl(var(--background));
+	border-radius: 20px;
+	padding: 24px;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03), 0 4px 12px rgba(0, 0, 0, 0.02);
+}
+.gantt--compact {
+	padding: 0;
+	border-radius: 0;
+	box-shadow: none;
 }
 
-.gantt-toolbar {
+/* ── Toolbar ── */
+.gantt__toolbar {
 	display: flex;
-	align-items: center;
 	justify-content: space-between;
-	padding: 10px 16px;
-	border-bottom: 1px solid hsl(var(--border) / 0.4);
-	background: hsl(var(--muted) / 0.15);
-}
-
-.gantt-ctrl-btn {
-	width: 28px;
-	height: 28px;
-	border-radius: 8px;
-	display: flex;
 	align-items: center;
-	justify-content: center;
-	color: hsl(var(--muted-foreground));
-	transition: all 0.15s;
-}
-.gantt-ctrl-btn:hover { background: hsl(var(--muted) / 0.5); }
-.gantt-ctrl-btn:disabled { opacity: 0.3; }
-
-.gantt-type-filter {
-	display: flex;
-	align-items: center;
-	gap: 4px;
-	padding: 3px 8px;
-	border-radius: 8px;
-	font-size: 10px;
-	font-weight: 500;
-	cursor: pointer;
-	transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-	user-select: none;
+	padding-bottom: 16px;
+	margin-bottom: 8px;
 }
 
-.gantt-type-count {
-	font-size: 9px;
-	font-weight: 700;
-	min-width: 16px;
-	height: 16px;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	border-radius: 999px;
-	padding: 0 4px;
-}
-
-/* ── Body: sidebar + chart ── */
-.gantt-body {
-	display: flex;
-	max-height: calc(100vh - 240px);
-	overflow: hidden;
-}
-
-/* ── Sidebar ── */
-.gantt-sidebar {
-	width: 280px;
-	min-width: 280px;
-	border-right: 1px solid hsl(var(--border) / 0.4);
+/* ── Empty / loading states ── */
+.gantt__empty {
 	display: flex;
 	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	min-height: 200px;
+}
+
+/* ── Body (scroll container — scrolls both axes) ── */
+.gantt__body {
+	overflow: auto;
+	max-height: calc(100vh - 280px);
+	scrollbar-width: none;
+	-ms-overflow-style: none;
+}
+.gantt__body::-webkit-scrollbar { display: none; }
+
+/* ── Inner scroll area (sets the total scrollable width) ── */
+.gantt__scroll {
+	position: relative;
+}
+
+/* ── Header row ── */
+.gantt__header {
+	display: flex;
+	height: 28px;
+	border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+:is(.dark) .gantt__header {
+	border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+.gantt__header-label {
+	width: 180px;
+	min-width: 180px;
+	position: sticky;
+	left: 0;
+	z-index: 12;
+	display: flex;
+	align-items: flex-end;
+	padding: 0 14px 4px;
+	font-size: 9px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: hsl(var(--muted-foreground) / 0.6);
 	background: hsl(var(--background));
 }
-
-.gantt-sidebar-header {
-	height: 48px;
-	display: flex;
-	align-items: center;
-	padding: 0 16px;
-	border-bottom: 1px solid hsl(var(--border) / 0.4);
-	background: hsl(var(--muted) / 0.1);
+.gantt--compact .gantt__header-label {
+	background: hsl(var(--card));
 }
 
-.gantt-sidebar-rows {
+.gantt__header-track {
 	flex: 1;
-	overflow-y: auto;
-	overflow-x: hidden;
-	scrollbar-width: none;
-}
-.gantt-sidebar-rows::-webkit-scrollbar { display: none; }
-
-.gantt-sidebar-row {
-	height: 36px;
-	display: flex;
-	align-items: center;
-	gap: 6px;
-	padding-right: 12px;
-	border-bottom: 1px solid hsl(var(--border) / 0.1);
-	cursor: default;
-	transition: background 0.1s;
 	position: relative;
-}
-.gantt-sidebar-row:hover { background: hsl(var(--muted) / 0.15); }
-
-.gantt-sidebar-row-project {
-	background: hsl(var(--muted) / 0.06);
+	min-width: 0;
 }
 
-.gantt-sidebar-row-child {
-	background: transparent;
-}
-
-.gantt-sidebar-color-bar {
-	position: absolute;
-	left: 0;
-	top: 4px;
-	bottom: 4px;
-	width: 2px;
-	border-radius: 1px;
-	opacity: 0.5;
-}
-
-/* ── Chart area ── */
-.gantt-chart {
-	flex: 1;
-	overflow: auto;
-	position: relative;
-}
-
-.gantt-chart-header {
-	position: sticky;
-	top: 0;
-	z-index: 10;
-	height: 48px;
-	background: hsl(var(--muted) / 0.1);
-	border-bottom: 1px solid hsl(var(--border) / 0.4);
-}
-
-.gantt-month-label {
+.gantt__month {
 	position: absolute;
 	top: 0;
-	height: 48px;
+	height: 100%;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	font-size: 11px;
+	font-size: 9px;
 	font-weight: 600;
-	letter-spacing: 0.04em;
-	color: hsl(var(--muted-foreground));
-	border-right: 1px solid hsl(var(--border) / 0.2);
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: rgba(0, 0, 0, 0.3);
+	border-right: 1px solid rgba(0, 0, 0, 0.04);
+	user-select: none;
+}
+:is(.dark) .gantt__month {
+	color: rgba(255, 255, 255, 0.25);
+	border-right-color: rgba(255, 255, 255, 0.04);
+}
+.gantt__month--current {
+	color: hsl(var(--primary));
+}
+
+/* ── Quarter header ── */
+.gantt__header--quarters {
+	height: 24px;
+	border-bottom: none;
+}
+.gantt__header--quarters .gantt__header-label {
+	height: 24px;
+}
+
+.gantt__quarter {
+	position: absolute;
+	top: 0;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 	user-select: none;
 }
 
-.gantt-month-current {
-	color: hsl(var(--primary));
-	background: hsl(var(--primary) / 0.04);
-}
-
-.gantt-chart-rows {
-	position: relative;
-	min-height: 100%;
-}
-
-.gantt-grid-line {
-	position: absolute;
-	top: 0;
-	bottom: 0;
-	width: 1px;
-	background: hsl(var(--border) / 0.08);
-	pointer-events: none;
-}
-
-/* ── Today marker ── */
-.gantt-today {
-	position: absolute;
-	top: 0;
-	bottom: 0;
-	z-index: 5;
-	pointer-events: none;
-}
-
-.gantt-today-label {
-	position: absolute;
-	top: -44px;
-	left: 50%;
-	transform: translateX(-50%);
+.gantt__quarter-pill {
 	font-size: 8px;
 	font-weight: 700;
 	letter-spacing: 0.06em;
 	text-transform: uppercase;
-	color: hsl(var(--primary));
-	background: hsl(var(--primary) / 0.08);
+	color: hsl(var(--muted-foreground) / 0.5);
+	background: hsl(var(--muted) / 0.3);
 	padding: 2px 8px;
 	border-radius: 999px;
 	white-space: nowrap;
 }
+.gantt__quarter--current .gantt__quarter-pill {
+	color: hsl(var(--primary));
+	background: hsl(var(--primary) / 0.08);
+}
 
-.gantt-today-line {
+/* ── Quarter grid lines ── */
+.gantt__quarter-line {
 	position: absolute;
 	top: 0;
-	bottom: 0;
-	left: 0;
 	width: 1px;
-	background: hsl(var(--primary));
-	opacity: 0.35;
+	background: hsl(var(--border) / 0.3);
+	z-index: 0;
+	pointer-events: none;
 }
 
-/* ── Rows ── */
-.gantt-row {
-	position: absolute;
+/* ── Data row ── */
+.gantt__row {
+	display: flex;
+	height: 32px;
+}
+.gantt__row--alt .gantt__label {
+	background: rgba(0, 0, 0, 0.015);
+}
+:is(.dark) .gantt__row--alt .gantt__label {
+	background: rgba(255, 255, 255, 0.015);
+}
+
+/* ── Label column (sticky left) ── */
+.gantt__label {
+	width: 180px;
+	min-width: 180px;
+	position: sticky;
 	left: 0;
-	right: 0;
-	border-bottom: 1px solid hsl(var(--border) / 0.06);
-	transition: background 0.1s;
-}
-.gantt-row:hover { background: hsl(var(--muted) / 0.12); }
-.gantt-row-alt { background: hsl(var(--muted) / 0.02); }
-.gantt-row-project { background: hsl(var(--muted) / 0.05); }
-
-/* ── Inline labels (when sidebar is hidden) ── */
-.gantt-inline-label {
-	position: absolute;
-	top: 50%;
-	transform: translate(-100%, -50%) translateX(-8px);
+	z-index: 10;
 	display: flex;
 	align-items: center;
-	gap: 4px;
-	max-width: 200px;
-	white-space: nowrap;
-	color: hsl(var(--foreground) / 0.85);
-	pointer-events: auto;
-	z-index: 3;
-}
-
-/* ── Fade transition ── */
-.fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
-
-/* ── Bars ── */
-.gantt-bar {
-	position: absolute;
-	top: 50%;
-	transform: translateY(-50%);
-	height: 20px;
-	border-radius: 0 999px 999px 0;
-	display: flex;
-	align-items: center;
-	padding: 0 10px;
+	padding: 0 8px 0 0;
+	font-size: 11px;
+	font-weight: 400;
+	color: hsl(var(--foreground) / 0.55);
+	background: hsl(var(--background));
 	cursor: pointer;
-	opacity: 0.8;
-	transition: opacity 0.15s;
 	overflow: hidden;
-	min-width: 8px;
-	box-shadow: inset 0 1px 0 rgba(255,255,255,0.15);
+	transition: color 0.15s;
+	border-right: 1px solid rgba(0, 0, 0, 0.04);
+	position: sticky;
+	left: 0;
+	/* position: relative needed for absolute toggle button */
 }
-.gantt-bar:hover {
-	opacity: 1;
-	z-index: 2;
+:is(.dark) .gantt__label {
+	border-right-color: rgba(255, 255, 255, 0.04);
 }
-
-.gantt-bar-project {
-	height: 24px;
+.gantt--compact .gantt__label {
+	background: hsl(var(--card));
+}
+.gantt__label:hover {
+	color: hsl(var(--foreground));
+}
+.gantt__label--project {
 	font-weight: 600;
-	opacity: 0.9;
-	border-radius: 0 6px 6px 0;
+	color: hsl(var(--foreground) / 0.85);
 }
-
-.gantt-bar-event {
-	height: 18px;
-	opacity: 0.75;
-}
-
-.gantt-bar-ticket {
-	height: 16px;
-	opacity: 0.7;
-	border-radius: 0 4px 4px 0;
-}
-
-.gantt-bar-task {
-	height: 14px;
-	opacity: 0.65;
-	border-radius: 0 4px 4px 0;
-}
-
-.gantt-bar-completed {
-	opacity: 0.3;
-}
-
-.gantt-bar-label {
+.gantt__label--child {
+	font-weight: 400;
+	color: hsl(var(--foreground) / 0.45);
 	font-size: 10px;
-	font-weight: 600;
-	color: white;
+}
+.gantt__label--depth2 {
+	font-weight: 400;
+	color: hsl(var(--foreground) / 0.35);
+	font-size: 9px;
+}
+
+.gantt__label-text {
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
-	text-shadow: 0 1px 2px rgba(0,0,0,0.15);
+	flex: 1;
+	min-width: 0;
 }
 
-/* ── Milestones (diamond) ── */
-.gantt-milestone {
+/* ── Toggle button (+/-) — absolute so labels align ── */
+.gantt__toggle {
+	position: absolute;
+	left: 2px;
+	width: 14px;
+	height: 14px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	border-radius: 3px;
+	color: hsl(var(--muted-foreground) / 0.5);
+	border: 1px solid hsl(var(--border) / 0.5);
+	transition: all 0.15s;
+	z-index: 1;
+}
+.gantt__toggle:hover {
+	color: hsl(var(--foreground));
+	border-color: hsl(var(--border));
+	background: hsl(var(--muted) / 0.3);
+}
+
+/* ── Track column ── */
+.gantt__track {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	min-width: 0;
+}
+
+.gantt__track-bg {
+	width: 100%;
+	height: 12px;
+	border-radius: 6px;
+	position: relative;
+}
+
+/* ── Overflow bar (grey extension for child dates outside project range) ── */
+.gantt__overflow {
+	position: absolute;
+	top: 2px;
+	height: calc(100% - 4px);
+	border-radius: 4px;
+	background: rgba(0, 0, 0, 0.04);
+	z-index: 0;
+}
+:is(.dark) .gantt__overflow {
+	background: rgba(255, 255, 255, 0.04);
+}
+
+/* ── Bar ── */
+.gantt__bar {
+	position: absolute;
+	top: 0;
+	height: 100%;
+	border-radius: 6px;
+	cursor: pointer;
+	transition: filter 0.15s;
+	z-index: 1;
+}
+.gantt__bar:hover {
+	filter: brightness(0.92);
+}
+
+/* ── Milestone ── */
+.gantt__milestone {
 	position: absolute;
 	top: 50%;
 	transform: translate(-50%, -50%);
 	z-index: 2;
 }
-
-.gantt-diamond {
-	width: 10px;
-	height: 10px;
+.gantt__diamond {
+	width: 8px;
+	height: 8px;
 	transform: rotate(45deg);
-	border-radius: 2px;
+	border-radius: 1px;
 	opacity: 0.8;
 }
 
+/* ── Today line ── */
+.gantt__today {
+	position: absolute;
+	width: 1px;
+	background: hsl(var(--primary));
+	opacity: 0.2;
+	z-index: 5;
+	pointer-events: none;
+}
+.gantt__today-pip {
+	position: absolute;
+	top: 8px;
+	left: -3px;
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: hsl(var(--primary));
+	opacity: 0.6;
+}
+
+/* ── Modal form fields ── */
+.gantt-modal-label {
+	display: block;
+	font-size: 10px;
+	font-weight: 500;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: hsl(var(--muted-foreground));
+	margin-bottom: 4px;
+}
+.gantt-modal-input {
+	width: 100%;
+	height: 32px;
+	border-radius: 8px;
+	border: 1px solid hsl(var(--border));
+	background: hsl(var(--background));
+	padding: 0 12px;
+	font-size: 13px;
+	color: hsl(var(--foreground));
+	transition: border-color 0.15s;
+}
+.gantt-modal-input:focus {
+	outline: none;
+	border-color: hsl(var(--primary) / 0.4);
+	box-shadow: 0 0 0 2px hsl(var(--primary) / 0.08);
+}
+
+/* ── Fade transition ── */
+.fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
 </style>

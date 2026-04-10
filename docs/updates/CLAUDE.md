@@ -212,6 +212,66 @@ deploys to `app.earnest.guru`. The Directus admin lives at `admin.earnest.guru`.
 White-label uses wildcard SSL on `*.earnest.guru`. Reserved subdomains:
 `app`, `companion`, `admin`, `api`, `www`, `mail`, `status`
 
+## Design System: "Clean Gantt" Direction
+
+The UnifiedGantt redesign established the visual language for all data-heavy widgets going forward.
+Apply these principles when building or refactoring any widget (scheduler, calendar, boards, dashboards):
+
+**Layout:**
+- CSS Grid or flex with sticky label columns (labels pin left, content scrolls horizontally)
+- No separate sidebar + content scroll sync — everything in one scroll container
+- `position: sticky; left: 0` for label columns with matching background color
+
+**Typography & Spacing:**
+- Labels: 11px/600 for primary items, 10px/400 for children, 9px/400 for grandchildren
+- Headers: 9px uppercase, letter-spacing 0.06-0.08em, muted color
+- Row height: 32px. Compact and scannable
+- Generous use of `truncate` with `title` attributes for overflow
+
+**Color & Status:**
+- Status expressed via **opacity** (completed=0.3, active=1.0, scheduled=0.6) — not color-coded badges
+- Bar colors from data (project service color), not hard-coded per type
+- Backgrounds: barely-there greys (`rgba(0,0,0, 0.015)` alternating rows)
+- Borders: hairline or none (`rgba(0,0,0, 0.03)`)
+
+**Bars & Tracks:**
+- 12px tall, 6px border-radius, flat (no shadows, no gradients, no inset shine)
+- No labels inside bars — labels live in the sticky left column
+- Overflow indicators: subtle grey bar behind main bar for child date overflow
+
+**Containers:**
+- White/card background, 20px border-radius, 24px padding, barely-there shadow
+- `compact` prop removes padding/shadow when embedded inside an ios-card widget
+- Scrollbar hidden (`scrollbar-width: none`)
+
+**Interactivity:**
+- Click item → opens editable modal (role-aware: editors get inputs, viewers get read-only text)
+- +/- toggle buttons: `position: absolute` so labels align consistently
+- Expand/collapse with smooth transitions
+- "Today" button with `behavior: 'smooth'` scroll
+- Quarter labels as pill badges in header row with vertical grid lines
+
+**Hierarchy (2-level nesting):**
+- Depth 0: Project (bold, full opacity, +/- toggle)
+- Depth 1: Events/Tickets (icon + label, muted, indented 32px)
+- Depth 2: Tasks under events (smaller icon + label, more muted, indented 48px)
+- Type icons: 📅 cyan (events), 🎫 amber (tickets), ☑ purple (tasks)
+
+**Data filtering:**
+- Hide completed/archived by default, show count toggle ("3 completed")
+- Filter out dateless items, show "X undated" badge linking to a dropdown list
+- Sort: status priority (active → scheduled → completed) then newest first within group
+
+**Role awareness:**
+- `useOrgRole().canEdit('feature')` gates edit vs read-only in modals
+- Editors: inline inputs, save button
+- Viewers: read-only text, same layout, no save button
+
+**Reference files:**
+- `app/components/ProjectTimeline/UnifiedGantt.vue` — the canonical implementation
+- `app/components/ProjectTimeline/UnifiedGanttLegacy.vue` — previous version (backup)
+- `earnest-marketing/app/assets/css/sellsheet-modern.css` lines 2278-2329 — original mockup inspiration
+
 ## Environment variables (relevant ones)
 
 ```

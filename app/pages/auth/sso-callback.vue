@@ -92,8 +92,8 @@ function extractTokens(): Record<string, string> {
 
         <!-- Success -->
         <template v-else-if="status === 'success'">
-          <div class="h-8 w-8 rounded-full bg-green-500/20 flex items-center justify-center">
-            <UIcon name="i-heroicons-check" class="h-5 w-5 text-green-500" />
+          <div class="h-8 w-8 rounded-full bg-green-500/20 dark:bg-green-500/15 flex items-center justify-center">
+            <UIcon name="i-heroicons-check" class="h-5 w-5 text-green-500 dark:text-green-400" />
           </div>
           <p class="text-sm text-muted-foreground">Signed in successfully. Redirecting...</p>
         </template>
