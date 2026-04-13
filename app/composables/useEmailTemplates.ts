@@ -70,12 +70,41 @@ export function useEmailTemplates() {
     });
   };
 
+  const duplicateTemplate = async (sourceId: number, newName?: string): Promise<EmailTemplate> => {
+    const source = await getTemplate(sourceId);
+    const created = await createTemplate({
+      name: newName || `${source.name} (Copy)`,
+      type: source.type,
+      status: 'draft',
+      include_header: source.include_header,
+      include_footer: source.include_footer,
+      include_web_version_bar: source.include_web_version_bar,
+    });
+
+    // Copy blocks from source template
+    if (source.blocks?.length) {
+      const blockItems = useDirectusItems('template_blocks');
+      for (const tb of source.blocks) {
+        const block = typeof tb.block_id === 'object' ? tb.block_id : { id: tb.block_id };
+        await blockItems.create({
+          template_id: created.id,
+          block_id: block.id,
+          sort: tb.sort,
+          instance_variables: tb.instance_variables,
+        } as any);
+      }
+    }
+
+    return created;
+  };
+
   return {
     getTemplates,
     getTemplate,
     createTemplate,
     updateTemplate,
     deleteTemplate,
+    duplicateTemplate,
     previewNewsletter,
     sendTestEmail,
   };

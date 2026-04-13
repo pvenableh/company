@@ -1,27 +1,27 @@
 <template>
   <Transition name="fade">
     <div
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
       @click.self="$emit('close')"
     >
       <Transition name="scale-up" appear>
-        <div class="bg-background rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden border">
+        <div class="ios-card w-full max-w-2xl mx-4 shadow-xl overflow-hidden">
           <!-- Header -->
-          <div class="relative px-6 pt-6 pb-4">
+          <div class="relative px-5 pt-5 pb-4 border-b border-border/30">
             <button
-              class="absolute right-4 top-4 p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              class="absolute right-4 top-4 p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted ios-press transition-colors"
               @click="$emit('close')"
             >
-              <Icon name="lucide:x" class="w-4 h-4" />
+              <Icon name="lucide:x" class="w-3.5 h-3.5" />
             </button>
 
             <div class="flex items-center gap-3 mb-1">
-              <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center shadow-lg shadow-violet-500/20">
-                <Icon name="lucide:sparkles" class="w-4.5 h-4.5 text-white" />
+              <div class="w-8 h-8 rounded-xl bg-violet-500/10 flex items-center justify-center">
+                <Icon name="lucide:sparkles" class="w-4 h-4 text-violet-500" />
               </div>
               <div>
-                <h2 class="text-lg font-semibold text-foreground">AI Email Generator</h2>
-                <p class="text-xs text-muted-foreground">Describe your email and we'll create it for you</p>
+                <h2 class="text-sm font-semibold text-foreground">AI Email Generator</h2>
+                <p class="text-[10px] text-muted-foreground">Describe your email and we'll create it</p>
               </div>
             </div>
 
@@ -31,160 +31,158 @@
                 v-for="s in 2"
                 :key="s"
                 class="flex-1 h-1 rounded-full transition-all duration-500"
-                :class="s <= step ? 'bg-gradient-to-r from-violet-500 to-pink-500' : 'bg-muted'"
+                :class="s <= step ? 'bg-violet-500' : 'bg-muted'"
               />
             </div>
           </div>
 
           <!-- Step 1: What & Why -->
-          <div v-if="step === 1" class="px-6 pb-6">
-            <div class="space-y-5">
-              <!-- Email type quick-picks -->
+          <div v-if="step === 1" class="px-5 pb-5">
+            <div class="space-y-4 mt-4">
+              <!-- Email type -->
               <div>
-                <label class="text-sm font-medium text-foreground mb-2.5 block">What kind of email?</label>
+                <label class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2 block">What kind of email?</label>
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <button
                     v-for="t in emailTypes"
                     :key="t.value"
-                    class="flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl border-2 transition-all text-center"
+                    class="ios-card flex flex-col items-center gap-1.5 px-3 py-3 text-center transition-all"
                     :class="form.emailType === t.value
-                      ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/20 shadow-sm'
-                      : 'border-transparent bg-muted/50 hover:bg-muted hover:border-muted-foreground/20'"
+                      ? 'ring-2 ring-violet-500 ring-offset-1 bg-violet-50/50 dark:bg-violet-900/20'
+                      : 'hover:shadow-md'"
                     @click="form.emailType = t.value"
                   >
-                    <Icon :name="t.icon" class="w-5 h-5" :class="form.emailType === t.value ? 'text-violet-600 dark:text-violet-400' : 'text-muted-foreground'" />
-                    <span class="text-xs font-medium" :class="form.emailType === t.value ? 'text-violet-700 dark:text-violet-300' : 'text-foreground'">{{ t.label }}</span>
+                    <Icon :name="t.icon" class="w-4 h-4" :class="form.emailType === t.value ? 'text-violet-600 dark:text-violet-400' : 'text-muted-foreground'" />
+                    <span class="text-[10px] font-medium" :class="form.emailType === t.value ? 'text-violet-700 dark:text-violet-300' : 'text-foreground'">{{ t.label }}</span>
                   </button>
                 </div>
               </div>
 
-              <!-- Topic / Description -->
+              <!-- Topic -->
               <div>
-                <label class="text-sm font-medium text-foreground mb-1.5 block">What's this email about?</label>
+                <label class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">What's this email about?</label>
                 <textarea
                   v-model="form.topic"
                   rows="3"
-                  placeholder="e.g. We're launching a new product line of eco-friendly water bottles. We want to invite our customers to check them out with a 20% launch discount..."
-                  class="w-full rounded-xl border bg-background px-4 py-3 text-sm resize-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all placeholder:text-muted-foreground/60"
+                  placeholder="e.g. We're launching a new product line of eco-friendly water bottles..."
+                  class="w-full rounded-xl border bg-background px-3 py-2.5 text-sm resize-none focus:ring-1 focus:ring-violet-500/30 outline-none transition-all placeholder:text-muted-foreground/50"
                 />
               </div>
 
               <!-- Key points -->
               <div>
-                <label class="text-sm font-medium text-foreground mb-1.5 block">
-                  Key points to include
-                  <span class="text-muted-foreground font-normal">(optional)</span>
+                <label class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">
+                  Key points <span class="font-normal normal-case">(optional)</span>
                 </label>
                 <textarea
                   v-model="form.keyPoints"
                   rows="2"
-                  placeholder="- Free shipping on orders over $50&#10;- Available in 5 colors&#10;- Made from recycled materials"
-                  class="w-full rounded-xl border bg-background px-4 py-3 text-sm resize-none focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all placeholder:text-muted-foreground/60"
+                  placeholder="- Free shipping on orders over $50&#10;- Available in 5 colors"
+                  class="w-full rounded-xl border bg-background px-3 py-2.5 text-sm resize-none focus:ring-1 focus:ring-violet-500/30 outline-none transition-all placeholder:text-muted-foreground/50"
                 />
               </div>
             </div>
 
-            <div class="flex justify-end mt-6">
-              <Button
+            <div class="flex justify-end mt-5">
+              <button
+                class="rounded-full px-4 py-2 text-[11px] font-medium bg-violet-600 text-white hover:bg-violet-700 ios-press shadow-sm transition-colors inline-flex items-center gap-1.5 disabled:opacity-40"
                 :disabled="!form.topic.trim()"
-                class="bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-700 hover:to-pink-700 text-white border-0 shadow-lg shadow-violet-500/20 px-6"
                 @click="step = 2"
               >
-                Next
-                <Icon name="lucide:arrow-right" class="w-4 h-4 ml-1" />
-              </Button>
+                Next <Icon name="lucide:arrow-right" class="w-3 h-3" />
+              </button>
             </div>
           </div>
 
           <!-- Step 2: Audience & Tone -->
-          <div v-if="step === 2" class="px-6 pb-6">
-            <div class="space-y-5">
+          <div v-if="step === 2" class="px-5 pb-5">
+            <div class="space-y-4 mt-4">
               <!-- Audience -->
               <div>
-                <label class="text-sm font-medium text-foreground mb-2.5 block">Who's this for?</label>
+                <label class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2 block">Who's this for?</label>
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <button
                     v-for="a in audiences"
                     :key="a.value"
-                    class="flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl border-2 transition-all text-center"
+                    class="ios-card flex flex-col items-center gap-1.5 px-3 py-3 text-center transition-all"
                     :class="form.audience === a.value
-                      ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/20 shadow-sm'
-                      : 'border-transparent bg-muted/50 hover:bg-muted hover:border-muted-foreground/20'"
+                      ? 'ring-2 ring-violet-500 ring-offset-1 bg-violet-50/50 dark:bg-violet-900/20'
+                      : 'hover:shadow-md'"
                     @click="form.audience = a.value"
                   >
-                    <Icon :name="a.icon" class="w-5 h-5" :class="form.audience === a.value ? 'text-violet-600 dark:text-violet-400' : 'text-muted-foreground'" />
-                    <span class="text-xs font-medium" :class="form.audience === a.value ? 'text-violet-700 dark:text-violet-300' : 'text-foreground'">{{ a.label }}</span>
+                    <Icon :name="a.icon" class="w-4 h-4" :class="form.audience === a.value ? 'text-violet-600 dark:text-violet-400' : 'text-muted-foreground'" />
+                    <span class="text-[10px] font-medium" :class="form.audience === a.value ? 'text-violet-700 dark:text-violet-300' : 'text-foreground'">{{ a.label }}</span>
                   </button>
                 </div>
               </div>
 
               <!-- Tone -->
               <div>
-                <label class="text-sm font-medium text-foreground mb-2.5 block">What tone?</label>
+                <label class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2 block">What tone?</label>
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <button
                     v-for="t in tones"
                     :key="t.value"
-                    class="flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl border-2 transition-all text-center"
+                    class="ios-card flex flex-col items-center gap-1.5 px-3 py-3 text-center transition-all"
                     :class="form.tone === t.value
-                      ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/20 shadow-sm'
-                      : 'border-transparent bg-muted/50 hover:bg-muted hover:border-muted-foreground/20'"
+                      ? 'ring-2 ring-violet-500 ring-offset-1 bg-violet-50/50 dark:bg-violet-900/20'
+                      : 'hover:shadow-md'"
                     @click="form.tone = t.value"
                   >
-                    <span class="text-lg">{{ t.emoji }}</span>
-                    <span class="text-xs font-medium" :class="form.tone === t.value ? 'text-violet-700 dark:text-violet-300' : 'text-foreground'">{{ t.label }}</span>
+                    <span class="text-base">{{ t.emoji }}</span>
+                    <span class="text-[10px] font-medium" :class="form.tone === t.value ? 'text-violet-700 dark:text-violet-300' : 'text-foreground'">{{ t.label }}</span>
                   </button>
                 </div>
               </div>
 
               <!-- Color Scheme -->
               <div>
-                <label class="text-sm font-medium text-foreground mb-2.5 block">Color scheme</label>
+                <label class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2 block">Color scheme</label>
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <button
                     v-for="s in colorSchemes"
                     :key="s.value"
-                    class="flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl border-2 transition-all text-center"
+                    class="ios-card flex flex-col items-center gap-1.5 px-3 py-3 text-center transition-all"
                     :class="form.colorScheme === s.value
-                      ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/20 shadow-sm'
-                      : 'border-transparent bg-muted/50 hover:bg-muted hover:border-muted-foreground/20'"
+                      ? 'ring-2 ring-violet-500 ring-offset-1 bg-violet-50/50 dark:bg-violet-900/20'
+                      : 'hover:shadow-md'"
                     @click="form.colorScheme = s.value"
                   >
                     <div class="flex gap-0.5">
                       <span
                         v-for="(c, ci) in s.colors"
                         :key="ci"
-                        class="w-4 h-4 rounded-full border border-black/10"
+                        class="w-3.5 h-3.5 rounded-full border border-black/10"
                         :style="{ backgroundColor: c }"
                       />
                     </div>
-                    <span class="text-xs font-medium" :class="form.colorScheme === s.value ? 'text-violet-700 dark:text-violet-300' : 'text-foreground'">{{ s.label }}</span>
+                    <span class="text-[10px] font-medium" :class="form.colorScheme === s.value ? 'text-violet-700 dark:text-violet-300' : 'text-foreground'">{{ s.label }}</span>
                   </button>
                 </div>
               </div>
 
-              <!-- Custom color pickers (shown when "Custom" scheme is selected) -->
+              <!-- Custom color pickers -->
               <div v-if="form.colorScheme === 'custom'" class="space-y-3">
-                <label class="text-sm font-medium text-foreground block">Pick your colors</label>
+                <label class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider block">Pick your colors</label>
                 <div class="flex gap-4">
                   <div class="flex-1">
-                    <label class="text-xs text-muted-foreground mb-1 block">Text</label>
+                    <label class="text-[10px] text-muted-foreground mb-1 block">Text</label>
                     <div class="flex items-center gap-2">
-                      <input type="color" v-model="customColors.text" class="w-8 h-8 rounded border cursor-pointer" />
+                      <input type="color" v-model="customColors.text" class="w-8 h-8 rounded-lg border cursor-pointer" />
                       <input type="text" v-model="customColors.text" class="flex-1 rounded-lg border px-2 py-1.5 text-xs font-mono bg-background" />
                     </div>
                   </div>
                   <div class="flex-1">
-                    <label class="text-xs text-muted-foreground mb-1 block">Accent</label>
+                    <label class="text-[10px] text-muted-foreground mb-1 block">Accent</label>
                     <div class="flex items-center gap-2">
-                      <input type="color" v-model="customColors.accent" class="w-8 h-8 rounded border cursor-pointer" />
+                      <input type="color" v-model="customColors.accent" class="w-8 h-8 rounded-lg border cursor-pointer" />
                       <input type="text" v-model="customColors.accent" class="flex-1 rounded-lg border px-2 py-1.5 text-xs font-mono bg-background" />
                     </div>
                   </div>
                   <div v-if="form.colorCount === 3" class="flex-1">
-                    <label class="text-xs text-muted-foreground mb-1 block">Background</label>
+                    <label class="text-[10px] text-muted-foreground mb-1 block">Background</label>
                     <div class="flex items-center gap-2">
-                      <input type="color" v-model="customColors.background" class="w-8 h-8 rounded border cursor-pointer" />
+                      <input type="color" v-model="customColors.background" class="w-8 h-8 rounded-lg border cursor-pointer" />
                       <input type="text" v-model="customColors.background" class="flex-1 rounded-lg border px-2 py-1.5 text-xs font-mono bg-background" />
                     </div>
                   </div>
@@ -193,54 +191,51 @@
 
               <!-- Number of colors -->
               <div>
-                <label class="text-sm font-medium text-foreground mb-2.5 block">How many colors?</label>
-                <div class="flex gap-2">
+                <label class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2 block">How many colors?</label>
+                <div class="bg-muted/40 rounded-full p-0.5 flex gap-0.5 w-fit">
                   <button
                     v-for="n in [2, 3]"
                     :key="n"
-                    class="flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 transition-all"
-                    :class="form.colorCount === n
-                      ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/20 shadow-sm'
-                      : 'border-transparent bg-muted/50 hover:bg-muted hover:border-muted-foreground/20'"
+                    class="rounded-full px-3.5 py-1.5 text-[11px] font-medium transition-all inline-flex items-center gap-1.5"
+                    :class="form.colorCount === n ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'"
                     @click="form.colorCount = n"
                   >
                     <div class="flex gap-0.5">
                       <span
                         v-for="i in n"
                         :key="i"
-                        class="w-3.5 h-3.5 rounded-full"
+                        class="w-3 h-3 rounded-full"
                         :style="{ backgroundColor: selectedSchemeColors[i - 1] || '#ccc' }"
                       />
                     </div>
-                    <span class="text-xs font-medium" :class="form.colorCount === n ? 'text-violet-700 dark:text-violet-300' : 'text-foreground'">{{ n }} colors</span>
+                    {{ n }} colors
                   </button>
                 </div>
               </div>
 
-              <!-- Brand color (optional) -->
+              <!-- Brand color -->
               <div>
-                <label class="text-sm font-medium text-foreground mb-1.5 block">
-                  Brand color
-                  <span class="text-muted-foreground font-normal">(optional — overrides scheme accent)</span>
+                <label class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">
+                  Brand color <span class="font-normal normal-case">(optional)</span>
                 </label>
                 <div class="flex items-center gap-3">
                   <input
                     type="color"
                     :value="form.brandColor || '#6366f1'"
                     @input="form.brandColor = ($event.target as HTMLInputElement).value"
-                    class="w-10 h-10 rounded-lg border cursor-pointer shrink-0"
+                    class="w-9 h-9 rounded-xl border cursor-pointer shrink-0"
                   />
                   <input
                     type="text"
                     v-model="form.brandColor"
                     placeholder="#6366f1"
-                    class="flex-1 rounded-xl border px-4 py-2.5 text-sm bg-background font-mono focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all"
+                    class="flex-1 rounded-xl border px-3 py-2 text-sm bg-background font-mono focus:ring-1 focus:ring-violet-500/30 outline-none transition-all"
                   />
-                  <div class="flex gap-1.5">
+                  <div class="flex gap-1">
                     <button
                       v-for="c in presetColors"
                       :key="c"
-                      class="w-7 h-7 rounded-lg border-2 transition-all hover:scale-110"
+                      class="w-6 h-6 rounded-lg border-2 transition-all hover:scale-110 ios-press"
                       :class="form.brandColor === c ? 'border-foreground scale-110' : 'border-transparent'"
                       :style="{ backgroundColor: c }"
                       @click="form.brandColor = c"
@@ -250,87 +245,80 @@
               </div>
             </div>
 
-            <div class="flex justify-between mt-6">
-              <Button variant="ghost" @click="step = 1">
-                <Icon name="lucide:arrow-left" class="w-4 h-4 mr-1" />
-                Back
-              </Button>
-              <Button
-                class="bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-700 hover:to-pink-700 text-white border-0 shadow-lg shadow-violet-500/20 px-6"
+            <div class="flex justify-between mt-5">
+              <button class="rounded-full px-3 py-1.5 text-[11px] font-medium text-muted-foreground hover:bg-muted ios-press transition-colors inline-flex items-center gap-1" @click="step = 1">
+                <Icon name="lucide:arrow-left" class="w-3 h-3" /> Back
+              </button>
+              <button
+                class="rounded-full px-4 py-2 text-[11px] font-medium bg-violet-600 text-white hover:bg-violet-700 ios-press shadow-sm transition-colors inline-flex items-center gap-1.5"
                 @click="generate"
               >
-                <Icon name="lucide:sparkles" class="w-4 h-4 mr-1" />
-                Generate Email
-              </Button>
+                <Icon name="lucide:sparkles" class="w-3 h-3" /> Generate Email
+              </button>
             </div>
           </div>
 
           <!-- Step 3: Generating / Results -->
-          <div v-if="step === 3" class="px-6 pb-6">
-            <!-- Loading state -->
+          <div v-if="step === 3" class="px-5 pb-5">
+            <!-- Loading -->
             <div v-if="generating" class="py-12 text-center">
-              <div class="relative w-16 h-16 mx-auto mb-6">
-                <div class="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-500 to-pink-500 animate-pulse opacity-30" />
-                <div class="absolute inset-0 flex items-center justify-center">
-                  <Icon name="lucide:sparkles" class="w-7 h-7 text-violet-600 dark:text-violet-400 animate-bounce" />
-                </div>
+              <div class="w-14 h-14 rounded-2xl bg-violet-500/10 flex items-center justify-center mx-auto mb-4">
+                <Icon name="lucide:sparkles" class="w-6 h-6 text-violet-500 animate-bounce" />
               </div>
-              <h3 class="font-semibold text-foreground mb-1">Crafting your email...</h3>
-              <p class="text-sm text-muted-foreground max-w-xs mx-auto">
-                Writing engaging copy, selecting the best layout, and preparing image suggestions
+              <h3 class="text-sm font-semibold text-foreground mb-1">Crafting your email...</h3>
+              <p class="text-xs text-muted-foreground max-w-xs mx-auto">
+                Writing copy, selecting layout, and preparing images
               </p>
               <div class="flex justify-center gap-1 mt-4">
                 <div v-for="i in 3" :key="i" class="w-1.5 h-1.5 rounded-full bg-violet-500 animate-bounce" :style="{ animationDelay: `${i * 150}ms` }" />
               </div>
             </div>
 
-            <!-- Error state -->
+            <!-- Error -->
             <div v-else-if="error" class="py-8 text-center">
-              <div class="w-14 h-14 mx-auto mb-4 rounded-2xl bg-destructive/10 flex items-center justify-center">
-                <Icon name="lucide:alert-circle" class="w-6 h-6 text-destructive" />
+              <div class="w-12 h-12 mx-auto mb-4 rounded-2xl bg-destructive/10 flex items-center justify-center">
+                <Icon name="lucide:alert-circle" class="w-5 h-5 text-destructive" />
               </div>
-              <h3 class="font-semibold text-foreground mb-1">Generation failed</h3>
-              <p class="text-sm text-muted-foreground mb-4">{{ error }}</p>
+              <h3 class="text-sm font-semibold text-foreground mb-1">Generation failed</h3>
+              <p class="text-xs text-muted-foreground mb-4">{{ error }}</p>
               <div class="flex justify-center gap-2">
-                <Button variant="outline" @click="step = 2">
-                  <Icon name="lucide:arrow-left" class="w-4 h-4 mr-1" />
-                  Go Back
-                </Button>
-                <Button
-                  class="bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-700 hover:to-pink-700 text-white border-0"
+                <button class="rounded-full px-3 py-1.5 text-[11px] font-medium border border-border bg-card hover:bg-muted ios-press transition-colors inline-flex items-center gap-1" @click="step = 2">
+                  <Icon name="lucide:arrow-left" class="w-3 h-3" /> Go Back
+                </button>
+                <button
+                  class="rounded-full px-3 py-1.5 text-[11px] font-medium bg-violet-600 text-white hover:bg-violet-700 ios-press shadow-sm transition-colors inline-flex items-center gap-1"
                   @click="generate"
                 >
-                  <Icon name="lucide:refresh-cw" class="w-4 h-4 mr-1" />
-                  Try Again
-                </Button>
+                  <Icon name="lucide:refresh-cw" class="w-3 h-3" /> Try Again
+                </button>
               </div>
             </div>
 
             <!-- Results -->
-            <div v-else-if="result" class="space-y-4">
+            <div v-else-if="result" class="space-y-4 mt-4">
               <!-- Subject line -->
-              <div class="rounded-xl border bg-muted/30 p-4">
-                <label class="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 block">Subject Line</label>
+              <div class="ios-card p-4 bg-muted/20">
+                <label class="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1 block">Subject Line</label>
                 <input
                   v-model="result.subject"
                   class="w-full text-sm font-medium bg-transparent border-0 outline-none text-foreground"
                 />
-                <p v-if="result.previewText" class="text-xs text-muted-foreground mt-1 truncate">
+                <p v-if="result.previewText" class="text-[10px] text-muted-foreground mt-1 truncate">
                   Preview: {{ result.previewText }}
                 </p>
               </div>
 
-              <!-- Generated sections -->
+              <!-- Sections -->
               <div class="space-y-2 max-h-[360px] overflow-y-auto pr-1">
                 <div
                   v-for="(section, i) in result.sections"
                   :key="i"
-                  class="group rounded-xl border bg-card p-4 transition-all hover:shadow-sm"
+                  class="ios-card p-4 transition-all"
                 >
                   <div class="flex items-start justify-between gap-3">
                     <div class="flex items-center gap-2.5 min-w-0">
                       <div
-                        class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold"
+                        class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-[10px] font-bold"
                         :class="getSectionStyle(section.blockCategory)"
                       >
                         {{ i + 1 }}
@@ -340,7 +328,7 @@
                           <span class="text-xs font-semibold text-foreground">{{ section.blockName }}</span>
                           <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground">{{ section.blockCategory }}</span>
                         </div>
-                        <p class="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                        <p class="text-[10px] text-muted-foreground mt-0.5 line-clamp-2">
                           {{ getSectionPreview(section) }}
                         </p>
                       </div>
@@ -350,16 +338,16 @@
                   <!-- Image suggestion -->
                   <div
                     v-if="section.imageSuggestion"
-                    class="mt-2.5 flex items-start gap-2 px-2.5 py-2 rounded-lg bg-amber-50 dark:bg-amber-900/10 border border-amber-200/50 dark:border-amber-800/30"
+                    class="mt-2.5 flex items-start gap-2 px-2.5 py-2 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200/50 dark:border-amber-800/30"
                   >
-                    <Icon name="lucide:image" class="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                    <Icon name="lucide:image" class="w-3 h-3 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                     <div>
-                      <p class="text-[11px] font-medium text-amber-800 dark:text-amber-300">{{ section.imageSuggestion.description }}</p>
+                      <p class="text-[10px] font-medium text-amber-800 dark:text-amber-300">{{ section.imageSuggestion.description }}</p>
                       <div class="flex flex-wrap gap-1 mt-1">
                         <span
                           v-for="term in section.imageSuggestion.searchTerms"
                           :key="term"
-                          class="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
+                          class="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
                         >
                           {{ term }}
                         </span>
@@ -370,20 +358,18 @@
               </div>
 
               <!-- Actions -->
-              <div class="flex items-center justify-between pt-2 border-t">
-                <Button variant="ghost" size="sm" @click="generate">
-                  <Icon name="lucide:refresh-cw" class="w-3.5 h-3.5 mr-1" />
-                  Regenerate
-                </Button>
+              <div class="flex items-center justify-between pt-3 border-t border-border/30">
+                <button class="rounded-full px-3 py-1.5 text-[11px] font-medium text-muted-foreground hover:bg-muted ios-press transition-colors inline-flex items-center gap-1" @click="generate">
+                  <Icon name="lucide:refresh-cw" class="w-3 h-3" /> Regenerate
+                </button>
                 <div class="flex gap-2">
-                  <Button variant="outline" @click="$emit('close')">Cancel</Button>
-                  <Button
-                    class="bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-700 hover:to-pink-700 text-white border-0 shadow-lg shadow-violet-500/20 px-6"
+                  <button class="rounded-full px-3 py-1.5 text-[11px] font-medium text-muted-foreground hover:bg-muted ios-press transition-colors" @click="$emit('close')">Cancel</button>
+                  <button
+                    class="rounded-full px-4 py-2 text-[11px] font-medium bg-violet-600 text-white hover:bg-violet-700 ios-press shadow-sm transition-colors inline-flex items-center gap-1.5"
                     @click="applyToTemplate"
                   >
-                    <Icon name="lucide:check" class="w-4 h-4 mr-1" />
-                    Apply to Template
-                  </Button>
+                    <Icon name="lucide:check" class="w-3 h-3" /> Apply to Template
+                  </button>
                 </div>
               </div>
             </div>
@@ -395,8 +381,6 @@
 </template>
 
 <script setup lang="ts">
-import { Button } from '~/components/ui/button';
-
 const emit = defineEmits<{
   close: [];
   apply: [result: { subject: string; previewText: string; sections: any[] }];
@@ -463,7 +447,6 @@ const colorSchemes = [
   { value: 'corporate', label: 'Corporate', emoji: '💼', colors: ['#2c3e50', '#2980b9', '#27ae60', '#ecf0f1'] },
 ];
 
-// Custom color state for "Custom" scheme
 const customColors = reactive({
   text: '#333333',
   accent: '#f97316',
@@ -479,7 +462,6 @@ async function generate() {
   result.value = null;
 
   try {
-    // When using custom colors, pass them as the color scheme description and brand color
     const isCustom = form.colorScheme === 'custom';
     const data = await $fetch('/api/email/ai-generate', {
       method: 'POST',
@@ -517,7 +499,6 @@ function applyToTemplate() {
 
 function getSectionPreview(section: any): string {
   if (!section.variables) return '';
-  // Find the most content-rich variable to preview
   const contentKeys = ['title', 'heading', 'headline', 'text', 'body', 'content', 'description', 'subtitle', 'subheading'];
   for (const key of contentKeys) {
     for (const [vKey, vVal] of Object.entries(section.variables)) {
@@ -526,7 +507,6 @@ function getSectionPreview(section: any): string {
       }
     }
   }
-  // Fallback: first non-empty string variable
   const first = Object.values(section.variables).find(
     (v) => typeof v === 'string' && (v as string).length > 3 && !(v as string).startsWith('#') && v !== 'transparent',
   );
@@ -535,19 +515,19 @@ function getSectionPreview(section: any): string {
 
 function getSectionStyle(category: string): string {
   const styles: Record<string, string> = {
-    hero: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400',
-    content: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-    'two-column': 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-    'three-column': 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-    cta: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-    image: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
-    stats: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
-    quote: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400',
-    list: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400',
-    divider: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
-    social: 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400',
-    header: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-    footer: 'bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400',
+    hero: 'bg-violet-500/10 text-violet-600',
+    content: 'bg-green-500/10 text-green-600',
+    'two-column': 'bg-amber-500/10 text-amber-600',
+    'three-column': 'bg-amber-500/10 text-amber-600',
+    cta: 'bg-red-500/10 text-red-600',
+    image: 'bg-cyan-500/10 text-cyan-600',
+    stats: 'bg-indigo-500/10 text-indigo-600',
+    quote: 'bg-pink-500/10 text-pink-600',
+    list: 'bg-teal-500/10 text-teal-600',
+    divider: 'bg-gray-500/10 text-gray-600',
+    social: 'bg-sky-500/10 text-sky-600',
+    header: 'bg-blue-500/10 text-blue-600',
+    footer: 'bg-slate-500/10 text-slate-600',
   };
   return styles[category] || 'bg-primary/10 text-primary';
 }
@@ -564,22 +544,17 @@ function getSectionStyle(category: string): string {
 }
 
 .scale-up-enter-active {
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .scale-up-leave-active {
   transition: all 0.2s ease;
 }
 .scale-up-enter-from {
   opacity: 0;
-  transform: scale(0.92) translateY(10px);
+  transform: scale(0.95) translateY(8px);
 }
 .scale-up-leave-to {
   opacity: 0;
-  transform: scale(0.95);
-}
-
-@keyframes bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
+  transform: scale(0.97);
 }
 </style>

@@ -1,123 +1,134 @@
 <template>
   <div class="block-builder h-screen flex flex-col overflow-hidden">
     <!-- Top bar -->
-    <div class="flex items-center justify-between px-2 sm:px-4 py-2 border-b bg-background/95 backdrop-blur-sm sticky top-0 z-10 gap-2">
-      <div class="flex items-center gap-1.5 sm:gap-3 min-w-0">
+    <div class="flex items-center justify-between px-3 py-2 border-b glass sticky top-0 z-10 gap-2">
+      <div class="flex items-center gap-2 min-w-0">
         <NuxtLink
           to="/email"
-          class="text-muted-foreground hover:text-foreground text-sm transition-colors shrink-0"
+          class="rounded-full p-1.5 hover:bg-muted/50 text-muted-foreground hover:text-foreground ios-press transition-colors shrink-0"
         >
-          <Icon name="lucide:arrow-left" class="w-4 h-4 inline mr-1" />
-          <span class="hidden sm:inline">Email</span>
+          <Icon name="lucide:arrow-left" class="w-3.5 h-3.5" />
         </NuxtLink>
-        <span class="text-muted-foreground/30 hidden sm:inline">|</span>
-        <h1 class="font-semibold text-sm truncate">{{ template?.name || 'Template Builder' }}</h1>
+        <h1 class="font-medium text-sm truncate">{{ template?.name || 'Template Builder' }}</h1>
 
         <!-- Save status indicator -->
         <Transition name="fade" mode="out-in">
-          <span v-if="builder.saving.value" class="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+          <span v-if="builder.saving.value" class="flex items-center gap-1 text-[10px] text-muted-foreground shrink-0">
             <Icon name="lucide:loader-2" class="w-3 h-3 animate-spin" />
             <span class="hidden sm:inline">Saving…</span>
           </span>
-          <span v-else-if="justSaved" class="flex items-center gap-1 text-xs text-green-600 shrink-0">
+          <span v-else-if="justSaved" class="flex items-center gap-1 text-[10px] text-green-600 shrink-0">
             <Icon name="lucide:check" class="w-3 h-3" />
             <span class="hidden sm:inline">Saved</span>
           </span>
-          <span v-else-if="builder.isDirty.value" class="flex items-center gap-1 text-xs text-amber-500 shrink-0">
+          <span v-else-if="builder.isDirty.value" class="flex items-center gap-1 text-[10px] text-amber-500 shrink-0">
             <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
             <span class="hidden sm:inline">Unsaved</span>
           </span>
         </Transition>
       </div>
 
-      <div class="flex items-center gap-1 sm:gap-2 shrink-0">
+      <div class="flex items-center gap-1 shrink-0">
         <!-- Block count -->
-        <span v-if="builder.canvas.value.length" class="text-[11px] text-muted-foreground tabular-nums mr-1 hidden sm:inline">
+        <span v-if="builder.canvas.value.length" class="text-[10px] text-muted-foreground tabular-nums mr-1 hidden sm:inline">
           {{ builder.canvas.value.length }} {{ builder.canvas.value.length === 1 ? 'block' : 'blocks' }}
         </span>
 
-        <!-- Sidebar toggle (visible on < lg) -->
-        <Button variant="ghost" size="sm" class="lg:hidden" @click="showSidebar = !showSidebar">
-          <Icon name="lucide:layout-list" class="w-3.5 h-3.5" />
-          <span class="hidden sm:inline ml-1">Blocks</span>
-        </Button>
+        <!-- Sidebar toggle (mobile) -->
+        <button class="lg:hidden rounded-full px-2.5 py-1.5 text-[11px] font-medium border border-border bg-card hover:bg-muted ios-press inline-flex items-center gap-1 transition-colors" @click="showSidebar = !showSidebar">
+          <Icon name="lucide:layout-list" class="w-3 h-3" />
+          <span class="hidden sm:inline">Blocks</span>
+        </button>
 
-        <!-- AI Generate button -->
-        <Button
-          variant="ghost"
-          size="sm"
-          class="text-violet-600 hover:text-violet-700 hover:bg-violet-50 dark:text-violet-400 dark:hover:bg-violet-900/20"
+        <!-- AI Generate -->
+        <button
+          class="rounded-full px-2.5 py-1.5 text-[11px] font-medium bg-violet-500/10 text-violet-600 hover:bg-violet-500/20 dark:text-violet-400 ios-press inline-flex items-center gap-1 transition-colors"
           @click="showAIWizard = true"
         >
-          <Icon name="lucide:sparkles" class="w-3.5 h-3.5" />
-          <span class="hidden sm:inline ml-1">AI Generate</span>
-        </Button>
+          <Icon name="lucide:sparkles" class="w-3 h-3" />
+          <span class="hidden sm:inline">AI</span>
+        </button>
 
-        <!-- Import/Export dropdown -->
+        <!-- HTML dropdown -->
         <div class="relative" ref="importExportRef">
-          <Button variant="ghost" size="sm" @click="showImportExport = !showImportExport">
-            <Icon name="lucide:file-code-2" class="w-3.5 h-3.5" />
-            <span class="hidden sm:inline ml-1">HTML</span>
-            <Icon name="lucide:chevron-down" class="w-3 h-3 ml-0.5" />
-          </Button>
+          <button
+            class="rounded-full px-2.5 py-1.5 text-[11px] font-medium border border-border bg-card hover:bg-muted ios-press inline-flex items-center gap-1 transition-colors"
+            @click="showImportExport = !showImportExport"
+          >
+            <Icon name="lucide:file-code-2" class="w-3 h-3" />
+            <span class="hidden sm:inline">HTML</span>
+            <Icon name="lucide:chevron-down" class="w-2.5 h-2.5" />
+          </button>
           <Transition name="fade">
             <div
               v-if="showImportExport"
-              class="absolute right-0 top-full mt-1 w-48 bg-card border border-border rounded-lg shadow-lg z-50 py-1"
+              class="absolute right-0 top-full mt-1.5 w-48 ios-card py-1 shadow-xl z-50"
             >
               <button
-                class="flex items-center gap-2 w-full px-3 py-2 text-xs hover:bg-muted/50 transition-colors text-left"
+                class="flex items-center gap-2 w-full px-3 py-2 text-[11px] rounded-lg hover:bg-muted/50 transition-colors text-left"
                 @click="showImportExport = false; showPasteModal = true"
               >
                 <Icon name="lucide:clipboard-paste" class="w-3.5 h-3.5 text-muted-foreground" />
                 Paste HTML / MJML
               </button>
               <button
-                class="flex items-center gap-2 w-full px-3 py-2 text-xs hover:bg-muted/50 transition-colors text-left"
+                class="flex items-center gap-2 w-full px-3 py-2 text-[11px] rounded-lg hover:bg-muted/50 transition-colors text-left"
                 :disabled="!builder.previewHtml.value"
                 :class="{ 'opacity-40 cursor-not-allowed': !builder.previewHtml.value }"
                 @click="showImportExport = false; copyHtmlToClipboard()"
               >
                 <Icon name="lucide:copy" class="w-3.5 h-3.5 text-muted-foreground" />
-                Copy HTML to Clipboard
+                Copy HTML
               </button>
               <button
-                class="flex items-center gap-2 w-full px-3 py-2 text-xs hover:bg-muted/50 transition-colors text-left"
+                class="flex items-center gap-2 w-full px-3 py-2 text-[11px] rounded-lg hover:bg-muted/50 transition-colors text-left"
                 :disabled="!builder.previewHtml.value"
                 :class="{ 'opacity-40 cursor-not-allowed': !builder.previewHtml.value }"
                 @click="showImportExport = false; downloadHtml()"
               >
                 <Icon name="lucide:download" class="w-3.5 h-3.5 text-muted-foreground" />
-                Download HTML File
+                Download HTML
               </button>
               <button
-                class="flex items-center gap-2 w-full px-3 py-2 text-xs hover:bg-muted/50 transition-colors text-left"
+                class="flex items-center gap-2 w-full px-3 py-2 text-[11px] rounded-lg hover:bg-muted/50 transition-colors text-left"
                 @click="showImportExport = false; copyMjmlToClipboard()"
               >
                 <Icon name="lucide:braces" class="w-3.5 h-3.5 text-muted-foreground" />
-                Copy MJML Source
+                Copy MJML
               </button>
             </div>
           </Transition>
         </div>
 
-        <Button variant="ghost" size="sm" @click="showTestModal = true">
-          <Icon name="lucide:send" class="w-3.5 h-3.5" />
-          <span class="hidden sm:inline ml-1">Send Test</span>
-        </Button>
-        <Button variant="outline" size="sm" @click="showPreview = !showPreview">
-          <Icon :name="showPreview ? 'lucide:panel-right-close' : 'lucide:panel-right-open'" class="w-3.5 h-3.5" />
-          <span class="hidden sm:inline ml-1">Preview</span>
-        </Button>
-        <Button size="sm" :disabled="builder.saving.value || !builder.isDirty.value" @click="handleSave">
-          <Icon name="lucide:save" class="w-3.5 h-3.5" />
-          <span class="hidden sm:inline ml-1">Save</span>
-        </Button>
+        <!-- Divider -->
+        <div class="w-px h-5 bg-border/60 mx-0.5 hidden sm:block" />
+
+        <!-- Test -->
+        <button class="rounded-full px-2.5 py-1.5 text-[11px] font-medium border border-border bg-card hover:bg-muted ios-press inline-flex items-center gap-1 transition-colors" @click="showTestModal = true">
+          <Icon name="lucide:send" class="w-3 h-3" />
+          <span class="hidden sm:inline">Test</span>
+        </button>
+
+        <!-- Preview -->
+        <button class="rounded-full px-2.5 py-1.5 text-[11px] font-medium border border-border bg-card hover:bg-muted ios-press inline-flex items-center gap-1 transition-colors" @click="showPreview = !showPreview">
+          <Icon :name="showPreview ? 'lucide:panel-right-close' : 'lucide:panel-right-open'" class="w-3 h-3" />
+          <span class="hidden sm:inline">Preview</span>
+        </button>
+
+        <!-- Save -->
+        <button
+          class="rounded-full px-2.5 py-1.5 text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 ios-press inline-flex items-center gap-1 shadow-sm transition-colors disabled:opacity-40"
+          :disabled="builder.saving.value || !builder.isDirty.value"
+          @click="handleSave"
+        >
+          <Icon name="lucide:save" class="w-3 h-3" />
+          <span class="hidden sm:inline">Save</span>
+        </button>
       </div>
     </div>
 
     <div class="flex flex-1 overflow-hidden relative">
-      <!-- Sidebar backdrop (visible on < lg when sidebar is open) -->
+      <!-- Sidebar backdrop (mobile) -->
       <Transition name="fade">
         <div
           v-if="showSidebar"
@@ -133,14 +144,14 @@
           class="
             w-64 shrink-0 border-r overflow-y-auto flex flex-col bg-background
             fixed inset-y-0 left-0 z-30 lg:relative lg:z-auto
-            shadow-xl lg:shadow-none
+            lg:shadow-none
           "
-          :class="{ 'top-0': !isLg }"
+          :class="{ 'top-0 glass': !isLg }"
         >
           <!-- Mobile sidebar header -->
           <div class="flex items-center justify-between px-3 py-2 border-b lg:hidden">
-            <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Block Library</span>
-            <button class="p-1 rounded hover:bg-muted" @click="showSidebar = false">
+            <span class="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Block Library</span>
+            <button class="p-1 rounded-full hover:bg-muted ios-press" @click="showSidebar = false">
               <Icon name="lucide:x" class="w-4 h-4" />
             </button>
           </div>
@@ -154,7 +165,7 @@
           <!-- Custom Block Button -->
           <div class="border-t p-3">
             <button
-              class="w-full flex items-center justify-center gap-1.5 rounded-md border border-dashed border-primary/30 px-3 py-2 text-xs font-medium text-primary hover:bg-primary/5 hover:border-primary/50 transition-all"
+              class="w-full flex items-center justify-center gap-1.5 rounded-full border border-dashed border-primary/30 px-3 py-2 text-[11px] font-medium text-primary hover:bg-primary/5 hover:border-primary/50 ios-press transition-all"
               @click="showCustomBlockModal = true"
             >
               <Icon name="lucide:code-2" class="w-3.5 h-3.5" />
@@ -162,11 +173,10 @@
             </button>
           </div>
 
-          <!-- Partial Toggles + Edit -->
-          <div class="border-t p-3 space-y-2 bg-muted/30">
-            <p class="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Email Sections</p>
+          <!-- Partial Toggles -->
+          <div class="border-t p-3 space-y-2 bg-muted/20">
+            <p class="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Email Sections</p>
 
-            <!-- Web version bar -->
             <div class="flex items-center gap-2 text-xs">
               <input
                 type="checkbox"
@@ -174,10 +184,9 @@
                 class="rounded border-border h-3.5 w-3.5 cursor-pointer"
                 @change="handlePartialToggle('web_version_bar', ($event.target as HTMLInputElement).checked)"
               />
-              <span class="flex-1 cursor-pointer" @click="builder.includeWebVersionBar.value = !builder.includeWebVersionBar.value; handlePartialToggle('web_version_bar', builder.includeWebVersionBar.value)">Web version bar</span>
+              <span class="flex-1 cursor-pointer text-[11px]" @click="builder.includeWebVersionBar.value = !builder.includeWebVersionBar.value; handlePartialToggle('web_version_bar', builder.includeWebVersionBar.value)">Web version bar</span>
             </div>
 
-            <!-- Header -->
             <div class="flex items-center gap-2 text-xs">
               <input
                 type="checkbox"
@@ -185,19 +194,16 @@
                 class="rounded border-border h-3.5 w-3.5 cursor-pointer"
                 @change="handlePartialToggle('header', ($event.target as HTMLInputElement).checked)"
               />
-              <span class="flex-1">Header</span>
+              <span class="flex-1 text-[11px]">Header</span>
               <button
                 v-if="builder.headerPartial.value"
                 class="text-[10px] text-primary hover:underline flex items-center gap-0.5"
-                title="Edit header variables (logo, colors, etc.)"
                 @click="editingPartialType = 'header'"
               >
-                <Icon name="lucide:pencil" class="w-3 h-3" />
-                Edit
+                <Icon name="lucide:pencil" class="w-3 h-3" /> Edit
               </button>
             </div>
 
-            <!-- Footer -->
             <div class="flex items-center gap-2 text-xs">
               <input
                 type="checkbox"
@@ -205,15 +211,13 @@
                 class="rounded border-border h-3.5 w-3.5 cursor-pointer"
                 @change="handlePartialToggle('footer', ($event.target as HTMLInputElement).checked)"
               />
-              <span class="flex-1">Footer</span>
+              <span class="flex-1 text-[11px]">Footer</span>
               <button
                 v-if="builder.footerPartial.value"
                 class="text-[10px] text-primary hover:underline flex items-center gap-0.5"
-                title="Edit footer variables (address, links, etc.)"
                 @click="editingPartialType = 'footer'"
               >
-                <Icon name="lucide:pencil" class="w-3 h-3" />
-                Edit
+                <Icon name="lucide:pencil" class="w-3 h-3" /> Edit
               </button>
             </div>
           </div>
@@ -221,7 +225,7 @@
       </Transition>
 
       <!-- Canvas -->
-      <div class="flex-1 overflow-y-auto bg-muted/20 p-3 sm:p-6">
+      <div class="flex-1 overflow-y-auto bg-muted/10 p-3 sm:p-6">
         <div class="max-w-2xl mx-auto">
           <NewsletterBuilderCanvas
             v-if="builder.canvas.value.length"
@@ -233,47 +237,45 @@
             @reorder="handleReorder($event)"
           />
 
-          <!-- Empty state — choose AI or manual -->
+          <!-- Empty state -->
           <div v-else class="py-8 sm:py-16">
             <div class="text-center mb-8">
-              <h2 class="text-lg font-semibold text-foreground mb-1">How would you like to start?</h2>
-              <p class="text-sm text-muted-foreground">Choose a starting point for your email template</p>
+              <h2 class="text-lg font-medium text-foreground mb-1">How would you like to start?</h2>
+              <p class="text-xs text-muted-foreground">Choose a starting point for your email</p>
             </div>
 
-            <div class="grid sm:grid-cols-2 gap-4 max-w-lg mx-auto">
-              <!-- AI Generate option (primary) -->
+            <div class="grid sm:grid-cols-2 gap-3 max-w-lg mx-auto">
+              <!-- AI Generate -->
               <button
-                class="group relative flex flex-col items-center text-center p-6 rounded-2xl border-2 border-violet-200 dark:border-violet-800/50 bg-gradient-to-b from-violet-50/80 to-white dark:from-violet-900/20 dark:to-background hover:border-violet-400 dark:hover:border-violet-600 hover:shadow-lg hover:shadow-violet-500/10 transition-all duration-300"
+                class="ios-card p-5 cursor-pointer group text-center bg-violet-50/30 dark:bg-violet-900/10 hover:shadow-md transition-all"
                 @click="showAIWizard = true"
               >
-                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 to-pink-500 flex items-center justify-center mb-4 shadow-lg shadow-violet-500/20 group-hover:scale-105 transition-transform">
-                  <Icon name="lucide:sparkles" class="w-6 h-6 text-white" />
+                <div class="w-12 h-12 rounded-2xl bg-violet-500/10 flex items-center justify-center mb-3 mx-auto group-hover:scale-105 transition-transform">
+                  <Icon name="lucide:sparkles" class="w-5 h-5 text-violet-500" />
                 </div>
-                <h3 class="font-semibold text-foreground mb-1">Start with AI</h3>
-                <p class="text-xs text-muted-foreground leading-relaxed">
-                  Describe your email and AI will generate the layout, content, and images
+                <h3 class="text-sm font-semibold text-foreground mb-0.5">Start with AI</h3>
+                <p class="text-[10px] text-muted-foreground leading-relaxed">
+                  Describe your email and AI generates layout and content
                 </p>
-                <span class="mt-3 inline-flex items-center gap-1 text-xs font-medium text-violet-600 dark:text-violet-400">
-                  Recommended
-                  <Icon name="lucide:arrow-right" class="w-3 h-3" />
+                <span class="mt-2 inline-flex items-center gap-1 text-[10px] font-medium text-violet-600 dark:text-violet-400">
+                  Recommended <Icon name="lucide:arrow-right" class="w-2.5 h-2.5" />
                 </span>
               </button>
 
-              <!-- Manual build option -->
+              <!-- Manual -->
               <button
-                class="group flex flex-col items-center text-center p-6 rounded-2xl border-2 border-dashed border-muted-foreground/20 bg-background/50 hover:border-muted-foreground/40 hover:bg-muted/30 transition-all duration-300"
+                class="ios-card p-5 cursor-pointer group text-center hover:shadow-md transition-all"
                 @click="showSidebar = true"
               >
-                <div class="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center mb-4 group-hover:bg-primary/10 transition-colors">
-                  <Icon name="lucide:layout-template" class="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
+                <div class="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center mb-3 mx-auto group-hover:bg-primary/10 transition-colors">
+                  <Icon name="lucide:layout-template" class="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
                 </div>
-                <h3 class="font-semibold text-foreground mb-1">Build Manually</h3>
-                <p class="text-xs text-muted-foreground leading-relaxed">
-                  Drag and drop blocks from the library to create your layout
+                <h3 class="text-sm font-semibold text-foreground mb-0.5">Build Manually</h3>
+                <p class="text-[10px] text-muted-foreground leading-relaxed">
+                  Drag and drop blocks from the library
                 </p>
-                <span class="mt-3 inline-flex items-center gap-1 text-xs text-muted-foreground">
-                  <Icon name="lucide:grip-vertical" class="w-3 h-3" />
-                  Drag & drop
+                <span class="mt-2 inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+                  <Icon name="lucide:grip-vertical" class="w-2.5 h-2.5" /> Drag & drop
                 </span>
               </button>
             </div>
@@ -291,10 +293,9 @@
             flex flex-col bg-background
           "
         >
-          <!-- Mobile preview close bar -->
           <div class="flex items-center justify-between px-3 py-2 border-b lg:hidden">
-            <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Preview</span>
-            <button class="p-1 rounded hover:bg-muted" @click="showPreview = false">
+            <span class="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Preview</span>
+            <button class="p-1 rounded-full hover:bg-muted ios-press" @click="showPreview = false">
               <Icon name="lucide:x" class="w-4 h-4" />
             </button>
           </div>
@@ -342,35 +343,40 @@
     <Teleport to="body">
       <div
         v-if="showPasteModal"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm"
         @click.self="showPasteModal = false"
       >
-        <div class="ios-card w-full max-w-2xl mx-4 p-6 shadow-xl">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="font-semibold">Paste HTML or MJML</h3>
-            <button class="p-1 rounded hover:bg-muted" @click="showPasteModal = false">
-              <Icon name="lucide:x" class="w-4 h-4" />
+        <div class="ios-card w-full max-w-2xl mx-4 shadow-xl overflow-hidden">
+          <div class="flex items-center justify-between px-5 py-4 border-b border-border/30">
+            <h3 class="text-sm font-semibold">Paste HTML or MJML</h3>
+            <button class="p-1.5 rounded-full hover:bg-muted ios-press" @click="showPasteModal = false">
+              <Icon name="lucide:x" class="w-3.5 h-3.5" />
             </button>
           </div>
-          <p class="text-xs text-muted-foreground mb-3">
-            Paste generated HTML from an MJML app or any email HTML. This will replace the current template MJML source and update the preview.
-          </p>
-          <textarea
-            v-model="pastedHtmlContent"
-            rows="12"
-            placeholder="Paste your HTML or MJML here..."
-            class="w-full rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/30 resize-y"
-          />
-          <div class="flex items-center justify-between mt-4">
+          <div class="px-5 py-4">
+            <p class="text-[11px] text-muted-foreground mb-3">
+              Paste generated HTML from an MJML app or any email HTML. This will replace the current template source.
+            </p>
+            <textarea
+              v-model="pastedHtmlContent"
+              rows="12"
+              placeholder="Paste your HTML or MJML here..."
+              class="w-full rounded-xl border border-border bg-muted/20 px-3 py-2 text-xs font-mono placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/30 resize-y"
+            />
+          </div>
+          <div class="flex items-center justify-between px-5 py-3 border-t border-border/30">
             <span class="text-[10px] text-muted-foreground">
               {{ pastedHtmlContent.includes('<mjml') ? 'Detected: MJML' : pastedHtmlContent.includes('<html') || pastedHtmlContent.includes('<table') ? 'Detected: HTML' : 'Paste content above' }}
             </span>
             <div class="flex gap-2">
-              <Button variant="outline" size="sm" @click="showPasteModal = false">Cancel</Button>
-              <Button size="sm" :disabled="!pastedHtmlContent.trim()" @click="handlePasteImport">
-                <Icon name="lucide:check" class="w-3.5 h-3.5 mr-1" />
-                Import
-              </Button>
+              <button class="rounded-full px-3 py-1.5 text-[11px] font-medium text-muted-foreground hover:bg-muted ios-press transition-colors" @click="showPasteModal = false">Cancel</button>
+              <button
+                class="rounded-full px-3 py-1.5 text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 ios-press shadow-sm transition-colors inline-flex items-center gap-1 disabled:opacity-40"
+                :disabled="!pastedHtmlContent.trim()"
+                @click="handlePasteImport"
+              >
+                <Icon name="lucide:check" class="w-3 h-3" /> Import
+              </button>
             </div>
           </div>
         </div>
@@ -380,7 +386,6 @@
 </template>
 
 <script setup lang="ts">
-import { Button } from '~/components/ui/button';
 import { useDebounceFn, useMediaQuery } from '@vueuse/core';
 import type { CanvasBlock, NewsletterBlock } from '~~/shared/email/blocks';
 import { nanoid } from 'nanoid';
@@ -418,7 +423,6 @@ onMounted(async () => {
   if (builder.canvas.value.length > 0) {
     await builder.refreshPreview();
   } else if (props.autoOpenAi) {
-    // Auto-open AI wizard when coming from "Create & Generate"
     showAIWizard.value = true;
   }
 });
@@ -433,12 +437,10 @@ onUnmounted(() => {
 });
 
 function handleKeydown(e: KeyboardEvent) {
-  // Ctrl/Cmd+S = Save
   if ((e.ctrlKey || e.metaKey) && e.key === 's') {
     e.preventDefault();
     if (builder.isDirty.value) handleSave();
   }
-  // Ctrl/Cmd+P = Toggle Preview
   if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
     e.preventDefault();
     showPreview.value = !showPreview.value;
@@ -470,14 +472,12 @@ function handleDuplicateBlock(instanceId: string) {
   };
 
   builder.canvas.value.splice(idx + 1, 0, duplicate);
-  // Reindex sort order
   builder.canvas.value.forEach((b, i) => (b.sort = i));
   builder.isDirty.value = true;
   debouncedPreview();
 }
 
 function handleReorder(newOrder: CanvasBlock[]) {
-  // Update the canvas with the new order
   builder.canvas.value.splice(0, builder.canvas.value.length, ...newOrder);
   builder.canvas.value.forEach((b, i) => (b.sort = i));
   builder.isDirty.value = true;
@@ -502,18 +502,14 @@ async function handleSave() {
 }
 
 async function handleCustomBlockCreated(block: NewsletterBlock) {
-  // Add the new block to the canvas
   builder.addBlock(block);
   debouncedPreview();
-  // Refresh the block library so the new block appears in the sidebar
   blockLibrary.value = await getBlockLibrary();
 }
 
 async function handleAIApply(result: { subject: string; previewText: string; sections: any[] }) {
   showAIWizard.value = false;
-  // Populate canvas from AI output
   builder.populateFromAI(result.sections, blockLibrary.value);
-  // Auto-open preview to show the result
   showPreview.value = true;
   await builder.refreshPreview();
 }
@@ -526,17 +522,14 @@ async function handlePasteImport() {
   const isMjml = content.includes('<mjml');
 
   if (isMjml) {
-    // Save the MJML directly to the template and refresh preview
     const emailTemplateItems = useDirectusItems('email_templates');
     await emailTemplateItems.update(props.templateId, {
       mjml_source: content,
       mjml_assembled_at: new Date().toISOString(),
     });
-    // Reload blocks and preview
     await builder.loadBlocks();
     await builder.refreshPreview();
   } else {
-    // It's raw HTML — wrap in MJML raw block structure and save
     const wrappedMjml = `<mjml>
   <mj-head>
     <mj-attributes>
@@ -573,7 +566,6 @@ async function copyHtmlToClipboard() {
     copyFeedback.value = 'html';
     setTimeout(() => { copyFeedback.value = ''; }, 2000);
   } catch {
-    // Fallback for older browsers
     const textarea = document.createElement('textarea');
     textarea.value = builder.previewHtml.value;
     document.body.appendChild(textarea);

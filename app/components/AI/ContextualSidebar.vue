@@ -2,7 +2,7 @@
 import { nextTick, onMounted } from 'vue';
 
 const props = defineProps<{
-  entityType: 'client' | 'project' | 'invoice';
+  entityType: 'client' | 'project' | 'invoice' | 'email' | 'marketing';
   entityId: string;
   entityLabel: string;
 }>();
@@ -60,6 +60,16 @@ const entityPrompts: Record<string, string[]> = {
     'Why is this invoice overdue?',
     'Draft a payment reminder email',
     'Summarize payment history',
+  ],
+  email: [
+    'Suggest a subject line for this email',
+    'Improve the copy in this template',
+    'What content blocks would work here?',
+  ],
+  marketing: [
+    'What campaigns should I run this month?',
+    'Analyze my email engagement trends',
+    'Draft a content calendar for next week',
   ],
 };
 

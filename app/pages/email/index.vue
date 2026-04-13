@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { Contact } from '~~/shared/email/contacts';
-import { Button } from '~/components/ui/button';
 import { useDebounceFn } from '@vueuse/core';
 
 definePageMeta({ middleware: ['auth'] });
@@ -9,9 +8,15 @@ useHead({ title: 'Email | Earnest' });
 const router = useRouter();
 const { getContacts } = useContacts();
 const { getLists } = useMailingLists();
-const { getTemplates, createTemplate } = useEmailTemplates();
+const { getTemplates, createTemplate, duplicateTemplate } = useEmailTemplates();
+const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext();
 
-const tab = ref<'templates' | 'lists' | 'contacts'>('templates');
+const activeTab = ref(0);
+const tabs = [
+	{ key: 'templates', label: 'Templates', icon: 'lucide:layout-template' },
+	{ key: 'lists', label: 'Lists', icon: 'lucide:list' },
+	{ key: 'contacts', label: 'Contacts', icon: 'lucide:users' },
+];
 
 // Templates state
 const templates = ref<any[]>([]);
@@ -34,8 +39,9 @@ const listsLoading = ref(true);
 const showNewTemplate = ref(false);
 const newTemplateName = ref('');
 const newTemplateType = ref<'newsletter' | 'transactional'>('newsletter');
-const useAIAssist = ref(true);
 const creatingTemplate = ref(false);
+const startMethod = ref<'blank' | 'existing' | 'ai' | null>(null);
+const selectedSourceTemplate = ref<any>(null);
 
 const fetchTemplates = async () => {
 	templatesLoading.value = true;
@@ -71,218 +77,266 @@ const handleCreateTemplate = async () => {
 	if (!newTemplateName.value.trim()) return;
 	creatingTemplate.value = true;
 	try {
-		const tpl = await createTemplate({
-			name: newTemplateName.value.trim(),
-			type: newTemplateType.value,
-			status: 'draft',
-		});
-		showNewTemplate.value = false;
-		newTemplateName.value = '';
-		await fetchTemplates();
-		const path = `/email/templates/${tpl.id}`;
-		router.push(useAIAssist.value ? `${path}?ai=1` : path);
+		if (startMethod.value === 'existing' && selectedSourceTemplate.value) {
+			const tpl = await duplicateTemplate(
+				selectedSourceTemplate.value.id,
+				newTemplateName.value.trim(),
+			);
+			showNewTemplate.value = false;
+			resetModal();
+			await fetchTemplates();
+			router.push(`/email/templates/${tpl.id}`);
+		} else {
+			const tpl = await createTemplate({
+				name: newTemplateName.value.trim(),
+				type: newTemplateType.value,
+				status: 'draft',
+			});
+			showNewTemplate.value = false;
+			resetModal();
+			await fetchTemplates();
+			const path = `/email/templates/${tpl.id}`;
+			router.push(startMethod.value === 'ai' ? `${path}?ai=1` : path);
+		}
 	} catch {
 		await fetchTemplates();
 		showNewTemplate.value = false;
+		resetModal();
 	} finally {
 		creatingTemplate.value = false;
 	}
 };
 
+const handleDuplicate = async (tpl: any) => {
+	creatingTemplate.value = true;
+	try {
+		const newTpl = await duplicateTemplate(tpl.id);
+		await fetchTemplates();
+		router.push(`/email/templates/${newTpl.id}`);
+	} finally {
+		creatingTemplate.value = false;
+	}
+};
+
+function resetModal() {
+	newTemplateName.value = '';
+	startMethod.value = null;
+	selectedSourceTemplate.value = null;
+	newTemplateType.value = 'newsletter';
+}
+
 onMounted(async () => {
+	setEntity('email', 'dashboard', 'Email Dashboard');
 	await Promise.all([fetchTemplates(), fetchContacts(), fetchLists()]);
 });
+
+onUnmounted(() => clearEntity());
 </script>
 
 <template>
-	<div class="p-6 max-w-7xl mx-auto">
+	<div class="p-4 md:p-6 max-w-7xl mx-auto">
 		<!-- Header -->
 		<div class="flex items-center justify-between mb-6">
 			<div>
-				<h1 class="text-xl font-semibold">Email</h1>
-				<p class="text-sm text-muted-foreground">Create campaigns, manage templates and mailing lists</p>
+				<h1 class="text-2xl font-semibold">Email</h1>
+				<p class="text-xs text-muted-foreground mt-0.5">Templates, lists, and contacts</p>
 			</div>
-			<div class="flex gap-2">
+			<div class="flex items-center gap-2">
+				<button
+					class="rounded-full px-3 py-1.5 text-[11px] font-medium border border-border bg-card hover:bg-muted ios-press inline-flex items-center gap-1.5 transition-colors"
+					@click="sidebarOpen = true"
+				>
+					<Icon name="lucide:sparkles" class="w-3 h-3" />
+					<span class="hidden sm:inline">Ask Earnest</span>
+				</button>
 				<NuxtLink to="/contacts/import">
-					<Button variant="outline" size="sm">
-						<Icon name="lucide:upload" class="w-4 h-4 mr-1" />
+					<button class="rounded-full px-3 py-1.5 text-[11px] font-medium border border-border bg-card hover:bg-muted ios-press inline-flex items-center gap-1.5 transition-colors">
+						<Icon name="lucide:upload" class="w-3 h-3" />
 						Import CSV
-					</Button>
+					</button>
 				</NuxtLink>
-				<Button size="sm" @click="showNewTemplate = true">
-					<Icon name="lucide:plus" class="w-4 h-4 mr-1" />
+				<button
+					class="rounded-full px-3 py-1.5 text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 ios-press inline-flex items-center gap-1.5 shadow-sm transition-colors"
+					@click="showNewTemplate = true; startMethod = null"
+				>
+					<Icon name="lucide:plus" class="w-3 h-3" />
 					New Email
-				</Button>
+				</button>
 			</div>
 		</div>
 
 		<!-- Tabs -->
-		<div class="flex gap-1 mb-6 border-b">
-			<button
-				class="px-4 py-2.5 text-sm font-medium border-b-2 transition-colors"
-				:class="tab === 'templates' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'"
-				@click="tab = 'templates'"
-			>
-				Templates ({{ templates.length }})
-			</button>
-			<button
-				class="px-4 py-2.5 text-sm font-medium border-b-2 transition-colors"
-				:class="tab === 'lists' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'"
-				@click="tab = 'lists'"
-			>
-				Mailing Lists ({{ lists.length }})
-			</button>
-			<button
-				class="px-4 py-2.5 text-sm font-medium border-b-2 transition-colors"
-				:class="tab === 'contacts' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'"
-				@click="tab = 'contacts'"
-			>
-				Contacts ({{ contactTotal }})
-			</button>
-		</div>
+		<UTabs v-model="activeTab" :items="tabs" class="mb-6" />
 
 		<!-- Templates Tab -->
-		<div v-if="tab === 'templates'">
-			<div v-if="templatesLoading" class="py-8 text-center text-muted-foreground">Loading templates...</div>
+		<div v-if="tabs[activeTab]?.key === 'templates'">
+			<div v-if="templatesLoading" class="py-8 text-center text-muted-foreground text-sm">Loading templates...</div>
 			<div v-else-if="templates.length === 0" class="py-16 text-center">
-				<div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-rose-50 dark:bg-rose-900/20 flex items-center justify-center">
-					<Icon name="lucide:mail-plus" class="w-8 h-8 text-rose-400" />
+				<div class="w-14 h-14 mx-auto mb-4 rounded-2xl bg-primary/5 flex items-center justify-center">
+					<Icon name="lucide:mail-plus" class="w-7 h-7 text-primary/40" />
 				</div>
 				<h3 class="font-semibold text-foreground mb-1">No email templates yet</h3>
-				<p class="text-sm text-muted-foreground mb-4">Create your first email template to start sending campaigns</p>
-				<Button @click="showNewTemplate = true">
-					<Icon name="lucide:plus" class="w-4 h-4 mr-1" />
+				<p class="text-xs text-muted-foreground mb-4">Create your first email template to start sending campaigns</p>
+				<button
+					class="rounded-full px-4 py-2 text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 ios-press inline-flex items-center gap-1.5 shadow-sm"
+					@click="showNewTemplate = true; startMethod = null"
+				>
+					<Icon name="lucide:plus" class="w-3.5 h-3.5" />
 					Create Template
-				</Button>
+				</button>
 			</div>
-			<div v-else class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+			<div v-else class="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
 				<div
 					v-for="tpl in templates"
 					:key="tpl.id"
-					class="group border rounded-xl p-5 hover:border-primary/30 hover:shadow-sm cursor-pointer transition-all"
+					class="ios-card p-4 cursor-pointer group"
 					@click="router.push(`/email/templates/${tpl.id}`)"
 				>
 					<div class="flex items-start justify-between mb-3">
-						<div class="w-10 h-10 rounded-lg flex items-center justify-center" :class="tpl.type === 'newsletter' ? 'bg-rose-50 dark:bg-rose-900/20' : 'bg-blue-50 dark:bg-blue-900/20'">
-							<Icon :name="tpl.type === 'newsletter' ? 'lucide:newspaper' : 'lucide:mail'" class="w-5 h-5" :class="tpl.type === 'newsletter' ? 'text-rose-500' : 'text-blue-500'" />
+						<div class="w-9 h-9 rounded-xl flex items-center justify-center" :class="tpl.type === 'newsletter' ? 'bg-primary/5' : 'bg-blue-500/5'">
+							<Icon :name="tpl.type === 'newsletter' ? 'lucide:newspaper' : 'lucide:mail'" class="w-4 h-4" :class="tpl.type === 'newsletter' ? 'text-primary/60' : 'text-blue-500/60'" />
 						</div>
 						<span
-							class="text-xs px-2 py-0.5 rounded-full"
+							class="text-[10px] px-2 py-0.5 rounded-full font-medium"
 							:class="{
-								'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400': tpl.status === 'published',
-								'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400': tpl.status === 'draft',
-								'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400': !tpl.status || tpl.status === 'archived',
+								'bg-green-500/10 text-green-600': tpl.status === 'published',
+								'bg-amber-500/10 text-amber-600': tpl.status === 'draft',
+								'bg-muted text-muted-foreground': !tpl.status || tpl.status === 'archived',
 							}"
 						>
 							{{ tpl.status || 'draft' }}
 						</span>
 					</div>
-					<h3 class="font-semibold text-foreground mb-1 group-hover:text-primary transition-colors">{{ tpl.name }}</h3>
-					<p class="text-xs text-muted-foreground capitalize">{{ tpl.type || 'newsletter' }}</p>
+					<h3 class="text-sm font-semibold text-foreground mb-0.5 group-hover:text-primary transition-colors">{{ tpl.name }}</h3>
+					<p class="text-[10px] text-muted-foreground capitalize">{{ tpl.type || 'newsletter' }}</p>
+					<!-- Hover actions -->
+					<div class="flex gap-1 mt-3 pt-2 border-t border-border/30 opacity-0 group-hover:opacity-100 transition-opacity">
+						<button
+							class="rounded-full px-2 py-1 text-[10px] font-medium text-muted-foreground hover:bg-muted ios-press inline-flex items-center gap-1 transition-colors"
+							@click.stop="handleDuplicate(tpl)"
+						>
+							<Icon name="lucide:copy" class="w-3 h-3" /> Duplicate
+						</button>
+						<button
+							class="rounded-full px-2 py-1 text-[10px] font-medium text-muted-foreground hover:bg-muted ios-press inline-flex items-center gap-1 transition-colors"
+							@click.stop="router.push(`/email/templates/${tpl.id}`)"
+						>
+							<Icon name="lucide:pencil" class="w-3 h-3" /> Edit
+						</button>
+					</div>
 				</div>
 
 				<!-- New template card -->
 				<button
-					class="border-2 border-dashed rounded-xl p-5 flex flex-col items-center justify-center text-muted-foreground hover:border-primary/40 hover:text-primary transition-all min-h-[140px]"
-					@click="showNewTemplate = true"
+					class="ios-card border-dashed border-2 p-4 flex flex-col items-center justify-center text-muted-foreground hover:text-primary min-h-[140px] cursor-pointer transition-colors"
+					@click="showNewTemplate = true; startMethod = null"
 				>
-					<Icon name="lucide:plus" class="w-6 h-6 mb-2" />
-					<span class="text-sm font-medium">New Template</span>
+					<Icon name="lucide:plus" class="w-5 h-5 mb-2" />
+					<span class="text-[11px] font-medium">New Template</span>
 				</button>
 			</div>
 		</div>
 
 		<!-- Lists Tab -->
-		<div v-if="tab === 'lists'">
+		<div v-if="tabs[activeTab]?.key === 'lists'">
 			<div class="flex justify-end mb-4">
 				<NuxtLink to="/lists">
-					<Button variant="outline" size="sm">Manage Lists</Button>
+					<button class="rounded-full px-3 py-1.5 text-[11px] font-medium border border-border bg-card hover:bg-muted ios-press inline-flex items-center gap-1.5 transition-colors">
+						Manage Lists
+					</button>
 				</NuxtLink>
 			</div>
 
-			<div v-if="listsLoading" class="py-8 text-center text-muted-foreground">Loading lists...</div>
+			<div v-if="listsLoading" class="py-8 text-center text-muted-foreground text-sm">Loading lists...</div>
 			<div v-else-if="lists.length === 0" class="py-16 text-center">
-				<div class="w-16 h-16 mx-auto mb-4 rounded-2xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
-					<Icon name="lucide:list" class="w-8 h-8 text-blue-400" />
+				<div class="w-14 h-14 mx-auto mb-4 rounded-2xl bg-blue-500/5 flex items-center justify-center">
+					<Icon name="lucide:list" class="w-7 h-7 text-blue-400/40" />
 				</div>
 				<h3 class="font-semibold text-foreground mb-1">No mailing lists yet</h3>
-				<p class="text-sm text-muted-foreground mb-4">Create a mailing list to organize your contacts for campaigns</p>
+				<p class="text-xs text-muted-foreground mb-4">Create a mailing list to organize your contacts</p>
 				<NuxtLink to="/lists">
-					<Button variant="outline">Create Mailing List</Button>
+					<button class="rounded-full px-4 py-2 text-[11px] font-medium border border-border bg-card hover:bg-muted ios-press inline-flex items-center gap-1.5 transition-colors">
+						Create Mailing List
+					</button>
 				</NuxtLink>
 			</div>
-			<div v-else class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+			<div v-else class="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
 				<div
 					v-for="list in lists"
 					:key="list.id"
-					class="border rounded-xl p-5 hover:border-primary/30 hover:shadow-sm cursor-pointer transition-all"
+					class="ios-card p-4 cursor-pointer group"
 					@click="router.push(`/lists/${list.id}`)"
 				>
-					<div class="flex items-center gap-3 mb-3">
-						<div class="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
-							<Icon name="lucide:users" class="w-5 h-5 text-blue-500" />
+					<div class="flex items-center gap-3 mb-2">
+						<div class="w-9 h-9 rounded-xl bg-blue-500/5 flex items-center justify-center">
+							<Icon name="lucide:users" class="w-4 h-4 text-blue-500/60" />
 						</div>
 						<div class="flex-1 min-w-0">
-							<h3 class="font-semibold text-foreground truncate">{{ list.name }}</h3>
-							<p class="text-xs text-muted-foreground">{{ list.subscriber_count || 0 }} subscribers</p>
+							<h3 class="text-sm font-semibold text-foreground truncate group-hover:text-primary transition-colors">{{ list.name }}</h3>
+							<p class="text-[10px] text-muted-foreground">{{ list.subscriber_count || 0 }} subscribers</p>
 						</div>
 					</div>
-					<p v-if="list.description" class="text-sm text-muted-foreground line-clamp-2">{{ list.description }}</p>
+					<p v-if="list.description" class="text-xs text-muted-foreground line-clamp-2">{{ list.description }}</p>
 					<div v-if="list.double_opt_in" class="mt-2">
-						<span class="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-full">Double opt-in</span>
+						<span class="text-[10px] text-amber-600 bg-amber-500/10 px-2 py-0.5 rounded-full font-medium">Double opt-in</span>
 					</div>
 				</div>
 			</div>
 		</div>
 
 		<!-- Contacts Tab -->
-		<div v-if="tab === 'contacts'">
+		<div v-if="tabs[activeTab]?.key === 'contacts'">
 			<div class="flex gap-3 mb-4">
-				<input
-					v-model="search"
-					type="search"
-					placeholder="Search name, email, company..."
-					class="flex-1 min-w-48 rounded-md border bg-background px-3 py-2 text-sm"
-					@input="debouncedFetch"
-				/>
+				<div class="relative flex-1 min-w-48">
+					<Icon name="lucide:search" class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+					<input
+						v-model="search"
+						type="search"
+						placeholder="Search name, email, company..."
+						class="w-full rounded-full border bg-muted/30 pl-8 pr-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all"
+						@input="debouncedFetch"
+					/>
+				</div>
 				<NuxtLink to="/contacts">
-					<Button variant="outline" size="sm">Full Contact Manager</Button>
+					<button class="rounded-full px-3 py-1.5 text-[11px] font-medium border border-border bg-card hover:bg-muted ios-press inline-flex items-center gap-1.5 transition-colors">
+						Full Contact Manager
+					</button>
 				</NuxtLink>
 			</div>
 
-			<div v-if="contactLoading" class="py-8 text-center text-muted-foreground">Loading contacts...</div>
+			<div v-if="contactLoading" class="py-8 text-center text-muted-foreground text-sm">Loading contacts...</div>
 			<div v-else-if="contacts.length === 0" class="py-12 text-center">
-				<Icon name="lucide:users" class="w-12 h-12 mx-auto text-muted-foreground/30 mb-3" />
-				<p class="text-muted-foreground">No contacts yet</p>
-				<NuxtLink to="/contacts" class="text-primary text-sm hover:underline mt-2 inline-block">Go to Contact Manager</NuxtLink>
+				<Icon name="lucide:users" class="w-10 h-10 mx-auto text-muted-foreground/20 mb-3" />
+				<p class="text-sm text-muted-foreground">No contacts yet</p>
+				<NuxtLink to="/contacts" class="text-primary text-xs hover:underline mt-2 inline-block">Go to Contact Manager</NuxtLink>
 			</div>
-			<div v-else class="border rounded-lg overflow-hidden">
-				<table class="w-full text-sm">
-					<thead class="bg-muted/50">
+			<div v-else class="ios-card overflow-hidden">
+				<table class="w-full text-xs">
+					<thead class="bg-muted/30">
 						<tr>
-							<th class="text-left px-4 py-2 font-medium">Name</th>
-							<th class="text-left px-4 py-2 font-medium">Email</th>
-							<th class="text-left px-4 py-2 font-medium hidden md:table-cell">Company</th>
-							<th class="text-left px-4 py-2 font-medium hidden lg:table-cell">Status</th>
+							<th class="text-left px-4 py-2.5 font-medium text-muted-foreground">Name</th>
+							<th class="text-left px-4 py-2.5 font-medium text-muted-foreground">Email</th>
+							<th class="text-left px-4 py-2.5 font-medium text-muted-foreground hidden md:table-cell">Company</th>
+							<th class="text-left px-4 py-2.5 font-medium text-muted-foreground hidden lg:table-cell">Status</th>
 						</tr>
 					</thead>
-					<tbody class="divide-y">
+					<tbody class="divide-y divide-border/40">
 						<tr
 							v-for="contact in contacts"
 							:key="contact.id"
-							class="hover:bg-muted/30 cursor-pointer transition-colors"
+							class="hover:bg-muted/20 cursor-pointer transition-colors"
 							@click="router.push(`/contacts/${contact.id}`)"
 						>
-							<td class="px-4 py-2">{{ contact.first_name }} {{ contact.last_name }}</td>
-							<td class="px-4 py-2 text-muted-foreground">{{ contact.email }}</td>
-							<td class="px-4 py-2 text-muted-foreground hidden md:table-cell">{{ contact.company || '-' }}</td>
-							<td class="px-4 py-2 hidden lg:table-cell">
+							<td class="px-4 py-2.5 text-foreground">{{ contact.first_name }} {{ contact.last_name }}</td>
+							<td class="px-4 py-2.5 text-muted-foreground">{{ contact.email }}</td>
+							<td class="px-4 py-2.5 text-muted-foreground hidden md:table-cell">{{ contact.company || '-' }}</td>
+							<td class="px-4 py-2.5 hidden lg:table-cell">
 								<span
-									class="text-xs px-2 py-0.5 rounded-full"
+									class="text-[10px] px-2 py-0.5 rounded-full font-medium"
 									:class="{
-										'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400': contact.status === 'active' || contact.status === 'published',
-										'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400': contact.status === 'unsubscribed' || contact.status === 'bounced',
-										'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400': !contact.status,
+										'bg-green-500/10 text-green-600': contact.status === 'active' || contact.status === 'published',
+										'bg-red-500/10 text-red-600': contact.status === 'unsubscribed' || contact.status === 'bounced',
+										'bg-muted text-muted-foreground': !contact.status,
 									}"
 								>
 									{{ contact.status || 'active' }}
@@ -294,88 +348,207 @@ onMounted(async () => {
 			</div>
 
 			<div v-if="contacts.length > 0" class="flex justify-between items-center mt-4">
-				<p class="text-sm text-muted-foreground">Showing {{ contacts.length }} of {{ contactTotal }}</p>
-				<div class="flex gap-2">
-					<Button variant="outline" size="sm" :disabled="page === 1" @click="page--; fetchContacts()">Prev</Button>
-					<Button variant="outline" size="sm" :disabled="!hasMore" @click="page++; fetchContacts()">Next</Button>
+				<p class="text-[11px] text-muted-foreground">Showing {{ contacts.length }} of {{ contactTotal }}</p>
+				<div class="flex gap-1.5">
+					<button
+						class="rounded-full px-3 py-1.5 text-[10px] font-medium border border-border bg-card hover:bg-muted ios-press transition-colors disabled:opacity-40"
+						:disabled="page === 1"
+						@click="page--; fetchContacts()"
+					>
+						Prev
+					</button>
+					<button
+						class="rounded-full px-3 py-1.5 text-[10px] font-medium border border-border bg-card hover:bg-muted ios-press transition-colors disabled:opacity-40"
+						:disabled="!hasMore"
+						@click="page++; fetchContacts()"
+					>
+						Next
+					</button>
 				</div>
 			</div>
 		</div>
 
 		<!-- New Template Modal -->
-		<div v-if="showNewTemplate" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" @click.self="showNewTemplate = false">
-			<div class="bg-background rounded-2xl shadow-2xl w-full max-w-md mx-4 p-6 border">
-				<div class="flex items-center justify-between mb-5">
-					<h2 class="text-lg font-semibold text-foreground">Create Email Template</h2>
-					<button class="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" @click="showNewTemplate = false">
-						<Icon name="lucide:x" class="w-4 h-4" />
-					</button>
-				</div>
-				<div class="space-y-4">
-					<div>
-						<label class="text-sm font-medium text-foreground/80 mb-1.5 block">Template Name</label>
-						<input
-							v-model="newTemplateName"
-							type="text"
-							placeholder="e.g. March Newsletter, Welcome Email..."
-							class="w-full rounded-xl border bg-background px-3 py-2.5 text-sm focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 outline-none transition-all"
-							@keyup.enter="handleCreateTemplate"
-						/>
+		<Teleport to="body">
+			<div v-if="showNewTemplate" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" @click.self="showNewTemplate = false; resetModal()">
+				<div class="ios-card w-full max-w-md mx-4 shadow-xl overflow-hidden">
+					<!-- Modal header -->
+					<div class="flex items-center justify-between px-5 py-4 border-b border-border/30">
+						<div class="flex items-center gap-2">
+							<button v-if="startMethod" class="p-1 rounded-full hover:bg-muted ios-press text-muted-foreground" @click="startMethod = null; selectedSourceTemplate = null">
+								<Icon name="lucide:arrow-left" class="w-3.5 h-3.5" />
+							</button>
+							<h2 class="text-sm font-semibold text-foreground">
+								{{ !startMethod ? 'Create Email' : startMethod === 'existing' ? 'From Existing' : startMethod === 'ai' ? 'AI Generate' : 'New Template' }}
+							</h2>
+						</div>
+						<button class="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted ios-press transition-colors" @click="showNewTemplate = false; resetModal()">
+							<Icon name="lucide:x" class="w-3.5 h-3.5" />
+						</button>
 					</div>
-					<div>
-						<label class="text-sm font-medium text-foreground/80 mb-1.5 block">Type</label>
-						<div class="grid grid-cols-2 gap-3">
+
+					<!-- Step 1: Choose method -->
+					<div v-if="!startMethod" class="p-2">
+						<div class="ios-group">
 							<button
-								class="p-3 rounded-xl border-2 text-left transition-all"
-								:class="newTemplateType === 'newsletter' ? 'border-primary bg-primary/5' : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'"
-								@click="newTemplateType = 'newsletter'"
+								class="flex items-center gap-3 w-full px-4 py-3.5 text-left hover:bg-muted/30 transition-colors ios-press"
+								@click="startMethod = 'blank'"
 							>
-								<Icon name="lucide:newspaper" class="w-5 h-5 mb-1" :class="newTemplateType === 'newsletter' ? 'text-primary' : 'text-muted-foreground'" />
-								<p class="text-sm font-medium">Newsletter</p>
-								<p class="text-xs text-muted-foreground">Campaign emails</p>
+								<div class="w-8 h-8 rounded-xl bg-muted flex items-center justify-center">
+									<Icon name="lucide:file-plus" class="w-4 h-4 text-muted-foreground" />
+								</div>
+								<div class="flex-1">
+									<p class="text-sm font-medium text-foreground">Blank Template</p>
+									<p class="text-[11px] text-muted-foreground">Start from scratch</p>
+								</div>
+								<Icon name="lucide:chevron-right" class="w-4 h-4 text-muted-foreground/40" />
 							</button>
 							<button
-								class="p-3 rounded-xl border-2 text-left transition-all"
-								:class="newTemplateType === 'transactional' ? 'border-primary bg-primary/5' : 'border-gray-200 dark:border-gray-700 hover:border-gray-300'"
-								@click="newTemplateType = 'transactional'"
+								class="flex items-center gap-3 w-full px-4 py-3.5 text-left hover:bg-muted/30 transition-colors ios-press"
+								:disabled="templates.length === 0"
+								:class="{ 'opacity-40': templates.length === 0 }"
+								@click="startMethod = 'existing'"
 							>
-								<Icon name="lucide:mail" class="w-5 h-5 mb-1" :class="newTemplateType === 'transactional' ? 'text-primary' : 'text-muted-foreground'" />
-								<p class="text-sm font-medium">Transactional</p>
-								<p class="text-xs text-muted-foreground">Automated emails</p>
+								<div class="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center">
+									<Icon name="lucide:copy" class="w-4 h-4 text-blue-500" />
+								</div>
+								<div class="flex-1">
+									<p class="text-sm font-medium text-foreground">From Existing</p>
+									<p class="text-[11px] text-muted-foreground">Duplicate &amp; customize a template</p>
+								</div>
+								<Icon name="lucide:chevron-right" class="w-4 h-4 text-muted-foreground/40" />
+							</button>
+							<button
+								class="flex items-center gap-3 w-full px-4 py-3.5 text-left hover:bg-muted/30 transition-colors ios-press"
+								@click="startMethod = 'ai'"
+							>
+								<div class="w-8 h-8 rounded-xl bg-violet-500/10 flex items-center justify-center">
+									<Icon name="lucide:sparkles" class="w-4 h-4 text-violet-500" />
+								</div>
+								<div class="flex-1">
+									<p class="text-sm font-medium text-foreground">AI Generate</p>
+									<p class="text-[11px] text-muted-foreground">Describe your email, AI builds it</p>
+								</div>
+								<Icon name="lucide:chevron-right" class="w-4 h-4 text-muted-foreground/40" />
 							</button>
 						</div>
 					</div>
 
-					<!-- AI-Assisted toggle -->
-					<div class="rounded-xl border-2 border-violet-200 dark:border-violet-800/50 bg-gradient-to-r from-violet-50/50 to-pink-50/30 dark:from-violet-900/10 dark:to-pink-900/5 p-3">
-						<label class="flex items-center gap-3 cursor-pointer">
+					<!-- Step 2: Blank / AI — name + type -->
+					<div v-else-if="startMethod === 'blank' || startMethod === 'ai'" class="px-5 py-4 space-y-4">
+						<div>
+							<label class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Template Name</label>
 							<input
-								v-model="useAIAssist"
-								type="checkbox"
-								class="rounded border-violet-300 text-violet-600 focus:ring-violet-500/20 h-4 w-4"
+								v-model="newTemplateName"
+								type="text"
+								placeholder="e.g. March Newsletter, Welcome Email..."
+								class="w-full rounded-xl border bg-background px-3 py-2.5 text-sm focus:ring-1 focus:ring-primary/30 outline-none transition-all"
+								@keyup.enter="handleCreateTemplate"
 							/>
-							<div class="flex-1">
-								<div class="flex items-center gap-1.5">
-									<Icon name="lucide:sparkles" class="w-4 h-4 text-violet-500" />
-									<span class="text-sm font-medium text-foreground">Start with AI</span>
-								</div>
-								<p class="text-xs text-muted-foreground mt-0.5">AI will help you generate content and layout</p>
+						</div>
+						<div>
+							<label class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Type</label>
+							<div class="bg-muted/40 rounded-full p-0.5 flex gap-0.5 w-fit">
+								<button
+									class="rounded-full px-3.5 py-1.5 text-[11px] font-medium transition-all"
+									:class="newTemplateType === 'newsletter' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'"
+									@click="newTemplateType = 'newsletter'"
+								>
+									Newsletter
+								</button>
+								<button
+									class="rounded-full px-3.5 py-1.5 text-[11px] font-medium transition-all"
+									:class="newTemplateType === 'transactional' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'"
+									@click="newTemplateType = 'transactional'"
+								>
+									Transactional
+								</button>
 							</div>
-						</label>
+						</div>
+						<div class="flex justify-end gap-2 pt-2">
+							<button class="rounded-full px-3 py-1.5 text-[11px] font-medium text-muted-foreground hover:bg-muted ios-press transition-colors" @click="showNewTemplate = false; resetModal()">
+								Cancel
+							</button>
+							<button
+								class="rounded-full px-4 py-1.5 text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 ios-press shadow-sm transition-colors inline-flex items-center gap-1.5 disabled:opacity-40"
+								:disabled="!newTemplateName.trim() || creatingTemplate"
+								@click="handleCreateTemplate"
+							>
+								<Icon v-if="startMethod === 'ai'" name="lucide:sparkles" class="w-3 h-3" />
+								{{ creatingTemplate ? 'Creating...' : startMethod === 'ai' ? 'Create & Generate' : 'Create' }}
+							</button>
+						</div>
+					</div>
+
+					<!-- Step 2: From Existing — template picker -->
+					<div v-else-if="startMethod === 'existing'" class="space-y-0">
+						<div class="max-h-64 overflow-y-auto divide-y divide-border/30">
+							<button
+								v-for="tpl in templates"
+								:key="tpl.id"
+								class="flex items-center gap-3 w-full px-5 py-3 text-left hover:bg-muted/30 transition-colors ios-press"
+								:class="{ 'bg-primary/5': selectedSourceTemplate?.id === tpl.id }"
+								@click="selectedSourceTemplate = tpl; newTemplateName = `${tpl.name} (Copy)`"
+							>
+								<div class="w-7 h-7 rounded-lg flex items-center justify-center" :class="tpl.type === 'newsletter' ? 'bg-primary/5' : 'bg-blue-500/5'">
+									<Icon :name="tpl.type === 'newsletter' ? 'lucide:newspaper' : 'lucide:mail'" class="w-3.5 h-3.5" :class="tpl.type === 'newsletter' ? 'text-primary/60' : 'text-blue-500/60'" />
+								</div>
+								<div class="flex-1 min-w-0">
+									<p class="text-sm font-medium text-foreground truncate">{{ tpl.name }}</p>
+									<p class="text-[10px] text-muted-foreground capitalize">{{ tpl.type }}</p>
+								</div>
+								<Icon v-if="selectedSourceTemplate?.id === tpl.id" name="lucide:check" class="w-4 h-4 text-primary" />
+							</button>
+						</div>
+						<div v-if="selectedSourceTemplate" class="px-5 py-3 border-t border-border/30 space-y-3">
+							<div>
+								<label class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1 block">New Name</label>
+								<input
+									v-model="newTemplateName"
+									type="text"
+									class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:ring-1 focus:ring-primary/30 outline-none transition-all"
+									@keyup.enter="handleCreateTemplate"
+								/>
+							</div>
+							<div class="flex justify-end">
+								<button
+									class="rounded-full px-4 py-1.5 text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 ios-press shadow-sm transition-colors inline-flex items-center gap-1.5 disabled:opacity-40"
+									:disabled="!newTemplateName.trim() || creatingTemplate"
+									@click="handleCreateTemplate"
+								>
+									<Icon name="lucide:copy" class="w-3 h-3" />
+									{{ creatingTemplate ? 'Duplicating...' : 'Duplicate' }}
+								</button>
+							</div>
+						</div>
 					</div>
 				</div>
-				<div class="flex justify-end gap-3 mt-6">
-					<Button variant="ghost" @click="showNewTemplate = false">Cancel</Button>
-					<Button
-						:disabled="!newTemplateName.trim() || creatingTemplate"
-						:class="useAIAssist ? 'bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-700 hover:to-pink-700 text-white border-0' : ''"
-						@click="handleCreateTemplate"
-					>
-						<Icon v-if="useAIAssist" name="lucide:sparkles" class="w-4 h-4 mr-1" />
-						{{ creatingTemplate ? 'Creating...' : useAIAssist ? 'Create & Generate' : 'Create Template' }}
-					</Button>
-				</div>
 			</div>
-		</div>
+		</Teleport>
+
+		<!-- AI Contextual Sidebar -->
+		<ClientOnly>
+			<AIContextualSidebar
+				v-if="sidebarOpen"
+				entity-type="email"
+				entity-id="dashboard"
+				entity-label="Email Dashboard"
+				@close="closeSidebar"
+			/>
+			<Transition name="overlay">
+				<div v-if="sidebarOpen" class="fixed inset-0 bg-black/20 z-40" @click="closeSidebar" />
+			</Transition>
+		</ClientOnly>
 	</div>
 </template>
+
+<style scoped>
+.overlay-enter-active,
+.overlay-leave-active {
+	transition: opacity 0.3s ease;
+}
+.overlay-enter-from,
+.overlay-leave-to {
+	opacity: 0;
+}
+</style>

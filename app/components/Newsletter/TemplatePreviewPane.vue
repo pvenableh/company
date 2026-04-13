@@ -1,33 +1,33 @@
 <template>
   <div class="flex flex-col h-full">
     <!-- Preview toolbar -->
-    <div class="px-3 py-2 bg-muted/50 border-b flex items-center justify-between gap-2">
-      <span class="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Preview</span>
+    <div class="px-3 py-2 glass border-b flex items-center justify-between gap-2">
+      <span class="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider">Preview</span>
 
-      <div class="flex items-center gap-1">
+      <div class="flex items-center gap-1.5">
         <!-- Device switcher -->
-        <div class="flex items-center bg-background rounded-md border p-0.5">
+        <div class="flex items-center bg-muted/40 rounded-full p-0.5">
           <button
             v-for="device in devices"
             :key="device.key"
-            class="flex items-center gap-1 px-2 py-1 rounded transition-all text-xs"
+            class="flex items-center gap-1 px-2.5 py-1 rounded-full transition-all text-[10px] font-medium"
             :class="
               activeDevice === device.key
-                ? 'bg-primary text-primary-foreground shadow-sm'
+                ? 'bg-background shadow-sm text-foreground'
                 : 'text-muted-foreground hover:text-foreground'
             "
             :title="device.label + ' (' + device.width + ')'"
             @click="activeDevice = device.key"
           >
-            <Icon :name="device.icon" class="w-3.5 h-3.5" />
-            <span class="text-[10px] hidden lg:inline">{{ device.label }}</span>
+            <Icon :name="device.icon" class="w-3 h-3" />
+            <span class="hidden lg:inline">{{ device.label }}</span>
           </button>
         </div>
 
         <!-- Zoom -->
-        <div class="flex items-center bg-background rounded-md border p-0.5 ml-1">
+        <div class="flex items-center bg-muted/40 rounded-full p-0.5">
           <button
-            class="p-1 rounded text-muted-foreground hover:text-foreground transition-colors"
+            class="p-1 rounded-full text-muted-foreground hover:text-foreground transition-colors"
             title="Zoom out"
             :disabled="zoom <= 50"
             @click="zoom = Math.max(50, zoom - 10)"
@@ -36,7 +36,7 @@
           </button>
           <span class="text-[10px] tabular-nums text-muted-foreground min-w-[32px] text-center">{{ zoom }}%</span>
           <button
-            class="p-1 rounded text-muted-foreground hover:text-foreground transition-colors"
+            class="p-1 rounded-full text-muted-foreground hover:text-foreground transition-colors"
             title="Zoom in"
             :disabled="zoom >= 150"
             @click="zoom = Math.min(150, zoom + 10)"
@@ -71,20 +71,19 @@
       </Transition>
     </div>
 
-    <!-- Success indicator (no errors) -->
+    <!-- Success indicator -->
     <div v-else-if="html" class="px-3 py-1 bg-green-500/5 border-b flex items-center gap-1.5">
       <Icon name="lucide:check-circle-2" class="w-3 h-3 text-green-600" />
-      <span class="text-[11px] text-green-700 font-medium">Valid MJML — no errors</span>
+      <span class="text-[10px] text-green-700 font-medium">Valid MJML</span>
     </div>
 
     <!-- Iframe preview -->
-    <div class="flex-1 overflow-auto flex items-start justify-center bg-muted/60 p-4">
+    <div class="flex-1 overflow-auto flex items-start justify-center bg-muted/30 p-4">
       <div v-if="!html" class="flex flex-col items-center justify-center py-20 text-muted-foreground">
         <Icon name="lucide:eye-off" class="w-8 h-8 mb-2 opacity-40" />
         <p class="text-xs">Preview will appear here</p>
       </div>
       <div v-else class="relative" :style="{ width: deviceWidth, transition: 'width 0.3s ease' }">
-        <!-- Device frame label -->
         <div class="text-center mb-2">
           <span class="text-[10px] text-muted-foreground/50 tabular-nums">{{ deviceWidthLabel }}</span>
         </div>
@@ -96,10 +95,10 @@
             maxWidth: deviceWidth,
             border: 'none',
             background: '#ffffff',
-            borderRadius: '8px',
+            borderRadius: '12px',
             boxShadow: activeDevice === 'mobile'
               ? '0 0 0 8px #1a1a1a, 0 0 0 10px #333, 0 8px 30px rgba(0,0,0,0.2)'
-              : '0 1px 3px rgba(0,0,0,0.1)',
+              : '0 1px 3px rgba(0,0,0,0.08)',
             transform: `scale(${zoom / 100})`,
             transformOrigin: 'top center',
           }"
@@ -137,7 +136,7 @@ const deviceWidth = computed(() => {
 const deviceWidthLabel = computed(() => {
   switch (activeDevice.value) {
     case 'mobile': return '375px — Mobile';
-    default: return '600px — Desktop (Email Max Width)';
+    default: return '600px — Desktop';
   }
 });
 
@@ -150,7 +149,6 @@ function resizeIframe() {
         (doc.documentElement.scrollHeight || 600) + 'px';
     }
   } catch {
-    // Cross-origin restriction — use fallback height
     iframeRef.value.style.height = '600px';
   }
 }

@@ -1,30 +1,30 @@
 <template>
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="$emit('close')">
-    <div class="bg-background rounded-lg shadow-xl w-full max-w-lg mx-4 max-h-[80vh] flex flex-col">
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" @click.self="$emit('close')">
+    <div class="ios-card w-full max-w-lg mx-4 max-h-[80vh] flex flex-col shadow-xl overflow-hidden">
       <!-- Header -->
-      <div class="flex items-center justify-between px-5 py-4 border-b shrink-0">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-border/30 shrink-0">
         <div class="flex items-center gap-2">
-          <div class="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Icon :name="typeIcon" class="w-4 h-4 text-primary" />
+          <div class="w-7 h-7 rounded-xl bg-primary/10 flex items-center justify-center">
+            <Icon :name="typeIcon" class="w-3.5 h-3.5 text-primary" />
           </div>
           <div>
-            <h3 class="font-semibold text-sm">Edit {{ typeLabel }}</h3>
-            <p v-if="currentPartial" class="text-[11px] text-muted-foreground">{{ currentPartial.name }}</p>
+            <h3 class="text-sm font-semibold">Edit {{ typeLabel }}</h3>
+            <p v-if="currentPartial" class="text-[10px] text-muted-foreground">{{ currentPartial.name }}</p>
           </div>
         </div>
-        <button class="text-muted-foreground hover:text-foreground transition-colors" @click="$emit('close')">
-          <Icon name="lucide:x" class="w-4 h-4" />
+        <button class="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted ios-press transition-colors" @click="$emit('close')">
+          <Icon name="lucide:x" class="w-3.5 h-3.5" />
         </button>
       </div>
 
       <!-- Body -->
       <div class="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-        <!-- Partial selector (if multiple available) -->
+        <!-- Partial selector -->
         <div v-if="availablePartials.length > 1" class="space-y-1.5">
-          <label class="text-xs font-medium">Template</label>
+          <label class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Template</label>
           <select
             :value="currentPartial?.id"
-            class="w-full rounded-md border px-3 py-2 text-sm bg-background"
+            class="w-full rounded-xl border px-3 py-2 text-sm bg-background focus:ring-1 focus:ring-primary/30 outline-none transition-all"
             @change="handlePartialChange(Number(($event.target as HTMLSelectElement).value))"
           >
             <option
@@ -39,8 +39,8 @@
 
         <!-- Variable editor -->
         <div v-if="parsedSchema.length">
-          <p class="text-[11px] text-muted-foreground mb-3">
-            Customize this {{ typeLabel.toLowerCase() }} for your organization. Changes are saved per-template.
+          <p class="text-[10px] text-muted-foreground mb-3">
+            Customize this {{ typeLabel.toLowerCase() }} for your organization.
           </p>
           <NewsletterBlockVariableEditor
             :schema="parsedSchema"
@@ -52,11 +52,6 @@
         <div v-else-if="currentPartial" class="text-center py-6 text-muted-foreground">
           <Icon name="lucide:settings-2" class="w-6 h-6 mx-auto mb-2 opacity-40" />
           <p class="text-xs">This {{ typeLabel.toLowerCase() }} has no configurable variables.</p>
-          <p class="text-[11px] mt-1">
-            Edit the MJML source in Directus to add
-            <code class="bg-muted px-1 rounded text-[10px]" v-text="'{{{ variable_name }}}'"></code>
-            patterns.
-          </p>
         </div>
 
         <div v-else class="text-center py-6 text-muted-foreground">
@@ -65,30 +60,29 @@
         </div>
 
         <!-- Feedback -->
-        <div v-if="saveSuccess" class="rounded-md px-3 py-2 bg-green-500/10 text-green-700 text-xs flex items-center gap-1.5">
+        <div v-if="saveSuccess" class="rounded-xl px-3 py-2 bg-green-500/10 text-green-700 text-xs flex items-center gap-1.5">
           <Icon name="lucide:check" class="w-3.5 h-3.5" />
           Saved successfully
         </div>
       </div>
 
       <!-- Footer -->
-      <div class="flex justify-end gap-2 px-5 py-3 border-t shrink-0">
-        <Button variant="outline" size="sm" @click="$emit('close')">Cancel</Button>
-        <Button
-          size="sm"
+      <div class="flex justify-end gap-2 px-5 py-3 border-t border-border/30 shrink-0">
+        <button class="rounded-full px-3 py-1.5 text-[11px] font-medium text-muted-foreground hover:bg-muted ios-press transition-colors" @click="$emit('close')">Cancel</button>
+        <button
+          class="rounded-full px-4 py-1.5 text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 ios-press shadow-sm transition-colors disabled:opacity-40 inline-flex items-center gap-1"
           :disabled="!hasChanges || saving"
           @click="handleSave"
         >
-          <Icon name="lucide:save" class="w-3.5 h-3.5 mr-1" />
+          <Icon name="lucide:save" class="w-3 h-3" />
           {{ saving ? 'Saving…' : 'Save Changes' }}
-        </Button>
+        </button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { Button } from '~/components/ui/button';
 import type { EmailPartial, EmailPartialType } from '~~/shared/email/blocks';
 import { parseVariablesSchema } from '~~/shared/email/blocks';
 
@@ -143,13 +137,11 @@ const typeIcon = computed(() => {
   }
 });
 
-// Load available partials and set initial variables
 onMounted(async () => {
   availablePartials.value = await props.builder.getPartialOptions(props.type);
 
   if (currentPartial.value) {
     const vars = { ...(currentPartial.value.instance_variables || {}) };
-    // Fill in defaults from schema for any missing variables
     for (const def of parsedSchema.value) {
       if (!(def.key in vars)) {
         vars[def.key] = def.default ?? '';

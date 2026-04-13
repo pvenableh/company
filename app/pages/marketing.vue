@@ -3,22 +3,21 @@
 		<!-- Header -->
 		<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
 			<div>
-				<h1 class="text-2xl font-bold text-foreground">Marketing Intelligence</h1>
-				<p class="text-sm text-muted-foreground mt-1">
+				<h1 class="text-2xl font-semibold text-foreground">Marketing Intelligence</h1>
+				<p class="text-xs text-muted-foreground mt-1">
 					Create marketing for <span class="font-medium text-foreground">{{ analysisScope }}</span>
 				</p>
 				<!-- Scope indicator -->
 				<div class="flex items-center gap-3 mt-2">
-					<span v-if="currentClient" class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
+					<span v-if="currentClient" class="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-medium">
 						<Icon name="lucide:user" class="w-3 h-3" />
 						Client: {{ currentClient.name }}
 					</span>
-					<span v-else class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
+					<span v-else class="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
 						<Icon name="lucide:building-2" class="w-3 h-3" />
 						{{ currentOrg?.name || 'Organization' }}
 					</span>
-					<!-- Include clients toggle (only when in org-wide mode) -->
-					<label v-if="!currentClient" class="inline-flex items-center gap-1.5 text-xs cursor-pointer select-none">
+					<label v-if="!currentClient" class="inline-flex items-center gap-1.5 text-[10px] cursor-pointer select-none">
 						<input
 							type="checkbox"
 							v-model="includeClients"
@@ -29,19 +28,26 @@
 				</div>
 			</div>
 			<div class="flex flex-col items-end gap-2">
-				<div class="flex items-center gap-3">
-					<span v-if="lastAnalyzed" class="text-xs text-muted-foreground">
-						Last analyzed {{ timeAgo(lastAnalyzed) }}
+				<div class="flex items-center gap-2">
+					<button
+						class="rounded-full px-3 py-1.5 text-[11px] font-medium border border-border bg-card hover:bg-muted ios-press inline-flex items-center gap-1.5 transition-colors"
+						@click="sidebarOpen = true"
+					>
+						<Icon name="lucide:sparkles" class="w-3 h-3" />
+						<span class="hidden sm:inline">Ask Earnest</span>
+					</button>
+					<span v-if="lastAnalyzed" class="text-[10px] text-muted-foreground">
+						{{ timeAgo(lastAnalyzed) }}
 					</span>
-					<Button
+					<button
+						class="rounded-full px-4 py-2 text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 ios-press shadow-sm transition-colors inline-flex items-center gap-1.5 disabled:opacity-40"
 						:disabled="analyzing"
-						class="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white border-0 shadow-lg shadow-blue-500/20"
 						@click="runDashboardAnalysis"
 					>
-						<Icon v-if="!analyzing" name="lucide:sparkles" class="w-4 h-4 mr-1.5" />
-						<Icon v-else name="lucide:loader-2" class="w-4 h-4 mr-1.5 animate-spin" />
+						<Icon v-if="!analyzing" name="lucide:sparkles" class="w-3.5 h-3.5" />
+						<Icon v-else name="lucide:loader-2" class="w-3.5 h-3.5 animate-spin" />
 						{{ analyzing ? 'Analyzing...' : `Analyze ${currentClient ? currentClient.name : ''}` }}
-					</Button>
+					</button>
 				</div>
 				<p v-if="currentClient" class="text-[10px] text-muted-foreground">
 					Select "All Clients" in the header for org-wide analysis
@@ -51,106 +57,98 @@
 
 		<!-- Loading state -->
 		<div v-if="analyzing && !dashboard" class="space-y-6">
-			<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-				<div class="md:col-span-1">
-					<div class="rounded-xl border bg-card p-6">
-						<div class="animate-pulse space-y-4">
-							<div class="w-32 h-32 rounded-full bg-muted/40 mx-auto" />
-							<div class="space-y-2">
-								<div class="h-2 bg-muted/40 rounded w-full" />
-								<div class="h-2 bg-muted/40 rounded w-3/4" />
-								<div class="h-2 bg-muted/40 rounded w-5/6" />
-								<div class="h-2 bg-muted/40 rounded w-2/3" />
-							</div>
+			<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+				<div class="ios-card p-5">
+					<div class="animate-pulse space-y-4">
+						<div class="w-32 h-32 rounded-full bg-muted/40 mx-auto" />
+						<div class="space-y-2">
+							<div class="h-2 bg-muted/40 rounded w-full" />
+							<div class="h-2 bg-muted/40 rounded w-3/4" />
+							<div class="h-2 bg-muted/40 rounded w-5/6" />
 						</div>
 					</div>
 				</div>
-				<div class="md:col-span-2">
-					<div class="rounded-xl border bg-card p-6">
-						<div class="animate-pulse space-y-3">
-							<div class="h-4 bg-muted/40 rounded w-1/3" />
-							<div class="grid grid-cols-2 gap-3">
-								<div v-for="i in 4" :key="i" class="h-24 bg-muted/40 rounded-lg" />
-							</div>
+				<div class="md:col-span-2 ios-card p-5">
+					<div class="animate-pulse space-y-3">
+						<div class="h-4 bg-muted/40 rounded w-1/3" />
+						<div class="grid grid-cols-2 gap-3">
+							<div v-for="i in 4" :key="i" class="h-20 bg-muted/40 rounded-xl" />
 						</div>
 					</div>
 				</div>
 			</div>
 			<div class="text-center py-6">
 				<div class="flex justify-center gap-1 mb-3">
-					<div v-for="i in 3" :key="i" class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-bounce" :style="{ animationDelay: `${i * 150}ms` }" />
+					<div v-for="i in 3" :key="i" class="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" :style="{ animationDelay: `${i * 150}ms` }" />
 				</div>
-				<p class="text-sm text-muted-foreground">Analyzing contacts, social media, email campaigns, clients, revenue, and more...</p>
+				<p class="text-xs text-muted-foreground">Analyzing contacts, social media, email campaigns, and more...</p>
 			</div>
 		</div>
 
 		<!-- Empty state -->
 		<div v-else-if="!dashboard && !error" class="flex flex-col items-center justify-center py-20">
-			<div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500/10 to-cyan-500/10 flex items-center justify-center mb-4">
-				<Icon name="lucide:brain" class="w-8 h-8 text-blue-500" />
+			<div class="w-14 h-14 rounded-2xl bg-primary/5 flex items-center justify-center mb-4">
+				<Icon name="lucide:brain" class="w-7 h-7 text-primary/40" />
 			</div>
-			<h2 class="text-lg font-semibold text-foreground mb-1">Ready to analyze {{ analysisScope }}</h2>
-			<p class="text-sm text-muted-foreground text-center max-w-md mb-6">
+			<h2 class="text-lg font-medium text-foreground mb-1">Ready to analyze {{ analysisScope }}</h2>
+			<p class="text-xs text-muted-foreground text-center max-w-md mb-6">
 				{{ currentClient
-					? `Generate AI-powered marketing insights tailored to ${currentClient.name}'s brand, goals, and target audience.`
-					: 'Click Analyze to scan your contacts, social media, email campaigns, clients, and revenue data for AI-powered marketing insights.'
+					? `Generate AI-powered marketing insights tailored to ${currentClient.name}'s brand, goals, and audience.`
+					: 'Click Analyze to scan your contacts, social media, email campaigns, and revenue data.'
 				}}
 			</p>
-			<Button
-				class="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white border-0 shadow-lg shadow-blue-500/20"
+			<button
+				class="rounded-full px-4 py-2 text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 ios-press shadow-sm transition-colors inline-flex items-center gap-1.5"
 				@click="runDashboardAnalysis"
 			>
-				<Icon name="lucide:sparkles" class="w-4 h-4 mr-1.5" />
+				<Icon name="lucide:sparkles" class="w-3.5 h-3.5" />
 				{{ currentClient ? `Analyze ${currentClient.name}` : 'Run First Analysis' }}
-			</Button>
+			</button>
 		</div>
 
 		<!-- Error state -->
 		<div v-else-if="error" class="flex flex-col items-center justify-center py-16">
-			<div class="w-14 h-14 rounded-2xl bg-destructive/10 flex items-center justify-center mb-4">
-				<Icon name="lucide:alert-circle" class="w-6 h-6 text-destructive" />
+			<div class="w-12 h-12 rounded-2xl bg-destructive/10 flex items-center justify-center mb-4">
+				<Icon name="lucide:alert-circle" class="w-5 h-5 text-destructive" />
 			</div>
-			<h3 class="font-semibold text-foreground mb-1">Analysis failed</h3>
-			<p class="text-sm text-muted-foreground mb-4">{{ error }}</p>
-			<Button variant="outline" @click="runDashboardAnalysis">
-				<Icon name="lucide:refresh-cw" class="w-4 h-4 mr-1" />
-				Try Again
-			</Button>
+			<h3 class="text-sm font-semibold text-foreground mb-1">Analysis failed</h3>
+			<p class="text-xs text-muted-foreground mb-4">{{ error }}</p>
+			<button class="rounded-full px-3 py-1.5 text-[11px] font-medium border border-border bg-card hover:bg-muted ios-press transition-colors inline-flex items-center gap-1" @click="runDashboardAnalysis">
+				<Icon name="lucide:refresh-cw" class="w-3 h-3" /> Try Again
+			</button>
 		</div>
 
 		<!-- Dashboard content -->
 		<div v-else-if="dashboard" class="space-y-6">
 			<!-- Save button -->
 			<div class="flex justify-end">
-				<Button
-					variant="outline"
-					size="sm"
+				<button
+					class="rounded-full px-3 py-1.5 text-[11px] font-medium border border-border bg-card hover:bg-muted ios-press transition-colors inline-flex items-center gap-1 disabled:opacity-40"
 					:disabled="savingDashboard"
 					@click="saveDashboard"
 				>
-					<Icon :name="savedDashboard ? 'lucide:check' : savingDashboard ? 'lucide:loader-2' : 'lucide:save'" class="w-4 h-4 mr-1" :class="{ 'animate-spin': savingDashboard }" />
+					<Icon :name="savedDashboard ? 'lucide:check' : savingDashboard ? 'lucide:loader-2' : 'lucide:save'" class="w-3 h-3" :class="{ 'animate-spin': savingDashboard }" />
 					{{ savedDashboard ? 'Saved' : savingDashboard ? 'Saving...' : 'Save Analysis' }}
-				</Button>
+				</button>
 			</div>
+
 			<!-- Top row: Health Score + Velocity + Audience -->
-			<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-				<!-- Health Score -->
-				<div class="rounded-xl border bg-card p-6">
-					<h3 class="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Marketing Health</h3>
+			<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+				<div class="ios-card p-5">
+					<h3 class="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-4">Marketing Health</h3>
 					<MarketingHealthScore
 						:score="dashboard.healthScore"
 						:breakdown="dashboard.healthBreakdown"
 					/>
 				</div>
 
-				<!-- Content Velocity -->
-				<div class="rounded-xl border bg-card p-6">
-					<h3 class="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Content Velocity</h3>
+				<div class="ios-card p-5">
+					<h3 class="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-4">Content Velocity</h3>
 					<div class="space-y-6">
 						<div>
 							<div class="flex items-baseline gap-2">
 								<span class="text-3xl font-bold text-foreground">{{ dashboard.contentVelocity.postsPerWeek }}</span>
-								<span class="text-sm text-muted-foreground">posts / week</span>
+								<span class="text-xs text-muted-foreground">posts / week</span>
 								<Icon
 									:name="getTrendIcon(dashboard.contentVelocity.trend)"
 									class="w-4 h-4 ml-auto"
@@ -161,44 +159,43 @@
 						<div>
 							<div class="flex items-baseline gap-2">
 								<span class="text-3xl font-bold text-foreground">{{ dashboard.contentVelocity.emailsPerMonth }}</span>
-								<span class="text-sm text-muted-foreground">emails / month</span>
+								<span class="text-xs text-muted-foreground">emails / month</span>
 							</div>
 						</div>
 					</div>
 				</div>
 
-				<!-- Audience Overview -->
-				<div class="rounded-xl border bg-card p-6">
-					<h3 class="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-4">Audience</h3>
+				<div class="ios-card p-5">
+					<h3 class="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-4">Audience</h3>
 					<div class="space-y-4">
 						<div class="flex items-center justify-between">
 							<div class="flex items-center gap-2">
-								<Icon name="lucide:users" class="w-4 h-4 text-muted-foreground" />
-								<span class="text-sm text-muted-foreground">Contacts</span>
+								<Icon name="lucide:users" class="w-3.5 h-3.5 text-muted-foreground" />
+								<span class="text-xs text-muted-foreground">Contacts</span>
 							</div>
 							<span class="text-lg font-bold text-foreground">{{ formatNumber(dashboard.audienceGrowth.contacts) }}</span>
 						</div>
 						<div class="flex items-center justify-between">
 							<div class="flex items-center gap-2">
-								<Icon name="lucide:mail" class="w-4 h-4 text-muted-foreground" />
-								<span class="text-sm text-muted-foreground">Subscribers</span>
+								<Icon name="lucide:mail" class="w-3.5 h-3.5 text-muted-foreground" />
+								<span class="text-xs text-muted-foreground">Subscribers</span>
 							</div>
 							<span class="text-lg font-bold text-foreground">{{ formatNumber(dashboard.audienceGrowth.subscribers) }}</span>
 						</div>
 						<div class="flex items-center justify-between">
 							<div class="flex items-center gap-2">
-								<Icon name="lucide:share-2" class="w-4 h-4 text-muted-foreground" />
-								<span class="text-sm text-muted-foreground">Social Followers</span>
+								<Icon name="lucide:share-2" class="w-3.5 h-3.5 text-muted-foreground" />
+								<span class="text-xs text-muted-foreground">Social Followers</span>
 							</div>
 							<span class="text-lg font-bold text-foreground">{{ formatNumber(dashboard.audienceGrowth.followers) }}</span>
 						</div>
-						<div class="pt-2 border-t flex items-center gap-2">
+						<div class="pt-2 border-t border-border/30 flex items-center gap-2">
 							<Icon
 								:name="getTrendIcon(dashboard.audienceGrowth.trend)"
-								class="w-4 h-4"
+								class="w-3.5 h-3.5"
 								:class="getTrendColor(dashboard.audienceGrowth.trend)"
 							/>
-							<span class="text-xs text-muted-foreground">
+							<span class="text-[10px] text-muted-foreground">
 								{{ dashboard.audienceGrowth.trend === 'up' ? 'Growing' : dashboard.audienceGrowth.trend === 'down' ? 'Declining' : 'Stable' }}
 							</span>
 						</div>
@@ -206,9 +203,9 @@
 				</div>
 			</div>
 
-			<!-- Insights grid -->
+			<!-- Insights -->
 			<div>
-				<h3 class="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">AI Insights</h3>
+				<h3 class="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">AI Insights</h3>
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 					<MarketingInsightCard
 						v-for="(insight, i) in dashboard.insights"
@@ -220,21 +217,21 @@
 
 			<!-- Recommendations -->
 			<div v-if="dashboard.recommendations?.length">
-				<h3 class="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Recommendations</h3>
+				<h3 class="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Recommendations</h3>
 				<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
 					<div
 						v-for="(rec, i) in dashboard.recommendations"
 						:key="i"
-						class="rounded-xl border p-4 hover:shadow-md transition-shadow"
+						class="ios-card p-4"
 					>
-						<h4 class="text-sm font-semibold text-foreground mb-1">{{ rec.title }}</h4>
-						<p class="text-xs text-muted-foreground leading-relaxed mb-3">{{ rec.description }}</p>
+						<h4 class="text-xs font-semibold text-foreground mb-1">{{ rec.title }}</h4>
+						<p class="text-[10px] text-muted-foreground leading-relaxed mb-3">{{ rec.description }}</p>
 						<div class="flex items-center gap-3">
-							<span class="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground uppercase tracking-wider">{{ rec.channel }}</span>
-							<span class="text-[10px] text-muted-foreground">
+							<span class="text-[9px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground uppercase tracking-wider font-medium">{{ rec.channel }}</span>
+							<span class="text-[9px] text-muted-foreground">
 								Effort: <span class="font-medium" :class="effortColor(rec.effort)">{{ rec.effort }}</span>
 							</span>
-							<span class="text-[10px] text-muted-foreground">
+							<span class="text-[9px] text-muted-foreground">
 								Impact: <span class="font-medium" :class="impactColor(rec.impact)">{{ rec.impact }}</span>
 							</span>
 						</div>
@@ -244,25 +241,25 @@
 		</div>
 
 		<!-- Saved Campaigns -->
-		<div v-if="savedCampaigns.length > 0 || loadingCampaigns" class="mt-10 pt-8 border-t">
+		<div v-if="savedCampaigns.length > 0 || loadingCampaigns" class="mt-10 pt-8 border-t border-border/30">
 			<div class="flex items-center justify-between mb-4">
 				<div class="flex items-center gap-3">
-					<div class="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-						<Icon name="lucide:folder-open" class="w-4.5 h-4.5 text-white" />
+					<div class="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+						<Icon name="lucide:folder-open" class="w-4 h-4 text-emerald-500" />
 					</div>
 					<div>
-						<h2 class="text-lg font-semibold text-foreground">Saved Campaigns</h2>
-						<p class="text-xs text-muted-foreground">{{ savedCampaigns.length }} campaign{{ savedCampaigns.length !== 1 ? 's' : '' }}</p>
+						<h2 class="text-lg font-medium text-foreground">Saved Campaigns</h2>
+						<p class="text-[10px] text-muted-foreground">{{ savedCampaigns.length }} campaign{{ savedCampaigns.length !== 1 ? 's' : '' }}</p>
 					</div>
 				</div>
-				<div class="flex items-center gap-1.5">
+				<div class="bg-muted/40 rounded-full p-0.5 flex gap-0.5">
 					<button
 						v-for="f in campaignFilters"
 						:key="f.value"
-						class="px-2.5 py-1 text-xs font-medium rounded-lg transition-colors"
+						class="rounded-full px-2.5 py-1 text-[10px] font-medium transition-all"
 						:class="campaignFilter === f.value
-							? 'bg-primary/10 text-primary'
-							: 'text-muted-foreground hover:bg-muted/50'"
+							? 'bg-background shadow-sm text-foreground'
+							: 'text-muted-foreground hover:text-foreground'"
 						@click="campaignFilter = f.value"
 					>
 						{{ f.label }}
@@ -271,7 +268,7 @@
 			</div>
 
 			<div v-if="loadingCampaigns" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-				<div v-for="i in 3" :key="i" class="rounded-xl border bg-card p-4 animate-pulse">
+				<div v-for="i in 3" :key="i" class="ios-card p-4 animate-pulse">
 					<div class="h-4 bg-muted/40 rounded w-2/3 mb-2" />
 					<div class="h-3 bg-muted/40 rounded w-full mb-3" />
 					<div class="h-3 bg-muted/40 rounded w-1/4" />
@@ -282,7 +279,7 @@
 				<div
 					v-for="c in filteredCampaigns"
 					:key="c.id"
-					class="rounded-xl border bg-card p-4 hover:shadow-md transition-all cursor-pointer group"
+					class="ios-card p-4 cursor-pointer group"
 					@click="expandedCampaign = expandedCampaign === c.id ? null : c.id"
 				>
 					<div class="flex items-start justify-between mb-2">
@@ -292,12 +289,12 @@
 									:name="c.type === 'campaign' ? 'lucide:rocket' : 'lucide:bar-chart-2'"
 									class="w-3.5 h-3.5 text-muted-foreground flex-shrink-0"
 								/>
-								<h4 class="text-sm font-semibold text-foreground truncate">{{ c.title }}</h4>
+								<h4 class="text-xs font-semibold text-foreground truncate">{{ c.title }}</h4>
 							</div>
-							<p v-if="c.goal" class="text-xs text-muted-foreground line-clamp-2">{{ c.goal }}</p>
+							<p v-if="c.goal" class="text-[10px] text-muted-foreground line-clamp-2">{{ c.goal }}</p>
 						</div>
 						<span
-							class="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full flex-shrink-0 ml-2"
+							class="text-[9px] font-semibold uppercase px-2 py-0.5 rounded-full flex-shrink-0 ml-2"
 							:class="statusBadgeClass(c.status)"
 						>
 							{{ c.status }}
@@ -311,27 +308,27 @@
 						<div class="flex items-center gap-1">
 							<button
 								v-if="c.status === 'draft'"
-								class="text-[10px] px-2 py-0.5 rounded-lg bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors"
+								class="rounded-full text-[10px] px-2 py-0.5 bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 ios-press transition-colors"
 								@click.stop="updateCampaignStatus(c.id, 'active')"
 							>
 								Activate
 							</button>
 							<button
 								v-if="c.status === 'active'"
-								class="text-[10px] px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 transition-colors"
+								class="rounded-full text-[10px] px-2 py-0.5 bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 ios-press transition-colors"
 								@click.stop="updateCampaignStatus(c.id, 'paused')"
 							>
 								Pause
 							</button>
 							<button
 								v-if="c.status === 'active' || c.status === 'paused'"
-								class="text-[10px] px-2 py-0.5 rounded-lg bg-green-500/10 text-green-600 hover:bg-green-500/20 transition-colors"
+								class="rounded-full text-[10px] px-2 py-0.5 bg-green-500/10 text-green-600 hover:bg-green-500/20 ios-press transition-colors"
 								@click.stop="updateCampaignStatus(c.id, 'completed')"
 							>
 								Complete
 							</button>
 							<button
-								class="text-[10px] px-2 py-0.5 rounded-lg bg-red-500/10 text-red-600 hover:bg-red-500/20 transition-colors opacity-0 group-hover:opacity-100 transition-opacity"
+								class="rounded-full text-[10px] px-2 py-0.5 bg-red-500/10 text-red-600 hover:bg-red-500/20 ios-press transition-colors opacity-0 group-hover:opacity-100"
 								@click.stop="deleteCampaign(c.id)"
 							>
 								Archive
@@ -343,14 +340,14 @@
 		</div>
 
 		<!-- Campaign Planner -->
-		<div class="mt-10 pt-8 border-t">
+		<div class="mt-10 pt-8 border-t border-border/30">
 			<div class="flex items-center gap-3 mb-4">
-				<div class="w-9 h-9 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg shadow-purple-500/20">
-					<Icon name="lucide:rocket" class="w-4.5 h-4.5 text-white" />
+				<div class="w-8 h-8 rounded-xl bg-violet-500/10 flex items-center justify-center">
+					<Icon name="lucide:rocket" class="w-4 h-4 text-violet-500" />
 				</div>
 				<div>
-					<h2 class="text-lg font-semibold text-foreground">Campaign Planner</h2>
-					<p class="text-xs text-muted-foreground">Describe a goal and AI builds a multi-channel plan</p>
+					<h2 class="text-lg font-medium text-foreground">Campaign Planner</h2>
+					<p class="text-[10px] text-muted-foreground">Describe a goal and AI builds a multi-channel plan</p>
 				</div>
 			</div>
 
@@ -358,47 +355,46 @@
 				<input
 					v-model="campaignGoal"
 					type="text"
-					placeholder="e.g. Launch our new service next month, re-engage churned clients, build brand awareness..."
-					class="flex-1 rounded-xl border bg-background px-4 py-3 text-sm focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 outline-none transition-all placeholder:text-muted-foreground/60"
+					placeholder="e.g. Launch our new service next month, re-engage churned clients..."
+					class="flex-1 rounded-full border bg-muted/20 px-4 py-2.5 text-sm focus:ring-1 focus:ring-primary/30 outline-none transition-all placeholder:text-muted-foreground/50"
 					@keyup.enter="runCampaignAnalysis"
 				/>
-				<Button
+				<button
+					class="rounded-full px-4 py-2.5 text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 ios-press shadow-sm transition-colors inline-flex items-center gap-1.5 shrink-0 disabled:opacity-40"
 					:disabled="!campaignGoal.trim() || generatingCampaign"
-					class="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white border-0 shadow-lg shadow-purple-500/20 px-6"
 					@click="runCampaignAnalysis"
 				>
-					<Icon v-if="!generatingCampaign" name="lucide:sparkles" class="w-4 h-4 mr-1" />
-					<Icon v-else name="lucide:loader-2" class="w-4 h-4 mr-1 animate-spin" />
+					<Icon v-if="!generatingCampaign" name="lucide:sparkles" class="w-3.5 h-3.5" />
+					<Icon v-else name="lucide:loader-2" class="w-3.5 h-3.5 animate-spin" />
 					{{ generatingCampaign ? 'Planning...' : 'Generate Plan' }}
-				</Button>
+				</button>
 			</div>
 
 			<!-- Campaign loading -->
 			<div v-if="generatingCampaign" class="py-12 text-center">
 				<div class="flex justify-center gap-1 mb-3">
-					<div v-for="i in 3" :key="i" class="w-1.5 h-1.5 rounded-full bg-purple-500 animate-bounce" :style="{ animationDelay: `${i * 150}ms` }" />
+					<div v-for="i in 3" :key="i" class="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" :style="{ animationDelay: `${i * 150}ms` }" />
 				</div>
-				<p class="text-sm text-muted-foreground">Building your multi-channel campaign plan...</p>
+				<p class="text-xs text-muted-foreground">Building your multi-channel campaign plan...</p>
 			</div>
 
 			<!-- Campaign error -->
-			<div v-if="campaignError" class="mt-4 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-center">
-				<p class="text-sm text-destructive">{{ campaignError }}</p>
-				<Button variant="outline" size="sm" class="mt-2" @click="runCampaignAnalysis">Try Again</Button>
+			<div v-if="campaignError" class="mt-4 ios-card border-destructive/30 bg-destructive/5 p-4 text-center">
+				<p class="text-xs text-destructive">{{ campaignError }}</p>
+				<button class="rounded-full px-3 py-1.5 text-[11px] font-medium border border-border bg-card hover:bg-muted ios-press transition-colors mt-2" @click="runCampaignAnalysis">Try Again</button>
 			</div>
 
 			<!-- Campaign result -->
 			<div v-if="campaign && !generatingCampaign" class="mt-6">
 				<div class="flex justify-end mb-3">
-					<Button
-						variant="outline"
-						size="sm"
+					<button
+						class="rounded-full px-3 py-1.5 text-[11px] font-medium border border-border bg-card hover:bg-muted ios-press transition-colors inline-flex items-center gap-1 disabled:opacity-40"
 						:disabled="savingCampaign"
 						@click="saveCampaign"
 					>
-						<Icon :name="savedCampaign ? 'lucide:check' : savingCampaign ? 'lucide:loader-2' : 'lucide:save'" class="w-4 h-4 mr-1" :class="{ 'animate-spin': savingCampaign }" />
+						<Icon :name="savedCampaign ? 'lucide:check' : savingCampaign ? 'lucide:loader-2' : 'lucide:save'" class="w-3 h-3" :class="{ 'animate-spin': savingCampaign }" />
 						{{ savedCampaign ? 'Saved' : savingCampaign ? 'Saving...' : 'Save Plan' }}
-					</Button>
+					</button>
 				</div>
 				<MarketingCampaignTimeline
 					:campaign="campaign"
@@ -406,11 +402,24 @@
 				/>
 			</div>
 		</div>
+
+		<!-- AI Contextual Sidebar -->
+		<ClientOnly>
+			<AIContextualSidebar
+				v-if="sidebarOpen"
+				entity-type="marketing"
+				entity-id="dashboard"
+				entity-label="Marketing Intelligence"
+				@close="closeSidebar"
+			/>
+			<Transition name="overlay">
+				<div v-if="sidebarOpen" class="fixed inset-0 bg-black/20 z-40" @click="closeSidebar" />
+			</Transition>
+		</ClientOnly>
 	</div>
 </template>
 
 <script setup lang="ts">
-import { Button } from '~/components/ui/button';
 import type { DashboardAnalysis, CampaignAnalysis, CampaignActivity } from '~~/shared/marketing';
 
 definePageMeta({
@@ -423,9 +432,9 @@ useHead({
 
 const { selectedOrg, currentOrg } = useOrganization();
 const { selectedClient, currentClient } = useClients();
+const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext();
 const includeClients = ref(false);
 
-// Computed scope label for UI feedback
 const analysisScope = computed(() => {
 	if (currentClient.value) return currentClient.value.name;
 	return currentOrg.value?.name || 'your organization';
@@ -446,7 +455,6 @@ const savedDashboard = ref(false);
 const savingCampaign = ref(false);
 const savedCampaign = ref(false);
 
-// Campaign history
 const savedCampaigns = ref<any[]>([]);
 const loadingCampaigns = ref(false);
 const campaignFilter = ref('all');
@@ -455,11 +463,10 @@ const expandedCampaign = ref<string | null>(null);
 const campaignFilters = [
 	{ label: 'All', value: 'all' },
 	{ label: 'Active', value: 'active' },
-	{ label: 'Completed', value: 'completed' },
+	{ label: 'Done', value: 'completed' },
 	{ label: 'Drafts', value: 'draft' },
 ];
 
-// Clear analysis when client/org changes so stale results don't persist
 watch([selectedOrg, selectedClient], () => {
 	dashboard.value = null;
 	campaign.value = null;
@@ -488,7 +495,6 @@ async function fetchCampaigns() {
 		const data = await $fetch(`/api/marketing/campaigns?organizationId=${selectedOrg.value}`);
 		savedCampaigns.value = (data as any).campaigns || [];
 	} catch {
-		// Campaign collection may not exist yet
 		savedCampaigns.value = [];
 	} finally {
 		loadingCampaigns.value = false;
@@ -590,7 +596,7 @@ async function saveDashboard() {
 		});
 		savedDashboard.value = true;
 		setTimeout(() => { savedDashboard.value = false; }, 3000);
-		fetchCampaigns(); // Refresh list
+		fetchCampaigns();
 	} catch (err: any) {
 		console.error('Failed to save analysis:', err);
 	} finally {
@@ -614,7 +620,7 @@ async function saveCampaign() {
 		});
 		savedCampaign.value = true;
 		setTimeout(() => { savedCampaign.value = false; }, 3000);
-		fetchCampaigns(); // Refresh list
+		fetchCampaigns();
 	} catch (err: any) {
 		console.error('Failed to save campaign plan:', err);
 	} finally {
@@ -669,13 +675,25 @@ function impactColor(level: string): string {
 	return 'text-amber-600 dark:text-amber-400';
 }
 
-// Load saved campaigns on mount
 onMounted(() => {
+	setEntity('marketing', 'dashboard', 'Marketing Intelligence');
 	fetchCampaigns();
 });
 
-// Reload when org changes
+onUnmounted(() => clearEntity());
+
 watch(selectedOrg, () => {
 	fetchCampaigns();
 });
 </script>
+
+<style scoped>
+.overlay-enter-active,
+.overlay-leave-active {
+	transition: opacity 0.3s ease;
+}
+.overlay-enter-from,
+.overlay-leave-to {
+	opacity: 0;
+}
+</style>

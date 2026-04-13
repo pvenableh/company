@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col h-full">
     <div class="px-3 py-3 border-b">
-      <h2 class="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+      <h2 class="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
         Block Library
       </h2>
       <div class="relative">
@@ -10,7 +10,7 @@
           v-model="search"
           type="text"
           placeholder="Search blocks…"
-          class="w-full rounded-md border pl-7 pr-2.5 py-1.5 text-xs bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          class="w-full rounded-full border bg-muted/30 pl-7 pr-2.5 py-1.5 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all"
         />
         <button
           v-if="search"
@@ -33,7 +33,7 @@
             class="w-3 h-3 text-muted-foreground transition-transform"
           />
           <Icon :name="getCategoryIcon(category as string)" class="w-3 h-3" :class="getCategoryColor(category as string)" />
-          <span class="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex-1">
+          <span class="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider flex-1">
             {{ formatCategory(category as string) }}
           </span>
           <span class="text-[10px] text-muted-foreground/60 tabular-nums">{{ blocks.length }}</span>

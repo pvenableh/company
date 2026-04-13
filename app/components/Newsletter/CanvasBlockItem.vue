@@ -1,6 +1,6 @@
 <template>
   <div
-    class="group rounded-lg border bg-card shadow-sm transition-all duration-200 hover:shadow-md"
+    class="ios-card transition-all duration-200"
     :class="{
       'ring-2 ring-primary': isEditing,
       'ring-1 ring-primary/40': isFocused && !isEditing,
@@ -8,7 +8,7 @@
     @click="$emit('focus')"
   >
     <!-- Block Header -->
-    <div class="flex items-center justify-between px-3 py-2 border-b bg-muted/40">
+    <div class="flex items-center justify-between px-3 py-2 border-b border-border/30 bg-muted/20">
       <div class="flex items-center gap-2 min-w-0">
         <!-- Drag handle -->
         <div
@@ -19,7 +19,7 @@
         </div>
 
         <span
-          class="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider"
+          class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider"
           :class="categoryStyle"
         >
           {{ canvasBlock.block.category }}
@@ -29,7 +29,7 @@
 
       <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
-          class="p-1 rounded hover:bg-accent text-muted-foreground transition-colors"
+          class="p-1 rounded-full hover:bg-muted text-muted-foreground ios-press transition-colors"
           title="Move up"
           :disabled="isFirst"
           :class="{ 'opacity-30 cursor-not-allowed': isFirst }"
@@ -38,7 +38,7 @@
           <Icon name="lucide:chevron-up" class="w-3.5 h-3.5" />
         </button>
         <button
-          class="p-1 rounded hover:bg-accent text-muted-foreground transition-colors"
+          class="p-1 rounded-full hover:bg-muted text-muted-foreground ios-press transition-colors"
           title="Move down"
           :disabled="isLast"
           :class="{ 'opacity-30 cursor-not-allowed': isLast }"
@@ -46,24 +46,24 @@
         >
           <Icon name="lucide:chevron-down" class="w-3.5 h-3.5" />
         </button>
-        <div class="w-px h-4 bg-border mx-0.5" />
+        <div class="w-px h-4 bg-border/40 mx-0.5" />
         <button
-          class="p-1 rounded hover:bg-accent text-muted-foreground transition-colors"
+          class="p-1 rounded-full hover:bg-muted text-muted-foreground ios-press transition-colors"
           title="Duplicate block"
           @click.stop="$emit('duplicate', canvasBlock.instanceId)"
         >
           <Icon name="lucide:copy" class="w-3.5 h-3.5" />
         </button>
         <button
-          class="p-1 rounded hover:bg-accent text-muted-foreground transition-colors"
-          :class="{ 'bg-accent text-foreground': isEditing }"
+          class="p-1 rounded-full hover:bg-muted text-muted-foreground ios-press transition-colors"
+          :class="{ 'bg-muted text-foreground': isEditing }"
           title="Edit variables"
           @click.stop="isEditing = !isEditing"
         >
           <Icon name="lucide:settings-2" class="w-3.5 h-3.5" />
         </button>
         <button
-          class="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+          class="p-1 rounded-full hover:bg-destructive/10 text-muted-foreground hover:text-destructive ios-press transition-colors"
           title="Remove block"
           @click.stop="$emit('remove', canvasBlock.instanceId)"
         >
@@ -74,7 +74,7 @@
 
     <!-- Variable Editor (collapsible with transition) -->
     <Transition name="slide-down">
-      <div v-if="isEditing" class="border-t">
+      <div v-if="isEditing" class="border-t border-border/30">
         <NewsletterBlockVariableEditor
           :schema="parsedSchema"
           :variables="canvasBlock.variables"

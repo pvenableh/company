@@ -1,16 +1,16 @@
 <template>
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="$emit('close')">
-    <div class="bg-background rounded-lg shadow-xl w-full max-w-3xl mx-4 max-h-[90vh] flex flex-col">
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" @click.self="$emit('close')">
+    <div class="ios-card w-full max-w-3xl mx-4 max-h-[90vh] flex flex-col shadow-xl overflow-hidden">
       <!-- Header -->
-      <div class="flex items-center justify-between px-5 py-4 border-b shrink-0">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-border/30 shrink-0">
         <div class="flex items-center gap-2">
-          <div class="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Icon name="lucide:code-2" class="w-4 h-4 text-primary" />
+          <div class="w-7 h-7 rounded-xl bg-primary/10 flex items-center justify-center">
+            <Icon name="lucide:code-2" class="w-3.5 h-3.5 text-primary" />
           </div>
-          <h3 class="font-semibold text-sm">Custom MJML Block</h3>
+          <h3 class="text-sm font-semibold">Custom MJML Block</h3>
         </div>
-        <button class="text-muted-foreground hover:text-foreground transition-colors" @click="$emit('close')">
-          <Icon name="lucide:x" class="w-4 h-4" />
+        <button class="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted ios-press transition-colors" @click="$emit('close')">
+          <Icon name="lucide:x" class="w-3.5 h-3.5" />
         </button>
       </div>
 
@@ -19,19 +19,19 @@
         <!-- Block info -->
         <div class="grid grid-cols-2 gap-3">
           <div class="space-y-1.5">
-            <label class="text-xs font-medium">Block Name <span class="text-destructive">*</span></label>
+            <label class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Block Name <span class="text-destructive">*</span></label>
             <input
               v-model="name"
               type="text"
               placeholder="My Custom Block"
-              class="w-full rounded-md border px-3 py-2 text-sm bg-background"
+              class="w-full rounded-xl border px-3 py-2 text-sm bg-background focus:ring-1 focus:ring-primary/30 outline-none transition-all"
             />
           </div>
           <div class="space-y-1.5">
-            <label class="text-xs font-medium">Category</label>
+            <label class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Category</label>
             <select
               v-model="category"
-              class="w-full rounded-md border px-3 py-2 text-sm bg-background"
+              class="w-full rounded-xl border px-3 py-2 text-sm bg-background focus:ring-1 focus:ring-primary/30 outline-none transition-all"
             >
               <option value="content">Content</option>
               <option value="header">Header</option>
@@ -51,36 +51,36 @@
         </div>
 
         <div class="space-y-1.5">
-          <label class="text-xs font-medium">Description</label>
+          <label class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Description</label>
           <input
             v-model="description"
             type="text"
             placeholder="A brief description of what this block does"
-            class="w-full rounded-md border px-3 py-2 text-sm bg-background"
+            class="w-full rounded-xl border px-3 py-2 text-sm bg-background focus:ring-1 focus:ring-primary/30 outline-none transition-all"
           />
         </div>
 
         <!-- MJML Code -->
         <div class="space-y-1.5">
           <div class="flex items-center justify-between">
-            <label class="text-xs font-medium">
+            <label class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
               MJML Code <span class="text-destructive">*</span>
             </label>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1">
               <button
-                class="text-[11px] text-primary hover:underline"
+                class="rounded-full px-2 py-0.5 text-[10px] font-medium text-primary bg-primary/5 hover:bg-primary/10 ios-press transition-colors"
                 @click="insertTemplate('section')"
               >
                 + Section
               </button>
               <button
-                class="text-[11px] text-primary hover:underline"
+                class="rounded-full px-2 py-0.5 text-[10px] font-medium text-primary bg-primary/5 hover:bg-primary/10 ios-press transition-colors"
                 @click="insertTemplate('two-column')"
               >
                 + Two Column
               </button>
               <button
-                class="text-[11px] text-primary hover:underline"
+                class="rounded-full px-2 py-0.5 text-[10px] font-medium text-primary bg-primary/5 hover:bg-primary/10 ios-press transition-colors"
                 @click="insertTemplate('image')"
               >
                 + Image
@@ -92,7 +92,7 @@
               ref="codeRef"
               v-model="mjmlSource"
               rows="14"
-              class="w-full rounded-md border px-3 py-2.5 text-xs bg-background font-mono resize-y leading-relaxed"
+              class="w-full rounded-xl border px-3 py-2.5 text-xs bg-background font-mono resize-y leading-relaxed focus:ring-1 focus:ring-primary/30 outline-none transition-all"
               placeholder="<mj-section>
   <mj-column>
     <mj-text>Your content here</mj-text>
@@ -100,13 +100,12 @@
 </mj-section>"
               spellcheck="false"
             />
-            <!-- Line count indicator -->
             <div class="absolute bottom-2 right-2 text-[10px] text-muted-foreground/50 tabular-nums">
               {{ mjmlSource.split('\n').length }} lines
             </div>
           </div>
-          <p class="text-[11px] text-muted-foreground">
-            Write MJML section content (no &lt;mjml&gt; or &lt;mj-body&gt; wrapper needed).
+          <p class="text-[10px] text-muted-foreground">
+            Write MJML section content (no &lt;mjml&gt; wrapper needed).
             Use <code class="bg-muted px-1 rounded text-[10px]" v-text="'{{{ variable_name }}}'"></code> for configurable values.
           </p>
         </div>
@@ -114,8 +113,8 @@
         <!-- Variables (auto-detected) -->
         <div v-if="detectedVariables.length" class="space-y-2">
           <div class="flex items-center gap-2">
-            <label class="text-xs font-medium">Detected Variables</label>
-            <span class="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
+            <label class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Detected Variables</label>
+            <span class="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-full font-medium">
               {{ detectedVariables.length }}
             </span>
           </div>
@@ -123,20 +122,20 @@
             <div
               v-for="variable in variableDefinitions"
               :key="variable.key"
-              class="flex items-center gap-2 bg-muted/30 rounded-md px-3 py-2"
+              class="flex items-center gap-2 bg-muted/20 rounded-xl px-3 py-2"
             >
-              <code class="text-[11px] font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded min-w-[80px]">
+              <code class="text-[10px] font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded-full min-w-[80px]">
                 {{ variable.key }}
               </code>
               <input
                 v-model="variable.label"
                 type="text"
                 placeholder="Label"
-                class="flex-1 rounded border px-2 py-1 text-xs bg-background"
+                class="flex-1 rounded-lg border px-2 py-1 text-xs bg-background"
               />
               <select
                 v-model="variable.type"
-                class="rounded border px-2 py-1 text-xs bg-background w-24"
+                class="rounded-lg border px-2 py-1 text-xs bg-background w-24"
               >
                 <option value="text">Text</option>
                 <option value="color">Color</option>
@@ -149,21 +148,21 @@
                 v-model="variable.default"
                 type="text"
                 placeholder="Default"
-                class="w-24 rounded border px-2 py-1 text-xs bg-background"
+                class="w-24 rounded-lg border px-2 py-1 text-xs bg-background"
               />
             </div>
           </div>
         </div>
 
         <!-- Validation errors -->
-        <div v-if="validationError" class="rounded-md px-3 py-2 bg-destructive/10 text-destructive text-xs">
+        <div v-if="validationError" class="rounded-xl px-3 py-2 bg-destructive/10 text-destructive text-xs">
           {{ validationError }}
         </div>
 
         <!-- Preview -->
         <div v-if="previewHtml" class="space-y-1.5">
-          <label class="text-xs font-medium">Preview</label>
-          <div class="rounded-md border overflow-hidden bg-white">
+          <label class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Preview</label>
+          <div class="rounded-xl border overflow-hidden bg-white">
             <iframe
               ref="previewRef"
               style="width: 100%; min-height: 200px; border: none"
@@ -174,21 +173,25 @@
       </div>
 
       <!-- Footer -->
-      <div class="flex items-center justify-between px-5 py-3 border-t shrink-0">
-        <Button variant="outline" size="sm" :disabled="!mjmlSource.trim()" @click="handlePreview">
-          <Icon name="lucide:eye" class="w-3.5 h-3.5 mr-1" />
+      <div class="flex items-center justify-between px-5 py-3 border-t border-border/30 shrink-0">
+        <button
+          class="rounded-full px-3 py-1.5 text-[11px] font-medium border border-border bg-card hover:bg-muted ios-press transition-colors inline-flex items-center gap-1 disabled:opacity-40"
+          :disabled="!mjmlSource.trim()"
+          @click="handlePreview"
+        >
+          <Icon name="lucide:eye" class="w-3 h-3" />
           Preview
-        </Button>
+        </button>
         <div class="flex items-center gap-2">
-          <Button variant="outline" size="sm" @click="$emit('close')">Cancel</Button>
-          <Button
-            size="sm"
+          <button class="rounded-full px-3 py-1.5 text-[11px] font-medium text-muted-foreground hover:bg-muted ios-press transition-colors" @click="$emit('close')">Cancel</button>
+          <button
+            class="rounded-full px-4 py-1.5 text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 ios-press shadow-sm transition-colors disabled:opacity-40 inline-flex items-center gap-1"
             :disabled="!canSave || saving"
             @click="handleSave"
           >
-            <Icon name="lucide:plus" class="w-3.5 h-3.5 mr-1" />
-            {{ saving ? 'Creating…' : saveToLibrary ? 'Save to Library & Add' : 'Add to Canvas' }}
-          </Button>
+            <Icon name="lucide:plus" class="w-3 h-3" />
+            {{ saving ? 'Creating…' : saveToLibrary ? 'Save & Add' : 'Add to Canvas' }}
+          </button>
         </div>
       </div>
     </div>
@@ -196,7 +199,6 @@
 </template>
 
 <script setup lang="ts">
-import { Button } from '~/components/ui/button';
 import type { NewsletterBlock, BlockCategory, BlockVariableDefinition } from '~~/shared/email/blocks';
 
 const emit = defineEmits<{
@@ -218,7 +220,6 @@ const previewRef = ref<HTMLIFrameElement | null>(null);
 const codeRef = ref<HTMLTextAreaElement | null>(null);
 const saveToLibrary = ref(true);
 
-// Auto-detect {{{variable}}} patterns in MJML code
 const detectedVariables = computed(() => {
   const matches = mjmlSource.value.match(/\{\{\{([^}]+)\}\}\}/g);
   if (!matches) return [];
@@ -226,14 +227,12 @@ const detectedVariables = computed(() => {
   return unique;
 });
 
-// Build variable definitions reactively
 const variableDefinitions = ref<(BlockVariableDefinition & { default: string })[]>([]);
 
 watch(detectedVariables, (vars) => {
   const existing = new Map(variableDefinitions.value.map((v) => [v.key, v]));
   variableDefinitions.value = vars.map((key) => {
     if (existing.has(key)) return existing.get(key)!;
-    // Smart type guessing from the variable name
     const lowerKey = key.toLowerCase();
     let type: BlockVariableDefinition['type'] = 'text';
     let defaultVal = '';
@@ -258,7 +257,6 @@ const canSave = computed(() => {
   return name.value.trim() && mjmlSource.value.trim();
 });
 
-// MJML starter templates
 function insertTemplate(type: string) {
   const templates: Record<string, string> = {
     section: `<mj-section padding="20px">
@@ -292,7 +290,6 @@ function insertTemplate(type: string) {
 async function handlePreview() {
   validationError.value = '';
   try {
-    // Wrap in MJML structure for preview
     const fullMjml = `<mjml>
   <mj-head>
     <mj-attributes>
@@ -318,7 +315,6 @@ ${mjmlSource.value}
       validationError.value = result.errors.join('\n');
     }
 
-    // Write to iframe
     nextTick(() => {
       if (previewRef.value && result.html) {
         const doc = previewRef.value.contentDocument;
@@ -346,13 +342,11 @@ async function handleSave() {
   validationError.value = '';
 
   try {
-    // Build the slug from the name
     const slug = name.value
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '');
 
-    // Build variables schema
     const variablesSchema = variableDefinitions.value.length
       ? variableDefinitions.value.map((v) => ({
           key: v.key,
@@ -363,7 +357,6 @@ async function handleSave() {
       : [];
 
     if (saveToLibrary.value) {
-      // Save to Directus as a new newsletter block
       const block = await createBlock({
         name: name.value.trim(),
         slug,
@@ -376,9 +369,8 @@ async function handleSave() {
 
       emit('add-block', block);
     } else {
-      // Create a transient block (not saved to DB)
       const block: NewsletterBlock = {
-        id: -Date.now(), // Negative ID for transient blocks
+        id: -Date.now(),
         slug,
         name: name.value.trim(),
         category: category.value,

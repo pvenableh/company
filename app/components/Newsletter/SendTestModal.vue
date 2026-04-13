@@ -1,42 +1,45 @@
 <template>
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="$emit('close')">
-    <div class="bg-background rounded-lg shadow-lg w-full max-w-md mx-4">
-      <div class="flex items-center justify-between px-5 py-4 border-b">
-        <h3 class="font-semibold text-sm">Send Test Email</h3>
-        <button class="text-muted-foreground hover:text-foreground" @click="$emit('close')">
-          <Icon name="lucide:x" class="w-4 h-4" />
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" @click.self="$emit('close')">
+    <div class="ios-card w-full max-w-md mx-4 shadow-xl overflow-hidden">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-border/30">
+        <h3 class="text-sm font-semibold">Send Test Email</h3>
+        <button class="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted ios-press transition-colors" @click="$emit('close')">
+          <Icon name="lucide:x" class="w-3.5 h-3.5" />
         </button>
       </div>
 
       <div class="px-5 py-4 space-y-4">
         <div class="space-y-1.5">
-          <label class="text-xs font-medium">Recipient Email</label>
+          <label class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">Recipient Email</label>
           <input
             v-model="email"
             type="email"
             placeholder="test@example.com"
-            class="w-full rounded-md border px-3 py-2 text-sm bg-background"
+            class="w-full rounded-xl border px-3 py-2.5 text-sm bg-background focus:ring-1 focus:ring-primary/30 outline-none transition-all"
           />
         </div>
 
-        <div v-if="result" class="rounded-md px-3 py-2 text-sm" :class="result.success ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400' : 'bg-destructive/10 text-destructive'">
+        <div v-if="result" class="rounded-xl px-3 py-2 text-xs" :class="result.success ? 'bg-green-500/10 text-green-700 dark:text-green-400' : 'bg-destructive/10 text-destructive'">
           {{ result.message || result.error }}
         </div>
       </div>
 
-      <div class="flex justify-end gap-2 px-5 py-3 border-t">
-        <Button variant="outline" size="sm" @click="$emit('close')">Cancel</Button>
-        <Button size="sm" :disabled="!email || sending" @click="send">
+      <div class="flex justify-end gap-2 px-5 py-3 border-t border-border/30">
+        <button class="rounded-full px-3 py-1.5 text-[11px] font-medium text-muted-foreground hover:bg-muted ios-press transition-colors" @click="$emit('close')">Cancel</button>
+        <button
+          class="rounded-full px-4 py-1.5 text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 ios-press shadow-sm transition-colors disabled:opacity-40 inline-flex items-center gap-1"
+          :disabled="!email || sending"
+          @click="send"
+        >
+          <Icon name="lucide:send" class="w-3 h-3" />
           {{ sending ? 'Sending…' : 'Send Test' }}
-        </Button>
+        </button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { Button } from '~/components/ui/button';
-
 const props = defineProps<{ templateId: number }>();
 defineEmits<{ close: [] }>();
 
