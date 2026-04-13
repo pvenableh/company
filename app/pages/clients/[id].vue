@@ -236,6 +236,11 @@ onMounted(async () => {
         </button>
       </div>
 
+      <!-- AI Notices -->
+      <ClientOnly>
+        <AIProactiveNotices entity-type="client" :entity-id="client.id" />
+      </ClientOnly>
+
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Main form -->
         <div class="lg:col-span-2 space-y-6">

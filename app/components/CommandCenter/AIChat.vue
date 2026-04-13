@@ -41,6 +41,33 @@ const { personas: responseStyles, selectedPersona: responseStyle, activePersona 
 const { responseVerbosity, setVerbosity } = useAIPreferences();
 const { trackUsage } = useAIUsage();
 
+// ── Smart Prompts (data-driven) ──
+const { fetchSmartData, getSmartPrompts, smartData } = useAISmartPrompts();
+const smartPrompts = computed(() => getSmartPrompts(responseStyle.value));
+
+// ── Save Note Modal ──
+const showSaveNote = ref(false);
+const saveNoteMessage = ref({ content: '', id: '' });
+const savedMessageIds = ref<Set<string>>(new Set());
+
+const openSaveNote = (msg: any) => {
+  saveNoteMessage.value = { content: msg.content, id: msg.id };
+  showSaveNote.value = true;
+};
+
+const onNoteSaved = (note: any) => {
+  savedMessageIds.value.add(saveNoteMessage.value.id);
+};
+
+const copyMessage = async (content: string) => {
+  try {
+    await navigator.clipboard.writeText(content);
+  } catch {}
+};
+
+// Fetch smart data on mount for data-driven prompts
+onMounted(() => { fetchSmartData(); });
+
 // ── State ──
 const sessions = ref<any[]>([]);
 const activeSessionId = ref<string | null>(null);
@@ -458,15 +485,56 @@ onUnmounted(() => {
 					<UIcon name="i-heroicons-chevron-right" class="w-4 h-4 text-muted-foreground flex-shrink-0 mt-1" />
 				</NuxtLink>
 
-				<!-- Empty state: Persona Selection Experience -->
+				<!-- Empty state: Operational Snapshot + Persona Selection -->
 				<div
 					v-if="messages.length === 0 && !isLoadingMessages"
-					class="flex flex-col items-center justify-center h-full px-4"
+					class="flex flex-col items-center justify-center flex-1 min-h-0 px-4"
 				>
+					<!-- Operational Snapshot -->
+					<div v-if="smartData" class="w-full max-w-lg mb-5">
+						<div class="flex flex-wrap gap-2 justify-center">
+							<div
+								v-if="smartData.overdueInvoices.count > 0"
+								class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-xs font-medium text-amber-700 dark:text-amber-400"
+							>
+								<UIcon name="i-heroicons-banknotes" class="w-3.5 h-3.5" />
+								{{ smartData.overdueInvoices.count }} overdue — ${{ smartData.overdueInvoices.total.toLocaleString() }}
+							</div>
+							<div
+								v-if="smartData.staleClients.length > 0"
+								class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-xs font-medium text-orange-700 dark:text-orange-400"
+							>
+								<UIcon name="i-heroicons-user-group" class="w-3.5 h-3.5" />
+								{{ smartData.staleClients.length }} client{{ smartData.staleClients.length > 1 ? 's' : '' }} need follow-up
+							</div>
+							<div
+								v-if="smartData.overdueProjects.length > 0"
+								class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-rose-500/10 border border-rose-500/20 text-xs font-medium text-rose-700 dark:text-rose-400"
+							>
+								<UIcon name="i-heroicons-folder" class="w-3.5 h-3.5" />
+								{{ smartData.overdueProjects.length }} project{{ smartData.overdueProjects.length > 1 ? 's' : '' }} overdue
+							</div>
+							<div
+								v-if="smartData.overdueTasks > 0"
+								class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 text-xs font-medium text-red-700 dark:text-red-400"
+							>
+								<UIcon name="i-heroicons-clipboard-document-check" class="w-3.5 h-3.5" />
+								{{ smartData.overdueTasks }} task{{ smartData.overdueTasks > 1 ? 's' : '' }} overdue
+							</div>
+							<div
+								v-if="smartData.openDeals.count > 0"
+								class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs font-medium text-emerald-700 dark:text-emerald-400"
+							>
+								<UIcon name="i-heroicons-currency-dollar" class="w-3.5 h-3.5" />
+								{{ smartData.openDeals.count }} open deal{{ smartData.openDeals.count > 1 ? 's' : '' }} — ${{ smartData.openDeals.pipelineValue.toLocaleString() }}
+							</div>
+						</div>
+					</div>
+
 					<!-- Greeting -->
 					<div class="text-center mb-6">
-						<h3 class="text-lg font-bold text-foreground mb-1">Who do you want to talk to?</h3>
-						<p class="text-sm text-muted-foreground">Pick a vibe. You can switch anytime.</p>
+						<h3 class="text-lg font-bold text-foreground mb-1">Here's what's on your radar</h3>
+						<p class="text-sm text-muted-foreground">Pick a vibe to get started. You can switch anytime.</p>
 					</div>
 
 					<!-- Persona Cards -->
@@ -498,7 +566,7 @@ onUnmounted(() => {
 						</button>
 					</div>
 
-					<!-- Active persona greeting + prompts -->
+					<!-- Active persona greeting + smart prompts -->
 					<div class="text-center max-w-md">
 						<div class="flex items-center justify-center gap-2 mb-3">
 							<div
@@ -511,7 +579,7 @@ onUnmounted(() => {
 						</div>
 						<div class="flex flex-wrap gap-2 justify-center">
 							<button
-								v-for="prompt in activePersona.prompts"
+								v-for="prompt in smartPrompts"
 								:key="prompt"
 								@click="newMessage = prompt"
 								class="px-3 py-1.5 rounded-full text-xs transition-all hover:scale-105"
@@ -533,7 +601,7 @@ onUnmounted(() => {
 					<div
 						v-for="msg in messages"
 						:key="msg.id"
-						class="flex gap-3"
+						class="flex gap-3 group"
 						:class="msg.role === 'user' ? 'flex-row-reverse' : ''"
 					>
 						<!-- Avatar -->
@@ -553,30 +621,59 @@ onUnmounted(() => {
 						</div>
 
 						<!-- Message Content -->
-						<div
-							class="max-w-[80%] rounded-xl px-4 py-2.5"
-							:class="
-								msg.role === 'user'
-									? 'bg-primary text-primary-foreground'
-									: 'bg-muted'
-							"
-						>
-							<!-- User messages: plain text -->
-							<p v-if="msg.role === 'user'" class="text-sm whitespace-pre-wrap break-words">
-								{{ msg.content }}
-							</p>
-							<!-- Assistant messages: rendered markdown -->
+						<div class="max-w-[80%] relative">
 							<div
-								v-else
-								class="text-sm prose prose-sm dark:prose-invert max-w-none break-words [&>p]:my-1 [&>ul]:my-1 [&>ol]:my-1"
-								v-html="renderMarkdown(msg.content)"
-							></div>
-							<p
-								class="text-[10px] mt-1"
-								:class="msg.role === 'user' ? 'text-primary-foreground/60 text-right' : 'text-muted-foreground'"
+								class="rounded-xl px-4 py-2.5"
+								:class="
+									msg.role === 'user'
+										? 'bg-primary text-primary-foreground'
+										: 'bg-muted'
+								"
 							>
-								{{ formatTime(msg.date_created) }}
-							</p>
+								<!-- User messages: plain text -->
+								<p v-if="msg.role === 'user'" class="text-sm whitespace-pre-wrap break-words">
+									{{ msg.content }}
+								</p>
+								<!-- Assistant messages: rendered markdown -->
+								<div
+									v-else
+									class="text-sm prose prose-sm dark:prose-invert max-w-none break-words [&>p]:my-1 [&>ul]:my-1 [&>ol]:my-1"
+									v-html="renderMarkdown(msg.content)"
+								></div>
+								<p
+									class="text-[10px] mt-1"
+									:class="msg.role === 'user' ? 'text-primary-foreground/60 text-right' : 'text-muted-foreground'"
+								>
+									{{ formatTime(msg.date_created) }}
+								</p>
+							</div>
+
+							<!-- Hover actions (assistant messages only) -->
+							<div
+								v-if="msg.role === 'assistant'"
+								class="absolute -bottom-3 left-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+							>
+								<button
+									@click="openSaveNote(msg)"
+									class="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium bg-background border border-gray-200 dark:border-gray-600 shadow-sm hover:bg-muted transition-colors"
+									:class="savedMessageIds.has(msg.id) ? 'text-primary' : 'text-muted-foreground'"
+									:title="savedMessageIds.has(msg.id) ? 'Saved' : 'Save as Note'"
+								>
+									<UIcon
+										:name="savedMessageIds.has(msg.id) ? 'i-heroicons-bookmark-solid' : 'i-heroicons-bookmark'"
+										class="w-3 h-3"
+									/>
+									{{ savedMessageIds.has(msg.id) ? 'Saved' : 'Save' }}
+								</button>
+								<button
+									@click="copyMessage(msg.content)"
+									class="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium text-muted-foreground bg-background border border-gray-200 dark:border-gray-600 shadow-sm hover:bg-muted transition-colors"
+									title="Copy to clipboard"
+								>
+									<UIcon name="i-heroicons-clipboard-document" class="w-3 h-3" />
+									Copy
+								</button>
+							</div>
 						</div>
 					</div>
 
@@ -614,7 +711,7 @@ onUnmounted(() => {
 						v-model="newMessage"
 						@keydown="handleKeydown"
 						:disabled="isSending"
-						placeholder="Ask the AI assistant..."
+						placeholder="Ask about a client, project, or invoice..."
 						rows="1"
 						class="flex-1 resize-none text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2.5 bg-transparent dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground"
 					/>
@@ -637,4 +734,13 @@ onUnmounted(() => {
 			</div>
 		</div>
 	</div>
+
+	<!-- Save Note Modal -->
+	<AISaveNoteModal
+		v-model="showSaveNote"
+		:message-content="saveNoteMessage.content"
+		:session-id="activeSessionId || ''"
+		:message-id="saveNoteMessage.id"
+		@saved="onNoteSaved"
+	/>
 </template>

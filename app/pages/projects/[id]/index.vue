@@ -522,6 +522,11 @@ const formatCurrency = (amount) => {
 				</button>
 			</div>
 
+			<!-- AI Notices -->
+			<ClientOnly>
+				<AIProactiveNotices v-if="project?.id" entity-type="project" :entity-id="String(project.id)" />
+			</ClientOnly>
+
 			<!-- Stats Row -->
 			<div class="grid grid-cols-5 gap-2 md:gap-3 mb-6">
 				<UiStatCard label="Tickets" :value="stats.openTickets" :detail="`${stats.ticketCount} total`" />

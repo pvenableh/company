@@ -179,6 +179,11 @@ onMounted(loadInvoice);
         </button>
       </div>
 
+      <!-- AI Notices -->
+      <ClientOnly>
+        <AIProactiveNotices v-if="invoice?.id" entity-type="invoice" :entity-id="String(invoice.id)" />
+      </ClientOnly>
+
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Main: Form -->
         <div class="lg:col-span-2">

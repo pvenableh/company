@@ -42,6 +42,55 @@ export interface AiChatSession {
 	messages?: string;
 }
 
+export interface AiContextSnapshot {
+	/** @primaryKey */
+	id: number;
+	/** @required */
+	context_type: 'full' | 'clients' | 'projects' | 'invoices' | 'deals' | 'brand';
+	/** @description Serialized context snapshot (JSON) */
+	data?: Record<string, any> | null;
+	/** @description Approximate token count of the data field */
+	token_estimate?: number | null;
+	date_created?: string | null;
+	/** @description When this snapshot becomes stale */
+	expires_at?: string | null;
+	/** @required */
+	organization: Organization | string;
+}
+
+export interface AiNote {
+	/** @primaryKey */
+	id: number;
+	status?: 'active' | 'archived' | null;
+	/** @description User-editable title, defaults to first ~80 chars of content */
+	title?: string | null;
+	/** @description Saved AI response content (markdown) @required */
+	content: string;
+	/** @description Auto-generated plain-text excerpt for list views (~200 chars) */
+	excerpt?: string | null;
+	/** @description ID of the specific message saved (string, not FK) */
+	source_message_id?: string | null;
+	/** @required */
+	organization: Organization | string;
+	/** @required */
+	user: DirectusUser | string;
+	/** @description Pin important notes to top of list */
+	is_pinned?: boolean | null;
+	user_created?: string | null;
+	date_created?: string | null;
+	date_updated?: string | null;
+	source_session?: AiChatSession | string | null;
+	tags?: AiNotesAiTag[] | string[];
+}
+
+export interface AiNotesAiTag {
+	/** @primaryKey */
+	id: number;
+	sort?: number | null;
+	ai_notes_id?: AiNote | string | null;
+	ai_tags_id?: AiTag | string | null;
+}
+
 export interface AiPreference {
 	/** @primaryKey */
 	id: number;
@@ -61,6 +110,28 @@ export interface AiPreference {
 	token_budget_monthly?: number | null;
 	ai_enabled?: boolean | null;
 	organization?: Organization | string | null;
+}
+
+export interface AiTag {
+	/** @primaryKey */
+	id: number;
+	/** @description Tag display name @required */
+	name: string;
+	/** @description URL-safe identifier, unique per org */
+	slug?: string | null;
+	/** @description Badge display color (hex) */
+	color?: string | null;
+	/** @description category = user-created topic, entity = linked to a client/contact/project @required */
+	type: 'category' | 'entity';
+	/** @description Only for entity tags — which collection is linked */
+	entity_type?: 'client' | 'contact' | 'project' | null;
+	/** @description UUID of the linked entity */
+	entity_id?: string | null;
+	/** @required */
+	organization: Organization | string;
+	user_created?: string | null;
+	date_created?: string | null;
+	date_updated?: string | null;
 }
 
 export interface AiUsageLog {
@@ -3805,7 +3876,11 @@ export interface DirectusDeploymentRun {
 export interface Schema {
 	ai_chat_messages: AiChatMessage[];
 	ai_chat_sessions: AiChatSession[];
+	ai_context_snapshots: AiContextSnapshot[];
+	ai_notes: AiNote[];
+	ai_notes_ai_tags: AiNotesAiTag[];
 	ai_preferences: AiPreference[];
+	ai_tags: AiTag[];
 	ai_usage_logs: AiUsageLog[];
 	animation_presets: AnimationPreset[];
 	appointments: Appointment[];
@@ -4013,7 +4088,11 @@ export interface Schema {
 export enum CollectionNames {
 	ai_chat_messages = 'ai_chat_messages',
 	ai_chat_sessions = 'ai_chat_sessions',
+	ai_context_snapshots = 'ai_context_snapshots',
+	ai_notes = 'ai_notes',
+	ai_notes_ai_tags = 'ai_notes_ai_tags',
 	ai_preferences = 'ai_preferences',
+	ai_tags = 'ai_tags',
 	ai_usage_logs = 'ai_usage_logs',
 	animation_presets = 'animation_presets',
 	appointments = 'appointments',

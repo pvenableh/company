@@ -19,6 +19,7 @@ import { buildSystemPrompt } from '~~/server/utils/llm/context';
 import { logAIUsage } from '~~/server/utils/ai-usage';
 import { enforceTokenLimits, deductOrgTokens } from '~~/server/utils/ai-token-enforcement';
 import { getBrandContext } from '~~/server/utils/brand-context';
+import { getOrgContext } from '~~/server/utils/context-broker';
 import type { ChatMessage } from '~~/server/utils/llm/types';
 
 export default defineEventHandler(async (event) => {
@@ -98,51 +99,63 @@ export default defineEventHandler(async (event) => {
       content: m.content,
     }));
 
-    // 5. Get org context + task context for system prompt
-    let orgContext: any = {};
-    try {
-      const userData = (session as any).user;
-      orgContext = {
-        userName: userData?.first_name
-          ? `${userData.first_name} ${userData.last_name || ''}`.trim()
-          : undefined,
-      };
-    } catch {
-      // Continue without org context
-    }
+    // 5. Build operational context via Context Broker (cached) + user tasks (fresh)
+    const userData = (session as any).user;
+    const userName = userData?.first_name
+      ? `${userData.first_name} ${userData.last_name || ''}`.trim()
+      : undefined;
 
-    // Fetch user's tasks so the AI has awareness of their workload
-    let taskContext = '';
-    try {
-      const tasks = await directus.request(
-        readItems('project_tasks', {
-          filter: { assignee_id: { _eq: userId } },
-          fields: ['id', 'title', 'status', 'completed', 'due_date', 'priority'],
-          sort: ['-due_date'],
-          limit: 30,
-        }),
-      ) as Array<{ id: string; title: string; status: string; completed: boolean; due_date: string; priority: string }>;
+    const now = new Date();
 
-      if (tasks.length > 0) {
-        const pending = tasks.filter(t => !t.completed);
-        const overdue = pending.filter(t => t.due_date && new Date(t.due_date) < new Date());
-        const completed = tasks.filter(t => t.completed);
+    // Parallel: cached org context from broker + fresh user tasks + client brand override
+    const [cachedContext, taskContext, clientBrandContext] = await Promise.all([
+      // Org context from broker (L1 → L2 → L3 with stale-while-revalidate)
+      organizationId ? getOrgContext(organizationId).catch(() => null) : Promise.resolve(null),
 
-        taskContext = `\n\nUSER'S CURRENT TASKS (${tasks.length} total, ${pending.length} pending, ${completed.length} completed${overdue.length ? `, ${overdue.length} overdue` : ''}):\n`;
-        taskContext += pending.slice(0, 15).map(t =>
-          `- [${t.completed ? 'x' : ' '}] ${t.title}${t.due_date ? ` (due: ${t.due_date})` : ''}${t.priority ? ` [${t.priority}]` : ''}${t.status ? ` — ${t.status}` : ''}`,
-        ).join('\n');
-        if (overdue.length > 0) {
-          taskContext += `\n\nOVERDUE TASKS:\n`;
-          taskContext += overdue.map(t => `- ${t.title} (was due: ${t.due_date})`).join('\n');
-        }
-      }
-    } catch {
-      // Tasks collection may not be accessible — continue without
-    }
+      // User tasks — always fresh (user-scoped, cheap query)
+      (async () => {
+        try {
+          const tasks = await directus.request(
+            readItems('project_tasks', {
+              filter: { assignee_id: { _eq: userId } },
+              fields: ['id', 'title', 'status', 'completed', 'due_date', 'priority'],
+              sort: ['-due_date'],
+              limit: 30,
+            }),
+          ) as Array<{ id: string; title: string; status: string; completed: boolean; due_date: string; priority: string }>;
 
-    // 5b. Fetch brand context for the selected client or organization
-    const brandContext = await getBrandContext(event, { clientId, organizationId });
+          if (tasks.length === 0) return '';
+
+          const pending = tasks.filter(t => !t.completed);
+          const overdue = pending.filter(t => t.due_date && new Date(t.due_date) < now);
+          const completed = tasks.filter(t => t.completed);
+
+          let ctx = `\n\nUSER'S CURRENT TASKS (${tasks.length} total, ${pending.length} pending, ${completed.length} completed${overdue.length ? `, ${overdue.length} overdue` : ''}):\n`;
+          ctx += pending.slice(0, 15).map(t =>
+            `- [${t.completed ? 'x' : ' '}] ${t.title}${t.due_date ? ` (due: ${t.due_date})` : ''}${t.priority ? ` [${t.priority}]` : ''}${t.status ? ` — ${t.status}` : ''}`,
+          ).join('\n');
+          if (overdue.length > 0) {
+            ctx += `\n\nOVERDUE TASKS:\n`;
+            ctx += overdue.map(t => `- ${t.title} (was due: ${t.due_date})`).join('\n');
+          }
+          return ctx;
+        } catch { return ''; }
+      })(),
+
+      // Client-specific brand override (only when a specific client is selected)
+      clientId ? getBrandContext(event, { clientId, organizationId }) : Promise.resolve(''),
+    ]);
+
+    const orgContext = {
+      userName,
+      clientsSummary: cachedContext?.clientsSummary || undefined,
+      projectsSummary: cachedContext?.projectsSummary || undefined,
+      invoicesSummary: cachedContext?.invoicesSummary || undefined,
+      dealsSummary: cachedContext?.dealsSummary || undefined,
+    };
+
+    // Brand context: client-specific override takes priority, else use broker's org-level brand
+    const brandContext = clientBrandContext || (cachedContext?.brandSummary ? `\n\n${cachedContext.brandSummary}` : '');
 
     // Build response style instruction
     let styleContext = '';

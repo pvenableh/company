@@ -24,7 +24,45 @@ const {
 } = useEarnestChat();
 const router = useRouter();
 
-const activeTab = ref<'chat' | 'productivity'>('chat');
+const { fetchSmartData, getSmartPrompts, smartData } = useAISmartPrompts();
+const activeTab = ref<'chat' | 'productivity' | 'notes'>('chat');
+const smartPrompts = computed(() => getSmartPrompts(selectedPersona.value));
+
+// Save Note from tray
+const showTraySaveNote = ref(false);
+const traySaveMsg = ref({ content: '', id: '' });
+const traySavedIds = ref<Set<string>>(new Set());
+
+const openTraySaveNote = (msg: any) => {
+  traySaveMsg.value = { content: msg.content, id: msg.id };
+  showTraySaveNote.value = true;
+};
+
+const onTrayNoteSaved = () => {
+  traySavedIds.value.add(traySaveMsg.value.id);
+};
+
+// Notes tab state
+const { notes: allNotes, fetchNotes, isLoading: trayNotesLoading } = useAINotes();
+const trayNotesSearch = ref('');
+const trayNotes = computed(() => {
+  const q = trayNotesSearch.value.toLowerCase().trim();
+  let result = allNotes.value;
+  if (q) {
+    result = result.filter(n => n.title?.toLowerCase().includes(q) || n.excerpt?.toLowerCase().includes(q));
+  }
+  return result.slice(0, 20);
+});
+
+const loadTrayNotes = () => { fetchNotes({ limit: 20 }); };
+const getTrayNoteTags = (note: any) => (note.tags || []).map((jn: any) => jn.ai_tags_id).filter(Boolean);
+
+const showTrayNoteDetail = ref(false);
+const trayNoteDetailId = ref('');
+const openTrayNote = (noteId: string) => {
+  trayNoteDetailId.value = noteId;
+  showTrayNoteDetail.value = true;
+};
 const filterCategory = ref('all');
 const showPreferences = ref(false);
 const chatInput = ref('');
@@ -120,6 +158,7 @@ const renderMarkdown = (text: string): string => {
 
 onMounted(() => {
 	runAnalysis();
+	fetchSmartData();
 });
 
 // Re-analyze when tray opens; handle initial prompt
@@ -218,6 +257,16 @@ watch(quickStreamingContent, () => {
 						<UIcon name="i-heroicons-bolt" class="w-3.5 h-3.5" />
 						Productivity
 					</button>
+					<button
+						@click="activeTab = 'notes'; loadTrayNotes()"
+						class="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-medium transition-colors"
+						:class="activeTab === 'notes'
+							? 'text-primary border-b-2 border-primary'
+							: 'text-muted-foreground hover:text-foreground'"
+					>
+						<UIcon name="i-heroicons-bookmark" class="w-3.5 h-3.5" />
+						Notes
+					</button>
 				</div>
 			</div>
 
@@ -240,7 +289,7 @@ watch(quickStreamingContent, () => {
 							<p class="text-xs text-muted-foreground text-center mb-6 max-w-[240px]">{{ activePersona.description }}</p>
 							<div class="flex flex-wrap gap-2 justify-center">
 								<button
-									v-for="prompt in activePersona.prompts"
+									v-for="prompt in smartPrompts"
 									:key="prompt"
 									@click="chatInput = prompt"
 									class="px-3 py-1.5 rounded-full text-[11px] transition-all hover:scale-105"
@@ -264,7 +313,7 @@ watch(quickStreamingContent, () => {
 							<div
 								v-for="msg in quickMessages"
 								:key="msg.id"
-								class="flex gap-2"
+								class="flex gap-2 group"
 								:class="msg.role === 'user' ? 'flex-row-reverse' : ''"
 							>
 								<div
@@ -274,18 +323,44 @@ watch(quickStreamingContent, () => {
 								>
 									<UIcon :name="activePersona.icon" class="w-3 h-3" :class="activePersona.iconColor" />
 								</div>
-								<div
-									class="max-w-[85%] rounded-xl px-3 py-2 text-xs"
-									:class="msg.role === 'user'
-										? 'bg-primary text-primary-foreground'
-										: 'bg-muted'"
-								>
-									<p v-if="msg.role === 'user'" class="whitespace-pre-wrap break-words">{{ msg.content }}</p>
+								<div class="max-w-[85%] relative">
 									<div
-										v-else
-										class="prose prose-xs dark:prose-invert max-w-none break-words [&>p]:my-0.5"
-										v-html="renderMarkdown(msg.content)"
-									></div>
+										class="rounded-xl px-3 py-2 text-xs"
+										:class="msg.role === 'user'
+											? 'bg-primary text-primary-foreground'
+											: 'bg-muted'"
+									>
+										<p v-if="msg.role === 'user'" class="whitespace-pre-wrap break-words">{{ msg.content }}</p>
+										<div
+											v-else
+											class="prose prose-xs dark:prose-invert max-w-none break-words [&>p]:my-0.5"
+											v-html="renderMarkdown(msg.content)"
+										></div>
+									</div>
+									<!-- Hover actions (assistant messages only) -->
+									<div
+										v-if="msg.role === 'assistant'"
+										class="absolute -bottom-2.5 left-1 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+									>
+										<button
+											@click="openTraySaveNote(msg)"
+											class="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-medium bg-background border border-gray-200 dark:border-gray-600 shadow-sm hover:bg-muted transition-colors"
+											:class="traySavedIds.has(msg.id) ? 'text-primary' : 'text-muted-foreground'"
+										>
+											<UIcon
+												:name="traySavedIds.has(msg.id) ? 'i-heroicons-bookmark-solid' : 'i-heroicons-bookmark'"
+												class="w-2.5 h-2.5"
+											/>
+											{{ traySavedIds.has(msg.id) ? 'Saved' : 'Save' }}
+										</button>
+										<button
+											@click="navigator.clipboard.writeText(msg.content)"
+											class="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-medium text-muted-foreground bg-background border border-gray-200 dark:border-gray-600 shadow-sm hover:bg-muted transition-colors"
+										>
+											<UIcon name="i-heroicons-clipboard-document" class="w-2.5 h-2.5" />
+											Copy
+										</button>
+									</div>
 								</div>
 							</div>
 							<!-- Streaming -->
@@ -321,7 +396,7 @@ watch(quickStreamingContent, () => {
 								<input
 									v-model="chatInput"
 									type="text"
-									:placeholder="`Ask ${activePersona.label} anything...`"
+									placeholder="Ask about a client, project, or invoice..."
 									:disabled="isQuickSending"
 									@keydown="handleChatKeydown"
 									class="w-full bg-muted/40 rounded-lg pl-9 pr-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50"
@@ -455,6 +530,73 @@ watch(quickStreamingContent, () => {
 					</div>
 				</div>
 			</template>
+
+			<!-- ═══ Notes Tab ═══ -->
+			<template v-else-if="activeTab === 'notes'">
+				<div class="flex-1 flex flex-col min-h-0">
+					<!-- Search -->
+					<div class="p-3 border-b border-gray-100 dark:border-gray-700">
+						<input
+							v-model="trayNotesSearch"
+							placeholder="Search notes..."
+							class="w-full text-xs px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-transparent placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+						/>
+					</div>
+
+					<!-- Notes list -->
+					<div class="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-hide">
+						<div v-if="trayNotesLoading" class="flex items-center justify-center py-8">
+							<UIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin text-muted-foreground" />
+						</div>
+
+						<div v-else-if="trayNotes.length === 0" class="flex flex-col items-center justify-center py-8">
+							<UIcon name="i-heroicons-bookmark" class="w-8 h-8 text-muted-foreground/30 mb-2" />
+							<p class="text-xs text-muted-foreground">No saved notes yet</p>
+						</div>
+
+						<div
+							v-for="note in trayNotes"
+							:key="(note as any).id"
+							@click="openTrayNote((note as any).id)"
+							class="p-3 rounded-lg bg-muted/30 border border-gray-100 dark:border-gray-700 cursor-pointer hover:bg-muted/50 transition-colors"
+						>
+							<div class="flex items-start justify-between gap-2">
+								<h4 class="text-xs font-semibold text-foreground line-clamp-1 flex-1">
+									{{ note.title || 'Untitled' }}
+								</h4>
+								<UIcon
+									v-if="note.is_pinned"
+									name="i-heroicons-star-solid"
+									class="w-3 h-3 text-amber-500 flex-shrink-0"
+								/>
+							</div>
+							<p class="text-[11px] text-muted-foreground line-clamp-2 mt-1">
+								{{ note.excerpt }}
+							</p>
+							<div v-if="getTrayNoteTags(note).length > 0" class="flex flex-wrap gap-1 mt-2">
+								<span
+									v-for="tag in getTrayNoteTags(note).slice(0, 3)"
+									:key="tag.id"
+									class="px-1.5 py-0.5 rounded text-[9px] font-medium"
+									:style="{ backgroundColor: (tag.color || '#6366f1') + '1a', color: tag.color || '#6366f1' }"
+								>
+									{{ tag.name }}
+								</span>
+							</div>
+						</div>
+					</div>
+
+					<!-- View all link -->
+					<div class="p-3 border-t border-gray-100 dark:border-gray-700">
+						<button
+							@click="router.push('/command-center/notes'); emit('close')"
+							class="w-full text-xs text-center text-muted-foreground hover:text-primary transition-colors"
+						>
+							View all notes
+						</button>
+					</div>
+				</div>
+			</template>
 		</div>
 	</Transition>
 
@@ -466,6 +608,23 @@ watch(quickStreamingContent, () => {
 			@click="emit('close')"
 		/>
 	</Transition>
+
+	<!-- Save Note Modal -->
+	<AISaveNoteModal
+		v-model="showTraySaveNote"
+		:message-content="traySaveMsg.content"
+		:session-id="quickSessionId || ''"
+		:message-id="traySaveMsg.id"
+		@saved="onTrayNoteSaved"
+	/>
+
+	<!-- Note Detail Modal -->
+	<AINoteDetailModal
+		v-model="showTrayNoteDetail"
+		:note-id="trayNoteDetailId"
+		@deleted="loadTrayNotes"
+		@updated="loadTrayNotes"
+	/>
 </template>
 
 <style scoped>

@@ -9,11 +9,16 @@
  * - Appropriate behavior guidelines
  */
 
-interface OrgContext {
+export interface OrgContext {
   orgName?: string;
   userName?: string;
   userRole?: string;
   features?: string[];
+  /** Pre-built context summaries from the context broker */
+  clientsSummary?: string;
+  projectsSummary?: string;
+  invoicesSummary?: string;
+  dealsSummary?: string;
 }
 
 /**
@@ -23,15 +28,18 @@ interface OrgContext {
 export function buildSystemPrompt(context?: OrgContext): string {
   const parts: string[] = [];
 
-  // Base personality
+  // Core identity — business operations partner, not generic chatbot
   parts.push(
-    'You are a helpful AI assistant integrated into a business management platform. ' +
-    'You help users with their work by answering questions, providing insights, and offering suggestions.'
+    'You are Earnest, the user\'s business operations partner. ' +
+    'You have real-time visibility into their clients, projects, revenue, tasks, and team. ' +
+    'Lead with what you notice — surface risks, opportunities, and connections the user might miss. ' +
+    'When referencing data, cite specifics (client names, amounts, dates). ' +
+    'Be proactive: if you see overdue invoices, stale clients, or blocked projects, mention them.',
   );
 
-  // Org context
+  // Org + user context
   if (context?.orgName) {
-    parts.push(`You are assisting a user from the organization "${context.orgName}".`);
+    parts.push(`You are the operations partner for "${context.orgName}".`);
   }
 
   if (context?.userName) {
@@ -42,22 +50,37 @@ export function buildSystemPrompt(context?: OrgContext): string {
     parts.push(`Their role is: ${context.userRole}.`);
   }
 
+  // Live operational context (from context broker queries)
+  if (context?.clientsSummary) {
+    parts.push(`CLIENTS:\n${context.clientsSummary}`);
+  }
+  if (context?.projectsSummary) {
+    parts.push(`PROJECTS:\n${context.projectsSummary}`);
+  }
+  if (context?.invoicesSummary) {
+    parts.push(`REVENUE:\n${context.invoicesSummary}`);
+  }
+  if (context?.dealsSummary) {
+    parts.push(`PIPELINE:\n${context.dealsSummary}`);
+  }
+
   // Platform awareness
   parts.push(
     'The platform includes these modules: ' +
     'Projects, Tickets, Tasks, Invoices, Contacts, Clients, Channels (messaging), ' +
-    'Email Campaigns, Social Media, Scheduling/Appointments, Phone/Call Logs, and Deals/Leads.'
+    'Email Campaigns, Social Media, Scheduling/Appointments, Phone/Call Logs, and Deals/Leads.',
   );
 
   // Behavior guidelines
   parts.push(
     'Guidelines:',
     '- Be concise and professional',
-    '- When discussing data, remind users you can only see what they share in the conversation',
-    '- Offer actionable suggestions when appropriate',
-    '- If asked about specific platform features, explain how they work',
-    '- Do not make up data or statistics',
-    '- Format responses with markdown when helpful (headers, lists, code blocks)',
+    '- Reference the operational data above to give contextually grounded answers',
+    '- Distinguish between known facts (from data), observed patterns, and recommendations',
+    '- When you spot a risk or opportunity in the data, surface it proactively',
+    '- Offer actionable next steps — draft an email, create a task, flag an overdue invoice',
+    '- Do not fabricate data — if you don\'t have context on something, say so',
+    '- Format responses with markdown when helpful (headers, lists, bold for key points)',
   );
 
   return parts.join('\n\n');
