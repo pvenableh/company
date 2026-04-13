@@ -58,7 +58,7 @@
 /* ---- Title treatment — adapts to style variant ---- */
 .t-title {
   text-transform: var(--title-transform, uppercase);
-  letter-spacing: var(--title-tracking, 0.12em);
+  letter-spacing: var(--title-tracking, 0.04em);
   font-family: var(--title-font);
   font-weight: var(--title-weight, 500);
 }
@@ -66,7 +66,7 @@
 /* ---- Label treatment — adapts to style variant ---- */
 .t-label {
   text-transform: var(--label-transform, uppercase);
-  letter-spacing: var(--label-tracking, 0.08em);
+  letter-spacing: var(--label-tracking, 0.04em);
   font-weight: var(--label-weight, 600);
   font-size: var(--label-size, 0.625rem);
 }
@@ -201,15 +201,25 @@
   color: hsl(var(--muted-foreground));
 }
 .cg-text-stat {
-  font-size: 1.5rem;
+  font-size: 1rem;
   font-weight: 600;
 }
+@media (min-width: 640px) {
+  .cg-text-stat {
+    font-size: 1.5rem;
+  }
+}
 .cg-text-label {
-  font-size: 10px;
+  font-size: 8px;
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: hsl(var(--muted-foreground));
+}
+@media (min-width: 640px) {
+  .cg-text-label {
+    font-size: 10px;
+  }
 }
 
 /* ---- Status opacity (Clean Gantt pattern) ---- */
@@ -242,7 +252,12 @@
 .cg-card-compact {
   @apply bg-card rounded-2xl border border-border/50 shadow-sm;
   transition: box-shadow 0.2s ease, transform 0.2s ease;
-  padding: 14px;
+  padding: 8px;
+}
+@media (min-width: 640px) {
+  .cg-card-compact {
+    padding: 14px;
+  }
 }
 .cg-card-compact:hover {
   @apply shadow-md;

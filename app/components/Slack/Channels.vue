@@ -1,107 +1,122 @@
 <script setup>
-// Add project prop
 const props = defineProps({
-	project: {
-		type: Object,
-		default: () => null,
-	},
+  project: {
+    type: Object,
+    default: () => null,
+  },
 });
-
-// Create computed filter that includes project if defined
-const channelsFilter = computed(() => {
-	const filter = {
-		_and: [],
-	};
-
-	// Add project filter if project prop is defined
-	// Project filter
-	if (props.project) {
-		filter._and.push({
-			project: { _eq: props.project },
-		});
-	}
-
-	return filter;
-});
-
-console.log(channelsFilter.value);
-
-// Update channels subscription to use computed filter
-// const {
-// 	data: channels,
-// 	isLoading: channelsLoading,
-// 	error: channelsError,
-// 	isConnected: channelsConnected,
-// 	refresh: refreshChannels,
-// } = useRealtimeSubscription('channels', ['*'], channelsFilter, '-date_updated');
 
 const {
-	data: channels,
-	isLoading: channelsLoading,
-	error: channelsError,
-	isConnected: channelsConnected,
-	refresh: refreshChannels,
+  data: channels,
+  isLoading: channelsLoading,
+  error: channelsError,
+  isConnected: channelsConnected,
+  refresh: refreshChannels,
 } = useRealtimeSubscription('channels', ['id', 'name', 'messages'], {
-	project: { _eq: props.project.id },
+  project: { _eq: props.project.id },
 });
 
-console.log(channels);
-
-// Computed properties for status
 const isFullyConnected = computed(() => channelsConnected.value);
 const isLoading = computed(() => channelsLoading.value);
 const hasError = computed(() => channelsError.value);
 
-// Refresh function for both subscriptions
+const showCreateForm = ref(false);
+
 const refreshAll = () => {
-	refreshChannels();
-	// refreshMessages();
+  refreshChannels();
 };
 </script>
 
 <template>
-	<div class="md:px-6 mx-auto flex items-start justify-center flex-col relative px-4 pt-20">
-		<SlackCreate :project="project" />
-		<!-- Connection Status Alerts -->
-		<div v-if="!isFullyConnected && !isLoading" class="w-full mb-4">
-			<UAlert title="Connection Lost" description="Attempting to reconnect to real-time updates..." color="yellow">
-				<template #footer>
-					<UButton size="sm" color="yellow" @click="refreshAll">Retry Connection</UButton>
-				</template>
-			</UAlert>
-		</div>
+  <div class="w-full space-y-4">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Channels</span>
+        <span v-if="channels?.length" class="text-[10px] text-muted-foreground/60">{{ channels.length }}</span>
+      </div>
+      <button
+        class="text-[10px] font-medium text-primary hover:underline uppercase tracking-wide"
+        @click="showCreateForm = !showCreateForm"
+      >
+        {{ showCreateForm ? 'Cancel' : '+ New Channel' }}
+      </button>
+    </div>
 
-		<!-- Error Alert -->
-		<div v-if="hasError" class="w-full mb-4">
-			<UAlert title="Error" description="Failed to load channels. Please try again." color="red">
-				<template #footer>
-					<UButton size="sm" color="red" @click="refreshAll">Retry</UButton>
-				</template>
-			</UAlert>
-		</div>
+    <!-- Connection warning -->
+    <div v-if="!isFullyConnected && !isLoading" class="ios-card p-3 flex items-center gap-2 border-amber-200 dark:border-amber-800">
+      <div class="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
+        <Icon name="lucide:wifi-off" class="w-3.5 h-3.5 text-amber-500" />
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-xs font-medium text-foreground">Connection lost</p>
+        <p class="text-[10px] text-muted-foreground">Attempting to reconnect...</p>
+      </div>
+      <button class="text-[10px] text-primary hover:underline shrink-0" @click="refreshAll">Retry</button>
+    </div>
 
-		<div class="w-full flex flex-col lg:flex-row items-center lg:items-start justify-center z-10 page__inner">
-			<!-- Loading State -->
-			<div v-if="isLoading" class="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-				<div v-for="n in 3" :key="n" class="p-12 shadow-lg">
-					<USkeleton class="h-6 w-32" />
-				</div>
-			</div>
+    <!-- Error -->
+    <div v-if="hasError" class="ios-card p-3 flex items-center gap-2 border-red-200 dark:border-red-800">
+      <div class="w-7 h-7 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0">
+        <Icon name="lucide:alert-circle" class="w-3.5 h-3.5 text-red-500" />
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-xs font-medium text-foreground">Failed to load channels</p>
+      </div>
+      <button class="text-[10px] text-primary hover:underline shrink-0" @click="refreshAll">Retry</button>
+    </div>
 
-			<!-- Channels Grid -->
-			<div v-else class="w-full flex flex-row flex-wrap items-center justify-center">
-				<NuxtLink
-					v-for="item in channels"
-					:key="item.name"
-					:to="'/channels/' + item.name"
-					class="inline-block p-12 my-6 shadow-lg bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors duration-200 lowercase mx-3 mb-6 rounded-lg"
-				>
-					#{{ item.name }}
-					<UChip :text="item.messages.length" size="2xl">
-						<UIcon name="i-heroicons-chat-bubble-left-right" class="w-4 h-4 inline-block" />
-					</UChip>
-				</NuxtLink>
-			</div>
-		</div>
-	</div>
+    <!-- Create channel form (inline, compact) -->
+    <div v-if="showCreateForm" class="ios-card p-4">
+      <SlackCreate :project="project" />
+    </div>
+
+    <!-- Loading -->
+    <div v-if="isLoading" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div v-for="n in 3" :key="n" class="ios-card p-4 animate-pulse">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-muted/60" />
+          <div class="space-y-1.5 flex-1">
+            <div class="h-3 w-24 bg-muted/60 rounded" />
+            <div class="h-2.5 w-16 bg-muted/40 rounded" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Channels grid -->
+    <div v-else-if="channels?.length" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <NuxtLink
+        v-for="item in channels"
+        :key="item.name"
+        :to="'/channels/' + item.name"
+        class="ios-card p-4 flex items-center justify-between ios-press"
+      >
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-9 h-9 rounded-xl bg-violet-500/10 flex items-center justify-center shrink-0">
+            <Icon name="lucide:hash" class="w-4 h-4 text-violet-500" />
+          </div>
+          <div class="min-w-0">
+            <p class="text-sm font-medium text-foreground truncate">{{ item.name }}</p>
+            <p class="text-[10px] text-muted-foreground">{{ item.messages?.length || 0 }} messages</p>
+          </div>
+        </div>
+        <Icon name="lucide:chevron-right" class="w-4 h-4 text-muted-foreground/40 shrink-0" />
+      </NuxtLink>
+    </div>
+
+    <!-- Empty state -->
+    <div v-else class="flex flex-col items-center justify-center py-16 text-center">
+      <div class="h-12 w-12 rounded-full bg-muted/60 flex items-center justify-center mb-4">
+        <Icon name="lucide:message-circle" class="h-6 w-6 text-muted-foreground/60" />
+      </div>
+      <p class="text-sm text-muted-foreground">No channels for this project.</p>
+      <button
+        class="mt-3 text-xs text-primary hover:underline"
+        @click="showCreateForm = true"
+      >
+        Create the first channel
+      </button>
+    </div>
+  </div>
 </template>

@@ -48,7 +48,7 @@ export default defineEventHandler(async (event) => {
     const messages = await directus.request(
       readItems('ai_chat_messages', {
         filter: { session: { _eq: sessionId } },
-        fields: ['id', 'role', 'content', 'date_created'],
+        fields: ['id', 'role', 'content', 'date_created', 'feedback'],
         sort: ['date_created'],
         limit: messageLimit,
       }),

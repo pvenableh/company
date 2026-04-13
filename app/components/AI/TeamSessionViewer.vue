@@ -65,6 +65,9 @@ const renderMarkdown = (text: string): string => {
   html = html.replace(/^- (.+)$/gm, '<li class="ml-4 list-disc text-sm">$1</li>');
   html = html.replace(/(<li[^>]*>.*<\/li>\n?)+/g, '<ul class="my-1 space-y-0.5">$&</ul>');
   html = html.replace(/^\d+\. (.+)$/gm, '<li class="ml-4 list-decimal text-sm">$1</li>');
+  // Source attribution badges
+  html = html.replace(/\[Source:\s*([^\]]+)\]/g,
+    '<span class="inline-flex items-center px-1.5 py-0 rounded-full bg-primary/10 text-primary text-[9px] font-medium whitespace-nowrap align-baseline mx-0.5">$1</span>');
   html = html.replace(/\n/g, '<br>');
   return html;
 };

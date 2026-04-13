@@ -20,6 +20,7 @@ useHead({ title: 'Project Details | Earnest' });
 
 const router = useRouter();
 const showEditModal = ref(false);
+const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext();
 
 const project = await projectItems.get(params.id, {
 	fields: [
@@ -49,11 +50,6 @@ const items = [
 		icon: 'i-heroicons-square-3-stack-3d',
 	},
 	{
-		slot: 'activity',
-		label: 'Activity',
-		icon: 'i-heroicons-clock',
-	},
-	{
 		slot: 'time',
 		label: 'Time',
 		icon: 'i-heroicons-clock',
@@ -67,6 +63,11 @@ const items = [
 		slot: 'billing',
 		label: 'Billing',
 		icon: 'i-heroicons-credit-card',
+	},
+	{
+		slot: 'activity',
+		label: 'Activity',
+		icon: 'i-heroicons-clock',
 	},
 ];
 
@@ -135,7 +136,9 @@ onMounted(() => {
 	loadStats();
 	loadDocuments();
 	loadInvoices();
+	if (project?.id) setEntity('project', String(project.id), project.title || 'Project');
 });
+onUnmounted(() => clearEntity());
 
 // ── Status styling ──
 const { getStatusAccent, getStatusBadgeClasses: getProjectStatusClasses } = useStatusStyle();
@@ -495,31 +498,55 @@ const formatCurrency = (amount) => {
 <template>
 	<div class="page__content">
 		<div class="max-w-screen-xl mx-auto page_inner px-4 2xl:px-0">
+			<!-- Back link -->
+			<NuxtLink
+				to="/projects"
+				class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground hover:text-foreground transition-colors mt-4 mb-2"
+			>
+				<Icon name="lucide:chevron-left" class="w-3 h-3" />
+				Projects
+			</NuxtLink>
+
 			<!-- Header -->
-			<div class="flex items-center justify-between mb-4">
-				<div class="flex items-center gap-3">
-					<BackButton to="/projects" />
-					<div>
-						<div class="flex items-center gap-2">
-							<h1 class="text-xl font-semibold text-foreground">{{ project?.title || 'Project' }}</h1>
+			<div class="flex items-start sm:items-center justify-between mb-4 gap-2">
+				<div class="min-w-0">
+					<div class="sm:hidden mb-1">
+						<UiStatusBadge :status="project?.status" />
+					</div>
+					<div class="flex items-center gap-2">
+						<h1 class="text-sm sm:text-base font-semibold text-foreground" style="line-height: 1.1">{{ project?.title || 'Project' }}</h1>
+						<div class="hidden sm:block shrink-0">
 							<UiStatusBadge :status="project?.status" />
 						</div>
-						<div class="flex items-center gap-2 mt-0.5">
-							<span v-if="project?.service" class="flex items-center gap-1 text-xs text-muted-foreground">
-								<span class="h-2 w-2 inline-block rounded-full" :style="{ backgroundColor: project.service.color }" />
-								{{ project.service.name }}
-							</span>
-							<span class="text-xs text-muted-foreground">{{ project?.client?.name || project?.organization?.name }}</span>
-						</div>
+					</div>
+					<div class="flex items-center gap-1.5 mt-0.5">
+						<span v-if="project?.service" class="flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+							<span class="h-2 w-2 inline-block rounded-full" :style="{ backgroundColor: project.service.color }" />
+							{{ project.service.name }}
+						</span>
+						<span v-if="project?.service && (project?.client?.name || project?.organization?.name)" class="text-muted-foreground/40">·</span>
+						<span v-if="project?.client?.name || project?.organization?.name" class="flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+							<Icon name="lucide:building-2" class="w-3 h-3" />
+							{{ project?.client?.name || project?.organization?.name }}
+						</span>
 					</div>
 				</div>
-				<button
-					class="h-8 px-3 rounded-lg border border-border text-sm font-medium text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors flex items-center gap-1.5"
-					@click="showEditModal = true"
-				>
-					<Icon name="lucide:pencil" class="w-3.5 h-3.5" />
-					Edit
-				</button>
+				<div class="flex items-center gap-1.5">
+					<button
+						class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium text-primary hover:bg-primary/10 hover:border-primary/30 transition-colors"
+						@click="sidebarOpen = true"
+					>
+						<Icon name="lucide:sparkles" class="w-3.5 h-3.5" />
+						<span class="hidden sm:inline">Ask Earnest</span>
+					</button>
+					<button
+						class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors"
+						@click="showEditModal = true"
+					>
+						<Icon name="lucide:pencil" class="w-3.5 h-3.5" />
+						<span class="hidden sm:inline">Edit</span>
+					</button>
+				</div>
 			</div>
 
 			<!-- AI Notices -->
@@ -527,8 +554,13 @@ const formatCurrency = (amount) => {
 				<AIProactiveNotices v-if="project?.id" entity-type="project" :entity-id="String(project.id)" />
 			</ClientOnly>
 
+			<!-- Edit Project Modal -->
+			<ClientOnly>
+				<ProjectsFormModal v-model="showEditModal" :project="project" @updated="refreshProject" @deleted="handleDeleted" />
+			</ClientOnly>
+
 			<!-- Stats Row -->
-			<div class="grid grid-cols-5 gap-2 md:gap-3 mb-6">
+			<div class="grid grid-cols-5 gap-2 md:gap-3 mb-8">
 				<UiStatCard label="Tickets" :value="stats.openTickets" :detail="`${stats.ticketCount} total`" />
 
 				<div class="cg-card-compact">
@@ -558,33 +590,15 @@ const formatCurrency = (amount) => {
 				</div>
 			</div>
 
-			<!-- Assigned Team -->
-			<div v-if="project?.assigned_to?.length" class="flex items-center gap-2 mb-6">
-				<span class="t-label text-muted-foreground mr-2">Team:</span>
-				<div class="flex -space-x-2">
-					<UAvatar
-						v-for="assignment in project.assigned_to.slice(0, 6)"
-						:key="assignment.directus_users_id?.id"
-						:src="assignment.directus_users_id?.avatar ? `${useRuntimeConfig().public.directusUrl}/assets/${assignment.directus_users_id.avatar}?width=64&height=64&fit=cover` : undefined"
-						:alt="`${assignment.directus_users_id?.first_name || ''} ${assignment.directus_users_id?.last_name || ''}`"
-						size="xs"
-						class="ring-2 ring-background"
-					/>
-				</div>
-				<span v-if="project.assigned_to.length > 6" class="text-xs text-muted-foreground">+{{ project.assigned_to.length - 6 }}</span>
+			<!-- Team Management -->
+			<div v-if="project?.id" class="mb-6">
+				<ProjectsTeamManager :project-id="String(project.id)" @updated="refreshProject" />
 			</div>
 
-			<!-- Edit Project Modal -->
-			<ClientOnly>
-				<ProjectsFormModal v-model="showEditModal" :project="project" @updated="refreshProject" @deleted="handleDeleted" />
-			</ClientOnly>
-		</div>
-
-		<!-- Tabs -->
-		<div class="max-w-screen-xl mx-auto page_inner px-4 2xl:px-0 my-4">
+			<!-- Tabs -->
 			<UTabs
 				:items="items"
-				class="mt-2 w-full"
+				class="w-full"
 			>
 				<template #overview="{ item }">
 					<ProjectsOverview :project="project" @eventCreated="refreshProject" />
@@ -900,6 +914,20 @@ const formatCurrency = (amount) => {
 				</template>
 			</UTabs>
 		</div>
+
+		<!-- Contextual AI Sidebar -->
+		<ClientOnly>
+			<AIContextualSidebar
+				v-if="sidebarOpen && project?.id"
+				entity-type="project"
+				:entity-id="String(project.id)"
+				:entity-label="project.title || 'Project'"
+				@close="closeSidebar"
+			/>
+			<Transition name="overlay">
+				<div v-if="sidebarOpen" class="fixed inset-0 bg-black/20 z-40" @click="closeSidebar" />
+			</Transition>
+		</ClientOnly>
 	</div>
 </template>
 <style></style>

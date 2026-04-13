@@ -361,12 +361,18 @@ function syncScroll() {
 
 /* ── Sidebar ── */
 .mg-sidebar {
-	width: 220px;
-	min-width: 220px;
+	width: 140px;
+	min-width: 140px;
 	border-right: 1px solid hsl(var(--border) / 0.4);
 	display: flex;
 	flex-direction: column;
 	background: hsl(var(--background));
+}
+@media (min-width: 640px) {
+	.mg-sidebar {
+		width: 220px;
+		min-width: 220px;
+	}
 }
 
 .mg-sidebar-header {

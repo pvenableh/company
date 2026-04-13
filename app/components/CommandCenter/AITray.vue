@@ -42,6 +42,39 @@ const onTrayNoteSaved = () => {
   traySavedIds.value.add(traySaveMsg.value.id);
 };
 
+// Feedback
+const trayCorrectionTarget = ref<any>(null);
+const trayCorrectionText = ref('');
+
+const submitTrayFeedback = async (msg: any, rating: 'positive' | 'negative', correction?: string) => {
+  try {
+    await $fetch(`/api/ai/messages/${msg.id}/feedback`, {
+      method: 'POST',
+      body: { rating, correction },
+    });
+    msg.feedback = { rating, correction };
+  } catch (err: any) {
+    console.warn('[AITray] Feedback failed:', err.message);
+  }
+};
+
+const openTrayCorrection = (msg: any) => {
+  if (trayCorrectionTarget.value?.id === msg.id) {
+    trayCorrectionTarget.value = null;
+    trayCorrectionText.value = '';
+    return;
+  }
+  trayCorrectionTarget.value = msg;
+  trayCorrectionText.value = '';
+};
+
+const submitTrayCorrection = async () => {
+  if (!trayCorrectionTarget.value) return;
+  await submitTrayFeedback(trayCorrectionTarget.value, 'negative', trayCorrectionText.value || undefined);
+  trayCorrectionTarget.value = null;
+  trayCorrectionText.value = '';
+};
+
 // Notes tab state
 const { notes: allNotes, fetchNotes, isLoading: trayNotesLoading } = useAINotes();
 const trayNotesSearch = ref('');
@@ -151,6 +184,9 @@ const renderMarkdown = (text: string): string => {
 	html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
 	html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
 	html = html.replace(/^- (.+)$/gm, '<li class="ml-3 list-disc text-xs">$1</li>');
+	// Source attribution badges
+	html = html.replace(/\[Source:\s*([^\]]+)\]/g,
+		'<span class="inline-flex items-center px-1.5 py-0 rounded-full bg-primary/10 text-primary text-[9px] font-medium whitespace-nowrap align-baseline mx-0.5">$1</span>');
 	html = html.replace(/\n\n/g, '</p><p class="my-1">');
 	html = html.replace(/\n/g, '<br>');
 	return `<p class="my-0.5">${html}</p>`;
@@ -359,6 +395,41 @@ watch(quickStreamingContent, () => {
 										>
 											<UIcon name="i-heroicons-clipboard-document" class="w-2.5 h-2.5" />
 											Copy
+										</button>
+										<button
+											@click="submitTrayFeedback(msg, 'positive')"
+											class="flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-background border border-gray-200 dark:border-gray-600 shadow-sm hover:bg-muted transition-colors"
+											:class="msg.feedback?.rating === 'positive' ? 'text-green-500' : 'text-muted-foreground'"
+											title="Helpful"
+										>
+											<UIcon name="i-heroicons-hand-thumb-up" class="w-2.5 h-2.5" />
+										</button>
+										<button
+											@click="openTrayCorrection(msg)"
+											class="flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-background border border-gray-200 dark:border-gray-600 shadow-sm hover:bg-muted transition-colors"
+											:class="msg.feedback?.rating === 'negative' ? 'text-red-500' : 'text-muted-foreground'"
+											title="Not helpful"
+										>
+											<UIcon name="i-heroicons-hand-thumb-down" class="w-2.5 h-2.5" />
+										</button>
+									</div>
+									<!-- Correction input -->
+									<div
+										v-if="trayCorrectionTarget?.id === msg.id"
+										class="mt-0.5 ml-1 flex gap-1 items-end"
+									>
+										<textarea
+											v-model="trayCorrectionText"
+											placeholder="What was wrong? (optional)"
+											class="flex-1 text-[11px] rounded border border-gray-200 dark:border-gray-600 bg-background px-2 py-1 resize-none focus:outline-none focus:ring-1 focus:ring-primary/50"
+											rows="2"
+											@keydown.enter.ctrl="submitTrayCorrection"
+										/>
+										<button
+											@click="submitTrayCorrection"
+											class="px-2 py-1 rounded text-[9px] font-medium bg-red-500/10 text-red-600 hover:bg-red-500/20 transition-colors shrink-0"
+										>
+											Submit
 										</button>
 									</div>
 								</div>

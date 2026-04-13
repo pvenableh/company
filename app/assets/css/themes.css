@@ -258,18 +258,18 @@
 [data-style='modern'] {
 	--title-font: var(--font-proxima-regular);
 	--title-transform: uppercase;
-	--title-tracking: 0.12em;
+	--title-tracking: 0.04em;
 	--title-weight: 500;
 	--body-font: var(--font-proxima-regular);
 	--label-transform: uppercase;
-	--label-tracking: 0.08em;
+	--label-tracking: 0.04em;
 	--label-weight: 600;
 	--label-size: 0.625rem;
 	--card-border-width: 1px;
 	--card-shadow: 0 1px 2px rgba(0,0,0,0.04);
 	--card-hover-shadow: 0 4px 12px rgba(0,0,0,0.06);
 	--btn-transform: uppercase;
-	--btn-tracking: 0.08em;
+	--btn-tracking: 0.04em;
 	--btn-weight: 500;
 }
 
@@ -302,7 +302,7 @@
 [data-style='modern'] h3 {
 	font-family: var(--font-proxima-regular);
 	text-transform: uppercase;
-	letter-spacing: 0.12em;
+	letter-spacing: var(--title-tracking, 0.04em);
 	font-weight: 500;
 }
 [data-style='modern'] h1 { font-size: 1.25rem; }
@@ -311,7 +311,7 @@
 [data-style='modern'] h6 {
 	font-family: var(--font-proxima-regular);
 	text-transform: uppercase;
-	letter-spacing: 0.08em;
+	letter-spacing: var(--label-tracking, 0.04em);
 	font-weight: 600;
 }
 

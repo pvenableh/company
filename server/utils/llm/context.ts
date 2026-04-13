@@ -33,7 +33,7 @@ export function buildSystemPrompt(context?: OrgContext): string {
     'You are Earnest, the user\'s business operations partner. ' +
     'You have real-time visibility into their clients, projects, revenue, tasks, and team. ' +
     'Lead with what you notice — surface risks, opportunities, and connections the user might miss. ' +
-    'When referencing data, cite specifics (client names, amounts, dates). ' +
+    'When referencing data, cite specifics (client names, amounts, dates) and include [Source: X] tags inline to attribute where the data came from (e.g. [Source: Invoices], [Source: Client Profile], [Source: Tasks]). ' +
     'Be proactive: if you see overdue invoices, stale clients, or blocked projects, mention them.',
   );
 
@@ -84,6 +84,35 @@ export function buildSystemPrompt(context?: OrgContext): string {
   );
 
   return parts.join('\n\n');
+}
+
+/**
+ * Format saved AI notes into a context block for the system prompt.
+ * Pinned notes and entity-tagged notes are surfaced to the AI so it can
+ * reference prior user-curated knowledge.
+ */
+export function formatNotesContext(notes: Array<{
+  title?: string | null;
+  content: string;
+  is_pinned?: boolean | null;
+  tags?: any[];
+}>): string {
+  if (!notes || notes.length === 0) return '';
+
+  const lines = notes.map((n) => {
+    const tagNames = (n.tags || [])
+      .map((t: any) => t.ai_tags_id?.name)
+      .filter(Boolean)
+      .join(', ');
+    const title = n.title || 'Untitled';
+    // Truncate content to ~300 chars to stay within token budget
+    const content = n.content.length > 300
+      ? n.content.substring(0, 300) + '...'
+      : n.content;
+    return `### ${title}${tagNames ? ` [${tagNames}]` : ''}${n.is_pinned ? ' 📌' : ''}\n${content}`;
+  });
+
+  return `\n\nYOUR SAVED NOTES (${notes.length} relevant — the user pinned or tagged these for you to reference):\n${lines.join('\n\n---\n\n')}`;
 }
 
 /**

@@ -21,6 +21,7 @@ const error = ref<string | null>(null);
 const toast = useToast();
 
 const { getStatusBadgeClasses } = useStatusStyle();
+const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext();
 
 async function loadInvoice() {
   loading.value = true;
@@ -105,6 +106,11 @@ async function handleSendEmail() {
 }
 
 onMounted(loadInvoice);
+
+watch(invoice, (inv) => {
+  if (inv) setEntity('invoice', String(inv.id), inv.invoice_code || 'Invoice');
+}, { immediate: true });
+onUnmounted(() => clearEntity());
 </script>
 
 <template>
@@ -135,36 +141,46 @@ onMounted(loadInvoice);
 
     <!-- Invoice Detail -->
     <template v-else-if="invoice">
+      <!-- Back link -->
+      <NuxtLink
+        to="/invoices"
+        class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground hover:text-foreground transition-colors mt-4 mb-2"
+      >
+        <Icon name="lucide:chevron-left" class="w-3 h-3" />
+        Invoices
+      </NuxtLink>
+
       <!-- Header -->
-      <div class="flex items-center justify-between mb-6">
-        <div class="flex items-center gap-3">
-          <NuxtLink
-            to="/invoices"
-            class="flex items-center justify-center w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-          >
-            <Icon name="lucide:arrow-left" class="w-5 h-5" />
-          </NuxtLink>
-          <div>
-            <h1 class="text-xl font-semibold text-foreground">{{ invoice.invoice_code || 'Invoice' }}</h1>
-            <p class="text-sm text-muted-foreground">{{ getClientName(invoice) }}</p>
+      <div class="flex items-center justify-between mb-5">
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-base font-semibold text-foreground">{{ invoice.invoice_code || 'Invoice' }}</h1>
+            <span
+              v-if="invoice.status"
+              class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize"
+              :class="getStatusBadgeClasses(invoice.status)"
+            >
+              {{ invoice.status }}
+            </span>
           </div>
-          <span
-            v-if="invoice.status"
-            class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium capitalize"
-            :class="getStatusBadgeClasses(invoice.status)"
-          >
-            {{ invoice.status }}
-          </span>
+          <p class="text-xs text-muted-foreground">{{ getClientName(invoice) }}</p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          class="text-destructive hover:text-destructive hover:bg-destructive/10"
-          @click="showDeleteConfirm = true"
-        >
-          <Icon name="lucide:trash-2" class="w-4 h-4 mr-1" />
-          Delete
-        </Button>
+        <div class="flex items-center gap-1.5">
+          <button
+            class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium text-primary hover:bg-primary/10 hover:border-primary/30 transition-colors"
+            @click="sidebarOpen = true"
+          >
+            <Icon name="lucide:sparkles" class="w-3.5 h-3.5" />
+            <span class="hidden sm:inline">Ask Earnest</span>
+          </button>
+          <button
+            class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium text-destructive hover:bg-destructive/10 hover:border-destructive/30 transition-colors"
+            @click="showDeleteConfirm = true"
+          >
+            <Icon name="lucide:trash-2" class="w-3.5 h-3.5" />
+            <span class="hidden sm:inline">Delete</span>
+          </button>
+        </div>
       </div>
 
       <!-- Inline error banner -->
@@ -354,5 +370,19 @@ onMounted(loadInvoice);
         </div>
       </div>
     </Teleport>
+
+    <!-- Contextual AI Sidebar -->
+    <ClientOnly>
+      <AIContextualSidebar
+        v-if="sidebarOpen && invoice?.id"
+        entity-type="invoice"
+        :entity-id="String(invoice.id)"
+        :entity-label="invoice.invoice_code || 'Invoice'"
+        @close="closeSidebar"
+      />
+      <Transition name="overlay">
+        <div v-if="sidebarOpen" class="fixed inset-0 bg-black/20 z-40" @click="closeSidebar" />
+      </Transition>
+    </ClientOnly>
   </div>
 </template>

@@ -15,7 +15,8 @@
 
 import { createItem, readItems, updateItem } from '@directus/sdk';
 import { getLLMProvider } from '~~/server/utils/llm/factory';
-import { buildSystemPrompt } from '~~/server/utils/llm/context';
+import { buildSystemPrompt, formatNotesContext } from '~~/server/utils/llm/context';
+import { getEntityContext } from '~~/server/utils/entity-context';
 import { logAIUsage } from '~~/server/utils/ai-usage';
 import { enforceTokenLimits, deductOrgTokens } from '~~/server/utils/ai-token-enforcement';
 import { getBrandContext } from '~~/server/utils/brand-context';
@@ -32,7 +33,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event);
-  const { sessionId, message, model, clientId, organizationId, responseStyle, verbosity } = body;
+  const { sessionId, message, model, clientId, organizationId, responseStyle, verbosity, entityType, entityId } = body;
 
   if (!message?.trim()) {
     throw createError({ statusCode: 400, message: 'Message is required' });
@@ -51,12 +52,17 @@ export default defineEventHandler(async (event) => {
     let chatSessionId = sessionId;
     if (!chatSessionId) {
       try {
-        const newSession = await directus.request(
-          createItem('ai_chat_sessions', {
+        const sessionData: Record<string, any> = {
             user: userId,
             title: message.trim().substring(0, 100),
             status: 'active',
-          }, {
+        };
+        // Store entity context so we can find this session later by entity
+        if (entityType && entityId) {
+          sessionData.context = { entityType, entityId };
+        }
+        const newSession = await directus.request(
+          createItem('ai_chat_sessions', sessionData, {
             fields: ['id'],
           }),
         );
@@ -83,21 +89,31 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 500, message: `Failed to store message: ${msgError.message}` });
     }
 
-    // 3. Load conversation history
+    // 3. Load conversation history (with feedback for correction annotations)
     const previousMessages = await directus.request(
       readItems('ai_chat_messages', {
         filter: { session: { _eq: chatSessionId } },
-        fields: ['role', 'content'],
+        fields: ['role', 'content', 'feedback'],
         sort: ['date_created'],
         limit: 50,
       }),
-    ) as Array<{ role: string; content: string }>;
+    ) as Array<{ role: string; content: string; feedback?: { rating?: string; correction?: string } }>;
 
-    // 4. Build messages array for LLM
-    const chatMessages: ChatMessage[] = previousMessages.map((m) => ({
-      role: m.role as 'user' | 'assistant',
-      content: m.content,
-    }));
+    // 4. Build messages array for LLM — annotate corrected assistant messages
+    const chatMessages: ChatMessage[] = previousMessages.map((m) => {
+      // If user gave negative feedback with a correction, annotate the assistant message
+      // so the model learns from the correction in this conversation
+      if (m.role === 'assistant' && m.feedback?.rating === 'negative' && m.feedback?.correction) {
+        return {
+          role: 'assistant' as const,
+          content: m.content + `\n\n[USER CORRECTION: ${m.feedback.correction}]`,
+        };
+      }
+      return {
+        role: m.role as 'user' | 'assistant',
+        content: m.content,
+      };
+    });
 
     // 5. Build operational context via Context Broker (cached) + user tasks (fresh)
     const userData = (session as any).user;
@@ -107,8 +123,8 @@ export default defineEventHandler(async (event) => {
 
     const now = new Date();
 
-    // Parallel: cached org context from broker + fresh user tasks + client brand override
-    const [cachedContext, taskContext, clientBrandContext] = await Promise.all([
+    // Parallel: cached org context from broker + fresh user tasks + client brand override + entity context + saved notes
+    const [cachedContext, taskContext, clientBrandContext, entityContext, notesContext] = await Promise.all([
       // Org context from broker (L1 → L2 → L3 with stale-while-revalidate)
       organizationId ? getOrgContext(organizationId).catch(() => null) : Promise.resolve(null),
 
@@ -144,6 +160,48 @@ export default defineEventHandler(async (event) => {
 
       // Client-specific brand override (only when a specific client is selected)
       clientId ? getBrandContext(event, { clientId, organizationId }) : Promise.resolve(''),
+
+      // Entity-scoped context (when chatting from an entity detail page)
+      entityType && entityId && organizationId
+        ? getEntityContext(entityType, entityId, organizationId).catch(() => '')
+        : Promise.resolve(''),
+
+      // User's pinned notes + entity-tagged notes (always fresh, user-scoped)
+      organizationId ? (async () => {
+        try {
+          const orConditions: any[] = [{ is_pinned: { _eq: true } }];
+          if (entityType && entityId) {
+            orConditions.push({
+              tags: {
+                ai_tags_id: {
+                  _and: [
+                    { entity_type: { _eq: entityType } },
+                    { entity_id: { _eq: entityId } },
+                  ],
+                },
+              },
+            });
+          }
+
+          const notes = await directus.request(
+            readItems('ai_notes', {
+              filter: {
+                _and: [
+                  { user: { _eq: userId } },
+                  { organization: { _eq: organizationId } },
+                  { status: { _eq: 'active' } },
+                  { _or: orConditions },
+                ],
+              },
+              fields: ['id', 'title', 'content', 'is_pinned', 'tags.ai_tags_id.name'],
+              sort: ['-is_pinned', '-date_updated'],
+              limit: 10,
+            }),
+          ) as any[];
+
+          return formatNotesContext(notes);
+        } catch { return ''; }
+      })() : Promise.resolve(''),
     ]);
 
     const orgContext = {
@@ -197,7 +255,10 @@ export default defineEventHandler(async (event) => {
 - Only include essential details`;
     }
 
-    const systemPrompt = buildSystemPrompt(orgContext) + taskContext + brandContext + styleContext + verbosityContext;
+    // Entity context (Layer 4): focused context when chatting from an entity detail page
+    const entityBlock = entityContext ? `\n\n${entityContext}` : '';
+
+    const systemPrompt = buildSystemPrompt(orgContext) + notesContext + taskContext + brandContext + entityBlock + styleContext + verbosityContext;
 
     // 6. Stream response via SSE
     let provider;

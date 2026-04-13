@@ -1,6 +1,7 @@
 <script setup lang="ts">
 /**
  * UTabs - NuxtUI-compatible tabs wrapper for shadcn-vue Tabs
+ * Features a floating animated pill indicator for the active tab.
  */
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -34,7 +35,6 @@ const emit = defineEmits<{
   (e: 'change', index: number): void
 }>()
 
-// Internal state for uncontrolled mode (when no v-model is provided)
 const internalValue = ref<string>('')
 
 const activeTab = computed({
@@ -62,20 +62,75 @@ const tabItems = computed(() =>
     key: item.key || String(index),
   }))
 )
+
+// Custom compact styling applied via class overrides (keeps ui/tabs pristine)
+const listClass = computed(() =>
+  cn('relative !rounded-full !p-0.5 !gap-0.5', props.ui?.list)
+)
+
+const triggerClass = computed(() =>
+  cn('relative z-10 !rounded-full !px-3 !py-1.5 !text-[10px] !gap-1.5 data-[state=active]:!bg-transparent data-[state=active]:!shadow-none', props.ui?.trigger)
+)
+
+// Floating pill indicator
+const tabsListRef = ref<HTMLElement | null>(null)
+const pillStyle = ref({ left: '0px', width: '0px', opacity: '0' })
+
+function updatePill() {
+  const el = tabsListRef.value?.$el || tabsListRef.value
+  if (!el) return
+
+  const activeTrigger = el.querySelector('[data-state="active"]') as HTMLElement
+  if (!activeTrigger) {
+    pillStyle.value = { ...pillStyle.value, opacity: '0' }
+    return
+  }
+
+  const listRect = el.getBoundingClientRect()
+  const triggerRect = activeTrigger.getBoundingClientRect()
+
+  pillStyle.value = {
+    left: `${triggerRect.left - listRect.left}px`,
+    width: `${triggerRect.width}px`,
+    opacity: '1',
+  }
+}
+
+watch(activeTab, () => {
+  nextTick(updatePill)
+})
+
+onMounted(() => {
+  nextTick(() => setTimeout(updatePill, 50))
+})
+
+if (import.meta.client) {
+  const ro = new ResizeObserver(() => updatePill())
+  onMounted(() => {
+    const el = tabsListRef.value?.$el || tabsListRef.value
+    if (el) ro.observe(el)
+  })
+  onUnmounted(() => ro.disconnect())
+}
 </script>
 
 <template>
   <Tabs v-model="activeTab" :class="cn(props.class)" :orientation="orientation">
     <div :class="cn(orientation !== 'vertical' ? 'overflow-x-auto -mx-1 px-1 scrollbar-hide' : '')">
-    <TabsList :class="cn(orientation === 'vertical' ? 'flex-col h-auto' : 'w-max', props.ui?.list)">
+    <TabsList ref="tabsListRef" :class="listClass">
+      <!-- Floating pill indicator -->
+      <div
+        class="absolute top-0.5 h-[calc(100%-4px)] rounded-full bg-card shadow-sm border border-border/50 transition-all duration-300 ease-out pointer-events-none"
+        :style="pillStyle"
+      />
       <TabsTrigger
         v-for="item in tabItems"
         :key="item.key"
         :value="item.key!"
         :disabled="item.disabled"
-        :class="props.ui?.trigger"
+        :class="triggerClass"
       >
-        <UIcon v-if="item.icon" :name="item.icon" class="mr-2 h-4 w-4" />
+        <UIcon v-if="item.icon" :name="item.icon" class="mr-1 h-3.5 w-3.5" />
         {{ item.label }}
       </TabsTrigger>
     </TabsList>

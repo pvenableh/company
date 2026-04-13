@@ -1,45 +1,31 @@
 <template>
-	<div class="w-full px-4 py-6 min-h-[50vh] flex items-start justify-center">
-		<div class="w-full max-w-3xl space-y-6">
-			<!-- Stats Cards -->
-			<div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-				<div class="ios-card p-4 space-y-1">
-					<p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Total Hours</p>
-					<p class="text-2xl font-semibold text-foreground tabular-nums">{{ formatHours(timeStats.totalMinutes) }}</p>
-					<p class="text-xs text-muted-foreground">{{ timeStats.entryCount }} entries</p>
+	<div class="w-full py-6 min-h-[50vh]">
+		<div class="lg:flex lg:gap-6">
+			<!-- Content area -->
+			<div class="flex-1 min-w-0 space-y-6">
+			<!-- Header with filters + start timer -->
+			<div class="flex items-center justify-between mb-4">
+				<div class="flex flex-wrap items-center gap-1.5">
+					<button
+						v-for="preset in periodPresets"
+						:key="preset.label"
+						class="text-xs px-2.5 py-1 rounded-lg transition-colors"
+						:class="
+							activePreset === preset.label
+								? 'bg-primary text-primary-foreground'
+								: 'bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted'
+						"
+						@click="applyPreset(preset)"
+					>
+						{{ preset.label }}
+					</button>
 				</div>
-				<div class="ios-card p-4 space-y-1">
-					<p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Billable Hours</p>
-					<p class="text-2xl font-semibold text-foreground tabular-nums">{{ formatHours(timeStats.billableMinutes) }}</p>
-				</div>
-				<div class="ios-card p-4 space-y-1">
-					<p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Unbilled</p>
-					<p class="text-2xl font-semibold text-amber-600 dark:text-amber-400 tabular-nums">
-						${{ formatCurrency(timeStats.unbilledAmount) }}
-					</p>
-				</div>
-				<div class="ios-card p-4 space-y-1">
-					<p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Billed</p>
-					<p class="text-2xl font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
-						${{ formatCurrency(timeStats.billedAmount) }}
-					</p>
-				</div>
-			</div>
-
-			<!-- Filters -->
-			<div class="flex flex-wrap items-center gap-1.5">
 				<button
-					v-for="preset in periodPresets"
-					:key="preset.label"
-					class="text-xs px-2.5 py-1 rounded-lg transition-colors"
-					:class="
-						activePreset === preset.label
-							? 'bg-primary text-primary-foreground'
-							: 'bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted'
-					"
-					@click="applyPreset(preset)"
+					class="inline-flex items-center gap-1.5 h-7 px-3 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
+					@click="handleStartTimer"
 				>
-					{{ preset.label }}
+					<Icon name="lucide:play" class="w-3.5 h-3.5" />
+					Start Timer
 				</button>
 			</div>
 
@@ -76,6 +62,34 @@
 					</div>
 				</div>
 			</template>
+			</div>
+
+			<!-- Stats sidebar (right on lg+) -->
+			<div class="lg:w-44 lg:shrink-0 mt-4 lg:mt-0">
+				<div class="grid grid-cols-2 lg:grid-cols-1 gap-3">
+					<div class="ios-card p-4 space-y-1">
+						<p class="text-xs font-semibold uppercase text-muted-foreground">Total Hours</p>
+						<p class="text-2xl font-semibold text-foreground tabular-nums">{{ formatHours(timeStats.totalMinutes) }}</p>
+						<p class="text-xs text-muted-foreground">{{ timeStats.entryCount }} entries</p>
+					</div>
+					<div class="ios-card p-4 space-y-1">
+						<p class="text-xs font-semibold uppercase text-muted-foreground">Billable</p>
+						<p class="text-2xl font-semibold text-foreground tabular-nums">{{ formatHours(timeStats.billableMinutes) }}</p>
+					</div>
+					<div class="ios-card p-4 space-y-1">
+						<p class="text-xs font-semibold uppercase text-muted-foreground">Unbilled</p>
+						<p class="text-2xl font-semibold text-amber-600 dark:text-amber-400 tabular-nums">
+							${{ formatCurrency(timeStats.unbilledAmount) }}
+						</p>
+					</div>
+					<div class="ios-card p-4 space-y-1">
+						<p class="text-xs font-semibold uppercase text-muted-foreground">Billed</p>
+						<p class="text-2xl font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
+							${{ formatCurrency(timeStats.billedAmount) }}
+						</p>
+					</div>
+				</div>
+			</div>
 		</div>
 	</div>
 </template>
@@ -101,7 +115,28 @@ const {
 	getProjectTimeStats,
 	deleteTimeEntry,
 	formatDuration,
+	startTimer,
+	isTimerRunning,
 } = useTimeTracker();
+
+const toast = useToast();
+
+async function handleStartTimer() {
+	if (isTimerRunning.value) {
+		toast.add({ title: 'Timer already running', description: 'Stop the current timer first.', color: 'yellow' });
+		return;
+	}
+	try {
+		await startTimer({
+			project: props.projectId,
+			client: props.clientId || null,
+			billable: true,
+		});
+		toast.add({ title: 'Timer started', description: 'Tracking time for this project.', color: 'green' });
+	} catch (err: any) {
+		toast.add({ title: 'Failed to start timer', description: err.message, color: 'red' });
+	}
+}
 
 const loading = ref(true);
 const entries = ref<TimeEntry[]>([]);

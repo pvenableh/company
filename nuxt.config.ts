@@ -141,6 +141,9 @@ export default defineNuxtConfig({
 		// Cron
 		cronSecret: process.env.CRON_SECRET,
 
+		// Redis Queue (BullMQ for async AI jobs)
+		redisQueueUrl: process.env.REDIS_QUEUE_URL || 'redis://queue:6379',
+
 		// LLM (AI Chat)
 		llm: {
 			provider: process.env.LLM_PROVIDER || 'claude',
@@ -370,6 +373,11 @@ export default defineNuxtConfig({
 				'cheerio-select',
 				'parse5',
 				'parse5-htmlparser2-tree-adapter',
+			],
+			external: [
+				'bullmq',
+				'ioredis',
+				'msgpackr',
 			],
 		},
 		// Increase Vercel function timeout (default 10s is too short for LLM calls)

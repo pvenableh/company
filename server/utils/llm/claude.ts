@@ -17,7 +17,7 @@ export class ClaudeProvider implements LLMProvider {
   private client: Anthropic;
 
   constructor(apiKey: string) {
-    this.client = new Anthropic({ apiKey });
+    this.client = new Anthropic({ apiKey, maxRetries: 3 });
   }
 
   async chat(messages: ChatMessage[], options?: LLMOptions): Promise<LLMResponse> {

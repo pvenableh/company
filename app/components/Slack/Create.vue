@@ -1,120 +1,74 @@
 <template>
-	<div class="create-channel-container">
-		<h2 class="text-xl font-bold mb-4">
-			Create a New Channel
-			<span v-if="project">for {{ project.title }}</span>
-			.
-		</h2>
-
-		<form @submit.prevent="createChannel" class="space-y-4">
-			<!-- Channel Name Input -->
-			<div>
-				<UFormGroup for="channelName" label="Channel Name">
-					<UInput
-						v-model="channelName"
-						type="text"
-						id="channelName"
-						placeholder="Enter a channel name"
-						:disabled="isLoading"
-						required
-					/>
-				</UFormGroup>
-				<p v-if="channelName && !isValidChannelName" class="text-xs text-red-500 mt-1">
-					Channel name must be at least 3 characters long.
-				</p>
-			</div>
-
-			<!-- Create Channel Button -->
-			<div>
-				<UButton type="submit" :disabled="isLoading || !isValidChannelName" color="primary" :loading="isLoading">
-					<span v-if="isLoading">Creating...</span>
-					<span v-else>Create Channel</span>
-				</UButton>
-			</div>
-		</form>
-
-		<!-- Success Message -->
-		<div v-if="successMessage" class="mt-4 text-green-500">
-			<p>{{ successMessage }}</p>
-		</div>
-
-		<!-- Error Message -->
-		<div v-if="errorMessage" class="mt-4 text-red-500">
-			<p>{{ errorMessage }}</p>
-		</div>
-	</div>
+  <div>
+    <form @submit.prevent="createChannel" class="flex items-end gap-2">
+      <div class="flex-1 min-w-0">
+        <label class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1 block">Channel name</label>
+        <input
+          v-model="channelName"
+          type="text"
+          placeholder="e.g. design-feedback"
+          :disabled="isLoading"
+          class="w-full h-8 rounded-lg border border-border bg-background px-3 text-xs placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+        />
+        <p v-if="channelName && !isValidChannelName" class="text-[10px] text-red-500 mt-0.5">
+          At least 3 characters required.
+        </p>
+      </div>
+      <button
+        type="submit"
+        :disabled="isLoading || !isValidChannelName"
+        class="h-8 px-3 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+      >
+        {{ isLoading ? 'Creating...' : 'Create' }}
+      </button>
+    </form>
+    <p v-if="successMessage" class="text-[10px] text-emerald-600 mt-1.5">{{ successMessage }}</p>
+    <p v-if="errorMessage" class="text-[10px] text-red-500 mt-1.5">{{ errorMessage }}</p>
+  </div>
 </template>
 
 <script setup>
 const props = defineProps({
-	project: {
-		type: Object,
-		default: () => null,
-	},
+  project: {
+    type: Object,
+    default: () => null,
+  },
 });
-// State variables
+
 const channelName = ref('');
 const channelSlug = computed(() => slugify(channelName.value));
 const isLoading = ref(false);
 const successMessage = ref('');
 const errorMessage = ref('');
 
-// Directus API (assuming you're using Directus SDK or similar for the backend)
 const channelItems = useDirectusItems('channels');
 
-// Computed property for validating channel name (must be at least 3 characters)
 const isValidChannelName = computed(() => channelName.value.length >= 3);
 
-// Function to handle channel creation
 const createChannel = async () => {
-	if (!isValidChannelName.value) return; // Prevent submission if the name is invalid
+  if (!isValidChannelName.value) return;
 
-	isLoading.value = true;
-	successMessage.value = '';
-	errorMessage.value = '';
+  isLoading.value = true;
+  successMessage.value = '';
+  errorMessage.value = '';
 
-	try {
-		// Create a new channel using the Directus API
-		const data = {
-			name: channelSlug.value,
-			status: 'published',
-		};
-		if (props.project?.id) data.project = props.project.id;
-		if (props.project?.organization?.id) data.organization = props.project.organization.id;
-		if (props.project?.client) data.client = typeof props.project.client === 'object' ? props.project.client.id : props.project.client;
-		await channelItems.create(data);
+  try {
+    const data = {
+      name: channelSlug.value,
+      status: 'published',
+    };
+    if (props.project?.id) data.project = props.project.id;
+    if (props.project?.organization?.id) data.organization = props.project.organization.id;
+    if (props.project?.client) data.client = typeof props.project.client === 'object' ? props.project.client.id : props.project.client;
+    await channelItems.create(data);
 
-		// Show success message
-		successMessage.value = `Channel "${channelName.value}" has been created successfully.`;
-
-		// Clear input after successful creation
-		channelName.value = '';
-	} catch (error) {
-		// Handle error (e.g., network issues or validation errors from Directus)
-		console.error('Error creating channel:', error);
-		errorMessage.value = 'Failed to create channel. Please try again.';
-	} finally {
-		isLoading.value = false;
-	}
+    successMessage.value = `Channel "${channelName.value}" created.`;
+    channelName.value = '';
+  } catch (error) {
+    console.error('Error creating channel:', error);
+    errorMessage.value = 'Failed to create channel. Please try again.';
+  } finally {
+    isLoading.value = false;
+  }
 };
 </script>
-
-<style scoped>
-.create-channel-container {
-	max-width: 400px;
-	margin: 0 auto;
-	padding: 2rem;
-	background-color: white;
-	border-radius: 8px;
-	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-button:disabled {
-	cursor: not-allowed;
-}
-
-input:disabled {
-	background-color: #f9f9f9;
-	cursor: not-allowed;
-}
-</style>

@@ -65,6 +65,41 @@ const copyMessage = async (content: string) => {
   } catch {}
 };
 
+// ── Feedback ──
+const correctionTarget = ref<any>(null);
+const correctionText = ref('');
+
+const submitFeedback = async (msg: any, rating: 'positive' | 'negative', correction?: string) => {
+  try {
+    await $fetch(`/api/ai/messages/${msg.id}/feedback`, {
+      method: 'POST',
+      body: { rating, correction },
+    });
+    // Optimistic update
+    msg.feedback = { rating, correction };
+  } catch (err: any) {
+    console.warn('[AIChat] Feedback failed:', err.message);
+  }
+};
+
+const openCorrection = (msg: any) => {
+  if (correctionTarget.value?.id === msg.id) {
+    // Toggle off
+    correctionTarget.value = null;
+    correctionText.value = '';
+    return;
+  }
+  correctionTarget.value = msg;
+  correctionText.value = '';
+};
+
+const submitCorrection = async () => {
+  if (!correctionTarget.value) return;
+  await submitFeedback(correctionTarget.value, 'negative', correctionText.value || undefined);
+  correctionTarget.value = null;
+  correctionText.value = '';
+};
+
 // Fetch smart data on mount for data-driven prompts
 onMounted(() => { fetchSmartData(); });
 
@@ -305,6 +340,10 @@ const renderMarkdown = (text: string): string => {
 		}
 		return text;
 	});
+
+	// Source attribution badges
+	html = html.replace(/\[Source:\s*([^\]]+)\]/g,
+		'<span class="inline-flex items-center px-1.5 py-0 rounded-full bg-primary/10 text-primary text-[9px] font-medium whitespace-nowrap align-baseline mx-0.5">$1</span>');
 
 	// Line breaks (double newline = paragraph)
 	html = html.replace(/\n\n/g, '</p><p class="my-2">');
@@ -672,6 +711,41 @@ onUnmounted(() => {
 								>
 									<UIcon name="i-heroicons-clipboard-document" class="w-3 h-3" />
 									Copy
+								</button>
+								<button
+									@click="submitFeedback(msg, 'positive')"
+									class="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium bg-background border border-gray-200 dark:border-gray-600 shadow-sm hover:bg-muted transition-colors"
+									:class="msg.feedback?.rating === 'positive' ? 'text-green-500' : 'text-muted-foreground'"
+									title="Helpful"
+								>
+									<UIcon name="i-heroicons-hand-thumb-up" class="w-3 h-3" />
+								</button>
+								<button
+									@click="openCorrection(msg)"
+									class="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium bg-background border border-gray-200 dark:border-gray-600 shadow-sm hover:bg-muted transition-colors"
+									:class="msg.feedback?.rating === 'negative' ? 'text-red-500' : 'text-muted-foreground'"
+									title="Not helpful"
+								>
+									<UIcon name="i-heroicons-hand-thumb-down" class="w-3 h-3" />
+								</button>
+							</div>
+							<!-- Correction input (appears below message on thumbs-down) -->
+							<div
+								v-if="correctionTarget?.id === msg.id"
+								class="mt-1 ml-2 flex gap-1.5 items-end"
+							>
+								<textarea
+									v-model="correctionText"
+									placeholder="What was wrong? (optional)"
+									class="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-600 bg-background px-2.5 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-primary/50"
+									rows="2"
+									@keydown.enter.ctrl="submitCorrection"
+								/>
+								<button
+									@click="submitCorrection"
+									class="px-2.5 py-1.5 rounded-lg text-[10px] font-medium bg-red-500/10 text-red-600 hover:bg-red-500/20 transition-colors shrink-0"
+								>
+									Submit
 								</button>
 							</div>
 						</div>

@@ -5,7 +5,7 @@
 			:is="activeLayoutComponent"
 			:user="user"
 			@open-spotlight="spotlightOpen = true"
-			@open-ai-tray="aiTrayOpen = true"
+			@open-ai-tray="handleOpenAI"
 			@open-timer="timeTrackerModalVisible = true"
 		>
 			<slot />
@@ -28,7 +28,7 @@
 
 		<!-- Floating dock (tasks, timer, AI) — desktop only -->
 		<ClientOnly>
-			<LayoutFloatingDock @open-ai="aiTrayOpen = true" />
+			<LayoutFloatingDock @open-ai="handleOpenAI" />
 		</ClientOnly>
 
 		<!-- Spotlight Search (Cmd+K) -->
@@ -45,6 +45,15 @@ const { user } = useDirectusAuth();
 const { currentMode } = useLayoutMode();
 
 const aiTrayOpen = ref(false);
+const { isOnEntityPage, openSidebar: openEntitySidebar } = useEntityPageContext();
+
+const handleOpenAI = () => {
+  if (isOnEntityPage.value) {
+    openEntitySidebar();
+  } else {
+    aiTrayOpen.value = true;
+  }
+};
 const spotlightOpen = ref(false);
 const timeTrackerModalVisible = timeTrackerModalOpen;
 

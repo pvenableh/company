@@ -247,12 +247,26 @@ watch(() => route.path, () => {
 		<!-- ─── Main area ─── -->
 		<div class="flex-1 flex flex-col min-w-0">
 			<!-- Header -->
-			<header class="glass flex items-center justify-between border-b border-border/40 px-4 lg:px-6 h-12 shrink-0 z-40">
+			<header class="glass flex items-center justify-between border-b border-border/40 pl-1 pr-2 sm:px-4 lg:px-6 h-12 shrink-0 z-40">
 				<!-- Left: Menu button (mobile) + sidebar toggle (desktop) + context -->
-				<div class="flex items-center gap-2 min-w-0">
-					<!-- Client & team selects (always visible) -->
+				<div class="flex items-center gap-0.5 sm:gap-1 min-w-0">
+					<!-- Sidebar toggle + Client & team selects -->
 					<ClientOnly>
-						<div class="flex items-center gap-1">
+						<div class="flex items-center gap-0.5 sm:gap-1">
+							<!-- Mobile/tablet: open drawer -->
+							<button
+								class="xl:hidden flex items-center justify-center w-7 h-7 rounded-full hover:bg-muted/50 text-muted-foreground transition-colors"
+								@click="mobileDrawerOpen = !mobileDrawerOpen"
+							>
+								<Icon :name="mobileDrawerOpen ? 'lucide:x' : 'lucide:menu'" class="w-4 h-4" />
+							</button>
+							<!-- Desktop: toggle sidebar collapse -->
+							<button
+								class="hidden xl:flex items-center justify-center w-8 h-8 rounded-full hover:bg-muted/50 text-muted-foreground transition-colors"
+								@click="sidebarCollapsed = !sidebarCollapsed"
+							>
+								<Icon :name="sidebarCollapsed ? 'lucide:panel-left-open' : 'lucide:panel-left-close'" class="w-4 h-4" />
+							</button>
 							<LayoutClientSelect v-if="user" :user="user" @open-org-switcher="showOrgSwitcher = true" />
 							<LayoutTeamSelect v-if="user" class="hidden lg:block" />
 						</div>
@@ -266,10 +280,12 @@ watch(() => route.path, () => {
 				</NuxtLink>
 
 				<!-- Right: Help + Search + Notifications + Avatar -->
-				<div class="flex items-center gap-2">
-					<WalkthroughHelpMenu />
+				<div class="flex items-center gap-1.5 sm:gap-2">
+					<div class="hidden sm:block">
+						<WalkthroughHelpMenu />
+					</div>
 					<button
-						class="flex items-center justify-center w-8 h-8 rounded-full hover:bg-muted/50 text-muted-foreground"
+						class="hidden sm:flex items-center justify-center w-8 h-8 rounded-full hover:bg-muted/50 text-muted-foreground"
 						@click="emit('open-spotlight')"
 					>
 						<Icon name="lucide:search" class="w-4 h-4" />
@@ -378,25 +394,6 @@ watch(() => route.path, () => {
 			</Transition>
 		</Teleport>
 
-		<!-- ─── Mobile Bottom Bar ─── -->
-		<nav
-			class="xl:hidden fixed bottom-0 inset-x-0 z-40 glass border-t border-border/40 flex items-center justify-around"
-			style="height: calc(48px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom)"
-		>
-			<button @click="mobileDrawerOpen = true" class="mobile-btn">
-				<Icon name="lucide:menu" class="w-5 h-5" />
-				<span class="text-[9px]">Menu</span>
-			</button>
-			<button @click="emit('open-ai-tray')" class="mobile-btn">
-				<Icon name="heroicons:sparkles" class="w-5 h-5" />
-				<span class="text-[9px]">AI</span>
-			</button>
-			<button @click="emit('open-spotlight')" class="mobile-btn">
-				<Icon name="lucide:search" class="w-5 h-5" />
-				<span class="text-[9px]">Search</span>
-			</button>
-		</nav>
-
 		<!-- Org Switcher Modal -->
 		<LayoutOrgSwitcher v-model="showOrgSwitcher" />
 	</div>
@@ -465,23 +462,6 @@ watch(() => route.path, () => {
 
 .has-tooltip:hover::after {
 	opacity: 1;
-}
-
-/* ── Mobile bottom bar buttons ── */
-.mobile-btn {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: 2px;
-	padding: 6px 16px;
-	color: hsl(var(--muted-foreground));
-	transition: color 0.2s ease;
-	-webkit-tap-highlight-color: transparent;
-}
-
-.mobile-btn:active {
-	transform: scale(0.92);
-	opacity: 0.7;
 }
 
 /* ── Drawer transitions ── */

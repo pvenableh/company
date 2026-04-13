@@ -25,6 +25,8 @@ export interface AiChatMessage {
 	date_created?: string | null;
 	/** @required */
 	session: AiChatSession | string;
+	/** @description User feedback on AI response: { rating: "positive"|"negative", correction?: string } */
+	feedback?: Record<string, any> | null;
 }
 
 export interface AiChatSession {
@@ -89,6 +91,23 @@ export interface AiNotesAiTag {
 	sort?: number | null;
 	ai_notes_id?: AiNote | string | null;
 	ai_tags_id?: AiTag | string | null;
+}
+
+export interface AiNoticeHistory {
+	/** @primaryKey */
+	id: number;
+	/** @description MD5 hash of noticeId:orgId:YYYY-MM for deduplication @required */
+	notice_hash: string;
+	/** @description Deterministic notice ID (e.g. client-overdue-invoices-abc123) @required */
+	notice_id: string;
+	/** @description client, project, or invoice */
+	entity_type?: string | null;
+	/** @description UUID of the entity */
+	entity_id?: string | null;
+	/** @required */
+	sent_at: string;
+	/** @required */
+	organization: Organization | string;
 }
 
 export interface AiPreference {
@@ -3879,6 +3898,7 @@ export interface Schema {
 	ai_context_snapshots: AiContextSnapshot[];
 	ai_notes: AiNote[];
 	ai_notes_ai_tags: AiNotesAiTag[];
+	ai_notice_history: AiNoticeHistory[];
 	ai_preferences: AiPreference[];
 	ai_tags: AiTag[];
 	ai_usage_logs: AiUsageLog[];
@@ -4091,6 +4111,7 @@ export enum CollectionNames {
 	ai_context_snapshots = 'ai_context_snapshots',
 	ai_notes = 'ai_notes',
 	ai_notes_ai_tags = 'ai_notes_ai_tags',
+	ai_notice_history = 'ai_notice_history',
 	ai_preferences = 'ai_preferences',
 	ai_tags = 'ai_tags',
 	ai_usage_logs = 'ai_usage_logs',

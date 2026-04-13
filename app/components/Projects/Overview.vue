@@ -1,85 +1,87 @@
 <template>
 	<div class="w-full py-6 space-y-6">
-		<!-- Status Update Section -->
-		<div class="ios-card p-5">
-			<div class="flex items-center justify-between mb-3">
-				<div class="flex items-center gap-2">
-					<Icon name="lucide:flag" class="w-4 h-4 text-muted-foreground" />
-					<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Project Status</span>
-				</div>
-				<button
-					v-if="isAdmin && !showUpdateForm"
-					class="text-[10px] font-medium text-primary hover:text-primary/80 transition-colors"
-					@click="showUpdateForm = true"
-				>
-					Post Update
-				</button>
-			</div>
-
-			<!-- Post Update Form -->
-			<div v-if="showUpdateForm" class="space-y-3 mb-4 p-3 rounded-xl bg-muted/20 border border-border/50">
-				<div class="flex gap-2">
-					<button
-						v-for="(cfg, key) in statusUpdateColors"
-						:key="key"
-						class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors"
-						:class="newStatus === key ? `${cfg.bg} ${cfg.text}` : 'text-muted-foreground hover:bg-muted/40'"
-						@click="newStatus = key"
-					>
-						<span class="w-2 h-2 rounded-full" :class="cfg.dot" />
-						{{ cfg.label }}
-					</button>
-				</div>
-				<textarea
-					v-model="newStatusText"
-					rows="2"
-					class="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs placeholder:text-muted-foreground/40 resize-none"
-					placeholder="What's the latest on this project?"
-				/>
-				<div class="flex justify-end gap-2">
-					<button class="text-xs text-muted-foreground hover:text-foreground" @click="showUpdateForm = false">Cancel</button>
-					<button
-						class="px-3 py-1 rounded-lg text-xs bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40"
-						:disabled="!newStatusText.trim() || postingUpdate"
-						@click="postStatusUpdate"
-					>
-						{{ postingUpdate ? 'Posting...' : 'Post' }}
-					</button>
-				</div>
-			</div>
-
-			<!-- Latest Status -->
-			<div v-if="statusUpdates.length" class="space-y-3">
-				<div
-					v-for="update in statusUpdates.slice(0, 3)"
-					:key="update.id"
-					class="flex items-start gap-3"
-				>
-					<span
-						class="w-2.5 h-2.5 rounded-full mt-1.5 shrink-0"
-						:class="statusUpdateColors[update.status]?.dot || 'bg-muted'"
-					/>
-					<div class="flex-1 min-w-0">
-						<div class="flex items-center gap-2">
-							<span
-								class="text-[10px] font-medium px-1.5 py-0.5 rounded-full"
-								:class="`${statusUpdateColors[update.status]?.bg || 'bg-muted'} ${statusUpdateColors[update.status]?.text || 'text-muted-foreground'}`"
-							>
-								{{ statusUpdateColors[update.status]?.label || update.status }}
-							</span>
-							<span class="text-[10px] text-muted-foreground">
-								{{ update.user_created?.first_name }} · {{ getFriendlyDate(update.date_created) }}
-							</span>
-						</div>
-						<p class="text-xs text-foreground mt-1">{{ update.text }}</p>
-					</div>
-				</div>
-			</div>
-			<p v-else class="text-xs text-muted-foreground/50 text-center py-2">No status updates yet</p>
-		</div>
-
 		<!-- Info Widgets Row -->
 		<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+			<!-- Project Status Widget -->
+			<div class="ios-card p-5">
+				<div class="flex items-center justify-between mb-3">
+					<div class="flex items-center gap-2">
+						<div class="h-8 w-8 rounded-xl bg-blue-500/10 flex items-center justify-center">
+							<Icon name="lucide:flag" class="w-4 h-4 text-blue-500" />
+						</div>
+						<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Status</span>
+					</div>
+					<button
+						v-if="isAdmin && !showUpdateForm"
+						class="text-[10px] font-medium text-primary hover:text-primary/80 transition-colors"
+						@click="showUpdateForm = true"
+					>
+						Post Update
+					</button>
+				</div>
+
+				<!-- Post Update Form -->
+				<div v-if="showUpdateForm" class="space-y-3 mb-4 p-3 rounded-xl bg-muted/20 border border-border/50">
+					<div class="flex gap-2">
+						<button
+							v-for="(cfg, key) in statusUpdateColors"
+							:key="key"
+							class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium transition-colors"
+							:class="newStatus === key ? `${cfg.bg} ${cfg.text}` : 'text-muted-foreground hover:bg-muted/40'"
+							@click="newStatus = key"
+						>
+							<span class="w-2 h-2 rounded-full" :class="cfg.dot" />
+							{{ cfg.label }}
+						</button>
+					</div>
+					<textarea
+						v-model="newStatusText"
+						rows="2"
+						class="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs placeholder:text-muted-foreground/40 resize-none"
+						placeholder="What's the latest on this project?"
+					/>
+					<div class="flex justify-end gap-2">
+						<button class="text-xs text-muted-foreground hover:text-foreground" @click="showUpdateForm = false">Cancel</button>
+						<button
+							class="px-3 py-1 rounded-lg text-xs bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40"
+							:disabled="!newStatusText.trim() || postingUpdate"
+							@click="postStatusUpdate"
+						>
+							{{ postingUpdate ? 'Posting...' : 'Post' }}
+						</button>
+					</div>
+				</div>
+
+				<!-- Latest Status -->
+				<div v-if="statusUpdates.length" class="space-y-3">
+					<div
+						v-for="update in statusUpdates.slice(0, 3)"
+						:key="update.id"
+						class="flex items-start gap-3"
+					>
+						<span
+							class="w-2.5 h-2.5 rounded-full mt-1.5 shrink-0"
+							:class="statusUpdateColors[update.status]?.dot || 'bg-muted'"
+						/>
+						<div class="flex-1 min-w-0">
+							<div class="flex items-center gap-2">
+								<span
+									class="text-[10px] font-medium px-1.5 py-0.5 rounded-full"
+									:class="`${statusUpdateColors[update.status]?.bg || 'bg-muted'} ${statusUpdateColors[update.status]?.text || 'text-muted-foreground'}`"
+								>
+									{{ statusUpdateColors[update.status]?.label || update.status }}
+								</span>
+								<span class="text-[10px] text-muted-foreground">
+									{{ update.user_created?.first_name }} · {{ getFriendlyDate(update.date_created) }}
+								</span>
+							</div>
+							<p class="text-xs text-foreground mt-1">{{ update.text }}</p>
+						</div>
+					</div>
+				</div>
+				<p v-else class="text-xs text-muted-foreground/50 text-center py-2">No status updates yet</p>
+			</div>
+
 			<!-- Project Details Widget -->
 			<div class="ios-card p-5">
 				<div class="flex items-center gap-2 mb-4">
@@ -118,40 +120,6 @@
 					</div>
 				</div>
 				<p v-if="project.description" class="text-xs text-muted-foreground mt-4 line-clamp-3">{{ project.description }}</p>
-			</div>
-
-			<!-- Team Widget -->
-			<div class="ios-card p-5">
-				<div class="flex items-center gap-2 mb-4">
-					<div class="h-8 w-8 rounded-xl bg-indigo-500/10 flex items-center justify-center">
-						<UIcon name="i-heroicons-user-group" class="w-4 h-4 text-indigo-500" />
-					</div>
-					<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Team</span>
-					<span v-if="project.assigned_to?.length" class="text-[10px] text-muted-foreground ml-auto">{{ project.assigned_to.length }} member{{ project.assigned_to.length !== 1 ? 's' : '' }}</span>
-				</div>
-				<div v-if="project.assigned_to?.length" class="space-y-2.5">
-					<div
-						v-for="assignment in project.assigned_to"
-						:key="assignment.directus_users_id?.id"
-						class="flex items-center gap-3"
-					>
-						<UAvatar
-							:src="assignment.directus_users_id?.avatar ? `${runtimeConfig.public.directusUrl}/assets/${assignment.directus_users_id.avatar}?width=64&height=64&fit=cover` : undefined"
-							:alt="`${assignment.directus_users_id?.first_name || ''} ${assignment.directus_users_id?.last_name || ''}`"
-							size="xs"
-						/>
-						<div class="min-w-0">
-							<p class="text-sm font-medium text-foreground truncate">
-								{{ assignment.directus_users_id?.first_name }} {{ assignment.directus_users_id?.last_name }}
-							</p>
-							<p v-if="assignment.directus_users_id?.email" class="text-[10px] text-muted-foreground truncate">{{ assignment.directus_users_id.email }}</p>
-						</div>
-					</div>
-				</div>
-				<div v-else class="flex flex-col items-center justify-center py-8 text-center">
-					<UIcon name="i-heroicons-user-group" class="w-8 h-8 text-muted-foreground/30 mb-2" />
-					<p class="text-xs text-muted-foreground">No team members assigned</p>
-				</div>
 			</div>
 
 			<!-- Financial Summary Widget -->
@@ -195,23 +163,23 @@
 		</div>
 
 		<!-- Events Section -->
-		<div class="ios-card p-5">
-			<div class="flex items-center justify-between mb-4">
-				<div class="flex items-center gap-3">
-					<div class="h-8 w-8 rounded-xl bg-cyan-500/10 flex items-center justify-center">
-						<UIcon name="i-heroicons-calendar" class="w-4 h-4 text-cyan-500" />
+		<div class="ios-card p-3 sm:p-5 overflow-hidden">
+			<div class="flex items-center justify-between gap-2 mb-4">
+				<div class="flex items-center gap-2 sm:gap-3 min-w-0">
+					<div class="h-7 w-7 sm:h-8 sm:w-8 rounded-xl bg-cyan-500/10 flex items-center justify-center shrink-0">
+						<UIcon name="i-heroicons-calendar" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-500" />
 					</div>
 					<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Events</span>
 					<span v-if="allEvents.length" class="text-[10px] text-muted-foreground/50">({{ allEvents.length }})</span>
 				</div>
-				<div class="flex items-center gap-2">
-					<Button size="sm" variant="outline" class="uppercase text-[10px] tracking-wide" @click="showTimelineWizard = true">
-						<UIcon name="i-heroicons-sparkles" class="h-3 w-3 mr-1" />
-						Generate Timeline
+				<div class="flex items-center gap-1 sm:gap-2 shrink-0">
+					<Button size="sm" variant="outline" class="uppercase text-[9px] sm:text-[10px] tracking-wide h-7 px-2 sm:px-3" @click="showTimelineWizard = true">
+						<UIcon name="i-heroicons-sparkles" class="h-3 w-3 mr-0.5 sm:mr-1" />
+						<span class="hidden sm:inline">Generate</span> Timeline
 					</Button>
-					<Button size="sm" variant="outline" class="uppercase text-[10px] tracking-wide" @click="showNewEventModal = true">
-						<UIcon name="i-heroicons-plus" class="h-3 w-3 mr-1" />
-						New Event
+					<Button size="sm" variant="outline" class="uppercase text-[9px] sm:text-[10px] tracking-wide h-7 px-2 sm:px-3" @click="showNewEventModal = true">
+						<UIcon name="i-heroicons-plus" class="h-3 w-3 mr-0.5 sm:mr-1" />
+						New
 					</Button>
 				</div>
 			</div>
