@@ -619,7 +619,7 @@ export function useTimeTracker() {
 
 		const invoice = await createInvoice({
 			client: params.clientId,
-			project: params.projectId || null,
+			projects: params.projectId ? [{ projects_id: params.projectId }] : [],
 			invoice_date: params.invoiceDate,
 			due_date: params.dueDate,
 			invoice_code: invoiceCode,

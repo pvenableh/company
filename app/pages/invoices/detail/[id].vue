@@ -79,10 +79,17 @@ function getCheckImageUrl(inv: Invoice): string | null {
   return getFileUrl(fileId, { width: 400, format: 'webp' });
 }
 
-function getProjectTitle(inv: Invoice): string {
-  if (!inv.project) return '\u2014';
-  if (typeof inv.project === 'string') return inv.project;
-  return (inv.project as any).title || '\u2014';
+function getProjectTitles(inv: Invoice): string {
+  if (!inv.projects?.length) return '\u2014';
+  const titles = (inv.projects as any[])
+    .map((j: any) => {
+      const p = j.projects_id;
+      if (!p) return null;
+      if (typeof p === 'string') return p;
+      return p.title || null;
+    })
+    .filter(Boolean);
+  return titles.length ? titles.join(', ') : '\u2014';
 }
 
 async function handleSendEmail() {

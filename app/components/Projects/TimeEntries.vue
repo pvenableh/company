@@ -260,4 +260,6 @@ function formatCurrency(value: number): string {
 
 // ── Lifecycle ──────────────────────────────────────────────
 onMounted(fetchData);
+
+defineExpose({ refresh: fetchData });
 </script>

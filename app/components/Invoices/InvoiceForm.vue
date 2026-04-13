@@ -30,11 +30,23 @@
         />
       </div>
       <div>
-        <label class="block text-sm font-medium mb-1">Project</label>
-        <select v-model="formData.project" class="w-full rounded-md border bg-background px-3 py-2 text-sm">
-          <option :value="null">None</option>
-          <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.title }}</option>
-        </select>
+        <label class="block text-sm font-medium mb-1">Projects</label>
+        <div class="w-full rounded-md border bg-background px-3 py-2 text-sm space-y-1.5">
+          <label
+            v-for="p in projects"
+            :key="p.id"
+            class="flex items-center gap-2 cursor-pointer hover:text-primary transition-colors"
+          >
+            <input
+              type="checkbox"
+              :value="p.id"
+              v-model="formData.projects"
+              class="rounded border-gray-300 text-primary focus:ring-primary/50"
+            />
+            <span class="truncate">{{ p.title }}</span>
+          </label>
+          <p v-if="!projects.length" class="text-muted-foreground text-xs">No projects available</p>
+        </div>
       </div>
     </div>
 
@@ -280,7 +292,7 @@ import { Button } from '~/components/ui/button';
 const props = defineProps<{
   invoice?: Invoice | null;
   saving?: boolean;
-  defaults?: { project?: string | null; bill_to?: string | null; client?: string | null } | null;
+  defaults?: { projects?: string[]; bill_to?: string | null; client?: string | null } | null;
 }>();
 
 const emit = defineEmits<{
@@ -317,11 +329,20 @@ function extractId(val: any): string | null {
   return val.id || null;
 }
 
+function extractProjectIds(invoice: any): string[] {
+  if (!invoice?.projects?.length) return [];
+  return invoice.projects
+    .map((j: any) => typeof j === 'string' ? j : (j.projects_id?.id || j.projects_id || null))
+    .filter(Boolean);
+}
+
 // --- Form state ---
 const formData = reactive({
   bill_to: extractId(props.invoice?.bill_to) || props.defaults?.bill_to || '',
   client: extractId(props.invoice?.client) || props.defaults?.client || null,
-  project: extractId(props.invoice?.project) || props.defaults?.project || null,
+  projects: extractProjectIds(props.invoice).length
+    ? extractProjectIds(props.invoice)
+    : (props.defaults?.projects || []),
   invoice_code: props.invoice?.invoice_code || '',
   invoice_date: props.invoice?.invoice_date?.split('T')[0] || todayString(),
   due_date: props.invoice?.due_date?.split('T')[0] || '',
@@ -465,7 +486,9 @@ function handleSubmit() {
     billing_email: formData.billing_email || undefined,
     billing_address: formData.billing_address || undefined,
     client: formData.client || undefined,
-    project: formData.project || undefined,
+    projects: formData.projects.length
+      ? formData.projects.map((id: string) => ({ projects_id: id }))
+      : [],
     emails: ccEmails.value.length ? ccEmails.value : [],
   };
 

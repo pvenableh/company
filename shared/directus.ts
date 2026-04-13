@@ -1695,7 +1695,6 @@ export interface Invoice {
 	/** @description This is automatically calculated once you create and save line items. */
 	total_amount?: number | null;
 	emails?: string[] | null;
-	project?: Project | string | null;
 	melio?: string | null;
 	/** @description The client this invoice is for @required */
 	client: Client | string;
@@ -1712,6 +1711,8 @@ export interface Invoice {
 	/** @required */
 	line_items: LineItem[] | string[];
 	payments?: PaymentsReceived[] | string[];
+	/** @description Projects associated with this invoice */
+	projects?: InvoicesProject[] | string[];
 }
 
 export interface InvoicesProduct {
@@ -1719,6 +1720,13 @@ export interface InvoicesProduct {
 	id: number;
 	invoices_id?: Invoice | string | null;
 	products_id?: Product | string | null;
+}
+
+export interface InvoicesProject {
+	/** @primaryKey */
+	id: number;
+	invoices_id?: Invoice | string | null;
+	projects_id?: Project | string | null;
 }
 
 export interface JunctionDirectusUsersTeam {
@@ -3686,9 +3694,9 @@ export interface DirectusSettings {
 	ai_openai_compatible_name?: string | null;
 	ai_openai_compatible_models?: Array<{ id: string; name: string; context: number; output: number; attachment: boolean; reasoning: boolean; providerOptions: Record<string, any> }> | null;
 	ai_openai_compatible_headers?: Array<{ header: string; value: string }> | null;
-	ai_openai_allowed_models?: Array<`gpt-4o-mini` | `gpt-4.1-nano` | `gpt-4.1-mini` | `gpt-4.1` | `gpt-5-nano` | `gpt-5-mini` | `gpt-5` | `gpt-5.2` | `gpt-5.2-chat-latest` | `gpt-5.2-pro`> | null;
-	ai_anthropic_allowed_models?: Array<`claude-haiku-4-5` | `claude-sonnet-4-5` | `claude-opus-4-5`> | null;
-	ai_google_allowed_models?: Array<`gemini-3-pro-preview` | `gemini-3-flash-preview` | `gemini-2.5-pro` | `gemini-2.5-flash`> | null;
+	ai_openai_allowed_models?: Array<`gpt-4o-mini` | `gpt-4.1-nano` | `gpt-4.1-mini` | `gpt-4.1` | `gpt-5-nano` | `gpt-5-mini` | `gpt-5` | `gpt-5.2` | `gpt-5.2-chat-latest` | `gpt-5.2-pro` | `gpt-5.4` | `gpt-5.4-pro`> | null;
+	ai_anthropic_allowed_models?: Array<`claude-haiku-4-5` | `claude-sonnet-4-5` | `claude-opus-4-5` | `claude-sonnet-4-6` | `claude-opus-4-6`> | null;
+	ai_google_allowed_models?: Array<`gemini-3-pro-preview` | `gemini-3-flash-preview` | `gemini-2.5-pro` | `gemini-2.5-flash` | `gemini-3.1-pro-preview` | `gemini-3.1-flash-lite-preview` | `gemini-2.5-flash-lite`> | null;
 	collaborative_editing_enabled?: boolean;
 }
 
@@ -3868,6 +3876,9 @@ export interface DirectusDeployment {
 	options?: 'json' | null;
 	date_created?: string | null;
 	user_created?: DirectusUser | string | null;
+	webhook_ids?: 'json' | null;
+	webhook_secret?: string | null;
+	last_synced_at?: string | null;
 	projects?: DirectusDeploymentProject[] | string[];
 }
 
@@ -3879,6 +3890,9 @@ export interface DirectusDeploymentProject {
 	name?: string;
 	date_created?: string | null;
 	user_created?: DirectusUser | string | null;
+	url?: string | null;
+	framework?: string | null;
+	deployable?: boolean;
 	runs?: DirectusDeploymentRun[] | string[];
 }
 
@@ -3890,6 +3904,10 @@ export interface DirectusDeploymentRun {
 	target?: string;
 	date_created?: string | null;
 	user_created?: DirectusUser | string | null;
+	status?: string | null;
+	url?: string | null;
+	started_at?: string | null;
+	completed_at?: string | null;
 }
 
 export interface Schema {
@@ -3983,6 +4001,7 @@ export interface Schema {
 	industries_content_blocks: IndustriesContentBlock[];
 	invoices: Invoice[];
 	invoices_products: InvoicesProduct[];
+	invoices_projects: InvoicesProject[];
 	junction_directus_users_teams: JunctionDirectusUsersTeam[];
 	lead_activities: LeadActivity[];
 	lead_activities_files: LeadActivitiesFile[];
@@ -4196,6 +4215,7 @@ export enum CollectionNames {
 	industries_content_blocks = 'industries_content_blocks',
 	invoices = 'invoices',
 	invoices_products = 'invoices_products',
+	invoices_projects = 'invoices_projects',
 	junction_directus_users_teams = 'junction_directus_users_teams',
 	lead_activities = 'lead_activities',
 	lead_activities_files = 'lead_activities_files',

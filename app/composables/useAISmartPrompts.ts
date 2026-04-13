@@ -55,9 +55,16 @@ export function useAISmartPrompts() {
 
   /** Fetch live data for prompt generation */
   const fetchSmartData = async () => {
-    if (_smartDataLoading.value) return;
-    if (_smartData.value && Date.now() < _smartDataExpiry.value) return;
+    if (_smartDataLoading.value) {
+      console.debug('[SmartPrompts] Skipping fetch — already loading');
+      return;
+    }
+    if (_smartData.value && Date.now() < _smartDataExpiry.value) {
+      console.debug('[SmartPrompts] Using cached data, expires in', Math.round((_smartDataExpiry.value - Date.now()) / 1000), 's');
+      return;
+    }
 
+    console.debug('[SmartPrompts] Fetching live data...', { org: selectedOrg.value, user: user.value?.id });
     _smartDataLoading.value = true;
     const now = new Date();
     const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000).toISOString();
@@ -154,8 +161,16 @@ export function useAISmartPrompts() {
         upcomingMeetings: 0,
       };
       _smartDataExpiry.value = Date.now() + SMART_DATA_TTL;
-    } catch {
-      // Non-critical — fall back to static prompts
+      console.debug('[SmartPrompts] Data fetched:', {
+        staleClients: _smartData.value?.staleClients.length,
+        overdueInvoices: _smartData.value?.overdueInvoices.count,
+        overdueProjects: _smartData.value?.overdueProjects.length,
+        overdueTasks: _smartData.value?.overdueTasks,
+        pendingTasks: _smartData.value?.pendingTasks,
+        openDeals: _smartData.value?.openDeals.count,
+      });
+    } catch (err) {
+      console.warn('[SmartPrompts] Fetch failed — falling back to static prompts:', err);
     } finally {
       _smartDataLoading.value = false;
     }
@@ -167,7 +182,10 @@ export function useAISmartPrompts() {
    */
   const getSmartPrompts = (persona: string): string[] => {
     const data = _smartData.value;
-    if (!data) return getStaticPrompts(persona);
+    if (!data) {
+      console.debug('[SmartPrompts] No data available — returning static prompts for persona:', persona);
+      return getStaticPrompts(persona);
+    }
 
     const prompts: SmartPrompt[] = [];
 

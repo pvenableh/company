@@ -487,10 +487,11 @@ const stats = ref({
 const loadStats = async () => {
 	try {
 		const projectFilter = { project: { _eq: props.project.id } };
+		const invoiceProjectFilter = { projects: { projects_id: { _eq: props.project.id } } };
 		const [tickets, tasks, invoices] = await Promise.all([
 			ticketItems.list({ fields: ['id', 'status'], filter: projectFilter, limit: 200 }),
 			taskItems.list({ fields: ['id', 'completed', 'status'], filter: projectFilter, limit: 200 }),
-			invoiceItems.list({ fields: ['id', 'status', 'line_items'], filter: projectFilter, limit: 100 }),
+			invoiceItems.list({ fields: ['id', 'status', 'line_items'], filter: invoiceProjectFilter, limit: 100 }),
 		]);
 
 		stats.value.ticketCount = tickets?.length || 0;

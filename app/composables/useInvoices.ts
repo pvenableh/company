@@ -75,7 +75,7 @@ export function useInvoices() {
         '*',
         'bill_to.*', 'bill_to.owner.email', 'check_image.id', 'check_image.filename_download', 'check_image.type',
         'client.id', 'client.name', 'client.billing_email', 'client.billing_name', 'client.billing_address', 'client.billing_contacts', 'client.parent_client.id', 'client.parent_client.name', 'client.parent_client.billing_email', 'client.parent_client.billing_name', 'client.parent_client.billing_address', 'client.parent_client.billing_contacts',
-        'project.id', 'project.title',
+        'projects.projects_id.id', 'projects.projects_id.title',
         'line_items.*', 'line_items.product.*',
         'payments.*',
       ],

@@ -271,7 +271,8 @@ async function buildInvoiceContext(directus: any, invoiceId: string, now: Date):
     directus.request(
       readItem('invoices', invoiceId, {
         fields: ['id', 'invoice_code', 'status', 'total_amount', 'subtotal', 'tax_amount',
-          'due_date', 'invoice_date', 'notes', 'client.name', 'client.id'],
+          'due_date', 'invoice_date', 'notes', 'client.name', 'client.id',
+          'projects.projects_id.id', 'projects.projects_id.title'],
       }),
     ).catch(() => null) as Promise<any>,
 
@@ -304,6 +305,11 @@ async function buildInvoiceContext(directus: any, invoiceId: string, now: Date):
   lines.push('[Source: Invoice Details]');
   lines.push(`Status: ${invoice.status || 'unknown'}`);
   if (clientName) lines.push(`Client: ${clientName}`);
+  // Projects (M2M)
+  const projectNames = (invoice.projects || [])
+    .map((j: any) => j.projects_id?.title)
+    .filter(Boolean);
+  if (projectNames.length) lines.push(`Project${projectNames.length > 1 ? 's' : ''}: ${projectNames.join(', ')}`);
   lines.push(`Amount: $${(invoice.total_amount || 0).toLocaleString()}`);
   if (invoice.subtotal && invoice.tax_amount) {
     lines.push(`  Subtotal: $${invoice.subtotal.toLocaleString()}, Tax: $${invoice.tax_amount.toLocaleString()}`);

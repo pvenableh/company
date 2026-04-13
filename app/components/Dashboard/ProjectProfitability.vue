@@ -50,19 +50,25 @@ const projectData = computed(() => {
   const map = new Map<string, { name: string; total: number; count: number; paidCount: number; unpaidCount: number }>();
 
   for (const inv of props.invoices) {
-    const projectName = inv.project && typeof inv.project === 'object'
-      ? (inv.project as any).title || 'Unknown'
-      : 'No Project';
+    // Extract project names from M2M junction
+    const projectNames: string[] = (inv.projects as any[] || [])
+      .map((j: any) => j.projects_id?.title || (typeof j.projects_id === 'string' ? j.projects_id : null))
+      .filter(Boolean);
 
-    const existing = map.get(projectName) || { name: projectName, total: 0, count: 0, paidCount: 0, unpaidCount: 0 };
-    existing.total += Number(inv.total_amount) || 0;
-    existing.count++;
-    if (inv.status === 'paid') {
-      existing.paidCount++;
-    } else if (inv.status !== 'archived') {
-      existing.unpaidCount++;
+    // If no projects linked, file under "No Project"
+    const names = projectNames.length ? projectNames : ['No Project'];
+
+    for (const projectName of names) {
+      const existing = map.get(projectName) || { name: projectName, total: 0, count: 0, paidCount: 0, unpaidCount: 0 };
+      existing.total += Number(inv.total_amount) || 0;
+      existing.count++;
+      if (inv.status === 'paid') {
+        existing.paidCount++;
+      } else if (inv.status !== 'archived') {
+        existing.unpaidCount++;
+      }
+      map.set(projectName, existing);
     }
-    map.set(projectName, existing);
   }
 
   return Array.from(map.values()).sort((a, b) => b.total - a.total);

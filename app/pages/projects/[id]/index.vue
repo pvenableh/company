@@ -5,6 +5,7 @@ const projectItems = useDirectusItems('projects');
 const ticketItems = useDirectusItems('tickets');
 const taskItems = useDirectusItems('project_tasks');
 const invoiceItems = useDirectusItems('invoices');
+const timeEntryItems = useDirectusItems('time_entries');
 const fileItems = useDirectusItems('directus_files');
 const projectFilesItems = useDirectusItems('projects_files');
 
@@ -86,6 +87,7 @@ const stats = ref({
 const loadStats = async () => {
 	try {
 		const projectFilter = { project: { _eq: params.id } };
+		const invoiceProjectFilter = { projects: { projects_id: { _eq: params.id } } };
 		const [tickets, tasks, invoices] = await Promise.all([
 			ticketItems.list({
 				fields: ['id', 'status'],
@@ -104,7 +106,7 @@ const loadStats = async () => {
 			}),
 			invoiceItems.list({
 				fields: ['id', 'status', 'line_items'],
-				filter: projectFilter,
+				filter: invoiceProjectFilter,
 				limit: 100,
 			}),
 		]);
@@ -200,7 +202,7 @@ const openAttachInvoice = async () => {
 		const { selectedClient } = useClients();
 		const filter = {
 			_and: [
-				{ project: { _null: true } },
+				{ projects: { _none: { projects_id: { _eq: params.id } } } },
 				{ status: { _nin: ['archived'] } },
 			],
 		};
@@ -225,7 +227,9 @@ const openAttachInvoice = async () => {
 
 const attachInvoice = async (invoiceId) => {
 	try {
-		await invoiceItems.update(invoiceId, { project: params.id });
+		await invoiceItems.update(invoiceId, {
+			projects: { create: [{ projects_id: params.id }] },
+		});
 		unattachedInvoices.value = unattachedInvoices.value.filter((i) => i.id !== invoiceId);
 		toast.add({ title: 'Invoice attached to project', color: 'green' });
 		loadInvoices();
@@ -238,10 +242,76 @@ const attachInvoice = async (invoiceId) => {
 
 // Defaults for new invoice form (project + client + org pre-selected)
 const invoiceDefaults = computed(() => ({
-	project: params.id,
+	projects: [params.id],
 	bill_to: project?.organization?.id || null,
 	client: project?.client?.id || null,
 }));
+
+// ── Attach Time Entries ──
+const showAttachTimeEntry = ref(false);
+const unattachedTimeEntries = ref([]);
+const loadingUnattachedEntries = ref(false);
+const timeEntriesRef = ref(null);
+
+const openAttachTimeEntry = async () => {
+	showAttachTimeEntry.value = true;
+	loadingUnattachedEntries.value = true;
+	try {
+		const { selectedClient } = useClients();
+		const { selectedOrg } = useOrganization();
+		const filter = {
+			_and: [
+				{ project: { _null: true } },
+				{ status: { _eq: 'completed' } },
+			],
+		};
+		if (selectedOrg.value) {
+			filter._and.push({ organization: { _eq: selectedOrg.value } });
+		}
+		if (selectedClient.value && selectedClient.value !== 'org') {
+			filter._and.push({ client: { _eq: selectedClient.value } });
+		}
+		const entries = await timeEntryItems.list({
+			fields: ['id', 'description', 'duration_minutes', 'date', 'start_time', 'billable', 'hourly_rate', 'user.first_name', 'user.last_name', 'client.name'],
+			filter,
+			sort: ['-date', '-start_time'],
+			limit: 50,
+		});
+		unattachedTimeEntries.value = entries || [];
+	} catch (err) {
+		console.error('Error fetching unattached time entries:', err);
+		unattachedTimeEntries.value = [];
+	} finally {
+		loadingUnattachedEntries.value = false;
+	}
+};
+
+const attachTimeEntry = async (entryId) => {
+	try {
+		await timeEntryItems.update(String(entryId), { project: params.id });
+		unattachedTimeEntries.value = unattachedTimeEntries.value.filter((e) => e.id !== entryId);
+		toast.add({ title: 'Time entry attached to project', color: 'green' });
+		timeEntriesRef.value?.refresh?.();
+		loadStats();
+	} catch (err) {
+		console.error('Error attaching time entry:', err);
+		toast.add({ title: 'Failed to attach time entry', color: 'red' });
+	}
+};
+
+const formatEntryDuration = (minutes) => {
+	if (!minutes) return '0m';
+	const h = Math.floor(minutes / 60);
+	const m = minutes % 60;
+	if (h === 0) return `${m}m`;
+	return m > 0 ? `${h}h ${m}m` : `${h}h`;
+};
+
+const formatEntryDate = (dateStr) => {
+	if (!dateStr) return '';
+	const d = new Date(dateStr);
+	return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+};
 
 // ── Documents ──
 const documents = ref([]);
@@ -454,7 +524,7 @@ const loadInvoices = async () => {
 	try {
 		const invs = await invoiceItems.list({
 			fields: ['id', 'invoice_code', 'status', 'invoice_date', 'due_date', 'total_amount', 'client.id', 'client.name', 'bill_to.name'],
-			filter: { project: { _eq: params.id } },
+			filter: { projects: { projects_id: { _eq: params.id } } },
 			sort: ['-date_created'],
 		});
 		projectInvoices.value = invs || [];
@@ -652,7 +722,69 @@ const formatCurrency = (amount) => {
 					</div>
 				</template>
 				<template #time="{ item }">
-					<ProjectsTimeEntries :project-id="params.id" :client-id="project?.client?.id" />
+					<div class="w-full">
+						<!-- Attach Existing button above time entries -->
+						<div class="flex justify-end px-1 mb-2">
+							<Button size="sm" variant="outline" class="uppercase text-[10px] tracking-wide" @click="openAttachTimeEntry">
+								<UIcon name="i-heroicons-link" class="h-3 w-3 mr-1" />
+								Attach Existing
+							</Button>
+						</div>
+						<ProjectsTimeEntries ref="timeEntriesRef" :project-id="params.id" :client-id="project?.client?.id" />
+					</div>
+
+					<!-- Attach Existing Time Entry Modal -->
+					<ClientOnly>
+						<UModal v-model="showAttachTimeEntry">
+							<div class="p-6">
+								<h3 class="text-lg font-semibold mb-4">Attach Existing Time Entry</h3>
+
+								<div v-if="loadingUnattachedEntries" class="space-y-2 py-4">
+									<div v-for="n in 3" :key="n" class="h-14 bg-muted rounded-xl animate-pulse" />
+								</div>
+
+								<div v-else-if="unattachedTimeEntries.length === 0" class="text-center py-8 text-muted-foreground">
+									<UIcon name="i-heroicons-clock" class="w-8 h-8 mx-auto mb-2 opacity-40" />
+									<p class="text-sm">No unattached time entries found.</p>
+								</div>
+
+								<div v-else class="space-y-2 max-h-[60vh] overflow-y-auto">
+									<div
+										v-for="entry in unattachedTimeEntries"
+										:key="entry.id"
+										class="ios-card p-3 flex items-center justify-between"
+									>
+										<div class="min-w-0 flex-1">
+											<div class="flex items-center gap-2 mb-0.5">
+												<span class="text-xs font-semibold text-foreground tabular-nums">{{ formatEntryDuration(entry.duration_minutes) }}</span>
+												<span v-if="entry.date" class="text-[10px] text-muted-foreground">{{ formatEntryDate(entry.date) }}</span>
+												<span v-if="entry.billable" class="text-[10px] text-emerald-600 font-medium">$</span>
+											</div>
+											<p class="text-xs text-foreground truncate">{{ entry.description || 'No description' }}</p>
+											<p class="text-[10px] text-muted-foreground">
+												{{ entry.user?.first_name }} {{ entry.user?.last_name }}
+												<span v-if="entry.client?.name"> &middot; {{ entry.client.name }}</span>
+											</p>
+										</div>
+										<UButton
+											icon="i-heroicons-link"
+											size="xs"
+											color="primary"
+											variant="soft"
+											class="shrink-0 ml-3"
+											@click="attachTimeEntry(entry.id)"
+										>
+											Attach
+										</UButton>
+									</div>
+								</div>
+
+								<div class="flex justify-end mt-4 pt-4 border-t border-border/40">
+									<UButton color="gray" variant="ghost" @click="showAttachTimeEntry = false">Close</UButton>
+								</div>
+							</div>
+						</UModal>
+					</ClientOnly>
 				</template>
 				<template #documents="{ item }">
 					<div class="w-full py-6">

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick } from 'vue';
+import { nextTick, onMounted } from 'vue';
 
 const props = defineProps<{
   entityType: 'client' | 'project' | 'invoice';
@@ -10,6 +10,19 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'close'): void;
 }>();
+
+// Transition: component is v-if'd by parent, so we need a local
+// visible flag that flips on nextTick to trigger the <Transition>.
+const visible = ref(false);
+onMounted(() => {
+  nextTick(() => { visible.value = true; });
+});
+
+const handleClose = () => {
+  visible.value = false;
+  // Wait for leave transition to finish before actually unmounting
+  setTimeout(() => emit('close'), 300);
+};
 
 const {
   messages,
@@ -173,6 +186,7 @@ const renderMarkdown = (text: string): string => {
 <template>
   <Transition name="ctx-sidebar">
     <div
+      v-if="visible"
       class="fixed right-0 top-0 h-full w-full max-w-md bg-white dark:bg-gray-800 shadow-2xl z-50 flex flex-col overflow-hidden border-l border-gray-200 dark:border-gray-700"
     >
       <!-- Header -->
@@ -199,7 +213,7 @@ const renderMarkdown = (text: string): string => {
               <Icon name="lucide:plus" class="w-3.5 h-3.5 text-gray-500" />
             </button>
             <button
-              @click="emit('close')"
+              @click="handleClose()"
               class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               <Icon name="lucide:x" class="w-4 h-4 text-gray-500" />
