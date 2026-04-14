@@ -101,7 +101,7 @@ watch(() => route.path, () => {
 	<div class="flex h-screen bg-background">
 		<!-- ─── Desktop Sidebar ─── -->
 		<aside
-			class="hidden md:flex flex-col border-r border-border/40 bg-sidebar-background shrink-0 transition-[width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] z-30"
+			class="hidden md:flex flex-col border-r border-border/40 bg-sidebar-background shrink-0 transition-[width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] relative z-50"
 			:class="sidebarCollapsed ? 'w-14 overflow-visible' : 'w-60 overflow-hidden'"
 		>
 			<!-- Command Center link (top of sidebar) -->
@@ -203,11 +203,11 @@ watch(() => route.path, () => {
 				<button
 					class="nav-item w-full"
 					:class="{ 'justify-center': sidebarCollapsed, 'has-tooltip': sidebarCollapsed }"
-					:data-tooltip="sidebarCollapsed ? 'Earnest AI' : undefined"
+					:data-tooltip="sidebarCollapsed ? 'Earnest' : undefined"
 					@click="emit('open-ai-tray')"
 				>
-					<Icon name="heroicons:sparkles" class="w-4 h-4 shrink-0" />
-					<span v-if="!sidebarCollapsed" class="text-[13px]">AI</span>
+					<EarnestIcon class="w-4 h-4 shrink-0" />
+					<span v-if="!sidebarCollapsed" class="text-[13px]">Earnest</span>
 				</button>
 				<!-- Timer omitted from desktop sidebar — floating dock provides quick timer access -->
 				<NuxtLink
@@ -372,8 +372,8 @@ watch(() => route.path, () => {
 
 					<div class="p-3 border-t border-border/30 space-y-0.5">
 						<button class="nav-item w-full" @click="emit('open-ai-tray'); mobileDrawerOpen = false">
-							<Icon name="heroicons:sparkles" class="w-4 h-4 shrink-0" />
-							<span class="text-[13px]">AI</span>
+							<EarnestIcon class="w-4 h-4 shrink-0" />
+							<span class="text-[13px]">Earnest</span>
 						</button>
 						<NuxtLink to="/time-tracker" class="nav-item" :class="{ 'nav-item-active': isActiveItem('/time-tracker') }">
 							<Icon name="heroicons:clock" class="w-4 h-4 shrink-0" />

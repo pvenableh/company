@@ -45,7 +45,7 @@ const tabs = [
   },
   {
     id: 'ai',
-    label: 'AI',
+    label: 'Chat',
     icon: 'heroicons:sparkles',
     to: '/',
     routes: ['/command-center', '/', '/dashboard'],

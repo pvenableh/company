@@ -20,6 +20,7 @@ export interface CachedOrgContext {
   projectsSummary: string;
   invoicesSummary: string;
   dealsSummary: string;
+  ticketsSummary: string;
   brandSummary: string;
   tokenEstimate: number;
   builtAt: number;
@@ -82,16 +83,17 @@ export async function rebuildOrgContext(organizationId: string): Promise<CachedO
   const orgFilter = { organization: { _eq: organizationId } };
   const now = new Date();
 
-  // Run all 5 scope builders in parallel
-  const [clientsSummary, projectsSummary, invoicesSummary, dealsSummary, brandSummary] = await Promise.all([
+  // Run all 6 scope builders in parallel
+  const [clientsSummary, projectsSummary, invoicesSummary, dealsSummary, ticketsSummary, brandSummary] = await Promise.all([
     buildClientsSummary(directus, orgFilter, now),
     buildProjectsSummary(directus, orgFilter, now),
     buildInvoicesSummary(directus, orgFilter, now),
     buildDealsSummary(directus, orgFilter, now),
+    buildTicketsSummary(directus, orgFilter, now),
     buildBrandSummary(directus, organizationId),
   ]);
 
-  const allText = [clientsSummary, projectsSummary, invoicesSummary, dealsSummary, brandSummary].join('');
+  const allText = [clientsSummary, projectsSummary, invoicesSummary, dealsSummary, ticketsSummary, brandSummary].join('');
   const tokenEstimate = Math.ceil(allText.length / 4);
 
   const context: CachedOrgContext = {
@@ -99,6 +101,7 @@ export async function rebuildOrgContext(organizationId: string): Promise<CachedO
     projectsSummary,
     invoicesSummary,
     dealsSummary,
+    ticketsSummary,
     brandSummary,
     tokenEstimate,
     builtAt: Date.now(),
@@ -160,6 +163,7 @@ async function readFromL2(organizationId: string): Promise<CachedOrgContext | nu
     projectsSummary: data.projectsSummary || '',
     invoicesSummary: data.invoicesSummary || '',
     dealsSummary: data.dealsSummary || '',
+    ticketsSummary: data.ticketsSummary || '',
     brandSummary: data.brandSummary || '',
     tokenEstimate: row.token_estimate || 0,
     builtAt: new Date(row.date_created).getTime(),
@@ -176,6 +180,7 @@ async function writeToL2(organizationId: string, context: CachedOrgContext): Pro
     projectsSummary: context.projectsSummary,
     invoicesSummary: context.invoicesSummary,
     dealsSummary: context.dealsSummary,
+    ticketsSummary: context.ticketsSummary,
     brandSummary: context.brandSummary,
   };
 
@@ -341,6 +346,35 @@ async function buildDealsSummary(directus: any, orgFilter: any, now: Date): Prom
     });
 
     const result = `${leads.length} open leads, pipeline value $${pipelineValue.toLocaleString()}${staleLeads.length > 0 ? ` (${staleLeads.length} need follow-up)` : ''}:\n${lines.join('\n')}`;
+    return truncateToTokenBudget(result);
+  } catch { return ''; }
+}
+
+async function buildTicketsSummary(directus: any, orgFilter: any, now: Date): Promise<string> {
+  try {
+    const tickets = await directus.request(
+      readItems('tickets', {
+        filter: {
+          ...orgFilter,
+          status: { _in: ['open', 'in_progress', 'pending'] },
+        },
+        fields: ['id', 'title', 'status', 'priority', 'assigned_to.first_name', 'assigned_to.last_name', 'date_created', 'project.name'],
+        sort: ['-priority', '-date_created'],
+        limit: 15,
+      }),
+    ) as any[];
+
+    if (tickets.length === 0) return '';
+
+    const urgentCount = tickets.filter(t => t.priority === 'urgent').length;
+    const highCount = tickets.filter(t => t.priority === 'high').length;
+    const lines = tickets.slice(0, 10).map((t) => {
+      const assignee = t.assigned_to ? `${t.assigned_to.first_name || ''} ${t.assigned_to.last_name || ''}`.trim() : 'Unassigned';
+      const project = t.project?.name ? ` [${t.project.name}]` : '';
+      return `- #${t.id}: ${t.title || 'Untitled'} — ${t.status}, ${t.priority}${project} (${assignee})`;
+    });
+
+    const result = `${tickets.length} open tickets${urgentCount ? ` (${urgentCount} urgent)` : ''}${highCount ? `, ${highCount} high priority` : ''}:\n${lines.join('\n')}`;
     return truncateToTokenBudget(result);
   } catch { return ''; }
 }

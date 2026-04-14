@@ -34,7 +34,7 @@ const formatTokens = (n: number) => {
 	<div class="p-4">
 		<div class="flex items-center justify-between mb-4">
 			<div>
-				<h3 class="text-sm font-bold text-foreground">Earnest AI Settings</h3>
+				<h3 class="text-sm font-bold text-foreground">Earnest Settings</h3>
 				<p class="text-xs text-muted-foreground mt-0.5">
 					{{ enabledCount }}/{{ totalCount }} modules active
 				</p>
@@ -123,7 +123,7 @@ const formatTokens = (n: number) => {
 
 		<!-- Persona Section -->
 		<div v-if="activeSection === 'persona'" class="space-y-3">
-			<p class="text-xs text-muted-foreground">Choose how Earnest AI communicates with you.</p>
+			<p class="text-xs text-muted-foreground">Choose how Earnest communicates with you.</p>
 			<div class="space-y-2">
 				<button
 					v-for="p in personas"
@@ -161,7 +161,7 @@ const formatTokens = (n: number) => {
 			<!-- Personalizations -->
 			<div class="flex items-center justify-between p-3 rounded-lg bg-muted/20">
 				<div>
-					<p class="text-xs font-medium text-foreground">AI Personalizations</p>
+					<p class="text-xs font-medium text-foreground">Personalizations</p>
 					<p class="text-[10px] text-muted-foreground">Generate unique greetings with AI</p>
 				</div>
 				<button
@@ -191,7 +191,7 @@ const formatTokens = (n: number) => {
 			<!-- Low usage explanation -->
 			<div v-if="lowUsageMode" class="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
 				<p class="text-[11px] text-amber-400">
-					Low usage mode disables AI-generated greetings, reduces suggestion frequency, and skips auto-generated content to conserve tokens.
+					Low usage mode disables generated greetings, reduces suggestion frequency, and skips auto-generated content to conserve tokens.
 				</p>
 			</div>
 

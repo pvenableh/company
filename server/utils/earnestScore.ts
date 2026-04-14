@@ -42,6 +42,9 @@ export const EP_AWARDS: Record<string, EPAward> = {
 	contact_added:        { dimension: 'growth',        ep: 10, reason: 'Contact added to CRM' },
 	deal_won:             { dimension: 'growth',        ep: 20, reason: 'Deal won' },
 	social_post:          { dimension: 'growth',        ep: 3,  reason: 'Social post published' },
+	lead_stage_advanced:  { dimension: 'growth',        ep: 5,  reason: 'Lead advanced in pipeline' },
+	follow_up_completed:  { dimension: 'growth',        ep: 5,  reason: 'Follow-up completed' },
+	lead_qualified:       { dimension: 'growth',        ep: 10, reason: 'Lead qualified' },
 
 	// Consistency — showing up
 	daily_login:          { dimension: 'consistency',   ep: 3,  reason: 'Daily login' },
@@ -75,7 +78,7 @@ function calculateCurrentScore(dimensions: Record<string, number>): number {
 		delivery: 100,
 		communication: 50,
 		finance: 40,
-		growth: 60,
+		growth: 80,
 		consistency: 50,
 	};
 

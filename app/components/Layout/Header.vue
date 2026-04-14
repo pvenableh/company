@@ -109,7 +109,7 @@ onUnmounted(() => {
 							<DropdownMenuItem as-child>
 								<NuxtLink to="/command-center/ai" class="flex items-center gap-2 cursor-pointer text-primary">
 									<UIcon name="i-heroicons-chat-bubble-left-right" class="w-4 h-4" />
-									<span class="text-xs font-medium">Open AI Chat</span>
+									<span class="text-xs font-medium">Open Chat</span>
 								</NuxtLink>
 							</DropdownMenuItem>
 						</div>

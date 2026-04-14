@@ -40,11 +40,11 @@
 					>
 						<div class="ai-callout-icon-wrap">
 							<div class="ai-callout-icon-bg">
-								<UIcon name="i-heroicons-sparkles" class="ai-callout-icon" />
+								<EarnestIcon class="ai-callout-icon" />
 							</div>
 						</div>
-						<span class="ai-callout-title">EARNEST AI</span>
-						<span class="ai-callout-desc">Chat with your AI assistant</span>
+						<span class="ai-callout-title">EARNEST</span>
+						<span class="ai-callout-desc">Chat with Earnest</span>
 					</nuxt-link>
 				</div>
 

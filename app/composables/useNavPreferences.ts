@@ -24,7 +24,7 @@ const STORAGE_KEY = 'nav-preferences';
 // All links appear in Command Center grid and Cmd+K spotlight regardless of sidebar visibility.
 const DEFAULT_LINKS: NavLink[] = [
 	// ── Core (sidebar top — no section label) ──
-	{ name: 'Command Center', type: ['header', 'toolbar', 'drawer'], to: '/', icon: 'i-heroicons-command-line', color: 'bg-gradient-to-br from-violet-500 to-purple-600', description: 'AI productivity hub', section: 'primary' },
+	{ name: 'Command Center', type: ['header', 'toolbar', 'drawer'], to: '/', icon: 'i-heroicons-command-line', color: 'bg-gradient-to-br from-violet-500 to-purple-600', description: 'Productivity hub', section: 'primary' },
 	{ name: 'Projects', type: ['header', 'footer', 'toolbar', 'drawer'], to: '/projects', icon: 'i-heroicons-square-3-stack-3d', color: 'bg-purple-500', description: 'Track projects', section: 'primary', featureKey: 'projects' },
 	{ name: 'People', type: ['footer', 'toolbar', 'drawer'], to: '/people', icon: 'i-heroicons-user-group', color: 'bg-gradient-to-br from-orange-400 to-red-500', description: 'Contacts & clients', section: 'primary', featureKey: 'people' },
 	{ name: 'Leads', type: ['header', 'footer', 'drawer'], to: '/leads', icon: 'i-heroicons-funnel', color: 'bg-gradient-to-br from-amber-500 to-orange-500', description: 'Lead pipeline', section: 'primary', featureKey: 'leads' },
@@ -47,7 +47,7 @@ const DEFAULT_LINKS: NavLink[] = [
 	{ name: 'Time Tracker', type: ['header', 'footer', 'drawer'], to: '/time-tracker', icon: 'i-heroicons-clock', color: 'bg-lime-600', description: 'Track time', section: 'secondary' },
 	{ name: 'Phone', type: ['drawer'], to: '/phone-settings', icon: 'i-heroicons-phone', color: 'bg-teal-500', description: 'Phone system', section: 'secondary' },
 	{ name: 'Guide', type: ['drawer'], to: '/guide', icon: 'i-heroicons-book-open', color: 'bg-gradient-to-br from-cyan-500 to-blue-500', description: 'Setup tutorial', section: 'secondary' },
-	{ name: 'AI Chat', type: ['drawer'], to: '/command-center/ai', icon: 'i-heroicons-sparkles', color: 'bg-gradient-to-br from-violet-500 to-purple-600', description: 'AI assistant' },
+	{ name: 'Chat', type: ['drawer'], to: '/command-center/ai', icon: 'i-heroicons-sparkles', color: 'bg-gradient-to-br from-violet-500 to-purple-600', description: 'Earnest assistant' },
 	{ name: 'Organization', type: ['drawer'], to: '/organization', icon: 'i-heroicons-building-office-2', color: 'bg-gray-700', description: 'Settings', section: 'secondary', featureKey: 'org_settings' },
 ];
 

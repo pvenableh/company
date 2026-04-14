@@ -4,7 +4,7 @@
 		<div class="ios-card rounded-2xl border border-border bg-card p-5 space-y-4">
 			<div class="flex items-center gap-4">
 				<div class="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
-					<UIcon name="i-heroicons-sparkles" class="w-7 h-7 text-primary" />
+					<EarnestIcon class="w-7 h-7 text-primary" />
 				</div>
 				<div class="flex-1 min-w-0">
 					<div class="flex items-center gap-2">
@@ -50,8 +50,8 @@
 			<h3 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Dimensions</h3>
 			<EarnestDimensionChart :dimensions="earnest.dimensions" />
 			<p class="text-[11px] text-muted-foreground pt-1 border-t border-border">
-				Your earnest score measures <strong>follow-through</strong>, <strong>consistency</strong>, <strong>responsiveness</strong>,
-				<strong>proactivity</strong>, and <strong>depth</strong> of engagement.
+				Your earnest score measures <strong>follow-through</strong>, <strong>CRM discipline</strong>, <strong>consistency</strong>,
+				<strong>responsiveness</strong>, <strong>proactivity</strong>, and <strong>depth</strong> of engagement.
 			</p>
 		</div>
 

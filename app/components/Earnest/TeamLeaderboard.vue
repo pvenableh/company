@@ -2,13 +2,28 @@
 	<div class="space-y-4">
 		<div class="flex items-center justify-between">
 			<h3 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Earnest Leaderboard</h3>
-			<button
-				@click="refresh"
-				class="text-xs text-primary hover:underline"
-				:class="{ 'opacity-50': loading }"
-			>
-				Refresh
-			</button>
+			<div class="flex items-center gap-2">
+				<div class="flex gap-0.5 p-0.5 bg-muted/40 rounded-lg">
+					<button
+						v-for="p in periods"
+						:key="p.value"
+						@click="setPeriod(p.value)"
+						class="px-2 py-0.5 rounded-md text-[10px] font-medium transition-all"
+						:class="activePeriod === p.value
+							? 'bg-background text-foreground shadow-sm'
+							: 'text-muted-foreground hover:text-foreground'"
+					>
+						{{ p.label }}
+					</button>
+				</div>
+				<button
+					@click="refresh"
+					class="text-xs text-primary hover:underline"
+					:class="{ 'opacity-50': loading }"
+				>
+					Refresh
+				</button>
+			</div>
 		</div>
 
 		<div v-if="loading" class="text-center py-8">
@@ -50,7 +65,7 @@
 				<!-- Score -->
 				<div class="text-right shrink-0">
 					<p class="text-lg font-bold tabular-nums" :class="getScoreColor(member.currentScore)">{{ member.currentScore }}</p>
-					<p class="text-[10px] text-muted-foreground tabular-nums">{{ member.totalEP.toLocaleString() }} EP</p>
+					<p class="text-[10px] text-muted-foreground tabular-nums">{{ member.totalEP.toLocaleString() }} EP{{ activePeriod !== 'all' ? ' earned' : '' }}</p>
 				</div>
 
 				<!-- Streak -->
@@ -64,10 +79,17 @@
 </template>
 
 <script setup lang="ts">
-const { teamScores: scores, fetchAllMemberScores, getScoreTier } = useEarnestScore();
+const { teamScores: scores, fetchAllMemberScores, fetchPeriodRanking, getScoreTier } = useEarnestScore();
 const config = useRuntimeConfig();
 
 const loading = ref(false);
+const activePeriod = ref<'all' | 'month' | 'week'>('all');
+
+const periods = [
+	{ label: 'All Time', value: 'all' as const },
+	{ label: 'Month', value: 'month' as const },
+	{ label: 'Week', value: 'week' as const },
+];
 
 const getAvatarUrl = (avatarId: string) => {
 	const id = typeof avatarId === 'object' ? (avatarId as any).id : avatarId;
@@ -79,9 +101,16 @@ const getScoreColor = (score: number) => {
 	return tier.color;
 };
 
+const setPeriod = async (period: 'all' | 'month' | 'week') => {
+	activePeriod.value = period;
+	loading.value = true;
+	await fetchPeriodRanking(period);
+	loading.value = false;
+};
+
 const refresh = async () => {
 	loading.value = true;
-	await fetchAllMemberScores();
+	await fetchPeriodRanking(activePeriod.value);
 	loading.value = false;
 };
 

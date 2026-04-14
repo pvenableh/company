@@ -303,8 +303,8 @@ async function toggleMemberAI(userId: string, enabled: boolean) {
 		const member = members.value.find((m) => m.id === userId);
 		if (member) member.aiEnabled = enabled;
 		toast.add({
-			title: enabled ? 'AI Enabled' : 'AI Disabled',
-			description: `AI access ${enabled ? 'enabled' : 'disabled'} for ${member?.name || 'member'}`,
+			title: enabled ? 'Earnest Enabled' : 'Earnest Disabled',
+			description: `Earnest access ${enabled ? 'enabled' : 'disabled'} for ${member?.name || 'member'}`,
 			color: enabled ? 'green' : 'orange',
 		});
 	} catch (err: any) {

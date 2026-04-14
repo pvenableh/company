@@ -1,5 +1,5 @@
 <template>
-	<div class="grid grid-cols-4 gap-2">
+	<div class="grid grid-cols-4 sm:grid-cols-5 gap-2">
 		<div
 			v-for="badge in badges"
 			:key="badge.id"

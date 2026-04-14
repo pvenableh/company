@@ -356,7 +356,7 @@ const saveProgress = async () => {
 				<UIcon name="i-heroicons-flag" class="w-7 h-7 text-primary" />
 			</div>
 			<h3 class="text-base font-semibold mb-1">No goals yet</h3>
-			<p class="text-sm text-muted-foreground mb-4 max-w-sm mx-auto">Create your first goal to start tracking your progress. Goals help Earnest AI provide personalized suggestions.</p>
+			<p class="text-sm text-muted-foreground mb-4 max-w-sm mx-auto">Create your first goal to start tracking your progress. Goals help Earnest provide personalized suggestions.</p>
 			<button
 				@click="showCreateModal = true"
 				class="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"

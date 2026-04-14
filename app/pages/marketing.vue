@@ -205,7 +205,7 @@
 
 			<!-- Insights -->
 			<div>
-				<h3 class="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">AI Insights</h3>
+				<h3 class="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Insights</h3>
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
 					<MarketingInsightCard
 						v-for="(insight, i) in dashboard.insights"

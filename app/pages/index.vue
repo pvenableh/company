@@ -34,7 +34,27 @@ watch(selectedPersona, () => {
 const { snapshot: crmSnapshot, snapshotLoading: crmSnapshotLoading, analyze: crmAnalyze, overview: crmOverview, isLoading: crmLoading, lastAIAnalysis: crmLastAI } = useCRMIntelligence();
 
 // ── Earnest Score ──
-const { state: earnestState, syncState, fetchState, fetchTeamRanking, fetchHistory, newBadges, leveledUp } = useEarnestScore();
+const { state: earnestState, syncState, fetchState, fetchTeamRanking, fetchHistory, newBadges, leveledUp, getScoreTier } = useEarnestScore();
+
+const badgeColor = (id: string): string => {
+	const colors: Record<string, string> = {
+		'first-flame': 'bg-orange-500/10 text-orange-600 ring-1 ring-orange-500/20',
+		'keeper-of-promises': 'bg-green-500/10 text-green-600 ring-1 ring-green-500/20',
+		'seven-day-resolve': 'bg-blue-500/10 text-blue-600 ring-1 ring-blue-500/20',
+		'thirty-day-pillar': 'bg-indigo-500/10 text-indigo-600 ring-1 ring-indigo-500/20',
+		'rapid-responder': 'bg-yellow-500/10 text-yellow-600 ring-1 ring-yellow-500/20',
+		'deep-current': 'bg-cyan-500/10 text-cyan-600 ring-1 ring-cyan-500/20',
+		'the-preparator': 'bg-violet-500/10 text-violet-600 ring-1 ring-violet-500/20',
+		'team-anchor': 'bg-teal-500/10 text-teal-600 ring-1 ring-teal-500/20',
+		'first-close': 'bg-emerald-500/10 text-emerald-600 ring-1 ring-emerald-500/20',
+		'pipeline-builder': 'bg-rose-500/10 text-rose-600 ring-1 ring-rose-500/20',
+		'follow-up-master': 'bg-amber-500/10 text-amber-600 ring-1 ring-amber-500/20',
+		'quick-closer': 'bg-pink-500/10 text-pink-600 ring-1 ring-pink-500/20',
+		'iron-will': 'bg-red-500/10 text-red-600 ring-1 ring-red-500/20',
+		'century': 'bg-purple-500/10 text-purple-600 ring-1 ring-purple-500/20',
+	};
+	return colors[id] || 'bg-primary/10 text-primary ring-1 ring-primary/20';
+};
 const { celebrate } = useConfetti();
 
 // ── Context ──
@@ -43,20 +63,9 @@ const { selectedTeam } = useTeams();
 const { selectedClient } = useClients();
 const router = useRouter();
 
-// ── AI Prompt ──
-const promptInput = ref('');
-const promptFocused = ref(false);
+// ── AI Tray ──
 const aiTrayOpen = ref(false);
 const aiTrayPrompt = ref('');
-
-const handlePromptSubmit = () => {
-	const query = promptInput.value.trim();
-	if (!query) return;
-	// Open AI tray and send the prompt
-	aiTrayPrompt.value = query;
-	aiTrayOpen.value = true;
-	promptInput.value = '';
-};
 
 const handleTrayClose = () => {
 	aiTrayOpen.value = false;
@@ -201,8 +210,8 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 						@click="aiTrayPrompt = ''; aiTrayOpen = true"
 						class="flex items-center gap-1.5 px-3.5 py-2 bg-primary text-primary-foreground rounded-full shadow-sm transition-all duration-200 text-[13px] font-medium ios-press"
 					>
-						<UIcon name="i-heroicons-sparkles" class="w-4 h-4" />
-						<span class="hidden sm:inline">Earnest AI</span>
+						<EarnestIcon class="w-4 h-4" />
+						<span class="hidden sm:inline">Earnest</span>
 					</button>
 				</div>
 
@@ -239,28 +248,32 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 				<!-- ═══ Command Center Tab ═══ -->
 				<div v-show="activeTab === 'commander'" class="space-y-6">
 
-				<!-- Smart Prompt -->
-				<div class="ios-card p-1">
-					<form @submit.prevent="handlePromptSubmit" class="relative">
-						<div class="flex items-center">
-							<UIcon name="i-heroicons-sparkles" class="w-5 h-5 text-primary ml-4 flex-shrink-0" />
-							<input
-								v-model="promptInput"
-								type="text"
-								placeholder="What do you need help with?"
-								class="flex-1 bg-transparent px-3 py-3.5 text-[15px] text-foreground placeholder:text-muted-foreground/60 focus:outline-none"
-								@focus="promptFocused = true"
-								@blur="promptFocused = false"
-							/>
-							<button
-								v-if="promptInput.trim()"
-								type="submit"
-								class="mr-2 px-4 py-1.5 bg-primary text-primary-foreground rounded-full text-xs font-medium transition-all ios-press"
-							>
-								Go
-							</button>
-						</div>
-					</form>
+				<!-- Badge Highlights + Score Stat -->
+				<div class="flex items-center gap-2 overflow-x-auto py-1 hide-scrollbar">
+					<!-- Earnest Score pill -->
+					<div
+						class="flex items-center gap-1.5 px-3 py-1.5 rounded-full shrink-0 ring-1 ring-primary/30"
+						:class="getScoreTier(earnestState.currentScore).bg + '/10'"
+						:title="`Level ${earnestState.level} — ${earnestState.levelTitle} (${earnestState.totalEP.toLocaleString()} EP)`"
+					>
+						<EarnestIcon class="w-3.5 h-3.5 text-primary" />
+						<span class="text-[11px] font-bold tabular-nums" :class="getScoreTier(earnestState.currentScore).color">{{ earnestState.currentScore }}</span>
+						<span class="text-[10px] text-muted-foreground">/100</span>
+					</div>
+					<div class="w-px h-5 bg-border/60 shrink-0" />
+					<!-- Badges -->
+					<div
+						v-for="badge in earnestState.badges"
+						:key="badge.id"
+						class="flex items-center gap-1.5 px-3 py-1.5 rounded-full shrink-0 transition-all cursor-default"
+						:class="badge.unlocked
+							? badgeColor(badge.id)
+							: 'bg-muted/30 text-muted-foreground/40'"
+						:title="badge.unlocked ? `${badge.name} — ${badge.description}` : `${badge.name} (Locked) — ${badge.description}`"
+					>
+						<UIcon :name="badge.icon" class="w-3.5 h-3.5" />
+						<span class="text-[11px] font-medium whitespace-nowrap">{{ badge.name }}</span>
+					</div>
 				</div>
 
 				<!-- Hat Modes (hidden in Spaces layout — sidebar provides navigation) -->
@@ -452,10 +465,10 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 								>
 									<UIcon v-if="crmLoading" name="i-heroicons-arrow-path" class="w-3 h-3 animate-spin" />
 									<UIcon v-else name="i-heroicons-sparkles" class="w-3 h-3" />
-									{{ crmLoading ? 'Analyzing...' : 'Run AI Analysis' }}
+									{{ crmLoading ? 'Analyzing...' : 'Run Analysis' }}
 								</button>
 								<p v-if="crmLastAI" class="text-[9px] text-muted-foreground mt-1">
-									AI analysis {{ new Date(crmLastAI).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
+									Analysis {{ new Date(crmLastAI).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}
 								</p>
 							</div>
 
@@ -490,11 +503,11 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 
 				<!-- CRM Insights + Growth Opportunities -->
 				<div v-if="crmInsights.length > 0 || crmActions.length > 0" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-					<!-- AI Insights -->
+					<!-- Insights -->
 					<div v-if="crmInsights.length > 0" class="ios-card p-5">
 						<div class="flex items-center gap-2 mb-4">
 							<UIcon name="i-heroicons-light-bulb" class="w-5 h-5 text-primary" />
-							<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70">AI Insights</h3>
+							<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70">Insights</h3>
 						</div>
 
 						<div class="space-y-3">
@@ -665,6 +678,8 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 
 <style>
 @reference "~/assets/css/tailwind.css";
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.hide-scrollbar::-webkit-scrollbar { display: none; }
 .home {
 	.building {
 		max-width: 350px;

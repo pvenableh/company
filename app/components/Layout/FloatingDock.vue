@@ -60,10 +60,10 @@
 				<!-- Earnest AI button -->
 				<button
 					class="dock-btn dock-btn-ai"
-					title="Earnest AI"
+					title="Earnest"
 					@click="emit('open-ai')"
 				>
-					<Icon name="heroicons:sparkles" class="w-4 h-4" />
+					<EarnestIcon class="w-4 h-4" />
 				</button>
 
 				<!-- Collapse button -->

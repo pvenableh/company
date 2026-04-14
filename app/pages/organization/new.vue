@@ -42,7 +42,7 @@ const plans = [
     name: 'Solo',
     price: '49',
     desc: 'For the one-person shop doing serious work.',
-    features: ['1 team seat', 'Every feature included', '100K AI tokens/month', '5 client portal seats'],
+    features: ['1 team seat', 'Every feature included', '100K Earnest tokens/month', '5 client portal seats'],
   },
   {
     key: 'pro',
@@ -50,14 +50,14 @@ const plans = [
     price: '149',
     desc: 'For the team that means business.',
     popular: true,
-    features: ['8 team seats', 'Team channels & video', '400K AI tokens/month', '15 client portal seats'],
+    features: ['8 team seats', 'Team channels & video', '400K Earnest tokens/month', '15 client portal seats'],
   },
   {
     key: 'enterprise',
     name: 'Agency',
     price: '299',
     desc: 'For the business that has grown into something real.',
-    features: ['15 team seats', 'Priority support', '1M AI tokens/month', 'Unlimited client portals'],
+    features: ['15 team seats', 'Priority support', '1M Earnest tokens/month', 'Unlimited client portals'],
   },
 ]
 

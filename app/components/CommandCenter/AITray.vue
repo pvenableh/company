@@ -236,7 +236,7 @@ watch(quickStreamingContent, () => {
 							<UIcon :name="activePersona.icon" class="w-4 h-4" :class="activePersona.iconColor" />
 						</div>
 						<div>
-							<h2 class="text-sm font-bold text-gray-900 dark:text-white">Earnest AI</h2>
+							<h2 class="text-sm font-bold text-gray-900 dark:text-white">Earnest</h2>
 							<p class="text-[10px] text-gray-500 italic">"{{ activePersona.greeting }}"</p>
 						</div>
 					</div>
@@ -463,11 +463,11 @@ watch(quickStreamingContent, () => {
 					<div class="border-t border-gray-100 dark:border-gray-700 p-3">
 						<form @submit.prevent="handleChatSubmit" class="flex items-center gap-2">
 							<div class="flex-1 relative">
-								<UIcon name="i-heroicons-sparkles" class="w-4 h-4 text-primary absolute left-3 top-1/2 -translate-y-1/2" />
+								<EarnestIcon class="w-4 h-4 text-primary absolute left-3 top-1/2 -translate-y-1/2" />
 								<input
 									v-model="chatInput"
 									type="text"
-									placeholder="Ask about a client, project, or invoice..."
+									placeholder="Ask about clients, leads, tickets, projects, invoices..."
 									:disabled="isQuickSending"
 									@keydown="handleChatKeydown"
 									class="w-full bg-muted/40 rounded-lg pl-9 pr-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50"

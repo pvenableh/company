@@ -19,6 +19,7 @@ export interface OrgContext {
   projectsSummary?: string;
   invoicesSummary?: string;
   dealsSummary?: string;
+  ticketsSummary?: string;
 }
 
 /**
@@ -62,6 +63,9 @@ export function buildSystemPrompt(context?: OrgContext): string {
   }
   if (context?.dealsSummary) {
     parts.push(`PIPELINE:\n${context.dealsSummary}`);
+  }
+  if (context?.ticketsSummary) {
+    parts.push(`TICKETS:\n${context.ticketsSummary}`);
   }
 
   // Platform awareness

@@ -14,7 +14,7 @@
 		<template v-else>
 		<!-- Period selector -->
 		<div class="flex items-center justify-between">
-			<h3 class="text-lg font-semibold text-foreground">AI Usage</h3>
+			<h3 class="text-lg font-semibold text-foreground">Token Usage</h3>
 			<div class="flex items-center gap-2">
 				<button
 					v-for="p in periods"

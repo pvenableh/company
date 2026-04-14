@@ -48,6 +48,11 @@ export interface ProductivityMetrics {
 	missedCalls: number;
 	openDeals: number;
 	dealsPipelineValue: number;
+	// CRM metrics for Earnest Score
+	leadsWon: number;
+	leadsInPipeline: number;
+	overdueFollowUps: number;
+	totalLeadsClosed: number;
 }
 
 // Module-level cache — persists across composable calls for 60s TTL
@@ -73,6 +78,10 @@ export const useAIProductivityEngine = () => {
 		missedCalls: 0,
 		openDeals: 0,
 		dealsPipelineValue: 0,
+		leadsWon: 0,
+		leadsInPipeline: 0,
+		overdueFollowUps: 0,
+		totalLeadsClosed: 0,
 	});
 	const isAnalyzing = ref(false);
 	const greeting = ref('');
@@ -894,6 +903,7 @@ export const useAIProductivityEngine = () => {
 
 			const t = today();
 			let totalPipelineValue = 0;
+			let overdueFollowUpCount = 0;
 
 			for (const lead of leads) {
 				const value = Number(lead.estimated_value) || 0;
@@ -904,6 +914,8 @@ export const useAIProductivityEngine = () => {
 					const followUpDate = new Date(lead.next_follow_up);
 					const isOverdue = followUpDate < t;
 					const isToday = followUpDate.toDateString() === t.toDateString();
+
+					if (isOverdue) overdueFollowUpCount++;
 
 					if (isOverdue) {
 						const daysOver = Math.floor((t.getTime() - followUpDate.getTime()) / 86400000);
@@ -963,6 +975,26 @@ export const useAIProductivityEngine = () => {
 
 			metrics.value.openDeals = leads.length;
 			metrics.value.dealsPipelineValue = totalPipelineValue;
+			metrics.value.leadsInPipeline = leads.length;
+			metrics.value.overdueFollowUps = overdueFollowUpCount;
+
+			// Fetch won/lost counts for CRM dimension
+			try {
+				const wonLeads = await dealItems.list({
+					fields: ['id'],
+					filter: { stage: { _eq: 'won' } },
+					limit: -1,
+				});
+				const lostLeads = await dealItems.list({
+					fields: ['id'],
+					filter: { stage: { _eq: 'lost' } },
+					limit: -1,
+				});
+				metrics.value.leadsWon = wonLeads.length;
+				metrics.value.totalLeadsClosed = wonLeads.length + lostLeads.length;
+			} catch {
+				// Non-critical
+			}
 		} catch (e) {
 			console.warn('[AI Engine] Could not analyze deals:', e);
 		}

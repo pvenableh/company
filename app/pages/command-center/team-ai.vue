@@ -5,7 +5,7 @@
  */
 
 definePageMeta({ layout: 'app', middleware: ['auth'] });
-useHead({ title: 'Team AI Activity | Earnest' });
+useHead({ title: 'Team Activity | Earnest' });
 
 const { selectedOrg } = useOrganization();
 const config = useRuntimeConfig();
@@ -172,9 +172,9 @@ const getNoteUserName = (note: any) => {
       <div class="border-b border-gray-100 dark:border-gray-700 px-6 py-4">
         <div class="flex items-center justify-between">
           <div>
-            <h1 class="text-lg font-bold text-foreground">Team AI Activity</h1>
+            <h1 class="text-lg font-bold text-foreground">Team Activity</h1>
             <p class="text-xs text-muted-foreground mt-0.5">
-              View AI conversations and saved notes across your organization
+              View conversations and saved notes across your organization
             </p>
           </div>
 
@@ -229,7 +229,7 @@ const getNoteUserName = (note: any) => {
 
           <div v-else-if="sessions.length === 0" class="flex flex-col items-center justify-center py-16">
             <UIcon name="i-heroicons-chat-bubble-left-right" class="w-12 h-12 text-muted-foreground/30 mb-3" />
-            <p class="text-sm text-muted-foreground">No AI conversations found.</p>
+            <p class="text-sm text-muted-foreground">No conversations found.</p>
           </div>
 
           <div v-else class="space-y-2">

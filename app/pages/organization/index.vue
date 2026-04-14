@@ -29,7 +29,7 @@ const tabItems = [
 	{ slot: 'overview', label: 'Overview', icon: 'i-heroicons-home' },
 	{ slot: 'members', label: 'Members', icon: 'i-heroicons-users' },
 	{ slot: 'teams', label: 'Teams', icon: 'i-heroicons-user-group' },
-	{ slot: 'ai-usage', label: 'AI Usage', icon: 'i-heroicons-sparkles' },
+	{ slot: 'ai-usage', label: 'Usage', icon: 'i-heroicons-sparkles' },
 ];
 
 definePageMeta({

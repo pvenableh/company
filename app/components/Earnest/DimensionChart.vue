@@ -26,10 +26,11 @@ const props = defineProps<{
 }>();
 
 const dimensionList = computed(() => [
-	{ key: 'followThrough', label: 'Follow-Through', value: props.dimensions.followThrough, max: 30, colorClass: 'bg-green-500' },
-	{ key: 'consistency', label: 'Consistency', value: props.dimensions.consistency, max: 25, colorClass: 'bg-blue-500' },
-	{ key: 'responsiveness', label: 'Responsive', value: props.dimensions.responsiveness, max: 20, colorClass: 'bg-violet-500' },
-	{ key: 'proactivity', label: 'Proactivity', value: props.dimensions.proactivity, max: 15, colorClass: 'bg-amber-500' },
+	{ key: 'followThrough', label: 'Follow-Through', value: props.dimensions.followThrough, max: 25, colorClass: 'bg-green-500' },
+	{ key: 'crm', label: 'CRM', value: props.dimensions.crm ?? 0, max: 20, colorClass: 'bg-rose-500' },
+	{ key: 'consistency', label: 'Consistency', value: props.dimensions.consistency, max: 20, colorClass: 'bg-blue-500' },
+	{ key: 'responsiveness', label: 'Responsive', value: props.dimensions.responsiveness, max: 15, colorClass: 'bg-violet-500' },
+	{ key: 'proactivity', label: 'Proactivity', value: props.dimensions.proactivity, max: 10, colorClass: 'bg-amber-500' },
 	{ key: 'depth', label: 'Depth', value: props.dimensions.depth, max: 10, colorClass: 'bg-cyan-500' },
 ]);
 </script>
