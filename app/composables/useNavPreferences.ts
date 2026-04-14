@@ -97,7 +97,7 @@ const HATS: Hat[] = [
 		icon: 'i-fluent-emoji-flat-necktie',
 		name: 'Manager',
 		description: 'Teams, tickets, tasks & scheduling',
-		routes: ['/', '/projects', '/tickets', '/tasks', '/organization/teams', '/scheduler', '/channels', '/activity'],
+		routes: ['/', '/projects', '/clients', '/tickets', '/tasks', '/organization/teams', '/scheduler', '/channels', '/activity'],
 	},
 	{
 		id: 'marketing',
@@ -111,7 +111,7 @@ const HATS: Hat[] = [
 		icon: 'i-fluent-emoji-flat-rocket',
 		name: 'Sales',
 		description: 'Leads, proposals, invoicing & meetings',
-		routes: ['/', '/leads', '/proposals', '/people', '/invoices', '/scheduler', '/channels', '/email'],
+		routes: ['/', '/leads', '/proposals', '/clients', '/people', '/invoices', '/scheduler', '/channels', '/email'],
 	},
 	{
 		id: 'focus',

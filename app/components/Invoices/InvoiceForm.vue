@@ -490,6 +490,7 @@ function handleSubmit() {
       ? formData.projects.map((id: string) => ({ projects_id: id }))
       : [],
     emails: ccEmails.value.length ? ccEmails.value : [],
+    total_amount: computedTotal.value,
   };
 
   if (props.invoice) {

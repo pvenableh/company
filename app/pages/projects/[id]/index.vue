@@ -105,7 +105,7 @@ const loadStats = async () => {
 				limit: 500,
 			}),
 			invoiceItems.list({
-				fields: ['id', 'status', 'total_amount'],
+				fields: ['id', 'status', 'total_amount', 'line_items.quantity', 'line_items.rate'],
 				filter: invoiceProjectFilter,
 				limit: 100,
 			}),
@@ -118,11 +118,14 @@ const loadStats = async () => {
 		stats.value.eventCount = project?.events?.length || 0;
 		stats.value.pendingApprovals = project?.events?.filter(e => e.approval === 'Need Approval').length || 0;
 
-		// Invoice totals — use the pre-calculated total_amount field
+		// Invoice totals — use total_amount if available, otherwise compute from line items
 		let total = 0;
 		let paid = 0;
 		for (const inv of (invoices || [])) {
-			const invTotal = parseFloat(inv.total_amount) || 0;
+			let invTotal = parseFloat(inv.total_amount) || 0;
+			if (!invTotal && inv.line_items?.length) {
+				invTotal = inv.line_items.reduce((sum, li) => sum + ((li.quantity || 0) * (li.rate || 0)), 0);
+			}
 			total += invTotal;
 			if (inv.status === 'paid') paid += invTotal;
 		}

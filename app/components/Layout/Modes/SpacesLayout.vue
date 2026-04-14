@@ -19,6 +19,7 @@ const { currentContext } = useContextualHat()
 const sidebarCollapsed = ref(true)
 const mobileDrawerOpen = ref(false)
 const showOrgSwitcher = ref(false)
+const showNavEditor = ref(false)
 
 // ── Collapsible space sections ──
 const SPACE_STORAGE_KEY = 'earnest-spaces-collapsed'
@@ -61,6 +62,7 @@ const workItems: NavItem[] = [
 
 const relationshipItems: NavItem[] = [
 	{ name: 'People', to: '/people', icon: 'heroicons:user-group' },
+	{ name: 'Clients', to: '/clients', icon: 'heroicons:building-storefront' },
 	{ name: 'Leads', to: '/leads', icon: 'heroicons:funnel' },
 	{ name: 'Channels', to: '/channels', icon: 'heroicons:chat-bubble-left-right' },
 	{ name: 'Teams', to: '/organization/teams', icon: 'heroicons:users' },
@@ -200,16 +202,6 @@ watch(() => route.path, () => {
 
 			<!-- Footer utilities -->
 			<div class="p-3 border-t border-border/30 space-y-0.5 shrink-0">
-				<button
-					class="nav-item w-full"
-					:class="{ 'justify-center': sidebarCollapsed, 'has-tooltip': sidebarCollapsed }"
-					:data-tooltip="sidebarCollapsed ? 'Earnest' : undefined"
-					@click="emit('open-ai-tray')"
-				>
-					<EarnestIcon class="w-4 h-4 shrink-0" />
-					<span v-if="!sidebarCollapsed" class="text-[13px]">Earnest</span>
-				</button>
-				<!-- Timer omitted from desktop sidebar — floating dock provides quick timer access -->
 				<NuxtLink
 					to="/organization"
 					class="nav-item"
@@ -219,6 +211,17 @@ watch(() => route.path, () => {
 					<Icon name="lucide:building-2" class="w-4 h-4 shrink-0" />
 					<span v-if="!sidebarCollapsed" class="text-[13px]">Organization</span>
 				</NuxtLink>
+
+				<!-- Edit Apps -->
+				<button
+					@click="showNavEditor = true"
+					class="nav-item w-full"
+					:class="{ 'justify-center': sidebarCollapsed, 'has-tooltip': sidebarCollapsed }"
+					:data-tooltip="sidebarCollapsed ? 'Edit Apps' : undefined"
+				>
+					<Icon name="lucide:pencil" class="w-4 h-4 shrink-0" />
+					<span v-if="!sidebarCollapsed" class="text-[13px]">Edit Apps</span>
+				</button>
 
 				<!-- Logout -->
 				<button
@@ -390,6 +393,11 @@ watch(() => route.path, () => {
 
 		<!-- Org Switcher Modal -->
 		<LayoutOrgSwitcher v-model="showOrgSwitcher" />
+
+		<!-- Nav Editor -->
+		<ClientOnly>
+			<LayoutNavEditor :is-open="showNavEditor" @close="showNavEditor = false" />
+		</ClientOnly>
 	</div>
 </template>
 
