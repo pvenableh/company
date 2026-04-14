@@ -137,6 +137,7 @@ export async function getCRMContext(
 		// ─── Deals (open) ───
 		directus.request(readItems('leads', {
 			filter: {
+				organization: { _eq: orgId },
 				status: { _in: ['published', 'draft'] },
 				converted_to_customer: { _neq: true },
 			},
@@ -148,6 +149,7 @@ export async function getCRMContext(
 		// ─── Deals (converted, for conversion rate) ───
 		directus.request(readItems('leads', {
 			filter: {
+				organization: { _eq: orgId },
 				converted_to_customer: { _eq: true },
 				date_created: { _gte: sixMonthsAgo },
 			},
