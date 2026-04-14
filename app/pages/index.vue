@@ -251,29 +251,33 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 				<!-- Badge Highlights + Score Stat -->
 				<div class="flex items-center gap-2 overflow-x-auto py-1 hide-scrollbar">
 					<!-- Earnest Score pill -->
-					<div
-						class="flex items-center gap-1.5 px-3 py-1.5 rounded-full shrink-0 ring-1 ring-primary/30"
-						:class="getScoreTier(earnestState.currentScore).bg + '/10'"
-						:title="`Level ${earnestState.level} — ${earnestState.levelTitle} (${earnestState.totalEP.toLocaleString()} EP)`"
-					>
-						<EarnestIcon class="w-3.5 h-3.5 text-primary" />
-						<span class="text-[11px] font-bold tabular-nums" :class="getScoreTier(earnestState.currentScore).color">{{ earnestState.currentScore }}</span>
-						<span class="text-[10px] text-muted-foreground">/100</span>
-					</div>
+					<UTooltip :text="`Level ${earnestState.level} — ${earnestState.levelTitle} (${earnestState.totalEP.toLocaleString()} EP)`">
+						<div
+							class="flex items-center gap-1.5 px-3 py-1.5 rounded-full shrink-0 ring-1 ring-primary/30"
+							:class="getScoreTier(earnestState.currentScore).bg + '/10'"
+						>
+							<EarnestIcon class="w-3.5 h-3.5 text-primary" />
+							<span class="text-[11px] font-bold tabular-nums" :class="getScoreTier(earnestState.currentScore).color">{{ earnestState.currentScore }}</span>
+							<span class="text-[10px] text-muted-foreground">/100</span>
+						</div>
+					</UTooltip>
 					<div class="w-px h-5 bg-border/60 shrink-0" />
 					<!-- Badges -->
-					<div
+					<UTooltip
 						v-for="badge in earnestState.badges"
 						:key="badge.id"
-						class="flex items-center gap-1.5 px-3 py-1.5 rounded-full shrink-0 transition-all cursor-default"
-						:class="badge.unlocked
-							? badgeColor(badge.id)
-							: 'bg-muted/30 text-muted-foreground/40'"
-						:title="badge.unlocked ? `${badge.name} — ${badge.description}` : `${badge.name} (Locked) — ${badge.description}`"
+						:text="badge.unlocked ? `${badge.name} — ${badge.description}` : `${badge.name} (Locked) — ${badge.description}`"
 					>
-						<UIcon :name="badge.icon" class="w-3.5 h-3.5" />
-						<span class="text-[11px] font-medium whitespace-nowrap">{{ badge.name }}</span>
-					</div>
+						<div
+							class="flex items-center gap-1.5 px-3 py-1.5 rounded-full shrink-0 transition-all cursor-default"
+							:class="badge.unlocked
+								? badgeColor(badge.id)
+								: 'bg-muted/30 text-muted-foreground/40'"
+						>
+							<UIcon :name="badge.icon" class="w-3.5 h-3.5" />
+							<span class="text-[11px] font-medium whitespace-nowrap">{{ badge.name }}</span>
+						</div>
+					</UTooltip>
 				</div>
 
 				<!-- Hat Modes (hidden in Spaces layout — sidebar provides navigation) -->
