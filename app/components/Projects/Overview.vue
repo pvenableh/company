@@ -340,49 +340,52 @@
 		<!-- Event Detail Modal -->
 		<UModal v-model="showEventDetail" class="sm:max-w-xl">
 			<template #header>
-				<div class="flex items-center justify-between w-full">
-					<div class="flex items-center gap-2">
-						<span class="inline-block h-2.5 w-2.5 rounded-full" :style="{ backgroundColor: project.service?.color || '#888' }" />
-						<h3 class="t-label">{{ selectedEventFull?.title || 'Event Detail' }}</h3>
-					</div>
-					<div class="flex items-center gap-2">
-						<!-- Approval actions -->
-						<template v-if="selectedEventFull?.approval === 'Need Approval'">
-							<UButton
-								size="xs"
-								color="green"
-								variant="soft"
-								icon="i-heroicons-check"
-								@click="approveEvent(selectedEventFull)"
-								:loading="approvingEvent"
+				<div class="w-full space-y-3">
+					<div class="flex items-center justify-between">
+						<h3 class="text-sm font-bold uppercase tracking-wide">Event Details</h3>
+						<div class="flex items-center gap-2">
+							<!-- Approval actions -->
+							<template v-if="selectedEventFull?.approval === 'Need Approval'">
+								<button
+									class="inline-flex items-center gap-1 rounded-full bg-green-500/10 border border-green-500/30 px-2.5 py-1 text-xs font-medium text-green-600 dark:text-green-400 transition-colors hover:bg-green-500/20"
+									:disabled="approvingEvent"
+									@click="approveEvent(selectedEventFull)"
+								>
+									<Icon name="lucide:check" class="w-3 h-3" />
+									Approve
+								</button>
+								<button
+									class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+									:disabled="generatingLink"
+									@click="generateApprovalLink(selectedEventFull)"
+								>
+									<Icon name="lucide:link" class="w-3 h-3" />
+									Send Link
+								</button>
+							</template>
+							<span
+								v-else-if="selectedEventFull?.approval === 'Approved'"
+								class="inline-flex items-center gap-1 rounded-full bg-green-500/10 px-2.5 py-1 text-[9px] uppercase tracking-wider font-semibold text-green-500"
 							>
-								Approve
-							</UButton>
-							<UButton
-								size="xs"
-								color="gray"
-								variant="outline"
-								icon="i-heroicons-link"
-								@click="generateApprovalLink(selectedEventFull)"
-								:loading="generatingLink"
-							>
-								Send Link
-							</UButton>
-						</template>
-						<span
-							v-else-if="selectedEventFull?.approval === 'Approved'"
-							class="text-[9px] uppercase tracking-wider font-semibold px-2 py-1 rounded-md text-green-500 bg-green-500/10 flex items-center gap-1"
-						>
-							<UIcon name="i-heroicons-check-circle" class="w-3 h-3" />
-							Approved
-							<span v-if="selectedEventFull?.approved_at" class="text-muted-foreground font-normal">
-								{{ getFriendlyDate(selectedEventFull.approved_at) }}
+								<Icon name="lucide:check-circle" class="w-3 h-3" />
+								Approved
+								<span v-if="selectedEventFull?.approved_at" class="text-muted-foreground font-normal normal-case">
+									{{ getFriendlyDate(selectedEventFull.approved_at) }}
+								</span>
 							</span>
-						</span>
-						<Button variant="ghost" size="icon-sm" @click="closeEventDetail">
-							<UIcon name="i-heroicons-x-mark" class="h-4 w-4" />
-						</Button>
+							<Button variant="ghost" size="icon-sm" @click="closeEventDetail">
+								<UIcon name="i-heroicons-x-mark" class="h-4 w-4" />
+							</Button>
+						</div>
 					</div>
+					<FormStatusTimeline
+						v-if="selectedEventFull && !loadingEventDetail"
+						:currentStatus="selectedEventFull.status || 'Active'"
+						:statuses="eventStatusOptions.map(s => ({ id: s, name: s }))"
+						collection="project_events"
+						:itemId="selectedEventFull.id"
+						@status-change="handleEventStatusChange"
+					/>
 				</div>
 			</template>
 
@@ -392,12 +395,39 @@
 				</div>
 				<ProjectTimelineEventDetail
 					v-else-if="selectedEventFull"
+					ref="eventDetailRef"
 					:event="selectedEventFull"
 					:project="eventProjectProxy"
 					@close="closeEventDetail"
 					@updated="handleEventUpdated"
 				/>
 			</div>
+
+			<template #footer v-if="selectedEventFull && !loadingEventDetail">
+				<div class="flex items-center justify-between w-full">
+					<div class="flex items-center gap-1">
+						<UTooltip text="Delete event">
+							<Button
+								variant="ghost"
+								size="icon-sm"
+								class="text-destructive hover:text-destructive hover:bg-destructive/10"
+								@click="handleDeleteEvent"
+							>
+								<Icon name="lucide:trash-2" class="h-3.5 w-3.5" />
+							</Button>
+						</UTooltip>
+					</div>
+					<Button
+						size="sm"
+						:disabled="!eventDetailRef?.dirty || eventDetailRef?.saving"
+						@click="eventDetailRef?.save()"
+					>
+						<Icon v-if="eventDetailRef?.saving" name="lucide:loader-2" class="h-3.5 w-3.5 mr-1 animate-spin" />
+						<Icon v-else name="lucide:save" class="h-3.5 w-3.5 mr-1" />
+						Save
+					</Button>
+				</div>
+			</template>
 		</UModal>
 	</div>
 </template>
@@ -673,6 +703,9 @@ const formatEventDate = (dateStr) => getFriendlyDateTwo(dateStr);
 const showEventDetail = ref(false);
 const selectedEventFull = ref(null);
 const loadingEventDetail = ref(false);
+const eventDetailRef = ref(null);
+const eventStatusOptions = ['Scheduled', 'Active', 'Completed'];
+const { updateEvent, deleteEvent } = useProjectTimeline();
 
 const eventProjectProxy = computed(() => ({
 	id: props.project.id,
@@ -703,6 +736,30 @@ const closeEventDetail = () => {
 
 const handleEventUpdated = () => {
 	emit('eventCreated');
+};
+
+const handleEventStatusChange = async (e) => {
+	if (!selectedEventFull.value) return;
+	try {
+		await updateEvent(selectedEventFull.value.id, { status: e.newStatus });
+		selectedEventFull.value.status = e.newStatus;
+		emit('eventCreated');
+	} catch (err) {
+		console.error('Error updating event status:', err);
+	}
+};
+
+const handleDeleteEvent = async () => {
+	if (!selectedEventFull.value) return;
+	if (!confirm('Are you sure you want to delete this event? This cannot be undone.')) return;
+	try {
+		await deleteEvent(selectedEventFull.value.id);
+		closeEventDetail();
+		emit('eventCreated');
+		toast.add({ title: 'Event deleted', color: 'green' });
+	} catch (err) {
+		toast.add({ title: 'Failed to delete event', color: 'red' });
+	}
 };
 
 // ── Approval functions ──

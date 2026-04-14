@@ -33,12 +33,12 @@ async function handleToggle(taskId: string, completed: boolean) {
   emit('updated');
 }
 
-function getPriorityColor(priority: string | null) {
+function getPriorityClasses(priority: string | null) {
   switch (priority) {
-    case 'high': return 'text-red-500';
-    case 'medium': return 'text-yellow-500';
-    case 'low': return 'text-blue-400';
-    default: return 'text-gray-400';
+    case 'high': return 'bg-red-500/10 text-red-500 border-red-500/20';
+    case 'medium': return 'bg-amber-500/10 text-amber-500 border-amber-500/20';
+    case 'low': return 'bg-blue-500/10 text-blue-400 border-blue-400/20';
+    default: return 'bg-muted text-muted-foreground border-border';
   }
 }
 
@@ -49,11 +49,11 @@ function formatDueDate(dateStr: string | null) {
 </script>
 
 <template>
-  <div class="space-y-1.5">
+  <div class="space-y-1">
     <div
       v-for="task in sortedTasks"
       :key="task.id"
-      class="flex items-start gap-2.5 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
+      class="flex items-start gap-2.5 p-2 rounded-xl hover:bg-muted/50 transition-colors group"
       :class="{ 'opacity-50': task.completed }"
     >
       <!-- Checkbox -->
@@ -67,17 +67,17 @@ function formatDueDate(dateStr: string | null) {
       <div class="flex-1 min-w-0">
         <p
           class="text-sm leading-tight"
-          :class="{ 'line-through text-gray-400': task.completed }"
+          :class="{ 'line-through text-muted-foreground': task.completed }"
         >
           {{ task.title }}
         </p>
 
-        <div class="flex items-center gap-2 mt-1">
-          <!-- Priority -->
+        <div class="flex flex-wrap items-center gap-1.5 mt-1.5">
+          <!-- Priority pill -->
           <span
             v-if="task.priority"
-            class="text-[8px] uppercase tracking-wider font-bold"
-            :class="getPriorityColor(task.priority)"
+            class="inline-flex items-center rounded-full border px-2 py-0.5 text-[8px] uppercase tracking-wider font-bold"
+            :class="getPriorityClasses(task.priority)"
           >
             {{ task.priority }}
           </span>
@@ -103,7 +103,7 @@ function formatDueDate(dateStr: string | null) {
                 {{ (task.assignee_id.first_name?.[0] || '') + (task.assignee_id.last_name?.[0] || '') }}
               </AvatarFallback>
             </UserAvatar>
-            <span class="text-[9px] text-gray-400">
+            <span class="text-[9px] text-muted-foreground">
               {{ task.assignee_id.first_name }}
             </span>
           </div>
