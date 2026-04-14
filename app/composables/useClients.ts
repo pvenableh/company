@@ -364,8 +364,37 @@ export function useClients() {
 
   const folderItems = useDirectusItems('directus_folders');
 
+  /**
+   * Ensure a slug is unique within the org by appending -2, -3, etc. if needed.
+   */
+  const ensureUniqueSlug = async (slug: string, orgId: string, excludeId?: string): Promise<string> => {
+    if (!slug) return '';
+    let candidate = slug;
+    let suffix = 2;
+    while (true) {
+      const filter: any = {
+        _and: [
+          { slug: { _eq: candidate } },
+          { organization: { _eq: orgId } },
+        ],
+      };
+      if (excludeId) {
+        filter._and.push({ id: { _neq: excludeId } });
+      }
+      const existing = await items.list({ filter, fields: ['id'], limit: 1 });
+      if (existing.length === 0) return candidate;
+      candidate = `${slug}-${suffix}`;
+      suffix++;
+    }
+  };
+
   const createClient = async (payload: Partial<Client>): Promise<Client> => {
     const orgId = payload.organization || selectedOrg.value;
+
+    // Auto-deduplicate slug
+    if (payload.slug && orgId) {
+      payload.slug = await ensureUniqueSlug(payload.slug, orgId as string);
+    }
 
     const result = await items.create({
       ...payload,
@@ -403,6 +432,10 @@ export function useClients() {
   };
 
   const updateClient = async (id: string, payload: Partial<Client>): Promise<Client> => {
+    // Auto-deduplicate slug on update
+    if (payload.slug && selectedOrg.value) {
+      payload.slug = await ensureUniqueSlug(payload.slug, selectedOrg.value, id);
+    }
     const result = await items.update(id, payload);
     await fetchActiveClients();
     return result;

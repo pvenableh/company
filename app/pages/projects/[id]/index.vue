@@ -25,7 +25,7 @@ const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageConte
 
 const project = await projectItems.get(params.id, {
 	fields: [
-		'id,status,service.name,service.color,title,description,contract_value,start_date,due_date,projected_date,completion_date,organization.id,organization.name,organization.logo,client.id,client.name,events.id,events.status,events.type,events.approval,events.priority,events.hours,events.title,events.description,events.date,events.event_date,events.end_date,events.sort,events.link,events.prototype_link,events.amount,events.payment_amount,events.file,assigned_to.directus_users_id.id,assigned_to.directus_users_id.first_name,assigned_to.directus_users_id.last_name,assigned_to.directus_users_id.avatar,assigned_to.directus_users_id.email,assigned_to.directus_users_id.phone',
+		'id,status,service.id,service.name,service.color,title,description,contract_value,start_date,due_date,projected_date,completion_date,url,template,organization.id,organization.name,organization.logo,client.id,client.name,events.id,events.status,events.type,events.approval,events.priority,events.hours,events.title,events.description,events.date,events.event_date,events.end_date,events.sort,events.link,events.prototype_link,events.amount,events.payment_amount,events.file,assigned_to.directus_users_id.id,assigned_to.directus_users_id.first_name,assigned_to.directus_users_id.last_name,assigned_to.directus_users_id.avatar,assigned_to.directus_users_id.email,assigned_to.directus_users_id.phone',
 	],
 });
 
@@ -105,7 +105,7 @@ const loadStats = async () => {
 				limit: 500,
 			}),
 			invoiceItems.list({
-				fields: ['id', 'status', 'line_items'],
+				fields: ['id', 'status', 'total_amount'],
 				filter: invoiceProjectFilter,
 				limit: 100,
 			}),
@@ -118,12 +118,11 @@ const loadStats = async () => {
 		stats.value.eventCount = project?.events?.length || 0;
 		stats.value.pendingApprovals = project?.events?.filter(e => e.approval === 'Need Approval').length || 0;
 
-		// Invoice totals
+		// Invoice totals — use the pre-calculated total_amount field
 		let total = 0;
 		let paid = 0;
 		for (const inv of (invoices || [])) {
-			const lineItems = inv.line_items || [];
-			const invTotal = lineItems.reduce((sum, li) => sum + ((li.quantity || 0) * (li.rate || 0)), 0);
+			const invTotal = parseFloat(inv.total_amount) || 0;
 			total += invTotal;
 			if (inv.status === 'paid') paid += invTotal;
 		}

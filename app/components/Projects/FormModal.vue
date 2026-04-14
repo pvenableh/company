@@ -80,7 +80,7 @@
 				</div>
 			</div>
 
-			<!-- Contract Value & Billable -->
+			<!-- Contract Value & URL -->
 			<div class="grid grid-cols-2 gap-4">
 				<div class="space-y-1">
 					<label class="t-label text-muted-foreground">Contract Value</label>
@@ -90,6 +90,31 @@
 					<label class="t-label text-muted-foreground">URL</label>
 					<UInput v-model="form.url" placeholder="https://..." />
 				</div>
+			</div>
+
+			<!-- Assigned Users (edit mode only) -->
+			<div v-if="isEditing" class="space-y-1">
+				<label class="t-label text-muted-foreground">Assigned Users</label>
+				<div class="flex flex-wrap gap-1.5 mb-1.5">
+					<span
+						v-for="u in assignedUsers"
+						:key="u.id"
+						class="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2.5 py-1 text-xs"
+					>
+						{{ u.first_name }} {{ u.last_name }}
+						<button type="button" class="text-muted-foreground/60 hover:text-destructive transition-colors" @click="removeAssignedUser(u.id)">
+							<Icon name="lucide:x" class="w-3 h-3" />
+						</button>
+					</span>
+					<span v-if="!assignedUsers.length" class="text-xs text-muted-foreground/60 py-1">No users assigned</span>
+				</div>
+				<select
+					class="w-full rounded-full border bg-background px-3 py-2 text-sm"
+					@change="addAssignedUser($event.target.value); $event.target.value = ''"
+				>
+					<option value="">+ Add user...</option>
+					<option v-for="u in availableUsers" :key="u.id" :value="u.id">{{ u.first_name }} {{ u.last_name }}</option>
+				</select>
 			</div>
 		</form>
 
@@ -143,6 +168,9 @@ const serviceItems = useDirectusItems('services');
 
 const clients = ref([]);
 const services = ref([]);
+const assignedUsers = ref([]);
+const allOrgUsers = ref([]);
+const junctionItems = useDirectusItems('projects_directus_users');
 
 const statusOptions = [
 	{ label: 'Pending', value: 'Pending' },
@@ -203,6 +231,11 @@ watch(isOpen, (val) => {
 	}
 });
 
+const availableUsers = computed(() => {
+	const assignedIds = new Set(assignedUsers.value.map(u => u.id));
+	return allOrgUsers.value.filter(u => !assignedIds.has(u.id));
+});
+
 async function loadOptions() {
 	try {
 		clients.value = await getClientOptions();
@@ -216,6 +249,65 @@ async function loadOptions() {
 			limit: -1,
 		});
 	} catch { services.value = []; }
+
+	// Load assigned users + all org users for the picker
+	if (props.project?.id) {
+		try {
+			const junctions = await junctionItems.list({
+				filter: { projects_id: { _eq: props.project.id } },
+				fields: ['id', 'directus_users_id.id', 'directus_users_id.first_name', 'directus_users_id.last_name', 'directus_users_id.email'],
+				limit: -1,
+			});
+			assignedUsers.value = junctions.map(j => j.directus_users_id).filter(Boolean);
+		} catch { assignedUsers.value = []; }
+	}
+
+	if (selectedOrg.value) {
+		try {
+			const { readUsers } = useDirectusUsers();
+			allOrgUsers.value = await readUsers({
+				filter: { organizations: { organizations_id: { id: { _eq: selectedOrg.value } } } },
+				fields: ['id', 'first_name', 'last_name', 'email'],
+				sort: ['first_name'],
+			});
+		} catch { allOrgUsers.value = []; }
+	}
+}
+
+async function addAssignedUser(userId) {
+	if (!userId || !props.project?.id) return;
+	try {
+		await junctionItems.create({
+			projects_id: props.project.id,
+			directus_users_id: userId,
+		});
+		const user = allOrgUsers.value.find(u => u.id === userId);
+		if (user) assignedUsers.value.push(user);
+	} catch (err) {
+		console.error('Failed to assign user:', err);
+	}
+}
+
+async function removeAssignedUser(userId) {
+	if (!props.project?.id) return;
+	try {
+		const junctions = await junctionItems.list({
+			filter: {
+				_and: [
+					{ projects_id: { _eq: props.project.id } },
+					{ directus_users_id: { _eq: userId } },
+				],
+			},
+			fields: ['id'],
+			limit: 1,
+		});
+		if (junctions.length > 0) {
+			await junctionItems.remove(junctions[0].id);
+			assignedUsers.value = assignedUsers.value.filter(u => u.id !== userId);
+		}
+	} catch (err) {
+		console.error('Failed to remove user:', err);
+	}
 }
 
 async function handleSubmit() {

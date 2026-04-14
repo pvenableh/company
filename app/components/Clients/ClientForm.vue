@@ -15,8 +15,9 @@
         <label class="block text-sm font-medium mb-1">Slug</label>
         <input
           v-model="formData.slug"
-          class="w-full rounded-md border bg-background px-3 py-2 text-sm"
-          placeholder="client-slug"
+          class="w-full rounded-md border bg-background px-3 py-2 text-sm text-muted-foreground"
+          placeholder="auto-generated from name"
+          readonly
         />
       </div>
       <div>
@@ -112,6 +113,16 @@
         <Icon name="lucide:plus" class="w-3 h-3 mr-1" />
         Add Contact
       </Button>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-1">Address</label>
+      <textarea
+        v-model="formData.billing_address"
+        rows="2"
+        class="w-full rounded-md border bg-background px-3 py-2 text-sm"
+        placeholder="Street address, city, state, zip..."
+      />
     </div>
 
     <div>
@@ -226,6 +237,7 @@ const formData = reactive({
   notes: props.client?.notes || '',
   tags: [...(props.client?.tags || [])] as string[],
   billing_contacts: [...(props.client?.billing_contacts || [])] as { name: string; email: string }[],
+  billing_address: props.client?.billing_address || '',
   brand_direction: props.client?.brand_direction || '',
   goals: props.client?.goals || '',
   target_audience: props.client?.target_audience || '',
@@ -233,6 +245,24 @@ const formData = reactive({
 });
 
 const newTag = ref('');
+
+// Auto-generate slug from name
+function slugify(str: string): string {
+  return str
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/[\s_]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+watch(() => formData.name, (newName) => {
+  // Only auto-generate if slug is empty or was previously auto-generated
+  if (!props.client?.slug || !formData.slug || formData.slug === slugify(props.client?.name || '')) {
+    formData.slug = slugify(newName);
+  }
+});
 
 function addTag() {
   const tag = newTag.value.trim().toLowerCase();
@@ -262,6 +292,7 @@ function handleSubmit() {
     // Keep billing_email/billing_name in sync with primary billing contact
     billing_email: primaryContact?.email?.trim() || undefined,
     billing_name: primaryContact?.name?.trim() || undefined,
+    billing_address: formData.billing_address || undefined,
     brand_direction: formData.brand_direction || undefined,
     goals: formData.goals || undefined,
     target_audience: formData.target_audience || undefined,

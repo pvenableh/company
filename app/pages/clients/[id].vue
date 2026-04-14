@@ -13,7 +13,14 @@ const clientId = route.params.id as string;
 const { getClient, updateClient, deleteClient } = useClients();
 const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext();
 
+const contactItems = useDirectusItems('contacts');
+const projectItemsApi = useDirectusItems('projects');
+const ticketItemsApi = useDirectusItems('tickets');
+
 const client = ref<Client | null>(null);
+const relatedContacts = ref<any[]>([]);
+const relatedProjects = ref<any[]>([]);
+const relatedTickets = ref<any[]>([]);
 const loading = ref(true);
 const saving = ref(false);
 const deleting = ref(false);
@@ -21,11 +28,35 @@ const showDeleteConfirm = ref(false);
 const error = ref<string | null>(null);
 const activeTab = ref<'contacts' | 'projects' | 'tickets'>('contacts');
 
+async function loadRelated() {
+  const [contacts, projects, tickets] = await Promise.all([
+    contactItems.list({
+      filter: { client: { _eq: clientId } },
+      fields: ['id', 'first_name', 'last_name', 'email', 'phone'],
+      limit: -1,
+    }).catch(() => []),
+    projectItemsApi.list({
+      filter: { client: { _eq: clientId } },
+      fields: ['id', 'title', 'status'],
+      limit: -1,
+    }).catch(() => []),
+    ticketItemsApi.list({
+      filter: { client: { _eq: clientId } },
+      fields: ['id', 'title', 'status'],
+      limit: -1,
+    }).catch(() => []),
+  ]);
+  relatedContacts.value = contacts;
+  relatedProjects.value = projects;
+  relatedTickets.value = tickets;
+}
+
 async function loadClient() {
   loading.value = true;
   error.value = null;
   try {
     client.value = await getClient(clientId);
+    await loadRelated();
   } catch (e: any) {
     error.value = e?.message || 'Failed to load client';
   } finally {
@@ -39,7 +70,7 @@ async function handleUpdate(data: Partial<Client>) {
   try {
     await updateClient(clientId, data);
     client.value = await getClient(clientId);
-    await resolveIndustryName();
+    await Promise.all([resolveIndustryName(), loadRelated()]);
   } catch (e: any) {
     error.value = e?.message || 'Failed to update client';
   } finally {
@@ -97,7 +128,6 @@ async function resolveIndustryName() {
 
 // Primary contact editing
 const showContactPicker = ref(false);
-const contactItems = useDirectusItems('clients');
 
 async function setPrimaryContact(contactId: string | null) {
   saving.value = true;
@@ -288,29 +318,29 @@ onUnmounted(() => clearEntity());
                 <Icon :name="tab.icon" class="w-4 h-4" />
                 {{ tab.label }}
                 <span class="text-[9px] text-muted-foreground/60 ml-0.5">
-                  ({{ (client as any)[tab.key]?.length || 0 }})
+                  ({{ tab.key === 'contacts' ? relatedContacts.length : tab.key === 'projects' ? relatedProjects.length : relatedTickets.length }})
                 </span>
               </button>
             </div>
 
             <!-- Contacts Tab -->
             <div v-if="activeTab === 'contacts'">
-              <div v-if="client.contacts?.length" class="space-y-2">
+              <div v-if="relatedContacts.length" class="space-y-2">
                 <div
-                  v-for="contact in client.contacts"
-                  :key="(contact as any).id"
+                  v-for="contact in relatedContacts"
+                  :key="contact.id"
                   class="flex items-center justify-between p-3 bg-muted/30 rounded-xl"
                 >
                   <div class="flex items-center gap-3">
                     <div class="w-8 h-8 rounded-full bg-muted/60 flex items-center justify-center text-xs font-medium text-muted-foreground">
-                      {{ ((contact as any).first_name || '?').charAt(0) }}{{ ((contact as any).last_name || '').charAt(0) }}
+                      {{ (contact.first_name || '?').charAt(0) }}{{ (contact.last_name || '').charAt(0) }}
                     </div>
                     <div>
-                      <p class="text-sm font-medium">{{ (contact as any).first_name }} {{ (contact as any).last_name }}</p>
-                      <p v-if="(contact as any).email" class="text-xs text-muted-foreground">{{ (contact as any).email }}</p>
+                      <p class="text-sm font-medium">{{ contact.first_name }} {{ contact.last_name }}</p>
+                      <p v-if="contact.email" class="text-xs text-muted-foreground">{{ contact.email }}</p>
                     </div>
                   </div>
-                  <NuxtLink :to="`/contacts/${(contact as any).id}`">
+                  <NuxtLink :to="`/contacts/${contact.id}`">
                     <Button variant="ghost" size="sm">
                       <Icon name="lucide:arrow-right" class="w-4 h-4" />
                     </Button>
@@ -322,24 +352,24 @@ onUnmounted(() => clearEntity());
 
             <!-- Projects Tab -->
             <div v-if="activeTab === 'projects'">
-              <div v-if="client.projects?.length" class="space-y-2">
+              <div v-if="relatedProjects.length" class="space-y-2">
                 <div
-                  v-for="project in client.projects"
-                  :key="(project as any).id"
+                  v-for="project in relatedProjects"
+                  :key="project.id"
                   class="flex items-center justify-between p-3 bg-muted/30 rounded-xl"
                 >
                   <div>
-                    <p class="text-sm font-medium">{{ (project as any).title }}</p>
+                    <p class="text-sm font-medium">{{ project.title }}</p>
                   </div>
                   <div class="flex items-center gap-2">
                     <span
-                      v-if="(project as any).status"
+                      v-if="project.status"
                       class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
-                      :class="statusColors[(project as any).status] || 'bg-muted text-muted-foreground'"
+                      :class="statusColors[project.status] || 'bg-muted text-muted-foreground'"
                     >
-                      {{ (project as any).status }}
+                      {{ project.status }}
                     </span>
-                    <NuxtLink :to="`/projects/${(project as any).id}`">
+                    <NuxtLink :to="`/projects/${project.id}`">
                       <Button variant="ghost" size="sm">
                         <Icon name="lucide:arrow-right" class="w-4 h-4" />
                       </Button>
@@ -352,24 +382,24 @@ onUnmounted(() => clearEntity());
 
             <!-- Tickets Tab -->
             <div v-if="activeTab === 'tickets'">
-              <div v-if="client.tickets?.length" class="space-y-2">
+              <div v-if="relatedTickets.length" class="space-y-2">
                 <div
-                  v-for="ticket in client.tickets"
-                  :key="(ticket as any).id"
+                  v-for="ticket in relatedTickets"
+                  :key="ticket.id"
                   class="flex items-center justify-between p-3 bg-muted/30 rounded-xl"
                 >
                   <div>
-                    <p class="text-sm font-medium">{{ (ticket as any).title }}</p>
+                    <p class="text-sm font-medium">{{ ticket.title }}</p>
                   </div>
                   <div class="flex items-center gap-2">
                     <span
-                      v-if="(ticket as any).status"
+                      v-if="ticket.status"
                       class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
-                      :class="statusColors[(ticket as any).status] || 'bg-muted text-muted-foreground'"
+                      :class="statusColors[ticket.status] || 'bg-muted text-muted-foreground'"
                     >
-                      {{ (ticket as any).status }}
+                      {{ ticket.status }}
                     </span>
-                    <NuxtLink :to="`/tickets/${(ticket as any).id}`">
+                    <NuxtLink :to="`/tickets/${ticket.id}`">
                       <Button variant="ghost" size="sm">
                         <Icon name="lucide:arrow-right" class="w-4 h-4" />
                       </Button>
@@ -391,11 +421,11 @@ onUnmounted(() => clearEntity());
               Info
             </h3>
             <div class="space-y-2.5 text-sm">
-              <div class="flex justify-between">
+              <div class="flex justify-between items-baseline">
                 <span class="text-muted-foreground">Organization</span>
                 <span>{{ (client.organization as any)?.name || '\u2014' }}</span>
               </div>
-              <div class="flex justify-between">
+              <div class="flex justify-between items-baseline">
                 <span class="text-muted-foreground">Website</span>
                 <a
                   v-if="client.website"
@@ -407,15 +437,19 @@ onUnmounted(() => clearEntity());
                 </a>
                 <span v-else>&#x2014;</span>
               </div>
-              <div class="flex justify-between">
+              <div class="flex justify-between items-baseline">
                 <span class="text-muted-foreground">Industry</span>
-                <span>{{ industryName || '\u2014' }}</span>
+                <span class="text-[10px] uppercase tracking-wide text-muted-foreground font-medium text-right">{{ industryName || '\u2014' }}</span>
               </div>
-              <div class="flex justify-between">
+              <div v-if="client.billing_address" class="flex justify-between items-baseline">
+                <span class="text-muted-foreground">Address</span>
+                <span class="text-right text-xs max-w-[160px]">{{ client.billing_address }}</span>
+              </div>
+              <div class="flex justify-between items-baseline">
                 <span class="text-muted-foreground">Created</span>
                 <span>{{ client.date_created ? new Date(client.date_created).toLocaleDateString() : '\u2014' }}</span>
               </div>
-              <div class="flex justify-between">
+              <div class="flex justify-between items-baseline">
                 <span class="text-muted-foreground">Updated</span>
                 <span>{{ client.date_updated ? new Date(client.date_updated).toLocaleDateString() : '\u2014' }}</span>
               </div>
@@ -487,7 +521,7 @@ onUnmounted(() => clearEntity());
 
             <!-- Contact Picker Dropdown -->
             <div v-if="showContactPicker" class="mt-3 border border-border rounded-lg overflow-hidden">
-              <div v-if="client.contacts?.length" class="max-h-[200px] overflow-y-auto">
+              <div v-if="relatedContacts.length" class="max-h-[200px] overflow-y-auto">
                 <button
                   v-if="client.primary_contact"
                   class="flex items-center gap-2 w-full px-3 py-2 text-xs hover:bg-muted/50 transition-colors text-muted-foreground"
@@ -497,16 +531,16 @@ onUnmounted(() => clearEntity());
                   Remove primary contact
                 </button>
                 <button
-                  v-for="contact in client.contacts"
-                  :key="(contact as any).id"
+                  v-for="contact in relatedContacts"
+                  :key="contact.id"
                   class="flex items-center gap-2 w-full px-3 py-2 text-xs hover:bg-muted/50 transition-colors"
-                  :class="{ 'text-primary font-medium': (client.primary_contact as any)?.id === (contact as any).id }"
-                  @click="setPrimaryContact((contact as any).id)"
+                  :class="{ 'text-primary font-medium': (client.primary_contact as any)?.id === contact.id }"
+                  @click="setPrimaryContact(contact.id)"
                 >
                   <div class="w-5 h-5 rounded-full bg-muted/60 flex items-center justify-center text-[9px] font-medium shrink-0">
-                    {{ ((contact as any).first_name || '?').charAt(0) }}{{ ((contact as any).last_name || '').charAt(0) }}
+                    {{ (contact.first_name || '?').charAt(0) }}{{ (contact.last_name || '').charAt(0) }}
                   </div>
-                  {{ (contact as any).first_name }} {{ (contact as any).last_name }}
+                  {{ contact.first_name }} {{ contact.last_name }}
                 </button>
               </div>
               <p v-else class="px-3 py-2 text-xs text-muted-foreground">No contacts to choose from. Add contacts first.</p>
