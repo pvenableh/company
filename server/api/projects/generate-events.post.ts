@@ -128,7 +128,7 @@ ${jsonRules}`;
   if (body.teamSize) userParts.push(`Team size: ${body.teamSize} people`);
   if (body.serviceName) userParts.push(`Service: ${body.serviceName}`);
   if (body.specialRequirements?.trim()) {
-    userParts.push(`Special requirements:\n${body.specialRequirements.trim()}`);
+    userParts.push(`Special requirements:\n${body.specialRequirements.trim().slice(0, 500)}`);
   }
   if (template) {
     if (deadlineNote) userParts.push(`\nIMPORTANT: ${deadlineNote}`);
@@ -146,7 +146,7 @@ ${jsonRules}`;
   try {
     const response = await provider.chat(messages, {
       systemPrompt,
-      maxTokens: 4096,
+      maxTokens: 8192,
       temperature: 0.7,
     });
 

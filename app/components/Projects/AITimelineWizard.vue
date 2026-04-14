@@ -20,7 +20,7 @@
                 <Icon name="lucide:sparkles" class="w-4.5 h-4.5 text-white" />
               </div>
               <div>
-                <h2 class="text-lg font-semibold text-foreground">AI Timeline Generator</h2>
+                <h2 class="text-lg font-semibold text-foreground">Earnest Timeline Generator</h2>
                 <p class="text-xs text-muted-foreground">Generate a project timeline with milestones and tasks</p>
               </div>
             </div>
@@ -138,9 +138,11 @@
                 <textarea
                   v-model="form.specialRequirements"
                   rows="2"
+                  maxlength="500"
                   placeholder="e.g. Needs accessibility audit, multi-language support, rush delivery..."
                   class="w-full rounded-xl border bg-background px-4 py-3 text-sm resize-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all placeholder:text-muted-foreground/60"
                 />
+                <span v-if="form.specialRequirements.length > 400" class="text-xs text-muted-foreground text-right block mt-1">{{ form.specialRequirements.length }}/500</span>
               </div>
             </div>
 
