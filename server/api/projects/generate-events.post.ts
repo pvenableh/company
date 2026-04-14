@@ -67,18 +67,18 @@ export default defineEventHandler(async (event) => {
   // 3. Build AI prompt — shared rules for JSON output format
   const jsonRules = `RULES:
 - Return ONLY valid JSON, no markdown fences, no extra text
-- Each event needs: id (string like "evt_1"), title, description (1-2 sentences), event_date (YYYY-MM-DD), end_date (YYYY-MM-DD), duration_days (integer), type (one of: General, Design, Content, Timeline, Financial, Hours), is_milestone (boolean), enabled (true), sort (integer starting at 1)
-- Each event must have a "tasks" array with 2-5 tasks
-- Each task needs: id (string like "task_1_1"), title, description (1 sentence), priority ("low", "medium", or "high"), due_date (YYYY-MM-DD, set to the event's end_date)
+- Each event needs: id (string like "evt_1"), title, description (1 short sentence), event_date (YYYY-MM-DD), end_date (YYYY-MM-DD), duration_days (integer), type (one of: General, Design, Content, Timeline, Financial, Hours), is_milestone (boolean), enabled (true), sort (integer starting at 1)
+- Each event must have a "tasks" array with 2-3 tasks
+- Each task needs: id (string like "task_1_1"), title (max 8 words), description (max 12 words), priority ("low", "medium", or "high"), due_date (YYYY-MM-DD, set to the event's end_date)
 - Dates must be sequential and not overlap (next event starts when previous ends)
 - Skip weekends when calculating dates
-- Keep descriptions concise and actionable
-- Return 8-17 events for a complete project timeline
+- Be concise — short titles and descriptions only
+- Return 8-12 events for a complete project timeline
 
 Return this exact JSON structure:
 {
   "events": [array of events with nested tasks],
-  "summary": "Brief explanation of adjustments made (1-2 sentences)",
+  "summary": "Brief explanation of adjustments made (1 sentence)",
   "totalDays": number
 }`;
 
