@@ -381,7 +381,7 @@
 					<FormStatusTimeline
 						v-if="selectedEventFull && !loadingEventDetail"
 						:currentStatus="selectedEventFull.status || 'Active'"
-						:statuses="eventStatusOptions.map(s => ({ id: s, name: s }))"
+						:statuses="eventStatusOptions.map(s => ({ id: s.value, name: s.label }))"
 						collection="project_events"
 						:itemId="selectedEventFull.id"
 						@status-change="handleEventStatusChange"
@@ -605,9 +605,9 @@ const eventTypeOptions = [
 ];
 
 const eventStatusOptions = [
+	{ label: 'Scheduled', value: 'Scheduled' },
 	{ label: 'Active', value: 'Active' },
 	{ label: 'Completed', value: 'Completed' },
-	{ label: 'Cancelled', value: 'Cancelled' },
 ];
 
 const priorityOptions = [
@@ -704,7 +704,6 @@ const showEventDetail = ref(false);
 const selectedEventFull = ref(null);
 const loadingEventDetail = ref(false);
 const eventDetailRef = ref(null);
-const eventStatusOptions = ['Scheduled', 'Active', 'Completed'];
 const { updateEvent, deleteEvent } = useProjectTimeline();
 
 const eventProjectProxy = computed(() => ({
