@@ -143,6 +143,7 @@ function isActive(tabId: string): boolean {
     <!-- ─── Main Content ─── -->
     <main class="flex-1 overflow-auto pb-16 md:pb-0">
       <slot />
+      <LayoutFooter />
     </main>
 
     <!-- ─── Mobile Bottom Tab Bar ─── -->

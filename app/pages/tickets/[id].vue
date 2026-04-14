@@ -35,6 +35,8 @@ const ticket = await ticketItems.get(params.id, {
 		'assigned_to.directus_users_id.last_name',
 		'assigned_to.directus_users_id.avatar',
 		'assigned_to.directus_users_id.email',
+		'client.id',
+		'client.name',
 		'tasks',
 		'team.*',
 	],
@@ -47,12 +49,15 @@ const columns = [
 ];
 </script>
 <template>
-	<div class="max-w-screen-xl mx-auto">
-		<nuxt-link to="/tickets" class="uppercase text-[10px] text-gray-400 px-4 2xl:px-0">
-			<UIcon name="i-heroicons-arrow-left" class="-mb-0.5" />
-			Back to tickets
-		</nuxt-link>
-		<div class="w-full my-4 px-4 2xl:px-0">
+	<div class="max-w-screen-xl mx-auto px-4 2xl:px-0">
+		<NuxtLink
+			to="/tickets"
+			class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground hover:text-foreground transition-colors mt-4 mb-2"
+		>
+			<Icon name="lucide:chevron-left" class="w-3 h-3" />
+			Tickets
+		</NuxtLink>
+		<div class="w-full my-4">
 			<TicketsDetailsNew :element="ticket" :columns="columns" />
 		</div>
 	</div>

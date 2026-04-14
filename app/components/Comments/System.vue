@@ -20,13 +20,23 @@
 		</transition>
 
 		<div class="w-full flex items-center justify-between gap-2 text-xs relative">
-			<h4 class="cursor-pointer uppercase block font-medium text-gray-700 dark:text-gray-200 tracking-wide">
-				<transition name="fade" mode="out-in">
-					<span v-if="isLoading">Loading</span>
-					<span v-else>{{ commentsCount }}</span>
-				</transition>
-				{{ commentsCount === 1 ? 'Comment' : 'Comments' }}
-			</h4>
+			<div class="flex items-center gap-2">
+				<h4 class="cursor-pointer uppercase block font-medium text-gray-700 dark:text-gray-200 tracking-wide">
+					<transition name="fade" mode="out-in">
+						<span v-if="isLoading">Loading</span>
+						<span v-else>{{ commentsCount }}</span>
+					</transition>
+					{{ commentsCount === 1 ? 'Comment' : 'Comments' }}
+				</h4>
+				<button
+					v-if="!hideSort && commentsCount > 1"
+					class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-medium uppercase tracking-wider transition-colors bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground border border-border/50"
+					@click="sortOrder = sortOrder === 'newest' ? 'oldest' : 'newest'"
+				>
+					<Icon :name="sortOrder === 'newest' ? 'lucide:arrow-down' : 'lucide:arrow-up'" class="w-2.5 h-2.5" />
+					{{ sortOrder === 'newest' ? 'Newest' : 'Oldest' }}
+				</button>
+			</div>
 			<h5
 				class="cursor-pointer uppercase tracking-wide text-[9px] inline-block"
 				@click="toggleComment = !toggleComment"
@@ -44,29 +54,6 @@
 				:organization-id="organizationId"
 				:client-id="clientId"
 			/>
-			<div v-if="!hideSort" class="w-full flex items-start justify-start">
-				<USelect
-					v-model="sortOrder"
-					:options="[
-						{ label: 'NEWEST FIRST', value: 'newest' },
-						{ label: 'OLDEST FIRST', value: 'oldest' },
-					]"
-					color="white"
-					size="xs"
-					class="w-22 relative"
-					:ui="{
-						rounded: 'rounded-sm',
-						variant: {
-							outline: ' ring-0',
-						},
-						color: {
-							white: {
-								outline: 'py-0.5 ring-0 border border-gray-300  text-[9px]',
-							},
-						},
-					}"
-				/>
-			</div>
 			<TransitionGroup name="comments" tag="div" class="space-y-4">
 				<CommentsThread
 					v-for="comment in sortedComments"

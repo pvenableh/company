@@ -262,3 +262,21 @@
 .cg-card-compact:hover {
   @apply shadow-md;
 }
+
+/* ============================================
+   Pill-shaped form controls
+   ============================================ */
+
+/* Native selects */
+form select,
+.ios-card select {
+  border-radius: 9999px;
+}
+
+/* NuxtUI select & input wrappers */
+form .relative > button[role="combobox"],
+.ios-card .relative > button[role="combobox"] {
+  border-radius: 9999px;
+}
+
+

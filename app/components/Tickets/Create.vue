@@ -1,9 +1,13 @@
 <template>
 	<div>
 		<!-- Create Button -->
-		<UButton icon="i-heroicons-document-plus" color="primary" class="tracking-wide" @click="openForm">
-			Create Ticket
-		</UButton>
+		<button
+			class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium text-foreground hover:bg-muted/50 hover:border-primary/30 transition-colors"
+			@click="openForm"
+		>
+			<Icon name="lucide:plus" class="w-3.5 h-3.5" />
+			<span>New Ticket</span>
+		</button>
 
 		<!-- Teleported Fullscreen Form -->
 		<Teleport to="body">

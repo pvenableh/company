@@ -23,9 +23,8 @@
 						? 'shadow cursor-pointer hover:scale-110'
 						: 'border-gray-200 cursor-pointer hover:border-gray-400 hover:scale-110',
 					currentStatus === (status.id || status) ? 'scale-125' : '',
-					// Apply correct border colors based on index
-					getBorderColorClass(index, statusIndex >= index),
 				]"
+				:style="getBorderColorStyle(index, statusIndex >= index)"
 				:title="status.name || status"
 				@click="handleStatusClick(status.id || status, index)"
 				:data-status="status.id || status"
@@ -33,7 +32,7 @@
 				<!-- Animate current status point -->
 				<div
 					class="absolute w-5 h-5 border-4 rounded-full flex items-center justify-center animate-ping"
-					:class="getBorderColorClass(index, statusIndex >= index)"
+					:style="getBorderColorStyle(index, statusIndex >= index)"
 					v-if="currentStatus === (status.id || status)"
 				></div>
 
@@ -104,6 +103,7 @@ const emit = defineEmits(['update:currentStatus', 'status-change', 'click']);
 
 // Local state
 const isUpdating = ref(false);
+const { getStatusAccent } = useStatusStyle();
 
 // Computed values for handling both string and object status arrays
 const normalizedStatuses = computed(() => {
@@ -121,26 +121,23 @@ const statusIndex = computed(() => {
 	return index === -1 ? 0 : index;
 });
 
-// Gradient for progress bar
+// Build gradient from status accent colors
 const progressGradient = computed(() => {
-	return props.gradient;
+	const colors = normalizedStatuses.value.map((s) => getStatusAccent(s.id));
+	return `linear-gradient(to right, ${colors.join(', ')})`;
 });
 
 const getBorderColorClass = (index, isActive) => {
 	if (!isActive) return 'border-gray-200';
+	// Return empty — we use inline style for border color instead
+	return '';
+};
 
-	switch (index) {
-		case 0:
-			return 'border-[var(--cyan)]'; // First status - Cyan
-		case 1:
-			return ' border-[var(--cyan2)]'; // Second status - Blue
-		case 2:
-			return 'border-[var(--green2)]'; // Third status - Light Green
-		case 3:
-			return 'border-[var(--green)]'; // Fourth status - Green
-		default:
-			return 'border-gray-500'; // Fallback
-	}
+const getBorderColorStyle = (index, isActive) => {
+	if (!isActive) return {};
+	const status = normalizedStatuses.value[index];
+	if (!status) return {};
+	return { borderColor: getStatusAccent(status.id) };
 };
 
 // Handle status click

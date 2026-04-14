@@ -2,6 +2,7 @@
 	<div class="w-full mx-auto">
 		<LayoutUserPresenceIndicator v-if="currentUser" />
 
+		<!-- Status Timeline -->
 		<div class="w-full flex items-center">
 			<FormStatusTimeline
 				v-model:currentStatus="currentStatus"
@@ -10,105 +11,209 @@
 				:itemId="localElement.id"
 				:loading="isUpdatingStatus"
 				@status-change="handleStatusChange"
-				class="mb-4"
+				class="mb-12"
 			/>
 		</div>
-		<div class="flex flex-row justify-between items-start my-4">
-			<div class="flex-grow">
-				<div class="flex items-center justify-between">
-					<h2 class="mt-6 mb-2 text-[22px] leading-5 lg:text-[32px] lg:mb-4 font-bold">{{ localElement.title }}</h2>
+
+		<!-- Header -->
+		<div class="flex items-start sm:items-center justify-between mb-6 gap-2">
+			<div class="min-w-0">
+				<div class="flex items-center gap-2">
+					<h1 class="text-sm sm:text-base font-semibold text-foreground" style="line-height: 1.1">{{ localElement.title }}</h1>
 				</div>
-				<div class="flex items-center gap-2 text-xs text-muted-foreground" v-if="localElement.due_date">
-					<Icon name="lucide:calendar" class="w-3.5 h-3.5" />
-					<span class="uppercase tracking-wider">Due {{ formatDate(localElement.due_date) }}</span>
-				</div>
-				<div class="flex flex-wrap items-center gap-2 mt-3">
-					<span class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white" :class="getStatusColor(currentStatus)">
+				<div class="flex items-center gap-1.5 mt-1">
+					<span
+						class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+						:class="getStatusColor(currentStatus)"
+					>
 						{{ currentStatus }}
 					</span>
-					<span class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white" :class="getPriorityColor(currentPriority)">
+					<span
+						class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white"
+						:class="getPriorityColor(currentPriority)"
+					>
 						{{ currentPriority }}
 					</span>
-					<Share :url="shareUrl" :title="shareTitle" :description="shareDescription" @share="handleShare" />
+					<span v-if="localElement.due_date" class="flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground ml-1">
+						<Icon name="lucide:calendar" class="w-3 h-3" />
+						Due {{ formatDate(localElement.due_date) }}
+					</span>
 				</div>
 			</div>
-
-			<!-- Right side: Actions -->
-			<div class="flex gap-2 mt-4">
-				<TicketsDetailsMetadata :ticket="localElement" />
-			</div>
-		</div>
-
-		<!-- Priority slider in header -->
-
-		<div class="mb-6">
-			<div class="inline-flex items-center gap-1 rounded-xl bg-muted/50 p-1 border border-border">
+			<div class="flex items-center gap-1.5">
+				<LayoutShareButton :title="shareTitle" :text="shareDescription" />
 				<button
-					v-for="tab in tabs"
-					:key="tab.id"
-					class="flex items-center gap-2 px-4 py-2 rounded-lg text-[11px] uppercase tracking-wider font-semibold transition-all duration-200"
-					:class="
-						activeTab === tab.id
-							? 'bg-card text-foreground shadow-sm'
-							: 'text-muted-foreground hover:text-foreground'
-					"
-					@click="setActiveTab(tab.id)"
+					class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium text-primary hover:bg-primary/10 hover:border-primary/30 transition-colors"
+					@click="sidebarOpen = true"
 				>
-					<UIcon :name="tab.icon" class="w-4 h-4" />
-					{{ tab.name }}
+					<Icon name="lucide:sparkles" class="w-3.5 h-3.5" />
+					<span class="hidden sm:inline">Ask Earnest</span>
+				</button>
+				<button
+					class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium text-destructive hover:bg-destructive/10 hover:border-destructive/30 transition-colors"
+					@click="showDeleteModal = true"
+				>
+					<Icon name="lucide:trash-2" class="w-3.5 h-3.5" />
+					<span class="hidden sm:inline">Delete</span>
 				</button>
 			</div>
 		</div>
 
-		<div
-			v-if="activeTab === 'work'"
-			class="flex items-start justify-between flex-col lg:flex-row flex-wrap animate-fadein"
+		<!-- AI Notices -->
+		<ClientOnly>
+			<AIProactiveNotices entity-type="ticket" :entity-id="String(localElement.id)" />
+		</ClientOnly>
+
+		<!-- Tabs -->
+		<UTabs
+			v-model="activeTab"
+			:items="tabItems"
+			class="w-full"
 		>
-			<div v-if="displayDescription" class="w-full mb-6">
-				<div class="ios-card p-4 lg:p-5">
-					<h5 class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
-						Description
-					</h5>
-					<div v-html="displayDescription" class="text-sm w-full ticket__description" />
+			<!-- Overview Tab -->
+			<template #overview>
+				<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-6 animate-fadein items-start">
+					<!-- Main Content -->
+					<div class="lg:col-span-2 space-y-6">
+						<!-- Ticket Details Card -->
+						<div class="ios-card p-5">
+							<div ref="stickyHeaderSentinel" class="h-0" />
+							<div
+								ref="stickyHeader"
+								class="flex items-center justify-between mb-4 sticky top-0 z-10 bg-card py-3 -mx-5 px-5 rounded-t-2xl transition-shadow duration-200"
+								:class="{ 'shadow-[0_4px_12px_rgba(0,0,0,0.06)]': isHeaderStuck }"
+							>
+								<h2 class="font-medium">Ticket Details</h2>
+								<div class="flex items-center gap-2">
+									<transition name="fade">
+										<span v-if="formRef?.isDirty" class="text-[10px] text-amber-500 uppercase tracking-wider font-medium">Unsaved</span>
+									</transition>
+									<button
+										class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border text-xs font-medium transition-colors"
+										:class="isLoading || !formRef?.isDirty
+											? 'border-border text-muted-foreground opacity-50 cursor-not-allowed'
+											: 'bg-primary text-primary-foreground border-primary hover:bg-primary/90'"
+										:disabled="isLoading || !formRef?.isDirty"
+										@click="handleSaveClick"
+									>
+										<Icon v-if="isLoading" name="lucide:loader-2" class="w-3.5 h-3.5 animate-spin" />
+										<Icon v-else name="lucide:save" class="w-3.5 h-3.5" />
+										<span class="hidden sm:inline">Save</span>
+									</button>
+								</div>
+							</div>
+							<TicketsDetailsForm
+								ref="formRef"
+								:ticket="localElement"
+								:columns="columns"
+								:is-loading="isLoading"
+								@update="updateTicket"
+								@change="handleFormChange"
+								@dirty-state-change="handleDirtyStateChange"
+							/>
+
+							<!-- Description -->
+							<div class="mt-4">
+								<UFormGroup label="Description">
+									<div class="max-h-64 overflow-y-auto rounded-lg shadow-[inset_0_2px_4px_rgba(0,0,0,0.04),inset_0_-2px_4px_rgba(0,0,0,0.04)] border border-border/40">
+										<LazyFormTiptap
+											v-if="formRef?.form"
+											:modelValue="formRef.form.description"
+											@update:modelValue="val => formRef.form.description = val"
+											placeholder="Enter ticket description"
+											@mention="formRef?.handleMention"
+											:editor-props="{
+												content: formRef.form.description,
+											}"
+											:organization-id="localElement.organization?.id"
+											:client-id="typeof localElement.client === 'object' ? localElement.client?.id : localElement.client"
+											:context="{
+												collection: 'tickets',
+												itemId: localElement.id,
+											}"
+										/>
+										<div v-else-if="displayDescription" v-html="displayDescription" class="text-sm w-full ticket__description" />
+									</div>
+								</UFormGroup>
+							</div>
+
+							<!-- Comments -->
+							<div class="mt-8">
+								<CommentsSystem
+									ref="commentsSystemRef"
+									:item-id="localElement.id"
+									collection="tickets"
+									class="w-full"
+									:client-id="typeof localElement.client === 'object' ? localElement.client?.id : localElement.client"
+									@update:commentCount="handleCommentCountUpdate"
+								/>
+							</div>
+						</div>
+					</div>
+
+					<!-- Sidebar -->
+					<div class="lg:sticky lg:top-0 space-y-4">
+						<!-- Tasks Card -->
+						<div class="ios-card p-5 relative overflow-hidden">
+							<h3 class="font-medium text-sm mb-3 flex items-center gap-2">
+								<Icon name="lucide:check-circle" class="w-4 h-4 text-muted-foreground" />
+								Tasks
+							</h3>
+							<TicketsTasks ref="tasksRef" :ticket-id="localElement.id" />
+						</div>
+					</div>
 				</div>
-			</div>
-			<div class="flex items-start justify-between flex-col lg:flex-row flex-wrap w-full gap-6">
-				<div class="w-full lg:w-1/2 lg:sticky lg:top-20">
-					<CommentsSystem
-						ref="commentsSystemRef"
-						:item-id="localElement.id"
-						collection="tickets"
-						class="w-full lg:pb-20"
-						:client-id="typeof localElement.client === 'object' ? localElement.client?.id : localElement.client"
-						@update:commentCount="handleCommentCountUpdate"
-					/>
+			</template>
+
+			<!-- Activity Tab -->
+			<template #activity>
+				<div class="pt-6 animate-fadein">
+					<TicketsActivity ref="activityRef" :ticket-id="localElement.id" :debug-mode="true" />
 				</div>
-				<div
-					class="w-full lg:w-[500px] ios-card lg:p-5 lg:sticky lg:top-20 ticket__tasks"
-				>
-					<h4 class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-3">Tasks</h4>
-					<TicketsTasks ref="tasksRef" :ticket-id="localElement.id" class="pb-6" />
+			</template>
+
+			<!-- Info Tab -->
+			<template #info>
+				<div class="pt-6 animate-fadein max-w-lg">
+					<div class="ios-card p-6">
+						<h2 class="font-medium mb-4 flex items-center gap-2">
+							<Icon name="lucide:info" class="w-4 h-4 text-muted-foreground" />
+							Ticket Info
+						</h2>
+						<div class="space-y-3 text-sm">
+							<div class="flex justify-between">
+								<span class="text-muted-foreground">Ticket #</span>
+								<span>{{ localElement.id }}</span>
+							</div>
+							<div v-if="localElement.organization" class="flex justify-between">
+								<span class="text-muted-foreground">Organization</span>
+								<span>{{ localElement.organization.name }}</span>
+							</div>
+							<div v-if="localElement.team" class="flex justify-between">
+								<span class="text-muted-foreground">Team</span>
+								<span>{{ localElement.team.name }}</span>
+							</div>
+							<div v-if="localElement.project" class="flex justify-between">
+								<span class="text-muted-foreground">Project</span>
+								<span>{{ localElement.project.title }}</span>
+							</div>
+							<div v-if="localElement.user_created" class="flex justify-between">
+								<span class="text-muted-foreground">Created by</span>
+								<span>{{ getUserFullName(localElement.user_created) }}</span>
+							</div>
+							<div v-if="localElement.date_created" class="flex justify-between">
+								<span class="text-muted-foreground">Created</span>
+								<span>{{ formatDate(localElement.date_created) }}</span>
+							</div>
+							<div v-if="localElement.date_updated" class="flex justify-between">
+								<span class="text-muted-foreground">Updated</span>
+								<span>{{ formatDate(localElement.date_updated) }}</span>
+							</div>
+						</div>
+					</div>
 				</div>
-			</div>
-		</div>
-		<div v-else-if="activeTab === 'activity'" class="animate-fadein">
-			<TicketsActivity ref="activityRef" :ticket-id="localElement.id" :debug-mode="true" />
-		</div>
-		<div v-else-if="activeTab === 'edit'" class="animate-fadein">
-			<TicketsDetailsForm
-				ref="formRef"
-				:ticket="localElement"
-				:columns="columns"
-				:is-loading="isLoading"
-				@update="updateTicket"
-				@delete-click="showDeleteModal = true"
-				@comment-count-update="handleCommentCountUpdate"
-				@share="handleShare"
-				@change="handleFormChange"
-				@dirty-state-change="handleDirtyStateChange"
-				class="w-full mt-4 lg:mt-8"
-			/>
-		</div>
+			</template>
+		</UTabs>
 
 		<!-- Modals -->
 		<TicketsModalDelete
@@ -124,10 +229,26 @@
 			@save="handleSave"
 			@discard="handleDiscard"
 		/>
+
+		<!-- Contextual AI Sidebar -->
+		<ClientOnly>
+			<AIContextualSidebar
+				v-if="sidebarOpen"
+				entity-type="ticket"
+				:entity-id="String(localElement.id)"
+				:entity-label="localElement.title || 'Ticket'"
+				@close="closeSidebar"
+			/>
+			<Transition name="overlay">
+				<div v-if="sidebarOpen" class="fixed inset-0 bg-black/20 z-40" @click="closeSidebar" />
+			</Transition>
+		</ClientOnly>
 	</div>
 </template>
 
 <script setup>
+import { Button } from '~/components/ui/button';
+
 const props = defineProps({
 	element: {
 		type: Object,
@@ -158,6 +279,8 @@ const router = useRouter();
 const { notifyTicketStatusChange, notifyTicketAssignment, notifyTicketUpdate, notifyMentions } =
 	useNotificationHelper();
 const config = useRuntimeConfig();
+const { getStatusPillClass, getPriorityBadgeClass } = useStatusStyle();
+const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext();
 
 // Refs
 const formRef = ref(null);
@@ -173,9 +296,19 @@ const pendingTabChange = ref(null);
 const currentStatus = ref(props.element.status);
 const currentPriority = ref(props.element.priority);
 const isUpdatingStatus = ref(false);
+const stickyHeaderSentinel = ref(null);
+const stickyHeader = ref(null);
+const isHeaderStuck = ref(false);
+
+// Tab configuration
+const activeTab = ref('overview');
+const tabItems = [
+	{ key: 'overview', label: 'Overview', icon: 'i-heroicons-squares-2x2' },
+	{ key: 'activity', label: 'Activity', icon: 'i-heroicons-clock' },
+	{ key: 'info', label: 'Info', icon: 'i-heroicons-information-circle' },
+];
 
 const shareUrl = computed(() => {
-	// For demo, use the site URL + tickets + ID
 	const baseUrl = config.public.appUrl || 'https://app.earnest.guru';
 	return `${baseUrl}/tickets/${props.element.id}`;
 });
@@ -184,80 +317,61 @@ const shareTitle = computed(() => {
 	return `Ticket #${props.element.id}: ${props.element.title}`;
 });
 
-const shareDescription = computed(() => {
-	const description = props.element.description || '';
-	if (import.meta.client) {
-		// Only run this on the client-side
-		const tempDiv = document.createElement('div');
-		tempDiv.innerHTML = description;
-		const plainText = tempDiv.textContent || tempDiv.innerText || '';
-		return plainText.length > 150 ? plainText.substring(0, 147) + '...' : plainText;
-	} else {
-		// Provide a server-safe fallback (e.g., the raw description or a truncated version without DOM manipulation)
-		return description.length > 150 ? description.substring(0, 147) + '...' : description;
-	}
-});
-
-const processDescription = (description) => {
-	if (!import.meta.client || !description) return description;
-
+const stripHtml = (html) => {
+	if (!import.meta.client || !html) return html || '';
 	const tempDiv = document.createElement('div');
-	tempDiv.innerHTML = description;
-	return tempDiv.textContent || tempDiv.innerText || '';
+	tempDiv.innerHTML = html;
+	const text = tempDiv.textContent || tempDiv.innerText || '';
+	tempDiv.textContent = '';
+	return text;
 };
 
-const displayDescription = computed(() => {
-	const rawDescription = props.element.description || '';
-	return import.meta.client ? processDescription(rawDescription) : rawDescription;
+const shareDescription = computed(() => {
+	const plainText = stripHtml(props.element.description);
+	return plainText.length > 150 ? plainText.substring(0, 147) + '...' : plainText;
 });
-const displayTitle = computed(() => props.element.title || '');
-const displayDueDate = computed(() => props.element.due_date || '');
+
+const displayDescription = computed(() => {
+	return stripHtml(props.element.description);
+});
 
 const localElement = ref({ ...props.element });
 
-// Add this with your methods
+// Status change handler
 async function handleStatusChange(event) {
 	if (isUpdatingStatus.value || isLoading.value) return;
 
 	try {
 		isUpdatingStatus.value = true;
 
-		// Create a record of the old status for notifications
 		const oldStatus = event.oldStatus;
-		const newStatus = event.newStatus; // Define newStatus before using it
+		const newStatus = event.newStatus;
 
-		// Update the local reactive state immediately for UI
 		currentStatus.value = newStatus;
 
-		// Also update our local element copy
 		localElement.value = {
 			...localElement.value,
 			status: newStatus,
 		};
 
-		// Update the ticket status
 		await ticketItems.update(props.element.id, {
 			status: newStatus,
 			date_updated: new Date(),
 		});
 
-		// Send notification to assigned users about status change
 		await notifyTicketStatusChange(props.element, newStatus, oldStatus);
 
-		// Show success message
 		toast.add({
 			title: 'Success',
 			description: `Ticket status updated to ${newStatus}`,
 			color: 'green',
 		});
 
-		// Create a shallow copy of the element to update the parent component
 		const updatedElement = { ...props.element, status: newStatus };
 		emit('updated', updatedElement);
 	} catch (error) {
 		console.error('Error updating ticket status:', error);
 
-		// Revert the status in the UI
 		currentStatus.value = event.oldStatus;
 		localElement.value.status = event.oldStatus;
 
@@ -273,68 +387,36 @@ async function handleStatusChange(event) {
 
 const updateFormWithLatestData = () => {
 	if (!import.meta.client || !formRef.value || !formRef.value.updateFormData) {
-		console.warn('FormRef or updateFormData method not available');
 		return;
 	}
-
-	console.log('Explicitly updating form with latest data');
 	formRef.value.updateFormData(localElement.value);
 };
 
-const updateDescriptionInDOM = (newDescription) => {
-	if (!newDescription || !import.meta.client) return;
+// Sync header priority badge with form changes in real-time
+watch(() => formRef.value?.form?.priority, (newPriority) => {
+	if (newPriority) {
+		currentPriority.value = newPriority;
+	}
+});
 
-	nextTick(() => {
-		// Query for the description element in the DOM
-		const descriptionEl = document.querySelector('.ticket__description');
-		if (descriptionEl) {
-			// Update its content with the new description
-			descriptionEl.innerHTML = newDescription;
-			console.log('Description updated in DOM');
-		}
-	});
-};
-const activeTab = ref('work');
-// Tab configuration
-const tabs = [
-	{ id: 'work', name: 'Work', icon: 'i-heroicons-sparkles' },
-	{ id: 'activity', name: 'Activity', icon: 'i-heroicons-clock' },
-	{ id: 'edit', name: 'Edit', icon: 'i-heroicons-pencil-square' },
-];
-
-// Tab management
-const setActiveTab = (tabId) => {
-	// Store previous tab
+// Tab change watcher
+watch(activeTab, (tabId) => {
 	previousTab.value = activeTab.value;
 
-	// Set new active tab
-	activeTab.value = tabId;
-
-	// If switching to edit tab, make sure the form has the latest data
-	if (tabId === 'edit') {
+	if (tabId === 'overview') {
 		nextTick(() => {
 			updateFormWithLatestData();
 		});
 	}
 
-	// If switching to the work tab, ensure description is up to date
-	if (tabId === 'work' && localElement.value.description && import.meta.client) {
-		nextTick(() => {
-			updateDescriptionInDOM(localElement.value.description);
-		});
-	}
-
-	// Schedule refresh of components after tab switch is complete
 	nextTick(() => {
 		refreshTabContent(tabId);
 	});
-};
+});
 
 // Refresh content when switching tabs
 const refreshTabContent = (tabId) => {
-	// Handle different tab refreshes
-	if (tabId === 'work') {
-		// Refresh comments and tasks
+	if (tabId === 'overview') {
 		if (commentsSystemRef.value && commentsSystemRef.value.refresh) {
 			commentsSystemRef.value.refresh();
 		}
@@ -342,52 +424,19 @@ const refreshTabContent = (tabId) => {
 			tasksRef.value.refresh();
 		}
 	} else if (tabId === 'activity') {
-		// Refresh activity log if component has refresh method
 		if (activityRef.value && activityRef.value.refresh) {
 			activityRef.value.refresh();
 		}
 	}
 };
 
-// Methods
-// Uses getFriendlyDateThree and formatDateWithTime from utils/dates.ts
 const formatDate = (dateString, includeTime = false) => {
 	if (!dateString) return '';
 	return includeTime ? formatDateWithTime(dateString) : getFriendlyDateThree(dateString);
 };
 
-const getStatusColor = (status) => {
-	switch (status) {
-		case 'Pending':
-			return 'bg-[var(--cyan)]';
-		case 'Scheduled':
-			return 'bg-[var(--cyan2)]';
-		case 'In Progress':
-			return 'bg-[var(--green2)]';
-		case 'Completed':
-			return 'bg-[var(--green)]';
-		default:
-			return 'bg-[var(--cyan)]';
-	}
-};
-
-const getPriorityColor = (priority) => {
-	switch (priority) {
-		case 'high':
-			return 'bg-[var(--red)]';
-		case 'medium':
-			return 'bg-[var(--cyan)]';
-		case 'low':
-			return 'bg-[var(--lightGrey)]';
-		default:
-			return 'bg-[var(--cyan)]';
-	}
-};
-
-const getAvatarUrl = (user) => {
-	if (!user?.avatar) return null;
-	return `${useRuntimeConfig().public.directusUrl}/assets/${user.avatar}?key=small`;
-};
+const getStatusColor = (status) => getStatusPillClass(status);
+const getPriorityColor = (priority) => getPriorityBadgeClass(priority);
 
 const getUserFullName = (user) => {
 	if (!user) return 'Unknown';
@@ -412,26 +461,30 @@ const handleDirtyStateChange = (isDirty) => {
 	emit('preventClose', isDirty);
 };
 
+// Save button click handler — triggers the form submit
+const handleSaveClick = () => {
+	if (formRef.value?.handleSubmit) {
+		formRef.value.handleSubmit();
+	}
+};
+
 // Update ticket logic
 const updateTicket = async (formData) => {
 	try {
 		isLoading.value = true;
 		const { assigned_to, mentioned_users, ...ticketData } = formData;
 
-		// Create a record of current state for notifications
 		const oldStatus = props.element.status;
 		const oldPriority = props.element.priority;
 		const oldTeam = props.element.team?.id;
 		const currentAssignments = props.element.assigned_to?.map((a) => a.directus_users_id.id) || [];
 		const updatedFields = [];
 
-		// Check which fields are changed to notify about
 		if (ticketData.status !== oldStatus) updatedFields.push('status');
 		if (ticketData.title !== props.element.title) updatedFields.push('title');
 		if (ticketData.priority !== oldPriority) updatedFields.push('priority');
 		if (ticketData.due_date !== props.element.due_date) updatedFields.push('due date');
 
-		// IMPORTANT: Update the local reactive state BEFORE API calls
 		if (ticketData.status) {
 			currentStatus.value = ticketData.status;
 		}
@@ -439,30 +492,17 @@ const updateTicket = async (formData) => {
 			currentPriority.value = ticketData.priority;
 		}
 
-		// Handle description reactivity explicitly
-		// We need to check if the description has changed before attempting to update it
-		if (ticketData.description && ticketData.description !== props.element.description) {
-			// Use our helper function to update the description in the DOM
-			if (activeTab.value === 'work') {
-				updateDescriptionInDOM(ticketData.description);
-			}
-		}
-
-		// Sync team with global state before saving (using exposed method)
 		if (formRef.value?.syncTeamWithGlobalState) {
 			formRef.value.syncTeamWithGlobalState();
 		}
 
-		// Update the main ticket data
 		const updatedTicket = await ticketItems.update(props.element.id, {
 			...ticketData,
 			date_updated: new Date(),
 		});
 
-		// Find assignments to add (new assignments not in current)
 		const assignmentsToAdd = assigned_to.filter((id) => !currentAssignments.includes(id));
 
-		// Process new assignments
 		for (const userId of assignmentsToAdd) {
 			await ticketsDirectusUsersItems.create({
 				tickets_id: props.element.id,
@@ -470,60 +510,57 @@ const updateTicket = async (formData) => {
 			});
 		}
 
-		// Send notifications in parallel
 		const notificationPromises = [];
 
-		// 1. Status change notification
 		if (ticketData.status !== oldStatus) {
 			notificationPromises.push(notifyTicketStatusChange(props.element, ticketData.status, oldStatus));
 		}
 
-		// 2. New assignments notifications
 		if (assignmentsToAdd.length > 0) {
 			notificationPromises.push(notifyTicketAssignment(props.element, assignmentsToAdd, currentAssignments));
 		}
 
-		// 3. Team change notification
-		if (ticketData.team !== oldTeam) {
-			// This would be handled by a more specific helper function if needed
-		}
-
-		// 4. General update notification for other fields
 		if (updatedFields.length > 0) {
 			notificationPromises.push(notifyTicketUpdate(props.element, updatedFields));
 		}
 
-		// 5. Mention notifications
 		if (mentioned_users && mentioned_users.length > 0) {
 			notificationPromises.push(notifyMentions(mentioned_users, props.element.id, props.element.title, 'tickets'));
 		}
 
-		// Send all notifications in parallel
 		await Promise.all(notificationPromises);
 
-		// Reset form state and show success message
-		formRef.value?.resetFormState();
 		pendingChanges.value.clear();
 
-		// After successful update, refresh the appropriate content
 		refreshTabContent(activeTab.value);
 
-		// Important: Create a reactive copy of the element for UI updates
-		const updatedElement = { ...props.element };
-
-		// Merge all the updated fields into our local copy
-		Object.keys(ticketData).forEach((key) => {
-			updatedElement[key] = ticketData[key];
-		});
-
-		localElement.value = updatedElement;
-
-		if (activeTab.value === 'edit') {
-			updateFormWithLatestData();
+		// Re-fetch the ticket to get clean expanded data (objects, not raw IDs)
+		try {
+			const freshTicket = await ticketItems.get(props.element.id, {
+				fields: [
+					'id', 'title', 'description', 'status', 'priority', 'date_created', 'date_updated',
+					'user_updated.first_name', 'user_updated.last_name', 'user_updated.id',
+					'user_created.first_name', 'user_created.last_name', 'user_created.id',
+					'due_date', 'organization.id', 'organization.name', 'organization.logo',
+					'project.id', 'project.title', 'project.url',
+					'assigned_to.id', 'assigned_to.directus_users_id.id', 'assigned_to.directus_users_id.first_name',
+					'assigned_to.directus_users_id.last_name', 'assigned_to.directus_users_id.avatar',
+					'assigned_to.directus_users_id.email', 'tasks', 'team.*', 'client.id', 'client.name',
+				],
+			});
+			localElement.value = freshTicket;
+		} catch (e) {
+			// Fallback: merge locally if re-fetch fails
+			const updatedElement = { ...props.element };
+			Object.keys(ticketData).forEach((key) => {
+				updatedElement[key] = ticketData[key];
+			});
+			localElement.value = updatedElement;
 		}
 
-		// Emit an event to update the parent component
-		emit('updated', updatedElement);
+		// The ticket watcher in DetailsForm will pick up the new localElement and reset form state
+
+		emit('updated', localElement.value);
 
 		toast.add({
 			title: 'Success',
@@ -547,7 +584,6 @@ const deleteTicket = async () => {
 	try {
 		isLoading.value = true;
 
-		// Check if admin (can permanently delete) or just archive
 		if (useOrgRole().isOrgAdminOrAbove.value) {
 			await ticketItems.remove(props.element.id);
 		} else {
@@ -600,11 +636,14 @@ const handleDiscard = () => {
 let routerGuard = null;
 
 onMounted(() => {
-	// Initialize currentStatus and currentPriority with the element's values
 	currentStatus.value = props.element.status;
 	currentPriority.value = props.element.priority;
 
-	// Set up navigation guard
+	// Register entity context for AI awareness
+	if (props.element?.id) {
+		setEntity('ticket', String(props.element.id), props.element.title || 'Ticket');
+	}
+
 	routerGuard = router.beforeEach((to, from, next) => {
 		if (formRef.value?.isDirty) {
 			showUnsavedModal.value = true;
@@ -614,17 +653,35 @@ onMounted(() => {
 		}
 	});
 
-	// Set up beforeunload handler
 	if (import.meta.client) {
 		window.addEventListener('beforeunload', handleBeforeUnload);
+
+		// Observe when the sentinel scrolls out of view to add shadow to sticky header
+		if (stickyHeaderSentinel.value) {
+			stickyObserver = new IntersectionObserver(
+				([entry]) => {
+					isHeaderStuck.value = !entry.isIntersecting;
+				},
+				{ threshold: 0 }
+			);
+			stickyObserver.observe(stickyHeaderSentinel.value);
+		}
 	}
 });
 
+let stickyObserver = null;
+
 onBeforeUnmount(() => {
-	// Clean up
+	clearEntity();
 	if (routerGuard) {
 		routerGuard();
+		routerGuard = null;
 	}
+	if (stickyObserver) {
+		stickyObserver.disconnect();
+		stickyObserver = null;
+	}
+	pendingChanges.value.clear();
 	if (import.meta.client) {
 		window.removeEventListener('beforeunload', handleBeforeUnload);
 	}
@@ -637,17 +694,15 @@ const handleBeforeUnload = (e) => {
 	}
 };
 
-// Watch for element changes to update status, priority, and description
+// Watch for element changes
 watch(
 	[() => props.element?.id, () => props.element?.status, () => props.element?.priority, () => props.element?.description, () => props.element?.date_updated],
 	() => {
 		const newElement = props.element;
 		if (!newElement) return;
 
-		// Update our local copy with the new element data
 		localElement.value = { ...newElement };
 
-		// Also update the individual reactive state vars
 		if (newElement.status !== currentStatus.value) {
 			currentStatus.value = newElement.status;
 		}
@@ -655,25 +710,8 @@ watch(
 		if (newElement.priority !== currentPriority.value) {
 			currentPriority.value = newElement.priority;
 		}
-
-		// Refresh description in DOM if needed
-		if (activeTab.value === 'work' && newElement.description && import.meta.client) {
-			updateDescriptionInDOM(newElement.description);
-		}
 	},
 	{ immediate: true },
-);
-
-watch(
-	() => displayDescription.value,
-	(newDescription) => {
-		console.log('Description computed property changed');
-		// Only run on client-side
-		if (import.meta.client) {
-			// Force DOM update when the computed property changes
-			updateDescriptionInDOM(newDescription);
-		}
-	},
 );
 </script>
 
@@ -708,5 +746,14 @@ watch(
 	to {
 		opacity: 1;
 	}
+}
+
+.fade-enter-active,
+.fade-leave-active {
+	transition: opacity 0.2s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+	opacity: 0;
 }
 </style>

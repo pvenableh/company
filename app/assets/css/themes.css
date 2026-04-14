@@ -77,7 +77,7 @@
 	--sidebar-ring: 0 0% 12%;
 
 	/* Success & Warning */
-	--success: 142 76% 36%;
+	--success: 142 72% 46%;
 	--success-foreground: 0 0% 100%;
 	--warning: 38 92% 50%;
 	--warning-foreground: 0 0% 0%;
@@ -193,7 +193,7 @@
 	--sidebar-ring: 30 8% 15%;
 
 	/* Success & Warning */
-	--success: 142 76% 36%;
+	--success: 142 72% 46%;
 	--success-foreground: 0 0% 100%;
 	--warning: 38 92% 50%;
 	--warning-foreground: 0 0% 0%;

@@ -188,10 +188,10 @@ header.retracted {
 }
 
 .header-tagline {
-	font-family: var(--font-proxima-light);
-	font-style: italic;
-	font-size: 9px;
-	letter-spacing: 0.06em;
+	font-family: var(--font-signature);
+	font-size: 11px;
+	line-height: 1;
+	letter-spacing: 0.02em;
 	color: hsl(var(--muted-foreground));
 	margin-top: 1px;
 }

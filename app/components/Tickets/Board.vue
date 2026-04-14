@@ -23,7 +23,7 @@
 
 		<!-- Filters and Controls -->
 		<div
-			class="w-full flex flex-col md:flex-row items-end justify-between mb-4 xl:mb-8 xl:mt-2 px-4 gap-4 pt-4 tickets-board__filters"
+			class="w-full flex flex-col md:flex-row items-start md:items-center justify-between mb-4 xl:mb-8 xl:mt-2 px-4 gap-4 pt-4 tickets-board__filters"
 		>
 			<div class="flex items-center gap-3 mb-4 xl:mb-0">
 				<TicketsCreate :columns="columns" :default-project="projectId" :default-organization="organizationId" @ticketCreated="handleTicketCreated" />
@@ -41,7 +41,7 @@
 				</UButton>
 			</div>
 
-			<div v-if="!projectId" class="hidden md:flex flex-col items-end gap-2 relative mb-4 xl:mb-0 shrink-0">
+			<div v-if="!projectId" class="hidden md:flex flex-col items-end gap-2 relative mb-4 xl:mb-0 shrink-0 min-w-0">
 				<!-- Row 1: Toggles -->
 				<div class="flex flex-row items-center gap-4">
 					<button

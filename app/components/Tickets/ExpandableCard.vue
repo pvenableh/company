@@ -1,52 +1,18 @@
 <template>
-	<div ref="cardRef" class="w-full relative flex flex-col lg:flex-row flex-wrap items-center justify-center">
+	<div class="w-full relative">
 		<!-- Card Preview -->
-		<div class="w-full cursor-pointer transition-transform duration-300" :class="{ 'pointer-events-none': isExpanded }">
-			<TicketsCard :element="element" @expand="expand" @archive="archiveTicket" />
+		<div class="w-full cursor-pointer transition-transform duration-300">
+			<TicketsCard :element="element" @edit="openModal" @archive="archiveTicket" />
 		</div>
 
-		<!-- Teleported Fullscreen Overlay -->
-		<Teleport to="body">
-			<Transition
-				enter-active-class="transition duration-300 ease-out"
-				enter-from-class="opacity-0 scale-95"
-				enter-to-class="opacity-100 scale-100"
-				leave-active-class="transition duration-200 ease-in"
-				leave-from-class="opacity-100 scale-100"
-				leave-to-class="opacity-0 scale-95"
-			>
-				<div
-					v-if="isExpanded"
-					class="fixed inset-0 backdrop-blur-lg bg-white/75 dark:bg-gray-800 z-[50] overflow-auto"
-					@click.self="collapse"
-				>
-					<div
-						class="container mx-auto relative max-w-screen-xl flex items-center justify-center flex-wrap flex-col min-h-full"
-					>
-						<!-- Header -->
-						<div class="w-full sticky pb-6 top-10 z-10 flex items-end justify-end">
-							<UButton
-								color="gray"
-								variant="solid"
-								icon="i-heroicons-x-mark-20-solid"
-								@click="collapse"
-								:ui="{ rounded: 'rounded-full' }"
-								class=""
-							/>
-						</div>
-						<!-- Content -->
-
-						<TicketsDetails
-							v-if="element"
-							:element="element"
-							:columns="columns"
-							:is-loading="updatingTickets?.has(element.id)"
-							@prevent-close="handlePreventClose"
-						/>
-					</div>
-				</div>
-			</Transition>
-		</Teleport>
+		<!-- Quick Edit Modal -->
+		<TicketsFormModal
+			v-model="showModal"
+			:ticket="element"
+			:organization-id="element?.organization?.id || element?.organization"
+			@updated="handleUpdated"
+			@deleted="handleDeleted"
+		/>
 	</div>
 </template>
 
@@ -69,47 +35,20 @@ const props = defineProps({
 		required: true,
 	},
 });
-if (props.element.comments.length) {
-	console.log('Comments:', props.element.comments);
-}
 
-// Use computed properties instead of refs to keep values reactive
-const commentsCount = computed(() => {
-	// If commentsCount is explicitly set, use it
-	if (typeof props.element.commentsCount === 'number') {
-		return props.element.commentsCount;
-	}
+const showModal = ref(false);
 
-	// If comments is a number, return it directly
-	if (typeof props.element.comments === 'number') {
-		return props.element.comments;
-	}
+const openModal = () => {
+	showModal.value = true;
+};
 
-	// If comments is an array, return its length
-	if (Array.isArray(props.element.comments)) {
-		return props.element.comments.length;
-	}
+const handleUpdated = () => {
+	triggerRefresh();
+};
 
-	// Default to 0 if undefined or null
-	return 0;
-});
-
-const tasksCount = computed(() => {
-	// If tasks is an array, return its length
-	if (Array.isArray(props.element.tasks)) {
-		return props.element.tasks.length;
-	}
-	// If tasks is already a number, return it directly
-	if (typeof props.element.tasks === 'number') {
-		return props.element.tasks;
-	}
-	// Default to 0 if undefined or null
-	return 0;
-});
-
-const cardRef = ref(null);
-const isExpanded = ref(false);
-const canClose = ref(true);
+const handleDeleted = () => {
+	triggerRefresh();
+};
 
 const archiveTicket = async (id) => {
 	try {
@@ -121,34 +60,4 @@ const archiveTicket = async (id) => {
 		toast.add({ title: 'Failed to archive ticket', color: 'red' });
 	}
 };
-
-const expand = () => {
-	isExpanded.value = true;
-	document.body.style.overflow = 'hidden';
-};
-
-const collapse = () => {
-	if (!canClose.value) {
-		return;
-	}
-	isExpanded.value = false;
-	document.body.style.overflow = '';
-	triggerRefresh();
-};
-
-const handlePreventClose = (prevented) => {
-	canClose.value = !prevented;
-};
-
-onMounted(() => {
-	document.addEventListener('keydown', (e) => {
-		if (e.key === 'Escape' && isExpanded.value) {
-			collapse();
-		}
-	});
-});
-
-onUnmounted(() => {
-	document.body.style.overflow = '';
-});
 </script>

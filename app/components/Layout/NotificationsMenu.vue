@@ -4,7 +4,7 @@
 		<Popover v-model:open="isPopoverOpen">
 			<PopoverTrigger as-child>
 				<button
-					class="flex items-center justify-center relative rounded-full h-8 w-8 bg-white dark:bg-gray-800 shadow hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+					class="flex items-center justify-center relative rounded-full h-8 w-8 hover:bg-muted/50 text-muted-foreground transition-colors"
 					:disabled="!user"
 				>
 					<BellRing

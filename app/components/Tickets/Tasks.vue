@@ -289,6 +289,8 @@ async function updateTaskDescription(taskId, newDescription) {
 	}
 }
 
+let confettiFrameId = null;
+
 function startConfetti(duration = 4000) {
 	const end = Date.now() + duration;
 	const colors = ['#00bfff', '#0ef62d', '#e8fc00', '#ffcc00', '#ff005c', '#ff00cc', '#502989'];
@@ -310,7 +312,9 @@ function startConfetti(duration = 4000) {
 		});
 
 		if (Date.now() < end) {
-			requestAnimationFrame(frame);
+			confettiFrameId = requestAnimationFrame(frame);
+		} else {
+			confettiFrameId = null;
 		}
 	}
 
@@ -376,6 +380,11 @@ onMounted(() => {
 
 onUnmounted(() => {
 	disconnect();
+	if (confettiFrameId) {
+		cancelAnimationFrame(confettiFrameId);
+		confettiFrameId = null;
+	}
+	mentionedUsers.value.clear();
 });
 </script>
 
@@ -399,7 +408,7 @@ onUnmounted(() => {
 				</UAlert>
 			</div>
 		</transition>
-		<div class="transform scale-50 xl:scale-75 absolute -top-[90px] xl:-top-[120px] -right-10 xl:-right-20">
+		<div class="transform scale-[0.35] lg:scale-[0.4] absolute -top-[80px] lg:-top-[84px] -right-[54px] lg:-right-[50px]">
 			<TicketsProgressCircle :progressPercentage="progress" />
 		</div>
 

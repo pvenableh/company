@@ -60,8 +60,7 @@
 					<UIcon name="i-heroicons-link" class="w-4 h-4" />
 				</button>
 			</div>
-			<div v-if="showCharCount" class="absolute -bottom-[20px] right-0">
-				<!-- Character count display -->
+			<div v-if="showCharCount" class="flex items-center pr-2 ml-auto">
 				<span
 					class="text-[10px]"
 					:class="{
@@ -785,6 +784,11 @@ watch(
 );
 
 onBeforeUnmount(() => {
+	// Clean up any lingering mentions popup
+	if (mentionsPortal.value) {
+		const popup = mentionsPortal.value.querySelector('.mentions-menu');
+		if (popup) popup.remove();
+	}
 	editor.value?.destroy();
 });
 

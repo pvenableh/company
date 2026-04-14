@@ -20,8 +20,9 @@ export function useStatusStyle() {
     const s = normalize(status);
     if (['completed', 'done', 'paid', 'approved'].includes(s)) return 'hsl(var(--success))';
     if (['overdue', 'rejected', 'failed', 'cancelled'].includes(s)) return 'hsl(var(--destructive))';
-    if (['active', 'inprogress', 'open'].includes(s)) return 'hsl(var(--primary))';
-    if (['pending', 'processing', 'scheduled', 'new'].includes(s)) return 'hsl(var(--warning))';
+    if (['active', 'inprogress', 'open'].includes(s)) return 'hsl(160, 60%, 45%)';
+    if (['scheduled'].includes(s)) return 'hsl(199, 89%, 48%)';
+    if (['pending', 'processing', 'new'].includes(s)) return 'hsl(var(--warning))';
     if (['archived', 'draft', 'closed'].includes(s)) return 'hsl(var(--muted-foreground))';
     return 'hsl(var(--muted-foreground))';
   }
@@ -29,10 +30,11 @@ export function useStatusStyle() {
   /** Tailwind classes for inline badge (bg + text) */
   function getStatusBadgeClasses(status?: string | null): string {
     const s = normalize(status);
-    if (['completed', 'done', 'paid', 'approved'].includes(s)) return 'bg-emerald-500/15 text-emerald-500';
+    if (['completed', 'done', 'paid', 'approved'].includes(s)) return 'bg-green-500/15 text-green-500';
     if (['overdue', 'rejected', 'failed', 'cancelled'].includes(s)) return 'bg-destructive/15 text-destructive';
-    if (['active', 'inprogress', 'open'].includes(s)) return 'bg-primary/15 text-primary';
-    if (['pending', 'processing', 'scheduled', 'new'].includes(s)) return 'bg-amber-500/15 text-amber-500';
+    if (['active', 'inprogress', 'open'].includes(s)) return 'bg-teal-500/15 text-teal-500';
+    if (['scheduled'].includes(s)) return 'bg-sky-500/15 text-sky-500';
+    if (['pending', 'processing', 'new'].includes(s)) return 'bg-amber-500/15 text-amber-500';
     if (['archived', 'draft', 'closed'].includes(s)) return 'bg-muted text-muted-foreground';
     return 'bg-muted text-muted-foreground';
   }
@@ -45,5 +47,41 @@ export function useStatusStyle() {
     return 'cg-status-active';
   }
 
-  return { getStatusOpacity, getStatusAccent, getStatusBadgeClasses, getStatusOpacityClass };
+  /** Solid bg + white text class for prominent status pills */
+  function getStatusPillClass(status?: string | null): string {
+    const s = normalize(status);
+    if (['completed', 'done', 'paid', 'approved'].includes(s)) return 'bg-green-500 text-white';
+    if (['overdue', 'rejected', 'failed', 'cancelled'].includes(s)) return 'bg-destructive text-white';
+    if (['active', 'inprogress', 'open'].includes(s)) return 'bg-teal-500 text-white';
+    if (['scheduled'].includes(s)) return 'bg-sky-500 text-white';
+    if (['pending', 'processing', 'new'].includes(s)) return 'bg-amber-500 text-white';
+    if (['archived', 'draft', 'closed'].includes(s)) return 'bg-muted-foreground text-white';
+    return 'bg-muted-foreground text-white';
+  }
+
+  // ── Priority styling ──
+
+  /** Tailwind bg class for priority pill badges (white text) */
+  function getPriorityBadgeClass(priority?: string | null): string {
+    const p = normalize(priority);
+    if (p === 'high') return 'bg-[var(--red)]';
+    if (p === 'medium') return 'bg-[var(--cyan)]';
+    if (p === 'low') return 'bg-[var(--lightGrey)]';
+    return 'bg-[var(--lightGrey)]';
+  }
+
+  /** CSS gradient string for the priority segmented control */
+  const priorityGradient = 'linear-gradient(to right, var(--lightGrey), var(--cyan), var(--red))';
+
+  /** Priority options for segmented controls and selectors */
+  const priorityOptions = [
+    { value: 'low', label: 'Low' },
+    { value: 'medium', label: 'Medium' },
+    { value: 'high', label: 'High' },
+  ] as const;
+
+  return {
+    getStatusOpacity, getStatusAccent, getStatusBadgeClasses, getStatusPillClass, getStatusOpacityClass,
+    getPriorityBadgeClass, priorityGradient, priorityOptions,
+  };
 }

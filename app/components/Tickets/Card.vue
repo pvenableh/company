@@ -41,16 +41,11 @@
 			</div>
 
 			<!-- Title -->
-			<nuxt-link :to="`/tickets/${element.id}`" class="block mb-3">
+			<div class="block mb-3 cursor-pointer" @click="$emit('edit', element)">
 				<h4 class="text-sm font-semibold text-foreground line-clamp-2 leading-snug">
 					{{ element?.title }}
-					<UIcon
-						name="i-heroicons-arrow-right"
-						size="xs"
-						class="inline-block ml-0.5 -mb-[2px] scale-75 opacity-0 group-hover:opacity-50 transition-opacity"
-					/>
 				</h4>
-			</nuxt-link>
+			</div>
 
 			<!-- Meta: Client/Organization & Team -->
 			<div v-if="element?.client || element?.organization || element?.team" class="flex flex-col gap-1 mb-3">
@@ -158,7 +153,7 @@ const props = defineProps({
 	},
 });
 
-const emit = defineEmits(['archive']);
+const emit = defineEmits(['archive', 'edit']);
 
 const { user } = useDirectusAuth();
 

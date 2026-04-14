@@ -28,7 +28,7 @@
 					<label class="t-label text-muted-foreground">Client</label>
 					<select
 						v-model="form.client"
-						class="w-full rounded-md border bg-background px-3 py-2 text-sm"
+						class="w-full rounded-full border bg-background px-3 py-2 text-sm"
 					>
 						<option :value="null">No client</option>
 						<option v-for="c in clients" :key="c.value" :value="c.value">{{ c.label }}</option>
@@ -38,7 +38,7 @@
 					<label class="t-label text-muted-foreground">Service</label>
 					<select
 						v-model="form.service"
-						class="w-full rounded-md border bg-background px-3 py-2 text-sm"
+						class="w-full rounded-full border bg-background px-3 py-2 text-sm"
 					>
 						<option :value="null">No service</option>
 						<option v-for="s in services" :key="s.id" :value="s.id">{{ s.name }}</option>
@@ -95,26 +95,28 @@
 
 		<template #footer>
 			<div class="flex items-center justify-between w-full">
-				<div>
-					<Button
-						v-if="isEditing"
-						variant="ghost"
-						size="sm"
-						class="text-destructive hover:text-destructive hover:bg-destructive/10"
-						:disabled="saving"
-						@click="handleDelete"
-					>
-						<UIcon name="i-heroicons-trash" class="h-3.5 w-3.5 mr-1" />
-						Delete
-					</Button>
-				</div>
-				<div class="flex gap-3">
-					<Button variant="outline" size="sm" @click="isOpen = false">Cancel</Button>
+				<div class="flex items-center gap-1">
+					<UTooltip v-if="isEditing" text="Delete">
+						<Button
+							variant="ghost"
+							size="icon-sm"
+							class="text-destructive hover:text-destructive hover:bg-destructive/10"
+							:disabled="saving"
+							@click="handleDelete"
+						>
+							<Icon name="lucide:trash-2" class="h-3.5 w-3.5" />
+						</Button>
+					</UTooltip>
 					<Button size="sm" :disabled="saving || !form.title.trim()" @click="handleSubmit">
-						<UIcon v-if="saving" name="i-heroicons-arrow-path" class="animate-spin h-3 w-3 mr-1" />
-						{{ isEditing ? 'Save Changes' : 'Create Project' }}
+						<Icon v-if="saving" name="lucide:loader-2" class="h-3.5 w-3.5 mr-1 animate-spin" />
+						<Icon v-else name="lucide:save" class="h-3.5 w-3.5 mr-1" />
+						{{ isEditing ? 'Save' : 'Create' }}
 					</Button>
 				</div>
+				<NuxtLink v-if="isEditing && project?.id" :to="`/projects/${project.id}`" class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground hover:text-foreground transition-colors">
+					Full Details
+					<Icon name="lucide:chevron-right" class="w-3 h-3" />
+				</NuxtLink>
 			</div>
 		</template>
 	</UModal>

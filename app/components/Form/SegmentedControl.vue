@@ -4,7 +4,7 @@
 			<!-- Interactive Segmented Control -->
 			<div class="relative">
 				<!-- Steps Bar -->
-				<div class="segmented-track relative flex items-center rounded overflow-hidden h-5">
+				<div class="segmented-track relative flex items-center rounded-full overflow-hidden h-6">
 					<!-- Full-width gradient background -->
 					<div
 						class="absolute inset-0 w-full h-full"
@@ -17,7 +17,7 @@
 					<!-- Mask layer that reveals the gradient -->
 					<div
 						ref="maskLayer"
-						class="absolute inset-0 bg-gray-200 dark:bg-gray-700 h-full transition-all duration-300 origin-right"
+						class="absolute inset-0 bg-muted dark:bg-gray-700 h-full transition-all duration-300 origin-right"
 						:style="{
 							width: `${100 - progressWidth}%`,
 							right: 0,
@@ -144,7 +144,7 @@ const updateValue = (newValue) => {
 <style scoped>
 .segmented-track {
 	background-color: rgba(229, 231, 235, 0.5);
-	box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+	box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.06);
 	overflow: hidden;
 }
 

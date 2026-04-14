@@ -3,7 +3,7 @@
 		v-model="priorityValue"
 		:options="priorities"
 		label="Priority"
-		:custom-gradient="priorityGradient"
+		:custom-gradient="gradient"
 	/>
 </template>
 
@@ -17,14 +17,11 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue']);
 
-// Define our priority levels with values and labels
-const priorities = [
-	{ value: 'low', label: 'Low' },
-	{ value: 'medium', label: 'Medium' },
-	{ value: 'high', label: 'High' },
-];
+const { priorityGradient, priorityOptions } = useStatusStyle();
 
-// Priority computed value with getter/setter for v-model binding
+const priorities = [...priorityOptions];
+const gradient = priorityGradient;
+
 const priorityValue = computed({
 	get() {
 		return props.modelValue;
@@ -33,7 +30,4 @@ const priorityValue = computed({
 		emit('update:modelValue', newValue);
 	},
 });
-
-// Single gradient that will be revealed progressively
-const priorityGradient = 'linear-gradient(to right, var(--lightGrey), var(--cyan), var(--red)';
 </script>

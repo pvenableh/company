@@ -101,7 +101,7 @@ watch(() => route.path, () => {
 	<div class="flex h-screen bg-background">
 		<!-- ─── Desktop Sidebar ─── -->
 		<aside
-			class="hidden xl:flex flex-col border-r border-border/40 bg-sidebar-background shrink-0 transition-[width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] z-30"
+			class="hidden md:flex flex-col border-r border-border/40 bg-sidebar-background shrink-0 transition-[width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] z-30"
 			:class="sidebarCollapsed ? 'w-14 overflow-visible' : 'w-60 overflow-hidden'"
 		>
 			<!-- Command Center link (top of sidebar) -->
@@ -253,19 +253,12 @@ watch(() => route.path, () => {
 					<!-- Sidebar toggle + Client & team selects -->
 					<ClientOnly>
 						<div class="flex items-center gap-0.5 sm:gap-1">
-							<!-- Mobile/tablet: open drawer -->
+							<!-- Open drawer (mobile only, sidebar visible on md+) -->
 							<button
-								class="xl:hidden flex items-center justify-center w-7 h-7 rounded-full hover:bg-muted/50 text-muted-foreground transition-colors"
+								class="md:hidden flex items-center justify-center w-7 h-7 rounded-full hover:bg-muted/50 text-muted-foreground transition-colors"
 								@click="mobileDrawerOpen = !mobileDrawerOpen"
 							>
 								<Icon :name="mobileDrawerOpen ? 'lucide:x' : 'lucide:menu'" class="w-4 h-4" />
-							</button>
-							<!-- Desktop: toggle sidebar collapse -->
-							<button
-								class="hidden xl:flex items-center justify-center w-8 h-8 rounded-full hover:bg-muted/50 text-muted-foreground transition-colors"
-								@click="sidebarCollapsed = !sidebarCollapsed"
-							>
-								<Icon :name="sidebarCollapsed ? 'lucide:panel-left-open' : 'lucide:panel-left-close'" class="w-4 h-4" />
 							</button>
 							<LayoutClientSelect v-if="user" :user="user" @open-org-switcher="showOrgSwitcher = true" />
 							<LayoutTeamSelect v-if="user" class="hidden lg:block" />
@@ -303,6 +296,7 @@ watch(() => route.path, () => {
 			<!-- Page content -->
 			<main class="flex-1 overflow-auto">
 				<slot />
+				<LayoutFooter />
 			</main>
 
 			<!-- Walkthrough overlay (global) -->
@@ -404,10 +398,10 @@ watch(() => route.path, () => {
 
 /* ── Header tagline ── */
 .header-tagline {
-	font-family: var(--font-proxima-light);
-	font-style: italic;
-	font-size: 9px;
-	letter-spacing: 0.06em;
+	font-family: var(--font-signature);
+	font-size: 11px;
+	line-height: 1;
+	letter-spacing: 0.02em;
 	color: hsl(var(--muted-foreground));
 	margin-top: 1px;
 }
