@@ -1,13 +1,9 @@
 <template>
 	<div>
 		<!-- Create Button -->
-		<button
-			class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium text-foreground hover:bg-muted/50 hover:border-primary/30 transition-colors"
-			@click="openForm"
-		>
-			<Icon name="lucide:plus" class="w-3.5 h-3.5" />
-			<span>New Ticket</span>
-		</button>
+		<UiActionButton icon="lucide:plus" @click="openForm">
+			New Ticket
+		</UiActionButton>
 
 		<!-- Teleported Fullscreen Form -->
 		<Teleport to="body">

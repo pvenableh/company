@@ -602,20 +602,12 @@ const formatCurrency = (amount) => {
 					</div>
 				</div>
 				<div class="flex items-center gap-1.5">
-					<button
-						class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium text-primary hover:bg-primary/10 hover:border-primary/30 transition-colors"
-						@click="sidebarOpen = true"
-					>
-						<Icon name="lucide:sparkles" class="w-3.5 h-3.5" />
-						<span class="hidden sm:inline">Ask Earnest</span>
-					</button>
-					<button
-						class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors"
-						@click="showEditModal = true"
-					>
-						<Icon name="lucide:pencil" class="w-3.5 h-3.5" />
-						<span class="hidden sm:inline">Edit</span>
-					</button>
+					<UiActionButton icon="lucide:sparkles" variant="primary" @click="sidebarOpen = true" hide-label="sm">
+						Ask Earnest
+					</UiActionButton>
+					<UiActionButton icon="lucide:pencil" @click="showEditModal = true" hide-label="sm">
+						Edit
+					</UiActionButton>
 				</div>
 			</div>
 

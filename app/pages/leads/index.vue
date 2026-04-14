@@ -6,7 +6,16 @@ definePageMeta({ middleware: ['auth'] });
 useHead({ title: 'Leads | Earnest' });
 
 const { getLeads, getLeadStats } = useLeads();
-const { canAccess } = useOrgRole();
+
+// View toggle — useCookie is SSR-safe (no hydration mismatch)
+const viewCookie = useCookie('leadView', { default: () => 'board' });
+const activeView = ref(viewCookie.value || 'board');
+watch(activeView, (val) => { viewCookie.value = val; });
+
+const viewOptions = [
+	{ value: 'board', label: 'Board', icon: 'lucide:columns-3' },
+	{ value: 'grid', label: 'Grid', icon: 'lucide:layout-grid' },
+];
 
 const allLeads = ref<any[]>([]);
 const stats = ref({
@@ -61,35 +70,46 @@ onMounted(fetchData);
 		<!-- Stats -->
 		<LeadsLeadStats :stats="stats" class="mb-6" />
 
-		<!-- Filters -->
-		<LeadsLeadFilters
-			v-model:search="search"
-			v-model:stage="stageFilter"
-			v-model:priority="priorityFilter"
-			class="mb-4"
-			@clear="fetchData"
-		/>
+		<!-- View Toggle -->
+		<UiPillToggle v-model="activeView" :options="viewOptions" class="mb-6" />
 
-		<!-- Loading -->
-		<div v-if="loading" class="flex items-center justify-center py-20">
-			<UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin t-text-muted" />
+		<!-- Board View -->
+		<div v-show="activeView === 'board'">
+			<LeadsPipelineBoard />
 		</div>
 
-		<!-- Lead Grid -->
-		<div v-else-if="allLeads.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-			<LeadsLeadCard
-				v-for="lead in allLeads"
-				:key="lead.id"
-				:lead="lead"
-				@click="navigateTo(`/leads/${lead.id}`)"
+		<!-- Grid View -->
+		<div v-show="activeView !== 'board'">
+			<!-- Filters -->
+			<LeadsLeadFilters
+				v-model:search="search"
+				v-model:stage="stageFilter"
+				v-model:priority="priorityFilter"
+				class="mb-4"
+				@clear="fetchData"
 			/>
-		</div>
 
-		<!-- Empty -->
-		<div v-else class="text-center py-20">
-			<UIcon name="i-heroicons-inbox" class="w-12 h-12 t-text-muted mx-auto mb-3" />
-			<p class="t-text-secondary">No leads found</p>
-			<p class="text-xs t-text-muted mt-1">Leads from your website forms will appear here</p>
+			<!-- Loading -->
+			<div v-if="loading" class="flex items-center justify-center py-20">
+				<UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin t-text-muted" />
+			</div>
+
+			<!-- Lead Grid -->
+			<div v-else-if="allLeads.length" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+				<LeadsLeadCard
+					v-for="lead in allLeads"
+					:key="lead.id"
+					:lead="lead"
+					@click="navigateTo(`/leads/${lead.id}`)"
+				/>
+			</div>
+
+			<!-- Empty -->
+			<div v-else class="text-center py-20">
+				<UIcon name="i-heroicons-inbox" class="w-12 h-12 t-text-muted mx-auto mb-3" />
+				<p class="t-text-secondary">No leads found</p>
+				<p class="text-xs t-text-muted mt-1">Leads from your website forms will appear here</p>
+			</div>
 		</div>
 	</div>
 </template>

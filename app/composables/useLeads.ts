@@ -6,6 +6,7 @@
  */
 
 import type { LeadFilters, LeadStage, LeadStats } from '~~/shared/leads';
+import { LEAD_PIPELINE_STAGES, FOLLOW_UP_INTERVALS } from '~~/shared/leads';
 
 export function useLeads() {
   const leads = useDirectusItems('leads');
@@ -112,12 +113,207 @@ export function useLeads() {
     };
   };
 
+  const createLead = async (payload: Record<string, any>) => {
+    const { selectedOrg } = useOrganization();
+    return await leads.create({
+      ...payload,
+      organization: payload.organization || selectedOrg.value,
+      stage: payload.stage || 'new',
+    } as any);
+  };
+
+  const updateLead = async (id: number | string, payload: Record<string, any>) => {
+    return await leads.update(id, {
+      ...payload,
+      date_updated: new Date(),
+    } as any);
+  };
+
+  const scheduleFollowUp = async (leadId: number | string, stage: LeadStage) => {
+    const intervalDays = FOLLOW_UP_INTERVALS[stage];
+    if (!intervalDays) return;
+
+    const nextDate = new Date();
+    nextDate.setDate(nextDate.getDate() + intervalDays);
+    const nextFollowUp = nextDate.toISOString();
+
+    await leads.update(leadId, { next_follow_up: nextFollowUp } as any);
+
+    const { createActivity } = useLeadActivities();
+    await createActivity({
+      lead: Number(leadId),
+      activity_type: 'follow_up',
+      subject: `Auto follow-up scheduled (${stage})`,
+      description: `Follow-up automatically scheduled ${intervalDays} day${intervalDays > 1 ? 's' : ''} after stage change to ${stage}.`,
+      next_action: `Follow up on ${nextDate.toLocaleDateString()}`,
+      next_action_date: nextFollowUp,
+    });
+  };
+
+  const updateLeadStageWithAutomation = async (
+    id: number | string,
+    newStage: LeadStage,
+    oldStage?: LeadStage,
+  ): Promise<{ requiresConversion?: boolean; requiresLostReason?: boolean }> => {
+    if (newStage === 'won') {
+      return { requiresConversion: true };
+    }
+    if (newStage === 'lost') {
+      return { requiresLostReason: true };
+    }
+
+    await leads.update(id, { stage: newStage, date_updated: new Date() } as any);
+
+    // Log stage change activity
+    const { createActivity } = useLeadActivities();
+    await createActivity({
+      lead: Number(id),
+      activity_type: 'note',
+      subject: `Stage changed to ${newStage}`,
+      description: oldStage ? `Pipeline stage moved from ${oldStage} to ${newStage}.` : `Pipeline stage set to ${newStage}.`,
+    });
+
+    // Auto-schedule follow-up
+    await scheduleFollowUp(id, newStage);
+
+    return {};
+  };
+
+  const convertToClient = async (
+    leadId: number | string,
+    clientData: Record<string, any>,
+    projectData?: Record<string, any>,
+  ) => {
+    const { createClient } = useClients();
+    const projectItems = useDirectusItems('projects');
+    const { selectedOrg } = useOrganization();
+
+    // Create client
+    const client = await createClient({
+      ...clientData,
+      organization: clientData.organization || selectedOrg.value,
+    });
+
+    // Create project if requested
+    if (projectData && (client as any)?.id) {
+      await projectItems.create({
+        ...projectData,
+        client: (client as any).id,
+        organization: projectData.organization || selectedOrg.value,
+        status: projectData.status || 'Active',
+      } as any);
+    }
+
+    // Mark lead as converted
+    await leads.update(leadId, {
+      converted_to_customer: true,
+      stage: 'won',
+      actual_value: clientData.contract_value || null,
+      closed_date: new Date().toISOString(),
+      date_updated: new Date(),
+    } as any);
+
+    // Log conversion activity
+    const { createActivity } = useLeadActivities();
+    await createActivity({
+      lead: Number(leadId),
+      activity_type: 'note',
+      subject: 'Lead converted to client',
+      description: `Created client "${clientData.name}" and marked lead as won.`,
+    });
+
+    return client;
+  };
+
+  const markLeadLost = async (leadId: number | string, lostReason: string, closedDate?: string) => {
+    await leads.update(leadId, {
+      stage: 'lost',
+      lost_reason: lostReason,
+      closed_date: closedDate || new Date().toISOString(),
+      date_updated: new Date(),
+    } as any);
+
+    const { createActivity } = useLeadActivities();
+    await createActivity({
+      lead: Number(leadId),
+      activity_type: 'note',
+      subject: 'Lead marked as lost',
+      description: `Reason: ${lostReason}`,
+    });
+  };
+
+  const getLeadsByStage = async (filters?: LeadFilters): Promise<Record<LeadStage, any[]>> => {
+    const allLeads = await getLeads(filters);
+
+    const grouped: Record<LeadStage, any[]> = {
+      new: [], contacted: [], qualified: [], proposal_sent: [], negotiating: [], won: [], lost: [],
+    };
+
+    for (const lead of allLeads as any[]) {
+      const stage = lead.stage as LeadStage;
+      if (grouped[stage]) {
+        grouped[stage].push(lead);
+      }
+    }
+
+    // Sort each stage by lead_score descending
+    for (const stage of Object.keys(grouped) as LeadStage[]) {
+      grouped[stage].sort((a: any, b: any) => (b.lead_score || 0) - (a.lead_score || 0));
+    }
+
+    return grouped;
+  };
+
+  const archiveLead = async (id: number | string) => {
+    await leads.update(id, { status: 'archived', date_updated: new Date() } as any);
+  };
+
+  const junkLead = async (id: number | string) => {
+    await leads.update(id, { status: 'junk', date_updated: new Date() } as any);
+  };
+
+  const restoreLead = async (id: number | string) => {
+    await leads.update(id, { status: 'published', date_updated: new Date() } as any);
+  };
+
+  const getArchivedLeads = async () => {
+    return await leads.list({
+      fields: [
+        '*',
+        'related_contact.id',
+        'related_contact.first_name',
+        'related_contact.last_name',
+        'related_contact.email',
+        'related_contact.company',
+        'assigned_to.id',
+        'assigned_to.first_name',
+        'assigned_to.last_name',
+      ],
+      filter: {
+        status: { _in: ['archived', 'junk'] },
+      },
+      sort: ['-date_updated'],
+      limit: 100,
+    });
+  };
+
   return {
     getLeads,
     getLead,
     updateLeadStage,
     assignLead,
     getLeadStats,
+    createLead,
+    updateLead,
+    updateLeadStageWithAutomation,
+    convertToClient,
+    markLeadLost,
+    scheduleFollowUp,
+    getLeadsByStage,
+    archiveLead,
+    junkLead,
+    restoreLead,
+    getArchivedLeads,
     ...leads,
   };
 }

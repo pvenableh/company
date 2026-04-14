@@ -17,6 +17,16 @@ const isAdmin = computed(() => canAccess('projects'));
 // Default to timeline view for admin, table for others
 const activeView = ref('timeline');
 
+const projectViewOptions = computed(() => {
+	const opts = [];
+	if (isAdmin.value) {
+		opts.push({ value: 'timeline', label: 'Timeline', icon: 'lucide:map' });
+		opts.push({ value: 'board', label: 'Board', icon: 'lucide:columns-3' });
+	}
+	opts.push({ value: 'table', label: 'Table', icon: 'lucide:table' });
+	return opts;
+});
+
 // Filters
 const statusFilter = ref('active');
 const searchQuery = ref('');
@@ -153,13 +163,9 @@ definePageMeta({
 			</div>
 			<div class="flex items-center gap-2">
 			<LayoutShareButton title="Projects | Earnest" />
-			<button
-				class="h-9 px-4 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors flex items-center gap-2"
-				@click="showProjectForm = true"
-			>
-				<UIcon name="i-heroicons-plus" class="w-4 h-4" />
+			<UiActionButton icon="lucide:plus" @click="showProjectForm = true">
 				New Project
-			</button>
+			</UiActionButton>
 			</div>
 		</div>
 
@@ -170,40 +176,7 @@ definePageMeta({
 
 		<!-- View switcher -->
 		<ClientOnly>
-			<div class="flex items-center gap-1 mb-5">
-				<button
-					v-if="isAdmin"
-					class="px-3 py-1.5 text-xs font-medium rounded-md transition-colors"
-					:class="activeView === 'timeline'
-						? 'bg-primary text-primary-foreground'
-						: 'text-muted-foreground hover:text-foreground'"
-					@click="activeView = 'timeline'"
-				>
-					<Icon name="lucide:map" class="h-3.5 w-3.5 inline -mt-0.5 mr-1" />
-					Timeline
-				</button>
-				<button
-					v-if="isAdmin"
-					class="px-3 py-1.5 text-xs font-medium rounded-md transition-colors"
-					:class="activeView === 'board'
-						? 'bg-primary text-primary-foreground'
-						: 'text-muted-foreground hover:text-foreground'"
-					@click="activeView = 'board'"
-				>
-					<Icon name="lucide:columns-3" class="h-3.5 w-3.5 inline -mt-0.5 mr-1" />
-					Board
-				</button>
-				<button
-					class="px-3 py-1.5 text-xs font-medium rounded-md transition-colors"
-					:class="activeView === 'table'
-						? 'bg-primary text-primary-foreground'
-						: 'text-muted-foreground hover:text-foreground'"
-					@click="activeView = 'table'"
-				>
-					<Icon name="lucide:table" class="h-3.5 w-3.5 inline -mt-0.5 mr-1" />
-					Table
-				</button>
-			</div>
+			<UiPillToggle v-model="activeView" :options="projectViewOptions" class="mb-5" />
 		</ClientOnly>
 
 		<!-- Filters -->

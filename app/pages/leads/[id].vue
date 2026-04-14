@@ -7,13 +7,19 @@ definePageMeta({ middleware: ['auth'] });
 const route = useRoute();
 const leadId = computed(() => route.params.id as string);
 
-const { getLead, updateLeadStage } = useLeads();
+const { getLead, updateLeadStageWithAutomation } = useLeads();
 const { getActivitiesForLead, createActivity } = useLeadActivities();
+const { getPriorityBadgeClass } = useStatusStyle();
 
 const lead = ref<any>(null);
 const activities = ref<any[]>([]);
 const loading = ref(true);
 const stageUpdating = ref(false);
+
+// Modals
+const showFormModal = ref(false);
+const showConversionModal = ref(false);
+const showLostReasonModal = ref(false);
 
 // Activity form
 const showActivityForm = ref(false);
@@ -25,6 +31,9 @@ const newActivity = reactive({
 	next_action: '',
 });
 const activitySaving = ref(false);
+
+// Stage statuses for FormStatusTimeline
+const stageStatuses = Object.entries(LEAD_STAGE_LABELS).map(([id, name]) => ({ id, name }));
 
 async function fetchData() {
 	loading.value = true;
@@ -43,11 +52,24 @@ async function fetchData() {
 	}
 }
 
-async function handleStageChange(stage: LeadStage) {
+async function handleStageChange(e: { oldStatus: string; newStatus: string }) {
+	const newStage = e.newStatus as LeadStage;
+
+	if (newStage === 'won') {
+		showConversionModal.value = true;
+		return;
+	}
+	if (newStage === 'lost') {
+		showLostReasonModal.value = true;
+		return;
+	}
+
 	stageUpdating.value = true;
 	try {
-		await updateLeadStage(leadId.value, stage);
-		lead.value.stage = stage;
+		await updateLeadStageWithAutomation(leadId.value, newStage, lead.value?.stage);
+		lead.value.stage = newStage;
+		// Refresh activities to show the auto-logged stage change
+		activities.value = await getActivitiesForLead(leadId.value) as any[];
 	} finally {
 		stageUpdating.value = false;
 	}
@@ -67,14 +89,31 @@ async function handleAddActivity() {
 		});
 		showActivityForm.value = false;
 		Object.assign(newActivity, { activity_type: 'note', subject: '', description: '', outcome: '', next_action: '' });
-		// Refresh activities
 		activities.value = await getActivitiesForLead(leadId.value) as any[];
 	} finally {
 		activitySaving.value = false;
 	}
 }
 
-const stageOptions = Object.entries(LEAD_STAGE_LABELS).map(([value, label]) => ({ value, label }));
+function handleModalUpdated() {
+	fetchData();
+	showFormModal.value = false;
+}
+
+function handleConverted() {
+	fetchData();
+	showConversionModal.value = false;
+}
+
+function handleLost() {
+	fetchData();
+	showLostReasonModal.value = false;
+}
+
+const isOverdueFollowUp = computed(() => {
+	if (!lead.value?.next_follow_up) return false;
+	return new Date(lead.value.next_follow_up) < new Date();
+});
 
 // ── Meeting integration ──
 const showMeetingModal = ref(false);
@@ -103,7 +142,6 @@ async function fetchUpcomingMeetings() {
 const handleMeetingCreated = () => {
 	showMeetingModal.value = false;
 	fetchUpcomingMeetings();
-	// Refresh activities to show the auto-logged meeting
 	getActivitiesForLead(leadId.value).then((r) => { activities.value = r as any[]; });
 };
 
@@ -136,43 +174,38 @@ onMounted(() => {
 							<span v-if="lead.related_contact?.email"> · {{ lead.related_contact.email }}</span>
 						</p>
 					</div>
-					<div class="flex items-center gap-2">
-						<button
-							@click="showMeetingModal = true"
-							class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-600 text-[11px] font-medium hover:bg-emerald-500/20 transition-colors ios-press"
-						>
-							<UIcon name="i-heroicons-video-camera" class="w-3.5 h-3.5" />
-							Schedule Meeting
-						</button>
-						<NuxtLink
-							:to="`/proposals/new?lead=${lead.id}`"
-							class="text-xs"
-						>
-							<UButton size="sm" variant="outline" icon="i-heroicons-document-plus">
-								Create Proposal
-							</UButton>
+					<div class="flex items-center gap-1.5">
+						<UiActionButton icon="lucide:pencil" @click="showFormModal = true" hide-label="sm">
+							Edit
+						</UiActionButton>
+						<UiActionButton icon="lucide:video" variant="primary" @click="showMeetingModal = true" hide-label="sm">
+							Meeting
+						</UiActionButton>
+						<NuxtLink :to="`/proposals/new?lead=${lead.id}`">
+							<UiActionButton icon="lucide:file-plus">
+								Proposal
+							</UiActionButton>
 						</NuxtLink>
 					</div>
 				</div>
 			</div>
 
+			<!-- Pipeline Stage Timeline -->
+			<div class="ios-card p-4 mb-6">
+				<p class="text-[10px] uppercase font-semibold t-text-muted tracking-wider mb-4">Pipeline Stage</p>
+				<FormStatusTimeline
+					:currentStatus="lead.stage"
+					:statuses="stageStatuses"
+					collection="leads"
+					:itemId="String(lead.id)"
+					:loading="stageUpdating"
+					@status-change="handleStageChange"
+				/>
+			</div>
+
 			<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 				<!-- Left: Lead info -->
 				<div class="lg:col-span-1 space-y-4">
-					<!-- Stage -->
-					<div class="ios-card p-4">
-						<p class="text-[10px] uppercase font-semibold t-text-muted tracking-wider mb-2">Pipeline Stage</p>
-						<USelectMenu
-							:model-value="lead.stage"
-							:options="stageOptions"
-							value-attribute="value"
-							option-attribute="label"
-							size="sm"
-							:loading="stageUpdating"
-							@update:model-value="handleStageChange"
-						/>
-					</div>
-
 					<!-- Details -->
 					<div class="ios-card p-4 space-y-3">
 						<p class="text-[10px] uppercase font-semibold t-text-muted tracking-wider">Details</p>
@@ -183,7 +216,12 @@ onMounted(() => {
 							</div>
 							<div>
 								<p class="t-text-muted">Priority</p>
-								<p class="font-medium t-text capitalize">{{ lead.priority || 'none' }}</p>
+								<span
+									class="text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded text-white"
+									:class="getPriorityBadgeClass(lead.priority)"
+								>
+									{{ lead.priority || 'none' }}
+								</span>
 							</div>
 							<div>
 								<p class="t-text-muted">Source</p>
@@ -199,7 +237,10 @@ onMounted(() => {
 							</div>
 							<div>
 								<p class="t-text-muted">Next Follow-up</p>
-								<p class="font-medium t-text">{{ lead.next_follow_up ? new Date(lead.next_follow_up).toLocaleDateString() : '—' }}</p>
+								<p class="font-medium" :class="isOverdueFollowUp ? 'text-red-500' : 't-text'">
+									{{ lead.next_follow_up ? new Date(lead.next_follow_up).toLocaleDateString() : '—' }}
+									<span v-if="isOverdueFollowUp" class="text-[9px] font-semibold ml-1">OVERDUE</span>
+								</p>
 							</div>
 						</div>
 					</div>
@@ -319,6 +360,30 @@ onMounted(() => {
 					<LeadsActivityTimeline :activities="activities" />
 				</div>
 			</div>
+
+			<!-- Quick Edit Modal -->
+			<LeadsFormModal
+				v-model="showFormModal"
+				:lead="lead"
+				:organization-id="lead?.organization?.id || lead?.organization"
+				@updated="handleModalUpdated"
+				@convert="showConversionModal = true; showFormModal = false"
+				@lost="showLostReasonModal = true; showFormModal = false"
+			/>
+
+			<!-- Conversion Modal -->
+			<LeadsConversionModal
+				v-model="showConversionModal"
+				:lead="lead"
+				@converted="handleConverted"
+			/>
+
+			<!-- Lost Reason Modal -->
+			<LeadsLostReasonModal
+				v-model="showLostReasonModal"
+				:lead="lead"
+				@lost="handleLost"
+			/>
 
 			<!-- Schedule Meeting Modal -->
 			<SchedulerNewMeetingModal

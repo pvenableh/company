@@ -43,3 +43,30 @@ export const LEAD_STAGE_COLORS: Record<LeadStage, string> = {
   won: '#10B981',
   lost: '#EF4444',
 };
+
+/** Active pipeline stages for the Kanban board (excludes terminal won/lost) */
+export const LEAD_PIPELINE_STAGES: LeadStage[] = [
+  'new', 'contacted', 'qualified', 'proposal_sent', 'negotiating',
+];
+
+/** CSS variable color names for board column headers */
+export const LEAD_STAGE_COLUMN_COLORS: Record<LeadStage, string> = {
+  new: 'cyan',
+  contacted: 'cyan2',
+  qualified: 'green2',
+  proposal_sent: 'yellow',
+  negotiating: 'pink',
+  won: 'green',
+  lost: 'red',
+};
+
+/** Default follow-up intervals in days per stage */
+export const FOLLOW_UP_INTERVALS: Record<LeadStage, number> = {
+  new: 1,
+  contacted: 3,
+  qualified: 5,
+  proposal_sent: 2,
+  negotiating: 1,
+  won: 0,
+  lost: 0,
+};
