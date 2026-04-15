@@ -8,6 +8,8 @@
 const props = defineProps<{
 	project: any;
 	tickets?: any[];
+	meetings?: any[];
+	invoices?: any[];
 }>();
 
 const emit = defineEmits<{
@@ -21,7 +23,7 @@ const SIDEBAR_WIDTH = 220;
 interface MiniRow {
 	id: string;
 	label: string;
-	type: 'event' | 'ticket' | 'task';
+	type: 'event' | 'ticket' | 'task' | 'meeting' | 'invoice';
 	color: string;
 	startDate?: string;
 	endDate?: string;
@@ -74,6 +76,35 @@ const rows = computed<MiniRow[]>(() => {
 			startDate: ticket.date_created,
 			dueDate: ticket.due_date,
 			status: ticket.status,
+		});
+	}
+
+	// Video meetings — single-day markers
+	for (const meeting of (props.meetings || [])) {
+		if (meeting.status === 'cancelled' || meeting.status === 'archived') continue;
+		result.push({
+			id: `meeting-${meeting.id}`,
+			label: meeting.title || 'Meeting',
+			type: 'meeting',
+			color: '#a855f7', // purple
+			startDate: meeting.scheduled_start,
+			endDate: meeting.scheduled_start, // single-day marker
+			status: meeting.status,
+			raw: meeting,
+		});
+	}
+
+	// Invoices — single-day markers
+	for (const inv of (props.invoices || [])) {
+		result.push({
+			id: `invoice-${inv.id}`,
+			label: inv.invoice_code || 'Invoice',
+			type: 'invoice',
+			color: '#22c55e', // green
+			startDate: inv.invoice_date,
+			endDate: inv.invoice_date, // single-day marker
+			status: inv.status,
+			raw: inv,
 		});
 	}
 
@@ -219,7 +250,7 @@ function syncScroll() {
 
 						<!-- Type icon with tooltip -->
 						<UTooltip
-							:text="row.type === 'event' ? 'Event' : row.type === 'ticket' ? 'Ticket' : 'Task'"
+							:text="row.type === 'event' ? 'Event' : row.type === 'ticket' ? 'Ticket' : row.type === 'meeting' ? 'Meeting' : row.type === 'invoice' ? 'Invoice' : 'Task'"
 							:popper="{ placement: 'right', offsetDistance: 6 }"
 						>
 							<span
@@ -227,16 +258,18 @@ function syncScroll() {
 								:style="row.type === 'event' ? { backgroundColor: row.color + '1a' } : undefined"
 								:class="{
 									'bg-amber-500/10': row.type === 'ticket',
-									'bg-purple-500/10': row.type === 'task',
+									'bg-purple-500/10': row.type === 'task' || row.type === 'meeting',
+									'bg-green-500/10': row.type === 'invoice',
 								}"
 							>
 								<Icon
-									:name="row.type === 'event' ? 'lucide:calendar' : row.type === 'ticket' ? 'lucide:ticket' : 'lucide:check-square'"
+									:name="row.type === 'event' ? 'lucide:calendar' : row.type === 'ticket' ? 'lucide:ticket' : row.type === 'meeting' ? 'lucide:video' : row.type === 'invoice' ? 'lucide:receipt' : 'lucide:check-square'"
 									class="w-3 h-3"
 									:style="row.type === 'event' ? { color: row.color } : undefined"
 									:class="{
 										'text-amber-500': row.type === 'ticket',
-										'text-purple-500': row.type === 'task',
+										'text-purple-500': row.type === 'task' || row.type === 'meeting',
+										'text-green-500': row.type === 'invoice',
 									}"
 								/>
 							</span>

@@ -3401,6 +3401,7 @@ export interface VideoMeeting {
 	outlook_event_id?: string | null;
 	/** @description Require host to admit guests before they can join */
 	waiting_room_enabled?: boolean;
+	project?: Project | string | null;
 	attendees?: VideoMeetingAttendee[] | string[];
 }
 

@@ -48,6 +48,13 @@
 					</div>
 				</UFormGroup>
 
+				<!-- Project context badge -->
+				<div v-if="projectData" class="flex items-center gap-2 px-3 py-2 bg-cyan-500/5 border border-cyan-500/20 rounded-lg">
+					<UIcon name="i-heroicons-folder" class="w-4 h-4 text-cyan-500 shrink-0" />
+					<span class="text-xs font-medium text-foreground">{{ projectData.title }}</span>
+					<span class="text-[9px] uppercase tracking-wider text-muted-foreground">Project</span>
+				</div>
+
 				<!-- Title -->
 				<UFormGroup label="Meeting Title" required>
 					<UInput v-model="form.title" placeholder="Project discussion" size="lg" />
@@ -134,6 +141,8 @@ const props = defineProps<{
 	selectedDate?: Date;
 	leadId?: number | string;
 	leadData?: any;
+	projectId?: string;
+	projectData?: any;
 }>();
 
 const emit = defineEmits(['update:modelValue', 'created']);
@@ -299,6 +308,7 @@ const createMeeting = async () => {
 				waiting_room_enabled: form.waiting_room_enabled,
 				custom_message: form.custom_message,
 				related_lead: form.related_lead?.id || null,
+				project: props.projectId || null,
 				attendees: form.attendees.filter((a) => a.name || a.email),
 			},
 		});

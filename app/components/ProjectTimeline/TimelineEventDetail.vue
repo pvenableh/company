@@ -16,7 +16,6 @@ const emit = defineEmits<{
 const config = useRuntimeConfig();
 const { updateEvent } = useProjectTimeline();
 const { getPriorityBadgeClass } = useStatusStyle();
-const { getInvoices } = useInvoices();
 const toast = useToast();
 
 // Local editable copy
@@ -32,11 +31,6 @@ const form = reactive({
   prototype_link: '',
 });
 
-// M2M invoices — managed as array of selected IDs
-const selectedInvoiceIds = ref<string[]>([]);
-const availableInvoices = ref<any[]>([]);
-const loadingInvoices = ref(false);
-
 // Sync from prop on load / change
 watchEffect(() => {
   if (!props.event) return;
@@ -49,12 +43,6 @@ watchEffect(() => {
   form.is_milestone = Boolean(props.event.is_milestone);
   form.link = (props.event as any).link || '';
   form.prototype_link = (props.event as any).prototype_link || '';
-
-  // Sync linked invoices
-  const invoices = (props.event as any).invoices || [];
-  selectedInvoiceIds.value = invoices
-    .map((j: any) => j.invoices_id?.id || j.invoices_id)
-    .filter(Boolean);
 });
 
 // Conditional field visibility based on type
@@ -63,41 +51,13 @@ const visibleFields = computed(() => {
   return {
     showLink: ['General', 'Design', 'Content'].includes(t),
     showPrototypeLink: t === 'Design',
-    showFiles: ['Design', 'Content', 'Financial'].includes(t),
-    showInvoices: t === 'Financial',
+    showFiles: ['Design', 'Content'].includes(t),
     showApproval: ['Design', 'Content'].includes(t),
   };
 });
 
-// Fetch available invoices when type is Financial
-watch(() => visibleFields.value.showInvoices, async (show) => {
-  if (!show || availableInvoices.value.length > 0) return;
-  const clientId = (props.project as any)?.client;
-  if (!clientId) return;
-  loadingInvoices.value = true;
-  try {
-    const { data } = await getInvoices({ limit: 200 });
-    // Filter to invoices belonging to this project's client
-    availableInvoices.value = data.filter((inv: any) =>
-      inv.client?.id === clientId || inv.bill_to?.id === clientId
-    );
-  } catch (err) {
-    console.error('Failed to fetch invoices:', err);
-  } finally {
-    loadingInvoices.value = false;
-  }
-}, { immediate: true });
-
 const dirty = computed(() => {
   if (!props.event) return false;
-
-  const origInvoiceIds = ((props.event as any).invoices || [])
-    .map((j: any) => j.invoices_id?.id || j.invoices_id)
-    .filter(Boolean)
-    .sort()
-    .join(',');
-  const currentInvoiceIds = [...selectedInvoiceIds.value].sort().join(',');
-
   return (
     form.title !== (props.event.title || '') ||
     form.description !== (props.event.description || '') ||
@@ -107,8 +67,7 @@ const dirty = computed(() => {
     form.priority !== (props.event.priority || 'Normal') ||
     form.is_milestone !== Boolean(props.event.is_milestone) ||
     form.link !== ((props.event as any).link || '') ||
-    form.prototype_link !== ((props.event as any).prototype_link || '') ||
-    origInvoiceIds !== currentInvoiceIds
+    form.prototype_link !== ((props.event as any).prototype_link || '')
   );
 });
 
@@ -118,7 +77,7 @@ async function save() {
   if (!dirty.value || saving.value) return;
   saving.value = true;
   try {
-    const payload: Record<string, any> = {
+    await updateEvent(props.event.id, {
       title: form.title,
       description: form.description,
       event_date: form.event_date,
@@ -129,39 +88,13 @@ async function save() {
       is_milestone: form.is_milestone,
       link: form.link || null,
       prototype_link: form.prototype_link || null,
-    };
-
-    // Include M2M invoices if Financial type
-    if (visibleFields.value.showInvoices) {
-      payload.invoices = selectedInvoiceIds.value.map(id => ({ invoices_id: id }));
-    }
-
-    await updateEvent(props.event.id, payload);
+    });
     toast.add({ title: 'Event updated', color: 'green' });
     emit('updated');
   } catch (err: any) {
     toast.add({ title: 'Failed to save', description: err?.message, color: 'red' });
   } finally {
     saving.value = false;
-  }
-}
-
-function toggleInvoice(id: string) {
-  const idx = selectedInvoiceIds.value.indexOf(id);
-  if (idx >= 0) {
-    selectedInvoiceIds.value.splice(idx, 1);
-  } else {
-    selectedInvoiceIds.value.push(id);
-  }
-}
-
-function invoiceStatusColor(status: string) {
-  switch (status?.toLowerCase()) {
-    case 'paid': return 'text-green-600 bg-green-500/10';
-    case 'sent': case 'pending': return 'text-amber-600 bg-amber-500/10';
-    case 'overdue': return 'text-red-600 bg-red-500/10';
-    case 'draft': return 'text-muted-foreground bg-muted';
-    default: return 'text-muted-foreground bg-muted';
   }
 }
 
@@ -175,7 +108,7 @@ const taskStats = computed(() => {
 
 const fileCount = computed(() => props.event.files?.length || 0);
 
-const typeOptions = ['General', 'Design', 'Content', 'Timeline', 'Financial', 'Hours'];
+const typeOptions = ['General', 'Design', 'Content', 'Timeline', 'Hours'];
 const priorityOptions = ['Normal', 'Urgent'];
 
 defineExpose({ dirty, save });
@@ -286,42 +219,6 @@ defineExpose({ dirty, save });
             class="w-full rounded-xl border bg-background px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-primary/30 placeholder:text-muted-foreground/50"
             placeholder="https://figma.com/..."
           />
-        </div>
-      </div>
-
-      <!-- Invoice Selector (Financial only) -->
-      <div v-if="visibleFields.showInvoices" class="space-y-2">
-        <label class="t-label text-muted-foreground">Linked Invoices</label>
-        <div v-if="loadingInvoices" class="flex items-center gap-2 text-xs text-muted-foreground">
-          <Icon name="lucide:loader-2" class="w-3.5 h-3.5 animate-spin" />
-          Loading invoices...
-        </div>
-        <div v-else-if="availableInvoices.length === 0" class="text-xs text-muted-foreground">
-          No invoices found for this client.
-        </div>
-        <div v-else class="flex flex-wrap gap-1.5">
-          <button
-            v-for="inv in availableInvoices"
-            :key="inv.id"
-            type="button"
-            class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors"
-            :class="selectedInvoiceIds.includes(inv.id)
-              ? 'bg-green-500/10 border-green-500/30 text-green-700 dark:text-green-400'
-              : 'text-muted-foreground hover:text-foreground hover:border-foreground/30'"
-            @click="toggleInvoice(inv.id)"
-          >
-            <Icon
-              :name="selectedInvoiceIds.includes(inv.id) ? 'lucide:check-circle-2' : 'lucide:circle'"
-              class="w-3 h-3"
-            />
-            <span class="font-medium">{{ inv.invoice_code }}</span>
-            <span v-if="inv.total_amount != null">${{ Number(inv.total_amount).toLocaleString() }}</span>
-            <span
-              v-if="inv.status"
-              class="rounded-full px-1.5 py-0.5 text-[9px] uppercase tracking-wider font-semibold"
-              :class="invoiceStatusColor(inv.status)"
-            >{{ inv.status }}</span>
-          </button>
         </div>
       </div>
 

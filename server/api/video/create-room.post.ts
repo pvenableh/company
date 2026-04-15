@@ -23,6 +23,7 @@ interface CreateRoomBody {
 	attendees?: AttendeeInput[];
 	custom_message?: string;
 	related_lead?: number | string | null;
+	project?: string | null;
 }
 
 export default defineEventHandler(async (event) => {
@@ -118,6 +119,9 @@ export default defineEventHandler(async (event) => {
 
 		if (body.related_lead) {
 			videoMeetingData.related_lead = body.related_lead;
+		}
+		if (body.project) {
+			videoMeetingData.project = body.project;
 		}
 
 		const videoMeeting = await directus.request(

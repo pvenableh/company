@@ -170,12 +170,16 @@
 						<UIcon name="i-heroicons-calendar" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-500" />
 					</div>
 					<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Events</span>
-					<span v-if="allEvents.length" class="text-[10px] text-muted-foreground/50">({{ allEvents.length }})</span>
+					<span v-if="allTimelineItems.length" class="text-[10px] text-muted-foreground/50">({{ allTimelineItems.length }})</span>
 				</div>
 				<div class="flex items-center gap-1 sm:gap-2 shrink-0">
 					<Button size="sm" variant="outline" class="uppercase text-[9px] sm:text-[10px] tracking-wide h-7 px-2 sm:px-3" @click="showTimelineWizard = true">
 						<UIcon name="i-heroicons-sparkles" class="h-3 w-3 mr-0.5 sm:mr-1" />
 						<span class="hidden sm:inline">Generate</span> Timeline
+					</Button>
+					<Button size="sm" variant="outline" class="uppercase text-[9px] sm:text-[10px] tracking-wide h-7 px-2 sm:px-3" @click="showScheduleMeeting = true">
+						<UIcon name="i-heroicons-video-camera" class="h-3 w-3 mr-0.5 sm:mr-1" />
+						<span class="hidden sm:inline">Schedule</span> Meeting
 					</Button>
 					<Button size="sm" variant="outline" class="uppercase text-[9px] sm:text-[10px] tracking-wide h-7 px-2 sm:px-3" @click="showNewEventModal = true">
 						<UIcon name="i-heroicons-plus" class="h-3 w-3 mr-0.5 sm:mr-1" />
@@ -184,7 +188,7 @@
 				</div>
 			</div>
 
-			<div v-if="allEvents.length === 0" class="flex flex-col items-center justify-center py-12 text-center">
+			<div v-if="allTimelineItems.length === 0" class="flex flex-col items-center justify-center py-12 text-center">
 				<UIcon name="i-heroicons-calendar" class="w-8 h-8 text-muted-foreground/30 mb-2" />
 				<p class="text-sm text-muted-foreground">No events yet</p>
 				<p class="text-xs text-muted-foreground/60 mt-1">Create events manually or generate a timeline with AI.</p>
@@ -192,57 +196,66 @@
 
 			<UTabs v-else :items="eventTabs">
 				<template #timeline>
-					<ProjectsMiniGantt :project="project" class="mt-2" @event-click="openEventDetail" />
+					<ProjectsMiniGantt :project="project" :meetings="projectMeetings" :invoices="projectInvoices" class="mt-2" @event-click="openEventDetail" />
 				</template>
 				<template #list>
 					<div class="space-y-2 mt-2">
 						<button
-							v-for="event in allEvents"
-							:key="event.id"
+							v-for="item in allTimelineItems"
+							:key="`${item.source}-${item.id}`"
 							class="w-full text-left p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors ios-press"
-							@click="openEventDetail(event)"
+							@click="handleTimelineItemClick(item)"
 						>
 							<div class="flex items-center justify-between">
 								<div class="flex items-center gap-2 min-w-0">
-									<div
+									<!-- Source-aware dot/icon -->
+									<div v-if="item.source === 'meeting'" class="h-5 w-5 rounded-full bg-purple-500/10 flex items-center justify-center shrink-0">
+										<UIcon name="i-heroicons-video-camera" class="w-3 h-3 text-purple-500" />
+									</div>
+									<div v-else-if="item.source === 'invoice'" class="h-5 w-5 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
+										<UIcon name="i-heroicons-document-text" class="w-3 h-3 text-emerald-500" />
+									</div>
+									<div v-else
 										class="h-2.5 w-2.5 rounded-full shrink-0"
 										:class="{
-											'bg-blue-500': event.type === 'design',
-											'bg-green-500': event.type === 'payment',
-											'bg-orange-500': event.type === 'review',
-											'bg-purple-500': event.type === 'meeting',
-											'bg-gray-400': !['design', 'payment', 'review', 'meeting'].includes(event.type),
+											'bg-pink-500': item.type === 'Design',
+											'bg-orange-500': item.type === 'Content',
+											'bg-cyan-500': item.type === 'Timeline',
+											'bg-violet-500': item.type === 'Hours',
+											'bg-gray-400': !['Design', 'Content', 'Timeline', 'Hours'].includes(item.type),
 										}"
 									/>
-									<h5 class="uppercase tracking-wide font-bold text-xs truncate">{{ event.title }}</h5>
+									<h5 class="uppercase tracking-wide font-bold text-xs truncate">{{ item.title }}</h5>
+									<!-- Invoice amount -->
+									<span v-if="item.source === 'invoice' && item._raw.total_amount != null" class="text-[10px] font-medium text-emerald-600">
+										{{ formatCurrency(item._raw.total_amount) }}
+									</span>
 								</div>
 								<div class="flex items-center gap-2 shrink-0 ml-2">
-									<span v-if="event.date" class="text-[9px] text-muted-foreground">
-										{{ formatEventDate(event.date || event.event_date) }}
+									<span v-if="item.date" class="text-[9px] text-muted-foreground">
+										{{ formatEventDate(item.date) }}
 									</span>
-									<span
-										v-if="event.approval === 'Need Approval'"
-										class="text-[8px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-md text-amber-500 bg-amber-500/10"
-									>
-										Needs Approval
-									</span>
-									<span
-										v-else-if="event.approval === 'Approved'"
-										class="text-[8px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-md text-green-500 bg-green-500/10"
-									>
-										Approved
-									</span>
+									<!-- Approval badges (events only) -->
+									<template v-if="item.source === 'event'">
+										<span
+											v-if="item._raw.approval === 'Need Approval'"
+											class="text-[8px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-md text-amber-500 bg-amber-500/10"
+										>Needs Approval</span>
+										<span
+											v-else-if="item._raw.approval === 'Approved'"
+											class="text-[8px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-md text-green-500 bg-green-500/10"
+										>Approved</span>
+									</template>
 									<span
 										class="text-[8px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-md"
 										:class="{
-											'text-blue-500 bg-blue-500/10': event.status === 'Active',
-											'text-green-500 bg-green-500/10': event.status === 'Completed',
-											'text-muted-foreground bg-muted/40': event.status === 'draft' || event.status === 'archived',
-											'text-cyan-500 bg-cyan-500/10': event.status === 'Scheduled',
+											'text-blue-500 bg-blue-500/10': item.status === 'Active' || item.status === 'in_progress',
+											'text-green-500 bg-green-500/10': item.status === 'Completed' || item.status === 'completed' || item.status === 'paid',
+											'text-muted-foreground bg-muted/40': item.status === 'draft' || item.status === 'archived' || item.status === 'cancelled',
+											'text-cyan-500 bg-cyan-500/10': item.status === 'Scheduled' || item.status === 'scheduled',
+											'text-amber-500 bg-amber-500/10': item.status === 'pending' || item.status === 'no_show',
 										}"
-									>
-										{{ event.status }}
-									</span>
+									>{{ item.status }}</span>
 									<UIcon name="i-heroicons-chevron-right" class="h-3.5 w-3.5 text-muted-foreground/50" />
 								</div>
 							</div>
@@ -429,6 +442,74 @@
 				</div>
 			</template>
 		</UModal>
+
+		<!-- Meeting Detail Modal (read-only) -->
+		<UModal v-model="showMeetingDetail" class="sm:max-w-md">
+			<template #header>
+				<div class="flex items-center justify-between w-full">
+					<div class="flex items-center gap-2">
+						<div class="h-7 w-7 rounded-xl bg-purple-500/10 flex items-center justify-center">
+							<UIcon name="i-heroicons-video-camera" class="w-4 h-4 text-purple-500" />
+						</div>
+						<h3 class="text-sm font-bold uppercase tracking-wide">Meeting</h3>
+					</div>
+					<Button variant="ghost" size="icon-sm" @click="showMeetingDetail = false">
+						<UIcon name="i-heroicons-x-mark" class="h-4 w-4" />
+					</Button>
+				</div>
+			</template>
+
+			<div v-if="selectedMeeting" class="p-4 space-y-4">
+				<div>
+					<h4 class="text-base font-semibold text-foreground">{{ selectedMeeting.title }}</h4>
+					<span
+						class="inline-block mt-1 text-[8px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-md"
+						:class="meetingStatusColor(selectedMeeting.status)"
+					>{{ selectedMeeting.status }}</span>
+				</div>
+
+				<div class="space-y-2">
+					<div v-if="selectedMeeting.scheduled_start" class="flex items-center gap-2 text-sm">
+						<UIcon name="i-heroicons-calendar" class="w-4 h-4 text-muted-foreground shrink-0" />
+						<span>{{ new Date(selectedMeeting.scheduled_start).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) }}</span>
+						<span class="text-muted-foreground">
+							{{ new Date(selectedMeeting.scheduled_start).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) }}
+						</span>
+					</div>
+					<div v-if="selectedMeeting.duration_minutes" class="flex items-center gap-2 text-sm">
+						<UIcon name="i-heroicons-clock" class="w-4 h-4 text-muted-foreground shrink-0" />
+						<span>{{ selectedMeeting.duration_minutes }} minutes</span>
+					</div>
+					<div v-if="selectedMeeting.meeting_type" class="flex items-center gap-2 text-sm">
+						<UIcon name="i-heroicons-tag" class="w-4 h-4 text-muted-foreground shrink-0" />
+						<span class="capitalize">{{ selectedMeeting.meeting_type.replace('_', ' ') }}</span>
+					</div>
+					<div v-if="selectedMeeting.invitee_name || selectedMeeting.invitee_email" class="flex items-center gap-2 text-sm">
+						<UIcon name="i-heroicons-user" class="w-4 h-4 text-muted-foreground shrink-0" />
+						<span>{{ selectedMeeting.invitee_name || selectedMeeting.invitee_email }}</span>
+					</div>
+				</div>
+
+				<a
+					v-if="selectedMeeting.meeting_url && ['scheduled', 'in_progress'].includes(selectedMeeting.status)"
+					:href="selectedMeeting.meeting_url"
+					target="_blank"
+					class="inline-flex items-center gap-2 rounded-lg bg-purple-500 text-white px-4 py-2 text-sm font-medium hover:bg-purple-600 transition-colors"
+				>
+					<UIcon name="i-heroicons-video-camera" class="w-4 h-4" />
+					Join Meeting
+				</a>
+			</div>
+		</UModal>
+
+		<!-- Schedule Meeting Modal -->
+		<SchedulerNewMeetingModal
+			v-if="showScheduleMeeting"
+			v-model="showScheduleMeeting"
+			:project-id="project.id"
+			:project-data="project"
+			@created="handleMeetingCreated"
+		/>
 	</div>
 </template>
 <script setup>
@@ -453,6 +534,7 @@ const eventFileItems = useDirectusItems('project_events_files');
 const ticketItems = useDirectusItems('tickets');
 const taskItems = useDirectusItems('project_tasks');
 const invoiceItems = useDirectusItems('invoices');
+const meetingItems = useDirectusItems('video_meetings');
 const { upload: uploadFile } = useDirectusFiles();
 const { getOrgSubfolder } = useOrgFolders();
 
@@ -505,7 +587,7 @@ async function postStatusUpdate() {
 	}
 }
 
-// ── Stats ──
+// ── Stats & Project Data ──
 const stats = ref({
 	ticketCount: 0,
 	openTickets: 0,
@@ -515,14 +597,19 @@ const stats = ref({
 	paidTotal: 0,
 });
 
-const loadStats = async () => {
+const projectInvoices = ref([]);
+const projectMeetings = ref([]);
+
+const loadProjectData = async () => {
 	try {
 		const projectFilter = { project: { _eq: props.project.id } };
 		const invoiceProjectFilter = { projects: { projects_id: { _eq: props.project.id } } };
-		const [tickets, tasks, invoices] = await Promise.all([
+		const meetingFilter = { project: { _eq: props.project.id } };
+		const [tickets, tasks, invoices, meetings] = await Promise.all([
 			ticketItems.list({ fields: ['id', 'status'], filter: projectFilter, limit: 200 }),
 			taskItems.list({ fields: ['id', 'completed', 'status'], filter: projectFilter, limit: 200 }),
-			invoiceItems.list({ fields: ['id', 'status', 'line_items'], filter: invoiceProjectFilter, limit: 100 }),
+			invoiceItems.list({ fields: ['id', 'status', 'total_amount', 'invoice_code', 'invoice_date', 'due_date'], filter: invoiceProjectFilter, limit: 100 }),
+			meetingItems.list({ fields: ['id', 'title', 'scheduled_start', 'scheduled_end', 'duration_minutes', 'status', 'meeting_url', 'room_name', 'invitee_name', 'invitee_email', 'meeting_type'], filter: meetingFilter, limit: 100 }).catch(() => []),
 		]);
 
 		stats.value.ticketCount = tickets?.length || 0;
@@ -533,15 +620,17 @@ const loadStats = async () => {
 		let total = 0;
 		let paid = 0;
 		for (const inv of (invoices || [])) {
-			const lineItems = inv.line_items || [];
-			const invTotal = lineItems.reduce((sum, li) => sum + ((li.quantity || 0) * (li.rate || 0)), 0);
+			const invTotal = Number(inv.total_amount) || 0;
 			total += invTotal;
 			if (inv.status === 'paid') paid += invTotal;
 		}
 		stats.value.invoiceTotal = total;
 		stats.value.paidTotal = paid;
+
+		projectInvoices.value = invoices || [];
+		projectMeetings.value = meetings || [];
 	} catch (err) {
-		console.warn('Could not load project stats:', err);
+		console.warn('Could not load project data:', err);
 	}
 };
 
@@ -566,8 +655,13 @@ const formatCurrency = (amount) => {
 const formatDate = (dateStr) => getFriendlyDateThree(dateStr);
 
 onMounted(() => {
-	loadStats();
+	loadProjectData();
 	loadStatusUpdates();
+});
+
+// Refresh stats when project changes (e.g. returning from Billing tab)
+watch(() => props.project?.date_updated, () => {
+	loadProjectData();
 });
 
 // Timeline wizard state
@@ -588,7 +682,7 @@ const creatingEvent = ref(false);
 const newEventForm = reactive({
 	title: '',
 	description: '',
-	type: 'design',
+	type: 'General',
 	status: 'Active',
 	date: '',
 	prototype_link: '',
@@ -599,10 +693,11 @@ const uploadingFiles = ref(false);
 const eventFileInput = ref(null);
 
 const eventTypeOptions = [
-	{ label: 'Design', value: 'design' },
-	{ label: 'Development', value: 'development' },
-	{ label: 'Review', value: 'review' },
-	{ label: 'Meeting', value: 'meeting' },
+	{ label: 'General', value: 'General' },
+	{ label: 'Design', value: 'Design' },
+	{ label: 'Content', value: 'Content' },
+	{ label: 'Timeline', value: 'Timeline' },
+	{ label: 'Hours', value: 'Hours' },
 ];
 
 const eventStatusOptions = [
@@ -692,10 +787,26 @@ const handleCreateEvent = async () => {
 	}
 };
 
-// Show all events sorted by date
-const allEvents = computed(() => {
-	return (props.project?.events || [])
-		.sort((a, b) => new Date(a.date || a.event_date || 0) - new Date(b.date || b.event_date || 0));
+// Unified timeline: project events + meetings + invoices
+const allTimelineItems = computed(() => {
+	const items = [];
+
+	// Project events
+	for (const event of (props.project?.events || [])) {
+		items.push({ source: 'event', id: event.id, title: event.title, date: event.event_date || event.date, status: event.status, type: event.type, _raw: event });
+	}
+
+	// Video meetings linked to this project
+	for (const m of projectMeetings.value) {
+		items.push({ source: 'meeting', id: m.id, title: m.title, date: m.scheduled_start, status: m.status, type: 'Meeting', _raw: m });
+	}
+
+	// Invoices linked to this project
+	for (const inv of projectInvoices.value) {
+		items.push({ source: 'invoice', id: inv.id, title: inv.invoice_code, date: inv.invoice_date, status: inv.status, type: 'Financial', _raw: inv });
+	}
+
+	return items.sort((a, b) => new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime());
 });
 
 // Uses getFriendlyDateTwo from utils/dates.ts
@@ -735,8 +846,43 @@ const closeEventDetail = () => {
 	selectedEventFull.value = null;
 };
 
+// Meeting detail state
+const showMeetingDetail = ref(false);
+const selectedMeeting = ref(null);
+
+const handleTimelineItemClick = (item) => {
+	if (item.source === 'event') {
+		openEventDetail(item._raw);
+	} else if (item.source === 'meeting') {
+		selectedMeeting.value = item._raw;
+		showMeetingDetail.value = true;
+	} else if (item.source === 'invoice') {
+		navigateTo(`/invoices/preview/${item.id}`);
+	}
+};
+
+const meetingStatusColor = (status) => {
+	switch (status) {
+		case 'scheduled': return 'text-cyan-500 bg-cyan-500/10';
+		case 'in_progress': return 'text-blue-500 bg-blue-500/10';
+		case 'completed': return 'text-green-500 bg-green-500/10';
+		case 'cancelled': return 'text-muted-foreground bg-muted/40';
+		case 'no_show': return 'text-amber-500 bg-amber-500/10';
+		default: return 'text-muted-foreground bg-muted/40';
+	}
+};
+
+// Schedule meeting modal
+const showScheduleMeeting = ref(false);
+
+const handleMeetingCreated = () => {
+	showScheduleMeeting.value = false;
+	loadProjectData();
+};
+
 const handleEventUpdated = () => {
 	emit('eventCreated');
+	loadProjectData();
 };
 
 const handleEventStatusChange = async (e) => {
