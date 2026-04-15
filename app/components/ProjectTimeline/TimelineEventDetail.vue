@@ -16,6 +16,7 @@ const emit = defineEmits<{
 const config = useRuntimeConfig();
 const { updateEvent } = useProjectTimeline();
 const { getPriorityBadgeClass } = useStatusStyle();
+const { getInvoices } = useInvoices();
 const toast = useToast();
 
 // Local editable copy
@@ -27,7 +28,14 @@ const form = reactive({
   type: '' as string,
   priority: '' as string,
   is_milestone: false,
+  link: '',
+  prototype_link: '',
 });
+
+// M2M invoices — managed as array of selected IDs
+const selectedInvoiceIds = ref<string[]>([]);
+const availableInvoices = ref<any[]>([]);
+const loadingInvoices = ref(false);
 
 // Sync from prop on load / change
 watchEffect(() => {
@@ -39,10 +47,57 @@ watchEffect(() => {
   form.type = props.event.type || 'General';
   form.priority = props.event.priority || 'Normal';
   form.is_milestone = Boolean(props.event.is_milestone);
+  form.link = (props.event as any).link || '';
+  form.prototype_link = (props.event as any).prototype_link || '';
+
+  // Sync linked invoices
+  const invoices = (props.event as any).invoices || [];
+  selectedInvoiceIds.value = invoices
+    .map((j: any) => j.invoices_id?.id || j.invoices_id)
+    .filter(Boolean);
 });
+
+// Conditional field visibility based on type
+const visibleFields = computed(() => {
+  const t = form.type;
+  return {
+    showLink: ['General', 'Design', 'Content'].includes(t),
+    showPrototypeLink: t === 'Design',
+    showFiles: ['Design', 'Content', 'Financial'].includes(t),
+    showInvoices: t === 'Financial',
+    showApproval: ['Design', 'Content'].includes(t),
+  };
+});
+
+// Fetch available invoices when type is Financial
+watch(() => visibleFields.value.showInvoices, async (show) => {
+  if (!show || availableInvoices.value.length > 0) return;
+  const clientId = (props.project as any)?.client;
+  if (!clientId) return;
+  loadingInvoices.value = true;
+  try {
+    const { data } = await getInvoices({ limit: 200 });
+    // Filter to invoices belonging to this project's client
+    availableInvoices.value = data.filter((inv: any) =>
+      inv.client?.id === clientId || inv.bill_to?.id === clientId
+    );
+  } catch (err) {
+    console.error('Failed to fetch invoices:', err);
+  } finally {
+    loadingInvoices.value = false;
+  }
+}, { immediate: true });
 
 const dirty = computed(() => {
   if (!props.event) return false;
+
+  const origInvoiceIds = ((props.event as any).invoices || [])
+    .map((j: any) => j.invoices_id?.id || j.invoices_id)
+    .filter(Boolean)
+    .sort()
+    .join(',');
+  const currentInvoiceIds = [...selectedInvoiceIds.value].sort().join(',');
+
   return (
     form.title !== (props.event.title || '') ||
     form.description !== (props.event.description || '') ||
@@ -50,7 +105,10 @@ const dirty = computed(() => {
     form.end_date !== (props.event.end_date || props.event.event_date || props.event.date || '') ||
     form.type !== (props.event.type || 'General') ||
     form.priority !== (props.event.priority || 'Normal') ||
-    form.is_milestone !== Boolean(props.event.is_milestone)
+    form.is_milestone !== Boolean(props.event.is_milestone) ||
+    form.link !== ((props.event as any).link || '') ||
+    form.prototype_link !== ((props.event as any).prototype_link || '') ||
+    origInvoiceIds !== currentInvoiceIds
   );
 });
 
@@ -60,7 +118,7 @@ async function save() {
   if (!dirty.value || saving.value) return;
   saving.value = true;
   try {
-    await updateEvent(props.event.id, {
+    const payload: Record<string, any> = {
       title: form.title,
       description: form.description,
       event_date: form.event_date,
@@ -69,13 +127,41 @@ async function save() {
       type: form.type as any,
       priority: form.priority as any,
       is_milestone: form.is_milestone,
-    });
+      link: form.link || null,
+      prototype_link: form.prototype_link || null,
+    };
+
+    // Include M2M invoices if Financial type
+    if (visibleFields.value.showInvoices) {
+      payload.invoices = selectedInvoiceIds.value.map(id => ({ invoices_id: id }));
+    }
+
+    await updateEvent(props.event.id, payload);
     toast.add({ title: 'Event updated', color: 'green' });
     emit('updated');
   } catch (err: any) {
     toast.add({ title: 'Failed to save', description: err?.message, color: 'red' });
   } finally {
     saving.value = false;
+  }
+}
+
+function toggleInvoice(id: string) {
+  const idx = selectedInvoiceIds.value.indexOf(id);
+  if (idx >= 0) {
+    selectedInvoiceIds.value.splice(idx, 1);
+  } else {
+    selectedInvoiceIds.value.push(id);
+  }
+}
+
+function invoiceStatusColor(status: string) {
+  switch (status?.toLowerCase()) {
+    case 'paid': return 'text-green-600 bg-green-500/10';
+    case 'sent': case 'pending': return 'text-amber-600 bg-amber-500/10';
+    case 'overdue': return 'text-red-600 bg-red-500/10';
+    case 'draft': return 'text-muted-foreground bg-muted';
+    default: return 'text-muted-foreground bg-muted';
   }
 }
 
@@ -175,6 +261,84 @@ defineExpose({ dirty, save });
         />
       </div>
 
+      <!-- Link (General, Design, Content) -->
+      <div v-if="visibleFields.showLink" class="space-y-1">
+        <label class="t-label text-muted-foreground">Link</label>
+        <div class="flex items-center gap-2">
+          <Icon name="lucide:link" class="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+          <input
+            v-model="form.link"
+            type="url"
+            class="w-full rounded-xl border bg-background px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-primary/30 placeholder:text-muted-foreground/50"
+            placeholder="https://..."
+          />
+        </div>
+      </div>
+
+      <!-- Prototype Link (Design only) -->
+      <div v-if="visibleFields.showPrototypeLink" class="space-y-1">
+        <label class="t-label text-muted-foreground">Prototype / Figma</label>
+        <div class="flex items-center gap-2">
+          <Icon name="lucide:figma" class="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+          <input
+            v-model="form.prototype_link"
+            type="url"
+            class="w-full rounded-xl border bg-background px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-primary/30 placeholder:text-muted-foreground/50"
+            placeholder="https://figma.com/..."
+          />
+        </div>
+      </div>
+
+      <!-- Invoice Selector (Financial only) -->
+      <div v-if="visibleFields.showInvoices" class="space-y-2">
+        <label class="t-label text-muted-foreground">Linked Invoices</label>
+        <div v-if="loadingInvoices" class="flex items-center gap-2 text-xs text-muted-foreground">
+          <Icon name="lucide:loader-2" class="w-3.5 h-3.5 animate-spin" />
+          Loading invoices...
+        </div>
+        <div v-else-if="availableInvoices.length === 0" class="text-xs text-muted-foreground">
+          No invoices found for this client.
+        </div>
+        <div v-else class="flex flex-wrap gap-1.5">
+          <button
+            v-for="inv in availableInvoices"
+            :key="inv.id"
+            type="button"
+            class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors"
+            :class="selectedInvoiceIds.includes(inv.id)
+              ? 'bg-green-500/10 border-green-500/30 text-green-700 dark:text-green-400'
+              : 'text-muted-foreground hover:text-foreground hover:border-foreground/30'"
+            @click="toggleInvoice(inv.id)"
+          >
+            <Icon
+              :name="selectedInvoiceIds.includes(inv.id) ? 'lucide:check-circle-2' : 'lucide:circle'"
+              class="w-3 h-3"
+            />
+            <span class="font-medium">{{ inv.invoice_code }}</span>
+            <span v-if="inv.total_amount != null">${{ Number(inv.total_amount).toLocaleString() }}</span>
+            <span
+              v-if="inv.status"
+              class="rounded-full px-1.5 py-0.5 text-[9px] uppercase tracking-wider font-semibold"
+              :class="invoiceStatusColor(inv.status)"
+            >{{ inv.status }}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Approval Status (Design, Content) -->
+      <div v-if="visibleFields.showApproval && ((event as any).approved_by || (event as any).approved_at)" class="flex items-center gap-2">
+        <Icon name="lucide:check-circle-2" class="w-3.5 h-3.5 text-green-500" />
+        <span class="text-xs text-muted-foreground">
+          Approved
+          <template v-if="(event as any).approved_by">
+            by {{ (event as any).approved_by.first_name }} {{ (event as any).approved_by.last_name }}
+          </template>
+          <template v-if="(event as any).approved_at">
+            on {{ new Date((event as any).approved_at).toLocaleDateString() }}
+          </template>
+        </span>
+      </div>
+
       <!-- Reactions -->
       <ReactionsBar
         :item-id="String(event.id)"
@@ -206,12 +370,13 @@ defineExpose({ dirty, save });
       />
     </div>
 
-    <!-- Files -->
-    <div v-if="fileCount > 0" class="ios-card p-4">
+    <!-- Files (Design, Content, Financial — or any type if files exist) -->
+    <div v-if="fileCount > 0 || visibleFields.showFiles" class="ios-card p-4">
       <h4 class="t-label text-muted-foreground mb-3">
-        Files ({{ fileCount }})
+        Files{{ fileCount > 0 ? ` (${fileCount})` : '' }}
       </h4>
-      <ProjectTimelineFileList :files="event.files || []" />
+      <ProjectTimelineFileList v-if="fileCount > 0" :files="event.files || []" />
+      <p v-else class="text-xs text-muted-foreground">No files attached.</p>
     </div>
 
     <!-- Discussion -->

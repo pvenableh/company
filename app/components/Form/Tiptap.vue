@@ -246,6 +246,7 @@ const fileInput = ref(null);
 const linkUrl = ref('');
 const linkPopoverOpen = ref(false);
 const { uploadFiles, updateFile } = useDirectusFiles();
+const { getOrgSubfolder } = useOrgFolders();
 const { notify } = useNotifications();
 const { user: sessionUser, loggedIn } = useUserSession();
 const currentUser = computed(() => {
@@ -813,7 +814,7 @@ const handleFiles = async (files) => {
 		resetUploadState();
 		startUpload();
 
-		const folderId = '50aebdbd-1c67-4fae-8f56-8895b1b4c0cc'; // Your folder ID
+		const folderId = await getOrgSubfolder('Uploads');
 
 		// Process files with enhanced validation and compression
 		const { success, formData, processedFilesInfo, errors, warnings } = await processUpload(files, {

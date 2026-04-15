@@ -34,6 +34,21 @@ const toast = useToast();
 const canEditProjects = computed(() => canEdit('projects'));
 const canEditEvents = computed(() => canEdit('projects')); // events are part of projects
 
+// ── Event type color map ──
+// "General" inherits from the project service color (passed as fallback)
+const EVENT_TYPE_COLORS: Record<string, string> = {
+	Design: '#f472b6',    // pink
+	Content: '#fb923c',   // orange
+	Timeline: '#06b6d4',  // cyan
+	Financial: '#22c55e', // green
+	Hours: '#a78bfa',     // violet
+};
+
+function getEventColor(event: any, fallbackColor: string): string {
+	const type = event.type || 'General';
+	return EVENT_TYPE_COLORS[type] || fallbackColor;
+}
+
 // ── Constants ──
 const ROW_HEIGHT = 32;
 const HEADER_HEIGHT = 52; // 24px quarter row + 28px month row
@@ -221,7 +236,7 @@ const rows = computed<GanttRow[]>(() => {
 						label: event.title || event.name || 'Event',
 						type: 'event',
 						depth: 1,
-						color: '#06b6d4', // cyan — matches label icon
+						color: getEventColor(event, projectColor),
 						startDate: eventDate,
 						endDate: event.end_date || eventDate,
 						projectId: project.id,
@@ -658,42 +673,82 @@ async function toggleTaskCompleted(row: GanttRow) {
 	}
 }
 
-// ── Editable event fields ──
+// ── Full event detail (TimelineEventDetail pattern) ──
 const eventItems = useDirectusItems('project_events');
-const eventForm = reactive({ title: '', description: '', start_date: '', end_date: '', status: '' });
-const savingEvent = ref(false);
+const selectedEventFull = ref<any>(null);
+const loadingEventDetail = ref(false);
+const eventDetailRef = ref<any>(null);
+const { updateEvent, deleteEvent } = useProjectTimeline();
 
-watch(selectedEvent, (e) => {
-	if (e) {
-		eventForm.title = e.title || e.name || '';
-		eventForm.description = e.description || '';
-		eventForm.start_date = e.start_date?.split('T')[0] || '';
-		eventForm.end_date = e.end_date?.split('T')[0] || '';
-		eventForm.status = e.status || '';
+const eventStatusOptions = [
+	{ value: 'Pending', label: 'Pending' },
+	{ value: 'Scheduled', label: 'Scheduled' },
+	{ value: 'In Progress', label: 'In Progress' },
+	{ value: 'Completed', label: 'Completed' },
+];
+
+const eventProjectProxy = computed(() => {
+	if (!selectedEventFull.value || !selectedEventId.value) return null;
+	// Find the project this event belongs to
+	for (const p of projects.value) {
+		if ((p.events || []).some((e: any) => e.id === selectedEventId.value)) {
+			return { id: p.id, title: p.title, color: p.service?.color || '#888', client: p.client };
+		}
+	}
+	return null;
+});
+
+async function openEventDetailFull() {
+	if (!selectedEventId.value) return;
+	loadingEventDetail.value = true;
+	try {
+		const fullEvent = await eventItems.get(selectedEventId.value, {
+			fields: ['*', 'tasks.*', 'tasks.assignee_id.id', 'tasks.assignee_id.first_name', 'tasks.assignee_id.last_name', 'tasks.assignee_id.avatar', 'files.directus_files_id.*', 'category_id.id,category_id.name,category_id.color,category_id.text_color', 'invoices.invoices_id.id', 'invoices.invoices_id.invoice_code', 'invoices.invoices_id.total_amount', 'invoices.invoices_id.status', 'approved_by.id', 'approved_by.first_name', 'approved_by.last_name'],
+		});
+		selectedEventFull.value = fullEvent;
+	} catch (err) {
+		console.error('Error fetching event details:', err);
+		selectedEventFull.value = null;
+	} finally {
+		loadingEventDetail.value = false;
+	}
+}
+
+watch(showEventDetail, (open) => {
+	if (open && selectedEventId.value) {
+		openEventDetailFull();
+	} else {
+		selectedEventFull.value = null;
 	}
 });
 
-async function saveEventChanges() {
-	if (!selectedEventId.value) return;
-	savingEvent.value = true;
+const handleEventStatusChange = async (e: any) => {
+	if (!selectedEventFull.value) return;
 	try {
-		await eventItems.update(selectedEventId.value, {
-			title: eventForm.title || undefined,
-			description: eventForm.description || undefined,
-			start_date: eventForm.start_date || undefined,
-			end_date: eventForm.end_date || undefined,
-			status: eventForm.status || undefined,
-		});
-		await fetchAllData();
-		toast.add({ title: 'Event updated', color: 'green' });
-		handleCloseDetail();
+		await updateEvent(selectedEventFull.value.id, { status: e.newStatus });
+		selectedEventFull.value.status = e.newStatus;
+		fetchAllData();
 	} catch (err) {
-		toast.add({ title: 'Failed to update event', color: 'red' });
-		console.error('Failed to update event:', err);
-	} finally {
-		savingEvent.value = false;
+		console.error('Error updating event status:', err);
 	}
-}
+};
+
+const handleEventUpdated = () => {
+	fetchAllData();
+};
+
+const handleDeleteEventFromModal = async () => {
+	if (!selectedEventFull.value) return;
+	if (!confirm('Are you sure you want to delete this event? This cannot be undone.')) return;
+	try {
+		await deleteEvent(selectedEventFull.value.id);
+		handleCloseDetail();
+		fetchAllData();
+		toast.add({ title: 'Event deleted', color: 'green' });
+	} catch (err) {
+		toast.add({ title: 'Failed to delete event', color: 'red' });
+	}
+};
 
 // ── Editable project fields ──
 const projectItems = useDirectusItems('projects');
@@ -935,11 +990,8 @@ const showUndated = ref(false);
 							v-if="row.depth > 0 && row.type !== 'task'"
 							:name="row.type === 'event' ? 'lucide:calendar' : 'lucide:ticket'"
 							class="w-3 h-3 shrink-0"
-							:class="{
-								'text-cyan-500': row.type === 'event',
-								'text-amber-500': row.type === 'ticket',
-							}"
-							:style="{ marginLeft: `${16 + row.depth * 16}px` }"
+							:class="{ 'text-amber-500': row.type === 'ticket' }"
+							:style="{ marginLeft: `${16 + row.depth * 16}px`, ...(row.type === 'event' ? { color: row.color } : {}) }"
 						/>
 						<!-- Task status icon -->
 						<Icon
@@ -1031,68 +1083,60 @@ const showUndated = ref(false);
 		<!-- Event Modal (editable if permitted, read-only otherwise) -->
 		<UModal v-model="showEventDetail" class="sm:max-w-xl">
 			<template #header>
-				<div class="flex items-center justify-between w-full">
-					<div class="flex items-center gap-2">
-						<Icon name="lucide:calendar" class="w-4 h-4 text-cyan-500" />
-						<span class="text-sm font-semibold">{{ selectedEvent?.title || selectedEvent?.name }}</span>
+				<div class="w-full space-y-3">
+					<div class="flex items-center justify-between">
+						<h3 class="text-sm font-bold uppercase tracking-wide">Event Details</h3>
+						<button @click="handleCloseDetail" class="p-1 text-muted-foreground hover:text-foreground">
+							<Icon name="lucide:x" class="w-4 h-4" />
+						</button>
 					</div>
-					<button @click="handleCloseDetail" class="p-1 text-muted-foreground hover:text-foreground">
-						<Icon name="lucide:x" class="w-4 h-4" />
+					<FormStatusTimeline
+						v-if="selectedEventFull && !loadingEventDetail"
+						:currentStatus="selectedEventFull.status || 'Active'"
+						:statuses="eventStatusOptions.map(s => ({ id: s.value, name: s.label }))"
+						collection="project_events"
+						:itemId="selectedEventFull.id"
+						@status-change="handleEventStatusChange"
+					/>
+				</div>
+			</template>
+
+			<div class="max-h-[70vh] overflow-y-auto px-4 pb-4">
+				<div v-if="loadingEventDetail" class="flex items-center justify-center py-20">
+					<div class="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-primary" />
+				</div>
+				<ProjectTimelineEventDetail
+					v-else-if="selectedEventFull"
+					ref="eventDetailRef"
+					:event="selectedEventFull"
+					:project="eventProjectProxy || { id: '', title: '', color: '#888' }"
+					@close="handleCloseDetail"
+					@updated="handleEventUpdated"
+				/>
+			</div>
+
+			<template #footer v-if="selectedEventFull && !loadingEventDetail">
+				<div class="flex items-center justify-between w-full">
+					<div class="flex items-center gap-1">
+						<UTooltip text="Delete event">
+							<button
+								class="p-1.5 rounded-md text-destructive hover:bg-destructive/10 transition-colors"
+								@click="handleDeleteEventFromModal"
+							>
+								<Icon name="lucide:trash-2" class="h-3.5 w-3.5" />
+							</button>
+						</UTooltip>
+					</div>
+					<button
+						class="px-4 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+						:disabled="!eventDetailRef?.dirty || eventDetailRef?.saving"
+						@click="eventDetailRef?.save()"
+					>
+						<Icon v-if="eventDetailRef?.saving" name="lucide:loader-2" class="h-3.5 w-3.5 mr-1 inline animate-spin" />
+						Save
 					</button>
 				</div>
 			</template>
-			<div v-if="selectedEvent" class="p-4 space-y-3 text-sm">
-				<div v-if="selectedEventProject" class="flex items-center gap-2 text-muted-foreground mb-1">
-					<Icon name="lucide:folder" class="w-3.5 h-3.5" />
-					<span>{{ selectedEventProject.title }}</span>
-				</div>
-
-				<!-- Editable fields (or read-only) -->
-				<div class="space-y-3">
-					<div>
-						<label class="gantt-modal-label">Title</label>
-						<input v-if="canEditEvents" v-model="eventForm.title" type="text" class="gantt-modal-input" />
-						<p v-else class="text-sm text-foreground">{{ eventForm.title }}</p>
-					</div>
-					<div class="grid grid-cols-2 gap-3">
-						<div>
-							<label class="gantt-modal-label">Start Date</label>
-							<input v-if="canEditEvents" v-model="eventForm.start_date" type="date" class="gantt-modal-input" />
-							<p v-else class="text-xs text-foreground">{{ getFriendlyDate(eventForm.start_date) || '—' }}</p>
-						</div>
-						<div>
-							<label class="gantt-modal-label">End Date</label>
-							<input v-if="canEditEvents" v-model="eventForm.end_date" type="date" class="gantt-modal-input" />
-							<p v-else class="text-xs text-foreground">{{ getFriendlyDate(eventForm.end_date) || '—' }}</p>
-						</div>
-					</div>
-					<div>
-						<label class="gantt-modal-label">Status</label>
-						<select v-if="canEditEvents" v-model="eventForm.status" class="gantt-modal-input">
-							<option value="">None</option>
-							<option value="Pending">Pending</option>
-							<option value="Scheduled">Scheduled</option>
-							<option value="In Progress">In Progress</option>
-							<option value="Completed">Completed</option>
-						</select>
-						<p v-else class="text-xs text-foreground">{{ eventForm.status || '—' }}</p>
-					</div>
-					<div>
-						<label class="gantt-modal-label">Description</label>
-						<textarea v-if="canEditEvents" v-model="eventForm.description" rows="3" class="gantt-modal-input !h-auto py-2 resize-none" />
-						<p v-else class="text-xs text-foreground/70 leading-relaxed">{{ eventForm.description || '—' }}</p>
-					</div>
-				</div>
-
-				<!-- Save button (editors only) -->
-				<div v-if="canEditEvents" class="flex justify-end pt-2">
-					<button
-						@click="saveEventChanges"
-						:disabled="savingEvent"
-						class="px-4 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
-					>{{ savingEvent ? 'Saving...' : 'Save Changes' }}</button>
-				</div>
-			</div>
 		</UModal>
 
 		<!-- Project Modal (editable if permitted, read-only otherwise) -->

@@ -7,6 +7,7 @@ useHead({ title: 'Files | Earnest' });
 const config = useRuntimeConfig();
 const { list: listFiles, upload: uploadFile, remove: removeFile, getUrl } = useDirectusFiles();
 const { getChildren: getSubfolders, create: createFolder, remove: removeFolder, get: getFolder } = useFolders();
+const { getOrgFolderId } = useOrgFolders();
 
 // ── State ────────────────────────────────────────────────────────────────────
 const currentFolderId = ref<string | null>(null);
@@ -292,8 +293,15 @@ async function handleRename() {
 }
 
 // ── Init ─────────────────────────────────────────────────────────────────────
-onMounted(() => {
-  fetchContents();
+onMounted(async () => {
+  // Default to the current org's folder tree
+  const orgFolderId = getOrgFolderId();
+  if (orgFolderId) {
+    currentFolderId.value = orgFolderId;
+    const { currentOrg } = useOrganization();
+    breadcrumbs.value = [{ id: orgFolderId, name: currentOrg.value?.name || 'Files' }];
+  }
+  await fetchContents();
 });
 </script>
 

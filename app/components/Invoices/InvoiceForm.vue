@@ -11,11 +11,11 @@
       </div>
       <div>
         <label class="block text-sm font-medium mb-1">Organization</label>
-        <select v-model="formData.bill_to" class="w-full rounded-md border bg-background px-3 py-2 text-sm" :disabled="!!formData.client">
-          <option value="">Auto (from client)</option>
-          <option v-for="org in orgs" :key="org.id" :value="org.id">{{ org.name }}</option>
-        </select>
-        <p v-if="formData.client" class="text-[10px] text-muted-foreground mt-0.5">Auto-set from client</p>
+        <input
+          :value="currentOrg?.name || orgs.find(o => o.id === formData.bill_to)?.name || '—'"
+          disabled
+          class="w-full rounded-md border bg-muted/50 px-3 py-2 text-sm text-muted-foreground cursor-not-allowed"
+        />
       </div>
     </div>
 
@@ -25,27 +25,38 @@
         <label class="block text-sm font-medium mb-1">Invoice Code</label>
         <input
           v-model="formData.invoice_code"
-          class="w-full rounded-md border bg-background px-3 py-2 text-sm"
-          placeholder="INV-001"
+          disabled
+          class="w-full rounded-md border bg-muted/50 px-3 py-2 text-sm text-muted-foreground cursor-not-allowed"
+          placeholder="Auto-generated"
         />
       </div>
       <div>
         <label class="block text-sm font-medium mb-1">Projects</label>
-        <div class="w-full rounded-md border bg-background px-3 py-2 text-sm space-y-1.5">
-          <label
-            v-for="p in projects"
-            :key="p.id"
-            class="flex items-center gap-2 cursor-pointer hover:text-primary transition-colors"
-          >
-            <input
-              type="checkbox"
-              :value="p.id"
-              v-model="formData.projects"
-              class="rounded border-gray-300 text-primary focus:ring-primary/50"
-            />
-            <span class="truncate">{{ p.title }}</span>
-          </label>
-          <p v-if="!projects.length" class="text-muted-foreground text-xs">No projects available</p>
+        <div
+          class="w-full rounded-md border bg-background px-3 py-2 text-sm space-y-1.5 max-h-32 overflow-y-auto"
+          :class="{ 'opacity-50 pointer-events-none': !formData.client }"
+        >
+          <template v-if="!formData.client">
+            <p class="text-muted-foreground text-xs">Select a client first</p>
+          </template>
+          <template v-else-if="!clientProjects.length">
+            <p class="text-muted-foreground text-xs">No active projects for this client</p>
+          </template>
+          <template v-else>
+            <label
+              v-for="p in clientProjects"
+              :key="p.id"
+              class="flex items-center gap-2 cursor-pointer hover:text-primary transition-colors"
+            >
+              <input
+                type="checkbox"
+                :value="p.id"
+                v-model="formData.projects"
+                class="rounded border-gray-300 text-primary focus:ring-primary/50"
+              />
+              <span class="truncate">{{ p.title }}</span>
+            </label>
+          </template>
         </div>
       </div>
     </div>
@@ -308,15 +319,16 @@ const statusOptions = [
 ];
 
 // --- Fetch dropdown data ---
-const { organizations } = useOrganization();
+const { organizations, selectedOrg, currentOrg } = useOrganization();
 const { getClientOptions, getClients } = useClients();
 const { getProducts, generateInvoiceCode } = useInvoices();
 const { upload: uploadFile, getUrl: getFileUrl } = useDirectusFiles();
+const { getOrgSubfolder } = useOrgFolders();
 const projectItems = useDirectusItems('projects');
 
 const orgs = computed(() => organizations.value || []);
 const clientOptions = ref<{ label: string; value: string }[]>([]);
-const projects = ref<any[]>([]);
+const clientProjects = ref<any[]>([]);
 const productsList = ref<Product[]>([]);
 
 function todayString(): string {
@@ -338,7 +350,7 @@ function extractProjectIds(invoice: any): string[] {
 
 // --- Form state ---
 const formData = reactive({
-  bill_to: extractId(props.invoice?.bill_to) || props.defaults?.bill_to || '',
+  bill_to: extractId(props.invoice?.bill_to) || props.defaults?.bill_to || selectedOrg.value || '',
   client: extractId(props.invoice?.client) || props.defaults?.client || null,
   projects: extractProjectIds(props.invoice).length
     ? extractProjectIds(props.invoice)
@@ -397,7 +409,8 @@ async function handleCheckImageUpload(e: Event) {
   const file = input.files?.[0];
   if (!file) return;
   try {
-    const uploaded = await uploadFile(file, { title: `Check - ${formData.invoice_code || 'invoice'}` });
+    const folder = await getOrgSubfolder('Financials');
+    const uploaded = await uploadFile(file, { title: `Check - ${formData.invoice_code || 'invoice'}`, ...(folder && { folder }) });
     formData.check_image = (uploaded as any)?.id || null;
   } catch (err) {
     console.warn('Check image upload failed:', err);
@@ -617,6 +630,8 @@ watch(() => formData.client, (clientId) => {
   }
   // Auto-populate billing fields from client — select all billing contacts
   if (clientId && !props.invoice && clientBillingLookup.value.has(clientId)) {
+    // Reset billing fields and CC emails before populating from new client
+    ccEmails.value = [];
     const billing = clientBillingLookup.value.get(clientId)!;
     const contacts = billing.billing_contacts?.filter(c => c.email?.trim()) || [];
     if (contacts.length > 0) {
@@ -624,12 +639,7 @@ watch(() => formData.client, (clientId) => {
       formData.billing_email = contacts[0].email;
       formData.billing_name = contacts[0].name || '';
       // Remaining contacts = CC
-      const extraEmails = contacts.slice(1).map(c => c.email);
-      for (const email of extraEmails) {
-        if (!ccEmails.value.includes(email)) {
-          ccEmails.value.push(email);
-        }
-      }
+      ccEmails.value = contacts.slice(1).map(c => c.email);
     } else {
       formData.billing_email = billing.billing_email || '';
       formData.billing_name = billing.billing_name || '';
@@ -639,22 +649,45 @@ watch(() => formData.client, (clientId) => {
 });
 watch(() => formData.invoice_date, autoGenerateCode);
 
+// --- Fetch projects for the selected client (Scheduled / Active only) ---
+async function fetchClientProjects(clientId: string | null) {
+  if (!clientId) {
+    clientProjects.value = [];
+    return;
+  }
+  try {
+    const projs = await projectItems.list({
+      fields: ['id', 'title'],
+      filter: {
+        client: { _eq: clientId },
+      },
+      sort: ['title'],
+      limit: 200,
+    });
+    clientProjects.value = projs;
+  } catch {
+    clientProjects.value = [];
+  }
+}
+
+watch(() => formData.client, (clientId, oldClientId) => {
+  // Only clear selections when the user changes the client, not on initial load
+  if (oldClientId !== undefined) {
+    formData.projects = [];
+  }
+  fetchClientProjects(clientId);
+}, { immediate: true });
+
 // --- Fetch dropdown data on mount ---
 onMounted(async () => {
   try {
-    const [clientOpts, allClients, prods, projs] = await Promise.all([
+    const [clientOpts, allClients, prods] = await Promise.all([
       getClientOptions(),
       getClients({ limit: 500 }),
       getProducts(),
-      projectItems.list({
-        fields: ['id', 'title'],
-        sort: ['title'],
-        limit: 200,
-      }),
     ]);
     clientOptions.value = clientOpts;
     productsList.value = prods;
-    projects.value = projs;
 
     // Build client → organization and billing lookups
     // For sub-brands with no billing details, fall back to parent_client

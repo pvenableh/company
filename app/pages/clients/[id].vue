@@ -27,6 +27,43 @@ const deleting = ref(false);
 const showDeleteConfirm = ref(false);
 const error = ref<string | null>(null);
 const activeTab = ref<'contacts' | 'projects' | 'tickets'>('contacts');
+const toast = useToast();
+
+// --- Logo Upload ---
+const { processUpload, uploadFilesWithProgress, startUpload, resetUploadState, isUploading: logoUploading } = useFileUpload();
+const clientLogoInput = ref<HTMLInputElement | null>(null);
+
+const onClientLogoSelected = async (event: Event) => {
+	const file = (event.target as HTMLInputElement).files?.[0];
+	if (!file || !client.value?.id) return;
+
+	startUpload();
+	try {
+		const result = await processUpload([file]);
+		if (!result.success) {
+			toast.add({ title: 'Error', description: result.errors[0], color: 'red' });
+			return;
+		}
+		// Route logo to client's own folder
+		const clientFolder = client.value.folder
+			? (typeof client.value.folder === 'object' ? (client.value.folder as any).id : client.value.folder)
+			: null;
+		if (clientFolder) result.formData.append('folder', clientFolder);
+		const uploaded = await uploadFilesWithProgress(result.formData);
+		const fileId = uploaded?.id || uploaded?.[0]?.id;
+		if (fileId) {
+			await updateClient(client.value.id as string, { logo: fileId });
+			toast.add({ title: 'Success', description: 'Logo updated', color: 'green' });
+			await loadClient();
+		}
+	} catch (err) {
+		console.error('Logo upload failed:', err);
+		toast.add({ title: 'Error', description: 'Failed to upload logo', color: 'red' });
+	} finally {
+		resetUploadState();
+		if (clientLogoInput.value) clientLogoInput.value.value = '';
+	}
+};
 
 async function loadRelated() {
   const [contacts, projects, tickets] = await Promise.all([
@@ -227,7 +264,7 @@ onUnmounted(() => clearEntity());
       <!-- Header -->
       <div class="flex items-center justify-between mb-5">
         <div class="flex items-center gap-2.5">
-          <div class="shrink-0">
+          <div class="shrink-0 relative group">
             <img
               v-if="getLogoUrl(client)"
               :src="getLogoUrl(client)!"
@@ -240,6 +277,23 @@ onUnmounted(() => clearEntity());
             >
               {{ getInitial(client.name) }}
             </div>
+            <button
+              class="absolute inset-0 w-8 h-8 rounded-lg bg-black/0 group-hover:bg-black/40 flex items-center justify-center transition-colors cursor-pointer"
+              :disabled="logoUploading"
+              @click="clientLogoInput?.click()"
+            >
+              <Icon
+                :name="logoUploading ? 'lucide:loader-2' : 'lucide:camera'"
+                :class="['w-3.5 h-3.5 text-white opacity-0 group-hover:opacity-100 transition-opacity', logoUploading && 'animate-spin opacity-100']"
+              />
+            </button>
+            <input
+              ref="clientLogoInput"
+              type="file"
+              accept="image/*"
+              class="hidden"
+              @change="onClientLogoSelected"
+            />
           </div>
           <div>
             <div class="flex items-center gap-2">
@@ -416,17 +470,14 @@ onUnmounted(() => clearEntity());
         <div class="space-y-4">
           <!-- Quick Info -->
           <div class="ios-card p-5">
-            <h3 class="font-medium text-sm mb-3 flex items-center gap-2">
-              <Icon name="lucide:info" class="w-4 h-4 text-muted-foreground" />
-              Info
-            </h3>
+            <h3 class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-3">Info</h3>
             <div class="space-y-2.5 text-sm">
               <div class="flex justify-between items-baseline">
-                <span class="text-muted-foreground">Organization</span>
+                <span class="text-[10px] uppercase tracking-wider text-muted-foreground">Organization</span>
                 <span>{{ (client.organization as any)?.name || '\u2014' }}</span>
               </div>
               <div class="flex justify-between items-baseline">
-                <span class="text-muted-foreground">Website</span>
+                <span class="text-[10px] uppercase tracking-wider text-muted-foreground">Website</span>
                 <a
                   v-if="client.website"
                   :href="client.website"
@@ -438,19 +489,19 @@ onUnmounted(() => clearEntity());
                 <span v-else>&#x2014;</span>
               </div>
               <div class="flex justify-between items-baseline">
-                <span class="text-muted-foreground">Industry</span>
-                <span class="text-[10px] uppercase tracking-wide text-muted-foreground font-medium text-right">{{ industryName || '\u2014' }}</span>
+                <span class="text-[10px] uppercase tracking-wider text-muted-foreground">Industry</span>
+                <span>{{ industryName || '\u2014' }}</span>
               </div>
               <div v-if="client.billing_address" class="flex justify-between items-baseline">
-                <span class="text-muted-foreground">Address</span>
+                <span class="text-[10px] uppercase tracking-wider text-muted-foreground">Address</span>
                 <span class="text-right text-xs max-w-[160px]">{{ client.billing_address }}</span>
               </div>
               <div class="flex justify-between items-baseline">
-                <span class="text-muted-foreground">Created</span>
+                <span class="text-[10px] uppercase tracking-wider text-muted-foreground">Created</span>
                 <span>{{ client.date_created ? new Date(client.date_created).toLocaleDateString() : '\u2014' }}</span>
               </div>
               <div class="flex justify-between items-baseline">
-                <span class="text-muted-foreground">Updated</span>
+                <span class="text-[10px] uppercase tracking-wider text-muted-foreground">Updated</span>
                 <span>{{ client.date_updated ? new Date(client.date_updated).toLocaleDateString() : '\u2014' }}</span>
               </div>
             </div>
@@ -458,10 +509,7 @@ onUnmounted(() => clearEntity());
 
           <!-- Tags -->
           <div class="ios-card p-5">
-            <h3 class="font-medium text-sm mb-3 flex items-center gap-2">
-              <Icon name="lucide:tags" class="w-4 h-4 text-muted-foreground" />
-              Tags
-            </h3>
+            <h3 class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-3">Tags</h3>
             <div class="flex flex-wrap gap-1.5 mb-2">
               <span
                 v-for="tag in (client.tags || [])"
@@ -492,11 +540,8 @@ onUnmounted(() => clearEntity());
 
           <!-- Primary Contact -->
           <div class="ios-card p-5">
-            <h3 class="font-medium text-sm mb-3 flex items-center justify-between">
-              <span class="flex items-center gap-2">
-                <Icon name="lucide:user" class="w-4 h-4 text-muted-foreground" />
-                Primary Contact
-              </span>
+            <h3 class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-3 flex items-center justify-between">
+              <span>Primary Contact</span>
               <button
                 class="text-xs text-muted-foreground hover:text-foreground transition-colors"
                 @click="showContactPicker = !showContactPicker"

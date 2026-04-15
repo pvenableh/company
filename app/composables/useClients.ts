@@ -402,15 +402,20 @@ export function useClients() {
       status: payload.status || 'active',
     } as any);
 
-    // Auto-create a folder for this client under the org folder
+    // Auto-create a folder for this client under the org's Clients/ subfolder
     if (result && (result as any).id && payload.name) {
       try {
-        // Find org's folder
         let parentFolderId: string | null = null;
         if (orgId && currentOrg.value?.folder) {
-          parentFolderId = typeof currentOrg.value.folder === 'object'
+          const orgFolderId = typeof currentOrg.value.folder === 'object'
             ? (currentOrg.value.folder as any).id
             : currentOrg.value.folder;
+
+          // Find the Clients subfolder under the org root
+          const { getChildren } = useFolders();
+          const children = await getChildren(orgFolderId);
+          const clientsSubfolder = children.find(f => f.name === 'Clients');
+          parentFolderId = clientsSubfolder?.id || orgFolderId;
         }
 
         const folder = await folderItems.create({

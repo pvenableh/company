@@ -20,10 +20,10 @@ const activeView = ref('timeline');
 const projectViewOptions = computed(() => {
 	const opts = [];
 	if (isAdmin.value) {
-		opts.push({ value: 'timeline', label: 'Timeline', icon: 'lucide:map' });
-		opts.push({ value: 'board', label: 'Board', icon: 'lucide:columns-3' });
+		opts.push({ key: 'timeline', label: 'Timeline', icon: 'lucide:map' });
+		opts.push({ key: 'board', label: 'Board', icon: 'lucide:columns-3' });
 	}
-	opts.push({ value: 'table', label: 'Table', icon: 'lucide:table' });
+	opts.push({ key: 'table', label: 'Table', icon: 'lucide:table' });
 	return opts;
 });
 
@@ -176,7 +176,7 @@ definePageMeta({
 
 		<!-- View switcher -->
 		<ClientOnly>
-			<UiPillToggle v-model="activeView" :options="projectViewOptions" class="mb-5" />
+			<UTabs v-model="activeView" :items="projectViewOptions" class="mb-5" />
 		</ClientOnly>
 
 		<!-- Filters -->

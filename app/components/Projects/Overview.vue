@@ -454,6 +454,7 @@ const ticketItems = useDirectusItems('tickets');
 const taskItems = useDirectusItems('project_tasks');
 const invoiceItems = useDirectusItems('invoices');
 const { upload: uploadFile } = useDirectusFiles();
+const { getOrgSubfolder } = useOrgFolders();
 
 const isAdmin = computed(() => canAccess('projects'));
 
@@ -662,9 +663,10 @@ const handleCreateEvent = async () => {
 		// Upload and link files if any
 		if (pendingFiles.value.length > 0 && created?.id) {
 			uploadingFiles.value = true;
+			const uploadsFolder = await getOrgSubfolder('Uploads');
 			for (const file of pendingFiles.value) {
 				try {
-					const uploaded = await uploadFile(file, { title: `${data.title} - ${file.name}` });
+					const uploaded = await uploadFile(file, { title: `${data.title} - ${file.name}`, ...(uploadsFolder && { folder: uploadsFolder }) });
 					if (uploaded?.id) {
 						await eventFileItems.create({
 							project_events_id: created.id,
@@ -717,7 +719,7 @@ const openEventDetail = async (event) => {
 	loadingEventDetail.value = true;
 	try {
 		const fullEvent = await eventItems.get(event.id, {
-			fields: ['*', 'tasks.*', 'files.directus_files_id.*', 'category_id.id,category_id.name,category_id.color,category_id.text_color'],
+			fields: ['*', 'tasks.*', 'files.directus_files_id.*', 'category_id.id,category_id.name,category_id.color,category_id.text_color', 'invoices.invoices_id.id', 'invoices.invoices_id.invoice_code', 'invoices.invoices_id.total_amount', 'invoices.invoices_id.status', 'approved_by.id', 'approved_by.first_name', 'approved_by.last_name'],
 		});
 		selectedEventFull.value = fullEvent;
 	} catch (err) {

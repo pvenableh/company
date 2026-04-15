@@ -176,10 +176,14 @@ watch(() => selectedClient.value, debouncedFetch);
       </div>
       <div class="flex items-center gap-2">
         <LayoutShareButton title="Invoices | Earnest" />
-        <Button v-if="isAdmin" size="sm" @click="showCreateModal = true">
-          <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
+        <button
+          v-if="isAdmin"
+          class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium text-primary hover:bg-primary/10 hover:border-primary/30 transition-colors"
+          @click="showCreateModal = true"
+        >
+          <Icon name="lucide:plus" class="w-3.5 h-3.5" />
           New Invoice
-        </Button>
+        </button>
       </div>
     </div>
 

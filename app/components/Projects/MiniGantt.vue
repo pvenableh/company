@@ -32,6 +32,20 @@ interface MiniRow {
 
 const projectColor = computed(() => props.project?.service?.color || '#d4d4d8');
 
+// Event type color map — "General" inherits from project service color
+const EVENT_TYPE_COLORS: Record<string, string> = {
+	Design: '#f472b6',    // pink
+	Content: '#fb923c',   // orange
+	Timeline: '#06b6d4',  // cyan
+	Financial: '#22c55e', // green
+	Hours: '#a78bfa',     // violet
+};
+
+function getEventColor(event: any): string {
+	const type = event.type || 'General';
+	return EVENT_TYPE_COLORS[type] || projectColor.value;
+}
+
 const rows = computed<MiniRow[]>(() => {
 	const result: MiniRow[] = [];
 	const events = props.project?.events || [];
@@ -42,7 +56,7 @@ const rows = computed<MiniRow[]>(() => {
 			id: event.id,
 			label: event.title || 'Event',
 			type: 'event',
-			color: projectColor.value,
+			color: getEventColor(event),
 			startDate: event.event_date || event.date,
 			endDate: event.end_date || event.event_date || event.date,
 			status: event.status,
@@ -163,6 +177,15 @@ function isCompleted(status?: string): boolean {
 	return s === 'completed' || s === 'done';
 }
 
+function getBarOpacity(status?: string): number {
+	if (!status) return 0.7;
+	const s = status.toLowerCase().replace(/\s+/g, '');
+	if (s === 'completed' || s === 'done') return 0.3;
+	if (s === 'inprogress' || s === 'active') return 0.9;
+	if (s === 'scheduled') return 0.7;
+	return 0.6;
+}
+
 // Sync scroll between sidebar and chart
 const chartScroll = ref<HTMLElement | null>(null);
 const sidebarScroll = ref<HTMLElement | null>(null);
@@ -201,8 +224,8 @@ function syncScroll() {
 						>
 							<span
 								class="w-5 h-5 rounded-md flex items-center justify-center shrink-0"
+								:style="row.type === 'event' ? { backgroundColor: row.color + '1a' } : undefined"
 								:class="{
-									'bg-cyan-500/10': row.type === 'event',
 									'bg-amber-500/10': row.type === 'ticket',
 									'bg-purple-500/10': row.type === 'task',
 								}"
@@ -210,8 +233,8 @@ function syncScroll() {
 								<Icon
 									:name="row.type === 'event' ? 'lucide:calendar' : row.type === 'ticket' ? 'lucide:ticket' : 'lucide:check-square'"
 									class="w-3 h-3"
+									:style="row.type === 'event' ? { color: row.color } : undefined"
 									:class="{
-										'text-cyan-500': row.type === 'event',
 										'text-amber-500': row.type === 'ticket',
 										'text-purple-500': row.type === 'task',
 									}"
@@ -292,16 +315,15 @@ function syncScroll() {
 							<template #default>
 								<div
 									class="mg-bar"
-									:class="[
-										`mg-bar-${row.type}`,
-										{ 'mg-bar-completed': isCompleted(row.status) },
-										{ 'cursor-pointer': row.type === 'event' },
-									]"
-									:style="{ ...getBarStyle(row), backgroundColor: row.color }"
+									:class="{ 'cursor-pointer': row.type === 'event' }"
+									:style="{
+										...getBarStyle(row),
+										backgroundColor: row.color,
+										opacity: getBarOpacity(row.status),
+									}"
 									@click="row.type === 'event' && row.raw && emit('event-click', row.raw)"
 								>
-									<span class="mg-bar-label">{{ row.label }}</span>
-								</div>
+									</div>
 							</template>
 							<template #text>
 								<div class="text-left">
@@ -516,52 +538,20 @@ function syncScroll() {
 	position: absolute;
 	top: 50%;
 	transform: translateY(-50%);
-	height: 18px;
-	border-radius: 999px;
-	display: flex;
-	align-items: center;
-	padding: 0 8px;
+	height: 12px;
+	border-radius: 6px;
 	cursor: default;
-	opacity: 0.8;
-	transition: opacity 0.15s;
-	overflow: hidden;
+	transition: filter 0.15s;
 	min-width: 6px;
-	box-shadow: inset 0 1px 0 rgba(255,255,255,0.15);
+	z-index: 1;
 }
 .mg-bar:hover {
-	opacity: 1;
+	filter: brightness(0.92);
 	z-index: 2;
-}
-
-.mg-bar-event {
-	height: 18px;
-	opacity: 0.8;
-}
-
-.mg-bar-ticket {
-	height: 14px;
-	opacity: 0.65;
-	border-radius: 4px;
-}
-
-.mg-bar-task {
-	height: 12px;
-	opacity: 0.55;
-	border-radius: 4px;
 }
 
 .mg-bar-completed {
 	opacity: 0.3;
-}
-
-.mg-bar-label {
-	font-size: 9px;
-	font-weight: 600;
-	color: white;
-	white-space: nowrap;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	text-shadow: 0 1px 2px rgba(0,0,0,0.15);
 }
 
 /* ── Diamond milestone ── */

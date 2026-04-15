@@ -22,6 +22,56 @@ const isLoading = ref(true);
 const orgRoles = ref([]);
 const orgMemberships = ref([]);
 
+// --- Logo Upload ---
+const { processUpload, uploadFilesWithProgress, startUpload, resetUploadState, isUploading: logoUploading } = useFileUpload();
+const { getOrgFolderId } = useOrgFolders();
+const logoInput = ref(null);
+
+const onLogoFileSelected = async (event) => {
+	const file = event.target.files?.[0];
+	if (!file || !org.value?.id) return;
+
+	startUpload();
+	try {
+		const result = await processUpload([file]);
+		if (!result.success) {
+			toast.add({ title: 'Error', description: result.errors[0], color: 'red' });
+			return;
+		}
+		const orgFolder = getOrgFolderId();
+		if (orgFolder) result.formData.append('folder', orgFolder);
+		const uploaded = await uploadFilesWithProgress(result.formData);
+		const fileId = uploaded?.id || uploaded?.[0]?.id;
+		if (fileId) {
+			await organizationItems.update(org.value.id, { logo: fileId });
+			toast.add({ title: 'Success', description: 'Logo updated', color: 'green' });
+			await fetchOrganizationData();
+			await fetchOrganizationDetails();
+		}
+	} catch (error) {
+		console.error('Logo upload failed:', error);
+		toast.add({ title: 'Error', description: 'Failed to upload logo', color: 'red' });
+	} finally {
+		resetUploadState();
+		if (logoInput.value) logoInput.value.value = '';
+	}
+};
+
+// --- Industries ---
+const industryItems = useDirectusItems('industries');
+const industries = ref([]);
+const fetchIndustries = async () => {
+	try {
+		industries.value = await industryItems.list({
+			fields: ['id', 'name'],
+			filter: { status: { _eq: 'published' } },
+			sort: ['name'],
+			limit: -1,
+		});
+	} catch { /* industries may not be accessible */ }
+};
+fetchIndustries();
+
 const activeTab = ref(0);
 
 // Define tab items once:
@@ -44,27 +94,102 @@ onUnmounted(() => {
 	}
 });
 
-// --- Edit Organization ---
-const showEditOrgModal = ref(false);
-const editForm = ref({
-	name: '',
-	website: '',
-	phone: '',
-	notes: '',
-	brand_color: '',
-	active: true,
-	brand_direction: '',
-	goals: '',
-	target_audience: '',
-	location: '',
-	default_hourly_rate: null,
-});
-const savingOrg = ref(false);
-
 const { canAccess } = useOrgRole();
 const canManageOrg = computed(() => {
 	return canAccess('org_settings');
 });
+
+// --- Inline Info Editing ---
+const editingInfo = ref(false);
+const savingInfo = ref(false);
+const infoForm = ref({
+	name: '',
+	website: '',
+	notes: '',
+	brand_color: '',
+	industry: '',
+	active: true,
+});
+
+const startEditInfo = () => {
+	infoForm.value = {
+		name: org.value?.name || '',
+		website: org.value?.website || '',
+		notes: org.value?.notes || '',
+		brand_color: org.value?.brand_color || '',
+		industry: (typeof org.value?.industry === 'object' ? org.value?.industry?.id : org.value?.industry) || '',
+		active: org.value?.active !== false,
+	};
+	editingInfo.value = true;
+};
+
+const saveInfo = async () => {
+	if (!org.value?.id) return;
+	savingInfo.value = true;
+	try {
+		await organizationItems.update(org.value.id, {
+			name: infoForm.value.name,
+			website: infoForm.value.website || null,
+			notes: infoForm.value.notes || null,
+			brand_color: infoForm.value.brand_color || null,
+			industry: infoForm.value.industry || null,
+			active: infoForm.value.active,
+		});
+		toast.add({ title: 'Success', description: 'Organization info updated', color: 'green' });
+		editingInfo.value = false;
+		await fetchOrganizationData();
+		await fetchOrganizationDetails();
+	} catch (error) {
+		console.error('Error updating info:', error);
+		const msg = error?.data?.message || error?.message || 'Failed to update organization info';
+		toast.add({ title: 'Error', description: msg, color: 'red' });
+	} finally {
+		savingInfo.value = false;
+	}
+};
+
+// --- Inline Billing Editing ---
+const editingBilling = ref(false);
+const savingBilling = ref(false);
+const billingForm = ref({
+	email: '',
+	phone: '',
+	address: '',
+	default_hourly_rate: null,
+});
+
+const startEditBilling = () => {
+	billingForm.value = {
+		email: org.value?.email || '',
+		phone: org.value?.phone || '',
+		address: org.value?.address || '',
+		default_hourly_rate: org.value?.default_hourly_rate || null,
+	};
+	editingBilling.value = true;
+};
+
+const saveBilling = async () => {
+	if (!org.value?.id) return;
+	savingBilling.value = true;
+	try {
+		await organizationItems.update(org.value.id, {
+			email: billingForm.value.email || null,
+			phone: billingForm.value.phone || null,
+			address: billingForm.value.address || null,
+			default_hourly_rate: billingForm.value.default_hourly_rate || null,
+		});
+		toast.add({ title: 'Success', description: 'Billing info updated', color: 'green' });
+		editingBilling.value = false;
+		await fetchOrganizationData();
+		await fetchOrganizationDetails();
+	} catch (error) {
+		console.error('Error updating billing:', error);
+		const msg = error?.data?.message || error?.message || 'Failed to update billing info';
+		toast.add({ title: 'Error', description: msg, color: 'red' });
+	} finally {
+		savingBilling.value = false;
+	}
+};
 
 // --- Inline Brand Editing ---
 const editingBrand = ref(false);
@@ -109,53 +234,6 @@ const saveBrand = async () => {
 	}
 };
 
-const openEditModal = () => {
-	if (!org.value) return;
-	editForm.value = {
-		name: org.value.name || '',
-		website: org.value.website || '',
-		phone: org.value.phone || '',
-		notes: org.value.notes || '',
-		brand_color: org.value.brand_color || '',
-		active: org.value.active !== false,
-		brand_direction: org.value.brand_direction || '',
-		goals: org.value.goals || '',
-		target_audience: org.value.target_audience || '',
-		location: org.value.location || '',
-		default_hourly_rate: org.value.default_hourly_rate || null,
-	};
-	showEditOrgModal.value = true;
-};
-
-const saveOrganization = async () => {
-	if (!org.value?.id) return;
-	savingOrg.value = true;
-	try {
-		await organizationItems.update(org.value.id, {
-			name: editForm.value.name,
-			website: editForm.value.website,
-			phone: editForm.value.phone,
-			notes: editForm.value.notes,
-			brand_color: editForm.value.brand_color,
-			active: editForm.value.active,
-			brand_direction: editForm.value.brand_direction || null,
-			goals: editForm.value.goals || null,
-			target_audience: editForm.value.target_audience || null,
-			location: editForm.value.location || null,
-			default_hourly_rate: editForm.value.default_hourly_rate || null,
-		});
-		toast.add({ title: 'Success', description: 'Organization updated successfully', color: 'green' });
-		showEditOrgModal.value = false;
-		await fetchOrganizationData();
-		await fetchOrganizationDetails();
-	} catch (error) {
-		console.error('Error saving organization:', error);
-		const msg = error?.data?.message || error?.message || 'Failed to update organization';
-		toast.add({ title: 'Error', description: msg, color: 'red' });
-	} finally {
-		savingOrg.value = false;
-	}
-};
 
 // --- Invite Member (new system) ---
 const showInviteModal = ref(false);
@@ -393,7 +471,7 @@ const pendingInvites = computed(() => {
 // Function to fetch organization data with correct fields
 const ORG_DETAIL_FIELDS = [
 	'id', 'name', 'logo', 'category', 'notes', 'website', 'phone', 'address',
-	'industry.name', 'industry.class', 'brand_color', 'emails',
+	'industry.name', 'industry.class', 'brand_color', 'email', 'emails',
 	'date_created', 'origin_date', 'icon', 'active', 'brand_direction',
 	'goals', 'target_audience', 'location', 'default_hourly_rate',
 ];
@@ -512,7 +590,7 @@ watch(searchEmail, (val) => {
 				<!-- Organization Header -->
 				<div class="flex flex-col md:flex-row gap-6 items-start mb-8">
 					<!-- Logo -->
-					<div class="flex-shrink-0">
+					<div class="flex-shrink-0 relative group">
 						<div
 							v-if="getIconUrl"
 							class="w-24 h-24 rounded-full shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden flex items-center justify-center bg-white dark:bg-gray-800"
@@ -529,21 +607,29 @@ watch(searchEmail, (val) => {
 						>
 							<UIcon name="i-heroicons-building-office" class="w-12 h-12 text-gray-400" />
 						</div>
+						<button
+							v-if="canManageOrg"
+							class="absolute inset-0 w-24 h-24 rounded-full bg-black/0 group-hover:bg-black/40 flex items-center justify-center transition-colors cursor-pointer"
+							:disabled="logoUploading"
+							@click="logoInput?.click()"
+						>
+							<UIcon
+								:name="logoUploading ? 'i-heroicons-arrow-path' : 'i-heroicons-camera'"
+								:class="['w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity', logoUploading && 'animate-spin opacity-100']"
+							/>
+						</button>
+						<input
+							ref="logoInput"
+							type="file"
+							accept="image/*"
+							class="hidden"
+							@change="onLogoFileSelected"
+						/>
 					</div>
 
 					<!-- Organization Info -->
 					<div class="flex-grow">
-						<div class="flex items-center justify-between">
-							<h1 class="text-2xl md:text-3xl font-bold mb-2">{{ org.name }}</h1>
-							<UButton
-								v-if="canManageOrg"
-								color="gray"
-								variant="ghost"
-								icon="i-heroicons-pencil-square"
-								size="sm"
-								@click="openEditModal"
-							/>
-						</div>
+						<h1 class="text-2xl md:text-3xl font-bold mb-2">{{ org.name }}</h1>
 
 						<div class="flex flex-wrap gap-x-6 gap-y-1 mb-4 text-sm text-gray-600 dark:text-gray-300">
 							<div v-if="org.industry?.name" class="flex items-center">
@@ -606,10 +692,7 @@ watch(searchEmail, (val) => {
 								<UCard>
 									<template #header>
 										<div class="flex items-center justify-between">
-											<div class="flex items-center">
-												<UIcon name="i-heroicons-paint-brush" class="w-5 h-5 mr-2" />
-												<h3 class="text-lg font-medium">Brand & Strategy</h3>
-											</div>
+											<h3 class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Brand & Strategy</h3>
 											<UButton
 												v-if="canManageOrg && !editingBrand"
 												color="gray"
@@ -624,26 +707,26 @@ watch(searchEmail, (val) => {
 									<!-- View mode -->
 									<div v-if="!editingBrand" class="space-y-4">
 										<div>
-											<h4 class="text-sm font-medium text-gray-500 mb-1">Brand Direction</h4>
-											<p v-if="org.brand_direction" class="text-gray-700 dark:text-gray-300 whitespace-pre-line">{{ org.brand_direction }}</p>
+											<h4 class="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Brand Direction</h4>
+											<p v-if="org.brand_direction" class="text-sm whitespace-pre-line">{{ org.brand_direction }}</p>
 											<p v-else class="text-sm text-muted-foreground italic">Not set — click edit to add brand direction</p>
 										</div>
 
 										<div>
-											<h4 class="text-sm font-medium text-gray-500 mb-1">Goals</h4>
-											<p v-if="org.goals" class="text-gray-700 dark:text-gray-300 whitespace-pre-line">{{ org.goals }}</p>
+											<h4 class="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Goals</h4>
+											<p v-if="org.goals" class="text-sm whitespace-pre-line">{{ org.goals }}</p>
 											<p v-else class="text-sm text-muted-foreground italic">Not set</p>
 										</div>
 
 										<div>
-											<h4 class="text-sm font-medium text-gray-500 mb-1">Target Audience</h4>
-											<p v-if="org.target_audience" class="text-gray-700 dark:text-gray-300">{{ org.target_audience }}</p>
+											<h4 class="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Target Audience</h4>
+											<p v-if="org.target_audience" class="text-sm">{{ org.target_audience }}</p>
 											<p v-else class="text-sm text-muted-foreground italic">Not set</p>
 										</div>
 
 										<div>
-											<h4 class="text-sm font-medium text-gray-500 mb-1">Location</h4>
-											<p v-if="org.location" class="text-gray-700 dark:text-gray-300">{{ org.location }}</p>
+											<h4 class="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Location</h4>
+											<p v-if="org.location" class="text-sm">{{ org.location }}</p>
 											<p v-else class="text-sm text-muted-foreground italic">Not set</p>
 										</div>
 									</div>
@@ -694,26 +777,38 @@ watch(searchEmail, (val) => {
 
 							<!-- Sidebar -->
 							<div class="space-y-4">
-								<!-- Quick Info -->
+								<!-- Organization Info — inline editable -->
 								<UCard>
 									<template #header>
-										<div class="flex items-center">
-											<UIcon name="i-heroicons-information-circle" class="w-5 h-5 mr-2" />
-											<h3 class="text-sm font-medium">Info</h3>
+										<div class="flex items-center justify-between">
+											<h3 class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Info</h3>
+											<UButton
+												v-if="canManageOrg && !editingInfo"
+												color="gray"
+												variant="ghost"
+												icon="i-heroicons-pencil-square"
+												size="xs"
+												@click="startEditInfo"
+											/>
 										</div>
 									</template>
 
-									<div class="space-y-3 text-sm">
+									<!-- View mode -->
+									<div v-if="!editingInfo" class="space-y-3 text-sm">
 										<div class="flex justify-between">
-											<span class="text-gray-500">Industry</span>
+											<span class="text-[10px] uppercase tracking-wider text-muted-foreground">Name</span>
+											<span class="font-medium">{{ org.name }}</span>
+										</div>
+										<div class="flex justify-between">
+											<span class="text-[10px] uppercase tracking-wider text-muted-foreground">Industry</span>
 											<span>{{ org.industry?.name || '—' }}</span>
 										</div>
 										<div v-if="org.industry?.class" class="flex justify-between">
-											<span class="text-gray-500">Classification</span>
+											<span class="text-[10px] uppercase tracking-wider text-muted-foreground">Classification</span>
 											<span>{{ org.industry.class }}</span>
 										</div>
 										<div class="flex justify-between">
-											<span class="text-gray-500">Website</span>
+											<span class="text-[10px] uppercase tracking-wider text-muted-foreground">Website</span>
 											<a
 												v-if="org.website"
 												:href="org.website.startsWith('http') ? org.website : 'https://' + org.website"
@@ -725,66 +820,163 @@ watch(searchEmail, (val) => {
 											<span v-else>—</span>
 										</div>
 										<div class="flex justify-between">
-											<span class="text-gray-500">Phone</span>
-											<span>{{ org.phone || '—' }}</span>
+											<span class="text-[10px] uppercase tracking-wider text-muted-foreground">Notes</span>
+											<span class="text-right max-w-[180px]">{{ org.notes || '—' }}</span>
 										</div>
-										<div v-if="org.address" class="flex justify-between">
-											<span class="text-gray-500">Address</span>
-											<span class="text-right max-w-[160px]">{{ org.address }}</span>
-										</div>
-										<div v-if="org.brand_color" class="flex justify-between items-center">
-											<span class="text-gray-500">Brand Color</span>
-											<div class="flex items-center gap-1.5">
+										<div class="flex justify-between items-center">
+											<span class="text-[10px] uppercase tracking-wider text-muted-foreground">Brand Color</span>
+											<div v-if="org.brand_color" class="flex items-center gap-1.5">
 												<div class="w-4 h-4 rounded border border-gray-200" :style="{ backgroundColor: org.brand_color }"></div>
 												<span>{{ org.brand_color }}</span>
 											</div>
+											<span v-else>—</span>
 										</div>
 										<div class="flex justify-between">
-											<span class="text-gray-500">Member Since</span>
+											<span class="text-[10px] uppercase tracking-wider text-muted-foreground">Status</span>
+											<UBadge :color="org.active !== false ? 'green' : 'gray'" variant="soft" size="xs">
+												{{ org.active !== false ? 'Active' : 'Inactive' }}
+											</UBadge>
+										</div>
+										<div class="flex justify-between">
+											<span class="text-[10px] uppercase tracking-wider text-muted-foreground">Member Since</span>
 											<span>{{ org.origin_date ? formatDate(org.origin_date) : '—' }}</span>
 										</div>
 										<div class="flex justify-between">
-											<span class="text-gray-500">Created</span>
+											<span class="text-[10px] uppercase tracking-wider text-muted-foreground">Created</span>
 											<span>{{ org.date_created ? formatDate(org.date_created) : '—' }}</span>
+										</div>
+									</div>
+
+									<!-- Edit mode -->
+									<div v-else class="space-y-3">
+										<UFormGroup label="Name" required>
+											<UInput v-model="infoForm.name" placeholder="Organization name" />
+										</UFormGroup>
+										<UFormGroup label="Industry">
+											<select
+												v-model="infoForm.industry"
+												class="w-full rounded-full border bg-background px-3 py-2 text-sm"
+											>
+												<option value="">Select industry...</option>
+												<option v-for="ind in industries" :key="ind.id" :value="ind.id">{{ ind.name }}</option>
+											</select>
+										</UFormGroup>
+										<UFormGroup label="Website">
+											<UInput v-model="infoForm.website" placeholder="https://example.com" />
+										</UFormGroup>
+										<UFormGroup label="Notes">
+											<UTextarea v-model="infoForm.notes" placeholder="Organization description or notes" :rows="2" autoresize />
+										</UFormGroup>
+										<UFormGroup label="Brand Color">
+											<div class="flex items-center gap-3">
+												<input
+													type="color"
+													v-model="infoForm.brand_color"
+													class="w-8 h-8 rounded cursor-pointer border border-gray-200"
+												/>
+												<UInput v-model="infoForm.brand_color" placeholder="#000000" class="flex-1" />
+											</div>
+										</UFormGroup>
+										<UFormGroup label="Active">
+											<div class="flex items-center gap-3">
+												<UToggle v-model="infoForm.active" />
+												<span class="text-xs text-gray-500">
+													{{ infoForm.active ? 'Visible in selectors' : 'Hidden from selectors' }}
+												</span>
+											</div>
+										</UFormGroup>
+										<div class="flex justify-end gap-2 pt-2">
+											<UButton color="gray" variant="ghost" size="xs" @click="editingInfo = false">Cancel</UButton>
+											<UButton color="primary" size="xs" :loading="savingInfo" :disabled="!infoForm.name" @click="saveInfo">Save</UButton>
 										</div>
 									</div>
 								</UCard>
 
-								<!-- Emails -->
-								<UCard v-if="org.emails?.length">
+								<!-- Billing Info — inline editable -->
+								<UCard>
 									<template #header>
-										<div class="flex items-center">
-											<UIcon name="i-heroicons-envelope" class="w-5 h-5 mr-2" />
-											<h3 class="text-sm font-medium">Emails</h3>
+										<div class="flex items-center justify-between">
+											<h3 class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Billing</h3>
+											<UButton
+												v-if="canManageOrg && !editingBilling"
+												color="gray"
+												variant="ghost"
+												icon="i-heroicons-pencil-square"
+												size="xs"
+												@click="startEditBilling"
+											/>
 										</div>
 									</template>
-									<div class="flex flex-wrap gap-1.5">
-										<UBadge
-											v-for="(email, index) in Array.isArray(org.emails) ? org.emails : [org.emails]"
-											:key="index"
-											color="primary"
-											variant="soft"
-											size="xs"
-										>
-											{{ email }}
-										</UBadge>
+
+									<!-- View mode -->
+									<div v-if="!editingBilling" class="space-y-3 text-sm">
+										<div class="flex justify-between">
+											<span class="text-[10px] uppercase tracking-wider text-muted-foreground">Email</span>
+											<a v-if="org.email" :href="'mailto:' + org.email" class="text-primary truncate max-w-[180px]">{{ org.email }}</a>
+											<span v-else class="text-muted-foreground italic">Not set</span>
+										</div>
+										<div class="flex justify-between">
+											<span class="text-[10px] uppercase tracking-wider text-muted-foreground">Phone</span>
+											<a v-if="org.phone" :href="'tel:' + org.phone" class="text-primary">{{ org.phone }}</a>
+											<span v-else class="text-muted-foreground italic">Not set</span>
+										</div>
+										<div class="flex justify-between">
+											<span class="text-[10px] uppercase tracking-wider text-muted-foreground">Address</span>
+											<span v-if="org.address" class="text-right max-w-[180px]">{{ org.address }}</span>
+											<span v-else class="text-muted-foreground italic">Not set</span>
+										</div>
+										<div class="flex justify-between">
+											<span class="text-[10px] uppercase tracking-wider text-muted-foreground">Hourly Rate</span>
+											<span>{{ org.default_hourly_rate ? `$${org.default_hourly_rate}` : '—' }}</span>
+										</div>
+										<div v-if="org.emails?.length">
+											<span class="text-[10px] uppercase tracking-wider text-muted-foreground block mb-1.5">Notification Emails</span>
+											<div class="flex flex-wrap gap-1.5">
+												<UBadge
+													v-for="(email, index) in Array.isArray(org.emails) ? org.emails : [org.emails]"
+													:key="index"
+													color="primary"
+													variant="soft"
+													size="xs"
+												>
+													{{ email }}
+												</UBadge>
+											</div>
+										</div>
+									</div>
+
+									<!-- Edit mode -->
+									<div v-else class="space-y-3">
+										<UFormGroup label="Email">
+											<UInput v-model="billingForm.email" placeholder="billing@example.com" type="email" />
+										</UFormGroup>
+										<UFormGroup label="Phone">
+											<UInput v-model="billingForm.phone" placeholder="+1 (555) 000-0000" />
+										</UFormGroup>
+										<UFormGroup label="Address">
+											<UTextarea v-model="billingForm.address" placeholder="Street address, city, state, ZIP" :rows="3" autoresize />
+										</UFormGroup>
+										<UFormGroup label="Default Hourly Rate" help="Auto-populated in time tracking when billable is enabled">
+											<UInput v-model="billingForm.default_hourly_rate" type="number" placeholder="0.00" step="0.01" min="0" icon="i-heroicons-currency-dollar" />
+										</UFormGroup>
+										<div class="flex justify-end gap-2 pt-2">
+											<UButton color="gray" variant="ghost" @click="editingBilling = false">Cancel</UButton>
+											<UButton color="primary" :loading="savingBilling" @click="saveBilling">Save</UButton>
+										</div>
 									</div>
 								</UCard>
 							<!-- Subscription & Plan -->
 								<UCard v-if="canManageOrg">
 									<template #header>
-										<div class="flex items-center">
-											<UIcon name="i-heroicons-credit-card" class="w-5 h-5 mr-2" />
-											<h3 class="text-sm font-medium">Earnest Subscription</h3>
-										</div>
+										<h3 class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Subscription</h3>
 									</template>
 									<div class="space-y-3 text-sm">
 										<div class="flex justify-between">
-											<span class="text-gray-500">Plan</span>
+											<span class="text-[10px] uppercase tracking-wider text-muted-foreground">Plan</span>
 											<UBadge color="primary" variant="soft" size="xs">Pro</UBadge>
 										</div>
 										<div class="flex justify-between">
-											<span class="text-gray-500">Status</span>
+											<span class="text-[10px] uppercase tracking-wider text-muted-foreground">Status</span>
 											<UBadge color="green" variant="soft" size="xs">Active</UBadge>
 										</div>
 										<NuxtLink
@@ -926,108 +1118,6 @@ watch(searchEmail, (val) => {
 				</UTabs>
 			</div>
 		</div>
-
-		<!-- Edit Organization Modal -->
-		<UModal v-model="showEditOrgModal">
-			<div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-				<h3 class="text-lg font-semibold">Edit Organization</h3>
-				<UButton color="gray" variant="ghost" icon="i-heroicons-x-mark" @click="showEditOrgModal = false" />
-			</div>
-
-			<form @submit.prevent="saveOrganization" class="space-y-4 p-4">
-				<UFormGroup label="Organization Name" required>
-					<UInput v-model="editForm.name" placeholder="Organization name" />
-				</UFormGroup>
-
-				<UFormGroup label="Website">
-					<UInput v-model="editForm.website" placeholder="https://example.com" />
-				</UFormGroup>
-
-				<UFormGroup label="Phone">
-					<UInput v-model="editForm.phone" placeholder="+1 (555) 000-0000" />
-				</UFormGroup>
-
-				<UFormGroup label="Notes">
-					<UInput v-model="editForm.notes" placeholder="Organization description or notes" />
-				</UFormGroup>
-
-				<UFormGroup label="Brand Color">
-					<div class="flex items-center gap-3">
-						<input
-							type="color"
-							v-model="editForm.brand_color"
-							class="w-10 h-10 rounded cursor-pointer border border-gray-200"
-						/>
-						<UInput v-model="editForm.brand_color" placeholder="#000000" class="flex-1" />
-					</div>
-				</UFormGroup>
-
-				<UFormGroup label="Active">
-					<div class="flex items-center gap-3">
-						<UToggle v-model="editForm.active" />
-						<span class="text-sm text-gray-500">
-							{{ editForm.active ? 'Organization is active and visible in selectors' : 'Organization is inactive and hidden from selectors' }}
-						</span>
-					</div>
-				</UFormGroup>
-
-
-				<!-- Brand & Strategy -->
-				<div class="border-t pt-4 mt-2">
-					<h3 class="text-sm font-semibold mb-3 flex items-center gap-2">
-						<UIcon name="i-heroicons-paint-brush" class="w-4 h-4 text-muted-foreground" />
-						Brand & Strategy
-					</h3>
-
-					<div class="space-y-4">
-						<BrandAIFieldSuggest
-							v-model="editForm.brand_direction"
-							label="Brand Direction"
-							field="brand_direction"
-							placeholder="Brand positioning, voice, visual style, and messaging strategy..."
-							entity-type="organization"
-							:entity-id="org?.id || ''"
-							:organization-id="org?.id || ''"
-						/>
-
-						<BrandAIFieldSuggest
-							v-model="editForm.goals"
-							label="Goals"
-							field="goals"
-							placeholder="Business goals and objectives..."
-							entity-type="organization"
-							:entity-id="org?.id || ''"
-							:organization-id="org?.id || ''"
-						/>
-
-						<BrandAIFieldSuggest
-							v-model="editForm.target_audience"
-							label="Target Audience"
-							field="target_audience"
-							placeholder="Ideal customer profile, demographics, psychographics..."
-							entity-type="organization"
-							:entity-id="org?.id || ''"
-							:organization-id="org?.id || ''"
-						/>
-
-						<UFormGroup label="Location">
-							<UInput v-model="editForm.location" placeholder="City, region, or Remote/Global" />
-						</UFormGroup>
-
-						<UFormGroup label="Default Hourly Rate" help="Auto-populated in time tracking when billable is enabled">
-							<UInput v-model="editForm.default_hourly_rate" type="number" placeholder="0.00" step="0.01" min="0" icon="i-heroicons-currency-dollar" />
-						</UFormGroup>
-					</div>
-				</div>
-			</form>
-
-			<div class="flex justify-end gap-2 p-4 border-t border-gray-200 dark:border-gray-700">
-				<UButton color="gray" variant="ghost" @click="showEditOrgModal = false">Cancel</UButton>
-				<UButton color="primary" :loading="savingOrg" :disabled="!editForm.name" @click="saveOrganization">
-					Save Changes
-				</UButton>
-			</div>
-		</UModal>
 
 		<!-- Invite Member Modal (new org-aware component) -->
 		<OrganizationInviteMemberModal

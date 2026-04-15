@@ -24,9 +24,13 @@ const formatNumber = (value) => {
 					<InvoicesPdfGenerator :invoice="invoice" />
 				</ClientOnly>
 			</div>
+			<h5 v-if="invoice.invoice_date" class="font-bold uppercase text-xs">
+				<span class="opacity-30">Billing date:</span>
+				{{ getFriendlyDateThree(invoice.invoice_date) }}
+			</h5>
 			<h5 class="font-bold uppercase text-xs">
 				<span class="opacity-30">Due date:</span>
-				{{ getFriendlyDateTwo(invoice.due_date) }}
+				{{ getFriendlyDateThree(invoice.due_date) }}
 			</h5>
 			<h5 class="font-bold uppercase text-xs">
 				<span class="opacity-30">Status:</span>
@@ -34,8 +38,7 @@ const formatNumber = (value) => {
 			</h5>
 			<h5 class="font-bold uppercase text-xs mt-6">
 				<span class="opacity-30">Bill to:</span>
-				<p>{{ invoice.billing_name || invoice.client?.billing_contacts?.[0]?.name || invoice.client?.billing_name || invoice.client?.name || invoice.bill_to?.name }}</p>
-				<p v-if="invoice.billing_email || invoice.client?.billing_contacts?.[0]?.email || invoice.client?.billing_email || invoice.bill_to?.email">{{ invoice.billing_email || invoice.client?.billing_contacts?.[0]?.email || invoice.client?.billing_email || invoice.bill_to?.email }}</p>
+				<p>{{ invoice.client?.name || invoice.bill_to?.name }}</p>
 				<p v-if="invoice.billing_address || invoice.client?.billing_address">{{ invoice.billing_address || invoice.client?.billing_address }}</p>
 			<template v-if="invoice.emails?.length">
 				<p v-for="(e, i) in invoice.emails" :key="i" class="opacity-50">cc: {{ e }}</p>

@@ -1713,6 +1713,7 @@ export interface Invoice {
 	payments?: PaymentsReceived[] | string[];
 	/** @description Projects associated with this invoice */
 	projects?: InvoicesProject[] | string[];
+	project_events?: ProjectEventsInvoice[] | string[];
 }
 
 export interface InvoicesProduct {
@@ -2525,9 +2526,10 @@ export interface ProjectEvent {
 	/** @description Unique token for shareable approval links */
 	approval_token?: string | null;
 	comments?: ProjectEventsComment[] | string[];
-	spawned_projects?: Project[] | string[];
 	tasks?: ProjectTask[] | string[];
 	files?: ProjectEventFile[] | string[];
+	invoices?: ProjectEventsInvoice[] | string[];
+	spawned_projects?: Project[] | string[];
 }
 
 export interface ProjectEventsComment {
@@ -2535,6 +2537,14 @@ export interface ProjectEventsComment {
 	id: number;
 	project_events_id?: ProjectEvent | string | null;
 	comments_id?: Comment | string | null;
+	sort?: number | null;
+}
+
+export interface ProjectEventsInvoice {
+	/** @primaryKey */
+	id: number;
+	project_events_id?: ProjectEvent | string | null;
+	invoices_id?: Invoice | string | null;
 	sort?: number | null;
 }
 
@@ -4046,6 +4056,7 @@ export interface Schema {
 	project_event_files: ProjectEventFile[];
 	project_events: ProjectEvent[];
 	project_events_comments: ProjectEventsComment[];
+	project_events_invoices: ProjectEventsInvoice[];
 	projects: Project[];
 	projects_directus_users: ProjectsDirectusUser[];
 	projects_files: ProjectsFile[];
@@ -4260,6 +4271,7 @@ export enum CollectionNames {
 	project_event_files = 'project_event_files',
 	project_events = 'project_events',
 	project_events_comments = 'project_events_comments',
+	project_events_invoices = 'project_events_invoices',
 	projects = 'projects',
 	projects_directus_users = 'projects_directus_users',
 	projects_files = 'projects_files',

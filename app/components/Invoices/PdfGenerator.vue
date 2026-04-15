@@ -10,6 +10,7 @@ const props = defineProps({
 	},
 });
 
+const { currentOrg } = useOrganization();
 const isGenerating = ref(false);
 
 const formatNumber = (value) => {
@@ -32,12 +33,10 @@ const generatePDF = async () => {
              alt="hue logo" 
              style="height: 48px; width: auto; margin-right: 16px;" />
         <div style="font-size: 9px; text-transform: uppercase; line-height: 1; margin-top: -8px;">
-          <p style="font-weight: bold;">hue</p>
-          <p>1033 Lenox Ave</p>
-          <p>Suite 314</p>
-          <p>Miami Beach, FL 33139</p>
-          <p>305.680.0485</p>
-          <p>hello@earnest.guru</p>
+          <p style="font-weight: bold;">${currentOrg.value?.name || ''}</p>
+          ${currentOrg.value?.address ? `<p>${currentOrg.value.address}</p>` : ''}
+          ${currentOrg.value?.phone ? `<p>${currentOrg.value.phone}</p>` : ''}
+          <p>${currentOrg.value?.email || 'hello@earnest.guru'}</p>
         </div>
       </div>`;
 
@@ -98,7 +97,7 @@ const generatePDF = async () => {
 
 		pdf.addImage(canvas.toDataURL('image/png', 1.0), 'PNG', margin, margin, availableWidth, imgHeight, '', 'FAST');
 
-		pdf.save(`invoice-${props.invoice.invoice_code}.pdf`);
+		pdf.save(`${props.invoice.invoice_code}.pdf`);
 	} catch (error) {
 		console.error('Error generating PDF:', error);
 	} finally {

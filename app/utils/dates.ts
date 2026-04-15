@@ -40,7 +40,17 @@
 // ---------------------------------------------------------------------------
 function toDate(input: string | Date | number | null | undefined): Date | null {
 	if (input == null) return null;
-	const d = typeof input === 'number' ? new Date(input * 1000) : new Date(input);
+	if (typeof input === 'number') {
+		const d = new Date(input * 1000);
+		return isNaN(d.getTime()) ? null : d;
+	}
+	// Date-only strings (YYYY-MM-DD) must be parsed as local, not UTC
+	if (typeof input === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(input)) {
+		const [y, m, d] = input.split('-').map(Number);
+		const date = new Date(y, m - 1, d);
+		return isNaN(date.getTime()) ? null : date;
+	}
+	const d = new Date(input);
 	return isNaN(d.getTime()) ? null : d;
 }
 

@@ -98,6 +98,21 @@ export default defineEventHandler(async (event) => {
       await directus.request(
         updateItem('organizations', org.id, { folder: folderId })
       );
+
+      // Create standard subfolders
+      const subfolderNames = ['Clients', 'Financials', 'Uploads'];
+      for (const subName of subfolderNames) {
+        try {
+          await directus.request(
+            createItem('directus_folders', {
+              name: subName,
+              parent: folderId,
+            })
+          );
+        } catch (subErr) {
+          console.warn(`Failed to create ${subName} subfolder:`, subErr);
+        }
+      }
     } catch (folderError) {
       console.warn('Failed to create org folder:', folderError);
     }
