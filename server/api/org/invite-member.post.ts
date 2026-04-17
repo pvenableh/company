@@ -13,6 +13,7 @@
  */
 
 import { createItem, readItems, readUsers, readRoles, inviteUser, createUser } from '@directus/sdk';
+import { ensureContactForUser } from '~~/server/utils/contact-sync';
 
 export default defineEventHandler(async (event) => {
   try {
@@ -230,6 +231,21 @@ export default defineEventHandler(async (event) => {
       }
     } catch (junctionErr: any) {
       console.warn('Legacy junction create failed (non-fatal):', junctionErr?.message);
+    }
+
+    // Ensure a Contact exists for this user in this org
+    try {
+      await ensureContactForUser({
+        directus,
+        organizationId,
+        userId: targetUserId,
+        email,
+        firstName: existingUsers[0]?.first_name || null,
+        lastName: existingUsers[0]?.last_name || null,
+        source: 'invite:member',
+      });
+    } catch (contactErr: any) {
+      console.warn('Contact sync failed (non-fatal):', contactErr?.message);
     }
 
     return {
