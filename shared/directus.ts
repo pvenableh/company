@@ -1806,7 +1806,7 @@ export interface LeadActivitiesFile {
 export interface Lead {
 	/** @primaryKey */
 	id: number;
-	status?: 'published' | 'draft' | 'archived';
+	status?: 'published' | 'draft' | 'archived' | 'junk';
 	sort?: number | null;
 	user_created?: DirectusUser | string | null;
 	date_created?: string | null;
