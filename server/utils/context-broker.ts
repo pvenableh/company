@@ -22,6 +22,7 @@ export interface CachedOrgContext {
   dealsSummary: string;
   ticketsSummary: string;
   brandSummary: string;
+  contactsSummary: string;
   tokenEstimate: number;
   builtAt: number;
   expiresAt: number;
@@ -83,17 +84,18 @@ export async function rebuildOrgContext(organizationId: string): Promise<CachedO
   const orgFilter = { organization: { _eq: organizationId } };
   const now = new Date();
 
-  // Run all 6 scope builders in parallel
-  const [clientsSummary, projectsSummary, invoicesSummary, dealsSummary, ticketsSummary, brandSummary] = await Promise.all([
+  // Run all 7 scope builders in parallel
+  const [clientsSummary, projectsSummary, invoicesSummary, dealsSummary, ticketsSummary, brandSummary, contactsSummary] = await Promise.all([
     buildClientsSummary(directus, orgFilter, now),
     buildProjectsSummary(directus, orgFilter, now),
     buildInvoicesSummary(directus, orgFilter, now),
     buildDealsSummary(directus, orgFilter, now),
     buildTicketsSummary(directus, orgFilter, now),
     buildBrandSummary(directus, organizationId),
+    buildContactsSummary(directus, organizationId, now),
   ]);
 
-  const allText = [clientsSummary, projectsSummary, invoicesSummary, dealsSummary, ticketsSummary, brandSummary].join('');
+  const allText = [clientsSummary, projectsSummary, invoicesSummary, dealsSummary, ticketsSummary, brandSummary, contactsSummary].join('');
   const tokenEstimate = Math.ceil(allText.length / 4);
 
   const context: CachedOrgContext = {
@@ -103,6 +105,7 @@ export async function rebuildOrgContext(organizationId: string): Promise<CachedO
     dealsSummary,
     ticketsSummary,
     brandSummary,
+    contactsSummary,
     tokenEstimate,
     builtAt: Date.now(),
     expiresAt: Date.now() + L1_TTL_MS,
@@ -165,6 +168,7 @@ async function readFromL2(organizationId: string): Promise<CachedOrgContext | nu
     dealsSummary: data.dealsSummary || '',
     ticketsSummary: data.ticketsSummary || '',
     brandSummary: data.brandSummary || '',
+    contactsSummary: data.contactsSummary || '',
     tokenEstimate: row.token_estimate || 0,
     builtAt: new Date(row.date_created).getTime(),
     expiresAt: Date.now() + L1_TTL_MS, // Reset L1 TTL from L2 read
@@ -182,6 +186,7 @@ async function writeToL2(organizationId: string, context: CachedOrgContext): Pro
     dealsSummary: context.dealsSummary,
     ticketsSummary: context.ticketsSummary,
     brandSummary: context.brandSummary,
+    contactsSummary: context.contactsSummary,
   };
 
   // Upsert: check for existing row, update or create
@@ -377,6 +382,95 @@ async function buildTicketsSummary(directus: any, orgFilter: any, now: Date): Pr
     const result = `${tickets.length} open tickets${urgentCount ? ` (${urgentCount} urgent)` : ''}${highCount ? `, ${highCount} high priority` : ''}:\n${lines.join('\n')}`;
     return truncateToTokenBudget(result);
   } catch { return ''; }
+}
+
+async function buildContactsSummary(directus: any, organizationId: string, now: Date): Promise<string> {
+  try {
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+    // Contacts scoped to the org via the M2M junction
+    const contacts = await directus.request(
+      (readItems as any)('contacts', {
+        filter: {
+          organizations: { organizations_id: { _eq: organizationId } },
+          status: { _neq: 'archived' },
+        },
+        fields: [
+          'id', 'first_name', 'last_name', 'email', 'company', 'category',
+          'email_subscribed', 'email_bounced',
+          'total_emails_sent', 'total_opens', 'total_clicks',
+          'last_opened_at', 'last_clicked_at',
+          'lists.list_id.name', 'lists.subscribed',
+        ],
+        limit: 250,
+      }),
+    ) as any[];
+
+    if (!contacts.length) return '';
+
+    const subscribed = contacts.filter((c) => c.email_subscribed !== false);
+    const bounced = contacts.filter((c) => c.email_bounced);
+    const recentOpens = contacts
+      .filter((c) => c.last_opened_at && c.last_opened_at > thirtyDaysAgo)
+      .sort((a, b) => (b.last_opened_at || '').localeCompare(a.last_opened_at || ''));
+    const topEngaged = [...contacts]
+      .filter((c) => (c.total_opens || 0) + (c.total_clicks || 0) > 0)
+      .sort((a, b) => ((b.total_opens || 0) + (b.total_clicks || 0)) - ((a.total_opens || 0) + (a.total_clicks || 0)))
+      .slice(0, 8);
+
+    // Open leads per contact (for the AI to answer "what's happening with X")
+    const openLeads = await directus.request(
+      (readItems as any)('leads', {
+        filter: {
+          organization: { _eq: organizationId },
+          stage: { _nin: ['won', 'lost'] },
+          status: { _eq: 'published' },
+          related_contact: { _nnull: true },
+        },
+        fields: ['related_contact', 'stage'],
+        limit: 200,
+      }),
+    ) as Array<{ related_contact: string | null; stage: string }>;
+
+    const openLeadsByContact = new Map<string, number>();
+    for (const l of openLeads) {
+      const cid = typeof l.related_contact === 'string' ? l.related_contact : (l.related_contact as any)?.id;
+      if (cid) openLeadsByContact.set(cid, (openLeadsByContact.get(cid) || 0) + 1);
+    }
+
+    const lines: string[] = [];
+    lines.push(`${contacts.length} contacts (${subscribed.length} subscribed${bounced.length ? `, ${bounced.length} bounced` : ''}).`);
+
+    if (topEngaged.length) {
+      lines.push('Most engaged (by opens + clicks):');
+      for (const c of topEngaged.slice(0, 6)) {
+        const name = `${c.first_name || ''} ${c.last_name || ''}`.trim() || c.email || 'Unnamed';
+        const listNames = Array.isArray(c.lists)
+          ? c.lists.map((m: any) => m?.list_id?.name).filter(Boolean).slice(0, 3).join(', ')
+          : '';
+        const activeLeadCount = openLeadsByContact.get(c.id) || 0;
+        const bits: string[] = [];
+        bits.push(`${c.total_opens || 0}o/${c.total_clicks || 0}c`);
+        if (c.company) bits.push(c.company);
+        if (activeLeadCount) bits.push(`${activeLeadCount} open lead${activeLeadCount === 1 ? '' : 's'}`);
+        if (listNames) bits.push(`lists: ${listNames}`);
+        if (c.email_bounced) bits.push('⚠ bounced');
+        lines.push(`- ${name} — ${bits.join(' · ')}`);
+      }
+    }
+
+    if (recentOpens.length && recentOpens.length !== topEngaged.length) {
+      lines.push(`${recentOpens.length} contacts opened an email in the last 30 days.`);
+    }
+
+    if (bounced.length) {
+      lines.push(`Bounced (do not email): ${bounced.slice(0, 5).map((c) => `${c.first_name || ''} ${c.last_name || ''}`.trim() || c.email).join(', ')}${bounced.length > 5 ? `, +${bounced.length - 5} more` : ''}.`);
+    }
+
+    return truncateToTokenBudget(lines.join('\n'));
+  } catch {
+    return '';
+  }
 }
 
 async function buildBrandSummary(directus: any, organizationId: string): Promise<string> {

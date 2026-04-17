@@ -20,6 +20,7 @@ export interface OrgContext {
   invoicesSummary?: string;
   dealsSummary?: string;
   ticketsSummary?: string;
+  contactsSummary?: string;
 }
 
 /**
@@ -66,6 +67,9 @@ export function buildSystemPrompt(context?: OrgContext): string {
   }
   if (context?.ticketsSummary) {
     parts.push(`TICKETS:\n${context.ticketsSummary}`);
+  }
+  if (context?.contactsSummary) {
+    parts.push(`CONTACTS & EMAIL ENGAGEMENT:\n${context.contactsSummary}`);
   }
 
   // Platform awareness
