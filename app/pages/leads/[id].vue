@@ -296,6 +296,20 @@ onMounted(() => {
 						</div>
 					</div>
 
+					<!-- Tags -->
+					<div v-if="lead.tags?.length" class="ios-card p-4">
+						<p class="text-[10px] uppercase font-semibold t-text-muted tracking-wider mb-2">Tags</p>
+						<div class="flex flex-wrap gap-1.5">
+							<span
+								v-for="tag in lead.tags"
+								:key="tag"
+								class="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium t-text"
+							>
+								{{ tag }}
+							</span>
+						</div>
+					</div>
+
 					<!-- Notes -->
 					<div v-if="lead.notes" class="ios-card p-4">
 						<p class="text-[10px] uppercase font-semibold t-text-muted tracking-wider mb-2">Notes</p>

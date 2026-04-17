@@ -12,6 +12,7 @@ export interface LeadFilters {
   source?: string;
   assigned_to?: string;
   related_contact?: string;
+  tag?: string;
   date_from?: string;
   date_to?: string;
   search?: string;

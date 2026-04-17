@@ -20,6 +20,7 @@ export function useLeads() {
     if (filters?.source) filter.source = { _eq: filters.source };
     if (filters?.assigned_to) filter.assigned_to = { _eq: filters.assigned_to };
     if (filters?.related_contact) filter.related_contact = { _eq: filters.related_contact };
+    if (filters?.tag) filter.tags = { _contains: filters.tag };
     if (filters?.date_from) filter.date_created = { _gte: filters.date_from };
     if (filters?.date_to) {
       filter.date_created = { ...filter.date_created, _lte: filters.date_to };

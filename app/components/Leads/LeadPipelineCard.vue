@@ -26,6 +26,20 @@
 			{{ lead.related_contact?.company || lead.related_contact?.email || '' }}
 		</p>
 
+		<!-- Tags -->
+		<div v-if="lead.tags?.length" class="flex flex-wrap gap-1 mb-2">
+			<span
+				v-for="tag in lead.tags.slice(0, 3)"
+				:key="tag"
+				class="inline-flex items-center rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-medium text-foreground"
+			>
+				{{ tag }}
+			</span>
+			<span v-if="lead.tags.length > 3" class="text-[9px] text-muted-foreground">
+				+{{ lead.tags.length - 3 }}
+			</span>
+		</div>
+
 		<!-- Score bar -->
 		<div class="flex items-center gap-2 mb-2">
 			<div class="flex-1 h-1 bg-muted rounded-full overflow-hidden">

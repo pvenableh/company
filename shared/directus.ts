@@ -1832,6 +1832,8 @@ export interface Lead {
 	stage?: 'new' | 'contacted' | 'qualified' | 'proposal_sent' | 'negotiating' | 'won' | 'lost' | null;
 	/** @description Associated organization */
 	organization?: Organization | string | null;
+	/** @description Custom tags for flexible categorization across the pipeline (e.g., hot, referral, rfp) */
+	tags?: string[] | null;
 }
 
 export interface LineItem {

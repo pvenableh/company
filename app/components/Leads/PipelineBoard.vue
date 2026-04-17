@@ -38,6 +38,13 @@
 					size="sm"
 					class="w-40"
 				/>
+				<UInput
+					v-model="tagFilter"
+					icon="i-heroicons-tag"
+					placeholder="Filter by tag"
+					size="sm"
+					class="w-36"
+				/>
 				<UButton
 					icon="i-heroicons-archive-box"
 					size="xs"
@@ -292,6 +299,7 @@ const isFetching = ref(false);
 const isDragging = ref(false);
 const filterByAssignedTo = ref(false);
 const searchQuery = ref('');
+const tagFilter = ref('');
 const updatingLeads = ref(new Set());
 const showNewLeadModal = ref(false);
 
@@ -356,6 +364,7 @@ const assignedToStorage = useStorageSync('leadFilterAssignedTo');
 // Debounced search
 const debouncedFetch = useDebounceFn(() => fetchLeads(), 300);
 watch(searchQuery, () => debouncedFetch());
+watch(tagFilter, () => debouncedFetch());
 watch(filterByAssignedTo, (newVal) => {
 	assignedToStorage.setValue(newVal);
 	fetchLeads();
@@ -367,6 +376,7 @@ async function fetchLeads() {
 	try {
 		const filters = {};
 		if (searchQuery.value) filters.search = searchQuery.value;
+		if (tagFilter.value.trim()) filters.tag = tagFilter.value.trim();
 		if (filterByAssignedTo.value && user.value?.id) {
 			filters.assigned_to = user.value.id;
 		}

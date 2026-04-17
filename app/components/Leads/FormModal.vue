@@ -59,6 +59,32 @@
 				</div>
 			</div>
 
+			<!-- Tags -->
+			<div class="space-y-1">
+				<label class="t-label text-muted-foreground">Tags</label>
+				<div class="flex flex-wrap items-center gap-1.5">
+					<span
+						v-for="tag in form.tags"
+						:key="tag"
+						class="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-foreground"
+					>
+						{{ tag }}
+						<button type="button" class="text-muted-foreground hover:text-destructive" @click="removeTag(tag)">
+							<Icon name="lucide:x" class="h-3 w-3" />
+						</button>
+					</span>
+					<UInput
+						v-model="tagInput"
+						size="xs"
+						class="w-28"
+						placeholder="Add tag"
+						@keydown.enter.prevent="addTag"
+						@keydown.,.prevent="addTag"
+						@blur="addTag"
+					/>
+				</div>
+			</div>
+
 			<!-- Notes -->
 			<div class="space-y-1">
 				<label class="t-label text-muted-foreground">Notes</label>
@@ -156,7 +182,21 @@ const form = reactive({
 	notes: '',
 	next_follow_up: '',
 	assigned_to: null,
+	tags: [],
 });
+
+const tagInput = ref('');
+
+function addTag() {
+	const raw = tagInput.value.trim();
+	if (!raw) return;
+	if (!form.tags.includes(raw)) form.tags.push(raw);
+	tagInput.value = '';
+}
+
+function removeTag(tag) {
+	form.tags = form.tags.filter((t) => t !== tag);
+}
 
 const initialAssignedUsers = ref([]);
 
@@ -205,6 +245,7 @@ function populateForm() {
 		form.estimated_value = props.lead.estimated_value || '';
 		form.source = props.lead.source || '';
 		form.notes = props.lead.notes || '';
+		form.tags = Array.isArray(props.lead.tags) ? [...props.lead.tags] : [];
 		form.assigned_to = typeof props.lead.assigned_to === 'object'
 			? props.lead.assigned_to?.id
 			: props.lead.assigned_to || null;
@@ -231,8 +272,10 @@ function populateForm() {
 			notes: '',
 			next_follow_up: '',
 			assigned_to: null,
+			tags: [],
 		});
 	}
+	tagInput.value = '';
 }
 
 watch(isOpen, (val) => {
@@ -254,6 +297,9 @@ async function loadUsers() {
 async function handleSubmit() {
 	saving.value = true;
 
+	// flush any pending tag input
+	if (tagInput.value.trim()) addTag();
+
 	const payload = {
 		stage: form.stage,
 		priority: form.priority,
@@ -262,6 +308,7 @@ async function handleSubmit() {
 		notes: form.notes || null,
 		next_follow_up: form.next_follow_up ? new Date(form.next_follow_up).toISOString() : null,
 		assigned_to: form.assigned_to || null,
+		tags: form.tags.length ? form.tags : null,
 	};
 
 	if (!isEditing.value && props.contactId) {
