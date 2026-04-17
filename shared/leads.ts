@@ -11,6 +11,7 @@ export interface LeadFilters {
   priority?: LeadPriority;
   source?: string;
   assigned_to?: string;
+  related_contact?: string;
   date_from?: string;
   date_to?: string;
   search?: string;

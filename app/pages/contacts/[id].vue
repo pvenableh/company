@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Contact, CreateContactPayload } from '~~/shared/email/contacts';
 import { Button } from '~/components/ui/button';
+import { LEAD_STAGE_LABELS, LEAD_STAGE_COLORS } from '~~/shared/leads';
 
 definePageMeta({ middleware: ['auth'] });
 useHead({ title: 'Contact Details | Earnest' });
@@ -11,6 +12,7 @@ const contactId = route.params.id as string;
 
 const { getContact, updateContact, deleteContact, linkToClient } = useContacts();
 const { getClients } = useClients();
+const { getLeads } = useLeads();
 const { selectedOrg } = useOrganization();
 
 const contact = ref<Contact | null>(null);
@@ -24,6 +26,27 @@ const error = ref<string | null>(null);
 const availableClients = ref<any[]>([]);
 const showClientPicker = ref(false);
 const linkingClient = ref(false);
+
+// Leads back-link
+const relatedLeads = ref<any[]>([]);
+const loadingLeads = ref(false);
+const openLeads = computed(() =>
+  relatedLeads.value.filter((l: any) => l.stage !== 'won' && l.stage !== 'lost' && l.status !== 'archived' && l.status !== 'junk'),
+);
+const closedLeads = computed(() =>
+  relatedLeads.value.filter((l: any) => l.stage === 'won' || l.stage === 'lost'),
+);
+
+async function loadRelatedLeads() {
+  loadingLeads.value = true;
+  try {
+    relatedLeads.value = await getLeads({ related_contact: contactId });
+  } catch {
+    relatedLeads.value = [];
+  } finally {
+    loadingLeads.value = false;
+  }
+}
 
 async function loadClients() {
   if (!selectedOrg.value) return;
@@ -87,6 +110,7 @@ async function handleDelete() {
 onMounted(() => {
   loadContact();
   loadClients();
+  loadRelatedLeads();
 });
 </script>
 
@@ -245,6 +269,67 @@ onMounted(() => {
                   Cancel
                 </button>
               </div>
+            </div>
+          </div>
+
+          <!-- Leads back-link -->
+          <div class="ios-card p-5">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-medium text-sm flex items-center gap-2">
+                <Icon name="lucide:trending-up" class="w-4 h-4 text-muted-foreground" />
+                Leads
+                <span v-if="relatedLeads.length" class="text-xs text-muted-foreground font-normal">
+                  ({{ openLeads.length }} open)
+                </span>
+              </h3>
+              <NuxtLink
+                :to="`/leads/new?contact=${contactId}`"
+                class="text-xs text-primary hover:underline flex items-center gap-1"
+              >
+                <Icon name="lucide:plus" class="w-3 h-3" />
+                Start a deal
+              </NuxtLink>
+            </div>
+            <div v-if="loadingLeads" class="text-sm text-muted-foreground">Loading&hellip;</div>
+            <div v-else-if="!relatedLeads.length" class="text-sm text-muted-foreground">
+              No leads yet.
+            </div>
+            <div v-else class="space-y-2">
+              <NuxtLink
+                v-for="lead in openLeads"
+                :key="lead.id"
+                :to="`/leads/${lead.id}`"
+                class="flex items-center justify-between p-2.5 bg-muted/50 rounded-xl text-sm hover:bg-muted/80 transition-colors"
+              >
+                <div class="flex items-center gap-2 min-w-0">
+                  <span
+                    class="w-2 h-2 rounded-full shrink-0"
+                    :style="{ backgroundColor: LEAD_STAGE_COLORS[lead.stage as keyof typeof LEAD_STAGE_COLORS] || '#94a3b8' }"
+                  ></span>
+                  <span class="truncate">
+                    {{ lead.project_type || `Lead #${lead.id}` }}
+                  </span>
+                </div>
+                <span class="text-xs text-muted-foreground shrink-0 ml-2">
+                  {{ LEAD_STAGE_LABELS[lead.stage as keyof typeof LEAD_STAGE_LABELS] || lead.stage }}
+                </span>
+              </NuxtLink>
+              <details v-if="closedLeads.length" class="text-xs text-muted-foreground">
+                <summary class="cursor-pointer hover:text-foreground">
+                  {{ closedLeads.length }} closed lead{{ closedLeads.length === 1 ? '' : 's' }}
+                </summary>
+                <div class="mt-2 space-y-1">
+                  <NuxtLink
+                    v-for="lead in closedLeads"
+                    :key="lead.id"
+                    :to="`/leads/${lead.id}`"
+                    class="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors"
+                  >
+                    <span class="truncate">{{ lead.project_type || `Lead #${lead.id}` }}</span>
+                    <span class="ml-2 shrink-0">{{ lead.stage }}</span>
+                  </NuxtLink>
+                </div>
+              </details>
             </div>
           </div>
 
