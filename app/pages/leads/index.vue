@@ -11,6 +11,7 @@ const router = useRouter();
 const { getLeads, getLeadStats } = useLeads();
 const { getContact } = useContacts();
 const { triggerRefresh } = useLeadsStore();
+const { isOrgManagerOrAbove } = useOrgRole();
 
 // "Start a deal" launcher — /leads?new=1&contact=<id>
 const showNewFromContactModal = ref(false);
@@ -100,6 +101,14 @@ onMounted(() => {
 				<h1 class="text-xl font-bold t-text">Leads</h1>
 				<p class="text-sm t-text-secondary">{{ stats.total }} total lead{{ stats.total === 1 ? '' : 's' }}</p>
 			</div>
+			<NuxtLink
+				v-if="isOrgManagerOrAbove"
+				to="/leads/automations"
+				class="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
+			>
+				<Icon name="lucide:zap" class="w-3.5 h-3.5" />
+				Automations
+			</NuxtLink>
 		</div>
 
 		<!-- Stats -->
