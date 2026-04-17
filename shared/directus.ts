@@ -1869,6 +1869,24 @@ export interface MailingListContact {
 	custom_fields?: string | null;
 }
 
+export interface LeadStageListRule {
+	/** @primaryKey */
+	id: number;
+	status?: 'published' | 'draft' | 'archived';
+	sort?: number | null;
+	user_created?: DirectusUser | string | null;
+	date_created?: string | null;
+	organization: Organization | string;
+	enabled?: boolean | null;
+	/** @description Stage the lead is moving FROM. Null = any previous stage. */
+	from_stage?: 'new' | 'contacted' | 'qualified' | 'proposal_sent' | 'negotiating' | 'won' | 'lost' | null;
+	/** @description Stage the lead is moving TO @required */
+	to_stage: 'new' | 'contacted' | 'qualified' | 'proposal_sent' | 'negotiating' | 'won' | 'lost';
+	add_to_list?: MailingList | number | null;
+	remove_from_list?: MailingList | number | null;
+	description?: string | null;
+}
+
 export interface MailingList {
 	/** @primaryKey */
 	id: number;

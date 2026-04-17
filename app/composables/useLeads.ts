@@ -164,6 +164,82 @@ export function useLeads() {
     });
   };
 
+  /**
+   * Look up matching lead_stage_list_rules for a stage transition and apply them.
+   * Each matched rule optionally adds the lead's contact to one list and/or
+   * removes from another. Uses addLeadToList so contact auto-promotion still
+   * works when the lead has no related_contact yet. Failures are non-fatal.
+   */
+  const applyStageRules = async (
+    leadId: number | string,
+    newStage: LeadStage,
+    oldStage?: LeadStage,
+  ): Promise<{ added: number; removed: number; skipped: number }> => {
+    const { selectedOrg } = useOrganization();
+    const { removeFromList } = useContacts();
+    const rulesItems = useDirectusItems('lead_stage_list_rules');
+
+    const result = { added: 0, removed: 0, skipped: 0 };
+    if (!selectedOrg.value) return result;
+
+    try {
+      const fromStageFilter: any = oldStage
+        ? { _or: [{ from_stage: { _null: true } }, { from_stage: { _eq: oldStage } }] }
+        : { from_stage: { _null: true } };
+
+      const rules = await rulesItems.list({
+        fields: ['id', 'add_to_list', 'remove_from_list'],
+        filter: {
+          _and: [
+            { organization: { _eq: selectedOrg.value } },
+            { status: { _eq: 'published' } },
+            { enabled: { _eq: true } },
+            { to_stage: { _eq: newStage } },
+            fromStageFilter,
+          ],
+        },
+        limit: 20,
+      });
+
+      for (const rule of rules as any[]) {
+        const addListId = typeof rule.add_to_list === 'object' ? rule.add_to_list?.id : rule.add_to_list;
+        const removeListId = typeof rule.remove_from_list === 'object' ? rule.remove_from_list?.id : rule.remove_from_list;
+
+        if (addListId) {
+          try {
+            await addLeadToList(leadId, Number(addListId), 'stage_rule');
+            result.added++;
+          } catch (err) {
+            console.warn('[stage-rule] add_to_list failed:', err);
+            result.skipped++;
+          }
+        }
+
+        if (removeListId) {
+          try {
+            const fresh = await getLead(leadId) as any;
+            const contactId = typeof fresh?.related_contact === 'object'
+              ? fresh?.related_contact?.id
+              : fresh?.related_contact;
+            if (contactId) {
+              await removeFromList(contactId, Number(removeListId));
+              result.removed++;
+            } else {
+              result.skipped++;
+            }
+          } catch (err) {
+            console.warn('[stage-rule] remove_from_list failed:', err);
+            result.skipped++;
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[stage-rule] rule lookup failed:', err);
+    }
+
+    return result;
+  };
+
   const updateLeadStageWithAutomation = async (
     id: number | string,
     newStage: LeadStage,
@@ -189,6 +265,9 @@ export function useLeads() {
 
     // Auto-schedule follow-up
     await scheduleFollowUp(id, newStage);
+
+    // Fire marketing-automation rules (non-fatal)
+    await applyStageRules(id, newStage, oldStage);
 
     return {};
   };
@@ -311,10 +390,14 @@ export function useLeads() {
       description: `Created client "${clientData.name}" and marked lead as won.`,
     });
 
+    // Fire marketing-automation rules for the won transition
+    const oldStage = (lead as any)?.stage as LeadStage | undefined;
+    await applyStageRules(leadId, 'won', oldStage);
+
     return client;
   };
 
-  const markLeadLost = async (leadId: number | string, lostReason: string, closedDate?: string) => {
+  const markLeadLost = async (leadId: number | string, lostReason: string, closedDate?: string, oldStage?: LeadStage) => {
     await leads.update(leadId, {
       stage: 'lost',
       lost_reason: lostReason,
@@ -329,6 +412,9 @@ export function useLeads() {
       subject: 'Lead marked as lost',
       description: `Reason: ${lostReason}`,
     });
+
+    // Fire marketing-automation rules for the lost transition
+    await applyStageRules(leadId, 'lost', oldStage);
   };
 
   const getLeadsByStage = async (filters?: LeadFilters): Promise<Record<LeadStage, any[]>> => {

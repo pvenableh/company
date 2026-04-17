@@ -84,6 +84,7 @@ async function handleSubmit() {
 			props.lead.id,
 			form.lost_reason.trim(),
 			form.closed_date ? new Date(form.closed_date).toISOString() : undefined,
+			props.lead.stage,
 		);
 
 		toast.add({ title: 'Lead marked as lost', color: 'yellow' });
