@@ -70,6 +70,10 @@ export function useLeads() {
         'related_contact.total_clicks',
         'related_contact.last_opened_at',
         'related_contact.last_clicked_at',
+        'related_contact.lists.id',
+        'related_contact.lists.subscribed',
+        'related_contact.lists.list_id.id',
+        'related_contact.lists.list_id.name',
         'assigned_to.id',
         'assigned_to.first_name',
         'assigned_to.last_name',
@@ -187,6 +191,48 @@ export function useLeads() {
     await scheduleFollowUp(id, newStage);
 
     return {};
+  };
+
+  /**
+   * Add a lead to a mailing list. If the lead has no related_contact yet,
+   * auto-creates one from the lead's data (option-b approach from the
+   * contacts/leads unification plan). Returns the contact id used.
+   */
+  const addLeadToList = async (
+    leadId: number | string,
+    listId: number,
+    source = 'lead_list_promote',
+  ): Promise<{ contactId: string; created: boolean }> => {
+    const { createContact, addToList } = useContacts();
+
+    const lead = await getLead(leadId) as any;
+    if (!lead) throw new Error('Lead not found');
+
+    let contactId: string | null = null;
+    let created = false;
+
+    const rc = lead.related_contact;
+    contactId = typeof rc === 'string' ? rc : rc?.id || null;
+
+    if (!contactId) {
+      // Promote: synthesize a Contact from what the lead has (name/company/source).
+      // Marketing needs an email to be useful, so fall back to a stub if missing.
+      const newContact = await createContact({
+        first_name: (rc?.first_name || '') as string,
+        last_name: (rc?.last_name || '') as string,
+        email: (rc?.email || '') as string,
+        phone: (rc?.phone as string) || undefined,
+        company: (rc?.company as string) || undefined,
+        source: `lead:${lead.source || 'unknown'}`,
+      } as any);
+      contactId = (newContact as any)?.id || null;
+      if (!contactId) throw new Error('Failed to create contact from lead');
+      await leads.update(leadId, { related_contact: contactId } as any);
+      created = true;
+    }
+
+    await addToList(contactId, listId, source);
+    return { contactId, created };
   };
 
   const convertToClient = async (
@@ -357,6 +403,7 @@ export function useLeads() {
     junkLead,
     restoreLead,
     getArchivedLeads,
+    addLeadToList,
     ...leads,
   };
 }

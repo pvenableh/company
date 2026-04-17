@@ -1,15 +1,19 @@
 <script setup lang="ts">
 import { LEAD_STAGE_LABELS, LEAD_STAGE_COLORS } from '~~/shared/leads';
 import type { LeadStage } from '~~/shared/leads';
+import { Button } from '~/components/ui/button';
 
 definePageMeta({ middleware: ['auth'] });
 
 const route = useRoute();
 const leadId = computed(() => route.params.id as string);
 
-const { getLead, updateLeadStageWithAutomation } = useLeads();
+const { getLead, updateLeadStageWithAutomation, addLeadToList } = useLeads();
 const { getActivitiesForLead, createActivity } = useLeadActivities();
 const { getPriorityBadgeClass } = useStatusStyle();
+const { getLists } = useMailingLists();
+const { removeFromList } = useContacts();
+const toast = useToast();
 
 const lead = ref<any>(null);
 const activities = ref<any[]>([]);
@@ -115,6 +119,67 @@ const isOverdueFollowUp = computed(() => {
 	return new Date(lead.value.next_follow_up) < new Date();
 });
 
+// ── Mailing list membership ──
+const availableLists = ref<any[]>([]);
+const showListPicker = ref(false);
+const selectedListId = ref<number | null>(null);
+const listBusy = ref(false);
+
+const leadLists = computed(() => {
+	const memberships = lead.value?.related_contact?.lists || [];
+	return memberships.filter((m: any) => m?.subscribed);
+});
+const leadListIds = computed(() =>
+	leadLists.value.map((m: any) => (typeof m.list_id === 'object' ? m.list_id?.id : m.list_id)).filter(Boolean),
+);
+const listsToShow = computed(() =>
+	availableLists.value.filter((l: any) => !leadListIds.value.includes(l.id)),
+);
+
+async function loadAvailableLists() {
+	try {
+		availableLists.value = (await getLists()) as any[];
+	} catch {
+		availableLists.value = [];
+	}
+}
+
+async function handleAddToList() {
+	if (!selectedListId.value || !lead.value?.id) return;
+	listBusy.value = true;
+	try {
+		const { created } = await addLeadToList(lead.value.id, selectedListId.value, 'lead_detail');
+		toast.add({
+			title: created ? 'Lead promoted to contact + added to list' : 'Added to list',
+			color: 'green',
+		});
+		showListPicker.value = false;
+		selectedListId.value = null;
+		await fetchData();
+	} catch (err: any) {
+		toast.add({ title: 'Failed to add to list', description: err?.message, color: 'red' });
+	} finally {
+		listBusy.value = false;
+	}
+}
+
+async function handleRemoveFromList(listId: number) {
+	const contactId = typeof lead.value?.related_contact === 'object'
+		? lead.value?.related_contact?.id
+		: lead.value?.related_contact;
+	if (!contactId || !listId) return;
+	listBusy.value = true;
+	try {
+		await removeFromList(contactId, listId);
+		toast.add({ title: 'Removed from list', color: 'green' });
+		await fetchData();
+	} catch (err: any) {
+		toast.add({ title: 'Failed to remove from list', description: err?.message, color: 'red' });
+	} finally {
+		listBusy.value = false;
+	}
+}
+
 // ── Meeting integration ──
 const showMeetingModal = ref(false);
 const upcomingMeetings = ref<any[]>([]);
@@ -148,6 +213,7 @@ const handleMeetingCreated = () => {
 onMounted(() => {
 	fetchData();
 	fetchUpcomingMeetings();
+	loadAvailableLists();
 });
 </script>
 
@@ -293,6 +359,62 @@ onMounted(() => {
 							<p v-if="lead.related_contact.last_clicked_at" class="text-[11px] t-text-secondary">
 								Last clicked {{ new Date(lead.related_contact.last_clicked_at).toLocaleDateString() }}
 							</p>
+						</div>
+					</div>
+
+					<!-- Mailing Lists (auto-promotes lead to contact on add) -->
+					<div class="ios-card p-4 space-y-2">
+						<div class="flex items-center justify-between">
+							<p class="text-[10px] uppercase font-semibold t-text-muted tracking-wider">Mailing Lists</p>
+							<button
+								v-if="!showListPicker && listsToShow.length"
+								class="text-[10px] text-primary hover:underline"
+								@click="showListPicker = true"
+							>
+								+ Add to list
+							</button>
+						</div>
+
+						<div v-if="leadLists.length" class="space-y-1.5">
+							<div
+								v-for="m in leadLists"
+								:key="(m as any).id"
+								class="flex items-center justify-between p-2 rounded-lg bg-muted/40 text-xs"
+							>
+								<span class="truncate">{{ ((m as any).list_id as any)?.name || 'Unknown list' }}</span>
+								<button
+									class="text-[10px] text-muted-foreground hover:text-destructive"
+									:disabled="listBusy"
+									@click="handleRemoveFromList(((m as any).list_id as any)?.id)"
+								>
+									Remove
+								</button>
+							</div>
+						</div>
+						<p v-else-if="!showListPicker" class="text-[11px] text-muted-foreground">
+							Not on any list. Adding one will {{ lead.related_contact ? 'subscribe this contact' : 'create a contact from the lead and subscribe them' }}.
+						</p>
+
+						<div v-if="showListPicker" class="space-y-2 pt-1">
+							<select
+								v-model="selectedListId"
+								class="w-full rounded-lg border border-input bg-background px-2 py-1.5 text-xs"
+								:disabled="listBusy"
+							>
+								<option :value="null">Select a list&hellip;</option>
+								<option v-for="l in listsToShow" :key="l.id" :value="l.id">{{ l.name }}</option>
+							</select>
+							<div class="flex items-center gap-2">
+								<Button size="sm" :disabled="!selectedListId || listBusy" @click="handleAddToList">
+									Add
+								</Button>
+								<button
+									class="text-[10px] text-muted-foreground hover:text-foreground"
+									@click="showListPicker = false; selectedListId = null"
+								>
+									Cancel
+								</button>
+							</div>
 						</div>
 					</div>
 
