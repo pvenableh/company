@@ -1806,7 +1806,7 @@ export interface LeadActivitiesFile {
 export interface Lead {
 	/** @primaryKey */
 	id: number;
-	status?: 'published' | 'draft' | 'archived' | 'junk';
+	status?: 'published' | 'draft' | 'archived';
 	sort?: number | null;
 	user_created?: DirectusUser | string | null;
 	date_created?: string | null;
@@ -1834,6 +1834,29 @@ export interface Lead {
 	organization?: Organization | string | null;
 	/** @description Custom tags for flexible categorization across the pipeline (e.g., hot, referral, rfp) */
 	tags?: string[] | null;
+}
+
+export interface LeadStageListRule {
+	/** @primaryKey */
+	id: number;
+	status?: 'published' | 'draft' | 'archived';
+	sort?: number | null;
+	user_created?: DirectusUser | string | null;
+	date_created?: string | null;
+	/** @description Organization that owns this rule @required */
+	organization: Organization | string;
+	/** @description Turn off to pause this rule without deleting it */
+	enabled?: boolean | null;
+	/** @description Stage the lead is moving FROM. Leave empty to match any previous stage. */
+	from_stage?: 'new' | 'contacted' | 'qualified' | 'proposal_sent' | 'negotiating' | 'won' | 'lost' | null;
+	/** @description Stage the lead is moving TO @required */
+	to_stage: 'new' | 'contacted' | 'qualified' | 'proposal_sent' | 'negotiating' | 'won' | 'lost';
+	/** @description Mailing list to add the lead's contact to. Auto-creates a contact if the lead has none. */
+	add_to_list?: MailingList | string | null;
+	/** @description Mailing list to unsubscribe the lead's contact from */
+	remove_from_list?: MailingList | string | null;
+	/** @description Optional human-friendly name, e.g. 'Lost → add to nurture drip' */
+	description?: string | null;
 }
 
 export interface LineItem {
@@ -1867,24 +1890,6 @@ export interface MailingListContact {
 	date_unsubscribed?: string | null;
 	source?: string | null;
 	custom_fields?: string | null;
-}
-
-export interface LeadStageListRule {
-	/** @primaryKey */
-	id: number;
-	status?: 'published' | 'draft' | 'archived';
-	sort?: number | null;
-	user_created?: DirectusUser | string | null;
-	date_created?: string | null;
-	organization: Organization | string;
-	enabled?: boolean | null;
-	/** @description Stage the lead is moving FROM. Null = any previous stage. */
-	from_stage?: 'new' | 'contacted' | 'qualified' | 'proposal_sent' | 'negotiating' | 'won' | 'lost' | null;
-	/** @description Stage the lead is moving TO @required */
-	to_stage: 'new' | 'contacted' | 'qualified' | 'proposal_sent' | 'negotiating' | 'won' | 'lost';
-	add_to_list?: MailingList | number | null;
-	remove_from_list?: MailingList | number | null;
-	description?: string | null;
 }
 
 export interface MailingList {
@@ -4073,6 +4078,7 @@ export interface Schema {
 	lead_activities: LeadActivity[];
 	lead_activities_files: LeadActivitiesFile[];
 	leads: Lead[];
+	lead_stage_list_rules: LeadStageListRule[];
 	line_items: LineItem[];
 	mailing_list_contacts: MailingListContact[];
 	mailing_lists: MailingList[];
@@ -4289,6 +4295,7 @@ export enum CollectionNames {
 	lead_activities = 'lead_activities',
 	lead_activities_files = 'lead_activities_files',
 	leads = 'leads',
+	lead_stage_list_rules = 'lead_stage_list_rules',
 	line_items = 'line_items',
 	mailing_list_contacts = 'mailing_list_contacts',
 	mailing_lists = 'mailing_lists',
