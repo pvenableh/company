@@ -1414,6 +1414,35 @@ export interface EarnestTokenPool {
 	date_created?: string | null;
 }
 
+export interface EmailEvent {
+	/** @primaryKey */
+	id: number;
+	sort?: number | null;
+	date_created?: string | null;
+	/** @description Campaign this event belongs to */
+	email_id?: Email | string | null;
+	/** @description SendGrid's unique event id — used to dedupe retries */
+	sg_event_id?: string | null;
+	/** @description SendGrid message id — shared across events from the same send */
+	sg_message_id?: string | null;
+	event?: 'delivered' | 'open' | 'click' | 'bounce' | 'dropped' | 'deferred' | 'processed' | 'spamreport' | 'unsubscribe' | 'group_unsubscribe' | 'group_resubscribe' | null;
+	recipient?: string | null;
+	/** @description When SendGrid recorded the event */
+	timestamp?: string | null;
+	/** @description Clicked URL (for click events) */
+	url?: string | null;
+	/** @description Failure reason from SendGrid (for bounce/dropped/deferred) */
+	reason?: string | null;
+	/** @description Full SendGrid event payload for debugging */
+	raw?: Record<string, any> | null;
+	/** @description Organization (denormalized from campaign for filter perf) */
+	organization?: Organization | string | null;
+	/** @description DEPRECATED — use `contact` (uuid) instead. This integer field is unused and can be ignored. */
+	contact_id?: number | null;
+	/** @description Contact matched by recipient email at event time */
+	contact?: Contact | string | null;
+}
+
 export interface EmailPartial {
 	/** @primaryKey */
 	id: number;
@@ -1459,6 +1488,8 @@ export interface Email {
 	total_failed?: number | null;
 	send_errors?: Record<string, any> | null;
 	preview_html?: string | null;
+	/** @description Organization this campaign belongs to */
+	organization?: Organization | string | null;
 }
 
 export interface EmailTemplate {
@@ -1486,6 +1517,10 @@ export interface EmailTemplate {
 	footer_partial_id?: EmailPartial | string | null;
 	/** @description Organization this template belongs to */
 	organization?: Organization | string | null;
+	/** @description Marks this template as a starter/preset available to all organizations. */
+	is_starter?: boolean | null;
+	/** @description Background color behind the email body (mj-body). Defaults to white. */
+	body_background_color?: string | null;
 	blocks?: TemplateBlock[] | string[];
 }
 
@@ -3996,6 +4031,7 @@ export interface Schema {
 	earnest_scores: EarnestScore[];
 	earnest_showcase_brands: EarnestShowcaseBrand[];
 	earnest_token_pools: EarnestTokenPool[];
+	email_events: EmailEvent[];
 	email_partials: EmailPartial[];
 	emails: Email[];
 	email_templates: EmailTemplate[];
@@ -4211,6 +4247,7 @@ export enum CollectionNames {
 	earnest_scores = 'earnest_scores',
 	earnest_showcase_brands = 'earnest_showcase_brands',
 	earnest_token_pools = 'earnest_token_pools',
+	email_events = 'email_events',
 	email_partials = 'email_partials',
 	emails = 'emails',
 	email_templates = 'email_templates',

@@ -237,6 +237,33 @@
             @reorder="handleReorder($event)"
           />
 
+          <!-- Raw MJML fallback: template has source but no blocks yet -->
+          <div v-else-if="builder.rawMjmlSource.value" class="py-6 sm:py-10">
+            <div class="ios-card p-5 max-w-lg mx-auto text-center">
+              <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center mb-3 mx-auto">
+                <Icon name="lucide:layout-template" class="w-5 h-5 text-emerald-500" />
+              </div>
+              <h3 class="text-sm font-semibold text-foreground mb-1">Seeded from a template</h3>
+              <p class="text-[11px] text-muted-foreground leading-relaxed mb-4">
+                This starter ships as a complete MJML document. The preview on the right renders the original design. To edit, paste a revised MJML, replace with blocks, or add blocks alongside it.
+              </p>
+              <div class="flex gap-2 justify-center">
+                <button
+                  class="rounded-full px-3 py-1.5 text-[11px] font-medium border border-border bg-card hover:bg-muted ios-press inline-flex items-center gap-1.5 transition-colors"
+                  @click="showPasteModal = true"
+                >
+                  <Icon name="lucide:clipboard-paste" class="w-3 h-3" /> Edit MJML
+                </button>
+                <button
+                  class="rounded-full px-3 py-1.5 text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 ios-press inline-flex items-center gap-1.5 shadow-sm transition-colors"
+                  @click="showSidebar = true"
+                >
+                  <Icon name="lucide:blocks" class="w-3 h-3" /> Add blocks
+                </button>
+              </div>
+            </div>
+          </div>
+
           <!-- Empty state -->
           <div v-else class="py-8 sm:py-16">
             <div class="text-center mb-8">
@@ -420,7 +447,7 @@ const debouncedPreview = useDebounceFn(() => builder.refreshPreview(), 600);
 onMounted(async () => {
   blockLibrary.value = await getBlockLibrary();
   await builder.loadBlocks();
-  if (builder.canvas.value.length > 0) {
+  if (builder.canvas.value.length > 0 || builder.rawMjmlSource.value) {
     await builder.refreshPreview();
   } else if (props.autoOpenAi) {
     showAIWizard.value = true;
@@ -471,8 +498,13 @@ function handleDuplicateBlock(instanceId: string) {
     sort: idx + 1,
   };
 
-  builder.canvas.value.splice(idx + 1, 0, duplicate);
-  builder.canvas.value.forEach((b, i) => (b.sort = i));
+  const next = [
+    ...builder.canvas.value.slice(0, idx + 1),
+    duplicate,
+    ...builder.canvas.value.slice(idx + 1),
+  ];
+  next.forEach((b, i) => (b.sort = i));
+  builder.canvas.value = next;
   builder.isDirty.value = true;
   debouncedPreview();
 }

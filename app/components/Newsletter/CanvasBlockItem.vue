@@ -1,6 +1,6 @@
 <template>
   <div
-    class="ios-card transition-all duration-200"
+    class="ios-card transition-all duration-200 group"
     :class="{
       'ring-2 ring-primary': isEditing,
       'ring-1 ring-primary/40': isFocused && !isEditing,
@@ -27,7 +27,7 @@
         <span class="text-xs font-medium truncate text-foreground">{{ canvasBlock.block.name }}</span>
       </div>
 
-      <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div class="flex items-center gap-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
         <button
           class="p-1 rounded-full hover:bg-muted text-muted-foreground ios-press transition-colors"
           title="Move up"

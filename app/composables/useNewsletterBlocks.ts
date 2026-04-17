@@ -19,8 +19,11 @@ export function useNewsletterBlocks() {
     const blocks = await getBlocks();
     const grouped: Record<string, NewsletterBlock[]> = {};
     for (const block of blocks) {
-      if (!grouped[block.category]) grouped[block.category] = [];
-      grouped[block.category].push(block);
+      // Bucket blocks with missing/unknown categories under 'other' so they
+      // don't render as a "NULL" header in the library sidebar.
+      const cat = block.category || 'other';
+      if (!grouped[cat]) grouped[cat] = [];
+      grouped[cat].push(block);
     }
     return grouped;
   };

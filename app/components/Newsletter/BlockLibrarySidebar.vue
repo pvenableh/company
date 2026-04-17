@@ -116,6 +116,7 @@ const categoryLabels: Record<string, string> = {
   divider: 'Divider',
   social: 'Social Links',
   footer: 'Footer',
+  other: 'Other',
 };
 
 const categoryIcons: Record<string, string> = {
@@ -132,6 +133,7 @@ const categoryIcons: Record<string, string> = {
   divider: 'lucide:minus',
   social: 'lucide:share-2',
   footer: 'lucide:panel-bottom',
+  other: 'lucide:box',
 };
 
 const categoryColors: Record<string, string> = {
@@ -148,6 +150,7 @@ const categoryColors: Record<string, string> = {
   divider: 'text-gray-400',
   social: 'text-sky-500',
   footer: 'text-slate-500',
+  other: 'text-muted-foreground',
 };
 
 function formatCategory(cat: string): string {

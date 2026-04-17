@@ -19,6 +19,10 @@ export function useTemplateBuilder(templateId: Ref<number>) {
   const previewErrors = ref<string[]>([]);
   const isDirty = ref(false);
   const saving = ref(false);
+  /** Raw MJML saved on the template itself. Used for starter templates that
+   * were seeded as whole-MJML rather than decomposed into blocks, and as a
+   * fallback so the preview stays accurate before the user touches anything. */
+  const rawMjmlSource = ref<string | null>(null);
 
   // Partial toggles
   const includeHeader = ref(true);
@@ -46,12 +50,13 @@ export function useTemplateBuilder(templateId: Ref<number>) {
 
     // Load template partial settings
     const tmpl = await emailTemplateItems.get(templateId.value, {
-      fields: ['include_header', 'include_footer', 'include_web_version_bar', 'header_partial_id', 'footer_partial_id'],
+      fields: ['include_header', 'include_footer', 'include_web_version_bar', 'header_partial_id', 'footer_partial_id', 'mjml_source'],
     }) as any;
 
     includeHeader.value = tmpl.include_header !== false;
     includeFooter.value = tmpl.include_footer !== false;
     includeWebVersionBar.value = tmpl.include_web_version_bar !== false;
+    rawMjmlSource.value = tmpl.mjml_source || null;
 
     // Load partials (from template or defaults)
     await loadPartials(tmpl.header_partial_id, tmpl.footer_partial_id);
@@ -102,12 +107,13 @@ export function useTemplateBuilder(templateId: Ref<number>) {
       variables: getDefaultVariables(block),
       sort: canvas.value.length,
     };
-    if (atIndex !== undefined) {
-      canvas.value.splice(atIndex, 0, newBlock);
-    } else {
-      canvas.value.push(newBlock);
-    }
-    reindex();
+    // Reassign to a new array so watchers tracking props.blocks identity fire
+    // (e.g. BuilderCanvas's localBlocks sync).
+    const next = atIndex !== undefined
+      ? [...canvas.value.slice(0, atIndex), newBlock, ...canvas.value.slice(atIndex)]
+      : [...canvas.value, newBlock];
+    next.forEach((b, i) => (b.sort = i));
+    canvas.value = next;
     isDirty.value = true;
   };
 
@@ -168,6 +174,14 @@ export function useTemplateBuilder(templateId: Ref<number>) {
     // Safety net: validate color values even when non-empty — prevents text leaking into color attrs
     if (type === 'color') {
       const colorRegex = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
+      const lowerKey = (key || '').toLowerCase();
+      const isBgKey = lowerKey.includes('background') || lowerKey.includes('bg');
+      // 'transparent' is only meaningful for background-style keys. On text
+      // color fields it renders the content invisible — snap to a visible
+      // default. This also rescues existing saved data from the old schema.
+      if (str === 'transparent' && !isBgKey) {
+        return '#333333';
+      }
       if (!colorRegex.test(str) && !['transparent', 'inherit', 'currentColor'].includes(str)) {
         return '#333333';
       }
@@ -208,6 +222,15 @@ export function useTemplateBuilder(templateId: Ref<number>) {
   };
 
   const assembleMjml = (): string => {
+    // Starter templates (and any template seeded from raw MJML) ship a
+    // complete document in mjml_source. When the canvas hasn't been built up
+    // from blocks yet, use that as-is so the preview renders the original
+    // design exactly. As soon as the user adds their first block, we switch
+    // back to block assembly.
+    if (canvas.value.length === 0 && rawMjmlSource.value) {
+      return rawMjmlSource.value;
+    }
+
     const sections: string[] = [];
 
     // Web version bar (always first if enabled)
@@ -480,6 +503,7 @@ ${sections.join('\n')}
     previewErrors,
     isDirty,
     saving,
+    rawMjmlSource,
     includeHeader,
     includeFooter,
     includeWebVersionBar,

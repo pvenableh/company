@@ -8,7 +8,7 @@ useHead({ title: 'Email | Earnest' });
 const router = useRouter();
 const { getContacts } = useContacts();
 const { getLists } = useMailingLists();
-const { getTemplates, createTemplate, duplicateTemplate } = useEmailTemplates();
+const { getTemplates, getStarterTemplates, createTemplate, duplicateTemplate } = useEmailTemplates();
 const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext();
 
 const activeTab = ref(0);
@@ -21,6 +21,7 @@ const tabs = [
 // Templates state
 const templates = ref<any[]>([]);
 const templatesLoading = ref(true);
+const starterTemplates = ref<any[]>([]);
 
 // Contacts state
 const contacts = ref<Contact[]>([]);
@@ -40,7 +41,7 @@ const showNewTemplate = ref(false);
 const newTemplateName = ref('');
 const newTemplateType = ref<'newsletter' | 'transactional'>('newsletter');
 const creatingTemplate = ref(false);
-const startMethod = ref<'blank' | 'existing' | 'ai' | null>(null);
+const startMethod = ref<'blank' | 'existing' | 'starter' | 'ai' | null>(null);
 const selectedSourceTemplate = ref<any>(null);
 
 const fetchTemplates = async () => {
@@ -51,6 +52,14 @@ const fetchTemplates = async () => {
 		templates.value = [];
 	}
 	templatesLoading.value = false;
+};
+
+const fetchStarterTemplates = async () => {
+	try {
+		starterTemplates.value = await getStarterTemplates();
+	} catch {
+		starterTemplates.value = [];
+	}
 };
 
 const fetchContacts = async () => {
@@ -77,7 +86,7 @@ const handleCreateTemplate = async () => {
 	if (!newTemplateName.value.trim()) return;
 	creatingTemplate.value = true;
 	try {
-		if (startMethod.value === 'existing' && selectedSourceTemplate.value) {
+		if ((startMethod.value === 'existing' || startMethod.value === 'starter') && selectedSourceTemplate.value) {
 			const tpl = await duplicateTemplate(
 				selectedSourceTemplate.value.id,
 				newTemplateName.value.trim(),
@@ -127,7 +136,7 @@ function resetModal() {
 
 onMounted(async () => {
 	setEntity('email', 'dashboard', 'Email Dashboard');
-	await Promise.all([fetchTemplates(), fetchContacts(), fetchLists()]);
+	await Promise.all([fetchTemplates(), fetchStarterTemplates(), fetchContacts(), fetchLists()]);
 });
 
 onUnmounted(() => clearEntity());
@@ -379,7 +388,7 @@ onUnmounted(() => clearEntity());
 								<Icon name="lucide:arrow-left" class="w-3.5 h-3.5" />
 							</button>
 							<h2 class="text-sm font-semibold text-foreground">
-								{{ !startMethod ? 'Create Email' : startMethod === 'existing' ? 'From Existing' : startMethod === 'ai' ? 'AI Generate' : 'New Template' }}
+								{{ !startMethod ? 'Create Email' : startMethod === 'existing' ? 'From Existing' : startMethod === 'starter' ? 'Start from Template' : startMethod === 'ai' ? 'AI Generate' : 'New Template' }}
 							</h2>
 						</div>
 						<button class="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted ios-press transition-colors" @click="showNewTemplate = false; resetModal()">
@@ -400,6 +409,20 @@ onUnmounted(() => clearEntity());
 								<div class="flex-1">
 									<p class="text-sm font-medium text-foreground">Blank Template</p>
 									<p class="text-[11px] text-muted-foreground">Start from scratch</p>
+								</div>
+								<Icon name="lucide:chevron-right" class="w-4 h-4 text-muted-foreground/40" />
+							</button>
+							<button
+								v-if="starterTemplates.length > 0"
+								class="flex items-center gap-3 w-full px-4 py-3.5 text-left hover:bg-muted/30 transition-colors ios-press"
+								@click="startMethod = 'starter'"
+							>
+								<div class="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+									<Icon name="lucide:layout-template" class="w-4 h-4 text-emerald-500" />
+								</div>
+								<div class="flex-1">
+									<p class="text-sm font-medium text-foreground">Start from Template</p>
+									<p class="text-[11px] text-muted-foreground">{{ starterTemplates.length }} pre-built {{ starterTemplates.length === 1 ? 'design' : 'designs' }}</p>
 								</div>
 								<Icon name="lucide:chevron-right" class="w-4 h-4 text-muted-foreground/40" />
 							</button>
@@ -477,6 +500,49 @@ onUnmounted(() => clearEntity());
 								<Icon v-if="startMethod === 'ai'" name="lucide:sparkles" class="w-3 h-3" />
 								{{ creatingTemplate ? 'Creating...' : startMethod === 'ai' ? 'Create & Generate' : 'Create' }}
 							</button>
+						</div>
+					</div>
+
+					<!-- Step 2: Starter Template picker -->
+					<div v-else-if="startMethod === 'starter'" class="space-y-0">
+						<div class="max-h-64 overflow-y-auto divide-y divide-border/30">
+							<button
+								v-for="tpl in starterTemplates"
+								:key="tpl.id"
+								class="flex items-center gap-3 w-full px-5 py-3 text-left hover:bg-muted/30 transition-colors ios-press"
+								:class="{ 'bg-primary/5': selectedSourceTemplate?.id === tpl.id }"
+								@click="selectedSourceTemplate = tpl; newTemplateName = tpl.name"
+							>
+								<div class="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
+									<Icon name="lucide:layout-template" class="w-3.5 h-3.5 text-emerald-500" />
+								</div>
+								<div class="flex-1 min-w-0">
+									<p class="text-sm font-medium text-foreground truncate">{{ tpl.name }}</p>
+									<p class="text-[10px] text-muted-foreground capitalize">{{ tpl.block_count || 0 }} blocks · {{ tpl.type }}</p>
+								</div>
+								<Icon v-if="selectedSourceTemplate?.id === tpl.id" name="lucide:check" class="w-4 h-4 text-primary" />
+							</button>
+						</div>
+						<div v-if="selectedSourceTemplate" class="px-5 py-3 border-t border-border/30 space-y-3">
+							<div>
+								<label class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-1 block">Name Your Copy</label>
+								<input
+									v-model="newTemplateName"
+									type="text"
+									class="w-full rounded-xl border bg-background px-3 py-2 text-sm focus:ring-1 focus:ring-primary/30 outline-none transition-all"
+									@keyup.enter="handleCreateTemplate"
+								/>
+							</div>
+							<div class="flex justify-end">
+								<button
+									class="rounded-full px-4 py-1.5 text-[11px] font-medium bg-primary text-primary-foreground hover:bg-primary/90 ios-press shadow-sm transition-colors inline-flex items-center gap-1.5 disabled:opacity-40"
+									:disabled="!newTemplateName.trim() || creatingTemplate"
+									@click="handleCreateTemplate"
+								>
+									<Icon name="lucide:layout-template" class="w-3 h-3" />
+									{{ creatingTemplate ? 'Creating...' : 'Use Template' }}
+								</button>
+							</div>
 						</div>
 					</div>
 

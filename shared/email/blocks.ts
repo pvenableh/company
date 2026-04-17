@@ -70,10 +70,12 @@ export function inferVariablesFromMjml(mjml: string): BlockVariableDefinition[] 
     let type: BlockVariableDefinition['type'] = 'text';
     let defaultVal: string | undefined;
 
-    // Infer type from variable name
+    // Infer type from variable name. Leave `defaultVal` undefined so the caller
+    // can apply a key-aware default (backgrounds → transparent, text colors →
+    // visible dark). Hardcoding 'transparent' here made all text colors render
+    // invisible in the preview.
     if (lower.includes('color') || lower.includes('bg') || lower.includes('background')) {
       type = 'color';
-      defaultVal = 'transparent';
     } else if (lower.includes('url') || lower.includes('link') || lower.includes('href')) {
       type = 'url';
     } else if (lower.includes('image') || lower.includes('img') || lower.includes('src') || lower.includes('logo') || lower.includes('photo') || lower.includes('avatar')) {
@@ -155,6 +157,9 @@ export interface EmailTemplate {
   include_web_version_bar?: boolean | null;
   header_partial_id?: number | EmailPartial | string | null;
   footer_partial_id?: number | EmailPartial | string | null;
+
+  // System-provided starter templates that users can clone as a jump-start.
+  is_starter?: boolean | null;
 }
 
 export interface MjmlCompileResult {

@@ -5,7 +5,7 @@ export function useEmailTemplates() {
   const { selectedOrg, getOrganizationFilter } = useOrganization();
 
   const getTemplates = async (type?: 'newsletter' | 'transactional'): Promise<EmailTemplate[]> => {
-    const filter: any = { _and: [] };
+    const filter: any = { _and: [{ is_starter: { _neq: true } }] };
 
     // Org-scope
     const orgFilter = getOrganizationFilter();
@@ -19,8 +19,17 @@ export function useEmailTemplates() {
 
     return items.list({
       fields: ['*'],
-      filter: filter._and.length ? filter : undefined,
+      filter,
       sort: ['-date_updated'],
+    });
+  };
+
+  /** Starter templates are system-provided and shared across all orgs. */
+  const getStarterTemplates = async (): Promise<EmailTemplate[]> => {
+    return items.list({
+      fields: ['*'],
+      filter: { is_starter: { _eq: true }, status: { _eq: 'published' } },
+      sort: ['sort', 'name'],
     });
   };
 
@@ -79,6 +88,10 @@ export function useEmailTemplates() {
       include_header: source.include_header,
       include_footer: source.include_footer,
       include_web_version_bar: source.include_web_version_bar,
+      // Carry the raw MJML so starters seeded from whole-template MJML render
+      // correctly in the clone before the user touches anything.
+      mjml_source: source.mjml_source || null,
+      subject_template: source.subject_template || null,
     });
 
     // Copy blocks from source template
@@ -100,6 +113,7 @@ export function useEmailTemplates() {
 
   return {
     getTemplates,
+    getStarterTemplates,
     getTemplate,
     createTemplate,
     updateTemplate,
