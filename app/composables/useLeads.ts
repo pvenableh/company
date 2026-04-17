@@ -184,16 +184,49 @@ export function useLeads() {
     leadId: number | string,
     clientData: Record<string, any>,
     projectData?: Record<string, any>,
+    options?: { contactData?: { first_name?: string; last_name?: string; email?: string; phone?: string } },
   ) => {
     const { createClient } = useClients();
+    const { createContact } = useContacts();
     const projectItems = useDirectusItems('projects');
     const { selectedOrg } = useOrganization();
+
+    // If the lead has no related_contact yet but we have contact fields, create one first
+    let contactId: string | null = clientData.primary_contact || null;
+    const lead = await getLead(leadId);
+    if (!contactId && !(lead as any)?.related_contact && options?.contactData) {
+      const { first_name, last_name, email } = options.contactData;
+      if (first_name || last_name || email) {
+        const created = await createContact({
+          first_name: first_name || '',
+          last_name: last_name || '',
+          email: email || '',
+          phone: options.contactData.phone,
+          source: 'lead_conversion',
+        } as any);
+        contactId = (created as any)?.id || null;
+        if (contactId) {
+          await leads.update(leadId, { related_contact: contactId } as any);
+        }
+      }
+    }
 
     // Create client
     const client = await createClient({
       ...clientData,
+      primary_contact: contactId || clientData.primary_contact || null,
       organization: clientData.organization || selectedOrg.value,
     });
+
+    // Link contact to the new client (reverse FK) if we have one
+    if (contactId && (client as any)?.id) {
+      try {
+        const { linkToClient } = useContacts();
+        await linkToClient(contactId, (client as any).id);
+      } catch (err) {
+        console.warn('Failed to link contact to client (non-fatal):', err);
+      }
+    }
 
     // Create project if requested
     if (projectData && (client as any)?.id) {

@@ -31,6 +31,21 @@
 				<p v-if="lead.related_contact.email" class="text-xs t-text-secondary">{{ lead.related_contact.email }}</p>
 			</div>
 
+			<!-- New contact (when lead has no related_contact) -->
+			<div v-else class="ios-card p-3 space-y-2">
+				<p class="text-[10px] uppercase font-semibold t-text-muted tracking-wider">
+					New Contact
+				</p>
+				<p class="text-[11px] t-text-secondary">
+					This lead has no contact yet. We&rsquo;ll create one and link it to the new client.
+				</p>
+				<div class="grid grid-cols-2 gap-2">
+					<UInput v-model="contactForm.first_name" placeholder="First name" size="sm" />
+					<UInput v-model="contactForm.last_name" placeholder="Last name" size="sm" />
+				</div>
+				<UInput v-model="contactForm.email" type="email" placeholder="Email" size="sm" />
+			</div>
+
 			<!-- Create Project Toggle -->
 			<div class="space-y-3">
 				<div class="flex items-center gap-3">
@@ -92,6 +107,12 @@ const projectForm = reactive({
 	title: '',
 });
 
+const contactForm = reactive({
+	first_name: '',
+	last_name: '',
+	email: '',
+});
+
 watch(isOpen, (val) => {
 	if (val && props.lead) {
 		const contact = props.lead.related_contact;
@@ -100,6 +121,9 @@ watch(isOpen, (val) => {
 		form.notes = '';
 		createProject.value = false;
 		projectForm.title = `${form.name} Project`;
+		contactForm.first_name = '';
+		contactForm.last_name = '';
+		contactForm.email = '';
 	}
 });
 
@@ -123,7 +147,15 @@ async function handleConvert() {
 			? { title: projectForm.title.trim() }
 			: undefined;
 
-		await convertToClient(props.lead.id, clientData, projectData);
+		const contactData = !props.lead?.related_contact && (contactForm.first_name || contactForm.last_name || contactForm.email)
+			? {
+				first_name: contactForm.first_name.trim() || undefined,
+				last_name: contactForm.last_name.trim() || undefined,
+				email: contactForm.email.trim() || undefined,
+			}
+			: undefined;
+
+		await convertToClient(props.lead.id, clientData, projectData, contactData ? { contactData } : undefined);
 
 		toast.add({ title: 'Lead converted to client!', color: 'green' });
 		triggerRefresh();
