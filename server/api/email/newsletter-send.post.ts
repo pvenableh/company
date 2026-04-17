@@ -16,20 +16,29 @@ export default defineEventHandler(async (event) => {
     name,
     subject: emailSubject,
     target_lists,
+    target_segments,
     recipient_ids,
     cc_list,
     bcc_list,
     custom_variables,
+    organization_id,
   } = await readBody(event);
 
   if (!template_id) {
     throw createError({ statusCode: 400, message: 'template_id is required' });
   }
 
-  if (!target_lists?.length && !recipient_ids?.length) {
+  if (!target_lists?.length && !recipient_ids?.length && !target_segments?.length) {
     throw createError({
       statusCode: 400,
-      message: 'target_lists or recipient_ids is required',
+      message: 'target_lists, target_segments, or recipient_ids is required',
+    });
+  }
+
+  if (target_segments?.length && !organization_id) {
+    throw createError({
+      statusCode: 400,
+      message: 'organization_id is required when using target_segments',
     });
   }
 
@@ -88,6 +97,33 @@ export default defineEventHandler(async (event) => {
             ...contact,
             custom_fields: { ...contactCF, ...memberCF },
           });
+        }
+      }
+    }
+  }
+
+  // ── Resolve CRM segments → contact IDs ────────────────────────────
+  if (target_segments?.length && organization_id) {
+    const segmentContactIds = await resolveSegments(directus, organization_id, target_segments);
+    if (segmentContactIds.length) {
+      const segmentContacts = (await directus.request(
+        readItems('contacts', {
+          filter: {
+            _and: [
+              { id: { _in: segmentContactIds } },
+              { email_subscribed: { _eq: true } },
+              { email_bounced: { _eq: false } },
+              { status: { _eq: 'published' } },
+            ],
+          },
+          limit: -1,
+        })
+      )) as any[];
+
+      for (const contact of segmentContacts) {
+        if (contact?.email && !seen.has(contact.email)) {
+          seen.add(contact.email);
+          contacts.push(contact);
         }
       }
     }
@@ -256,3 +292,79 @@ export default defineEventHandler(async (event) => {
     errors: errors.length > 0 ? errors : undefined,
   };
 });
+
+/**
+ * Resolve CRM segment descriptors into a list of contact IDs.
+ *
+ * Supported segment types:
+ *   { type: 'lead_stage', stage: 'negotiating' }        — contacts on leads at stage X
+ *   { type: 'lead_any_open' }                             — contacts on any non-won/non-lost lead
+ *   { type: 'client_active' }                             — contacts with a client FK where client is active
+ *   { type: 'contact_category', category: 'architect' }   — contacts by category
+ */
+async function resolveSegments(
+  directus: ReturnType<typeof getServerDirectus>,
+  organizationId: string,
+  segments: Array<Record<string, any>>,
+): Promise<string[]> {
+  const ids = new Set<string>();
+
+  for (const seg of segments) {
+    try {
+      if (seg?.type === 'lead_stage' || seg?.type === 'lead_any_open') {
+        const filter: any = {
+          _and: [
+            { organization: { _eq: organizationId } },
+            { related_contact: { _nnull: true } },
+            { status: { _eq: 'published' } },
+          ],
+        };
+        if (seg.type === 'lead_stage' && seg.stage) {
+          filter._and.push({ stage: { _eq: seg.stage } });
+        } else {
+          filter._and.push({ stage: { _nin: ['won', 'lost'] } });
+        }
+        const rows = (await directus.request(
+          readItems('leads', { filter, fields: ['related_contact'], limit: -1 }),
+        )) as any[];
+        for (const r of rows) {
+          const cid = typeof r.related_contact === 'string' ? r.related_contact : r.related_contact?.id;
+          if (cid) ids.add(cid);
+        }
+      } else if (seg?.type === 'client_active') {
+        const rows = (await directus.request(
+          readItems('contacts', {
+            filter: {
+              _and: [
+                { organizations: { organizations_id: { _eq: organizationId } } },
+                { client: { _nnull: true } },
+                { 'client.status': { _eq: 'active' } },
+              ],
+            },
+            fields: ['id'],
+            limit: -1,
+          }),
+        )) as any[];
+        for (const r of rows) if (r.id) ids.add(r.id);
+      } else if (seg?.type === 'contact_category' && seg.category) {
+        const rows = (await directus.request(
+          readItems('contacts', {
+            filter: {
+              _and: [
+                { organizations: { organizations_id: { _eq: organizationId } } },
+                { category: { _eq: seg.category } },
+              ],
+            },
+            fields: ['id'],
+            limit: -1,
+          }),
+        )) as any[];
+        for (const r of rows) if (r.id) ids.add(r.id);
+      }
+    } catch (err: any) {
+      console.warn(`[newsletter-send] Segment ${seg?.type} failed:`, err?.message);
+    }
+  }
+
+  return Array.from(ids);
+}
