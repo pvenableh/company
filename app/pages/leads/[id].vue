@@ -247,11 +247,53 @@ onMounted(() => {
 
 					<!-- Contact -->
 					<div v-if="lead.related_contact" class="ios-card p-4 space-y-2">
-						<p class="text-[10px] uppercase font-semibold t-text-muted tracking-wider">Contact</p>
+						<div class="flex items-center justify-between">
+							<p class="text-[10px] uppercase font-semibold t-text-muted tracking-wider">Contact</p>
+							<NuxtLink
+								:to="`/contacts/${lead.related_contact.id}`"
+								class="text-[10px] text-primary hover:underline"
+							>
+								View
+							</NuxtLink>
+						</div>
 						<p class="text-sm font-medium t-text">{{ lead.related_contact.first_name }} {{ lead.related_contact.last_name }}</p>
 						<p v-if="lead.related_contact.email" class="text-xs t-text-secondary">{{ lead.related_contact.email }}</p>
 						<p v-if="lead.related_contact.phone" class="text-xs t-text-secondary">{{ lead.related_contact.phone }}</p>
 						<p v-if="lead.related_contact.company" class="text-xs t-text-secondary">{{ lead.related_contact.company }}</p>
+					</div>
+
+					<!-- Email Engagement (pulled from related_contact) -->
+					<div v-if="lead.related_contact" class="ios-card p-4 space-y-2">
+						<p class="text-[10px] uppercase font-semibold t-text-muted tracking-wider">Email Engagement</p>
+						<div v-if="lead.related_contact.email_bounced" class="flex items-center gap-1.5 text-[11px] text-red-600 dark:text-red-400">
+							<UIcon name="i-heroicons-exclamation-triangle" class="w-3.5 h-3.5" />
+							Bounced{{ lead.related_contact.email_bounce_type ? ` (${lead.related_contact.email_bounce_type})` : '' }}
+						</div>
+						<div v-if="lead.related_contact.email_subscribed === false" class="text-[11px] text-amber-600 dark:text-amber-400">
+							Unsubscribed
+						</div>
+						<div class="grid grid-cols-3 gap-2 text-xs">
+							<div>
+								<p class="t-text-muted">Sent</p>
+								<p class="font-medium t-text">{{ lead.related_contact.total_emails_sent || 0 }}</p>
+							</div>
+							<div>
+								<p class="t-text-muted">Opens</p>
+								<p class="font-medium t-text">{{ lead.related_contact.total_opens || 0 }}</p>
+							</div>
+							<div>
+								<p class="t-text-muted">Clicks</p>
+								<p class="font-medium t-text">{{ lead.related_contact.total_clicks || 0 }}</p>
+							</div>
+						</div>
+						<div v-if="lead.related_contact.last_opened_at || lead.related_contact.last_clicked_at" class="pt-1 border-t border-border/60 space-y-0.5">
+							<p v-if="lead.related_contact.last_opened_at" class="text-[11px] t-text-secondary">
+								Last opened {{ new Date(lead.related_contact.last_opened_at).toLocaleDateString() }}
+							</p>
+							<p v-if="lead.related_contact.last_clicked_at" class="text-[11px] t-text-secondary">
+								Last clicked {{ new Date(lead.related_contact.last_clicked_at).toLocaleDateString() }}
+							</p>
+						</div>
 					</div>
 
 					<!-- Notes -->
