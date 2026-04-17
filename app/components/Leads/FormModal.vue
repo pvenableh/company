@@ -25,14 +25,14 @@
 				<TicketsDetailsPriority v-model="form.priority" />
 			</div>
 
-			<!-- Contact (read-only for edit, search for create) -->
-			<div v-if="isEditing && lead?.related_contact" class="ios-card p-3 space-y-1">
+			<!-- Contact (read-only for edit, preselected for new-from-contact flow) -->
+			<div v-if="displayContact" class="ios-card p-3 space-y-1">
 				<p class="text-[10px] uppercase font-semibold t-text-muted tracking-wider">Contact</p>
 				<p class="text-sm font-medium t-text">
-					{{ lead.related_contact.first_name }} {{ lead.related_contact.last_name }}
+					{{ displayContact.first_name }} {{ displayContact.last_name }}
 				</p>
-				<p v-if="lead.related_contact.email" class="text-xs t-text-secondary">{{ lead.related_contact.email }}</p>
-				<p v-if="lead.related_contact.company" class="text-xs t-text-secondary">{{ lead.related_contact.company }}</p>
+				<p v-if="displayContact.email" class="text-xs t-text-secondary">{{ displayContact.email }}</p>
+				<p v-if="displayContact.company" class="text-xs t-text-secondary">{{ displayContact.company }}</p>
 			</div>
 
 			<!-- Estimated Value + Source -->
@@ -125,6 +125,8 @@ import { useFilteredUsers } from '~/composables/useFilteredUsers';
 const props = defineProps({
 	lead: { type: Object, default: null },
 	organizationId: { type: String, default: null },
+	contactId: { type: String, default: null },
+	contact: { type: Object, default: null },
 });
 
 const emit = defineEmits(['created', 'updated', 'deleted', 'convert', 'lost']);
@@ -139,6 +141,12 @@ const { filteredUsers, fetchFilteredUsers } = useFilteredUsers();
 const toast = useToast();
 
 const stageStatuses = Object.entries(LEAD_STAGE_LABELS).map(([id, name]) => ({ id, name }));
+
+const displayContact = computed(() => {
+	if (isEditing.value && props.lead?.related_contact) return props.lead.related_contact;
+	if (props.contact) return props.contact;
+	return null;
+});
 
 const form = reactive({
 	stage: 'new',
@@ -255,6 +263,10 @@ async function handleSubmit() {
 		next_follow_up: form.next_follow_up ? new Date(form.next_follow_up).toISOString() : null,
 		assigned_to: form.assigned_to || null,
 	};
+
+	if (!isEditing.value && props.contactId) {
+		payload.related_contact = props.contactId;
+	}
 
 	try {
 		if (isEditing.value) {

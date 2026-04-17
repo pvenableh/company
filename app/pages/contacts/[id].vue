@@ -283,7 +283,7 @@ onMounted(() => {
                 </span>
               </h3>
               <NuxtLink
-                :to="`/leads/new?contact=${contactId}`"
+                :to="`/leads?new=1&contact=${contactId}`"
                 class="text-xs text-primary hover:underline flex items-center gap-1"
               >
                 <Icon name="lucide:plus" class="w-3 h-3" />

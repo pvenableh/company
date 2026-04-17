@@ -5,7 +5,39 @@ import { useDebounceFn } from '@vueuse/core';
 definePageMeta({ middleware: ['auth'] });
 useHead({ title: 'Leads | Earnest' });
 
+const route = useRoute();
+const router = useRouter();
+
 const { getLeads, getLeadStats } = useLeads();
+const { getContact } = useContacts();
+const { triggerRefresh } = useLeadsStore();
+
+// "Start a deal" launcher — /leads?new=1&contact=<id>
+const showNewFromContactModal = ref(false);
+const newFromContact = ref<any>(null);
+const newFromContactId = ref<string | null>(null);
+
+async function maybeOpenFromQuery() {
+	if (route.query.new !== '1' || typeof route.query.contact !== 'string') return;
+	const contactId = route.query.contact;
+	newFromContactId.value = contactId;
+	try {
+		newFromContact.value = await getContact(contactId);
+	} catch {
+		newFromContact.value = null;
+	}
+	showNewFromContactModal.value = true;
+	// Clear the query so back-navigation doesn't re-open the modal
+	router.replace({ path: '/leads', query: {} });
+}
+
+function handleCreatedFromContact() {
+	showNewFromContactModal.value = false;
+	newFromContact.value = null;
+	newFromContactId.value = null;
+	triggerRefresh();
+	fetchData();
+}
 
 // View toggle — useCookie is SSR-safe (no hydration mismatch)
 const viewCookie = useCookie('leadView', { default: () => 'board' });
@@ -54,7 +86,10 @@ const debouncedSearch = useDebounceFn(() => fetchData(), 300);
 watch(search, () => debouncedSearch());
 watch([stageFilter, priorityFilter], () => fetchData());
 
-onMounted(fetchData);
+onMounted(() => {
+	fetchData();
+	maybeOpenFromQuery();
+});
 </script>
 
 <template>
@@ -111,5 +146,13 @@ onMounted(fetchData);
 				<p class="text-xs t-text-muted mt-1">Leads from your website forms will appear here</p>
 			</div>
 		</div>
+
+		<!-- Pre-wired FormModal for 'Start a deal from contact' flow -->
+		<LeadsFormModal
+			v-model="showNewFromContactModal"
+			:contact-id="newFromContactId || undefined"
+			:contact="newFromContact"
+			@created="handleCreatedFromContact"
+		/>
 	</div>
 </template>
