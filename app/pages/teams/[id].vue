@@ -14,17 +14,17 @@ const teamItems = useDirectusItems<Team>('teams');
 const ticketItems = useDirectusItems('tickets');
 const goalItems = useDirectusItems('team_goals');
 
+const { getStatusBadgeClasses } = useStatusStyle();
+const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext();
+
 const team = ref<any>(null);
 const loading = ref(true);
 const error = ref<string | null>(null);
 const ticketStats = ref({ pending: 0, scheduled: 0, inProgress: 0, completed: 0, total: 0 });
 const goals = ref<any[]>([]);
 const goalsLoading = ref(false);
-const showGoalForm = ref(false);
+const showGoalModal = ref(false);
 const editingGoal = ref<any>(null);
-const goalSaving = ref(false);
-const showDeleteGoal = ref(false);
-const deletingGoal = ref<any>(null);
 
 async function loadTeam() {
   loading.value = true;
@@ -87,44 +87,34 @@ async function loadGoals() {
   }
 }
 
-async function handleGoalSave(data: any) {
-  goalSaving.value = true;
-  try {
-    if (editingGoal.value) {
-      await goalItems.update(editingGoal.value.id, data);
-    } else {
-      await goalItems.create({ ...data, team: teamId });
-    }
-    showGoalForm.value = false;
-    editingGoal.value = null;
-    await loadGoals();
-  } catch (e: any) {
-    error.value = e?.message || 'Failed to save goal';
-  } finally {
-    goalSaving.value = false;
-  }
+function openNewGoal() {
+  editingGoal.value = null;
+  showGoalModal.value = true;
 }
 
 function editGoal(goal: any) {
   editingGoal.value = goal;
-  showGoalForm.value = true;
+  showGoalModal.value = true;
 }
 
-async function deleteGoal() {
-  if (!deletingGoal.value) return;
+async function onGoalSaved() {
+  editingGoal.value = null;
+  await loadGoals();
+}
+
+async function onGoalDeleted() {
+  editingGoal.value = null;
+  await loadGoals();
+}
+
+async function handleGoalQuickDelete(goal: any) {
+  if (!confirm(`Delete "${goal.title}"? This cannot be undone.`)) return;
   try {
-    await goalItems.remove(deletingGoal.value.id);
-    showDeleteGoal.value = false;
-    deletingGoal.value = null;
+    await goalItems.remove(goal.id);
     await loadGoals();
   } catch (e: any) {
     error.value = e?.message || 'Failed to delete goal';
   }
-}
-
-function confirmDeleteGoal(goal: any) {
-  deletingGoal.value = goal;
-  showDeleteGoal.value = true;
 }
 
 // Helpers
@@ -155,12 +145,6 @@ function getUserInitials(user: any): string {
   return (first + last).toUpperCase() || '?';
 }
 
-const projectStatusColors: Record<string, string> = {
-  active: 'bg-emerald-500/15 text-emerald-400',
-  draft: 'bg-yellow-500/15 text-yellow-400',
-  archived: 'bg-neutral-500/15 text-neutral-400',
-};
-
 const { isOrgManagerOrAbove } = useOrgRole();
 
 const goalProgress = computed(() => {
@@ -169,6 +153,13 @@ const goalProgress = computed(() => {
 });
 
 onMounted(loadTeam);
+
+// AI sidebar lifecycle
+watch(team, (t) => {
+  if (!t) return;
+  setEntity('team', String(t.id), t.name || 'Team');
+}, { immediate: true });
+onUnmounted(() => clearEntity());
 </script>
 
 <template>
@@ -194,18 +185,21 @@ onMounted(loadTeam);
 
     <!-- Team Dashboard -->
     <template v-else-if="team">
+      <!-- Back link -->
+      <NuxtLink
+        to="/organization/teams"
+        class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors mt-4 mb-2"
+      >
+        <Icon name="lucide:chevron-left" class="w-3 h-3" />
+        Teams
+      </NuxtLink>
+
       <!-- Header -->
-      <div class="flex items-center gap-3 mb-6">
-        <NuxtLink
-          to="/organization/teams"
-          class="flex items-center justify-center w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-        >
-          <Icon name="lucide:arrow-left" class="w-5 h-5" />
-        </NuxtLink>
+      <div class="flex items-center justify-between mb-5">
         <div class="flex items-center gap-3">
           <div
             v-if="team.icon"
-            class="w-10 h-10 rounded-xl overflow-hidden bg-muted"
+            class="w-10 h-10 rounded-xl overflow-hidden bg-muted shrink-0"
           >
             <img
               :src="`${config.public.directusUrl}/assets/${typeof team.icon === 'string' ? team.icon : team.icon.id}?key=avatar`"
@@ -215,14 +209,23 @@ onMounted(loadTeam);
           </div>
           <div
             v-else
-            class="w-10 h-10 rounded-xl bg-muted/60 flex items-center justify-center text-lg font-semibold text-muted-foreground"
+            class="w-10 h-10 rounded-xl bg-muted/60 flex items-center justify-center text-lg font-semibold text-muted-foreground shrink-0"
           >
             {{ (team.name || '?')[0].toUpperCase() }}
           </div>
           <div>
-            <h1 class="text-xl font-semibold">{{ team.name }}</h1>
-            <p class="text-sm text-muted-foreground">{{ members.length }} members</p>
+            <h1 class="text-base font-semibold">{{ team.name }}</h1>
+            <p class="text-xs text-muted-foreground">{{ members.length }} {{ members.length === 1 ? 'member' : 'members' }}</p>
           </div>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <button
+            class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium text-primary hover:bg-primary/10 hover:border-primary/30 transition-colors"
+            @click="sidebarOpen = true"
+          >
+            <Icon name="lucide:sparkles" class="w-3.5 h-3.5" />
+            <span class="hidden sm:inline">Ask Earnest</span>
+          </button>
         </div>
       </div>
 
@@ -236,13 +239,18 @@ onMounted(loadTeam);
         <button class="ml-auto" @click="error = null"><Icon name="lucide:x" class="w-4 h-4" /></button>
       </div>
 
+      <!-- AI Notices -->
+      <ClientOnly>
+        <AIProactiveNotices v-if="team?.id" entity-type="team" :entity-id="String(team.id)" />
+      </ClientOnly>
+
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Left: Main content -->
-        <div class="lg:col-span-2 space-y-6">
+        <div class="lg:col-span-2 space-y-4">
           <!-- Description -->
           <div v-if="team.description" class="ios-card p-5">
-            <h3 class="font-medium text-sm mb-2 flex items-center gap-2">
-              <Icon name="lucide:info" class="w-4 h-4 text-muted-foreground" />
+            <h3 class="text-[10px] uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-2">
+              <Icon name="lucide:info" class="w-3.5 h-3.5" />
               About
             </h3>
             <p class="text-sm text-muted-foreground leading-relaxed">{{ team.description }}</p>
@@ -251,24 +259,15 @@ onMounted(loadTeam);
           <!-- Goals -->
           <div class="ios-card p-5">
             <div class="flex items-center justify-between mb-3">
-              <h3 class="font-medium text-sm flex items-center gap-2">
-                <Icon name="lucide:target" class="w-4 h-4 text-muted-foreground" />
+              <h3 class="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                <Icon name="lucide:target" class="w-3.5 h-3.5" />
                 Goals
-                <span v-if="goals.length" class="text-xs text-muted-foreground/60">{{ goalProgress }}% avg</span>
+                <span v-if="goals.length" class="text-[10px] text-muted-foreground/60 normal-case tracking-normal">{{ goalProgress }}% avg</span>
               </h3>
-              <Button type="button" variant="outline" size="sm" @click="editingGoal = null; showGoalForm = true">
+              <Button type="button" variant="outline" size="sm" @click="openNewGoal">
                 <Icon name="lucide:plus" class="w-3.5 h-3.5 mr-1" />
                 Add Goal
               </Button>
-            </div>
-
-            <div v-if="showGoalForm" class="mb-4 p-4 bg-muted/20 rounded-xl">
-              <TeamsGoalForm
-                :goal="editingGoal"
-                :saving="goalSaving"
-                @save="handleGoalSave"
-                @cancel="showGoalForm = false; editingGoal = null"
-              />
             </div>
 
             <div v-if="goals.length" class="space-y-2">
@@ -277,20 +276,20 @@ onMounted(loadTeam);
                 :key="goal.id"
                 :goal="goal"
                 @edit="editGoal"
-                @delete="confirmDeleteGoal"
+                @delete="handleGoalQuickDelete"
               />
             </div>
-            <div v-else-if="!showGoalForm" class="text-center py-6 text-sm text-muted-foreground">
+            <div v-else class="text-center py-6 text-sm text-muted-foreground">
               No goals set yet. Add a goal to track team progress.
             </div>
           </div>
 
           <!-- Team Members -->
           <div class="ios-card p-5">
-            <h3 class="font-medium text-sm mb-3 flex items-center gap-2">
-              <Icon name="lucide:users" class="w-4 h-4 text-muted-foreground" />
+            <h3 class="text-[10px] uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
+              <Icon name="lucide:users" class="w-3.5 h-3.5" />
               Members
-              <span class="text-xs text-muted-foreground/60 ml-auto">{{ members.length }}</span>
+              <span class="text-[10px] text-muted-foreground/60 ml-auto normal-case tracking-normal">{{ members.length }}</span>
             </h3>
             <div class="space-y-2">
               <div
@@ -326,33 +325,33 @@ onMounted(loadTeam);
         <div class="space-y-4">
           <!-- Ticket Stats -->
           <div class="ios-card p-5">
-            <h3 class="font-medium text-sm mb-3 flex items-center gap-2">
-              <Icon name="lucide:ticket" class="w-4 h-4 text-muted-foreground" />
+            <h3 class="text-[10px] uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
+              <Icon name="lucide:ticket" class="w-3.5 h-3.5" />
               Tickets
-              <span class="text-xs text-muted-foreground/60 ml-auto">{{ ticketStats.total }}</span>
+              <span class="text-[10px] text-muted-foreground/60 ml-auto normal-case tracking-normal">{{ ticketStats.total }}</span>
             </h3>
             <div class="space-y-2.5 text-sm">
-              <div class="flex justify-between">
+              <div class="flex justify-between items-center">
                 <span class="text-muted-foreground">Pending</span>
-                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-yellow-500/15 text-yellow-400">
+                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium" :class="getStatusBadgeClasses('pending')">
                   {{ ticketStats.pending }}
                 </span>
               </div>
-              <div class="flex justify-between">
+              <div class="flex justify-between items-center">
                 <span class="text-muted-foreground">Scheduled</span>
-                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-blue-500/15 text-blue-400">
+                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium" :class="getStatusBadgeClasses('scheduled')">
                   {{ ticketStats.scheduled }}
                 </span>
               </div>
-              <div class="flex justify-between">
+              <div class="flex justify-between items-center">
                 <span class="text-muted-foreground">In Progress</span>
-                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-purple-500/15 text-purple-400">
+                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium" :class="getStatusBadgeClasses('in progress')">
                   {{ ticketStats.inProgress }}
                 </span>
               </div>
-              <div class="flex justify-between">
+              <div class="flex justify-between items-center">
                 <span class="text-muted-foreground">Completed</span>
-                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium bg-emerald-500/15 text-emerald-400">
+                <span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium" :class="getStatusBadgeClasses('completed')">
                   {{ ticketStats.completed }}
                 </span>
               </div>
@@ -366,10 +365,10 @@ onMounted(loadTeam);
 
           <!-- Projects -->
           <div v-if="projects.length" class="ios-card p-5">
-            <h3 class="font-medium text-sm mb-3 flex items-center gap-2">
-              <Icon name="lucide:folder" class="w-4 h-4 text-muted-foreground" />
+            <h3 class="text-[10px] uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
+              <Icon name="lucide:folder" class="w-3.5 h-3.5" />
               Projects
-              <span class="text-xs text-muted-foreground/60 ml-auto">{{ projects.length }}</span>
+              <span class="text-[10px] text-muted-foreground/60 ml-auto normal-case tracking-normal">{{ projects.length }}</span>
             </h3>
             <div class="space-y-2">
               <div
@@ -381,7 +380,7 @@ onMounted(loadTeam);
                 <span
                   v-if="project.status"
                   class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize"
-                  :class="projectStatusColors[project.status] || 'bg-muted text-muted-foreground'"
+                  :class="getStatusBadgeClasses(project.status)"
                 >
                   {{ project.status }}
                 </span>
@@ -391,14 +390,14 @@ onMounted(loadTeam);
 
           <!-- Team Info -->
           <div class="ios-card p-5">
-            <h3 class="font-medium text-sm mb-3 flex items-center gap-2">
-              <Icon name="lucide:info" class="w-4 h-4 text-muted-foreground" />
+            <h3 class="text-[10px] uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
+              <Icon name="lucide:info" class="w-3.5 h-3.5" />
               Details
             </h3>
             <div class="space-y-2.5 text-sm">
               <div class="flex justify-between">
                 <span class="text-muted-foreground">Organization</span>
-                <span>{{ team.organization?.name || '—' }}</span>
+                <span>{{ team.organization?.name || '\u2014' }}</span>
               </div>
               <div class="flex justify-between">
                 <span class="text-muted-foreground">Members</span>
@@ -416,33 +415,30 @@ onMounted(loadTeam);
           </div>
         </div>
       </div>
+
+      <!-- Goal Modal -->
+      <TeamsGoalFormModal
+        v-model="showGoalModal"
+        :goal="editingGoal"
+        :team-id="teamId"
+        @created="onGoalSaved"
+        @updated="onGoalSaved"
+        @deleted="onGoalDeleted"
+      />
     </template>
 
-    <!-- Delete Goal Confirmation -->
-    <Teleport to="body">
-      <div
-        v-if="showDeleteGoal"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-        @click.self="showDeleteGoal = false"
-      >
-        <div class="ios-card w-full max-w-md mx-4 p-6 shadow-xl">
-          <div class="flex items-start gap-3 mb-4">
-            <div class="flex items-center justify-center w-10 h-10 rounded-full bg-destructive/10 shrink-0">
-              <Icon name="lucide:alert-triangle" class="w-5 h-5 text-destructive" />
-            </div>
-            <div>
-              <h3 class="font-semibold">Delete Goal</h3>
-              <p class="text-sm text-muted-foreground mt-1">
-                Delete <strong>{{ deletingGoal?.title }}</strong>? This cannot be undone.
-              </p>
-            </div>
-          </div>
-          <div class="flex justify-end gap-2 pt-2">
-            <Button variant="outline" size="sm" @click="showDeleteGoal = false">Cancel</Button>
-            <Button variant="destructive" size="sm" @click="deleteGoal">Delete</Button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
+    <!-- Contextual AI Sidebar -->
+    <ClientOnly>
+      <AIContextualSidebar
+        v-if="sidebarOpen && team?.id"
+        entity-type="team"
+        :entity-id="String(team.id)"
+        :entity-label="team.name || 'Team'"
+        @close="closeSidebar"
+      />
+      <Transition name="overlay">
+        <div v-if="sidebarOpen" class="fixed inset-0 bg-black/20 z-40" @click="closeSidebar" />
+      </Transition>
+    </ClientOnly>
   </div>
 </template>

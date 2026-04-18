@@ -1,36 +1,22 @@
 <template>
   <form @submit.prevent="handleSubmit" class="space-y-4">
-    <div>
-      <label class="block text-sm font-medium mb-1">Title *</label>
-      <input
-        v-model="formData.title"
-        required
-        class="w-full rounded-md border bg-background px-3 py-2 text-sm"
-        placeholder="Goal title"
-      />
+    <div class="space-y-1">
+      <label class="t-label text-muted-foreground">Title *</label>
+      <UInput v-model="formData.title" required placeholder="Goal title" />
     </div>
 
-    <div>
-      <label class="block text-sm font-medium mb-1">Description</label>
-      <textarea
-        v-model="formData.description"
-        rows="2"
-        class="w-full rounded-md border bg-background px-3 py-2 text-sm"
-        placeholder="What does this goal aim to achieve?"
-      />
+    <div class="space-y-1">
+      <label class="t-label text-muted-foreground">Description</label>
+      <UTextarea v-model="formData.description" :rows="2" placeholder="What does this goal aim to achieve?" />
     </div>
 
     <div class="grid grid-cols-2 gap-4">
-      <div>
-        <label class="block text-sm font-medium mb-1">Target Date</label>
-        <input
-          v-model="formData.target_date"
-          type="date"
-          class="w-full rounded-md border bg-background px-3 py-2 text-sm"
-        />
+      <div class="space-y-1">
+        <label class="t-label text-muted-foreground">Target Date</label>
+        <UInput v-model="formData.target_date" type="date" />
       </div>
-      <div>
-        <label class="block text-sm font-medium mb-1">Progress ({{ formData.progress }}%)</label>
+      <div class="space-y-1">
+        <label class="t-label text-muted-foreground">Progress ({{ formData.progress }}%)</label>
         <input
           v-model.number="formData.progress"
           type="range"
@@ -41,19 +27,10 @@
         />
       </div>
     </div>
-
-    <div class="flex justify-end gap-2 pt-2">
-      <Button type="button" variant="outline" size="sm" @click="$emit('cancel')">Cancel</Button>
-      <Button type="submit" size="sm" :disabled="saving || !formData.title">
-        {{ saving ? 'Saving...' : (goal ? 'Update' : 'Add Goal') }}
-      </Button>
-    </div>
   </form>
 </template>
 
 <script setup lang="ts">
-import { Button } from '~/components/ui/button';
-
 const props = defineProps<{
   goal?: any;
   saving?: boolean;
@@ -61,7 +38,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   save: [data: any];
-  cancel: [];
 }>();
 
 const formData = reactive({
@@ -75,8 +51,13 @@ function handleSubmit() {
   emit('save', {
     title: formData.title,
     description: formData.description || undefined,
-    target_date: formData.target_date || undefined,
+    target_date: formData.target_date || null,
     progress: formData.progress,
   });
 }
+
+defineExpose({
+  triggerSubmit: handleSubmit,
+  hasTitle: computed(() => !!formData.title?.trim()),
+});
 </script>
