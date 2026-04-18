@@ -29,7 +29,7 @@
 			<span class="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Viewing:</span>
 			<div class="relative">
 				<button
-					class="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border text-sm hover:border-primary/30 transition-colors"
+					class="flex items-center gap-2 px-3 py-1.5 rounded-full border border-border text-sm hover:border-primary/30 transition-colors"
 					@click="showUserPicker = !showUserPicker"
 				>
 					<UIcon name="i-heroicons-user-circle" class="w-4 h-4 text-muted-foreground" />
