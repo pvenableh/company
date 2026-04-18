@@ -207,16 +207,16 @@ onUnmounted(() => {
 </script>
 
 <template>
-	<div class="flex flex-col h-full bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
+	<div class="ios-card flex flex-col h-full overflow-hidden">
 		<!-- Header -->
-		<div class="flex items-center justify-between p-3 border-b border-gray-100 dark:border-gray-700">
+		<div class="flex items-center justify-between p-3 border-b border-border/30">
 			<NuxtLink to="/channels" class="flex items-center gap-2 hover:opacity-80 transition-opacity">
 				<UIcon name="i-heroicons-chat-bubble-bottom-center-text" class="w-5 h-5 text-violet-500" />
 				<h3 class="text-sm font-semibold uppercase tracking-wide">Channels</h3>
 			</NuxtLink>
 			<select
 				v-model="selectedChannel"
-				class="text-xs border border-gray-200 dark:border-gray-600 rounded-md px-2 py-1 bg-transparent dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"
+				class="text-xs rounded-full border bg-background px-3 py-1 focus:outline-none focus:ring-1 focus:ring-primary"
 			>
 				<option value="" disabled>Select channel</option>
 				<option v-for="ch in channels" :key="ch.id" :value="ch.id">
@@ -261,8 +261,8 @@ onUnmounted(() => {
 						class="max-w-[75%] rounded-lg px-3 py-2 text-sm overflow-visible"
 						:class="
 							isOwnMessage(msg)
-								? 'bg-primary/10 text-gray-900 dark:text-white'
-								: 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
+								? 'bg-primary/10 text-foreground'
+								: 'bg-muted text-foreground'
 						"
 					>
 						<p v-if="!isOwnMessage(msg)" class="text-[10px] font-semibold text-gray-500 mb-0.5">
@@ -276,7 +276,7 @@ onUnmounted(() => {
 		</div>
 
 		<!-- Input with @mentions support -->
-		<div class="border-t border-gray-100 dark:border-gray-700 p-3">
+		<div class="border-t border-border/30 p-3">
 			<div class="flex items-end gap-2">
 				<div class="flex-1 chat-tiptap-wrapper">
 					<LazyFormTiptap

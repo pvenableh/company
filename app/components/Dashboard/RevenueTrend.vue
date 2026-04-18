@@ -5,7 +5,7 @@
         <Icon name="lucide:trending-up" class="w-4 h-4 text-muted-foreground" />
         Revenue Trend
       </h3>
-      <select v-model.number="period" class="text-xs rounded-md border bg-background px-2 py-1">
+      <select v-model.number="period" class="text-xs rounded-full border bg-background px-3 py-1 focus:outline-none focus:ring-1 focus:ring-primary">
         <option :value="6">Last 6 Months</option>
         <option :value="12">Last 12 Months</option>
         <option :value="3">Last 3 Months</option>

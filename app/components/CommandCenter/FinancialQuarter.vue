@@ -289,7 +289,7 @@ onMounted(() => {
 				</button>
 				<select
 					v-model="selectedYear"
-					class="text-xs border border-gray-200 dark:border-gray-600 rounded-md px-2 py-1 bg-transparent dark:text-white focus:outline-none focus:ring-1 focus:ring-primary"
+					class="text-xs rounded-full border bg-background px-3 py-1 focus:outline-none focus:ring-1 focus:ring-primary"
 				>
 					<option :value="currentYear - 1">{{ currentYear - 1 }}</option>
 					<option :value="currentYear">{{ currentYear }}</option>
@@ -303,7 +303,7 @@ onMounted(() => {
 			<p class="text-xs text-gray-500 mb-3">Set quarterly revenue goals:</p>
 			<div class="grid grid-cols-4 gap-3">
 				<div v-for="(_, idx) in goalInputs" :key="idx">
-					<label class="text-[10px] uppercase font-bold text-gray-500 block mb-1">Q{{ idx + 1 }}</label>
+					<label class="text-[10px] uppercase tracking-wider text-muted-foreground block mb-1">Q{{ idx + 1 }}</label>
 					<input
 						v-model.number="goalInputs[idx]"
 						type="number"
