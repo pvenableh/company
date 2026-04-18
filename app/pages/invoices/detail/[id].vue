@@ -8,16 +8,14 @@ useHead({ title: 'Invoice Detail | Earnest' });
 const route = useRoute();
 const router = useRouter();
 const invoiceId = route.params.id as string;
-const { getInvoice, updateInvoice, deleteInvoice } = useInvoices();
+const { getInvoice } = useInvoices();
 const { getUrl: getFileUrl } = useDirectusFiles();
 
 const invoice = ref<Invoice | null>(null);
 const loading = ref(true);
-const saving = ref(false);
-const deleting = ref(false);
-const showDeleteConfirm = ref(false);
-const sendingEmail = ref(false);
 const error = ref<string | null>(null);
+const sendingEmail = ref(false);
+const showEditModal = ref(false);
 const toast = useToast();
 
 const { getStatusBadgeClasses } = useStatusStyle();
@@ -35,28 +33,12 @@ async function loadInvoice() {
   }
 }
 
-async function handleUpdate(data: any) {
-  saving.value = true;
-  error.value = null;
-  try {
-    invoice.value = await updateInvoice(invoiceId, data);
-  } catch (e: any) {
-    error.value = e?.message || 'Failed to update invoice';
-  } finally {
-    saving.value = false;
-  }
+function onInvoiceUpdated(updated: Invoice) {
+  invoice.value = updated;
 }
 
-async function handleDelete() {
-  deleting.value = true;
-  try {
-    await deleteInvoice(invoiceId);
-    router.push('/invoices');
-  } catch (e: any) {
-    error.value = e?.message || 'Failed to delete invoice';
-    deleting.value = false;
-    showDeleteConfirm.value = false;
-  }
+function onInvoiceDeleted() {
+  router.push('/invoices');
 }
 
 function getBillToName(inv: Invoice): string {
@@ -90,6 +72,15 @@ function getProjectTitles(inv: Invoice): string {
     })
     .filter(Boolean);
   return titles.length ? titles.join(', ') : '\u2014';
+}
+
+function stripHtml(html: string): string {
+  if (!html) return '';
+  return html.replace(/<[^>]*>/g, '').trim();
+}
+
+function formatLineItemAmount(li: any): string {
+  return formatCurrency((li.quantity || 0) * (li.rate || 0));
 }
 
 async function handleSendEmail() {
@@ -151,7 +142,7 @@ onUnmounted(() => clearEntity());
       <!-- Back link -->
       <NuxtLink
         to="/invoices"
-        class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground hover:text-foreground transition-colors mt-4 mb-2"
+        class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors mt-4 mb-2"
       >
         <Icon name="lucide:chevron-left" class="w-3 h-3" />
         Invoices
@@ -181,11 +172,11 @@ onUnmounted(() => clearEntity());
             <span class="hidden sm:inline">Ask Earnest</span>
           </button>
           <button
-            class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium text-destructive hover:bg-destructive/10 hover:border-destructive/30 transition-colors"
-            @click="showDeleteConfirm = true"
+            class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors"
+            @click="showEditModal = true"
           >
-            <Icon name="lucide:trash-2" class="w-3.5 h-3.5" />
-            <span class="hidden sm:inline">Delete</span>
+            <Icon name="lucide:pencil" class="w-3.5 h-3.5" />
+            <span class="hidden sm:inline">Edit</span>
           </button>
         </div>
       </div>
@@ -208,16 +199,98 @@ onUnmounted(() => clearEntity());
       </ClientOnly>
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Main: Form -->
-        <div class="lg:col-span-2">
+        <!-- Main: Details -->
+        <div class="lg:col-span-2 space-y-4">
+          <!-- Billing + Dates + Misc -->
+          <div class="ios-card p-6 space-y-4">
+            <h2 class="text-[10px] uppercase tracking-wider text-muted-foreground">Invoice Details</h2>
+
+            <div class="grid grid-cols-2 gap-4 text-sm">
+              <div class="space-y-1">
+                <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Client</p>
+                <p class="font-medium">{{ getClientName(invoice) }}</p>
+              </div>
+              <div class="space-y-1">
+                <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Projects</p>
+                <p>{{ getProjectTitles(invoice) }}</p>
+              </div>
+              <div class="space-y-1">
+                <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Invoice Date</p>
+                <p>{{ invoice.invoice_date ? getFriendlyDateThree(invoice.invoice_date) : '\u2014' }}</p>
+              </div>
+              <div class="space-y-1">
+                <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Due Date</p>
+                <p>{{ invoice.due_date ? getFriendlyDateThree(invoice.due_date) : '\u2014' }}</p>
+              </div>
+              <div v-if="invoice.melio" class="space-y-1 col-span-2">
+                <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Melio Link</p>
+                <a :href="invoice.melio" target="_blank" class="text-primary hover:underline break-all text-xs">{{ invoice.melio }}</a>
+              </div>
+            </div>
+
+            <!-- Billing contact -->
+            <div v-if="invoice.billing_name || invoice.billing_email || invoice.billing_address" class="pt-3 border-t border-border/30 space-y-1">
+              <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Billing Contact</p>
+              <p v-if="invoice.billing_name" class="text-sm font-medium">{{ invoice.billing_name }}</p>
+              <p v-if="invoice.billing_email" class="text-xs">{{ invoice.billing_email }}</p>
+              <p v-if="invoice.billing_address" class="text-xs text-muted-foreground">{{ invoice.billing_address }}</p>
+            </div>
+
+            <!-- CC Emails -->
+            <div v-if="Array.isArray(invoice.emails) && invoice.emails.length" class="pt-3 border-t border-border/30 space-y-1.5">
+              <p class="text-[10px] uppercase tracking-wider text-muted-foreground">CC</p>
+              <div class="flex flex-wrap gap-1.5">
+                <span
+                  v-for="email in invoice.emails"
+                  :key="email"
+                  class="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[11px]"
+                >
+                  {{ email }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Notes -->
+            <div v-if="invoice.note" class="pt-3 border-t border-border/30 space-y-1">
+              <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Note</p>
+              <p class="text-sm whitespace-pre-wrap">{{ invoice.note }}</p>
+            </div>
+            <div v-if="invoice.memo" class="pt-3 border-t border-border/30 space-y-1">
+              <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Internal Memo</p>
+              <p class="text-sm whitespace-pre-wrap text-muted-foreground">{{ invoice.memo }}</p>
+            </div>
+          </div>
+
+          <!-- Line Items -->
           <div class="ios-card p-6">
-            <h2 class="font-medium mb-4">Invoice Details</h2>
-            <InvoicesInvoiceForm
-              :invoice="invoice"
-              :saving="saving"
-              @save="handleUpdate"
-              @cancel="router.push('/invoices')"
-            />
+            <h2 class="text-[10px] uppercase tracking-wider text-muted-foreground mb-3">Line Items</h2>
+
+            <div v-if="(invoice.line_items as any[])?.length" class="space-y-2">
+              <div class="grid grid-cols-12 gap-2 text-[10px] uppercase tracking-wider text-muted-foreground font-medium px-1 pb-2 border-b border-border/30">
+                <span class="col-span-3">Product</span>
+                <span class="col-span-4">Description</span>
+                <span class="col-span-1 text-right">Qty</span>
+                <span class="col-span-2 text-right">Rate</span>
+                <span class="col-span-2 text-right">Amount</span>
+              </div>
+              <div
+                v-for="li in (invoice.line_items as any[])"
+                :key="li.id"
+                class="grid grid-cols-12 gap-2 text-sm px-1 py-1.5"
+              >
+                <span class="col-span-3 truncate">{{ typeof li.product === 'object' ? (li.product?.name || '\u2014') : '\u2014' }}</span>
+                <span class="col-span-4 truncate text-muted-foreground">{{ stripHtml(li.description || '') || '\u2014' }}</span>
+                <span class="col-span-1 text-right tabular-nums">{{ li.quantity || 0 }}</span>
+                <span class="col-span-2 text-right tabular-nums">{{ formatCurrency(li.rate || 0) }}</span>
+                <span class="col-span-2 text-right font-medium tabular-nums">{{ formatLineItemAmount(li) }}</span>
+              </div>
+              <div class="flex justify-end pt-3 border-t border-border">
+                <div class="text-sm font-semibold">
+                  Total: <span class="ml-2">{{ formatCurrency(invoice.total_amount || 0) }}</span>
+                </div>
+              </div>
+            </div>
+            <p v-else class="text-sm text-muted-foreground italic">No line items.</p>
           </div>
         </div>
 
@@ -225,8 +298,8 @@ onUnmounted(() => clearEntity());
         <div class="space-y-4">
           <!-- Summary -->
           <div class="ios-card p-5">
-            <h3 class="font-medium text-sm mb-3 flex items-center gap-2">
-              <Icon name="lucide:info" class="w-4 h-4 text-muted-foreground" />
+            <h3 class="text-[10px] uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
+              <Icon name="lucide:info" class="w-3.5 h-3.5" />
               Summary
             </h3>
             <div class="space-y-2.5 text-sm">
@@ -253,7 +326,7 @@ onUnmounted(() => clearEntity());
             </div>
             <!-- Check Image -->
             <div v-if="getCheckImageUrl(invoice)" class="mt-3 pt-3 border-t border-border/30">
-              <p class="text-xs text-muted-foreground mb-2">Check Image</p>
+              <p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Check Image</p>
               <a :href="getCheckImageUrl(invoice)!" target="_blank">
                 <img
                   :src="getCheckImageUrl(invoice)!"
@@ -266,8 +339,8 @@ onUnmounted(() => clearEntity());
 
           <!-- Actions -->
           <div class="ios-card p-5">
-            <h3 class="font-medium text-sm mb-3 flex items-center gap-2">
-              <Icon name="lucide:link" class="w-4 h-4 text-muted-foreground" />
+            <h3 class="text-[10px] uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
+              <Icon name="lucide:link" class="w-3.5 h-3.5" />
               Actions
             </h3>
             <div class="flex flex-col gap-2">
@@ -302,8 +375,8 @@ onUnmounted(() => clearEntity());
 
           <!-- Payments -->
           <div v-if="(invoice.payments as any[])?.length" class="ios-card p-5">
-            <h3 class="font-medium text-sm mb-3 flex items-center gap-2">
-              <Icon name="lucide:banknote" class="w-4 h-4 text-muted-foreground" />
+            <h3 class="text-[10px] uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
+              <Icon name="lucide:banknote" class="w-3.5 h-3.5" />
               Payments
               <span class="text-xs text-muted-foreground/60 ml-auto">
                 {{ (invoice.payments as any[]).length }}
@@ -323,7 +396,7 @@ onUnmounted(() => clearEntity());
                 </div>
                 <span
                   class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium capitalize"
-                  :class="payment.status === 'paid' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-yellow-500/15 text-yellow-400'"
+                  :class="getStatusBadgeClasses(payment.status)"
                 >
                   {{ payment.status }}
                 </span>
@@ -332,51 +405,15 @@ onUnmounted(() => clearEntity());
           </div>
         </div>
       </div>
-    </template>
 
-    <!-- Delete Confirmation Modal -->
-    <Teleport to="body">
-      <div
-        v-if="showDeleteConfirm"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-        @click.self="showDeleteConfirm = false"
-      >
-        <div class="ios-card w-full max-w-md mx-4 p-6 shadow-xl">
-          <div class="flex items-start gap-3 mb-4">
-            <div class="flex items-center justify-center w-10 h-10 rounded-full bg-destructive/10 shrink-0">
-              <Icon name="lucide:alert-triangle" class="w-5 h-5 text-destructive" />
-            </div>
-            <div>
-              <h3 class="font-semibold">Delete Invoice</h3>
-              <p class="text-sm text-muted-foreground mt-1">
-                Are you sure you want to delete invoice
-                <strong>{{ invoice?.invoice_code || invoice?.id }}</strong>?
-                This action cannot be undone.
-              </p>
-            </div>
-          </div>
-          <div class="flex justify-end gap-2 pt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              :disabled="deleting"
-              @click="showDeleteConfirm = false"
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              :disabled="deleting"
-              @click="handleDelete"
-            >
-              <Icon v-if="deleting" name="lucide:loader-2" class="w-4 h-4 mr-1 animate-spin" />
-              {{ deleting ? 'Deleting...' : 'Delete' }}
-            </Button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
+      <!-- Edit Modal -->
+      <InvoicesFormModal
+        v-model="showEditModal"
+        :invoice="invoice"
+        @updated="onInvoiceUpdated"
+        @deleted="onInvoiceDeleted"
+      />
+    </template>
 
     <!-- Contextual AI Sidebar -->
     <ClientOnly>

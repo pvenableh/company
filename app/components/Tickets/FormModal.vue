@@ -1,131 +1,96 @@
 <template>
-	<UModal v-model="isOpen" class="sm:max-w-lg">
-		<template #header>
-			<div class="w-full space-y-3">
-				<div class="flex items-center justify-between">
-					<h3 class="text-sm font-bold uppercase tracking-wide">{{ isEditing ? 'Edit Ticket' : 'New Ticket' }}</h3>
-					<Button variant="ghost" size="icon-sm" @click="isOpen = false">
-						<UIcon name="i-heroicons-x-mark" class="h-4 w-4" />
-					</Button>
-				</div>
-				<FormStatusTimeline
-					v-if="isEditing"
-					v-model:currentStatus="form.status"
-					:statuses="statusOptions.map(s => ({ id: s.value, name: s.label }))"
-					collection="tickets"
-					:itemId="ticket?.id"
-					@status-change="e => form.status = e.newStatus"
+	<FormModal
+		v-model="isOpen"
+		:title="isEditing ? 'Edit Ticket' : 'New Ticket'"
+		:is-editing="isEditing"
+		:saving="saving"
+		:submit-disabled="!form.title.trim()"
+		:statuses="timelineStatuses"
+		:current-status="form.status"
+		collection="tickets"
+		:item-id="ticket?.id ?? null"
+		:detail-route="ticket ? `/tickets/${ticket.id}` : null"
+		@submit="handleSubmit"
+		@delete="handleDelete"
+		@status-change="e => form.status = e.newStatus"
+	>
+		<!-- Priority -->
+		<div class="max-w-xs">
+			<TicketsDetailsPriority v-model="form.priority" />
+		</div>
+
+		<!-- Title -->
+		<div class="space-y-1">
+			<label class="t-label text-muted-foreground">Title *</label>
+			<UInput v-model="form.title" placeholder="Ticket title" />
+		</div>
+
+		<!-- Client, Project & Team -->
+		<div class="grid grid-cols-3 gap-4">
+			<div class="space-y-1">
+				<label class="t-label text-muted-foreground">Client</label>
+				<select
+					v-model="form.client"
+					class="w-full rounded-full border bg-background px-3 py-2 text-sm"
+				>
+					<option :value="null">No client</option>
+					<option v-for="c in clients" :key="c.value" :value="c.value">{{ c.label }}</option>
+				</select>
+			</div>
+			<div class="space-y-1">
+				<label class="t-label text-muted-foreground">Project (optional)</label>
+				<select
+					v-model="form.project"
+					class="w-full rounded-full border bg-background px-3 py-2 text-sm"
+				>
+					<option :value="null">None</option>
+					<option v-for="p in projects" :key="p.id" :value="p.id">{{ p.title }}</option>
+				</select>
+			</div>
+			<div class="space-y-1">
+				<label class="t-label text-muted-foreground">Team (optional)</label>
+				<select
+					v-model="form.team"
+					class="w-full rounded-full border bg-background px-3 py-2 text-sm"
+				>
+					<option :value="null">No team</option>
+					<option v-for="t in teamOptions" :key="t.id" :value="t.id">{{ t.name }}</option>
+				</select>
+			</div>
+		</div>
+
+		<!-- Status (for new tickets only) & Due Date -->
+		<div class="grid grid-cols-2 gap-4">
+			<div v-if="!isEditing" class="space-y-1">
+				<label class="t-label text-muted-foreground">Status</label>
+				<USelectMenu
+					v-model="form.status"
+					:options="statusOptions"
+					option-attribute="label"
+					value-attribute="value"
 				/>
 			</div>
-		</template>
-
-		<form @submit.prevent="handleSubmit" class="space-y-4 p-4 max-h-[70vh] overflow-y-auto">
-			<!-- Priority -->
-			<div class="max-w-xs">
-				<TicketsDetailsPriority v-model="form.priority" />
+			<div class="space-y-1 min-w-0">
+				<label class="t-label text-muted-foreground">Due Date</label>
+				<UInput v-model="form.due_date" type="datetime-local" />
 			</div>
+		</div>
 
-			<!-- Title -->
-			<div class="space-y-1">
-				<label class="t-label text-muted-foreground">Title *</label>
-				<UInput v-model="form.title" placeholder="Ticket title" />
-			</div>
-
-			<!-- Client, Project & Team -->
-			<div class="grid grid-cols-3 gap-4">
-				<div class="space-y-1">
-					<label class="t-label text-muted-foreground">Client</label>
-					<select
-						v-model="form.client"
-						class="w-full rounded-full border bg-background px-3 py-2 text-sm"
-					>
-						<option :value="null">No client</option>
-						<option v-for="c in clients" :key="c.value" :value="c.value">{{ c.label }}</option>
-					</select>
-				</div>
-				<div class="space-y-1">
-					<label class="t-label text-muted-foreground">Project (optional)</label>
-					<select
-						v-model="form.project"
-						class="w-full rounded-full border bg-background px-3 py-2 text-sm"
-					>
-						<option :value="null">None</option>
-						<option v-for="p in projects" :key="p.id" :value="p.id">{{ p.title }}</option>
-					</select>
-				</div>
-				<div class="space-y-1">
-					<label class="t-label text-muted-foreground">Team (optional)</label>
-					<select
-						v-model="form.team"
-						class="w-full rounded-full border bg-background px-3 py-2 text-sm"
-					>
-						<option :value="null">No team</option>
-						<option v-for="t in teamOptions" :key="t.id" :value="t.id">{{ t.name }}</option>
-					</select>
-				</div>
-			</div>
-
-			<!-- Status (for new tickets only) & Due Date -->
-			<div class="grid grid-cols-2 gap-4">
-				<div v-if="!isEditing" class="space-y-1">
-					<label class="t-label text-muted-foreground">Status</label>
-					<USelectMenu
-						v-model="form.status"
-						:options="statusOptions"
-						option-attribute="label"
-						value-attribute="value"
-					/>
-				</div>
-				<div class="space-y-1 min-w-0">
-					<label class="t-label text-muted-foreground">Due Date</label>
-					<UInput v-model="form.due_date" type="datetime-local" />
-				</div>
-			</div>
-
-			<!-- Assigned To -->
-			<UiAssignmentPicker
-				:modelValue="assignedUserIds"
-				@update:modelValue="handleAssignmentChange"
-				:users="availableUsers"
-				label="Assigned To"
-				empty-text="No one assigned"
-				:multiple="false"
-				@added="handleUserAdded"
-				@removed="handleUserRemoved"
-			/>
-		</form>
-
-		<template #footer>
-			<div class="flex items-center justify-between w-full">
-				<div class="flex items-center gap-1">
-					<UTooltip v-if="isEditing" text="Delete">
-						<Button
-							variant="ghost"
-							size="icon-sm"
-							class="text-destructive hover:text-destructive hover:bg-destructive/10"
-							:disabled="saving"
-							@click="handleDelete"
-						>
-							<Icon name="lucide:trash-2" class="h-3.5 w-3.5" />
-						</Button>
-					</UTooltip>
-					<Button size="sm" :disabled="saving || !form.title.trim()" @click="handleSubmit">
-						<Icon v-if="saving" name="lucide:loader-2" class="h-3.5 w-3.5 mr-1 animate-spin" />
-						<Icon v-else name="lucide:save" class="h-3.5 w-3.5 mr-1" />
-						{{ isEditing ? 'Save' : 'Create' }}
-					</Button>
-				</div>
-				<NuxtLink v-if="isEditing" :to="`/tickets/${ticket.id}`" class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground hover:text-foreground transition-colors">
-					Full Details
-					<Icon name="lucide:chevron-right" class="w-3 h-3" />
-				</NuxtLink>
-			</div>
-		</template>
-	</UModal>
+		<!-- Assigned To -->
+		<UiAssignmentPicker
+			:modelValue="assignedUserIds"
+			@update:modelValue="handleAssignmentChange"
+			:users="availableUsers"
+			label="Assigned To"
+			empty-text="No one assigned"
+			:multiple="false"
+			@added="handleUserAdded"
+			@removed="handleUserRemoved"
+		/>
+	</FormModal>
 </template>
 
 <script setup>
-import { Button } from '~/components/ui/button';
 import { useFilteredUsers } from '~/composables/useFilteredUsers';
 
 const props = defineProps({
@@ -159,6 +124,8 @@ const statusOptions = [
 	{ label: 'In Progress', value: 'In Progress' },
 	{ label: 'Completed', value: 'Completed' },
 ];
+
+const timelineStatuses = statusOptions.map(s => ({ id: s.value, name: s.label }));
 
 const form = reactive({
 	title: '',

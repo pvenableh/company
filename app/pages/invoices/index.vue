@@ -8,7 +8,7 @@ definePageMeta({ middleware: ['auth'] });
 useHead({ title: 'Invoices | Earnest' });
 
 const router = useRouter();
-const { getInvoices, createInvoice, updateInvoice, deleteInvoice } = useInvoices();
+const { getInvoices, updateInvoice, deleteInvoice } = useInvoices();
 const { selectedClient } = useClients();
 const { canAccess } = useOrgRole();
 const isAdmin = computed(() => canAccess('invoices'));
@@ -18,7 +18,6 @@ const total = ref(0);
 const loading = ref(true);
 const search = ref('');
 const showCreateModal = ref(false);
-const creating = ref(false);
 const statusFilter = ref('all');
 const showPaid = ref(false);
 const viewMode = ref<'cards' | 'table'>('table');
@@ -104,17 +103,8 @@ function viewInvoice(invoice: Invoice) {
   router.push(`/invoices/detail/${invoice.id}`);
 }
 
-async function handleCreate(data: any) {
-  creating.value = true;
-  try {
-    await createInvoice(data);
-    showCreateModal.value = false;
-    await fetchData();
-  } catch (err) {
-    console.error('Failed to create invoice:', err);
-  } finally {
-    creating.value = false;
-  }
+function onInvoiceCreated() {
+  fetchData();
 }
 
 function formatAmount(value: number | null | undefined): string {
@@ -472,22 +462,10 @@ watch(() => selectedClient.value, debouncedFetch);
     </template>
 
     <!-- Create Modal -->
-    <Teleport to="body">
-      <div
-        v-if="showCreateModal"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-        @click.self="showCreateModal = false"
-      >
-        <div class="ios-card shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto p-6">
-          <h2 class="font-semibold mb-4">New Invoice</h2>
-          <InvoicesInvoiceForm
-            :saving="creating"
-            @save="handleCreate"
-            @cancel="showCreateModal = false"
-          />
-        </div>
-      </div>
-    </Teleport>
+    <InvoicesFormModal
+      v-model="showCreateModal"
+      @created="onInvoiceCreated"
+    />
 
     <!-- Delete Confirmation Dialog -->
     <Teleport to="body">

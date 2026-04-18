@@ -2,38 +2,36 @@
   <form @submit.prevent="handleSubmit" class="space-y-5">
     <!-- Row 1: Client (primary billing target) -->
     <div class="grid grid-cols-2 gap-4">
-      <div>
-        <label class="block text-sm font-medium mb-1">Client *</label>
-        <select v-model="formData.client" required class="w-full rounded-md border bg-background px-3 py-2 text-sm">
+      <div class="space-y-1">
+        <label class="t-label text-muted-foreground">Client *</label>
+        <select
+          v-model="formData.client"
+          required
+          class="w-full rounded-full border bg-background px-3 py-2 text-sm"
+        >
           <option :value="null" disabled>Select client...</option>
           <option v-for="c in clientOptions" :key="c.value" :value="c.value">{{ c.label }}</option>
         </select>
       </div>
-      <div>
-        <label class="block text-sm font-medium mb-1">Organization</label>
-        <input
-          :value="currentOrg?.name || orgs.find(o => o.id === formData.bill_to)?.name || '—'"
+      <div class="space-y-1">
+        <label class="t-label text-muted-foreground">Organization</label>
+        <UInput
+          :model-value="currentOrg?.name || orgs.find(o => o.id === formData.bill_to)?.name || '—'"
           disabled
-          class="w-full rounded-md border bg-muted/50 px-3 py-2 text-sm text-muted-foreground cursor-not-allowed"
         />
       </div>
     </div>
 
     <!-- Row 2: Invoice Code + Project -->
     <div class="grid grid-cols-2 gap-4">
-      <div>
-        <label class="block text-sm font-medium mb-1">Invoice Code</label>
-        <input
-          v-model="formData.invoice_code"
-          disabled
-          class="w-full rounded-md border bg-muted/50 px-3 py-2 text-sm text-muted-foreground cursor-not-allowed"
-          placeholder="Auto-generated"
-        />
+      <div class="space-y-1">
+        <label class="t-label text-muted-foreground">Invoice Code</label>
+        <UInput v-model="formData.invoice_code" disabled placeholder="Auto-generated" />
       </div>
-      <div>
-        <label class="block text-sm font-medium mb-1">Projects</label>
+      <div class="space-y-1">
+        <label class="t-label text-muted-foreground">Projects</label>
         <div
-          class="w-full rounded-md border bg-background px-3 py-2 text-sm space-y-1.5 max-h-32 overflow-y-auto"
+          class="w-full rounded-xl border bg-background px-3 py-2 text-sm space-y-1.5 max-h-32 overflow-y-auto"
           :class="{ 'opacity-50 pointer-events-none': !formData.client }"
         >
           <template v-if="!formData.client">
@@ -63,56 +61,41 @@
 
     <!-- Row 3: Dates -->
     <div class="grid grid-cols-2 gap-4">
-      <div>
-        <label class="block text-sm font-medium mb-1">Invoice Date *</label>
-        <input
-          v-model="formData.invoice_date"
-          type="date"
-          required
-          class="w-full rounded-md border bg-background px-3 py-2 text-sm"
-        />
+      <div class="space-y-1">
+        <label class="t-label text-muted-foreground">Invoice Date *</label>
+        <UInput v-model="formData.invoice_date" type="date" required />
       </div>
-      <div>
-        <label class="block text-sm font-medium mb-1">Due Date *</label>
-        <input
-          v-model="formData.due_date"
-          type="date"
-          required
-          class="w-full rounded-md border bg-background px-3 py-2 text-sm"
-        />
+      <div class="space-y-1">
+        <label class="t-label text-muted-foreground">Due Date *</label>
+        <UInput v-model="formData.due_date" type="date" required />
       </div>
     </div>
 
-    <!-- Status + Melio -->
+    <!-- Status (create only) + Melio -->
     <div class="grid grid-cols-2 gap-4">
-      <div>
-        <label class="block text-sm font-medium mb-1">Status</label>
-        <select v-model="formData.status" class="w-full rounded-md border bg-background px-3 py-2 text-sm">
-          <option v-for="s in statusOptions" :key="s.value" :value="s.value">{{ s.label }}</option>
-        </select>
-      </div>
-      <div>
-        <label class="block text-sm font-medium mb-1">Melio Link</label>
-        <input
-          v-model="formData.melio"
-          class="w-full rounded-md border bg-background px-3 py-2 text-sm"
-          placeholder="https://app.meliopayments.com/..."
+      <div v-if="!isEditing" class="space-y-1">
+        <label class="t-label text-muted-foreground">Status</label>
+        <USelectMenu
+          v-model="statusModel"
+          :options="statusOptions"
+          option-attribute="label"
+          value-attribute="value"
         />
+      </div>
+      <div class="space-y-1" :class="{ 'col-span-2': isEditing }">
+        <label class="t-label text-muted-foreground">Melio Link</label>
+        <UInput v-model="formData.melio" placeholder="https://app.meliopayments.com/..." />
       </div>
     </div>
 
     <!-- Check / Mailing -->
     <div class="grid grid-cols-2 gap-4">
-      <div>
-        <label class="block text-sm font-medium mb-1">Date Mailed</label>
-        <input
-          v-model="formData.date_mailed"
-          type="date"
-          class="w-full rounded-md border bg-background px-3 py-2 text-sm"
-        />
+      <div class="space-y-1">
+        <label class="t-label text-muted-foreground">Date Mailed</label>
+        <UInput v-model="formData.date_mailed" type="date" />
       </div>
-      <div>
-        <label class="block text-sm font-medium mb-1">Check Image</label>
+      <div class="space-y-1">
+        <label class="t-label text-muted-foreground">Check Image</label>
         <div v-if="checkImagePreview" class="mb-2 flex items-center gap-2">
           <a :href="checkImagePreview" target="_blank" class="flex items-center gap-2 text-xs text-primary hover:underline">
             <img :src="checkImagePreview" alt="Check" class="h-10 w-16 object-cover rounded border" />
@@ -123,30 +106,28 @@
         <input
           type="file"
           accept="image/*"
-          class="w-full rounded-md border bg-background px-3 py-2 text-sm file:mr-2 file:rounded file:border-0 file:bg-primary/10 file:px-2 file:py-1 file:text-xs file:text-primary"
+          class="w-full rounded-full border bg-background px-3 py-2 text-sm file:mr-2 file:rounded file:border-0 file:bg-primary/10 file:px-2 file:py-1 file:text-xs file:text-primary"
           @change="handleCheckImageUpload"
         />
       </div>
     </div>
 
     <!-- Note -->
-    <div>
-      <label class="block text-sm font-medium mb-1">Note</label>
-      <textarea
+    <div class="space-y-1">
+      <label class="t-label text-muted-foreground">Note</label>
+      <UTextarea
         v-model="formData.note"
-        rows="2"
-        class="w-full rounded-md border bg-background px-3 py-2 text-sm"
+        :rows="2"
         placeholder="Note visible on the invoice..."
       />
     </div>
 
     <!-- Memo -->
-    <div>
-      <label class="block text-sm font-medium mb-1">Internal Memo</label>
-      <textarea
+    <div class="space-y-1">
+      <label class="t-label text-muted-foreground">Internal Memo</label>
+      <UTextarea
         v-model="formData.memo"
-        rows="2"
-        class="w-full rounded-md border bg-background px-3 py-2 text-sm"
+        :rows="2"
         placeholder="Internal memo (not shown to client)..."
       />
     </div>
@@ -188,38 +169,25 @@
       </div>
 
       <div class="grid grid-cols-2 gap-4">
-        <div>
-          <label class="block text-sm font-medium mb-1">Billing Name</label>
-          <input
-            v-model="formData.billing_name"
-            class="w-full rounded-md border bg-background px-3 py-2 text-sm"
-            placeholder="Contact name"
-          />
+        <div class="space-y-1">
+          <label class="t-label text-muted-foreground">Billing Name</label>
+          <UInput v-model="formData.billing_name" placeholder="Contact name" />
         </div>
-        <div>
-          <label class="block text-sm font-medium mb-1">Billing Email</label>
-          <input
-            v-model="formData.billing_email"
-            type="email"
-            class="w-full rounded-md border bg-background px-3 py-2 text-sm"
-            placeholder="billing@example.com"
-          />
+        <div class="space-y-1">
+          <label class="t-label text-muted-foreground">Billing Email</label>
+          <UInput v-model="formData.billing_email" type="email" placeholder="billing@example.com" />
         </div>
       </div>
-      <div class="mt-3">
-        <label class="block text-sm font-medium mb-1">Billing Address</label>
-        <input
-          v-model="formData.billing_address"
-          class="w-full rounded-md border bg-background px-3 py-2 text-sm"
-          placeholder="Billing address"
-        />
+      <div class="mt-3 space-y-1">
+        <label class="t-label text-muted-foreground">Billing Address</label>
+        <UInput v-model="formData.billing_address" placeholder="Billing address" />
       </div>
     </div>
 
     <!-- CC / Additional Recipients -->
-    <div>
-      <label class="block text-sm font-medium mb-1">Email Recipients (CC)</label>
-      <div class="flex flex-wrap gap-1.5 min-h-[38px] w-full rounded-md border bg-background px-3 py-2 text-sm items-center">
+    <div class="space-y-1">
+      <label class="t-label text-muted-foreground">Email Recipients (CC)</label>
+      <div class="flex flex-wrap gap-1.5 min-h-[38px] w-full rounded-full border bg-background px-3 py-2 text-sm items-center">
         <span
           v-for="(email, i) in ccEmails"
           :key="i"
@@ -245,7 +213,7 @@
     <!-- Line Items -->
     <div>
       <div class="flex items-center justify-between mb-3">
-        <label class="text-sm font-medium">Line Items *</label>
+        <label class="t-label text-muted-foreground">Line Items *</label>
         <Button type="button" variant="outline" size="sm" @click="addLineItem">
           <Icon name="lucide:plus" class="w-3.5 h-3.5 mr-1" />
           Add Item
@@ -284,14 +252,6 @@
         No line items yet. Click "Add Item" to get started.
       </div>
     </div>
-
-    <!-- Actions -->
-    <div class="flex justify-end gap-2 pt-2">
-      <Button type="button" variant="outline" @click="$emit('cancel')">Cancel</Button>
-      <Button type="submit" :disabled="saving || !lineItems.length">
-        {{ saving ? 'Saving...' : (invoice ? 'Update Invoice' : 'Create Invoice') }}
-      </Button>
-    </div>
   </form>
 </template>
 
@@ -308,8 +268,11 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   save: [data: any];
-  cancel: [];
 }>();
+
+const statusModel = defineModel<string>('status', { default: 'pending' });
+
+const isEditing = computed(() => !!props.invoice?.id);
 
 const statusOptions = [
   { label: 'Pending', value: 'pending' },
@@ -358,7 +321,6 @@ const formData = reactive({
   invoice_code: props.invoice?.invoice_code || '',
   invoice_date: props.invoice?.invoice_date?.split('T')[0] || todayString(),
   due_date: props.invoice?.due_date?.split('T')[0] || '',
-  status: props.invoice?.status || 'pending',
   note: props.invoice?.note || '',
   memo: props.invoice?.memo || '',
   melio: props.invoice?.melio || '',
@@ -368,6 +330,11 @@ const formData = reactive({
   billing_email: props.invoice?.billing_email || '',
   billing_address: props.invoice?.billing_address || '',
 });
+
+// Initialize status from invoice on mount (status is a defineModel, owned by parent)
+if (props.invoice?.status) {
+  statusModel.value = props.invoice.status;
+}
 
 // --- CC emails state ---
 const ccEmails = ref<string[]>(
@@ -489,7 +456,7 @@ function handleSubmit() {
     invoice_code: formData.invoice_code || undefined,
     invoice_date: formData.invoice_date,
     due_date: formData.due_date,
-    status: formData.status,
+    status: statusModel.value,
     note: formData.note || undefined,
     memo: formData.memo || undefined,
     melio: formData.melio || undefined,
@@ -550,6 +517,12 @@ function handleSubmit() {
 
   emit('save', payload);
 }
+
+// Expose submit so parent (FormModal wrapper) can trigger it from the footer Save button
+defineExpose({
+  triggerSubmit: handleSubmit,
+  hasLineItems: computed(() => lineItems.value.length > 0),
+});
 
 // --- Auto-generate invoice code when client or invoice_date changes (new invoices only) ---
 const autoGenerateCode = async () => {
