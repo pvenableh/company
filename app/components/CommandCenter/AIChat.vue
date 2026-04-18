@@ -371,14 +371,14 @@ onUnmounted(() => {
 </script>
 
 <template>
-	<div class="flex h-full bg-background rounded-xl overflow-hidden border border-gray-100 dark:border-gray-700">
+	<div class="flex h-full bg-background rounded-xl overflow-hidden border border-border/30">
 		<!-- Sidebar: Session List -->
 		<div
 			v-show="showSidebar"
-			class="w-64 flex-shrink-0 border-r border-gray-100 dark:border-gray-700 flex flex-col bg-muted/30"
+			class="w-64 flex-shrink-0 border-r border-border/30 flex flex-col bg-muted/30"
 		>
 			<!-- Sidebar Header -->
-			<div class="p-3 border-b border-gray-100 dark:border-gray-700">
+			<div class="p-3 border-b border-border/30">
 				<button
 					@click="startNewSession"
 					class="w-full flex items-center justify-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
@@ -432,7 +432,7 @@ onUnmounted(() => {
 		<!-- Main Chat Area -->
 		<div class="flex-1 flex flex-col min-w-0">
 			<!-- Chat Header -->
-			<div class="flex items-center justify-between p-3 border-b border-gray-100 dark:border-gray-700">
+			<div class="flex items-center justify-between p-3 border-b border-border/30">
 				<div class="flex items-center gap-2">
 					<button
 						@click="showSidebar = !showSidebar"
@@ -694,7 +694,7 @@ onUnmounted(() => {
 							>
 								<button
 									@click="openSaveNote(msg)"
-									class="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium bg-background border border-gray-200 dark:border-gray-600 shadow-sm hover:bg-muted transition-colors"
+									class="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium bg-background border border-border shadow-sm hover:bg-muted transition-colors"
 									:class="savedMessageIds.has(msg.id) ? 'text-primary' : 'text-muted-foreground'"
 									:title="savedMessageIds.has(msg.id) ? 'Saved' : 'Save as Note'"
 								>
@@ -706,7 +706,7 @@ onUnmounted(() => {
 								</button>
 								<button
 									@click="copyMessage(msg.content)"
-									class="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium text-muted-foreground bg-background border border-gray-200 dark:border-gray-600 shadow-sm hover:bg-muted transition-colors"
+									class="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium text-muted-foreground bg-background border border-border shadow-sm hover:bg-muted transition-colors"
 									title="Copy to clipboard"
 								>
 									<UIcon name="i-heroicons-clipboard-document" class="w-3 h-3" />
@@ -714,7 +714,7 @@ onUnmounted(() => {
 								</button>
 								<button
 									@click="submitFeedback(msg, 'positive')"
-									class="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium bg-background border border-gray-200 dark:border-gray-600 shadow-sm hover:bg-muted transition-colors"
+									class="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium bg-background border border-border shadow-sm hover:bg-muted transition-colors"
 									:class="msg.feedback?.rating === 'positive' ? 'text-green-500' : 'text-muted-foreground'"
 									title="Helpful"
 								>
@@ -722,7 +722,7 @@ onUnmounted(() => {
 								</button>
 								<button
 									@click="openCorrection(msg)"
-									class="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium bg-background border border-gray-200 dark:border-gray-600 shadow-sm hover:bg-muted transition-colors"
+									class="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium bg-background border border-border shadow-sm hover:bg-muted transition-colors"
 									:class="msg.feedback?.rating === 'negative' ? 'text-red-500' : 'text-muted-foreground'"
 									title="Not helpful"
 								>
@@ -737,7 +737,7 @@ onUnmounted(() => {
 								<textarea
 									v-model="correctionText"
 									placeholder="What was wrong? (optional)"
-									class="flex-1 text-xs rounded-lg border border-gray-200 dark:border-gray-600 bg-background px-2.5 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-primary/50"
+									class="flex-1 text-xs rounded-lg border border-border bg-background px-2.5 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-primary/50"
 									rows="2"
 									@keydown.enter.ctrl="submitCorrection"
 								/>
@@ -779,7 +779,7 @@ onUnmounted(() => {
 			</div>
 
 			<!-- Input -->
-			<div class="border-t border-gray-100 dark:border-gray-700 p-3">
+			<div class="border-t border-border/30 p-3">
 				<div class="flex items-end gap-2">
 					<textarea
 						v-model="newMessage"
@@ -787,7 +787,7 @@ onUnmounted(() => {
 						:disabled="isSending"
 						placeholder="Ask about a client, project, or invoice..."
 						rows="1"
-						class="flex-1 resize-none text-sm border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2.5 bg-transparent dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground"
+						class="flex-1 resize-none text-sm border border-border rounded-lg px-3 py-2.5 bg-transparent text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 placeholder:text-muted-foreground"
 					/>
 					<button
 						@click="sendMessage"
