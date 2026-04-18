@@ -10,6 +10,7 @@ const { getContacts } = useContacts();
 const { getLists } = useMailingLists();
 const { getTemplates, getStarterTemplates, createTemplate, duplicateTemplate } = useEmailTemplates();
 const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext();
+const { getStatusBadgeClasses } = useStatusStyle();
 
 const activeTab = ref(0);
 const tabs = [
@@ -206,12 +207,8 @@ onUnmounted(() => clearEntity());
 							<Icon :name="tpl.type === 'newsletter' ? 'lucide:newspaper' : 'lucide:mail'" class="w-4 h-4" :class="tpl.type === 'newsletter' ? 'text-primary/60' : 'text-blue-500/60'" />
 						</div>
 						<span
-							class="text-[10px] px-2 py-0.5 rounded-full font-medium"
-							:class="{
-								'bg-green-500/10 text-green-600': tpl.status === 'published',
-								'bg-amber-500/10 text-amber-600': tpl.status === 'draft',
-								'bg-muted text-muted-foreground': !tpl.status || tpl.status === 'archived',
-							}"
+							class="text-[10px] px-2 py-0.5 rounded-full font-medium capitalize"
+							:class="getStatusBadgeClasses(tpl.status || 'draft')"
 						>
 							{{ tpl.status || 'draft' }}
 						</span>

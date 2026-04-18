@@ -18,7 +18,7 @@ export function useStatusStyle() {
   /** CSS color string for accent indicators (dots, borders, progress bars) */
   function getStatusAccent(status?: string | null): string {
     const s = normalize(status);
-    if (['completed', 'done', 'paid', 'approved'].includes(s)) return 'hsl(var(--success))';
+    if (['completed', 'done', 'paid', 'approved', 'published'].includes(s)) return 'hsl(var(--success))';
     if (['overdue', 'rejected', 'failed', 'cancelled'].includes(s)) return 'hsl(var(--destructive))';
     if (['active', 'inprogress', 'open'].includes(s)) return 'hsl(160, 60%, 45%)';
     if (['scheduled'].includes(s)) return 'hsl(199, 89%, 48%)';
@@ -30,7 +30,7 @@ export function useStatusStyle() {
   /** Tailwind classes for inline badge (bg + text) */
   function getStatusBadgeClasses(status?: string | null): string {
     const s = normalize(status);
-    if (['completed', 'done', 'paid', 'approved'].includes(s)) return 'bg-green-500/15 text-green-500';
+    if (['completed', 'done', 'paid', 'approved', 'published'].includes(s)) return 'bg-green-500/15 text-green-500';
     if (['overdue', 'rejected', 'failed', 'cancelled'].includes(s)) return 'bg-destructive/15 text-destructive';
     if (['active', 'inprogress', 'open'].includes(s)) return 'bg-teal-500/15 text-teal-500';
     if (['scheduled'].includes(s)) return 'bg-sky-500/15 text-sky-500';
@@ -50,7 +50,7 @@ export function useStatusStyle() {
   /** Solid bg + white text class for prominent status pills */
   function getStatusPillClass(status?: string | null): string {
     const s = normalize(status);
-    if (['completed', 'done', 'paid', 'approved'].includes(s)) return 'bg-green-500 text-white';
+    if (['completed', 'done', 'paid', 'approved', 'published'].includes(s)) return 'bg-green-500 text-white';
     if (['overdue', 'rejected', 'failed', 'cancelled'].includes(s)) return 'bg-destructive text-white';
     if (['active', 'inprogress', 'open'].includes(s)) return 'bg-teal-500 text-white';
     if (['scheduled'].includes(s)) return 'bg-sky-500 text-white';
