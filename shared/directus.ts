@@ -2096,6 +2096,8 @@ export interface Organization {
 	projects?: Project[] | string[];
 	tickets?: Ticket[] | string[];
 	teams?: Team[] | string[];
+	/** @description Active membership rows. Used by the row-permission rule in setup-org-row-permissions.ts. */
+	memberships?: OrgMembership[] | string[];
 }
 
 export interface OrganizationsDirectusUser {

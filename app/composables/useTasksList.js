@@ -42,13 +42,18 @@ export function useTasksList({
 	const effectiveTeamId = computed(() => (teamIdParam.value !== undefined ? teamIdParam.value : selectedTeam.value));
 
 	const generateFilter = () => {
+		// Tenant-data safety: refuse to build a filter without an org. Returning
+		// an empty filter here would subscribe to every org's tickets under
+		// Directus's current permission setup. Callers check for null.
+		if (!effectiveOrgId.value) return null;
+
 		const filter = { _and: [] };
 
-		if (effectiveOrgId.value) {
-			const orgFilter = getOrganizationFilter(effectiveOrgId.value);
-			if (orgFilter && Object.keys(orgFilter).length > 0) {
-				filter._and.push(orgFilter);
-			}
+		const orgFilter = getOrganizationFilter(effectiveOrgId.value);
+		if (orgFilter && Object.keys(orgFilter).length > 0) {
+			filter._and.push(orgFilter);
+		} else {
+			return null;
 		}
 
 		if (effectiveTeamId.value) {
@@ -68,10 +73,6 @@ export function useTasksList({
 					directus_users_id: { _eq: userIdParam.value },
 				},
 			});
-		}
-
-		if (filter._and.length === 0) {
-			return {};
 		}
 
 		console.log('Generated task filter:', JSON.stringify(filter));
@@ -191,6 +192,13 @@ export function useTasksList({
 		}
 
 		const filter = generateFilter();
+		if (!filter) {
+			// No org selected yet — stay idle. The watcher below will re-setup
+			// once effectiveOrgId resolves.
+			tasks.value = [];
+			isLoading.value = false;
+			return;
+		}
 		console.log('Setting up task subscription with filter:', filter);
 
 		const {
@@ -236,10 +244,20 @@ export function useTasksList({
 		});
 
 		if (subscriptionInitialized && updateFilterFunc) {
-			isLoading.value = true;
 			const newFilter = generateFilter();
+			if (!newFilter) {
+				tasks.value = [];
+				isLoading.value = false;
+				return;
+			}
+			isLoading.value = true;
 			console.log('Updating subscription filter:', newFilter);
 			updateFilterFunc(newFilter);
+		} else if (effectiveOrgId.value) {
+			// Subscription wasn't initialized because no org was available earlier.
+			// Now that an org is present, set it up.
+			setupSubscription();
+			if (connect) connect();
 		} else {
 			console.warn('updateFilter function not available yet. Will update on setup.');
 		}

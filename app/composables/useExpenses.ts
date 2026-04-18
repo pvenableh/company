@@ -46,13 +46,19 @@ export const useExpenses = () => {
 		billableOnly?: boolean;
 	}) => {
 		if (import.meta.server || !user.value?.id) return;
+
+		// Tenant-data safety: never run the query without an org. An empty filter
+		// returns every org's expenses under Directus's current permission setup.
+		if (!selectedOrg.value) {
+			expenses.value = [];
+			isLoaded.value = true;
+			return;
+		}
+
 		isLoading.value = true;
 		try {
-			const filter: any = { _and: [] };
+			const filter: any = { _and: [{ organization: { _eq: selectedOrg.value } }] };
 
-			if (selectedOrg.value) {
-				filter._and.push({ organization: { _eq: selectedOrg.value } });
-			}
 			if (params?.category) {
 				filter._and.push({ category: { _eq: params.category } });
 			}
@@ -78,12 +84,9 @@ export const useExpenses = () => {
 				filter._and.push({ is_billable: { _eq: true } });
 			}
 
-			// If no filters, remove the empty _and
-			const finalFilter = filter._and.length ? filter : {};
-
 			const records = await expenseItems.list({
 				fields: EXPENSE_FIELDS,
-				filter: finalFilter,
+				filter,
 				sort: ['-date'],
 				limit: 500,
 			});
@@ -174,16 +177,17 @@ export const useExpenses = () => {
 
 	/** Fetch quarterly expense totals for a given year (standalone, doesn't use singleton state). */
 	const getQuarterlyExpenses = async (year: number): Promise<{ q1: number; q2: number; q3: number; q4: number; total: number }> => {
+		if (!selectedOrg.value) {
+			return { q1: 0, q2: 0, q3: 0, q4: 0, total: 0 };
+		}
 		try {
 			const filter: any = {
 				_and: [
+					{ organization: { _eq: selectedOrg.value } },
 					{ date: { _gte: `${year}-01-01` } },
 					{ date: { _lte: `${year}-12-31` } },
 				],
 			};
-			if (selectedOrg.value) {
-				filter._and.push({ organization: { _eq: selectedOrg.value } });
-			}
 
 			const records = await expenseItems.list({
 				fields: ['amount', 'date'],
@@ -208,8 +212,9 @@ export const useExpenses = () => {
 		}
 	};
 
-	// Load on init if not already loaded
-	if (!isLoaded.value && !isLoading.value) {
+	// Load on init if not already loaded — only when an org is selected, to avoid
+	// a cross-org fetch during the brief window before useOrganization resolves.
+	if (!isLoaded.value && !isLoading.value && selectedOrg.value) {
 		load();
 	}
 
@@ -222,6 +227,14 @@ export const useExpenses = () => {
 			return;
 		}
 		load();
+	});
+
+	// Reload when the selected org changes (including the initial async resolution).
+	watch(() => selectedOrg.value, (newOrg, oldOrg) => {
+		if (newOrg === oldOrg) return;
+		isLoaded.value = false;
+		expenses.value = [];
+		if (newOrg) load();
 	});
 
 	return {

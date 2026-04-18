@@ -6,25 +6,29 @@ export function useMailingLists() {
   const { selectedOrg, getOrganizationFilter } = useOrganization();
 
   const getLists = async (): Promise<MailingList[]> => {
-    const filter: any = { _and: [] };
-
-    // Org-scope
-    const orgFilter = getOrganizationFilter();
-    if (orgFilter?.organization) {
-      filter._and.push({ organization: orgFilter.organization });
-    }
-
-    filter._and.push({ status: { _eq: 'published' } });
+    // Tenant-data safety: never query without an org. Under Directus's current
+    // permission setup an empty org clause would return every org's lists.
+    if (!selectedOrg.value) return [];
 
     return items.list({
       fields: ['*'],
-      filter: filter._and.length ? filter : undefined,
+      filter: {
+        _and: [
+          { organization: { _eq: selectedOrg.value } },
+          { status: { _eq: 'published' } },
+        ],
+      },
       sort: ['-is_default', 'name'],
     });
   };
 
   const getList = async (id: number): Promise<MailingList> => {
-    return items.get(id, { fields: ['*'] });
+    const list = (await items.get(id, { fields: ['*'] })) as MailingList;
+    // Reject cross-org reads that slip past Directus permissions.
+    if (selectedOrg.value && (list as any)?.organization && (list as any).organization !== selectedOrg.value) {
+      throw new Error('Mailing list not available in this organization');
+    }
+    return list;
   };
 
   const createList = async (payload: Partial<MailingList>): Promise<MailingList> => {
@@ -41,6 +45,10 @@ export function useMailingLists() {
   };
 
   const getListContacts = async (listId: number): Promise<Contact[]> => {
+    // Verify the list belongs to the current org before reading its contacts.
+    // Prevents a forged listId from another org from leaking contacts.
+    await getList(listId);
+
     const members = await memberItems.list({
       fields: ['contact_id.*', 'custom_fields'],
       filter: {

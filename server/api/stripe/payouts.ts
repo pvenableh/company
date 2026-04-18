@@ -1,7 +1,12 @@
 import Stripe from 'stripe';
-import { defineEventHandler } from 'h3';
+import { createError, defineEventHandler } from 'h3';
 
 export default defineEventHandler(async (event) => {
+	const session = await requireUserSession(event);
+	if (!(session as any)?.user?.id) {
+		throw createError({ statusCode: 401, message: 'Authentication required' });
+	}
+
 	try {
 		const config = useRuntimeConfig();
 		const stripeSecretKey =

@@ -33,16 +33,20 @@ export const useGoals = () => {
 	/** Load goals from Directus for the current org. */
 	const load = async () => {
 		if (import.meta.server || !user.value?.id) return;
+
+		// Tenant-data safety: refuse to query without an org. An empty filter
+		// returns every org's goals under Directus's current permission setup.
+		if (!selectedOrg.value) {
+			goals.value = [];
+			isLoaded.value = true;
+			return;
+		}
+
 		isLoading.value = true;
 		try {
-			const filter: any = {};
-			if (selectedOrg.value) {
-				filter.organization = { _eq: selectedOrg.value };
-			}
-
 			const records = await goalItems.list({
 				fields: GOAL_FIELDS,
-				filter,
+				filter: { organization: { _eq: selectedOrg.value } },
 				sort: ['-date_created'],
 				limit: 200,
 			});
@@ -164,8 +168,9 @@ export const useGoals = () => {
 		});
 	});
 
-	// Load on init if not already loaded
-	if (!isLoaded.value && !isLoading.value) {
+	// Load on init — only when an org is resolved, to avoid a cross-org fetch
+	// during the brief window before useOrganization resolves.
+	if (!isLoaded.value && !isLoading.value && selectedOrg.value) {
 		load();
 	}
 
