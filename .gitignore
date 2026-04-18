@@ -22,6 +22,7 @@ dist
 .directus/uploads
 node-compile-cache/
 docker-compose.earnest.yml
+.backups/
 
 # Claude Code
 .claude/worktrees/

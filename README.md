@@ -111,7 +111,7 @@ Edit `.env` and fill in the required values. At minimum you need:
 |---|---|
 | `NUXT_SESSION_PASSWORD` | Random string (>= 32 chars) for session cookie encryption. Generate with `openssl rand -base64 32` |
 | `DIRECTUS_URL` | URL of your Directus instance |
-| `DIRECTUS_STATIC_TOKEN` | Directus static token for server-side admin operations |
+| `DIRECTUS_SERVER_TOKEN` | Directus server token for server-side admin operations (webhooks, cron, etc.) |
 
 See [`.env.example`](.env.example) for the full list of available variables.
 

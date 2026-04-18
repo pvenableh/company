@@ -35,7 +35,7 @@ export default defineEventHandler(async (event) => {
 	try {
 		// Get user settings with refresh token
 		const client = createDirectus(config.public.directusUrl).with(rest());
-		const staticToken = config.directusStaticToken;
+		const staticToken = config.directusServerToken;
 		if (staticToken) {
 			client.setToken(staticToken);
 		}

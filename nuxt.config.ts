@@ -114,11 +114,9 @@ export default defineNuxtConfig({
 		// Directus (server-side - NEVER expose to client)
 		directus: {
 			url: process.env.DIRECTUS_URL || 'https://admin.earnest.guru',
-			staticToken: process.env.DIRECTUS_STATIC_TOKEN,
 			serverToken: process.env.DIRECTUS_SERVER_TOKEN,
 		},
 		directusServerToken: process.env.DIRECTUS_SERVER_TOKEN,
-		directusStaticToken: process.env.DIRECTUS_STATIC_TOKEN,
 
 		// Daily.co video conferencing
 		dailyApiKey: process.env.DAILY_API_KEY || '',

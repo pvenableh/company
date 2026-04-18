@@ -29,28 +29,35 @@ type DirectusAuthClient = DirectusClient<any> &
   AuthenticationClient<any>;
 
 /**
- * Get admin Directus client with static token
- * Use for server-side admin operations
+ * Get admin Directus client with the server token.
+ * Use for server-side admin operations (webhooks, cron, anything that runs
+ * without a user session).
+ *
+ * Historically this used DIRECTUS_STATIC_TOKEN, but that token belonged to
+ * a user with no role/policies — its writes only worked because the Public
+ * policy granted anonymous writes. Those grants were revoked 2026-04-17,
+ * so the static token is useless here and this now uses the server token
+ * exclusively.
  */
 export function getTypedDirectus(): DirectusAuthClient {
   const config = useRuntimeConfig();
   const directusUrl = config.directus?.url || config.public.directusUrl;
-  const staticToken = config.directus?.staticToken;
+  const token = config.directus?.serverToken;
 
   if (!directusUrl) {
     throw new Error("DIRECTUS_URL not configured");
   }
 
-  if (!staticToken) {
-    console.warn("[directus] DIRECTUS_STATIC_TOKEN not configured — admin client will be unauthenticated");
+  if (!token) {
+    console.warn("[directus] DIRECTUS_SERVER_TOKEN not configured — admin client will be unauthenticated");
   }
 
   const client = createDirectus(directusUrl)
     .with(rest())
     .with(authentication("json"));
 
-  if (staticToken) {
-    client.setToken(staticToken);
+  if (token) {
+    client.setToken(token);
   }
 
   return client;

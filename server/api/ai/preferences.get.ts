@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig();
   const directus = createDirectus(config.public.directusUrl)
     .with(rest())
-    .with(staticToken(config.directusServerToken || config.directusStaticToken));
+    .with(staticToken(config.directusServerToken));
 
   try {
     const records = await directus.request(

@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
 		// Use server token to read meeting data with relations
 		const directus = createDirectus(config.public.directusUrl)
 			.with(rest())
-			.with(staticToken(config.directusServerToken || config.directusStaticToken));
+			.with(staticToken(config.directusServerToken));
 
 		const meetings = await directus.request(
 			readItems('video_meetings', {
