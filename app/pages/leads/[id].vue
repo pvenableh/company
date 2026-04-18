@@ -13,6 +13,7 @@ const { getActivitiesForLead, createActivity } = useLeadActivities();
 const { getPriorityBadgeClass } = useStatusStyle();
 const { getLists } = useMailingLists();
 const { removeFromList } = useContacts();
+const { setEntity, clearEntity } = useEntityPageContext();
 const toast = useToast();
 
 const lead = ref<any>(null);
@@ -215,6 +216,17 @@ onMounted(() => {
 	fetchUpcomingMeetings();
 	loadAvailableLists();
 });
+
+watch(lead, (l) => {
+	if (!l) return;
+	const contact = l.related_contact;
+	const name = contact && typeof contact === 'object'
+		? [contact.first_name, contact.last_name].filter(Boolean).join(' ') || contact.company
+		: '';
+	setEntity('lead', l.id, name || 'Lead');
+}, { immediate: true });
+
+onUnmounted(() => clearEntity());
 </script>
 
 <template>

@@ -13,6 +13,7 @@ const router = useRouter();
 const invoiceItems = useDirectusItems('invoices');
 const expenseItems = useDirectusItems('expenses');
 const { selectedOrg } = useOrganization();
+const { setEntity, clearEntity } = useEntityPageContext();
 
 const currentYear = new Date().getFullYear();
 const monthlyData = ref<{ month: number; label: string; revenue: number; expenses: number; net: number }[]>([]);
@@ -105,7 +106,12 @@ async function loadDashboard() {
   }
 }
 
-onMounted(loadDashboard);
+onMounted(() => {
+  loadDashboard();
+  setEntity('financials', 'dashboard', 'Financials');
+});
+
+onUnmounted(() => clearEntity());
 
 // ── Chart config ──
 const revenueChartConfig: ChartConfig = {
