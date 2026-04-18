@@ -418,7 +418,7 @@ onUnmounted(() => {
 						<div class="flex-1 min-w-0">
 							<p class="truncate text-sm">{{ sessionTitle(session) }}</p>
 							<p class="text-[10px] text-muted-foreground/70 mt-0.5">
-								{{ formatDate(session.date_updated || session.date_created) }}
+								{{ formatChatTimestamp(session.date_updated || session.date_created) }}
 							</p>
 						</div>
 						<button
