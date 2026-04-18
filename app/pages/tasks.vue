@@ -102,7 +102,7 @@
 
 				<div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
 					<div class="ios-card p-5">
-						<h2 class="text-lg font-medium mb-4">{{ tabs[activeTab]?.label }} Tasks</h2>
+						<h2 class="text-lg font-medium mb-4">{{ tabs[activeTab]?.label }}</h2>
 
 						<ClientOnly>
 							<TicketsTasksList
