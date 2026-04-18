@@ -30,6 +30,7 @@
  * TIME-ONLY:
  *   formatTime()            → "2:30 PM"
  *   formatTimeFromString()  → "2:30 PM" (from "14:30" string)
+ *   formatChatTimestamp()   → "2:31 PM" / "Yesterday 2:31 PM" / "Mon 2:31 PM" / "Mar 15, 2:31 PM"
  *
  * OTHER:
  *   getFirstLetter()        → "A" (first char uppercased)
@@ -314,6 +315,37 @@ export function formatTime(dateInput: string | Date | null | undefined): string 
 	const date = toDate(dateInput);
 	if (!date) return '';
 	return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+}
+
+/**
+ * Smart chat timestamp — hides noise for today's messages, reveals the day
+ * once it matters.
+ *   Today          → "2:31 PM"
+ *   Yesterday      → "Yesterday 2:31 PM"
+ *   < 7 days old   → "Mon 2:31 PM"
+ *   Same year      → "Mar 15, 2:31 PM"
+ *   Older          → "Mar 15, 2025, 2:31 PM"
+ */
+export function formatChatTimestamp(dateInput: string | Date | null | undefined): string {
+	const date = toDate(dateInput);
+	if (!date) return '';
+
+	const now = new Date();
+	const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+	const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+	const diffDays = Math.floor((today.getTime() - dateOnly.getTime()) / 86400000);
+
+	const time = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+	if (diffDays === 0) return time;
+	if (diffDays === 1) return `Yesterday ${time}`;
+	if (diffDays > 0 && diffDays < 7) {
+		return `${date.toLocaleDateString('en-US', { weekday: 'short' })} ${time}`;
+	}
+	if (date.getFullYear() === now.getFullYear()) {
+		return `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, ${time}`;
+	}
+	return `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}, ${time}`;
 }
 
 /**

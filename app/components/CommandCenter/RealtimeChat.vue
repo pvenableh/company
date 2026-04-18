@@ -172,7 +172,7 @@ const getAvatar = (msg: any) => {
 	return `https://ui-avatars.com/api/?name=${u.first_name}+${u.last_name}&background=6366f1&color=fff&size=32`;
 };
 
-// formatTime and formatRelativeDay are auto-imported from utils/dates.ts
+// formatChatTimestamp and formatRelativeDay are auto-imported from utils/dates.ts
 const formatDate = (dateStr: string) => formatRelativeDay(dateStr);
 
 
@@ -265,11 +265,11 @@ onUnmounted(() => {
 								: 'bg-muted text-foreground'
 						"
 					>
-						<p v-if="!isOwnMessage(msg)" class="text-[10px] font-semibold text-gray-500 mb-0.5">
+						<p v-if="!isOwnMessage(msg)" class="text-[10px] font-semibold text-muted-foreground mb-0.5">
 							{{ msg.user_created?.first_name }}
 						</p>
 						<p class="whitespace-pre-wrap break-words overflow-wrap-anywhere" v-html="msg.text"></p>
-						<p class="text-[10px] text-gray-400 mt-1 text-right">{{ formatTime(msg.date_created) }}</p>
+						<p class="text-[10px] text-muted-foreground/70 mt-1 text-right">{{ formatChatTimestamp(msg.date_created) }}</p>
 					</div>
 				</div>
 			</template>
