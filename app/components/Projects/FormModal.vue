@@ -1,154 +1,129 @@
 <template>
-	<UModal v-model="isOpen" class="sm:max-w-lg">
-		<template #header>
-			<div class="flex items-center justify-between w-full">
-				<h3 class="text-sm font-bold uppercase tracking-wide">{{ isEditing ? 'Edit Project' : 'New Project' }}</h3>
-				<Button variant="ghost" size="icon-sm" @click="isOpen = false">
-					<UIcon name="i-heroicons-x-mark" class="h-4 w-4" />
-				</Button>
-			</div>
-		</template>
+	<FormModal
+		v-model="isOpen"
+		:title="isEditing ? 'Edit Project' : 'New Project'"
+		:is-editing="isEditing"
+		:saving="saving"
+		:submit-disabled="!form.title.trim()"
+		:statuses="projectStatuses"
+		:current-status="currentStatus"
+		collection="projects"
+		:item-id="project?.id ?? null"
+		:detail-route="project ? `/projects/${project.id}` : null"
+		@submit="handleSubmit"
+		@delete="handleDelete"
+		@status-change="e => currentStatus = e.newStatus"
+	>
+		<!-- Title -->
+		<div class="space-y-1">
+			<label class="t-label text-muted-foreground">Title *</label>
+			<UInput v-model="form.title" placeholder="Project title" />
+		</div>
 
-		<form @submit.prevent="handleSubmit" class="space-y-4 p-4">
-			<!-- Title -->
+		<!-- Description -->
+		<div class="space-y-1">
+			<label class="t-label text-muted-foreground">Description</label>
+			<UTextarea v-model="form.description" placeholder="Project description..." :rows="3" />
+		</div>
+
+		<!-- Client & Service -->
+		<div class="grid grid-cols-2 gap-4">
 			<div class="space-y-1">
-				<label class="t-label text-muted-foreground">Title *</label>
-				<UInput v-model="form.title" placeholder="Project title" />
-			</div>
-
-			<!-- Description -->
-			<div class="space-y-1">
-				<label class="t-label text-muted-foreground">Description</label>
-				<UTextarea v-model="form.description" placeholder="Project description..." :rows="3" />
-			</div>
-
-			<!-- Client & Service -->
-			<div class="grid grid-cols-2 gap-4">
-				<div class="space-y-1">
-					<label class="t-label text-muted-foreground">Client</label>
-					<select
-						v-model="form.client"
-						class="w-full rounded-full border bg-background px-3 py-2 text-sm"
-					>
-						<option :value="null">No client</option>
-						<option v-for="c in clients" :key="c.value" :value="c.value">{{ c.label }}</option>
-					</select>
-				</div>
-				<div class="space-y-1">
-					<label class="t-label text-muted-foreground">Service</label>
-					<select
-						v-model="form.service"
-						class="w-full rounded-full border bg-background px-3 py-2 text-sm"
-					>
-						<option :value="null">No service</option>
-						<option v-for="s in services" :key="s.id" :value="s.id">{{ s.name }}</option>
-					</select>
-				</div>
-			</div>
-
-			<!-- Status & Template -->
-			<div class="grid grid-cols-2 gap-4">
-				<div class="space-y-1">
-					<label class="t-label text-muted-foreground">Status</label>
-					<USelectMenu
-						v-model="form.status"
-						:options="statusOptions"
-						option-attribute="label"
-						value-attribute="value"
-					/>
-				</div>
-				<div class="space-y-1">
-					<label class="t-label text-muted-foreground">Template</label>
-					<USelectMenu
-						v-model="form.template"
-						:options="templateOptions"
-						option-attribute="label"
-						value-attribute="value"
-					/>
-				</div>
-			</div>
-
-			<!-- Dates -->
-			<div class="grid grid-cols-2 gap-4">
-				<div class="space-y-1">
-					<label class="t-label text-muted-foreground">Start Date</label>
-					<UInput v-model="form.start_date" type="date" />
-				</div>
-				<div class="space-y-1">
-					<label class="t-label text-muted-foreground">Due Date</label>
-					<UInput v-model="form.due_date" type="date" />
-				</div>
-			</div>
-
-			<!-- Contract Value & URL -->
-			<div class="grid grid-cols-2 gap-4">
-				<div class="space-y-1">
-					<label class="t-label text-muted-foreground">Contract Value</label>
-					<UInput v-model="form.contract_value" type="number" placeholder="0.00" />
-				</div>
-				<div class="space-y-1">
-					<label class="t-label text-muted-foreground">URL</label>
-					<UInput v-model="form.url" placeholder="https://..." />
-				</div>
-			</div>
-
-			<!-- Assigned Users (edit mode only) -->
-			<div v-if="isEditing" class="space-y-1">
-				<label class="t-label text-muted-foreground">Assigned Users</label>
-				<div class="flex flex-wrap gap-1.5 mb-1.5">
-					<span
-						v-for="u in assignedUsers"
-						:key="u.id"
-						class="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2.5 py-1 text-xs"
-					>
-						{{ u.first_name }} {{ u.last_name }}
-						<button type="button" class="text-muted-foreground/60 hover:text-destructive transition-colors" @click="removeAssignedUser(u.id)">
-							<Icon name="lucide:x" class="w-3 h-3" />
-						</button>
-					</span>
-					<span v-if="!assignedUsers.length" class="text-xs text-muted-foreground/60 py-1">No users assigned</span>
-				</div>
+				<label class="t-label text-muted-foreground">Client</label>
 				<select
+					v-model="form.client"
 					class="w-full rounded-full border bg-background px-3 py-2 text-sm"
-					@change="addAssignedUser($event.target.value); $event.target.value = ''"
 				>
-					<option value="">+ Add user...</option>
-					<option v-for="u in availableUsers" :key="u.id" :value="u.id">{{ u.first_name }} {{ u.last_name }}</option>
+					<option :value="null">No client</option>
+					<option v-for="c in clients" :key="c.value" :value="c.value">{{ c.label }}</option>
 				</select>
 			</div>
-		</form>
-
-		<template #footer>
-			<div class="flex items-center justify-between w-full">
-				<div class="flex items-center gap-1">
-					<UTooltip v-if="isEditing" text="Delete">
-						<Button
-							variant="ghost"
-							size="icon-sm"
-							class="text-destructive hover:text-destructive hover:bg-destructive/10"
-							:disabled="saving"
-							@click="handleDelete"
-						>
-							<Icon name="lucide:trash-2" class="h-3.5 w-3.5" />
-						</Button>
-					</UTooltip>
-					<Button size="sm" :disabled="saving || !form.title.trim()" @click="handleSubmit">
-						<Icon v-if="saving" name="lucide:loader-2" class="h-3.5 w-3.5 mr-1 animate-spin" />
-						<Icon v-else name="lucide:save" class="h-3.5 w-3.5 mr-1" />
-						{{ isEditing ? 'Save' : 'Create' }}
-					</Button>
-				</div>
-				<NuxtLink v-if="isEditing && project?.id" :to="`/projects/${project.id}`" class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground hover:text-foreground transition-colors">
-					Full Details
-					<Icon name="lucide:chevron-right" class="w-3 h-3" />
-				</NuxtLink>
+			<div class="space-y-1">
+				<label class="t-label text-muted-foreground">Service</label>
+				<select
+					v-model="form.service"
+					class="w-full rounded-full border bg-background px-3 py-2 text-sm"
+				>
+					<option :value="null">No service</option>
+					<option v-for="s in services" :key="s.id" :value="s.id">{{ s.name }}</option>
+				</select>
 			</div>
-		</template>
-	</UModal>
+		</div>
+
+		<!-- Status (create-only, edit-mode uses timeline) & Template -->
+		<div class="grid grid-cols-2 gap-4">
+			<div v-if="!isEditing" class="space-y-1">
+				<label class="t-label text-muted-foreground">Status</label>
+				<USelectMenu
+					v-model="currentStatus"
+					:options="statusOptions"
+					option-attribute="label"
+					value-attribute="value"
+				/>
+			</div>
+			<div class="space-y-1" :class="{ 'col-span-2': isEditing }">
+				<label class="t-label text-muted-foreground">Template</label>
+				<USelectMenu
+					v-model="form.template"
+					:options="templateOptions"
+					option-attribute="label"
+					value-attribute="value"
+				/>
+			</div>
+		</div>
+
+		<!-- Dates -->
+		<div class="grid grid-cols-2 gap-4">
+			<div class="space-y-1">
+				<label class="t-label text-muted-foreground">Start Date</label>
+				<UInput v-model="form.start_date" type="date" />
+			</div>
+			<div class="space-y-1">
+				<label class="t-label text-muted-foreground">Due Date</label>
+				<UInput v-model="form.due_date" type="date" />
+			</div>
+		</div>
+
+		<!-- Contract Value & URL -->
+		<div class="grid grid-cols-2 gap-4">
+			<div class="space-y-1">
+				<label class="t-label text-muted-foreground">Contract Value</label>
+				<UInput v-model="form.contract_value" type="number" placeholder="0.00" />
+			</div>
+			<div class="space-y-1">
+				<label class="t-label text-muted-foreground">URL</label>
+				<UInput v-model="form.url" placeholder="https://..." />
+			</div>
+		</div>
+
+		<!-- Assigned Users (edit mode only) -->
+		<div v-if="isEditing" class="space-y-1">
+			<label class="t-label text-muted-foreground">Assigned Users</label>
+			<div class="flex flex-wrap gap-1.5 mb-1.5">
+				<span
+					v-for="u in assignedUsers"
+					:key="u.id"
+					class="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2.5 py-1 text-xs"
+				>
+					{{ u.first_name }} {{ u.last_name }}
+					<button type="button" class="text-muted-foreground/60 hover:text-destructive transition-colors" @click="removeAssignedUser(u.id)">
+						<Icon name="lucide:x" class="w-3 h-3" />
+					</button>
+				</span>
+				<span v-if="!assignedUsers.length" class="text-xs text-muted-foreground/60 py-1">No users assigned</span>
+			</div>
+			<select
+				class="w-full rounded-full border bg-background px-3 py-2 text-sm"
+				@change="addAssignedUser($event.target.value); $event.target.value = ''"
+			>
+				<option value="">+ Add user...</option>
+				<option v-for="u in availableUsers" :key="u.id" :value="u.id">{{ u.first_name }} {{ u.last_name }}</option>
+			</select>
+		</div>
+	</FormModal>
 </template>
 
 <script setup>
-import { Button } from '~/components/ui/button';
 import { toast } from 'vue-sonner';
 
 const props = defineProps({
@@ -180,17 +155,21 @@ const statusOptions = [
 	{ label: 'Archived', value: 'Archived' },
 ];
 
+// Timeline stages — map statusOptions to the {id, name} shape FormStatusTimeline expects
+const projectStatuses = statusOptions.map(s => ({ id: s.value, name: s.label }));
+
 const templateOptions = [
 	{ label: 'Web Project', value: 'web-project' },
 	{ label: 'Branding Project', value: 'branding-project' },
 ];
+
+const currentStatus = ref('Pending');
 
 const form = reactive({
 	title: '',
 	description: '',
 	client: null,
 	service: null,
-	status: 'Pending',
 	template: 'web-project',
 	start_date: '',
 	due_date: '',
@@ -204,23 +183,23 @@ function populateForm() {
 		form.description = props.project.description || '';
 		form.client = props.project.client?.id || props.project.client || null;
 		form.service = props.project.service?.id || props.project.service || null;
-		form.status = props.project.status || 'Pending';
 		form.template = props.project.template || 'web-project';
 		form.start_date = props.project.start_date?.split('T')[0] || '';
 		form.due_date = props.project.due_date?.split('T')[0] || '';
 		form.contract_value = props.project.contract_value || null;
 		form.url = props.project.url || '';
+		currentStatus.value = props.project.status || 'Pending';
 	} else {
 		form.title = '';
 		form.description = '';
 		form.client = null;
 		form.service = null;
-		form.status = 'Pending';
 		form.template = 'web-project';
 		form.start_date = '';
 		form.due_date = '';
 		form.contract_value = null;
 		form.url = '';
+		currentStatus.value = 'Pending';
 	}
 }
 
@@ -317,13 +296,13 @@ async function handleSubmit() {
 	const payload = {
 		title: form.title.trim(),
 		description: form.description?.trim() || null,
-		status: form.status,
+		status: currentStatus.value,
 		template: form.template,
 		client: form.client || null,
 		service: form.service || null,
 		start_date: form.start_date || null,
 		due_date: form.due_date || null,
-		contract_value: form.contract_value || null,
+		contract_value: form.contract_value === '' || form.contract_value == null ? null : Number(form.contract_value),
 		url: form.url?.trim() || null,
 	};
 
