@@ -200,33 +200,33 @@ const renderMarkdown = (text: string): string => {
       class="fixed right-0 top-0 h-full w-full max-w-md bg-background shadow-2xl z-50 flex flex-col overflow-hidden border-l border-border"
     >
       <!-- Header -->
-      <div class="border-b border-gray-100 dark:border-gray-700 shrink-0">
+      <div class="border-b border-border/30 shrink-0">
         <div class="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-primary/5 to-violet-500/5">
           <div class="flex items-center gap-2.5 min-w-0">
             <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
               <Icon name="lucide:sparkles" class="w-4 h-4 text-primary" />
             </div>
             <div class="min-w-0">
-              <h2 class="text-sm font-bold text-gray-900 dark:text-white truncate">
+              <h2 class="text-sm font-bold text-foreground truncate">
                 Ask about this {{ entityType }}
               </h2>
-              <p class="text-[10px] text-gray-500 truncate">{{ entityLabel }}</p>
+              <p class="text-[10px] text-muted-foreground truncate">{{ entityLabel }}</p>
             </div>
           </div>
           <div class="flex items-center gap-1 shrink-0">
             <button
               v-if="hasHistory"
               @click="clearChat"
-              class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-muted transition-colors"
               title="New conversation"
             >
-              <Icon name="lucide:plus" class="w-3.5 h-3.5 text-gray-500" />
+              <Icon name="lucide:plus" class="w-3.5 h-3.5 text-muted-foreground" />
             </button>
             <button
               @click="handleClose()"
-              class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-muted transition-colors"
             >
-              <Icon name="lucide:x" class="w-4 h-4 text-gray-500" />
+              <Icon name="lucide:x" class="w-4 h-4 text-muted-foreground" />
             </button>
           </div>
         </div>
@@ -236,7 +236,7 @@ const renderMarkdown = (text: string): string => {
       <div ref="messagesContainer" class="flex-1 overflow-y-auto px-4 py-3 space-y-3 scroll-smooth">
         <!-- Loading history -->
         <div v-if="isLoadingHistory" class="flex flex-col items-center justify-center h-full text-center px-4">
-          <div class="flex items-center gap-2 text-xs text-gray-400">
+          <div class="flex items-center gap-2 text-xs text-muted-foreground/70">
             <Icon name="lucide:loader-2" class="w-4 h-4 animate-spin" />
             Loading conversation...
           </div>
@@ -247,10 +247,10 @@ const renderMarkdown = (text: string): string => {
           <div class="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-3">
             <Icon name="lucide:sparkles" class="w-6 h-6 text-primary" />
           </div>
-          <p class="text-sm font-medium text-gray-900 dark:text-white mb-1">
+          <p class="text-sm font-medium text-foreground mb-1">
             Ask Earnest about this {{ entityType }}
           </p>
-          <p class="text-xs text-gray-500 mb-4">
+          <p class="text-xs text-muted-foreground mb-4">
             I have full context on {{ entityLabel }} and can help you analyze, draft, or plan.
           </p>
           <div class="w-full space-y-2">
@@ -258,7 +258,7 @@ const renderMarkdown = (text: string): string => {
               v-for="prompt in prompts"
               :key="prompt"
               @click="handlePromptClick(prompt)"
-              class="w-full text-left px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 text-xs text-gray-700 dark:text-gray-300 hover:bg-primary/5 hover:border-primary/30 transition-colors"
+              class="w-full text-left px-3 py-2 rounded-xl border border-border text-xs text-foreground hover:bg-primary/5 hover:border-primary/30 transition-colors"
             >
               <Icon name="lucide:sparkles" class="w-3 h-3 text-primary/60 inline mr-1.5" />
               {{ prompt }}
@@ -278,14 +278,14 @@ const renderMarkdown = (text: string): string => {
           <div v-else class="group flex justify-start">
             <div class="max-w-[90%]">
               <div
-                class="px-3 py-2 rounded-2xl rounded-bl-md bg-gray-100 dark:bg-gray-700 text-xs leading-relaxed text-gray-800 dark:text-gray-200 prose-sm"
+                class="px-3 py-2 rounded-2xl rounded-bl-md bg-muted text-xs leading-relaxed text-foreground prose-sm"
                 v-html="renderMarkdown(msg.content)"
               />
               <div class="flex items-center gap-1 mt-0.5 ml-1 h-5">
                 <button
                   v-if="sessionId && !savedMessageIds.has(msg.id)"
                   @click="handleSaveAsNote(msg)"
-                  class="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-primary p-0.5 rounded"
+                  class="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground/70 hover:text-primary p-0.5 rounded"
                   title="Save as note"
                 >
                   <Icon name="lucide:bookmark" class="w-3 h-3" />
@@ -300,7 +300,7 @@ const renderMarkdown = (text: string): string => {
                 <button
                   @click="submitSidebarFeedback(msg, 'positive')"
                   class="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded"
-                  :class="msg.feedback?.rating === 'positive' ? 'text-green-500' : 'text-gray-400 hover:text-green-500'"
+                  :class="msg.feedback?.rating === 'positive' ? 'text-green-500' : 'text-muted-foreground/70 hover:text-green-500'"
                   title="Helpful"
                 >
                   <Icon name="lucide:thumbs-up" class="w-3 h-3" />
@@ -308,7 +308,7 @@ const renderMarkdown = (text: string): string => {
                 <button
                   @click="openSidebarCorrection(msg)"
                   class="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded"
-                  :class="msg.feedback?.rating === 'negative' ? 'text-red-500' : 'text-gray-400 hover:text-red-500'"
+                  :class="msg.feedback?.rating === 'negative' ? 'text-red-500' : 'text-muted-foreground/70 hover:text-red-500'"
                   title="Not helpful"
                 >
                   <Icon name="lucide:thumbs-down" class="w-3 h-3" />
@@ -322,7 +322,7 @@ const renderMarkdown = (text: string): string => {
                 <textarea
                   v-model="sidebarCorrectionText"
                   placeholder="What was wrong? (optional)"
-                  class="flex-1 text-[11px] rounded border border-gray-200 dark:border-gray-600 bg-background px-2 py-1 resize-none focus:outline-none focus:ring-1 focus:ring-primary/50"
+                  class="flex-1 text-[11px] rounded border border-border bg-background px-2 py-1 resize-none focus:outline-none focus:ring-1 focus:ring-primary/50"
                   rows="2"
                   @keydown.enter.ctrl="submitSidebarCorrection"
                 />
@@ -341,7 +341,7 @@ const renderMarkdown = (text: string): string => {
         <div v-if="isStreaming && streamingContent" class="flex justify-start">
           <div class="max-w-[90%]">
             <div
-              class="px-3 py-2 rounded-2xl rounded-bl-md bg-gray-100 dark:bg-gray-700 text-xs leading-relaxed text-gray-800 dark:text-gray-200 prose-sm"
+              class="px-3 py-2 rounded-2xl rounded-bl-md bg-muted text-xs leading-relaxed text-foreground prose-sm"
               v-html="renderMarkdown(streamingContent)"
             />
             <span class="inline-block w-1.5 h-3.5 bg-primary/60 rounded-sm animate-pulse ml-1" />
@@ -350,11 +350,11 @@ const renderMarkdown = (text: string): string => {
 
         <!-- Loading indicator -->
         <div v-if="isSending && !streamingContent" class="flex justify-start">
-          <div class="px-3 py-2 rounded-2xl rounded-bl-md bg-gray-100 dark:bg-gray-700">
+          <div class="px-3 py-2 rounded-2xl rounded-bl-md bg-muted">
             <div class="flex items-center gap-1.5">
-              <span class="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0ms" />
-              <span class="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 150ms" />
-              <span class="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 300ms" />
+              <span class="w-1.5 h-1.5 bg-muted-foreground/70 rounded-full animate-bounce" style="animation-delay: 0ms" />
+              <span class="w-1.5 h-1.5 bg-muted-foreground/70 rounded-full animate-bounce" style="animation-delay: 150ms" />
+              <span class="w-1.5 h-1.5 bg-muted-foreground/70 rounded-full animate-bounce" style="animation-delay: 300ms" />
             </div>
           </div>
         </div>
@@ -366,7 +366,7 @@ const renderMarkdown = (text: string): string => {
       </div>
 
       <!-- Input -->
-      <div class="border-t border-gray-100 dark:border-gray-700 p-3 shrink-0">
+      <div class="border-t border-border/30 p-3 shrink-0">
         <div class="flex items-end gap-2">
           <textarea
             v-model="newMessage"
@@ -374,7 +374,7 @@ const renderMarkdown = (text: string): string => {
             :placeholder="`Ask about ${entityLabel}...`"
             :disabled="isSending"
             rows="1"
-            class="flex-1 resize-none rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 px-3 py-2 text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-colors"
+            class="flex-1 resize-none rounded-xl border border-border bg-muted/50 px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-colors"
             style="max-height: 96px"
           />
           <button
@@ -386,7 +386,7 @@ const renderMarkdown = (text: string): string => {
                 ? 'bg-red-500 hover:bg-red-600 text-white'
                 : newMessage.trim()
                   ? 'bg-primary hover:bg-primary/90 text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-400'
+                  : 'bg-muted text-muted-foreground/70'
             "
           >
             <Icon :name="isStreaming ? 'lucide:square' : 'lucide:arrow-up'" class="w-3.5 h-3.5" />

@@ -229,30 +229,30 @@ watch(quickStreamingContent, () => {
 			class="fixed right-0 top-0 h-full w-full max-w-sm bg-background shadow-2xl z-50 flex flex-col overflow-hidden border-l border-border"
 		>
 			<!-- Header -->
-			<div class="border-b border-gray-100 dark:border-gray-700">
+			<div class="border-b border-border/30">
 				<div class="flex items-center justify-between p-4 bg-gradient-to-r from-primary/5 to-violet-500/5">
 					<div class="flex items-center gap-2">
 						<div class="w-8 h-8 rounded-lg flex items-center justify-center" :class="activePersona.iconBg">
 							<UIcon :name="activePersona.icon" class="w-4 h-4" :class="activePersona.iconColor" />
 						</div>
 						<div>
-							<h2 class="text-sm font-bold text-gray-900 dark:text-white">Earnest</h2>
-							<p class="text-[10px] text-gray-500 italic">"{{ activePersona.greeting }}"</p>
+							<h2 class="text-sm font-bold text-foreground">Earnest</h2>
+							<p class="text-[10px] text-muted-foreground italic">"{{ activePersona.greeting }}"</p>
 						</div>
 					</div>
 					<div class="flex items-center gap-1">
 						<button
 							@click="showPreferences = !showPreferences"
-							class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+							class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted transition-colors"
 							:class="showPreferences ? 'bg-primary/10 text-primary' : ''"
 						>
-							<UIcon name="i-heroicons-cog-6-tooth" class="w-4 h-4" :class="showPreferences ? 'text-primary' : 'text-gray-500'" />
+							<UIcon name="i-heroicons-cog-6-tooth" class="w-4 h-4" :class="showPreferences ? 'text-primary' : 'text-muted-foreground'" />
 						</button>
 						<button
 							@click="emit('close')"
-							class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+							class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted transition-colors"
 						>
-							<UIcon name="i-heroicons-x-mark" class="w-5 h-5 text-gray-500" />
+							<UIcon name="i-heroicons-x-mark" class="w-5 h-5 text-muted-foreground" />
 						</button>
 					</div>
 				</div>
@@ -272,7 +272,7 @@ watch(quickStreamingContent, () => {
 					</button>
 				</div>
 				<!-- Tab Switcher -->
-				<div v-if="!showPreferences" class="flex border-b border-gray-100 dark:border-gray-700">
+				<div v-if="!showPreferences" class="flex border-b border-border/30">
 					<button
 						@click="activeTab = 'chat'"
 						class="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-medium transition-colors"
@@ -380,7 +380,7 @@ watch(quickStreamingContent, () => {
 									>
 										<button
 											@click="openTraySaveNote(msg)"
-											class="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-medium bg-background border border-gray-200 dark:border-gray-600 shadow-sm hover:bg-muted transition-colors"
+											class="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-medium bg-background border border-border shadow-sm hover:bg-muted transition-colors"
 											:class="traySavedIds.has(msg.id) ? 'text-primary' : 'text-muted-foreground'"
 										>
 											<UIcon
@@ -391,14 +391,14 @@ watch(quickStreamingContent, () => {
 										</button>
 										<button
 											@click="navigator.clipboard.writeText(msg.content)"
-											class="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-medium text-muted-foreground bg-background border border-gray-200 dark:border-gray-600 shadow-sm hover:bg-muted transition-colors"
+											class="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-medium text-muted-foreground bg-background border border-border shadow-sm hover:bg-muted transition-colors"
 										>
 											<UIcon name="i-heroicons-clipboard-document" class="w-2.5 h-2.5" />
 											Copy
 										</button>
 										<button
 											@click="submitTrayFeedback(msg, 'positive')"
-											class="flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-background border border-gray-200 dark:border-gray-600 shadow-sm hover:bg-muted transition-colors"
+											class="flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-background border border-border shadow-sm hover:bg-muted transition-colors"
 											:class="msg.feedback?.rating === 'positive' ? 'text-green-500' : 'text-muted-foreground'"
 											title="Helpful"
 										>
@@ -406,7 +406,7 @@ watch(quickStreamingContent, () => {
 										</button>
 										<button
 											@click="openTrayCorrection(msg)"
-											class="flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-background border border-gray-200 dark:border-gray-600 shadow-sm hover:bg-muted transition-colors"
+											class="flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-background border border-border shadow-sm hover:bg-muted transition-colors"
 											:class="msg.feedback?.rating === 'negative' ? 'text-red-500' : 'text-muted-foreground'"
 											title="Not helpful"
 										>
@@ -421,7 +421,7 @@ watch(quickStreamingContent, () => {
 										<textarea
 											v-model="trayCorrectionText"
 											placeholder="What was wrong? (optional)"
-											class="flex-1 text-[11px] rounded border border-gray-200 dark:border-gray-600 bg-background px-2 py-1 resize-none focus:outline-none focus:ring-1 focus:ring-primary/50"
+											class="flex-1 text-[11px] rounded border border-border bg-background px-2 py-1 resize-none focus:outline-none focus:ring-1 focus:ring-primary/50"
 											rows="2"
 											@keydown.enter.ctrl="submitTrayCorrection"
 										/>
@@ -460,7 +460,7 @@ watch(quickStreamingContent, () => {
 					</div>
 
 					<!-- Chat Input -->
-					<div class="border-t border-gray-100 dark:border-gray-700 p-3">
+					<div class="border-t border-border/30 p-3">
 						<form @submit.prevent="handleChatSubmit" class="flex items-center gap-2">
 							<div class="flex-1 relative">
 								<EarnestIcon class="w-4 h-4 text-primary absolute left-3 top-1/2 -translate-y-1/2" />
@@ -511,7 +511,7 @@ watch(quickStreamingContent, () => {
 			<!-- ═══ Productivity Tab ═══ -->
 			<template v-else-if="activeTab === 'productivity'">
 				<!-- Productivity Score -->
-				<div class="p-4 border-b border-gray-100 dark:border-gray-700">
+				<div class="p-4 border-b border-border/30">
 					<CommandCenterProductivityMeter
 						:score="metrics.productivityScore"
 						:overdue-items="metrics.overdueItems"
@@ -524,17 +524,17 @@ watch(quickStreamingContent, () => {
 				</div>
 
 				<!-- Quick Actions -->
-				<div class="p-4 border-b border-gray-100 dark:border-gray-700">
-					<h3 class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-3">Quick Actions</h3>
+				<div class="p-4 border-b border-border/30">
+					<h3 class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">Quick Actions</h3>
 					<div class="grid grid-cols-3 gap-2">
 						<button
 							v-for="action in quickActions"
 							:key="action.label"
 							@click="handleQuickAction(action.route)"
-							class="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-center"
+							class="flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-muted transition-colors text-center"
 						>
 							<UIcon :name="action.icon" class="w-5 h-5 text-primary" />
-							<span class="text-[10px] text-gray-600 dark:text-gray-400">{{ action.label }}</span>
+							<span class="text-[10px] text-muted-foreground">{{ action.label }}</span>
 						</button>
 					</div>
 				</div>
@@ -543,9 +543,9 @@ watch(quickStreamingContent, () => {
 				<div class="flex-1 overflow-y-auto">
 					<div class="p-4">
 						<div class="flex items-center justify-between mb-3">
-							<h3 class="text-[10px] font-semibold uppercase tracking-wider text-gray-500">
+							<h3 class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
 								Smart Suggestions
-								<span v-if="suggestions.length" class="text-gray-400 ml-1">({{ suggestions.length }})</span>
+								<span v-if="suggestions.length" class="text-muted-foreground/70 ml-1">({{ suggestions.length }})</span>
 							</h3>
 							<button
 								@click="runAnalysis"
@@ -566,7 +566,7 @@ watch(quickStreamingContent, () => {
 								:class="[
 									filterCategory === cat.value
 										? 'bg-primary text-white'
-										: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400',
+										: 'bg-muted text-muted-foreground',
 								]"
 								class="text-[10px] px-2.5 py-1 rounded-full whitespace-nowrap transition-colors font-medium flex items-center gap-1"
 							>
@@ -582,10 +582,10 @@ watch(quickStreamingContent, () => {
 
 						<!-- Suggestion Cards -->
 						<div v-if="isAnalyzing" class="space-y-2">
-							<div v-for="n in 4" :key="n" class="h-16 bg-gray-100 dark:bg-gray-700 rounded-lg animate-pulse" />
+							<div v-for="n in 4" :key="n" class="h-16 bg-muted rounded-lg animate-pulse" />
 						</div>
 
-						<div v-else-if="filteredSuggestions.length === 0" class="text-center py-8 text-gray-400 text-sm">
+						<div v-else-if="filteredSuggestions.length === 0" class="text-center py-8 text-muted-foreground/70 text-sm">
 							<UIcon name="i-heroicons-check-circle" class="w-8 h-8 mx-auto mb-2" />
 							<p>All caught up! No suggestions right now.</p>
 						</div>
@@ -606,11 +606,11 @@ watch(quickStreamingContent, () => {
 			<template v-else-if="activeTab === 'notes'">
 				<div class="flex-1 flex flex-col min-h-0">
 					<!-- Search -->
-					<div class="p-3 border-b border-gray-100 dark:border-gray-700">
+					<div class="p-3 border-b border-border/30">
 						<input
 							v-model="trayNotesSearch"
 							placeholder="Search notes..."
-							class="w-full text-xs px-3 py-2 border border-gray-200 dark:border-gray-600 rounded-lg bg-transparent placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+							class="w-full text-xs px-3 py-2 border border-border rounded-lg bg-transparent placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
 						/>
 					</div>
 
@@ -629,7 +629,7 @@ watch(quickStreamingContent, () => {
 							v-for="note in trayNotes"
 							:key="(note as any).id"
 							@click="openTrayNote((note as any).id)"
-							class="p-3 rounded-lg bg-muted/30 border border-gray-100 dark:border-gray-700 cursor-pointer hover:bg-muted/50 transition-colors"
+							class="p-3 rounded-lg bg-muted/30 border border-border/30 cursor-pointer hover:bg-muted/50 transition-colors"
 						>
 							<div class="flex items-start justify-between gap-2">
 								<h4 class="text-xs font-semibold text-foreground line-clamp-1 flex-1">
@@ -658,7 +658,7 @@ watch(quickStreamingContent, () => {
 					</div>
 
 					<!-- View all link -->
-					<div class="p-3 border-t border-gray-100 dark:border-gray-700">
+					<div class="p-3 border-t border-border/30">
 						<button
 							@click="router.push('/command-center/notes'); emit('close')"
 							class="w-full text-xs text-center text-muted-foreground hover:text-primary transition-colors"
