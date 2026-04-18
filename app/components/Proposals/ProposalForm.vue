@@ -45,7 +45,12 @@ const form = reactive({
 });
 
 function handleSubmit() {
-	emit('submit', { ...form });
+	emit('submit', {
+		...form,
+		// Coerce empty strings to null for numeric/date columns — Postgres rejects ""
+		total_value: form.total_value === '' || form.total_value == null ? null : Number(form.total_value),
+		valid_until: form.valid_until || null,
+	});
 }
 
 defineExpose({
