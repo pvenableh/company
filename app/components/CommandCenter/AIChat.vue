@@ -400,11 +400,15 @@ onUnmounted(() => {
 				</div>
 
 				<div v-else class="py-1">
-					<button
+					<div
 						v-for="session in sessions"
 						:key="session.id"
+						role="button"
+						tabindex="0"
 						@click="loadSession(session.id)"
-						class="w-full text-left px-3 py-2.5 text-sm transition-colors group flex items-center justify-between"
+						@keydown.enter.prevent="loadSession(session.id)"
+						@keydown.space.prevent="loadSession(session.id)"
+						class="w-full text-left px-3 py-2.5 text-sm transition-colors group flex items-center justify-between cursor-pointer"
 						:class="
 							activeSessionId === session.id
 								? 'bg-primary/10 text-foreground'
@@ -424,7 +428,7 @@ onUnmounted(() => {
 						>
 							<UIcon name="i-heroicons-trash" class="w-3.5 h-3.5" />
 						</button>
-					</button>
+					</div>
 				</div>
 			</div>
 		</div>
