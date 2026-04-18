@@ -6,13 +6,11 @@ definePageMeta({ middleware: ['auth'] });
 useHead({ title: 'Lists | Earnest' });
 
 const router = useRouter();
-const { getLists, createList } = useMailingLists();
+const { getLists } = useMailingLists();
 
 const lists = ref<MailingList[]>([]);
 const loading = ref(true);
 const showCreateModal = ref(false);
-const creating = ref(false);
-const newList = reactive({ name: '', slug: '', description: '', is_default: false, double_opt_in: false });
 
 async function loadData() {
   loading.value = true;
@@ -20,22 +18,8 @@ async function loadData() {
   loading.value = false;
 }
 
-function generateSlug(name: string): string {
-  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-}
-
-async function handleCreate() {
-  if (!newList.name) return;
-  creating.value = true;
-  try {
-    newList.slug = generateSlug(newList.name);
-    await createList(newList);
-    showCreateModal.value = false;
-    Object.assign(newList, { name: '', slug: '', description: '', is_default: false, double_opt_in: false });
-    await loadData();
-  } finally {
-    creating.value = false;
-  }
+async function onListCreated() {
+  await loadData();
 }
 
 onMounted(loadData);
@@ -75,36 +59,6 @@ onMounted(loadData);
     </div>
 
     <!-- Create Modal -->
-    <div v-if="showCreateModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" @click.self="showCreateModal = false">
-      <div class="bg-background rounded-lg shadow-lg w-full max-w-md mx-4 p-6">
-        <h2 class="font-semibold mb-4">New Mailing List</h2>
-        <form @submit.prevent="handleCreate" class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium mb-1">Name *</label>
-            <input v-model="newList.name" required class="w-full rounded-md border bg-background px-3 py-2 text-sm" placeholder="e.g. Monthly Newsletter" />
-          </div>
-          <div>
-            <label class="block text-sm font-medium mb-1">Description</label>
-            <input v-model="newList.description" class="w-full rounded-md border bg-background px-3 py-2 text-sm" placeholder="Optional description" />
-          </div>
-          <div class="flex items-center gap-4">
-            <label class="flex items-center gap-2 text-sm">
-              <input v-model="newList.is_default" type="checkbox" class="accent-primary" />
-              Default list
-            </label>
-            <label class="flex items-center gap-2 text-sm">
-              <input v-model="newList.double_opt_in" type="checkbox" class="accent-primary" />
-              Double opt-in
-            </label>
-          </div>
-          <div class="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" @click="showCreateModal = false">Cancel</Button>
-            <Button type="submit" :disabled="creating || !newList.name">
-              {{ creating ? 'Creating...' : 'Create' }}
-            </Button>
-          </div>
-        </form>
-      </div>
-    </div>
+    <ListsFormModal v-model="showCreateModal" @created="onListCreated" />
   </div>
 </template>

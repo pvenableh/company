@@ -2,8 +2,7 @@
 definePageMeta({ middleware: ['auth'] });
 useHead({ title: 'Expenses | Earnest' });
 
-const { expenses, isLoading, totalExpenses, expensesByCategory, billableExpenses, reimbursableExpenses, createExpense, updateExpense, deleteExpense, refresh } = useExpenses();
-const { EXPENSE_CATEGORIES } = await import('~/composables/useExpenses');
+const { expenses, isLoading, totalExpenses, expensesByCategory, billableExpenses, reimbursableExpenses, deleteExpense, refresh } = useExpenses();
 
 const toast = useToast();
 
@@ -43,43 +42,6 @@ const billableTotal = computed(() => billableExpenses.value.reduce((sum, e) => s
 // ── Create/Edit Modal ──
 const showModal = ref(false);
 const editingExpense = ref<any>(null);
-const saving = ref(false);
-
-const defaultForm = () => ({
-	name: '',
-	category: 'other',
-	amount: null as number | null,
-	date: new Date().toISOString().split('T')[0] as string,
-	description: '',
-	vendor: '',
-	payment_method: '',
-	is_billable: false,
-	is_reimbursable: false,
-	status: 'draft',
-	project: null as string | null,
-});
-
-const form = ref(defaultForm());
-
-watch(showModal, (open) => {
-	if (open && editingExpense.value) {
-		form.value = {
-			name: editingExpense.value.name || '',
-			category: editingExpense.value.category || 'other',
-			amount: editingExpense.value.amount,
-			date: editingExpense.value.date || (new Date().toISOString().split('T')[0] as string),
-			description: editingExpense.value.description || '',
-			vendor: editingExpense.value.vendor || '',
-			payment_method: editingExpense.value.payment_method || '',
-			is_billable: editingExpense.value.is_billable || false,
-			is_reimbursable: editingExpense.value.is_reimbursable || false,
-			status: editingExpense.value.status || 'draft',
-			project: typeof editingExpense.value.project === 'object' ? editingExpense.value.project?.id : editingExpense.value.project || null,
-		};
-	} else if (open) {
-		form.value = defaultForm();
-	}
-});
 
 const openCreate = () => {
 	editingExpense.value = null;
@@ -91,23 +53,9 @@ const openEdit = (expense: any) => {
 	showModal.value = true;
 };
 
-const handleSave = async () => {
-	if (!form.value.name.trim() || !form.value.amount) return;
-	saving.value = true;
-	try {
-		if (editingExpense.value) {
-			await updateExpense(editingExpense.value.id, { ...form.value });
-			toast.add({ title: 'Expense updated', color: 'success' });
-		} else {
-			await createExpense({ ...form.value });
-			toast.add({ title: 'Expense created', color: 'success' });
-		}
-		showModal.value = false;
-	} catch {
-		toast.add({ title: 'Error', description: 'Failed to save expense', color: 'error' });
-	} finally {
-		saving.value = false;
-	}
+const onExpenseSaved = async () => {
+	editingExpense.value = null;
+	await refresh();
 };
 
 const handleDelete = async (expense: any) => {
@@ -140,15 +88,6 @@ const statusColors: Record<string, string> = {
 	paid: 'bg-green-500/20 text-green-400',
 	rejected: 'bg-red-500/20 text-red-400',
 };
-
-const paymentMethods = [
-	{ value: '', label: 'None' },
-	{ value: 'cash', label: 'Cash' },
-	{ value: 'credit_card', label: 'Credit Card' },
-	{ value: 'bank_transfer', label: 'Bank Transfer' },
-	{ value: 'check', label: 'Check' },
-	{ value: 'other', label: 'Other' },
-];
 
 const statusOptions = [
 	{ value: 'draft', label: 'Draft' },
@@ -400,131 +339,10 @@ const statusOptions = [
 		</div>
 
 		<!-- Create/Edit Modal -->
-		<UModal v-model="showModal">
-			<div class="space-y-4 p-1">
-				<div>
-					<h2 class="text-lg font-semibold text-foreground">{{ editingExpense ? 'Edit Expense' : 'New Expense' }}</h2>
-					<p class="text-sm text-muted-foreground mt-0.5">Track a business expense</p>
-				</div>
-
-				<!-- Name -->
-				<div>
-					<label class="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Name</label>
-					<input
-						v-model="form.name"
-						type="text"
-						placeholder="e.g., Adobe Creative Cloud subscription"
-						class="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30"
-					/>
-				</div>
-
-				<!-- Category & Amount -->
-				<div class="grid grid-cols-2 gap-3">
-					<div>
-						<label class="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Category</label>
-						<select
-							v-model="form.category"
-							class="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-						>
-							<option v-for="cat in EXPENSE_CATEGORIES" :key="cat.value" :value="cat.value">{{ cat.label }}</option>
-						</select>
-					</div>
-					<div>
-						<label class="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Amount ($)</label>
-						<input
-							v-model.number="form.amount"
-							type="number"
-							step="0.01"
-							min="0"
-							placeholder="0.00"
-							class="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30"
-						/>
-					</div>
-				</div>
-
-				<!-- Date & Vendor -->
-				<div class="grid grid-cols-2 gap-3">
-					<div>
-						<label class="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Date</label>
-						<input
-							v-model="form.date"
-							type="date"
-							class="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-						/>
-					</div>
-					<div>
-						<label class="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Vendor</label>
-						<input
-							v-model="form.vendor"
-							type="text"
-							placeholder="Company name"
-							class="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30"
-						/>
-					</div>
-				</div>
-
-				<!-- Status & Payment Method -->
-				<div class="grid grid-cols-2 gap-3">
-					<div>
-						<label class="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Status</label>
-						<select
-							v-model="form.status"
-							class="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-						>
-							<option v-for="s in statusOptions" :key="s.value" :value="s.value">{{ s.label }}</option>
-						</select>
-					</div>
-					<div>
-						<label class="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Payment Method</label>
-						<select
-							v-model="form.payment_method"
-							class="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-						>
-							<option v-for="pm in paymentMethods" :key="pm.value" :value="pm.value">{{ pm.label }}</option>
-						</select>
-					</div>
-				</div>
-
-				<!-- Toggles -->
-				<div class="flex items-center gap-6">
-					<label class="flex items-center gap-2 cursor-pointer">
-						<input v-model="form.is_billable" type="checkbox" class="rounded border-border text-primary focus:ring-primary" />
-						<span class="text-sm text-foreground">Billable</span>
-					</label>
-					<label class="flex items-center gap-2 cursor-pointer">
-						<input v-model="form.is_reimbursable" type="checkbox" class="rounded border-border text-primary focus:ring-primary" />
-						<span class="text-sm text-foreground">Reimbursable</span>
-					</label>
-				</div>
-
-				<!-- Description -->
-				<div>
-					<label class="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Notes</label>
-					<textarea
-						v-model="form.description"
-						rows="2"
-						placeholder="Optional notes about this expense"
-						class="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
-					/>
-				</div>
-
-				<!-- Actions -->
-				<div class="flex justify-end gap-2 pt-2">
-					<button
-						@click="showModal = false"
-						class="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg"
-					>
-						Cancel
-					</button>
-					<button
-						@click="handleSave"
-						:disabled="!form.name.trim() || !form.amount || saving"
-						class="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
-					>
-						{{ saving ? 'Saving...' : editingExpense ? 'Update Expense' : 'Create Expense' }}
-					</button>
-				</div>
-			</div>
-		</UModal>
+		<ExpensesFormModal
+			v-model="showModal"
+			:expense="editingExpense"
+			@saved="onExpenseSaved"
+		/>
 	</div>
 </template>

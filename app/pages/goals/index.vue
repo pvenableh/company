@@ -2,11 +2,12 @@
 definePageMeta({ middleware: ['auth'] });
 useHead({ title: 'Goals | Earnest' });
 
-const { goals, activeGoals, completedGoals, goalsByType, overdueGoals, isLoading, createGoal, updateGoal, deleteGoal, recordSnapshot, goalProgress, refresh } = useGoals();
+const { goals, activeGoals, completedGoals, goalsByType, overdueGoals, isLoading, deleteGoal, recordSnapshot, goalProgress, refresh } = useGoals();
 
 const activeTab = ref('all');
 const showCreateModal = ref(false);
 const editingGoal = ref(null);
+const aiPrefill = ref(null);
 const showProgressModal = ref(false);
 const progressGoal = ref(null);
 const progressValue = ref(0);
@@ -40,12 +41,9 @@ const fetchAISuggestions = async () => {
 	}
 };
 
-const skipFormReset = ref(false);
-
 const adoptSuggestion = (suggestion: any) => {
 	editingGoal.value = null;
-	skipFormReset.value = true;
-	goalForm.value = {
+	aiPrefill.value = {
 		title: suggestion.title || '',
 		description: suggestion.description || '',
 		type: suggestion.type || 'custom',
@@ -63,63 +61,17 @@ const adoptSuggestion = (suggestion: any) => {
 	aiSuggestions.value = aiSuggestions.value.filter((s: any) => s !== suggestion);
 };
 
-const goalTypeOptions = [
-	{ label: 'Financial', value: 'financial', icon: 'i-heroicons-banknotes' },
-	{ label: 'Networking', value: 'networking', icon: 'i-heroicons-user-group' },
-	{ label: 'Performance', value: 'performance', icon: 'i-heroicons-chart-bar' },
-	{ label: 'Marketing', value: 'marketing', icon: 'i-heroicons-megaphone' },
-	{ label: 'Custom', value: 'custom', icon: 'i-heroicons-flag' },
-];
+function openNewGoal() {
+	editingGoal.value = null;
+	aiPrefill.value = null;
+	showCreateModal.value = true;
+}
 
-const goalUnitOptions = [
-	{ label: 'USD ($)', value: 'USD' },
-	{ label: 'Percent (%)', value: 'percent' },
-	{ label: 'Contacts', value: 'contacts' },
-	{ label: 'Projects', value: 'projects' },
-	{ label: 'Tasks', value: 'tasks' },
-	{ label: 'Campaigns', value: 'campaigns' },
-	{ label: 'Custom', value: '' },
-];
-
-const defaultForm = () => ({
-	title: '',
-	description: '',
-	type: 'financial',
-	target_value: null,
-	target_unit: 'USD',
-	current_value: 0,
-	start_date: new Date().toISOString().split('T')[0],
-	end_date: '',
-	timeframe: 'quarterly',
-	priority: 'medium',
-	status: 'active',
-});
-
-const goalForm = ref(defaultForm());
-
-watch(showCreateModal, (open) => {
-	if (open && skipFormReset.value) {
-		skipFormReset.value = false;
-		return;
-	} else if (open && editingGoal.value) {
-		const g = editingGoal.value;
-		goalForm.value = {
-			title: g.title || '',
-			description: g.description || '',
-			type: g.type || 'financial',
-			target_value: g.target_value,
-			target_unit: g.target_unit || 'USD',
-			current_value: g.current_value || 0,
-			start_date: g.start_date || '',
-			end_date: g.end_date || '',
-			timeframe: g.timeframe || 'quarterly',
-			priority: g.priority || 'medium',
-			status: g.status || 'active',
-		};
-	} else if (open) {
-		goalForm.value = defaultForm();
-	}
-});
+async function onGoalSaved() {
+	editingGoal.value = null;
+	aiPrefill.value = null;
+	await refresh();
+}
 
 const tabs = [
 	{ label: 'All', value: 'all' },
@@ -154,25 +106,9 @@ const stats = computed(() => ({
 		: 0,
 }));
 
-const handleSaveGoal = async () => {
-	if (!goalForm.value.title.trim()) return;
-	try {
-		if (editingGoal.value?.id) {
-			await updateGoal(editingGoal.value.id, goalForm.value);
-			toast.add({ title: 'Goal updated', color: 'success' });
-		} else {
-			await createGoal(goalForm.value);
-			toast.add({ title: 'Goal created', color: 'success' });
-		}
-		showCreateModal.value = false;
-		editingGoal.value = null;
-	} catch (err) {
-		toast.add({ title: 'Error', description: 'Failed to save goal', color: 'error' });
-	}
-};
-
 const handleEdit = (goal) => {
 	editingGoal.value = goal;
+	aiPrefill.value = null;
 	showCreateModal.value = true;
 };
 
@@ -219,7 +155,7 @@ const saveProgress = async () => {
 					AI Suggest
 				</button>
 				<button
-					@click="editingGoal = null; showCreateModal = true"
+					@click="openNewGoal"
 					class="flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
 				>
 					<UIcon name="i-heroicons-plus" class="w-4 h-4" />
@@ -358,7 +294,7 @@ const saveProgress = async () => {
 			<h3 class="text-base font-semibold mb-1">No goals yet</h3>
 			<p class="text-sm text-muted-foreground mb-4 max-w-sm mx-auto">Create your first goal to start tracking your progress. Goals help Earnest provide personalized suggestions.</p>
 			<button
-				@click="showCreateModal = true"
+				@click="openNewGoal"
 				class="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
 			>
 				Create Your First Goal
@@ -383,85 +319,12 @@ const saveProgress = async () => {
 		</div>
 
 		<!-- Create/Edit Modal -->
-		<ClientOnly>
-		<UModal v-model="showCreateModal">
-			<div class="space-y-4 p-1">
-				<div>
-					<h2 class="text-lg font-semibold text-foreground">{{ editingGoal ? 'Edit Goal' : 'New Goal' }}</h2>
-					<p class="text-sm text-muted-foreground mt-0.5">Set a target to track your progress</p>
-				</div>
-				<div>
-					<label class="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Title</label>
-					<input v-model="goalForm.title" type="text" placeholder="e.g., Reach $50K monthly revenue" class="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30" />
-				</div>
-				<div>
-					<label class="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Type</label>
-					<div class="flex gap-2 flex-wrap">
-						<button v-for="opt in goalTypeOptions" :key="opt.value" @click="goalForm.type = opt.value" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors" :class="goalForm.type === opt.value ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground'">
-							<UIcon :name="opt.icon" class="w-3.5 h-3.5" />
-							{{ opt.label }}
-						</button>
-					</div>
-				</div>
-				<div>
-					<label class="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Description</label>
-					<textarea v-model="goalForm.description" rows="2" placeholder="What does success look like?" class="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none" />
-				</div>
-				<div class="grid grid-cols-2 gap-3">
-					<div>
-						<label class="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Target</label>
-						<input v-model.number="goalForm.target_value" type="number" placeholder="50000" class="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30" />
-					</div>
-					<div>
-						<label class="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Unit</label>
-						<select v-model="goalForm.target_unit" class="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30">
-							<option v-for="opt in goalUnitOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
-						</select>
-					</div>
-				</div>
-				<div v-if="editingGoal">
-					<label class="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Current Value</label>
-					<input v-model.number="goalForm.current_value" type="number" class="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
-				</div>
-				<div class="grid grid-cols-2 gap-3">
-					<div>
-						<label class="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Timeframe</label>
-						<select v-model="goalForm.timeframe" class="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30">
-							<option value="weekly">Weekly</option>
-							<option value="monthly">Monthly</option>
-							<option value="quarterly">Quarterly</option>
-							<option value="yearly">Yearly</option>
-							<option value="custom">Custom</option>
-						</select>
-					</div>
-					<div>
-						<label class="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Priority</label>
-						<select v-model="goalForm.priority" class="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30">
-							<option value="low">Low</option>
-							<option value="medium">Medium</option>
-							<option value="high">High</option>
-						</select>
-					</div>
-				</div>
-				<div class="grid grid-cols-2 gap-3">
-					<div>
-						<label class="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">Start Date</label>
-						<input v-model="goalForm.start_date" type="date" class="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
-					</div>
-					<div>
-						<label class="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1.5 block">End Date</label>
-						<input v-model="goalForm.end_date" type="date" class="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30" />
-					</div>
-				</div>
-				<div class="flex justify-end gap-2 pt-2">
-					<button @click="showCreateModal = false" class="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg">Cancel</button>
-					<button @click="handleSaveGoal" :disabled="!goalForm.title.trim()" class="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors">
-						{{ editingGoal ? 'Update Goal' : 'Create Goal' }}
-					</button>
-				</div>
-			</div>
-		</UModal>
-		</ClientOnly>
+		<GoalsGoalCreateModal
+			v-model="showCreateModal"
+			:goal="editingGoal"
+			:prefill="aiPrefill"
+			@saved="onGoalSaved"
+		/>
 
 		<!-- Progress Update Modal -->
 		<ClientOnly>
