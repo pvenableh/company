@@ -10,8 +10,9 @@ const router = useRouter();
 const config = useRuntimeConfig();
 const clientId = route.params.id as string;
 
-const { getClient, updateClient, deleteClient } = useClients();
+const { getClient, updateClient } = useClients();
 const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext();
+const { getStatusBadgeClasses } = useStatusStyle();
 
 const contactItems = useDirectusItems('contacts');
 const projectItemsApi = useDirectusItems('projects');
@@ -23,8 +24,7 @@ const relatedProjects = ref<any[]>([]);
 const relatedTickets = ref<any[]>([]);
 const loading = ref(true);
 const saving = ref(false);
-const deleting = ref(false);
-const showDeleteConfirm = ref(false);
+const showEditModal = ref(false);
 const error = ref<string | null>(null);
 const activeTab = ref<'contacts' | 'projects' | 'tickets'>('contacts');
 const toast = useToast();
@@ -115,16 +115,13 @@ async function handleUpdate(data: Partial<Client>) {
   }
 }
 
-async function handleDelete() {
-  deleting.value = true;
-  try {
-    await deleteClient(clientId);
-    router.push('/clients');
-  } catch (e: any) {
-    error.value = e?.message || 'Failed to delete client';
-    deleting.value = false;
-    showDeleteConfirm.value = false;
-  }
+async function onClientUpdated(updated: Client) {
+  client.value = updated;
+  await Promise.all([resolveIndustryName(), loadRelated()]);
+}
+
+function onClientDeleted() {
+  router.push('/clients');
 }
 
 function getLogoUrl(client: Client): string | null {
@@ -196,21 +193,6 @@ async function removeSidebarTag(tag: string) {
   const currentTags = (client.value.tags || []).filter((t: string) => t !== tag);
   await handleUpdate({ tags: currentTags } as any);
 }
-
-const statusColors: Record<string, string> = {
-  active: 'bg-emerald-500/15 text-emerald-400',
-  prospect: 'bg-blue-500/15 text-blue-400',
-  inactive: 'bg-neutral-500/15 text-neutral-400',
-  churned: 'bg-red-500/15 text-red-400',
-  Pending: 'bg-yellow-500/15 text-yellow-400',
-  Scheduled: 'bg-blue-500/15 text-blue-400',
-  'In Progress': 'bg-indigo-500/15 text-indigo-400',
-  Completed: 'bg-emerald-500/15 text-emerald-400',
-  pending: 'bg-yellow-500/15 text-yellow-400',
-  processing: 'bg-blue-500/15 text-blue-400',
-  paid: 'bg-emerald-500/15 text-emerald-400',
-  archived: 'bg-neutral-500/15 text-neutral-400',
-};
 
 onMounted(async () => {
   await loadClient();
@@ -300,8 +282,8 @@ onUnmounted(() => clearEntity());
               <h1 class="text-base font-semibold">{{ client.name }}</h1>
               <span
                 v-if="client.status"
-                class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
-                :class="statusColors[client.status] || 'bg-muted text-muted-foreground'"
+                class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize"
+                :class="getStatusBadgeClasses(client.status)"
               >
                 {{ client.status }}
               </span>
@@ -318,11 +300,11 @@ onUnmounted(() => clearEntity());
             <span class="hidden sm:inline">Ask Earnest</span>
           </button>
           <button
-            class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium text-destructive hover:bg-destructive/10 hover:border-destructive/30 transition-colors"
-            @click="showDeleteConfirm = true"
+            class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors"
+            @click="showEditModal = true"
           >
-            <Icon name="lucide:trash-2" class="w-3.5 h-3.5" />
-            <span class="hidden sm:inline">Delete</span>
+            <Icon name="lucide:pencil" class="w-3.5 h-3.5" />
+            <span class="hidden sm:inline">Edit</span>
           </button>
         </div>
       </div>
@@ -345,16 +327,96 @@ onUnmounted(() => clearEntity());
       </ClientOnly>
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Main form -->
+        <!-- Main -->
         <div class="lg:col-span-2 space-y-6">
-          <div class="ios-card p-6">
-            <h2 class="font-medium mb-4">Client Details</h2>
-            <ClientsClientForm
-              :client="client"
-              :saving="saving"
-              @save="handleUpdate"
-              @cancel="router.push('/clients')"
-            />
+          <!-- Client Details summary -->
+          <div class="ios-card p-6 space-y-4">
+            <div class="flex items-start justify-between">
+              <h2 class="text-[10px] uppercase tracking-wider text-muted-foreground">Client Details</h2>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 text-sm">
+              <div class="space-y-1">
+                <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Name</p>
+                <p class="font-medium">{{ client.name }}</p>
+              </div>
+              <div class="space-y-1">
+                <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Website</p>
+                <a
+                  v-if="client.website"
+                  :href="client.website"
+                  target="_blank"
+                  class="text-primary hover:underline text-xs break-all"
+                >
+                  {{ client.website.replace(/^https?:\/\//, '') }}
+                </a>
+                <p v-else class="text-muted-foreground">&mdash;</p>
+              </div>
+              <div class="space-y-1">
+                <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Industry</p>
+                <p>{{ industryName || '\u2014' }}</p>
+              </div>
+              <div v-if="client.slug" class="space-y-1">
+                <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Slug</p>
+                <p class="font-mono text-xs text-muted-foreground">{{ client.slug }}</p>
+              </div>
+            </div>
+
+            <!-- Billing contacts -->
+            <div
+              v-if="Array.isArray(client.billing_contacts) && client.billing_contacts.length"
+              class="pt-3 border-t border-border/30 space-y-1.5"
+            >
+              <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Billing Contacts</p>
+              <div class="space-y-1">
+                <div
+                  v-for="(contact, i) in (client.billing_contacts as any[])"
+                  :key="i"
+                  class="flex items-center gap-2 text-sm"
+                >
+                  <span class="font-medium">{{ contact.name || 'Unnamed' }}</span>
+                  <span v-if="contact.email" class="text-xs text-muted-foreground">{{ contact.email }}</span>
+                  <span
+                    v-if="i === 0"
+                    class="text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-primary/15 text-primary"
+                  >TO</span>
+                  <span
+                    v-else
+                    class="text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground"
+                  >CC</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Notes -->
+            <div v-if="client.notes" class="pt-3 border-t border-border/30 space-y-1">
+              <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Notes</p>
+              <p class="text-sm whitespace-pre-wrap text-muted-foreground">{{ client.notes }}</p>
+            </div>
+
+            <!-- Brand & strategy (shown when any populated) -->
+            <div
+              v-if="client.brand_direction || client.goals || client.target_audience || client.location"
+              class="pt-3 border-t border-border/30 space-y-3"
+            >
+              <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Brand &amp; Strategy</p>
+              <div v-if="client.brand_direction" class="space-y-1">
+                <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Brand Direction</p>
+                <p class="text-sm whitespace-pre-wrap">{{ client.brand_direction }}</p>
+              </div>
+              <div v-if="client.goals" class="space-y-1">
+                <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Goals</p>
+                <p class="text-sm whitespace-pre-wrap">{{ client.goals }}</p>
+              </div>
+              <div v-if="client.target_audience" class="space-y-1">
+                <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Target Audience</p>
+                <p class="text-sm whitespace-pre-wrap">{{ client.target_audience }}</p>
+              </div>
+              <div v-if="client.location" class="space-y-1">
+                <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Location</p>
+                <p class="text-sm">{{ client.location }}</p>
+              </div>
+            </div>
           </div>
 
           <!-- Related Items Tabs -->
@@ -419,7 +481,7 @@ onUnmounted(() => clearEntity());
                     <span
                       v-if="project.status"
                       class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
-                      :class="statusColors[project.status] || 'bg-muted text-muted-foreground'"
+                      :class="getStatusBadgeClasses(project.status)"
                     >
                       {{ project.status }}
                     </span>
@@ -449,7 +511,7 @@ onUnmounted(() => clearEntity());
                     <span
                       v-if="ticket.status"
                       class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
-                      :class="statusColors[ticket.status] || 'bg-muted text-muted-foreground'"
+                      :class="getStatusBadgeClasses(ticket.status)"
                     >
                       {{ ticket.status }}
                     </span>
@@ -600,49 +662,14 @@ onUnmounted(() => clearEntity());
       </div>
     </template>
 
-    <!-- Delete Confirmation Modal -->
-    <Teleport to="body">
-      <div
-        v-if="showDeleteConfirm"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-        @click.self="showDeleteConfirm = false"
-      >
-        <div class="ios-card w-full max-w-md mx-4 p-6 shadow-xl">
-          <div class="flex items-start gap-3 mb-4">
-            <div class="flex items-center justify-center w-10 h-10 rounded-full bg-destructive/10 shrink-0">
-              <Icon name="lucide:alert-triangle" class="w-5 h-5 text-destructive" />
-            </div>
-            <div>
-              <h3 class="font-semibold">Delete Client</h3>
-              <p class="text-sm text-muted-foreground mt-1">
-                Are you sure you want to delete
-                <strong>{{ client?.name }}</strong>?
-                This action cannot be undone.
-              </p>
-            </div>
-          </div>
-          <div class="flex justify-end gap-2 pt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              :disabled="deleting"
-              @click="showDeleteConfirm = false"
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              :disabled="deleting"
-              @click="handleDelete"
-            >
-              <Icon v-if="deleting" name="lucide:loader-2" class="w-4 h-4 mr-1 animate-spin" />
-              {{ deleting ? 'Deleting...' : 'Delete' }}
-            </Button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
+    <!-- Edit Modal -->
+    <ClientsFormModal
+      v-if="client"
+      v-model="showEditModal"
+      :client="client"
+      @updated="onClientUpdated"
+      @deleted="onClientDeleted"
+    />
 
     <!-- Contextual AI Sidebar -->
     <ClientOnly>

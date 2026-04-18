@@ -1,47 +1,36 @@
 <template>
   <form @submit.prevent="handleSubmit" class="space-y-4">
-    <div>
-      <label class="block text-sm font-medium mb-1">Name *</label>
-      <input
-        v-model="formData.name"
-        required
-        class="w-full rounded-md border bg-background px-3 py-2 text-sm"
-        placeholder="Client name"
-      />
+    <div class="space-y-1">
+      <label class="t-label text-muted-foreground">Name *</label>
+      <UInput v-model="formData.name" required placeholder="Client name" />
     </div>
 
     <div class="grid grid-cols-2 gap-4">
-      <div>
-        <label class="block text-sm font-medium mb-1">Slug</label>
-        <input
-          v-model="formData.slug"
-          class="w-full rounded-md border bg-background px-3 py-2 text-sm text-muted-foreground"
-          placeholder="auto-generated from name"
-          readonly
-        />
+      <div class="space-y-1">
+        <label class="t-label text-muted-foreground">Slug</label>
+        <UInput v-model="formData.slug" readonly placeholder="auto-generated from name" />
       </div>
-      <div>
-        <label class="block text-sm font-medium mb-1">Status</label>
-        <select v-model="formData.status" class="w-full rounded-md border bg-background px-3 py-2 text-sm">
+      <div v-if="!isEditing" class="space-y-1">
+        <label class="t-label text-muted-foreground">Status</label>
+        <select
+          v-model="statusModel"
+          class="w-full rounded-full border bg-background px-3 py-2 text-sm"
+        >
           <option v-for="s in statusOptions" :key="s.value" :value="s.value">{{ s.label }}</option>
         </select>
       </div>
     </div>
 
     <div class="grid grid-cols-2 gap-4">
-      <div>
-        <label class="block text-sm font-medium mb-1">Website</label>
-        <input
-          v-model="formData.website"
-          class="w-full rounded-md border bg-background px-3 py-2 text-sm"
-          placeholder="https://"
-        />
+      <div class="space-y-1">
+        <label class="t-label text-muted-foreground">Website</label>
+        <UInput v-model="formData.website" placeholder="https://" />
       </div>
-      <div>
-        <label class="block text-sm font-medium mb-1">Industry</label>
+      <div class="space-y-1">
+        <label class="t-label text-muted-foreground">Industry</label>
         <select
           v-model="formData.industry"
-          class="w-full rounded-md border bg-background px-3 py-2 text-sm"
+          class="w-full rounded-full border bg-background px-3 py-2 text-sm"
         >
           <option value="">Select industry...</option>
           <option v-for="ind in industries" :key="ind.id" :value="ind.id">{{ ind.name }}</option>
@@ -49,52 +38,43 @@
       </div>
     </div>
 
-    <div>
-      <label class="block text-sm font-medium mb-1">Tags</label>
-      <div class="flex flex-wrap gap-1 mb-2">
+    <div class="space-y-1">
+      <label class="t-label text-muted-foreground">Tags</label>
+      <div class="flex flex-wrap items-center gap-1.5">
         <span
           v-for="tag in formData.tags"
           :key="tag"
-          class="inline-flex items-center gap-1 rounded-full bg-muted/60 px-2.5 py-0.5 text-xs text-muted-foreground"
+          class="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-foreground"
         >
           {{ tag }}
-          <button type="button" class="hover:text-foreground transition-colors" @click="removeTag(tag)">
-            <Icon name="lucide:x" class="w-3 h-3" />
+          <button type="button" class="text-muted-foreground hover:text-destructive" @click="removeTag(tag)">
+            <Icon name="lucide:x" class="h-3 w-3" />
           </button>
         </span>
-      </div>
-      <div class="flex gap-2">
-        <input
+        <UInput
           v-model="newTag"
-          class="flex-1 rounded-md border bg-background px-3 py-2 text-sm"
-          placeholder="Add tag..."
+          size="xs"
+          class="w-28"
+          placeholder="Add tag"
           @keydown.enter.prevent="addTag"
+          @keydown.,.prevent="addTag"
+          @blur="addTag"
         />
-        <Button type="button" variant="outline" size="sm" @click="addTag">Add</Button>
       </div>
     </div>
 
     <!-- Billing Contacts -->
-    <div>
-      <label class="block text-sm font-medium mb-1">Billing Contacts</label>
-      <p class="text-xs text-muted-foreground mb-2">Invoice recipients — these emails receive payment links and invoice notifications.</p>
-      <div class="space-y-2 mb-2">
+    <div class="space-y-1">
+      <label class="t-label text-muted-foreground">Billing Contacts</label>
+      <p class="text-xs text-muted-foreground">Invoice recipients — these emails receive payment links and invoice notifications.</p>
+      <div class="space-y-2 pt-1">
         <div
           v-for="(contact, i) in formData.billing_contacts"
           :key="i"
           class="flex gap-2 items-center"
         >
-          <input
-            v-model="contact.name"
-            class="flex-1 rounded-md border bg-background px-3 py-2 text-sm"
-            placeholder="Name"
-          />
-          <input
-            v-model="contact.email"
-            type="email"
-            class="flex-1 rounded-md border bg-background px-3 py-2 text-sm"
-            placeholder="email@example.com"
-          />
+          <UInput v-model="contact.name" class="flex-1" placeholder="Name" />
+          <UInput v-model="contact.email" type="email" class="flex-1" placeholder="email@example.com" />
           <button
             type="button"
             class="p-1.5 text-muted-foreground/40 hover:text-destructive transition-colors"
@@ -104,39 +84,31 @@
           </button>
         </div>
       </div>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        @click="formData.billing_contacts.push({ name: '', email: '' })"
-      >
-        <Icon name="lucide:plus" class="w-3 h-3 mr-1" />
-        Add Contact
-      </Button>
+      <div class="pt-1">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          @click="formData.billing_contacts.push({ name: '', email: '' })"
+        >
+          <Icon name="lucide:plus" class="w-3 h-3 mr-1" />
+          Add Contact
+        </Button>
+      </div>
     </div>
 
-    <div>
-      <label class="block text-sm font-medium mb-1">Address</label>
-      <textarea
-        v-model="formData.billing_address"
-        rows="2"
-        class="w-full rounded-md border bg-background px-3 py-2 text-sm"
-        placeholder="Street address, city, state, zip..."
-      />
+    <div class="space-y-1">
+      <label class="t-label text-muted-foreground">Address</label>
+      <UTextarea v-model="formData.billing_address" :rows="2" placeholder="Street address, city, state, zip..." />
     </div>
 
-    <div>
-      <label class="block text-sm font-medium mb-1">Notes</label>
-      <textarea
-        v-model="formData.notes"
-        rows="3"
-        class="w-full rounded-md border bg-background px-3 py-2 text-sm"
-        placeholder="Internal notes about this client..."
-      />
+    <div class="space-y-1">
+      <label class="t-label text-muted-foreground">Notes</label>
+      <UTextarea v-model="formData.notes" :rows="3" placeholder="Internal notes about this client..." />
     </div>
 
-    <!-- Brand & Strategy -->
-    <div v-if="client?.id" class="border-t pt-4 mt-2">
+    <!-- Brand & Strategy (edit-only — BrandAIFieldSuggest needs an entity id) -->
+    <div v-if="isEditing" class="border-t pt-4 mt-2">
       <h3 class="text-sm font-semibold mb-3 flex items-center gap-2">
         <Icon name="lucide:palette" class="w-4 h-4 text-muted-foreground" />
         Brand & Strategy
@@ -149,8 +121,8 @@
           field="brand_direction"
           placeholder="Brand positioning, voice, visual style, and messaging strategy..."
           entity-type="client"
-          :entity-id="client.id"
-          :organization-id="typeof client.organization === 'string' ? client.organization : client.organization?.id || ''"
+          :entity-id="client!.id"
+          :organization-id="typeof client!.organization === 'string' ? client!.organization : (client!.organization as any)?.id || ''"
         />
 
         <BrandAIFieldSuggest
@@ -159,8 +131,8 @@
           field="goals"
           placeholder="Business goals and objectives..."
           entity-type="client"
-          :entity-id="client.id"
-          :organization-id="typeof client.organization === 'string' ? client.organization : client.organization?.id || ''"
+          :entity-id="client!.id"
+          :organization-id="typeof client!.organization === 'string' ? client!.organization : (client!.organization as any)?.id || ''"
         />
 
         <BrandAIFieldSuggest
@@ -169,26 +141,15 @@
           field="target_audience"
           placeholder="Ideal customer profile, demographics, psychographics..."
           entity-type="client"
-          :entity-id="client.id"
-          :organization-id="typeof client.organization === 'string' ? client.organization : client.organization?.id || ''"
+          :entity-id="client!.id"
+          :organization-id="typeof client!.organization === 'string' ? client!.organization : (client!.organization as any)?.id || ''"
         />
 
-        <div>
-          <label class="block text-sm font-medium mb-1">Location</label>
-          <input
-            v-model="formData.location"
-            class="w-full rounded-md border bg-background px-3 py-2 text-sm"
-            placeholder="City, region, or Remote/Global"
-          />
+        <div class="space-y-1">
+          <label class="t-label text-muted-foreground">Location</label>
+          <UInput v-model="formData.location" placeholder="City, region, or Remote/Global" />
         </div>
       </div>
-    </div>
-
-    <div class="flex justify-end gap-2 pt-2">
-      <Button type="button" variant="outline" @click="$emit('cancel')">Cancel</Button>
-      <Button type="submit" :disabled="saving">
-        {{ saving ? 'Saving...' : (client ? 'Update' : 'Create') }}
-      </Button>
     </div>
   </form>
 </template>
@@ -204,8 +165,11 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   save: [data: Partial<Client>];
-  cancel: [];
 }>();
+
+const statusModel = defineModel<string>('status', { default: 'active' });
+
+const isEditing = computed(() => !!props.client?.id);
 
 const statusOptions = [
   { label: 'Active', value: 'active' },
@@ -231,7 +195,6 @@ onMounted(async () => {
 const formData = reactive({
   name: props.client?.name || '',
   slug: props.client?.slug || '',
-  status: props.client?.status || 'active',
   website: props.client?.website || '',
   industry: (typeof props.client?.industry === 'object' ? (props.client?.industry as any)?.id : props.client?.industry) || '',
   notes: props.client?.notes || '',
@@ -243,6 +206,11 @@ const formData = reactive({
   target_audience: props.client?.target_audience || '',
   location: props.client?.location || '',
 });
+
+// Initialize status model from client on mount (status is owned by parent via defineModel)
+if (props.client?.status) {
+  statusModel.value = props.client.status;
+}
 
 const newTag = ref('');
 
@@ -277,13 +245,16 @@ function removeTag(tag: string) {
 }
 
 function handleSubmit() {
+  // Flush pending tag input
+  if (newTag.value.trim()) addTag();
+
   const validContacts = formData.billing_contacts.filter(c => c.email?.trim());
   const primaryContact = validContacts[0];
 
   emit('save', {
     name: formData.name,
     slug: formData.slug || undefined,
-    status: formData.status as Client['status'],
+    status: statusModel.value as Client['status'],
     website: formData.website || undefined,
     industry: formData.industry || undefined,
     notes: formData.notes || undefined,
@@ -299,4 +270,9 @@ function handleSubmit() {
     location: formData.location || undefined,
   });
 }
+
+defineExpose({
+  triggerSubmit: handleSubmit,
+  hasName: computed(() => !!formData.name.trim()),
+});
 </script>

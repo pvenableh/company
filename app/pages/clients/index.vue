@@ -8,14 +8,13 @@ useHead({ title: 'Clients | Earnest' });
 
 const router = useRouter();
 const config = useRuntimeConfig();
-const { getClients, createClient, deleteClient: doDelete } = useClients();
+const { getClients, deleteClient: doDelete } = useClients();
 
 const allClients = ref<Client[]>([]);
 const total = ref(0);
 const loading = ref(true);
 const search = ref('');
 const showCreateModal = ref(false);
-const creating = ref(false);
 const deleteTarget = ref<Client | null>(null);
 
 // ── Status Tabs ──────────────────────────────────────────────────────────────
@@ -93,16 +92,8 @@ function viewClient(client: Client) {
   router.push(`/clients/${client.id}`);
 }
 
-async function handleCreate(data: any) {
-  creating.value = true;
-  try {
-    await createClient(data);
-    showCreateModal.value = false;
-    await fetchData();
-    await fetchTabCounts();
-  } finally {
-    creating.value = false;
-  }
+async function onClientCreated() {
+  await Promise.all([fetchData(), fetchTabCounts()]);
 }
 
 async function confirmDelete() {
@@ -378,14 +369,7 @@ onMounted(() => {
     </div>
 
     <!-- Create Modal -->
-    <Teleport to="body">
-      <div v-if="showCreateModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" @click.self="showCreateModal = false">
-        <div class="ios-card shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto p-6">
-          <h2 class="font-semibold mb-4">New Client</h2>
-          <ClientsClientForm :saving="creating" @save="handleCreate" @cancel="showCreateModal = false" />
-        </div>
-      </div>
-    </Teleport>
+    <ClientsFormModal v-model="showCreateModal" @created="onClientCreated" />
 
     <!-- Delete Confirmation Dialog -->
     <Teleport to="body">
