@@ -21,7 +21,6 @@ const limit = 50;
 const hasMore = computed(() => page.value * limit < total.value);
 const lists = ref<any[]>([]);
 const showCreateModal = ref(false);
-const creating = ref(false);
 
 const industries = [
   'Technology', 'Healthcare', 'Finance', 'Education',
@@ -60,17 +59,8 @@ async function handleDelete(contact: Contact) {
   await fetchData();
 }
 
-const { createContact } = useContacts();
-
-async function handleCreate(data: any) {
-  creating.value = true;
-  try {
-    await createContact(data);
-    showCreateModal.value = false;
-    await fetchData();
-  } finally {
-    creating.value = false;
-  }
+async function onContactCreated() {
+  await fetchData();
 }
 
 onMounted(async () => {
@@ -154,13 +144,6 @@ onMounted(async () => {
     </div>
 
     <!-- Create Modal -->
-    <Teleport to="body">
-      <div v-if="showCreateModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" @click.self="showCreateModal = false">
-        <div class="ios-card shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto p-6">
-          <h2 class="font-semibold mb-4">New Contact</h2>
-          <ContactsContactForm :saving="creating" @submit="handleCreate" @cancel="showCreateModal = false" />
-        </div>
-      </div>
-    </Teleport>
+    <ContactsFormModal v-model="showCreateModal" @created="onContactCreated" />
   </div>
 </template>

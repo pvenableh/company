@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Contact, CreateContactPayload } from '~~/shared/email/contacts';
+import type { Contact } from '~~/shared/email/contacts';
 import { Button } from '~/components/ui/button';
 import { LEAD_STAGE_LABELS, LEAD_STAGE_COLORS } from '~~/shared/leads';
 
@@ -10,17 +10,16 @@ const route = useRoute();
 const router = useRouter();
 const contactId = route.params.id as string;
 
-const { getContact, updateContact, deleteContact, linkToClient } = useContacts();
+const { getContact, linkToClient } = useContacts();
 const { getClients } = useClients();
 const { getLeads } = useLeads();
 const { selectedOrg } = useOrganization();
+const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext();
 
 const contact = ref<Contact | null>(null);
 const loading = ref(true);
-const saving = ref(false);
-const deleting = ref(false);
-const showDeleteConfirm = ref(false);
 const error = ref<string | null>(null);
+const showEditModal = ref(false);
 
 // Client association
 const availableClients = ref<any[]>([]);
@@ -83,28 +82,12 @@ async function loadContact() {
   }
 }
 
-async function handleUpdate(data: CreateContactPayload) {
-  saving.value = true;
-  try {
-    await updateContact(contactId, data);
-    contact.value = await getContact(contactId);
-  } catch (e: any) {
-    error.value = e?.message || 'Failed to update contact';
-  } finally {
-    saving.value = false;
-  }
+function onContactUpdated(updated: Contact) {
+  contact.value = updated;
 }
 
-async function handleDelete() {
-  deleting.value = true;
-  try {
-    await deleteContact(contactId);
-    router.push('/contacts');
-  } catch (e: any) {
-    error.value = e?.message || 'Failed to delete contact';
-    deleting.value = false;
-    showDeleteConfirm.value = false;
-  }
+function onContactDeleted() {
+  router.push('/contacts');
 }
 
 onMounted(() => {
@@ -112,6 +95,14 @@ onMounted(() => {
   loadClients();
   loadRelatedLeads();
 });
+
+// AI sidebar lifecycle
+watch(contact, (c) => {
+  if (!c) return;
+  const label = `${c.first_name || ''} ${c.last_name || ''}`.trim() || c.email || 'Contact';
+  setEntity('contact', String(c.id), label);
+}, { immediate: true });
+onUnmounted(() => clearEntity());
 </script>
 
 <template>
@@ -142,32 +133,44 @@ onMounted(() => {
 
     <!-- Contact Detail -->
     <template v-else-if="contact">
+      <!-- Back link -->
+      <NuxtLink
+        to="/contacts"
+        class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors mt-4 mb-2"
+      >
+        <Icon name="lucide:chevron-left" class="w-3 h-3" />
+        Contacts
+      </NuxtLink>
+
       <!-- Header -->
-      <div class="flex items-center justify-between mb-6">
+      <div class="flex items-center justify-between mb-5">
         <div class="flex items-center gap-3">
-          <NuxtLink
-            to="/contacts"
-            class="flex items-center justify-center w-8 h-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-          >
-            <Icon name="lucide:arrow-left" class="w-5 h-5" />
-          </NuxtLink>
           <div>
-            <h1 class="text-xl font-semibold">
-              {{ contact.prefix ? `${contact.prefix} ` : '' }}{{ contact.first_name }} {{ contact.last_name }}
-            </h1>
-            <p class="text-sm text-muted-foreground">{{ contact.email }}</p>
+            <div class="flex items-center gap-2">
+              <h1 class="text-base font-semibold">
+                {{ contact.prefix ? `${contact.prefix} ` : '' }}{{ contact.first_name }} {{ contact.last_name }}
+              </h1>
+              <ContactsContactStatusBadge :status="contact.status" />
+            </div>
+            <p class="text-xs text-muted-foreground">{{ contact.email }}</p>
           </div>
-          <ContactsContactStatusBadge :status="contact.status" />
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          class="text-destructive hover:text-destructive hover:bg-destructive/10"
-          @click="showDeleteConfirm = true"
-        >
-          <Icon name="lucide:trash-2" class="w-4 h-4 mr-1" />
-          Delete
-        </Button>
+        <div class="flex items-center gap-1.5">
+          <button
+            class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium text-primary hover:bg-primary/10 hover:border-primary/30 transition-colors"
+            @click="sidebarOpen = true"
+          >
+            <Icon name="lucide:sparkles" class="w-3.5 h-3.5" />
+            <span class="hidden sm:inline">Ask Earnest</span>
+          </button>
+          <button
+            class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors"
+            @click="showEditModal = true"
+          >
+            <Icon name="lucide:pencil" class="w-3.5 h-3.5" />
+            <span class="hidden sm:inline">Edit</span>
+          </button>
+        </div>
       </div>
 
       <!-- Inline error banner -->
@@ -182,17 +185,62 @@ onMounted(() => {
         </button>
       </div>
 
+      <!-- AI Notices -->
+      <ClientOnly>
+        <AIProactiveNotices v-if="contact?.id" entity-type="contact" :entity-id="String(contact.id)" />
+      </ClientOnly>
+
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Main form -->
+        <!-- Main: read-only summary -->
         <div class="lg:col-span-2 space-y-4">
-          <div class="ios-card p-6">
-            <h2 class="font-medium mb-4">Contact Details</h2>
-            <ContactsContactForm
-              :contact="contact"
-              :saving="saving"
-              @submit="handleUpdate"
-              @cancel="router.push('/contacts')"
-            />
+          <div class="ios-card p-6 space-y-4">
+            <h2 class="text-[10px] uppercase tracking-wider text-muted-foreground">Contact Details</h2>
+
+            <div class="grid grid-cols-2 gap-4 text-sm">
+              <div class="space-y-1">
+                <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Email</p>
+                <p class="font-medium break-all">{{ contact.email }}</p>
+              </div>
+              <div v-if="contact.phone" class="space-y-1">
+                <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Phone</p>
+                <p>{{ contact.phone }}</p>
+              </div>
+              <div v-if="contact.title" class="space-y-1">
+                <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Title</p>
+                <p>{{ contact.title }}</p>
+              </div>
+              <div v-if="contact.company" class="space-y-1">
+                <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Company</p>
+                <p>{{ contact.company }}</p>
+              </div>
+              <div v-if="contact.industry" class="space-y-1">
+                <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Industry</p>
+                <p>{{ contact.industry }}</p>
+              </div>
+              <div v-if="contact.website" class="space-y-1">
+                <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Website</p>
+                <a :href="contact.website" target="_blank" class="text-primary hover:underline text-xs break-all">
+                  {{ contact.website.replace(/^https?:\/\//, '') }}
+                </a>
+              </div>
+            </div>
+
+            <div v-if="contact.mailing_address" class="pt-3 border-t border-border/30 space-y-1">
+              <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Mailing Address</p>
+              <p class="text-sm whitespace-pre-wrap">{{ contact.mailing_address }}</p>
+            </div>
+
+            <div v-if="Array.isArray(contact.tags) && contact.tags.length" class="pt-3 border-t border-border/30 space-y-1.5">
+              <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Tags</p>
+              <div class="flex flex-wrap gap-1.5">
+                <ContactsContactTagBadge v-for="tag in contact.tags" :key="tag" :tag="tag" />
+              </div>
+            </div>
+
+            <div v-if="contact.notes" class="pt-3 border-t border-border/30 space-y-1">
+              <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Notes</p>
+              <p class="text-sm whitespace-pre-wrap text-muted-foreground">{{ contact.notes }}</p>
+            </div>
           </div>
 
           <!-- Custom Fields -->
@@ -200,14 +248,14 @@ onMounted(() => {
             v-if="contact.custom_fields && Object.keys(contact.custom_fields).length"
             class="ios-card p-6"
           >
-            <h2 class="font-medium mb-4">Custom Fields</h2>
+            <h2 class="text-[10px] uppercase tracking-wider text-muted-foreground mb-4">Custom Fields</h2>
             <div class="grid grid-cols-2 gap-3">
               <div
                 v-for="(value, key) in contact.custom_fields"
                 :key="key"
                 class="p-3 bg-muted/50 rounded-xl"
               >
-                <p class="text-xs text-muted-foreground font-mono">{{ key }}</p>
+                <p class="text-[10px] uppercase tracking-wider text-muted-foreground font-mono">{{ key }}</p>
                 <p class="text-sm mt-1">{{ value }}</p>
               </div>
             </div>
@@ -218,8 +266,8 @@ onMounted(() => {
         <div class="space-y-4">
           <!-- Client Association -->
           <div class="ios-card p-5">
-            <h3 class="font-medium text-sm mb-3 flex items-center gap-2">
-              <Icon name="lucide:building-2" class="w-4 h-4 text-muted-foreground" />
+            <h3 class="text-[10px] uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
+              <Icon name="lucide:building-2" class="w-3.5 h-3.5" />
               Client
             </h3>
             <div v-if="(contact as any).client && typeof (contact as any).client === 'object'" class="flex items-center justify-between">
@@ -253,7 +301,7 @@ onMounted(() => {
               </div>
               <div v-else class="space-y-2">
                 <select
-                  class="w-full text-sm rounded-lg border border-input bg-background px-3 py-2"
+                  class="w-full text-sm rounded-full border border-input bg-background px-3 py-2"
                   @change="handleLinkClient(($event.target as HTMLSelectElement).value)"
                   :disabled="linkingClient"
                 >
@@ -275,10 +323,10 @@ onMounted(() => {
           <!-- Leads back-link -->
           <div class="ios-card p-5">
             <div class="flex items-center justify-between mb-3">
-              <h3 class="font-medium text-sm flex items-center gap-2">
-                <Icon name="lucide:trending-up" class="w-4 h-4 text-muted-foreground" />
+              <h3 class="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                <Icon name="lucide:trending-up" class="w-3.5 h-3.5" />
                 Leads
-                <span v-if="relatedLeads.length" class="text-xs text-muted-foreground font-normal">
+                <span v-if="relatedLeads.length" class="text-[10px] text-muted-foreground/60 font-normal normal-case tracking-normal">
                   ({{ openLeads.length }} open)
                 </span>
               </h3>
@@ -335,8 +383,8 @@ onMounted(() => {
 
           <!-- Mailing Lists -->
           <div class="ios-card p-5">
-            <h3 class="font-medium text-sm mb-3 flex items-center gap-2">
-              <Icon name="lucide:mail" class="w-4 h-4 text-muted-foreground" />
+            <h3 class="text-[10px] uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
+              <Icon name="lucide:mail" class="w-3.5 h-3.5" />
               Mailing Lists
             </h3>
             <div v-if="contact.lists?.length" class="space-y-2">
@@ -353,8 +401,8 @@ onMounted(() => {
 
           <!-- Engagement Stats -->
           <div class="ios-card p-5">
-            <h3 class="font-medium text-sm mb-3 flex items-center gap-2">
-              <Icon name="lucide:bar-chart-3" class="w-4 h-4 text-muted-foreground" />
+            <h3 class="text-[10px] uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
+              <Icon name="lucide:bar-chart-3" class="w-3.5 h-3.5" />
               Engagement
             </h3>
             <div class="space-y-2.5 text-sm">
@@ -375,8 +423,8 @@ onMounted(() => {
 
           <!-- Meta / Info -->
           <div class="ios-card p-5">
-            <h3 class="font-medium text-sm mb-3 flex items-center gap-2">
-              <Icon name="lucide:info" class="w-4 h-4 text-muted-foreground" />
+            <h3 class="text-[10px] uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
+              <Icon name="lucide:info" class="w-3.5 h-3.5" />
               Info
             </h3>
             <div class="space-y-2.5 text-sm">
@@ -398,50 +446,28 @@ onMounted(() => {
           </div>
         </div>
       </div>
+
+      <!-- Edit Modal -->
+      <ContactsFormModal
+        v-model="showEditModal"
+        :contact="contact"
+        @updated="onContactUpdated"
+        @deleted="onContactDeleted"
+      />
     </template>
 
-    <!-- Delete Confirmation Modal -->
-    <Teleport to="body">
-      <div
-        v-if="showDeleteConfirm"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-        @click.self="showDeleteConfirm = false"
-      >
-        <div class="ios-card w-full max-w-md mx-4 p-6 shadow-xl">
-          <div class="flex items-start gap-3 mb-4">
-            <div class="flex items-center justify-center w-10 h-10 rounded-full bg-destructive/10 shrink-0">
-              <Icon name="lucide:alert-triangle" class="w-5 h-5 text-destructive" />
-            </div>
-            <div>
-              <h3 class="font-semibold">Delete Contact</h3>
-              <p class="text-sm text-muted-foreground mt-1">
-                Are you sure you want to delete
-                <strong>{{ contact?.first_name }} {{ contact?.last_name }}</strong>?
-                This action cannot be undone.
-              </p>
-            </div>
-          </div>
-          <div class="flex justify-end gap-2 pt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              :disabled="deleting"
-              @click="showDeleteConfirm = false"
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              :disabled="deleting"
-              @click="handleDelete"
-            >
-              <Icon v-if="deleting" name="lucide:loader-2" class="w-4 h-4 mr-1 animate-spin" />
-              {{ deleting ? 'Deleting...' : 'Delete' }}
-            </Button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
+    <!-- Contextual AI Sidebar -->
+    <ClientOnly>
+      <AIContextualSidebar
+        v-if="sidebarOpen && contact?.id"
+        entity-type="contact"
+        :entity-id="String(contact.id)"
+        :entity-label="`${contact.first_name || ''} ${contact.last_name || ''}`.trim() || contact.email || 'Contact'"
+        @close="closeSidebar"
+      />
+      <Transition name="overlay">
+        <div v-if="sidebarOpen" class="fixed inset-0 bg-black/20 z-40" @click="closeSidebar" />
+      </Transition>
+    </ClientOnly>
   </div>
 </template>
