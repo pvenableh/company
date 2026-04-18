@@ -40,7 +40,16 @@ async function executeOperation(
     // User is authenticated, use their token
     directus = await getUserDirectus(event, retryCount > 0);
   } else {
-    // No authenticated user, use public client
+    // No authenticated user — public client handles anonymous reads
+    // (public booking pages, invoice preview, etc.). All writes are denied
+    // at the Directus perms layer post-Public-Write-Audit; surface that as
+    // an explicit 401 here instead of waiting for a 403 from Directus.
+    if (operation === "create" || operation === "update" || operation === "delete") {
+      throw createError({
+        statusCode: 401,
+        message: "Authentication required for write operations",
+      });
+    }
     directus = getPublicDirectus();
   }
 

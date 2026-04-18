@@ -4,6 +4,8 @@ useHead({ title: 'Expenses | Earnest' });
 
 const { expenses, isLoading, totalExpenses, expensesByCategory, billableExpenses, reimbursableExpenses, deleteExpense, refresh } = useExpenses();
 
+const { getStatusBadgeClasses } = useStatusStyle();
+
 const toast = useToast();
 
 // ── Filters ──
@@ -80,14 +82,6 @@ const formatDate = (dateStr: string) => {
 
 const getCategoryConfig = (cat: string) =>
 	EXPENSE_CATEGORIES.find(c => c.value === cat) || EXPENSE_CATEGORIES[EXPENSE_CATEGORIES.length - 1];
-
-const statusColors: Record<string, string> = {
-	draft: 'bg-gray-500/20 text-gray-400',
-	submitted: 'bg-blue-500/20 text-blue-400',
-	approved: 'bg-emerald-500/20 text-emerald-400',
-	paid: 'bg-green-500/20 text-green-400',
-	rejected: 'bg-red-500/20 text-red-400',
-};
 
 const statusOptions = [
 	{ value: 'draft', label: 'Draft' },
@@ -242,7 +236,7 @@ const statusOptions = [
 							<td class="py-3 px-4">
 								<span
 									class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize"
-									:class="statusColors[expense.status || 'draft']"
+									:class="getStatusBadgeClasses(expense.status || 'draft')"
 								>
 									{{ expense.status || 'draft' }}
 								</span>
@@ -301,7 +295,7 @@ const statusOptions = [
 						<div class="flex flex-wrap gap-1.5 mt-2">
 							<span
 								class="px-1.5 py-0.5 rounded text-[10px] font-medium"
-								:class="statusColors[expense.status || 'draft']"
+								:class="getStatusBadgeClasses(expense.status || 'draft')"
 							>
 								{{ expense.status || 'draft' }}
 							</span>

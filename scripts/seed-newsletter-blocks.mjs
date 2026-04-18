@@ -1,17 +1,17 @@
 /**
  * Seed the newsletter_blocks collection with the standard block library.
- * Run with: DIRECTUS_STATIC_TOKEN=xxx node scripts/seed-newsletter-blocks.mjs
+ * Run with: DIRECTUS_SERVER_TOKEN=xxx node scripts/seed-newsletter-blocks.mjs
  *
  * Optional env vars:
  *   DIRECTUS_URL (default: http://localhost:8055)
- *   DIRECTUS_STATIC_TOKEN (required)
+ *   DIRECTUS_SERVER_TOKEN (required)
  */
 
 const DIRECTUS_URL = process.env.DIRECTUS_URL || 'http://localhost:8055';
-const STATIC_TOKEN = process.env.DIRECTUS_STATIC_TOKEN;
+const STATIC_TOKEN = process.env.DIRECTUS_SERVER_TOKEN;
 
 if (!STATIC_TOKEN) {
-  console.error('DIRECTUS_STATIC_TOKEN env var required');
+  console.error('DIRECTUS_SERVER_TOKEN env var required');
   process.exit(1);
 }
 

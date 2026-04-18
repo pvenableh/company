@@ -551,7 +551,6 @@ async function refreshProject() {
 		});
 		Object.assign(project, updated);
 		loadStats();
-		toast.add({ title: 'Project updated', color: 'green' });
 	} catch (err) {
 		console.error('Error refreshing project:', err);
 		toast.add({ title: 'Failed to refresh project', color: 'red' });

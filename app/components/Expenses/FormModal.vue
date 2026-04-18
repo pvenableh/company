@@ -179,7 +179,8 @@ async function handleSubmit() {
 		const payload = {
 			...form.value,
 			status: currentStatus.value,
-			amount: form.value.amount === null || form.value.amount === undefined ? null : Number(form.value.amount),
+			amount: form.value.amount === '' || form.value.amount === null || form.value.amount === undefined ? null : Number(form.value.amount),
+			date: form.value.date || null,
 		};
 
 		if (isEditing.value) {

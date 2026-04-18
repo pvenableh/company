@@ -11,7 +11,7 @@ export function useStatusStyle() {
     const s = normalize(status);
     if (['completed', 'done', 'archived', 'paid', 'closed'].includes(s)) return 0.3;
     if (['active', 'inprogress', 'approved', 'open'].includes(s)) return 1;
-    if (['scheduled', 'pending', 'processing', 'draft', 'new'].includes(s)) return 0.6;
+    if (['scheduled', 'pending', 'processing', 'draft', 'new', 'submitted'].includes(s)) return 0.6;
     return 0.8;
   }
 
@@ -21,9 +21,9 @@ export function useStatusStyle() {
     if (['completed', 'done', 'paid', 'approved', 'published'].includes(s)) return 'hsl(var(--success))';
     if (['overdue', 'rejected', 'failed', 'cancelled'].includes(s)) return 'hsl(var(--destructive))';
     if (['active', 'inprogress', 'open'].includes(s)) return 'hsl(160, 60%, 45%)';
-    if (['scheduled'].includes(s)) return 'hsl(199, 89%, 48%)';
-    if (['pending', 'processing', 'new'].includes(s)) return 'hsl(var(--warning))';
-    if (['archived', 'draft', 'closed'].includes(s)) return 'hsl(var(--muted-foreground))';
+    if (['scheduled', 'submitted'].includes(s)) return 'hsl(199, 89%, 48%)';
+    if (['pending', 'processing', 'new', 'draft'].includes(s)) return 'hsl(var(--warning))';
+    if (['archived', 'closed'].includes(s)) return 'hsl(var(--muted-foreground))';
     return 'hsl(var(--muted-foreground))';
   }
 
@@ -33,9 +33,9 @@ export function useStatusStyle() {
     if (['completed', 'done', 'paid', 'approved', 'published'].includes(s)) return 'bg-green-500/15 text-green-500';
     if (['overdue', 'rejected', 'failed', 'cancelled'].includes(s)) return 'bg-destructive/15 text-destructive';
     if (['active', 'inprogress', 'open'].includes(s)) return 'bg-teal-500/15 text-teal-500';
-    if (['scheduled'].includes(s)) return 'bg-sky-500/15 text-sky-500';
-    if (['pending', 'processing', 'new'].includes(s)) return 'bg-amber-500/15 text-amber-500';
-    if (['archived', 'draft', 'closed'].includes(s)) return 'bg-muted text-muted-foreground';
+    if (['scheduled', 'submitted'].includes(s)) return 'bg-sky-500/15 text-sky-500';
+    if (['pending', 'processing', 'new', 'draft'].includes(s)) return 'bg-amber-500/15 text-amber-500';
+    if (['archived', 'closed'].includes(s)) return 'bg-muted text-muted-foreground';
     return 'bg-muted text-muted-foreground';
   }
 
@@ -53,9 +53,9 @@ export function useStatusStyle() {
     if (['completed', 'done', 'paid', 'approved', 'published'].includes(s)) return 'bg-green-500 text-white';
     if (['overdue', 'rejected', 'failed', 'cancelled'].includes(s)) return 'bg-destructive text-white';
     if (['active', 'inprogress', 'open'].includes(s)) return 'bg-teal-500 text-white';
-    if (['scheduled'].includes(s)) return 'bg-sky-500 text-white';
-    if (['pending', 'processing', 'new'].includes(s)) return 'bg-amber-500 text-white';
-    if (['archived', 'draft', 'closed'].includes(s)) return 'bg-muted-foreground text-white';
+    if (['scheduled', 'submitted'].includes(s)) return 'bg-sky-500 text-white';
+    if (['pending', 'processing', 'new', 'draft'].includes(s)) return 'bg-amber-500 text-white';
+    if (['archived', 'closed'].includes(s)) return 'bg-muted-foreground text-white';
     return 'bg-muted-foreground text-white';
   }
 
