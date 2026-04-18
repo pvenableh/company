@@ -226,7 +226,7 @@ watch(quickStreamingContent, () => {
 	<Transition name="tray">
 		<div
 			v-if="isOpen"
-			class="fixed right-0 top-0 h-full w-full max-w-sm bg-white dark:bg-gray-800 shadow-2xl z-50 flex flex-col overflow-hidden border-l border-gray-200 dark:border-gray-700"
+			class="fixed right-0 top-0 h-full w-full max-w-sm bg-background shadow-2xl z-50 flex flex-col overflow-hidden border-l border-border"
 		>
 			<!-- Header -->
 			<div class="border-b border-gray-100 dark:border-gray-700">

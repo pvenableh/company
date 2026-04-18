@@ -197,7 +197,7 @@ const renderMarkdown = (text: string): string => {
   <Transition name="ctx-sidebar">
     <div
       v-if="visible"
-      class="fixed right-0 top-0 h-full w-full max-w-md bg-white dark:bg-gray-800 shadow-2xl z-50 flex flex-col overflow-hidden border-l border-gray-200 dark:border-gray-700"
+      class="fixed right-0 top-0 h-full w-full max-w-md bg-background shadow-2xl z-50 flex flex-col overflow-hidden border-l border-border"
     >
       <!-- Header -->
       <div class="border-b border-gray-100 dark:border-gray-700 shrink-0">

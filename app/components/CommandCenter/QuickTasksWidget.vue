@@ -4,7 +4,7 @@
 		<div class="flex items-center justify-between mb-4">
 			<div class="flex items-center gap-2">
 				<UIcon name="i-heroicons-clipboard-document-check" class="w-5 h-5 text-primary" />
-				<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70">Quick Tasks</h3>
+				<h3 class="text-sm font-semibold uppercase tracking-wider text-foreground/70">Quick Tasks</h3>
 			</div>
 			<div class="flex items-center gap-3">
 				<!-- View toggle: list vs grouped -->

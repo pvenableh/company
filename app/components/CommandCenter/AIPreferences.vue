@@ -63,13 +63,13 @@ const formatTokens = (n: number) => {
 			<div class="flex items-center gap-2 mb-2">
 				<button
 					@click="enableAll"
-					class="text-[10px] px-2 py-1 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+					class="text-[10px] px-2.5 py-1 rounded-full bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
 				>
 					Enable All
 				</button>
 				<button
 					@click="disableAll"
-					class="text-[10px] px-2 py-1 rounded-md bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
+					class="text-[10px] px-2.5 py-1 rounded-full bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
 				>
 					Disable All
 				</button>

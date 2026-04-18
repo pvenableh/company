@@ -20,14 +20,21 @@ const priorityColors: Record<string, string> = {
 	urgent: 'bg-red-50/50 dark:bg-red-900/10',
 	high: 'bg-amber-50/50 dark:bg-amber-900/10',
 	medium: 'bg-blue-50/30 dark:bg-blue-900/10',
-	low: 'bg-gray-50/30 dark:bg-gray-800/30',
+	low: 'bg-muted/30',
 };
 
 const priorityLineColors: Record<string, string> = {
 	urgent: 'bg-red-500',
 	high: 'bg-amber-500',
 	medium: 'bg-blue-500',
-	low: 'bg-gray-300',
+	low: 'bg-muted-foreground/40',
+};
+
+const priorityIconColors: Record<string, string> = {
+	urgent: 'text-red-500',
+	high: 'text-amber-500',
+	medium: 'text-blue-500',
+	low: 'text-muted-foreground',
 };
 
 const typeIcons: Record<string, string> = {
@@ -55,14 +62,15 @@ const handleAction = () => {
 			<div class="flex-shrink-0 mt-0.5">
 				<UIcon
 					:name="suggestion.icon"
-					:class="'w-5 h-5 ' + (suggestion.priority === 'urgent' ? 'text-red-500' : suggestion.priority === 'high' ? 'text-amber-500' : suggestion.priority === 'medium' ? 'text-blue-500' : 'text-gray-400')"
+					class="w-5 h-5"
+					:class="priorityIconColors[suggestion.priority] || priorityIconColors.low"
 				/>
 			</div>
 			<div class="flex-1 min-w-0">
-				<p class="text-sm font-medium text-gray-900 dark:text-white truncate">
+				<p class="text-sm font-medium text-foreground truncate">
 					{{ suggestion.title }}
 				</p>
-				<p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">
+				<p class="text-xs text-muted-foreground mt-0.5 line-clamp-2">
 					{{ suggestion.description }}
 				</p>
 			</div>
