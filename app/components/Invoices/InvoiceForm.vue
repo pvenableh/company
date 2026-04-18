@@ -481,7 +481,7 @@ function handleSubmit() {
 
     if (newItems.length) {
       lineItemPayload.create = newItems.map(li => ({
-        product: li.product,
+        product: li.product || null,
         quantity: li.quantity,
         rate: li.rate,
         description: li.description || undefined,
@@ -490,7 +490,7 @@ function handleSubmit() {
     if (existingItems.length) {
       lineItemPayload.update = existingItems.map(li => ({
         id: li.id,
-        product: li.product,
+        product: li.product || null,
         quantity: li.quantity,
         rate: li.rate,
         description: li.description || undefined,
@@ -507,7 +507,7 @@ function handleSubmit() {
     // Create mode
     payload.line_items = {
       create: lineItems.value.map(li => ({
-        product: li.product,
+        product: li.product || null,
         quantity: li.quantity,
         rate: li.rate,
         description: li.description || undefined,
