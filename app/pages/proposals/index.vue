@@ -6,12 +6,16 @@ import { useDebounceFn } from '@vueuse/core';
 definePageMeta({ middleware: ['auth'] });
 useHead({ title: 'Proposals | Earnest' });
 
+const route = useRoute();
+const router = useRouter();
 const { getProposals } = useProposals();
 
 const allProposals = ref<any[]>([]);
 const loading = ref(true);
 const search = ref('');
 const statusFilter = ref('');
+const showCreateModal = ref(false);
+const newFromLeadId = ref<number | string | null>(null);
 
 const statusOptions = [
 	{ value: '', label: 'All Statuses' },
@@ -36,7 +40,31 @@ const debouncedSearch = useDebounceFn(() => fetchData(), 300);
 watch(search, () => debouncedSearch());
 watch(statusFilter, () => fetchData());
 
-onMounted(fetchData);
+function openCreate(leadId?: number | string | null) {
+	newFromLeadId.value = leadId || null;
+	showCreateModal.value = true;
+}
+
+async function onProposalCreated(created: any) {
+	// Clear any ?new/?lead query params so reload doesn't reopen
+	if (route.query.new || route.query.lead) {
+		await router.replace({ query: {} });
+	}
+	newFromLeadId.value = null;
+	if (created?.id) {
+		router.push(`/proposals/${created.id}`);
+	} else {
+		await fetchData();
+	}
+}
+
+onMounted(async () => {
+	await fetchData();
+	// Support /proposals?new=1&lead=X deep-link (formerly /proposals/new?lead=X)
+	if (route.query.new) {
+		openCreate(route.query.lead as string | undefined);
+	}
+});
 </script>
 
 <template>
@@ -47,9 +75,7 @@ onMounted(fetchData);
 				<h1 class="text-xl font-bold t-text">Proposals</h1>
 				<p class="text-sm t-text-secondary">{{ allProposals.length }} proposal{{ allProposals.length === 1 ? '' : 's' }}</p>
 			</div>
-			<NuxtLink to="/proposals/new">
-				<UButton icon="i-heroicons-plus" size="sm">New Proposal</UButton>
-			</NuxtLink>
+			<UButton icon="i-heroicons-plus" size="sm" @click="openCreate()">New Proposal</UButton>
 		</div>
 
 		<!-- Filters -->
@@ -91,9 +117,16 @@ onMounted(fetchData);
 		<div v-else class="text-center py-20">
 			<UIcon name="i-heroicons-document-text" class="w-12 h-12 t-text-muted mx-auto mb-3" />
 			<p class="t-text-secondary">No proposals yet</p>
-			<NuxtLink to="/proposals/new" class="text-xs text-primary mt-2 inline-block">
+			<button class="text-xs text-primary mt-2 inline-block hover:underline" @click="openCreate()">
 				Create your first proposal
-			</NuxtLink>
+			</button>
 		</div>
+
+		<!-- Create Modal -->
+		<ProposalsFormModal
+			v-model="showCreateModal"
+			:lead-id="newFromLeadId"
+			@created="onProposalCreated"
+		/>
 	</div>
 </template>

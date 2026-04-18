@@ -259,7 +259,7 @@ onUnmounted(() => clearEntity());
 						<UiActionButton icon="lucide:video" variant="primary" @click="showMeetingModal = true" hide-label="sm">
 							Meeting
 						</UiActionButton>
-						<NuxtLink :to="`/proposals/new?lead=${lead.id}`">
+						<NuxtLink :to="`/proposals?new=1&lead=${lead.id}`">
 							<UiActionButton icon="lucide:file-plus">
 								Proposal
 							</UiActionButton>
