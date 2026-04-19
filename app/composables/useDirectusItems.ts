@@ -204,6 +204,13 @@ async function dedupedFetch<R>(
   fetchFn: () => Promise<R>,
   ttl: number = DEFAULT_CACHE_TTL
 ): Promise<R> {
+  // SSR: bypass the module-level cache entirely.
+  // The Node process serves all SSR requests, so sharing a cache across them
+  // would leak one user's scoped data to another. Always fetch fresh during
+  // hydration; the client takes over immediately after and gets its own
+  // cache there.
+  if (import.meta.server) return fetchFn();
+
   // 1. Return from cache if fresh
   const cached = getCached(cacheKey);
   if (cached !== undefined) return cached as R;
@@ -237,6 +244,14 @@ export const useDirectusItems = <T = any>(
 
   const ttl = getCollectionTTL(collection);
 
+  // useRequestFetch forwards the incoming request's cookies during SSR.
+  // Plain $fetch doesn't, which causes /api/directus/items to receive no
+  // session on the server side — falls through to the public client and
+  // 403s on user-scoped collections (org_memberships etc.), cascading into
+  // a "Broken" error boundary on cold-load. On the client, useRequestFetch
+  // resolves to plain $fetch, so behavior is unchanged there.
+  const fetchWithCookies = useRequestFetch();
+
   /**
    * List items from collection
    */
@@ -248,7 +263,7 @@ export const useDirectusItems = <T = any>(
     const cacheKey = makeCacheKey(collection, "list", query);
 
     return dedupedFetch(cacheKey, () =>
-      $fetch("/api/directus/items", {
+      fetchWithCookies("/api/directus/items", {
         method: "POST",
         body: {
           collection,
@@ -274,7 +289,7 @@ export const useDirectusItems = <T = any>(
     const cacheKey = makeCacheKey(collection, "get", { id, ...query });
 
     return dedupedFetch(cacheKey, () =>
-      $fetch("/api/directus/items", {
+      fetchWithCookies("/api/directus/items", {
         method: "POST",
         body: {
           collection,
@@ -298,7 +313,7 @@ export const useDirectusItems = <T = any>(
       throw new Error("Authentication required");
     }
 
-    const result = await $fetch("/api/directus/items", {
+    const result = await fetchWithCookies("/api/directus/items", {
       method: "POST",
       body: {
         collection,
@@ -324,7 +339,7 @@ export const useDirectusItems = <T = any>(
       throw new Error("Authentication required");
     }
 
-    const result = await $fetch("/api/directus/items", {
+    const result = await fetchWithCookies("/api/directus/items", {
       method: "POST",
       body: {
         collection,
@@ -349,7 +364,7 @@ export const useDirectusItems = <T = any>(
       throw new Error("Authentication required");
     }
 
-    await $fetch("/api/directus/items", {
+    await fetchWithCookies("/api/directus/items", {
       method: "POST",
       body: {
         collection,
@@ -375,7 +390,7 @@ export const useDirectusItems = <T = any>(
     const cacheKey = makeCacheKey(collection, "aggregate", query);
 
     return dedupedFetch(cacheKey, () =>
-      $fetch("/api/directus/items", {
+      fetchWithCookies("/api/directus/items", {
         method: "POST",
         body: {
           collection,
@@ -446,7 +461,7 @@ export const useDirectusItems = <T = any>(
     _emitOptimistic({ type: 'create', collection, id: tempId, data: optimisticItem, timestamp: Date.now() });
 
     try {
-      const result = await $fetch("/api/directus/items", {
+      const result = await fetchWithCookies("/api/directus/items", {
         method: "POST",
         body: { collection, operation: "create", data, query },
       });
@@ -499,7 +514,7 @@ export const useDirectusItems = <T = any>(
     _emitOptimistic({ type: 'update', collection, id, data, timestamp: Date.now() });
 
     try {
-      const result = await $fetch("/api/directus/items", {
+      const result = await fetchWithCookies("/api/directus/items", {
         method: "POST",
         body: { collection, operation: "update", id, data, query },
       });
