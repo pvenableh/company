@@ -136,7 +136,7 @@ const formatDate = (dateStr: string) => {
           <div class="flex items-center gap-1">
             <button
               @click="handlePin"
-              class="p-1.5 rounded-md hover:bg-muted transition-colors"
+              class="p-1.5 rounded-lg hover:bg-muted transition-colors"
               :title="note?.is_pinned ? 'Unpin' : 'Pin'"
             >
               <UIcon
@@ -148,14 +148,14 @@ const formatDate = (dateStr: string) => {
             <button
               v-if="!isEditing"
               @click="isEditing = true"
-              class="p-1.5 rounded-md hover:bg-muted transition-colors"
+              class="p-1.5 rounded-lg hover:bg-muted transition-colors"
               title="Edit"
             >
               <UIcon name="i-heroicons-pencil" class="w-4 h-4 text-muted-foreground" />
             </button>
             <button
               @click="handleDelete"
-              class="p-1.5 rounded-md hover:bg-destructive/10 transition-colors"
+              class="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors"
               title="Delete"
             >
               <UIcon name="i-heroicons-trash" class="w-4 h-4 text-muted-foreground hover:text-destructive" />
@@ -175,7 +175,7 @@ const formatDate = (dateStr: string) => {
           <span
             v-for="tag in noteTags"
             :key="tag.id"
-            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium"
+            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium"
             :style="{ backgroundColor: (tag.color || '#6366f1') + '1a', color: tag.color || '#6366f1' }"
           >
             <span

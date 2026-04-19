@@ -95,7 +95,7 @@ const contentPreview = computed(() => {
         <!-- Content preview -->
         <UFormGroup label="Content">
           <div
-            class="max-h-48 overflow-y-auto p-3 bg-muted/30 rounded-lg border border-gray-100 dark:border-gray-700 text-sm prose prose-sm dark:prose-invert max-w-none"
+            class="max-h-48 overflow-y-auto p-3 bg-muted/30 rounded-lg border border-border/30 text-sm prose prose-sm dark:prose-invert max-w-none"
             v-html="contentPreview"
           />
         </UFormGroup>
