@@ -280,7 +280,11 @@ export default defineEventHandler(async (event) => {
 
     const responseWriter = event.node.res;
     let fullResponse = '';
+    let streamResult: any;
+    let streamError: Error | null = null;
 
+    // Stream the LLM response. Any error here is captured but does NOT skip persistence —
+    // we always try to save whatever `fullResponse` accumulated so the session isn't orphaned.
     try {
       const stream = provider.chatStream(chatMessages, {
         model,
@@ -288,72 +292,86 @@ export default defineEventHandler(async (event) => {
         maxTokens: 4096,
       });
 
-      // Iterate manually to capture the generator's return value (usage metadata)
-      let streamResult: any;
       let iterResult = await stream.next();
       while (!iterResult.done) {
         fullResponse += iterResult.value;
         responseWriter.write(`data: ${JSON.stringify({ type: 'chunk', content: iterResult.value })}\n\n`);
         iterResult = await stream.next();
       }
-      // The return value from the generator contains usage info
       if (iterResult.value) {
         streamResult = iterResult.value;
       }
+    } catch (e: any) {
+      streamError = e;
+    }
 
-      // Log AI usage (fire-and-forget)
-      if (streamResult?.usage) {
-        logAIUsage({
-          event,
-          endpoint: 'ai/chat',
-          model: streamResult.model || model || 'claude-sonnet-4-20250514',
-          inputTokens: streamResult.usage.inputTokens,
-          outputTokens: streamResult.usage.outputTokens,
-          sessionId: String(chatSessionId),
-          organizationId: organizationId,
-          metadata: { responseStyle, verbosity },
-        }).catch(() => {});
+    // Log AI usage (fire-and-forget). Only possible when the stream returned usage metadata.
+    if (streamResult?.usage) {
+      logAIUsage({
+        event,
+        endpoint: 'ai/chat',
+        model: streamResult.model || model || 'claude-sonnet-4-20250514',
+        inputTokens: streamResult.usage.inputTokens,
+        outputTokens: streamResult.usage.outputTokens,
+        sessionId: String(chatSessionId),
+        organizationId: organizationId,
+        metadata: { responseStyle, verbosity },
+      }).catch(() => {});
 
-        // Deduct tokens from org balance
-        if (organizationId) {
-          const totalTokens = (streamResult.usage.inputTokens || 0) + (streamResult.usage.outputTokens || 0);
-          deductOrgTokens(organizationId, totalTokens).catch(() => {});
-        }
+      if (organizationId) {
+        const totalTokens = (streamResult.usage.inputTokens || 0) + (streamResult.usage.outputTokens || 0);
+        deductOrgTokens(organizationId, totalTokens).catch(() => {});
       }
+    }
 
-      // 7. Store assistant response
+    // Always persist an assistant row — partial, empty, or whole — so the session stays
+    // coherent even if the stream died mid-flight. Without this, a transient upstream error
+    // leaves the session with a dangling user message and nothing else.
+    try {
+      const persistedContent = fullResponse || (streamError
+        ? `[stream interrupted — ${streamError.message || 'unknown error'}]`
+        : '');
+
       await directus.request(
         createItem('ai_chat_messages', {
           session: chatSessionId,
           role: 'assistant',
-          content: fullResponse,
+          content: persistedContent,
+          metadata: streamError
+            ? { error: streamError.message, partial: fullResponse.length > 0 }
+            : undefined,
         }, {
           fields: ['id'],
         }),
       );
+    } catch (persistError: any) {
+      console.error('[ai/chat] Failed to persist assistant message:', persistError.message);
+    }
 
-      // Update session title if this is the first exchange
-      if (!sessionId) {
-        // Auto-generate a title from the first message
-        const title = message.trim().substring(0, 100);
-        await directus.request(
-          updateItem('ai_chat_sessions', chatSessionId, { title }),
-        ).catch(() => {});
-      }
+    // Update session title on the first exchange (best-effort)
+    if (!sessionId) {
+      const title = message.trim().substring(0, 100);
+      await directus.request(
+        updateItem('ai_chat_sessions', chatSessionId, { title }),
+      ).catch(() => {});
+    }
 
-      // Send final event with metadata
+    // Final SSE event — error if the stream died, done otherwise
+    if (streamError) {
+      responseWriter.write(
+        `data: ${JSON.stringify({
+          type: 'error',
+          error: streamError.message || 'Stream failed',
+          sessionId: chatSessionId,
+          content: fullResponse,
+        })}\n\n`,
+      );
+    } else {
       responseWriter.write(
         `data: ${JSON.stringify({
           type: 'done',
           sessionId: chatSessionId,
           content: fullResponse,
-        })}\n\n`,
-      );
-    } catch (streamError: any) {
-      responseWriter.write(
-        `data: ${JSON.stringify({
-          type: 'error',
-          error: streamError.message || 'Stream failed',
         })}\n\n`,
       );
     }
