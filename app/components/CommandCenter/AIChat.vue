@@ -135,6 +135,8 @@ const loadSessions = async () => {
 
 const loadSession = async (sessionId: string) => {
 	activeSessionId.value = sessionId;
+	messages.value = [];
+	streamingContent.value = '';
 	isLoadingMessages.value = true;
 	error.value = null;
 	try {
