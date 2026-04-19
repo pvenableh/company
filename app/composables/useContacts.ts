@@ -16,16 +16,21 @@ export function useContacts() {
     limit?: number;
     page?: number;
   }): Promise<{ data: Contact[]; total: number }> => {
-    const filter: any = { _and: [] };
-
-    // Org-scope via M2M junction (contacts_organizations)
-    if (selectedOrg.value) {
-      filter._and.push({
-        organizations: {
-          organizations_id: { _eq: selectedOrg.value },
-        },
-      });
+    // Tenant-data safety: never query without an org. Without this guard,
+    // an empty/implicit filter would return every org's contacts.
+    if (!selectedOrg.value) {
+      return { data: [], total: 0 };
     }
+
+    const filter: any = {
+      _and: [
+        {
+          organizations: {
+            organizations_id: { _eq: selectedOrg.value },
+          },
+        },
+      ],
+    };
 
     if (params?.status) {
       filter._and.push({ status: { _eq: params.status } });
