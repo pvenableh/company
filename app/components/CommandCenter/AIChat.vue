@@ -440,13 +440,13 @@ onUnmounted(() => {
 				<div class="flex items-center gap-2">
 					<button
 						@click="showSidebar = !showSidebar"
-						class="p-1.5 rounded-md hover:bg-muted transition-colors lg:hidden"
+						class="p-1.5 rounded-lg hover:bg-muted transition-colors lg:hidden"
 					>
 						<UIcon name="i-heroicons-bars-3" class="w-4 h-4" />
 					</button>
 					<button
 						@click="showSidebar = !showSidebar"
-						class="p-1.5 rounded-md hover:bg-muted transition-colors hidden lg:block"
+						class="p-1.5 rounded-lg hover:bg-muted transition-colors hidden lg:block"
 						:title="showSidebar ? 'Hide sidebar' : 'Show sidebar'"
 					>
 						<UIcon
@@ -698,7 +698,7 @@ onUnmounted(() => {
 							>
 								<button
 									@click="openSaveNote(msg)"
-									class="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium bg-background border border-border shadow-sm hover:bg-muted transition-colors"
+									class="flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium bg-background border border-border shadow-sm hover:bg-muted transition-colors"
 									:class="savedMessageIds.has(msg.id) ? 'text-primary' : 'text-muted-foreground'"
 									:title="savedMessageIds.has(msg.id) ? 'Saved' : 'Save as Note'"
 								>
@@ -710,7 +710,7 @@ onUnmounted(() => {
 								</button>
 								<button
 									@click="copyMessage(msg.content)"
-									class="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium text-muted-foreground bg-background border border-border shadow-sm hover:bg-muted transition-colors"
+									class="flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium text-muted-foreground bg-background border border-border shadow-sm hover:bg-muted transition-colors"
 									title="Copy to clipboard"
 								>
 									<UIcon name="i-heroicons-clipboard-document" class="w-3 h-3" />
@@ -718,7 +718,7 @@ onUnmounted(() => {
 								</button>
 								<button
 									@click="submitFeedback(msg, 'positive')"
-									class="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium bg-background border border-border shadow-sm hover:bg-muted transition-colors"
+									class="flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium bg-background border border-border shadow-sm hover:bg-muted transition-colors"
 									:class="msg.feedback?.rating === 'positive' ? 'text-green-500' : 'text-muted-foreground'"
 									title="Helpful"
 								>
@@ -726,7 +726,7 @@ onUnmounted(() => {
 								</button>
 								<button
 									@click="openCorrection(msg)"
-									class="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium bg-background border border-border shadow-sm hover:bg-muted transition-colors"
+									class="flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium bg-background border border-border shadow-sm hover:bg-muted transition-colors"
 									:class="msg.feedback?.rating === 'negative' ? 'text-red-500' : 'text-muted-foreground'"
 									title="Not helpful"
 								>
