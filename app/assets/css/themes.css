@@ -350,8 +350,10 @@
 	font-weight: 500;
 }
 
-/* Buttons */
-[data-style='modern'] button,
+/* Buttons — only tagged buttons (shadcn-vue Button / .btn) receive theme styling.
+   Bare <button> elements are exempt so generic clickable rows, icon toggles,
+   and list-item buttons render with natural casing. To opt a raw <button>
+   into theme styling, add class="btn" or wrap it in a Button component. */
 [data-style='modern'] .btn,
 [data-style='modern'] [class*="Button"] {
 	text-transform: var(--btn-transform);
@@ -359,7 +361,6 @@
 	font-weight: var(--btn-weight);
 }
 
-[data-style='classic'] button,
 [data-style='classic'] .btn,
 [data-style='classic'] [class*="Button"] {
 	text-transform: none;
@@ -414,7 +415,6 @@
 	font-weight: 500;
 }
 
-[data-style='casual'] button,
 [data-style='casual'] .btn,
 [data-style='casual'] [class*="Button"] {
 	text-transform: none;
@@ -469,7 +469,6 @@
 	font-weight: 700;
 }
 
-[data-style='bold'] button,
 [data-style='bold'] .btn,
 [data-style='bold'] [class*="Button"] {
 	text-transform: none;
