@@ -64,16 +64,20 @@ const handleRegisterOrg = () => {
 
 			<!-- Organization list -->
 			<div class="space-y-2 mb-6 max-h-[60vh] overflow-y-auto">
-				<button
+				<div
 					v-for="org in organizations"
 					:key="org.id"
-					class="w-full flex items-center gap-3 p-3 rounded-xl border transition-all"
+					role="button"
+					tabindex="0"
+					class="w-full flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer"
 					:class="
 						selectedOrg === org.id
 							? 'border-[var(--cyan)] bg-cyan-50/50'
 							: 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
 					"
 					@click="handleSelectOrg(org.id)"
+					@keydown.enter.prevent="handleSelectOrg(org.id)"
+					@keydown.space.prevent="handleSelectOrg(org.id)"
 				>
 					<Avatar class="size-10">
 						<AvatarImage v-if="getIconUrl(org)" :src="getIconUrl(org)" :alt="org.name" />
@@ -109,7 +113,7 @@ const handleRegisterOrg = () => {
 						v-if="selectedOrg === org.id"
 						class="size-5 text-[var(--cyan)] shrink-0"
 					/>
-				</button>
+				</div>
 			</div>
 
 			<!-- Register new organization -->

@@ -199,11 +199,15 @@
 		<div class="space-y-3">
 			<h4 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Typography Style</h4>
 			<div class="space-y-2">
-				<button
+				<div
 					v-for="style in styles"
 					:key="style.id"
+					role="button"
+					tabindex="0"
 					@click="setStyle(style.id)"
-					class="w-full group relative flex items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition-all duration-200 ios-press"
+					@keydown.enter.prevent="setStyle(style.id)"
+					@keydown.space.prevent="setStyle(style.id)"
+					class="w-full group relative flex items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition-all duration-200 ios-press cursor-pointer"
 					:class="
 						currentStyle === style.id
 							? 'border-primary bg-primary/5 ring-1 ring-primary/20 shadow-sm'
@@ -223,7 +227,7 @@
 					>
 						<Icon name="lucide:check" class="w-2.5 h-2.5 text-primary-foreground" />
 					</div>
-				</button>
+				</div>
 			</div>
 		</div>
 	</div>

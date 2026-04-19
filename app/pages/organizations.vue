@@ -67,16 +67,20 @@ const handleSelectOrg = (orgId: string) => {
 
         <!-- Organization list -->
         <div v-else class="space-y-3 mb-8">
-          <button
+          <div
             v-for="org in organizations"
             :key="org.id"
-            class="w-full flex items-center gap-4 p-4 rounded-xl border transition-all"
+            role="button"
+            tabindex="0"
+            class="w-full flex items-center gap-4 p-4 rounded-xl border transition-all cursor-pointer"
             :class="
               selectedOrg === org.id
                 ? 'border-[var(--cyan)] bg-cyan-50/50'
                 : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
             "
             @click="handleSelectOrg(org.id)"
+            @keydown.enter.prevent="handleSelectOrg(org.id)"
+            @keydown.space.prevent="handleSelectOrg(org.id)"
           >
             <Avatar class="size-12">
               <AvatarImage v-if="getIconUrl(org)" :src="getIconUrl(org)" :alt="org.name" />
@@ -107,7 +111,7 @@ const handleSelectOrg = (orgId: string) => {
               />
               <ArrowRight v-else class="size-4 text-gray-300" />
             </div>
-          </button>
+          </div>
 
           <!-- Empty state -->
           <div v-if="!organizations.length" class="text-center py-8">

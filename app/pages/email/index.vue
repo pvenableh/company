@@ -503,12 +503,16 @@ onUnmounted(() => clearEntity());
 					<!-- Step 2: Starter Template picker -->
 					<div v-else-if="startMethod === 'starter'" class="space-y-0">
 						<div class="max-h-64 overflow-y-auto divide-y divide-border/30">
-							<button
+							<div
 								v-for="tpl in starterTemplates"
 								:key="tpl.id"
-								class="flex items-center gap-3 w-full px-5 py-3 text-left hover:bg-muted/30 transition-colors ios-press"
+								role="button"
+								tabindex="0"
+								class="flex items-center gap-3 w-full px-5 py-3 text-left hover:bg-muted/30 transition-colors ios-press cursor-pointer"
 								:class="{ 'bg-primary/5': selectedSourceTemplate?.id === tpl.id }"
 								@click="selectedSourceTemplate = tpl; newTemplateName = tpl.name"
+								@keydown.enter.prevent="selectedSourceTemplate = tpl; newTemplateName = tpl.name"
+								@keydown.space.prevent="selectedSourceTemplate = tpl; newTemplateName = tpl.name"
 							>
 								<div class="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
 									<Icon name="lucide:layout-template" class="w-3.5 h-3.5 text-emerald-500" />
@@ -518,7 +522,7 @@ onUnmounted(() => clearEntity());
 									<p class="text-[10px] text-muted-foreground capitalize">{{ tpl.block_count || 0 }} blocks · {{ tpl.type }}</p>
 								</div>
 								<Icon v-if="selectedSourceTemplate?.id === tpl.id" name="lucide:check" class="w-4 h-4 text-primary" />
-							</button>
+							</div>
 						</div>
 						<div v-if="selectedSourceTemplate" class="px-5 py-3 border-t border-border/30 space-y-3">
 							<div>
@@ -546,12 +550,16 @@ onUnmounted(() => clearEntity());
 					<!-- Step 2: From Existing — template picker -->
 					<div v-else-if="startMethod === 'existing'" class="space-y-0">
 						<div class="max-h-64 overflow-y-auto divide-y divide-border/30">
-							<button
+							<div
 								v-for="tpl in templates"
 								:key="tpl.id"
-								class="flex items-center gap-3 w-full px-5 py-3 text-left hover:bg-muted/30 transition-colors ios-press"
+								role="button"
+								tabindex="0"
+								class="flex items-center gap-3 w-full px-5 py-3 text-left hover:bg-muted/30 transition-colors ios-press cursor-pointer"
 								:class="{ 'bg-primary/5': selectedSourceTemplate?.id === tpl.id }"
 								@click="selectedSourceTemplate = tpl; newTemplateName = `${tpl.name} (Copy)`"
+								@keydown.enter.prevent="selectedSourceTemplate = tpl; newTemplateName = `${tpl.name} (Copy)`"
+								@keydown.space.prevent="selectedSourceTemplate = tpl; newTemplateName = `${tpl.name} (Copy)`"
 							>
 								<div class="w-7 h-7 rounded-lg flex items-center justify-center" :class="tpl.type === 'newsletter' ? 'bg-primary/5' : 'bg-blue-500/5'">
 									<Icon :name="tpl.type === 'newsletter' ? 'lucide:newspaper' : 'lucide:mail'" class="w-3.5 h-3.5" :class="tpl.type === 'newsletter' ? 'text-primary/60' : 'text-blue-500/60'" />
@@ -561,7 +569,7 @@ onUnmounted(() => clearEntity());
 									<p class="text-[10px] text-muted-foreground capitalize">{{ tpl.type }}</p>
 								</div>
 								<Icon v-if="selectedSourceTemplate?.id === tpl.id" name="lucide:check" class="w-4 h-4 text-primary" />
-							</button>
+							</div>
 						</div>
 						<div v-if="selectedSourceTemplate" class="px-5 py-3 border-t border-border/30 space-y-3">
 							<div>

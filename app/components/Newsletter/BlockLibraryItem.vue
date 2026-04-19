@@ -1,7 +1,11 @@
 <template>
-  <button
-    class="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-xl text-left text-sm hover:bg-muted/50 transition-all group ios-press"
+  <div
+    role="button"
+    tabindex="0"
+    class="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-xl text-left text-sm hover:bg-muted/50 transition-all group ios-press cursor-pointer"
     @click="$emit('add', block)"
+    @keydown.enter.prevent="$emit('add', block)"
+    @keydown.space.prevent="$emit('add', block)"
   >
     <div
       class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-colors"
@@ -20,7 +24,7 @@
         <Icon name="lucide:plus" class="w-3 h-3 text-primary" />
       </div>
     </div>
-  </button>
+  </div>
 </template>
 
 <script setup lang="ts">
