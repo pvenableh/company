@@ -6,36 +6,46 @@ export function useStatusStyle() {
   const normalize = (status?: string | null): string =>
     (status || '').toLowerCase().replace(/[\s_-]+/g, '');
 
+  // ── Status buckets (single source of truth; normalized keys) ──
+  // Normalization strips spaces/underscores/hyphens and lowercases, so
+  // "In Progress", "in_progress", "in-progress" all match "inprogress".
+  const SUCCESS = ['completed', 'done', 'paid', 'approved', 'published', 'succeeded'];
+  const DESTRUCTIVE = ['overdue', 'rejected', 'failed', 'cancelled', 'canceled', 'noshow'];
+  const ACTIVE = ['active', 'inprogress', 'open'];
+  const SCHEDULED = ['scheduled', 'submitted'];
+  const PENDING = ['pending', 'processing', 'new', 'draft', 'paused', 'publishing', 'todo', 'onhold', 'requirespaymentmethod', 'requiresaction', 'intransit', 'prospect'];
+  const MUTED = ['archived', 'closed', 'inactive', 'refunded'];
+
   /** Opacity value for bars, cards, and visual weight (Clean Gantt pattern) */
   function getStatusOpacity(status?: string | null): number {
     const s = normalize(status);
-    if (['completed', 'done', 'archived', 'paid', 'closed'].includes(s)) return 0.3;
-    if (['active', 'inprogress', 'approved', 'open'].includes(s)) return 1;
-    if (['scheduled', 'pending', 'processing', 'draft', 'new', 'submitted'].includes(s)) return 0.6;
+    if ([...SUCCESS, ...MUTED].includes(s)) return 0.3;
+    if (ACTIVE.includes(s)) return 1;
+    if ([...SCHEDULED, ...PENDING].includes(s)) return 0.6;
     return 0.8;
   }
 
   /** CSS color string for accent indicators (dots, borders, progress bars) */
   function getStatusAccent(status?: string | null): string {
     const s = normalize(status);
-    if (['completed', 'done', 'paid', 'approved', 'published'].includes(s)) return 'hsl(var(--success))';
-    if (['overdue', 'rejected', 'failed', 'cancelled'].includes(s)) return 'hsl(var(--destructive))';
-    if (['active', 'inprogress', 'open'].includes(s)) return 'hsl(160, 60%, 45%)';
-    if (['scheduled', 'submitted'].includes(s)) return 'hsl(199, 89%, 48%)';
-    if (['pending', 'processing', 'new', 'draft'].includes(s)) return 'hsl(var(--warning))';
-    if (['archived', 'closed'].includes(s)) return 'hsl(var(--muted-foreground))';
+    if (SUCCESS.includes(s)) return 'hsl(var(--success))';
+    if (DESTRUCTIVE.includes(s)) return 'hsl(var(--destructive))';
+    if (ACTIVE.includes(s)) return 'hsl(160, 60%, 45%)';
+    if (SCHEDULED.includes(s)) return 'hsl(199, 89%, 48%)';
+    if (PENDING.includes(s)) return 'hsl(var(--warning))';
+    if (MUTED.includes(s)) return 'hsl(var(--muted-foreground))';
     return 'hsl(var(--muted-foreground))';
   }
 
   /** Tailwind classes for inline badge (bg + text) */
   function getStatusBadgeClasses(status?: string | null): string {
     const s = normalize(status);
-    if (['completed', 'done', 'paid', 'approved', 'published'].includes(s)) return 'bg-green-500/15 text-green-500';
-    if (['overdue', 'rejected', 'failed', 'cancelled'].includes(s)) return 'bg-destructive/15 text-destructive';
-    if (['active', 'inprogress', 'open'].includes(s)) return 'bg-teal-500/15 text-teal-500';
-    if (['scheduled', 'submitted'].includes(s)) return 'bg-sky-500/15 text-sky-500';
-    if (['pending', 'processing', 'new', 'draft'].includes(s)) return 'bg-amber-500/15 text-amber-500';
-    if (['archived', 'closed'].includes(s)) return 'bg-muted text-muted-foreground';
+    if (SUCCESS.includes(s)) return 'bg-green-500/15 text-green-500';
+    if (DESTRUCTIVE.includes(s)) return 'bg-destructive/15 text-destructive';
+    if (ACTIVE.includes(s)) return 'bg-teal-500/15 text-teal-500';
+    if (SCHEDULED.includes(s)) return 'bg-sky-500/15 text-sky-500';
+    if (PENDING.includes(s)) return 'bg-amber-500/15 text-amber-500';
+    if (MUTED.includes(s)) return 'bg-muted text-muted-foreground';
     return 'bg-muted text-muted-foreground';
   }
 
@@ -50,24 +60,46 @@ export function useStatusStyle() {
   /** Solid bg + white text class for prominent status pills */
   function getStatusPillClass(status?: string | null): string {
     const s = normalize(status);
-    if (['completed', 'done', 'paid', 'approved', 'published'].includes(s)) return 'bg-green-500 text-white';
-    if (['overdue', 'rejected', 'failed', 'cancelled'].includes(s)) return 'bg-destructive text-white';
-    if (['active', 'inprogress', 'open'].includes(s)) return 'bg-teal-500 text-white';
-    if (['scheduled', 'submitted'].includes(s)) return 'bg-sky-500 text-white';
-    if (['pending', 'processing', 'new', 'draft'].includes(s)) return 'bg-amber-500 text-white';
-    if (['archived', 'closed'].includes(s)) return 'bg-muted-foreground text-white';
+    if (SUCCESS.includes(s)) return 'bg-green-500 text-white';
+    if (DESTRUCTIVE.includes(s)) return 'bg-destructive text-white';
+    if (ACTIVE.includes(s)) return 'bg-teal-500 text-white';
+    if (SCHEDULED.includes(s)) return 'bg-sky-500 text-white';
+    if (PENDING.includes(s)) return 'bg-amber-500 text-white';
+    if (MUTED.includes(s)) return 'bg-muted-foreground text-white';
     return 'bg-muted-foreground text-white';
   }
 
-  // ── Priority styling ──
+  /** Bare color token name (e.g. for UBadge `color` prop or CSS var lookup) */
+  function getStatusColorName(status?: string | null): 'green' | 'red' | 'teal' | 'sky' | 'amber' | 'gray' {
+    const s = normalize(status);
+    if (SUCCESS.includes(s)) return 'green';
+    if (DESTRUCTIVE.includes(s)) return 'red';
+    if (ACTIVE.includes(s)) return 'teal';
+    if (SCHEDULED.includes(s)) return 'sky';
+    if (PENDING.includes(s)) return 'amber';
+    return 'gray';
+  }
+
+  // ── Priority styling (4-level: urgent > high > medium > low) ──
 
   /** Tailwind bg class for priority pill badges (white text) */
   function getPriorityBadgeClass(priority?: string | null): string {
     const p = normalize(priority);
+    if (p === 'urgent') return 'bg-red-600';
     if (p === 'high') return 'bg-[var(--red)]';
-    if (p === 'medium') return 'bg-[var(--cyan)]';
+    if (p === 'medium' || p === 'normal') return 'bg-[var(--cyan)]';
     if (p === 'low') return 'bg-[var(--lightGrey)]';
     return 'bg-[var(--lightGrey)]';
+  }
+
+  /** Tinted bg + matching text (for subtle priority chips) */
+  function getPriorityBadgeClasses(priority?: string | null): string {
+    const p = normalize(priority);
+    if (p === 'urgent') return 'bg-red-600/15 text-red-600';
+    if (p === 'high') return 'bg-red-500/15 text-red-500';
+    if (p === 'medium' || p === 'normal') return 'bg-cyan-500/15 text-cyan-500';
+    if (p === 'low') return 'bg-muted text-muted-foreground';
+    return 'bg-muted text-muted-foreground';
   }
 
   /** CSS gradient string for the priority segmented control */
@@ -82,6 +114,7 @@ export function useStatusStyle() {
 
   return {
     getStatusOpacity, getStatusAccent, getStatusBadgeClasses, getStatusPillClass, getStatusOpacityClass,
-    getPriorityBadgeClass, priorityGradient, priorityOptions,
+    getStatusColorName,
+    getPriorityBadgeClass, getPriorityBadgeClasses, priorityGradient, priorityOptions,
   };
 }

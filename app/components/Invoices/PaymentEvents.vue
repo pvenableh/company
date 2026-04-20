@@ -15,17 +15,7 @@ const paymentIntent = ref(null);
 // Uses formatDateWithTime from utils/dates.ts (timestamp is unix seconds)
 const formatDate = (timestamp) => formatDateWithTime(timestamp);
 
-const statusColorClass = (status) => {
-	const colors = {
-		succeeded: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-200',
-		processing: 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-200',
-		requires_payment_method: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200',
-		requires_action: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200',
-		failed: 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-200',
-		canceled: 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-200',
-	};
-	return colors[status] || 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-200';
-};
+const { getStatusBadgeClasses: statusColorClass } = useStatusStyle();
 
 const fetchEvents = async () => {
 	if (!props.paymentIntentId) return;

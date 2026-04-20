@@ -140,13 +140,7 @@ function isToday(date: Date) {
   return isSameDay(date, new Date())
 }
 
-const statusColors: Record<string, string> = {
-  draft: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
-  scheduled: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  publishing: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-  published: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-  failed: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-}
+const { getStatusBadgeClasses } = useStatusStyle()
 
 const platformIcons: Record<string, string> = {
   instagram: 'i-lucide-instagram',
@@ -295,7 +289,7 @@ const df = new DateFormatter('en-US', { month: 'long', year: 'numeric' })
                 :key="post.id"
                 @click="openPost(post)"
                 class="w-full text-left px-1.5 py-1 rounded text-xs truncate transition-colors"
-                :class="statusColors[post.status]"
+                :class="getStatusBadgeClasses(post.status)"
               >
                 <span class="flex items-center gap-1">
                   <UIcon

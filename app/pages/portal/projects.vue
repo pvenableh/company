@@ -134,12 +134,7 @@ const statusLabels: Record<string, string> = {
 	completed: 'Completed',
 };
 
-const statusColors: Record<string, string> = {
-	in_progress: 'bg-green-500',
-	scheduled: 'bg-blue-500',
-	pending: 'bg-amber-500',
-	completed: 'bg-gray-400',
-};
+const { getStatusPillClass } = useStatusStyle();
 
 const config = useRuntimeConfig();
 
@@ -172,7 +167,7 @@ watch(() => selectedOrg.value, () => loadProjects());
 			<div v-for="(group, status) in statusGroups" :key="status">
 				<template v-if="group.length > 0">
 					<div class="flex items-center gap-2 mb-3 mt-6 first:mt-0">
-						<div class="w-2 h-2 rounded-full" :class="statusColors[status]" />
+						<div class="w-2 h-2 rounded-full" :class="getStatusPillClass(status)" />
 						<h2 class="text-sm font-medium text-muted-foreground uppercase tracking-wider">
 							{{ statusLabels[status] }}
 						</h2>

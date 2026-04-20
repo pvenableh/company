@@ -39,12 +39,7 @@ function formatDate(dateStr: string | null | undefined): string {
 	return getFriendlyDateThree(dateStr) || '—';
 }
 
-const statusColors: Record<string, string> = {
-	completed: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
-	pending: 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400',
-	failed: 'bg-red-500/15 text-red-600 dark:text-red-400',
-	refunded: 'bg-purple-500/15 text-purple-600 dark:text-purple-400',
-};
+const { getStatusBadgeClasses } = useStatusStyle();
 
 const totalReceived = computed(() => {
 	return payments.value.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
@@ -144,7 +139,7 @@ const totalReceived = computed(() => {
 						<td class="px-4 py-3 text-sm">
 							<span
 								class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
-								:class="statusColors[payment.status] || 'bg-muted text-muted-foreground'"
+								:class="getStatusBadgeClasses(payment.status)"
 							>
 								{{ payment.status || 'completed' }}
 							</span>

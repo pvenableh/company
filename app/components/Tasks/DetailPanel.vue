@@ -18,7 +18,7 @@
 						</button>
 						<span
 							class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full"
-							:class="statusColors[localTask.status || 'todo']"
+							:class="getStatusBadgeClasses(localTask.status || 'todo')"
 						>
 							{{ statusLabels[localTask.status || 'todo'] }}
 						</span>
@@ -156,13 +156,7 @@ watch(() => props.task, (newTask) => {
 	Object.assign(localTask, newTask);
 }, { deep: true });
 
-const statusColors: Record<string, string> = {
-	todo: 'bg-blue-500/15 text-blue-400',
-	in_progress: 'bg-amber-500/15 text-amber-400',
-	done: 'bg-emerald-500/15 text-emerald-400',
-	published: 'bg-blue-500/15 text-blue-400',
-	draft: 'bg-neutral-500/15 text-neutral-400',
-};
+const { getStatusBadgeClasses } = useStatusStyle();
 
 const statusLabels: Record<string, string> = {
 	todo: 'To Do',

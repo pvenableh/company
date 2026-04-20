@@ -162,23 +162,7 @@ const sortedProjects = computed(() => {
 	return list;
 });
 
-const statusClass = (status) => {
-	switch (status) {
-		case 'Pending':
-			return 'bg-amber-500/10 text-amber-600 dark:text-amber-400';
-		case 'Scheduled':
-			return 'bg-blue-500/10 text-blue-600 dark:text-blue-400';
-		case 'In Progress':
-			return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400';
-		case 'Completed':
-		case 'completed':
-			return 'bg-green-500/10 text-green-600 dark:text-green-400';
-		case 'Archived':
-			return 'bg-gray-500/10 text-gray-500';
-		default:
-			return 'bg-muted text-muted-foreground';
-	}
-};
+const { getStatusBadgeClasses: statusClass } = useStatusStyle();
 
 // isOverdue and getFriendlyDate are auto-imported from utils/dates.ts
 const timeAgo = (dateStr) => getFriendlyDate(dateStr);

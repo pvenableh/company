@@ -295,7 +295,7 @@
 						</div>
 						<span
 							class="text-[9px] font-semibold uppercase px-2 py-0.5 rounded-full flex-shrink-0 ml-2"
-							:class="statusBadgeClass(c.status)"
+							:class="getStatusBadgeClasses(c.status)"
 						>
 							{{ c.status }}
 						</span>
@@ -433,6 +433,7 @@ useHead({
 const { selectedOrg, currentOrg } = useOrganization();
 const { selectedClient, currentClient } = useClients();
 const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext();
+const { getStatusBadgeClasses } = useStatusStyle();
 const includeClients = ref(false);
 
 const analysisScope = computed(() => {
@@ -477,16 +478,6 @@ const filteredCampaigns = computed(() => {
 	if (campaignFilter.value === 'all') return savedCampaigns.value.filter(c => c.status !== 'archived');
 	return savedCampaigns.value.filter(c => c.status === campaignFilter.value);
 });
-
-function statusBadgeClass(status: string): string {
-	switch (status) {
-		case 'active': return 'bg-blue-500/10 text-blue-600';
-		case 'completed': return 'bg-green-500/10 text-green-600';
-		case 'paused': return 'bg-amber-500/10 text-amber-600';
-		case 'archived': return 'bg-muted text-muted-foreground';
-		default: return 'bg-muted/50 text-muted-foreground';
-	}
-}
 
 async function fetchCampaigns() {
 	if (!selectedOrg.value) return;

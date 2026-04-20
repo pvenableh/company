@@ -37,11 +37,7 @@ const typeColors: Record<string, string> = {
   Product: 'bg-purple-500/15 text-purple-400',
 };
 
-const statusColors: Record<string, string> = {
-  published: 'bg-emerald-500/15 text-emerald-400',
-  draft: 'bg-yellow-500/15 text-yellow-400',
-  archived: 'bg-neutral-500/15 text-neutral-400',
-};
+const { getStatusBadgeClasses } = useStatusStyle();
 
 async function fetchData() {
   loading.value = true;
@@ -243,7 +239,7 @@ onMounted(fetchData);
             <span
               v-if="product.status"
               class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize"
-              :class="statusColors[product.status] || 'bg-muted text-muted-foreground'"
+              :class="getStatusBadgeClasses(product.status)"
             >
               {{ product.status }}
             </span>

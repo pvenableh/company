@@ -231,11 +231,6 @@ const isCurrentUser = (assignedUser) => {
 	return assignedUser?.id === user?.value?.id;
 };
 
-const getPriorityColor = (priority) => {
-	const colors = { low: 'gray', medium: 'blue', high: 'red', urgent: 'red' };
-	return colors[priority] || 'gray';
-};
-
 const getAvatarUrl = (user) => {
 	if (!user?.avatar) return null;
 	return `${useRuntimeConfig().public.directusUrl}/assets/${user.avatar}?key=small`;

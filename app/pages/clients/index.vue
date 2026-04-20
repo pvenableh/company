@@ -26,12 +26,7 @@ const tabs = [
   { label: 'Archived', value: 'archived', color: 'bg-red-400' },
 ];
 
-const statusColors: Record<string, string> = {
-  active: 'bg-emerald-500/15 text-emerald-400',
-  prospect: 'bg-amber-500/15 text-amber-400',
-  inactive: 'bg-neutral-500/15 text-neutral-400',
-  archived: 'bg-red-500/15 text-red-400',
-};
+const { getStatusBadgeClasses } = useStatusStyle();
 
 // ── Sorting ──────────────────────────────────────────────────────────────────
 const sortBy = ref('sort,name');
@@ -309,7 +304,7 @@ onMounted(() => {
               <td class="py-3 px-4">
                 <span
                   class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize"
-                  :class="statusColors[client.status || 'active']"
+                  :class="getStatusBadgeClasses(client.status || 'active')"
                 >
                   {{ client.status }}
                 </span>
