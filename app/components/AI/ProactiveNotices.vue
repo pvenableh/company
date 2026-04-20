@@ -5,7 +5,18 @@
  */
 
 const props = defineProps<{
-  entityType: 'client' | 'project' | 'invoice';
+  entityType:
+    | 'client'
+    | 'project'
+    | 'invoice'
+    | 'contact'
+    | 'proposal'
+    | 'team'
+    | 'ticket'
+    | 'lead'
+    | 'email'
+    | 'marketing'
+    | 'financials';
   entityId: string;
 }>();
 

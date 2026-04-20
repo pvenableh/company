@@ -13,7 +13,7 @@ const { getActivitiesForLead, createActivity } = useLeadActivities();
 const { getPriorityBadgeClass } = useStatusStyle();
 const { getLists } = useMailingLists();
 const { removeFromList } = useContacts();
-const { setEntity, clearEntity } = useEntityPageContext();
+const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext();
 const toast = useToast();
 
 const lead = ref<any>(null);
@@ -253,6 +253,13 @@ onUnmounted(() => clearEntity());
 						</p>
 					</div>
 					<div class="flex items-center gap-1.5">
+						<button
+							class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium text-primary hover:bg-primary/10 hover:border-primary/30 transition-colors"
+							@click="sidebarOpen = true"
+						>
+							<UIcon name="lucide:sparkles" class="w-3.5 h-3.5" />
+							<span class="hidden sm:inline">Ask Earnest</span>
+						</button>
 						<UiActionButton icon="lucide:pencil" @click="showFormModal = true" hide-label="sm">
 							Edit
 						</UiActionButton>
@@ -267,6 +274,11 @@ onUnmounted(() => clearEntity());
 					</div>
 				</div>
 			</div>
+
+			<!-- AI Notices -->
+			<ClientOnly>
+				<AIProactiveNotices v-if="lead?.id" entity-type="lead" :entity-id="String(lead.id)" />
+			</ClientOnly>
 
 			<!-- Pipeline Stage Timeline -->
 			<div class="ios-card p-4 mb-6">
@@ -583,5 +595,19 @@ onUnmounted(() => clearEntity());
 				@created="handleMeetingCreated"
 			/>
 		</template>
+
+		<!-- Contextual AI Sidebar -->
+		<ClientOnly>
+			<AIContextualSidebar
+				v-if="sidebarOpen && lead?.id"
+				entity-type="lead"
+				:entity-id="String(lead.id)"
+				:entity-label="[lead.related_contact?.first_name, lead.related_contact?.last_name].filter(Boolean).join(' ') || lead.related_contact?.company || 'Lead'"
+				@close="closeSidebar"
+			/>
+			<Transition name="overlay">
+				<div v-if="sidebarOpen" class="fixed inset-0 bg-black/20 z-40" @click="closeSidebar" />
+			</Transition>
+		</ClientOnly>
 	</div>
 </template>

@@ -13,7 +13,7 @@ const router = useRouter();
 const invoiceItems = useDirectusItems('invoices');
 const expenseItems = useDirectusItems('expenses');
 const { selectedOrg } = useOrganization();
-const { setEntity, clearEntity } = useEntityPageContext();
+const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext();
 
 const currentYear = new Date().getFullYear();
 const monthlyData = ref<{ month: number; label: string; revenue: number; expenses: number; net: number }[]>([]);
@@ -179,6 +179,13 @@ const sections = [
         <h1 class="text-xl font-semibold">Financials</h1>
         <p class="text-sm text-muted-foreground">{{ currentYear }} financial overview</p>
       </div>
+      <button
+        class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium text-primary hover:bg-primary/10 hover:border-primary/30 transition-colors"
+        @click="sidebarOpen = true"
+      >
+        <UIcon name="lucide:sparkles" class="w-3.5 h-3.5" />
+        <span class="hidden sm:inline">Ask Earnest</span>
+      </button>
     </div>
 
     <!-- Summary Stats with month-over-month arrows -->
@@ -405,5 +412,19 @@ const sections = [
       <h2 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">Quarterly Overview</h2>
       <CommandCenterFinancialQuarter />
     </div>
+
+    <!-- Contextual AI Sidebar -->
+    <ClientOnly>
+      <AIContextualSidebar
+        v-if="sidebarOpen"
+        entity-type="financials"
+        entity-id="dashboard"
+        entity-label="Financials"
+        @close="closeSidebar"
+      />
+      <Transition name="overlay">
+        <div v-if="sidebarOpen" class="fixed inset-0 bg-black/20 z-40" @click="closeSidebar" />
+      </Transition>
+    </ClientOnly>
   </div>
 </template>

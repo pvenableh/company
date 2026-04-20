@@ -2,7 +2,22 @@
 import { nextTick, onMounted } from 'vue';
 
 const props = defineProps<{
-  entityType: 'client' | 'project' | 'invoice' | 'email' | 'marketing';
+  entityType:
+    | 'client'
+    | 'project'
+    | 'invoice'
+    | 'email'
+    | 'marketing'
+    | 'contact'
+    | 'proposal'
+    | 'team'
+    | 'ticket'
+    | 'lead'
+    | 'financials'
+    | 'list'
+    | 'project_event'
+    | 'channel'
+    | 'social_post';
   entityId: string;
   entityLabel: string;
 }>();
@@ -71,12 +86,72 @@ const entityPrompts: Record<string, string[]> = {
     'Analyze my email engagement trends',
     'Draft a content calendar for next week',
   ],
+  contact: [
+    'Summarize this contact\'s recent engagement',
+    'Draft a personalized outreach email',
+    'What lists and leads are linked to this contact?',
+  ],
+  proposal: [
+    'Summarize this proposal and its status',
+    'Draft a follow-up to the recipient',
+    'What should I revise before sending?',
+  ],
+  team: [
+    'What is this team working on right now?',
+    'Summarize open goals and progress',
+    'Draft a standup-style status update',
+  ],
+  ticket: [
+    'Summarize what this ticket is about',
+    'What\'s blocking progress here?',
+    'Draft an update for the requester',
+  ],
+  lead: [
+    'Summarize this lead and where it stands',
+    'Draft a follow-up message',
+    'What\'s the next best action for this lead?',
+  ],
+  financials: [
+    'How is cashflow this month?',
+    'Which invoices are overdue or at risk?',
+    'Summarize revenue trends',
+  ],
+  list: [
+    'Who\'s on this list and how is engagement?',
+    'Suggest segments to peel off',
+    'Draft an email to this audience',
+  ],
+  project_event: [
+    'Summarize this event and its current status',
+    'What work remains before it ships?',
+    'Draft an update for the team',
+  ],
+  channel: [
+    'Summarize what\'s been discussed lately',
+    'Who\'s active here and what are the open threads?',
+    'Suggest what I should follow up on',
+  ],
+  social_post: [
+    'Tighten the caption copy',
+    'Suggest hashtags for this post',
+    'Recommend the best posting time',
+  ],
 };
 
 const prompts = computed(() => entityPrompts[props.entityType] || entityPrompts.client);
 
+const entityTypeDisplay: Record<string, string> = {
+  project_event: 'event',
+  social_post: 'post',
+  financials: 'dashboard',
+  marketing: 'dashboard',
+};
+
+const entityTypeReadable = computed(() => entityTypeDisplay[props.entityType] || props.entityType);
+
 const entityTypeLabel = computed(() => {
-  return props.entityType.charAt(0).toUpperCase() + props.entityType.slice(1);
+  const r = entityTypeReadable.value;
+  return r.charAt(0).toUpperCase() + r.slice(1);
 });
 
 const scrollToBottom = () => {
@@ -208,7 +283,7 @@ const renderMarkdown = (text: string): string => {
             </div>
             <div class="min-w-0">
               <h2 class="text-sm font-bold text-foreground truncate">
-                Ask about this {{ entityType }}
+                Ask about this {{ entityTypeReadable }}
               </h2>
               <p class="text-[10px] text-muted-foreground truncate">{{ entityLabel }}</p>
             </div>
@@ -248,7 +323,7 @@ const renderMarkdown = (text: string): string => {
             <Icon name="lucide:sparkles" class="w-6 h-6 text-primary" />
           </div>
           <p class="text-sm font-medium text-foreground mb-1">
-            Ask Earnest about this {{ entityType }}
+            Ask Earnest about this {{ entityTypeReadable }}
           </p>
           <p class="text-xs text-muted-foreground mb-4">
             I have full context on {{ entityLabel }} and can help you analyze, draft, or plan.
