@@ -239,9 +239,9 @@
 						/>
 					</div>
 
-					<!-- Right: Day Detail Panel -->
+					<!-- Right: Day Timeline (Clean Gantt) -->
 					<div>
-						<SchedulerDayDetailPanel
+						<SchedulerDayTimeline
 							:date="selectedDate"
 							:events="selectedDateEvents"
 							@new-event="handleNewEvent"
