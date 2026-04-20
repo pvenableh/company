@@ -18,7 +18,7 @@ import type {
 
 export function useProjectTimeline() {
   const { user } = useDirectusAuth();
-  const { getOrganizationFilter } = useOrganization();
+  const { selectedOrg } = useOrganization();
   const { getClientFilter } = useClients();
   const projects = useDirectusItems<Project>('projects');
   const events = useDirectusItems<ProjectEvent>('project_events');
@@ -86,17 +86,22 @@ export function useProjectTimeline() {
       loading.value = false;
       return;
     }
+    if (!selectedOrg.value) {
+      projectList.value = [];
+      loading.value = false;
+      return;
+    }
 
     loading.value = true;
     error.value = null;
 
     try {
-      const filter: Record<string, any> = { _and: [{ status: { _in: TIMELINE_VISIBLE_STATUSES } }] };
-
-      const orgFilter = getOrganizationFilter();
-      if (Object.keys(orgFilter).length > 0) {
-        filter._and.push(orgFilter);
-      }
+      const filter: Record<string, any> = {
+        _and: [
+          { organization: { _eq: selectedOrg.value } },
+          { status: { _in: TIMELINE_VISIBLE_STATUSES } },
+        ],
+      };
 
       const clientFilter = getClientFilter();
       if (Object.keys(clientFilter).length > 0) {
