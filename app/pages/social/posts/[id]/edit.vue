@@ -17,6 +17,7 @@ useHead({ title: 'Edit Post | Earnest' })
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
+const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext()
 const postId = route.params.id as string
 
 // Fetch post data
@@ -28,6 +29,9 @@ if (postError.value || !postResponse?.data) {
 }
 
 const post = postResponse.data as SocialPost
+
+setEntity('social_post', postId, post.caption?.slice(0, 40) || 'Social Post')
+onUnmounted(() => clearEntity())
 
 // Fetch accounts (lazy to avoid blocking render)
 const { data: accountsData } = useLazyFetch('/api/social/accounts')
@@ -212,9 +216,18 @@ const minDate = today(getLocalTimeZone())
           </p>
         </div>
       </div>
-      <UButton variant="soft" color="red" icon="i-lucide-trash-2" @click="deletePost">
-        Delete
-      </UButton>
+      <div class="flex items-center gap-1.5">
+        <button
+          class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium text-primary hover:bg-primary/10 hover:border-primary/30 transition-colors"
+          @click="sidebarOpen = true"
+        >
+          <UIcon name="lucide:sparkles" class="w-3.5 h-3.5" />
+          <span class="hidden sm:inline">Ask Earnest</span>
+        </button>
+        <UButton variant="soft" color="red" icon="i-lucide-trash-2" @click="deletePost">
+          Delete
+        </UButton>
+      </div>
     </div>
 
     <div class="grid lg:grid-cols-5 gap-8">
@@ -419,6 +432,20 @@ const minDate = today(getLocalTimeZone())
         </div>
       </div>
     </div>
+
+    <!-- Contextual AI Sidebar -->
+    <ClientOnly>
+      <AIContextualSidebar
+        v-if="sidebarOpen"
+        entity-type="social_post"
+        :entity-id="postId"
+        :entity-label="caption?.slice(0, 40) || 'Social Post'"
+        @close="closeSidebar"
+      />
+      <Transition name="overlay">
+        <div v-if="sidebarOpen" class="fixed inset-0 bg-black/20 z-40" @click="closeSidebar" />
+      </Transition>
+    </ClientOnly>
   </div>
 </template>
 

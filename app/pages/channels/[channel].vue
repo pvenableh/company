@@ -9,6 +9,7 @@ const user = computed(() => {
 });
 
 const { selectedOrg } = useOrganization();
+const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext();
 
 definePageMeta({
 	middleware: ['auth'],
@@ -76,10 +77,12 @@ watch(
 	(newChannels) => {
 		if (newChannels?.length) {
 			channelId.value = newChannels[0].id;
+			setEntity('channel', String(newChannels[0].id), `#${params.channel}`);
 		}
 	},
 	{ immediate: true },
 );
+onUnmounted(() => clearEntity());
 
 // Send message function
 const sendMessage = async () => {
@@ -149,7 +152,16 @@ onMounted(() => {
 					/>
 				</div>
 			</div>
-			<LayoutShareButton :title="`#${params.channel} | Earnest`" />
+			<div class="flex items-center gap-1.5">
+				<button
+					class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium text-primary hover:bg-primary/10 hover:border-primary/30 transition-colors"
+					@click="sidebarOpen = true"
+				>
+					<Icon name="lucide:sparkles" class="w-3.5 h-3.5" />
+					<span class="hidden sm:inline">Ask Earnest</span>
+				</button>
+				<LayoutShareButton :title="`#${params.channel} | Earnest`" />
+			</div>
 		</div>
 
 		<!-- Connection Error -->
@@ -225,6 +237,20 @@ onMounted(() => {
 				Type <kbd class="px-1 py-0.5 rounded bg-muted/40 text-[9px] font-mono">@</kbd> to mention someone.
 			</p>
 		</div>
+
+		<!-- Contextual AI Sidebar -->
+		<ClientOnly>
+			<AIContextualSidebar
+				v-if="sidebarOpen && channelId"
+				entity-type="channel"
+				:entity-id="String(channelId)"
+				:entity-label="`#${params.channel}`"
+				@close="closeSidebar"
+			/>
+			<Transition name="overlay">
+				<div v-if="sidebarOpen" class="fixed inset-0 bg-black/20 z-40" @click="closeSidebar" />
+			</Transition>
+		</ClientOnly>
 	</div>
 </template>
 

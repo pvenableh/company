@@ -2,6 +2,7 @@
 const { params } = useRoute();
 const projectEventItems = useDirectusItems('project_events');
 const { getUrl } = useDirectusFiles();
+const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext();
 
 const { user: sessionUser, loggedIn } = useUserSession();
 const user = computed(() => {
@@ -18,6 +19,9 @@ const event = await projectEventItems.get(params.event, {
 		'*,files.directus_files_id.id,files.directus_files_id.title,files.directus_files_id.type,files.directus_files_id.width,files.directus_files_id.height,files.directus_files_id.filename_download,project.id,project.title,project.service.color,project.organization.id,project.organization.name,project.organization.logo,project.client',
 	],
 });
+
+if (event?.id) setEntity('project_event', String(event.id), event.title || 'Event');
+onUnmounted(() => clearEntity());
 
 const handleStatusChanged = async (newStatus) => {
 	await projectEventItems.update(event.id, {
@@ -70,6 +74,13 @@ const openLightbox = (index) => {
 				</div>
 			</div>
 			<div class="flex items-center gap-3">
+				<button
+					class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium text-primary hover:bg-primary/10 hover:border-primary/30 transition-colors"
+					@click="sidebarOpen = true"
+				>
+					<UIcon name="lucide:sparkles" class="w-3.5 h-3.5" />
+					<span class="hidden sm:inline">Ask Earnest</span>
+				</button>
 				<ReactionsBar
 					:item-id="String(event.id)"
 					collection="project_events"
@@ -179,6 +190,20 @@ const openLightbox = (index) => {
 				</div>
 			</div>
 		</div>
+
+		<!-- Contextual AI Sidebar -->
+		<ClientOnly>
+			<AIContextualSidebar
+				v-if="sidebarOpen && event?.id"
+				entity-type="project_event"
+				:entity-id="String(event.id)"
+				:entity-label="event.title || 'Event'"
+				@close="closeSidebar"
+			/>
+			<Transition name="overlay">
+				<div v-if="sidebarOpen" class="fixed inset-0 bg-black/20 z-40" @click="closeSidebar" />
+			</Transition>
+		</ClientOnly>
 
 		<!-- Lightbox -->
 		<Teleport to="body">
