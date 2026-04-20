@@ -305,13 +305,9 @@ export function useTimeTracker() {
 		page?: number;
 		teamView?: boolean;
 	}): Promise<{ data: TimeEntry[]; total: number }> {
-		const filter: any = { _and: [] };
+		if (!selectedOrg.value) return { data: [], total: 0 };
 
-		// Org scope
-		const orgFilter = getOrganizationFilter();
-		if (orgFilter?.organization) {
-			filter._and.push({ organization: orgFilter.organization });
-		}
+		const filter: any = { _and: [{ organization: { _eq: selectedOrg.value } }] };
 
 		// Client filter (from header)
 		const clientFilter = getClientFilter();
@@ -398,18 +394,17 @@ export function useTimeTracker() {
 		totalMinutes: number;
 		totalAmount: number;
 	}> {
+		if (!selectedOrg.value) {
+			return { entries: [], totalMinutes: 0, totalAmount: 0 };
+		}
 		const filter: any = {
 			_and: [
+				{ organization: { _eq: selectedOrg.value } },
 				{ billable: { _eq: true } },
 				{ billed: { _eq: false } },
 				{ status: { _eq: 'completed' } },
 			],
 		};
-
-		const orgFilter = getOrganizationFilter();
-		if (orgFilter?.organization) {
-			filter._and.push({ organization: orgFilter.organization });
-		}
 
 		if (clientId) {
 			filter._and.push({ client: { _eq: clientId } });

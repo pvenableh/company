@@ -277,13 +277,9 @@ export function useClients() {
     limit?: number;
     page?: number;
   }): Promise<{ data: Client[]; total: number }> => {
-    const filter: any = { _and: [] };
+    if (!selectedOrg.value) return { data: [], total: 0 };
 
-    // Always org-scoped
-    const orgFilter = getOrganizationFilter();
-    if (orgFilter?.organization) {
-      filter._and.push({ organization: orgFilter.organization });
-    }
+    const filter: any = { _and: [{ organization: { _eq: selectedOrg.value } }] };
 
     // Role-based access control: restrict to assigned clients for non-admins
     const allowedIds = accessibleClientIds.value;
@@ -454,11 +450,13 @@ export function useClients() {
 
   // Get clients for dropdown selection (lightweight) — kept for backward compat
   const getClientOptions = async (): Promise<{ label: string; value: string }[]> => {
-    const filter: any = { _and: [{ status: { _in: ['active', 'prospect'] } }] };
-    const orgFilter = getOrganizationFilter();
-    if (orgFilter?.organization) {
-      filter._and.push({ organization: orgFilter.organization });
-    }
+    if (!selectedOrg.value) return [];
+    const filter: any = {
+      _and: [
+        { status: { _in: ['active', 'prospect'] } },
+        { organization: { _eq: selectedOrg.value } },
+      ],
+    };
 
     // Role-based access control
     const allowedIds = accessibleClientIds.value;
