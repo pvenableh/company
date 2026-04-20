@@ -15,6 +15,11 @@ import {
   generateClientNotices,
   generateProjectNotices,
   generateInvoiceNotices,
+  generateLeadNotices,
+  generateProposalNotices,
+  generateContactNotices,
+  generateTicketNotices,
+  generateTeamNotices,
   PRIORITY_ORDER,
 } from '~~/server/utils/ai-notices';
 
@@ -46,6 +51,16 @@ export default defineEventHandler(async (event) => {
       notices = await generateProjectNotices(directus, entityId, organizationId, now);
     } else if (entityType === 'invoice') {
       notices = await generateInvoiceNotices(directus, entityId, organizationId, now);
+    } else if (entityType === 'lead') {
+      notices = await generateLeadNotices(directus, entityId, organizationId, now);
+    } else if (entityType === 'proposal') {
+      notices = await generateProposalNotices(directus, entityId, organizationId, now);
+    } else if (entityType === 'contact') {
+      notices = await generateContactNotices(directus, entityId, organizationId, now);
+    } else if (entityType === 'ticket') {
+      notices = await generateTicketNotices(directus, entityId, organizationId, now);
+    } else if (entityType === 'team') {
+      notices = await generateTeamNotices(directus, entityId, organizationId, now);
     }
 
     // Sort by priority (urgent first)

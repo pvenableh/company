@@ -21,6 +21,9 @@ import {
   generateClientNotices,
   generateProjectNotices,
   generateInvoiceNotices,
+  generateLeadNotices,
+  generateProposalNotices,
+  generateTicketNotices,
   type AINotice,
 } from '~~/server/utils/ai-notices';
 
@@ -92,8 +95,8 @@ async function checkOrgNotices(
 ): Promise<{ checked: number; sent: number; skipped: number }> {
 
   try {
-    // 1. Fetch all active clients and projects for this org
-    const [clients, projects, invoices] = await Promise.all([
+    // 1. Fetch all active clients, projects, invoices, leads, proposals, tickets for this org
+    const [clients, projects, invoices, leads, proposals, tickets] = await Promise.all([
       directus.request(
         readItems('clients', {
           filter: {
@@ -132,6 +135,45 @@ async function checkOrgNotices(
           limit: 100,
         }),
       ).catch(() => []) as Promise<any[]>,
+
+      directus.request(
+        readItems('leads', {
+          filter: {
+            _and: [
+              { organization: { _eq: organizationId } },
+              { stage: { _nin: ['won', 'lost'] } },
+            ],
+          },
+          fields: ['id'],
+          limit: 200,
+        }),
+      ).catch(() => []) as Promise<any[]>,
+
+      directus.request(
+        readItems('proposals', {
+          filter: {
+            _and: [
+              { organization: { _eq: organizationId } },
+              { proposal_status: { _nin: ['accepted', 'rejected'] } },
+            ],
+          },
+          fields: ['id'],
+          limit: 100,
+        }),
+      ).catch(() => []) as Promise<any[]>,
+
+      directus.request(
+        readItems('tickets', {
+          filter: {
+            _and: [
+              { organization: { _eq: organizationId } },
+              { status: { _in: ['Pending', 'Scheduled', 'In Progress'] } },
+            ],
+          },
+          fields: ['id'],
+          limit: 200,
+        }),
+      ).catch(() => []) as Promise<any[]>,
     ]);
 
     // 2. Generate notices for each entity
@@ -146,16 +188,34 @@ async function checkOrgNotices(
     const invoiceNoticePromises = (invoices || []).map((i: any) =>
       generateInvoiceNotices(directus, i.id, organizationId, now).catch(() => []),
     );
+    const leadNoticePromises = (leads || []).map((l: any) =>
+      generateLeadNotices(directus, String(l.id), organizationId, now).catch(() => []),
+    );
+    const proposalNoticePromises = (proposals || []).map((p: any) =>
+      generateProposalNotices(directus, p.id, organizationId, now).catch(() => []),
+    );
+    const ticketNoticePromises = (tickets || []).map((t: any) =>
+      generateTicketNotices(directus, t.id, organizationId, now).catch(() => []),
+    );
 
-    const [clientResults, projectResults, invoiceResults] = await Promise.all([
+    const [
+      clientResults, projectResults, invoiceResults,
+      leadResults, proposalResults, ticketResults,
+    ] = await Promise.all([
       Promise.all(clientNoticePromises),
       Promise.all(projectNoticePromises),
       Promise.all(invoiceNoticePromises),
+      Promise.all(leadNoticePromises),
+      Promise.all(proposalNoticePromises),
+      Promise.all(ticketNoticePromises),
     ]);
 
     clientResults.forEach((notices) => allNotices.push(...notices));
     projectResults.forEach((notices) => allNotices.push(...notices));
     invoiceResults.forEach((notices) => allNotices.push(...notices));
+    leadResults.forEach((notices) => allNotices.push(...notices));
+    proposalResults.forEach((notices) => allNotices.push(...notices));
+    ticketResults.forEach((notices) => allNotices.push(...notices));
 
     // 3. Filter to urgent/high priority only
     const actionableNotices = allNotices.filter(
