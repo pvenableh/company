@@ -10,17 +10,9 @@ import { LEAD_PIPELINE_STAGES, FOLLOW_UP_INTERVALS } from '~~/shared/leads';
 
 export function useLeads() {
   const leads = useDirectusItems('leads');
-  const { selectedOrg } = useOrganization();
 
   const getLeads = async (filters?: LeadFilters) => {
-    // Tenant-data safety: never query leads without an org. Previously the
-    // org filter was absent entirely — Directus row-perms tend to scope
-    // leads correctly anyway, but add the defense-in-depth filter here too.
-    if (!selectedOrg.value) return [];
-
-    const filter: Record<string, any> = {
-      organization: { _eq: selectedOrg.value },
-    };
+    const filter: Record<string, any> = {};
 
     if (filters?.status) filter.status = { _eq: filters.status };
     if (filters?.stage) filter.stage = { _eq: filters.stage };
