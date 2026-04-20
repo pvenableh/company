@@ -10,9 +10,17 @@ import { LEAD_PIPELINE_STAGES, FOLLOW_UP_INTERVALS } from '~~/shared/leads';
 
 export function useLeads() {
   const leads = useDirectusItems('leads');
+  const { selectedOrg } = useOrganization();
 
   const getLeads = async (filters?: LeadFilters) => {
-    const filter: Record<string, any> = {};
+    // Tenant-data safety: never query leads without an org. Null-org leads
+    // were backfilled 2026-04-20 (scripts/backfill-null-org-leads.ts) so this
+    // guard no longer hides real data.
+    if (!selectedOrg.value) return [];
+
+    const filter: Record<string, any> = {
+      organization: { _eq: selectedOrg.value },
+    };
 
     if (filters?.status) filter.status = { _eq: filters.status };
     if (filters?.stage) filter.stage = { _eq: filters.stage };
@@ -93,8 +101,19 @@ export function useLeads() {
   };
 
   const getLeadStats = async (): Promise<LeadStats> => {
+    if (!selectedOrg.value) {
+      return {
+        total: 0,
+        by_stage: { new: 0, contacted: 0, qualified: 0, proposal_sent: 0, negotiating: 0, won: 0, lost: 0 },
+        avg_score: 0,
+        pipeline_value: 0,
+        new_this_week: 0,
+      };
+    }
+
     const allLeads = await leads.list({
       fields: ['id', 'stage', 'lead_score', 'estimated_value', 'date_created'],
+      filter: { organization: { _eq: selectedOrg.value } },
       limit: -1,
     });
 
@@ -452,6 +471,8 @@ export function useLeads() {
   };
 
   const getArchivedLeads = async () => {
+    if (!selectedOrg.value) return [];
+
     return await leads.list({
       fields: [
         '*',
@@ -465,7 +486,10 @@ export function useLeads() {
         'assigned_to.last_name',
       ],
       filter: {
-        status: { _in: ['archived', 'junk'] },
+        _and: [
+          { organization: { _eq: selectedOrg.value } },
+          { status: { _in: ['archived', 'junk'] } },
+        ],
       },
       sort: ['-date_updated'],
       limit: 100,
