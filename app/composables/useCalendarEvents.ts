@@ -42,7 +42,7 @@ export function useCalendarEvents() {
 			'video_meeting.id', 'video_meeting.room_name', 'video_meeting.title',
 			'video_meeting.meeting_type', 'video_meeting.duration_minutes',
 			'video_meeting.invitee_name', 'video_meeting.invitee_email',
-			'video_meeting.related_lead',
+			'video_meeting.related_lead.id', 'video_meeting.related_lead.stage',
 			'related_lead.id', 'related_lead.stage',
 			'related_lead.related_contact.first_name', 'related_lead.related_contact.last_name',
 			'attendees.id',
