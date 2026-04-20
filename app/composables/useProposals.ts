@@ -6,12 +6,18 @@ import type { ProposalFilters, ProposalStatus } from '~~/shared/proposals-enhanc
 
 export function useProposals() {
   const proposals = useDirectusItems('proposals');
+  const { selectedOrg } = useOrganization();
 
   const getProposals = async (filters?: ProposalFilters) => {
-    const filter: Record<string, any> = {};
+    // Tenant-data safety: the 1 legacy null-org proposal was backfilled
+    // 2026-04-20, so this guard no longer hides real data.
+    if (!selectedOrg.value) return [];
+
+    const filter: Record<string, any> = {
+      organization: { _eq: filters?.organization || selectedOrg.value },
+    };
 
     if (filters?.proposal_status) filter.proposal_status = { _eq: filters.proposal_status };
-    if (filters?.organization) filter.organization = { _eq: filters.organization };
     if (filters?.date_from) filter.date_created = { _gte: filters.date_from };
     if (filters?.date_to) {
       filter.date_created = { ...filter.date_created, _lte: filters.date_to };
@@ -71,6 +77,7 @@ export function useProposals() {
   const createProposal = async (data: Record<string, any>) => {
     return await proposals.create({
       ...data,
+      organization: data.organization || selectedOrg.value,
       proposal_status: data.proposal_status || 'draft',
     } as any);
   };
