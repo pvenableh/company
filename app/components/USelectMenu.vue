@@ -69,6 +69,8 @@ function getOptionValue(option: any): any {
 function toStringKey(option: any, index: number): string {
   const val = getOptionValue(option)
   if (val == null) return `__null_${index}`
+  // Reka Select reserves '' to mean "unselected" — never pass it to SelectItem.
+  if (val === '') return `__empty_${index}`
   if (typeof val === 'string') return val
   if (typeof val === 'number') return String(val)
   // Object value – use index as key
@@ -80,6 +82,7 @@ function toStringKey(option: any, index: number): string {
  */
 function fromStringKey(key: string): any {
   if (key.startsWith('__null_')) return null
+  if (key.startsWith('__empty_')) return ''
   if (key.startsWith('__idx_')) {
     const idx = parseInt(key.replace('__idx_', ''), 10)
     const option = props.options[idx]
