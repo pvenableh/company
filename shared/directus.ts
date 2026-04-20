@@ -41,7 +41,6 @@ export interface AiChatSession {
 	date_updated?: string | null;
 	user?: DirectusUser | string | null;
 	user_created?: DirectusUser | string | null;
-	messages?: string;
 }
 
 export interface AiContextSnapshot {
@@ -216,6 +215,8 @@ export interface Appointment {
 	meeting_link?: string | null;
 	/** @description Twilio room name (if video meeting) */
 	room_name?: string | null;
+	/** @description Linked lead (if this appointment is about a lead) */
+	related_lead?: Lead | string | null;
 	attendees?: AppointmentsDirectusUser[] | string[];
 }
 
@@ -3224,6 +3225,26 @@ export interface TasksDirectusUser {
 	sort?: number | null;
 }
 
+export interface TeamGoal {
+	/** @primaryKey */
+	id: string;
+	sort?: number | null;
+	date_created?: string | null;
+	date_updated?: string | null;
+	user_created?: string | null;
+	user_updated?: string | null;
+	/** @description Short label for the goal @required */
+	title: string;
+	/** @description Detail on what success looks like */
+	description?: string | null;
+	/** @description Optional deadline */
+	target_date?: string | null;
+	/** @description 0-100 percent complete */
+	progress?: number | null;
+	/** @description Owning team @required */
+	team: Team | string;
+}
+
 export interface Team {
 	/** @primaryKey */
 	id: string;
@@ -3464,6 +3485,8 @@ export interface VideoMeeting {
 	/** @description Require host to admit guests before they can join */
 	waiting_room_enabled?: boolean;
 	project?: Project | string | null;
+	/** @description Linked lead (if this meeting is about a lead) */
+	related_lead?: Lead | string | null;
 	attendees?: VideoMeetingAttendee[] | string[];
 }
 
@@ -4156,6 +4179,7 @@ export interface Schema {
 	social_posts: SocialPost[];
 	tasks: Task[];
 	tasks_directus_users: TasksDirectusUser[];
+	team_goals: TeamGoal[];
 	teams: Team[];
 	template_blocks: TemplateBlock[];
 	testimonials: Testimonial[];
@@ -4373,6 +4397,7 @@ export enum CollectionNames {
 	social_posts = 'social_posts',
 	tasks = 'tasks',
 	tasks_directus_users = 'tasks_directus_users',
+	team_goals = 'team_goals',
 	teams = 'teams',
 	template_blocks = 'template_blocks',
 	testimonials = 'testimonials',
