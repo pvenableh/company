@@ -5,7 +5,7 @@
  *
  * Used by:
  *   - server/api/ai/notices.get.ts (entity-scoped, user request)
- *   - server/api/ai/notices/check.post.ts (org-wide cron, notification bridge)
+ *   - server/api/ai/notices/check.ts (org-wide cron, notification bridge)
  */
 
 import { readItem, readItems } from '@directus/sdk';

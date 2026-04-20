@@ -63,7 +63,7 @@ async function processAIJob(job: Job<AIJobData>) {
     case 'notice-check': {
       // Trigger the notice check endpoint internally
       // This allows BullMQ to schedule and retry notice checks
-      const { default: checkHandler } = await import('~~/server/api/ai/notices/check.post');
+      const { default: checkHandler } = await import('~~/server/api/ai/notices/check');
       // Note: For cron-triggered jobs, the check endpoint is called directly
       // via HTTP. This job type is reserved for future internal queueing.
       return { type, organizationId, status: 'completed' };

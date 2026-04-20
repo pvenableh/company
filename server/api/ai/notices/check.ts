@@ -1,4 +1,4 @@
-// server/api/ai/notices/check.post.ts
+// server/api/ai/notices/check.ts
 /**
  * Cron-callable endpoint that generates AI notices for organizations
  * and creates Directus notifications for urgent/high-priority notices.
@@ -8,7 +8,8 @@
  *
  * Auth: cronSecret Bearer token OR admin user session
  *
- * Body: { organizationId?: string }
+ * Accepts GET (Vercel Cron) or POST. When POST, body may include:
+ *   { organizationId?: string }
  *   - If organizationId provided: checks only that org
  *   - If omitted (cron mode): checks ALL active organizations
  *
@@ -28,8 +29,9 @@ import {
 } from '~~/server/utils/ai-notices';
 
 export default defineEventHandler(async (event) => {
-  const body = await readBody(event) || {};
-  const { organizationId } = body;
+  const method = getMethod(event);
+  const body = method === 'POST' ? (await readBody(event).catch(() => ({})) || {}) : {};
+  const { organizationId } = body as { organizationId?: string };
 
   // Auth: accept cronSecret or user session
   const authHeader = getHeader(event, 'authorization');
