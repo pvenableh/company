@@ -336,18 +336,7 @@ const loadMore = () => {
 // getFriendlyDateTwo and formatDateTimeCompact are auto-imported from utils/dates.ts
 const formatCompletionDate = (date) => formatDateTimeCompact(date);
 
-// Get color for status badge
-const getStatusColor = (status) => {
-	const statusColors = {
-		Pending: 'gray',
-		Scheduled: 'blue',
-		'In Progress': 'yellow',
-		Completed: 'green',
-		'On Hold': 'orange',
-	};
-
-	return statusColors[status] || 'gray';
-};
+const { getStatusColorName: getStatusColor } = useStatusStyle();
 
 onMounted(() => {
 	// Update total count when data changes

@@ -70,10 +70,6 @@ const scoreColor = computed(() => {
 	return '#EF4444';
 });
 
-const priorityClass = computed(() => {
-	const p = props.lead.priority;
-	if (p === 'high' || p === 'urgent') return 'bg-red-500/15 text-red-400';
-	if (p === 'medium') return 'bg-yellow-500/15 text-yellow-400';
-	return 'bg-gray-500/15 text-gray-400';
-});
+const { getPriorityBadgeClasses } = useStatusStyle();
+const priorityClass = computed(() => getPriorityBadgeClasses(props.lead.priority));
 </script>

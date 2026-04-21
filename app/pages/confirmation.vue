@@ -153,15 +153,8 @@ watch(
 	{ deep: true },
 );
 
-const paymentStatusColor = computed(() => {
-	const statusColors = {
-		succeeded: 'green',
-		processing: 'blue',
-		requires_payment_method: 'yellow',
-		default: 'gray',
-	};
-	return statusColors[paymentIntent.value?.status] || statusColors.default;
-});
+const { getStatusColorName } = useStatusStyle();
+const paymentStatusColor = computed(() => getStatusColorName(paymentIntent.value?.status));
 
 const paymentStatusVariant = computed(() => (paymentIntent.value?.status === 'succeeded' ? 'solid' : 'soft'));
 

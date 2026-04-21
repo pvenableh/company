@@ -75,6 +75,8 @@ const clientName = computed(() => {
 	return typeof client === 'object' ? client.name : null;
 });
 
+const { getPriorityBadgeClasses, getStatusBadgeClasses } = useStatusStyle();
+
 onMounted(() => {
 	loadDashboard();
 });
@@ -166,11 +168,7 @@ watch(() => selectedOrg.value, () => {
 							<span class="text-sm font-medium truncate">{{ project.title }}</span>
 							<span
 								class="text-xs px-2 py-0.5 rounded-full shrink-0"
-								:class="{
-									'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400': project.status === 'pending',
-									'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400': project.status === 'scheduled',
-									'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400': project.status === 'in_progress',
-								}"
+								:class="getStatusBadgeClasses(project.status)"
 							>
 								{{ project.status?.replace('_', ' ') }}
 							</span>
@@ -205,22 +203,13 @@ watch(() => selectedOrg.value, () => {
 								<span
 									v-if="ticket.priority"
 									class="text-xs px-2 py-0.5 rounded-full"
-									:class="{
-										'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400': ticket.priority === 'urgent',
-										'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400': ticket.priority === 'high',
-										'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400': ticket.priority === 'normal',
-										'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400': ticket.priority === 'low',
-									}"
+									:class="getPriorityBadgeClasses(ticket.priority)"
 								>
 									{{ ticket.priority }}
 								</span>
 								<span
 									class="text-xs px-2 py-0.5 rounded-full"
-									:class="{
-										'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400': ticket.status === 'open',
-										'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400': ticket.status === 'in_progress',
-										'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400': ticket.status === 'pending',
-									}"
+									:class="getStatusBadgeClasses(ticket.status)"
 								>
 									{{ ticket.status?.replace('_', ' ') }}
 								</span>

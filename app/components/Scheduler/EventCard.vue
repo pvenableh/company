@@ -15,18 +15,7 @@ const formatEventTime = (dateStr) => {
 	return format(new Date(dateStr), 'EEE, MMM d · h:mm a');
 };
 
-const getStatusColor = (status) => {
-	const colors = {
-		confirmed: 'green',
-		scheduled: 'green',
-		pending: 'yellow',
-		canceled: 'red',
-		cancelled: 'red',
-		completed: 'gray',
-		in_progress: 'blue',
-	};
-	return colors[status] || 'blue';
-};
+const { getStatusColorName: getStatusColor } = useStatusStyle();
 
 const copyMeetingLink = async () => {
 	const url = props.event.video_meeting?.meeting_url || `${window.location.origin}/meeting/${props.event.video_meeting?.room_name}`;

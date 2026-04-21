@@ -60,16 +60,7 @@ const platformIcon = (platform?: string) => {
   return platform === 'instagram' ? 'i-lucide-instagram' : 'i-lucide-music'
 }
 
-const statusColor = (status: string) => {
-  const colors: Record<string, string> = {
-    published: 'emerald',
-    scheduled: 'blue',
-    failed: 'red',
-    draft: 'gray',
-    publishing: 'amber',
-  }
-  return colors[status] || 'gray'
-}
+const { getStatusColorName: statusColor } = useStatusStyle()
 </script>
 
 <template>

@@ -16,26 +16,7 @@ const props = defineProps<{
 	};
 }>();
 
-const priorityColors: Record<string, string> = {
-	urgent: 'bg-red-50/50 dark:bg-red-900/10',
-	high: 'bg-amber-50/50 dark:bg-amber-900/10',
-	medium: 'bg-blue-50/30 dark:bg-blue-900/10',
-	low: 'bg-muted/30',
-};
-
-const priorityLineColors: Record<string, string> = {
-	urgent: 'bg-red-500',
-	high: 'bg-amber-500',
-	medium: 'bg-blue-500',
-	low: 'bg-muted-foreground/40',
-};
-
-const priorityIconColors: Record<string, string> = {
-	urgent: 'text-red-500',
-	high: 'text-amber-500',
-	medium: 'text-blue-500',
-	low: 'text-muted-foreground',
-};
+const { getPriorityBg, getPriorityAccent, getPriorityIconClass } = useStatusStyle();
 
 const typeIcons: Record<string, string> = {
 	action: 'i-heroicons-bolt',
@@ -54,8 +35,8 @@ const handleAction = () => {
 
 <template>
 	<AccentCard
-		:accent="priorityLineColors[suggestion.priority] || priorityLineColors.low"
-		:class="[priorityColors[suggestion.priority] || priorityColors.low, 'hover:shadow-md transition-all duration-200 cursor-pointer group']"
+		:accent="getPriorityAccent(suggestion.priority)"
+		:class="[getPriorityBg(suggestion.priority), 'hover:shadow-md transition-all duration-200 cursor-pointer group']"
 		@click="handleAction"
 	>
 		<div class="flex items-start gap-3">
@@ -63,7 +44,7 @@ const handleAction = () => {
 				<UIcon
 					:name="suggestion.icon"
 					class="w-5 h-5"
-					:class="priorityIconColors[suggestion.priority] || priorityIconColors.low"
+					:class="getPriorityIconClass(suggestion.priority)"
 				/>
 			</div>
 			<div class="flex-1 min-w-0">

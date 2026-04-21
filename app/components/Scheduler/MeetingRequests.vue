@@ -58,14 +58,7 @@ const getRequesterName = (request: any) => {
 	return typeof r === 'object' ? `${r.first_name || ''} ${r.last_name || ''}`.trim() : r;
 };
 
-const getStatusColor = (status: string) => {
-	switch (status) {
-		case 'approved': return 'green';
-		case 'rejected': return 'red';
-		case 'pending': return 'yellow';
-		default: return 'gray';
-	}
-};
+const { getStatusColorName: getStatusColor } = useStatusStyle();
 
 onMounted(() => fetchRequests());
 </script>

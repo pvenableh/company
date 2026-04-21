@@ -24,18 +24,7 @@ const formatAmount = (amount) => {
 	}).format(amount / 100); // Stripe amounts are in cents
 };
 
-const getStatusColor = (status) => {
-	const statusColors = {
-		succeeded: 'green',
-		pending: 'yellow',
-		processing: 'blue',
-		paid: 'green',
-		in_transit: 'blue',
-		canceled: 'red',
-		failed: 'red',
-	};
-	return statusColors[status] || 'gray';
-};
+const { getStatusColorName: getStatusColor } = useStatusStyle();
 
 const loadDetails = async () => {
 	if (!props.payment.charge_id || (chargeDetails.value && payoutDetails.value)) return;

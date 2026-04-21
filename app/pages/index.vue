@@ -122,26 +122,7 @@ const insightColors: Record<string, string> = {
 };
 
 // ── Priority Styles ──
-const priorityBg: Record<string, string> = {
-	urgent: 'bg-red-50/50 dark:bg-red-900/10',
-	high: 'bg-amber-50/50 dark:bg-amber-900/10',
-	medium: 'bg-blue-50/30 dark:bg-blue-900/10',
-	low: 'bg-gray-50/30 dark:bg-gray-800/30',
-};
-
-const priorityAccent: Record<string, string> = {
-	urgent: 'bg-red-500',
-	high: 'bg-amber-500',
-	medium: 'bg-blue-500',
-	low: 'bg-gray-300',
-};
-
-const priorityIconColor: Record<string, string> = {
-	urgent: 'text-red-500',
-	high: 'text-amber-500',
-	medium: 'text-blue-500',
-	low: 'text-gray-400',
-};
+const { getPriorityIconClass: priorityIconColor, getPriorityBadgeClasses: priorityChipClasses } = useStatusStyle();
 
 // ── Analysis Flow ──
 const runAnalysis = async () => {
@@ -352,17 +333,12 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 									<div class="flex items-start gap-3">
 										<div
 											class="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-											:class="{
-												'bg-red-500/10': action.priority === 'urgent',
-												'bg-amber-500/10': action.priority === 'high',
-												'bg-blue-500/10': action.priority === 'medium',
-												'bg-muted/60': action.priority === 'low',
-											}"
+											:class="priorityChipClasses(action.priority)"
 										>
 											<UIcon
 												:name="action.icon"
 												class="w-4 h-4"
-												:class="priorityIconColor[action.priority] || priorityIconColor.low"
+												:class="priorityIconColor(action.priority)"
 											/>
 										</div>
 										<div class="flex-1 min-w-0">
@@ -372,12 +348,7 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 										<div class="flex-shrink-0 flex items-center gap-2">
 											<span
 												class="text-[8px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-md"
-												:class="{
-													'text-red-500 bg-red-500/10': action.priority === 'urgent',
-													'text-amber-500 bg-amber-500/10': action.priority === 'high',
-													'text-blue-500 bg-blue-500/10': action.priority === 'medium',
-													'text-muted-foreground bg-muted/40': action.priority === 'low',
-												}"
+												:class="priorityChipClasses(action.priority)"
 											>
 												{{ action.priority }}
 											</span>
@@ -579,12 +550,7 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 									<div class="flex items-center gap-2">
 										<p class="text-sm font-medium text-foreground">{{ action.title }}</p>
 										<span class="text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded-full"
-											:class="{
-												'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400': action.priority === 'urgent',
-												'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400': action.priority === 'high',
-												'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400': action.priority === 'medium',
-												'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400': action.priority === 'low',
-											}"
+											:class="priorityChipClasses(action.priority)"
 										>
 											{{ action.priority }}
 										</span>

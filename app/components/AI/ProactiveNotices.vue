@@ -41,26 +41,7 @@ watch(() => [props.entityType, props.entityId], ([type, id]) => {
   }
 }, { immediate: true });
 
-const priorityColors: Record<string, string> = {
-  urgent: 'bg-red-50/50 dark:bg-red-900/10',
-  high: 'bg-amber-50/50 dark:bg-amber-900/10',
-  medium: 'bg-blue-50/30 dark:bg-blue-900/10',
-  low: 'bg-gray-50/30 dark:bg-gray-800/30',
-};
-
-const priorityLineColors: Record<string, string> = {
-  urgent: 'bg-red-500',
-  high: 'bg-amber-500',
-  medium: 'bg-blue-500',
-  low: 'bg-gray-300',
-};
-
-const priorityIconColors: Record<string, string> = {
-  urgent: 'text-red-500',
-  high: 'text-amber-500',
-  medium: 'text-blue-500',
-  low: 'text-gray-400',
-};
+const { getPriorityBg, getPriorityAccent, getPriorityIconClass } = useStatusStyle();
 
 const handleAction = (notice: any) => {
   if (notice.actionRoute) {
@@ -87,8 +68,8 @@ const handleAction = (notice: any) => {
         class="group"
       >
         <AccentCard
-          :accent="priorityLineColors[notice.priority] || priorityLineColors.low"
-          :class="[priorityColors[notice.priority] || priorityColors.low, 'transition-all duration-200']"
+          :accent="getPriorityAccent(notice.priority)"
+          :class="[getPriorityBg(notice.priority), 'transition-all duration-200']"
         >
           <div class="flex items-start gap-3">
             <!-- Icon -->
@@ -96,7 +77,7 @@ const handleAction = (notice: any) => {
               <UIcon
                 :name="notice.icon"
                 class="w-4 h-4"
-                :class="priorityIconColors[notice.priority] || 'text-gray-400'"
+                :class="getPriorityIconClass(notice.priority)"
               />
             </div>
 

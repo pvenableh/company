@@ -9,7 +9,7 @@ export function useStatusStyle() {
   // ── Status buckets (single source of truth; normalized keys) ──
   // Normalization strips spaces/underscores/hyphens and lowercases, so
   // "In Progress", "in_progress", "in-progress" all match "inprogress".
-  const SUCCESS = ['completed', 'done', 'paid', 'approved', 'published', 'succeeded'];
+  const SUCCESS = ['completed', 'done', 'paid', 'approved', 'published', 'succeeded', 'confirmed'];
   const DESTRUCTIVE = ['overdue', 'rejected', 'failed', 'cancelled', 'canceled', 'noshow'];
   const ACTIVE = ['active', 'inprogress', 'open'];
   const SCHEDULED = ['scheduled', 'submitted'];
@@ -102,6 +102,36 @@ export function useStatusStyle() {
     return 'bg-muted text-muted-foreground';
   }
 
+  /** Soft card background by priority (very light tint; for AccentCard bodies) */
+  function getPriorityBg(priority?: string | null): string {
+    const p = normalize(priority);
+    if (p === 'urgent') return 'bg-red-50/80 dark:bg-red-900/20';
+    if (p === 'high') return 'bg-red-50/40 dark:bg-red-900/10';
+    if (p === 'medium' || p === 'normal') return 'bg-cyan-50/50 dark:bg-cyan-900/10';
+    if (p === 'low') return 'bg-muted/30';
+    return 'bg-muted/30';
+  }
+
+  /** Solid accent bar color by priority (for AccentCard left-rail, dots, lines) */
+  function getPriorityAccent(priority?: string | null): string {
+    const p = normalize(priority);
+    if (p === 'urgent') return 'bg-red-600';
+    if (p === 'high') return 'bg-red-500';
+    if (p === 'medium' || p === 'normal') return 'bg-cyan-500';
+    if (p === 'low') return 'bg-muted-foreground/40';
+    return 'bg-muted-foreground/40';
+  }
+
+  /** Icon text color by priority */
+  function getPriorityIconClass(priority?: string | null): string {
+    const p = normalize(priority);
+    if (p === 'urgent') return 'text-red-600';
+    if (p === 'high') return 'text-red-500';
+    if (p === 'medium' || p === 'normal') return 'text-cyan-500';
+    if (p === 'low') return 'text-muted-foreground';
+    return 'text-muted-foreground';
+  }
+
   /** CSS gradient string for the priority segmented control */
   const priorityGradient = 'linear-gradient(to right, var(--lightGrey), var(--cyan), var(--red))';
 
@@ -115,6 +145,8 @@ export function useStatusStyle() {
   return {
     getStatusOpacity, getStatusAccent, getStatusBadgeClasses, getStatusPillClass, getStatusOpacityClass,
     getStatusColorName,
-    getPriorityBadgeClass, getPriorityBadgeClasses, priorityGradient, priorityOptions,
+    getPriorityBadgeClass, getPriorityBadgeClasses,
+    getPriorityBg, getPriorityAccent, getPriorityIconClass,
+    priorityGradient, priorityOptions,
   };
 }

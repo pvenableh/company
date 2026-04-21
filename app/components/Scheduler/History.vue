@@ -105,10 +105,7 @@ const fetchHistory = async () => {
 	loading.value = false;
 };
 
-const getStatusColor = (status) => {
-	const colors = { completed: 'green', cancelled: 'red', canceled: 'red', no_show: 'orange', scheduled: 'blue' };
-	return colors[status] || 'gray';
-};
+const { getStatusColorName: getStatusColor } = useStatusStyle();
 
 // Uses formatDateWithTime from utils/dates.ts
 const formatDateTime = (dateStr) => {

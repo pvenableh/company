@@ -21,7 +21,7 @@
 					<div>
 						<h3 class="text-sm font-medium">{{ ticket.title }}</h3>
 						<div class="flex gap-2 mt-1">
-							<UBadge size="xs" :class="'uppercase bg-[' + getStatusColor(ticket.status) + ']'">
+							<UBadge size="xs" :color="getStatusColor(ticket.status)" variant="solid" class="uppercase">
 								{{ ticket.status }}
 							</UBadge>
 							<UBadge size="xs" color="gray">{{ ticket.priority }}</UBadge>
@@ -65,23 +65,7 @@ const props = defineProps({
 
 defineEmits(['viewTicket']);
 
-// Helper functions (duplicated from parent component)
-const getStatusColor = (status) => {
-	status = status.toLowerCase().replace(/\s+/g, '');
-
-	switch (status) {
-		case 'pending':
-			return 'var(--cyan)';
-		case 'scheduled':
-			return 'var(--cyan2)';
-		case 'inprogress':
-			return 'var(--green2)';
-		case 'completed':
-			return 'var(--green)';
-		default:
-			return 'gray';
-	}
-};
+const { getStatusColorName: getStatusColor } = useStatusStyle();
 
 const getTicketAge = (ticket) => {
 	const createdDate = new Date(ticket.date_created);

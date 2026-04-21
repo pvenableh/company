@@ -997,40 +997,6 @@ const formatAssignees = (assignees) => {
 	return `${assignees.length} assignees`;
 };
 
-// Get status color
-const getStatusColor = (status) => {
-	status = status.toLowerCase().replace(/\s+/g, '');
-
-	switch (status) {
-		case 'pending':
-			return 'var(--cyan)';
-		case 'scheduled':
-			return 'var(--cyan2)';
-		case 'inprogress':
-			return 'var(--green2)';
-		case 'completed':
-			return 'var(--green)';
-		default:
-			return 'gray';
-	}
-};
-
-// Get status card class
-const getStatusCardClass = (status) => {
-	switch (status) {
-		case 'pending':
-			return 'border-[var(--cyan)]';
-		case 'scheduled':
-			return 'border-[var(--cyan2)]';
-		case 'inProgress':
-			return 'border-[var(--green2)]';
-		case 'completed':
-			return 'border-[var(--green)]';
-		default:
-			return 'border-gray-500';
-	}
-};
-
 // Navigate to ticket detail
 const navigateToTicket = (ticketId) => {
 	if (!ticketId) return;
@@ -1098,14 +1064,4 @@ watch(
 	{ immediate: false },
 );
 
-// Export helper functions for child components
-const helpers = {
-	formatDate,
-	formatDuration,
-	formatAssignees,
-	getStatusColor,
-	getStatusCardClass,
-	getTicketAge,
-	getTicketTimeToComplete,
-};
 </script>

@@ -27,10 +27,7 @@ const formatEventTime = (dateStr) => {
 	return format(new Date(dateStr), 'EEE, MMM d · h:mm a');
 };
 
-const getStatusColor = (status) => {
-	const colors = { scheduled: 'green', in_progress: 'blue', completed: 'gray', cancelled: 'red' };
-	return colors[status] || 'gray';
-};
+const { getStatusColorName: getStatusColor } = useStatusStyle();
 
 const copyMeetingLink = async (meeting) => {
 	const url = meeting.meeting_url || `${window.location.origin}/meeting/${meeting.room_name}`;

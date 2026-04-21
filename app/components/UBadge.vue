@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 const props = withDefaults(
   defineProps<{
-    color?: "primary" | "gray" | "red" | "green" | "blue" | "yellow" | "orange" | "purple" | "pink" | "white" | "emerald" | "amber" | string;
+    color?: "primary" | "gray" | "red" | "green" | "blue" | "yellow" | "orange" | "purple" | "pink" | "white" | "emerald" | "amber" | "teal" | "sky" | string;
     variant?: "solid" | "soft" | "subtle" | "outline";
     size?: "xs" | "sm" | "md" | "lg";
     label?: string;
@@ -97,6 +97,16 @@ const colorClasses = computed(() => {
       solid: "bg-amber-500 text-white",
       soft: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
       outline: "border border-amber-500 text-amber-600",
+    },
+    teal: {
+      solid: "bg-teal-500 text-white",
+      soft: "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400",
+      outline: "border border-teal-500 text-teal-600",
+    },
+    sky: {
+      solid: "bg-sky-500 text-white",
+      soft: "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400",
+      outline: "border border-sky-500 text-sky-600",
     },
   };
 

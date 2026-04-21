@@ -861,16 +861,7 @@ const handleTimelineItemClick = (item) => {
 	}
 };
 
-const meetingStatusColor = (status) => {
-	switch (status) {
-		case 'scheduled': return 'text-cyan-500 bg-cyan-500/10';
-		case 'in_progress': return 'text-blue-500 bg-blue-500/10';
-		case 'completed': return 'text-green-500 bg-green-500/10';
-		case 'cancelled': return 'text-muted-foreground bg-muted/40';
-		case 'no_show': return 'text-amber-500 bg-amber-500/10';
-		default: return 'text-muted-foreground bg-muted/40';
-	}
-};
+const { getStatusBadgeClasses: meetingStatusColor } = useStatusStyle();
 
 // Schedule meeting modal
 const showScheduleMeeting = ref(false);
