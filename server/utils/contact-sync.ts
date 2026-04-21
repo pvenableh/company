@@ -17,6 +17,8 @@ export interface EnsureContactInput {
   email: string;
   firstName?: string | null;
   lastName?: string | null;
+  phone?: string | null;
+  photo?: string | null;
   clientId?: string | null;
   source?: string;
 }
@@ -24,6 +26,7 @@ export interface EnsureContactInput {
 export interface EnsureContactResult {
   contactId: string;
   created: boolean;
+  outcome: 'existing' | 'adopted' | 'created';
 }
 
 /**
@@ -39,11 +42,11 @@ export interface EnsureContactResult {
 export async function ensureContactForUser(
   input: EnsureContactInput,
 ): Promise<EnsureContactResult> {
-  const { directus, organizationId, userId, email, firstName, lastName, clientId, source } = input;
+  const { directus, organizationId, userId, email, firstName, lastName, phone, photo, clientId, source } = input;
 
   // 1. Find by user FK
   let contactId: string | null = null;
-  let created = false;
+  let outcome: 'existing' | 'adopted' | 'created' = 'existing';
 
   const byUser = await directus.request(
     readItems('contacts', {
@@ -73,6 +76,7 @@ export async function ensureContactForUser(
     if (byEmail.length) {
       const adoptId = byEmail[0].id as string;
       contactId = adoptId;
+      outcome = 'adopted';
       await directus.request(
         updateItem('contacts', adoptId, { user: userId } as any),
       );
@@ -87,6 +91,8 @@ export async function ensureContactForUser(
         first_name: firstName || null,
         last_name: lastName || null,
         email: email || null,
+        phone: phone || null,
+        photo: photo || null,
         status: 'published',
         email_subscribed: true,
         source: source || 'invite',
@@ -94,7 +100,7 @@ export async function ensureContactForUser(
       } as any),
     ) as any;
     contactId = newContact.id;
-    created = true;
+    outcome = 'created';
   } else if (clientId) {
     // If a clientId is provided and contact has none, attach it
     const existing = await directus.request(
@@ -136,5 +142,5 @@ export async function ensureContactForUser(
     );
   }
 
-  return { contactId: contactId!, created };
+  return { contactId: contactId!, created: outcome === 'created', outcome };
 }
