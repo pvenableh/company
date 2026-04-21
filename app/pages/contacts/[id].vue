@@ -20,6 +20,7 @@ const contact = ref<Contact | null>(null);
 const loading = ref(true);
 const error = ref<string | null>(null);
 const showEditModal = ref(false);
+const showLeadModal = ref(false);
 
 // Client association
 const availableClients = ref<any[]>([]);
@@ -88,6 +89,11 @@ function onContactUpdated(updated: Contact) {
 
 function onContactDeleted() {
   router.push('/contacts');
+}
+
+function handleLeadCreated() {
+  showLeadModal.value = false;
+  loadRelatedLeads();
 }
 
 onMounted(() => {
@@ -330,17 +336,24 @@ onUnmounted(() => clearEntity());
                   ({{ openLeads.length }} open)
                 </span>
               </h3>
-              <NuxtLink
-                :to="`/leads?new=1&contact=${contactId}`"
-                class="text-xs text-primary hover:underline flex items-center gap-1"
+              <button
+                class="inline-flex items-center gap-1 h-6 px-2.5 rounded-full border border-border text-[11px] font-medium text-primary hover:bg-primary/10 hover:border-primary/30 transition-colors"
+                @click="showLeadModal = true"
               >
                 <Icon name="lucide:plus" class="w-3 h-3" />
                 Start a deal
-              </NuxtLink>
+              </button>
             </div>
             <div v-if="loadingLeads" class="text-sm text-muted-foreground">Loading&hellip;</div>
-            <div v-else-if="!relatedLeads.length" class="text-sm text-muted-foreground">
-              No leads yet.
+            <div v-else-if="!relatedLeads.length" class="flex flex-col items-center gap-2 py-3 text-center">
+              <p class="text-sm text-muted-foreground">No leads yet.</p>
+              <button
+                class="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
+                @click="showLeadModal = true"
+              >
+                <Icon name="lucide:plus" class="w-3.5 h-3.5" />
+                Start a deal
+              </button>
             </div>
             <div v-else class="space-y-2">
               <NuxtLink
@@ -453,6 +466,14 @@ onUnmounted(() => clearEntity());
         :contact="contact"
         @updated="onContactUpdated"
         @deleted="onContactDeleted"
+      />
+
+      <!-- New-Lead Modal (inline — avoids nav to /leads) -->
+      <LeadsFormModal
+        v-model="showLeadModal"
+        :contact-id="contactId"
+        :contact="contact"
+        @created="handleLeadCreated"
       />
     </template>
 
