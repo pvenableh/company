@@ -478,88 +478,27 @@ async function buildLeadContext(directus: any, leadId: string, now: Date): Promi
 
 // ─── Contact Context ────────────────────────────────────────────────────────
 
-async function buildContactContext(directus: any, contactId: string, now: Date): Promise<string> {
-  const [contact, leads] = await Promise.all([
+async function buildContactContext(directus: any, contactId: string, _now: Date): Promise<string> {
+  // Fetch display name separately (cheap) so the header reads well even if the
+  // summary helper returns empty. The helper itself parallels 3 queries inside.
+  const [headerLookup, summary] = await Promise.all([
     directus.request(
-      readItem('contacts', contactId, {
-        fields: [
-          'id', 'first_name', 'last_name', 'email', 'phone', 'prefix', 'title', 'company',
-          'industry', 'category', 'source', 'notes', 'tags', 'linkedin_url', 'website',
-          'instagram_handle', 'timezone', 'status',
-          'email_subscribed', 'email_bounced', 'email_bounce_type',
-          'total_emails_sent', 'total_opens', 'total_clicks', 'last_opened_at', 'last_clicked_at',
-          'client.id', 'client.name',
-          'lists.id', 'lists.subscribed', 'lists.date_subscribed', 'lists.list_id.id', 'lists.list_id.name',
-        ],
-      }),
+      readItem('contacts', contactId, { fields: ['id', 'first_name', 'last_name', 'email'] }),
     ).catch(() => null) as Promise<any>,
 
-    directus.request(
-      readItems('leads', {
-        filter: { related_contact: { _eq: contactId } },
-        fields: ['id', 'stage', 'status', 'estimated_value', 'lead_score', 'next_follow_up'],
-        sort: ['-date_created'],
-        limit: 10,
-      }),
-    ).catch(() => []) as Promise<any[]>,
+    buildContactSummary(contactId),
   ]);
 
-  if (!contact) return '';
+  if (!summary) return '';
+
+  const name = `${headerLookup?.first_name || ''} ${headerLookup?.last_name || ''}`.trim()
+    || headerLookup?.email || 'Contact';
 
   const lines: string[] = [];
-  const name = `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || contact.email || 'Contact';
-
   lines.push(`CURRENT FOCUS: Contact "${name}"`);
-  lines.push('[Source: Contact Profile]');
-  if (contact.title) lines.push(`Title: ${contact.title}`);
-  if (contact.company) lines.push(`Company: ${contact.company}`);
-  if (contact.email) lines.push(`Email: ${contact.email}${contact.email_bounced ? ` [BOUNCED${contact.email_bounce_type ? `: ${contact.email_bounce_type}` : ''}]` : ''}${contact.email_subscribed === false ? ' [UNSUBSCRIBED]' : ''}`);
-  if (contact.phone) lines.push(`Phone: ${contact.phone}`);
-  if (contact.linkedin_url) lines.push(`LinkedIn: ${contact.linkedin_url}`);
-  if (contact.website) lines.push(`Website: ${contact.website}`);
-  if (contact.industry) lines.push(`Industry: ${contact.industry}`);
-  if (contact.source) lines.push(`Source: ${contact.source}`);
-  if (contact.tags?.length) lines.push(`Tags: ${contact.tags.join(', ')}`);
-  if (contact.client?.name) lines.push(`Client: ${contact.client.name}`);
-
-  if (contact.total_emails_sent || contact.total_opens || contact.total_clicks) {
-    lines.push('');
-    lines.push('[Source: Email Engagement]');
-    lines.push(`Sent: ${contact.total_emails_sent || 0} · Opens: ${contact.total_opens || 0} · Clicks: ${contact.total_clicks || 0}`);
-    if (contact.last_opened_at) lines.push(`Last opened: ${contact.last_opened_at.split('T')[0]}`);
-    if (contact.last_clicked_at) lines.push(`Last clicked: ${contact.last_clicked_at.split('T')[0]}`);
-  }
-
-  const subscribedLists = (contact.lists || []).filter((l: any) => l?.subscribed && l?.list_id);
-  if (subscribedLists.length > 0) {
-    lines.push('');
-    lines.push('[Source: Mailing Lists]');
-    lines.push(`SUBSCRIBED LISTS (${subscribedLists.length}):`);
-    subscribedLists.slice(0, 8).forEach((l: any) => {
-      lines.push(`  - ${l.list_id.name || 'list'}`);
-    });
-  }
-
-  if (leads.length > 0) {
-    const open = leads.filter((l: any) => !['won', 'lost'].includes(l.stage));
-    lines.push('');
-    lines.push('[Source: Related Leads]');
-    lines.push(`LEADS (${leads.length} total, ${open.length} open):`);
-    leads.slice(0, 5).forEach((l: any) => {
-      const value = l.estimated_value ? ` [$${Number(l.estimated_value).toLocaleString()}]` : '';
-      const overdue = l.next_follow_up && new Date(l.next_follow_up) < now ? ' FOLLOW-UP OVERDUE' : '';
-      lines.push(`  - stage: ${l.stage}${value}${overdue}`);
-    });
-  }
-
-  if (contact.notes) {
-    lines.push('');
-    lines.push('[Source: Contact Profile]');
-    lines.push(`NOTES: ${contact.notes}`);
-  }
-
+  lines.push(summary);
   lines.push('');
-  lines.push('Focus your reasoning on this contact. Reference engagement and lead history when relevant. When citing data, include the [Source: X] tag.');
+  lines.push('Focus your reasoning on this contact. Reference engagement, list membership, and lead history when relevant. When citing data, include the [Source: X] tag.');
 
   return truncate(lines.join('\n'));
 }

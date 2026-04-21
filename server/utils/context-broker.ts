@@ -473,6 +473,198 @@ async function buildContactsSummary(directus: any, organizationId: string, now: 
   }
 }
 
+// ─── Per-Contact Summary (entity-level helper) ───────────────────────────────
+
+/**
+ * Build a compact per-contact summary for the AI sidebar on /contacts/[id].
+ * Includes identity, client/org linkage, marketing engagement, list membership,
+ * open + closed leads, and the last few LeadActivity rows for this contact's leads.
+ *
+ * Returns a formatted text block (no CURRENT FOCUS header — the entity-context
+ * wrapper adds that). Exported so server/utils/entity-context.ts can call it.
+ */
+export async function buildContactSummary(contactId: string): Promise<string> {
+  try {
+    const directus = getTypedDirectus();
+    const now = new Date();
+
+    const [contact, leads, activities] = await Promise.all([
+      directus.request(
+        (readItem as any)('contacts', contactId, {
+          fields: [
+            'id', 'first_name', 'last_name', 'prefix', 'email', 'phone', 'title', 'company',
+            'category', 'industry', 'source', 'tags', 'notes', 'website', 'linkedin_url',
+            'status',
+            'email_subscribed', 'email_bounced', 'email_bounce_type',
+            'total_emails_sent', 'total_opens', 'total_clicks',
+            'last_opened_at', 'last_clicked_at',
+            'client.id', 'client.name',
+            'organizations.organizations_id.id', 'organizations.organizations_id.name',
+            'lists.subscribed', 'lists.list_id.id', 'lists.list_id.name',
+          ],
+        }),
+      ).catch(() => null) as Promise<any>,
+
+      directus.request(
+        (readItems as any)('leads', {
+          filter: { related_contact: { _eq: contactId } },
+          fields: [
+            'id', 'stage', 'status', 'project_type', 'estimated_value',
+            'next_follow_up', 'closed_date', 'lost_reason', 'date_created',
+          ],
+          sort: ['-date_created'],
+          limit: 25,
+        }),
+      ).catch(() => []) as Promise<any[]>,
+
+      directus.request(
+        (readItems as any)('lead_activities', {
+          filter: { lead: { related_contact: { _eq: contactId } } },
+          fields: [
+            'id', 'activity_type', 'subject', 'outcome', 'activity_date',
+            'next_action', 'next_action_date', 'lead',
+          ],
+          sort: ['-activity_date'],
+          limit: 5,
+        }),
+      ).catch(() => []) as Promise<any[]>,
+    ]);
+
+    if (!contact) return '';
+
+    const lines: string[] = [];
+    const fullName = `${contact.prefix ? contact.prefix + ' ' : ''}${contact.first_name || ''} ${contact.last_name || ''}`.trim()
+      || contact.email || 'Contact';
+
+    // Identity
+    lines.push('[Source: Contact Profile]');
+    lines.push(`Name: ${fullName}`);
+    if (contact.email) {
+      const flags: string[] = [];
+      if (contact.email_bounced) flags.push(contact.email_bounce_type ? `BOUNCED: ${contact.email_bounce_type}` : 'BOUNCED');
+      if (contact.email_subscribed === false) flags.push('UNSUBSCRIBED');
+      lines.push(`Email: ${contact.email}${flags.length ? ` [${flags.join(' · ')}]` : ''}`);
+    }
+    if (contact.phone) lines.push(`Phone: ${contact.phone}`);
+    if (contact.title || contact.company) {
+      lines.push(`${contact.title || '—'}${contact.company ? ` at ${contact.company}` : ''}`);
+    }
+    if (contact.category || contact.industry) {
+      const bits = [contact.category && `category: ${contact.category}`, contact.industry && `industry: ${contact.industry}`].filter(Boolean);
+      lines.push(bits.join(' · '));
+    }
+    if (contact.source) lines.push(`Source: ${contact.source}`);
+    if (Array.isArray(contact.tags) && contact.tags.length) lines.push(`Tags: ${contact.tags.join(', ')}`);
+
+    // Client/Org linkage
+    const orgNames = (contact.organizations || [])
+      .map((j: any) => j?.organizations_id?.name)
+      .filter(Boolean);
+    if (contact.client?.name || orgNames.length) {
+      lines.push('');
+      lines.push('[Source: Client/Org Linkage]');
+      if (contact.client?.name) lines.push(`Client: ${contact.client.name}`);
+      if (orgNames.length) lines.push(`Member of orgs (${orgNames.length}): ${orgNames.slice(0, 8).join(', ')}`);
+    }
+
+    // Marketing engagement — always include if any data is present
+    const hasEngagement = contact.total_emails_sent || contact.total_opens || contact.total_clicks
+      || contact.last_opened_at || contact.last_clicked_at
+      || contact.email_bounced || contact.email_subscribed === false;
+    if (hasEngagement) {
+      lines.push('');
+      lines.push('[Source: Email Engagement]');
+      lines.push(`Sent: ${contact.total_emails_sent || 0} · Opens: ${contact.total_opens || 0} · Clicks: ${contact.total_clicks || 0}`);
+      if (contact.last_opened_at) {
+        const d = Math.floor((now.getTime() - new Date(contact.last_opened_at).getTime()) / (1000 * 60 * 60 * 24));
+        lines.push(`Last opened: ${contact.last_opened_at.split('T')[0]} (${d}d ago)`);
+      }
+      if (contact.last_clicked_at) {
+        const d = Math.floor((now.getTime() - new Date(contact.last_clicked_at).getTime()) / (1000 * 60 * 60 * 24));
+        lines.push(`Last clicked: ${contact.last_clicked_at.split('T')[0]} (${d}d ago)`);
+      }
+      const subState = contact.email_subscribed === false ? 'no' : 'yes';
+      const bounceState = contact.email_bounced ? `yes${contact.email_bounce_type ? ` (${contact.email_bounce_type})` : ''}` : 'no';
+      lines.push(`Subscribed: ${subState} · Bounced: ${bounceState}`);
+    }
+
+    // Mailing lists (names of all memberships, flagged as subscribed/unsubscribed)
+    const listMemberships = Array.isArray(contact.lists) ? contact.lists : [];
+    const listRows = listMemberships
+      .map((m: any) => ({
+        name: m?.list_id?.name,
+        subscribed: m?.subscribed !== false,
+      }))
+      .filter((r: any) => r.name);
+    if (listRows.length) {
+      const subscribed = listRows.filter((r: any) => r.subscribed);
+      const unsubscribed = listRows.filter((r: any) => !r.subscribed);
+      lines.push('');
+      lines.push('[Source: Mailing Lists]');
+      if (subscribed.length) {
+        lines.push(`SUBSCRIBED LISTS (${subscribed.length}): ${subscribed.map((r: any) => r.name).slice(0, 10).join(', ')}`);
+      }
+      if (unsubscribed.length) {
+        lines.push(`UNSUBSCRIBED FROM (${unsubscribed.length}): ${unsubscribed.map((r: any) => r.name).slice(0, 5).join(', ')}`);
+      }
+    }
+
+    // Pipeline — split open vs closed
+    const open = leads.filter((l: any) => !['won', 'lost'].includes(l.stage));
+    const closed = leads.filter((l: any) => ['won', 'lost'].includes(l.stage));
+    if (leads.length) {
+      lines.push('');
+      lines.push('[Source: Pipeline]');
+      if (open.length) {
+        lines.push(`OPEN LEADS (${open.length}):`);
+        open.slice(0, 8).forEach((l: any) => {
+          const value = l.estimated_value ? ` · est $${Number(l.estimated_value).toLocaleString()}` : '';
+          let followUp = '';
+          if (l.next_follow_up) {
+            const daysUntil = Math.ceil((new Date(l.next_follow_up).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            followUp = daysUntil < 0
+              ? ` · FOLLOW-UP ${Math.abs(daysUntil)}d OVERDUE`
+              : daysUntil <= 7 ? ` · follow-up in ${daysUntil}d` : '';
+          }
+          lines.push(`  - #${l.id} stage:${l.stage}${l.project_type ? ` · ${l.project_type}` : ''}${value}${followUp}`);
+        });
+      }
+      if (closed.length) {
+        lines.push(`CLOSED LEADS (${closed.length}): ${closed.slice(0, 5).map((l: any) =>
+          `#${l.id} ${l.stage}${l.project_type ? ` (${l.project_type})` : ''}${l.lost_reason ? ` — ${l.lost_reason}` : ''}`
+        ).join(' · ')}`);
+      }
+    }
+
+    // Recent activity
+    if (activities.length) {
+      lines.push('');
+      lines.push('[Source: Recent Activity]');
+      lines.push(`LAST ACTIVITIES (${activities.length}):`);
+      activities.slice(0, 5).forEach((a: any) => {
+        const when = a.activity_date ? a.activity_date.split('T')[0] : '';
+        const leadId = typeof a.lead === 'object' ? (a.lead as any)?.id : a.lead;
+        const outcome = a.outcome ? ` · ${a.outcome}` : '';
+        const subj = a.subject ? ` — "${String(a.subject).substring(0, 80)}"` : '';
+        lines.push(`  - ${when} [${a.activity_type || 'note'}]${leadId ? ` lead #${leadId}` : ''}${subj}${outcome}`);
+        if (a.next_action) lines.push(`      Next: ${a.next_action}${a.next_action_date ? ` (${a.next_action_date})` : ''}`);
+      });
+    }
+
+    // Notes last (can be longer)
+    if (contact.notes) {
+      lines.push('');
+      lines.push('[Source: Contact Profile]');
+      lines.push(`NOTES: ${String(contact.notes).substring(0, 600)}`);
+    }
+
+    return lines.join('\n');
+  } catch (err: any) {
+    console.warn('[context-broker] buildContactSummary failed:', err?.message);
+    return '';
+  }
+}
+
 async function buildBrandSummary(directus: any, organizationId: string): Promise<string> {
   try {
     const org = await directus.request(
