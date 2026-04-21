@@ -202,3 +202,21 @@ a {
 .screen-leave-to {
   opacity: 0;
 }
+
+/* ============================================
+   Dialog close — visibility safety net
+   ============================================
+   tw-animate-css compiles `animate-out` with `animation-fill-mode: none`,
+   so after the exit animation finishes, the element snaps back to the
+   underlying opacity (1) before Reka's Presence has a chance to unmount.
+   If Reka's animationend handler misfires (hidden-tab throttling, HMR
+   races, etc.), the dialog stays fully visible + interactive. These rules
+   force the element invisible and non-interactive the instant data-state
+   flips, regardless of whether the exit animation actually runs. */
+
+[data-slot='dialog-content'][data-state='closed'],
+[data-slot='dialog-overlay'][data-state='closed'] {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  animation-fill-mode: forwards;
+}
