@@ -11,7 +11,44 @@ export default defineNuxtConfig({
 	compatibilityDate: '2025-07-01',
 
 	app: {
-		pageTransition: { name: 'page', mode: 'out-in' },
+		// Page transition with rAF-starvation fallback. Vue's default nextFrame
+		// helper (two requestAnimationFrames) pauses entirely when the tab is
+		// hidden, stalling the leave → enter handoff under `mode: 'out-in'` so
+		// the incoming page never mounts. The JS hooks below call `done()` via
+		// setTimeout (which still fires in hidden tabs) so the state machine
+		// advances regardless of rAF.
+		pageTransition: {
+			name: 'page',
+			mode: 'out-in',
+			onLeave(el: Element, done: () => void) {
+				let called = false;
+				const finish = () => {
+					if (called) return;
+					called = true;
+					el.removeEventListener('transitionend', onEnd);
+					done();
+				};
+				function onEnd(e: Event) {
+					if (e.target === el) finish();
+				}
+				el.addEventListener('transitionend', onEnd);
+				setTimeout(finish, 300);
+			},
+			onEnter(el: Element, done: () => void) {
+				let called = false;
+				const finish = () => {
+					if (called) return;
+					called = true;
+					el.removeEventListener('transitionend', onEnd);
+					done();
+				};
+				function onEnd(e: Event) {
+					if (e.target === el) finish();
+				}
+				el.addEventListener('transitionend', onEnd);
+				setTimeout(finish, 450);
+			},
+		},
 		head: {
 			meta: [
 				// iOS PWA — native app feel
