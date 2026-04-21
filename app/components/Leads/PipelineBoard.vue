@@ -62,8 +62,7 @@
 		</div>
 
 		<!-- Archived / Junk View -->
-		<transition name="fade" mode="out-in">
-		<div v-if="showArchived" key="archived-view" class="px-4">
+		<div v-if="showArchived" class="px-4">
 			<div class="bg-card border border-border rounded-2xl p-6">
 				<div class="flex items-center justify-between mb-6">
 					<h3 class="text-sm font-semibold uppercase tracking-wider text-foreground flex items-center gap-2">
@@ -97,9 +96,9 @@
 								<span class="flex items-center gap-1">
 									<span
 										class="inline-block w-1.5 h-1.5 rounded-full"
-										:class="lead.status === 'junk' ? 'bg-red-500' : 'bg-muted-foreground'"
+										:class="lead.is_junk ? 'bg-red-500' : 'bg-muted-foreground'"
 									/>
-									{{ lead.status === 'junk' ? 'Junk' : 'Archived' }}
+									{{ lead.is_junk ? 'Junk' : 'Archived' }}
 								</span>
 								<span v-if="lead.source" class="flex items-center gap-1">
 									Source: {{ lead.source }}
@@ -126,7 +125,7 @@
 			</div>
 		</div>
 
-		<div v-else key="board-view">
+		<div v-else>
 		<!-- Won/Lost Summary -->
 		<div class="flex items-center gap-3 px-4 mb-4">
 			<div class="flex items-center gap-1.5 text-[10px] font-medium">
@@ -234,7 +233,6 @@
 		</div>
 
 		</div>
-		</transition>
 
 		<!-- New Lead Modal -->
 		<LeadsFormModal

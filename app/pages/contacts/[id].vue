@@ -30,7 +30,7 @@ const linkingClient = ref(false);
 const relatedLeads = ref<any[]>([]);
 const loadingLeads = ref(false);
 const openLeads = computed(() =>
-  relatedLeads.value.filter((l: any) => l.stage !== 'won' && l.stage !== 'lost' && l.status !== 'archived' && l.status !== 'junk'),
+  relatedLeads.value.filter((l: any) => l.stage !== 'won' && l.stage !== 'lost' && l.status !== 'archived' && !l.is_junk),
 );
 const closedLeads = computed(() =>
   relatedLeads.value.filter((l: any) => l.stage === 'won' || l.stage === 'lost'),

@@ -1835,6 +1835,8 @@ export interface Lead {
 	organization?: Organization | string | null;
 	/** @description Custom tags for flexible categorization across the pipeline (e.g., hot, referral, rfp) */
 	tags?: string[] | null;
+	/** @description Disposition flag for spam / unqualified leads. Orthogonal to status lifecycle. */
+	is_junk?: boolean;
 }
 
 export interface LeadStageListRule {

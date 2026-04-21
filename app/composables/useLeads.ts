@@ -463,11 +463,11 @@ export function useLeads() {
   };
 
   const junkLead = async (id: number | string) => {
-    await leads.update(id, { status: 'junk', date_updated: new Date() } as any);
+    await leads.update(id, { is_junk: true, status: 'archived', date_updated: new Date() } as any);
   };
 
   const restoreLead = async (id: number | string) => {
-    await leads.update(id, { status: 'published', date_updated: new Date() } as any);
+    await leads.update(id, { is_junk: false, status: 'published', date_updated: new Date() } as any);
   };
 
   const getArchivedLeads = async () => {
@@ -488,7 +488,7 @@ export function useLeads() {
       filter: {
         _and: [
           { organization: { _eq: selectedOrg.value } },
-          { status: { _in: ['archived', 'junk'] } },
+          { _or: [{ status: { _eq: 'archived' } }, { is_junk: { _eq: true } }] },
         ],
       },
       sort: ['-date_updated'],
