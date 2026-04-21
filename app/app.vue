@@ -53,7 +53,7 @@ const { visibleLinks } = useNavPreferences();
 		color="repeating-linear-gradient(to right, hsl(var(--primary)) 0%, hsl(var(--muted-foreground)) 100%)"
 	/>
 	<Toaster
-		position="top-center"
+		position="bottom-center"
 		:toast-options="{
 			classNames: {
 				toast: 'group toast bg-card text-foreground border-border/50 shadow-xl rounded-2xl backdrop-blur-xl',
@@ -70,13 +70,7 @@ const { visibleLinks } = useNavPreferences();
 		}"
 		rich-colors
 		close-button
-		:offset="'env(safe-area-inset-top, 8px)'"
+		:offset="'calc(env(safe-area-inset-bottom, 0px) + 24px)'"
+		:mobile-offset="'calc(env(safe-area-inset-bottom, 0px) + 16px)'"
 	/>
 </template>
-
-<style>
-/* iOS-style toast positioning */
-.sonner-toaster {
-	padding-top: env(safe-area-inset-top, 0px) !important;
-}
-</style>
