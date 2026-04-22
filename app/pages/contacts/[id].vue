@@ -12,7 +12,6 @@ const contactId = route.params.id as string;
 
 const { getContact, linkToClient } = useContacts();
 const { getClients } = useClients();
-const { getLeads } = useLeads();
 const { selectedOrg } = useOrganization();
 const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext();
 
@@ -27,26 +26,17 @@ const availableClients = ref<any[]>([]);
 const showClientPicker = ref(false);
 const linkingClient = ref(false);
 
-// Leads back-link
-const relatedLeads = ref<any[]>([]);
-const loadingLeads = ref(false);
+// Leads back-link — sourced from Contact.leads inverse O2M projection in getContact
+const relatedLeads = computed<any[]>(() => {
+  const leads = (contact.value as any)?.leads;
+  return Array.isArray(leads) ? leads : [];
+});
 const openLeads = computed(() =>
   relatedLeads.value.filter((l: any) => l.stage !== 'won' && l.stage !== 'lost' && l.status !== 'archived' && !l.is_junk),
 );
 const closedLeads = computed(() =>
   relatedLeads.value.filter((l: any) => l.stage === 'won' || l.stage === 'lost'),
 );
-
-async function loadRelatedLeads() {
-  loadingLeads.value = true;
-  try {
-    relatedLeads.value = await getLeads({ related_contact: contactId });
-  } catch {
-    relatedLeads.value = [];
-  } finally {
-    loadingLeads.value = false;
-  }
-}
 
 async function loadClients() {
   if (!selectedOrg.value) return;
@@ -93,13 +83,12 @@ function onContactDeleted() {
 
 function handleLeadCreated() {
   showLeadModal.value = false;
-  loadRelatedLeads();
+  loadContact();
 }
 
 onMounted(() => {
   loadContact();
   loadClients();
-  loadRelatedLeads();
 });
 
 // AI sidebar lifecycle
@@ -344,8 +333,7 @@ onUnmounted(() => clearEntity());
                 Start a deal
               </button>
             </div>
-            <div v-if="loadingLeads" class="text-sm text-muted-foreground">Loading&hellip;</div>
-            <div v-else-if="!relatedLeads.length" class="flex flex-col items-center gap-2 py-3 text-center">
+            <div v-if="!relatedLeads.length" class="flex flex-col items-center gap-2 py-3 text-center">
               <p class="text-sm text-muted-foreground">No leads yet.</p>
               <button
                 class="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"

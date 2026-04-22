@@ -77,7 +77,7 @@ export function useContacts() {
 
   const getContact = async (id: string): Promise<Contact> => {
     return items.get(id, {
-      fields: ['*', 'lists.id', 'lists.list_id.*', 'lists.subscribed', 'client.id', 'client.name', 'organizations.id', 'organizations.organizations_id.id', 'organizations.organizations_id.name'],
+      fields: ['*', 'lists.id', 'lists.list_id.*', 'lists.subscribed', 'client.id', 'client.name', 'organizations.id', 'organizations.organizations_id.id', 'organizations.organizations_id.name', 'leads.id', 'leads.stage', 'leads.status', 'leads.project_type', 'leads.is_junk', 'leads.next_follow_up', 'leads.estimated_value'],
     });
   };
 

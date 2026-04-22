@@ -57,7 +57,7 @@ export async function getCRMContext(
 		// ─── Clients ───
 		directus.request(readItems('clients', {
 			filter: { organization: { _eq: orgId } },
-			fields: ['id', 'name', 'status', 'tags', 'date_created'],
+			fields: ['id', 'name', 'status', 'account_state', 'tags', 'date_created'],
 			limit: -1,
 		})).catch(() => [] as any[]),
 
@@ -293,13 +293,13 @@ export async function getCRMContext(
 	// ─── Build Clients Summary ───
 	const clientsByStatus: Record<string, number> = {};
 	for (const c of clients as any[]) {
-		const status = c.status || 'unknown';
-		clientsByStatus[status] = (clientsByStatus[status] || 0) + 1;
+		const state = c.account_state || c.status || 'unknown';
+		clientsByStatus[state] = (clientsByStatus[state] || 0) + 1;
 	}
 	const recentClients = (clients as any[])
 		.sort((a: any, b: any) => new Date(b.date_created).getTime() - new Date(a.date_created).getTime())
 		.slice(0, 5)
-		.map((c: any) => ({ name: c.name, status: c.status || 'active', createdAt: c.date_created }));
+		.map((c: any) => ({ name: c.name, status: c.account_state || 'active', createdAt: c.date_created }));
 
 	// Count clients with active projects/tickets
 	const clientNamesWithProjects = new Set((projects as any[]).map((p: any) => p.client?.name).filter(Boolean));

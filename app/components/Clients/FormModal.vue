@@ -5,14 +5,14 @@
 		:is-editing="isEditing"
 		:saving="saving"
 		:submit-disabled="!formRef?.hasName"
-		:statuses="clientStatuses"
-		:current-status="currentStatus"
+		:statuses="accountStateOptions"
+		:current-status="currentAccountState"
 		collection="clients"
 		:item-id="client?.id ?? null"
 		:detail-route="client ? `/clients/${client.id}` : null"
 		@submit="triggerSave"
 		@delete="handleDelete"
-		@status-change="e => currentStatus = e.newStatus"
+		@status-change="e => currentAccountState = e.newStatus"
 	>
 		<ClientsClientForm
 			v-if="isOpen"
@@ -20,7 +20,7 @@
 			ref="formRef"
 			:client="client"
 			:saving="saving"
-			v-model:status="currentStatus"
+			v-model:account-state="currentAccountState"
 			@save="onFormSave"
 		/>
 	</FormModal>
@@ -42,22 +42,22 @@ const emit = defineEmits<{
 const isOpen = defineModel<boolean>({ default: false });
 const isEditing = computed(() => !!props.client?.id);
 const saving = ref(false);
-const currentStatus = ref<string>(props.client?.status || 'active');
+const currentAccountState = ref<string>((props.client as any)?.account_state || 'active');
 const formRef = ref<any>(null);
 
 const toast = useToast();
 const { createClient, updateClient, deleteClient } = useClients();
 
-const clientStatuses = [
+const accountStateOptions = [
 	{ id: 'active', name: 'Active' },
 	{ id: 'prospect', name: 'Prospect' },
 	{ id: 'inactive', name: 'Inactive' },
-	{ id: 'archived', name: 'Archived' },
+	{ id: 'churned', name: 'Churned' },
 ];
 
 watch(isOpen, (open) => {
 	if (open) {
-		currentStatus.value = props.client?.status || 'active';
+		currentAccountState.value = (props.client as any)?.account_state || 'active';
 	}
 });
 

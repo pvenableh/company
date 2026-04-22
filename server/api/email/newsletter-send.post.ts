@@ -352,7 +352,7 @@ async function resolveSegments(
               _and: [
                 { organizations: { organizations_id: { _eq: organizationId } } },
                 { client: { _nnull: true } },
-                { 'client.status': { _eq: 'active' } },
+                { 'client.account_state': { _eq: 'active' } },
               ],
             },
             fields: ['id'],

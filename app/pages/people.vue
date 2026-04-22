@@ -14,10 +14,14 @@
 		</div>
 
 		<!-- Compact stat bar -->
-		<div class="grid grid-cols-3 gap-3 mb-6">
+		<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
 			<NuxtLink to="/contacts" class="ios-card p-4 hover:ring-1 hover:ring-white/10 transition-all">
 				<p class="text-2xl font-bold">{{ contactCount }}</p>
 				<p class="text-[10px] uppercase tracking-wide text-muted-foreground">Contacts</p>
+			</NuxtLink>
+			<NuxtLink to="/leads" class="ios-card p-4 hover:ring-1 hover:ring-white/10 transition-all">
+				<p class="text-2xl font-bold">{{ leadCount }}</p>
+				<p class="text-[10px] uppercase tracking-wide text-muted-foreground">Leads</p>
 			</NuxtLink>
 			<NuxtLink to="/clients" class="ios-card p-4 hover:ring-1 hover:ring-white/10 transition-all">
 				<p class="text-2xl font-bold">{{ clientCount }}</p>
@@ -82,6 +86,10 @@
 				<Icon name="lucide:list" class="w-4 h-4 text-muted-foreground" />
 				<span class="text-xs font-medium">All Contacts</span>
 			</NuxtLink>
+			<NuxtLink to="/leads" class="flex items-center gap-1.5 px-3 py-2 ios-card hover:ring-1 hover:ring-white/10 transition-all shrink-0">
+				<Icon name="lucide:columns-3" class="w-4 h-4 text-sky-400" />
+				<span class="text-xs font-medium">Pipeline Board</span>
+			</NuxtLink>
 			<NuxtLink to="/clients" class="flex items-center gap-1.5 px-3 py-2 ios-card hover:ring-1 hover:ring-white/10 transition-all shrink-0">
 				<Icon name="lucide:building-2" class="w-4 h-4 text-muted-foreground" />
 				<span class="text-xs font-medium">All Clients</span>
@@ -102,7 +110,7 @@
 				class="flex items-center gap-3 rounded-lg border p-3 hover:bg-muted/50 transition-colors"
 			>
 				<div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold text-white"
-					:class="result.source === 'contacts' ? 'bg-orange-500' : result.source === 'clients' ? 'bg-red-500' : 'bg-purple-500'"
+					:class="result.source === 'contacts' ? 'bg-orange-500' : result.source === 'clients' ? 'bg-red-500' : result.source === 'leads' ? 'bg-sky-500' : 'bg-purple-500'"
 				>
 					{{ result.initials }}
 				</div>
@@ -129,6 +137,7 @@ useHead({ title: 'People | Earnest' });
 
 const { getContacts } = useContacts();
 const { getClients } = useClients();
+const { getLeads, getLeadStats } = useLeads();
 const { fetchContacts: fetchCdContacts } = useCardDesk();
 
 const search = ref('');
@@ -143,6 +152,7 @@ const searchResults = ref<Array<{
 }>>([]);
 
 const contactCount = ref(0);
+const leadCount = ref(0);
 const clientCount = ref(0);
 const networkCount = ref(0);
 const needsAttention = ref<Array<{ id: string; name: string; reason: string; urgency: 'high' | 'medium'; route: string; action: string }>>([]);
@@ -150,12 +160,14 @@ const needsAttention = ref<Array<{ id: string; name: string; reason: string; urg
 // Load counts + attention items
 onMounted(async () => {
 	try {
-		const [contacts, clients] = await Promise.all([
+		const [contacts, clients, leadStats] = await Promise.all([
 			getContacts({ limit: 1, page: 1 }),
 			getClients({ limit: 1, page: 1 }),
+			getLeadStats(),
 		]);
 		contactCount.value = contacts.total;
 		clientCount.value = clients.total;
+		leadCount.value = leadStats.total;
 
 		// Find clients that need attention — recently inactive or with overdue invoices
 		const allClients = await getClients({ limit: 50, page: 1 });
@@ -206,7 +218,50 @@ onMounted(async () => {
 			}
 		}
 
-		needsAttention.value = items.sort((a, b) => (a.urgency === 'high' ? -1 : 1) - (b.urgency === 'high' ? -1 : 1)).slice(0, 5);
+		// Overdue lead follow-ups: next_follow_up < now, not in terminal stages, not junk/archived.
+		// Capture in a separate bucket so leads don't get starved by saturating invoice entries below.
+		const leadItems: typeof needsAttention.value = [];
+		try {
+			const openLeads = await getLeads({ limit: 200 } as any) as any[];
+			const now = Date.now();
+			for (const lead of openLeads) {
+				if (!lead?.next_follow_up) continue;
+				if (lead.is_junk) continue;
+				if (lead.status === 'archived') continue;
+				if (lead.stage === 'won' || lead.stage === 'lost') continue;
+				const dueTs = new Date(lead.next_follow_up).getTime();
+				if (!Number.isFinite(dueTs) || dueTs >= now) continue;
+				const daysOverdue = Math.floor((now - dueTs) / (1000 * 60 * 60 * 24));
+				const rc = lead.related_contact;
+				const contactName = rc && typeof rc === 'object'
+					? [rc.first_name, rc.last_name].filter(Boolean).join(' ') || rc.email || rc.company
+					: null;
+				const leadLabel = contactName || lead.project_type || `Lead #${lead.id}`;
+				leadItems.push({
+					id: String(lead.id),
+					name: leadLabel,
+					reason: `Follow-up ${daysOverdue === 0 ? 'due today' : `overdue ${daysOverdue}d`}${lead.stage ? ` · ${lead.stage}` : ''}`,
+					urgency: daysOverdue >= 7 ? 'high' : 'medium',
+					route: `/leads/${lead.id}`,
+					action: 'Reach out',
+				});
+			}
+			leadItems.sort((a, b) => {
+				// Most-overdue first: reason carries days in the string, but simpler to sort by urgency then id.
+				if (a.urgency !== b.urgency) return a.urgency === 'high' ? -1 : 1;
+				return 0;
+			});
+		} catch { /* lead attention is non-critical */ }
+
+		// Interleave: up to 3 invoice items + up to 2 lead items, each sorted by urgency.
+		const invoiceSorted = items.sort((a, b) => (a.urgency === 'high' ? -1 : 1) - (b.urgency === 'high' ? -1 : 1));
+		const blended = [...invoiceSorted.slice(0, 3), ...leadItems.slice(0, 2)];
+		// Backfill if one bucket is short so we still surface 5 when possible.
+		if (blended.length < 5) {
+			const extras = [...invoiceSorted.slice(3), ...leadItems.slice(2)];
+			while (blended.length < 5 && extras.length) blended.push(extras.shift()!);
+		}
+		needsAttention.value = blended.sort((a, b) => (a.urgency === 'high' ? -1 : 1) - (b.urgency === 'high' ? -1 : 1));
 	} catch { /* counts are non-critical */ }
 
 	try {
@@ -229,9 +284,10 @@ const doSearch = useDebounceFn(async () => {
 	const results: typeof searchResults.value = [];
 
 	try {
-		const [contacts, clients] = await Promise.all([
+		const [contacts, clients, leads] = await Promise.all([
 			getContacts({ search: search.value, limit: 10, page: 1 }),
 			getClients({ search: search.value, limit: 10, page: 1 }),
+			getLeads({ search: search.value, limit: 10 } as any) as Promise<any[]>,
 		]);
 
 		for (const c of contacts.data) {
@@ -255,6 +311,25 @@ const doSearch = useDebounceFn(async () => {
 				initials: getInitials(name),
 				source: 'clients',
 				route: `/clients/${c.id}`,
+			});
+		}
+
+		for (const lead of leads as any[]) {
+			const rc = lead?.related_contact;
+			const contactName = rc && typeof rc === 'object'
+				? [rc.first_name, rc.last_name].filter(Boolean).join(' ') || rc.email
+				: null;
+			const name = contactName || lead.project_type || `Lead #${lead.id}`;
+			const detail = [lead.project_type, lead.stage, rc && typeof rc === 'object' ? rc.company : null]
+				.filter(Boolean)
+				.join(' · ');
+			results.push({
+				id: String(lead.id),
+				name,
+				detail,
+				initials: getInitials(name),
+				source: 'leads',
+				route: `/leads/${lead.id}`,
 			});
 		}
 	} catch { /* search errors are non-critical */ }

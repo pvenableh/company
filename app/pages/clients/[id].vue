@@ -14,12 +14,14 @@ const { getClient, updateClient } = useClients();
 const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext();
 const { getStatusBadgeClasses } = useStatusStyle();
 
-const contactItems = useDirectusItems('contacts');
 const projectItemsApi = useDirectusItems('projects');
 const ticketItemsApi = useDirectusItems('tickets');
 
 const client = ref<Client | null>(null);
-const relatedContacts = ref<any[]>([]);
+const relatedContacts = computed<any[]>(() => {
+  const contacts = (client.value as any)?.contacts;
+  return Array.isArray(contacts) ? contacts : [];
+});
 const relatedProjects = ref<any[]>([]);
 const relatedTickets = ref<any[]>([]);
 const loading = ref(true);
@@ -66,12 +68,8 @@ const onClientLogoSelected = async (event: Event) => {
 };
 
 async function loadRelated() {
-  const [contacts, projects, tickets] = await Promise.all([
-    contactItems.list({
-      filter: { client: { _eq: clientId } },
-      fields: ['id', 'first_name', 'last_name', 'email', 'phone'],
-      limit: -1,
-    }).catch(() => []),
+  // Contacts now sourced from client.contacts O2M inverse projected in getClient().
+  const [projects, tickets] = await Promise.all([
     projectItemsApi.list({
       filter: { client: { _eq: clientId } },
       fields: ['id', 'title', 'status'],
@@ -83,7 +81,6 @@ async function loadRelated() {
       limit: -1,
     }).catch(() => []),
   ]);
-  relatedContacts.value = contacts;
   relatedProjects.value = projects;
   relatedTickets.value = tickets;
 }
@@ -281,11 +278,11 @@ onUnmounted(() => clearEntity());
             <div class="flex items-center gap-2">
               <h1 class="text-base font-semibold">{{ client.name }}</h1>
               <span
-                v-if="client.status"
+                v-if="client.account_state"
                 class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize"
-                :class="getStatusBadgeClasses(client.status)"
+                :class="getStatusBadgeClasses(client.account_state)"
               >
-                {{ client.status }}
+                {{ client.account_state }}
               </span>
             </div>
             <p v-if="client.industry" class="text-xs text-muted-foreground">{{ industryName || 'Loading...' }}</p>

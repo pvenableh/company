@@ -405,7 +405,7 @@ const enrichActivities = async (activities) => {
 			if (collection === 'cd_contacts') fields = ['id', 'name', 'first_name', 'last_name', 'company', 'rating', 'is_client'];
 			if (collection === 'cd_activities') fields = ['id', 'type', 'label', 'note', 'contact'];
 			if (collection === 'contacts') fields = ['id', 'first_name', 'last_name', 'email', 'company', 'category'];
-			if (collection === 'clients') fields = ['id', 'name', 'status', 'industry'];
+			if (collection === 'clients') fields = ['id', 'name', 'status', 'account_state', 'industry'];
 
 			const items = await useDirectusItems(collection).list({
 				fields,
@@ -766,14 +766,15 @@ watch(selectedOrg, () => {
 						<!-- Client details -->
 						<template v-if="item.collection === 'clients' && item.itemData">
 							<span v-if="item.itemData.industry" class="text-[10px] text-muted-foreground">{{ item.itemData.industry }}</span>
-							<span v-if="item.itemData.status" class="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full"
+							<span v-if="item.itemData.account_state" class="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full"
 								:class="{
-									'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400': item.itemData.status === 'active',
-									'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400': item.itemData.status === 'prospect',
-									'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400': item.itemData.status === 'inactive',
+									'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400': item.itemData.account_state === 'active',
+									'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400': item.itemData.account_state === 'prospect',
+									'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400': item.itemData.account_state === 'inactive',
+									'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400': item.itemData.account_state === 'churned',
 								}"
 							>
-								{{ item.itemData.status }}
+								{{ item.itemData.account_state }}
 							</span>
 						</template>
 

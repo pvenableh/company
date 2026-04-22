@@ -1085,7 +1085,7 @@ export interface Channel {
 export interface Client {
 	/** @primaryKey */
 	id: string;
-	status?: 'active' | 'prospect' | 'inactive' | 'churned' | null;
+	status?: 'published' | 'draft' | 'archived';
 	sort?: number | null;
 	user_created?: DirectusUser | string | null;
 	date_created?: string | null;
@@ -1127,12 +1127,16 @@ export interface Client {
 	payment_terms?: 'due_on_receipt' | 'net_15' | 'net_30' | 'net_45' | 'net_60' | null;
 	/** @description Parent client for sub-brands. Billing falls back to parent if not set on this client. */
 	parent_client?: Client | string | null;
+	/** @description Customer relationship state. Lifecycle (published/draft/archived) lives on `status`. */
+	account_state?: 'active' | 'prospect' | 'inactive' | 'churned' | null;
 	/** @description Teams assigned to this client */
 	assigned_teams?: ClientsTeam[] | string[];
 	/** @description Individual users with direct access to this client */
 	assigned_users?: ClientsDirectusUser[] | string[];
 	/** @description Sub-brands that bill through this client */
 	sub_brands?: Client[] | string[];
+	/** @description Contacts who belong to this client. Inverse of contacts.client. */
+	contacts?: Contact[] | string[];
 }
 
 export interface ClientsDirectusUser {
@@ -1272,6 +1276,8 @@ export interface Contact {
 	client?: Client | string | null;
 	organizations?: ContactsOrganization[] | string[];
 	lists?: MailingListContact[] | string[];
+	/** @description Leads associated with this contact. Inverse of leads.related_contact. */
+	leads?: Lead[] | string[];
 }
 
 export interface ContactsOrganization {

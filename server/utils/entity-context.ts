@@ -64,7 +64,7 @@ async function buildClientContext(directus: any, clientId: string, now: Date): P
   const [client, invoices, projects, contacts] = await Promise.all([
     directus.request(
       readItem('clients', clientId, {
-        fields: ['id', 'name', 'status', 'industry', 'date_created', 'date_updated',
+        fields: ['id', 'name', 'status', 'account_state', 'industry', 'date_created', 'date_updated',
           'brand_direction', 'goals', 'target_audience', 'location', 'website', 'notes'],
       }),
     ).catch(() => null) as Promise<any>,
@@ -103,7 +103,8 @@ async function buildClientContext(directus: any, clientId: string, now: Date): P
 
   // [Source: Client Profile]
   lines.push('[Source: Client Profile]');
-  lines.push(`Status: ${client.status || 'unknown'}`);
+  lines.push(`Account state: ${client.account_state || 'unknown'}`);
+  lines.push(`Lifecycle: ${client.status || 'published'}`);
   if (client.industry) lines.push(`Industry: ${client.industry}`);
   if (client.location) lines.push(`Location: ${client.location}`);
   if (client.website) lines.push(`Website: ${client.website}`);

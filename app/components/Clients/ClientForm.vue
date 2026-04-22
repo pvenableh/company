@@ -11,12 +11,12 @@
         <UInput v-model="formData.slug" readonly placeholder="auto-generated from name" />
       </div>
       <div v-if="!isEditing" class="space-y-1">
-        <label class="t-label text-muted-foreground">Status</label>
+        <label class="t-label text-muted-foreground">Account State</label>
         <select
-          v-model="statusModel"
+          v-model="accountStateModel"
           class="w-full rounded-full border bg-background px-3 py-2 text-sm"
         >
-          <option v-for="s in statusOptions" :key="s.value" :value="s.value">{{ s.label }}</option>
+          <option v-for="s in accountStateOptions" :key="s.value" :value="s.value">{{ s.label }}</option>
         </select>
       </div>
     </div>
@@ -167,15 +167,15 @@ const emit = defineEmits<{
   save: [data: Partial<Client>];
 }>();
 
-const statusModel = defineModel<string>('status', { default: 'active' });
+const accountStateModel = defineModel<string>('accountState', { default: 'active' });
 
 const isEditing = computed(() => !!props.client?.id);
 
-const statusOptions = [
+const accountStateOptions = [
   { label: 'Active', value: 'active' },
   { label: 'Prospect', value: 'prospect' },
   { label: 'Inactive', value: 'inactive' },
-  { label: 'Archived', value: 'archived' },
+  { label: 'Churned', value: 'churned' },
 ];
 
 const industryItems = useDirectusItems('industries');
@@ -207,9 +207,9 @@ const formData = reactive({
   location: props.client?.location || '',
 });
 
-// Initialize status model from client on mount (status is owned by parent via defineModel)
-if (props.client?.status) {
-  statusModel.value = props.client.status;
+// Initialize account_state model from client on mount (owned by parent via defineModel).
+if ((props.client as any)?.account_state) {
+  accountStateModel.value = (props.client as any).account_state;
 }
 
 const newTag = ref('');
@@ -254,7 +254,7 @@ function handleSubmit() {
   emit('save', {
     name: formData.name,
     slug: formData.slug || undefined,
-    status: statusModel.value as Client['status'],
+    account_state: accountStateModel.value,
     website: formData.website || undefined,
     industry: formData.industry || undefined,
     notes: formData.notes || undefined,

@@ -184,7 +184,7 @@ export function useClients() {
 
       const filter: any = {
         _and: [
-          { status: { _eq: 'active' } },
+          { account_state: { _eq: 'active' } },
           { organization: { _eq: selectedOrg.value } },
         ],
       };
@@ -201,7 +201,7 @@ export function useClients() {
       }
 
       const data = await items.list({
-        fields: ['id', 'name', 'logo', 'status'],
+        fields: ['id', 'name', 'logo', 'status', 'account_state'],
         filter,
         sort: ['sort', 'name'],
         limit: -1,
@@ -271,6 +271,7 @@ export function useClients() {
 
   const getClients = async (params?: {
     status?: string;
+    accountState?: string;
     search?: string;
     tags?: string[];
     sort?: string[];
@@ -292,6 +293,10 @@ export function useClients() {
 
     if (params?.status) {
       filter._and.push({ status: { _eq: params.status } });
+    }
+
+    if (params?.accountState) {
+      filter._and.push({ account_state: { _eq: params.accountState } });
     }
 
     if (params?.search) {
@@ -395,7 +400,8 @@ export function useClients() {
     const result = await items.create({
       ...payload,
       organization: orgId,
-      status: payload.status || 'active',
+      status: payload.status || 'published',
+      account_state: (payload as any).account_state || 'active',
     } as any);
 
     // Auto-create a folder for this client under the org's Clients/ subfolder
@@ -453,7 +459,7 @@ export function useClients() {
     if (!selectedOrg.value) return [];
     const filter: any = {
       _and: [
-        { status: { _in: ['active', 'prospect'] } },
+        { account_state: { _in: ['active', 'prospect'] } },
         { organization: { _eq: selectedOrg.value } },
       ],
     };
@@ -466,7 +472,7 @@ export function useClients() {
     }
 
     const data = await items.list({
-      fields: ['id', 'name', 'status'],
+      fields: ['id', 'name', 'status', 'account_state'],
       filter,
       sort: ['sort', 'name'],
       limit: -1,

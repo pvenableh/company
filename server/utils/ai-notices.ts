@@ -34,7 +34,7 @@ export async function generateClientNotices(
   const [client, invoices, projects] = await Promise.all([
     directus.request(
       readItem('clients', clientId, {
-        fields: ['id', 'name', 'status', 'date_updated', 'brand_direction', 'goals', 'target_audience', 'location'],
+        fields: ['id', 'name', 'status', 'account_state', 'date_updated', 'brand_direction', 'goals', 'target_audience', 'location'],
       }),
     ).catch(() => null) as Promise<any>,
 
@@ -131,7 +131,7 @@ export async function generateClientNotices(
   }
 
   // No active projects
-  if ((projects || []).length === 0 && client.status === 'active') {
+  if ((projects || []).length === 0 && client.account_state === 'active') {
     notices.push({
       id: `client-no-projects-${clientId}`,
       priority: 'low',

@@ -18,13 +18,22 @@ const showCreateModal = ref(false);
 const deleteTarget = ref<Client | null>(null);
 
 // ── Status Tabs ──────────────────────────────────────────────────────────────
+// Tabs filter by `account_state` (relationship state) for Active/Prospects/Inactive/Churned,
+// and by lifecycle `status` for Archived.
 const activeTab = ref('active');
 const tabs = [
-  { label: 'Active', value: 'active', color: 'bg-emerald-500' },
-  { label: 'Prospects', value: 'prospect', color: 'bg-amber-500' },
-  { label: 'Inactive', value: 'inactive', color: 'bg-neutral-400' },
-  { label: 'Archived', value: 'archived', color: 'bg-red-400' },
+  { label: 'Active', value: 'active', color: 'bg-emerald-500', kind: 'accountState' as const },
+  { label: 'Prospects', value: 'prospect', color: 'bg-amber-500', kind: 'accountState' as const },
+  { label: 'Inactive', value: 'inactive', color: 'bg-neutral-400', kind: 'accountState' as const },
+  { label: 'Churned', value: 'churned', color: 'bg-red-500', kind: 'accountState' as const },
+  { label: 'Archived', value: 'archived', color: 'bg-zinc-400', kind: 'status' as const },
 ];
+
+function tabFilter(value: string): { status?: string; accountState?: string } {
+  const tab = tabs.find((t) => t.value === value);
+  if (!tab) return {};
+  return tab.kind === 'status' ? { status: value } : { accountState: value };
+}
 
 const { getStatusBadgeClasses } = useStatusStyle();
 
@@ -44,7 +53,7 @@ async function fetchTabCounts() {
   try {
     const results = await Promise.all(
       tabs.map(tab =>
-        getClients({ status: tab.value, limit: 1, page: 1 })
+        getClients({ ...tabFilter(tab.value), limit: 1, page: 1 })
       )
     );
     const counts: Record<string, number> = {};
@@ -64,7 +73,7 @@ const fetchData = async () => {
     const sortFields = sortBy.value.split(',');
     const result = await getClients({
       search: search.value || undefined,
-      status: activeTab.value,
+      ...tabFilter(activeTab.value),
       sort: sortFields,
       limit: 200,
       page: 1,
@@ -276,7 +285,7 @@ onMounted(() => {
               v-for="client in allClients"
               :key="client.id"
               class="border-b border-border/30 last:border-b-0 hover:bg-muted/20 cursor-pointer transition-colors"
-              :class="{ 'opacity-50': client.status === 'inactive' || client.status === 'archived' }"
+              :class="{ 'opacity-50': client.account_state === 'inactive' || client.account_state === 'churned' || client.status === 'archived' }"
               @click="viewClient(client)"
             >
               <!-- Client Name + Logo -->
@@ -304,9 +313,9 @@ onMounted(() => {
               <td class="py-3 px-4">
                 <span
                   class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize"
-                  :class="getStatusBadgeClasses(client.status || 'active')"
+                  :class="getStatusBadgeClasses(client.account_state || 'active')"
                 >
-                  {{ client.status }}
+                  {{ client.account_state || 'active' }}
                 </span>
               </td>
 
