@@ -251,6 +251,9 @@ onUnmounted(() => clearEntity());
 							{{ lead.related_contact?.company }}
 							<span v-if="lead.related_contact?.email"> · {{ lead.related_contact.email }}</span>
 						</p>
+						<div v-if="Array.isArray(lead.tags) && lead.tags.length" class="flex flex-wrap gap-1.5 mt-2">
+							<ContactsContactTagBadge v-for="tag in lead.tags" :key="tag" :tag="tag" />
+						</div>
 					</div>
 					<div class="flex items-center gap-1.5">
 						<button
@@ -439,20 +442,6 @@ onUnmounted(() => clearEntity());
 									Cancel
 								</button>
 							</div>
-						</div>
-					</div>
-
-					<!-- Tags -->
-					<div v-if="lead.tags?.length" class="ios-card p-4">
-						<p class="text-[10px] uppercase font-semibold t-text-muted tracking-wider mb-2">Tags</p>
-						<div class="flex flex-wrap gap-1.5">
-							<span
-								v-for="tag in lead.tags"
-								:key="tag"
-								class="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium t-text"
-							>
-								{{ tag }}
-							</span>
 						</div>
 					</div>
 

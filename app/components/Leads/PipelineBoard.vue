@@ -38,13 +38,14 @@
 					size="sm"
 					class="w-40"
 				/>
-				<UInput
+				<select
+					v-if="availableTags.length"
 					v-model="tagFilter"
-					icon="i-heroicons-tag"
-					placeholder="Filter by tag"
-					size="sm"
-					class="w-36"
-				/>
+					class="h-8 rounded-full border bg-background px-3 text-[11px] uppercase tracking-wider text-foreground"
+				>
+					<option value="">All tags</option>
+					<option v-for="tag in availableTags" :key="tag" :value="tag">{{ tag }}</option>
+				</select>
 				<UButton
 					icon="i-heroicons-archive-box"
 					size="xs"
@@ -174,7 +175,7 @@
 							class="text-[10px] font-bold tabular-nums min-w-[20px] h-5 flex items-center justify-center rounded-full px-1.5"
 							:style="{ backgroundColor: `var(--${column.color})`, color: 'var(--darkBlue)' }"
 						>
-							{{ localLeads[column.id]?.length || 0 }}
+							{{ filteredCount(column.id) }}
 						</span>
 					</div>
 				</div>
@@ -207,7 +208,11 @@
 					@change="(event) => handleDragChange(column.id, event)"
 				>
 					<template #item="{ element }">
-						<div :id="element.id" class="lead-wrapper stagger-item">
+						<div
+							:id="element.id"
+							class="lead-wrapper stagger-item"
+							v-show="leadMatchesTag(element)"
+						>
 							<div class="relative">
 								<div
 									v-if="updatingLeads.has(element.id)"
@@ -362,11 +367,30 @@ const assignedToStorage = useStorageSync('leadFilterAssignedTo');
 // Debounced search
 const debouncedFetch = useDebounceFn(() => fetchLeads(), 300);
 watch(searchQuery, () => debouncedFetch());
-watch(tagFilter, () => debouncedFetch());
 watch(filterByAssignedTo, (newVal) => {
 	assignedToStorage.setValue(newVal);
 	fetchLeads();
 });
+
+// Client-side tag filter: derive distinct tags from loaded leads and filter v-show.
+const availableTags = computed(() => {
+	const set = new Set();
+	for (const stage of LEAD_PIPELINE_STAGES) {
+		for (const lead of localLeads.value[stage] || []) {
+			for (const t of lead.tags || []) set.add(t);
+		}
+	}
+	return Array.from(set).sort();
+});
+function leadMatchesTag(lead) {
+	if (!tagFilter.value) return true;
+	return Array.isArray(lead.tags) && lead.tags.includes(tagFilter.value);
+}
+function filteredCount(stageId) {
+	const col = localLeads.value[stageId] || [];
+	if (!tagFilter.value) return col.length;
+	return col.filter(leadMatchesTag).length;
+}
 
 async function fetchLeads() {
 	isFetching.value = true;
@@ -374,7 +398,6 @@ async function fetchLeads() {
 	try {
 		const filters = {};
 		if (searchQuery.value) filters.search = searchQuery.value;
-		if (tagFilter.value.trim()) filters.tag = tagFilter.value.trim();
 		if (filterByAssignedTo.value && user.value?.id) {
 			filters.assigned_to = user.value.id;
 		}
