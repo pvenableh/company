@@ -2,6 +2,7 @@
 import type { Contact } from '~~/shared/email/contacts';
 import { Button } from '~/components/ui/button';
 import { LEAD_STAGE_LABELS, LEAD_STAGE_COLORS } from '~~/shared/leads';
+import { CONNECTION_ROLE_LABELS } from '~/composables/useContactConnections';
 
 definePageMeta({ middleware: ['auth'] });
 useHead({ title: 'Contact Details | Earnest' });
@@ -25,6 +26,15 @@ const showLeadModal = ref(false);
 const availableClients = ref<any[]>([]);
 const showClientPicker = ref(false);
 const linkingClient = ref(false);
+
+// Connections
+const showConnectionModal = ref(false);
+const editingConnection = ref<any>(null);
+const connections = computed<any[]>(() => {
+  const list = (contact.value as any)?.connections;
+  return Array.isArray(list) ? list : [];
+});
+const isPartner = computed(() => (contact.value as any)?.category === 'partner');
 
 // Leads back-link — sourced from Contact.leads inverse O2M projection in getContact
 const relatedLeads = computed<any[]>(() => {
@@ -86,6 +96,22 @@ function handleLeadCreated() {
   loadContact();
 }
 
+function handleConnectionSaved() {
+  showConnectionModal.value = false;
+  editingConnection.value = null;
+  loadContact();
+}
+
+function openNewConnection() {
+  editingConnection.value = null;
+  showConnectionModal.value = true;
+}
+
+function openEditConnection(conn: any) {
+  editingConnection.value = conn;
+  showConnectionModal.value = true;
+}
+
 onMounted(() => {
   loadContact();
   loadClients();
@@ -141,10 +167,11 @@ onUnmounted(() => clearEntity());
       <div class="flex items-center justify-between mb-5">
         <div class="flex items-center gap-3">
           <div>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-wrap">
               <h1 class="text-base font-semibold">
                 {{ contact.prefix ? `${contact.prefix} ` : '' }}{{ contact.first_name }} {{ contact.last_name }}
               </h1>
+              <ContactsContactCategoryBadge v-if="contact.category" :category="contact.category" show-icon />
               <ContactsContactStatusBadge :status="contact.status" />
             </div>
             <p class="text-xs text-muted-foreground">{{ contact.email }}</p>
@@ -315,6 +342,69 @@ onUnmounted(() => clearEntity());
             </div>
           </div>
 
+          <!-- Client Connections (partners/connectors only) -->
+          <div v-if="isPartner || connections.length" class="ios-card p-5">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                <Icon name="lucide:hub" class="w-3.5 h-3.5" />
+                Client Connections
+                <span v-if="connections.length" class="text-[10px] text-muted-foreground/60 font-normal normal-case tracking-normal">
+                  ({{ connections.length }})
+                </span>
+              </h3>
+              <button
+                class="inline-flex items-center gap-1 h-6 px-2.5 rounded-full border border-border text-[11px] font-medium text-primary hover:bg-primary/10 hover:border-primary/30 transition-colors"
+                @click="openNewConnection"
+              >
+                <Icon name="lucide:plus" class="w-3 h-3" />
+                Add
+              </button>
+            </div>
+            <div v-if="!connections.length" class="flex flex-col items-center gap-2 py-3 text-center">
+              <p class="text-xs text-muted-foreground">No client connections yet.</p>
+              <button
+                class="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
+                @click="openNewConnection"
+              >
+                <Icon name="lucide:plus" class="w-3.5 h-3.5" />
+                Add connection
+              </button>
+            </div>
+            <div v-else class="space-y-2">
+              <button
+                v-for="conn in connections"
+                :key="conn.id"
+                class="w-full flex items-start justify-between gap-2 p-2.5 bg-muted/50 hover:bg-muted/80 rounded-xl text-left transition-colors"
+                @click="openEditConnection(conn)"
+              >
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center gap-1.5 mb-0.5">
+                    <span class="text-sm font-medium truncate">{{ conn.client?.name || 'Unknown' }}</span>
+                    <span
+                      v-if="conn.introduced_by === 'partner'"
+                      class="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-violet-500/15 text-violet-400"
+                      title="Partner introduced us to this client"
+                    >
+                      <Icon name="lucide:arrow-right" class="w-2.5 h-2.5 inline" /> us
+                    </span>
+                    <span
+                      v-else-if="conn.introduced_by === 'us'"
+                      class="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-sky-500/15 text-sky-400"
+                      title="We introduced this partner to the client"
+                    >
+                      <Icon name="lucide:arrow-left" class="w-2.5 h-2.5 inline" /> us
+                    </span>
+                  </div>
+                  <p class="text-[11px] text-muted-foreground">
+                    {{ CONNECTION_ROLE_LABELS[conn.role as keyof typeof CONNECTION_ROLE_LABELS] || conn.role }}
+                  </p>
+                  <p v-if="conn.notes" class="text-[11px] text-muted-foreground/80 mt-1 line-clamp-2">{{ conn.notes }}</p>
+                </div>
+                <Icon name="lucide:pencil" class="w-3 h-3 text-muted-foreground/50 shrink-0 mt-1" />
+              </button>
+            </div>
+          </div>
+
           <!-- Leads back-link -->
           <div class="ios-card p-5">
             <div class="flex items-center justify-between mb-3">
@@ -462,6 +552,15 @@ onUnmounted(() => clearEntity());
         :contact-id="contactId"
         :contact="contact"
         @created="handleLeadCreated"
+      />
+
+      <!-- Connection Modal -->
+      <ContactsConnectionFormModal
+        v-model="showConnectionModal"
+        :contact-id="contactId"
+        :connection="editingConnection"
+        @saved="handleConnectionSaved"
+        @deleted="handleConnectionSaved"
       />
     </template>
 

@@ -16,6 +16,7 @@ const loading = ref(true);
 const search = ref('');
 const filterIndustry = ref('');
 const filterStatus = ref('');
+const filterCategory = ref<Contact['category'] | ''>('');
 const page = ref(1);
 const limit = 50;
 const hasMore = computed(() => page.value * limit < total.value);
@@ -27,12 +28,24 @@ const industries = [
   'Real Estate', 'Retail', 'Hospitality', 'Legal', 'Non-Profit', 'Government', 'Other',
 ];
 
+const categoryChips: Array<{ value: Contact['category'] | ''; label: string }> = [
+  { value: '', label: 'All' },
+  { value: 'client', label: 'Clients' },
+  { value: 'prospect', label: 'Prospects' },
+  { value: 'partner', label: 'Partners' },
+  { value: 'architect', label: 'Architects' },
+  { value: 'developer', label: 'Developers' },
+  { value: 'hospitality', label: 'Hospitality' },
+  { value: 'media', label: 'Media' },
+];
+
 const fetchData = async () => {
   loading.value = true;
   const result = await getContacts({
     search: search.value || undefined,
     industry: filterIndustry.value || undefined,
     status: filterStatus.value || undefined,
+    category: filterCategory.value || undefined,
     limit,
     page: page.value,
   });
@@ -40,6 +53,12 @@ const fetchData = async () => {
   total.value = result.total;
   loading.value = false;
 };
+
+function selectCategory(value: Contact['category'] | '') {
+  filterCategory.value = value;
+  page.value = 1;
+  fetchData();
+}
 
 const debouncedFetch = useDebounceFn(fetchData, 300);
 
@@ -88,6 +107,21 @@ onMounted(async () => {
           Add Contact
         </Button>
       </div>
+    </div>
+
+    <!-- Category Chips -->
+    <div class="flex gap-1.5 mb-3 flex-wrap">
+      <button
+        v-for="chip in categoryChips"
+        :key="chip.value || 'all'"
+        class="inline-flex items-center h-7 px-3 rounded-full text-xs font-medium border transition-colors"
+        :class="filterCategory === chip.value
+          ? 'bg-primary text-primary-foreground border-primary'
+          : 'border-border text-muted-foreground hover:text-foreground hover:bg-muted/60'"
+        @click="selectCategory(chip.value)"
+      >
+        {{ chip.label }}
+      </button>
     </div>
 
     <!-- Filters -->

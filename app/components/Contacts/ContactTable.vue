@@ -6,6 +6,7 @@
           <th class="pb-3 pr-4 font-medium">Name</th>
           <th class="pb-3 pr-4 font-medium">Email</th>
           <th class="pb-3 pr-4 font-medium">Company</th>
+          <th class="pb-3 pr-4 font-medium">Category</th>
           <th class="pb-3 pr-4 font-medium">Status</th>
           <th class="pb-3 pr-4 font-medium">Tags</th>
           <th class="pb-3 font-medium text-right">Actions</th>
@@ -31,6 +32,10 @@
           <td class="py-3 pr-4 text-muted-foreground">{{ contact.email }}</td>
           <td class="py-3 pr-4 text-muted-foreground">{{ contact.company || '—' }}</td>
           <td class="py-3 pr-4">
+            <ContactsContactCategoryBadge v-if="contact.category" :category="contact.category" />
+            <span v-else class="text-muted-foreground/50">—</span>
+          </td>
+          <td class="py-3 pr-4">
             <ContactStatusBadge :status="contact.status" />
           </td>
           <td class="py-3 pr-4">
@@ -43,6 +48,7 @@
           </td>
           <td class="py-3 text-right">
             <div class="flex items-center justify-end gap-1" @click.stop>
+
               <Button
                 v-if="contact.email_subscribed"
                 variant="ghost"

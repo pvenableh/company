@@ -488,7 +488,7 @@ export async function buildContactSummary(contactId: string): Promise<string> {
     const directus = getTypedDirectus();
     const now = new Date();
 
-    const [contact, leads, activities] = await Promise.all([
+    const [contact, leads, activities, connections] = await Promise.all([
       directus.request(
         (readItem as any)('contacts', contactId, {
           fields: [
@@ -528,6 +528,15 @@ export async function buildContactSummary(contactId: string): Promise<string> {
           limit: 5,
         }),
       ).catch(() => []) as Promise<any[]>,
+
+      directus.request(
+        (readItems as any)('contact_connections', {
+          filter: { contact: { _eq: contactId } },
+          fields: ['id', 'role', 'introduced_by', 'notes', 'client.id', 'client.name'],
+          sort: ['-date_created'],
+          limit: 25,
+        }),
+      ).catch(() => []) as Promise<any[]>,
     ]);
 
     if (!contact) return '';
@@ -563,8 +572,22 @@ export async function buildContactSummary(contactId: string): Promise<string> {
     if (contact.client?.name || orgNames.length) {
       lines.push('');
       lines.push('[Source: Client/Org Linkage]');
-      if (contact.client?.name) lines.push(`Client: ${contact.client.name}`);
+      if (contact.client?.name) lines.push(`Employment (Contact.client): ${contact.client.name}`);
       if (orgNames.length) lines.push(`Member of orgs (${orgNames.length}): ${orgNames.slice(0, 8).join(', ')}`);
+    }
+
+    // Cross-client connections (partners/connectors)
+    if (Array.isArray(connections) && connections.length) {
+      lines.push('');
+      lines.push('[Source: Cross-Client Connections]');
+      lines.push(`${contact.category === 'partner' ? 'This PARTNER has ' : 'Non-employment client links ('}${connections.length}${contact.category === 'partner' ? ' active client connection(s):' : '):'}`);
+      connections.slice(0, 15).forEach((c: any) => {
+        const clientName = c.client?.name || 'Unknown client';
+        const dir = c.introduced_by === 'partner' ? ' · partner→us intro'
+          : c.introduced_by === 'us' ? ' · we→them intro' : '';
+        const notes = c.notes ? ` · ${String(c.notes).substring(0, 80)}` : '';
+        lines.push(`  - ${clientName} [${c.role || 'other'}]${dir}${notes}`);
+      });
     }
 
     // Marketing engagement — always include if any data is present

@@ -61,11 +61,12 @@ export async function getEntityContext(
 // ─── Client Context ─────────────────────────────────────────────────────────
 
 async function buildClientContext(directus: any, clientId: string, now: Date): Promise<string> {
-  const [client, invoices, projects, contacts] = await Promise.all([
+  const [client, invoices, projects, contacts, connections] = await Promise.all([
     directus.request(
       readItem('clients', clientId, {
         fields: ['id', 'name', 'status', 'account_state', 'industry', 'date_created', 'date_updated',
-          'brand_direction', 'goals', 'target_audience', 'location', 'website', 'notes'],
+          'brand_direction', 'goals', 'target_audience', 'location', 'website', 'notes',
+          'parent_client.id', 'parent_client.name'],
       }),
     ).catch(() => null) as Promise<any>,
 
@@ -90,8 +91,17 @@ async function buildClientContext(directus: any, clientId: string, now: Date): P
     directus.request(
       readItems('contacts', {
         filter: { client: { _eq: clientId } },
-        fields: ['id', 'first_name', 'last_name', 'email', 'job_title'],
+        fields: ['id', 'first_name', 'last_name', 'email', 'job_title', 'category'],
         limit: 10,
+      }),
+    ).catch(() => []) as Promise<any[]>,
+
+    directus.request(
+      readItems('contact_connections', {
+        filter: { client: { _eq: clientId } },
+        fields: ['id', 'role', 'introduced_by', 'notes',
+          'contact.id', 'contact.first_name', 'contact.last_name', 'contact.email', 'contact.category', 'contact.company'],
+        limit: 20,
       }),
     ).catch(() => []) as Promise<any[]>,
   ]);
@@ -123,6 +133,13 @@ async function buildClientContext(directus: any, clientId: string, now: Date): P
     if (client.target_audience) lines.push(`  Audience: ${client.target_audience}`);
   }
 
+  // Parent client (if this is a sub-brand)
+  if (client.parent_client?.name) {
+    lines.push('');
+    lines.push(`[Source: Client Hierarchy]`);
+    lines.push(`Sub-brand of: ${client.parent_client.name} (id: ${client.parent_client.id})`);
+  }
+
   // Contacts [Source: Contacts]
   if (contacts.length > 0) {
     lines.push('');
@@ -130,7 +147,22 @@ async function buildClientContext(directus: any, clientId: string, now: Date): P
     lines.push(`CONTACTS (${contacts.length}):`);
     contacts.slice(0, 5).forEach((c: any) => {
       const name = `${c.first_name || ''} ${c.last_name || ''}`.trim();
-      lines.push(`  - ${name}${c.job_title ? ` — ${c.job_title}` : ''}${c.email ? ` (${c.email})` : ''}`);
+      const cat = c.category ? ` [${c.category}]` : '';
+      lines.push(`  - ${name}${cat}${c.job_title ? ` — ${c.job_title}` : ''}${c.email ? ` (${c.email})` : ''}`);
+    });
+  }
+
+  // Partner/connector links (non-employment relationships)
+  if (connections.length > 0) {
+    lines.push('');
+    lines.push(`[Source: Partner Connections]`);
+    lines.push(`PARTNERS/CONNECTORS (${connections.length}):`);
+    connections.slice(0, 10).forEach((c: any) => {
+      const name = `${c.contact?.first_name || ''} ${c.contact?.last_name || ''}`.trim() || c.contact?.email || 'Unknown';
+      const company = c.contact?.company ? ` (${c.contact.company})` : '';
+      const dir = c.introduced_by === 'partner' ? ' · they introduced us'
+        : c.introduced_by === 'us' ? ' · we introduced them' : '';
+      lines.push(`  - ${name}${company} [${c.role || 'other'}]${dir}`);
     });
   }
 

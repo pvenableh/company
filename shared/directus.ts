@@ -1137,6 +1137,8 @@ export interface Client {
 	sub_brands?: Client[] | string[];
 	/** @description Contacts who belong to this client. Inverse of contacts.client. */
 	contacts?: Contact[] | string[];
+	/** @description Partner/connector relationships pointing at this client. Inverse of contact_connections.client. */
+	partner_connections?: ContactConnection[] | string[];
 }
 
 export interface ClientsDirectusUser {
@@ -1224,6 +1226,24 @@ export interface Comment {
 	hidden_at?: string | null;
 }
 
+export interface ContactConnection {
+	/** @primaryKey */
+	id: number;
+	sort?: number | null;
+	date_created?: string | null;
+	user_created?: string | null;
+	/** @description The connector (usually category=partner) @required */
+	contact: Contact | string;
+	/** @description The client this contact has a relationship with (beyond employment) @required */
+	client: Client | string;
+	/** @description Nature of the connection @required */
+	role: 'referral_partner' | 'vendor' | 'board' | 'consultant' | 'investor' | 'other';
+	/** @description Direction of the introduction (for referral attribution) */
+	introduced_by?: 'partner' | 'us' | null;
+	/** @description Optional free-form context about the relationship */
+	notes?: string | null;
+}
+
 export interface Contact {
 	/** @primaryKey */
 	id: string;
@@ -1278,6 +1298,8 @@ export interface Contact {
 	lists?: MailingListContact[] | string[];
 	/** @description Leads associated with this contact. Inverse of leads.related_contact. */
 	leads?: Lead[] | string[];
+	/** @description Cross-client connections. Inverse of contact_connections.contact. */
+	connections?: ContactConnection[] | string[];
 }
 
 export interface ContactsOrganization {
@@ -4080,6 +4102,7 @@ export interface Schema {
 	client_testimonials: ClientTestimonial[];
 	comment_reports: CommentReport[];
 	comments: Comment[];
+	contact_connections: ContactConnection[];
 	contacts: Contact[];
 	contacts_organizations: ContactsOrganization[];
 	courses: Course[];
@@ -4298,6 +4321,7 @@ export enum CollectionNames {
 	client_testimonials = 'client_testimonials',
 	comment_reports = 'comment_reports',
 	comments = 'comments',
+	contact_connections = 'contact_connections',
 	contacts = 'contacts',
 	contacts_organizations = 'contacts_organizations',
 	courses = 'courses',

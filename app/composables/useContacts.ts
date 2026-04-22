@@ -13,6 +13,7 @@ export function useContacts() {
     tags?: string[];
     industry?: string;
     client?: string;
+    category?: Contact['category'] | '';
     limit?: number;
     page?: number;
   }): Promise<{ data: Contact[]; total: number }> => {
@@ -62,6 +63,10 @@ export function useContacts() {
       filter._and.push({ client: { _eq: params.client } });
     }
 
+    if (params?.category) {
+      filter._and.push({ category: { _eq: params.category } });
+    }
+
     const data = await items.list({
       fields: ['*', 'client.id', 'client.name'],
       filter: filter._and.length ? filter : undefined,
@@ -77,7 +82,15 @@ export function useContacts() {
 
   const getContact = async (id: string): Promise<Contact> => {
     return items.get(id, {
-      fields: ['*', 'lists.id', 'lists.list_id.*', 'lists.subscribed', 'client.id', 'client.name', 'organizations.id', 'organizations.organizations_id.id', 'organizations.organizations_id.name', 'leads.id', 'leads.stage', 'leads.status', 'leads.project_type', 'leads.is_junk', 'leads.next_follow_up', 'leads.estimated_value'],
+      fields: [
+        '*',
+        'lists.id', 'lists.list_id.*', 'lists.subscribed',
+        'client.id', 'client.name',
+        'organizations.id', 'organizations.organizations_id.id', 'organizations.organizations_id.name',
+        'leads.id', 'leads.stage', 'leads.status', 'leads.project_type', 'leads.is_junk', 'leads.next_follow_up', 'leads.estimated_value',
+        'connections.id', 'connections.role', 'connections.introduced_by', 'connections.notes', 'connections.date_created',
+        'connections.client.id', 'connections.client.name', 'connections.client.logo',
+      ],
     });
   };
 
