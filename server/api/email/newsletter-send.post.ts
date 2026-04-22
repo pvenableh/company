@@ -10,6 +10,9 @@ import { readItems, readItem, createItem, updateItem } from '@directus/sdk';
 
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig();
+  const query = getQuery(event);
+  const dryRun = query.dry_run === '1' || query.dry_run === 'true';
+
   const {
     email_id,
     template_id,
@@ -24,7 +27,7 @@ export default defineEventHandler(async (event) => {
     organization_id,
   } = await readBody(event);
 
-  if (!template_id) {
+  if (!template_id && !dryRun) {
     throw createError({ statusCode: 400, message: 'template_id is required' });
   }
 
@@ -43,16 +46,18 @@ export default defineEventHandler(async (event) => {
   }
 
   const apiKey = config.sendgridApiKey || config.SENDGRID_API_KEY;
-  if (!apiKey) {
+  if (!apiKey && !dryRun) {
     throw createError({ statusCode: 500, message: 'SendGrid API key not configured' });
   }
 
-  sgMail.setApiKey(apiKey as string);
+  if (apiKey) sgMail.setApiKey(apiKey as string);
   const directus = getServerDirectus();
 
-  // Fetch the template
-  const template = (await directus.request(readItem('email_templates', template_id))) as any;
-  if (!template?.mjml_source) {
+  // Fetch the template (skipped on dry run — we only need recipient resolution)
+  const template = template_id
+    ? ((await directus.request(readItem('email_templates', template_id))) as any)
+    : null;
+  if (!dryRun && !template?.mjml_source) {
     throw createError({ statusCode: 400, message: 'Template has no compiled MJML' });
   }
 
@@ -151,6 +156,15 @@ export default defineEventHandler(async (event) => {
         contacts.push(contact);
       }
     }
+  }
+
+  if (dryRun) {
+    return {
+      success: true,
+      dry_run: true,
+      total: contacts.length,
+      sample_emails: contacts.slice(0, 5).map((c) => c.email),
+    };
   }
 
   if (contacts.length === 0) {

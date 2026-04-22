@@ -109,6 +109,15 @@
           <span class="hidden sm:inline">Test</span>
         </button>
 
+        <!-- Send -->
+        <button
+          class="rounded-full px-2.5 py-1.5 text-[11px] font-medium bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 ios-press inline-flex items-center gap-1 transition-colors"
+          @click="showSendModal = true"
+        >
+          <Icon name="lucide:paper-plane" class="w-3 h-3" />
+          <span class="hidden sm:inline">Send</span>
+        </button>
+
         <!-- Preview -->
         <button class="rounded-full px-2.5 py-1.5 text-[11px] font-medium border border-border bg-card hover:bg-muted ios-press inline-flex items-center gap-1 transition-colors" @click="showPreview = !showPreview">
           <Icon :name="showPreview ? 'lucide:panel-right-close' : 'lucide:panel-right-open'" class="w-3 h-3" />
@@ -342,6 +351,14 @@
       @close="showTestModal = false"
     />
 
+    <!-- Send Newsletter Modal -->
+    <NewsletterSendNewsletterModal
+      v-if="showSendModal"
+      :template-id="templateId"
+      :template-name="template?.name"
+      @close="showSendModal = false"
+    />
+
     <!-- Custom MJML Block Modal -->
     <NewsletterCustomBlockModal
       v-if="showCustomBlockModal"
@@ -432,6 +449,7 @@ const blockLibrary = ref<Record<string, any>>({});
 const showPreview = ref(true);
 const showSidebar = ref(false);
 const showTestModal = ref(false);
+const showSendModal = ref(false);
 const showCustomBlockModal = ref(false);
 const showAIWizard = ref(false);
 const editingPartialType = ref<'header' | 'footer' | 'web_version_bar' | null>(null);
