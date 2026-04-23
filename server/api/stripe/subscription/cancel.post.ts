@@ -1,6 +1,8 @@
 // POST /api/stripe/subscription/cancel
 // Cancels a subscription (at period end by default)
 export default defineEventHandler(async (event) => {
+	await requireOrgRole(event, ['owner', 'admin']);
+
 	const stripe = useStripe();
 	const body = await readBody(event);
 	const { subscriptionId, immediate } = body;

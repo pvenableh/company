@@ -2,6 +2,7 @@
  * Shared Earnest AI chat state — used by AITray quick chat and AIChat full page.
  * Provides a single active quick-chat conversation that persists across tray open/close.
  */
+import { toast } from 'vue-sonner';
 
 interface ChatMessage {
 	id: string;
@@ -58,7 +59,20 @@ export function useEarnestChat() {
 			});
 
 			if (!response.ok) {
-				throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+				// Pull the real error message out of the JSON body so the user sees
+				// the actual reason (e.g. "Your monthly AI token limit has been reached")
+				// instead of a bare status code. 402 = token budget exhausted,
+				// 429 = rate limited — both get a toast so the visitor sees it even
+				// if they've already closed the tray.
+				let message = response.statusText || 'Request failed';
+				try {
+					const body = await response.json();
+					message = body?.data?.message || body?.message || body?.statusMessage || message;
+				} catch {}
+				if (response.status === 402 || response.status === 429) {
+					toast.error(message);
+				}
+				throw new Error(message);
 			}
 
 			const reader = response.body?.getReader();

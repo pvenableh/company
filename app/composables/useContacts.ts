@@ -88,6 +88,8 @@ export function useContacts() {
         'client.id', 'client.name',
         'organizations.id', 'organizations.organizations_id.id', 'organizations.organizations_id.name',
         'leads.id', 'leads.stage', 'leads.status', 'leads.project_type', 'leads.is_junk', 'leads.next_follow_up', 'leads.estimated_value',
+        'leads.actual_value', 'leads.lost_reason', 'leads.closed_date',
+        'leads.resulting_client.id', 'leads.resulting_client.name',
         'connections.id', 'connections.role', 'connections.introduced_by', 'connections.notes', 'connections.date_created',
         'connections.client.id', 'connections.client.name', 'connections.client.logo',
       ],

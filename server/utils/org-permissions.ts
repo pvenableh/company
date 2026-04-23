@@ -98,3 +98,43 @@ export async function requireOrgPermission(
     membership: { id: membership.id, roleSlug, roleName },
   };
 }
+
+/**
+ * Require that the authenticated user has at least one active org_membership
+ * whose role.slug is in `allowed`. Used as a coarse gate for endpoints that
+ * aren't org-scoped in their body (e.g. Stripe billing routes operate on a
+ * stripe customer id, not an orgId). Throws 401/403 on failure.
+ */
+export async function requireOrgRole(
+  event: any,
+  allowed: RoleSlug[],
+): Promise<{ userId: string; roleSlug: RoleSlug }> {
+  const session = await requireUserSession(event);
+  const userId = (session as any).user?.id as string | undefined;
+  if (!userId) {
+    throw createError({ statusCode: 401, message: 'Authentication required' });
+  }
+
+  const directus = getTypedDirectus();
+  const memberships = await directus.request(
+    readItems('org_memberships', {
+      filter: {
+        _and: [
+          { user: { _eq: userId } },
+          { status: { _eq: 'active' } },
+        ],
+      },
+      fields: ['id', 'role.slug'],
+      limit: 50,
+    }),
+  ) as any[];
+
+  const match = memberships.find((m: any) => allowed.includes(m?.role?.slug as RoleSlug));
+  if (!match) {
+    throw createError({
+      statusCode: 403,
+      message: 'You do not have permission to perform this action',
+    });
+  }
+  return { userId, roleSlug: match.role.slug as RoleSlug };
+}

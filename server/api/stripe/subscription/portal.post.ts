@@ -1,6 +1,8 @@
 // POST /api/stripe/subscription/portal
 // Creates a Stripe Customer Portal session for self-service management
 export default defineEventHandler(async (event) => {
+	await requireOrgRole(event, ['owner', 'admin']);
+
 	const stripe = useStripe();
 	const body = await readBody(event);
 	const { customerId, returnUrl } = body;

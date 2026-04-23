@@ -99,6 +99,35 @@ export const walkthroughTours: WalkthroughTour[] = [
     ],
   },
 
+  // ── Contact Detail ──
+  {
+    id: 'contact-detail',
+    title: 'Contact Details',
+    description: 'Partner connections, sourced-leads attribution, and Ask Earnest',
+    route: '/contacts/',
+    icon: 'i-heroicons-user-circle',
+    steps: [
+      {
+        target: '[data-tour-id="ask-earnest"]',
+        title: 'Ask Earnest about this contact',
+        description: 'Opens the contextual chat pane. Earnest loads this person\'s full profile — pipeline, sourced attribution, client connections, email engagement — before answering, so responses cite real data instead of guessing.',
+        placement: 'bottom',
+      },
+      {
+        target: '[data-tour-id="leads-sourced"]',
+        title: 'Leads Sourced',
+        description: 'Shows every lead tied to this person rolled up into won / open / lost buckets with dollar totals. "Clients Won" lists the actual clients they sourced (with multi-deal counts). Partners always see this card; regular contacts see it once they\'ve won their first deal.',
+        placement: 'left',
+      },
+      {
+        target: '[data-tour-id="client-connections"]',
+        title: 'Client Connections',
+        description: 'Non-employment links between this person and your clients — referral partners, vendors, board members, consultants, investors. Track who introduced who and why. Only appears for partners or contacts that already have a connection.',
+        placement: 'left',
+      },
+    ],
+  },
+
   // ── Teams & Navigation ──
   {
     id: 'navigation-intro',

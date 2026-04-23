@@ -27,6 +27,9 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'organizationId is required' });
   }
 
+  // Only owner/admin of the target org may purchase tokens for it.
+  await requireOrgPermission(event, organizationId, 'org_settings', 'update');
+
   const pkg = TOKEN_PACKAGES.find((p) => p.id === packageId);
   if (!pkg) {
     throw createError({ statusCode: 400, message: 'Invalid package ID' });

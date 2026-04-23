@@ -509,8 +509,9 @@ export async function buildContactSummary(contactId: string): Promise<string> {
         (readItems as any)('leads', {
           filter: { related_contact: { _eq: contactId } },
           fields: [
-            'id', 'stage', 'status', 'project_type', 'estimated_value',
+            'id', 'stage', 'status', 'project_type', 'estimated_value', 'actual_value',
             'next_follow_up', 'closed_date', 'lost_reason', 'date_created',
+            'resulting_client.id', 'resulting_client.name',
           ],
           sort: ['-date_created'],
           limit: 25,
@@ -656,6 +657,38 @@ export async function buildContactSummary(contactId: string): Promise<string> {
         lines.push(`CLOSED LEADS (${closed.length}): ${closed.slice(0, 5).map((l: any) =>
           `#${l.id} ${l.stage}${l.project_type ? ` (${l.project_type})` : ''}${l.lost_reason ? ` — ${l.lost_reason}` : ''}`
         ).join(' · ')}`);
+      }
+    }
+
+    // Sourced attribution — partner-ROI rollup (won leads only)
+    const wonLeads = leads.filter((l: any) => l.stage === 'won');
+    if (wonLeads.length) {
+      const totalClosed = wonLeads.reduce((s: number, l: any) => s + (Number(l.actual_value) || 0), 0);
+      const byClient = new Map<string, { name: string; total: number; count: number }>();
+      let unknownCount = 0;
+      let unknownTotal = 0;
+      for (const l of wonLeads) {
+        const amount = Number(l.actual_value) || 0;
+        const c = l.resulting_client;
+        if (c?.id) {
+          const existing = byClient.get(c.id);
+          if (existing) { existing.total += amount; existing.count += 1; }
+          else byClient.set(c.id, { name: c.name || 'Unnamed client', total: amount, count: 1 });
+        } else {
+          unknownCount += 1;
+          unknownTotal += amount;
+        }
+      }
+      lines.push('');
+      lines.push('[Source: Sourced Attribution]');
+      lines.push(`SOURCED ATTRIBUTION: ${wonLeads.length} won · $${totalClosed.toLocaleString()} closed`);
+      const clientRows = Array.from(byClient.values()).sort((a, b) => b.total - a.total);
+      clientRows.slice(0, 8).forEach((c) => {
+        const dealSuffix = c.count > 1 ? `, ${c.count} deals` : '';
+        lines.push(`  - ${c.name} ($${c.total.toLocaleString()}${dealSuffix})`);
+      });
+      if (unknownCount > 0) {
+        lines.push(`  - Client unknown ($${unknownTotal.toLocaleString()}, ${unknownCount} ${unknownCount === 1 ? 'deal' : 'deals'})`);
       }
     }
 

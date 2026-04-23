@@ -396,6 +396,7 @@ export function useLeads() {
       converted_to_customer: true,
       stage: 'won',
       actual_value: clientData.contract_value || null,
+      resulting_client: (client as any)?.id || null,
       closed_date: new Date().toISOString(),
       date_updated: new Date(),
     } as any);

@@ -323,25 +323,25 @@ async function buildInvoiceContext(directus: any, invoiceId: string, now: Date):
   const [invoice, lineItems, payments] = await Promise.all([
     directus.request(
       readItem('invoices', invoiceId, {
-        fields: ['id', 'invoice_code', 'status', 'total_amount', 'subtotal', 'tax_amount',
-          'due_date', 'invoice_date', 'notes', 'client.name', 'client.id',
+        fields: ['id', 'invoice_code', 'status', 'total_amount',
+          'due_date', 'invoice_date', 'note', 'memo', 'client.name', 'client.id',
           'projects.projects_id.id', 'projects.projects_id.title'],
       }),
     ).catch(() => null) as Promise<any>,
 
     directus.request(
-      readItems('invoice_items', {
-        filter: { invoice: { _eq: invoiceId } },
-        fields: ['id', 'description', 'quantity', 'unit_price', 'total'],
+      readItems('line_items', {
+        filter: { invoice_id: { _eq: invoiceId } },
+        fields: ['id', 'description', 'quantity', 'rate', 'amount', 'product.name'],
         limit: 20,
       }),
     ).catch(() => []) as Promise<any[]>,
 
     directus.request(
-      readItems('payments', {
-        filter: { invoice: { _eq: invoiceId } },
-        fields: ['id', 'amount', 'status', 'date_created', 'payment_method'],
-        sort: ['-date_created'],
+      readItems('payments_received', {
+        filter: { invoice_id: { _eq: invoiceId } },
+        fields: ['id', 'amount', 'status', 'date_received', 'payment_method'],
+        sort: ['-date_received'],
         limit: 10,
       }),
     ).catch(() => []) as Promise<any[]>,
@@ -351,6 +351,7 @@ async function buildInvoiceContext(directus: any, invoiceId: string, now: Date):
 
   const lines: string[] = [];
   const clientName = (invoice.client as any)?.name;
+  const totalAmount = Number(invoice.total_amount) || 0;
 
   lines.push(`CURRENT FOCUS: Invoice "${invoice.invoice_code || invoiceId}"`);
 
@@ -363,10 +364,7 @@ async function buildInvoiceContext(directus: any, invoiceId: string, now: Date):
     .map((j: any) => j.projects_id?.title)
     .filter(Boolean);
   if (projectNames.length) lines.push(`Project${projectNames.length > 1 ? 's' : ''}: ${projectNames.join(', ')}`);
-  lines.push(`Amount: $${(invoice.total_amount || 0).toLocaleString()}`);
-  if (invoice.subtotal && invoice.tax_amount) {
-    lines.push(`  Subtotal: $${invoice.subtotal.toLocaleString()}, Tax: $${invoice.tax_amount.toLocaleString()}`);
-  }
+  lines.push(`Amount: $${totalAmount.toLocaleString()}`);
   if (invoice.invoice_date) lines.push(`Issued: ${invoice.invoice_date}`);
   if (invoice.due_date) {
     const daysUntil = Math.ceil((new Date(invoice.due_date).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
@@ -379,31 +377,37 @@ async function buildInvoiceContext(directus: any, invoiceId: string, now: Date):
     lines.push('[Source: Line Items]');
     lines.push(`LINE ITEMS (${lineItems.length}):`);
     lineItems.slice(0, 10).forEach((item: any) => {
-      lines.push(`  - ${item.description || 'Item'} — ${item.quantity || 1} x $${(item.unit_price || 0).toLocaleString()} = $${(item.total || 0).toLocaleString()}`);
+      const label = item.description || item.product?.name || 'Item';
+      const qty = item.quantity || 1;
+      const rate = Number(item.rate) || 0;
+      const amt = Number(item.amount) || (qty * rate);
+      lines.push(`  - ${label} — ${qty} x $${rate.toLocaleString()} = $${amt.toLocaleString()}`);
     });
   }
 
   // Payment history [Source: Payment History]
   if (payments.length > 0) {
-    const totalPaid = payments.filter((p: any) => p.status === 'completed' || p.status === 'succeeded')
-      .reduce((s: number, p: any) => s + (p.amount || 0), 0);
+    const totalPaid = payments.filter((p: any) => p.status === 'paid')
+      .reduce((s: number, p: any) => s + (Number(p.amount) || 0), 0);
     lines.push('');
     lines.push('[Source: Payment History]');
     lines.push(`PAYMENTS (${payments.length}, total paid: $${totalPaid.toLocaleString()}):`);
     payments.slice(0, 5).forEach((p: any) => {
-      lines.push(`  - $${(p.amount || 0).toLocaleString()} — ${p.status}${p.payment_method ? ` via ${p.payment_method}` : ''}${p.date_created ? ` on ${p.date_created.split('T')[0]}` : ''}`);
+      const amt = Number(p.amount) || 0;
+      lines.push(`  - $${amt.toLocaleString()} — ${p.status}${p.payment_method ? ` via ${p.payment_method}` : ''}${p.date_received ? ` on ${p.date_received.split('T')[0]}` : ''}`);
     });
 
-    const remaining = (invoice.total_amount || 0) - totalPaid;
+    const remaining = totalAmount - totalPaid;
     if (remaining > 0) {
       lines.push(`  Balance remaining: $${remaining.toLocaleString()}`);
     }
   }
 
-  if (invoice.notes) {
+  const noteText = invoice.note || invoice.memo;
+  if (noteText) {
     lines.push('');
     lines.push('[Source: Invoice Details]');
-    lines.push(`NOTES: ${invoice.notes}`);
+    lines.push(`NOTES: ${noteText}`);
   }
 
   lines.push('');

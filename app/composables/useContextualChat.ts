@@ -145,7 +145,7 @@ export function useContextualChat() {
         body: JSON.stringify({
           sessionId: chat.sessionId || undefined,
           message: content.trim(),
-          organizationId: (selectedOrg.value as any)?.id || undefined,
+          organizationId: typeof selectedOrg.value === 'string' ? selectedOrg.value : (selectedOrg.value as any)?.id || undefined,
           responseStyle: selectedPersona.value !== 'default' ? selectedPersona.value : undefined,
           verbosity: useAIPreferences().responseVerbosity.value,
           entityType,
@@ -154,7 +154,19 @@ export function useContextualChat() {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        // Surface the real error reason (e.g. token cap hit) instead of a
+        // bare status code, and toast on 402/429 so visitors notice even if
+        // they've collapsed the sidebar.
+        let message = response.statusText || 'Request failed';
+        try {
+          const body = await response.json();
+          message = body?.data?.message || body?.message || body?.statusMessage || message;
+        } catch {}
+        if (response.status === 402 || response.status === 429) {
+          const { toast } = await import('vue-sonner');
+          toast.error(message);
+        }
+        throw new Error(message);
       }
 
       const reader = response.body?.getReader();

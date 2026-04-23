@@ -61,5 +61,8 @@ async function handleForgotPassword(values: { email: string }) {
 				@back="panel = 'login'"
 			/>
 		</Transition>
+		<p v-if="panel === 'login'" class="mt-6 text-center text-xs text-muted-foreground">
+			Just looking? <NuxtLink to="/try-demo" class="underline">Try the demo</NuxtLink>.
+		</p>
 	</div>
 </template>

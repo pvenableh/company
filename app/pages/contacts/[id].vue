@@ -48,6 +48,56 @@ const closedLeads = computed(() =>
   relatedLeads.value.filter((l: any) => l.stage === 'won' || l.stage === 'lost'),
 );
 
+// Leads Sourced — partner-ROI attribution rollup
+const wonLeads = computed(() => relatedLeads.value.filter((l: any) => l.stage === 'won'));
+const lostLeads = computed(() => relatedLeads.value.filter((l: any) => l.stage === 'lost'));
+const openLeadsForSourced = computed(() =>
+  relatedLeads.value.filter((l: any) => !['won', 'lost'].includes(l.stage) && l.status !== 'archived' && !l.is_junk),
+);
+
+const showSourcedCard = computed(() => isPartner.value || wonLeads.value.length > 0);
+
+const sourcedStats = computed(() => {
+  const closedValue = wonLeads.value.reduce((sum: number, l: any) => sum + (Number(l.actual_value) || 0), 0);
+  const pipelineValue = openLeadsForSourced.value.reduce((sum: number, l: any) => sum + (Number(l.estimated_value) || 0), 0);
+  return {
+    wonCount: wonLeads.value.length,
+    openCount: openLeadsForSourced.value.length,
+    lostCount: lostLeads.value.length,
+    closedValue,
+    pipelineValue,
+  };
+});
+
+const clientsWon = computed(() => {
+  const byClient = new Map<string, { id: string; name: string; total: number; count: number }>();
+  const unknownBucket = { id: '__unknown__', name: 'Client unknown', total: 0, count: 0 };
+  for (const lead of wonLeads.value) {
+    const client = (lead as any).resulting_client;
+    const amount = Number((lead as any).actual_value) || 0;
+    if (client?.id) {
+      const existing = byClient.get(client.id);
+      if (existing) {
+        existing.total += amount;
+        existing.count += 1;
+      } else {
+        byClient.set(client.id, { id: client.id, name: client.name || 'Unnamed client', total: amount, count: 1 });
+      }
+    } else {
+      unknownBucket.total += amount;
+      unknownBucket.count += 1;
+    }
+  }
+  const list = Array.from(byClient.values()).sort((a, b) => b.total - a.total);
+  if (unknownBucket.count > 0) list.push(unknownBucket);
+  return list;
+});
+
+function formatCurrency(n: number): string {
+  if (!n) return '$0';
+  return `$${Math.round(n).toLocaleString()}`;
+}
+
 async function loadClients() {
   if (!selectedOrg.value) return;
   try {
@@ -179,6 +229,7 @@ onUnmounted(() => clearEntity());
         </div>
         <div class="flex items-center gap-1.5">
           <button
+            data-tour-id="ask-earnest"
             class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium text-primary hover:bg-primary/10 hover:border-primary/30 transition-colors"
             @click="sidebarOpen = true"
           >
@@ -343,7 +394,7 @@ onUnmounted(() => clearEntity());
           </div>
 
           <!-- Client Connections (partners/connectors only) -->
-          <div v-if="isPartner || connections.length" class="ios-card p-5">
+          <div v-if="isPartner || connections.length" data-tour-id="client-connections" class="ios-card p-5">
             <div class="flex items-center justify-between mb-3">
               <h3 class="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-2">
                 <Icon name="lucide:hub" class="w-3.5 h-3.5" />
@@ -402,6 +453,111 @@ onUnmounted(() => clearEntity());
                 </div>
                 <Icon name="lucide:pencil" class="w-3 h-3 text-muted-foreground/50 shrink-0 mt-1" />
               </button>
+            </div>
+          </div>
+
+          <!-- Leads Sourced — partner-ROI attribution -->
+          <div v-if="showSourcedCard" data-tour-id="leads-sourced" class="ios-card p-5">
+            <h3 class="text-[10px] uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
+              <Icon name="lucide:target" class="w-3.5 h-3.5" />
+              Leads Sourced
+            </h3>
+            <div class="space-y-3">
+              <!-- Summary row -->
+              <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm">
+                <span class="font-medium">{{ sourcedStats.wonCount }} won</span>
+                <span class="text-muted-foreground">·</span>
+                <span>{{ sourcedStats.openCount }} open</span>
+                <span class="text-muted-foreground">·</span>
+                <span class="text-muted-foreground">{{ sourcedStats.lostCount }} lost</span>
+              </div>
+              <div class="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                <span v-if="sourcedStats.closedValue > 0">
+                  <span class="text-foreground font-medium">{{ formatCurrency(sourcedStats.closedValue) }}</span> closed
+                </span>
+                <span v-if="sourcedStats.closedValue > 0 && sourcedStats.pipelineValue > 0" class="text-muted-foreground">·</span>
+                <span v-if="sourcedStats.pipelineValue > 0">
+                  <span class="text-foreground font-medium">{{ formatCurrency(sourcedStats.pipelineValue) }}</span> pipeline
+                </span>
+                <span v-if="sourcedStats.closedValue === 0 && sourcedStats.pipelineValue === 0 && isPartner">
+                  No sourced revenue yet
+                </span>
+              </div>
+
+              <!-- Clients Won -->
+              <div v-if="clientsWon.length" class="pt-2 border-t border-border/30 space-y-1.5">
+                <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Clients Won</p>
+                <div class="space-y-1">
+                  <NuxtLink
+                    v-for="c in clientsWon"
+                    :key="c.id"
+                    :to="c.id === '__unknown__' ? '' : `/clients/${c.id}`"
+                    :class="[
+                      'flex items-center justify-between p-2 bg-muted/50 rounded-lg text-sm transition-colors',
+                      c.id === '__unknown__' ? 'pointer-events-none opacity-70' : 'hover:bg-muted/80',
+                    ]"
+                  >
+                    <span class="truncate">
+                      {{ c.name }}
+                      <span v-if="c.count > 1" class="text-xs text-muted-foreground">({{ c.count }} deals)</span>
+                    </span>
+                    <span class="text-xs font-medium shrink-0 ml-2">{{ formatCurrency(c.total) }}</span>
+                  </NuxtLink>
+                </div>
+              </div>
+
+              <!-- Active Pipeline -->
+              <div v-if="openLeadsForSourced.length" class="pt-2 border-t border-border/30 space-y-1.5">
+                <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Active Pipeline</p>
+                <div class="space-y-1">
+                  <NuxtLink
+                    v-for="lead in openLeadsForSourced"
+                    :key="lead.id"
+                    :to="`/leads/${lead.id}`"
+                    class="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors text-sm"
+                  >
+                    <div class="flex items-center gap-2 min-w-0">
+                      <span
+                        class="w-1.5 h-1.5 rounded-full shrink-0"
+                        :style="{ backgroundColor: LEAD_STAGE_COLORS[lead.stage as keyof typeof LEAD_STAGE_COLORS] || '#94a3b8' }"
+                      ></span>
+                      <span class="truncate">{{ lead.project_type || `Lead #${lead.id}` }}</span>
+                      <span class="text-xs text-muted-foreground shrink-0">
+                        {{ LEAD_STAGE_LABELS[lead.stage as keyof typeof LEAD_STAGE_LABELS] || lead.stage }}
+                      </span>
+                    </div>
+                    <span v-if="lead.estimated_value" class="text-xs text-muted-foreground shrink-0 ml-2">
+                      {{ formatCurrency(Number(lead.estimated_value)) }}
+                    </span>
+                  </NuxtLink>
+                </div>
+              </div>
+
+              <!-- Lost -->
+              <div v-if="lostLeads.length" class="pt-2 border-t border-border/30 space-y-1.5">
+                <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Lost</p>
+                <div class="space-y-1">
+                  <NuxtLink
+                    v-for="lead in lostLeads"
+                    :key="lead.id"
+                    :to="`/leads/${lead.id}`"
+                    class="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors text-sm opacity-70"
+                  >
+                    <span class="truncate">{{ lead.project_type || `Lead #${lead.id}` }}</span>
+                    <span v-if="lead.lost_reason" class="text-xs text-muted-foreground shrink-0 ml-2 truncate">
+                      {{ lead.lost_reason }}
+                    </span>
+                  </NuxtLink>
+                </div>
+              </div>
+
+              <!-- Empty partner state -->
+              <p
+                v-if="isPartner && !clientsWon.length && !openLeadsForSourced.length && !lostLeads.length"
+                class="text-xs text-muted-foreground italic"
+              >
+                No leads attached to this partner yet.
+              </p>
             </div>
           </div>
 

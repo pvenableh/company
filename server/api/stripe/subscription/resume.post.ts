@@ -1,6 +1,8 @@
 // POST /api/stripe/subscription/resume
 // Resumes a subscription that was set to cancel at period end
 export default defineEventHandler(async (event) => {
+	await requireOrgRole(event, ['owner', 'admin']);
+
 	const stripe = useStripe();
 	const body = await readBody(event);
 	const { subscriptionId } = body;
