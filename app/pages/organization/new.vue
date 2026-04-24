@@ -45,7 +45,7 @@ const plans = [
     features: ['1 team seat', 'Every feature included', '100K Earnest tokens/month', '5 client portal seats'],
   },
   {
-    key: 'pro',
+    key: 'studio',
     name: 'Studio',
     price: '149',
     desc: 'For the team that means business.',
@@ -53,7 +53,7 @@ const plans = [
     features: ['8 team seats', 'Team channels & video', '400K Earnest tokens/month', '15 client portal seats'],
   },
   {
-    key: 'enterprise',
+    key: 'agency',
     name: 'Agency',
     price: '299',
     desc: 'For the business that has grown into something real.',

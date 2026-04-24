@@ -25,7 +25,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Organization name is required' });
   }
 
-  const validPlans = ['solo', 'pro', 'enterprise'];
+  const validPlans = ['free', 'solo', 'studio', 'agency', 'enterprise'];
   const orgPlan = validPlans.includes(plan) ? plan : 'solo';
 
   const directus = getServerDirectus();

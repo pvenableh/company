@@ -3,7 +3,7 @@
 import { defineEventHandler, getHeader, readBody } from 'h3';
 import Stripe from 'stripe';
 import { updateItems, updateItem, readItems, createItem } from '@directus/sdk';
-import { EARNEST_PLANS, EARNEST_ADDONS, planFromPriceId, addonFromPriceId, earnestPlanToOrgPlan } from '~~/server/utils/stripe';
+import { EARNEST_PLANS, EARNEST_ADDONS, planFromPriceId, addonFromPriceId } from '~~/server/utils/stripe';
 import type { EarnestPlanId, EarnestAddonId } from '~~/server/utils/stripe';
 
 export default defineEventHandler(async (event) => {
@@ -244,7 +244,7 @@ async function handleSubscriptionChange(
 				const orgUpdate: Record<string, any> = {};
 
 				if (planId && plan) {
-					orgUpdate.plan = earnestPlanToOrgPlan(planId);
+					orgUpdate.plan = planId;
 					orgUpdate.ai_token_limit_monthly = plan.aiTokens.monthlyAllotment;
 					orgUpdate.scan_credits_limit_monthly = plan.scanCredits;
 				}
@@ -389,7 +389,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 				if (planId && plan) {
 					await directus.request(
 						updateItem('organizations', orgId, {
-							plan: earnestPlanToOrgPlan(planId),
+							plan: planId,
 							ai_token_limit_monthly: plan.aiTokens.monthlyAllotment,
 							ai_token_balance: plan.aiTokens.monthlyAllotment,
 							ai_tokens_used_this_period: 0,

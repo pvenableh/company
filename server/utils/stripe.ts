@@ -159,22 +159,11 @@ export function planFromPriceId(stripePriceId: string): EarnestPlanId | null {
 	return null;
 }
 
-/** Map an Earnest plan ID to the org.plan field value stored in Directus */
-export function earnestPlanToOrgPlan(planId: EarnestPlanId | null): string {
-	const map: Record<EarnestPlanId, string> = {
-		solo: 'starter',
-		studio: 'pro',
-		agency: 'enterprise',
-	};
-	return planId ? map[planId] : 'free';
-}
-
-/** Map a Directus org.plan value back to an Earnest plan ID */
-export function orgPlanToEarnestPlan(orgPlan: string): EarnestPlanId | null {
-	const map: Record<string, EarnestPlanId> = {
-		starter: 'solo',
-		pro: 'studio',
-		enterprise: 'agency',
-	};
-	return map[orgPlan] ?? null;
-}
+/**
+ * The Directus `organizations.plan` enum shares its vocabulary with
+ * EarnestPlanId. Valid stored values are:
+ *   'free' | 'solo' | 'studio' | 'agency' | 'enterprise'
+ * where 'free' = no active sub and 'enterprise' = hand-configured. The old
+ * mapping helpers (earnestPlanToOrgPlan / orgPlanToEarnestPlan) are retired
+ * — the identity function suffices.
+ */

@@ -100,10 +100,27 @@ export async function requireOrgPermission(
 }
 
 /**
+ * Emails that belong to the shared demo workspaces. These accounts are
+ * public — anyone can sign in by clicking /try-demo — so they must never
+ * hit coarse-grained role checks like the Stripe subscription routes,
+ * regardless of what role they carry inside the demo org.
+ */
+const DEMO_USER_EMAILS = new Set<string>(
+  [
+    process.env.DEMO_USER_EMAIL || 'demo@earnest.guru',
+    process.env.DEMO_AGENCY_USER_EMAIL || 'demo-agency@earnest.guru',
+  ].map((e) => e.toLowerCase()),
+);
+
+/**
  * Require that the authenticated user has at least one active org_membership
  * whose role.slug is in `allowed`. Used as a coarse gate for endpoints that
  * aren't org-scoped in their body (e.g. Stripe billing routes operate on a
  * stripe customer id, not an orgId). Throws 401/403 on failure.
+ *
+ * Demo-workspace logins are hard-blocked here — the solo demo is Member
+ * so wouldn't pass anyway, but the agency demo is Admin and would otherwise
+ * sail through the role check even though it's a shared public account.
  */
 export async function requireOrgRole(
   event: any,
@@ -113,6 +130,14 @@ export async function requireOrgRole(
   const userId = (session as any).user?.id as string | undefined;
   if (!userId) {
     throw createError({ statusCode: 401, message: 'Authentication required' });
+  }
+
+  const userEmail = ((session as any).user?.email as string | undefined)?.toLowerCase();
+  if (userEmail && DEMO_USER_EMAILS.has(userEmail)) {
+    throw createError({
+      statusCode: 403,
+      message: 'Demo accounts cannot perform billing or destructive org actions.',
+    });
   }
 
   const directus = getTypedDirectus();

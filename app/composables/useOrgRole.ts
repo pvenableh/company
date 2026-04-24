@@ -5,15 +5,16 @@ import { DEFAULT_ROLE_PERMISSIONS } from '~~/shared/permissions';
 // Plan hierarchy for tier comparisons (values from organizations.plan field)
 const PLAN_HIERARCHY: Record<string, number> = {
   free: 0,
-  starter: 1,    // maps to 'solo' Earnest plan
-  pro: 2,        // maps to 'studio' Earnest plan
-  enterprise: 3, // maps to 'agency' Earnest plan
+  solo: 1,
+  studio: 2,
+  agency: 3,
+  enterprise: 4,
 };
 
 // Features that are truly plan-restricted (not resource-limited).
 // Per business model: all features available on all plans except white-label.
 const PLAN_GATED_FEATURES: Record<string, string> = {
-  white_label: 'enterprise', // Agency only — $19/mo add-on gates the UI, this gates the plan tier
+  white_label: 'agency', // Agency tier + $19/mo add-on gates the UI; this gates the plan tier.
 };
 
 /**
@@ -230,7 +231,7 @@ export function useOrgRole() {
     return orgLevel >= requiredLevel;
   }
 
-  /** The org's current plan tier string (e.g. 'free', 'starter', 'pro', 'enterprise') */
+  /** The org's current plan tier string (e.g. 'free', 'solo', 'studio', 'agency', 'enterprise') */
   const orgPlan = computed(() => (currentOrg.value as any)?.plan ?? 'free');
 
   /**

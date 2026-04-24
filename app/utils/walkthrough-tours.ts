@@ -144,6 +144,55 @@ export const walkthroughTours: WalkthroughTour[] = [
       },
     ],
   },
+
+  // ── Team Detail (agency demo) ──
+  // Matches any /teams/[id] route. Introduces the Admin-only team-management
+  // surface for visitors who picked the Agency persona on /try-demo.
+  {
+    id: 'teams-overview',
+    title: 'Team workspace',
+    description: 'Teammates, goals, and team-scoped tickets',
+    route: '/teams/',
+    icon: 'i-heroicons-user-group',
+    steps: [
+      {
+        target: 'h1',
+        title: 'Team workspace',
+        description: 'Teams group the agency into pods — Creative, Delivery, etc. Each team has its own members, goals, and ticket rollup so leads can see at a glance what their pod is shipping.',
+        placement: 'bottom',
+      },
+      {
+        target: '.page__content, main',
+        title: 'Members, goals, and work',
+        description: 'Goals track quarter-scale objectives with progress. Assigned tickets and projects roll up here so the team lead can spot bottlenecks without jumping between views.',
+        placement: 'top',
+      },
+    ],
+  },
+
+  // ── Marketing Intelligence (agency demo) ──
+  // Admin-only surface. Member-role demo (solo) doesn't see this at all.
+  {
+    id: 'marketing-overview',
+    title: 'Marketing Intelligence',
+    description: 'Campaigns, mailing lists, and AI-driven plans',
+    route: '/marketing',
+    icon: 'i-heroicons-megaphone',
+    steps: [
+      {
+        target: 'h1',
+        title: 'Marketing Intelligence',
+        description: 'This is where Earnest helps you plan and run outreach. It pulls context from your clients, leads, and past wins so campaigns are grounded in your real pipeline — not generic advice.',
+        placement: 'bottom',
+      },
+      {
+        target: '.page__content, main',
+        title: 'Scope and generate',
+        description: 'Scope the workspace (entire org, or a single client) and generate a campaign or dashboard. Earnest uses your mailing lists, CRM segments, and past engagement data to draft goals, tactics, and reporting.',
+        placement: 'top',
+      },
+    ],
+  },
 ];
 
 /**

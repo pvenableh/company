@@ -1865,6 +1865,8 @@ export interface Lead {
 	tags?: string[] | null;
 	/** @description Disposition flag for spam / unqualified leads. Orthogonal to status lifecycle. */
 	is_junk?: boolean;
+	/** @description Client this lead converted into (set on conversion). Used for partner-ROI attribution. */
+	resulting_client?: Client | string | null;
 }
 
 export interface LeadStageListRule {
@@ -2090,7 +2092,7 @@ export interface Organization {
 	short_name?: string | null;
 	active?: boolean | null;
 	/** @description Subscription plan tier */
-	plan?: 'free' | 'starter' | 'pro' | 'enterprise' | null;
+	plan?: 'free' | 'solo' | 'studio' | 'agency' | 'enterprise' | null;
 	/** @description Voice, visual style, and brand positioning */
 	brand_direction?: string | null;
 	/** @description Business objectives and growth targets */
@@ -2123,6 +2125,8 @@ export interface Organization {
 	active_addons?: Record<string, any> | null;
 	/** @description Default hourly rate for time tracking billable entries */
 	default_hourly_rate?: number | null;
+	/** @description URL-safe stable identifier. Auto-generated from name; unique across the org table. */
+	slug?: string;
 	users?: OrganizationsDirectusUser[] | string[];
 	projects?: Project[] | string[];
 	tickets?: Ticket[] | string[];
