@@ -94,7 +94,7 @@ onUnmounted(() => {
 	}
 });
 
-const { canAccess } = useOrgRole();
+const { canAccess, isOrgOwner } = useOrgRole();
 const canManageOrg = computed(() => {
 	return canAccess('org_settings');
 });
@@ -234,6 +234,61 @@ const saveBrand = async () => {
 	}
 };
 
+
+// --- Archive / Restore Organization ---
+const showArchiveModal = ref(false);
+const archiving = ref(false);
+const restoring = ref(false);
+
+const isArchived = computed(() => !!org.value?.archived_at);
+const archivedDate = computed(() => {
+	return org.value?.archived_at ? formatDateLong(org.value.archived_at) : null;
+});
+
+const confirmArchive = async () => {
+	if (!org.value?.id || archiving.value) return;
+	archiving.value = true;
+	try {
+		const res = await $fetch(`/api/org/${org.value.id}/archive`, { method: 'POST' });
+		const msg = res?.alreadyArchived
+			? 'Organization was already archived.'
+			: res?.stripe
+				? `Organization archived. Subscription set to cancel at period end (${new Date((res.stripe.current_period_end || 0) * 1000).toLocaleDateString()}).`
+				: 'Organization archived.';
+		toast.add({ title: 'Archived', description: msg, color: 'amber' });
+		showArchiveModal.value = false;
+		await fetchOrganizationData();
+		await fetchOrganizationDetails();
+	} catch (error) {
+		console.error('Archive failed:', error);
+		const msg = error?.data?.message || error?.message || 'Failed to archive organization';
+		toast.add({ title: 'Error', description: msg, color: 'red' });
+	} finally {
+		archiving.value = false;
+	}
+};
+
+const confirmRestore = async () => {
+	if (!org.value?.id || restoring.value) return;
+	restoring.value = true;
+	try {
+		const res = await $fetch(`/api/org/${org.value.id}/restore`, { method: 'POST' });
+		const msg = res?.resubscribeRequired
+			? 'Organization restored. Your previous subscription has ended — visit Subscription to re-subscribe.'
+			: res?.stripe?.cancel_at_period_end === false
+				? 'Organization restored. Subscription reactivated.'
+				: 'Organization restored.';
+		toast.add({ title: 'Restored', description: msg, color: 'green' });
+		await fetchOrganizationData();
+		await fetchOrganizationDetails();
+	} catch (error) {
+		console.error('Restore failed:', error);
+		const msg = error?.data?.message || error?.message || 'Failed to restore organization';
+		toast.add({ title: 'Error', description: msg, color: 'red' });
+	} finally {
+		restoring.value = false;
+	}
+};
 
 // --- Invite Member (new system) ---
 const showInviteModal = ref(false);
@@ -474,8 +529,9 @@ const ORG_DETAIL_FIELDS = [
 	'industry.name', 'industry.class', 'brand_color', 'email', 'emails',
 	'date_created', 'origin_date', 'icon', 'active', 'brand_direction',
 	'goals', 'target_audience', 'location', 'default_hourly_rate',
+	'archived_at',
 ];
-const ORG_BASIC_FIELDS = ['id', 'name', 'logo', 'icon', 'active', 'date_created', 'website', 'phone', 'brand_color', 'brand_direction', 'goals', 'target_audience', 'location', 'notes'];
+const ORG_BASIC_FIELDS = ['id', 'name', 'logo', 'icon', 'active', 'date_created', 'website', 'phone', 'brand_color', 'brand_direction', 'goals', 'target_audience', 'location', 'notes', 'archived_at'];
 
 const fetchOrganizationData = async () => {
 	if (!selectedOrg.value) return;
@@ -587,6 +643,33 @@ watch(searchEmail, (val) => {
 
 			<!-- Organization Data -->
 			<div v-else class="max-w-7xl mx-auto w-full">
+				<!-- Archived banner -->
+				<div
+					v-if="isArchived"
+					class="mb-6 flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/40 dark:bg-amber-900/20"
+				>
+					<div class="flex items-start gap-2 flex-grow">
+						<UIcon name="i-heroicons-archive-box" class="w-5 h-5 mt-0.5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+						<div class="text-sm">
+							<div class="font-medium text-amber-900 dark:text-amber-200">This organization is archived.</div>
+							<div class="text-amber-800/80 dark:text-amber-300/80">
+								Archived {{ archivedDate }}. Data is retained for 90 days and is still visible here until Session 5 ships. Restore any time before the retention window closes.
+							</div>
+						</div>
+					</div>
+					<UButton
+						v-if="isOrgOwner"
+						color="amber"
+						variant="solid"
+						size="sm"
+						icon="i-heroicons-arrow-uturn-left"
+						:loading="restoring"
+						@click="confirmRestore"
+					>
+						Restore
+					</UButton>
+				</div>
+
 				<!-- Organization Header -->
 				<div class="flex flex-col md:flex-row gap-6 items-start mb-8">
 					<!-- Logo -->
@@ -988,6 +1071,46 @@ watch(searchEmail, (val) => {
 										</NuxtLink>
 									</div>
 								</UCard>
+
+								<!-- Danger Zone — archive / restore (owner only) -->
+								<UCard v-if="isOrgOwner" class="border border-red-200 dark:border-red-900/50">
+									<template #header>
+										<h3 class="text-[10px] uppercase tracking-wider font-semibold text-red-600 dark:text-red-400">Danger Zone</h3>
+									</template>
+									<div class="space-y-3 text-sm">
+										<template v-if="!isArchived">
+											<p class="text-xs text-muted-foreground">
+												Archive to cancel your subscription at the end of the current billing period and soft-delete all org data. Data is retained for 90 days.
+											</p>
+											<UButton
+												color="red"
+												variant="outline"
+												icon="i-heroicons-archive-box"
+												size="sm"
+												block
+												@click="showArchiveModal = true"
+											>
+												Archive Organization
+											</UButton>
+										</template>
+										<template v-else>
+											<p class="text-xs text-muted-foreground">
+												This organization is archived. Restore to reactivate the subscription (if within the period) and make it visible again.
+											</p>
+											<UButton
+												color="amber"
+												variant="solid"
+												icon="i-heroicons-arrow-uturn-left"
+												size="sm"
+												block
+												:loading="restoring"
+												@click="confirmRestore"
+											>
+												Restore Organization
+											</UButton>
+										</template>
+									</div>
+								</UCard>
 							</div>
 						</div>
 					</template>
@@ -1189,6 +1312,34 @@ watch(searchEmail, (val) => {
 
 			<div class="flex justify-end p-4 border-t border-gray-200 dark:border-gray-700">
 				<UButton color="gray" variant="ghost" @click="showAddMemberModal = false">Close</UButton>
+			</div>
+		</UModal>
+
+		<!-- Archive Organization Confirmation Modal -->
+		<UModal v-model="showArchiveModal">
+			<div class="p-4 border-b border-gray-200 dark:border-gray-700">
+				<h3 class="text-lg font-semibold text-red-600">Archive Organization</h3>
+			</div>
+
+			<div class="p-4 space-y-3 text-sm">
+				<p>
+					Are you sure you want to archive <strong>{{ org?.name }}</strong>?
+				</p>
+				<ul class="list-disc pl-5 space-y-1 text-gray-700 dark:text-gray-300">
+					<li>Your Stripe subscription will be set to cancel at the end of the current billing period.</li>
+					<li>The organization and its data will be hidden from daily use.</li>
+					<li>Your data is retained for 90 days. Restore any time before then.</li>
+				</ul>
+				<p class="text-xs text-muted-foreground">
+					This action only you, the owner, can perform. Demo accounts cannot archive.
+				</p>
+			</div>
+
+			<div class="flex justify-end gap-2 p-4 border-t border-gray-200 dark:border-gray-700">
+				<UButton color="gray" variant="ghost" :disabled="archiving" @click="showArchiveModal = false">Cancel</UButton>
+				<UButton color="red" icon="i-heroicons-archive-box" :loading="archiving" @click="confirmArchive">
+					Archive Organization
+				</UButton>
 			</div>
 		</UModal>
 

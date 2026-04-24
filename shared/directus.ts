@@ -2127,6 +2127,8 @@ export interface Organization {
 	default_hourly_rate?: number | null;
 	/** @description URL-safe stable identifier. Auto-generated from name; unique across the org table. */
 	slug?: string;
+	/** @description Soft-delete timestamp. When set, the org is archived; restore clears it. A cleanup cron hard-deletes rows aged past the retention window. */
+	archived_at?: string | null;
 	users?: OrganizationsDirectusUser[] | string[];
 	projects?: Project[] | string[];
 	tickets?: Ticket[] | string[];
