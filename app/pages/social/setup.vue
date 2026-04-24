@@ -219,7 +219,7 @@ const checks = computed(() => [
           <h4>Step 2: Configure OAuth Settings</h4>
           <ol>
             <li>In Facebook Login settings, add your redirect URI:
-              <pre><code>https://your-domain.com/api/social/oauth/instagram/callback</code></pre>
+              <pre><code>https://app.earnest.guru/api/social/oauth/instagram/callback</code></pre>
             </li>
             <li>Required permissions/scopes:
               <ul>
@@ -236,7 +236,7 @@ const checks = computed(() => [
           <h4>Step 3: Environment Variables</h4>
           <pre><code>INSTAGRAM_APP_ID=your_facebook_app_id
 INSTAGRAM_APP_SECRET=your_facebook_app_secret
-INSTAGRAM_REDIRECT_URI=https://your-domain.com/api/social/oauth/instagram/callback</code></pre>
+INSTAGRAM_REDIRECT_URI=https://app.earnest.guru/api/social/oauth/instagram/callback</code></pre>
 
           <h4>Step 4: Connect Account</h4>
           <p>Once configured, go to <strong>Social Settings</strong> and click <strong>Connect</strong> under the Instagram section. You'll be redirected to Facebook to authorize the app.</p>
@@ -293,12 +293,12 @@ INSTAGRAM_REDIRECT_URI=https://your-domain.com/api/social/oauth/instagram/callba
 
           <h4>Step 2: Configure Redirect URI</h4>
           <p>In your TikTok app settings, add the redirect URI:</p>
-          <pre><code>https://your-domain.com/api/social/oauth/tiktok/callback</code></pre>
+          <pre><code>https://app.earnest.guru/api/social/oauth/tiktok/callback</code></pre>
 
           <h4>Step 3: Environment Variables</h4>
           <pre><code>TIKTOK_CLIENT_KEY=your_tiktok_client_key
 TIKTOK_CLIENT_SECRET=your_tiktok_client_secret
-TIKTOK_REDIRECT_URI=https://your-domain.com/api/social/oauth/tiktok/callback</code></pre>
+TIKTOK_REDIRECT_URI=https://app.earnest.guru/api/social/oauth/tiktok/callback</code></pre>
 
           <h4>Step 4: Connect Account</h4>
           <p>Go to <strong>Social Settings</strong> and click <strong>Connect</strong> under the TikTok section.</p>
@@ -348,17 +348,60 @@ TIKTOK_REDIRECT_URI=https://your-domain.com/api/social/oauth/tiktok/callback</co
               <tr><th>Variable</th><th>Required</th><th>Description</th></tr>
             </thead>
             <tbody>
-              <tr><td><code>INSTAGRAM_APP_ID</code></td><td>For Instagram</td><td>Facebook App ID</td></tr>
-              <tr><td><code>INSTAGRAM_APP_SECRET</code></td><td>For Instagram</td><td>Facebook App Secret</td></tr>
+              <tr><td><code>INSTAGRAM_APP_ID</code></td><td>For Instagram</td><td>Meta app ID (shared across IG/FB/Threads)</td></tr>
+              <tr><td><code>INSTAGRAM_APP_SECRET</code></td><td>For Instagram</td><td>Meta app secret (shared across IG/FB/Threads)</td></tr>
               <tr><td><code>INSTAGRAM_REDIRECT_URI</code></td><td>For Instagram</td><td>OAuth callback URL</td></tr>
+              <tr><td><code>FACEBOOK_APP_ID</code></td><td>Optional</td><td>Falls back to <code>INSTAGRAM_APP_ID</code> (same Meta app)</td></tr>
+              <tr><td><code>FACEBOOK_APP_SECRET</code></td><td>Optional</td><td>Falls back to <code>INSTAGRAM_APP_SECRET</code></td></tr>
+              <tr><td><code>FACEBOOK_REDIRECT_URI</code></td><td>For Facebook</td><td>OAuth callback URL</td></tr>
+              <tr><td><code>THREADS_APP_ID</code></td><td>Optional</td><td>Falls back to <code>INSTAGRAM_APP_ID</code></td></tr>
+              <tr><td><code>THREADS_APP_SECRET</code></td><td>Optional</td><td>Falls back to <code>INSTAGRAM_APP_SECRET</code></td></tr>
+              <tr><td><code>THREADS_REDIRECT_URI</code></td><td>For Threads</td><td>OAuth callback URL</td></tr>
               <tr><td><code>TIKTOK_CLIENT_KEY</code></td><td>For TikTok</td><td>TikTok App Client Key</td></tr>
               <tr><td><code>TIKTOK_CLIENT_SECRET</code></td><td>For TikTok</td><td>TikTok App Client Secret</td></tr>
               <tr><td><code>TIKTOK_REDIRECT_URI</code></td><td>For TikTok</td><td>OAuth callback URL</td></tr>
+              <tr><td><code>LINKEDIN_CLIENT_ID</code></td><td>For LinkedIn</td><td>LinkedIn App Client ID</td></tr>
+              <tr><td><code>LINKEDIN_CLIENT_SECRET</code></td><td>For LinkedIn</td><td>LinkedIn App Client Secret</td></tr>
+              <tr><td><code>LINKEDIN_REDIRECT_URI</code></td><td>For LinkedIn</td><td>OAuth callback URL</td></tr>
+              <tr><td><code>GOOGLE_CLIENT_ID</code></td><td>For Google Calendar</td><td>Google Cloud OAuth client ID (Calendar redirect derived from <code>SITE_URL</code>)</td></tr>
+              <tr><td><code>GOOGLE_CLIENT_SECRET</code></td><td>For Google Calendar</td><td>Google Cloud OAuth client secret</td></tr>
+              <tr><td><code>AZURE_CLIENT_ID</code></td><td>For Outlook Calendar</td><td>Azure app registration client ID (redirect derived from <code>SITE_URL</code>)</td></tr>
+              <tr><td><code>AZURE_CLIENT_SECRET</code></td><td>For Outlook Calendar</td><td>Azure app registration client secret</td></tr>
+              <tr><td><code>SITE_URL</code></td><td>Yes</td><td>Public origin (e.g. <code>https://app.earnest.guru</code>) — Google/Outlook Calendar callbacks derive from this</td></tr>
               <tr><td><code>SOCIAL_ENCRYPTION_KEY</code></td><td>Yes</td><td>AES-256 key for token encryption (min 32 chars). Generate with <code>openssl rand -base64 32</code></td></tr>
               <tr><td><code>DIRECTUS_URL</code></td><td>Yes</td><td>Directus instance URL</td></tr>
               <tr><td><code>DIRECTUS_SERVER_TOKEN</code></td><td>Yes</td><td>Directus admin token</td></tr>
             </tbody>
           </table>
+
+          <h4>All OAuth Redirect URIs (production)</h4>
+          <p>Paste these into each provider's developer console allowlist. Every path is case-sensitive; don't add a trailing slash.</p>
+          <table>
+            <thead>
+              <tr><th>Provider</th><th>Redirect URI</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Instagram</td><td><code>https://app.earnest.guru/api/social/oauth/instagram/callback</code></td></tr>
+              <tr><td>Facebook</td><td><code>https://app.earnest.guru/api/social/oauth/facebook/callback</code></td></tr>
+              <tr><td>Threads</td><td><code>https://app.earnest.guru/api/social/oauth/threads/callback</code></td></tr>
+              <tr><td>TikTok</td><td><code>https://app.earnest.guru/api/social/oauth/tiktok/callback</code></td></tr>
+              <tr><td>LinkedIn</td><td><code>https://app.earnest.guru/api/social/oauth/linkedin/callback</code></td></tr>
+              <tr><td>Google Calendar</td><td><code>https://app.earnest.guru/api/calendar/google/callback</code></td></tr>
+              <tr><td>Outlook Calendar</td><td><code>https://app.earnest.guru/api/calendar/outlook/callback</code></td></tr>
+              <tr><td>Google SSO (Directus)</td><td><code>https://admin.earnest.guru/auth/login/google/callback</code></td></tr>
+            </tbody>
+          </table>
+
+          <div class="not-prose">
+            <UAlert
+              color="blue"
+              variant="subtle"
+              icon="i-lucide-info"
+              title="Meta app = one app, three products"
+              description="Instagram, Facebook, and Threads share a single Meta developer app. Each product tab inside that app has its own redirect-URI allowlist — all three must be updated."
+              class="mt-4"
+            />
+          </div>
         </div>
       </UCard>
 
