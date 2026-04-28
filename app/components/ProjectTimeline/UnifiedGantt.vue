@@ -905,6 +905,14 @@ const showUndated = ref(false);
 			<template v-else>
 				<p class="text-sm font-medium text-foreground">No projects on the timeline</p>
 				<p class="text-xs text-muted-foreground mt-1">{{ selectedClient ? 'No projects for this client.' : 'Create a project to see it here.' }}</p>
+				<NuxtLink
+					v-if="!selectedClient"
+					to="/projects?new=1"
+					class="inline-flex items-center gap-1.5 mt-4 px-4 py-1.5 rounded-full bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
+				>
+					<Icon name="lucide:plus" class="w-3.5 h-3.5" />
+					Create your first project
+				</NuxtLink>
 			</template>
 		</div>
 

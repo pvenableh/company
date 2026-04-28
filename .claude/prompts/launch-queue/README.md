@@ -17,6 +17,9 @@ Sessions are numbered roughly by ship order. Hard dependencies are noted in each
 | 4 | [session-4-archive-schema.md](session-4-archive-schema.md) | none |
 | 5 | [session-5-archive-gating.md](session-5-archive-gating.md) | Session 4 must be shipped |
 | 6 | [session-6-smoke-test.md](session-6-smoke-test.md) | Sessions 1–5 all shipped (note deferrals in the smoke report) |
+| 8 | [session-8-tenant-perm-patch.md](session-8-tenant-perm-patch.md) | none — but ship before opening signups (real cross-tenant leak fix; smoke-report blocker) |
+| 9 | [session-9-onboarding-completion.md](session-9-onboarding-completion.md) | Session 8 should ship first |
+| 10 | [session-10-empty-states-and-cleanup.md](session-10-empty-states-and-cleanup.md) | Sessions 8 + 9 should ship first |
 | 7a | [session-7a-c2-deferred.md](session-7a-c2-deferred.md) | post-launch; needs null-org backfill script run first |
 | 7b | [session-7b-chat-sessions-cold-load.md](session-7b-chat-sessions-cold-load.md) | post-launch |
 | 7c | [session-7c-ipv6-localhost.md](session-7c-ipv6-localhost.md) | post-launch; dev-env only |

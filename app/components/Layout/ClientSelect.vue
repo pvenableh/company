@@ -20,7 +20,10 @@ const props = defineProps({
 const emit = defineEmits(['open-org-switcher']);
 
 const router = useRouter();
-const { currentOrg, hasMultipleOrgs } = useOrganization();
+const { currentOrg, hasMultipleOrgs, organizations } = useOrganization();
+// Hide the entire org+client picker for orgless users — every action it
+// offers (open switcher, filter clients) requires at least one membership.
+const hasOrg = computed(() => organizations.value.length > 0);
 const {
 	selectedClient,
 	clientOptions,
@@ -68,13 +71,13 @@ onUnmounted(() => {
 </script>
 
 <template>
-	<div class="flex items-center gap-1.5">
+	<div v-if="hasOrg" class="flex items-center gap-1.5">
 		<!-- Org icon (clickable for multi-org users to open switcher) -->
 		<button
 			class="flex items-center rounded-full border-2 border-[var(--cyan)] p-0.5 shadow-inner overflow-hidden transition-opacity"
 			:class="'cursor-pointer hover:opacity-80'"
 			:title="hasMultipleOrgs ? 'Switch organization' : currentOrg?.name"
-			@click="navigateTo('/organizations')"
+			@click="hasMultipleOrgs ? emit('open-org-switcher') : navigateTo('/organizations')"
 		>
 			<Avatar class="size-7">
 				<AvatarImage v-if="getIconUrl(currentOrg)" :src="getIconUrl(currentOrg)" :alt="currentOrg?.name" />

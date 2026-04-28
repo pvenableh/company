@@ -74,7 +74,7 @@ const formSchema = toTypedSchema(
       firstName: z.string().min(1, "First name is required"),
       lastName: z.string().min(1, "Last name is required"),
       email: z.string().email("Please enter a valid email address"),
-      organizationName: z.string().optional(),
+      organizationName: z.string().min(1, "Organization name is required"),
       password: z
         .string()
         .min(8, "Password must be at least 8 characters")
@@ -182,19 +182,18 @@ const inputClass = "w-full rounded-lg border bg-background px-3 py-2.5 text-sm f
           </div>
         </VeeField>
 
-        <VeeField v-slot="{ field }" name="organizationName">
+        <VeeField v-slot="{ field, errors }" name="organizationName">
           <div class="space-y-1.5">
-            <label for="organizationName" class="text-sm font-medium">
-              Organization Name <span class="text-muted-foreground font-normal text-xs">(optional)</span>
-            </label>
+            <label for="organizationName" class="text-sm font-medium">Organization Name</label>
             <input
               id="organizationName"
               type="text"
               placeholder="Your company or team name"
               v-bind="field"
-              :class="[inputClass, 'border-border']"
+              :class="[inputClass, errors.length ? 'border-red-300 dark:border-red-700' : 'border-border']"
             />
-            <p class="text-[11px] text-muted-foreground">You'll be set as owner. Invite team members later.</p>
+            <p v-if="errors.length" class="text-xs text-red-500">{{ errors[0] }}</p>
+            <p v-else class="text-[11px] text-muted-foreground">You'll be set as owner. Invite team members later.</p>
           </div>
         </VeeField>
 

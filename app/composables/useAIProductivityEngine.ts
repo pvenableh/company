@@ -1078,6 +1078,62 @@ export const useAIProductivityEngine = () => {
 		const hour = new Date().getHours();
 		const dayOfWeek = new Date().getDay();
 
+		// New-org detection — when there's no activity, time-based generic suggestions
+		// ("Plan your day", "Client outreach window") feel out of place. Surface
+		// onboarding suggestions instead.
+		const m = metrics.value;
+		const hasNoActivity =
+			m.activeProjects === 0 &&
+			m.pendingTasks === 0 &&
+			m.tasksCompletedThisWeek === 0 &&
+			m.openDeals === 0 &&
+			m.leadsInPipeline === 0 &&
+			m.pendingInvoiceTotal === 0 &&
+			m.overdueItems === 0;
+
+		if (hasNoActivity) {
+			results.push({
+				id: 'suggestion-onboard-client',
+				type: 'action',
+				priority: 'medium',
+				icon: 'i-heroicons-user-plus',
+				title: 'Add your first client',
+				description: 'Start by adding the people or companies you work with. Clients anchor projects, invoices, and tickets.',
+				actionLabel: 'Add Client',
+				actionRoute: '/clients?new=1',
+				category: 'leads',
+				timestamp: new Date(),
+				score: 60,
+			});
+			results.push({
+				id: 'suggestion-onboard-project',
+				type: 'action',
+				priority: 'medium',
+				icon: 'i-heroicons-rectangle-stack',
+				title: 'Create your first project',
+				description: 'Projects organize work, timelines, and deliverables. You can attach tickets, events, and invoices later.',
+				actionLabel: 'New Project',
+				actionRoute: '/projects?new=1',
+				category: 'projects',
+				timestamp: new Date(),
+				score: 55,
+			});
+			results.push({
+				id: 'suggestion-onboard-team',
+				type: 'action',
+				priority: 'low',
+				icon: 'i-heroicons-user-group',
+				title: 'Invite your team',
+				description: 'Bring teammates in to collaborate on projects, tickets, and channels.',
+				actionLabel: 'Invite',
+				actionRoute: '/organization',
+				category: 'communication',
+				timestamp: new Date(),
+				score: 45,
+			});
+			return results;
+		}
+
 		// Morning: Focus on planning
 		if (hour >= 7 && hour < 10) {
 			results.push({

@@ -129,14 +129,18 @@ watch([() => activeView.value, selectedOrg, selectedClient], ([view]) => {
 	}
 });
 
+const showProjectForm = ref(false);
+const router = useRouter();
+
 onMounted(() => {
 	if (activeView.value === 'table') {
 		fetchTableProjects();
 	}
+	if (router.currentRoute.value.query.new === '1') {
+		showProjectForm.value = true;
+		router.replace({ query: {} });
+	}
 });
-
-const showProjectForm = ref(false);
-const router = useRouter();
 
 function handleProjectCreated(project) {
 	fetchTableProjects();

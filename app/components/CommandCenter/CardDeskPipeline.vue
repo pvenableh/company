@@ -173,7 +173,14 @@ onMounted(() => {
 			<div v-if="stats.totalContacts === 0 && !isLoading" class="text-center py-4">
 				<UIcon name="i-heroicons-identification" class="w-8 h-8 mx-auto text-gray-300 mb-2" />
 				<p class="text-xs text-gray-400">No CardDesk contacts yet</p>
-				<p class="text-[10px] text-gray-400 mt-1">Scan business cards in CardDesk to see your pipeline here</p>
+				<p class="text-[10px] text-gray-400 mt-1">Scan business cards to build your networking pipeline.</p>
+				<NuxtLink
+					to="/carddesk"
+					class="inline-flex items-center gap-1 mt-3 px-3 py-1 rounded-full bg-primary text-primary-foreground text-[10px] font-medium hover:bg-primary/90 transition-colors"
+				>
+					<UIcon name="i-heroicons-camera" class="w-3 h-3" />
+					Start scanning cards
+				</NuxtLink>
 			</div>
 		</div>
 	</div>

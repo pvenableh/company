@@ -20,8 +20,9 @@ onMounted(async () => {
 })
 
 const getIconUrl = (org: any) => {
-  if (!org?.icon) return undefined
-  return `${config.public.directusUrl}/assets/${org.icon}?key=avatar`
+  const asset = org?.icon || org?.logo
+  if (!asset) return undefined
+  return `${config.public.directusUrl}/assets/${asset}?key=avatar`
 }
 
 const getInitials = (org: any) => {

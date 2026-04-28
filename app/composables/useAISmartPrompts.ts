@@ -72,61 +72,51 @@ export function useAISmartPrompts() {
     try {
       const [clients, invoices, projects, tasks, leads] = await Promise.all([
         // Stale clients
-        clientItems.getItems({
-          params: {
-            filter: { ...orgFilter(), status: { _eq: 'active' } },
-            fields: ['id', 'name', 'date_updated'],
-            sort: ['date_updated'],
-            limit: 10,
-          },
+        clientItems.list({
+          filter: { ...orgFilter(), status: { _eq: 'active' } },
+          fields: ['id', 'name', 'date_updated'],
+          sort: ['date_updated'],
+          limit: 10,
         }).catch(() => []) as Promise<Array<{ id: string; name: string; date_updated: string }>>,
 
         // Overdue invoices
-        invoiceItems.getItems({
-          params: {
-            filter: {
-              ...orgFilter(),
-              status: { _in: ['pending', 'processing'] },
-              due_date: { _lt: now.toISOString() },
-            },
-            fields: ['id', 'total_amount'],
-            limit: 50,
+        invoiceItems.list({
+          filter: {
+            ...orgFilter(),
+            status: { _in: ['pending', 'processing'] },
+            due_date: { _lt: now.toISOString() },
           },
+          fields: ['id', 'total_amount'],
+          limit: 50,
         }).catch(() => []) as Promise<Array<{ id: string; total_amount: number }>>,
 
         // Active projects
-        projectItems.getItems({
-          params: {
-            filter: {
-              ...orgFilter(),
-              status: { _in: ['Pending', 'Scheduled', 'In Progress'] },
-            },
-            fields: ['id', 'title', 'status', 'due_date'],
-            sort: ['due_date'],
-            limit: 15,
+        projectItems.list({
+          filter: {
+            ...orgFilter(),
+            status: { _in: ['Pending', 'Scheduled', 'In Progress'] },
           },
+          fields: ['id', 'title', 'status', 'due_date'],
+          sort: ['due_date'],
+          limit: 15,
         }).catch(() => []) as Promise<Array<{ id: string; title: string; status: string; due_date: string }>>,
 
         // User's tasks
-        taskItems.getItems({
-          params: {
-            filter: { assignee_id: { _eq: user.value?.id } },
-            fields: ['id', 'completed', 'due_date'],
-            limit: 50,
-          },
+        taskItems.list({
+          filter: { assignee_id: { _eq: user.value?.id } },
+          fields: ['id', 'completed', 'due_date'],
+          limit: 50,
         }).catch(() => []) as Promise<Array<{ id: string; completed: boolean; due_date: string }>>,
 
         // Open leads
-        leadItems.getItems({
-          params: {
-            filter: {
-              ...orgFilter(),
-              status: { _eq: 'published' },
-              stage: { _nin: ['won', 'lost'] },
-            },
-            fields: ['id', 'estimated_value'],
-            limit: 20,
+        leadItems.list({
+          filter: {
+            ...orgFilter(),
+            status: { _eq: 'published' },
+            stage: { _nin: ['won', 'lost'] },
           },
+          fields: ['id', 'estimated_value'],
+          limit: 20,
         }).catch(() => []) as Promise<Array<{ id: string; estimated_value: number }>>,
       ]);
 

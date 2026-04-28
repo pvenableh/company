@@ -17,6 +17,23 @@ let _isRefreshing = false
 let _channel = null
 let _initialized = false
 
+/**
+ * Clears the cross-user `selectedOrganization` cookie + localStorage.
+ *
+ * Why: useOrganization persists the active org to a 30-day cookie at path `/`.
+ * Without an explicit clear, signing out and signing in as a different user
+ * (or registering a brand-new user in the same browser) leaves the previous
+ * user's org id in the cookie. Until tryRestoreSelectedOrg notices the
+ * mismatch, the dashboard renders queries scoped to the wrong tenant.
+ * Called on signIn, signOut, and register.
+ */
+function clearOrgSelection() {
+	if (import.meta.client) {
+		document.cookie = 'selectedOrganization=; path=/; max-age=0; samesite=lax'
+		try { localStorage.removeItem('selectedOrganization') } catch {}
+	}
+}
+
 export const useDirectusAuth = () => {
 	const { user, loggedIn, session, fetch: fetchSession, clear: clearSession } = useUserSession()
 
@@ -122,6 +139,7 @@ export const useDirectusAuth = () => {
 	// ─── Sign In / Sign Out ────────────────────────────────────────────────────
 
 	const signIn = async (credentials) => {
+		clearOrgSelection()
 		try {
 			const result = await $fetch('/api/auth/login', {
 				method: 'POST',
@@ -148,6 +166,7 @@ export const useDirectusAuth = () => {
 		}
 
 		await clearSession()
+		clearOrgSelection()
 		broadcastAuth('logout')
 
 		if (options.callbackUrl && import.meta.client) {
@@ -179,6 +198,7 @@ export const useDirectusAuth = () => {
 	// ─── Registration ─────────────────────────────────────────────────────────
 
 	const register = async (userData) => {
+		clearOrgSelection()
 		return await $fetch('/api/auth/register', {
 			method: 'POST',
 			body: userData,

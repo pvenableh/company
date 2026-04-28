@@ -1,22 +1,39 @@
 <script setup lang="ts">
 import { toast } from 'vue-sonner'
-import { Building2, ChevronLeft, ChevronRight, Plus, X, Check, Sparkles } from 'lucide-vue-next'
+import { Building2, ChevronLeft, ChevronRight, Plus, X, Check, Sparkles, CreditCard, PackagePlus } from 'lucide-vue-next'
 
 definePageMeta({ middleware: ['auth'] })
 useHead({ title: 'New Organization | Earnest' })
 
-const { initializeOrganizations, setOrganization } = useOrganization()
+const { setOrganization } = useOrganization()
 const router = useRouter()
+const route = useRoute()
 
 // ── Step state ──
+// Internal step indices (1..6):
+//   1=name, 2=plan, 3=details, 4=payment, 5=addons, 6=invite
+// The Add-ons step is only shown on the paid path. Free-tier users go from
+// step 4 directly to step 6 (invite). The progress bar collapses to 5 dots
+// when paidCheckoutCompleted is false.
 const currentStep = ref(1)
-const totalSteps = 4
 const creating = ref(false)
+const checkingOut = ref(false)
+const subscribingAddons = ref(false)
+const paidCheckoutCompleted = ref(false)
+const stripeSessionId = ref<string | null>(null)
+
+const totalSteps = computed(() => paidCheckoutCompleted.value ? 6 : 5)
+const displayedStep = computed(() => {
+  // On the free path, step 6 (invite) is shown as "step 5 of 5".
+  if (!paidCheckoutCompleted.value && currentStep.value === 6) return 5
+  return currentStep.value
+})
 
 // ── Form data ──
 const orgName = ref('')
 const selectedIndustry = ref<string | null>(null)
 const selectedPlan = ref('solo')
+const selectedInterval = ref<'monthly' | 'annual'>('monthly')
 const orgLocation = ref('')
 const orgWebsite = ref('')
 const orgBrandColor = ref('')
@@ -24,30 +41,123 @@ const invites = ref<{ email: string; role: string }[]>([])
 const newInviteEmail = ref('')
 const newInviteRole = ref('member')
 
+// Add-on selection (paid path only). Map of addonId -> selected.
+const selectedAddons = ref<Record<string, boolean>>({})
+
+// Created-org tracker — persisted across the Stripe round-trip so step 5
+// invite-sending targets the existing org instead of creating a duplicate.
+const createdOrgId = ref<string | null>(null)
+
+// ── Persistence ──
+// sessionStorage survives the Stripe checkout redirect (same-origin return).
+const STATE_KEY = 'organization-new-wizard-state'
+
+function loadState() {
+  if (!import.meta.client) return
+  try {
+    const saved = sessionStorage.getItem(STATE_KEY)
+    if (!saved) return
+    const data = JSON.parse(saved)
+    orgName.value = data.orgName || ''
+    selectedIndustry.value = data.selectedIndustry || null
+    selectedPlan.value = data.selectedPlan || 'solo'
+    selectedInterval.value = data.selectedInterval || 'monthly'
+    orgLocation.value = data.orgLocation || ''
+    orgWebsite.value = data.orgWebsite || ''
+    orgBrandColor.value = data.orgBrandColor || ''
+    invites.value = Array.isArray(data.invites) ? data.invites : []
+    createdOrgId.value = data.createdOrgId || null
+    paidCheckoutCompleted.value = !!data.paidCheckoutCompleted
+    stripeSessionId.value = data.stripeSessionId || null
+    selectedAddons.value = (data.selectedAddons && typeof data.selectedAddons === 'object') ? data.selectedAddons : {}
+  } catch {}
+}
+
+function saveState() {
+  if (!import.meta.client) return
+  try {
+    sessionStorage.setItem(STATE_KEY, JSON.stringify({
+      orgName: orgName.value,
+      selectedIndustry: selectedIndustry.value,
+      selectedPlan: selectedPlan.value,
+      selectedInterval: selectedInterval.value,
+      orgLocation: orgLocation.value,
+      orgWebsite: orgWebsite.value,
+      orgBrandColor: orgBrandColor.value,
+      invites: invites.value,
+      createdOrgId: createdOrgId.value,
+      paidCheckoutCompleted: paidCheckoutCompleted.value,
+      stripeSessionId: stripeSessionId.value,
+      selectedAddons: selectedAddons.value,
+    }))
+  } catch {}
+}
+
+function clearState() {
+  if (!import.meta.client) return
+  try { sessionStorage.removeItem(STATE_KEY) } catch {}
+}
+
 // ── Industries (fetched from Directus) ──
 const { list } = useDirectusItems('industries')
 const industries = ref<{ id: string; name: string }[]>([])
 
 onMounted(async () => {
+  // 1. Restore state if present (Stripe round-trip support)
+  loadState()
+
+  // 2. Handle return URL params from Stripe checkout
+  const stepParam = route.query.step as string | undefined
+  const checkoutFlag = route.query.checkout as string | undefined
+  const orgIdParam = route.query.org_id as string | undefined
+  const sessionIdParam = route.query.session_id as string | undefined
+
+  if (stepParam === 'invite' && checkoutFlag === 'ok') {
+    // Successful Stripe round-trip — flip into the paid path so the wizard
+    // surfaces the Add-ons step (5) before Invite (6).
+    if (orgIdParam && !createdOrgId.value) createdOrgId.value = orgIdParam
+    if (createdOrgId.value) setOrganization(createdOrgId.value)
+    if (sessionIdParam) stripeSessionId.value = sessionIdParam
+    paidCheckoutCompleted.value = true
+    toast.success('Payment received — pick any add-ons to round it out')
+    currentStep.value = 5  // Add-ons step (paid path)
+    saveState()
+    router.replace({ path: '/organization/new' })
+  } else if (stepParam === 'plan' && checkoutFlag === 'cancel') {
+    currentStep.value = 2
+    toast.info('Checkout canceled — you can try again or start with Free')
+    router.replace({ path: '/organization/new' })
+  }
+
+  // 3. Fetch industries
   try {
     const data = await list({ fields: ['id', 'name'], sort: ['name'] })
     industries.value = data as any[]
   } catch {}
 })
 
-// ── Plans ──
+// Persist on every relevant change. Cheap and lossless across reloads.
+watch(
+  [orgName, selectedIndustry, selectedPlan, selectedInterval, orgLocation, orgWebsite, orgBrandColor, invites, createdOrgId, paidCheckoutCompleted, stripeSessionId, selectedAddons],
+  () => saveState(),
+  { deep: true },
+)
+
+// ── Plans + pricing ──
 const plans = [
   {
     key: 'solo',
     name: 'Solo',
-    price: '49',
+    monthly: 49,
+    annual: 408,
     desc: 'For the one-person shop doing serious work.',
     features: ['1 team seat', 'Every feature included', '100K Earnest tokens/month', '5 client portal seats'],
   },
   {
     key: 'studio',
     name: 'Studio',
-    price: '149',
+    monthly: 149,
+    annual: 1241,
     desc: 'For the team that means business.',
     popular: true,
     features: ['8 team seats', 'Team channels & video', '400K Earnest tokens/month', '15 client portal seats'],
@@ -55,11 +165,40 @@ const plans = [
   {
     key: 'agency',
     name: 'Agency',
-    price: '299',
+    monthly: 299,
+    annual: 2491,
     desc: 'For the business that has grown into something real.',
     features: ['15 team seats', 'Priority support', '1M Earnest tokens/month', 'Unlimited client portals'],
   },
 ]
+
+// ── Add-ons (mirrors EARNEST_ADDONS price/feature surface) ──
+// Source of truth for Stripe price IDs lives server-side; the wizard only
+// references add-on ids and human-facing copy.
+const addons = [
+  { id: 'extra_seats_5', name: 'Extra Seats', price: 15, blurb: '+5 team seats' },
+  { id: 'communications', name: 'Communications', price: 49, blurb: 'Phone, SMS, video & live chat' },
+  { id: 'client_pack_starter', name: 'Client Pack Starter', price: 29, blurb: '+5 client portal seats · 50K tokens' },
+  { id: 'client_pack_pro', name: 'Client Pack Pro', price: 59, blurb: '+10 client portal seats · 150K tokens' },
+  { id: 'client_pack_unlimited', name: 'Client Pack Unlimited', price: 129, blurb: 'Unlimited client portals · 500K tokens' },
+  { id: 'white_label', name: 'Companion White-Label', price: 19, blurb: 'Remove Earnest branding', agencyOnly: true },
+]
+
+const visibleAddons = computed(() => {
+  return addons.filter(a => !a.agencyOnly || selectedPlan.value === 'agency')
+})
+
+const selectedAddonCount = computed(() => Object.values(selectedAddons.value).filter(Boolean).length)
+const selectedAddonsTotal = computed(() => {
+  return addons.reduce((sum, a) => sum + (selectedAddons.value[a.id] ? a.price : 0), 0)
+})
+
+const currentPlan = computed(() => plans.find(p => p.key === selectedPlan.value) || plans[0])
+const currentPrice = computed(() => {
+  const p = currentPlan.value
+  return selectedInterval.value === 'annual' ? p.annual : p.monthly
+})
+const intervalLabel = computed(() => selectedInterval.value === 'annual' ? '/yr' : '/mo')
 
 // ── Roles for invites ──
 const roles = [
@@ -76,13 +215,17 @@ const canProceed = computed(() => {
 
 // ── Navigation ──
 function nextStep() {
-  if (currentStep.value < totalSteps && canProceed.value) {
+  // Steps 1-3 advance normally. Step 4 is handled by Skip-Free /
+  // Continue-to-Payment buttons. Steps 5-6 use their own handlers.
+  if (currentStep.value < 4 && canProceed.value) {
     currentStep.value++
   }
 }
 
 function prevStep() {
-  if (currentStep.value > 1) {
+  // Once the org is committed (step 5+), there is no rewind. Free path users
+  // never visit step 5.
+  if (currentStep.value > 1 && currentStep.value <= 4) {
     currentStep.value--
   }
 }
@@ -101,26 +244,142 @@ function removeInvite(index: number) {
   invites.value.splice(index, 1)
 }
 
-// ── Create organization ──
-async function handleCreate() {
-  if (!orgName.value.trim()) return
+// ── Org creation (idempotent) ──
+async function ensureOrgCreated(plan: string): Promise<string> {
+  if (createdOrgId.value) return createdOrgId.value
+
+  const result = await $fetch('/api/org/create', {
+    method: 'POST',
+    body: {
+      name: orgName.value.trim(),
+      plan,
+      industry: selectedIndustry.value,
+      location: orgLocation.value.trim() || undefined,
+      website: orgWebsite.value.trim() || undefined,
+      brand_color: orgBrandColor.value.trim() || undefined,
+    },
+  }) as any
+
+  const id = result?.organization?.id
+  if (!id) throw new Error('Organization creation returned no id')
+
+  createdOrgId.value = id
+  setOrganization(id)
+  return id
+}
+
+// ── Payment step actions ──
+async function handleSkipFree() {
+  if (creating.value || checkingOut.value) return
+  creating.value = true
+  try {
+    await ensureOrgCreated('free')
+    // Free tier has no Stripe sub, so the Add-ons step (5) is skipped.
+    currentStep.value = 6
+  } catch (err: any) {
+    toast.error(err?.data?.message || 'Failed to create organization')
+  } finally {
+    creating.value = false
+  }
+}
+
+// ── Add-ons step actions ──
+async function handleSubscribeAddons() {
+  if (subscribingAddons.value) return
+  const picks = addons.filter(a => selectedAddons.value[a.id])
+
+  // Nothing selected: just advance.
+  if (picks.length === 0) {
+    currentStep.value = 6
+    return
+  }
+
+  if (!createdOrgId.value) {
+    toast.error('Organization not created — please refresh')
+    return
+  }
+
+  subscribingAddons.value = true
+  let failures = 0
+
+  for (const addon of picks) {
+    try {
+      await $fetch('/api/stripe/addons/subscribe', {
+        method: 'POST',
+        body: {
+          orgId: createdOrgId.value,
+          addonId: addon.id,
+          // Fallback for the webhook race — server uses this to resolve the
+          // subscription if `stripe_subscription_id` hasn't been linked yet.
+          sessionId: stripeSessionId.value || undefined,
+        },
+      })
+    } catch (err: any) {
+      console.warn('[wizard] add-on subscribe failed:', addon.id, err?.data?.message || err?.message)
+      failures++
+    }
+  }
+
+  subscribingAddons.value = false
+
+  if (failures === picks.length) {
+    toast.error('Couldn\'t add the selected add-ons. You can add them later from billing.')
+  } else if (failures > 0) {
+    toast.warning(`Added ${picks.length - failures} of ${picks.length} add-ons. The rest can be added from billing.`)
+  } else {
+    toast.success(`Added ${picks.length} add-on${picks.length > 1 ? 's' : ''}`)
+  }
+
+  currentStep.value = 6
+}
+
+function handleSkipAddons() {
+  currentStep.value = 6
+}
+
+async function handleContinueToPayment() {
+  if (creating.value || checkingOut.value) return
+  checkingOut.value = true
+  try {
+    const orgId = await ensureOrgCreated(selectedPlan.value)
+
+    const origin = window.location.origin
+    const successUrl = `${origin}/organization/new?step=invite&checkout=ok&org_id=${orgId}&session_id={CHECKOUT_SESSION_ID}`
+    const cancelUrl = `${origin}/organization/new?step=plan&checkout=cancel`
+
+    const data = await $fetch<{ url: string }>('/api/stripe/subscription/checkout', {
+      method: 'POST',
+      body: {
+        plan: selectedPlan.value,
+        interval: selectedInterval.value,
+        successUrl,
+        cancelUrl,
+      },
+    })
+
+    if (data?.url) {
+      window.location.href = data.url
+    } else {
+      toast.error('Failed to start checkout')
+      checkingOut.value = false
+    }
+  } catch (err: any) {
+    toast.error(err?.data?.message || 'Failed to start checkout')
+    checkingOut.value = false
+  }
+}
+
+// ── Final step: send invites & finish ──
+async function handleFinish() {
+  if (creating.value) return
+  if (!createdOrgId.value) {
+    toast.error('Organization not created — please refresh and try again')
+    return
+  }
   creating.value = true
 
   try {
-    const result = await $fetch('/api/org/create', {
-      method: 'POST',
-      body: {
-        name: orgName.value.trim(),
-        plan: selectedPlan.value,
-        industry: selectedIndustry.value,
-        location: orgLocation.value.trim() || undefined,
-        website: orgWebsite.value.trim() || undefined,
-        brand_color: orgBrandColor.value.trim() || undefined,
-      },
-    }) as any
-
-    // Send invites if any
-    if (invites.value.length > 0 && result?.organization?.id) {
+    if (invites.value.length > 0) {
       for (const invite of invites.value) {
         try {
           await $fetch('/api/org/invite-member', {
@@ -128,25 +387,24 @@ async function handleCreate() {
             body: {
               email: invite.email,
               roleSlug: invite.role,
-              organizationId: result.organization.id,
+              organizationId: createdOrgId.value,
             },
           })
         } catch {
-          // Continue even if an invite fails
+          // Continue even if a single invite fails
         }
       }
     }
 
-    toast.success('Organization created!')
+    toast.success('You\'re all set!')
 
-    // Refresh org list, select the new org, and redirect
-    await initializeOrganizations()
-    if (result?.organization?.id) {
-      setOrganization(result.organization.id)
+    clearState()
+    if (import.meta.client) {
+      // Brief delay so the success toast registers before reload.
+      setTimeout(() => { window.location.href = '/' }, 400)
     }
-    navigateTo('/', { external: true })
   } catch (err: any) {
-    toast.error(err?.data?.message || 'Failed to create organization')
+    toast.error(err?.data?.message || 'Something went wrong')
   } finally {
     creating.value = false
   }
@@ -157,13 +415,13 @@ async function handleCreate() {
   <div class="flex min-h-svh items-center justify-center px-4 py-12">
     <div class="w-full max-w-xl">
       <div class="ios-card p-8">
-        <!-- Step indicator -->
+        <!-- Step indicator (collapses to 5 dots for free path, 6 for paid) -->
         <div class="flex items-center gap-1.5 mb-8">
           <div
             v-for="s in totalSteps"
             :key="s"
             class="flex-1 h-1 rounded-full transition-all duration-500"
-            :class="s <= currentStep ? 'bg-[var(--cyan)]' : 'bg-muted/50'"
+            :class="s <= displayedStep ? 'bg-[var(--cyan)]' : 'bg-muted/50'"
           />
         </div>
 
@@ -219,6 +477,31 @@ async function handleCreate() {
             <p class="text-sm text-muted-foreground mt-1">You can change this anytime. All plans include every feature.</p>
           </div>
 
+          <!-- Billing interval toggle -->
+          <div class="flex justify-center mb-5">
+            <div class="inline-flex p-1 bg-muted/50 rounded-full">
+              <button
+                class="px-4 py-1.5 rounded-full text-xs font-medium transition-all"
+                :class="selectedInterval === 'monthly'
+                  ? 'bg-white text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'"
+                @click="selectedInterval = 'monthly'"
+              >
+                Monthly
+              </button>
+              <button
+                class="px-4 py-1.5 rounded-full text-xs font-medium transition-all flex items-center gap-1.5"
+                :class="selectedInterval === 'annual'
+                  ? 'bg-white text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'"
+                @click="selectedInterval = 'annual'"
+              >
+                Annual
+                <span class="text-[9px] uppercase tracking-wider text-[var(--cyan)] font-bold">2 mo free</span>
+              </button>
+            </div>
+          </div>
+
           <div class="space-y-3">
             <button
               v-for="plan in plans"
@@ -229,7 +512,6 @@ async function handleCreate() {
                 : 'border-gray-200 hover:border-gray-300 bg-white'"
               @click="selectedPlan = plan.key"
             >
-              <!-- Popular badge -->
               <span
                 v-if="plan.popular"
                 class="absolute -top-2.5 right-4 text-[9px] font-bold uppercase tracking-wider bg-[var(--cyan)] text-white px-2.5 py-0.5 rounded-full"
@@ -239,8 +521,8 @@ async function handleCreate() {
                 <div class="flex-1">
                   <div class="flex items-baseline gap-2">
                     <span class="text-base font-bold">{{ plan.name }}</span>
-                    <span class="text-lg font-bold">${{ plan.price }}</span>
-                    <span class="text-xs text-muted-foreground">/mo</span>
+                    <span class="text-lg font-bold">${{ selectedInterval === 'annual' ? plan.annual : plan.monthly }}</span>
+                    <span class="text-xs text-muted-foreground">{{ selectedInterval === 'annual' ? '/yr' : '/mo' }}</span>
                   </div>
                   <p class="text-xs text-muted-foreground mt-0.5">{{ plan.desc }}</p>
                   <div class="flex flex-wrap gap-x-4 gap-y-0.5 mt-2">
@@ -311,8 +593,96 @@ async function handleCreate() {
           </div>
         </div>
 
-        <!-- ═══ STEP 4: Invite Team (Optional) ═══ -->
+        <!-- ═══ STEP 4: Payment ═══ -->
         <div v-if="currentStep === 4">
+          <div class="text-center mb-8">
+            <div class="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
+              <CreditCard class="w-6 h-6 text-gray-500" />
+            </div>
+            <h1 class="text-xl font-semibold">Set Up Payment</h1>
+            <p class="text-sm text-muted-foreground mt-1">Secure checkout via Stripe. Cancel anytime from your account.</p>
+          </div>
+
+          <!-- Order summary -->
+          <div class="rounded-xl border-2 border-[var(--cyan)] bg-cyan-50/30 p-4 mb-5">
+            <div class="flex items-start justify-between">
+              <div>
+                <p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Selected plan</p>
+                <p class="text-base font-bold">{{ currentPlan.name }} · {{ selectedInterval === 'annual' ? 'Annual' : 'Monthly' }}</p>
+                <p class="text-xs text-muted-foreground mt-1">{{ currentPlan.desc }}</p>
+              </div>
+              <div class="text-right shrink-0 ml-3">
+                <p class="text-2xl font-bold leading-none">${{ currentPrice }}</p>
+                <p class="text-[10px] text-muted-foreground mt-1 uppercase tracking-wider">{{ intervalLabel }}</p>
+              </div>
+            </div>
+            <div class="flex flex-wrap gap-x-4 gap-y-0.5 mt-3 pt-3 border-t border-cyan-200/40">
+              <span v-for="f in currentPlan.features" :key="f" class="text-[10px] text-gray-600 flex items-center gap-1">
+                <Check class="w-3 h-3 text-[var(--cyan)]" />
+                {{ f }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Free tier offer -->
+          <div class="rounded-lg border border-dashed border-gray-200 bg-muted/20 p-3 text-center">
+            <p class="text-xs text-muted-foreground">
+              Not ready to commit? Start with the free tier — limited features, but you can upgrade anytime.
+            </p>
+          </div>
+        </div>
+
+        <!-- ═══ STEP 5: Add-ons (paid path only) ═══ -->
+        <div v-if="currentStep === 5">
+          <div class="text-center mb-8">
+            <div class="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
+              <PackagePlus class="w-6 h-6 text-gray-500" />
+            </div>
+            <h1 class="text-xl font-semibold">Round it out with add-ons</h1>
+            <p class="text-sm text-muted-foreground mt-1">Optional — billed monthly alongside your plan. You can change these anytime.</p>
+          </div>
+
+          <div class="space-y-2">
+            <button
+              v-for="addon in visibleAddons"
+              :key="addon.id"
+              class="w-full text-left p-3.5 rounded-xl border-2 transition-all flex items-center gap-3"
+              :class="selectedAddons[addon.id]
+                ? 'border-[var(--cyan)] bg-cyan-50/30'
+                : 'border-gray-200 hover:border-gray-300 bg-white'"
+              @click="selectedAddons[addon.id] = !selectedAddons[addon.id]"
+            >
+              <div
+                class="w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors"
+                :class="selectedAddons[addon.id] ? 'border-[var(--cyan)] bg-[var(--cyan)]' : 'border-gray-300'"
+              >
+                <Check v-if="selectedAddons[addon.id]" class="w-3 h-3 text-white" />
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-baseline gap-2">
+                  <span class="text-sm font-semibold">{{ addon.name }}</span>
+                  <span class="text-[10px] text-muted-foreground">{{ addon.blurb }}</span>
+                </div>
+              </div>
+              <div class="text-right shrink-0">
+                <span class="text-sm font-bold">${{ addon.price }}</span>
+                <span class="text-[10px] text-muted-foreground ml-0.5">/mo</span>
+              </div>
+            </button>
+          </div>
+
+          <!-- Running total -->
+          <div
+            v-if="selectedAddonCount > 0"
+            class="mt-4 p-3 rounded-lg bg-cyan-50/40 border border-cyan-200/60 flex items-center justify-between"
+          >
+            <span class="text-xs text-muted-foreground">{{ selectedAddonCount }} add-on{{ selectedAddonCount > 1 ? 's' : '' }} selected</span>
+            <span class="text-sm font-bold">+${{ selectedAddonsTotal }}/mo</span>
+          </div>
+        </div>
+
+        <!-- ═══ STEP 6: Invite Team (Optional) ═══ -->
+        <div v-if="currentStep === 6">
           <div class="text-center mb-8">
             <div class="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
               <Icon name="lucide:users" class="w-6 h-6 text-gray-500" />
@@ -381,9 +751,9 @@ async function handleCreate() {
 
         <!-- ═══ Navigation buttons ═══ -->
         <div class="flex items-center gap-3 mt-8 pt-6 border-t border-border/30">
-          <!-- Back -->
+          <!-- Back / Cancel (only for steps 2-4; step 5+ is post-commit) -->
           <button
-            v-if="currentStep > 1"
+            v-if="currentStep > 1 && currentStep <= 4"
             class="flex items-center gap-1 px-4 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
             @click="prevStep"
           >
@@ -391,7 +761,7 @@ async function handleCreate() {
             Back
           </button>
           <button
-            v-else
+            v-else-if="currentStep === 1"
             class="flex items-center gap-1 px-4 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
             @click="router.back()"
           >
@@ -400,7 +770,7 @@ async function handleCreate() {
 
           <div class="flex-1" />
 
-          <!-- Skip (steps 3 & 4) -->
+          <!-- Skip (step 3 only — details are optional) -->
           <button
             v-if="currentStep === 3"
             class="px-4 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
@@ -409,9 +779,9 @@ async function handleCreate() {
             Skip
           </button>
 
-          <!-- Next / Create -->
+          <!-- Steps 1-3: Continue -->
           <button
-            v-if="currentStep < totalSteps"
+            v-if="currentStep < 4"
             class="flex items-center gap-1 px-6 py-2.5 rounded-lg text-sm font-medium bg-foreground text-background hover:opacity-90 transition-opacity disabled:opacity-40"
             :disabled="!canProceed"
             @click="nextStep"
@@ -420,20 +790,62 @@ async function handleCreate() {
             <ChevronRight class="w-4 h-4" />
           </button>
 
+          <!-- Step 4: Skip Free / Continue to payment -->
+          <template v-else-if="currentStep === 4">
+            <button
+              class="px-4 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
+              :disabled="creating || checkingOut"
+              @click="handleSkipFree"
+            >
+              <Icon v-if="creating" name="lucide:loader-2" class="w-4 h-4 mr-1 animate-spin inline" />
+              Skip — Start Free
+            </button>
+            <button
+              class="flex items-center gap-1 px-6 py-2.5 rounded-lg text-sm font-medium bg-foreground text-background hover:opacity-90 transition-opacity disabled:opacity-40"
+              :disabled="creating || checkingOut"
+              @click="handleContinueToPayment"
+            >
+              <Icon v-if="checkingOut" name="lucide:loader-2" class="w-4 h-4 mr-1 animate-spin" />
+              {{ checkingOut ? 'Redirecting...' : 'Continue to payment' }}
+              <ChevronRight v-if="!checkingOut" class="w-4 h-4" />
+            </button>
+          </template>
+
+          <!-- Step 5: Add-ons (skip / subscribe) -->
+          <template v-else-if="currentStep === 5">
+            <button
+              class="px-4 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
+              :disabled="subscribingAddons"
+              @click="handleSkipAddons"
+            >
+              Skip add-ons
+            </button>
+            <button
+              class="flex items-center gap-1 px-6 py-2.5 rounded-lg text-sm font-medium bg-foreground text-background hover:opacity-90 transition-opacity disabled:opacity-40"
+              :disabled="subscribingAddons"
+              @click="handleSubscribeAddons"
+            >
+              <Icon v-if="subscribingAddons" name="lucide:loader-2" class="w-4 h-4 mr-1 animate-spin" />
+              {{ subscribingAddons ? 'Adding...' : (selectedAddonCount > 0 ? `Add ${selectedAddonCount} & Continue` : 'Continue') }}
+              <ChevronRight v-if="!subscribingAddons" class="w-4 h-4" />
+            </button>
+          </template>
+
+          <!-- Step 6: Finish -->
           <button
-            v-else
+            v-else-if="currentStep === 6"
             class="flex items-center gap-1 px-6 py-2.5 rounded-lg text-sm font-medium bg-foreground text-background hover:opacity-90 transition-opacity disabled:opacity-40"
             :disabled="creating"
-            @click="handleCreate"
+            @click="handleFinish"
           >
             <Icon v-if="creating" name="lucide:loader-2" class="w-4 h-4 mr-1 animate-spin" />
-            {{ creating ? 'Creating...' : (invites.length > 0 ? 'Create & Invite' : 'Create Organization') }}
+            {{ creating ? 'Finishing...' : (invites.length > 0 ? 'Send Invites & Finish' : 'Finish') }}
           </button>
         </div>
 
         <!-- Step label -->
         <p class="text-center text-[10px] text-muted-foreground/50 mt-4 uppercase tracking-wider">
-          Step {{ currentStep }} of {{ totalSteps }}
+          Step {{ displayedStep }} of {{ totalSteps }}
         </p>
       </div>
     </div>

@@ -12,6 +12,7 @@
 import { createUser, createItem, readItems } from '@directus/sdk';
 import { DEFAULT_ROLE_PERMISSIONS, ROLE_METADATA } from '~~/shared/permissions';
 import type { RoleSlug } from '~~/shared/permissions';
+import { ensureContactForUser } from '~~/server/utils/contact-sync';
 
 const SYSTEM_ROLES: RoleSlug[] = ['owner', 'admin', 'manager', 'member', 'client'];
 
@@ -58,10 +59,15 @@ export default defineEventHandler(async (event) => {
     // 2. If organization_name is provided, create the full org setup
     if (organization_name?.trim()) {
       try {
-        // Create organization
+        // Create organization. `slug` is required by the schema; derive it
+        // from the name and append a short random suffix so two orgs with
+        // matching names don't collide on the unique index.
+        const slugBase = organization_name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'org';
+        const slugSuffix = Math.random().toString(36).slice(2, 8);
         const org = await directus.request(
           createItem('organizations', {
             name: organization_name.trim(),
+            slug: `${slugBase}-${slugSuffix}`,
             status: 'published',
             active: true,
             plan: 'free',
@@ -104,6 +110,26 @@ export default defineEventHandler(async (event) => {
             accepted_at: new Date().toISOString(),
           })
         );
+
+        // Create the team-member contact + org junction so the new user
+        // appears in mention pickers, scheduler invitee lists, and anywhere
+        // else that reads from `contacts`. Uses the shared helper so we get
+        // the same find-by-user → find-by-email-and-adopt → create resolution
+        // order as the invite flow.
+        try {
+          await ensureContactForUser({
+            directus,
+            organizationId: org.id,
+            userId: newUser.id,
+            email,
+            firstName: first_name,
+            lastName: last_name,
+            phone: phone || null,
+            source: 'registration',
+          });
+        } catch (contactError: any) {
+          console.error('[Registration] Team-member contact creation failed (non-fatal):', contactError?.message);
+        }
       } catch (orgError: any) {
         // Log but don't fail registration if org setup fails
         console.error('Org setup error (user was still created):', orgError);

@@ -339,6 +339,9 @@ const sections = [
       </div>
     </div>
 
+    <!-- Billed vs Paid trend (collection-efficiency lens, complements Revenue vs Expenses above) -->
+    <DashboardRevenueTrend v-if="detailedInvoices.length" :invoices="detailedInvoices" class="mb-6" />
+
     <!-- Unpaid Invoices + Recent Expenses side by side -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
       <!-- Unpaid Invoices -->

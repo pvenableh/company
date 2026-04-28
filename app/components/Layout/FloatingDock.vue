@@ -1,7 +1,7 @@
 <template>
 	<!-- Desktop-only floating dock (hidden on mobile where tab bar exists) -->
 	<div
-		v-if="user"
+		v-if="user && hasOrg"
 		ref="dockRef"
 		class="floating-dock flex"
 		:class="[
@@ -186,6 +186,10 @@
 
 <script setup lang="ts">
 const { user } = useDirectusAuth();
+// Hide the dock for orgless users — every dock action (tasks, timer, AI) is
+// org-scoped and would either 403 or no-op until they finish onboarding.
+const { organizations } = useOrganization();
+const hasOrg = computed(() => organizations.value.length > 0);
 const { activeTasks } = useQuickTasks();
 const {
 	activeTimer,

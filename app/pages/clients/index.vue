@@ -184,6 +184,10 @@ onMounted(() => {
   fetchData();
   fetchTabCounts();
   fetchActivityCounts();
+  if (router.currentRoute.value.query.new === '1') {
+    showCreateModal.value = true;
+    router.replace({ query: {} });
+  }
 });
 </script>
 

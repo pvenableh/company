@@ -8,6 +8,8 @@
 import { createItem } from '@directus/sdk';
 import { DEFAULT_ROLE_PERMISSIONS, ROLE_METADATA } from '~~/shared/permissions';
 import type { RoleSlug } from '~~/shared/permissions';
+import { ensureContactForUser } from '~~/server/utils/contact-sync';
+import { sendOrgWelcomeEmail } from '~~/server/utils/welcome-email';
 
 const SYSTEM_ROLES: RoleSlug[] = ['owner', 'admin', 'manager', 'member', 'client'];
 
@@ -32,8 +34,14 @@ export default defineEventHandler(async (event) => {
 
   try {
     // 1. Create the organization
+    // `slug` is required by the schema. Derive from name and append a short
+    // random suffix so two orgs with the same name don't collide on the
+    // unique index (`Acme` + `Acme` would both become `acme`).
+    const slugBase = name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'org';
+    const slugSuffix = Math.random().toString(36).slice(2, 8);
     const orgData: Record<string, any> = {
       name: name.trim(),
+      slug: `${slugBase}-${slugSuffix}`,
       status: 'published',
       active: true,
       plan: orgPlan,
@@ -82,6 +90,24 @@ export default defineEventHandler(async (event) => {
       })
     );
 
+    // 4b. Create the team-member contact + org junction so the user appears
+    // in mention pickers, scheduler invitee lists, etc. Uses the shared
+    // helper which adopts an existing email-only contact if one exists.
+    try {
+      const sessionUser = session.user as any;
+      await ensureContactForUser({
+        directus,
+        organizationId: org.id,
+        userId: session.user.id,
+        email: sessionUser.email,
+        firstName: sessionUser.first_name || null,
+        lastName: sessionUser.last_name || null,
+        source: 'org_setup',
+      });
+    } catch (contactError: any) {
+      console.error('[org/create] Team-member contact creation failed (non-fatal):', contactError?.message);
+    }
+
     // 5. Create a Directus folder for this organization
     let folderId: string | null = null;
     try {
@@ -115,6 +141,21 @@ export default defineEventHandler(async (event) => {
       }
     } catch (folderError) {
       console.warn('Failed to create org folder:', folderError);
+    }
+
+    // Welcome email — best-effort, non-fatal. Captures the just-completed
+    // signup; webhook-driven plan upgrades after Stripe checkout fire their
+    // own follow-ups (see paymentchange handler) and don't re-trigger this.
+    try {
+      const sessionUser = session.user as any;
+      await sendOrgWelcomeEmail({
+        to: sessionUser.email,
+        firstName: sessionUser.first_name || null,
+        orgName: org.name,
+        plan: orgPlan,
+      });
+    } catch (welcomeErr: any) {
+      console.warn('[org/create] Welcome email failed (non-fatal):', welcomeErr?.message);
     }
 
     return {

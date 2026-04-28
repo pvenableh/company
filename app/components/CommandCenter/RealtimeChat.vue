@@ -235,6 +235,19 @@ onUnmounted(() => {
 				<UIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin text-gray-400" />
 			</div>
 
+			<div v-else-if="!selectedChannel && channels.length === 0" class="flex flex-col items-center justify-center h-full text-gray-400 text-sm">
+				<UIcon name="i-heroicons-chat-bubble-left-right" class="w-8 h-8 mb-2" />
+				<p>No channels yet</p>
+				<p class="text-xs mt-1">Create a channel to start collaborating.</p>
+				<NuxtLink
+					to="/channels?new=1"
+					class="inline-flex items-center gap-1 mt-3 px-3 py-1 rounded-full bg-primary text-primary-foreground text-[10px] font-medium hover:bg-primary/90 transition-colors"
+				>
+					<UIcon name="i-heroicons-plus" class="w-3 h-3" />
+					Create a channel
+				</NuxtLink>
+			</div>
+
 			<div v-else-if="!selectedChannel" class="flex flex-col items-center justify-center h-full text-gray-400 text-sm">
 				<UIcon name="i-heroicons-chat-bubble-left-right" class="w-8 h-8 mb-2" />
 				<p>Select a channel to start chatting</p>

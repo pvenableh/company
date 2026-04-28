@@ -13,7 +13,7 @@
 
 		<ClientOnly>
 			<transition name="fade">
-				<div v-if="!isConnected && !isLoading" class="mb-4 absolute right-0 top-0 connection-alert">
+				<div v-if="!isConnected && !isLoading && hasEverConnected" class="mb-4 absolute right-0 top-0 connection-alert">
 					<UAlert title="Connection Lost" description="Attempting to reconnect..." color="yellow">
 						<template #footer>
 							<UButton size="sm" color="yellow" @click="refreshTasks">Retry Connection</UButton>
@@ -203,6 +203,14 @@ const {
 	userId: props.userId,
 	limit: props.limit,
 });
+
+// Suppress "Connection Lost" alert until the websocket has connected at least
+// once. Without this, a brief flash appears on first load before the realtime
+// subscription opens — confusing for new signups.
+const hasEverConnected = ref(false);
+watch(isConnected, (val) => {
+	if (val) hasEverConnected.value = true;
+}, { immediate: true });
 
 // Expose public methods and computed properties
 defineExpose({

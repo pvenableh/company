@@ -1,20 +1,48 @@
 // POST /api/stripe/subscription/checkout
 // Creates a Stripe Checkout Session for subscription signup
 import Stripe from 'stripe';
+import { EARNEST_PLANS } from '~~/server/utils/stripe';
+import type { EarnestPlanId } from '~~/server/utils/stripe';
 
 export default defineEventHandler(async (event) => {
+	// Caller must be owner/admin of *some* org. The wizard creates the org
+	// before invoking checkout, so the new owner membership satisfies this.
 	await requireOrgRole(event, ['owner', 'admin']);
 
 	const stripe = useStripe();
 	const body = await readBody(event);
-	const { email, customerId, priceId, successUrl, cancelUrl } = body;
+	const { customerId, plan, interval, successUrl, cancelUrl } = body;
+	let { email, priceId } = body;
 
+	// Default email to the authenticated user when client omits it (the wizard
+	// flow doesn't have it client-side and shouldn't need to send it).
+	if (!email) {
+		const session = await getUserSession(event);
+		email = (session as any)?.user?.email;
+	}
 	if (!email) {
 		throw createError({ statusCode: 400, message: 'Email is required' });
 	}
 
+	// Resolve priceId from `plan` + optional `interval` ('monthly'|'annual').
+	// This lets the wizard call with `{ plan: 'solo', interval: 'monthly' }`
+	// instead of leaking Stripe price IDs into client code.
+	if (!priceId && plan) {
+		const planDef = EARNEST_PLANS[plan as EarnestPlanId];
+		if (!planDef) {
+			throw createError({ statusCode: 400, message: `Unknown plan: ${plan}` });
+		}
+		priceId = interval === 'annual' ? planDef.stripePriceIdAnnual : planDef.stripePriceId;
+		if (!priceId) {
+			throw createError({
+				statusCode: 500,
+				message: `Stripe price not configured for ${plan} ${interval || 'monthly'}`,
+			});
+		}
+	}
+
 	if (!priceId) {
-		throw createError({ statusCode: 400, message: 'Price ID is required' });
+		throw createError({ statusCode: 400, message: 'Price ID or plan is required' });
 	}
 
 	try {

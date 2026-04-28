@@ -18,17 +18,41 @@ import { ensureContactForUser } from '~~/server/utils/contact-sync';
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event);
-    const { email, organizationId, roleId } = body;
+    const { email, organizationId } = body;
+    let { roleId } = body;
+    const { roleSlug } = body;
 
-    if (!email || !organizationId || !roleId) {
+    if (!email || !organizationId || (!roleId && !roleSlug)) {
       throw createError({
         statusCode: 400,
-        message: 'email, organizationId, and roleId are required',
+        message: 'email, organizationId, and roleId or roleSlug are required',
       });
     }
 
     const directus = getServerDirectus();
     const config = useRuntimeConfig();
+
+    // Resolve roleSlug → roleId scoped to this org. Wizard sends slug because
+    // each org's role IDs are unique (org_roles is per-org, not global).
+    if (!roleId && roleSlug) {
+      const matched = await directus.request(
+        readItems('org_roles', {
+          filter: {
+            organization: { _eq: organizationId },
+            slug: { _eq: roleSlug },
+          },
+          fields: ['id'],
+          limit: 1,
+        })
+      ) as any[];
+      if (!matched.length) {
+        throw createError({
+          statusCode: 400,
+          message: `No '${roleSlug}' role found in this organization`,
+        });
+      }
+      roleId = matched[0].id;
+    }
 
     // Get the current user from session
     const session = await getUserSession(event);

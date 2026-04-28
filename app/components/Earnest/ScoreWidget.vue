@@ -23,6 +23,10 @@
 			<EarnestStreakIndicator :streak="streak" />
 		</div>
 
+		<p v-if="currentScore === 0 && totalEP === 0" class="text-[11px] text-muted-foreground text-center -mt-1">
+			Complete your first ticket to start scoring.
+		</p>
+
 		<!-- Score bar -->
 		<div class="h-2 rounded-full bg-muted/40 overflow-hidden">
 			<div

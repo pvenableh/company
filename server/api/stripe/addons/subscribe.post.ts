@@ -8,6 +8,11 @@ import type { EarnestAddonId } from '~~/server/utils/stripe';
 interface SubscribeBody {
 	addonId: EarnestAddonId;
 	orgId: string;
+	// Optional Stripe Checkout Session id. When the wizard returns from a fresh
+	// paid signup, the `customer.subscription.created` webhook may not have
+	// linked `directus_users.stripe_subscription_id` yet. Passing the session
+	// id lets us resolve the subscription directly from Stripe.
+	sessionId?: string;
 }
 
 export default defineEventHandler(async (event) => {
@@ -44,7 +49,23 @@ export default defineEventHandler(async (event) => {
 			})
 		) as any[];
 
-		const subscriptionId = users[0]?.stripe_subscription_id;
+		let subscriptionId: string | null = users[0]?.stripe_subscription_id || null;
+
+		// Wizard fallback: if the webhook hasn't linked the sub yet, resolve it
+		// from the just-completed Checkout Session.
+		if (!subscriptionId && body.sessionId) {
+			try {
+				const checkoutSession = await stripe.checkout.sessions.retrieve(body.sessionId);
+				if (typeof checkoutSession.subscription === 'string') {
+					subscriptionId = checkoutSession.subscription;
+				} else if (checkoutSession.subscription && typeof checkoutSession.subscription === 'object') {
+					subscriptionId = (checkoutSession.subscription as any).id || null;
+				}
+			} catch (lookupErr: any) {
+				console.warn('[stripe/addons/subscribe] sessionId lookup failed:', lookupErr?.message);
+			}
+		}
+
 		if (!subscriptionId) {
 			throw createError({
 				statusCode: 400,

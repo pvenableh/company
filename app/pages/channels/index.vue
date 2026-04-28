@@ -117,6 +117,14 @@ definePageMeta({
 });
 useHead({ title: 'Channels | Earnest' });
 
+const router = useRouter();
+onMounted(() => {
+	if (router.currentRoute.value.query.new === '1') {
+		showCreateChannel.value = true;
+		router.replace({ query: {} });
+	}
+});
+
 // Reactive filter
 
 const currentFilter = computed(() => {

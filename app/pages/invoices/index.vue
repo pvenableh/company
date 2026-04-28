@@ -149,7 +149,13 @@ function getLineItemCount(inv: Invoice): number {
   return Array.isArray(inv.line_items) ? inv.line_items.length : 0;
 }
 
-onMounted(fetchData);
+onMounted(() => {
+  fetchData();
+  if (router.currentRoute.value.query.new === '1') {
+    showCreateModal.value = true;
+    router.replace({ query: {} });
+  }
+});
 
 watch(() => selectedClient.value, debouncedFetch);
 </script>

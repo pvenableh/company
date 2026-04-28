@@ -222,7 +222,10 @@ export function useOrganization() {
 
 	const clearOrganization = () => {
 		organizations.value = [];
+		selectedOrg.value = null;
 		isInitialized.value = false;
+		orgInitializing.value = false;
+		error.value = null;
 		orgStorage.clearValue();
 	};
 
@@ -262,14 +265,16 @@ export function useOrganization() {
 		});
 	}
 
+	// Track the user *id* so a swap between two distinct authenticated users
+	// (cross-tab sync, register-then-signin in the same browser) trips a
+	// state reset. Without this, `initializeOrganizations` short-circuits on
+	// the prior user's `isInitialized=true` and the new user inherits stale
+	// orgs/selectedOrg until a hard reload — a tenant-isolation footgun.
 	watch(
-		() => user.value,
-		(newUser) => {
-			if (newUser) {
-				initializeOrganizations();
-			} else {
-				clearOrganization();
-			}
+		() => user.value?.id || null,
+		(newId, oldId) => {
+			if (newId !== oldId) clearOrganization();
+			if (newId) initializeOrganizations();
 		},
 		{ immediate: true },
 	);

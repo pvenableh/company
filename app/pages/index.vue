@@ -444,14 +444,16 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 
 							<!-- No data state -->
 							<div v-else class="py-6">
-								<UIcon name="i-heroicons-chart-bar" class="w-10 h-10 mx-auto text-muted-foreground/40 mb-2" />
-								<p class="text-xs text-muted-foreground">CRM analysis will appear here</p>
-								<button
-									@click="runCRMAnalysis"
-									class="mt-2 text-xs text-primary hover:underline"
+								<UIcon name="i-heroicons-user-group" class="w-10 h-10 mx-auto text-muted-foreground/40 mb-2" />
+								<p class="text-xs text-muted-foreground">No clients yet</p>
+								<p class="text-[10px] text-muted-foreground/70 mt-1">Add your first client to see CRM health.</p>
+								<NuxtLink
+									to="/clients?new=1"
+									class="inline-flex items-center gap-1 mt-3 px-3 py-1 rounded-full bg-primary text-primary-foreground text-[10px] font-medium hover:bg-primary/90 transition-colors"
 								>
-									Run Analysis
-								</button>
+									<UIcon name="i-heroicons-plus" class="w-3 h-3" />
+									Add your first client
+								</NuxtLink>
 							</div>
 						</div>
 
