@@ -48,7 +48,7 @@ const tabs = [
     label: 'Chat',
     icon: 'heroicons:sparkles',
     to: '/',
-    routes: ['/command-center', '/', '/dashboard'],
+    routes: ['/command-center', '/'],
   },
 ] as const
 

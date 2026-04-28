@@ -6,7 +6,7 @@
  * Falls back to DEFAULT_ROLE_PERMISSIONS when a feature key is missing
  * (handles migration of new feature keys to existing orgs without data changes).
  */
-import { readItems } from '@directus/sdk';
+import { readItem, readItems } from '@directus/sdk';
 import type { CrudAction, FeatureKey, PermissionMatrix, RoleSlug } from '~~/shared/permissions';
 import { DEFAULT_ROLE_PERMISSIONS } from '~~/shared/permissions';
 
@@ -162,4 +162,34 @@ export async function requireOrgRole(
     });
   }
   return { userId, roleSlug: match.role.slug as RoleSlug };
+}
+
+/**
+ * Require that the target organization is not archived. Throws 410 (Gone) when
+ * archived so client code can detect "this org's lifecycle has ended" cleanly
+ * (vs. 403 which means "you can't"). Use on every mutating route that operates
+ * inside an org context — archive/restore are exempt by design.
+ *
+ * Returns the organization row so the caller can avoid a duplicate lookup.
+ */
+export async function requireActiveOrg(orgId: string): Promise<{ id: string; archived_at: string | null }> {
+  if (!orgId) {
+    throw createError({ statusCode: 400, message: 'Organization id is required' });
+  }
+  const directus = getTypedDirectus();
+  const org = await directus.request(
+    readItem('organizations', orgId, { fields: ['id', 'archived_at'] }),
+  ).catch(() => null) as { id: string; archived_at: string | null } | null;
+
+  if (!org) {
+    throw createError({ statusCode: 404, message: 'Organization not found' });
+  }
+  if (org.archived_at) {
+    throw createError({
+      statusCode: 410,
+      message: 'This organization is archived. Restore it before making changes.',
+      data: { archived_at: org.archived_at },
+    });
+  }
+  return org;
 }

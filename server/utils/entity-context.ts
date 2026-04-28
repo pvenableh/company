@@ -24,6 +24,16 @@ export async function getEntityContext(
     const directus = getTypedDirectus();
     const now = new Date();
 
+    // Archive guard: skip context-building for archived orgs so the AI sidebar
+    // doesn't surface data slated for hard-delete and doesn't accidentally
+    // bleed it into a sibling org's chat. (Session 5)
+    if (organizationId) {
+      const org = await directus.request(
+        readItem('organizations', organizationId, { fields: ['archived_at'] }),
+      ).catch(() => null) as any;
+      if (org?.archived_at) return '';
+    }
+
     if (entityType === 'client') {
       return await buildClientContext(directus, entityId, now);
     } else if (entityType === 'project') {

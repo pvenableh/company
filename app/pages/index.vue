@@ -1,14 +1,9 @@
 <script setup lang="ts">
-definePageMeta({ layout: false });
+definePageMeta({ layout: false, middleware: 'auth' });
 useHead({ title: 'Home | Earnest' });
 
 const { user } = useDirectusAuth();
 const config = useRuntimeConfig();
-
-// Redirect unauthenticated users to login
-if (!user.value) {
-	await navigateTo('/auth/signin');
-}
 
 const layout = 'default';
 

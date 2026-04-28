@@ -42,10 +42,46 @@ const rebuildInProgress = new Set<string>();
 // ─── Public API ──────────────────────────────────────────────────────────────
 
 /**
+ * Returns true when the org's row has a non-null archived_at — used by every
+ * AI context entry-point to short-circuit before assembling/serving stale data
+ * for an org that's pending hard-delete.
+ */
+async function isOrgArchived(organizationId: string): Promise<boolean> {
+  try {
+    const directus = getTypedDirectus();
+    const org = await directus.request(
+      readItem('organizations', organizationId, { fields: ['archived_at'] }),
+    ) as any;
+    return !!org?.archived_at;
+  } catch {
+    return false;
+  }
+}
+
+function emptyContext(): CachedOrgContext {
+  const now = Date.now();
+  return {
+    clientsSummary: '',
+    projectsSummary: '',
+    invoicesSummary: '',
+    dealsSummary: '',
+    ticketsSummary: '',
+    brandSummary: '',
+    contactsSummary: '',
+    tokenEstimate: 0,
+    builtAt: now,
+    expiresAt: now + L1_TTL_MS,
+  };
+}
+
+/**
  * Get org context from the tiered cache. Returns cached data when available,
  * falls back to live queries. Uses stale-while-revalidate for expired L1 data.
  */
 export async function getOrgContext(organizationId: string): Promise<CachedOrgContext> {
+  if (await isOrgArchived(organizationId)) {
+    return emptyContext();
+  }
   const cacheKey = `org:${organizationId}`;
   const cached = inMemoryCache.get(cacheKey);
 

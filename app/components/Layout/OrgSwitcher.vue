@@ -1,6 +1,6 @@
 <script setup>
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Building2, Plus, Check, Settings } from 'lucide-vue-next'
+import { Building2, Plus, Check, Settings, Archive } from 'lucide-vue-next'
 
 const props = defineProps({
 	modelValue: {
@@ -11,7 +11,14 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue']);
 
-const { selectedOrg, organizations, setOrganization, hasMultipleOrgs } = useOrganization();
+const {
+	selectedOrg,
+	visibleOrganizations,
+	hasArchivedOrgs,
+	showArchived,
+	setOrganization,
+	hasMultipleOrgs,
+} = useOrganization();
 const { clearClient } = useClients();
 const config = useRuntimeConfig();
 
@@ -63,18 +70,19 @@ const handleRegisterOrg = () => {
 			</div>
 
 			<!-- Organization list -->
-			<div class="space-y-2 mb-6 max-h-[60vh] overflow-y-auto">
+			<div class="space-y-2 mb-3 max-h-[60vh] overflow-y-auto">
 				<div
-					v-for="org in organizations"
+					v-for="org in visibleOrganizations"
 					:key="org.id"
 					role="button"
 					tabindex="0"
 					class="w-full flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer"
-					:class="
+					:class="[
 						selectedOrg === org.id
 							? 'border-[var(--cyan)] bg-cyan-50/50'
-							: 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-					"
+							: 'border-gray-200 hover:border-gray-300 hover:bg-gray-50',
+						org.archived_at && 'opacity-70',
+					]"
 					@click="handleSelectOrg(org.id)"
 					@keydown.enter.prevent="handleSelectOrg(org.id)"
 					@keydown.space.prevent="handleSelectOrg(org.id)"
@@ -87,7 +95,16 @@ const handleRegisterOrg = () => {
 					</Avatar>
 
 					<div class="flex-1 text-left min-w-0">
-						<p class="text-sm font-medium text-gray-900 truncate">{{ org.name }}</p>
+						<p class="text-sm font-medium text-gray-900 truncate flex items-center gap-1.5">
+							{{ org.name }}
+							<span
+								v-if="org.archived_at"
+								class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wider text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded"
+							>
+								<Archive class="size-3" />
+								Archived
+							</span>
+						</p>
 						<div class="flex items-center gap-3 mt-0.5">
 							<span v-if="org.ticketsCount > 0" class="text-[10px] text-gray-400">
 								{{ org.ticketsCount }} ticket{{ org.ticketsCount !== 1 ? 's' : '' }}
@@ -114,6 +131,25 @@ const handleRegisterOrg = () => {
 						class="size-5 text-[var(--cyan)] shrink-0"
 					/>
 				</div>
+
+				<p v-if="visibleOrganizations.length === 0" class="text-center text-xs text-gray-400 py-4">
+					{{ hasArchivedOrgs ? 'All organizations are archived. Toggle below to view.' : 'No organizations.' }}
+				</p>
+			</div>
+
+			<!-- Show-archived toggle (only when archived orgs exist) -->
+			<div v-if="hasArchivedOrgs" class="mb-4 px-1">
+				<label class="flex items-center gap-2 text-xs text-gray-500 cursor-pointer">
+					<input
+						v-model="showArchived"
+						type="checkbox"
+						class="rounded border-gray-300 text-[var(--cyan)] focus:ring-[var(--cyan)]"
+					/>
+					<span class="flex items-center gap-1">
+						<Archive class="size-3" />
+						Show archived organizations
+					</span>
+				</label>
 			</div>
 
 			<!-- Register new organization -->

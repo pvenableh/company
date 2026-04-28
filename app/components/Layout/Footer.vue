@@ -90,7 +90,7 @@ const platformLinks = [
 	{ to: '/tickets', label: 'Tickets' },
 	{ to: '/projects', label: 'Projects' },
 	{ to: '/scheduler', label: 'Scheduler' },
-	{ to: '/dashboard', label: 'Dashboard' },
+	{ to: '/financials', label: 'Financials' },
 ];
 
 const toolLinks = [

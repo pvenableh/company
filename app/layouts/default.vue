@@ -1,5 +1,10 @@
 <template>
 	<div class="relative bg-background text-foreground transition duration-150 ios-safe-area">
+		<!-- Archived-org banner (shown above the active layout when current org is archived) -->
+		<ClientOnly>
+			<LayoutArchivedOrgBanner />
+		</ClientOnly>
+
 		<!-- Dynamic layout based on user's selected mode -->
 		<component
 			:is="activeLayoutComponent"

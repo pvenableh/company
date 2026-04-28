@@ -20,6 +20,10 @@ const monthlyData = ref<{ month: number; label: string; revenue: number; expense
 const isLoadingCharts = ref(true);
 const unpaidInvoices = ref<any[]>([]);
 const recentExpenses = ref<any[]>([]);
+// Detailed invoice rows for the breakdown widgets folded over from /dashboard
+// (Revenue by Client / Project, Payment Analysis). Kept separate from the
+// chart-summary fetch so the lean monthly fetch stays cheap.
+const detailedInvoices = ref<any[]>([]);
 
 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -66,15 +70,28 @@ async function loadDashboard() {
       unpaidFilter._and.push({ bill_to: { _eq: selectedOrg.value } });
     }
 
-    const [invoices, expenses, unpaid, recentExp] = await Promise.all([
+    const [invoices, expenses, unpaid, recentExp, detailed] = await Promise.all([
       invoiceItems.list({ filter: invoiceFilter, fields: ['total_amount', 'invoice_date', 'status'], limit: 1000 }),
       expenseItems.list({ filter: expenseFilter, fields: ['amount', 'date'], limit: 1000 }),
       invoiceItems.list({ filter: unpaidFilter, fields: ['id', 'invoice_code', 'total_amount', 'due_date', 'status', 'client.name'], sort: ['due_date'], limit: 10 }),
       expenseItems.list({ fields: ['name', 'amount', 'category', 'date'], sort: ['-date'], limit: 5 }),
+      invoiceItems.list({
+        filter: invoiceFilter,
+        fields: [
+          'id', 'total_amount', 'invoice_date', 'status',
+          'client.name',
+          'projects.projects_id.title',
+          'payments.id', 'payments.amount', 'payments.status',
+          'payments.date_received', 'payments.payment_intent',
+          'payments.charge_id', 'payments.payment_method',
+        ],
+        limit: 500,
+      }),
     ]);
 
     unpaidInvoices.value = unpaid;
     recentExpenses.value = recentExp;
+    detailedInvoices.value = detailed;
 
     // Bucket by month
     const data = months.map((label, i) => ({
@@ -406,6 +423,14 @@ const sections = [
         <span class="text-xs font-medium">{{ section.name }}</span>
       </NuxtLink>
     </div>
+
+    <!-- Revenue Breakdowns (folded over from the retired /dashboard page) -->
+    <div v-if="detailedInvoices.length" class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+      <DashboardClientBreakdown :invoices="detailedInvoices" />
+      <DashboardProjectProfitability :invoices="detailedInvoices" />
+    </div>
+
+    <DashboardPaymentAnalysis v-if="detailedInvoices.length" :invoices="detailedInvoices" class="mb-6" />
 
     <!-- Quarterly Analysis -->
     <div>

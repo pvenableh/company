@@ -77,6 +77,12 @@ async function executeOperation(
 
       case "create":
         if (!data) throw new Error("Data required for create operation");
+        // Archive guard: refuse writes whose payload binds them to an archived org.
+        // Collections that auto-fill `organization` server-side aren't payload-bound,
+        // so they pass through here and rely on the row's existing org link.
+        if ('organization' in data) {
+          await assertOrgNotArchived(data.organization);
+        }
         if (collection === "directus_comments") {
           return await directus.request(createComment(data, query));
         }
@@ -85,6 +91,9 @@ async function executeOperation(
       case "update":
         if (!id) throw new Error("ID required for update operation");
         if (!data) throw new Error("Data required for update operation");
+        if ('organization' in data) {
+          await assertOrgNotArchived(data.organization);
+        }
         return await directus.request(updateItem(collection, id, data, query));
 
       case "delete":
@@ -124,6 +133,51 @@ async function executeOperation(
     }
 
     throw error;
+  }
+}
+
+// ── Archived-org write guard ───────────────────────────────────────────────
+// Block create/update/delete on any row whose `organization` payload field
+// resolves to an archived org. We cache archived org IDs for 60s to avoid
+// hammering Directus on every mutation. Server-side admin code bypasses this
+// proxy entirely, so the cleanup cron + archive/restore routes still work.
+
+const ARCHIVED_CACHE_TTL_MS = 60 * 1000;
+let archivedOrgIds = new Set<string>();
+let archivedCacheLoadedAt = 0;
+
+async function getArchivedOrgIds(): Promise<Set<string>> {
+  if (Date.now() - archivedCacheLoadedAt < ARCHIVED_CACHE_TTL_MS) {
+    return archivedOrgIds;
+  }
+  try {
+    const directus = getTypedDirectus();
+    const rows = await directus.request(
+      readItems('organizations', {
+        filter: { archived_at: { _nnull: true } },
+        fields: ['id'],
+        limit: -1,
+      }),
+    ) as Array<{ id: string }>;
+    archivedOrgIds = new Set((rows || []).map((r) => r.id));
+    archivedCacheLoadedAt = Date.now();
+  } catch (err: any) {
+    // On lookup failure, leave the previous set in place — fail open rather
+    // than block legitimate writes. Surfaces in logs for diagnosis.
+    console.warn('[items.post] archived-org cache refresh failed:', err.message);
+  }
+  return archivedOrgIds;
+}
+
+async function assertOrgNotArchived(payloadOrg: string | { id?: string } | undefined | null): Promise<void> {
+  const orgId = typeof payloadOrg === 'string' ? payloadOrg : payloadOrg?.id;
+  if (!orgId) return;
+  const archived = await getArchivedOrgIds();
+  if (archived.has(orgId)) {
+    throw createError({
+      statusCode: 410,
+      message: 'This organization is archived. Restore it before making changes.',
+    });
   }
 }
 

@@ -6,6 +6,9 @@ export function useOrganization() {
 	const organizations = useState('organizations', () => []);
 	const error = useState('orgError', () => null);
 	const isInitialized = useState('orgIsInitialized', () => false);
+	// Show-archived toggle: archived orgs are excluded by default. Flip via
+	// the org switcher dropdown to surface them (for restore).
+	const showArchived = useState('showArchivedOrgs', () => false);
 
 	const orgStorage = useStorageSync('selectedOrganization', {
 		cookie: {
@@ -21,13 +24,27 @@ export function useOrganization() {
 
 	const { user } = useDirectusAuth();
 
-	const hasMultipleOrgs = computed(() => organizations.value.length > 1);
-	const organizationOptions = computed(() => [{ id: null, name: 'All Organizations' }, ...organizations.value]);
+	// Active = not archived. Archived orgs are hidden by default; the switcher
+	// can opt-in via showArchived. selectedOrg can still resolve to an archived
+	// org (so the owner can navigate in to restore) — currentOrg below uses the
+	// raw list, not the filtered one.
+	const visibleOrganizations = computed(() => {
+		if (showArchived.value) return organizations.value;
+		return organizations.value.filter((org) => !org.archived_at);
+	});
+
+	const archivedOrganizations = computed(() => organizations.value.filter((org) => !!org.archived_at));
+	const hasArchivedOrgs = computed(() => archivedOrganizations.value.length > 0);
+
+	const hasMultipleOrgs = computed(() => visibleOrganizations.value.length > 1);
+	const organizationOptions = computed(() => [{ id: null, name: 'All Organizations' }, ...visibleOrganizations.value]);
 
 	const currentOrg = computed(() => {
 		if (!selectedOrg.value || !organizations.value.length) return null;
 		return organizations.value.find((org) => org.id === selectedOrg.value);
 	});
+
+	const isCurrentOrgArchived = computed(() => !!currentOrg.value?.archived_at);
 
 	const getOrganizationFilter = (orgId) => {
 		const idToFilterBy = orgId !== undefined ? orgId : selectedOrg.value;
@@ -54,7 +71,7 @@ export function useOrganization() {
 						users: { directus_users_id: { _eq: user.value.id } },
 						active: { _neq: false },
 					},
-					fields: ['id', 'name', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'default_hourly_rate', 'email', 'phone', 'address'],
+					fields: ['id', 'name', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'default_hourly_rate', 'email', 'phone', 'address', 'archived_at'],
 				}),
 				membershipItems.list({
 					filter: {
@@ -83,7 +100,7 @@ export function useOrganization() {
 							id: { _in: membershipOnlyOrgIds },
 							active: { _neq: false },
 						},
-						fields: ['id', 'name', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'default_hourly_rate', 'email', 'phone', 'address'],
+						fields: ['id', 'name', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'default_hourly_rate', 'email', 'phone', 'address', 'archived_at'],
 					});
 				} catch {
 					// Continue if membership-only orgs can't be fetched
@@ -133,6 +150,7 @@ export function useOrganization() {
 					email: org.email ?? null,
 					phone: org.phone ?? null,
 					address: org.address ?? null,
+					archived_at: org.archived_at ?? null,
 					ticketsCount: tc,
 					projectsCount: pc,
 					totalActivity: tc + pc,
@@ -156,13 +174,19 @@ export function useOrganization() {
 
 	const tryRestoreSelectedOrg = () => {
 		const savedOrg = orgStorage.getValue();
+		// Auto-select prefers active orgs only; archived orgs are reachable
+		// only via explicit selection from the switcher with showArchived on.
+		const activeOrgs = organizations.value.filter((org) => !org.archived_at);
 
 		if (savedOrg && organizations.value.some((org) => org.id === savedOrg)) {
 			if (selectedOrg.value !== savedOrg) {
 				orgStorage.setValue(savedOrg);
 			}
+		} else if (activeOrgs.length >= 1) {
+			// Auto-select the first active org (sorted by most activity) when no saved value
+			orgStorage.setValue(activeOrgs[0].id);
 		} else if (organizations.value.length >= 1) {
-			// Auto-select the first org (sorted by most activity) when no saved value
+			// Fallback: only archived orgs exist — user has churned but not been deleted yet
 			orgStorage.setValue(organizations.value[0].id);
 		} else {
 			orgStorage.clearValue();
@@ -253,12 +277,17 @@ export function useOrganization() {
 	return {
 		selectedOrg: readonly(selectedOrg),
 		organizations: readonly(organizations),
+		visibleOrganizations,
+		archivedOrganizations,
+		hasArchivedOrgs,
+		showArchived,
 		isLoading: readonly(orgInitializing),
 		error: readonly(error),
 		isInitialized: readonly(isInitialized),
 		hasMultipleOrgs,
 		organizationOptions,
 		currentOrg,
+		isCurrentOrgArchived,
 		setOrganization,
 		clearOrganization,
 		initializeOrganizations,
