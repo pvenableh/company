@@ -64,6 +64,7 @@ export function useOrganization() {
 		error.value = null;
 
 		try {
+			console.log('[fetchOrgDetails]', { side: import.meta.server ? 'SSR' : 'CLIENT', userId: user.value.id });
 			// Fetch orgs and memberships in parallel
 			const [junctionOrgs, memberships] = await Promise.all([
 				orgItems.list({
@@ -79,8 +80,9 @@ export function useOrganization() {
 						status: { _eq: 'active' },
 					},
 					fields: ['id', 'organization', 'role.id', 'role.name', 'role.slug', 'client.id', 'client.name'],
-				}).catch(() => []),
+				}).catch((e) => { console.log('[fetchOrgDetails] memberships err:', e?.message); return []; }),
 			]);
+			console.log('[fetchOrgDetails] junctionOrgs:', junctionOrgs?.length, 'memberships:', memberships?.length);
 
 			const membershipByOrg = {};
 			for (const m of memberships) {
@@ -165,7 +167,7 @@ export function useOrganization() {
 				return a.name.localeCompare(b.name);
 			});
 		} catch (err) {
-			console.error('Failed to fetch organizations:', err);
+			console.error('[fetchOrgDetails] CAUGHT:', err?.message, err?.statusCode, err?.data?.message);
 			error.value = err.message;
 		} finally {
 			orgInitializing.value = false;
@@ -193,25 +195,37 @@ export function useOrganization() {
 		}
 	};
 
+	// In-flight init promise so concurrent callers await the same fetch
+	// instead of early-returning (which left the SSR `needs-org` middleware
+	// reading a stale empty `organizations` and redirecting to /organization/new).
+	// Stored on `useNuxtApp()` so it's per-request on SSR and per-app on client —
+	// NOT in `useState` because a Promise can't be JSON-serialized into the
+	// hydration payload.
+	const nuxtApp = useNuxtApp();
+
 	const initializeOrganizations = async () => {
-		if (orgInitializing.value || isInitialized.value || !user.value) return;
+		if (isInitialized.value || !user.value) return;
+		if (nuxtApp._orgInitInflight) return nuxtApp._orgInitInflight;
 
-		orgInitializing.value = true;
-		error.value = null;
-
-		try {
-			organizations.value = [];
-			await fetchOrganizationDetails();
-			tryRestoreSelectedOrg();
-			isInitialized.value = true;
-			// console.log('Organization initialized:', selectedOrg.value);
-		} catch (err) {
-			console.error('Initialization error:', err);
-			error.value = err.message;
-			clearOrganization();
-		} finally {
-			orgInitializing.value = false;
-		}
+		const run = (async () => {
+			orgInitializing.value = true;
+			error.value = null;
+			try {
+				organizations.value = [];
+				await fetchOrganizationDetails();
+				tryRestoreSelectedOrg();
+				isInitialized.value = true;
+			} catch (err) {
+				console.error('Initialization error:', err);
+				error.value = err.message;
+				clearOrganization();
+			} finally {
+				orgInitializing.value = false;
+				nuxtApp._orgInitInflight = null;
+			}
+		})();
+		nuxtApp._orgInitInflight = run;
+		return run;
 	};
 
 	const setOrganization = (orgId) => {

@@ -61,9 +61,9 @@ const MONTH_SLUG = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2
 const DATED_DIR = resolve(MARKETING_REPO, 'public/screenshots', MONTH_SLUG);
 const LATEST_DIR = resolve(MARKETING_REPO, 'public/screenshots/latest');
 
-// Debounce after `networkidle` — gives sticky header/sidebar and any
+// Debounce after `domcontentloaded` — gives sticky header/sidebar and any
 // animations a beat to settle before the shutter fires.
-const SETTLE_MS = 500;
+const SETTLE_MS = 2500;
 
 /** CSS we inject on every page to hide overlays that shouldn't appear in
  *  marketing shots (floating dock with the AI launcher, presence pills,
@@ -72,7 +72,12 @@ const HIDE_OVERLAYS_CSS = `
 .floating-dock,
 [data-testid="ai-tray"],
 .dock-morph,
-.dock-edge-trigger { display: none !important; }
+.dock-edge-trigger,
+#nuxt-devtools-anchor,
+.nuxt-devtools-panel,
+[data-v-inspector-icon],
+.__nuxt-devtools__,
+[data-nuxt-devtools] { display: none !important; }
 `;
 
 // ─── Capture plan ───────────────────────────────────────────────────────
@@ -189,19 +194,43 @@ const SHOTS: Shot[] = [
 // ─── Helpers ────────────────────────────────────────────────────────────
 
 async function firstDetailHref(page: Page, listPath: string, baseUrl: string): Promise<string> {
-	await page.goto(`${baseUrl}${listPath}`, { waitUntil: 'networkidle' });
-	await page.waitForTimeout(SETTLE_MS);
-
-	// Look for the first internal link into a detail route, e.g. /contacts/{uuid}.
-	const hrefs = await page.$$eval(
-		`a[href^="${listPath}/"]`,
-		(nodes) => nodes.map((n) => (n as HTMLAnchorElement).getAttribute('href')).filter(Boolean),
-	);
-	const first = hrefs.find((h): h is string => !!h && h !== `${listPath}/` && !h.startsWith(`${listPath}/new`));
-	if (!first) {
-		throw new Error(`No seeded detail rows found under ${listPath}. Re-run scripts/setup-demo-org.ts?`);
+	// Establish an origin for the page-side fetch so the relative URL works
+	// and the auth cookie is in scope. Use `domcontentloaded` (not
+	// `networkidle`) — the list pages keep notification long-polls open
+	// indefinitely and `networkidle` never resolves on prod.
+	if (page.url() === 'about:blank') {
+		await page.goto(`${baseUrl}/command-center`, { waitUntil: 'domcontentloaded', timeout: 15000 });
 	}
-	return first;
+
+	// Hit the items endpoint via the page's authed session and grab the
+	// first row id. More deterministic than scraping the rendered list
+	// (which uses `router.push()` clicks instead of `<a href>`).
+	const collection = listPath.replace(/^\//, '');
+	const id = await page.evaluate(async (col) => {
+		try {
+			const res = await fetch(`/api/directus/items`, {
+				method: 'POST',
+				credentials: 'include',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({
+					collection: col,
+					operation: 'list',
+					query: { limit: 1, fields: ['id'] },
+				}),
+			});
+			if (!res.ok) return { error: `${res.status} ${(await res.text()).slice(0, 120)}` };
+			const json = await res.json().catch(() => null);
+			return { id: json?.data?.[0]?.id ?? null };
+		} catch (err) {
+			return { error: String(err) };
+		}
+	}, collection);
+	if (typeof id === 'object' && id && 'id' in id && id.id) return `${listPath}/${id.id}`;
+	if (typeof id === 'object' && id && 'error' in id) {
+		console.warn(`  ⚠ ${listPath} resolver: ${id.error}`);
+	}
+
+	throw new Error(`No seeded detail rows found under ${listPath}. Re-run scripts/setup-demo-org.ts?`);
 }
 
 const LOGIN_ENDPOINT: Record<Persona, string> = {
@@ -239,7 +268,7 @@ async function captureOne(browser: Browser, shot: Shot): Promise<void> {
 	const url = await shot.resolveUrl({ page, baseUrl: APP_URL });
 	console.log(`  → ${shot.slug}  ${url}`);
 
-	await page.goto(url, { waitUntil: 'networkidle' });
+	await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
 	// Re-inject overlay-hiding after the hard navigation replaced the DOM.
 	await page.addStyleTag({ content: HIDE_OVERLAYS_CSS });
 	await page.waitForTimeout(SETTLE_MS);

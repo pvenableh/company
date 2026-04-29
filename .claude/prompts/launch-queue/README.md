@@ -20,6 +20,7 @@ Sessions are numbered roughly by ship order. Hard dependencies are noted in each
 | 8 | [session-8-tenant-perm-patch.md](session-8-tenant-perm-patch.md) | none — but ship before opening signups (real cross-tenant leak fix; smoke-report blocker) |
 | 9 | [session-9-onboarding-completion.md](session-9-onboarding-completion.md) | Session 8 should ship first |
 | 10 | [session-10-empty-states-and-cleanup.md](session-10-empty-states-and-cleanup.md) | Sessions 8 + 9 should ship first |
+| 11 | [session-11-final-verification.md](session-11-final-verification.md) | Sessions 8–10 shipped + live Stripe env vars deployed to Vercel |
 | 7a | [session-7a-c2-deferred.md](session-7a-c2-deferred.md) | post-launch; needs null-org backfill script run first |
 | 7b | [session-7b-chat-sessions-cold-load.md](session-7b-chat-sessions-cold-load.md) | post-launch |
 | 7c | [session-7c-ipv6-localhost.md](session-7c-ipv6-localhost.md) | post-launch; dev-env only |

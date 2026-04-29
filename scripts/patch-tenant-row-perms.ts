@@ -81,42 +81,46 @@ const TENANT_COLLECTIONS = [
 ]
 const TENANT_SET = new Set(TENANT_COLLECTIONS)
 
-// Per-collection scope filter shape. Default is `organization._in.$CURRENT_USER.organizations.id`.
+// Per-collection scope filter shape. Default is `organization._in.$CURRENT_USER.organizations.organizations_id`.
 function scopeFor(collection: string): any {
   switch (collection) {
     case 'organizations':
-      return { id: { _in: '$CURRENT_USER.organizations.id' } }
+      // Use reverse M2M (no recursion). Self-referencing
+      // `id._in.$CURRENT_USER.organizations.organizations_id` would force
+      // Directus to read `organizations` rows to resolve the filter, then
+      // re-apply the same filter — 500.
+      return { users: { directus_users_id: { _eq: '$CURRENT_USER' } } }
     case 'tasks':
-      return { organization_id: { _in: '$CURRENT_USER.organizations.id' } }
+      return { organization_id: { _in: '$CURRENT_USER.organizations.organizations_id' } }
     case 'team_goals':
-      return { team: { organization: { _in: '$CURRENT_USER.organizations.id' } } }
+      return { team: { organization: { _in: '$CURRENT_USER.organizations.organizations_id' } } }
     case 'mailing_list_contacts':
-      return { list_id: { organization: { _in: '$CURRENT_USER.organizations.id' } } }
+      return { list_id: { organization: { _in: '$CURRENT_USER.organizations.organizations_id' } } }
     case 'invoices':
-      return { client: { organization: { _in: '$CURRENT_USER.organizations.id' } } }
+      return { client: { organization: { _in: '$CURRENT_USER.organizations.organizations_id' } } }
     case 'invoice_items':
-      return { invoice: { client: { organization: { _in: '$CURRENT_USER.organizations.id' } } } }
+      return { invoice: { client: { organization: { _in: '$CURRENT_USER.organizations.organizations_id' } } } }
     case 'contacts':
       // Orphan contacts (no client) need a fallback — leads.contact reverse
       // alias and user_created cover the lead-pipeline + creator paths.
       return { _or: [
-        { client: { organization: { _in: '$CURRENT_USER.organizations.id' } } },
-        { leads: { organization: { _in: '$CURRENT_USER.organizations.id' } } },
+        { client: { organization: { _in: '$CURRENT_USER.organizations.organizations_id' } } },
+        { leads: { organization: { _in: '$CURRENT_USER.organizations.organizations_id' } } },
         { user_created: { _eq: '$CURRENT_USER' } },
       ] }
     case 'contact_connections':
-      return { client: { organization: { _in: '$CURRENT_USER.organizations.id' } } }
+      return { client: { organization: { _in: '$CURRENT_USER.organizations.organizations_id' } } }
     case 'comments':
       // Polymorphic (parent_id + collection + item). Scope by author being
       // in one of the user's orgs — not perfect, but lets team threads work
       // (any commenter who shares an org with the current user is visible).
-      return { user: { organizations: { organizations_id: { _in: '$CURRENT_USER.organizations.id' } } } }
+      return { user: { organizations: { organizations_id: { _in: '$CURRENT_USER.organizations.organizations_id' } } } }
     case 'video_meetings':
       // No `organization` column; combine host_user with related_organization
       // so both hosts and tenant members can see the meeting record.
       return { _or: [
         { host_user: { _eq: '$CURRENT_USER' } },
-        { related_organization: { _in: '$CURRENT_USER.organizations.id' } },
+        { related_organization: { _in: '$CURRENT_USER.organizations.organizations_id' } },
       ] }
     case 'ai_chat_sessions':
       return { user: { _eq: '$CURRENT_USER' } }
@@ -125,7 +129,7 @@ function scopeFor(collection: string): any {
     case 'ai_preferences':
       return { user: { _eq: '$CURRENT_USER' } }
     default:
-      return { organization: { _in: '$CURRENT_USER.organizations.id' } }
+      return { organization: { _in: '$CURRENT_USER.organizations.organizations_id' } }
   }
 }
 
