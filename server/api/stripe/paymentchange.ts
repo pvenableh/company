@@ -2,7 +2,7 @@
 // Stripe webhook handler for payment and subscription events
 import { defineEventHandler, getHeader, readBody } from 'h3';
 import Stripe from 'stripe';
-import { updateItems, updateItem, readItems, createItem } from '@directus/sdk';
+import { updateItems, updateItem, readItems, createItem, readUsers, updateUser } from '@directus/sdk';
 import { EARNEST_PLANS, EARNEST_ADDONS, planFromPriceId, addonFromPriceId } from '~~/server/utils/stripe';
 import type { EarnestPlanId, EarnestAddonId } from '~~/server/utils/stripe';
 
@@ -145,9 +145,11 @@ async function findOrgForCustomer(
 	directus: ReturnType<typeof getTypedDirectus>,
 	customerId: string
 ): Promise<{ userId: string; orgId: string | null }> {
-	// Find user by stripe_customer_id
+	// Find user by stripe_customer_id. directus_users is a system collection,
+	// so it must be queried via readUsers (/users endpoint) not readItems
+	// (/items/directus_users 403's).
 	const users = await directus.request(
-		readItems('directus_users', {
+		readUsers({
 			filter: { stripe_customer_id: { _eq: customerId } },
 			fields: ['id', 'email'],
 			limit: 1,
