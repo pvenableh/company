@@ -64,7 +64,6 @@ export function useOrganization() {
 		error.value = null;
 
 		try {
-			console.log('[fetchOrgDetails]', { side: import.meta.server ? 'SSR' : 'CLIENT', userId: user.value.id });
 			// Fetch orgs and memberships in parallel
 			const [junctionOrgs, memberships] = await Promise.all([
 				orgItems.list({
@@ -80,9 +79,8 @@ export function useOrganization() {
 						status: { _eq: 'active' },
 					},
 					fields: ['id', 'organization', 'role.id', 'role.name', 'role.slug', 'client.id', 'client.name'],
-				}).catch((e) => { console.log('[fetchOrgDetails] memberships err:', e?.message); return []; }),
+				}).catch(() => []),
 			]);
-			console.log('[fetchOrgDetails] junctionOrgs:', junctionOrgs?.length, 'memberships:', memberships?.length);
 
 			const membershipByOrg = {};
 			for (const m of memberships) {
@@ -167,7 +165,7 @@ export function useOrganization() {
 				return a.name.localeCompare(b.name);
 			});
 		} catch (err) {
-			console.error('[fetchOrgDetails] CAUGHT:', err?.message, err?.statusCode, err?.data?.message);
+			console.error('Failed to fetch organizations:', err);
 			error.value = err.message;
 		} finally {
 			orgInitializing.value = false;

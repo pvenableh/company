@@ -53,7 +53,7 @@ function labelFor(path: string): string {
 }
 
 export default defineNuxtRouteMiddleware(async (to) => {
-  const { loggedIn, user } = useUserSession();
+  const { loggedIn } = useUserSession();
   if (!loggedIn.value) return;
 
   const allowedPrefixes = ['/organization/new', '/auth', '/account'];
@@ -63,25 +63,13 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   const { organizations, isInitialized, initializeOrganizations } = useOrganization();
 
-  // DEBUG
-  console.log('[needs-org]', {
-    path: to.path,
-    side: import.meta.server ? 'SSR' : 'CLIENT',
-    loggedIn: loggedIn.value,
-    userId: user.value?.id ?? null,
-    isInitialized: isInitialized.value,
-    orgsLen: organizations.value.length,
-  });
-
   if (!isInitialized.value) {
     try {
       await initializeOrganizations();
-    } catch (e) {
-      console.log('[needs-org] init error:', (e as Error).message);
+    } catch {
       // If we can't fetch orgs, fall through — auth middleware or app shell will surface the error
       return;
     }
-    console.log('[needs-org] post-init orgs:', organizations.value.length);
   }
 
   // Active membership in any org → continue (client-portal middleware will narrow further if needed)

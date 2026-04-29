@@ -63,7 +63,7 @@ const LATEST_DIR = resolve(MARKETING_REPO, 'public/screenshots/latest');
 
 // Debounce after `domcontentloaded` — gives sticky header/sidebar and any
 // animations a beat to settle before the shutter fires.
-const SETTLE_MS = 2500;
+const SETTLE_MS = 5000;
 
 /** CSS we inject on every page to hide overlays that shouldn't appear in
  *  marketing shots (floating dock with the AI launcher, presence pills,
@@ -220,7 +220,10 @@ async function firstDetailHref(page: Page, listPath: string, baseUrl: string): P
 			});
 			if (!res.ok) return { error: `${res.status} ${(await res.text()).slice(0, 120)}` };
 			const json = await res.json().catch(() => null);
-			return { id: json?.data?.[0]?.id ?? null };
+			// Items endpoint returns raw array; some other Directus endpoints
+			// return { data: [...] } — accept either shape.
+			const arr = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : [];
+			return { id: arr[0]?.id ?? null };
 		} catch (err) {
 			return { error: String(err) };
 		}
@@ -271,6 +274,11 @@ async function captureOne(browser: Browser, shot: Shot): Promise<void> {
 	await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
 	// Re-inject overlay-hiding after the hard navigation replaced the DOM.
 	await page.addStyleTag({ content: HIDE_OVERLAYS_CSS });
+	// Wait for any "Loading…" placeholders to disappear, with a hard
+	// timeout so a stuck spinner doesn't block the run.
+	await page
+		.waitForFunction(() => !/loading\b/i.test(document.body.innerText), { timeout: 10000 })
+		.catch(() => { /* fall through — capture whatever's there */ });
 	await page.waitForTimeout(SETTLE_MS);
 	if (shot.waitFor) await shot.waitFor(page);
 
