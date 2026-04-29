@@ -282,10 +282,18 @@ export function useOrganization() {
 	// state reset. Without this, `initializeOrganizations` short-circuits on
 	// the prior user's `isInitialized=true` and the new user inherits stale
 	// orgs/selectedOrg until a hard reload — a tenant-isolation footgun.
+	//
+	// Skip `clearOrganization` on the initial immediate fire (`oldId === undefined`):
+	// every component that calls `useOrganization()` registers its own watcher,
+	// and 50+ components × `immediate: true` would each clear the org-state
+	// between mounts, wiping localStorage and oscillating `selectedOrg`
+	// null ↔ orgId. That oscillation cascaded into duplicate Board.vue watchers
+	// firing and stuck "Loading Tickets" overlays. Only clear on a *real* user
+	// transition (oldId truthy and changed).
 	watch(
 		() => user.value?.id || null,
 		(newId, oldId) => {
-			if (newId !== oldId) clearOrganization();
+			if (oldId !== undefined && newId !== oldId) clearOrganization();
 			if (newId) initializeOrganizations();
 		},
 		{ immediate: true },

@@ -341,7 +341,7 @@ onUnmounted(() => clearEntity());
                 {{ client.account_state }}
               </span>
             </div>
-            <p v-if="client.industry" class="text-xs text-muted-foreground">{{ industryName || 'Loading...' }}</p>
+            <p v-if="client.industry" class="text-xs text-muted-foreground">{{ industryName || '\u2014' }}</p>
           </div>
         </div>
         <div class="flex items-center gap-1.5">

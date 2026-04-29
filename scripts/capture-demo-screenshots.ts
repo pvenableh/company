@@ -62,8 +62,10 @@ const DATED_DIR = resolve(MARKETING_REPO, 'public/screenshots', MONTH_SLUG);
 const LATEST_DIR = resolve(MARKETING_REPO, 'public/screenshots/latest');
 
 // Debounce after `domcontentloaded` — gives sticky header/sidebar and any
-// animations a beat to settle before the shutter fires.
-const SETTLE_MS = 5000;
+// animations a beat to settle before the shutter fires. 8s covers heavy
+// dashboards (command-center gantt + priority actions) on cold contexts
+// where Vite serves modules without warm cache.
+const SETTLE_MS = 8000;
 
 /** CSS we inject on every page to hide overlays that shouldn't appear in
  *  marketing shots (floating dock with the AI launcher, presence pills,
@@ -274,10 +276,25 @@ async function captureOne(browser: Browser, shot: Shot): Promise<void> {
 	await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
 	// Re-inject overlay-hiding after the hard navigation replaced the DOM.
 	await page.addStyleTag({ content: HIDE_OVERLAYS_CSS });
-	// Wait for any "Loading…" placeholders to disappear, with a hard
-	// timeout so a stuck spinner doesn't block the run.
+	// Wait for any "Loading…" text AND skeleton placeholders (animate-pulse
+	// gray bars) to disappear. Both are marketing-unfriendly. 30s covers
+	// heavy pages (command-center gantt + AI analyze pass for Priority
+	// Actions, financials charts) on cold-context captures; shorter pages
+	// exit this early via the predicate.
 	await page
-		.waitForFunction(() => !/loading\b/i.test(document.body.innerText), { timeout: 10000 })
+		.waitForFunction(
+			() => {
+				const txt = document.body.innerText;
+				if (/loading\b/i.test(txt)) return false;
+				// Skeleton placeholders (e.g. Priority Actions while AI engine
+				// is analyzing). Don't wait forever — if N skeletons are
+				// persistent because the page is genuinely empty, the outer
+				// timeout breaks us out.
+				if (document.querySelectorAll('.animate-pulse').length > 0) return false;
+				return true;
+			},
+			{ timeout: 30000 },
+		)
 		.catch(() => { /* fall through — capture whatever's there */ });
 	await page.waitForTimeout(SETTLE_MS);
 	if (shot.waitFor) await shot.waitFor(page);

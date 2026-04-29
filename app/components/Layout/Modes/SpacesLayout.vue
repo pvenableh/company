@@ -296,10 +296,14 @@ watch(() => route.path, () => {
 				</div>
 			</header>
 
-			<!-- Page content -->
+			<!-- Page content — slot fills remaining height so footer pins to bottom on short pages -->
 			<main class="flex-1 overflow-auto">
-				<slot />
-				<LayoutFooter />
+				<div class="min-h-full flex flex-col">
+					<div class="flex-1">
+						<slot />
+					</div>
+					<LayoutFooter />
+				</div>
 			</main>
 
 			<!-- Walkthrough overlay (global) -->

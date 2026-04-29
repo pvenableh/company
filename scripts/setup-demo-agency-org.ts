@@ -758,6 +758,7 @@ async function seedTeams(
 				description: t.description,
 				organization: orgId,
 				active: true,
+				status: 'published',
 				focus: t.focus,
 				goals: t.goals,
 			},

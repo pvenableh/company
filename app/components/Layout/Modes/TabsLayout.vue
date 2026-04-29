@@ -140,10 +140,14 @@ function isActive(tabId: string): boolean {
       </div>
     </header>
 
-    <!-- ─── Main Content ─── -->
+    <!-- ─── Main Content — slot fills remaining height so footer pins to bottom on short pages ─── -->
     <main class="flex-1 overflow-auto pb-16 md:pb-0">
-      <slot />
-      <LayoutFooter />
+      <div class="min-h-full flex flex-col">
+        <div class="flex-1">
+          <slot />
+        </div>
+        <LayoutFooter />
+      </div>
     </main>
 
     <!-- ─── Mobile Bottom Tab Bar ─── -->

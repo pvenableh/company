@@ -19,6 +19,24 @@ export const useTeams = () => {
 	const lastFetchedOrg = useState('teams_lastFetchedOrg', () => null);
 	const storageListener = ref(null);
 
+	// SSR can leave `loading=true` and `lastFetchedOrg=<orgId>` in the hydration
+	// payload: the page-level `immediate:true` watch on `selectedOrg` fires
+	// during render and calls fetchTeams, but Nuxt doesn't await the watch
+	// callback's promise — so the response is serialized before the fetch
+	// resolves. On client mount the watch fires again, but the "already
+	// fetching" guard at the top of fetchTeams short-circuits and the spinner
+	// hangs forever. Mirror the useOrganization SSR-stale reset, but
+	// synchronous + once-per-page-load so it runs *before* the page watch
+	// fires (not after, like onNuxtReady).
+	const ssrStaleResetDone = useState('teams_ssr_reset_done', () => false);
+	if (import.meta.client && !ssrStaleResetDone.value) {
+		ssrStaleResetDone.value = true;
+		if (loading.value) {
+			loading.value = false;
+			lastFetchedOrg.value = null;
+		}
+	}
+
 	const { user } = useDirectusAuth();
 
 	const { selectedOrg } = useOrganization();
