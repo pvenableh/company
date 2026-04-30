@@ -1,6 +1,6 @@
 // /server/api/stripe/paymentchange.ts
 // Stripe webhook handler for payment and subscription events
-import { defineEventHandler, getHeader, readBody } from 'h3';
+import { defineEventHandler, getHeader, readRawBody } from 'h3';
 import Stripe from 'stripe';
 import { updateItems, updateItem, readItems, createItem, readUsers, updateUser } from '@directus/sdk';
 import { EARNEST_PLANS, EARNEST_ADDONS, planFromPriceId, addonFromPriceId } from '~~/server/utils/stripe';
@@ -9,7 +9,11 @@ import type { EarnestPlanId, EarnestAddonId } from '~~/server/utils/stripe';
 export default defineEventHandler(async (event) => {
 	try {
 		const stripe = useStripe();
-		const payload = await readBody(event);
+		// Stripe signs the *raw* request bytes — readBody → JSON.stringify
+		// produces a different byte sequence (key order, whitespace) that
+		// fails verification every time. Use readRawBody to keep the bytes
+		// Stripe sent.
+		const payload = await readRawBody(event, 'utf-8');
 		const signature = getHeader(event, 'stripe-signature') || '';
 
 		const config = useRuntimeConfig();
@@ -18,10 +22,10 @@ export default defineEventHandler(async (event) => {
 
 		// Verify webhook signature
 		try {
-			stripeEvent = stripe.webhooks.constructEvent(JSON.stringify(payload), signature, endpointSecret);
-		} catch (err) {
-			console.error('Stripe webhook verification error:', err);
-			return { statusCode: 400, message: 'Webhook verification failed' };
+			stripeEvent = stripe.webhooks.constructEvent(payload || '', signature, endpointSecret);
+		} catch (err: any) {
+			console.error('Stripe webhook verification error:', err?.message || err);
+			throw createError({ statusCode: 400, message: 'Webhook verification failed' });
 		}
 
 		console.log(`[Stripe Webhook] Event: ${stripeEvent.type}`);
@@ -76,10 +80,13 @@ export default defineEventHandler(async (event) => {
 			}
 		}
 
-		return { statusCode: 200, message: 'Event received' };
-	} catch (error) {
+		return { received: true };
+	} catch (error: any) {
+		// Re-throw createError() so the response status is correct (otherwise
+		// the wrapping try/catch would swallow the 400 verification error).
+		if (error?.statusCode) throw error;
 		console.error('Error handling Stripe webhook:', error);
-		return { statusCode: 500, message: 'Server error' };
+		throw createError({ statusCode: 500, message: 'Server error' });
 	}
 });
 
@@ -225,7 +232,7 @@ async function handleSubscriptionChange(
 		}
 
 		await directus.request(
-			updateItems('directus_users', [userId], subscriptionData)
+			updateUser(userId, subscriptionData)
 		);
 
 		// ── Sync organization plan & limits ──
@@ -239,11 +246,14 @@ async function handleSubscriptionChange(
 						scan_credits_limit_monthly: 0,
 						scan_credits_balance: 0,
 						active_addons: null,
+						stripe_subscription_id: null,
 					})
 				);
 			} else {
 				const { planId, plan } = resolvePlanFromSubscription(subscription);
-				const orgUpdate: Record<string, any> = {};
+				const orgUpdate: Record<string, any> = {
+					stripe_subscription_id: subscription.id,
+				};
 
 				if (planId && plan) {
 					orgUpdate.plan = planId;
@@ -349,10 +359,12 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
 		if (!customerId || !subscriptionId) return;
 
-		// Find user by email or stripe_customer_id and link subscription
+		// Find user by email or stripe_customer_id and link subscription.
+		// readUsers/updateUser route to /users; readItems/updateItems on
+		// directus_users would 403 (system collection).
 		const email = session.customer_details?.email || session.metadata?.earnest_email;
 		let users = await directus.request(
-			readItems('directus_users', {
+			readUsers({
 				filter: { stripe_customer_id: { _eq: customerId } },
 				fields: ['id'],
 				limit: 1,
@@ -361,7 +373,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
 		if (users.length === 0 && email) {
 			users = await directus.request(
-				readItems('directus_users', {
+				readUsers({
 					filter: { email: { _eq: email } },
 					fields: ['id'],
 					limit: 1,
@@ -374,7 +386,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
 			// Link subscription to user
 			await directus.request(
-				updateItems('directus_users', [userId], {
+				updateUser(userId, {
 					stripe_customer_id: customerId,
 					stripe_subscription_id: subscriptionId,
 					subscription_status: 'active',

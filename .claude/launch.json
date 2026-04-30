@@ -4,7 +4,7 @@
     {
       "name": "earnest-dev",
       "runtimeExecutable": "/bin/zsh",
-      "runtimeArgs": ["-c", "source ~/.zshrc && STRIPE_WEBHOOK_SECRET=whsec_6e8f3015a6838c6d748405740ad4742926ac6b84953836e5c564bda55e7af4b7 pnpm dev --host 0.0.0.0"],
+      "runtimeArgs": ["-c", "source ~/.zshrc && pnpm dev --host 0.0.0.0"],
       "port": 3000,
       "url": "http://127.0.0.1:3000",
       "host": "127.0.0.1",

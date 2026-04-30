@@ -15,8 +15,10 @@ export default defineNitroPlugin(() => {
   const config = useRuntimeConfig();
   const redisUrl = config.redisQueueUrl;
 
-  // Only start the worker if a Redis URL is configured
-  if (!redisUrl) {
+  // Only start the worker if a Redis URL is configured. Treat 'disabled'
+  // as a sentinel for explicit dev-time opt-out (compose hostname `queue`
+  // doesn't resolve outside docker-compose and floods the log buffer).
+  if (!redisUrl || redisUrl === 'disabled') {
     console.log('[ai-worker] REDIS_QUEUE_URL not configured — worker disabled');
     return;
   }
