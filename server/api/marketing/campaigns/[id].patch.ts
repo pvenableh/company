@@ -4,21 +4,16 @@
 import { updateItem } from '@directus/sdk';
 
 export default defineEventHandler(async (event) => {
-  const session = await requireUserSession(event);
-  const userId = (session as any).user?.id;
-  if (!userId) {
-    throw createError({ statusCode: 401, message: 'Authentication required' });
-  }
-
   const id = getRouterParam(event, 'id');
   if (!id) {
     throw createError({ statusCode: 400, message: 'Campaign ID is required' });
   }
 
-  const body = await readBody(event);
-  const directus = await getUserDirectus(event);
+  const existing = await getMarketingCampaign(id);
+  await requireOrgMembership(event, existing.organization || '');
 
-  // Only allow updating specific fields
+  const body = await readBody(event);
+
   const updates: Record<string, any> = {};
   if (body.title !== undefined) updates.title = body.title;
   if (body.goal !== undefined) updates.goal = body.goal;
@@ -31,12 +26,9 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'No fields to update' });
   }
 
+  const directus = getTypedDirectus();
   try {
-    const campaign = await directus.request(
-      updateItem('marketing_campaigns', id, updates),
-    );
-
-    return campaign;
+    return await directus.request(updateItem('marketing_campaigns', id, updates));
   } catch (error: any) {
     console.error('[campaigns/update] Error:', error.message);
     throw createError({ statusCode: 500, message: 'Failed to update campaign' });

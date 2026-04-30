@@ -11,6 +11,7 @@ const props = defineProps({
 });
 
 const { currentOrg } = useOrganization();
+const config = useRuntimeConfig();
 const isGenerating = ref(false);
 
 const formatNumber = (value) => {
@@ -26,17 +27,33 @@ const generatePDF = async () => {
 		const invoiceElement = document.querySelector('.invoice');
 		const clone = invoiceElement.cloneNode(true);
 
+		// The on-screen invoice already renders the seller header via .invoice__seller —
+		// remove it from the clone so we can replace it with a PDF-styled equivalent
+		// that won't depend on Tailwind/dark-mode classes surviving html2canvas.
+		const inlineSellerHeader = clone.querySelector('.invoice__seller');
+		if (inlineSellerHeader) inlineSellerHeader.remove();
+
+		// Resolve seller from invoice.bill_to (the authoritative seller for this row),
+		// falling back to currentOrg only when bill_to is missing (shouldn't happen).
+		const seller = props.invoice?.bill_to || currentOrg.value || {};
+		const sellerName = seller.name || '';
+		const sellerAddress = seller.address || '';
+		const sellerPhone = seller.phone || '';
+		const sellerEmail = seller.email || '';
+		const sellerWebsite = seller.website ? seller.website.replace(/^https?:\/\//, '') : '';
+		const logoId = typeof seller.logo === 'string' ? seller.logo : seller.logo?.id;
+		const logoUrl = logoId ? `${config.public.directusUrl}/assets/${logoId}?key=medium-contain` : '';
+
 		const header = document.createElement('div');
 		header.innerHTML = `
       <div style="display: flex; align-items: flex-start; margin-bottom: 32px; border-bottom: 1px solid #e5e7eb; padding-bottom: 24px;">
-        <img src="https://admin.earnest.guru/assets/cf9d5f4f-9a30-418d-b48e-acb037c3c2c9" 
-             alt="hue logo" 
-             style="height: 48px; width: auto; margin-right: 16px;" />
-        <div style="font-size: 9px; text-transform: uppercase; line-height: 1; margin-top: -8px;">
-          <p style="font-weight: bold;">${currentOrg.value?.name || ''}</p>
-          ${currentOrg.value?.address ? `<p>${currentOrg.value.address}</p>` : ''}
-          ${currentOrg.value?.phone ? `<p>${currentOrg.value.phone}</p>` : ''}
-          <p>${currentOrg.value?.email || 'hello@earnest.guru'}</p>
+        ${logoUrl ? `<img src="${logoUrl}" alt="${sellerName} logo" style="height: 48px; width: auto; margin-right: 16px;" crossorigin="anonymous" />` : ''}
+        <div style="font-size: 9px; text-transform: uppercase; line-height: 1.2; margin-top: -2px;">
+          ${sellerName ? `<p style="font-weight: bold;">${sellerName}</p>` : ''}
+          ${sellerAddress ? `<p style="white-space: pre-line;">${sellerAddress}</p>` : ''}
+          ${sellerPhone ? `<p>${sellerPhone}</p>` : ''}
+          ${sellerEmail ? `<p>${sellerEmail}</p>` : ''}
+          ${sellerWebsite ? `<p>${sellerWebsite}</p>` : ''}
         </div>
       </div>`;
 

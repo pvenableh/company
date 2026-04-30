@@ -654,44 +654,84 @@ watch(() => formData.client, (clientId, oldClientId) => {
 // --- Fetch dropdown data on mount ---
 onMounted(async () => {
   try {
-    const [clientOpts, allClients, prods] = await Promise.all([
+    const clientItemsBilling = useDirectusItems('clients');
+    const [clientOpts, billingClients, prods] = await Promise.all([
       getClientOptions(),
-      getClients({ limit: 500 }),
+      // Dedicated bulk fetch for billing resolution — includes contacts.is_billing_contact
+      clientItemsBilling.list({
+        fields: [
+          'id', 'name', 'organization', 'parent_client',
+          'billing_email', 'billing_name', 'billing_address', 'billing_contacts',
+          'contacts.id', 'contacts.email', 'contacts.first_name', 'contacts.last_name', 'contacts.is_billing_contact',
+        ],
+        limit: 500,
+      }) as Promise<any[]>,
       getProducts(),
     ]);
     clientOptions.value = clientOpts;
     productsList.value = prods;
 
-    // Build client → organization and billing lookups
-    // For sub-brands with no billing details, fall back to parent_client
-    const clientList = Array.isArray(allClients) ? allClients : allClients?.data || [];
-    // First pass: index all clients
+    // Build client → organization and billing lookups.
+    // Walks parent_client chain up to 3 levels. Resolution order at each level:
+    //   1. legacy clients.billing_contacts JSON, 2. contacts where is_billing_contact=true,
+    //   3. clients.billing_email, 4. move to next ancestor.
+    const clientList = Array.isArray(billingClients) ? billingClients : [];
     const clientMap = new Map<string, any>();
     for (const c of clientList) {
       clientMap.set(c.id, c);
     }
+
+    function resolveBillingSource(start: any): any {
+      let current = start;
+      for (let depth = 0; depth < 4; depth++) {
+        const legacy = Array.isArray(current.billing_contacts)
+          && current.billing_contacts.some((bc: any) => bc.email?.trim());
+        const contactRows = Array.isArray(current.contacts)
+          && current.contacts.some((c: any) => c.is_billing_contact && c.email?.trim());
+        if (legacy || contactRows || current.billing_email) return current;
+        const parentId = typeof current.parent_client === 'object' ? current.parent_client?.id : current.parent_client;
+        const parent = parentId ? clientMap.get(parentId) : null;
+        if (!parent) return current;
+        current = parent;
+      }
+      return current;
+    }
+
+    function buildBillingContacts(source: any): Array<{ name: string; email: string }> | undefined {
+      const legacyList = Array.isArray(source.billing_contacts)
+        ? source.billing_contacts.filter((bc: any) => bc.email?.trim())
+        : [];
+      if (legacyList.length) return legacyList.map((bc: any) => ({ name: bc.name || '', email: bc.email }));
+
+      const flagged = Array.isArray(source.contacts)
+        ? source.contacts.filter((c: any) => c.is_billing_contact && c.email?.trim())
+        : [];
+      if (flagged.length) {
+        return flagged.map((c: any) => ({
+          name: `${c.first_name || ''} ${c.last_name || ''}`.trim() || c.email,
+          email: c.email,
+        }));
+      }
+      return undefined;
+    }
+
     for (const c of clientList) {
       const orgId = typeof c.organization === 'object' ? c.organization?.id : c.organization;
       if (orgId) clientLookup.value.set(c.id, orgId);
 
-      const hasBilling = c.billing_email || (Array.isArray(c.billing_contacts) && c.billing_contacts.some((bc: any) => bc.email?.trim()));
-      const parentId = typeof c.parent_client === 'object' ? c.parent_client?.id : c.parent_client;
-      const parent = parentId ? clientMap.get(parentId) : null;
+      const source = resolveBillingSource(c);
 
-      // Use client's own billing if present, otherwise fall back to parent
-      const source = hasBilling ? c : (parent || c);
-
-      // For org lookup: sub-brands without their own org inherit from parent
-      if (!orgId && parent) {
-        const parentOrgId = typeof parent.organization === 'object' ? parent.organization?.id : parent.organization;
-        if (parentOrgId) clientLookup.value.set(c.id, parentOrgId);
+      // For org lookup: clients without their own org inherit from the resolved ancestor
+      if (!orgId) {
+        const sourceOrgId = typeof source.organization === 'object' ? source.organization?.id : source.organization;
+        if (sourceOrgId) clientLookup.value.set(c.id, sourceOrgId);
       }
 
       clientBillingLookup.value.set(c.id, {
         billing_name: source.billing_name || undefined,
         billing_email: source.billing_email || undefined,
         billing_address: source.billing_address || undefined,
-        billing_contacts: source.billing_contacts || undefined,
+        billing_contacts: buildBillingContacts(source),
       });
     }
 

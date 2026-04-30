@@ -128,6 +128,11 @@ function scopeFor(collection: string): any {
       return { session: { user: { _eq: '$CURRENT_USER' } } }
     case 'ai_preferences':
       return { user: { _eq: '$CURRENT_USER' } }
+    case 'products':
+      // Global catalogue — no `organization` column. All authenticated users
+      // can list products; tenant scoping is enforced at the consumer level
+      // (invoice/expense `client.organization` filters).
+      return {}
     default:
       return { organization: { _in: '$CURRENT_USER.organizations.organizations_id' } }
   }
@@ -199,8 +204,14 @@ async function main() {
       const isUnscoped = !cur || (typeof cur === 'object' && Object.keys(cur).length === 0)
       // Already-scoped user-filter (e.g. ai_chat_*) — leave alone if it
       // matches the desired user-scoped shape. Otherwise replace.
+      const desiredIsEmpty = typeof desired === 'object' && desired !== null && Object.keys(desired).length === 0
       if (isUnscoped) {
         ops.push({ kind: 'update', id: p.id, policyName: polLabel, collection: p.collection, permissions: desired, reason: 'scope unscoped read' })
+      } else if (desiredIsEmpty) {
+        // Collection is intentionally global (e.g. products has no org column).
+        // Force-rewrite any non-empty filter — a stale `organization` filter
+        // here would 500 since the column doesn't exist.
+        ops.push({ kind: 'update', id: p.id, policyName: polLabel, collection: p.collection, permissions: desired, reason: 'unscope global collection' })
       } else if (JSON.stringify(cur) !== JSON.stringify(desired)) {
         // Existing perm is filtered but doesn't match what we want. Only
         // touch if it's not org-scoped already. Leave already-org-scoped

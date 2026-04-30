@@ -121,7 +121,7 @@ async function loadInheritedContacts() {
     for (const ancestor of ancestors) {
       const rows = await contactItemsApi.list({
         filter: { client: { _eq: ancestor.id } },
-        fields: ['id', 'first_name', 'last_name', 'email', 'phone', 'category'],
+        fields: ['id', 'first_name', 'last_name', 'email', 'phone', 'title', 'category', 'is_billing_contact'],
         limit: -1,
       }).catch(() => []);
       for (const c of rows as any[]) {
@@ -143,6 +143,7 @@ async function loadClient() {
   try {
     client.value = await getClient(clientId);
     await loadRelated();
+    await resolveEffectiveBilling();
   } catch (e: any) {
     error.value = e?.message || 'Failed to load client';
   } finally {
@@ -166,7 +167,7 @@ async function handleUpdate(data: Partial<Client>) {
 
 async function onClientUpdated(updated: Client) {
   client.value = updated;
-  await Promise.all([resolveIndustryName(), loadRelated()]);
+  await Promise.all([resolveIndustryName(), loadRelated(), resolveEffectiveBilling()]);
 }
 
 function onClientDeleted() {
@@ -186,6 +187,122 @@ function getInitial(name: string): string {
 
 const totalPartnerCount = computed(() => directConnections.value.length + inheritedConnections.value.length);
 const totalContactCount = computed(() => relatedContacts.value.length + inheritedContacts.value.length);
+
+// Resolve effective billing by walking parent_client up to depth 3.
+// At each level, returns first match where billing_email or billing_contacts exists.
+const effectiveBilling = ref<{
+  source: 'self' | 'inherited';
+  fromId: string | null;
+  fromName: string | null;
+  bill_to: string | null;
+  email: string | null;
+  address: string | null;
+  terms: string | null;
+} | null>(null);
+
+const PAYMENT_TERMS_LABELS: Record<string, string> = {
+  due_on_receipt: 'Due on receipt',
+  net_15: 'Net 15',
+  net_30: 'Net 30',
+  net_45: 'Net 45',
+  net_60: 'Net 60',
+};
+
+const clientItemsApi = useDirectusItems('clients');
+
+async function resolveEffectiveBilling() {
+  effectiveBilling.value = null;
+  if (!client.value) return;
+
+  const fetchLevel = (id: string) => clientItemsApi.get(id, {
+    fields: [
+      'id', 'name', 'billing_email', 'billing_name', 'billing_address',
+      'billing_contacts', 'payment_terms',
+      'contacts.id', 'contacts.email', 'contacts.first_name', 'contacts.last_name', 'contacts.is_billing_contact',
+    ],
+  }) as Promise<any>;
+
+  const ancestors = await getAncestorClientIds(clientId, 3);
+  const chain: Array<{ id: string; name: string; data: any }> = [];
+  // Self first
+  const self = await fetchLevel(clientId).catch(() => null);
+  if (self) chain.push({ id: clientId, name: self.name || client.value.name || '', data: self });
+  for (const a of ancestors) {
+    const data = await fetchLevel(a.id).catch(() => null);
+    if (data) chain.push({ id: a.id, name: a.name, data });
+  }
+
+  for (let i = 0; i < chain.length; i++) {
+    const level = chain[i];
+    const data = level.data;
+    const legacy = Array.isArray(data.billing_contacts)
+      ? data.billing_contacts.find((c: any) => c.email?.trim())
+      : null;
+    const flagged = Array.isArray(data.contacts)
+      ? data.contacts.find((c: any) => c.is_billing_contact && c.email?.trim())
+      : null;
+    if (!legacy && !flagged && !data.billing_email) continue;
+
+    const primaryEmail = legacy?.email
+      || (flagged?.email)
+      || data.billing_email
+      || null;
+    const primaryName = legacy?.name
+      || (flagged ? `${flagged.first_name || ''} ${flagged.last_name || ''}`.trim() : null)
+      || data.billing_name
+      || null;
+
+    effectiveBilling.value = {
+      source: i === 0 ? 'self' : 'inherited',
+      fromId: i === 0 ? null : level.id,
+      fromName: i === 0 ? null : level.name,
+      bill_to: primaryName,
+      email: primaryEmail,
+      address: data.billing_address || null,
+      terms: data.payment_terms ? (PAYMENT_TERMS_LABELS[data.payment_terms] || data.payment_terms) : null,
+    };
+    return;
+  }
+}
+
+// Merged contacts list: direct + inherited, billing-first sort.
+type MergedContact = {
+  contact: any;
+  source: 'direct' | 'inherited';
+  inheritedFromId?: string | null;
+  inheritedFromName?: string | null;
+  isBilling: boolean;
+};
+
+const mergedContacts = computed<MergedContact[]>(() => {
+  const direct: MergedContact[] = relatedContacts.value.map(c => ({
+    contact: c,
+    source: 'direct' as const,
+    isBilling: !!c.is_billing_contact,
+  }));
+  const inherited: MergedContact[] = inheritedContacts.value.map(({ contact, inheritedFromId, inheritedFromName }) => ({
+    contact,
+    source: 'inherited' as const,
+    inheritedFromId,
+    inheritedFromName,
+    isBilling: !!contact.is_billing_contact,
+  }));
+  const all = [...direct, ...inherited];
+  // Billing first, then direct, then inherited
+  return all.sort((a, b) => {
+    if (a.isBilling !== b.isBilling) return a.isBilling ? -1 : 1;
+    if (a.source !== b.source) return a.source === 'direct' ? -1 : 1;
+    return 0;
+  });
+});
+
+// Add Existing Contact modal state
+const showAddExistingModal = ref(false);
+
+async function onContactAttached() {
+  showAddExistingModal.value = false;
+  await loadClient();
+}
 
 const tabs = [
   { key: 'contacts', label: 'Contacts', icon: 'lucide:users' },
@@ -472,93 +589,123 @@ onUnmounted(() => clearEntity());
             </div>
           </div>
 
+          <!-- Effective Billing card -->
+          <div v-if="effectiveBilling" class="ios-card p-6 space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <h2 class="text-[10px] uppercase tracking-wider text-muted-foreground">Effective Billing</h2>
+                <span
+                  v-if="effectiveBilling.source === 'inherited' && effectiveBilling.fromName"
+                  class="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-500 font-medium"
+                >
+                  <Icon name="lucide:corner-up-left" class="w-3 h-3" />
+                  via {{ effectiveBilling.fromName }}
+                </span>
+              </div>
+              <button
+                class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors"
+                @click="showEditModal = true"
+              >
+                <Icon name="lucide:pencil" class="w-3.5 h-3.5" />
+                Edit
+              </button>
+            </div>
+            <div class="grid grid-cols-[80px_1fr] gap-y-1.5 gap-x-3 text-sm">
+              <span class="text-[10px] uppercase tracking-wider text-muted-foreground self-center">Bill to</span>
+              <span class="font-medium">{{ effectiveBilling.bill_to || '—' }}</span>
+
+              <span class="text-[10px] uppercase tracking-wider text-muted-foreground self-center">Email</span>
+              <span class="font-mono text-xs">{{ effectiveBilling.email || '—' }}</span>
+
+              <span class="text-[10px] uppercase tracking-wider text-muted-foreground self-start mt-0.5">Address</span>
+              <span class="text-xs whitespace-pre-line">{{ effectiveBilling.address || '—' }}</span>
+
+              <span class="text-[10px] uppercase tracking-wider text-muted-foreground self-center">Terms</span>
+              <span class="text-xs">{{ effectiveBilling.terms || '—' }}</span>
+            </div>
+          </div>
+
           <!-- Related Items Tabs -->
           <div class="ios-card p-6">
-            <div class="inline-flex items-center gap-1 rounded-xl bg-muted/50 p-1 border border-border mb-4">
+            <div class="flex flex-wrap gap-1.5 mb-4">
               <button
                 v-for="tab in tabs"
                 :key="tab.key"
-                class="flex items-center gap-2 px-4 py-2 rounded-lg text-[11px] uppercase tracking-wider font-semibold transition-all duration-200"
+                class="inline-flex items-center gap-2 h-8 px-3.5 rounded-full text-xs font-medium border transition-colors"
                 :class="activeTab === tab.key
-                  ? 'bg-card text-foreground shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground'"
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'border-border text-muted-foreground hover:text-foreground hover:bg-muted/60'"
                 @click="activeTab = tab.key"
               >
-                <Icon :name="tab.icon" class="w-4 h-4" />
+                <Icon :name="tab.icon" class="w-3.5 h-3.5" />
                 {{ tab.label }}
-                <span class="text-[9px] text-muted-foreground/60 ml-0.5">
-                  ({{ tab.key === 'contacts' ? totalContactCount
+                <span class="text-[10px] opacity-70 ml-0.5">
+                  {{ tab.key === 'contacts' ? totalContactCount
                       : tab.key === 'partners' ? totalPartnerCount
                       : tab.key === 'projects' ? relatedProjects.length
-                      : relatedTickets.length }})
+                      : relatedTickets.length }}
                 </span>
               </button>
             </div>
 
             <!-- Contacts Tab -->
             <div v-if="activeTab === 'contacts'">
-              <div v-if="!totalContactCount" class="text-sm text-muted-foreground text-center py-6">
+              <div class="flex items-center justify-end gap-1.5 mb-3">
+                <button
+                  class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full border border-border text-[11px] font-medium hover:bg-muted transition-colors"
+                  @click="showAddExistingModal = true"
+                >
+                  <Icon name="lucide:link" class="w-3 h-3" />
+                  Add Existing
+                </button>
+                <NuxtLink
+                  to="/contacts"
+                  class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-primary text-primary-foreground text-[11px] font-medium hover:bg-primary/90 transition-colors"
+                >
+                  <Icon name="lucide:plus" class="w-3 h-3" />
+                  New Contact
+                </NuxtLink>
+              </div>
+
+              <div v-if="!mergedContacts.length" class="text-sm text-muted-foreground text-center py-6">
                 No contacts linked to this client.
               </div>
 
-              <div v-else class="space-y-4">
-                <!-- Direct contacts -->
-                <div v-if="relatedContacts.length" class="space-y-2">
-                  <p v-if="inheritedContacts.length" class="text-[10px] uppercase tracking-wider text-muted-foreground">
-                    Direct ({{ relatedContacts.length }})
-                  </p>
-                  <div
-                    v-for="contact in relatedContacts"
-                    :key="`direct-${contact.id}`"
-                    class="flex items-center justify-between p-3 bg-muted/30 rounded-xl"
-                  >
-                    <div class="flex items-center gap-3">
-                      <div class="w-8 h-8 rounded-full bg-muted/60 flex items-center justify-center text-xs font-medium text-muted-foreground">
-                        {{ (contact.first_name || '?').charAt(0) }}{{ (contact.last_name || '').charAt(0) }}
-                      </div>
-                      <div>
-                        <p class="text-sm font-medium">{{ contact.first_name }} {{ contact.last_name }}</p>
-                        <p v-if="contact.email" class="text-xs text-muted-foreground">{{ contact.email }}</p>
-                      </div>
-                    </div>
-                    <NuxtLink :to="`/contacts/${contact.id}`">
-                      <Button variant="ghost" size="sm">
-                        <Icon name="lucide:arrow-right" class="w-4 h-4" />
-                      </Button>
-                    </NuxtLink>
+              <div v-else class="space-y-px">
+                <NuxtLink
+                  v-for="row in mergedContacts"
+                  :key="`${row.source}-${row.contact.id}`"
+                  :to="`/contacts/${row.contact.id}`"
+                  class="flex items-center gap-3 h-12 px-3 hover:bg-muted/40 border-b border-border/30 last:border-b-0 transition-colors group"
+                >
+                  <span
+                    class="w-1.5 h-1.5 rounded-full shrink-0"
+                    :class="row.isBilling ? 'bg-emerald-500' : row.source === 'direct' ? 'bg-primary/60' : 'bg-muted-foreground/40'"
+                  />
+                  <div class="flex-1 min-w-0 flex items-center gap-2">
+                    <p class="text-sm font-medium truncate">{{ row.contact.first_name }} {{ row.contact.last_name }}</p>
+                    <span
+                      v-if="row.contact.title"
+                      class="text-[11px] text-muted-foreground truncate hidden sm:inline"
+                    >· {{ row.contact.title }}</span>
                   </div>
-                </div>
-
-                <!-- Inherited contacts from parent_client chain -->
-                <div v-if="inheritedContacts.length" class="space-y-2">
-                  <p class="text-[10px] uppercase tracking-wider text-muted-foreground">
-                    Inherited from parent ({{ inheritedContacts.length }})
-                  </p>
-                  <NuxtLink
-                    v-for="({ contact, inheritedFromId, inheritedFromName }) in inheritedContacts"
-                    :key="`inherited-${contact.id}`"
-                    :to="`/contacts/${contact.id}`"
-                    class="flex items-center justify-between p-3 bg-muted/20 hover:bg-muted/50 border border-dashed border-border/50 rounded-xl transition-colors gap-3"
+                  <span
+                    v-if="row.contact.email"
+                    class="hidden md:inline text-[11px] text-muted-foreground font-mono truncate max-w-[200px]"
+                  >{{ row.contact.email }}</span>
+                  <span
+                    v-if="row.isBilling"
+                    class="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500 shrink-0"
+                  >Billing</span>
+                  <span
+                    v-if="row.source === 'inherited' && row.inheritedFromName"
+                    class="inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-500 shrink-0"
                   >
-                    <div class="flex items-center gap-3 min-w-0">
-                      <div class="w-8 h-8 rounded-full bg-muted/60 flex items-center justify-center text-xs font-medium text-muted-foreground shrink-0">
-                        {{ (contact.first_name || '?').charAt(0) }}{{ (contact.last_name || '').charAt(0) }}
-                      </div>
-                      <div class="min-w-0">
-                        <p class="text-sm font-medium truncate">{{ contact.first_name }} {{ contact.last_name }}</p>
-                        <p class="text-[11px] text-muted-foreground">
-                          <span v-if="contact.email">{{ contact.email }} · </span>
-                          <span>Inherited from </span>
-                          <NuxtLink
-                            :to="`/clients/${inheritedFromId}`"
-                            class="text-primary hover:underline"
-                            @click.stop
-                          >{{ inheritedFromName }}</NuxtLink>
-                        </p>
-                      </div>
-                    </div>
-                  </NuxtLink>
-                </div>
+                    <Icon name="lucide:corner-up-left" class="w-2.5 h-2.5" />
+                    via {{ row.inheritedFromName }}
+                  </span>
+                  <Icon name="lucide:chevron-right" class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors shrink-0" />
+                </NuxtLink>
               </div>
             </div>
 
@@ -568,133 +715,103 @@ onUnmounted(() => clearEntity());
                 No partners or connectors linked to this client.
               </div>
 
-              <div v-else class="space-y-4">
-                <!-- Direct connections -->
-                <div v-if="directConnections.length" class="space-y-2">
-                  <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Direct ({{ directConnections.length }})</p>
-                  <NuxtLink
-                    v-for="conn in directConnections"
-                    :key="`direct-${conn.id}`"
-                    :to="`/contacts/${conn.contact?.id || ''}`"
-                    class="flex items-start justify-between p-3 bg-muted/30 hover:bg-muted/60 rounded-xl transition-colors gap-3"
-                  >
-                    <div class="flex items-center gap-3 min-w-0">
-                      <div class="w-8 h-8 rounded-full bg-violet-500/10 text-violet-400 flex items-center justify-center text-xs font-medium shrink-0">
-                        {{ (conn.contact?.first_name || '?').charAt(0) }}{{ (conn.contact?.last_name || '').charAt(0) }}
-                      </div>
-                      <div class="min-w-0">
-                        <p class="text-sm font-medium truncate">
-                          {{ conn.contact?.first_name }} {{ conn.contact?.last_name }}
-                        </p>
-                        <p class="text-[11px] text-muted-foreground">
-                          {{ CONNECTION_ROLE_LABELS[conn.role as keyof typeof CONNECTION_ROLE_LABELS] || conn.role }}
-                          <span v-if="conn.contact?.company"> · {{ conn.contact.company }}</span>
-                        </p>
-                      </div>
-                    </div>
-                    <span
-                      v-if="conn.introduced_by"
-                      class="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-full shrink-0 mt-1"
-                      :class="conn.introduced_by === 'partner' ? 'bg-violet-500/15 text-violet-400' : 'bg-sky-500/15 text-sky-400'"
-                    >
-                      {{ conn.introduced_by === 'partner' ? 'intro → us' : 'intro ← us' }}
+              <div v-else class="space-y-px">
+                <NuxtLink
+                  v-for="conn in directConnections"
+                  :key="`direct-${conn.id}`"
+                  :to="`/contacts/${conn.contact?.id || ''}`"
+                  class="flex items-center gap-3 h-12 px-3 hover:bg-muted/40 border-b border-border/30 last:border-b-0 transition-colors group"
+                >
+                  <span class="w-1.5 h-1.5 rounded-full bg-violet-500 shrink-0" />
+                  <div class="flex-1 min-w-0 flex items-center gap-2">
+                    <p class="text-sm font-medium truncate">{{ conn.contact?.first_name }} {{ conn.contact?.last_name }}</p>
+                    <span class="text-[11px] text-muted-foreground truncate">
+                      · {{ CONNECTION_ROLE_LABELS[conn.role as keyof typeof CONNECTION_ROLE_LABELS] || conn.role }}
                     </span>
-                  </NuxtLink>
-                </div>
-
-                <!-- Inherited connections -->
-                <div v-if="inheritedConnections.length" class="space-y-2">
-                  <p class="text-[10px] uppercase tracking-wider text-muted-foreground">
-                    Inherited from parent ({{ inheritedConnections.length }})
-                  </p>
-                  <NuxtLink
-                    v-for="({ connection: conn, inheritedFromId, inheritedFromName }) in inheritedConnections"
-                    :key="`inherited-${conn.id}`"
-                    :to="`/contacts/${conn.contact?.id || ''}`"
-                    class="flex items-start justify-between p-3 bg-muted/20 hover:bg-muted/50 border border-dashed border-border/50 rounded-xl transition-colors gap-3"
+                  </div>
+                  <span
+                    v-if="conn.introduced_by"
+                    class="text-[10px] font-medium px-1.5 py-0.5 rounded-full shrink-0"
+                    :class="conn.introduced_by === 'partner' ? 'bg-violet-500/15 text-violet-500' : 'bg-sky-500/15 text-sky-500'"
                   >
-                    <div class="flex items-center gap-3 min-w-0">
-                      <div class="w-8 h-8 rounded-full bg-muted/60 text-muted-foreground flex items-center justify-center text-xs font-medium shrink-0">
-                        {{ (conn.contact?.first_name || '?').charAt(0) }}{{ (conn.contact?.last_name || '').charAt(0) }}
-                      </div>
-                      <div class="min-w-0">
-                        <p class="text-sm font-medium truncate">
-                          {{ conn.contact?.first_name }} {{ conn.contact?.last_name }}
-                        </p>
-                        <p class="text-[11px] text-muted-foreground">
-                          {{ CONNECTION_ROLE_LABELS[conn.role as keyof typeof CONNECTION_ROLE_LABELS] || conn.role }}
-                          <span> · Inherited from </span>
-                          <NuxtLink
-                            :to="`/clients/${inheritedFromId}`"
-                            class="text-primary hover:underline"
-                            @click.stop
-                          >{{ inheritedFromName }}</NuxtLink>
-                        </p>
-                      </div>
-                    </div>
-                  </NuxtLink>
-                </div>
+                    {{ conn.introduced_by === 'partner' ? 'intro → us' : 'intro ← us' }}
+                  </span>
+                  <Icon name="lucide:chevron-right" class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors shrink-0" />
+                </NuxtLink>
+                <NuxtLink
+                  v-for="({ connection: conn, inheritedFromId, inheritedFromName }) in inheritedConnections"
+                  :key="`inherited-${conn.id}`"
+                  :to="`/contacts/${conn.contact?.id || ''}`"
+                  class="flex items-center gap-3 h-12 px-3 hover:bg-muted/40 border-b border-border/30 last:border-b-0 transition-colors group opacity-75"
+                >
+                  <span class="w-1.5 h-1.5 rounded-full bg-muted-foreground/40 shrink-0" />
+                  <div class="flex-1 min-w-0 flex items-center gap-2">
+                    <p class="text-sm font-medium truncate">{{ conn.contact?.first_name }} {{ conn.contact?.last_name }}</p>
+                    <span class="text-[11px] text-muted-foreground truncate">
+                      · {{ CONNECTION_ROLE_LABELS[conn.role as keyof typeof CONNECTION_ROLE_LABELS] || conn.role }}
+                    </span>
+                  </div>
+                  <span class="inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-500 shrink-0">
+                    <Icon name="lucide:corner-up-left" class="w-2.5 h-2.5" />
+                    via {{ inheritedFromName }}
+                  </span>
+                  <Icon name="lucide:chevron-right" class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors shrink-0" />
+                </NuxtLink>
               </div>
             </div>
 
             <!-- Projects Tab -->
             <div v-if="activeTab === 'projects'">
-              <div v-if="relatedProjects.length" class="space-y-2">
-                <div
+              <div v-if="!relatedProjects.length" class="text-sm text-muted-foreground text-center py-6">
+                No projects linked to this client.
+              </div>
+              <div v-else class="space-y-px">
+                <NuxtLink
                   v-for="project in relatedProjects"
                   :key="project.id"
-                  class="flex items-center justify-between p-3 bg-muted/30 rounded-xl"
+                  :to="`/projects/${project.id}`"
+                  class="flex items-center gap-3 h-12 px-3 hover:bg-muted/40 border-b border-border/30 last:border-b-0 transition-colors group"
+                  :class="project.status === 'completed' || project.status === 'archived' ? 'opacity-60' : ''"
                 >
-                  <div>
-                    <p class="text-sm font-medium">{{ project.title }}</p>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <span
-                      v-if="project.status"
-                      class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
-                      :class="getStatusBadgeClasses(project.status)"
-                    >
-                      {{ project.status }}
-                    </span>
-                    <NuxtLink :to="`/projects/${project.id}`">
-                      <Button variant="ghost" size="sm">
-                        <Icon name="lucide:arrow-right" class="w-4 h-4" />
-                      </Button>
-                    </NuxtLink>
-                  </div>
-                </div>
+                  <span class="w-1.5 h-1.5 rounded-full bg-primary/60 shrink-0" />
+                  <p class="flex-1 text-sm font-medium truncate">{{ project.title }}</p>
+                  <span
+                    v-if="project.status"
+                    class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium shrink-0"
+                    :class="getStatusBadgeClasses(project.status)"
+                  >
+                    {{ project.status }}
+                  </span>
+                  <Icon name="lucide:chevron-right" class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors shrink-0" />
+                </NuxtLink>
               </div>
-              <p v-else class="text-sm text-muted-foreground text-center py-6">No projects linked to this client.</p>
             </div>
 
             <!-- Tickets Tab -->
             <div v-if="activeTab === 'tickets'">
-              <div v-if="relatedTickets.length" class="space-y-2">
-                <div
+              <div v-if="!relatedTickets.length" class="text-sm text-muted-foreground text-center py-6">
+                No tickets linked to this client.
+              </div>
+              <div v-else class="space-y-px">
+                <NuxtLink
                   v-for="ticket in relatedTickets"
                   :key="ticket.id"
-                  class="flex items-center justify-between p-3 bg-muted/30 rounded-xl"
+                  :to="`/tickets/${ticket.id}`"
+                  class="flex items-center gap-3 h-12 px-3 hover:bg-muted/40 border-b border-border/30 last:border-b-0 transition-colors group"
+                  :class="ticket.status === 'closed' || ticket.status === 'resolved' ? 'opacity-60' : ''"
                 >
-                  <div>
-                    <p class="text-sm font-medium">{{ ticket.title }}</p>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <span
-                      v-if="ticket.status"
-                      class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium"
-                      :class="getStatusBadgeClasses(ticket.status)"
-                    >
-                      {{ ticket.status }}
-                    </span>
-                    <NuxtLink :to="`/tickets/${ticket.id}`">
-                      <Button variant="ghost" size="sm">
-                        <Icon name="lucide:arrow-right" class="w-4 h-4" />
-                      </Button>
-                    </NuxtLink>
-                  </div>
-                </div>
+                  <span class="w-1.5 h-1.5 rounded-full bg-primary/60 shrink-0" />
+                  <p class="flex-1 text-sm font-medium truncate">{{ ticket.title }}</p>
+                  <span
+                    v-if="ticket.status"
+                    class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium shrink-0"
+                    :class="getStatusBadgeClasses(ticket.status)"
+                  >
+                    {{ ticket.status }}
+                  </span>
+                  <Icon name="lucide:chevron-right" class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors shrink-0" />
+                </NuxtLink>
               </div>
-              <p v-else class="text-sm text-muted-foreground text-center py-6">No tickets linked to this client.</p>
             </div>
           </div>
         </div>
@@ -840,6 +957,14 @@ onUnmounted(() => clearEntity());
       :client="client"
       @updated="onClientUpdated"
       @deleted="onClientDeleted"
+    />
+
+    <!-- Add Existing Contact Modal -->
+    <ClientsAddExistingContactModal
+      v-if="client"
+      v-model="showAddExistingModal"
+      :client-id="clientId"
+      @attached="onContactAttached"
     />
 
     <!-- Contextual AI Sidebar -->

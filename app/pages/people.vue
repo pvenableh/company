@@ -2,7 +2,12 @@
 	<div class="p-4 md:p-6 max-w-7xl mx-auto">
 		<!-- Header -->
 		<div class="flex items-center justify-between mb-6">
-			<h1 class="text-xl font-semibold">People</h1>
+			<div>
+				<h1 class="text-xl font-semibold">People Intelligence</h1>
+				<p class="text-[11px] text-muted-foreground mt-0.5">
+					Pipeline, audience, and the relationships that move the studio.
+				</p>
+			</div>
 			<div class="flex items-center gap-2">
 				<NuxtLink to="/contacts?new=true" class="flex items-center gap-1.5 px-3 py-2 text-sm font-medium border border-border rounded-lg hover:bg-muted/50 transition-colors">
 					<Icon name="lucide:plus" class="w-4 h-4" /> Contact
@@ -13,29 +18,254 @@
 			</div>
 		</div>
 
-		<!-- Compact stat bar -->
-		<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-			<NuxtLink to="/contacts" class="ios-card p-4 hover:ring-1 hover:ring-white/10 transition-all">
-				<p class="text-2xl font-bold">{{ contactCount }}</p>
-				<p class="text-[10px] uppercase tracking-wide text-muted-foreground">Contacts</p>
+		<!-- Hero stat row with sparklines -->
+		<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+			<NuxtLink
+				to="/contacts"
+				class="ios-card p-4 hover:ring-1 hover:ring-white/10 transition-all flex flex-col gap-2"
+			>
+				<div class="flex items-center justify-between">
+					<p class="text-[10px] uppercase tracking-wider text-muted-foreground">Contacts</p>
+					<Icon name="lucide:users" class="w-3.5 h-3.5 text-muted-foreground" />
+				</div>
+				<div class="flex items-baseline gap-2">
+					<p class="text-2xl font-bold">{{ contactCount }}</p>
+					<span v-if="contactDelta" class="text-[10px] font-medium" :class="deltaColor(contactDelta)">
+						{{ formatDelta(contactDelta) }}
+					</span>
+				</div>
+				<ClientOnly>
+					<div v-if="contactGrowthSeries.length" class="h-8 -mx-1">
+						<VisXYContainer :data="contactGrowthSeries" :margin="{ left: 0, right: 0, top: 2, bottom: 2 }">
+							<VisLine
+								:x="(d: any) => d.weekIdx"
+								:y="(d: any) => d.count"
+								:color="['hsl(217, 91%, 60%)']"
+								:curve-type="CurveType.MonotoneX"
+							/>
+						</VisXYContainer>
+					</div>
+				</ClientOnly>
 			</NuxtLink>
-			<NuxtLink to="/leads" class="ios-card p-4 hover:ring-1 hover:ring-white/10 transition-all">
-				<p class="text-2xl font-bold">{{ leadCount }}</p>
-				<p class="text-[10px] uppercase tracking-wide text-muted-foreground">Leads</p>
+
+			<NuxtLink
+				to="/leads"
+				class="ios-card p-4 hover:ring-1 hover:ring-white/10 transition-all flex flex-col gap-2"
+			>
+				<div class="flex items-center justify-between">
+					<p class="text-[10px] uppercase tracking-wider text-muted-foreground">Pipeline</p>
+					<Icon name="lucide:trending-up" class="w-3.5 h-3.5 text-muted-foreground" />
+				</div>
+				<div class="flex items-baseline gap-2">
+					<p class="text-2xl font-bold">{{ leadCount }}</p>
+					<span class="text-[10px] text-muted-foreground">
+						leads
+					</span>
+				</div>
+				<p class="text-[11px] text-emerald-500/90 font-medium">
+					${{ formatNumber(pipelineValue) }} value
+				</p>
 			</NuxtLink>
-			<NuxtLink to="/clients" class="ios-card p-4 hover:ring-1 hover:ring-white/10 transition-all">
-				<p class="text-2xl font-bold">{{ clientCount }}</p>
-				<p class="text-[10px] uppercase tracking-wide text-muted-foreground">Clients</p>
+
+			<NuxtLink
+				to="/clients"
+				class="ios-card p-4 hover:ring-1 hover:ring-white/10 transition-all flex flex-col gap-2"
+			>
+				<div class="flex items-center justify-between">
+					<p class="text-[10px] uppercase tracking-wider text-muted-foreground">Clients</p>
+					<Icon name="lucide:building-2" class="w-3.5 h-3.5 text-muted-foreground" />
+				</div>
+				<div class="flex items-baseline gap-2">
+					<p class="text-2xl font-bold">{{ clientCount }}</p>
+					<span class="text-[10px] text-muted-foreground">
+						{{ activeClientCount }} active
+					</span>
+				</div>
+				<p class="text-[11px] text-muted-foreground">
+					${{ formatNumber(yearRevenue) }} YTD revenue
+				</p>
 			</NuxtLink>
-			<NuxtLink to="/carddesk" class="ios-card p-4 hover:ring-1 hover:ring-white/10 transition-all">
-				<p class="text-2xl font-bold">{{ networkCount }}</p>
-				<p class="text-[10px] uppercase tracking-wide text-muted-foreground">Network</p>
+
+			<NuxtLink
+				to="/carddesk"
+				class="ios-card p-4 hover:ring-1 hover:ring-white/10 transition-all flex flex-col gap-2"
+			>
+				<div class="flex items-center justify-between">
+					<p class="text-[10px] uppercase tracking-wider text-muted-foreground">Network</p>
+					<Icon name="lucide:scan" class="w-3.5 h-3.5 text-muted-foreground" />
+				</div>
+				<div class="flex items-baseline gap-2">
+					<p class="text-2xl font-bold">{{ networkCount }}</p>
+					<span class="text-[10px] text-muted-foreground">
+						captured
+					</span>
+				</div>
+				<p class="text-[11px] text-muted-foreground">
+					{{ partnerCount }} partners
+				</p>
 			</NuxtLink>
 		</div>
 
+		<!-- Charts row -->
+		<div class="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
+			<!-- Contact growth -->
+			<div class="ios-card p-5 lg:col-span-2">
+				<div class="flex items-center justify-between mb-3">
+					<h3 class="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Audience Growth — last 90 days</h3>
+					<span v-if="contactGrowthSeries.length" class="text-[10px] text-muted-foreground">
+						+{{ contactsLast90 }} new contacts
+					</span>
+				</div>
+				<div class="h-[160px] overflow-hidden">
+					<ClientOnly>
+						<div v-if="contactGrowthSeries.length" class="h-full">
+							<VisXYContainer :data="contactGrowthSeries" :height="160" :margin="{ left: 30, right: 8, top: 8, bottom: 24 }">
+								<VisLine
+									:x="(d: any) => d.weekIdx"
+									:y="(d: any) => d.cumulative"
+									:color="['hsl(217, 91%, 60%)']"
+									:line-width="2"
+									:curve-type="CurveType.MonotoneX"
+								/>
+								<VisAxis
+									type="x"
+									:tick-line="false"
+									:domain-line="false"
+									:grid-line="false"
+									:tick-format="(v: number) => contactGrowthSeries[Math.round(v)]?.label ?? ''"
+									:num-ticks="6"
+								/>
+								<VisAxis
+									type="y"
+									:tick-line="false"
+									:domain-line="false"
+									:grid-line="true"
+									:num-ticks="4"
+								/>
+							</VisXYContainer>
+						</div>
+						<div v-else class="h-full flex items-center justify-center text-[11px] text-muted-foreground">
+							Not enough data yet — contacts will appear here as you add them.
+						</div>
+					</ClientOnly>
+				</div>
+			</div>
+
+			<!-- Network composition donut -->
+			<div class="ios-card p-5">
+				<div class="flex items-center justify-between mb-3">
+					<h3 class="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Network Composition</h3>
+					<span class="text-[10px] text-muted-foreground">{{ networkTotal }} total</span>
+				</div>
+				<ClientOnly>
+					<div v-if="dataLoaded && networkTotal > 0" class="flex flex-col items-center">
+						<div class="h-[140px] w-full relative">
+							<VisSingleContainer :data="networkComposition" :height="140">
+								<VisDonut
+									:value="(d: any) => d.value"
+									:arc-width="28"
+									:pad-angle="0.02"
+									:corner-radius="3"
+									:color="(d: any, i: number) => networkColors[i % networkColors.length]"
+									:show-empty-segments="false"
+									:arc-label="() => ''"
+								/>
+							</VisSingleContainer>
+							<div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+								<div class="text-center">
+									<p class="text-2xl font-bold leading-none">{{ networkTotal }}</p>
+									<p class="text-[10px] uppercase tracking-wider text-muted-foreground mt-0.5">total</p>
+								</div>
+							</div>
+						</div>
+						<div class="grid grid-cols-2 gap-x-3 gap-y-1.5 mt-3 w-full">
+							<div
+								v-for="(item, i) in networkComposition"
+								:key="item.label"
+								class="flex items-center gap-1.5 text-[11px]"
+							>
+								<span class="w-2 h-2 rounded-sm shrink-0" :style="{ background: networkColors[i % networkColors.length] }" />
+								<span class="text-muted-foreground truncate">{{ item.label }}</span>
+								<span class="ml-auto font-medium">{{ item.value }}</span>
+							</div>
+						</div>
+					</div>
+					<div v-else class="h-[160px] flex items-center justify-center text-[11px] text-muted-foreground">
+						Add contacts to see your network composition.
+					</div>
+				</ClientOnly>
+			</div>
+		</div>
+
+		<!-- Funnel + Top Clients row -->
+		<div class="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-4">
+			<!-- Lead pipeline funnel -->
+			<div class="ios-card p-5">
+				<div class="flex items-center justify-between mb-3">
+					<h3 class="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Lead Pipeline</h3>
+					<NuxtLink to="/leads" class="text-[10px] text-primary hover:underline">View all →</NuxtLink>
+				</div>
+				<div v-if="funnelStages.some(s => s.count > 0)" class="space-y-2">
+					<div
+						v-for="stage in funnelStages"
+						:key="stage.key"
+						class="group"
+					>
+						<div class="flex items-center gap-2 mb-0.5">
+							<span class="text-[11px] font-medium capitalize w-24 shrink-0">{{ stage.label }}</span>
+							<div class="flex-1 relative h-5 bg-muted/30 rounded-md overflow-hidden">
+								<div
+									class="absolute inset-y-0 left-0 rounded-md transition-all"
+									:style="{ width: funnelBarWidth(stage.count) + '%', background: stage.color }"
+								/>
+								<span class="absolute inset-y-0 left-2 flex items-center text-[10px] font-medium text-foreground/90 z-10">
+									{{ stage.count }}
+								</span>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div v-else class="py-8 text-center text-[11px] text-muted-foreground">
+					No leads in pipeline. <NuxtLink to="/leads?new=true" class="text-primary hover:underline">Add a lead →</NuxtLink>
+				</div>
+			</div>
+
+			<!-- Top clients by revenue -->
+			<div class="ios-card p-5">
+				<div class="flex items-center justify-between mb-3">
+					<h3 class="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Top Clients by Revenue</h3>
+					<span class="text-[10px] text-muted-foreground">last 12 mo</span>
+				</div>
+				<div v-if="topClients.length" class="space-y-2">
+					<div
+						v-for="(client, i) in topClients"
+						:key="client.id"
+						class="flex items-center gap-3"
+					>
+						<span class="text-[10px] text-muted-foreground w-4">{{ i + 1 }}</span>
+						<NuxtLink :to="`/clients/${client.id}`" class="flex-1 min-w-0 group">
+							<div class="flex items-center gap-2 mb-0.5">
+								<span class="text-[11px] font-medium truncate group-hover:text-primary">{{ client.name }}</span>
+								<span class="text-[10px] text-muted-foreground ml-auto shrink-0">${{ formatNumber(client.revenue) }}</span>
+							</div>
+							<div class="h-1.5 bg-muted/30 rounded-full overflow-hidden">
+								<div
+									class="h-full rounded-full bg-emerald-500/70"
+									:style="{ width: topClientBarWidth(client.revenue) + '%' }"
+								/>
+							</div>
+						</NuxtLink>
+					</div>
+				</div>
+				<div v-else class="py-8 text-center text-[11px] text-muted-foreground">
+					No revenue data yet. <NuxtLink to="/invoices?new=true" class="text-primary hover:underline">Add an invoice →</NuxtLink>
+				</div>
+			</div>
+		</div>
+
 		<!-- Needs Attention -->
-		<div v-if="needsAttention.length" class="ios-card p-5 mb-6">
-			<h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">
+		<div v-if="needsAttention.length" class="ios-card p-5 mb-4">
+			<h3 class="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-3">
 				Needs Attention
 				<span class="text-amber-400 ml-1">({{ needsAttention.length }})</span>
 			</h3>
@@ -62,7 +292,7 @@
 		</div>
 
 		<!-- Unified search -->
-		<div class="relative mb-6">
+		<div class="relative mb-4">
 			<Icon name="i-heroicons-magnifying-glass" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
 			<input
 				v-model="search"
@@ -72,8 +302,8 @@
 			/>
 		</div>
 
-		<!-- Quick links (compact, only when not searching) -->
-		<div v-if="!search" class="flex gap-2 mb-6 overflow-x-auto pb-1">
+		<!-- Quick links (only when not searching) -->
+		<div v-if="!search" class="flex gap-2 mb-2 overflow-x-auto pb-1">
 			<NuxtLink to="/contacts/import" class="flex items-center gap-1.5 px-3 py-2 ios-card hover:ring-1 hover:ring-white/10 transition-all shrink-0">
 				<Icon name="lucide:upload" class="w-4 h-4 text-blue-400" />
 				<span class="text-xs font-medium">Import CSV</span>
@@ -131,6 +361,8 @@
 
 <script setup lang="ts">
 import { useDebounceFn } from '@vueuse/core';
+import { VisXYContainer, VisLine, VisAxis, VisSingleContainer, VisDonut } from '@unovis/vue';
+import { CurveType } from '@unovis/ts';
 
 definePageMeta({ middleware: ['auth'] });
 useHead({ title: 'People | Earnest' });
@@ -139,6 +371,7 @@ const { getContacts } = useContacts();
 const { getClients } = useClients();
 const { getLeads, getLeadStats } = useLeads();
 const { fetchContacts: fetchCdContacts } = useCardDesk();
+const { selectedOrg } = useOrganization();
 
 const search = ref('');
 const searchLoading = ref(false);
@@ -151,26 +384,215 @@ const searchResults = ref<Array<{
 	route: string;
 }>>([]);
 
+// Hero counts
 const contactCount = ref(0);
 const leadCount = ref(0);
 const clientCount = ref(0);
 const networkCount = ref(0);
+const activeClientCount = ref(0);
+const partnerCount = ref(0);
+
+const dataLoaded = ref(false);
+
+// Charts data
+const contactGrowthSeries = ref<Array<{ weekIdx: number; label: string; count: number; cumulative: number }>>([]);
+const contactsLast90 = ref(0);
+const contactDelta = ref(0); // 30d vs prior 30d
+const pipelineValue = ref(0);
+const yearRevenue = ref(0);
+const funnelStages = ref<Array<{ key: string; label: string; count: number; color: string }>>([]);
+const topClients = ref<Array<{ id: string; name: string; revenue: number }>>([]);
+
+// Network composition donut
+const networkColors = ['hsl(25, 95%, 55%)', 'hsl(199, 89%, 55%)', 'hsl(0, 72%, 55%)', 'hsl(280, 65%, 60%)'];
+const networkComposition = computed(() => [
+	{ label: 'Contacts', value: contactCount.value },
+	{ label: 'Leads', value: leadCount.value },
+	{ label: 'Clients', value: clientCount.value },
+	{ label: 'Network', value: networkCount.value },
+]);
+const networkTotal = computed(() => networkComposition.value.reduce((s, x) => s + Number(x.value || 0), 0));
+
+const STAGE_LABELS: Record<string, string> = {
+	new: 'New',
+	contacted: 'Contacted',
+	qualified: 'Qualified',
+	proposal_sent: 'Proposal Sent',
+	negotiating: 'Negotiating',
+	won: 'Won',
+};
+const STAGE_COLORS: Record<string, string> = {
+	new: 'hsl(217, 91%, 60%)',
+	contacted: 'hsl(199, 89%, 55%)',
+	qualified: 'hsl(173, 78%, 45%)',
+	proposal_sent: 'hsl(43, 95%, 55%)',
+	negotiating: 'hsl(25, 95%, 55%)',
+	won: 'hsl(142, 71%, 45%)',
+};
+
 const needsAttention = ref<Array<{ id: string; name: string; reason: string; urgency: 'high' | 'medium'; route: string; action: string }>>([]);
 
-// Load counts + attention items
-onMounted(async () => {
+function formatNumber(n: number): string {
+	if (!n) return '0';
+	if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+	if (n >= 1000) return `${(n / 1000).toFixed(1)}K`;
+	return String(Math.round(n));
+}
+
+function formatDelta(n: number): string {
+	const sign = n > 0 ? '+' : '';
+	return `${sign}${n}`;
+}
+
+function deltaColor(n: number): string {
+	if (n > 0) return 'text-emerald-500';
+	if (n < 0) return 'text-red-500';
+	return 'text-muted-foreground';
+}
+
+const maxFunnelCount = computed(() => Math.max(1, ...funnelStages.value.map(s => s.count)));
+function funnelBarWidth(count: number): number {
+	return Math.max(2, (count / maxFunnelCount.value) * 100);
+}
+
+const maxClientRevenue = computed(() => Math.max(1, ...topClients.value.map(c => c.revenue)));
+function topClientBarWidth(revenue: number): number {
+	return Math.max(4, (revenue / maxClientRevenue.value) * 100);
+}
+
+async function loadIntelligence() {
+	if (!selectedOrg.value) return;
+	const orgId = selectedOrg.value;
+	const today = new Date();
+	const ninetyAgo = new Date(today.getTime() - 90 * 86_400_000);
+	const thirtyAgo = new Date(today.getTime() - 30 * 86_400_000);
+	const sixtyAgo = new Date(today.getTime() - 60 * 86_400_000);
+	const yearAgo = new Date(today.getTime() - 365 * 86_400_000);
+
+	const contactItems = useDirectusItems('contacts');
+	const invoiceItems = useDirectusItems('invoices');
+
 	try {
-		const [contacts, clients, leadStats] = await Promise.all([
+		const [contactsRes, clientsRes, leadStats, growthRows, partners, paidInvoices, allClientsForActive] = await Promise.all([
 			getContacts({ limit: 1, page: 1 }),
 			getClients({ limit: 1, page: 1 }),
 			getLeadStats(),
+			contactItems.list({
+				filter: {
+					_and: [
+						{ organizations: { organizations_id: { _eq: orgId } } },
+						{ date_created: { _gte: ninetyAgo.toISOString() } },
+					],
+				},
+				fields: ['id', 'date_created'],
+				sort: ['date_created'],
+				limit: 1000,
+			}),
+			contactItems.list({
+				filter: {
+					_and: [
+						{ organizations: { organizations_id: { _eq: orgId } } },
+						{ category: { _eq: 'partner' } },
+					],
+				},
+				fields: ['id'],
+				limit: 200,
+			}),
+			invoiceItems.list({
+				filter: {
+					_and: [
+						{ bill_to: { _eq: orgId } },
+						{ status: { _eq: 'paid' } },
+						{ invoice_date: { _gte: yearAgo.toISOString().slice(0, 10) } },
+					],
+				},
+				fields: ['total_amount', 'invoice_date', 'client.id', 'client.name'],
+				limit: 500,
+			}),
+			getClients({ limit: 200, page: 1 }),
 		]);
-		contactCount.value = contacts.total;
-		clientCount.value = clients.total;
-		leadCount.value = leadStats.total;
 
-		// Find clients that need attention — recently inactive or with overdue invoices
-		const allClients = await getClients({ limit: 50, page: 1 });
+		contactCount.value = contactsRes.total;
+		clientCount.value = clientsRes.total;
+		leadCount.value = leadStats.total;
+		pipelineValue.value = leadStats.pipeline_value;
+		partnerCount.value = (partners as any[]).length;
+
+		// Active clients
+		activeClientCount.value = (allClientsForActive.data as any[]).filter(c => c.account_state === 'active').length;
+
+		// Contact growth — bucket by week (12 weeks ≈ 90 days)
+		const weeks = 12;
+		const buckets = Array.from({ length: weeks }, (_, i) => ({
+			weekIdx: i,
+			label: '',
+			count: 0,
+			cumulative: 0,
+		}));
+		const startMs = ninetyAgo.getTime();
+		const weekMs = 7 * 86_400_000;
+		for (const row of growthRows as any[]) {
+			if (!row.date_created) continue;
+			const ts = new Date(row.date_created).getTime();
+			const idx = Math.min(weeks - 1, Math.max(0, Math.floor((ts - startMs) / weekMs)));
+			if (buckets[idx]) buckets[idx].count++;
+		}
+		// Cumulative + labels
+		let running = contactsRes.total - (growthRows as any[]).length;
+		if (running < 0) running = 0;
+		for (const b of buckets) {
+			running += b.count;
+			b.cumulative = running;
+			const labelDate = new Date(startMs + b.weekIdx * weekMs);
+			b.label = labelDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+		}
+		contactGrowthSeries.value = buckets;
+		contactsLast90.value = (growthRows as any[]).length;
+
+		// 30d vs prior-30d delta on new contacts
+		let last30 = 0, prior30 = 0;
+		for (const row of growthRows as any[]) {
+			if (!row.date_created) continue;
+			const ts = new Date(row.date_created).getTime();
+			if (ts >= thirtyAgo.getTime()) last30++;
+			else if (ts >= sixtyAgo.getTime()) prior30++;
+		}
+		contactDelta.value = last30 - prior30;
+
+		// Lead pipeline funnel
+		funnelStages.value = (Object.keys(STAGE_LABELS) as Array<keyof typeof STAGE_LABELS>).map(key => ({
+			key,
+			label: STAGE_LABELS[key],
+			count: (leadStats.by_stage as any)[key] || 0,
+			color: STAGE_COLORS[key] || 'hsl(217, 91%, 60%)',
+		}));
+
+		// Top clients by revenue
+		const revenueMap = new Map<string, { id: string; name: string; revenue: number }>();
+		let yearTotal = 0;
+		for (const inv of paidInvoices as any[]) {
+			const amt = Number(inv.total_amount) || 0;
+			yearTotal += amt;
+			const c = inv.client;
+			const id = typeof c === 'object' ? c?.id : c;
+			const name = typeof c === 'object' ? c?.name : null;
+			if (!id || !name) continue;
+			const existing = revenueMap.get(id);
+			if (existing) existing.revenue += amt;
+			else revenueMap.set(id, { id, name, revenue: amt });
+		}
+		topClients.value = [...revenueMap.values()]
+			.sort((a, b) => b.revenue - a.revenue)
+			.slice(0, 5);
+		yearRevenue.value = yearTotal;
+	} catch (err) {
+		console.error('[people] failed to load intelligence:', err);
+	}
+}
+
+async function loadNeedsAttention() {
+	if (!selectedOrg.value) return;
+	try {
 		const invoiceItems = useDirectusItems('invoices');
 		const unpaidInvoices = await invoiceItems.list({
 			filter: { status: { _in: ['pending', 'processing'] } },
@@ -178,7 +600,6 @@ onMounted(async () => {
 			limit: 50,
 		});
 
-		// Group overdue invoices by client
 		const clientInvoiceMap = new Map<string, any[]>();
 		for (const inv of unpaidInvoices) {
 			const clientId = typeof inv.client === 'object' ? inv.client?.id : inv.client;
@@ -218,8 +639,7 @@ onMounted(async () => {
 			}
 		}
 
-		// Overdue lead follow-ups: next_follow_up < now, not in terminal stages, not junk/archived.
-		// Capture in a separate bucket so leads don't get starved by saturating invoice entries below.
+		// Overdue lead follow-ups
 		const leadItems: typeof needsAttention.value = [];
 		try {
 			const openLeads = await getLeads({ limit: 200 } as any) as any[];
@@ -246,28 +666,29 @@ onMounted(async () => {
 					action: 'Reach out',
 				});
 			}
-			leadItems.sort((a, b) => {
-				// Most-overdue first: reason carries days in the string, but simpler to sort by urgency then id.
-				if (a.urgency !== b.urgency) return a.urgency === 'high' ? -1 : 1;
-				return 0;
-			});
+			leadItems.sort((a, b) => (a.urgency === 'high' ? -1 : 1) - (b.urgency === 'high' ? -1 : 1));
 		} catch { /* lead attention is non-critical */ }
 
-		// Interleave: up to 3 invoice items + up to 2 lead items, each sorted by urgency.
 		const invoiceSorted = items.sort((a, b) => (a.urgency === 'high' ? -1 : 1) - (b.urgency === 'high' ? -1 : 1));
 		const blended = [...invoiceSorted.slice(0, 3), ...leadItems.slice(0, 2)];
-		// Backfill if one bucket is short so we still surface 5 when possible.
 		if (blended.length < 5) {
 			const extras = [...invoiceSorted.slice(3), ...leadItems.slice(2)];
 			while (blended.length < 5 && extras.length) blended.push(extras.shift()!);
 		}
 		needsAttention.value = blended.sort((a, b) => (a.urgency === 'high' ? -1 : 1) - (b.urgency === 'high' ? -1 : 1));
 	} catch { /* counts are non-critical */ }
+}
 
+async function loadNetworkCount() {
 	try {
 		const cdResult = await fetchCdContacts({ page: 1 });
 		networkCount.value = cdResult?.length || 0;
 	} catch { /* counts are non-critical */ }
+}
+
+onMounted(async () => {
+	await Promise.all([loadIntelligence(), loadNeedsAttention(), loadNetworkCount()]);
+	dataLoaded.value = true;
 });
 
 function getInitials(name: string): string {

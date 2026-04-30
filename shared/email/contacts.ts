@@ -60,6 +60,10 @@ export interface Contact {
   notes?: string | null;
   photo?: string | null;
 
+  // Client linkage + billing role
+  client?: any | null;
+  is_billing_contact?: boolean | null;
+
   // Email preferences
   email_subscribed?: boolean | null;
   email_unsubscribed_at?: string | null;
@@ -123,6 +127,9 @@ export interface CreateContactPayload {
   tags?: string[];
   custom_fields?: string;
   source?: string;
+  category?: 'client' | 'prospect' | 'architect' | 'developer' | 'hospitality' | 'partner' | 'media' | '';
+  notes?: string;
+  is_billing_contact?: boolean;
 }
 
 export interface CsvContactRow {

@@ -5,24 +5,21 @@
  *   organizationId: string (required)
  *   status: string (optional filter)
  *   type: 'campaign' | 'dashboard' (optional filter)
+ *
+ * Reads via the server token because `marketing_campaigns` has no row-level
+ * Directus perms granted to org roles. We gate access by verifying the
+ * caller has an active membership in `organizationId` first, which is the
+ * same trust boundary the user-token path would have provided once perms
+ * are wired up.
  */
 import { readItems } from '@directus/sdk';
 
 export default defineEventHandler(async (event) => {
-  const session = await requireUserSession(event);
-  const userId = (session as any).user?.id;
-  if (!userId) {
-    throw createError({ statusCode: 401, message: 'Authentication required' });
-  }
-
   const query = getQuery(event);
   const organizationId = query.organizationId as string;
-  if (!organizationId) {
-    throw createError({ statusCode: 400, message: 'organizationId is required' });
-  }
+  await requireOrgMembership(event, organizationId);
 
-  const directus = await getUserDirectus(event);
-
+  const directus = getTypedDirectus();
   const filter: any = {
     organization: { _eq: organizationId },
   };
@@ -37,7 +34,7 @@ export default defineEventHandler(async (event) => {
     const campaigns = await directus.request(
       readItems('marketing_campaigns', {
         filter,
-        fields: ['id', 'title', 'goal', 'status', 'type', 'start_date', 'end_date', 'date_created', 'date_updated', 'user_created'],
+        fields: ['id', 'title', 'goal', 'status', 'type', 'plan_data', 'start_date', 'end_date', 'date_created', 'date_updated', 'user_created'],
         sort: ['-date_created'],
         limit: 50,
       }),

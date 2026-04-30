@@ -280,7 +280,8 @@
 					v-for="c in filteredCampaigns"
 					:key="c.id"
 					class="ios-card p-4 cursor-pointer group"
-					@click="expandedCampaign = expandedCampaign === c.id ? null : c.id"
+					:class="{ 'md:col-span-2 lg:col-span-3': expandedCampaign === c.id }"
+					@click="loadAndExpandCampaign(c)"
 				>
 					<div class="flex items-start justify-between mb-2">
 						<div class="flex-1 min-w-0">
@@ -334,6 +335,39 @@
 								Archive
 							</button>
 						</div>
+					</div>
+
+					<!-- Expanded plan body -->
+					<div v-if="expandedCampaign === c.id" class="mt-4 pt-4 border-t border-border/30" @click.stop>
+						<MarketingCampaignTimeline
+							v-if="c.type === 'campaign' && c.plan_data"
+							:campaign="c.plan_data as CampaignAnalysis"
+							@create="handleCampaignCreate"
+						/>
+						<div v-else-if="c.type === 'dashboard' && c.plan_data" class="space-y-4">
+							<div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+								<div class="rounded-xl border bg-card/40 p-4">
+									<p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Health Score</p>
+									<p class="text-2xl font-bold text-foreground">{{ (c.plan_data as DashboardAnalysis).healthScore }}</p>
+								</div>
+								<div class="rounded-xl border bg-card/40 p-4">
+									<p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Posts / Week</p>
+									<p class="text-2xl font-bold text-foreground">{{ (c.plan_data as DashboardAnalysis).contentVelocity?.postsPerWeek ?? 0 }}</p>
+								</div>
+								<div class="rounded-xl border bg-card/40 p-4">
+									<p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Subscribers</p>
+									<p class="text-2xl font-bold text-foreground">{{ formatNumber((c.plan_data as DashboardAnalysis).audienceGrowth?.subscribers ?? 0) }}</p>
+								</div>
+							</div>
+							<div v-if="(c.plan_data as DashboardAnalysis).insights?.length" class="grid grid-cols-1 md:grid-cols-2 gap-2">
+								<MarketingInsightCard
+									v-for="(insight, i) in (c.plan_data as DashboardAnalysis).insights"
+									:key="i"
+									:insight="insight"
+								/>
+							</div>
+						</div>
+						<p v-else class="text-xs text-muted-foreground italic">No detail available for this entry.</p>
 					</div>
 				</div>
 			</div>
@@ -485,6 +519,24 @@ async function fetchCampaigns() {
 	try {
 		const data = await $fetch(`/api/marketing/campaigns?organizationId=${selectedOrg.value}`);
 		savedCampaigns.value = (data as any).campaigns || [];
+
+		// Auto-restore the most recent saved analysis/campaign so visiting the
+		// page after a save (or a fresh demo screenshot run) renders the full
+		// dashboard + campaign timeline instead of the empty button state.
+		if (!dashboard.value) {
+			const latestDashboard = savedCampaigns.value.find(c => c.type === 'dashboard' && c.status !== 'archived' && c.plan_data);
+			if (latestDashboard) {
+				dashboard.value = latestDashboard.plan_data as DashboardAnalysis;
+				lastAnalyzed.value = new Date(latestDashboard.date_created);
+			}
+		}
+		if (!campaign.value) {
+			const latestCampaign = savedCampaigns.value.find(c => c.type === 'campaign' && c.status !== 'archived' && c.plan_data);
+			if (latestCampaign) {
+				campaign.value = latestCampaign.plan_data as CampaignAnalysis;
+				if (latestCampaign.goal) campaignGoal.value = latestCampaign.goal;
+			}
+		}
 	} catch {
 		savedCampaigns.value = [];
 	} finally {
@@ -503,6 +555,10 @@ async function updateCampaignStatus(id: string, status: string) {
 	} catch (err) {
 		console.error('Failed to update campaign:', err);
 	}
+}
+
+function loadAndExpandCampaign(c: any) {
+	expandedCampaign.value = expandedCampaign.value === c.id ? null : c.id;
 }
 
 async function deleteCampaign(id: string) {

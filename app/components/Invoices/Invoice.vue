@@ -5,15 +5,45 @@ const props = defineProps({
 		required: true,
 	},
 });
+const config = useRuntimeConfig();
+
 const formatNumber = (value) => {
 	return new Intl.NumberFormat('en-US', {
 		minimumFractionDigits: 2,
 		maximumFractionDigits: 2,
 	}).format(value);
 };
+
+const sellerLogoUrl = computed(() => {
+	const logo = props.invoice?.bill_to?.logo;
+	if (!logo) return null;
+	const id = typeof logo === 'string' ? logo : logo?.id;
+	if (!id) return null;
+	return `${config.public.directusUrl}/assets/${id}?key=medium-contain`;
+});
 </script>
 <template>
 	<div class="px-6 pt-12 pb-16 w-full border bg-white/90 dark:bg-gray-700 shadow invoice">
+		<!-- Seller header -->
+		<div
+			v-if="invoice.bill_to"
+			class="flex items-start gap-4 pb-6 mb-6 border-b border-gray-200 dark:border-gray-600 invoice__seller"
+		>
+			<img
+				v-if="sellerLogoUrl"
+				:src="sellerLogoUrl"
+				:alt="invoice.bill_to.name || 'Logo'"
+				class="h-12 w-auto object-contain shrink-0"
+			/>
+			<div class="text-[10px] uppercase leading-tight tracking-wide">
+				<p class="font-bold text-[11px]">{{ invoice.bill_to.name }}</p>
+				<p v-if="invoice.bill_to.address" class="whitespace-pre-line opacity-70">{{ invoice.bill_to.address }}</p>
+				<p v-if="invoice.bill_to.phone" class="opacity-70">{{ invoice.bill_to.phone }}</p>
+				<p v-if="invoice.bill_to.email" class="opacity-70">{{ invoice.bill_to.email }}</p>
+				<p v-if="invoice.bill_to.website" class="opacity-70">{{ invoice.bill_to.website.replace(/^https?:\/\//, '') }}</p>
+			</div>
+		</div>
+
 		<div class="">
 			<div class="w-full flex flex-row items-center justify-between">
 				<h1 class="font-bold uppercase text-xl">

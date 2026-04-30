@@ -1294,6 +1294,8 @@ export interface Contact {
 	timezone?: string | null;
 	/** @description The client company this contact belongs to */
 	client?: Client | string | null;
+	/** @description When true, this contact is used as a billing recipient for invoices issued to its client (and inherited by sub-clients via parent_client walk). */
+	is_billing_contact?: boolean;
 	organizations?: ContactsOrganization[] | string[];
 	lists?: MailingListContact[] | string[];
 	/** @description Leads associated with this contact. Inverse of leads.related_contact. */
@@ -2129,6 +2131,8 @@ export interface Organization {
 	slug?: string;
 	/** @description Soft-delete timestamp. When set, the org is archived; restore clears it. A cleanup cron hard-deletes rows aged past the retention window. */
 	archived_at?: string | null;
+	/** @description Org-level mirror of the active Stripe Subscription id. */
+	stripe_subscription_id?: string | null;
 	users?: OrganizationsDirectusUser[] | string[];
 	projects?: Project[] | string[];
 	tickets?: Ticket[] | string[];
@@ -3867,6 +3871,16 @@ export interface DirectusUser {
 	networking_goal?: string | null;
 	/** @description JSON preferences for nav visibility and order */
 	nav_preferences?: Record<string, any> | null;
+	/** @description Stripe Customer id (cus_…). Set on registration; primary lookup key for webhook → org sync. */
+	stripe_customer_id?: string | null;
+	/** @description Stripe Subscription id (sub_…). Set by checkout/subscription webhooks. */
+	stripe_subscription_id?: string | null;
+	/** @description Stripe subscription status mirror. */
+	subscription_status?: 'active' | 'trialing' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' | 'incomplete_expired' | 'paused' | null;
+	/** @description Stripe Price id of the active line item (price_…). */
+	subscription_plan?: string | null;
+	/** @description When the current billing period rolls over. */
+	subscription_current_period_end?: string | null;
 	organizations?: OrganizationsDirectusUser[] | string[];
 	teams?: JunctionDirectusUsersTeam[] | string[];
 	policies?: DirectusAccess[] | string[];

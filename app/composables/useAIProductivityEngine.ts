@@ -890,10 +890,16 @@ export const useAIProductivityEngine = () => {
 	const analyzeDeals = async (): Promise<TaskSuggestion[]> => {
 		const results: TaskSuggestion[] = [];
 
+		// Tenant-data safety: never query leads without an org. Null-org leads
+		// were backfilled 2026-04-20 (scripts/backfill-null-org-leads.ts) so this
+		// guard no longer hides real data.
+		if (!selectedOrg.value) return results;
+
 		try {
 			const leads = await dealItems.list({
 				fields: ['id', 'status', 'priority', 'estimated_value', 'next_follow_up', 'related_contact.id', 'source', 'notes', 'closed_date'],
 				filter: {
+					...orgFilter(),
 					status: { _in: ['published', 'draft'] },
 					converted_to_customer: { _neq: true },
 				},
@@ -982,12 +988,12 @@ export const useAIProductivityEngine = () => {
 			try {
 				const wonLeads = await dealItems.list({
 					fields: ['id'],
-					filter: { stage: { _eq: 'won' } },
+					filter: { ...orgFilter(), stage: { _eq: 'won' } },
 					limit: -1,
 				});
 				const lostLeads = await dealItems.list({
 					fields: ['id'],
-					filter: { stage: { _eq: 'lost' } },
+					filter: { ...orgFilter(), stage: { _eq: 'lost' } },
 					limit: -1,
 				});
 				metrics.value.leadsWon = wonLeads.length;

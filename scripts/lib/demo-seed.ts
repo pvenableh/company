@@ -196,3 +196,37 @@ export async function pingDirectus(): Promise<void> {
 		process.exit(1);
 	}
 }
+
+/**
+ * Spread `date_created` across the last `windowDays` days for the given
+ * contact ids, deterministic by index so re-runs don't shuffle the chart.
+ *
+ * Demo orgs create all contacts at seed time, which makes the People
+ * Intelligence growth-line render flat-then-spike. Backdating gives the
+ * chart visible variance for screenshots without inventing data.
+ *
+ * Directus allows overriding the audit field `date_created` on PATCH when
+ * authenticated with the admin server token. Won't work without admin.
+ */
+export async function backdateContacts(
+	contactIds: string[],
+	windowDays = 88,
+): Promise<void> {
+	if (contactIds.length === 0) return;
+	const now = Date.now();
+	const dayMs = 86_400_000;
+	for (let i = 0; i < contactIds.length; i++) {
+		const id = contactIds[i];
+		// Even spread, oldest first. Add a small per-index hour jitter so
+		// week-buckets don't all land at midnight on a single day.
+		const fraction = contactIds.length === 1 ? 0 : i / (contactIds.length - 1);
+		const offsetDays = Math.floor((1 - fraction) * windowDays);
+		const jitterMs = ((i * 7) % 24) * 3_600_000;
+		const ts = new Date(now - offsetDays * dayMs - jitterMs).toISOString();
+		const res = await directusRequest(`/items/contacts/${id}`, 'PATCH', { date_created: ts });
+		if (!res.ok) {
+			console.warn(`  [warn] backdate contact ${id}: ${res.error}`);
+		}
+	}
+	console.log(`  [ok]   backdated ${contactIds.length} contacts across ${windowDays} days`);
+}

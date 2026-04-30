@@ -1,5 +1,9 @@
 /**
- * Save a marketing plan or analysis to AI chat sessions for later reference.
+ * Save a marketing plan or analysis. Mirrors the plan into both
+ * `ai_chat_sessions` (for the chat history surface) and `marketing_campaigns`
+ * (for the marketing dashboard). The chat-session writes use the user
+ * token; the marketing_campaigns write uses the server token because that
+ * collection has no row-level perms granted to org roles yet.
  */
 import { createItem } from '@directus/sdk';
 
@@ -12,16 +16,15 @@ interface SavePlanRequest {
 }
 
 export default defineEventHandler(async (event) => {
-  const session = await requireUserSession(event);
-  const userId = (session as any).user?.id;
-  if (!userId) {
-    throw createError({ statusCode: 401, message: 'Authentication required' });
-  }
-
   const body = await readBody<SavePlanRequest>(event);
   if (!body.type || !body.data) {
     throw createError({ statusCode: 400, message: 'type and data are required' });
   }
+  if (!body.organizationId) {
+    throw createError({ statusCode: 400, message: 'organizationId is required' });
+  }
+
+  const { userId } = await requireOrgMembership(event, body.organizationId);
 
   const directus = await getUserDirectus(event);
 
@@ -60,22 +63,22 @@ export default defineEventHandler(async (event) => {
     }),
   );
 
-  // Also save to marketing_campaigns collection for the campaigns dashboard
+  // marketing_campaigns row — server token, since user perms aren't wired.
   let campaignId = null;
   try {
-    const campaign = await directus.request(
+    const adminDirectus = getTypedDirectus();
+    const campaign = await adminDirectus.request(
       createItem('marketing_campaigns', {
         title: body.title || `Marketing ${body.type === 'dashboard' ? 'Analysis' : 'Campaign Plan'}`,
         goal: body.goal || null,
         status: 'draft',
         type: body.type,
         plan_data: body.data,
-        organization: body.organizationId || null,
+        organization: body.organizationId,
       }),
     ) as any;
     campaignId = campaign?.id;
   } catch (err) {
-    // Non-critical — campaigns collection may not exist yet
     console.warn('[save-plan] Could not save to marketing_campaigns:', (err as Error).message);
   }
 

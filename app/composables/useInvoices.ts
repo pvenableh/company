@@ -83,53 +83,69 @@ export function useInvoices() {
   };
 
   const createInvoice = async (payload: any): Promise<Invoice> => {
-    // Auto-snapshot billing fields and bill_to from client if not already provided
-    // For sub-brands: falls back to parent_client billing details when the client has none
+    // Auto-snapshot billing fields and bill_to from client if not already provided.
+    // Walks parent_client chain up to depth 3. At each level the resolution order is:
+    //   1. legacy clients.billing_contacts JSON (first entry with an email)
+    //   2. contacts where is_billing_contact = true (first with an email)
+    //   3. clients.billing_email (single primary)
+    //   4. move to next ancestor
     if (payload.client) {
       try {
         const clientItems = useDirectusItems('clients');
-        const client = await clientItems.get(payload.client, {
+        const { getAncestorClientIds } = useContactConnections();
+
+        const fetchLevel = (id: string) => clientItems.get(id, {
           fields: [
-            'billing_email', 'billing_name', 'billing_address', 'billing_contacts', 'name', 'organization',
-            'parent_client.id', 'parent_client.billing_email', 'parent_client.billing_name',
-            'parent_client.billing_address', 'parent_client.billing_contacts', 'parent_client.name',
-            'parent_client.organization',
+            'id', 'name', 'organization',
+            'billing_email', 'billing_name', 'billing_address', 'billing_contacts',
+            'contacts.id', 'contacts.email', 'contacts.first_name', 'contacts.last_name', 'contacts.is_billing_contact',
           ],
-        }) as any;
+        }) as Promise<any>;
 
-        if (client) {
-          const parent = client.parent_client;
-
-          // Auto-set bill_to from client's organization (or parent's organization for sub-brands)
-          if (!payload.bill_to) {
-            const org = client.organization || parent?.organization;
-            if (org) {
-              payload.bill_to = typeof org === 'object' ? org.id : org;
-            }
+        const self = await fetchLevel(payload.client);
+        if (self) {
+          // Auto-set bill_to from self's organization, falling back to ancestors below if missing
+          if (!payload.bill_to && self.organization) {
+            payload.bill_to = typeof self.organization === 'object' ? self.organization.id : self.organization;
           }
 
-          // Resolve billing: client fields → parent_client fields → skip
           if (!payload.billing_email) {
-            const clientContacts = Array.isArray(client.billing_contacts)
-              ? client.billing_contacts.find((c: any) => c.email?.trim())
-              : null;
-            const parentContacts = Array.isArray(parent?.billing_contacts)
-              ? parent.billing_contacts.find((c: any) => c.email?.trim())
-              : null;
+            const ancestorIds = (await getAncestorClientIds(payload.client, 3)).map(a => a.id);
+            const chain = [self];
+            for (const id of ancestorIds) {
+              const level = await fetchLevel(id);
+              if (level) chain.push(level);
+            }
 
-            const hasBilling = clientContacts || client.billing_email;
+            for (const level of chain) {
+              const legacyContact = Array.isArray(level.billing_contacts)
+                ? level.billing_contacts.find((c: any) => c.email?.trim())
+                : null;
+              const contactRow = Array.isArray(level.contacts)
+                ? level.contacts.find((c: any) => c.is_billing_contact && c.email?.trim())
+                : null;
+              const hasBilling = legacyContact || contactRow || level.billing_email;
+              if (!hasBilling) continue;
 
-            const source = hasBilling ? client : (parent || client);
-            const primaryContact = hasBilling ? clientContacts : parentContacts;
+              const primary = legacyContact
+                ? { email: legacyContact.email, name: legacyContact.name }
+                : contactRow
+                  ? {
+                      email: contactRow.email,
+                      name: `${contactRow.first_name || ''} ${contactRow.last_name || ''}`.trim() || null,
+                    }
+                  : null;
 
-            payload.billing_email = primaryContact?.email
-              || source.billing_email
-              || null;
-            payload.billing_name = primaryContact?.name
-              || source.billing_name
-              || source.name
-              || null;
-            payload.billing_address = source.billing_address || null;
+              payload.billing_email = primary?.email || level.billing_email || null;
+              payload.billing_name = primary?.name || level.billing_name || level.name || null;
+              payload.billing_address = level.billing_address || null;
+
+              // Inherit bill_to from the resolved ancestor if still missing
+              if (!payload.bill_to && level.organization) {
+                payload.bill_to = typeof level.organization === 'object' ? level.organization.id : level.organization;
+              }
+              break;
+            }
           }
         }
       } catch {
