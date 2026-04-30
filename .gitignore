@@ -23,6 +23,8 @@ dist
 node-compile-cache/
 docker-compose.earnest.yml
 .backups/
+oauth-walkthrough-*.webm
+oauth-walkthrough-*.mp4
 
 # Claude Code
 .claude/worktrees/
