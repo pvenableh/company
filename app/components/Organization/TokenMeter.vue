@@ -142,6 +142,6 @@ function formatTokens(value: number | null | undefined): string {
 }
 
 function navigateToBilling() {
-	router.push('/account/billing');
+	router.push('/organization?tab=ai-usage');
 }
 </script>

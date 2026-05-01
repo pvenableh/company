@@ -78,7 +78,7 @@
 		<OrganizationTokenMeter
 			v-if="!collapsed && showTokenMeter"
 			compact
-			@topup="$router.push('/account/billing')"
+			@topup="$router.push('/organization?tab=ai-usage')"
 		/>
 
 		<!-- Footer -->

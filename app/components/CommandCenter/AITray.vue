@@ -22,7 +22,96 @@ const {
 	sendQuickMessage,
 	clearQuickChat,
 } = useEarnestChat();
+const { user: trayUser } = useDirectusAuth();
+const { selectedOrg } = useOrganization();
+const { canAccess } = useOrgRole();
+const { usageSummary, refresh: refreshTokenUsage } = useAITokens();
+const trayToast = useToast();
 const router = useRouter();
+
+// ── Token meter (inline strip + reload picker) ──
+const tokensUnlimited = computed(() => {
+	const s = usageSummary.value;
+	return !s || s.orgLimit === null || s.orgLimit === undefined;
+});
+const tokensUsedPct = computed(() => {
+	const s = usageSummary.value;
+	if (!s || !s.orgLimit) return 0;
+	return Math.min(100, Math.round(((s.orgTokensUsed ?? 0) / s.orgLimit) * 100));
+});
+const tokensDepleted = computed(() => {
+	const s = usageSummary.value;
+	if (!s) return false;
+	return (s.orgBalance != null && s.orgBalance <= 0) || tokensUsedPct.value >= 100;
+});
+const tokensBarClass = computed(() => {
+	if (tokensUsedPct.value >= 90) return 'bg-destructive';
+	if (tokensUsedPct.value >= 70) return 'bg-amber-500';
+	return 'bg-primary/60';
+});
+const tokensTextClass = computed(() => {
+	if (tokensUsedPct.value >= 90) return 'text-destructive';
+	if (tokensUsedPct.value >= 70) return 'text-amber-500';
+	return 'text-muted-foreground';
+});
+const canManageTokens = computed(() => canAccess('org_settings'));
+const showReloadPicker = ref(false);
+const reloadLoading = ref<string | null>(null);
+
+function formatTokens(n: number | null | undefined): string {
+	if (n == null) return '—';
+	if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+	if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K`;
+	return String(n);
+}
+
+const tokenPackages = [
+	{ id: 'tokens_100k', name: '100K', tokens: 100_000, price: 9 },
+	{ id: 'tokens_500k', name: '500K', tokens: 500_000, price: 39 },
+	{ id: 'tokens_1_5m', name: '1.5M', tokens: 1_500_000, price: 99 },
+];
+
+async function buyTokens(packageId: string) {
+	if (!trayUser.value || !selectedOrg.value) return;
+	reloadLoading.value = packageId;
+	try {
+		const data = await $fetch<{ url: string }>('/api/stripe/tokens/checkout', {
+			method: 'POST',
+			body: {
+				email: (trayUser.value as any).email,
+				customerId: (trayUser.value as any).stripe_customer_id,
+				packageId,
+				organizationId: (selectedOrg.value as any)?.id || selectedOrg.value,
+			},
+		});
+		if (data?.url) {
+			window.location.href = data.url;
+		}
+	} catch (err: any) {
+		trayToast.add({
+			title: 'Could not start checkout',
+			description: err?.data?.message || err?.message || 'Please try again',
+			color: 'red',
+		});
+	} finally {
+		reloadLoading.value = null;
+	}
+}
+
+function openManageTokens() {
+	router.push('/organization?tab=ai-usage');
+	emit('close');
+}
+
+// Refresh token meter when tray opens (so it's fresh after navigation)
+watch(() => props.isOpen, (open) => {
+	if (open) refreshTokenUsage();
+});
+
+// Auto-collapse reload picker when tray closes
+watch(() => props.isOpen, (open) => {
+	if (!open) showReloadPicker.value = false;
+});
 
 const { fetchSmartData, getSmartPrompts, smartData } = useAISmartPrompts();
 const activeTab = ref<'chat' | 'productivity' | 'notes'>('chat');
@@ -242,6 +331,14 @@ watch(quickStreamingContent, () => {
 					</div>
 					<div class="flex items-center gap-1">
 						<button
+							v-if="canManageTokens"
+							@click="openManageTokens"
+							class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted transition-colors text-muted-foreground"
+							title="Manage AI tokens"
+						>
+							<UIcon name="i-heroicons-bolt" class="w-4 h-4" />
+						</button>
+						<button
 							@click="showPreferences = !showPreferences"
 							class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-muted transition-colors"
 							:class="showPreferences ? 'bg-primary/10 text-primary' : ''"
@@ -255,6 +352,55 @@ watch(quickStreamingContent, () => {
 							<UIcon name="i-heroicons-x-mark" class="w-5 h-5 text-muted-foreground" />
 						</button>
 					</div>
+				</div>
+				<!-- Token Usage Strip + Reload Picker -->
+				<div v-if="!tokensUnlimited && usageSummary" class="px-4 py-2 bg-background border-t border-border/20">
+					<div class="flex items-center gap-2.5">
+						<UIcon name="i-heroicons-bolt" class="w-3.5 h-3.5 flex-shrink-0" :class="tokensTextClass" />
+						<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex-shrink-0">Tokens</span>
+						<div class="flex-1 h-1.5 rounded-full bg-muted/40 overflow-hidden">
+							<div
+								class="h-full rounded-full transition-all duration-500"
+								:class="tokensBarClass"
+								:style="{ width: `${Math.min(tokensUsedPct, 100)}%` }"
+							/>
+						</div>
+						<span class="text-[10px] font-medium tabular-nums flex-shrink-0" :class="tokensTextClass">
+							{{ tokensUsedPct }}%
+						</span>
+						<button
+							v-if="canManageTokens"
+							@click="showReloadPicker = !showReloadPicker"
+							class="text-[10px] font-medium px-2 py-0.5 rounded-md transition-colors flex-shrink-0"
+							:class="tokensDepleted || tokensUsedPct >= 70
+								? 'bg-primary text-primary-foreground hover:bg-primary/90'
+								: 'text-primary hover:bg-primary/10'"
+						>
+							{{ showReloadPicker ? 'Close' : 'Reload' }}
+						</button>
+					</div>
+					<!-- Reload picker -->
+					<div v-if="showReloadPicker && canManageTokens" class="mt-2 grid grid-cols-3 gap-1.5">
+						<button
+							v-for="pkg in tokenPackages"
+							:key="pkg.id"
+							:disabled="reloadLoading !== null"
+							@click="buyTokens(pkg.id)"
+							class="flex flex-col items-center justify-center py-2 px-1 rounded-lg border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors disabled:opacity-60 disabled:cursor-wait"
+						>
+							<UIcon
+								v-if="reloadLoading === pkg.id"
+								name="i-heroicons-arrow-path"
+								class="w-3.5 h-3.5 animate-spin text-primary mb-0.5"
+							/>
+							<span v-else class="text-[11px] font-bold text-foreground leading-none">{{ pkg.name }}</span>
+							<span class="text-[9px] text-muted-foreground mt-0.5">${{ pkg.price }}</span>
+						</button>
+					</div>
+					<!-- Member fallback -->
+					<p v-if="!canManageTokens && (tokensDepleted || tokensUsedPct >= 90)" class="text-[10px] text-muted-foreground mt-1.5">
+						Ask your admin to top up tokens.
+					</p>
 				</div>
 				<!-- Persona Picker -->
 				<div class="flex gap-1 px-4 py-2 bg-muted/20">
