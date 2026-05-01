@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 useHead({ title: 'Organization | Earnest' });
 
 import { ROLE_METADATA } from '~~/shared/permissions';

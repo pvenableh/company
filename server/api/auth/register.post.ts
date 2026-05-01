@@ -19,7 +19,7 @@ const SYSTEM_ROLES: RoleSlug[] = ['owner', 'admin', 'manager', 'member', 'client
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event);
-    const { email, password, first_name, last_name, phone, organization_name } = body;
+    const { email, password, first_name, last_name, phone, organization_name, terms_accepted } = body;
 
     if (!email || !password) {
       throw createError({
@@ -32,6 +32,13 @@ export default defineEventHandler(async (event) => {
       throw createError({
         statusCode: 400,
         message: 'First name and last name are required',
+      });
+    }
+
+    if (!terms_accepted) {
+      throw createError({
+        statusCode: 400,
+        message: 'You must agree to the Terms of Service and Privacy Policy',
       });
     }
 
@@ -51,6 +58,7 @@ export default defineEventHandler(async (event) => {
         phone: phone || null,
         status: 'active',
         role: defaultRoleId,
+        terms_accepted_at: new Date().toISOString(),
       })
     );
 

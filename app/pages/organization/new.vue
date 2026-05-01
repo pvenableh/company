@@ -22,6 +22,16 @@ const subscribingAddons = ref(false)
 const paidCheckoutCompleted = ref(false)
 const stripeSessionId = ref<string | null>(null)
 
+// In-page Elements state for the paid path.
+//   step=4 enters with `clientSecret` null → user sees order summary +
+//   "Continue to payment". Clicking it creates the org + subscription, returns
+//   a clientSecret, and the Elements card form swaps in below the summary.
+const subscriptionClientSecret = ref<string | null>(null)
+const subscriptionId = ref<string | null>(null)
+const termsReaffirmed = ref(false)
+const paymentFormRef = ref<any>(null)
+const submittingPayment = ref(false)
+
 const totalSteps = computed(() => paidCheckoutCompleted.value ? 6 : 5)
 const displayedStep = computed(() => {
   // On the free path, step 6 (invite) is shown as "step 5 of 5".
@@ -69,6 +79,7 @@ function loadState() {
     createdOrgId.value = data.createdOrgId || null
     paidCheckoutCompleted.value = !!data.paidCheckoutCompleted
     stripeSessionId.value = data.stripeSessionId || null
+    subscriptionId.value = data.subscriptionId || null
     selectedAddons.value = (data.selectedAddons && typeof data.selectedAddons === 'object') ? data.selectedAddons : {}
   } catch {}
 }
@@ -88,6 +99,7 @@ function saveState() {
       createdOrgId: createdOrgId.value,
       paidCheckoutCompleted: paidCheckoutCompleted.value,
       stripeSessionId: stripeSessionId.value,
+      subscriptionId: subscriptionId.value,
       selectedAddons: selectedAddons.value,
     }))
   } catch {}
@@ -138,7 +150,7 @@ onMounted(async () => {
 
 // Persist on every relevant change. Cheap and lossless across reloads.
 watch(
-  [orgName, selectedIndustry, selectedPlan, selectedInterval, orgLocation, orgWebsite, orgBrandColor, invites, createdOrgId, paidCheckoutCompleted, stripeSessionId, selectedAddons],
+  [orgName, selectedIndustry, selectedPlan, selectedInterval, orgLocation, orgWebsite, orgBrandColor, invites, createdOrgId, paidCheckoutCompleted, stripeSessionId, subscriptionId, selectedAddons],
   () => saveState(),
   { deep: true },
 )
@@ -309,8 +321,10 @@ async function handleSubscribeAddons() {
         body: {
           orgId: createdOrgId.value,
           addonId: addon.id,
-          // Fallback for the webhook race — server uses this to resolve the
-          // subscription if `stripe_subscription_id` hasn't been linked yet.
+          // Pass the subscription id directly when we created it via Elements
+          // (no webhook race); fall back to the Checkout sessionId for the
+          // legacy redirect flow.
+          subscriptionId: subscriptionId.value || undefined,
           sessionId: stripeSessionId.value || undefined,
         },
       })
@@ -339,34 +353,70 @@ function handleSkipAddons() {
 
 async function handleContinueToPayment() {
   if (creating.value || checkingOut.value) return
+  if (!termsReaffirmed.value) {
+    toast.error('Please agree to the Terms of Service and Privacy Policy')
+    return
+  }
   checkingOut.value = true
   try {
-    const orgId = await ensureOrgCreated(selectedPlan.value)
+    await ensureOrgCreated(selectedPlan.value)
 
-    const origin = window.location.origin
-    const successUrl = `${origin}/organization/new?step=invite&checkout=ok&org_id=${orgId}&session_id={CHECKOUT_SESSION_ID}`
-    const cancelUrl = `${origin}/organization/new?step=plan&checkout=cancel`
-
-    const data = await $fetch<{ url: string }>('/api/stripe/subscription/checkout', {
-      method: 'POST',
-      body: {
-        plan: selectedPlan.value,
-        interval: selectedInterval.value,
-        successUrl,
-        cancelUrl,
+    // Create the subscription server-side with default_incomplete; the
+    // returned clientSecret is what Stripe Elements confirms below. No redirect.
+    const data = await $fetch<{ subscriptionId: string; clientSecret: string }>(
+      '/api/stripe/subscription/create',
+      {
+        method: 'POST',
+        body: {
+          plan: selectedPlan.value,
+          interval: selectedInterval.value,
+          termsAcceptedAt: new Date().toISOString(),
+        },
       },
-    })
+    )
 
-    if (data?.url) {
-      window.location.href = data.url
-    } else {
-      toast.error('Failed to start checkout')
-      checkingOut.value = false
-    }
+    subscriptionId.value = data.subscriptionId
+    subscriptionClientSecret.value = data.clientSecret
   } catch (err: any) {
-    toast.error(err?.data?.message || 'Failed to start checkout')
+    toast.error(err?.data?.message || err?.message || 'Failed to start payment')
+  } finally {
     checkingOut.value = false
   }
+}
+
+function handleEditOrderBack() {
+  // From the Elements form back to the order summary. The clientSecret is
+  // tied to a draft invoice on the just-created subscription; clearing it
+  // un-mounts the form. The subscription itself stays in `incomplete`
+  // status until the user pays — Stripe auto-cancels stale incompletes.
+  subscriptionClientSecret.value = null
+}
+
+async function handleSubmitPayment() {
+  if (submittingPayment.value) return
+  if (!termsReaffirmed.value) {
+    toast.error('Please agree to the Terms of Service and Privacy Policy')
+    return
+  }
+  if (!paymentFormRef.value) return
+  submittingPayment.value = true
+  try {
+    await paymentFormRef.value.submit()
+  } catch {
+    submittingPayment.value = false
+  }
+}
+
+function handlePaymentSuccess() {
+  paidCheckoutCompleted.value = true
+  submittingPayment.value = false
+  toast.success('Payment received — pick any add-ons to round it out')
+  currentStep.value = 5
+}
+
+function handlePaymentError(message: string) {
+  submittingPayment.value = false
+  toast.error(message || 'Payment failed')
 }
 
 // ── Final step: send invites & finish ──
@@ -600,7 +650,7 @@ async function handleFinish() {
               <CreditCard class="w-6 h-6 text-gray-500" />
             </div>
             <h1 class="text-xl font-semibold">Set Up Payment</h1>
-            <p class="text-sm text-muted-foreground mt-1">Secure checkout via Stripe. Cancel anytime from your account.</p>
+            <p class="text-sm text-muted-foreground mt-1">Cancel anytime from your account.</p>
           </div>
 
           <!-- Order summary -->
@@ -624,12 +674,51 @@ async function handleFinish() {
             </div>
           </div>
 
-          <!-- Free tier offer -->
-          <div class="rounded-lg border border-dashed border-gray-200 bg-muted/20 p-3 text-center">
-            <p class="text-xs text-muted-foreground">
-              Not ready to commit? Start with the free tier — limited features, but you can upgrade anytime.
-            </p>
-          </div>
+          <!-- Pre-payment view: free-tier offer + terms re-affirmation -->
+          <template v-if="!subscriptionClientSecret">
+            <!-- Terms re-affirmation -->
+            <label class="flex items-start gap-2 cursor-pointer select-none mb-4 p-3 rounded-lg border border-gray-200 bg-muted/10 hover:bg-muted/20 transition-colors">
+              <input
+                v-model="termsReaffirmed"
+                type="checkbox"
+                class="mt-0.5 h-4 w-4 rounded border-gray-300 text-[var(--cyan)] focus:ring-2 focus:ring-[var(--cyan)] focus:ring-offset-0 cursor-pointer shrink-0"
+              />
+              <span class="text-[12px] text-muted-foreground leading-relaxed">
+                I agree to the
+                <NuxtLink to="/terms-of-service" target="_blank" class="text-foreground font-medium hover:underline underline-offset-4">Terms of Service</NuxtLink>
+                and
+                <NuxtLink to="/privacy-policy" target="_blank" class="text-foreground font-medium hover:underline underline-offset-4">Privacy Policy</NuxtLink>,
+                and authorize recurring billing of ${{ currentPrice }}{{ intervalLabel }}.
+              </span>
+            </label>
+
+            <!-- Free tier offer -->
+            <div class="rounded-lg border border-dashed border-gray-200 bg-muted/20 p-3 text-center">
+              <p class="text-xs text-muted-foreground">
+                Not ready to commit? Start with the free tier — limited features, but you can upgrade anytime.
+              </p>
+            </div>
+          </template>
+
+          <!-- Payment view: in-page Stripe Elements -->
+          <template v-else>
+            <OrganizationSubscriptionPaymentForm
+              ref="paymentFormRef"
+              :client-secret="subscriptionClientSecret"
+              :email="''"
+              :price-label="`$${currentPrice}${intervalLabel}`"
+              @success="handlePaymentSuccess"
+              @error="handlePaymentError"
+            />
+
+            <button
+              class="mt-4 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              :disabled="submittingPayment"
+              @click="handleEditOrderBack"
+            >
+              ← Edit order
+            </button>
+          </template>
         </div>
 
         <!-- ═══ STEP 5: Add-ons (paid path only) ═══ -->
@@ -751,9 +840,9 @@ async function handleFinish() {
 
         <!-- ═══ Navigation buttons ═══ -->
         <div class="flex items-center gap-3 mt-8 pt-6 border-t border-border/30">
-          <!-- Back / Cancel (only for steps 2-4; step 5+ is post-commit) -->
+          <!-- Back / Cancel (only for steps 2-4 pre-payment; step 5+ is post-commit) -->
           <button
-            v-if="currentStep > 1 && currentStep <= 4"
+            v-if="currentStep > 1 && currentStep <= 4 && !subscriptionClientSecret"
             class="flex items-center gap-1 px-4 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted/30 transition-colors"
             @click="prevStep"
           >
@@ -790,8 +879,8 @@ async function handleFinish() {
             <ChevronRight class="w-4 h-4" />
           </button>
 
-          <!-- Step 4: Skip Free / Continue to payment -->
-          <template v-else-if="currentStep === 4">
+          <!-- Step 4: pre-payment OR Elements view -->
+          <template v-else-if="currentStep === 4 && !subscriptionClientSecret">
             <button
               class="px-4 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
               :disabled="creating || checkingOut"
@@ -802,12 +891,25 @@ async function handleFinish() {
             </button>
             <button
               class="flex items-center gap-1 px-6 py-2.5 rounded-lg text-sm font-medium bg-foreground text-background hover:opacity-90 transition-opacity disabled:opacity-40"
-              :disabled="creating || checkingOut"
+              :disabled="creating || checkingOut || !termsReaffirmed"
               @click="handleContinueToPayment"
             >
               <Icon v-if="checkingOut" name="lucide:loader-2" class="w-4 h-4 mr-1 animate-spin" />
-              {{ checkingOut ? 'Redirecting...' : 'Continue to payment' }}
+              {{ checkingOut ? 'Setting up...' : 'Continue to payment' }}
               <ChevronRight v-if="!checkingOut" class="w-4 h-4" />
+            </button>
+          </template>
+
+          <!-- Step 4: Elements form — Pay button -->
+          <template v-else-if="currentStep === 4 && subscriptionClientSecret">
+            <button
+              class="flex items-center justify-center gap-1 w-full px-6 py-3 rounded-lg text-sm font-semibold bg-[var(--cyan)] text-white hover:opacity-90 transition-opacity disabled:opacity-40"
+              :disabled="submittingPayment"
+              @click="handleSubmitPayment"
+            >
+              <Icon v-if="submittingPayment" name="lucide:loader-2" class="w-4 h-4 animate-spin" />
+              <Icon v-else name="lucide:lock" class="w-4 h-4" />
+              {{ submittingPayment ? 'Processing...' : `Pay $${currentPrice}${intervalLabel}` }}
             </button>
           </template>
 

@@ -1312,6 +1312,48 @@ export interface ContactsOrganization {
 	sort?: number | null;
 }
 
+export interface Contract {
+	/** @primaryKey */
+	id: number;
+	status?: 'published' | 'draft' | 'archived' | null;
+	sort?: number | null;
+	date_created?: string | null;
+	date_updated?: string | null;
+	user_created?: string | null;
+	user_updated?: string | null;
+	/** @description e.g. "Master Services Agreement — Atlas Fintech" @required */
+	title: string;
+	contract_status?: 'draft' | 'sent' | 'signed' | 'declined' | 'cancelled' | 'expired' | null;
+	total_value?: number | null;
+	date_sent?: string | null;
+	/** @description After this, the unsigned contract auto-expires */
+	valid_until?: string | null;
+	/** @description When the agreement takes effect (often signing date) */
+	effective_date?: string | null;
+	/** @description Internal notes (not rendered to the client). Use blocks for the contract body. */
+	notes?: string | null;
+	/** @description Ordered array of block entries: { block_id, heading, content, page_break_after } */
+	blocks?: Record<string, any> | null;
+	/** @description Final signed PDF (uploaded post-signing) */
+	file?: string | null;
+	/** @description Timestamp of signature */
+	signed_at?: string | null;
+	signed_by_name?: string | null;
+	signed_by_email?: string | null;
+	signed_by_ip?: string | null;
+	/** @description Typed-name string OR data-URL of drawn signature */
+	signature_data?: string | null;
+	/** @description UUID for the public unauth signing URL */
+	signing_token?: string | null;
+	/** @required */
+	organization: Organization | string;
+	/** @description Recipient — usually the client signer */
+	contact?: Contact | string | null;
+	lead?: Lead | string | null;
+	/** @description Source proposal (if generated from one) */
+	proposal?: Proposal | string | null;
+}
+
 export interface Course {
 	/** @primaryKey */
 	id: string;
@@ -1325,6 +1367,29 @@ export interface Course {
 	description?: string | null;
 	menu_id?: Menu | string | null;
 	options?: Option[] | string[];
+}
+
+export interface DocumentBlock {
+	/** @primaryKey */
+	id: number;
+	status?: 'published' | 'draft' | 'archived' | null;
+	sort?: number | null;
+	date_created?: string | null;
+	date_updated?: string | null;
+	user_created?: string | null;
+	user_updated?: string | null;
+	/** @description e.g. "Studio bio", "Standard NDA terms" @required */
+	name: string;
+	/** @description Filter / group in the picker */
+	category?: 'bio' | 'references' | 'case_study' | 'deliverables' | 'pricing' | 'timeline' | 'terms' | 'nda' | 'cover' | 'other' | null;
+	/** @description One-liner shown in the block picker */
+	description?: string | null;
+	/** @description Which document types can use this block */
+	applies_to?: Array<'proposals' | 'contracts'> | null;
+	/** @description Owning organization @required */
+	organization: Organization | string;
+	/** @description Block content (markdown). Renders into proposals + contracts. Per-document overrides don't mutate this. */
+	content?: string | null;
 }
 
 export interface EarnestHistory {
@@ -2133,6 +2198,8 @@ export interface Organization {
 	archived_at?: string | null;
 	/** @description Org-level mirror of the active Stripe Subscription id. */
 	stripe_subscription_id?: string | null;
+	/** @description When true (and plan supports whitelabel), hides "Powered by Earnest." on client-facing documents. */
+	whitelabel?: boolean;
 	users?: OrganizationsDirectusUser[] | string[];
 	projects?: Project[] | string[];
 	tickets?: Ticket[] | string[];
@@ -2505,6 +2572,7 @@ export interface Portfolio {
 	capabilities?: PortfolioCapability[] | string[];
 	projects?: Portfolio[] | string[];
 	before_and_afters?: PortfolioBeforeAndAfter[] | string[];
+	services?: PortfolioService[] | string[];
 }
 
 export interface PortfolioBeforeAndAfter {
@@ -2535,6 +2603,14 @@ export interface PortfolioIndustry {
 	id: number;
 	portfolio_id?: Portfolio | string | null;
 	industries_id?: Industry | string | null;
+	sort?: number | null;
+}
+
+export interface PortfolioService {
+	/** @primaryKey */
+	id: number;
+	portfolio_id?: Portfolio | string | null;
+	services_id?: Service | string | null;
 	sort?: number | null;
 }
 
@@ -2786,6 +2862,8 @@ export interface Proposal {
 	valid_until?: string | null;
 	/** @description Current proposal status */
 	proposal_status?: 'draft' | 'sent' | 'viewed' | 'accepted' | 'rejected' | 'expired' | null;
+	/** @description Ordered array of block entries: { block_id, heading, content, page_break_after } */
+	blocks?: Record<string, any> | null;
 }
 
 export interface ProposalsFile {
@@ -2947,6 +3025,31 @@ export interface ServicesContentBlock {
 	collection?: string | null;
 	sort?: number | null;
 	status?: 'draft' | 'published' | 'archived' | null;
+}
+
+export interface ServiceTemplate {
+	/** @primaryKey */
+	id: number;
+	/** @description Only `published` templates show in the AI draft picker */
+	status?: 'published' | 'draft' | 'archived' | null;
+	sort?: number | null;
+	date_created?: string | null;
+	date_updated?: string | null;
+	user_created?: string | null;
+	user_updated?: string | null;
+	/** @description e.g. "Brand Identity Package" @required */
+	name: string;
+	category?: 'branding' | 'web' | 'marketing' | 'retainer' | 'other' | null;
+	/** @description One-liner shown in the picker */
+	description?: string | null;
+	/** @description Default scope copy. Use plain text or markdown — the AI will adapt this to the lead's context (industry, brief, etc.) when drafting the proposal. */
+	scope_template?: string | null;
+	/** @description Reference base price */
+	default_total?: number | null;
+	/** @description Typical project length */
+	default_duration_days?: number | null;
+	/** @description Owning organization @required */
+	organization: Organization | string;
 }
 
 export interface ShopCategory {
@@ -3881,6 +3984,8 @@ export interface DirectusUser {
 	subscription_plan?: string | null;
 	/** @description When the current billing period rolls over. */
 	subscription_current_period_end?: string | null;
+	/** @description When the user agreed to Terms of Service & Privacy Policy. Set on registration; updated on subscription checkout re-affirmation. */
+	terms_accepted_at?: string | null;
 	organizations?: OrganizationsDirectusUser[] | string[];
 	teams?: JunctionDirectusUsersTeam[] | string[];
 	policies?: DirectusAccess[] | string[];
@@ -4125,7 +4230,9 @@ export interface Schema {
 	contact_connections: ContactConnection[];
 	contacts: Contact[];
 	contacts_organizations: ContactsOrganization[];
+	contracts: Contract[];
 	courses: Course[];
+	document_blocks: DocumentBlock[];
 	earnest_history: EarnestHistory[];
 	earnest_reviews: EarnestReview[];
 	earnest_scan_credits: EarnestScanCredit[];
@@ -4189,6 +4296,7 @@ export interface Schema {
 	portfolio_capabilities: PortfolioCapability[];
 	portfolio_files: PortfolioFile[];
 	portfolio_industries: PortfolioIndustry[];
+	portfolio_services: PortfolioService[];
 	products: Product[];
 	project_categories: ProjectCategory[];
 	project_event_categories: ProjectEventCategory[];
@@ -4213,6 +4321,7 @@ export interface Schema {
 	services: Service[];
 	services_capabilities: ServicesCapability[];
 	services_content_blocks: ServicesContentBlock[];
+	service_templates: ServiceTemplate[];
 	shop_categories: ShopCategory[];
 	shop_order_items: ShopOrderItem[];
 	shop_orders: ShopOrder[];
@@ -4344,7 +4453,9 @@ export enum CollectionNames {
 	contact_connections = 'contact_connections',
 	contacts = 'contacts',
 	contacts_organizations = 'contacts_organizations',
+	contracts = 'contracts',
 	courses = 'courses',
+	document_blocks = 'document_blocks',
 	earnest_history = 'earnest_history',
 	earnest_reviews = 'earnest_reviews',
 	earnest_scan_credits = 'earnest_scan_credits',
@@ -4408,6 +4519,7 @@ export enum CollectionNames {
 	portfolio_capabilities = 'portfolio_capabilities',
 	portfolio_files = 'portfolio_files',
 	portfolio_industries = 'portfolio_industries',
+	portfolio_services = 'portfolio_services',
 	products = 'products',
 	project_categories = 'project_categories',
 	project_event_categories = 'project_event_categories',
@@ -4432,6 +4544,7 @@ export enum CollectionNames {
 	services = 'services',
 	services_capabilities = 'services_capabilities',
 	services_content_blocks = 'services_content_blocks',
+	service_templates = 'service_templates',
 	shop_categories = 'shop_categories',
 	shop_order_items = 'shop_order_items',
 	shop_orders = 'shop_orders',

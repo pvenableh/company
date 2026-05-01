@@ -29,6 +29,7 @@ const emit = defineEmits<{
       email: string;
       password: string;
       organizationName?: string;
+      termsAccepted: boolean;
     }
   ): void;
   (e: "login"): void;
@@ -82,6 +83,9 @@ const formSchema = toTypedSchema(
         .regex(/[a-z]/, "Must contain a lowercase letter")
         .regex(/[0-9]/, "Must contain a number"),
       confirmPassword: z.string(),
+      termsAccepted: z.boolean().refine((v) => v === true, {
+        message: "You must agree to the Terms of Service and Privacy Policy",
+      }),
     })
     .refine((data) => data.password === data.confirmPassword, {
       message: "Passwords do not match",
@@ -98,6 +102,7 @@ const { handleSubmit, isSubmitting, values } = useForm({
     organizationName: "",
     password: "",
     confirmPassword: "",
+    termsAccepted: false,
   },
 });
 
@@ -123,6 +128,7 @@ const onSubmit = handleSubmit(async (values) => {
     email: values.email!,
     password: values.password!,
     organizationName: values.organizationName || undefined,
+    termsAccepted: values.termsAccepted!,
   });
 });
 
@@ -235,6 +241,26 @@ const inputClass = "w-full rounded-lg border bg-background px-3 py-2.5 text-sm f
               :class="[inputClass, errors.length ? 'border-red-300 dark:border-red-700' : 'border-border']"
             />
             <p v-if="errors.length" class="text-xs text-red-500">{{ errors[0] }}</p>
+          </div>
+        </VeeField>
+
+        <VeeField v-slot="{ value, handleChange, errors }" name="termsAccepted" type="checkbox" :value="true" :unchecked-value="false">
+          <div class="space-y-1.5 pt-1">
+            <label class="flex items-start gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                :checked="value === true"
+                class="mt-0.5 h-4 w-4 rounded border-border text-[var(--cyan)] focus:ring-2 focus:ring-[var(--cyan)] focus:ring-offset-0 cursor-pointer shrink-0"
+                @change="handleChange(($event.target as HTMLInputElement).checked)"
+              />
+              <span class="text-[12px] text-muted-foreground leading-relaxed">
+                I agree to the
+                <NuxtLink to="/terms-of-service" target="_blank" class="text-foreground font-medium hover:underline underline-offset-4">Terms of Service</NuxtLink>
+                and
+                <NuxtLink to="/privacy-policy" target="_blank" class="text-foreground font-medium hover:underline underline-offset-4">Privacy Policy</NuxtLink>.
+              </span>
+            </label>
+            <p v-if="errors.length" class="text-xs text-red-500 ml-6">{{ errors[0] }}</p>
           </div>
         </VeeField>
 

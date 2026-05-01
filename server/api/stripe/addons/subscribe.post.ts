@@ -8,11 +8,12 @@ import type { EarnestAddonId } from '~~/server/utils/stripe';
 interface SubscribeBody {
 	addonId: EarnestAddonId;
 	orgId: string;
-	// Optional Stripe Checkout Session id. When the wizard returns from a fresh
-	// paid signup, the `customer.subscription.created` webhook may not have
-	// linked `directus_users.stripe_subscription_id` yet. Passing the session
-	// id lets us resolve the subscription directly from Stripe.
+	// Optional Stripe Checkout Session id (legacy redirect flow).
 	sessionId?: string;
+	// Optional Stripe Subscription id (in-page Elements flow). When set, skip
+	// the webhook-linked lookup entirely — the wizard knows the sub from the
+	// /subscription/create response.
+	subscriptionId?: string;
 }
 
 export default defineEventHandler(async (event) => {
@@ -40,16 +41,22 @@ export default defineEventHandler(async (event) => {
 		const stripe = useStripe();
 		const directus = getTypedDirectus();
 
-		// Find the user's existing Stripe subscription
-		const users = await directus.request(
-			readItems('directus_users', {
-				filter: { id: { _eq: userId } },
-				fields: ['stripe_subscription_id'],
-				limit: 1,
-			})
-		) as any[];
+		// In-page Elements flow: the wizard already knows the subscription id
+		// from /subscription/create — skip the user-row lookup entirely.
+		let subscriptionId: string | null = body.subscriptionId || null;
 
-		let subscriptionId: string | null = users[0]?.stripe_subscription_id || null;
+		if (!subscriptionId) {
+			// Find the user's existing Stripe subscription
+			const users = await directus.request(
+				readItems('directus_users', {
+					filter: { id: { _eq: userId } },
+					fields: ['stripe_subscription_id'],
+					limit: 1,
+				})
+			) as any[];
+
+			subscriptionId = users[0]?.stripe_subscription_id || null;
+		}
 
 		// Wizard fallback: if the webhook hasn't linked the sub yet, resolve it
 		// from the just-completed Checkout Session.
