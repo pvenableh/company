@@ -55,11 +55,13 @@ if (!existsSync(MARKETING_REPO)) {
 	process.exit(1);
 }
 
-/** YYYY-MM slug for the dated output folder. */
+/** YYYY-MM slug for the dated archive month, plus a per-run timestamp
+ *  subfolder so re-runs within the same month don't clobber each other. */
 const now = new Date();
 const MONTH_SLUG = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+const RUN_SLUG = now.toISOString().replace(/\..+$/, '').replace(/:/g, '-'); // 2026-05-01T16-32-04
 
-const DATED_DIR = resolve(MARKETING_REPO, 'public/screenshots', MONTH_SLUG);
+const DATED_DIR = resolve(MARKETING_REPO, 'public/screenshots', MONTH_SLUG, RUN_SLUG);
 const LATEST_DIR = resolve(MARKETING_REPO, 'public/screenshots/latest');
 
 // Debounce after `domcontentloaded` — gives sticky header/sidebar and any

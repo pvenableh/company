@@ -1,5 +1,48 @@
 <template>
 	<div class="space-y-6">
+		<!-- Admin: Grant Comp Tokens (Directus system admins only) -->
+		<div v-if="isDirectusAdmin" class="ios-card p-4 border border-amber-500/30 bg-amber-500/5">
+			<div class="flex items-center justify-between mb-3">
+				<h4 class="text-sm font-semibold text-foreground flex items-center gap-2">
+					<UIcon name="i-heroicons-bolt" class="w-4 h-4 text-amber-500" />
+					Grant Comp Tokens
+					<span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 font-medium">Admin</span>
+				</h4>
+			</div>
+			<p class="text-xs text-muted-foreground mb-3">
+				Bypass Stripe and add tokens directly to this org's prepaid balance — at Anthropic cost. Visible in the meter the moment you grant; consumed once the monthly limit is exhausted.
+			</p>
+			<div class="flex items-center gap-2">
+				<UInput
+					v-model="grantTokensInput"
+					type="number"
+					placeholder="e.g. 500000"
+					class="flex-1 max-w-xs"
+					size="sm"
+				/>
+				<UInput
+					v-model="grantNoteInput"
+					placeholder="Note (optional, e.g. team comp)"
+					class="flex-1"
+					size="sm"
+				/>
+				<UButton
+					color="primary"
+					size="sm"
+					:loading="grantLoading"
+					:disabled="!grantTokensInput || Number(grantTokensInput) <= 0"
+					icon="i-heroicons-plus-circle"
+					@click="grantTokens"
+				>
+					Grant
+				</UButton>
+			</div>
+			<p v-if="lastGrantInfo" class="mt-2 text-[11px] text-muted-foreground">
+				Last grant: <span class="font-mono text-emerald-600">+{{ formatTokens(lastGrantInfo.granted) }}</span>
+				· new balance <span class="font-mono">{{ formatTokens(lastGrantInfo.newBalance) }}</span>
+			</p>
+		</div>
+
 		<!-- Buy Tokens Section -->
 		<div class="ios-card p-4">
 			<div class="flex items-center justify-between mb-3">
@@ -234,6 +277,8 @@ const props = defineProps({
 });
 
 const { user } = useDirectusAuth();
+const { isDirectusAdmin } = useViewAsOrgAdmin();
+const { refresh: refreshTokenUsage } = useAITokens();
 const toast = useToast();
 
 // State
@@ -247,6 +292,46 @@ const orgLimitInput = ref<string>('');
 const savingOrgLimit = ref(false);
 const editBudgets = ref<Record<string, string>>({});
 const savingBudget = ref<string | null>(null);
+
+// Admin grant state
+const grantTokensInput = ref<string>('');
+const grantNoteInput = ref<string>('');
+const grantLoading = ref(false);
+const lastGrantInfo = ref<{ granted: number; newBalance: number } | null>(null);
+
+async function grantTokens() {
+	const amount = Number(grantTokensInput.value);
+	if (!Number.isFinite(amount) || amount <= 0) return;
+	grantLoading.value = true;
+	try {
+		const res = await $fetch<{ granted: number; newBalance: number }>('/api/ai/manage/admin-grant', {
+			method: 'POST',
+			body: {
+				organizationId: props.organizationId,
+				tokens: amount,
+				note: grantNoteInput.value || undefined,
+			},
+		});
+		lastGrantInfo.value = { granted: res.granted, newBalance: res.newBalance };
+		grantTokensInput.value = '';
+		grantNoteInput.value = '';
+		toast.add({
+			title: 'Tokens granted',
+			description: `+${formatTokens(res.granted)} · new balance ${formatTokens(res.newBalance)}`,
+			color: 'green',
+		});
+		// Refresh the live meter (dock ring + tray strip + sidebar bar)
+		await refreshTokenUsage();
+	} catch (err: any) {
+		toast.add({
+			title: 'Grant failed',
+			description: err?.data?.message || err?.message || 'Could not grant tokens',
+			color: 'red',
+		});
+	} finally {
+		grantLoading.value = false;
+	}
+}
 
 // Load members with AI settings
 async function loadMembers() {
