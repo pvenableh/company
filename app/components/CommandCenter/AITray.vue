@@ -99,8 +99,7 @@ async function buyTokens(packageId: string) {
 }
 
 function openManageTokens() {
-	router.push('/organization?tab=ai-usage');
-	emit('close');
+	openTokenModal();
 }
 
 // Refresh token meter when tray opens (so it's fresh after navigation)

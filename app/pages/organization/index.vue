@@ -73,8 +73,6 @@ const fetchIndustries = async () => {
 };
 fetchIndustries();
 
-const activeTab = ref(0);
-
 // Define tab items once:
 const tabItems = [
 	{ slot: 'overview', label: 'Overview', icon: 'i-heroicons-home' },
@@ -82,6 +80,27 @@ const tabItems = [
 	{ slot: 'teams', label: 'Teams', icon: 'i-heroicons-user-group' },
 	{ slot: 'ai-usage', label: 'Usage', icon: 'i-heroicons-sparkles' },
 ];
+
+const route = useRoute();
+const router = useRouter();
+
+const tabKeyToIndex = (key: string | undefined): number => {
+	const i = tabItems.findIndex(t => t.slot === key);
+	return i >= 0 ? i : 0;
+};
+
+const activeTab = ref(tabKeyToIndex(route.query.tab as string | undefined));
+
+watch(() => route.query.tab, (newKey) => {
+	activeTab.value = tabKeyToIndex(newKey as string | undefined);
+});
+
+watch(activeTab, (i) => {
+	const key = tabItems[i]?.slot;
+	if (key && route.query.tab !== key) {
+		router.replace({ query: { ...route.query, tab: key } });
+	}
+});
 
 definePageMeta({
 	middleware: ['auth'],

@@ -9,7 +9,7 @@
 	</div>
 
 	<!-- Compact mode: sidebar widget -->
-	<div v-else-if="compact" class="px-3 py-2 cursor-pointer group" @click="navigateToBilling">
+	<div v-else-if="compact" class="px-3 py-2 cursor-pointer group" @click="$emit('topup')">
 		<div class="flex items-center justify-between mb-1.5">
 			<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">AI Tokens</span>
 			<span v-if="isUnlimited" class="text-[10px] font-medium text-muted-foreground">
@@ -96,7 +96,6 @@ defineEmits<{
 	topup: [];
 }>();
 
-const router = useRouter();
 const { usageSummary } = useAITokens();
 
 const summary = computed(() => usageSummary.value);
@@ -141,7 +140,4 @@ function formatTokens(value: number | null | undefined): string {
 	return value.toLocaleString();
 }
 
-function navigateToBilling() {
-	router.push('/organization?tab=ai-usage');
-}
 </script>

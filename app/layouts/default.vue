@@ -26,6 +26,11 @@
 			<TimeTrackerModal v-model="timeTrackerModalVisible" />
 		</ClientOnly>
 
+		<!-- AI Token Management Modal (global, triggered from sidebar/AI tray) -->
+		<ClientOnly>
+			<OrganizationTokenManagementModal v-model="tokenModalVisible" />
+		</ClientOnly>
+
 		<!-- Floating time tracker indicator (mobile fallback) -->
 		<ClientOnly>
 			<TimeTrackerFloatingIndicator class="md:hidden" />
@@ -45,6 +50,7 @@
 
 <script setup lang="ts">
 import { timeTrackerModalOpen } from '~/composables/useTimeTrackerModal';
+import { tokenModalOpen } from '~/composables/useTokenModal';
 
 const { user } = useDirectusAuth();
 const { currentMode } = useLayoutMode();
@@ -61,6 +67,7 @@ const handleOpenAI = () => {
 };
 const spotlightOpen = ref(false);
 const timeTrackerModalVisible = timeTrackerModalOpen;
+const tokenModalVisible = tokenModalOpen;
 
 // Resolve layout component based on current mode
 const activeLayoutComponent = computed(() => {
