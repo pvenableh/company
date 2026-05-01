@@ -101,6 +101,8 @@ function formatTotal(n: number | null | undefined) {
 				<div v-else class="mt-12 text-center opacity-50 text-sm">
 					This proposal has no content yet.
 				</div>
+
+				<DocumentsDocumentFooter />
 			</div>
 		</div>
 	</div>
