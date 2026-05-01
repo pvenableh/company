@@ -56,7 +56,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
   const { loggedIn } = useUserSession();
   if (!loggedIn.value) return;
 
-  const allowedPrefixes = ['/organization/new', '/auth', '/account'];
+  const allowedPrefixes = ['/organization/new', '/auth', '/account', '/contracts/sign', '/invoices'];
   if (allowedPrefixes.some((p) => to.path === p || to.path.startsWith(`${p}/`))) {
     return;
   }

@@ -4,7 +4,10 @@
  */
 
 export interface ServiceTemplate {
-  id: string;
+  // Setup script declared `meta.special: ['uuid']` but Directus created the
+  // column as integer; existing demo rows have integer ids. Accept both so
+  // the type matches reality without re-creating the column.
+  id: string | number;
   status: 'published' | 'draft' | 'archived';
   name: string;
   category: string;
@@ -60,12 +63,12 @@ export function useServiceTemplates() {
     } as any)) as ServiceTemplate;
   };
 
-  const update = async (id: string, data: Partial<ServiceTemplate>): Promise<ServiceTemplate> => {
-    return (await templates.update(id, data as any)) as ServiceTemplate;
+  const update = async (id: string | number, data: Partial<ServiceTemplate>): Promise<ServiceTemplate> => {
+    return (await templates.update(id as any, data as any)) as ServiceTemplate;
   };
 
-  const remove = async (id: string): Promise<void> => {
-    await templates.remove(id);
+  const remove = async (id: string | number): Promise<void> => {
+    await templates.remove(id as any);
   };
 
   return { list, listPublished, create, update, remove };

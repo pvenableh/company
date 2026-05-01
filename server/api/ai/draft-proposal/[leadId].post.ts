@@ -138,12 +138,27 @@ export default defineEventHandler(async (event) => {
 	// Validate every block_id reference points to an actual library block
 	// in this org. Drop bogus ones; keep content as inline.
 	const validIds = new Set(blockLibrary.map((b) => b.id));
-	parsed.blocks = parsed.blocks.map((b) => ({
-		block_id: b.block_id && validIds.has(b.block_id) ? b.block_id : null,
-		heading: b.heading || null,
-		content: b.content || '',
-		page_break_after: !!b.page_break_after,
-	})).filter((b) => b.content.trim() || b.heading);
+	// Build a heading-name index so we can recover library refs the LLM
+	// dropped: when block_id is null but the heading matches a library
+	// block name (case-insensitive, trimmed), restore the linkage.
+	const libByName = new Map<string, string>();
+	for (const b of blockLibrary) {
+		const key = (b.name || '').trim().toLowerCase();
+		if (key) libByName.set(key, b.id);
+	}
+	parsed.blocks = parsed.blocks.map((b) => {
+		let blockId = b.block_id && validIds.has(b.block_id) ? b.block_id : null;
+		if (!blockId && b.heading) {
+			const matchId = libByName.get(b.heading.trim().toLowerCase());
+			if (matchId) blockId = matchId;
+		}
+		return {
+			block_id: blockId,
+			heading: b.heading || null,
+			content: b.content || '',
+			page_break_after: !!b.page_break_after,
+		};
+	}).filter((b) => b.content.trim() || b.heading);
 
 	return parsed;
 });

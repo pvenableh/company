@@ -30,6 +30,8 @@ export default defineNuxtRouteMiddleware((to) => {
     '/account',        // User account settings
     '/auth',           // Auth pages (login, register, etc.)
     '/approve',        // Public approval pages
+    '/contracts/sign', // Public contract-signing route
+    '/invoices',       // Public invoice payment + preview pages
   ];
 
   const allowedExact = [

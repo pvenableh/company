@@ -62,6 +62,23 @@ function onProposalDeleted() {
 	router.push('/proposals');
 }
 
+const converting = ref(false);
+async function convertToContract() {
+	if (!proposal.value?.id || converting.value) return;
+	converting.value = true;
+	try {
+		const res = await $fetch(`/api/contracts/from-proposal/${proposal.value.id}`, { method: 'POST' });
+		if (res?.id) {
+			toast.add({ title: 'Contract drafted from proposal', color: 'green' });
+			router.push(`/contracts/${res.id}`);
+		}
+	} catch (err: any) {
+		toast.add({ title: 'Failed to convert', description: err?.data?.message || err?.message, color: 'red' });
+	} finally {
+		converting.value = false;
+	}
+}
+
 onMounted(fetchData);
 
 // AI sidebar lifecycle
@@ -113,6 +130,18 @@ onUnmounted(() => clearEntity());
 					>
 						<UIcon name="lucide:sparkles" class="w-3.5 h-3.5" />
 						<span class="hidden sm:inline">Ask Earnest</span>
+					</button>
+					<button
+						class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors disabled:opacity-50"
+						:disabled="converting"
+						@click="convertToContract"
+					>
+						<UIcon
+							:name="converting ? 'lucide:loader-2' : 'lucide:file-signature'"
+							class="w-3.5 h-3.5"
+							:class="converting ? 'animate-spin' : ''"
+						/>
+						<span class="hidden sm:inline">Convert to contract</span>
 					</button>
 					<button
 						class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium hover:bg-muted transition-colors"

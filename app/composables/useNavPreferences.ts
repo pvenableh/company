@@ -30,6 +30,7 @@ const DEFAULT_LINKS: NavLink[] = [
 	{ name: 'Clients', type: ['header', 'footer', 'drawer'], to: '/clients', icon: 'i-heroicons-building-storefront', color: 'bg-gradient-to-br from-sky-500 to-blue-600', description: 'Client accounts', section: 'primary' },
 	{ name: 'Leads', type: ['header', 'footer', 'drawer'], to: '/leads', icon: 'i-heroicons-funnel', color: 'bg-gradient-to-br from-amber-500 to-orange-500', description: 'Lead pipeline', section: 'primary', featureKey: 'leads' },
 	{ name: 'Proposals', type: ['header', 'footer', 'drawer'], to: '/proposals', icon: 'i-heroicons-document-check', color: 'bg-gradient-to-br from-teal-500 to-emerald-500', description: 'Proposals & estimates', section: 'primary', featureKey: 'proposals' },
+	{ name: 'Contracts', type: ['header', 'footer', 'drawer'], to: '/contracts', icon: 'i-heroicons-document-arrow-down', color: 'bg-gradient-to-br from-sky-500 to-blue-600', description: 'Contracts & signing', section: 'secondary', featureKey: 'proposals' },
 	{ name: 'Invoices', type: ['header', 'footer', 'drawer'], to: '/invoices', icon: 'i-heroicons-document-text', color: 'bg-emerald-500', description: 'Billing & payments', section: 'primary', featureKey: 'invoices' },
 	{ name: 'Marketing', type: ['header', 'footer', 'toolbar', 'drawer'], to: '/marketing', icon: 'i-lucide-bar-chart-3', color: 'bg-gradient-to-br from-blue-500 to-cyan-500', description: 'Campaigns & insights', section: 'primary', featureKey: 'email_campaigns' },
 	// ── More (sidebar bottom — subtle "More" divider) ──

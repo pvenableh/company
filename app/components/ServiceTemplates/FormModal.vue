@@ -31,7 +31,7 @@ const props = defineProps<{
 const emit = defineEmits<{
 	created: [t: ServiceTemplate];
 	updated: [t: ServiceTemplate];
-	deleted: [id: string];
+	deleted: [id: string | number];
 }>();
 
 const isOpen = defineModel<boolean>({ default: false });

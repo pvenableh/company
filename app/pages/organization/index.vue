@@ -2,6 +2,7 @@
 useHead({ title: 'Organization | Earnest' });
 
 import { ROLE_METADATA } from '~~/shared/permissions';
+import { planSupportsWhitelabel } from '~~/shared/branding';
 
 const organizationItems = useDirectusItems('organizations');
 const orgUserJunction = useDirectusItems('organizations_directus_users');
@@ -234,6 +235,31 @@ const saveBrand = async () => {
 	}
 };
 
+
+// --- Whitelabel toggle ---
+const whitelabelSupported = computed(() => planSupportsWhitelabel(org.value?.plan));
+const savingWhitelabel = ref(false);
+
+const toggleWhitelabel = async (next) => {
+	if (!org.value?.id || savingWhitelabel.value) return;
+	if (!whitelabelSupported.value) return;
+	savingWhitelabel.value = true;
+	try {
+		await organizationItems.update(org.value.id, { whitelabel: !!next });
+		org.value = { ...org.value, whitelabel: !!next };
+		toast.add({
+			title: next ? 'Branding hidden' : 'Branding restored',
+			description: next ? '"Powered by Earnest." is hidden on client documents.' : '"Powered by Earnest." now shows on client documents.',
+			color: 'green',
+		});
+		await fetchOrganizationDetails();
+	} catch (error) {
+		console.error('Whitelabel toggle failed:', error);
+		toast.add({ title: 'Error', description: error?.data?.message || error?.message || 'Failed to update branding', color: 'red' });
+	} finally {
+		savingWhitelabel.value = false;
+	}
+};
 
 // --- Archive / Restore Organization ---
 const showArchiveModal = ref(false);
@@ -529,9 +555,9 @@ const ORG_DETAIL_FIELDS = [
 	'industry.name', 'industry.class', 'brand_color', 'email', 'emails',
 	'date_created', 'origin_date', 'icon', 'active', 'brand_direction',
 	'goals', 'target_audience', 'location', 'default_hourly_rate',
-	'archived_at',
+	'archived_at', 'plan', 'whitelabel',
 ];
-const ORG_BASIC_FIELDS = ['id', 'name', 'logo', 'icon', 'active', 'date_created', 'website', 'phone', 'brand_color', 'brand_direction', 'goals', 'target_audience', 'location', 'notes', 'archived_at'];
+const ORG_BASIC_FIELDS = ['id', 'name', 'logo', 'icon', 'active', 'date_created', 'website', 'phone', 'brand_color', 'brand_direction', 'goals', 'target_audience', 'location', 'notes', 'archived_at', 'plan', 'whitelabel'];
 
 const fetchOrganizationData = async () => {
 	if (!selectedOrg.value) return;
@@ -1048,6 +1074,31 @@ watch(searchEmail, (val) => {
 										</div>
 									</div>
 								</UCard>
+							<!-- Branding (whitelabel) -->
+								<UCard v-if="canManageOrg">
+									<template #header>
+										<h3 class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Branding</h3>
+									</template>
+									<div class="space-y-3 text-sm">
+										<div class="flex items-start justify-between gap-3">
+											<div class="flex-1 min-w-0">
+												<p class="font-medium text-sm">Hide "Powered by Earnest."</p>
+												<p class="text-xs text-muted-foreground mt-0.5">
+													Removes the badge from client-facing proposals, contracts, and invoices.
+												</p>
+												<p v-if="!whitelabelSupported" class="text-[11px] text-amber-600 dark:text-amber-400 mt-1">
+													Upgrade to Studio, Agency, or Enterprise to remove this badge.
+												</p>
+											</div>
+											<UToggle
+												:model-value="!!org.whitelabel"
+												:disabled="!whitelabelSupported || savingWhitelabel"
+												@update:model-value="toggleWhitelabel"
+											/>
+										</div>
+									</div>
+								</UCard>
+
 							<!-- Subscription & Plan -->
 								<UCard v-if="canManageOrg">
 									<template #header>

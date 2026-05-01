@@ -1,5 +1,9 @@
+<script setup lang="ts">
+const props = withDefaults(defineProps<{ hidden?: boolean }>(), { hidden: false });
+</script>
+
 <template>
-	<footer class="doc__footer">
+	<footer v-if="!hidden" class="doc__footer">
 		<a
 			href="https://earnest.guru"
 			target="_blank"

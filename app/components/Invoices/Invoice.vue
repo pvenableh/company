@@ -1,4 +1,6 @@
 <script setup>
+import { shouldHideEarnestFooter } from '~~/shared/branding';
+
 const props = defineProps({
 	invoice: {
 		type: Object,
@@ -6,6 +8,11 @@ const props = defineProps({
 	},
 });
 const config = useRuntimeConfig();
+
+const hideFooter = computed(() => {
+	const seller = props.invoice?.bill_to;
+	return shouldHideEarnestFooter({ whitelabel: seller?.whitelabel, plan: seller?.plan });
+});
 
 const formatNumber = (value) => {
 	return new Intl.NumberFormat('en-US', {
@@ -111,6 +118,7 @@ const sellerLogoUrl = computed(() => {
 					<p class="text-[12px]">${{ formatNumber(invoice.total_amount) }}</p>
 				</div>
 			</div>
+			<DocumentsDocumentFooter :hidden="hideFooter" />
 		</div>
 	</div>
 </template>

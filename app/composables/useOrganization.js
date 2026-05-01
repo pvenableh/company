@@ -71,7 +71,7 @@ export function useOrganization() {
 						users: { directus_users_id: { _eq: user.value.id } },
 						active: { _neq: false },
 					},
-					fields: ['id', 'name', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'default_hourly_rate', 'email', 'phone', 'address', 'archived_at'],
+					fields: ['id', 'name', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'default_hourly_rate', 'email', 'phone', 'address', 'archived_at', 'whitelabel'],
 				}),
 				membershipItems.list({
 					filter: {
@@ -100,7 +100,7 @@ export function useOrganization() {
 							id: { _in: membershipOnlyOrgIds },
 							active: { _neq: false },
 						},
-						fields: ['id', 'name', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'default_hourly_rate', 'email', 'phone', 'address', 'archived_at'],
+						fields: ['id', 'name', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'default_hourly_rate', 'email', 'phone', 'address', 'archived_at', 'whitelabel'],
 					});
 				} catch {
 					// Continue if membership-only orgs can't be fetched
@@ -151,6 +151,7 @@ export function useOrganization() {
 					phone: org.phone ?? null,
 					address: org.address ?? null,
 					archived_at: org.archived_at ?? null,
+					whitelabel: org.whitelabel ?? false,
 					ticketsCount: tc,
 					projectsCount: pc,
 					totalActivity: tc + pc,

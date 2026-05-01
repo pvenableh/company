@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { shouldHideEarnestFooter } from '~~/shared/branding';
+
 definePageMeta({ middleware: ['auth'] });
 useHead({ title: 'Proposal Preview | Earnest' });
 
@@ -15,12 +17,35 @@ onMounted(async () => {
 				'id', 'title', 'date_sent', 'valid_until', 'total_value', 'proposal_status', 'notes', 'blocks',
 				'organization.id', 'organization.name', 'organization.logo',
 				'organization.address', 'organization.phone', 'organization.email', 'organization.website',
+				'organization.plan', 'organization.whitelabel',
 				'contact.id', 'contact.first_name', 'contact.last_name', 'contact.email', 'contact.company',
 			],
 		});
 	} finally {
 		loading.value = false;
 	}
+});
+
+const hideFooter = computed(() => shouldHideEarnestFooter({
+	whitelabel: proposal.value?.organization?.whitelabel,
+	plan: proposal.value?.organization?.plan,
+}));
+
+const config = useRuntimeConfig();
+
+const coverContext = computed(() => {
+	const o: any = proposal.value?.organization;
+	const logo = o?.logo;
+	const logoId = typeof logo === 'string' ? logo : logo?.id;
+	return {
+		logoUrl: logoId ? `${config.public.directusUrl}/assets/${logoId}?key=medium-contain` : null,
+		title: proposal.value?.title || null,
+		recipient: recipient.value?.name || null,
+		dateSent: proposal.value?.date_sent || proposal.value?.date_created || null,
+		dateLabel: 'Sent',
+		expiresAt: proposal.value?.valid_until || null,
+		expiresLabel: 'Valid until',
+	};
 });
 
 const seller = computed(() => {
@@ -92,7 +117,7 @@ function formatTotal(n: number | null | undefined) {
 
 				<!-- Blocks -->
 				<div v-if="hasBlocks" class="mt-8">
-					<DocumentsBlockRenderer :blocks="proposal.blocks" />
+					<DocumentsBlockRenderer :blocks="proposal.blocks" :cover="coverContext" />
 				</div>
 
 				<!-- Legacy notes fallback -->
@@ -102,7 +127,7 @@ function formatTotal(n: number | null | undefined) {
 					This proposal has no content yet.
 				</div>
 
-				<DocumentsDocumentFooter />
+				<DocumentsDocumentFooter :hidden="hideFooter" />
 			</div>
 		</div>
 	</div>
