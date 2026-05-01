@@ -25,6 +25,49 @@ const stageUpdating = ref(false);
 const showFormModal = ref(false);
 const showConversionModal = ref(false);
 const showLostReasonModal = ref(false);
+const showDraftProposalModal = ref(false);
+const draftProposal = ref<any>(null);
+const drafting = ref(false);
+
+async function generateDraft() {
+	if (!lead.value?.id || drafting.value) return;
+	drafting.value = true;
+	try {
+		const result = await $fetch<any>(`/api/ai/draft-proposal/${lead.value.id}`, { method: 'POST' });
+		draftProposal.value = {
+			...result,
+			lead: lead.value.id,
+			organization: lead.value.organization?.id || lead.value.organization,
+			contact: lead.value.related_contact?.id || lead.value.related_contact || null,
+			proposal_status: 'draft',
+		};
+		showDraftProposalModal.value = true;
+		if (result.suggested_template_name) {
+			toast.add({
+				title: 'Draft ready',
+				description: `Starting from template: ${result.suggested_template_name}`,
+				color: 'green',
+			});
+		} else {
+			toast.add({ title: 'Draft ready', color: 'green' });
+		}
+	} catch (err: any) {
+		console.error('[draft-proposal]', err);
+		toast.add({
+			title: 'Draft failed',
+			description: err?.data?.statusMessage || err?.message || 'Try again in a moment.',
+			color: 'red',
+		});
+	} finally {
+		drafting.value = false;
+	}
+}
+
+function onDraftProposalCreated(created: any) {
+	draftProposal.value = null;
+	showDraftProposalModal.value = false;
+	if (created?.id) navigateTo(`/proposals/${created.id}`);
+}
 
 // Activity form
 const showActivityForm = ref(false);
@@ -268,6 +311,15 @@ onUnmounted(() => clearEntity());
 						</UiActionButton>
 						<UiActionButton icon="lucide:video" variant="primary" @click="showMeetingModal = true" hide-label="sm">
 							Meeting
+						</UiActionButton>
+						<UiActionButton
+							icon="lucide:sparkles"
+							variant="primary"
+							:loading="drafting"
+							hide-label="sm"
+							@click="generateDraft"
+						>
+							AI Draft
 						</UiActionButton>
 						<NuxtLink :to="`/proposals?new=1&lead=${lead.id}`">
 							<UiActionButton icon="lucide:file-plus">
@@ -582,6 +634,14 @@ onUnmounted(() => clearEntity());
 				:lead-id="lead?.id"
 				:lead-data="lead"
 				@created="handleMeetingCreated"
+			/>
+
+			<!-- AI-drafted proposal: pre-filled, user reviews + saves -->
+			<ProposalsFormModal
+				v-model="showDraftProposalModal"
+				:proposal="draftProposal"
+				:lead-id="lead?.id"
+				@created="onDraftProposalCreated"
 			/>
 		</template>
 
