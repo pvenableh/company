@@ -72,6 +72,8 @@ const tokenModalVisible = tokenModalOpen;
 // Resolve layout component based on current mode
 const activeLayoutComponent = computed(() => {
 	switch (currentMode.value) {
+		case 'focus':
+			return resolveComponent('LayoutModesFocusLayout');
 		case 'tabs':
 			return resolveComponent('LayoutModesTabsLayout');
 		case 'home':

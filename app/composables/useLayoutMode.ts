@@ -1,21 +1,25 @@
 /**
  * Layout Mode System for Earnest.
  *
- * Three switchable navigation layouts:
- *   1. 'spaces'  — macOS-style 3-space sidebar + inspector panel (default)
- *   2. 'tabs'    — iPadOS-style 5-tab bar + contextual panel
- *   3. 'home'    — Apple TV-style grid home + breadcrumb drill-down
+ * User-selectable navigation layouts:
+ *   1. 'spaces' — macOS-style sidebar + inspector panel (default)
+ *   2. 'focus'  — Spark/Superhuman-style unified inbox + reading pane
+ *
+ * Hidden modes (kept in source for revival, not shown in picker):
+ *   - 'tabs' — iPadOS-style 5-tab bar + contextual panel
+ *   - 'home' — Apple TV-style grid home + breadcrumb drill-down
  *
  * Persists to localStorage + Directus user profile.
  */
 
-export type LayoutMode = 'spaces' | 'tabs' | 'home';
+export type LayoutMode = 'spaces' | 'focus' | 'tabs' | 'home';
 
 export interface LayoutModeDefinition {
 	id: LayoutMode;
 	name: string;
 	description: string;
 	icon: string;
+	hidden?: boolean;
 }
 
 const LAYOUT_MODES: LayoutModeDefinition[] = [
@@ -26,16 +30,24 @@ const LAYOUT_MODES: LayoutModeDefinition[] = [
 		icon: 'i-lucide-panel-left',
 	},
 	{
+		id: 'focus',
+		name: 'Focus',
+		description: 'Unified inbox — one thing at a time, Spark-style',
+		icon: 'i-lucide-inbox',
+	},
+	{
 		id: 'tabs',
 		name: 'Tabs',
 		description: 'Five top tabs for instant domain switching',
 		icon: 'i-lucide-layout-grid',
+		hidden: true,
 	},
 	{
 		id: 'home',
 		name: 'Home',
 		description: 'Card grid with drill-down navigation',
 		icon: 'i-lucide-layout-dashboard',
+		hidden: true,
 	},
 ];
 
@@ -64,8 +76,11 @@ export function useLayoutMode() {
 		}
 	};
 
+	const visibleModes = LAYOUT_MODES.filter((m) => !m.hidden);
+
 	return {
 		modes: LAYOUT_MODES,
+		visibleModes,
 		currentMode: readonly(currentMode),
 		setMode,
 		initLayoutMode,

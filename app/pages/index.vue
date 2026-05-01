@@ -172,7 +172,10 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 
 <template>
 	<NuxtLayout :name="layout">
-	<div class="min-h-screen t-bg t-text">
+	<!-- Focus mode: streamlined Spark/Superhuman-style inbox -->
+	<LayoutFocusInbox v-if="currentMode === 'focus'" />
+
+	<div v-else class="min-h-screen t-bg t-text">
 		<!-- Action Board: shown when user IS logged in -->
 		<div v-if="user" class="min-h-screen bg-background">
 			<div class="max-w-screen-xl mx-auto px-4 pb-8 sm:px-6 lg:px-8 space-y-6">

@@ -5,9 +5,9 @@
 			<h4 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Layout</h4>
 			<p class="text-[10px] text-muted-foreground -mt-1">Choose how you navigate Earnest</p>
 
-			<div class="grid grid-cols-3 gap-2.5">
+			<div class="grid grid-cols-2 gap-2.5">
 				<button
-					v-for="mode in modes"
+					v-for="mode in visibleModes"
 					:key="mode.id"
 					@click="setMode(mode.id)"
 					class="group relative flex flex-col items-center gap-2 rounded-xl border px-3 py-4 text-center transition-all duration-200 ios-press"
@@ -236,7 +236,7 @@
 <script setup lang="ts">
 const { themes, styles, monoPresets, currentTheme, currentStyle, monoHue, setTheme, setStyle, setMonoHue } = useTheme();
 const { themes: timelineThemes, currentThemeId: currentTimelineThemeId, setTheme: setTimelineTheme } = useTimelineTheme();
-const { modes, currentMode, setMode } = useLayoutMode();
+const { visibleModes, currentMode, setMode } = useLayoutMode();
 
 const showAdvancedColors = ref(false);
 
