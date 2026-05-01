@@ -25,32 +25,32 @@ const stageUpdating = ref(false);
 const showFormModal = ref(false);
 const showConversionModal = ref(false);
 const showLostReasonModal = ref(false);
-const showDraftProposalModal = ref(false);
-const draftProposal = ref<any>(null);
 const drafting = ref(false);
+const { createProposal } = useProposals();
 
 async function generateDraft() {
 	if (!lead.value?.id || drafting.value) return;
 	drafting.value = true;
 	try {
-		const result = await $fetch<any>(`/api/ai/draft-proposal/${lead.value.id}`, { method: 'POST' });
-		draftProposal.value = {
-			...result,
+		const draft = await $fetch<any>(`/api/ai/draft-proposal/${lead.value.id}`, { method: 'POST' });
+		const created = await createProposal({
+			title: draft.title,
+			total_value: draft.total_value,
+			valid_until: draft.valid_until,
+			blocks: draft.blocks,
 			lead: lead.value.id,
 			organization: lead.value.organization?.id || lead.value.organization,
 			contact: lead.value.related_contact?.id || lead.value.related_contact || null,
 			proposal_status: 'draft',
-		};
-		showDraftProposalModal.value = true;
-		if (result.suggested_template_name) {
-			toast.add({
-				title: 'Draft ready',
-				description: `Starting from template: ${result.suggested_template_name}`,
-				color: 'green',
-			});
-		} else {
-			toast.add({ title: 'Draft ready', color: 'green' });
-		}
+		});
+		toast.add({
+			title: 'Draft ready',
+			description: draft.suggested_template_name
+				? `Starting from template: ${draft.suggested_template_name}`
+				: 'Review and edit on the proposal page.',
+			color: 'green',
+		});
+		if (created?.id) navigateTo(`/proposals/${created.id}`);
 	} catch (err: any) {
 		console.error('[draft-proposal]', err);
 		toast.add({
@@ -61,12 +61,6 @@ async function generateDraft() {
 	} finally {
 		drafting.value = false;
 	}
-}
-
-function onDraftProposalCreated(created: any) {
-	draftProposal.value = null;
-	showDraftProposalModal.value = false;
-	if (created?.id) navigateTo(`/proposals/${created.id}`);
 }
 
 // Activity form
@@ -636,13 +630,6 @@ onUnmounted(() => clearEntity());
 				@created="handleMeetingCreated"
 			/>
 
-			<!-- AI-drafted proposal: pre-filled, user reviews + saves -->
-			<ProposalsFormModal
-				v-model="showDraftProposalModal"
-				:proposal="draftProposal"
-				:lead-id="lead?.id"
-				@created="onDraftProposalCreated"
-			/>
 		</template>
 
 		<!-- Contextual AI Sidebar -->

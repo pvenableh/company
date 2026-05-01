@@ -14,16 +14,43 @@ const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageConte
 const proposal = ref<any>(null);
 const loading = ref(true);
 const showEditModal = ref(false);
+const proposalItems = useDirectusItems('proposals');
+const toast = useToast();
+
+const blocks = ref<any[]>([]);
+const blocksDirty = ref(false);
+const savingBlocks = ref(false);
 
 async function fetchData() {
 	loading.value = true;
 	try {
 		proposal.value = await getProposal(proposalId.value);
+		blocks.value = Array.isArray(proposal.value?.blocks) ? proposal.value.blocks : [];
+		blocksDirty.value = false;
 		useHead({ title: `${proposal.value?.title || 'Proposal'} | Earnest` });
 	} catch (e) {
 		console.error('Failed to load proposal:', e);
 	} finally {
 		loading.value = false;
+	}
+}
+
+function onBlocksChange(next: any[]) {
+	blocks.value = next;
+	blocksDirty.value = true;
+}
+
+async function saveBlocks() {
+	if (!proposal.value?.id || savingBlocks.value) return;
+	savingBlocks.value = true;
+	try {
+		await proposalItems.update(proposal.value.id, { blocks: blocks.value });
+		blocksDirty.value = false;
+		toast.add({ title: 'Saved', color: 'green' });
+	} catch (err: any) {
+		toast.add({ title: 'Failed to save blocks', description: err.message, color: 'red' });
+	} finally {
+		savingBlocks.value = false;
 	}
 }
 
@@ -155,11 +182,42 @@ onUnmounted(() => clearEntity());
 				</div>
 
 				<!-- Main: content -->
-				<div class="lg:col-span-2">
-					<div class="ios-card p-6">
-						<p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-3">Proposal Content</p>
-						<div v-if="proposal.notes" class="prose prose-sm dark:prose-invert max-w-none" v-html="proposal.notes" />
-						<p v-else class="text-sm text-muted-foreground">No content yet. Click Edit to add proposal details.</p>
+				<div class="lg:col-span-2 space-y-4">
+					<div class="flex items-center justify-between">
+						<p class="text-[10px] uppercase tracking-wider text-muted-foreground">Proposal Content</p>
+						<button
+							v-if="blocksDirty"
+							class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+							:disabled="savingBlocks"
+							@click="saveBlocks"
+						>
+							<UIcon
+								:name="savingBlocks ? 'lucide:loader-2' : 'lucide:save'"
+								class="w-3.5 h-3.5"
+								:class="savingBlocks ? 'animate-spin' : ''"
+							/>
+							Save changes
+						</button>
+					</div>
+
+					<DocumentsBlockComposer
+						:model-value="blocks"
+						applies-to="proposals"
+						:saving="savingBlocks"
+						@update:model-value="onBlocksChange"
+					/>
+
+					<!-- Legacy notes (only shown if non-empty AND no blocks yet) -->
+					<div
+						v-if="proposal.notes && (!blocks || blocks.length === 0)"
+						class="ios-card p-5 mt-2"
+					>
+						<p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Notes (legacy)</p>
+						<div class="prose prose-sm dark:prose-invert max-w-none" v-html="proposal.notes" />
+						<p class="text-xs text-muted-foreground mt-3">
+							This proposal was created before the blocks composer. Add blocks above to migrate to the new format —
+							your notes stay until you remove them.
+						</p>
 					</div>
 				</div>
 			</div>

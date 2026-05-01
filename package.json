@@ -109,6 +109,7 @@
 		"ioredis": "^5.10.1",
 		"jspdf": "^2.5.2",
 		"lucide-vue-next": "^0.554.0",
+		"marked": "^18.0.2",
 		"mjml": "^4.18.0",
 		"nanoid": "^5.1.6",
 		"nuxt-auth-utils": "^0.5.25",
