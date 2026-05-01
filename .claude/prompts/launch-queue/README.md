@@ -26,6 +26,7 @@ Sessions are numbered roughly by ship order. Hard dependencies are noted in each
 | 7c | [session-7c-ipv6-localhost.md](session-7c-ipv6-localhost.md) | post-launch; dev-env only |
 | 7d | [session-7d-contact-orgs-fk.md](session-7d-contact-orgs-fk.md) | post-launch; only if partner-activation UX develops friction |
 | 17 | [session-17-residual-leak-cleanup.md](session-17-residual-leak-cleanup.md) | post-launch hardening; FK-walk-create server routes for comments/contact_connections/team_goals/ai_chat_messages, transitive uuid cleanup, video_meetings.organization orphan field |
+| 18 | [session-18-document-system-finish.md](session-18-document-system-finish.md) | finishes the document-system rollout: footer on invoices+contracts, whitelabel toggle, cover-page styling, contract list/preview/signing flow, polish (UNIQUE on templates, drag-reorder, AI block_id matching, v-html sanitization) |
 
 Sessions 1–3 are upstream of this queue and are not reproduced here. Per the handoff note, "Sessions 2 and 3 can run in parallel if the user drives OAuth console updates while Stripe code work happens." If you need those prompts back, they would have been in an earlier planning conversation — check the Mac's memory files or past Claude sessions.
 
