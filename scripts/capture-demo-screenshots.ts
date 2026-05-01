@@ -22,7 +22,7 @@
  * See scripts/CAPTURE-SCREENSHOTS.md for the full checklist.
  */
 import 'dotenv/config';
-import { mkdir, rm, copyFile } from 'node:fs/promises';
+import { mkdir, copyFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -471,12 +471,12 @@ async function captureOne(browser: Browser, shot: Shot): Promise<void> {
 async function main(): Promise<void> {
 	console.log(`Capturing demo screenshots`);
 	console.log(`  app       : ${APP_URL}`);
-	console.log(`  dated     : ${DATED_DIR}`);
+	console.log(`  archive   : ${DATED_DIR}`);
 	console.log(`  latest    : ${LATEST_DIR}`);
 
-	// Wipe & recreate the dated folder so re-runs within the same month
-	// overwrite cleanly. latest/ is overwritten file-by-file.
-	await rm(DATED_DIR, { recursive: true, force: true });
+	// Per-run archive folder under YYYY-MM/ — each run is its own snapshot
+	// so we never lose a prior capture. latest/ is overwritten file-by-file
+	// and is what feature pages read from.
 	await mkdir(DATED_DIR, { recursive: true });
 	await mkdir(LATEST_DIR, { recursive: true });
 
