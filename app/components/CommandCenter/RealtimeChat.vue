@@ -135,10 +135,13 @@ const sendMessage = async () => {
 	newMessage.value = '';
 
 	try {
-		await messageItems.create({
-			text: savedContent,
-			channel: selectedChannel.value,
-			status: 'published',
+		await $fetch('/api/messages', {
+			method: 'POST',
+			body: {
+				text: savedContent,
+				channel: selectedChannel.value,
+				status: 'published',
+			},
 		});
 		await nextTick();
 		scrollToBottom();

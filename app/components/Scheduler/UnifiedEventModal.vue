@@ -242,7 +242,10 @@ const handleSubmit = async () => {
 				toast.add({ title: 'Appointment updated', color: 'green' });
 				emit('saved');
 			} else {
-				const created = await appointmentItems.create(appointmentData);
+				const created = await $fetch<{ id: string }>('/api/appointments', {
+					method: 'POST',
+					body: appointmentData,
+				});
 
 				// Link team members as attendees
 				if (form.members.length > 0) {

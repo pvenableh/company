@@ -577,6 +577,8 @@ export const useAIProductivityEngine = () => {
 			const yesterday = new Date();
 			yesterday.setDate(yesterday.getDate() - 1);
 
+			// Tenant-scope via channel FK: messages collection has no `organization` column,
+			// and the Client policy attached to Client Manager has a null read filter.
 			const recentMessages = await messageItems.list({
 				fields: ['id', 'channel.id', 'channel.name', 'date_created', 'user_created.id'],
 				filter: {
@@ -584,6 +586,7 @@ export const useAIProductivityEngine = () => {
 						{ status: { _eq: 'published' } },
 						{ date_created: { _gte: yesterday.toISOString() } },
 						{ user_created: { _neq: '$CURRENT_USER' } },
+						{ channel: { _in: channels.map((c: any) => c.id) } },
 					],
 				},
 				sort: ['-date_created'],
@@ -675,10 +678,13 @@ export const useAIProductivityEngine = () => {
 			}
 
 			// Check scheduled posts
+			// social_posts has no client/org FK; scope to the current user since
+			// non-admin policies grant no row-level read on this collection anyway.
 			const posts = await socialPostItems.list({
 				fields: ['id', 'post_status', 'scheduled_at', 'platforms', 'caption'],
 				filter: {
 					post_status: { _in: ['scheduled', 'draft', 'failed'] },
+					user_created: { _eq: '$CURRENT_USER' },
 				},
 				sort: ['scheduled_at'],
 				limit: 50,
@@ -771,6 +777,8 @@ export const useAIProductivityEngine = () => {
 			const endOfTomorrow = new Date(tomorrow);
 			endOfTomorrow.setHours(23, 59, 59, 999);
 
+			// appointments has no `organization` FK and the Client policy attached
+			// to Client Manager has a null read filter — scope to the current user.
 			const appointments = await appointmentItems.list({
 				fields: ['id', 'title', 'start_time', 'end_time', 'status'],
 				filter: {
@@ -778,6 +786,7 @@ export const useAIProductivityEngine = () => {
 						{ start_time: { _gte: t.toISOString() } },
 						{ start_time: { _lte: endOfTomorrow.toISOString() } },
 						{ status: { _neq: 'cancelled' } },
+						{ user_created: { _eq: '$CURRENT_USER' } },
 					],
 				},
 				sort: ['start_time'],
