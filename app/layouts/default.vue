@@ -18,7 +18,7 @@
 
 		<!-- AI Tray (shared across all modes) -->
 		<ClientOnly>
-			<CommandCenterAITray :is-open="aiTrayOpen" @close="aiTrayOpen = false" />
+			<CommandCenterAITray :is-open="aiTrayOpen" :initial-prompt="aiTrayInitialPrompt" @close="closeAITray" />
 		</ClientOnly>
 
 		<!-- Time Tracker Modal (global, triggered from anywhere) -->
@@ -51,18 +51,18 @@
 <script setup lang="ts">
 import { timeTrackerModalOpen } from '~/composables/useTimeTrackerModal';
 import { tokenModalOpen } from '~/composables/useTokenModal';
+import { aiTrayOpen, aiTrayInitialPrompt, openAITray, closeAITray } from '~/composables/useAITray';
 
 const { user } = useDirectusAuth();
 const { currentMode } = useLayoutMode();
 
-const aiTrayOpen = ref(false);
 const { isOnEntityPage, openSidebar: openEntitySidebar } = useEntityPageContext();
 
 const handleOpenAI = () => {
   if (isOnEntityPage.value) {
     openEntitySidebar();
   } else {
-    aiTrayOpen.value = true;
+    openAITray();
   }
 };
 const spotlightOpen = ref(false);
