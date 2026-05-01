@@ -37,6 +37,11 @@ import {
 	generatePassword,
 	pingDirectus,
 	randomToken,
+	seedDocumentBlocks,
+	seedServiceTemplates,
+	seedDemoProposal,
+	seedDemoContracts,
+	seedTodayAppointments,
 } from './lib/demo-seed';
 
 const DEMO_ORG_NAME = 'Earnest Demo — Solo';
@@ -656,7 +661,7 @@ async function main() {
 	await backdateContacts(Object.values(contactIds));
 
 	console.log('\n--- leads ---');
-	await seedLeads(org.id, contactIds, clientIds);
+	const leadIds = await seedLeads(org.id, contactIds, clientIds);
 
 	console.log('\n--- project ---');
 	const projectId = await seedProject(org.id, clientIds);
@@ -670,6 +675,71 @@ async function main() {
 
 	console.log('\n--- marketing plans (dashboard + campaign) ---');
 	await seedMarketingPlans(org.id);
+
+	console.log('\n--- document_blocks library ---');
+	const blockIds = await seedDocumentBlocks(org.id);
+
+	console.log('\n--- service_templates library ---');
+	await seedServiceTemplates(org.id);
+
+	console.log('\n--- proposal (composed blocks) ---');
+	// Lead 0 = Atlas Fintech (contacted, in active pipeline) — natural fit
+	// for an in-flight proposal screenshot.
+	const proposalId = await seedDemoProposal({
+		orgId: org.id,
+		leadId: leadIds[0] ?? null,
+		contactId: contactIds['julia@atlas.example'] ?? null,
+		blockIds,
+		title: 'Atlas Fintech — Marketing Site Redesign',
+		totalValue: 42_000,
+		intro: {
+			heading: 'Marketing Site Redesign',
+			content:
+				'Prepared for **Atlas Fintech** by **Earnest Demo**.\n\nThis proposal covers strategy, design, and build for an 8-page marketing site over an estimated 8-week engagement.',
+		},
+	});
+
+	console.log('\n--- contracts ---');
+	// Signed contract on the won lead (Helios) — narrative matches "Contracts
+	// signed." in the lead notes.
+	await seedDemoContracts({
+		orgId: org.id,
+		leadId: leadIds[1] ?? null,
+		contactId: contactIds['rae.nakamura@example.com'] ?? null,
+		proposalId: null,
+		blockIds,
+		contracts: [
+			{
+				title: 'Helios Studio — Master Services Agreement',
+				contract_status: 'signed',
+				total_value: 31_500,
+				signer: { name: 'Rae Nakamura', email: 'rae.nakamura@example.com' },
+			},
+		],
+	});
+	// Unsigned contract on the active Atlas lead, linked to the proposal
+	// above — completes the proposal → contract flow visible in the demo.
+	await seedDemoContracts({
+		orgId: org.id,
+		leadId: leadIds[0] ?? null,
+		contactId: contactIds['julia@atlas.example'] ?? null,
+		proposalId,
+		blockIds,
+		contracts: [
+			{
+				title: 'Atlas Fintech — Statement of Work',
+				contract_status: 'sent',
+				total_value: 42_000,
+			},
+		],
+	});
+
+	console.log("\n--- today's appointments ---");
+	await seedTodayAppointments({
+		userId: user.id,
+		contactId: contactIds['julia@atlas.example'] ?? null,
+		leadId: leadIds[0] ?? null,
+	});
 
 	console.log('\n=========================================');
 	console.log('  Summary');

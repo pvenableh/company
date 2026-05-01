@@ -21,6 +21,7 @@
  *
  * See scripts/CAPTURE-SCREENSHOTS.md for the full checklist.
  */
+import 'dotenv/config';
 import { mkdir, rm, copyFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -165,6 +166,82 @@ const SHOTS: Shot[] = [
 		persona: 'solo',
 		resolveUrl: async ({ baseUrl }) => `${baseUrl}/financials`,
 	},
+	{
+		slug: 'people-dashboard',
+		viewport: 'inline',
+		persona: 'solo',
+		resolveUrl: async ({ baseUrl }) => `${baseUrl}/people`,
+	},
+	{
+		slug: 'scheduler-day',
+		viewport: 'inline',
+		persona: 'solo',
+		resolveUrl: async ({ baseUrl }) => `${baseUrl}/scheduler`,
+	},
+	{
+		slug: 'proposals-composer',
+		viewport: 'inline',
+		persona: 'solo',
+		// Composer is the proposal detail page. Pick the newest proposal so
+		// the seeded "Atlas Fintech" doc with composed blocks wins over any
+		// older empty proposal that may exist in the demo org.
+		resolveUrl: async (ctx) =>
+			`${ctx.baseUrl}/proposals/${await firstItemId(ctx.page, 'proposals', ctx.baseUrl, undefined, ['-date_created'])}`,
+	},
+	{
+		slug: 'proposals-preview',
+		viewport: 'inline',
+		persona: 'solo',
+		// Preview is /proposals/preview/<id> — branded client-facing view.
+		// Same newest-first ordering as the composer shot.
+		resolveUrl: async (ctx) =>
+			`${ctx.baseUrl}/proposals/preview/${await firstItemId(ctx.page, 'proposals', ctx.baseUrl, undefined, ['-date_created'])}`,
+		// Preview uses a spinner (animate-spin), not a skeleton (animate-pulse),
+		// so the global wait predicate doesn't catch it. Wait for the
+		// document body to render before shooting.
+		waitFor: async (page) => {
+			await page
+				.waitForSelector('.proposal, .document-preview, [class*="proposal"]', { timeout: 8000 })
+				.catch(() => {
+					/* fall through — capture whatever rendered */
+				});
+			await page.waitForTimeout(1000);
+		},
+	},
+	{
+		slug: 'contracts-list',
+		viewport: 'inline',
+		persona: 'solo',
+		resolveUrl: async ({ baseUrl }) => `${baseUrl}/contracts`,
+	},
+	{
+		slug: 'contracts-signed',
+		viewport: 'inline',
+		persona: 'solo',
+		// Filter for the signed contract specifically — the seed always
+		// creates one. If none exists, fall back to the first row.
+		resolveUrl: async (ctx) =>
+			`${ctx.baseUrl}/contracts/${await firstItemId(ctx.page, 'contracts', ctx.baseUrl, { contract_status: { _eq: 'signed' } })}`,
+	},
+	{
+		slug: 'ai-sidebar',
+		viewport: 'inline',
+		persona: 'solo',
+		resolveUrl: async (ctx) => `${ctx.baseUrl}${await firstDetailHref(ctx.page, '/clients', ctx.baseUrl)}`,
+		// Open the contextual AI panel after the page settles. The trigger
+		// is an "Ask Earnest" button in the client header; the sidebar state
+		// is module-level so the click flips it open.
+		waitFor: async (page) => {
+			const trigger = page.getByRole('button', { name: /ask earnest/i });
+			try {
+				await trigger.click({ timeout: 3000 });
+				// Wait for the chat panel to mount + settle.
+				await page.waitForTimeout(1500);
+			} catch {
+				/* if the button isn't present, fall through and capture without */
+			}
+		},
+	},
 
 	// ── Agency (Admin role) — shots that Member role would render empty or 403 ──
 	{
@@ -178,6 +255,28 @@ const SHOTS: Shot[] = [
 		viewport: 'inline',
 		persona: 'agency',
 		resolveUrl: async ({ baseUrl }) => `${baseUrl}/organization`,
+	},
+	{
+		slug: 'organization-branding',
+		viewport: 'inline',
+		persona: 'agency',
+		// Same /organization page — but scrolled to the Branding card so
+		// the Whitelabel toggle is in frame. The card lives mid-page; we
+		// bring it into view via #branding hash + scrollIntoView fallback.
+		resolveUrl: async ({ baseUrl }) => `${baseUrl}/organization#branding`,
+		waitFor: async (page) => {
+			await page
+				.evaluate(() => {
+					const el = Array.from(document.querySelectorAll('h2, h3')).find((h) =>
+						/branding/i.test(h.textContent ?? ''),
+					);
+					if (el) el.scrollIntoView({ behavior: 'instant', block: 'start' });
+				})
+				.catch(() => {
+					/* best effort */
+				});
+			await page.waitForTimeout(600);
+		},
 	},
 	{
 		slug: 'organization-teams',
@@ -196,6 +295,24 @@ const SHOTS: Shot[] = [
 // ─── Helpers ────────────────────────────────────────────────────────────
 
 async function firstDetailHref(page: Page, listPath: string, baseUrl: string): Promise<string> {
+	const collection = listPath.replace(/^\//, '');
+	const id = await firstItemId(page, collection, baseUrl);
+	return `${listPath}/${id}`;
+}
+
+/**
+ * Page-side fetch against `/api/directus/items` returning the first row's
+ * `id` for the given collection. Optional `filter` narrows to a specific
+ * subset (e.g. signed contracts). Used by `firstDetailHref` and any shot
+ * that needs an id on a non-list URL (preview pages, etc).
+ */
+async function firstItemId(
+	page: Page,
+	collection: string,
+	baseUrl: string,
+	filter?: Record<string, any>,
+	sort: string[] = [],
+): Promise<string> {
 	// Establish an origin for the page-side fetch so the relative URL works
 	// and the auth cookie is in scope. Use `domcontentloaded` (not
 	// `networkidle`) — the list pages keep notification long-polls open
@@ -204,38 +321,44 @@ async function firstDetailHref(page: Page, listPath: string, baseUrl: string): P
 		await page.goto(`${baseUrl}/command-center`, { waitUntil: 'domcontentloaded', timeout: 15000 });
 	}
 
-	// Hit the items endpoint via the page's authed session and grab the
-	// first row id. More deterministic than scraping the rendered list
-	// (which uses `router.push()` clicks instead of `<a href>`).
-	const collection = listPath.replace(/^\//, '');
-	const id = await page.evaluate(async (col) => {
-		try {
-			const res = await fetch(`/api/directus/items`, {
-				method: 'POST',
-				credentials: 'include',
-				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({
-					collection: col,
-					operation: 'list',
-					query: { limit: 1, fields: ['id'] },
-				}),
-			});
-			if (!res.ok) return { error: `${res.status} ${(await res.text()).slice(0, 120)}` };
-			const json = await res.json().catch(() => null);
-			// Items endpoint returns raw array; some other Directus endpoints
-			// return { data: [...] } — accept either shape.
-			const arr = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : [];
-			return { id: arr[0]?.id ?? null };
-		} catch (err) {
-			return { error: String(err) };
-		}
-	}, collection);
-	if (typeof id === 'object' && id && 'id' in id && id.id) return `${listPath}/${id.id}`;
-	if (typeof id === 'object' && id && 'error' in id) {
-		console.warn(`  ⚠ ${listPath} resolver: ${id.error}`);
-	}
+	const result = await page.evaluate(
+		async ({ col, filt, srt }) => {
+			try {
+				const res = await fetch(`/api/directus/items`, {
+					method: 'POST',
+					credentials: 'include',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({
+						collection: col,
+						operation: 'list',
+						query: {
+							limit: 1,
+							fields: ['id'],
+							...(filt ? { filter: filt } : {}),
+							...(srt && srt.length ? { sort: srt } : {}),
+						},
+					}),
+				});
+				if (!res.ok) return { error: `${res.status} ${(await res.text()).slice(0, 120)}` };
+				const json = await res.json().catch(() => null);
+				const arr = Array.isArray(json) ? json : Array.isArray(json?.data) ? json.data : [];
+				return { id: arr[0]?.id ?? null };
+			} catch (err) {
+				return { error: String(err) };
+			}
+		},
+		{ col: collection, filt: filter ?? null, srt: sort },
+	);
 
-	throw new Error(`No seeded detail rows found under ${listPath}. Re-run scripts/setup-demo-org.ts?`);
+	if (typeof result === 'object' && result && 'id' in result && result.id) {
+		return String(result.id);
+	}
+	if (typeof result === 'object' && result && 'error' in result) {
+		console.warn(`  ⚠ ${collection} resolver: ${result.error}`);
+	}
+	// Fall back to the unfiltered first row if the filter matched nothing.
+	if (filter) return firstItemId(page, collection, baseUrl);
+	throw new Error(`No seeded ${collection} rows found. Re-run scripts/setup-demo-org.ts?`);
 }
 
 const LOGIN_ENDPOINT: Record<Persona, string> = {
