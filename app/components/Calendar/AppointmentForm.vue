@@ -320,7 +320,10 @@ async function handleSubmit() {
 		if (props.appointment) {
 			await appointmentItems.update(props.appointment.id, appointmentData);
 		} else {
-			const appointment = await appointmentItems.create(appointmentData);
+			const appointment = await $fetch<{ id: string }>('/api/appointments', {
+				method: 'POST',
+				body: appointmentData,
+			});
 
 			// Create attendee relationships
 			await Promise.all(

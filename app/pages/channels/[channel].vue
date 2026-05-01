@@ -91,11 +91,13 @@ const sendMessage = async () => {
 
 	sending.value = true;
 	try {
-		await messageItems.create({
-			text: newMessage.value,
-			channel: channelId.value,
-			status: 'published',
-			user_created: user.value.id,
+		await $fetch('/api/messages', {
+			method: 'POST',
+			body: {
+				text: newMessage.value,
+				channel: channelId.value,
+				status: 'published',
+			},
 		});
 		newMessage.value = '';
 	} catch (error) {

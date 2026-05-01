@@ -102,9 +102,12 @@ async function sendMessage() {
 	sending.value = true;
 
 	try {
-		await messageItems.create({
-			content: newMessage.value.trim(),
-			channel: selectedChannel.value.id,
+		await $fetch('/api/messages', {
+			method: 'POST',
+			body: {
+				text: newMessage.value.trim(),
+				channel: selectedChannel.value.id,
+			},
 		});
 		newMessage.value = '';
 		await loadMessages();

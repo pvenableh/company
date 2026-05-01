@@ -100,12 +100,14 @@ const toggleReplies = () => {
 const sendReply = async () => {
 	if (!replyText.value?.trim()) return;
 	try {
-		await messageItems.create({
-			text: replyText.value,
-			channel: props.message.channel,
-			parent_id: props.message.id,
-			status: 'published',
-			user_created: user.value.id,
+		await $fetch('/api/messages', {
+			method: 'POST',
+			body: {
+				text: replyText.value,
+				channel: props.message.channel,
+				parent_id: props.message.id,
+				status: 'published',
+			},
 		});
 		replyText.value = '';
 		showReplyInput.value = false;
