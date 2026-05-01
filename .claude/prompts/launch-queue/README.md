@@ -10,9 +10,7 @@ If you fire one of these prompts from a device that doesn't have the Mac's memor
 
 ## Active queue
 
-| Session | File | Blocker |
-| ------- | ---- | ------- |
-| 19 | [session-19-marketing-recapture.md](session-19-marketing-recapture.md) | none — recaptures screenshots + refreshes `features.ts` + writes a real README for the marketing site |
+_(empty — see Shipped sessions below)_
 
 ## Shipped sessions
 
@@ -39,6 +37,7 @@ To recall the original brief for a shipped session: read the file in `archive/` 
 | 15 | `archive/session-15-oauth-screen-recording.md` | (commit `00ff408`) |
 | 17 | `archive/session-17-residual-leak-cleanup.md` | (residual hardening; closed in working tree) |
 | 18 | `archive/session-18-document-system-finish.md` | `project_session18_document_system.md` |
+| 21 | `archive/session-21-recapture-after-tasks-and-time-tracker-seed.md` | `project_session21_demo_recapture.md` |
 
 (Sessions 1–3 predate this queue — Stripe + OAuth setup. Sessions 16 and others without their own files were planned and executed inline within the conversation that produced subsequent sessions.)
 

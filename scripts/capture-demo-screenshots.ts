@@ -129,6 +129,23 @@ const SHOTS: Shot[] = [
 		viewport: 'hero',
 		persona: 'solo',
 		resolveUrl: async ({ baseUrl }) => `${baseUrl}/command-center`,
+		// Project Timeline lanes start collapsed in UnifiedGantt — for the
+		// marketing shot we want one project expanded so events/tasks are
+		// visible underneath. Synthetic .click() avoids the auto-scroll
+		// Playwright's pointer-click triggers; scrollTo(0,0) puts the page
+		// header back in frame after the row toggle reflows the grid.
+		waitFor: async (page) => {
+			const toggle = page.locator('.gantt__toggle').first();
+			try {
+				await toggle.waitFor({ state: 'visible', timeout: 5000 });
+				await toggle.evaluate((el: HTMLElement) => el.click());
+				await page.waitForTimeout(800);
+				await page.evaluate(() => window.scrollTo(0, 0));
+				await page.waitForTimeout(300);
+			} catch {
+				/* gantt didn't render — fall through, capture as-is */
+			}
+		},
 	},
 	{
 		slug: 'leads-pipeline',
@@ -177,6 +194,23 @@ const SHOTS: Shot[] = [
 		viewport: 'inline',
 		persona: 'solo',
 		resolveUrl: async ({ baseUrl }) => `${baseUrl}/scheduler`,
+	},
+	{
+		slug: 'quick-tasks',
+		viewport: 'inline',
+		persona: 'solo',
+		resolveUrl: async ({ baseUrl }) => `${baseUrl}/tasks`,
+	},
+	{
+		slug: 'time-tracker',
+		viewport: 'inline',
+		persona: 'solo',
+		resolveUrl: async ({ baseUrl }) => `${baseUrl}/time-tracker`,
+		// Realtime subscription on time_entries can lag the initial render
+		// of the "This Week" tab — give it a beat before the shutter fires.
+		waitFor: async (page) => {
+			await page.waitForTimeout(1500);
+		},
 	},
 	{
 		slug: 'proposals-composer',

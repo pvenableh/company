@@ -27,6 +27,7 @@ import { DEFAULT_ROLE_PERMISSIONS } from '../shared/permissions';
 import type { PermissionMatrix } from '../shared/permissions';
 import {
 	assertDirectusToken,
+	assignTicketsToUser,
 	backdateContacts,
 	directusRequest,
 	ensureMembership,
@@ -42,6 +43,11 @@ import {
 	seedDemoProposal,
 	seedDemoContracts,
 	seedTodayAppointments,
+	seedDemoServices,
+	seedDemoProjects,
+	seedTimeEntries,
+	type ProjectSeed,
+	type TimeEntrySeed,
 } from './lib/demo-seed';
 
 const DEMO_ORG_NAME = 'Earnest Demo — Solo';
@@ -288,26 +294,70 @@ async function seedLeads(
 	return created;
 }
 
-async function seedProject(
-	orgId: string,
-	clientIds: Record<string, string>,
-): Promise<string | null> {
-	const row = await findOrCreate<any>(
-		'projects',
-		{ _and: [{ organization: { _eq: orgId } }, { title: { _eq: 'Helios West Hotel Launch' } }] },
+/**
+ * Build the solo demo's project list. Three projects with mixed statuses
+ * + a spread of event types (Design / Content / Timeline / Hours / Financial)
+ * so the Project Timeline gantt on /command-center renders the full
+ * Clean-Gantt color palette (and the bars vary in opacity by status).
+ *
+ * Helios anchors most of the workspace narrative — kept as the primary
+ * In-Progress project. Meridian closes a recently-completed engagement so
+ * the gantt shows a faded/completed lane. Driftwood is a Scheduled lane
+ * — the rebrand teed up by the won "rae.nakamura" lead.
+ */
+function buildSoloProjectSeeds(clientIds: Record<string, string>): ProjectSeed[] {
+	return [
 		{
+			key: 'helios-launch',
 			title: 'Helios West Hotel Launch',
 			description: 'Brand rollout + launch campaign.',
-			organization: orgId,
-			client: clientIds['helios-studio'],
+			clientId: clientIds['helios-studio'] ?? null,
+			serviceName: 'Brand & Identity',
 			status: 'In Progress',
-			contract_value: 140_000,
-			template: 'branding-project',
-			start_date: new Date().toISOString().slice(0, 10),
+			contractValue: 140_000,
+			startDayOffset: -45,
+			events: [
+				{ title: 'Discovery + stakeholder interviews', type: 'General', status: 'Completed', dayOffset: -42, durationDays: 5 },
+				{ title: 'Brand system — v1 concepts', type: 'Design', status: 'Completed', dayOffset: -28, durationDays: 10 },
+				{ title: 'Launch campaign content', type: 'Content', status: 'Active', dayOffset: -7, durationDays: 14 },
+				{ title: 'Phase 1 invoice', type: 'Financial', status: 'Completed', dayOffset: -10, durationDays: 1, is_milestone: true },
+				{ title: 'Opening ceremony', type: 'Timeline', status: 'Scheduled', dayOffset: 21, is_milestone: true },
+			],
 		},
-		`project "Helios West Hotel Launch"`,
-	);
-	return row?.id ?? null;
+		{
+			key: 'meridian-refresh',
+			title: 'Meridian Site Refresh',
+			description: 'Marketing site redesign with updated practice-area templates.',
+			clientId: clientIds['meridian-law'] ?? null,
+			serviceName: 'Web & Digital',
+			status: 'Completed',
+			contractValue: 38_000,
+			startDayOffset: -90,
+			events: [
+				{ title: 'Kickoff + content inventory', type: 'General', status: 'Completed', dayOffset: -82, durationDays: 4 },
+				{ title: 'Practice-page wireframes', type: 'Design', status: 'Completed', dayOffset: -65, durationDays: 12 },
+				{ title: 'Build + content load', type: 'Content', status: 'Completed', dayOffset: -40, durationDays: 18 },
+				{ title: 'Site launch', type: 'Timeline', status: 'Completed', dayOffset: -15, is_milestone: true },
+			],
+		},
+		{
+			key: 'driftwood-rebrand',
+			title: 'Driftwood Roasters Rebrand',
+			description: 'Wordmark + packaging system for the new flagship line.',
+			clientId: clientIds['helios-studio'] ?? null, // narrative bridge — close enough for demo
+			serviceName: 'Brand & Identity',
+			status: 'Scheduled',
+			contractValue: 31_500,
+			startDayOffset: 14,
+			events: [
+				{ title: 'Discovery week', type: 'General', status: 'Scheduled', dayOffset: 14, durationDays: 5 },
+				{ title: 'Identity directions', type: 'Design', status: 'Scheduled', dayOffset: 25, durationDays: 10 },
+				{ title: 'Packaging concepts', type: 'Design', status: 'Scheduled', dayOffset: 40, durationDays: 14 },
+				{ title: 'Production hours allocation', type: 'Hours', status: 'Scheduled', dayOffset: 55, durationDays: 20 },
+				{ title: 'Launch deliverables due', type: 'Timeline', status: 'Scheduled', dayOffset: 78, is_milestone: true },
+			],
+		},
+	];
 }
 
 async function seedProduct(): Promise<string | null> {
@@ -584,38 +634,116 @@ async function seedMarketingPlans(orgId: string): Promise<void> {
 
 async function seedQuickTasks(
 	orgId: string,
-	projectId: string | null,
+	userId: string,
+	projectIds: Record<string, string>,
 	clientIds: Record<string, string>,
 ): Promise<void> {
+	// Mix of schedules + statuses + priorities so the /tasks page shows a
+	// believable mid-week working state: Today has 4 (one in_progress), This
+	// Week has 4, Later has 3, and 2 completed land in the "Done" bucket.
 	const tasks: Array<{
 		title: string;
+		description?: string;
 		schedule: 'today' | 'this_week' | 'later';
 		priority: 'low' | 'medium' | 'high' | 'urgent';
 		status: 'new' | 'in_progress' | 'completed';
 		category: 'quick' | 'ticket' | 'project';
 		clientKey?: string;
+		projectKey?: string;
+		dueDayOffset?: number;
+		assignToSelf?: boolean;
 	}> = [
-		{ title: 'Reply to Julia Holt re: intro call', schedule: 'today', priority: 'high', status: 'new', category: 'quick' },
-		{ title: 'Draft launch carousel copy', schedule: 'this_week', priority: 'medium', status: 'in_progress', category: 'project', clientKey: 'helios-studio' },
-		{ title: 'Confirm HEL-0042 payment received', schedule: 'today', priority: 'medium', status: 'completed', category: 'project', clientKey: 'helios-studio' },
+		// — Today —
+		{ title: 'Reply to Julia Holt re: intro call', description: 'She asked about timeline + team size — pull a recent case study.', schedule: 'today', priority: 'high', status: 'new', category: 'quick', dueDayOffset: 0, assignToSelf: true },
+		{ title: 'Send Helios West v2 brand deck', description: 'Final hex codes + the updated wordmark lockup.', schedule: 'today', priority: 'urgent', status: 'in_progress', category: 'project', clientKey: 'helios-studio', projectKey: 'helios-launch', dueDayOffset: 0, assignToSelf: true },
+		{ title: 'Confirm HEL-0042 payment received', schedule: 'today', priority: 'medium', status: 'completed', category: 'project', clientKey: 'helios-studio', projectKey: 'helios-launch' },
+		{ title: 'Block 60 min for Driftwood concept review', schedule: 'today', priority: 'medium', status: 'new', category: 'quick', dueDayOffset: 0, assignToSelf: true },
+
+		// — This week —
+		{ title: 'Draft launch carousel copy', description: '4 frames, 50 words each — open with the moment, close with the booking link.', schedule: 'this_week', priority: 'medium', status: 'in_progress', category: 'project', clientKey: 'helios-studio', projectKey: 'helios-launch', dueDayOffset: 3, assignToSelf: true },
+		{ title: 'Pull Q1 utilization report for studio review', schedule: 'this_week', priority: 'low', status: 'new', category: 'quick', dueDayOffset: 4, assignToSelf: true },
+		{ title: 'Refresh Meridian wireframe annotations', schedule: 'this_week', priority: 'medium', status: 'new', category: 'project', clientKey: 'meridian-law', projectKey: 'meridian-refresh', dueDayOffset: 5, assignToSelf: true },
+		{ title: 'Outline reflection essay — "shipping a brand in 14 weeks"', schedule: 'this_week', priority: 'low', status: 'new', category: 'quick', dueDayOffset: 6, assignToSelf: true },
+
+		// — Later —
+		{ title: 'Schedule Driftwood photographer (Ben Wu)', schedule: 'later', priority: 'medium', status: 'new', category: 'project', clientKey: 'helios-studio', projectKey: 'driftwood-rebrand', assignToSelf: true },
+		{ title: 'Audit referral partner list — Q3 outreach', schedule: 'later', priority: 'low', status: 'new', category: 'quick', assignToSelf: true },
+		{ title: 'Prep Helios case study PDF for portfolio', schedule: 'later', priority: 'medium', status: 'new', category: 'project', clientKey: 'helios-studio', projectKey: 'helios-launch', assignToSelf: true },
+
+		// — Recently completed —
+		{ title: 'Confirm Atlas intro time on Calendly', schedule: 'today', priority: 'high', status: 'completed', category: 'quick' },
+		{ title: 'Sign Helios MSA renewal', schedule: 'this_week', priority: 'high', status: 'completed', category: 'project', clientKey: 'helios-studio' },
 	];
+
+	const todayIso = (offset = 0) => {
+		const d = new Date();
+		d.setHours(0, 0, 0, 0);
+		d.setDate(d.getDate() + offset);
+		return d.toISOString().slice(0, 10);
+	};
+
 	for (const t of tasks) {
-		await findOrCreate(
+		const projectId = t.projectKey ? projectIds[t.projectKey] ?? null : null;
+		const clientId = t.clientKey ? clientIds[t.clientKey] ?? null : null;
+		const due = typeof t.dueDayOffset === 'number' ? todayIso(t.dueDayOffset) : null;
+		const completedAt = t.status === 'completed' ? new Date().toISOString() : null;
+		const row = await findOrCreate<any>(
 			'tasks',
 			{ _and: [{ organization_id: { _eq: orgId } }, { title: { _eq: t.title } }] },
 			{
 				title: t.title,
+				description: t.description ?? null,
 				organization_id: orgId,
 				project_id: projectId,
-				client_id: t.clientKey ? clientIds[t.clientKey] || null : null,
+				client_id: clientId,
 				schedule: t.schedule,
 				priority: t.priority,
 				status: t.status,
 				category: t.category,
+				due_date: due,
+				date_completed: completedAt,
 			},
 			`task "${t.title}"`,
 		);
+		// Assign to demo user so /tasks "Assigned to Me" tab is non-empty.
+		if (row && t.assignToSelf) {
+			await findOrCreate(
+				'tasks_directus_users',
+				{ _and: [{ tasks_id: { _eq: row.id } }, { directus_users_id: { _eq: userId } }] },
+				{ tasks_id: row.id, directus_users_id: userId },
+				`task assignee (${t.title})`,
+			);
+		}
 	}
+}
+
+/**
+ * Build the solo demo's time-tracker entries. Anchored to the current week
+ * via dayOffset (-5 → 0 covers Mon–today on most days). One entry stays
+ * `running` so the timer dock + Time Tracker header show an active session.
+ */
+function buildSoloTimeEntries(): TimeEntrySeed[] {
+	return [
+		// 5 days ago
+		{ key: 'helios-discovery-notes', description: 'Helios — discovery notes write-up', dayOffset: -5, edtStartHour: 9, durationMinutes: 90, projectKey: 'helios-launch', clientKey: 'helios-studio', billable: true, hourlyRate: 175 },
+		{ key: 'meridian-redirect-map', description: 'Meridian — redirect map QA', dayOffset: -5, edtStartHour: 14, durationMinutes: 75, projectKey: 'meridian-refresh', clientKey: 'meridian-law', billable: true, hourlyRate: 175 },
+		// 4 days ago
+		{ key: 'helios-brand-refinement', description: 'Helios — brand v2 refinement', dayOffset: -4, edtStartHour: 10, durationMinutes: 150, projectKey: 'helios-launch', clientKey: 'helios-studio', billable: true, hourlyRate: 175 },
+		// 3 days ago
+		{ key: 'studio-newsletter', description: 'Studio newsletter draft', dayOffset: -3, edtStartHour: 8, durationMinutes: 45, billable: false },
+		{ key: 'helios-launch-copy', description: 'Helios — launch carousel copy', dayOffset: -3, edtStartHour: 13, durationMinutes: 120, projectKey: 'helios-launch', clientKey: 'helios-studio', billable: true, hourlyRate: 175 },
+		// 2 days ago
+		{ key: 'driftwood-research', description: 'Driftwood — packaging benchmark scan', dayOffset: -2, edtStartHour: 11, durationMinutes: 60, projectKey: 'driftwood-rebrand', billable: true, hourlyRate: 175 },
+		{ key: 'meridian-content-review', description: 'Meridian — practice-area content review', dayOffset: -2, edtStartHour: 15, durationMinutes: 90, projectKey: 'meridian-refresh', clientKey: 'meridian-law', billable: true, hourlyRate: 175 },
+		// Yesterday
+		{ key: 'helios-photo-direction', description: 'Helios — opening photoshoot direction', dayOffset: -1, edtStartHour: 9, durationMinutes: 105, projectKey: 'helios-launch', clientKey: 'helios-studio', billable: true, hourlyRate: 175 },
+		{ key: 'studio-admin', description: 'Studio admin — invoicing + email', dayOffset: -1, edtStartHour: 16, durationMinutes: 30, billable: false },
+		// Today
+		{ key: 'helios-launch-prep', description: 'Helios — launch ceremony prep', dayOffset: 0, edtStartHour: 9, durationMinutes: 60, projectKey: 'helios-launch', clientKey: 'helios-studio', billable: true, hourlyRate: 175 },
+		// Today — running timer (no end_time, status='running'). The dock
+		// will show an active session for the screenshot.
+		{ key: 'driftwood-concept-pass', description: 'Driftwood — concept pass 1', dayOffset: 0, edtStartHour: 11, durationMinutes: 45, projectKey: 'driftwood-rebrand', billable: true, hourlyRate: 175, running: true },
+	];
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────
@@ -663,15 +791,32 @@ async function main() {
 	console.log('\n--- leads ---');
 	const leadIds = await seedLeads(org.id, contactIds, clientIds);
 
-	console.log('\n--- project ---');
-	const projectId = await seedProject(org.id, clientIds);
+	console.log('\n--- services (color palette for Project Timeline) ---');
+	const serviceIds = await seedDemoServices();
+
+	console.log('\n--- projects + events (mixed status for Clean Gantt) ---');
+	const projectIds = await seedDemoProjects({
+		orgId: org.id,
+		projects: buildSoloProjectSeeds(clientIds),
+		serviceIds,
+	});
+	const projectId = projectIds['helios-launch'] ?? null;
 
 	console.log('\n--- product + invoice ---');
 	const productId = await seedProduct();
 	await seedInvoice(org.id, clientIds, productId);
 
 	console.log('\n--- quick tasks ---');
-	await seedQuickTasks(org.id, projectId, clientIds);
+	await seedQuickTasks(org.id, user.id, projectIds, clientIds);
+
+	console.log('\n--- time entries (this week + running timer) ---');
+	await seedTimeEntries({
+		orgId: org.id,
+		userId: user.id,
+		clientIds,
+		projectIds,
+		entries: buildSoloTimeEntries(),
+	});
 
 	console.log('\n--- marketing plans (dashboard + campaign) ---');
 	await seedMarketingPlans(org.id);
@@ -740,6 +885,9 @@ async function main() {
 		contactId: contactIds['julia@atlas.example'] ?? null,
 		leadId: leadIds[0] ?? null,
 	});
+
+	console.log('\n--- ticket assignees (so /tasks "Assigned to Me" tab fills) ---');
+	await assignTicketsToUser(org.id, user.id);
 
 	console.log('\n=========================================');
 	console.log('  Summary');
