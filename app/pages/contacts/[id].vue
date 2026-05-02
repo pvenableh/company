@@ -177,7 +177,7 @@ onUnmounted(() => clearEntity());
 </script>
 
 <template>
-  <div class="p-6 max-w-4xl mx-auto">
+  <LayoutPageContainer>
     <!-- Loading State -->
     <div v-if="loading" class="flex flex-col items-center justify-center py-24 gap-3">
       <Icon name="lucide:loader-2" class="w-8 h-8 text-muted-foreground animate-spin" />
@@ -733,5 +733,5 @@ onUnmounted(() => clearEntity());
         <div v-if="sidebarOpen" class="fixed inset-0 bg-black/20 z-40" @click="closeSidebar" />
       </Transition>
     </ClientOnly>
-  </div>
+  </LayoutPageContainer>
 </template>

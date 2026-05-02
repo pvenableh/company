@@ -222,8 +222,7 @@ const sortedChannels = computed(() => {
 </script>
 
 <template>
-	<div class="page__content">
-		<div class="max-w-screen-xl mx-auto page_inner px-4 2xl:px-0">
+	<LayoutPageContainer>
 			<!-- Header -->
 			<div class="flex items-center justify-between mb-6">
 				<div>
@@ -364,6 +363,5 @@ const sortedChannels = computed(() => {
 					</button>
 				</div>
 			</template>
-		</div>
-	</div>
+	</LayoutPageContainer>
 </template>

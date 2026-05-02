@@ -59,7 +59,7 @@ onMounted(async () => {
 </script>
 
 <template>
-	<div class="page__inner px-6 max-w-7xl mx-auto">
+	<LayoutPageContainer>
 		<div class="flex items-center justify-between mb-6">
 			<div>
 				<h1 class="text-xl font-bold t-text">Contracts</h1>
@@ -112,5 +112,5 @@ onMounted(async () => {
 			v-model="showCreateModal"
 			@created="onContractCreated"
 		/>
-	</div>
+	</LayoutPageContainer>
 </template>

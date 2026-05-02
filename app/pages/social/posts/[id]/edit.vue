@@ -203,7 +203,7 @@ const minDate = today(getLocalTimeZone())
 </script>
 
 <template>
-  <div class="p-6 lg:p-8 max-w-5xl mx-auto">
+  <LayoutPageContainer>
     <!-- Header -->
     <div class="flex items-center justify-between mb-8">
       <div class="flex items-center gap-4">
@@ -446,7 +446,7 @@ const minDate = today(getLocalTimeZone())
         <div v-if="sidebarOpen" class="fixed inset-0 bg-black/20 z-40" @click="closeSidebar" />
       </Transition>
     </ClientOnly>
-  </div>
+  </LayoutPageContainer>
 </template>
 
 <script lang="ts">

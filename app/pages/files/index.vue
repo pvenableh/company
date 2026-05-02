@@ -306,8 +306,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div
-    class="p-4 md:p-6 max-w-7xl mx-auto"
+  <LayoutPageContainer
     @dragover="onDragOver"
     @dragleave="onDragLeave"
     @drop="onDrop"
@@ -721,5 +720,5 @@ onMounted(async () => {
         </div>
       </div>
     </Teleport>
-  </div>
+  </LayoutPageContainer>
 </template>

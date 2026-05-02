@@ -182,7 +182,7 @@ watch(() => selectedClient.value, () => {
 </script>
 
 <template>
-  <div class="p-4 md:p-6 max-w-7xl mx-auto">
+  <LayoutPageContainer>
     <!-- Header -->
     <div class="flex items-center justify-between mb-6">
       <div>
@@ -343,7 +343,7 @@ watch(() => selectedClient.value, () => {
         </div>
       </Transition>
     </Teleport>
-  </div>
+  </LayoutPageContainer>
 </template>
 
 <style scoped>

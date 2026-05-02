@@ -141,7 +141,7 @@ const saveProgress = async () => {
 </script>
 
 <template>
-	<div class="p-4 md:p-6 max-w-7xl mx-auto">
+	<LayoutPageContainer>
 		<!-- Header -->
 		<div class="flex items-center justify-between mb-6">
 			<h1 class="text-xl font-semibold">Goals</h1>
@@ -372,5 +372,5 @@ const saveProgress = async () => {
 			</div>
 		</UModal>
 		</ClientOnly>
-	</div>
+	</LayoutPageContainer>
 </template>

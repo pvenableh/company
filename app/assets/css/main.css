@@ -170,23 +170,8 @@ a {
    Page structure
    ============================================ */
 
-.page {
-  @apply pt-20;
-}
-.page__content {
-  transition: all 0.25s var(--spring);
-  min-height: calc(100svh - 80px);
-  @apply relative z-10;
-}
-.page__inner {
-  min-height: calc(90vh - 175px);
-  @apply relative z-10 mt-12;
-}
-.page .nuxt-page {
-  min-height: calc(90vh - 100px);
-  z-index: 5;
-  position: relative;
-}
+/* Legacy .page / .page__content / .page__inner classes removed —
+   pages now use <LayoutPageContainer> for consistent width + spacing. */
 
 /* ============================================
    Screen overlay transition

@@ -287,13 +287,13 @@ onMounted(() => {
 </script>
 
 <template>
-	<div class="page__content">
-		<div v-if="!isAdmin" class="flex flex-col items-center justify-center z-10 min-h-[60vh] page__inner">
+	<LayoutPageContainer>
+		<div v-if="!isAdmin" class="flex flex-col items-center justify-center z-10 min-h-[60vh]">
 			<h2 class="text-2xl font-proxima-light uppercase tracking-widest text-muted-foreground">Admin Only</h2>
 			<p class="text-sm text-muted-foreground mt-2">You need admin access to manage phone settings.</p>
 		</div>
 
-		<div v-else class="max-w-5xl mx-auto px-4 py-6 page__inner">
+		<div v-else>
 			<!-- Loading -->
 			<div v-if="loading" class="flex items-center justify-center min-h-[300px]">
 				<div class="h-8 w-8 animate-spin rounded-full border-2 border-border border-t-primary" />
@@ -543,5 +543,5 @@ onMounted(() => {
 				</div>
 			</template>
 		</div>
-	</div>
+	</LayoutPageContainer>
 </template>

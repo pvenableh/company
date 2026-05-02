@@ -567,8 +567,7 @@ const formatCurrency = (amount) => {
 };
 </script>
 <template>
-	<div class="page__content">
-		<div class="max-w-screen-xl mx-auto page_inner px-4 2xl:px-0">
+	<LayoutPageContainer>
 			<!-- Back link -->
 			<NuxtLink
 				to="/projects"
@@ -1038,7 +1037,6 @@ const formatCurrency = (amount) => {
 					</ClientOnly>
 				</template>
 			</UTabs>
-		</div>
 
 		<!-- Contextual AI Sidebar -->
 		<ClientOnly>
@@ -1053,6 +1051,6 @@ const formatCurrency = (amount) => {
 				<div v-if="sidebarOpen" class="fixed inset-0 bg-black/20 z-40" @click="closeSidebar" />
 			</Transition>
 		</ClientOnly>
-	</div>
+	</LayoutPageContainer>
 </template>
 <style></style>

@@ -4,7 +4,7 @@ useHead({ title: 'Activity | Earnest' });
 </script>
 
 <template>
-	<div class="max-w-screen-xl mx-auto px-4 pb-8 sm:px-6 lg:px-8">
+	<LayoutPageContainer>
 		<div class="flex items-center justify-between pt-2 mb-6">
 			<div>
 				<h1 class="text-[28px] font-bold text-foreground tracking-tight leading-tight">Activity</h1>
@@ -13,5 +13,5 @@ useHead({ title: 'Activity | Earnest' });
 		</div>
 
 		<CommandCenterTimeline />
-	</div>
+	</LayoutPageContainer>
 </template>

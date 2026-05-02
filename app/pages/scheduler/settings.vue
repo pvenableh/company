@@ -341,7 +341,7 @@ onMounted(() => {
 </script>
 
 <template>
-	<div class="max-w-6xl mx-auto px-4 py-6">
+	<LayoutPageContainer>
 		<div class="flex items-center justify-between mb-6">
 			<div class="flex items-center gap-3">
 				<UButton color="gray" variant="ghost" icon="i-heroicons-arrow-left" to="/scheduler" />
@@ -540,5 +540,5 @@ onMounted(() => {
 				</div>
 			</UCard>
 		</div>
-	</div>
+	</LayoutPageContainer>
 </template>

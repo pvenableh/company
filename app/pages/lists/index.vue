@@ -26,7 +26,7 @@ onMounted(loadData);
 </script>
 
 <template>
-  <div class="p-6 max-w-4xl mx-auto">
+  <LayoutPageContainer>
     <div class="flex items-center justify-between mb-6">
       <div>
         <h1 class="text-xl font-semibold">Mailing Lists</h1>
@@ -60,5 +60,5 @@ onMounted(loadData);
 
     <!-- Create Modal -->
     <ListsFormModal v-model="showCreateModal" @created="onListCreated" />
-  </div>
+  </LayoutPageContainer>
 </template>

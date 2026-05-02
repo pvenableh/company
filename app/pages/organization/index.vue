@@ -669,7 +669,7 @@ watch(searchEmail, (val) => {
 </script>
 
 <template>
-	<div class="max-w-screen-xl mx-auto px-4 py-6">
+	<LayoutPageContainer>
 		<h1 class="text-2xl font-semibold mb-6">Company</h1>
 		<div class="w-full">
 			<!-- Loading state (wait for both org initialization and page data) -->
@@ -1435,5 +1435,5 @@ watch(searchEmail, (val) => {
 				<UButton color="red" :loading="removingMember" @click="removeMember">Remove Member</UButton>
 			</div>
 		</UModal>
-	</div>
+	</LayoutPageContainer>
 </template>

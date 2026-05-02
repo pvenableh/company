@@ -1,5 +1,5 @@
 <template>
-	<div class="container mx-auto py-6 px-4">
+	<LayoutPageContainer>
 		<div class="flex items-center justify-between mb-6">
 			<div>
 				<h2 class="text-2xl font-semibold">Service Templates</h2>
@@ -69,7 +69,7 @@
 			@updated="onUpdated"
 			@deleted="onDeleted"
 		/>
-	</div>
+	</LayoutPageContainer>
 </template>
 
 <script setup lang="ts">

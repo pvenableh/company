@@ -68,7 +68,7 @@ const handleAnonymousSubmit = async (formData) => {
 			</nuxt-link>
 		</div>
 
-		<div class="w-full flex flex-col lg:flex-row items-center lg:items-start justify-center z-10 page__inner">
+		<div class="w-full flex flex-col lg:flex-row items-center lg:items-start justify-center relative z-10 mt-12">
 			<InvoicesInvoice :invoice="invoice" class="lg:sticky lg:top-12" />
 			<div v-if="showAnonymousForm && invoice.status === 'pending'" class="w-full px-6 pt-0 pb-16 lg:w-1/2 max-w-xl">
 				<UButton

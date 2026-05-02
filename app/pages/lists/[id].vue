@@ -39,7 +39,7 @@ onUnmounted(() => clearEntity());
 </script>
 
 <template>
-  <div class="p-6 max-w-5xl mx-auto">
+  <LayoutPageContainer>
     <div class="flex items-start justify-between gap-3 mb-6" v-if="list">
       <div class="flex items-center gap-3">
         <NuxtLink to="/lists" class="text-muted-foreground hover:text-foreground">
@@ -81,5 +81,5 @@ onUnmounted(() => clearEntity());
         <div v-if="sidebarOpen" class="fixed inset-0 bg-black/20 z-40" @click="closeSidebar" />
       </Transition>
     </ClientOnly>
-  </div>
+  </LayoutPageContainer>
 </template>

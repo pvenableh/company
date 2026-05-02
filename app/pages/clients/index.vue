@@ -29,6 +29,13 @@ const tabs = [
   { label: 'Archived', value: 'archived', color: 'bg-zinc-400', kind: 'status' as const },
 ];
 
+const tabItems = computed(() => tabs.map((t) => ({
+  key: t.value,
+  label: t.label,
+  dotColor: t.color,
+  count: tabCounts.value[t.value] ?? null,
+})));
+
 function tabFilter(value: string): { status?: string; accountState?: string } {
   const tab = tabs.find((t) => t.value === value);
   if (!tab) return {};
@@ -192,43 +199,23 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="p-6 max-w-7xl mx-auto">
-    <!-- Header -->
-    <div class="flex items-center justify-between mb-6">
-      <div>
-        <h1 class="text-xl font-semibold">Clients</h1>
-        <p class="text-sm text-muted-foreground">
-          {{ total }} {{ activeTab }}
-        </p>
-      </div>
-      <Button size="sm" @click="showCreateModal = true">
-        <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
-        Add Client
-      </Button>
-    </div>
+  <LayoutPageContainer>
+    <LayoutPageHeader title="Clients" :subtitle="`${total} ${activeTab}`">
+      <template #actions>
+        <Button size="sm" @click="showCreateModal = true">
+          <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
+          Add Client
+        </Button>
+      </template>
+    </LayoutPageHeader>
 
     <!-- Status Tabs -->
-    <div class="flex gap-1 p-1 bg-muted/30 rounded-lg w-fit mb-6">
-      <button
-        v-for="tab in tabs"
-        :key="tab.value"
-        class="flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-md transition-all"
-        :class="activeTab === tab.value
-          ? 'bg-background shadow-sm text-foreground'
-          : 'text-muted-foreground hover:text-foreground'"
-        @click="switchTab(tab.value)"
-      >
-        <span class="w-2 h-2 rounded-full" :class="tab.color"></span>
-        {{ tab.label }}
-        <span
-          v-if="tabCounts[tab.value]"
-          class="text-[10px] px-1.5 py-0.5 rounded-full"
-          :class="activeTab === tab.value ? 'bg-muted/60' : 'bg-muted/40'"
-        >
-          {{ tabCounts[tab.value] }}
-        </span>
-      </button>
-    </div>
+    <UTabs
+      v-model="activeTab"
+      :items="tabItems"
+      class="mb-6 w-fit"
+      @change="fetchData"
+    />
 
     <!-- Filters -->
     <div class="flex gap-3 mb-6 flex-wrap items-center">
@@ -406,5 +393,5 @@ onMounted(() => {
         </div>
       </div>
     </Teleport>
-  </div>
+  </LayoutPageContainer>
 </template>
