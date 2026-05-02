@@ -5,6 +5,7 @@
  */
 import { z } from 'zod';
 import { getSocialPosts, createSocialPost, logSocialActivity } from '~~/server/utils/social-directus';
+import { requireSocialOrg } from '~~/server/utils/social-tenancy';
 import type { SocialPostTarget } from '~~/shared/social';
 
 const platformTargetSchema = z.object({
@@ -26,6 +27,7 @@ const createPostSchema = z.object({
 	post_type: z.enum(['image', 'video', 'carousel', 'reel', 'story', 'text', 'article']),
 	scheduled_at: z.string().datetime().optional(),
 	status: z.enum(['draft', 'scheduled']).default('draft'),
+	client: z.string().uuid().nullable().optional(),
 }).refine(
 	(data) => {
 		if (data.status === 'scheduled') {
@@ -39,23 +41,21 @@ const createPostSchema = z.object({
 );
 
 export default defineEventHandler(async (event) => {
+	const { organizationId, userId } = await requireSocialOrg(event);
 	const method = getMethod(event);
 
 	// ── GET: List posts ──
 	if (method === 'GET') {
-		try {
-			const query = getQuery(event);
-			const posts = await getSocialPosts({
-				status: query.status as string | undefined,
-				scheduled_after: query.scheduled_after as string | undefined,
-				scheduled_before: query.scheduled_before as string | undefined,
-				limit: query.limit ? Number(query.limit) : 50,
-			});
-			return { data: posts };
-		} catch (error: any) {
-			console.warn('[Social Posts API] GET error:', error.message || error);
-			return { data: [] };
-		}
+		const query = getQuery(event);
+		const clientFilter = query.client as string | undefined;
+		const posts = await getSocialPosts(organizationId, {
+			status: query.status as string | undefined,
+			scheduled_after: query.scheduled_after as string | undefined,
+			scheduled_before: query.scheduled_before as string | undefined,
+			client: clientFilter === 'null' ? null : clientFilter,
+			limit: query.limit ? Number(query.limit) : 50,
+		});
+		return { data: posts };
 	}
 
 	// ── POST: Create post ──
@@ -73,9 +73,10 @@ export default defineEventHandler(async (event) => {
 
 		const data = parsed.data;
 
-		// Create post in Directus
 		// Worker polls for posts with status='scheduled' and scheduled_at <= now
 		const post = await createSocialPost({
+			organization: organizationId,
+			client: data.client ?? null,
 			caption: data.caption,
 			media_urls: data.media_urls,
 			media_types: data.media_types,
@@ -87,7 +88,7 @@ export default defineEventHandler(async (event) => {
 			publish_results: null,
 			published_at: null,
 			error_message: null,
-			created_by: null, // TODO: get from session
+			created_by: userId,
 		});
 
 		// Log activity

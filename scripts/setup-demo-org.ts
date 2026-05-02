@@ -46,6 +46,7 @@ import {
 	seedDemoServices,
 	seedDemoProjects,
 	seedTimeEntries,
+	seedSocial,
 	type ProjectSeed,
 	type TimeEntrySeed,
 } from './lib/demo-seed';
@@ -888,6 +889,15 @@ async function main() {
 
 	console.log('\n--- ticket assignees (so /tasks "Assigned to Me" tab fills) ---');
 	await assignTicketsToUser(org.id, user.id);
+
+	await seedSocial({
+		orgId: org.id,
+		assignments: [
+			{ clientId: null, clientName: 'House', platforms: ['instagram', 'linkedin'] },
+			{ clientId: clientIds['helios-studio'] ?? null, clientName: 'Helios Studio', platforms: ['instagram'] },
+		],
+		postCount: 6,
+	});
 
 	console.log('\n=========================================');
 	console.log('  Summary');

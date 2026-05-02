@@ -10,6 +10,8 @@ import {
   updateSocialAccount,
   logSocialActivity,
 } from '~~/server/utils/social-directus'
+import { decodeOAuthState } from '~~/server/utils/social-tenancy'
+import { requireOrgMembership } from '~~/server/utils/marketing-perms'
 import { addDays } from 'date-fns'
 
 export default defineEventHandler(async (event) => {
@@ -23,6 +25,14 @@ export default defineEventHandler(async (event) => {
 
   if (!code) {
     return sendRedirect(event, `/social/settings?error=no_code`)
+  }
+
+  let organizationId: string
+  try {
+    organizationId = decodeOAuthState(state).organizationId
+    await requireOrgMembership(event, organizationId)
+  } catch (err: any) {
+    return sendRedirect(event, `/social/settings?error=invalid_state&message=${encodeURIComponent(err.message || 'state invalid')}`)
   }
 
   try {
@@ -39,10 +49,11 @@ export default defineEventHandler(async (event) => {
     let connectedCount = 0
 
     for (const page of pages) {
-      const existing = await getSocialAccountByPlatformId('facebook', page.pageId)
+      const existing = await getSocialAccountByPlatformId('facebook', page.pageId, organizationId)
       const tokenExpiresAt = addDays(new Date(), Math.floor(expiresIn / 86400)).toISOString()
 
       const accountData = {
+        organization: organizationId,
         platform: 'facebook' as const,
         platform_user_id: page.pageId,
         account_name: page.name,

@@ -1,112 +1,86 @@
 /**
- * Single Account API
- * GET /api/social/accounts/:id — Get account details
- * PATCH /api/social/accounts/:id — Update account (assign to client)
- * DELETE /api/social/accounts/:id — Disconnect account
+ * Single Social Account API
+ * GET /api/social/accounts/:id     — fetch (org-scoped)
+ * PATCH /api/social/accounts/:id   — update (e.g. reassign client)
+ * DELETE /api/social/accounts/:id  — disconnect
  */
 
 import { z } from 'zod'
-import { logSocialActivity } from '~~/server/utils/social-directus'
+import { requireSocialOrg } from '~~/server/utils/social-tenancy'
+import { getSocialAccountById, logSocialActivity } from '~~/server/utils/social-directus'
+import { getTypedDirectus } from '~~/server/utils/directus'
+import { readItem, updateItem, deleteItem } from '@directus/sdk'
 
 const updateAccountSchema = z.object({
-  client_id: z.string().uuid().nullable().optional(),
+  client: z.string().uuid().nullable().optional(),
 })
 
-async function directusFetch<T>(
-  path: string,
-  options: { method?: string; body?: unknown; params?: Record<string, string> } = {}
-): Promise<T> {
-  const config = useRuntimeConfig()
-  const { method = 'GET', body, params } = options
-  const queryString = params ? `?${new URLSearchParams(params).toString()}` : ''
-
-  const response = await fetch(`${config.directus.url}${path}${queryString}`, {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${config.directus.serverToken}`,
-    },
-    body: body ? JSON.stringify(body) : undefined,
-  })
-
-  if (!response.ok) {
-    if (response.status === 404) return null as T
-    const error = await response.text()
-    throw new Error(`Directus request failed: ${response.status} ${error}`)
-  }
-
-  const json = await response.json()
-  return json.data as T
-}
-
 export default defineEventHandler(async (event) => {
+  const { organizationId } = await requireSocialOrg(event)
   const method = getMethod(event)
   const id = getRouterParam(event, 'id')
+  if (!id) throw createError({ statusCode: 400, message: 'Account ID required' })
 
-  if (!id) {
-    throw createError({ statusCode: 400, message: 'Account ID required' })
-  }
+  const account = await getSocialAccountById(id, organizationId)
+  if (!account) throw createError({ statusCode: 404, message: 'Account not found' })
 
-  // GET: Account details
+  const directus = getTypedDirectus()
+
   if (method === 'GET') {
-    const account = await directusFetch<any>(`/items/social_accounts/${id}`, {
-      params: {
-        fields: 'id,platform,platform_user_id,account_name,account_handle,profile_picture_url,status,token_expires_at,client_id,date_created',
+    let clientName: string | null = null
+    const clientId = typeof account.client === 'string' ? account.client : (account.client as any)?.id || null
+    if (clientId) {
+      try {
+        const c = (await directus.request(readItem('clients', clientId, { fields: ['name'] }))) as any
+        clientName = c?.name ?? null
+      } catch { /* ignore */ }
+    }
+    return {
+      data: {
+        id: account.id,
+        platform: account.platform,
+        platform_user_id: account.platform_user_id,
+        account_name: account.account_name,
+        account_handle: account.account_handle,
+        profile_picture_url: account.profile_picture_url,
+        status: account.account_status,
+        token_expires_at: account.token_expires_at,
+        organization: typeof account.organization === 'string' ? account.organization : (account.organization as any)?.id,
+        client: clientId,
+        client_name: clientName,
+        date_created: account.date_created,
       },
-    })
-
-    if (!account) {
-      throw createError({ statusCode: 404, message: 'Account not found' })
     }
-
-    // Get client name if assigned
-    if (account.client_id) {
-      const client = await directusFetch<any>(`/items/social_clients/${account.client_id}`)
-      account.client_name = client?.name
-    }
-
-    return { data: account }
   }
 
-  // PATCH: Update account (mainly for assigning to client)
   if (method === 'PATCH') {
     const body = await readBody(event)
     const parsed = updateAccountSchema.safeParse(body)
-
     if (!parsed.success) {
-      throw createError({
-        statusCode: 400,
-        message: 'Validation failed',
-        data: parsed.error.flatten(),
-      })
+      throw createError({ statusCode: 400, message: 'Validation failed', data: parsed.error.flatten() })
     }
-
-    const updated = await directusFetch<any>(`/items/social_accounts/${id}`, {
-      method: 'PATCH',
-      body: parsed.data,
-    })
-
+    // If client supplied, verify it's in the same org
+    if (parsed.data.client) {
+      const c = (await directus.request(readItem('clients', parsed.data.client, { fields: ['organization'] })).catch(() => null)) as any
+      if (!c) throw createError({ statusCode: 404, message: 'Client not found' })
+      const cOrg = typeof c.organization === 'string' ? c.organization : c.organization?.id
+      if (cOrg !== organizationId) {
+        throw createError({ statusCode: 403, message: 'Client belongs to a different organization' })
+      }
+    }
+    const updated = (await directus.request(updateItem('social_accounts', id, parsed.data))) as any
     return { data: updated }
   }
 
-  // DELETE: Disconnect account
   if (method === 'DELETE') {
-    const account = await directusFetch<any>(`/items/social_accounts/${id}`)
-
-    if (!account) {
-      throw createError({ statusCode: 404, message: 'Account not found' })
-    }
-
-    await directusFetch(`/items/social_accounts/${id}`, { method: 'DELETE' })
-
+    await directus.request(deleteItem('social_accounts', id))
     await logSocialActivity({
       action: 'account_disconnected',
       entity_type: 'account',
       entity_id: id,
-      platform: account.platform,
+      platform: account.platform as any,
       details: { account_name: account.account_name },
     })
-
     return { success: true }
   }
 

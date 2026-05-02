@@ -3,18 +3,23 @@
  * GET /api/social/analytics — Get analytics overview with optional filters
  */
 
-import { getAnalyticsSnapshots, getSocialAccounts } from '~~/server/utils/social-directus'
-import type { SocialPlatform } from '~~/shared/social'
+import { getAnalyticsSnapshots, getSocialAccounts, getSocialAccountById } from '~~/server/utils/social-directus'
+import { requireSocialOrg } from '~~/server/utils/social-tenancy'
 
 export default defineEventHandler(async (event) => {
+  const { organizationId } = await requireSocialOrg(event)
   const query = getQuery(event)
   const accountId = query.account_id as string | undefined
   const startDate = query.start_date as string | undefined
   const endDate = query.end_date as string | undefined
 
   try {
-    // If specific account requested
+    // If specific account requested — verify it belongs to this org
     if (accountId) {
+      const acc = await getSocialAccountById(accountId, organizationId)
+      if (!acc) {
+        throw createError({ statusCode: 404, message: 'Account not found' })
+      }
       const snapshots = await getAnalyticsSnapshots({
         social_account: accountId,
         snapshot_type: 'account',
@@ -23,7 +28,6 @@ export default defineEventHandler(async (event) => {
         limit: 100,
       })
 
-      // Get latest snapshot for current metrics
       const latest = snapshots[0]
       const previous = snapshots[snapshots.length - 1]
 
@@ -37,8 +41,8 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // Aggregate across all accounts
-    const accounts = await getSocialAccounts({ status: 'active' })
+    // Aggregate across all org accounts
+    const accounts = await getSocialAccounts(organizationId, { status: 'active' })
 
     const allSnapshots = []
     for (const account of accounts) {

@@ -8,8 +8,6 @@ export type {
 	SocialActivityLog,
 	SocialComment,
 } from './directus';
-// Re-export SocialClient and SocialPost with augmented fields for frontend use
-export type { SocialClient } from './directus';
 
 export type SocialPlatform = 'instagram' | 'tiktok' | 'linkedin' | 'facebook' | 'threads';
 export type PostType = 'image' | 'video' | 'carousel' | 'reel' | 'story' | 'text' | 'article';
@@ -72,8 +70,11 @@ export interface SocialAccountPublic {
 	status: AccountStatus;
 	token_expires_at: string;
 	is_token_expiring_soon: boolean;
-	client_id: string | null;
-	client_name?: string;
+	organization: string;
+	/** Owning client UUID (null = house/agency-owned) */
+	client: string | null;
+	/** Resolved client name for display (null when house-owned) */
+	client_name: string | null;
 }
 
 // Post target for multi-account publishing

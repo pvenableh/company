@@ -59,25 +59,32 @@ async function directusFetch<T>(
 // SOCIAL ACCOUNTS
 // ══════════════════════════════════════════════════════════════════════════════
 
-export async function getSocialAccounts(filters?: {
-  platform?: SocialPlatform
-  status?: 'active' | 'expired' | 'revoked'
-}): Promise<SocialAccount[]> {
-  const params: Record<string, string> = {}
-
-  if (filters?.platform) {
-    params['filter[platform][_eq]'] = filters.platform
+export async function getSocialAccounts(
+  organization: string,
+  filters?: {
+    platform?: SocialPlatform
+    status?: 'active' | 'expired' | 'revoked'
+    client?: string | null
+  },
+): Promise<SocialAccount[]> {
+  const params: Record<string, string> = {
+    'filter[organization][_eq]': organization,
   }
-  if (filters?.status) {
-    params['filter[account_status][_eq]'] = filters.status
-  }
+  if (filters?.platform) params['filter[platform][_eq]'] = filters.platform
+  if (filters?.status) params['filter[account_status][_eq]'] = filters.status
+  if (filters?.client === null) params['filter[client][_null]'] = 'true'
+  else if (filters?.client) params['filter[client][_eq]'] = filters.client
 
   return directusFetch<SocialAccount[]>('/items/social_accounts', { params })
 }
 
-export async function getSocialAccountById(id: string): Promise<SocialAccount | null> {
+export async function getSocialAccountById(id: string, organization?: string): Promise<SocialAccount | null> {
   try {
-    return await directusFetch<SocialAccount>(`/items/social_accounts/${id}`)
+    const account = await directusFetch<SocialAccount>(`/items/social_accounts/${id}`)
+    if (organization && account && (account.organization as any) !== organization && (account.organization as any)?.id !== organization) {
+      return null
+    }
+    return account
   } catch {
     return null
   }
@@ -85,10 +92,12 @@ export async function getSocialAccountById(id: string): Promise<SocialAccount | 
 
 export async function getSocialAccountByPlatformId(
   platform: SocialPlatform,
-  platformUserId: string
+  platformUserId: string,
+  organization: string,
 ): Promise<SocialAccount | null> {
   const accounts = await directusFetch<SocialAccount[]>('/items/social_accounts', {
     params: {
+      'filter[organization][_eq]': organization,
       'filter[platform][_eq]': platform,
       'filter[platform_user_id][_eq]': platformUserId,
       limit: '1',
@@ -98,6 +107,8 @@ export async function getSocialAccountByPlatformId(
 }
 
 export async function createSocialAccount(data: {
+  organization: string
+  client?: string | null
   platform: SocialPlatform
   platform_user_id: string
   account_name: string
@@ -114,7 +125,7 @@ export async function createSocialAccount(data: {
       ...data,
       access_token: encryptSocialToken(data.access_token),
       refresh_token: data.refresh_token ? encryptSocialToken(data.refresh_token) : null,
-      status: 'active',
+      account_status: 'active',
     },
   })
 }
@@ -129,6 +140,7 @@ export async function updateSocialAccount(
     refresh_token: string
     token_expires_at: string
     status: 'active' | 'expired' | 'revoked'
+    client: string | null
     metadata: Record<string, unknown>
   }>
 ): Promise<SocialAccount> {
@@ -139,6 +151,10 @@ export async function updateSocialAccount(
   }
   if (data.refresh_token) {
     updateData.refresh_token = encryptSocialToken(data.refresh_token)
+  }
+  if ('status' in updateData) {
+    updateData.account_status = updateData.status
+    delete updateData.status
   }
 
   return directusFetch<SocialAccount>(`/items/social_accounts/${id}`, {
@@ -203,26 +219,37 @@ function mapPostToDirectus(data: Record<string, unknown>): Record<string, unknow
   return mapped
 }
 
-export async function getSocialPosts(filters?: {
-  status?: string
-  scheduled_after?: string
-  scheduled_before?: string
-  limit?: number
-}): Promise<SocialPost[]> {
-  const params: Record<string, string> = { sort: '-scheduled_at' }
-
+export async function getSocialPosts(
+  organization: string,
+  filters?: {
+    status?: string
+    scheduled_after?: string
+    scheduled_before?: string
+    client?: string | null
+    limit?: number
+  },
+): Promise<SocialPost[]> {
+  const params: Record<string, string> = {
+    sort: '-scheduled_at',
+    'filter[organization][_eq]': organization,
+  }
   if (filters?.status) params['filter[post_status][_eq]'] = filters.status
   if (filters?.scheduled_after) params['filter[scheduled_at][_gte]'] = filters.scheduled_after
   if (filters?.scheduled_before) params['filter[scheduled_at][_lte]'] = filters.scheduled_before
+  if (filters?.client === null) params['filter[client][_null]'] = 'true'
+  else if (filters?.client) params['filter[client][_eq]'] = filters.client
   if (filters?.limit) params.limit = String(filters.limit)
 
   const raw = await directusFetch<DirectusSocialPost[]>('/items/social_posts', { params })
   return raw.map(mapDirectusPost)
 }
 
-export async function getSocialPostById(id: string): Promise<SocialPost | null> {
+export async function getSocialPostById(id: string, organization?: string): Promise<SocialPost | null> {
   try {
     const raw = await directusFetch<DirectusSocialPost>(`/items/social_posts/${id}`)
+    if (organization && raw && (raw.organization as any) !== organization && (raw.organization as any)?.id !== organization) {
+      return null
+    }
     return mapDirectusPost(raw)
   } catch {
     return null
@@ -230,7 +257,7 @@ export async function getSocialPostById(id: string): Promise<SocialPost | null> 
 }
 
 export async function createSocialPost(
-  data: Omit<SocialPost, 'id' | 'date_created' | 'date_updated'>
+  data: Omit<SocialPost, 'id' | 'date_created' | 'date_updated'> & { organization: string; client?: string | null },
 ): Promise<SocialPost> {
   const raw = await directusFetch<DirectusSocialPost>('/items/social_posts', {
     method: 'POST',

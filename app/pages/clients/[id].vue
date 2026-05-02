@@ -37,7 +37,7 @@ const loading = ref(true);
 const saving = ref(false);
 const showEditModal = ref(false);
 const error = ref<string | null>(null);
-const activeTab = ref<'contacts' | 'partners' | 'projects' | 'tickets'>('contacts');
+const activeTab = ref<'contacts' | 'partners' | 'projects' | 'tickets' | 'social'>('contacts');
 const toast = useToast();
 
 // --- Logo Upload ---
@@ -309,7 +309,30 @@ const tabs = [
   { key: 'partners', label: 'Partners', icon: 'lucide:hub' },
   { key: 'projects', label: 'Projects', icon: 'lucide:folder-kanban' },
   { key: 'tickets', label: 'Tickets', icon: 'lucide:ticket' },
+  { key: 'social', label: 'Social', icon: 'lucide:share-2' },
 ] as const;
+
+// Social accounts assigned to this client
+import type { SocialAccountPublic } from '~~/shared/social';
+const socialAccounts = ref<SocialAccountPublic[]>([]);
+async function loadSocialAccounts() {
+  try {
+    const res = await $fetch<{ data: SocialAccountPublic[] }>('/api/social/accounts', {
+      query: { client: route.params.id as string },
+    });
+    socialAccounts.value = res?.data || [];
+  } catch {
+    socialAccounts.value = [];
+  }
+}
+
+const platformIconFor: Record<string, string> = {
+  instagram: 'lucide:instagram',
+  tiktok: 'lucide:music',
+  linkedin: 'lucide:linkedin',
+  facebook: 'lucide:facebook',
+  threads: 'lucide:at-sign',
+};
 
 const { isOrgAdminOrAbove } = useOrgRole();
 
@@ -367,6 +390,7 @@ async function removeSidebarTag(tag: string) {
 onMounted(async () => {
   await loadClient();
   await resolveIndustryName();
+  await loadSocialAccounts();
 });
 
 // Register entity context for dock AI button awareness
@@ -643,7 +667,8 @@ onUnmounted(() => clearEntity());
                   {{ tab.key === 'contacts' ? totalContactCount
                       : tab.key === 'partners' ? totalPartnerCount
                       : tab.key === 'projects' ? relatedProjects.length
-                      : relatedTickets.length }}
+                      : tab.key === 'tickets' ? relatedTickets.length
+                      : socialAccounts.length }}
                 </span>
               </button>
             </div>
@@ -811,6 +836,41 @@ onUnmounted(() => clearEntity());
                   </span>
                   <Icon name="lucide:chevron-right" class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors shrink-0" />
                 </NuxtLink>
+              </div>
+            </div>
+
+            <!-- Social Tab -->
+            <div v-if="activeTab === 'social'">
+              <div class="flex items-center justify-end gap-1.5 mb-3">
+                <NuxtLink
+                  to="/social/settings"
+                  class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full bg-primary text-primary-foreground text-[11px] font-medium hover:bg-primary/90 transition-colors"
+                >
+                  <Icon name="lucide:plug" class="w-3 h-3" />
+                  Manage Connections
+                </NuxtLink>
+              </div>
+
+              <div v-if="!socialAccounts.length" class="text-sm text-muted-foreground text-center py-6">
+                No social accounts assigned to this client.
+              </div>
+
+              <div v-else class="space-y-px">
+                <div
+                  v-for="acc in socialAccounts"
+                  :key="acc.id"
+                  class="flex items-center gap-3 h-12 px-3 border-b border-border/30 last:border-b-0"
+                >
+                  <Icon :name="platformIconFor[acc.platform] || 'lucide:share-2'" class="w-4 h-4 text-muted-foreground shrink-0" />
+                  <p class="flex-1 text-sm font-medium truncate">{{ acc.account_name }}</p>
+                  <span class="text-xs text-muted-foreground truncate">@{{ acc.account_handle }}</span>
+                  <span
+                    class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium shrink-0"
+                    :class="acc.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'"
+                  >
+                    {{ acc.status }}
+                  </span>
+                </div>
               </div>
             </div>
           </div>

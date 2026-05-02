@@ -928,3 +928,107 @@ export async function seedDemoProjects(opts: {
 	console.log(`  [ok]   ${projects.length} projects + ${projects.reduce((n, p) => n + p.events.length, 0)} events`);
 	return out;
 }
+
+// ── Social demo seed ─────────────────────────────────────────────────────────
+// Inserts placeholder social_accounts + social_posts so the demo orgs surface
+// realistic UI. Tokens are non-functional placeholders — diagnostics will
+// show decrypt-fail / 401 for these accounts, which is accurate.
+type SocialPlatform = 'instagram' | 'tiktok' | 'linkedin' | 'facebook' | 'threads';
+
+const PLATFORM_HANDLE_HINT: Record<SocialPlatform, string> = {
+	instagram: 'ig',
+	tiktok: 'tt',
+	linkedin: 'in',
+	facebook: 'fb',
+	threads: 'th',
+};
+
+export interface SocialSeedAssignment {
+	clientId: string | null;
+	clientName: string;
+	platforms: SocialPlatform[];
+}
+
+const SAMPLE_CAPTIONS: { caption: string; type: 'image' | 'video' | 'text' }[] = [
+	{ caption: "Excited to share what we've been working on this quarter — a full brand refresh for one of our favorite clients.", type: 'image' },
+	{ caption: "Behind-the-scenes from yesterday's shoot. The team brought everything together in 4 hours flat.", type: 'image' },
+	{ caption: 'Three takeaways from our latest case study. ✨', type: 'text' },
+	{ caption: "New work, new week. Here's a peek at the campaign launching Friday.", type: 'video' },
+	{ caption: "When the strategy doc and the design comps line up perfectly — that's the magic.", type: 'image' },
+	{ caption: 'Tip of the day: clarity beats cleverness, every time.', type: 'text' },
+	{ caption: 'Our favorite design tools of 2026 — link in bio for the full breakdown.', type: 'image' },
+	{ caption: 'Just shipped! Big shoutout to the whole team. 🎉', type: 'image' },
+];
+
+export async function seedSocial(opts: {
+	orgId: string;
+	assignments: SocialSeedAssignment[];
+	postCount: number;
+}): Promise<{ accountIds: string[]; postIds: string[] }> {
+	console.log(`\n--- social ---`);
+	const accountIds: string[] = [];
+	const createdAccounts: Array<{ id: string; platform: SocialPlatform; name: string; handle: string; client: string | null }> = [];
+
+	for (const assignment of opts.assignments) {
+		for (const platform of assignment.platforms) {
+			const slug = assignment.clientName.toLowerCase().replace(/[^a-z0-9]+/g, '_').slice(0, 18) || 'house';
+			const handle = `${slug}_${PLATFORM_HANDLE_HINT[platform]}`;
+			const platformUserId = `demo_${assignment.clientId ?? 'house'}_${platform}_${Math.random().toString(36).slice(2, 8)}`;
+			const tokenExpiresAt = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString();
+			const displayName = assignment.clientName === 'House' ? 'Earnest Demo' : assignment.clientName;
+
+			const accRes = await directusRequest<{ id: string }>('/items/social_accounts', 'POST', {
+				organization: opts.orgId,
+				client: assignment.clientId,
+				platform,
+				platform_user_id: platformUserId,
+				account_name: displayName,
+				account_handle: handle,
+				profile_picture_url: null,
+				access_token: 'demo-placeholder-token-not-encrypted',
+				token_expires_at: tokenExpiresAt,
+				account_status: 'active',
+				metadata: { demo: true },
+			});
+			if (!accRes.ok || !accRes.data) {
+				console.warn(`  [skip] ${platform} for ${displayName}: ${accRes.error || accRes.status}`);
+				continue;
+			}
+			const acc = accRes.data;
+			accountIds.push(acc.id);
+			createdAccounts.push({ id: acc.id, platform, name: displayName, handle, client: assignment.clientId });
+		}
+	}
+	console.log(`  [ok]   ${accountIds.length} social_accounts`);
+
+	const postIds: string[] = [];
+	const now = Date.now();
+	for (let i = 0; i < opts.postCount; i++) {
+		const acc = createdAccounts[i % createdAccounts.length]!;
+		const sample = SAMPLE_CAPTIONS[i % SAMPLE_CAPTIONS.length]!;
+		const bucket = i % 3;
+		const offsetDays = bucket === 0 ? -((i + 1) * 3) : bucket === 1 ? (i + 1) * 2 : 0;
+		const scheduledAt = new Date(now + offsetDays * 24 * 60 * 60 * 1000).toISOString();
+		const status = bucket === 0 ? 'published' : bucket === 1 ? 'scheduled' : 'draft';
+		const postRes = await directusRequest<{ id: string }>('/items/social_posts', 'POST', {
+			organization: opts.orgId,
+			client: acc.client,
+			caption: sample.caption,
+			media_urls: sample.type === 'text' ? [] : ['https://images.unsplash.com/photo-1545239351-cefa43af60f3?w=800'],
+			media_types: sample.type === 'text' ? [] : [sample.type],
+			platforms: [{ platform: acc.platform, account_id: acc.id, account_name: acc.name }],
+			post_type: sample.type,
+			scheduled_at: scheduledAt,
+			post_status: status,
+			published_at: status === 'published' ? scheduledAt : null,
+		});
+		if (!postRes.ok || !postRes.data) {
+			console.warn(`  [skip] post ${i}: ${postRes.error || postRes.status}`);
+			continue;
+		}
+		postIds.push(postRes.data.id);
+	}
+	console.log(`  [ok]   ${postIds.length} social_posts`);
+
+	return { accountIds, postIds };
+}

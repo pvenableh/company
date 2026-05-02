@@ -16,6 +16,7 @@ useHead({ title: 'Social Settings | Earnest' })
 const route = useRoute()
 const toast = useToast()
 const { isOrgAdminOrAbove } = useOrgRole()
+const { clientList: clients } = useClients()
 
 // Platform display config
 const platformConfig: Record<SocialPlatform, {
@@ -271,6 +272,24 @@ async function disconnectAccount() {
     accountToDelete.value = null
   }
 }
+
+// Inline "owner client" picker per account (House = null)
+async function reassignAccountClient(account: SocialAccountPublic, newClient: string | null) {
+  try {
+    await $fetch(`/api/social/accounts/${account.id}`, {
+      method: 'PATCH',
+      body: { client: newClient },
+    })
+    await refreshAccounts()
+  } catch (error: any) {
+    toast.add({
+      title: 'Error',
+      description: error.data?.message || 'Failed to update account owner',
+      icon: 'i-lucide-alert-circle',
+      color: 'red',
+    })
+  }
+}
 </script>
 
 <template>
@@ -330,6 +349,18 @@ async function disconnectAccount() {
               <p class="font-medium text-gray-900 dark:text-white">{{ account.account_name }}</p>
               <p class="text-sm text-gray-500 dark:text-gray-400">@{{ account.account_handle }}</p>
             </div>
+            <USelectMenu
+              :model-value="account.client ?? 'house'"
+              :options="[
+                { label: 'House (agency-owned)', value: 'house' },
+                ...clients.map((c) => ({ label: c.name, value: c.id })),
+              ]"
+              value-attribute="value"
+              option-attribute="label"
+              size="xs"
+              class="w-48"
+              @update:model-value="(v: string) => reassignAccountClient(account, v === 'house' ? null : v)"
+            />
             <UBadge :color="getTokenStatus(account).color" variant="subtle" size="sm">
               {{ getTokenStatus(account).label }}
             </UBadge>

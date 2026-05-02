@@ -12,6 +12,7 @@ import {
 	deleteSocialPost,
 	logSocialActivity,
 } from '~~/server/utils/social-directus';
+import { requireSocialOrg } from '~~/server/utils/social-tenancy';
 
 const updatePostSchema = z.object({
 	caption: z.string().min(1).max(2200).optional(),
@@ -34,6 +35,7 @@ const updatePostSchema = z.object({
 });
 
 export default defineEventHandler(async (event) => {
+	const { organizationId } = await requireSocialOrg(event);
 	const method = getMethod(event);
 	const id = getRouterParam(event, 'id');
 
@@ -43,7 +45,7 @@ export default defineEventHandler(async (event) => {
 
 	// ── GET: Single post ──
 	if (method === 'GET') {
-		const post = await getSocialPostById(id);
+		const post = await getSocialPostById(id, organizationId);
 
 		if (!post) {
 			throw createError({ statusCode: 404, message: 'Post not found' });
@@ -54,7 +56,7 @@ export default defineEventHandler(async (event) => {
 
 	// ── PATCH: Update post ──
 	if (method === 'PATCH') {
-		const existing = await getSocialPostById(id);
+		const existing = await getSocialPostById(id, organizationId);
 		if (!existing) {
 			throw createError({ statusCode: 404, message: 'Post not found' });
 		}
@@ -87,7 +89,7 @@ export default defineEventHandler(async (event) => {
 
 	// ── DELETE: Remove post ──
 	if (method === 'DELETE') {
-		const existing = await getSocialPostById(id);
+		const existing = await getSocialPostById(id, organizationId);
 		if (!existing) {
 			throw createError({ statusCode: 404, message: 'Post not found' });
 		}

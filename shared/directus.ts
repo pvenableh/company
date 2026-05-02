@@ -3225,8 +3225,10 @@ export interface SocialAccount {
 	account_status?: 'active' | 'expired' | 'revoked';
 	/** @description Platform-specific data (page_id, scopes, etc.) */
 	metadata?: Record<string, any> | null;
-	/** @description Which agency client this account belongs to */
-	client_id?: SocialClient | string | null;
+	/** @description Owning organization @required */
+	organization: Organization | string;
+	/** @description Which agency client owns this account (null = house/agency-owned) */
+	client?: Client | string | null;
 }
 
 export interface SocialActivityLog {
@@ -3259,25 +3261,6 @@ export interface SocialAnalyticsSnapshot {
 	captured_at: string;
 	/** @description Platform-specific metrics object (followers, likes, impressions, etc.) @required */
 	metrics: Record<string, any>;
-}
-
-export interface SocialClient {
-	/** @primaryKey */
-	id: string;
-	status?: 'published' | 'draft' | 'archived';
-	sort?: number | null;
-	user_created?: DirectusUser | string | null;
-	date_created?: string | null;
-	user_updated?: DirectusUser | string | null;
-	date_updated?: string | null;
-	/** @required */
-	name: string;
-	/** @description URL to client logo image */
-	logo_url?: string | null;
-	/** @description Primary contact email */
-	contact_email?: string | null;
-	brand_color?: string | null;
-	notes?: string | null;
 }
 
 export interface SocialComment {
@@ -3331,6 +3314,10 @@ export interface SocialPost {
 	published_at?: string | null;
 	/** @description Error details if publishing failed */
 	error_message?: string | null;
+	/** @description Owning organization @required */
+	organization: Organization | string;
+	/** @description Which agency client this post is for (defaults from selected accounts at compose time) */
+	client?: Client | string | null;
 }
 
 export interface Task {
@@ -4334,7 +4321,6 @@ export interface Schema {
 	social_accounts: SocialAccount[];
 	social_activity_log: SocialActivityLog[];
 	social_analytics_snapshots: SocialAnalyticsSnapshot[];
-	social_clients: SocialClient[];
 	social_comments: SocialComment[];
 	social_posts: SocialPost[];
 	tasks: Task[];
@@ -4557,7 +4543,6 @@ export enum CollectionNames {
 	social_accounts = 'social_accounts',
 	social_activity_log = 'social_activity_log',
 	social_analytics_snapshots = 'social_analytics_snapshots',
-	social_clients = 'social_clients',
 	social_comments = 'social_comments',
 	social_posts = 'social_posts',
 	tasks = 'tasks',

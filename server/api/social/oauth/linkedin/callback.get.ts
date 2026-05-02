@@ -10,6 +10,8 @@ import {
   updateSocialAccount,
   logSocialActivity,
 } from '~~/server/utils/social-directus'
+import { decodeOAuthState } from '~~/server/utils/social-tenancy'
+import { requireOrgMembership } from '~~/server/utils/marketing-perms'
 import { addDays } from 'date-fns'
 
 export default defineEventHandler(async (event) => {
@@ -25,6 +27,14 @@ export default defineEventHandler(async (event) => {
     return sendRedirect(event, `/social/settings?error=no_code`)
   }
 
+  let organizationId: string
+  try {
+    organizationId = decodeOAuthState(state).organizationId
+    await requireOrgMembership(event, organizationId)
+  } catch (err: any) {
+    return sendRedirect(event, `/social/settings?error=invalid_state&message=${encodeURIComponent(err.message || 'state invalid')}`)
+  }
+
   try {
     // Exchange code for tokens
     const tokens = await exchangeLinkedInCode(code)
@@ -36,9 +46,10 @@ export default defineEventHandler(async (event) => {
     let connectedCount = 0
 
     // Connect personal profile
-    const existingPersonal = await getSocialAccountByPlatformId('linkedin', profile.sub)
+    const existingPersonal = await getSocialAccountByPlatformId('linkedin', profile.sub, organizationId)
 
     const personalData = {
+      organization: organizationId,
       platform: 'linkedin' as const,
       platform_user_id: profile.sub,
       account_name: profile.name,
@@ -77,9 +88,10 @@ export default defineEventHandler(async (event) => {
 
     for (const org of orgs) {
       const orgPlatformId = `org_${org.organizationId}`
-      const existingOrg = await getSocialAccountByPlatformId('linkedin', orgPlatformId)
+      const existingOrg = await getSocialAccountByPlatformId('linkedin', orgPlatformId, organizationId)
 
       const orgData = {
+        organization: organizationId,
         platform: 'linkedin' as const,
         platform_user_id: orgPlatformId,
         account_name: org.name,

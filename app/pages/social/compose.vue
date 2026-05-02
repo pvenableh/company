@@ -10,13 +10,14 @@
  */
 
 import { format, addHours, roundToNearestMinutes } from 'date-fns';
-import type { SocialAccountPublic, SocialPostTarget, PostType, SocialClient, SocialPlatform } from '~~/shared/social';
+import type { SocialAccountPublic, SocialPostTarget, PostType, SocialPlatform } from '~~/shared/social';
+import type { Client } from '~~/shared/directus';
 
 const showAIWizard = ref(false);
 
 function handleAICreated(posts: { platform: SocialPlatform; caption: string }[]) {
 	showAIWizard.value = false;
-	if (posts.length > 0) {
+	if (posts.length > 0 && posts[0]) {
 		caption.value = posts[0].caption;
 	}
 	toast.add({
@@ -42,12 +43,12 @@ const platformIcons: Record<SocialPlatform, string> = {
 	threads: 'i-lucide-at-sign',
 };
 
-// Fetch data (lazy to avoid blocking page render on Directus errors)
-const { data: accountsData } = useLazyFetch('/api/social/accounts');
-const { data: clientsData, refresh: refreshClients } = useLazyFetch('/api/social/clients');
+// Real client list comes from the global useClients() composable so the
+// social composer uses the same client picker as the rest of the app.
+const { clientList: clients, selectedClient: globalSelectedClient } = useClients();
 
+const { data: accountsData } = useLazyFetch('/api/social/accounts');
 const accounts = computed(() => ((accountsData.value as any)?.data || []) as SocialAccountPublic[]);
-const clients = computed(() => ((clientsData.value as any)?.data || []) as (SocialClient & { account_count: number })[]);
 
 // Form state
 const caption = ref('');
@@ -63,36 +64,34 @@ const isDraft = ref(false);
 // LinkedIn-specific options
 const linkedInVisibility = ref<'PUBLIC' | 'CONNECTIONS'>('PUBLIC');
 
-// Filter state
-const selectedClientId = ref<string | null>(null);
+// Compose-scoped client picker — defaults to the global header client when set.
+// 'house' = post on behalf of the agency itself (account.client === null).
+type ClientScope = 'house' | string
+const selectedClientScope = ref<ClientScope>(
+	globalSelectedClient.value && globalSelectedClient.value !== 'org'
+		? (globalSelectedClient.value as string)
+		: 'house',
+);
+
+// Keep in sync if user changes the global picker while on this page
+watch(globalSelectedClient, (val) => {
+	if (val && val !== 'org') selectedClientScope.value = val as string
+	else selectedClientScope.value = 'house'
+})
 
 // UI state
 const isSubmitting = ref(false);
 const mediaInput = ref('');
 const toast = useToast();
-const showNewClientModal = ref(false);
-const newClientName = ref('');
 
-// Group accounts by client for display
-const accountsByClient = computed(() => {
-	const grouped: Record<string, { client: SocialClient | null; accounts: SocialAccountPublic[] }> = {};
-
-	// Unassigned accounts
-	const unassigned = accounts.value.filter((a) => !a.client_id);
-	if (unassigned.length > 0) {
-		grouped['unassigned'] = { client: null, accounts: unassigned };
+// Filter accounts to the picked client scope so cross-client cross-posting
+// is structurally prevented (see PR 2 design discussion).
+const scopedAccounts = computed(() => {
+	if (selectedClientScope.value === 'house') {
+		return accounts.value.filter((a) => !a.client)
 	}
-
-	// Grouped by client
-	for (const client of clients.value) {
-		const clientAccounts = accounts.value.filter((a) => a.client_id === client.id);
-		if (clientAccounts.length > 0) {
-			grouped[client.id] = { client, accounts: clientAccounts };
-		}
-	}
-
-	return grouped;
-});
+	return accounts.value.filter((a) => a.client === selectedClientScope.value)
+})
 
 const selectedAccountDetails = computed(() => {
 	return accounts.value.filter((a) => selectedAccounts.value.includes(a.id));
@@ -176,20 +175,14 @@ function toggleAccount(accountId: string) {
 	}
 }
 
-function selectAllInClient(clientId: string | null) {
-	const clientAccounts = clientId
-		? accounts.value.filter((a) => a.client_id === clientId)
-		: accounts.value.filter((a) => !a.client_id);
-
-	const allSelected = clientAccounts.every((a) => selectedAccounts.value.includes(a.id));
-
+function selectAllScoped() {
+	const allSelected = scopedAccounts.value.every((a) => selectedAccounts.value.includes(a.id));
 	if (allSelected) {
-		for (const account of clientAccounts) {
-			const index = selectedAccounts.value.indexOf(account.id);
-			if (index !== -1) selectedAccounts.value.splice(index, 1);
-		}
+		selectedAccounts.value = selectedAccounts.value.filter(
+			(id) => !scopedAccounts.value.some((a) => a.id === id),
+		);
 	} else {
-		for (const account of clientAccounts) {
+		for (const account of scopedAccounts.value) {
 			if (!selectedAccounts.value.includes(account.id)) {
 				selectedAccounts.value.push(account.id);
 			}
@@ -197,33 +190,10 @@ function selectAllInClient(clientId: string | null) {
 	}
 }
 
-async function createClient() {
-	if (!newClientName.value.trim()) return;
-
-	try {
-		await $fetch('/api/social/clients', {
-			method: 'POST',
-			body: { name: newClientName.value.trim() },
-		});
-
-		toast.add({
-			title: 'Client created',
-			icon: 'i-lucide-check-circle',
-			color: 'green',
-		});
-
-		await refreshClients();
-		showNewClientModal.value = false;
-		newClientName.value = '';
-	} catch (error: any) {
-		toast.add({
-			title: 'Error',
-			description: error.data?.message || 'Failed to create client',
-			icon: 'i-lucide-alert-circle',
-			color: 'red',
-		});
-	}
-}
+// Reset selected accounts whenever client scope changes
+watch(selectedClientScope, () => {
+	selectedAccounts.value = []
+})
 
 async function submitPost() {
 	if (!canSubmit.value) return;
@@ -261,6 +231,7 @@ async function submitPost() {
 				post_type: postType.value,
 				scheduled_at: new Date(scheduledAt.value).toISOString(),
 				status: isDraft.value ? 'draft' : 'scheduled',
+				client: selectedClientScope.value === 'house' ? null : selectedClientScope.value,
 			},
 		});
 
@@ -428,6 +399,26 @@ async function submitPost() {
 
 			<!-- Sidebar -->
 			<div class="lg:col-span-2 space-y-6">
+				<!-- Posting Context (client) -->
+				<UCard>
+					<template #header>
+						<h2 class="font-semibold text-gray-900 dark:text-white">Posting as</h2>
+					</template>
+					<USelectMenu
+						v-model="selectedClientScope"
+						:options="[
+							{ label: 'House (agency-owned)', value: 'house' },
+							...clients.map((c) => ({ label: c.name, value: c.id })),
+						]"
+						value-attribute="value"
+						option-attribute="label"
+						class="w-full"
+					/>
+					<p class="text-xs text-muted-foreground mt-2">
+						This post will be tagged to {{ selectedClientScope === 'house' ? 'your agency (no client)' : (clients.find((c) => c.id === selectedClientScope)?.name || 'the selected client') }}.
+					</p>
+				</UCard>
+
 				<!-- Account Selection -->
 				<UCard>
 					<template #header>
@@ -439,96 +430,53 @@ async function submitPost() {
 						</div>
 					</template>
 
-					<!-- Client Filter -->
-					<div class="mb-4">
-						<USelectMenu
-							v-model="selectedClientId"
-							:options="[
-								{ label: 'All Accounts', value: null },
-								...clients.map((c) => ({ label: c.name, value: c.id })),
-							]"
-							value-attribute="value"
-							option-attribute="label"
-							placeholder="Filter by client..."
-							class="w-full"
-						/>
-					</div>
-
-					<div v-if="accounts.length === 0" class="text-center py-4">
-						<p class="text-sm text-gray-500 dark:text-gray-400 mb-3">No accounts connected</p>
+					<div v-if="scopedAccounts.length === 0" class="text-center py-4">
+						<p class="text-sm text-gray-500 dark:text-gray-400 mb-3">
+							No accounts owned by {{ selectedClientScope === 'house' ? 'House' : 'this client' }}
+						</p>
 						<UButton to="/social/settings" size="sm" variant="soft">Connect Account</UButton>
 					</div>
 
-					<!-- Grouped Account List -->
-					<div v-else class="space-y-4 max-h-[400px] overflow-y-auto">
-						<template v-for="(group, groupKey) in accountsByClient" :key="groupKey">
-							<template
-								v-if="
-									!selectedClientId || selectedClientId === groupKey || (groupKey === 'unassigned' && !selectedClientId)
+					<div v-else>
+						<div class="flex items-center justify-end mb-2">
+							<button
+								@click="selectAllScoped"
+								class="text-xs text-primary hover:text-primary/85"
+							>
+								{{ scopedAccounts.every((a) => selectedAccounts.includes(a.id)) ? 'Deselect all' : 'Select all' }}
+							</button>
+						</div>
+						<div class="space-y-2 max-h-[400px] overflow-y-auto">
+							<label
+								v-for="account in scopedAccounts"
+								:key="account.id"
+								class="flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors"
+								:class="
+									selectedAccounts.includes(account.id)
+										? 'bg-primary/10'
+										: 'hover:bg-gray-50 dark:hover:bg-gray-800'
 								"
 							>
-								<div class="border-b border-gray-100 dark:border-gray-800 pb-4 last:border-0">
-									<!-- Client Header -->
-									<div class="flex items-center justify-between mb-2">
-										<div class="flex items-center gap-2">
-											<div
-												v-if="group.client?.brand_color"
-												class="w-3 h-3 rounded-full"
-												:style="{ backgroundColor: group.client.brand_color }"
-											/>
-											<span class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-												{{ group.client?.name || 'Unassigned' }}
-											</span>
-										</div>
-										<button
-											@click="selectAllInClient(group.client?.id || null)"
-											class="text-xs text-primary hover:text-primary/85"
-										>
-											Select all
-										</button>
-									</div>
-
-									<!-- Account Items -->
-									<div class="space-y-2">
-										<label
-											v-for="account in group.accounts"
-											:key="account.id"
-											class="flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors"
-											:class="
-												selectedAccounts.includes(account.id)
-													? 'bg-primary/10'
-													: 'hover:bg-gray-50 dark:hover:bg-gray-800'
-											"
-										>
-											<UCheckbox
-												:model-value="selectedAccounts.includes(account.id)"
-												@update:model-value="toggleAccount(account.id)"
-											/>
-											<UAvatar :src="account.profile_picture_url || undefined" :alt="account.account_name" size="xs" />
-											<div class="flex-1 min-w-0">
-												<p class="text-sm font-medium text-gray-900 dark:text-white truncate">
-													{{ account.account_name }}
-												</p>
-												<p class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-													<UIcon
-														:name="platformIcons[account.platform] || 'i-lucide-globe'"
-														class="w-3 h-3"
-													/>
-													@{{ account.account_handle }}
-												</p>
-											</div>
-										</label>
-									</div>
+								<UCheckbox
+									:model-value="selectedAccounts.includes(account.id)"
+									@update:model-value="toggleAccount(account.id)"
+								/>
+								<UAvatar :src="account.profile_picture_url || undefined" :alt="account.account_name" size="xs" />
+								<div class="flex-1 min-w-0">
+									<p class="text-sm font-medium text-gray-900 dark:text-white truncate">
+										{{ account.account_name }}
+									</p>
+									<p class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+										<UIcon
+											:name="platformIcons[account.platform] || 'i-lucide-globe'"
+											class="w-3 h-3"
+										/>
+										@{{ account.account_handle }}
+									</p>
 								</div>
-							</template>
-						</template>
+							</label>
+						</div>
 					</div>
-
-					<template #footer>
-						<UButton variant="ghost" size="xs" icon="i-lucide-plus" @click="showNewClientModal = true">
-							Add Client
-						</UButton>
-					</template>
 				</UCard>
 
 				<!-- Schedule -->
@@ -570,23 +518,5 @@ async function submitPost() {
 			@close="showAIWizard = false"
 			@created="handleAICreated"
 		/>
-
-		<!-- New Client Modal -->
-		<UModal v-model="showNewClientModal">
-			<UCard>
-				<template #header>
-					<h3 class="font-semibold text-gray-900 dark:text-white">Add New Client</h3>
-				</template>
-
-				<UInput v-model="newClientName" placeholder="Client name..." @keyup.enter="createClient" />
-
-				<template #footer>
-					<div class="flex justify-end gap-3">
-						<UButton variant="ghost" @click="showNewClientModal = false">Cancel</UButton>
-						<UButton @click="createClient" :disabled="!newClientName.trim()">Create</UButton>
-					</div>
-				</template>
-			</UCard>
-		</UModal>
 	</LayoutPageContainer>
 </template>

@@ -37,6 +37,7 @@ import {
 	generatePassword,
 	pingDirectus,
 	randomToken,
+	seedSocial,
 } from './lib/demo-seed';
 
 const DEMO_ORG_NAME = 'Earnest Demo — Agency';
@@ -1310,6 +1311,17 @@ async function main() {
 
 	console.log('\n--- channel + messages ---');
 	await seedChannel(org.id, projectIds, [adminUser.id, ...teammateIds]);
+
+	await seedSocial({
+		orgId: org.id,
+		assignments: [
+			{ clientId: null, clientName: 'House', platforms: ['instagram', 'tiktok'] },
+			{ clientId: clientIds['helios-studio'] ?? null, clientName: 'Helios Hospitality Group', platforms: ['instagram', 'tiktok'] },
+			{ clientId: clientIds['atlas-fintech'] ?? null, clientName: 'Atlas Fintech', platforms: ['instagram', 'linkedin'] },
+			{ clientId: clientIds['beacon-school'] ?? null, clientName: 'Beacon School', platforms: ['instagram'] },
+		],
+		postCount: 10,
+	});
 
 	console.log('\n============================================');
 	console.log('  Summary');

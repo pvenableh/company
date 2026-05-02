@@ -13,7 +13,7 @@
 
 import { format, subDays, subWeeks, subMonths, startOfDay, endOfDay } from 'date-fns'
 import { CalendarDate, getLocalTimeZone, today } from '@internationalized/date'
-import type { SocialClient, SocialAccountPublic, SocialAnalyticsSnapshot, InstagramMetrics, TikTokMetrics } from '~~/shared/social'
+import type { SocialAccountPublic, SocialAnalyticsSnapshot, InstagramMetrics, TikTokMetrics } from '~~/shared/social'
 
 definePageMeta({
   layout: 'default',
@@ -54,21 +54,19 @@ const dateRange = computed(() => {
   }
 })
 
-// Filters
+// Filters — client comes from the global useClients() composable
+const { clientList: clients } = useClients()
 const selectedClientId = ref<string | null>(null)
 const selectedAccountId = ref<string | null>(null)
 
-// Fetch data (lazy to avoid blocking page render on Directus errors)
-const { data: clientsData } = useLazyFetch('/api/social/clients')
 const { data: accountsData } = useLazyFetch('/api/social/accounts')
-
-const clients = computed(() => ((clientsData.value as any)?.data || []) as SocialClient[])
 const accounts = computed(() => ((accountsData.value as any)?.data || []) as SocialAccountPublic[])
 
-// Filter accounts by client
+// Filter accounts by selected client; null = all accounts in this org
 const filteredAccounts = computed(() => {
   if (!selectedClientId.value) return accounts.value
-  return accounts.value.filter((a) => a.client_id === selectedClientId.value)
+  if (selectedClientId.value === 'house') return accounts.value.filter((a) => !a.client)
+  return accounts.value.filter((a) => a.client === selectedClientId.value)
 })
 
 // When client changes, reset account selection
@@ -172,11 +170,15 @@ const platformIcons: Record<string, string> = {
     <div class="flex flex-wrap items-center gap-3 mb-6">
       <USelectMenu
         v-model="selectedClientId"
-        :options="[{ label: 'All Contacts', value: null }, ...clients.map((c) => ({ label: c.name, value: c.id }))]"
+        :options="[
+          { label: 'All clients', value: null },
+          { label: 'House (agency-owned)', value: 'house' },
+          ...clients.map((c) => ({ label: c.name, value: c.id })),
+        ]"
         value-attribute="value"
         option-attribute="label"
-        placeholder="Filter by contact"
-        class="w-40"
+        placeholder="Filter by client"
+        class="w-44"
       />
       <USelectMenu
         v-model="selectedAccountId"

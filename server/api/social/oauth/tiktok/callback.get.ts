@@ -10,6 +10,8 @@ import {
   updateSocialAccount,
   logSocialActivity,
 } from '~~/server/utils/social-directus'
+import { decodeOAuthState } from '~~/server/utils/social-tenancy'
+import { requireOrgMembership } from '~~/server/utils/marketing-perms'
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)
@@ -24,6 +26,14 @@ export default defineEventHandler(async (event) => {
     return sendRedirect(event, `/social/settings?error=no_code`)
   }
 
+  let organizationId: string
+  try {
+    organizationId = decodeOAuthState(state).organizationId
+    await requireOrgMembership(event, organizationId)
+  } catch (err: any) {
+    return sendRedirect(event, `/social/settings?error=invalid_state&message=${encodeURIComponent(err.message || 'state invalid')}`)
+  }
+
   try {
     // Exchange code for tokens
     const tokens = await exchangeTikTokCode(code)
@@ -33,9 +43,10 @@ export default defineEventHandler(async (event) => {
 
     const tokenExpiresAt = new Date(Date.now() + tokens.expiresIn * 1000).toISOString()
 
-    const existing = await getSocialAccountByPlatformId('tiktok', tokens.openId)
+    const existing = await getSocialAccountByPlatformId('tiktok', tokens.openId, organizationId)
 
     const accountData = {
+      organization: organizationId,
       platform: 'tiktok' as const,
       platform_user_id: tokens.openId,
       account_name: userInfo.displayName,

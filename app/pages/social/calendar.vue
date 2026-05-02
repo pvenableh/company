@@ -12,7 +12,7 @@
 
 import { CalendarDate, DateFormatter, getLocalTimeZone, today } from '@internationalized/date'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, addMonths, subMonths } from 'date-fns'
-import type { SocialPost, SocialClient, SocialAccountPublic } from '~~/shared/social'
+import type { SocialPost, SocialAccountPublic } from '~~/shared/social'
 
 definePageMeta({
   layout: 'default',
@@ -31,11 +31,9 @@ const selectedClientId = ref<string | null>(null)
 const selectedPlatform = ref<string | null>(null)
 const selectedStatus = ref<string | null>(null)
 
-// Fetch data (lazy to avoid blocking page render on Directus errors)
-const { data: clientsData } = useLazyFetch('/api/social/clients')
+// Real client list comes from useClients()
+const { clientList: clients } = useClients()
 const { data: accountsData } = useLazyFetch('/api/social/accounts')
-
-const clients = computed(() => ((clientsData.value as any)?.data || []) as SocialClient[])
 const accounts = computed(() => ((accountsData.value as any)?.data || []) as SocialAccountPublic[])
 
 // Fetch posts for current month range
@@ -58,8 +56,9 @@ const filteredPosts = computed(() => {
   let result = posts.value
 
   if (selectedClientId.value) {
+    const wantedClient = selectedClientId.value === 'house' ? null : selectedClientId.value
     const clientAccountIds = accounts.value
-      .filter((a) => a.client_id === selectedClientId.value)
+      .filter((a) => a.client === wantedClient)
       .map((a) => a.id)
     result = result.filter((p) =>
       p.platforms.some((t) => clientAccountIds.includes(t.account_id))
@@ -178,7 +177,11 @@ const df = new DateFormatter('en-US', { month: 'long', year: 'numeric' })
     <div class="flex flex-wrap items-center gap-3 mb-6">
       <USelectMenu
         v-model="selectedClientId"
-        :options="[{ label: 'All Contacts', value: null }, ...clients.map((c) => ({ label: c.name, value: c.id }))]"
+        :options="[
+          { label: 'All clients', value: null },
+          { label: 'House', value: 'house' },
+          ...clients.map((c) => ({ label: c.name, value: c.id })),
+        ]"
         value-attribute="value"
         option-attribute="label"
         placeholder="Filter by contact"

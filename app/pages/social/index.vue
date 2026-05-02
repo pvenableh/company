@@ -50,6 +50,9 @@ const stats = computed<SocialDashboardStats>(() => {
     accounts_by_platform: {
       instagram: accounts.value.filter((a) => a.platform === 'instagram').length,
       tiktok: accounts.value.filter((a) => a.platform === 'tiktok').length,
+      linkedin: accounts.value.filter((a) => a.platform === 'linkedin').length,
+      facebook: accounts.value.filter((a) => a.platform === 'facebook').length,
+      threads: accounts.value.filter((a) => a.platform === 'threads').length,
     },
     engagement_rate_avg: 4.7,
     follower_growth_weekly: 248,
@@ -291,15 +294,6 @@ const { getStatusColorName: statusColor } = useStatusStyle()
               icon="i-lucide-bar-chart-2"
             >
               Analytics
-            </UButton>
-            <UButton
-              to="/social/clients"
-              block
-              variant="soft"
-              color="gray"
-              icon="i-lucide-building-2"
-            >
-              Social Accounts
             </UButton>
             <UButton
               to="/social/settings"

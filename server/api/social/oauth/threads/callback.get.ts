@@ -10,6 +10,8 @@ import {
   updateSocialAccount,
   logSocialActivity,
 } from '~~/server/utils/social-directus'
+import { decodeOAuthState } from '~~/server/utils/social-tenancy'
+import { requireOrgMembership } from '~~/server/utils/marketing-perms'
 import { addDays } from 'date-fns'
 
 export default defineEventHandler(async (event) => {
@@ -25,6 +27,14 @@ export default defineEventHandler(async (event) => {
     return sendRedirect(event, `/social/settings?error=no_code`)
   }
 
+  let organizationId: string
+  try {
+    organizationId = decodeOAuthState(state).organizationId
+    await requireOrgMembership(event, organizationId)
+  } catch (err: any) {
+    return sendRedirect(event, `/social/settings?error=invalid_state&message=${encodeURIComponent(err.message || 'state invalid')}`)
+  }
+
   try {
     // Exchange code for tokens
     const tokens = await exchangeThreadsCode(code)
@@ -34,9 +44,10 @@ export default defineEventHandler(async (event) => {
 
     const tokenExpiresAt = addDays(new Date(), Math.floor(tokens.expiresIn / 86400)).toISOString()
 
-    const existing = await getSocialAccountByPlatformId('threads', profile.id)
+    const existing = await getSocialAccountByPlatformId('threads', profile.id, organizationId)
 
     const accountData = {
+      organization: organizationId,
       platform: 'threads' as const,
       platform_user_id: profile.id,
       account_name: profile.name,
