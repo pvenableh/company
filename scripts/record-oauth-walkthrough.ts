@@ -185,7 +185,7 @@ async function main(): Promise<void> {
 		await page.waitForTimeout(3500);
 
 		// 8) End on social dashboard — closes the "integrated workflow" arc
-		await gotoAndSettle(page, '/social/dashboard', 2000);
+		await gotoAndSettle(page, '/social', 2000);
 		await page.waitForTimeout(2500);
 	} finally {
 		// Closing the context flushes the video to disk.

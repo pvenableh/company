@@ -44,7 +44,7 @@ const DEFAULT_LINKS: NavLink[] = [
 	{ name: 'Teams', type: ['drawer'], to: '/organization/teams', icon: 'i-heroicons-user-group', color: 'bg-blue-500', description: 'Team management', section: 'secondary', featureKey: 'team_management' },
 	{ name: 'Goals', type: ['drawer'], to: '/goals', icon: 'i-heroicons-flag', color: 'bg-amber-500', description: 'Track goals', section: 'secondary' },
 	{ name: 'Email', type: ['header', 'footer', 'drawer'], to: '/email', icon: 'i-heroicons-envelope', color: 'bg-rose-500', description: 'Email campaigns', section: 'secondary', featureKey: 'email_campaigns' },
-	{ name: 'Social', type: ['header', 'footer', 'drawer'], to: '/social/dashboard', icon: 'i-heroicons-share', color: 'bg-pink-500', description: 'Social media', section: 'secondary', featureKey: 'email_campaigns' },
+	{ name: 'Social', type: ['header', 'footer', 'drawer'], to: '/social', icon: 'i-heroicons-share', color: 'bg-pink-500', description: 'Social media', section: 'secondary', featureKey: 'email_campaigns' },
 	{ name: 'Financials', type: ['footer', 'drawer'], to: '/financials', icon: 'i-heroicons-chart-bar', color: 'bg-green-600', description: 'Financial reports', section: 'secondary', featureKey: 'invoices' },
 	{ name: 'Time Tracker', type: ['header', 'footer', 'drawer'], to: '/time-tracker', icon: 'i-heroicons-clock', color: 'bg-lime-600', description: 'Track time', section: 'secondary' },
 	{ name: 'Phone', type: ['drawer'], to: '/phone-settings', icon: 'i-heroicons-phone', color: 'bg-teal-500', description: 'Phone system', section: 'secondary' },
@@ -84,7 +84,7 @@ const HATS: Hat[] = [
 		icon: 'i-fluent-emoji-flat-artist-palette',
 		name: 'Creative',
 		description: 'Design, content & brand work',
-		routes: ['/', '/projects', '/marketing', '/social/dashboard', '/files'],
+		routes: ['/', '/projects', '/marketing', '/social', '/files'],
 	},
 	{
 		id: 'finance',
@@ -105,7 +105,7 @@ const HATS: Hat[] = [
 		icon: 'i-fluent-emoji-flat-bullseye',
 		name: 'Marketing',
 		description: 'Campaigns, social & outreach',
-		routes: ['/', '/marketing', '/email', '/social/dashboard', '/people', '/scheduler'],
+		routes: ['/', '/marketing', '/email', '/social', '/people', '/scheduler'],
 	},
 	{
 		id: 'sales',

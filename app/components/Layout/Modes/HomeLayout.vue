@@ -161,6 +161,8 @@ const initials = computed(() => {
 			</div>
 		</header>
 
+		<LayoutSubNav />
+
 		<!-- ─── Main Content ─── -->
 		<main class="flex-1 overflow-auto pb-16">
 			<slot />

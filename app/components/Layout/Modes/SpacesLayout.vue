@@ -87,6 +87,8 @@ const initials = computed(() => {
 				</div>
 			</header>
 
+			<LayoutSubNav />
+
 			<!-- Page content — slot fills remaining height so footer pins to bottom on short pages -->
 			<main class="flex-1 overflow-auto">
 				<div class="min-h-full flex flex-col">

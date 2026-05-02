@@ -111,6 +111,8 @@ function isActiveItem(to: string): boolean {
 				</div>
 			</header>
 
+			<LayoutSubNav />
+
 			<!-- Page content -->
 			<main class="flex-1 overflow-auto">
 				<slot />

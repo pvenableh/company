@@ -61,6 +61,121 @@ const platformConfig: Record<SocialPlatform, {
 
 const platformOrder: SocialPlatform[] = ['instagram', 'tiktok', 'linkedin', 'facebook', 'threads']
 
+// ── Setup guide (per-platform OAuth + env reference, surfaced at bottom of page) ──
+type SetupGuide = {
+  envVars: { name: string; required: boolean; note?: string }[]
+  scopes: string[]
+  redirectPath: string
+  consoleUrl: string
+  consoleLabel: string
+  notes?: string[]
+}
+
+const setupGuides: Record<SocialPlatform, SetupGuide> = {
+  instagram: {
+    envVars: [
+      { name: 'INSTAGRAM_APP_ID', required: true, note: 'Meta app ID (shared across IG/FB/Threads)' },
+      { name: 'INSTAGRAM_APP_SECRET', required: true, note: 'Meta app secret (shared across IG/FB/Threads)' },
+      { name: 'INSTAGRAM_REDIRECT_URI', required: true },
+    ],
+    scopes: [
+      'instagram_basic',
+      'instagram_content_publish',
+      'instagram_manage_comments',
+      'instagram_manage_insights',
+      'pages_show_list',
+      'pages_read_engagement',
+    ],
+    redirectPath: '/api/social/oauth/instagram/callback',
+    consoleUrl: 'https://developers.facebook.com/apps/',
+    consoleLabel: 'Meta for Developers',
+    notes: [
+      'Requires an Instagram Business or Creator account linked to a Facebook Page.',
+      'Long-lived tokens last 60 days; the system auto-refreshes before expiry.',
+    ],
+  },
+  tiktok: {
+    envVars: [
+      { name: 'TIKTOK_CLIENT_KEY', required: true },
+      { name: 'TIKTOK_CLIENT_SECRET', required: true },
+      { name: 'TIKTOK_REDIRECT_URI', required: true },
+    ],
+    scopes: ['user.info.basic', 'video.upload', 'video.publish', 'video.list'],
+    redirectPath: '/api/social/oauth/tiktok/callback',
+    consoleUrl: 'https://developers.tiktok.com/',
+    consoleLabel: 'TikTok for Developers',
+    notes: [
+      'Posts go to inbox as drafts by default. Direct posting requires TikTok audit approval.',
+      'Access tokens expire after 24h; refresh tokens last 365 days and refresh automatically.',
+    ],
+  },
+  linkedin: {
+    envVars: [
+      { name: 'LINKEDIN_CLIENT_ID', required: true },
+      { name: 'LINKEDIN_CLIENT_SECRET', required: true },
+      { name: 'LINKEDIN_REDIRECT_URI', required: true },
+    ],
+    scopes: [
+      'openid',
+      'profile',
+      'w_member_social',
+      'r_organization_social',
+      'w_organization_social',
+      'rw_organization_admin',
+    ],
+    redirectPath: '/api/social/oauth/linkedin/callback',
+    consoleUrl: 'https://www.linkedin.com/developers/apps',
+    consoleLabel: 'LinkedIn Developer Portal',
+    notes: [
+      'Community Management API is invite-only and must be the only product on the app — recommend Marketing Developer Platform instead.',
+      'For personal-only posting until org-page approval, trim scopes to: openid, profile, w_member_social.',
+    ],
+  },
+  facebook: {
+    envVars: [
+      { name: 'FACEBOOK_APP_ID', required: false, note: 'Falls back to INSTAGRAM_APP_ID (same Meta app)' },
+      { name: 'FACEBOOK_APP_SECRET', required: false, note: 'Falls back to INSTAGRAM_APP_SECRET' },
+      { name: 'FACEBOOK_REDIRECT_URI', required: true },
+    ],
+    scopes: [
+      'pages_show_list',
+      'pages_read_engagement',
+      'pages_manage_posts',
+      'pages_manage_engagement',
+      'pages_read_user_content',
+      'read_insights',
+    ],
+    redirectPath: '/api/social/oauth/facebook/callback',
+    consoleUrl: 'https://developers.facebook.com/apps/',
+    consoleLabel: 'Meta for Developers',
+    notes: [
+      'Only Facebook Pages you manage can be connected — personal profiles are not supported.',
+    ],
+  },
+  threads: {
+    envVars: [
+      { name: 'THREADS_APP_ID', required: false, note: 'Falls back to INSTAGRAM_APP_ID' },
+      { name: 'THREADS_APP_SECRET', required: false, note: 'Falls back to INSTAGRAM_APP_SECRET' },
+      { name: 'THREADS_REDIRECT_URI', required: true },
+    ],
+    scopes: [
+      'threads_basic',
+      'threads_content_publish',
+      'threads_manage_insights',
+      'threads_manage_replies',
+    ],
+    redirectPath: '/api/social/oauth/threads/callback',
+    consoleUrl: 'https://developers.facebook.com/apps/',
+    consoleLabel: 'Meta for Developers',
+  },
+}
+
+const siteOrigin = useRuntimeConfig().public.siteUrl as string
+
+function fullRedirectUri(platform: SocialPlatform): string {
+  return `${siteOrigin}${setupGuides[platform].redirectPath}`
+}
+
 // Handle OAuth callback messages
 onMounted(() => {
   const { success, error, count, message } = route.query
@@ -158,10 +273,10 @@ async function disconnectAccount() {
 </script>
 
 <template>
-  <div class="p-6 lg:p-8 max-w-4xl mx-auto">
+  <LayoutPageContainer>
     <!-- Header -->
     <div class="flex items-center gap-4 mb-8">
-      <UButton to="/social/dashboard" variant="ghost" icon="i-lucide-arrow-left" size="sm" />
+      <UButton to="/social" variant="ghost" icon="i-lucide-arrow-left" size="sm" />
       <div>
         <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Social Settings</h1>
         <p class="text-gray-500 dark:text-gray-400 mt-0.5">Manage your connected accounts</p>
@@ -228,6 +343,111 @@ async function disconnectAccount() {
       </UCard>
     </div>
 
+    <!-- Setup Guide (env vars / OAuth scopes / redirect URI per platform) -->
+    <section id="setup-guide" class="mt-12 scroll-mt-24">
+      <div class="flex items-center gap-2 mb-4">
+        <UIcon name="i-lucide-book-open" class="w-5 h-5 text-muted-foreground" />
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Setup Guide</h2>
+      </div>
+      <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
+        Configure these env vars and OAuth settings on each platform's developer console before connecting an account.
+      </p>
+
+      <div class="space-y-3">
+        <details
+          v-for="platform in platformOrder"
+          :key="platform"
+          class="group rounded-xl border border-border/60 bg-background"
+        >
+          <summary
+            class="flex items-center justify-between gap-3 px-4 py-3 cursor-pointer list-none select-none hover:bg-muted/30 rounded-xl"
+          >
+            <div class="flex items-center gap-3">
+              <div class="p-1.5 rounded-md" :class="platformConfig[platform].bgClass">
+                <UIcon :name="platformConfig[platform].icon" class="w-4 h-4 text-white" />
+              </div>
+              <span class="font-medium text-gray-900 dark:text-white">
+                {{ platformConfig[platform].label }} setup
+              </span>
+            </div>
+            <UIcon
+              name="i-lucide-chevron-down"
+              class="w-4 h-4 text-muted-foreground transition-transform group-open:rotate-180"
+            />
+          </summary>
+
+          <div class="px-4 pb-4 pt-2 border-t border-border/40 space-y-4 text-sm">
+            <!-- Developer console -->
+            <div>
+              <p class="text-xs uppercase tracking-wider text-muted-foreground mb-1.5">Developer console</p>
+              <a
+                :href="setupGuides[platform].consoleUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex items-center gap-1.5 text-primary hover:underline"
+              >
+                {{ setupGuides[platform].consoleLabel }}
+                <UIcon name="i-lucide-external-link" class="w-3 h-3" />
+              </a>
+            </div>
+
+            <!-- Redirect URI -->
+            <div>
+              <p class="text-xs uppercase tracking-wider text-muted-foreground mb-1.5">Redirect URI (allowlist this exactly)</p>
+              <code class="block px-3 py-2 bg-muted/40 rounded-md text-[12px] break-all">{{ fullRedirectUri(platform) }}</code>
+            </div>
+
+            <!-- OAuth scopes -->
+            <div>
+              <p class="text-xs uppercase tracking-wider text-muted-foreground mb-1.5">OAuth scopes requested</p>
+              <div class="flex flex-wrap gap-1.5">
+                <code
+                  v-for="scope in setupGuides[platform].scopes"
+                  :key="scope"
+                  class="px-2 py-0.5 bg-muted/40 rounded text-[11px]"
+                >{{ scope }}</code>
+              </div>
+            </div>
+
+            <!-- Env vars -->
+            <div>
+              <p class="text-xs uppercase tracking-wider text-muted-foreground mb-1.5">Environment variables</p>
+              <ul class="space-y-1">
+                <li
+                  v-for="env in setupGuides[platform].envVars"
+                  :key="env.name"
+                  class="flex flex-wrap items-baseline gap-2"
+                >
+                  <code class="text-[12px]">{{ env.name }}</code>
+                  <span
+                    class="text-[10px] uppercase tracking-wider"
+                    :class="env.required ? 'text-rose-600 dark:text-rose-400' : 'text-muted-foreground'"
+                  >{{ env.required ? 'required' : 'optional' }}</span>
+                  <span v-if="env.note" class="text-[12px] text-muted-foreground">— {{ env.note }}</span>
+                </li>
+              </ul>
+            </div>
+
+            <!-- Notes -->
+            <div v-if="setupGuides[platform].notes?.length">
+              <p class="text-xs uppercase tracking-wider text-muted-foreground mb-1.5">Notes</p>
+              <ul class="list-disc pl-5 space-y-1 text-gray-700 dark:text-gray-300">
+                <li v-for="(note, i) in setupGuides[platform].notes" :key="i">{{ note }}</li>
+              </ul>
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <div class="mt-4 text-xs text-muted-foreground">
+        <p>
+          Also required globally:
+          <code>SOCIAL_ENCRYPTION_KEY</code> (AES-256, min 32 chars; rotating invalidates all stored tokens),
+          <code>DIRECTUS_URL</code>, and <code>DIRECTUS_SERVER_TOKEN</code>.
+        </p>
+      </div>
+    </section>
+
     <!-- Delete Confirmation Modal -->
     <UModal v-model="showDeleteModal">
       <UCard>
@@ -255,5 +475,5 @@ async function disconnectAccount() {
         </template>
       </UCard>
     </UModal>
-  </div>
+  </LayoutPageContainer>
 </template>
