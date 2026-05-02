@@ -293,10 +293,10 @@ async function submitPost() {
 </script>
 
 <template>
-	<div class="p-6 lg:p-8 max-w-6xl mx-auto">
+	<LayoutPageContainer>
 		<!-- Header -->
 		<div class="flex items-center gap-4 mb-8">
-			<UButton to="/social/dashboard" variant="ghost" icon="i-lucide-arrow-left" size="sm" />
+			<UButton to="/social" variant="ghost" icon="i-lucide-arrow-left" size="sm" />
 			<div class="flex-1">
 				<h1 class="text-2xl font-bold text-gray-900 dark:text-white">Create Post</h1>
 				<p class="text-gray-500 dark:text-gray-400 mt-0.5">Schedule content across multiple accounts</p>
@@ -588,5 +588,5 @@ async function submitPost() {
 				</template>
 			</UCard>
 		</UModal>
-	</div>
+	</LayoutPageContainer>
 </template>

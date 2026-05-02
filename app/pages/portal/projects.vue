@@ -143,7 +143,7 @@ watch(() => selectedOrg.value, () => loadProjects());
 </script>
 
 <template>
-	<div class="p-6 max-w-5xl mx-auto">
+	<LayoutPageContainer>
 		<div class="flex items-center justify-between mb-6">
 			<div>
 				<h1 class="text-xl font-semibold">Projects</h1>
@@ -384,7 +384,7 @@ watch(() => selectedOrg.value, () => loadProjects());
 				</div>
 			</Transition>
 		</Teleport>
-	</div>
+	</LayoutPageContainer>
 </template>
 
 <style scoped>

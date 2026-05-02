@@ -12,7 +12,7 @@ const invoice = await invoiceItems.get(params.id, {
 </script>
 <template>
 	<div class="w-full flex flex-col items-center justify-start">
-		<div class="w-full flex flex-col items-center justify-center z-10 page__inner">
+		<div class="w-full flex flex-col items-center justify-center relative z-10 mt-12">
 			<InvoicesInvoice :invoice="invoice" />
 			<nuxt-link v-if="invoice.status !== 'paid'" :to="'/invoices/' + invoice.id" class="mt-12">
 				<UButton

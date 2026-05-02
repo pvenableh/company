@@ -133,11 +133,11 @@ function getContactAccounts(contactId: string) {
 </script>
 
 <template>
-  <div class="p-6 lg:p-8 max-w-5xl mx-auto">
+  <LayoutPageContainer>
     <!-- Header -->
     <div class="flex items-center justify-between mb-8">
       <div class="flex items-center gap-4">
-        <UButton to="/social/dashboard" variant="ghost" icon="i-lucide-arrow-left" size="sm" />
+        <UButton to="/social" variant="ghost" icon="i-lucide-arrow-left" size="sm" />
         <div>
           <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Social Accounts</h1>
           <p class="text-gray-500 dark:text-gray-400 mt-0.5">Organize clients and assign social media accounts</p>
@@ -377,5 +377,5 @@ function getContactAccounts(contactId: string) {
         </template>
       </UCard>
     </UModal>
-  </div>
+  </LayoutPageContainer>
 </template>

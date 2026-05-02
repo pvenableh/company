@@ -87,7 +87,7 @@ watch(() => selectedOrg.value, () => {
 </script>
 
 <template>
-	<div class="p-6 max-w-5xl mx-auto">
+	<LayoutPageContainer>
 		<!-- Welcome Header -->
 		<div class="mb-8">
 			<h1 class="text-2xl font-semibold">
@@ -222,5 +222,5 @@ watch(() => selectedOrg.value, () => {
 				</div>
 			</div>
 		</template>
-	</div>
+	</LayoutPageContainer>
 </template>

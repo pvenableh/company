@@ -128,7 +128,7 @@ watch(filter, () => loadTickets());
 </script>
 
 <template>
-	<div class="p-6 max-w-5xl mx-auto">
+	<LayoutPageContainer>
 		<!-- Header -->
 		<div class="flex items-center justify-between mb-6">
 			<div>
@@ -270,7 +270,7 @@ watch(filter, () => loadTickets());
 				</div>
 			</div>
 		</div>
-	</div>
+	</LayoutPageContainer>
 </template>
 
 <style scoped>

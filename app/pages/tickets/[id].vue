@@ -49,10 +49,10 @@ const columns = [
 ];
 </script>
 <template>
-	<div class="max-w-screen-xl mx-auto px-4 2xl:px-0">
+	<LayoutPageContainer>
 		<NuxtLink
 			to="/tickets"
-			class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground hover:text-foreground transition-colors mt-4 mb-2"
+			class="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground hover:text-foreground transition-colors mb-2"
 		>
 			<Icon name="lucide:chevron-left" class="w-3 h-3" />
 			Tickets
@@ -60,6 +60,6 @@ const columns = [
 		<div class="w-full my-4">
 			<TicketsDetailsNew :element="ticket" :columns="columns" />
 		</div>
-	</div>
+	</LayoutPageContainer>
 </template>
 <style></style>

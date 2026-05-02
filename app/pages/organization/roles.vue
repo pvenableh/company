@@ -1,5 +1,5 @@
 <template>
-	<div class="container mx-auto py-6 px-4">
+	<LayoutPageContainer>
 		<div class="flex items-center justify-between mb-6">
 			<div>
 				<h2 class="text-2xl font-semibold">Roles & Permissions</h2>
@@ -164,7 +164,7 @@
 				</div>
 			</UCard>
 		</div>
-	</div>
+	</LayoutPageContainer>
 </template>
 
 <script setup>

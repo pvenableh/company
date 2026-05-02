@@ -669,7 +669,7 @@ export const useAIProductivityEngine = () => {
 					title: 'Connect Social Accounts',
 					description: 'Link your Instagram or TikTok to start scheduling content',
 					actionLabel: 'Setup',
-					actionRoute: '/social/setup',
+					actionRoute: '/social/settings',
 					category: 'social',
 					timestamp: new Date(),
 					score: 20,

@@ -101,8 +101,7 @@ onMounted(async () => {
 </script>
 
 <template>
-	<div class="min-h-screen">
-		<div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
+	<LayoutPageContainer class="min-h-screen">
 			<!-- Header -->
 			<div class="flex items-center justify-between mb-6">
 				<div class="flex items-center gap-3">
@@ -465,6 +464,5 @@ onMounted(async () => {
 					</div>
 				</div>
 			</div>
-		</div>
-	</div>
+	</LayoutPageContainer>
 </template>

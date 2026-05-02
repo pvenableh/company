@@ -159,11 +159,11 @@ const df = new DateFormatter('en-US', { month: 'long', year: 'numeric' })
 </script>
 
 <template>
-  <div class="p-6 lg:p-8 max-w-7xl mx-auto">
+  <LayoutPageContainer>
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
       <div class="flex items-center gap-4">
-        <UButton to="/social/dashboard" variant="ghost" icon="i-lucide-arrow-left" size="sm" />
+        <UButton to="/social" variant="ghost" icon="i-lucide-arrow-left" size="sm" />
         <div>
           <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Content Calendar</h1>
           <p class="text-gray-500 dark:text-gray-400 mt-0.5">
@@ -398,5 +398,5 @@ const df = new DateFormatter('en-US', { month: 'long', year: 'numeric' })
         </template>
       </UCard>
     </UModal>
-  </div>
+  </LayoutPageContainer>
 </template>

@@ -146,7 +146,7 @@ function ruleLabel(rule: LeadStageListRule): string {
 </script>
 
 <template>
-	<div class="page__inner px-6 max-w-4xl mx-auto py-6">
+	<LayoutPageContainer>
 		<!-- Header -->
 		<div class="flex items-center justify-between mb-6">
 			<div class="flex items-center gap-3">
@@ -262,5 +262,5 @@ function ruleLabel(rule: LeadStageListRule): string {
 			@updated="handleUpdated"
 			@deleted="handleDeleted"
 		/>
-	</div>
+	</LayoutPageContainer>
 </template>

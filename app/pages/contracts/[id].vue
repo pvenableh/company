@@ -93,7 +93,7 @@ onMounted(fetchData);
 </script>
 
 <template>
-	<div class="p-6 max-w-5xl mx-auto">
+	<LayoutPageContainer>
 		<div v-if="loading" class="flex items-center justify-center py-20">
 			<UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin t-text-muted" />
 		</div>
@@ -260,5 +260,5 @@ onMounted(fetchData);
 				@deleted="onContractDeleted"
 			/>
 		</template>
-	</div>
+	</LayoutPageContainer>
 </template>

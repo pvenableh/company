@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * Social Media Dashboard
- * /social/dashboard
+ * /social
  */
 
 import { format, startOfWeek, endOfWeek, isToday } from 'date-fns'
@@ -64,7 +64,7 @@ const { getStatusColorName: statusColor } = useStatusStyle()
 </script>
 
 <template>
-  <div class="p-6 lg:p-8 max-w-7xl mx-auto">
+  <LayoutPageContainer>
     <!-- Header -->
     <div class="flex items-center justify-between mb-8">
       <div>
@@ -101,7 +101,7 @@ const { getStatusColorName: statusColor } = useStatusStyle()
           <p class="text-sm text-gray-600 dark:text-gray-400">Connect your social accounts to start scheduling and publishing content with AI assistance.</p>
         </div>
         <div class="flex gap-2">
-          <UButton to="/social/setup" variant="ghost" size="sm">Setup Guide</UButton>
+          <UButton to="/social/settings#setup-guide" variant="ghost" size="sm">Setup Guide</UButton>
           <UButton to="/social/settings" icon="i-lucide-plug" size="sm">Connect Accounts</UButton>
         </div>
       </div>
@@ -372,5 +372,5 @@ const { getStatusColorName: statusColor } = useStatusStyle()
       @close="showAIWizard = false"
       @created="handleAICreated"
     />
-  </div>
+  </LayoutPageContainer>
 </template>

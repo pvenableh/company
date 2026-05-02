@@ -68,7 +68,7 @@ onMounted(async () => {
 </script>
 
 <template>
-	<div class="page__inner px-6 max-w-7xl mx-auto">
+	<LayoutPageContainer>
 		<!-- Header -->
 		<div class="flex items-center justify-between mb-6">
 			<div>
@@ -128,5 +128,5 @@ onMounted(async () => {
 			:lead-id="newFromLeadId"
 			@created="onProposalCreated"
 		/>
-	</div>
+	</LayoutPageContainer>
 </template>

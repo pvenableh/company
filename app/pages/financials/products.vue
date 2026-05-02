@@ -134,7 +134,7 @@ onMounted(fetchData);
 </script>
 
 <template>
-  <div class="p-6 max-w-6xl mx-auto">
+  <LayoutPageContainer>
     <!-- Header -->
     <div class="flex items-center justify-between mb-6">
       <div>
@@ -328,5 +328,5 @@ onMounted(fetchData);
         </div>
       </div>
     </Teleport>
-  </div>
+  </LayoutPageContainer>
 </template>

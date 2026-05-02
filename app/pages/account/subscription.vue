@@ -97,7 +97,7 @@ async function handleManageBilling() {
 </script>
 
 <template>
-	<div class="p-4 md:p-6 max-w-3xl mx-auto">
+	<LayoutPageContainer size="narrow">
 		<div class="mb-8">
 			<h1 class="text-2xl font-bold text-foreground">Subscription & Billing</h1>
 			<p class="text-sm text-muted-foreground mt-1">Manage your Earnest plan, billing, and payment methods.</p>
@@ -323,5 +323,5 @@ async function handleManageBilling() {
 				</div>
 			</template>
 		</UModal>
-	</div>
+	</LayoutPageContainer>
 </template>

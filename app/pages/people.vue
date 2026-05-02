@@ -1,5 +1,5 @@
 <template>
-	<div class="p-4 md:p-6 max-w-7xl mx-auto">
+	<LayoutPageContainer>
 		<!-- Header -->
 		<div class="flex items-center justify-between mb-6">
 			<div>
@@ -356,7 +356,7 @@
 		<div v-else-if="search && !searchLoading" class="py-12 text-center">
 			<p class="text-sm text-muted-foreground">No results found for "{{ search }}"</p>
 		</div>
-	</div>
+	</LayoutPageContainer>
 </template>
 
 <script setup lang="ts">

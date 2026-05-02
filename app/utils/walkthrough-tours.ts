@@ -39,7 +39,7 @@ export const walkthroughTours: WalkthroughTour[] = [
     icon: 'i-heroicons-folder',
     steps: [
       {
-        target: '.page__content',
+        target: 'main',
         title: 'Your Projects',
         description: 'All your projects are listed here, organized by status. Each project tracks its timeline, tasks, tickets, billing, and team assignments.',
         placement: 'bottom',
@@ -162,7 +162,7 @@ export const walkthroughTours: WalkthroughTour[] = [
         placement: 'bottom',
       },
       {
-        target: '.page__content, main',
+        target: 'main',
         title: 'Members, goals, and work',
         description: 'Goals track quarter-scale objectives with progress. Assigned tickets and projects roll up here so the team lead can spot bottlenecks without jumping between views.',
         placement: 'top',
@@ -186,7 +186,7 @@ export const walkthroughTours: WalkthroughTour[] = [
         placement: 'bottom',
       },
       {
-        target: '.page__content, main',
+        target: 'main',
         title: 'Scope and generate',
         description: 'Scope the workspace (entire org, or a single client) and generate a campaign or dashboard. Earnest uses your mailing lists, CRM segments, and past engagement data to draft goals, tactics, and reporting.',
         placement: 'top',

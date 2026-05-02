@@ -47,7 +47,7 @@ const totalReceived = computed(() => {
 </script>
 
 <template>
-	<div class="p-4 md:p-6 max-w-5xl mx-auto">
+	<LayoutPageContainer>
 		<div class="flex items-center justify-between mb-6">
 			<div class="flex items-center gap-3">
 				<NuxtLink
@@ -148,5 +148,5 @@ const totalReceived = computed(() => {
 				</tbody>
 			</table>
 		</div>
-	</div>
+	</LayoutPageContainer>
 </template>

@@ -140,6 +140,9 @@ function isActive(tabId: string): boolean {
       </div>
     </header>
 
+    <!-- ─── Sub-nav (per-context secondary pills, e.g. Engage → Marketing/Email/Social) ─── -->
+    <LayoutSubNav />
+
     <!-- ─── Main Content — slot fills remaining height so footer pins to bottom on short pages ─── -->
     <main class="flex-1 overflow-auto pb-16 md:pb-0">
       <div class="min-h-full flex flex-col">

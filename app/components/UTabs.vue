@@ -11,6 +11,10 @@ interface TabItem {
   key?: string
   label: string
   icon?: string
+  /** Optional count chip rendered to the right of the label */
+  count?: number | string | null
+  /** Optional Tailwind class (e.g. `bg-emerald-500`) for a small status dot before the label */
+  dotColor?: string
   disabled?: boolean
   slot?: string
   [key: string]: any
@@ -130,8 +134,15 @@ if (import.meta.client) {
         :disabled="item.disabled"
         :class="triggerClass"
       >
-        <UIcon v-if="item.icon" :name="item.icon" class="mr-1 h-3.5 w-3.5" />
+        <span v-if="item.dotColor" class="inline-block w-1.5 h-1.5 rounded-full" :class="item.dotColor" />
+        <UIcon v-if="item.icon" :name="item.icon" class="h-3.5 w-3.5" />
         {{ item.label }}
+        <span
+          v-if="item.count != null && item.count !== '' && item.count !== 0"
+          class="ml-1 text-[9px] px-1.5 py-0.5 rounded-full bg-muted/60 text-muted-foreground font-medium leading-none"
+        >
+          {{ item.count }}
+        </span>
       </TabsTrigger>
     </TabsList>
     </div>

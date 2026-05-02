@@ -61,7 +61,7 @@ onMounted(() => {
 </script>
 
 <template>
-	<div class="page__inner px-6 max-w-7xl mx-auto">
+	<LayoutPageContainer>
 		<!-- Header -->
 		<div class="flex items-center justify-between mb-6">
 			<div>
@@ -123,5 +123,5 @@ onMounted(() => {
 			</div>
 		</div>
 
-	</div>
+	</LayoutPageContainer>
 </template>

@@ -1,5 +1,5 @@
 <template>
-	<div class="container mx-auto py-6 px-4">
+	<LayoutPageContainer>
 		<div class="flex items-center justify-between mb-6">
 			<h2 class="text-2xl font-semibold">Teams</h2>
 			<UButton
@@ -200,7 +200,7 @@
 				<UButton color="red" :loading="deletingTeam" @click="deleteTeam">Delete Team</UButton>
 			</div>
 		</UModal>
-	</div>
+	</LayoutPageContainer>
 </template>
 
 <script setup>

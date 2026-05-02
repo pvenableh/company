@@ -161,16 +161,12 @@ watch(() => selectedClient.value, debouncedFetch);
 </script>
 
 <template>
-  <div class="p-6 max-w-7xl mx-auto">
-    <!-- Header -->
-    <div class="flex items-center justify-between mb-6">
-      <div>
-        <h1 class="text-xl font-semibold">Invoices</h1>
-        <p class="text-sm text-muted-foreground">
-          {{ total }} total<span v-if="activeInvoices.length">, {{ activeInvoices.length }} active</span>
-        </p>
-      </div>
-      <div class="flex items-center gap-2">
+  <LayoutPageContainer>
+    <LayoutPageHeader
+      title="Invoices"
+      :subtitle="`${total} total${activeInvoices.length ? `, ${activeInvoices.length} active` : ''}`"
+    >
+      <template #actions>
         <LayoutShareButton title="Invoices | Earnest" />
         <button
           v-if="isAdmin"
@@ -180,8 +176,8 @@ watch(() => selectedClient.value, debouncedFetch);
           <Icon name="lucide:plus" class="w-3.5 h-3.5" />
           New Invoice
         </button>
-      </div>
-    </div>
+      </template>
+    </LayoutPageHeader>
 
     <!-- Stats -->
     <div class="flex gap-4 mb-6">
@@ -500,5 +496,5 @@ watch(() => selectedClient.value, debouncedFetch);
         </div>
       </div>
     </Teleport>
-  </div>
+  </LayoutPageContainer>
 </template>

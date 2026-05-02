@@ -129,7 +129,7 @@ const isSignable = computed(() => contract.value?.contract_status === 'sent');
 			<UIcon name="lucide:file-x" class="w-12 h-12 mx-auto mb-3 opacity-50" />
 			<p>{{ errorMsg }}</p>
 		</div>
-		<div v-else-if="contract" class="w-full flex flex-col items-center justify-center z-10 page__inner py-8">
+		<div v-else-if="contract" class="w-full flex flex-col items-center justify-center relative z-10 mt-12 py-8">
 			<div class="px-6 pt-12 pb-16 w-full max-w-3xl border bg-white dark:bg-gray-800 shadow proposal">
 				<DocumentsDocumentHeader :seller="seller" :recipient="recipient" :doc="docMeta" />
 

@@ -32,6 +32,13 @@ const statusFilter = ref('active');
 const searchQuery = ref('');
 const debouncedSearch = useDebounceFn(() => fetchTableProjects(), 300);
 
+const projectStatusItems = [
+	{ key: 'active', label: 'Active' },
+	{ key: 'completed', label: 'Completed' },
+	{ key: 'archived', label: 'Archived' },
+	{ key: 'all', label: 'All' },
+];
+
 // Table view data
 const projectItems = useDirectusItems('projects');
 const taskItems = useDirectusItems('project_tasks');
@@ -155,23 +162,18 @@ definePageMeta({
 </script>
 
 <template>
-	<div class="page__content">
-		<div class="max-w-screen-xl mx-auto page_inner px-4 2xl:px-0">
-		<!-- Header -->
-		<div class="flex items-center justify-between mb-6">
-			<div>
-				<h1 class="text-xl font-semibold">Projects</h1>
-				<p class="text-sm text-muted-foreground">
-					{{ tableProjects.length }} project{{ tableProjects.length !== 1 ? 's' : '' }}
-				</p>
-			</div>
-			<div class="flex items-center gap-2">
-			<LayoutShareButton title="Projects | Earnest" />
-			<UiActionButton icon="lucide:plus" @click="showProjectForm = true">
-				New Project
-			</UiActionButton>
-			</div>
-		</div>
+	<LayoutPageContainer>
+		<LayoutPageHeader
+			title="Projects"
+			:subtitle="`${tableProjects.length} project${tableProjects.length !== 1 ? 's' : ''}`"
+		>
+			<template #actions>
+				<LayoutShareButton title="Projects | Earnest" />
+				<UiActionButton icon="lucide:plus" @click="showProjectForm = true">
+					New Project
+				</UiActionButton>
+			</template>
+		</LayoutPageHeader>
 
 		<!-- Create Project Modal -->
 		<ClientOnly>
@@ -180,7 +182,7 @@ definePageMeta({
 
 		<!-- View switcher -->
 		<ClientOnly>
-			<UTabs v-model="activeView" :items="projectViewOptions" class="mb-5" />
+			<UTabs v-model="activeView" :items="projectViewOptions" class="mb-5 w-fit" />
 		</ClientOnly>
 
 		<!-- Filters -->
@@ -192,17 +194,12 @@ definePageMeta({
 				class="flex-1 min-w-48 rounded-md border bg-background px-3 py-2 text-sm"
 				@input="debouncedSearch"
 			/>
-			<div class="flex gap-1 p-0.5 bg-muted/30 rounded-lg">
-				<button
-					v-for="s in [{ label: 'Active', value: 'active' }, { label: 'Completed', value: 'completed' }, { label: 'Archived', value: 'archived' }, { label: 'All', value: 'all' }]"
-					:key="s.value"
-					class="px-2.5 py-1 text-[10px] font-medium rounded-md transition-all"
-					:class="statusFilter === s.value ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'"
-					@click="statusFilter = s.value; fetchTableProjects()"
-				>
-					{{ s.label }}
-				</button>
-			</div>
+			<UTabs
+				v-model="statusFilter"
+				:items="projectStatusItems"
+				class="w-fit"
+				@change="fetchTableProjects"
+			/>
 		</div>
 
 		<ClientOnly>
@@ -233,6 +230,5 @@ definePageMeta({
 				</div>
 			</template>
 		</ClientOnly>
-		</div>
-	</div>
+	</LayoutPageContainer>
 </template>

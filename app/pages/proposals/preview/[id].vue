@@ -96,7 +96,7 @@ function formatTotal(n: number | null | undefined) {
 			<UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin t-text-muted" />
 		</div>
 		<div v-else-if="!proposal" class="py-20 text-sm text-muted-foreground">Proposal not found.</div>
-		<div v-else class="w-full flex flex-col items-center justify-center z-10 page__inner">
+		<div v-else class="w-full flex flex-col items-center justify-center relative z-10 mt-12">
 			<div class="px-6 pt-12 pb-16 w-full max-w-3xl border bg-white/90 dark:bg-gray-700 shadow proposal">
 				<DocumentsDocumentHeader :seller="seller" :recipient="recipient" :doc="docMeta">
 					<template #actions>

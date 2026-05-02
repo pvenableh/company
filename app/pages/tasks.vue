@@ -1,5 +1,5 @@
 <template>
-	<div class="max-w-screen-xl mx-auto px-4 py-6">
+	<LayoutPageContainer>
 		<h1 class="text-2xl font-semibold mb-6">{{ filterUserId && filterUserId !== user?.id ? filterUserLabel + "'s Tasks" : 'My Tasks' }}</h1>
 
 		<div class="mb-6 flex flex-wrap gap-4 items-center">
@@ -136,7 +136,7 @@
 				</div>
 			</div>
 		</div>
-	</div>
+	</LayoutPageContainer>
 </template>
 
 <script setup>

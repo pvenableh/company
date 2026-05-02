@@ -22,10 +22,10 @@ const org = await organizationItems.get(params.id, {
 });
 </script>
 <template>
-	<div class="md:px-6 mx-auto flex items-start justify-center flex-col relative px-4">
-		<div class="w-full flex flex-col items-center justify-center z-10 page__inner">
-			<div v-for="(user, index) in org.users" :key="index" class="">{{ user }}</div>
+	<LayoutPageContainer>
+		<div class="w-full flex flex-col items-center justify-center">
+			<div v-for="(user, index) in org.users" :key="index">{{ user }}</div>
 		</div>
-	</div>
+	</LayoutPageContainer>
 </template>
 <style></style>

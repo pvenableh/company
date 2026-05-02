@@ -39,6 +39,11 @@ const categoryChips: Array<{ value: Contact['category'] | ''; label: string }> =
   { value: 'media', label: 'Media' },
 ];
 
+const categoryItems = computed(() => categoryChips.map((c) => ({
+  key: c.value || 'all',
+  label: c.label,
+})));
+
 const fetchData = async () => {
   loading.value = true;
   const result = await getContacts({
@@ -89,13 +94,9 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="p-6 max-w-7xl mx-auto">
-    <div class="flex items-center justify-between mb-6">
-      <div>
-        <h1 class="text-xl font-semibold">Contacts</h1>
-        <p class="text-sm text-muted-foreground">{{ total.toLocaleString() }} contacts</p>
-      </div>
-      <div class="flex gap-2">
+  <LayoutPageContainer>
+    <LayoutPageHeader title="Contacts" :subtitle="`${total.toLocaleString()} contacts`">
+      <template #actions>
         <NuxtLink to="/contacts/import">
           <Button variant="outline" size="sm">
             <Icon name="lucide:upload" class="w-4 h-4 mr-1" />
@@ -106,23 +107,16 @@ onMounted(async () => {
           <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
           Add Contact
         </Button>
-      </div>
-    </div>
+      </template>
+    </LayoutPageHeader>
 
-    <!-- Category Chips -->
-    <div class="flex gap-1.5 mb-3 flex-wrap">
-      <button
-        v-for="chip in categoryChips"
-        :key="chip.value || 'all'"
-        class="inline-flex items-center h-7 px-3 rounded-full text-xs font-medium border transition-colors"
-        :class="filterCategory === chip.value
-          ? 'bg-primary text-primary-foreground border-primary'
-          : 'border-border text-muted-foreground hover:text-foreground hover:bg-muted/60'"
-        @click="selectCategory(chip.value)"
-      >
-        {{ chip.label }}
-      </button>
-    </div>
+    <!-- Category Tabs -->
+    <UTabs
+      :model-value="filterCategory || 'all'"
+      :items="categoryItems"
+      class="mb-3 w-fit"
+      @update:model-value="(v) => selectCategory(v === 'all' ? '' : (v as Contact['category']))"
+    />
 
     <!-- Filters -->
     <div class="flex gap-3 mb-4 flex-wrap">
@@ -179,5 +173,5 @@ onMounted(async () => {
 
     <!-- Create Modal -->
     <ContactsFormModal v-model="showCreateModal" @created="onContactCreated" />
-  </div>
+  </LayoutPageContainer>
 </template>

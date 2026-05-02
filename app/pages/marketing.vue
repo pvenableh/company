@@ -1,5 +1,5 @@
 <template>
-	<div class="p-4 md:p-6 max-w-7xl mx-auto">
+	<LayoutPageContainer>
 		<!-- Header -->
 		<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
 			<div>
@@ -450,7 +450,7 @@
 				<div v-if="sidebarOpen" class="fixed inset-0 bg-black/20 z-40" @click="closeSidebar" />
 			</Transition>
 		</ClientOnly>
-	</div>
+	</LayoutPageContainer>
 </template>
 
 <script setup lang="ts">

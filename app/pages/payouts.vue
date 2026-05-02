@@ -33,9 +33,9 @@ const fetchPayoutDetails = async (payoutId) => {
 </script>
 
 <template>
-	<div class="w-full relative">
-		<div class="grid gap-6 grid-cols-1 md:grid-cols-2 page__inner">
-			<div class="" v-if="admin">
+	<LayoutPageContainer>
+		<div class="grid gap-6 grid-cols-1 md:grid-cols-2">
+			<div v-if="admin">
 				<ul>
 					<li v-for="payout in payouts" :key="payout.id">
 						{{ payout.amount }} - {{ payout.status }}
@@ -43,7 +43,7 @@ const fetchPayoutDetails = async (payoutId) => {
 					</li>
 				</ul>
 			</div>
-			<div class="">
+			<div>
 				<div v-if="selectedPayout" class="relative">
 					<h2>Payout Details</h2>
 					{{ selectedPayout }}
@@ -52,5 +52,5 @@ const fetchPayoutDetails = async (payoutId) => {
 				</div>
 			</div>
 		</div>
-	</div>
+	</LayoutPageContainer>
 </template>

@@ -117,7 +117,7 @@ async function runImport() {
 </script>
 
 <template>
-  <div class="p-6 max-w-3xl mx-auto">
+  <LayoutPageContainer size="narrow">
     <div class="flex items-center gap-3 mb-6">
       <NuxtLink to="/contacts" class="text-muted-foreground hover:text-foreground">
         <Icon name="lucide:arrow-left" class="w-5 h-5" />
@@ -240,5 +240,5 @@ Jane,Smith,jane@acme.com,CEO,Acme Corp,Technology,"123 Main St, Miami FL 33101",
         {{ importing ? `Importing ${csvRows.length} contacts...` : `Import ${csvRows.length} Contacts` }}
       </Button>
     </div>
-  </div>
+  </LayoutPageContainer>
 </template>

@@ -6,7 +6,7 @@ useHead({ title: 'Chat | Earnest' });
 </script>
 
 <template>
-	<div class="max-w-6xl mx-auto px-4 pb-8 sm:px-6 lg:px-8">
+	<LayoutPageContainer>
 		<div class="flex items-center gap-3 mb-6">
 			<NuxtLink to="/" class="text-muted-foreground hover:text-foreground transition-colors">
 				<UIcon name="i-heroicons-arrow-left" class="w-5 h-5" />
@@ -26,5 +26,5 @@ useHead({ title: 'Chat | Earnest' });
 				</template>
 			</ClientOnly>
 		</div>
-	</div>
+	</LayoutPageContainer>
 </template>
