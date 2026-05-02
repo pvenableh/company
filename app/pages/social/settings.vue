@@ -15,6 +15,7 @@ useHead({ title: 'Social Settings | Earnest' })
 
 const route = useRoute()
 const toast = useToast()
+const { isOrgAdminOrAbove } = useOrgRole()
 
 // Platform display config
 const platformConfig: Record<SocialPlatform, {
@@ -277,10 +278,19 @@ async function disconnectAccount() {
     <!-- Header -->
     <div class="flex items-center gap-4 mb-8">
       <UButton to="/social" variant="ghost" icon="i-lucide-arrow-left" size="sm" />
-      <div>
+      <div class="flex-1">
         <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Social Settings</h1>
         <p class="text-gray-500 dark:text-gray-400 mt-0.5">Manage your connected accounts</p>
       </div>
+      <UButton
+        v-if="isOrgAdminOrAbove"
+        to="/social/diagnostics"
+        variant="ghost"
+        icon="i-lucide-stethoscope"
+        size="sm"
+      >
+        Diagnostics
+      </UButton>
     </div>
 
     <div class="space-y-8">
