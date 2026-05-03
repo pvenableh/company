@@ -2,7 +2,7 @@
 	<footer class="w-full mt-12">
 		<div class="max-w-screen-xl mx-auto px-6 py-12">
 			<!-- Top section: Brand + Nav -->
-			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-10">
+			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8 mb-10">
 				<!-- Brand -->
 				<div>
 					<nuxt-link to="/" class="group">
@@ -27,6 +27,17 @@
 						<span class="text-[10px] font-semibold uppercase tracking-wider text-foreground">Tools</span>
 						<div class="flex flex-col gap-1.5">
 							<nuxt-link v-for="link in toolLinks" :key="link.to" :to="link.to" class="text-xs text-muted-foreground hover:text-foreground transition-colors">
+								{{ link.label }}
+							</nuxt-link>
+						</div>
+					</div>
+					<div class="space-y-2.5">
+						<div class="flex items-center gap-1.5">
+							<UIcon name="i-heroicons-megaphone" class="w-3 h-3 text-foreground/60" />
+							<span class="text-[10px] font-semibold uppercase tracking-wider text-foreground">Engage</span>
+						</div>
+						<div class="flex flex-col gap-1.5">
+							<nuxt-link v-for="link in engageLinks" :key="link.to" :to="link.to" class="text-xs text-muted-foreground hover:text-foreground transition-colors">
 								{{ link.label }}
 							</nuxt-link>
 						</div>
@@ -95,9 +106,15 @@ const platformLinks = [
 
 const toolLinks = [
 	{ to: '/invoices', label: 'Invoices' },
-	{ to: '/email', label: 'Email' },
 	{ to: '/contacts', label: 'Contacts' },
 	{ to: '/clients', label: 'Clients' },
+];
+
+const engageLinks = [
+	{ to: '/marketing-feed', label: 'Marketing Feed' },
+	{ to: '/marketing', label: 'Marketing' },
+	{ to: '/email', label: 'Email' },
+	{ to: '/social', label: 'Social' },
 ];
 
 const accountLinks = [
