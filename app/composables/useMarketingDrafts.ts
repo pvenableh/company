@@ -8,10 +8,30 @@ import type {
 } from '~~/shared/marketing-persistence';
 
 /**
- * A drafted touch — what the generator returns before anything persists.
- * Mirrors the persistable MarketingTouch shape minus the FK + audit fields.
+ * A snapshot of a touch's content — written into regenerate_history before
+ * each regenerate so the user can one-click undo back to the prior version.
+ */
+export interface TouchHistoryEntry {
+	saved_at: string;
+	email_subject: string | null;
+	email_preview_text: string | null;
+	email_body_markdown: string | null;
+	email_cta: EmailCTA | null;
+	social_channel: SocialChannel | null;
+	social_caption: string | null;
+	social_image_brief: string | null;
+	audience_filter: AudienceFilter;
+	send_offset_hours: number;
+}
+
+/**
+ * A drafted touch — once persisted (after Generate), `id` and
+ * `regenerate_history` are present. The drawer reads `id` to wire
+ * per-touch regenerate/restore, and shows the restore affordance when
+ * regenerate_history has at least one entry.
  */
 export interface DraftedTouch {
+	id?: number;
 	kind: MarketingTouchKind;
 	send_offset_hours: number;
 	audience_target: MarketingTouchAudienceTarget;
@@ -25,9 +45,12 @@ export interface DraftedTouch {
 	social_channel: SocialChannel | null;
 	social_caption: string | null;
 	social_image_brief: string | null;
+	// persisted-only
+	regenerate_history?: TouchHistoryEntry[] | null;
 }
 
 export interface DraftedCampaign {
+	campaign_id?: number;
 	touches: DraftedTouch[];
 	phase_strategy: string | null;
 	cadence_rationale: string;

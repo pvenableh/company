@@ -10,14 +10,36 @@
 				<span class="text-muted-foreground/60">·</span>
 				<span>{{ audienceLabel }}</span>
 			</div>
-			<button
-				type="button"
-				class="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full hover:bg-background border border-transparent hover:border-border/60 text-muted-foreground hover:text-foreground transition-colors"
-				@click="$emit('regenerate')"
-			>
-				<Icon name="lucide:refresh-ccw" class="w-3 h-3" />
-				Regenerate · 200
-			</button>
+			<div class="inline-flex items-center gap-1">
+				<button
+					v-if="canRestore"
+					type="button"
+					class="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full hover:bg-background border border-transparent hover:border-border/60 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+					:disabled="loading || restoring"
+					:title="`Restore previous version (${historyCount} ${historyCount === 1 ? 'snapshot' : 'snapshots'} saved)`"
+					@click="$emit('restore')"
+				>
+					<Icon
+						:name="restoring ? 'lucide:loader-circle' : 'lucide:undo-2'"
+						class="w-3 h-3"
+						:class="{ 'animate-spin': restoring }"
+					/>
+					Undo
+				</button>
+				<button
+					type="button"
+					class="inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full hover:bg-background border border-transparent hover:border-border/60 text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+					:disabled="loading || restoring"
+					@click="$emit('regenerate')"
+				>
+					<Icon
+						:name="loading ? 'lucide:loader-circle' : 'lucide:refresh-ccw'"
+						class="w-3 h-3"
+						:class="{ 'animate-spin': loading }"
+					/>
+					{{ loading ? 'Regenerating…' : 'Regenerate' }}
+				</button>
+			</div>
 		</header>
 
 		<!-- Email body -->
@@ -121,12 +143,18 @@ import type { DraftedTouch } from '~/composables/useMarketingDrafts';
 const props = defineProps<{
 	touch: DraftedTouch;
 	sequenceIndex: number;
+	loading?: boolean;
+	restoring?: boolean;
 }>();
 
 const emit = defineEmits<{
 	(e: 'update', patch: Partial<DraftedTouch>): void;
 	(e: 'regenerate'): void;
+	(e: 'restore'): void;
 }>();
+
+const historyCount = computed(() => props.touch.regenerate_history?.length ?? 0);
+const canRestore = computed(() => historyCount.value > 0);
 
 function emitUpdate(patch: Partial<DraftedTouch>) {
 	emit('update', patch);

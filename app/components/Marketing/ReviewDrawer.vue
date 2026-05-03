@@ -82,12 +82,23 @@
 			<div class="flex-1 overflow-y-auto px-6 py-5 space-y-4">
 				<MarketingTouchEditor
 					v-for="(touch, idx) in localTouches"
-					:key="idx"
+					:key="touch.id ?? idx"
 					:touch="touch"
 					:sequence-index="idx"
+					:loading="loadingTouchKeys.get(touch.id ?? idx) === 'regenerating'"
+					:restoring="loadingTouchKeys.get(touch.id ?? idx) === 'restoring'"
 					@update="updateTouch(idx, $event)"
 					@regenerate="onRegenerate(idx)"
+					@restore="onRestore(idx)"
 				/>
+			</div>
+
+			<!-- Inline error -->
+			<div
+				v-if="touchError"
+				class="px-6 py-2 border-t border-rose-200 bg-rose-50 dark:bg-rose-900/20 dark:border-rose-800/40 text-xs text-rose-800 dark:text-rose-200 shrink-0"
+			>
+				{{ touchError }}
 			</div>
 
 			<!-- Footer -->
@@ -154,6 +165,10 @@ const emit = defineEmits<{
 
 const localTouches = ref<DraftedTouch[]>([]);
 const scheduling = ref(false);
+const touchError = ref<string | null>(null);
+// Keyed by touch.id when persisted, else by index — handles the brief moment
+// before generate returns persisted IDs.
+const loadingTouchKeys = ref<Map<number, 'regenerating' | 'restoring'>>(new Map());
 
 watch(
 	() => props.draft,
@@ -166,8 +181,15 @@ watch(
 
 function updateTouch(idx: number, patch: Partial<DraftedTouch>) {
 	const next = [...localTouches.value];
-	next[idx] = { ...next[idx], ...patch };
+	next[idx] = { ...next[idx]!, ...patch };
 	localTouches.value = next;
+}
+
+function setTouchLoading(key: number, state: 'regenerating' | 'restoring' | null) {
+	const next = new Map(loadingTouchKeys.value);
+	if (state === null) next.delete(key);
+	else next.set(key, state);
+	loadingTouchKeys.value = next;
 }
 
 function onOpenChange(v: boolean) {
@@ -190,8 +212,49 @@ function onDiscard() {
 	emit('update:open', false);
 }
 
-function onRegenerate(idx: number) {
-	console.info('[review-drawer] regenerate', idx, '— wire generator endpoint next');
+async function onRegenerate(idx: number) {
+	const touch = localTouches.value[idx];
+	if (!touch?.id) {
+		touchError.value = 'Touch is not yet persisted — try closing and reopening the drawer.';
+		return;
+	}
+	const key = touch.id;
+	touchError.value = null;
+	setTouchLoading(key, 'regenerating');
+	try {
+		const res = await $fetch<{ touch: DraftedTouch }>(
+			`/api/marketing/touches/${touch.id}/regenerate`,
+			{ method: 'POST', body: {} },
+		);
+		const next = [...localTouches.value];
+		next[idx] = res.touch;
+		localTouches.value = next;
+	} catch (err: any) {
+		touchError.value = err?.data?.message || err?.message || 'Could not regenerate touch.';
+	} finally {
+		setTouchLoading(key, null);
+	}
+}
+
+async function onRestore(idx: number) {
+	const touch = localTouches.value[idx];
+	if (!touch?.id) return;
+	const key = touch.id;
+	touchError.value = null;
+	setTouchLoading(key, 'restoring');
+	try {
+		const res = await $fetch<{ touch: DraftedTouch }>(
+			`/api/marketing/touches/${touch.id}/restore`,
+			{ method: 'POST' },
+		);
+		const next = [...localTouches.value];
+		next[idx] = res.touch;
+		localTouches.value = next;
+	} catch (err: any) {
+		touchError.value = err?.data?.message || err?.message || 'Could not restore touch.';
+	} finally {
+		setTouchLoading(key, null);
+	}
 }
 
 const audienceLabel = computed(() => {

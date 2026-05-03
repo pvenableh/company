@@ -370,10 +370,19 @@ async function onScheduleAll(payload: { rec: MarketingRecommendation; touches: D
 	}
 }
 
-function onDiscardDraft(rec: MarketingRecommendation) {
-	console.info('[marketing-feed] discard', rec.id);
+async function onDiscardDraft(rec: MarketingRecommendation) {
+	const recId = rec.id;
 	activeRec.value = null;
 	activeDraft.value = null;
+	try {
+		await $fetch(`/api/marketing/recommendations/${recId}/discard`, { method: 'POST' });
+		// Refresh so the card reverts to "pending" state and a fresh Generate
+		// runs the AI again instead of reloading the discarded draft.
+		await loadRecommendations();
+		flashToast('success', 'Draft discarded.');
+	} catch (err: any) {
+		flashToast('error', err?.data?.message || 'Could not discard draft.');
+	}
 }
 
 function deriveHeadline(rec: MarketingRecommendation): string {

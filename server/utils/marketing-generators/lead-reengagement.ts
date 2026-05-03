@@ -443,3 +443,291 @@ export async function runLeadReengagementGenerator(
 
 export const LEAD_REENGAGEMENT_PROMPT_VERSION = PROMPT_VERSION;
 export const LEAD_REENGAGEMENT_MODEL = MODEL;
+
+// ─── Single-touch regenerator ───────────────────────────────────────────────
+
+const SINGLE_TOUCH_PROMPT_VERSION = 'lead_reengagement_single_v1.0';
+
+const produceLeadReengagementSingleTouchTool: Anthropic.Tool = {
+	name: 'produce_lead_reengagement_single_touch',
+	description:
+		'Produce exactly ONE replacement email touch for a lead-reengagement campaign. Take a meaningfully different angle than the prior version.',
+	input_schema: {
+		type: 'object',
+		properties: {
+			touch: {
+				type: 'object',
+				properties: {
+					kind: { type: 'string', enum: ['email'] },
+					send_offset_hours: { type: 'integer', minimum: 0, maximum: 168 },
+					email: {
+						type: 'object',
+						properties: {
+							subject: { type: 'string', maxLength: 60 },
+							preview_text: { type: 'string', maxLength: 90 },
+							body_markdown: { type: 'string' },
+							cta: { type: 'string', enum: ['reply', 'view_case_study', 'reply_with_question'] },
+						},
+						required: ['subject', 'preview_text', 'body_markdown', 'cta'],
+					},
+				},
+				required: ['kind', 'send_offset_hours', 'email'],
+			},
+			facts_used: { type: 'array', items: { type: 'string' } },
+			cadence_note: { type: 'string', maxLength: 120 },
+		},
+		required: ['touch', 'facts_used'],
+	},
+};
+
+interface SingleTouchToolOutput {
+	touch: ToolOutput['touches'][number];
+	facts_used: string[];
+	cadence_note?: string;
+}
+
+function priorEmailSummary(t: DraftedTouch): Record<string, unknown> {
+	return {
+		kind: 'email',
+		subject: t.email_subject,
+		preview_text: t.email_preview_text,
+		body_markdown: t.email_body_markdown,
+		cta: t.email_cta,
+	};
+}
+
+function renderSingleTouchUserMessage(args: {
+	orgName: string;
+	orgIndustry: string;
+	voice: ResolvedVoice;
+	candidate: LeadReengagementCandidate;
+	facts: AvailableFact[];
+	priorTouch: DraftedTouch;
+	varyInstruction?: string;
+}): string {
+	const baseMsg = renderUserMessage({
+		orgName: args.orgName,
+		orgIndustry: args.orgIndustry,
+		voice: args.voice,
+		candidate: args.candidate,
+		facts: args.facts,
+	});
+	const varyDir = args.varyInstruction?.trim() ||
+		'Take a meaningfully different angle. Different opener, different anchor proof point when one exists in available_facts in this cluster topic, different CTA framing where natural. Keep it as one email and roughly similar length.';
+
+	return `${baseMsg}
+
+REGENERATE MODE — REPLACE ONE TOUCH
+===================================
+Prior touch (DO NOT reproduce — produce a different draft):
+${JSON.stringify(priorEmailSummary(args.priorTouch), null, 2)}
+
+VARY DIRECTION
+==============
+${varyDir}
+
+CONSTRAINTS FOR THIS REGENERATE
+===============================
+- Produce exactly 1 touch via produce_lead_reengagement_single_touch.
+- Kind must be email (this generator only emits email).
+- Subject MUST differ from the prior.
+- Body MUST be a different draft, not just a rephrase.
+
+Produce the replacement touch.`;
+}
+
+function validateSingleTouch(
+	output: SingleTouchToolOutput,
+	facts: AvailableFact[],
+	voice: ResolvedVoice,
+	priorTouch: DraftedTouch,
+): { hardFailures: string[]; warnings: string[] } {
+	const hard: string[] = [];
+	const warn: string[] = [];
+
+	const factIds = new Set(facts.map((f) => f.id));
+	for (const id of output.facts_used || []) {
+		if (!factIds.has(id)) hard.push(`facts_used contains unknown id "${id}"`);
+	}
+
+	const t = output.touch;
+	if (!t || t.kind !== 'email' || !t.email) {
+		hard.push('lead_reengagement single-touch must be an email');
+		return { hardFailures: hard, warnings: warn };
+	}
+
+	const allCopy: string[] = [t.email.subject, t.email.preview_text, t.email.body_markdown];
+	if (t.email.subject.length > 60) hard.push(`subject exceeds 60 chars: "${t.email.subject}"`);
+	const wc = wordCount(t.email.body_markdown);
+	if (wc < 60 || wc > 180) warn.push(`email body word count ${wc} outside 80-150`);
+	const placeholders = (t.email.body_markdown.match(/\{\{[^}]+\}\}/g) || []).filter(
+		(m) => m !== '{{first_name}}',
+	);
+	if (placeholders.length > 0) hard.push(`stray placeholders in body: ${placeholders.join(', ')}`);
+	if (
+		priorTouch.email_subject &&
+		t.email.subject.trim().toLowerCase() === priorTouch.email_subject.trim().toLowerCase()
+	) {
+		hard.push('regenerated subject identical to prior');
+	}
+	if (
+		priorTouch.email_body_markdown &&
+		t.email.body_markdown.trim() === priorTouch.email_body_markdown.trim()
+	) {
+		hard.push('regenerated body identical to prior');
+	}
+
+	const haystack = allCopy.join('\n').toLowerCase();
+	for (const phrase of voice.avoid_phrases.map((p) => p.toLowerCase())) {
+		if (phrase && haystack.includes(phrase)) hard.push(`avoid_phrase used: "${phrase}"`);
+	}
+
+	return { hardFailures: hard, warnings: warn };
+}
+
+function adaptSingleTouchOutput(args: {
+	output: SingleTouchToolOutput;
+	facts: AvailableFact[];
+	priorTouch: DraftedTouch;
+}): { touch: DraftedTouch; factsUsed: { id: string; label: string; kind: string }[] } {
+	const { output, facts, priorTouch } = args;
+	const factsById = new Map(facts.map((f) => [f.id, f]));
+	const t = output.touch;
+
+	const touch: DraftedTouch = {
+		kind: 'email',
+		send_offset_hours:
+			typeof t.send_offset_hours === 'number' ? t.send_offset_hours : priorTouch.send_offset_hours,
+		audience_target: priorTouch.audience_target,
+		audience_filter: priorTouch.audience_filter,
+		email_subject: t.email?.subject ?? null,
+		email_preview_text: t.email?.preview_text ?? null,
+		email_body_markdown: t.email?.body_markdown ?? null,
+		email_cta: (t.email?.cta as EmailCTA) ?? null,
+		social_channel: null,
+		social_caption: null,
+		social_image_brief: null,
+	};
+
+	const factsUsed = (output.facts_used || []).map((id) => {
+		const f = factsById.get(id);
+		return { id, label: f?.title || id, kind: f?.kind || 'fact' };
+	});
+	return { touch, factsUsed };
+}
+
+async function callAnthropicSingleTouch(args: {
+	systemBlocks: Anthropic.MessageCreateParams['system'];
+	userMessage: string;
+	retryNote?: string;
+}): Promise<{ output: SingleTouchToolOutput; inputTokens: number; outputTokens: number }> {
+	const client = getClient();
+	const messages: Anthropic.MessageParam[] = [
+		{
+			role: 'user',
+			content: args.retryNote
+				? `${args.userMessage}\n\nPREVIOUS ATTEMPT REJECTED:\n${args.retryNote}\nProduce a corrected version now.`
+				: args.userMessage,
+		},
+	];
+	const response = await client.messages.create({
+		model: MODEL,
+		max_tokens: 1024,
+		system: args.systemBlocks,
+		tools: [produceLeadReengagementSingleTouchTool],
+		tool_choice: { type: 'tool', name: produceLeadReengagementSingleTouchTool.name } as any,
+		messages,
+	});
+	const toolBlock = response.content.find((b: any) => b.type === 'tool_use');
+	if (!toolBlock) throw new Error('Single-touch generator did not return a tool_use block');
+	const usage = response.usage as any;
+	const inputTokens =
+		(usage?.input_tokens || 0) +
+		(usage?.cache_read_input_tokens || 0) +
+		(usage?.cache_creation_input_tokens || 0);
+	return {
+		output: (toolBlock as any).input as SingleTouchToolOutput,
+		inputTokens,
+		outputTokens: usage?.output_tokens || 0,
+	};
+}
+
+export interface RunLeadReengagementSingleTouchRegeneratorResult {
+	touch: DraftedTouch;
+	factsUsed: { id: string; label: string; kind: string }[];
+	inputTokens: number;
+	outputTokens: number;
+	durationMs: number;
+	promptVersion: string;
+	model: string;
+	warnings: string[];
+	retried: boolean;
+}
+
+export async function runLeadReengagementSingleTouchRegenerator(args: {
+	organizationId: string;
+	orgName: string;
+	orgIndustry?: string;
+	candidate: LeadReengagementCandidate;
+	facts: AvailableFact[];
+	voice?: ResolvedVoice;
+	priorTouch: DraftedTouch;
+	varyInstruction?: string;
+}): Promise<RunLeadReengagementSingleTouchRegeneratorResult> {
+	const start = Date.now();
+	const voice = args.voice || getResolvedVoice(args.organizationId);
+	const userMessage = renderSingleTouchUserMessage({
+		orgName: args.orgName,
+		orgIndustry: args.orgIndustry || 'small business',
+		voice,
+		candidate: args.candidate,
+		facts: args.facts,
+		priorTouch: args.priorTouch,
+		varyInstruction: args.varyInstruction,
+	});
+
+	const systemBlocks: Anthropic.MessageCreateParams['system'] = [
+		{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } } as any,
+	];
+
+	let totalInput = 0;
+	let totalOutput = 0;
+	let result = await callAnthropicSingleTouch({ systemBlocks, userMessage });
+	totalInput += result.inputTokens;
+	totalOutput += result.outputTokens;
+
+	let validation = validateSingleTouch(result.output, args.facts, voice, args.priorTouch);
+	let retried = false;
+	if (validation.hardFailures.length > 0) {
+		retried = true;
+		const note = validation.hardFailures.join('\n- ');
+		result = await callAnthropicSingleTouch({ systemBlocks, userMessage, retryNote: `- ${note}` });
+		totalInput += result.inputTokens;
+		totalOutput += result.outputTokens;
+		validation = validateSingleTouch(result.output, args.facts, voice, args.priorTouch);
+		if (validation.hardFailures.length > 0) {
+			throw createError({
+				statusCode: 502,
+				message: `Single-touch regenerator failed validation after retry: ${validation.hardFailures.join('; ')}`,
+			});
+		}
+	}
+
+	const adapted = adaptSingleTouchOutput({
+		output: result.output,
+		facts: args.facts,
+		priorTouch: args.priorTouch,
+	});
+
+	return {
+		touch: adapted.touch,
+		factsUsed: adapted.factsUsed,
+		inputTokens: totalInput,
+		outputTokens: totalOutput,
+		durationMs: Date.now() - start,
+		promptVersion: SINGLE_TOUCH_PROMPT_VERSION,
+		model: MODEL,
+		warnings: validation.warnings,
+		retried,
+	};
+}

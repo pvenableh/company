@@ -161,6 +161,24 @@ export type AudienceFilter = AudienceFilterLiteral | `cluster:${string}`;
 
 export type PersonalizationState = 'none' | 'requested' | 'in_progress' | 'completed';
 
+/**
+ * One snapshot of a touch's content, captured immediately before a regenerate
+ * so the user can one-click undo. Stored as a JSON array on
+ * marketing_touches.regenerate_history.
+ */
+export interface TouchHistoryEntry {
+	saved_at: string;
+	email_subject: string | null;
+	email_preview_text: string | null;
+	email_body_markdown: string | null;
+	email_cta: EmailCTA | null;
+	social_channel: SocialChannel | null;
+	social_caption: string | null;
+	social_image_brief: string | null;
+	audience_filter: AudienceFilter;
+	send_offset_hours: number;
+}
+
 export interface MarketingTouch {
 	// integer auto-increment id, not uuid — see note on MarketingRecommendation.
 	id: number;
@@ -202,7 +220,7 @@ export interface MarketingTouch {
 
 	// Provenance
 	tokens_spent: number;
-	regenerate_history: Record<string, unknown> | null;
+	regenerate_history: TouchHistoryEntry[] | null;
 	generator_strategy_excerpt: string | null;
 
 	date_created: string;

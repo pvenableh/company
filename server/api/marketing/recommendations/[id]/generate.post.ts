@@ -1,25 +1,26 @@
 /**
- * Generate a marketing draft for a recommendation — runs the Anthropic
- * generator, validates the output, deducts org tokens, flips the
- * recommendation to status='drafted', and returns a DraftedCampaign-shaped
- * payload identical to the stub composable.
+ * Generate a marketing draft for a recommendation.
  *
  * POST /api/marketing/recommendations/[id]/generate
  *
- * Wiring:
- *   ┌─ requireOrgMembership
- *   ├─ enforceTokenLimits (org balance / per-member budget)
- *   ├─ load recommendation, verify status pending|drafted
- *   ├─ build available_facts (deterministic, per-card-type)
- *   ├─ runDormantGenerator (or per-card-type generator)
- *   ├─ logAIUsage + deductOrgTokens
- *   ├─ update recommendation: status='drafted'
- *   └─ return DraftedCampaign JSON
+ * Two paths:
+ *   1. Cold call (rec.status='pending' OR rec lacks a resulting_campaign):
+ *      Runs the Anthropic generator, deducts tokens, persists a marketing_campaigns
+ *      row in status='draft' + N marketing_touches in status='pending', flips the
+ *      recommendation to status='drafted' with resulting_campaign set, returns
+ *      DraftedCampaign with persisted IDs.
  *
- * Routes via server token after gating in app code (same pattern as the
- * rest of the marketing routes — collections have no row-level perms).
+ *   2. Reload (rec.status='drafted' with a draft-state resulting_campaign):
+ *      No AI call, no token spend. Loads the persisted campaign+touches and
+ *      returns them in DraftedCampaign shape so the drawer can re-open the
+ *      same draft cleanly. The "drafts auto-save" UX promise depends on this.
+ *
+ * The reload path makes per-touch regenerate (which mutates marketing_touches
+ * directly) interoperate with re-opening the drawer — edits and regenerates
+ * survive across drawer close/reopen until the user explicitly Discards or
+ * Schedules.
  */
-import { readItem, updateItem } from '@directus/sdk';
+import { readItem, readItems, createItem, updateItem } from '@directus/sdk';
 import { enforceTokenLimits, deductOrgTokens } from '~~/server/utils/ai-token-enforcement';
 import { logAIUsage } from '~~/server/utils/ai-usage';
 import { buildAvailableFactsForDormant } from '~~/server/utils/marketing-facts/build-dormant-facts';
@@ -38,6 +39,53 @@ import {
 	runLeadReengagementGenerator,
 } from '~~/server/utils/marketing-generators/lead-reengagement';
 import type { LeadReengagementCandidate } from '~~/server/utils/marketing-facts/build-lead-reengagement-facts';
+import type { DraftedCampaign, DraftedTouch } from '~/composables/useMarketingDrafts';
+import type { MarketingTouch } from '~~/shared/marketing-persistence';
+
+function deriveTitleFromCardType(cardType: string, candidate: any): string {
+	const data = candidate || {};
+	const audienceSize = data?.audience?.size ?? 0;
+	switch (cardType) {
+		case 'dormant_clients':
+			return `Reach out to ${audienceSize} dormant ${audienceSize === 1 ? 'client' : 'clients'}`;
+		case 'project_complete': {
+			const phase = data?.phase as string | undefined;
+			const contact = data?.signal?.primary_contact_name as string | undefined;
+			const project = data?.signal?.project_title as string | undefined;
+			if (phase === 'request_testimonial' && contact) return `Ask ${contact} for a testimonial`;
+			if (project) return `Turn ${project} into a campaign`;
+			return 'Surface a recent win';
+		}
+		case 'lead_reengagement': {
+			const topic = data?.cluster?.label as string | undefined;
+			const count = data?.cluster?.size ?? audienceSize;
+			if (topic) return `Re-engage ${count} ${topic.toLowerCase()} leads`;
+			return `Re-engage ${count} quiet leads`;
+		}
+		default:
+			return 'Marketing action';
+	}
+}
+
+function touchRowToDraftedTouch(row: MarketingTouch): DraftedTouch {
+	return {
+		id: row.id,
+		kind: row.kind,
+		send_offset_hours: row.send_offset_hours,
+		audience_target: row.audience_target,
+		audience_filter: row.audience_filter,
+		email_subject: row.email_subject,
+		email_preview_text: row.email_preview_text,
+		email_body_markdown: row.email_body_markdown,
+		email_cta: row.email_cta,
+		social_channel: row.social_channel,
+		social_caption: row.social_caption,
+		social_image_brief: row.social_image_brief,
+		regenerate_history: Array.isArray(row.regenerate_history)
+			? (row.regenerate_history as DraftedTouch['regenerate_history'])
+			: null,
+	};
+}
 
 export default defineEventHandler(async (event) => {
 	const idParam = getRouterParam(event, 'id');
@@ -48,11 +96,10 @@ export default defineEventHandler(async (event) => {
 
 	const directus = getTypedDirectus();
 
-	// Load the recommendation first — we need the org id to gate on.
 	const rec = await directus
 		.request(
 			readItem('marketing_recommendations', recommendationId, {
-				fields: ['id', 'organization', 'card_type', 'status', 'candidate_data'],
+				fields: ['id', 'organization', 'card_type', 'status', 'candidate_data', 'resulting_campaign'],
 			}),
 		)
 		.catch(() => null) as any;
@@ -63,12 +110,72 @@ export default defineEventHandler(async (event) => {
 	if (!['pending', 'drafted'].includes(rec.status)) {
 		throw createError({
 			statusCode: 409,
-			message: `Recommendation is ${rec.status}; cannot regenerate.`,
+			message: `Recommendation is ${rec.status}; cannot generate.`,
 		});
 	}
 
 	const organizationId: string = rec.organization;
 	await requireOrgMembership(event, organizationId);
+
+	// ─── Reload path ────────────────────────────────────────────────────────
+	// If a draft campaign already exists for this rec, return it without
+	// running the AI again. Idempotent generate is what makes the "drafts
+	// auto-save" promise work.
+	if (rec.status === 'drafted' && rec.resulting_campaign) {
+		const existing = await directus
+			.request(
+				readItem('marketing_campaigns', rec.resulting_campaign, {
+					fields: [
+						'id',
+						'status',
+						'generator_strategy',
+						'cadence_rationale',
+						'facts_used',
+						'tokens_spent',
+						'audience_snapshot',
+					],
+				}),
+			)
+			.catch(() => null) as any;
+
+		if (existing && existing.status === 'draft') {
+			const touchRows = await directus.request(
+				readItems('marketing_touches', {
+					filter: { campaign: { _eq: existing.id } },
+					sort: ['sequence_index'],
+					limit: -1,
+				}),
+			) as any[];
+
+			const touches = touchRows.map(touchRowToDraftedTouch);
+			const audienceSnapshot = existing.audience_snapshot || {};
+
+			const draft: DraftedCampaign = {
+				campaign_id: existing.id,
+				touches,
+				phase_strategy: existing.generator_strategy ?? null,
+				cadence_rationale: existing.cadence_rationale ?? '',
+				facts_used: Array.isArray(existing.facts_used)
+					? existing.facts_used.map((id: string) => ({ id, label: id, kind: 'fact' }))
+					: [],
+				tokens_spent: existing.tokens_spent ?? 0,
+				duration_ms: 0,
+				voice_signals: ['reloaded from saved draft'],
+				audience_summary: {
+					size: Array.isArray(audienceSnapshot?.contact_ids) ? audienceSnapshot.contact_ids.length : 0,
+					sample_names: Array.isArray(audienceSnapshot?.sample_names) ? audienceSnapshot.sample_names : [],
+				},
+			};
+
+			return {
+				...draft,
+				_meta: { reloaded: true, prompt_versions: {} },
+			};
+		}
+		// Otherwise (campaign got promoted/cancelled): fall through to fresh generate.
+	}
+
+	// ─── Cold-generate path ─────────────────────────────────────────────────
 
 	// Token gate — block before spending API credits.
 	const tokenCheck = await enforceTokenLimits(event, organizationId);
@@ -79,14 +186,11 @@ export default defineEventHandler(async (event) => {
 		});
 	}
 
-	// Org name for the prompt.
 	let orgName = 'Your business';
 	let orgIndustry = '';
 	try {
 		const org = await directus.request(
-			readItem('organizations', organizationId, {
-				fields: ['name', 'industry'],
-			}),
+			readItem('organizations', organizationId, { fields: ['name', 'industry'] }),
 		) as any;
 		if (org?.name) orgName = org.name;
 		if (org?.industry) orgIndustry = org.industry;
@@ -94,15 +198,11 @@ export default defineEventHandler(async (event) => {
 		// Non-fatal — fall back to defaults.
 	}
 
-	// Dispatch by card_type. Each generator returns the same DraftedCampaign
-	// shape so downstream wiring (token logging, drawer rendering, schedule)
-	// is identical. Card types not in this switch fall through to 501 so the
-	// client uses the dev stub.
 	const voice = getResolvedVoice(organizationId);
 	const candidateData = (rec.candidate_data || {}) as any;
 
 	let result: {
-		draft: any;
+		draft: DraftedCampaign;
 		inputTokens: number;
 		outputTokens: number;
 		durationMs: number;
@@ -188,17 +288,103 @@ export default defineEventHandler(async (event) => {
 	}).catch(() => {});
 	deductOrgTokens(organizationId, result.inputTokens + result.outputTokens).catch(() => {});
 
-	// Flip recommendation to drafted (best-effort — drafted state is recoverable).
+	// ─── Persist draft campaign + touches ───────────────────────────────────
+	const audienceData = candidateData?.audience || {};
+	const clusterLabel = candidateData?.cluster?.label;
+	const audienceSnapshot = {
+		contact_ids: Array.isArray(audienceData.contact_ids) ? audienceData.contact_ids : [],
+		cluster_label: clusterLabel,
+		sample_names: Array.isArray(audienceData.sample_names) ? audienceData.sample_names : [],
+		captured_at: new Date().toISOString(),
+	};
+
+	const title = deriveTitleFromCardType(rec.card_type, candidateData);
+
+	let createdCampaign: any;
+	try {
+		createdCampaign = await directus.request(
+			createItem('marketing_campaigns', {
+				title,
+				goal: null,
+				status: 'draft',
+				type: 'feed_recommendation',
+				organization: organizationId,
+				recommendation: recommendationId,
+				card_type: rec.card_type,
+				phase: candidateData?.phase || null,
+				voice_fingerprint_snapshot: null,
+				facts_used: (result.draft.facts_used || []).map((f) => f.id),
+				prompt_versions: { generator: result.promptVersion },
+				audience_snapshot: audienceSnapshot,
+				tokens_spent: result.draft.tokens_spent ?? 0,
+				generator_strategy: result.draft.phase_strategy ?? null,
+				cadence_rationale: result.draft.cadence_rationale ?? null,
+				start_date: null,
+				end_date: null,
+			}),
+		);
+	} catch (err: any) {
+		console.error('[marketing/generate] campaign create failed:', err.message);
+		throw createError({ statusCode: 500, message: 'Failed to persist draft campaign' });
+	}
+
+	const campaignId = createdCampaign.id;
+	const persistedTouches: DraftedTouch[] = [];
+	try {
+		for (let i = 0; i < result.draft.touches.length; i++) {
+			const t = result.draft.touches[i]!;
+			const created = await directus.request(
+				createItem('marketing_touches', {
+					campaign: campaignId,
+					organization: organizationId,
+					sequence_index: i,
+					kind: t.kind,
+					audience_target: t.audience_target,
+					audience_filter: t.audience_filter || 'all',
+					send_offset_hours: t.send_offset_hours,
+					scheduled_for: null,
+					status: 'pending',
+					email_subject: t.email_subject,
+					email_preview_text: t.email_preview_text,
+					email_body_markdown: t.email_body_markdown,
+					email_cta: t.email_cta,
+					social_channel: t.social_channel,
+					social_caption: t.social_caption,
+					social_image_brief: t.social_image_brief,
+					social_image_url: null,
+					personalization_state: 'none',
+					tokens_spent: 0,
+					regenerate_history: null,
+					generator_strategy_excerpt: result.draft.phase_strategy ?? null,
+				}),
+			) as any;
+			persistedTouches.push({ ...t, id: created.id, regenerate_history: null });
+		}
+	} catch (err: any) {
+		console.error('[marketing/generate] touch create failed:', err.message);
+		throw createError({ statusCode: 500, message: 'Failed to persist draft touches' });
+	}
+
+	// Flip rec to drafted with the campaign FK.
 	try {
 		await directus.request(
-			updateItem('marketing_recommendations', recommendationId, { status: 'drafted' }),
+			updateItem('marketing_recommendations', recommendationId, {
+				status: 'drafted',
+				resulting_campaign: campaignId,
+			}),
 		);
 	} catch (err: any) {
 		console.warn('[marketing/generate] status update failed:', err.message);
 	}
 
-	return {
+	const draftWithIds: DraftedCampaign = {
 		...result.draft,
+		campaign_id: campaignId,
+		touches: persistedTouches,
+	};
+
+	return {
+		...draftWithIds,
 		_meta: {
 			model: result.model,
 			prompt_versions: { generator: result.promptVersion },
