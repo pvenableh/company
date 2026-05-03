@@ -12,6 +12,7 @@ import {
 } from '~~/server/utils/social-directus'
 import { decodeOAuthState } from '~~/server/utils/social-tenancy'
 import { requireOrgMembership } from '~~/server/utils/marketing-perms'
+import { computeTokenExpiry } from '~~/server/utils/oauth-expiry'
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)
@@ -41,7 +42,7 @@ export default defineEventHandler(async (event) => {
     // Get user profile
     const userInfo = await getTikTokUserInfo(tokens.accessToken)
 
-    const tokenExpiresAt = new Date(Date.now() + tokens.expiresIn * 1000).toISOString()
+    const tokenExpiresAt = computeTokenExpiry(tokens.expiresIn)
 
     const existing = await getSocialAccountByPlatformId('tiktok', tokens.openId, organizationId)
 

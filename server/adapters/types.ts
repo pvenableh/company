@@ -15,7 +15,8 @@ import type { SocialPlatform } from '~~/shared/social'
 export interface OAuthTokenResult {
   accessToken: string
   refreshToken?: string
-  expiresIn: number // seconds
+  /** Seconds until expiry. Optional — some providers (e.g. Meta) omit this for non-expiring tokens. */
+  expiresIn?: number
   userId?: string
 }
 

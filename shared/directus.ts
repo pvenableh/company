@@ -2020,14 +2020,152 @@ export interface MarketingCampaign {
 	title: string;
 	/** @description User-stated campaign goal */
 	goal?: string | null;
-	status?: 'draft' | 'active' | 'paused' | 'completed' | 'archived' | null;
-	type?: 'campaign' | 'dashboard' | null;
+	status?: 'draft' | 'scheduled' | 'partial_sent' | 'completed' | 'cancelled' | 'active' | 'paused' | 'archived' | null;
+	type?: 'campaign' | 'dashboard' | 'feed_recommendation' | null;
 	/** @description Full AI-generated plan (CampaignAnalysis or DashboardAnalysis) */
 	plan_data?: Record<string, any> | null;
 	organization?: Organization | string | null;
 	start_date?: string | null;
 	end_date?: string | null;
 	user_created?: DirectusUser | string | null;
+	date_created?: string | null;
+	date_updated?: string | null;
+	/** @description Null for legacy dashboard/campaign rows; set for feed-driven campaigns. */
+	card_type?: 'dormant_clients' | 'project_complete' | 'lead_reengagement' | 'new_client_welcome' | 'service_promo' | 'campaign_clone' | 'partner_anniversary' | 'event_teaser' | null;
+	/** @description e.g. request_testimonial | repurpose_to_campaign — for phased card types. */
+	phase?: string | null;
+	/** @description Full VoiceFingerprint at generation time — supports the visible "Drafted from your context" panel. */
+	voice_fingerprint_snapshot?: Record<string, any> | null;
+	/** @description Fact IDs referenced in any touch — drives the visible context panel. */
+	facts_used?: string[] | null;
+	/** @description { ranker, generator, voice } — for eval reproducibility. */
+	prompt_versions?: Record<string, any> | null;
+	/** @description Audience at generation time — survives subsequent CRM drift. */
+	audience_snapshot?: Record<string, any> | null;
+	/** @description Total across this campaign (generation + regenerate). */
+	tokens_spent?: number | null;
+	/** @description cluster_strategy / phase_strategy text from the generator. */
+	generator_strategy?: string | null;
+	/** @description Why this timing/channel mix — from the generator. */
+	cadence_rationale?: string | null;
+	/** @description FK to the marketing_recommendations card that produced this campaign. */
+	recommendation?: MarketingRecommendation | string | null;
+}
+
+export interface MarketingRecommendation {
+	/** @primaryKey */
+	id: number;
+	/** @required */
+	organization: Organization | string;
+	/** @description Which of the 8 recommendation card types this is. @required */
+	card_type: 'dormant_clients' | 'project_complete' | 'lead_reengagement' | 'new_client_welcome' | 'service_promo' | 'campaign_clone' | 'partner_anniversary' | 'event_teaser';
+	/** @description pending → generating → drafted → approved | skipped | expired @required */
+	status: 'pending' | 'generating' | 'drafted' | 'approved' | 'skipped' | 'expired';
+	/** @description From ranker — 0-100. Higher = more time-sensitive. */
+	urgency?: number | null;
+	/** @description Full RecommendationCandidate from the signal extractor. */
+	candidate_data?: Record<string, any> | null;
+	/** @description { why_now, urgency, audience_overlap_with } from the ranker. */
+	ranker_output?: Record<string, any> | null;
+	/** @description Identifier for the ranker batch this came from. Eval-traceable. */
+	ranker_run_id?: string | null;
+	/** @description e.g. "v3" — for eval reproducibility. */
+	ranker_prompt_version?: string | null;
+	/** @description Optional user note when skipped. */
+	skipped_reason?: string | null;
+	/** @description When this card first appeared in the feed. */
+	surfaced_at?: string | null;
+	/** @description After this, a daily cron flips status to expired. */
+	expires_at?: string | null;
+	date_created?: string | null;
+	date_updated?: string | null;
+	user_created?: string | null;
+	user_updated?: string | null;
+	/** @description Set when the user approves and a campaign is created. */
+	resulting_campaign?: MarketingCampaign | string | null;
+}
+
+export interface MarketingTouche {
+	/** @primaryKey */
+	id: number;
+	/** @required */
+	campaign: MarketingCampaign | string;
+	/** @description Denormalized from campaign for fast org-scoped queries. @required */
+	organization: Organization | string;
+	/** @description Order within campaign (0, 1, 2…). */
+	sequence_index?: number | null;
+	/** @required */
+	kind: 'email' | 'social';
+	/** @required */
+	audience_target: 'project_contact' | 'lookalike_audience' | 'public';
+	/** @description all | opened_previous | unopened_previous | cluster:<label> */
+	audience_filter?: string | null;
+	/** @description Hours from campaign start. */
+	send_offset_hours?: number | null;
+	/** @description Computed at schedule time from campaign start + offset. */
+	scheduled_for?: string | null;
+	sent_at?: string | null;
+	/** @required */
+	status: 'pending' | 'scheduled' | 'sent' | 'cancelled' | 'failed';
+	/** @description Null when kind=social. */
+	email_subject?: string | null;
+	/** @description Inbox preview line. */
+	email_preview_text?: string | null;
+	/** @description 80-150 words target. */
+	email_body_markdown?: string | null;
+	email_cta?: 'book_call' | 'reply' | 'view_portfolio' | 'view_case_study' | 'reply_with_question' | null;
+	/** @description Null when kind=email. */
+	social_channel?: 'linkedin' | 'instagram' | 'twitter' | null;
+	social_caption?: string | null;
+	/** @description AI-generated description of the desired image. */
+	social_image_brief?: string | null;
+	/** @description Populated after user uploads/generates an image. */
+	social_image_url?: string | null;
+	/** @description FK to social_posts created at schedule time. */
+	source_social_post?: SocialPost | string | null;
+	/** @description FK to email send record (no relation yet — wired when email-send infra is centralized). */
+	source_email_send?: string | null;
+	/** @required */
+	personalization_state: 'none' | 'requested' | 'in_progress' | 'completed';
+	opens_count?: number | null;
+	clicks_count?: number | null;
+	replies_count?: number | null;
+	/** @description Generation + any regenerate spend. */
+	tokens_spent?: number | null;
+	/** @description Prior subjects/bodies kept for one-click undo. */
+	regenerate_history?: Record<string, any> | null;
+	/** @description Short note from cluster_strategy / phase_strategy at gen time. */
+	generator_strategy_excerpt?: string | null;
+	date_created?: string | null;
+	date_updated?: string | null;
+	user_created?: string | null;
+	user_updated?: string | null;
+}
+
+export interface MarketingTouchVariant {
+	/** @primaryKey */
+	id: number;
+	/** @required */
+	touch: MarketingTouche | string;
+	/** @required */
+	contact: Contact | string;
+	/** @description Denormalized from touch.organization for fast org-scoped queries. @required */
+	organization: Organization | string;
+	/** @required */
+	status: 'pending' | 'processing' | 'completed' | 'failed';
+	/** @description Set when worker claims this row. Stale claims (>60s) reclaimable. */
+	processing_started_at?: string | null;
+	generated_at?: string | null;
+	/** @description Already personalized — no {{first_name}} substitution at send time. */
+	email_subject?: string | null;
+	email_preview_text?: string | null;
+	email_body_markdown?: string | null;
+	tokens_spent?: number | null;
+	prompt_version?: string | null;
+	/** @description Set when status=failed. */
+	error_message?: string | null;
+	/** @description Snapshot of per-contact facts fed into the generator (for debug + audit). */
+	context_used?: Record<string, any> | null;
 	date_created?: string | null;
 	date_updated?: string | null;
 }
@@ -4253,6 +4391,9 @@ export interface Schema {
 	mailing_list_contacts: MailingListContact[];
 	mailing_lists: MailingList[];
 	marketing_campaigns: MarketingCampaign[];
+	marketing_recommendations: MarketingRecommendation[];
+	marketing_touches: MarketingTouche[];
+	marketing_touch_variants: MarketingTouchVariant[];
 	meeting_requests: MeetingRequest[];
 	menus: Menu[];
 	messages: Message[];
@@ -4475,6 +4616,9 @@ export enum CollectionNames {
 	mailing_list_contacts = 'mailing_list_contacts',
 	mailing_lists = 'mailing_lists',
 	marketing_campaigns = 'marketing_campaigns',
+	marketing_recommendations = 'marketing_recommendations',
+	marketing_touches = 'marketing_touches',
+	marketing_touch_variants = 'marketing_touch_variants',
 	meeting_requests = 'meeting_requests',
 	menus = 'menus',
 	messages = 'messages',

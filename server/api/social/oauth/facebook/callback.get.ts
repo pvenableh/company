@@ -12,7 +12,7 @@ import {
 } from '~~/server/utils/social-directus'
 import { decodeOAuthState } from '~~/server/utils/social-tenancy'
 import { requireOrgMembership } from '~~/server/utils/marketing-perms'
-import { addDays } from 'date-fns'
+import { computeTokenExpiry } from '~~/server/utils/oauth-expiry'
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)
@@ -50,7 +50,7 @@ export default defineEventHandler(async (event) => {
 
     for (const page of pages) {
       const existing = await getSocialAccountByPlatformId('facebook', page.pageId, organizationId)
-      const tokenExpiresAt = addDays(new Date(), Math.floor(expiresIn / 86400)).toISOString()
+      const tokenExpiresAt = computeTokenExpiry(expiresIn)
 
       const accountData = {
         organization: organizationId,

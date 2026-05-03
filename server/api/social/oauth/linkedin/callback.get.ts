@@ -12,7 +12,7 @@ import {
 } from '~~/server/utils/social-directus'
 import { decodeOAuthState } from '~~/server/utils/social-tenancy'
 import { requireOrgMembership } from '~~/server/utils/marketing-perms'
-import { addDays } from 'date-fns'
+import { computeTokenExpiry } from '~~/server/utils/oauth-expiry'
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)
@@ -42,7 +42,7 @@ export default defineEventHandler(async (event) => {
     // Get user profile
     const profile = await getLinkedInProfile(tokens.accessToken)
 
-    const tokenExpiresAt = addDays(new Date(), Math.floor(tokens.expiresIn / 86400)).toISOString()
+    const tokenExpiresAt = computeTokenExpiry(tokens.expiresIn)
     let connectedCount = 0
 
     // Connect personal profile
