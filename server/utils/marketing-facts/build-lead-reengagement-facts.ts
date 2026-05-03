@@ -41,6 +41,7 @@ export interface LeadReengagementCandidate {
 		size?: number;
 		representative_intent?: string;
 		lead_sources_summary?: string;
+		lead_ids?: number[];
 	};
 	signal?: {
 		lead_count?: number;

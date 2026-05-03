@@ -109,6 +109,7 @@ export async function extractLeadReengagementCandidates(
 		const avg = Math.round(gaps.reduce((a, b) => a + b, 0) / gaps.length);
 		const samples = members.slice(0, 3).map((l) => fullName(l.related_contact));
 		const ids = members.map((l) => l.related_contact?.id).filter(Boolean);
+		const leadIds = members.map((l) => l.id).filter((x) => x != null);
 		const sources = topicToSourcesSummary(members.map((l) => l.source || 'unknown'));
 
 		const impactScore = Math.min(85, Math.round(35 + Math.log10(members.length + 1) * 25 + avg * 0.15));
@@ -129,6 +130,7 @@ export async function extractLeadReengagementCandidates(
 					size: members.length,
 					representative_intent: `Inquired about ${topic.toLowerCase()}`,
 					lead_sources_summary: sources,
+					lead_ids: leadIds,
 				},
 				audience: {
 					size: members.length,

@@ -65,9 +65,37 @@ function parseOrgId(): string {
 	return DEFAULT_ORG_ID;
 }
 
+// ─── Lead lookup for lead_reengagement seed ────────────────────────────────
+
+interface SeedLead {
+	id: number;
+	contactId: string;
+}
+
+async function fetchBrandStrategyLeads(orgId: string): Promise<SeedLead[]> {
+	const filter = encodeURIComponent(JSON.stringify({
+		_and: [
+			{ organization: { _eq: orgId } },
+			{ stage: { _eq: 'qualified' } },
+			{ project_type: { _eq: 'Brand strategy' } },
+			{ is_junk: { _neq: true } },
+		],
+	}));
+	const { data, error } = await directusRequest<any[]>(
+		`/items/leads?filter=${filter}&fields=id,related_contact&limit=20`,
+	);
+	if (error || !data) return [];
+	return data
+		.map((l) => ({
+			id: l.id,
+			contactId: typeof l.related_contact === 'string' ? l.related_contact : l.related_contact?.id ?? null,
+		}))
+		.filter((l): l is SeedLead => typeof l.contactId === 'string' && l.contactId.length > 0);
+}
+
 // ─── Seed Definitions ────────────────────────────────────────────────────────
 
-function buildRecommendations(orgId: string) {
+function buildRecommendations(orgId: string, leadReengagementLeads: SeedLead[]) {
 	const now = new Date();
 	const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // +7 days
 	const surfaced = now.toISOString();
@@ -162,13 +190,15 @@ function buildRecommendations(orgId: string) {
 				},
 				cluster: {
 					label: 'Brand strategy',
-					size: 7,
+					size: leadReengagementLeads.length || 7,
 					representative_intent: 'Inquired about brand strategy / identity refresh',
 					lead_sources_summary: '3 demo_request, 4 contact_form_with_topic',
+					lead_ids: leadReengagementLeads.map((l) => l.id),
 				},
 				audience: {
-					size: 7,
+					size: leadReengagementLeads.length || 7,
 					sample_names: ['Tom Bell', 'Anna Wu', 'Devon Reyes'],
+					contact_ids: leadReengagementLeads.map((l) => l.contactId),
 				},
 				recency_days: 7,
 				impact_score: 68,
@@ -239,8 +269,23 @@ async function main() {
 		console.log('  Cleared.\n');
 	}
 
+	// Look up real Brand-strategy leads so the lead_reengagement seed carries
+	// resolvable cluster.lead_ids + audience.contact_ids. Falls back to an
+	// empty list if seed-marketing-source-data.ts hasn't been run yet — the
+	// generate endpoint will still persist the campaign, but personalize
+	// will 409 until the source data is seeded.
+	const leadReengagementLeads = await fetchBrandStrategyLeads(orgId);
+	if (leadReengagementLeads.length === 0) {
+		console.warn(
+			'  ! No qualified Brand-strategy leads found. lead_reengagement seed will lack lead_ids/contact_ids.',
+		);
+		console.warn('    Run `pnpm tsx scripts/seed-marketing-source-data.ts` first.');
+	} else {
+		console.log(`Found ${leadReengagementLeads.length} Brand-strategy lead(s) for lead_reengagement seed.`);
+	}
+
 	// Insert fresh seed rows.
-	const recs = buildRecommendations(orgId);
+	const recs = buildRecommendations(orgId, leadReengagementLeads);
 	console.log(`Creating ${recs.length} recommendations...`);
 
 	for (const rec of recs) {
