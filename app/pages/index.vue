@@ -473,6 +473,9 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 							:team-size="earnestState.teamSize"
 							:dimensions="earnestState.dimensions"
 						/>
+
+						<!-- Marketing actions ready in the feed -->
+						<CommandCenterMarketingActionsWidget />
 					</div>
 				</div>
 
