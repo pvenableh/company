@@ -20,7 +20,7 @@
 			</div>
 
 			<button
-				v-if="!loading && recommendations.length > 1"
+				v-if="!loading && recommendations.length > 1 && canDoAll"
 				type="button"
 				class="inline-flex items-center gap-2 rounded-full bg-foreground text-background px-5 py-2.5 text-sm font-medium hover:bg-foreground/90 transition-colors disabled:opacity-50"
 				:disabled="generatingAll"
@@ -119,7 +119,7 @@
 					Recently sent
 				</h3>
 				<NuxtLink
-					to="/marketing"
+					to="/marketing-timeline"
 					class="text-xs text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"
 				>
 					See full timeline
@@ -183,7 +183,17 @@ useHead({
 });
 
 const { selectedOrg } = useOrganization();
+const { isOrgManagerOrAbove } = useOrgRole();
 const { generate } = useMarketingDrafts();
+
+/**
+ * "Do all N" fires the full campaign sequence in one click — generate +
+ * schedule every recommendation back-to-back. That's a real send-out
+ * commitment, so we gate it on manager-or-above. Per-card Generate /
+ * Customize still works for any active org member (they get to review
+ * each draft in the drawer before scheduling).
+ */
+const canDoAll = computed(() => isOrgManagerOrAbove.value);
 
 const recommendations = ref<MarketingRecommendation[]>([]);
 const loading = ref(false);
@@ -280,13 +290,48 @@ async function onSkip(rec: MarketingRecommendation) {
 	}
 }
 
-function onGenerateAll() {
+/**
+ * Push-button "Do all N": for each recommendation, generate the draft,
+ * then immediately schedule it. Runs sequentially so the UI surfaces
+ * which one is in flight and the server isn't slammed with parallel
+ * Anthropic + Directus writes.
+ */
+async function onGenerateAll() {
 	generatingAll.value = true;
-	for (const rec of recommendations.value) generatingIds.value.add(rec.id);
-	setTimeout(() => {
-		generatingIds.value.clear();
-		generatingAll.value = false;
-	}, 800);
+	const targets = [...recommendations.value];
+	for (const rec of targets) generatingIds.value.add(rec.id);
+	let scheduled = 0;
+	for (const rec of targets) {
+		try {
+			const draft = await generate(rec);
+			await $fetch(`/api/marketing/recommendations/${rec.id}/schedule`, {
+				method: 'POST',
+				body: {
+					touches: draft.touches,
+					phase_strategy: draft.phase_strategy ?? null,
+					cadence_rationale: draft.cadence_rationale ?? null,
+					facts_used: draft.facts_used ?? [],
+					tokens_spent: draft.tokens_spent ?? 0,
+					voice_fingerprint_snapshot: null,
+					prompt_versions: { ranker: rec.ranker_prompt_version, generator: 'auto-v1' },
+				},
+			});
+			recommendations.value = recommendations.value.filter((r) => r.id !== rec.id);
+			scheduled++;
+		} catch (err: any) {
+			console.error('[marketing-feed] do-all failed for', rec.id, err);
+		} finally {
+			generatingIds.value.delete(rec.id);
+		}
+	}
+	generatingAll.value = false;
+	if (scheduled === targets.length) {
+		flashToast('success', `Scheduled ${scheduled} ${scheduled === 1 ? 'campaign' : 'campaigns'}.`);
+	} else if (scheduled > 0) {
+		flashToast('error', `Scheduled ${scheduled} of ${targets.length} — some failed.`);
+	} else {
+		flashToast('error', 'Could not schedule any campaigns.');
+	}
 }
 
 async function onScheduleAll(payload: { rec: MarketingRecommendation; touches: DraftedTouch[] }) {
