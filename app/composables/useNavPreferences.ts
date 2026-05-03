@@ -14,6 +14,8 @@ export interface NavLink {
 	color: string;
 	description: string;
 	section?: 'primary' | 'secondary' | 'tools';
+	/** When set, the link is rendered inside a collapsible sidebar group instead of its `section` list. */
+	group?: 'engage';
 	featureKey?: FeatureKey;
 }
 
@@ -32,7 +34,7 @@ const DEFAULT_LINKS: NavLink[] = [
 	{ name: 'Proposals', type: ['header', 'footer', 'drawer'], to: '/proposals', icon: 'i-heroicons-document-check', color: 'bg-gradient-to-br from-teal-500 to-emerald-500', description: 'Proposals & estimates', section: 'primary', featureKey: 'proposals' },
 	{ name: 'Contracts', type: ['header', 'footer', 'drawer'], to: '/contracts', icon: 'i-heroicons-document-arrow-down', color: 'bg-gradient-to-br from-sky-500 to-blue-600', description: 'Contracts & signing', section: 'secondary', featureKey: 'proposals' },
 	{ name: 'Invoices', type: ['header', 'footer', 'drawer'], to: '/invoices', icon: 'i-heroicons-document-text', color: 'bg-emerald-500', description: 'Billing & payments', section: 'primary', featureKey: 'invoices' },
-	{ name: 'Marketing', type: ['header', 'footer', 'toolbar', 'drawer'], to: '/marketing', icon: 'i-lucide-bar-chart-3', color: 'bg-gradient-to-br from-blue-500 to-cyan-500', description: 'Campaigns & insights', section: 'primary', featureKey: 'email_campaigns' },
+	{ name: 'Marketing', type: ['header', 'footer', 'toolbar', 'drawer'], to: '/marketing', icon: 'i-lucide-bar-chart-3', color: 'bg-gradient-to-br from-blue-500 to-cyan-500', description: 'Campaigns & insights', section: 'primary', group: 'engage', featureKey: 'email_campaigns' },
 	// ── More (sidebar bottom — subtle "More" divider) ──
 	{ name: 'Activity', type: ['header', 'footer', 'drawer'], to: '/activity', icon: 'i-heroicons-clock', color: 'bg-violet-500', description: 'Activity timeline', section: 'secondary' },
 	{ name: 'Channels', type: ['header', 'footer', 'drawer'], to: '/channels', icon: 'i-heroicons-chat-bubble-left-right', color: 'bg-cyan-500', description: 'Team messaging', section: 'secondary', featureKey: 'channels' },
@@ -43,8 +45,8 @@ const DEFAULT_LINKS: NavLink[] = [
 	{ name: 'Tickets', type: ['header', 'footer', 'toolbar', 'drawer'], to: '/tickets', icon: 'i-heroicons-queue-list', color: 'bg-indigo-500', description: 'Support tickets', section: 'secondary', featureKey: 'tickets' },
 	{ name: 'Teams', type: ['drawer'], to: '/organization/teams', icon: 'i-heroicons-user-group', color: 'bg-blue-500', description: 'Team management', section: 'secondary', featureKey: 'team_management' },
 	{ name: 'Goals', type: ['drawer'], to: '/goals', icon: 'i-heroicons-flag', color: 'bg-amber-500', description: 'Track goals', section: 'secondary' },
-	{ name: 'Email', type: ['header', 'footer', 'drawer'], to: '/email', icon: 'i-heroicons-envelope', color: 'bg-rose-500', description: 'Email campaigns', section: 'secondary', featureKey: 'email_campaigns' },
-	{ name: 'Social', type: ['header', 'footer', 'drawer'], to: '/social', icon: 'i-heroicons-share', color: 'bg-pink-500', description: 'Social media', section: 'secondary', featureKey: 'email_campaigns' },
+	{ name: 'Email', type: ['header', 'footer', 'drawer'], to: '/email', icon: 'i-heroicons-envelope', color: 'bg-rose-500', description: 'Email campaigns', section: 'secondary', group: 'engage', featureKey: 'email_campaigns' },
+	{ name: 'Social', type: ['header', 'footer', 'drawer'], to: '/social', icon: 'i-heroicons-share', color: 'bg-pink-500', description: 'Social media', section: 'secondary', group: 'engage', featureKey: 'email_campaigns' },
 	{ name: 'Financials', type: ['footer', 'drawer'], to: '/financials', icon: 'i-heroicons-chart-bar', color: 'bg-green-600', description: 'Financial reports', section: 'secondary', featureKey: 'invoices' },
 	{ name: 'Time Tracker', type: ['header', 'footer', 'drawer'], to: '/time-tracker', icon: 'i-heroicons-clock', color: 'bg-lime-600', description: 'Track time', section: 'secondary' },
 	{ name: 'Phone', type: ['drawer'], to: '/phone-settings', icon: 'i-heroicons-phone', color: 'bg-teal-500', description: 'Phone system', section: 'secondary' },
@@ -53,8 +55,13 @@ const DEFAULT_LINKS: NavLink[] = [
 	{ name: 'Organization', type: ['drawer'], to: '/organization', icon: 'i-heroicons-building-office-2', color: 'bg-gray-700', description: 'Settings', section: 'secondary', featureKey: 'org_settings' },
 ];
 
-// Default sidebar visibility — first 9 items (Command Center + 4 primary + 4 secondary)
-const DEFAULT_VISIBLE_ROUTES = new Set(DEFAULT_LINKS.slice(0, 10).map(l => l.to));
+// Default sidebar visibility — first 10 items (Command Center + work apps + Marketing + Activity)
+// plus the rest of the Engage group so the collapsible section has all 3 children out of the box.
+const DEFAULT_VISIBLE_ROUTES = new Set([
+	...DEFAULT_LINKS.slice(0, 10).map(l => l.to),
+	'/email',
+	'/social',
+]);
 
 // ── Hats ────────────────────────────────────────────────────────────────────
 // Hats are workspace presets that pre-fill sidebar visibility.

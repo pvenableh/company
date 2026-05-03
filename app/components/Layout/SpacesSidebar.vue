@@ -46,6 +46,7 @@ const spacesCollapsed = ref<Record<string, boolean>>({
 	work: false,
 	relationships: false,
 	business: false,
+	engage: false,
 })
 
 if (import.meta.client) {
@@ -88,8 +89,13 @@ const relationshipItems: NavItem[] = [
 const businessItems: NavItem[] = [
 	{ name: 'Invoices', to: '/invoices', icon: 'heroicons:document-text' },
 	{ name: 'Proposals', to: '/proposals', icon: 'heroicons:document-check' },
-	{ name: 'Marketing', to: '/marketing', icon: 'lucide:bar-chart-3' },
 	{ name: 'Financials', to: '/financials', icon: 'heroicons:chart-bar' },
+]
+
+const engageItems: NavItem[] = [
+	{ name: 'Marketing', to: '/marketing', icon: 'lucide:bar-chart-3' },
+	{ name: 'Email', to: '/email', icon: 'heroicons:envelope' },
+	{ name: 'Social', to: '/social', icon: 'heroicons:share' },
 ]
 
 function isActiveItem(to: string): boolean {
@@ -188,6 +194,32 @@ function handleTopup() {
 				<div v-show="!spacesCollapsed.business || sidebarCollapsed" class="space-y-0.5 mt-0.5">
 					<NuxtLink
 						v-for="item in businessItems"
+						:key="item.to"
+						:to="item.to"
+						class="nav-item"
+						:class="{ 'nav-item-active': isActiveItem(item.to), 'justify-center': sidebarCollapsed, 'has-tooltip': sidebarCollapsed }"
+						:data-tooltip="sidebarCollapsed ? item.name : undefined"
+					>
+						<Icon :name="item.icon" class="w-4 h-4 shrink-0" />
+						<span v-if="!sidebarCollapsed" class="text-[13px]">{{ item.name }}</span>
+					</NuxtLink>
+				</div>
+			</div>
+
+			<!-- ENGAGE -->
+			<div class="pt-2">
+				<button
+					v-if="!sidebarCollapsed"
+					@click="toggleSpace('engage')"
+					class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 hover:text-muted-foreground transition-colors"
+				>
+					<Icon :name="spacesCollapsed.engage ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="w-3 h-3 shrink-0" />
+					<span>Engage</span>
+				</button>
+				<div v-if="sidebarCollapsed" class="h-2" />
+				<div v-show="!spacesCollapsed.engage || sidebarCollapsed" class="space-y-0.5 mt-0.5">
+					<NuxtLink
+						v-for="item in engageItems"
 						:key="item.to"
 						:to="item.to"
 						class="nav-item"
@@ -313,6 +345,18 @@ function handleTopup() {
 						</button>
 						<div v-show="!spacesCollapsed.business" class="space-y-0.5 mt-0.5">
 							<NuxtLink v-for="item in businessItems" :key="item.to" :to="item.to" class="nav-item" :class="{ 'nav-item-active': isActiveItem(item.to) }">
+								<Icon :name="item.icon" class="w-4 h-4 shrink-0" />
+								<span class="text-[13px]">{{ item.name }}</span>
+							</NuxtLink>
+						</div>
+					</div>
+					<div class="pt-2">
+						<button @click="toggleSpace('engage')" class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+							<Icon :name="spacesCollapsed.engage ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="w-3 h-3" />
+							<span>Engage</span>
+						</button>
+						<div v-show="!spacesCollapsed.engage" class="space-y-0.5 mt-0.5">
+							<NuxtLink v-for="item in engageItems" :key="item.to" :to="item.to" class="nav-item" :class="{ 'nav-item-active': isActiveItem(item.to) }">
 								<Icon :name="item.icon" class="w-4 h-4 shrink-0" />
 								<span class="text-[13px]">{{ item.name }}</span>
 							</NuxtLink>

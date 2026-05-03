@@ -45,6 +45,61 @@
 				</NuxtLink>
 			</div>
 
+			<!-- Engage group (collapsible) -->
+			<div v-if="engageLinks.length" class="sidebar-section">
+				<!-- Collapsed sidebar: render flat with child icons (no group chrome) -->
+				<template v-if="collapsed">
+					<NuxtLink
+						v-for="link in engageLinks"
+						:key="link.to"
+						:to="link.to"
+						class="sidebar-link sidebar-link--collapsed"
+						:class="isActive(link.to) ? 'sidebar-link-active' : 'sidebar-link-inactive'"
+						:title="link.name"
+					>
+						<UIcon
+							:name="link.icon"
+							class="w-[18px] h-[18px] flex-shrink-0 transition-colors"
+							:class="isActive(link.to) ? 'text-primary' : 'text-muted-foreground'"
+						/>
+					</NuxtLink>
+				</template>
+
+				<!-- Expanded sidebar: collapsible header + indented children -->
+				<template v-else>
+					<button
+						class="sidebar-group-header"
+						:class="{ 'sidebar-group-header--active': hasActiveEngage }"
+						:aria-expanded="engageOpen"
+						@click="toggleEngage"
+					>
+						<UIcon name="i-heroicons-megaphone" class="w-[18px] h-[18px] flex-shrink-0 transition-colors" :class="hasActiveEngage ? 'text-primary' : 'text-muted-foreground'" />
+						<span class="sidebar-link-label flex-1 text-left">Engage</span>
+						<UIcon
+							:name="engageOpen ? 'i-heroicons-chevron-down' : 'i-heroicons-chevron-right'"
+							class="w-3.5 h-3.5 flex-shrink-0 transition-transform"
+							:class="hasActiveEngage ? 'text-primary/70' : 'text-muted-foreground/60'"
+						/>
+					</button>
+					<div v-show="engageOpen" class="sidebar-group-children">
+						<NuxtLink
+							v-for="link in engageLinks"
+							:key="link.to"
+							:to="link.to"
+							class="sidebar-link sidebar-link--child"
+							:class="isActive(link.to) ? 'sidebar-link-active' : 'sidebar-link-inactive'"
+						>
+							<UIcon
+								:name="link.icon"
+								class="w-[14px] h-[14px] flex-shrink-0 transition-colors"
+								:class="isActive(link.to) ? 'text-primary' : 'text-muted-foreground'"
+							/>
+							<span class="sidebar-link-label">{{ link.name }}</span>
+						</NuxtLink>
+					</div>
+				</template>
+			</div>
+
 			<!-- Secondary (subtle divider) -->
 			<div v-if="secondaryLinks.length" class="sidebar-section">
 				<div v-if="!collapsed" class="sidebar-divider" />
@@ -147,17 +202,41 @@ const showTokenMeter = computed(() => {
 });
 
 const primaryLinks = computed(() =>
-	visibleLinks.value.filter(l => l.section === 'primary' && l.to !== '/'),
+	visibleLinks.value.filter(l => l.section === 'primary' && l.to !== '/' && !l.group),
 );
 
 const secondaryLinks = computed(() =>
-	visibleLinks.value.filter(l => l.section === 'secondary'),
+	visibleLinks.value.filter(l => l.section === 'secondary' && !l.group),
+);
+
+const engageLinks = computed(() =>
+	visibleLinks.value.filter(l => l.group === 'engage'),
 );
 
 const isActive = (to: string) => {
 	if (to === '/') return route.path === '/';
 	return route.path.startsWith(to);
 };
+
+const hasActiveEngage = computed(() => engageLinks.value.some(l => isActive(l.to)));
+
+// Persist Engage group expand/collapse state, defaulting to expanded.
+const ENGAGE_STORAGE_KEY = 'sidebar-engage-open';
+const engageOpen = ref(true);
+if (import.meta.client) {
+	try {
+		const saved = localStorage.getItem(ENGAGE_STORAGE_KEY);
+		if (saved === 'false') engageOpen.value = false;
+	} catch {}
+}
+const toggleEngage = () => {
+	engageOpen.value = !engageOpen.value;
+	try { localStorage.setItem(ENGAGE_STORAGE_KEY, String(engageOpen.value)); } catch {}
+};
+// Auto-expand when navigating into one of the group's pages.
+watch(hasActiveEngage, (active) => {
+	if (active) engageOpen.value = true;
+}, { immediate: true });
 </script>
 
 <style scoped>
@@ -261,6 +340,43 @@ const isActive = (to: string) => {
 	font-weight: 500;
 	transition: all 0.15s ease;
 	cursor: pointer;
+}
+
+.sidebar-group-header {
+	width: 100%;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 6px 10px;
+	border-radius: 10px;
+	font-size: 13px;
+	font-weight: 500;
+	color: hsl(var(--muted-foreground));
+	transition: all 0.15s ease;
+	cursor: pointer;
+}
+.sidebar-group-header:hover {
+	background: hsl(var(--muted) / 0.4);
+	color: hsl(var(--foreground));
+}
+.sidebar-group-header--active {
+	color: hsl(var(--primary));
+}
+
+.sidebar-group-children {
+	margin-top: 1px;
+	margin-left: 18px;
+	padding-left: 8px;
+	border-left: 1px solid hsl(var(--border) / 0.4);
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+}
+
+.sidebar-link--child {
+	gap: 8px;
+	padding: 5px 8px;
+	font-size: 12px;
 }
 
 .sidebar-link--collapsed {
