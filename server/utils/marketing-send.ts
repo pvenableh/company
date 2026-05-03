@@ -31,6 +31,7 @@
 
 import sgMail from '@sendgrid/mail';
 import { createItem, readItem, readItems, updateItem } from '@directus/sdk';
+import type { MarketingTouchVariant } from '~~/shared/marketing-persistence';
 
 export interface SendTouchArgs {
 	touchId: number;
@@ -184,6 +185,33 @@ async function resolveAudience(args: {
 	return loadEligibleContacts(directus, baseIds);
 }
 
+async function loadVariantsByContact(
+	directus: any,
+	touchId: number,
+	contactIds: string[],
+): Promise<Map<string, MarketingTouchVariant>> {
+	if (contactIds.length === 0) return new Map();
+	try {
+		const rows = await directus.request(
+			readItems('marketing_touch_variants', {
+				filter: {
+					_and: [
+						{ touch: { _eq: touchId } },
+						{ contact: { _in: contactIds as any } },
+						{ status: { _eq: 'completed' } },
+					],
+				},
+				fields: ['id', 'contact', 'email_subject', 'email_preview_text', 'email_body_markdown'],
+				limit: -1,
+			}),
+		) as MarketingTouchVariant[];
+		return new Map(rows.map((r) => [String(r.contact), r]));
+	} catch (err: any) {
+		console.warn('[marketing-send] variant lookup failed (falling back to base):', err.message);
+		return new Map();
+	}
+}
+
 async function sendEmailTouch(args: {
 	directus: any;
 	touch: any;
@@ -203,9 +231,20 @@ async function sendEmailTouch(args: {
 		};
 	}
 
+	// Per-recipient variants override the base content. Variants store the
+	// already-personalized strings — no {{first_name}} substitution needed
+	// when reading them.
+	const variants = await loadVariantsByContact(
+		directus,
+		touch.id,
+		recipients.map((r) => r.id),
+	);
+	const variantCount = variants.size;
+
 	if (dryRun) {
 		console.info(
 			`[marketing-send] DRY RUN — would send touch ${touch.id} to ${recipients.length} recipients ` +
+			`(${variantCount} via personalized variant, ${recipients.length - variantCount} via base) ` +
 			`(campaign ${campaign.id}, subject: "${touch.email_subject}")`,
 		);
 		return { touchId: touch.id, kind: 'email', status: 'dry_run', recipients: recipients.length };
@@ -234,9 +273,12 @@ async function sendEmailTouch(args: {
 	let sentCount = 0;
 	for (const r of recipients) {
 		try {
-			const subject = personalize(subjectTemplate, r);
-			const preview = personalize(previewTemplate, r);
-			const body = personalize(bodyTemplate, r);
+			const variant = variants.get(r.id);
+			// Variant strings are already personalized — no {{first_name}} swap.
+			// Base strings still go through personalize() for the legacy mail-merge.
+			const subject = variant?.email_subject ?? personalize(subjectTemplate, r);
+			const preview = variant?.email_preview_text ?? personalize(previewTemplate, r);
+			const body = variant?.email_body_markdown ?? personalize(bodyTemplate, r);
 			await sgMail.send({
 				to: { email: r.email!, name: [r.first_name, r.last_name].filter(Boolean).join(' ') || undefined },
 				from: { email: fromEmail, name: fromName },

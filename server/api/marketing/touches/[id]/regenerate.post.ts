@@ -19,7 +19,7 @@
  * Refuses regenerate when touch.status='sent'/'cancelled'/'failed' — only
  * pending or scheduled touches are mutable.
  */
-import { readItem, updateItem } from '@directus/sdk';
+import { deleteItems, readItem, readItems, updateItem } from '@directus/sdk';
 import { enforceTokenLimits, deductOrgTokens } from '~~/server/utils/ai-token-enforcement';
 import { logAIUsage } from '~~/server/utils/ai-usage';
 import { buildAvailableFactsForDormant } from '~~/server/utils/marketing-facts/build-dormant-facts';
@@ -295,11 +295,31 @@ export default defineEventHandler(async (event) => {
 				social_image_brief: result.touch.social_image_brief,
 				regenerate_history: newHistory,
 				tokens_spent: newTokensSpent,
+				personalization_state: 'none',
 			}),
 		);
 	} catch (err: any) {
 		console.error('[marketing/touches/regenerate] persist failed:', err.message);
 		throw createError({ statusCode: 500, message: 'Failed to save regenerated touch' });
+	}
+
+	// Clear any per-recipient variants — they were personalized against the
+	// prior base, so they're now stale. User must click Personalize again.
+	try {
+		const staleVariants = await directus.request(
+			readItems('marketing_touch_variants', {
+				filter: { touch: { _eq: touchId } },
+				fields: ['id'],
+				limit: -1,
+			}),
+		) as { id: number }[];
+		if (staleVariants.length > 0) {
+			await directus.request(
+				deleteItems('marketing_touch_variants', staleVariants.map((v) => v.id) as any),
+			);
+		}
+	} catch (err: any) {
+		console.warn('[marketing/touches/regenerate] variant cleanup failed:', err.message);
 	}
 
 	// Best-effort bump campaign tokens_spent so the drawer header stays accurate.

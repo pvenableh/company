@@ -87,9 +87,12 @@
 					:sequence-index="idx"
 					:loading="loadingTouchKeys.get(touch.id ?? idx) === 'regenerating'"
 					:restoring="loadingTouchKeys.get(touch.id ?? idx) === 'restoring'"
+					:personalizing="loadingTouchKeys.get(touch.id ?? idx) === 'personalizing'"
+					:personalization-status="touch.id ? personalizationByTouch.get(touch.id) ?? null : null"
 					@update="updateTouch(idx, $event)"
 					@regenerate="onRegenerate(idx)"
 					@restore="onRestore(idx)"
+					@personalize="onPersonalize(idx)"
 				/>
 			</div>
 
@@ -163,12 +166,25 @@ const emit = defineEmits<{
 	(e: 'discard', rec: MarketingRecommendation): void;
 }>();
 
+interface PersonalizationStatus {
+	state: string;
+	total: number;
+	pending: number;
+	processing: number;
+	completed: number;
+	failed: number;
+	is_done: boolean;
+}
+
 const localTouches = ref<DraftedTouch[]>([]);
 const scheduling = ref(false);
 const touchError = ref<string | null>(null);
 // Keyed by touch.id when persisted, else by index — handles the brief moment
 // before generate returns persisted IDs.
-const loadingTouchKeys = ref<Map<number, 'regenerating' | 'restoring'>>(new Map());
+const loadingTouchKeys = ref<Map<number, 'regenerating' | 'restoring' | 'personalizing'>>(new Map());
+const personalizationByTouch = ref<Map<number, PersonalizationStatus>>(new Map());
+const pollHandles = new Map<number, ReturnType<typeof setInterval>>();
+const POLL_INTERVAL_MS = 2500;
 
 watch(
 	() => props.draft,
@@ -185,12 +201,97 @@ function updateTouch(idx: number, patch: Partial<DraftedTouch>) {
 	localTouches.value = next;
 }
 
-function setTouchLoading(key: number, state: 'regenerating' | 'restoring' | null) {
+function setTouchLoading(key: number, state: 'regenerating' | 'restoring' | 'personalizing' | null) {
 	const next = new Map(loadingTouchKeys.value);
 	if (state === null) next.delete(key);
 	else next.set(key, state);
 	loadingTouchKeys.value = next;
 }
+
+function setPersonalizationStatus(touchId: number, status: PersonalizationStatus) {
+	const next = new Map(personalizationByTouch.value);
+	next.set(touchId, status);
+	personalizationByTouch.value = next;
+}
+
+async function fetchPersonalizationStatus(touchId: number): Promise<PersonalizationStatus | null> {
+	try {
+		const res = await $fetch<PersonalizationStatus>(
+			`/api/marketing/touches/${touchId}/personalize-status`,
+		);
+		setPersonalizationStatus(touchId, res);
+		return res;
+	} catch {
+		return null;
+	}
+}
+
+function stopPolling(touchId: number) {
+	const h = pollHandles.get(touchId);
+	if (h) {
+		clearInterval(h);
+		pollHandles.delete(touchId);
+	}
+}
+
+function startPolling(touchId: number) {
+	stopPolling(touchId);
+	const tick = async () => {
+		const res = await fetchPersonalizationStatus(touchId);
+		if (!res || res.is_done) {
+			stopPolling(touchId);
+		}
+	};
+	void tick();
+	const h = setInterval(tick, POLL_INTERVAL_MS);
+	pollHandles.set(touchId, h);
+}
+
+async function onPersonalize(idx: number) {
+	const touch = localTouches.value[idx];
+	if (!touch?.id) {
+		touchError.value = 'Touch is not yet persisted — close and reopen the drawer.';
+		return;
+	}
+	const key = touch.id;
+	touchError.value = null;
+	setTouchLoading(key, 'personalizing');
+	try {
+		await $fetch(`/api/marketing/touches/${touch.id}/personalize`, {
+			method: 'POST',
+			body: {},
+		});
+		startPolling(key);
+	} catch (err: any) {
+		touchError.value = err?.data?.message || err?.message || 'Could not start personalization.';
+	} finally {
+		setTouchLoading(key, null);
+	}
+}
+
+// Pull initial status for any touches that already have variants when the
+// drawer opens (e.g. user re-opened a drafted card mid-personalization).
+watch(
+	() => props.open,
+	async (open) => {
+		if (!open) {
+			for (const id of pollHandles.keys()) stopPolling(id);
+			return;
+		}
+		const ids = localTouches.value.map((t) => t.id).filter((id): id is number => typeof id === 'number');
+		await Promise.all(
+			ids.map(async (id) => {
+				const status = await fetchPersonalizationStatus(id);
+				if (status && !status.is_done && status.total > 0) startPolling(id);
+			}),
+		);
+	},
+	{ immediate: true },
+);
+
+onBeforeUnmount(() => {
+	for (const id of pollHandles.keys()) stopPolling(id);
+});
 
 function onOpenChange(v: boolean) {
 	emit('update:open', v);

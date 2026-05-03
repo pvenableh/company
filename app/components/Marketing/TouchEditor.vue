@@ -87,14 +87,21 @@
 			>
 				<div class="flex items-center gap-2 text-xs text-muted-foreground">
 					<Icon name="lucide:users-round" class="w-3.5 h-3.5" />
-					<span>Personalize this email for each recipient using their CRM context</span>
+					<span>{{ personalizeBlurb }}</span>
 				</div>
 				<button
 					type="button"
-					class="inline-flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-full bg-primary/10 text-primary hover:bg-primary/15 font-medium transition-colors"
+					class="inline-flex items-center gap-1 text-[10px] px-2.5 py-1 rounded-full font-medium transition-colors disabled:opacity-50"
+					:class="personalizeButtonClass"
+					:disabled="personalizing || personalizationDone"
+					@click="$emit('personalize')"
 				>
-					<Icon name="lucide:zap" class="w-3 h-3" />
-					Personalize · ~1.7K
+					<Icon
+						:name="personalizeIcon"
+						class="w-3 h-3"
+						:class="{ 'animate-spin': personalizing }"
+					/>
+					{{ personalizeLabel }}
 				</button>
 			</div>
 		</div>
@@ -145,13 +152,68 @@ const props = defineProps<{
 	sequenceIndex: number;
 	loading?: boolean;
 	restoring?: boolean;
+	personalizing?: boolean;
+	personalizationStatus?: {
+		state: string;
+		total: number;
+		completed: number;
+		failed: number;
+	} | null;
 }>();
 
 const emit = defineEmits<{
 	(e: 'update', patch: Partial<DraftedTouch>): void;
 	(e: 'regenerate'): void;
 	(e: 'restore'): void;
+	(e: 'personalize'): void;
 }>();
+
+const personalizationDone = computed(() => {
+	const s = props.personalizationStatus;
+	return !!s && s.total > 0 && s.completed === s.total && s.failed === 0;
+});
+
+const personalizationInFlight = computed(() => {
+	if (props.personalizing) return true;
+	const s = props.personalizationStatus;
+	return !!s && (s.state === 'in_progress' || s.state === 'requested');
+});
+
+const personalizeBlurb = computed(() => {
+	const s = props.personalizationStatus;
+	if (personalizationInFlight.value && s) {
+		const done = s.completed;
+		const total = s.total || 0;
+		return `Personalizing ${done}/${total} for each recipient…`;
+	}
+	if (personalizationDone.value && s) {
+		return `Personalized for ${s.completed} ${s.completed === 1 ? 'recipient' : 'recipients'}`;
+	}
+	if (s && s.failed > 0 && s.completed > 0) {
+		return `Personalized ${s.completed}/${s.total} (${s.failed} failed — click to retry)`;
+	}
+	return 'Personalize this email for each recipient using their CRM context';
+});
+
+const personalizeIcon = computed(() => {
+	if (personalizationInFlight.value) return 'lucide:loader-circle';
+	if (personalizationDone.value) return 'lucide:check';
+	return 'lucide:zap';
+});
+
+const personalizeLabel = computed(() => {
+	if (personalizationInFlight.value) return 'Working…';
+	if (personalizationDone.value) return 'Done';
+	const s = props.personalizationStatus;
+	if (s && s.failed > 0) return 'Retry';
+	return 'Personalize';
+});
+
+const personalizeButtonClass = computed(() => {
+	if (personalizationDone.value) return 'bg-emerald-500/10 text-emerald-600';
+	if (personalizationInFlight.value) return 'bg-muted text-muted-foreground';
+	return 'bg-primary/10 text-primary hover:bg-primary/15';
+});
 
 const historyCount = computed(() => props.touch.regenerate_history?.length ?? 0);
 const canRestore = computed(() => historyCount.value > 0);

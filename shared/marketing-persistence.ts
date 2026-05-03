@@ -179,6 +179,44 @@ export interface TouchHistoryEntry {
 	send_offset_hours: number;
 }
 
+// ─── Touch variants (per-recipient personalization) ────────────────────────
+
+export type MarketingTouchVariantStatus =
+	| 'pending'
+	| 'processing'
+	| 'completed'
+	| 'failed';
+
+/**
+ * Per-contact personalized version of a marketing_touch (email only).
+ * Created by /touches/[id]/personalize, processed by the worker cron, consumed
+ * by the send cron (preferred over the base touch when status='completed').
+ */
+export interface MarketingTouchVariant {
+	id: number;
+	touch: number; // FK to marketing_touches.id
+	contact: string; // FK to contacts.id (uuid)
+	organization: string; // denormalized
+
+	status: MarketingTouchVariantStatus;
+	processing_started_at: string | null;
+	generated_at: string | null;
+
+	// Already personalized — send cron does NOT do {{first_name}} substitution
+	// when reading these. Worker writes the final string with names interpolated.
+	email_subject: string | null;
+	email_preview_text: string | null;
+	email_body_markdown: string | null;
+
+	tokens_spent: number;
+	prompt_version: string | null;
+	error_message: string | null;
+	context_used: Record<string, unknown> | null;
+
+	date_created: string;
+	date_updated: string;
+}
+
 export interface MarketingTouch {
 	// integer auto-increment id, not uuid — see note on MarketingRecommendation.
 	id: number;

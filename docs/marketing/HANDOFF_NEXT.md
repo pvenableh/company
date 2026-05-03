@@ -13,6 +13,8 @@ Use this as a `/handoff` prompt for a new Claude Code session. Repo at `/Users/p
 | `50077d6` | Demo data seed: backdate contacts + qualified leads for marketing cron |
 | `01011f0` | Marketing handoff: docs/marketing/HANDOFF_NEXT.md |
 | `20ef3b0` | Marketing per-touch regenerate + persistent drafts |
+| `b17d04d` | Marketing handoff: refresh next-session prompt for personalization track |
+| _next_   | Per-recipient personalization (collection + cron + UI + send-cron prefer variants) |
 
 End-to-end verified against the demo Solo org `40c4d2e5-79d2-4008-9a97-9c14f94dfd0e`:
 - Cold generate persists `marketing_campaigns(status=draft)` + N `marketing_touches(status=pending)` and returns IDs in the `DraftedCampaign` payload.
@@ -23,13 +25,17 @@ End-to-end verified against the demo Solo org `40c4d2e5-79d2-4008-9a97-9c14f94df
 - Schedule promotes the existing draft (PATCH `scheduled_for` + flip statuses) instead of re-creating rows — `marketing_touches.id` stays stable across the lifecycle.
 - `/marketing-feed` and `/marketing-timeline` both render and pass tooltips/snapshot checks.
 
-## Lifecycle reference (committed in 20ef3b0)
+## Lifecycle reference (committed in 20ef3b0, extended next session)
 
 ```
 marketing_recommendations: pending → drafted → approved | skipped | expired
 marketing_campaigns:               draft → scheduled → partial_sent → completed
                                                     └→ cancelled / archived
 marketing_touches:                pending → scheduled → sent → cancelled | failed
+marketing_touch_variants:         pending → processing → completed | failed
+                                  (one row per touch×contact, email-only)
+marketing_touches.personalization_state: none → in_progress | requested → completed
+                                          (auto-reset to 'none' on regenerate)
 ```
 
 - `generate.post.ts` creates `campaign(status=draft)` + N `touches(status=pending)` once. Idempotent — re-call on a drafted rec returns the saved campaign without burning tokens.
@@ -40,12 +46,18 @@ marketing_touches:                pending → scheduled → sent → cancelled |
 
 ## What's NOT done (in priority order)
 
-### 1. Per-recipient personalization (next-clearest win)
-The `Personalize · ~1.7K` button in [TouchEditor.vue](app/components/Marketing/TouchEditor.vue) is wired to nothing. Build:
-- New collection `marketing_touch_variants` (FK to touch + contact, holds personalized subject/preview/body).
-- `POST /api/marketing/touches/[id]/personalize` — uses prompt caching (the base draft is the cached portion) and runs the per-recipient personalization prompt for each contact in the audience snapshot.
-- Send cron must pick the per-contact variant when present, falling back to the base touch otherwise.
-- Mirror the lifecycle pattern from regenerate: persistent rows, idempotent re-call, status field for partial completion.
+### 0. (SHIPPED) Per-recipient personalization
+Background-job + status-polling architecture, see lifecycle table above.
+- Collection `marketing_touch_variants` created via [scripts/setup-marketing-touch-variants-collection.ts](scripts/setup-marketing-touch-variants-collection.ts).
+- Enqueue [POST /touches/[id]/personalize](server/api/marketing/touches/[id]/personalize.post.ts) creates pending rows up front, returns 202 immediately.
+- Worker cron [process-personalization-queue.ts](server/api/marketing/cron/process-personalization-queue.ts) (in vercel.json `* * * * *`, defaults to dry-run via `MARKETING_PERSONALIZE_DRY_RUN`).
+- Status [GET /touches/[id]/personalize-status](server/api/marketing/touches/[id]/personalize-status.get.ts) — polled by drawer every 2.5s.
+- Two-block prompt cache (system + per-touch stable; per-contact tail uncached) gives 1 cache write + N-1 cache reads per worker batch.
+- Send cron prefers `completed` variants per recipient, else falls back to base + `{{first_name}}`.
+- Regenerate auto-deletes all variants and resets `personalization_state` to `none`.
+- Per-contact context (`build-personalize-context.ts`) skips `ai_notes` (no privacy flag) and uses `contacts.notes` (user-typed) + last project + open lead + days-since-engagement.
+
+**Pre-existing bug surfaced**: lead_reengagement campaigns persist with empty `audience_snapshot.contact_ids`, so personalize 409s on those cards. Spawned task — fix walks `lead.related_contact` at persist time.
 
 ### 2. Arm the send cron (manual, requires user judgment)
 - Verify a few campaigns end-to-end with `dryRun: true` on production.

@@ -11,6 +11,10 @@
     {
       "path": "/api/marketing/cron/refresh-recommendations",
       "schedule": "0 13 * * 1"
+    },
+    {
+      "path": "/api/marketing/cron/process-personalization-queue",
+      "schedule": "* * * * *"
     }
   ]
 }
