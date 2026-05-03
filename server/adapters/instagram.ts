@@ -52,6 +52,7 @@ export function getInstagramAuthUrl(state: string): string {
     'instagram_manage_insights',
     'pages_show_list',
     'pages_read_engagement',
+    'business_management',
   ].join(',')
 
   const params = new URLSearchParams({
@@ -134,8 +135,38 @@ export async function refreshInstagramToken(currentToken: string): Promise<{
   return { accessToken: res.access_token, expiresIn: res.expires_in }
 }
 
+type RawPage = {
+  id: string
+  name: string
+  access_token?: string
+}
+
+async function fetchAllGraphPages<T>(
+  initialUrl: string,
+  initialParams: Record<string, string>,
+): Promise<T[]> {
+  const all: T[] = []
+  let url: string | undefined = initialUrl
+  let params: Record<string, string> | undefined = initialParams
+
+  while (url) {
+    const res = await $fetch<{ data: T[]; paging?: { next?: string } }>(url, { params })
+    all.push(...(res.data || []))
+    url = res.paging?.next
+    params = undefined
+  }
+  return all
+}
+
 /**
- * Fetch Instagram Business accounts linked to user's Facebook Pages.
+ * Fetch Instagram Business accounts linked to Facebook Pages the user manages.
+ *
+ * Pulls candidate Pages from three sources and de-duplicates by Page id:
+ *   1. /me/accounts — pages the user is a direct admin of
+ *   2. owned_pages of every business in /me/businesses (Business Manager)
+ *   3. client_pages of every business (partner access via Business Manager)
+ *
+ * Then for each Page, fetches its linked instagram_business_account (if any).
  */
 export async function getInstagramAccounts(accessToken: string): Promise<Array<{
   igUserId: string
@@ -145,43 +176,90 @@ export async function getInstagramAccounts(accessToken: string): Promise<Array<{
   pageId: string
   pageAccessToken: string
 }>> {
-  // Get user's Pages
-  const pagesRes = await $fetch<{
-    data: Array<{ id: string; name: string; access_token: string }>
-  }>(graphUrl('/me/accounts'), {
-    params: { access_token: accessToken, fields: 'id,name,access_token' },
+  const pageFields = 'id,name,access_token'
+  const limit = '200'
+
+  const directPages = await fetchAllGraphPages<RawPage>(graphUrl('/me/accounts'), {
+    access_token: accessToken,
+    fields: pageFields,
+    limit,
   })
 
-  const accounts = []
+  let businesses: Array<{ id: string }> = []
+  try {
+    businesses = await fetchAllGraphPages<{ id: string }>(graphUrl('/me/businesses'), {
+      access_token: accessToken,
+      fields: 'id',
+      limit,
+    })
+  } catch (err) {
+    console.warn('[social:oauth:instagram] /me/businesses failed (likely missing business_management scope):', err)
+  }
 
-  for (const page of pagesRes.data) {
+  const businessPages: RawPage[] = []
+  for (const biz of businesses) {
+    for (const path of [`/${biz.id}/owned_pages`, `/${biz.id}/client_pages`]) {
+      try {
+        const pages = await fetchAllGraphPages<RawPage>(graphUrl(path), {
+          access_token: accessToken,
+          fields: pageFields,
+          limit,
+        })
+        businessPages.push(...pages)
+      } catch (err) {
+        console.warn(`[social:oauth:instagram] ${path} failed:`, err)
+      }
+    }
+  }
+
+  const seenPages = new Set<string>()
+  const candidatePages: RawPage[] = []
+  for (const page of [...directPages, ...businessPages]) {
+    if (!page.access_token || seenPages.has(page.id)) continue
+    seenPages.add(page.id)
+    candidatePages.push(page)
+  }
+
+  const accounts: Array<{
+    igUserId: string
+    username: string
+    name: string
+    profilePictureUrl: string
+    pageId: string
+    pageAccessToken: string
+  }> = []
+  const seenIg = new Set<string>()
+
+  for (const page of candidatePages) {
     try {
       const igRes = await $fetch<{ instagram_business_account?: { id: string } }>(
         graphUrl(`/${page.id}`),
-        { params: { access_token: page.access_token, fields: 'instagram_business_account' } }
+        { params: { access_token: page.access_token!, fields: 'instagram_business_account' } }
       )
 
-      if (igRes.instagram_business_account) {
-        const igDetails = await $fetch<{
-          id: string
-          username: string
-          name: string
-          profile_picture_url: string
-        }>(graphUrl(`/${igRes.instagram_business_account.id}`), {
-          params: { access_token: page.access_token, fields: 'id,username,name,profile_picture_url' },
-        })
+      const igId = igRes.instagram_business_account?.id
+      if (!igId || seenIg.has(igId)) continue
+      seenIg.add(igId)
 
-        accounts.push({
-          igUserId: igDetails.id,
-          username: igDetails.username,
-          name: igDetails.name || igDetails.username,
-          profilePictureUrl: igDetails.profile_picture_url,
-          pageId: page.id,
-          pageAccessToken: page.access_token,
-        })
-      }
+      const igDetails = await $fetch<{
+        id: string
+        username: string
+        name: string
+        profile_picture_url: string
+      }>(graphUrl(`/${igId}`), {
+        params: { access_token: page.access_token!, fields: 'id,username,name,profile_picture_url' },
+      })
+
+      accounts.push({
+        igUserId: igDetails.id,
+        username: igDetails.username,
+        name: igDetails.name || igDetails.username,
+        profilePictureUrl: igDetails.profile_picture_url,
+        pageId: page.id,
+        pageAccessToken: page.access_token!,
+      })
     } catch (err) {
-      console.warn(`[instagram] Failed to fetch IG account for page ${page.id}:`, err)
+      console.warn(`[social:oauth:instagram] Failed to fetch IG account for page ${page.id}:`, err)
     }
   }
 
