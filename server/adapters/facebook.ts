@@ -61,6 +61,7 @@ export function getFacebookAuthUrl(state: string): string {
     'pages_manage_engagement',
     'pages_read_user_content',
     'read_insights',
+    'business_management',
   ]
 
   const params = new URLSearchParams({
@@ -151,9 +152,41 @@ export async function refreshFacebookToken(currentToken: string): Promise<OAuthT
 // PAGE DISCOVERY
 // ══════════════════════════════════════════════════════════════════════════════
 
+type RawFacebookPage = {
+  id: string
+  name: string
+  category: string
+  access_token?: string
+  picture?: { data?: { url: string } }
+  followers_count?: number
+}
+
+async function fetchAllGraphPages<T>(
+  initialUrl: string,
+  initialParams: Record<string, string>,
+): Promise<T[]> {
+  const all: T[] = []
+  let url: string | undefined = initialUrl
+  let params: Record<string, string> | undefined = initialParams
+
+  while (url) {
+    const res = await $fetch<{ data: T[]; paging?: { next?: string } }>(url, { params })
+    all.push(...(res.data || []))
+    url = res.paging?.next
+    params = undefined
+  }
+  return all
+}
+
 /**
  * Get Facebook Pages the user manages.
- * Returns page-specific access tokens for publishing.
+ *
+ * Pulls from three sources and de-duplicates by page id:
+ *   1. /me/accounts — pages the user is a direct admin of
+ *   2. owned_pages of every business in /me/businesses (Business Manager)
+ *   3. client_pages of every business (partner access via Business Manager)
+ *
+ * Pages without an access_token are dropped — they aren't posting-capable.
  */
 export async function getFacebookPages(accessToken: string): Promise<Array<{
   pageId: string
@@ -163,28 +196,56 @@ export async function getFacebookPages(accessToken: string): Promise<Array<{
   pageAccessToken: string
   followersCount: number
 }>> {
-  const res = await $fetch<{
-    data: Array<{
-      id: string
-      name: string
-      category: string
-      access_token: string
-      picture?: { data?: { url: string } }
-      followers_count?: number
-    }>
-  }>(graphUrl('/me/accounts'), {
-    params: {
-      access_token: accessToken,
-      fields: 'id,name,category,access_token,picture,followers_count',
-    },
+  const fields = 'id,name,category,access_token,picture,followers_count'
+  const limit = '200'
+
+  const directPages = await fetchAllGraphPages<RawFacebookPage>(graphUrl('/me/accounts'), {
+    access_token: accessToken,
+    fields,
+    limit,
   })
 
-  return (res.data || []).map(page => ({
+  let businesses: Array<{ id: string }> = []
+  try {
+    businesses = await fetchAllGraphPages<{ id: string }>(graphUrl('/me/businesses'), {
+      access_token: accessToken,
+      fields: 'id',
+      limit,
+    })
+  } catch (err) {
+    console.warn('[social:oauth:facebook] /me/businesses failed (likely missing business_management scope):', err)
+  }
+
+  const businessPages: RawFacebookPage[] = []
+  for (const biz of businesses) {
+    for (const path of [`/${biz.id}/owned_pages`, `/${biz.id}/client_pages`]) {
+      try {
+        const pages = await fetchAllGraphPages<RawFacebookPage>(graphUrl(path), {
+          access_token: accessToken,
+          fields,
+          limit,
+        })
+        businessPages.push(...pages)
+      } catch (err) {
+        console.warn(`[social:oauth:facebook] ${path} failed:`, err)
+      }
+    }
+  }
+
+  const seen = new Set<string>()
+  const merged: RawFacebookPage[] = []
+  for (const page of [...directPages, ...businessPages]) {
+    if (!page.access_token || seen.has(page.id)) continue
+    seen.add(page.id)
+    merged.push(page)
+  }
+
+  return merged.map(page => ({
     pageId: page.id,
     name: page.name,
     category: page.category,
     pictureUrl: page.picture?.data?.url || '',
-    pageAccessToken: page.access_token,
+    pageAccessToken: page.access_token!,
     followersCount: page.followers_count || 0,
   }))
 }
