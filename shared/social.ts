@@ -47,6 +47,8 @@ export interface SocialPost {
 	created_by: string | null;
 	date_created: string;
 	date_updated: string | null;
+	cta_url?: string | null;
+	cta_label?: string | null;
 }
 
 // Dashboard stats summary

@@ -15,6 +15,10 @@
     {
       "path": "/api/marketing/cron/process-personalization-queue",
       "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/social/cron/publish-scheduled",
+      "schedule": "* * * * *"
     }
   ]
 }

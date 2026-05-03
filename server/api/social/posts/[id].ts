@@ -15,23 +15,26 @@ import {
 import { requireSocialOrg } from '~~/server/utils/social-tenancy';
 
 const updatePostSchema = z.object({
-	caption: z.string().min(1).max(2200).optional(),
-	media_urls: z.array(z.string().url()).min(1).max(10).optional(),
+	caption: z.string().min(1).max(4000).optional(),
+	media_urls: z.array(z.string().url()).max(10).optional(),
 	media_types: z.array(z.enum(['image', 'video'])).optional(),
 	thumbnail_url: z.string().url().optional().nullable(),
 	platforms: z
 		.array(
 			z.object({
-				platform: z.enum(['instagram', 'tiktok']),
+				platform: z.enum(['instagram', 'tiktok', 'linkedin', 'facebook', 'threads']),
 				account_id: z.string().uuid(),
 				account_name: z.string(),
 				options: z.record(z.unknown()).optional(),
 			}),
 		)
 		.optional(),
-	post_type: z.enum(['image', 'video', 'carousel', 'reel', 'story']).optional(),
+	post_type: z.enum(['image', 'video', 'carousel', 'reel', 'story', 'text', 'article']).optional(),
 	scheduled_at: z.string().datetime().optional(),
 	status: z.enum(['draft', 'scheduled']).optional(),
+	client: z.string().uuid().nullable().optional(),
+	cta_url: z.string().url().max(500).nullable().optional(),
+	cta_label: z.string().max(80).nullable().optional(),
 });
 
 export default defineEventHandler(async (event) => {

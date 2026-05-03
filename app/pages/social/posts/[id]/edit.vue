@@ -57,10 +57,15 @@ const calendarDate = ref(new CalendarDate(
 
 const isDraft = ref(post.status === 'draft')
 
+// CTA fields (preserved from AI wizard or composer)
+const ctaUrl = ref(post.cta_url || '')
+const ctaLabel = ref(post.cta_label || '')
+
 // UI state
 const isSubmitting = ref(false)
 const mediaInput = ref('')
 const showDatePicker = ref(false)
+const showFilePicker = ref(false)
 
 // Computed
 const selectedAccountDetails = computed(() => {
@@ -151,6 +156,8 @@ async function savePost() {
         post_type: postType.value,
         scheduled_at: scheduledDateTime.value.toISOString(),
         status: isDraft.value ? 'draft' : 'scheduled',
+        cta_url: ctaUrl.value.trim() || null,
+        cta_label: ctaUrl.value.trim() ? (ctaLabel.value.trim() || null) : null,
       },
     })
 
@@ -279,8 +286,25 @@ const minDate = today(getLocalTimeZone())
           </div>
 
           <div class="flex gap-2">
-            <UInput v-model="mediaInput" placeholder="Paste media URL..." class="flex-1" @keyup.enter="addMedia" />
-            <UButton @click="addMedia" icon="i-lucide-plus" :disabled="!mediaInput.trim()">Add</UButton>
+            <UButton variant="soft" icon="i-lucide-folder-open" @click="showFilePicker = true">
+              Choose from Files
+            </UButton>
+            <UInput v-model="mediaInput" placeholder="…or paste a media URL" class="flex-1" @keyup.enter="addMedia" />
+            <UButton variant="ghost" @click="addMedia" icon="i-lucide-plus" :disabled="!mediaInput.trim()" />
+          </div>
+        </UCard>
+
+        <!-- Link / Call to Action -->
+        <UCard>
+          <template #header>
+            <div class="flex items-center justify-between">
+              <h2 class="font-semibold text-gray-900 dark:text-white">Add a Link</h2>
+              <span class="text-xs text-gray-400">Optional</span>
+            </div>
+          </template>
+          <div class="space-y-3">
+            <UInput v-model="ctaUrl" type="url" placeholder="https://example.com/landing-page" />
+            <UInput v-model="ctaLabel" placeholder='Short label (e.g. "Visit Website")' />
           </div>
         </UCard>
 
@@ -432,6 +456,13 @@ const minDate = today(getLocalTimeZone())
         </div>
       </div>
     </div>
+
+    <!-- File Picker -->
+    <SocialMediaFilePicker
+      v-if="showFilePicker"
+      @close="showFilePicker = false"
+      @picked="(picked) => { for (const f of picked) { mediaUrls.push(f.url); mediaTypes.push(f.type); } showFilePicker = false; }"
+    />
 
     <!-- Contextual AI Sidebar -->
     <ClientOnly>

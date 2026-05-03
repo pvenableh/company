@@ -3456,6 +3456,10 @@ export interface SocialPost {
 	organization: Organization | string;
 	/** @description Which agency client this post is for (defaults from selected accounts at compose time) */
 	client?: Client | string | null;
+	/** @description Optional CTA URL appended to the caption at publish time (LinkedIn/Facebook/Threads will OG-unfurl it). */
+	cta_url?: string | null;
+	/** @description Short CTA label rendered alongside the URL (e.g. "Visit Website"). */
+	cta_label?: string | null;
 }
 
 export interface Task {

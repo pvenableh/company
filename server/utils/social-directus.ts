@@ -203,6 +203,8 @@ function mapDirectusPost(raw: DirectusSocialPost): SocialPost {
     created_by: null,
     date_created: raw.date_created ?? '',
     date_updated: raw.date_updated ?? null,
+    cta_url: raw.cta_url ?? null,
+    cta_label: raw.cta_label ?? null,
   }
 }
 
@@ -276,6 +278,24 @@ export async function updateSocialPost(id: string, data: Partial<SocialPost>): P
 
 export async function deleteSocialPost(id: string): Promise<void> {
   await directusFetch(`/items/social_posts/${id}`, { method: 'DELETE' })
+}
+
+/**
+ * Find posts due for publishing across all organizations. Used by the
+ * scheduled-publish cron worker — caller has already authenticated as cron.
+ */
+export async function findDueScheduledPosts(opts: { limit?: number } = {}): Promise<SocialPost[]> {
+  const limit = opts.limit ?? 10
+  const nowIso = new Date().toISOString()
+  const raw = await directusFetch<DirectusSocialPost[]>('/items/social_posts', {
+    params: {
+      'filter[post_status][_eq]': 'scheduled',
+      'filter[scheduled_at][_lte]': nowIso,
+      sort: 'scheduled_at',
+      limit: String(limit),
+    },
+  })
+  return raw.map(mapDirectusPost)
 }
 
 // ══════════════════════════════════════════════════════════════════════════════

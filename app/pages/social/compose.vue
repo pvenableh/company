@@ -11,9 +11,9 @@
 
 import { format, addHours, roundToNearestMinutes } from 'date-fns';
 import type { SocialAccountPublic, SocialPostTarget, PostType, SocialPlatform } from '~~/shared/social';
-import type { Client } from '~~/shared/directus';
 
 const showAIWizard = ref(false);
+const showPostNowConfirm = ref(false);
 
 function handleAICreated(posts: { platform: SocialPlatform; caption: string }[]) {
 	showAIWizard.value = false;
@@ -43,10 +43,6 @@ const platformIcons: Record<SocialPlatform, string> = {
 	threads: 'i-lucide-at-sign',
 };
 
-// Real client list comes from the global useClients() composable so the
-// social composer uses the same client picker as the rest of the app.
-const { clientList: clients, selectedClient: globalSelectedClient } = useClients();
-
 const { data: accountsData } = useLazyFetch('/api/social/accounts');
 const accounts = computed(() => ((accountsData.value as any)?.data || []) as SocialAccountPublic[]);
 
@@ -61,41 +57,45 @@ const scheduledAt = ref(
 );
 const isDraft = ref(false);
 
+// Optional CTA link — appended to caption at publish time. Persists on the
+// draft so it survives wizard generation, manual edits, and previews.
+const ctaUrl = ref('');
+const ctaLabel = ref('');
+
 // LinkedIn-specific options
 const linkedInVisibility = ref<'PUBLIC' | 'CONNECTIONS'>('PUBLIC');
-
-// Compose-scoped client picker — defaults to the global header client when set.
-// 'house' = post on behalf of the agency itself (account.client === null).
-type ClientScope = 'house' | string
-const selectedClientScope = ref<ClientScope>(
-	globalSelectedClient.value && globalSelectedClient.value !== 'org'
-		? (globalSelectedClient.value as string)
-		: 'house',
-);
-
-// Keep in sync if user changes the global picker while on this page
-watch(globalSelectedClient, (val) => {
-	if (val && val !== 'org') selectedClientScope.value = val as string
-	else selectedClientScope.value = 'house'
-})
 
 // UI state
 const isSubmitting = ref(false);
 const mediaInput = ref('');
+const showFilePicker = ref(false);
 const toast = useToast();
 
-// Filter accounts to the picked client scope so cross-client cross-posting
-// is structurally prevented (see PR 2 design discussion).
-const scopedAccounts = computed(() => {
-	if (selectedClientScope.value === 'house') {
-		return accounts.value.filter((a) => !a.client)
+// All connected accounts grouped by client (House first, then per-client).
+const accountGroups = computed(() => {
+	const groups: { label: string; clientId: string | null; accounts: SocialAccountPublic[] }[] = [];
+	const houseAccounts = accounts.value.filter((a) => !a.client);
+	if (houseAccounts.length) groups.push({ label: 'House (agency-owned)', clientId: null, accounts: houseAccounts });
+
+	const byClient = new Map<string, { name: string; accounts: SocialAccountPublic[] }>();
+	for (const a of accounts.value) {
+		if (!a.client) continue;
+		if (!byClient.has(a.client)) byClient.set(a.client, { name: a.client_name || 'Unnamed Client', accounts: [] });
+		byClient.get(a.client)!.accounts.push(a);
 	}
-	return accounts.value.filter((a) => a.client === selectedClientScope.value)
-})
+	for (const [id, { name, accounts: list }] of byClient) {
+		groups.push({ label: name, clientId: id, accounts: list });
+	}
+	return groups;
+});
 
 const selectedAccountDetails = computed(() => {
 	return accounts.value.filter((a) => selectedAccounts.value.includes(a.id));
 });
+
+// Infer the post's tagged client from the first selected account so the
+// social_posts.client FK is still populated for analytics & filtering.
+const inferredClient = computed(() => selectedAccountDetails.value[0]?.client ?? null);
 
 // Platform selection detection
 function hasPlatformSelected(platform: SocialPlatform) {
@@ -175,64 +175,58 @@ function toggleAccount(accountId: string) {
 	}
 }
 
-function selectAllScoped() {
-	const allSelected = scopedAccounts.value.every((a) => selectedAccounts.value.includes(a.id));
+function selectAllAccounts() {
+	const allSelected = accounts.value.every((a) => selectedAccounts.value.includes(a.id));
 	if (allSelected) {
-		selectedAccounts.value = selectedAccounts.value.filter(
-			(id) => !scopedAccounts.value.some((a) => a.id === id),
-		);
+		selectedAccounts.value = [];
 	} else {
-		for (const account of scopedAccounts.value) {
-			if (!selectedAccounts.value.includes(account.id)) {
-				selectedAccounts.value.push(account.id);
-			}
-		}
+		selectedAccounts.value = accounts.value.map((a) => a.id);
 	}
 }
 
-// Reset selected accounts whenever client scope changes
-watch(selectedClientScope, () => {
-	selectedAccounts.value = []
-})
+function buildPostBody(status: 'draft' | 'scheduled') {
+	const platforms: SocialPostTarget[] = selectedAccountDetails.value.map((account) => ({
+		platform: account.platform,
+		account_id: account.id,
+		account_name: account.account_name,
+		options:
+			account.platform === 'tiktok'
+				? {
+						privacy_level: 'PUBLIC_TO_EVERYONE',
+						disable_duet: false,
+						disable_stitch: false,
+						disable_comment: false,
+						post_mode: 'MEDIA_UPLOAD',
+					}
+				: account.platform === 'linkedin'
+					? {
+							visibility: linkedInVisibility.value,
+						}
+					: undefined,
+	}));
+
+	return {
+		caption: caption.value,
+		media_urls: mediaUrls.value,
+		media_types: mediaTypes.value,
+		platforms,
+		post_type: postType.value,
+		scheduled_at: new Date(scheduledAt.value).toISOString(),
+		status,
+		client: inferredClient.value,
+		cta_url: ctaUrl.value.trim() || null,
+		cta_label: ctaUrl.value.trim() ? (ctaLabel.value.trim() || null) : null,
+	};
+}
 
 async function submitPost() {
 	if (!canSubmit.value) return;
-
 	isSubmitting.value = true;
 
 	try {
-		const platforms: SocialPostTarget[] = selectedAccountDetails.value.map((account) => ({
-			platform: account.platform,
-			account_id: account.id,
-			account_name: account.account_name,
-			options:
-				account.platform === 'tiktok'
-					? {
-							privacy_level: 'PUBLIC_TO_EVERYONE',
-							disable_duet: false,
-							disable_stitch: false,
-							disable_comment: false,
-							post_mode: 'MEDIA_UPLOAD',
-						}
-					: account.platform === 'linkedin'
-						? {
-								visibility: linkedInVisibility.value,
-							}
-						: undefined,
-		}));
-
 		await $fetch('/api/social/posts', {
 			method: 'POST',
-			body: {
-				caption: caption.value,
-				media_urls: mediaUrls.value,
-				media_types: mediaTypes.value,
-				platforms,
-				post_type: postType.value,
-				scheduled_at: new Date(scheduledAt.value).toISOString(),
-				status: isDraft.value ? 'draft' : 'scheduled',
-				client: selectedClientScope.value === 'house' ? null : selectedClientScope.value,
-			},
+			body: buildPostBody(isDraft.value ? 'draft' : 'scheduled'),
 		});
 
 		toast.add({
@@ -243,11 +237,6 @@ async function submitPost() {
 			icon: 'i-lucide-check-circle',
 			color: 'green',
 		});
-
-		caption.value = '';
-		mediaUrls.value = [];
-		mediaTypes.value = [];
-		selectedAccounts.value = [];
 
 		await navigateTo('/social/calendar');
 	} catch (error: any) {
@@ -260,6 +249,51 @@ async function submitPost() {
 	} finally {
 		isSubmitting.value = false;
 	}
+}
+
+async function postNow() {
+	if (!canSubmit.value) return;
+	isSubmitting.value = true;
+	showPostNowConfirm.value = false;
+
+	try {
+		// Save as scheduled at "now" then immediately publish.
+		const created: any = await $fetch('/api/social/posts', {
+			method: 'POST',
+			body: { ...buildPostBody('scheduled'), scheduled_at: new Date().toISOString() },
+		});
+
+		const postId = created?.data?.id;
+		if (postId) {
+			await $fetch(`/api/social/posts/${postId}/publish-now`, { method: 'POST' });
+		}
+
+		toast.add({
+			title: 'Posting…',
+			description: `Publishing to ${selectedAccounts.value.length} account(s) — refresh in a moment to see results.`,
+			icon: 'i-lucide-send',
+			color: 'green',
+		});
+
+		await navigateTo('/social/calendar');
+	} catch (error: any) {
+		toast.add({
+			title: 'Error',
+			description: error.data?.message || 'Failed to publish post',
+			icon: 'i-lucide-alert-circle',
+			color: 'red',
+		});
+	} finally {
+		isSubmitting.value = false;
+	}
+}
+
+function onPickFiles(picked: { url: string; type: 'image' | 'video' }[]) {
+	for (const f of picked) {
+		mediaUrls.value.push(f.url);
+		mediaTypes.value.push(f.type);
+	}
+	showFilePicker.value = false;
 }
 </script>
 
@@ -334,8 +368,30 @@ async function submitPost() {
 					</div>
 
 					<div class="flex gap-2">
-						<UInput v-model="mediaInput" placeholder="Paste media URL..." class="flex-1" @keyup.enter="addMedia" />
-						<UButton @click="addMedia" icon="i-lucide-plus" :disabled="!mediaInput.trim()">Add</UButton>
+						<UButton variant="soft" icon="i-lucide-folder-open" @click="showFilePicker = true">
+							Choose from Files
+						</UButton>
+						<UInput v-model="mediaInput" placeholder="…or paste a media URL" class="flex-1" @keyup.enter="addMedia" />
+						<UButton variant="ghost" @click="addMedia" icon="i-lucide-plus" :disabled="!mediaInput.trim()" />
+					</div>
+				</UCard>
+
+				<!-- Link / Call to Action -->
+				<UCard>
+					<template #header>
+						<div class="flex items-center justify-between">
+							<h2 class="font-semibold text-gray-900 dark:text-white">Add a Link</h2>
+							<span class="text-xs text-gray-400">Optional</span>
+						</div>
+					</template>
+					<div class="space-y-3">
+						<UInput v-model="ctaUrl" type="url" placeholder="https://example.com/landing-page" />
+						<UInput v-model="ctaLabel" placeholder='Short label (e.g. "Visit Website")' />
+						<p class="text-xs text-muted-foreground">
+							The URL is appended to the caption when the post publishes. LinkedIn, Facebook and Threads
+							will fetch OG tags and render a link card automatically. Instagram and TikTok don't make
+							caption links clickable — the URL is included for reference only.
+						</p>
 					</div>
 				</UCard>
 
@@ -399,26 +455,6 @@ async function submitPost() {
 
 			<!-- Sidebar -->
 			<div class="lg:col-span-2 space-y-6">
-				<!-- Posting Context (client) -->
-				<UCard>
-					<template #header>
-						<h2 class="font-semibold text-gray-900 dark:text-white">Posting as</h2>
-					</template>
-					<USelectMenu
-						v-model="selectedClientScope"
-						:options="[
-							{ label: 'House (agency-owned)', value: 'house' },
-							...clients.map((c) => ({ label: c.name, value: c.id })),
-						]"
-						value-attribute="value"
-						option-attribute="label"
-						class="w-full"
-					/>
-					<p class="text-xs text-muted-foreground mt-2">
-						This post will be tagged to {{ selectedClientScope === 'house' ? 'your agency (no client)' : (clients.find((c) => c.id === selectedClientScope)?.name || 'the selected client') }}.
-					</p>
-				</UCard>
-
 				<!-- Account Selection -->
 				<UCard>
 					<template #header>
@@ -430,9 +466,9 @@ async function submitPost() {
 						</div>
 					</template>
 
-					<div v-if="scopedAccounts.length === 0" class="text-center py-4">
+					<div v-if="accounts.length === 0" class="text-center py-4">
 						<p class="text-sm text-gray-500 dark:text-gray-400 mb-3">
-							No accounts owned by {{ selectedClientScope === 'house' ? 'House' : 'this client' }}
+							No accounts connected yet.
 						</p>
 						<UButton to="/social/settings" size="sm" variant="soft">Connect Account</UButton>
 					</div>
@@ -440,41 +476,48 @@ async function submitPost() {
 					<div v-else>
 						<div class="flex items-center justify-end mb-2">
 							<button
-								@click="selectAllScoped"
+								@click="selectAllAccounts"
 								class="text-xs text-primary hover:text-primary/85"
 							>
-								{{ scopedAccounts.every((a) => selectedAccounts.includes(a.id)) ? 'Deselect all' : 'Select all' }}
+								{{ accounts.every((a) => selectedAccounts.includes(a.id)) ? 'Deselect all' : 'Select all' }}
 							</button>
 						</div>
-						<div class="space-y-2 max-h-[400px] overflow-y-auto">
-							<label
-								v-for="account in scopedAccounts"
-								:key="account.id"
-								class="flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors"
-								:class="
-									selectedAccounts.includes(account.id)
-										? 'bg-primary/10'
-										: 'hover:bg-gray-50 dark:hover:bg-gray-800'
-								"
-							>
-								<UCheckbox
-									:model-value="selectedAccounts.includes(account.id)"
-									@update:model-value="toggleAccount(account.id)"
-								/>
-								<UAvatar :src="account.profile_picture_url || undefined" :alt="account.account_name" size="xs" />
-								<div class="flex-1 min-w-0">
-									<p class="text-sm font-medium text-gray-900 dark:text-white truncate">
-										{{ account.account_name }}
-									</p>
-									<p class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-										<UIcon
-											:name="platformIcons[account.platform] || 'i-lucide-globe'"
-											class="w-3 h-3"
+						<div class="space-y-3 max-h-[400px] overflow-y-auto">
+							<div v-for="group in accountGroups" :key="group.clientId ?? 'house'">
+								<p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 px-1">
+									{{ group.label }}
+								</p>
+								<div class="space-y-1">
+									<label
+										v-for="account in group.accounts"
+										:key="account.id"
+										class="flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors"
+										:class="
+											selectedAccounts.includes(account.id)
+												? 'bg-primary/10'
+												: 'hover:bg-gray-50 dark:hover:bg-gray-800'
+										"
+									>
+										<UCheckbox
+											:model-value="selectedAccounts.includes(account.id)"
+											@update:model-value="toggleAccount(account.id)"
 										/>
-										@{{ account.account_handle }}
-									</p>
+										<UAvatar :src="account.profile_picture_url || undefined" :alt="account.account_name" size="xs" />
+										<div class="flex-1 min-w-0">
+											<p class="text-sm font-medium text-gray-900 dark:text-white truncate">
+												{{ account.account_name }}
+											</p>
+											<p class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+												<UIcon
+													:name="platformIcons[account.platform] || 'i-lucide-globe'"
+													class="w-3 h-3"
+												/>
+												@{{ account.account_handle }}
+											</p>
+										</div>
+									</label>
 								</div>
-							</label>
+							</div>
 						</div>
 					</div>
 				</UCard>
@@ -499,9 +542,22 @@ async function submitPost() {
 						:disabled="!canSubmit"
 						block
 						size="lg"
-						:icon="isDraft ? 'i-lucide-save' : 'i-lucide-send'"
+						:icon="isDraft ? 'i-lucide-save' : 'i-lucide-calendar-clock'"
 					>
 						{{ isDraft ? 'Save Draft' : 'Schedule Post' }}
+					</UButton>
+
+					<UButton
+						v-if="!isDraft"
+						@click="showPostNowConfirm = true"
+						:disabled="!canSubmit || isSubmitting"
+						block
+						size="lg"
+						color="green"
+						variant="soft"
+						icon="i-lucide-send"
+					>
+						Post Now
 					</UButton>
 
 					<p v-if="!isDraft && canSubmit" class="text-xs text-center text-gray-500 dark:text-gray-400">
@@ -512,11 +568,67 @@ async function submitPost() {
 			</div>
 		</div>
 
+		<!-- Platform Previews -->
+		<div v-if="selectedAccountDetails.length > 0" class="mt-10">
+			<h2 class="text-sm font-semibold uppercase tracking-wider text-gray-500 mb-4">Preview</h2>
+			<SocialPostPreview
+				:caption="caption"
+				:media-urls="mediaUrls"
+				:media-types="mediaTypes"
+				:cta-url="ctaUrl"
+				:cta-label="ctaLabel"
+				:accounts="selectedAccountDetails"
+			/>
+		</div>
+
 		<!-- AI Social Wizard -->
 		<SocialAISocialWizard
 			v-if="showAIWizard"
 			@close="showAIWizard = false"
 			@created="handleAICreated"
 		/>
+
+		<!-- File Picker -->
+		<SocialMediaFilePicker
+			v-if="showFilePicker"
+			@close="showFilePicker = false"
+			@picked="onPickFiles"
+		/>
+
+		<!-- Post Now confirm -->
+		<UModal v-model="showPostNowConfirm" class="sm:max-w-md">
+			<UCard>
+				<template #header>
+					<div class="flex items-center gap-2">
+						<UIcon name="i-lucide-send" class="w-5 h-5 text-green-600" />
+						<h3 class="font-semibold">Post immediately?</h3>
+					</div>
+				</template>
+
+				<p class="text-sm text-gray-700 dark:text-gray-300 mb-3">
+					This will publish to <strong>{{ selectedAccounts.length }} account{{ selectedAccounts.length !== 1 ? 's' : '' }}</strong> right now.
+					You can't unpublish from inside Earnest — you'll need to delete from each platform directly if you change your mind.
+				</p>
+				<div v-if="selectedAccountDetails.length > 0" class="flex flex-wrap gap-1.5">
+					<span
+						v-for="a in selectedAccountDetails"
+						:key="a.id"
+						class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800"
+					>
+						<UIcon :name="platformIcons[a.platform]" class="w-3 h-3" />
+						{{ a.account_name }}
+					</span>
+				</div>
+
+				<template #footer>
+					<div class="flex justify-end gap-2">
+						<UButton variant="ghost" @click="showPostNowConfirm = false">Cancel</UButton>
+						<UButton color="green" icon="i-lucide-send" :loading="isSubmitting" @click="postNow">
+							Yes, Post Now
+						</UButton>
+					</div>
+				</template>
+			</UCard>
+		</UModal>
 	</LayoutPageContainer>
 </template>

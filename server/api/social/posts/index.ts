@@ -28,6 +28,8 @@ const createPostSchema = z.object({
 	scheduled_at: z.string().datetime().optional(),
 	status: z.enum(['draft', 'scheduled']).default('draft'),
 	client: z.string().uuid().nullable().optional(),
+	cta_url: z.string().url().max(500).nullable().optional(),
+	cta_label: z.string().max(80).nullable().optional(),
 }).refine(
 	(data) => {
 		if (data.status === 'scheduled') {
@@ -89,6 +91,8 @@ export default defineEventHandler(async (event) => {
 			published_at: null,
 			error_message: null,
 			created_by: userId,
+			cta_url: data.cta_url ?? null,
+			cta_label: data.cta_label ?? null,
 		});
 
 		// Log activity

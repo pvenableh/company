@@ -192,18 +192,31 @@
                     />
                   </button>
                 </div>
-                <div v-if="form.ctaEnabled" class="flex flex-wrap gap-2">
-                  <button
-                    v-for="c in ctaTypes"
-                    :key="c.value"
-                    class="px-3 py-1.5 rounded-lg text-xs font-medium border transition-all"
-                    :class="form.ctaType === c.value
-                      ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
-                      : 'border-transparent bg-muted/50 text-foreground hover:bg-muted'"
-                    @click="form.ctaType = c.value"
-                  >
-                    {{ c.label }}
-                  </button>
+                <div v-if="form.ctaEnabled" class="space-y-3">
+                  <div class="flex flex-wrap gap-2">
+                    <button
+                      v-for="c in ctaTypes"
+                      :key="c.value"
+                      class="px-3 py-1.5 rounded-lg text-xs font-medium border transition-all"
+                      :class="form.ctaType === c.value
+                        ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
+                        : 'border-transparent bg-muted/50 text-foreground hover:bg-muted'"
+                      @click="form.ctaType = c.value"
+                    >
+                      {{ c.label }}
+                    </button>
+                  </div>
+                  <div>
+                    <label class="text-[11px] font-medium text-muted-foreground mb-1 block">
+                      Link URL <span class="font-normal">(optional — appended to caption so LinkedIn/Facebook/Threads unfurl an OG card)</span>
+                    </label>
+                    <input
+                      v-model="form.ctaUrl"
+                      type="url"
+                      placeholder="https://example.com/your-landing-page"
+                      class="w-full rounded-xl border bg-background px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none transition-all placeholder:text-muted-foreground/60"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -423,7 +436,15 @@ const form = reactive({
   brandVoice: '',
   ctaEnabled: false,
   ctaType: 'visit-website' as SocialCTAType,
+  ctaUrl: '',
 });
+
+const ctaLabelMap: Record<SocialCTAType, string> = {
+  'visit-website': 'Visit Website',
+  'book-a-call': 'Book a Call',
+  'learn-more': 'Learn More',
+  'shop-now': 'Shop Now',
+};
 
 const platformOptions = [
   { value: 'linkedin' as SocialPlatform, label: 'LinkedIn', icon: 'lucide:linkedin' },
@@ -576,12 +597,15 @@ async function createPosts() {
 
   try {
     const createdPosts: { platform: SocialPlatform; caption: string }[] = [];
+    const ctaUrl = form.ctaEnabled && form.ctaUrl.trim() ? form.ctaUrl.trim() : null;
+    const ctaLabel = form.ctaEnabled ? ctaLabelMap[form.ctaType] : null;
 
     for (const post of result.value) {
       const hashtagString = post.hashtags.length > 0
         ? '\n\n' + post.hashtags.join(' ')
         : '';
-      const fullCaption = post.content + hashtagString;
+      const ctaSentence = post.cta?.trim() ? `\n\n${post.cta.trim()}` : '';
+      const fullCaption = post.content + ctaSentence + hashtagString;
 
       await $fetch('/api/social/posts', {
         method: 'POST',
@@ -592,6 +616,8 @@ async function createPosts() {
           platforms: [{ platform: post.platform }],
           post_type: 'text',
           status: 'draft',
+          cta_url: ctaUrl,
+          cta_label: ctaLabel,
         },
       });
 
