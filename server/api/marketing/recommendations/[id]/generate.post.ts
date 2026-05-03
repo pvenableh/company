@@ -291,8 +291,40 @@ export default defineEventHandler(async (event) => {
 	// ─── Persist draft campaign + touches ───────────────────────────────────
 	const audienceData = candidateData?.audience || {};
 	const clusterLabel = candidateData?.cluster?.label;
+	let contactIds: string[] = Array.isArray(audienceData.contact_ids) ? audienceData.contact_ids : [];
+
+	// Lead-reengagement clusters target leads, not contacts directly. If the
+	// candidate didn't pre-resolve audience.contact_ids (older seeds, or
+	// extractor rev that only emitted cluster.lead_ids), walk the leads here
+	// so the personalization endpoint can find recipients.
+	if (rec.card_type === 'lead_reengagement' && contactIds.length === 0) {
+		const leadIds = Array.isArray(candidateData?.cluster?.lead_ids)
+			? (candidateData.cluster.lead_ids as number[]).filter((x) => Number.isFinite(x))
+			: [];
+		if (leadIds.length > 0) {
+			try {
+				const leads = await directus.request(
+					readItems('leads', {
+						filter: { id: { _in: leadIds as any } },
+						fields: ['id', 'related_contact'],
+						limit: -1,
+					}),
+				) as any[];
+				contactIds = Array.from(
+					new Set(
+						leads
+							.map((l) => (typeof l.related_contact === 'string' ? l.related_contact : l.related_contact?.id))
+							.filter((x): x is string => typeof x === 'string' && x.length > 0),
+					),
+				);
+			} catch (err: any) {
+				console.warn('[marketing/generate] lead→contact walk failed:', err.message);
+			}
+		}
+	}
+
 	const audienceSnapshot = {
-		contact_ids: Array.isArray(audienceData.contact_ids) ? audienceData.contact_ids : [],
+		contact_ids: contactIds,
 		cluster_label: clusterLabel,
 		sample_names: Array.isArray(audienceData.sample_names) ? audienceData.sample_names : [],
 		captured_at: new Date().toISOString(),
