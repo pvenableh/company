@@ -145,10 +145,8 @@ function formatChange(change: number, suffix = ''): string {
   return `${sign}${change}${suffix}`
 }
 
-const platformIcons: Record<string, string> = {
-  instagram: 'i-lucide-instagram',
-  tiktok: 'i-lucide-music',
-}
+import { getSocialPlatformIcon } from '~/utils/icons'
+const platformIcons = (p: string) => getSocialPlatformIcon(p)
 </script>
 
 <template>
@@ -302,7 +300,7 @@ const platformIcons: Record<string, string> = {
             class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
           >
             <div class="flex items-center gap-2 mb-2">
-              <UIcon :name="platformIcons[platform]" class="w-4 h-4" />
+              <UIcon :name="platformIcons(String(platform))" class="w-4 h-4 rounded-sm" />
               <span class="font-medium text-gray-900 dark:text-white capitalize">{{ platform }}</span>
             </div>
             <div class="grid grid-cols-3 gap-2 text-sm">
@@ -346,9 +344,7 @@ const platformIcons: Record<string, string> = {
               class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             />
             <div class="absolute top-2 left-2">
-              <div class="p-1.5 bg-black/50 backdrop-blur rounded-full">
-                <UIcon :name="platformIcons[post.platform]" class="w-4 h-4 text-white" />
-              </div>
+              <UIcon :name="platformIcons(post.platform)" class="w-6 h-6 rounded-md" />
             </div>
           </div>
           <p class="text-sm text-gray-900 dark:text-white line-clamp-2 mb-2">

@@ -197,13 +197,9 @@ function getChannelColor(channel: string): string {
 	return colors[channel] || 'text-muted-foreground';
 }
 
+import { getSocialPlatformIcon } from '~/utils/icons';
+
 function getPlatformIcon(platform: string): string {
-	const icons: Record<string, string> = {
-		linkedin: 'lucide:linkedin',
-		facebook: 'lucide:facebook',
-		instagram: 'lucide:instagram',
-		threads: 'lucide:at-sign',
-	};
-	return icons[platform] || 'lucide:globe';
+	return getSocialPlatformIcon(platform);
 }
 </script>

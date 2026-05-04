@@ -7,6 +7,7 @@
 import { format, parseISO } from 'date-fns'
 import { CalendarDate, getLocalTimeZone, parseDate, today } from '@internationalized/date'
 import type { SocialPost, SocialAccountPublic, SocialPostTarget, PostType } from '~~/shared/social'
+import { getSocialPlatformIcon } from '~/utils/icons'
 
 definePageMeta({
   layout: 'default',
@@ -355,7 +356,7 @@ const minDate = today(getLocalTimeZone())
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ account.account_name }}</p>
                 <p class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                  <UIcon :name="account.platform === 'instagram' ? 'i-lucide-instagram' : 'i-lucide-music'" class="w-3 h-3" />
+                  <UIcon :name="getSocialPlatformIcon(account.platform)" class="w-3.5 h-3.5 rounded-sm shrink-0" />
                   @{{ account.account_handle }}
                 </p>
               </div>

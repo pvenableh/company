@@ -59,9 +59,8 @@ const stats = computed<SocialDashboardStats>(() => {
   }
 })
 
-const platformIcon = (platform?: string) => {
-  return platform === 'instagram' ? 'i-lucide-instagram' : 'i-lucide-music'
-}
+import { getSocialPlatformIcon } from '~/utils/icons'
+const platformIcon = (platform?: string) => getSocialPlatformIcon(platform)
 
 const { getStatusColorName: statusColor } = useStatusStyle()
 </script>

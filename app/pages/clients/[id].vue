@@ -314,6 +314,7 @@ const tabs = [
 
 // Social accounts assigned to this client
 import type { SocialAccountPublic } from '~~/shared/social';
+import { getSocialPlatformIcon } from '~/utils/icons';
 const socialAccounts = ref<SocialAccountPublic[]>([]);
 async function loadSocialAccounts() {
   try {
@@ -326,13 +327,7 @@ async function loadSocialAccounts() {
   }
 }
 
-const platformIconFor: Record<string, string> = {
-  instagram: 'lucide:instagram',
-  tiktok: 'lucide:music',
-  linkedin: 'lucide:linkedin',
-  facebook: 'lucide:facebook',
-  threads: 'lucide:at-sign',
-};
+const platformIconFor = (p: string) => getSocialPlatformIcon(p);
 
 const { isOrgAdminOrAbove } = useOrgRole();
 
@@ -861,7 +856,7 @@ onUnmounted(() => clearEntity());
                   :key="acc.id"
                   class="flex items-center gap-3 h-12 px-3 border-b border-border/30 last:border-b-0"
                 >
-                  <Icon :name="platformIconFor[acc.platform] || 'lucide:share-2'" class="w-4 h-4 text-muted-foreground shrink-0" />
+                  <Icon :name="platformIconFor(acc.platform)" class="w-4 h-4 rounded-sm shrink-0" />
                   <p class="flex-1 text-sm font-medium truncate">{{ acc.account_name }}</p>
                   <span class="text-xs text-muted-foreground truncate">@{{ acc.account_handle }}</span>
                   <span

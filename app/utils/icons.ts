@@ -60,3 +60,31 @@ export function getFileIcon(filetype: FileType | string | null | undefined) {
 
 	return fileIconMap[filetype as FileType];
 }
+
+// ── Social platform brand marks (use real logos: marks, not lucide generics) ──
+
+export const socialPlatformIcon: Record<string, string> = {
+	facebook: 'logos:facebook',
+	instagram: 'logos:instagram-icon',
+	linkedin: 'logos:linkedin-icon',
+	tiktok: 'logos:tiktok-icon',
+	threads: 'logos:threads-icon',
+};
+
+export const socialPlatformLabel: Record<string, string> = {
+	facebook: 'Facebook',
+	instagram: 'Instagram',
+	linkedin: 'LinkedIn',
+	tiktok: 'TikTok',
+	threads: 'Threads',
+};
+
+export function getSocialPlatformIcon(platform: string | null | undefined): string {
+	if (!platform) return 'lucide:share-2';
+	return socialPlatformIcon[platform] ?? 'lucide:share-2';
+}
+
+export function getSocialPlatformLabel(platform: string | null | undefined): string {
+	if (!platform) return '';
+	return socialPlatformLabel[platform] ?? platform;
+}

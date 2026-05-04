@@ -11,7 +11,7 @@
           : 'border-border bg-background hover:bg-muted'"
         @click="active = p"
       >
-        <UIcon :name="platformMeta[p].icon" class="w-3.5 h-3.5" />
+        <UIcon :name="platformMeta[p].icon" class="w-4 h-4 rounded-sm shrink-0" />
         {{ platformMeta[p].label }}
       </button>
     </div>
@@ -187,12 +187,14 @@ const props = defineProps<{
   accounts: SocialAccountPublic[];
 }>();
 
+import { getSocialPlatformIcon, getSocialPlatformLabel } from '~/utils/icons';
+
 const platformMeta: Record<SocialPlatform, { label: string; icon: string }> = {
-  linkedin: { label: 'LinkedIn', icon: 'i-lucide-linkedin' },
-  facebook: { label: 'Facebook', icon: 'i-lucide-facebook' },
-  instagram: { label: 'Instagram', icon: 'i-lucide-instagram' },
-  threads: { label: 'Threads', icon: 'i-lucide-at-sign' },
-  tiktok: { label: 'TikTok', icon: 'i-lucide-music' },
+  linkedin: { label: getSocialPlatformLabel('linkedin'), icon: getSocialPlatformIcon('linkedin') },
+  facebook: { label: getSocialPlatformLabel('facebook'), icon: getSocialPlatformIcon('facebook') },
+  instagram: { label: getSocialPlatformLabel('instagram'), icon: getSocialPlatformIcon('instagram') },
+  threads: { label: getSocialPlatformLabel('threads'), icon: getSocialPlatformIcon('threads') },
+  tiktok: { label: getSocialPlatformLabel('tiktok'), icon: getSocialPlatformIcon('tiktok') },
 };
 
 const availablePlatforms = computed(() => {

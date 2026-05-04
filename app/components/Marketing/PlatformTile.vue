@@ -5,12 +5,10 @@
 		:class="{ 'opacity-60 hover:opacity-100': !tile.connected }"
 	>
 		<div class="flex items-center gap-2">
-			<div
-				class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-				:class="iconBgClass"
-			>
-				<Icon :name="iconName" class="w-3.5 h-3.5" :class="iconColorClass" />
-			</div>
+			<Icon
+				:name="iconName"
+				class="w-7 h-7 rounded-md shrink-0"
+			/>
 			<span class="text-xs font-semibold text-foreground capitalize">{{ tile.platform }}</span>
 			<span
 				v-if="tile.expired"
@@ -57,6 +55,7 @@
 
 <script setup lang="ts">
 import type { SocialPlatform } from '~~/shared/social';
+import { getSocialPlatformIcon } from '~/utils/icons';
 
 interface Tile {
 	platform: SocialPlatform;
@@ -71,18 +70,7 @@ interface Tile {
 
 const props = defineProps<{ tile: Tile }>();
 
-const PLATFORM_META: Record<SocialPlatform, { icon: string; bg: string; fg: string }> = {
-	instagram: { icon: 'lucide:instagram', bg: 'bg-pink-500/10', fg: 'text-pink-500' },
-	linkedin: { icon: 'lucide:linkedin', bg: 'bg-sky-600/10', fg: 'text-sky-600' },
-	facebook: { icon: 'lucide:facebook', bg: 'bg-blue-600/10', fg: 'text-blue-600' },
-	tiktok: { icon: 'lucide:music-2', bg: 'bg-zinc-900/10 dark:bg-zinc-100/10', fg: 'text-foreground' },
-	threads: { icon: 'lucide:at-sign', bg: 'bg-zinc-900/10 dark:bg-zinc-100/10', fg: 'text-foreground' },
-};
-
-const meta = computed(() => PLATFORM_META[props.tile.platform]);
-const iconName = computed(() => meta.value.icon);
-const iconBgClass = computed(() => meta.value.bg);
-const iconColorClass = computed(() => meta.value.fg);
+const iconName = computed(() => getSocialPlatformIcon(props.tile.platform));
 
 const targetHref = computed(() => {
 	if (!props.tile.connected) return { path: '/social/settings' };

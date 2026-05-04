@@ -34,14 +34,9 @@ definePageMeta({
 });
 useHead({ title: 'Compose Post | Earnest' });
 
-// Platform icon mapping
-const platformIcons: Record<SocialPlatform, string> = {
-	instagram: 'i-lucide-instagram',
-	tiktok: 'i-lucide-music',
-	linkedin: 'i-lucide-linkedin',
-	facebook: 'i-lucide-facebook',
-	threads: 'i-lucide-at-sign',
-};
+import { getSocialPlatformIcon } from '~/utils/icons';
+// Platform icon mapping (logos:* brand marks; see app/utils/icons.ts)
+const platformIcons = (p: SocialPlatform) => getSocialPlatformIcon(p);
 
 const { data: accountsData } = useLazyFetch('/api/social/accounts');
 const accounts = computed(() => ((accountsData.value as any)?.data || []) as SocialAccountPublic[]);
@@ -433,7 +428,7 @@ function onPickFiles(picked: { url: string; type: 'image' | 'video' }[]) {
 				<UCard v-if="linkedinSelected">
 					<template #header>
 						<div class="flex items-center gap-2">
-							<UIcon name="i-lucide-linkedin" class="w-4 h-4 text-[#0A66C2]" />
+							<UIcon name="logos:linkedin-icon" class="w-4 h-4 rounded-sm shrink-0" />
 							<h2 class="font-semibold text-gray-900 dark:text-white">LinkedIn Options</h2>
 						</div>
 					</template>
@@ -522,7 +517,7 @@ function onPickFiles(picked: { url: string; type: 'image' | 'video' }[]) {
 											</p>
 											<p class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
 												<UIcon
-													:name="platformIcons[account.platform] || 'i-lucide-globe'"
+													:name="platformIcons(account.platform)"
 													class="w-3 h-3"
 												/>
 												@{{ account.account_handle }}
@@ -642,7 +637,7 @@ function onPickFiles(picked: { url: string; type: 'image' | 'video' }[]) {
 						:key="a.id"
 						class="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800"
 					>
-						<UIcon :name="platformIcons[a.platform]" class="w-3 h-3" />
+						<UIcon :name="platformIcons(a.platform)" class="w-3 h-3" />
 						{{ a.account_name }}
 					</span>
 				</div>

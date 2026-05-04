@@ -23,6 +23,9 @@ import type {
   PublishPayload,
   PublishResponse,
   PlatformComment,
+  PlatformConversation,
+  PlatformMessage,
+  SendMessagePayload,
 } from './types'
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -511,6 +514,174 @@ export async function deleteFacebookComment(
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// MESSAGING (Page DMs via Messenger Platform)
+// ══════════════════════════════════════════════════════════════════════════════
+
+type RawFacebookConversation = {
+  id: string
+  updated_time: string
+  snippet?: string
+  unread_count?: number
+  participants?: {
+    data: Array<{ id: string; name?: string; email?: string }>
+  }
+}
+
+/**
+ * List conversations for a Page.
+ * Returns participant info derived from `participants.data` (the entry whose id != pageId).
+ */
+export async function getFacebookConversations(
+  pageId: string,
+  pageAccessToken: string,
+  cursor?: string,
+): Promise<{ conversations: PlatformConversation[]; nextCursor?: string }> {
+  const params: Record<string, string> = {
+    access_token: pageAccessToken,
+    fields: 'id,updated_time,snippet,unread_count,participants{id,name}',
+    limit: '50',
+  }
+  if (cursor) params.after = cursor
+
+  const res = await $fetch<{
+    data: RawFacebookConversation[]
+    paging?: { cursors?: { after?: string }; next?: string }
+  }>(graphUrl(`/${pageId}/conversations`), { params })
+
+  const conversations: PlatformConversation[] = (res.data || []).map((c) => {
+    const participant = c.participants?.data?.find(p => p.id !== pageId)
+    return {
+      threadId: c.id,
+      participantId: participant?.id || '',
+      participantName: participant?.name,
+      lastMessageAt: c.updated_time,
+      lastMessagePreview: c.snippet,
+      unreadCount: c.unread_count,
+    }
+  })
+
+  return {
+    conversations,
+    nextCursor: res.paging?.next ? res.paging.cursors?.after : undefined,
+  }
+}
+
+type RawFacebookMessageAttachment = {
+  mime_type?: string
+  image_data?: { url?: string }
+  video_data?: { url?: string }
+  file_url?: string
+}
+
+type RawFacebookMessage = {
+  id: string
+  message?: string
+  created_time: string
+  from?: { id: string; name?: string }
+  attachments?: { data: RawFacebookMessageAttachment[] }
+}
+
+/**
+ * List messages in a conversation. Page id is required so we can flag outgoing messages.
+ */
+export async function getFacebookMessages(
+  threadId: string,
+  pageId: string,
+  pageAccessToken: string,
+  cursor?: string,
+): Promise<{ messages: PlatformMessage[]; nextCursor?: string }> {
+  const params: Record<string, string> = {
+    access_token: pageAccessToken,
+    fields: 'id,message,created_time,from,attachments',
+    limit: '50',
+  }
+  if (cursor) params.after = cursor
+
+  const res = await $fetch<{
+    data: RawFacebookMessage[]
+    paging?: { cursors?: { after?: string }; next?: string }
+  }>(graphUrl(`/${threadId}/messages`), { params })
+
+  const messages: PlatformMessage[] = (res.data || []).map(m => ({
+    messageId: m.id,
+    threadId,
+    fromId: m.from?.id || '',
+    isOutgoing: m.from?.id === pageId,
+    text: m.message,
+    attachments: (m.attachments?.data || []).map((a) => {
+      const url = a.image_data?.url || a.video_data?.url || a.file_url || ''
+      return {
+        type: a.mime_type?.startsWith('image/')
+          ? 'image' as const
+          : a.mime_type?.startsWith('video/')
+            ? 'video' as const
+            : a.mime_type?.startsWith('audio/')
+              ? 'audio' as const
+              : 'file' as const,
+        url,
+      }
+    }).filter(a => a.url),
+    createdAt: m.created_time,
+  }))
+
+  return {
+    messages,
+    nextCursor: res.paging?.next ? res.paging.cursors?.after : undefined,
+  }
+}
+
+/**
+ * Send a message to a participant. Uses the Send API at `/me/messages` with the Page token.
+ *
+ * For inbound-initiated threads, the standard 24-hour messaging window applies.
+ * For outside-window messages we'd need `messaging_type: 'MESSAGE_TAG'` + a tag — out of scope for v1.
+ */
+export async function sendFacebookMessage(
+  recipientPsid: string,
+  pageAccessToken: string,
+  payload: SendMessagePayload,
+): Promise<{ messageId: string }> {
+  const message: Record<string, unknown> = {}
+  if (payload.text) message.text = payload.text
+  if (payload.mediaUrl) {
+    message.attachment = {
+      type: payload.mediaType || 'image',
+      payload: { url: payload.mediaUrl, is_reusable: true },
+    }
+  }
+
+  const res = await $fetch<{ message_id: string; recipient_id: string }>(graphUrl('/me/messages'), {
+    method: 'POST',
+    params: { access_token: pageAccessToken },
+    body: {
+      recipient: { id: recipientPsid },
+      messaging_type: 'RESPONSE',
+      message,
+    },
+  })
+
+  return { messageId: res.message_id }
+}
+
+/**
+ * Mark a conversation as seen by the Page (sender_action=mark_seen).
+ */
+export async function markFacebookConversationSeen(
+  recipientPsid: string,
+  pageAccessToken: string,
+): Promise<{ success: boolean }> {
+  await $fetch(graphUrl('/me/messages'), {
+    method: 'POST',
+    params: { access_token: pageAccessToken },
+    body: {
+      recipient: { id: recipientPsid },
+      sender_action: 'mark_seen',
+    },
+  })
+  return { success: true }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 // ADAPTER INSTANCE
 // ══════════════════════════════════════════════════════════════════════════════
 
@@ -583,5 +754,21 @@ export const facebookAdapter: PlatformAdapter = {
 
   async replyToComment(commentId, accessToken, message) {
     return replyToFacebookComment(commentId, accessToken, message)
+  },
+
+  async getConversations(accountId, accessToken, cursor) {
+    return getFacebookConversations(accountId, accessToken, cursor)
+  },
+
+  async getMessages(threadId, accountId, accessToken, cursor) {
+    return getFacebookMessages(threadId, accountId, accessToken, cursor)
+  },
+
+  async sendMessage(recipientId, accessToken, payload) {
+    return sendFacebookMessage(recipientId, accessToken, payload)
+  },
+
+  async markRead(recipientId, accessToken) {
+    return markFacebookConversationSeen(recipientId, accessToken)
   },
 }

@@ -15,6 +15,17 @@
  */
 
 import type { InstagramMetrics } from '~~/shared/social'
+import type {
+  PlatformAdapter,
+  OAuthTokenResult,
+  PlatformAccount,
+  PublishPayload,
+  PublishResponse,
+  PlatformComment,
+  PlatformConversation,
+  PlatformMessage,
+  SendMessagePayload,
+} from './types'
 
 // ══════════════════════════════════════════════════════════════════════════════
 // CONFIGURATION
@@ -694,4 +705,284 @@ export async function getInstagramRecentMedia(
   })
 
   return res.data
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// MESSAGING (Instagram DMs via Messenger Platform)
+//
+// All endpoints require the linked Page Access Token (not the IG user token) and
+// the `?platform=instagram` query param when calling /me-scoped Messenger routes.
+// ══════════════════════════════════════════════════════════════════════════════
+
+type RawInstagramConversation = {
+  id: string
+  updated_time: string
+  snippet?: string
+  unread_count?: number
+  participants?: {
+    data: Array<{ id: string; username?: string; name?: string }>
+  }
+}
+
+/**
+ * List IG conversations for a Page-linked IG account.
+ *
+ * @param igUserId IG account id — used to identify the Page side of each thread.
+ * @param pageAccessToken The linked Page Access Token (user tokens won't work — gotcha).
+ */
+export async function getInstagramConversations(
+  igUserId: string,
+  pageAccessToken: string,
+  cursor?: string,
+): Promise<{ conversations: PlatformConversation[]; nextCursor?: string }> {
+  const params: Record<string, string> = {
+    access_token: pageAccessToken,
+    platform: 'instagram',
+    fields: 'id,updated_time,snippet,unread_count,participants{id,username,name}',
+    limit: '50',
+  }
+  if (cursor) params.after = cursor
+
+  const res = await $fetch<{
+    data: RawInstagramConversation[]
+    paging?: { cursors?: { after?: string }; next?: string }
+  }>(graphUrl('/me/conversations'), { params })
+
+  const conversations: PlatformConversation[] = (res.data || []).map((c) => {
+    const participant = c.participants?.data?.find(p => p.id !== igUserId)
+    return {
+      threadId: c.id,
+      participantId: participant?.id || '',
+      participantName: participant?.username || participant?.name,
+      lastMessageAt: c.updated_time,
+      lastMessagePreview: c.snippet,
+      unreadCount: c.unread_count,
+    }
+  })
+
+  return {
+    conversations,
+    nextCursor: res.paging?.next ? res.paging.cursors?.after : undefined,
+  }
+}
+
+type RawInstagramMessageAttachment = {
+  mime_type?: string
+  image_data?: { url?: string }
+  video_data?: { url?: string }
+  file_url?: string
+}
+
+type RawInstagramMessage = {
+  id: string
+  message?: string
+  created_time: string
+  from?: { id: string; username?: string }
+  attachments?: { data: RawInstagramMessageAttachment[] }
+}
+
+/**
+ * List messages in an IG conversation. `igUserId` is required so we can flag outgoing messages.
+ */
+export async function getInstagramMessages(
+  threadId: string,
+  igUserId: string,
+  pageAccessToken: string,
+  cursor?: string,
+): Promise<{ messages: PlatformMessage[]; nextCursor?: string }> {
+  const params: Record<string, string> = {
+    access_token: pageAccessToken,
+    fields: 'id,message,created_time,from,attachments',
+    limit: '50',
+  }
+  if (cursor) params.after = cursor
+
+  const res = await $fetch<{
+    data: RawInstagramMessage[]
+    paging?: { cursors?: { after?: string }; next?: string }
+  }>(graphUrl(`/${threadId}/messages`), { params })
+
+  const messages: PlatformMessage[] = (res.data || []).map(m => ({
+    messageId: m.id,
+    threadId,
+    fromId: m.from?.id || '',
+    isOutgoing: m.from?.id === igUserId,
+    text: m.message,
+    attachments: (m.attachments?.data || []).map((a) => {
+      const url = a.image_data?.url || a.video_data?.url || a.file_url || ''
+      return {
+        type: a.mime_type?.startsWith('image/')
+          ? 'image' as const
+          : a.mime_type?.startsWith('video/')
+            ? 'video' as const
+            : a.mime_type?.startsWith('audio/')
+              ? 'audio' as const
+              : 'file' as const,
+        url,
+      }
+    }).filter(a => a.url),
+    createdAt: m.created_time,
+  }))
+
+  return {
+    messages,
+    nextCursor: res.paging?.next ? res.paging.cursors?.after : undefined,
+  }
+}
+
+/**
+ * Send a DM to an IG user. Uses the Messenger Send API with `?platform=instagram` semantics.
+ *
+ * IG attachment types are limited: image, video, audio (no generic file).
+ */
+export async function sendInstagramMessage(
+  recipientIgsid: string,
+  pageAccessToken: string,
+  payload: SendMessagePayload,
+): Promise<{ messageId: string }> {
+  const message: Record<string, unknown> = {}
+  if (payload.text) message.text = payload.text
+  if (payload.mediaUrl) {
+    const t = payload.mediaType === 'file' ? 'image' : (payload.mediaType || 'image')
+    message.attachment = {
+      type: t,
+      payload: { url: payload.mediaUrl, is_reusable: true },
+    }
+  }
+
+  const res = await $fetch<{ message_id: string; recipient_id: string }>(graphUrl('/me/messages'), {
+    method: 'POST',
+    params: { access_token: pageAccessToken },
+    body: {
+      recipient: { id: recipientIgsid },
+      messaging_type: 'RESPONSE',
+      message,
+    },
+  })
+
+  return { messageId: res.message_id }
+}
+
+/**
+ * Mark an IG conversation as seen (sender_action=mark_seen).
+ */
+export async function markInstagramConversationSeen(
+  recipientIgsid: string,
+  pageAccessToken: string,
+): Promise<{ success: boolean }> {
+  await $fetch(graphUrl('/me/messages'), {
+    method: 'POST',
+    params: { access_token: pageAccessToken },
+    body: {
+      recipient: { id: recipientIgsid },
+      sender_action: 'mark_seen',
+    },
+  })
+  return { success: true }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ADAPTER INSTANCE
+// ══════════════════════════════════════════════════════════════════════════════
+
+export const instagramAdapter: PlatformAdapter = {
+  platform: 'instagram',
+
+  getAuthUrl: getInstagramAuthUrl,
+
+  async exchangeCode(code: string): Promise<OAuthTokenResult> {
+    return exchangeInstagramCode(code)
+  },
+
+  async refreshToken(token: string): Promise<OAuthTokenResult> {
+    return refreshInstagramToken(token)
+  },
+
+  async getAccounts(accessToken: string): Promise<PlatformAccount[]> {
+    const accounts = await getInstagramAccounts(accessToken)
+    return accounts.map(a => ({
+      platformUserId: a.igUserId,
+      name: a.name,
+      handle: a.username,
+      profilePictureUrl: a.profilePictureUrl,
+      metadata: {
+        pageId: a.pageId,
+        pageAccessToken: a.pageAccessToken,
+      },
+    }))
+  },
+
+  async publishPost(accountId, accessToken, payload): Promise<PublishResponse> {
+    let result: { id: string; permalink?: string }
+
+    if (payload.mediaUrls?.length && payload.mediaTypes?.[0] === 'video') {
+      result = await publishInstagramReel(accountId, accessToken, payload.mediaUrls[0]!, payload.text)
+    } else if (payload.mediaUrls?.length && payload.mediaUrls.length > 1) {
+      const items = payload.mediaUrls.map((url, i) => ({
+        type: (payload.mediaTypes?.[i] === 'video' ? 'video' : 'image') as 'image' | 'video',
+        url,
+      }))
+      result = await publishInstagramCarousel(accountId, accessToken, items, payload.text)
+    } else if (payload.mediaUrls?.length) {
+      result = await publishInstagramImage(accountId, accessToken, payload.mediaUrls[0]!, payload.text)
+    } else {
+      throw new Error('Instagram requires at least one media URL — text-only posts are not supported.')
+    }
+
+    return {
+      platformPostId: result.id,
+      permalink: result.permalink,
+    }
+  },
+
+  async getAccountMetrics(accountId, accessToken) {
+    const metrics = await getInstagramAccountInsights(accountId, accessToken)
+    return {
+      followers_count: metrics.followers_count || 0,
+      reach: metrics.reach || 0,
+      impressions: metrics.impressions || 0,
+      engagement_rate: metrics.engagement_rate || 0,
+      profile_views: metrics.profile_views || 0,
+    }
+  },
+
+  async getComments(mediaId, accessToken) {
+    const result = await getInstagramComments(mediaId, accessToken)
+    return {
+      comments: result.comments.map<PlatformComment>(c => ({
+        id: c.id,
+        text: c.text,
+        authorName: c.username,
+        createdAt: c.timestamp,
+        likeCount: c.like_count,
+        replies: c.replies?.map(r => ({
+          id: r.id,
+          text: r.text,
+          authorName: r.username,
+          createdAt: r.timestamp,
+        })),
+      })),
+      nextCursor: result.nextCursor,
+    }
+  },
+
+  async replyToComment(commentId, accessToken, message) {
+    return replyToInstagramComment(commentId, accessToken, message)
+  },
+
+  async getConversations(accountId, accessToken, cursor) {
+    return getInstagramConversations(accountId, accessToken, cursor)
+  },
+
+  async getMessages(threadId, accountId, accessToken, cursor) {
+    return getInstagramMessages(threadId, accountId, accessToken, cursor)
+  },
+
+  async sendMessage(recipientId, accessToken, payload) {
+    return sendInstagramMessage(recipientId, accessToken, payload)
+  },
+
+  async markRead(recipientId, accessToken) {
+    return markInstagramConversationSeen(recipientId, accessToken)
+  },
 }

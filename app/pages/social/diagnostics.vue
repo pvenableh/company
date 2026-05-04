@@ -32,29 +32,10 @@ interface DiagnosticsResponse {
   reports: PlatformReport[]
 }
 
-const platformLabel: Record<SocialPlatform, string> = {
-  instagram: 'Instagram',
-  tiktok: 'TikTok',
-  linkedin: 'LinkedIn',
-  facebook: 'Facebook',
-  threads: 'Threads',
-}
+import { getSocialPlatformIcon, getSocialPlatformLabel } from '~/utils/icons'
 
-const platformBg: Record<SocialPlatform, string> = {
-  instagram: 'bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500',
-  tiktok: 'bg-black',
-  linkedin: 'bg-[#0A66C2]',
-  facebook: 'bg-[#1877F2]',
-  threads: 'bg-black',
-}
-
-const platformIcon: Record<SocialPlatform, string> = {
-  instagram: 'i-lucide-instagram',
-  tiktok: 'i-lucide-music',
-  linkedin: 'i-lucide-linkedin',
-  facebook: 'i-lucide-facebook',
-  threads: 'i-lucide-at-sign',
-}
+const platformLabel = (p: SocialPlatform) => getSocialPlatformLabel(p)
+const platformIcon = (p: SocialPlatform) => getSocialPlatformIcon(p)
 
 const data = ref<DiagnosticsResponse | null>(null)
 const loading = ref(false)
@@ -175,12 +156,10 @@ const requiredCounts = computed(() => {
           <template #header>
             <div class="flex items-center justify-between gap-4">
               <div class="flex items-center gap-3">
-                <div class="p-2 rounded-lg" :class="platformBg[report.platform]">
-                  <UIcon :name="platformIcon[report.platform]" class="w-5 h-5 text-white" />
-                </div>
+                <UIcon :name="platformIcon(report.platform)" class="w-9 h-9 rounded-md shrink-0" />
                 <div>
                   <h2 class="font-semibold text-gray-900 dark:text-white">
-                    {{ platformLabel[report.platform] }}
+                    {{ platformLabel(report.platform) }}
                   </h2>
                   <p class="text-xs text-muted-foreground">
                     {{ report.accountPings.length }} account{{ report.accountPings.length !== 1 ? 's' : '' }} connected

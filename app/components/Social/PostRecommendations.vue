@@ -102,8 +102,7 @@
 						<div class="flex items-center gap-2 mb-2">
 							<Icon
 								:name="platformIcon(platform)"
-								class="w-3.5 h-3.5"
-								:class="platformColor(platform)"
+								class="w-4 h-4 rounded-sm shrink-0"
 							/>
 							<span class="text-xs font-semibold text-foreground capitalize">{{ platform }}</span>
 							<span
@@ -228,25 +227,9 @@ function severityBorder(s: RecSeverity): string {
 	return '';
 }
 
-function platformIcon(p: SocialPlatform): string {
-	const icons: Record<SocialPlatform, string> = {
-		instagram: 'lucide:instagram',
-		linkedin: 'lucide:linkedin',
-		facebook: 'lucide:facebook',
-		tiktok: 'lucide:music-2',
-		threads: 'lucide:at-sign',
-	};
-	return icons[p];
-}
+import { getSocialPlatformIcon } from '~/utils/icons';
 
-function platformColor(p: SocialPlatform): string {
-	const colors: Record<SocialPlatform, string> = {
-		instagram: 'text-pink-500',
-		linkedin: 'text-sky-600',
-		facebook: 'text-blue-600',
-		tiktok: 'text-foreground',
-		threads: 'text-foreground',
-	};
-	return colors[p];
+function platformIcon(p: SocialPlatform): string {
+	return getSocialPlatformIcon(p);
 }
 </script>

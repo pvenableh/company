@@ -52,7 +52,7 @@
                       : 'border-transparent bg-muted/50 hover:bg-muted hover:border-muted-foreground/20'"
                     @click="togglePlatform(p.value)"
                   >
-                    <Icon :name="p.icon" class="w-5 h-5" :class="form.platforms.includes(p.value) ? 'text-blue-600 dark:text-blue-400' : 'text-muted-foreground'" />
+                    <Icon :name="p.icon" class="w-6 h-6 rounded-md shrink-0" />
                     <span class="text-xs font-medium" :class="form.platforms.includes(p.value) ? 'text-blue-700 dark:text-blue-300' : 'text-foreground'">{{ p.label }}</span>
                     <!-- Checkmark -->
                     <div
@@ -288,7 +288,7 @@
                     :value="post.platform"
                     class="flex-1 !text-[11px]"
                   >
-                    <Icon :name="getPlatformIcon(post.platform)" class="w-3.5 h-3.5" />
+                    <Icon :name="getPlatformIcon(post.platform)" class="w-4 h-4 rounded-sm shrink-0" />
                     {{ getPlatformLabel(post.platform) }}
                   </TabsTrigger>
                 </TabsList>
@@ -446,12 +446,11 @@ const ctaLabelMap: Record<SocialCTAType, string> = {
   'shop-now': 'Shop Now',
 };
 
-const platformOptions = [
-  { value: 'linkedin' as SocialPlatform, label: 'LinkedIn', icon: 'lucide:linkedin' },
-  { value: 'facebook' as SocialPlatform, label: 'Facebook', icon: 'lucide:facebook' },
-  { value: 'threads' as SocialPlatform, label: 'Threads', icon: 'lucide:at-sign' },
-  { value: 'instagram' as SocialPlatform, label: 'Instagram', icon: 'lucide:instagram' },
-];
+import { getSocialPlatformIcon, getSocialPlatformLabel } from '~/utils/icons';
+
+const platformOptions = (['linkedin', 'facebook', 'threads', 'instagram'] as const).map(
+  (p) => ({ value: p as SocialPlatform, label: getSocialPlatformLabel(p), icon: getSocialPlatformIcon(p) }),
+);
 
 const contentTypes = [
   { value: 'announcement', label: 'Announcement', icon: 'lucide:megaphone' },
@@ -499,25 +498,11 @@ function togglePlatform(platform: SocialPlatform) {
 }
 
 function getPlatformIcon(platform: SocialPlatform): string {
-  const icons: Record<SocialPlatform, string> = {
-    linkedin: 'lucide:linkedin',
-    facebook: 'lucide:facebook',
-    threads: 'lucide:at-sign',
-    instagram: 'lucide:instagram',
-    tiktok: 'lucide:music',
-  };
-  return icons[platform] || 'lucide:globe';
+  return getSocialPlatformIcon(platform);
 }
 
 function getPlatformLabel(platform: SocialPlatform): string {
-  const labels: Record<SocialPlatform, string> = {
-    linkedin: 'LinkedIn',
-    facebook: 'Facebook',
-    threads: 'Threads',
-    instagram: 'Instagram',
-    tiktok: 'TikTok',
-  };
-  return labels[platform] || platform;
+  return getSocialPlatformLabel(platform);
 }
 
 function getCharLimit(platform: SocialPlatform): string {

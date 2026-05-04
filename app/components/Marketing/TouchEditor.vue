@@ -226,11 +226,11 @@ const kindIcon = computed(() => {
 	if (props.touch.kind === 'email') return 'lucide:mail';
 	switch (props.touch.social_channel) {
 		case 'linkedin':
-			return 'lucide:linkedin';
+			return 'logos:linkedin-icon';
 		case 'instagram':
-			return 'lucide:instagram';
+			return 'logos:instagram-icon';
 		case 'twitter':
-			return 'lucide:twitter';
+			return 'logos:x';
 		default:
 			return 'lucide:share-2';
 	}

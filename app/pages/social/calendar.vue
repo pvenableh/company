@@ -141,10 +141,8 @@ function isToday(date: Date) {
 
 const { getStatusBadgeClasses } = useStatusStyle()
 
-const platformIcons: Record<string, string> = {
-  instagram: 'i-lucide-instagram',
-  tiktok: 'i-lucide-music',
-}
+import { getSocialPlatformIcon } from '~/utils/icons'
+const platformIcons = (p: string) => getSocialPlatformIcon(p)
 
 // Stats
 const monthStats = computed(() => ({
@@ -298,7 +296,7 @@ const df = new DateFormatter('en-US', { month: 'long', year: 'numeric' })
                   <UIcon
                     v-for="platform in [...new Set(post.platforms.map((p) => p.platform))]"
                     :key="platform"
-                    :name="platformIcons[platform]"
+                    :name="platformIcons(platform)"
                     class="w-3 h-3 flex-shrink-0"
                   />
                   <span class="truncate">{{ post.caption.slice(0, 25) }}</span>
@@ -350,7 +348,7 @@ const df = new DateFormatter('en-US', { month: 'long', year: 'numeric' })
               :key="target.account_id"
               class="flex items-center gap-1.5 px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-full text-xs"
             >
-              <UIcon :name="platformIcons[target.platform]" class="w-3 h-3" />
+              <UIcon :name="platformIcons(target.platform)" class="w-3 h-3" />
               {{ target.account_name }}
             </div>
           </div>
@@ -366,7 +364,7 @@ const df = new DateFormatter('en-US', { month: 'long', year: 'numeric' })
               class="flex items-center justify-between text-sm"
             >
               <span class="flex items-center gap-2">
-                <UIcon :name="platformIcons[result.platform]" class="w-4 h-4" />
+                <UIcon :name="platformIcons(result.platform)" class="w-4 h-4" />
                 {{ result.account_id }}
               </span>
               <UBadge :color="result.success ? 'green' : 'red'" variant="subtle" size="xs">

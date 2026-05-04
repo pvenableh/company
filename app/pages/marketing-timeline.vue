@@ -86,9 +86,9 @@ const HEADER_HEIGHT = 28;
 // ── Derived ──
 const channels: Array<{ key: 'email' | 'linkedin' | 'instagram' | 'twitter'; label: string; icon: string }> = [
 	{ key: 'email', label: 'Email', icon: 'lucide:mail' },
-	{ key: 'linkedin', label: 'LinkedIn', icon: 'lucide:linkedin' },
-	{ key: 'instagram', label: 'Instagram', icon: 'lucide:instagram' },
-	{ key: 'twitter', label: 'Twitter', icon: 'lucide:twitter' },
+	{ key: 'linkedin', label: 'LinkedIn', icon: 'logos:linkedin-icon' },
+	{ key: 'instagram', label: 'Instagram', icon: 'logos:instagram-icon' },
+	{ key: 'twitter', label: 'Twitter', icon: 'logos:x' },
 ];
 
 const visibleChannels = computed(() => {
@@ -345,7 +345,7 @@ watch(() => totalCount.value, scrollToNow);
 							class="sticky left-0 bg-background z-10 flex items-center gap-2 px-3 border-r border-border/30"
 							:style="{ width: `${LABEL_WIDTH}px`, minWidth: `${LABEL_WIDTH}px`, height: `${ROW_HEIGHT}px` }"
 						>
-							<Icon :name="row.channel.icon" class="w-3.5 h-3.5 text-muted-foreground" />
+							<Icon :name="row.channel.icon" class="w-4 h-4 rounded-sm shrink-0" />
 							<span class="text-[11px] font-medium text-foreground">{{ row.channel.label }}</span>
 							<span class="ml-auto text-[10px] text-muted-foreground">{{ row.items.length }}</span>
 						</div>

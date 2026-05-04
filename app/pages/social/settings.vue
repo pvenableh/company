@@ -27,54 +27,47 @@ type PlatformKey = SocialPlatform | 'linkedin-org'
 const platformConfig: Record<PlatformKey, {
   label: string
   icon: string
-  bgClass: string
   connectLabel: string
   connectPath: string
   footerNote?: string
 }> = {
   instagram: {
     label: 'Instagram',
-    icon: 'i-lucide-instagram',
-    bgClass: 'bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500',
+    icon: 'logos:instagram-icon',
     connectLabel: 'Connect Instagram Business Account',
     connectPath: '/api/social/accounts/connect/instagram',
   },
   tiktok: {
     label: 'TikTok',
-    icon: 'i-lucide-music',
-    bgClass: 'bg-black',
+    icon: 'logos:tiktok-icon',
     connectLabel: 'Connect TikTok Account',
     connectPath: '/api/social/accounts/connect/tiktok',
     footerNote: 'TikTok posts are sent to your inbox as drafts. Direct posting requires TikTok audit approval.',
   },
   linkedin: {
     label: 'LinkedIn (Personal)',
-    icon: 'i-lucide-linkedin',
-    bgClass: 'bg-[#0A66C2]',
+    icon: 'logos:linkedin-icon',
     connectLabel: 'Connect Personal LinkedIn',
     connectPath: '/api/social/accounts/connect/linkedin',
     footerNote: 'Posts to your personal LinkedIn profile. Use the Company Pages card below to post to a LinkedIn Page.',
   },
   'linkedin-org': {
     label: 'LinkedIn (Company Pages)',
-    icon: 'i-lucide-building-2',
-    bgClass: 'bg-[#0A66C2]',
+    icon: 'logos:linkedin-icon',
     connectLabel: 'Connect LinkedIn Company Pages',
     connectPath: '/api/social/accounts/connect/linkedin-org',
     footerNote: 'Requires LinkedIn Community Management API approval (separate app). Connects all Company Pages you administer.',
   },
   facebook: {
     label: 'Facebook',
-    icon: 'i-lucide-facebook',
-    bgClass: 'bg-[#1877F2]',
+    icon: 'logos:facebook',
     connectLabel: 'Connect Facebook Page',
     connectPath: '/api/social/accounts/connect/facebook',
     footerNote: 'Only Facebook Pages you manage can be connected. Personal profiles are not supported.',
   },
   threads: {
     label: 'Threads',
-    icon: 'i-lucide-at-sign',
-    bgClass: 'bg-black',
+    icon: 'logos:threads-icon',
     connectLabel: 'Connect Threads Account',
     connectPath: '/api/social/accounts/connect/threads',
   },
@@ -356,9 +349,7 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
         <template #header>
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
-              <div class="p-2 rounded-lg" :class="platformConfig[platform].bgClass">
-                <UIcon :name="platformConfig[platform].icon" class="w-5 h-5 text-white" />
-              </div>
+              <UIcon :name="platformConfig[platform].icon" class="w-9 h-9 rounded-md shrink-0" />
               <div>
                 <h2 class="font-semibold text-gray-900 dark:text-white">{{ platformConfig[platform].label }}</h2>
                 <p class="text-sm text-gray-500 dark:text-gray-400">
@@ -373,7 +364,7 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
         </template>
 
         <div v-if="accountsForPlatform(platform).length === 0" class="text-center py-8">
-          <UIcon :name="platformConfig[platform].icon" class="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+          <UIcon :name="platformConfig[platform].icon" class="w-12 h-12 mx-auto mb-3 opacity-40" />
           <p class="text-gray-500 dark:text-gray-400 mb-4">No {{ platformConfig[platform].label }} accounts connected</p>
           <UButton :to="platformConfig[platform].connectPath" external variant="soft">
             {{ platformConfig[platform].connectLabel }}
@@ -442,9 +433,7 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
             class="flex items-center justify-between gap-3 px-4 py-3 cursor-pointer list-none select-none hover:bg-muted/30 rounded-xl"
           >
             <div class="flex items-center gap-3">
-              <div class="p-1.5 rounded-md" :class="platformConfig[platform].bgClass">
-                <UIcon :name="platformConfig[platform].icon" class="w-4 h-4 text-white" />
-              </div>
+              <UIcon :name="platformConfig[platform].icon" class="w-6 h-6 rounded-md shrink-0" />
               <span class="font-medium text-gray-900 dark:text-white">
                 {{ platformConfig[platform].label }} setup
               </span>
