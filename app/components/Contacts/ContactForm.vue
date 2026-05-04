@@ -56,6 +56,16 @@
 
     <div class="grid grid-cols-2 gap-4">
       <div class="space-y-1">
+        <label class="t-label text-muted-foreground">Client</label>
+        <select
+          v-model="formData.client"
+          class="w-full rounded-full border bg-background px-3 py-2 text-sm"
+        >
+          <option value="">— None</option>
+          <option v-for="opt in clientOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+        </select>
+      </div>
+      <div class="space-y-1">
         <label class="t-label text-muted-foreground">Category</label>
         <select
           v-model="formData.category"
@@ -65,22 +75,23 @@
           <option v-for="c in categories" :key="c" :value="c">{{ categoryLabel(c) }}</option>
         </select>
       </div>
-      <div class="space-y-1">
-        <label class="t-label text-muted-foreground">Billing Role</label>
-        <label
-          class="flex items-center gap-2 px-3 py-2"
-          :class="hasClient ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'"
-        >
-          <Switch
-            v-model="formData.is_billing_contact"
-            :disabled="!hasClient"
-          />
-          <span class="text-sm">
-            Billing contact
-            <span v-if="!hasClient" class="text-xs text-muted-foreground">— attach to a client first</span>
-          </span>
-        </label>
-      </div>
+    </div>
+
+    <div class="space-y-1">
+      <label class="t-label text-muted-foreground">Billing Role</label>
+      <label
+        class="flex items-center gap-2 px-3 py-2"
+        :class="hasClient ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'"
+      >
+        <Switch
+          v-model="formData.is_billing_contact"
+          :disabled="!hasClient"
+        />
+        <span class="text-sm">
+          Billing contact
+          <span v-if="!hasClient" class="text-xs text-muted-foreground">— attach to a client first</span>
+        </span>
+      </label>
     </div>
 
     <div class="space-y-1">
@@ -145,11 +156,14 @@ function categoryLabel(c: string) {
   return c.charAt(0).toUpperCase() + c.slice(1);
 }
 
-const hasClient = computed(() => {
+const { getClientOptions } = useClients();
+const clientOptions = ref<Array<{ label: string; value: string }>>([]);
+
+const initialClientId = (() => {
   const c: any = props.contact?.client;
-  if (!c) return false;
-  return typeof c === 'string' ? !!c : !!c?.id;
-});
+  if (!c) return '';
+  return typeof c === 'string' ? c : c?.id || '';
+})();
 
 const formData = reactive<any>({
   prefix: props.contact?.prefix || '',
@@ -165,7 +179,21 @@ const formData = reactive<any>({
   tags: [...(props.contact?.tags || [])],
   notes: props.contact?.notes || '',
   category: props.contact?.category || '',
+  client: initialClientId,
   is_billing_contact: !!props.contact?.is_billing_contact,
+});
+
+const hasClient = computed(() => !!formData.client);
+
+// Clear billing-contact toggle if client is removed.
+watch(() => formData.client, (clientId) => {
+  if (!clientId) formData.is_billing_contact = false;
+});
+
+onMounted(async () => {
+  try {
+    clientOptions.value = await getClientOptions();
+  } catch { /* may not be accessible */ }
 });
 
 const newTag = ref('');
@@ -185,7 +213,9 @@ function removeTag(tag: string) {
 function handleSubmit() {
   // Flush any pending tag input
   if (newTag.value.trim()) addTag();
-  emit('submit', { ...formData });
+  // Send null for cleared client so Directus drops the FK rather than rejecting ''
+  const payload = { ...formData, client: formData.client || null };
+  emit('submit', payload);
 }
 
 defineExpose({
