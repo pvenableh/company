@@ -124,10 +124,47 @@ function goToToday() {
 // Post actions
 const selectedPost = ref<SocialPost | null>(null)
 const showPostModal = ref(false)
+const isDeleting = ref(false)
 
 function openPost(post: SocialPost) {
   selectedPost.value = post
   showPostModal.value = true
+}
+
+async function deleteSelectedPost() {
+  if (!selectedPost.value) return
+  if (!['draft', 'scheduled', 'failed'].includes(selectedPost.value.status)) {
+    toast.add({
+      title: 'Cannot delete',
+      description: 'Posts that went live stay in your history. Delete from the platform directly to retract.',
+      icon: 'i-lucide-alert-circle',
+      color: 'red',
+    })
+    return
+  }
+  if (!confirm(`Delete this ${selectedPost.value.status} post? This cannot be undone.`)) return
+
+  isDeleting.value = true
+  try {
+    await $fetch(`/api/social/posts/${selectedPost.value.id}`, { method: 'DELETE' })
+    toast.add({
+      title: 'Post deleted',
+      icon: 'i-lucide-check-circle',
+      color: 'green',
+    })
+    showPostModal.value = false
+    selectedPost.value = null
+    await refreshPosts()
+  } catch (error: any) {
+    toast.add({
+      title: 'Failed to delete',
+      description: error.data?.message || error.message || 'Unknown error',
+      icon: 'i-lucide-alert-circle',
+      color: 'red',
+    })
+  } finally {
+    isDeleting.value = false
+  }
 }
 
 function getPostsForDay(date: Date) {
@@ -377,10 +414,13 @@ const df = new DateFormatter('en-US', { month: 'long', year: 'numeric' })
         <template #footer>
           <div class="flex justify-between">
             <UButton
-              v-if="selectedPost.status === 'scheduled' || selectedPost.status === 'draft'"
+              v-if="['scheduled', 'draft', 'failed'].includes(selectedPost.status)"
               variant="soft"
               color="red"
               size="sm"
+              :loading="isDeleting"
+              :disabled="isDeleting"
+              @click="deleteSelectedPost"
             >
               Delete
             </UButton>

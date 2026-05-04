@@ -2,21 +2,39 @@
  * Facebook / Messenger Webhook Receiver
  * POST /api/social/oauth/facebook/webhook
  *
- * Receives event notifications subscribed in the Meta app dashboard for the
- * Messenger and Pages products (messages, messaging_postbacks, feed, mention,
- * etc.). Must always 200 OK quickly — Meta retries on non-2xx and disables the
- * webhook after repeated failures.
+ * Verifies the X-Hub-Signature-256 against the Meta app secret, then routes
+ * the payload through the shared inbox router. Must always 200 OK quickly —
+ * Meta retries on non-2xx and disables the webhook after repeated failures.
  *
  * Payload shape: https://developers.facebook.com/docs/graph-api/webhooks/reference/page
  */
 
-export default defineEventHandler(async (event) => {
-  const body = await readBody(event)
+import { verifyMetaWebhookSignature } from '~~/server/utils/meta-webhook-signature'
+import { routeWebhookEvent } from '~~/server/utils/social-inbox-router'
 
-  // TODO: route by `entry[].messaging` (Messenger DMs) and
-  // `entry[].changes[].field` (feed, mentions, etc.) and persist to a
-  // `social_inbox` collection. For now, log + ack.
-  console.log('[social:facebook:webhook] Received event:', JSON.stringify(body))
+export default defineEventHandler(async (event) => {
+  const { social } = useRuntimeConfig()
+  const appSecret = social?.facebook?.appSecret || social?.instagram?.appSecret || ''
+
+  const rawBody = (await readRawBody(event)) || ''
+  const signature = getHeader(event, 'x-hub-signature-256')
+
+  if (!verifyMetaWebhookSignature(rawBody, signature, appSecret)) {
+    console.warn('[social:facebook:webhook] Signature mismatch — rejecting')
+    throw createError({ statusCode: 401, statusMessage: 'Invalid signature' })
+  }
+
+  let payload: any
+  try {
+    payload = JSON.parse(typeof rawBody === 'string' ? rawBody : rawBody.toString('utf8'))
+  } catch {
+    throw createError({ statusCode: 400, statusMessage: 'Invalid JSON' })
+  }
+
+  // Fire-and-don't-await so we always 200 fast. Errors logged inside router.
+  routeWebhookEvent(payload).catch((err) => {
+    console.error('[social:facebook:webhook] Router error:', err)
+  })
 
   return { ok: true }
 })

@@ -3378,7 +3378,7 @@ export interface SocialActivity {
 	/** @description Connected social_accounts row @required */
 	account: SocialAccount | string;
 	/** @required */
-	platform: 'facebook' | 'instagram';
+	platform: 'facebook' | 'instagram' | 'threads';
 	/** @required */
 	type: 'comment' | 'mention' | 'reaction' | 'follow' | 'lead';
 	/** @description Meta's comment_id, post_id, etc. */
@@ -3522,8 +3522,8 @@ export interface SocialThread {
 	/** @description Connected social_accounts row @required */
 	account: SocialAccount | string;
 	/** @required */
-	platform: 'facebook' | 'instagram';
-	/** @description Meta's t_{...} for FB, conversation ID for IG @required */
+	platform: 'facebook' | 'instagram' | 'threads';
+	/** @description Meta's t_{...} for FB, conversation ID for IG, conversation ID for Threads @required */
 	thread_id: string;
 	/** @description PSID (FB) or IGSID (IG) @required */
 	participant_id: string;

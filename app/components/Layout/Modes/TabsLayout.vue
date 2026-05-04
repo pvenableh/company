@@ -112,6 +112,7 @@ function isActive(tabId: string): boolean {
           <Icon name="lucide:search" class="w-4 h-4" />
         </button>
 
+        <LayoutInboxBell />
         <LayoutNotificationsMenu />
 
         <NuxtLink v-if="user" to="/account" class="shrink-0">
@@ -136,6 +137,7 @@ function isActive(tabId: string): boolean {
         >
           <Icon name="lucide:search" class="w-4 h-4" />
         </button>
+        <LayoutInboxBell />
         <LayoutNotificationsMenu />
       </div>
     </header>

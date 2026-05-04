@@ -27,6 +27,7 @@ import {
   publishInstagramImage,
   publishInstagramReel,
   publishInstagramCarousel,
+  publishInstagramStory,
 } from '~~/server/adapters/instagram'
 import {
   publishThreadsText,
@@ -90,6 +91,9 @@ async function publishToTarget(
 
       case 'facebook': {
         const pageId = account.platform_user_id
+        if (post.post_type === 'story') {
+          throw new Error('Facebook Page Stories require additional permissions and are not yet supported. Use Instagram for cross-posted Stories.')
+        }
         if (!mediaUrls.length) {
           res = await publishFacebookTextPost(pageId, accessToken, text, post.cta_url || undefined)
         } else if (mediaTypes[0] === 'video') {
@@ -105,7 +109,18 @@ async function publishToTarget(
         if (!mediaUrls.length) {
           throw new Error('Instagram requires at least one image or video')
         }
-        if (mediaUrls.length > 1) {
+        if (post.post_type === 'story') {
+          if (mediaUrls.length > 1) {
+            throw new Error('Instagram Stories accept one image or video at a time')
+          }
+          const storyRes = await publishInstagramStory(
+            igUserId,
+            accessToken,
+            mediaUrls[0]!,
+            (mediaTypes[0] === 'video' ? 'video' : 'image') as 'image' | 'video',
+          )
+          res = { id: storyRes.id }
+        } else if (post.post_type === 'carousel' || mediaUrls.length > 1) {
           res = await publishInstagramCarousel(
             igUserId,
             accessToken,
@@ -115,7 +130,7 @@ async function publishToTarget(
             })),
             text,
           )
-        } else if (mediaTypes[0] === 'video' || post.post_type === 'reel') {
+        } else if (post.post_type === 'reel' || mediaTypes[0] === 'video') {
           res = await publishInstagramReel(igUserId, accessToken, mediaUrls[0]!, text)
         } else {
           res = await publishInstagramImage(igUserId, accessToken, mediaUrls[0]!, text)

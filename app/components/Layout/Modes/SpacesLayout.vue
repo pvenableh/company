@@ -77,6 +77,7 @@ const initials = computed(() => {
 					>
 						<Icon name="lucide:search" class="w-4 h-4" />
 					</button>
+					<LayoutInboxBell />
 					<LayoutNotificationsMenu />
 					<NuxtLink v-if="user" to="/account" class="shrink-0">
 						<Avatar class="size-7">

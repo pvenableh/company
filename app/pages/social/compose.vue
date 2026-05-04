@@ -10,6 +10,7 @@
  */
 
 import { format, addHours, roundToNearestMinutes } from 'date-fns';
+import draggable from 'vuedraggable';
 import type { SocialAccountPublic, SocialPostTarget, PostType, SocialPlatform } from '~~/shared/social';
 
 const showAIWizard = ref(false);
@@ -46,7 +47,6 @@ const caption = ref('');
 const mediaUrls = ref<string[]>([]);
 const mediaTypes = ref<('image' | 'video')[]>([]);
 const selectedAccounts = ref<string[]>([]);
-const postType = ref<PostType>('image');
 const scheduledAt = ref(
 	format(roundToNearestMinutes(addHours(new Date(), 1), { nearestTo: 15 }), "yyyy-MM-dd'T'HH:mm"),
 );
@@ -135,15 +135,49 @@ const captionLimit = computed(() => {
 	return '4,000';
 });
 
-const postTypeOptions = [
-	{ value: 'text', label: 'Text', icon: 'i-lucide-type' },
-	{ value: 'image', label: 'Image', icon: 'i-lucide-image' },
-	{ value: 'video', label: 'Video', icon: 'i-lucide-video' },
-	{ value: 'carousel', label: 'Carousel', icon: 'i-lucide-images' },
-	{ value: 'reel', label: 'Reel', icon: 'i-lucide-clapperboard' },
-	{ value: 'story', label: 'Story', icon: 'i-lucide-clock' },
-	{ value: 'article', label: 'Article', icon: 'i-lucide-newspaper' },
-];
+// "Post as Story" is the only genuine user intent that can't be derived from
+// the attached media — same image/video can go to Feed *or* Story. Everything
+// else (image vs carousel vs reel vs text) is computed in `derivedPostType`
+// from media count + types.
+const postAsStory = ref(false);
+
+const storyEligible = computed(() => {
+	return (
+		instagramSelected.value &&
+		mediaUrls.value.length === 1 &&
+		(mediaTypes.value[0] === 'image' || mediaTypes.value[0] === 'video')
+	);
+});
+
+const storyBlockReason = computed(() => {
+	if (!instagramSelected.value) return 'Stories require an Instagram account';
+	if (mediaUrls.value.length === 0) return 'Add 1 image or video';
+	if (mediaUrls.value.length > 1) return 'Stories accept a single media item';
+	return null;
+});
+
+// If the user toggled Story on and then made the post ineligible (added more
+// media, removed Instagram, etc.), warn + clear the flag so we don't ship a
+// silently-broken post_type.
+watch(storyEligible, (eligible) => {
+	if (!eligible && postAsStory.value) {
+		postAsStory.value = false;
+		toast.add({
+			title: 'Switched off "Post as Story"',
+			description: storyBlockReason.value || 'Story conditions no longer met',
+			icon: 'i-lucide-alert-circle',
+			color: 'amber',
+		});
+	}
+});
+
+const derivedPostType = computed<PostType>(() => {
+	if (postAsStory.value && storyEligible.value) return 'story';
+	if (mediaUrls.value.length === 0) return 'text';
+	if (mediaUrls.value.length > 1) return 'carousel';
+	if (mediaTypes.value[0] === 'video') return 'reel';
+	return 'image';
+});
 
 const canSubmit = computed(() => {
 	const hasCaption = caption.value.trim().length > 0;
@@ -151,10 +185,11 @@ const canSubmit = computed(() => {
 	const hasAccounts = selectedAccounts.value.length > 0;
 	const noWarning = !captionWarning.value;
 
-	// Text and article posts don't require media
-	const isTextType = postType.value === 'text' || postType.value === 'article';
-
-	return hasCaption && (hasMedia || isTextType) && hasAccounts && noWarning;
+	// Text-only posts (no media) are valid as long as the platforms support them.
+	// LinkedIn / Facebook / Threads accept text-only; Instagram / TikTok don't.
+	// We trust the platform-side validation in social-publish.ts to surface that
+	// at submit time rather than blocking here.
+	return hasCaption && (hasMedia || derivedPostType.value === 'text') && hasAccounts && noWarning;
 });
 
 const minDateTime = computed(() => format(new Date(), "yyyy-MM-dd'T'HH:mm"));
@@ -173,6 +208,18 @@ function removeMedia(index: number) {
 	mediaUrls.value.splice(index, 1);
 	mediaTypes.value.splice(index, 1);
 }
+
+// vuedraggable wants a single array of objects. We keep the storage as
+// parallel arrays (mediaUrls + mediaTypes) so the rest of the page and the
+// publish payload don't need to change — this computed pairs them for the
+// drag UI and splits them back on reorder.
+const mediaItems = computed<{ url: string; type: 'image' | 'video' }[]>({
+	get: () => mediaUrls.value.map((url, i) => ({ url, type: mediaTypes.value[i] || 'image' })),
+	set: (next) => {
+		mediaUrls.value = next.map((it) => it.url);
+		mediaTypes.value = next.map((it) => it.type);
+	},
+});
 
 function toggleAccount(accountId: string) {
 	const index = selectedAccounts.value.indexOf(accountId);
@@ -218,7 +265,7 @@ function buildPostBody(status: 'draft' | 'scheduled') {
 		media_urls: mediaUrls.value,
 		media_types: mediaTypes.value,
 		platforms,
-		post_type: postType.value,
+		post_type: derivedPostType.value,
 		scheduled_at: new Date(scheduledAt.value).toISOString(),
 		status,
 		client: inferredClient.value,
@@ -347,32 +394,60 @@ function onPickFiles(picked: { url: string; type: 'image' | 'video' }[]) {
 					<template #header>
 						<div class="flex items-center justify-between">
 							<h2 class="font-semibold text-gray-900 dark:text-white">Media</h2>
-							<span v-if="postType === 'text' || postType === 'article'" class="text-xs text-gray-400">Optional for {{ postType }} posts</span>
+							<span v-if="derivedPostType === 'text'" class="text-xs text-gray-400">Optional — text-only post</span>
 						</div>
 					</template>
 
-					<div v-if="mediaUrls.length > 0" class="grid grid-cols-3 gap-3 mb-4">
-						<div
-							v-for="(url, index) in mediaUrls"
-							:key="index"
-							class="relative aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden group"
+					<div v-if="mediaUrls.length > 0">
+						<p
+							v-if="mediaUrls.length > 1"
+							class="mb-2 flex items-center gap-1.5 text-[11px] text-muted-foreground"
 						>
-							<img
-								v-if="mediaTypes[index] === 'image'"
-								:src="url"
-								:alt="`Media ${index + 1}`"
-								class="w-full h-full object-cover"
-							/>
-							<div v-else class="w-full h-full flex items-center justify-center">
-								<UIcon name="i-lucide-video" class="w-8 h-8 text-gray-400" />
-							</div>
-							<button
-								@click="removeMedia(index)"
-								class="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-							>
-								<UIcon name="i-lucide-x" class="w-4 h-4" />
-							</button>
-						</div>
+							<UIcon name="i-lucide-grip-vertical" class="w-3 h-3" />
+							Drag to reorder — first slide is the cover image
+						</p>
+						<draggable
+							v-model="mediaItems"
+							item-key="url"
+							class="grid grid-cols-3 gap-3 mb-4"
+							handle=".drag-handle"
+							:animation="150"
+						>
+							<template #item="{ element, index }">
+								<div class="relative aspect-square bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden group">
+									<img
+										v-if="element.type === 'image'"
+										:src="element.url"
+										:alt="`Media ${index + 1}`"
+										class="w-full h-full object-cover"
+									/>
+									<div v-else class="w-full h-full flex items-center justify-center">
+										<UIcon name="i-lucide-video" class="w-8 h-8 text-gray-400" />
+									</div>
+
+									<!-- Slide-order badge (1, 2, 3 ...) -->
+									<div
+										v-if="mediaUrls.length > 1"
+										class="absolute top-2 left-2 w-6 h-6 rounded-full bg-black/60 text-white text-[11px] font-semibold flex items-center justify-center backdrop-blur-sm"
+									>
+										{{ index + 1 }}
+									</div>
+
+									<!-- Drag handle: always-visible on desktop hover, always-on for touch -->
+									<div
+										class="drag-handle absolute inset-0 cursor-grab active:cursor-grabbing"
+										title="Drag to reorder"
+									></div>
+
+									<button
+										@click="removeMedia(index)"
+										class="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
+									>
+										<UIcon name="i-lucide-x" class="w-4 h-4" />
+									</button>
+								</div>
+							</template>
+						</draggable>
 					</div>
 
 					<div class="flex gap-2">
@@ -403,24 +478,52 @@ function onPickFiles(picked: { url: string; type: 'image' | 'video' }[]) {
 					</div>
 				</UCard>
 
-				<!-- Post Type -->
-				<UCard>
+				<!-- Post destination — Feed is automatic; user only chooses if they
+					 want to post to Story instead (Instagram + single media only). -->
+				<UCard v-if="instagramSelected">
 					<template #header>
-						<h2 class="font-semibold text-gray-900 dark:text-white">Post Type</h2>
+						<div class="flex items-center justify-between">
+							<h2 class="font-semibold text-gray-900 dark:text-white">Destination</h2>
+							<span class="text-[10px] uppercase tracking-wider text-muted-foreground">
+								{{ derivedPostType }}
+							</span>
+						</div>
 					</template>
 
-					<div class="flex flex-wrap gap-2">
-						<UButton
-							v-for="option in postTypeOptions"
-							:key="option.value"
-							:variant="postType === option.value ? 'solid' : 'soft'"
-							:color="postType === option.value ? 'primary' : 'gray'"
-							:icon="option.icon"
-							size="sm"
-							@click="postType = option.value as PostType"
+					<div class="flex items-start gap-3">
+						<button
+							type="button"
+							role="switch"
+							:aria-checked="postAsStory"
+							:disabled="!storyEligible"
+							class="relative inline-flex h-5 w-9 shrink-0 mt-0.5 cursor-pointer rounded-full border-2 border-transparent transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+							:class="postAsStory ? 'bg-primary' : 'bg-gray-300 dark:bg-gray-700'"
+							@click="postAsStory = !postAsStory"
 						>
-							{{ option.label }}
-						</UButton>
+							<span
+								class="inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform"
+								:class="postAsStory ? 'translate-x-4' : 'translate-x-0'"
+							/>
+						</button>
+						<div class="flex-1 min-w-0">
+							<label
+								class="text-sm font-medium text-gray-900 dark:text-gray-100 select-none cursor-pointer"
+								@click="storyEligible && (postAsStory = !postAsStory)"
+							>
+								Post as Instagram Story
+							</label>
+							<p v-if="storyBlockReason" class="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+								{{ storyBlockReason }}
+							</p>
+							<p v-else-if="postAsStory" class="text-xs text-amber-600 dark:text-amber-400 mt-0.5 flex items-center gap-1">
+								<UIcon name="i-lucide-clock" class="w-3 h-3" />
+								Stories disappear from your profile after 24 hours.
+							</p>
+							<p v-else class="text-xs text-muted-foreground mt-0.5">
+								Otherwise this posts to your feed as
+								<span class="font-medium">{{ derivedPostType }}</span>.
+							</p>
+						</div>
 					</div>
 				</UCard>
 
@@ -510,16 +613,24 @@ function onPickFiles(picked: { url: string; type: 'image' | 'video' }[]) {
 											:model-value="selectedAccounts.includes(account.id)"
 											@update:model-value="toggleAccount(account.id)"
 										/>
-										<UAvatar :src="account.profile_picture_url || undefined" :alt="account.account_name" size="xs" />
+										<div class="relative shrink-0">
+											<UAvatar
+												:src="account.profile_picture_url || undefined"
+												:alt="account.account_name"
+												:icon="account.profile_picture_url ? undefined : platformIcons(account.platform)"
+												size="xs"
+											/>
+											<UIcon
+												v-if="account.profile_picture_url"
+												:name="platformIcons(account.platform)"
+												class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-sm bg-white dark:bg-gray-800 ring-1 ring-white dark:ring-gray-800"
+											/>
+										</div>
 										<div class="flex-1 min-w-0">
 											<p class="text-sm font-medium text-gray-900 dark:text-white truncate">
 												{{ account.account_name }}
 											</p>
-											<p class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-												<UIcon
-													:name="platformIcons(account.platform)"
-													class="w-3 h-3"
-												/>
+											<p class="text-xs text-gray-500 dark:text-gray-400 truncate">
 												@{{ account.account_handle }}
 											</p>
 										</div>
@@ -535,7 +646,7 @@ function onPickFiles(picked: { url: string; type: 'image' | 'video' }[]) {
 					:caption="caption"
 					:media-count="mediaUrls.length"
 					:media-types="mediaTypes"
-					:post-type="postType"
+					:post-type="derivedPostType"
 					:platforms="selectedPlatforms"
 					:cta-url="ctaUrl"
 					:cta-label="ctaLabel"
@@ -600,6 +711,7 @@ function onPickFiles(picked: { url: string; type: 'image' | 'video' }[]) {
 				:cta-url="ctaUrl"
 				:cta-label="ctaLabel"
 				:accounts="selectedAccountDetails"
+				:post-type="derivedPostType"
 			/>
 		</div>
 

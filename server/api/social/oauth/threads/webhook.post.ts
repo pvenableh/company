@@ -1,12 +1,12 @@
 /**
- * Instagram Webhook Receiver
- * POST /api/social/oauth/instagram/webhook
+ * Threads Webhook Receiver
+ * POST /api/social/oauth/threads/webhook
  *
- * Verifies the X-Hub-Signature-256 against the Meta app secret, then routes
+ * Verifies the X-Hub-Signature-256 against the Threads app secret, then routes
  * the payload through the shared inbox router. Must always 200 OK quickly —
  * Meta retries on non-2xx and disables the webhook after repeated failures.
  *
- * Payload shape: https://developers.facebook.com/docs/graph-api/webhooks/reference/instagram
+ * Payload shape: https://developers.facebook.com/docs/threads/webhooks
  */
 
 import { verifyMetaWebhookSignature } from '~~/server/utils/meta-webhook-signature'
@@ -14,13 +14,13 @@ import { routeWebhookEvent } from '~~/server/utils/social-inbox-router'
 
 export default defineEventHandler(async (event) => {
   const { social } = useRuntimeConfig()
-  const appSecret = social?.instagram?.appSecret || social?.facebook?.appSecret || ''
+  const appSecret = social?.threads?.appSecret || social?.instagram?.appSecret || ''
 
   const rawBody = (await readRawBody(event)) || ''
   const signature = getHeader(event, 'x-hub-signature-256')
 
   if (!verifyMetaWebhookSignature(rawBody, signature, appSecret)) {
-    console.warn('[social:instagram:webhook] Signature mismatch — rejecting')
+    console.warn('[social:threads:webhook] Signature mismatch — rejecting')
     throw createError({ statusCode: 401, statusMessage: 'Invalid signature' })
   }
 
@@ -32,7 +32,7 @@ export default defineEventHandler(async (event) => {
   }
 
   routeWebhookEvent(payload).catch((err) => {
-    console.error('[social:instagram:webhook] Router error:', err)
+    console.error('[social:threads:webhook] Router error:', err)
   })
 
   return { ok: true }

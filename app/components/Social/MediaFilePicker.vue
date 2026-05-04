@@ -7,7 +7,12 @@
       <div class="bg-background rounded-lg shadow-xl w-full max-w-3xl mx-4 max-h-[85vh] flex flex-col">
         <!-- Header -->
         <div class="flex items-center justify-between px-5 py-3 border-b shrink-0">
-          <h3 class="font-semibold text-sm">Choose Media</h3>
+          <div>
+            <h3 class="font-semibold text-sm">Choose Media</h3>
+            <p class="text-[11px] text-muted-foreground mt-0.5">
+              Click to select multiple — pick 2+ to post as a carousel
+            </p>
+          </div>
           <button class="text-muted-foreground hover:text-foreground" @click="$emit('close')">
             <Icon name="lucide:x" class="w-4 h-4" />
           </button>
@@ -133,12 +138,19 @@
                     </span>
                   </div>
 
-                  <!-- Selected check -->
+                  <!-- Always-visible checkbox affordance: empty when unselected,
+                       filled when selected. Position numbered when 2+ are picked
+                       so users see carousel order. -->
                   <div
-                    v-if="isSelected(file.id)"
-                    class="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center shadow"
+                    class="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-semibold transition-all"
+                    :class="isSelected(file.id)
+                      ? 'bg-primary text-white shadow ring-2 ring-white'
+                      : 'bg-white/80 text-transparent ring-1 ring-gray-300 group-hover:ring-primary/60 backdrop-blur-sm'"
                   >
-                    <Icon name="lucide:check" class="w-3.5 h-3.5" />
+                    <span v-if="isSelected(file.id) && selected.length > 1">
+                      {{ selected.findIndex((s) => s.id === file.id) + 1 }}
+                    </span>
+                    <Icon v-else-if="isSelected(file.id)" name="lucide:check" class="w-3.5 h-3.5" />
                   </div>
 
                   <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -153,7 +165,11 @@
         <!-- Footer -->
         <div class="flex items-center justify-between px-5 py-3 border-t shrink-0">
           <span class="text-xs text-muted-foreground">
-            {{ selected.length }} selected
+            <template v-if="selected.length === 0">Nothing selected</template>
+            <template v-else-if="selected.length === 1">1 selected</template>
+            <template v-else>
+              {{ selected.length }} selected — will post as a carousel
+            </template>
           </span>
           <div class="flex gap-2">
             <UButton variant="ghost" size="sm" @click="$emit('close')">Cancel</UButton>

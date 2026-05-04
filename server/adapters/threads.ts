@@ -21,6 +21,8 @@ import type {
   PublishPayload,
   PublishResponse,
   PlatformComment,
+  PlatformConversation,
+  PlatformMessage,
 } from './types'
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -495,6 +497,105 @@ export async function replyToThreadsPost(
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
+// MESSAGING (Reply-thread inbox)
+//
+// Threads has no private DM API. The "inbox" surface treats each of the user's
+// own posts that has reply activity as a "conversation"; each public reply is
+// a "message". Outgoing messages are public replies posted via the same
+// container+publish flow used for top-level posts.
+// ══════════════════════════════════════════════════════════════════════════════
+
+type RawThreadsPost = {
+  id: string
+  text?: string
+  timestamp: string
+  permalink?: string
+  reply_audience?: string
+  username?: string
+}
+
+/**
+ * List the user's recent posts that have any reply activity. Each becomes one
+ * inbox "conversation". The participant slot holds the *post itself* (since
+ * Threads conversations are public and 1-to-many, there's no single counterpart).
+ */
+export async function getThreadsConversations(
+  userId: string,
+  accessToken: string,
+  cursor?: string,
+): Promise<{ conversations: PlatformConversation[]; nextCursor?: string }> {
+  const params: Record<string, string> = {
+    access_token: accessToken,
+    fields: 'id,text,timestamp,permalink,username',
+    limit: '50',
+  }
+  if (cursor) params.after = cursor
+
+  const res = await $fetch<{
+    data: RawThreadsPost[]
+    paging?: { cursors?: { after?: string }; next?: string }
+  }>(threadsUrl(`/${userId}/threads`), { params })
+
+  const conversations: PlatformConversation[] = (res.data || []).map((p) => ({
+    threadId: p.id,
+    participantId: p.id,
+    participantName: p.text ? p.text.slice(0, 80) : 'Threads post',
+    lastMessageAt: p.timestamp,
+    lastMessagePreview: p.text || '',
+  }))
+
+  return {
+    conversations,
+    nextCursor: res.paging?.next ? res.paging.cursors?.after : undefined,
+  }
+}
+
+type RawThreadsReply = {
+  id: string
+  text?: string
+  timestamp: string
+  username?: string
+  from?: { id: string; username?: string }
+}
+
+/**
+ * List replies in a Threads conversation. Returns the parent post first
+ * followed by chronological replies.
+ */
+export async function getThreadsConversationMessages(
+  parentPostId: string,
+  userId: string,
+  accessToken: string,
+  cursor?: string,
+): Promise<{ messages: PlatformMessage[]; nextCursor?: string }> {
+  const params: Record<string, string> = {
+    access_token: accessToken,
+    fields: 'id,text,timestamp,username,from',
+    limit: '50',
+  }
+  if (cursor) params.after = cursor
+
+  const res = await $fetch<{
+    data: RawThreadsReply[]
+    paging?: { cursors?: { after?: string }; next?: string }
+  }>(threadsUrl(`/${parentPostId}/conversation`), { params })
+
+  const messages: PlatformMessage[] = (res.data || []).map((r) => ({
+    messageId: r.id,
+    threadId: parentPostId,
+    fromId: r.from?.id || r.username || '',
+    isOutgoing: (r.from?.id || '') === userId,
+    text: r.text,
+    createdAt: r.timestamp,
+  }))
+
+  return {
+    messages,
+    nextCursor: res.paging?.next ? res.paging.cursors?.after : undefined,
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
 // ADAPTER INSTANCE
 // ══════════════════════════════════════════════════════════════════════════════
 
@@ -573,5 +674,34 @@ export const threadsAdapter: PlatformAdapter = {
     // In practice, the caller should provide userId::mediaId format
     const [userId, mediaId] = commentId.split('::')
     return replyToThreadsPost(userId, mediaId, accessToken, message)
+  },
+
+  async getConversations(accountId, accessToken, cursor) {
+    return getThreadsConversations(accountId, accessToken, cursor)
+  },
+
+  async getMessages(threadId, accountId, accessToken, cursor) {
+    return getThreadsConversationMessages(threadId, accountId, accessToken, cursor)
+  },
+
+  // Threads has no recipient — replies are public. The caller passes
+  // `userId::parentPostId` so the adapter can post a reply container under the
+  // right user with the right reply_to_id.
+  async sendMessage(recipientId, accessToken, payload) {
+    if (!payload.text) {
+      throw new Error('Threads replies require text — media-only replies are not supported')
+    }
+    const [userId, parentPostId] = recipientId.split('::')
+    if (!userId || !parentPostId) {
+      throw new Error('Threads sendMessage recipientId must be "userId::parentPostId"')
+    }
+    const res = await replyToThreadsPost(userId, parentPostId, accessToken, payload.text)
+    return { messageId: res.id }
+  },
+
+  // Threads has no read/unread state for replies — no-op so the inbox UI can
+  // call markRead uniformly across all platforms.
+  async markRead(_recipientId, _accessToken) {
+    return { success: true }
   },
 }

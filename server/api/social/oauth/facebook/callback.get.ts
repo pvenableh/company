@@ -13,6 +13,7 @@ import {
 import { decodeOAuthState } from '~~/server/utils/social-tenancy'
 import { requireOrgMembership } from '~~/server/utils/marketing-perms'
 import { computeTokenExpiry } from '~~/server/utils/oauth-expiry'
+import { subscribeMetaPage } from '~~/server/utils/meta-subscribe'
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)
@@ -87,6 +88,14 @@ export default defineEventHandler(async (event) => {
           entity_id: newAccount.id,
           platform: 'facebook',
         })
+      }
+
+      // Opt this Page into webhook events. Failure here is non-fatal — the
+      // account is still connected and posting works; the user just won't get
+      // realtime inbox events until they reconnect or we backfill.
+      const sub = await subscribeMetaPage(page.pageId, page.pageAccessToken)
+      if (!sub.ok) {
+        console.warn(`[social:oauth:facebook] subscribed_apps failed for page ${page.pageId}: ${sub.error}`)
       }
 
       connectedCount++

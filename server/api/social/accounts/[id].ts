@@ -7,9 +7,10 @@
 
 import { z } from 'zod'
 import { requireSocialOrg } from '~~/server/utils/social-tenancy'
-import { getSocialAccountById, logSocialActivity } from '~~/server/utils/social-directus'
+import { getSocialAccountById, getDecryptedAccessToken, logSocialActivity } from '~~/server/utils/social-directus'
 import { getTypedDirectus } from '~~/server/utils/directus'
 import { readItem, updateItem, deleteItem } from '@directus/sdk'
+import { unsubscribeMetaPage } from '~~/server/utils/meta-subscribe'
 
 const updateAccountSchema = z.object({
   client: z.string().uuid().nullable().optional(),
@@ -73,6 +74,19 @@ export default defineEventHandler(async (event) => {
   }
 
   if (method === 'DELETE') {
+    // Best-effort unsubscribe before deleting. FB rows store the page token as
+    // access_token; IG rows store the user token + page_id in metadata, so IG
+    // unsubscribe relies on whatever token the row has and may no-op silently.
+    if (account.platform === 'facebook' || account.platform === 'instagram') {
+      const pageId = account.platform === 'facebook'
+        ? account.platform_user_id
+        : (account.metadata as any)?.page_id
+      const token = await getDecryptedAccessToken(id)
+      if (pageId && token) {
+        await unsubscribeMetaPage(pageId, token)
+      }
+    }
+
     await directus.request(deleteItem('social_accounts', id))
     await logSocialActivity({
       action: 'account_disconnected',

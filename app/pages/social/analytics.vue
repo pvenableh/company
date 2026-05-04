@@ -69,6 +69,15 @@ const filteredAccounts = computed(() => {
   return accounts.value.filter((a) => a.client === selectedClientId.value)
 })
 
+// Options for the account dropdown — sentinel "All Accounts" + each account
+const accountSelectOptions = computed(() => [
+  { label: filteredAccounts.value.length > 0 ? `All Accounts (${filteredAccounts.value.length})` : 'No accounts connected', value: null },
+  ...filteredAccounts.value.map((a) => ({
+    label: `${a.account_name} • ${a.platform}${a.account_handle ? ` (@${a.account_handle})` : ''}`,
+    value: a.id,
+  })),
+])
+
 // When client changes, reset account selection
 watch(selectedClientId, () => {
   selectedAccountId.value = null
@@ -180,12 +189,22 @@ const platformIcons = (p: string) => getSocialPlatformIcon(p)
       />
       <USelectMenu
         v-model="selectedAccountId"
-        :options="[{ label: 'All Accounts', value: null }, ...filteredAccounts.map((a) => ({ label: `${a.account_name} (${a.platform})`, value: a.id }))]"
+        :options="accountSelectOptions"
         value-attribute="value"
         option-attribute="label"
-        placeholder="Select account"
-        class="w-52"
+        :placeholder="filteredAccounts.length === 0 ? 'No accounts connected' : 'All Accounts'"
+        :disabled="filteredAccounts.length === 0"
+        class="w-56"
       />
+      <UButton
+        v-if="filteredAccounts.length === 0"
+        to="/social/settings"
+        variant="soft"
+        size="sm"
+        icon="i-lucide-plus"
+      >
+        Connect
+      </UButton>
 
       <div class="flex-1" />
 

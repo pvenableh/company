@@ -97,6 +97,16 @@ export default defineEventHandler(async (event) => {
 			throw createError({ statusCode: 404, message: 'Post not found' });
 		}
 
+		// Only drafts/scheduled/failed can be removed. Posts that went live stay
+		// — they're a record of what was published. Delete from each platform directly
+		// if you need to retract them.
+		if (!['draft', 'scheduled', 'failed'].includes(existing.status)) {
+			throw createError({
+				statusCode: 400,
+				message: `Cannot delete a ${existing.status} post. Posts that went live stay in your history — delete from each platform directly to retract.`,
+			});
+		}
+
 		await deleteSocialPost(id);
 
 		await logSocialActivity({

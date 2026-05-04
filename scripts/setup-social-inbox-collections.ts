@@ -163,6 +163,7 @@ const userUpdatedField = {
 const platformChoices = [
 	{ text: 'Facebook', value: 'facebook' },
 	{ text: 'Instagram', value: 'instagram' },
+	{ text: 'Threads', value: 'threads' },
 ];
 
 // ─── social_threads ───────────────────────────────────────────────────────────

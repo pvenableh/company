@@ -67,24 +67,39 @@ export const socialPlatformIcon: Record<string, string> = {
 	facebook: 'logos:facebook',
 	instagram: 'logos:instagram-icon',
 	linkedin: 'logos:linkedin-icon',
+	// Legacy / variant keys all resolve to the LinkedIn brand mark
+	'linkedin-personal': 'logos:linkedin-icon',
+	'linkedin-org': 'logos:linkedin-icon',
+	'linkedin-organization': 'logos:linkedin-icon',
 	tiktok: 'logos:tiktok-icon',
 	threads: 'logos:threads-icon',
+	twitter: 'logos:x',
+	x: 'logos:x',
+	youtube: 'logos:youtube-icon',
 };
 
 export const socialPlatformLabel: Record<string, string> = {
 	facebook: 'Facebook',
 	instagram: 'Instagram',
 	linkedin: 'LinkedIn',
+	'linkedin-personal': 'LinkedIn',
+	'linkedin-org': 'LinkedIn',
+	'linkedin-organization': 'LinkedIn',
 	tiktok: 'TikTok',
 	threads: 'Threads',
+	twitter: 'X',
+	x: 'X',
+	youtube: 'YouTube',
 };
 
 export function getSocialPlatformIcon(platform: string | null | undefined): string {
 	if (!platform) return 'lucide:share-2';
-	return socialPlatformIcon[platform] ?? 'lucide:share-2';
+	const key = String(platform).toLowerCase().trim();
+	return socialPlatformIcon[key] ?? 'lucide:share-2';
 }
 
 export function getSocialPlatformLabel(platform: string | null | undefined): string {
 	if (!platform) return '';
-	return socialPlatformLabel[platform] ?? platform;
+	const key = String(platform).toLowerCase().trim();
+	return socialPlatformLabel[key] ?? platform;
 }

@@ -107,6 +107,7 @@ function isActiveItem(to: string): boolean {
 						<span class="hidden sm:inline">Search</span>
 						<kbd class="hidden sm:inline text-[9px] font-medium opacity-70 ml-1">⌘K</kbd>
 					</button>
+					<LayoutInboxBell />
 					<LayoutNotificationsMenu />
 				</div>
 			</header>

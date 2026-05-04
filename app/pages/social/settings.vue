@@ -373,7 +373,19 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
 
         <div v-else class="divide-y divide-gray-100 dark:divide-gray-800">
           <div v-for="account in accountsForPlatform(platform)" :key="account.id" class="flex items-center gap-4 py-4">
-            <UAvatar :src="account.profile_picture_url || undefined" :alt="account.account_name" size="lg" />
+            <div class="relative shrink-0">
+              <UAvatar
+                :src="account.profile_picture_url || undefined"
+                :alt="account.account_name"
+                :icon="account.profile_picture_url ? undefined : platformConfig[platform].icon"
+                size="lg"
+              />
+              <UIcon
+                v-if="account.profile_picture_url"
+                :name="platformConfig[platform].icon"
+                class="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-md bg-white dark:bg-gray-800 ring-2 ring-white dark:ring-gray-800"
+              />
+            </div>
             <div class="flex-1 min-w-0">
               <p class="font-medium text-gray-900 dark:text-white">{{ account.account_name }}</p>
               <p class="text-sm text-gray-500 dark:text-gray-400">@{{ account.account_handle }}</p>

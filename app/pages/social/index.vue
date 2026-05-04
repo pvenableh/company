@@ -125,53 +125,45 @@ const { getStatusColorName: statusColor } = useStatusStyle()
 
     <!-- Stats Grid -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-      <UCard>
-        <div class="flex items-center gap-4">
-          <div class="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
-            <UIcon name="i-lucide-calendar-clock" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
-          </div>
-          <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Scheduled</p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.total_scheduled }}</p>
-          </div>
+      <div class="ios-card p-5 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center shrink-0">
+          <UIcon name="i-lucide-calendar-clock" class="w-6 h-6 text-blue-600 dark:text-blue-400" />
         </div>
-      </UCard>
+        <div>
+          <p class="text-sm text-gray-500 dark:text-gray-400 leading-none">Scheduled</p>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white leading-none mt-1.5">{{ stats.total_scheduled }}</p>
+        </div>
+      </div>
 
-      <UCard>
-        <div class="flex items-center gap-4">
-          <div class="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl">
-            <UIcon name="i-lucide-check-circle" class="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
-          </div>
-          <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Published Today</p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.published_today }}</p>
-          </div>
+      <div class="ios-card p-5 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
+          <UIcon name="i-lucide-check-circle" class="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
         </div>
-      </UCard>
+        <div>
+          <p class="text-sm text-gray-500 dark:text-gray-400 leading-none">Published Today</p>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white leading-none mt-1.5">{{ stats.published_today }}</p>
+        </div>
+      </div>
 
-      <UCard>
-        <div class="flex items-center gap-4">
-          <div class="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl">
-            <UIcon name="i-lucide-trending-up" class="w-6 h-6 text-purple-600 dark:text-purple-400" />
-          </div>
-          <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Engagement</p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ stats.engagement_rate_avg }}%</p>
-          </div>
+      <div class="ios-card p-5 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center shrink-0">
+          <UIcon name="i-lucide-trending-up" class="w-6 h-6 text-purple-600 dark:text-purple-400" />
         </div>
-      </UCard>
+        <div>
+          <p class="text-sm text-gray-500 dark:text-gray-400 leading-none">Engagement</p>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white leading-none mt-1.5">{{ stats.engagement_rate_avg }}%</p>
+        </div>
+      </div>
 
-      <UCard>
-        <div class="flex items-center gap-4">
-          <div class="p-3 bg-pink-100 dark:bg-pink-900/30 rounded-xl">
-            <UIcon name="i-lucide-users" class="w-6 h-6 text-pink-600 dark:text-pink-400" />
-          </div>
-          <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">Followers</p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white">+{{ stats.follower_growth_weekly }}</p>
-          </div>
+      <div class="ios-card p-5 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-pink-500/10 flex items-center justify-center shrink-0">
+          <UIcon name="i-lucide-users" class="w-6 h-6 text-pink-600 dark:text-pink-400" />
         </div>
-      </UCard>
+        <div>
+          <p class="text-sm text-gray-500 dark:text-gray-400 leading-none">Followers</p>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white leading-none mt-1.5">+{{ stats.follower_growth_weekly }}</p>
+        </div>
+      </div>
     </div>
 
     <div class="grid lg:grid-cols-3 gap-6">
@@ -335,17 +327,24 @@ const { getStatusColorName: statusColor } = useStatusStyle()
               :key="account.id"
               class="flex items-center gap-3"
             >
-              <UAvatar
-                :src="account.profile_picture_url || undefined"
-                :alt="account.account_name"
-                size="sm"
-              />
+              <div class="relative shrink-0">
+                <UAvatar
+                  :src="account.profile_picture_url || undefined"
+                  :alt="account.account_name"
+                  :icon="account.profile_picture_url ? undefined : platformIcon(account.platform)"
+                  size="sm"
+                />
+                <UIcon
+                  v-if="account.profile_picture_url"
+                  :name="platformIcon(account.platform)"
+                  class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-sm bg-white dark:bg-gray-800 ring-1 ring-white dark:ring-gray-800"
+                />
+              </div>
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium text-gray-900 dark:text-white truncate">
                   {{ account.account_name }}
                 </p>
-                <p class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                  <UIcon :name="platformIcon(account.platform)" class="w-3 h-3" />
+                <p class="text-xs text-gray-500 dark:text-gray-400 truncate">
                   @{{ account.account_handle }}
                 </p>
               </div>

@@ -151,6 +151,7 @@ const initials = computed(() => {
 			<!-- Right: Context + Notifications + Avatar -->
 			<div class="flex items-center gap-2 shrink-0">
 				<LayoutContextPill />
+				<LayoutInboxBell />
 				<LayoutNotificationsMenu />
 				<NuxtLink v-if="user" to="/account" class="shrink-0">
 					<Avatar class="size-7">

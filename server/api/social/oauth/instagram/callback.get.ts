@@ -13,6 +13,7 @@ import {
 import { decodeOAuthState } from '~~/server/utils/social-tenancy'
 import { requireOrgMembership } from '~~/server/utils/marketing-perms'
 import { computeTokenExpiry } from '~~/server/utils/oauth-expiry'
+import { subscribeInstagramAccount } from '~~/server/utils/meta-subscribe'
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)
@@ -83,6 +84,14 @@ export default defineEventHandler(async (event) => {
           entity_id: newAccount.id,
           platform: 'instagram',
         })
+      }
+
+      // Opt the IG account's underlying Page into webhook events. Failure
+      // here is non-fatal — the account is still connected; the user just
+      // won't get realtime inbox events until they reconnect.
+      const sub = await subscribeInstagramAccount(ig.pageId, ig.pageAccessToken)
+      if (!sub.ok) {
+        console.warn(`[social:oauth:instagram] subscribed_apps failed for page ${ig.pageId}: ${sub.error}`)
       }
 
       connectedCount++

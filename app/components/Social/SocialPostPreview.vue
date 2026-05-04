@@ -18,8 +18,92 @@
 
     <!-- Active platform preview -->
     <div v-if="activeAccount" class="grid md:grid-cols-2 gap-6 items-start">
+      <!-- ─── Story (Instagram only) ──────────────────────────────────────── -->
+      <div
+        v-if="effectiveType === 'story' && active === 'instagram'"
+        class="relative rounded-2xl overflow-hidden max-w-[280px] aspect-[9/16] bg-gradient-to-br from-pink-600 via-purple-700 to-yellow-500 shadow-lg"
+      >
+        <img
+          v-if="firstMediaUrl && firstMediaType === 'image'"
+          :src="firstMediaUrl"
+          class="absolute inset-0 w-full h-full object-cover"
+        />
+        <div
+          v-else
+          class="absolute inset-0 flex items-center justify-center text-white/60"
+        >
+          <UIcon :name="firstMediaType === 'video' ? 'i-lucide-video' : 'i-lucide-image'" class="w-12 h-12" />
+        </div>
+
+        <!-- Top bar: progress + avatar -->
+        <div class="absolute top-0 inset-x-0 p-2.5">
+          <div class="h-0.5 bg-white/30 rounded-full overflow-hidden">
+            <div class="h-full w-1/3 bg-white" />
+          </div>
+          <div class="flex items-center gap-2 mt-2">
+            <div class="w-7 h-7 rounded-full bg-white/40 overflow-hidden ring-2 ring-white">
+              <img v-if="activeAccount.profile_picture_url" :src="activeAccount.profile_picture_url" class="w-full h-full object-cover" />
+            </div>
+            <span class="text-xs font-semibold text-white drop-shadow-md">
+              {{ activeAccount.account_handle || activeAccount.account_name }}
+            </span>
+            <span class="text-xs text-white/70 drop-shadow-md">now</span>
+          </div>
+        </div>
+
+        <!-- Caption pill -->
+        <div v-if="caption" class="absolute bottom-16 inset-x-3">
+          <p class="text-xs text-white whitespace-pre-wrap line-clamp-3 drop-shadow-md">{{ caption }}</p>
+        </div>
+
+        <div class="absolute bottom-3 inset-x-3 flex items-center gap-2">
+          <div class="flex-1 px-3 py-1.5 rounded-full border border-white/40 text-white/70 text-xs">
+            Send message
+          </div>
+          <UIcon name="i-lucide-heart" class="w-5 h-5 text-white" />
+          <UIcon name="i-lucide-send" class="w-5 h-5 text-white" />
+        </div>
+      </div>
+
+      <!-- ─── Reel (Instagram or TikTok) ──────────────────────────────────── -->
+      <div
+        v-else-if="effectiveType === 'reel' && (active === 'instagram' || active === 'tiktok')"
+        class="relative rounded-xl overflow-hidden max-w-[280px] aspect-[9/16] bg-black shadow-lg"
+      >
+        <img
+          v-if="firstMediaUrl && firstMediaType === 'image'"
+          :src="firstMediaUrl"
+          class="absolute inset-0 w-full h-full object-cover opacity-90"
+        />
+        <div
+          v-else
+          class="absolute inset-0 flex items-center justify-center text-white/40"
+        >
+          <UIcon name="i-lucide-clapperboard" class="w-12 h-12" />
+        </div>
+
+        <!-- Reel chrome: top + bottom -->
+        <div class="absolute top-3 left-3 text-white text-xs font-semibold drop-shadow-md flex items-center gap-1.5">
+          <UIcon name="i-lucide-clapperboard" class="w-3.5 h-3.5" />
+          {{ active === 'tiktok' ? 'TikTok' : 'Reels' }}
+        </div>
+
+        <div class="absolute right-2 bottom-24 flex flex-col items-center gap-3 text-white">
+          <UIcon name="i-lucide-heart" class="w-6 h-6 drop-shadow-md" />
+          <UIcon name="i-lucide-message-circle" class="w-6 h-6 drop-shadow-md" />
+          <UIcon name="i-lucide-send" class="w-6 h-6 drop-shadow-md" />
+          <UIcon name="i-lucide-bookmark" class="w-6 h-6 drop-shadow-md" />
+        </div>
+
+        <div class="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/80 to-transparent text-white">
+          <p class="text-sm font-semibold">@{{ activeAccount.account_handle || activeAccount.account_name }}</p>
+          <p class="text-xs whitespace-pre-wrap line-clamp-3 opacity-90 mt-0.5">{{ displayCaption }}</p>
+        </div>
+      </div>
+
+      <!-- ─── Default: feed-style cards by platform ───────────────────────── -->
       <!-- LinkedIn -->
-      <div v-if="active === 'linkedin'" class="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden max-w-md">
+      <div v-else-if="active === 'linkedin'" class="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden max-w-md">
         <div class="px-4 pt-3 pb-2 flex items-start gap-2">
           <div class="w-12 h-12 rounded-full bg-gray-200 overflow-hidden shrink-0">
             <img v-if="activeAccount.profile_picture_url" :src="activeAccount.profile_picture_url" class="w-full h-full object-cover" />
@@ -31,8 +115,15 @@
           <span class="text-xs text-gray-400">•••</span>
         </div>
         <div class="px-4 pb-3 text-sm text-gray-900 whitespace-pre-wrap">{{ displayCaption }}</div>
-        <div v-if="firstImageUrl" class="border-t bg-gray-100">
-          <img :src="firstImageUrl" class="w-full max-h-96 object-cover" />
+        <SocialPostPreviewCarousel
+          v-if="effectiveType === 'carousel' && mediaUrls.length > 1"
+          :media-urls="mediaUrls"
+          :media-types="mediaTypes"
+          aspect="video"
+        />
+        <img v-else-if="firstMediaUrl && firstMediaType === 'image'" :src="firstMediaUrl" class="w-full max-h-96 object-cover bg-gray-100" />
+        <div v-else-if="firstMediaUrl && firstMediaType === 'video'" class="bg-black aspect-video flex items-center justify-center">
+          <UIcon name="i-lucide-play-circle" class="w-12 h-12 text-white/80" />
         </div>
         <div v-else-if="ctaUrl" class="mx-4 mb-3 mt-1 border rounded-md overflow-hidden">
           <div class="bg-gray-100 h-32 flex items-center justify-center">
@@ -63,7 +154,16 @@
           </div>
         </div>
         <div class="px-4 pb-3 text-sm text-gray-900 whitespace-pre-wrap">{{ displayCaption }}</div>
-        <img v-if="firstImageUrl" :src="firstImageUrl" class="w-full max-h-96 object-cover bg-gray-100" />
+        <SocialPostPreviewCarousel
+          v-if="effectiveType === 'carousel' && mediaUrls.length > 1"
+          :media-urls="mediaUrls"
+          :media-types="mediaTypes"
+          aspect="video"
+        />
+        <img v-else-if="firstMediaUrl && firstMediaType === 'image'" :src="firstMediaUrl" class="w-full max-h-96 object-cover bg-gray-100" />
+        <div v-else-if="firstMediaUrl && firstMediaType === 'video'" class="bg-black aspect-video flex items-center justify-center">
+          <UIcon name="i-lucide-play-circle" class="w-12 h-12 text-white/80" />
+        </div>
         <div v-else-if="ctaUrl" class="mx-3 mb-3 border rounded-md overflow-hidden">
           <div class="bg-gradient-to-br from-blue-50 to-blue-100 h-32 flex items-center justify-center">
             <UIcon name="i-lucide-link-2" class="w-8 h-8 text-blue-400" />
@@ -80,7 +180,7 @@
         </div>
       </div>
 
-      <!-- Instagram -->
+      <!-- Instagram (feed-style — story/reel handled above) -->
       <div v-else-if="active === 'instagram'" class="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden max-w-sm">
         <div class="px-3 py-2 flex items-center gap-2 border-b">
           <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-pink-500 to-yellow-500 p-0.5">
@@ -93,8 +193,15 @@
           <p class="text-sm font-semibold text-gray-900 flex-1 truncate">{{ activeAccount.account_handle || activeAccount.account_name }}</p>
           <span class="text-xs text-gray-400">•••</span>
         </div>
-        <div class="aspect-square bg-gray-100 flex items-center justify-center">
-          <img v-if="firstImageUrl" :src="firstImageUrl" class="w-full h-full object-cover" />
+        <SocialPostPreviewCarousel
+          v-if="effectiveType === 'carousel' && mediaUrls.length > 1"
+          :media-urls="mediaUrls"
+          :media-types="mediaTypes"
+          aspect="square"
+        />
+        <div v-else class="aspect-square bg-gray-100 flex items-center justify-center">
+          <img v-if="firstMediaUrl && firstMediaType === 'image'" :src="firstMediaUrl" class="w-full h-full object-cover" />
+          <UIcon v-else-if="firstMediaUrl && firstMediaType === 'video'" name="i-lucide-play-circle" class="w-16 h-16 text-gray-400" />
           <UIcon v-else name="i-lucide-image" class="w-12 h-12 text-gray-300" />
         </div>
         <div class="px-3 py-2 flex items-center gap-3 text-gray-900">
@@ -124,7 +231,18 @@
               <span class="text-xs text-gray-400">now</span>
             </div>
             <div class="text-sm text-gray-900 whitespace-pre-wrap mt-0.5">{{ displayCaption }}</div>
-            <img v-if="firstImageUrl" :src="firstImageUrl" class="w-full mt-2 rounded-lg max-h-80 object-cover" />
+            <SocialPostPreviewCarousel
+              v-if="effectiveType === 'carousel' && mediaUrls.length > 1"
+              class="mt-2"
+              :media-urls="mediaUrls"
+              :media-types="mediaTypes"
+              aspect="square"
+              rounded
+            />
+            <img v-else-if="firstMediaUrl && firstMediaType === 'image'" :src="firstMediaUrl" class="w-full mt-2 rounded-lg max-h-80 object-cover" />
+            <div v-else-if="firstMediaUrl && firstMediaType === 'video'" class="bg-black mt-2 rounded-lg aspect-video flex items-center justify-center">
+              <UIcon name="i-lucide-play-circle" class="w-10 h-10 text-white/80" />
+            </div>
           </div>
         </div>
         <div class="px-4 pb-3 pl-14 flex items-center gap-4 text-gray-500">
@@ -135,9 +253,11 @@
         </div>
       </div>
 
-      <!-- TikTok -->
+      <!-- TikTok (always portrait — reel chrome handled above; this is the
+           plain feed entry, kept for parity but rarely hit because TikTok
+           posts default to reel) -->
       <div v-else-if="active === 'tiktok'" class="rounded-lg border border-gray-200 bg-black overflow-hidden max-w-[280px] aspect-[9/16] relative">
-        <img v-if="firstImageUrl" :src="firstImageUrl" class="absolute inset-0 w-full h-full object-cover" />
+        <img v-if="firstMediaUrl && firstMediaType === 'image'" :src="firstMediaUrl" class="absolute inset-0 w-full h-full object-cover" />
         <div v-else class="absolute inset-0 flex items-center justify-center text-white/40">
           <UIcon name="i-lucide-video" class="w-12 h-12" />
         </div>
@@ -176,7 +296,7 @@
 </template>
 
 <script setup lang="ts">
-import type { SocialAccountPublic, SocialPlatform } from '~~/shared/social';
+import type { SocialAccountPublic, SocialPlatform, PostType } from '~~/shared/social';
 
 const props = defineProps<{
   caption: string;
@@ -185,6 +305,7 @@ const props = defineProps<{
   ctaUrl: string;
   ctaLabel: string;
   accounts: SocialAccountPublic[];
+  postType?: PostType;
 }>();
 
 import { getSocialPlatformIcon, getSocialPlatformLabel } from '~/utils/icons';
@@ -215,12 +336,18 @@ const otherAccountsForActive = computed(() =>
   props.accounts.filter((a) => a.platform === active.value && a.id !== activeAccount.value?.id),
 );
 
-const firstImageUrl = computed(() => {
-  for (let i = 0; i < props.mediaUrls.length; i++) {
-    if (props.mediaTypes[i] === 'image') return props.mediaUrls[i];
-  }
-  return null;
+// Per-platform effective type. Some types (story, reel) only render their
+// chrome on platforms that support them — otherwise fall back to a feed post
+// so users see *something* sensible per tab.
+const effectiveType = computed<PostType>(() => {
+  const t = props.postType || 'image';
+  if (t === 'story' && active.value !== 'instagram') return 'image';
+  if (t === 'reel' && active.value !== 'instagram' && active.value !== 'tiktok') return 'video';
+  return t;
 });
+
+const firstMediaUrl = computed(() => props.mediaUrls[0] || null);
+const firstMediaType = computed(() => props.mediaTypes[0] || 'image');
 
 const ctaHost = computed(() => {
   if (!props.ctaUrl) return '';
