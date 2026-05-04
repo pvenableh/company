@@ -92,7 +92,7 @@ const sellerLogoUrl = computed(() => {
 					class="lg:pl-3 my-1 flex flex-col items-start justify-between pb-12 line-item"
 				>
 					<div class="w-full flex flex-col md:flex-row items-start justify-between">
-						<p class="uppercase text-[12px] font-bold">{{ item.product.name }}</p>
+						<p class="uppercase text-[12px] font-bold">{{ item.product?.name || 'Item' }}</p>
 						<div class="hidden md:flex items-center flex-grow ml-1 mr-3 min-w-[20px] h-[15px]">
 							<div class="w-full border-b border-gray-200 dark:border-gray-700"></div>
 						</div>

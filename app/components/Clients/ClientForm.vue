@@ -39,6 +39,18 @@
     </div>
 
     <div class="space-y-1">
+      <label class="t-label text-muted-foreground">Parent Client</label>
+      <p class="text-xs text-muted-foreground">If this is a sub-brand, select its parent. Billing info inherits from the parent when not set here.</p>
+      <select
+        v-model="formData.parent_client"
+        class="w-full rounded-full border bg-background px-3 py-2 text-sm mt-1"
+      >
+        <option value="">None (top-level client)</option>
+        <option v-for="opt in parentClientOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+      </select>
+    </div>
+
+    <div class="space-y-1">
       <label class="t-label text-muted-foreground">Tags</label>
       <div class="flex flex-wrap items-center gap-1.5">
         <span
@@ -84,7 +96,7 @@
           </button>
         </div>
       </div>
-      <div class="pt-1">
+      <div class="pt-1 flex flex-wrap items-center gap-2 relative">
         <Button
           type="button"
           variant="outline"
@@ -94,6 +106,55 @@
           <Icon name="lucide:plus" class="w-3 h-3 mr-1" />
           Add Contact
         </Button>
+        <Button
+          v-if="isEditing"
+          type="button"
+          variant="ghost"
+          size="sm"
+          @click="togglePicker"
+        >
+          <Icon name="lucide:users" class="w-3 h-3 mr-1" />
+          Pick from existing
+        </Button>
+
+        <div
+          v-if="showPicker"
+          class="absolute left-0 top-full mt-1 z-30 w-full max-w-md rounded-xl border border-border bg-popover shadow-lg"
+        >
+          <div class="px-3 py-2 border-b border-border/40 text-[10px] uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+            <span>Connected contacts</span>
+            <button type="button" class="text-muted-foreground/60 hover:text-foreground" @click="showPicker = false">
+              <Icon name="lucide:x" class="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <div v-if="loadingPickerContacts" class="px-3 py-6 text-center text-xs text-muted-foreground">
+            <Icon name="lucide:loader-2" class="w-4 h-4 animate-spin inline-block" />
+          </div>
+          <div v-else-if="!availablePickerContacts.length" class="px-3 py-6 text-center text-xs text-muted-foreground">
+            No contacts with email on this client or its parent chain.
+          </div>
+          <div v-else class="max-h-[280px] overflow-y-auto">
+            <button
+              v-for="c in availablePickerContacts"
+              :key="c.id"
+              type="button"
+              class="w-full flex items-center gap-2 px-3 py-2 hover:bg-muted/40 border-b border-border/30 last:border-b-0 text-left"
+              @click="addContactFromPicker(c)"
+            >
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium truncate">{{ c.first_name }} {{ c.last_name }}</p>
+                <p class="text-[11px] text-muted-foreground truncate">{{ c.email }}</p>
+              </div>
+              <span
+                v-if="c.source === 'parent'"
+                class="text-[9px] uppercase tracking-wider text-muted-foreground/70 shrink-0"
+                :title="`From ${c.fromName || 'parent client'}`"
+              >
+                from {{ c.fromName }}
+              </span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -180,23 +241,17 @@ const accountStateOptions = [
 
 const industryItems = useDirectusItems('industries');
 const industries = ref<Array<{ id: string; name: string }>>([]);
-
-onMounted(async () => {
-  try {
-    industries.value = await industryItems.list({
-      fields: ['id', 'name'],
-      filter: { status: { _eq: 'published' } },
-      sort: ['name'],
-      limit: -1,
-    }) as any;
-  } catch { /* industries may not be accessible */ }
-});
+const { getClientOptions } = useClients();
+const { getAncestorClientIds } = useContactConnections();
+const contactItemsApi = useDirectusItems('contacts');
+const parentClientOptions = ref<Array<{ label: string; value: string }>>([]);
 
 const formData = reactive({
   name: props.client?.name || '',
   slug: props.client?.slug || '',
   website: props.client?.website || '',
   industry: (typeof props.client?.industry === 'object' ? (props.client?.industry as any)?.id : props.client?.industry) || '',
+  parent_client: (typeof props.client?.parent_client === 'object' ? (props.client?.parent_client as any)?.id : props.client?.parent_client) || '',
   notes: props.client?.notes || '',
   tags: [...(props.client?.tags || [])] as string[],
   billing_contacts: [...(props.client?.billing_contacts || [])] as { name: string; email: string }[],
@@ -211,6 +266,100 @@ const formData = reactive({
 if ((props.client as any)?.account_state) {
   accountStateModel.value = (props.client as any).account_state;
 }
+
+// ── Billing-contact picker (existing client + parent-chain contacts) ────────
+const showPicker = ref(false);
+const loadingPickerContacts = ref(false);
+type PickerContact = {
+  id: string;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  source: 'self' | 'parent';
+  fromName?: string;
+};
+const pickerContacts = ref<PickerContact[]>([]);
+
+async function loadPickerContacts() {
+  if (!props.client?.id) return;
+  loadingPickerContacts.value = true;
+  try {
+    const selfRows = (await contactItemsApi.list({
+      fields: ['id', 'first_name', 'last_name', 'email'],
+      filter: { client: { _eq: props.client.id } },
+      limit: -1,
+    })) as any[];
+
+    const ancestors = await getAncestorClientIds(props.client.id, 3);
+    const ancestorRows: PickerContact[] = [];
+    for (const a of ancestors) {
+      const rows = (await contactItemsApi.list({
+        fields: ['id', 'first_name', 'last_name', 'email'],
+        filter: { client: { _eq: a.id } },
+        limit: -1,
+      }).catch(() => [])) as any[];
+      for (const r of rows) {
+        ancestorRows.push({ ...r, source: 'parent', fromName: a.name });
+      }
+    }
+
+    pickerContacts.value = [
+      ...selfRows.map((r) => ({ ...r, source: 'self' as const })),
+      ...ancestorRows,
+    ];
+  } catch (err) {
+    console.error('[ClientForm] picker contact fetch failed:', err);
+    pickerContacts.value = [];
+  } finally {
+    loadingPickerContacts.value = false;
+  }
+}
+
+const availablePickerContacts = computed<PickerContact[]>(() => {
+  const existingEmails = new Set(
+    formData.billing_contacts
+      .map((c) => (c.email || '').trim().toLowerCase())
+      .filter(Boolean),
+  );
+  return pickerContacts.value.filter(
+    (c) => c.email?.trim() && !existingEmails.has(c.email.trim().toLowerCase()),
+  );
+});
+
+function togglePicker() {
+  showPicker.value = !showPicker.value;
+  if (showPicker.value && pickerContacts.value.length === 0) {
+    loadPickerContacts();
+  }
+}
+
+function addContactFromPicker(c: PickerContact) {
+  const name = `${c.first_name || ''} ${c.last_name || ''}`.trim();
+  formData.billing_contacts.push({
+    name: name || c.email || '',
+    email: c.email || '',
+  });
+  showPicker.value = false;
+}
+
+onMounted(async () => {
+  try {
+    industries.value = await industryItems.list({
+      fields: ['id', 'name'],
+      filter: { status: { _eq: 'published' } },
+      sort: ['name'],
+      limit: -1,
+    }) as any;
+  } catch { /* industries may not be accessible */ }
+
+  try {
+    const opts = await getClientOptions();
+    // Exclude self to prevent self-parenting
+    parentClientOptions.value = props.client?.id
+      ? opts.filter(o => o.value !== props.client?.id)
+      : opts;
+  } catch { /* options may not be accessible */ }
+});
 
 const newTag = ref('');
 
@@ -257,6 +406,7 @@ function handleSubmit() {
     account_state: accountStateModel.value,
     website: formData.website || undefined,
     industry: formData.industry || undefined,
+    parent_client: formData.parent_client || null,
     notes: formData.notes || undefined,
     tags: formData.tags.length ? formData.tags : undefined,
     billing_contacts: validContacts.length ? validContacts : undefined,
