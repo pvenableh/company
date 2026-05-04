@@ -107,6 +107,19 @@ const tiktokSelected = computed(() => hasPlatformSelected('tiktok'));
 const linkedinSelected = computed(() => hasPlatformSelected('linkedin'));
 const threadsSelected = computed(() => hasPlatformSelected('threads'));
 
+const selectedPlatforms = computed(() => {
+	const set = new Set<SocialPlatform>();
+	for (const a of selectedAccountDetails.value) set.add(a.platform);
+	return [...set];
+});
+
+const aiSuggesting = ref(false);
+function askEarnestForSuggestions() {
+	// Re-use the existing AI Wizard, pre-seeded with current draft as the topic
+	// so Earnest can rewrite/strengthen the post.
+	showAIWizard.value = true;
+}
+
 const captionLength = computed(() => caption.value.length);
 const captionWarning = computed(() => {
 	if (instagramSelected.value && captionLength.value > 2200) {
@@ -521,6 +534,20 @@ function onPickFiles(picked: { url: string; type: 'image' | 'video' }[]) {
 						</div>
 					</div>
 				</UCard>
+
+				<!-- Earnest Recommendations -->
+				<SocialPostRecommendations
+					:caption="caption"
+					:media-count="mediaUrls.length"
+					:media-types="mediaTypes"
+					:post-type="postType"
+					:platforms="selectedPlatforms"
+					:cta-url="ctaUrl"
+					:cta-label="ctaLabel"
+					:scheduled-at="scheduledAt"
+					:ai-loading="aiSuggesting"
+					@ai-recommend="askEarnestForSuggestions"
+				/>
 
 				<!-- Schedule -->
 				<UCard>
