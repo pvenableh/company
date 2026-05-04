@@ -3369,6 +3369,32 @@ export interface SocialAccount {
 	client?: Client | string | null;
 }
 
+export interface SocialActivity {
+	/** @primaryKey */
+	id: string;
+	date_created?: string | null;
+	/** @description Owning organization (tenant) @required */
+	organization: Organization | string;
+	/** @description Connected social_accounts row @required */
+	account: SocialAccount | string;
+	/** @required */
+	platform: 'facebook' | 'instagram';
+	/** @required */
+	type: 'comment' | 'mention' | 'reaction' | 'follow' | 'lead';
+	/** @description Meta's comment_id, post_id, etc. */
+	ref_id?: string | null;
+	/** @description Parent post if applicable */
+	post_id?: string | null;
+	actor_id?: string | null;
+	actor_name?: string | null;
+	preview?: string | null;
+	/** @description Original webhook payload for debugging + future re-parse */
+	raw_payload?: Record<string, any> | null;
+	read?: boolean;
+	/** @description Platform timestamp @required */
+	created_at: string;
+}
+
 export interface SocialActivityLog {
 	/** @primaryKey */
 	id: string;
@@ -3422,6 +3448,28 @@ export interface SocialComment {
 	username: string;
 }
 
+export interface SocialMessage {
+	/** @primaryKey */
+	id: string;
+	date_created?: string | null;
+	/** @description Parent thread @required */
+	thread: SocialThread | string;
+	/** @description Denormalized from thread for fast tenant filtering @required */
+	organization: Organization | string;
+	/** @description Meta's mid; UNIQUE for idempotent webhook ingestion @required */
+	platform_message_id: string;
+	/** @description PSID/IGSID or Page ID @required */
+	from_id: string;
+	is_outgoing?: boolean;
+	text?: string | null;
+	/** @description [{ type: image|video|audio|file, url }] */
+	attachments?: Record<string, any> | null;
+	/** @description [{ from_id, emoji }] */
+	reactions?: Record<string, any> | null;
+	/** @description Platform timestamp (not Directus date_created) @required */
+	created_at: string;
+}
+
 export interface SocialPost {
 	/** @primaryKey */
 	id: string;
@@ -3456,10 +3504,38 @@ export interface SocialPost {
 	organization: Organization | string;
 	/** @description Which agency client this post is for (defaults from selected accounts at compose time) */
 	client?: Client | string | null;
-	/** @description Optional CTA URL appended to the caption at publish time (LinkedIn/Facebook/Threads will OG-unfurl it). */
+	/** @description Optional URL appended to the caption at publish time. LinkedIn / Facebook / Threads will fetch OG tags and render a link card. */
 	cta_url?: string | null;
-	/** @description Short CTA label rendered alongside the URL (e.g. "Visit Website"). */
+	/** @description Short call-to-action label rendered alongside the URL (e.g. "Visit Website", "Book a Call"). */
 	cta_label?: string | null;
+}
+
+export interface SocialThread {
+	/** @primaryKey */
+	id: string;
+	date_created?: string | null;
+	date_updated?: string | null;
+	user_created?: string | null;
+	user_updated?: string | null;
+	/** @description Owning organization (tenant) @required */
+	organization: Organization | string;
+	/** @description Connected social_accounts row @required */
+	account: SocialAccount | string;
+	/** @required */
+	platform: 'facebook' | 'instagram';
+	/** @description Meta's t_{...} for FB, conversation ID for IG @required */
+	thread_id: string;
+	/** @description PSID (FB) or IGSID (IG) @required */
+	participant_id: string;
+	participant_name?: string | null;
+	participant_avatar?: string | null;
+	last_message_at?: string | null;
+	/** @description Snippet of latest message for list rendering */
+	last_message_preview?: string | null;
+	unread_count?: number;
+	archived?: boolean;
+	/** @description Optional triage assignee */
+	assigned_to?: DirectusUser | string | null;
 }
 
 export interface Task {
@@ -4464,10 +4540,13 @@ export interface Schema {
 	shop_variants: ShopVariant[];
 	slides: Slide[];
 	social_accounts: SocialAccount[];
+	social_activity: SocialActivity[];
 	social_activity_log: SocialActivityLog[];
 	social_analytics_snapshots: SocialAnalyticsSnapshot[];
 	social_comments: SocialComment[];
+	social_messages: SocialMessage[];
 	social_posts: SocialPost[];
+	social_threads: SocialThread[];
 	tasks: Task[];
 	tasks_directus_users: TasksDirectusUser[];
 	team_goals: TeamGoal[];
@@ -4689,10 +4768,13 @@ export enum CollectionNames {
 	shop_variants = 'shop_variants',
 	slides = 'slides',
 	social_accounts = 'social_accounts',
+	social_activity = 'social_activity',
 	social_activity_log = 'social_activity_log',
 	social_analytics_snapshots = 'social_analytics_snapshots',
 	social_comments = 'social_comments',
+	social_messages = 'social_messages',
 	social_posts = 'social_posts',
+	social_threads = 'social_threads',
 	tasks = 'tasks',
 	tasks_directus_users = 'tasks_directus_users',
 	team_goals = 'team_goals',

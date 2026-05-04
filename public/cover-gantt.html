@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Earnest — Cover Gantt</title>
+<style>
+  :root {
+    --bg: #fafaf9;
+    --ink: #1c1917;
+    --ink-muted: #78716c;
+    --line: #e7e5e4;
+    --line-soft: #f0efed;
+    --teal: #14b8a6;
+    --sky: #0ea5e9;
+    --amber: #f59e0b;
+    --green: #22c55e;
+    --pink: #f472b6;
+    --orange: #fb923c;
+    --cyan: #06b6d4;
+    --violet: #a78bfa;
+    --rose: #fb7185;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--ink); font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; -webkit-font-smoothing: antialiased; }
+  body { width: 1640px; height: 856px; overflow: hidden; }
+
+  .stage {
+    width: 1640px;
+    height: 856px;
+    padding: 56px 64px;
+    display: grid;
+    grid-template-columns: 540px 1fr;
+    gap: 48px;
+    align-items: center;
+  }
+
+  /* LinkedIn variant — 1584×396, banner layout */
+  body.linkedin { width: 1584px; height: 396px; }
+  body.linkedin .stage {
+    width: 1584px;
+    height: 396px;
+    padding: 28px 36px;
+    grid-template-columns: 380px 1fr;
+    gap: 28px;
+  }
+  body.linkedin .hero h1 { font-size: 36px; }
+  body.linkedin .hero .lede { font-size: 13px; margin-top: 12px; max-width: 340px; }
+  body.linkedin .hero .url { margin-top: 16px; font-size: 13px; }
+  body.linkedin .hero .brandbar { margin-bottom: 14px; font-size: 13px; }
+  body.linkedin .hero .brandbar .logo { width: 22px; height: 22px; border-radius: 6px; }
+  body.linkedin .panel { transform: none; }
+  body.linkedin .panel-header { padding: 10px 14px; }
+  body.linkedin .panel-title { font-size: 12px; }
+  body.linkedin .axis { height: 32px; }
+  body.linkedin .axis-spacer { height: 32px; }
+  body.linkedin .row-label, body.linkedin .row-track { height: 24px; }
+  body.linkedin .row-label .name { font-size: 11px; }
+  body.linkedin .bar { height: 8px; border-radius: 3px; }
+  body.linkedin .bar.parent { height: 10px; border-radius: 4px; }
+  body.linkedin .legend { padding: 8px 14px; font-size: 10px; }
+
+  /* ── Left hero ── */
+  .hero h1 {
+    font-size: 64px;
+    line-height: 1.05;
+    letter-spacing: -0.025em;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .hero h1 .em { font-style: italic; font-weight: 500; color: var(--ink-muted); }
+  .hero .lede {
+    margin-top: 24px;
+    font-size: 18px;
+    line-height: 1.5;
+    color: var(--ink-muted);
+    max-width: 460px;
+  }
+  .brandbar {
+    margin-bottom: 28px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: -0.01em;
+  }
+  .brandbar .logo {
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--teal), var(--sky));
+    box-shadow: 0 4px 16px rgba(20, 184, 166, 0.25);
+  }
+  .url {
+    margin-top: 36px;
+    font-size: 16px;
+    color: var(--ink);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+  .url .arrow { color: var(--teal); }
+
+  /* ── Gantt card ── */
+  .panel {
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow:
+      0 1px 2px rgba(28, 25, 23, 0.04),
+      0 8px 32px -8px rgba(28, 25, 23, 0.12),
+      0 24px 64px -24px rgba(28, 25, 23, 0.18);
+    transform: rotate(-0.3deg);
+  }
+  .panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .panel-title {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px; font-weight: 600; letter-spacing: -0.01em;
+  }
+  .panel-title .dot { width: 8px; height: 8px; border-radius: 999px; background: var(--teal); }
+  .quarter {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--ink-muted);
+    background: var(--line-soft);
+    padding: 4px 10px;
+    border-radius: 999px;
+    letter-spacing: 0.02em;
+  }
+
+  /* ── Gantt grid ── */
+  .gantt {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+  }
+  .axis-spacer { background: var(--bg); border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); height: 44px; }
+  .axis {
+    height: 44px;
+    border-bottom: 1px solid var(--line);
+    position: relative;
+    background: linear-gradient(to bottom, #fcfbfa, white);
+  }
+  .axis-month {
+    position: absolute;
+    top: 0; bottom: 0;
+    border-right: 1px dashed var(--line);
+    display: flex; align-items: center; justify-content: flex-start;
+    padding-left: 12px;
+    font-size: 11px; color: var(--ink-muted); font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .axis-month:last-child { border-right: none; }
+
+  .row {
+    display: contents;
+  }
+  .row-label {
+    border-right: 1px solid var(--line);
+    border-bottom: 1px solid var(--line-soft);
+    padding: 0 14px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: white;
+  }
+  .row-label .swatch {
+    width: 6px; height: 6px; border-radius: 999px; flex: 0 0 auto;
+  }
+  .row-label .name {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ink);
+    letter-spacing: -0.005em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .row-label.is-child .name { padding-left: 16px; color: var(--ink-muted); font-weight: 400; }
+  .row-track {
+    border-bottom: 1px solid var(--line-soft);
+    height: 36px;
+    position: relative;
+    background:
+      linear-gradient(to right,
+        transparent 0,
+        transparent calc(100% / 6 - 1px),
+        var(--line-soft) calc(100% / 6 - 1px),
+        var(--line-soft) calc(100% / 6),
+        transparent calc(100% / 6)),
+      linear-gradient(to right,
+        transparent 0,
+        transparent calc(2 * 100% / 6 - 1px),
+        var(--line-soft) calc(2 * 100% / 6 - 1px),
+        var(--line-soft) calc(2 * 100% / 6),
+        transparent calc(2 * 100% / 6)),
+      linear-gradient(to right,
+        transparent 0,
+        transparent calc(3 * 100% / 6 - 1px),
+        var(--line) calc(3 * 100% / 6 - 1px),
+        var(--line) calc(3 * 100% / 6),
+        transparent calc(3 * 100% / 6)),
+      linear-gradient(to right,
+        transparent 0,
+        transparent calc(4 * 100% / 6 - 1px),
+        var(--line-soft) calc(4 * 100% / 6 - 1px),
+        var(--line-soft) calc(4 * 100% / 6),
+        transparent calc(4 * 100% / 6)),
+      linear-gradient(to right,
+        transparent 0,
+        transparent calc(5 * 100% / 6 - 1px),
+        var(--line-soft) calc(5 * 100% / 6 - 1px),
+        var(--line-soft) calc(5 * 100% / 6),
+        transparent calc(5 * 100% / 6));
+  }
+
+  /* now-line */
+  .now-line {
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 1px;
+    background: var(--rose);
+    opacity: 0.55;
+  }
+  .now-line.with-cap::before {
+    content: '';
+    position: absolute;
+    top: -3px; left: -3px;
+    width: 7px; height: 7px;
+    border-radius: 999px;
+    background: var(--rose);
+    opacity: 1.6; /* clamps to 1 */
+  }
+
+  /* bars */
+  .bar {
+    position: absolute;
+    height: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-radius: 4px;
+  }
+  .bar.parent {
+    height: 14px;
+    border-radius: 5px;
+  }
+  .bar .label {
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-left: 8px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--ink-muted);
+    white-space: nowrap;
+  }
+  .milestone {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%) rotate(45deg);
+    width: 14px; height: 14px;
+    border-radius: 2px;
+    box-shadow: 0 0 0 2px white;
+  }
+
+  /* status opacity */
+  .s-completed { opacity: 0.32; }
+  .s-active { opacity: 1; }
+  .s-scheduled { opacity: 0.55; }
+
+  /* ── Status legend at panel base ── */
+  .legend {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 12px 18px;
+    border-top: 1px solid var(--line);
+    background: linear-gradient(to bottom, white, #fcfbfa);
+    font-size: 11px;
+    color: var(--ink-muted);
+  }
+  .legend .dot { width: 8px; height: 8px; border-radius: 999px; display: inline-block; margin-right: 6px; vertical-align: middle; }
+</style>
+</head>
+<body>
+  <script>
+    if (new URLSearchParams(location.search).get('variant') === 'linkedin') {
+      document.body.classList.add('linkedin');
+    }
+  </script>
+  <div class="stage">
+
+    <!-- ── Left hero ── -->
+    <div class="hero">
+      <div class="brandbar">
+        <div class="logo"></div>
+        <span>Earnest</span>
+      </div>
+      <h1>
+        Run your studio.<br />
+        <span class="em">Not your tool stack.</span>
+      </h1>
+      <p class="lede">
+        The operating system for solo studios and small agencies. Clients, projects, invoicing, and AI — in one place.
+      </p>
+      <div class="url">earnest.guru <span class="arrow">→</span></div>
+    </div>
+
+    <!-- ── Right: Clean Gantt panel ── -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title"><span class="dot"></span>Project Timeline</div>
+        <div class="quarter">Q2 · Q3 2026</div>
+      </div>
+
+      <div class="gantt">
+        <!-- axis -->
+        <div class="axis-spacer"></div>
+        <div class="axis">
+          <div class="axis-month" style="left:0;width:16.66%">May</div>
+          <div class="axis-month" style="left:16.66%;width:16.66%">Jun</div>
+          <div class="axis-month" style="left:33.33%;width:16.66%">Jul</div>
+          <div class="axis-month" style="left:50%;width:16.66%">Aug</div>
+          <div class="axis-month" style="left:66.66%;width:16.66%">Sep</div>
+          <div class="axis-month" style="left:83.33%;width:16.66%">Oct</div>
+        </div>
+
+        <!-- ── Project: Helios Brand System (parent) ── -->
+        <div class="row-label">
+          <span class="swatch" style="background: var(--teal)"></span>
+          <span class="name">Helios — Brand System</span>
+        </div>
+        <div class="row-track">
+          <div class="now-line with-cap" style="left: 28%"></div>
+          <div class="bar parent s-active" style="left: 4%; width: 52%; background: var(--teal);"></div>
+        </div>
+
+        <!-- children: design events -->
+        <div class="row-label is-child">
+          <span class="swatch" style="background: var(--pink)"></span>
+          <span class="name">Discovery</span>
+        </div>
+        <div class="row-track">
+          <div class="now-line" style="left: 28%"></div>
+          <div class="bar s-completed" style="left: 4%; width: 12%; background: var(--pink);"></div>
+        </div>
+
+        <div class="row-label is-child">
+          <span class="swatch" style="background: var(--pink)"></span>
+          <span class="name">Wireframes</span>
+        </div>
+        <div class="row-track">
+          <div class="now-line" style="left: 28%"></div>
+          <div class="bar s-completed" style="left: 16%; width: 12%; background: var(--pink);"></div>
+        </div>
+
+        <div class="row-label is-child">
+          <span class="swatch" style="background: var(--pink)"></span>
+          <span class="name">Visual Design</span>
+        </div>
+        <div class="row-track">
+          <div class="now-line" style="left: 28%"></div>
+          <div class="bar s-active" style="left: 22%; width: 18%; background: var(--pink);"></div>
+        </div>
+
+        <div class="row-label is-child">
+          <span class="swatch" style="background: var(--green)"></span>
+          <span class="name">Invoice · Milestone 1</span>
+        </div>
+        <div class="row-track">
+          <div class="now-line" style="left: 28%"></div>
+          <div class="milestone s-active" style="left: 38%; background: var(--green);"></div>
+        </div>
+
+        <!-- ── Project: Atlas — E-commerce ── -->
+        <div class="row-label">
+          <span class="swatch" style="background: var(--cyan)"></span>
+          <span class="name">Atlas — E-commerce</span>
+        </div>
+        <div class="row-track">
+          <div class="now-line" style="left: 28%"></div>
+          <div class="bar parent s-active" style="left: 14%; width: 60%; background: var(--cyan);"></div>
+        </div>
+
+        <div class="row-label is-child">
+          <span class="swatch" style="background: var(--cyan)"></span>
+          <span class="name">Catalog Build</span>
+        </div>
+        <div class="row-track">
+          <div class="now-line" style="left: 28%"></div>
+          <div class="bar s-active" style="left: 18%; width: 26%; background: var(--cyan);"></div>
+        </div>
+
+        <div class="row-label is-child">
+          <span class="swatch" style="background: var(--orange)"></span>
+          <span class="name">Launch Content</span>
+        </div>
+        <div class="row-track">
+          <div class="now-line" style="left: 28%"></div>
+          <div class="bar s-scheduled" style="left: 44%; width: 24%; background: var(--orange);"></div>
+        </div>
+
+        <!-- ── Project: Meridian — Campaign ── -->
+        <div class="row-label">
+          <span class="swatch" style="background: var(--orange)"></span>
+          <span class="name">Meridian — Campaign</span>
+        </div>
+        <div class="row-track">
+          <div class="now-line" style="left: 28%"></div>
+          <div class="bar parent s-scheduled" style="left: 32%; width: 50%; background: var(--orange);"></div>
+        </div>
+
+        <div class="row-label is-child">
+          <span class="swatch" style="background: var(--orange)"></span>
+          <span class="name">Strategy</span>
+        </div>
+        <div class="row-track">
+          <div class="now-line" style="left: 28%"></div>
+          <div class="bar s-scheduled" style="left: 32%; width: 18%; background: var(--orange);"></div>
+        </div>
+
+        <div class="row-label is-child">
+          <span class="swatch" style="background: var(--violet)"></span>
+          <span class="name">Production Hours</span>
+        </div>
+        <div class="row-track">
+          <div class="now-line" style="left: 28%"></div>
+          <div class="bar s-scheduled" style="left: 50%; width: 32%; background: var(--violet);"></div>
+        </div>
+
+        <!-- ── Project: Polaris — App Refresh ── -->
+        <div class="row-label">
+          <span class="swatch" style="background: var(--violet)"></span>
+          <span class="name">Polaris — App Refresh</span>
+        </div>
+        <div class="row-track">
+          <div class="now-line" style="left: 28%"></div>
+          <div class="bar parent s-active" style="left: 8%; width: 76%; background: var(--violet);"></div>
+        </div>
+
+      </div>
+
+      <div class="legend">
+        <span><span class="dot" style="background: var(--teal); opacity: 1"></span>Active</span>
+        <span><span class="dot" style="background: var(--sky); opacity: 0.55"></span>Scheduled</span>
+        <span><span class="dot" style="background: var(--green); opacity: 0.32"></span>Completed</span>
+        <span style="margin-left: auto; color: var(--rose); font-weight: 500;">▎ Today</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
