@@ -440,6 +440,76 @@ export async function getFacebookPageInsights(
 }
 
 /**
+ * Daily history of Page-level insights for a [since, until] window.
+ *
+ * Returns one row per day. Meta retains ~28 days for most page metrics — values
+ * outside that window come back as 0 or are missing. Caller should clamp the
+ * window before calling.
+ */
+export async function getFacebookPageInsightsHistory(
+  pageId: string,
+  pageAccessToken: string,
+  sinceUnix: number,
+  untilUnix: number,
+): Promise<Array<{ date: string; metrics: Record<string, number> }>> {
+  const res = await $fetch<{
+    data: Array<{
+      name: string
+      values: Array<{ value: number; end_time: string }>
+    }>
+  }>(graphUrl(`/${pageId}/insights`), {
+    params: {
+      access_token: pageAccessToken,
+      metric: 'page_impressions,page_post_engagements,page_fan_adds',
+      period: 'day',
+      since: String(sinceUnix),
+      until: String(untilUnix),
+    },
+  }).catch(() => ({ data: [] }))
+
+  // Pivot from metric-major (one entry per metric, value array per day) to
+  // day-major (one row per day, all metrics on it).
+  const byDate = new Map<string, Record<string, number>>()
+  for (const metric of res.data || []) {
+    for (const v of metric.values || []) {
+      const day = v.end_time?.slice(0, 10)
+      if (!day) continue
+      const row = byDate.get(day) || {}
+      row[metric.name] = Number(v.value) || 0
+      byDate.set(day, row)
+    }
+  }
+
+  return Array.from(byDate.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, metrics]) => ({ date, metrics }))
+}
+
+/**
+ * List recent Page post ids, oldest-first up to `limit`. Pairs with
+ * getFacebookPostInsights for the per-account backfill route.
+ */
+export async function listFacebookRecentPostIds(
+  pageId: string,
+  pageAccessToken: string,
+  limit: number,
+): Promise<Array<{ platformPostId: string; createdAt: string }>> {
+  const res = await $fetch<{
+    data: Array<{ id: string; created_time: string }>
+  }>(graphUrl(`/${pageId}/posts`), {
+    params: {
+      access_token: pageAccessToken,
+      fields: 'id,created_time',
+      limit: String(Math.min(100, Math.max(1, limit))),
+    },
+  }).catch(() => ({ data: [] }))
+
+  return (res.data || [])
+    .map((p) => ({ platformPostId: p.id, createdAt: p.created_time }))
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+}
+
+/**
  * Get per-post insights for a Facebook Page post.
  *
  * Returns flat metric → number map suitable for storing in
@@ -777,6 +847,14 @@ export const facebookAdapter: PlatformAdapter = {
 
   async getPostInsights(platformPostId, accessToken) {
     return getFacebookPostInsights(platformPostId, accessToken)
+  },
+
+  async getAccountMetricsHistory(accountId, accessToken, sinceUnix, untilUnix) {
+    return getFacebookPageInsightsHistory(accountId, accessToken, sinceUnix, untilUnix)
+  },
+
+  async listRecentPostIds(accountId, accessToken, limit) {
+    return listFacebookRecentPostIds(accountId, accessToken, limit)
   },
 
   async getComments(mediaId, accessToken) {

@@ -665,6 +665,47 @@ export async function getInstagramMediaInsights(
 }
 
 /**
+ * Daily history of account-level insights for a [since, until] window.
+ *
+ * Returns one row per day. Meta retains ~28 days for most IG account metrics;
+ * `profile_views` and `website_clicks` are user-only metrics that may be empty
+ * for Business accounts. Values outside the retention window come back missing.
+ */
+export async function getInstagramAccountInsightsHistory(
+  igUserId: string,
+  accessToken: string,
+  sinceUnix: number,
+  untilUnix: number,
+): Promise<Array<{ date: string; metrics: Record<string, number> }>> {
+  const res = await $fetch<{
+    data: Array<{ name: string; values: Array<{ value: number; end_time: string }> }>
+  }>(graphUrl(`/${igUserId}/insights`), {
+    params: {
+      access_token: accessToken,
+      metric: 'reach,impressions,profile_views,website_clicks',
+      period: 'day',
+      since: String(sinceUnix),
+      until: String(untilUnix),
+    },
+  }).catch(() => ({ data: [] }))
+
+  const byDate = new Map<string, Record<string, number>>()
+  for (const metric of res.data || []) {
+    for (const v of metric.values || []) {
+      const day = v.end_time?.slice(0, 10)
+      if (!day) continue
+      const row = byDate.get(day) || {}
+      row[metric.name] = Number(v.value) || 0
+      byDate.set(day, row)
+    }
+  }
+
+  return Array.from(byDate.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, metrics]) => ({ date, metrics }))
+}
+
+/**
  * Per-post insights for an IG media object. Returns a flat metric → number map.
  *
  * `video_views` is only valid for video media — we attempt the full set and
@@ -981,6 +1022,17 @@ export const instagramAdapter: PlatformAdapter = {
 
   async getPostInsights(platformPostId, accessToken) {
     return getInstagramPostInsights(platformPostId, accessToken)
+  },
+
+  async getAccountMetricsHistory(accountId, accessToken, sinceUnix, untilUnix) {
+    return getInstagramAccountInsightsHistory(accountId, accessToken, sinceUnix, untilUnix)
+  },
+
+  async listRecentPostIds(accountId, accessToken, limit) {
+    const media = await getInstagramRecentMedia(accountId, accessToken, limit)
+    return media
+      .map((m) => ({ platformPostId: m.id, createdAt: m.timestamp }))
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
   },
 
   async getComments(mediaId, accessToken) {

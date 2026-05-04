@@ -251,6 +251,64 @@ const isDeleting = ref<string | null>(null)
 const showDeleteModal = ref(false)
 const accountToDelete = ref<SocialAccountPublic | null>(null)
 
+// Backfill state
+const isBackfilling = ref<string | null>(null)
+const showBackfillModal = ref(false)
+const accountToBackfill = ref<SocialAccountPublic | null>(null)
+const backfillDays = ref(28)
+
+const BACKFILL_SUPPORTED_PLATFORMS: SocialPlatform[] = ['facebook', 'instagram']
+function supportsBackfill(account: SocialAccountPublic): boolean {
+  return BACKFILL_SUPPORTED_PLATFORMS.includes(account.platform)
+}
+
+function openBackfillModal(account: SocialAccountPublic) {
+  accountToBackfill.value = account
+  backfillDays.value = 28
+  showBackfillModal.value = true
+}
+
+async function runBackfill() {
+  if (!accountToBackfill.value) return
+  const accountId = accountToBackfill.value.id
+  const accountName = accountToBackfill.value.account_name
+  isBackfilling.value = accountId
+  showBackfillModal.value = false
+
+  try {
+    const res = (await $fetch(`/api/social/accounts/${accountId}/backfill`, {
+      method: 'POST',
+      body: { days: backfillDays.value },
+    })) as any
+
+    const lines = [
+      `${res.days_processed} day(s) added`,
+      res.days_skipped > 0 ? `${res.days_skipped} skipped` : null,
+      res.posts_processed > 0 ? `${res.posts_processed} post(s) added` : null,
+      res.days_failed > 0 || res.posts_failed > 0
+        ? `${res.days_failed + res.posts_failed} failed (see server logs)`
+        : null,
+    ].filter(Boolean)
+
+    toast.add({
+      title: `Backfill complete — ${accountName}`,
+      description: lines.join(' · ') + (res.note ? ` ${res.note}` : ''),
+      icon: 'i-lucide-check-circle',
+      color: 'green',
+    })
+  } catch (error: any) {
+    toast.add({
+      title: 'Backfill failed',
+      description: error.data?.message || error.message || 'Unknown error',
+      icon: 'i-lucide-alert-circle',
+      color: 'red',
+    })
+  } finally {
+    isBackfilling.value = null
+    accountToBackfill.value = null
+  }
+}
+
 function getTokenStatus(account: SocialAccountPublic) {
   const expiresAt = new Date(account.token_expires_at)
   const daysUntilExpiry = differenceInDays(expiresAt, new Date())
@@ -407,11 +465,21 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
             </UBadge>
             <UDropdown
               :items="[
-                [{ label: 'Reconnect', icon: 'i-lucide-refresh-cw', to: platformConfig[platform].connectPath, external: true }],
+                [
+                  { label: 'Reconnect', icon: 'i-lucide-refresh-cw', to: platformConfig[platform].connectPath, external: true },
+                  ...(supportsBackfill(account)
+                    ? [{
+                        label: isBackfilling === account.id ? 'Fetching history…' : 'Fetch history',
+                        icon: 'i-lucide-history',
+                        click: () => openBackfillModal(account),
+                        disabled: isBackfilling === account.id,
+                      }]
+                    : []),
+                ],
                 [{ label: 'Disconnect', icon: 'i-lucide-trash-2', click: () => confirmDelete(account) }],
               ]"
             >
-              <UButton variant="ghost" icon="i-lucide-more-vertical" size="sm" />
+              <UButton variant="ghost" icon="i-lucide-more-vertical" size="sm" :loading="isBackfilling === account.id" />
             </UDropdown>
           </div>
         </div>
@@ -527,6 +595,66 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
         </p>
       </div>
     </section>
+
+    <!-- Backfill Modal -->
+    <UModal v-model="showBackfillModal">
+      <UCard>
+        <template #header>
+          <div class="flex items-center gap-3">
+            <div class="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <UIcon name="i-lucide-history" class="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            </div>
+            <h3 class="font-semibold text-gray-900 dark:text-white">Fetch historical insights</h3>
+          </div>
+        </template>
+
+        <div class="space-y-4">
+          <p class="text-gray-600 dark:text-gray-300">
+            Pull daily account-level metrics and insights for up to
+            <strong>{{ backfillDays }} days</strong> of history on
+            <strong>{{ accountToBackfill?.account_name }}</strong>.
+          </p>
+
+          <div>
+            <label class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5 block">
+              Days to fetch
+            </label>
+            <div class="flex gap-2">
+              <UButton
+                v-for="opt in [7, 14, 28, 60, 90]"
+                :key="opt"
+                size="xs"
+                :variant="backfillDays === opt ? 'solid' : 'soft'"
+                @click="backfillDays = opt"
+              >{{ opt }}d</UButton>
+            </div>
+          </div>
+
+          <div class="rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40 p-3 text-xs text-amber-800 dark:text-amber-200 space-y-1">
+            <p>
+              <UIcon name="i-lucide-info" class="w-3.5 h-3.5 inline-block align-text-bottom mr-1" />
+              Meta retains roughly 28 days of account-level insights — anything before that may come back empty.
+            </p>
+            <p>
+              The fetch runs sequentially with 1-second pacing to stay under Graph API rate limits.
+              Up to 25 recent posts are also fetched. Total run time: {{ Math.ceil((backfillDays + 25) * 1.1) }}s.
+            </p>
+            <p>
+              Re-running is safe — already-captured days are skipped automatically.
+            </p>
+          </div>
+        </div>
+
+        <template #footer>
+          <div class="flex justify-end gap-3">
+            <UButton variant="ghost" @click="showBackfillModal = false">Cancel</UButton>
+            <UButton color="primary" @click="runBackfill">
+              Fetch {{ backfillDays }} days of history
+            </UButton>
+          </div>
+        </template>
+      </UCard>
+    </UModal>
 
     <!-- Delete Confirmation Modal -->
     <UModal v-model="showDeleteModal">

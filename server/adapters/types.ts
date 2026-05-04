@@ -129,6 +129,33 @@ export interface PlatformAdapter {
     accessToken: string,
   ): Promise<Record<string, number>>
 
+  /**
+   * Daily account-metrics history for a [since, until] window. Used by the
+   * per-account backfill route. Adapters return one row per day inside the
+   * window. Platforms with no historical insights endpoint (e.g. Threads)
+   * should not implement this.
+   *
+   * Meta-side retention is typically ~28 days for most page/IG metrics; the
+   * adapter forwards what the platform returns and never extrapolates.
+   */
+  getAccountMetricsHistory?(
+    accountId: string,
+    accessToken: string,
+    sinceUnix: number,
+    untilUnix: number,
+  ): Promise<Array<{ date: string; metrics: Record<string, number> }>>
+
+  /**
+   * List the platform-post ids of recent posts on an account, oldest-first up
+   * to `limit`. Used by the backfill route to find posts to fetch insights for.
+   * Doesn't return insights itself — caller pairs each id with getPostInsights.
+   */
+  listRecentPostIds?(
+    accountId: string,
+    accessToken: string,
+    limit: number,
+  ): Promise<Array<{ platformPostId: string; createdAt: string }>>
+
   // ── Comments (optional) ──
   getComments?(
     mediaId: string,
