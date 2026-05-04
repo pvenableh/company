@@ -439,6 +439,43 @@ export async function getFacebookPageInsights(
   }
 }
 
+/**
+ * Get per-post insights for a Facebook Page post.
+ *
+ * Returns flat metric → number map suitable for storing in
+ * social_analytics_snapshots.metrics. Reaction-by-type breakdown is flattened
+ * into reactions_{type} keys so the analytics UI can read them without parsing.
+ */
+export async function getFacebookPostInsights(
+  postId: string,
+  pageAccessToken: string,
+): Promise<Record<string, number>> {
+  const res = await $fetch<{
+    data: Array<{
+      name: string
+      values: Array<{ value: number | Record<string, number> }>
+    }>
+  }>(graphUrl(`/${postId}/insights`), {
+    params: {
+      access_token: pageAccessToken,
+      metric: 'post_impressions,post_engaged_users,post_reactions_by_type_total,post_clicks',
+    },
+  }).catch(() => ({ data: [] }))
+
+  const metrics: Record<string, number> = {}
+  for (const m of res.data || []) {
+    const value = m.values?.[0]?.value
+    if (typeof value === 'number') {
+      metrics[m.name] = value
+    } else if (value && typeof value === 'object') {
+      for (const [k, v] of Object.entries(value)) {
+        metrics[`${m.name}_${k}`] = Number(v) || 0
+      }
+    }
+  }
+  return metrics
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // COMMENTS
 // ══════════════════════════════════════════════════════════════════════════════
@@ -736,6 +773,10 @@ export const facebookAdapter: PlatformAdapter = {
       impressions: metrics.impressions || 0,
       engagement_rate: metrics.engagement_rate || 0,
     }
+  },
+
+  async getPostInsights(platformPostId, accessToken) {
+    return getFacebookPostInsights(platformPostId, accessToken)
   },
 
   async getComments(mediaId, accessToken) {

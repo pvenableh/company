@@ -555,22 +555,24 @@ type RawThreadsReply = {
   text?: string
   timestamp: string
   username?: string
-  from?: { id: string; username?: string }
+  is_reply_owned_by_me?: boolean
 }
 
 /**
- * List replies in a Threads conversation. Returns the parent post first
- * followed by chronological replies.
+ * List replies in a Threads conversation (all replies, any depth).
+ *
+ * Uses GET /{media-id}/conversation. Threads has no `from` field on replies —
+ * authorship is conveyed via `username` plus the boolean `is_reply_owned_by_me`.
  */
 export async function getThreadsConversationMessages(
   parentPostId: string,
-  userId: string,
+  _userId: string,
   accessToken: string,
   cursor?: string,
 ): Promise<{ messages: PlatformMessage[]; nextCursor?: string }> {
   const params: Record<string, string> = {
     access_token: accessToken,
-    fields: 'id,text,timestamp,username,from',
+    fields: 'id,text,timestamp,username,is_reply_owned_by_me',
     limit: '50',
   }
   if (cursor) params.after = cursor
@@ -583,8 +585,8 @@ export async function getThreadsConversationMessages(
   const messages: PlatformMessage[] = (res.data || []).map((r) => ({
     messageId: r.id,
     threadId: parentPostId,
-    fromId: r.from?.id || r.username || '',
-    isOutgoing: (r.from?.id || '') === userId,
+    fromId: r.username || '',
+    isOutgoing: r.is_reply_owned_by_me === true,
     text: r.text,
     createdAt: r.timestamp,
   }))
@@ -667,6 +669,10 @@ export const threadsAdapter: PlatformAdapter = {
         createdAt: r.timestamp,
       })),
     }
+  },
+
+  async getPostInsights(platformPostId, accessToken) {
+    return getThreadsMediaInsights(platformPostId, accessToken)
   },
 
   async replyToComment(commentId, accessToken, message) {

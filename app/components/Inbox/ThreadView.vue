@@ -124,6 +124,17 @@ const composerHint = computed(() => {
             >
               {{ fmt(m.created_at) }}
             </p>
+            <div
+              v-if="Array.isArray(m.reactions) && m.reactions.length"
+              class="mt-1 flex flex-wrap gap-1"
+            >
+              <span
+                v-for="(r, i) in m.reactions"
+                :key="i"
+                class="rounded-full bg-white px-1.5 py-0.5 text-sm leading-none shadow-sm ring-1 ring-gray-200 dark:bg-gray-900 dark:ring-gray-700"
+                :title="r.from_id || ''"
+              >{{ r.emoji || r.reaction || '👍' }}</span>
+            </div>
           </div>
         </div>
       </div>

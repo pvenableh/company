@@ -60,9 +60,16 @@ export default defineEventHandler(async (event) => {
         account_name: ig.name,
         account_handle: ig.username,
         profile_picture_url: ig.profilePictureUrl,
-        access_token: accessToken,
+        // Send API + subscribed_apps require the Page Access Token, not the user token.
+        access_token: ig.pageAccessToken,
         token_expires_at: tokenExpiresAt,
-        metadata: { page_id: ig.pageId, fb_user_id: userId },
+        metadata: {
+          page_id: ig.pageId,
+          fb_user_id: userId,
+          // Keep the user token around for refresh flows (Page tokens inherit
+          // expiry from the underlying long-lived user token).
+          user_access_token: accessToken,
+        },
       }
 
       if (existing) {

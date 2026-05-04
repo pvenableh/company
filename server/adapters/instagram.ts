@@ -665,6 +665,39 @@ export async function getInstagramMediaInsights(
 }
 
 /**
+ * Per-post insights for an IG media object. Returns a flat metric → number map.
+ *
+ * `video_views` is only valid for video media — we attempt the full set and
+ * fall back to the non-video set on `(#100)` errors so the call doesn't fail
+ * for image/carousel posts.
+ */
+export async function getInstagramPostInsights(
+  mediaId: string,
+  accessToken: string,
+): Promise<Record<string, number>> {
+  const fetchInsights = async (metricList: string) => {
+    const r = await $fetch<{ data: Array<{ name: string; values: Array<{ value: number }> }> }>(
+      graphUrl(`/${mediaId}/insights`),
+      { params: { access_token: accessToken, metric: metricList } },
+    )
+    return r
+  }
+
+  let res
+  try {
+    res = await fetchInsights('impressions,reach,engagement,saved,video_views')
+  } catch {
+    res = await fetchInsights('impressions,reach,engagement,saved').catch(() => ({ data: [] }))
+  }
+
+  const metrics: Record<string, number> = {}
+  for (const m of res.data || []) {
+    metrics[m.name] = m.values?.[0]?.value ?? 0
+  }
+  return metrics
+}
+
+/**
  * Get recent media for an account.
  */
 export async function getInstagramRecentMedia(
@@ -944,6 +977,10 @@ export const instagramAdapter: PlatformAdapter = {
       engagement_rate: metrics.engagement_rate || 0,
       profile_views: metrics.profile_views || 0,
     }
+  },
+
+  async getPostInsights(platformPostId, accessToken) {
+    return getInstagramPostInsights(platformPostId, accessToken)
   },
 
   async getComments(mediaId, accessToken) {

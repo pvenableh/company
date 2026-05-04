@@ -35,6 +35,7 @@ export interface InboxMessage {
   is_outgoing: boolean
   text: string | null
   attachments: Array<{ type: string; url: string }> | null
+  reactions: Array<{ from_id?: string; emoji?: string; reaction?: string }> | null
   created_at: string
 }
 

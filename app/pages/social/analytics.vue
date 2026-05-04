@@ -156,6 +156,10 @@ function formatChange(change: number, suffix = ''): string {
 
 import { getSocialPlatformIcon } from '~/utils/icons'
 const platformIcons = (p: string) => getSocialPlatformIcon(p)
+
+const hasAnyAccount = computed(() => filteredAccounts.value.length > 0)
+const hasAnySnapshot = computed(() => Object.keys(analytics.value.platformBreakdown).length > 0)
+const showEmptyState = computed(() => !analyticsLoading.value && (!hasAnyAccount.value || !hasAnySnapshot.value))
 </script>
 
 <template>
@@ -220,8 +224,33 @@ const platformIcons = (p: string) => getSocialPlatformIcon(p)
       </div>
     </div>
 
+    <!-- Empty state — no accounts, or accounts but no snapshots yet -->
+    <UCard v-if="showEmptyState" class="mb-6">
+      <div class="flex flex-col items-center justify-center py-12 text-center">
+        <UIcon name="i-lucide-bar-chart-3" class="h-10 w-10 text-gray-300 dark:text-gray-700 mb-3" />
+        <p class="text-sm font-medium text-gray-900 dark:text-white">
+          {{ hasAnyAccount ? 'No metrics yet' : 'Connect a social account to start tracking' }}
+        </p>
+        <p class="mt-1 max-w-md text-sm text-gray-500 dark:text-gray-400">
+          {{ hasAnyAccount
+            ? 'The daily refresh runs at 4 AM UTC. New snapshots will appear here within 24 hours of connecting an account.'
+            : 'Once a Facebook Page, Instagram, Threads, LinkedIn, or TikTok account is connected, daily metrics snapshots will populate this dashboard.' }}
+        </p>
+        <UButton
+          v-if="!hasAnyAccount"
+          to="/social/settings"
+          variant="solid"
+          size="sm"
+          icon="i-lucide-plus"
+          class="mt-4"
+        >
+          Connect account
+        </UButton>
+      </div>
+    </UCard>
+
     <!-- Overview Stats -->
-    <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+    <div v-show="!showEmptyState" class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
       <UCard>
         <div>
           <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Followers</p>
@@ -282,7 +311,7 @@ const platformIcons = (p: string) => getSocialPlatformIcon(p)
       </UCard>
     </div>
 
-    <div class="grid lg:grid-cols-3 gap-6 mb-6">
+    <div v-show="!showEmptyState" class="grid lg:grid-cols-3 gap-6 mb-6">
       <!-- Follower Growth Chart -->
       <UCard class="lg:col-span-2">
         <template #header>
@@ -342,7 +371,7 @@ const platformIcons = (p: string) => getSocialPlatformIcon(p)
     </div>
 
     <!-- Top Performing Posts -->
-    <UCard>
+    <UCard v-show="!showEmptyState">
       <template #header>
         <div class="flex items-center justify-between">
           <h3 class="font-semibold text-gray-900 dark:text-white">Top Performing Posts</h3>
@@ -385,7 +414,7 @@ const platformIcons = (p: string) => getSocialPlatformIcon(p)
     </UCard>
 
     <!-- Engagement Chart -->
-    <UCard class="mt-6">
+    <UCard v-show="!showEmptyState" class="mt-6">
       <template #header>
         <h3 class="font-semibold text-gray-900 dark:text-white">Engagement Rate Trend</h3>
       </template>

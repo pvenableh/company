@@ -281,6 +281,34 @@ export async function deleteSocialPost(id: string): Promise<void> {
 }
 
 /**
+ * List every active social_accounts row across all orgs. Used by the
+ * daily refresh-metrics cron — caller has already authenticated as cron.
+ */
+export async function findActiveSocialAccountsAcrossOrgs(): Promise<SocialAccount[]> {
+  return directusFetch<SocialAccount[]>('/items/social_accounts', {
+    params: {
+      'filter[account_status][_eq]': 'active',
+      limit: '-1',
+    },
+  })
+}
+
+/**
+ * Find recently published posts across all orgs. Used by the daily
+ * refresh-metrics cron to capture per-post insights inside a freshness window.
+ */
+export async function findRecentlyPublishedPostsAcrossOrgs(opts: { sinceIso: string }): Promise<DirectusSocialPost[]> {
+  return directusFetch<DirectusSocialPost[]>('/items/social_posts', {
+    params: {
+      'filter[post_status][_eq]': 'published',
+      'filter[published_at][_gte]': opts.sinceIso,
+      sort: '-published_at',
+      limit: '-1',
+    },
+  })
+}
+
+/**
  * Find posts due for publishing across all organizations. Used by the
  * scheduled-publish cron worker — caller has already authenticated as cron.
  */

@@ -118,6 +118,17 @@ export interface PlatformAdapter {
     accessToken: string,
   ): Promise<Record<string, number>>
 
+  /**
+   * Per-post insights. Called from the daily refresh cron for posts published
+   * in the last week. Adapters that don't implement this leave their post-level
+   * snapshots empty until added. Errors should bubble — caller handles per-post
+   * tolerance.
+   */
+  getPostInsights?(
+    platformPostId: string,
+    accessToken: string,
+  ): Promise<Record<string, number>>
+
   // ── Comments (optional) ──
   getComments?(
     mediaId: string,
