@@ -5,6 +5,9 @@
  * Maps NuxtUI's UModal API (v-model, title, description, preventClose,
  * fullscreen, slots: trigger/header/footer) onto shadcn-vue's Dialog
  * component system.
+ *
+ * Owns universal modal chrome: standard padding (px-6 py-4 per section)
+ * and a single top-right close button. Pass `hide-close` to suppress.
  */
 
 import { cn } from '@/lib/utils'
@@ -25,6 +28,7 @@ const props = withDefaults(
     description?: string
     preventClose?: boolean
     fullscreen?: boolean
+    hideClose?: boolean
     class?: string
     ui?: {
       base?: string
@@ -42,6 +46,7 @@ const props = withDefaults(
     modelValue: false,
     preventClose: false,
     fullscreen: false,
+    hideClose: false,
   }
 )
 
@@ -79,8 +84,9 @@ const handleEscapeKeyDown = (event: KeyboardEvent) => {
     </DialogTrigger>
 
     <DialogContent
-      :show-close-button="false"
+      :show-close-button="!hideClose"
       :class="cn(
+        'p-0 gap-0 overflow-hidden',
         props.fullscreen && 'max-w-none h-screen w-screen rounded-none sm:max-w-none',
         props.ui?.content,
         props.class
@@ -89,7 +95,10 @@ const handleEscapeKeyDown = (event: KeyboardEvent) => {
       @escape-key-down="handleEscapeKeyDown"
     >
       <!-- Header -->
-      <DialogHeader v-if="title || $slots.header" :class="props.ui?.header">
+      <DialogHeader
+        v-if="title || $slots.header"
+        :class="cn('px-6 py-4 border-b border-border/40', props.ui?.header)"
+      >
         <slot name="header">
           <DialogTitle v-if="title" :class="props.ui?.title">
             {{ title }}
@@ -101,12 +110,15 @@ const handleEscapeKeyDown = (event: KeyboardEvent) => {
       </DialogHeader>
 
       <!-- Body -->
-      <div :class="props.ui?.body">
+      <div :class="cn('px-6 py-4', props.ui?.body)">
         <slot />
       </div>
 
       <!-- Footer -->
-      <DialogFooter v-if="$slots.footer" :class="props.ui?.footer">
+      <DialogFooter
+        v-if="$slots.footer"
+        :class="cn('px-6 py-4 border-t border-border/40', props.ui?.footer)"
+      >
         <slot name="footer" />
       </DialogFooter>
     </DialogContent>

@@ -277,13 +277,10 @@ const handleSubmit = async () => {
 	<UModal v-model="isOpen" :ui="{ base: 'overflow-hidden', rounded: 'rounded-2xl', shadow: 'shadow-lg', ring: '', background: 'bg-card', padding: '', width: 'max-w-lg' }">
 		<div class="flex flex-col max-h-[calc(100vh-4rem)]">
 			<!-- Header (fixed) -->
-			<div class="flex-shrink-0 px-5 py-3.5 border-b border-border/30 flex items-center justify-between">
+			<div class="flex-shrink-0 px-5 py-3.5 border-b border-border/30 flex items-center">
 				<span class="text-[10px] font-semibold uppercase tracking-[0.08em] text-foreground/70">
 					{{ appointment ? 'Edit Event' : form.is_video ? 'New Video Meeting' : 'New Event' }}
 				</span>
-				<button type="button" @click="close" class="p-1.5 rounded-lg hover:bg-muted/30 transition-colors">
-					<UIcon name="i-heroicons-x-mark" class="w-4 h-4 text-muted-foreground" />
-				</button>
 			</div>
 
 			<!-- Form (scrollable) -->

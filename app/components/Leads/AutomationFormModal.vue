@@ -1,15 +1,10 @@
 <template>
 	<UModal v-model="isOpen" class="sm:max-w-lg">
 		<template #header>
-			<div class="flex items-center justify-between">
-				<h3 class="text-sm font-bold uppercase tracking-wide">{{ isEditing ? 'Edit Rule' : 'New Rule' }}</h3>
-				<Button variant="ghost" size="icon-sm" @click="isOpen = false">
-					<UIcon name="i-heroicons-x-mark" class="h-4 w-4" />
-				</Button>
-			</div>
+			<h3 class="text-sm font-bold uppercase tracking-wide">{{ isEditing ? 'Edit Rule' : 'New Rule' }}</h3>
 		</template>
 
-		<form @submit.prevent="handleSubmit" class="space-y-4 p-4 max-h-[70vh] overflow-y-auto">
+		<form @submit.prevent="handleSubmit" class="space-y-4 max-h-[70vh] overflow-y-auto">
 			<!-- Stages -->
 			<div class="grid grid-cols-2 gap-4">
 				<div class="space-y-1">

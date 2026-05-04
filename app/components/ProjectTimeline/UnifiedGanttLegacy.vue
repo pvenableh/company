@@ -739,14 +739,9 @@ function handleCloseDetail() {
 		<!-- Event Detail Modal -->
 		<UModal v-model="showEventDetail" class="sm:max-w-xl">
 			<template #header>
-				<div class="flex items-center justify-between w-full">
-					<div class="flex items-center gap-2">
-						<span v-if="selectedEventProject" class="inline-block h-2.5 w-2.5 rounded-full" :style="{ backgroundColor: selectedEventProject.color }" />
-						<h3 class="t-label">Event Detail</h3>
-					</div>
-					<Button variant="ghost" size="icon-sm" @click="handleCloseDetail">
-						<Icon name="i-heroicons-x-mark" class="h-4 w-4" />
-					</Button>
+				<div class="flex items-center gap-2">
+					<span v-if="selectedEventProject" class="inline-block h-2.5 w-2.5 rounded-full" :style="{ backgroundColor: selectedEventProject.color }" />
+					<h3 class="t-label">Event Detail</h3>
 				</div>
 			</template>
 			<div class="max-h-[70vh] overflow-y-auto px-4 pb-4">

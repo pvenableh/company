@@ -1092,12 +1092,7 @@ const showUndated = ref(false);
 		<UModal v-model="showEventDetail" class="sm:max-w-xl">
 			<template #header>
 				<div class="w-full space-y-3">
-					<div class="flex items-center justify-between">
-						<h3 class="text-sm font-bold uppercase tracking-wide">Event Details</h3>
-						<button @click="handleCloseDetail" class="p-1 text-muted-foreground hover:text-foreground">
-							<Icon name="lucide:x" class="w-4 h-4" />
-						</button>
-					</div>
+					<h3 class="text-sm font-bold uppercase tracking-wide pr-8">Event Details</h3>
 					<FormStatusTimeline
 						v-if="selectedEventFull && !loadingEventDetail"
 						:currentStatus="selectedEventFull.status || 'Active'"
@@ -1150,17 +1145,12 @@ const showUndated = ref(false);
 		<!-- Project Modal (editable if permitted, read-only otherwise) -->
 		<UModal v-model="showProjectPreview" class="sm:max-w-md">
 			<template #header>
-				<div class="flex items-center justify-between w-full">
-					<div class="flex items-center gap-2">
-						<span
-							class="w-3 h-3 rounded-full shrink-0"
-							:style="{ backgroundColor: selectedProject?.service?.color || '#d4d4d8' }"
-						/>
-						<span class="text-sm font-semibold">{{ selectedProject?.title }}</span>
-					</div>
-					<button @click="closeProjectPreview" class="p-1 text-muted-foreground hover:text-foreground">
-						<Icon name="lucide:x" class="w-4 h-4" />
-					</button>
+				<div class="flex items-center gap-2">
+					<span
+						class="w-3 h-3 rounded-full shrink-0"
+						:style="{ backgroundColor: selectedProject?.service?.color || '#d4d4d8' }"
+					/>
+					<span class="text-sm font-semibold">{{ selectedProject?.title }}</span>
 				</div>
 			</template>
 			<div v-if="selectedProject" class="p-4 space-y-3 text-sm">

@@ -3,10 +3,7 @@
 	<UModal v-model="isOpen" :ui="{ width: 'max-w-2xl' }">
 		<UCard>
 			<template #header>
-				<div class="flex items-center justify-between">
-					<h3 class="text-lg font-semibold">Create Video Meeting</h3>
-					<UButton color="gray" variant="ghost" icon="i-heroicons-x-mark" @click="close" />
-				</div>
+				<h3 class="text-lg font-semibold">Create Video Meeting</h3>
 			</template>
 
 			<form @submit.prevent="createMeeting" class="space-y-6">

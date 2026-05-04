@@ -132,15 +132,10 @@
 		<!-- New Project Modal -->
 		<UModal v-model="showNewProjectModal" title="New Project">
 			<template #header>
-				<div class="flex items-center justify-between w-full">
-					<h3 class="text-sm font-bold uppercase tracking-wide">New Project</h3>
-					<Button variant="ghost" size="icon-sm" @click="showNewProjectModal = false">
-						<UIcon name="i-heroicons-x-mark" class="h-4 w-4" />
-					</Button>
-				</div>
+				<h3 class="text-sm font-bold uppercase tracking-wide">New Project</h3>
 			</template>
 
-			<form @submit.prevent="handleCreateProject" class="space-y-4 p-4">
+			<form @submit.prevent="handleCreateProject" class="space-y-4">
 				<!-- Title -->
 				<div class="space-y-1">
 					<label class="t-label text-muted-foreground">Title *</label>
@@ -205,20 +200,15 @@
 		<!-- Post-Creation Timeline Prompt -->
 		<UModal v-model="showTimelinePrompt" title="Generate Timeline?">
 			<template #header>
-				<div class="flex items-center justify-between w-full">
-					<div class="flex items-center gap-2">
-						<div class="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
-							<UIcon name="i-heroicons-sparkles" class="h-3.5 w-3.5 text-white" />
-						</div>
-						<h3 class="text-sm font-bold uppercase tracking-wide">Generate Timeline?</h3>
+				<div class="flex items-center gap-2">
+					<div class="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
+						<UIcon name="i-heroicons-sparkles" class="h-3.5 w-3.5 text-white" />
 					</div>
-					<Button variant="ghost" size="icon-sm" @click="showTimelinePrompt = false">
-						<UIcon name="i-heroicons-x-mark" class="h-4 w-4" />
-					</Button>
+					<h3 class="text-sm font-bold uppercase tracking-wide">Generate Timeline?</h3>
 				</div>
 			</template>
 
-			<div class="p-4 space-y-3">
+			<div class="space-y-3">
 				<p class="text-sm text-foreground">
 					<span class="font-semibold">"{{ lastCreatedProject?.title }}"</span> has been created.
 				</p>

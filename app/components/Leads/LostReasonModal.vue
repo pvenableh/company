@@ -1,15 +1,10 @@
 <template>
 	<UModal v-model="isOpen" class="sm:max-w-sm">
 		<template #header>
-			<div class="flex items-center justify-between w-full">
-				<h3 class="text-sm font-bold uppercase tracking-wide">Mark Lead as Lost</h3>
-				<Button variant="ghost" size="icon-sm" @click="handleCancel">
-					<UIcon name="i-heroicons-x-mark" class="h-4 w-4" />
-				</Button>
-			</div>
+			<h3 class="text-sm font-bold uppercase tracking-wide">Mark Lead as Lost</h3>
 		</template>
 
-		<form @submit.prevent="handleSubmit" class="space-y-4 p-4">
+		<form @submit.prevent="handleSubmit" class="space-y-4">
 			<div class="space-y-1">
 				<label class="t-label text-muted-foreground">Why was this lead lost? *</label>
 				<UTextarea

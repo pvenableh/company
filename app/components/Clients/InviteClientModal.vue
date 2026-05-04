@@ -2,10 +2,7 @@
 	<UModal v-model="isOpen">
 		<UCard>
 			<template #header>
-				<div class="flex items-center justify-between">
-					<h3 class="text-lg font-semibold">Invite Client User</h3>
-					<UButton color="gray" variant="ghost" icon="i-heroicons-x-mark" @click="isOpen = false" />
-				</div>
+				<h3 class="text-lg font-semibold">Invite Client User</h3>
 			</template>
 
 			<form @submit.prevent="sendInvitation" class="space-y-4">

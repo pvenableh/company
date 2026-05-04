@@ -136,9 +136,8 @@
 
 		<!-- Team Management Modal -->
 		<UModal v-model="showTeamMembersModal" :ui="{ width: 'max-w-xl' }">
-			<div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+			<div class="flex items-center p-4 border-b border-gray-200 dark:border-gray-700">
 				<h3 class="text-lg font-semibold">Manage Team: {{ currentEditTeam?.name }}</h3>
-				<UButton color="gray" variant="ghost" icon="i-heroicons-x-mark" @click="showTeamMembersModal = false" />
 			</div>
 
 			<div class="p-4">
@@ -154,9 +153,8 @@
 
 		<!-- Create/Edit Team Modal -->
 		<UModal v-model="showCreateTeamModal">
-			<div class="flex items-center justify-between p-4 border-b border-border">
+			<div class="flex items-center p-4 border-b border-border">
 				<h3 class="text-lg font-semibold">{{ isEditing ? 'Edit' : 'Create' }} Team</h3>
-				<UButton color="gray" variant="ghost" icon="i-heroicons-x-mark" @click="cancelTeamForm" />
 			</div>
 
 			<form @submit.prevent="submitTeamForm" class="space-y-4 p-4">

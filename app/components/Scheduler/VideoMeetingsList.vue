@@ -153,10 +153,7 @@ const getMeetingActions = (meeting) => [
 		<UModal v-model="showInviteModal">
 			<UCard>
 				<template #header>
-					<div class="flex items-center justify-between">
-						<h3 class="text-lg font-semibold">Send Invite</h3>
-						<UButton color="gray" variant="ghost" icon="i-heroicons-x-mark" @click="showInviteModal = false" />
-					</div>
+					<h3 class="text-lg font-semibold">Send Invite</h3>
 				</template>
 
 				<div v-if="selectedMeeting" class="space-y-4">

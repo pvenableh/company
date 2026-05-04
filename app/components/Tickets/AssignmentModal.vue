@@ -2,10 +2,7 @@
 	<UModal :model-value="isOpen" @update:model-value="$emit('update:isOpen', $event)">
 		<UCard>
 			<template #header>
-				<div class="flex items-center justify-between">
-					<h3 class="text-lg font-medium">Manage Assignments</h3>
-					<UButton color="gray" variant="ghost" icon="i-heroicons-x-mark" @click="handleCancel" />
-				</div>
+				<h3 class="text-lg font-medium">Manage Assignments</h3>
 			</template>
 
 			<div class="py-2">

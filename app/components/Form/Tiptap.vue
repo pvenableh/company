@@ -116,24 +116,14 @@
 
 		<div ref="mentionsPortal" class="mentions-portal" />
 		<UModal v-model="isModalOpen" fullscreen>
-			<div class="relative">
-				<UButton
-					class="absolute top-2 right-2 z-10"
-					color="gray"
-					variant="outline"
-					icon="i-heroicons-x-mark"
-					:ui="{ rounded: 'rounded-full' }"
-					@click="closeModal"
+			<transition name="fade">
+				<img
+					v-if="currentImageSrc"
+					:src="currentImageSrc"
+					alt="Expanded view"
+					class="w-full h-auto max-h-screenrounded-none object-contain"
 				/>
-				<transition name="fade">
-					<img
-						v-if="currentImageSrc"
-						:src="currentImageSrc"
-						alt="Expanded view"
-						class="w-full h-auto max-h-screenrounded-none object-contain"
-					/>
-				</transition>
-			</div>
+			</transition>
 		</UModal>
 	</div>
 </template>

@@ -268,15 +268,10 @@
 		<!-- New Event Modal -->
 		<UModal v-model="showNewEventModal" title="New Event">
 			<template #header>
-				<div class="flex items-center justify-between w-full">
-					<h3 class="text-sm font-bold uppercase tracking-wide">New Event</h3>
-					<Button variant="ghost" size="icon-sm" @click="showNewEventModal = false">
-						<UIcon name="i-heroicons-x-mark" class="h-4 w-4" />
-					</Button>
-				</div>
+				<h3 class="text-sm font-bold uppercase tracking-wide">New Event</h3>
 			</template>
 
-			<form @submit.prevent="handleCreateEvent" class="space-y-4 p-4">
+			<form @submit.prevent="handleCreateEvent" class="space-y-4">
 				<div class="space-y-1">
 					<label class="t-label text-muted-foreground">Title *</label>
 					<UInput v-model="newEventForm.title" placeholder="Event title" />
@@ -354,7 +349,7 @@
 		<UModal v-model="showEventDetail" class="sm:max-w-xl">
 			<template #header>
 				<div class="w-full space-y-3">
-					<div class="flex items-center justify-between">
+					<div class="flex items-center justify-between gap-2 pr-8">
 						<h3 class="text-sm font-bold uppercase tracking-wide">Event Details</h3>
 						<div class="flex items-center gap-2">
 							<!-- Approval actions -->
@@ -386,9 +381,6 @@
 									{{ getFriendlyDate(selectedEventFull.approved_at) }}
 								</span>
 							</span>
-							<Button variant="ghost" size="icon-sm" @click="closeEventDetail">
-								<UIcon name="i-heroicons-x-mark" class="h-4 w-4" />
-							</Button>
 						</div>
 					</div>
 					<FormStatusTimeline
@@ -446,16 +438,11 @@
 		<!-- Meeting Detail Modal (read-only) -->
 		<UModal v-model="showMeetingDetail" class="sm:max-w-md">
 			<template #header>
-				<div class="flex items-center justify-between w-full">
-					<div class="flex items-center gap-2">
-						<div class="h-7 w-7 rounded-xl bg-purple-500/10 flex items-center justify-center">
-							<UIcon name="i-heroicons-video-camera" class="w-4 h-4 text-purple-500" />
-						</div>
-						<h3 class="text-sm font-bold uppercase tracking-wide">Meeting</h3>
+				<div class="flex items-center gap-2">
+					<div class="h-7 w-7 rounded-xl bg-purple-500/10 flex items-center justify-center">
+						<UIcon name="i-heroicons-video-camera" class="w-4 h-4 text-purple-500" />
 					</div>
-					<Button variant="ghost" size="icon-sm" @click="showMeetingDetail = false">
-						<UIcon name="i-heroicons-x-mark" class="h-4 w-4" />
-					</Button>
+					<h3 class="text-sm font-bold uppercase tracking-wide">Meeting</h3>
 				</div>
 			</template>
 

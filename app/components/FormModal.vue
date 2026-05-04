@@ -2,12 +2,7 @@
 	<UModal v-model="isOpen" class="sm:max-w-lg">
 		<template #header>
 			<div class="w-full space-y-3">
-				<div class="flex items-center justify-between">
-					<h3 class="text-sm font-bold uppercase tracking-wide">{{ title }}</h3>
-					<Button variant="ghost" size="icon-sm" @click="isOpen = false">
-						<UIcon name="i-heroicons-x-mark" class="h-4 w-4" />
-					</Button>
-				</div>
+				<h3 class="text-sm font-bold uppercase tracking-wide pr-8">{{ title }}</h3>
 				<FormStatusTimeline
 					v-if="isEditing && statuses.length"
 					:currentStatus="currentStatus"
@@ -19,7 +14,7 @@
 			</div>
 		</template>
 
-		<form @submit.prevent="$emit('submit')" class="space-y-4 p-4 max-h-[70vh] overflow-y-auto">
+		<form @submit.prevent="$emit('submit')" class="space-y-4 max-h-[70vh] overflow-y-auto">
 			<slot />
 		</form>
 

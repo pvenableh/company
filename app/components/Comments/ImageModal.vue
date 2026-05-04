@@ -1,18 +1,8 @@
 <template>
 	<UModal v-model="isOpen">
-		<div class="relative">
-			<UButton
-				class="absolute -top-4 -right-4 z-10"
-				color="gray"
-				variant="solid"
-				icon="i-heroicons-x-mark"
-				:ui="{ rounded: 'rounded-full' }"
-				@click="closeModal"
-			/>
-			<transition name="fade">
-				<img v-if="currentImage" :src="currentImage" alt="Expanded view" class="w-full h-auto rounded-lg" />
-			</transition>
-		</div>
+		<transition name="fade">
+			<img v-if="currentImage" :src="currentImage" alt="Expanded view" class="w-full h-auto rounded-lg" />
+		</transition>
 	</UModal>
 </template>
 
