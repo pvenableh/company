@@ -130,6 +130,7 @@ export interface CreateContactPayload {
   category?: 'client' | 'prospect' | 'architect' | 'developer' | 'hospitality' | 'partner' | 'media' | '';
   notes?: string;
   is_billing_contact?: boolean;
+  client?: string | null;
 }
 
 export interface CsvContactRow {
