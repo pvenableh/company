@@ -74,9 +74,12 @@ const renderMarkdown = (text: string): string => {
 </script>
 
 <template>
-  <UModal :model-value="modelValue" @update:model-value="emit('update:modelValue', $event)" :ui="{ width: 'max-w-2xl' }">
-    <UCard class="max-h-[80vh] flex flex-col">
-      <template #header>
+  <UModal
+    :model-value="modelValue"
+    :ui="{ content: 'max-w-2xl max-h-[80vh] flex flex-col' }"
+    @update:model-value="emit('update:modelValue', $event)"
+  >
+    <template #header>
         <div class="flex items-center gap-3">
           <img
             v-if="session?.user_avatar"
@@ -164,13 +167,12 @@ const renderMarkdown = (text: string): string => {
         </div>
       </div>
 
-      <template #footer>
-        <div class="flex justify-end">
-          <UButton variant="ghost" size="sm" @click="emit('update:modelValue', false)">
-            Close
-          </UButton>
-        </div>
-      </template>
-    </UCard>
+    <template #footer>
+      <div class="flex justify-end">
+        <UButton variant="ghost" size="sm" @click="emit('update:modelValue', false)">
+          Close
+        </UButton>
+      </div>
+    </template>
   </UModal>
 </template>

@@ -1,21 +1,19 @@
 <template>
 	<UModal :model-value="isOpen" @update:model-value="$emit('update:isOpen', $event)">
-		<UCard>
-			<template #header>
-				<div class="flex items-center justify-between">
-					<h3 class="text-lg font-semibold">Delete Ticket</h3>
-				</div>
-			</template>
+		<template #header>
+			<div class="flex items-center justify-between">
+				<h3 class="text-lg font-semibold">Delete Ticket</h3>
+			</div>
+		</template>
 
-			<p class="text-sm text-muted-foreground">Are you sure you want to delete this ticket? This action cannot be undone.</p>
+		<p class="text-sm text-muted-foreground">Are you sure you want to delete this ticket? This action cannot be undone.</p>
 
-			<template #footer>
-				<div class="flex justify-end gap-2">
-					<UButton variant="soft" color="gray" @click="handleCancel">Cancel</UButton>
-					<UButton color="red" :loading="isLoading" @click="handleDelete">Delete</UButton>
-				</div>
-			</template>
-		</UCard>
+		<template #footer>
+			<div class="flex justify-end gap-2">
+				<UButton variant="soft" color="gray" @click="handleCancel">Cancel</UButton>
+				<UButton color="red" :loading="isLoading" @click="handleDelete">Delete</UButton>
+			</div>
+		</template>
 	</UModal>
 </template>
 

@@ -1,12 +1,11 @@
 <!-- components/Scheduler/NewMeetingModal.vue -->
 <template>
-	<UModal v-model="isOpen" :ui="{ width: 'max-w-2xl' }">
-		<UCard>
-			<template #header>
-				<h3 class="text-lg font-semibold">Create Video Meeting</h3>
-			</template>
+	<UModal v-model="isOpen" :ui="{ content: 'max-w-2xl' }">
+		<template #header>
+			<h3 class="text-lg font-semibold">Create Video Meeting</h3>
+		</template>
 
-			<form @submit.prevent="createMeeting" class="space-y-6">
+		<form @submit.prevent="createMeeting" class="space-y-6">
 				<!-- Lead Selector -->
 				<UFormGroup label="Link to Lead" hint="Optional — links meeting to CRM pipeline">
 					<div class="relative">
@@ -117,15 +116,14 @@
 					<UTextarea v-model="form.custom_message" placeholder="Looking forward to meeting with you!" :rows="2" />
 				</UFormGroup>
 
-				<!-- Actions -->
-				<div class="flex justify-end gap-3 pt-4">
-					<UButton color="gray" variant="soft" @click="close">Cancel</UButton>
-					<UButton type="submit" color="green" :loading="creating" icon="i-heroicons-video-camera">
-						Create Meeting
-					</UButton>
-				</div>
-			</form>
-		</UCard>
+			<!-- Actions -->
+			<div class="flex justify-end gap-3 pt-4">
+				<UButton color="gray" variant="soft" @click="close">Cancel</UButton>
+				<UButton type="submit" color="green" :loading="creating" icon="i-heroicons-video-camera">
+					Create Meeting
+				</UButton>
+			</div>
+		</form>
 	</UModal>
 </template>
 

@@ -1,46 +1,44 @@
 <template>
 	<UModal v-model="isOpen">
-		<UCard>
-			<template #header>
-				<h3 class="text-lg font-semibold">Invite Client User</h3>
-			</template>
+		<template #header>
+			<h3 class="text-lg font-semibold">Invite Client User</h3>
+		</template>
 
-			<form @submit.prevent="sendInvitation" class="space-y-4">
-				<p class="text-sm text-muted-foreground">
-					Invite a user to access this organization as a client.
-					They will have limited access scoped to <strong>{{ clientName }}</strong>.
-				</p>
+		<form @submit.prevent="sendInvitation" class="space-y-4">
+			<p class="text-sm text-muted-foreground">
+				Invite a user to access this organization as a client.
+				They will have limited access scoped to <strong>{{ clientName }}</strong>.
+			</p>
 
-				<UFormGroup label="Email Address" required>
-					<UInput
-						v-model="form.email"
-						type="email"
-						placeholder="client@company.com"
-						icon="i-heroicons-envelope"
-					/>
-				</UFormGroup>
+			<UFormGroup label="Email Address" required>
+				<UInput
+					v-model="form.email"
+					type="email"
+					placeholder="client@company.com"
+					icon="i-heroicons-envelope"
+				/>
+			</UFormGroup>
 
-				<div class="rounded-lg bg-blue-50 dark:bg-blue-900/20 px-4 py-3 text-sm text-blue-700 dark:text-blue-300">
-					<Icon name="heroicons:information-circle" class="inline w-4 h-4 mr-1" />
-					This user will be assigned the <strong>Client</strong> role with access limited to their
-					client record, related projects, tickets, and messaging.
-				</div>
-			</form>
+			<div class="rounded-lg bg-blue-50 dark:bg-blue-900/20 px-4 py-3 text-sm text-blue-700 dark:text-blue-300">
+				<Icon name="heroicons:information-circle" class="inline w-4 h-4 mr-1" />
+				This user will be assigned the <strong>Client</strong> role with access limited to their
+				client record, related projects, tickets, and messaging.
+			</div>
+		</form>
 
-			<template #footer>
-				<div class="flex justify-end gap-2">
-					<UButton color="gray" variant="ghost" @click="isOpen = false">Cancel</UButton>
-					<UButton
-						color="primary"
-						:loading="sending"
-						:disabled="!form.email"
-						@click="sendInvitation"
-					>
-						Send Invitation
-					</UButton>
-				</div>
-			</template>
-		</UCard>
+		<template #footer>
+			<div class="flex justify-end gap-2">
+				<UButton color="gray" variant="ghost" @click="isOpen = false">Cancel</UButton>
+				<UButton
+					color="primary"
+					:loading="sending"
+					:disabled="!form.email"
+					@click="sendInvitation"
+				>
+					Send Invitation
+				</UButton>
+			</div>
+		</template>
 	</UModal>
 </template>
 

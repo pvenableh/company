@@ -111,9 +111,12 @@ const formatDate = (dateStr: string) => {
 </script>
 
 <template>
-  <UModal :model-value="modelValue" @update:model-value="emit('update:modelValue', $event)">
-    <UCard class="max-h-[80vh] flex flex-col">
-      <template #header>
+  <UModal
+    :model-value="modelValue"
+    :ui="{ content: 'max-h-[80vh] flex flex-col', body: 'px-6 py-4 flex-1 overflow-y-auto' }"
+    @update:model-value="emit('update:modelValue', $event)"
+  >
+    <template #header>
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2 flex-1 min-w-0">
             <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
@@ -233,7 +236,6 @@ const formatDate = (dateStr: string) => {
             </UButton>
           </div>
         </div>
-      </template>
-    </UCard>
+    </template>
   </UModal>
 </template>

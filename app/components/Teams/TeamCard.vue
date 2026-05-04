@@ -60,42 +60,40 @@
 
 		<!-- Add Member Modal -->
 		<UModal v-model="showAddMember">
-			<UCard>
-				<template #header>
-					<h4 class="text-lg font-medium">Add Team Member</h4>
-				</template>
+			<template #header>
+				<h4 class="text-lg font-medium">Add Team Member</h4>
+			</template>
 
-				<div class="py-4">
-					<USelect
-						v-model="selectedUser"
-						:options="availableUsersFormatted"
-						option-attribute="email"
-						value-attribute="id"
-						searchable
-						:loading="loading"
-						placeholder="Select a user to add..."
-					>
-						<template #option="{ option }">
-							<div class="flex items-center gap-2 py-1">
-								<UAvatar :src="getAvatarUrl(option)" :alt="getUserFullName(option)" size="sm" />
-								<div>
-									<div class="font-medium">{{ getUserFullName(option) }}</div>
-									<div class="text-sm text-gray-500">{{ option.email }}</div>
-								</div>
+			<div class="py-4">
+				<USelect
+					v-model="selectedUser"
+					:options="availableUsersFormatted"
+					option-attribute="email"
+					value-attribute="id"
+					searchable
+					:loading="loading"
+					placeholder="Select a user to add..."
+				>
+					<template #option="{ option }">
+						<div class="flex items-center gap-2 py-1">
+							<UAvatar :src="getAvatarUrl(option)" :alt="getUserFullName(option)" size="sm" />
+							<div>
+								<div class="font-medium">{{ getUserFullName(option) }}</div>
+								<div class="text-sm text-gray-500">{{ option.email }}</div>
 							</div>
-						</template>
-					</USelect>
-				</div>
+						</div>
+					</template>
+				</USelect>
+			</div>
 
-				<template #footer>
-					<div class="flex justify-end gap-2">
-						<UButton color="gray" variant="ghost" @click="closeAddMemberModal">Cancel</UButton>
-						<UButton color="primary" :loading="addLoading" @click="addMember" :disabled="!selectedUser || addLoading">
-							Add Member
-						</UButton>
-					</div>
-				</template>
-			</UCard>
+			<template #footer>
+				<div class="flex justify-end gap-2">
+					<UButton color="gray" variant="ghost" @click="closeAddMemberModal">Cancel</UButton>
+					<UButton color="primary" :loading="addLoading" @click="addMember" :disabled="!selectedUser || addLoading">
+						Add Member
+					</UButton>
+				</div>
+			</template>
 		</UModal>
 	</UCard>
 </template>

@@ -1,47 +1,45 @@
 <template>
 	<UModal :model-value="true" @update:model-value="$emit('close')">
-		<UCard>
-			<template #header>
-				<h3 class="text-lg font-semibold">Add to Mailing List</h3>
-			</template>
+		<template #header>
+			<h3 class="text-lg font-semibold">Add to Mailing List</h3>
+		</template>
 
-			<div class="space-y-3">
-				<p class="text-sm text-muted-foreground">
-					Select a list to add {{ contactName }} to:
-				</p>
+		<div class="space-y-3">
+			<p class="text-sm text-muted-foreground">
+				Select a list to add {{ contactName }} to:
+			</p>
 
-				<div class="space-y-2 max-h-64 overflow-y-auto">
-					<label
-						v-for="list in lists"
-						:key="list.id"
-						class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50"
-						:class="selectedListId === list.id ? 'border-primary bg-primary/5' : ''"
-					>
-						<input
-							type="radio"
-							:value="list.id"
-							v-model="selectedListId"
-							class="accent-primary"
-						/>
-						<div>
-							<p class="text-sm font-medium">{{ list.name }}</p>
-							<p class="text-xs text-muted-foreground">
-								{{ list.subscriber_count || 0 }} subscribers
-							</p>
-						</div>
-					</label>
-				</div>
+			<div class="space-y-2 max-h-64 overflow-y-auto">
+				<label
+					v-for="list in lists"
+					:key="list.id"
+					class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-muted/50"
+					:class="selectedListId === list.id ? 'border-primary bg-primary/5' : ''"
+				>
+					<input
+						type="radio"
+						:value="list.id"
+						v-model="selectedListId"
+						class="accent-primary"
+					/>
+					<div>
+						<p class="text-sm font-medium">{{ list.name }}</p>
+						<p class="text-xs text-muted-foreground">
+							{{ list.subscriber_count || 0 }} subscribers
+						</p>
+					</div>
+				</label>
 			</div>
+		</div>
 
-			<template #footer>
-				<div class="flex justify-end gap-2">
-					<UButton variant="soft" color="gray" @click="$emit('close')">Cancel</UButton>
-					<UButton color="primary" :disabled="!selectedListId || adding" :loading="adding" @click="handleAdd">
-						Add to List
-					</UButton>
-				</div>
-			</template>
-		</UCard>
+		<template #footer>
+			<div class="flex justify-end gap-2">
+				<UButton variant="soft" color="gray" @click="$emit('close')">Cancel</UButton>
+				<UButton color="primary" :disabled="!selectedListId || adding" :loading="adding" @click="handleAdd">
+					Add to List
+				</UButton>
+			</div>
+		</template>
 	</UModal>
 </template>
 

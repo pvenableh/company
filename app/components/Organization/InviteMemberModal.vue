@@ -1,52 +1,50 @@
 <template>
 	<UModal v-model="isOpen">
-		<UCard>
-			<template #header>
-				<h3 class="text-lg font-semibold">Invite Member</h3>
-			</template>
+		<template #header>
+			<h3 class="text-lg font-semibold">Invite Member</h3>
+		</template>
 
-			<form @submit.prevent="sendInvitation" class="space-y-4">
-				<p class="text-sm text-muted-foreground">
-					Invite a new team member to join this organization. They will receive an email with instructions to accept.
+		<form @submit.prevent="sendInvitation" class="space-y-4">
+			<p class="text-sm text-muted-foreground">
+				Invite a new team member to join this organization. They will receive an email with instructions to accept.
+			</p>
+
+			<UFormGroup label="Email Address" required>
+				<UInput
+					v-model="form.email"
+					type="email"
+					placeholder="user@example.com"
+					icon="i-heroicons-envelope"
+				/>
+			</UFormGroup>
+
+			<UFormGroup label="Role" required>
+				<USelect
+					v-model="form.roleId"
+					:options="availableRoles"
+					option-attribute="label"
+					value-attribute="value"
+					placeholder="Select a role"
+				/>
+				<p v-if="selectedRoleDescription" class="text-xs text-muted-foreground mt-1">
+					{{ selectedRoleDescription }}
 				</p>
+			</UFormGroup>
+		</form>
 
-				<UFormGroup label="Email Address" required>
-					<UInput
-						v-model="form.email"
-						type="email"
-						placeholder="user@example.com"
-						icon="i-heroicons-envelope"
-					/>
-				</UFormGroup>
-
-				<UFormGroup label="Role" required>
-					<USelect
-						v-model="form.roleId"
-						:options="availableRoles"
-						option-attribute="label"
-						value-attribute="value"
-						placeholder="Select a role"
-					/>
-					<p v-if="selectedRoleDescription" class="text-xs text-muted-foreground mt-1">
-						{{ selectedRoleDescription }}
-					</p>
-				</UFormGroup>
-			</form>
-
-			<template #footer>
-				<div class="flex justify-end gap-2">
-					<UButton color="gray" variant="ghost" @click="isOpen = false">Cancel</UButton>
-					<UButton
-						color="primary"
-						:loading="sending"
-						:disabled="!form.email || !form.roleId"
-						@click="sendInvitation"
-					>
-						Send Invitation
-					</UButton>
-				</div>
-			</template>
-		</UCard>
+		<template #footer>
+			<div class="flex justify-end gap-2">
+				<UButton color="gray" variant="ghost" @click="isOpen = false">Cancel</UButton>
+				<UButton
+					color="primary"
+					:loading="sending"
+					:disabled="!form.email || !form.roleId"
+					@click="sendInvitation"
+				>
+					Send Invitation
+				</UButton>
+			</div>
+		</template>
 	</UModal>
 </template>
 

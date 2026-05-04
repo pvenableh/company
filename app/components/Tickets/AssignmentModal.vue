@@ -1,73 +1,71 @@
 <template>
 	<UModal :model-value="isOpen" @update:model-value="$emit('update:isOpen', $event)">
-		<UCard>
-			<template #header>
-				<h3 class="text-lg font-medium">Manage Assignments</h3>
-			</template>
+		<template #header>
+			<h3 class="text-lg font-medium">Manage Assignments</h3>
+		</template>
 
-			<div class="py-2">
-				<!-- Current Assignments -->
-				<div class="mb-4">
-					<h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Currently Assigned</h4>
-					<div class="flex flex-wrap gap-2" v-if="selectedUsers.length">
-						<UBadge
-							v-for="userId in selectedUsers"
-							:key="userId"
-							color="gray"
-							class="flex items-center gap-2"
-							:class="isCurrentUserBadge(userId) ? 'border border-cyan-300' : ''"
-						>
-							<UAvatar
-								:src="getAvatarUrl(getUserById(userId))"
-								:alt="getUserFullName(getUserById(userId))"
-								size="2xs"
-							/>
-							{{ getUserFullName(getUserById(userId)) }}
-							<UButton
-								color="white"
-								variant="ghost"
-								icon="i-heroicons-x-mark-20-solid"
-								size="2xs"
-								class="-mr-1"
-								:ui="{ rounded: 'rounded-full' }"
-								@click="removeUser(userId)"
-							/>
-						</UBadge>
-					</div>
-					<div v-else class="text-sm text-muted-foreground italic">No users assigned</div>
-				</div>
-
-				<!-- User Selector -->
-				<div>
-					<h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Assign Users</h4>
-					<USelectMenu
-						v-model="selectedUser"
-						:options="availableUsers"
-						placeholder="Select users to assign..."
-						searchable
-						:loading="loadingUsers"
-						@update:modelValue="handleUserSelect"
+		<div class="py-2">
+			<!-- Current Assignments -->
+			<div class="mb-4">
+				<h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Currently Assigned</h4>
+				<div class="flex flex-wrap gap-2" v-if="selectedUsers.length">
+					<UBadge
+						v-for="userId in selectedUsers"
+						:key="userId"
+						color="gray"
+						class="flex items-center gap-2"
+						:class="isCurrentUserBadge(userId) ? 'border border-cyan-300' : ''"
 					>
-						<template #option="{ option: user }">
-							<div class="flex items-center gap-2 py-1">
-								<UAvatar :src="getAvatarUrl(user)" :alt="user.label" size="sm" />
-								<div class="flex flex-col">
-									<span class="font-medium">{{ user.label }}</span>
-									<span class="text-xs text-muted-foreground">{{ user.email }}</span>
-								</div>
-							</div>
-						</template>
-					</USelectMenu>
+						<UAvatar
+							:src="getAvatarUrl(getUserById(userId))"
+							:alt="getUserFullName(getUserById(userId))"
+							size="2xs"
+						/>
+						{{ getUserFullName(getUserById(userId)) }}
+						<UButton
+							color="white"
+							variant="ghost"
+							icon="i-heroicons-x-mark-20-solid"
+							size="2xs"
+							class="-mr-1"
+							:ui="{ rounded: 'rounded-full' }"
+							@click="removeUser(userId)"
+						/>
+					</UBadge>
 				</div>
+				<div v-else class="text-sm text-muted-foreground italic">No users assigned</div>
 			</div>
 
-			<template #footer>
-				<div class="flex justify-end gap-2">
-					<UButton variant="soft" color="gray" @click="handleCancel">Cancel</UButton>
-					<UButton color="primary" @click="handleSave" :loading="isLoading">Save Assignments</UButton>
-				</div>
-			</template>
-		</UCard>
+			<!-- User Selector -->
+			<div>
+				<h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Assign Users</h4>
+				<USelectMenu
+					v-model="selectedUser"
+					:options="availableUsers"
+					placeholder="Select users to assign..."
+					searchable
+					:loading="loadingUsers"
+					@update:modelValue="handleUserSelect"
+				>
+					<template #option="{ option: user }">
+						<div class="flex items-center gap-2 py-1">
+							<UAvatar :src="getAvatarUrl(user)" :alt="user.label" size="sm" />
+							<div class="flex flex-col">
+								<span class="font-medium">{{ user.label }}</span>
+								<span class="text-xs text-muted-foreground">{{ user.email }}</span>
+							</div>
+						</div>
+					</template>
+				</USelectMenu>
+			</div>
+		</div>
+
+		<template #footer>
+			<div class="flex justify-end gap-2">
+				<UButton variant="soft" color="gray" @click="handleCancel">Cancel</UButton>
+				<UButton color="primary" @click="handleSave" :loading="isLoading">Save Assignments</UButton>
+			</div>
+		</template>
 	</UModal>
 </template>
 

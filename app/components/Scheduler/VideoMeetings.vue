@@ -150,51 +150,49 @@ const getMeetingActions = (meeting) => [
 
 		<!-- Invite Modal -->
 		<UModal v-model="showInviteModal">
-			<UCard>
-				<template #header>
-					<h3 class="text-lg font-semibold">Send Invite</h3>
-				</template>
+			<template #header>
+				<h3 class="text-lg font-semibold">Send Invite</h3>
+			</template>
 
-				<div v-if="selectedMeeting" class="space-y-4">
-					<div class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-						<div class="font-medium">{{ selectedMeeting.title }}</div>
-						<div class="text-sm text-gray-500">{{ formatEventTime(selectedMeeting.scheduled_start) }}</div>
-					</div>
-
-					<UTabs :items="inviteTabs" v-model="inviteTab">
-						<template #item="{ item }">
-							<div class="space-y-4 pt-4">
-								<template v-if="item.key === 'email'">
-									<UFormGroup label="Email" required><UInput v-model="inviteForm.email" type="email" /></UFormGroup>
-									<UFormGroup label="Name"><UInput v-model="inviteForm.name" /></UFormGroup>
-									<UFormGroup label="Message"><UTextarea v-model="inviteForm.message" rows="2" /></UFormGroup>
-								</template>
-								<template v-else-if="item.key === 'sms'">
-									<UFormGroup label="Phone" required><UInput v-model="inviteForm.phone" type="tel" /></UFormGroup>
-									<UFormGroup label="Message"><UTextarea v-model="inviteForm.message" rows="2" /></UFormGroup>
-								</template>
-								<template v-else>
-									<UFormGroup label="Meeting Link">
-										<div class="flex gap-2">
-											<UInput :model-value="selectedMeeting.meeting_url || `${$config.public.siteUrl}/meeting/${selectedMeeting.room_name}`" readonly class="flex-1" />
-											<UButton color="gray" icon="i-heroicons-clipboard" @click="copyMeetingLink(selectedMeeting)" />
-										</div>
-									</UFormGroup>
-								</template>
-							</div>
-						</template>
-					</UTabs>
+			<div v-if="selectedMeeting" class="space-y-4">
+				<div class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+					<div class="font-medium">{{ selectedMeeting.title }}</div>
+					<div class="text-sm text-gray-500">{{ formatEventTime(selectedMeeting.scheduled_start) }}</div>
 				</div>
 
-				<template #footer>
-					<div class="flex justify-end gap-3">
-						<UButton color="gray" variant="soft" @click="showInviteModal = false">Cancel</UButton>
-						<UButton v-if="inviteTab !== 2" color="primary" @click="sendInvite">
-							Send {{ inviteTab === 0 ? 'Email' : 'SMS' }}
-						</UButton>
-					</div>
-				</template>
-			</UCard>
+				<UTabs :items="inviteTabs" v-model="inviteTab">
+					<template #item="{ item }">
+						<div class="space-y-4 pt-4">
+							<template v-if="item.key === 'email'">
+								<UFormGroup label="Email" required><UInput v-model="inviteForm.email" type="email" /></UFormGroup>
+								<UFormGroup label="Name"><UInput v-model="inviteForm.name" /></UFormGroup>
+								<UFormGroup label="Message"><UTextarea v-model="inviteForm.message" rows="2" /></UFormGroup>
+							</template>
+							<template v-else-if="item.key === 'sms'">
+								<UFormGroup label="Phone" required><UInput v-model="inviteForm.phone" type="tel" /></UFormGroup>
+								<UFormGroup label="Message"><UTextarea v-model="inviteForm.message" rows="2" /></UFormGroup>
+							</template>
+							<template v-else>
+								<UFormGroup label="Meeting Link">
+									<div class="flex gap-2">
+										<UInput :model-value="selectedMeeting.meeting_url || `${$config.public.siteUrl}/meeting/${selectedMeeting.room_name}`" readonly class="flex-1" />
+										<UButton color="gray" icon="i-heroicons-clipboard" @click="copyMeetingLink(selectedMeeting)" />
+									</div>
+								</UFormGroup>
+							</template>
+						</div>
+					</template>
+				</UTabs>
+			</div>
+
+			<template #footer>
+				<div class="flex justify-end gap-3">
+					<UButton color="gray" variant="soft" @click="showInviteModal = false">Cancel</UButton>
+					<UButton v-if="inviteTab !== 2" color="primary" @click="sendInvite">
+						Send {{ inviteTab === 0 ? 'Email' : 'SMS' }}
+					</UButton>
+				</div>
+			</template>
 		</UModal>
 	</div>
 </template>

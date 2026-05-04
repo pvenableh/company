@@ -73,57 +73,55 @@ const contentPreview = computed(() => {
 
 <template>
   <UModal :model-value="modelValue" @update:model-value="emit('update:modelValue', $event)">
-    <UCard>
-      <template #header>
-        <div class="flex items-center gap-2">
-          <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-            <UIcon name="i-heroicons-bookmark" class="w-4 h-4 text-primary" />
-          </div>
-          <div>
-            <h3 class="text-sm font-semibold">Save AI Note</h3>
-            <p class="text-xs text-muted-foreground">Save this insight for future reference</p>
-          </div>
+    <template #header>
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+          <UIcon name="i-heroicons-bookmark" class="w-4 h-4 text-primary" />
         </div>
-      </template>
-
-      <div class="space-y-4">
-        <!-- Title -->
-        <UFormGroup label="Title">
-          <UInput v-model="title" placeholder="Note title..." />
-        </UFormGroup>
-
-        <!-- Content preview -->
-        <UFormGroup label="Content">
-          <div
-            class="max-h-48 overflow-y-auto p-3 bg-muted/30 rounded-lg border border-border/30 text-sm prose prose-sm dark:prose-invert max-w-none"
-            v-html="contentPreview"
-          />
-        </UFormGroup>
-
-        <!-- Tags -->
-        <UFormGroup label="Tags">
-          <AITagSelector v-model="selectedTagIds" />
-        </UFormGroup>
+        <div>
+          <h3 class="text-sm font-semibold">Save AI Note</h3>
+          <p class="text-xs text-muted-foreground">Save this insight for future reference</p>
+        </div>
       </div>
+    </template>
 
-      <template #footer>
-        <div class="flex justify-end gap-2">
-          <UButton
-            variant="ghost"
-            @click="emit('update:modelValue', false)"
-          >
-            Cancel
-          </UButton>
-          <UButton
-            @click="save"
-            :loading="saving"
-            :disabled="!messageContent.trim()"
-          >
-            <UIcon name="i-heroicons-bookmark" class="w-4 h-4 mr-1" />
-            Save Note
-          </UButton>
-        </div>
-      </template>
-    </UCard>
+    <div class="space-y-4">
+      <!-- Title -->
+      <UFormGroup label="Title">
+        <UInput v-model="title" placeholder="Note title..." />
+      </UFormGroup>
+
+      <!-- Content preview -->
+      <UFormGroup label="Content">
+        <div
+          class="max-h-48 overflow-y-auto p-3 bg-muted/30 rounded-lg border border-border/30 text-sm prose prose-sm dark:prose-invert max-w-none"
+          v-html="contentPreview"
+        />
+      </UFormGroup>
+
+      <!-- Tags -->
+      <UFormGroup label="Tags">
+        <AITagSelector v-model="selectedTagIds" />
+      </UFormGroup>
+    </div>
+
+    <template #footer>
+      <div class="flex justify-end gap-2">
+        <UButton
+          variant="ghost"
+          @click="emit('update:modelValue', false)"
+        >
+          Cancel
+        </UButton>
+        <UButton
+          @click="save"
+          :loading="saving"
+          :disabled="!messageContent.trim()"
+        >
+          <UIcon name="i-heroicons-bookmark" class="w-4 h-4 mr-1" />
+          Save Note
+        </UButton>
+      </div>
+    </template>
   </UModal>
 </template>

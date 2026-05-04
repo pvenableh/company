@@ -58,6 +58,10 @@ const { selectedTeam } = useTeams();
 const { selectedClient } = useClients();
 const router = useRouter();
 
+// ── Marketing pulse (drives compact-vs-rich widget swap below) ──
+const marketingPulse = useMarketingPulse();
+watch(selectedOrg, () => marketingPulse.load(), { immediate: true });
+
 // ── AI Tray ──
 const aiTrayOpen = ref(false);
 const aiTrayPrompt = ref('');
@@ -474,10 +478,13 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 							:dimensions="earnestState.dimensions"
 						/>
 
-						<!-- Marketing actions ready in the feed -->
-						<CommandCenterMarketingActionsWidget />
+						<!-- Marketing actions — compact (only when no social/email data) -->
+						<CommandCenterMarketingActionsWidget v-if="!marketingPulse.hasRichData.value" />
 					</div>
 				</div>
+
+				<!-- Marketing & Social Pulse — full width when we have social/email data -->
+				<CommandCenterMarketingPulseWidget v-if="marketingPulse.hasRichData.value" />
 
 				<!-- CRM Insights + Growth Opportunities -->
 				<div v-if="crmInsights.length > 0 || crmActions.length > 0" class="grid grid-cols-1 lg:grid-cols-2 gap-6">

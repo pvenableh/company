@@ -93,26 +93,24 @@
 
 		<!-- Confirmation Modal -->
 		<UModal v-model="showConfirmModal">
-			<UCard>
-				<template #header>
-					<h3 class="text-lg font-semibold">Confirm Action</h3>
-				</template>
+			<template #header>
+				<h3 class="text-lg font-semibold">Confirm Action</h3>
+			</template>
 
-				<p>{{ confirmMessage }}</p>
+			<p>{{ confirmMessage }}</p>
 
-				<template #footer>
-					<div class="flex justify-end gap-2">
-						<UButton color="gray" variant="ghost" @click="showConfirmModal = false">Cancel</UButton>
-						<UButton
-							:color="confirmAction === 'remove' ? 'red' : 'blue'"
-							:loading="confirmLoading"
-							@click="handleConfirm"
-						>
-							{{ confirmAction === 'remove' ? 'Remove' : 'Update' }}
-						</UButton>
-					</div>
-				</template>
-			</UCard>
+			<template #footer>
+				<div class="flex justify-end gap-2">
+					<UButton color="gray" variant="ghost" @click="showConfirmModal = false">Cancel</UButton>
+					<UButton
+						:color="confirmAction === 'remove' ? 'red' : 'blue'"
+						:loading="confirmLoading"
+						@click="handleConfirm"
+					>
+						{{ confirmAction === 'remove' ? 'Remove' : 'Update' }}
+					</UButton>
+				</div>
+			</template>
 		</UModal>
 	</div>
 </template>

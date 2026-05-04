@@ -76,21 +76,8 @@
 import type { MarketingRecommendation } from '~~/shared/marketing-persistence';
 
 const { selectedOrg } = useOrganization();
-
-const recommendations = ref<MarketingRecommendation[]>([]);
-const loading = ref(false);
-
-const pendingCount = computed(() =>
-	recommendations.value.filter(r => r.status === 'pending' || r.status === 'drafted').length,
-);
-
-const topRec = computed<MarketingRecommendation | null>(() => {
-	const active = recommendations.value
-		.filter(r => r.status === 'pending' || r.status === 'drafted')
-		.slice()
-		.sort((a, b) => (b.ranker_output?.urgency ?? 0) - (a.ranker_output?.urgency ?? 0));
-	return active[0] ?? null;
-});
+const pulse = useMarketingPulse();
+const { loading, pendingCount, topRec, recommendations } = pulse;
 
 const topUrgency = computed(() => topRec.value?.ranker_output?.urgency ?? null);
 const topReason = computed(() => topRec.value?.ranker_output?.why_now ?? '');
@@ -145,25 +132,5 @@ function urgencyChipClass(u: number): string {
 	return 'bg-muted/40 text-muted-foreground';
 }
 
-async function load() {
-	const orgId = selectedOrg.value;
-	if (!orgId) {
-		recommendations.value = [];
-		return;
-	}
-	loading.value = true;
-	try {
-		const data = await $fetch<{ recommendations: MarketingRecommendation[] }>(
-			'/api/marketing/recommendations',
-			{ query: { organizationId: orgId } },
-		);
-		recommendations.value = data.recommendations || [];
-	} catch {
-		recommendations.value = [];
-	} finally {
-		loading.value = false;
-	}
-}
-
-watch(selectedOrg, () => load(), { immediate: true });
+watch(selectedOrg, () => pulse.load(), { immediate: true });
 </script>

@@ -598,90 +598,86 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
 
     <!-- Backfill Modal -->
     <UModal v-model="showBackfillModal">
-      <UCard>
-        <template #header>
-          <div class="flex items-center gap-3">
-            <div class="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-              <UIcon name="i-lucide-history" class="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            </div>
-            <h3 class="font-semibold text-gray-900 dark:text-white">Fetch historical insights</h3>
+      <template #header>
+        <div class="flex items-center gap-3">
+          <div class="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+            <UIcon name="i-lucide-history" class="w-5 h-5 text-blue-600 dark:text-blue-400" />
           </div>
-        </template>
+          <h3 class="font-semibold text-gray-900 dark:text-white">Fetch historical insights</h3>
+        </div>
+      </template>
 
-        <div class="space-y-4">
-          <p class="text-gray-600 dark:text-gray-300">
-            Pull daily account-level metrics and insights for up to
-            <strong>{{ backfillDays }} days</strong> of history on
-            <strong>{{ accountToBackfill?.account_name }}</strong>.
-          </p>
+      <div class="space-y-4">
+        <p class="text-gray-600 dark:text-gray-300">
+          Pull daily account-level metrics and insights for up to
+          <strong>{{ backfillDays }} days</strong> of history on
+          <strong>{{ accountToBackfill?.account_name }}</strong>.
+        </p>
 
-          <div>
-            <label class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5 block">
-              Days to fetch
-            </label>
-            <div class="flex gap-2">
-              <UButton
-                v-for="opt in [7, 14, 28, 60, 90]"
-                :key="opt"
-                size="xs"
-                :variant="backfillDays === opt ? 'solid' : 'soft'"
-                @click="backfillDays = opt"
-              >{{ opt }}d</UButton>
-            </div>
-          </div>
-
-          <div class="rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40 p-3 text-xs text-amber-800 dark:text-amber-200 space-y-1">
-            <p>
-              <UIcon name="i-lucide-info" class="w-3.5 h-3.5 inline-block align-text-bottom mr-1" />
-              Meta retains roughly 28 days of account-level insights — anything before that may come back empty.
-            </p>
-            <p>
-              The fetch runs sequentially with 1-second pacing to stay under Graph API rate limits.
-              Up to 25 recent posts are also fetched. Total run time: {{ Math.ceil((backfillDays + 25) * 1.1) }}s.
-            </p>
-            <p>
-              Re-running is safe — already-captured days are skipped automatically.
-            </p>
+        <div>
+          <label class="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5 block">
+            Days to fetch
+          </label>
+          <div class="flex gap-2">
+            <UButton
+              v-for="opt in [7, 14, 28, 60, 90]"
+              :key="opt"
+              size="xs"
+              :variant="backfillDays === opt ? 'solid' : 'soft'"
+              @click="backfillDays = opt"
+            >{{ opt }}d</UButton>
           </div>
         </div>
 
-        <template #footer>
-          <div class="flex justify-end gap-3">
-            <UButton variant="ghost" @click="showBackfillModal = false">Cancel</UButton>
-            <UButton color="primary" @click="runBackfill">
-              Fetch {{ backfillDays }} days of history
-            </UButton>
-          </div>
-        </template>
-      </UCard>
+        <div class="rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40 p-3 text-xs text-amber-800 dark:text-amber-200 space-y-1">
+          <p>
+            <UIcon name="i-lucide-info" class="w-3.5 h-3.5 inline-block align-text-bottom mr-1" />
+            Meta retains roughly 28 days of account-level insights — anything before that may come back empty.
+          </p>
+          <p>
+            The fetch runs sequentially with 1-second pacing to stay under Graph API rate limits.
+            Up to 25 recent posts are also fetched. Total run time: {{ Math.ceil((backfillDays + 25) * 1.1) }}s.
+          </p>
+          <p>
+            Re-running is safe — already-captured days are skipped automatically.
+          </p>
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <UButton variant="ghost" @click="showBackfillModal = false">Cancel</UButton>
+          <UButton color="primary" @click="runBackfill">
+            Fetch {{ backfillDays }} days of history
+          </UButton>
+        </div>
+      </template>
     </UModal>
 
     <!-- Delete Confirmation Modal -->
     <UModal v-model="showDeleteModal">
-      <UCard>
-        <template #header>
-          <div class="flex items-center gap-3">
-            <div class="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
-              <UIcon name="i-lucide-alert-triangle" class="w-5 h-5 text-red-600 dark:text-red-400" />
-            </div>
-            <h3 class="font-semibold text-gray-900 dark:text-white">Disconnect Account</h3>
+      <template #header>
+        <div class="flex items-center gap-3">
+          <div class="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
+            <UIcon name="i-lucide-alert-triangle" class="w-5 h-5 text-red-600 dark:text-red-400" />
           </div>
-        </template>
+          <h3 class="font-semibold text-gray-900 dark:text-white">Disconnect Account</h3>
+        </div>
+      </template>
 
-        <p class="text-gray-600 dark:text-gray-300">
-          Are you sure you want to disconnect <strong>{{ accountToDelete?.account_name }}</strong>?
-          You'll need to reconnect to post to this account again.
-        </p>
+      <p class="text-gray-600 dark:text-gray-300">
+        Are you sure you want to disconnect <strong>{{ accountToDelete?.account_name }}</strong>?
+        You'll need to reconnect to post to this account again.
+      </p>
 
-        <template #footer>
-          <div class="flex justify-end gap-3">
-            <UButton variant="ghost" @click="showDeleteModal = false">Cancel</UButton>
-            <UButton color="red" :loading="isDeleting === accountToDelete?.id" @click="disconnectAccount">
-              Disconnect
-            </UButton>
-          </div>
-        </template>
-      </UCard>
+      <template #footer>
+        <div class="flex justify-end gap-3">
+          <UButton variant="ghost" @click="showDeleteModal = false">Cancel</UButton>
+          <UButton color="red" :loading="isDeleting === accountToDelete?.id" @click="disconnectAccount">
+            Disconnect
+          </UButton>
+        </div>
+      </template>
     </UModal>
   </LayoutPageContainer>
 </template>

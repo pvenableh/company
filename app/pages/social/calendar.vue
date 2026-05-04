@@ -347,21 +347,18 @@ const df = new DateFormatter('en-US', { month: 'long', year: 'numeric' })
 
     <!-- Post Detail Modal -->
     <UModal v-model="showPostModal" class="sm:max-w-xl">
-      <UCard v-if="selectedPost">
-        <template #header>
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <UBadge :color="selectedPost.status === 'published' ? 'green' : selectedPost.status === 'failed' ? 'red' : 'blue'" variant="subtle">
-                {{ selectedPost.status }}
-              </UBadge>
-              <span class="text-sm text-gray-500 dark:text-gray-400">
-                {{ format(parseISO(selectedPost.scheduled_at), 'MMM d, yyyy • h:mm a') }}
-              </span>
-            </div>
-            <UButton variant="ghost" icon="i-lucide-x" size="xs" @click="showPostModal = false" />
-          </div>
-        </template>
+      <template v-if="selectedPost" #header>
+        <div class="flex items-center gap-2">
+          <UBadge :color="selectedPost.status === 'published' ? 'green' : selectedPost.status === 'failed' ? 'red' : 'blue'" variant="subtle">
+            {{ selectedPost.status }}
+          </UBadge>
+          <span class="text-sm text-gray-500 dark:text-gray-400">
+            {{ format(parseISO(selectedPost.scheduled_at), 'MMM d, yyyy • h:mm a') }}
+          </span>
+        </div>
+      </template>
 
+      <template v-if="selectedPost">
         <!-- Thumbnail -->
         <div v-if="selectedPost.thumbnail_url || selectedPost.media_urls?.length" class="mb-4">
           <img
@@ -410,34 +407,34 @@ const df = new DateFormatter('en-US', { month: 'long', year: 'numeric' })
             </div>
           </div>
         </div>
+      </template>
 
-        <template #footer>
-          <div class="flex justify-between">
+      <template v-if="selectedPost" #footer>
+        <div class="flex justify-between">
+          <UButton
+            v-if="['scheduled', 'draft', 'failed'].includes(selectedPost.status)"
+            variant="soft"
+            color="red"
+            size="sm"
+            :loading="isDeleting"
+            :disabled="isDeleting"
+            @click="deleteSelectedPost"
+          >
+            Delete
+          </UButton>
+          <div class="flex gap-2">
             <UButton
-              v-if="['scheduled', 'draft', 'failed'].includes(selectedPost.status)"
+              v-if="selectedPost.status === 'scheduled' || selectedPost.status === 'draft'"
               variant="soft"
-              color="red"
               size="sm"
-              :loading="isDeleting"
-              :disabled="isDeleting"
-              @click="deleteSelectedPost"
+              :to="`/social/posts/${selectedPost.id}/edit`"
             >
-              Delete
+              Edit
             </UButton>
-            <div class="flex gap-2">
-              <UButton
-                v-if="selectedPost.status === 'scheduled' || selectedPost.status === 'draft'"
-                variant="soft"
-                size="sm"
-                :to="`/social/posts/${selectedPost.id}/edit`"
-              >
-                Edit
-              </UButton>
-              <UButton size="sm" @click="showPostModal = false">Close</UButton>
-            </div>
+            <UButton size="sm" @click="showPostModal = false">Close</UButton>
           </div>
-        </template>
-      </UCard>
+        </div>
+      </template>
     </UModal>
   </LayoutPageContainer>
 </template>
