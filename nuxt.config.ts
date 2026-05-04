@@ -130,9 +130,15 @@ export default defineNuxtConfig({
 				redirectUri: process.env.TIKTOK_REDIRECT_URI || '',
 			},
 			linkedin: {
+				// App A — Sign In with LinkedIn + Share on LinkedIn (personal-profile posting)
 				clientId: process.env.LINKEDIN_CLIENT_ID || '',
 				clientSecret: process.env.LINKEDIN_CLIENT_SECRET || '',
 				redirectUri: process.env.LINKEDIN_REDIRECT_URI || '',
+				// App B — Community Management API (company-page posting). Separate
+				// app required by LinkedIn legal exclusivity rules.
+				orgClientId: process.env.LINKEDIN_ORG_CLIENT_ID || '',
+				orgClientSecret: process.env.LINKEDIN_ORG_CLIENT_SECRET || '',
+				orgRedirectUri: process.env.LINKEDIN_ORG_REDIRECT_URI || '',
 			},
 			facebook: {
 				// Same Meta app as Instagram — falls back to Instagram credentials

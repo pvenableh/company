@@ -32,6 +32,12 @@ const LINKEDIN_TOKEN_URL = 'https://www.linkedin.com/oauth/v2/accessToken'
 const LINKEDIN_API = 'https://api.linkedin.com/v2'
 const LINKEDIN_REST = 'https://api.linkedin.com/rest'
 
+// LinkedIn requires Community Management API to be the only product on its app
+// (legal exclusivity), so we run two separate apps:
+//   - Personal (App A): Sign In with LinkedIn + Share on LinkedIn → personal-profile posting
+//   - Org (App B): Community Management API only → Company-Page posting
+// Each has its own client_id, secret, and redirect URI.
+
 export function getLinkedInConfig() {
   const config = useRuntimeConfig()
   return {
@@ -41,20 +47,37 @@ export function getLinkedInConfig() {
   }
 }
 
+export function getLinkedInOrgConfig() {
+  const config = useRuntimeConfig()
+  return {
+    clientId: config.social.linkedin.orgClientId,
+    clientSecret: config.social.linkedin.orgClientSecret,
+    redirectUri: config.social.linkedin.orgRedirectUri,
+  }
+}
+
 // ══════════════════════════════════════════════════════════════════════════════
 // OAUTH FLOW
 // ══════════════════════════════════════════════════════════════════════════════
 
-/**
- * Generate the OAuth authorization URL.
- * Uses OpenID Connect for profile info + social scopes for posting.
- */
 export function getLinkedInAuthUrl(state: string): string {
   const { clientId, redirectUri } = getLinkedInConfig()
+  const scopes = ['openid', 'profile', 'w_member_social']
+
+  const params = new URLSearchParams({
+    response_type: 'code',
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    state,
+    scope: scopes.join(' '),
+  })
+
+  return `${LINKEDIN_AUTH_URL}?${params.toString()}`
+}
+
+export function getLinkedInOrgAuthUrl(state: string): string {
+  const { clientId, redirectUri } = getLinkedInOrgConfig()
   const scopes = [
-    'openid',
-    'profile',
-    'w_member_social',
     'r_organization_social',
     'w_organization_social',
     'rw_organization_admin',
@@ -76,8 +99,17 @@ export function getLinkedInAuthUrl(state: string): string {
  * LinkedIn tokens last 60 days; refresh tokens last 365 days.
  */
 export async function exchangeLinkedInCode(code: string): Promise<OAuthTokenResult> {
-  const { clientId, clientSecret, redirectUri } = getLinkedInConfig()
+  return exchangeCode(code, getLinkedInConfig())
+}
 
+export async function exchangeLinkedInOrgCode(code: string): Promise<OAuthTokenResult> {
+  return exchangeCode(code, getLinkedInOrgConfig())
+}
+
+async function exchangeCode(
+  code: string,
+  cfg: { clientId: string; clientSecret: string; redirectUri: string },
+): Promise<OAuthTokenResult> {
   const res = await $fetch<{
     access_token: string
     expires_in: number
@@ -89,9 +121,9 @@ export async function exchangeLinkedInCode(code: string): Promise<OAuthTokenResu
     body: new URLSearchParams({
       grant_type: 'authorization_code',
       code,
-      client_id: clientId,
-      client_secret: clientSecret,
-      redirect_uri: redirectUri,
+      client_id: cfg.clientId,
+      client_secret: cfg.clientSecret,
+      redirect_uri: cfg.redirectUri,
     }).toString(),
   })
 
@@ -104,9 +136,15 @@ export async function exchangeLinkedInCode(code: string): Promise<OAuthTokenResu
 
 /**
  * Refresh an expired access token.
+ * Pass `isOrgAccount` for tokens issued by App B.
  */
-export async function refreshLinkedInToken(refreshToken: string): Promise<OAuthTokenResult> {
-  const { clientId, clientSecret } = getLinkedInConfig()
+export async function refreshLinkedInToken(
+  refreshToken: string,
+  isOrgAccount = false,
+): Promise<OAuthTokenResult> {
+  const { clientId, clientSecret } = isOrgAccount
+    ? getLinkedInOrgConfig()
+    : getLinkedInConfig()
 
   const res = await $fetch<{
     access_token: string

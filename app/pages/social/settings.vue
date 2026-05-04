@@ -18,12 +18,18 @@ const toast = useToast()
 const { isOrgAdminOrAbove } = useOrgRole()
 const { clientList: clients } = useClients()
 
+// LinkedIn requires two apps (legal-exclusivity rule on Community Management
+// API), so we surface it as two cards. Both store `platform: 'linkedin'` in the
+// DB and differentiate via `metadata.type` ('personal' vs 'organization').
+type PlatformKey = SocialPlatform | 'linkedin-org'
+
 // Platform display config
-const platformConfig: Record<SocialPlatform, {
+const platformConfig: Record<PlatformKey, {
   label: string
   icon: string
   bgClass: string
   connectLabel: string
+  connectPath: string
   footerNote?: string
 }> = {
   instagram: {
@@ -31,26 +37,38 @@ const platformConfig: Record<SocialPlatform, {
     icon: 'i-lucide-instagram',
     bgClass: 'bg-gradient-to-br from-purple-500 via-pink-500 to-orange-500',
     connectLabel: 'Connect Instagram Business Account',
+    connectPath: '/api/social/accounts/connect/instagram',
   },
   tiktok: {
     label: 'TikTok',
     icon: 'i-lucide-music',
     bgClass: 'bg-black',
     connectLabel: 'Connect TikTok Account',
+    connectPath: '/api/social/accounts/connect/tiktok',
     footerNote: 'TikTok posts are sent to your inbox as drafts. Direct posting requires TikTok audit approval.',
   },
   linkedin: {
-    label: 'LinkedIn',
+    label: 'LinkedIn (Personal)',
     icon: 'i-lucide-linkedin',
     bgClass: 'bg-[#0A66C2]',
-    connectLabel: 'Connect LinkedIn Account',
-    footerNote: 'Connects your personal profile and any Company Pages you manage.',
+    connectLabel: 'Connect Personal LinkedIn',
+    connectPath: '/api/social/accounts/connect/linkedin',
+    footerNote: 'Posts to your personal LinkedIn profile. Use the Company Pages card below to post to a LinkedIn Page.',
+  },
+  'linkedin-org': {
+    label: 'LinkedIn (Company Pages)',
+    icon: 'i-lucide-building-2',
+    bgClass: 'bg-[#0A66C2]',
+    connectLabel: 'Connect LinkedIn Company Pages',
+    connectPath: '/api/social/accounts/connect/linkedin-org',
+    footerNote: 'Requires LinkedIn Community Management API approval (separate app). Connects all Company Pages you administer.',
   },
   facebook: {
     label: 'Facebook',
     icon: 'i-lucide-facebook',
     bgClass: 'bg-[#1877F2]',
     connectLabel: 'Connect Facebook Page',
+    connectPath: '/api/social/accounts/connect/facebook',
     footerNote: 'Only Facebook Pages you manage can be connected. Personal profiles are not supported.',
   },
   threads: {
@@ -58,10 +76,11 @@ const platformConfig: Record<SocialPlatform, {
     icon: 'i-lucide-at-sign',
     bgClass: 'bg-black',
     connectLabel: 'Connect Threads Account',
+    connectPath: '/api/social/accounts/connect/threads',
   },
 }
 
-const platformOrder: SocialPlatform[] = ['instagram', 'tiktok', 'linkedin', 'facebook', 'threads']
+const platformOrder: PlatformKey[] = ['instagram', 'tiktok', 'linkedin', 'linkedin-org', 'facebook', 'threads']
 
 // ── Setup guide (per-platform OAuth + env reference, surfaced at bottom of page) ──
 type SetupGuide = {
@@ -73,7 +92,7 @@ type SetupGuide = {
   notes?: string[]
 }
 
-const setupGuides: Record<SocialPlatform, SetupGuide> = {
+const setupGuides: Record<PlatformKey, SetupGuide> = {
   instagram: {
     envVars: [
       { name: 'INSTAGRAM_APP_ID', required: true, note: 'Meta app ID (shared across IG/FB/Threads)' },
@@ -117,20 +136,29 @@ const setupGuides: Record<SocialPlatform, SetupGuide> = {
       { name: 'LINKEDIN_CLIENT_SECRET', required: true },
       { name: 'LINKEDIN_REDIRECT_URI', required: true },
     ],
-    scopes: [
-      'openid',
-      'profile',
-      'w_member_social',
-      'r_organization_social',
-      'w_organization_social',
-      'rw_organization_admin',
-    ],
+    scopes: ['openid', 'profile', 'w_member_social'],
     redirectPath: '/api/social/oauth/linkedin/callback',
     consoleUrl: 'https://www.linkedin.com/developers/apps',
     consoleLabel: 'LinkedIn Developer Portal',
     notes: [
-      'Community Management API is invite-only and must be the only product on the app — recommend Marketing Developer Platform instead.',
-      'For personal-only posting until org-page approval, trim scopes to: openid, profile, w_member_social.',
+      'Add the products "Sign In with LinkedIn using OpenID Connect" + "Share on LinkedIn" to this app.',
+      'For Company-Page posting, set up a SECOND app and configure the LINKEDIN_ORG_* env vars (see LinkedIn Company Pages setup below).',
+    ],
+  },
+  'linkedin-org': {
+    envVars: [
+      { name: 'LINKEDIN_ORG_CLIENT_ID', required: true },
+      { name: 'LINKEDIN_ORG_CLIENT_SECRET', required: true },
+      { name: 'LINKEDIN_ORG_REDIRECT_URI', required: true },
+    ],
+    scopes: ['r_organization_social', 'w_organization_social', 'rw_organization_admin'],
+    redirectPath: '/api/social/oauth/linkedin-org/callback',
+    consoleUrl: 'https://www.linkedin.com/developers/apps',
+    consoleLabel: 'LinkedIn Developer Portal',
+    notes: [
+      'Use a SECOND LinkedIn app — Community Management API legal rules require it to be the only product on its app.',
+      'Submit a Community Management API access request with privacy policy + terms of service URLs and a clear use-case write-up.',
+      'Approval can take weeks and is frequently denied; this card stays empty until LinkedIn approves.',
     ],
   },
   facebook: {
@@ -174,7 +202,7 @@ const setupGuides: Record<SocialPlatform, SetupGuide> = {
 
 const siteOrigin = useRuntimeConfig().public.siteUrl as string
 
-function fullRedirectUri(platform: SocialPlatform): string {
+function fullRedirectUri(platform: PlatformKey): string {
   return `${siteOrigin}${setupGuides[platform].redirectPath}`
 }
 
@@ -211,7 +239,17 @@ onMounted(() => {
 const { data: accountsData, refresh: refreshAccounts } = useLazyFetch('/api/social/accounts')
 const accounts = computed(() => (accountsData.value?.data || []) as SocialAccountPublic[])
 
-function accountsForPlatform(platform: SocialPlatform) {
+function accountsForPlatform(platform: PlatformKey) {
+  if (platform === 'linkedin') {
+    return accounts.value.filter(
+      (a) => a.platform === 'linkedin' && (a.metadata as any)?.type !== 'organization',
+    )
+  }
+  if (platform === 'linkedin-org') {
+    return accounts.value.filter(
+      (a) => a.platform === 'linkedin' && (a.metadata as any)?.type === 'organization',
+    )
+  }
   return accounts.value.filter((a) => a.platform === platform)
 }
 
@@ -328,7 +366,7 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
                 </p>
               </div>
             </div>
-            <UButton :to="`/api/social/accounts/connect/${platform}`" external icon="i-lucide-plus" size="sm">
+            <UButton :to="platformConfig[platform].connectPath" external icon="i-lucide-plus" size="sm">
               Connect
             </UButton>
           </div>
@@ -337,7 +375,7 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
         <div v-if="accountsForPlatform(platform).length === 0" class="text-center py-8">
           <UIcon :name="platformConfig[platform].icon" class="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
           <p class="text-gray-500 dark:text-gray-400 mb-4">No {{ platformConfig[platform].label }} accounts connected</p>
-          <UButton :to="`/api/social/accounts/connect/${platform}`" external variant="soft">
+          <UButton :to="platformConfig[platform].connectPath" external variant="soft">
             {{ platformConfig[platform].connectLabel }}
           </UButton>
         </div>
@@ -366,7 +404,7 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
             </UBadge>
             <UDropdown
               :items="[
-                [{ label: 'Reconnect', icon: 'i-lucide-refresh-cw', to: `/api/social/accounts/connect/${platform}`, external: true }],
+                [{ label: 'Reconnect', icon: 'i-lucide-refresh-cw', to: platformConfig[platform].connectPath, external: true }],
                 [{ label: 'Disconnect', icon: 'i-lucide-trash-2', click: () => confirmDelete(account) }],
               ]"
             >

@@ -3,7 +3,7 @@
  * GET /api/social/oauth/linkedin/callback
  */
 
-import { exchangeLinkedInCode, getLinkedInProfile, getLinkedInOrganizations } from '~~/server/adapters/linkedin'
+import { exchangeLinkedInCode, getLinkedInProfile } from '~~/server/adapters/linkedin'
 import {
   getSocialAccountByPlatformId,
   createSocialAccount,
@@ -43,9 +43,9 @@ export default defineEventHandler(async (event) => {
     const profile = await getLinkedInProfile(tokens.accessToken)
 
     const tokenExpiresAt = computeTokenExpiry(tokens.expiresIn)
-    let connectedCount = 0
 
-    // Connect personal profile
+    // Connect personal profile only. Company-Page connections go through the
+    // separate App B flow at /api/social/oauth/linkedin-org/callback.
     const existingPersonal = await getSocialAccountByPlatformId('linkedin', profile.sub, organizationId)
 
     const personalData = {
@@ -81,52 +81,8 @@ export default defineEventHandler(async (event) => {
         platform: 'linkedin',
       })
     }
-    connectedCount++
 
-    // Also connect organization pages the user manages
-    const orgs = await getLinkedInOrganizations(tokens.accessToken).catch(() => [])
-
-    for (const org of orgs) {
-      const orgPlatformId = `org_${org.organizationId}`
-      const existingOrg = await getSocialAccountByPlatformId('linkedin', orgPlatformId, organizationId)
-
-      const orgData = {
-        organization: organizationId,
-        platform: 'linkedin' as const,
-        platform_user_id: orgPlatformId,
-        account_name: org.name,
-        account_handle: org.vanityName,
-        profile_picture_url: org.logoUrl,
-        access_token: tokens.accessToken,
-        refresh_token: tokens.refreshToken,
-        token_expires_at: tokenExpiresAt,
-        metadata: { type: 'organization', authorUrn: `urn:li:organization:${org.organizationId}` },
-      }
-
-      if (existingOrg) {
-        await updateSocialAccount(existingOrg.id, {
-          ...orgData,
-          status: 'active',
-        })
-        await logSocialActivity({
-          action: 'account_token_refreshed',
-          entity_type: 'account',
-          entity_id: existingOrg.id,
-          platform: 'linkedin',
-        })
-      } else {
-        const newAccount = await createSocialAccount(orgData)
-        await logSocialActivity({
-          action: 'account_connected',
-          entity_type: 'account',
-          entity_id: newAccount.id,
-          platform: 'linkedin',
-        })
-      }
-      connectedCount++
-    }
-
-    return sendRedirect(event, `/social/settings?success=linkedin&count=${connectedCount}`)
+    return sendRedirect(event, `/social/settings?success=linkedin&count=1`)
   } catch (err: any) {
     console.error('[social:oauth:linkedin] Error:', err)
     return sendRedirect(
