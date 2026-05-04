@@ -117,7 +117,7 @@
 						<h3 class="text-sm font-semibold text-foreground">Email</h3>
 					</div>
 					<NuxtLink
-						to="/email/templates"
+						to="/email"
 						class="text-[10px] uppercase tracking-wider font-medium text-muted-foreground hover:text-foreground"
 					>
 						Open →
@@ -185,7 +185,7 @@
 						<h3 class="text-sm font-semibold text-foreground">Social</h3>
 					</div>
 					<NuxtLink
-						to="/social/posts"
+						to="/social"
 						class="text-[10px] uppercase tracking-wider font-medium text-muted-foreground hover:text-foreground"
 					>
 						Open →
@@ -350,16 +350,18 @@
 		</div>
 
 		<!-- AI Tools — collapsed/secondary -->
-		<details class="ios-card overflow-hidden mb-6" :open="aiToolsOpen">
-			<summary
-				class="flex items-center justify-between gap-3 px-5 py-4 cursor-pointer list-none"
-				@click.prevent="aiToolsOpen = !aiToolsOpen"
+		<div class="ios-card overflow-hidden mb-6">
+			<button
+				type="button"
+				class="w-full flex items-center justify-between gap-3 px-5 py-4 cursor-pointer hover:bg-muted/30 transition-colors"
+				:aria-expanded="aiToolsOpen"
+				@click="aiToolsOpen = !aiToolsOpen"
 			>
 				<div class="flex items-center gap-3">
 					<div class="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center">
 						<Icon name="lucide:wand" class="w-4 h-4 text-amber-500" />
 					</div>
-					<div>
+					<div class="text-left">
 						<h3 class="text-sm font-semibold text-foreground">Earnest Intelligence</h3>
 						<p class="text-[10px] text-muted-foreground">Deep analysis + AI campaign planner</p>
 					</div>
@@ -369,7 +371,7 @@
 					class="w-4 h-4 text-muted-foreground transition-transform"
 					:class="{ 'rotate-180': aiToolsOpen }"
 				/>
-			</summary>
+			</button>
 
 			<div v-if="aiToolsOpen" class="px-5 pb-5 pt-1 space-y-6 border-t border-border/30">
 				<!-- Run analysis row -->
@@ -469,7 +471,7 @@
 					</div>
 				</div>
 			</div>
-		</details>
+		</div>
 
 		<!-- AI Contextual Sidebar -->
 		<ClientOnly>
@@ -663,7 +665,7 @@ const actionItems = computed(() => {
 			label: 'Publishing failed',
 			message: `${count} post${count > 1 ? 's' : ''} failed to publish`,
 			icon: 'lucide:alert-circle',
-			href: '/social/posts?status=failed',
+			href: { path: '/social', query: { status: 'failed' } },
 			toneClass: 'border-rose-500/20',
 			iconBgClass: 'bg-rose-500/10',
 			iconColorClass: 'text-rose-500',
@@ -696,7 +698,7 @@ const actionItems = computed(() => {
 			label: 'Going out today',
 			message: `${scheduledToday.length} scheduled post${scheduledToday.length > 1 ? 's' : ''} today`,
 			icon: 'lucide:clock',
-			href: '/social/posts?status=scheduled',
+			href: { path: '/social', query: { status: 'scheduled' } },
 			toneClass: 'border-cyan-500/20',
 			iconBgClass: 'bg-cyan-500/10',
 			iconColorClass: 'text-cyan-500',
@@ -1025,7 +1027,7 @@ async function saveCampaign() {
 
 function handleCampaignCreate(activity: CampaignActivity) {
 	if (activity.channel === 'social') navigateTo('/social/compose');
-	else if (activity.channel === 'email') navigateTo('/email/templates');
+	else if (activity.channel === 'email') navigateTo('/email');
 }
 
 // ── Lifecycle ──────────────────────────────────────────────────────────

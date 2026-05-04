@@ -85,8 +85,8 @@ const iconBgClass = computed(() => meta.value.bg);
 const iconColorClass = computed(() => meta.value.fg);
 
 const targetHref = computed(() => {
-	if (!props.tile.connected) return '/social/settings';
-	return `/social/posts?platform=${props.tile.platform}`;
+	if (!props.tile.connected) return { path: '/social/settings' };
+	return { path: '/social', query: { platform: props.tile.platform } };
 });
 
 function formatNumber(n: number): string {
