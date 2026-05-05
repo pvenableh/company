@@ -543,7 +543,6 @@ const COLLECTIONS = {
             choices: [
               { text: 'Account', value: 'account' },
               { text: 'Post', value: 'post' },
-              { text: 'Aggregate', value: 'aggregate' },
             ],
           },
         },

@@ -341,7 +341,7 @@ export async function createAnalyticsSnapshot(
 
 export async function getAnalyticsSnapshots(filters: {
   social_account: string
-  snapshot_type?: 'account' | 'post' | 'aggregate'
+  snapshot_type?: 'account' | 'post'
   captured_after?: string
   captured_before?: string
   limit?: number

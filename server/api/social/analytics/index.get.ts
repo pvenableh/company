@@ -39,6 +39,7 @@ export default defineEventHandler(async (event) => {
       let totalProfileViews = 0
       let totalWebsiteClicks = 0
       let totalPostEngagements = 0
+      let totalVideoViews = 0
       for (const s of snapshots) {
         const m = (s.metrics as any) || {}
         if (m.reach) totalReach += m.reach
@@ -47,22 +48,8 @@ export default defineEventHandler(async (event) => {
         if (m.profile_views) totalProfileViews += m.profile_views
         if (m.website_clicks) totalWebsiteClicks += m.website_clicks
         if (m.page_post_engagements) totalPostEngagements += m.page_post_engagements
+        if (m.video_views) totalVideoViews += m.video_views
       }
-
-      // Layer on the most recent period-aggregate snapshot. These metrics
-      // (e.g. IG views/profile_views/website_clicks, FB page_views_total /
-      // page_video_views) come back from Meta as a single total for the whole
-      // window — the daily summing loop above can't produce them.
-      const aggregates = await getAnalyticsSnapshots({
-        social_account: accountId,
-        snapshot_type: 'aggregate',
-        limit: 1,
-      })
-      const latestAggregate = (aggregates[0]?.metrics as any) || {}
-      if (latestAggregate.impressions) totalImpressions += latestAggregate.impressions
-      if (latestAggregate.profile_views) totalProfileViews += latestAggregate.profile_views
-      if (latestAggregate.website_clicks) totalWebsiteClicks += latestAggregate.website_clicks
-      const totalVideoViews = Number(latestAggregate.video_views) || 0
 
       const latestMetrics = (latest?.metrics as any) || {}
       const totalFollowers = latestMetrics.followers_count ?? latestMetrics.follower_count ?? 0
@@ -118,7 +105,6 @@ export default defineEventHandler(async (event) => {
     const accounts = await getSocialAccounts(organizationId, { status: 'active' })
 
     const allSnapshots = []
-    const latestAggregates: Array<Record<string, any>> = []
     for (const account of accounts) {
       // Limit upper-bounded to 90 (= MAX_DAYS in backfill) — one row per day max.
       const snapshots = await getAnalyticsSnapshots({
@@ -129,15 +115,6 @@ export default defineEventHandler(async (event) => {
         limit: 90,
       })
       allSnapshots.push(...snapshots.map((s) => ({ ...s, account })))
-
-      // Most recent period-aggregate per account (no date filter — Meta only
-      // gives us "the last N days" totals, so we always use the freshest one).
-      const aggregates = await getAnalyticsSnapshots({
-        social_account: account.id,
-        snapshot_type: 'aggregate',
-        limit: 1,
-      })
-      if (aggregates[0]?.metrics) latestAggregates.push(aggregates[0].metrics as any)
     }
 
     // Track latest per-account for stock metrics + per-account exposure
@@ -169,6 +146,7 @@ export default defineEventHandler(async (event) => {
     let totalProfileViews = 0
     let totalWebsiteClicks = 0
     let totalPostEngagements = 0
+    let totalVideoViews = 0
     for (const snapshot of allSnapshots) {
       const metrics = (snapshot as any).metrics as Record<string, number>
       if (metrics.reach) totalReach += metrics.reach
@@ -177,15 +155,7 @@ export default defineEventHandler(async (event) => {
       if (metrics.profile_views) totalProfileViews += metrics.profile_views
       if (metrics.website_clicks) totalWebsiteClicks += metrics.website_clicks
       if (metrics.page_post_engagements) totalPostEngagements += metrics.page_post_engagements
-    }
-
-    // Layer on period-aggregate metrics (one freshest snapshot per account).
-    let totalVideoViews = 0
-    for (const m of latestAggregates) {
-      if (m.impressions) totalImpressions += Number(m.impressions) || 0
-      if (m.profile_views) totalProfileViews += Number(m.profile_views) || 0
-      if (m.website_clicks) totalWebsiteClicks += Number(m.website_clicks) || 0
-      if (m.video_views) totalVideoViews += Number(m.video_views) || 0
+      if (metrics.video_views) totalVideoViews += metrics.video_views
     }
 
     return {

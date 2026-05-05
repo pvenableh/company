@@ -3420,7 +3420,7 @@ export interface SocialAnalyticsSnapshot {
 	/** @description Linked post for post-level metrics (null for account-level) */
 	social_post?: SocialPost | string | null;
 	/** @required */
-	snapshot_type: 'account' | 'post' | 'aggregate';
+	snapshot_type: 'account' | 'post';
 	/** @description When these metrics were captured @required */
 	captured_at: string;
 	/** @description Platform-specific metrics object (followers, likes, impressions, etc.) @required */
