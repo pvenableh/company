@@ -1,10 +1,20 @@
 <template>
 	<footer class="w-full mt-12">
 		<div class="max-w-screen-xl mx-auto px-6 py-12">
+			<!-- Brand: full-width centered on mobile, left-aligned in grid on lg+ -->
+			<div class="text-center lg:hidden mb-8">
+				<nuxt-link to="/" class="inline-block group">
+					<span class="text-2xl font-bold text-foreground" style="font-family: var(--font-bauer-bodoni)">
+						Earnest<span class="text-primary">.</span>
+					</span>
+				</nuxt-link>
+				<p class="text-xs text-muted-foreground mt-2" style="font-family: var(--font-signature)">Do good work.</p>
+			</div>
+
 			<!-- Top section: Brand + Nav -->
-			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8 mb-10">
-				<!-- Brand -->
-				<div>
+			<div class="grid grid-cols-2 lg:grid-cols-6 gap-8 mb-10 text-center lg:text-left">
+				<!-- Brand: only renders inside the grid on lg+ -->
+				<div class="hidden lg:block">
 					<nuxt-link to="/" class="group">
 						<span class="text-2xl font-bold text-foreground" style="font-family: var(--font-bauer-bodoni)">
 							Earnest<span class="text-primary">.</span>
@@ -16,26 +26,31 @@
 				<!-- Logged-in nav columns -->
 				<template v-if="isLoggedIn">
 					<div class="space-y-2.5">
-						<span class="text-[10px] font-semibold uppercase tracking-wider text-foreground">Platform</span>
+						<span class="text-[10px] font-semibold uppercase tracking-wider text-foreground">Work</span>
 						<div class="flex flex-col gap-1.5">
-							<nuxt-link v-for="link in platformLinks" :key="link.to" :to="link.to" class="text-xs text-muted-foreground hover:text-foreground transition-colors">
+							<nuxt-link v-for="link in workLinks" :key="link.to" :to="link.to" class="text-xs text-muted-foreground hover:text-foreground transition-colors">
 								{{ link.label }}
 							</nuxt-link>
 						</div>
 					</div>
 					<div class="space-y-2.5">
-						<span class="text-[10px] font-semibold uppercase tracking-wider text-foreground">Tools</span>
+						<span class="text-[10px] font-semibold uppercase tracking-wider text-foreground">Pipeline</span>
 						<div class="flex flex-col gap-1.5">
-							<nuxt-link v-for="link in toolLinks" :key="link.to" :to="link.to" class="text-xs text-muted-foreground hover:text-foreground transition-colors">
+							<nuxt-link v-for="link in pipelineLinks" :key="link.to" :to="link.to" class="text-xs text-muted-foreground hover:text-foreground transition-colors">
 								{{ link.label }}
 							</nuxt-link>
 						</div>
 					</div>
 					<div class="space-y-2.5">
-						<div class="flex items-center gap-1.5">
-							<UIcon name="i-heroicons-megaphone" class="w-3 h-3 text-foreground/60" />
-							<span class="text-[10px] font-semibold uppercase tracking-wider text-foreground">Engage</span>
+						<span class="text-[10px] font-semibold uppercase tracking-wider text-foreground">Financials</span>
+						<div class="flex flex-col gap-1.5">
+							<nuxt-link v-for="link in financialsLinks" :key="link.to" :to="link.to" class="text-xs text-muted-foreground hover:text-foreground transition-colors">
+								{{ link.label }}
+							</nuxt-link>
 						</div>
+					</div>
+					<div class="space-y-2.5">
+						<span class="text-[10px] font-semibold uppercase tracking-wider text-foreground">Engage</span>
 						<div class="flex flex-col gap-1.5">
 							<nuxt-link v-for="link in engageLinks" :key="link.to" :to="link.to" class="text-xs text-muted-foreground hover:text-foreground transition-colors">
 								{{ link.label }}
@@ -97,19 +112,26 @@
 const { user: sessionUser, loggedIn } = useUserSession();
 const isLoggedIn = computed(() => loggedIn.value && sessionUser.value);
 
-const platformLinks = [
-	{ to: '/tickets', label: 'Tickets' },
+const workLinks = [
 	{ to: '/projects', label: 'Projects' },
+	{ to: '/tickets', label: 'Tickets' },
+	{ to: '/tasks', label: 'Tasks' },
 	{ to: '/scheduler', label: 'Scheduler' },
-	{ to: '/financials', label: 'Financials' },
 ];
 
-const toolLinks = [
-	{ to: '/invoices', label: 'Invoices' },
+const pipelineLinks = [
+	{ to: '/leads', label: 'Leads' },
 	{ to: '/proposals', label: 'Proposals' },
 	{ to: '/contracts', label: 'Contracts' },
-	{ to: '/contacts', label: 'Contacts' },
 	{ to: '/clients', label: 'Clients' },
+	{ to: '/contacts', label: 'Contacts' },
+];
+
+const financialsLinks = [
+	{ to: '/invoices', label: 'Invoices' },
+	{ to: '/expenses', label: 'Expenses' },
+	{ to: '/payouts', label: 'Payouts' },
+	{ to: '/financials', label: 'Financials' },
 ];
 
 const engageLinks = [

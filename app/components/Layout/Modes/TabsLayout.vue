@@ -11,9 +11,12 @@ const emit = defineEmits<{
 }>()
 
 const config = useRuntimeConfig()
-const { currentContext } = useContextualHat()
+const route = useRoute()
 
 // ── Tab definitions ──
+// `routes` is the source of truth for active state — prefix match below.
+// Channels + /organization/teams ride along under Pipeline so the tab still
+// lights up on those pages even though the pill-nav surfaces them as Team.
 const tabs = [
   {
     id: 'work',
@@ -23,18 +26,18 @@ const tabs = [
     routes: ['/projects', '/tickets', '/tasks', '/scheduler', '/files', '/goals', '/time-tracker'],
   },
   {
-    id: 'people',
-    label: 'People',
-    icon: 'heroicons:user-group',
-    to: '/people',
-    routes: ['/people', '/contacts', '/clients', '/leads', '/channels', '/organization/teams'],
+    id: 'pipeline',
+    label: 'Pipeline',
+    icon: 'heroicons:funnel',
+    to: '/leads',
+    routes: ['/leads', '/proposals', '/contracts', '/clients', '/contacts', '/people', '/channels', '/organization/teams'],
   },
   {
-    id: 'money',
-    label: 'Money',
+    id: 'financials',
+    label: 'Financials',
     icon: 'heroicons:document-text',
     to: '/invoices',
-    routes: ['/invoices', '/proposals', '/expenses', '/financials', '/payouts'],
+    routes: ['/invoices', '/expenses', '/payouts', '/financials'],
   },
   {
     id: 'engage',
@@ -66,8 +69,10 @@ const initials = computed(() => {
 })
 
 // ── Active tab check ──
-function isActive(tabId: string): boolean {
-  return currentContext.value === tabId
+function isActive(tab: typeof tabs[number]): boolean {
+  const path = route.path
+  if (tab.id === 'ai') return path === '/' || path.startsWith('/command-center')
+  return tab.routes.some((prefix) => path === prefix || path.startsWith(prefix + '/'))
 }
 </script>
 
@@ -95,7 +100,7 @@ function isActive(tabId: string): boolean {
           :key="tab.id"
           :to="tab.to"
           class="tab-pill"
-          :class="isActive(tab.id) ? 'tab-pill-active' : 'tab-pill-inactive'"
+          :class="isActive(tab) ? 'tab-pill-active' : 'tab-pill-inactive'"
         >
           <Icon :name="tab.icon" class="w-4 h-4" />
           <span class="text-[13px] font-medium">{{ tab.label }}</span>
@@ -166,9 +171,9 @@ function isActive(tabId: string): boolean {
           :key="tab.id"
           :to="tab.to"
           class="mobile-tab"
-          :class="isActive(tab.id) ? 'mobile-tab-active' : 'mobile-tab-inactive'"
+          :class="isActive(tab) ? 'mobile-tab-active' : 'mobile-tab-inactive'"
         >
-          <span class="mobile-tab-icon-wrap" :class="{ 'mobile-tab-icon-wrap-active': isActive(tab.id) }">
+          <span class="mobile-tab-icon-wrap" :class="{ 'mobile-tab-icon-wrap-active': isActive(tab) }">
             <Icon :name="tab.icon" class="w-5 h-5" />
           </span>
           <span class="text-[10px] font-medium leading-none mt-1">{{ tab.label }}</span>

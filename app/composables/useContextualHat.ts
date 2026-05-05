@@ -8,7 +8,14 @@
  * Contexts: work, people, money, engage, ai
  */
 
-export type WorkspaceContext = 'work' | 'people' | 'money' | 'engage' | 'ai' | 'settings';
+export type WorkspaceContext =
+	| 'work'
+	| 'pipeline'
+	| 'financials'
+	| 'engage'
+	| 'team'
+	| 'ai'
+	| 'settings';
 
 interface ContextMapping {
 	context: WorkspaceContext;
@@ -22,16 +29,20 @@ const CONTEXT_MAP: ContextMapping[] = [
 		routes: ['/projects', '/tickets', '/tasks', '/scheduler', '/files', '/goals', '/time-tracker'],
 	},
 	{
-		context: 'people',
-		routes: ['/people', '/contacts', '/clients', '/leads', '/channels', '/organization/teams'],
+		context: 'pipeline',
+		routes: ['/leads', '/proposals', '/contracts', '/clients', '/contacts', '/people'],
 	},
 	{
-		context: 'money',
-		routes: ['/invoices', '/proposals', '/expenses', '/financials', '/payouts'],
+		context: 'financials',
+		routes: ['/invoices', '/expenses', '/payouts', '/financials'],
 	},
 	{
 		context: 'engage',
 		routes: ['/email', '/social', '/marketing'],
+	},
+	{
+		context: 'team',
+		routes: ['/channels', '/organization/teams'],
 	},
 	{
 		context: 'ai',
@@ -39,6 +50,8 @@ const CONTEXT_MAP: ContextMapping[] = [
 	},
 	{
 		context: 'settings',
+		// /organization matches /organization/teams too; team mapping above wins
+		// because CONTEXT_MAP is iterated in order.
 		routes: ['/account', '/organization'],
 	},
 ];

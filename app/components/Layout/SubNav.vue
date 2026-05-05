@@ -7,10 +7,36 @@ const { currentContext } = useContextualHat()
 type SubNavItem = { label: string; to: string; icon: string }
 
 const subNavs: Partial<Record<WorkspaceContext, SubNavItem[]>> = {
+  work: [
+    { label: 'Projects', to: '/projects', icon: 'lucide:gantt-chart' },
+    { label: 'Tickets', to: '/tickets', icon: 'heroicons:queue-list' },
+    { label: 'Tasks', to: '/tasks', icon: 'heroicons:clipboard-document-check' },
+    { label: 'Scheduler', to: '/scheduler', icon: 'heroicons:calendar-date-range' },
+    { label: 'Files', to: '/files', icon: 'heroicons:folder-open' },
+    { label: 'Goals', to: '/goals', icon: 'lucide:target' },
+  ],
+  pipeline: [
+    { label: 'Leads', to: '/leads', icon: 'heroicons:funnel' },
+    { label: 'Proposals', to: '/proposals', icon: 'heroicons:document-check' },
+    { label: 'Contracts', to: '/contracts', icon: 'lucide:file-signature' },
+    { label: 'Clients', to: '/clients', icon: 'heroicons:building-storefront' },
+    { label: 'Contacts', to: '/contacts', icon: 'heroicons:identification' },
+    { label: 'People', to: '/people', icon: 'heroicons:user-group' },
+  ],
+  financials: [
+    { label: 'Invoices', to: '/invoices', icon: 'heroicons:document-text' },
+    { label: 'Expenses', to: '/expenses', icon: 'lucide:receipt' },
+    { label: 'Payouts', to: '/payouts', icon: 'lucide:banknote' },
+    { label: 'Financials', to: '/financials', icon: 'heroicons:chart-bar' },
+  ],
   engage: [
     { label: 'Marketing', to: '/marketing', icon: 'lucide:megaphone' },
     { label: 'Email', to: '/email', icon: 'lucide:mail' },
     { label: 'Social', to: '/social', icon: 'lucide:share-2' },
+  ],
+  team: [
+    { label: 'Channels', to: '/channels', icon: 'heroicons:chat-bubble-left-right' },
+    { label: 'Teams', to: '/organization/teams', icon: 'heroicons:users' },
   ],
 }
 
