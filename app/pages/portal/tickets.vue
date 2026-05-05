@@ -18,6 +18,15 @@ const loading = ref(true);
 const tickets = ref<any[]>([]);
 const filter = ref<'all' | 'open' | 'completed'>('open');
 
+// Detail slide-over
+const selectedTicket = ref<any | null>(null);
+const showDetail = ref(false);
+
+function openTicket(ticket: any) {
+	selectedTicket.value = ticket;
+	showDetail.value = true;
+}
+
 // Create ticket
 const showCreateForm = ref(false);
 const creating = ref(false);
@@ -226,10 +235,11 @@ watch(filter, () => loadTickets());
 
 		<!-- Ticket List -->
 		<div v-else class="space-y-2">
-			<div
+			<button
 				v-for="ticket in tickets"
 				:key="ticket.id"
-				class="ios-card p-4 hover:shadow-md transition-shadow"
+				class="ios-card p-4 hover:shadow-md transition-shadow w-full text-left cursor-pointer"
+				@click="openTicket(ticket)"
 			>
 				<div class="flex items-start gap-3">
 					<!-- Status icon -->
@@ -268,8 +278,94 @@ watch(filter, () => loadTickets());
 						</div>
 					</div>
 				</div>
-			</div>
+			</button>
 		</div>
+
+		<!-- Ticket Detail Slide-over -->
+		<Teleport to="body">
+			<Transition name="slide">
+				<div v-if="showDetail && selectedTicket" class="fixed inset-0 z-50 flex justify-end">
+					<div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="showDetail = false" />
+					<div class="relative w-full max-w-lg bg-background border-l border-border shadow-xl overflow-y-auto">
+						<div class="sticky top-0 z-10 bg-background/90 backdrop-blur-sm border-b border-border/40 p-4 flex items-center justify-between">
+							<h2 class="font-semibold">{{ selectedTicket.title }}</h2>
+							<button class="p-1.5 rounded-lg hover:bg-muted/60 transition-colors" @click="showDetail = false">
+								<Icon name="lucide:x" class="w-5 h-5" />
+							</button>
+						</div>
+
+						<div class="p-5 space-y-5">
+							<!-- Status + Priority -->
+							<div class="flex gap-4">
+								<div>
+									<p class="text-xs text-muted-foreground mb-1">Status</p>
+									<span class="text-xs px-2.5 py-1 rounded-full font-medium"
+										:class="{
+											'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400': selectedTicket.status === 'open',
+											'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400': selectedTicket.status === 'in_progress',
+											'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400': selectedTicket.status === 'pending',
+											'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400': selectedTicket.status === 'completed',
+										}"
+									>
+										{{ selectedTicket.status?.replace('_', ' ') }}
+									</span>
+								</div>
+								<div v-if="selectedTicket.priority">
+									<p class="text-xs text-muted-foreground mb-1">Priority</p>
+									<span class="text-xs px-2.5 py-1 rounded-full font-medium"
+										:class="priorityBadge[selectedTicket.priority] || priorityBadge.normal"
+									>
+										{{ selectedTicket.priority }}
+									</span>
+								</div>
+							</div>
+
+							<!-- Description -->
+							<div v-if="selectedTicket.description">
+								<p class="text-xs text-muted-foreground mb-1">Description</p>
+								<div class="text-sm leading-relaxed prose prose-sm" v-html="selectedTicket.description" />
+							</div>
+
+							<!-- Project -->
+							<div v-if="selectedTicket.project?.title">
+								<p class="text-xs text-muted-foreground mb-1">Project</p>
+								<p class="text-sm flex items-center gap-1.5">
+									<Icon name="lucide:folder" class="w-3.5 h-3.5 text-muted-foreground" />
+									{{ selectedTicket.project.title }}
+								</p>
+							</div>
+
+							<!-- Assigned -->
+							<div v-if="selectedTicket.assigned_to">
+								<p class="text-xs text-muted-foreground mb-1">Assigned To</p>
+								<p class="text-sm">{{ selectedTicket.assigned_to.first_name }} {{ selectedTicket.assigned_to.last_name }}</p>
+							</div>
+
+							<!-- Date -->
+							<div>
+								<p class="text-xs text-muted-foreground mb-1">Opened</p>
+								<p class="text-sm">{{ selectedTicket.date_created ? new Date(selectedTicket.date_created).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '—' }}</p>
+							</div>
+
+							<!-- Reactions -->
+							<div>
+								<p class="text-xs text-muted-foreground mb-2">React</p>
+								<PortalReactions collection="tickets" :item-id="selectedTicket.id" />
+							</div>
+
+							<!-- Comments -->
+							<div class="border-t border-border/30 pt-5">
+								<PortalCommentThread
+									collection="tickets"
+									:item-id="selectedTicket.id"
+									label="Comments"
+								/>
+							</div>
+						</div>
+					</div>
+				</div>
+			</Transition>
+		</Teleport>
 	</LayoutPageContainer>
 </template>
 
@@ -282,5 +378,18 @@ watch(filter, () => loadTickets());
 .expand-leave-to {
 	opacity: 0;
 	transform: translateY(-8px);
+}
+
+.slide-enter-active,
+.slide-leave-active {
+	transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.slide-enter-from .relative,
+.slide-leave-to .relative {
+	transform: translateX(100%);
+}
+.slide-enter-from .absolute,
+.slide-leave-to .absolute {
+	opacity: 0;
 }
 </style>

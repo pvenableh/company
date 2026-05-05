@@ -77,6 +77,7 @@ fetchIndustries();
 const tabItems = [
 	{ slot: 'overview', label: 'Overview', icon: 'i-heroicons-home' },
 	{ slot: 'members', label: 'Members', icon: 'i-heroicons-users' },
+	{ slot: 'client-access', label: 'Client Access', icon: 'i-heroicons-key' },
 	{ slot: 'teams', label: 'Teams', icon: 'i-heroicons-user-group' },
 	{ slot: 'ai-usage', label: 'Usage', icon: 'i-heroicons-sparkles' },
 ];
@@ -504,6 +505,99 @@ const fetchOrgMemberships = async () => {
 	}
 };
 
+// --- Client portal memberships (role.slug = 'client') ---
+const clientMemberships = ref([]);
+const clientMembershipsLoading = ref(false);
+const clientActingId = ref(null);
+
+const fetchClientMemberships = async () => {
+	if (!selectedOrg.value) return;
+	clientMembershipsLoading.value = true;
+	try {
+		const all = await membershipItems.list({
+			filter: { organization: { _eq: selectedOrg.value } },
+			fields: [
+				'id', 'status', 'invited_at',
+				'user.id', 'user.first_name', 'user.last_name', 'user.email', 'user.last_access',
+				'role.slug',
+				'client.id', 'client.name',
+			],
+			sort: ['-invited_at'],
+			limit: -1,
+		});
+		clientMemberships.value = all.filter((m) => m.role?.slug === 'client');
+	} catch {
+		clientMemberships.value = [];
+	} finally {
+		clientMembershipsLoading.value = false;
+	}
+};
+
+const clientStatusClass = (status) => {
+	if (status === 'active') return 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400';
+	if (status === 'pending') return 'bg-amber-500/15 text-amber-600 dark:text-amber-400';
+	return 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300';
+};
+
+const formatRelative = (iso) => {
+	if (!iso) return '';
+	const date = new Date(iso);
+	const diffMs = Date.now() - date.getTime();
+	const sec = Math.round(diffMs / 1000);
+	if (sec < 60) return 'just now';
+	const min = Math.round(sec / 60);
+	if (min < 60) return `${min}m ago`;
+	const hr = Math.round(min / 60);
+	if (hr < 24) return `${hr}h ago`;
+	const day = Math.round(hr / 24);
+	if (day < 30) return `${day}d ago`;
+	return date.toLocaleDateString();
+};
+
+const resendClientInvite = async (m) => {
+	if (!selectedOrg.value) return;
+	clientActingId.value = m.id;
+	try {
+		const result = await $fetch('/api/org/resend-client-invite', {
+			method: 'POST',
+			body: { membershipId: m.id, organizationId: selectedOrg.value },
+		});
+		toast.add({ title: 'Invitation Resent', description: result.message, color: 'green' });
+	} catch (e) {
+		const message = e?.data?.message || e?.message || 'Failed to resend invitation';
+		toast.add({ title: 'Error', description: message, color: 'red' });
+	} finally {
+		clientActingId.value = null;
+	}
+};
+
+const revokeClientAccess = async (m) => {
+	if (!confirm('Revoke portal access for this user? They will no longer be able to sign in.')) return;
+	clientActingId.value = m.id;
+	try {
+		await membershipItems.update(m.id, { status: 'suspended' });
+		toast.add({ title: 'Access Revoked', description: 'Portal access has been suspended.', color: 'green' });
+		await fetchClientMemberships();
+	} catch (e) {
+		toast.add({ title: 'Error', description: e?.data?.message || e?.message || 'Failed to revoke', color: 'red' });
+	} finally {
+		clientActingId.value = null;
+	}
+};
+
+const restoreClientAccess = async (m) => {
+	clientActingId.value = m.id;
+	try {
+		await membershipItems.update(m.id, { status: 'active' });
+		toast.add({ title: 'Access Restored', description: 'Portal access has been re-enabled.', color: 'green' });
+		await fetchClientMemberships();
+	} catch (e) {
+		toast.add({ title: 'Error', description: e?.data?.message || e?.message || 'Failed to restore', color: 'red' });
+	} finally {
+		clientActingId.value = null;
+	}
+};
+
 // --- Get member's org role ---
 const getMemberRole = (memberId) => {
 	const membership = orgMemberships.value.find(
@@ -609,6 +703,7 @@ const fetchOrganizationData = async () => {
 			fetchTeams(selectedOrg.value),
 			fetchOrgRoles(),
 			fetchOrgMemberships(),
+			fetchClientMemberships(),
 		]);
 	} catch (error) {
 		console.error('Error fetching organization data:', error);
@@ -1282,6 +1377,113 @@ watch(searchEmail, (val) => {
 								>
 									Invite a Member
 								</UButton>
+							</div>
+						</div>
+					</template>
+
+					<template #client-access>
+						<div class="mt-6">
+							<div class="flex justify-between items-center mb-4">
+								<div>
+									<h3 class="text-lg font-medium">Client Portal Access</h3>
+									<p class="text-xs text-muted-foreground mt-0.5">All client users with login access across your client companies.</p>
+								</div>
+							</div>
+
+							<div v-if="clientMembershipsLoading" class="flex justify-center py-12">
+								<UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-gray-400" />
+							</div>
+
+							<div v-else-if="!clientMemberships.length" class="text-center py-12">
+								<UIcon name="i-heroicons-key" class="w-10 h-10 text-gray-300 mx-auto mb-3" />
+								<p class="text-gray-500 mb-1">No client portal users yet.</p>
+								<p class="text-xs text-muted-foreground">Invite a client user from a client's detail page.</p>
+							</div>
+
+							<div v-else class="ios-card p-0 overflow-hidden">
+								<div class="grid grid-cols-[1fr_auto_auto_auto] sm:grid-cols-[1fr_1fr_auto_auto_auto] gap-3 px-4 py-2.5 border-b border-border/50 bg-muted/20 text-[10px] uppercase tracking-wider text-muted-foreground font-medium">
+									<div>User</div>
+									<div class="hidden sm:block">Client Company</div>
+									<div>Status</div>
+									<div class="text-right whitespace-nowrap">Last Login</div>
+									<div></div>
+								</div>
+
+								<div
+									v-for="m in clientMemberships"
+									:key="m.id"
+									class="grid grid-cols-[1fr_auto_auto_auto] sm:grid-cols-[1fr_1fr_auto_auto_auto] gap-3 items-center px-4 py-3 border-b border-border/30 last:border-b-0 hover:bg-muted/20 transition-colors"
+								>
+									<div class="min-w-0">
+										<p class="text-sm font-medium truncate">
+											{{ ((m.user?.first_name || '') + ' ' + (m.user?.last_name || '')).trim() || m.user?.email || 'Unknown' }}
+										</p>
+										<p class="text-xs text-muted-foreground truncate">{{ m.user?.email }}</p>
+										<p v-if="m.client?.name" class="sm:hidden text-[11px] text-muted-foreground/70 truncate mt-0.5">
+											{{ m.client.name }}
+										</p>
+									</div>
+									<div class="hidden sm:block min-w-0">
+										<NuxtLink
+											v-if="m.client?.id"
+											:to="`/clients/${m.client.id}`"
+											class="text-sm text-primary hover:underline truncate block"
+										>
+											{{ m.client.name }}
+										</NuxtLink>
+										<span v-else class="text-xs text-muted-foreground italic">Unscoped</span>
+									</div>
+									<span
+										class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize justify-self-start"
+										:class="clientStatusClass(m.status)"
+									>
+										{{ m.status }}
+									</span>
+									<div class="text-right text-xs text-muted-foreground whitespace-nowrap">
+										<span v-if="m.user?.last_access" :title="new Date(m.user.last_access).toLocaleString()">
+											{{ formatRelative(m.user.last_access) }}
+										</span>
+										<span v-else-if="m.invited_at" class="text-[10px] italic">
+											Invited {{ formatRelative(m.invited_at) }}
+										</span>
+										<span v-else>—</span>
+									</div>
+									<div class="flex items-center gap-1 justify-end">
+										<UButton
+											v-if="m.status === 'pending' && canManageOrg"
+											color="gray"
+											variant="ghost"
+											size="xs"
+											icon="i-heroicons-paper-airplane"
+											:loading="clientActingId === m.id"
+											@click="resendClientInvite(m)"
+										>
+											Resend
+										</UButton>
+										<UButton
+											v-if="m.status === 'suspended' && canManageOrg"
+											color="gray"
+											variant="ghost"
+											size="xs"
+											icon="i-heroicons-arrow-path"
+											:loading="clientActingId === m.id"
+											@click="restoreClientAccess(m)"
+										>
+											Restore
+										</UButton>
+										<UButton
+											v-if="m.status !== 'suspended' && canManageOrg"
+											color="red"
+											variant="ghost"
+											size="xs"
+											icon="i-heroicons-no-symbol"
+											:loading="clientActingId === m.id"
+											@click="revokeClientAccess(m)"
+										>
+											Revoke
+										</UButton>
+									</div>
+								</div>
 							</div>
 						</div>
 					</template>

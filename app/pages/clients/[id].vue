@@ -997,6 +997,13 @@ onUnmounted(() => clearEntity());
             </div>
           </div>
 
+          <!-- Portal Access (client-role memberships) -->
+          <ClientsPortalAccess
+            :clientId="clientId"
+            :clientName="client.name"
+            :canManage="isOrgAdminOrAbove"
+          />
+
           <!-- User Access Overrides -->
           <div class="ios-card p-5">
             <ClientsUserAssignment :clientId="clientId" :canManage="isOrgAdminOrAbove" />

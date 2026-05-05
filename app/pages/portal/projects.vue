@@ -379,6 +379,21 @@ watch(() => selectedOrg.value, () => loadProjects());
 									<p class="text-sm">{{ selectedProject.date_updated ? getFriendlyDate(selectedProject.date_updated) : '—' }}</p>
 								</div>
 							</div>
+
+							<!-- Reactions -->
+							<div>
+								<p class="text-xs text-muted-foreground mb-2">React</p>
+								<PortalReactions collection="projects" :item-id="selectedProject.id" />
+							</div>
+
+							<!-- Comments -->
+							<div class="border-t border-border/30 pt-5">
+								<PortalCommentThread
+									collection="projects"
+									:item-id="selectedProject.id"
+									label="Comments"
+								/>
+							</div>
 						</div>
 					</div>
 				</div>

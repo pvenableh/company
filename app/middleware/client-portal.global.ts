@@ -26,12 +26,14 @@ export default defineNuxtRouteMiddleware((to) => {
 
   // Whitelist: routes client users CAN access
   const allowedPrefixes = [
-    '/portal',         // Client portal pages
-    '/account',        // User account settings
-    '/auth',           // Auth pages (login, register, etc.)
-    '/approve',        // Public approval pages
-    '/contracts/sign', // Public contract-signing route
-    '/invoices',       // Public invoice payment + preview pages
+    '/portal',             // Client portal pages
+    '/account',            // User account settings
+    '/auth',               // Auth pages (login, register, etc.)
+    '/approve',            // Public approval pages
+    '/contracts/sign',     // Public contract-signing route
+    '/contracts/preview',  // Contract read-only preview
+    '/proposals/preview',  // Proposal read-only preview
+    '/invoices',           // Public invoice payment + preview pages
   ];
 
   const allowedExact = [

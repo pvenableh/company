@@ -30,10 +30,10 @@
 			<slot />
 		</div>
 
-		<!-- Simplified mobile toolbar for client portal -->
+		<!-- Mobile toolbar — primary links only -->
 		<nav class="portal-toolbar md:hidden">
 			<NuxtLink
-				v-for="link in portalLinks"
+				v-for="link in primaryLinks"
 				:key="link.to"
 				:to="link.to"
 				class="portal-tab"
@@ -42,7 +42,34 @@
 				<Icon :name="link.icon" class="w-5 h-5" />
 				<span class="text-[10px] mt-0.5">{{ link.name }}</span>
 			</NuxtLink>
+			<!-- More sheet trigger -->
+			<button class="portal-tab" :class="{ 'portal-tab--active': showMore }" @click="showMore = !showMore">
+				<Icon name="lucide:more-horizontal" class="w-5 h-5" />
+				<span class="text-[10px] mt-0.5">More</span>
+			</button>
 		</nav>
+
+		<!-- Mobile "More" sheet -->
+		<Transition name="slide-up">
+			<div v-if="showMore" class="fixed inset-0 z-50 md:hidden flex flex-col justify-end" @click.self="showMore = false">
+				<div class="bg-background border-t border-border/40 rounded-t-2xl shadow-xl p-4 pb-safe-portal">
+					<div class="w-12 h-1 rounded-full bg-muted mx-auto mb-4" />
+					<div class="grid grid-cols-4 gap-2">
+						<NuxtLink
+							v-for="link in secondaryLinks"
+							:key="link.to"
+							:to="link.to"
+							class="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl transition-colors"
+							:class="isActiveRoute(link.to) ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'"
+							@click="showMore = false"
+						>
+							<Icon :name="link.icon" class="w-6 h-6" />
+							<span class="text-[10px]">{{ link.name }}</span>
+						</NuxtLink>
+					</div>
+				</div>
+			</div>
+		</Transition>
 
 		<!-- Desktop sidebar nav (visible on md+) -->
 		<aside class="hidden md:flex portal-sidebar">
@@ -79,13 +106,24 @@ const config = useRuntimeConfig();
 const route = useRoute();
 
 const isRetracted = ref(false);
+const showMore = ref(false);
 
 const portalLinks = [
-	{ name: 'Dashboard', to: '/portal', icon: 'lucide:layout-dashboard' },
-	{ name: 'Projects', to: '/portal/projects', icon: 'lucide:folder-kanban' },
-	{ name: 'Tickets', to: '/portal/tickets', icon: 'lucide:ticket' },
-	{ name: 'Messages', to: '/portal/messages', icon: 'lucide:message-square' },
+	{ name: 'Dashboard',  to: '/portal',           icon: 'lucide:layout-dashboard' },
+	{ name: 'Projects',   to: '/portal/projects',  icon: 'lucide:folder-kanban' },
+	{ name: 'Tasks',      to: '/portal/tasks',     icon: 'lucide:check-square' },
+	{ name: 'Tickets',    to: '/portal/tickets',   icon: 'lucide:ticket' },
+	{ name: 'Invoices',   to: '/portal/invoices',  icon: 'lucide:file-text' },
+	{ name: 'Proposals',  to: '/portal/proposals', icon: 'lucide:file-signature' },
+	{ name: 'Contracts',  to: '/portal/contracts', icon: 'lucide:file-badge' },
+	{ name: 'Social',     to: '/portal/social',    icon: 'lucide:bar-chart-2' },
+	{ name: 'Marketing',  to: '/portal/marketing', icon: 'lucide:megaphone' },
+	{ name: 'Messages',   to: '/portal/messages',  icon: 'lucide:message-square' },
 ];
+
+// Mobile bottom bar shows the 4 most-used links; the rest live in "More"
+const primaryLinks = portalLinks.slice(0, 4);
+const secondaryLinks = portalLinks.slice(4);
 
 const avatarUrl = computed(() => {
 	if (!user.value?.avatar) return null;
@@ -227,5 +265,15 @@ onUnmounted(() => {
 	.pb-safe-portal {
 		padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 16px);
 	}
+}
+
+.slide-up-enter-active,
+.slide-up-leave-active {
+	transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.slide-up-enter-from,
+.slide-up-leave-to {
+	opacity: 0;
+	transform: translateY(100%);
 }
 </style>
