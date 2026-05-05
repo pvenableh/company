@@ -83,14 +83,18 @@ watch(selectedClientId, () => {
   selectedAccountId.value = null
 })
 
-// Fetch analytics for selected account or all accounts
+// Fetch analytics for selected account or all accounts.
+// Use a single computed `query` ref so date-range / account changes always
+// produce a fresh URL key for useLazyFetch — the nested-computed pattern
+// silently failed to refetch when the picker changed.
+const analyticsQuery = computed(() => ({
+  account_id: selectedAccountId.value || undefined,
+  start_date: dateRange.value.start,
+  end_date: dateRange.value.end,
+}))
 const { data: analyticsData, pending: analyticsLoading } = useLazyFetch('/api/social/analytics', {
-  query: {
-    account_id: selectedAccountId,
-    start_date: computed(() => dateRange.value.start),
-    end_date: computed(() => dateRange.value.end),
-  },
-  watch: [selectedAccountId, dateRange],
+  query: analyticsQuery,
+  watch: [analyticsQuery],
 })
 
 // Derive analytics from real API data with safe defaults
