@@ -6,52 +6,19 @@ definePageMeta({
 useHead({ title: 'Invoices | Client Portal' });
 
 const { selectedOrg } = useOrganization();
-const { clientScope } = useOrgRole();
-
-const invoiceItems = useDirectusItems('invoices');
 
 const loading = ref(true);
 const invoices = ref<any[]>([]);
 const filter = ref<'all' | 'unpaid' | 'paid'>('all');
 
 async function loadInvoices() {
-	if (!selectedOrg.value) return;
 	loading.value = true;
-
 	try {
-		const conditions: any[] = [];
-
-		if (clientScope.value) {
-			conditions.push({ client: { _eq: clientScope.value } });
-		}
-
-		if (filter.value === 'unpaid') {
-			conditions.push({ status: { _in: ['draft', 'sent', 'overdue'] } });
-		} else if (filter.value === 'paid') {
-			conditions.push({ status: { _eq: 'paid' } });
-		}
-
-		invoices.value = await invoiceItems.list({
-			filter: conditions.length ? { _and: conditions } : undefined,
-			fields: [
-				'id',
-				'invoice_code',
-				'status',
-				'invoice_date',
-				'due_date',
-				'total',
-				'currency',
-				'client.id',
-				'client.name',
-				'payments.id',
-				'payments.status',
-				'payments.amount',
-			],
-			sort: ['-invoice_date'],
-			limit: 100,
-		});
+		const res = await $fetch<{ invoices: any[] }>(`/api/portal/invoices?status=${filter.value}`);
+		invoices.value = res?.invoices ?? [];
 	} catch (err) {
 		console.error('Failed to load invoices:', err);
+		invoices.value = [];
 	} finally {
 		loading.value = false;
 	}

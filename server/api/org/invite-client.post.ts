@@ -209,30 +209,11 @@ export default defineEventHandler(async (event) => {
       })
     ) as any;
 
-    // Legacy junction for backward compat
-    try {
-      const existingJunction = await directus.request(
-        readItems('organizations_directus_users', {
-          filter: {
-            organizations_id: { _eq: organizationId },
-            directus_users_id: { _eq: targetUserId },
-          },
-          fields: ['id'],
-          limit: 1,
-        })
-      ) as any[];
-
-      if (!existingJunction.length) {
-        await directus.request(
-          createItem('organizations_directus_users', {
-            organizations_id: organizationId,
-            directus_users_id: targetUserId,
-          })
-        );
-      }
-    } catch (junctionErr: any) {
-      console.warn('Legacy junction create failed (non-fatal):', junctionErr?.message);
-    }
+    // NOTE: We deliberately do NOT create an `organizations_directus_users`
+    // junction row for client users. That legacy junction is what Directus
+    // row-level filters key off to grant org-wide read access. A client user
+    // must only see their scoped client + child clients — the new
+    // `org_memberships` row is the sole source of truth for their access.
 
     // Ensure a Contact exists for this client user, linked to the client record
     try {

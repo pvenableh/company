@@ -130,6 +130,11 @@ export function useOrgRole() {
   const config = useRuntimeConfig();
 
   function getFallbackRoleSlug(): RoleSlug | null {
+    // The fallback exists only for legacy platform admins (Directus admin role)
+    // who never got an org_membership row during the multi-tenant migration.
+    // We deliberately do NOT fall back to 'member' for everyone else — that
+    // path silently granted any Directus user (including invited contacts)
+    // member-level access to whichever org happened to be in their cookie.
     if (!user.value) return null;
     const roleId = typeof user.value.role === 'object'
       ? (user.value.role as any)?.id
@@ -137,11 +142,8 @@ export function useOrgRole() {
     if (!roleId) return null;
 
     const adminRoleId = config.public.adminRole || config.public.adminRoleId;
-    const clientManagerRoleId = config.public.clientManagerRoleId || '7b62b285-e3a8-46ff-9e8c-d1445a3c13bb';
-
     if (roleId === adminRoleId) return 'admin';
-    if (roleId === clientManagerRoleId) return 'manager';
-    return 'member';
+    return null;
   }
 
   function applyFallbackRole(): void {

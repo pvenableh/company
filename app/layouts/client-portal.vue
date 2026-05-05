@@ -26,7 +26,7 @@
 			</div>
 		</header>
 
-		<div class="page pb-safe-portal">
+		<div class="page pb-safe-portal pt-portal-header">
 			<slot />
 		</div>
 
@@ -108,22 +108,48 @@ const route = useRoute();
 const isRetracted = ref(false);
 const showMore = ref(false);
 
-const portalLinks = [
+type PortalLink = { name: string; to: string; icon: string; key?: 'social' | 'marketing' | 'proposals' | 'contracts' };
+
+const ALL_LINKS: PortalLink[] = [
 	{ name: 'Dashboard',  to: '/portal',           icon: 'lucide:layout-dashboard' },
 	{ name: 'Projects',   to: '/portal/projects',  icon: 'lucide:folder-kanban' },
 	{ name: 'Tasks',      to: '/portal/tasks',     icon: 'lucide:check-square' },
 	{ name: 'Tickets',    to: '/portal/tickets',   icon: 'lucide:ticket' },
 	{ name: 'Invoices',   to: '/portal/invoices',  icon: 'lucide:file-text' },
-	{ name: 'Proposals',  to: '/portal/proposals', icon: 'lucide:file-signature' },
-	{ name: 'Contracts',  to: '/portal/contracts', icon: 'lucide:file-badge' },
-	{ name: 'Social',     to: '/portal/social',    icon: 'lucide:bar-chart-2' },
-	{ name: 'Marketing',  to: '/portal/marketing', icon: 'lucide:megaphone' },
+	{ name: 'Proposals',  to: '/portal/proposals', icon: 'lucide:file-signature', key: 'proposals' },
+	{ name: 'Contracts',  to: '/portal/contracts', icon: 'lucide:file-badge',     key: 'contracts' },
+	{ name: 'Social',     to: '/portal/social',    icon: 'lucide:bar-chart-2',    key: 'social' },
+	{ name: 'Marketing',  to: '/portal/marketing', icon: 'lucide:megaphone',      key: 'marketing' },
 	{ name: 'Messages',   to: '/portal/messages',  icon: 'lucide:message-square' },
 ];
 
-// Mobile bottom bar shows the 4 most-used links; the rest live in "More"
-const primaryLinks = portalLinks.slice(0, 4);
-const secondaryLinks = portalLinks.slice(4);
+// Optional sections — hidden when the client has zero data for them.
+const availability = ref<Partial<Record<NonNullable<PortalLink['key']>, boolean>>>({
+	social: true,
+	marketing: true,
+	proposals: true,
+	contracts: true,
+});
+
+async function loadAvailability() {
+	if (!user.value) return;
+	try {
+		availability.value = await $fetch('/api/portal/nav-availability');
+	} catch {
+		// Leave defaults (show everything) if the endpoint fails — better
+		// than hiding nav and confusing the user.
+	}
+}
+
+const portalLinks = computed(() => {
+	return ALL_LINKS.filter((link) => {
+		if (!link.key) return true;
+		return availability.value[link.key] !== false;
+	});
+});
+
+const primaryLinks = computed(() => portalLinks.value.slice(0, 4));
+const secondaryLinks = computed(() => portalLinks.value.slice(4));
 
 const avatarUrl = computed(() => {
 	if (!user.value?.avatar) return null;
@@ -157,7 +183,12 @@ const manageNavBarAnimations = () => {
 onMounted(() => {
 	if (import.meta.client) {
 		window.addEventListener('scroll', manageNavBarAnimations);
+		loadAvailability();
 	}
+});
+
+watch(() => user.value?.id, (id) => {
+	if (id) loadAvailability();
 });
 
 onUnmounted(() => {
@@ -249,6 +280,11 @@ onUnmounted(() => {
 }
 .portal-nav-item--active {
 	@apply text-foreground bg-muted/80 font-medium;
+}
+
+/* Push page content below the fixed header. Header is ~76px tall expanded. */
+.pt-portal-header {
+	padding-top: 88px;
 }
 
 /* Page content offset for sidebar */

@@ -1,57 +1,80 @@
 // middleware/client-portal.ts
 /**
- * Client Portal middleware — redirects client-role users away from admin routes.
+ * Client Portal middleware — keeps client-role users in /portal.
  *
- * Client users should only access /portal/* routes, /account, and /auth/* routes.
- * If a client user tries to access any other route, they're redirected to /portal.
+ * Behavior:
+ *   - If the user's role in the currently-selected org is `client`,
+ *     redirect non-portal routes to /portal.
+ *   - If the user has NO role in the currently-selected org but DOES
+ *     have a client membership elsewhere (stale cookie from a former
+ *     org), switch them to that org and bounce to /portal.
+ *   - Otherwise (member/manager/admin/owner of the selected org), no-op.
  *
- * Usage: This is a global middleware that runs on every navigation.
- * Pages that are explicitly allowed for client users are whitelisted below.
+ * This deliberately keys off `selectedOrg`, not "any client membership",
+ * so a user who is a client in one org and an owner of another org can
+ * use the org switcher to flip between portal-mode and full-app mode.
  */
 
-export default defineNuxtRouteMiddleware((to) => {
+export default defineNuxtRouteMiddleware(async (to) => {
   const { loggedIn } = useUserSession();
-
-  // Skip entirely when not logged in — avoids triggering useOrgRole API calls
   if (!loggedIn.value) return;
 
-  const { isOrgClient, hasMembership } = useOrgRole();
+  const {
+    initializeOrganizations,
+    isInitialized,
+    organizations,
+    selectedOrg,
+    setOrganization,
+  } = useOrganization();
 
-  // Only applies to logged-in client-role users with an active membership
-  if (!hasMembership.value || !isOrgClient.value) {
-    return;
+  if (!isInitialized.value) {
+    try {
+      await initializeOrganizations();
+    } catch {
+      return;
+    }
   }
 
   const path = to.path;
 
-  // Whitelist: routes client users CAN access
   const allowedPrefixes = [
-    '/portal',             // Client portal pages
-    '/account',            // User account settings
-    '/auth',               // Auth pages (login, register, etc.)
-    '/approve',            // Public approval pages
-    '/contracts/sign',     // Public contract-signing route
-    '/contracts/preview',  // Contract read-only preview
-    '/proposals/preview',  // Proposal read-only preview
-    '/invoices',           // Public invoice payment + preview pages
+    '/portal',
+    '/account',
+    '/auth',
+    '/approve',
+    '/contracts/sign',
+    '/contracts/preview',
+    '/proposals/preview',
+    '/invoices',
   ];
-
-  const allowedExact = [
-    '/',               // Root (will redirect to /portal)
-  ];
-
-  // Check if route is allowed
+  const allowedExact = ['/'];
   const isAllowed =
     allowedExact.includes(path) ||
-    allowedPrefixes.some((prefix) => path.startsWith(prefix));
+    allowedPrefixes.some((p) => path.startsWith(p));
 
-  if (!isAllowed) {
-    // Redirect client users to portal dashboard
-    return navigateTo('/portal');
+  const currentOrg = organizations.value.find((o: any) => o.id === selectedOrg.value);
+  const currentRole = currentOrg?.membership?.role?.slug || null;
+
+  // Path 1: user IS a client in the currently-selected org.
+  if (currentRole === 'client') {
+    if (!isAllowed || path === '/') {
+      return navigateTo('/portal');
+    }
+    return;
   }
 
-  // Redirect root to portal for client users
-  if (path === '/') {
-    return navigateTo('/portal');
+  // Path 2: user has NO role in the selected org. Could be a stale cookie
+  // pointing at a former host org. If they have a client membership somewhere,
+  // switch them and redirect to /portal.
+  if (!currentRole) {
+    const clientOrg = organizations.value.find(
+      (o: any) => o.membership?.role?.slug === 'client'
+    );
+    if (clientOrg) {
+      setOrganization(clientOrg.id);
+      if (!path.startsWith('/portal')) {
+        return navigateTo('/portal');
+      }
+    }
   }
 });

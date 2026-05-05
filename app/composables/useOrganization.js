@@ -46,6 +46,26 @@ export function useOrganization() {
 
 	const isCurrentOrgArchived = computed(() => !!currentOrg.value?.archived_at);
 
+	// Client portal — first active client-role membership across all orgs.
+	// Used by the global client-portal middleware to gate access to /portal/*
+	// and force-select the right org regardless of cookie state.
+	const clientMembership = computed(() => {
+		for (const org of organizations.value) {
+			const m = org.membership;
+			if (m?.role?.slug === 'client' && m?.status === 'active') {
+				return {
+					membershipId: m.id,
+					organizationId: org.id,
+					clientId: typeof m.client === 'object' ? m.client?.id : m.client,
+					clientName: typeof m.client === 'object' ? m.client?.name : null,
+				};
+			}
+		}
+		return null;
+	});
+
+	const isClientPortalUser = computed(() => !!clientMembership.value);
+
 	const getOrganizationFilter = (orgId) => {
 		const idToFilterBy = orgId !== undefined ? orgId : selectedOrg.value;
 		return idToFilterBy ? { organization: { _eq: idToFilterBy } } : {};
@@ -179,10 +199,18 @@ export function useOrganization() {
 		// only via explicit selection from the switcher with showArchived on.
 		const activeOrgs = organizations.value.filter((org) => !org.archived_at);
 
+		// Saved cookie still resolves to one of the user's orgs → keep it.
+		// (Includes the dual-role case: a client portal user who also owns
+		// another Earnest org keeps whichever they had selected.)
 		if (savedOrg && organizations.value.some((org) => org.id === savedOrg)) {
 			if (selectedOrg.value !== savedOrg) {
 				orgStorage.setValue(savedOrg);
 			}
+		} else if (clientMembership.value) {
+			// No saved org (or it's stale): if the user is primarily a client
+			// portal user, drop them into their client's org so the portal
+			// middleware has the right context.
+			orgStorage.setValue(clientMembership.value.organizationId);
 		} else if (activeOrgs.length >= 1) {
 			// Auto-select the first active org (sorted by most activity) when no saved value
 			orgStorage.setValue(activeOrgs[0].id);
@@ -314,6 +342,8 @@ export function useOrganization() {
 		organizationOptions,
 		currentOrg,
 		isCurrentOrgArchived,
+		clientMembership,
+		isClientPortalUser,
 		setOrganization,
 		clearOrganization,
 		initializeOrganizations,
