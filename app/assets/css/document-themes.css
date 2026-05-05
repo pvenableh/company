@@ -1,0 +1,152 @@
+/* ============================================
+   Document themes — applied to a .doc-shell wrapper
+   on invoices, proposals, and contracts. Scoped so
+   the rest of the app is unaffected.
+   ============================================ */
+
+.doc-shell {
+	--doc-bg: #ffffff;
+	--doc-fg: #0f172a;
+	--doc-muted: rgba(15, 23, 42, 0.55);
+	--doc-rule: rgba(15, 23, 42, 0.10);
+	--doc-accent: var(--doc-accent-color, #1f2937);
+	--doc-heading-font: 'Proxima Nova W01 Regular', 'Avenir Next', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+	--doc-body-font: var(--doc-heading-font);
+	--doc-meta-tracking: 0.06em;
+	--doc-meta-transform: uppercase;
+	--doc-card-radius: 0px;
+	--doc-card-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+	--doc-card-border: 1px solid rgba(15, 23, 42, 0.08);
+
+	background: var(--doc-bg);
+	color: var(--doc-fg);
+	font-family: var(--doc-body-font);
+	border-radius: var(--doc-card-radius);
+	box-shadow: var(--doc-card-shadow);
+	border: var(--doc-card-border);
+}
+
+.doc-shell h1,
+.doc-shell h2,
+.doc-shell h3,
+.doc-shell h4,
+.doc-shell h5 {
+	font-family: var(--doc-heading-font);
+	color: var(--doc-fg);
+}
+
+.doc-shell .doc__seller p,
+.doc-shell .doc__meta {
+	letter-spacing: var(--doc-meta-tracking);
+	text-transform: var(--doc-meta-transform);
+}
+
+/* Status pills inside doc shell — keep readable but tinted by theme */
+.doc-shell .doc__rule {
+	border-color: var(--doc-rule);
+}
+
+/* ============================================
+   Theme: Classic (default)
+   ============================================ */
+.doc-shell.doc-theme--classic {
+	/* Defaults already match Classic — no overrides needed. */
+}
+
+/* ============================================
+   Theme: Editorial — warm cream, serif body
+   ============================================ */
+.doc-shell.doc-theme--editorial {
+	--doc-bg: #faf6ee;
+	--doc-fg: #1c1917;
+	--doc-muted: rgba(28, 25, 23, 0.55);
+	--doc-rule: rgba(28, 25, 23, 0.14);
+	--doc-accent: #5a3d1f;
+	--doc-heading-font: 'Source Serif 4', 'Source Serif Pro', Georgia, 'Times New Roman', serif;
+	--doc-body-font: 'Source Serif 4', 'Source Serif Pro', Georgia, 'Times New Roman', serif;
+	--doc-meta-tracking: 0.08em;
+	--doc-meta-transform: uppercase;
+}
+
+.doc-shell.doc-theme--editorial h1.doc__title,
+.doc-shell.doc-theme--editorial .doc__cover-title {
+	font-style: italic;
+	font-weight: 600;
+	letter-spacing: -0.01em;
+}
+
+.doc-shell.doc-theme--editorial .doc__block-heading {
+	font-weight: 600;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+	font-size: 0.78rem;
+	border-bottom: 1px solid var(--doc-rule);
+	padding-bottom: 0.35rem;
+}
+
+.doc-shell.doc-theme--editorial .prose {
+	font-size: 0.95rem;
+	line-height: 1.7;
+}
+
+/* ============================================
+   Theme: Mono — minimal, brand accent
+   ============================================ */
+.doc-shell.doc-theme--mono {
+	--doc-bg: #ffffff;
+	--doc-fg: #0a0a0a;
+	--doc-muted: rgba(10, 10, 10, 0.55);
+	--doc-rule: rgba(10, 10, 10, 0.10);
+	--doc-accent: var(--doc-accent-color, #1f2937);
+	--doc-heading-font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+	--doc-body-font: var(--doc-heading-font);
+	--doc-meta-tracking: 0.12em;
+	--doc-meta-transform: uppercase;
+}
+
+.doc-shell.doc-theme--mono h1.doc__title,
+.doc-shell.doc-theme--mono .doc__cover-title {
+	font-weight: 600;
+	letter-spacing: -0.01em;
+}
+
+.doc-shell.doc-theme--mono .doc__block-heading {
+	color: var(--doc-accent);
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	font-size: 0.7rem;
+	border-left: 3px solid var(--doc-accent);
+	padding-left: 0.6rem;
+}
+
+.doc-shell.doc-theme--mono .doc__seller {
+	border-bottom-color: var(--doc-accent) !important;
+	border-bottom-width: 2px !important;
+}
+
+.doc-shell.doc-theme--mono .doc__cover-recipient {
+	color: var(--doc-accent);
+}
+
+.doc-shell.doc-theme--mono .doc__total-rule {
+	border-top: 2px solid var(--doc-accent);
+}
+
+/* ============================================
+   Dark-mode tweaks — only Classic ships dark mode;
+   Editorial + Mono stay paper-like even in dark UI
+   so they read like real documents.
+   ============================================ */
+.dark .doc-shell.doc-theme--classic {
+	--doc-bg: rgba(31, 41, 55, 0.92);
+	--doc-fg: #f3f4f6;
+	--doc-muted: rgba(243, 244, 246, 0.6);
+	--doc-rule: rgba(243, 244, 246, 0.12);
+}
+
+@media print {
+	.doc-shell {
+		box-shadow: none !important;
+		border: none !important;
+	}
+}

@@ -106,6 +106,8 @@ const platformLinks = [
 
 const toolLinks = [
 	{ to: '/invoices', label: 'Invoices' },
+	{ to: '/proposals', label: 'Proposals' },
+	{ to: '/contracts', label: 'Contracts' },
 	{ to: '/contacts', label: 'Contacts' },
 	{ to: '/clients', label: 'Clients' },
 ];

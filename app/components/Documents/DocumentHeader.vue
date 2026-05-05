@@ -68,38 +68,36 @@ function fmtDate(d: string | null | undefined) {
 				class="h-12 w-auto object-contain shrink-0"
 			/>
 			<div class="text-[10px] uppercase leading-tight tracking-wide">
-				<p class="font-bold text-[11px]">{{ seller.name }}</p>
+				<p class="font-semibold text-[11px]">{{ seller.name }}</p>
 				<p v-if="seller.address" class="whitespace-pre-line opacity-70">{{ seller.address }}</p>
 				<p v-if="seller.phone" class="opacity-70">{{ seller.phone }}</p>
-				<p v-if="seller.email" class="opacity-70">{{ seller.email }}</p>
-				<p v-if="seller.website" class="opacity-70">{{ seller.website.replace(/^https?:\/\//, '') }}</p>
 			</div>
 		</div>
 
 		<!-- Doc meta + recipient -->
 		<div class="">
 			<div class="w-full flex flex-row items-center justify-between">
-				<h1 class="font-bold uppercase text-xl">
-					<span class="opacity-30">{{ doc.kind }}{{ doc.code ? ' #:' : '' }}</span>
+				<h1 class="font-semibold uppercase text-xl doc__title">
+					<span class="opacity-40">{{ doc.kind }}{{ doc.code ? ' #:' : '' }}</span>
 					<template v-if="doc.code"> {{ doc.code }}</template>
 				</h1>
 				<slot name="actions" />
 			</div>
-			<h5 v-if="doc.date" class="font-bold uppercase text-xs">
-				<span class="opacity-30">{{ doc.dateLabel || 'Date:' }}:</span>
+			<h5 v-if="doc.date" class="font-semibold uppercase text-xs">
+				<span class="opacity-40">{{ doc.dateLabel || 'Date:' }}:</span>
 				{{ fmtDate(doc.date) }}
 			</h5>
-			<h5 v-if="doc.expiresAt" class="font-bold uppercase text-xs">
-				<span class="opacity-30">{{ doc.expiresLabel || 'Valid until:' }}:</span>
+			<h5 v-if="doc.expiresAt" class="font-semibold uppercase text-xs">
+				<span class="opacity-40">{{ doc.expiresLabel || 'Valid until:' }}:</span>
 				{{ fmtDate(doc.expiresAt) }}
 			</h5>
-			<h5 v-if="doc.status" class="font-bold uppercase text-xs">
-				<span class="opacity-30">Status:</span>
+			<h5 v-if="doc.status" class="font-semibold uppercase text-xs">
+				<span class="opacity-40">Status:</span>
 				{{ doc.status }}
 			</h5>
 
-			<h5 v-if="recipient?.name" class="font-bold uppercase text-xs mt-6">
-				<span class="opacity-30">Issued to:</span>
+			<h5 v-if="recipient?.name" class="font-semibold uppercase text-xs mt-6">
+				<span class="opacity-40">Issued to:</span>
 				<p>{{ recipient.name }}</p>
 				<p v-if="recipient.address" class="whitespace-pre-line">{{ recipient.address }}</p>
 				<template v-if="recipient.emails?.length">

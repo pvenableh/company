@@ -40,6 +40,7 @@ const railItems: RailItem[] = [
 	{ name: 'Projects', to: '/projects', icon: 'lucide:gantt-chart' },
 	{ name: 'Scheduler', to: '/scheduler', icon: 'heroicons:calendar-date-range' },
 	{ name: 'Invoices', to: '/invoices', icon: 'heroicons:document-text' },
+	{ name: 'Contracts', to: '/contracts', icon: 'lucide:file-signature' },
 ]
 
 function isActiveItem(to: string): boolean {

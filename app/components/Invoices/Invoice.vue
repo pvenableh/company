@@ -30,11 +30,12 @@ const sellerLogoUrl = computed(() => {
 });
 </script>
 <template>
-	<div class="px-6 pt-12 pb-16 w-full border bg-white/90 dark:bg-gray-700 shadow invoice">
+	<DocumentsDocumentShell :seller="invoice.bill_to" wrapper-class="invoice px-6 pt-12 pb-16 w-full">
 		<!-- Seller header -->
 		<div
 			v-if="invoice.bill_to"
-			class="flex items-start gap-4 pb-6 mb-6 border-b border-gray-200 dark:border-gray-600 invoice__seller"
+			class="flex items-start gap-4 pb-6 mb-6 doc__seller"
+			style="border-bottom: 1px solid var(--doc-rule);"
 		>
 			<img
 				v-if="sellerLogoUrl"
@@ -42,39 +43,41 @@ const sellerLogoUrl = computed(() => {
 				:alt="invoice.bill_to.name || 'Logo'"
 				class="h-12 w-auto object-contain shrink-0"
 			/>
-			<div class="text-[10px] uppercase leading-tight tracking-wide">
-				<p class="font-bold text-[11px]">{{ invoice.bill_to.name }}</p>
+			<div class="text-[10px] leading-tight">
+				<p class="font-semibold text-[11px]">{{ invoice.bill_to.name }}</p>
 				<p v-if="invoice.bill_to.address" class="whitespace-pre-line opacity-70">{{ invoice.bill_to.address }}</p>
 				<p v-if="invoice.bill_to.phone" class="opacity-70">{{ invoice.bill_to.phone }}</p>
-				<p v-if="invoice.bill_to.email" class="opacity-70">{{ invoice.bill_to.email }}</p>
-				<p v-if="invoice.bill_to.website" class="opacity-70">{{ invoice.bill_to.website.replace(/^https?:\/\//, '') }}</p>
 			</div>
 		</div>
 
 		<div class="">
 			<div class="w-full flex flex-row items-center justify-between">
-				<h1 class="font-bold uppercase text-xl">
-					<span class="opacity-30">Invoice #:</span>
+				<h1 class="font-semibold uppercase text-xl doc__title">
+					<span class="opacity-40">Invoice #:</span>
 					{{ invoice.invoice_code }}
 				</h1>
 				<ClientOnly>
-					<InvoicesPdfGenerator :invoice="invoice" />
+					<DocumentsDocumentPdfGenerator
+						:filename="invoice.invoice_code || 'invoice'"
+						selector=".doc-shell.invoice"
+						data-pdf-strip
+					/>
 				</ClientOnly>
 			</div>
-			<h5 v-if="invoice.invoice_date" class="font-bold uppercase text-xs">
-				<span class="opacity-30">Billing date:</span>
+			<h5 v-if="invoice.invoice_date" class="font-semibold uppercase text-xs">
+				<span class="opacity-40">Billing date:</span>
 				{{ getFriendlyDateThree(invoice.invoice_date) }}
 			</h5>
-			<h5 class="font-bold uppercase text-xs">
-				<span class="opacity-30">Due date:</span>
+			<h5 class="font-semibold uppercase text-xs">
+				<span class="opacity-40">Due date:</span>
 				{{ getFriendlyDateThree(invoice.due_date) }}
 			</h5>
-			<h5 class="font-bold uppercase text-xs">
-				<span class="opacity-30">Status:</span>
+			<h5 class="font-semibold uppercase text-xs">
+				<span class="opacity-40">Status:</span>
 				{{ invoice.status }}
 			</h5>
-			<h5 class="font-bold uppercase text-xs mt-6">
-				<span class="opacity-30">Bill to:</span>
+			<h5 class="font-semibold uppercase text-xs mt-6">
+				<span class="opacity-40">Bill to:</span>
 				<p>{{ invoice.client?.name || invoice.bill_to?.name }}</p>
 				<p v-if="invoice.billing_address || invoice.client?.billing_address">{{ invoice.billing_address || invoice.client?.billing_address }}</p>
 			<template v-if="invoice.emails?.length">
@@ -92,7 +95,7 @@ const sellerLogoUrl = computed(() => {
 					class="lg:pl-3 my-1 flex flex-col items-start justify-between pb-12 line-item"
 				>
 					<div class="w-full flex flex-col md:flex-row items-start justify-between">
-						<p class="uppercase text-[12px] font-bold">{{ item.product?.name || 'Item' }}</p>
+						<p class="uppercase text-[12px] font-semibold">{{ item.product?.name || 'Item' }}</p>
 						<div class="hidden md:flex items-center flex-grow ml-1 mr-3 min-w-[20px] h-[15px]">
 							<div class="w-full border-b border-gray-200 dark:border-gray-700"></div>
 						</div>
@@ -114,13 +117,13 @@ const sellerLogoUrl = computed(() => {
 					</div>
 				</div>
 				<div class="lg:ml-3 flex flex-row items-center justify-between pt-6">
-					<p class="uppercase text-[12px] font-bold">Total:</p>
-					<p class="text-[12px]">${{ formatNumber(invoice.total_amount) }}</p>
+					<p class="uppercase text-[12px] font-semibold">Total:</p>
+					<p class="text-[12px] font-semibold">${{ formatNumber(invoice.total_amount) }}</p>
 				</div>
 			</div>
 			<DocumentsDocumentFooter :hidden="hideFooter" />
 		</div>
-	</div>
+	</DocumentsDocumentShell>
 </template>
 <style>
 @reference "~/assets/css/tailwind.css";

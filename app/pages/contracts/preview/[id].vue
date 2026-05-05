@@ -19,6 +19,7 @@ onMounted(async () => {
 				'organization.id', 'organization.name', 'organization.logo',
 				'organization.address', 'organization.phone', 'organization.email', 'organization.website',
 				'organization.plan', 'organization.whitelabel',
+				'organization.document_theme', 'organization.document_accent',
 				'contact.id', 'contact.first_name', 'contact.last_name', 'contact.email', 'contact.company',
 			],
 		});
@@ -94,16 +95,23 @@ function formatTotal(n: number | null | undefined) {
 		</div>
 		<div v-else-if="!contract" class="py-20 text-sm text-muted-foreground">Contract not found.</div>
 		<div v-else class="w-full flex flex-col items-center justify-center relative z-10 mt-12">
-			<div class="px-6 pt-12 pb-16 w-full max-w-3xl border bg-white/90 dark:bg-gray-700 shadow proposal">
+			<DocumentsDocumentShell
+				:seller="contract.organization"
+				wrapper-class="px-6 pt-12 pb-16 w-full max-w-3xl proposal contract-doc"
+			>
 				<DocumentsDocumentHeader :seller="seller" :recipient="recipient" :doc="docMeta">
 					<template #actions>
-						<button v-if="contract.title" class="hidden md:block text-[10px] uppercase tracking-wider opacity-60">
-							{{ contract.title }}
-						</button>
+						<ClientOnly>
+							<DocumentsDocumentPdfGenerator
+								:filename="(contract.title || 'contract').replace(/\\s+/g, '-')"
+								selector=".doc-shell.contract-doc"
+								data-pdf-strip
+							/>
+						</ClientOnly>
 					</template>
 				</DocumentsDocumentHeader>
 
-				<div v-if="contract.total_value != null" class="mt-6 mb-2 flex items-center justify-between border-t border-gray-200 dark:border-gray-600 pt-4">
+				<div v-if="contract.total_value != null" class="mt-6 mb-2 flex items-center justify-between pt-4 doc__total-rule" style="border-top: 1px solid var(--doc-rule);">
 					<p class="text-[10px] uppercase tracking-wider opacity-60">Total value</p>
 					<p class="text-xl font-bold">{{ formatTotal(contract.total_value) }}</p>
 				</div>
@@ -118,17 +126,18 @@ function formatTotal(n: number | null | undefined) {
 				<!-- Signed-already badge -->
 				<div
 					v-if="contract.contract_status === 'signed'"
-					class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-600"
+					class="mt-8 pt-6"
+					style="border-top: 1px solid var(--doc-rule);"
 				>
-					<p class="text-[10px] uppercase tracking-wider text-muted-foreground">Signed</p>
+					<p class="text-[10px] uppercase tracking-wider opacity-60">Signed</p>
 					<p class="text-sm font-medium mt-0.5">
-						{{ contract.signed_by_name }} <span class="text-muted-foreground text-xs">&lt;{{ contract.signed_by_email }}&gt;</span>
+						{{ contract.signed_by_name }} <span class="opacity-60 text-xs">&lt;{{ contract.signed_by_email }}&gt;</span>
 					</p>
-					<p class="text-xs text-muted-foreground">{{ contract.signed_at ? new Date(contract.signed_at).toLocaleString() : '' }}</p>
+					<p class="text-xs opacity-60">{{ contract.signed_at ? new Date(contract.signed_at).toLocaleString() : '' }}</p>
 				</div>
 
 				<DocumentsDocumentFooter :hidden="hideFooter" />
-			</div>
+			</DocumentsDocumentShell>
 		</div>
 	</div>
 </template>

@@ -89,6 +89,7 @@ const relationshipItems: NavItem[] = [
 const businessItems: NavItem[] = [
 	{ name: 'Invoices', to: '/invoices', icon: 'heroicons:document-text' },
 	{ name: 'Proposals', to: '/proposals', icon: 'heroicons:document-check' },
+	{ name: 'Contracts', to: '/contracts', icon: 'lucide:file-signature' },
 	{ name: 'Financials', to: '/financials', icon: 'heroicons:chart-bar' },
 ]
 
