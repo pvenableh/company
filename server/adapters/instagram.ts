@@ -667,9 +667,17 @@ export async function getInstagramMediaInsights(
 /**
  * Daily history of account-level insights for a [since, until] window.
  *
- * Returns one row per day. Meta retains ~28 days for most IG account metrics;
- * `profile_views` and `website_clicks` are user-only metrics that may be empty
- * for Business accounts. Values outside the retention window come back missing.
+ * Returns one row per day. Meta retains ~28 days for IG account metrics; values
+ * outside the retention window come back missing.
+ *
+ * As of Graph API v22, IG account-level insights bifurcated:
+ *   - `reach` still supports period=day → returns a time-series we can store
+ *     as one row per day.
+ *   - `views`, `profile_views`, `website_clicks` now require
+ *     `metric_type=total_value`, which collapses the response to a single
+ *     aggregate for the whole [since, until] window. That doesn't fit the
+ *     one-row-per-day snapshot model, so we drop them from the daily history
+ *     call. They can be fetched as a separate aggregate snapshot if needed.
  */
 export async function getInstagramAccountInsightsHistory(
   igUserId: string,
@@ -682,12 +690,22 @@ export async function getInstagramAccountInsightsHistory(
   }>(graphUrl(`/${igUserId}/insights`), {
     params: {
       access_token: accessToken,
-      metric: 'reach,impressions,profile_views,website_clicks',
+      metric: 'reach',
       period: 'day',
       since: String(sinceUnix),
       until: String(untilUnix),
     },
-  }).catch(() => ({ data: [] }))
+  }).catch((err: any) => {
+    const msg =
+      err?.data?.error?.message ||
+      err?.response?._data?.error?.message ||
+      err?.message ||
+      String(err)
+    const code =
+      err?.data?.error?.code ?? err?.response?._data?.error?.code ?? err?.statusCode
+    console.warn(`[social:adapter:ig] account-insights history failed (code=${code}): ${msg}`)
+    return { data: [] }
+  })
 
   const byDate = new Map<string, Record<string, number>>()
   for (const metric of res.data || []) {
@@ -703,6 +721,51 @@ export async function getInstagramAccountInsightsHistory(
   return Array.from(byDate.entries())
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([date, metrics]) => ({ date, metrics }))
+}
+
+/**
+ * Period-aggregate account-level insights for [since, until]. These are the
+ * metrics Meta now requires `metric_type=total_value` for and so can't return
+ * as a daily breakdown — the response is one number per metric for the whole
+ * window. Returns a flat metric→number map.
+ */
+export async function getInstagramAccountInsightsAggregate(
+  igUserId: string,
+  accessToken: string,
+  sinceUnix: number,
+  untilUnix: number,
+): Promise<Record<string, number>> {
+  const res = await $fetch<{
+    data: Array<{ name: string; total_value?: { value: number } }>
+  }>(graphUrl(`/${igUserId}/insights`), {
+    params: {
+      access_token: accessToken,
+      metric: 'views,profile_views,website_clicks',
+      period: 'day',
+      metric_type: 'total_value',
+      since: String(sinceUnix),
+      until: String(untilUnix),
+    },
+  }).catch((err: any) => {
+    const msg =
+      err?.data?.error?.message ||
+      err?.response?._data?.error?.message ||
+      err?.message ||
+      String(err)
+    const code =
+      err?.data?.error?.code ?? err?.response?._data?.error?.code ?? err?.statusCode
+    console.warn(`[social:adapter:ig] account-insights aggregate failed (code=${code}): ${msg}`)
+    return { data: [] }
+  })
+
+  const out: Record<string, number> = {}
+  for (const m of res.data || []) {
+    // Remap Meta's `views` to our internal `impressions` key so the analytics
+    // aggregator stays metric-name-stable across IG and FB.
+    const name = m.name === 'views' ? 'impressions' : m.name
+    out[name] = Number(m.total_value?.value) || 0
+  }
+  return out
 }
 
 /**
@@ -1026,6 +1089,10 @@ export const instagramAdapter: PlatformAdapter = {
 
   async getAccountMetricsHistory(accountId, accessToken, sinceUnix, untilUnix) {
     return getInstagramAccountInsightsHistory(accountId, accessToken, sinceUnix, untilUnix)
+  },
+
+  async getAccountMetricsAggregate(accountId, accessToken, sinceUnix, untilUnix) {
+    return getInstagramAccountInsightsAggregate(accountId, accessToken, sinceUnix, untilUnix)
   },
 
   async listRecentPostIds(accountId, accessToken, limit) {

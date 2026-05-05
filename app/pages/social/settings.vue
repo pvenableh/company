@@ -407,7 +407,7 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
         <template #header>
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
-              <UIcon :name="platformConfig[platform].icon" class="w-9 h-9 rounded-md shrink-0" />
+              <UIcon :name="platformConfig[platform].icon" class="w-9 h-9 shrink-0" />
               <div>
                 <h2 class="font-semibold text-gray-900 dark:text-white">{{ platformConfig[platform].label }}</h2>
                 <p class="text-sm text-gray-500 dark:text-gray-400">
@@ -513,7 +513,7 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
             class="flex items-center justify-between gap-3 px-4 py-3 cursor-pointer list-none select-none hover:bg-muted/30 rounded-xl"
           >
             <div class="flex items-center gap-3">
-              <UIcon :name="platformConfig[platform].icon" class="w-6 h-6 rounded-md shrink-0" />
+              <UIcon :name="platformConfig[platform].icon" class="w-6 h-6 shrink-0" />
               <span class="font-medium text-gray-900 dark:text-white">
                 {{ platformConfig[platform].label }} setup
               </span>

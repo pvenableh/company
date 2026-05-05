@@ -54,9 +54,11 @@ const dateRange = computed(() => {
   }
 })
 
-// Filters — client comes from the global useClients() composable
-const { clientList: clients } = useClients()
-const selectedClientId = ref<string | null>(null)
+// Filters — `selectedClientId` is the GLOBAL header selector, so picking a
+// client in the app shell auto-applies here. The global state uses 'org' as
+// its sentinel for agency-owned items; we alias it to 'house' in this page's
+// local UI for consistency with /social/settings copy.
+const { clientList: clients, selectedClient: selectedClientId } = useClients()
 const selectedAccountId = ref<string | null>(null)
 
 const { data: accountsData } = useLazyFetch('/api/social/accounts')
@@ -65,7 +67,7 @@ const accounts = computed(() => ((accountsData.value as any)?.data || []) as Soc
 // Filter accounts by selected client; null = all accounts in this org
 const filteredAccounts = computed(() => {
   if (!selectedClientId.value) return accounts.value
-  if (selectedClientId.value === 'house') return accounts.value.filter((a) => !a.client)
+  if (selectedClientId.value === 'org') return accounts.value.filter((a) => !a.client)
   return accounts.value.filter((a) => a.client === selectedClientId.value)
 })
 
@@ -105,6 +107,7 @@ const defaultAnalytics = {
     impressions: { total: 0, change_pct: 0 },
     engagement_rate: { current: 0, change: 0 },
     posts_count: 0,
+    video_views: { total: 0 },
   },
   followerHistory: [] as { date: string; value: number }[],
   engagementHistory: [] as { date: string; value: number }[],
@@ -129,6 +132,7 @@ const analytics = computed(() => {
       impressions: { total: overview.total_impressions ?? 0, change_pct: 0 },
       engagement_rate: { current: overview.avg_engagement_rate ?? 0, change: 0 },
       posts_count: overview.total_accounts ?? 0,
+      video_views: { total: overview.total_video_views ?? 0 },
     },
     followerHistory: [] as { date: string; value: number }[],
     engagementHistory: [] as { date: string; value: number }[],
@@ -187,7 +191,7 @@ const showEmptyState = computed(() => !analyticsLoading.value && (!hasAnyAccount
         v-model="selectedClientId"
         :options="[
           { label: 'All clients', value: null },
-          { label: 'House (agency-owned)', value: 'house' },
+          { label: 'House (agency-owned)', value: 'org' },
           ...clients.map((c) => ({ label: c.name, value: c.id })),
         ]"
         value-attribute="value"
@@ -254,7 +258,7 @@ const showEmptyState = computed(() => !analyticsLoading.value && (!hasAnyAccount
     </UCard>
 
     <!-- Overview Stats -->
-    <div v-show="!showEmptyState" class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+    <div v-show="!showEmptyState" class="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
       <UCard>
         <div>
           <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Followers</p>
@@ -313,6 +317,16 @@ const showEmptyState = computed(() => !analyticsLoading.value && (!hasAnyAccount
           <p class="text-xs text-gray-400 mt-1">this period</p>
         </div>
       </UCard>
+
+      <UCard>
+        <div>
+          <p class="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">Video Views</p>
+          <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+            {{ formatNumber(analytics.overview.video_views.total) }}
+          </p>
+          <p class="text-xs text-gray-400 mt-1">this period</p>
+        </div>
+      </UCard>
     </div>
 
     <div v-show="!showEmptyState" class="grid lg:grid-cols-3 gap-6 mb-6">
@@ -352,7 +366,7 @@ const showEmptyState = computed(() => !analyticsLoading.value && (!hasAnyAccount
             class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
           >
             <div class="flex items-center gap-2 mb-2">
-              <UIcon :name="platformIcons(String(platform))" class="w-4 h-4 rounded-sm" />
+              <SocialPlatformIcon :platform="String(platform)" class="w-4 h-4" />
               <span class="font-medium text-gray-900 dark:text-white capitalize">{{ platform }}</span>
             </div>
             <div class="grid grid-cols-3 gap-2 text-sm">
@@ -396,7 +410,7 @@ const showEmptyState = computed(() => !analyticsLoading.value && (!hasAnyAccount
               class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
             />
             <div class="absolute top-2 left-2">
-              <UIcon :name="platformIcons(post.platform)" class="w-6 h-6 rounded-md" />
+              <SocialPlatformIcon :platform="post.platform" class="w-6 h-6" />
             </div>
           </div>
           <p class="text-sm text-gray-900 dark:text-white line-clamp-2 mb-2">

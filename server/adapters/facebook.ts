@@ -465,7 +465,17 @@ export async function getFacebookPageInsightsHistory(
       since: String(sinceUnix),
       until: String(untilUnix),
     },
-  }).catch(() => ({ data: [] }))
+  }).catch((err: any) => {
+    const msg =
+      err?.data?.error?.message ||
+      err?.response?._data?.error?.message ||
+      err?.message ||
+      String(err)
+    const code =
+      err?.data?.error?.code ?? err?.response?._data?.error?.code ?? err?.statusCode
+    console.warn(`[social:adapter:fb] page-insights history failed (code=${code}): ${msg}`)
+    return { data: [] }
+  })
 
   // Pivot from metric-major (one entry per metric, value array per day) to
   // day-major (one row per day, all metrics on it).
@@ -483,6 +493,57 @@ export async function getFacebookPageInsightsHistory(
   return Array.from(byDate.entries())
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([date, metrics]) => ({ date, metrics }))
+}
+
+/**
+ * Period-aggregate page-level insights for [since, until]. FB returns these
+ * with period=day so they could in principle be added to the daily-history
+ * call, but we keep them in a separate aggregate snapshot to mirror the IG
+ * adapter contract — the analytics API treats both platforms identically.
+ *
+ * Returns a flat metric→number map. `page_views_total` is renamed to
+ * `profile_views` so the cross-platform aggregator stays metric-name-stable.
+ */
+export async function getFacebookPageInsightsAggregate(
+  pageId: string,
+  pageAccessToken: string,
+  sinceUnix: number,
+  untilUnix: number,
+): Promise<Record<string, number>> {
+  const res = await $fetch<{
+    data: Array<{ name: string; values: Array<{ value: number }> }>
+  }>(graphUrl(`/${pageId}/insights`), {
+    params: {
+      access_token: pageAccessToken,
+      metric: 'page_views_total,page_video_views',
+      period: 'day',
+      since: String(sinceUnix),
+      until: String(untilUnix),
+    },
+  }).catch((err: any) => {
+    const msg =
+      err?.data?.error?.message ||
+      err?.response?._data?.error?.message ||
+      err?.message ||
+      String(err)
+    const code =
+      err?.data?.error?.code ?? err?.response?._data?.error?.code ?? err?.statusCode
+    console.warn(`[social:adapter:fb] page-insights aggregate failed (code=${code}): ${msg}`)
+    return { data: [] }
+  })
+
+  const out: Record<string, number> = {}
+  for (const m of res.data || []) {
+    const total = (m.values || []).reduce((s, v) => s + (Number(v.value) || 0), 0)
+    // Rename FB-specific keys to cross-platform names so the analytics
+    // aggregator and dashboard KPIs stay metric-name-stable across IG and FB.
+    const key =
+      m.name === 'page_views_total' ? 'profile_views'
+      : m.name === 'page_video_views' ? 'video_views'
+      : m.name
+    out[key] = total
+  }
+  return out
 }
 
 /**
@@ -851,6 +912,10 @@ export const facebookAdapter: PlatformAdapter = {
 
   async getAccountMetricsHistory(accountId, accessToken, sinceUnix, untilUnix) {
     return getFacebookPageInsightsHistory(accountId, accessToken, sinceUnix, untilUnix)
+  },
+
+  async getAccountMetricsAggregate(accountId, accessToken, sinceUnix, untilUnix) {
+    return getFacebookPageInsightsAggregate(accountId, accessToken, sinceUnix, untilUnix)
   },
 
   async listRecentPostIds(accountId, accessToken, limit) {

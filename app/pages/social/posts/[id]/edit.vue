@@ -356,7 +356,7 @@ const minDate = today(getLocalTimeZone())
               <div class="flex-1 min-w-0">
                 <p class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ account.account_name }}</p>
                 <p class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                  <UIcon :name="getSocialPlatformIcon(account.platform)" class="w-3.5 h-3.5 rounded-sm shrink-0" />
+                  <UIcon :name="getSocialPlatformIcon(account.platform)" class="w-3.5 h-3.5 shrink-0" />
                   @{{ account.account_handle }}
                 </p>
               </div>

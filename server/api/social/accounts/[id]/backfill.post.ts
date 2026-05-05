@@ -43,7 +43,7 @@ import type { SocialPlatform } from '~~/shared/social'
 const MAX_DAYS = 90
 const DEFAULT_DAYS = 28
 const MAX_POSTS = 25
-const PACE_MS = 1000
+const PACE_MS = 200
 
 const adapterByPlatform: Partial<Record<SocialPlatform, PlatformAdapter>> = {
   facebook: facebookAdapter,
@@ -151,6 +151,41 @@ export default defineEventHandler(async (event) => {
     if (!demoMode) await sleep(PACE_MS)
   }
 
+  // ── Pass 1.5: period aggregate ──
+  // For metrics Meta requires `metric_type=total_value` for (no daily breakdown
+  // available — e.g. IG views/profile_views/website_clicks post-v22), we make
+  // one extra call per backfill and store the totals as a single 'aggregate'
+  // snapshot dated to `now`. The analytics API surfaces these by reading the
+  // most recent aggregate per account.
+  let aggregateProcessed = 0
+  if (!demoMode && adapter.getAccountMetricsAggregate) {
+    try {
+      const aggregate = await adapter.getAccountMetricsAggregate(
+        account.platform_user_id,
+        accessToken!,
+        sinceUnix,
+        untilUnix,
+      )
+      if (Object.keys(aggregate).length > 0) {
+        await createAnalyticsSnapshot({
+          social_account: id,
+          snapshot_type: 'aggregate',
+          captured_at: now.toISOString(),
+          metrics: {
+            ...aggregate,
+            _period_days: days,
+            _period_start: new Date(sinceUnix * 1000).toISOString(),
+            _period_end: now.toISOString(),
+          },
+        })
+        aggregateProcessed = 1
+      }
+    } catch (err: any) {
+      console.warn(`[social:backfill] aggregate snapshot failed for ${id}: ${err?.message || err}`)
+    }
+    if (!demoMode) await sleep(PACE_MS)
+  }
+
   // ── Pass 2: recent posts ──
   let postsProcessed = 0
   let postsSkipped = 0
@@ -223,6 +258,7 @@ export default defineEventHandler(async (event) => {
     posts_processed: postsProcessed,
     posts_skipped: postsSkipped,
     posts_failed: postsFailed,
+    aggregate_processed: aggregateProcessed,
     note: demoMode
       ? 'Demo account — synthetic history generated (no Graph API call).'
       : days > 28

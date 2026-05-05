@@ -146,6 +146,20 @@ export interface PlatformAdapter {
   ): Promise<Array<{ date: string; metrics: Record<string, number> }>>
 
   /**
+   * Period-aggregate account-metrics for a [since, until] window. Used for
+   * platform metrics that Meta requires `metric_type=total_value` for and
+   * therefore can't return as a daily time-series (e.g. IG `views`,
+   * `profile_views`, `website_clicks` after Graph API v22). Adapters return
+   * a single flat metric→number map representing the whole window.
+   */
+  getAccountMetricsAggregate?(
+    accountId: string,
+    accessToken: string,
+    sinceUnix: number,
+    untilUnix: number,
+  ): Promise<Record<string, number>>
+
+  /**
    * List the platform-post ids of recent posts on an account, oldest-first up
    * to `limit`. Used by the backfill route to find posts to fetch insights for.
    * Doesn't return insights itself — caller pairs each id with getPostInsights.
