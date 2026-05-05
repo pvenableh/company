@@ -22,6 +22,9 @@ import { enforceTokenLimits, deductOrgTokens } from '~~/server/utils/ai-token-en
 import { getBrandContext } from '~~/server/utils/brand-context';
 import { getOrgContext } from '~~/server/utils/context-broker';
 import type { ChatMessage } from '~~/server/utils/llm/types';
+import { MUTATION_TOOLS } from '~~/server/utils/llm/tools';
+import { executeToolCall } from '~~/server/utils/llm/tool-handlers';
+import type { ClaudeProvider } from '~~/server/utils/llm/claude';
 
 export default defineEventHandler(async (event) => {
   // Require authentication
@@ -33,7 +36,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event);
-  const { sessionId, message, model, clientId, organizationId, responseStyle, verbosity, entityType, entityId } = body;
+  const { sessionId, message, model, clientId, organizationId, responseStyle, verbosity, entityType, entityId, allowMutations } = body;
 
   if (!message?.trim()) {
     throw createError({ statusCode: 400, message: 'Message is required' });
@@ -262,7 +265,7 @@ export default defineEventHandler(async (event) => {
 
     const systemPrompt = buildSystemPrompt(orgContext) + notesContext + taskContext + brandContext + entityBlock + styleContext + verbosityContext;
 
-    // 6. Stream response via SSE
+    // 6. Stream/tool response via SSE
     let provider;
     try {
       provider = getLLMProvider();
@@ -283,26 +286,95 @@ export default defineEventHandler(async (event) => {
     let streamResult: any;
     let streamError: Error | null = null;
 
-    // Stream the LLM response. Any error here is captured but does NOT skip persistence —
-    // we always try to save whatever `fullResponse` accumulated so the session isn't orphaned.
-    try {
-      const stream = provider.chatStream(chatMessages, {
-        model,
-        systemPrompt,
-        maxTokens: 4096,
-      });
+    // Determine whether to use mutation tools for this request.
+    // Tools are enabled when: the client opted in (allowMutations=true), an entity is focused,
+    // and the provider is ClaudeProvider (which has chatWithTools).
+    const useMutationTools = allowMutations === true && entityType && entityId && organizationId;
 
-      let iterResult = await stream.next();
-      while (!iterResult.done) {
-        fullResponse += iterResult.value;
-        responseWriter.write(`data: ${JSON.stringify({ type: 'chunk', content: iterResult.value })}\n\n`);
-        iterResult = await stream.next();
+    if (useMutationTools && typeof (provider as any).chatWithTools === 'function') {
+      // ── Tool-aware path ──────────────────────────────────────────────────────
+      // Round 1: ask Claude — it may respond with text, or request a tool call.
+      // Round 2 (if tool called): execute tool, send result back, get final text.
+      try {
+        const claudeProvider = provider as ClaudeProvider;
+        const llmOptions = { model, systemPrompt, maxTokens: 4096, tools: MUTATION_TOOLS };
+
+        // Build Anthropic-format messages from conversation history
+        const anthropicMsgs = claudeProvider.toAnthropicMessageParams(chatMessages);
+
+        const round1 = await claudeProvider.chatWithTools(anthropicMsgs, llmOptions);
+
+        if (round1.stopReason === 'tool_use' && round1.toolCalls.length > 0) {
+          const toolResultContents: Array<{ type: 'tool_result'; tool_use_id: string; content: string; is_error?: boolean }> = [];
+
+          for (const tc of round1.toolCalls) {
+            responseWriter.write(
+              `data: ${JSON.stringify({ type: 'tool_start', tool: tc.name, input: tc.input })}\n\n`,
+            );
+
+            const result = await executeToolCall(tc.name, tc.input, { organizationId, userId });
+
+            responseWriter.write(
+              `data: ${JSON.stringify({ type: 'tool_done', tool: tc.name, success: result.success, summary: result.summary, data: result.data })}\n\n`,
+            );
+
+            toolResultContents.push({
+              type: 'tool_result',
+              tool_use_id: tc.id,
+              content: result.success
+                ? JSON.stringify({ success: true, summary: result.summary, ...result.data })
+                : JSON.stringify({ success: false, error: result.error }),
+              is_error: !result.success,
+            });
+          }
+
+          // Round 2: append assistant's tool_use blocks + tool results, then get follow-up text.
+          // Anthropic requires: [...history, {role:'assistant', content: rawContent}, {role:'user', content: tool_results}]
+          const round2Messages = [
+            ...anthropicMsgs,
+            { role: 'assistant' as const, content: round1.rawContent },
+            { role: 'user' as const, content: toolResultContents },
+          ];
+
+          const round2 = await claudeProvider.chatWithTools(round2Messages, llmOptions);
+          fullResponse = round2.text;
+          streamResult = round2.usage ? { usage: round2.usage, model: model || 'claude-sonnet-4-20250514' } : undefined;
+
+          if (fullResponse) {
+            responseWriter.write(`data: ${JSON.stringify({ type: 'chunk', content: fullResponse })}\n\n`);
+          }
+        } else {
+          // No tool call — plain text response
+          fullResponse = round1.text;
+          streamResult = round1.usage ? { usage: round1.usage, model: model || 'claude-sonnet-4-20250514' } : undefined;
+          if (fullResponse) {
+            responseWriter.write(`data: ${JSON.stringify({ type: 'chunk', content: fullResponse })}\n\n`);
+          }
+        }
+      } catch (e: any) {
+        streamError = e;
       }
-      if (iterResult.value) {
-        streamResult = iterResult.value;
+    } else {
+      // ── Standard streaming path (read-only) ──────────────────────────────────
+      try {
+        const stream = provider.chatStream(chatMessages, {
+          model,
+          systemPrompt,
+          maxTokens: 4096,
+        });
+
+        let iterResult = await stream.next();
+        while (!iterResult.done) {
+          fullResponse += iterResult.value;
+          responseWriter.write(`data: ${JSON.stringify({ type: 'chunk', content: iterResult.value })}\n\n`);
+          iterResult = await stream.next();
+        }
+        if (iterResult.value) {
+          streamResult = iterResult.value;
+        }
+      } catch (e: any) {
+        streamError = e;
       }
-    } catch (e: any) {
-      streamError = e;
     }
 
     // Log AI usage (fire-and-forget). Only possible when the stream returned usage metadata.

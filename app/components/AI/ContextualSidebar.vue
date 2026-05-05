@@ -47,6 +47,7 @@ const {
   isStreaming,
   isLoadingHistory,
   streamingContent,
+  activeToolCall,
   error,
   setEntity,
   sendMessage,
@@ -67,9 +68,10 @@ const entityPrompts: Record<string, string[]> = {
     'What\'s outstanding for this client?',
   ],
   project: [
+    'Push the start date back 2 weeks',
     'What\'s blocking progress on this project?',
     'Summarize the task status',
-    'Draft a status update for the team',
+    'Mark this project as In Progress',
   ],
   invoice: [
     'Why is this invoice overdue?',
@@ -102,9 +104,10 @@ const entityPrompts: Record<string, string[]> = {
     'Draft a standup-style status update',
   ],
   ticket: [
+    'Change priority to urgent',
     'Summarize what this ticket is about',
     'What\'s blocking progress here?',
-    'Draft an update for the requester',
+    'Mark this ticket as In Review',
   ],
   lead: [
     'Summarize this lead and where it stands',
@@ -122,9 +125,10 @@ const entityPrompts: Record<string, string[]> = {
     'Draft an email to this audience',
   ],
   project_event: [
+    'Move this event back one week',
     'Summarize this event and its current status',
     'What work remains before it ships?',
-    'Draft an update for the team',
+    'Mark this event as complete',
   ],
   channel: [
     'Summarize what\'s been discussed lately',
@@ -423,8 +427,34 @@ const renderMarkdown = (text: string): string => {
           </div>
         </div>
 
+        <!-- Tool call indicator -->
+        <div v-if="activeToolCall" class="flex justify-start">
+          <div class="max-w-[90%] px-3 py-2 rounded-2xl rounded-bl-md border text-xs"
+            :class="activeToolCall.success === false
+              ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400'
+              : activeToolCall.success === true
+                ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400'
+                : 'bg-sky-50 dark:bg-sky-900/20 border-sky-200 dark:border-sky-800 text-sky-700 dark:text-sky-400'"
+          >
+            <div class="flex items-center gap-1.5">
+              <Icon
+                v-if="activeToolCall.success === true"
+                name="lucide:check-circle-2"
+                class="w-3 h-3 shrink-0"
+              />
+              <Icon
+                v-else-if="activeToolCall.success === false"
+                name="lucide:x-circle"
+                class="w-3 h-3 shrink-0"
+              />
+              <span v-else class="w-2.5 h-2.5 border border-current border-t-transparent rounded-full animate-spin shrink-0" />
+              <span class="font-medium">{{ activeToolCall.summary || activeToolCall.label }}</span>
+            </div>
+          </div>
+        </div>
+
         <!-- Loading indicator -->
-        <div v-if="isSending && !streamingContent" class="flex justify-start">
+        <div v-if="isSending && !streamingContent && !activeToolCall" class="flex justify-start">
           <div class="px-3 py-2 rounded-2xl rounded-bl-md bg-muted">
             <div class="flex items-center gap-1.5">
               <span class="w-1.5 h-1.5 bg-muted-foreground/70 rounded-full animate-bounce" style="animation-delay: 0ms" />

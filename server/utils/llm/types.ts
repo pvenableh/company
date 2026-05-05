@@ -12,6 +12,28 @@ export interface ChatMessage {
   content: string;
 }
 
+export interface ToolDefinition {
+  name: string;
+  description: string;
+  input_schema: {
+    type: 'object';
+    properties: Record<string, any>;
+    required?: string[];
+  };
+}
+
+export interface ToolCall {
+  id: string;
+  name: string;
+  input: Record<string, any>;
+}
+
+export interface ToolResult {
+  tool_use_id: string;
+  content: string;
+  is_error?: boolean;
+}
+
 export interface LLMOptions {
   /** Model identifier (provider-specific, e.g. 'claude-sonnet-4-20250514') */
   model?: string;
@@ -21,6 +43,8 @@ export interface LLMOptions {
   temperature?: number;
   /** System prompt to set the assistant's behavior */
   systemPrompt?: string;
+  /** Tools available for this request */
+  tools?: ToolDefinition[];
 }
 
 export interface LLMResponse {

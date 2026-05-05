@@ -7,7 +7,7 @@
  */
 
 import Anthropic from '@anthropic-ai/sdk';
-import type { LLMProvider, ChatMessage, LLMOptions, LLMResponse } from './types';
+import type { LLMProvider, ChatMessage, LLMOptions, LLMResponse, ToolCall } from './types';
 
 const DEFAULT_MODEL = 'claude-sonnet-4-20250514';
 const DEFAULT_MAX_TOKENS = 4096;
@@ -87,6 +87,66 @@ export class ClaudeProvider implements LLMProvider {
     } catch {
       return undefined;
     }
+  }
+
+  /**
+   * Non-streaming call with tool support.
+   * Accepts pre-built Anthropic MessageParam[] so callers can construct
+   * multi-turn tool_use / tool_result sequences correctly.
+   */
+  async chatWithTools(
+    anthropicMessages: Anthropic.MessageParam[],
+    options?: LLMOptions,
+  ): Promise<{
+    text: string;
+    toolCalls: ToolCall[];
+    stopReason: string;
+    rawContent: Anthropic.ContentBlock[];
+    usage?: { inputTokens: number; outputTokens: number };
+  }> {
+    const anthropicTools: Anthropic.Tool[] = (options?.tools || []).map((t) => ({
+      name: t.name,
+      description: t.description,
+      input_schema: t.input_schema as Anthropic.Tool.InputSchema,
+    }));
+
+    const response = await this.client.messages.create({
+      model: options?.model || DEFAULT_MODEL,
+      max_tokens: options?.maxTokens || DEFAULT_MAX_TOKENS,
+      system: options?.systemPrompt || undefined,
+      messages: anthropicMessages,
+      tools: anthropicTools.length > 0 ? anthropicTools : undefined,
+    });
+
+    const text = response.content
+      .filter((b) => b.type === 'text')
+      .map((b) => (b as Anthropic.TextBlock).text)
+      .join('');
+
+    const toolCalls: ToolCall[] = response.content
+      .filter((b) => b.type === 'tool_use')
+      .map((b) => {
+        const tb = b as Anthropic.ToolUseBlock;
+        return { id: tb.id, name: tb.name, input: tb.input as Record<string, any> };
+      });
+
+    return {
+      text,
+      toolCalls,
+      stopReason: response.stop_reason || 'end_turn',
+      rawContent: response.content,
+      usage: { inputTokens: response.usage.input_tokens, outputTokens: response.usage.output_tokens },
+    };
+  }
+
+  /** Convert ChatMessage[] to Anthropic.MessageParam[] for use with chatWithTools. */
+  toAnthropicMessageParams(messages: ChatMessage[]): Anthropic.MessageParam[] {
+    return messages
+      .filter((m) => m.role !== 'system')
+      .map((m) => ({
+        role: m.role as 'user' | 'assistant',
+        content: m.content,
+      }));
   }
 
   models(): string[] {

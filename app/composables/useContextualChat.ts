@@ -21,6 +21,13 @@ interface EntityChat {
   hydrated: boolean; // whether we've attempted to load from server
 }
 
+export interface ToolCallState {
+  name: string;
+  label: string;
+  summary?: string;
+  success?: boolean;
+}
+
 // Module-level shared state — persists across sidebar open/close
 const entityChats = reactive(new Map<string, EntityChat>());
 const activeEntityKey = ref<string | null>(null);
@@ -29,7 +36,14 @@ const isStreaming = ref(false);
 const isLoadingHistory = ref(false);
 const streamingContent = ref('');
 const error = ref<string | null>(null);
+const activeToolCall = ref<ToolCallState | null>(null);
 let abortController: AbortController | null = null;
+
+const TOOL_LABELS: Record<string, string> = {
+  reschedule_project: 'Rescheduling project...',
+  update_field: 'Updating...',
+  add_task: 'Creating task...',
+};
 
 function getEntityKey(entityType: string, entityId: string): string {
   return `${entityType}:${entityId}`;
@@ -52,6 +66,7 @@ export function useContextualChat() {
       isStreaming: ref(false),
       isLoadingHistory: ref(false),
       streamingContent: ref(''),
+      activeToolCall: ref<ToolCallState | null>(null),
       error: ref<string | null>(null),
       setEntity: (_type: string, _id: string) => {},
       sendMessage: async (_content: string) => {},
@@ -126,6 +141,7 @@ export function useContextualChat() {
     isSending.value = true;
     isStreaming.value = true;
     streamingContent.value = '';
+    activeToolCall.value = null;
     error.value = null;
 
     const userMsg: ContextualMessage = {
@@ -150,6 +166,7 @@ export function useContextualChat() {
           verbosity: useAIPreferences().responseVerbosity.value,
           entityType,
           entityId,
+          allowMutations: true,
         }),
       });
 
@@ -189,6 +206,18 @@ export function useContextualChat() {
             const data = JSON.parse(line.slice(6));
             if (data.type === 'chunk') {
               streamingContent.value += data.content;
+            } else if (data.type === 'tool_start') {
+              activeToolCall.value = {
+                name: data.tool,
+                label: TOOL_LABELS[data.tool] || 'Working...',
+              };
+            } else if (data.type === 'tool_done') {
+              activeToolCall.value = {
+                name: data.tool,
+                label: TOOL_LABELS[data.tool]?.replace('...', '') || 'Done',
+                summary: data.summary,
+                success: data.success,
+              };
             } else if (data.type === 'done') {
               if (data.sessionId) {
                 chat.sessionId = data.sessionId;
@@ -200,8 +229,10 @@ export function useContextualChat() {
                 date_created: new Date().toISOString(),
               });
               streamingContent.value = '';
+              activeToolCall.value = null;
             } else if (data.type === 'error') {
               error.value = data.error;
+              activeToolCall.value = null;
             }
           } catch {
             // skip malformed JSON
@@ -220,6 +251,7 @@ export function useContextualChat() {
       isSending.value = false;
       isStreaming.value = false;
       streamingContent.value = '';
+      activeToolCall.value = null;
       abortController = null;
     }
   };
@@ -236,6 +268,7 @@ export function useContextualChat() {
     chat.sessionId = null;
     chat.hydrated = false;
     streamingContent.value = '';
+    activeToolCall.value = null;
     error.value = null;
   };
 
@@ -247,6 +280,7 @@ export function useContextualChat() {
     isStreaming,
     isLoadingHistory,
     streamingContent,
+    activeToolCall,
     error,
     setEntity,
     sendMessage,
