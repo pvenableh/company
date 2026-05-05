@@ -3,18 +3,20 @@
  * Accept an organization invitation.
  *
  * Body: { membershipId, password? }
+ *   - `membershipId` may resolve in either `org_memberships` (staff) OR
+ *     `client_portal_users` (portal user). The id is checked against both.
  *
- * If the user is new (came via Directus invite), password is required
- * and will be used to accept the Directus invite first.
+ * If the user is new (came via Directus invite), password is required and
+ * will be used to accept the Directus invite first.
  *
  * Flow:
- * 1. Validate the membership exists and is pending
+ * 1. Resolve the row in either table; validate it's pending
  * 2. If password provided and user status is 'invited', accept Directus invite
- * 3. Set membership status to 'active' with accepted_at timestamp
+ * 3. Set status to 'active' with accepted_at timestamp on the same table
  * 4. Auto-login the user and return session
  */
 
-import { readItems, updateItem, readUsers } from '@directus/sdk';
+import { readItems, updateItem } from '@directus/sdk';
 
 export default defineEventHandler(async (event) => {
   try {
@@ -30,8 +32,9 @@ export default defineEventHandler(async (event) => {
 
     const directus = getServerDirectus();
 
-    // Fetch the membership with related data
-    const memberships = await directus.request(
+    // Look up the row in both tables. The id only lives in one of them.
+    let collection: 'org_memberships' | 'client_portal_users' = 'org_memberships';
+    let rows = await directus.request(
       readItems('org_memberships', {
         filter: { id: { _eq: membershipId } },
         fields: [
@@ -47,21 +50,42 @@ export default defineEventHandler(async (event) => {
           'role.id',
           'role.name',
           'role.slug',
-          'client.id',
-          'client.name',
         ],
         limit: 1,
       })
     ) as any[];
 
-    if (!memberships.length) {
+    if (!rows.length) {
+      collection = 'client_portal_users';
+      rows = await directus.request(
+        readItems('client_portal_users', {
+          filter: { id: { _eq: membershipId } },
+          fields: [
+            'id',
+            'status',
+            'organization.id',
+            'organization.name',
+            'user.id',
+            'user.email',
+            'user.first_name',
+            'user.last_name',
+            'user.status',
+            'client.id',
+            'client.name',
+          ],
+          limit: 1,
+        } as any)
+      ) as any[];
+    }
+
+    if (!rows.length) {
       throw createError({
         statusCode: 404,
         message: 'Invitation not found',
       });
     }
 
-    const membership = memberships[0];
+    const membership = rows[0];
 
     if (membership.status !== 'pending') {
       throw createError({
@@ -91,12 +115,12 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // Activate the org membership
+    // Activate the row in whichever table it lives
     await directus.request(
-      updateItem('org_memberships', membershipId, {
+      updateItem(collection, membershipId, {
         status: 'active',
         accepted_at: new Date().toISOString(),
-      })
+      } as any)
     );
 
     // Try to auto-login the user
@@ -147,10 +171,9 @@ export default defineEventHandler(async (event) => {
         id: membership.organization?.id,
         name: membership.organization?.name,
       },
-      role: {
-        name: membership.role?.name,
-        slug: membership.role?.slug,
-      },
+      role: collection === 'client_portal_users'
+        ? { name: 'Client Portal', slug: 'client' }
+        : { name: membership.role?.name, slug: membership.role?.slug },
       login: loginResult,
     };
   } catch (error: any) {

@@ -1,9 +1,5 @@
 <template>
-	<UModal v-model="isOpen">
-		<template #header>
-			<h3 class="text-lg font-semibold">Invite Member</h3>
-		</template>
-
+	<UModal v-model="isOpen" title="Invite Member">
 		<form @submit.prevent="sendInvitation" class="space-y-4">
 			<p class="text-sm text-muted-foreground">
 				Invite a new team member to join this organization. They will receive an email with instructions to accept.
@@ -33,16 +29,16 @@
 		</form>
 
 		<template #footer>
-			<div class="flex justify-end gap-2">
-				<UButton color="gray" variant="ghost" @click="isOpen = false">Cancel</UButton>
-				<UButton
-					color="primary"
+			<div class="flex justify-end">
+				<UiActionButton
+					icon="lucide:send"
+					variant="primary"
 					:loading="sending"
 					:disabled="!form.email || !form.roleId"
 					@click="sendInvitation"
 				>
 					Send Invitation
-				</UButton>
+				</UiActionButton>
 			</div>
 		</template>
 	</UModal>

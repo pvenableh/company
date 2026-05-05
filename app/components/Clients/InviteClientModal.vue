@@ -1,14 +1,26 @@
 <template>
-	<UModal v-model="isOpen">
-		<template #header>
-			<h3 class="text-lg font-semibold">Invite Client User</h3>
-		</template>
-
+	<UModal v-model="isOpen" title="Invite Client User">
 		<form @submit.prevent="sendInvitation" class="space-y-4">
 			<p class="text-sm text-muted-foreground">
 				Invite a user to access this organization as a client.
-				They will have limited access scoped to <strong>{{ clientName }}</strong>.
+				<template v-if="resolvedClientName">
+					They will have limited access scoped to <strong>{{ resolvedClientName }}</strong>.
+				</template>
+				<template v-else>
+					Pick the client company to scope their access.
+				</template>
 			</p>
+
+			<UFormGroup v-if="!props.clientId" label="Client Company" required>
+				<USelectMenu
+					v-model="form.clientId"
+					:options="clientOptions"
+					value-attribute="id"
+					option-attribute="name"
+					placeholder="Select a client…"
+					:loading="clientsLoading"
+				/>
+			</UFormGroup>
 
 			<UFormGroup label="Email Address" required>
 				<UInput
@@ -27,16 +39,16 @@
 		</form>
 
 		<template #footer>
-			<div class="flex justify-end gap-2">
-				<UButton color="gray" variant="ghost" @click="isOpen = false">Cancel</UButton>
-				<UButton
-					color="primary"
+			<div class="flex justify-end">
+				<UiActionButton
+					icon="lucide:send"
+					variant="primary"
 					:loading="sending"
-					:disabled="!form.email"
+					:disabled="!canSubmit"
 					@click="sendInvitation"
 				>
 					Send Invitation
-				</UButton>
+				</UiActionButton>
 			</div>
 		</template>
 	</UModal>
@@ -46,14 +58,19 @@
 const props = defineProps({
 	modelValue: { type: Boolean, default: false },
 	organizationId: { type: String, required: true },
-	clientId: { type: String, required: true },
-	clientName: { type: String, default: 'this client' },
+	/** Pre-scoped client. Omit to render a client picker. */
+	clientId: { type: String, default: null },
+	clientName: { type: String, default: '' },
 });
 
 const emit = defineEmits(['update:modelValue', 'invited']);
 
 const toast = useToast();
 const sending = ref(false);
+
+const clientItems = useDirectusItems('clients');
+const clients = ref([]);
+const clientsLoading = ref(false);
 
 const isOpen = computed({
 	get: () => props.modelValue,
@@ -62,17 +79,44 @@ const isOpen = computed({
 
 const form = ref({
 	email: '',
+	clientId: props.clientId || null,
 });
 
-// Reset form when modal opens
+const clientOptions = computed(() => clients.value);
+
+const resolvedClientName = computed(() => {
+	if (props.clientId) return props.clientName || 'this client';
+	if (!form.value.clientId) return '';
+	return clients.value.find((c) => c.id === form.value.clientId)?.name || '';
+});
+
+const canSubmit = computed(() => !!form.value.email && !!(props.clientId || form.value.clientId));
+
+async function loadClients() {
+	if (props.clientId) return;
+	clientsLoading.value = true;
+	try {
+		clients.value = await clientItems.list({
+			filter: { organization: { _eq: props.organizationId } },
+			fields: ['id', 'name'],
+			sort: ['name'],
+			limit: -1,
+		});
+	} finally {
+		clientsLoading.value = false;
+	}
+}
+
 watch(isOpen, (val) => {
 	if (val) {
 		form.value.email = '';
+		form.value.clientId = props.clientId || null;
+		if (!props.clientId && !clients.value.length) loadClients();
 	}
 });
 
 async function sendInvitation() {
-	if (!form.value.email) return;
+	if (!canSubmit.value) return;
 
 	sending.value = true;
 	try {
@@ -81,7 +125,7 @@ async function sendInvitation() {
 			body: {
 				email: form.value.email,
 				organizationId: props.organizationId,
-				clientId: props.clientId,
+				clientId: props.clientId || form.value.clientId,
 			},
 		});
 

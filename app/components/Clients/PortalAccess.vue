@@ -105,7 +105,6 @@ const toast = useToast();
 const { selectedOrg } = useOrganization();
 
 const organizationId = computed(() => selectedOrg.value);
-const membershipItems = useDirectusItems('org_memberships');
 
 const memberships = ref<any[]>([]);
 const loading = ref(false);
@@ -113,21 +112,15 @@ const actingId = ref<string | null>(null);
 const showInvite = ref(false);
 
 async function load() {
-  if (!props.clientId) return;
+  if (!props.clientId || !organizationId.value) return;
   loading.value = true;
   try {
-    memberships.value = await membershipItems.list({
-      filter: { client: { _eq: props.clientId } },
-      fields: [
-        'id', 'status', 'invited_at',
-        'user.id', 'user.first_name', 'user.last_name', 'user.email', 'user.last_access',
-        'role.slug',
-      ],
-      sort: ['-invited_at'],
-      limit: -1,
+    memberships.value = await $fetch('/api/org/list-portal-users', {
+      method: 'POST',
+      body: { organizationId: organizationId.value, clientId: props.clientId },
     });
   } catch (e: any) {
-    console.error('Failed to load portal memberships:', e);
+    console.error('Failed to load portal users:', e);
     memberships.value = [];
   } finally {
     loading.value = false;
@@ -190,7 +183,10 @@ async function onRevoke(m: any) {
   if (!confirm('Revoke portal access for this user? They will no longer be able to sign in.')) return;
   actingId.value = m.id;
   try {
-    await membershipItems.update(m.id, { status: 'suspended' });
+    await $fetch('/api/org/portal-user-status', {
+      method: 'POST',
+      body: { portalUserId: m.id, organizationId: organizationId.value, status: 'suspended' },
+    });
     toast.add({ title: 'Access Revoked', description: 'Portal access has been suspended.', color: 'green' });
     await load();
   } catch (e: any) {
@@ -204,7 +200,10 @@ async function onRevoke(m: any) {
 async function onRestore(m: any) {
   actingId.value = m.id;
   try {
-    await membershipItems.update(m.id, { status: 'active' });
+    await $fetch('/api/org/portal-user-status', {
+      method: 'POST',
+      body: { portalUserId: m.id, organizationId: organizationId.value, status: 'active' },
+    });
     toast.add({ title: 'Access Restored', description: 'Portal access has been re-enabled.', color: 'green' });
     await load();
   } catch (e: any) {

@@ -4,8 +4,9 @@
  *
  * Body: { email, organizationId, clientId }
  *
- * The role is automatically set to the org's "client" role.
- * The membership is scoped to the client record via the `client` FK.
+ * Writes to `client_portal_users` — the dedicated table for external portal
+ * users (split out from `org_memberships` to kill role-slug discrimination
+ * across the codebase).
  */
 
 import { createItem, readItems, readUsers, readRoles, inviteUser } from '@directus/sdk';
@@ -74,27 +75,6 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    // Find the "client" role for this org
-    const clientRole = await directus.request(
-      readItems('org_roles', {
-        filter: {
-          organization: { _eq: organizationId },
-          slug: { _eq: 'client' },
-        },
-        fields: ['id'],
-        limit: 1,
-      })
-    ) as any[];
-
-    if (!clientRole.length) {
-      throw createError({
-        statusCode: 500,
-        message: 'Client role not found. Please seed roles for this organization first.',
-      });
-    }
-
-    const clientRoleId = clientRole[0].id;
-
     // Check if user exists
     const existingUsers = await directus.request(
       readUsers({
@@ -110,24 +90,24 @@ export default defineEventHandler(async (event) => {
     if (existingUsers.length > 0) {
       targetUserId = existingUsers[0].id;
 
-      // Check for existing membership
-      const existingMembership = await directus.request(
-        readItems('org_memberships', {
+      // Check for existing portal-user row in this org
+      const existingPortalRow = await directus.request(
+        readItems('client_portal_users', {
           filter: {
             organization: { _eq: organizationId },
             user: { _eq: targetUserId },
           },
           fields: ['id', 'status'],
           limit: 1,
-        })
+        } as any)
       ) as any[];
 
-      if (existingMembership.length > 0) {
-        const status = existingMembership[0].status;
+      if (existingPortalRow.length > 0) {
+        const status = existingPortalRow[0].status;
         if (status === 'active') {
           throw createError({
             statusCode: 409,
-            message: 'This user already has access to this organization',
+            message: 'This user already has portal access for this organization',
           });
         }
         if (status === 'pending') {
@@ -196,24 +176,23 @@ export default defineEventHandler(async (event) => {
       targetUserId = newUsers[0].id;
     }
 
-    // Create the org_membership with client scope
-    const membership = await directus.request(
-      createItem('org_memberships', {
+    // Create the client_portal_users row
+    const portalRow = await directus.request(
+      createItem('client_portal_users', {
         organization: organizationId,
         user: targetUserId,
-        role: clientRoleId,
         client: clientId,
         status: 'pending',
         invited_by: currentUserId,
         invited_at: new Date().toISOString(),
-      })
+      } as any)
     ) as any;
 
     // NOTE: We deliberately do NOT create an `organizations_directus_users`
-    // junction row for client users. That legacy junction is what Directus
-    // row-level filters key off to grant org-wide read access. A client user
-    // must only see their scoped client + child clients — the new
-    // `org_memberships` row is the sole source of truth for their access.
+    // junction row for portal users. That legacy junction is what Directus
+    // row-level filters key off to grant org-wide read access. A portal user
+    // must only see their scoped client + child clients — the
+    // `client_portal_users` row is the sole source of truth for their access.
 
     // Ensure a Contact exists for this client user, linked to the client record
     try {
@@ -235,7 +214,7 @@ export default defineEventHandler(async (event) => {
         ? `Invitation sent to ${email}. They will receive an email to set up their account.`
         : `${email} has been invited as a client user for ${clientRecord[0].name}.`,
       membership: {
-        id: membership.id,
+        id: portalRow.id,
         status: 'pending',
         clientId,
         isNewUser,

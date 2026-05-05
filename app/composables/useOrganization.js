@@ -21,6 +21,7 @@ export function useOrganization() {
 
 	const orgItems = useDirectusItems('organizations');
 	const membershipItems = useDirectusItems('org_memberships');
+	const portalUserItems = useDirectusItems('client_portal_users');
 
 	const { user } = useDirectusAuth();
 
@@ -46,22 +47,19 @@ export function useOrganization() {
 
 	const isCurrentOrgArchived = computed(() => !!currentOrg.value?.archived_at);
 
-	// Client portal — first active client-role membership across all orgs.
+	// Client portal — first active row in client_portal_users across all orgs.
 	// Used by the global client-portal middleware to gate access to /portal/*
 	// and force-select the right org regardless of cookie state.
+	const clientPortalRows = useState('clientPortalRows', () => []);
 	const clientMembership = computed(() => {
-		for (const org of organizations.value) {
-			const m = org.membership;
-			if (m?.role?.slug === 'client' && m?.status === 'active') {
-				return {
-					membershipId: m.id,
-					organizationId: org.id,
-					clientId: typeof m.client === 'object' ? m.client?.id : m.client,
-					clientName: typeof m.client === 'object' ? m.client?.name : null,
-				};
-			}
-		}
-		return null;
+		const r = clientPortalRows.value[0];
+		if (!r) return null;
+		return {
+			membershipId: r.id,
+			organizationId: r.organizationId,
+			clientId: r.clientId,
+			clientName: r.clientName,
+		};
 	});
 
 	const isClientPortalUser = computed(() => !!clientMembership.value);
@@ -84,8 +82,8 @@ export function useOrganization() {
 		error.value = null;
 
 		try {
-			// Fetch orgs and memberships in parallel
-			const [junctionOrgs, memberships] = await Promise.all([
+			// Fetch orgs, staff memberships, and portal-user rows in parallel
+			const [junctionOrgs, memberships, portalRows] = await Promise.all([
 				orgItems.list({
 					filter: {
 						users: { directus_users_id: { _eq: user.value.id } },
@@ -98,7 +96,14 @@ export function useOrganization() {
 						user: { _eq: user.value.id },
 						status: { _eq: 'active' },
 					},
-					fields: ['id', 'organization', 'role.id', 'role.name', 'role.slug', 'client.id', 'client.name'],
+					fields: ['id', 'organization', 'role.id', 'role.name', 'role.slug'],
+				}).catch(() => []),
+				portalUserItems.list({
+					filter: {
+						user: { _eq: user.value.id },
+						status: { _eq: 'active' },
+					},
+					fields: ['id', 'organization', 'client.id', 'client.name', 'status'],
 				}).catch(() => []),
 			]);
 
@@ -108,27 +113,48 @@ export function useOrganization() {
 				if (orgId) membershipByOrg[orgId] = m;
 			}
 
-			// Fetch any membership-only orgs not already in junction results
-			const junctionOrgIds = new Set(junctionOrgs.map((org) => org.id));
-			const membershipOnlyOrgIds = Object.keys(membershipByOrg).filter((id) => !junctionOrgIds.has(id));
+			// Index portal-user rows by org and persist normalized rows for the
+			// `clientMembership`/`isClientPortalUser` computed up top.
+			const portalByOrg = {};
+			const normalizedPortalRows = [];
+			for (const r of portalRows) {
+				const orgId = typeof r.organization === 'object' ? r.organization?.id : r.organization;
+				const clientField = r.client;
+				const clientId = typeof clientField === 'object' ? clientField?.id : clientField;
+				const clientName = typeof clientField === 'object' ? clientField?.name ?? null : null;
+				if (!orgId || !clientId) continue;
+				const norm = { id: r.id, organizationId: orgId, clientId, clientName, status: r.status };
+				portalByOrg[orgId] = norm;
+				normalizedPortalRows.push(norm);
+			}
+			clientPortalRows.value = normalizedPortalRows;
 
-			let membershipOrgs = [];
-			if (membershipOnlyOrgIds.length > 0) {
+			// Fetch any membership-only orgs not already in junction results.
+			// "Membership" here covers both staff org_memberships AND
+			// client_portal_users — a portal-only user has no junction row.
+			const junctionOrgIds = new Set(junctionOrgs.map((org) => org.id));
+			const extraOrgIds = new Set([
+				...Object.keys(membershipByOrg),
+				...Object.keys(portalByOrg),
+			].filter((id) => !junctionOrgIds.has(id)));
+
+			let extraOrgs = [];
+			if (extraOrgIds.size > 0) {
 				try {
-					membershipOrgs = await orgItems.list({
+					extraOrgs = await orgItems.list({
 						filter: {
-							id: { _in: membershipOnlyOrgIds },
+							id: { _in: Array.from(extraOrgIds) },
 							active: { _neq: false },
 						},
 						fields: ['id', 'name', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'default_hourly_rate', 'email', 'phone', 'address', 'archived_at', 'whitelabel'],
 					});
 				} catch {
-					// Continue if membership-only orgs can't be fetched
+					// Continue if extra orgs can't be fetched
 				}
 			}
 
 			// Merge both sources
-			const data = [...junctionOrgs, ...membershipOrgs];
+			const data = [...junctionOrgs, ...extraOrgs];
 
 			// Fetch counts per org using aggregate queries (avoids transferring full arrays)
 			const orgIds = data.map((org) => org.id);
@@ -176,6 +202,7 @@ export function useOrganization() {
 					projectsCount: pc,
 					totalActivity: tc + pc,
 					membership: membershipByOrg[org.id] ?? null,
+					clientPortal: portalByOrg[org.id] ?? null,
 				};
 			});
 

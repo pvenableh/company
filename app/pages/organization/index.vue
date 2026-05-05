@@ -537,7 +537,7 @@ const fetchOrgMemberships = async () => {
 			filter: {
 				organization: { _eq: selectedOrg.value },
 			},
-			fields: ['id', 'status', 'user', 'role.id', 'role.name', 'role.slug', 'client.id', 'client.name'],
+			fields: ['id', 'status', 'user', 'role.id', 'role.name', 'role.slug'],
 			limit: -1,
 		});
 	} catch {
@@ -545,27 +545,25 @@ const fetchOrgMemberships = async () => {
 	}
 };
 
-// --- Client portal memberships (role.slug = 'client') ---
+// --- Client portal users (separate table; admin-routed listing) ---
 const clientMemberships = ref([]);
 const clientMembershipsLoading = ref(false);
 const clientActingId = ref(null);
+const showInviteClientModal = ref(false);
+
+const onClientInvited = async () => {
+	showInviteClientModal.value = false;
+	await fetchClientMemberships();
+};
 
 const fetchClientMemberships = async () => {
 	if (!selectedOrg.value) return;
 	clientMembershipsLoading.value = true;
 	try {
-		const all = await membershipItems.list({
-			filter: { organization: { _eq: selectedOrg.value } },
-			fields: [
-				'id', 'status', 'invited_at',
-				'user.id', 'user.first_name', 'user.last_name', 'user.email', 'user.last_access',
-				'role.slug',
-				'client.id', 'client.name',
-			],
-			sort: ['-invited_at'],
-			limit: -1,
+		clientMemberships.value = await $fetch('/api/org/list-portal-users', {
+			method: 'POST',
+			body: { organizationId: selectedOrg.value },
 		});
-		clientMemberships.value = all.filter((m) => m.role?.slug === 'client');
 	} catch {
 		clientMemberships.value = [];
 	} finally {
@@ -615,7 +613,10 @@ const revokeClientAccess = async (m) => {
 	if (!confirm('Revoke portal access for this user? They will no longer be able to sign in.')) return;
 	clientActingId.value = m.id;
 	try {
-		await membershipItems.update(m.id, { status: 'suspended' });
+		await $fetch('/api/org/portal-user-status', {
+			method: 'POST',
+			body: { portalUserId: m.id, organizationId: selectedOrg.value, status: 'suspended' },
+		});
 		toast.add({ title: 'Access Revoked', description: 'Portal access has been suspended.', color: 'green' });
 		await fetchClientMemberships();
 	} catch (e) {
@@ -628,7 +629,10 @@ const revokeClientAccess = async (m) => {
 const restoreClientAccess = async (m) => {
 	clientActingId.value = m.id;
 	try {
-		await membershipItems.update(m.id, { status: 'active' });
+		await $fetch('/api/org/portal-user-status', {
+			method: 'POST',
+			body: { portalUserId: m.id, organizationId: selectedOrg.value, status: 'active' },
+		});
 		toast.add({ title: 'Access Restored', description: 'Portal access has been re-enabled.', color: 'green' });
 		await fetchClientMemberships();
 	} catch (e) {
@@ -1420,56 +1424,62 @@ watch(searchEmail, (val) => {
 							</div>
 
 							<div v-if="filteredUsers.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-								<UCard v-for="member in filteredUsers" :key="member.id">
-									<div class="flex items-center justify-between">
-										<div class="flex items-center space-x-4">
-											<UAvatar
-												:src="member.avatar ? `${config.public.directusUrl}/assets/${member.avatar}?key=small` : null"
-												:alt="`${member.first_name} ${member.last_name}`"
-											/>
-											<div>
-												<div class="flex items-center gap-2">
-													<h4 class="font-medium">{{ member.first_name }} {{ member.last_name }}</h4>
-													<!-- Role: editable dropdown for owners/admins, badge otherwise -->
-													<template v-if="getMemberRole(member.id)">
-														<select
-															v-if="canManageOrg && member.id !== user?.id && getMemberRole(member.id).slug !== 'owner'"
-															class="text-xs rounded-md border border-gray-200 dark:border-gray-600 bg-transparent px-1.5 py-0.5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
-															:value="getMemberRole(member.id).id"
-															:disabled="changingRole"
-															@change="changeMemberRole(member.id, $event.target.value)"
-														>
-															<option
-																v-for="role in assignableRoles"
-																:key="role.id"
-																:value="role.id"
-															>
-																{{ role.name }}
-															</option>
-														</select>
-														<UBadge
-															v-else
-															:color="getRoleBadgeColor(getMemberRole(member.id).slug)"
-															variant="soft"
-															size="xs"
-														>
-															{{ getMemberRole(member.id).name }}
-														</UBadge>
-													</template>
-												</div>
-												<p class="text-sm text-gray-500">{{ member.email }}</p>
-											</div>
-										</div>
-										<UButton
-											v-if="canManageOrg && member.id !== user?.id"
-											color="red"
-											variant="ghost"
-											icon="i-heroicons-user-minus"
-											size="xs"
-											@click="confirmRemoveMember(member)"
+								<div
+									v-for="member in filteredUsers"
+									:key="member.id"
+									class="ios-card p-4 flex flex-col gap-3"
+								>
+									<!-- Top row: avatar + name/email (truncating) + remove button (always pinned right) -->
+									<div class="flex items-start gap-3">
+										<UAvatar
+											:src="member.avatar ? `${config.public.directusUrl}/assets/${member.avatar}?key=small` : null"
+											:alt="`${member.first_name} ${member.last_name}`"
+											size="md"
+											class="shrink-0"
 										/>
+										<div class="flex-1 min-w-0">
+											<h4 class="font-medium text-sm truncate">{{ member.first_name }} {{ member.last_name }}</h4>
+											<p class="text-xs text-muted-foreground truncate">{{ member.email }}</p>
+										</div>
+										<button
+											v-if="canManageOrg && member.id !== user?.id"
+											type="button"
+											class="shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+											:title="`Remove ${member.first_name}`"
+											@click="confirmRemoveMember(member)"
+										>
+											<Icon name="lucide:user-minus" class="w-3.5 h-3.5" />
+										</button>
 									</div>
-								</UCard>
+
+									<!-- Role row: own line so alignment doesn't shift with name length -->
+									<div v-if="getMemberRole(member.id)" class="flex items-center justify-between">
+										<span class="text-[10px] uppercase tracking-wider text-muted-foreground">Role</span>
+										<select
+											v-if="canManageOrg && member.id !== user?.id && getMemberRole(member.id).slug !== 'owner'"
+											class="text-xs rounded-full border border-border bg-transparent px-2.5 py-0.5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
+											:value="getMemberRole(member.id).id"
+											:disabled="changingRole"
+											@change="changeMemberRole(member.id, $event.target.value)"
+										>
+											<option
+												v-for="role in assignableRoles"
+												:key="role.id"
+												:value="role.id"
+											>
+												{{ role.name }}
+											</option>
+										</select>
+										<UBadge
+											v-else
+											:color="getRoleBadgeColor(getMemberRole(member.id).slug)"
+											variant="soft"
+											size="xs"
+										>
+											{{ getMemberRole(member.id).name }}
+										</UBadge>
+									</div>
+								</div>
 							</div>
 
 							<div v-else class="text-center py-12">
@@ -1494,6 +1504,14 @@ watch(searchEmail, (val) => {
 									<h3 class="text-lg font-medium">Client Portal Access</h3>
 									<p class="text-xs text-muted-foreground mt-0.5">All client users with login access across your client companies.</p>
 								</div>
+								<UiActionButton
+									v-if="canManageOrg"
+									icon="lucide:user-plus"
+									variant="primary"
+									@click="showInviteClientModal = true"
+								>
+									Invite Client
+								</UiActionButton>
 							</div>
 
 							<div v-if="clientMembershipsLoading" class="flex justify-center py-12">
@@ -1629,15 +1647,18 @@ watch(searchEmail, (val) => {
 			@invited="onMemberInvited"
 		/>
 
-		<!-- Add Existing User Modal -->
-		<UModal v-model="showAddMemberModal" :ui="{ width: 'max-w-lg' }">
-			<div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-				<h3 class="text-lg font-semibold">Add Member to Organization</h3>
-				<UButton color="gray" variant="ghost" icon="i-heroicons-x-mark" @click="showAddMemberModal = false" />
-			</div>
+		<!-- Invite Client Modal (org-level: client picker shown inside the modal) -->
+		<ClientsInviteClientModal
+			v-if="selectedOrg"
+			v-model="showInviteClientModal"
+			:organization-id="selectedOrg"
+			@invited="onClientInvited"
+		/>
 
-			<div class="space-y-4 p-4">
-				<p class="text-sm text-gray-500">
+		<!-- Add Existing User Modal -->
+		<UModal v-model="showAddMemberModal" title="Add Member to Organization" class="sm:max-w-lg">
+			<div class="space-y-4">
+				<p class="text-sm text-muted-foreground">
 					Search for existing users to add them to this organization.
 				</p>
 
@@ -1650,60 +1671,53 @@ watch(searchEmail, (val) => {
 				</UFormGroup>
 
 				<div v-if="searching" class="flex justify-center py-4">
-					<UIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin text-gray-500" />
+					<UIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin text-muted-foreground" />
 				</div>
 
 				<div v-else-if="searchResults.length > 0" class="space-y-2 max-h-64 overflow-y-auto">
 					<div
 						v-for="result in searchResults"
 						:key="result.id"
-						class="flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-gray-700"
+						class="flex items-center justify-between p-3 rounded-lg border border-border"
 					>
-						<div class="flex items-center space-x-3">
+						<div class="flex items-center space-x-3 min-w-0">
 							<UAvatar
 								:src="result.avatar ? `${config.public.directusUrl}/assets/${result.avatar}?key=small` : null"
 								:alt="`${result.first_name} ${result.last_name}`"
 								size="sm"
 							/>
-							<div>
-								<p class="font-medium text-sm">{{ result.first_name }} {{ result.last_name }}</p>
-								<p class="text-xs text-gray-500">{{ result.email }}</p>
+							<div class="min-w-0">
+								<p class="font-medium text-sm truncate">{{ result.first_name }} {{ result.last_name }}</p>
+								<p class="text-xs text-muted-foreground truncate">{{ result.email }}</p>
 							</div>
 						</div>
-						<UButton
-							color="primary"
-							variant="outline"
-							size="xs"
-							icon="i-heroicons-plus"
+						<UiActionButton
+							icon="lucide:plus"
+							variant="primary"
 							:loading="addingUser"
 							@click="addUserToOrganization(result.id)"
 						>
 							Add
-						</UButton>
+						</UiActionButton>
 					</div>
 				</div>
 
-				<p v-else-if="searchEmail.length >= 2 && !searching" class="text-center text-sm text-gray-500 py-4">
+				<p v-else-if="searchEmail.length >= 2 && !searching" class="text-center text-sm text-muted-foreground py-4">
 					No users found matching your search.
 				</p>
-			</div>
-
-			<div class="flex justify-end p-4 border-t border-gray-200 dark:border-gray-700">
-				<UButton color="gray" variant="ghost" @click="showAddMemberModal = false">Close</UButton>
+				<p v-else-if="searchEmail.length < 2" class="text-center text-sm text-muted-foreground py-4">
+					Type at least 2 characters to search.
+				</p>
 			</div>
 		</UModal>
 
 		<!-- Archive Organization Confirmation Modal -->
-		<UModal v-model="showArchiveModal">
-			<div class="p-4 border-b border-gray-200 dark:border-gray-700">
-				<h3 class="text-lg font-semibold text-red-600">Archive Organization</h3>
-			</div>
-
-			<div class="p-4 space-y-3 text-sm">
+		<UModal v-model="showArchiveModal" title="Archive Organization">
+			<div class="space-y-3 text-sm">
 				<p>
 					Are you sure you want to archive <strong>{{ org?.name }}</strong>?
 				</p>
-				<ul class="list-disc pl-5 space-y-1 text-gray-700 dark:text-gray-300">
+				<ul class="list-disc pl-5 space-y-1 text-muted-foreground">
 					<li>Your Stripe subscription will be set to cancel at the end of the current billing period.</li>
 					<li>The organization and its data will be hidden from daily use.</li>
 					<li>Your data is retained for 90 days. Restore any time before then.</li>
@@ -1712,36 +1726,37 @@ watch(searchEmail, (val) => {
 					This action only you, the owner, can perform. Demo accounts cannot archive.
 				</p>
 			</div>
-
-			<div class="flex justify-end gap-2 p-4 border-t border-gray-200 dark:border-gray-700">
-				<UButton color="gray" variant="ghost" :disabled="archiving" @click="showArchiveModal = false">Cancel</UButton>
-				<UButton color="red" icon="i-heroicons-archive-box" :loading="archiving" @click="confirmArchive">
-					Archive Organization
-				</UButton>
-			</div>
+			<template #footer>
+				<div class="flex justify-end">
+					<UiActionButton
+						icon="lucide:archive"
+						variant="destructive"
+						:loading="archiving"
+						@click="confirmArchive"
+					>
+						Archive Organization
+					</UiActionButton>
+				</div>
+			</template>
 		</UModal>
 
 		<!-- Remove Member Confirmation Modal -->
-		<UModal v-model="showRemoveMemberModal">
-			<div class="p-4 border-b border-gray-200 dark:border-gray-700">
-				<h3 class="text-lg font-semibold text-red-600">Remove Member</h3>
-			</div>
-
-			<div class="p-4">
-				<p class="mb-4">
-					Are you sure you want to remove
-					<strong>{{ memberToRemove?.first_name }} {{ memberToRemove?.last_name }}</strong>
-					from this organization?
-				</p>
-				<p class="text-sm text-gray-500">
-					This will remove their access to organization resources. Their user account will remain active.
-				</p>
-			</div>
-
-			<div class="flex justify-end gap-2 p-4 border-t border-gray-200 dark:border-gray-700">
-				<UButton color="gray" variant="ghost" @click="showRemoveMemberModal = false">Cancel</UButton>
-				<UButton color="red" :loading="removingMember" @click="removeMember">Remove Member</UButton>
-			</div>
+		<UModal v-model="showRemoveMemberModal" title="Remove Member">
+			<p class="mb-3 text-sm">
+				Are you sure you want to remove
+				<strong>{{ memberToRemove?.first_name }} {{ memberToRemove?.last_name }}</strong>
+				from this organization?
+			</p>
+			<p class="text-sm text-muted-foreground">
+				This will remove their access to organization resources. Their user account will remain active.
+			</p>
+			<template #footer>
+				<div class="flex justify-end">
+					<UiActionButton variant="destructive" :loading="removingMember" @click="removeMember">
+						Remove Member
+					</UiActionButton>
+				</div>
+			</template>
 		</UModal>
 	</LayoutPageContainer>
 </template>

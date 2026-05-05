@@ -49,7 +49,6 @@ export function useOrgRole() {
   const isOrgAdmin = computed(() => roleSlug.value === 'admin');
   const isOrgManager = computed(() => roleSlug.value === 'manager');
   const isOrgMember = computed(() => roleSlug.value === 'member');
-  const isOrgClient = computed(() => roleSlug.value === 'client');
 
   /** True if the user has owner or admin level access */
   const isOrgAdminOrAbove = computed(() => isOrgOwner.value || isOrgAdmin.value);
@@ -59,22 +58,24 @@ export function useOrgRole() {
     () => isOrgOwner.value || isOrgAdmin.value || isOrgManager.value
   );
 
-  /** True if the user has an active membership in the current org */
-  const hasMembership = computed(() => !!membership.value && membership.value.status === 'active');
-
-  /** The client FK if this is a client-scoped membership */
-  const clientScope = computed(() => {
-    if (!membership.value) return null;
-    const client = membership.value.client;
-    if (!client) return null;
-    return typeof client === 'string' ? client : client.id;
+  // ── Client-portal shims ────────────────────────────────────────────────────
+  // These used to live here as `role.slug === 'client'` checks against
+  // org_memberships. Portal users now live in the separate
+  // `client_portal_users` table — see useClientPortalUser. Kept as re-exports
+  // so the 14 existing call sites don't need to know the source moved.
+  const portal = useClientPortalUser();
+  const isOrgClient = portal.isPortalUserHere;
+  const clientScope = portal.clientScope;
+  const clientData = computed(() => {
+    const cur = portal.currentPortalUser.value;
+    if (!cur) return null;
+    return { id: cur.clientId, name: cur.clientName };
   });
 
-  /** The full client object for display (name, id) — null if not client-scoped */
-  const clientData = computed(() => {
-    if (!membership.value?.client) return null;
-    const client = membership.value.client;
-    return typeof client === 'object' ? client : null;
+  /** True if the user has an active staff membership OR an active portal-user row in the current org */
+  const hasMembership = computed(() => {
+    if (membership.value && membership.value.status === 'active') return true;
+    return isOrgClient.value;
   });
 
   // ── Permission matrix ──────────────────────────────────────────────────────
@@ -190,8 +191,6 @@ export function useOrgRole() {
           'role.slug',
           'role.is_system',
           'role.permissions',
-          'client.id',
-          'client.name',
         ],
         limit: 1,
       });

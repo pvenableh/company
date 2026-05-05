@@ -3,8 +3,10 @@
  * Resend a client portal invitation by re-triggering the Directus invite email.
  *
  * Body: { membershipId, organizationId }
+ *   - `membershipId` is the `client_portal_users` row id (kept named
+ *     `membershipId` for backwards-compat with the existing UI calls).
  *
- * Only re-sends for memberships in `pending` status. Already-active members
+ * Only re-sends for rows in `pending` status. Already-active rows
  * return 409. Same role check as invite-client (owner/admin/manager only).
  */
 
@@ -52,31 +54,27 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const membership = await directus.request(
-      readItem('org_memberships', membershipId, {
-        fields: ['id', 'status', 'organization', 'user', 'role.slug'],
-      })
+    const portalRow = await directus.request(
+      readItem('client_portal_users', membershipId, {
+        fields: ['id', 'status', 'organization', 'user'],
+      } as any)
     ) as any;
 
-    if (!membership || membership.organization !== organizationId) {
-      throw createError({ statusCode: 404, message: 'Membership not found in this organization' });
+    if (!portalRow || portalRow.organization !== organizationId) {
+      throw createError({ statusCode: 404, message: 'Portal user not found in this organization' });
     }
 
-    if (membership.role?.slug !== 'client') {
-      throw createError({ statusCode: 400, message: 'This route only resends client portal invitations' });
-    }
-
-    if (membership.status === 'active') {
+    if (portalRow.status === 'active') {
       throw createError({ statusCode: 409, message: 'This user already has active access' });
     }
 
-    if (membership.status === 'suspended') {
+    if (portalRow.status === 'suspended') {
       throw createError({ statusCode: 400, message: 'Cannot resend invite to a suspended user — restore access first' });
     }
 
-    const userId = typeof membership.user === 'string' ? membership.user : membership.user?.id;
+    const userId = typeof portalRow.user === 'string' ? portalRow.user : portalRow.user?.id;
     if (!userId) {
-      throw createError({ statusCode: 500, message: 'Membership has no associated user' });
+      throw createError({ statusCode: 500, message: 'Portal user row has no associated user' });
     }
 
     const user = await directus.request(

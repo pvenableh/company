@@ -53,25 +53,24 @@ export default defineNuxtRouteMiddleware(async (to) => {
     allowedPrefixes.some((p) => path.startsWith(p));
 
   const currentOrg = organizations.value.find((o: any) => o.id === selectedOrg.value);
-  const currentRole = currentOrg?.membership?.role?.slug || null;
+  const currentStaffRole = currentOrg?.membership?.role?.slug || null;
+  const isPortalUserHere = !!currentOrg?.clientPortal;
 
-  // Path 1: user IS a client in the currently-selected org.
-  if (currentRole === 'client') {
+  // Path 1: user IS a portal user in the currently-selected org.
+  if (isPortalUserHere) {
     if (!isAllowed || path === '/') {
       return navigateTo('/portal');
     }
     return;
   }
 
-  // Path 2: user has NO role in the selected org. Could be a stale cookie
-  // pointing at a former host org. If they have a client membership somewhere,
-  // switch them and redirect to /portal.
-  if (!currentRole) {
-    const clientOrg = organizations.value.find(
-      (o: any) => o.membership?.role?.slug === 'client'
-    );
-    if (clientOrg) {
-      setOrganization(clientOrg.id);
+  // Path 2: user has NO role and NO portal-row in the selected org. Could be
+  // a stale cookie pointing at a former host org. If they're a portal user
+  // anywhere else, switch them and redirect to /portal.
+  if (!currentStaffRole) {
+    const portalOrg = organizations.value.find((o: any) => !!o.clientPortal);
+    if (portalOrg) {
+      setOrganization(portalOrg.id);
       if (!path.startsWith('/portal')) {
         return navigateTo('/portal');
       }

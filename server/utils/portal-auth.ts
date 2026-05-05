@@ -2,13 +2,14 @@
 /**
  * Resolve the current request's client-portal context.
  *
- * Returns the user's active client-role membership (org + client + scope).
- * Used by every /api/portal/* endpoint to scope reads to the user's client.
+ * Returns the user's active row in `client_portal_users` (org + client +
+ * scope). Used by every /api/portal/* endpoint to scope reads to the user's
+ * client.
  *
- * Throws 401 if not logged in. Throws 403 if the user has no active client
- * membership. Returns the resolved client + descendant client IDs (1 hop
- * via `parent_client`, then 1 more) so the portal can show the user's
- * scope plus child clients in one query.
+ * Throws 401 if not logged in. Throws 403 if the user has no active portal
+ * row. Returns the resolved client + descendant client IDs (1 hop via
+ * `parent_client`, then 1 more) so the portal can show the user's scope plus
+ * child clients in one query.
  */
 
 import { readItems } from '@directus/sdk';
@@ -31,26 +32,25 @@ export async function requirePortalContext(event: any): Promise<PortalContext> {
 
   const directus = getServerDirectus();
 
-  const memberships = await directus.request(
-    readItems('org_memberships', {
+  const portalRows = await directus.request(
+    readItems('client_portal_users', {
       filter: {
         user: { _eq: userId },
         status: { _eq: 'active' },
-        role: { slug: { _eq: 'client' } },
       },
       fields: ['id', 'organization', 'client'],
       limit: 1,
-    })
+    } as any)
   ) as any[];
 
-  if (!memberships.length) {
+  if (!portalRows.length) {
     throw createError({
       statusCode: 403,
       message: 'No active client portal membership',
     });
   }
 
-  const m = memberships[0];
+  const m = portalRows[0];
   const organizationId = typeof m.organization === 'object' ? m.organization?.id : m.organization;
   const clientId = typeof m.client === 'object' ? m.client?.id : m.client;
 
