@@ -31,6 +31,12 @@ import {
   getAnalyticsSnapshots,
   createAnalyticsSnapshot,
 } from '~~/server/utils/social-directus'
+import {
+  isDemoAccount,
+  generateSyntheticHistory,
+  listSyntheticRecentPosts,
+  syntheticPostInsights,
+} from '~~/server/utils/social-demo-backfill'
 import type { PlatformAdapter } from '~~/server/adapters/types'
 import type { SocialPlatform } from '~~/shared/social'
 
@@ -73,8 +79,12 @@ export default defineEventHandler(async (event) => {
   }
   const days = parsed.data.days ?? DEFAULT_DAYS
 
-  const accessToken = await getDecryptedAccessToken(id)
-  if (!accessToken) {
+  const demoMode = isDemoAccount(account)
+  // Demo accounts seed placeholder tokens that don't decrypt and would never
+  // authenticate against the real Graph API. Skip the network round-trip and
+  // synthesize plausible historical data so the analytics surfaces light up.
+  const accessToken = demoMode ? null : await getDecryptedAccessToken(id)
+  if (!demoMode && !accessToken) {
     throw createError({ statusCode: 400, message: 'Account token could not be decrypted — try reconnecting.' })
   }
 
@@ -102,16 +112,20 @@ export default defineEventHandler(async (event) => {
   )
 
   let history: Array<{ date: string; metrics: Record<string, number> }> = []
-  try {
-    history = await adapter.getAccountMetricsHistory(
-      account.platform_user_id,
-      accessToken,
-      sinceUnix,
-      untilUnix,
-    )
-  } catch (err: any) {
-    console.warn(`[social:backfill] account-history fetch failed for ${id}: ${err?.message || err}`)
-    daysFailed = days
+  if (demoMode) {
+    history = generateSyntheticHistory(account, days)
+  } else {
+    try {
+      history = await adapter.getAccountMetricsHistory(
+        account.platform_user_id,
+        accessToken!,
+        sinceUnix,
+        untilUnix,
+      )
+    } catch (err: any) {
+      console.warn(`[social:backfill] account-history fetch failed for ${id}: ${err?.message || err}`)
+      daysFailed = days
+    }
   }
 
   for (const row of history) {
@@ -134,7 +148,7 @@ export default defineEventHandler(async (event) => {
       daysFailed++
       console.warn(`[social:backfill] account snapshot ${row.date} failed: ${err?.message || err}`)
     }
-    await sleep(PACE_MS)
+    if (!demoMode) await sleep(PACE_MS)
   }
 
   // ── Pass 2: recent posts ──
@@ -143,9 +157,11 @@ export default defineEventHandler(async (event) => {
   let postsFailed = 0
 
   let recentPosts: Array<{ platformPostId: string; createdAt: string }> = []
-  if (adapter.listRecentPostIds && adapter.getPostInsights) {
+  if (demoMode) {
+    recentPosts = await listSyntheticRecentPosts(account, MAX_POSTS)
+  } else if (adapter.listRecentPostIds && adapter.getPostInsights) {
     try {
-      recentPosts = await adapter.listRecentPostIds(account.platform_user_id, accessToken, MAX_POSTS)
+      recentPosts = await adapter.listRecentPostIds(account.platform_user_id, accessToken!, MAX_POSTS)
     } catch (err: any) {
       console.warn(`[social:backfill] listRecentPostIds failed for ${id}: ${err?.message || err}`)
     }
@@ -174,7 +190,9 @@ export default defineEventHandler(async (event) => {
     }
 
     try {
-      const metrics = await adapter.getPostInsights!(post.platformPostId, accessToken)
+      const metrics = demoMode
+        ? syntheticPostInsights(account.platform, post.platformPostId)
+        : await adapter.getPostInsights!(post.platformPostId, accessToken!)
       await createAnalyticsSnapshot({
         social_account: id,
         snapshot_type: 'post',
@@ -189,7 +207,7 @@ export default defineEventHandler(async (event) => {
       postsFailed++
       console.warn(`[social:backfill] post insights ${post.platformPostId} failed: ${err?.message || err}`)
     }
-    await sleep(PACE_MS)
+    if (!demoMode) await sleep(PACE_MS)
   }
 
   return {
@@ -205,8 +223,10 @@ export default defineEventHandler(async (event) => {
     posts_processed: postsProcessed,
     posts_skipped: postsSkipped,
     posts_failed: postsFailed,
-    note: days > 28
-      ? 'Meta retains roughly 28 days of account-level insights — days beyond that may have come back empty.'
-      : undefined,
+    note: demoMode
+      ? 'Demo account — synthetic history generated (no Graph API call).'
+      : days > 28
+        ? 'Meta retains roughly 28 days of account-level insights — days beyond that may have come back empty.'
+        : undefined,
   }
 })
