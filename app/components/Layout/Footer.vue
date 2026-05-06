@@ -129,6 +129,7 @@ const workLinks = [
 	{ to: '/tickets', label: 'Tickets' },
 	{ to: '/tasks', label: 'Tasks' },
 	{ to: '/scheduler', label: 'Scheduler' },
+	{ to: '/meetings', label: 'Meetings' },
 	{ to: '/files', label: 'Files' },
 	{ to: '/goals', label: 'Goals' },
 ];

@@ -262,7 +262,7 @@ async function buildProjectContext(directus: any, projectId: string, now: Date):
   const lines: string[] = [];
   const clientName = (project.client as any)?.name;
 
-  lines.push(`CURRENT FOCUS: Project "${project.title}"`);
+  lines.push(`CURRENT FOCUS: Project "${project.title}" (id: ${project.id})`);
 
   // [Source: Project Profile]
   lines.push('[Source: Project Profile]');
@@ -851,7 +851,7 @@ async function buildChannelContext(directus: any, channelId: string, now: Date):
 // ─── Project Event Context ──────────────────────────────────────────────────
 
 async function buildProjectEventContext(directus: any, eventId: string, now: Date): Promise<string> {
-  const [event, tasks] = await Promise.all([
+  const [event, tasks, meetings] = await Promise.all([
     directus.request(
       readItem('project_events', eventId, {
         fields: [
@@ -870,6 +870,15 @@ async function buildProjectEventContext(directus: any, eventId: string, now: Dat
         fields: ['id', 'title', 'completed', 'due_date', 'priority'],
         sort: ['-due_date'],
         limit: 15,
+      }),
+    ).catch(() => []) as Promise<any[]>,
+
+    directus.request(
+      readItems('video_meetings', {
+        filter: { project_event: { _eq: eventId } },
+        fields: ['id', 'title', 'status', 'scheduled_start', 'actual_start', 'actual_end', 'host_user.first_name', 'host_user.last_name'],
+        sort: ['-scheduled_start'],
+        limit: 10,
       }),
     ).catch(() => []) as Promise<any[]>,
   ]);
@@ -920,6 +929,17 @@ async function buildProjectEventContext(directus: any, eventId: string, now: Dat
     pending.slice(0, 5).forEach((t: any) => {
       const overdue = t.due_date && new Date(t.due_date) < now ? ' OVERDUE' : '';
       lines.push(`  - ${t.title}${t.due_date ? ` (due ${t.due_date})` : ''}${t.priority ? ` [${t.priority}]` : ''}${overdue}`);
+    });
+  }
+
+  if (meetings.length > 0) {
+    lines.push('');
+    lines.push('[Source: Meetings]');
+    lines.push(`MEETINGS (${meetings.length} linked to this milestone):`);
+    meetings.slice(0, 6).forEach((m: any) => {
+      const when = m.scheduled_start ? new Date(m.scheduled_start).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'unscheduled';
+      const host = m.host_user ? `${m.host_user.first_name || ''} ${m.host_user.last_name || ''}`.trim() : '';
+      lines.push(`  - [${m.status}] "${m.title}" — ${when}${host ? ` (host: ${host})` : ''}`);
     });
   }
 

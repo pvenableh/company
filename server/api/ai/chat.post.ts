@@ -263,7 +263,16 @@ export default defineEventHandler(async (event) => {
     // Entity context (Layer 4): focused context when chatting from an entity detail page
     const entityBlock = entityContext ? `\n\n${entityContext}` : '';
 
-    const systemPrompt = buildSystemPrompt(orgContext) + notesContext + taskContext + brandContext + entityBlock + styleContext + verbosityContext;
+    // When the chat opts into mutation tools, give Claude an unambiguous handle
+    // to the focused record + permission to use the tools without asking. Without
+    // this, the model often hallucinates an id (or asks the user) instead of
+    // calling reschedule_project / update_field with the real UUID.
+    const useMutationTools = allowMutations === true && entityType && entityId && organizationId;
+    const toolNudge = useMutationTools
+      ? `\n\nTOOLS ENABLED: You can mutate this entity directly. The user's currently focused record is ${entityType}="${entityId}" in organization="${organizationId}". When the user asks to reschedule, update, or add — call the matching tool (reschedule_project / update_field / add_task) with this exact id. Do NOT refuse or describe the change; execute it. If a tool returns success:false, surface the error verbatim instead of inventing a permission excuse.`
+      : '';
+
+    const systemPrompt = buildSystemPrompt(orgContext) + notesContext + taskContext + brandContext + entityBlock + toolNudge + styleContext + verbosityContext;
 
     // 6. Stream/tool response via SSE
     let provider;
@@ -286,11 +295,8 @@ export default defineEventHandler(async (event) => {
     let streamResult: any;
     let streamError: Error | null = null;
 
-    // Determine whether to use mutation tools for this request.
     // Tools are enabled when: the client opted in (allowMutations=true), an entity is focused,
     // and the provider is ClaudeProvider (which has chatWithTools).
-    const useMutationTools = allowMutations === true && entityType && entityId && organizationId;
-
     if (useMutationTools && typeof (provider as any).chatWithTools === 'function') {
       // ── Tool-aware path ──────────────────────────────────────────────────────
       // Round 1: ask Claude — it may respond with text, or request a tool call.
@@ -315,7 +321,13 @@ export default defineEventHandler(async (event) => {
             const result = await executeToolCall(tc.name, tc.input, { organizationId, userId });
 
             responseWriter.write(
-              `data: ${JSON.stringify({ type: 'tool_done', tool: tc.name, success: result.success, summary: result.summary, data: result.data })}\n\n`,
+              `data: ${JSON.stringify({
+                type: 'tool_done',
+                tool: tc.name,
+                success: result.success,
+                summary: result.success ? result.summary : (result.error || 'Tool failed'),
+                data: result.data,
+              })}\n\n`,
             );
 
             toolResultContents.push({
@@ -399,12 +411,13 @@ export default defineEventHandler(async (event) => {
     // Always persist an assistant row — partial, empty, or whole — so the session stays
     // coherent even if the stream died mid-flight. Without this, a transient upstream error
     // leaves the session with a dangling user message and nothing else.
+    let assistantMessageId: string | null = null;
     try {
       const persistedContent = fullResponse || (streamError
         ? `[stream interrupted — ${streamError.message || 'unknown error'}]`
         : '');
 
-      await directus.request(
+      const persisted = await directus.request(
         createItem('ai_chat_messages', {
           session: chatSessionId,
           role: 'assistant',
@@ -415,7 +428,8 @@ export default defineEventHandler(async (event) => {
         }, {
           fields: ['id'],
         }),
-      );
+      ) as any;
+      assistantMessageId = persisted?.id != null ? String(persisted.id) : null;
     } catch (persistError: any) {
       console.error('[ai/chat] Failed to persist assistant message:', persistError.message);
     }
@@ -436,6 +450,7 @@ export default defineEventHandler(async (event) => {
           error: streamError.message || 'Stream failed',
           sessionId: chatSessionId,
           content: fullResponse,
+          assistantMessageId,
         })}\n\n`,
       );
     } else {
@@ -444,6 +459,7 @@ export default defineEventHandler(async (event) => {
           type: 'done',
           sessionId: chatSessionId,
           content: fullResponse,
+          assistantMessageId,
         })}\n\n`,
       );
     }

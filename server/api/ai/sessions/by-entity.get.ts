@@ -57,17 +57,39 @@ export default defineEventHandler(async (event) => {
       return { session: null, messages: [] };
     }
 
-    // Fetch messages for this session
-    const messages = await directus.request(
-      readItems('ai_chat_messages', {
-        filter: { session: { _eq: match.id } },
-        fields: ['id', 'role', 'content', 'date_created'],
-        sort: ['date_created'],
-        limit: 50,
-      }),
-    );
+    // Fetch messages for this session + which ones the user has already
+    // bookmarked as notes (so the sidebar can restore the saved-state badge
+    // instead of showing the bookmark icon as if nothing was saved).
+    const [messages, savedNotes] = await Promise.all([
+      directus.request(
+        readItems('ai_chat_messages', {
+          filter: { session: { _eq: match.id } },
+          fields: ['id', 'role', 'content', 'date_created'],
+          sort: ['date_created'],
+          limit: 50,
+        }),
+      ),
+      directus.request(
+        readItems('ai_notes', {
+          filter: {
+            _and: [
+              { user: { _eq: userId } },
+              { source_session: { _eq: match.id } },
+              { status: { _eq: 'active' } },
+              { source_message_id: { _nnull: true } },
+            ],
+          },
+          fields: ['source_message_id'],
+          limit: 200,
+        }),
+      ).catch(() => []) as Promise<any[]>,
+    ]);
 
-    return { session: match, messages };
+    const savedMessageIds = (savedNotes as any[])
+      .map((n) => n.source_message_id)
+      .filter(Boolean);
+
+    return { session: match, messages, savedMessageIds };
   } catch (error: any) {
     console.error('[ai/sessions/by-entity] Error:', error);
     throw createError({

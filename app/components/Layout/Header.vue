@@ -68,10 +68,7 @@ onUnmounted(() => {
 		<!-- Org Switcher Modal -->
 		<LayoutOrgSwitcher v-if="user" v-model="showOrgSwitcher" />
 
-		<nuxt-link to="/" class="header-brand" :class="{ 'header-brand--retracted': isRetracted }">
-			<LogoEarnest size="md" />
-			<span class="header-tagline">Do good work.</span>
-		</nuxt-link>
+		<LayoutEarnestBrand to="/" tagline="Do good work." :retracted="isRetracted" />
 		<div class="account-controls">
 			<template v-if="user">
 				<!-- AI Persona Selector -->
@@ -173,26 +170,4 @@ header.retracted {
 	background: rgba(20, 20, 20, 0.82);
 }
 
-.header-brand {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-	transform: scale(1);
-	transform-origin: center center;
-	transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.header-brand--retracted {
-	transform: scale(0.78);
-}
-
-.header-tagline {
-	font-family: var(--font-signature);
-	font-size: 11px;
-	line-height: 1;
-	letter-spacing: 0.02em;
-	color: hsl(var(--muted-foreground));
-	margin-top: 1px;
-}
 </style>

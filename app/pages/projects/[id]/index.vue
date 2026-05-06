@@ -1046,6 +1046,7 @@ const formatCurrency = (amount) => {
 				:entity-id="String(project.id)"
 				:entity-label="project.title || 'Project'"
 				@close="closeSidebar"
+				@entity-mutated="refreshProject"
 			/>
 			<Transition name="overlay">
 				<div v-if="sidebarOpen" class="fixed inset-0 bg-black/20 z-40" @click="closeSidebar" />

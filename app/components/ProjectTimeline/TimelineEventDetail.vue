@@ -217,9 +217,10 @@ defineExpose({ dirty, save });
             v-model="form.prototype_link"
             type="url"
             class="w-full rounded-xl border bg-background px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-primary/30 placeholder:text-muted-foreground/50"
-            placeholder="https://figma.com/..."
+            placeholder="https://www.figma.com/proto/..."
           />
         </div>
+        <p class="text-[10px] text-muted-foreground/70">Paste the <strong>prototype</strong> share link (Figma → Share → Copy link). Design or dev-mode links won't drive live frame sync in meetings.</p>
       </div>
 
       <!-- Approval Status (Design, Content) -->

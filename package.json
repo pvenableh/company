@@ -80,6 +80,7 @@
 		"@aws-sdk/client-s3": "^3.984.0",
 		"@aws-sdk/s3-request-presigner": "^3.984.0",
 		"@azure/msal-node": "^3.8.4",
+		"@daily-co/daily-js": "^0.89.1",
 		"@directus/sdk": "^20.3.0",
 		"@internationalized/date": "^3.10.1",
 		"@nuxt/image": "^1.9.0",

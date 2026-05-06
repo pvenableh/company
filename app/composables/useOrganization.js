@@ -103,7 +103,13 @@ export function useOrganization() {
 						user: { _eq: user.value.id },
 						status: { _eq: 'active' },
 					},
-					fields: ['id', 'organization', 'client.id', 'client.name', 'status'],
+					// Fetch `client` as a raw FK, NOT a deep walk (`client.id, client.name`).
+					// When the user lacks read perm on the `clients` collection, Directus
+					// returns the entire deep field as `null` — not just the joined data —
+					// which would trip the `if (!clientId) continue` guard below and leave
+					// portal-only users with an empty `organizations.value`, breaking the
+					// /portal redirect. The `clientName` is fetched separately downstream.
+					fields: ['id', 'organization', 'client', 'status'],
 				}).catch(() => []),
 			]);
 

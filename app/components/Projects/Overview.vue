@@ -302,7 +302,8 @@
 				</div>
 				<div class="space-y-1">
 					<label class="t-label text-muted-foreground">Figma / Prototype Link</label>
-					<UInput v-model="newEventForm.prototype_link" placeholder="https://figma.com/..." />
+					<UInput v-model="newEventForm.prototype_link" placeholder="https://www.figma.com/proto/..." />
+					<p class="text-[10px] text-muted-foreground/70">Paste the <strong>prototype</strong> share link (Figma → Share → Copy link, with "Link to current frame" toggled on). Design or dev-mode links won't drive live frame sync in meetings.</p>
 				</div>
 				<div class="space-y-1">
 					<label class="t-label text-muted-foreground">Images / Files</label>

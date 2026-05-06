@@ -71,9 +71,10 @@ export default defineEventHandler(async (event) => {
 				eventTypes: [
 					'meeting.started',
 					'meeting.ended',
-					'meeting.participant-joined',
-					'meeting.participant-left',
+					'participant.joined',
+					'participant.left',
 					'recording.ready-to-download',
+					'transcript.ready-to-download',
 				],
 			}),
 		});

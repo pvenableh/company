@@ -4,14 +4,21 @@
 		<header class="portal-header" :class="{ retracted: isRetracted }">
 			<div class="filter-controls">
 				<client-only>
-					<LayoutClientSelect v-if="user" :user="user" />
+					<LayoutPortalClientSelect v-if="user" :user="user" @open-org-switcher="handleOrgSwitcherClick" />
 				</client-only>
 			</div>
 
-			<nuxt-link to="/portal" class="header-brand" :class="{ 'header-brand--retracted': isRetracted }">
-				<LogoEarnest size="md" />
-				<span class="header-tagline">Client Portal</span>
-			</nuxt-link>
+			<!-- Upsell modal for portal-only users -->
+			<LayoutPortalUpsellModal
+				v-if="user"
+				v-model="showUpsell"
+				:host-org-name="currentOrg?.name ?? null"
+			/>
+
+			<!-- Standard org switcher for dual-role portal users -->
+			<LayoutOrgSwitcher v-if="user && !isPortalOnly" v-model="showOrgSwitcher" />
+
+			<LayoutEarnestBrand to="/portal" tagline="Client Portal" :retracted="isRetracted" />
 
 			<div class="account-controls">
 				<template v-if="user">
@@ -30,8 +37,8 @@
 			<slot />
 		</div>
 
-		<!-- Mobile toolbar — primary links only -->
-		<nav class="portal-toolbar md:hidden">
+		<!-- Mobile toolbar — primary links only (hidden on lg+ where sidebar takes over) -->
+		<nav class="portal-toolbar lg:hidden">
 			<NuxtLink
 				v-for="link in primaryLinks"
 				:key="link.to"
@@ -51,7 +58,7 @@
 
 		<!-- Mobile "More" sheet -->
 		<Transition name="slide-up">
-			<div v-if="showMore" class="fixed inset-0 z-50 md:hidden flex flex-col justify-end" @click.self="showMore = false">
+			<div v-if="showMore" class="fixed inset-0 z-50 lg:hidden flex flex-col justify-end" @click.self="showMore = false">
 				<div class="bg-background border-t border-border/40 rounded-t-2xl shadow-xl p-4 pb-safe-portal">
 					<div class="w-12 h-1 rounded-full bg-muted mx-auto mb-4" />
 					<div class="grid grid-cols-4 gap-2">
@@ -71,8 +78,8 @@
 			</div>
 		</Transition>
 
-		<!-- Desktop sidebar nav (visible on md+) -->
-		<aside class="hidden md:flex portal-sidebar">
+		<!-- Desktop sidebar nav (visible on lg+) -->
+		<aside class="hidden lg:flex portal-sidebar">
 			<nav class="flex flex-col gap-1 p-3 w-full">
 				<NuxtLink
 					v-for="link in portalLinks"
@@ -101,12 +108,15 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const { user } = useDirectusAuth();
-const { membership } = useOrgRole();
 const config = useRuntimeConfig();
 const route = useRoute();
+const { organizations, currentOrg } = useOrganization();
+const { clientName: portalClientName, isPortalUserHere } = useClientPortalUser();
 
 const isRetracted = ref(false);
 const showMore = ref(false);
+const showOrgSwitcher = ref(false);
+const showUpsell = ref(false);
 
 type PortalLink = { name: string; to: string; icon: string; key?: 'social' | 'marketing' | 'proposals' | 'contracts' };
 
@@ -163,11 +173,23 @@ const initials = computed(() => {
 	return (first + last).toUpperCase() || 'U';
 });
 
-const clientName = computed(() => {
-	if (!membership.value?.client) return null;
-	const client = membership.value.client;
-	return typeof client === 'object' ? client.name : null;
+const clientName = computed(() => portalClientName.value);
+
+// Portal-only = single org, portal user there, no junction membership anywhere.
+// Dual-role users (client at A, owner at B) get the standard switcher instead.
+const isPortalOnly = computed(() => {
+	if (!isPortalUserHere.value) return false;
+	if (organizations.value.length !== 1) return false;
+	return organizations.value.every((org: any) => !org.membership);
 });
+
+function handleOrgSwitcherClick() {
+	if (isPortalOnly.value) {
+		showUpsell.value = true;
+	} else {
+		showOrgSwitcher.value = true;
+	}
+}
 
 function isActiveRoute(path: string): boolean {
 	if (path === '/portal') {
@@ -234,24 +256,28 @@ onUnmounted(() => {
 	background: rgba(20, 20, 20, 0.82);
 }
 
-/* Mobile toolbar */
-.portal-toolbar {
-	position: fixed;
-	bottom: 0;
-	left: 0;
-	right: 0;
-	z-index: 50;
-	display: flex;
-	justify-content: space-around;
-	align-items: center;
-	background: rgba(255, 255, 255, 0.82);
-	backdrop-filter: saturate(180%) blur(20px);
-	-webkit-backdrop-filter: saturate(180%) blur(20px);
-	border-top: 1px solid hsl(var(--border) / 0.4);
-	padding: 8px 0 calc(8px + env(safe-area-inset-bottom, 0px));
-}
-:is(.dark) .portal-toolbar {
-	background: rgba(20, 20, 20, 0.82);
+/* Mobile toolbar — only rendered <lg via Tailwind `lg:hidden`. The
+   display:flex sits inside a max-width media query so it doesn't override
+   the lg:hidden display:none on wider screens. */
+@media (max-width: 1023.98px) {
+	.portal-toolbar {
+		position: fixed;
+		bottom: 0;
+		left: 0;
+		right: 0;
+		z-index: 50;
+		display: flex;
+		justify-content: space-around;
+		align-items: center;
+		background: rgba(255, 255, 255, 0.82);
+		backdrop-filter: saturate(180%) blur(20px);
+		-webkit-backdrop-filter: saturate(180%) blur(20px);
+		border-top: 1px solid hsl(var(--border) / 0.4);
+		padding: 8px 0 calc(8px + env(safe-area-inset-bottom, 0px));
+	}
+	:is(.dark) .portal-toolbar {
+		background: rgba(20, 20, 20, 0.82);
+	}
 }
 
 .portal-tab {
@@ -287,8 +313,8 @@ onUnmounted(() => {
 	padding-top: 88px;
 }
 
-/* Page content offset for sidebar */
-@media (min-width: 768px) {
+/* Page content offset for sidebar (sidebar is lg+ only) */
+@media (min-width: 1024px) {
 	.portal-header {
 		padding-left: 200px;
 	}
@@ -297,7 +323,7 @@ onUnmounted(() => {
 		padding-bottom: 0;
 	}
 }
-@media (max-width: 767px) {
+@media (max-width: 1023px) {
 	.pb-safe-portal {
 		padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 16px);
 	}

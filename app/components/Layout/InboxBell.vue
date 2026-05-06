@@ -8,6 +8,16 @@ import { getSocialPlatformIcon } from '~/utils/icons'
 const { activity, unread, refreshFeed, markRead } = useSocialActivity()
 const isOpen = ref(false)
 
+// Hide the bell entirely until at least one social account is connected —
+// otherwise it's a permanent zero-state with no path forward from the popover.
+const { data: accountsData } = useFetch('/api/social/accounts', {
+  default: () => ({ data: [] as any[] }),
+})
+const hasConnectedAccounts = computed(() => {
+  const list = (accountsData.value as any)?.data ?? accountsData.value
+  return Array.isArray(list) ? list.length > 0 : false
+})
+
 watch(isOpen, (open) => {
   if (open) refreshFeed()
 })
@@ -29,7 +39,7 @@ function activityIcon(type: string) {
 </script>
 
 <template>
-  <Popover v-model:open="isOpen">
+  <Popover v-if="hasConnectedAccounts" v-model:open="isOpen">
     <PopoverTrigger as-child>
       <button
         class="flex items-center justify-center relative rounded-full h-8 w-8 hover:bg-muted/50 text-muted-foreground transition-colors"

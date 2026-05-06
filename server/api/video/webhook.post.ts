@@ -4,6 +4,12 @@
 // Webhook URL: https://yourdomain.com/api/video/webhook
 
 import { readItems, updateItem } from '@directus/sdk';
+import {
+	getDailyTranscript,
+	fetchDailyTranscriptBody,
+	vttToPlainText,
+} from '~~/server/utils/daily';
+import { generateAndSaveMeetingSummary } from '~~/server/utils/meeting-summary';
 
 interface DailyWebhookEvent {
 	type: string;
@@ -17,6 +23,8 @@ interface DailyWebhookEvent {
 		joined_at?: string;
 		duration?: number;
 		recording_id?: string;
+		transcript_id?: string;
+		transcriptId?: string;
 		[key: string]: any;
 	};
 	event_ts: number;
@@ -79,6 +87,7 @@ export default defineEventHandler(async (event) => {
 				break;
 			}
 
+			case 'participant.joined':
 			case 'meeting.participant-joined': {
 				const log = meeting.participants_log || [];
 				log.push({
@@ -103,6 +112,7 @@ export default defineEventHandler(async (event) => {
 				break;
 			}
 
+			case 'participant.left':
 			case 'meeting.participant-left': {
 				const log = meeting.participants_log || [];
 				log.push({
@@ -122,11 +132,58 @@ export default defineEventHandler(async (event) => {
 			}
 
 			case 'recording.ready-to-download': {
-				await directus.request(
-					updateItem('video_meetings', meeting.id, {
-						recording_url: body.payload.recording_id,
-					}),
-				);
+				// Daily provides a download URL for the recording. The payload field
+				// names vary by webhook version; we accept either `download_link`
+				// or fall back to the recording ID for later REST lookup.
+				const url = body.payload?.download_link || body.payload?.recording_url || body.payload?.recording_id || null;
+				if (url) {
+					await directus.request(
+						updateItem('video_meetings', meeting.id, { recording_url: String(url) }),
+					);
+				}
+				break;
+			}
+
+			case 'transcript.ready-to-download': {
+				const transcriptId = body.payload?.transcript_id || body.payload?.transcriptId;
+				if (!transcriptId) {
+					console.warn('[video/webhook] transcript event without transcript_id', body.payload);
+					break;
+				}
+
+				try {
+					const meta = await getDailyTranscript(transcriptId);
+					const downloadUrl = meta.download_link || meta.out_file_url;
+					if (!downloadUrl) {
+						throw new Error('Transcript metadata missing download_link');
+					}
+
+					const vtt = await fetchDailyTranscriptBody(downloadUrl);
+					const plain = vttToPlainText(vtt);
+
+					await directus.request(
+						updateItem('video_meetings', meeting.id, {
+							transcript_id: transcriptId,
+							transcript_url: meta.out_file_url || downloadUrl,
+							transcript_text: plain,
+							summary_status: 'pending',
+						}),
+					);
+
+					// Fire-and-forget summary generation. We don't block the webhook
+					// on Claude latency — the meeting page polls summary_status.
+					generateAndSaveMeetingSummary(meeting.id).catch((err: any) => {
+						console.error('[video/webhook] summary generation failed', err.message);
+					});
+				} catch (err: any) {
+					console.error('[video/webhook] transcript ingest failed:', err.message);
+					await directus.request(
+						updateItem('video_meetings', meeting.id, {
+							summary_status: 'failed',
+							summary_error: `Transcript ingest failed: ${err.message}`,
+						}),
+					).catch(() => {});
+				}
 				break;
 			}
 

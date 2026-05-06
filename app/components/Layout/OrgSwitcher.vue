@@ -1,6 +1,6 @@
 <script setup>
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Building2, Plus, Check, Settings, Archive } from 'lucide-vue-next'
+import { Building2, Plus, Check, Settings, Archive, UserCog, ExternalLink } from 'lucide-vue-next'
 
 const props = defineProps({
 	modelValue: {
@@ -21,6 +21,7 @@ const {
 } = useOrganization();
 const { clearClient } = useClients();
 const config = useRuntimeConfig();
+const route = useRoute();
 
 const isOpen = computed({
 	get: () => props.modelValue,
@@ -46,8 +47,22 @@ const handleSelectOrg = (orgId) => {
 	if (orgId !== selectedOrg.value) {
 		setOrganization(orgId);
 		clearClient();
+
+		// Leaving the portal: if we're currently on a /portal/* route and the
+		// new org has no client_portal_users row, drop the user back at the
+		// staff app root so they don't sit on a portal route in staff context.
+		const newOrg = visibleOrganizations.value.find((o) => o.id === orgId);
+		if (route.path.startsWith('/portal') && !newOrg?.clientPortal) {
+			navigateTo('/');
+		}
 	}
 	isOpen.value = false;
+};
+
+const roleLabel = (org) => {
+	const slug = org?.membership?.role?.slug;
+	if (!slug) return null;
+	return slug.charAt(0).toUpperCase() + slug.slice(1);
 };
 
 const handleRegisterOrg = () => {
@@ -105,7 +120,22 @@ const handleRegisterOrg = () => {
 								Archived
 							</span>
 						</p>
-						<div class="flex items-center gap-3 mt-0.5">
+						<div class="flex items-center gap-1.5 mt-1 flex-wrap">
+							<!-- Role badges: shows context the user enters this org with -->
+							<span
+								v-if="roleLabel(org)"
+								class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wider text-gray-700 bg-gray-100 px-1.5 py-0.5 rounded"
+							>
+								<UserCog class="size-3" />
+								{{ roleLabel(org) }}
+							</span>
+							<span
+								v-if="org.clientPortal"
+								class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wider text-[var(--cyan)] bg-cyan-50 px-1.5 py-0.5 rounded"
+							>
+								<ExternalLink class="size-3" />
+								Client Portal
+							</span>
 							<span v-if="org.ticketsCount > 0" class="text-[10px] text-gray-400">
 								{{ org.ticketsCount }} ticket{{ org.ticketsCount !== 1 ? 's' : '' }}
 							</span>

@@ -1,8 +1,10 @@
 <script setup>
 const { params } = useRoute();
 const projectEventItems = useDirectusItems('project_events');
+const videoMeetingItems = useDirectusItems('video_meetings');
 const { getUrl } = useDirectusFiles();
 const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext();
+const toast = useToast();
 
 const { user: sessionUser, loggedIn } = useUserSession();
 const user = computed(() => {
@@ -52,6 +54,76 @@ const lightboxIndex = ref(0);
 const openLightbox = (index) => {
 	lightboxIndex.value = index;
 	lightboxOpen.value = true;
+};
+
+// ─── Meetings linked to this event ───────────────────────────────────────────
+const meetings = ref([]);
+const meetingsLoading = ref(true);
+const creatingMeeting = ref(false);
+
+const loadMeetings = async () => {
+	if (!event?.id) return;
+	meetingsLoading.value = true;
+	try {
+		meetings.value = await videoMeetingItems.list({
+			fields: ['id', 'room_name', 'title', 'status', 'scheduled_start', 'scheduled_end', 'meeting_url', 'host_user.first_name', 'host_user.last_name'],
+			filter: { project_event: { _eq: event.id } },
+			sort: ['-scheduled_start'],
+			limit: 50,
+		});
+	} catch {
+		// Field may not exist yet (pre-schema-script) — render empty state, don't kill the page
+		meetings.value = [];
+	} finally {
+		meetingsLoading.value = false;
+	}
+};
+onMounted(() => { loadMeetings(); });
+
+const formatMeetingTime = (iso) => {
+	if (!iso) return '';
+	return new Date(iso).toLocaleString('en-US', {
+		month: 'short',
+		day: 'numeric',
+		hour: 'numeric',
+		minute: '2-digit',
+		hour12: true,
+	});
+};
+
+const meetingStatusTone = (status) => ({
+	scheduled: 'bg-sky-500/10 text-sky-600 dark:text-sky-400',
+	in_progress: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+	completed: 'bg-muted text-muted-foreground',
+	cancelled: 'bg-rose-500/10 text-rose-600 dark:text-rose-400',
+	no_show: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+	archived: 'bg-muted text-muted-foreground',
+}[status] || 'bg-muted text-muted-foreground');
+
+const startMeetingForEvent = async () => {
+	creatingMeeting.value = true;
+	try {
+		const projectId = typeof event.project === 'object' ? event.project?.id : event.project;
+		const response = await $fetch('/api/video/create-room', {
+			method: 'POST',
+			body: {
+				title: event.title || 'Design Review',
+				description: event.description || null,
+				scheduled_start: new Date().toISOString(),
+				duration: 60,
+				meeting_type: 'project_review',
+				project: projectId,
+				project_event: event.id,
+			},
+		});
+		toast.add({ title: 'Meeting room created', color: 'green' });
+		window.open(`/meeting/${response.data.roomName}`, '_blank');
+		await loadMeetings();
+	} catch (error) {
+		toast.add({ title: 'Failed to start meeting', description: error?.message, color: 'red' });
+	} finally {
+		creatingMeeting.value = false;
+	}
 };
 </script>
 <template>
@@ -105,11 +177,9 @@ const openLightbox = (index) => {
 						<a :href="event.prototype_link" target="_blank" class="text-[10px] text-primary hover:underline ml-auto">Open in new tab</a>
 					</div>
 					<div class="w-full border border-border rounded-lg overflow-hidden" :class="eventImages.length ? 'h-[500px]' : 'h-[calc(100vh-240px)]'">
-						<iframe
-							:title="event.title + ' Prototype'"
-							:src="event.prototype_link"
-							class="w-full h-full"
-							allowfullscreen
+						<DesignFigmaEmbed
+							:url="event.prototype_link"
+							:title="`${event.title} Prototype`"
 						/>
 					</div>
 				</div>
@@ -175,6 +245,52 @@ const openLightbox = (index) => {
 				<div class="h-full overflow-y-auto p-5 hide-scrollbar space-y-6">
 					<!-- Tasks for this event -->
 					<TasksInlineAdder context="event" :context-id="String(event.id)" :organization-id="event.project.organization.id" />
+
+					<!-- Meetings for this milestone -->
+					<div>
+						<div class="flex items-center justify-between mb-3">
+							<h3 class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+								Meetings
+								<span v-if="meetings.length" class="text-muted-foreground/60">{{ meetings.length }}</span>
+							</h3>
+							<button
+								class="inline-flex items-center gap-1 h-6 px-2 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 transition-colors disabled:opacity-50"
+								:disabled="creatingMeeting"
+								@click="startMeetingForEvent"
+							>
+								<UIcon :name="creatingMeeting ? 'i-heroicons-arrow-path' : 'i-heroicons-video-camera'" :class="['w-3 h-3', creatingMeeting && 'animate-spin']" />
+								Start
+							</button>
+						</div>
+
+						<div v-if="meetingsLoading" class="text-[11px] text-muted-foreground/60 py-2">Loading…</div>
+						<div v-else-if="!meetings.length" class="text-[11px] text-muted-foreground/60 py-2">
+							No meetings yet. Start one to review this milestone live.
+						</div>
+						<ul v-else class="space-y-1.5">
+							<li
+								v-for="m in meetings"
+								:key="m.id"
+								class="flex items-center gap-2 px-2.5 py-2 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors group"
+							>
+								<UIcon name="i-heroicons-video-camera" class="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+								<div class="flex-1 min-w-0">
+									<div class="flex items-center gap-1.5">
+										<span class="text-[12px] font-medium text-foreground truncate">{{ m.title }}</span>
+										<span :class="['text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0', meetingStatusTone(m.status)]">{{ m.status?.replace('_', ' ') }}</span>
+									</div>
+									<div class="text-[10px] text-muted-foreground/70">{{ formatMeetingTime(m.scheduled_start) }}</div>
+								</div>
+								<NuxtLink
+									:to="`/meeting/${m.room_name}`"
+									target="_blank"
+									class="text-[10px] font-semibold uppercase tracking-wider text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+								>
+									Join
+								</NuxtLink>
+							</li>
+						</ul>
+					</div>
 
 					<!-- Discussion -->
 					<div>

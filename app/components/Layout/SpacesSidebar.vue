@@ -34,7 +34,6 @@ const showTokenMeter = computed(() => {
 
 // ── Sidebar state (default collapsed on desktop) ──
 const sidebarCollapsed = ref(true)
-const showNavEditor = ref(false)
 
 // ── Mobile drawer (v-model:mobileOpen) ──
 const mobileOpen = computed({
@@ -87,6 +86,7 @@ const ALL_WORK_ITEMS: NavItem[] = [
 	{ name: 'Tickets', to: '/tickets', icon: 'heroicons:queue-list' },
 	{ name: 'Tasks', to: '/tasks', icon: 'heroicons:clipboard-document-check' },
 	{ name: 'Scheduler', to: '/scheduler', icon: 'heroicons:calendar-date-range' },
+	{ name: 'Meetings', to: '/meetings', icon: 'heroicons:video-camera' },
 	{ name: 'Files', to: '/files', icon: 'heroicons:folder-open' },
 	{ name: 'Goals', to: '/goals', icon: 'lucide:target' },
 ]
@@ -123,6 +123,19 @@ const financialsItems = computed(() => filterByHat(ALL_FINANCIALS_ITEMS))
 const engageItems = computed(() => filterByHat(ALL_ENGAGE_ITEMS))
 const teamItems = computed(() => filterByHat(ALL_TEAM_ITEMS))
 
+// When a non-default hat is active, the 5-group taxonomy is more noise than
+// signal — empty groups leave gaps and single-item groups feel heavier than
+// the data warrants. Collapse into one flat list under the hat's name.
+const isHatActive = computed(() => activeHat.value.id !== 'default')
+
+const hatItems = computed<NavItem[]>(() => [
+	...workItems.value,
+	...pipelineItems.value,
+	...financialsItems.value,
+	...engageItems.value,
+	...teamItems.value,
+])
+
 function isActiveItem(to: string): boolean {
 	return route.path === to || route.path.startsWith(to + '/')
 }
@@ -153,135 +166,165 @@ function handleTopup() {
 
 		<!-- Scrollable nav -->
 		<nav class="flex-1 px-3 space-y-1" :class="sidebarCollapsed ? 'overflow-visible' : 'overflow-y-auto'">
-			<!-- WORK -->
-			<div>
-				<button
-					v-if="!sidebarCollapsed"
-					@click="toggleSpace('work')"
-					class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 hover:text-muted-foreground transition-colors"
-				>
-					<Icon :name="spacesCollapsed.work ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="w-3 h-3 shrink-0" />
-					<span>Work</span>
-				</button>
-				<div v-if="sidebarCollapsed" class="h-2" />
-				<div v-show="!spacesCollapsed.work || sidebarCollapsed" class="space-y-0.5 mt-0.5">
-					<NuxtLink
-						v-for="item in workItems"
-						:key="item.to + item.name"
-						:to="item.to"
-						class="nav-item"
-						:class="{ 'nav-item-active': isActiveItem(item.to), 'justify-center': sidebarCollapsed, 'has-tooltip': sidebarCollapsed }"
-						:data-tooltip="sidebarCollapsed ? item.name : undefined"
+			<!-- ── HAT MODE: single flat list under the hat's name ── -->
+			<template v-if="isHatActive">
+				<div>
+					<div
+						v-if="!sidebarCollapsed"
+						class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70"
 					>
-						<Icon :name="item.icon" class="w-4 h-4 shrink-0" />
-						<span v-if="!sidebarCollapsed" class="text-[13px]">{{ item.name }}</span>
-					</NuxtLink>
+						<UIcon :name="activeHat.icon" class="w-3.5 h-3.5 shrink-0" />
+						<span>{{ activeHat.name }}</span>
+					</div>
+					<div v-if="sidebarCollapsed" class="h-2" />
+					<div class="space-y-0.5 mt-0.5">
+						<NuxtLink
+							v-for="item in hatItems"
+							:key="item.to + item.name"
+							:to="item.to"
+							class="nav-item"
+							:class="{ 'nav-item-active': isActiveItem(item.to), 'justify-center': sidebarCollapsed, 'has-tooltip': sidebarCollapsed }"
+							:data-tooltip="sidebarCollapsed ? item.name : undefined"
+						>
+							<Icon :name="item.icon" class="w-4 h-4 shrink-0" />
+							<span v-if="!sidebarCollapsed" class="text-[13px]">{{ item.name }}</span>
+						</NuxtLink>
+					</div>
 				</div>
-			</div>
+			</template>
 
-			<!-- PIPELINE -->
-			<div class="pt-2">
-				<button
-					v-if="!sidebarCollapsed"
-					@click="toggleSpace('pipeline')"
-					class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 hover:text-muted-foreground transition-colors"
-				>
-					<Icon :name="spacesCollapsed.pipeline ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="w-3 h-3 shrink-0" />
-					<span>Pipeline</span>
-				</button>
-				<div v-if="sidebarCollapsed" class="h-2" />
-				<div v-show="!spacesCollapsed.pipeline || sidebarCollapsed" class="space-y-0.5 mt-0.5">
-					<NuxtLink
-						v-for="item in pipelineItems"
-						:key="item.to"
-						:to="item.to"
-						class="nav-item"
-						:class="{ 'nav-item-active': isActiveItem(item.to), 'justify-center': sidebarCollapsed, 'has-tooltip': sidebarCollapsed }"
-						:data-tooltip="sidebarCollapsed ? item.name : undefined"
+			<!-- ── DEFAULT HAT: 5 collapsible groups ── -->
+			<template v-else>
+				<!-- WORK -->
+				<div>
+					<button
+						v-if="!sidebarCollapsed"
+						@click="toggleSpace('work')"
+						class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 hover:text-muted-foreground transition-colors"
 					>
-						<Icon :name="item.icon" class="w-4 h-4 shrink-0" />
-						<span v-if="!sidebarCollapsed" class="text-[13px]">{{ item.name }}</span>
-					</NuxtLink>
+						<Icon :name="spacesCollapsed.work ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="w-3 h-3 shrink-0" />
+						<span>Work</span>
+					</button>
+					<div v-if="sidebarCollapsed" class="h-2" />
+					<div v-show="!spacesCollapsed.work || sidebarCollapsed" class="space-y-0.5 mt-0.5">
+						<NuxtLink
+							v-for="item in workItems"
+							:key="item.to + item.name"
+							:to="item.to"
+							class="nav-item"
+							:class="{ 'nav-item-active': isActiveItem(item.to), 'justify-center': sidebarCollapsed, 'has-tooltip': sidebarCollapsed }"
+							:data-tooltip="sidebarCollapsed ? item.name : undefined"
+						>
+							<Icon :name="item.icon" class="w-4 h-4 shrink-0" />
+							<span v-if="!sidebarCollapsed" class="text-[13px]">{{ item.name }}</span>
+						</NuxtLink>
+					</div>
 				</div>
-			</div>
 
-			<!-- FINANCIALS -->
-			<div class="pt-2">
-				<button
-					v-if="!sidebarCollapsed"
-					@click="toggleSpace('financials')"
-					class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 hover:text-muted-foreground transition-colors"
-				>
-					<Icon :name="spacesCollapsed.financials ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="w-3 h-3 shrink-0" />
-					<span>Financials</span>
-				</button>
-				<div v-if="sidebarCollapsed" class="h-2" />
-				<div v-show="!spacesCollapsed.financials || sidebarCollapsed" class="space-y-0.5 mt-0.5">
-					<NuxtLink
-						v-for="item in financialsItems"
-						:key="item.to"
-						:to="item.to"
-						class="nav-item"
-						:class="{ 'nav-item-active': isActiveItem(item.to), 'justify-center': sidebarCollapsed, 'has-tooltip': sidebarCollapsed }"
-						:data-tooltip="sidebarCollapsed ? item.name : undefined"
+				<!-- PIPELINE -->
+				<div class="pt-2">
+					<button
+						v-if="!sidebarCollapsed"
+						@click="toggleSpace('pipeline')"
+						class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 hover:text-muted-foreground transition-colors"
 					>
-						<Icon :name="item.icon" class="w-4 h-4 shrink-0" />
-						<span v-if="!sidebarCollapsed" class="text-[13px]">{{ item.name }}</span>
-					</NuxtLink>
+						<Icon :name="spacesCollapsed.pipeline ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="w-3 h-3 shrink-0" />
+						<span>Pipeline</span>
+					</button>
+					<div v-if="sidebarCollapsed" class="h-2" />
+					<div v-show="!spacesCollapsed.pipeline || sidebarCollapsed" class="space-y-0.5 mt-0.5">
+						<NuxtLink
+							v-for="item in pipelineItems"
+							:key="item.to"
+							:to="item.to"
+							class="nav-item"
+							:class="{ 'nav-item-active': isActiveItem(item.to), 'justify-center': sidebarCollapsed, 'has-tooltip': sidebarCollapsed }"
+							:data-tooltip="sidebarCollapsed ? item.name : undefined"
+						>
+							<Icon :name="item.icon" class="w-4 h-4 shrink-0" />
+							<span v-if="!sidebarCollapsed" class="text-[13px]">{{ item.name }}</span>
+						</NuxtLink>
+					</div>
 				</div>
-			</div>
 
-			<!-- ENGAGE -->
-			<div class="pt-2">
-				<button
-					v-if="!sidebarCollapsed"
-					@click="toggleSpace('engage')"
-					class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 hover:text-muted-foreground transition-colors"
-				>
-					<Icon :name="spacesCollapsed.engage ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="w-3 h-3 shrink-0" />
-					<span>Engage</span>
-				</button>
-				<div v-if="sidebarCollapsed" class="h-2" />
-				<div v-show="!spacesCollapsed.engage || sidebarCollapsed" class="space-y-0.5 mt-0.5">
-					<NuxtLink
-						v-for="item in engageItems"
-						:key="item.to"
-						:to="item.to"
-						class="nav-item"
-						:class="{ 'nav-item-active': isActiveItem(item.to), 'justify-center': sidebarCollapsed, 'has-tooltip': sidebarCollapsed }"
-						:data-tooltip="sidebarCollapsed ? item.name : undefined"
+				<!-- FINANCIALS -->
+				<div class="pt-2">
+					<button
+						v-if="!sidebarCollapsed"
+						@click="toggleSpace('financials')"
+						class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 hover:text-muted-foreground transition-colors"
 					>
-						<Icon :name="item.icon" class="w-4 h-4 shrink-0" />
-						<span v-if="!sidebarCollapsed" class="text-[13px]">{{ item.name }}</span>
-					</NuxtLink>
+						<Icon :name="spacesCollapsed.financials ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="w-3 h-3 shrink-0" />
+						<span>Financials</span>
+					</button>
+					<div v-if="sidebarCollapsed" class="h-2" />
+					<div v-show="!spacesCollapsed.financials || sidebarCollapsed" class="space-y-0.5 mt-0.5">
+						<NuxtLink
+							v-for="item in financialsItems"
+							:key="item.to"
+							:to="item.to"
+							class="nav-item"
+							:class="{ 'nav-item-active': isActiveItem(item.to), 'justify-center': sidebarCollapsed, 'has-tooltip': sidebarCollapsed }"
+							:data-tooltip="sidebarCollapsed ? item.name : undefined"
+						>
+							<Icon :name="item.icon" class="w-4 h-4 shrink-0" />
+							<span v-if="!sidebarCollapsed" class="text-[13px]">{{ item.name }}</span>
+						</NuxtLink>
+					</div>
 				</div>
-			</div>
 
-			<!-- TEAM -->
-			<div class="pt-2">
-				<button
-					v-if="!sidebarCollapsed"
-					@click="toggleSpace('team')"
-					class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 hover:text-muted-foreground transition-colors"
-				>
-					<Icon :name="spacesCollapsed.team ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="w-3 h-3 shrink-0" />
-					<span>Team</span>
-				</button>
-				<div v-if="sidebarCollapsed" class="h-2" />
-				<div v-show="!spacesCollapsed.team || sidebarCollapsed" class="space-y-0.5 mt-0.5">
-					<NuxtLink
-						v-for="item in teamItems"
-						:key="item.to"
-						:to="item.to"
-						class="nav-item"
-						:class="{ 'nav-item-active': isActiveItem(item.to), 'justify-center': sidebarCollapsed, 'has-tooltip': sidebarCollapsed }"
-						:data-tooltip="sidebarCollapsed ? item.name : undefined"
+				<!-- ENGAGE -->
+				<div class="pt-2">
+					<button
+						v-if="!sidebarCollapsed"
+						@click="toggleSpace('engage')"
+						class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 hover:text-muted-foreground transition-colors"
 					>
-						<Icon :name="item.icon" class="w-4 h-4 shrink-0" />
-						<span v-if="!sidebarCollapsed" class="text-[13px]">{{ item.name }}</span>
-					</NuxtLink>
+						<Icon :name="spacesCollapsed.engage ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="w-3 h-3 shrink-0" />
+						<span>Engage</span>
+					</button>
+					<div v-if="sidebarCollapsed" class="h-2" />
+					<div v-show="!spacesCollapsed.engage || sidebarCollapsed" class="space-y-0.5 mt-0.5">
+						<NuxtLink
+							v-for="item in engageItems"
+							:key="item.to"
+							:to="item.to"
+							class="nav-item"
+							:class="{ 'nav-item-active': isActiveItem(item.to), 'justify-center': sidebarCollapsed, 'has-tooltip': sidebarCollapsed }"
+							:data-tooltip="sidebarCollapsed ? item.name : undefined"
+						>
+							<Icon :name="item.icon" class="w-4 h-4 shrink-0" />
+							<span v-if="!sidebarCollapsed" class="text-[13px]">{{ item.name }}</span>
+						</NuxtLink>
+					</div>
 				</div>
-			</div>
+
+				<!-- TEAM -->
+				<div class="pt-2">
+					<button
+						v-if="!sidebarCollapsed"
+						@click="toggleSpace('team')"
+						class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 hover:text-muted-foreground transition-colors"
+					>
+						<Icon :name="spacesCollapsed.team ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="w-3 h-3 shrink-0" />
+						<span>Team</span>
+					</button>
+					<div v-if="sidebarCollapsed" class="h-2" />
+					<div v-show="!spacesCollapsed.team || sidebarCollapsed" class="space-y-0.5 mt-0.5">
+						<NuxtLink
+							v-for="item in teamItems"
+							:key="item.to"
+							:to="item.to"
+							class="nav-item"
+							:class="{ 'nav-item-active': isActiveItem(item.to), 'justify-center': sidebarCollapsed, 'has-tooltip': sidebarCollapsed }"
+							:data-tooltip="sidebarCollapsed ? item.name : undefined"
+						>
+							<Icon :name="item.icon" class="w-4 h-4 shrink-0" />
+							<span v-if="!sidebarCollapsed" class="text-[13px]">{{ item.name }}</span>
+						</NuxtLink>
+					</div>
+				</div>
+			</template>
 		</nav>
 
 		<!-- Hat picker (between nav and footer) -->
@@ -308,17 +351,6 @@ function handleTopup() {
 				<Icon name="lucide:building-2" class="w-4 h-4 shrink-0" />
 				<span v-if="!sidebarCollapsed" class="text-[13px]">Organization</span>
 			</NuxtLink>
-
-			<!-- Edit Apps -->
-			<button
-				@click="showNavEditor = true"
-				class="nav-item w-full"
-				:class="{ 'justify-center': sidebarCollapsed, 'has-tooltip': sidebarCollapsed }"
-				:data-tooltip="sidebarCollapsed ? 'Edit Apps' : undefined"
-			>
-				<Icon name="lucide:pencil" class="w-4 h-4 shrink-0" />
-				<span v-if="!sidebarCollapsed" class="text-[13px]">Edit Apps</span>
-			</button>
 
 			<!-- Logout -->
 			<button
@@ -370,66 +402,85 @@ function handleTopup() {
 				</div>
 
 				<nav class="flex-1 px-3 space-y-1">
-					<div>
-						<button @click="toggleSpace('work')" class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-							<Icon :name="spacesCollapsed.work ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="w-3 h-3" />
-							<span>Work</span>
-						</button>
-						<div v-show="!spacesCollapsed.work" class="space-y-0.5 mt-0.5">
-							<NuxtLink v-for="item in workItems" :key="item.to + item.name" :to="item.to" class="nav-item" :class="{ 'nav-item-active': isActiveItem(item.to) }">
-								<Icon :name="item.icon" class="w-4 h-4 shrink-0" />
-								<span class="text-[13px]">{{ item.name }}</span>
-							</NuxtLink>
+					<!-- ── HAT MODE: single flat list ── -->
+					<template v-if="isHatActive">
+						<div>
+							<div class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+								<UIcon :name="activeHat.icon" class="w-3.5 h-3.5 shrink-0" />
+								<span>{{ activeHat.name }}</span>
+							</div>
+							<div class="space-y-0.5 mt-0.5">
+								<NuxtLink v-for="item in hatItems" :key="item.to + item.name" :to="item.to" class="nav-item" :class="{ 'nav-item-active': isActiveItem(item.to) }">
+									<Icon :name="item.icon" class="w-4 h-4 shrink-0" />
+									<span class="text-[13px]">{{ item.name }}</span>
+								</NuxtLink>
+							</div>
 						</div>
-					</div>
-					<div class="pt-2">
-						<button @click="toggleSpace('pipeline')" class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-							<Icon :name="spacesCollapsed.pipeline ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="w-3 h-3" />
-							<span>Pipeline</span>
-						</button>
-						<div v-show="!spacesCollapsed.pipeline" class="space-y-0.5 mt-0.5">
-							<NuxtLink v-for="item in pipelineItems" :key="item.to" :to="item.to" class="nav-item" :class="{ 'nav-item-active': isActiveItem(item.to) }">
-								<Icon :name="item.icon" class="w-4 h-4 shrink-0" />
-								<span class="text-[13px]">{{ item.name }}</span>
-							</NuxtLink>
+					</template>
+
+					<!-- ── DEFAULT HAT: 5 collapsible groups ── -->
+					<template v-else>
+						<div>
+							<button @click="toggleSpace('work')" class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+								<Icon :name="spacesCollapsed.work ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="w-3 h-3" />
+								<span>Work</span>
+							</button>
+							<div v-show="!spacesCollapsed.work" class="space-y-0.5 mt-0.5">
+								<NuxtLink v-for="item in workItems" :key="item.to + item.name" :to="item.to" class="nav-item" :class="{ 'nav-item-active': isActiveItem(item.to) }">
+									<Icon :name="item.icon" class="w-4 h-4 shrink-0" />
+									<span class="text-[13px]">{{ item.name }}</span>
+								</NuxtLink>
+							</div>
 						</div>
-					</div>
-					<div class="pt-2">
-						<button @click="toggleSpace('financials')" class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-							<Icon :name="spacesCollapsed.financials ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="w-3 h-3" />
-							<span>Financials</span>
-						</button>
-						<div v-show="!spacesCollapsed.financials" class="space-y-0.5 mt-0.5">
-							<NuxtLink v-for="item in financialsItems" :key="item.to" :to="item.to" class="nav-item" :class="{ 'nav-item-active': isActiveItem(item.to) }">
-								<Icon :name="item.icon" class="w-4 h-4 shrink-0" />
-								<span class="text-[13px]">{{ item.name }}</span>
-							</NuxtLink>
+						<div class="pt-2">
+							<button @click="toggleSpace('pipeline')" class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+								<Icon :name="spacesCollapsed.pipeline ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="w-3 h-3" />
+								<span>Pipeline</span>
+							</button>
+							<div v-show="!spacesCollapsed.pipeline" class="space-y-0.5 mt-0.5">
+								<NuxtLink v-for="item in pipelineItems" :key="item.to" :to="item.to" class="nav-item" :class="{ 'nav-item-active': isActiveItem(item.to) }">
+									<Icon :name="item.icon" class="w-4 h-4 shrink-0" />
+									<span class="text-[13px]">{{ item.name }}</span>
+								</NuxtLink>
+							</div>
 						</div>
-					</div>
-					<div class="pt-2">
-						<button @click="toggleSpace('engage')" class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-							<Icon :name="spacesCollapsed.engage ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="w-3 h-3" />
-							<span>Engage</span>
-						</button>
-						<div v-show="!spacesCollapsed.engage" class="space-y-0.5 mt-0.5">
-							<NuxtLink v-for="item in engageItems" :key="item.to" :to="item.to" class="nav-item" :class="{ 'nav-item-active': isActiveItem(item.to) }">
-								<Icon :name="item.icon" class="w-4 h-4 shrink-0" />
-								<span class="text-[13px]">{{ item.name }}</span>
-							</NuxtLink>
+						<div class="pt-2">
+							<button @click="toggleSpace('financials')" class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+								<Icon :name="spacesCollapsed.financials ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="w-3 h-3" />
+								<span>Financials</span>
+							</button>
+							<div v-show="!spacesCollapsed.financials" class="space-y-0.5 mt-0.5">
+								<NuxtLink v-for="item in financialsItems" :key="item.to" :to="item.to" class="nav-item" :class="{ 'nav-item-active': isActiveItem(item.to) }">
+									<Icon :name="item.icon" class="w-4 h-4 shrink-0" />
+									<span class="text-[13px]">{{ item.name }}</span>
+								</NuxtLink>
+							</div>
 						</div>
-					</div>
-					<div class="pt-2">
-						<button @click="toggleSpace('team')" class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-							<Icon :name="spacesCollapsed.team ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="w-3 h-3" />
-							<span>Team</span>
-						</button>
-						<div v-show="!spacesCollapsed.team" class="space-y-0.5 mt-0.5">
-							<NuxtLink v-for="item in teamItems" :key="item.to" :to="item.to" class="nav-item" :class="{ 'nav-item-active': isActiveItem(item.to) }">
-								<Icon :name="item.icon" class="w-4 h-4 shrink-0" />
-								<span class="text-[13px]">{{ item.name }}</span>
-							</NuxtLink>
+						<div class="pt-2">
+							<button @click="toggleSpace('engage')" class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+								<Icon :name="spacesCollapsed.engage ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="w-3 h-3" />
+								<span>Engage</span>
+							</button>
+							<div v-show="!spacesCollapsed.engage" class="space-y-0.5 mt-0.5">
+								<NuxtLink v-for="item in engageItems" :key="item.to" :to="item.to" class="nav-item" :class="{ 'nav-item-active': isActiveItem(item.to) }">
+									<Icon :name="item.icon" class="w-4 h-4 shrink-0" />
+									<span class="text-[13px]">{{ item.name }}</span>
+								</NuxtLink>
+							</div>
 						</div>
-					</div>
+						<div class="pt-2">
+							<button @click="toggleSpace('team')" class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+								<Icon :name="spacesCollapsed.team ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="w-3 h-3" />
+								<span>Team</span>
+							</button>
+							<div v-show="!spacesCollapsed.team" class="space-y-0.5 mt-0.5">
+								<NuxtLink v-for="item in teamItems" :key="item.to" :to="item.to" class="nav-item" :class="{ 'nav-item-active': isActiveItem(item.to) }">
+									<Icon :name="item.icon" class="w-4 h-4 shrink-0" />
+									<span class="text-[13px]">{{ item.name }}</span>
+								</NuxtLink>
+							</div>
+						</div>
+					</template>
 				</nav>
 
 				<div class="p-3 border-t border-border/30 space-y-0.5">
@@ -455,11 +506,6 @@ function handleTopup() {
 			</aside>
 		</Transition>
 	</Teleport>
-
-	<!-- Nav Editor -->
-	<ClientOnly>
-		<LayoutNavEditor :is-open="showNavEditor" @close="showNavEditor = false" />
-	</ClientOnly>
 </template>
 
 <style scoped>

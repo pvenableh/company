@@ -278,6 +278,24 @@ const SHOTS: Shot[] = [
 			}
 		},
 	},
+	{
+		slug: 'ai-actions',
+		viewport: 'inline',
+		persona: 'solo',
+		// AI Actions is the same contextual sidebar surface as ai-sidebar, but
+		// scoped to a project so the marketing copy ("Reschedule a project —
+		// every linked event and task shifts automatically") matches the shot.
+		resolveUrl: async (ctx) => `${ctx.baseUrl}${await firstDetailHref(ctx.page, '/projects', ctx.baseUrl)}`,
+		waitFor: async (page) => {
+			const trigger = page.getByRole('button', { name: /ask earnest/i });
+			try {
+				await trigger.click({ timeout: 3000 });
+				await page.waitForTimeout(1500);
+			} catch {
+				/* fall through */
+			}
+		},
+	},
 
 	// ── Agency (Admin role) — shots that Member role would render empty or 403 ──
 	{
@@ -285,6 +303,40 @@ const SHOTS: Shot[] = [
 		viewport: 'inline',
 		persona: 'agency',
 		resolveUrl: async ({ baseUrl }) => `${baseUrl}/marketing`,
+	},
+	{
+		slug: 'marketing-recommendations',
+		viewport: 'inline',
+		persona: 'agency',
+		// Same /marketing page, scrolled to the recommendation feed (the
+		// MarketingFeedSection that was folded in from /marketing-feed). We
+		// scroll the section into view so the campaign cards are in frame
+		// instead of the KPI strip.
+		resolveUrl: async ({ baseUrl }) => `${baseUrl}/marketing`,
+		waitFor: async (page) => {
+			await page
+				.evaluate(() => {
+					const candidates = Array.from(document.querySelectorAll('h2, h3, [class*="MarketingFeed"]'));
+					const el = candidates.find((n) => /recommend|feed|for you/i.test(n.textContent ?? ''));
+					if (el) (el as HTMLElement).scrollIntoView({ behavior: 'instant', block: 'start' });
+				})
+				.catch(() => {
+					/* best effort */
+				});
+			await page.waitForTimeout(600);
+		},
+	},
+	{
+		slug: 'social-inbox',
+		viewport: 'inline',
+		persona: 'agency',
+		resolveUrl: async ({ baseUrl }) => `${baseUrl}/social/inbox`,
+	},
+	{
+		slug: 'social-analytics',
+		viewport: 'inline',
+		persona: 'agency',
+		resolveUrl: async ({ baseUrl }) => `${baseUrl}/social/analytics`,
 	},
 	{
 		slug: 'organization-overview',

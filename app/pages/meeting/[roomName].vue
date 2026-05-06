@@ -37,12 +37,22 @@
 				</div>
 				<h1 class="text-lg font-semibold text-foreground">Meeting Ended</h1>
 				<p class="text-sm text-muted-foreground mt-2">Thanks for joining!</p>
-				<NuxtLink
-					to="/"
-					class="mt-6 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-muted/30 hover:bg-muted/60 text-sm font-medium text-foreground transition-colors ios-press"
-				>
-					Go Home
-				</NuxtLink>
+				<div class="mt-6 flex flex-col gap-2">
+					<NuxtLink
+						v-if="meeting?.id"
+						:to="`/meetings/${meeting.id}`"
+						class="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium transition-colors ios-press"
+					>
+						<UIcon name="i-heroicons-document-text" class="w-4 h-4" />
+						View Recap
+					</NuxtLink>
+					<NuxtLink
+						to="/"
+						class="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-muted/30 hover:bg-muted/60 text-sm font-medium text-foreground transition-colors ios-press"
+					>
+						Go Home
+					</NuxtLink>
+				</div>
 			</div>
 		</div>
 
@@ -138,9 +148,47 @@
 				allow="camera; microphone; autoplay; display-capture; screen-wake-lock"
 				allowfullscreen
 			/>
+
+			<!-- Annotation overlay covers the entire iframe so users can draw
+			     directly on top of any screen-share or video tile. The canvas is
+			     pointer-events:none until the user toggles annotate mode on. -->
+			<MeetingAnnotationCanvas
+				v-if="annotationAuthorId && hasJoined"
+				ref="annotationCanvas"
+				:bus="annotationBus"
+				:author-id="annotationAuthorId"
+				toolbar-position="bottom"
+			/>
+
+			<!-- Project-event back-link — moved to top-16 to clear Daily's top bar -->
+			<NuxtLink
+				v-if="linkedEvent"
+				:to="`/projects/${linkedEvent.projectId}/events/${linkedEvent.id}`"
+				target="_blank"
+				class="fixed top-16 left-4 z-30 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white text-[11px] font-medium transition-colors shadow-lg pointer-events-auto"
+				title="Open milestone in a new tab"
+			>
+				<UIcon name="i-heroicons-flag" class="w-3.5 h-3.5" />
+				<span class="opacity-70">{{ linkedEvent.projectTitle }}</span>
+				<span class="opacity-40">/</span>
+				<span>{{ linkedEvent.title }}</span>
+				<UIcon name="i-heroicons-arrow-top-right-on-square" class="w-3 h-3 opacity-60" />
+			</NuxtLink>
+
+			<!-- Ask Earnest AI button — top-right below Daily header -->
+			<button
+				v-if="hasJoined"
+				class="fixed top-16 right-4 z-30 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white text-[11px] font-medium transition-colors shadow-lg pointer-events-auto"
+				title="Ask Earnest about this meeting"
+				@click="aiTrayOpen = true"
+			>
+				<UIcon name="i-heroicons-sparkles" class="w-3.5 h-3.5" />
+				<span>Ask Earnest</span>
+			</button>
 		</div>
 
-		<!-- Floating dock (tasks, timer, AI) — opaque bg for video overlay -->
+		<!-- Floating dock + AI tray. The dock is draggable and minimizable so the
+		     user can park it away from Daily's leave button when it gets in the way. -->
 		<ClientOnly>
 			<div class="meeting-dock-override">
 				<LayoutFloatingDock @open-ai="aiTrayOpen = true" />
@@ -176,6 +224,7 @@ const myAttendeeId = ref(null);
 const loadingToken = ref(false);
 const dailyUrl = ref(null);
 const aiTrayOpen = ref(false);
+const dailyFrame = ref(null);
 
 let statusPollInterval = null;
 
@@ -186,6 +235,107 @@ const isHost = computed(() => {
 		? meeting.value.host_user?.id
 		: meeting.value.host_user;
 	return hostId === currentUser.value.id;
+});
+
+const linkedEvent = computed(() => {
+	const pe = meeting.value?.project_event;
+	if (!pe || typeof pe !== 'object') return null;
+	const projectId = typeof pe.project === 'object' ? pe.project?.id : pe.project;
+	if (!projectId) return null;
+	return {
+		id: pe.id,
+		title: pe.title || 'Milestone',
+		projectId,
+		projectTitle: typeof pe.project === 'object' ? pe.project?.title || 'Project' : 'Project',
+	};
+});
+
+// ─── Daily app-message bus + annotation sync ─────────────────────────────────
+// We wrap the prebuilt iframe with @daily-co/daily-js so we can use the
+// app-message API for broadcasting annotation strokes between participants.
+
+let dailyCallObject = null;
+const mySessionId = ref(null);
+const strokeSubscribers = new Set();
+const clearSubscribers = new Set();
+const annotationCanvas = ref(null);
+
+// Stable per-tab id used to label annotation strokes. Daily's session_id from
+// the prebuilt iframe doesn't always reach our wrap()'d object (the prebuilt
+// owns the join), so we fall back to a UUID generated on mount.
+const localAuthorId = ref('');
+const annotationAuthorId = computed(() => mySessionId.value || localAuthorId.value);
+
+const annotationBus = {
+	onStroke(cb) {
+		strokeSubscribers.add(cb);
+		return () => strokeSubscribers.delete(cb);
+	},
+	onClear(cb) {
+		clearSubscribers.add(cb);
+		return () => clearSubscribers.delete(cb);
+	},
+	sendStroke(segment) {
+		if (!dailyCallObject || !segment) return;
+		try {
+			dailyCallObject.sendAppMessage({ type: 'annotation-stroke', segment }, '*');
+		} catch {}
+	},
+	sendClear() {
+		if (!dailyCallObject) return;
+		try {
+			dailyCallObject.sendAppMessage(
+				{ type: 'annotation-clear', authorId: annotationAuthorId.value },
+				'*',
+			);
+		} catch {}
+	},
+};
+
+const handleAppMessage = (e) => {
+	const data = e?.data;
+	if (!data || typeof data !== 'object') return;
+
+	if (data.type === 'annotation-stroke') {
+		if (!data.segment) return;
+		for (const cb of strokeSubscribers) cb(data.segment);
+		return;
+	}
+
+	if (data.type === 'annotation-clear') {
+		for (const cb of clearSubscribers) cb();
+		return;
+	}
+};
+
+const handleJoinedMeeting = (e) => {
+	mySessionId.value = e?.participants?.local?.session_id || null;
+};
+
+const wrapDailyIframe = async () => {
+	if (dailyCallObject) return;                        // already wrapped
+	const el = dailyFrame.value;
+	if (!el) return;
+
+	try {
+		const { default: DailyIframe } = await import('@daily-co/daily-js');
+		dailyCallObject = DailyIframe.wrap(el);
+		dailyCallObject.on('app-message', handleAppMessage);
+		dailyCallObject.on('joined-meeting', handleJoinedMeeting);
+		// In case we wrapped after the join already fired
+		const local = dailyCallObject.participants?.()?.local;
+		if (local?.session_id) mySessionId.value = local.session_id;
+	} catch (err) {
+		console.warn('[meeting] Daily wrap failed', err);
+	}
+};
+
+// Wrap once the iframe element exists and dailyUrl is set.
+watch([dailyFrame, dailyUrl], async ([el, url]) => {
+	if (el && url && !dailyCallObject) {
+		await nextTick();
+		wrapDailyIframe();
+	}
 });
 
 // Format helpers
@@ -366,6 +516,7 @@ const handleDailyMessage = (e) => {
 
 // Lifecycle
 onMounted(() => {
+	localAuthorId.value = `u-${(globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2))}`;
 	fetchMeeting();
 	window.addEventListener('message', handleDailyMessage);
 });
@@ -373,11 +524,17 @@ onMounted(() => {
 onBeforeUnmount(() => {
 	if (statusPollInterval) clearInterval(statusPollInterval);
 	window.removeEventListener('message', handleDailyMessage);
+	if (dailyCallObject) {
+		try { dailyCallObject.destroy(); } catch {}
+		dailyCallObject = null;
+	}
+	strokeSubscribers.clear();
+	clearSubscribers.clear();
 });
 </script>
 
 <style scoped>
-/* Override the floating dock glass background to be opaque over the video iframe */
+/* Make the floating dock opaque over the video iframe so it stays readable. */
 .meeting-dock-override :deep(.dock-bar) {
 	background: hsl(var(--background));
 	backdrop-filter: none;

@@ -24,6 +24,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'close'): void;
+  (e: 'entity-mutated', payload: { tool: string; data?: Record<string, any> }): void;
 }>();
 
 // Transition: component is v-if'd by parent, so we need a local
@@ -48,6 +49,11 @@ const {
   isLoadingHistory,
   streamingContent,
   activeToolCall,
+  mutationSignal,
+  lastMutation,
+  savedMessageIds,
+  markMessageSaved,
+  unmarkMessageSaved,
   error,
   setEntity,
   sendMessage,
@@ -55,8 +61,14 @@ const {
   clearChat,
 } = useContextualChat();
 
+// Bubble successful mutations to the host page so it can refetch its entity.
+watch(mutationSignal, (n) => {
+  if (n > 0 && lastMutation.value) {
+    emit('entity-mutated', lastMutation.value);
+  }
+});
+
 const { saveNoteFromMessage } = useAINotes();
-const savedMessageIds = ref(new Set<string>());
 
 const newMessage = ref('');
 const messagesContainer = ref<HTMLElement | null>(null);
@@ -158,10 +170,28 @@ const entityTypeLabel = computed(() => {
   return r.charAt(0).toUpperCase() + r.slice(1);
 });
 
-const scrollToBottom = () => {
-  if (messagesContainer.value) {
-    messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
-  }
+// Scroll behaviour: snap on user-initiated sends, smooth nudges during
+// streaming, and respect the user — if they've scrolled away from the
+// bottom we don't yank them back.
+const isNearBottom = () => {
+  const el = messagesContainer.value;
+  if (!el) return true;
+  return el.scrollHeight - (el.scrollTop + el.clientHeight) < 80;
+};
+
+const scrollToBottom = (smooth = false) => {
+  const el = messagesContainer.value;
+  if (!el) return;
+  el.scrollTo({ top: el.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
+};
+
+let scrollRaf = 0;
+const scheduleStreamScroll = () => {
+  if (scrollRaf) return;
+  scrollRaf = requestAnimationFrame(() => {
+    scrollRaf = 0;
+    if (isNearBottom()) scrollToBottom(false);
+  });
 };
 
 const handleSend = async () => {
@@ -179,13 +209,19 @@ const handlePromptClick = async (prompt: string) => {
   scrollToBottom();
 };
 
-const handleSaveAsNote = async (msg: { id: string; content: string }) => {
-  if (!sessionId.value || savedMessageIds.value.has(msg.id)) return;
-  savedMessageIds.value.add(msg.id);
+const handleSaveAsNote = async (msg: { id: string; content: string; serverId?: string }) => {
+  const targetId = msg.serverId || msg.id;
+  if (!sessionId.value || savedMessageIds.value.has(targetId)) return;
+  markMessageSaved(targetId);
   try {
-    await saveNoteFromMessage(sessionId.value, msg.content, msg.id);
+    const note = await saveNoteFromMessage(sessionId.value, msg.content, targetId);
+    if (!note) throw new Error('Save failed');
+    const { toast } = await import('vue-sonner');
+    toast.success('Saved to your notes');
   } catch {
-    savedMessageIds.value.delete(msg.id);
+    unmarkMessageSaved(targetId);
+    const { toast } = await import('vue-sonner');
+    toast.error('Could not save note');
   }
 };
 
@@ -240,9 +276,15 @@ watch(
   { immediate: true },
 );
 
-// Auto-scroll on streaming
+// Auto-scroll on streaming — throttled, only if near bottom.
 watch(streamingContent, () => {
-  nextTick(() => scrollToBottom());
+  scheduleStreamScroll();
+});
+
+// Snap to bottom whenever the message *count* changes — that's a new send
+// or the assistant bubble being staged. Smooth so it doesn't feel like a jump.
+watch(() => messages.value.length, () => {
+  nextTick(() => scrollToBottom(true));
 });
 
 // Markdown renderer (same pattern as AITray)
@@ -346,90 +388,89 @@ const renderMarkdown = (text: string): string => {
         </div>
 
         <!-- Message list -->
-        <template v-for="msg in messages" :key="msg.id">
-          <!-- User message -->
-          <div v-if="msg.role === 'user'" class="flex justify-end">
-            <div class="max-w-[85%] px-3 py-2 rounded-2xl rounded-br-md bg-primary text-white text-xs leading-relaxed">
-              {{ msg.content }}
-            </div>
-          </div>
-          <!-- Assistant message -->
-          <div v-else class="group flex justify-start">
-            <div class="max-w-[90%]">
-              <div
-                class="px-3 py-2 rounded-2xl rounded-bl-md bg-muted text-xs leading-relaxed text-foreground prose-sm"
-                v-html="renderMarkdown(msg.content)"
-              />
-              <div class="flex items-center gap-1 mt-0.5 ml-1 h-5">
-                <button
-                  v-if="sessionId && !savedMessageIds.has(msg.id)"
-                  @click="handleSaveAsNote(msg)"
-                  class="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground/70 hover:text-primary p-0.5 rounded"
-                  title="Save as note"
-                >
-                  <Icon name="lucide:bookmark" class="w-3 h-3" />
-                </button>
-                <span
-                  v-else-if="savedMessageIds.has(msg.id)"
-                  class="text-[10px] text-primary/70 flex items-center gap-0.5"
-                >
-                  <Icon name="lucide:bookmark-check" class="w-3 h-3" />
-                  Saved
-                </span>
-                <button
-                  @click="submitSidebarFeedback(msg, 'positive')"
-                  class="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded"
-                  :class="msg.feedback?.rating === 'positive' ? 'text-green-500' : 'text-muted-foreground/70 hover:text-green-500'"
-                  title="Helpful"
-                >
-                  <Icon name="lucide:thumbs-up" class="w-3 h-3" />
-                </button>
-                <button
-                  @click="openSidebarCorrection(msg)"
-                  class="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded"
-                  :class="msg.feedback?.rating === 'negative' ? 'text-red-500' : 'text-muted-foreground/70 hover:text-red-500'"
-                  title="Not helpful"
-                >
-                  <Icon name="lucide:thumbs-down" class="w-3 h-3" />
-                </button>
-              </div>
-              <!-- Correction input -->
-              <div
-                v-if="sidebarCorrectionTarget?.id === msg.id"
-                class="mt-1 ml-1 flex gap-1 items-end"
-              >
-                <textarea
-                  v-model="sidebarCorrectionText"
-                  placeholder="What was wrong? (optional)"
-                  class="flex-1 text-[11px] rounded border border-border bg-background px-2 py-1 resize-none focus:outline-none focus:ring-1 focus:ring-primary/50"
-                  rows="2"
-                  @keydown.enter.ctrl="submitSidebarCorrection"
-                />
-                <button
-                  @click="submitSidebarCorrection"
-                  class="px-2 py-1 rounded text-[9px] font-medium bg-red-500/10 text-red-600 hover:bg-red-500/20 transition-colors shrink-0"
-                >
-                  Submit
-                </button>
+        <TransitionGroup name="msg" tag="div" class="contents">
+          <template v-for="msg in messages" :key="msg.key || msg.id">
+            <!-- User message -->
+            <div v-if="msg.role === 'user'" class="msg-row flex justify-end">
+              <div class="max-w-[85%] px-3 py-2 rounded-2xl rounded-br-md bg-primary text-white text-xs leading-relaxed">
+                {{ msg.content }}
               </div>
             </div>
-          </div>
-        </template>
-
-        <!-- Streaming preview -->
-        <div v-if="isStreaming && streamingContent" class="flex justify-start">
-          <div class="max-w-[90%]">
-            <div
-              class="px-3 py-2 rounded-2xl rounded-bl-md bg-muted text-xs leading-relaxed text-foreground prose-sm"
-              v-html="renderMarkdown(streamingContent)"
-            />
-            <span class="inline-block w-1.5 h-3.5 bg-primary/60 rounded-sm animate-pulse ml-1" />
-          </div>
-        </div>
+            <!-- Assistant message (streaming or final — same bubble) -->
+            <div v-else class="msg-row group flex justify-start">
+              <div class="max-w-[90%]">
+                <div
+                  class="px-3 py-2 rounded-2xl rounded-bl-md bg-muted text-xs leading-relaxed text-foreground prose-sm"
+                  :class="{ 'is-streaming': msg.streaming }"
+                >
+                  <span v-if="!msg.content && msg.streaming" class="typing-dots" aria-label="Thinking">
+                    <span></span><span></span><span></span>
+                  </span>
+                  <template v-else>
+                    <span v-html="renderMarkdown(msg.content)"></span>
+                    <span v-if="msg.streaming" class="caret" aria-hidden="true"></span>
+                  </template>
+                </div>
+                <div v-if="!msg.streaming" class="flex items-center gap-1 mt-0.5 ml-1 h-5">
+                  <button
+                    v-if="sessionId && !savedMessageIds.has(msg.serverId || msg.id)"
+                    @click="handleSaveAsNote(msg)"
+                    class="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground/70 hover:text-primary p-0.5 rounded"
+                    title="Save as note"
+                  >
+                    <Icon name="lucide:bookmark" class="w-3 h-3" />
+                  </button>
+                  <span
+                    v-else-if="savedMessageIds.has(msg.serverId || msg.id)"
+                    class="text-[10px] text-primary/70 flex items-center gap-0.5"
+                  >
+                    <Icon name="lucide:bookmark-check" class="w-3 h-3" />
+                    Saved
+                  </span>
+                  <button
+                    @click="submitSidebarFeedback(msg, 'positive')"
+                    class="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded"
+                    :class="msg.feedback?.rating === 'positive' ? 'text-green-500' : 'text-muted-foreground/70 hover:text-green-500'"
+                    title="Helpful"
+                  >
+                    <Icon name="lucide:thumbs-up" class="w-3 h-3" />
+                  </button>
+                  <button
+                    @click="openSidebarCorrection(msg)"
+                    class="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded"
+                    :class="msg.feedback?.rating === 'negative' ? 'text-red-500' : 'text-muted-foreground/70 hover:text-red-500'"
+                    title="Not helpful"
+                  >
+                    <Icon name="lucide:thumbs-down" class="w-3 h-3" />
+                  </button>
+                </div>
+                <!-- Correction input -->
+                <div
+                  v-if="sidebarCorrectionTarget?.id === msg.id"
+                  class="mt-1 ml-1 flex gap-1 items-end"
+                >
+                  <textarea
+                    v-model="sidebarCorrectionText"
+                    placeholder="What was wrong? (optional)"
+                    class="flex-1 text-[11px] rounded border border-border bg-background px-2 py-1 resize-none focus:outline-none focus:ring-1 focus:ring-primary/50"
+                    rows="2"
+                    @keydown.enter.ctrl="submitSidebarCorrection"
+                  />
+                  <button
+                    @click="submitSidebarCorrection"
+                    class="px-2 py-1 rounded text-[9px] font-medium bg-red-500/10 text-red-600 hover:bg-red-500/20 transition-colors shrink-0"
+                  >
+                    Submit
+                  </button>
+                </div>
+              </div>
+            </div>
+          </template>
+        </TransitionGroup>
 
         <!-- Tool call indicator -->
-        <div v-if="activeToolCall" class="flex justify-start">
-          <div class="max-w-[90%] px-3 py-2 rounded-2xl rounded-bl-md border text-xs"
+        <div v-if="activeToolCall" class="msg-row flex justify-start">
+          <div class="tool-pill max-w-[90%] px-3 py-2 rounded-2xl rounded-bl-md border text-xs"
             :class="activeToolCall.success === false
               ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400'
               : activeToolCall.success === true
@@ -449,17 +490,6 @@ const renderMarkdown = (text: string): string => {
               />
               <span v-else class="w-2.5 h-2.5 border border-current border-t-transparent rounded-full animate-spin shrink-0" />
               <span class="font-medium">{{ activeToolCall.summary || activeToolCall.label }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Loading indicator -->
-        <div v-if="isSending && !streamingContent && !activeToolCall" class="flex justify-start">
-          <div class="px-3 py-2 rounded-2xl rounded-bl-md bg-muted">
-            <div class="flex items-center gap-1.5">
-              <span class="w-1.5 h-1.5 bg-muted-foreground/70 rounded-full animate-bounce" style="animation-delay: 0ms" />
-              <span class="w-1.5 h-1.5 bg-muted-foreground/70 rounded-full animate-bounce" style="animation-delay: 150ms" />
-              <span class="w-1.5 h-1.5 bg-muted-foreground/70 rounded-full animate-bounce" style="animation-delay: 300ms" />
             </div>
           </div>
         </div>
@@ -510,5 +540,84 @@ const renderMarkdown = (text: string): string => {
 .ctx-sidebar-enter-from,
 .ctx-sidebar-leave-to {
   transform: translateX(100%);
+}
+
+/* ── Message list transitions ── */
+.msg-row {
+  /* Smooth content-driven height changes during streaming so the bubble
+     grows fluidly instead of snapping line-by-line. */
+  transition: max-height 0.2s ease-out;
+}
+.msg-enter-active {
+  transition: opacity 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.msg-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.msg-enter-from {
+  opacity: 0;
+  transform: translateY(8px) scale(0.98);
+}
+.msg-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+/* The streaming bubble itself gets a subtle pulse on its border so it's
+   visually distinct from a settled response. */
+.is-streaming {
+  box-shadow: inset 0 0 0 1px hsl(var(--primary) / 0.12);
+}
+
+/* Inline blinking caret at end of streamed text. */
+.caret {
+  display: inline-block;
+  width: 2px;
+  height: 0.95em;
+  margin-left: 2px;
+  vertical-align: -2px;
+  background: hsl(var(--primary) / 0.7);
+  border-radius: 1px;
+  animation: caret-blink 0.9s steps(1) infinite;
+}
+@keyframes caret-blink {
+  0%, 50% { opacity: 1; }
+  50.01%, 100% { opacity: 0; }
+}
+
+/* Typing dots placeholder shown while waiting for first chunk. */
+.typing-dots {
+  display: inline-flex;
+  gap: 4px;
+  padding: 2px 0;
+}
+.typing-dots span {
+  width: 5px;
+  height: 5px;
+  border-radius: 9999px;
+  background: hsl(var(--muted-foreground) / 0.55);
+  animation: typing-bounce 1.1s ease-in-out infinite;
+}
+.typing-dots span:nth-child(2) { animation-delay: 0.15s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes typing-bounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.55; }
+  40%           { transform: translateY(-3px); opacity: 1; }
+}
+
+/* Tool-call pill: ease the colour swap when it flips from running → success/error. */
+.tool-pill {
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .msg-enter-active,
+  .msg-leave-active,
+  .typing-dots span,
+  .caret {
+    animation: none !important;
+    transition: none !important;
+  }
 }
 </style>

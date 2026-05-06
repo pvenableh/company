@@ -13,12 +13,23 @@ interface ContextualMessage {
   role: 'user' | 'assistant';
   content: string;
   date_created: string;
+  /** Stable id for v-for keys so the same DOM node is reused across the
+   * streaming → persisted transition. */
+  key: string;
+  /** Server-side persisted message id (set after `done` event arrives or
+   * when the message comes from hydration). The bookmark feature uses this
+   * because `id` may still be a local temp value while streaming. */
+  serverId?: string;
+  /** True while the assistant message is actively receiving streamed chunks. */
+  streaming?: boolean;
+  feedback?: { rating?: 'positive' | 'negative'; correction?: string };
 }
 
 interface EntityChat {
   sessionId: string | null;
   messages: ContextualMessage[];
   hydrated: boolean; // whether we've attempted to load from server
+  savedMessageIds: Set<string>; // message ids that have already been saved as ai_notes
 }
 
 export interface ToolCallState {
@@ -37,6 +48,10 @@ const isLoadingHistory = ref(false);
 const streamingContent = ref('');
 const error = ref<string | null>(null);
 const activeToolCall = ref<ToolCallState | null>(null);
+// Bumped each time a mutation tool returns success — pages watch this to
+// know when to refetch their entity data.
+const mutationSignal = ref(0);
+const lastMutation = ref<{ tool: string; data?: Record<string, any> } | null>(null);
 let abortController: AbortController | null = null;
 
 const TOOL_LABELS: Record<string, string> = {
@@ -51,7 +66,7 @@ function getEntityKey(entityType: string, entityId: string): string {
 
 function getOrCreateChat(key: string): EntityChat {
   if (!entityChats.has(key)) {
-    entityChats.set(key, { sessionId: null, messages: [], hydrated: false });
+    entityChats.set(key, { sessionId: null, messages: [], hydrated: false, savedMessageIds: new Set() });
   }
   return entityChats.get(key)!;
 }
@@ -67,6 +82,11 @@ export function useContextualChat() {
       isLoadingHistory: ref(false),
       streamingContent: ref(''),
       activeToolCall: ref<ToolCallState | null>(null),
+      mutationSignal: ref(0),
+      lastMutation: ref<{ tool: string; data?: Record<string, any> } | null>(null),
+      savedMessageIds: computed(() => new Set<string>()),
+      markMessageSaved: (_id: string) => {},
+      unmarkMessageSaved: (_id: string) => {},
       error: ref<string | null>(null),
       setEntity: (_type: string, _id: string) => {},
       sendMessage: async (_content: string) => {},
@@ -93,6 +113,27 @@ export function useContextualChat() {
     return getOrCreateChat(activeEntityKey.value).messages.length > 0;
   });
 
+  const savedMessageIds = computed(() => {
+    if (!activeEntityKey.value) return new Set<string>();
+    return getOrCreateChat(activeEntityKey.value).savedMessageIds;
+  });
+
+  const markMessageSaved = (messageId: string) => {
+    if (!activeEntityKey.value) return;
+    const chat = getOrCreateChat(activeEntityKey.value);
+    // Recreate the Set so reactivity fires (Vue tracks Set membership but
+    // a plain `.add` on a Set held in a Map can miss in some setups).
+    chat.savedMessageIds = new Set(chat.savedMessageIds);
+    chat.savedMessageIds.add(messageId);
+  };
+
+  const unmarkMessageSaved = (messageId: string) => {
+    if (!activeEntityKey.value) return;
+    const chat = getOrCreateChat(activeEntityKey.value);
+    chat.savedMessageIds = new Set(chat.savedMessageIds);
+    chat.savedMessageIds.delete(messageId);
+  };
+
   /** Load the most recent session for this entity from the server. */
   const hydrateFromServer = async (entityType: string, entityId: string, chat: EntityChat) => {
     if (chat.hydrated) return; // already loaded or attempted
@@ -106,12 +147,20 @@ export function useContextualChat() {
 
       if (data?.session && data.messages?.length) {
         chat.sessionId = data.session.id;
-        chat.messages = data.messages.map((m: any) => ({
-          id: String(m.id),
-          role: m.role,
-          content: m.content,
-          date_created: m.date_created,
-        }));
+        chat.messages = data.messages.map((m: any) => {
+          const id = String(m.id);
+          return {
+            id,
+            serverId: id,
+            key: id,
+            role: m.role,
+            content: m.content,
+            date_created: m.date_created,
+          };
+        });
+        if (Array.isArray(data.savedMessageIds)) {
+          chat.savedMessageIds = new Set<string>(data.savedMessageIds.map((id: any) => String(id)));
+        }
       }
     } catch (e: any) {
       console.error('[ContextualChat] Failed to hydrate session:', e.message);
@@ -144,13 +193,26 @@ export function useContextualChat() {
     activeToolCall.value = null;
     error.value = null;
 
+    const stamp = Date.now();
     const userMsg: ContextualMessage = {
-      id: `temp-${Date.now()}`,
+      id: `user-${stamp}`,
+      key: `user-${stamp}`,
       role: 'user',
       content: content.trim(),
       date_created: new Date().toISOString(),
     };
-    chat.messages.push(userMsg);
+    // Pre-stage an empty assistant bubble so the streamed text grows in
+    // place inside the message list (instead of swapping a separate
+    // streaming preview node for the persisted message at the end).
+    const assistantMsg: ContextualMessage = {
+      id: `assistant-${stamp}`,
+      key: `assistant-${stamp}`,
+      role: 'assistant',
+      content: '',
+      date_created: new Date().toISOString(),
+      streaming: true,
+    };
+    chat.messages.push(userMsg, assistantMsg);
 
     try {
       abortController = new AbortController();
@@ -205,7 +267,8 @@ export function useContextualChat() {
           try {
             const data = JSON.parse(line.slice(6));
             if (data.type === 'chunk') {
-              streamingContent.value += data.content;
+              assistantMsg.content += data.content;
+              streamingContent.value = assistantMsg.content;
             } else if (data.type === 'tool_start') {
               activeToolCall.value = {
                 name: data.tool,
@@ -218,16 +281,24 @@ export function useContextualChat() {
                 summary: data.summary,
                 success: data.success,
               };
+              if (data.success) {
+                lastMutation.value = { tool: data.tool, data: data.data };
+                mutationSignal.value++;
+              }
             } else if (data.type === 'done') {
               if (data.sessionId) {
                 chat.sessionId = data.sessionId;
               }
-              chat.messages.push({
-                id: `assistant-${Date.now()}`,
-                role: 'assistant',
-                content: data.content,
-                date_created: new Date().toISOString(),
-              });
+              // Backfill final content (covers the tool-aware path where the
+              // server sends a single chunk + done) and flip streaming off.
+              if (data.content && !assistantMsg.content) {
+                assistantMsg.content = data.content;
+              }
+              if (data.assistantMessageId) {
+                assistantMsg.serverId = String(data.assistantMessageId);
+                assistantMsg.id = String(data.assistantMessageId);
+              }
+              assistantMsg.streaming = false;
               streamingContent.value = '';
               activeToolCall.value = null;
             } else if (data.type === 'error') {
@@ -243,9 +314,14 @@ export function useContextualChat() {
       if (e.name !== 'AbortError') {
         console.error('[ContextualChat] Stream error:', e);
         error.value = e.message || 'Failed to get AI response';
-        // Remove optimistic user message on error
-        const idx = chat.messages.indexOf(userMsg);
-        if (idx !== -1) chat.messages.splice(idx, 1);
+        // Roll back the optimistic user + (empty) assistant bubbles.
+        for (const m of [assistantMsg, userMsg]) {
+          const idx = chat.messages.indexOf(m);
+          if (idx !== -1) chat.messages.splice(idx, 1);
+        }
+      } else {
+        // Abort: keep what was streamed; just stop streaming state.
+        assistantMsg.streaming = false;
       }
     } finally {
       isSending.value = false;
@@ -253,6 +329,7 @@ export function useContextualChat() {
       streamingContent.value = '';
       activeToolCall.value = null;
       abortController = null;
+      assistantMsg.streaming = false;
     }
   };
 
@@ -267,6 +344,7 @@ export function useContextualChat() {
     chat.messages.length = 0;
     chat.sessionId = null;
     chat.hydrated = false;
+    chat.savedMessageIds = new Set();
     streamingContent.value = '';
     activeToolCall.value = null;
     error.value = null;
@@ -281,6 +359,11 @@ export function useContextualChat() {
     isLoadingHistory,
     streamingContent,
     activeToolCall,
+    mutationSignal,
+    lastMutation,
+    savedMessageIds,
+    markMessageSaved,
+    unmarkMessageSaved,
     error,
     setEntity,
     sendMessage,
