@@ -21,7 +21,6 @@ const subNavs: Partial<Record<WorkspaceContext, SubNavItem[]>> = {
     { label: 'Contracts', to: '/contracts', icon: 'lucide:file-signature' },
     { label: 'Clients', to: '/clients', icon: 'heroicons:building-storefront' },
     { label: 'Contacts', to: '/contacts', icon: 'heroicons:identification' },
-    { label: 'People', to: '/people', icon: 'heroicons:user-group' },
   ],
   financials: [
     { label: 'Invoices', to: '/invoices', icon: 'heroicons:document-text' },
@@ -31,7 +30,6 @@ const subNavs: Partial<Record<WorkspaceContext, SubNavItem[]>> = {
   ],
   engage: [
     { label: 'Marketing', to: '/marketing', icon: 'lucide:megaphone' },
-    { label: 'Marketing Feed', to: '/marketing-feed', icon: 'lucide:sparkles' },
     { label: 'Email', to: '/email', icon: 'lucide:mail' },
     { label: 'Social', to: '/social', icon: 'lucide:share-2' },
   ],

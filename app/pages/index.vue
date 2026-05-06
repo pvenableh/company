@@ -12,6 +12,7 @@ const { currentMode } = useLayoutMode();
 
 // ── Hats ──
 const { hats, activeHat, setHat } = useNavPreferences();
+const { showWidget } = useHatLayout();
 
 // ── Productivity Engine (existing) ──
 const { suggestions, metrics, isAnalyzing, greeting, subtitle, analyze } = useAIProductivityEngine();
@@ -280,7 +281,7 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 				</div>
 
 				<!-- Unified Gantt Timeline -->
-				<ClientOnly>
+				<ClientOnly v-if="showWidget('project-timeline')">
 					<div class="ios-card p-4 overflow-hidden">
 						<div class="flex items-center gap-2 mb-3">
 							<UIcon name="i-heroicons-chart-bar" class="w-5 h-5 text-primary" />
@@ -364,12 +365,12 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 						</div>
 
 						<!-- Quick Tasks Widget (full width under Priority Actions) -->
-						<CommandCenterQuickTasksWidget />
+						<CommandCenterQuickTasksWidget v-if="showWidget('quick-tasks')" />
 					</div>
 
 					<!-- Right Column: CRM Health + Earnest Score (1/3 width, stretch to match) -->
 					<div class="space-y-4 flex flex-col">
-						<div :class="healthBg" class="ios-card p-5 text-center flex-1">
+						<div v-if="showWidget('crm-health')" :class="healthBg" class="ios-card p-5 text-center flex-1">
 							<h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">CRM Health</h3>
 
 							<!-- Loading (snapshot) -->
@@ -479,15 +480,15 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 						/>
 
 						<!-- Marketing actions — compact (only when no social/email data) -->
-						<CommandCenterMarketingActionsWidget v-if="!marketingPulse.hasRichData.value" />
+						<CommandCenterMarketingActionsWidget v-if="showWidget('marketing-actions') && !marketingPulse.hasRichData.value" />
 					</div>
 				</div>
 
 				<!-- Marketing & Social Pulse — full width when we have social/email data -->
-				<CommandCenterMarketingPulseWidget v-if="marketingPulse.hasRichData.value" />
+				<CommandCenterMarketingPulseWidget v-if="showWidget('marketing-pulse') && marketingPulse.hasRichData.value" />
 
 				<!-- CRM Insights + Growth Opportunities -->
-				<div v-if="crmInsights.length > 0 || crmActions.length > 0" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+				<div v-if="showWidget('crm-insights') && (crmInsights.length > 0 || crmActions.length > 0)" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 					<!-- Insights -->
 					<div v-if="crmInsights.length > 0" class="ios-card p-5">
 						<div class="flex items-center gap-2 mb-4">
@@ -574,11 +575,11 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 				</div>
 
 				<!-- Goals Summary -->
-				<GoalsSummaryWidget />
+				<GoalsSummaryWidget v-if="showWidget('goals')" />
 
 	
 				<!-- Other Suggestions (lower priority) -->
-				<div v-if="otherSuggestions.length > 0" class="ios-card p-5">
+				<div v-if="showWidget('suggestions') && otherSuggestions.length > 0" class="ios-card p-5">
 					<div class="flex items-center justify-between mb-4">
 						<div class="flex items-center gap-2">
 							<UIcon name="i-heroicons-sparkles" class="w-5 h-5 text-primary" />
@@ -610,15 +611,15 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 				</div>
 
 				<!-- Bottom Section: Chat + CardDesk -->
-				<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-					<div class="h-[500px]">
+				<div v-if="showWidget('realtime-chat') || showWidget('card-desk')" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+					<div v-if="showWidget('realtime-chat')" class="h-[500px]">
 						<CommandCenterRealtimeChat />
 					</div>
-					<CommandCenterCardDeskPipeline />
+					<CommandCenterCardDeskPipeline v-if="showWidget('card-desk')" />
 				</div>
 
 				<!-- Financial Analysis (full width) -->
-				<CommandCenterFinancialQuarter />
+				<CommandCenterFinancialQuarter v-if="showWidget('financial-quarter')" />
 
 				</div><!-- /Commander tab -->
 

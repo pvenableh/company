@@ -15,6 +15,14 @@ const { logout } = useLogout()
 const { usageSummary } = useAITokens()
 const { isOrgAdminOrAbove } = useOrgRole()
 const { isDirectusAdmin } = useViewAsOrgAdmin()
+const { activeHat } = useNavPreferences()
+
+// Filter a nav section by the active hat. Default hat shows everything.
+const filterByHat = <T extends { to: string }>(items: T[]): T[] => {
+	if (activeHat.value.id === 'default') return items
+	const allowed = new Set(activeHat.value.routes)
+	return items.filter(i => allowed.has(i.to))
+}
 
 const showTokenMeter = computed(() => {
 	if (isDirectusAdmin.value) return true
@@ -74,7 +82,7 @@ interface NavItem {
 	icon: string
 }
 
-const workItems: NavItem[] = [
+const ALL_WORK_ITEMS: NavItem[] = [
 	{ name: 'Projects', to: '/projects', icon: 'lucide:gantt-chart' },
 	{ name: 'Tickets', to: '/tickets', icon: 'heroicons:queue-list' },
 	{ name: 'Tasks', to: '/tasks', icon: 'heroicons:clipboard-document-check' },
@@ -83,33 +91,37 @@ const workItems: NavItem[] = [
 	{ name: 'Goals', to: '/goals', icon: 'lucide:target' },
 ]
 
-const pipelineItems: NavItem[] = [
+const ALL_PIPELINE_ITEMS: NavItem[] = [
 	{ name: 'Leads', to: '/leads', icon: 'heroicons:funnel' },
 	{ name: 'Proposals', to: '/proposals', icon: 'heroicons:document-check' },
 	{ name: 'Contracts', to: '/contracts', icon: 'lucide:file-signature' },
 	{ name: 'Clients', to: '/clients', icon: 'heroicons:building-storefront' },
 	{ name: 'Contacts', to: '/contacts', icon: 'heroicons:identification' },
-	{ name: 'People', to: '/people', icon: 'heroicons:user-group' },
 ]
 
-const financialsItems: NavItem[] = [
+const ALL_FINANCIALS_ITEMS: NavItem[] = [
 	{ name: 'Invoices', to: '/invoices', icon: 'heroicons:document-text' },
 	{ name: 'Expenses', to: '/expenses', icon: 'lucide:receipt' },
 	{ name: 'Payouts', to: '/payouts', icon: 'lucide:banknote' },
 	{ name: 'Financials', to: '/financials', icon: 'heroicons:chart-bar' },
 ]
 
-const engageItems: NavItem[] = [
+const ALL_ENGAGE_ITEMS: NavItem[] = [
 	{ name: 'Marketing', to: '/marketing', icon: 'lucide:megaphone' },
-	{ name: 'Marketing Feed', to: '/marketing-feed', icon: 'lucide:sparkles' },
 	{ name: 'Email', to: '/email', icon: 'lucide:mail' },
 	{ name: 'Social', to: '/social', icon: 'lucide:share-2' },
 ]
 
-const teamItems: NavItem[] = [
+const ALL_TEAM_ITEMS: NavItem[] = [
 	{ name: 'Channels', to: '/channels', icon: 'heroicons:chat-bubble-left-right' },
 	{ name: 'Teams', to: '/organization/teams', icon: 'heroicons:users' },
 ]
+
+const workItems = computed(() => filterByHat(ALL_WORK_ITEMS))
+const pipelineItems = computed(() => filterByHat(ALL_PIPELINE_ITEMS))
+const financialsItems = computed(() => filterByHat(ALL_FINANCIALS_ITEMS))
+const engageItems = computed(() => filterByHat(ALL_ENGAGE_ITEMS))
+const teamItems = computed(() => filterByHat(ALL_TEAM_ITEMS))
 
 function isActiveItem(to: string): boolean {
 	return route.path === to || route.path.startsWith(to + '/')
@@ -271,6 +283,11 @@ function handleTopup() {
 				</div>
 			</div>
 		</nav>
+
+		<!-- Hat picker (between nav and footer) -->
+		<div class="px-3 py-2 border-t border-border/30 shrink-0">
+			<LayoutHatPicker :collapsed="sidebarCollapsed" />
+		</div>
 
 		<!-- Footer utilities -->
 		<div class="p-3 border-t border-border/30 space-y-0.5 shrink-0">

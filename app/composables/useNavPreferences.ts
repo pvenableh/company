@@ -28,14 +28,13 @@ const DEFAULT_LINKS: NavLink[] = [
 	// ── Core (sidebar top — no section label) ──
 	{ name: 'Command Center', type: ['header', 'toolbar', 'drawer'], to: '/', icon: 'i-heroicons-command-line', color: 'bg-gradient-to-br from-violet-500 to-purple-600', description: 'Productivity hub', section: 'primary' },
 	{ name: 'Projects', type: ['header', 'footer', 'toolbar', 'drawer'], to: '/projects', icon: 'i-heroicons-square-3-stack-3d', color: 'bg-purple-500', description: 'Track projects', section: 'primary', featureKey: 'projects' },
-	{ name: 'People', type: ['footer', 'toolbar', 'drawer'], to: '/people', icon: 'i-heroicons-user-group', color: 'bg-gradient-to-br from-orange-400 to-red-500', description: 'Contacts & clients', section: 'primary', featureKey: 'people' },
+	{ name: 'Contacts', type: ['footer', 'toolbar', 'drawer'], to: '/contacts', icon: 'i-heroicons-identification', color: 'bg-gradient-to-br from-orange-400 to-red-500', description: 'Contacts list & insights', section: 'primary', featureKey: 'people' },
 	{ name: 'Clients', type: ['header', 'footer', 'drawer'], to: '/clients', icon: 'i-heroicons-building-storefront', color: 'bg-gradient-to-br from-sky-500 to-blue-600', description: 'Client accounts', section: 'primary' },
 	{ name: 'Leads', type: ['header', 'footer', 'drawer'], to: '/leads', icon: 'i-heroicons-funnel', color: 'bg-gradient-to-br from-amber-500 to-orange-500', description: 'Lead pipeline', section: 'primary', featureKey: 'leads' },
 	{ name: 'Proposals', type: ['header', 'footer', 'drawer'], to: '/proposals', icon: 'i-heroicons-document-check', color: 'bg-gradient-to-br from-teal-500 to-emerald-500', description: 'Proposals & estimates', section: 'primary', featureKey: 'proposals' },
 	{ name: 'Contracts', type: ['header', 'footer', 'drawer'], to: '/contracts', icon: 'i-heroicons-document-arrow-down', color: 'bg-gradient-to-br from-sky-500 to-blue-600', description: 'Contracts & signing', section: 'secondary', featureKey: 'proposals' },
 	{ name: 'Invoices', type: ['header', 'footer', 'drawer'], to: '/invoices', icon: 'i-heroicons-document-text', color: 'bg-emerald-500', description: 'Billing & payments', section: 'primary', featureKey: 'invoices' },
-	{ name: 'Marketing', type: ['header', 'footer', 'toolbar', 'drawer'], to: '/marketing', icon: 'i-lucide-bar-chart-3', color: 'bg-gradient-to-br from-blue-500 to-cyan-500', description: 'Campaigns & insights', section: 'primary', group: 'engage', featureKey: 'email_campaigns' },
-	{ name: 'Marketing Feed', type: ['header', 'footer', 'drawer'], to: '/marketing-feed', icon: 'i-lucide-sparkles', color: 'bg-gradient-to-br from-blue-500 to-indigo-600', description: 'This week\'s marketing recommendations', section: 'secondary', group: 'engage', featureKey: 'email_campaigns' },
+	{ name: 'Marketing', type: ['header', 'footer', 'toolbar', 'drawer'], to: '/marketing', icon: 'i-lucide-bar-chart-3', color: 'bg-gradient-to-br from-blue-500 to-cyan-500', description: 'Campaigns, recommendations & insights', section: 'primary', group: 'engage', featureKey: 'email_campaigns' },
 	// ── More (sidebar bottom — subtle "More" divider) ──
 	{ name: 'Activity', type: ['header', 'footer', 'drawer'], to: '/activity', icon: 'i-heroicons-clock', color: 'bg-violet-500', description: 'Activity timeline', section: 'secondary' },
 	{ name: 'Channels', type: ['header', 'footer', 'drawer'], to: '/channels', icon: 'i-heroicons-chat-bubble-left-right', color: 'bg-cyan-500', description: 'Team messaging', section: 'secondary', featureKey: 'channels' },
@@ -83,53 +82,39 @@ export interface Hat {
 
 const HATS: Hat[] = [
 	{
-		id: 'everything',
+		id: 'default',
 		icon: 'i-fluent-emoji-flat-comet',
-		name: 'Everything',
+		name: 'Default',
 		description: 'Full workspace — all your apps',
 		routes: [...DEFAULT_VISIBLE_ROUTES],
 	},
 	{
-		id: 'creative',
-		icon: 'i-fluent-emoji-flat-artist-palette',
-		name: 'Creative',
-		description: 'Design, content & brand work',
-		routes: ['/', '/projects', '/marketing', '/social', '/files'],
+		id: 'project_manager',
+		icon: 'i-fluent-emoji-flat-clipboard',
+		name: 'Project Manager',
+		description: 'Projects, tickets, tasks & scheduling',
+		routes: ['/', '/projects', '/tickets', '/tasks', '/scheduler', '/channels', '/activity', '/contacts'],
 	},
 	{
-		id: 'finance',
+		id: 'accountant',
 		icon: 'i-fluent-emoji-flat-money-bag',
-		name: 'Finance',
-		description: 'Billing, reports & time tracking',
-		routes: ['/', '/invoices', '/financials', '/time-tracker', '/people'],
+		name: 'Accountant',
+		description: 'Invoices, contracts, expenses & reports',
+		routes: ['/', '/invoices', '/contracts', '/expenses', '/payouts', '/financials', '/time-tracker', '/contacts'],
 	},
 	{
-		id: 'manager',
-		icon: 'i-fluent-emoji-flat-necktie',
-		name: 'Manager',
-		description: 'Teams, tickets, tasks & scheduling',
-		routes: ['/', '/projects', '/clients', '/tickets', '/tasks', '/organization/teams', '/scheduler', '/channels', '/activity'],
-	},
-	{
-		id: 'marketing',
-		icon: 'i-fluent-emoji-flat-bullseye',
-		name: 'Marketing',
-		description: 'Campaigns, social & outreach',
-		routes: ['/', '/marketing', '/email', '/social', '/people', '/scheduler'],
-	},
-	{
-		id: 'sales',
+		id: 'salesman',
 		icon: 'i-fluent-emoji-flat-rocket',
-		name: 'Sales',
-		description: 'Leads, proposals, invoicing & meetings',
-		routes: ['/', '/leads', '/proposals', '/clients', '/people', '/invoices', '/scheduler', '/channels', '/email'],
+		name: 'Salesman',
+		description: 'Leads, proposals, CRM & outreach',
+		routes: ['/', '/leads', '/proposals', '/clients', '/contacts', '/contracts', '/scheduler', '/email'],
 	},
 	{
-		id: 'focus',
-		icon: 'i-fluent-emoji-flat-headphone',
-		name: 'Focus',
-		description: 'Deep work — minimal distractions',
-		routes: ['/', '/projects', '/tasks', '/channels'],
+		id: 'marketing_manager',
+		icon: 'i-fluent-emoji-flat-bullseye',
+		name: 'Marketing Manager',
+		description: 'Campaigns, social, email & insights',
+		routes: ['/', '/marketing', '/social', '/email', '/contacts', '/scheduler'],
 	},
 ];
 
@@ -144,7 +129,7 @@ interface NavPreferencesData {
 // Shared reactive state (singleton across components)
 const visible = ref<Set<string>>(new Set(DEFAULT_VISIBLE_ROUTES));
 const order = ref<string[]>(DEFAULT_LINKS.map((l) => l.to));
-const activeHatId = ref<string>('everything');
+const activeHatId = ref<string>('default');
 const isLoaded = ref(false);
 let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -244,6 +229,24 @@ export const useNavPreferences = () => {
 		save();
 	};
 
+	/**
+	 * Pick a sensible starting hat based on the user's org role.
+	 * Only applies if no hat has ever been chosen (no saved activeHat).
+	 */
+	const applySmartDefaultHat = () => {
+		if (import.meta.server) return;
+		// Bail if user already has a saved hat preference
+		const saved = user.value?.nav_preferences as NavPreferencesData | null;
+		if (saved?.activeHat) return;
+		if (localStorage.getItem(HAT_STORAGE_KEY)) return;
+		const role = getOrgRole();
+		const slug = role?.roleSlug?.value;
+		if (!slug) return;
+		// owner/admin → keep Default (full surface)
+		// manager → Project Manager preset is the closest fit
+		if (slug === 'manager') setHat('project_manager');
+	};
+
 	/** The currently active hat object. */
 	const activeHat = computed<Hat>(() =>
 		HATS.find(h => h.id === activeHatId.value) || HATS[0],
@@ -266,7 +269,7 @@ export const useNavPreferences = () => {
 	};
 
 	const resetToDefault = () => {
-		activeHatId.value = 'everything';
+		activeHatId.value = 'default';
 		visible.value = new Set(DEFAULT_VISIBLE_ROUTES);
 		order.value = DEFAULT_LINKS.map((l) => l.to);
 		save();
@@ -326,5 +329,6 @@ export const useNavPreferences = () => {
 		hats: HATS,
 		activeHat,
 		setHat,
+		applySmartDefaultHat,
 	};
 };

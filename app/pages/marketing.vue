@@ -23,13 +23,6 @@
 						{{ r.label }}
 					</button>
 				</div>
-				<NuxtLink
-					to="/marketing-feed"
-					class="hidden sm:inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium border border-border bg-card hover:bg-muted ios-press transition-colors"
-				>
-					<Icon name="lucide:layout-grid" class="w-3 h-3" />
-					Recommendation Feed
-				</NuxtLink>
 				<button
 					class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium border border-border bg-card hover:bg-muted ios-press transition-colors"
 					@click="sidebarOpen = true"
@@ -39,6 +32,9 @@
 				</button>
 			</div>
 		</div>
+
+		<!-- Recommendation feed — folded in from the deprecated /marketing-feed route -->
+		<MarketingFeedSection />
 
 		<!-- Hero KPI strip — horizontal-scroll on mobile with snap -->
 		<div
@@ -206,9 +202,8 @@
 			</div>
 		</div>
 
-		<!-- Active Campaigns + Recommendations preview, side by side -->
-		<div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
-			<!-- Active Campaigns -->
+		<!-- Active Campaigns — recommendations now live in the feed at the top of the page -->
+		<div class="mb-8">
 			<div class="ios-card p-5">
 				<div class="flex items-center justify-between mb-4">
 					<div class="flex items-center gap-2">
@@ -278,75 +273,6 @@
 				</div>
 			</div>
 
-			<!-- Recommendations preview -->
-			<div class="ios-card p-5">
-				<div class="flex items-center justify-between mb-4">
-					<div class="flex items-center gap-2">
-						<div class="w-8 h-8 rounded-xl bg-fuchsia-500/10 flex items-center justify-center">
-							<Icon name="lucide:sparkles" class="w-4 h-4 text-fuchsia-500" />
-						</div>
-						<h3 class="text-sm font-semibold text-foreground">Recommendations</h3>
-					</div>
-					<NuxtLink
-						to="/marketing-feed"
-						class="text-[10px] uppercase tracking-wider font-medium text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
-					>
-						Feed
-						<Icon name="lucide:chevron-right" class="w-3 h-3" />
-					</NuxtLink>
-				</div>
-
-				<div v-if="loadingRecs" class="space-y-2 animate-pulse">
-					<div v-for="i in 3" :key="i" class="rounded-xl border bg-muted/10 p-3 h-16" />
-				</div>
-
-				<div v-else-if="topRecs.length === 0" class="py-8 text-center">
-					<Icon name="lucide:check-circle-2" class="w-8 h-8 text-emerald-500/40 mx-auto mb-2" />
-					<p class="text-xs text-foreground font-medium mb-1">Nothing pending</p>
-					<p class="text-[10px] text-muted-foreground">
-						As your CRM fills out we'll surface things to do here.
-					</p>
-				</div>
-
-				<div v-else class="space-y-2">
-					<div
-						v-for="rec in topRecs"
-						:key="rec.id"
-						class="rounded-xl border border-border/40 bg-card/40 p-3 hover:bg-muted/30 transition-colors group"
-					>
-						<div class="flex items-start gap-2 mb-2">
-							<span
-								class="mt-1 w-1.5 h-1.5 rounded-full shrink-0"
-								:class="recUrgencyDot(rec.urgency)"
-							/>
-							<div class="flex-1 min-w-0">
-								<p class="text-sm text-foreground font-medium leading-snug">
-									{{ rec.headline }}
-								</p>
-								<p v-if="rec.why_now" class="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">
-									{{ rec.why_now }}
-								</p>
-							</div>
-						</div>
-						<div class="flex items-center gap-1.5">
-							<NuxtLink
-								to="/marketing-feed"
-								class="rounded-full px-2.5 py-1 text-[10px] font-medium bg-foreground text-background hover:bg-foreground/90 transition-colors"
-							>
-								Open
-							</NuxtLink>
-							<button
-								class="rounded-full px-2.5 py-1 text-[10px] font-medium border border-border bg-card hover:bg-muted transition-colors disabled:opacity-50"
-								:disabled="dismissingId === rec.id"
-								@click="dismissRec(rec.id)"
-							>
-								<span v-if="dismissingId === rec.id">…</span>
-								<span v-else>Skip</span>
-							</button>
-						</div>
-					</div>
-				</div>
-			</div>
 		</div>
 
 		<!-- AI Tools — collapsed/secondary -->
@@ -645,20 +571,10 @@ const actionItems = computed(() => {
 	const items: any[] = [];
 	const m = health.value?.metrics;
 
-	// 1. Pending recommendations
-	if (recommendations.value.length > 0) {
-		items.push({
-			label: 'Recommendations',
-			message: `${recommendations.value.length} pending in the feed`,
-			icon: 'lucide:sparkles',
-			href: '/marketing-feed',
-			toneClass: 'border-fuchsia-500/20',
-			iconBgClass: 'bg-fuchsia-500/10',
-			iconColorClass: 'text-fuchsia-500',
-		});
-	}
+	// (Pending recommendations are surfaced in the feed at the top of the page,
+	// so they don't need a duplicate entry in the action bar.)
 
-	// 2. Failed social posts
+	// Failed social posts
 	if (failedPosts.value.length > 0 || (m?.failedPosts ?? 0) > 0) {
 		const count = Math.max(failedPosts.value.length, m?.failedPosts ?? 0);
 		items.push({

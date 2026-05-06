@@ -29,7 +29,7 @@
 		<div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,2fr)] gap-5 lg:gap-6 lg:items-stretch">
 			<!-- LEFT: Recommendation -->
 			<NuxtLink
-				to="/marketing-feed"
+				to="/marketing"
 				class="group rounded-xl bg-muted/20 hover:bg-muted/40 transition-colors p-4 block"
 			>
 				<div v-if="pulse.loading.value && !pulse.topRec.value" class="space-y-2">

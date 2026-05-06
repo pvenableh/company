@@ -7,8 +7,18 @@ definePageMeta({ middleware: ['auth'] });
 useHead({ title: 'Contacts | Earnest' });
 
 const router = useRouter();
+const route = useRoute();
 const { getContacts, deleteContact: doDelete, unsubscribeContact: doUnsubscribe } = useContacts();
 const { getLists } = useMailingLists();
+
+type ViewKey = 'list' | 'insights';
+
+const initialView: ViewKey = route.query.view === 'insights' ? 'insights' : 'list';
+const view = ref<ViewKey>(initialView);
+
+watch(view, (next) => {
+  router.replace({ query: { ...route.query, view: next === 'list' ? undefined : next } });
+});
 
 const contacts = ref<Contact[]>([]);
 const total = ref(0);
@@ -110,66 +120,92 @@ onMounted(async () => {
       </template>
     </LayoutPageHeader>
 
-    <!-- Category Tabs -->
-    <UTabs
-      :model-value="filterCategory || 'all'"
-      :items="categoryItems"
-      class="mb-3 w-fit"
-      @update:model-value="(v) => selectCategory(v === 'all' ? '' : (v as Contact['category']))"
-    />
+    <!-- View toggle: List | Insights -->
+    <div class="mb-4 flex items-center gap-1 rounded-full border border-border bg-card p-0.5 w-fit">
+      <button
+        type="button"
+        class="rounded-full px-3 py-1 text-xs font-medium transition-colors"
+        :class="view === 'list' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'"
+        @click="view = 'list'"
+      >
+        <Icon name="lucide:list" class="w-3.5 h-3.5 inline -mt-0.5 mr-1" />
+        List
+      </button>
+      <button
+        type="button"
+        class="rounded-full px-3 py-1 text-xs font-medium transition-colors"
+        :class="view === 'insights' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'"
+        @click="view = 'insights'"
+      >
+        <Icon name="lucide:bar-chart-3" class="w-3.5 h-3.5 inline -mt-0.5 mr-1" />
+        Insights
+      </button>
+    </div>
 
-    <!-- Filters -->
-    <div class="flex gap-3 mb-4 flex-wrap">
-      <input
-        v-model="search"
-        type="search"
-        placeholder="Search name, email, company..."
-        class="flex-1 min-w-48 rounded-md border bg-background px-3 py-2 text-sm"
-        @input="debouncedFetch"
+    <template v-if="view === 'list'">
+      <!-- Category Tabs -->
+      <UTabs
+        :model-value="filterCategory || 'all'"
+        :items="categoryItems"
+        class="mb-3 w-fit"
+        @update:model-value="(v) => selectCategory(v === 'all' ? '' : (v as Contact['category']))"
       />
-      <select
-        v-model="filterIndustry"
-        @change="page = 1; fetchData()"
-        class="rounded-md border bg-background px-3 py-2 text-sm w-40"
-      >
-        <option value="">All Industries</option>
-        <option v-for="ind in industries" :key="ind" :value="ind">{{ ind }}</option>
-      </select>
-      <select
-        v-model="filterStatus"
-        @change="page = 1; fetchData()"
-        class="rounded-md border bg-background px-3 py-2 text-sm w-36"
-      >
-        <option value="">All Statuses</option>
-        <option value="active">Active</option>
-        <option value="unsubscribed">Unsubscribed</option>
-        <option value="bounced">Bounced</option>
-      </select>
-    </div>
 
-    <ContactsContactTable
-      :contacts="contacts"
-      :loading="loading"
-      @edit="editContact"
-      @unsubscribe="handleUnsubscribe"
-      @delete="handleDelete"
-    />
-
-    <!-- Pagination -->
-    <div class="flex justify-between items-center mt-4">
-      <p class="text-sm text-muted-foreground">
-        Showing {{ contacts.length }} of {{ total }}
-      </p>
-      <div class="flex gap-2">
-        <Button variant="outline" size="sm" :disabled="page === 1" @click="page--; fetchData()">
-          <Icon name="lucide:chevron-left" class="w-4 h-4" />
-        </Button>
-        <span class="text-sm px-3 py-1">{{ page }}</span>
-        <Button variant="outline" size="sm" :disabled="!hasMore" @click="page++; fetchData()">
-          <Icon name="lucide:chevron-right" class="w-4 h-4" />
-        </Button>
+      <!-- Filters -->
+      <div class="flex gap-3 mb-4 flex-wrap">
+        <input
+          v-model="search"
+          type="search"
+          placeholder="Search name, email, company..."
+          class="flex-1 min-w-48 rounded-md border bg-background px-3 py-2 text-sm"
+          @input="debouncedFetch"
+        />
+        <select
+          v-model="filterIndustry"
+          @change="page = 1; fetchData()"
+          class="rounded-md border bg-background px-3 py-2 text-sm w-40"
+        >
+          <option value="">All Industries</option>
+          <option v-for="ind in industries" :key="ind" :value="ind">{{ ind }}</option>
+        </select>
+        <select
+          v-model="filterStatus"
+          @change="page = 1; fetchData()"
+          class="rounded-md border bg-background px-3 py-2 text-sm w-36"
+        >
+          <option value="">All Statuses</option>
+          <option value="active">Active</option>
+          <option value="unsubscribed">Unsubscribed</option>
+          <option value="bounced">Bounced</option>
+        </select>
       </div>
-    </div>
+
+      <ContactsContactTable
+        :contacts="contacts"
+        :loading="loading"
+        @edit="editContact"
+        @unsubscribe="handleUnsubscribe"
+        @delete="handleDelete"
+      />
+
+      <!-- Pagination -->
+      <div class="flex justify-between items-center mt-4">
+        <p class="text-sm text-muted-foreground">
+          Showing {{ contacts.length }} of {{ total }}
+        </p>
+        <div class="flex gap-2">
+          <Button variant="outline" size="sm" :disabled="page === 1" @click="page--; fetchData()">
+            <Icon name="lucide:chevron-left" class="w-4 h-4" />
+          </Button>
+          <span class="text-sm px-3 py-1">{{ page }}</span>
+          <Button variant="outline" size="sm" :disabled="!hasMore" @click="page++; fetchData()">
+            <Icon name="lucide:chevron-right" class="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+    </template>
+
+    <ContactsInsightsView v-else />
 
     <!-- Create Modal -->
     <ContactsFormModal v-model="showCreateModal" @created="onContactCreated" />

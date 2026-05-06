@@ -524,6 +524,10 @@ const features = [
 		desc: 'Your command center. Scans tickets, projects, tasks, invoices, channels, social, deals, and goals — then surfaces prioritized actions, urgent items, and intelligent suggestions. No AI tokens needed — pure algorithmic intelligence that loads instantly every time you open Earnest.',
 	},
 	{
+		name: 'Workspace Hats',
+		desc: 'Switch the whole app to match what you\'re actually doing. Pick a hat — Project Manager, Accountant, Salesman, or Marketing Manager — and the sidebar, command palette, and dashboard refocus on the tools that role lives in. Default mode shows everything. One click, no setup, fully reversible.',
+	},
+	{
 		name: 'CRM Intelligence',
 		desc: 'AI reads across your entire business — contacts, clients, projects, tickets, invoices, deals, and goals — then generates health scores, pipeline forecasts, growth plans, and contact strategies tailored to your brand positioning and objectives.',
 	},

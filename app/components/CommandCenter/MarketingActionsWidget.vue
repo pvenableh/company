@@ -1,6 +1,6 @@
 <template>
 	<NuxtLink
-		to="/marketing-feed"
+		to="/marketing"
 		class="ios-card p-5 block group"
 	>
 		<!-- Header -->

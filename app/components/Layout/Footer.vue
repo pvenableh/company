@@ -139,7 +139,6 @@ const pipelineLinks = [
 	{ to: '/contracts', label: 'Contracts' },
 	{ to: '/clients', label: 'Clients' },
 	{ to: '/contacts', label: 'Contacts' },
-	{ to: '/people', label: 'People' },
 ];
 
 const financialsLinks = [
@@ -151,7 +150,6 @@ const financialsLinks = [
 
 const engageLinks = [
 	{ to: '/marketing', label: 'Marketing' },
-	{ to: '/marketing-feed', label: 'Marketing Feed' },
 	{ to: '/email', label: 'Email' },
 	{ to: '/social', label: 'Social' },
 ];

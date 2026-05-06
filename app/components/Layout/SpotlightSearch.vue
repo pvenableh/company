@@ -22,23 +22,31 @@
 
 					<!-- Results -->
 					<div v-if="results.length" class="spotlight-results">
-						<button
-							v-for="(link, i) in results"
-							:key="link.to"
-							class="spotlight-result"
-							:class="{ 'spotlight-result--active': i === highlightIndex }"
-							@click="navigate(link)"
-							@mouseenter="highlightIndex = i"
-						>
-							<UIcon
-								:name="link.icon"
-								class="w-[18px] h-[18px] flex-shrink-0 text-muted-foreground"
-							/>
-							<div class="flex-1 min-w-0">
-								<div class="text-sm font-medium text-foreground">{{ link.name }}</div>
-								<div class="text-xs text-muted-foreground truncate">{{ link.description }}</div>
+						<template v-for="(link, i) in results" :key="link.to">
+							<!-- Section divider before the first "other" link -->
+							<div
+								v-if="otherStartIndex !== -1 && i === otherStartIndex"
+								class="spotlight-section"
+							>
+								<span>Other apps</span>
+								<span class="text-muted-foreground/50">{{ activeHat.name }} hides these</span>
 							</div>
-						</button>
+							<button
+								class="spotlight-result"
+								:class="{ 'spotlight-result--active': i === highlightIndex }"
+								@click="navigate(link)"
+								@mouseenter="highlightIndex = i"
+							>
+								<UIcon
+									:name="link.icon"
+									class="w-[18px] h-[18px] flex-shrink-0 text-muted-foreground"
+								/>
+								<div class="flex-1 min-w-0">
+									<div class="text-sm font-medium text-foreground">{{ link.name }}</div>
+									<div class="text-xs text-muted-foreground truncate">{{ link.description }}</div>
+								</div>
+							</button>
+						</template>
 					</div>
 
 					<!-- Empty State -->
@@ -61,21 +69,34 @@ const props = defineProps<{ open: boolean }>();
 const emit = defineEmits<{ (e: 'close'): void }>();
 
 const router = useRouter();
-const { defaultLinks } = useNavPreferences();
+const { defaultLinks, visibleLinks, activeHat } = useNavPreferences();
 
 const query = ref('');
 const highlightIndex = ref(0);
 const inputRef = ref<HTMLInputElement | null>(null);
 
+// Hat-aware ordering: visible-in-current-hat first, hidden-by-hat after
+const orderedLinks = computed(() => {
+	const visibleSet = new Set(visibleLinks.value.map(l => l.to));
+	const inHat = defaultLinks.filter(l => l.to !== '/' && visibleSet.has(l.to));
+	const others = defaultLinks.filter(l => l.to !== '/' && !visibleSet.has(l.to));
+	return { inHat, others };
+});
+
 const results = computed(() => {
-	if (!query.value.trim()) return defaultLinks.filter(l => l.to !== '/');
-	const q = query.value.toLowerCase();
-	return defaultLinks.filter(l =>
-		l.to !== '/' && (
-			l.name.toLowerCase().includes(q) ||
-			l.description.toLowerCase().includes(q)
-		),
-	);
+	const { inHat, others } = orderedLinks.value;
+	const q = query.value.trim().toLowerCase();
+	const matches = (l: { name: string; description: string }) =>
+		!q || l.name.toLowerCase().includes(q) || l.description.toLowerCase().includes(q);
+	return [...inHat.filter(matches), ...others.filter(matches)];
+});
+
+// Index where "Other apps" starts (-1 = no divider)
+const otherStartIndex = computed(() => {
+	const visibleSet = new Set(visibleLinks.value.map(l => l.to));
+	const idx = results.value.findIndex(l => !visibleSet.has(l.to));
+	// Only render the divider if there's at least one in-hat result above it
+	return idx > 0 ? idx : -1;
 });
 
 watch(() => query.value, () => {
@@ -176,6 +197,18 @@ const moveUp = () => {
 	max-height: 320px;
 	overflow-y: auto;
 	padding: 6px;
+}
+
+.spotlight-section {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 10px 10px 4px;
+	font-size: 10px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: hsl(var(--muted-foreground));
 }
 
 .spotlight-result {

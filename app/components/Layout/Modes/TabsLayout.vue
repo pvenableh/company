@@ -30,7 +30,7 @@ const tabs = [
     label: 'Pipeline',
     icon: 'heroicons:funnel',
     to: '/leads',
-    routes: ['/leads', '/proposals', '/contracts', '/clients', '/contacts', '/people', '/channels', '/organization/teams'],
+    routes: ['/leads', '/proposals', '/contracts', '/clients', '/contacts', '/channels', '/organization/teams'],
   },
   {
     id: 'financials',
@@ -44,7 +44,7 @@ const tabs = [
     label: 'Engage',
     icon: 'lucide:bar-chart-3',
     to: '/marketing',
-    routes: ['/email', '/social', '/marketing', '/marketing-feed', '/marketing-timeline'],
+    routes: ['/email', '/social', '/marketing', '/marketing-timeline'],
   },
   {
     id: 'ai',

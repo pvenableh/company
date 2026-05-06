@@ -257,7 +257,7 @@ watch(() => totalCount.value, scrollToNow);
 						Scheduled ({{ scheduledCount }})
 					</span>
 					<NuxtLink
-						to="/marketing-feed"
+						to="/marketing"
 						class="ml-3 text-xs font-medium text-primary hover:underline"
 					>
 						← Back to feed
@@ -276,7 +276,7 @@ watch(() => totalCount.value, scrollToNow);
 				<p>Nothing scheduled yet.</p>
 				<p class="text-xs mt-1">
 					Schedule a campaign from the
-					<NuxtLink to="/marketing-feed" class="text-primary hover:underline">marketing feed</NuxtLink>
+					<NuxtLink to="/marketing" class="text-primary hover:underline">marketing feed</NuxtLink>
 					and it will appear here.
 				</p>
 			</div>

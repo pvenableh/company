@@ -30,7 +30,7 @@ const CONTEXT_MAP: ContextMapping[] = [
 	},
 	{
 		context: 'pipeline',
-		routes: ['/leads', '/proposals', '/contracts', '/clients', '/contacts', '/people'],
+		routes: ['/leads', '/proposals', '/contracts', '/clients', '/contacts'],
 	},
 	{
 		context: 'financials',
@@ -39,9 +39,9 @@ const CONTEXT_MAP: ContextMapping[] = [
 	{
 		context: 'engage',
 		// Listed explicitly (not relying on `/marketing` startsWith) so
-		// `/marketing-feed` and `/marketing-timeline` don't depend on a
-		// loose prefix match that misbehaves with hyphenated siblings.
-		routes: ['/email', '/social', '/marketing', '/marketing-feed', '/marketing-timeline'],
+		// `/marketing-timeline` doesn't depend on a loose prefix match
+		// that misbehaves with hyphenated siblings.
+		routes: ['/email', '/social', '/marketing', '/marketing-timeline'],
 	},
 	{
 		context: 'team',
