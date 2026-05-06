@@ -31,6 +31,7 @@ const subNavs: Partial<Record<WorkspaceContext, SubNavItem[]>> = {
   ],
   engage: [
     { label: 'Marketing', to: '/marketing', icon: 'lucide:megaphone' },
+    { label: 'Marketing Feed', to: '/marketing-feed', icon: 'lucide:sparkles' },
     { label: 'Email', to: '/email', icon: 'lucide:mail' },
     { label: 'Social', to: '/social', icon: 'lucide:share-2' },
   ],
@@ -42,10 +43,22 @@ const subNavs: Partial<Record<WorkspaceContext, SubNavItem[]>> = {
 
 const items = computed<SubNavItem[]>(() => subNavs[currentContext.value] ?? [])
 
-function isActive(item: SubNavItem): boolean {
+// Most-specific match wins so a child pill (e.g. /marketing-feed) takes
+// precedence over the parent (/marketing) when both technically match.
+const activeItem = computed<SubNavItem | null>(() => {
   const path = route.path
-  if (path === item.to) return true
-  return path.startsWith(`${item.to}/`)
+  let best: SubNavItem | null = null
+  for (const item of items.value) {
+    const exact = path === item.to
+    const nested = path.startsWith(`${item.to}/`)
+    if (!exact && !nested) continue
+    if (!best || item.to.length > best.to.length) best = item
+  }
+  return best
+})
+
+function isActive(item: SubNavItem): boolean {
+  return activeItem.value === item
 }
 </script>
 

@@ -12,7 +12,7 @@
 			</div>
 
 			<!-- Top section: Brand + Nav -->
-			<div class="grid grid-cols-2 lg:grid-cols-6 gap-8 mb-10 text-center lg:text-left">
+			<div class="grid grid-cols-2 lg:grid-cols-7 gap-8 mb-10 text-center lg:text-left">
 				<!-- Brand: only renders inside the grid on lg+ -->
 				<div class="hidden lg:block">
 					<nuxt-link to="/" class="group">
@@ -53,6 +53,14 @@
 						<span class="text-[10px] font-semibold uppercase tracking-wider text-foreground">Engage</span>
 						<div class="flex flex-col gap-1.5">
 							<nuxt-link v-for="link in engageLinks" :key="link.to" :to="link.to" class="text-xs text-muted-foreground hover:text-foreground transition-colors">
+								{{ link.label }}
+							</nuxt-link>
+						</div>
+					</div>
+					<div class="space-y-2.5">
+						<span class="text-[10px] font-semibold uppercase tracking-wider text-foreground">Team</span>
+						<div class="flex flex-col gap-1.5">
+							<nuxt-link v-for="link in teamLinks" :key="link.to" :to="link.to" class="text-xs text-muted-foreground hover:text-foreground transition-colors">
 								{{ link.label }}
 							</nuxt-link>
 						</div>
@@ -112,11 +120,17 @@
 const { user: sessionUser, loggedIn } = useUserSession();
 const isLoggedIn = computed(() => loggedIn.value && sessionUser.value);
 
+// Source of truth for groupings: mirrors `useContextualHat` contexts
+// (work / pipeline / financials / engage / team) so footer ↔ pill nav
+// ↔ icon-rail sidenav (`SpacesSidebar`) all agree on which item lives
+// in which section.
 const workLinks = [
 	{ to: '/projects', label: 'Projects' },
 	{ to: '/tickets', label: 'Tickets' },
 	{ to: '/tasks', label: 'Tasks' },
 	{ to: '/scheduler', label: 'Scheduler' },
+	{ to: '/files', label: 'Files' },
+	{ to: '/goals', label: 'Goals' },
 ];
 
 const pipelineLinks = [
@@ -125,6 +139,7 @@ const pipelineLinks = [
 	{ to: '/contracts', label: 'Contracts' },
 	{ to: '/clients', label: 'Clients' },
 	{ to: '/contacts', label: 'Contacts' },
+	{ to: '/people', label: 'People' },
 ];
 
 const financialsLinks = [
@@ -135,10 +150,15 @@ const financialsLinks = [
 ];
 
 const engageLinks = [
-	{ to: '/marketing-feed', label: 'Marketing Feed' },
 	{ to: '/marketing', label: 'Marketing' },
+	{ to: '/marketing-feed', label: 'Marketing Feed' },
 	{ to: '/email', label: 'Email' },
 	{ to: '/social', label: 'Social' },
+];
+
+const teamLinks = [
+	{ to: '/channels', label: 'Channels' },
+	{ to: '/organization/teams', label: 'Teams' },
 ];
 
 const accountLinks = [

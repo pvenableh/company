@@ -35,6 +35,7 @@ const DEFAULT_LINKS: NavLink[] = [
 	{ name: 'Contracts', type: ['header', 'footer', 'drawer'], to: '/contracts', icon: 'i-heroicons-document-arrow-down', color: 'bg-gradient-to-br from-sky-500 to-blue-600', description: 'Contracts & signing', section: 'secondary', featureKey: 'proposals' },
 	{ name: 'Invoices', type: ['header', 'footer', 'drawer'], to: '/invoices', icon: 'i-heroicons-document-text', color: 'bg-emerald-500', description: 'Billing & payments', section: 'primary', featureKey: 'invoices' },
 	{ name: 'Marketing', type: ['header', 'footer', 'toolbar', 'drawer'], to: '/marketing', icon: 'i-lucide-bar-chart-3', color: 'bg-gradient-to-br from-blue-500 to-cyan-500', description: 'Campaigns & insights', section: 'primary', group: 'engage', featureKey: 'email_campaigns' },
+	{ name: 'Marketing Feed', type: ['header', 'footer', 'drawer'], to: '/marketing-feed', icon: 'i-lucide-sparkles', color: 'bg-gradient-to-br from-blue-500 to-indigo-600', description: 'This week\'s marketing recommendations', section: 'secondary', group: 'engage', featureKey: 'email_campaigns' },
 	// ── More (sidebar bottom — subtle "More" divider) ──
 	{ name: 'Activity', type: ['header', 'footer', 'drawer'], to: '/activity', icon: 'i-heroicons-clock', color: 'bg-violet-500', description: 'Activity timeline', section: 'secondary' },
 	{ name: 'Channels', type: ['header', 'footer', 'drawer'], to: '/channels', icon: 'i-heroicons-chat-bubble-left-right', color: 'bg-cyan-500', description: 'Team messaging', section: 'secondary', featureKey: 'channels' },
@@ -47,6 +48,8 @@ const DEFAULT_LINKS: NavLink[] = [
 	{ name: 'Goals', type: ['drawer'], to: '/goals', icon: 'i-heroicons-flag', color: 'bg-amber-500', description: 'Track goals', section: 'secondary' },
 	{ name: 'Email', type: ['header', 'footer', 'drawer'], to: '/email', icon: 'i-heroicons-envelope', color: 'bg-rose-500', description: 'Email campaigns', section: 'secondary', group: 'engage', featureKey: 'email_campaigns' },
 	{ name: 'Social', type: ['header', 'footer', 'drawer'], to: '/social', icon: 'i-heroicons-share', color: 'bg-pink-500', description: 'Social media', section: 'secondary', group: 'engage', featureKey: 'email_campaigns' },
+	{ name: 'Expenses', type: ['header', 'footer', 'drawer'], to: '/expenses', icon: 'i-lucide-receipt', color: 'bg-orange-500', description: 'Track expenses', section: 'secondary', featureKey: 'invoices' },
+	{ name: 'Payouts', type: ['header', 'footer', 'drawer'], to: '/payouts', icon: 'i-lucide-banknote', color: 'bg-teal-600', description: 'Stripe payouts & ledger', section: 'secondary', featureKey: 'invoices' },
 	{ name: 'Financials', type: ['footer', 'drawer'], to: '/financials', icon: 'i-heroicons-chart-bar', color: 'bg-green-600', description: 'Financial reports', section: 'secondary', featureKey: 'invoices' },
 	{ name: 'Time Tracker', type: ['header', 'footer', 'drawer'], to: '/time-tracker', icon: 'i-heroicons-clock', color: 'bg-lime-600', description: 'Track time', section: 'secondary' },
 	{ name: 'Phone', type: ['drawer'], to: '/phone-settings', icon: 'i-heroicons-phone', color: 'bg-teal-500', description: 'Phone system', section: 'secondary' },

@@ -44,7 +44,7 @@ const tabs = [
     label: 'Engage',
     icon: 'lucide:bar-chart-3',
     to: '/marketing',
-    routes: ['/email', '/social', '/marketing'],
+    routes: ['/email', '/social', '/marketing', '/marketing-feed', '/marketing-timeline'],
   },
   {
     id: 'ai',

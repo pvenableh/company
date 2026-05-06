@@ -40,13 +40,17 @@ watch(() => route.path, () => {
 })
 
 // ── Collapsible space sections ──
+// Section keys + names mirror the pill-nav contexts (`useContextualHat`)
+// so the icon-rail sidebar, the per-page pill nav, and the footer all
+// agree on which item belongs to which group.
 const SPACE_STORAGE_KEY = 'earnest-spaces-collapsed'
 
 const spacesCollapsed = ref<Record<string, boolean>>({
 	work: false,
-	relationships: false,
-	business: false,
+	pipeline: false,
+	financials: false,
 	engage: false,
+	team: false,
 })
 
 if (import.meta.client) {
@@ -76,27 +80,35 @@ const workItems: NavItem[] = [
 	{ name: 'Tasks', to: '/tasks', icon: 'heroicons:clipboard-document-check' },
 	{ name: 'Scheduler', to: '/scheduler', icon: 'heroicons:calendar-date-range' },
 	{ name: 'Files', to: '/files', icon: 'heroicons:folder-open' },
+	{ name: 'Goals', to: '/goals', icon: 'lucide:target' },
 ]
 
-const relationshipItems: NavItem[] = [
-	{ name: 'People', to: '/people', icon: 'heroicons:user-group' },
-	{ name: 'Clients', to: '/clients', icon: 'heroicons:building-storefront' },
+const pipelineItems: NavItem[] = [
 	{ name: 'Leads', to: '/leads', icon: 'heroicons:funnel' },
-	{ name: 'Channels', to: '/channels', icon: 'heroicons:chat-bubble-left-right' },
-	{ name: 'Teams', to: '/organization/teams', icon: 'heroicons:users' },
-]
-
-const businessItems: NavItem[] = [
-	{ name: 'Invoices', to: '/invoices', icon: 'heroicons:document-text' },
 	{ name: 'Proposals', to: '/proposals', icon: 'heroicons:document-check' },
 	{ name: 'Contracts', to: '/contracts', icon: 'lucide:file-signature' },
+	{ name: 'Clients', to: '/clients', icon: 'heroicons:building-storefront' },
+	{ name: 'Contacts', to: '/contacts', icon: 'heroicons:identification' },
+	{ name: 'People', to: '/people', icon: 'heroicons:user-group' },
+]
+
+const financialsItems: NavItem[] = [
+	{ name: 'Invoices', to: '/invoices', icon: 'heroicons:document-text' },
+	{ name: 'Expenses', to: '/expenses', icon: 'lucide:receipt' },
+	{ name: 'Payouts', to: '/payouts', icon: 'lucide:banknote' },
 	{ name: 'Financials', to: '/financials', icon: 'heroicons:chart-bar' },
 ]
 
 const engageItems: NavItem[] = [
-	{ name: 'Marketing', to: '/marketing', icon: 'lucide:bar-chart-3' },
-	{ name: 'Email', to: '/email', icon: 'heroicons:envelope' },
-	{ name: 'Social', to: '/social', icon: 'heroicons:share' },
+	{ name: 'Marketing', to: '/marketing', icon: 'lucide:megaphone' },
+	{ name: 'Marketing Feed', to: '/marketing-feed', icon: 'lucide:sparkles' },
+	{ name: 'Email', to: '/email', icon: 'lucide:mail' },
+	{ name: 'Social', to: '/social', icon: 'lucide:share-2' },
+]
+
+const teamItems: NavItem[] = [
+	{ name: 'Channels', to: '/channels', icon: 'heroicons:chat-bubble-left-right' },
+	{ name: 'Teams', to: '/organization/teams', icon: 'heroicons:users' },
 ]
 
 function isActiveItem(to: string): boolean {
@@ -155,20 +167,20 @@ function handleTopup() {
 				</div>
 			</div>
 
-			<!-- RELATIONSHIPS -->
+			<!-- PIPELINE -->
 			<div class="pt-2">
 				<button
 					v-if="!sidebarCollapsed"
-					@click="toggleSpace('relationships')"
+					@click="toggleSpace('pipeline')"
 					class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 hover:text-muted-foreground transition-colors"
 				>
-					<Icon :name="spacesCollapsed.relationships ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="w-3 h-3 shrink-0" />
-					<span>Relationships</span>
+					<Icon :name="spacesCollapsed.pipeline ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="w-3 h-3 shrink-0" />
+					<span>Pipeline</span>
 				</button>
 				<div v-if="sidebarCollapsed" class="h-2" />
-				<div v-show="!spacesCollapsed.relationships || sidebarCollapsed" class="space-y-0.5 mt-0.5">
+				<div v-show="!spacesCollapsed.pipeline || sidebarCollapsed" class="space-y-0.5 mt-0.5">
 					<NuxtLink
-						v-for="item in relationshipItems"
+						v-for="item in pipelineItems"
 						:key="item.to"
 						:to="item.to"
 						class="nav-item"
@@ -181,20 +193,20 @@ function handleTopup() {
 				</div>
 			</div>
 
-			<!-- BUSINESS -->
+			<!-- FINANCIALS -->
 			<div class="pt-2">
 				<button
 					v-if="!sidebarCollapsed"
-					@click="toggleSpace('business')"
+					@click="toggleSpace('financials')"
 					class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 hover:text-muted-foreground transition-colors"
 				>
-					<Icon :name="spacesCollapsed.business ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="w-3 h-3 shrink-0" />
-					<span>Business</span>
+					<Icon :name="spacesCollapsed.financials ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="w-3 h-3 shrink-0" />
+					<span>Financials</span>
 				</button>
 				<div v-if="sidebarCollapsed" class="h-2" />
-				<div v-show="!spacesCollapsed.business || sidebarCollapsed" class="space-y-0.5 mt-0.5">
+				<div v-show="!spacesCollapsed.financials || sidebarCollapsed" class="space-y-0.5 mt-0.5">
 					<NuxtLink
-						v-for="item in businessItems"
+						v-for="item in financialsItems"
 						:key="item.to"
 						:to="item.to"
 						class="nav-item"
@@ -221,6 +233,32 @@ function handleTopup() {
 				<div v-show="!spacesCollapsed.engage || sidebarCollapsed" class="space-y-0.5 mt-0.5">
 					<NuxtLink
 						v-for="item in engageItems"
+						:key="item.to"
+						:to="item.to"
+						class="nav-item"
+						:class="{ 'nav-item-active': isActiveItem(item.to), 'justify-center': sidebarCollapsed, 'has-tooltip': sidebarCollapsed }"
+						:data-tooltip="sidebarCollapsed ? item.name : undefined"
+					>
+						<Icon :name="item.icon" class="w-4 h-4 shrink-0" />
+						<span v-if="!sidebarCollapsed" class="text-[13px]">{{ item.name }}</span>
+					</NuxtLink>
+				</div>
+			</div>
+
+			<!-- TEAM -->
+			<div class="pt-2">
+				<button
+					v-if="!sidebarCollapsed"
+					@click="toggleSpace('team')"
+					class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 hover:text-muted-foreground transition-colors"
+				>
+					<Icon :name="spacesCollapsed.team ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="w-3 h-3 shrink-0" />
+					<span>Team</span>
+				</button>
+				<div v-if="sidebarCollapsed" class="h-2" />
+				<div v-show="!spacesCollapsed.team || sidebarCollapsed" class="space-y-0.5 mt-0.5">
+					<NuxtLink
+						v-for="item in teamItems"
 						:key="item.to"
 						:to="item.to"
 						class="nav-item"
@@ -328,24 +366,24 @@ function handleTopup() {
 						</div>
 					</div>
 					<div class="pt-2">
-						<button @click="toggleSpace('relationships')" class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-							<Icon :name="spacesCollapsed.relationships ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="w-3 h-3" />
-							<span>Relationships</span>
+						<button @click="toggleSpace('pipeline')" class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+							<Icon :name="spacesCollapsed.pipeline ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="w-3 h-3" />
+							<span>Pipeline</span>
 						</button>
-						<div v-show="!spacesCollapsed.relationships" class="space-y-0.5 mt-0.5">
-							<NuxtLink v-for="item in relationshipItems" :key="item.to" :to="item.to" class="nav-item" :class="{ 'nav-item-active': isActiveItem(item.to) }">
+						<div v-show="!spacesCollapsed.pipeline" class="space-y-0.5 mt-0.5">
+							<NuxtLink v-for="item in pipelineItems" :key="item.to" :to="item.to" class="nav-item" :class="{ 'nav-item-active': isActiveItem(item.to) }">
 								<Icon :name="item.icon" class="w-4 h-4 shrink-0" />
 								<span class="text-[13px]">{{ item.name }}</span>
 							</NuxtLink>
 						</div>
 					</div>
 					<div class="pt-2">
-						<button @click="toggleSpace('business')" class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-							<Icon :name="spacesCollapsed.business ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="w-3 h-3" />
-							<span>Business</span>
+						<button @click="toggleSpace('financials')" class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+							<Icon :name="spacesCollapsed.financials ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="w-3 h-3" />
+							<span>Financials</span>
 						</button>
-						<div v-show="!spacesCollapsed.business" class="space-y-0.5 mt-0.5">
-							<NuxtLink v-for="item in businessItems" :key="item.to" :to="item.to" class="nav-item" :class="{ 'nav-item-active': isActiveItem(item.to) }">
+						<div v-show="!spacesCollapsed.financials" class="space-y-0.5 mt-0.5">
+							<NuxtLink v-for="item in financialsItems" :key="item.to" :to="item.to" class="nav-item" :class="{ 'nav-item-active': isActiveItem(item.to) }">
 								<Icon :name="item.icon" class="w-4 h-4 shrink-0" />
 								<span class="text-[13px]">{{ item.name }}</span>
 							</NuxtLink>
@@ -358,6 +396,18 @@ function handleTopup() {
 						</button>
 						<div v-show="!spacesCollapsed.engage" class="space-y-0.5 mt-0.5">
 							<NuxtLink v-for="item in engageItems" :key="item.to" :to="item.to" class="nav-item" :class="{ 'nav-item-active': isActiveItem(item.to) }">
+								<Icon :name="item.icon" class="w-4 h-4 shrink-0" />
+								<span class="text-[13px]">{{ item.name }}</span>
+							</NuxtLink>
+						</div>
+					</div>
+					<div class="pt-2">
+						<button @click="toggleSpace('team')" class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+							<Icon :name="spacesCollapsed.team ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="w-3 h-3" />
+							<span>Team</span>
+						</button>
+						<div v-show="!spacesCollapsed.team" class="space-y-0.5 mt-0.5">
+							<NuxtLink v-for="item in teamItems" :key="item.to" :to="item.to" class="nav-item" :class="{ 'nav-item-active': isActiveItem(item.to) }">
 								<Icon :name="item.icon" class="w-4 h-4 shrink-0" />
 								<span class="text-[13px]">{{ item.name }}</span>
 							</NuxtLink>
