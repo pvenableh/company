@@ -364,6 +364,11 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 							</div>
 						</div>
 
+						<!-- Today's Briefs (above Quick Tasks; visible whenever briefs exist) -->
+						<ClientOnly v-if="showWidget('project-digests')">
+							<CommandCenterProjectDigestsWidget />
+						</ClientOnly>
+
 						<!-- Quick Tasks Widget (full width under Priority Actions) -->
 						<CommandCenterQuickTasksWidget v-if="showWidget('quick-tasks')" />
 					</div>

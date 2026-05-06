@@ -158,6 +158,23 @@ async function setupAIPreferences() {
     meta: { special: ['user-created'], interface: 'select-dropdown-m2o', readonly: true, hidden: true },
     schema: {},
   })
+
+  await createField('ai_preferences', {
+    field: 'digest_cadence',
+    type: 'string',
+    meta: {
+      interface: 'select-dropdown',
+      note: 'How often to receive daily PM project briefs',
+      options: {
+        choices: [
+          { text: 'Daily', value: 'daily' },
+          { text: 'Weekly (Mondays)', value: 'weekly' },
+          { text: 'Off', value: 'off' },
+        ],
+      },
+    },
+    schema: { default_value: 'daily' },
+  })
 }
 
 async function setupAIChatSessions() {

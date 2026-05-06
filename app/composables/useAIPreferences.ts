@@ -107,6 +107,9 @@ const AI_MODULES: AIModule[] = [
 // ── Response Verbosity ──
 export type ResponseVerbosity = 'concise' | 'regular';
 
+// ── Digest Cadence ──
+export type DigestCadence = 'daily' | 'weekly' | 'off';
+
 const STORAGE_KEY = 'ai-tray-preferences';
 const VERBOSITY_KEY = 'ai-response-verbosity';
 
@@ -114,6 +117,7 @@ const VERBOSITY_KEY = 'ai-response-verbosity';
 const _verbosity = ref<ResponseVerbosity>('regular');
 const _personalizationsEnabled = ref(true);
 const _lowUsageMode = ref(false);
+const _digestCadence = ref<DigestCadence>('daily');
 let _prefRecordId: number | null = null;
 let _directusSynced = false;
 
@@ -155,7 +159,7 @@ export const useAIPreferences = () => {
 		if (import.meta.server || !user.value?.id) return;
 		try {
 			const records = await prefItems.list({
-				fields: ['id', 'enabled_modules', 'personalizations_enabled', 'low_usage_mode'],
+				fields: ['id', 'enabled_modules', 'personalizations_enabled', 'low_usage_mode', 'digest_cadence'],
 				filter: { user: { _eq: user.value.id } },
 				limit: 1,
 			}) as any[];
@@ -178,6 +182,10 @@ export const useAIPreferences = () => {
 				if (records[0].low_usage_mode !== null && records[0].low_usage_mode !== undefined) {
 					_lowUsageMode.value = records[0].low_usage_mode;
 				}
+
+				if (records[0].digest_cadence === 'daily' || records[0].digest_cadence === 'weekly' || records[0].digest_cadence === 'off') {
+					_digestCadence.value = records[0].digest_cadence;
+				}
 			}
 			_directusSynced = true;
 		} catch (err) {
@@ -196,6 +204,7 @@ export const useAIPreferences = () => {
 					enabled_modules: [...enabledModules.value],
 					personalizations_enabled: _personalizationsEnabled.value,
 					low_usage_mode: _lowUsageMode.value,
+					digest_cadence: _digestCadence.value,
 				};
 				if (_prefRecordId) {
 					await prefItems.update(_prefRecordId, payload);
@@ -258,6 +267,15 @@ export const useAIPreferences = () => {
 		},
 	});
 
+	// ── Digest Cadence ──
+	const digestCadence = computed({
+		get: () => _digestCadence.value,
+		set: (val: DigestCadence) => {
+			_digestCadence.value = val;
+			saveToDirectus();
+		},
+	});
+
 	// ── Verbosity ──
 	const verbosityKey = computed(() => {
 		const userId = user.value?.id || 'anonymous';
@@ -302,6 +320,7 @@ export const useAIPreferences = () => {
 			enabledModules.value = new Set(AI_MODULES.map((m) => m.key));
 			_personalizationsEnabled.value = true;
 			_lowUsageMode.value = false;
+			_digestCadence.value = 'daily';
 			_verbosity.value = 'regular';
 			return;
 		}
@@ -319,6 +338,7 @@ export const useAIPreferences = () => {
 		disableAll,
 		personalizationsEnabled,
 		lowUsageMode,
+		digestCadence,
 		responseVerbosity: readonly(responseVerbosity),
 		setVerbosity,
 	};

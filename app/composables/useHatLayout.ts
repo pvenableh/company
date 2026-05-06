@@ -8,6 +8,7 @@ const HAT_WIDGETS: Record<string, string[]> = {
 	project_manager: [
 		'project-timeline',
 		'priority-actions',
+		'project-digests',
 		'quick-tasks',
 		'card-desk',
 		'goals',

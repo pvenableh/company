@@ -23,6 +23,10 @@
     {
       "path": "/api/social/cron/refresh-metrics",
       "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/project-digests",
+      "schedule": "0 12 * * *"
     }
   ]
 }

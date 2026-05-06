@@ -3,7 +3,7 @@ const emit = defineEmits<{
 	(e: 'close'): void;
 }>();
 
-const { modules, enabledModules, toggle, isEnabled, enableAll, disableAll, personalizationsEnabled, lowUsageMode } = useAIPreferences();
+const { modules, enabledModules, toggle, isEnabled, enableAll, disableAll, personalizationsEnabled, lowUsageMode, digestCadence } = useAIPreferences();
 const { personas, selectedPersona, setPersona } = useAIPersona();
 const { usageSummary } = useAITokens();
 
@@ -193,6 +193,25 @@ const formatTokens = (n: number) => {
 				<p class="text-[11px] text-amber-400">
 					Low usage mode disables generated greetings, reduces suggestion frequency, and skips auto-generated content to conserve tokens.
 				</p>
+			</div>
+
+			<!-- Daily Project Briefs cadence -->
+			<div class="p-3 rounded-lg bg-muted/20">
+				<div class="flex items-center justify-between gap-3 mb-1">
+					<div class="min-w-0">
+						<p class="text-xs font-medium text-foreground">Project Briefs</p>
+						<p class="text-[10px] text-muted-foreground">Daily AI summaries of projects you manage</p>
+					</div>
+					<select
+						:value="digestCadence"
+						@change="(e) => digestCadence = (e.target as HTMLSelectElement).value as any"
+						class="text-[11px] rounded-full bg-background border border-border px-2.5 py-1 focus:outline-none focus:ring-1 focus:ring-primary"
+					>
+						<option value="daily">Daily</option>
+						<option value="weekly">Weekly</option>
+						<option value="off">Off</option>
+					</select>
+				</div>
 			</div>
 
 			<!-- Usage Summary -->
