@@ -164,6 +164,7 @@ async function setupMeetingNotes() {
 			interface: 'select-dropdown-m2o',
 			special: ['m2o'],
 			note: 'Who captured the note (set on create, read-only thereafter)',
+			options: { template: '{{first_name}} {{last_name}}' },
 		},
 		schema: { is_nullable: true },
 	});
@@ -203,13 +204,31 @@ async function setupMeetingNotes() {
 	});
 
 	// Relations
+	// NOTE: inverse alias is named `note_entries` (not `notes`) — `video_meetings`
+	// already has a freeform rich-text `notes` column, and Directus will silently
+	// fail to create the alias on a name collision. The structured-notes o2m must
+	// use a distinct field name.
 	await createRelation({
 		collection: 'meeting_notes',
 		field: 'meeting',
 		related_collection: 'video_meetings',
 		schema: { on_delete: 'CASCADE' },
-		// Inverse alias on video_meetings — "notes" o2m
-		meta: { one_field: 'notes', sort_field: null, junction_field: null },
+		meta: { one_field: 'note_entries', sort_field: null, junction_field: null },
+	});
+
+	// Belt-and-suspenders: explicitly create the inverse alias. Directus 11 does
+	// not always auto-create the alias from `one_field` alone — particularly on
+	// reruns where the relation already exists.
+	await createField('video_meetings', {
+		field: 'note_entries',
+		type: 'alias',
+		meta: {
+			special: ['o2m'],
+			interface: 'list-o2m',
+			options: { template: '{{note_type}} — {{content}}' },
+			note: 'Structured notes & decisions captured during the meeting (separate from the freeform notes field)',
+		},
+		schema: null,
 	});
 
 	await createRelation({

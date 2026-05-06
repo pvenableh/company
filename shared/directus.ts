@@ -41,6 +41,7 @@ export interface AiChatSession {
 	date_updated?: string | null;
 	user?: DirectusUser | string | null;
 	user_created?: DirectusUser | string | null;
+	messages?: string;
 }
 
 export interface AiContextSnapshot {
@@ -128,6 +129,8 @@ export interface AiPreference {
 	token_budget_monthly?: number | null;
 	ai_enabled?: boolean | null;
 	organization?: Organization | string | null;
+	/** @description How often to receive daily PM project briefs */
+	digest_cadence?: 'daily' | 'weekly' | 'off' | null;
 }
 
 export interface AiTag {
@@ -2192,6 +2195,25 @@ export interface MarketingTouchVariant {
 	date_updated?: string | null;
 }
 
+export interface MeetingNote {
+	/** @primaryKey */
+	id: number;
+	date_created?: string | null;
+	date_updated?: string | null;
+	user_created?: string | null;
+	user_updated?: string | null;
+	/** @description Meeting this note belongs to @required */
+	meeting: VideoMeeting | string;
+	/** @description Who captured the note (set on create, read-only thereafter) */
+	author?: DirectusUser | string | null;
+	/** @description Distinguishes general notes from team-binding decisions @required */
+	note_type: 'note' | 'decision';
+	/** @required */
+	content: string;
+	/** @description Seconds since meeting actual_start when the note was captured (lets the recap align notes to transcript) */
+	meeting_offset_seconds?: number | null;
+}
+
 export interface MeetingRequest {
 	/** @primaryKey */
 	id: string;
@@ -2808,6 +2830,25 @@ export interface ProjectCategory {
 	icon?: string | null;
 }
 
+export interface ProjectDigest {
+	/** @primaryKey */
+	id: number;
+	date_created?: string | null;
+	date_updated?: string | null;
+	user_created?: string | null;
+	user_updated?: string | null;
+	/** @required */
+	project: Project | string;
+	/** @description User this digest was generated for (typically the project PM) @required */
+	recipient: DirectusUser | string;
+	/** @description Date the digest covers (used for daily idempotency) @required */
+	digest_date: string;
+	/** @description Markdown brief, ~300 words */
+	summary?: string | null;
+	/** @description When the recipient first viewed the brief */
+	read_at?: string | null;
+}
+
 export interface ProjectEventCategory {
 	/** @primaryKey */
 	id: string;
@@ -2875,6 +2916,8 @@ export interface ProjectEvent {
 	files?: ProjectEventFile[] | string[];
 	invoices?: ProjectEventsInvoice[] | string[];
 	spawned_projects?: Project[] | string[];
+	/** @description Meetings linked to this milestone (kickoff / mid-review / signoff) */
+	meetings?: VideoMeeting[] | string[];
 }
 
 export interface ProjectEventsComment {
@@ -2930,6 +2973,8 @@ export interface Project {
 	tickets?: Ticket[] | string[];
 	children?: Project[] | string[];
 	files?: ProjectsFile[] | string[];
+	/** @description AI-generated daily PM briefs for this project */
+	digests?: ProjectDigest[] | string[];
 }
 
 export interface ProjectsDirectusUser {
@@ -3595,25 +3640,6 @@ export interface Task {
 	assigned_to?: TasksDirectusUser[] | string[];
 }
 
-export interface MeetingNote {
-	/** @primaryKey */
-	id: string;
-	date_created?: string | null;
-	date_updated?: string | null;
-	user_created?: DirectusUser | string | null;
-	user_updated?: DirectusUser | string | null;
-	/** @description Meeting this note belongs to @required */
-	meeting: VideoMeeting | string;
-	/** @description Who captured the note */
-	author?: DirectusUser | string | null;
-	/** @description note = general capture, decision = team-binding outcome */
-	note_type: 'note' | 'decision';
-	/** @required */
-	content: string;
-	/** @description Seconds since meeting actual_start when the note was captured */
-	meeting_offset_seconds?: number | null;
-}
-
 export interface TasksDirectusUser {
 	/** @primaryKey */
 	id: number;
@@ -3902,8 +3928,8 @@ export interface VideoMeeting {
 	/** @description Last failure message, if any */
 	summary_error?: string | null;
 	attendees?: VideoMeetingAttendee[] | string[];
-	/** @description Notes & decisions captured during the call */
-	notes?: MeetingNote[] | string[];
+	/** @description Structured notes & decisions captured during the meeting (separate from the freeform notes field) */
+	note_entries?: MeetingNote[] | string[];
 }
 
 export interface Video {
@@ -4543,6 +4569,7 @@ export interface Schema {
 	marketing_recommendations: MarketingRecommendation[];
 	marketing_touches: MarketingTouche[];
 	marketing_touch_variants: MarketingTouchVariant[];
+	meeting_notes: MeetingNote[];
 	meeting_requests: MeetingRequest[];
 	menus: Menu[];
 	messages: Message[];
@@ -4576,6 +4603,7 @@ export interface Schema {
 	portfolio_services: PortfolioService[];
 	products: Product[];
 	project_categories: ProjectCategory[];
+	project_digests: ProjectDigest[];
 	project_event_categories: ProjectEventCategory[];
 	project_event_files: ProjectEventFile[];
 	project_events: ProjectEvent[];
@@ -4631,7 +4659,6 @@ export interface Schema {
 	user_presence: UserPresence[];
 	video_meeting_attendees: VideoMeetingAttendee[];
 	video_meetings: VideoMeeting[];
-	meeting_notes: MeetingNote[];
 	videos: Video[];
 	directus_access: DirectusAccess[];
 	directus_activity: DirectusActivity[];
@@ -4773,6 +4800,7 @@ export enum CollectionNames {
 	marketing_recommendations = 'marketing_recommendations',
 	marketing_touches = 'marketing_touches',
 	marketing_touch_variants = 'marketing_touch_variants',
+	meeting_notes = 'meeting_notes',
 	meeting_requests = 'meeting_requests',
 	menus = 'menus',
 	messages = 'messages',
@@ -4806,6 +4834,7 @@ export enum CollectionNames {
 	portfolio_services = 'portfolio_services',
 	products = 'products',
 	project_categories = 'project_categories',
+	project_digests = 'project_digests',
 	project_event_categories = 'project_event_categories',
 	project_event_files = 'project_event_files',
 	project_events = 'project_events',
@@ -4861,7 +4890,6 @@ export enum CollectionNames {
 	user_presence = 'user_presence',
 	video_meeting_attendees = 'video_meeting_attendees',
 	video_meetings = 'video_meetings',
-	meeting_notes = 'meeting_notes',
 	videos = 'videos',
 	directus_access = 'directus_access',
 	directus_activity = 'directus_activity',

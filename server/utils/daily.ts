@@ -178,6 +178,43 @@ export function vttToPlainText(vtt: string): string {
 }
 
 /**
+ * List cloud recordings for a room. Returns everything Daily has for this
+ * room name, sorted newest-first. Recordings persist in Daily's cloud until
+ * a domain owner deletes them, so the list survives room-expiry.
+ */
+export interface DailyRecording {
+	id: string;
+	room_name: string;
+	start_ts: number;
+	status: 'in-progress' | 'finished' | 'canceled';
+	duration?: number;
+	max_participants?: number;
+	mtgSessionId?: string;
+	tracks?: Array<Record<string, any>>;
+}
+
+export async function listDailyRecordings(roomName: string, limit = 100): Promise<DailyRecording[]> {
+	const params = new URLSearchParams({ room_name: roomName, limit: String(limit) });
+	const res = await dailyFetch<{ data: DailyRecording[]; total_count?: number }>(`/recordings?${params}`);
+	const list = res.data || [];
+	return list.sort((a, b) => (b.start_ts || 0) - (a.start_ts || 0));
+}
+
+/**
+ * Mint a short-lived download URL for a single recording.
+ * Daily's access links expire (~1hr) so we mint per click.
+ */
+export async function getDailyRecordingAccessLink(recordingId: string): Promise<string> {
+	const res = await dailyFetch<{ download_link: string; expires?: number }>(
+		`/recordings/${recordingId}/access-link`,
+	);
+	if (!res.download_link) {
+		throw new Error('Daily returned no download_link for recording');
+	}
+	return res.download_link;
+}
+
+/**
  * Generate a meeting token for a participant.
  * Tokens control permissions (owner vs guest).
  */

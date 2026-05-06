@@ -236,7 +236,10 @@ async function setupContracts() {
   // FKs
   await createField('contracts', {
     field: 'organization', type: 'uuid',
-    meta: { interface: 'select-dropdown-m2o', special: ['m2o'], required: true, hidden: true },
+    meta: {
+      interface: 'select-dropdown-m2o', special: ['m2o'], required: true, hidden: true,
+      options: { template: '{{name}}' },
+    },
     schema: { is_nullable: false },
   });
   await createRelation({
@@ -246,7 +249,11 @@ async function setupContracts() {
 
   await createField('contracts', {
     field: 'contact', type: 'uuid',
-    meta: { interface: 'select-dropdown-m2o', special: ['m2o'], note: 'Recipient — usually the client signer' },
+    meta: {
+      interface: 'select-dropdown-m2o', special: ['m2o'],
+      note: 'Recipient — usually the client signer',
+      options: { template: '{{first_name}} {{last_name}}' },
+    },
     schema: {},
   });
   await createRelation({
@@ -256,7 +263,10 @@ async function setupContracts() {
 
   await createField('contracts', {
     field: 'lead', type: 'integer',
-    meta: { interface: 'select-dropdown-m2o', special: ['m2o'] },
+    meta: {
+      interface: 'select-dropdown-m2o', special: ['m2o'],
+      options: { template: 'Lead #{{id}} ({{project_type}})' },
+    },
     schema: {},
   });
   await createRelation({
@@ -266,7 +276,11 @@ async function setupContracts() {
 
   await createField('contracts', {
     field: 'proposal', type: 'uuid',
-    meta: { interface: 'select-dropdown-m2o', special: ['m2o'], note: 'Source proposal (if generated from one)' },
+    meta: {
+      interface: 'select-dropdown-m2o', special: ['m2o'],
+      note: 'Source proposal (if generated from one)',
+      options: { template: '{{title}}' },
+    },
     schema: {},
   });
   await createRelation({

@@ -116,8 +116,21 @@ async function setup() {
 		meta: { one_field: 'meetings', sort_field: null, junction_field: null },
 	});
 
+	// Belt-and-suspenders: Directus 11 does not always auto-create the inverse
+	// alias from `one_field` alone. Create it explicitly so the o2m is browsable
+	// from the project_events detail page in the Directus admin.
 	console.log('\n=== project_events.meetings (inverse alias) ===');
-	console.log('  -> Created automatically by relation above (one_field: "meetings")');
+	await createField('project_events', {
+		field: 'meetings',
+		type: 'alias',
+		meta: {
+			special: ['o2m'],
+			interface: 'list-o2m',
+			options: { template: '{{title}}' },
+			note: 'Meetings linked to this milestone (kickoff / mid-review / signoff)',
+		},
+		schema: null,
+	});
 }
 
 async function main() {

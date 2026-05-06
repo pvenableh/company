@@ -3,7 +3,7 @@ const { user } = useDirectusAuth();
 const router = useRouter();
 
 interface DigestRow {
-	id: string;
+	id: number;
 	digest_date: string;
 	summary: string | null;
 	read_at: string | null;

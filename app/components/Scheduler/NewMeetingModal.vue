@@ -77,6 +77,7 @@
 				<!-- Settings -->
 				<div class="flex items-center gap-6">
 					<UCheckbox v-model="form.waiting_room_enabled" label="Enable waiting room" />
+					<UCheckbox v-model="form.recording_enabled" label="Enable cloud recording" />
 				</div>
 
 				<UDivider label="Invite Attendees" />
@@ -227,6 +228,7 @@ const form = reactive({
 	duration: 30,
 	description: '',
 	waiting_room_enabled: true,
+	recording_enabled: false,
 	custom_message: '',
 	related_lead: null as any,
 	attendees: [] as Array<{
@@ -272,6 +274,7 @@ const resetForm = () => {
 	form.duration = 30;
 	form.description = '';
 	form.waiting_room_enabled = true;
+	form.recording_enabled = false;
 	form.custom_message = '';
 	form.related_lead = null;
 	form.attendees = [];
@@ -301,6 +304,7 @@ const createMeeting = async () => {
 				scheduled_start: scheduledStart.toISOString(),
 				duration: form.duration,
 				waiting_room_enabled: form.waiting_room_enabled,
+				recording_enabled: form.recording_enabled,
 				custom_message: form.custom_message,
 				related_lead: form.related_lead?.id || null,
 				project: props.projectId || null,

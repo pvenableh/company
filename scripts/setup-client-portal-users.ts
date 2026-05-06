@@ -144,21 +144,39 @@ async function setupClientPortalUsers() {
 	await createField('client_portal_users', {
 		field: 'organization',
 		type: 'uuid',
-		meta: { interface: 'select-dropdown-m2o', special: ['m2o'], required: true, note: 'The org this portal user belongs to' },
+		meta: {
+			interface: 'select-dropdown-m2o',
+			special: ['m2o'],
+			required: true,
+			note: 'The org this portal user belongs to',
+			options: { template: '{{name}}' },
+		},
 		schema: { is_nullable: false },
 	});
 
 	await createField('client_portal_users', {
 		field: 'user',
 		type: 'uuid',
-		meta: { interface: 'select-dropdown-m2o', special: ['m2o'], required: true, note: 'The Directus user who logs in' },
+		meta: {
+			interface: 'select-dropdown-m2o',
+			special: ['m2o'],
+			required: true,
+			note: 'The Directus user who logs in',
+			options: { template: '{{first_name}} {{last_name}} <{{email}}>' },
+		},
 		schema: { is_nullable: false },
 	});
 
 	await createField('client_portal_users', {
 		field: 'client',
 		type: 'uuid',
-		meta: { interface: 'select-dropdown-m2o', special: ['m2o'], required: true, note: 'Root client scope. parent_client walk extends visibility to descendants.' },
+		meta: {
+			interface: 'select-dropdown-m2o',
+			special: ['m2o'],
+			required: true,
+			note: 'Root client scope. parent_client walk extends visibility to descendants.',
+			options: { template: '{{name}}' },
+		},
 		schema: { is_nullable: false },
 	});
 
@@ -183,7 +201,12 @@ async function setupClientPortalUsers() {
 	await createField('client_portal_users', {
 		field: 'invited_by',
 		type: 'uuid',
-		meta: { interface: 'select-dropdown-m2o', special: ['m2o'], note: 'Who sent the invite (null for self-signup if ever supported)' },
+		meta: {
+			interface: 'select-dropdown-m2o',
+			special: ['m2o'],
+			note: 'Who sent the invite (null for self-signup if ever supported)',
+			options: { template: '{{first_name}} {{last_name}}' },
+		},
 		schema: {},
 	});
 
@@ -201,6 +224,10 @@ async function setupClientPortalUsers() {
 		schema: {},
 	});
 
+	// NOTE: on the original prod run, the FK schema did not get created at the
+	// DB level (relations.schema came back as null). If you need a hard FK on
+	// organization, drop+recreate the column or add the constraint via SQL —
+	// updating the relation after the fact does not back-fill the constraint.
 	await createRelation({
 		collection: 'client_portal_users',
 		field: 'organization',

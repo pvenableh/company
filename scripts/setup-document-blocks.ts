@@ -207,7 +207,11 @@ async function setupDocumentBlocks() {
   // Tenant FK
   await createField('document_blocks', {
     field: 'organization', type: 'uuid',
-    meta: { interface: 'select-dropdown-m2o', special: ['m2o'], required: true, hidden: true, note: 'Owning organization' },
+    meta: {
+      interface: 'select-dropdown-m2o', special: ['m2o'], required: true, hidden: true,
+      note: 'Owning organization',
+      options: { template: '{{name}}' },
+    },
     schema: { is_nullable: false },
   });
   await createRelation({

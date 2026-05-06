@@ -165,7 +165,13 @@ async function setupMarketingTouches() {
 	await createField('marketing_touches', {
 		field: 'campaign',
 		type: 'integer',
-		meta: { interface: 'select-dropdown-m2o', special: ['m2o'], required: true, width: 'half' },
+		meta: {
+			interface: 'select-dropdown-m2o',
+			special: ['m2o'],
+			required: true,
+			width: 'half',
+			options: { template: '{{title}}' },
+		},
 		schema: { is_nullable: false },
 	});
 
@@ -178,6 +184,7 @@ async function setupMarketingTouches() {
 			required: true,
 			width: 'half',
 			note: 'Denormalized from campaign for fast org-scoped queries.',
+			options: { template: '{{name}}' },
 		},
 		schema: { is_nullable: false },
 	});
@@ -339,6 +346,7 @@ async function setupMarketingTouches() {
 			special: ['m2o'],
 			width: 'half',
 			note: 'FK to social_posts created at schedule time.',
+			options: { template: '{{caption}}' },
 		},
 		schema: {},
 	});

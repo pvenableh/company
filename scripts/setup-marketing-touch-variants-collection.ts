@@ -128,14 +128,26 @@ async function setupMarketingTouchVariants() {
 	await createField('marketing_touch_variants', {
 		field: 'touch',
 		type: 'integer',
-		meta: { interface: 'select-dropdown-m2o', special: ['m2o'], required: true, width: 'half' },
+		meta: {
+			interface: 'select-dropdown-m2o',
+			special: ['m2o'],
+			required: true,
+			width: 'half',
+			options: { template: '{{kind}} #{{sequence_index}}' },
+		},
 		schema: { is_nullable: false },
 	});
 
 	await createField('marketing_touch_variants', {
 		field: 'contact',
 		type: 'uuid',
-		meta: { interface: 'select-dropdown-m2o', special: ['m2o'], required: true, width: 'half' },
+		meta: {
+			interface: 'select-dropdown-m2o',
+			special: ['m2o'],
+			required: true,
+			width: 'half',
+			options: { template: '{{first_name}} {{last_name}} <{{email}}>' },
+		},
 		schema: { is_nullable: false },
 	});
 
@@ -148,6 +160,7 @@ async function setupMarketingTouchVariants() {
 			required: true,
 			width: 'half',
 			note: 'Denormalized from touch.organization for fast org-scoped queries.',
+			options: { template: '{{name}}' },
 		},
 		schema: { is_nullable: false },
 	});

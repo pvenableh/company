@@ -283,6 +283,82 @@ const formatNoteTime = (n) => {
 	} catch { return ''; }
 };
 
+// ─── Recordings (pulled live from Daily.co) ───
+const recordings = ref([]);
+const recordingsLoading = ref(false);
+const recordingsError = ref('');
+const playingRecordingId = ref(null);
+const playingUrl = ref('');
+const linkLoadingId = ref('');
+
+const fetchRecordings = async () => {
+	if (!meetingId.value) return;
+	recordingsLoading.value = true;
+	recordingsError.value = '';
+	try {
+		const res = await $fetch(`/api/video/meetings/${meetingId.value}/recordings`);
+		recordings.value = res?.data || [];
+	} catch (err) {
+		recordingsError.value = err.statusMessage || err.message || 'Could not load recordings';
+		recordings.value = [];
+	}
+	recordingsLoading.value = false;
+};
+
+watch(meetingId, fetchRecordings, { immediate: true });
+// Also refetch when the meeting completes — Daily uploads recordings shortly after.
+watch(
+	() => meeting.value?.status,
+	(s, prev) => { if (s === 'completed' && prev && prev !== 'completed') fetchRecordings(); },
+);
+
+const formatRecordingDuration = (secs) => {
+	if (!secs || !Number.isFinite(secs)) return '—';
+	const m = Math.floor(secs / 60);
+	const s = Math.floor(secs % 60);
+	return `${m}:${String(s).padStart(2, '0')}`;
+};
+
+const formatRecordingDate = (ts) => {
+	if (!ts) return '';
+	try {
+		return new Date(ts * 1000).toLocaleString(undefined, {
+			month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+		});
+	} catch { return ''; }
+};
+
+const playRecording = async (recordingId) => {
+	if (linkLoadingId.value) return;
+	linkLoadingId.value = recordingId;
+	try {
+		const res = await $fetch(`/api/video/meetings/${meetingId.value}/recordings/${recordingId}/link`);
+		const url = res?.data?.url;
+		if (!url) throw new Error('No download link returned');
+		playingRecordingId.value = recordingId;
+		playingUrl.value = url;
+	} catch (err) {
+		const msg = err.statusMessage || err.data?.message || err.message || 'Could not load recording';
+		toast.add({ title: 'Recording unavailable', description: msg, color: 'red' });
+	}
+	linkLoadingId.value = '';
+};
+
+const downloadRecording = async (recordingId) => {
+	if (linkLoadingId.value) return;
+	linkLoadingId.value = recordingId;
+	try {
+		const res = await $fetch(`/api/video/meetings/${meetingId.value}/recordings/${recordingId}/link`);
+		const url = res?.data?.url;
+		if (!url) throw new Error('No download link returned');
+		window.open(url, '_blank', 'noopener');
+	} catch (err) {
+		const msg = err.statusMessage || err.data?.message || err.message || 'Could not load recording';
+		toast.add({ title: 'Download failed', description: msg, color: 'red' });
+	}
+	linkLoadingId.value = '';
+};
+
 // ─── Action item promotion ───
 const promoteActionItem = async (idx) => {
 	if (promotingIndex.value !== -1) return;
@@ -369,24 +445,97 @@ const promoteActionItem = async (idx) => {
 				</p>
 			</div>
 
-			<!-- Recording -->
-			<div v-if="meeting.recording_url" class="ios-card p-5 mb-4">
+			<!-- Recordings (live from Daily.co) -->
+			<div
+				v-if="recordingsLoading || recordings.length > 0 || recordingsError"
+				class="ios-card p-5 mb-4"
+			>
 				<div class="flex items-center justify-between mb-3">
-					<h2 class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Recording</h2>
-					<a
-						:href="meeting.recording_url"
-						target="_blank"
-						rel="noopener"
-						class="text-[11px] font-semibold text-emerald-600 hover:text-emerald-700 inline-flex items-center gap-1"
+					<h2 class="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+						Recordings
+						<span v-if="recordings.length > 0" class="ml-1.5 text-muted-foreground/70 normal-case tracking-normal">({{ recordings.length }})</span>
+					</h2>
+					<button
+						type="button"
+						class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:text-foreground inline-flex items-center gap-1 disabled:opacity-50"
+						:disabled="recordingsLoading"
+						@click="fetchRecordings"
 					>
-						Open <UIcon name="i-heroicons-arrow-top-right-on-square" class="w-3 h-3" />
-					</a>
+						<UIcon
+							:name="recordingsLoading ? 'i-heroicons-arrow-path' : 'i-heroicons-arrow-path-rounded-square'"
+							:class="['w-3 h-3', recordingsLoading ? 'animate-spin' : '']"
+						/>
+						Refresh
+					</button>
 				</div>
-				<video
-					:src="meeting.recording_url"
-					controls
-					class="w-full rounded-lg bg-black aspect-video"
-				/>
+
+				<div v-if="recordingsError" class="text-[12px] text-red-500 py-2">{{ recordingsError }}</div>
+
+				<div v-else-if="recordingsLoading && recordings.length === 0" class="text-[12px] text-muted-foreground py-3 text-center">
+					Checking for recordings…
+				</div>
+
+				<ul v-else class="space-y-2">
+					<li
+						v-for="rec in recordings"
+						:key="rec.id"
+						class="rounded-lg border border-border/40 p-3"
+					>
+						<div class="flex items-center justify-between gap-3">
+							<div class="min-w-0 flex-1">
+								<div class="flex items-center gap-2">
+									<UIcon name="i-heroicons-video-camera" class="w-4 h-4 text-muted-foreground flex-shrink-0" />
+									<span class="text-[13px] font-medium text-foreground">
+										{{ formatRecordingDate(rec.start_ts) }}
+									</span>
+									<span
+										v-if="rec.status && rec.status !== 'finished'"
+										class="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full"
+										:class="rec.status === 'in-progress' ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400' : 'bg-muted/40 text-muted-foreground'"
+									>
+										{{ rec.status }}
+									</span>
+								</div>
+								<p class="text-[11px] text-muted-foreground mt-0.5 ml-6">
+									{{ formatRecordingDuration(rec.duration) }}
+									<span v-if="rec.max_participants"> · {{ rec.max_participants }} participants</span>
+								</p>
+							</div>
+							<div class="flex items-center gap-1.5 flex-shrink-0">
+								<button
+									v-if="rec.status === 'finished'"
+									type="button"
+									:disabled="linkLoadingId === rec.id"
+									class="inline-flex items-center gap-1 h-7 px-3 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 disabled:opacity-50 transition-colors"
+									@click="playRecording(rec.id)"
+								>
+									<UIcon
+										:name="linkLoadingId === rec.id ? 'i-heroicons-arrow-path' : 'i-heroicons-play'"
+										:class="['w-3 h-3', linkLoadingId === rec.id ? 'animate-spin' : '']"
+									/>
+									Play
+								</button>
+								<button
+									v-if="rec.status === 'finished'"
+									type="button"
+									:disabled="linkLoadingId === rec.id"
+									class="inline-flex items-center gap-1 h-7 px-3 rounded-full text-[10px] font-bold uppercase tracking-wider bg-muted/40 hover:bg-muted/60 text-muted-foreground hover:text-foreground disabled:opacity-50 transition-colors"
+									@click="downloadRecording(rec.id)"
+								>
+									<UIcon name="i-heroicons-arrow-down-tray" class="w-3 h-3" />
+									Download
+								</button>
+							</div>
+						</div>
+						<video
+							v-if="playingRecordingId === rec.id && playingUrl"
+							:src="playingUrl"
+							controls
+							autoplay
+							class="w-full rounded-lg bg-black aspect-video mt-3"
+						/>
+					</li>
+				</ul>
 			</div>
 
 			<!-- Summary -->

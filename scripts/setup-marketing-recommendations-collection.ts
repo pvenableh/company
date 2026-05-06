@@ -137,7 +137,13 @@ async function setupMarketingRecommendations() {
 	await createField('marketing_recommendations', {
 		field: 'organization',
 		type: 'uuid',
-		meta: { interface: 'select-dropdown-m2o', special: ['m2o'], required: true, width: 'half' },
+		meta: {
+			interface: 'select-dropdown-m2o',
+			special: ['m2o'],
+			required: true,
+			width: 'half',
+			options: { template: '{{name}}' },
+		},
 		schema: { is_nullable: false },
 	});
 
@@ -213,6 +219,7 @@ async function setupMarketingRecommendations() {
 			special: ['m2o'],
 			width: 'half',
 			note: 'Set when the user approves and a campaign is created.',
+			options: { template: '{{title}}' },
 		},
 		schema: {},
 	});
