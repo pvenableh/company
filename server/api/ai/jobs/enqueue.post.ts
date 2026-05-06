@@ -1,16 +1,20 @@
 // server/api/ai/jobs/enqueue.post.ts
 /**
- * Enqueue an async AI job for background processing.
+ * Enqueue an async AI job for the standalone earnest-worker container.
  *
  * Body:
- *   type: string (required) — Job type: 'summarize-session' | 'batch-analysis'
+ *   type: 'recap-meeting' | 'digest-project' (required)
  *   organizationId: string (required)
- *   ...additional data depending on type
+ *   ...job-specific data (e.g. meetingId, projectId, recipientUserId, digestDate)
  *
  * Returns: { jobId: string }
+ *
+ * Returns 503 cleanly when REDIS_QUEUE_URL is unset (no worker provisioned).
  */
 
 import { getAIQueue } from '~~/server/utils/queue';
+
+const ALLOWED_TYPES = ['recap-meeting', 'digest-project'];
 
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event);
@@ -21,7 +25,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event);
-  const { type, organizationId, ...data } = body;
+  const { type, organizationId, ...data } = body || {};
 
   if (!type) {
     throw createError({ statusCode: 400, message: 'type is required' });
@@ -31,9 +35,8 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'organizationId is required' });
   }
 
-  const allowedTypes = ['summarize-session', 'batch-analysis', 'notice-check'];
-  if (!allowedTypes.includes(type)) {
-    throw createError({ statusCode: 400, message: `Invalid job type. Allowed: ${allowedTypes.join(', ')}` });
+  if (!ALLOWED_TYPES.includes(type)) {
+    throw createError({ statusCode: 400, message: `Invalid job type. Allowed: ${ALLOWED_TYPES.join(', ')}` });
   }
 
   const queue = getAIQueue();
