@@ -7,9 +7,12 @@
  *
  * Eligibility:
  *   - Org must not be archived
- *   - Project status must not be 'done' or 'cancelled', and must have
- *     activity in the last 14 days
- *   - Recipient = project.pm if set, else org owner
+ *   - Project status must not be 'completed' or 'Archived' (the real enum
+ *     values on prod — see shared/directus.ts Project.status)
+ *   - Project must have date_updated within the last 14 days
+ *   - Recipient resolution order:
+ *       1. project.user_created (the project's creator — typically the PM)
+ *       2. org owner (from organizations_directus_users where role='owner')
  *   - Recipient's `ai_preferences.digest_cadence` must be 'daily', or
  *     'weekly' on Mondays
  *
@@ -26,7 +29,7 @@ interface ProjectRow {
 	title?: string;
 	status?: string;
 	organization?: string | { id: string };
-	pm?: string | { id: string } | null;
+	user_created?: string | { id: string } | null;
 	date_updated?: string | null;
 }
 interface PrefRow { user: string | { id: string }; digest_cadence?: string }
@@ -63,9 +66,13 @@ export default defineEventHandler(async (event) => {
 		return { ok: false, reason: 'REDIS_QUEUE_URL not configured' };
 	}
 
-	const dryRun = method === 'POST'
-		? Boolean((await readBody(event).catch(() => ({})) as any)?.dryRun)
-		: getQuery(event)?.dryRun === 'true';
+	// Accept dryRun via query string OR JSON body, on either GET or POST.
+	// Vercel Cron fires GET; manual smoke-tests via curl typically POST.
+	const queryDryRun = getQuery(event)?.dryRun;
+	const bodyDryRun = method === 'POST'
+		? (await readBody(event).catch(() => ({})) as any)?.dryRun
+		: undefined;
+	const dryRun = queryDryRun === 'true' || queryDryRun === true || bodyDryRun === true || bodyDryRun === 'true';
 
 	const directus = getServerDirectus();
 	const today = todayIso();
@@ -90,11 +97,12 @@ export default defineEventHandler(async (event) => {
 				filter: {
 					_and: [
 						{ organization: { _eq: org.id } },
-						{ status: { _nin: ['done', 'cancelled', 'archived'] } },
+						// Real enum on prod: 'Pending' | 'Scheduled' | 'In Progress' | 'completed' | 'Archived'
+						{ status: { _nin: ['completed', 'Archived'] } },
 						{ date_updated: { _gte: since } },
 					],
 				},
-				fields: ['id', 'title', 'status', 'organization', 'pm', 'date_updated'] as any,
+				fields: ['id', 'title', 'status', 'organization', 'user_created', 'date_updated'] as any,
 				limit: -1,
 			}),
 		).catch(() => []) as ProjectRow[];
@@ -104,7 +112,7 @@ export default defineEventHandler(async (event) => {
 			continue;
 		}
 
-		// Org owner — fallback when project.pm is unset.
+		// Org owner — fallback when project.user_created can't be resolved.
 		const ownerships = await directus.request(
 			readItems('organizations_directus_users' as any, {
 				filter: {
@@ -127,7 +135,7 @@ export default defineEventHandler(async (event) => {
 		// Pre-fetch all candidate recipients' digest_cadence preferences in one round-trip.
 		const recipientIds = Array.from(new Set(
 			projects
-				.map((p) => (typeof p.pm === 'object' ? p.pm?.id : p.pm) || ownerId)
+				.map((p) => (typeof p.user_created === 'object' ? p.user_created?.id : p.user_created) || ownerId)
 				.filter(Boolean) as string[],
 		));
 
@@ -149,7 +157,7 @@ export default defineEventHandler(async (event) => {
 		let skipped = 0;
 
 		for (const project of projects) {
-			const recipient = (typeof project.pm === 'object' ? project.pm?.id : project.pm) || ownerId;
+			const recipient = (typeof project.user_created === 'object' ? project.user_created?.id : project.user_created) || ownerId;
 			if (!recipient) { skipped++; continue; }
 
 			const cadence = cadenceByUser.get(recipient) || 'daily';

@@ -159,6 +159,7 @@ async function setup() {
 			special: ['m2o'],
 			required: true,
 			note: 'User this digest was generated for (typically the project PM)',
+			options: { template: '{{first_name}} {{last_name}}' },
 		},
 		schema: { is_nullable: false },
 	});
@@ -191,6 +192,20 @@ async function setup() {
 		related_collection: 'projects',
 		schema: { on_delete: 'CASCADE' },
 		meta: { one_field: 'digests', sort_field: null, junction_field: null },
+	});
+
+	// Belt-and-suspenders: Directus 11 does not always auto-create the inverse
+	// alias from `one_field` alone. Create the projects.digests o2m explicitly.
+	await createField('projects', {
+		field: 'digests',
+		type: 'alias',
+		meta: {
+			special: ['o2m'],
+			interface: 'list-o2m',
+			options: { template: '{{digest_date}} — {{recipient.first_name}} {{recipient.last_name}}' },
+			note: 'AI-generated daily PM briefs for this project',
+		},
+		schema: null,
 	});
 
 	await createRelation({
