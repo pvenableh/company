@@ -11,6 +11,19 @@ import { getEventTimelineDate } from '~~/shared/projects';
 // ── Props ──
 const props = defineProps<{
 	compact?: boolean;
+	/**
+	 * Render in client-portal mode. Reads route through /api/portal/items
+	 * (admin token + portal-scope filter), all write affordances are
+	 * disabled, and ticket links target the portal route.
+	 */
+	portal?: boolean;
+	/**
+	 * If the loaded project list is at most this size, auto-expand every
+	 * project so the user sees nested events/tickets/tasks without an
+	 * extra click. Useful for the portal dashboard where there are usually
+	 * one or two projects. 0 (default) = always start collapsed.
+	 */
+	autoExpandThreshold?: number;
 }>();
 
 // ── Data composables ──
@@ -22,9 +35,9 @@ const {
 	fetchAll,
 	ticketsByProject,
 	personalTasks,
-} = useUnifiedTimeline();
+} = useUnifiedTimeline({ portal: props.portal });
 
-const { projects, loading: projectsLoading, error, fetchProjects } = useProjectTimeline();
+const { projects, loading: projectsLoading, error, fetchProjects } = useProjectTimeline({ portal: props.portal });
 const { user: authUser } = useDirectusAuth();
 const { selectedOrg } = useOrganization();
 const { selectedClient } = useClients();
@@ -112,6 +125,28 @@ function toggleProject(id: string) {
 function expandAll() {
 	expandedProjects.value = new Set(projects.value.map(p => p.id));
 }
+
+// Auto-expand on first load when the project count is small. We watch
+// `projects.value.length` instead of doing it in onMounted because data
+// arrives asynchronously after fetchAllData() resolves. Tracked via a
+// flag so subsequent fetches (e.g. after a filter change) don't keep
+// re-expanding rows the user just collapsed.
+const autoExpandedOnce = ref(false);
+watch(
+	() => projects.value.length,
+	(len) => {
+		const threshold = props.autoExpandThreshold ?? 0;
+		if (
+			!autoExpandedOnce.value &&
+			threshold > 0 &&
+			len > 0 &&
+			len <= threshold
+		) {
+			expandAll();
+			autoExpandedOnce.value = true;
+		}
+	},
+);
 
 // ── Sort helper: earliest date for a project ──
 function getEarliestDate(project: ProjectWithRelations): number {
@@ -219,7 +254,7 @@ const rows = computed<GanttRow[]>(() => {
 				endDate: project.completion_date,
 				hasChildren: childCount > 0,
 				expanded: isExpanded,
-				link: `/projects/${project.id}`,
+				link: props.portal ? undefined : `/projects/${project.id}`,
 			});
 
 			if (isExpanded) {
@@ -268,7 +303,7 @@ const rows = computed<GanttRow[]>(() => {
 						startDate: ticket.date_created,
 						dueDate: ticket.due_date,
 						projectId: project.id,
-						link: `/tickets/${ticket.id}`,
+						link: props.portal ? '/portal/tickets' : `/tickets/${ticket.id}`,
 					});
 				}
 			}
@@ -284,7 +319,7 @@ const rows = computed<GanttRow[]>(() => {
 				status: project.status,
 				startDate: project.start_date,
 				endDate: project.completion_date,
-				link: `/projects/${project.id}`,
+				link: props.portal ? undefined : `/projects/${project.id}`,
 			});
 		}
 		for (const ticket of timelineData.value.tickets) {
@@ -297,7 +332,7 @@ const rows = computed<GanttRow[]>(() => {
 				status: ticket.status,
 				startDate: ticket.date_created,
 				dueDate: ticket.due_date,
-				link: `/tickets/${ticket.id}`,
+				link: props.portal ? '/portal/tickets' : `/tickets/${ticket.id}`,
 			});
 		}
 	}
@@ -587,7 +622,7 @@ const selectedProjectChildren = computed(() => {
 			type: 'ticket',
 			date: t.due_date || t.date_created,
 			status: t.status,
-			link: `/tickets/${t.id}`,
+			link: props.portal ? '/portal/tickets' : `/tickets/${t.id}`,
 		});
 	}
 	// Sort by date
@@ -638,6 +673,9 @@ function isTaskDoneEffective(row: GanttRow): boolean {
 
 async function toggleTaskCompleted(row: GanttRow) {
 	if (row.type !== 'task' || togglingTasks.value.has(row.id)) return;
+	// Portal users can't toggle task completion — clients don't manage
+	// task state. Click is a no-op (cursor stays default via class below).
+	if (props.portal) return;
 	togglingTasks.value.add(row.id);
 	const wasCompleted = isTaskDoneEffective(row);
 
@@ -674,7 +712,11 @@ async function toggleTaskCompleted(row: GanttRow) {
 }
 
 // ── Full event detail (TimelineEventDetail pattern) ──
-const eventItems = useDirectusItems('project_events');
+// In portal mode, reads route through the portal proxy so portal-only
+// users (no Directus role on project_events) can still open the modal.
+const eventItems = props.portal
+	? (usePortalItems('project_events') as any)
+	: useDirectusItems('project_events');
 const selectedEventFull = ref<any>(null);
 const loadingEventDetail = ref(false);
 const eventDetailRef = ref<any>(null);
@@ -757,6 +799,9 @@ const serviceItems = useDirectusItems('services');
 const servicesList = ref<{ id: string; name: string; color?: string }[]>([]);
 
 onMounted(async () => {
+	// Services are only used in the project-edit dropdown; portal users
+	// can't edit, and `services` isn't whitelisted in the portal proxy.
+	if (props.portal) return;
 	try {
 		const results = await serviceItems.list({ fields: ['id', 'name', 'color'], filter: { status: { _eq: 'published' } }, sort: ['name'], limit: 100 });
 		servicesList.value = (results || []) as any[];
@@ -904,9 +949,9 @@ const showUndated = ref(false);
 			</template>
 			<template v-else>
 				<p class="text-sm font-medium text-foreground">No projects on the timeline</p>
-				<p class="text-xs text-muted-foreground mt-1">{{ selectedClient ? 'No projects for this client.' : 'Create a project to see it here.' }}</p>
+				<p class="text-xs text-muted-foreground mt-1">{{ portal ? 'Nothing scheduled yet — your team will populate this view.' : selectedClient ? 'No projects for this client.' : 'Create a project to see it here.' }}</p>
 				<NuxtLink
-					v-if="!selectedClient"
+					v-if="!portal && !selectedClient"
 					to="/projects?new=1"
 					class="inline-flex items-center gap-1.5 mt-4 px-4 py-1.5 rounded-full bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"
 				>

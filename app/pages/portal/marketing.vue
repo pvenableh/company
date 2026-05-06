@@ -8,8 +8,8 @@ useHead({ title: 'Marketing Activity | Client Portal' });
 const { selectedOrg } = useOrganization();
 const { clientScope } = useOrgRole();
 
-const campaignItems = useDirectusItems('marketing_campaigns');
-const touchItems = useDirectusItems('marketing_touches');
+const campaignItems = usePortalItems('marketing_campaigns');
+const touchItems = usePortalItems('marketing_touches');
 
 const loading = ref(true);
 const campaigns = ref<any[]>([]);
@@ -39,25 +39,18 @@ async function loadCampaigns() {
 	if (!selectedOrg.value) return;
 	loading.value = true;
 	try {
+		// `marketing_campaigns` has no `client` FK; visibility is org-scoped
+		// (the portal proxy already pins org). Per-client filtering will land
+		// when campaigns get a touch-variant join surface.
 		const conditions: any[] = [
-			{ organization: { _eq: selectedOrg.value } },
 			{ status: { _nin: ['archived'] } },
 		];
-		if (clientScope.value) {
-			conditions.push({
-				_or: [
-					{ client: { _eq: clientScope.value } },
-					{ client: { _null: true } },
-				],
-			});
-		}
 
 		campaigns.value = await campaignItems.list({
 			filter: { _and: conditions },
 			fields: [
 				'id', 'title', 'goal', 'status', 'type',
 				'start_date', 'end_date',
-				'client.id', 'client.name',
 			],
 			sort: ['-start_date'],
 			limit: 50,

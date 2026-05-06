@@ -71,7 +71,11 @@ export async function createDailyRoom(params: {
 			properties: {
 				exp: Math.floor(expiresAt.getTime() / 1000),
 				max_participants: params.maxParticipants ?? 25,
-				enable_recording: params.enableRecording ? 'cloud' : undefined,
+				// Always wire cloud recording capability — actual recording only
+				// starts when the host clicks the in-room record button. This way
+				// the option is always available regardless of whether the host
+				// pre-checked the "enable recording" box at scheduling time.
+				enable_recording: 'cloud',
 				enable_chat: true,
 				enable_screenshare: true,
 				start_video_off: false,
@@ -80,6 +84,23 @@ export async function createDailyRoom(params: {
 			},
 		}),
 	});
+}
+
+/**
+ * Ensure recording is enabled on an existing room. Used to retro-fit rooms that
+ * were created before `enable_recording: 'cloud'` became the default — without
+ * it, the prebuilt UI hides the record button and `startRecording()` on the
+ * wrapped iframe is a no-op.
+ */
+export async function ensureRoomRecordingEnabled(roomName: string): Promise<void> {
+	try {
+		await dailyFetch(`/rooms/${roomName}`, {
+			method: 'POST',
+			body: JSON.stringify({ properties: { enable_recording: 'cloud' } }),
+		});
+	} catch (err) {
+		console.warn(`[daily] failed to ensure recording on ${roomName}:`, err);
+	}
 }
 
 /**
@@ -217,6 +238,11 @@ export async function getDailyRecordingAccessLink(recordingId: string): Promise<
 /**
  * Generate a meeting token for a participant.
  * Tokens control permissions (owner vs guest).
+ *
+ * `redirectOnExit` plumbs Daily's `redirect_on_meeting_exit` token property —
+ * when set, the prebuilt UI sends the leaver to that URL after they click
+ * "Leave". We use it for the marketing follow-up page so guests joining via
+ * the Daily.co subdomain land on a real upsell, not Daily's blank exit screen.
  */
 export async function createDailyMeetingToken(params: {
 	roomName: string;
@@ -224,6 +250,7 @@ export async function createDailyMeetingToken(params: {
 	userName?: string;
 	isOwner?: boolean;
 	expiresAt?: Date;
+	redirectOnExit?: string;
 }): Promise<string> {
 	const expiresAt = params.expiresAt ?? new Date(Date.now() + 4 * 60 * 60 * 1000);
 
@@ -237,6 +264,9 @@ export async function createDailyMeetingToken(params: {
 				is_owner: params.isOwner ?? false,
 				exp: Math.floor(expiresAt.getTime() / 1000),
 				eject_at_token_exp: true,
+				...(params.redirectOnExit
+					? { redirect_on_meeting_exit: params.redirectOnExit }
+					: {}),
 			},
 		}),
 	});

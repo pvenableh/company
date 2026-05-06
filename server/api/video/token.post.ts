@@ -64,12 +64,20 @@ export default defineEventHandler(async (event) => {
 			identity = `Guest-${Math.random().toString(36).substring(2, 8)}`;
 		}
 
+		// Send anyone who clicks "Leave" inside the prebuilt to the marketing
+		// follow-up page. Embedded logged-in attendees never see this — our
+		// `left-meeting` listener navigates the parent to the recap first.
+		const config = useRuntimeConfig();
+		const marketingUrl = (config.public as any)?.marketingUrl || 'https://earnest.guru';
+		const redirectOnExit = `${marketingUrl.replace(/\/$/, '')}/meeting-follow-up`;
+
 		// Generate Daily.co meeting token
 		const token = await createDailyMeetingToken({
 			roomName: body.roomName,
 			userId,
 			userName: identity,
 			isOwner,
+			redirectOnExit,
 		});
 
 		return {

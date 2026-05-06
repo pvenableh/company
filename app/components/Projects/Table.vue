@@ -27,7 +27,7 @@
 					v-for="project in sortedProjects"
 					:key="project.id"
 					class="border-b last:border-0 hover:bg-muted/50 cursor-pointer transition-colors"
-					@click="navigateTo(`/projects/${project.id}`)"
+					@click="handleRowClick(project)"
 				>
 					<td class="py-3 pr-4">
 						<div class="flex items-center gap-2">
@@ -132,7 +132,25 @@ const props = defineProps({
 		type: Boolean,
 		default: false,
 	},
+	/**
+	 * When true, row clicks emit `select-project` instead of navigating to
+	 * `/projects/:id` (that route doesn't render for portal users).
+	 */
+	portal: {
+		type: Boolean,
+		default: false,
+	},
 });
+
+const emit = defineEmits(['select-project']);
+
+function handleRowClick(project) {
+	if (props.portal) {
+		emit('select-project', project);
+		return;
+	}
+	navigateTo(`/projects/${project.id}`);
+}
 
 const sortBy = ref('date_updated');
 const sortDir = ref('desc');

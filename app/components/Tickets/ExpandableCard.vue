@@ -2,11 +2,13 @@
 	<div class="w-full relative">
 		<!-- Card Preview -->
 		<div class="w-full cursor-pointer transition-transform duration-300">
-			<TicketsCard :element="element" @edit="openModal" @archive="archiveTicket" />
+			<TicketsCard :element="element" @edit="handleEdit" @archive="archiveTicket" />
 		</div>
 
-		<!-- Quick Edit Modal -->
+		<!-- Quick Edit Modal — agency only. Portal users can't edit, so we
+			 emit `view` instead and let the parent open a read-only flow. -->
 		<TicketsFormModal
+			v-if="!portal"
 			v-model="showModal"
 			:ticket="element"
 			:organization-id="element?.organization?.id || element?.organization"
@@ -34,12 +36,28 @@ const props = defineProps({
 		type: Set,
 		required: true,
 	},
+	/** When true, the agency edit/archive modal is hidden and the parent
+	 * receives a `view` event so it can open a read-only slide-over. */
+	portal: {
+		type: Boolean,
+		default: false,
+	},
 });
+
+const emit = defineEmits(['view']);
 
 const showModal = ref(false);
 
 const openModal = () => {
 	showModal.value = true;
+};
+
+const handleEdit = (ticket) => {
+	if (props.portal) {
+		emit('view', ticket);
+		return;
+	}
+	openModal();
 };
 
 const handleUpdated = () => {

@@ -16,15 +16,32 @@ import type {
   CreateTaskPayload,
 } from '~~/shared/projects';
 
-export function useProjectTimeline() {
+export function useProjectTimeline(opts: { portal?: boolean } = {}) {
   const { user } = useDirectusAuth();
   const { selectedOrg } = useOrganization();
   const { getClientFilter } = useClients();
-  const projects = useDirectusItems<Project>('projects');
-  const events = useDirectusItems<ProjectEvent>('project_events');
-  const tasks = useDirectusItems<ProjectTask>('project_tasks');
+
+  // Portal-only users have no Directus role granting read on
+  // projects/project_events/project_tasks. Route reads through the portal
+  // proxy (admin token + client_portal_users scope) when `portal: true`.
+  // The mutation surface (update/create/remove) only exists on
+  // useDirectusItems — calling it in portal mode is a programming error
+  // and the corresponding methods below throw with a clear message.
+  const projects = opts.portal
+    ? (usePortalItems<Project>('projects') as any)
+    : useDirectusItems<Project>('projects');
+  const events = opts.portal
+    ? (usePortalItems<ProjectEvent>('project_events') as any)
+    : useDirectusItems<ProjectEvent>('project_events');
+  const tasks = opts.portal
+    ? (usePortalItems<ProjectTask>('project_tasks') as any)
+    : useDirectusItems<ProjectTask>('project_tasks');
   const { getReactionSummary } = useReactions();
   const { getCommentCount } = useComments();
+
+  const portalWriteGuard = (): never => {
+    throw new Error('Mutations are disabled in portal mode');
+  };
 
   const projectList = useState<ProjectWithRelations[]>('project-timeline', () => []);
   const loading = ref(true);
@@ -86,7 +103,10 @@ export function useProjectTimeline() {
       loading.value = false;
       return;
     }
-    if (!selectedOrg.value) {
+    // Portal mode is org-scoped server-side — selectedOrg may not have
+    // resolved client-side yet when the Gantt mounts in /portal/projects,
+    // so skip the early bail.
+    if (!opts.portal && !selectedOrg.value) {
       projectList.value = [];
       loading.value = false;
       return;
@@ -98,14 +118,19 @@ export function useProjectTimeline() {
     try {
       const filter: Record<string, any> = {
         _and: [
-          { organization: { _eq: selectedOrg.value } },
           { status: { _in: TIMELINE_VISIBLE_STATUSES } },
         ],
       };
 
-      const clientFilter = getClientFilter();
-      if (Object.keys(clientFilter).length > 0) {
-        filter._and.push(clientFilter);
+      // Portal proxy auto-scopes to org + client (parent_client walk),
+      // so don't add manual conditions there — they'd just AND with the
+      // proxy filter.
+      if (!opts.portal) {
+        filter._and.push({ organization: { _eq: selectedOrg.value } });
+        const clientFilter = getClientFilter();
+        if (Object.keys(clientFilter).length > 0) {
+          filter._and.push(clientFilter);
+        }
       }
 
       const result = await projects.list({
@@ -166,18 +191,21 @@ export function useProjectTimeline() {
   };
 
   const createProject = async (data: CreateProjectPayload): Promise<ProjectWithRelations> => {
+    if (opts.portal) portalWriteGuard();
     const created = await projects.create(data as Partial<Project>, { fields: projectFields });
     await fetchProjects();
     return created as ProjectWithRelations;
   };
 
   const updateProject = async (projectId: string, data: Partial<Project>): Promise<ProjectWithRelations> => {
+    if (opts.portal) portalWriteGuard();
     const updated = await projects.update(projectId, data, { fields: projectFields });
     await fetchProjects();
     return updated as ProjectWithRelations;
   };
 
   const createEvent = async (data: CreateEventPayload): Promise<ProjectEventWithRelations> => {
+    if (opts.portal) portalWriteGuard();
     const payload: Partial<ProjectEvent> = {
       ...data,
       status: 'Active',
@@ -189,17 +217,20 @@ export function useProjectTimeline() {
   };
 
   const updateEvent = async (eventId: string, data: Partial<ProjectEvent>): Promise<ProjectEventWithRelations> => {
+    if (opts.portal) portalWriteGuard();
     const updated = await events.update(eventId, data);
     await fetchProjects();
     return updated as ProjectEventWithRelations;
   };
 
   const deleteEvent = async (eventId: string): Promise<void> => {
+    if (opts.portal) portalWriteGuard();
     await events.remove(eventId);
     await fetchProjects();
   };
 
   const toggleTask = async (taskId: string, completed: boolean): Promise<void> => {
+    if (opts.portal) portalWriteGuard();
     await tasks.update(taskId, {
       completed,
       completed_at: completed ? new Date().toISOString() : null,
@@ -209,18 +240,21 @@ export function useProjectTimeline() {
   };
 
   const createTask = async (data: CreateTaskPayload): Promise<ProjectTask> => {
+    if (opts.portal) portalWriteGuard();
     const created = await tasks.create(data as Partial<ProjectTask>);
     await fetchProjects();
     return created;
   };
 
   const updateTask = async (taskId: string, data: Partial<ProjectTask>): Promise<ProjectTask> => {
+    if (opts.portal) portalWriteGuard();
     const updated = await tasks.update(taskId, data);
     await fetchProjects();
     return updated;
   };
 
   const deleteTask = async (taskId: string): Promise<void> => {
+    if (opts.portal) portalWriteGuard();
     await tasks.remove(taskId);
     await fetchProjects();
   };

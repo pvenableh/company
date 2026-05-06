@@ -12,8 +12,8 @@ const { clientScope } = useOrgRole();
 const { user } = useDirectusAuth();
 const config = useRuntimeConfig();
 
-const channelItems = useDirectusItems('channels');
-const messageItems = useDirectusItems('messages');
+const channelItems = usePortalItems('channels');
+const messageItems = usePortalItems('messages');
 
 const loadingChannels = ref(true);
 const channels = ref<any[]>([]);
@@ -34,21 +34,18 @@ async function loadChannels() {
 			filter.push({ organization: orgFilter.organization });
 		}
 
-		// Client users see channels associated with their client
+		// Client users see channels associated with their client.
+		// Visibility is enforced server-side by /api/portal/items — the page-side
+		// filter is redundant but harmless.
 		if (clientScope.value) {
-			filter.push({
-				_or: [
-					{ client: { _eq: clientScope.value } },
-					{ is_public: { _eq: true } },
-				],
-			});
+			filter.push({ client: { _eq: clientScope.value } });
 		}
 
 		filter.push({ status: { _eq: 'published' } });
 
 		channels.value = await channelItems.list({
 			filter: filter.length ? { _and: filter } : undefined,
-			fields: ['id', 'name', 'description', 'icon', 'status', 'date_updated'],
+			fields: ['id', 'name', 'description', 'status', 'date_updated'],
 			sort: ['-date_updated'],
 			limit: 50,
 		});
@@ -80,7 +77,7 @@ async function loadMessages() {
 			},
 			fields: [
 				'id',
-				'content',
+				'text',
 				'date_created',
 				'user_created.id',
 				'user_created.first_name',
@@ -184,7 +181,7 @@ watch(() => selectedOrg.value, () => {
 						: 'text-muted-foreground hover:text-foreground hover:bg-muted/50'"
 					@click="selectChannel(channel)"
 				>
-					<Icon :name="channel.icon || 'lucide:hash'" class="w-4 h-4 shrink-0" />
+					<Icon :name="'lucide:hash'" class="w-4 h-4 shrink-0" />
 					<span class="truncate">{{ channel.name }}</span>
 				</button>
 			</nav>
@@ -205,7 +202,7 @@ watch(() => selectedOrg.value, () => {
 						@click="selectChannel(channel)"
 					>
 						<div class="flex items-center gap-3">
-							<Icon :name="channel.icon || 'lucide:hash'" class="w-5 h-5 text-muted-foreground" />
+							<Icon :name="'lucide:hash'" class="w-5 h-5 text-muted-foreground" />
 							<div>
 								<p class="font-medium text-sm">{{ channel.name }}</p>
 								<p v-if="channel.description" class="text-xs text-muted-foreground line-clamp-1">{{ channel.description }}</p>
@@ -226,7 +223,7 @@ watch(() => selectedOrg.value, () => {
 				<button class="sm:hidden p-1 rounded-lg hover:bg-muted/60" @click="selectedChannel = null">
 					<Icon name="lucide:arrow-left" class="w-5 h-5" />
 				</button>
-				<Icon :name="selectedChannel.icon || 'lucide:hash'" class="w-4 h-4 text-muted-foreground" />
+				<Icon :name="'lucide:hash'" class="w-4 h-4 text-muted-foreground" />
 				<h3 class="font-medium text-sm">{{ selectedChannel.name }}</h3>
 			</div>
 
@@ -279,7 +276,7 @@ watch(() => selectedOrg.value, () => {
 									? 'bg-primary text-primary-foreground rounded-tr-sm'
 									: 'bg-muted/60 rounded-tl-sm'"
 							>
-								{{ message.content }}
+								{{ message.text }}
 							</div>
 						</div>
 					</div>

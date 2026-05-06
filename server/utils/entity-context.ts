@@ -954,7 +954,7 @@ async function buildProjectEventContext(directus: any, eventId: string, now: Dat
 // ─── Video Meeting Context ──────────────────────────────────────────────────
 
 async function buildVideoMeetingContext(directus: any, meetingId: string, _now: Date): Promise<string> {
-  const [meeting, notes, comments] = await Promise.all([
+  const [meeting, notes, comments, chat] = await Promise.all([
     directus.request(
       readItem('video_meetings', meetingId, {
         fields: [
@@ -992,6 +992,15 @@ async function buildVideoMeetingContext(directus: any, meetingId: string, _now: 
         fields: ['id', 'comment', 'date_created', 'user.first_name', 'user.last_name'],
         sort: ['-date_created'],
         limit: 10,
+      }),
+    ).catch(() => []) as Promise<any[]>,
+
+    directus.request(
+      readItems('meeting_chat_messages', {
+        filter: { meeting: { _eq: meetingId } },
+        fields: ['id', 'sender_name', 'message', 'sent_at', 'date_created'],
+        sort: ['sent_at'],
+        limit: 80,
       }),
     ).catch(() => []) as Promise<any[]>,
   ]);
@@ -1067,6 +1076,17 @@ async function buildVideoMeetingContext(directus: any, meetingId: string, _now: 
       const who = c.user ? `${c.user.first_name || ''} ${c.user.last_name || ''}`.trim() : '';
       const text = String(c.comment || '').replace(/<[^>]+>/g, ' ').substring(0, 200);
       lines.push(`  - ${who ? `${who}: ` : ''}${text}`);
+    });
+  }
+
+  if (Array.isArray(chat) && chat.length > 0) {
+    lines.push('');
+    lines.push('[Source: In-call Chat]');
+    lines.push(`IN-CALL CHAT (${chat.length} messages):`);
+    chat.slice(0, 40).forEach((m: any) => {
+      const who = (m.sender_name || 'Unknown').slice(0, 60);
+      const text = String(m.message || '').slice(0, 240);
+      lines.push(`  - ${who}: ${text}`);
     });
   }
 

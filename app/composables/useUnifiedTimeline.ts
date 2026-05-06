@@ -41,10 +41,10 @@ export interface UnifiedTimelineData {
 	tasks: TimelineTask[];
 }
 
-export function useUnifiedTimeline() {
-	const projectItems = useDirectusItems('projects');
-	const ticketItems = useDirectusItems('tickets');
-	const taskItems = useDirectusItems('tasks');
+export function useUnifiedTimeline(opts: { portal?: boolean } = {}) {
+	const projectItems = opts.portal ? (usePortalItems('projects') as any) : useDirectusItems('projects');
+	const ticketItems = opts.portal ? (usePortalItems('tickets') as any) : useDirectusItems('tickets');
+	const taskItems = opts.portal ? (usePortalItems('tasks') as any) : useDirectusItems('tasks');
 	const { selectedOrg } = useOrganization();
 
 	const viewMode = ref<TimelineViewMode>('nested');
@@ -74,7 +74,9 @@ export function useUnifiedTimeline() {
 	}
 
 	const fetchAll = async () => {
-		if (!selectedOrg.value) return;
+		// In portal mode, the proxy auto-scopes by org+client; in agency mode
+		// we need a selected org before issuing scoped queries.
+		if (!opts.portal && !selectedOrg.value) return;
 		loading.value = true;
 
 		try {
@@ -82,7 +84,7 @@ export function useUnifiedTimeline() {
 
 			// Fetch projects with events and tasks
 			const projects = await projectItems.list({
-				filter: { organization: { _eq: orgId } },
+				filter: opts.portal ? undefined : { organization: { _eq: orgId } },
 				fields: [
 					'*',
 					'events.*',
@@ -97,24 +99,29 @@ export function useUnifiedTimeline() {
 
 			// Fetch tickets
 			const tickets = await ticketItems.list({
-				filter: { organization: { _eq: orgId } },
+				filter: opts.portal ? undefined : { organization: { _eq: orgId } },
 				fields: ['*', 'tasks.*', 'assigned_to.directus_users_id.*'],
 				sort: ['-date_created'],
 				limit: 100,
 			});
 
-			// Fetch quick tasks (personal tasks with due dates)
-			const tasks = await taskItems.list({
-				filter: {
-					_and: [
-						{ organization_id: { _eq: orgId } },
-						{ category: { _in: ['quick', 'project', 'event', 'ticket'] } },
-					],
-				},
-				fields: ['*'],
-				sort: ['-date_created'],
-				limit: 200,
-			});
+			// Fetch quick tasks (personal tasks with due dates).
+			// Portal users don't have a personal "quick task" stream — clients
+			// don't author standalone tasks — so skip this fetch entirely
+			// and the unified-timeline `personalTasks` swimlane stays empty.
+			const tasks = opts.portal
+				? []
+				: await taskItems.list({
+					filter: {
+						_and: [
+							{ organization_id: { _eq: orgId } },
+							{ category: { _in: ['quick', 'project', 'event', 'ticket'] } },
+						],
+					},
+					fields: ['*'],
+					sort: ['-date_created'],
+					limit: 200,
+				});
 
 			data.value = {
 				projects: projects || [],

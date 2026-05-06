@@ -13,7 +13,9 @@
 			class="w-full flex flex-col md:flex-row items-end justify-between mb-4 xl:mb-8 xl:mt-2 px-4 gap-4 pt-4 projects-board__filters"
 		>
 			<div class="flex items-center gap-4">
-				<div class="flex items-center space-x-2">
+				<!-- Service filter — agency only (services not exposed via portal proxy
+					 and clients almost always have a single service anyway) -->
+				<div v-if="!portal" class="flex items-center space-x-2">
 					<USelectMenu
 						v-model="selectedService"
 						:options="serviceOptions"
@@ -32,7 +34,7 @@
 					</USelectMenu>
 				</div>
 
-				<!-- Assigned To Filter -->
+				<!-- Assigned To Filter — useful in both modes -->
 				<div class="flex flex-row items-center justify-center space-x-2 ml-4">
 					<UToggle v-model="filterByAssignedTo" />
 					<span class="t-label text-muted-foreground">
@@ -40,8 +42,8 @@
 					</span>
 				</div>
 
-				<!-- New Project Button -->
-				<Button size="sm" variant="outline" class="ml-2 uppercase text-[10px] tracking-wide" @click="showNewProjectModal = true">
+				<!-- New Project Button — agency only; portal users can't create projects -->
+				<Button v-if="!portal" size="sm" variant="outline" class="ml-2 uppercase text-[10px] tracking-wide" @click="showNewProjectModal = true">
 					<UIcon name="i-heroicons-plus" class="h-3 w-3 mr-1" />
 					New Project
 				</Button>
@@ -92,11 +94,12 @@
 					</div>
 				</div>
 
-				<!-- Draggable Container -->
+				<!-- Draggable Container — drag disabled in portal mode (clients can't move projects between statuses) -->
 				<VueDraggable
 					v-else
 					v-model="localProjects[column.id]"
-					:group="{ name: 'projects' }"
+					:group="{ name: 'projects', pull: portal ? false : true, put: portal ? false : true }"
+					:disabled="portal"
 					item-key="id"
 					class="projects-board__board-col-content"
 					:class="{ 'is-dragging': isDragging }"
@@ -245,8 +248,21 @@
 <script setup>
 import VueDraggable from 'vuedraggable';
 import { Button } from '~/components/ui/button';
+
+const props = defineProps({
+	/**
+	 * Render in client-portal mode. Reads route through /api/portal/items
+	 * (admin token + portal-scope filter). Drag, status updates, project
+	 * creation, and the Directus realtime subscription are all disabled.
+	 */
+	portal: {
+		type: Boolean,
+		default: false,
+	},
+});
+
 const serviceItems = useDirectusItems('services');
-const projectItems = useDirectusItems('projects');
+const projectItems = props.portal ? usePortalItems('projects') : useDirectusItems('projects');
 const { user } = useDirectusAuth();
 const { selectedOrg, hasMultipleOrgs, organizationOptions, setOrganization, clearOrganization, getOrganizationFilter } =
 	useOrganization();
@@ -362,8 +378,9 @@ const localProjects = ref(
 	}, {}),
 );
 
-// Fetch services
+// Fetch services — agency only (portal hides the service select)
 const fetchServices = async () => {
+	if (props.portal) return;
 	try {
 		const services = await serviceItems.list({
 			fields: ['id', 'name', 'color'],
@@ -403,31 +420,32 @@ const fields = [
 const filterRef = computed(() => getFilter());
 
 const getFilter = () => {
-	console.log('Getting filter');
 	const filter = {
 		_and: [],
 	};
 
-	// Organization filter
-	const orgFilter = getOrganizationFilter();
-	if (Object.keys(orgFilter).length > 0) {
-		filter._and.push(orgFilter);
+	// Org + client filters are agency-only — portal proxy auto-scopes by
+	// org + parent_client walk, so adding manual conditions here is both
+	// redundant and broken (portal users have no `selectedClient`).
+	if (!props.portal) {
+		const orgFilter = getOrganizationFilter();
+		if (Object.keys(orgFilter).length > 0) {
+			filter._and.push(orgFilter);
+		}
+		const clientFilter = getClientFilter();
+		if (Object.keys(clientFilter).length > 0) {
+			filter._and.push(clientFilter);
+		}
 	}
 
-	// Client filter
-	const clientFilter = getClientFilter();
-	if (Object.keys(clientFilter).length > 0) {
-		filter._and.push(clientFilter);
-	}
-
-	// Service filter
-	if (selectedService.value) {
+	// Service filter (agency only — portal hides the service select)
+	if (!props.portal && selectedService.value) {
 		filter._and.push({
 			service: { _eq: selectedService.value },
 		});
 	}
 
-	// Assignment filter
+	// Assignment filter — works in both modes
 	if (filterByAssignedTo.value && user.value) {
 		filter._and.push({
 			assigned_to: {
@@ -442,27 +460,50 @@ const getFilter = () => {
 		delete filter._and;
 	}
 
-	// Debug final filter
-	console.log('Final Filter:', JSON.stringify(filter, null, 2));
-
-	// Debug final query
-	const query = {
-		fields,
-		filter,
-		sort: '-date_updated',
-	};
-	console.log('Final Query:', JSON.stringify(query, null, 2));
-
 	return filter;
 };
 
-const {
-	data: projects,
-	isLoading,
-	isConnected,
-	lastUpdated,
-	refresh,
-} = useRealtimeSubscription('projects', fields, filterRef.value, '-date_updated');
+// ── Data layer: realtime in agency, simple proxy fetch in portal ──
+// Portal users hit /api/portal/items via usePortalItems above, so the
+// realtime subscription (which uses Directus websockets directly) is
+// skipped. Refreshes are manual (refresh button) or status-filter triggered.
+const portalProjects = ref([]);
+const portalLoading = ref(true);
+const portalConnected = ref(true);
+const portalLastUpdated = ref(null);
+
+async function fetchPortalProjects() {
+	if (!props.portal) return;
+	portalLoading.value = true;
+	try {
+		const result = await projectItems.list({
+			fields,
+			filter: filterRef.value,
+			sort: ['-date_updated'],
+			limit: 100,
+		});
+		portalProjects.value = result || [];
+		portalLastUpdated.value = new Date();
+	} catch (err) {
+		console.error('Portal projects fetch failed:', err);
+	} finally {
+		portalLoading.value = false;
+	}
+}
+
+const realtimeData = props.portal
+	? null
+	: useRealtimeSubscription('projects', fields, filterRef.value, '-date_updated');
+
+const projects = props.portal ? portalProjects : realtimeData.data;
+const isLoading = props.portal ? portalLoading : realtimeData.isLoading;
+const isConnected = props.portal ? portalConnected : realtimeData.isConnected;
+const lastUpdated = props.portal ? portalLastUpdated : realtimeData.lastUpdated;
+const refresh = props.portal ? fetchPortalProjects : realtimeData.refresh;
+
+watch(filterRef, () => {
+	if (props.portal) fetchPortalProjects();
+});
 
 watch([() => projects.value, selectedOrg, selectedClient, selectedService, filterByAssignedTo], ([newProjects]) => {
 	if (!newProjects) return;
@@ -555,6 +596,7 @@ onMounted(() => {
 		window.addEventListener('resize', checkMobile);
 	}
 	fetchServices();
+	if (props.portal) fetchPortalProjects();
 });
 
 onUnmounted(() => {

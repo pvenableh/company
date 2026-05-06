@@ -8,7 +8,7 @@ useHead({ title: 'Tasks | Client Portal' });
 const { selectedOrg } = useOrganization();
 const { clientScope } = useOrgRole();
 
-const taskItems = useDirectusItems('tasks');
+const taskItems = usePortalItems('tasks');
 
 const loading = ref(true);
 const tasks = ref<any[]>([]);

@@ -18,13 +18,15 @@ export default defineEventHandler(async (event) => {
 
   const directus = getServerDirectus();
 
+  // `invoices` has no `organization` FK — scope is implied via `client.organization`.
+  // We rely on the parent_client walk in requirePortalContext to keep cross-tenant
+  // results out (clients are unique per org).
   const conditions: any[] = [
-    { organization: { _eq: ctx.organizationId } },
     { client: { _in: ctx.scopedClientIds } },
   ];
 
   if (filter === 'unpaid') {
-    conditions.push({ status: { _in: ['draft', 'sent', 'overdue'] } });
+    conditions.push({ status: { _in: ['pending', 'processing'] } });
   } else if (filter === 'paid') {
     conditions.push({ status: { _eq: 'paid' } });
   }
@@ -38,8 +40,7 @@ export default defineEventHandler(async (event) => {
         'status',
         'invoice_date',
         'due_date',
-        'total',
-        'currency',
+        'total_amount',
         'client.id',
         'client.name',
         'payments.id',

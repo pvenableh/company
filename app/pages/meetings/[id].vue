@@ -100,6 +100,76 @@ watch(meetingId, async (id) => {
 	if (id) await fetchNotes();
 }, { immediate: true });
 
+// Adaptive Earnest-AI prompts: derive from real meeting state so the sidebar
+// reads as an assistant for *this* meeting, not a generic prompt picker.
+// Order is intent-priority — most actionable first, evergreen fallback last.
+const adaptivePrompts = computed(() => {
+	const m = meeting.value;
+	if (!m) return [];
+	const out = [];
+
+	const items = Array.isArray(m.action_items) ? m.action_items : [];
+	const unpromoted = items.filter((i) => !i?.promoted);
+	if (unpromoted.length > 0) {
+		out.push(`Promote the ${unpromoted.length} unfinished action item${unpromoted.length === 1 ? '' : 's'} into tasks`);
+	}
+
+	if (m.summary_status === 'failed') {
+		out.push('Retry the AI recap — last attempt failed');
+	} else if (!m.summary && m.transcript_text) {
+		out.push('Generate a recap from the transcript');
+	}
+
+	const projectTitle = m.project?.title || m.project_event?.project?.title;
+	if (projectTitle) out.push(`How does this meeting affect the ${projectTitle} timeline?`);
+
+	const eventTitle = m.project_event?.title;
+	if (eventTitle) out.push(`What's left before "${eventTitle}" ships?`);
+
+	const clientName = m.related_organization?.name;
+	if (clientName) out.push(`Draft a follow-up email to ${clientName}`);
+
+	if (chatMessages.value.length > 0) {
+		out.push('Pull insights from the in-call chat');
+	}
+
+	const decisions = notes.value?.filter?.((n) => n.note_type === 'decision') || [];
+	if (decisions.length > 0) {
+		out.push(`Summarize the ${decisions.length} decision${decisions.length === 1 ? '' : 's'} we captured`);
+	}
+
+	// Evergreen tail so the panel never goes blank if everything above filtered out.
+	out.push('Summarize the conversation');
+
+	return out.slice(0, 6);
+});
+
+// In-call chat log (captured from Daily prebuilt's app-message bus).
+const chatMessages = ref([]);
+const chatOpen = ref(false);
+const fetchChat = async () => {
+	if (!meetingId.value) return;
+	try {
+		const res = await $fetch('/api/directus/items', {
+			method: 'POST',
+			body: {
+				collection: 'meeting_chat_messages',
+				operation: 'list',
+				query: {
+					filter: { meeting: { _eq: meetingId.value } },
+					fields: ['id', 'sender_name', 'message', 'sent_at', 'date_created'],
+					sort: ['sent_at'],
+					limit: 200,
+				},
+			},
+		});
+		chatMessages.value = Array.isArray(res?.data) ? res.data : [];
+	} catch {
+		chatMessages.value = [];
+	}
+};
+watch(meetingId, async (id) => { if (id) await fetchChat(); }, { immediate: true });
+
 // Set the AI sidebar's entity so Ask Earnest works against this meeting.
 watch(meeting, (m) => {
 	if (m?.id) setEntity('video_meeting', String(m.id), m.title || 'Meeting');
@@ -741,6 +811,29 @@ const promoteActionItem = async (idx) => {
 				</div>
 			</div>
 
+			<!-- In-call chat log (captured from Daily prebuilt) -->
+			<div v-if="chatMessages.length > 0" class="ios-card p-5">
+				<button class="w-full flex items-center justify-between" @click="chatOpen = !chatOpen">
+					<h2 class="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+						In-call Chat <span class="text-muted-foreground/60 ml-1">({{ chatMessages.length }})</span>
+					</h2>
+					<UIcon
+						:name="chatOpen ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'"
+						class="w-4 h-4 text-muted-foreground"
+					/>
+				</button>
+				<div v-if="chatOpen" class="mt-3 pt-3 border-t border-border/30 space-y-2.5 max-h-96 overflow-y-auto">
+					<div
+						v-for="m in chatMessages"
+						:key="m.id"
+						class="flex gap-2 text-[12px] leading-relaxed"
+					>
+						<span class="font-semibold text-foreground/90 whitespace-nowrap">{{ m.sender_name || 'Unknown' }}:</span>
+						<span class="text-foreground/70 whitespace-pre-wrap break-words">{{ m.message }}</span>
+					</div>
+				</div>
+			</div>
+
 			<!-- Discussion (async comments + reactions, polymorphic) -->
 			<div class="ios-card p-5">
 				<h2 class="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Discussion</h2>
@@ -759,6 +852,8 @@ const promoteActionItem = async (idx) => {
 				entity-type="video_meeting"
 				:entity-id="meeting.id"
 				:entity-label="meeting.title || 'Meeting'"
+				surface="recap"
+				:prompts="adaptivePrompts"
 				@close="closeSidebar"
 			/>
 			<Transition name="overlay">

@@ -175,25 +175,57 @@
 				<UIcon name="i-heroicons-arrow-top-right-on-square" class="w-3 h-3 opacity-60" />
 			</NuxtLink>
 
-			<!-- Ask Earnest AI button — top-right below Daily header -->
-			<button
-				v-if="hasJoined"
-				class="fixed top-16 right-4 z-30 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white text-[11px] font-medium transition-colors shadow-lg pointer-events-auto"
-				title="Ask Earnest about this meeting"
-				@click="aiTrayOpen = true"
-			>
-				<UIcon name="i-heroicons-sparkles" class="w-3.5 h-3.5" />
-				<span>Ask Earnest</span>
-			</button>
+			<!-- Top-right floating controls: Record (host) + Ask Earnest -->
+			<div v-if="hasJoined" class="fixed top-16 right-4 z-30 flex items-center gap-2 pointer-events-auto">
+				<button
+					v-if="isHost"
+					:class="[
+						'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-md text-[11px] font-medium transition-colors shadow-lg',
+						isRecording
+							? 'bg-red-500/90 hover:bg-red-500 text-white'
+							: 'bg-black/60 hover:bg-black/80 text-white',
+					]"
+					:disabled="recordingBusy"
+					:title="isRecording ? 'Stop cloud recording' : 'Start cloud recording'"
+					@click="toggleRecording"
+				>
+					<span v-if="isRecording" class="w-2 h-2 rounded-full bg-white animate-pulse" />
+					<UIcon v-else name="i-heroicons-video-camera" class="w-3.5 h-3.5" />
+					<span>{{ isRecording ? 'Recording' : 'Record' }}</span>
+				</button>
+				<button
+					class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white text-[11px] font-medium transition-colors shadow-lg"
+					title="Ask Earnest about this meeting"
+					@click="aiTrayOpen = true"
+				>
+					<UIcon name="i-heroicons-sparkles" class="w-3.5 h-3.5" />
+					<span>Ask Earnest</span>
+				</button>
+			</div>
 		</div>
 
-		<!-- Floating dock + AI tray. The dock is draggable and minimizable so the
-		     user can park it away from Daily's leave button when it gets in the way. -->
+		<!-- Floating dock + AI surface. While the meeting is active and the user
+		     is signed in we use the entity-aware ContextualSidebar so suggestions
+		     come back tied to this meeting's project / client / event. Anonymous
+		     guests fall back to the global tray. -->
 		<ClientOnly>
 			<div class="meeting-dock-override">
 				<LayoutFloatingDock @open-ai="aiTrayOpen = true" />
 			</div>
-			<CommandCenterAITray :is-open="aiTrayOpen" @close="aiTrayOpen = false" />
+			<AIContextualSidebar
+				v-if="aiTrayOpen && currentUser && meeting?.id"
+				entity-type="video_meeting"
+				:entity-id="meeting.id"
+				:entity-label="meeting.title || 'Meeting'"
+				surface="live"
+				:prompts="livePrompts"
+				@close="aiTrayOpen = false"
+			/>
+			<CommandCenterAITray
+				v-else-if="aiTrayOpen"
+				:is-open="aiTrayOpen"
+				@close="aiTrayOpen = false"
+			/>
 		</ClientOnly>
 	</div>
 </template>
@@ -225,6 +257,8 @@ const loadingToken = ref(false);
 const dailyUrl = ref(null);
 const aiTrayOpen = ref(false);
 const dailyFrame = ref(null);
+const isRecording = ref(false);
+const recordingBusy = ref(false);
 
 let statusPollInterval = null;
 
@@ -235,6 +269,32 @@ const isHost = computed(() => {
 		? meeting.value.host_user?.id
 		: meeting.value.host_user;
 	return hostId === currentUser.value.id;
+});
+
+// Adaptive Earnest-AI prompts for *during* the call. The recap surface has
+// post-call counts (action items, decisions, transcript) — here we lean on
+// the noun the meeting is anchored to (project / event / client) since the
+// in-call story is unfolding live.
+const livePrompts = computed(() => {
+	const m = meeting.value;
+	if (!m) return [];
+	const out = [];
+
+	const eventTitle = m.project_event?.title;
+	const projectTitle = m.project?.title || m.project_event?.project?.title;
+	const clientName = m.related_organization?.name;
+
+	if (eventTitle) out.push(`What's left to ship for "${eventTitle}"?`);
+	if (projectTitle) out.push(`Where are we on ${projectTitle}?`);
+	if (clientName) out.push(`Open items I should raise with ${clientName}`);
+
+	// Stable in-call fallbacks (always shown so the panel stays useful even
+	// when the meeting isn't tied to a project/client).
+	out.push('What have we discussed so far?');
+	out.push('Capture the latest decision as a note');
+	out.push('What should I cover before we wrap?');
+
+	return out.slice(0, 6);
 });
 
 const linkedEvent = computed(() => {
@@ -292,6 +352,28 @@ const annotationBus = {
 	},
 };
 
+// Daily prebuilt's chat panel broadcasts each message through `app-message`
+// with a `{ event: 'chat-msg', message, name }` payload. We mirror it into
+// meeting_chat_messages so the recap can replay it. Only one tab persists
+// per message — the room sender — to avoid duplicates from every viewer.
+const persistChatMessage = async (text, senderName, fromId) => {
+	if (!meeting.value?.id) return;
+	try {
+		await $fetch(`/api/video/meetings/${meeting.value.id}/chat-messages`, {
+			method: 'POST',
+			body: {
+				message: text,
+				senderName: senderName || null,
+				senderSessionId: fromId || null,
+				sentAt: new Date().toISOString(),
+			},
+		});
+	} catch (err) {
+		// Capture failures shouldn't disrupt the meeting — just log and move on.
+		console.warn('[meeting] chat capture failed', err?.message || err);
+	}
+};
+
 const handleAppMessage = (e) => {
 	const data = e?.data;
 	if (!data || typeof data !== 'object') return;
@@ -306,10 +388,45 @@ const handleAppMessage = (e) => {
 		for (const cb of clearSubscribers) cb();
 		return;
 	}
+
+	// Daily prebuilt chat (event names aren't documented in their public types
+	// but have been stable: `chat-msg`). Branch defensively on shape.
+	const isChat = data.event === 'chat-msg' || data.kind === 'chat-msg' || data.type === 'chat-msg';
+	const text = data.message || data.msg || data.text;
+	if (isChat && typeof text === 'string' && text.trim()) {
+		// Daily's `*` broadcast skips the sender, so the sender never sees their
+		// own message — only receivers do. To avoid writing N rows per message
+		// (one per receiver) we designate the host's tab as the sole logger.
+		// If the host hasn't joined yet, the chat isn't captured — acceptable
+		// since the host is the one who'll review the recap anyway.
+		if (!isHost.value) return;
+		persistChatMessage(text.trim(), data.name || data.fromName || 'Participant', e?.fromId);
+	}
 };
 
 const handleJoinedMeeting = (e) => {
 	mySessionId.value = e?.participants?.local?.session_id || null;
+};
+
+const handleLeftMeeting = () => {
+	// Daily fires this when the local participant leaves (clicks Leave or
+	// session ends). The postMessage path is unreliable on prebuilt — relying
+	// on the wrap()'d event guarantees we tear down the iframe + canvas.
+	finishMeeting();
+};
+
+const handleRecordingStarted = () => {
+	isRecording.value = true;
+	recordingBusy.value = false;
+};
+const handleRecordingStopped = () => {
+	isRecording.value = false;
+	recordingBusy.value = false;
+};
+const handleRecordingError = (e) => {
+	recordingBusy.value = false;
+	const msg = e?.errorMsg || 'Recording failed';
+	toast.add({ title: 'Recording error', description: msg, color: 'red' });
 };
 
 const wrapDailyIframe = async () => {
@@ -322,11 +439,50 @@ const wrapDailyIframe = async () => {
 		dailyCallObject = DailyIframe.wrap(el);
 		dailyCallObject.on('app-message', handleAppMessage);
 		dailyCallObject.on('joined-meeting', handleJoinedMeeting);
+		dailyCallObject.on('left-meeting', handleLeftMeeting);
+		dailyCallObject.on('recording-started', handleRecordingStarted);
+		dailyCallObject.on('recording-stopped', handleRecordingStopped);
+		dailyCallObject.on('recording-error', handleRecordingError);
 		// In case we wrapped after the join already fired
 		const local = dailyCallObject.participants?.()?.local;
 		if (local?.session_id) mySessionId.value = local.session_id;
 	} catch (err) {
 		console.warn('[meeting] Daily wrap failed', err);
+	}
+};
+
+const toggleRecording = async () => {
+	if (!dailyCallObject || recordingBusy.value) return;
+	recordingBusy.value = true;
+	try {
+		if (isRecording.value) {
+			await dailyCallObject.stopRecording();
+		} else {
+			await dailyCallObject.startRecording();
+		}
+	} catch (err) {
+		recordingBusy.value = false;
+		toast.add({
+			title: 'Recording failed',
+			description: err?.message || 'Daily refused the request',
+			color: 'red',
+		});
+	}
+};
+
+const router = useRouter();
+
+const finishMeeting = () => {
+	// Tear down the live iframe + annotation canvas immediately so they don't
+	// linger on top of the dom while we transition.
+	dailyUrl.value = null;
+	hasJoined.value = false;
+	meetingEnded.value = true;
+
+	// Logged-in attendees get the recap page; the small "Meeting Ended" card is
+	// kept as the public-facing follow-up screen for unauthenticated guests.
+	if (currentUser.value && meeting.value?.id) {
+		router.replace(`/meetings/${meeting.value.id}`);
 	}
 };
 
@@ -356,6 +512,13 @@ const fetchMeeting = async () => {
 				`${currentUser.value.first_name || ''} ${currentUser.value.last_name || ''}`.trim() ||
 				currentUser.value.email?.split('@')[0] || 'Host';
 			guestName.value = hostDisplayName;
+
+			// Retro-fit cloud recording on rooms created before it became default.
+			// Fire-and-forget — failure shouldn't block the join.
+			$fetch('/api/video/ensure-recording', {
+				method: 'POST',
+				body: { roomName: roomName.value },
+			}).catch(() => {});
 
 			try {
 				const joinResponse = await $fetch('/api/video/join-meeting', {
@@ -506,19 +669,10 @@ const leaveWaitingRoom = () => {
 	hasJoined.value = false;
 };
 
-// Listen for Daily.co "left-meeting" event via postMessage
-const handleDailyMessage = (e) => {
-	if (e.data?.action === 'left-meeting' || e.data?.action === 'meeting-ended') {
-		meetingEnded.value = true;
-		dailyUrl.value = null;
-	}
-};
-
 // Lifecycle
 onMounted(() => {
 	localAuthorId.value = `u-${(globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2))}`;
 	fetchMeeting();
-	window.addEventListener('message', handleDailyMessage);
 });
 
 // Stamp the call start time on window so the dock notes panel can compute
@@ -531,7 +685,6 @@ watch(hasJoined, (joined) => {
 
 onBeforeUnmount(() => {
 	if (statusPollInterval) clearInterval(statusPollInterval);
-	window.removeEventListener('message', handleDailyMessage);
 	if (import.meta.client) delete window.__earnestMeetingStart;
 	if (dailyCallObject) {
 		try { dailyCallObject.destroy(); } catch {}

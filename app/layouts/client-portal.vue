@@ -1,37 +1,6 @@
 <template>
 	<div class="relative bg-background text-foreground transition duration-150 lg:overflow-visible ios-safe-area">
-		<!-- Simplified header for client portal -->
-		<header class="portal-header" :class="{ retracted: isRetracted }">
-			<div class="filter-controls">
-				<client-only>
-					<LayoutPortalClientSelect v-if="user" :user="user" @open-org-switcher="handleOrgSwitcherClick" />
-				</client-only>
-			</div>
-
-			<!-- Upsell modal for portal-only users -->
-			<LayoutPortalUpsellModal
-				v-if="user"
-				v-model="showUpsell"
-				:host-org-name="currentOrg?.name ?? null"
-			/>
-
-			<!-- Standard org switcher for dual-role portal users -->
-			<LayoutOrgSwitcher v-if="user && !isPortalOnly" v-model="showOrgSwitcher" />
-
-			<LayoutEarnestBrand to="/portal" tagline="Client Portal" :retracted="isRetracted" />
-
-			<div class="account-controls">
-				<template v-if="user">
-					<nuxt-link to="/account" class="flex items-center justify-self-center">
-						<UserAvatar class="size-8 mr-2">
-							<AvatarImage v-if="avatarUrl" :src="avatarUrl" :alt="user?.first_name" />
-							<AvatarFallback>{{ initials }}</AvatarFallback>
-						</UserAvatar>
-					</nuxt-link>
-					<LayoutNotificationsMenu class="mr-2" />
-				</template>
-			</div>
-		</header>
+		<LayoutPortalHeader />
 
 		<div class="page pb-safe-portal pt-portal-header">
 			<slot />
@@ -105,18 +74,11 @@
 </template>
 
 <script setup lang="ts">
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-
 const { user } = useDirectusAuth();
-const config = useRuntimeConfig();
 const route = useRoute();
-const { organizations, currentOrg } = useOrganization();
-const { clientName: portalClientName, isPortalUserHere } = useClientPortalUser();
+const { clientName: portalClientName } = useClientPortalUser();
 
-const isRetracted = ref(false);
 const showMore = ref(false);
-const showOrgSwitcher = ref(false);
-const showUpsell = ref(false);
 
 type PortalLink = { name: string; to: string; icon: string; key?: 'social' | 'marketing' | 'proposals' | 'contracts' };
 
@@ -161,35 +123,7 @@ const portalLinks = computed(() => {
 const primaryLinks = computed(() => portalLinks.value.slice(0, 4));
 const secondaryLinks = computed(() => portalLinks.value.slice(4));
 
-const avatarUrl = computed(() => {
-	if (!user.value?.avatar) return null;
-	return `${config.public.assetsUrl}${user.value.avatar}?key=avatar`;
-});
-
-const initials = computed(() => {
-	if (!user.value) return 'U';
-	const first = user.value.first_name?.[0] ?? '';
-	const last = user.value.last_name?.[0] ?? '';
-	return (first + last).toUpperCase() || 'U';
-});
-
 const clientName = computed(() => portalClientName.value);
-
-// Portal-only = single org, portal user there, no junction membership anywhere.
-// Dual-role users (client at A, owner at B) get the standard switcher instead.
-const isPortalOnly = computed(() => {
-	if (!isPortalUserHere.value) return false;
-	if (organizations.value.length !== 1) return false;
-	return organizations.value.every((org: any) => !org.membership);
-});
-
-function handleOrgSwitcherClick() {
-	if (isPortalOnly.value) {
-		showUpsell.value = true;
-	} else {
-		showOrgSwitcher.value = true;
-	}
-}
 
 function isActiveRoute(path: string): boolean {
 	if (path === '/portal') {
@@ -198,63 +132,17 @@ function isActiveRoute(path: string): boolean {
 	return route.path.startsWith(path);
 }
 
-const manageNavBarAnimations = () => {
-	isRetracted.value = window.scrollY > 10;
-};
-
 onMounted(() => {
-	if (import.meta.client) {
-		window.addEventListener('scroll', manageNavBarAnimations);
-		loadAvailability();
-	}
+	if (import.meta.client) loadAvailability();
 });
 
 watch(() => user.value?.id, (id) => {
 	if (id) loadAvailability();
 });
-
-onUnmounted(() => {
-	if (import.meta.client) {
-		window.removeEventListener('scroll', manageNavBarAnimations);
-	}
-});
 </script>
 
 <style>
 @reference "~/assets/css/tailwind.css";
-
-.portal-header {
-	position: fixed;
-	background: rgba(255, 255, 255, 0.72);
-	backdrop-filter: saturate(180%) blur(20px);
-	-webkit-backdrop-filter: saturate(180%) blur(20px);
-	@apply w-full flex items-center justify-center z-40 border-b border-border/40 transition-all duration-300 ease-in-out py-4 left-1/2 -translate-x-1/2;
-}
-.portal-header .filter-controls {
-	@apply absolute flex items-center justify-center flex-row left-[10px] sm:pr-1 md:px-6 transition-all duration-300 ease-in-out;
-}
-.portal-header .account-controls {
-	@apply absolute flex items-center justify-center flex-row right-[10px] sm:pr-1 md:px-6 transition-all duration-300 ease-in-out;
-}
-
-:is(.dark) .portal-header {
-	background: rgba(20, 20, 20, 0.72);
-}
-
-.portal-header.retracted {
-	top: 8px;
-	background: rgba(255, 255, 255, 0.82);
-	@apply rounded-full w-11/12 md:w-5/6 lg:w-4/5 xl:w-3/5 py-3 md:py-2.5 border border-border/30 shadow-sm;
-}
-.portal-header.retracted .filter-controls {
-	@apply left-[5px] md:px-0;
-}
-.portal-header.retracted .account-controls {
-	@apply right-[5px] md:px-0;
-}
-:is(.dark) .portal-header.retracted {
-	background: rgba(20, 20, 20, 0.82);
-}
 
 /* Mobile toolbar — only rendered <lg via Tailwind `lg:hidden`. The
    display:flex sits inside a max-width media query so it doesn't override
@@ -315,9 +203,6 @@ onUnmounted(() => {
 
 /* Page content offset for sidebar (sidebar is lg+ only) */
 @media (min-width: 1024px) {
-	.portal-header {
-		padding-left: 200px;
-	}
 	.page.pb-safe-portal {
 		margin-left: 200px;
 		padding-bottom: 0;

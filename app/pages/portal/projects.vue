@@ -8,8 +8,8 @@ useHead({ title: 'Portal Projects | Earnest' });
 const { selectedOrg } = useOrganization();
 const { clientScope } = useOrgRole();
 
-const projectItems = useDirectusItems('projects');
-const eventItems = useDirectusItems('project_events');
+const projectItems = usePortalItems('projects');
+const eventItems = usePortalItems('project_events');
 const toast = useToast();
 
 const loading = ref(true);
@@ -25,13 +25,12 @@ async function loadProjects() {
 	loading.value = true;
 
 	try {
+		// Client scoping is enforced server-side by /api/portal/items.
+		// `projects.status` is capitalized except for `completed` — exclude
+		// the "Archived" enum specifically.
 		const filter: any[] = [
-			{ status: { _neq: 'archived' } },
+			{ status: { _neq: 'Archived' } },
 		];
-
-		if (clientScope.value) {
-			filter.push({ client: { _eq: clientScope.value } });
-		}
 
 		projects.value = await projectItems.list({
 			filter: { _and: filter },
@@ -40,13 +39,29 @@ async function loadProjects() {
 				'title',
 				'description',
 				'status',
+				'start_date',
+				'due_date',
+				'completion_date',
+				'color',
 				'date_created',
 				'date_updated',
 				'service.name',
 				'assigned_to.id',
-				'assigned_to.first_name',
-				'assigned_to.last_name',
-				'assigned_to.avatar',
+				'assigned_to.directus_users_id.id',
+				'assigned_to.directus_users_id.first_name',
+				'assigned_to.directus_users_id.last_name',
+				'assigned_to.directus_users_id.avatar',
+				// Events are needed for Gantt + completion %; cap them and
+				// drop archived in the same shape the Gantt expects.
+				'events.id',
+				'events.title',
+				'events.type',
+				'events.status',
+				'events.approval',
+				'events.event_date',
+				'events.end_date',
+				'events.duration_days',
+				'events.is_milestone',
 			],
 			sort: ['-date_updated'],
 			limit: 50,
@@ -87,9 +102,9 @@ async function loadProjectEvents(projectId: string) {
 async function approveEventFromPortal(eventId: string) {
 	approvingEventId.value = eventId;
 	try {
-		await eventItems.update(eventId, {
-			approval: 'Approved',
-			approved_at: new Date().toISOString(),
+		await $fetch('/api/portal/event-approve', {
+			method: 'POST',
+			body: { eventId },
 		});
 		const evt = projectEvents.value.find(e => e.id === eventId);
 		if (evt) {
@@ -108,35 +123,30 @@ async function approveEventFromPortal(eventId: string) {
 const pendingEvents = computed(() => projectEvents.value.filter(e => e.approval === 'Need Approval'));
 const otherEvents = computed(() => projectEvents.value.filter(e => e.approval !== 'Need Approval'));
 
-const statusGroups = computed(() => {
-	const groups: Record<string, any[]> = {
-		in_progress: [],
-		scheduled: [],
-		pending: [],
-		completed: [],
-	};
+const config = useRuntimeConfig();
 
-	for (const project of projects.value) {
-		const key = project.status || 'pending';
-		if (groups[key]) {
-			groups[key].push(project);
-		} else {
-			groups.pending.push(project);
-		}
+// View mode — persisted per-tab so the client lands on the same view they
+// were last using. Default to Gantt for the timeline-progress story.
+type ViewMode = 'gantt' | 'kanban' | 'list';
+const VIEW_KEY = 'portal-projects-view';
+const view = ref<ViewMode>('gantt');
+
+if (import.meta.client) {
+	const saved = localStorage.getItem(VIEW_KEY) as ViewMode | null;
+	if (saved === 'gantt' || saved === 'kanban' || saved === 'list') {
+		view.value = saved;
 	}
-	return groups;
+}
+
+watch(view, (v) => {
+	if (import.meta.client) localStorage.setItem(VIEW_KEY, v);
 });
 
-const statusLabels: Record<string, string> = {
-	in_progress: 'In Progress',
-	scheduled: 'Scheduled',
-	pending: 'Pending',
-	completed: 'Completed',
-};
-
-const { getStatusPillClass } = useStatusStyle();
-
-const config = useRuntimeConfig();
+const VIEW_OPTIONS: Array<{ key: ViewMode; label: string; icon: string }> = [
+	{ key: 'gantt', label: 'Timeline', icon: 'lucide:bar-chart-3' },
+	{ key: 'kanban', label: 'Board', icon: 'lucide:kanban-square' },
+	{ key: 'list', label: 'List', icon: 'lucide:list' },
+];
 
 onMounted(() => loadProjects());
 watch(() => selectedOrg.value, () => loadProjects());
@@ -144,10 +154,26 @@ watch(() => selectedOrg.value, () => loadProjects());
 
 <template>
 	<LayoutPageContainer>
-		<div class="flex items-center justify-between mb-6">
+		<div class="flex items-center justify-between mb-6 gap-4">
 			<div>
 				<h1 class="text-xl font-semibold">Projects</h1>
-				<p class="text-sm text-muted-foreground mt-0.5">View your project progress and status.</p>
+				<p class="text-sm text-muted-foreground mt-0.5">Track timeline, status, and progress.</p>
+			</div>
+
+			<!-- View switcher -->
+			<div class="flex gap-1 p-1 rounded-xl bg-muted/50 shrink-0">
+				<button
+					v-for="opt in VIEW_OPTIONS"
+					:key="opt.key"
+					class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors"
+					:class="view === opt.key
+						? 'bg-background shadow-sm text-foreground'
+						: 'text-muted-foreground hover:text-foreground'"
+					@click="view = opt.key"
+				>
+					<Icon :name="opt.icon" class="w-3.5 h-3.5" />
+					<span class="hidden sm:inline">{{ opt.label }}</span>
+				</button>
 			</div>
 		</div>
 
@@ -162,67 +188,21 @@ watch(() => selectedOrg.value, () => loadProjects());
 			<p class="text-sm text-muted-foreground">No projects assigned yet.</p>
 		</div>
 
-		<!-- Project Groups -->
-		<template v-else>
-			<div v-for="(group, status) in statusGroups" :key="status">
-				<template v-if="group.length > 0">
-					<div class="flex items-center gap-2 mb-3 mt-6 first:mt-0">
-						<div class="w-2 h-2 rounded-full" :class="getStatusPillClass(status)" />
-						<h2 class="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-							{{ statusLabels[status] }}
-						</h2>
-						<span class="text-xs text-muted-foreground/60">({{ group.length }})</span>
-					</div>
+		<!-- Gantt timeline — reuses the agency component in portal mode so
+			 the visual matches Command Center; reads route through
+			 /api/portal/items, all write affordances are gated off.
+			 Auto-expands when the client has ≤3 projects so events + tickets
+			 + tasks are visible without an extra click. -->
+		<ProjectTimelineUnifiedGantt v-else-if="view === 'gantt'" portal :auto-expand-threshold="3" />
 
-					<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-						<button
-							v-for="project in group"
-							:key="project.id"
-							class="ios-card p-4 text-left hover:shadow-md transition-shadow cursor-pointer"
-							@click="openProject(project)"
-						>
-							<div class="flex items-start justify-between mb-2">
-								<h3 class="font-medium text-sm">{{ project.title }}</h3>
-								<span
-									v-if="project.service?.name"
-									class="text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary shrink-0 ml-2"
-								>
-									{{ project.service.name }}
-								</span>
-							</div>
+		<!-- Board view — reuses agency ProjectsBoard in portal mode -->
+		<ProjectsBoard v-else-if="view === 'kanban'" portal />
 
-							<p v-if="project.description" class="text-xs text-muted-foreground line-clamp-2 mb-3" v-html="project.description" />
-
-							<div class="flex items-center justify-between">
-								<!-- Assigned users -->
-								<div v-if="project.assigned_to?.length" class="flex -space-x-2">
-									<div
-										v-for="assignee in project.assigned_to.slice(0, 3)"
-										:key="assignee.id"
-										class="w-6 h-6 rounded-full border-2 border-background overflow-hidden bg-muted flex items-center justify-center"
-									>
-										<img
-											v-if="assignee.avatar"
-											:src="`${config.public.assetsUrl}${assignee.avatar}?key=avatar`"
-											:alt="assignee.first_name"
-											class="w-full h-full object-cover"
-										/>
-										<span v-else class="text-[9px] font-medium text-muted-foreground">
-											{{ (assignee.first_name?.[0] || '') + (assignee.last_name?.[0] || '') }}
-										</span>
-									</div>
-								</div>
-								<div v-else />
-
-								<span class="text-xs text-muted-foreground">
-									{{ project.date_updated ? new Date(project.date_updated).toLocaleDateString() : '' }}
-								</span>
-							</div>
-						</button>
-					</div>
-				</template>
-			</div>
-		</template>
+		<!-- List view — reuses agency ProjectsTable; row click opens the
+			 portal slide-over instead of navigating to the agency detail route -->
+		<div v-else class="ios-card p-5">
+			<ProjectsTable :projects="projects" :loading="false" portal @select-project="openProject" />
+		</div>
 
 		<!-- Project Detail Slide-over -->
 		<Teleport to="body">
@@ -283,16 +263,16 @@ watch(() => selectedOrg.value, () => loadProjects());
 									>
 										<div class="w-7 h-7 rounded-full bg-muted overflow-hidden flex items-center justify-center">
 											<img
-												v-if="assignee.avatar"
-												:src="`${config.public.assetsUrl}${assignee.avatar}?key=avatar`"
-												:alt="assignee.first_name"
+												v-if="assignee.directus_users_id?.avatar"
+												:src="`${config.public.assetsUrl}${assignee.directus_users_id.avatar}?key=avatar`"
+												:alt="assignee.directus_users_id?.first_name"
 												class="w-full h-full object-cover"
 											/>
 											<span v-else class="text-[10px] font-medium text-muted-foreground">
-												{{ (assignee.first_name?.[0] || '') + (assignee.last_name?.[0] || '') }}
+												{{ (assignee.directus_users_id?.first_name?.[0] || '') + (assignee.directus_users_id?.last_name?.[0] || '') }}
 											</span>
 										</div>
-										<span class="text-sm">{{ assignee.first_name }} {{ assignee.last_name }}</span>
+										<span class="text-sm">{{ assignee.directus_users_id?.first_name }} {{ assignee.directus_users_id?.last_name }}</span>
 									</div>
 								</div>
 							</div>

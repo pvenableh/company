@@ -7,7 +7,7 @@ useHead({ title: 'Contracts | Client Portal' });
 
 const { selectedOrg } = useOrganization();
 
-const contractItems = useDirectusItems('contracts');
+const contractItems = usePortalItems('contracts');
 
 const loading = ref(true);
 const contracts = ref<any[]>([]);

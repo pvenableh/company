@@ -17,9 +17,23 @@ const props = defineProps<{
     | 'list'
     | 'project_event'
     | 'channel'
-    | 'social_post';
+    | 'social_post'
+    | 'video_meeting';
   entityId: string;
   entityLabel: string;
+  /**
+   * Distinguishes "live" usage (in the meeting room) from "recap" usage
+   * (the meeting detail page). Drives the default prompt set when no
+   * explicit `prompts` override is passed.
+   */
+  surface?: 'live' | 'recap';
+  /**
+   * Override the static per-entityType prompt list. Pages with rich state
+   * (e.g. /meetings/[id]) pass adaptive prompts derived from real data —
+   * action-item counts, project name, summary status — instead of the
+   * generic defaults. Empty / missing → fall back to the static map.
+   */
+  prompts?: string[];
 }>();
 
 const emit = defineEmits<{
@@ -152,15 +166,43 @@ const entityPrompts: Record<string, string[]> = {
     'Suggest hashtags for this post',
     'Recommend the best posting time',
   ],
+  // Recap (post-call) usage on /meetings/[id]
+  video_meeting: [
+    'Summarize the conversation',
+    'Pull out action items I haven\'t promoted yet',
+    'Draft a follow-up email to attendees',
+    'What decisions came out of this meeting?',
+  ],
 };
 
-const prompts = computed(() => entityPrompts[props.entityType] || entityPrompts.client);
+// Meeting room (live, mid-call) prompts — different goal than recap. We're
+// asking Earnest to help us *during* the call, not synthesize after.
+const liveMeetingPrompts = [
+  'What have we discussed so far?',
+  'Capture the latest decision as a note',
+  'Draft a follow-up for the client',
+  'What should I cover before we wrap?',
+  'Summarize where we are on the project',
+];
+
+const prompts = computed(() => {
+  // Page-supplied adaptive prompts win over any defaults. Filter empties so
+  // an over-eager computed never collapses the panel.
+  if (Array.isArray(props.prompts) && props.prompts.filter(Boolean).length > 0) {
+    return props.prompts.filter(Boolean);
+  }
+  if (props.entityType === 'video_meeting' && props.surface === 'live') {
+    return liveMeetingPrompts;
+  }
+  return entityPrompts[props.entityType] || entityPrompts.client;
+});
 
 const entityTypeDisplay: Record<string, string> = {
   project_event: 'event',
   social_post: 'post',
   financials: 'dashboard',
   marketing: 'dashboard',
+  video_meeting: 'meeting',
 };
 
 const entityTypeReadable = computed(() => entityTypeDisplay[props.entityType] || props.entityType);

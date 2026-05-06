@@ -25,15 +25,15 @@ async function loadInvoices() {
 }
 
 const statusConfig: Record<string, { label: string; classes: string }> = {
-	draft:   { label: 'Draft',   classes: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' },
-	sent:    { label: 'Sent',    classes: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
-	paid:    { label: 'Paid',    classes: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
-	overdue: { label: 'Overdue', classes: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
-	void:    { label: 'Void',    classes: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500' },
+	pending:    { label: 'Pending',    classes: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' },
+	processing: { label: 'Processing', classes: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
+	paid:       { label: 'Paid',       classes: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
+	overdue:    { label: 'Overdue',    classes: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
+	archived:   { label: 'Archived',   classes: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500' },
 };
 
-function formatCurrency(amount: number, currency = 'USD') {
-	return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount ?? 0);
+function formatCurrency(amount: number) {
+	return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount ?? 0);
 }
 
 function formatDate(d: string) {
@@ -42,14 +42,14 @@ function formatDate(d: string) {
 }
 
 function isOverdue(invoice: any) {
-	if (!invoice.due_date || invoice.status === 'paid' || invoice.status === 'void') return false;
+	if (!invoice.due_date || invoice.status === 'paid' || invoice.status === 'archived') return false;
 	return new Date(invoice.due_date) < new Date();
 }
 
 const amountPaid = (invoice: any) =>
 	(invoice.payments ?? [])
-		.filter((p: any) => p.status === 'completed')
-		.reduce((sum: number, p: any) => sum + (p.amount ?? 0), 0);
+		.filter((p: any) => p.status === 'paid')
+		.reduce((sum: number, p: any) => sum + Number(p.amount ?? 0), 0);
 
 onMounted(() => loadInvoices());
 watch(() => selectedOrg.value, () => loadInvoices());
@@ -124,9 +124,9 @@ watch(filter, () => loadInvoices());
 
 				<!-- Amount -->
 				<div class="text-right shrink-0">
-					<p class="text-sm font-semibold">{{ formatCurrency(invoice.total, invoice.currency) }}</p>
+					<p class="text-sm font-semibold">{{ formatCurrency(invoice.total_amount) }}</p>
 					<p v-if="invoice.status !== 'paid' && amountPaid(invoice) > 0" class="text-[10px] text-muted-foreground">
-						{{ formatCurrency(amountPaid(invoice), invoice.currency) }} paid
+						{{ formatCurrency(amountPaid(invoice)) }} paid
 					</p>
 				</div>
 

@@ -8,7 +8,7 @@ useHead({ title: 'Proposals | Client Portal' });
 const { selectedOrg } = useOrganization();
 const { clientScope } = useOrgRole();
 
-const proposalItems = useDirectusItems('proposals');
+const proposalItems = usePortalItems('proposals');
 
 const loading = ref(true);
 const proposals = ref<any[]>([]);
@@ -42,8 +42,7 @@ async function loadProposals() {
 				'contact.first_name',
 				'contact.last_name',
 				'contact.company',
-				'total',
-				'currency',
+				'total_value',
 			],
 			sort: ['-date_created'],
 			limit: 100,
@@ -60,9 +59,9 @@ function formatDate(d: string) {
 	return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function formatCurrency(amount: number, currency = 'USD') {
+function formatCurrency(amount: number | null | undefined) {
 	if (!amount) return null;
-	return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
+	return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
 }
 
 onMounted(() => loadProposals());
@@ -118,8 +117,8 @@ watch(() => selectedOrg.value, () => loadProposals());
 					</div>
 				</div>
 
-				<div v-if="proposal.total" class="text-right shrink-0">
-					<p class="text-sm font-semibold">{{ formatCurrency(proposal.total, proposal.currency) }}</p>
+				<div v-if="proposal.total_value" class="text-right shrink-0">
+					<p class="text-sm font-semibold">{{ formatCurrency(proposal.total_value) }}</p>
 				</div>
 
 				<Icon name="lucide:chevron-right" class="w-4 h-4 text-muted-foreground/40 shrink-0 group-hover:text-muted-foreground transition-colors" />

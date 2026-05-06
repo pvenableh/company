@@ -26,7 +26,9 @@
 			class="w-full flex flex-col md:flex-row items-start md:items-center justify-between mb-4 xl:mb-8 xl:mt-2 px-4 gap-4 pt-4 tickets-board__filters"
 		>
 			<div class="flex items-center gap-3 mb-4 xl:mb-0">
-				<TicketsCreate :columns="columns" :default-project="projectId" :default-organization="organizationId" @ticketCreated="handleTicketCreated" />
+				<!-- Create button — agency only. Portal users use the page-level
+					 New Ticket button on /portal/tickets which posts to /api/portal/tickets. -->
+				<TicketsCreate v-if="!portal" :columns="columns" :default-project="projectId" :default-organization="organizationId" @ticketCreated="handleTicketCreated" />
 				<UButton
 					v-if="!projectId"
 					icon="i-heroicons-x-mark"
@@ -41,7 +43,7 @@
 				</UButton>
 			</div>
 
-			<div v-if="!projectId" class="hidden md:flex flex-col items-end gap-2 relative mb-4 xl:mb-0 shrink-0 min-w-0">
+			<div v-if="!projectId && !portal" class="hidden md:flex flex-col items-end gap-2 relative mb-4 xl:mb-0 shrink-0 min-w-0">
 				<!-- Row 1: Toggles -->
 				<div class="flex flex-row items-center gap-4">
 					<button
@@ -253,11 +255,12 @@
 					</div>
 				</div>
 
-				<!-- Draggable Column Content -->
+				<!-- Draggable Column Content — drag disabled in portal mode (clients can't move tickets) -->
 				<VueDraggable
 					v-else
 					v-model="localTickets[column.id]"
-					:group="{ name: 'tickets' }"
+					:group="{ name: 'tickets', pull: portal ? false : true, put: portal ? false : true }"
+					:disabled="portal"
 					item-key="id"
 					class="tickets-board__board-col-content"
 					:class="{ 'is-dragging': isDragging }"
@@ -278,7 +281,13 @@
 									<LayoutLoader />
 									<!-- <UIcon name="i-heroicons-arrow-path" class="animate-spin h-5 w-5" /> -->
 								</div>
-								<TicketsExpandableCard :element="element" :columns="columns" :updating-tickets="updatingTickets" />
+								<TicketsExpandableCard
+									:element="element"
+									:columns="columns"
+									:updating-tickets="updatingTickets"
+									:portal="portal"
+									@view="(t) => emit('view-ticket', t)"
+								/>
 							</div>
 						</div>
 					</template>
@@ -304,9 +313,32 @@
 <script setup>
 import VueDraggable from 'vuedraggable';
 
-const ticketItems = useDirectusItems('tickets');
+const props = defineProps({
+	projectId: {
+		type: String,
+		default: null,
+	},
+	organizationId: {
+		type: String,
+		default: null,
+	},
+	/**
+	 * Render in client-portal mode. Reads route through /api/portal/items,
+	 * the Directus realtime subscription is skipped, drag/status updates
+	 * are disabled, and agency-only filter UI (project picker, team,
+	 * archive view, comment counts via aggregate) is hidden.
+	 */
+	portal: {
+		type: Boolean,
+		default: false,
+	},
+});
+
+const emit = defineEmits(['view-ticket']);
+
+const ticketItems = props.portal ? usePortalItems('tickets') : useDirectusItems('tickets');
 const commentItems = useDirectusItems('comments');
-const projectItems = useDirectusItems('projects');
+const projectItems = props.portal ? usePortalItems('projects') : useDirectusItems('projects');
 const { registerRefreshCallback } = useTicketsStore();
 const { user } = useDirectusAuth();
 const { triggerHaptic } = useHaptic();
@@ -325,17 +357,6 @@ const {
 	setupStorageListener: setupTeamListeners,
 	getTeamFilter,
 } = useTeams();
-
-const props = defineProps({
-	projectId: {
-		type: String,
-		default: null,
-	},
-	organizationId: {
-		type: String,
-		default: null,
-	},
-});
 
 // Define columns
 const columns = [
@@ -550,10 +571,12 @@ const generateFilter = () => {
 		}
 	}
 
-	// Client filter
-	const clientFilter = getClientFilter();
-	if (Object.keys(clientFilter).length > 0) {
-		filter._and.push(clientFilter);
+	// Client filter — agency only. Portal proxy auto-scopes by client_portal_users walk.
+	if (!props.portal) {
+		const clientFilter = getClientFilter();
+		if (Object.keys(clientFilter).length > 0) {
+			filter._and.push(clientFilter);
+		}
 	}
 
 	// Clean up empty filter
@@ -570,6 +593,16 @@ const attachCommentCounts = async (tickets) => {
 	const ticketIds = tickets.map((ticket) => ticket.id).filter(Boolean);
 
 	if (ticketIds.length === 0) {
+		tickets.forEach((ticket) => {
+			ticket.comments = 0;
+			ticket.commentsCount = 0;
+		});
+		return;
+	}
+
+	// Portal users may lack read perms on `comments` — skip the aggregate
+	// rather than hammering Directus with 403s. Counts default to 0 below.
+	if (props.portal) {
 		tickets.forEach((ticket) => {
 			ticket.comments = 0;
 			ticket.commentsCount = 0;
@@ -637,6 +670,16 @@ const fetchTicketsViaREST = async (filter) => {
 
 // Set up WebSocket subscription for real-time updates, using pre-fetched data
 const setupRealtimeOnly = (filter, initialTickets) => {
+	// Skip realtime entirely in portal mode — Directus websockets use the
+	// user token and would 401 for portal-only users, then spam reconnect.
+	// REST-only refreshes work fine for the read-only portal flow.
+	if (props.portal) {
+		ticketsData.value = initialTickets || [];
+		isConnected.value = true;
+		processTickets(initialTickets || []);
+		return;
+	}
+
 	// Clean up existing subscription
 	if (disconnectFunc) {
 		disconnectFunc();
@@ -813,8 +856,10 @@ const clearFilters = () => {
 };
 
 // Fetch projects for the current organization
-// Update the fetchProjects function to handle "All Organizations" mode
+// Update the fetchProjects function to handle "All Organizations" mode.
+// Portal mode hides the project filter dropdown so this is a no-op.
 const fetchProjects = async () => {
+	if (props.portal) return;
 	if (props.projectId) {
 		selectedProject.value = props.projectId;
 		return;
