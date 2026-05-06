@@ -83,7 +83,7 @@ const fetchMeeting = async () => {
 			},
 		});
 		// items.post.ts returns the row directly for `get`, not wrapped in `.data`.
-		meeting.value = (res && typeof res === 'object' && 'data' in res ? (res as any).data : res) || null;
+		meeting.value = (res && typeof res === 'object' && 'data' in res ? res.data : res) || null;
 		if (!meeting.value) error.value = 'Meeting not found';
 	} catch (err) {
 		console.error('[meetings/[id]] fetch failed', err);
