@@ -183,8 +183,9 @@ export default defineNuxtConfig({
 		// Cron
 		cronSecret: process.env.CRON_SECRET,
 
-		// Redis Queue (BullMQ for async AI jobs)
-		redisQueueUrl: process.env.REDIS_QUEUE_URL || 'redis://queue:6379',
+		// Redis Queue (BullMQ for async AI jobs) — leave empty to disable the worker
+		// and noop enqueues. Async AI is scaffolding only; not wired to real consumers.
+		redisQueueUrl: process.env.REDIS_QUEUE_URL || '',
 
 		// LLM (AI Chat)
 		llm: {

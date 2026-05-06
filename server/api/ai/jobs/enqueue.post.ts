@@ -36,8 +36,15 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: `Invalid job type. Allowed: ${allowedTypes.join(', ')}` });
   }
 
+  const queue = getAIQueue();
+  if (!queue) {
+    throw createError({
+      statusCode: 503,
+      message: 'Async AI jobs are not configured on this environment',
+    });
+  }
+
   try {
-    const queue = getAIQueue();
     const job = await queue.add(type, {
       type,
       organizationId,

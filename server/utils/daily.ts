@@ -49,9 +49,10 @@ export interface DailyMeetingToken {
  * Create a Daily.co room for a meeting.
  * Rooms auto-delete after expiry.
  *
- * Transcription is enabled by default — Deepgram-powered, started by the host
- * from the prebuilt "..." menu. `enable_transcription_storage` keeps the
- * transcript file after the meeting so we can download + summarise it.
+ * Transcription model/language are configured at the domain level in the Daily
+ * dashboard — the host starts transcription from the prebuilt "..." menu.
+ * `enable_transcription_storage` keeps the transcript file available after
+ * the meeting so we can download + summarise it.
  */
 export async function createDailyRoom(params: {
 	name: string;
@@ -76,9 +77,6 @@ export async function createDailyRoom(params: {
 				start_video_off: false,
 				start_audio_off: false,
 				enable_transcription_storage: enableTranscription,
-				transcription_settings: enableTranscription
-					? { language: 'en', model: 'nova-2', tier: 'enhanced', profanity_filter: false }
-					: undefined,
 			},
 		}),
 	});

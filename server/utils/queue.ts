@@ -2,9 +2,9 @@
 /**
  * BullMQ queue connection singleton.
  *
- * Provides a shared Redis connection and a named queue for async AI jobs.
- * The queue Redis container is on the Docker network at redis://queue:6379
- * with noeviction policy (required for BullMQ).
+ * Returns null when REDIS_QUEUE_URL is unset — async AI is scaffolding only,
+ * so callers must handle the disabled case rather than dial a non-existent
+ * host and flood the log buffer with ENOTFOUND.
  */
 
 import { Queue } from 'bullmq';
@@ -13,11 +13,11 @@ import IORedis from 'ioredis';
 let _connection: IORedis | null = null;
 let _aiQueue: Queue | null = null;
 
-export function getRedisConnection(): IORedis {
+export function getRedisConnection(): IORedis | null {
   if (_connection) return _connection;
 
-  const config = useRuntimeConfig();
-  const url = config.redisQueueUrl || 'redis://queue:6379';
+  const url = useRuntimeConfig().redisQueueUrl;
+  if (!url || url === 'disabled') return null;
 
   _connection = new IORedis(url, {
     maxRetriesPerRequest: null, // Required by BullMQ
@@ -35,11 +35,14 @@ export function getRedisConnection(): IORedis {
   return _connection;
 }
 
-export function getAIQueue(): Queue {
+export function getAIQueue(): Queue | null {
   if (_aiQueue) return _aiQueue;
 
+  const connection = getRedisConnection();
+  if (!connection) return null;
+
   _aiQueue = new Queue('ai-jobs', {
-    connection: getRedisConnection(),
+    connection,
     defaultJobOptions: {
       attempts: 3,
       backoff: {

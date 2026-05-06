@@ -8,6 +8,8 @@ definePageMeta({
 const { user: sessionUser, loggedIn } = useUserSession();
 const currentUser = computed(() => loggedIn.value ? sessionUser.value ?? null : null);
 
+const videoMeetings = useDirectusItems('video_meetings');
+
 const meetings = ref([]);
 const loading = ref(true);
 const search = ref('');
@@ -18,43 +20,44 @@ const fetchMeetings = async () => {
 	loading.value = true;
 	try {
 		const userId = currentUser.value.id;
-		const res = await $fetch('/api/directus/items', {
-			params: {
-				collection: 'video_meetings',
-				fields: [
-					'id',
-					'title',
-					'status',
-					'scheduled_start',
-					'actual_start',
-					'actual_end',
-					'actual_duration_minutes',
-					'recording_url',
-					'transcript_text',
-					'summary',
-					'summary_status',
-					'summary_generated_at',
-					'host_user.id',
-					'host_user.first_name',
-					'host_user.last_name',
-					'project.id',
-					'project.title',
-					'project_event.id',
-					'project_event.title',
-					'project_event.project.id',
-					'project_event.project.title',
-					'related_organization.id',
-					'related_organization.name',
-					'attendees.id',
-					'attendees.directus_user',
-				].join(','),
-				'filter[_or][0][host_user][_eq]': userId,
-				'filter[_or][1][attendees][directus_user][_eq]': userId,
-				sort: '-scheduled_start',
-				limit: 100,
+		const rows = await videoMeetings.list({
+			fields: [
+				'id',
+				'title',
+				'status',
+				'scheduled_start',
+				'actual_start',
+				'actual_end',
+				'actual_duration_minutes',
+				'recording_url',
+				'transcript_text',
+				'summary',
+				'summary_status',
+				'summary_generated_at',
+				'host_user.id',
+				'host_user.first_name',
+				'host_user.last_name',
+				'project.id',
+				'project.title',
+				'project_event.id',
+				'project_event.title',
+				'project_event.project.id',
+				'project_event.project.title',
+				'related_organization.id',
+				'related_organization.name',
+				'attendees.id',
+				'attendees.directus_user',
+			],
+			filter: {
+				_or: [
+					{ host_user: { _eq: userId } },
+					{ attendees: { directus_user: { _eq: userId } } },
+				],
 			},
+			sort: ['-scheduled_start'],
+			limit: 100,
 		});
-		meetings.value = res.data || [];
+		meetings.value = rows || [];
 	} catch (err) {
 		console.error('[meetings/index] fetch failed', err);
 		meetings.value = [];
