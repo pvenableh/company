@@ -3,6 +3,7 @@
 // Configure in Daily.co dashboard: https://dashboard.daily.co/developers
 // Webhook URL: https://yourdomain.com/api/video/webhook
 
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import { readItems, updateItem } from '@directus/sdk';
 import {
 	getDailyTranscript,
@@ -10,6 +11,25 @@ import {
 	vttToPlainText,
 } from '~~/server/utils/daily';
 import { generateAndSaveMeetingSummary } from '~~/server/utils/meeting-summary';
+
+// Daily signs each webhook with HMAC-SHA256 over `${timestamp}.${rawBody}` and
+// returns the digest base64-encoded in `X-Webhook-Signature`. The shared
+// secret was returned by the webhook-create call. Without verification anyone
+// can forge meeting.ended / transcript.ready-to-download events and corrupt
+// our video_meetings rows.
+function verifyDailySignature(
+	rawBody: string,
+	timestamp: string | undefined,
+	signature: string | undefined,
+	secret: string,
+): boolean {
+	if (!timestamp || !signature) return false;
+	const expected = createHmac('sha256', secret).update(`${timestamp}.${rawBody}`).digest('base64');
+	const a = Buffer.from(signature);
+	const b = Buffer.from(expected);
+	if (a.length !== b.length) return false;
+	try { return timingSafeEqual(a, b); } catch { return false; }
+}
 
 interface DailyWebhookEvent {
 	type: string;
@@ -32,7 +52,29 @@ interface DailyWebhookEvent {
 
 export default defineEventHandler(async (event) => {
 	try {
-		const body = await readBody<DailyWebhookEvent>(event);
+		// Read raw body FIRST so we can verify the HMAC against the exact bytes
+		// Daily signed. Passing the parsed object to HMAC would re-serialize and
+		// produce a different digest.
+		const rawBody = (await readRawBody(event)) || '';
+		const secret = useRuntimeConfig().dailyWebhookHmac;
+		const isProd = process.env.NODE_ENV === 'production';
+
+		if (isProd && secret) {
+			const sig = getHeader(event, 'x-webhook-signature');
+			const ts = getHeader(event, 'x-webhook-timestamp');
+			if (!verifyDailySignature(rawBody, ts, sig, secret)) {
+				throw createError({ statusCode: 401, statusMessage: 'Invalid webhook signature' });
+			}
+		} else if (isProd && !secret) {
+			console.warn('[video/webhook] DAILY_WEBHOOK_HMAC unset in production — webhook is unauthenticated');
+		}
+
+		let body: DailyWebhookEvent;
+		try {
+			body = (rawBody ? JSON.parse(rawBody) : {}) as DailyWebhookEvent;
+		} catch {
+			return { success: false, error: 'Invalid JSON' };
+		}
 
 		const roomName = body.payload?.room_name;
 		if (!roomName) {
@@ -193,9 +235,12 @@ export default defineEventHandler(async (event) => {
 		}
 
 		return { success: true };
-	} catch (error) {
+	} catch (error: any) {
+		// Auth failures must propagate so Daily sees a 401 — otherwise a
+		// rotated/missing secret silently accepts forged events.
+		if (error?.statusCode === 401) throw error;
 		console.error('Error processing Daily.co webhook:', error);
-		// Return 200 to prevent Daily.co from retrying
+		// Return 200 for non-auth errors to prevent Daily.co from retrying.
 		return { success: false, error: 'Internal error' };
 	}
 });

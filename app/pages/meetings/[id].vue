@@ -14,6 +14,16 @@ const loading = ref(true);
 const error = ref('');
 const generating = ref(false);
 const transcriptOpen = ref(false);
+const promotingIndex = ref(-1);
+
+// Notes & Decisions
+const { notes, fetchNotes, addNote, removeNote, submitting: noteSubmitting } = useMeetingNotes(meetingId);
+const noteDraft = ref('');
+const { user: sessionUser, loggedIn } = useUserSession();
+const currentUserId = computed(() => loggedIn.value ? sessionUser.value?.id || null : null);
+
+// AI sidebar — show Earnest scoped to this meeting
+const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext();
 
 const fetchMeeting = async () => {
 	loading.value = true;
@@ -77,6 +87,17 @@ const fetchMeeting = async () => {
 
 await fetchMeeting();
 watch(meetingId, fetchMeeting);
+
+// Hydrate notes once we have a meeting id and again whenever it changes.
+watch(meetingId, async (id) => {
+	if (id) await fetchNotes();
+}, { immediate: true });
+
+// Set the AI sidebar's entity so Ask Earnest works against this meeting.
+watch(meeting, (m) => {
+	if (m?.id) setEntity('video_meeting', String(m.id), m.title || 'Meeting');
+}, { immediate: true });
+onBeforeUnmount(() => clearEntity());
 
 const generateSummary = async () => {
 	if (!meeting.value?.id) return;
@@ -187,6 +208,72 @@ const toneClass = (tone) => ({
 const canRegenerate = computed(() =>
 	!!meeting.value?.transcript_text && meeting.value.summary_status !== 'generating',
 );
+
+// ─── Notes & Decisions helpers ───
+const groupedNotes = computed(() => {
+	const decisions = [];
+	const general = [];
+	for (const n of notes.value || []) {
+		(n.note_type === 'decision' ? decisions : general).push(n);
+	}
+	return { decisions, general };
+});
+
+const submitNote = async (type) => {
+	const text = noteDraft.value.trim();
+	if (!text || noteSubmitting.value) return;
+	const created = await addNote(text, type, null);
+	if (created) noteDraft.value = '';
+};
+
+const handleDeleteNote = async (id) => {
+	if (!confirm('Delete this note?')) return;
+	await removeNote(id);
+};
+
+const noteAuthorName = (n) => {
+	const a = n?.author;
+	if (!a) return 'Member';
+	const name = `${a.first_name || ''} ${a.last_name || ''}`.trim();
+	return name || 'Member';
+};
+
+const formatNoteTime = (n) => {
+	if (n.meeting_offset_seconds != null && Number.isFinite(n.meeting_offset_seconds)) {
+		const total = n.meeting_offset_seconds;
+		const m = Math.floor(total / 60);
+		const s = Math.floor(total % 60);
+		return `+${m}:${String(s).padStart(2, '0')}`;
+	}
+	if (!n.date_created) return '';
+	try {
+		return new Date(n.date_created).toLocaleString(undefined, {
+			month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+		});
+	} catch { return ''; }
+};
+
+// ─── Action item promotion ───
+const promoteActionItem = async (idx) => {
+	if (promotingIndex.value !== -1) return;
+	promotingIndex.value = idx;
+	try {
+		const res = await $fetch(`/api/video/meetings/${meetingId.value}/promote-action-item`, {
+			method: 'POST',
+			body: { index: idx },
+		});
+		// Mutate local copy so the UI hides the button without a full refetch.
+		if (meeting.value && res?.data?.action_items) {
+			meeting.value.action_items = res.data.action_items;
+		}
+		toast.add({ title: 'Promoted to task', color: 'green' });
+	} catch (err) {
+		const msg = err.statusMessage || err.data?.message || err.message || 'Failed to promote';
+		toast.add({ title: 'Could not promote', description: msg, color: 'red' });
+	} finally {
+		promotingIndex.value = -1;
+	}
+};
 </script>
 
 <template>
@@ -310,6 +397,97 @@ const canRegenerate = computed(() =>
 				</p>
 			</div>
 
+			<!-- Notes & Decisions (manual capture during the meeting) -->
+			<div class="ios-card p-5 mb-4">
+				<h2 class="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Notes &amp; Decisions</h2>
+
+				<!-- Capture form -->
+				<div class="mb-4">
+					<textarea
+						v-model="noteDraft"
+						rows="2"
+						placeholder="Capture a follow-up thought or a decision the team agreed to…"
+						class="w-full text-sm resize-none rounded-lg bg-muted/30 border border-border/40 focus:border-primary/40 focus:outline-none px-3 py-2 placeholder:text-muted-foreground/60"
+					/>
+					<div class="flex items-center gap-1.5 mt-2">
+						<button
+							class="inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 disabled:opacity-50 transition-colors"
+							:disabled="!noteDraft.trim() || noteSubmitting"
+							@click="submitNote('note')"
+						>
+							<UIcon name="i-heroicons-pencil-square" class="w-3 h-3" />
+							Note
+						</button>
+						<button
+							class="inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 disabled:opacity-50 transition-colors"
+							:disabled="!noteDraft.trim() || noteSubmitting"
+							@click="submitNote('decision')"
+						>
+							<UIcon name="i-heroicons-megaphone" class="w-3 h-3" />
+							Decision
+						</button>
+					</div>
+				</div>
+
+				<div v-if="!notes.length" class="text-sm text-muted-foreground py-3 text-center">
+					Nothing captured yet for this meeting.
+				</div>
+
+				<!-- Decisions group -->
+				<div v-if="groupedNotes.decisions.length > 0" class="mb-4">
+					<h3 class="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-2">Decisions</h3>
+					<ul class="space-y-2">
+						<li
+							v-for="n in groupedNotes.decisions"
+							:key="n.id"
+							class="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 group"
+						>
+							<div class="flex items-start justify-between gap-2">
+								<p class="text-[13px] text-foreground whitespace-pre-wrap leading-snug flex-1">{{ n.content }}</p>
+								<button
+									v-if="n.author?.id === currentUserId"
+									class="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-red-500 p-0.5 flex-shrink-0"
+									title="Delete"
+									@click="handleDeleteNote(n.id)"
+								>
+									<UIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5" />
+								</button>
+							</div>
+							<p class="text-[10px] text-muted-foreground mt-1.5">
+								{{ noteAuthorName(n) }} · {{ formatNoteTime(n) }}
+							</p>
+						</li>
+					</ul>
+				</div>
+
+				<!-- General notes group -->
+				<div v-if="groupedNotes.general.length > 0">
+					<h3 class="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-2">Notes</h3>
+					<ul class="space-y-2">
+						<li
+							v-for="n in groupedNotes.general"
+							:key="n.id"
+							class="rounded-lg border border-border/40 p-3 group"
+						>
+							<div class="flex items-start justify-between gap-2">
+								<p class="text-[13px] text-foreground whitespace-pre-wrap leading-snug flex-1">{{ n.content }}</p>
+								<button
+									v-if="n.author?.id === currentUserId"
+									class="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-red-500 p-0.5 flex-shrink-0"
+									title="Delete"
+									@click="handleDeleteNote(n.id)"
+								>
+									<UIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5" />
+								</button>
+							</div>
+							<p class="text-[10px] text-muted-foreground mt-1.5">
+								{{ noteAuthorName(n) }} · {{ formatNoteTime(n) }}
+							</p>
+						</li>
+					</ul>
+				</div>
+			</div>
+
 			<!-- Action items -->
 			<div v-if="(meeting.action_items?.length || 0) > 0" class="ios-card p-5 mb-4">
 				<h2 class="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Action items</h2>
@@ -321,13 +499,32 @@ const canRegenerate = computed(() =>
 					>
 						<UIcon name="i-heroicons-arrow-right-circle" class="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
 						<div class="flex-1 min-w-0">
-							<p class="text-foreground">{{ item.description }}</p>
+							<p class="text-foreground" :class="item.promoted ? 'line-through text-muted-foreground' : ''">{{ item.description }}</p>
 							<p v-if="item.assignee || item.due_date" class="text-[11px] text-muted-foreground mt-0.5">
 								<span v-if="item.assignee">@{{ item.assignee }}</span>
 								<span v-if="item.assignee && item.due_date"> · </span>
 								<span v-if="item.due_date">due {{ item.due_date }}</span>
 							</p>
 						</div>
+						<button
+							v-if="!item.promoted"
+							:disabled="promotingIndex === i"
+							class="flex-shrink-0 inline-flex items-center gap-1 h-6 px-2.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 disabled:opacity-50 transition-colors"
+							@click="promoteActionItem(i)"
+						>
+							<UIcon
+								:name="promotingIndex === i ? 'i-heroicons-arrow-path' : 'i-heroicons-plus'"
+								:class="['w-3 h-3', promotingIndex === i ? 'animate-spin' : '']"
+							/>
+							Task
+						</button>
+						<span
+							v-else
+							class="flex-shrink-0 inline-flex items-center gap-1 h-6 px-2.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-muted/40 text-muted-foreground"
+						>
+							<UIcon name="i-heroicons-check" class="w-3 h-3" />
+							Promoted
+						</span>
 					</li>
 				</ul>
 			</div>
@@ -349,7 +546,7 @@ const canRegenerate = computed(() =>
 			</div>
 
 			<!-- Transcript -->
-			<div v-if="meeting.transcript_text" class="ios-card p-5">
+			<div v-if="meeting.transcript_text" class="ios-card p-5 mb-4">
 				<button
 					class="w-full flex items-center justify-between"
 					@click="transcriptOpen = !transcriptOpen"
@@ -364,6 +561,30 @@ const canRegenerate = computed(() =>
 					<pre class="text-[12px] leading-relaxed whitespace-pre-wrap text-foreground/80 font-sans">{{ meeting.transcript_text }}</pre>
 				</div>
 			</div>
+
+			<!-- Discussion (async comments + reactions, polymorphic) -->
+			<div class="ios-card p-5">
+				<h2 class="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Discussion</h2>
+				<CommentsSystem
+					collection="video_meetings"
+					:item-id="meeting.id"
+					:organization-id="meeting.related_organization?.id || null"
+				/>
+			</div>
 		</template>
+
+		<!-- Contextual AI Sidebar -->
+		<ClientOnly>
+			<AIContextualSidebar
+				v-if="sidebarOpen && meeting?.id"
+				entity-type="video_meeting"
+				:entity-id="meeting.id"
+				:entity-label="meeting.title || 'Meeting'"
+				@close="closeSidebar"
+			/>
+			<Transition name="overlay">
+				<div v-if="sidebarOpen" class="fixed inset-0 bg-black/20 z-40" @click="closeSidebar" />
+			</Transition>
+		</ClientOnly>
 	</div>
 </template>

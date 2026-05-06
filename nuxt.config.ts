@@ -163,6 +163,7 @@ export default defineNuxtConfig({
 
 		// Daily.co video conferencing
 		dailyApiKey: process.env.DAILY_API_KEY || '',
+		dailyWebhookHmac: process.env.DAILY_WEBHOOK_HMAC || '',
 
 		// Twilio (SMS/voice — video migrated to Daily.co)
 		twilioAccountSid: process.env.TWILIO_ACCOUNT_SID,

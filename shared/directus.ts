@@ -3590,7 +3590,28 @@ export interface Task {
 	category?: 'quick' | 'ticket' | 'project' | 'event' | 'channel' | 'team' | null;
 	ai_suggested?: boolean | null;
 	client_id?: Client | string | null;
+	/** @description Meeting this task was promoted from (action item back-link) */
+	source_meeting?: VideoMeeting | string | null;
 	assigned_to?: TasksDirectusUser[] | string[];
+}
+
+export interface MeetingNote {
+	/** @primaryKey */
+	id: string;
+	date_created?: string | null;
+	date_updated?: string | null;
+	user_created?: DirectusUser | string | null;
+	user_updated?: DirectusUser | string | null;
+	/** @description Meeting this note belongs to @required */
+	meeting: VideoMeeting | string;
+	/** @description Who captured the note */
+	author?: DirectusUser | string | null;
+	/** @description note = general capture, decision = team-binding outcome */
+	note_type: 'note' | 'decision';
+	/** @required */
+	content: string;
+	/** @description Seconds since meeting actual_start when the note was captured */
+	meeting_offset_seconds?: number | null;
 }
 
 export interface TasksDirectusUser {
@@ -3881,6 +3902,8 @@ export interface VideoMeeting {
 	/** @description Last failure message, if any */
 	summary_error?: string | null;
 	attendees?: VideoMeetingAttendee[] | string[];
+	/** @description Notes & decisions captured during the call */
+	notes?: MeetingNote[] | string[];
 }
 
 export interface Video {
@@ -4608,6 +4631,7 @@ export interface Schema {
 	user_presence: UserPresence[];
 	video_meeting_attendees: VideoMeetingAttendee[];
 	video_meetings: VideoMeeting[];
+	meeting_notes: MeetingNote[];
 	videos: Video[];
 	directus_access: DirectusAccess[];
 	directus_activity: DirectusActivity[];
@@ -4837,6 +4861,7 @@ export enum CollectionNames {
 	user_presence = 'user_presence',
 	video_meeting_attendees = 'video_meeting_attendees',
 	video_meetings = 'video_meetings',
+	meeting_notes = 'meeting_notes',
 	videos = 'videos',
 	directus_access = 'directus_access',
 	directus_activity = 'directus_activity',

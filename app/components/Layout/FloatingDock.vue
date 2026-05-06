@@ -30,6 +30,17 @@
 
 			<!-- Expanded: full bar buttons -->
 			<template v-else>
+				<!-- Notes button — meeting-only -->
+				<button
+					v-if="isMeetingRoute"
+					class="dock-btn"
+					:class="{ 'dock-btn-active': activePanel === 'notes' }"
+					title="Capture meeting notes & decisions"
+					@click="togglePanel('notes')"
+				>
+					<Icon name="lucide:notebook-pen" class="w-4 h-4" />
+				</button>
+
 				<!-- Tasks button -->
 				<button
 					class="dock-btn"
@@ -98,7 +109,7 @@
 				<!-- Panel header -->
 				<div class="dock-panel-header">
 					<span class="text-xs font-semibold uppercase tracking-wider">
-						{{ activePanel === 'tasks' ? 'Quick Tasks' : 'Time Tracker' }}
+						{{ panelTitle }}
 					</span>
 					<div class="flex items-center gap-1">
 						<button
@@ -113,8 +124,13 @@
 
 				<!-- Panel body -->
 				<div class="dock-panel-body">
+					<!-- Notes Panel — meeting-only -->
+					<div v-if="activePanel === 'notes'" class="h-full">
+						<LayoutMeetingNotesPanel />
+					</div>
+
 					<!-- Tasks Panel -->
-					<div v-if="activePanel === 'tasks'" class="h-full overflow-y-auto hide-scrollbar px-4 py-3">
+					<div v-else-if="activePanel === 'tasks'" class="h-full overflow-y-auto hide-scrollbar px-4 py-3">
 						<TasksQuickTaskGenerator />
 
 						<!-- Link to full page -->
@@ -129,7 +145,7 @@
 					</div>
 
 					<!-- Timer Panel -->
-					<div v-if="activePanel === 'timer'" class="h-full overflow-y-auto hide-scrollbar px-4 py-3">
+					<div v-else-if="activePanel === 'timer'" class="h-full overflow-y-auto hide-scrollbar px-4 py-3">
 						<!-- Active timer display -->
 						<div v-if="isTimerRunning && activeTimer" class="space-y-3">
 							<div class="flex items-center gap-2">
@@ -284,7 +300,25 @@ watch(isCollapsed, (collapsed) => {
 
 const taskCount = computed(() => activeTasks.value.length);
 
-function togglePanel(panel: 'tasks' | 'timer') {
+const route = useRoute();
+const isMeetingRoute = computed(() => (route.path || '').startsWith('/meeting/'));
+
+const panelTitle = computed(() => {
+	if (activePanel.value === 'notes') return 'Meeting Notes';
+	if (activePanel.value === 'tasks') return 'Quick Tasks';
+	if (activePanel.value === 'timer') return 'Time Tracker';
+	return '';
+});
+
+// If the user navigates away from the meeting room, close the notes panel
+// so the dock doesn't show an unfocused capture box on unrelated pages.
+watch(isMeetingRoute, (inMeeting) => {
+	if (!inMeeting && activePanel.value === 'notes') {
+		activePanel.value = null;
+	}
+});
+
+function togglePanel(panel: 'tasks' | 'timer' | 'notes') {
 	activePanel.value = activePanel.value === panel ? null : panel;
 }
 

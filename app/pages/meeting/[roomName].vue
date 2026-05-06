@@ -521,9 +521,18 @@ onMounted(() => {
 	window.addEventListener('message', handleDailyMessage);
 });
 
+// Stamp the call start time on window so the dock notes panel can compute
+// `meeting_offset_seconds` for transcript alignment.
+watch(hasJoined, (joined) => {
+	if (joined && import.meta.client) {
+		window.__earnestMeetingStart = Date.now();
+	}
+});
+
 onBeforeUnmount(() => {
 	if (statusPollInterval) clearInterval(statusPollInterval);
 	window.removeEventListener('message', handleDailyMessage);
+	if (import.meta.client) delete window.__earnestMeetingStart;
 	if (dailyCallObject) {
 		try { dailyCallObject.destroy(); } catch {}
 		dailyCallObject = null;

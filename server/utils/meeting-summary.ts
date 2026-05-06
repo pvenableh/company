@@ -10,7 +10,7 @@
  * meaningfully grounded — not just a generic transcript summary.
  */
 
-import { readItem, updateItem } from '@directus/sdk';
+import { readItem, readItems, updateItem } from '@directus/sdk';
 import { getLLMProvider } from './llm/factory';
 
 export interface MeetingSummaryResult {
@@ -96,6 +96,34 @@ function formatAttendees(meeting: MeetingForSummary): string {
 		if (a.guest_name) lines.push(`- ${a.guest_name}${a.guest_email ? ` <${a.guest_email}>` : ''}`);
 	}
 	return lines.length ? lines.join('\n') : '- (attendee list unavailable)';
+}
+
+function formatNotesBlock(notes: any[]): string {
+	if (!notes?.length) return '';
+	const decisions = notes.filter((n) => n.note_type === 'decision');
+	const general = notes.filter((n) => n.note_type !== 'decision');
+	const lines: string[] = ['Manual notes & decisions captured during the call (treat as ground truth — these came from the team, not the transcript):'];
+	const fmt = (n: any) => {
+		const who = n.author && typeof n.author === 'object'
+			? `${n.author.first_name || ''} ${n.author.last_name || ''}`.trim()
+			: '';
+		const when = typeof n.meeting_offset_seconds === 'number'
+			? `+${Math.floor(n.meeting_offset_seconds / 60)}m`
+			: '';
+		const tag = [who, when].filter(Boolean).join(' ');
+		return tag ? `  - (${tag}) ${n.content}` : `  - ${n.content}`;
+	};
+	if (decisions.length) {
+		lines.push('');
+		lines.push('Decisions:');
+		decisions.forEach((n) => lines.push(fmt(n)));
+	}
+	if (general.length) {
+		lines.push('');
+		lines.push('Notes:');
+		general.forEach((n) => lines.push(fmt(n)));
+	}
+	return lines.join('\n');
 }
 
 function buildContextBlock(meeting: MeetingForSummary): string {
@@ -226,7 +254,26 @@ export async function generateAndSaveMeetingSummary(meetingId: string): Promise<
 	}
 
 	const contextBlock = buildContextBlock(meeting);
-	const userPrompt = `${contextBlock}\n\n---\n\nTranscript:\n\n${transcript}`;
+
+	// Pull human-captured notes/decisions before the transcript so the model
+	// weights team-marked moments above raw transcript noise. Best-effort —
+	// missing notes shouldn't fail summary generation.
+	const notes = await directus.request(
+		readItems('meeting_notes', {
+			filter: { meeting: { _eq: meetingId } },
+			fields: [
+				'id', 'note_type', 'content', 'meeting_offset_seconds', 'date_created',
+				'author.first_name', 'author.last_name',
+			] as any,
+			sort: ['date_created'],
+			limit: 200,
+		}),
+	).catch(() => []) as any[];
+
+	const notesBlock = formatNotesBlock(notes);
+	const userPrompt = notesBlock
+		? `${contextBlock}\n\n${notesBlock}\n\n---\n\nTranscript:\n\n${transcript}`
+		: `${contextBlock}\n\n---\n\nTranscript:\n\n${transcript}`;
 
 	const provider = getLLMProvider();
 	let llmResp;

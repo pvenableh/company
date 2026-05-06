@@ -54,6 +54,8 @@ export async function getEntityContext(
       return await buildChannelContext(directus, entityId, now);
     } else if (entityType === 'project_event') {
       return await buildProjectEventContext(directus, entityId, now);
+    } else if (entityType === 'video_meeting') {
+      return await buildVideoMeetingContext(directus, entityId, now);
     } else if (entityType === 'email') {
       return await buildEmailTemplateContext(directus, entityId, now);
     } else if (entityType === 'list') {
@@ -945,6 +947,137 @@ async function buildProjectEventContext(directus: any, eventId: string, now: Dat
 
   lines.push('');
   lines.push('Focus your reasoning on this event. Recommend next steps, identify blockers, or draft team updates. When citing data, include the [Source: X] tag.');
+
+  return truncate(lines.join('\n'));
+}
+
+// ─── Video Meeting Context ──────────────────────────────────────────────────
+
+async function buildVideoMeetingContext(directus: any, meetingId: string, _now: Date): Promise<string> {
+  const [meeting, notes, comments] = await Promise.all([
+    directus.request(
+      readItem('video_meetings', meetingId, {
+        fields: [
+          'id', 'title', 'description',
+          'scheduled_start', 'actual_start', 'actual_duration_minutes', 'status',
+          'summary', 'summary_status', 'transcript_text', 'action_items',
+          'host_user.first_name', 'host_user.last_name',
+          'project.id', 'project.title', 'project.status',
+          'project_event.id', 'project_event.title',
+          'project_event.project.title',
+          'related_organization.name',
+          'related_contact.first_name', 'related_contact.last_name',
+        ],
+      }),
+    ).catch(() => null) as Promise<any>,
+
+    directus.request(
+      readItems('meeting_notes', {
+        filter: { meeting: { _eq: meetingId } },
+        fields: ['id', 'note_type', 'content', 'meeting_offset_seconds', 'date_created',
+          'author.first_name', 'author.last_name'],
+        sort: ['date_created'],
+        limit: 50,
+      }),
+    ).catch(() => []) as Promise<any[]>,
+
+    directus.request(
+      readItems('comments', {
+        filter: {
+          _and: [
+            { collection: { _eq: 'video_meetings' } },
+            { item: { _eq: meetingId } },
+          ],
+        },
+        fields: ['id', 'comment', 'date_created', 'user.first_name', 'user.last_name'],
+        sort: ['-date_created'],
+        limit: 10,
+      }),
+    ).catch(() => []) as Promise<any[]>,
+  ]);
+
+  if (!meeting) return '';
+
+  const lines: string[] = [];
+  lines.push(`CURRENT FOCUS: Meeting "${meeting.title || 'Untitled meeting'}"`);
+
+  lines.push('');
+  lines.push('[Source: Meeting]');
+  lines.push(`Status: ${meeting.status || 'unknown'}`);
+  if (meeting.scheduled_start) lines.push(`Scheduled: ${meeting.scheduled_start}`);
+  if (meeting.actual_duration_minutes) lines.push(`Duration: ${meeting.actual_duration_minutes} min`);
+  if (meeting.host_user) {
+    const host = `${meeting.host_user.first_name || ''} ${meeting.host_user.last_name || ''}`.trim();
+    if (host) lines.push(`Host: ${host}`);
+  }
+  const projectTitle = meeting.project?.title || meeting.project_event?.project?.title;
+  if (projectTitle) lines.push(`Project: ${projectTitle}`);
+  if (meeting.project_event?.title) lines.push(`Milestone: ${meeting.project_event.title}`);
+  if (meeting.related_organization?.name) lines.push(`Client: ${meeting.related_organization.name}`);
+  if (meeting.description) {
+    lines.push(`Agenda: ${String(meeting.description).substring(0, 300)}`);
+  }
+
+  if (meeting.summary) {
+    lines.push('');
+    lines.push('[Source: AI Recap]');
+    lines.push(String(meeting.summary).substring(0, 1200));
+  }
+
+  const decisions = notes.filter((n: any) => n.note_type === 'decision');
+  const general = notes.filter((n: any) => n.note_type !== 'decision');
+
+  if (decisions.length > 0) {
+    lines.push('');
+    lines.push('[Source: Manual Decisions]');
+    lines.push(`DECISIONS captured during the call (${decisions.length}):`);
+    decisions.slice(0, 15).forEach((n: any) => {
+      const who = n.author ? `${n.author.first_name || ''} ${n.author.last_name || ''}`.trim() : '';
+      lines.push(`  - ${n.content}${who ? ` — ${who}` : ''}`);
+    });
+  }
+
+  if (general.length > 0) {
+    lines.push('');
+    lines.push('[Source: Manual Notes]');
+    lines.push(`NOTES captured during the call (${general.length}):`);
+    general.slice(0, 15).forEach((n: any) => {
+      const who = n.author ? `${n.author.first_name || ''} ${n.author.last_name || ''}`.trim() : '';
+      lines.push(`  - ${n.content}${who ? ` — ${who}` : ''}`);
+    });
+  }
+
+  if (Array.isArray(meeting.action_items) && meeting.action_items.length > 0) {
+    lines.push('');
+    lines.push('[Source: Action Items]');
+    lines.push(`ACTION ITEMS (${meeting.action_items.length}):`);
+    meeting.action_items.slice(0, 10).forEach((it: any) => {
+      const status = it.promoted ? ' [promoted to task]' : '';
+      const assignee = it.assignee ? ` @${it.assignee}` : '';
+      const due = it.due_date ? ` (due ${it.due_date})` : '';
+      lines.push(`  - ${it.description}${assignee}${due}${status}`);
+    });
+  }
+
+  if (comments.length > 0) {
+    lines.push('');
+    lines.push('[Source: Discussion]');
+    lines.push(`RECENT DISCUSSION (${comments.length} comments):`);
+    comments.slice(0, 5).forEach((c: any) => {
+      const who = c.user ? `${c.user.first_name || ''} ${c.user.last_name || ''}`.trim() : '';
+      const text = String(c.comment || '').replace(/<[^>]+>/g, ' ').substring(0, 200);
+      lines.push(`  - ${who ? `${who}: ` : ''}${text}`);
+    });
+  }
+
+  if (meeting.transcript_text && meeting.summary_status !== 'complete') {
+    lines.push('');
+    lines.push('[Source: Transcript excerpt]');
+    lines.push(String(meeting.transcript_text).substring(0, 800) + (meeting.transcript_text.length > 800 ? '\n[...truncated]' : ''));
+  }
+
+  lines.push('');
+  lines.push('Focus on this meeting. Help draft follow-ups, surface unresolved threads, suggest next-step tasks. When citing data, include the [Source: X] tag.');
 
   return truncate(lines.join('\n'));
 }
