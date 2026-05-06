@@ -116,20 +116,40 @@ const generateSummary = async () => {
 	generating.value = false;
 };
 
-// Poll while generating so the UI updates after the webhook finishes.
+// Poll while the recap is queued or generating so the UI keeps up if the
+// realtime notification gets dropped (rare but possible). The realtime
+// subscription below is the primary path; this is a safety net.
 let pollTimer = null;
 const stopPoll = () => { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } };
 watch(
 	() => meeting.value?.summary_status,
 	(s) => {
-		if (s === 'generating' && !pollTimer) {
-			pollTimer = setInterval(fetchMeeting, 4000);
-		} else if (s !== 'generating') {
+		if ((s === 'generating' || s === 'pending') && !pollTimer) {
+			pollTimer = setInterval(fetchMeeting, 8000);
+		} else if (s !== 'generating' && s !== 'pending') {
 			stopPoll();
 		}
 	},
 );
 onBeforeUnmount(stopPoll);
+
+// Realtime — when a directus_notification arrives pointing at this meeting,
+// refresh the record so the recap shows up without a manual reload.
+const notifications = useRealtimeSubscription(
+	'directus_notifications',
+	['id', 'collection', 'item', 'subject', 'status', 'date_created'],
+	{
+		_and: [
+			{ collection: { _eq: 'video_meetings' } },
+			{ item: { _eq: meetingId.value } },
+		],
+	},
+	'-date_created',
+);
+watch(
+	() => notifications.data.value.length,
+	(n, prev) => { if (n > (prev || 0)) fetchMeeting(); },
+);
 
 const formatDate = (s) => {
 	if (!s) return '—';
@@ -192,6 +212,7 @@ const summaryStatusLabel = computed(() => {
 	const s = meeting.value?.summary_status;
 	if (s === 'complete') return { text: 'Recap ready', tone: 'emerald' };
 	if (s === 'generating') return { text: 'Generating recap…', tone: 'sky' };
+	if (s === 'pending') return { text: 'Queued — recap on the way…', tone: 'sky' };
 	if (s === 'failed') return { text: 'Recap failed', tone: 'red' };
 	if (meeting.value?.transcript_text) return { text: 'Awaiting recap', tone: 'amber' };
 	return { text: 'No transcript', tone: 'gray' };
@@ -206,7 +227,9 @@ const toneClass = (tone) => ({
 }[tone] || 'bg-muted/40 text-muted-foreground');
 
 const canRegenerate = computed(() =>
-	!!meeting.value?.transcript_text && meeting.value.summary_status !== 'generating',
+	!!meeting.value?.transcript_text
+		&& meeting.value.summary_status !== 'generating'
+		&& meeting.value.summary_status !== 'pending',
 );
 
 // ─── Notes & Decisions helpers ───
@@ -378,8 +401,8 @@ const promoteActionItem = async (idx) => {
 				</div>
 
 				<div v-if="meeting.summary" v-html="renderMarkdown(meeting.summary)" class="prose prose-sm max-w-none" />
-				<div v-else-if="meeting.summary_status === 'generating'" class="text-sm text-muted-foreground py-4 text-center">
-					Earnest is reading the transcript and writing the recap. This usually takes 10-30 seconds.
+				<div v-else-if="meeting.summary_status === 'generating' || meeting.summary_status === 'pending'" class="text-sm text-muted-foreground py-4 text-center">
+					Earnest is reading the transcript and writing the recap. This usually takes 30-60 seconds.
 				</div>
 				<div v-else-if="meeting.summary_status === 'failed'" class="text-sm py-4">
 					<p class="text-red-500">{{ meeting.summary_error || 'Recap generation failed.' }}</p>

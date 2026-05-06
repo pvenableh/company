@@ -10,7 +10,7 @@ import {
 	fetchDailyTranscriptBody,
 	vttToPlainText,
 } from '~~/server/utils/daily';
-import { generateAndSaveMeetingSummary } from '~~/server/utils/meeting-summary';
+import { getAIQueue } from '~~/server/utils/queue';
 
 // Daily signs each webhook with HMAC-SHA256 over `${timestamp}.${rawBody}` and
 // returns the digest base64-encoded in `X-Webhook-Signature`. The shared
@@ -87,7 +87,12 @@ export default defineEventHandler(async (event) => {
 		const meetings = await directus.request(
 			readItems('video_meetings', {
 				filter: { room_name: { _eq: roomName } },
-				fields: ['id', 'actual_start', 'participant_count', 'participants_log'],
+				fields: [
+					'id', 'actual_start', 'participant_count', 'participants_log',
+					'related_organization',
+					'project.organization',
+					'project_event.project.organization',
+				] as any,
 				limit: 1,
 			}),
 		);
@@ -194,6 +199,9 @@ export default defineEventHandler(async (event) => {
 				}
 
 				try {
+					// Daily's download_link is short-lived (~minutes), so we fetch
+					// the VTT inline and stash it in transcript_text. The worker
+					// then has everything it needs without re-fetching.
 					const meta = await getDailyTranscript(transcriptId);
 					const downloadUrl = meta.download_link || meta.out_file_url;
 					if (!downloadUrl) {
@@ -212,11 +220,35 @@ export default defineEventHandler(async (event) => {
 						}),
 					);
 
-					// Fire-and-forget summary generation. We don't block the webhook
-					// on Claude latency — the meeting page polls summary_status.
-					generateAndSaveMeetingSummary(meeting.id).catch((err: any) => {
-						console.error('[video/webhook] summary generation failed', err.message);
-					});
+					// Hand off to the standalone earnest-worker. We don't block
+					// the webhook on Claude latency — the meeting page subscribes
+					// to directus_notifications via WebSocket and refreshes when
+					// the recap notification arrives.
+					const orgId =
+						(typeof meeting.related_organization === 'object' ? meeting.related_organization?.id : meeting.related_organization) ||
+						(typeof meeting.project === 'object' && typeof meeting.project?.organization === 'object'
+							? meeting.project.organization.id
+							: typeof meeting.project === 'object' ? meeting.project?.organization : null) ||
+						(typeof meeting.project_event === 'object' && typeof meeting.project_event?.project === 'object'
+							? (typeof meeting.project_event.project.organization === 'object'
+								? meeting.project_event.project.organization.id
+								: meeting.project_event.project.organization)
+							: null);
+
+					const queue = getAIQueue();
+					if (queue) {
+						// Use a stable job id so a re-delivered webhook doesn't
+						// double-summarize the same meeting.
+						await queue.add(
+							'recap-meeting',
+							{ type: 'recap-meeting', meetingId: meeting.id, organizationId: orgId },
+							{ jobId: `recap-meeting:${meeting.id}` },
+						).catch((err: any) => {
+							console.error('[video/webhook] enqueue recap-meeting failed:', err.message);
+						});
+					} else {
+						console.warn('[video/webhook] REDIS_QUEUE_URL unset — recap will not run');
+					}
 				} catch (err: any) {
 					console.error('[video/webhook] transcript ingest failed:', err.message);
 					await directus.request(
