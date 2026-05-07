@@ -33,7 +33,7 @@ export default defineEventHandler(async (event) => {
 		const meetings = await directus.request(
 			readItems('video_meetings', {
 				filter: { room_name: { _eq: roomName } },
-				fields: ['id', 'host_user', 'waiting_room_enabled', 'status'],
+				fields: ['id', 'host_user', 'waiting_room_enabled', 'status', 'related_organization'],
 				limit: 1,
 			}),
 		);
@@ -110,6 +110,16 @@ export default defineEventHandler(async (event) => {
 					status,
 				}),
 			);
+
+			// Bump last_contacted_at for the joined participant — best-effort
+			// analytics, scoped to the meeting's tenant org if known.
+			const orgId = (typeof meeting?.related_organization === 'string'
+				? meeting.related_organization
+				: (meeting?.related_organization as any)?.id) || null;
+			const participantEmail = guestEmail || null;
+			if (participantEmail) {
+				await touchContacts([participantEmail], 'meeting', orgId);
+			}
 		}
 
 		return {

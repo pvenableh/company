@@ -174,6 +174,10 @@ export default defineEventHandler(async (event) => {
 			}
 		}
 
+		// Bump last_contacted_at for the invitee (and the host, if they're a
+		// contact in the same org). Best-effort — never blocks the booking.
+		await touchContacts([inviteeEmail], 'meeting');
+
 		return {
 			success: true,
 			meeting: {

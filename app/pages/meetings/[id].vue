@@ -76,8 +76,10 @@ const fetchMeeting = async () => {
 						'attendees.id',
 						'attendees.guest_name',
 						'attendees.guest_email',
+						'attendees.directus_user.id',
 						'attendees.directus_user.first_name',
 						'attendees.directus_user.last_name',
+						'attendees.directus_user.email',
 					],
 				},
 			},
@@ -187,8 +189,17 @@ const generateSummary = async () => {
 		toast.add({ title: 'Recap generated', color: 'green' });
 		await fetchMeeting();
 	} catch (err) {
-		const msg = err.statusMessage || err.data?.message || err.message || 'Failed to generate recap';
-		toast.add({ title: 'Recap failed', description: msg, color: 'red' });
+		// Prefer the route's friendly `data.message` over h3's default
+		// `statusMessage` (which is just the standard reason phrase like
+		// "Conflict" or "Server Error" and hides the actual hint about
+		// transcripts not being ready yet).
+		const msg = err.data?.message || err.message || err.statusMessage || 'Failed to generate recap';
+		const isNoTranscript = err.statusCode === 409 || /no transcript/i.test(msg);
+		toast.add({
+			title: isNoTranscript ? 'No transcript yet' : 'Recap failed',
+			description: msg,
+			color: isNoTranscript ? 'amber' : 'red',
+		});
 	}
 	generating.value = false;
 };
@@ -241,26 +252,160 @@ const formatDate = (s) => {
 const projectTitle = computed(() => meeting.value?.project_event?.project?.title || meeting.value?.project?.title);
 const projectId = computed(() => meeting.value?.project_event?.project?.id || meeting.value?.project?.id);
 
+// ─── Attendee chips + contact-insight lookup ───
+// The attendees junction often duplicates the host (Daily auto-records the
+// host as an attendee on join). Dedupe so the host doesn't show twice. We
+// also tag the current viewer with `isYou` so the chip can read "Peter (you)".
+const attendeeContacts = ref({}); // email → contact summary
+
 const attendeesList = computed(() => {
 	if (!meeting.value) return [];
-	const items = [];
+	const out = [];
+	const seenUserIds = new Set();
+	const seenEmails = new Set();
+
+	const pushIfNew = (entry) => {
+		if (entry.userId && seenUserIds.has(entry.userId)) return;
+		const emailKey = (entry.email || '').toLowerCase();
+		if (emailKey && seenEmails.has(emailKey)) return;
+		if (entry.userId) seenUserIds.add(entry.userId);
+		if (emailKey) seenEmails.add(emailKey);
+		out.push(entry);
+	};
+
 	const host = meeting.value.host_user;
-	if (host) {
+	if (host && typeof host === 'object') {
 		const name = `${host.first_name || ''} ${host.last_name || ''}`.trim() || host.email || 'Host';
-		items.push({ name, role: 'Host' });
+		const email = (host.email || '').toLowerCase();
+		pushIfNew({
+			name,
+			role: 'Host',
+			userId: host.id || null,
+			email,
+			isYou: !!(currentUserId.value && host.id === currentUserId.value),
+			contact: email ? attendeeContacts.value[email] || null : null,
+		});
 	}
+
 	for (const a of meeting.value.attendees || []) {
 		const u = a.directus_user;
 		if (u && typeof u === 'object') {
-			const name = `${u.first_name || ''} ${u.last_name || ''}`.trim();
-			if (name) { items.push({ name, role: 'Member' }); continue; }
+			const name = `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email || 'Member';
+			const email = (u.email || '').toLowerCase();
+			pushIfNew({
+				name,
+				role: 'Member',
+				userId: u.id || null,
+				email,
+				isYou: !!(currentUserId.value && u.id === currentUserId.value),
+				contact: email ? attendeeContacts.value[email] || null : null,
+			});
+			continue;
 		}
-		if (a.guest_name) {
-			items.push({ name: a.guest_name, role: a.guest_email || 'Guest' });
+		if (a.guest_name || a.guest_email) {
+			const email = (a.guest_email || '').toLowerCase();
+			pushIfNew({
+				name: a.guest_name || a.guest_email || 'Guest',
+				role: a.guest_email ? 'Guest' : 'Guest',
+				userId: null,
+				email,
+				isYou: false,
+				contact: email ? attendeeContacts.value[email] || null : null,
+			});
 		}
 	}
-	return items;
+	return out;
 });
+
+// Fetch contacts collection rows that match the meeting participants' emails,
+// scoped to the current org. Surfaces them in an insight modal so a click on
+// a non-self attendee chip opens a quick view.
+const { selectedOrg } = useOrganization();
+const refreshAttendeeContacts = async () => {
+	if (!meeting.value || !selectedOrg.value) return;
+	const emails = new Set();
+	if (meeting.value.host_user?.email) emails.add(String(meeting.value.host_user.email).toLowerCase());
+	for (const a of meeting.value.attendees || []) {
+		const e = a.directus_user?.email || a.guest_email;
+		if (e) emails.add(String(e).toLowerCase());
+	}
+	if (!emails.size) { attendeeContacts.value = {}; return; }
+	try {
+		const res = await $fetch('/api/directus/items', {
+			method: 'POST',
+			body: {
+				collection: 'contacts',
+				operation: 'list',
+				query: {
+					fields: [
+						'id', 'first_name', 'last_name', 'email', 'company',
+						'category', 'status',
+						'last_contacted_at', 'last_contacted_channel',
+						'last_opened_at', 'date_updated',
+						'client.id', 'client.name',
+						'leads.id', 'leads.stage', 'leads.status', 'leads.is_junk',
+						'leads.estimated_value', 'leads.actual_value',
+					],
+					filter: {
+						_and: [
+							{ organizations: { organizations_id: { _eq: selectedOrg.value } } },
+							{ email: { _in: Array.from(emails) } },
+						],
+					},
+					limit: 50,
+				},
+			},
+		});
+		const list = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+		const map = {};
+		for (const c of list) {
+			const key = (c.email || '').toLowerCase();
+			if (key) map[key] = c;
+		}
+		attendeeContacts.value = map;
+	} catch (err) {
+		// Non-blocking — just leaves chips non-clickable.
+		console.warn('[meetings/[id]] attendee contact lookup failed', err);
+	}
+};
+watch(() => meeting.value?.id, refreshAttendeeContacts);
+watch(selectedOrg, refreshAttendeeContacts);
+
+const selectedAttendee = ref(null);
+function openAttendeeInsight(entry) {
+	if (!entry?.contact || entry.isYou) return;
+	selectedAttendee.value = entry;
+}
+function closeAttendeeInsight() { selectedAttendee.value = null; }
+
+const selectedAttendeeOpenLeads = computed(() => {
+	const leads = selectedAttendee.value?.contact?.leads;
+	if (!Array.isArray(leads)) return [];
+	return leads.filter((l) => !['won', 'lost'].includes(l.stage) && l.status !== 'archived' && !l.is_junk);
+});
+const selectedAttendeeWonLeads = computed(() => {
+	const leads = selectedAttendee.value?.contact?.leads;
+	if (!Array.isArray(leads)) return [];
+	return leads.filter((l) => l.stage === 'won');
+});
+const selectedAttendeePipelineValue = computed(() =>
+	selectedAttendeeOpenLeads.value.reduce((sum, l) => sum + (Number(l.estimated_value) || 0), 0),
+);
+const selectedAttendeeWonValue = computed(() =>
+	selectedAttendeeWonLeads.value.reduce((sum, l) => sum + (Number(l.actual_value) || 0), 0),
+);
+const formatMoney = (n) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(Number(n) || 0);
+const formatRelative = (s) => {
+	if (!s) return null;
+	const d = new Date(s).getTime();
+	if (!d) return null;
+	const days = Math.round((Date.now() - d) / 86400000);
+	if (days === 0) return 'today';
+	if (days === 1) return 'yesterday';
+	if (days < 30) return `${days}d ago`;
+	if (days < 365) return `${Math.round(days / 30)}mo ago`;
+	return `${Math.round(days / 365)}y ago`;
+};
 
 // Light markdown renderer matching the AI sidebar's pattern.
 const renderMarkdown = (text) => {
@@ -812,17 +957,105 @@ const promoteActionItem = async (idx) => {
 			<div v-if="attendeesList.length > 0" class="ios-card p-5 mb-4">
 				<h2 class="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Attendees</h2>
 				<div class="flex flex-wrap gap-2">
-					<span
+					<component
+						:is="(p.contact && !p.isYou) ? 'button' : 'span'"
 						v-for="(p, i) in attendeesList"
 						:key="i"
-						class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/30 text-[12px]"
+						:class="[
+							'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] transition-colors',
+							(p.contact && !p.isYou)
+								? 'bg-muted/40 hover:bg-muted/70 cursor-pointer ring-1 ring-inset ring-border/40'
+								: 'bg-muted/30',
+						]"
+						:title="(p.contact && !p.isYou) ? 'Open contact insights' : undefined"
+						@click="(p.contact && !p.isYou) && openAttendeeInsight(p)"
 					>
 						<UIcon name="i-heroicons-user" class="w-3.5 h-3.5 text-muted-foreground" />
-						<span class="font-medium">{{ p.name }}</span>
+						<span class="font-medium">{{ p.name }}<span v-if="p.isYou" class="text-muted-foreground/70 font-normal"> (you)</span></span>
 						<span class="text-muted-foreground">· {{ p.role }}</span>
-					</span>
+						<UIcon
+							v-if="p.contact && !p.isYou"
+							name="i-heroicons-arrow-top-right-on-square"
+							class="w-3 h-3 text-muted-foreground/60"
+						/>
+					</component>
 				</div>
 			</div>
+
+			<!-- Attendee insight modal — opens when clicking a chip whose attendee
+			     matches a contacts row in this org. Read-only quick view; full
+			     editing lives at /contacts/[id]. -->
+			<Teleport to="body">
+				<Transition name="fade">
+					<div
+						v-if="selectedAttendee?.contact"
+						class="fixed inset-0 z-50 flex items-center justify-center p-4"
+					>
+						<div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="closeAttendeeInsight" />
+						<div class="relative w-full max-w-md ios-card p-5 space-y-4 bg-background">
+							<div class="flex items-start justify-between gap-3">
+								<div class="min-w-0">
+									<h3 class="text-base font-semibold truncate">
+										{{ selectedAttendee.contact.first_name }} {{ selectedAttendee.contact.last_name }}
+									</h3>
+									<p v-if="selectedAttendee.contact.email" class="text-xs text-muted-foreground truncate">{{ selectedAttendee.contact.email }}</p>
+									<p v-if="selectedAttendee.contact.company" class="text-xs text-muted-foreground/80 truncate mt-0.5">{{ selectedAttendee.contact.company }}</p>
+								</div>
+								<button class="p-1.5 rounded-lg hover:bg-muted/60" @click="closeAttendeeInsight">
+									<UIcon name="i-heroicons-x-mark" class="w-5 h-5" />
+								</button>
+							</div>
+
+							<div class="flex flex-wrap gap-2">
+								<ContactsContactCategoryBadge v-if="selectedAttendee.contact.category" :category="selectedAttendee.contact.category" show-icon />
+								<ContactsContactStatusBadge v-if="selectedAttendee.contact.status" :status="selectedAttendee.contact.status" />
+								<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted/40 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+									{{ selectedAttendee.role }}
+								</span>
+							</div>
+
+							<div class="grid grid-cols-2 gap-3 pt-2 border-t border-border/30">
+								<div>
+									<p class="text-[10px] uppercase tracking-wider text-muted-foreground">Open leads</p>
+									<p class="text-sm font-medium">{{ selectedAttendeeOpenLeads.length }}<span v-if="selectedAttendeePipelineValue" class="text-muted-foreground font-normal"> · {{ formatMoney(selectedAttendeePipelineValue) }}</span></p>
+								</div>
+								<div>
+									<p class="text-[10px] uppercase tracking-wider text-muted-foreground">Won deals</p>
+									<p class="text-sm font-medium">{{ selectedAttendeeWonLeads.length }}<span v-if="selectedAttendeeWonValue" class="text-muted-foreground font-normal"> · {{ formatMoney(selectedAttendeeWonValue) }}</span></p>
+								</div>
+								<div>
+									<p class="text-[10px] uppercase tracking-wider text-muted-foreground">Last contacted</p>
+									<p class="text-sm font-medium">
+										{{ formatRelative(selectedAttendee.contact.last_contacted_at || selectedAttendee.contact.last_opened_at) || '—' }}
+										<span v-if="selectedAttendee.contact.last_contacted_channel" class="text-muted-foreground/70 font-normal text-[11px]">· {{ selectedAttendee.contact.last_contacted_channel }}</span>
+									</p>
+								</div>
+								<div>
+									<p class="text-[10px] uppercase tracking-wider text-muted-foreground">Linked client</p>
+									<p class="text-sm font-medium truncate">{{ selectedAttendee.contact.client?.name || '—' }}</p>
+								</div>
+							</div>
+
+							<div class="flex justify-between items-center gap-2 pt-3 border-t border-border/30">
+								<a
+									v-if="selectedAttendee.contact.email"
+									:href="`mailto:${selectedAttendee.contact.email}`"
+									class="text-xs text-muted-foreground hover:text-foreground"
+								>
+									Email
+								</a>
+								<NuxtLink
+									:to="`/contacts/${selectedAttendee.contact.id}`"
+									class="inline-flex items-center gap-1 text-xs font-medium text-white bg-primary hover:bg-primary/90 px-3 py-1.5 rounded-full"
+								>
+									Open contact
+									<UIcon name="i-heroicons-arrow-right" class="w-3 h-3" />
+								</NuxtLink>
+							</div>
+						</div>
+					</div>
+				</Transition>
+			</Teleport>
 
 			<!-- Transcript -->
 			<div v-if="meeting.transcript_text" class="ios-card p-5 mb-4">

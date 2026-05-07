@@ -254,6 +254,16 @@ export default defineEventHandler(async (event) => {
     }
   }
 
+  // Bump `last_contacted_at` for every successful recipient. We pass the full
+  // contact list (including the failures) — touchContacts is a best-effort
+  // analytics update; it filters internally and never throws.
+  if (sentCount > 0) {
+    const successEmails = contacts
+      .map((c) => c.email)
+      .filter((e): e is string => !!e);
+    await touchContacts(successEmails, 'email');
+  }
+
   // ── Build a generic preview HTML for web view (no personalized data) ──
   let previewHtml: string | null = null;
   try {
