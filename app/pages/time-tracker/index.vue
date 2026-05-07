@@ -205,8 +205,9 @@ const selectedTotalMinutes = computed(() =>
 const selectedRevenue = computed(() =>
   selectedEntries.value.reduce((sum, e) => {
     if (!e.billable) return sum;
-    const hours = (e.duration_minutes || 0) / 60;
-    return sum + hours * (e.hourly_rate || 0);
+    const hours = (Number(e.duration_minutes) || 0) / 60;
+    const rate = Number(e.hourly_rate) || 0;
+    return sum + hours * rate;
   }, 0),
 );
 

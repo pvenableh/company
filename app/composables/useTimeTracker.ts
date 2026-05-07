@@ -640,10 +640,13 @@ export function useTimeTracker() {
 
 		const lineItems: any[] = [];
 		for (const [, group] of buckets) {
-			const totalMins = group.entries.reduce((sum, e) => sum + (e.duration_minutes || 0), 0);
+			const totalMins = group.entries.reduce((sum, e) => sum + (Number(e.duration_minutes) || 0), 0);
 			const totalHours = Math.round((totalMins / 60) * 100) / 100;
 
-			const rates = group.entries.filter(e => e.hourly_rate).map(e => e.hourly_rate!);
+			// Directus returns decimal columns as strings — coerce or arithmetic NaNs.
+			const rates = group.entries
+				.map(e => Number(e.hourly_rate))
+				.filter(n => Number.isFinite(n) && n > 0);
 			const rate = rates.length > 0
 				? rates.reduce((a, b) => a + b, 0) / rates.length
 				: 0;

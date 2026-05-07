@@ -185,7 +185,7 @@ const clientName = computed(() => {
 });
 
 const totalMinutes = computed(() =>
-	props.entries.reduce((sum, e) => sum + (e.duration_minutes || 0), 0),
+	props.entries.reduce((sum, e) => sum + (Number(e.duration_minutes) || 0), 0),
 );
 
 const totalHours = computed(() => {
@@ -195,8 +195,9 @@ const totalHours = computed(() => {
 
 const estimatedTotal = computed(() =>
 	props.entries.reduce((sum, e) => {
-		const hours = (e.duration_minutes || 0) / 60;
-		return sum + hours * (e.hourly_rate || 0);
+		const hours = (Number(e.duration_minutes) || 0) / 60;
+		const rate = Number(e.hourly_rate) || 0;
+		return sum + hours * rate;
 	}, 0),
 );
 
@@ -238,9 +239,11 @@ const lineItemsPreview = computed<LineItemPreview[]>(() => {
 
 	const items: LineItemPreview[] = [];
 	for (const [, group] of buckets) {
-		const totalMins = group.entries.reduce((sum, e) => sum + (e.duration_minutes || 0), 0);
+		const totalMins = group.entries.reduce((sum, e) => sum + (Number(e.duration_minutes) || 0), 0);
 		const hours = Math.round((totalMins / 60) * 100) / 100;
-		const rates = group.entries.filter(e => e.hourly_rate).map(e => e.hourly_rate!);
+		const rates = group.entries
+			.map(e => Number(e.hourly_rate))
+			.filter(n => Number.isFinite(n) && n > 0);
 		const rate = rates.length > 0 ? rates.reduce((a, b) => a + b, 0) / rates.length : 0;
 		const dates = group.entries.map(e => e.date).filter(Boolean).sort() as string[];
 		const dateRange = dates.length > 1
