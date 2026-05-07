@@ -68,7 +68,7 @@ export const UPDATE_FIELD_TOOL: ToolDefinition = {
 export const ADD_TASK_TOOL: ToolDefinition = {
   name: 'add_task',
   description:
-    'Creates a new task linked to the current project or ticket. Use when the user says "add a task", "create a task", or similar.',
+    'Creates a new task linked to the current project, event, or ticket. Use when the user says "add a task", "create a task", or similar. Only pass project_id / event_id / ticket_id if the EXACT UUID appears in the context above — never invent a UUID. If the chat is focused on a project_event and no project_id is supplied, the server resolves it from the focused event automatically.',
   input_schema: {
     type: 'object',
     properties: {
@@ -78,11 +78,15 @@ export const ADD_TASK_TOOL: ToolDefinition = {
       },
       project_id: {
         type: 'string',
-        description: 'The project UUID to link this task to (if on a project page).',
+        description: 'Optional project UUID. Pass ONLY a UUID that appears verbatim in the context (e.g. "Project ID:" line). If omitted and the chat is focused on a project_event, the server fills this in from the focused event.',
+      },
+      event_id: {
+        type: 'string',
+        description: 'Optional project_event UUID to attach the task to. If omitted and the chat is focused on a project_event, the server fills this in from the focused event.',
       },
       ticket_id: {
         type: 'string',
-        description: 'The ticket UUID to link this task to (if on a ticket page).',
+        description: 'Optional ticket UUID to link this task to (if on a ticket page).',
       },
       due_date: {
         type: 'string',

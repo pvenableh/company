@@ -7,6 +7,8 @@ import { getServerDirectus } from '~~/server/utils/directus';
 interface ToolHandlerContext {
   organizationId: string;
   userId: string;
+  entityType?: string;
+  entityId?: string;
 }
 
 export interface ToolHandlerResult {
@@ -139,15 +141,21 @@ async function handleRescheduleProject(
 // ─── update_field ────────────────────────────────────────────────────────────
 
 // Collections that are scoped to an organization — we verify ownership before mutating.
+// Value is a dotted field path that resolves to the org id. project_events and
+// project_tasks have no direct organization column; we walk the parent project.
 const ORG_SCOPED_COLLECTIONS: Record<string, string> = {
   projects: 'organization',
   tickets: 'organization',
-  project_tasks: 'organization',
+  project_tasks: 'project.organization',
   invoices: 'organization',
   leads: 'organization',
   contacts: 'organization',
-  project_events: 'organization',
+  project_events: 'project.organization',
 };
+
+function getNested(obj: any, path: string): any {
+  return path.split('.').reduce((acc, key) => (acc == null ? acc : acc[key]), obj);
+}
 
 // Fields that are never allowed to be set via AI (security boundary)
 const BLOCKED_FIELDS = new Set(['organization', 'user_created', 'user_updated', 'date_created', 'date_updated', 'id']);
@@ -174,7 +182,8 @@ async function handleUpdateField(
     const record = await directus.request(
       readItem(entity_type as any, entity_id, { fields: ['id', orgField] }),
     ) as any;
-    if (!record || record[orgField] !== ctx.organizationId) {
+    const orgId = getNested(record, orgField);
+    if (!record || orgId !== ctx.organizationId) {
       return { success: false, summary: '', error: 'Record not found or access denied' };
     }
   }
@@ -194,21 +203,60 @@ async function handleAddTask(
   input: Record<string, any>,
   ctx: ToolHandlerContext,
 ): Promise<ToolHandlerResult> {
-  const { title, project_id, ticket_id, due_date, priority, assignee_id } = input;
+  const { title, ticket_id, due_date, priority, assignee_id } = input;
+  let { project_id, event_id } = input as { project_id?: string; event_id?: string };
 
   if (!title) return { success: false, summary: '', error: 'title is required' };
 
   const directus = getServerDirectus();
 
+  // If the chat is focused on a project_event and no project/event id was passed,
+  // resolve them from the focused event so the model doesn't have to invent UUIDs.
+  if (!project_id && !ticket_id && ctx.entityType === 'project_event' && ctx.entityId) {
+    const ev = await directus.request(
+      readItem('project_events', ctx.entityId, { fields: ['id', 'project.id', 'project.organization'] }),
+    ).catch(() => null) as any;
+    const evOrgId = ev?.project?.organization;
+    if (ev?.project?.id && evOrgId === ctx.organizationId) {
+      project_id = ev.project.id;
+      if (!event_id) event_id = ev.id;
+    }
+  }
+
+  // If the model supplied a project_id, verify it actually belongs to this org
+  // — otherwise the FK error from Directus is opaque and we can't tell whether
+  // the model hallucinated. Replace fabricated IDs with the focused event's
+  // project when one is available.
+  if (project_id) {
+    const proj = await directus.request(
+      readItem('projects', project_id, { fields: ['id', 'organization'] }),
+    ).catch(() => null) as any;
+    if (!proj || proj.organization !== ctx.organizationId) {
+      if (ctx.entityType === 'project_event' && ctx.entityId) {
+        const ev = await directus.request(
+          readItem('project_events', ctx.entityId, { fields: ['id', 'project.id', 'project.organization'] }),
+        ).catch(() => null) as any;
+        if (ev?.project?.id && ev.project.organization === ctx.organizationId) {
+          project_id = ev.project.id;
+          if (!event_id) event_id = ev.id;
+        } else {
+          return { success: false, summary: '', error: 'Provided project_id is invalid for this organization' };
+        }
+      } else {
+        return { success: false, summary: '', error: 'Provided project_id is invalid for this organization' };
+      }
+    }
+  }
+
   const payload: Record<string, any> = {
     title,
-    organization: ctx.organizationId,
     user_created: ctx.userId,
-    status: 'not_started',
+    status: 'published',
     completed: false,
   };
 
   if (project_id) payload.project = project_id;
+  if (event_id) payload.event_id = event_id;
   if (ticket_id) payload.ticket = ticket_id;
   if (due_date) payload.due_date = due_date;
   if (priority) payload.priority = priority;
@@ -221,7 +269,7 @@ async function handleAddTask(
   return {
     success: true,
     summary: `Created task "${title}"${due_date ? ` due ${due_date}` : ''}.`,
-    data: { id: created.id, title: created.title },
+    data: { id: created.id, title: created.title, project_id, event_id },
   };
 }
 
