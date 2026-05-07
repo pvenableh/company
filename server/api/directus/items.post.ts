@@ -40,14 +40,20 @@ async function executeOperation(
     // User is authenticated, use their token
     directus = await getUserDirectus(event, retryCount > 0);
   } else {
-    // No authenticated user — public client handles anonymous reads
-    // (public booking pages, invoice preview, etc.). All writes are denied
-    // at the Directus perms layer post-Public-Write-Audit; surface that as
-    // an explicit 401 here instead of waiting for a 403 from Directus.
+    // No authenticated user. Writes are always rejected. For reads, only fall
+    // through to the Public client for collections the public payment page +
+    // public booking flow actually need; anything else surfaces as 401 here so
+    // an expired session doesn't masquerade as a Directus perms 403.
     if (operation === "create" || operation === "update" || operation === "delete") {
       throw createError({
         statusCode: 401,
         message: "Authentication required for write operations",
+      });
+    }
+    if (!ANON_READABLE.has(collection)) {
+      throw createError({
+        statusCode: 401,
+        message: "Authentication required",
       });
     }
     directus = getPublicDirectus();
@@ -135,6 +141,16 @@ async function executeOperation(
     throw error;
   }
 }
+
+// ── Anonymous-readable allowlist ───────────────────────────────────────────
+// Mirrors PUBLIC_KEEP in scripts/patch-tenant-row-perms.ts: the only
+// collections the Public policy still grants `read` on. Read requests to any
+// other collection without a session are 401 (re-auth needed) instead of
+// silently falling through to Public and getting a misleading 403 back from
+// Directus.
+const ANON_READABLE = new Set([
+  'invoices', 'clients', 'products', 'payments_received', 'organizations',
+]);
 
 // ── Archived-org write guard ───────────────────────────────────────────────
 // Block create/update/delete on any row whose `organization` payload field
