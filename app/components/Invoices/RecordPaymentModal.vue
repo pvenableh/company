@@ -227,7 +227,7 @@ const referenceLabel = computed(() => {
 	}
 });
 
-const referenceRequired = computed(() => effectiveMethod.value === 'check');
+const referenceRequired = computed(() => false);
 
 const referencePlaceholder = computed(() => {
 	switch (effectiveMethod.value) {
