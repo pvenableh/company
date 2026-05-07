@@ -19,6 +19,18 @@ export default defineNuxtRouteMiddleware(async (to) => {
   const { loggedIn } = useUserSession();
   if (!loggedIn.value) return;
 
+  // Clear the `portal_preview_as` cookie when navigating off /portal/*. The
+  // cookie is only meaningful while previewing the portal as a client; once
+  // the admin returns to staff routes it shouldn't keep travelling on every
+  // request (it confuses log auditing and could shape future portal-aware
+  // helpers in unexpected ways). Server-only — no-op during SSR setup.
+  if (import.meta.client && !to.path.startsWith('/portal')) {
+    try {
+      const ck = useCookie('portal_preview_as');
+      if (ck.value) ck.value = null;
+    } catch { /* nuxt may not have the runtime; ignore */ }
+  }
+
   const {
     initializeOrganizations,
     isInitialized,
