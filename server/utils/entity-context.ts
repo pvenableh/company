@@ -919,6 +919,7 @@ async function buildProjectEventContext(directus: any, eventId: string, now: Dat
     lines.push(`Approval: ${event.approval}${approver ? ` (by ${approver})` : ''}${event.approved_at ? ` on ${event.approved_at}` : ''}`);
   }
   if (event.project?.title) lines.push(`Project: ${event.project.title} (${event.project.status || 'unknown'})`);
+  if (event.project?.id) lines.push(`Project ID: ${event.project.id}`);
   if (event.project?.client?.name) lines.push(`Client: ${event.project.client.name}`);
   if (event.event_date) lines.push(`Event date: ${event.event_date}`);
   if (event.date) lines.push(`Start date: ${event.date}`);
@@ -994,7 +995,7 @@ async function buildProjectEventContext(directus: any, eventId: string, now: Dat
   }
 
   lines.push('');
-  lines.push('You are scoped to this event. When the user asks to update status/type/priority/dates or to add tasks, call the matching tool (update_field / add_task) with this event id rather than describing the change. Cite data with [Source: X] tags.');
+  lines.push('You are scoped to this event. When the user asks to update status/type/priority/dates, call update_field with entity_type="project_events" and this event id. When they ask to add a task, call add_task and pass the EXACT "Project ID:" UUID above as project_id (do NOT invent a UUID — if it is not shown, omit project_id and the server will infer it from this event). Cite data with [Source: X] tags.');
 
   return truncate(lines.join('\n'));
 }
