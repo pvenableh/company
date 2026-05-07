@@ -137,7 +137,7 @@ watch(() => selectedOrg.value, () => loadContracts());
 			<NuxtLink
 				v-for="contract in contracts"
 				:key="contract.id"
-				:to="`/contracts/preview/${contract.id}`"
+				:to="`/portal/contracts/${contract.id}`"
 				class="ios-card p-4 flex items-center gap-4 hover:shadow-md transition-shadow group"
 			>
 				<div class="flex items-center justify-center w-10 h-10 rounded-full bg-muted/60 shrink-0">
@@ -206,7 +206,7 @@ watch(() => selectedOrg.value, () => loadContracts());
 						</div>
 
 						<NuxtLink
-							:to="`/contracts/preview/${signTarget.id}`"
+							:to="`/portal/contracts/${signTarget.id}`"
 							class="block text-[11px] text-primary hover:underline"
 						>
 							Read the full contract first →

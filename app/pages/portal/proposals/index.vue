@@ -123,7 +123,7 @@ watch(() => selectedOrg.value, () => loadProposals());
 			<NuxtLink
 				v-for="proposal in proposals"
 				:key="proposal.id"
-				:to="`/proposals/preview/${proposal.id}`"
+				:to="`/portal/proposals/${proposal.id}`"
 				class="ios-card p-4 flex items-center gap-4 hover:shadow-md transition-shadow group"
 			>
 				<div class="flex items-center justify-center w-10 h-10 rounded-full bg-muted/60 shrink-0">
