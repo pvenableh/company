@@ -14,6 +14,7 @@
  */
 
 import { createItem, readItems, updateItem } from '@directus/sdk';
+import { aggregate } from '@directus/sdk';
 import { getLLMProvider } from '~~/server/utils/llm/factory';
 import { buildSystemPrompt, formatNotesContext } from '~~/server/utils/llm/context';
 import { getEntityContext } from '~~/server/utils/entity-context';
@@ -42,10 +43,60 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'Message is required' });
   }
 
+  // Item 13 — Earnest staff gate. AI chat is for Earnest staff (owner / admin
+  // / manager / member). Client-portal-only users get a 403 with the
+  // sell-sheet flag so the client can route them to the upgrade modal
+  // instead of just toasting an error. We check the unscoped membership
+  // count: any active org_membership in any org is enough to call this an
+  // Earnest user.
+  try {
+    const sysDirectus = getTypedDirectus();
+    const memberships = await sysDirectus.request(
+      aggregate('org_memberships', {
+        aggregate: { count: ['*'] },
+        query: {
+          filter: {
+            _and: [
+              { user: { _eq: userId } },
+              { status: { _eq: 'active' } },
+            ],
+          },
+        },
+      }),
+    ) as any[];
+    const membershipCount = Number(memberships?.[0]?.count ?? 0);
+    if (membershipCount === 0) {
+      throw createError({
+        statusCode: 403,
+        statusMessage: 'AI is for Earnest staff',
+        data: {
+          sellSheet: true,
+          reason: 'portal_user',
+          message: 'Earnest AI is for Earnest team members. Ask your account owner to invite you as staff to use the assistant.',
+        },
+      });
+    }
+  } catch (err: any) {
+    if (err?.statusCode === 403) throw err;
+    // If the gate check itself throws for unrelated reasons (Directus
+    // hiccup), log and continue — failing closed would lock out staff
+    // whenever Directus has a bad day.
+    console.warn('[ai/chat] staff gate check failed open:', err?.message);
+  }
+
   // Enforce AI token limits before proceeding
   const tokenCheck = await enforceTokenLimits(event, organizationId);
   if (!tokenCheck.allowed) {
-    throw createError({ statusCode: tokenCheck.statusCode || 402, message: tokenCheck.reason || 'AI token limit reached' });
+    throw createError({
+      statusCode: tokenCheck.statusCode || 402,
+      message: tokenCheck.reason || 'AI token limit reached',
+      data: {
+        sellSheet: true,
+        reason: 'tokens_depleted',
+        orgTokensRemaining: tokenCheck.orgTokensRemaining ?? null,
+        memberBudgetRemaining: tokenCheck.memberBudgetRemaining ?? null,
+      },
+    });
   }
 
   const directus = await getUserDirectus(event);

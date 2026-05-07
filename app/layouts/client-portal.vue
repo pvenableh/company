@@ -1,8 +1,28 @@
 <template>
 	<div class="relative bg-background text-foreground transition duration-150 lg:overflow-visible ios-safe-area">
+		<!-- Admin preview banner — when the route carries ?previewAs=<id>,
+		     this layout was opened by an admin from the main app's client
+		     switcher. Make the mode obvious so they don't think it's their
+		     real account, and give them a one-click escape hatch. -->
+		<div
+			v-if="previewClientName"
+			class="fixed top-0 inset-x-0 z-[60] bg-[var(--cyan)]/15 border-b border-[var(--cyan)]/40 text-[12px] py-1.5 px-3 flex items-center justify-center gap-3"
+		>
+			<Icon name="lucide:eye" class="w-3.5 h-3.5 text-[var(--cyan)]" />
+			<span class="text-foreground/80">
+				Previewing <strong class="text-foreground">{{ previewClientName }}</strong>'s portal — read-only.
+			</span>
+			<button
+				class="text-[10px] uppercase tracking-wider font-bold text-[var(--cyan)] hover:underline"
+				@click="exitPreview"
+			>
+				Exit preview
+			</button>
+		</div>
+
 		<LayoutPortalHeader />
 
-		<div class="page pb-safe-portal pt-portal-header">
+		<div class="page pb-safe-portal pt-portal-header" :class="previewClientName ? 'pt-portal-header-preview' : ''">
 			<slot />
 		</div>
 
@@ -76,9 +96,46 @@
 <script setup lang="ts">
 const { user } = useDirectusAuth();
 const route = useRoute();
+const router = useRouter();
 const { clientName: portalClientName } = useClientPortalUser();
 
 const showMore = ref(false);
+
+// Admin preview-mode state. When an admin clicks "Preview <client> portal" in
+// the main-app client switcher we land on /portal?previewAs=<id> and a cookie
+// has been set; the portal API routes already pick up the cookie. The layout
+// just needs to label the mode and offer an exit.
+const previewClientId = computed(() => {
+	const q = route.query?.previewAs;
+	return typeof q === 'string' && q ? q : null;
+});
+
+const previewClientName = ref<string | null>(null);
+
+async function loadPreviewClientName() {
+	if (!previewClientId.value) {
+		previewClientName.value = null;
+		return;
+	}
+	try {
+		const scope = await $fetch<{ root: { id: string; name: string } | null }>(
+			`/api/portal/scope?previewAs=${encodeURIComponent(previewClientId.value)}`,
+		);
+		previewClientName.value = scope?.root?.name ?? null;
+	} catch {
+		previewClientName.value = null;
+	}
+}
+
+watch(previewClientId, loadPreviewClientName, { immediate: true });
+
+function exitPreview() {
+	if (import.meta.client) {
+		document.cookie = 'portal_preview_as=; path=/; max-age=0; samesite=lax';
+	}
+	// Send the admin back to where they likely came from.
+	router.push('/clients');
+}
 
 type PortalLink = { name: string; to: string; icon: string; key?: 'social' | 'marketing' | 'proposals' | 'contracts' };
 
@@ -199,6 +256,12 @@ watch(() => user.value?.id, (id) => {
 /* Push page content below the fixed header. Header is ~76px tall expanded. */
 .pt-portal-header {
 	padding-top: 88px;
+}
+
+/* When the admin preview banner is visible, push the page another ~30px so
+   the header isn't obscured. */
+.pt-portal-header-preview {
+	padding-top: 122px;
 }
 
 /* Page content offset for sidebar (sidebar is lg+ only) */

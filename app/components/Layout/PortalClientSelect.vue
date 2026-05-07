@@ -37,6 +37,15 @@ async function loadScope() {
 	try {
 		loading.value = true;
 		scope.value = await $fetch('/api/portal/scope');
+		// Item 11 — when there's only one client (no sub-brand descendants), the
+		// "All" filter is meaningless: there's nothing else to filter against.
+		// Lock the selection to the root so list pages render that client's
+		// items immediately instead of showing the "All" placeholder state.
+		if (scope.value.root && scope.value.descendants.length === 0) {
+			if (selectedClient.value !== scope.value.root.id) {
+				setClient(scope.value.root.id);
+			}
+		}
 	} catch {
 		scope.value = { root: null, descendants: [] };
 	} finally {
@@ -94,8 +103,26 @@ onMounted(() => {
 			</Avatar>
 		</button>
 
+		<!-- Single-client portal: no choices to make — just show the name as a
+		     read-only chip so users still see context without a dead dropdown. -->
+		<div
+			v-if="scope.descendants.length === 0"
+			class="flex items-center gap-1 rounded-full bg-white border border-gray-200 text-[9px] uppercase tracking-wider font-medium text-gray-700 p-0.5 sm:px-2 sm:py-1 max-w-[180px]"
+		>
+			<div class="size-6 sm:size-5 rounded-full bg-gray-100 flex items-center justify-center shrink-0 overflow-hidden">
+				<img
+					v-if="getIconUrl(scope.root)"
+					:src="getIconUrl(scope.root)"
+					:alt="scope.root.name"
+					class="size-6 sm:size-5 object-contain rounded-full"
+				/>
+				<span v-else class="font-medium text-gray-700 text-[8px]">{{ getInitials(scope.root) }}</span>
+			</div>
+			<span class="truncate hidden sm:inline">{{ scope.root.name }}</span>
+		</div>
+
 		<!-- Client filter dropdown — root + descendants -->
-		<DropdownMenu>
+		<DropdownMenu v-else>
 			<DropdownMenuTrigger as-child>
 				<button
 					class="flex items-center gap-1 rounded-full bg-white border border-gray-200 hover:border-[var(--cyan)] transition-colors text-[9px] uppercase tracking-wider font-medium text-gray-700 p-0.5 sm:px-2 sm:py-1 max-w-[180px]"

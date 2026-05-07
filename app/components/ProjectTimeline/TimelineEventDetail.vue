@@ -18,6 +18,20 @@ const { updateEvent } = useProjectTimeline();
 const { getPriorityBadgeClass } = useStatusStyle();
 const toast = useToast();
 
+// Wire the AI sidebar to this event so "Ask Earnest" gets scoped suggestions
+// + can mutate the event via update_field. The dedicated event page already
+// does this on mount; the slide-over needs the same behaviour because the
+// user lands here straight from the Gantt without ever visiting the page.
+const { setEntity, clearEntity, sidebarOpen } = useEntityPageContext();
+watch(
+  () => props.event?.id,
+  (id) => {
+    if (id) setEntity('project_event', String(id), props.event?.title || 'Event');
+  },
+  { immediate: true },
+);
+onBeforeUnmount(() => clearEntity());
+
 // Local editable copy
 const form = reactive({
   title: '',
@@ -118,12 +132,22 @@ defineExpose({ dirty, save });
   <div class="event-detail space-y-4 py-2">
     <!-- Editable fields card -->
     <div class="ios-card p-4 space-y-3">
-      <!-- Title -->
-      <input
-        v-model="form.title"
-        class="w-full text-base font-semibold bg-transparent border-0 outline-none text-foreground placeholder:text-muted-foreground/50"
-        placeholder="Event title..."
-      />
+      <div class="flex items-center justify-between gap-2">
+        <!-- Title -->
+        <input
+          v-model="form.title"
+          class="w-full text-base font-semibold bg-transparent border-0 outline-none text-foreground placeholder:text-muted-foreground/50"
+          placeholder="Event title..."
+        />
+        <button
+          class="shrink-0 inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-primary/10 hover:bg-primary/20 text-primary transition-colors"
+          title="Ask Earnest about this event — suggestions, status updates, follow-up tasks"
+          @click="sidebarOpen = true"
+        >
+          <Icon name="lucide:sparkles" class="w-3 h-3" />
+          Ask Earnest
+        </button>
+      </div>
 
       <!-- Date range row -->
       <div class="flex flex-wrap items-center gap-3">

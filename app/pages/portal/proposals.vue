@@ -7,11 +7,13 @@ useHead({ title: 'Proposals | Client Portal' });
 
 const { selectedOrg } = useOrganization();
 const { clientScope } = useOrgRole();
+const toast = useToast();
 
 const proposalItems = usePortalItems('proposals');
 
 const loading = ref(true);
 const proposals = ref<any[]>([]);
+const actingId = ref<string | null>(null);
 
 const statusConfig: Record<string, { label: string; classes: string }> = {
 	draft:    { label: 'Draft',    classes: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' },
@@ -62,6 +64,36 @@ function formatDate(d: string) {
 function formatCurrency(amount: number | null | undefined) {
 	if (!amount) return null;
 	return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+}
+
+const isActionable = (status: string) => status === 'sent' || status === 'viewed';
+
+async function actOnProposal(p: any, action: 'accept' | 'decline', evt?: MouseEvent) {
+	// The list rows are NuxtLinks to the preview; intercept clicks on the
+	// inline buttons so we don't navigate away as the action runs.
+	evt?.preventDefault();
+	evt?.stopPropagation();
+	if (action === 'decline' && !window.confirm('Decline this proposal? The agency will be notified.')) return;
+	actingId.value = p.id;
+	try {
+		const res = await $fetch<{ ok: true; proposal_status: string }>('/api/portal/proposal-action', {
+			method: 'POST',
+			body: { proposalId: p.id, action },
+		});
+		p.proposal_status = res.proposal_status;
+		toast.add({
+			title: action === 'accept' ? 'Proposal accepted' : 'Proposal declined',
+			color: action === 'accept' ? 'green' : 'amber',
+		});
+	} catch (err: any) {
+		toast.add({
+			title: action === 'accept' ? 'Could not accept' : 'Could not decline',
+			description: err?.data?.message || err?.message,
+			color: 'red',
+		});
+	} finally {
+		actingId.value = null;
+	}
 }
 
 onMounted(() => loadProposals());
@@ -119,6 +151,27 @@ watch(() => selectedOrg.value, () => loadProposals());
 
 				<div v-if="proposal.total_value" class="text-right shrink-0">
 					<p class="text-sm font-semibold">{{ formatCurrency(proposal.total_value) }}</p>
+				</div>
+
+				<!-- Inline accept/decline for sent or viewed proposals — saves the
+				     client a round trip to the preview page when they're decided. -->
+				<div v-if="isActionable(proposal.proposal_status)" class="flex items-center gap-1.5 shrink-0">
+					<button
+						class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 disabled:opacity-50 transition-colors"
+						:disabled="actingId === proposal.id"
+						@click="actOnProposal(proposal, 'accept', $event)"
+					>
+						<Icon name="lucide:check" class="w-3 h-3" />
+						Accept
+					</button>
+					<button
+						class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 disabled:opacity-50 transition-colors"
+						:disabled="actingId === proposal.id"
+						@click="actOnProposal(proposal, 'decline', $event)"
+					>
+						<Icon name="lucide:x" class="w-3 h-3" />
+						Decline
+					</button>
 				</div>
 
 				<Icon name="lucide:chevron-right" class="w-4 h-4 text-muted-foreground/40 shrink-0 group-hover:text-muted-foreground transition-colors" />

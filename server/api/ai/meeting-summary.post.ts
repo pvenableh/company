@@ -7,12 +7,36 @@
  * and for meetings where someone clicks "Regenerate" on the recap page.
  */
 
-import { readItem } from '@directus/sdk';
+import { readItem, readItems, updateItem } from '@directus/sdk';
 import { generateAndSaveMeetingSummary } from '~~/server/utils/meeting-summary';
 import { requireOrgMembership } from '~~/server/utils/marketing-perms';
+import { fetchDailyTranscriptBody, getDailyTranscript, vttToPlainText } from '~~/server/utils/daily';
 
 interface Body {
 	meetingId?: string;
+}
+
+// Daily's transcript REST endpoint requires a transcript_id. When the
+// webhook was missed, we can list transcripts for the room via the
+// `/transcript` listing route. This is an undocumented but stable path
+// that returns the same shape `transcript.ready-to-download` would have
+// fired with. Best-effort — failure means the user has to wait for the
+// webhook to retry.
+async function fetchLatestTranscriptIdForRoom(roomName: string): Promise<string | null> {
+	try {
+		const apiKey = process.env.DAILY_API_KEY || (useRuntimeConfig() as any).dailyApiKey;
+		if (!apiKey) return null;
+		const url = `https://api.daily.co/v1/transcript?room_name=${encodeURIComponent(roomName)}&limit=10`;
+		const res = await fetch(url, { headers: { Authorization: `Bearer ${apiKey}` } });
+		if (!res.ok) return null;
+		const body = await res.json() as any;
+		const list = (body?.data || []) as any[];
+		const finished = list.find((t) => t?.status === 'finished');
+		const candidate = finished || list[0];
+		return candidate?.transcriptId || candidate?.id || null;
+	} catch {
+		return null;
+	}
 }
 
 export default defineEventHandler(async (event) => {
@@ -43,6 +67,8 @@ export default defineEventHandler(async (event) => {
 					'project.organization',
 					'project_event.project.organization',
 					'transcript_text',
+					'transcript_id',
+					'room_name',
 				] as any,
 			}),
 		);
@@ -72,10 +98,41 @@ export default defineEventHandler(async (event) => {
 	}
 
 	if (!meeting.transcript_text) {
-		throw createError({
-			statusCode: 409,
-			message: 'No transcript yet. Start transcription during the meeting (host menu) and try again after it ends.',
-		});
+		// Fallback path: maybe the webhook was missed. If Daily has a finished
+		// transcript for this room, ingest it inline now so the host can recover
+		// without us re-running a manual SQL update.
+		let recovered = false;
+		try {
+			const transcriptId = meeting.transcript_id || (meeting.room_name ? await fetchLatestTranscriptIdForRoom(meeting.room_name) : null);
+			if (transcriptId) {
+				const meta = await getDailyTranscript(transcriptId);
+				const downloadUrl = meta.download_link || meta.out_file_url;
+				if (downloadUrl && (meta.status === 'finished' || !meta.status)) {
+					const vtt = await fetchDailyTranscriptBody(downloadUrl);
+					const plain = vttToPlainText(vtt);
+					if (plain.trim()) {
+						await directus.request(
+							updateItem('video_meetings', meetingId, {
+								transcript_id: transcriptId,
+								transcript_url: meta.out_file_url || downloadUrl,
+								transcript_text: plain,
+								summary_status: 'pending',
+							}),
+						);
+						recovered = true;
+					}
+				}
+			}
+		} catch (err: any) {
+			console.warn('[meeting-summary] Daily transcript recovery failed:', err.message);
+		}
+
+		if (!recovered) {
+			throw createError({
+				statusCode: 409,
+				message: 'No transcript yet. Make sure transcription was on during the meeting (host menu in the Daily prebuilt UI). Once Daily finishes the transcript Earnest will pick it up automatically.',
+			});
+		}
 	}
 
 	try {

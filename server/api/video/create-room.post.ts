@@ -71,6 +71,14 @@ export default defineEventHandler(async (event) => {
 		const durationMinutes = Number(body.duration) || 30;
 		const scheduledEnd = new Date(scheduledStart.getTime() + durationMinutes * 60 * 1000);
 
+		// Detect "instant" meetings (the InstantMeetingButton creates these with
+		// `scheduled_start: now`). These start immediately, so we shouldn't show
+		// them as `scheduled` in the meetings list — they're live the moment the
+		// host hits the button. Even if the Daily webhook fires `meeting.started`
+		// later, a 30-second list refresh window of the wrong status is the bug
+		// the user reported (Item 12).
+		const isInstant = Math.abs(scheduledStart.getTime() - Date.now()) < 60_000;
+
 		// Create Daily.co video room
 		let dailyRoom;
 		try {
@@ -104,7 +112,8 @@ export default defineEventHandler(async (event) => {
 			duration_minutes: durationMinutes,
 			scheduled_start: scheduledStart.toISOString(),
 			scheduled_end: scheduledEnd.toISOString(),
-			status: 'scheduled',
+			status: isInstant ? 'in_progress' : 'scheduled',
+			actual_start: isInstant ? scheduledStart.toISOString() : null,
 			host_identity: userName,
 			host_user: userId,
 			meeting_url: meetingUrl,
@@ -115,7 +124,7 @@ export default defineEventHandler(async (event) => {
 			invite_sent: false,
 			waiting_room_enabled: body.waiting_room_enabled ?? false,
 			recording_enabled: body.recording_enabled ?? false,
-			booked_via: 'direct',
+			booked_via: isInstant ? 'instant' : 'direct',
 		};
 
 		if (body.related_lead) {

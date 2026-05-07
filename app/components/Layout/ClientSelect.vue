@@ -8,7 +8,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Building2, Users, ChevronDown, ArrowRight } from 'lucide-vue-next'
+import { Building2, Users, ChevronDown, ArrowRight, Eye } from 'lucide-vue-next'
 
 const props = defineProps({
 	user: {
@@ -21,6 +21,7 @@ const emit = defineEmits(['open-org-switcher']);
 
 const router = useRouter();
 const { currentOrg, hasMultipleOrgs, organizations } = useOrganization();
+const { isOrgAdminOrAbove } = useOrgRole();
 // Hide the entire org+client picker for orgless users — every action it
 // offers (open switcher, filter clients) requires at least one membership.
 const hasOrg = computed(() => organizations.value.length > 0);
@@ -58,6 +59,26 @@ const displayLabel = computed(() => {
 	if (currentClient.value) return currentClient.value.name;
 	return 'All';
 });
+
+// Item 6 — admin "Preview as client" affordance. Only available when an
+// admin/owner has a real client (not "All"/"Org") selected.
+const canPreviewAsClient = computed(() => {
+	if (!isOrgAdminOrAbove.value) return false;
+	const id = selectedClient.value;
+	return !!id && id !== 'org';
+});
+
+function previewAsClient() {
+	const id = selectedClient.value;
+	if (!id || id === 'org') return;
+	if (import.meta.client) {
+		// 30-day session cookie scoped to the portal context. Any /api/portal/*
+		// call will pick it up via portal-auth's cookie fallback. Cleared from
+		// the portal layout's "Exit preview" action.
+		document.cookie = `portal_preview_as=${encodeURIComponent(id)}; path=/; max-age=2592000; samesite=lax`;
+		window.open(`/portal?previewAs=${encodeURIComponent(id)}`, '_blank', 'noopener');
+	}
+}
 
 let cleanupListeners = null;
 
@@ -175,6 +196,20 @@ onUnmounted(() => {
 				<div v-if="!clientsLoading && !hasClients" class="px-3 py-2">
 					<p class="text-xs text-gray-400">No active clients yet</p>
 				</div>
+
+				<!-- Admin: Preview client portal -->
+				<template v-if="canPreviewAsClient">
+					<DropdownMenuSeparator />
+					<DropdownMenuItem
+						class="flex items-center gap-3 cursor-pointer"
+						@click="previewAsClient"
+					>
+						<div class="size-6 rounded-full bg-[var(--cyan)]/15 flex items-center justify-center shrink-0">
+							<Eye class="size-3.5 text-[var(--cyan)]" />
+						</div>
+						<span class="text-[9px] uppercase leading-3 flex-1 font-medium">Preview {{ currentClient?.name }} portal</span>
+					</DropdownMenuItem>
+				</template>
 			</DropdownMenuContent>
 		</DropdownMenu>
 	</div>

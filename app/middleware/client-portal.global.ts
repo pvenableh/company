@@ -56,6 +56,18 @@ export default defineNuxtRouteMiddleware(async (to) => {
   const currentStaffRole = currentOrg?.membership?.role?.slug || null;
   const isPortalUserHere = !!currentOrg?.clientPortal;
 
+  // Admin "preview as client" path — any /portal route with ?previewAs=<id>
+  // is permitted for admin/owner users. The server-side scope endpoint
+  // verifies the actual permission against client_portal_users + memberships.
+  if (
+    path.startsWith('/portal') &&
+    typeof to.query?.previewAs === 'string' &&
+    to.query.previewAs &&
+    (currentStaffRole === 'admin' || currentStaffRole === 'owner')
+  ) {
+    return;
+  }
+
   // Path 1: user IS a portal user in the currently-selected org.
   if (isPortalUserHere) {
     if (!isAllowed || path === '/') {

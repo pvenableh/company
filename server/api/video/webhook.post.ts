@@ -11,6 +11,7 @@ import {
 	vttToPlainText,
 } from '~~/server/utils/daily';
 import { getAIQueue } from '~~/server/utils/queue';
+import { generateAndSaveMeetingSummary } from '~~/server/utils/meeting-summary';
 
 // Daily signs each webhook with HMAC-SHA256 over `${timestamp}.${rawBody}` and
 // returns the digest base64-encoded in `X-Webhook-Signature`. The shared
@@ -247,7 +248,12 @@ export default defineEventHandler(async (event) => {
 							console.error('[video/webhook] enqueue recap-meeting failed:', err.message);
 						});
 					} else {
-						console.warn('[video/webhook] REDIS_QUEUE_URL unset — recap will not run');
+						// No Redis worker — run the recap inline. We deliberately don't
+						// `await` so the webhook still ACKs Daily within their timeout,
+						// but the function persists status updates as it runs.
+						generateAndSaveMeetingSummary(meeting.id).catch((err: any) => {
+							console.error('[video/webhook] inline recap failed:', err.message);
+						});
 					}
 				} catch (err: any) {
 					console.error('[video/webhook] transcript ingest failed:', err.message);

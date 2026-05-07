@@ -234,14 +234,25 @@ export function useContextualChat() {
 
       if (!response.ok) {
         // Surface the real error reason (e.g. token cap hit) instead of a
-        // bare status code, and toast on 402/429 so visitors notice even if
-        // they've collapsed the sidebar.
+        // bare status code. 402 (tokens exhausted) and 403 (non-staff)
+        // open the sell-sheet/token modal instead of just toasting so the
+        // user has a clear path to the upgrade flow.
         let message = response.statusText || 'Request failed';
+        let errorData: any = null;
         try {
           const body = await response.json();
-          message = body?.data?.message || body?.message || body?.statusMessage || message;
+          errorData = body?.data || null;
+          message = errorData?.message || body?.message || body?.statusMessage || message;
         } catch {}
-        if (response.status === 402 || response.status === 429) {
+
+        if (response.status === 402 || (response.status === 403 && errorData?.sellSheet)) {
+          // Both routes share the same modal — it's the existing
+          // OrganizationTokenManagementModal mounted globally in the default
+          // layout. The modal copy already covers both "no tokens" and
+          // "upgrade for AI" states.
+          const { openTokenModal } = await import('~/composables/useTokenModal');
+          openTokenModal();
+        } else if (response.status === 429) {
           const { toast } = await import('vue-sonner');
           toast.error(message);
         }

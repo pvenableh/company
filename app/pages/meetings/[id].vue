@@ -303,11 +303,12 @@ const toneClass = (tone) => ({
 	gray: 'bg-muted/40 text-muted-foreground',
 }[tone] || 'bg-muted/40 text-muted-foreground');
 
-const canRegenerate = computed(() =>
-	!!meeting.value?.transcript_text
-		&& meeting.value.summary_status !== 'generating'
-		&& meeting.value.summary_status !== 'pending',
-);
+// Allow the user to force a recap whenever they're not actively in the middle
+// of one. We deliberately enable this while status is 'pending' — that's the
+// "queued" state that gets stuck if the worker isn't running, and the user
+// needs an escape hatch. If the transcript hasn't synced yet, the server side
+// will try to pull it from Daily on demand before failing.
+const canRegenerate = computed(() => meeting.value?.summary_status !== 'generating');
 
 // ─── Notes & Decisions helpers ───
 const groupedNotes = computed(() => {
@@ -427,6 +428,31 @@ const downloadRecording = async (recordingId) => {
 		toast.add({ title: 'Download failed', description: msg, color: 'red' });
 	}
 	linkLoadingId.value = '';
+};
+
+// ─── Chat export ───
+const downloadChat = () => {
+	if (!chatMessages.value.length) return;
+	const lines = [
+		`Meeting: ${meeting.value?.title || 'Untitled meeting'}`,
+		meeting.value?.scheduled_start ? `Scheduled: ${meeting.value.scheduled_start}` : null,
+		'',
+		...chatMessages.value.map((m) => {
+			const ts = m.sent_at || m.date_created;
+			const stamp = ts ? `[${new Date(ts).toLocaleTimeString()}] ` : '';
+			return `${stamp}${m.sender_name || 'Unknown'}: ${m.message}`;
+		}),
+	].filter((l) => l !== null);
+	const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+	const url = URL.createObjectURL(blob);
+	const a = document.createElement('a');
+	a.href = url;
+	const safeTitle = (meeting.value?.title || 'meeting').replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+	a.download = `${safeTitle}-chat.txt`;
+	document.body.appendChild(a);
+	a.click();
+	document.body.removeChild(a);
+	URL.revokeObjectURL(url);
 };
 
 // ─── Action item promotion ───
@@ -622,13 +648,17 @@ const promoteActionItem = async (idx) => {
 							:name="generating ? 'i-heroicons-arrow-path' : (meeting.summary ? 'i-heroicons-arrow-path-rounded-square' : 'i-heroicons-sparkles')"
 							:class="['w-3 h-3', generating ? 'animate-spin' : '']"
 						/>
-						{{ meeting.summary ? 'Regenerate' : 'Generate' }}
+						{{ meeting.summary ? 'Regenerate' : meeting.summary_status === 'pending' ? 'Force generate' : 'Generate' }}
 					</button>
 				</div>
 
 				<div v-if="meeting.summary" v-html="renderMarkdown(meeting.summary)" class="prose prose-sm max-w-none" />
-				<div v-else-if="meeting.summary_status === 'generating' || meeting.summary_status === 'pending'" class="text-sm text-muted-foreground py-4 text-center">
+				<div v-else-if="meeting.summary_status === 'generating'" class="text-sm text-muted-foreground py-4 text-center">
 					Earnest is reading the transcript and writing the recap. This usually takes 30-60 seconds.
+				</div>
+				<div v-else-if="meeting.summary_status === 'pending'" class="text-sm text-muted-foreground py-4 text-center">
+					Earnest queued the recap.
+					<span class="block text-[12px] text-muted-foreground/70 mt-1">If this hangs for more than a minute, click <em>Force generate</em> above to run it now.</span>
 				</div>
 				<div v-else-if="meeting.summary_status === 'failed'" class="text-sm py-4">
 					<p class="text-red-500">{{ meeting.summary_error || 'Recap generation failed.' }}</p>
@@ -813,15 +843,25 @@ const promoteActionItem = async (idx) => {
 
 			<!-- In-call chat log (captured from Daily prebuilt) -->
 			<div v-if="chatMessages.length > 0" class="ios-card p-5">
-				<button class="w-full flex items-center justify-between" @click="chatOpen = !chatOpen">
-					<h2 class="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-						In-call Chat <span class="text-muted-foreground/60 ml-1">({{ chatMessages.length }})</span>
-					</h2>
-					<UIcon
-						:name="chatOpen ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'"
-						class="w-4 h-4 text-muted-foreground"
-					/>
-				</button>
+				<div class="flex items-center justify-between">
+					<button class="flex items-center gap-2" @click="chatOpen = !chatOpen">
+						<h2 class="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+							In-call Chat <span class="text-muted-foreground/60 ml-1">({{ chatMessages.length }})</span>
+						</h2>
+						<UIcon
+							:name="chatOpen ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'"
+							class="w-4 h-4 text-muted-foreground"
+						/>
+					</button>
+					<button
+						class="inline-flex items-center gap-1 h-7 px-3 rounded-full text-[10px] font-bold uppercase tracking-wider bg-muted/40 hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-colors"
+						title="Download chat transcript as a text file"
+						@click="downloadChat"
+					>
+						<UIcon name="i-heroicons-arrow-down-tray" class="w-3 h-3" />
+						Download
+					</button>
+				</div>
 				<div v-if="chatOpen" class="mt-3 pt-3 border-t border-border/30 space-y-2.5 max-h-96 overflow-y-auto">
 					<div
 						v-for="m in chatMessages"

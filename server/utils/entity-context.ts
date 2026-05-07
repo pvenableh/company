@@ -853,15 +853,20 @@ async function buildChannelContext(directus: any, channelId: string, now: Date):
 // ─── Project Event Context ──────────────────────────────────────────────────
 
 async function buildProjectEventContext(directus: any, eventId: string, now: Date): Promise<string> {
-  const [event, tasks, meetings] = await Promise.all([
+  const [event, tasks, meetings, comments] = await Promise.all([
     directus.request(
       readItem('project_events', eventId, {
         fields: [
           'id', 'title', 'description', 'content', 'status', 'type', 'priority',
           'event_date', 'date', 'end_date', 'duration_days', 'hours', 'payment_amount',
           'link', 'prototype_link', 'is_milestone', 'date_created',
+          'approval', 'approved_at',
+          'approved_by.first_name', 'approved_by.last_name',
           'project.id', 'project.title', 'project.status',
+          'project.client.name',
+          'project.organization.name',
           'assigned_to.directus_users_id.first_name', 'assigned_to.directus_users_id.last_name',
+          'files.directus_files_id.id', 'files.directus_files_id.title', 'files.directus_files_id.type',
         ],
       }),
     ).catch(() => null) as Promise<any>,
@@ -878,9 +883,23 @@ async function buildProjectEventContext(directus: any, eventId: string, now: Dat
     directus.request(
       readItems('video_meetings', {
         filter: { project_event: { _eq: eventId } },
-        fields: ['id', 'title', 'status', 'scheduled_start', 'actual_start', 'actual_end', 'host_user.first_name', 'host_user.last_name'],
+        fields: ['id', 'title', 'status', 'scheduled_start', 'actual_start', 'actual_end', 'host_user.first_name', 'host_user.last_name', 'summary_status'],
         sort: ['-scheduled_start'],
         limit: 10,
+      }),
+    ).catch(() => []) as Promise<any[]>,
+
+    directus.request(
+      readItems('comments', {
+        filter: {
+          _and: [
+            { collection: { _eq: 'project_events' } },
+            { item: { _eq: eventId } },
+          ],
+        },
+        fields: ['id', 'comment', 'date_created', 'user.first_name', 'user.last_name'],
+        sort: ['-date_created'],
+        limit: 8,
       }),
     ).catch(() => []) as Promise<any[]>,
   ]);
@@ -895,7 +914,12 @@ async function buildProjectEventContext(directus: any, eventId: string, now: Dat
   if (event.type) lines.push(`Type: ${event.type}`);
   if (event.priority) lines.push(`Priority: ${event.priority}`);
   if (event.is_milestone) lines.push('Milestone: yes');
+  if (event.approval) {
+    const approver = event.approved_by ? `${event.approved_by.first_name || ''} ${event.approved_by.last_name || ''}`.trim() : '';
+    lines.push(`Approval: ${event.approval}${approver ? ` (by ${approver})` : ''}${event.approved_at ? ` on ${event.approved_at}` : ''}`);
+  }
   if (event.project?.title) lines.push(`Project: ${event.project.title} (${event.project.status || 'unknown'})`);
+  if (event.project?.client?.name) lines.push(`Client: ${event.project.client.name}`);
   if (event.event_date) lines.push(`Event date: ${event.event_date}`);
   if (event.date) lines.push(`Start date: ${event.date}`);
   if (event.end_date) lines.push(`End date: ${event.end_date}`);
@@ -941,12 +965,36 @@ async function buildProjectEventContext(directus: any, eventId: string, now: Dat
     meetings.slice(0, 6).forEach((m: any) => {
       const when = m.scheduled_start ? new Date(m.scheduled_start).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'unscheduled';
       const host = m.host_user ? `${m.host_user.first_name || ''} ${m.host_user.last_name || ''}`.trim() : '';
-      lines.push(`  - [${m.status}] "${m.title}" — ${when}${host ? ` (host: ${host})` : ''}`);
+      const recap = m.summary_status === 'complete' ? ' [recap ready]' : m.summary_status === 'failed' ? ' [recap failed]' : '';
+      lines.push(`  - [${m.status}] "${m.title}" — ${when}${host ? ` (host: ${host})` : ''}${recap}`);
+    });
+  }
+
+  const fileList = (event.files || [])
+    .map((f: any) => f.directus_files_id)
+    .filter((f: any) => f && f.title);
+  if (fileList.length > 0) {
+    lines.push('');
+    lines.push('[Source: Attached Files]');
+    lines.push(`FILES (${fileList.length}):`);
+    fileList.slice(0, 8).forEach((f: any) => {
+      lines.push(`  - ${f.title} (${f.type || 'file'})`);
+    });
+  }
+
+  if (comments.length > 0) {
+    lines.push('');
+    lines.push('[Source: Discussion]');
+    lines.push(`RECENT DISCUSSION (${comments.length} comments):`);
+    comments.slice(0, 5).forEach((c: any) => {
+      const who = c.user ? `${c.user.first_name || ''} ${c.user.last_name || ''}`.trim() : '';
+      const text = String(c.comment || '').replace(/<[^>]+>/g, ' ').substring(0, 200);
+      lines.push(`  - ${who ? `${who}: ` : ''}${text}`);
     });
   }
 
   lines.push('');
-  lines.push('Focus your reasoning on this event. Recommend next steps, identify blockers, or draft team updates. When citing data, include the [Source: X] tag.');
+  lines.push('You are scoped to this event. When the user asks to update status/type/priority/dates or to add tasks, call the matching tool (update_field / add_task) with this event id rather than describing the change. Cite data with [Source: X] tags.');
 
   return truncate(lines.join('\n'));
 }
@@ -1096,8 +1144,31 @@ async function buildVideoMeetingContext(directus: any, meetingId: string, _now: 
     lines.push(String(meeting.transcript_text).substring(0, 800) + (meeting.transcript_text.length > 800 ? '\n[...truncated]' : ''));
   }
 
+  // Bonus — when the meeting is "live"/in-progress and we have no captured
+  // context yet, give the AI explicit guidance on how to be useful instead
+  // of returning the generic "I don't have access to the transcript" reply
+  // the user complained about. The model now knows to (a) coach the host
+  // toward capturing notes/decisions inline, (b) draft the prep questions
+  // they should be asking right now from project + client context, and
+  // (c) lean on related meetings/projects/client info that *is* available.
+  const hasAnyCapture =
+    !!meeting.summary
+    || !!meeting.transcript_text
+    || (Array.isArray(notes) && notes.length > 0)
+    || (Array.isArray(comments) && comments.length > 0)
+    || (Array.isArray(chat) && chat.length > 0)
+    || (Array.isArray(meeting.action_items) && meeting.action_items.length > 0);
+  const isLive = meeting.status === 'in_progress' || meeting.status === 'scheduled';
+
   lines.push('');
-  lines.push('Focus on this meeting. Help draft follow-ups, surface unresolved threads, suggest next-step tasks. When citing data, include the [Source: X] tag.');
+  if (!hasAnyCapture && isLive) {
+    lines.push('CONTEXT GAP: This meeting has no notes, decisions, transcript, or chat captured yet. Do not fall back to "I do not have access" — instead:');
+    lines.push('  - Help the host draft talking points or agenda items from the project / client / event context above.');
+    lines.push('  - When the user asks "what have we discussed", explain that nothing is captured yet and offer to (a) start a note, (b) suggest decisions worth recording, or (c) ask whether transcription is on (host menu in Daily prebuilt).');
+    lines.push('  - Suggest 2-3 concrete next steps the host should raise on this call, grounded in the project status, related meetings, and recent decisions in the project.');
+  } else {
+    lines.push('Focus on this meeting. Help draft follow-ups, surface unresolved threads, suggest next-step tasks. When citing data, include the [Source: X] tag.');
+  }
 
   return truncate(lines.join('\n'));
 }

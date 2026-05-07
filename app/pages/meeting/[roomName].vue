@@ -175,24 +175,21 @@
 				<UIcon name="i-heroicons-arrow-top-right-on-square" class="w-3 h-3 opacity-60" />
 			</NuxtLink>
 
-			<!-- Top-right floating controls: Record (host) + Ask Earnest -->
+			<!-- Top-right floating controls: passive Recording indicator + Ask Earnest -->
+			<!-- Recording is started/stopped from Daily's prebuilt button (... menu /
+			     red dot). We mirror its state via the wrap()'d call object's
+			     `recording-started` / `recording-stopped` events instead of
+			     duplicating the control — the JS SDK's startRecording() does not
+			     reliably co-exist with the prebuilt UI's own recording state. -->
 			<div v-if="hasJoined" class="fixed top-16 right-4 z-30 flex items-center gap-2 pointer-events-auto">
-				<button
-					v-if="isHost"
-					:class="[
-						'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-md text-[11px] font-medium transition-colors shadow-lg',
-						isRecording
-							? 'bg-red-500/90 hover:bg-red-500 text-white'
-							: 'bg-black/60 hover:bg-black/80 text-white',
-					]"
-					:disabled="recordingBusy"
-					:title="isRecording ? 'Stop cloud recording' : 'Start cloud recording'"
-					@click="toggleRecording"
+				<span
+					v-if="isHost && isRecording"
+					class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-500/90 backdrop-blur-md text-white text-[11px] font-medium shadow-lg"
+					title="Cloud recording is on"
 				>
-					<span v-if="isRecording" class="w-2 h-2 rounded-full bg-white animate-pulse" />
-					<UIcon v-else name="i-heroicons-video-camera" class="w-3.5 h-3.5" />
-					<span>{{ isRecording ? 'Recording' : 'Record' }}</span>
-				</button>
+					<span class="w-2 h-2 rounded-full bg-white animate-pulse" />
+					<span>Recording</span>
+				</span>
 				<button
 					class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white text-[11px] font-medium transition-colors shadow-lg"
 					title="Ask Earnest about this meeting"
@@ -258,7 +255,6 @@ const dailyUrl = ref(null);
 const aiTrayOpen = ref(false);
 const dailyFrame = ref(null);
 const isRecording = ref(false);
-const recordingBusy = ref(false);
 
 let statusPollInterval = null;
 
@@ -417,14 +413,11 @@ const handleLeftMeeting = () => {
 
 const handleRecordingStarted = () => {
 	isRecording.value = true;
-	recordingBusy.value = false;
 };
 const handleRecordingStopped = () => {
 	isRecording.value = false;
-	recordingBusy.value = false;
 };
 const handleRecordingError = (e) => {
-	recordingBusy.value = false;
 	const msg = e?.errorMsg || 'Recording failed';
 	toast.add({ title: 'Recording error', description: msg, color: 'red' });
 };
@@ -448,25 +441,6 @@ const wrapDailyIframe = async () => {
 		if (local?.session_id) mySessionId.value = local.session_id;
 	} catch (err) {
 		console.warn('[meeting] Daily wrap failed', err);
-	}
-};
-
-const toggleRecording = async () => {
-	if (!dailyCallObject || recordingBusy.value) return;
-	recordingBusy.value = true;
-	try {
-		if (isRecording.value) {
-			await dailyCallObject.stopRecording();
-		} else {
-			await dailyCallObject.startRecording();
-		}
-	} catch (err) {
-		recordingBusy.value = false;
-		toast.add({
-			title: 'Recording failed',
-			description: err?.message || 'Daily refused the request',
-			color: 'red',
-		});
 	}
 };
 

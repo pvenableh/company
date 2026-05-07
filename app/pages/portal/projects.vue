@@ -83,7 +83,15 @@ async function loadProjectEvents(projectId: string) {
 	loadingEvents.value = true;
 	try {
 		projectEvents.value = await eventItems.list({
-			fields: ['id', 'title', 'type', 'status', 'approval', 'approved_at', 'event_date', 'end_date', 'description'],
+			fields: [
+				'id', 'title', 'type', 'status', 'approval', 'approved_at',
+				'event_date', 'end_date', 'description',
+				'prototype_link',
+				'files.directus_files_id.id',
+				'files.directus_files_id.type',
+				'files.directus_files_id.title',
+				'files.directus_files_id.filename_download',
+			],
 			filter: {
 				project: { _eq: projectId },
 				status: { _neq: 'archived' },
@@ -97,6 +105,16 @@ async function loadProjectEvents(projectId: string) {
 	} finally {
 		loadingEvents.value = false;
 	}
+}
+
+function eventDesignImages(evt: any) {
+	return (evt?.files || [])
+		.map((f: any) => f.directus_files_id)
+		.filter((f: any) => f && typeof f.type === 'string' && f.type.startsWith('image/'));
+}
+
+function eventHasDesign(evt: any) {
+	return !!(evt?.prototype_link || eventDesignImages(evt).length > 0);
 }
 
 async function approveEventFromPortal(eventId: string) {
@@ -277,17 +295,19 @@ watch(() => selectedOrg.value, () => loadProjects());
 								</div>
 							</div>
 
-							<!-- Pending Approvals -->
+							<!-- Pending Approvals — when an event carries a Figma link or
+							     design files, surface them inline so the client can
+							     review the design before approving. -->
 							<div v-if="pendingEvents.length > 0">
 								<p class="text-xs text-muted-foreground mb-2 flex items-center gap-1">
 									<UIcon name="i-heroicons-exclamation-circle" class="w-3.5 h-3.5 text-amber-500" />
 									Pending Your Approval ({{ pendingEvents.length }})
 								</p>
-								<div class="space-y-2">
+								<div class="space-y-3">
 									<div
 										v-for="evt in pendingEvents"
 										:key="evt.id"
-										class="ios-card p-3"
+										class="ios-card p-3 space-y-3"
 									>
 										<div class="flex items-start justify-between gap-2">
 											<div class="min-w-0">
@@ -308,6 +328,37 @@ watch(() => selectedOrg.value, () => loadProjects());
 											>
 												Approve
 											</UButton>
+										</div>
+
+										<!-- Figma / prototype embed for design review -->
+										<div v-if="evt.prototype_link" class="rounded-lg border border-border/40 overflow-hidden">
+											<div class="flex items-center gap-2 px-3 py-1.5 bg-muted/30 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+												<UIcon name="i-heroicons-link" class="w-3 h-3" />
+												Design preview
+												<a :href="evt.prototype_link" target="_blank" class="ml-auto text-primary hover:underline normal-case tracking-normal font-normal">
+													Open in new tab
+												</a>
+											</div>
+											<div class="h-[320px] bg-muted/20">
+												<DesignFigmaEmbed :url="evt.prototype_link" :title="`${evt.title} preview`" />
+											</div>
+										</div>
+
+										<!-- Image gallery for attached mockups -->
+										<div v-if="eventDesignImages(evt).length" class="grid gap-2" :class="eventDesignImages(evt).length === 1 ? 'grid-cols-1' : 'grid-cols-2'">
+											<a
+												v-for="img in eventDesignImages(evt)"
+												:key="img.id"
+												:href="`${config.public.directusUrl}/assets/${img.id}`"
+												target="_blank"
+												class="block rounded-lg overflow-hidden border border-border/40"
+											>
+												<img
+													:src="`${config.public.directusUrl}/assets/${img.id}?width=600&fit=cover`"
+													:alt="img.title || 'Design preview'"
+													class="w-full h-32 object-cover"
+												/>
+											</a>
 										</div>
 									</div>
 								</div>
