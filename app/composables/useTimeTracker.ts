@@ -550,13 +550,58 @@ export function useTimeTracker() {
 		return stats;
 	}
 
+	type TimeGrouping = 'project' | 'project_day' | 'entry';
+
+	function escapeHtml(value: string): string {
+		return value
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;')
+			.replace(/'/g, '&#39;');
+	}
+
+	function formatHoursDecimal(minutes: number): string {
+		return (Math.round((minutes / 60) * 100) / 100).toFixed(2) + 'h';
+	}
+
+	function entryNotes(e: TimeEntry): string {
+		// Strip HTML if anyone wrote rich text in the time entry; description is
+		// plain text in practice but be defensive.
+		const raw = (e.description || '').replace(/<[^>]*>/g, '').trim();
+		return raw || '—';
+	}
+
+	/**
+	 * Build the HTML <table class="time-block">…</table> body rendered inside
+	 * the invoice line item. CSS lives in app/components/Invoices/Invoice.vue.
+	 */
+	function buildTimeBlockHtml(entries: TimeEntry[]): string {
+		const sorted = [...entries].sort((a, b) => {
+			const da = a.date || a.start_time || '';
+			const db = b.date || b.start_time || '';
+			return da.localeCompare(db);
+		});
+		const rows = sorted
+			.map(e => {
+				const date = (e.date || e.start_time || '').slice(0, 10) || '—';
+				const hours = formatHoursDecimal(e.duration_minutes || 0);
+				return `<tr><td>${escapeHtml(date)}</td><td>${escapeHtml(hours)}</td><td>${escapeHtml(entryNotes(e))}</td></tr>`;
+			})
+			.join('');
+		return `<table class="time-block"><thead><tr><th>Date</th><th>Hours</th><th>Notes</th></tr></thead><tbody>${rows}</tbody></table>`;
+	}
+
 	async function generateInvoiceFromEntries(params: {
 		entryIds: (string | number)[];
 		clientId: string;
 		invoiceDate: string;
 		dueDate: string;
 		projectId?: string;
+		grouping?: TimeGrouping;
 	}): Promise<Invoice> {
+		const grouping: TimeGrouping = params.grouping || 'project';
+
 		// Fetch the selected entries
 		const entries: TimeEntry[] = [];
 		for (const id of params.entryIds) {
@@ -564,51 +609,57 @@ export function useTimeTracker() {
 			entries.push(entry);
 		}
 
-		// Group by project
-		const groups = new Map<string, { projectName: string; entries: TimeEntry[] }>();
+		// Bucket entries according to the chosen grouping
+		const buckets = new Map<string, { label: string; entries: TimeEntry[] }>();
 		for (const entry of entries) {
 			const proj = entry.project as any;
 			const projId = proj?.id || 'no-project';
 			const projName = proj?.title || 'General';
+			const date = (entry.date || entry.start_time || '').slice(0, 10);
 
-			if (!groups.has(projId)) {
-				groups.set(projId, { projectName: projName, entries: [] });
+			let key: string;
+			let label: string;
+			if (grouping === 'entry') {
+				key = `${entry.id}`;
+				label = projName;
+			} else if (grouping === 'project_day') {
+				key = `${projId}::${date}`;
+				label = projName;
+			} else {
+				key = projId;
+				label = projName;
 			}
-			groups.get(projId)!.entries.push(entry);
+
+			if (!buckets.has(key)) {
+				buckets.set(key, { label, entries: [] });
+			}
+			buckets.get(key)!.entries.push(entry);
 		}
 
-		// Build line items — use "Hours" product for time-based billing
 		const HOURS_PRODUCT_ID = 'e3b508fc-9a50-4978-aa4a-ccd30451ad85';
 
 		const lineItems: any[] = [];
-		for (const [, group] of groups) {
+		for (const [, group] of buckets) {
 			const totalMins = group.entries.reduce((sum, e) => sum + (e.duration_minutes || 0), 0);
 			const totalHours = Math.round((totalMins / 60) * 100) / 100;
 
-			// Use the most common hourly rate in the group
 			const rates = group.entries.filter(e => e.hourly_rate).map(e => e.hourly_rate!);
 			const rate = rates.length > 0
 				? rates.reduce((a, b) => a + b, 0) / rates.length
 				: 0;
 
-			const dates = group.entries
-				.map(e => e.date)
-				.filter(Boolean)
-				.sort();
-			const dateRange = dates.length > 1
-				? `${dates[0]} - ${dates[dates.length - 1]}`
-				: dates[0] || '';
+			const description = buildTimeBlockHtml(group.entries);
 
 			lineItems.push({
 				product: HOURS_PRODUCT_ID,
-				description: `${group.projectName} — ${dateRange} (${group.entries.length} entries, ${totalHours}h)`,
-				quantity: Math.ceil(totalHours),
+				description,
+				// Quantity is the precise hour count so total math is exact.
+				quantity: totalHours,
 				rate: Math.round(rate * 100) / 100,
 				amount: Math.round(totalHours * rate * 100) / 100,
 			});
 		}
 
-		// Create the invoice
 		const { createInvoice, generateInvoiceCode } = useInvoices();
 		const invoiceCode = await generateInvoiceCode(params.clientId, params.invoiceDate);
 
@@ -622,7 +673,6 @@ export function useTimeTracker() {
 			status: 'pending',
 		});
 
-		// Mark entries as billed and link to invoice
 		for (const id of params.entryIds) {
 			await items.update(String(id), {
 				billed: true,

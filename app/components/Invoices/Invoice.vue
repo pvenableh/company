@@ -1,5 +1,6 @@
 <script setup>
 import { shouldHideEarnestFooter } from '~~/shared/branding';
+import { sanitizeInvoiceHtml } from '~/utils/sanitizeHtml';
 
 const props = defineProps({
 	invoice: {
@@ -8,6 +9,7 @@ const props = defineProps({
 	},
 });
 const config = useRuntimeConfig();
+const safeHtml = sanitizeInvoiceHtml;
 
 const hideFooter = computed(() => {
 	const seller = props.invoice?.bill_to;
@@ -86,7 +88,7 @@ const sellerLogoUrl = computed(() => {
 			</h5>
 
 			<h5 v-if="invoice.note" class="uppercase tracking-wide text-[9px] mt-6">Note:</h5>
-			<div v-if="invoice.note" class="text-[12px] invoice__note" v-html="invoice.note"></div>
+			<div v-if="invoice.note" class="text-[12px] invoice__note" v-html="safeHtml(invoice.note)"></div>
 			<div v-if="invoice.line_items.length > 0" class="w-full mt-6">
 				<h5 class="uppercase tracking-wide text-[9px] mb-6">Line Items:</h5>
 				<div
@@ -112,7 +114,7 @@ const sellerLogoUrl = computed(() => {
 						<div
 							v-if="item.description"
 							class="text-[12px] max-w-md line-item__description"
-							v-html="item.description"
+							v-html="safeHtml(item.description)"
 						></div>
 					</div>
 				</div>
@@ -132,12 +134,21 @@ const sellerLogoUrl = computed(() => {
 	@media (min-width: theme('screens.lg')) {
 		max-width: 750px;
 	}
-	ul {
+	ul,
+	ol {
 		list-style: disc;
 		list-style-position: inside;
 		padding-left: 0px;
 		margin: 2px 0px;
-		line-height: 12px;
+		line-height: 1.4;
+	}
+	ol {
+		list-style: decimal;
+	}
+	/* Keep each line item on a single page when printing/exporting */
+	.line-item {
+		page-break-inside: avoid;
+		break-inside: avoid;
 	}
 	.line-item__description {
 		p {
@@ -146,6 +157,45 @@ const sellerLogoUrl = computed(() => {
 		p:last-child {
 			@apply mb-0;
 		}
+		ul,
+		ol {
+			page-break-inside: avoid;
+			break-inside: avoid;
+		}
+	}
+	/* Time-block tables produced by generateInvoiceFromEntries */
+	.time-block {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 11px;
+		margin-top: 4px;
+		page-break-inside: avoid;
+		break-inside: avoid;
+	}
+	.time-block th,
+	.time-block td {
+		border-bottom: 1px solid var(--doc-rule, rgba(0, 0, 0, 0.08));
+		padding: 3px 6px;
+		text-align: left;
+		vertical-align: top;
+	}
+	.time-block th {
+		font-weight: 600;
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+		font-size: 9px;
+		opacity: 0.5;
+	}
+	.time-block td:nth-child(1),
+	.time-block td:nth-child(2),
+	.time-block th:nth-child(1),
+	.time-block th:nth-child(2) {
+		white-space: nowrap;
+		font-variant-numeric: tabular-nums;
+	}
+	.time-block td:nth-child(2),
+	.time-block th:nth-child(2) {
+		text-align: right;
 	}
 }
 </style>

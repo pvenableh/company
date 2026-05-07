@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Invoice } from '~~/shared/directus';
+import type { Invoice, PaymentsReceived } from '~~/shared/directus';
 import { Button } from '~/components/ui/button';
 
 definePageMeta({ middleware: ['auth'] });
@@ -16,6 +16,9 @@ const loading = ref(true);
 const error = ref<string | null>(null);
 const sendingEmail = ref(false);
 const showEditModal = ref(false);
+const showPaymentModal = ref(false);
+const paymentMethodKey = ref<'check' | 'zelle' | 'venmo' | 'cash' | 'other' | 'edit'>('check');
+const editingPayment = ref<PaymentsReceived | null>(null);
 const toast = useToast();
 
 const { getStatusBadgeClasses } = useStatusStyle();
@@ -81,6 +84,80 @@ function stripHtml(html: string): string {
 
 function formatLineItemAmount(li: any): string {
   return formatCurrency((li.quantity || 0) * (li.rate || 0));
+}
+
+const totalPaid = computed(() => {
+  const list = (invoice.value?.payments as any[]) || [];
+  return list
+    .filter(p => p?.status === 'paid')
+    .reduce((sum, p) => sum + Number(p?.amount || 0), 0);
+});
+
+const balanceDue = computed(() => {
+  const total = Number(invoice.value?.total_amount || 0);
+  return Math.max(0, Math.round((total - totalPaid.value) * 100) / 100);
+});
+
+const fullyPaid = computed(() => {
+  const total = Number(invoice.value?.total_amount || 0);
+  return total > 0 && totalPaid.value >= total;
+});
+
+function openPaymentModal(method: 'check' | 'zelle' | 'venmo' | 'cash' | 'other') {
+  paymentMethodKey.value = method;
+  editingPayment.value = null;
+  showPaymentModal.value = true;
+}
+
+function openEditPayment(payment: any) {
+  paymentMethodKey.value = 'edit';
+  editingPayment.value = payment;
+  showPaymentModal.value = true;
+}
+
+function isManualPayment(payment: any): boolean {
+  return !payment?.payment_intent && !payment?.charge_id;
+}
+
+function getPaymentMethodIcon(method: string | null | undefined): string {
+  const m = (method || '').toLowerCase();
+  if (m === 'check') return 'lucide:square-check-big';
+  if (m === 'zelle') return 'lucide:send';
+  if (m === 'venmo') return 'lucide:smartphone';
+  if (m === 'cash') return 'lucide:banknote';
+  if (m === 'card' || m === 'us_bank_account' || m === 'cashapp') return 'lucide:credit-card';
+  return 'lucide:wallet';
+}
+
+function getPaymentMethodLabel(method: string | null | undefined): string {
+  const m = (method || '').toLowerCase();
+  if (m === 'check') return 'Check';
+  if (m === 'zelle') return 'Zelle';
+  if (m === 'venmo') return 'Venmo';
+  if (m === 'cash') return 'Cash';
+  if (m === 'card') return 'Card';
+  if (m === 'us_bank_account') return 'Bank';
+  if (!m) return 'Payment';
+  return method as string;
+}
+
+async function handleDeletePayment(payment: any) {
+  if (!confirm(`Delete this $${payment.amount} payment? This cannot be undone.`)) return;
+  try {
+    await $fetch(`/api/invoices/${invoiceId}/payments/${payment.id}`, { method: 'DELETE' });
+    toast.add({ title: 'Payment deleted', color: 'green' });
+    await loadInvoice();
+  } catch (e: any) {
+    toast.add({
+      title: 'Failed to delete payment',
+      description: e?.data?.message || e?.message || 'Something went wrong',
+      color: 'red',
+    });
+  }
+}
+
+async function onPaymentSaved() {
+  await loadInvoice();
 }
 
 async function handleSendEmail() {
@@ -179,6 +256,59 @@ onUnmounted(() => clearEntity());
             <span class="hidden sm:inline">Edit</span>
           </button>
         </div>
+      </div>
+
+      <!-- Record Payment quick-actions -->
+      <div
+        v-if="!fullyPaid"
+        class="flex flex-wrap items-center gap-1.5 mb-5"
+      >
+        <span class="text-[10px] uppercase tracking-wider text-muted-foreground mr-1">Record payment:</span>
+        <button
+          class="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-card text-xs font-medium hover:bg-emerald-50 hover:border-emerald-300 dark:hover:bg-emerald-950/20 transition-colors"
+          @click="openPaymentModal('check')"
+        >
+          <Icon name="lucide:square-check-big" class="w-3.5 h-3.5 text-emerald-600" />
+          Check
+        </button>
+        <button
+          class="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-card text-xs font-medium hover:bg-violet-50 hover:border-violet-300 dark:hover:bg-violet-950/20 transition-colors"
+          @click="openPaymentModal('zelle')"
+        >
+          <Icon name="lucide:send" class="w-3.5 h-3.5 text-violet-600" />
+          Zelle
+        </button>
+        <button
+          class="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-card text-xs font-medium hover:bg-sky-50 hover:border-sky-300 dark:hover:bg-sky-950/20 transition-colors"
+          @click="openPaymentModal('venmo')"
+        >
+          <Icon name="lucide:smartphone" class="w-3.5 h-3.5 text-sky-500" />
+          Venmo
+        </button>
+        <button
+          class="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-card text-xs font-medium hover:bg-amber-50 hover:border-amber-300 dark:hover:bg-amber-950/20 transition-colors"
+          @click="openPaymentModal('cash')"
+        >
+          <Icon name="lucide:banknote" class="w-3.5 h-3.5 text-amber-600" />
+          Cash
+        </button>
+        <button
+          class="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-card text-xs font-medium hover:bg-muted transition-colors"
+          @click="openPaymentModal('other')"
+        >
+          <Icon name="lucide:more-horizontal" class="w-3.5 h-3.5 text-muted-foreground" />
+          Other
+        </button>
+        <span v-if="balanceDue > 0 && totalPaid > 0" class="ml-auto text-xs text-muted-foreground">
+          Balance due: <span class="font-semibold text-foreground tabular-nums">{{ formatCurrency(balanceDue) }}</span>
+        </span>
+      </div>
+      <div
+        v-else
+        class="flex items-center gap-2 mb-5 px-3 py-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900 text-xs text-emerald-700 dark:text-emerald-400"
+      >
+        <Icon name="lucide:check-circle-2" class="w-4 h-4" />
+        Invoice fully paid ({{ formatCurrency(totalPaid) }} of {{ formatCurrency(invoice.total_amount || 0) }})
       </div>
 
       <!-- Inline error banner -->
@@ -379,27 +509,59 @@ onUnmounted(() => clearEntity());
               <Icon name="lucide:banknote" class="w-3.5 h-3.5" />
               Payments
               <span class="text-xs text-muted-foreground/60 ml-auto">
-                {{ (invoice.payments as any[]).length }}
+                {{ formatCurrency(totalPaid) }} of {{ formatCurrency(invoice.total_amount || 0) }}
               </span>
             </h3>
             <div class="space-y-2">
               <div
                 v-for="payment in (invoice.payments as any[])"
                 :key="payment.id"
-                class="flex items-center justify-between p-3 bg-muted/30 rounded-xl text-sm"
+                class="group p-3 bg-muted/30 rounded-xl text-sm"
               >
-                <div>
-                  <p class="font-medium">${{ payment.amount }}</p>
-                  <p class="text-xs text-muted-foreground">
-                    {{ payment.date_received ? new Date(payment.date_received).toLocaleDateString() : 'Pending' }}
-                  </p>
+                <div class="flex items-start justify-between gap-2">
+                  <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-1.5">
+                      <Icon :name="getPaymentMethodIcon(payment.payment_method)" class="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                      <span class="font-medium tabular-nums">{{ formatCurrency(Number(payment.amount || 0)) }}</span>
+                      <span class="text-[10px] uppercase tracking-wider text-muted-foreground">{{ getPaymentMethodLabel(payment.payment_method) }}</span>
+                      <span
+                        v-if="!isManualPayment(payment)"
+                        class="inline-flex items-center rounded-full bg-indigo-100 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wider"
+                      >
+                        Stripe
+                      </span>
+                    </div>
+                    <p class="text-xs text-muted-foreground mt-0.5">
+                      {{ payment.date_received ? new Date(payment.date_received).toLocaleDateString() : 'Pending' }}
+                      <template v-if="payment.reference">· #{{ payment.reference }}</template>
+                    </p>
+                    <p v-if="payment.note" class="text-xs text-muted-foreground/80 italic mt-1">{{ payment.note }}</p>
+                  </div>
+                  <div class="flex items-center gap-1 shrink-0">
+                    <span
+                      class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize"
+                      :class="getStatusBadgeClasses(payment.status)"
+                    >
+                      {{ payment.status }}
+                    </span>
+                    <button
+                      v-if="isManualPayment(payment)"
+                      class="p-1 rounded hover:bg-muted text-muted-foreground/60 hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Edit payment"
+                      @click="openEditPayment(payment)"
+                    >
+                      <Icon name="lucide:pencil" class="w-3 h-3" />
+                    </button>
+                    <button
+                      v-if="isManualPayment(payment)"
+                      class="p-1 rounded hover:bg-destructive/10 text-muted-foreground/60 hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Delete payment"
+                      @click="handleDeletePayment(payment)"
+                    >
+                      <Icon name="lucide:trash-2" class="w-3 h-3" />
+                    </button>
+                  </div>
                 </div>
-                <span
-                  class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium capitalize"
-                  :class="getStatusBadgeClasses(payment.status)"
-                >
-                  {{ payment.status }}
-                </span>
               </div>
             </div>
           </div>
@@ -412,6 +574,15 @@ onUnmounted(() => clearEntity());
         :invoice="invoice"
         @updated="onInvoiceUpdated"
         @deleted="onInvoiceDeleted"
+      />
+
+      <!-- Record Payment Modal -->
+      <InvoicesRecordPaymentModal
+        v-model="showPaymentModal"
+        :invoice="invoice"
+        :method="paymentMethodKey"
+        :payment="editingPayment"
+        @saved="onPaymentSaved"
       />
     </template>
 

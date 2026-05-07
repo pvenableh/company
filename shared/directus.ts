@@ -2601,6 +2601,13 @@ export interface PaymentsReceived {
 	date_received?: string | null;
 	organization?: Organization | string | null;
 	payment_method?: string | null;
+	/** @description Check #, Zelle confirmation, Venmo handle, etc. */
+	reference?: string | null;
+	note?: string | null;
+	/** @description Photo of the check or screenshot of the Zelle/Venmo confirmation */
+	check_image?: DirectusFile | string | null;
+	/** @description Date the check was deposited */
+	deposit_date?: string | null;
 }
 
 export interface People {

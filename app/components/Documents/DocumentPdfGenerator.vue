@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
-
 /**
  * Generic PDF generator for any document inside a `.doc-shell`. Captures
  * the wrapper, replaces brand assets to be CORS-safe, and exports as
  * letter-sized PDF. Pairs with DocumentShell so invoice/proposal/contract
  * all use the same export pipeline.
+ *
+ * jspdf and html2canvas are loaded lazily inside generatePDF so SSR
+ * (vite-node) never tries to evaluate the minified ES bundles.
  */
 
 const props = defineProps<{
@@ -24,6 +24,11 @@ async function generatePDF() {
 	if (isGenerating.value) return;
 	isGenerating.value = true;
 	try {
+		const [{ jsPDF }, html2canvasMod] = await Promise.all([
+			import('jspdf'),
+			import('html2canvas'),
+		]);
+		const html2canvas = (html2canvasMod as any).default || html2canvasMod;
 		const sel = props.selector || '.doc-shell';
 		const el = document.querySelector(sel) as HTMLElement | null;
 		if (!el) {

@@ -115,11 +115,15 @@
     <!-- Note -->
     <div class="space-y-1">
       <label class="t-label text-muted-foreground">Note</label>
-      <UTextarea
+      <FormTiptap
         v-model="formData.note"
-        :rows="2"
-        placeholder="Note visible on the invoice..."
+        :character-limit="0"
+        :show-char-count="false"
+        :allow-uploads="false"
+        height="min-h-[80px] max-h-64"
+        custom-classes="p-3"
       />
+      <p class="text-[10px] text-muted-foreground">Visible on the invoice. Bold, italics, and lists are allowed.</p>
     </div>
 
     <!-- Memo -->
@@ -220,14 +224,13 @@
         </Button>
       </div>
 
-      <div v-if="lineItems.length" class="space-y-2">
-        <!-- Header -->
-        <div class="grid grid-cols-12 gap-2 text-[10px] uppercase tracking-wider text-muted-foreground font-medium px-1">
-          <span class="col-span-3">Product</span>
-          <span class="col-span-3">Description</span>
+      <div v-if="lineItems.length" class="space-y-3">
+        <!-- Header (matches LineItemRow row-1 grid) -->
+        <div class="grid grid-cols-12 gap-2 text-[10px] uppercase tracking-wider text-muted-foreground font-medium px-4">
+          <span class="col-span-5">Product</span>
           <span class="col-span-2">Qty</span>
           <span class="col-span-2">Rate</span>
-          <span class="col-span-2 text-right">Amount</span>
+          <span class="col-span-3 text-right">Amount</span>
         </div>
 
         <InvoicesLineItemRow
@@ -398,12 +401,8 @@ interface LineItemWithKey extends LineItemFormData {
 const lineItems = ref<LineItemWithKey[]>([]);
 const removedLineItemIds = ref<string[]>([]);
 
-// Initialize from existing invoice
-function stripHtml(html: string): string {
-  if (!html) return '';
-  return html.replace(/<[^>]*>/g, '').trim();
-}
-
+// Initialize from existing invoice. Description is rich HTML — preserve it
+// round-trip; the Tiptap editor in LineItemRow.vue takes raw HTML directly.
 if (props.invoice?.line_items?.length) {
   lineItems.value = (props.invoice.line_items as any[]).map(li => ({
     _key: keyCounter++,
@@ -411,7 +410,7 @@ if (props.invoice?.line_items?.length) {
     product: typeof li.product === 'string' ? li.product : li.product?.id || '',
     quantity: li.quantity ?? 1,
     rate: li.rate ?? 0,
-    description: stripHtml(li.description || ''),
+    description: li.description || '',
     _isNew: false,
   }));
 }

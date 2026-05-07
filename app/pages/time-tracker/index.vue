@@ -20,6 +20,7 @@ const {
   deleteTimeEntry,
   formatDuration,
 } = useTimeTracker();
+const router = useRouter();
 
 const { selectedClient, currentClient } = useClients();
 const { isOrgManagerOrAbove } = useOrgRole();
@@ -165,8 +166,70 @@ async function handleDelete(entry: TimeEntry) {
 function switchTab(tab: typeof activeTab.value) {
   activeTab.value = tab;
   page.value = 1;
+  selectedIds.clear();
   if (tab !== 'reports' && tab !== 'team') {
     fetchEntries();
+  }
+}
+
+// ── Multi-select for invoice generation ─────────────────────────
+const selectedIds = reactive(new Set<string | number>());
+const showInvoiceModal = ref(false);
+
+function toggleSelection(entry: TimeEntry) {
+  if (selectedIds.has(entry.id)) {
+    selectedIds.delete(entry.id);
+  } else {
+    selectedIds.add(entry.id);
+  }
+}
+
+const unbilledBillableEntries = computed(() =>
+  allEntries.value.filter(e => e.billable && !e.billed),
+);
+
+function selectAllUnbilled() {
+  for (const e of unbilledBillableEntries.value) {
+    selectedIds.add(e.id);
+  }
+}
+
+const selectedEntries = computed(() =>
+  allEntries.value.filter(e => selectedIds.has(e.id)),
+);
+
+const selectedTotalMinutes = computed(() =>
+  selectedEntries.value.reduce((sum, e) => sum + (e.duration_minutes || 0), 0),
+);
+
+const selectedRevenue = computed(() =>
+  selectedEntries.value.reduce((sum, e) => {
+    if (!e.billable) return sum;
+    const hours = (e.duration_minutes || 0) / 60;
+    return sum + hours * (e.hourly_rate || 0);
+  }, 0),
+);
+
+function formatHoursLabel(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h === 0) return `${m}m`;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}
+
+function formatRevenue(value: number): string {
+  return new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+async function handleInvoiceCreated(invoiceId: string) {
+  showInvoiceModal.value = false;
+  selectedIds.clear();
+  await fetchEntries();
+  if (invoiceId) {
+    router.push(`/invoices/detail/${invoiceId}`);
   }
 }
 
@@ -270,6 +333,31 @@ watch(() => selectedClient.value, () => {
       v-else-if="activeTab !== 'team' && activeTab !== 'reports'"
       class="min-h-[400px]"
     >
+      <!-- Selection toolbar -->
+      <div
+        v-if="unbilledBillableEntries.length > 0 || selectedIds.size > 0"
+        class="flex items-center justify-end gap-2 mb-3"
+      >
+        <Button
+          v-if="unbilledBillableEntries.length > 0 && selectedIds.size === 0"
+          variant="ghost"
+          size="sm"
+          class="text-xs"
+          @click="selectAllUnbilled"
+        >
+          Select All Unbilled ({{ unbilledBillableEntries.length }})
+        </Button>
+        <Button
+          v-if="selectedIds.size > 0"
+          variant="ghost"
+          size="sm"
+          class="text-xs"
+          @click="selectedIds.clear()"
+        >
+          Clear ({{ selectedIds.size }})
+        </Button>
+      </div>
+
       <TransitionGroup name="entry-list" tag="div">
         <div v-for="group in groupedEntries" :key="group.date" class="mb-6">
           <!-- Date Header -->
@@ -287,12 +375,45 @@ watch(() => selectedClient.value, () => {
               :key="entry.id"
               :entry="entry"
               :show-user="activeTab === 'all'"
+              selectable
+              :selected="selectedIds.has(entry.id)"
+              @select="toggleSelection"
               @edit="editEntry"
               @delete="handleDelete"
             />
           </div>
         </div>
       </TransitionGroup>
+
+      <!-- Selection Action Bar -->
+      <Teleport to="body">
+        <Transition name="slide-up">
+          <div
+            v-if="selectedIds.size > 0"
+            class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-card border border-border shadow-xl rounded-2xl px-5 py-3"
+          >
+            <span class="text-sm font-medium">{{ selectedIds.size }} entries selected</span>
+            <span class="text-xs text-muted-foreground">{{ formatHoursLabel(selectedTotalMinutes) }} · ${{ formatRevenue(selectedRevenue) }}</span>
+            <Button size="sm" @click="showInvoiceModal = true">
+              <Icon name="lucide:file-text" class="w-4 h-4 mr-1" />
+              Generate Invoice
+            </Button>
+            <Button variant="ghost" size="sm" @click="selectedIds.clear()">
+              <Icon name="lucide:x" class="w-4 h-4" />
+            </Button>
+          </div>
+        </Transition>
+      </Teleport>
+
+      <!-- Invoice Generation Modal -->
+      <Teleport to="body">
+        <TimeTrackerInvoiceFromTimeModal
+          v-if="showInvoiceModal"
+          :entries="selectedEntries"
+          @close="showInvoiceModal = false"
+          @created="handleInvoiceCreated"
+        />
+      </Teleport>
 
       <!-- Pagination (All tab only) -->
       <div v-if="activeTab === 'all'" class="flex justify-between items-center mt-4">
@@ -372,5 +493,16 @@ watch(() => selectedClient.value, () => {
 .modal-fade-enter-from,
 .modal-fade-leave-to {
   opacity: 0;
+}
+
+/* Floating selection bar */
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: all 0.3s ease;
+}
+.slide-up-enter-from,
+.slide-up-leave-to {
+  opacity: 0;
+  transform: translate(-50%, 20px);
 }
 </style>

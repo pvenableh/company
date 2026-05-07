@@ -113,6 +113,23 @@ const DEMO_USER_EMAILS = new Set<string>(
 );
 
 /**
+ * Throw 403 if the authenticated session belongs to one of the shared demo
+ * workspace logins. Use this on top of `requireOrgPermission` for routes that
+ * mutate billing/payment data, since the agency demo's Admin role would
+ * otherwise pass the permission matrix.
+ */
+export async function requireNotDemoSession(event: any): Promise<void> {
+  const session = await requireUserSession(event);
+  const userEmail = ((session as any).user?.email as string | undefined)?.toLowerCase();
+  if (userEmail && DEMO_USER_EMAILS.has(userEmail)) {
+    throw createError({
+      statusCode: 403,
+      message: 'Demo accounts cannot perform billing or payment-recording actions.',
+    });
+  }
+}
+
+/**
  * Require that the authenticated user has at least one active org_membership
  * whose role.slug is in `allowed`. Used as a coarse gate for endpoints that
  * aren't org-scoped in their body (e.g. Stripe billing routes operate on a

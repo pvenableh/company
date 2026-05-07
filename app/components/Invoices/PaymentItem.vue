@@ -26,6 +26,32 @@ const formatAmount = (amount) => {
 
 const { getStatusColorName: getStatusColor } = useStatusStyle();
 
+// Manual rows have no Stripe identifiers
+const isManual = computed(() => !props.payment?.payment_intent && !props.payment?.charge_id);
+
+const methodIcon = computed(() => {
+	const m = (props.payment?.payment_method || '').toLowerCase();
+	if (m === 'check') return 'i-heroicons-document-check';
+	if (m === 'zelle') return 'i-heroicons-paper-airplane';
+	if (m === 'venmo') return 'i-heroicons-device-phone-mobile';
+	if (m === 'cash') return 'i-heroicons-banknotes';
+	if (m === 'card') return 'i-heroicons-credit-card';
+	if (m === 'us_bank_account') return 'i-heroicons-building-library';
+	return 'i-heroicons-wallet';
+});
+
+const methodLabel = computed(() => {
+	const m = (props.payment?.payment_method || '').toLowerCase();
+	if (m === 'check') return 'Check';
+	if (m === 'zelle') return 'Zelle';
+	if (m === 'venmo') return 'Venmo';
+	if (m === 'cash') return 'Cash';
+	if (m === 'card') return 'Card';
+	if (m === 'us_bank_account') return 'Bank';
+	if (!m) return 'Payment';
+	return props.payment.payment_method;
+});
+
 const loadDetails = async () => {
 	if (!props.payment.charge_id || (chargeDetails.value && payoutDetails.value)) return;
 
@@ -64,19 +90,27 @@ watch(showDetails, async (newValue) => {
 		<div class="flex justify-between items-start mb-4">
 			<div>
 				<div class="flex items-center gap-2">
-					<UIcon
-						:name="payment.payment_method === 'card' ? 'i-heroicons-credit-card' : 'i-heroicons-building-library'"
-						class="w-5 h-5"
-					/>
-					<span class="text-sm font-medium">Payment on {{ formatDate(payment.date_created) }}</span>
+					<UIcon :name="methodIcon" class="w-5 h-5" />
+					<span class="text-sm font-medium">
+						{{ methodLabel }} on {{ formatDate(payment.date_received || payment.date_created) }}
+					</span>
 				</div>
-				<div class="text-xs text-gray-500 mt-1">Method: {{ payment.payment_method }}</div>
+				<div v-if="payment.reference" class="text-xs text-gray-500 mt-1">Reference: {{ payment.reference }}</div>
+				<div v-if="isManual && payment.note" class="text-xs text-gray-500 mt-1 italic">{{ payment.note }}</div>
 			</div>
 			<UBadge
+				v-if="payment.stripe_status"
 				:color="getStatusColor(payment.stripe_status)"
 				:variant="payment.stripe_status === 'succeeded' ? 'solid' : 'soft'"
 			>
 				{{ payment.stripe_status }}
+			</UBadge>
+			<UBadge
+				v-else
+				:color="getStatusColor(payment.status)"
+				:variant="payment.status === 'paid' ? 'solid' : 'soft'"
+			>
+				{{ payment.status }}
 			</UBadge>
 		</div>
 
