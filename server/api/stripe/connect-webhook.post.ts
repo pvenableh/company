@@ -99,7 +99,7 @@ export default defineEventHandler(async (event) => {
 
 			case 'payment_intent.succeeded': {
 				const pi = stripeEvent.data.object as Stripe.PaymentIntent;
-				await handlePaymentSucceeded(pi, orgId);
+				await handlePaymentSucceeded(pi, orgId, connectedAccountId || null);
 				break;
 			}
 
@@ -148,13 +148,37 @@ export default defineEventHandler(async (event) => {
 
 // ── Handlers ───────────────────────────────────────────────────────────────
 
-async function handlePaymentSucceeded(paymentIntent: Stripe.PaymentIntent, orgId: string | null) {
+async function handlePaymentSucceeded(
+	paymentIntent: Stripe.PaymentIntent,
+	orgId: string | null,
+	connectedAccountId: string | null,
+) {
 	try {
 		const directus = getTypedDirectus();
 		const invoiceId = paymentIntent.metadata?.invoice_id || null;
 		const charge = paymentIntent.latest_charge as Stripe.Charge | string | null;
 		const chargeId = typeof charge === 'string' ? charge : charge?.id || null;
-		const receiptUrl = typeof charge === 'object' && charge ? charge.receipt_url : null;
+
+		// Stripe webhook payloads send `latest_charge` as a string ID, not an
+		// expanded object — so receipt_url and payment_method_details aren't
+		// in the payload. Fetch the charge from the connected account to
+		// hydrate them. Best-effort: a fetch failure shouldn't block writing
+		// the row.
+		let receiptUrl: string | null = typeof charge === 'object' && charge ? charge.receipt_url : null;
+		let paymentMethodType: string | null =
+			(typeof charge === 'object' && charge?.payment_method_details?.type) ||
+			paymentIntent.payment_method_types?.[0] ||
+			null;
+		if (chargeId && connectedAccountId && (!receiptUrl || !paymentMethodType)) {
+			try {
+				const stripe = useStripe();
+				const fetched = await stripe.charges.retrieve(chargeId, { stripeAccount: connectedAccountId });
+				receiptUrl = receiptUrl || fetched.receipt_url || null;
+				paymentMethodType = paymentMethodType || fetched.payment_method_details?.type || null;
+			} catch (err) {
+				console.warn(`[Stripe Connect] Could not retrieve charge ${chargeId} for receipt_url:`, err);
+			}
+		}
 
 		// Idempotency: skip if we've already written a row for this PI (the
 		// manual refund route or a webhook retry could have beat us to it).
@@ -177,10 +201,7 @@ async function handlePaymentSucceeded(paymentIntent: Stripe.PaymentIntent, orgId
 					invoice_id: invoiceId,
 					organization: orgId,
 					status: 'paid',
-					payment_method:
-						(typeof charge === 'object' && charge?.payment_method_details?.type) ||
-						paymentIntent.payment_method_types?.[0] ||
-						null,
+					payment_method: paymentMethodType,
 					date_received: new Date().toISOString(),
 				}),
 			);

@@ -67,8 +67,13 @@ export default defineEventHandler(async (event) => {
 		// Strip leading # because Stripe rejects it on `branding.primary_color`.
 		const primaryColor = brandColor && brandColor.startsWith('#') ? brandColor.slice(1) : brandColor;
 
+		// Standard accounts: connected merchants pay Stripe fees, get the
+		// full Stripe Dashboard, and Stripe carries negative-balance liability
+		// (vs. Express where Earnest would). Slightly heavier onboarding form
+		// is worth it for the trust signal of Stripe-branded KYC + the wider
+		// payment-method support (Klarna, Afterpay, Cash App, Pay by Bank).
 		const account = await stripe.accounts.create({
-			type: 'express',
+			type: 'standard',
 			country,
 			email: org.email || undefined,
 			business_profile: {
@@ -76,13 +81,6 @@ export default defineEventHandler(async (event) => {
 				url: org.website || undefined,
 				support_email: org.email || undefined,
 			},
-			settings: primaryColor
-				? {
-						branding: {
-							primary_color: `#${primaryColor}`,
-						},
-					}
-				: undefined,
 			capabilities: {
 				card_payments: { requested: true },
 				transfers: { requested: true },

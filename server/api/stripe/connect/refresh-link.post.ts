@@ -1,9 +1,10 @@
 // POST /api/stripe/connect/refresh-link
 //
-// Returns a Stripe `account_update` link so an org can re-enter Express
-// onboarding (e.g. after Stripe flagged additional verification, or the
-// initial link expired). Distinct from the `account_onboarding` link
-// produced by /onboard, which is intended for first-run.
+// Returns a Stripe Account Link so an org can re-enter onboarding (e.g.
+// after Stripe flagged additional verification, or the initial link
+// expired). Picks the link type based on account state: until
+// `details_submitted` flips true Stripe only accepts `account_onboarding`
+// links; after that, `account_update` is the right type for editing.
 import { readItem } from '@directus/sdk';
 import { useStripe } from '~~/server/utils/stripe';
 
@@ -41,9 +42,14 @@ export default defineEventHandler(async (event) => {
 	const returnUrl = body?.returnUrl || `${baseUrl}/organization?tab=billing&onboarding=updated`;
 	const refreshUrl = body?.refreshUrl || `${baseUrl}/organization?tab=billing&onboarding=refresh`;
 
+	const account = await stripe.accounts.retrieve(org.stripe_account_id);
+	const linkType: 'account_update' | 'account_onboarding' = account.details_submitted
+		? 'account_update'
+		: 'account_onboarding';
+
 	const link = await stripe.accountLinks.create({
 		account: org.stripe_account_id,
-		type: 'account_update',
+		type: linkType,
 		return_url: returnUrl,
 		refresh_url: refreshUrl,
 	});

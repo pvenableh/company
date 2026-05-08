@@ -35,7 +35,10 @@
           <p class="text-[11px] text-muted-foreground/70 truncate">{{ m.user?.email }}</p>
         </div>
         <div class="hidden sm:flex flex-col items-end text-[10px] text-muted-foreground/70 shrink-0">
-          <span v-if="m.user?.last_access" :title="new Date(m.user.last_access).toLocaleString()">
+          <span v-if="m.inherited && m.client?.name" class="font-medium text-muted-foreground">
+            via {{ m.client.name }}
+          </span>
+          <span v-else-if="m.user?.last_access" :title="new Date(m.user.last_access).toLocaleString()">
             Last login {{ relativeDate(m.user.last_access) }}
           </span>
           <span v-else-if="m.invited_at">
@@ -43,42 +46,62 @@
           </span>
         </div>
         <span
+          v-if="m.inherited"
+          class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium shrink-0 bg-sky-500/15 text-sky-600 dark:text-sky-400"
+          title="Access inherited from parent client"
+        >
+          <Icon name="lucide:link-2" class="w-2.5 h-2.5" />
+          Inherited
+        </span>
+        <span
+          v-else
           class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize shrink-0"
           :class="statusClasses(m.status)"
         >
           {{ m.status }}
         </span>
         <div v-if="canManage" class="flex items-center gap-1 shrink-0">
-          <button
-            v-if="m.status === 'pending'"
+          <NuxtLink
+            v-if="m.inherited && m.client?.id"
+            :to="`/clients/${m.client.id}`"
             class="inline-flex items-center gap-1 h-7 px-2 rounded-lg border border-border text-[10px] font-medium hover:bg-muted transition-colors"
-            :disabled="actingId === m.id"
-            @click="onResend(m)"
+            title="Manage access on the parent client"
           >
-            <Icon
-              :name="actingId === m.id ? 'lucide:loader-2' : 'lucide:send'"
-              :class="['w-3 h-3', actingId === m.id && 'animate-spin']"
-            />
-            Resend
-          </button>
-          <button
-            v-if="m.status === 'suspended'"
-            class="inline-flex items-center gap-1 h-7 px-2 rounded-lg border border-border text-[10px] font-medium hover:bg-muted transition-colors"
-            :disabled="actingId === m.id"
-            @click="onRestore(m)"
-          >
-            <Icon name="lucide:refresh-cw" class="w-3 h-3" />
-            Restore
-          </button>
-          <button
-            v-else
-            class="inline-flex items-center gap-1 h-7 px-2 rounded-lg border border-border text-[10px] font-medium text-destructive/80 hover:bg-destructive/10 hover:border-destructive/30 transition-colors"
-            :disabled="actingId === m.id"
-            @click="onRevoke(m)"
-          >
-            <Icon name="lucide:user-minus" class="w-3 h-3" />
-            Revoke
-          </button>
+            <Icon name="lucide:external-link" class="w-3 h-3" />
+            Manage
+          </NuxtLink>
+          <template v-else>
+            <button
+              v-if="m.status === 'pending'"
+              class="inline-flex items-center gap-1 h-7 px-2 rounded-lg border border-border text-[10px] font-medium hover:bg-muted transition-colors"
+              :disabled="actingId === m.id"
+              @click="onResend(m)"
+            >
+              <Icon
+                :name="actingId === m.id ? 'lucide:loader-2' : 'lucide:send'"
+                :class="['w-3 h-3', actingId === m.id && 'animate-spin']"
+              />
+              Resend
+            </button>
+            <button
+              v-if="m.status === 'suspended'"
+              class="inline-flex items-center gap-1 h-7 px-2 rounded-lg border border-border text-[10px] font-medium hover:bg-muted transition-colors"
+              :disabled="actingId === m.id"
+              @click="onRestore(m)"
+            >
+              <Icon name="lucide:refresh-cw" class="w-3 h-3" />
+              Restore
+            </button>
+            <button
+              v-else
+              class="inline-flex items-center gap-1 h-7 px-2 rounded-lg border border-border text-[10px] font-medium text-destructive/80 hover:bg-destructive/10 hover:border-destructive/30 transition-colors"
+              :disabled="actingId === m.id"
+              @click="onRevoke(m)"
+            >
+              <Icon name="lucide:user-minus" class="w-3 h-3" />
+              Revoke
+            </button>
+          </template>
         </div>
       </div>
     </div>

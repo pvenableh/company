@@ -372,6 +372,14 @@ const startConnectOnboarding = async () => {
 	}
 };
 
+const openStripeDashboard = () => {
+	// Standard accounts get the full Stripe Dashboard at dashboard.stripe.com.
+	// We can't deep-link to the merchant's account from the platform's
+	// session, so we open the root and let them sign in with their own
+	// credentials.
+	window.open('https://dashboard.stripe.com/', '_blank', 'noopener');
+};
+
 const refreshConnectLink = async () => {
 	if (!org.value?.id || connectActing.value) return;
 	connectActing.value = true;
@@ -410,7 +418,7 @@ watch(
 	{ immediate: true },
 );
 
-// Auto-poll status when the user just returned from Express onboarding
+// Auto-poll status when the user just returned from Stripe onboarding
 // (Stripe redirects back with ?onboarding=complete).
 watch(
 	() => route.query.onboarding,
@@ -1769,8 +1777,9 @@ watch(searchEmail, (val) => {
 											</p>
 											<ul class="text-sm space-y-2">
 												<li class="flex items-start gap-2"><UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />Funds settle to your bank on Stripe's standard 2-day rolling payout schedule.</li>
-												<li class="flex items-start gap-2"><UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />Refunds, balance, and payouts will live in this tab once active.</li>
-												<li class="flex items-start gap-2"><UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />You can disconnect at any time from your Stripe dashboard.</li>
+												<li class="flex items-start gap-2"><UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />Customers can pay with cards, ACH, Apple Pay, Klarna, Cash App Pay, and more.</li>
+												<li class="flex items-start gap-2"><UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />Refunds, balance, and payouts live in this tab once active.</li>
+												<li class="flex items-start gap-2"><UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />Manage your account anytime in your full Stripe dashboard.</li>
 											</ul>
 											<UiActionButton
 												icon="lucide:credit-card"
@@ -1839,15 +1848,17 @@ watch(searchEmail, (val) => {
 												</div>
 											</dl>
 											<UiActionButton
-												icon="lucide:settings"
+												icon="lucide:external-link"
 												variant="secondary"
 												size="xs"
-												:loading="connectActing"
 												:disabled="!canManageOrg"
-												@click="refreshConnectLink"
+												@click="openStripeDashboard"
 											>
-												Update business or bank info
+												Manage on Stripe
 											</UiActionButton>
+											<p class="text-xs text-muted-foreground">
+												Standard accounts manage business and bank info from the Stripe Dashboard. Sign in with the email used during onboarding.
+											</p>
 										</div>
 
 										<!-- Restricted -->

@@ -151,9 +151,12 @@
 
 			<!-- Annotation overlay covers the entire iframe so users can draw
 			     directly on top of any screen-share or video tile. The canvas is
-			     pointer-events:none until the user toggles annotate mode on. -->
+			     pointer-events:none until the user toggles annotate mode on.
+			     Gated on `dailyJoined` so we don't render the toolbar while the
+			     prebuilt is still on its prejoin screen — sendAppMessage is a
+			     no-op until the local participant has actually joined. -->
 			<MeetingAnnotationCanvas
-				v-if="annotationAuthorId && hasJoined"
+				v-if="annotationAuthorId && dailyJoined"
 				ref="annotationCanvas"
 				:bus="annotationBus"
 				:author-id="annotationAuthorId"
@@ -189,6 +192,14 @@
 				>
 					<span class="w-2 h-2 rounded-full bg-white animate-pulse" />
 					<span>Recording</span>
+				</span>
+				<span
+					v-if="isHost && isTranscribing"
+					class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/90 backdrop-blur-md text-white text-[11px] font-medium shadow-lg"
+					title="Transcription is running — recap will be generated when the meeting ends"
+				>
+					<UIcon name="i-heroicons-language" class="w-3 h-3" />
+					<span>Transcribing</span>
 				</span>
 				<button
 					class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white text-[11px] font-medium transition-colors shadow-lg"
@@ -255,6 +266,10 @@ const dailyUrl = ref(null);
 const aiTrayOpen = ref(false);
 const dailyFrame = ref(null);
 const isRecording = ref(false);
+const isTranscribing = ref(false);
+// Flips true after Daily fires `joined-meeting` — drawing/sendAppMessage do
+// nothing until then, so we hide the annotation toolbar while we wait.
+const dailyJoined = ref(false);
 
 let statusPollInterval = null;
 
@@ -385,6 +400,13 @@ const handleAppMessage = (e) => {
 		return;
 	}
 
+	if (data.type === 'annotation-ping') {
+		// Diagnostic ping — visible in DevTools so we can tell at a glance
+		// whether app-message delivery is reaching remote participants.
+		console.log('[meeting] annotation-ping received', { fromId: e?.fromId, at: data.at });
+		return;
+	}
+
 	// Daily prebuilt chat (event names aren't documented in their public types
 	// but have been stable: `chat-msg`). Branch defensively on shape.
 	const isChat = data.event === 'chat-msg' || data.kind === 'chat-msg' || data.type === 'chat-msg';
@@ -402,6 +424,36 @@ const handleAppMessage = (e) => {
 
 const handleJoinedMeeting = (e) => {
 	mySessionId.value = e?.participants?.local?.session_id || null;
+	dailyJoined.value = true;
+	// Send a one-shot diagnostic ping so we can verify app-message delivery
+	// across participants (visible in receivers' console).
+	try {
+		dailyCallObject?.sendAppMessage(
+			{ type: 'annotation-ping', at: Date.now() },
+			'*',
+		);
+	} catch {}
+	// Auto-start recording + transcription if this tab owns the meeting. Daily
+	// makes both available via the prebuilt UI, but relying on the host to
+	// remember to click the buttons leaves us with no transcript / no recap.
+	// Fire-and-forget — failures (e.g. domain doesn't have transcription
+	// add-on) are non-fatal; the host can still record manually.
+	if (isHost.value) {
+		try {
+			dailyCallObject?.startRecording?.();
+		} catch (err) {
+			console.warn('[meeting] startRecording failed', err);
+		}
+		try {
+			dailyCallObject?.startTranscription?.({
+				language: 'en',
+				model: 'nova-2-general',
+				punctuate: true,
+			});
+		} catch (err) {
+			console.warn('[meeting] startTranscription failed', err);
+		}
+	}
 };
 
 const handleLeftMeeting = () => {
@@ -421,6 +473,17 @@ const handleRecordingError = (e) => {
 	const msg = e?.errorMsg || 'Recording failed';
 	toast.add({ title: 'Recording error', description: msg, color: 'red' });
 };
+const handleTranscriptionStarted = () => {
+	isTranscribing.value = true;
+};
+const handleTranscriptionStopped = () => {
+	isTranscribing.value = false;
+};
+const handleTranscriptionError = (e) => {
+	const msg = e?.errorMsg || 'Transcription failed to start';
+	console.warn('[meeting] transcription error', e);
+	toast.add({ title: 'Transcription error', description: msg, color: 'red' });
+};
 
 const wrapDailyIframe = async () => {
 	if (dailyCallObject) return;                        // already wrapped
@@ -436,9 +499,16 @@ const wrapDailyIframe = async () => {
 		dailyCallObject.on('recording-started', handleRecordingStarted);
 		dailyCallObject.on('recording-stopped', handleRecordingStopped);
 		dailyCallObject.on('recording-error', handleRecordingError);
+		dailyCallObject.on('transcription-started', handleTranscriptionStarted);
+		dailyCallObject.on('transcription-stopped', handleTranscriptionStopped);
+		dailyCallObject.on('transcription-error', handleTranscriptionError);
+		console.log('[meeting] Daily wrap attached');
 		// In case we wrapped after the join already fired
 		const local = dailyCallObject.participants?.()?.local;
-		if (local?.session_id) mySessionId.value = local.session_id;
+		if (local?.session_id) {
+			mySessionId.value = local.session_id;
+			dailyJoined.value = true;
+		}
 	} catch (err) {
 		console.warn('[meeting] Daily wrap failed', err);
 	}

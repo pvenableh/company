@@ -80,23 +80,39 @@ export async function createDailyRoom(params: {
 				enable_screenshare: true,
 				start_video_off: false,
 				start_audio_off: false,
+				// `enable_transcription_storage` keeps the VTT file after the
+				// meeting; without `permissions.canAdmin: 'transcription'` (or
+				// the prebuilt's enable_transcription room flag) the prebuilt
+				// "Transcribe" button stays hidden, so transcription never
+				// starts at all. We auto-start via startTranscription() from
+				// the host's join, but keeping the flags ensures the prebuilt
+				// UI also shows the controls as a fallback.
 				enable_transcription_storage: enableTranscription,
+				permissions: {
+					canAdmin: ['transcription'],
+				},
 			},
 		}),
 	});
 }
 
 /**
- * Ensure recording is enabled on an existing room. Used to retro-fit rooms that
- * were created before `enable_recording: 'cloud'` became the default — without
- * it, the prebuilt UI hides the record button and `startRecording()` on the
- * wrapped iframe is a no-op.
+ * Ensure recording + transcription are enabled on an existing room. Used to
+ * retro-fit rooms that were created before these became defaults — without
+ * the flags the prebuilt UI hides the record/transcribe buttons and
+ * startRecording()/startTranscription() on the wrapped iframe are no-ops.
  */
 export async function ensureRoomRecordingEnabled(roomName: string): Promise<void> {
 	try {
 		await dailyFetch(`/rooms/${roomName}`, {
 			method: 'POST',
-			body: JSON.stringify({ properties: { enable_recording: 'cloud' } }),
+			body: JSON.stringify({
+				properties: {
+					enable_recording: 'cloud',
+					enable_transcription_storage: true,
+					permissions: { canAdmin: ['transcription'] },
+				},
+			}),
 		});
 	} catch (err) {
 		console.warn(`[daily] failed to ensure recording on ${roomName}:`, err);

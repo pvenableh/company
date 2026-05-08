@@ -90,12 +90,17 @@ export default defineEventHandler(async (event) => {
     if (existingUsers.length > 0) {
       targetUserId = existingUsers[0].id;
 
-      // Check for existing portal-user row in this org
+      // Check for existing portal-user row scoped to THIS client. A user can
+      // legitimately hold portal rows for multiple clients in the same org, so
+      // existence must be checked at (org, user, client) — not just (org, user)
+      // — otherwise the inviter sees "already has access" while the client's
+      // Portal Access card (filtered by clientId) shows nobody.
       const existingPortalRow = await directus.request(
         readItems('client_portal_users', {
           filter: {
             organization: { _eq: organizationId },
             user: { _eq: targetUserId },
+            client: { _eq: clientId },
           },
           fields: ['id', 'status'],
           limit: 1,
@@ -107,13 +112,13 @@ export default defineEventHandler(async (event) => {
         if (status === 'active') {
           throw createError({
             statusCode: 409,
-            message: 'This user already has portal access for this organization',
+            message: `This user already has portal access for ${clientRecord[0].name}`,
           });
         }
         if (status === 'pending') {
           throw createError({
             statusCode: 409,
-            message: 'An invitation is already pending for this user',
+            message: `An invitation is already pending for this user on ${clientRecord[0].name}`,
           });
         }
       }

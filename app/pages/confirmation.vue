@@ -263,9 +263,16 @@ const confirmPayment = async () => {
 			throw new Error('Invalid payment session');
 		}
 
-		// Initialize Stripe if not already done
+		// Initialize Stripe if not already done. Connected-account payments
+		// pass `stripe_account` (acct_…) on the return URL so we can scope
+		// retrievePaymentIntent to the right Stripe account; without it the
+		// lookup hits the platform Stripe and 404s on the PI.
 		if (!stripe) {
-			stripe = await loadStripe(config.public.stripePublic);
+			const stripeAccount = route.query.stripe_account;
+			stripe = await loadStripe(
+				config.public.stripePublic,
+				stripeAccount ? { stripeAccount } : undefined,
+			);
 		}
 
 		// Now get payment data after Stripe is initialized

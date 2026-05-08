@@ -18,6 +18,11 @@ import { generateAndSaveMeetingSummary } from '~~/server/utils/meeting-summary';
 // secret was returned by the webhook-create call. Without verification anyone
 // can forge meeting.ended / transcript.ready-to-download events and corrupt
 // our video_meetings rows.
+//
+// Daily's published guide uses the secret as a UTF-8 string, but their API
+// returns the secret base64-encoded — operators sometimes wire either form.
+// Accept both and let the bytes match either way; we still constant-time the
+// comparison.
 function verifyDailySignature(
 	rawBody: string,
 	timestamp: string | undefined,
@@ -25,11 +30,22 @@ function verifyDailySignature(
 	secret: string,
 ): boolean {
 	if (!timestamp || !signature) return false;
-	const expected = createHmac('sha256', secret).update(`${timestamp}.${rawBody}`).digest('base64');
-	const a = Buffer.from(signature);
-	const b = Buffer.from(expected);
-	if (a.length !== b.length) return false;
-	try { return timingSafeEqual(a, b); } catch { return false; }
+	const message = `${timestamp}.${rawBody}`;
+	const sigBuf = Buffer.from(signature);
+	const candidates: Buffer[] = [];
+	try {
+		candidates.push(Buffer.from(createHmac('sha256', secret).update(message).digest('base64')));
+	} catch { /* ignore */ }
+	try {
+		candidates.push(Buffer.from(
+			createHmac('sha256', Buffer.from(secret, 'base64')).update(message).digest('base64'),
+		));
+	} catch { /* ignore */ }
+	for (const c of candidates) {
+		if (c.length !== sigBuf.length) continue;
+		try { if (timingSafeEqual(sigBuf, c)) return true; } catch { /* try next */ }
+	}
+	return false;
 }
 
 interface DailyWebhookEvent {
@@ -64,6 +80,11 @@ export default defineEventHandler(async (event) => {
 			const sig = getHeader(event, 'x-webhook-signature');
 			const ts = getHeader(event, 'x-webhook-timestamp');
 			if (!verifyDailySignature(rawBody, ts, sig, secret)) {
+				console.warn('[video/webhook] HMAC mismatch', {
+					hasSig: !!sig,
+					hasTs: !!ts,
+					bodyLen: rawBody.length,
+				});
 				throw createError({ statusCode: 401, statusMessage: 'Invalid webhook signature' });
 			}
 		} else if (isProd && !secret) {

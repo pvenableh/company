@@ -28,16 +28,38 @@ export default defineEventHandler(async (event) => {
 		throw createError({ statusCode: 500, message: 'DAILY_API_KEY is not configured' });
 	}
 
+	// One canonical event list — referenced by both create + update so they
+	// don't drift again. Names match Daily's API enum exactly (verified via
+	// validation error on `meeting.participant-joined` — Daily uses bare
+	// `participant.joined` / `participant.left`).
+	const EVENT_TYPES = [
+		'meeting.started',
+		'meeting.ended',
+		'participant.joined',
+		'participant.left',
+		'recording.ready-to-download',
+		'transcript.ready-to-download',
+	];
+
 	try {
-		// Check if a webhook already exists
+		// Existing webhook lookup is best-effort. If Daily's list returns an
+		// array directly (some accounts) we accept that shape too.
 		const listRes = await fetch('https://api.daily.co/v1/webhooks', {
 			headers: { 'Authorization': `Bearer ${dailyApiKey}` },
 		});
-		const existing = await listRes.json();
+		const existingRaw = await listRes.json();
+		const existingList = Array.isArray(existingRaw)
+			? existingRaw
+			: (existingRaw?.data || []);
 
-		if (existing?.data?.length > 0) {
-			// Update the existing webhook
-			const existingId = existing.data[0].uuid;
+		if (existingList.length > 0) {
+			// Find a row whose URL matches what we're about to set so we don't
+			// repurpose someone else's webhook. Fall back to first row.
+			const match = existingList.find((w: any) => w.url === webhookUrl) || existingList[0];
+			const existingId = match.uuid;
+			// POST to /webhooks/{id} both updates AND resets the circuit-breaker
+			// (state: FAILED → ACTIVE) so a previously-failing webhook starts
+			// receiving events again after the underlying bug is fixed.
 			const updateRes = await fetch(`https://api.daily.co/v1/webhooks/${existingId}`, {
 				method: 'POST',
 				headers: {
@@ -46,13 +68,7 @@ export default defineEventHandler(async (event) => {
 				},
 				body: JSON.stringify({
 					url: webhookUrl,
-					eventTypes: [
-						'meeting.started',
-						'meeting.ended',
-						'meeting.participant-joined',
-						'meeting.participant-left',
-						'recording.ready-to-download',
-					],
+					eventTypes: EVENT_TYPES,
 				}),
 			});
 			const updated = await updateRes.json();
@@ -68,14 +84,7 @@ export default defineEventHandler(async (event) => {
 			},
 			body: JSON.stringify({
 				url: webhookUrl,
-				eventTypes: [
-					'meeting.started',
-					'meeting.ended',
-					'participant.joined',
-					'participant.left',
-					'recording.ready-to-download',
-					'transcript.ready-to-download',
-				],
+				eventTypes: EVENT_TYPES,
 			}),
 		});
 

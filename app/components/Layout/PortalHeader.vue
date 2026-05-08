@@ -6,15 +6,11 @@
 			</client-only>
 		</div>
 
-		<!-- Upsell modal for portal-only users -->
-		<LayoutPortalUpsellModal
-			v-if="user"
-			v-model="showUpsell"
-			:host-org-name="currentOrg?.name ?? null"
-		/>
-
-		<!-- Standard org switcher for dual-role portal users -->
-		<LayoutOrgSwitcher v-if="user && !isPortalOnly" v-model="showOrgSwitcher" />
+		<!-- Unified modal: lists all the user's orgs (portal + own) with the
+		     active one highlighted, and offers an upsell only when the user
+		     has no workspace of their own. Replaces the old portal-only / dual-
+		     role fork. -->
+		<LayoutPortalUpsellModal v-if="user" v-model="showUpsell" />
 
 		<LayoutEarnestBrand to="/portal" tagline="Client Portal" :retracted="isRetracted" />
 
@@ -37,11 +33,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const { user } = useDirectusAuth();
 const config = useRuntimeConfig();
-const { organizations, currentOrg } = useOrganization();
-const { isPortalUserHere } = useClientPortalUser();
 
 const isRetracted = ref(false);
-const showOrgSwitcher = ref(false);
 const showUpsell = ref(false);
 
 const avatarUrl = computed(() => {
@@ -56,20 +49,8 @@ const initials = computed(() => {
 	return (first + last).toUpperCase() || 'U';
 });
 
-// Portal-only = single org, portal user there, no junction membership anywhere.
-// Dual-role users (client at A, owner at B) get the standard switcher instead.
-const isPortalOnly = computed(() => {
-	if (!isPortalUserHere.value) return false;
-	if (organizations.value.length !== 1) return false;
-	return organizations.value.every((org: any) => !org.membership);
-});
-
 function handleOrgSwitcherClick() {
-	if (isPortalOnly.value) {
-		showUpsell.value = true;
-	} else {
-		showOrgSwitcher.value = true;
-	}
+	showUpsell.value = true;
 }
 
 const manageNavBarAnimations = () => {

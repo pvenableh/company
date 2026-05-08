@@ -30,6 +30,15 @@ export default defineEventHandler(async (event) => {
 
 		console.log(`[Stripe Webhook] Event: ${stripeEvent.type}`);
 
+		// Connect events arrive with `event.account` set (the connected acct_…)
+		// and are owned by /api/stripe/connect-webhook. Skip here so we don't
+		// double-write payments_received rows when both webhooks receive the
+		// same event (e.g. via `stripe listen` forwarding both scopes).
+		if ((stripeEvent as any).account) {
+			console.log(`[Stripe Webhook] Skipping connect event ${stripeEvent.type} for ${(stripeEvent as any).account}`);
+			return { received: true, skipped: 'connect-event' };
+		}
+
 		// ── Payment Intent Events ──
 		if (stripeEvent.type === 'payment_intent.succeeded') {
 			const paymentIntent = stripeEvent.data.object as Stripe.PaymentIntent;
@@ -107,12 +116,13 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
 			);
 		}
 
-		// Record payment
+		// Record payment. Stripe amounts are minor units (cents); the column
+		// stores dollars as a 2-decimal string.
 		await directus.request(
 			createItem('payments_received', {
 				payment_intent: paymentIntent.id,
 				stripe_status: 'succeeded',
-				amount: paymentIntent.amount,
+				amount: (paymentIntent.amount / 100).toFixed(2),
 				email: paymentIntent.receipt_email,
 				invoice_id: invoiceId || null,
 				status: 'paid',

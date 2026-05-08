@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Phase 3 of Stripe Connect Express. Rendered inside the Billing tab once
+// Phase 3 of Stripe Connect (Standard accounts). Rendered inside the Billing tab once
 // the org's connected account is `active`. Surfaces Transactions / Refunds /
 // Payouts / Balance — all data lives on Stripe, we just relay it through
 // org-scoped server routes and render natively. No leaving Earnest for the
@@ -290,7 +290,7 @@ const statusColor = (status: string): 'green' | 'amber' | 'red' | 'gray' => {
 				<div class="mt-4 space-y-4">
 					<div class="flex items-center justify-between">
 						<p class="text-sm text-muted-foreground">
-							Charges, refunds, fees, and payouts. Updated live from Stripe.
+							Online card and bank payments processed by Stripe. Manual payments (check, cash, Zelle, etc.) live on each invoice and aren't shown here.
 						</p>
 						<UiActionButton
 							icon="lucide:refresh-cw"

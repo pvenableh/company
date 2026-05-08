@@ -67,6 +67,7 @@ const isSubmitting = ref(false);
 const error = ref(null);
 let stripe = null;
 let elements = null;
+let connectedStripeAccount = null;
 
 // Computed
 const submitButtonText = computed(() => {
@@ -222,10 +223,15 @@ const handleSubmit = async () => {
 		loader.value = true;
 		openScreen();
 
+		const baseReturn = `${window.location.origin}/confirmation`;
+		const returnUrl = connectedStripeAccount
+			? `${baseReturn}?stripe_account=${connectedStripeAccount}`
+			: baseReturn;
+
 		const { error: stripeError } = await stripe.confirmPayment({
 			elements,
 			confirmParams: {
-				return_url: `${window.location.origin}/confirmation`,
+				return_url: returnUrl,
 				payment_method_data: {
 					billing_details: {
 						email: props.email,
@@ -250,10 +256,11 @@ onMounted(async () => {
 		// `stripeAccount` (acct_…) when this invoice routes through Stripe
 		// Connect, or null for the legacy platform path.
 		const paymentIntent = await createPaymentIntent();
+		connectedStripeAccount = paymentIntent?.stripeAccount || null;
 
 		stripe = await loadStripe(
 			config.public.stripePublic,
-			paymentIntent?.stripeAccount ? { stripeAccount: paymentIntent.stripeAccount } : undefined,
+			connectedStripeAccount ? { stripeAccount: connectedStripeAccount } : undefined,
 		);
 		if (!stripe) {
 			throw new Error('Failed to load Stripe');

@@ -121,7 +121,15 @@ export function useOrganization() {
 
 			// Index portal-user rows by org and persist normalized rows for the
 			// `clientMembership`/`isClientPortalUser` computed up top.
-			const portalByOrg = {};
+			//
+			// Multi-row support: a user can hold rows for multiple unrelated
+			// clients in the same org. We keep all rows in `clientPortalRows`
+			// and index per-org as an array. The legacy `clientPortal` field
+			// on each org now holds the FIRST row for that org so existing
+			// callers (middleware boolean check, OrgSwitcher list label) keep
+			// working — switching the active scope is a separate cookie flow
+			// owned by the portal header.
+			const portalRowsByOrg = {};
 			const normalizedPortalRows = [];
 			for (const r of portalRows) {
 				const orgId = typeof r.organization === 'object' ? r.organization?.id : r.organization;
@@ -130,7 +138,8 @@ export function useOrganization() {
 				const clientName = typeof clientField === 'object' ? clientField?.name ?? null : null;
 				if (!orgId || !clientId) continue;
 				const norm = { id: r.id, organizationId: orgId, clientId, clientName, status: r.status };
-				portalByOrg[orgId] = norm;
+				if (!portalRowsByOrg[orgId]) portalRowsByOrg[orgId] = [];
+				portalRowsByOrg[orgId].push(norm);
 				normalizedPortalRows.push(norm);
 			}
 			clientPortalRows.value = normalizedPortalRows;
@@ -141,7 +150,7 @@ export function useOrganization() {
 			const junctionOrgIds = new Set(junctionOrgs.map((org) => org.id));
 			const extraOrgIds = new Set([
 				...Object.keys(membershipByOrg),
-				...Object.keys(portalByOrg),
+				...Object.keys(portalRowsByOrg),
 			].filter((id) => !junctionOrgIds.has(id)));
 
 			let extraOrgs = [];
@@ -208,7 +217,8 @@ export function useOrganization() {
 					projectsCount: pc,
 					totalActivity: tc + pc,
 					membership: membershipByOrg[org.id] ?? null,
-					clientPortal: portalByOrg[org.id] ?? null,
+					clientPortal: portalRowsByOrg[org.id]?.[0] ?? null,
+					clientPortalRows: portalRowsByOrg[org.id] ?? [],
 				};
 			});
 

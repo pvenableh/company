@@ -6,6 +6,11 @@
  * scope). Used by every /api/portal/* endpoint to scope reads to the user's
  * client.
  *
+ * Multi-row support: a user can hold portal rows for multiple unrelated
+ * clients in the same org (or across orgs). The `portal_active_scope` cookie
+ * identifies which row is currently active — the picker in the portal header
+ * sets it. When unset, we fall back to the first active row.
+ *
  * Throws 401 if not logged in. Throws 403 if the user has no active portal
  * row. Returns the resolved client + descendant client IDs (1 hop via
  * `parent_client`, then 1 more) so the portal can show the user's scope plus
@@ -21,6 +26,9 @@ export interface PortalContext {
   clientId: string;
   /** clientId + descendant client IDs (children + grandchildren). */
   scopedClientIds: string[];
+  /** All active root scopes the user holds in this organization. Lets the
+   * portal header render a switcher when there's more than one. */
+  availableScopes: Array<{ membershipId: string; clientId: string }>;
   /** True when the caller is an admin previewing the portal as a client.
    * Mutations should be rejected when this is set so a preview never writes
    * data on behalf of the real client. */
@@ -62,7 +70,8 @@ export async function requirePortalContext(event: any): Promise<PortalContext> {
         status: { _eq: 'active' },
       },
       fields: ['id', 'organization', 'client'],
-      limit: 1,
+      limit: -1,
+      sort: ['date_created'],
     } as any)
   ) as any[];
 
@@ -73,26 +82,47 @@ export async function requirePortalContext(event: any): Promise<PortalContext> {
     });
   }
 
-  const m = portalRows[0];
-  const organizationId = typeof m.organization === 'object' ? m.organization?.id : m.organization;
-  const clientId = typeof m.client === 'object' ? m.client?.id : m.client;
+  const normalized = portalRows
+    .map((r: any) => ({
+      membershipId: r.id,
+      organizationId: typeof r.organization === 'object' ? r.organization?.id : r.organization,
+      clientId: typeof r.client === 'object' ? r.client?.id : r.client,
+    }))
+    .filter((r) => r.organizationId && r.clientId);
 
-  if (!organizationId || !clientId) {
+  if (!normalized.length) {
     throw createError({
       statusCode: 403,
       message: 'Membership missing organization or client scope',
     });
   }
 
+  // Active scope: prefer the cookie if it points at a row the user actually
+  // holds, otherwise fall back to the first row. Cookie is set by the portal
+  // header's client switcher. We do NOT trust the cookie blindly — it must
+  // match a real membership of the requesting user.
+  const activeScopeCookie = getCookie(event, 'portal_active_scope') || '';
+  const active =
+    (activeScopeCookie && normalized.find((r) => r.clientId === activeScopeCookie))
+    || normalized[0];
+
+  // Scopes available within the SAME org as the active scope. Cross-org
+  // switching happens via the org switcher; this list powers the portal's
+  // client switcher.
+  const availableScopes = normalized
+    .filter((r) => r.organizationId === active.organizationId)
+    .map((r) => ({ membershipId: r.membershipId, clientId: r.clientId }));
+
   // Walk descendant clients up to 2 levels (children + grandchildren)
-  const scopedClientIds = await collectDescendantClients(directus, clientId, organizationId);
+  const scopedClientIds = await collectDescendantClients(directus, active.clientId, active.organizationId);
 
   return {
     userId,
-    organizationId,
-    membershipId: m.id,
-    clientId,
+    organizationId: active.organizationId,
+    membershipId: active.membershipId,
+    clientId: active.clientId,
     scopedClientIds,
+    availableScopes,
   };
 }
 
@@ -135,6 +165,7 @@ async function tryResolvePreviewContext(
     membershipId: memberships[0].id,
     clientId: previewClientId,
     scopedClientIds,
+    availableScopes: [{ membershipId: memberships[0].id, clientId: previewClientId }],
     isPreview: true,
   };
 }
