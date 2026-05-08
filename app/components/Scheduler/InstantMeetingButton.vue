@@ -4,6 +4,7 @@ const emit = defineEmits(['created']);
 
 const schedulerData = inject('schedulerData');
 const { user } = schedulerData;
+const { selectedOrg } = useOrganization();
 
 const toast = useToast();
 const loading = ref(false);
@@ -18,6 +19,7 @@ const createInstantMeeting = async () => {
 				title: 'Instant Meeting',
 				scheduled_start: new Date().toISOString(),
 				duration: 60,
+				organization: selectedOrg.value || null,
 			},
 		});
 

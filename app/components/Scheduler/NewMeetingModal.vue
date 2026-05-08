@@ -75,9 +75,36 @@
 				</UFormGroup>
 
 				<!-- Settings -->
-				<div class="flex items-center gap-6">
+				<div class="space-y-2">
 					<UCheckbox v-model="form.waiting_room_enabled" label="Enable waiting room" />
-					<UCheckbox v-model="form.recording_enabled" label="Enable cloud recording" />
+					<div>
+						<UCheckbox
+							v-model="form.recording_enabled"
+							:disabled="!defaults.recordingAvailable"
+							label="Cloud recording"
+						/>
+						<p class="ml-6 text-[11px] text-muted-foreground">
+							<template v-if="defaults.recordingAvailable">{{ defaults.recordingCostNote }}</template>
+							<template v-else>
+								<UIcon name="i-heroicons-lock-closed" class="w-3 h-3 inline -mt-0.5" />
+								Upgrade to a paid plan to record meetings
+							</template>
+						</p>
+					</div>
+					<div>
+						<UCheckbox
+							v-model="form.transcription_enabled"
+							:disabled="!defaults.transcriptionAvailable"
+							label="Live transcription + AI recap"
+						/>
+						<p class="ml-6 text-[11px] text-muted-foreground">
+							<template v-if="defaults.transcriptionAvailable">{{ defaults.transcriptionCostNote }}</template>
+							<template v-else>
+								<UIcon name="i-heroicons-lock-closed" class="w-3 h-3 inline -mt-0.5" />
+								Upgrade to a paid plan for live transcripts
+							</template>
+						</p>
+					</div>
 				</div>
 
 				<UDivider label="Invite Attendees" />
@@ -145,6 +172,37 @@ const emit = defineEmits(['update:modelValue', 'created']);
 
 const toast = useToast();
 const creating = ref(false);
+
+const { selectedOrg } = useOrganization();
+
+// Plan-aware defaults for recording + transcription. Resolved server-side off
+// the org's plan + per-org overrides so the modal can pre-fill the right
+// initial values and disable a checkbox when the feature is gated. Free tier
+// → both unavailable; solo → transcription default-on; studio+ → both on.
+const FALLBACK_DEFAULTS = {
+	recording: false,
+	transcription: false,
+	recordingAvailable: false,
+	transcriptionAvailable: false,
+	recordingCostNote: '~$0.59/hr per participant (Daily cloud recording)',
+	transcriptionCostNote: '~$0.26/hr per meeting (Deepgram)',
+};
+const defaults = ref({ ...FALLBACK_DEFAULTS });
+
+const fetchDefaults = async () => {
+	if (!selectedOrg.value) {
+		defaults.value = { ...FALLBACK_DEFAULTS };
+		return;
+	}
+	try {
+		const res = await $fetch('/api/video/meeting-defaults', {
+			params: { organization: selectedOrg.value },
+		});
+		defaults.value = { ...FALLBACK_DEFAULTS, ...(res?.data ?? {}) };
+	} catch {
+		defaults.value = { ...FALLBACK_DEFAULTS };
+	}
+};
 
 // ── Lead search ──
 const { getLeads } = useLeads();
@@ -229,6 +287,7 @@ const form = reactive({
 	description: '',
 	waiting_room_enabled: true,
 	recording_enabled: false,
+	transcription_enabled: false,
 	custom_message: '',
 	related_lead: null as any,
 	attendees: [] as Array<{
@@ -274,7 +333,8 @@ const resetForm = () => {
 	form.duration = 30;
 	form.description = '';
 	form.waiting_room_enabled = true;
-	form.recording_enabled = false;
+	form.recording_enabled = defaults.value.recording;
+	form.transcription_enabled = defaults.value.transcription;
 	form.custom_message = '';
 	form.related_lead = null;
 	form.attendees = [];
@@ -305,9 +365,11 @@ const createMeeting = async () => {
 				duration: form.duration,
 				waiting_room_enabled: form.waiting_room_enabled,
 				recording_enabled: form.recording_enabled,
+				transcription_enabled: form.transcription_enabled,
 				custom_message: form.custom_message,
 				related_lead: form.related_lead?.id || null,
 				project: props.projectId || null,
+				organization: selectedOrg.value || null,
 				attendees: form.attendees.filter((a) => a.name || a.email),
 			},
 		});
@@ -335,10 +397,20 @@ const createMeeting = async () => {
 	creating.value = false;
 };
 
-// Add one attendee by default when opening
-watch(isOpen, (open) => {
-	if (open && form.attendees.length === 0) {
-		addAttendee();
+// Add one attendee by default when opening + sync recording/transcription
+// initial values from the org's plan-aware defaults so the host's first
+// glance reflects what the meeting will actually do.
+watch(isOpen, async (open) => {
+	if (open) {
+		if (form.attendees.length === 0) addAttendee();
+		await fetchDefaults();
+		form.recording_enabled = defaults.value.recording;
+		form.transcription_enabled = defaults.value.transcription;
 	}
+});
+
+// Re-fetch defaults when the active org changes mid-modal (rare but cheap).
+watch(selectedOrg, () => {
+	if (isOpen.value) fetchDefaults();
 });
 </script>

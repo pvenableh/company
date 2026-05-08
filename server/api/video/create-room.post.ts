@@ -20,11 +20,13 @@ interface CreateRoomBody {
 	meeting_type?: string;
 	waiting_room_enabled?: boolean;
 	recording_enabled?: boolean;
+	transcription_enabled?: boolean;
 	attendees?: AttendeeInput[];
 	custom_message?: string;
 	related_lead?: number | string | null;
 	project?: string | null;
 	project_event?: string | null;
+	organization?: string | null;
 }
 
 export default defineEventHandler(async (event) => {
@@ -79,6 +81,24 @@ export default defineEventHandler(async (event) => {
 		// the user reported (Item 12).
 		const isInstant = Math.abs(scheduledStart.getTime() - Date.now()) < 60_000;
 
+		// Resolve recording / transcription off the org's plan + per-org overrides.
+		// Body wins when explicitly set; otherwise we fall through to plan defaults.
+		// Free-tier orgs can't request either feature — assertFeatureAllowed will 402.
+		const orgIdForDefaults = (body.organization as string | null) || null;
+		const meetingDefaults = orgIdForDefaults
+			? await fetchOrgMeetingDefaults(orgIdForDefaults)
+			: null;
+		const recordingEnabled = typeof body.recording_enabled === 'boolean'
+			? body.recording_enabled
+			: (meetingDefaults?.recording ?? false);
+		const transcriptionEnabled = typeof body.transcription_enabled === 'boolean'
+			? body.transcription_enabled
+			: (meetingDefaults?.transcription ?? false);
+		if (meetingDefaults) {
+			assertFeatureAllowed(meetingDefaults, 'recording', recordingEnabled);
+			assertFeatureAllowed(meetingDefaults, 'transcription', transcriptionEnabled);
+		}
+
 		// Create Daily.co video room
 		let dailyRoom;
 		try {
@@ -86,7 +106,8 @@ export default defineEventHandler(async (event) => {
 				name: roomName,
 				expiresAt: new Date(scheduledEnd.getTime() + 60 * 60 * 1000), // 1hr buffer after scheduled end
 				maxParticipants: 25,
-				enableRecording: body.recording_enabled ?? false,
+				enableRecording: recordingEnabled,
+				enableTranscription: transcriptionEnabled,
 			});
 		} catch (dailyError: any) {
 			console.error('Daily.co room creation error:', dailyError);
@@ -123,7 +144,8 @@ export default defineEventHandler(async (event) => {
 			invite_method: body.invite_method || 'none',
 			invite_sent: false,
 			waiting_room_enabled: body.waiting_room_enabled ?? false,
-			recording_enabled: body.recording_enabled ?? false,
+			recording_enabled: recordingEnabled,
+			transcription_enabled: transcriptionEnabled,
 			booked_via: isInstant ? 'instant' : 'direct',
 		};
 
@@ -135,6 +157,9 @@ export default defineEventHandler(async (event) => {
 		}
 		if (body.project_event) {
 			videoMeetingData.project_event = body.project_event;
+		}
+		if (orgIdForDefaults) {
+			videoMeetingData.related_organization = orgIdForDefaults;
 		}
 
 		const videoMeeting = await directus.request(

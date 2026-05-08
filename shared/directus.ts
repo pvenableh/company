@@ -2380,6 +2380,10 @@ export interface Organization {
 	active_addons?: Record<string, any> | null;
 	/** @description Default hourly rate for time tracking billable entries */
 	default_hourly_rate?: number | null;
+	/** @description Per-org override for cloud-recording auto-start on new meetings. Null = use plan default (free=off, studio+=on). */
+	default_recording?: boolean | null;
+	/** @description Per-org override for transcription auto-start on new meetings. Null = use plan default (free=off, solo+=on). */
+	default_transcription?: boolean | null;
 	/** @description URL-safe stable identifier. Auto-generated from name; unique across the org table. */
 	slug?: string;
 	/** @description Soft-delete timestamp. When set, the org is archived; restore clears it. A cleanup cron hard-deletes rows aged past the retention window. */
@@ -3889,6 +3893,8 @@ export interface VideoMeeting {
 	/** @description Peak concurrent participants */
 	participant_count?: number | null;
 	recording_enabled?: boolean | null;
+	/** @description When true, auto-start Deepgram transcription on host join. Null = inherit org default. */
+	transcription_enabled?: boolean | null;
 	recording_url?: string | null;
 	meeting_url?: string | null;
 	/** @description Optional password protection */

@@ -21,8 +21,37 @@ const appointmentItems = useDirectusItems('appointments');
 const appointmentsDirectusUsersItems = useDirectusItems('appointments_directus_users');
 const { filteredUsers, fetchFilteredUsers, loading: loadingUsers } = useFilteredUsers();
 const { getLeads } = useLeads();
+const { selectedOrg } = useOrganization();
 
 const saving = ref(false);
+
+// Plan-aware recording/transcription defaults — see NewMeetingModal for the
+// long-form rationale. Free tier disables both checkboxes; solo+ unlocks
+// transcription by default; studio+ also turns on cloud recording.
+const FALLBACK_DEFAULTS = {
+	recording: false,
+	transcription: false,
+	recordingAvailable: false,
+	transcriptionAvailable: false,
+	recordingCostNote: '~$0.59/hr per participant (Daily cloud recording)',
+	transcriptionCostNote: '~$0.26/hr per meeting (Deepgram)',
+};
+const meetingDefaults = ref({ ...FALLBACK_DEFAULTS });
+
+const fetchMeetingDefaults = async () => {
+	if (!selectedOrg.value) {
+		meetingDefaults.value = { ...FALLBACK_DEFAULTS };
+		return;
+	}
+	try {
+		const res = await $fetch<{ data: typeof FALLBACK_DEFAULTS }>('/api/video/meeting-defaults', {
+			params: { organization: selectedOrg.value },
+		});
+		meetingDefaults.value = { ...FALLBACK_DEFAULTS, ...(res?.data ?? {}) };
+	} catch {
+		meetingDefaults.value = { ...FALLBACK_DEFAULTS };
+	}
+};
 
 // ── Modal open/close ──
 const isOpen = computed({
@@ -42,6 +71,8 @@ const form = reactive({
 	time: '09:00',
 	duration: 30,
 	waiting_room_enabled: false,
+	recording_enabled: false,
+	transcription_enabled: false,
 	related_lead: null as any,
 	// Team/client members (Directus users)
 	members: [] as Array<{ id: string; first_name: string; last_name: string; email: string; avatar?: string; label: string }>,
@@ -160,7 +191,7 @@ if (import.meta.client) {
 }
 
 // ── Reset form on open ──
-watch(isOpen, (open) => {
+watch(isOpen, async (open) => {
 	if (open) {
 		const d = props.selectedDate || new Date();
 		const defaultTime = new Date();
@@ -181,7 +212,17 @@ watch(isOpen, (open) => {
 		memberSearch.value = '';
 
 		fetchFilteredUsers();
+
+		// Pre-fill recording/transcription off the org's plan-aware defaults.
+		await fetchMeetingDefaults();
+		form.recording_enabled = meetingDefaults.value.recording;
+		form.transcription_enabled = meetingDefaults.value.transcription;
 	}
+});
+
+// Re-resolve defaults if the active org changes mid-modal.
+watch(selectedOrg, () => {
+	if (isOpen.value) fetchMeetingDefaults();
 });
 
 // ── Submit ──
@@ -211,7 +252,10 @@ const handleSubmit = async () => {
 					scheduled_start: startTime.toISOString(),
 					duration: form.duration,
 					waiting_room_enabled: form.waiting_room_enabled,
+					recording_enabled: form.recording_enabled,
+					transcription_enabled: form.transcription_enabled,
 					related_lead: form.related_lead?.id || null,
+					organization: selectedOrg.value || null,
 					invitee_name: first?.name || undefined,
 					invitee_email: first?.email || undefined,
 					invitee_phone: first?.phone || undefined,
@@ -360,7 +404,37 @@ const handleSubmit = async () => {
 						</div>
 					</div>
 
-					<UCheckbox v-model="form.waiting_room_enabled" label="Enable waiting room" />
+					<div class="space-y-2">
+						<UCheckbox v-model="form.waiting_room_enabled" label="Enable waiting room" />
+						<div>
+							<UCheckbox
+								v-model="form.recording_enabled"
+								:disabled="!meetingDefaults.recordingAvailable"
+								label="Cloud recording"
+							/>
+							<p class="ml-6 text-[11px] text-muted-foreground">
+								<template v-if="meetingDefaults.recordingAvailable">{{ meetingDefaults.recordingCostNote }}</template>
+								<template v-else>
+									<UIcon name="i-heroicons-lock-closed" class="w-3 h-3 inline -mt-0.5" />
+									Upgrade to a paid plan to record meetings
+								</template>
+							</p>
+						</div>
+						<div>
+							<UCheckbox
+								v-model="form.transcription_enabled"
+								:disabled="!meetingDefaults.transcriptionAvailable"
+								label="Live transcription + AI recap"
+							/>
+							<p class="ml-6 text-[11px] text-muted-foreground">
+								<template v-if="meetingDefaults.transcriptionAvailable">{{ meetingDefaults.transcriptionCostNote }}</template>
+								<template v-else>
+									<UIcon name="i-heroicons-lock-closed" class="w-3 h-3 inline -mt-0.5" />
+									Upgrade to a paid plan for live transcripts
+								</template>
+							</p>
+						</div>
+					</div>
 				</template>
 
 				<!-- People -->

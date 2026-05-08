@@ -178,29 +178,65 @@
 				<UIcon name="i-heroicons-arrow-top-right-on-square" class="w-3 h-3 opacity-60" />
 			</NuxtLink>
 
-			<!-- Top-right floating controls: passive Recording indicator + Ask Earnest -->
-			<!-- Recording is started/stopped from Daily's prebuilt button (... menu /
-			     red dot). We mirror its state via the wrap()'d call object's
-			     `recording-started` / `recording-stopped` events instead of
-			     duplicating the control — the JS SDK's startRecording() does not
-			     reliably co-exist with the prebuilt UI's own recording state. -->
+			<!-- Top-right floating controls. Host gets clickable Recording /
+			     Transcribing toggles that double as live status pills — color
+			     keys whether the feature is on (saturated) or off (muted).
+			     Guests see a passive indicator only when something is running.
+			     Auto-start is gated on `meeting.recording_enabled` /
+			     `meeting.transcription_enabled` so we no longer burn ~$0.84/hr
+			     of API time on every meeting. -->
 			<div v-if="hasJoined" class="fixed top-16 right-4 z-30 flex items-center gap-2 pointer-events-auto">
+				<button
+					v-if="isHost"
+					:disabled="recordingPending"
+					@click="toggleRecording"
+					:class="[
+						'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-md text-[11px] font-medium shadow-lg transition-colors',
+						isRecording
+							? 'bg-red-500/90 hover:bg-red-600 text-white'
+							: 'bg-black/60 hover:bg-black/80 text-white/70',
+						recordingPending ? 'opacity-60 cursor-wait' : '',
+					]"
+					:title="isRecording ? 'Cloud recording is on (click to stop)' : 'Click to start cloud recording (~$0.59/hr per participant)'"
+				>
+					<span v-if="isRecording" class="w-2 h-2 rounded-full bg-white animate-pulse" />
+					<UIcon v-else name="i-heroicons-video-camera" class="w-3 h-3" />
+					<span>{{ isRecording ? 'Recording' : 'Record' }}</span>
+				</button>
 				<span
-					v-if="isHost && isRecording"
+					v-else-if="isRecording"
 					class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-500/90 backdrop-blur-md text-white text-[11px] font-medium shadow-lg"
 					title="Cloud recording is on"
 				>
 					<span class="w-2 h-2 rounded-full bg-white animate-pulse" />
 					<span>Recording</span>
 				</span>
+
+				<button
+					v-if="isHost"
+					:disabled="transcribingPending"
+					@click="toggleTranscription"
+					:class="[
+						'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-md text-[11px] font-medium shadow-lg transition-colors',
+						isTranscribing
+							? 'bg-emerald-500/90 hover:bg-emerald-600 text-white'
+							: 'bg-black/60 hover:bg-black/80 text-white/70',
+						transcribingPending ? 'opacity-60 cursor-wait' : '',
+					]"
+					:title="isTranscribing ? 'Transcription is on (click to stop)' : 'Click to start transcription (~$0.26/hr)'"
+				>
+					<UIcon name="i-heroicons-language" class="w-3 h-3" />
+					<span>{{ isTranscribing ? 'Transcribing' : 'Transcribe' }}</span>
+				</button>
 				<span
-					v-if="isHost && isTranscribing"
+					v-else-if="isTranscribing"
 					class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/90 backdrop-blur-md text-white text-[11px] font-medium shadow-lg"
 					title="Transcription is running — recap will be generated when the meeting ends"
 				>
 					<UIcon name="i-heroicons-language" class="w-3 h-3" />
 					<span>Transcribing</span>
 				</span>
+
 				<button
 					class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white text-[11px] font-medium transition-colors shadow-lg"
 					title="Ask Earnest about this meeting"
@@ -267,6 +303,8 @@ const aiTrayOpen = ref(false);
 const dailyFrame = ref(null);
 const isRecording = ref(false);
 const isTranscribing = ref(false);
+const recordingPending = ref(false);
+const transcribingPending = ref(false);
 // Flips true after Daily fires `joined-meeting` — drawing/sendAppMessage do
 // nothing until then, so we hide the annotation toolbar while we wait.
 const dailyJoined = ref(false);
@@ -433,25 +471,23 @@ const handleJoinedMeeting = (e) => {
 			'*',
 		);
 	} catch {}
-	// Auto-start recording + transcription if this tab owns the meeting. Daily
-	// makes both available via the prebuilt UI, but relying on the host to
-	// remember to click the buttons leaves us with no transcript / no recap.
-	// Fire-and-forget — failures (e.g. domain doesn't have transcription
-	// add-on) are non-fatal; the host can still record manually.
+	// Auto-start recording + transcription only when the meeting row opted in.
+	// `recording_enabled` / `transcription_enabled` are resolved at create time
+	// from the org's plan + per-org defaults; rows opted out (or on the free
+	// tier) stay quiet. Host can still flip the in-room toggles to override.
 	if (isHost.value) {
-		try {
-			dailyCallObject?.startRecording?.();
-		} catch (err) {
-			console.warn('[meeting] startRecording failed', err);
+		if (meeting.value?.recording_enabled) {
+			try { dailyCallObject?.startRecording?.(); }
+			catch (err) { console.warn('[meeting] startRecording failed', err); }
 		}
-		try {
-			dailyCallObject?.startTranscription?.({
-				language: 'en',
-				model: 'nova-2-general',
-				punctuate: true,
-			});
-		} catch (err) {
-			console.warn('[meeting] startTranscription failed', err);
+		if (meeting.value?.transcription_enabled) {
+			try {
+				dailyCallObject?.startTranscription?.({
+					language: 'en',
+					model: 'nova-2-general',
+					punctuate: true,
+				});
+			} catch (err) { console.warn('[meeting] startTranscription failed', err); }
 		}
 	}
 };
@@ -483,6 +519,65 @@ const handleTranscriptionError = (e) => {
 	const msg = e?.errorMsg || 'Transcription failed to start';
 	console.warn('[meeting] transcription error', e);
 	toast.add({ title: 'Transcription error', description: msg, color: 'red' });
+};
+
+// Host-only in-room toggles. Persist the flag to Directus first so a refresh
+// keeps the new state, then fire the matching SDK call. We optimistically
+// update local refs but the wrap()'d events (`recording-started`/`-stopped`,
+// `transcription-started`/`-stopped`) are the source of truth.
+const toggleRecording = async () => {
+	if (!meeting.value?.id || recordingPending.value) return;
+	const next = !isRecording.value;
+	recordingPending.value = true;
+	try {
+		await $fetch(`/api/video/meetings/${meeting.value.id}/toggle-recording`, {
+			method: 'POST',
+			body: { enabled: next },
+		});
+		meeting.value.recording_enabled = next;
+		if (next) {
+			try { dailyCallObject?.startRecording?.(); }
+			catch (err) { console.warn('[meeting] startRecording failed', err); }
+		} else {
+			try { dailyCallObject?.stopRecording?.(); }
+			catch (err) { console.warn('[meeting] stopRecording failed', err); }
+		}
+	} catch (err) {
+		const msg = err?.data?.message || err?.message || 'Could not change recording';
+		toast.add({ title: 'Recording', description: msg, color: 'red' });
+	} finally {
+		recordingPending.value = false;
+	}
+};
+
+const toggleTranscription = async () => {
+	if (!meeting.value?.id || transcribingPending.value) return;
+	const next = !isTranscribing.value;
+	transcribingPending.value = true;
+	try {
+		await $fetch(`/api/video/meetings/${meeting.value.id}/toggle-transcription`, {
+			method: 'POST',
+			body: { enabled: next },
+		});
+		meeting.value.transcription_enabled = next;
+		if (next) {
+			try {
+				dailyCallObject?.startTranscription?.({
+					language: 'en',
+					model: 'nova-2-general',
+					punctuate: true,
+				});
+			} catch (err) { console.warn('[meeting] startTranscription failed', err); }
+		} else {
+			try { dailyCallObject?.stopTranscription?.(); }
+			catch (err) { console.warn('[meeting] stopTranscription failed', err); }
+		}
+	} catch (err) {
+		const msg = err?.data?.message || err?.message || 'Could not change transcription';
+		toast.add({ title: 'Transcription', description: msg, color: 'red' });
+	} finally {
+		transcribingPending.value = false;
+	}
 };
 
 const wrapDailyIframe = async () => {

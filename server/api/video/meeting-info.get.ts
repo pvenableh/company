@@ -36,6 +36,8 @@ export default defineEventHandler(async (event) => {
 					'duration_minutes',
 					'meeting_type',
 					'waiting_room_enabled',
+					'recording_enabled',
+					'transcription_enabled',
 					'host_identity',
 					'host_user.id',
 					'host_user.first_name',
