@@ -1,6 +1,6 @@
-# Next session: AI engine + cache headers + org-filter gap
+# Next session: AI engine + cache headers + org-filter gap + comment-count chattiness
 
-Three deferred follow-ups from prior perf sessions. Land them in one branch
+Four deferred follow-ups from prior perf sessions. Land them in one branch
 or split as you see fit. Verify in the running preview (per project memory:
 bind to `127.0.0.1:3000`, use `preview_*` tools — never bash/curl/Playwright).
 
@@ -78,9 +78,51 @@ POST body for `tickets` — when no org is selected, the filter should
 include `organization: { _in: [uuid, uuid] }` not an empty object. With
 one org selected, it should still be `{ _eq }`.
 
+## 4. Collapse `attachCommentCounts` into the main projects fields query
+
+[Projects/Board.vue](app/components/Projects/Board.vue) currently runs a
+separate aggregate query against `directus_comments` after every realtime
+tick of the projects list (see `attachCommentCounts` — fired from
+`watch(() => projects.value, …)`). Fine at the demo org's 21 projects, but
+chatty: every WebSocket update on a single project triggers a full
+aggregate over all visible project IDs.
+
+**Goal:** fold the count into the main projects fetch so there's one
+round-trip per board hydrate, not two.
+
+**Approach:**
+- Try adding `'count(comments) as commentsCount'` (or the equivalent
+  Directus alias syntax) to the `fields` array in
+  [Projects/Board.vue:399](app/components/Projects/Board.vue:399).
+- The same fields list is sent to the WebSocket subscribe call via
+  [useRealtimeSubscription.js:53](app/composables/useRealtimeSubscription.js:53). Verify Directus 11
+  WS subscriptions actually return `commentsCount` on `init` and `update`
+  events — last time I considered this for `tickets`/`events`, the WS
+  aggregate path was the unknown that pushed me to keep arrays of UUIDs.
+  If WS doesn't honor the aggregate, you have two options: (a) drop the
+  WS subscribe field for counts and re-fetch only the count side on
+  `update` events, or (b) keep `attachCommentCounts` but throttle it
+  (debounce 500ms after the last project mutation).
+- If you go with (a), the simplest split is: fields list *includes*
+  `commentsCount` for REST hydrate, then the WS handler in
+  `useRealtimeSubscription.js` patches just the diffed project's count
+  via a one-row aggregate fetch. That keeps the cold-mount payload
+  small and avoids the every-tick aggregate.
+- Same pattern is already in place for tickets via `attachCommentCounts`
+  in [Tickets/Board.vue:587](app/components/Tickets/Board.vue:587) — solve once and apply
+  to both, or note in the commit why one diverges.
+
+**Verify:** Same as the prior trim work — instrument fetch in preview,
+watch a project comment get added (use `/api/portal/comments` or click
+through to a project's chat), confirm the count on the board card updates
+without a separate `/api/directus/items` POST against `directus_comments`.
+
 ## Out of scope
 
 - Don't add new analyzers or new collections. Mechanics only.
 - Don't touch the `messages`/`social_posts`/`appointments` user-scoped queries.
 - Don't change cache TTLs to anything > 60s without asking — the user has
   flagged stale data as a concern in past UX feedback.
+- Don't pre-emptively rewrite `attachCommentCounts` for tickets unless you've
+  already validated the projects path — the demo org's data isn't enough
+  to surface the chatty pattern as a real problem yet.

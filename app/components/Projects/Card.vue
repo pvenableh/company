@@ -58,7 +58,20 @@ const getUserFullName = (assigned) => {
 
 const eventCount = computed(() => props.project?.events?.length || 0);
 const ticketCount = computed(() => props.project?.tickets?.length || 0);
-const hasCounts = computed(() => eventCount.value > 0 || ticketCount.value > 0);
+const commentCount = computed(() => {
+	const c = props.project?.commentsCount;
+	if (typeof c === 'number') return c;
+	if (Array.isArray(props.project?.comments)) return props.project.comments.length;
+	return 0;
+});
+const hasCounts = computed(
+	() => eventCount.value > 0 || ticketCount.value > 0 || commentCount.value > 0,
+);
+
+// Client first, fall back to organization for internal projects.
+const clientLabel = computed(
+	() => props.project?.client?.name || props.project?.organization?.name || '',
+);
 </script>
 
 <template>
@@ -80,7 +93,7 @@ const hasCounts = computed(() => eventCount.value > 0 || ticketCount.value > 0);
 						{{ project?.title }}
 					</p>
 
-					<!-- Meta row: service + org + counts -->
+					<!-- Meta row: service + client (fallback org) -->
 					<div class="flex items-center gap-2 mt-1.5 flex-wrap">
 						<span
 							v-if="project?.service?.name"
@@ -94,10 +107,10 @@ const hasCounts = computed(() => eventCount.value > 0 || ticketCount.value > 0);
 							{{ project.service.name }}
 						</span>
 						<span
-							v-if="project?.organization?.name"
+							v-if="clientLabel"
 							class="text-[10px] text-muted-foreground truncate max-w-[140px]"
 						>
-							{{ project.organization.name }}
+							{{ clientLabel }}
 						</span>
 					</div>
 				</div>
@@ -129,7 +142,7 @@ const hasCounts = computed(() => eventCount.value > 0 || ticketCount.value > 0);
 				</div>
 			</div>
 
-			<!-- Footer: event/ticket counts -->
+			<!-- Footer: event/ticket/comment counts -->
 			<div
 				v-if="hasCounts"
 				class="flex items-center gap-3 mt-3 text-[10px] text-muted-foreground"
@@ -144,6 +157,15 @@ const hasCounts = computed(() => eventCount.value > 0 || ticketCount.value > 0);
 					<span class="flex items-center gap-0.5">
 						<UIcon name="i-heroicons-square-3-stack-3d" class="w-2.5 h-2.5" />
 						{{ ticketCount }}
+					</span>
+				</UTooltip>
+				<UTooltip
+					v-if="commentCount > 0"
+					:text="commentCount + (commentCount === 1 ? ' Comment' : ' Comments')"
+				>
+					<span class="flex items-center gap-0.5">
+						<UIcon name="i-heroicons-chat-bubble-left-right" class="w-2.5 h-2.5" />
+						{{ commentCount }}
 					</span>
 				</UTooltip>
 			</div>

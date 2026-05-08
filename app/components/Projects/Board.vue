@@ -593,6 +593,50 @@ const rebuildLocalProjects = (incoming) => {
 // updates on the project list reconcile in place.
 let _projectsBoardInitialized = false;
 
+// Fetch comment counts and patch them onto the project objects in place.
+// Mirrors the Tickets board pattern: one aggregate query keyed by project id.
+// Portal users may lack `directus_comments` read perms — bail rather than 403-storm.
+//
+// Can't fold this into the main projects `fields` list: `directus_comments` is a
+// system collection keyed by (collection, item) strings, not registered as an
+// o2m on `projects`, so `count(comments) as commentsCount` has nothing to count.
+const attachCommentCounts = async (projectsList) => {
+	if (props.portal || !Array.isArray(projectsList) || projectsList.length === 0) return;
+	const ids = projectsList.map((p) => p?.id).filter(Boolean);
+	if (ids.length === 0) return;
+	try {
+		const counts = await commentItems.list({
+			filter: { collection: { _eq: 'projects' }, item: { _in: ids } },
+			fields: ['item'],
+			aggregate: { count: ['*'] },
+			groupBy: ['item'],
+		});
+		const map = {};
+		if (Array.isArray(counts)) {
+			for (const r of counts) {
+				if (r?.item) map[r.item] = parseInt(r.count, 10) || 0;
+			}
+		}
+		for (const p of projectsList) {
+			if (!p?.id) continue;
+			p.commentsCount = map[p.id] || 0;
+		}
+	} catch (err) {
+		console.error('Error fetching project comment counts:', err);
+	}
+};
+
+// Trailing-debounce so a burst of WS ticks (drag-drop, batch update, reconnect
+// init) collapses into a single aggregate query instead of one per tick.
+let _commentCountsTimer = null;
+const scheduleAttachCommentCounts = (projectsList) => {
+	if (_commentCountsTimer) clearTimeout(_commentCountsTimer);
+	_commentCountsTimer = setTimeout(() => {
+		_commentCountsTimer = null;
+		attachCommentCounts(projectsList);
+	}, 250);
+};
+
 watch(
 	() => projects.value,
 	(newProjects) => {
@@ -603,6 +647,10 @@ watch(
 		} else {
 			reconcileLocalProjects(newProjects);
 		}
+		// Fire-and-forget: patches `commentsCount` onto the same project objects
+		// that localProjects now references, so reactivity picks it up without
+		// rebuilding the columns.
+		scheduleAttachCommentCounts(newProjects);
 	},
 	{ immediate: true },
 );
@@ -690,6 +738,10 @@ onMounted(() => {
 onUnmounted(() => {
 	if (import.meta.client) {
 		window.removeEventListener('resize', checkMobile);
+	}
+	if (_commentCountsTimer) {
+		clearTimeout(_commentCountsTimer);
+		_commentCountsTimer = null;
 	}
 });
 
