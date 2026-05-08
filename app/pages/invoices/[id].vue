@@ -14,10 +14,19 @@ const emailSchema = yup.object({
 	email: yup.string().email('Please enter a valid email address').required('Email is required'),
 });
 
-// Remove auth middleware
-// definePageMeta({
-// 	 middleware: ['auth'], // Removed
-// });
+// Classify the viewer relative to this invoice. Portal users are bounced to
+// /portal/invoices/[id] so there's a single payment surface per audience;
+// staff in the merchant org see a view-only page (paying themselves makes no
+// sense). Anonymous + unrelated logged-in viewers get the normal pay flow.
+const viewerMode = ref('anonymous');
+if (loggedIn.value) {
+	const res = await $fetch(`/api/invoices/${params.id}/viewer-mode`).catch(() => ({ mode: 'unrelated' }));
+	viewerMode.value = res?.mode ?? 'unrelated';
+	if (viewerMode.value === 'portal') {
+		await navigateTo(`/portal/invoices/${params.id}`, { replace: true });
+	}
+}
+const isStaffViewer = computed(() => viewerMode.value === 'staff');
 
 const invoice = await invoiceItems.get(params.id, {
 	fields: [
@@ -70,7 +79,18 @@ const handleAnonymousSubmit = async (formData) => {
 
 		<div class="w-full flex flex-col lg:flex-row items-center lg:items-start justify-center relative z-10 mt-12">
 			<InvoicesInvoice :invoice="invoice" class="lg:sticky lg:top-12" />
-			<div v-if="showAnonymousForm && invoice.status === 'pending'" class="w-full px-6 pt-0 pb-16 lg:w-1/2 max-w-xl">
+
+			<div v-if="isStaffViewer && invoice.status === 'pending'" class="w-full px-6 pt-0 pb-16 lg:w-1/2 max-w-xl">
+				<div class="rounded-md border border-gray-200 dark:border-gray-700 p-4 text-sm text-muted-foreground">
+					<p class="font-medium text-foreground mb-1">View only</p>
+					<p>You're a member of this organization, so payment isn't available here.</p>
+					<NuxtLink :to="`/invoices/detail/${invoice.id}`" class="inline-block mt-3 text-primary hover:underline">
+						Open in admin →
+					</NuxtLink>
+				</div>
+			</div>
+
+			<div v-else-if="showAnonymousForm && invoice.status === 'pending'" class="w-full px-6 pt-0 pb-16 lg:w-1/2 max-w-xl">
 				<UButton
 					v-if="invoice.melio"
 					:to="invoice.melio"

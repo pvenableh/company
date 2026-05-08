@@ -490,12 +490,6 @@ onUnmounted(() => clearEntity());
               </Button>
               <NuxtLink :to="`/invoices/${invoice.id}`" target="_blank" class="block">
                 <Button variant="outline" size="sm" class="w-full justify-start">
-                  <Icon name="lucide:credit-card" class="w-4 h-4 mr-2" />
-                  Payment Page
-                </Button>
-              </NuxtLink>
-              <NuxtLink :to="`/invoices/preview/${invoice.id}`" target="_blank" class="block">
-                <Button variant="outline" size="sm" class="w-full justify-start">
                   <Icon name="lucide:eye" class="w-4 h-4 mr-2" />
                   Preview
                 </Button>

@@ -845,7 +845,7 @@ const handleTimelineItemClick = (item) => {
 		selectedMeeting.value = item._raw;
 		showMeetingDetail.value = true;
 	} else if (item.source === 'invoice') {
-		navigateTo(`/invoices/preview/${item.id}`);
+		navigateTo(`/invoices/${item.id}`);
 	}
 };
 

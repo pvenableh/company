@@ -94,7 +94,7 @@ watch(filter, () => loadInvoices());
 			<NuxtLink
 				v-for="invoice in invoices"
 				:key="invoice.id"
-				:to="`/invoices/${invoice.id}`"
+				:to="`/portal/invoices/${invoice.id}`"
 				class="ios-card p-4 flex items-center gap-4 hover:shadow-md transition-shadow group"
 			>
 				<!-- Icon -->
