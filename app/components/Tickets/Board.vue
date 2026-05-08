@@ -445,34 +445,29 @@ const activeDueDateFilter = computed(() => {
 	return typeof filterDueDate.value === 'object' ? filterDueDate.value.value : filterDueDate.value;
 });
 
-// Required fields for ticket data
+// Required fields for ticket data — kept tight for cold-mount payload size.
+// Card.vue + FormModal.vue + Board.vue archived list are the only consumers;
+// detail/description/project metadata are loaded on the ticket detail route.
 const fields = [
 	'id',
 	'title',
-	'description',
 	'status',
 	'priority',
 	'date_created',
 	'date_updated',
 	'user_updated.first_name',
 	'user_updated.last_name',
-	'user_updated.id',
 	'user_created.first_name',
 	'user_created.last_name',
-	'user_created.id',
 	'due_date',
 	'organization.id',
 	'organization.name',
-	'organization.logo',
-	'project.id',
-	'project.title',
-	'project.url',
+	'project',
 	'assigned_to.id',
 	'assigned_to.directus_users_id.id',
 	'assigned_to.directus_users_id.first_name',
 	'assigned_to.directus_users_id.last_name',
 	'assigned_to.directus_users_id.avatar',
-	'assigned_to.directus_users_id.email',
 	'tasks.id',
 	'tasks.status',
 	'team.id',
@@ -739,14 +734,32 @@ const setupRealtimeOnly = (filter, initialTickets) => {
 		{ immediate: true },
 	);
 
-	// Process real-time updates as they arrive
+	// Process real-time updates as they arrive.
+	//
+	// Important: do NOT re-run `processTickets` on every tick — that
+	// rebuilds every column from scratch in server `-date_updated` order,
+	// which is what makes cards "jump" after an edit (the edited ticket's
+	// date_updated bumps it to the top of its column on every rebuild).
+	//
+	// Instead, diff the new server snapshot against `localTickets` and
+	// apply only the changes:
+	//   - new id  → push into the matching column at the top (matches
+	//     the existing -date_updated sort for genuinely new items)
+	//   - status changed → splice from old column, unshift into new
+	//   - field changed → Object.assign in place (preserves array index,
+	//     so VueDraggable doesn't see a list-level change)
+	//   - removed id → splice out
+	//
+	// Comment counts are NOT re-fetched on every update — that was firing
+	// an aggregate query for every realtime tick. Counts are loaded once
+	// during initial fetch (`fetchTicketsViaREST → attachCommentCounts`)
+	// and then preserved across in-place updates. New tickets get a count
+	// of 0 until the next full refresh, which is acceptable.
 	watch(
 		data,
-		async (newData) => {
-			if (newData && newData.length > 0) {
-				await attachCommentCounts(newData);
-				processTickets(newData);
-			}
+		(newData) => {
+			if (!Array.isArray(newData)) return;
+			reconcileLocalTickets(newData);
 		},
 	);
 
@@ -782,10 +795,90 @@ const loadTickets = async () => {
 	setupRealtimeOnly(filter, tickets || []);
 };
 
-// Refresh: re-fetch via REST and reconnect WebSocket
+// Hard refresh — re-fetch via REST and reconnect WebSocket. Used by the
+// Retry Connection button and by org/team change handlers. NOT used after
+// every edit/create; those rely on the realtime reconciler to mutate
+// `localTickets` in place so cards stay put.
 const refreshData = async () => {
 	console.log('Board: Refreshing tickets...');
 	await loadTickets();
+};
+
+// Soft refresh — fetch new tickets via REST and reconcile in place. Used
+// by the post-edit/post-create hook from `useTicketsStore.triggerRefresh`
+// as a fallback when the realtime broadcast may not arrive before the
+// modal closes (e.g. after rapid edits, or if WebSocket is disconnected).
+// Cards are diff-merged into `localTickets` so positions stay stable.
+const softRefreshTickets = async () => {
+	const filter = generateFilter();
+	const tickets = await fetchTicketsViaREST(filter);
+	if (Array.isArray(tickets)) reconcileLocalTickets(tickets);
+};
+
+// Diff a fresh server snapshot of tickets against the current
+// `localTickets` column buckets and apply minimal mutations: in-place
+// field patches, splice-and-move on status change, append new, drop
+// removed. Used by the realtime watcher to avoid the "edit a ticket →
+// every card jumps" rebuild that `processTickets` causes.
+const reconcileLocalTickets = (tickets) => {
+	if (!Array.isArray(tickets)) return;
+
+	const serverById = new Map();
+	for (const t of tickets) if (t && t.id) serverById.set(t.id, t);
+
+	// Index every locally-rendered ticket by id so we can find which
+	// column it currently lives in without a linear scan per ticket.
+	const localById = new Map(); // id → { ticket, colId }
+	for (const colId of Object.keys(localTickets.value)) {
+		for (const t of localTickets.value[colId] || []) {
+			if (t && t.id) localById.set(t.id, { ticket: t, colId });
+		}
+	}
+
+	// Walk the server snapshot.
+	for (const [id, serverTicket] of serverById) {
+		const local = localById.get(id);
+		const targetCol = columns.some((c) => c.id === serverTicket.status)
+			? serverTicket.status
+			: columns[0].id;
+
+		if (!local) {
+			// Brand new ticket — push to the top of its column. Preserve
+			// any caller-supplied counts (Create flow may pre-attach 0).
+			if (typeof serverTicket.comments !== 'number') serverTicket.comments = 0;
+			if (typeof serverTicket.commentsCount !== 'number') serverTicket.commentsCount = 0;
+			(localTickets.value[targetCol] ||= []).unshift(serverTicket);
+			continue;
+		}
+
+		if (local.colId !== targetCol) {
+			// Status changed — move between columns.
+			const fromCol = localTickets.value[local.colId];
+			const idx = fromCol.findIndex((t) => t.id === id);
+			if (idx !== -1) fromCol.splice(idx, 1);
+			// Patch the server fields onto the existing object so the
+			// reference stays stable for any consumer that holds it.
+			Object.assign(local.ticket, serverTicket);
+			(localTickets.value[targetCol] ||= []).unshift(local.ticket);
+		} else {
+			// Same column — patch in place, preserving comment counts.
+			const prevComments = local.ticket.comments;
+			const prevCommentsCount = local.ticket.commentsCount;
+			Object.assign(local.ticket, serverTicket);
+			if (typeof prevComments === 'number') local.ticket.comments = prevComments;
+			if (typeof prevCommentsCount === 'number') local.ticket.commentsCount = prevCommentsCount;
+		}
+	}
+
+	// Anything in localById that's not in the server snapshot was
+	// deleted (or filtered out) — remove from its column.
+	for (const [id, { colId }] of localById) {
+		if (!serverById.has(id)) {
+			const arr = localTickets.value[colId];
+			const idx = arr.findIndex((t) => t.id === id);
+			if (idx !== -1) arr.splice(idx, 1);
+		}
+	}
 };
 
 // Process tickets into columns
@@ -837,9 +930,13 @@ const processTickets = (tickets) => {
 	localTickets.value = newLocalTickets;
 };
 
-// Handle newly created ticket
+// Handle newly created ticket. Realtime usually delivers the create
+// event within a few hundred ms, but the modal closes immediately after
+// emit, so we soft-fetch (REST + reconcile) to make sure the new card
+// appears even if the WebSocket is reconnecting. Reconcile is a no-op
+// for tickets already pushed by realtime — dedup is by id.
 const handleTicketCreated = () => {
-	refreshData();
+	softRefreshTickets();
 };
 
 // Check for active filters
@@ -1061,7 +1158,12 @@ onMounted(async () => {
 	cleanupMobileDetection = setupMobileDetection();
 
 	// Register refresh callback
-	registerRefreshCallback(refreshData);
+	// Edits/creates in the ExpandableCard modal call `triggerRefresh()`
+	// from `useTicketsStore` to ask the board to re-sync. Wire that to
+	// the in-place reconciler instead of a full hard refresh — the latter
+	// re-sorts every column by -date_updated and made cards "jump" to
+	// the top after every edit.
+	registerRefreshCallback(softRefreshTickets);
 
 	// Set up cross-tab sync
 	setupOrgListeners();

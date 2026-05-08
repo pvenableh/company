@@ -42,7 +42,6 @@ export interface UnifiedTimelineData {
 }
 
 export function useUnifiedTimeline(opts: { portal?: boolean } = {}) {
-	const projectItems = opts.portal ? (usePortalItems('projects') as any) : useDirectusItems('projects');
 	const ticketItems = opts.portal ? (usePortalItems('tickets') as any) : useDirectusItems('tickets');
 	const taskItems = opts.portal ? (usePortalItems('tasks') as any) : useDirectusItems('tasks');
 	const { selectedOrg } = useOrganization();
@@ -82,20 +81,12 @@ export function useUnifiedTimeline(opts: { portal?: boolean } = {}) {
 		try {
 			const orgId = selectedOrg.value;
 
-			// Fetch projects with events and tasks
-			const projects = await projectItems.list({
-				filter: opts.portal ? undefined : { organization: { _eq: orgId } },
-				fields: [
-					'*',
-					'events.*',
-					'events.tasks.*',
-					'events.files.directus_files_id',
-					'assigned_to.directus_users_id.*',
-					'children.*',
-				],
-				sort: ['-date_created'],
-				limit: 50,
-			});
+			// Projects are loaded by useProjectTimeline (shallow list +
+			// per-project lazy detail expand). The unified Gantt only reads
+			// tickets and personal tasks from this composable, so we no
+			// longer issue a projects query here — keeping it would deep-walk
+			// events/tasks/files for every project on cold mount.
+			const projects: ProjectWithRelations[] = [];
 
 			// Fetch tickets
 			const tickets = await ticketItems.list({

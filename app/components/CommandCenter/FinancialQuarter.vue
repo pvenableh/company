@@ -80,7 +80,7 @@ const loadFinancials = async () => {
 		// Fetch invoices and expenses in parallel
 		const [invoices, expenseRecords] = await Promise.all([
 			invoiceItems.list({
-				fields: ['id', 'status', 'invoice_date', 'due_date', 'total_amount', 'bill_to.name'],
+				fields: ['id', 'status', 'invoice_date', 'due_date', 'total_amount'],
 				filter: invoiceFilter,
 				sort: ['invoice_date'],
 				limit: 500,

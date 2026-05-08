@@ -75,7 +75,10 @@ export function useRealtimeSubscription(collection, fields, initialFilter, sort 
 						fields,
 						filter: currentFilter.value,
 						sort: sort ? [sort] : undefined,
-						limit: -1,
+						// Cap initial REST hydrate. WebSocket then reconciles via `init`.
+						// 200 covers every active board/list use we have today; raise per-caller
+						// if a future consumer genuinely needs more than the freshest 200 rows.
+						limit: 200,
 					},
 				},
 			});

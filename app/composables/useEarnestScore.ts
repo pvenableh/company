@@ -597,9 +597,10 @@ export const useEarnestScore = () => {
 			};
 
 			// ── Toast notifications ──
-			if (epEarned > 0) {
-				toast.add({ title: `+${epEarned} EP`, description: 'Daily score synced', color: 'primary', icon: 'i-heroicons-sparkles' });
-			}
+			// The bare "+EP" toast was removed: it fired on every cold mount
+			// (any EP delta) and added nothing the score pill at the top of
+			// the Command Center isn't already showing. Badge unlocks and
+			// level-ups stay — those are real moments worth surfacing.
 			for (const badgeId of newBadges.value) {
 				const badge = BADGES.find((b) => b.id === badgeId);
 				if (badge) {

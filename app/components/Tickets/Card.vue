@@ -1,146 +1,135 @@
 <template>
-	<div class="w-full mb-2 transition-all group ios-press">
-		<div class="ios-card p-4 relative">
-			<!-- Header: Priority + Progress -->
-			<div class="flex items-center justify-between mb-3">
-				<div class="flex items-center gap-2">
-					<span
-						v-if="element?.status !== 'Completed'"
-						class="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md"
-						:class="priorityStyle"
+	<div class="w-full mb-2 group ios-press">
+		<div
+			class="ios-card p-4 cursor-pointer transition-all relative"
+			@click="$emit('edit', element)"
+		>
+			<!-- Top row: status dot + title + assignee stack -->
+			<div class="flex items-start gap-2">
+				<span
+					class="shrink-0 mt-1 w-2 h-2 rounded-full"
+					:style="{ backgroundColor: statusAccent }"
+					:title="element?.status"
+				/>
+
+				<div class="flex-1 min-w-0">
+					<p
+						class="text-xs font-medium leading-snug line-clamp-2"
+						:class="element?.status === 'Completed' ? 'text-muted-foreground line-through' : 'text-foreground'"
 					>
-						{{ element?.priority }}
-					</span>
-					<span
-						v-else
-						class="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md text-emerald-500 bg-emerald-500/10"
-					>
-						Completed
-					</span>
-				</div>
-				<!-- Action buttons -->
-				<div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity" @click.stop>
-					<UTooltip text="Archive" :popper="{ arrow: true }">
-						<UButton
-							color="gray"
-							variant="ghost"
-							icon="i-heroicons-archive-box-arrow-down"
-							size="xs"
-							@click="$emit('archive', element?.id)"
-						/>
-					</UTooltip>
-					<UPopover mode="click" :popper="{ placement: 'left', offsetDistance: 3 }">
-						<UButton color="gray" variant="ghost" icon="i-heroicons-information-circle" size="xs" />
-						<template #panel>
-							<div class="p-2.5 text-muted-foreground font-medium text-[10px] leading-relaxed">
-								<span v-html="getTicketInfo"></span>
-							</div>
-						</template>
-					</UPopover>
-				</div>
-			</div>
+						{{ element?.title }}
+					</p>
 
-			<!-- Title -->
-			<div class="block mb-3 cursor-pointer" @click="$emit('edit', element)">
-				<h4 class="text-sm font-semibold text-foreground line-clamp-2 leading-snug">
-					{{ element?.title }}
-				</h4>
-			</div>
-
-			<!-- Meta: Client/Organization & Team -->
-			<div v-if="element?.client || element?.organization || element?.team" class="flex flex-col gap-1 mb-3">
-				<div v-if="element?.client || element?.organization" class="flex items-center gap-1.5 text-xs text-muted-foreground">
-					<UIcon name="i-heroicons-building-office" class="w-3.5 h-3.5 flex-shrink-0" />
-					<span class="truncate">{{ element?.client?.name || element?.organization?.name }}</span>
-				</div>
-				<div v-if="element?.team" class="flex items-center gap-1.5 text-xs text-muted-foreground">
-					<UIcon name="i-heroicons-user-group" class="w-3.5 h-3.5 flex-shrink-0" />
-					<span class="truncate">{{ element?.team?.name }}</span>
-				</div>
-			</div>
-
-			<!-- Progress Bar (tasks) -->
-			<div v-if="progress > 0" class="mb-3">
-				<div class="flex items-center justify-between text-[10px] mb-1">
-					<span class="text-muted-foreground">Tasks</span>
-					<span class="font-semibold" :class="progress >= 90 ? 'text-emerald-500' : progress >= 50 ? 'text-blue-500' : 'text-muted-foreground'">
-						{{ progress }}%
-					</span>
-				</div>
-				<div class="h-1 bg-muted rounded-full overflow-hidden">
-					<div
-						class="h-full rounded-full transition-all duration-500"
-						:class="progress >= 90 ? 'bg-emerald-500' : progress >= 50 ? 'bg-blue-500' : progress >= 25 ? 'bg-amber-500' : 'bg-red-500'"
-						:style="{ width: progress + '%' }"
-					/>
-				</div>
-			</div>
-
-			<!-- Assigned Users -->
-			<div class="flex items-center justify-between mb-3">
-				<div class="flex -space-x-1.5">
-					<template v-if="assignedUsers.length">
-						<UTooltip v-for="(user, index) in displayUsers" :key="index" :text="getUserFullName(user)">
-							<UAvatar
-								:src="getAvatarUrl(user)"
-								:alt="getUserFullName(user)"
-								size="xs"
-								:class="{
-									'ring-2 ring-primary/30 ring-offset-1 ring-offset-card': isCurrentUser(user),
-								}"
+					<!-- Meta row: priority + due date + client + team -->
+					<div class="flex items-center gap-2 mt-1.5 flex-wrap">
+						<span
+							v-if="element?.priority && element.priority !== 'medium'"
+							class="text-[8px] uppercase font-bold tracking-wider"
+							:class="priorityTextClass"
+						>
+							{{ element.priority }}
+						</span>
+						<span
+							v-if="element?.due_date && element?.status !== 'Completed'"
+							class="text-[10px] flex items-center gap-0.5"
+							:class="dueDateTextClass"
+						>
+							<UIcon
+								v-if="dueDateUrgency === 'past' || dueDateUrgency === 'urgent'"
+								name="i-heroicons-exclamation-triangle"
+								class="w-2.5 h-2.5"
 							/>
-						</UTooltip>
-						<UTooltip v-if="additionalUsersCount > 0" :text="getAdditionalUsersTooltip">
-							<div
-								class="flex items-center justify-center w-6 h-6 text-[10px] font-semibold text-muted-foreground bg-muted/60 rounded-full border-2 border-card"
-							>
-								+{{ additionalUsersCount }}
-							</div>
-						</UTooltip>
-					</template>
-					<UTooltip v-else text="Unassigned">
-						<UAvatar icon="i-heroicons-user" size="xs" class="opacity-40" />
-					</UTooltip>
+							<UIcon v-else name="i-heroicons-calendar" class="w-2.5 h-2.5" />
+							{{ formatDueDate(element.due_date) }}
+						</span>
+						<span
+							v-else-if="element?.status === 'Completed'"
+							class="text-[10px] text-muted-foreground"
+						>
+							{{ getFriendlyDate(element?.date_updated) }}
+						</span>
+						<span
+							v-if="clientLabel"
+							class="text-[10px] text-muted-foreground truncate max-w-[120px]"
+						>
+							{{ clientLabel }}
+						</span>
+						<span
+							v-if="element?.team?.name"
+							class="text-[10px] text-muted-foreground flex items-center gap-0.5"
+						>
+							<UIcon name="i-heroicons-user-group" class="w-2.5 h-2.5" />
+							{{ element.team.name }}
+						</span>
+					</div>
 				</div>
 
-				<!-- Due Date / Completed Date -->
-				<div v-if="element?.due_date && element?.status !== 'Completed'">
-					<span
-						class="text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded-md inline-flex items-center gap-1"
-						:class="dueDateStyle"
+				<!-- Assignees -->
+				<div v-if="assignedUsers.length" class="shrink-0 flex -space-x-1">
+					<UTooltip
+						v-for="(u, i) in displayUsers"
+						:key="i"
+						:text="getUserFullName(u)"
 					>
-						<UIcon
-							v-if="dueDateUrgency === 'past' || dueDateUrgency === 'urgent'"
-							name="i-heroicons-exclamation-triangle"
-							class="w-3 h-3"
+						<UAvatar
+							:src="getAvatarUrl(u)"
+							:alt="getUserFullName(u)"
+							size="2xs"
+							:class="{ 'ring-1 ring-primary/40': isCurrentUser(u) }"
 						/>
-						<UIcon v-else name="i-heroicons-calendar" class="w-3 h-3" />
-						{{ formatDueDate(element?.due_date) }}
-					</span>
-				</div>
-				<div v-else-if="element?.status === 'Completed'" class="text-[10px] text-muted-foreground">
-					{{ getFriendlyDate(element?.date_updated) }}
+					</UTooltip>
+					<UTooltip
+						v-if="additionalUsersCount > 0"
+						:text="getAdditionalUsersTooltip"
+					>
+						<div
+							class="flex items-center justify-center w-5 h-5 text-[8px] font-semibold text-muted-foreground bg-muted/60 rounded-full border border-card"
+						>
+							+{{ additionalUsersCount }}
+						</div>
+					</UTooltip>
 				</div>
 			</div>
 
-			<!-- Footer: Reactions + Counts -->
-			<div class="flex items-center justify-between pt-3 border-t border-border/40">
+			<!-- Slim progress bar (only when there are tasks) -->
+			<div v-if="progress > 0" class="mt-3 h-0.5 bg-muted/40 rounded-full overflow-hidden">
+				<div
+					class="h-full transition-all duration-500"
+					:class="progress >= 90 ? 'bg-emerald-500' : progress >= 50 ? 'bg-blue-500' : progress >= 25 ? 'bg-amber-500' : 'bg-red-500'"
+					:style="{ width: progress + '%' }"
+				/>
+			</div>
+
+			<!-- Footer: reactions + counts -->
+			<div v-if="hasFooter" class="flex items-center justify-between mt-3">
 				<ReactionsBar :item-id="element.id" collection="tickets" />
-				<div class="flex items-center gap-3 text-xs text-muted-foreground">
-					<UTooltip v-if="commentsCount > 0" :text="commentsCount + (commentsCount === 1 ? ' Comment' : ' Comments')" :popper="{ arrow: true }">
-						<div class="flex items-center gap-1">
-							<UIcon name="i-heroicons-chat-bubble-left-right" class="w-3.5 h-3.5" />
-							<span class="text-[11px]">{{ commentsCount }}</span>
-						</div>
+				<div class="flex items-center gap-2.5 text-[10px] text-muted-foreground">
+					<UTooltip
+						v-if="commentsCount > 0"
+						:text="commentsCount + (commentsCount === 1 ? ' Comment' : ' Comments')"
+					>
+						<span class="flex items-center gap-0.5">
+							<UIcon name="i-heroicons-chat-bubble-left-right" class="w-2.5 h-2.5" />
+							{{ commentsCount }}
+						</span>
 					</UTooltip>
-					<UTooltip v-if="tasksCount > 0" :text="tasksCount + ' tasks'" :popper="{ arrow: true }">
-						<div class="flex items-center gap-1">
-							<UIcon name="i-heroicons-check-circle" class="w-3.5 h-3.5" />
-							<span class="text-[11px]">{{ tasksCount }}</span>
-						</div>
+					<UTooltip v-if="tasksCount > 0" :text="tasksCount + ' tasks'">
+						<span class="flex items-center gap-0.5">
+							<UIcon name="i-heroicons-check-circle" class="w-2.5 h-2.5" />
+							{{ tasksCount }}
+						</span>
 					</UTooltip>
 				</div>
 			</div>
+
+			<!-- Hover archive button -->
+			<button
+				class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-muted/40"
+				:title="'Archive'"
+				@click.stop="$emit('archive', element?.id)"
+			>
+				<UIcon name="i-heroicons-archive-box-arrow-down" class="w-3 h-3 text-muted-foreground" />
+			</button>
 		</div>
 	</div>
 </template>
@@ -153,115 +142,96 @@ const props = defineProps({
 	},
 });
 
-const emit = defineEmits(['archive', 'edit']);
+defineEmits(['archive', 'edit']);
 
 const { user } = useDirectusAuth();
+const { getStatusAccent } = useStatusStyle();
 
-// Priority styling
-const priorityStyle = computed(() => {
-	const styles = {
-		low: 'text-gray-500 bg-gray-500/10',
-		medium: 'text-blue-500 bg-blue-500/10',
-		high: 'text-orange-500 bg-orange-500/10',
-		urgent: 'text-red-500 bg-red-500/10',
-	};
-	return styles[props.element?.priority] || styles.low;
+const statusAccent = computed(() => getStatusAccent(props.element?.status));
+
+const priorityTextClass = computed(() => {
+	const p = props.element?.priority;
+	if (p === 'urgent') return 'text-red-500';
+	if (p === 'high') return 'text-orange-500';
+	if (p === 'low') return 'text-muted-foreground';
+	return 'text-muted-foreground';
 });
 
-// Due date urgency
 const dueDateUrgency = computed(() => formatDueDateStatus(props.element?.due_date));
 
-const dueDateStyle = computed(() => {
-	const styles = {
-		past: 'text-red-500 bg-red-500/10',
-		urgent: 'text-orange-500 bg-orange-500/10',
-		medium: 'text-yellow-600 bg-yellow-500/10',
-	};
-	return styles[dueDateUrgency.value] || 'text-muted-foreground bg-muted/40';
+const dueDateTextClass = computed(() => {
+	const u = dueDateUrgency.value;
+	if (u === 'past') return 'text-red-500';
+	if (u === 'urgent') return 'text-orange-500';
+	if (u === 'medium') return 'text-yellow-600';
+	return 'text-muted-foreground';
 });
 
+const clientLabel = computed(
+	() => props.element?.client?.name || props.element?.organization?.name || '',
+);
+
 const commentsCount = computed(() => {
-	if (typeof props.element.comments === 'number') return props.element.comments;
-	if (Array.isArray(props.element.comments)) return props.element.comments.length;
+	const c = props.element?.comments;
+	if (typeof c === 'number') return c;
+	if (Array.isArray(c)) return c.length;
 	return 0;
 });
 
 const tasksCount = computed(() => {
-	if (typeof props.element.tasks === 'number') return props.element.tasks;
-	if (Array.isArray(props.element.tasks)) return props.element.tasks.length;
+	const t = props.element?.tasks;
+	if (typeof t === 'number') return t;
+	if (Array.isArray(t)) return t.length;
 	return 0;
 });
 
-const assignedUsers = computed(() => {
-	return props.element?.assigned_to?.map((assignment) => assignment.directus_users_id) || [];
-});
+const hasFooter = computed(() => commentsCount.value > 0 || tasksCount.value > 0);
+
+const assignedUsers = computed(
+	() => props.element?.assigned_to?.map((a) => a.directus_users_id) || [],
+);
 
 const progress = computed(() => {
-	if (typeof props.element.tasks === 'number') return 0;
-	if (!props.element.tasks || !Array.isArray(props.element.tasks) || props.element.tasks.length === 0) return 0;
-	const completedTasks = props.element.tasks.filter((task) => task && task.status === 'completed').length;
-	return Math.round((completedTasks / props.element.tasks.length) * 100);
+	const t = props.element?.tasks;
+	if (!Array.isArray(t) || t.length === 0) return 0;
+	const completed = t.filter((task) => task && task.status === 'completed').length;
+	return Math.round((completed / t.length) * 100);
 });
 
 const MAX_DISPLAYED_USERS = 3;
 
-const displayUsers = computed(() => {
-	return [...assignedUsers.value]
+const displayUsers = computed(() =>
+	[...assignedUsers.value]
 		.sort((a, b) => {
 			if (isCurrentUser(a)) return -1;
 			if (isCurrentUser(b)) return 1;
 			return 0;
 		})
-		.slice(0, MAX_DISPLAYED_USERS);
-});
+		.slice(0, MAX_DISPLAYED_USERS),
+);
 
-const additionalUsersCount = computed(() => {
-	return Math.max(0, assignedUsers.value.length - MAX_DISPLAYED_USERS);
-});
+const additionalUsersCount = computed(() =>
+	Math.max(0, assignedUsers.value.length - MAX_DISPLAYED_USERS),
+);
 
 const getAdditionalUsersTooltip = computed(() => {
-	const additionalUsers = assignedUsers.value
+	const additional = assignedUsers.value
 		.slice(MAX_DISPLAYED_USERS)
-		.map((user) => getUserFullName(user))
+		.map((u) => getUserFullName(u))
 		.join(', ');
-	return `Also assigned: ${additionalUsers}`;
+	return `Also assigned: ${additional}`;
 });
 
-const isCurrentUser = (assignedUser) => {
-	return assignedUser?.id === user?.value?.id;
+const isCurrentUser = (assigned) => assigned?.id === user?.value?.id;
+
+const getAvatarUrl = (u) => {
+	if (!u?.avatar) return null;
+	return `${useRuntimeConfig().public.directusUrl}/assets/${u.avatar}?key=small`;
 };
 
-const getAvatarUrl = (user) => {
-	if (!user?.avatar) return null;
-	return `${useRuntimeConfig().public.directusUrl}/assets/${user.avatar}?key=small`;
+const getUserFullName = (assigned) => {
+	if (!assigned) return 'Unknown';
+	if (assigned.id === user.value?.id) return 'You';
+	return `${assigned.first_name} ${assigned.last_name}`.trim();
 };
-
-const getUserFullName = (assignedUser) => {
-	if (!assignedUser) return 'Unknown';
-	if (assignedUser.id === user.value.id) return 'You';
-	return `${assignedUser.first_name} ${assignedUser.last_name}`.trim();
-};
-
-const getTicketInfo = computed(() => {
-	if (!props.element) return '';
-
-	const creator =
-		props.element.user_created?.first_name && props.element.user_created?.last_name
-			? `${props.element.user_created.first_name} ${props.element.user_created.last_name}`
-			: 'Unknown';
-
-	const updater =
-		props.element.user_updated?.first_name && props.element.user_updated?.last_name
-			? `${props.element.user_updated.first_name} ${props.element.user_updated.last_name}`
-			: 'Unknown';
-
-	const created = formatDateWithTime(props.element.date_created);
-	const updated = formatDateWithTime(props.element.date_updated);
-
-	const person = creator === updater ? `Created by: ${creator}` : `Updated by: ${updater}`;
-	const time = creator === updater ? `Created on: ${created}` : `Updated on: ${updated}`;
-
-	return `${person} <br/> ${time}`;
-});
 </script>
-

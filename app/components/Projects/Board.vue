@@ -263,6 +263,7 @@ const props = defineProps({
 
 const serviceItems = useDirectusItems('services');
 const projectItems = props.portal ? usePortalItems('projects') : useDirectusItems('projects');
+const commentItems = useDirectusItems('directus_comments');
 const { user } = useDirectusAuth();
 const { selectedOrg, hasMultipleOrgs, organizationOptions, setOrganization, clearOrganization, getOrganizationFilter } =
 	useOrganization();
@@ -300,7 +301,8 @@ const showTimelineWizard = ref(false);
 const lastCreatedProject = ref(null);
 
 const handleTimelineCreated = () => {
-	refresh();
+	// Realtime delivers the new events/tasks attached to the project;
+	// no need for a hard refresh that re-sorts every column.
 };
 
 const resetNewProjectForm = () => {
@@ -339,7 +341,11 @@ const handleCreateProject = async () => {
 		}
 
 		const created = await projectItems.create(data);
-		await refresh();
+		// Realtime broadcast will deliver the new project to the
+		// subscription within a few hundred ms. Optimistically push it
+		// into its column now so the user sees it without waiting.
+		const targetCol = columns.some((c) => c.id === created.status) ? created.status : columns[0].id;
+		(localProjects.value[targetCol] ||= []).unshift(created);
 
 		// Build project data for timeline wizard
 		const service = serviceOptions.value.find((s) => s.id === newProjectForm.service);
@@ -391,26 +397,25 @@ const fetchServices = async () => {
 	}
 };
 
+// Projects board fields — kept minimal for cold-mount payload size.
+// Card.vue is the only consumer; FormModal is opened from /projects/[id], not
+// from the board, so it fetches its own data and we don't need to preload edit-form fields.
+// `events` and `tickets` are returned as UUID-only arrays from Directus o2m FKs (~40B each),
+// kept rather than replaced with count() aggregates to avoid risk on the WebSocket subscription path.
 const fields = [
 	'id',
 	'title',
-	'description',
 	'status',
-	'date_created',
 	'date_updated',
-	'user_created.first_name',
-	'user_created.last_name',
-	'user_updated.first_name',
-	'user_updated.last_name',
 	'organization.id',
 	'organization.name',
+	'client.id',
+	'client.name',
 	'tickets',
 	'events',
 	'service.id',
 	'service.name',
 	'service.color',
-	'sort',
-	'assigned_to.id',
 	'assigned_to.directus_users_id.id',
 	'assigned_to.directus_users_id.first_name',
 	'assigned_to.directus_users_id.last_name',
@@ -505,23 +510,106 @@ watch(filterRef, () => {
 	if (props.portal) fetchPortalProjects();
 });
 
-watch([() => projects.value, selectedOrg, selectedClient, selectedService, filterByAssignedTo], ([newProjects]) => {
-	if (!newProjects) return;
-
-	const filtered = newProjects.filter((project) => {
+// Filter helper — applied to whatever subset we're reconciling.
+const applyClientFilters = (list) =>
+	list.filter((project) => {
 		const orgMatch = !selectedOrg.value || project.organization?.id === selectedOrg.value;
 		const serviceMatch = !selectedService.value || project.service?.id === selectedService.value;
 		let assignmentMatch = true;
 		if (filterByAssignedTo.value && user.value) {
 			assignmentMatch = project.assigned_to?.some((assignment) => assignment.directus_users_id?.id === user.value.id);
 		}
-		const clientMatch = true; // Client filtering is handled server-side via subscription
-		return orgMatch && clientMatch && serviceMatch && assignmentMatch;
+		// Client filtering is handled server-side via the realtime subscription.
+		return orgMatch && serviceMatch && assignmentMatch;
 	});
 
-	columns.forEach((column) => {
-		localProjects.value[column.id] = filtered.filter((project) => project.status === column.id);
-	});
+// Diff a fresh project list against the current `localProjects` columns
+// and apply minimal mutations: in-place patches for unchanged status,
+// splice + unshift on status change, append for new, drop for removed.
+// Avoids the "every realtime tick rebuilds every column" churn that
+// VueDraggable interprets as a reorder, plus prevents edit/create from
+// shoving cards to the top of their column.
+const reconcileLocalProjects = (incoming) => {
+	const filtered = applyClientFilters(incoming);
+	const serverById = new Map();
+	for (const p of filtered) if (p && p.id) serverById.set(p.id, p);
+
+	const localById = new Map(); // id → { project, colId }
+	for (const colId of Object.keys(localProjects.value)) {
+		for (const p of localProjects.value[colId] || []) {
+			if (p && p.id) localById.set(p.id, { project: p, colId });
+		}
+	}
+
+	for (const [id, serverProject] of serverById) {
+		const local = localById.get(id);
+		const targetCol = columns.some((c) => c.id === serverProject.status)
+			? serverProject.status
+			: columns[0].id;
+
+		if (!local) {
+			(localProjects.value[targetCol] ||= []).unshift(serverProject);
+			continue;
+		}
+
+		if (local.colId !== targetCol) {
+			const fromCol = localProjects.value[local.colId];
+			const idx = fromCol.findIndex((p) => p.id === id);
+			if (idx !== -1) fromCol.splice(idx, 1);
+			Object.assign(local.project, serverProject);
+			(localProjects.value[targetCol] ||= []).unshift(local.project);
+		} else {
+			Object.assign(local.project, serverProject);
+		}
+	}
+
+	// Removed (or filtered out) — drop from its column.
+	for (const [id, { colId }] of localById) {
+		if (!serverById.has(id)) {
+			const arr = localProjects.value[colId];
+			const idx = arr.findIndex((p) => p.id === id);
+			if (idx !== -1) arr.splice(idx, 1);
+		}
+	}
+};
+
+// Full rebuild — used only on hard reset (initial load, org/client switch).
+const rebuildLocalProjects = (incoming) => {
+	const filtered = applyClientFilters(incoming);
+	const fresh = columns.reduce((acc, col) => {
+		acc[col.id] = [];
+		return acc;
+	}, {});
+	for (const project of filtered) {
+		const col = columns.some((c) => c.id === project.status) ? project.status : columns[0].id;
+		fresh[col].push(project);
+	}
+	localProjects.value = fresh;
+};
+
+// Track whether we've ever rendered the board so we know when to do a
+// full rebuild vs a diff-merge. Filter changes (org/client/service/me)
+// always rebuild — the result set is genuinely different. Realtime
+// updates on the project list reconcile in place.
+let _projectsBoardInitialized = false;
+
+watch(
+	() => projects.value,
+	(newProjects) => {
+		if (!newProjects) return;
+		if (!_projectsBoardInitialized) {
+			rebuildLocalProjects(newProjects);
+			_projectsBoardInitialized = true;
+		} else {
+			reconcileLocalProjects(newProjects);
+		}
+	},
+	{ immediate: true },
+);
+
+// Filter changes are rebuild events — the result set scope changes.
+watch([selectedOrg, selectedClient, selectedService, filterByAssignedTo], () => {
+	if (projects.value) rebuildLocalProjects(projects.value);
 });
 
 watch(

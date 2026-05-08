@@ -11,119 +11,141 @@ const props = defineProps({
 });
 
 const { user } = useDirectusAuth();
+const { getStatusAccent } = useStatusStyle();
 
-const assignedUsers = computed(() => {
-	return props.project?.assigned_to?.map((assignment) => assignment.directus_users_id) || [];
-});
+const statusAccent = computed(() => getStatusAccent(props.project?.status));
 
-// Maximum number of avatars to display
+const assignedUsers = computed(
+	() => props.project?.assigned_to?.map((a) => a.directus_users_id) || [],
+);
+
 const MAX_DISPLAYED_USERS = 3;
 
-// Users to display in the avatar stack
-const displayUsers = computed(() => {
-	// Sort array to put current user first if they're assigned
-	return [...assignedUsers.value]
+const displayUsers = computed(() =>
+	[...assignedUsers.value]
 		.sort((a, b) => {
 			if (isCurrentUser(a)) return -1;
 			if (isCurrentUser(b)) return 1;
 			return 0;
 		})
-		.slice(0, MAX_DISPLAYED_USERS);
-});
+		.slice(0, MAX_DISPLAYED_USERS),
+);
 
-// Count of additional users not shown
-const additionalUsersCount = computed(() => {
-	return Math.max(0, assignedUsers.value.length - MAX_DISPLAYED_USERS);
-});
+const additionalUsersCount = computed(() =>
+	Math.max(0, assignedUsers.value.length - MAX_DISPLAYED_USERS),
+);
 
-const getUserFullName = (assignedUser) => {
-	if (!assignedUser) return 'Unknown';
-	if (assignedUser.id === user.value.id) return 'You';
-	return `${assignedUser.first_name} ${assignedUser.last_name}`.trim();
-};
-
-const getAvatarUrl = (user) => {
-	if (!user?.avatar) return null;
-	return `${useRuntimeConfig().public.directusUrl}/assets/${user.avatar}?key=small`;
-};
-
-// Tooltip text for additional users
 const getAdditionalUsersTooltip = computed(() => {
-	const additionalUsers = assignedUsers.value
+	const additional = assignedUsers.value
 		.slice(MAX_DISPLAYED_USERS)
-		.map((user) => getUserFullName(user))
+		.map((u) => getUserFullName(u))
 		.join(', ');
-	return `Also assigned: ${additionalUsers}`;
+	return `Also assigned: ${additional}`;
 });
 
-// Check if a user is the current authenticated user
-const isCurrentUser = (assignedUser) => {
-	return assignedUser?.id === user?.value?.id;
+const isCurrentUser = (assigned) => assigned?.id === user?.value?.id;
+
+const getAvatarUrl = (u) => {
+	if (!u?.avatar) return null;
+	return `${useRuntimeConfig().public.directusUrl}/assets/${u.avatar}?key=small`;
 };
+
+const getUserFullName = (assigned) => {
+	if (!assigned) return 'Unknown';
+	if (assigned.id === user.value?.id) return 'You';
+	return `${assigned.first_name} ${assigned.last_name}`.trim();
+};
+
+const eventCount = computed(() => props.project?.events?.length || 0);
+const ticketCount = computed(() => props.project?.tickets?.length || 0);
+const hasCounts = computed(() => eventCount.value > 0 || ticketCount.value > 0);
 </script>
+
 <template>
-	<nuxt-link :to="`/projects/${project.id}`" class="inline-block w-full mb-2 transition-all project-card">
-		<div class="ios-card transition-all w-full p-4">
-			<h5
-				class="t-label inline-flex rounded-full px-2 py-0.5 text-black"
-				:style="{ background: project.service?.color }"
-			>
-				{{ project.service?.name }}
-			</h5>
-			<h3 class="t-title font-medium text-foreground">{{ project.title }}</h3>
-			<h5 class="text-sm text-muted-foreground">{{ project.organization?.name }}</h5>
-			<!-- Assigned Users -->
-			<div class="w-full flex items-center justify-between text-xs text-muted-foreground mt-4">
-				<div class="flex items-center">
-					<!-- Avatar Stack -->
-					<div class="flex -space-x-1">
-						<template v-if="assignedUsers.length">
-							<UTooltip v-for="(user, index) in displayUsers" :key="index" :text="getUserFullName(user)">
-								<UAvatar
-									:src="getAvatarUrl(user)"
-									:alt="getUserFullName(user)"
-									size="xs"
-									:class="{
-										'ring-2 ring-cyan-500 ring-offset-2 shadow-lg ring-offset-card': isCurrentUser(user),
-										'-ml-1': true,
-									}"
-								/>
-							</UTooltip>
+	<nuxt-link
+		:to="`/projects/${project.id}`"
+		class="block w-full mb-2 transition-all project-card"
+	>
+		<div class="ios-card p-4 cursor-pointer transition-all">
+			<!-- Top row: status dot + title + assignees -->
+			<div class="flex items-start gap-2">
+				<span
+					class="shrink-0 mt-1 w-2 h-2 rounded-full"
+					:style="{ backgroundColor: statusAccent }"
+					:title="project?.status"
+				/>
 
-							<!-- Additional users count -->
-							<UTooltip v-if="additionalUsersCount > 0" :text="getAdditionalUsersTooltip">
-								<div
-									class="-ml-2 flex items-center justify-center w-6 h-6 text-xs font-medium text-muted-foreground bg-muted/40 rounded-full border-2 border-card"
-								>
-									+{{ additionalUsersCount }}
-								</div>
-							</UTooltip>
-						</template>
+				<div class="flex-1 min-w-0">
+					<p class="text-xs font-medium text-foreground leading-snug line-clamp-2">
+						{{ project?.title }}
+					</p>
 
-						<span v-else class="t-label text-muted-foreground">Unassigned</span>
+					<!-- Meta row: service + org + counts -->
+					<div class="flex items-center gap-2 mt-1.5 flex-wrap">
+						<span
+							v-if="project?.service?.name"
+							class="text-[8px] uppercase font-bold tracking-wider flex items-center gap-1"
+							:style="{ color: project?.service?.color || 'var(--muted-foreground)' }"
+						>
+							<span
+								class="w-1.5 h-1.5 rounded-full"
+								:style="{ backgroundColor: project?.service?.color || 'var(--muted-foreground)' }"
+							/>
+							{{ project.service.name }}
+						</span>
+						<span
+							v-if="project?.organization?.name"
+							class="text-[10px] text-muted-foreground truncate max-w-[140px]"
+						>
+							{{ project.organization.name }}
+						</span>
 					</div>
 				</div>
-			</div>
-		</div>
-		<div
-			v-if="project.events.length > 0 || project.tickets.length > 0"
-			class="w-full ios-card mt-1 px-2 py-1 flex flex-row items-center justify-between transition-all"
-		>
-			<!-- Ticket Footer -->
 
-			<div class="flex flex-row text-xs text-muted-foreground mr-3">
-				<div v-if="project.events.length > 0" class="flex items-center gap-1">
-					<UTooltip :text="project.events.length + ' events'" :popper="{ arrow: true }">
-						<UIcon name="i-heroicons-clock" class="w-4 h-4 inline-block mr-1" />
-						{{ project.events.length }}
+				<!-- Assignees -->
+				<div v-if="assignedUsers.length" class="shrink-0 flex -space-x-1">
+					<UTooltip
+						v-for="(u, i) in displayUsers"
+						:key="i"
+						:text="getUserFullName(u)"
+					>
+						<UAvatar
+							:src="getAvatarUrl(u)"
+							:alt="getUserFullName(u)"
+							size="2xs"
+							:class="{ 'ring-1 ring-primary/40': isCurrentUser(u) }"
+						/>
+					</UTooltip>
+					<UTooltip
+						v-if="additionalUsersCount > 0"
+						:text="getAdditionalUsersTooltip"
+					>
+						<div
+							class="flex items-center justify-center w-5 h-5 text-[8px] font-semibold text-muted-foreground bg-muted/60 rounded-full border border-card"
+						>
+							+{{ additionalUsersCount }}
+						</div>
 					</UTooltip>
 				</div>
-				<div v-if="project.tickets.length > 0" class="ml-2 flex items-center gap-1">
-					<UTooltip :text="project.tickets.length + ' tickets'" :popper="{ arrow: true }">
-						<UIcon name="i-heroicons-square-3-stack-3d" class="w-4 h-4 inline-block mr-1" />
-						{{ project.tickets.length }}
-					</UTooltip>
-				</div>
+			</div>
+
+			<!-- Footer: event/ticket counts -->
+			<div
+				v-if="hasCounts"
+				class="flex items-center gap-3 mt-3 text-[10px] text-muted-foreground"
+			>
+				<UTooltip v-if="eventCount > 0" :text="eventCount + ' events'">
+					<span class="flex items-center gap-0.5">
+						<UIcon name="i-heroicons-clock" class="w-2.5 h-2.5" />
+						{{ eventCount }}
+					</span>
+				</UTooltip>
+				<UTooltip v-if="ticketCount > 0" :text="ticketCount + ' tickets'">
+					<span class="flex items-center gap-0.5">
+						<UIcon name="i-heroicons-square-3-stack-3d" class="w-2.5 h-2.5" />
+						{{ ticketCount }}
+					</span>
+				</UTooltip>
 			</div>
 		</div>
 	</nuxt-link>

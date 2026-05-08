@@ -37,7 +37,7 @@ const {
 	personalTasks,
 } = useUnifiedTimeline({ portal: props.portal });
 
-const { projects, loading: projectsLoading, error, fetchProjects } = useProjectTimeline({ portal: props.portal });
+const { projects, loading: projectsLoading, error, fetchProjects, fetchProjectDetails, showAllCompleted, toggleShowAllCompleted } = useProjectTimeline({ portal: props.portal });
 const { user: authUser } = useDirectusAuth();
 const { selectedOrg } = useOrganization();
 const { selectedClient } = useClients();
@@ -118,12 +118,22 @@ onMounted(() => {
 // ── Expand / collapse ──
 function toggleProject(id: string) {
 	const s = new Set(expandedProjects.value);
-	if (s.has(id)) s.delete(id); else s.add(id);
+	if (s.has(id)) {
+		s.delete(id);
+	} else {
+		s.add(id);
+		// Lazy-load events/tasks for this project. The composable
+		// short-circuits if the detail set is already loaded or in flight.
+		void fetchProjectDetails(id);
+	}
 	expandedProjects.value = s;
 }
 
 function expandAll() {
 	expandedProjects.value = new Set(projects.value.map(p => p.id));
+	// Fan out detail fetches for every project so the events show up
+	// without an extra click.
+	void Promise.all(projects.value.map(p => fetchProjectDetails(p.id)));
 }
 
 // Auto-expand on first load when the project count is small. We watch
@@ -172,6 +182,10 @@ function projectHasDates(project: ProjectWithRelations): boolean {
 	for (const t of tickets) {
 		if (t.date_created || t.due_date) return true;
 	}
+	// Detail not loaded yet — give the project the benefit of the doubt
+	// rather than dumping it into the "undated" panel. Once events arrive
+	// via fetchProjectDetails this branch goes away.
+	if (project.events === undefined) return true;
 	return false;
 }
 
@@ -242,6 +256,11 @@ const rows = computed<GanttRow[]>(() => {
 			const tickets = ticketsByProject.value.get(project.id) || [];
 			const childCount = events.length + tickets.length;
 			const projectColor = project.service?.color || '#d4d4d8';
+			// Until a project's events have been lazy-loaded, we don't yet
+			// know if it has children — show the toggle anyway so the user
+			// can expand. Once `events` is set (even to an empty array) the
+			// real childCount governs whether the toggle stays.
+			const detailLoaded = project.events !== undefined;
 
 			result.push({
 				id: project.id,
@@ -252,7 +271,7 @@ const rows = computed<GanttRow[]>(() => {
 				status: project.status,
 				startDate: project.start_date,
 				endDate: project.completion_date,
-				hasChildren: childCount > 0,
+				hasChildren: childCount > 0 || !detailLoaded,
 				expanded: isExpanded,
 				link: props.portal ? undefined : `/projects/${project.id}`,
 			});
@@ -891,6 +910,24 @@ const showUndated = ref(false);
 				>
 					<Icon name="lucide:calendar-off" class="w-2.5 h-2.5" />
 					{{ undatedProjects.length }} undated
+				</button>
+				<!--
+					Older completed projects (>90 days) are excluded from the
+					initial fetch to keep cold-mount fast. This toggle re-runs
+					fetchProjects() with the date window dropped.
+				-->
+				<button
+					v-if="!portal"
+					@click="toggleShowAllCompleted"
+					:disabled="loading"
+					class="flex items-center gap-1 text-[9px] font-medium px-2 py-0.5 rounded-full transition-colors disabled:opacity-50"
+					:class="showAllCompleted
+						? 'text-foreground bg-muted/60'
+						: 'text-muted-foreground/70 bg-muted/20 hover:bg-muted/40'"
+					:title="showAllCompleted ? 'Showing all completed projects' : 'Load older completed projects'"
+				>
+					<Icon :name="showAllCompleted ? 'lucide:history' : 'lucide:history'" class="w-2.5 h-2.5" />
+					{{ showAllCompleted ? 'All time' : 'Show older' }}
 				</button>
 				<span class="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground/60 border border-border/40 px-2 py-0.5 rounded-full">
 					{{ quarterLabel }}

@@ -158,14 +158,19 @@ const newTaskTitles = reactive<Record<string, string>>({ todo: '', in_progress: 
 
 const isDragging = ref(false);
 
-const columns = [
+type TaskColumn = 'todo' | 'in_progress' | 'done';
+
+const columns: { key: TaskColumn; label: string; dotColor: string; badgeClass: string }[] = [
 	{ key: 'todo', label: 'To Do', dotColor: 'bg-blue-500', badgeClass: 'bg-blue-500/15 text-blue-600' },
 	{ key: 'in_progress', label: 'In Progress', dotColor: 'bg-amber-500', badgeClass: 'bg-amber-500/15 text-amber-600' },
 	{ key: 'done', label: 'Done', dotColor: 'bg-emerald-500', badgeClass: 'bg-emerald-500/15 text-emerald-600' },
 ];
 
-// Per-column reactive arrays for drag-and-drop
-const columnTasks = reactive<Record<string, any[]>>({ todo: [], in_progress: [], done: [] });
+// Per-column reactive arrays for drag-and-drop. Declared with explicit
+// keys rather than `Record<string, any[]>` so index access on a known key
+// returns `any[]` instead of `any[] | undefined` — this file references
+// columnTasks.todo / .in_progress / .done dozens of times.
+const columnTasks = reactive<Record<TaskColumn, any[]>>({ todo: [], in_progress: [], done: [] });
 
 const completedCount = computed(() => columnTasks.done.length);
 const allTasksCount = computed(() => columnTasks.todo.length + columnTasks.in_progress.length + columnTasks.done.length);
@@ -196,7 +201,7 @@ function distributeTasksToColumns() {
 }
 
 function getColumnTasks(status: string) {
-	return columnTasks[status] || [];
+	return columnTasks[status as TaskColumn] || [];
 }
 
 async function fetchTasks() {
@@ -224,7 +229,7 @@ async function fetchTasks() {
 	}
 }
 
-async function quickAdd(columnStatus: string) {
+async function quickAdd(columnStatus: TaskColumn) {
 	const title = newTaskTitles[columnStatus]?.trim();
 	if (!title) return;
 
@@ -247,9 +252,18 @@ async function quickAdd(columnStatus: string) {
 
 async function toggleComplete(task: any) {
 	const wasCompleted = task.completed;
+	const fromColumn = wasCompleted ? 'done' : (task.status === 'in_progress' ? 'in_progress' : 'todo');
+	const toColumn = wasCompleted ? 'todo' : 'done';
+
 	task.completed = !wasCompleted;
-	task.status = wasCompleted ? 'todo' : 'done';
-	distributeTasksToColumns();
+	task.status = toColumn;
+
+	// Splice from the old column and append to the new — no full
+	// re-distribution. Avoids tasks shuffling on every checkbox tick.
+	const idx = columnTasks[fromColumn].findIndex((t) => t.id === task.id);
+	if (idx !== -1) columnTasks[fromColumn].splice(idx, 1);
+	columnTasks[toColumn].push(task);
+
 	try {
 		await taskItems.update(task.id, {
 			completed: task.completed,
@@ -260,8 +274,10 @@ async function toggleComplete(task: any) {
 	} catch (err) {
 		// Revert
 		task.completed = wasCompleted;
-		task.status = wasCompleted ? 'done' : 'todo';
-		distributeTasksToColumns();
+		task.status = fromColumn;
+		const idxBack = columnTasks[toColumn].findIndex((t) => t.id === task.id);
+		if (idxBack !== -1) columnTasks[toColumn].splice(idxBack, 1);
+		columnTasks[fromColumn].push(task);
 	}
 }
 
@@ -290,8 +306,28 @@ async function handleTaskUpdate(taskId: string, payload: any) {
 	try {
 		await taskItems.update(taskId, payload);
 		const idx = allTasks.value.findIndex(t => t.id === taskId);
-		if (idx !== -1) Object.assign(allTasks.value[idx], payload);
-		if ('status' in payload || 'completed' in payload) distributeTasksToColumns();
+		if (idx === -1) return;
+		const task = allTasks.value[idx];
+		const oldColumn = task.completed
+			? 'done'
+			: task.status === 'in_progress'
+				? 'in_progress'
+				: 'todo';
+		Object.assign(task, payload);
+		// Move between columns only if the bucket actually changed —
+		// editing other fields keeps the card in place.
+		if ('status' in payload || 'completed' in payload) {
+			const newColumn = task.completed
+				? 'done'
+				: task.status === 'in_progress'
+					? 'in_progress'
+					: 'todo';
+			if (newColumn !== oldColumn) {
+				const fromIdx = columnTasks[oldColumn].findIndex(t => t.id === taskId);
+				if (fromIdx !== -1) columnTasks[oldColumn].splice(fromIdx, 1);
+				columnTasks[newColumn].push(task);
+			}
+		}
 		emit('statsChanged');
 	} catch (err) {
 		console.error('Failed to update task:', err);
@@ -302,7 +338,10 @@ async function handleTaskDelete(taskId: string) {
 	try {
 		await taskItems.remove(taskId);
 		allTasks.value = allTasks.value.filter(t => t.id !== taskId);
-		distributeTasksToColumns();
+		for (const colKey of (Object.keys(columnTasks) as TaskColumn[])) {
+			const idx = columnTasks[colKey].findIndex((t: any) => t.id === taskId);
+			if (idx !== -1) columnTasks[colKey].splice(idx, 1);
+		}
 		selectedTask.value = null;
 		emit('statsChanged');
 	} catch (err) {

@@ -36,8 +36,11 @@ export function useProjectTimeline(opts: { portal?: boolean } = {}) {
   const tasks = opts.portal
     ? (usePortalItems<ProjectTask>('project_tasks') as any)
     : useDirectusItems<ProjectTask>('project_tasks');
-  const { getReactionSummary } = useReactions();
-  const { getCommentCount } = useComments();
+  // Aggregate-only handles for batched comment/reaction count rollups.
+  // Skipped in portal mode — counts aren't displayed there and the portal
+  // proxy doesn't expose `comments` / `reactions` collections.
+  const commentItems = opts.portal ? null : useDirectusItems('comments');
+  const reactionItems = opts.portal ? null : useDirectusItems('reactions');
 
   const portalWriteGuard = (): never => {
     throw new Error('Mutations are disabled in portal mode');
@@ -47,9 +50,37 @@ export function useProjectTimeline(opts: { portal?: boolean } = {}) {
   const loading = ref(true);
   const error = ref<string | null>(null);
 
+  // When true, the 90-day date window on completed projects is dropped and
+  // every completed project is loaded. Off by default — the toggle UI in
+  // the Gantt toolbar flips it and re-fetches.
+  const showAllCompleted = useState('project-timeline-all-completed', () => false);
+
+  // Per-project lazy-load state. The shallow list query (below) doesn't
+  // walk into events/tasks/files; those arrive via fetchProjectDetails()
+  // when the user expands a project row. This map gates the detail fetch
+  // so re-expanding a row doesn't re-issue the request.
+  type ProjectDetailState = 'idle' | 'loading' | 'loaded';
+  const projectDetailState = useState<Record<string, ProjectDetailState>>(
+    'project-timeline-detail-state',
+    () => ({}),
+  );
+
+  // Shallow fields for the list query — just enough for the Gantt to
+  // render the project bar, parent/child grouping, and the toolbar
+  // metadata. Events/tasks/files are deferred to fetchProjectDetails().
   const projectFields = [
-    '*',
-    'category_id.*',
+    'id',
+    'title',
+    'status',
+    'color',
+    'start_date',
+    'due_date',
+    'completion_date',
+    'sort',
+    'service.name',
+    'service.color',
+    'organization.id',
+    'organization.name',
     'parent_id.id',
     'parent_id.title',
     'parent_id.color',
@@ -59,10 +90,17 @@ export function useProjectTimeline(opts: { portal?: boolean } = {}) {
     'user_created.first_name',
     'user_created.last_name',
     'user_created.avatar',
-    'service.name',
-    'service.color',
-    'organization.id',
-    'organization.name',
+    'category_id.*',
+    'children.id',
+    'children.title',
+    'children.color',
+    'children.status',
+  ];
+
+  // Detail fields fetched on row expand — events + their tasks + files,
+  // matching the nested shape the Gantt + event-detail modal expect.
+  const detailFields = [
+    'id',
     'events.id',
     'events.status',
     'events.title',
@@ -86,17 +124,17 @@ export function useProjectTimeline(opts: { portal?: boolean } = {}) {
     'events.files.directus_files_id.filename_download',
     'events.files.directus_files_id.type',
     'events.files.directus_files_id.filesize',
-    'children.id',
-    'children.title',
-    'children.color',
-    'children.status',
   ];
 
-  /** Existing project statuses considered visible for timeline display */
-  const TIMELINE_VISIBLE_STATUSES = ['In Progress', 'completed', 'Scheduled', 'Pending'];
-
-  /** Existing event statuses considered visible for timeline display */
+  /** Event statuses considered visible for timeline display (client-side filter) */
   const EVENT_VISIBLE_STATUSES = ['Active', 'Scheduled', 'Completed'];
+
+  /**
+   * Date-window for completed projects: include only those finished within
+   * the last 90 days. Active states (In Progress / Scheduled / Pending)
+   * are always shown regardless of dates.
+   */
+  const COMPLETED_WINDOW_DAYS = 90;
 
   const fetchProjects = async () => {
     if (!user.value?.id) {
@@ -116,11 +154,33 @@ export function useProjectTimeline(opts: { portal?: boolean } = {}) {
     error.value = null;
 
     try {
-      const filter: Record<string, any> = {
-        _and: [
-          { status: { _in: TIMELINE_VISIBLE_STATUSES } },
-        ],
-      };
+      const completedSince = new Date(
+        Date.now() - COMPLETED_WINDOW_DAYS * 86_400_000,
+      ).toISOString();
+
+      // When `showAllCompleted` is on, drop the date window and let every
+      // completed project through. Otherwise active states are always in,
+      // and `completed` requires a recent completion_date or date_updated.
+      const statusBranch = showAllCompleted.value
+        ? { status: { _in: ['In Progress', 'Scheduled', 'Pending', 'completed'] } }
+        : {
+            _or: [
+              { status: { _in: ['In Progress', 'Scheduled', 'Pending'] } },
+              {
+                _and: [
+                  { status: { _eq: 'completed' } },
+                  {
+                    _or: [
+                      { completion_date: { _gte: completedSince } },
+                      { date_updated: { _gte: completedSince } },
+                    ],
+                  },
+                ],
+              },
+            ],
+          };
+
+      const filter: Record<string, any> = { _and: [statusBranch] };
 
       // Portal proxy auto-scopes to org + client (parent_client walk),
       // so don't add manual conditions there — they'd just AND with the
@@ -133,50 +193,141 @@ export function useProjectTimeline(opts: { portal?: boolean } = {}) {
         }
       }
 
-      const result = await projects.list({
+      const result = (await projects.list({
         fields: projectFields,
         filter,
         sort: ['sort', 'start_date'],
         limit: -1,
-      });
+      })) as ProjectWithRelations[];
 
-      for (const project of result as ProjectWithRelations[]) {
-        if (project.events) {
-          project.events = (project.events as ProjectEventWithRelations[])
-            .filter((e) => EVENT_VISIBLE_STATUSES.includes(e.status))
-            .sort((a, b) => {
-              const dateA = a.event_date || a.date || '';
-              const dateB = b.event_date || b.date || '';
-              return new Date(dateA).getTime() - new Date(dateB).getTime();
-            });
-
-          for (const event of project.events as ProjectEventWithRelations[]) {
-            try {
-              const [commentCount, reactionSummary] = await Promise.all([
-                getCommentCount('project_events', event.id),
-                getReactionSummary('project_events', event.id),
-              ]);
-              event.comment_count = commentCount.total_count;
-              event.reaction_count = reactionSummary.totalCount;
-            } catch {
-              event.comment_count = 0;
-              event.reaction_count = 0;
-            }
-          }
+      // Preserve previously-loaded events for projects still present, so
+      // expanded rows don't flash empty across a shallow re-fetch (e.g.
+      // after a mutation). The detail re-fetch below replaces them with
+      // fresh data in the background.
+      const prevById = new Map(projectList.value.map((p) => [p.id, p]));
+      const previouslyLoadedIds: string[] = [];
+      for (const project of result) {
+        const prev = prevById.get(project.id);
+        if (prev && projectDetailState.value[project.id] === 'loaded') {
+          project.events = prev.events;
+          previouslyLoadedIds.push(project.id);
         }
-
         if (project.children) {
           project.children = (project.children as Project[]).filter((c) =>
-            ['In Progress', 'completed'].includes(c.status)
+            ['In Progress', 'completed'].includes(c.status ?? ''),
           ) as ProjectWithRelations[];
         }
       }
 
-      projectList.value = result as ProjectWithRelations[];
+      // Drop detail-state entries for projects that fell out of the list
+      // so the map doesn't grow unbounded across org/client switches.
+      const stillPresent = new Set(result.map((p) => p.id));
+      for (const id of Object.keys(projectDetailState.value)) {
+        if (!stillPresent.has(id)) delete projectDetailState.value[id];
+      }
+
+      projectList.value = result;
+
+      // Re-fetch detail for projects that were already expanded so their
+      // events stay in sync with the server. Reset to 'idle' first so
+      // fetchProjectDetails actually re-runs (it short-circuits on
+      // 'loading'/'loaded').
+      for (const id of previouslyLoadedIds) {
+        projectDetailState.value[id] = 'idle';
+      }
+      // Fire-and-forget — the shallow list resolve shouldn't block on
+      // refreshing nested detail.
+      void Promise.all(previouslyLoadedIds.map((id) => fetchProjectDetails(id)));
     } catch (e: any) {
       error.value = e.message || 'Failed to fetch projects';
     } finally {
       loading.value = false;
+    }
+  };
+
+  /**
+   * Lazy-load a single project's events/tasks/files plus comment + reaction
+   * counts. Idempotent: short-circuits if the project is currently loading
+   * or already loaded. The Gantt calls this when a project row is expanded.
+   */
+  const fetchProjectDetails = async (projectId: string): Promise<void> => {
+    const state = projectDetailState.value[projectId];
+    if (state === 'loading' || state === 'loaded') return;
+
+    projectDetailState.value[projectId] = 'loading';
+
+    try {
+      const detail = (await projects.get(projectId, {
+        fields: detailFields,
+      })) as ProjectWithRelations;
+
+      const rawEvents = (detail?.events || []) as ProjectEventWithRelations[];
+      const visibleEvents = rawEvents
+        .filter((e) => EVENT_VISIBLE_STATUSES.includes(e.status ?? ''))
+        .sort((a, b) => {
+          const dateA = a.event_date || a.date || '';
+          const dateB = b.event_date || b.date || '';
+          return new Date(dateA).getTime() - new Date(dateB).getTime();
+        });
+
+      // Comment + reaction count rollup, scoped to this project's visible
+      // events. Skipped in portal mode (the proxy doesn't expose those
+      // collections and counts aren't displayed there).
+      const visibleEventIds = visibleEvents.map((e) => e.id);
+      const commentCountByEvent = new Map<string, number>();
+      const reactionCountByEvent = new Map<string, number>();
+
+      if (visibleEventIds.length > 0 && commentItems && reactionItems) {
+        const [commentRows, reactionRows] = await Promise.all([
+          commentItems
+            .aggregate({
+              aggregate: { count: ['id'] },
+              groupBy: ['item'],
+              filter: {
+                collection: { _eq: 'project_events' },
+                item: { _in: visibleEventIds },
+              },
+            })
+            .catch(() => [] as any[]),
+          reactionItems
+            .aggregate({
+              aggregate: { count: ['id'] },
+              groupBy: ['item'],
+              filter: {
+                table: { _eq: 'project_events' },
+                item: { _in: visibleEventIds },
+              },
+            })
+            .catch(() => [] as any[]),
+        ]);
+
+        for (const row of (commentRows as any[]) || []) {
+          commentCountByEvent.set(row.item, parseInt(row.count?.id ?? row.count ?? 0));
+        }
+        for (const row of (reactionRows as any[]) || []) {
+          reactionCountByEvent.set(row.item, parseInt(row.count?.id ?? row.count ?? 0));
+        }
+      }
+
+      for (const event of visibleEvents) {
+        event.comment_count = commentCountByEvent.get(event.id) ?? 0;
+        event.reaction_count = reactionCountByEvent.get(event.id) ?? 0;
+      }
+
+      // Merge into the matching projectList entry. If the project is no
+      // longer in the list (org switch mid-flight, etc.) just drop the
+      // result silently.
+      const idx = projectList.value.findIndex((p) => p.id === projectId);
+      const target = idx !== -1 ? projectList.value[idx] : undefined;
+      if (target) {
+        target.events = visibleEvents;
+        projectList.value = [...projectList.value];
+      }
+
+      projectDetailState.value[projectId] = 'loaded';
+    } catch {
+      // Reset to idle on failure so the next expand can retry.
+      projectDetailState.value[projectId] = 'idle';
     }
   };
 
@@ -290,6 +441,11 @@ export function useProjectTimeline(opts: { portal?: boolean } = {}) {
     return null;
   };
 
+  const toggleShowAllCompleted = async () => {
+    showAllCompleted.value = !showAllCompleted.value;
+    await fetchProjects();
+  };
+
   return {
     projects: projectList,
     loading,
@@ -297,6 +453,8 @@ export function useProjectTimeline(opts: { portal?: boolean } = {}) {
     refresh: fetchProjects,
     fetchProjects,
     fetchProject,
+    fetchProjectDetails,
+    projectDetailState,
     createProject,
     updateProject,
     createEvent,
@@ -310,5 +468,7 @@ export function useProjectTimeline(opts: { portal?: boolean } = {}) {
     getProjectById,
     getEventById,
     getProjectForEvent,
+    showAllCompleted,
+    toggleShowAllCompleted,
   };
 }

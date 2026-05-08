@@ -125,15 +125,27 @@ const insightColors: Record<string, string> = {
 const { getPriorityIconClass: priorityIconColor, getPriorityBadgeClasses: priorityChipClasses } = useStatusStyle();
 
 // ── Analysis Flow ──
-const runAnalysis = async () => {
-	await Promise.all([
-		analyze(new Set(enabledModules.value)),
-		syncState(metrics.value),
-	]);
-	await fetchTeamRanking();
-	if (leveledUp.value || (newBadges.value && newBadges.value.length > 0)) {
-		celebrate();
-	}
+// Dedupes overlapping calls from onMounted + the user/org/team/persona
+// watchers that all fire during cold mount. Without this, `analyze()` —
+// ~12 Directus reads — runs 2-3× before the page settles.
+let analysisInflight: Promise<void> | null = null;
+const runAnalysis = (): Promise<void> => {
+	if (analysisInflight) return analysisInflight;
+	analysisInflight = (async () => {
+		try {
+			await Promise.all([
+				analyze(new Set(enabledModules.value)),
+				syncState(metrics.value),
+			]);
+			await fetchTeamRanking();
+			if (leveledUp.value || (newBadges.value && newBadges.value.length > 0)) {
+				celebrate();
+			}
+		} finally {
+			analysisInflight = null;
+		}
+	})();
+	return analysisInflight;
 };
 
 // CRM AI analysis is now on-demand only (user clicks "Run AI Analysis")
@@ -173,6 +185,15 @@ const goTo = (route: string) => {
 
 // ── Tabs: Command Center / Timeline / Statistics ──
 const activeTab = ref<'commander' | 'statistics'>('commander');
+
+// Mount Statistics tab content only after the user clicks it once.
+// Both tabs use v-show so the DOM persists across toggles, but we gate
+// the Statistics panel behind v-if to skip its 500-invoice fetch +
+// LazyTicketsDashboard fan-out on cold mount of /.
+const statisticsLoaded = ref(false);
+watch(activeTab, (t) => {
+	if (t === 'statistics') statisticsLoaded.value = true;
+});
 </script>
 
 <template>
@@ -580,7 +601,9 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 				</div>
 
 				<!-- Goals Summary -->
-				<GoalsSummaryWidget v-if="showWidget('goals')" />
+				<DeferUntilVisible v-if="showWidget('goals')" min-height="120px">
+					<GoalsSummaryWidget />
+				</DeferUntilVisible>
 
 	
 				<!-- Other Suggestions (lower priority) -->
@@ -615,16 +638,20 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 					<EarnestTeamLeaderboard />
 				</div>
 
-				<!-- Bottom Section: Chat + CardDesk -->
-				<div v-if="showWidget('realtime-chat') || showWidget('card-desk')" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-					<div v-if="showWidget('realtime-chat')" class="h-[500px]">
-						<CommandCenterRealtimeChat />
+				<!-- Bottom Section: Chat + CardDesk — deferred until scrolled near -->
+				<DeferUntilVisible v-if="showWidget('realtime-chat') || showWidget('card-desk')" min-height="500px">
+					<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+						<div v-if="showWidget('realtime-chat')" class="h-[500px]">
+							<CommandCenterRealtimeChat />
+						</div>
+						<CommandCenterCardDeskPipeline v-if="showWidget('card-desk')" />
 					</div>
-					<CommandCenterCardDeskPipeline v-if="showWidget('card-desk')" />
-				</div>
+				</DeferUntilVisible>
 
-				<!-- Financial Analysis (full width) -->
-				<CommandCenterFinancialQuarter v-if="showWidget('financial-quarter')" />
+				<!-- Financial Analysis (full width) — deferred until scrolled near -->
+				<DeferUntilVisible v-if="showWidget('financial-quarter')" min-height="320px">
+					<CommandCenterFinancialQuarter />
+				</DeferUntilVisible>
 
 				</div><!-- /Commander tab -->
 
@@ -650,7 +677,7 @@ const activeTab = ref<'commander' | 'statistics'>('commander');
 				-->
 
 				<!-- ═══ Statistics Tab ═══ -->
-				<div v-show="activeTab === 'statistics'" class="space-y-6">
+				<div v-if="statisticsLoaded" v-show="activeTab === 'statistics'" class="space-y-6">
 					<LazyDashboardStatisticsEmbed />
 				</div>
 			</div>
