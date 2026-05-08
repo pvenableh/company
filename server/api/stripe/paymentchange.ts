@@ -127,22 +127,10 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent)
 }
 
 async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent) {
-	try {
-		const directus = getTypedDirectus();
-		const invoiceId = paymentIntent.metadata?.invoice_id;
-
-		if (invoiceId) {
-			await directus.request(
-				updateItems('invoices', [invoiceId], {
-					status: 'failed',
-				})
-			);
-		}
-
-		console.log(`[Stripe] Payment failed: ${paymentIntent.id}`);
-	} catch (error) {
-		console.error('[Stripe] Error handling payment failure:', error);
-	}
+	// Leave invoice.status as 'pending' so the customer can retry — there's
+	// no 'failed' state in the invoices enum, and a failed attempt doesn't
+	// invalidate the invoice. We log for observability only.
+	console.log(`[Stripe] Payment failed: ${paymentIntent.id} (invoice ${paymentIntent.metadata?.invoice_id || 'n/a'})`);
 }
 
 // ── Shared Helpers ──

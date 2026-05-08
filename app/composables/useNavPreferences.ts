@@ -48,7 +48,7 @@ const DEFAULT_LINKS: NavLink[] = [
 	{ name: 'Email', type: ['header', 'footer', 'drawer'], to: '/email', icon: 'i-heroicons-envelope', color: 'bg-rose-500', description: 'Email campaigns', section: 'secondary', group: 'engage', featureKey: 'email_campaigns' },
 	{ name: 'Social', type: ['header', 'footer', 'drawer'], to: '/social', icon: 'i-heroicons-share', color: 'bg-pink-500', description: 'Social media', section: 'secondary', group: 'engage', featureKey: 'email_campaigns' },
 	{ name: 'Expenses', type: ['header', 'footer', 'drawer'], to: '/expenses', icon: 'i-lucide-receipt', color: 'bg-orange-500', description: 'Track expenses', section: 'secondary', featureKey: 'invoices' },
-	{ name: 'Payouts', type: ['header', 'footer', 'drawer'], to: '/payouts', icon: 'i-lucide-banknote', color: 'bg-teal-600', description: 'Stripe payouts & ledger', section: 'secondary', featureKey: 'invoices' },
+	{ name: 'Billing', type: ['header', 'footer', 'drawer'], to: '/organization?tab=billing', icon: 'i-lucide-banknote', color: 'bg-teal-600', description: 'Transactions, refunds, balance, payouts', section: 'secondary', featureKey: 'invoices' },
 	{ name: 'Financials', type: ['footer', 'drawer'], to: '/financials', icon: 'i-heroicons-chart-bar', color: 'bg-green-600', description: 'Financial reports', section: 'secondary', featureKey: 'invoices' },
 	{ name: 'Time Tracker', type: ['header', 'footer', 'drawer'], to: '/time-tracker', icon: 'i-heroicons-clock', color: 'bg-lime-600', description: 'Track time', section: 'secondary' },
 	{ name: 'Phone', type: ['drawer'], to: '/phone-settings', icon: 'i-heroicons-phone', color: 'bg-teal-500', description: 'Phone system', section: 'secondary' },
@@ -100,7 +100,7 @@ const HATS: Hat[] = [
 		icon: 'i-fluent-emoji-flat-money-bag',
 		name: 'Accountant',
 		description: 'Invoices, contracts, expenses & reports',
-		routes: ['/', '/invoices', '/contracts', '/expenses', '/payouts', '/financials', '/time-tracker', '/contacts'],
+		routes: ['/', '/invoices', '/contracts', '/expenses', '/financials', '/time-tracker', '/contacts', '/organization?tab=billing'],
 	},
 	{
 		id: 'salesman',

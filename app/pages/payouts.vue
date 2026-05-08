@@ -1,56 +1,15 @@
-<script setup>
+<script setup lang="ts">
+// Legacy /payouts route — superseded by the per-org Billing tab once Stripe
+// Connect Express shipped. The old page exposed Hue's platform-Stripe payouts
+// to anyone with `invoices` access, which leaked Earnest's bank deposits.
+// Redirect everyone to the org-scoped surface.
 definePageMeta({
 	middleware: ['auth'],
 });
-useHead({ title: 'Payouts | Earnest' });
 
-const { user: sessionUser, loggedIn } = useUserSession();
-const user = computed(() => {
-	return loggedIn.value ? sessionUser.value ?? null : null;
-});
-const { canAccess } = useOrgRole();
-
-const admin = computed(() => {
-	return canAccess('invoices');
-});
-// Fetch all payouts when the component loads
-const { data: payouts, error } = useFetch('/api/stripe/payouts');
-
-// Store selected payout details
-const selectedPayout = ref(null);
-const detailsError = ref(null);
-
-// Function to fetch details of a single payout
-const fetchPayoutDetails = async (payoutId) => {
-	console.log(payoutId);
-	try {
-		selectedPayout.value = await $fetch(`/api/stripe/payouts/${payoutId}`);
-		console.log(selectedPayout.value);
-	} catch (err) {
-		detailsError.value = err.message;
-	}
-};
+await navigateTo('/organization?tab=billing', { replace: true, redirectCode: 301 });
 </script>
 
 <template>
-	<LayoutPageContainer>
-		<div class="grid gap-6 grid-cols-1 md:grid-cols-2">
-			<div v-if="admin">
-				<ul>
-					<li v-for="payout in payouts" :key="payout.id">
-						{{ payout.amount }} - {{ payout.status }}
-						<button @click="fetchPayoutDetails(payout.id)">View Details</button>
-					</li>
-				</ul>
-			</div>
-			<div>
-				<div v-if="selectedPayout" class="relative">
-					<h2>Payout Details</h2>
-					{{ selectedPayout }}
-					<p>Amount: {{ selectedPayout.amount }}</p>
-					<p>Status: {{ selectedPayout.status }}</p>
-				</div>
-			</div>
-		</div>
-	</LayoutPageContainer>
+	<div />
 </template>

@@ -2,9 +2,9 @@
  * POST /api/invoices/:id/payments
  *
  * Record a manual payment (check / Zelle / Venmo / cash / other) against
- * an invoice. Stripe-driven rows are written by the webhook in
- * server/api/stripe/invoiceupdate.post.js — do not call this route from
- * Stripe flows.
+ * an invoice. Stripe-driven rows are written by the platform webhook in
+ * server/api/stripe/paymentchange.ts (and, for connected accounts, the
+ * Phase 4 connect-webhook) — do not call this route from Stripe flows.
  *
  * Auth:
  *   - Authenticated user with `invoices.update` on the invoice's org

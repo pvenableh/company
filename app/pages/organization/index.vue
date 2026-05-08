@@ -79,6 +79,7 @@ const tabItems = [
 	{ slot: 'members', label: 'Members', icon: 'i-heroicons-users' },
 	{ slot: 'client-access', label: 'Client Access', icon: 'i-heroicons-key' },
 	{ slot: 'teams', label: 'Teams', icon: 'i-heroicons-user-group' },
+	{ slot: 'billing', label: 'Billing', icon: 'i-heroicons-credit-card' },
 	{ slot: 'ai-usage', label: 'Usage', icon: 'i-heroicons-sparkles' },
 ];
 
@@ -320,6 +321,114 @@ const toggleWhitelabel = async (next) => {
 		savingWhitelabel.value = false;
 	}
 };
+
+// --- Stripe Connect (Phase 1) ---
+const connectStatus = ref(null as null | {
+	status: 'none' | 'pending' | 'active' | 'restricted';
+	accountId: string | null;
+	chargesEnabled: boolean;
+	payoutsEnabled: boolean;
+	detailsSubmitted: boolean;
+	requirements: { currentlyDue: string[]; eventuallyDue: string[]; pastDue: string[]; disabledReason: string | null } | null;
+});
+const connectLoading = ref(false);
+const connectActing = ref(false);
+
+const fetchConnectStatus = async () => {
+	if (!org.value?.id) return;
+	connectLoading.value = true;
+	try {
+		connectStatus.value = await $fetch('/api/stripe/connect/status', {
+			query: { organizationId: org.value.id },
+		});
+	} catch (err: any) {
+		// 403 just means the user can't read settings — leave status null and bail.
+		if (err?.statusCode !== 403) {
+			console.error('Connect status fetch failed:', err);
+		}
+		connectStatus.value = null;
+	} finally {
+		connectLoading.value = false;
+	}
+};
+
+const startConnectOnboarding = async () => {
+	if (!org.value?.id || connectActing.value) return;
+	connectActing.value = true;
+	try {
+		const res = await $fetch<{ url: string }>('/api/stripe/connect/onboard', {
+			method: 'POST',
+			body: { organizationId: org.value.id },
+		});
+		if (res?.url) window.location.href = res.url;
+	} catch (err: any) {
+		toast.add({
+			title: 'Could not start onboarding',
+			description: err?.data?.message || err?.message || 'Stripe rejected the request.',
+			color: 'red',
+		});
+	} finally {
+		connectActing.value = false;
+	}
+};
+
+const refreshConnectLink = async () => {
+	if (!org.value?.id || connectActing.value) return;
+	connectActing.value = true;
+	try {
+		const res = await $fetch<{ url: string }>('/api/stripe/connect/refresh-link', {
+			method: 'POST',
+			body: { organizationId: org.value.id },
+		});
+		if (res?.url) window.location.href = res.url;
+	} catch (err: any) {
+		toast.add({
+			title: 'Could not open Stripe',
+			description: err?.data?.message || err?.message || 'Stripe rejected the request.',
+			color: 'red',
+		});
+	} finally {
+		connectActing.value = false;
+	}
+};
+
+const connectStatusBadge = computed(() => {
+	const s = connectStatus.value?.status || (org.value?.stripe_account_id ? 'pending' : 'none');
+	if (s === 'active') return { label: 'Active', color: 'green', icon: 'i-heroicons-check-circle' };
+	if (s === 'pending') return { label: 'Onboarding in progress', color: 'amber', icon: 'i-heroicons-clock' };
+	if (s === 'restricted') return { label: 'Action required', color: 'red', icon: 'i-heroicons-exclamation-triangle' };
+	return { label: 'Not connected', color: 'gray', icon: 'i-heroicons-link-slash' };
+});
+
+watch(
+	() => [org.value?.id, activeTab.value],
+	([id, tab]) => {
+		if (id && tabItems[tab as number]?.slot === 'billing') {
+			fetchConnectStatus();
+		}
+	},
+	{ immediate: true },
+);
+
+// Auto-poll status when the user just returned from Express onboarding
+// (Stripe redirects back with ?onboarding=complete).
+watch(
+	() => route.query.onboarding,
+	async (val) => {
+		if (!val || !org.value?.id) return;
+		await fetchConnectStatus();
+		if (val === 'complete') {
+			toast.add({
+				title: 'Stripe onboarding submitted',
+				description: connectStatus.value?.status === 'active'
+					? 'Your account is active and can accept invoice payments.'
+					: 'Stripe is still verifying your details. This page will update automatically.',
+				color: 'green',
+			});
+		}
+	},
+	{ immediate: true },
+);
 
 // --- Archive / Restore Organization ---
 const showArchiveModal = ref(false);
@@ -713,8 +822,9 @@ const ORG_DETAIL_FIELDS = [
 	'date_created', 'origin_date', 'icon', 'active', 'brand_direction',
 	'goals', 'target_audience', 'location', 'default_hourly_rate',
 	'archived_at', 'plan', 'whitelabel', 'document_theme', 'document_accent',
+	'stripe_account_id', 'stripe_account_status', 'stripe_account_country',
 ];
-const ORG_BASIC_FIELDS = ['id', 'name', 'logo', 'icon', 'active', 'date_created', 'website', 'phone', 'brand_color', 'brand_direction', 'goals', 'target_audience', 'location', 'notes', 'archived_at', 'plan', 'whitelabel', 'document_theme', 'document_accent'];
+const ORG_BASIC_FIELDS = ['id', 'name', 'logo', 'icon', 'active', 'date_created', 'website', 'phone', 'brand_color', 'brand_direction', 'goals', 'target_audience', 'location', 'notes', 'archived_at', 'plan', 'whitelabel', 'document_theme', 'document_accent', 'stripe_account_id', 'stripe_account_status', 'stripe_account_country'];
 
 const fetchOrganizationData = async () => {
 	if (!selectedOrg.value) return;
@@ -1626,6 +1736,167 @@ watch(searchEmail, (val) => {
 								:initial-teams="visibleTeams"
 								:external-loading="teamsLoading"
 							/>
+						</div>
+					</template>
+
+					<template #billing>
+						<div class="mt-6 space-y-6">
+						<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+							<div class="lg:col-span-2 space-y-6">
+								<UCard>
+									<template #header>
+										<div class="flex items-center justify-between gap-3 flex-wrap">
+											<div>
+												<h3 class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Invoice Payments</h3>
+												<p class="text-sm font-medium mt-1">Accept card and ACH payments for your invoices</p>
+											</div>
+											<UBadge :color="connectStatusBadge.color" variant="soft" :icon="connectStatusBadge.icon">
+												{{ connectStatusBadge.label }}
+											</UBadge>
+										</div>
+									</template>
+
+									<div v-if="connectLoading && !connectStatus" class="flex items-center justify-center py-10 text-muted-foreground">
+										<UIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin mr-2" />
+										<span class="text-sm">Checking Stripe…</span>
+									</div>
+
+									<template v-else>
+										<!-- Not connected -->
+										<div v-if="connectStatusBadge.label === 'Not connected'" class="space-y-4">
+											<p class="text-sm text-muted-foreground">
+												Connect a Stripe account so payments on this organization's invoices land directly in your bank — not Hue's. Onboarding takes about 5 minutes; Stripe will ask for your business details and bank routing.
+											</p>
+											<ul class="text-sm space-y-2">
+												<li class="flex items-start gap-2"><UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />Funds settle to your bank on Stripe's standard 2-day rolling payout schedule.</li>
+												<li class="flex items-start gap-2"><UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />Refunds, balance, and payouts will live in this tab once active.</li>
+												<li class="flex items-start gap-2"><UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />You can disconnect at any time from your Stripe dashboard.</li>
+											</ul>
+											<UiActionButton
+												icon="lucide:credit-card"
+												variant="primary"
+												:loading="connectActing"
+												:disabled="!canManageOrg"
+												@click="startConnectOnboarding"
+											>
+												Activate payments
+											</UiActionButton>
+											<p v-if="!canManageOrg" class="text-xs text-muted-foreground">
+												Only owners and admins can connect a Stripe account.
+											</p>
+										</div>
+
+										<!-- Pending -->
+										<div v-else-if="connectStatusBadge.label === 'Onboarding in progress'" class="space-y-4">
+											<p class="text-sm text-muted-foreground">
+												Stripe is still verifying your account. Continue onboarding to finish the remaining steps — once Stripe approves the account, this tab unlocks transactions, refunds, balance, and payouts.
+											</p>
+											<div v-if="connectStatus?.requirements?.currentlyDue?.length" class="rounded-md border border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-900/20 p-3">
+												<div class="text-xs font-medium text-amber-800 dark:text-amber-200 mb-1">Stripe still needs:</div>
+												<ul class="text-xs text-amber-700 dark:text-amber-300 list-disc pl-4 space-y-0.5">
+													<li v-for="req in connectStatus.requirements.currentlyDue" :key="req">{{ req }}</li>
+												</ul>
+											</div>
+											<div class="flex flex-wrap gap-2">
+												<UiActionButton
+													icon="lucide:arrow-right"
+													variant="primary"
+													:loading="connectActing"
+													:disabled="!canManageOrg"
+													@click="refreshConnectLink"
+												>
+													Continue onboarding
+												</UiActionButton>
+												<UiActionButton
+													icon="lucide:refresh-cw"
+													variant="secondary"
+													:loading="connectLoading"
+													@click="fetchConnectStatus"
+												>
+													Refresh status
+												</UiActionButton>
+											</div>
+										</div>
+
+										<!-- Active -->
+										<div v-else-if="connectStatusBadge.label === 'Active'" class="space-y-4">
+											<dl class="grid grid-cols-2 gap-4 text-sm">
+												<div>
+													<dt class="text-[10px] uppercase tracking-wider text-muted-foreground">Charges</dt>
+													<dd class="font-medium mt-0.5">
+														<UIcon v-if="connectStatus?.chargesEnabled" name="i-heroicons-check-circle" class="w-4 h-4 text-emerald-500 inline-block mr-1 align-text-bottom" />
+														<UIcon v-else name="i-heroicons-x-circle" class="w-4 h-4 text-red-500 inline-block mr-1 align-text-bottom" />
+														{{ connectStatus?.chargesEnabled ? 'Enabled' : 'Disabled' }}
+													</dd>
+												</div>
+												<div>
+													<dt class="text-[10px] uppercase tracking-wider text-muted-foreground">Payouts</dt>
+													<dd class="font-medium mt-0.5">
+														<UIcon v-if="connectStatus?.payoutsEnabled" name="i-heroicons-check-circle" class="w-4 h-4 text-emerald-500 inline-block mr-1 align-text-bottom" />
+														<UIcon v-else name="i-heroicons-x-circle" class="w-4 h-4 text-red-500 inline-block mr-1 align-text-bottom" />
+														{{ connectStatus?.payoutsEnabled ? 'Enabled' : 'Disabled' }}
+													</dd>
+												</div>
+											</dl>
+											<UiActionButton
+												icon="lucide:settings"
+												variant="secondary"
+												size="xs"
+												:loading="connectActing"
+												:disabled="!canManageOrg"
+												@click="refreshConnectLink"
+											>
+												Update business or bank info
+											</UiActionButton>
+										</div>
+
+										<!-- Restricted -->
+										<div v-else class="space-y-4">
+											<div class="rounded-md border border-red-200 bg-red-50 dark:border-red-900/40 dark:bg-red-900/20 p-3">
+												<div class="text-sm font-medium text-red-800 dark:text-red-200">Stripe has restricted this account.</div>
+												<div v-if="connectStatus?.requirements?.disabledReason" class="text-xs text-red-700 dark:text-red-300 mt-1">
+													Reason: {{ connectStatus.requirements.disabledReason }}
+												</div>
+												<div v-if="connectStatus?.requirements?.pastDue?.length" class="text-xs text-red-700 dark:text-red-300 mt-2">
+													Past-due fields: {{ connectStatus.requirements.pastDue.join(', ') }}
+												</div>
+											</div>
+											<UiActionButton
+												icon="lucide:alert-triangle"
+												variant="primary"
+												:loading="connectActing"
+												:disabled="!canManageOrg"
+												@click="refreshConnectLink"
+											>
+												Resolve in Stripe
+											</UiActionButton>
+										</div>
+									</template>
+								</UCard>
+							</div>
+
+							<div class="space-y-6">
+								<UCard>
+									<template #header>
+										<h3 class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">How payments flow</h3>
+									</template>
+									<div class="space-y-3 text-sm">
+										<p class="text-muted-foreground">
+											Earnest never holds your customer payments. When a client pays an invoice, Stripe charges the card and routes the funds straight to your connected account.
+										</p>
+										<p class="text-muted-foreground">
+											Your Earnest subscription is billed separately on Hue's platform Stripe — that's a different account and isn't affected by this connection.
+										</p>
+									</div>
+								</UCard>
+							</div>
+						</div>
+
+						<!-- Phase 3: native Billing surface, only when connected account is active -->
+						<OrganizationBillingSurface
+							v-if="connectStatusBadge.label === 'Active' && org?.id"
+							:organization-id="org.id"
+						/>
 						</div>
 					</template>
 

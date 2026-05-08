@@ -38,7 +38,6 @@ const domainMap: Record<string, { parent?: { label: string; to: string }; label:
 	'/organization/teams': { parent: { label: 'Team', to: '/channels' }, label: 'Teams' },
 	'/invoices': { parent: { label: 'Financials', to: '/invoices' }, label: 'Invoices' },
 	'/expenses': { parent: { label: 'Financials', to: '/invoices' }, label: 'Expenses' },
-	'/payouts': { parent: { label: 'Financials', to: '/invoices' }, label: 'Payouts' },
 	'/financials': { parent: { label: 'Financials', to: '/invoices' }, label: 'Financials' },
 	'/email': { parent: { label: 'Marketing', to: '/marketing' }, label: 'Email' },
 	'/social': { parent: { label: 'Marketing', to: '/marketing' }, label: 'Social' },

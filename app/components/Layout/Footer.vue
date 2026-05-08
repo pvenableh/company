@@ -145,7 +145,7 @@ const pipelineLinks = [
 const financialsLinks = [
 	{ to: '/invoices', label: 'Invoices' },
 	{ to: '/expenses', label: 'Expenses' },
-	{ to: '/payouts', label: 'Payouts' },
+	{ to: '/organization?tab=billing', label: 'Billing' },
 	{ to: '/financials', label: 'Financials' },
 ];
 

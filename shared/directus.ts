@@ -2325,6 +2325,12 @@ export interface Organization {
 	tags?: string[] | null;
 	notes?: string | null;
 	stripe_customer_id?: string | null;
+	/** @description Stripe Express connected-account id (acct_…). Each org owns its own; invoice payments route through this account. */
+	stripe_account_id?: string | null;
+	/** @description Snapshot of the connected account state. Updated by the Connect webhook on `account.updated`. */
+	stripe_account_status?: 'none' | 'pending' | 'active' | 'restricted';
+	/** @description ISO-2 country code used at account creation. Express onboarding is currently US-only. */
+	stripe_account_country?: string;
 	phone?: string | null;
 	/** @description Three letter code for organization identity. */
 	code?: string | null;

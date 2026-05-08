@@ -117,6 +117,11 @@ export default defineNuxtConfig({
 		stripeSecretKeyTest: process.env.STRIPE_SECRET_KEY_TEST,
 		stripeSecretKeyLive: process.env.STRIPE_SECRET_KEY,
 		stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+		// Stripe Connect (Phase 2+): platform fee in basis points (1 bps = 0.01%).
+		// Defaults to 0; set when we decide what to charge orgs on top of Stripe's processing fee.
+		stripePlatformFeeBps: process.env.STRIPE_PLATFORM_FEE_BPS || '0',
+		// Stripe Connect (Phase 4): signing secret for the Connect webhook endpoint.
+		stripeConnectWebhookSecret: process.env.STRIPE_CONNECT_WEBHOOK_SECRET,
 		social: {
 			instagram: {
 				appId: process.env.INSTAGRAM_APP_ID || '',

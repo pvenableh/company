@@ -26,7 +26,7 @@ const subNavs: Partial<Record<WorkspaceContext, SubNavItem[]>> = {
   financials: [
     { label: 'Invoices', to: '/invoices', icon: 'heroicons:document-text' },
     { label: 'Expenses', to: '/expenses', icon: 'lucide:receipt' },
-    { label: 'Payouts', to: '/payouts', icon: 'lucide:banknote' },
+    { label: 'Billing', to: '/organization?tab=billing', icon: 'lucide:banknote' },
     { label: 'Financials', to: '/financials', icon: 'heroicons:chart-bar' },
   ],
   engage: [

@@ -60,11 +60,6 @@ const props = defineProps({
 
 const config = useRuntimeConfig();
 
-console.log('Stripe Config:', {
-	publicKey: config.public.stripePublic,
-	exists: !!config.public.stripePublic,
-});
-
 // State
 const isElementLoading = ref(true);
 const isElementReady = ref(false);
@@ -250,15 +245,19 @@ const handleSubmit = async () => {
 // Initialize
 onMounted(async () => {
 	try {
-		// Initialize Stripe
-		console.log('Initializing Stripe with key:', config.public.stripePublic);
-		stripe = await loadStripe(config.public.stripePublic);
+		// Resolve the payment intent first so we know whether to scope
+		// loadStripe to a connected account. The server returns
+		// `stripeAccount` (acct_…) when this invoice routes through Stripe
+		// Connect, or null for the legacy platform path.
+		const paymentIntent = await createPaymentIntent();
+
+		stripe = await loadStripe(
+			config.public.stripePublic,
+			paymentIntent?.stripeAccount ? { stripeAccount: paymentIntent.stripeAccount } : undefined,
+		);
 		if (!stripe) {
 			throw new Error('Failed to load Stripe');
 		}
-
-		// Create payment intent and get client secret
-		const paymentIntent = await createPaymentIntent();
 
 		// Setup Stripe Elements with client secret
 		await setupStripeElement(paymentIntent.clientSecret);

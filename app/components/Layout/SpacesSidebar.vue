@@ -102,7 +102,7 @@ const ALL_PIPELINE_ITEMS: NavItem[] = [
 const ALL_FINANCIALS_ITEMS: NavItem[] = [
 	{ name: 'Invoices', to: '/invoices', icon: 'heroicons:document-text' },
 	{ name: 'Expenses', to: '/expenses', icon: 'lucide:receipt' },
-	{ name: 'Payouts', to: '/payouts', icon: 'lucide:banknote' },
+	{ name: 'Billing', to: '/organization?tab=billing', icon: 'lucide:banknote' },
 	{ name: 'Financials', to: '/financials', icon: 'heroicons:chart-bar' },
 ]
 

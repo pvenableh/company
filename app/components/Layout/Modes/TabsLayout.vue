@@ -37,7 +37,7 @@ const tabs = [
     label: 'Financials',
     icon: 'heroicons:document-text',
     to: '/invoices',
-    routes: ['/invoices', '/expenses', '/payouts', '/financials'],
+    routes: ['/invoices', '/expenses', '/financials'],
   },
   {
     id: 'engage',

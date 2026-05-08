@@ -34,7 +34,7 @@ const CONTEXT_MAP: ContextMapping[] = [
 	},
 	{
 		context: 'financials',
-		routes: ['/invoices', '/expenses', '/payouts', '/financials'],
+		routes: ['/invoices', '/expenses', '/financials'],
 	},
 	{
 		context: 'engage',

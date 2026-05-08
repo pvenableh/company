@@ -279,26 +279,14 @@ const confirmPayment = async () => {
 			throw stripeError;
 		}
 
+		// `intent.latest_charge` is normally populated by Stripe.js's
+		// retrievePaymentIntent. The old server-side fallback hit a
+		// platform-only /api/stripe/charges route that's been retired with
+		// the move to Stripe Connect (charges now live on connected
+		// accounts). If we ever need this back, build it as a Connect-aware
+		// route taking organizationId.
 		if (!intent.latest_charge) {
-			try {
-				const chargeDetails = await $fetch(`/api/stripe/charges`, {
-					params: {
-						payment_id: intent.id,
-					},
-				});
-
-				// Update the latest_charge with the full charge details
-				intent.latest_charge = chargeDetails;
-
-				console.log('Updated Intent with Charge Details:', {
-					chargeId: intent.latest_charge.id,
-					receiptUrl: intent.latest_charge.receipt_url,
-				});
-			} catch (chargeError) {
-				console.error('Failed to retrieve charge details:', chargeError);
-			}
-		} else {
-			console.warn('No charge details found in payment intent');
+			console.warn('PaymentIntent has no latest_charge populated by Stripe.js');
 		}
 
 		// Now set the payment intent with the updated charge details
