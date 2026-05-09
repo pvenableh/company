@@ -1,6 +1,6 @@
-# Next session: Apps Layout — Phase 5 (Marketing app)
+# Next session: Apps Layout — Phase 6 (Organization app, last)
 
-Phases 0–4 are on `main` and pushed:
+Phases 0–5 are on `main` and pushed:
 
 - `187e6b0` Phase 0 — ResponsiveModal + modal sweep
 - `a57a73f` Phase 1 schema — `users.layout_mode` + `app_rail_position`
@@ -9,132 +9,175 @@ Phases 0–4 are on `main` and pushed:
 - `07343aa` Phase 2 detail — `/apps/clients/[id].vue` + slide-over + Messages mirror
 - `79fa15f` Phase 3 — Work app shell + floor strip (Gantt/Projects/Tasks/Tickets/Meetings/Calendar)
 - `fc32619` Phase 4 — Money app shell + floor strip (Cash flow/Invoices/Payments/Expenses/Time)
+- `3c72be2` Phase 5 — Marketing app shell + floor strip (Pulse/Campaigns/Email/Social/Audience)
+
+Phase 6 closes the apps layout. After this, AppRail covers all 5 apps and
+the Vue Router warning `No match found for location with path
+"/apps/organization"` clears.
 
 Canonical templates:
 - `/apps/clients/[id].vue` for noun-shaped detail pages.
-- `/apps/work/index.vue` for single-page floor-strip landings (multiple
-  parallel views over related work surfaces).
-- `/apps/money/index.vue` for floor strips that include both summary
-  (Cash flow KPIs + AR aging) and underlying log views (Invoices/
-  Payments/Expenses/Time). Money is closer to what Marketing will be —
-  a campaign-pulse summary up front, then channel-specific feeds.
+- `/apps/work/index.vue` for single-page floor-strip landings.
+- `/apps/money/index.vue` for floor strips with summary up front + log
+  views below.
+- `/apps/marketing/index.vue` for floor strips that lazy-load per floor
+  and reuse classic detail routes for drill-downs.
 
 Per project memory: bind preview to `127.0.0.1:3000`, use `preview_*`
-tools, never bash/curl/Playwright.
+tools, never bash/curl/Playwright. The Nuxt 4.4.2 dev server hides syntax
+errors as `IPC connection closed`; if a 500 lands, run `pnpm typecheck`
+first instead of chasing infra.
 
 ---
 
-## Phase 5 deliverables
+## Phase 6 deliverables
 
-### A. Routes under `/apps/marketing/`
+### A. Routes under `/apps/organization/`
 
-Create alongside (not replacing) `app/pages/marketing/index.vue`,
-`app/pages/social/`, `app/pages/email/`, etc. Classic users keep flat
-sidebar entries.
+Create alongside (not replacing) `app/pages/organization/*.vue` and
+`app/pages/account/*.vue`. Classic users keep flat sidebar entries.
 
-- `app/pages/apps/marketing/index.vue` — landing. `definePageMeta({
-  layout: 'apps', middleware: ['auth'] })`. Pill-segmented floor strip:
-  - **Pulse** (default) — KPI strip + active-campaigns Gantt + the
-    recommendation feed (`marketing_recommendations`) + last-7-days
-    activity. Mirrors what the existing /marketing redesign (Session 22)
-    landed inline; pull a self-contained variant if one exists.
-  - **Campaigns** — list of `marketing_campaigns` (status filter,
-    search, table). Drill into classic `/marketing/[id]` (or whichever
-    detail route exists — verify before assuming).
-  - **Email** — drafts/sent campaigns, opens/clicks/bounces. Reuse the
-    existing email pages' list components if exported, or inline a
-    table similar to the Money Invoices floor.
-  - **Social** — posts grouped by platform with engagement counters,
-    next-scheduled queue. Drill into classic `/social/[id]`. Include
-    the platform logos from `@iconify-json/logos` per memory.
-  - **Audience** — contacts segments, mailing lists. (`mailing_lists` +
-    contacts.lifecycle/status). Could fold in a recipient-targeting
-    preview if cheap.
-- Detail pages: don't build new ones. Drill into classic routes.
+- `app/pages/apps/organization/index.vue` — landing.
+  `definePageMeta({ layout: 'apps', middleware: ['auth'] })`. Pill-segmented
+  floor strip. Mostly a re-shell over existing organization/account
+  surfaces — no new data layers.
 
-Multi-home decision (document in commit + memory):
-- A campaign tagged `client = Acme` should appear in Marketing > Campaigns
-  (canonical) AND on `/apps/clients/[id]` (Marketing tab? or rolled into
-  Activity feed? — match what Phase 3 chose for tasks/meetings: keep
-  client detail tabs at five and use Activity for cross-noun chronology).
+  Floors:
+  - **Overview** (default) — org name + logo + brand snapshot, plan/seat
+    KPIs, members count, integrations status chips. Pull the "Brand &
+    Strategy" + "Info" sections from `app/pages/organization/index.vue`
+    (search for `slot: 'overview'` and the matching template block) into
+    a self-contained variant. This floor is read-mostly with an "Edit
+    organization" header action.
+  - **Members** — org members table + Client Access table. Reuse the
+    Members + Client Access UI from `app/pages/organization/index.vue`
+    (slots `members` and `client-access`) and `app/pages/organization/teams.vue`
+    if it shares components. Header action: "Invite member".
+  - **Billing** — subscription, plan, seats, payment method, invoice
+    history. Pull from `app/pages/account/subscription.vue` and the
+    `billing` slot in `app/pages/organization/index.vue`. Header action:
+    "Manage plan" → Stripe portal.
+  - **Integrations** — connection chips for Stripe Connect, Plaid (if
+    entitled), Daily, Meta/LinkedIn/TikTok/IG/FB social accounts (link
+    out to `/social/settings`), Google/email forwarding via name.com.
+    Status pill per row + Reconnect/Manage buttons.
+  - **Settings** — document themes + brand assets, AI usage, danger zone
+    (archive org). Pull from the `ai-usage` slot + the document/branding
+    sections + danger-zone block. Header action: none (settings inline).
+
+  Sub-routes that already exist (`/organization/teams.vue`,
+  `/organization/roles.vue`, `/organization/document-blocks.vue`,
+  `/organization/service-templates.vue`, `/organization/[id].vue`) stay
+  classic — drill into them from the relevant floor (e.g. Members floor
+  → "Manage Teams" link → `/organization/teams`).
+
+  Account-only screens (`/account` profile + avatar) are deliberately
+  separate; they belong to the user, not the org. Keep `/account` and
+  `/account/subscription` reachable via the avatar dropdown in the apps
+  shell — don't fold them into the Organization app.
 
 ### B. AppRail wiring
 
-`AppRail.vue` already routes to `/apps/marketing`. Verify:
+`AppRail.vue` already routes to `/apps/organization`. Verify:
 
-- Toggle to apps mode → click "Marketing" in rail → land on
-  `/apps/marketing` with apps shell + Pulse floor.
+- Toggle to apps mode → click "Organization" in rail → land on
+  `/apps/organization` with apps shell + Overview floor.
 - The Vue Router warning `No match found for location with path
-  "/apps/marketing"` (currently logged on every preview load) goes away
-  once this page exists.
-- Floor strip switches in-place without remounting the shell.
+  "/apps/organization"` (currently logged on every preview load) goes
+  away once this page exists.
+- Floor strip switches in-place via `?floor=` query param, never
+  remounting the shell — same pattern as Money/Marketing.
 
 ### C. Re-use, don't rebuild
 
-- KPIs / pulse — there's existing widget code on `/marketing` and in
-  `MarketingPulseWidget` / `MarketingActionsWidget`; pull a self-
-  contained variant if one exists.
-- Recommendation feed — backed by `marketing_recommendations` collection
-  (Session 22). Should render as a chronological feed with accept/dismiss
-  actions if those routes already exist.
-- Active-campaigns Gantt — reuse Clean Gantt component used on the
-  current `/marketing` redesign.
-- Social posts — reuse existing social-feed grid component.
-- Audience — reuse contacts/lists components (Insights tab from
-  Session 26's `/contacts?view=insights` consolidation).
+- Members table — there's an existing block in
+  `app/pages/organization/index.vue` around the `members` slot. Extract
+  inline; don't repaint.
+- Billing — `app/pages/account/subscription.vue` is the source of truth
+  for the Stripe portal launch + plan UI. Re-import it as a chunk if
+  cleanly separable, or duplicate the relevant section.
+- Integrations status — derive from existing endpoints
+  (`/api/social/accounts`, Stripe Connect status route, Plaid entitlement
+  check). No new APIs.
+- Document themes/branding — already lives under the `branding` /
+  `theme` sections of `organization/index.vue`. Re-shell, don't redesign.
+- Danger zone — the archive org button + retention countdown ships
+  unchanged.
 
 ### D. Decisions to make in-flight
 
-- Does Marketing deserve a dedicated **Compose** floor, or does
-  composing always live as a slide-over / modal launched from the rail
-  header action button? (Recommend: header action button per floor —
-  "New Campaign" on Campaigns floor, "New Post" on Social, "New Email"
-  on Email — matching the Money pattern.)
-- Does the **Pulse** floor surface a per-campaign drill-down inline, or
-  always push to a detail route?
-- Should `mailing_lists` be its own floor, or live inside Audience?
+- Per-floor header action button (matching Money/Marketing) vs. a single
+  global "Edit organization" button at the top? Recommend per-floor
+  ("Invite Member" on Members, "Manage Plan" on Billing, etc.).
+- Should **AI Usage** get its own floor or live inside Settings?
+  Recommend: inside Settings as a sub-section unless the data is
+  voluminous enough to warrant a dedicated floor (it's a single chart +
+  table today — Settings is fine).
+- Where do **Roles** + **Document Blocks** + **Service Templates**
+  appear? They have classic pages (`/organization/roles`, etc). Surface
+  them as link tiles inside Settings, not new floors — they're admin
+  tooling, not daily-use.
 
 ### E. Out of scope
 
-- Classic `/marketing`, `/social`, `/email`, `/contacts` trees.
+- Classic `/organization/*` and `/account/*` trees — keep them all alive
+  for the sidebar mode.
 - Slide-over edits (Phase 7).
-- Other apps (`/apps/organization` is Phase 6 — last to land).
+- `/apps/clients`, `/apps/work`, `/apps/money`, `/apps/marketing` —
+  already shipped.
 - Hat code migration.
+- Any changes to Stripe Connect onboarding flow, Plaid linkage flow, or
+  social OAuth paths — Organization app is a viewing/management surface,
+  not an onboarding rebuild.
 
 ---
 
 ## Verification
 
-1. Toggle apps mode → click "Marketing" in rail → land on
-   `/apps/marketing` with Pulse floor.
+1. Toggle apps mode → click "Organization" in rail → land on
+   `/apps/organization` with Overview floor.
 2. Floor strip switches in-place without remounting the shell.
-3. Drilling into a campaign row reaches a working detail page (classic
-   /marketing/[id] or wherever marketing detail lives).
-4. Classic toggle → `/marketing`, `/social`, `/email` still work.
-5. No new hydration mismatches.
-6. The `/apps/marketing` router warning disappears.
+3. Members floor shows real org members; "Invite member" header action
+   opens the existing invite modal.
+4. Billing floor's "Manage Plan" launches Stripe portal in a new tab.
+5. Integrations floor's status chips match what the classic pages show
+   (Stripe Connect KYC state, social account counts, etc).
+6. Settings floor's links into `/organization/teams` /
+   `/organization/roles` / `/organization/document-blocks` /
+   `/organization/service-templates` work.
+7. Classic toggle → `/organization`, `/account`, `/account/subscription`
+   all still work unchanged.
+8. The `/apps/organization` router warning disappears.
+9. After Phase 6 ships, no remaining `No match found for location with
+   path "/apps/*"` warnings should appear in the dev console.
 
 ---
 
 ## Suggested commits (floor of two)
 
-1. `feat: Marketing app shell — /apps/marketing landing + Pulse floor`
-2. `feat: Marketing app sub-floors — Campaigns/Email/Social/Audience`
+1. `feat: Organization app shell — /apps/organization landing + Overview floor`
+2. `feat: Organization app sub-floors — Members/Billing/Integrations/Settings`
 
-Split further if Pulse's KPI strip + recommendation feed + Gantt is
-large enough to warrant its own commit.
+Split further if any single floor grows large (Billing in particular —
+Stripe portal handoff + plan UI may want its own commit).
 
 ---
 
-## Phase 6 (next, last) — Organization app
+## After Phase 6: Phase 7 (post-launch tail)
 
-After Marketing lands, Phase 6 closes out the apps layout with the
-**Organization** app:
+With all 5 apps live, Phase 7 is polish + cross-cutting features that
+were intentionally deferred:
 
-- Floor strip: Overview / Members / Billing / Integrations / Settings.
-- All five floors map to existing `/organization/*` and `/account/*`
-  surfaces — mostly a re-shell + nav re-org, no new data layers.
-
-Once Phase 6 ships, AppRail covers all 5 apps and the Vue Router
-warnings clear. Phase 7 (slide-over edits, polish, multi-home Activity
-feeds) is the after-launch tail.
+- Slide-over edits across all apps (Phase 2 only landed the Clients
+  detail slide-over pattern).
+- Multi-home Activity feeds — chronological cross-noun roll-up on
+  `/apps/clients/[id]` so meetings/tasks/marketing-touches show up in a
+  single timeline rather than separate tabs.
+- AppRail polish — bottom + floating positions (currently TODO in
+  `AppRail.vue`).
+- Hat code migration — apps mode currently bypasses `useHatLayout`; if
+  we keep both paradigms, hats need an apps-mode equivalent or an
+  explicit deprecation.
+- Cleanup pass: drop the classic `/marketing-feed` + `/marketing-timeline`
+  flat routes if drill-down via `/apps/marketing` is the canonical path
+  (currently they redirect/remain).
