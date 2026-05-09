@@ -29,6 +29,10 @@ export default defineEventHandler(async (event) => {
 
 	const directus = getTypedDirectus();
 
+	// 30s browser cache for tab-switch / back-button. `private` blocks shared
+	// proxies (org-scoped data). Set after auth so 401s aren't cached.
+	setResponseHeader(event, 'Cache-Control', 'private, max-age=30');
+
 	const filter: any = {
 		organization: { _eq: organizationId },
 	};

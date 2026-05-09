@@ -100,12 +100,29 @@ export const useAIProductivityEngine = () => {
 	const goalItems = useDirectusItems('goals');
 	const appointmentItems = useDirectusItems('appointments');
 	const { user } = useDirectusAuth();
-	const { selectedOrg } = useOrganization();
+	const { selectedOrg, organizations } = useOrganization();
 	const { selectedTeam } = useTeams();
 	const { selectedClient, getClientFilter } = useClients();
 
-	// Build org/team/client filter fragments for Directus queries
-	const orgFilter = () => selectedOrg.value ? { organization: { _eq: selectedOrg.value } } : {};
+	// Build org/team/client filter fragments for Directus queries.
+	// When `selectedOrg` is null (multi-org admin "All Orgs" view) we used to
+	// return `{}` and rely on Directus row-perm walks to scope reads. That walk
+	// is the recursive `organization.users.directus_users_id.id._eq.$CURRENT_USER`
+	// path — slow (no indexed entry point) and the security flag noted in
+	// project_directus_perm_filter_gotchas.md. Replace it with an explicit allow
+	// list of the user's accessible (non-archived) org IDs so the planner gets
+	// an index seek and we stop relying on the ambiguous row-perm walk.
+	const accessibleOrgIds = computed<string[]>(() =>
+		(organizations.value || [])
+			.filter((o: any) => !o.archived_at)
+			.map((o: any) => o.id),
+	);
+	const orgFilter = () => {
+		if (selectedOrg.value) return { organization: { _eq: selectedOrg.value } };
+		const ids = accessibleOrgIds.value;
+		if (ids.length > 0) return { organization: { _in: ids } };
+		return {};
+	};
 	const clientFilter = () => getClientFilter();
 
 	// ─── Helpers ──────────────────────────────────────────────────────────────
@@ -304,13 +321,14 @@ export const useAIProductivityEngine = () => {
 			// Count completed today for metrics
 			try {
 				const cFilter = clientFilter();
+				const oFilter = orgFilter();
 				const completedTickets = await ticketItems.list({
 					fields: ['id'],
 					filter: {
 						_and: [
 							{ status: { _eq: 'completed' } },
 							{ date_updated: { _gte: todayISO() } },
-							...(selectedOrg.value ? [{ organization: { _eq: selectedOrg.value } }] : []),
+							...(Object.keys(oFilter).length > 0 ? [oFilter] : []),
 							...(Object.keys(cFilter).length > 0 ? [cFilter] : []),
 						],
 					},
@@ -496,6 +514,10 @@ export const useAIProductivityEngine = () => {
 			};
 			if (selectedOrg.value) {
 				invoiceFilter.bill_to = { _eq: selectedOrg.value };
+			} else if (accessibleOrgIds.value.length > 0) {
+				// Multi-org admin "All Orgs" view: allow-list instead of relying on
+				// the recursive Directus row-perm walk.
+				invoiceFilter.bill_to = { _in: accessibleOrgIds.value };
 			}
 
 			const invoices = await invoiceItems.list({
@@ -899,10 +921,12 @@ export const useAIProductivityEngine = () => {
 	const analyzeDeals = async (): Promise<TaskSuggestion[]> => {
 		const results: TaskSuggestion[] = [];
 
-		// Tenant-data safety: never query leads without an org. Null-org leads
-		// were backfilled 2026-04-20 (scripts/backfill-null-org-leads.ts) so this
-		// guard no longer hides real data.
-		if (!selectedOrg.value) return results;
+		// Tenant-data safety: never query leads without an org filter. Null-org
+		// leads were backfilled 2026-04-20 (scripts/backfill-null-org-leads.ts).
+		// `orgFilter()` now returns `{ organization: { _in: <accessibleOrgIds> } }`
+		// when no org is selected, so the multi-org admin "All Orgs" path is
+		// covered. Bail only if the user has zero accessible orgs.
+		if (!selectedOrg.value && accessibleOrgIds.value.length === 0) return results;
 
 		try {
 			const leads = await dealItems.list({
@@ -1429,6 +1453,72 @@ export const useAIProductivityEngine = () => {
 
 	// ─── Main Analysis ────────────────────────────────────────────────────────
 
+	const ALL_MODULES = [
+		'tickets', 'projects', 'tasks', 'invoices',
+		'channels', 'social', 'scheduling', 'phone', 'deals', 'carddesk', 'goals',
+	] as const;
+
+	const PRIORITY_MODULES = ['tickets', 'projects', 'tasks', 'invoices', 'channels'];
+	const SECONDARY_MODULES = ['social', 'scheduling', 'phone', 'deals', 'carddesk', 'goals'];
+
+	const analyzers: Record<string, () => Promise<TaskSuggestion[]>> = {
+		tickets: analyzeTickets,
+		projects: analyzeProjects,
+		tasks: analyzeTasks,
+		invoices: analyzeInvoices,
+		channels: analyzeChannels,
+		social: analyzeSocial,
+		scheduling: analyzeScheduling,
+		phone: analyzePhone,
+		deals: analyzeDeals,
+		carddesk: analyzeCardDesk,
+		goals: analyzeGoals,
+	};
+
+	// Track which modules have actually been run this session so we can merge
+	// later loadModule() calls into `suggestions` without dropping earlier work.
+	const _runModules = new Set<string>();
+	const _moduleResults = new Map<string, TaskSuggestion[]>();
+
+	const rebuildSuggestions = () => {
+		const all: TaskSuggestion[] = [];
+		for (const arr of _moduleResults.values()) all.push(...arr);
+		all.push(...generateBusinessSuggestions());
+		all.sort((a, b) => b.score - a.score);
+		suggestions.value = all;
+		metrics.value.productivityScore = calculateProductivityScore();
+	};
+
+	// Shared limiter so analyze() and loadModule() compete fairly
+	const sharedLimit = createLimiter(3);
+
+	const runModule = (name: string): Promise<TaskSuggestion[]> => {
+		const cached = getModuleCache(name);
+		if (cached) {
+			_moduleResults.set(name, cached);
+			_runModules.add(name);
+			return Promise.resolve(cached);
+		}
+
+		return sharedLimit(async () => {
+			const results = await analyzers[name]();
+			setModuleCache(name, results);
+			_moduleResults.set(name, results);
+			_runModules.add(name);
+			return results;
+		});
+	};
+
+	// Lazy-load a single module on demand (e.g. from an IntersectionObserver
+	// when a deferred widget enters view). Reuses the 60s cache; merges into
+	// the existing suggestions array without re-running other modules.
+	const loadModule = async (name: string): Promise<void> => {
+		if (!user.value) return;
+		if (!analyzers[name]) return;
+		await runModule(name);
+		rebuildSuggestions();
+	};
+
 	const analyze = async (enabledModules?: Set<string>) => {
 		// Don't make any API calls without active authentication
 		if (!user.value) {
@@ -1441,75 +1531,36 @@ export const useAIProductivityEngine = () => {
 		greeting.value = getGreeting();
 		subtitle.value = getSubtitle();
 
-		// Default: all modules enabled
-		const modules = enabledModules || new Set([
-			'tickets', 'projects', 'tasks', 'invoices',
-			'channels', 'social', 'scheduling', 'phone', 'deals', 'carddesk', 'goals',
-		]);
+		// Default: all modules enabled. Tickets is force-included so the
+		// `metrics.value.overdueItems` / `tasksCompletedToday` side-effects
+		// stay correct even when a hat would otherwise skip it.
+		const modules = enabledModules ? new Set(enabledModules) : new Set<string>(ALL_MODULES);
+		modules.add('tickets');
 
-		// Priority modules run first, secondary modules deferred
-		const priorityModules = ['tickets', 'projects', 'tasks', 'invoices', 'channels'];
-		const secondaryModules = ['social', 'scheduling', 'phone', 'deals', 'carddesk', 'goals'];
-
-		const analyzers: Record<string, () => Promise<TaskSuggestion[]>> = {
-			tickets: analyzeTickets,
-			projects: analyzeProjects,
-			tasks: analyzeTasks,
-			invoices: analyzeInvoices,
-			channels: analyzeChannels,
-			social: analyzeSocial,
-			scheduling: analyzeScheduling,
-			phone: analyzePhone,
-			deals: analyzeDeals,
-			carddesk: analyzeCardDesk,
-			goals: analyzeGoals,
-		};
-
-		// Limit to 3 concurrent API requests
-		const limit = createLimiter(3);
+		// Reset accumulated module results for this analysis pass so a hat
+		// switch doesn't keep stale suggestions from modules no longer in scope.
+		_moduleResults.clear();
+		_runModules.clear();
 
 		try {
-			const allResults: TaskSuggestion[][] = [];
-
-			// Run with concurrency limit, using cache when available
-			const runModule = (name: string) => {
-				const cached = getModuleCache(name);
-				if (cached) return Promise.resolve(cached);
-
-				return limit(async () => {
-					const results = await analyzers[name]();
-					setModuleCache(name, results);
-					return results;
-				});
-			};
-
 			// Run priority modules first
-			const priorityTasks = priorityModules
+			const priorityTasks = PRIORITY_MODULES
 				.filter((m) => modules.has(m))
 				.map((m) => runModule(m));
 
-			const priorityResults = await Promise.all(priorityTasks);
-			allResults.push(...priorityResults);
+			await Promise.all(priorityTasks);
 
 			// Fetch AI greeting after priority modules (metrics now populated)
 			fetchAIGreeting();
 
 			// Run secondary modules (deferred, non-blocking for initial render)
-			const secondaryTasks = secondaryModules
+			const secondaryTasks = SECONDARY_MODULES
 				.filter((m) => modules.has(m))
 				.map((m) => runModule(m));
 
-			const secondaryResults = await Promise.all(secondaryTasks);
-			allResults.push(...secondaryResults);
+			await Promise.all(secondaryTasks);
 
-			const businessSuggestions = generateBusinessSuggestions();
-
-			// Merge and sort by score (highest first)
-			const all = [...allResults.flat(), ...businessSuggestions];
-			all.sort((a, b) => b.score - a.score);
-
-			suggestions.value = all;
-			metrics.value.productivityScore = calculateProductivityScore();
+			rebuildSuggestions();
 		} catch (e) {
 			console.error('[AI Engine] Analysis failed:', e);
 		} finally {
@@ -1524,5 +1575,6 @@ export const useAIProductivityEngine = () => {
 		greeting,
 		subtitle,
 		analyze,
+		loadModule,
 	};
 };
