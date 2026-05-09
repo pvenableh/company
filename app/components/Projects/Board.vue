@@ -600,13 +600,25 @@ let _projectsBoardInitialized = false;
 // Can't fold this into the main projects `fields` list: `directus_comments` is a
 // system collection keyed by (collection, item) strings, not registered as an
 // o2m on `projects`, so `count(comments) as commentsCount` has nothing to count.
+//
+// To keep the WS path quiet, we only fetch counts for project IDs we haven't
+// seen yet. Comment creation doesn't trigger a project update anyway, so the
+// previous "re-fetch all counts on every WS tick" pattern was burning a full
+// aggregate round-trip per project mutation with no reactive benefit.
+const _commentCountFetched = new Set();
+
 const attachCommentCounts = async (projectsList) => {
 	if (props.portal || !Array.isArray(projectsList) || projectsList.length === 0) return;
-	const ids = projectsList.map((p) => p?.id).filter(Boolean);
-	if (ids.length === 0) return;
+	const newIds = projectsList
+		.map((p) => p?.id)
+		.filter((id) => id && !_commentCountFetched.has(id));
+	if (newIds.length === 0) return;
+
+	// Mark as fetched up front to dedupe parallel callers; rollback on error.
+	for (const id of newIds) _commentCountFetched.add(id);
 	try {
 		const counts = await commentItems.list({
-			filter: { collection: { _eq: 'projects' }, item: { _in: ids } },
+			filter: { collection: { _eq: 'projects' }, item: { _in: newIds } },
 			fields: ['item'],
 			aggregate: { count: ['*'] },
 			groupBy: ['item'],
@@ -618,16 +630,19 @@ const attachCommentCounts = async (projectsList) => {
 			}
 		}
 		for (const p of projectsList) {
-			if (!p?.id) continue;
+			if (!p?.id || !newIds.includes(p.id)) continue;
 			p.commentsCount = map[p.id] || 0;
 		}
 	} catch (err) {
+		for (const id of newIds) _commentCountFetched.delete(id);
 		console.error('Error fetching project comment counts:', err);
 	}
 };
 
-// Trailing-debounce so a burst of WS ticks (drag-drop, batch update, reconnect
-// init) collapses into a single aggregate query instead of one per tick.
+// Trailing-debounce so a burst of WS ticks during reconnect-init collapses
+// into a single aggregate. With the new-IDs-only pattern above this is mostly
+// belt-and-suspenders, but it still cuts one round-trip on cold mount when
+// the realtime subscription fires twice during init.
 let _commentCountsTimer = null;
 const scheduleAttachCommentCounts = (projectsList) => {
 	if (_commentCountsTimer) clearTimeout(_commentCountsTimer);

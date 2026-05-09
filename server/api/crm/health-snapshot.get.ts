@@ -24,6 +24,12 @@ export default defineEventHandler(async (event) => {
 
   const directus = await getUserDirectus(event);
 
+  // Snapshot is recomputed each request but tolerates 30s of staleness.
+  // `private` keeps shared proxies out (org-scoped data); back-button and tab
+  // switches inside that window short-circuit the recompute. Set after auth
+  // so 401s don't get cached.
+  setResponseHeader(event, 'Cache-Control', 'private, max-age=30');
+
   try {
     const ctx = await getCRMContext(directus, organizationId, userId);
 

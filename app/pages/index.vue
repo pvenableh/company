@@ -12,12 +12,22 @@ const { currentMode } = useLayoutMode();
 
 // ── Hats ──
 const { hats, activeHat, setHat } = useNavPreferences();
-const { showWidget } = useHatLayout();
+const { showWidget, hatModules } = useHatLayout();
 
 // ── Productivity Engine (existing) ──
 const { suggestions, metrics, isAnalyzing, greeting, subtitle, analyze } = useAIProductivityEngine();
 const { enabledModules } = useAIPreferences();
 const { selectedPersona } = useAIPersona();
+
+// Active engine modules = user-enabled ∩ hat-allowed. Hat-aware gating means
+// e.g. the Accountant hat only triggers tickets/tasks/invoices/deals/goals on
+// cold mount instead of all 11 analyzers.
+const activeEngineModules = computed<Set<string>>(() => {
+	const userEnabled = enabledModules.value;
+	const hatAllowed = hatModules.value;
+	if (!hatAllowed) return new Set(userEnabled);
+	return new Set([...userEnabled].filter((m) => hatAllowed.includes(m)));
+});
 
 // Update greeting when persona changes
 watch(selectedPersona, () => {
@@ -134,7 +144,7 @@ const runAnalysis = (): Promise<void> => {
 	analysisInflight = (async () => {
 		try {
 			await Promise.all([
-				analyze(new Set(enabledModules.value)),
+				analyze(activeEngineModules.value),
 				syncState(metrics.value),
 			]);
 			await fetchTeamRanking();
@@ -171,6 +181,14 @@ watch(user, (newUser) => {
 });
 
 watch([selectedOrg, selectedClient, selectedTeam], () => {
+	if (user.value) {
+		runAnalysis();
+	}
+});
+
+// Switching hats narrows or widens the active analyzer set; re-run so
+// suggestions/metrics drop modules no longer in scope and pull in new ones.
+watch(() => activeHat.value.id, () => {
 	if (user.value) {
 		runAnalysis();
 	}

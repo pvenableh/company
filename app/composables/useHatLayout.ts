@@ -39,6 +39,18 @@ const HAT_WIDGETS: Record<string, string[]> = {
 	],
 };
 
+// Map hat → AI engine modules to fetch on first paint. `null` means "fetch all".
+// Tickets is always included so `metrics.overdueItems` and `tasksCompletedToday`
+// (written from analyzeTickets) are populated regardless of hat. Widgets that
+// need additional modules can request them lazily via loadModule() in the engine.
+const HAT_MODULES: Record<string, string[] | null> = {
+	default: null, // null = run every analyzer (legacy behavior)
+	project_manager: ['tickets', 'projects', 'tasks', 'channels', 'carddesk', 'goals'],
+	accountant: ['tickets', 'tasks', 'invoices', 'deals', 'goals'],
+	salesman: ['tickets', 'tasks', 'channels', 'deals', 'carddesk', 'goals'],
+	marketing_manager: ['tickets', 'tasks', 'channels', 'social', 'goals'],
+};
+
 export const useHatLayout = () => {
 	const { activeHat } = useNavPreferences();
 
@@ -49,5 +61,11 @@ export const useHatLayout = () => {
 		return allowed.includes(widget);
 	};
 
-	return { showWidget };
+	// Modules the active hat cares about on first paint. `null` = all modules.
+	const hatModules = computed<string[] | null>(() => {
+		const hatId = activeHat.value.id;
+		return HAT_MODULES[hatId] ?? null;
+	});
+
+	return { showWidget, hatModules };
 };
