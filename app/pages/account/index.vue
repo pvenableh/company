@@ -40,7 +40,7 @@
 								<p class="text-sm font-medium">Try Apps Layout (preview)</p>
 								<p class="text-xs text-muted-foreground mt-1">
 									An app-by-app shell for Clients, Work, Money, Marketing, and
-									Organization. Hats and your current sidebar stay available — toggle
+									Organization. Your classic sidebar stays available — toggle
 									back any time.
 								</p>
 							</div>

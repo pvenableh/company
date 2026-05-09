@@ -2,7 +2,7 @@
  * Activity feed for /apps/clients/[id].
  *
  * Aggregates recent activity across the noun graph rooted at a client:
- *   - invoices (created, paid)
+ *   - invoices (created; "paid" event keys off date_updated when status flipped)
  *   - tickets (opened)
  *   - projects (created)
  *   - project_events (created)
@@ -74,10 +74,10 @@ export default defineEventHandler(async (event) => {
   const [invoices, tickets, projects, projectEvents, meetings, tasks] = await Promise.all([
     want(['money']) ? directus.request(readItems('invoices', {
       filter: { client: { _eq: clientId } },
-      fields: ['id', 'invoice_code', 'status', 'total_amount', 'date_created', 'paid_date', 'invoice_date'],
+      fields: ['id', 'invoice_code', 'status', 'total_amount', 'date_created', 'date_updated', 'invoice_date'],
       sort: ['-date_created'],
       limit: SLICE,
-    })).catch(() => []) as Promise<any[]> : Promise.resolve([]),
+    })).catch((err) => { console.error('[activity] invoices query failed', err?.message); return []; }) as Promise<any[]> : Promise.resolve([]),
 
     want(['tickets']) ? directus.request(readItems('tickets', {
       filter: { client: { _eq: clientId } },
@@ -135,11 +135,13 @@ export default defineEventHandler(async (event) => {
         icon: 'lucide:file-text',
       });
     }
-    if (inv.paid_date) {
+    // No dedicated paid_date column — surface the paid event via date_updated
+    // when status is 'paid'. Skipped if status flipped via a different update.
+    if (inv.status === 'paid' && inv.date_updated) {
       rows.push({
         id: `invoice-paid-${inv.id}`,
         kind: 'invoice_paid',
-        ts: inv.paid_date,
+        ts: inv.date_updated,
         title: `Invoice ${inv.invoice_code || ''} paid`,
         subtitle: inv.total_amount != null ? `$${Number(inv.total_amount).toLocaleString()}` : null,
         href: `/invoices/${inv.id}`,
