@@ -28,7 +28,6 @@ const domainMap: Record<string, { parent?: { label: string; to: string }; label:
 	'/scheduler': { parent: { label: 'Work', to: '/projects' }, label: 'Scheduler' },
 	'/files': { parent: { label: 'Work', to: '/projects' }, label: 'Files' },
 	'/goals': { parent: { label: 'Work', to: '/projects' }, label: 'Goals' },
-	'/people': { parent: { label: 'Pipeline', to: '/leads' }, label: 'People' },
 	'/contacts': { parent: { label: 'Pipeline', to: '/leads' }, label: 'Contacts' },
 	'/clients': { parent: { label: 'Pipeline', to: '/leads' }, label: 'Clients' },
 	'/leads': { parent: { label: 'Pipeline', to: '/leads' }, label: 'Leads' },

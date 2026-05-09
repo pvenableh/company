@@ -189,7 +189,7 @@ const SHOTS: Shot[] = [
 		slug: 'people-dashboard',
 		viewport: 'inline',
 		persona: 'solo',
-		resolveUrl: async ({ baseUrl }) => `${baseUrl}/people`,
+		resolveUrl: async ({ baseUrl }) => `${baseUrl}/contacts?view=insights`,
 	},
 	{
 		slug: 'scheduler-day',

@@ -42,7 +42,7 @@ const subNavs: Partial<Record<WorkspaceContext, SubNavItem[]>> = {
 
 const items = computed<SubNavItem[]>(() => subNavs[currentContext.value] ?? [])
 
-// Most-specific match wins so a child pill (e.g. /marketing-feed) takes
+// Most-specific match wins so a child pill (e.g. /marketing/email) takes
 // precedence over the parent (/marketing) when both technically match.
 const activeItem = computed<SubNavItem | null>(() => {
   const path = route.path

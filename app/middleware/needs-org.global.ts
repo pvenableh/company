@@ -27,7 +27,6 @@ const PATH_LABELS: Record<string, string> = {
   '/tasks': 'Tasks',
   '/scheduler': 'the Scheduler',
   '/files': 'Files',
-  '/people': 'People',
   '/clients': 'Clients',
   '/leads': 'Leads',
   '/contacts': 'Contacts',
