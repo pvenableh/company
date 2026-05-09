@@ -15,6 +15,11 @@ const props = withDefaults(
 	},
 );
 
+// `enter` fires once when the slot becomes visible. Parents can listen and
+// trigger lazy data fetches that should not run on cold mount (e.g. calling
+// `loadModule()` on the AI productivity engine for below-the-fold widgets).
+const emit = defineEmits<{ enter: [] }>();
+
 const target = ref<HTMLElement | null>(null);
 const visible = ref(false);
 
@@ -46,6 +51,7 @@ onMounted(() => {
 			const entry = entries[0];
 			if (entry?.isIntersecting && !visible.value) {
 				visible.value = true;
+				emit('enter');
 				stop();
 			}
 		},

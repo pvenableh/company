@@ -15,7 +15,7 @@ const { hats, activeHat, setHat } = useNavPreferences();
 const { showWidget, hatModules } = useHatLayout();
 
 // ── Productivity Engine (existing) ──
-const { suggestions, metrics, isAnalyzing, greeting, subtitle, analyze } = useAIProductivityEngine();
+const { suggestions, metrics, isAnalyzing, greeting, subtitle, analyze, loadModule } = useAIProductivityEngine();
 const { enabledModules } = useAIPreferences();
 const { selectedPersona } = useAIPersona();
 
@@ -147,6 +147,9 @@ const runAnalysis = (): Promise<void> => {
 				analyze(activeEngineModules.value),
 				syncState(metrics.value),
 			]);
+			// Replay enter handlers for any deferred widgets already in view so
+			// a hat switch doesn't drop their lazy modules' suggestions/metrics.
+			replayLazyLoaders();
 			await fetchTeamRanking();
 			if (leveledUp.value || (newBadges.value && newBadges.value.length > 0)) {
 				celebrate();
@@ -163,6 +166,38 @@ const runAnalysis = (): Promise<void> => {
 const runCRMAnalysis = () => {
 	if (selectedOrg.value) {
 		crmAnalyze('overview');
+	}
+};
+
+// Lazy module loaders for the three deferred widgets. The corresponding hat
+// `HAT_MODULES` entries omit these so cold mount stays cheap; once the
+// `<DeferUntilVisible @enter>` fires, we top up suggestions/metrics with the
+// modules each widget actually exercises.
+//
+// `_lazyEntered` remembers which deferred slots have already become visible
+// in this session so that a hat switch (which clears `_moduleResults` and
+// re-runs `analyze()`) re-merges those modules' suggestions instead of
+// dropping them — DeferUntilVisible's observer stops after first hit, so
+// `@enter` never fires twice for the same instance.
+const _lazyEntered = reactive({ chatDesk: false, financial: false });
+const onChatDeskEnter = () => {
+	_lazyEntered.chatDesk = true;
+	if (showWidget('realtime-chat')) loadModule('channels');
+	if (showWidget('card-desk')) loadModule('carddesk');
+};
+const onFinancialEnter = () => {
+	_lazyEntered.financial = true;
+	loadModule('invoices');
+	loadModule('deals');
+};
+const replayLazyLoaders = () => {
+	if (_lazyEntered.chatDesk) {
+		if (showWidget('realtime-chat')) loadModule('channels');
+		if (showWidget('card-desk')) loadModule('carddesk');
+	}
+	if (_lazyEntered.financial && showWidget('financial-quarter')) {
+		loadModule('invoices');
+		loadModule('deals');
 	}
 };
 
@@ -656,8 +691,14 @@ watch(activeTab, (t) => {
 					<EarnestTeamLeaderboard />
 				</div>
 
-				<!-- Bottom Section: Chat + CardDesk — deferred until scrolled near -->
-				<DeferUntilVisible v-if="showWidget('realtime-chat') || showWidget('card-desk')" min-height="500px">
+				<!-- Bottom Section: Chat + CardDesk — deferred until scrolled near.
+				     `channels` / `carddesk` are dropped from each hat's default
+				     module set and lazy-loaded here when the slot enters view. -->
+				<DeferUntilVisible
+					v-if="showWidget('realtime-chat') || showWidget('card-desk')"
+					min-height="500px"
+					@enter="onChatDeskEnter"
+				>
 					<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 						<div v-if="showWidget('realtime-chat')" class="h-[500px]">
 							<CommandCenterRealtimeChat />
@@ -666,8 +707,14 @@ watch(activeTab, (t) => {
 					</div>
 				</DeferUntilVisible>
 
-				<!-- Financial Analysis (full width) — deferred until scrolled near -->
-				<DeferUntilVisible v-if="showWidget('financial-quarter')" min-height="320px">
+				<!-- Financial Analysis (full width) — deferred until scrolled near.
+				     `invoices` / `deals` are dropped from accountant's default
+				     module set and lazy-loaded here when the slot enters view. -->
+				<DeferUntilVisible
+					v-if="showWidget('financial-quarter')"
+					min-height="320px"
+					@enter="onFinancialEnter"
+				>
 					<CommandCenterFinancialQuarter />
 				</DeferUntilVisible>
 

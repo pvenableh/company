@@ -59,53 +59,12 @@
 					>
 						<template #item="{ element: task }">
 							<div class="task-wrapper">
-								<div
-									class="ios-card p-4 cursor-pointer transition-all"
-									@click="selectedTask = task"
-								>
-									<div class="flex items-start gap-2">
-										<button class="shrink-0 mt-0.5" @click.stop="toggleComplete(task)">
-											<div
-												class="w-4 h-4 rounded border-2 flex items-center justify-center transition-all"
-												:class="task.completed
-													? 'bg-primary border-primary'
-													: 'border-border hover:border-primary'"
-											>
-												<Icon v-if="task.completed" name="lucide:check" class="w-2.5 h-2.5 text-white" />
-											</div>
-										</button>
-										<div class="flex-1 min-w-0">
-											<p class="text-xs font-medium" :class="task.completed ? 'line-through text-muted-foreground' : ''">
-												{{ task.title }}
-											</p>
-											<div class="flex items-center gap-2 mt-1.5">
-												<span
-													v-if="task.priority && task.priority !== 'medium'"
-													class="text-[8px] uppercase font-bold"
-													:class="{
-														'text-red-500': task.priority === 'high',
-														'text-blue-400': task.priority === 'low',
-													}"
-												>
-													{{ task.priority }}
-												</span>
-												<span v-if="task.due_date" class="text-[10px] text-muted-foreground flex items-center gap-0.5">
-													<Icon name="lucide:calendar" class="w-2.5 h-2.5" />
-													{{ formatDueDate(task.due_date) }}
-												</span>
-											</div>
-										</div>
-										<!-- Assignee avatar -->
-										<div v-if="task.assignee_id && getAssignee(task.assignee_id)" class="shrink-0">
-											<div
-												class="w-5 h-5 rounded-full bg-muted/60 flex items-center justify-center text-[8px] font-semibold text-muted-foreground"
-												:title="getAssigneeName(task.assignee_id)"
-											>
-												{{ getAssigneeInitial(task.assignee_id) }}
-											</div>
-										</div>
-									</div>
-								</div>
+								<TasksCard
+									:task="task"
+									:team-members="teamMembers"
+									@select="selectedTask = task"
+									@toggle-complete="toggleComplete(task)"
+								/>
 							</div>
 						</template>
 					</VueDraggable>
@@ -347,22 +306,6 @@ async function handleTaskDelete(taskId: string) {
 	} catch (err) {
 		console.error('Failed to delete task:', err);
 	}
-}
-
-// formatDueDate is auto-imported from utils/dates.ts
-
-function getAssignee(id: string) {
-	return props.teamMembers?.find(m => m.id === id);
-}
-
-function getAssigneeName(id: string) {
-	const m = getAssignee(id);
-	return m ? `${m.first_name} ${m.last_name}`.trim() : '';
-}
-
-function getAssigneeInitial(id: string) {
-	const m = getAssignee(id);
-	return m?.first_name?.[0]?.toUpperCase() || '?';
 }
 
 onMounted(fetchTasks);

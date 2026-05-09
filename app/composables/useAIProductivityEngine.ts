@@ -599,8 +599,11 @@ export const useAIProductivityEngine = () => {
 			const yesterday = new Date();
 			yesterday.setDate(yesterday.getDate() - 1);
 
-			// Tenant-scope via channel FK: messages collection has no `organization` column,
-			// and the Client policy attached to Client Manager has a null read filter.
+			// Tenant-scope via channel FK: messages has no `organization` column,
+			// so the Client Manager perm uses `channel.organization._in <user orgs>`.
+			// We pre-filter by `channel._in <visible channel ids>` here as an
+			// explicit, indexed bound — the perm's FK walk still applies as a
+			// belt-and-suspenders check.
 			const recentMessages = await messageItems.list({
 				fields: ['id', 'channel.id', 'channel.name', 'date_created', 'user_created.id'],
 				filter: {
@@ -675,7 +678,12 @@ export const useAIProductivityEngine = () => {
 		const results: TaskSuggestion[] = [];
 
 		try {
-			// Check connected accounts
+			// Check connected accounts.
+			//
+			// `social_accounts` has a direct `organization` FK and the Client
+			// Manager read perm is `{ organization: { _in <user orgs> } }`,
+			// so the perm scopes this read for us — no engine-side org filter
+			// needed.
 			const accounts = await socialAccountItems.list({
 				fields: ['id', 'platform', 'account_name', 'status'],
 				filter: { status: { _eq: 'published' } },
@@ -871,7 +879,18 @@ export const useAIProductivityEngine = () => {
 		const results: TaskSuggestion[] = [];
 
 		try {
-			// Analyze recent call logs
+			// Analyze recent call logs.
+			//
+			// `call_logs` has no `organization` column. The Client Manager
+			// read perm scopes via three OR branches:
+			//   user_created._eq.$CURRENT_USER
+			//   OR related_contact.client.organization._in <user orgs>
+			//   OR related_lead.organization._in <user orgs>
+			// We rely on that perm walk for tenant scope rather than mirroring
+			// the disjunction here — adding a redundant filter would just
+			// double-walk the same FK chain. This is safe because the perm
+			// uses the canonical `.organizations_id` form (verified in
+			// scripts/audit-tenant-row-perms.ts).
 			const calls = await callLogItems.list({
 				fields: ['id', 'event_type', 'call_duration', 'from_number', 'date_created', 'related_contact.id'],
 				filter: {
