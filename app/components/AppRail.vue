@@ -6,14 +6,14 @@
  * as icon+label buttons. Active app is highlighted via `useRoute()`'s
  * leading path segment. Position respects `useAppsMode().railPosition`:
  *
- *   left  → vertical column on the left  ✓ ship
- *   right → vertical column on the right ✓ ship
- *   top   → horizontal strip below header ✓ ship
- *   bottom / floating → TODO Phase 7 polish (drag-snap + auto-hide)
+ *   left     → vertical column on the left
+ *   right    → vertical column on the right
+ *   top      → horizontal strip below the header
+ *   bottom   → horizontal strip pinned to the bottom (forced on mobile)
+ *   floating → bottom-center pill, position: fixed, glass + shadow
  *
- * In Phase 1 the buttons route to `/apps/<id>` placeholder paths. Phase
- * 2-6 will replace each id with the real landing route as that app
- * lands.
+ * Phase 7 added bottom + floating; both are picker-selectable from the
+ * apps shell chrome via LayoutAppRailPositionPicker.
  */
 
 const APPS = [
@@ -78,7 +78,7 @@ const isHorizontal = computed(() => railPosition.value === 'top' || railPosition
 }
 
 .app-rail--horizontal {
-	@apply flex-row gap-1 px-2 py-1.5 w-full overflow-x-auto;
+	@apply flex-row gap-1 px-2 py-1.5 w-full overflow-x-auto justify-center;
 }
 
 .app-rail--top {
@@ -86,12 +86,28 @@ const isHorizontal = computed(() => railPosition.value === 'top' || railPosition
 }
 
 .app-rail--bottom {
-	@apply border-t;
+	@apply border-t pb-[env(safe-area-inset-bottom)];
 }
 
-/* TODO Phase 7: floating + bottom polish (drag-snap, auto-hide). */
 .app-rail--floating {
-	@apply fixed left-1/2 -translate-x-1/2 bottom-4 rounded-full border shadow-lg flex-row gap-1 px-2 py-1.5 w-auto z-40;
+	@apply fixed left-1/2 -translate-x-1/2
+		bottom-4 sm:bottom-6
+		rounded-full border border-border/40 shadow-xl
+		flex-row gap-0.5 px-1.5 py-1 w-auto z-40
+		bg-background/85 backdrop-blur-md;
+	bottom: calc(1rem + env(safe-area-inset-bottom));
+}
+
+.app-rail--floating .app-rail__item {
+	@apply flex-row gap-1 rounded-full px-2.5 py-1 text-xs;
+}
+
+.app-rail--floating .app-rail__icon {
+	@apply size-3.5;
+}
+
+.app-rail--floating .app-rail__label {
+	@apply normal-case tracking-normal text-[11px];
 }
 
 .app-rail__item {

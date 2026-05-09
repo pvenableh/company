@@ -4,18 +4,21 @@
  * Mirrors `useLayoutMode`'s shape but persists to the Directus user row
  * (`directus_users.layout_mode` + `app_rail_position`), not localStorage.
  *
- *   - 'classic' → default.vue + sidebar + hats (legacy behaviour)
+ *   - 'classic' → default.vue + sidebar (legacy behaviour)
  *   - 'apps'    → apps.vue + AppRail + per-app shell
  *
  * Pages opt into the apps shell via `definePageMeta({ layout: 'apps' })`.
- * Phase 1 has no such pages — the toggle just stores the pref. Phase 2+
- * routes will read `isAppsMode` to decide which layout to mount.
  *
  * State strategy: module-level refs are the client-side source of truth
  * to keep the toggle reactive. The session-cookie user payload doesn't
  * include these new fields (only id/email/name/avatar/role), so we
  * hydrate once from /api/directus/users/me on first read.
+ *
+ * Phase 7: mobile (< md) forces `railPosition = 'bottom'` regardless of
+ * stored preference, so users always have thumb-reachable nav. The
+ * stored value is preserved and re-engages on wider viewports.
  */
+import { useMediaQuery } from '@vueuse/core';
 
 export type AppsLayoutMode = 'classic' | 'apps';
 export type RailPosition = 'left' | 'top' | 'right' | 'bottom' | 'floating';
@@ -63,11 +66,19 @@ export function useAppsMode() {
 
 	const isAppsMode = computed(() => mode.value === 'apps');
 
-	const railPosition = computed<RailPosition>(() => {
+	const isMobile = useMediaQuery('(max-width: 767px)');
+
+	const storedRailPosition = computed<RailPosition>(() => {
 		if (localRailPosition.value !== null) return localRailPosition.value;
 		const raw = (user.value as any)?.app_rail_position as RailPosition | undefined;
 		return raw && RAIL_POSITIONS.includes(raw) ? raw : 'left';
 	});
+
+	// Mobile always forces bottom for thumb reach; the stored pref is preserved
+	// and re-engages once the viewport is wide enough.
+	const railPosition = computed<RailPosition>(() =>
+		isMobile.value ? 'bottom' : storedRailPosition.value,
+	);
 
 	async function setMode(next: AppsLayoutMode): Promise<void> {
 		const prev = mode.value;
@@ -98,6 +109,7 @@ export function useAppsMode() {
 		mode,
 		isAppsMode,
 		railPosition,
+		storedRailPosition,
 		setMode,
 		setRailPosition,
 	};

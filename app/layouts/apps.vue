@@ -29,6 +29,9 @@
 							<Icon name="lucide:search" class="size-4" />
 						</button>
 						<ClientOnly>
+							<LayoutAppRailPositionPicker class="hidden sm:flex" />
+						</ClientOnly>
+						<ClientOnly>
 							<LayoutInboxBell />
 						</ClientOnly>
 						<ClientOnly>
