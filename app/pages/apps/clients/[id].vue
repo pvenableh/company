@@ -41,15 +41,26 @@ const relatedChannels = ref<any[]>([]);
 const inheritedConnections = ref<Array<{ connection: any; inheritedFromId: string; inheritedFromName: string }>>([]);
 const inheritedContacts = ref<Array<{ contact: any; inheritedFromId: string; inheritedFromName: string }>>([]);
 
-type TabKey = 'contacts' | 'projects' | 'invoices' | 'partners' | 'messages';
+type TabKey = 'activity' | 'contacts' | 'projects' | 'invoices' | 'partners' | 'messages';
 const tabs: Array<{ key: TabKey; label: string; icon: string }> = [
+  { key: 'activity', label: 'Activity', icon: 'lucide:activity' },
   { key: 'contacts', label: 'Contacts', icon: 'lucide:users' },
   { key: 'projects', label: 'Projects', icon: 'lucide:folder-kanban' },
   { key: 'invoices', label: 'Invoices', icon: 'lucide:file-text' },
   { key: 'partners', label: 'Partners', icon: 'lucide:network' },
   { key: 'messages', label: 'Messages', icon: 'lucide:message-square' },
 ];
-const activeTab = ref<TabKey>('contacts');
+
+// Initial tab from `?tab=` query — defaults to Activity.
+const initialTab: TabKey = (() => {
+  const v = route.query.tab;
+  return typeof v === 'string' && tabs.some(t => t.key === v) ? (v as TabKey) : 'activity';
+})();
+const activeTab = ref<TabKey>(initialTab);
+
+watch(activeTab, (next) => {
+  router.replace({ query: { ...route.query, tab: next === 'activity' ? undefined : next } });
+});
 
 async function loadClient() {
   loading.value = true;
@@ -208,6 +219,69 @@ const slideOverOpen = computed({
   },
 });
 
+// ── Activity feed (Phase 7 Track B) ─────────────────────────────────────────
+type ActivityFilter = 'all' | 'meetings' | 'money' | 'projects' | 'tickets';
+interface ActivityRow {
+  id: string;
+  kind: string;
+  ts: string;
+  title: string;
+  subtitle?: string | null;
+  href?: string | null;
+  icon: string;
+}
+
+const activityRows = ref<ActivityRow[]>([]);
+const activityLoading = ref(false);
+const activityNextOffset = ref<number | null>(0);
+const activityFilter = ref<ActivityFilter>('all');
+const activityFilterChips: Array<{ key: ActivityFilter; label: string }> = [
+  { key: 'all', label: 'All' },
+  { key: 'meetings', label: 'Meetings' },
+  { key: 'money', label: 'Money' },
+  { key: 'projects', label: 'Projects' },
+  { key: 'tickets', label: 'Tickets' },
+];
+
+async function fetchActivity(reset = false) {
+  if (activityLoading.value) return;
+  if (!reset && activityNextOffset.value === null) return;
+  activityLoading.value = true;
+  try {
+    const offset = reset ? 0 : (activityNextOffset.value ?? 0);
+    const res: any = await $fetch(`/api/apps/clients/${clientId}/activity`, {
+      query: { offset, filter: activityFilter.value },
+    });
+    if (reset) activityRows.value = [];
+    activityRows.value.push(...(res?.rows ?? []));
+    activityNextOffset.value = res?.nextOffset ?? null;
+  } catch (err) {
+    console.error('[apps/clients/activity] fetch failed', err);
+  } finally {
+    activityLoading.value = false;
+  }
+}
+
+watch([activeTab, activityFilter], ([tab]) => {
+  if (tab === 'activity') {
+    fetchActivity(true);
+  }
+}, { immediate: true });
+
+function activityWhen(iso: string): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const ms = Date.now() - d.getTime();
+  const mins = Math.round(ms / 60000);
+  if (mins < 60) return `${Math.max(1, mins)}m ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.round(hrs / 24);
+  if (days < 30) return `${days}d ago`;
+  return d.toLocaleDateString();
+}
+
 async function openContactSlideOver(contactId: string) {
   slideOverContactId.value = contactId;
   slideOverLoading.value = true;
@@ -334,7 +408,7 @@ onUnmounted(() => clearEntity());
           >
             <Icon :name="tab.icon" class="w-3.5 h-3.5" />
             {{ tab.label }}
-            <span class="text-[10px] opacity-70 ml-0.5">
+            <span v-if="tab.key !== 'activity'" class="text-[10px] opacity-70 ml-0.5">
               {{ tab.key === 'contacts' ? totalContactCount
                   : tab.key === 'projects' ? relatedProjects.length
                   : tab.key === 'invoices' ? relatedInvoices.length
@@ -346,8 +420,69 @@ onUnmounted(() => clearEntity());
 
         <!-- Tab content -->
         <div class="ios-card p-4 sm:p-6">
+          <!-- Activity feed -->
+          <div v-if="activeTab === 'activity'">
+            <!-- Filter chips -->
+            <div class="flex items-center gap-1 rounded-full border border-border bg-card p-0.5 mb-4 w-fit">
+              <button
+                v-for="chip in activityFilterChips"
+                :key="chip.key"
+                type="button"
+                class="inline-flex items-center rounded-full px-3 py-0.5 text-[11px] font-medium transition-colors"
+                :class="activityFilter === chip.key ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'"
+                @click="activityFilter = chip.key"
+              >
+                {{ chip.label }}
+              </button>
+            </div>
+
+            <div v-if="activityLoading && !activityRows.length" class="text-sm text-muted-foreground text-center py-10">
+              Loading activity…
+            </div>
+
+            <div v-else-if="!activityRows.length" class="text-sm text-muted-foreground text-center py-10">
+              No activity for this filter yet.
+            </div>
+
+            <div v-else class="space-y-px">
+              <component
+                :is="row.href ? 'NuxtLink' : 'div'"
+                v-for="row in activityRows"
+                :key="row.id"
+                :to="row.href || undefined"
+                class="flex items-center gap-3 h-12 px-3 hover:bg-muted/40 border-b border-border/30 last:border-b-0 transition-colors group"
+              >
+                <Icon :name="row.icon" class="w-4 h-4 text-muted-foreground shrink-0" />
+                <div class="flex-1 min-w-0 flex items-center gap-2">
+                  <p class="text-sm font-medium truncate">{{ row.title }}</p>
+                  <span v-if="row.subtitle" class="text-[11px] text-muted-foreground truncate hidden sm:inline">
+                    · {{ row.subtitle }}
+                  </span>
+                </div>
+                <span class="text-[11px] text-muted-foreground shrink-0">{{ activityWhen(row.ts) }}</span>
+                <Icon
+                  v-if="row.href"
+                  name="lucide:chevron-right"
+                  class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0"
+                />
+              </component>
+
+              <div v-if="activityNextOffset !== null" class="pt-3 text-center">
+                <button
+                  type="button"
+                  :disabled="activityLoading"
+                  class="inline-flex items-center gap-1 text-xs text-primary hover:underline disabled:opacity-60"
+                  @click="fetchActivity(false)"
+                >
+                  <Icon v-if="activityLoading" name="lucide:loader-2" class="w-3 h-3 animate-spin" />
+                  Load more
+                </button>
+              </div>
+            </div>
+          </div>
+
           <!-- Contacts -->
-          <div v-if="activeTab === 'contacts'">
+          <div v-else-if="activeTab === 'contacts'">
             <div v-if="!mergedContacts.length" class="text-sm text-muted-foreground text-center py-10">
               No contacts linked to this client.
             </div>
