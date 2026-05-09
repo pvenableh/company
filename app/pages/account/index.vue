@@ -7,6 +7,7 @@
 			<a :class="{ active: panel === 1 }" @click.prevent="changePanel(1)">Profile</a>
 			<a :class="{ active: panel === 2 }" @click.prevent="changePanel(2)">Reset Password</a>
 			<a :class="{ active: panel === 3 }" @click.prevent="changePanel(3)">Earnest Score</a>
+			<a :class="{ active: panel === 4 }" @click.prevent="changePanel(4)">Layout</a>
 			<a :class="{ active: panel === 5 }" @click.prevent="changePanel(5)">Appearance</a>
 			<a :class="{ active: panel === 6 }" @click.prevent="changePanel(6)">Notifications</a>
 			<AccountLogout v-if="user" class="logout-icon" />
@@ -28,7 +29,57 @@
 					<EarnestProfilePanel />
 				</div>
 			</div>
-			<div v-if="panel === 4" key="4" class="account__panel"></div>
+			<div v-if="panel === 4" key="4" class="account__panel">
+				<div class="max-w-md">
+					<h2 class="text-lg font-semibold text-foreground mb-6">Layout</h2>
+
+					<div class="space-y-6">
+						<!-- Apps Layout toggle -->
+						<div class="flex items-start justify-between gap-4">
+							<div class="flex-1 min-w-0">
+								<p class="text-sm font-medium">Try Apps Layout (preview)</p>
+								<p class="text-xs text-muted-foreground mt-1">
+									An app-by-app shell for Clients, Work, Money, Marketing, and
+									Organization. Hats and your current sidebar stay available — toggle
+									back any time.
+								</p>
+							</div>
+							<Switch
+								:model-value="appsModeChecked"
+								:disabled="appsModeSaving"
+								@update:model-value="handleToggleAppsMode"
+							/>
+						</div>
+
+						<!-- Rail position select (only when apps mode is on) -->
+						<div v-if="appsModeChecked" class="flex items-start justify-between gap-4">
+							<div class="flex-1 min-w-0">
+								<p class="text-sm font-medium">Rail Position</p>
+								<p class="text-xs text-muted-foreground mt-1">
+									Where the app rail sits. Left and right are vertical columns; top
+									is a horizontal strip.
+								</p>
+							</div>
+							<Select
+								:model-value="railPosition"
+								:disabled="railSaving"
+								@update:model-value="handleRailChange"
+							>
+								<SelectTrigger class="w-32">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="left">Left</SelectItem>
+									<SelectItem value="top">Top</SelectItem>
+									<SelectItem value="right">Right</SelectItem>
+									<SelectItem value="bottom">Bottom</SelectItem>
+									<SelectItem value="floating">Floating</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
+					</div>
+				</div>
+			</div>
 			<div v-if="panel === 5" key="5" class="account__panel">
 				<div class="max-w-md">
 					<h2 class="text-lg font-semibold text-foreground mb-6">Appearance</h2>
@@ -184,8 +235,18 @@
 
 <script setup lang="ts">
 import { toast } from 'vue-sonner';
+import { Switch } from '@/components/ui/switch';
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from '@/components/ui/select';
+import type { RailPosition } from '~/composables/useAppsMode';
 
 const { user } = useDirectusAuth();
+const { isAppsMode, railPosition, setMode, setRailPosition } = useAppsMode();
 
 definePageMeta({
 	middleware: ['auth'],
@@ -228,6 +289,35 @@ async function requestDesktopPermission() {
 async function handleSavePrefs() {
 	await savePreferences(notifPrefs.value);
 	toast.success('Notification preferences saved');
+}
+
+// ── Apps Layout ─────────────────────────────────────────────────────────────
+const appsModeChecked = computed(() => isAppsMode.value);
+const appsModeSaving = ref(false);
+const railSaving = ref(false);
+
+async function handleToggleAppsMode(next: boolean) {
+	appsModeSaving.value = true;
+	try {
+		await setMode(next ? 'apps' : 'classic');
+		toast.success(next ? 'Apps Layout enabled' : 'Apps Layout disabled');
+	} catch {
+		toast.error("Couldn't save layout preference");
+	} finally {
+		appsModeSaving.value = false;
+	}
+}
+
+async function handleRailChange(next: unknown) {
+	if (typeof next !== 'string') return;
+	railSaving.value = true;
+	try {
+		await setRailPosition(next as RailPosition);
+	} catch {
+		toast.error("Couldn't save rail position");
+	} finally {
+		railSaving.value = false;
+	}
 }
 </script>
 <style>
