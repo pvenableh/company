@@ -15,10 +15,9 @@
 
 			<div class="apps-shell__main">
 				<header class="apps-shell__chrome glass">
-					<div class="apps-shell__chrome-left">
-						<NuxtLink to="/" class="apps-shell__home">
-							<LogoEarnest size="sm" />
-						</NuxtLink>
+					<div class="apps-shell__chrome-left" />
+					<div class="apps-shell__chrome-center">
+						<LayoutEarnestBrand to="/" tagline="Do good work." />
 					</div>
 					<div class="apps-shell__chrome-right">
 						<button
@@ -173,23 +172,25 @@ if (import.meta.client) {
 }
 
 .apps-shell__chrome {
-	@apply flex items-center justify-between border-b border-border/40 px-3 sm:px-4 lg:px-6 h-12 shrink-0 z-40;
+	@apply grid items-center border-b border-border/40 px-3 sm:px-4 lg:px-6 shrink-0 z-40;
+	grid-template-columns: 1fr auto 1fr;
+	min-height: 56px;
 }
 
 .apps-shell__chrome-left {
-	@apply flex items-center gap-2 min-w-0;
+	@apply flex items-center gap-2 min-w-0 justify-self-start;
+}
+
+.apps-shell__chrome-center {
+	@apply flex items-center justify-center;
 }
 
 .apps-shell__chrome-right {
-	@apply flex items-center gap-1.5;
+	@apply flex items-center gap-1.5 justify-self-end;
 }
 
 .apps-shell__chrome-btn {
 	@apply flex items-center justify-center w-8 h-8 rounded-full hover:bg-muted/50 text-muted-foreground transition-colors;
-}
-
-.apps-shell__home {
-	@apply flex items-center;
 }
 
 .apps-shell__page {
