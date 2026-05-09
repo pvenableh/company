@@ -1,117 +1,140 @@
-# Next session: Apps Layout — Phase 3 (Work app)
+# Next session: Apps Layout — Phase 5 (Marketing app)
 
-Phases 0+1+2 are on `main` and pushed:
+Phases 0–4 are on `main` and pushed:
 
 - `187e6b0` Phase 0 — ResponsiveModal + modal sweep
 - `a57a73f` Phase 1 schema — `users.layout_mode` + `app_rail_position`
 - `3b73be8` Phase 1 scaffolding — apps.vue, AppRail, AppHeader, AppSlideOver
 - `adea7cc` Phase 2 shell — `/apps/clients/index.vue` + AppHeader showBack rework
 - `07343aa` Phase 2 detail — `/apps/clients/[id].vue` + slide-over + Messages mirror
+- `79fa15f` Phase 3 — Work app shell + floor strip (Gantt/Projects/Tasks/Tickets/Meetings/Calendar)
+- `fc32619` Phase 4 — Money app shell + floor strip (Cash flow/Invoices/Payments/Expenses/Time)
 
-The Clients app is the canonical template. Verified live 2026-05-08.
-
-Phase 3 lands the **Work** app: a unified-Gantt landing with the floor
-strip Projects / Tasks / Tickets / Meetings / Calendar.
+Canonical templates:
+- `/apps/clients/[id].vue` for noun-shaped detail pages.
+- `/apps/work/index.vue` for single-page floor-strip landings (multiple
+  parallel views over related work surfaces).
+- `/apps/money/index.vue` for floor strips that include both summary
+  (Cash flow KPIs + AR aging) and underlying log views (Invoices/
+  Payments/Expenses/Time). Money is closer to what Marketing will be —
+  a campaign-pulse summary up front, then channel-specific feeds.
 
 Per project memory: bind preview to `127.0.0.1:3000`, use `preview_*`
 tools, never bash/curl/Playwright.
 
-Read `project_apps_layout_plan.md` for the locked decisions before
-starting. Mirror the Clients pattern (parallel route trees, explicit
-`:show-back`, Sheet handles its own portaling — don't fight it).
-
 ---
 
-## Phase 3 deliverables
+## Phase 5 deliverables
 
-### A. Routes under `/apps/work/`
+### A. Routes under `/apps/marketing/`
 
-Create alongside (not replacing) the existing `app/pages/projects/`,
-`app/pages/tasks*`, `app/pages/tickets/`, `app/pages/meetings/`,
-`app/pages/scheduler/`. Classic users keep their flat sidebar entries.
+Create alongside (not replacing) `app/pages/marketing/index.vue`,
+`app/pages/social/`, `app/pages/email/`, etc. Classic users keep flat
+sidebar entries.
 
-- `app/pages/apps/work/index.vue` — landing. `definePageMeta({ layout:
-  'apps', middleware: ['auth'] })`. Pill-segmented floor strip:
-  - **Gantt** (default) — unified timeline view across projects,
-    tasks, tickets. Re-use whatever the existing project-timeline /
-    Clean Gantt component is; just reshell into apps layout.
-  - **Projects**
-  - **Tasks**
-  - **Tickets**
-  - **Meetings**
-  - **Calendar**
-- Detail pages: don't build new ones in Phase 3. Clicking a project
-  row should still push to the classic `/projects/[id]` for now (or a
-  thin `/apps/work/projects/[id]` wrapper if a detail surface is
-  cheap). The locked rule is: two-deep navigation = full-page push,
-  not stacked slide-overs.
+- `app/pages/apps/marketing/index.vue` — landing. `definePageMeta({
+  layout: 'apps', middleware: ['auth'] })`. Pill-segmented floor strip:
+  - **Pulse** (default) — KPI strip + active-campaigns Gantt + the
+    recommendation feed (`marketing_recommendations`) + last-7-days
+    activity. Mirrors what the existing /marketing redesign (Session 22)
+    landed inline; pull a self-contained variant if one exists.
+  - **Campaigns** — list of `marketing_campaigns` (status filter,
+    search, table). Drill into classic `/marketing/[id]` (or whichever
+    detail route exists — verify before assuming).
+  - **Email** — drafts/sent campaigns, opens/clicks/bounces. Reuse the
+    existing email pages' list components if exported, or inline a
+    table similar to the Money Invoices floor.
+  - **Social** — posts grouped by platform with engagement counters,
+    next-scheduled queue. Drill into classic `/social/[id]`. Include
+    the platform logos from `@iconify-json/logos` per memory.
+  - **Audience** — contacts segments, mailing lists. (`mailing_lists` +
+    contacts.lifecycle/status). Could fold in a recipient-targeting
+    preview if cheap.
+- Detail pages: don't build new ones. Drill into classic routes.
 
-Each floor uses `<AppHeader title="Work" :show-back="false">` on the
-landing (no chevron), and `<AppHeader :title="..." :show-back="true"
-back-label="Work">` on any /apps/work/<sub> page.
+Multi-home decision (document in commit + memory):
+- A campaign tagged `client = Acme` should appear in Marketing > Campaigns
+  (canonical) AND on `/apps/clients/[id]` (Marketing tab? or rolled into
+  Activity feed? — match what Phase 3 chose for tasks/meetings: keep
+  client detail tabs at five and use Activity for cross-noun chronology).
 
 ### B. AppRail wiring
 
-`AppRail.vue` already routes to `/apps/work`. After Phase 3:
+`AppRail.vue` already routes to `/apps/marketing`. Verify:
 
-- Land on `/apps/work` with the apps shell.
-- "Work" icon highlighted.
-- Floor strip swap doesn't reload the shell.
+- Toggle to apps mode → click "Marketing" in rail → land on
+  `/apps/marketing` with apps shell + Pulse floor.
+- The Vue Router warning `No match found for location with path
+  "/apps/marketing"` (currently logged on every preview load) goes away
+  once this page exists.
+- Floor strip switches in-place without remounting the shell.
 
-No change to `AppRail.vue` should be needed — verify it works.
+### C. Re-use, don't rebuild
 
-### C. Multi-home rule
+- KPIs / pulse — there's existing widget code on `/marketing` and in
+  `MarketingPulseWidget` / `MarketingActionsWidget`; pull a self-
+  contained variant if one exists.
+- Recommendation feed — backed by `marketing_recommendations` collection
+  (Session 22). Should render as a chronological feed with accept/dismiss
+  actions if those routes already exist.
+- Active-campaigns Gantt — reuse Clean Gantt component used on the
+  current `/marketing` redesign.
+- Social posts — reuse existing social-feed grid component.
+- Audience — reuse contacts/lists components (Insights tab from
+  Session 26's `/contacts?view=insights` consolidation).
 
-A meeting tagged `client = Acme` should show in:
-- Work > Meetings (canonical)
-- Acme > Messages tab? — meetings aren't currently a Messages-tab
-  surface. **Decision needed**: do meetings need their own tab on
-  client detail in Phase 7, or is the Activity feed enough? Document
-  in project memory either way.
+### D. Decisions to make in-flight
 
-A task assigned to a client should appear in Work > Tasks (canonical)
-and likely a future Tasks tab on client detail (defer to Phase 7).
+- Does Marketing deserve a dedicated **Compose** floor, or does
+  composing always live as a slide-over / modal launched from the rail
+  header action button? (Recommend: header action button per floor —
+  "New Campaign" on Campaigns floor, "New Post" on Social, "New Email"
+  on Email — matching the Money pattern.)
+- Does the **Pulse** floor surface a per-campaign drill-down inline, or
+  always push to a detail route?
+- Should `mailing_lists` be its own floor, or live inside Audience?
 
-### D. Out of scope
+### E. Out of scope
 
-- Touching classic `/projects/*`, `/tasks*`, `/tickets/*`,
-  `/meetings/*`, `/scheduler/*` except for extracting genuinely shared
-  data composables. Those trees keep working.
-- Editing flows inside slide-overs (Phase 7).
-- The other three apps (Money / Marketing / Organization).
-- Migrating `useNavPreferences` / hat code.
+- Classic `/marketing`, `/social`, `/email`, `/contacts` trees.
+- Slide-over edits (Phase 7).
+- Other apps (`/apps/organization` is Phase 6 — last to land).
+- Hat code migration.
 
 ---
 
 ## Verification
 
-1. Toggle apps mode in /account → Layout. Click "Work" in the rail.
-   Land on `/apps/work` with the apps shell + Gantt view.
-2. Floor-strip switching renders each surface in-place without
-   re-mounting the shell.
-3. Drilling into a project row goes to a working detail page (apps or
-   classic — pick one, document it).
-4. Toggle to classic → /projects, /tasks, /tickets still work as
-   before.
-5. Hydration is clean (no SSR ↔ client mismatch errors beyond the
-   pre-existing ones flagged in project memory).
+1. Toggle apps mode → click "Marketing" in rail → land on
+   `/apps/marketing` with Pulse floor.
+2. Floor strip switches in-place without remounting the shell.
+3. Drilling into a campaign row reaches a working detail page (classic
+   /marketing/[id] or wherever marketing detail lives).
+4. Classic toggle → `/marketing`, `/social`, `/email` still work.
+5. No new hydration mismatches.
+6. The `/apps/marketing` router warning disappears.
 
 ---
 
-## Branch & commit hygiene
+## Suggested commits (floor of two)
 
-- Work directly on `main`. Tip is `07343aa` (Phase 2 ship).
-- Plaid bank-sync work parked on `claude/plaid-phase1-bank-sync`.
+1. `feat: Marketing app shell — /apps/marketing landing + Pulse floor`
+2. `feat: Marketing app sub-floors — Campaigns/Email/Social/Audience`
 
-## Suggested final commits
+Split further if Pulse's KPI strip + recommendation feed + Gantt is
+large enough to warrant its own commit.
 
-Keep the diff readable. Two commits is the floor:
+---
 
-1. `feat: Work app shell — /apps/work landing + floor strip`
-   (parts A floor-strip + B + F)
-2. `feat: Work app sub-floors — Projects/Tasks/Tickets/Meetings/Calendar`
-   (parts A floor content)
+## Phase 6 (next, last) — Organization app
 
-If A grows large (likely — the unified Gantt is the headline view),
-split it again: Gantt landing first, then sub-floors. Don't push until
-end-to-end verification passes.
+After Marketing lands, Phase 6 closes out the apps layout with the
+**Organization** app:
+
+- Floor strip: Overview / Members / Billing / Integrations / Settings.
+- All five floors map to existing `/organization/*` and `/account/*`
+  surfaces — mostly a re-shell + nav re-org, no new data layers.
+
+Once Phase 6 ships, AppRail covers all 5 apps and the Vue Router
+warnings clear. Phase 7 (slide-over edits, polish, multi-home Activity
+feeds) is the after-launch tail.
