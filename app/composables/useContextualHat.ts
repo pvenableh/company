@@ -1,11 +1,12 @@
 /**
  * Contextual Hat — Auto-Detected Workspace Context
  *
- * Replaces manual HatPicker by inferring the user's current context
- * from the active route. Used by all layout modes to highlight
- * the active navigation section.
+ * Despite the name, this composable is unrelated to the deprecated
+ * Hat workspace presets. It infers the user's current section from
+ * the active route and is used by SpacesSidebar, Footer, and SubNav
+ * to highlight the active group.
  *
- * Contexts: work, people, money, engage, ai
+ * Contexts: work / pipeline / financials / engage / team / ai / settings.
  */
 
 export type WorkspaceContext =

@@ -65,11 +65,12 @@ const DEFAULT_VISIBLE_ROUTES = new Set([
 	'/social',
 ]);
 
-// ── Hats ────────────────────────────────────────────────────────────────────
-// Hats are workspace presets that pre-fill sidebar visibility.
-// Switching hats resets visible apps to the hat's set. User can still
-// tweak individual apps via Edit Apps — those tweaks persist until the
-// next hat switch.
+// ── Hats (deprecated) ───────────────────────────────────────────────────────
+// Hats were workspace presets that pre-filled sidebar visibility. Apps Mode
+// now plays the role-shaped role, so hats are deprecated and the API is
+// frozen to a single Default hat. The exports below remain for one release
+// so persisted Directus prefs and any lingering imports don't crash; a
+// future cleanup can drop them entirely.
 
 export interface Hat {
 	id: string;
@@ -80,43 +81,15 @@ export interface Hat {
 	routes: string[];
 }
 
-const HATS: Hat[] = [
-	{
-		id: 'default',
-		icon: 'i-fluent-emoji-flat-comet',
-		name: 'Default',
-		description: 'Full workspace — all your apps',
-		routes: [...DEFAULT_VISIBLE_ROUTES],
-	},
-	{
-		id: 'project_manager',
-		icon: 'i-fluent-emoji-flat-clipboard',
-		name: 'Project Manager',
-		description: 'Projects, tickets, tasks & scheduling',
-		routes: ['/', '/projects', '/tickets', '/tasks', '/scheduler', '/channels', '/activity', '/contacts'],
-	},
-	{
-		id: 'accountant',
-		icon: 'i-fluent-emoji-flat-money-bag',
-		name: 'Accountant',
-		description: 'Invoices, contracts, expenses & reports',
-		routes: ['/', '/invoices', '/contracts', '/expenses', '/financials', '/time-tracker', '/contacts', '/organization?tab=billing'],
-	},
-	{
-		id: 'salesman',
-		icon: 'i-fluent-emoji-flat-rocket',
-		name: 'Salesman',
-		description: 'Leads, proposals, CRM & outreach',
-		routes: ['/', '/leads', '/proposals', '/clients', '/contacts', '/contracts', '/scheduler', '/email'],
-	},
-	{
-		id: 'marketing_manager',
-		icon: 'i-fluent-emoji-flat-bullseye',
-		name: 'Marketing Manager',
-		description: 'Campaigns, social, email & insights',
-		routes: ['/', '/marketing', '/social', '/email', '/contacts', '/scheduler'],
-	},
-];
+const DEFAULT_HAT: Hat = {
+	id: 'default',
+	icon: 'i-fluent-emoji-flat-comet',
+	name: 'Default',
+	description: 'Full workspace — all your apps',
+	routes: [...DEFAULT_VISIBLE_ROUTES],
+};
+
+const HATS: Hat[] = [DEFAULT_HAT];
 
 const HAT_STORAGE_KEY = 'earnest-active-hat';
 
@@ -216,41 +189,14 @@ export const useNavPreferences = () => {
 		}, 500);
 	};
 
-	/** Switch hat — resets visible apps to the hat's preset routes. */
-	const setHat = (hatId: string) => {
-		const hat = HATS.find(h => h.id === hatId);
-		if (!hat) return;
-		activeHatId.value = hatId;
-		visible.value = new Set(hat.routes);
-		// Reorder: hat routes first (in hat order), then everything else
-		const allRoutes = DEFAULT_LINKS.map(l => l.to);
-		const rest = allRoutes.filter(r => !hat.routes.includes(r));
-		order.value = [...hat.routes, ...rest];
-		save();
-	};
+	/** @deprecated Hats removed in Phase 7; kept as no-op for one release. */
+	const setHat = (_hatId: string) => {};
 
-	/**
-	 * Pick a sensible starting hat based on the user's org role.
-	 * Only applies if no hat has ever been chosen (no saved activeHat).
-	 */
-	const applySmartDefaultHat = () => {
-		if (import.meta.server) return;
-		// Bail if user already has a saved hat preference
-		const saved = user.value?.nav_preferences as NavPreferencesData | null;
-		if (saved?.activeHat) return;
-		if (localStorage.getItem(HAT_STORAGE_KEY)) return;
-		const role = getOrgRole();
-		const slug = role?.roleSlug?.value;
-		if (!slug) return;
-		// owner/admin → keep Default (full surface)
-		// manager → Project Manager preset is the closest fit
-		if (slug === 'manager') setHat('project_manager');
-	};
+	/** @deprecated Hats removed in Phase 7; no-op. */
+	const applySmartDefaultHat = () => {};
 
-	/** The currently active hat object. */
-	const activeHat = computed<Hat>(() =>
-		HATS.find(h => h.id === activeHatId.value) || HATS[0],
-	);
+	/** @deprecated Always returns the Default hat — hats are removed. */
+	const activeHat = computed<Hat>(() => DEFAULT_HAT);
 
 	const toggle = (route: string) => {
 		const set = new Set(visible.value);

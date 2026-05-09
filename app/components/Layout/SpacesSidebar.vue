@@ -15,14 +15,7 @@ const { logout } = useLogout()
 const { usageSummary } = useAITokens()
 const { isOrgAdminOrAbove } = useOrgRole()
 const { isDirectusAdmin } = useViewAsOrgAdmin()
-const { activeHat } = useNavPreferences()
-
-// Filter a nav section by the active hat. Default hat shows everything.
-const filterByHat = <T extends { to: string }>(items: T[]): T[] => {
-	if (activeHat.value.id === 'default') return items
-	const allowed = new Set(activeHat.value.routes)
-	return items.filter(i => allowed.has(i.to))
-}
+const { isAppsMode, setMode: setAppsMode } = useAppsMode()
 
 const showTokenMeter = computed(() => {
 	if (isDirectusAdmin.value) return true
@@ -117,24 +110,11 @@ const ALL_TEAM_ITEMS: NavItem[] = [
 	{ name: 'Teams', to: '/organization/teams', icon: 'heroicons:users' },
 ]
 
-const workItems = computed(() => filterByHat(ALL_WORK_ITEMS))
-const pipelineItems = computed(() => filterByHat(ALL_PIPELINE_ITEMS))
-const financialsItems = computed(() => filterByHat(ALL_FINANCIALS_ITEMS))
-const engageItems = computed(() => filterByHat(ALL_ENGAGE_ITEMS))
-const teamItems = computed(() => filterByHat(ALL_TEAM_ITEMS))
-
-// When a non-default hat is active, the 5-group taxonomy is more noise than
-// signal — empty groups leave gaps and single-item groups feel heavier than
-// the data warrants. Collapse into one flat list under the hat's name.
-const isHatActive = computed(() => activeHat.value.id !== 'default')
-
-const hatItems = computed<NavItem[]>(() => [
-	...workItems.value,
-	...pipelineItems.value,
-	...financialsItems.value,
-	...engageItems.value,
-	...teamItems.value,
-])
+const workItems = ALL_WORK_ITEMS
+const pipelineItems = ALL_PIPELINE_ITEMS
+const financialsItems = ALL_FINANCIALS_ITEMS
+const engageItems = ALL_ENGAGE_ITEMS
+const teamItems = ALL_TEAM_ITEMS
 
 function isActiveItem(to: string): boolean {
 	return route.path === to || route.path.startsWith(to + '/')
@@ -142,6 +122,13 @@ function isActiveItem(to: string): boolean {
 
 function handleTopup() {
 	openTokenModal()
+}
+
+async function handleEnterAppsMode() {
+	try {
+		await setAppsMode('apps')
+		await navigateTo('/apps/clients')
+	} catch {}
 }
 </script>
 
@@ -164,39 +151,10 @@ function handleTopup() {
 			</NuxtLink>
 		</div>
 
-		<!-- Scrollable nav -->
+		<!-- Scrollable nav: 5 collapsible groups -->
 		<nav class="flex-1 px-3 space-y-1" :class="sidebarCollapsed ? 'overflow-visible' : 'overflow-y-auto'">
-			<!-- ── HAT MODE: single flat list under the hat's name ── -->
-			<template v-if="isHatActive">
-				<div>
-					<div
-						v-if="!sidebarCollapsed"
-						class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70"
-					>
-						<UIcon :name="activeHat.icon" class="w-3.5 h-3.5 shrink-0" />
-						<span>{{ activeHat.name }}</span>
-					</div>
-					<div v-if="sidebarCollapsed" class="h-2" />
-					<div class="space-y-0.5 mt-0.5">
-						<NuxtLink
-							v-for="item in hatItems"
-							:key="item.to + item.name"
-							:to="item.to"
-							class="nav-item"
-							:class="{ 'nav-item-active': isActiveItem(item.to), 'justify-center': sidebarCollapsed, 'has-tooltip': sidebarCollapsed }"
-							:data-tooltip="sidebarCollapsed ? item.name : undefined"
-						>
-							<Icon :name="item.icon" class="w-4 h-4 shrink-0" />
-							<span v-if="!sidebarCollapsed" class="text-[13px]">{{ item.name }}</span>
-						</NuxtLink>
-					</div>
-				</div>
-			</template>
-
-			<!-- ── DEFAULT HAT: 5 collapsible groups ── -->
-			<template v-else>
-				<!-- WORK -->
-				<div>
+			<!-- WORK -->
+			<div>
 					<button
 						v-if="!sidebarCollapsed"
 						@click="toggleSpace('work')"
@@ -324,12 +282,20 @@ function handleTopup() {
 						</NuxtLink>
 					</div>
 				</div>
-			</template>
 		</nav>
 
-		<!-- Hat picker (between nav and footer) -->
-		<div class="px-3 py-2 border-t border-border/30 shrink-0">
-			<LayoutHatPicker :collapsed="sidebarCollapsed" />
+		<!-- Apps Layout entry point — surfaced for classic users -->
+		<div v-if="!isAppsMode" class="px-3 py-2 border-t border-border/30 shrink-0">
+			<button
+				type="button"
+				class="nav-item w-full"
+				:class="{ 'justify-center': sidebarCollapsed, 'has-tooltip': sidebarCollapsed }"
+				:data-tooltip="sidebarCollapsed ? 'Try Apps Layout' : undefined"
+				@click="handleEnterAppsMode"
+			>
+				<Icon name="lucide:layout-grid" class="w-4 h-4 shrink-0" />
+				<span v-if="!sidebarCollapsed" class="text-[13px]">Try Apps Layout</span>
+			</button>
 		</div>
 
 		<!-- Footer utilities -->
@@ -402,25 +368,8 @@ function handleTopup() {
 				</div>
 
 				<nav class="flex-1 px-3 space-y-1">
-					<!-- ── HAT MODE: single flat list ── -->
-					<template v-if="isHatActive">
-						<div>
-							<div class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-								<UIcon :name="activeHat.icon" class="w-3.5 h-3.5 shrink-0" />
-								<span>{{ activeHat.name }}</span>
-							</div>
-							<div class="space-y-0.5 mt-0.5">
-								<NuxtLink v-for="item in hatItems" :key="item.to + item.name" :to="item.to" class="nav-item" :class="{ 'nav-item-active': isActiveItem(item.to) }">
-									<Icon :name="item.icon" class="w-4 h-4 shrink-0" />
-									<span class="text-[13px]">{{ item.name }}</span>
-								</NuxtLink>
-							</div>
-						</div>
-					</template>
-
-					<!-- ── DEFAULT HAT: 5 collapsible groups ── -->
-					<template v-else>
-						<div>
+					<!-- 5 collapsible groups -->
+					<div>
 							<button @click="toggleSpace('work')" class="flex items-center gap-2 w-full px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
 								<Icon :name="spacesCollapsed.work ? 'lucide:chevron-right' : 'lucide:chevron-down'" class="w-3 h-3" />
 								<span>Work</span>
@@ -480,10 +429,18 @@ function handleTopup() {
 								</NuxtLink>
 							</div>
 						</div>
-					</template>
 				</nav>
 
 				<div class="p-3 border-t border-border/30 space-y-0.5">
+					<button
+						v-if="!isAppsMode"
+						type="button"
+						class="nav-item w-full"
+						@click="handleEnterAppsMode"
+					>
+						<Icon name="lucide:layout-grid" class="w-4 h-4 shrink-0" />
+						<span class="text-[13px]">Try Apps Layout</span>
+					</button>
 					<OrganizationTokenMeter
 						v-if="showTokenMeter"
 						compact

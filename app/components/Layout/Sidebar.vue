@@ -124,11 +124,6 @@
 			</div>
 		</div>
 
-		<!-- Hat Picker -->
-		<div class="px-2 pb-1">
-			<LayoutHatPicker :collapsed="collapsed" />
-		</div>
-
 		<!-- Token Meter -->
 		<OrganizationTokenMeter
 			v-if="!collapsed && showTokenMeter"

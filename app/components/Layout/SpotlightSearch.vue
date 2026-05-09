@@ -29,7 +29,7 @@
 								class="spotlight-section"
 							>
 								<span>Other apps</span>
-								<span class="text-muted-foreground/50">{{ activeHat.name }} hides these</span>
+								<span class="text-muted-foreground/50">Hidden from sidebar</span>
 							</div>
 							<button
 								class="spotlight-result"
@@ -69,13 +69,13 @@ const props = defineProps<{ open: boolean }>();
 const emit = defineEmits<{ (e: 'close'): void }>();
 
 const router = useRouter();
-const { defaultLinks, visibleLinks, activeHat } = useNavPreferences();
+const { defaultLinks, visibleLinks } = useNavPreferences();
 
 const query = ref('');
 const highlightIndex = ref(0);
 const inputRef = ref<HTMLInputElement | null>(null);
 
-// Hat-aware ordering: visible-in-current-hat first, hidden-by-hat after
+// Visible-in-sidebar first, hidden-from-sidebar after
 const orderedLinks = computed(() => {
 	const visibleSet = new Set(visibleLinks.value.map(l => l.to));
 	const inHat = defaultLinks.filter(l => l.to !== '/' && visibleSet.has(l.to));

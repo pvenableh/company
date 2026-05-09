@@ -10,8 +10,7 @@ const layout = 'default';
 // ── Layout mode ──
 const { currentMode } = useLayoutMode();
 
-// ── Hats ──
-const { hats, activeHat, setHat } = useNavPreferences();
+// ── Widget gating (legacy hat hooks; useHatLayout is now a no-op shim) ──
 const { showWidget, hatModules } = useHatLayout();
 
 // ── Productivity Engine (existing) ──
@@ -221,14 +220,6 @@ watch([selectedOrg, selectedClient, selectedTeam], () => {
 	}
 });
 
-// Switching hats narrows or widens the active analyzer set; re-run so
-// suggestions/metrics drop modules no longer in scope and pull in new ones.
-watch(() => activeHat.value.id, () => {
-	if (user.value) {
-		runAnalysis();
-	}
-});
-
 // Show leaderboard when a team is selected
 const showLeaderboard = computed(() => !!selectedTeam.value);
 
@@ -336,22 +327,6 @@ watch(activeTab, (t) => {
 							<span class="text-[11px] font-medium whitespace-nowrap">{{ badge.name }}</span>
 						</div>
 					</UTooltip>
-				</div>
-
-				<!-- Hat Modes (hidden in Spaces layout — sidebar provides navigation) -->
-				<div v-if="currentMode !== 'spaces'" class="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-					<button
-						v-for="hat in hats"
-						:key="hat.id"
-						class="flex items-center gap-2 px-3.5 py-2 rounded-xl text-[13px] font-medium whitespace-nowrap transition-all ios-press flex-shrink-0"
-						:class="activeHat.id === hat.id
-							? 'bg-primary/10 text-primary ring-1 ring-primary/20'
-							: 'bg-card text-muted-foreground hover:bg-muted/50 border border-border/40'"
-						@click="setHat(hat.id)"
-					>
-						<UIcon :name="hat.icon" class="w-[18px] h-[18px] flex-shrink-0" />
-						<span>{{ hat.name }}</span>
-					</button>
 				</div>
 
 				<!-- Unified Gantt Timeline -->
