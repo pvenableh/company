@@ -1,194 +1,174 @@
-# Next session: Commit pending perf wiring, then Apps Layout — Phase 0
+# Next session: Apps Layout — Phase 1 (apps shell scaffolding)
 
-Two parts in one session: (1) commit and verify the uncommitted perf
-follow-up wiring from May 8, then (2) start Phase 0 of the approved Apps
-Layout plan. Phase 0 is the prerequisite work that the apps shell (Phase 1)
-builds on, and it gives classic-mode users a free modal width upgrade in the
-meantime.
+Phase 0 is on `main` and pushed (commit `187e6b0` "feat: Apps Layout
+Phase 0 — ResponsiveModal + modal sweep", on top of `119663c` perf
+wiring). Both rode out behind `users.layout_mode` defaulting to classic
+for everyone, so production behaviour is unchanged for current users —
+they just inherited the modal-width upgrade and a hidden picker.
 
-Per project memory: bind preview to `127.0.0.1:3000`, use `preview_*` tools,
-never bash/curl/Playwright.
+Phase 1 builds the parallel apps shell. **No app content yet** — just the
+scaffolding + the "Try Apps Layout (preview)" toggle. Phases 2-6 fill the
+five apps one at a time.
 
----
+Per project memory: bind preview to `127.0.0.1:3000`, use `preview_*`
+tools, never bash/curl/Playwright.
 
-## PART 1 — Commit the pending perf wiring
-
-The previous session left work on the working tree but didn't commit. The
-diff is small and self-contained:
-
-```
-M app/components/DeferUntilVisible.vue       — emits `enter` once when slot becomes visible
-M app/components/Tasks/Board.vue             — uses extracted TasksCard
-?? app/components/Tasks/Card.vue             — extracted (universal status-dot pattern)
-M app/composables/useAIProductivityEngine.ts — audit-trail comments (no logic change)
-M app/composables/useHatLayout.ts            — trimmed HAT_MODULES; lazy via loadModule()
-M app/pages/index.vue                        — onChatDeskEnter / onFinancialEnter / replayLazyLoaders
-```
-
-### Verify before commit
-
-1. **Tasks/Card** — `/projects/<any>/Tasks` board. Cards should render with
-   the new pattern: checkbox left, title (line-through when complete),
-   priority + due-date row, assignee on right. Drag a card across columns to
-   confirm `vuedraggable` still works after the extraction. Toggle the
-   checkbox to confirm `toggle-complete` event fires.
-2. **Lazy module loaders** — set `localStorage.earnest-active-hat = 'accountant'`
-   then reload `/`. Cold mount should show priority-actions / goals /
-   suggestions. Scroll down — Financial Quarter widget enters view, and
-   `loadModule('invoices')` + `loadModule('deals')` fire. Confirm there are
-   no Vue runtime errors and the suggestions list updates.
-3. **Hat-switch replay** — switch from default to accountant hat after
-   sitting on default for >60s (so the `_moduleCache` TTL has expired).
-   Confirm Priority Actions still shows invoice alerts after switch — the
-   `replayLazyLoaders()` in `runAnalysis()` should re-fire `loadModule` for
-   any deferred widgets that already entered view.
-
-### Commit
-
-```
-git add -A
-git commit -m "$(cat <<'EOF'
-feat: lazy module loaders + Tasks/Card extraction
-
-- DeferUntilVisible emits `enter` once when the slot becomes visible
-- HAT_MODULES drops carddesk/channels (PM+Salesman) and invoices/deals
-  (Accountant) — these now load when their DeferUntilVisible widget enters
-  view via loadModule()
-- replayLazyLoaders() in runAnalysis() handles the hat-switch corner case
-  where the observer has already fired and won't re-emit on the next
-  analyze() pass
-- Tasks/Card.vue extracted; Tasks/Board.vue uses it; useStatusStyle pulls in
-  priority colors so the kanban matches Projects/Tickets visually
-- Audit comments updated for call_logs / messages / social_accounts
-  (Directus row perms scope these; no engine-side org filter needed —
-  see scripts/audit-tenant-row-perms.ts)
-
-Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
-EOF
-)"
-```
-
-Then move into Part 2.
+The full plan is in project memory `project_apps_layout_plan.md`. Pull
+it before starting if anything below is unclear. Decisions already locked
+there — don't re-litigate.
 
 ---
 
-## PART 2 — Apps Layout Phase 0
+## Phase 1 deliverables (do all five before stopping)
 
-Background: the approved Apps Layout plan is in project memory
-`project_apps_layout_plan.md` (originSession 2026-05-08). It introduces a
-parallel "apps mode" shell behind `users.layout_mode = 'classic' | 'apps'`,
-with five apps (Clients / Work / Money / Marketing / Organization). Phase 0
-lands in BOTH modes — it's foundation work, not the apps shell itself.
+### A. Directus schema
 
-### Phase 0 has three deliverables. Do all three before stopping.
+Add two columns to the `directus_users` collection (Directus admin or a
+schema migration script — match whichever pattern this codebase already
+uses for user schema additions):
 
-#### A. Hide dormant layout & timeline chooser options
+- `layout_mode` — string, enum `'classic' | 'apps'`, default `'classic'`,
+  nullable false
+- `app_rail_position` — string, enum `'left' | 'top' | 'bottom' | 'right' | 'floating'`,
+  default `'left'`, nullable false
 
-[useLayoutMode.ts](app/composables/useLayoutMode.ts) already gates `tabs` and
-`home` modes behind `hidden: true` in `LAYOUT_MODES`. That works for the
-picker, but verify there are no surfaces still rendering them:
+Update the typed schema in `server/types/directus-schema.d.ts` (or
+wherever the user shape is declared in `shared/`). Run typecheck before
+moving on. Existing users keep the defaults — no backfill needed since
+both default values match the legacy classic behaviour.
 
-```
-grep -rn "'tabs' as LayoutMode\|'home' as LayoutMode\|currentMode === 'tabs'\|currentMode === 'home'" app/
-```
+### B. Composable: `useAppsMode`
 
-Goal: Phase 0 leaves codepaths in source (revival-friendly) but hidden
-behind `v-if="false"` / `hidden: true`, never deleted.
+Create `app/composables/useAppsMode.ts`. Mirrors `useLayoutMode` but
+sources from the Directus user row, not `localStorage`:
 
-Same pass on the timeline view chooser. The home Project Timeline
-([ProjectTimelineUnifiedGantt](app/components/ProjectTimeline/UnifiedGantt.vue))
-has a `nested|flat|today` toggle persisted to `earnest-timeline-view-mode`
-localStorage. Audit which views are in active use vs. dormant. Hide the
-ones the user no longer wants exposed in the picker. Confirm with a screenshot
-of the home dashboard showing only the active toggle states.
+```ts
+export function useAppsMode() {
+  // current mode, reactive — reads from authenticated user
+  const mode = computed<'classic' | 'apps'>(...);
+  const isAppsMode = computed(() => mode.value === 'apps');
+  const railPosition = computed<RailPosition>(...);
 
-#### B. Build `ResponsiveModal` wrapper
+  async function setMode(next: 'classic' | 'apps'): Promise<void>;
+  async function setRailPosition(next: RailPosition): Promise<void>;
 
-**Location:** `app/components/ResponsiveModal.vue` (top-level — NOT
-`app/components/ui/`; the `Ui*` prefix collides with the auto-generated
-shadcn-vue wrappers).
-
-**Behavior:**
-- Mobile (< `md`): renders as a bottom drawer
-  ([UDrawer](app/components/ui/drawer)) — full-width, slides up, swipe-down
-  to dismiss.
-- Desktop (≥ `md`): renders as a centered dialog
-  ([UDialog](app/components/ui/dialog)) — comfortable max-width.
-
-**Sizing prop API:**
-- `sm` → `sm:max-w-md`  (28rem) — for the smallest existing modals
-- `md` → `sm:max-w-lg`  (32rem) — new default
-- `lg` → `sm:max-w-2xl` (42rem) — the comfortable target for forms
-- `xl` → `sm:max-w-4xl` (56rem) — proposal/contract editors etc.
-
-**Slot & prop parity:** match `UModal`'s API as closely as possible so the
-sweep in C is mechanical: `v-model` (open/close), `title`, `hideClose`,
-`onInteractOutside`. Default slot for body. The `hideClose` escape-hatch
-convention is established (see Session 22 chrome project memory).
-
-**Verification:** mount the component on a temporary surface (an inline
-button on `/`), resize via `preview_resize` between 375px and 1024px to
-confirm the drawer↔dialog flip, then remove the test surface.
-
-#### C. Sweep existing modals to use ResponsiveModal at comfortable widths
-
-Known starting set (all currently `sm:max-w-md` or narrower):
-- [Organization/BillingSurface.vue:564](app/components/Organization/BillingSurface.vue:564) — refund modal
-- [TimeTracker/Modal.vue](app/components/TimeTracker/Modal.vue) — time entry edit
-- [Leads/ConversionModal.vue](app/components/Leads/ConversionModal.vue) — lead → client
-- [Leads/LostReasonModal.vue](app/components/Leads/LostReasonModal.vue) — lost reason (currently `sm:max-w-sm`)
-- [Projects/Overview.vue:440](app/components/Projects/Overview.vue:440) — meeting detail
-- [ProjectTimelineUnifiedGantt:1228](app/components/ProjectTimeline/UnifiedGantt.vue:1228) — project preview
-
-Run a wider grep at the start to catch the rest:
-```
-grep -rln "UModal\|sm:max-w-" app/components --include="*.vue"
+  return { mode, isAppsMode, railPosition, setMode, setRailPosition };
+}
 ```
 
-For each modal touched: (1) swap `UModal` → `ResponsiveModal`, (2) raise
-width to `lg` or `xl` per content density, (3) verify mobile in preview at
-375px and desktop at 1024px+. The plan calls out: do all three, don't
-half-finish. A swept modal that's still narrow on desktop is no better
-than not sweeping it.
+`setMode` / `setRailPosition` should `PATCH /users/me` via the existing
+Directus auth client and update local user state so the layout flip is
+immediate (no full reload). Optimistic update + rollback on error is
+fine.
 
-### Decisions already locked (don't re-litigate)
+### C. Layout: `app/layouts/apps.vue`
 
-These were debated and decided in the brainstorm — pull from project memory
-`project_apps_layout_plan.md` if anything's unclear:
+The apps-mode shell. Mounts when `useAppsMode().isAppsMode === true`.
+Wires:
 
-- Toggle is `users.layout_mode = 'classic' | 'apps'`, default `classic`,
-  per-user (NOT per-org). Phase 1 ships the column + UI toggle.
-- Five apps: Clients, Work, Money, Marketing, Organization. Phase 2-6 each
-  ship one app standalone.
-- Slide-overs for one-deep nav, full-page push for two+ deep,
-  ResponsiveModal wrapper for modals.
-- No breadcrumbs. Back chevron + previous-screen-name + pill floor strip.
-- Hats stay untouched in classic mode; apps mode replaces them with per-app
-  saved view presets.
+- `<AppRail>` (positioned per `railPosition`, default left)
+- `<AppHeader>` slot (per-app title + actions; component stub OK if no
+  app routes exist yet)
+- `<NuxtPage />` for the active app's pages
+- `<AppSlideOver>` mount point (teleport target — slide-over content is
+  pushed in by individual apps via a composable in a later phase; for
+  Phase 1 just register the teleport target)
+- Persistent chrome that survives the layout flip: header bell (notices),
+  AI sidebar trigger, spotlight, user menu. Reuse the existing components
+  from `default.vue` — don't fork them.
 
-### Out of scope for this session
+Routing: any page that opts into apps layout uses
+`definePageMeta({ layout: 'apps' })`. Phase 1 has zero such pages — that's
+fine. The toggle (item E) flips an account flag; nothing changes visually
+until Phase 2's first app lands.
 
-- Phase 1 apps shell — `apps.vue` layout, `AppRail`, `AppHeader`,
-  `AppSlideOver`, the layout toggle UI. Don't start until Phase 0 lands.
-- New schema columns (`users.layout_mode`, `users.app_rail_position`) — go
-  with Phase 1.
-- Touching hat code, `default.vue`, `SpacesSidebar`, `useHatLayout`, the 5
-  hat definitions. Those stay untouched throughout the migration.
-- Any Apps Layout brainstorming — the plan is approved. Execute it.
+Keep `default.vue` and the spaces/focus layout stack untouched.
+
+### D. Components
+
+Create three top-level components in `app/components/`:
+
+- `AppRail.vue` — vertical rail listing the five apps as icon+label
+  buttons (Clients / Work / Money / Marketing / Organization). For Phase 1
+  the buttons are dead links (no app routes exist) but the component
+  should render, highlight the active app via `useRoute()`, and respect
+  `useAppsMode().railPosition`. Floating + bottom positions can be
+  stubbed with a TODO comment — left/top/right are the realistic ones to
+  ship now.
+- `AppHeader.vue` — top header strip per app. Slots: `default` (title),
+  `actions` (right-side controls). Auto-renders the back chevron +
+  previous-screen-name when `useRouter().back` is meaningful (i.e. there's
+  navigation history within the current app).
+- `AppSlideOver.vue` — right-side slide-over panel for one-deep nav.
+  Reuses `Sheet` with `side="right"`. API mirrors ResponsiveModal:
+  v-model, title, hideClose. Width: `lg` (max-w-2xl) on desktop, full on
+  mobile.
+
+Co-locate styles in each `<style scoped>` block. No global CSS.
+
+### E. Account toggle
+
+Add a "Layout" section to the user account page (likely
+`app/pages/account/index.vue` — verify the file exists before placing
+copy; if the page is split differently, follow the existing IA). The
+section has:
+
+- Heading: "Try Apps Layout (preview)"
+- Description: "An app-by-app shell for Clients, Work, Money, Marketing,
+  and Organization. Hats and your current sidebar stay available — toggle
+  back any time."
+- A `Switch` bound to `useAppsMode().mode === 'apps'` that calls
+  `setMode('apps' | 'classic')`.
+- A `Select` for rail position, only visible when mode === 'apps'.
+
+Toggling should immediately flip layouts on the next route resolution.
+Test by toggling and navigating — even though no apps pages exist yet,
+the rail should appear if you point a temporary `app/pages/apps-test.vue`
+with `definePageMeta({ layout: 'apps' })` at it. Remove that test page
+before commit.
+
+---
+
+## Verification
+
+1. Toggle on apps mode in account settings — confirm Directus user row
+   updates (check via admin or a `useDirectusAuth().user.value`
+   inspection).
+2. Toggle rail position between left / top / right — confirm
+   `<AppRail>` reflows correctly at desktop and mobile.
+3. Toggle back to classic — `default.vue` shell takes over, hats and
+   sidebar render unchanged.
+4. Confirm hydration is clean (no SSR ↔ client mismatch errors in the
+   preview console) for both modes.
+
+## Out of scope
+
+- The five actual apps. Clients/Work/Money/Marketing/Organization land
+  in Phases 2-6.
+- Drag-snap rail positioning, auto-hide, advanced transitions, saved view
+  presets — Phase 7 polish.
+- Touching hat code, `default.vue`, `SpacesSidebar`, `useHatLayout`, the
+  five hat definitions, header bell, AI sidebar, spotlight. Apps mode is
+  additive.
+- Mirror behaviour for channels/meetings/tasks (the multi-home rule) —
+  that's an app-level concern, lands per-app.
+- Migrating existing routes into the apps shell — Phase 2+ task.
 
 ---
 
 ## Branch & commit hygiene
 
-- Work directly on `main`. Current tip is `baa4125` (the perf-followups
-  merge). No feature branch.
-- Plaid bank-sync work parked on `claude/plaid-phase1-bank-sync` (intact,
-  awaiting Stripe Product creation per project memory) — leave it alone.
+- Work directly on `main`. Tip is `187e6b0` (Phase 0 ship).
+- Plaid bank-sync work parked on `claude/plaid-phase1-bank-sync` — leave
+  it alone.
 
 ## Suggested final commits
 
-Two commits on `main` keep the diff readable:
-1. `feat: lazy module loaders + Tasks/Card extraction` (Part 1)
-2. `feat: Apps Layout Phase 0 — ResponsiveModal + modal sweep` (Part 2)
+Two commits keep the diff readable:
 
-Don't push until both parts pass live verification.
+1. `feat: users.layout_mode + app_rail_position schema` (Part A)
+2. `feat: Apps Layout Phase 1 — shell scaffolding + preview toggle`
+   (Parts B-E)
+
+Don't push until end-to-end verification passes (toggle on, layout
+flips, toggle off, classic returns).
