@@ -4292,6 +4292,10 @@ export interface DirectusUser {
 	networking_goal?: string | null;
 	/** @description JSON preferences for nav visibility and order */
 	nav_preferences?: Record<string, any> | null;
+	/** @description Apps Layout shell selector. 'classic' keeps the sidebar+hats layout; 'apps' opts into the department-store rail. */
+	layout_mode?: 'classic' | 'apps';
+	/** @description Apps Layout rail placement. Ignored when layout_mode='classic'. */
+	app_rail_position?: 'left' | 'top' | 'right' | 'bottom' | 'floating';
 	/** @description Stripe Customer id (cus_…). Set on registration; primary lookup key for webhook → org sync. */
 	stripe_customer_id?: string | null;
 	/** @description Stripe Subscription id (sub_…). Set by checkout/subscription webhooks. */
