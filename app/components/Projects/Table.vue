@@ -140,12 +140,21 @@ const props = defineProps({
 		type: Boolean,
 		default: false,
 	},
+	/**
+	 * When true, row clicks emit `select-project` so the apps shell can
+	 * open a slide-over without losing the surrounding floor view. The
+	 * slide-over is responsible for rendering an "Open full page" link.
+	 */
+	apps: {
+		type: Boolean,
+		default: false,
+	},
 });
 
 const emit = defineEmits(['select-project']);
 
 function handleRowClick(project) {
-	if (props.portal) {
+	if (props.portal || props.apps) {
 		emit('select-project', project);
 		return;
 	}
