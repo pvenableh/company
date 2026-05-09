@@ -1225,7 +1225,7 @@ const showUndated = ref(false);
 		</UModal>
 
 		<!-- Project Modal (editable if permitted, read-only otherwise) -->
-		<UModal v-model="showProjectPreview" class="sm:max-w-md">
+		<ResponsiveModal v-model="showProjectPreview" size="lg">
 			<template #header>
 				<div class="flex items-center gap-2">
 					<span
@@ -1353,7 +1353,7 @@ const showUndated = ref(false);
 					>{{ savingProject ? 'Saving...' : 'Save Changes' }}</button>
 				</div>
 			</div>
-		</UModal>
+		</ResponsiveModal>
 	</div>
 </template>
 

@@ -1,5 +1,5 @@
 <template>
-	<UModal v-model="isOpen" class="sm:max-w-sm">
+	<ResponsiveModal v-model="isOpen" size="lg">
 		<template #header>
 			<h3 class="text-sm font-bold uppercase tracking-wide">Mark Lead as Lost</h3>
 		</template>
@@ -34,7 +34,7 @@
 				</Button>
 			</div>
 		</template>
-	</UModal>
+	</ResponsiveModal>
 </template>
 
 <script setup>

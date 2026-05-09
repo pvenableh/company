@@ -1,5 +1,5 @@
 <template>
-	<UModal v-model="isOpen" class="sm:max-w-md">
+	<ResponsiveModal v-model="isOpen" size="lg">
 		<template #header>
 			<h3 class="text-sm font-bold uppercase tracking-wide">Convert Lead to Client</h3>
 		</template>
@@ -72,7 +72,7 @@
 				</Button>
 			</div>
 		</template>
-	</UModal>
+	</ResponsiveModal>
 </template>
 
 <script setup>

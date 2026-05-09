@@ -1,5 +1,5 @@
 <template>
-	<UModal v-model="isOpen" class="sm:max-w-md">
+	<ResponsiveModal v-model="isOpen" size="lg">
 		<template #header>
 			<div class="flex items-center justify-between w-full">
 				<span class="text-sm font-semibold">Time Tracker</span>
@@ -64,7 +64,7 @@
 				<TimeTrackerStartForm ref="startFormRef" @started="isOpen = false" />
 			</div>
 		</div>
-	</UModal>
+	</ResponsiveModal>
 </template>
 
 <script setup lang="ts">

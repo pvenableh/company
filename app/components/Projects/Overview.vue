@@ -437,7 +437,7 @@
 		</UModal>
 
 		<!-- Meeting Detail Modal (read-only) -->
-		<UModal v-model="showMeetingDetail" class="sm:max-w-md">
+		<ResponsiveModal v-model="showMeetingDetail" size="lg">
 			<template #header>
 				<div class="flex items-center gap-2">
 					<div class="h-7 w-7 rounded-xl bg-purple-500/10 flex items-center justify-center">
@@ -488,7 +488,7 @@
 					Join Meeting
 				</a>
 			</div>
-		</UModal>
+		</ResponsiveModal>
 
 		<!-- Schedule Meeting Modal -->
 		<SchedulerNewMeetingModal

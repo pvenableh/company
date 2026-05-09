@@ -561,7 +561,7 @@ const statusColor = (status: string): 'green' | 'amber' | 'red' | 'gray' => {
 		</UTabs>
 
 		<!-- Refund modal -->
-		<UModal v-model="refundOpen" title="Issue Refund" class="sm:max-w-md">
+		<ResponsiveModal v-model="refundOpen" title="Issue Refund" size="lg">
 			<div v-if="refundTarget" class="space-y-4 text-sm">
 				<div class="rounded-md bg-muted/50 p-3 space-y-1">
 					<div class="text-[10px] uppercase tracking-wider text-muted-foreground">Charge</div>
@@ -605,6 +605,6 @@ const statusColor = (status: string): 'green' | 'amber' | 'red' | 'gray' => {
 					</UiActionButton>
 				</div>
 			</template>
-		</UModal>
+		</ResponsiveModal>
 	</div>
 </template>
