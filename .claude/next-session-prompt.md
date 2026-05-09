@@ -1,128 +1,139 @@
-# Next session: AI engine + cache headers + org-filter gap + comment-count chattiness
+# Next session: verify the perf follow-ups, finish card unification, sweep loose ends
 
-Four deferred follow-ups from prior perf sessions. Land them in one branch
-or split as you see fit. Verify in the running preview (per project memory:
-bind to `127.0.0.1:3000`, use `preview_*` tools — never bash/curl/Playwright).
+This continues the May 8 perf push. The four follow-ups in the previous version
+of this file shipped on `claude/perf-followups-may08` (commit `492b2dd`) and
+need live verification. Card unification (the "universal ticket design"
+introduced in `fa06c50`) was applied to Tickets/Card.vue and Projects/Card.vue
+but Tasks/Board.vue still renders cards inline with the old pattern. A few
+non-tenant-scoped queries that the perf prompt deferred are still open.
 
-## 1. Make analyze() lazy in [useAIProductivityEngine.ts](app/composables/useAIProductivityEngine.ts)
+Per project memory: bind preview to `127.0.0.1:3000`, use `preview_*` tools,
+never bash/curl/Playwright.
 
-Today, [analyze()](app/composables/useAIProductivityEngine.ts:1444) runs all 11 modules on
-mount (5 priority + 6 secondary, both via `Promise.all`). The dock badge,
-sidebar tray, and command-center widgets all subscribe to the same
-`suggestions`/`metrics` refs, so cold mount fans out 30+ Directus reads
-even when the active hat only renders one widget.
+## 1. Verify the four perf follow-ups in `492b2dd`
 
-**Goal:** run only what the active hat actually shows on first paint;
-lazy-load the remaining modules when their consumer widget enters view
-(IntersectionObserver) or the hat changes.
+The diff is small (8 files, +191/-70). The pieces:
 
-**Approach to consider:**
-- Map `hat → modules[]` (use [useHatLayout](app/composables/useHatLayout.ts) — Default/PM/Accountant/Salesman/Marketing Manager). Pass the active set into `analyze({ modules: ['tickets', 'projects'] })` and skip the rest.
-- For widgets gated by IntersectionObserver, expose a `loadModule(name)` so a widget can request its own data on mount-in-view. Reuse the existing `_moduleCache` map ([useAIProductivityEngine.ts:60](app/composables/useAIProductivityEngine.ts:60)) — it already has 5-min TTL, just route through it.
-- Keep the existing priority/secondary split as the *default* for the Default hat; other hats can override with their own subset.
-- Watch out for the `metrics.value.overdueItems` / `tasksCompletedToday` side-effects ([useAIProductivityEngine.ts:322](app/composables/useAIProductivityEngine.ts:322)) — they're written from `analyzeTickets` and read by widgets that may not invoke that module. Either compute them lazily on first read, or keep tickets in the always-on set.
+- **Lazy hat-aware analyze()** — [useHatLayout.ts](app/composables/useHatLayout.ts) exposes `hatModules` (`null` = all). [pages/index.vue](app/pages/index.vue) intersects with `enabledModules` and re-runs `analyze()` on hat switch. [useAIProductivityEngine.ts](app/composables/useAIProductivityEngine.ts) force-includes `tickets` so `metrics.overdueItems` / `tasksCompletedToday` side-effects still populate. New `loadModule(name)` exported but **not yet wired** into any DeferUntilVisible widget — see item 3.
+- **Cache headers** — `private, max-age=30` on `crm/health-snapshot`, `marketing/health-snapshot`, `marketing/timeline`, `marketing/recommendations`. Set after auth.
+- **Org-filter `_in: accessibleOrgIds`** — `orgFilter()` now allow-lists when `selectedOrg` is null. Same treatment in `analyzeTickets` completed-today and `analyzeInvoices.bill_to`. `analyzeDeals` guard relaxed.
+- **`attachCommentCounts` new-IDs-only** — [Projects/Board.vue](app/components/Projects/Board.vue) tracks `_commentCountFetched` set; existing project IDs skip the aggregate.
 
-**Verify:** In preview, instrument `fetch` to capture `/api/directus/items`
-calls. Land on `/` with the Default hat — should see priority modules
-only (~5 reads). Switch to the Accountant hat — should see invoice/billing
-modules but NOT social/scheduling/etc. Scroll to a deferred widget — that
-single module's reads fire. Confirm the suggestions stream still hydrates
-without flicker.
+### Verification steps
 
-## 2. Add 30s cache headers to read-only snapshot endpoints
+Run with the Default hat first, then switch to each persona-shaped hat and
+observe.
 
-Both endpoints recompute on every request and return stale-tolerant data.
-Adding `Cache-Control: private, max-age=30` lets the browser short-circuit
-the back-button and tab-switch case without forcing a refetch.
+1. **Hat-aware module loading** — Instrument fetch in preview, capture `/api/directus/items` POSTs by `collection`. Land on `/` with the Default hat: should see priority modules' reads (tickets/projects/tasks/invoices/channels). Switch to **Accountant** hat: tickets/tasks/invoices/deals/goals only — no `social_posts`, no `appointments`, no `call_logs`, no `channels`. Switch to **Marketing Manager**: `tickets/tasks/channels/social_posts/goals`, no `invoices`/`leads`/`call_logs`. Confirm hat switch re-runs (the `watch(activeHat.id)` in [pages/index.vue](app/pages/index.vue)).
+2. **Org-filter** — Pick a multi-org admin user. Inspect the `tickets` POST body when no org is selected: filter must include `organization: { _in: [uuid, uuid] }`, NOT `{}`. Pick one org → `{ _eq }`. Same for `projects`, `tasks` (note: tasks is user-scoped via `assignee_id`, ignore), `invoices` (uses `bill_to: { _in }`).
+3. **Cache headers** — Use `preview_network` and check the response headers on the four endpoints. Should be `cache-control: private, max-age=30`. Hit twice within 30s; second is `(disk cache)` in DevTools or `from-cache` in `preview_network`. Force-refresh bypasses.
+4. **Project comment counts** — On the projects board, watch a card's status get dragged or status flip via realtime. Confirm `directus_comments` aggregate fires only on cold mount + when a brand-new project ID enters the list (e.g. create a project). The previous behavior (one aggregate per WS tick) is gone. Add a comment via `/api/portal/comments` or the chat dock — count won't update without a refresh; that's expected (no WS signal exists for comment creation; the count was always stale on existing IDs anyway).
 
-- [server/api/crm/health-snapshot.get.ts](server/api/crm/health-snapshot.get.ts) — pure algorithmic CRM scoring, no AI tokens
-- [server/api/marketing/health-snapshot.get.ts](server/api/marketing/health-snapshot.get.ts)
-- [server/api/marketing/timeline.get.ts](server/api/marketing/timeline.get.ts)
-- [server/api/marketing/recommendations.get.ts](server/api/marketing/recommendations.get.ts)
+If anything diverges, fix and amend the commit. The changes are mechanical
+enough that I'd be surprised if any are wrong, but the multi-org admin path
+(no `selectedOrg`) is the easiest to misjudge — please verify there.
 
-Pattern (use h3's `setResponseHeader`):
+## 2. Wire `loadModule(name)` into the deferred widgets
+
+`loadModule(name)` is now exposed from [useAIProductivityEngine.ts](app/composables/useAIProductivityEngine.ts) but
+nothing calls it yet. Three home-dashboard widgets gate behind
+`DeferUntilVisible` and would benefit:
+
+- [CommandCenterCardDeskPipeline](app/components/CommandCenter/CardDeskPipeline.vue) — needs `carddesk` module
+- [CommandCenterRealtimeChat](app/components/CommandCenter/RealtimeChat.vue) — needs `channels` module
+- [CommandCenterFinancialQuarter](app/components/CommandCenter/FinancialQuarter.vue) — needs `invoices` + `deals`
+
+The [hat → modules map](app/composables/useHatLayout.ts:43) currently lists these
+upfront for hats that show the widget — which means they fire on cold mount
+even if the widget hasn't entered view yet. Two options:
+
+- **(a)** Drop those modules from the hat-default set and have each widget call `loadModule()` from an `onMounted` inside the `DeferUntilVisible` slot. Cold mount drops further; the widget's first paint pays for the fetch when it enters view.
+- **(b)** Keep them in the hat-default and skip the lazy wiring. Simpler, but you don't capture the "below-the-fold" win that `DeferUntilVisible` is designed for.
+
+I'd recommend (a). The lazy widgets should expose a small `<DeferUntilVisible
+@enter="loadModule('carddesk')">` pattern — match whatever event/prop the
+component already emits (look for `enter` or an `IntersectionObserver` ref).
+
+## 3. Card unification — Tasks board still uses the old pattern
+
+`fa06c50` introduced the "universal ticket design": status-dot accent +
+title + assignee avatar stack + bottom counts. Applied to:
+
+- [Tickets/Card.vue](app/components/Tickets/Card.vue) — full implementation
+- [Projects/Card.vue](app/components/Projects/Card.vue) — pattern adopted, status accent + counts
+- [Tasks/Board.vue:62](app/components/Tasks/Board.vue:62) — **still inline, old pattern**: priority text-color, due-date with calendar icon, no status accent dot, no extracted `Tasks/Card.vue`
+
+The mismatch is visually obvious if you switch between `/projects` and a
+project's task list. Two paths:
+
+- **Extract** `Tasks/Card.vue` matching the [Projects/Card.vue](app/components/Projects/Card.vue) skeleton: `getStatusAccent` from `useStatusStyle`, status dot, title (line-through when complete), single bottom-meta row with priority + due + assignee. Use the existing checkbox toggle as the "left" element instead of the status dot if you want to keep the inline-complete affordance — or move the checkbox into a hover-only action and let the status dot speak for completion.
+- **Keep inline** but match the visual rhythm: same `text-xs`, same `gap-2`, same accent dot, same assignee-avatar shape. Easier diff but loses the reusable component.
+
+Reusable component (extract path) wins on consistency. The two boards now
+diverge enough that drag-drop between them — if/when that's wired — will feel
+janky.
+
+While you're in there: `Tasks/Board.vue` doesn't use `useStatusStyle` at all
+(it's hardcoding red/blue priority colors). Worth pulling
+`getPriorityIconClass` / `getPriorityBadgeClasses` to match.
+
+## 4. `call_logs` org-filter audit (deferred from the perf prompt)
+
+[useAIProductivityEngine.ts:analyzePhone](app/composables/useAIProductivityEngine.ts:848) queries `call_logs` with no org
+filter and no user_created filter:
+
 ```ts
-setResponseHeader(event, 'Cache-Control', 'private, max-age=30');
+filter: {
+  event_type: { _eq: 'missed' },
+  status: { _eq: 'published' },
+}
 ```
 
-`private` is important — these are user/org-scoped, must not be cached by
-shared proxies. Place the header set after `requireUserSession` so 401s
-don't get cached.
+The previous perf prompt explicitly listed `messages`/`social_posts`/`appointments`
+as "intentionally user-scoped, leave alone." It did NOT list `call_logs`. This
+analyzer relies on Directus row perms to scope across tenants — the same
+ambiguous walk that item 3 of the perf prompt closed everywhere else. Confirm
+whether `call_logs` has a row-level read perm tying calls to the caller's org
+(via `related_contact.organization` or similar). If yes, leave alone. If
+no, add `...orgFilter()` to the filter.
 
-**Verify:** Preview the page that consumes the endpoint, hit it twice
-within 30s, the second request should `(disk cache)` in the Network tab
-(or use `preview_network` to inspect headers). Force-refresh should
-bypass cache as expected.
+The audit should also touch the `useAIProductivityEngine` collection list
+flagged in project memory (`social_accounts`/`call_logs`/`appointments`/
+`messages`) — same question for each. Memory says this was spawned as a
+separate audit task; check if that task ever ran.
 
-## 3. Close the org-filter gap in analyze()
+## 5. Tickets board comment-count pattern — confirm it's already fine
 
-Project memory entry [project_typecheck_debt.md](.claude/projects/-Users-peterhoffman-Sites-earnest-earnest/memory/project_typecheck_debt.md)
-already flags this and the spawned audit task is open. The concrete spots:
+The original perf prompt flagged [Tickets/Board.vue:587](app/components/Tickets/Board.vue:587)
+as the same chatty pattern. On read it's actually NOT — `attachCommentCounts`
+fires only once via `fetchTicketsViaREST → attachCommentCounts` (line 656),
+and the WS update path at [line 866](app/components/Tickets/Board.vue:866)
+preserves `commentsCount` across diffs instead of re-fetching. So tickets is
+already structured the cleaner way; the prompt's note was outdated. **Verify
+this in preview** (drag a ticket between columns and watch the network — no
+new `directus_comments` aggregate should fire).
 
-- [analyzeTickets](app/composables/useAIProductivityEngine.ts:249), [analyzeProjects](app/composables/useAIProductivityEngine.ts:333), [analyzeTasks](app/composables/useAIProductivityEngine.ts:421), [analyzeInvoices](app/composables/useAIProductivityEngine.ts:488) all use `orgFilter()` ([line 108](app/composables/useAIProductivityEngine.ts:108)) which returns `{}` when `selectedOrg.value` is null (multi-org admin "All Orgs" view).
-- Directus row-perm walks then filter via the recursive `organization.users.directus_users_id.id._eq.$CURRENT_USER` path — slow (no indexed entry point) and the security flag noted in [project_directus_perm_filter_gotchas.md](.claude/projects/-Users-peterhoffman-Sites-earnest-earnest/memory/project_directus_perm_filter_gotchas.md).
+If verified, no code change needed; just record the finding.
 
-**Fix:** When `selectedOrg.value` is null, replace `orgFilter()` with an
-explicit `{ organization: { _in: <allOrgIds> } }` allow-list, sourced from
-[useOrganization](app/composables/useOrganization.ts).accessibleOrgIds (or whichever name the composable
-exposes). That narrows the planner to an index seek and removes the
-ambiguity that Directus row-perm walks were papering over.
+## 6. Anything we missed from earlier today
 
-The user-scoped queries (`messages` via channel FK, `social_posts` via
-`user_created`, `appointments` via `user_created`) are intentionally
-user-scoped and do NOT need org-list scoping — leave them alone. The
-previous session's comments at [line 580](app/composables/useAIProductivityEngine.ts:580), [line 681](app/composables/useAIProductivityEngine.ts:681), and [line 780](app/composables/useAIProductivityEngine.ts:780) explain why.
+The May 8 commits to scan for leftover work:
 
-**Verify:** Preview as a multi-org admin. Inspect a `/api/directus/items`
-POST body for `tickets` — when no org is selected, the filter should
-include `organization: { _in: [uuid, uuid] }` not an empty object. With
-one org selected, it should still be `{ _eq }`.
-
-## 4. Collapse `attachCommentCounts` into the main projects fields query
-
-[Projects/Board.vue](app/components/Projects/Board.vue) currently runs a
-separate aggregate query against `directus_comments` after every realtime
-tick of the projects list (see `attachCommentCounts` — fired from
-`watch(() => projects.value, …)`). Fine at the demo org's 21 projects, but
-chatty: every WebSocket update on a single project triggers a full
-aggregate over all visible project IDs.
-
-**Goal:** fold the count into the main projects fetch so there's one
-round-trip per board hydrate, not two.
-
-**Approach:**
-- Try adding `'count(comments) as commentsCount'` (or the equivalent
-  Directus alias syntax) to the `fields` array in
-  [Projects/Board.vue:399](app/components/Projects/Board.vue:399).
-- The same fields list is sent to the WebSocket subscribe call via
-  [useRealtimeSubscription.js:53](app/composables/useRealtimeSubscription.js:53). Verify Directus 11
-  WS subscriptions actually return `commentsCount` on `init` and `update`
-  events — last time I considered this for `tickets`/`events`, the WS
-  aggregate path was the unknown that pushed me to keep arrays of UUIDs.
-  If WS doesn't honor the aggregate, you have two options: (a) drop the
-  WS subscribe field for counts and re-fetch only the count side on
-  `update` events, or (b) keep `attachCommentCounts` but throttle it
-  (debounce 500ms after the last project mutation).
-- If you go with (a), the simplest split is: fields list *includes*
-  `commentsCount` for REST hydrate, then the WS handler in
-  `useRealtimeSubscription.js` patches just the diffed project's count
-  via a one-row aggregate fetch. That keeps the cold-mount payload
-  small and avoids the every-tick aggregate.
-- Same pattern is already in place for tickets via `attachCommentCounts`
-  in [Tickets/Board.vue:587](app/components/Tickets/Board.vue:587) — solve once and apply
-  to both, or note in the commit why one diverges.
-
-**Verify:** Same as the prior trim work — instrument fetch in preview,
-watch a project comment get added (use `/api/portal/comments` or click
-through to a project's chat), confirm the count on the board card updates
-without a separate `/api/directus/items` POST against `directus_comments`.
+- `fa06c50` "Updated board performance universal ticket design" — main perf pass + `DeferUntilVisible` + Card refactor. Look for any `// TODO` / `console.log` / commented-out blocks.
+- `a5aaf56` "Updated board and cards" — the chatty `attachCommentCounts` (now superseded) + Projects/Card.vue comment-count chip + clientLabel fallback + a new favicon. Confirm Projects/Card.vue's `clientLabel` doesn't break for projects without a client (memory says it falls back to org name; verify the empty-string branch hides the row).
+- The `.claude/next-session-prompt.md` file itself was updated twice today (first to add the original 4 items, then by a5aaf56). This commit replaces it with the present file.
 
 ## Out of scope
 
-- Don't add new analyzers or new collections. Mechanics only.
-- Don't touch the `messages`/`social_posts`/`appointments` user-scoped queries.
-- Don't change cache TTLs to anything > 60s without asking — the user has
-  flagged stale data as a concern in past UX feedback.
-- Don't pre-emptively rewrite `attachCommentCounts` for tickets unless you've
-  already validated the projects path — the demo org's data isn't enough
-  to surface the chatty pattern as a real problem yet.
+- No new analyzers, no new collections.
+- Don't touch `messages`/`social_posts`/`appointments` user-scoped queries (covered by the prior prompt's gotchas).
+- Don't preemptively merge to `main` until item 1's verification passes — the four perf items haven't been live-tested yet.
+- Don't bump cache TTLs above 60s without asking.
+
+## Branch state
+
+- Working branch: `claude/perf-followups-may08` (commit `492b2dd`).
+- Plaid bank-sync work parked on `claude/plaid-phase1-bank-sync` (worktree
+  cleaned up; the branch is intact, awaiting Stripe Product creation per
+  project memory).
+- All other historical `claude/*` branches and worktrees were swept on May 8.
