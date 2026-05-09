@@ -6,9 +6,10 @@
  *   default → page/section title
  *   actions → right-side controls (e.g. "+ New", filters)
  *
- * Auto-renders an iOS-style back chevron + previous-screen-name when
- * the router has navigation history within the current app. Top-level
- * app landing pages omit the chevron.
+ * Pass `:show-back="true"` on detail/sub-pages to render an iOS-style
+ * back chevron + previous-screen-name. Landing pages (e.g.
+ * /apps/clients/index.vue) leave it off so the rail itself is the
+ * top-level way-finding.
  *
  * The back behaviour is intentionally generic — Phase 1 just calls
  * `router.back()`. Phase 2+ apps may want app-scoped history (e.g. an
@@ -18,18 +19,19 @@
 const router = useRouter();
 const route = useRoute();
 
-const props = defineProps<{
-	title?: string;
-	backLabel?: string;
-}>();
-
-const canGoBack = ref(false);
-
-onMounted(() => {
-	if (typeof window !== 'undefined' && window.history) {
-		canGoBack.value = window.history.length > 1;
-	}
-});
+const props = withDefaults(
+	defineProps<{
+		title?: string;
+		backLabel?: string;
+		/**
+		 * Show the iOS-style back chevron. Landing pages omit it.
+		 */
+		showBack?: boolean;
+	}>(),
+	{
+		showBack: false,
+	},
+);
 
 function goBack() {
 	router.back();
@@ -49,7 +51,7 @@ const fallbackBackLabel = computed(() => {
 	<header class="app-header">
 		<div class="app-header__left">
 			<button
-				v-if="canGoBack"
+				v-if="showBack"
 				type="button"
 				class="app-header__back"
 				@click="goBack"
