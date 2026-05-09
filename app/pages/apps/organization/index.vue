@@ -1,0 +1,1120 @@
+<script setup lang="ts">
+/**
+ * Organization app — Apps Layout Phase 6.
+ *
+ * Single landing page with a pill-segmented floor strip:
+ *   Overview (default) | Members | Billing | Integrations | Settings
+ *
+ * Same shape as the rest of the apps. Floor switching is in-place via
+ * `?floor=` query param so the shell never remounts. This page is a
+ * re-shell over `/organization/index.vue` + `/account/subscription.vue`
+ * — no new data layers, no new endpoints, no new modals. Existing
+ * components (`OrganizationAIUsage`, `OrganizationBillingSurface`,
+ * `OrganizationInviteMemberModal`, `ClientsInviteClientModal`) are
+ * reused as-is.
+ *
+ * Decisions documented for Phase 6:
+ *   - Overview floor is read-mostly; full inline editing stays on the
+ *     classic `/organization` page reachable via the Edit header action.
+ *   - AI Usage lives inside the Settings floor (single chart + table —
+ *     not voluminous enough to warrant its own floor).
+ *   - Roles, Document Blocks, Service Templates surface as link tiles
+ *     inside Settings — they're admin tooling, not daily-use.
+ *   - `/account` (user profile) and `/account/subscription` stay on the
+ *     avatar dropdown. The Organization app is org-scoped.
+ *   - Per-floor header action button matching Money/Marketing
+ *     ("Invite member" on Members, "Manage plan" on Billing, etc).
+ */
+import { Button } from '~/components/ui/button';
+
+definePageMeta({ layout: 'apps', middleware: ['auth'] });
+useHead({ title: 'Organization | Earnest' });
+
+const router = useRouter();
+const route = useRoute();
+const config = useRuntimeConfig();
+const toast = useToast();
+
+// ── Floor strip ─────────────────────────────────────────────────────────────
+type FloorKey = 'overview' | 'members' | 'billing' | 'integrations' | 'settings';
+const FLOOR_KEYS: FloorKey[] = ['overview', 'members', 'billing', 'integrations', 'settings'];
+
+const initialFloor: FloorKey = (() => {
+  const v = route.query.floor;
+  return typeof v === 'string' && FLOOR_KEYS.includes(v as FloorKey) ? (v as FloorKey) : 'overview';
+})();
+const floor = ref<FloorKey>(initialFloor);
+
+watch(floor, (next) => {
+  router.replace({ query: { ...route.query, floor: next === 'overview' ? undefined : next } });
+});
+
+const floors: Array<{ key: FloorKey; label: string; icon: string }> = [
+  { key: 'overview', label: 'Overview', icon: 'lucide:home' },
+  { key: 'members', label: 'Members', icon: 'lucide:users' },
+  { key: 'billing', label: 'Billing', icon: 'lucide:credit-card' },
+  { key: 'integrations', label: 'Integrations', icon: 'lucide:plug' },
+  { key: 'settings', label: 'Settings', icon: 'lucide:settings' },
+];
+
+// ── Common deps ─────────────────────────────────────────────────────────────
+const { selectedOrg, currentOrg } = useOrganization();
+const { canAccess, isOrgOwner } = useOrgRole();
+
+const canManageOrg = computed(() => canAccess('organization_settings'));
+
+const org = computed(() => currentOrg.value as any);
+const orgName = computed(() => org.value?.name || 'Organization');
+
+const orgLogoUrl = computed(() => {
+  const o = org.value;
+  if (!o) return null;
+  const logoId = o.logo
+    ? (typeof o.logo === 'object' ? o.logo?.id : o.logo)
+    : o.icon
+      ? (typeof o.icon === 'object' ? o.icon?.id : o.icon)
+      : null;
+  if (!logoId) return null;
+  return `${config.public.directusUrl}/assets/${logoId}?key=medium-contain`;
+});
+
+// ── Members floor ───────────────────────────────────────────────────────────
+const { filteredUsers, fetchFilteredUsers } = useFilteredUsers();
+const membershipItems = useDirectusItems('org_memberships');
+const orgRoles = ref<any[]>([]);
+const orgMemberships = ref<any[]>([]);
+const showInviteMemberModal = ref(false);
+
+async function fetchMembers() {
+  if (!selectedOrg.value) return;
+  try {
+    await fetchFilteredUsers(selectedOrg.value);
+  } catch {
+    /* fetchFilteredUsers handles its own errors */
+  }
+
+  const roleItems = useDirectusItems('org_roles');
+  try {
+    const roles = await roleItems.list({
+      filter: { organization: { _eq: selectedOrg.value } },
+      fields: ['id', 'name', 'slug', 'is_system'],
+      sort: ['sort', 'name'],
+    });
+    const order = ['owner', 'admin', 'manager', 'member', 'client'];
+    orgRoles.value = (roles || []).sort((a: any, b: any) => {
+      const ai = order.indexOf(a.slug);
+      const bi = order.indexOf(b.slug);
+      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+    });
+  } catch {
+    orgRoles.value = [];
+  }
+
+  try {
+    orgMemberships.value = await membershipItems.list({
+      filter: { organization: { _eq: selectedOrg.value } },
+      fields: ['id', 'status', 'user', 'role.id', 'role.name', 'role.slug'],
+      limit: -1,
+    });
+  } catch {
+    orgMemberships.value = [];
+  }
+}
+
+const pendingInvitesCount = computed(
+  () => orgMemberships.value.filter((m: any) => m.status === 'pending').length,
+);
+
+function getMemberRole(memberId: string) {
+  const m = orgMemberships.value.find(
+    (x: any) => (typeof x.user === 'object' ? x.user?.id : x.user) === memberId && x.status === 'active',
+  );
+  return m?.role || null;
+}
+
+function getRoleBadgeClasses(slug: string) {
+  if (slug === 'owner') return 'bg-purple-500/15 text-purple-700 dark:text-purple-300';
+  if (slug === 'admin') return 'bg-rose-500/15 text-rose-700 dark:text-rose-300';
+  if (slug === 'manager') return 'bg-sky-500/15 text-sky-700 dark:text-sky-300';
+  if (slug === 'member') return 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300';
+  return 'bg-muted text-muted-foreground';
+}
+
+// Client portal users (admin-routed listing)
+const clientMemberships = ref<any[]>([]);
+const clientMembershipsLoading = ref(false);
+const showInviteClientModal = ref(false);
+
+async function fetchClientMemberships() {
+  if (!selectedOrg.value) return;
+  clientMembershipsLoading.value = true;
+  try {
+    clientMemberships.value = (await $fetch('/api/org/list-portal-users', {
+      method: 'POST',
+      body: { organizationId: selectedOrg.value },
+    })) as any[];
+  } catch {
+    clientMemberships.value = [];
+  } finally {
+    clientMembershipsLoading.value = false;
+  }
+}
+
+function clientStatusClass(status: string) {
+  if (status === 'active') return 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400';
+  if (status === 'pending') return 'bg-amber-500/15 text-amber-600 dark:text-amber-400';
+  return 'bg-muted text-muted-foreground';
+}
+
+function formatRelative(iso: string | undefined) {
+  if (!iso) return '';
+  const date = new Date(iso);
+  const diffMs = Date.now() - date.getTime();
+  const sec = Math.round(diffMs / 1000);
+  if (sec < 60) return 'just now';
+  const min = Math.round(sec / 60);
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.round(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const day = Math.round(hr / 24);
+  if (day < 30) return `${day}d ago`;
+  return date.toLocaleDateString();
+}
+
+// ── Billing floor ───────────────────────────────────────────────────────────
+const {
+  loading: subscriptionLoading,
+  subscriptionData,
+  isActive: subscriptionActive,
+  isPastDue,
+  isCanceling,
+  currentPlan,
+  paymentMethods,
+  invoices: stripeInvoices,
+  periodEnd,
+  fetchStatus: fetchSubscription,
+  openPortal,
+} = useSubscription();
+
+const planName = computed(() => {
+  if (!currentPlan.value) return 'No active plan';
+  const product = (currentPlan.value as any).product;
+  if (typeof product === 'object' && product?.name) return product.name;
+  return 'Unknown Plan';
+});
+
+const planPrice = computed(() => {
+  const p = currentPlan.value as any;
+  if (!p?.amount) return null;
+  return `$${(p.amount / 100).toFixed(2)}/${p.interval || 'month'}`;
+});
+
+const subscriptionStatusBadge = computed(() => {
+  const status = (subscriptionData.value as any)?.subscription?.status;
+  if (!status || status === 'none' || (subscriptionData.value as any)?.status === 'no_customer') {
+    return { label: 'No Plan', tone: 'bg-muted text-muted-foreground' };
+  }
+  const map: Record<string, { label: string; tone: string }> = {
+    active: { label: 'Active', tone: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' },
+    trialing: { label: 'Trial', tone: 'bg-sky-500/15 text-sky-600 dark:text-sky-400' },
+    past_due: { label: 'Past Due', tone: 'bg-rose-500/15 text-rose-600 dark:text-rose-400' },
+    canceled: { label: 'Canceled', tone: 'bg-muted text-muted-foreground' },
+    incomplete: { label: 'Incomplete', tone: 'bg-amber-500/15 text-amber-600 dark:text-amber-400' },
+    unpaid: { label: 'Unpaid', tone: 'bg-rose-500/15 text-rose-600 dark:text-rose-400' },
+  };
+  return map[status] || { label: status, tone: 'bg-muted text-muted-foreground' };
+});
+
+function formatStripeDate(timestamp: number) {
+  return new Date(timestamp * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function formatStripeMoney(cents: number) {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format((cents || 0) / 100);
+}
+
+// ── Integrations floor ──────────────────────────────────────────────────────
+type IntegrationStatus = 'active' | 'pending' | 'inactive' | 'restricted' | 'unknown';
+
+const stripeConnect = ref<{
+  status: IntegrationStatus;
+  chargesEnabled?: boolean;
+  payoutsEnabled?: boolean;
+  accountId?: string | null;
+} | null>(null);
+
+const stripeConnectLoading = ref(false);
+
+async function fetchStripeConnect() {
+  if (!selectedOrg.value) return;
+  stripeConnectLoading.value = true;
+  try {
+    const data = await $fetch<{
+      status: 'none' | 'pending' | 'active' | 'restricted';
+      chargesEnabled: boolean;
+      payoutsEnabled: boolean;
+      accountId: string | null;
+    }>('/api/stripe/connect/status', { query: { organizationId: selectedOrg.value } });
+
+    let mapped: IntegrationStatus = 'inactive';
+    if (data.status === 'active') mapped = 'active';
+    else if (data.status === 'pending') mapped = 'pending';
+    else if (data.status === 'restricted') mapped = 'restricted';
+
+    stripeConnect.value = {
+      status: mapped,
+      chargesEnabled: data.chargesEnabled,
+      payoutsEnabled: data.payoutsEnabled,
+      accountId: data.accountId,
+    };
+  } catch (err: any) {
+    if (err?.statusCode === 403) {
+      stripeConnect.value = { status: 'unknown' };
+    } else {
+      stripeConnect.value = { status: 'inactive' };
+    }
+  } finally {
+    stripeConnectLoading.value = false;
+  }
+}
+
+const socialAccounts = ref<any[]>([]);
+const socialLoading = ref(false);
+
+async function fetchSocialAccounts() {
+  socialLoading.value = true;
+  try {
+    const r = (await $fetch('/api/social/accounts')) as any;
+    socialAccounts.value = (r?.data ?? []) as any[];
+  } catch {
+    socialAccounts.value = [];
+  } finally {
+    socialLoading.value = false;
+  }
+}
+
+function socialStatusFor(platform: string): IntegrationStatus {
+  const accts = socialAccounts.value.filter((a) => a.platform === platform && a.status !== 'disconnected');
+  return accts.length > 0 ? 'active' : 'inactive';
+}
+
+const integrationsList = computed(() => {
+  const stripeMeta = stripeConnect.value;
+  const stripeLabel =
+    stripeMeta?.status === 'active'
+      ? 'Connected · accepting payments'
+      : stripeMeta?.status === 'pending'
+        ? 'Onboarding in progress'
+        : stripeMeta?.status === 'restricted'
+          ? 'Action required'
+          : stripeMeta?.status === 'unknown'
+            ? 'Status unavailable'
+            : 'Not connected';
+
+  return [
+    {
+      key: 'stripe-connect',
+      label: 'Stripe Connect',
+      desc: 'Accept card and ACH payments on invoices',
+      icon: 'lucide:credit-card',
+      status: stripeMeta?.status || 'inactive',
+      statusLabel: stripeLabel,
+      action: stripeMeta?.status === 'active' ? 'Manage on Stripe' : 'Configure',
+      onClick: () => router.push('/organization?tab=billing'),
+    },
+    {
+      key: 'plaid',
+      label: 'Plaid (Bank Sync)',
+      desc: 'Auto-import transactions to expenses',
+      icon: 'lucide:landmark',
+      status: 'inactive' as IntegrationStatus,
+      statusLabel: 'Available as add-on',
+      action: 'Learn more',
+      onClick: () => router.push('/account/subscription'),
+    },
+    {
+      key: 'daily',
+      label: 'Daily (Video meetings)',
+      desc: 'Built-in video rooms with recording + transcription',
+      icon: 'lucide:video',
+      status: 'active' as IntegrationStatus,
+      statusLabel: 'Built-in',
+      action: 'Open meetings',
+      onClick: () => router.push('/meetings'),
+    },
+    {
+      key: 'instagram',
+      label: 'Instagram',
+      desc: 'Publish posts and reels',
+      icon: 'logos:instagram-icon',
+      status: socialStatusFor('instagram'),
+      statusLabel: socialStatusFor('instagram') === 'active' ? `${socialAccounts.filter((a) => a.platform === 'instagram').length} account(s)` : 'Not connected',
+      action: 'Manage',
+      onClick: () => router.push('/social/settings'),
+    },
+    {
+      key: 'facebook',
+      label: 'Facebook',
+      desc: 'Publish to Pages',
+      icon: 'logos:facebook',
+      status: socialStatusFor('facebook'),
+      statusLabel: socialStatusFor('facebook') === 'active' ? `${socialAccounts.filter((a) => a.platform === 'facebook').length} account(s)` : 'Not connected',
+      action: 'Manage',
+      onClick: () => router.push('/social/settings'),
+    },
+    {
+      key: 'linkedin',
+      label: 'LinkedIn',
+      desc: 'Publish to personal + Company Pages',
+      icon: 'logos:linkedin-icon',
+      status: socialStatusFor('linkedin'),
+      statusLabel: socialStatusFor('linkedin') === 'active' ? `${socialAccounts.filter((a) => a.platform === 'linkedin').length} account(s)` : 'Not connected',
+      action: 'Manage',
+      onClick: () => router.push('/social/settings'),
+    },
+    {
+      key: 'tiktok',
+      label: 'TikTok',
+      desc: 'Publish short-form video',
+      icon: 'logos:tiktok-icon',
+      status: socialStatusFor('tiktok'),
+      statusLabel: socialStatusFor('tiktok') === 'active' ? `${socialAccounts.filter((a) => a.platform === 'tiktok').length} account(s)` : 'Not connected',
+      action: 'Manage',
+      onClick: () => router.push('/social/settings'),
+    },
+    {
+      key: 'threads',
+      label: 'Threads',
+      desc: 'Publish text + image posts',
+      icon: 'lucide:at-sign',
+      status: socialStatusFor('threads'),
+      statusLabel: socialStatusFor('threads') === 'active' ? `${socialAccounts.filter((a) => a.platform === 'threads').length} account(s)` : 'Not connected',
+      action: 'Manage',
+      onClick: () => router.push('/social/settings'),
+    },
+    {
+      key: 'email-forwarding',
+      label: 'Email forwarding (name.com)',
+      desc: 'Inbound mail captures into Earnest',
+      icon: 'lucide:mail',
+      status: 'unknown' as IntegrationStatus,
+      statusLabel: 'Configured outside Earnest',
+      action: 'name.com',
+      onClick: () => window.open('https://www.name.com/account/domain', '_blank', 'noopener'),
+    },
+  ];
+});
+
+function statusDotClass(status: IntegrationStatus) {
+  if (status === 'active') return 'bg-emerald-500';
+  if (status === 'pending') return 'bg-amber-500';
+  if (status === 'restricted') return 'bg-rose-500';
+  if (status === 'unknown') return 'bg-muted-foreground/40';
+  return 'bg-muted-foreground/30';
+}
+
+// ── Settings floor — admin tooling tiles ─────────────────────────────────────
+const settingsTiles = [
+  { label: 'Teams', desc: 'Group members for permissions and assignment', to: '/organization/teams', icon: 'lucide:user-cog' },
+  { label: 'Roles & permissions', desc: 'Custom roles and feature access matrix', to: '/organization/roles', icon: 'lucide:shield-check' },
+  { label: 'Document blocks', desc: 'Reusable proposal + contract sections', to: '/organization/document-blocks', icon: 'lucide:blocks' },
+  { label: 'Service templates', desc: 'Pre-built quote / package presets', to: '/organization/service-templates', icon: 'lucide:layers' },
+];
+
+const isArchived = computed(() => !!org.value?.archived_at);
+
+// ── Lazy-load per floor ─────────────────────────────────────────────────────
+const overviewLoaded = ref(false);
+const membersLoaded = ref(false);
+const billingLoaded = ref(false);
+const integrationsLoaded = ref(false);
+const settingsLoaded = ref(false);
+
+watch(
+  floor,
+  (next) => {
+    if (!selectedOrg.value) return;
+    if (next === 'overview' && !overviewLoaded.value) {
+      overviewLoaded.value = true;
+      // Overview pulls everything visible from currentOrg + a member count.
+      fetchMembers();
+    }
+    if (next === 'members' && !membersLoaded.value) {
+      membersLoaded.value = true;
+      fetchMembers();
+      fetchClientMemberships();
+    }
+    if (next === 'billing' && !billingLoaded.value) {
+      billingLoaded.value = true;
+      fetchSubscription();
+    }
+    if (next === 'integrations' && !integrationsLoaded.value) {
+      integrationsLoaded.value = true;
+      fetchStripeConnect();
+      fetchSocialAccounts();
+    }
+    if (next === 'settings' && !settingsLoaded.value) {
+      settingsLoaded.value = true;
+      // Nothing extra to fetch — AI Usage component self-loads.
+    }
+  },
+  { immediate: true },
+);
+
+// Refetch on org change for any floor already loaded.
+watch(selectedOrg, () => {
+  if (overviewLoaded.value) fetchMembers();
+  if (membersLoaded.value) {
+    fetchMembers();
+    fetchClientMemberships();
+  }
+  if (billingLoaded.value) fetchSubscription();
+  if (integrationsLoaded.value) {
+    fetchStripeConnect();
+    fetchSocialAccounts();
+  }
+});
+
+// ── Header action ───────────────────────────────────────────────────────────
+const headerAction = computed(() => {
+  if (floor.value === 'overview' && canManageOrg.value) {
+    return {
+      label: 'Edit',
+      icon: 'lucide:pencil',
+      onClick: () => router.push('/organization'),
+    };
+  }
+  if (floor.value === 'members' && canManageOrg.value) {
+    return {
+      label: 'Invite member',
+      icon: 'lucide:mail',
+      onClick: () => {
+        showInviteMemberModal.value = true;
+      },
+    };
+  }
+  if (floor.value === 'billing' && (subscriptionActive.value || isPastDue.value)) {
+    return {
+      label: 'Manage plan',
+      icon: 'lucide:external-link',
+      onClick: async () => {
+        try {
+          await openPortal();
+        } catch {
+          toast.add({ title: 'Error', description: 'Could not open Stripe portal', color: 'red' });
+        }
+      },
+    };
+  }
+  return null;
+});
+
+function onMemberInvited() {
+  showInviteMemberModal.value = false;
+  fetchMembers();
+}
+
+function onClientInvited() {
+  showInviteClientModal.value = false;
+  fetchClientMemberships();
+}
+</script>
+
+<template>
+  <div class="apps-page">
+    <AppHeader :title="orgName">
+      <template #actions>
+        <Button v-if="headerAction" size="sm" @click="headerAction.onClick">
+          <Icon :name="headerAction.icon" class="w-4 h-4 mr-1" />
+          {{ headerAction.label }}
+        </Button>
+      </template>
+    </AppHeader>
+
+    <LayoutPageContainer>
+      <!-- Floor strip -->
+      <div class="mb-5 inline-flex items-center gap-1 rounded-full border border-border bg-card p-0.5 overflow-x-auto max-w-full">
+        <button
+          v-for="seg in floors"
+          :key="seg.key"
+          type="button"
+          class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors whitespace-nowrap"
+          :class="floor === seg.key ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'"
+          @click="floor = seg.key"
+        >
+          <Icon :name="seg.icon" class="w-3.5 h-3.5" />
+          {{ seg.label }}
+        </button>
+      </div>
+
+      <!-- Archived banner -->
+      <div
+        v-if="isArchived"
+        class="mb-5 rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-900/20 p-4 flex items-start gap-3"
+      >
+        <Icon name="lucide:archive" class="w-5 h-5 text-amber-600 mt-0.5" />
+        <div class="flex-1 text-sm">
+          <p class="font-medium text-amber-800 dark:text-amber-200">This organization is archived</p>
+          <p class="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
+            Restore it from the classic settings page to reactivate access.
+          </p>
+        </div>
+        <Button size="sm" variant="outline" @click="router.push('/organization')">
+          Open settings
+        </Button>
+      </div>
+
+      <!-- ── Overview floor ───────────────────────────────────────────── -->
+      <template v-if="floor === 'overview'">
+        <div v-if="!org" class="flex flex-col items-center justify-center py-24 gap-3">
+          <Icon name="lucide:loader-2" class="w-6 h-6 text-muted-foreground animate-spin" />
+          <p class="text-sm text-muted-foreground">Loading organization…</p>
+        </div>
+        <template v-else>
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            <!-- Left: brand + identity -->
+            <div class="lg:col-span-2 space-y-5">
+              <div class="ios-card p-5">
+                <div class="flex items-center gap-4">
+                  <div
+                    v-if="orgLogoUrl"
+                    class="w-16 h-16 rounded-xl overflow-hidden bg-muted flex items-center justify-center shrink-0"
+                  >
+                    <img :src="orgLogoUrl" :alt="orgName" class="w-full h-full object-contain" />
+                  </div>
+                  <div
+                    v-else
+                    class="w-16 h-16 rounded-xl bg-muted flex items-center justify-center shrink-0"
+                    :style="org.brand_color ? { backgroundColor: org.brand_color } : {}"
+                  >
+                    <Icon name="lucide:building-2" class="w-7 h-7 text-muted-foreground" />
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <h2 class="text-xl font-semibold truncate">{{ org.name }}</h2>
+                    <p v-if="org.industry?.name" class="text-xs text-muted-foreground mt-0.5">
+                      {{ org.industry.name }}<span v-if="org.industry.class"> · {{ org.industry.class }}</span>
+                    </p>
+                    <a
+                      v-if="org.website"
+                      :href="org.website.startsWith('http') ? org.website : 'https://' + org.website"
+                      target="_blank"
+                      class="text-xs text-primary hover:underline mt-0.5 inline-block"
+                    >
+                      {{ org.website.replace(/^https?:\/\//, '') }}
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              <div class="ios-card p-5 space-y-4">
+                <h3 class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Brand & Strategy</h3>
+                <div>
+                  <p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Brand Direction</p>
+                  <p v-if="org.brand_direction" class="text-sm whitespace-pre-line">{{ org.brand_direction }}</p>
+                  <p v-else class="text-sm text-muted-foreground italic">Not set</p>
+                </div>
+                <div>
+                  <p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Goals</p>
+                  <p v-if="org.goals" class="text-sm whitespace-pre-line">{{ org.goals }}</p>
+                  <p v-else class="text-sm text-muted-foreground italic">Not set</p>
+                </div>
+                <div>
+                  <p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Target Audience</p>
+                  <p v-if="org.target_audience" class="text-sm">{{ org.target_audience }}</p>
+                  <p v-else class="text-sm text-muted-foreground italic">Not set</p>
+                </div>
+                <div>
+                  <p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Location</p>
+                  <p v-if="org.location" class="text-sm">{{ org.location }}</p>
+                  <p v-else class="text-sm text-muted-foreground italic">Not set</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: snapshot stats -->
+            <div class="space-y-4">
+              <div class="ios-card p-5 space-y-3 text-sm">
+                <h3 class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Snapshot</h3>
+                <div class="flex items-center justify-between">
+                  <span class="text-muted-foreground text-xs">Members</span>
+                  <button
+                    type="button"
+                    class="text-sm font-medium hover:text-primary"
+                    @click="floor = 'members'"
+                  >
+                    {{ filteredUsers.length }}
+                  </button>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-muted-foreground text-xs">Pending invites</span>
+                  <span class="text-sm font-medium">{{ pendingInvitesCount }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-muted-foreground text-xs">Plan</span>
+                  <span class="text-sm font-medium capitalize">{{ org.plan || '—' }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-muted-foreground text-xs">Member since</span>
+                  <span class="text-sm font-medium">
+                    {{ org.origin_date ? new Date(org.origin_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' }) : '—' }}
+                  </span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-muted-foreground text-xs">Status</span>
+                  <span
+                    class="text-[10px] uppercase tracking-wider rounded-full px-2 py-0.5 font-medium"
+                    :class="org.active !== false ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' : 'bg-muted text-muted-foreground'"
+                  >
+                    {{ org.active !== false ? 'Active' : 'Inactive' }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="ios-card p-5 space-y-3 text-sm">
+                <h3 class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Contact</h3>
+                <div class="flex items-center justify-between">
+                  <span class="text-muted-foreground text-xs">Email</span>
+                  <a v-if="org.email" :href="'mailto:' + org.email" class="text-sm text-primary truncate max-w-[160px]">{{ org.email }}</a>
+                  <span v-else class="text-muted-foreground italic text-xs">—</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-muted-foreground text-xs">Phone</span>
+                  <a v-if="org.phone" :href="'tel:' + org.phone" class="text-sm text-primary">{{ org.phone }}</a>
+                  <span v-else class="text-muted-foreground italic text-xs">—</span>
+                </div>
+                <div v-if="org.address" class="text-xs text-muted-foreground whitespace-pre-line pt-1 border-t border-border/40">
+                  {{ org.address }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
+      </template>
+
+      <!-- ── Members floor ────────────────────────────────────────────── -->
+      <template v-else-if="floor === 'members'">
+        <div class="space-y-6">
+          <!-- Members section -->
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-sm font-semibold">Organization Members</h3>
+              <span class="text-xs text-muted-foreground">{{ filteredUsers.length }} member{{ filteredUsers.length === 1 ? '' : 's' }}</span>
+            </div>
+
+            <div
+              v-if="pendingInvitesCount > 0"
+              class="mb-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 px-4 py-2.5 text-sm text-amber-700 dark:text-amber-300 flex items-center gap-2"
+            >
+              <Icon name="lucide:clock" class="w-4 h-4" />
+              {{ pendingInvitesCount }} pending invitation{{ pendingInvitesCount === 1 ? '' : 's' }}
+            </div>
+
+            <div v-if="!filteredUsers.length" class="ios-card p-12 text-center">
+              <Icon name="lucide:users" class="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
+              <p class="text-sm text-muted-foreground">No members yet.</p>
+            </div>
+
+            <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div
+                v-for="member in filteredUsers"
+                :key="member.id"
+                class="ios-card p-4 flex items-center gap-3"
+              >
+                <div class="w-10 h-10 rounded-full bg-muted flex items-center justify-center overflow-hidden shrink-0">
+                  <img
+                    v-if="member.avatar"
+                    :src="`${config.public.directusUrl}/assets/${member.avatar}?key=small`"
+                    :alt="`${member.first_name} ${member.last_name}`"
+                    class="w-full h-full object-cover"
+                  />
+                  <span v-else class="text-sm font-medium text-muted-foreground">
+                    {{ (member.first_name?.[0] || '') + (member.last_name?.[0] || '') }}
+                  </span>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium truncate">{{ member.first_name }} {{ member.last_name }}</p>
+                  <p class="text-xs text-muted-foreground truncate">{{ member.email }}</p>
+                </div>
+                <span
+                  v-if="getMemberRole(member.id)"
+                  class="text-[10px] uppercase tracking-wider rounded-full px-2 py-0.5 font-medium shrink-0"
+                  :class="getRoleBadgeClasses(getMemberRole(member.id).slug)"
+                >
+                  {{ getMemberRole(member.id).name }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Client portal access section -->
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <h3 class="text-sm font-semibold">Client Portal Access</h3>
+                <p class="text-xs text-muted-foreground mt-0.5">
+                  All client users with login access across your client companies.
+                </p>
+              </div>
+              <Button
+                v-if="canManageOrg"
+                size="sm"
+                variant="outline"
+                @click="showInviteClientModal = true"
+              >
+                <Icon name="lucide:user-plus" class="w-4 h-4 mr-1" />
+                Invite client
+              </Button>
+            </div>
+
+            <div v-if="clientMembershipsLoading" class="flex justify-center py-12">
+              <Icon name="lucide:loader-2" class="w-6 h-6 animate-spin text-muted-foreground" />
+            </div>
+            <div v-else-if="!clientMemberships.length" class="ios-card p-10 text-center">
+              <Icon name="lucide:key" class="w-9 h-9 text-muted-foreground/40 mx-auto mb-3" />
+              <p class="text-sm text-muted-foreground">No client portal users yet.</p>
+            </div>
+
+            <div v-else class="ios-card overflow-hidden">
+              <div
+                v-for="m in clientMemberships"
+                :key="m.id"
+                class="grid grid-cols-[1fr_auto_auto] sm:grid-cols-[1fr_1fr_auto_auto] gap-3 items-center px-4 py-3 border-b border-border/30 last:border-b-0 hover:bg-muted/20 transition-colors"
+              >
+                <div class="min-w-0">
+                  <p class="text-sm font-medium truncate">
+                    {{ ((m.user?.first_name || '') + ' ' + (m.user?.last_name || '')).trim() || m.user?.email || 'Unknown' }}
+                  </p>
+                  <p class="text-xs text-muted-foreground truncate">{{ m.user?.email }}</p>
+                  <p v-if="m.client?.name" class="sm:hidden text-[11px] text-muted-foreground/70 truncate mt-0.5">
+                    {{ m.client.name }}
+                  </p>
+                </div>
+                <div class="hidden sm:block min-w-0">
+                  <NuxtLink
+                    v-if="m.client?.id"
+                    :to="`/clients/${m.client.id}`"
+                    class="text-sm text-primary hover:underline truncate block"
+                  >
+                    {{ m.client.name }}
+                  </NuxtLink>
+                  <span v-else class="text-xs text-muted-foreground italic">Unscoped</span>
+                </div>
+                <span
+                  class="text-[10px] uppercase tracking-wider rounded-full px-2 py-0.5 font-medium capitalize justify-self-start"
+                  :class="clientStatusClass(m.status)"
+                >
+                  {{ m.status }}
+                </span>
+                <div class="text-right text-xs text-muted-foreground whitespace-nowrap">
+                  <span v-if="m.user?.last_access" :title="new Date(m.user.last_access).toLocaleString()">
+                    {{ formatRelative(m.user.last_access) }}
+                  </span>
+                  <span v-else-if="m.invited_at" class="text-[10px] italic">
+                    Invited {{ formatRelative(m.invited_at) }}
+                  </span>
+                  <span v-else>—</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- ── Billing floor ────────────────────────────────────────────── -->
+      <template v-else-if="floor === 'billing'">
+        <div v-if="subscriptionLoading && !subscriptionData" class="space-y-3">
+          <div v-for="i in 3" :key="i" class="ios-card p-6 animate-pulse">
+            <div class="h-4 bg-muted rounded w-1/3 mb-3" />
+            <div class="h-3 bg-muted rounded w-2/3" />
+          </div>
+        </div>
+
+        <template v-else>
+          <!-- Past Due alert -->
+          <div
+            v-if="isPastDue"
+            class="rounded-xl border-2 border-rose-300 bg-rose-50 dark:bg-rose-900/20 p-4 mb-5 flex items-start gap-3"
+          >
+            <Icon name="lucide:alert-triangle" class="w-5 h-5 text-rose-500 mt-0.5" />
+            <div class="flex-1">
+              <p class="font-semibold text-rose-800 dark:text-rose-300 text-sm">Payment Past Due</p>
+              <p class="text-xs text-rose-600 dark:text-rose-400 mt-1">
+                Your last payment failed. Update your payment method to keep your subscription active.
+              </p>
+              <Button size="sm" variant="destructive" class="mt-3" @click="openPortal">
+                Update payment method
+              </Button>
+            </div>
+          </div>
+
+          <!-- Canceling notice -->
+          <div
+            v-if="isCanceling"
+            class="rounded-xl border-2 border-amber-300 bg-amber-50 dark:bg-amber-900/20 p-4 mb-5 flex items-start gap-3"
+          >
+            <Icon name="lucide:clock" class="w-5 h-5 text-amber-500 mt-0.5" />
+            <div class="flex-1">
+              <p class="font-semibold text-amber-800 dark:text-amber-300 text-sm">Subscription Canceling</p>
+              <p class="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                Ends on
+                <strong>{{ periodEnd ? periodEnd.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '—' }}</strong>.
+                You'll retain access until then.
+              </p>
+            </div>
+          </div>
+
+          <!-- Current Plan card -->
+          <div class="ios-card p-5 mb-5">
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
+                  <Icon name="lucide:sparkles" class="w-5 h-5 text-primary-foreground" />
+                </div>
+                <div>
+                  <p class="font-semibold text-foreground">{{ planName }}</p>
+                  <p class="text-xs text-muted-foreground">
+                    <template v-if="planPrice">{{ planPrice }}</template>
+                    <template v-else>Your current plan</template>
+                  </p>
+                </div>
+              </div>
+              <span
+                class="text-[10px] uppercase tracking-wider rounded-full px-2 py-0.5 font-medium"
+                :class="subscriptionStatusBadge.tone"
+              >
+                {{ subscriptionStatusBadge.label }}
+              </span>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <p class="text-muted-foreground text-xs">Plan</p>
+                <p class="font-medium">{{ planName }}</p>
+              </div>
+              <div>
+                <p class="text-muted-foreground text-xs">Price</p>
+                <p class="font-medium">{{ planPrice || '—' }}</p>
+              </div>
+              <div>
+                <p class="text-muted-foreground text-xs">Status</p>
+                <p class="font-medium capitalize">{{ (subscriptionData as any)?.subscription?.status || '—' }}</p>
+              </div>
+              <div>
+                <p class="text-muted-foreground text-xs">Next billing</p>
+                <p class="font-medium">{{ periodEnd ? periodEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—' }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stripe Connect billing surface (native) — when KYC active -->
+          <OrganizationBillingSurface
+            v-if="stripeConnect?.status === 'active' && org?.id"
+            :organization-id="org.id"
+            class="mb-5"
+          />
+
+          <!-- Payment methods -->
+          <div class="ios-card p-5 mb-5">
+            <h3 class="text-sm font-semibold mb-4 flex items-center gap-2">
+              <Icon name="lucide:credit-card" class="w-4 h-4" />
+              Payment Methods
+            </h3>
+            <div v-if="paymentMethods.length === 0" class="flex items-center justify-between">
+              <p class="text-sm text-muted-foreground">No payment method on file</p>
+              <Button size="sm" variant="outline" :disabled="subscriptionLoading" @click="openPortal">
+                Add payment method
+              </Button>
+            </div>
+            <div v-else class="space-y-3">
+              <div
+                v-for="pm in paymentMethods"
+                :key="pm.id"
+                class="flex items-center justify-between"
+              >
+                <div class="flex items-center gap-3">
+                  <Icon name="lucide:credit-card" class="w-5 h-5 text-muted-foreground" />
+                  <div>
+                    <p class="text-sm font-medium capitalize">{{ pm.brand }} •••• {{ pm.last4 }}</p>
+                    <p class="text-xs text-muted-foreground">Expires {{ pm.exp_month }}/{{ pm.exp_year }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Billing history -->
+          <div class="ios-card p-5">
+            <h3 class="text-sm font-semibold mb-4 flex items-center gap-2">
+              <Icon name="lucide:file-text" class="w-4 h-4" />
+              Billing History
+            </h3>
+            <div v-if="stripeInvoices.length === 0" class="text-center py-6">
+              <Icon name="lucide:file-text" class="w-9 h-9 mx-auto mb-3 text-muted-foreground/30" />
+              <p class="text-sm text-muted-foreground">No billing history yet</p>
+            </div>
+            <div v-else class="divide-y divide-border/40">
+              <div
+                v-for="inv in stripeInvoices"
+                :key="inv.id"
+                class="flex items-center justify-between py-3"
+              >
+                <div class="flex items-center gap-3">
+                  <Icon name="lucide:file-text" class="w-4 h-4 text-muted-foreground" />
+                  <div>
+                    <p class="text-sm font-medium">{{ inv.number || 'Invoice' }}</p>
+                    <p class="text-xs text-muted-foreground">{{ formatStripeDate(inv.created) }}</p>
+                  </div>
+                </div>
+                <div class="flex items-center gap-3">
+                  <span class="text-sm font-medium tabular-nums">{{ formatStripeMoney(inv.amount_paid || inv.amount_due) }}</span>
+                  <span
+                    class="text-[10px] uppercase tracking-wider rounded-full px-2 py-0.5 font-medium"
+                    :class="inv.status === 'paid'
+                      ? 'bg-emerald-500/15 text-emerald-600'
+                      : inv.status === 'open'
+                        ? 'bg-amber-500/15 text-amber-600'
+                        : 'bg-muted text-muted-foreground'"
+                  >
+                    {{ inv.status }}
+                  </span>
+                  <a
+                    v-if="inv.hosted_invoice_url"
+                    :href="inv.hosted_invoice_url"
+                    target="_blank"
+                    class="text-muted-foreground hover:text-foreground"
+                  >
+                    <Icon name="lucide:external-link" class="w-4 h-4" />
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
+      </template>
+
+      <!-- ── Integrations floor ───────────────────────────────────────── -->
+      <template v-else-if="floor === 'integrations'">
+        <div v-if="stripeConnectLoading && !stripeConnect" class="flex items-center justify-center py-16 gap-3">
+          <Icon name="lucide:loader-2" class="w-5 h-5 animate-spin text-muted-foreground" />
+          <span class="text-sm text-muted-foreground">Loading integrations…</span>
+        </div>
+
+        <div v-else class="ios-card overflow-hidden">
+          <div
+            v-for="(item, idx) in integrationsList"
+            :key="item.key"
+            class="flex items-center gap-4 px-4 py-3 hover:bg-muted/20 transition-colors"
+            :class="idx > 0 ? 'border-t border-border/30' : ''"
+          >
+            <div class="w-9 h-9 rounded-lg bg-muted/50 flex items-center justify-center shrink-0">
+              <Icon :name="item.icon" class="w-5 h-5" />
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium">{{ item.label }}</p>
+              <p class="text-xs text-muted-foreground truncate">{{ item.desc }}</p>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span :class="['w-1.5 h-1.5 rounded-full', statusDotClass(item.status)]" />
+                {{ item.statusLabel }}
+              </span>
+              <Button size="sm" variant="ghost" @click="item.onClick">
+                {{ item.action }}
+                <Icon name="lucide:chevron-right" class="w-3.5 h-3.5 ml-1" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- ── Settings floor ───────────────────────────────────────────── -->
+      <template v-else-if="floor === 'settings'">
+        <div class="space-y-5">
+          <!-- Admin tooling tiles -->
+          <div>
+            <h3 class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-3">
+              Admin tooling
+            </h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <NuxtLink
+                v-for="tile in settingsTiles"
+                :key="tile.label"
+                :to="tile.to"
+                class="ios-card p-4 flex items-start gap-3 hover:border-primary/40 transition-colors group"
+              >
+                <div class="w-9 h-9 rounded-lg bg-muted/50 flex items-center justify-center shrink-0">
+                  <Icon :name="tile.icon" class="w-5 h-5" />
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium group-hover:text-primary">{{ tile.label }}</p>
+                  <p class="text-xs text-muted-foreground mt-0.5">{{ tile.desc }}</p>
+                </div>
+                <Icon name="lucide:chevron-right" class="w-4 h-4 text-muted-foreground/50 shrink-0 mt-1" />
+              </NuxtLink>
+            </div>
+          </div>
+
+          <!-- Document themes / Branding link -->
+          <div class="ios-card p-5">
+            <h3 class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">
+              Document theme & branding
+            </h3>
+            <p class="text-sm text-muted-foreground mb-3">
+              Configure document theme, accent color, and the "Powered by Earnest" badge from the classic settings page.
+            </p>
+            <Button size="sm" variant="outline" @click="router.push('/organization')">
+              <Icon name="lucide:palette" class="w-4 h-4 mr-1" />
+              Open document settings
+            </Button>
+          </div>
+
+          <!-- AI Usage -->
+          <div class="ios-card p-5">
+            <OrganizationAIUsage v-if="selectedOrg" :organization-id="selectedOrg" />
+          </div>
+
+          <!-- Danger zone -->
+          <div v-if="isOrgOwner" class="ios-card p-5 border border-rose-300 dark:border-rose-900/50">
+            <h3 class="text-[10px] uppercase tracking-wider font-semibold text-rose-600 dark:text-rose-400 mb-2">
+              Danger zone
+            </h3>
+            <p v-if="!isArchived" class="text-sm text-muted-foreground mb-3">
+              Archive this organization to cancel your subscription at the end of the current billing period and soft-delete all data. Retained for 90 days.
+            </p>
+            <p v-else class="text-sm text-muted-foreground mb-3">
+              This organization is archived. Restore it from the classic settings page.
+            </p>
+            <Button size="sm" variant="outline" class="text-rose-600 border-rose-300" @click="router.push('/organization?tab=overview')">
+              <Icon name="lucide:archive" class="w-4 h-4 mr-1" />
+              {{ isArchived ? 'Manage archive' : 'Archive organization' }}
+            </Button>
+          </div>
+        </div>
+      </template>
+    </LayoutPageContainer>
+
+    <!-- Modals — reused from the classic page -->
+    <OrganizationInviteMemberModal
+      v-if="selectedOrg"
+      v-model="showInviteMemberModal"
+      :organization-id="selectedOrg"
+      :roles="orgRoles"
+      @invited="onMemberInvited"
+    />
+
+    <ClientsInviteClientModal
+      v-if="selectedOrg"
+      v-model="showInviteClientModal"
+      :organization-id="selectedOrg"
+      @invited="onClientInvited"
+    />
+  </div>
+</template>
+
+<style scoped>
+@reference "~/assets/css/tailwind.css";
+
+.apps-page {
+  @apply flex flex-col h-full;
+}
+</style>
