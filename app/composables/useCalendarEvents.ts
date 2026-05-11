@@ -108,6 +108,8 @@ export function useCalendarEvents() {
 			'video_meeting.waiting_room_enabled',
 			'video_meeting.invitee_name', 'video_meeting.invitee_email', 'video_meeting.invitee_phone',
 			'video_meeting.client.id', 'video_meeting.client.name',
+			'video_meeting.project.id', 'video_meeting.project.title',
+			'video_meeting.project.client.id', 'video_meeting.project.client.name',
 			'video_meeting.related_lead.id', 'video_meeting.related_lead.stage',
 			'video_meeting.related_lead.related_contact.first_name',
 			'video_meeting.related_lead.related_contact.last_name',

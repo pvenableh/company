@@ -7,10 +7,40 @@
  * The user can Accept (replaces description) or Dismiss.
  */
 import { readItem } from '@directus/sdk';
-import DOMPurify from 'isomorphic-dompurify';
 import { getLLMProvider } from '~~/server/utils/llm/factory';
 import { enforceTokenLimits } from '~~/server/utils/ai-token-enforcement';
 import type { ChatMessage } from '~~/server/utils/llm/types';
+
+/**
+ * Minimal HTML sanitizer for LLM agenda output. We can't use
+ * `isomorphic-dompurify` here — its transitive dep `html-encoding-sniffer`
+ * does CommonJS-style require() on an ESM-only `@exodus/bytes` module and
+ * blows up on Vercel's serverless runtime with ERR_REQUIRE_ESM.
+ *
+ * Since the LLM is constrained to a known tag list, we can sanitize with a
+ * tiny allow-list pass: strip <script>/<style>/comments wholesale, then
+ * regex out any tag that isn't in ALLOWED_TAGS and strip ALL attributes
+ * from the survivors. Output stays safe to v-html into Tiptap.
+ */
+function sanitizeAgendaHtml(input: string, allowedTags: string[]): string {
+	if (!input) return '';
+	let html = input;
+	// Drop script/style/iframe (and their content) and HTML comments.
+	html = html.replace(/<\s*(script|style|iframe|svg|math)\b[\s\S]*?<\s*\/\s*\1\s*>/gi, '');
+	html = html.replace(/<!--[\s\S]*?-->/g, '');
+	const allow = new Set(allowedTags.map(t => t.toLowerCase()));
+	// Replace each tag with either its allowed form (stripped of attrs) or empty.
+	html = html.replace(/<\s*\/?\s*([a-zA-Z][a-zA-Z0-9]*)\b[^>]*>/g, (match, tagName) => {
+		const t = String(tagName).toLowerCase();
+		if (!allow.has(t)) return '';
+		const isClosing = /^<\s*\//.test(match);
+		const isSelfClosing = /\/\s*>$/.test(match);
+		if (isClosing) return `</${t}>`;
+		if (isSelfClosing || t === 'br') return `<${t}>`;
+		return `<${t}>`;
+	});
+	return html;
+}
 
 interface GenerateAgendaBody {
 	organizationId: string;
@@ -98,7 +128,7 @@ export default defineEventHandler(async (event) => {
 		});
 
 		const raw = response.content.trim().replace(/^```html?\n?/, '').replace(/\n?```$/, '');
-		const clean = DOMPurify.sanitize(raw, { ALLOWED_TAGS, ALLOWED_ATTR: [] });
+		const clean = sanitizeAgendaHtml(raw, ALLOWED_TAGS);
 		return { html: clean };
 	} catch (err: any) {
 		console.error('[ai/generate-agenda] LLM error:', err);
