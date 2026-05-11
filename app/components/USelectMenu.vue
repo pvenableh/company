@@ -60,6 +60,11 @@ function getOptionLabel(option: any): string {
 function getOptionValue(option: any): any {
   if (typeof option === 'string') return option
   if (props.valueAttribute) return option?.[props.valueAttribute]
+  // Convention: when callers pass `[{label, value}]` without a `value-attribute`
+  // prop, treat `value` as the value field. This matches NuxtUI's USelect API
+  // and keeps the {label, value} pattern Just Working for the common case.
+  // Object-as-value callers (no `value` field) still get the entire object.
+  if (option && typeof option === 'object' && 'value' in option) return option.value
   return option
 }
 
@@ -85,12 +90,11 @@ function fromStringKey(key: string): any {
   if (key.startsWith('__empty_')) return ''
   if (key.startsWith('__idx_')) {
     const idx = parseInt(key.replace('__idx_', ''), 10)
-    const option = props.options[idx]
-    return props.valueAttribute ? getOptionValue(option) : option
+    return getOptionValue(props.options[idx])
   }
   // Direct string or numeric value – check if it matches a valueAttribute
   const found = props.options.find((o: any, i: number) => toStringKey(o, i) === key)
-  if (found) return props.valueAttribute ? getOptionValue(found) : found
+  if (found) return getOptionValue(found)
   return key
 }
 

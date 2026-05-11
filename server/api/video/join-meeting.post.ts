@@ -78,26 +78,25 @@ export default defineEventHandler(async (event) => {
 		let status;
 
 		if (existingAttendees.length > 0) {
-			// Update existing attendee
+			// Always admit at our layer — Daily's prebuilt owns the knock/admit
+			// flow inside the iframe when waiting_room_enabled is on. Older rows
+			// from the defunct in-app waiting room (status='waiting'/'rejected')
+			// get normalized to 'admitted' on touch so a returning user isn't
+			// trapped on a screen we no longer render.
+			status = 'admitted';
 			attendee = existingAttendees[0];
-
-			// If they were rejected or left, reset to waiting
-			if (attendee.status === 'rejected' || attendee.status === 'left') {
-				status = isHost || !meeting?.waiting_room_enabled ? 'admitted' : 'waiting';
+			if (attendee.status !== 'admitted' && attendee.status !== 'in_meeting') {
 				await directus.request(
 					updateItem('video_meeting_attendees', attendee.id, {
 						status,
 						guest_name: guestName || attendee.guest_name,
 					}),
 				);
-			} else if (attendee.status === 'admitted' || attendee.status === 'in_meeting') {
-				status = 'admitted';
-			} else {
-				status = attendee.status;
 			}
 		} else {
-			// Create new attendee
-			status = isHost || !meeting?.waiting_room_enabled ? 'admitted' : 'waiting';
+			// Create new attendee. Same rationale as above — let Daily's prebuilt
+			// own the knock/admit flow, always admit at our layer.
+			status = 'admitted';
 
 			attendee = await directus.request(
 				createItem('video_meeting_attendees', {

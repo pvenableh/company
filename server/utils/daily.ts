@@ -60,9 +60,11 @@ export async function createDailyRoom(params: {
 	maxParticipants?: number;
 	enableRecording?: boolean;
 	enableTranscription?: boolean;
+	enableKnocking?: boolean;
 }): Promise<DailyRoom> {
 	const expiresAt = params.expiresAt ?? new Date(Date.now() + 24 * 60 * 60 * 1000);
 	const enableTranscription = params.enableTranscription ?? true;
+	const enableKnocking = params.enableKnocking ?? false;
 
 	return dailyFetch<DailyRoom>('/rooms', {
 		method: 'POST',
@@ -88,6 +90,15 @@ export async function createDailyRoom(params: {
 				// the host's join, but keeping the flags ensures the prebuilt
 				// UI also shows the controls as a fallback.
 				enable_transcription_storage: enableTranscription,
+				// Knock-and-admit. When the meeting was created with the
+				// "Waiting room" toggle on, we delegate the entire knock/admit
+				// flow to Daily's prebuilt — `enable_knocking` makes guests hit
+				// a knock screen inside the iframe and notifies the owner-token
+				// host with an in-room "Someone is asking to join" panel.
+				// `enable_prejoin_ui` is required for the knock screen to
+				// surface (otherwise Daily auto-joins them past it).
+				enable_knocking: enableKnocking,
+				enable_prejoin_ui: enableKnocking,
 				permissions: {
 					canAdmin: ['transcription'],
 				},
@@ -116,6 +127,27 @@ export async function ensureRoomRecordingEnabled(roomName: string): Promise<void
 		});
 	} catch (err) {
 		console.warn(`[daily] failed to ensure recording on ${roomName}:`, err);
+	}
+}
+
+/**
+ * Patch an existing Daily room. Used by the meeting-edit endpoint to push
+ * waiting-room + timing changes to the live room without recreating it.
+ * Daily's REST API treats POST /rooms/{name} as an upsert when the room
+ * exists; only the properties you pass are touched.
+ */
+export async function updateDailyRoom(
+	roomName: string,
+	properties: Record<string, any>,
+): Promise<void> {
+	try {
+		await dailyFetch(`/rooms/${roomName}`, {
+			method: 'POST',
+			body: JSON.stringify({ properties }),
+		});
+	} catch (err) {
+		console.warn(`[daily] failed to update room ${roomName}:`, err);
+		throw err;
 	}
 }
 

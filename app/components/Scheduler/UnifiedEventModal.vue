@@ -10,10 +10,21 @@ const props = defineProps<{
 	modelValue: boolean;
 	selectedDate?: Date;
 	defaultVideo?: boolean;
+	// Edit-mode handles. Pass `appointment` when the calendar source is an
+	// appointment row; pass `meeting` when editing a video meeting directly.
+	// If only `appointment` is given and `appointment.video_meeting` is
+	// populated, we treat it as a video-meeting edit.
 	appointment?: any;
+	meeting?: any;
+	// Optional context pre-fill for "Schedule meeting" launchers that already
+	// know about a lead or project (e.g. /leads/[id], /projects/Overview).
+	leadId?: number | string | null;
+	leadData?: any;
+	projectId?: string | null;
+	projectData?: any;
 }>();
 
-const emit = defineEmits(['update:modelValue', 'created', 'saved']);
+const emit = defineEmits(['update:modelValue', 'created', 'saved', 'deleted']);
 
 const toast = useToast();
 const { user } = useDirectusAuth();
@@ -24,10 +35,29 @@ const { getLeads } = useLeads();
 const { selectedOrg } = useOrganization();
 
 const saving = ref(false);
+const deleting = ref(false);
+// Drives the inline send-invite form (rendered above the footer in edit mode).
+const showSendInvite = ref(false);
 
-// Plan-aware recording/transcription defaults — see NewMeetingModal for the
-// long-form rationale. Free tier disables both checkboxes; solo+ unlocks
-// transcription by default; studio+ also turns on cloud recording.
+// Old USelect bug stored `meeting_type` as `{label, value}` (sometimes JSON
+// stringified). Pull the `value` out so a corrupted row still renders the
+// correct option instead of falling through to the "Select…" placeholder.
+function unwrapLegacyMeetingType(raw: any): string | null {
+	if (raw == null) return null;
+	if (typeof raw === 'object' && 'value' in raw) return String(raw.value);
+	if (typeof raw === 'string') {
+		try {
+			const parsed = JSON.parse(raw);
+			if (parsed && typeof parsed === 'object' && 'value' in parsed) return String(parsed.value);
+		} catch {}
+		return raw;
+	}
+	return null;
+}
+
+// Plan-aware recording/transcription defaults. Free tier disables both
+// checkboxes; solo+ unlocks transcription by default; studio+ also turns on
+// cloud recording. Resolved server-side off the org's plan + per-org overrides.
 const FALLBACK_DEFAULTS = {
 	recording: false,
 	transcription: false,
@@ -59,7 +89,10 @@ const isOpen = computed({
 	set: (v) => emit('update:modelValue', v),
 });
 
-const close = () => { isOpen.value = false; };
+const close = () => {
+	isOpen.value = false;
+	showSendInvite.value = false;
+};
 
 // ── Form state ──
 const form = reactive({
@@ -190,6 +223,17 @@ if (import.meta.client) {
 	});
 }
 
+// Resolve the edit-mode video meeting (if any). Either `meeting` is passed
+// directly or the caller passed an appointment whose `video_meeting` relation
+// is populated.
+const editingMeeting = computed(() =>
+	props.meeting
+	|| (props.appointment && typeof props.appointment.video_meeting === 'object' ? props.appointment.video_meeting : null),
+);
+const isEditingVideo = computed(() => !!editingMeeting.value);
+const isEditingAppointment = computed(() => !!props.appointment && !isEditingVideo.value);
+const isEditing = computed(() => isEditingVideo.value || isEditingAppointment.value);
+
 // ── Reset form on open ──
 watch(isOpen, async (open) => {
 	if (open) {
@@ -197,26 +241,76 @@ watch(isOpen, async (open) => {
 		const defaultTime = new Date();
 		defaultTime.setHours(defaultTime.getHours() + 1, 0, 0, 0);
 
-		form.title = props.appointment?.title || '';
-		form.description = props.appointment?.description || '';
-		form.is_video = props.appointment ? (props.appointment.is_video ?? false) : (props.defaultVideo ?? true);
-		form.meeting_type = 'general';
-		form.date = format(d, 'yyyy-MM-dd');
-		form.time = props.appointment ? format(new Date(props.appointment.start_time), 'HH:mm') : format(defaultTime, 'HH:mm');
-		form.duration = 30;
-		form.waiting_room_enabled = false;
-		form.related_lead = null;
+		const m = editingMeeting.value;
+
+		form.title = m?.title || props.appointment?.title || '';
+		form.description = m?.description || props.appointment?.description || '';
+		form.is_video = m
+			? true
+			: props.appointment
+				? (props.appointment.is_video ?? false)
+				: (props.defaultVideo ?? true);
+		// Unwrap legacy meeting_type values: an older version of USelect was
+		// emitting the entire `{label, value}` option object as the v-model,
+		// which got stored verbatim (sometimes as JSON string, sometimes as a
+		// nested object after Directus round-trip). Pull `.value` back out so
+		// the new select renders the right option instead of "Select…".
+		form.meeting_type = unwrapLegacyMeetingType(m?.meeting_type) || 'general';
+
+		// Normalize Directus naive datetimes to UTC ISO before parsing — otherwise
+		// `new Date("2026-05-11T17:00:00")` is treated as local time and the edit
+		// modal pulls in a tz-offset shift.
+		const sourceStart = normalizeDirectusDate(m?.scheduled_start) || normalizeDirectusDate(props.appointment?.start_time);
+		const startDate = sourceStart ? new Date(sourceStart) : d;
+		form.date = format(startDate, 'yyyy-MM-dd');
+		form.time = sourceStart ? format(new Date(sourceStart), 'HH:mm') : format(defaultTime, 'HH:mm');
+		const aptStart = normalizeDirectusDate(props.appointment?.start_time);
+		const aptEnd = normalizeDirectusDate(props.appointment?.end_time);
+		form.duration = m?.duration_minutes
+			|| (aptStart && aptEnd
+				? Math.max(15, Math.round((new Date(aptEnd).getTime() - new Date(aptStart).getTime()) / 60000))
+				: 30);
+
+		form.waiting_room_enabled = !!m?.waiting_room_enabled;
+		form.recording_enabled = !!m?.recording_enabled;
+		form.transcription_enabled = !!m?.transcription_enabled;
+
+		// Lead context: prefer explicit prop, then the editing meeting, then
+		// the appointment row.
+		const seedLead = props.leadData
+			|| (props.appointment?.related_lead && typeof props.appointment.related_lead === 'object' ? props.appointment.related_lead : null)
+			|| (m?.related_lead && typeof m.related_lead === 'object' ? m.related_lead : null)
+			|| null;
+		form.related_lead = seedLead;
 		form.members = [];
 		form.guests = [];
 		leadSearch.value = '';
 		memberSearch.value = '';
 
+		// Auto-add the lead contact as a guest on initial open, like the
+		// retired NewMeetingModal did.
+		if (seedLead?.related_contact && !isEditing.value) {
+			const name = `${seedLead.related_contact.first_name || ''} ${seedLead.related_contact.last_name || ''}`.trim();
+			const email = seedLead.related_contact.email || '';
+			if (name || email) {
+				form.guests.push({
+					name,
+					email,
+					phone: seedLead.related_contact.phone || '',
+					invite_method: 'email',
+				});
+			}
+		}
+
 		fetchFilteredUsers();
 
-		// Pre-fill recording/transcription off the org's plan-aware defaults.
+		// Plan-aware defaults only apply to *new* meetings; in edit mode the
+		// saved values already populated above are what the row is set to.
 		await fetchMeetingDefaults();
-		form.recording_enabled = meetingDefaults.value.recording;
-		form.transcription_enabled = meetingDefaults.value.transcription;
+		if (!isEditing.value) {
+			form.recording_enabled = meetingDefaults.value.recording;
+			form.transcription_enabled = meetingDefaults.value.transcription;
+		}
 	}
 });
 
@@ -239,37 +333,60 @@ const handleSubmit = async () => {
 		const endTime = new Date(startTime.getTime() + form.duration * 60000);
 
 		if (form.is_video) {
-			// Create video meeting via API
 			const validGuests = form.guests.filter(g => g.name || g.email);
-			const first = validGuests[0];
 
-			const response = await $fetch('/api/video/create-room', {
-				method: 'POST',
-				body: {
-					title: form.title,
-					description: form.description,
-					meeting_type: form.meeting_type,
-					scheduled_start: startTime.toISOString(),
-					duration: form.duration,
-					waiting_room_enabled: form.waiting_room_enabled,
-					recording_enabled: form.recording_enabled,
-					transcription_enabled: form.transcription_enabled,
-					related_lead: form.related_lead?.id || null,
-					organization: selectedOrg.value || null,
-					invitee_name: first?.name || undefined,
-					invitee_email: first?.email || undefined,
-					invitee_phone: first?.phone || undefined,
-					invite_method: first?.invite_method || 'none',
-					attendees: validGuests,
-				},
-			});
+			if (isEditingVideo.value) {
+				// ── Edit: update the existing meeting row + Daily room ──
+				const meetingId = editingMeeting.value!.id;
+				await $fetch(`/api/video/meetings/${meetingId}`, {
+					method: 'PATCH',
+					body: {
+						title: form.title,
+						description: form.description,
+						meeting_type: form.meeting_type,
+						scheduled_start: startTime.toISOString(),
+						duration: form.duration,
+						waiting_room_enabled: form.waiting_room_enabled,
+						recording_enabled: form.recording_enabled,
+						transcription_enabled: form.transcription_enabled,
+						related_lead: form.related_lead?.id || null,
+						project: props.projectId || null,
+					},
+				});
+				toast.add({ title: 'Meeting updated', color: 'green' });
+				emit('saved', { id: meetingId });
+			} else {
+				// ── Create: POST to create-room (mints Daily room + appointment) ──
+				const first = validGuests[0];
+				const response = await $fetch('/api/video/create-room', {
+					method: 'POST',
+					body: {
+						title: form.title,
+						description: form.description,
+						meeting_type: form.meeting_type,
+						scheduled_start: startTime.toISOString(),
+						duration: form.duration,
+						waiting_room_enabled: form.waiting_room_enabled,
+						recording_enabled: form.recording_enabled,
+						transcription_enabled: form.transcription_enabled,
+						related_lead: form.related_lead?.id || null,
+						project: props.projectId || null,
+						organization: selectedOrg.value || null,
+						invitee_name: first?.name || undefined,
+						invitee_email: first?.email || undefined,
+						invitee_phone: first?.phone || undefined,
+						invite_method: first?.invite_method || 'none',
+						attendees: validGuests,
+					},
+				});
 
-			if (response.data?.meetingLink) {
-				await navigator.clipboard.writeText(response.data.meetingLink);
+				if (response.data?.meetingLink) {
+					await navigator.clipboard.writeText(response.data.meetingLink);
+				}
+
+				toast.add({ title: 'Video meeting created!', description: 'Link copied to clipboard', color: 'green' });
+				emit('created', response.data);
 			}
-
-			toast.add({ title: 'Video meeting created!', description: 'Link copied to clipboard', color: 'green' });
-			emit('created', response.data);
 		} else {
 			// Create appointment via Directus
 			const appointmentData = {
@@ -315,6 +432,41 @@ const handleSubmit = async () => {
 
 	saving.value = false;
 };
+
+const deleteMeeting = async () => {
+	if (!isEditingVideo.value || !editingMeeting.value?.id) return;
+	if (!window.confirm('Delete this meeting? The Daily room and linked appointment will also be removed. This cannot be undone.')) return;
+	deleting.value = true;
+	try {
+		await $fetch(`/api/video/meetings/${editingMeeting.value.id}`, { method: 'DELETE' });
+		toast.add({ title: 'Meeting deleted', color: 'green' });
+		emit('deleted', { id: editingMeeting.value.id });
+		emit('saved', { id: editingMeeting.value.id });
+		close();
+	} catch (error: any) {
+		toast.add({ title: 'Delete failed', description: error.message, color: 'red' });
+	} finally {
+		deleting.value = false;
+	}
+};
+
+// Shape needed by SchedulerSendInvitePopover. Pulled off whichever source the
+// modal is editing — the meeting row wins, with the appointment as fallback.
+const sendInviteMeeting = computed(() => {
+	const m = editingMeeting.value;
+	if (!m) return null;
+	return {
+		id: m.id,
+		room_name: m.room_name || props.appointment?.room_name || null,
+		title: m.title || props.appointment?.title || '',
+		scheduled_start: m.scheduled_start || props.appointment?.start_time || null,
+		scheduled_end: m.scheduled_end || props.appointment?.end_time || null,
+		host_name: m.host_identity || null,
+		invitee_name: m.invitee_name || null,
+		invitee_email: m.invitee_email || null,
+		invitee_phone: m.invitee_phone || null,
+	};
+});
 </script>
 
 <template>
@@ -323,12 +475,22 @@ const handleSubmit = async () => {
 			<!-- Header (fixed) -->
 			<div class="flex-shrink-0 px-5 py-3.5 border-b border-border/30 flex items-center">
 				<span class="text-[10px] font-semibold uppercase tracking-[0.08em] text-foreground/70">
-					{{ appointment ? 'Edit Event' : form.is_video ? 'New Video Meeting' : 'New Event' }}
+					<template v-if="isEditingVideo">Edit Video Meeting</template>
+					<template v-else-if="isEditingAppointment">Edit Event</template>
+					<template v-else-if="form.is_video">New Video Meeting</template>
+					<template v-else>New Event</template>
 				</span>
 			</div>
 
 			<!-- Form (scrollable) -->
 			<form @submit.prevent="handleSubmit" class="p-5 space-y-5 overflow-y-auto flex-1">
+				<!-- Project context badge -->
+				<div v-if="projectData" class="flex items-center gap-2 px-3 py-2 bg-cyan-500/5 border border-cyan-500/20 rounded-lg">
+					<UIcon name="i-heroicons-folder" class="w-4 h-4 text-cyan-500 shrink-0" />
+					<span class="text-xs font-medium text-foreground">{{ projectData.title }}</span>
+					<span class="text-[9px] uppercase tracking-wider text-muted-foreground">Project</span>
+				</div>
+
 				<!-- Type + Video toggle -->
 				<div class="flex items-center gap-4">
 					<UFormGroup v-if="form.is_video" label="Type" class="flex-1">
@@ -529,23 +691,57 @@ const handleSubmit = async () => {
 					Add External Guest
 				</button>
 
+				<!-- Inline send-invite form (edit mode for video meetings) -->
+				<SchedulerSendInvitePopover
+					v-if="isEditingVideo && sendInviteMeeting"
+					v-model="showSendInvite"
+					:meeting="sendInviteMeeting"
+					inline
+				/>
+
 				<!-- Actions -->
-				<div class="flex justify-end gap-2 pt-2">
-					<button
-						type="button"
-						@click="close"
-						class="px-4 py-2 rounded-xl bg-muted/30 hover:bg-muted/60 text-sm font-medium text-foreground transition-colors ios-press"
-					>
-						Cancel
-					</button>
-					<button
-						type="submit"
-						:disabled="saving"
-						class="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium transition-colors ios-press disabled:opacity-50"
-					>
-						<UIcon v-if="saving" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
-						{{ appointment ? 'Save' : 'Create' }}
-					</button>
+				<div class="flex items-center gap-2 pt-2">
+					<!-- Edit-mode video meeting tools (left) -->
+					<template v-if="isEditingVideo && sendInviteMeeting">
+						<button
+							type="button"
+							@click="showSendInvite = !showSendInvite"
+							class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-medium transition-colors ios-press"
+							:class="showSendInvite
+								? 'bg-primary/10 text-primary'
+								: 'text-muted-foreground hover:bg-muted/30 hover:text-foreground'"
+						>
+							<UIcon name="i-heroicons-paper-airplane" class="w-3.5 h-3.5" />
+							{{ showSendInvite ? 'Hide invite' : 'Send invite' }}
+						</button>
+						<button
+							type="button"
+							@click="deleteMeeting"
+							:disabled="deleting"
+							class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-medium text-red-600 hover:bg-red-500/10 transition-colors ios-press disabled:opacity-50"
+						>
+							<UIcon v-if="deleting" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
+							<UIcon v-else name="i-heroicons-trash" class="w-3.5 h-3.5" />
+							Delete
+						</button>
+					</template>
+					<div class="ml-auto flex items-center gap-2">
+						<button
+							type="button"
+							@click="close"
+							class="px-4 py-2 rounded-xl bg-muted/30 hover:bg-muted/60 text-sm font-medium text-foreground transition-colors ios-press"
+						>
+							Cancel
+						</button>
+						<button
+							type="submit"
+							:disabled="saving"
+							class="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium transition-colors ios-press disabled:opacity-50"
+						>
+							<UIcon v-if="saving" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
+							{{ isEditing ? 'Save' : 'Create' }}
+						</button>
+					</div>
 				</div>
 			</form>
 		</div>

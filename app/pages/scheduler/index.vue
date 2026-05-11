@@ -216,6 +216,18 @@
 						<span class="w-1.5 h-1.5 rounded-full" :class="filter.dot" />
 						{{ filter.label }}
 					</button>
+					<div class="flex-1" />
+					<button
+						@click="mineOnly = !mineOnly"
+						class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wide transition-all duration-200 ios-press"
+						:class="mineOnly
+							? 'bg-primary/15 text-primary'
+							: 'bg-muted/30 text-muted-foreground hover:bg-muted/50'"
+						:title="mineOnly ? 'Showing only your events — click to include teammates' : 'Showing all org events — click to filter to your own'"
+					>
+						<UIcon :name="mineOnly ? 'i-heroicons-user' : 'i-heroicons-user-group'" class="w-3 h-3" />
+						{{ mineOnly ? 'Mine only' : 'Team' }}
+					</button>
 				</div>
 
 				<!-- Main Layout: Sidebar + Calendar + Day Detail -->
@@ -247,6 +259,8 @@
 							@new-event="handleNewEvent"
 							@new-meeting="handleNewVideoMeeting"
 							@edit-event="handleEditEvent"
+							@join-meeting="handleJoinMeeting"
+							@deleted="handleEventCreated"
 						/>
 					</div>
 				</div>
@@ -257,6 +271,8 @@
 				v-model="showEventModal"
 				:selected-date="eventModalDate"
 				:default-video="eventModalDefaultVideo"
+				:appointment="eventModalAppointment"
+				:meeting="eventModalMeeting"
 				@created="handleEventCreated"
 				@saved="handleEventCreated"
 			/>
@@ -304,6 +320,25 @@ const selectedDate = ref(new Date().toISOString().substring(0, 10));
 // ── Filters ──
 const activeFilters = ref(new Set(['appointments', 'video', 'follow_ups']));
 
+// "Mine only" gates off the org-wide event feed. Default off so the scheduler
+// shows what your teammates are doing too; flipping it on collapses the feed
+// back to events you created or attend. Persisted across reloads.
+//
+// We defer the localStorage read until onMounted so SSR + client hydration
+// agree on the initial value (false). A brief flicker is acceptable here —
+// the toggle is a personal preference, not a critical layout decision.
+const MINE_ONLY_KEY = 'earnest:scheduler-mine-only';
+const mineOnly = ref(false);
+onMounted(() => {
+	try {
+		const stored = localStorage.getItem(MINE_ONLY_KEY);
+		if (stored === 'true' || stored === 'false') mineOnly.value = stored === 'true';
+	} catch {}
+	watch(mineOnly, (val) => {
+		try { localStorage.setItem(MINE_ONLY_KEY, String(val)); } catch {}
+	});
+});
+
 const eventFilters = [
 	{ key: 'appointments', label: 'Appointments', dot: 'bg-blue-500', activeBg: 'bg-blue-100/60 dark:bg-blue-900/20', activeText: 'text-blue-700 dark:text-blue-300' },
 	{ key: 'video', label: 'Video', dot: 'bg-emerald-500', activeBg: 'bg-emerald-100/60 dark:bg-emerald-900/20', activeText: 'text-emerald-700 dark:text-emerald-300' },
@@ -322,13 +357,20 @@ const filteredEvents = computed(() => {
 		if (e.type === 'video_meeting' && !activeFilters.value.has('video')) return false;
 		if (e.type === 'appointment' && !activeFilters.value.has('appointments')) return false;
 		if (e.type === 'follow_up' && !activeFilters.value.has('follow_ups')) return false;
+		if (mineOnly.value && e.is_mine === false) return false;
 		return true;
 	});
 });
 
 const selectedDateEvents = computed(() => {
 	return filteredEvents.value
-		.filter(e => e.start_time?.substring(0, 10) === selectedDate.value)
+		.filter(e => {
+			if (!e.start_time) return false;
+			const d = new Date(e.start_time);
+			if (isNaN(d.getTime())) return false;
+			const local = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+			return local === selectedDate.value;
+		})
 		.sort((a, b) => a.start_time.localeCompare(b.start_time));
 });
 
@@ -354,6 +396,19 @@ const stats = computed(() => {
 const showEventModal = ref(false);
 const eventModalDate = ref<Date | undefined>(undefined);
 const eventModalDefaultVideo = ref(true);
+const eventModalAppointment = ref<any>(null);
+const eventModalMeeting = ref<any>(null);
+
+const resetEventModalEditState = () => {
+	eventModalAppointment.value = null;
+	eventModalMeeting.value = null;
+};
+
+// Drop edit context whenever the modal closes so the next "+ New event" click
+// opens a clean form (not a stale edit).
+watch(showEventModal, (open) => {
+	if (!open) resetEventModalEditState();
+});
 
 // ── Event handlers ──
 const handleDateSelect = (dateStr: string) => {
@@ -361,26 +416,43 @@ const handleDateSelect = (dateStr: string) => {
 };
 
 const handleNewEvent = (dateStr: string) => {
+	resetEventModalEditState();
 	eventModalDate.value = parseISO(dateStr);
 	eventModalDefaultVideo.value = false;
 	showEventModal.value = true;
 };
 
 const handleNewVideoMeeting = (dateStr: string) => {
+	resetEventModalEditState();
 	eventModalDate.value = parseISO(dateStr);
 	eventModalDefaultVideo.value = true;
 	showEventModal.value = true;
 };
 
 const handleEditEvent = (event: CalendarEvent) => {
-	if (event.type === 'video_meeting' && event.room_name) {
-		router.push(`/meeting/${event.room_name}`);
-	} else if (event.type === 'follow_up' && event.lead?.id) {
+	if (event.type === 'follow_up' && event.lead?.id) {
 		router.push(`/leads/${event.lead.id}`);
+		return;
 	}
+	// `source_record` is the appointment row; its `video_meeting` relation is
+	// the video meeting we want to edit. Pass both so the modal can pre-fill
+	// off whichever has the field populated.
+	const apt = event.source_record;
+	eventModalAppointment.value = apt;
+	eventModalMeeting.value = apt?.video_meeting && typeof apt.video_meeting === 'object'
+		? apt.video_meeting
+		: null;
+	eventModalDate.value = event.start_time ? parseISO(event.start_time) : undefined;
+	eventModalDefaultVideo.value = event.type === 'video_meeting';
+	showEventModal.value = true;
+};
+
+const handleJoinMeeting = (event: CalendarEvent) => {
+	if (event.room_name) router.push(`/meeting/${event.room_name}`);
 };
 
 const handleEventCreated = () => {
+	resetEventModalEditState();
 	calendarEvents.refresh();
 	fetchVideoMeetings();
 };

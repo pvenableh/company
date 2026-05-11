@@ -108,6 +108,7 @@ export default defineEventHandler(async (event) => {
 				maxParticipants: 25,
 				enableRecording: recordingEnabled,
 				enableTranscription: transcriptionEnabled,
+				enableKnocking: body.waiting_room_enabled ?? false,
 			});
 		} catch (dailyError: any) {
 			console.error('Daily.co room creation error:', dailyError);

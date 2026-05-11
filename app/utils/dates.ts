@@ -39,6 +39,25 @@
 // ---------------------------------------------------------------------------
 // Internal helper
 // ---------------------------------------------------------------------------
+
+/**
+ * Normalize a Directus datetime string to ISO-UTC.
+ *
+ * Directus stores `dateTime` fields and returns them as `"YYYY-MM-DDTHH:MM:SS"`
+ * with no timezone marker. We always write UTC into those fields (via
+ * `.toISOString()` server-side), so the missing `Z` is purely a return-format
+ * quirk — but `new Date(naive)` treats the string as *local*, which adds a
+ * tz-offset shift on every read. Append `Z` so the parse is unambiguous.
+ *
+ * Pass through anything that already has a timezone marker (`Z` or `±HH:MM`).
+ */
+export function normalizeDirectusDate(input: string | null | undefined): string | null {
+	if (!input) return null;
+	if (/Z$|[+-]\d{2}:?\d{2}$/.test(input)) return input;
+	if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(input)) return `${input}Z`;
+	return input;
+}
+
 function toDate(input: string | Date | number | null | undefined): Date | null {
 	if (input == null) return null;
 	if (typeof input === 'number') {
@@ -50,6 +69,10 @@ function toDate(input: string | Date | number | null | undefined): Date | null {
 		const [y, m, d] = input.split('-').map(Number);
 		const date = new Date(y, m - 1, d);
 		return isNaN(date.getTime()) ? null : date;
+	}
+	if (typeof input === 'string') {
+		const d = new Date(normalizeDirectusDate(input)!);
+		return isNaN(d.getTime()) ? null : d;
 	}
 	const d = new Date(input);
 	return isNaN(d.getTime()) ? null : d;

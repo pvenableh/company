@@ -1,11 +1,28 @@
 <script setup lang="ts">
 import type { CalendarEvent } from '~/composables/useCalendarEvents';
+import { hostAccentColor } from '~/composables/useCalendarEvents';
 import { LEAD_STAGE_COLORS } from '~~/shared/leads';
 
 const props = defineProps<{
 	event: CalendarEvent;
 	compact?: boolean;
 }>();
+
+const { getStatusOpacity } = useStatusStyle();
+
+// Host accent: teammate-owned events get a unique stripe color keyed off
+// `creator_id`, so the day reads as a multi-host calendar at a glance.
+// Own events keep the type-based accent so the user's own pattern stays calm.
+const hostStripeStyle = computed(() => {
+	if (props.event.is_mine === false && props.event.creator_id) {
+		return { backgroundColor: hostAccentColor(props.event.creator_id) };
+	}
+	return null;
+});
+
+const chipOpacity = computed(() =>
+	getStatusOpacity(props.event.meeting_status || props.event.status),
+);
 
 const typeBg = computed(() => {
 	switch (props.event.type) {
@@ -61,11 +78,16 @@ const leadStageColor = computed(() => {
 	<div
 		:class="[typeBg]"
 		class="relative rounded-md transition-all duration-200 cursor-pointer group hover:shadow-sm"
-		:style="compact ? 'padding: 2px 6px 2px 12px' : 'padding: 6px 8px 6px 14px'"
+		:style="[
+			compact ? 'padding: 2px 6px 2px 12px' : 'padding: 6px 8px 6px 14px',
+			{ opacity: chipOpacity },
+		]"
 	>
 		<span
 			class="absolute left-1 top-1 bottom-1 w-[2px] rounded-full"
-			:class="typeAccent"
+			:class="hostStripeStyle ? '' : typeAccent"
+			:style="hostStripeStyle || undefined"
+			:title="event.is_mine === false && event.creator_name ? event.creator_name : undefined"
 		/>
 		<div class="flex items-center gap-1.5 min-w-0">
 			<UIcon :name="typeIcon" :class="typeIconColor" class="w-3 h-3 flex-shrink-0" />

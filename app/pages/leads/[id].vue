@@ -623,11 +623,13 @@ onUnmounted(() => clearEntity());
 			/>
 
 			<!-- Schedule Meeting Modal -->
-			<SchedulerNewMeetingModal
+			<SchedulerUnifiedEventModal
 				v-model="showMeetingModal"
 				:lead-id="lead?.id"
 				:lead-data="lead"
+				:default-video="true"
 				@created="handleMeetingCreated"
+				@saved="handleMeetingCreated"
 			/>
 
 		</template>

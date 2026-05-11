@@ -491,12 +491,14 @@
 		</ResponsiveModal>
 
 		<!-- Schedule Meeting Modal -->
-		<SchedulerNewMeetingModal
+		<SchedulerUnifiedEventModal
 			v-if="showScheduleMeeting"
 			v-model="showScheduleMeeting"
 			:project-id="project.id"
 			:project-data="project"
+			:default-video="true"
 			@created="handleMeetingCreated"
+			@saved="handleMeetingCreated"
 		/>
 	</div>
 </template>
