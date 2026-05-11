@@ -26,6 +26,8 @@ interface CreateAppointmentBody {
   google_event_id?: string | null;
   outlook_event_id?: string | null;
   reminder_sent?: boolean;
+  /** Directus user IDs to link as teammate attendees via appointments_directus_users. */
+  members?: string[];
   [key: string]: unknown;
 }
 
@@ -65,13 +67,61 @@ export default defineEventHandler(async (event) => {
     await requireOrgMembership(event, meeting.related_organization);
   }
 
+  // Strip members before insert — it's a relation we plumb separately.
+  const { members, ...appointmentFields } = body;
+
   const created = await directus.request(
     createItem('appointments', {
-      ...body,
+      ...appointmentFields,
       user_created: userId,
       status: body.status ?? 'published',
     }),
   );
+
+  const memberIds = Array.isArray(members) ? Array.from(new Set(members.filter(Boolean))) : [];
+  if (memberIds.length > 0) {
+    for (const memberId of memberIds) {
+      try {
+        await directus.request(
+          createItem('appointments_directus_users', {
+            appointments_id: (created as any).id,
+            directus_users_id: memberId,
+          } as any),
+        );
+      } catch (err) {
+        console.error('[appointments.post] failed to link member:', memberId, err);
+      }
+    }
+
+    // Notify added members. Skip for video appointments — those are created
+    // via /api/video/create-room and handle their own notifications keyed off
+    // the video_meetings row.
+    if (!body.is_video) {
+      try {
+        const hostName =
+          `${(session as any).user?.first_name || ''} ${(session as any).user?.last_name || ''}`.trim() || 'Host';
+        await notifyMeetingChange({
+          event: { kind: 'invited' },
+          meeting: {
+            id: (created as any).id,
+            title: body.title || 'Event',
+            meeting_url: null,
+            scheduled_start: body.start_time || new Date().toISOString(),
+            duration_minutes:
+              body.start_time && body.end_time
+                ? Math.max(15, Math.round((new Date(body.end_time).getTime() - new Date(body.start_time).getTime()) / 60000))
+                : 30,
+            collection: 'appointments',
+          },
+          recipientIds: memberIds,
+          hostId: userId,
+          hostName,
+        });
+      } catch (err) {
+        console.error('[appointments.post] notify(invited) failed:', err);
+      }
+    }
+  }
 
   return created;
 });

@@ -169,14 +169,35 @@
 						<div class="flex items-center justify-between">
 							<div>
 								<div class="font-medium text-sm">Email Notifications</div>
-								<div class="text-xs text-muted-foreground">Receive email for important notifications</div>
+								<div class="text-xs text-muted-foreground">Master switch — turn off to silence all email</div>
 							</div>
 							<Switch :checked="preferences.emailEnabled" @update:checked="preferences.emailEnabled = $event" />
+						</div>
+
+						<div v-if="preferences.emailEnabled" class="pl-4 space-y-3 border-l-2 border-muted">
+							<div class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Meeting emails</div>
+							<div
+								v-for="opt in meetingEmailOptions"
+								:key="opt.key"
+								class="flex items-center justify-between"
+							>
+								<div>
+									<div class="font-medium text-sm">{{ opt.label }}</div>
+									<div class="text-xs text-muted-foreground">{{ opt.hint }}</div>
+								</div>
+								<Switch
+									:checked="preferences.meetingEmailPrefs[opt.key] !== false"
+									@update:checked="preferences.meetingEmailPrefs[opt.key] = $event"
+								/>
+							</div>
 						</div>
 					</div>
 
 					<div class="flex justify-end gap-2 p-4 pt-2 border-t">
-						<Button size="sm" @click="savePreferences">Save Settings</Button>
+						<Button size="sm" :disabled="savingPrefs" @click="savePreferences">
+							<Loader2 v-if="savingPrefs" class="size-3 mr-1 animate-spin" />
+							Save Settings
+						</Button>
 					</div>
 				</div>
 
@@ -272,7 +293,46 @@ const showSettings = ref(false);
 const isMarkingAll = ref(false);
 const statusFilter = ref('inbox');
 const typeFilter = ref('all');
-const preferences = ref({ ...userPreferences.value });
+// Local form state. Mirrors the composable's local-only flags PLUS the
+// server-persisted email_notifications + per-event-type opt-out map. The
+// per-type map is keyed by the same strings server-side meeting-notifications
+// reads (meeting_invited, meeting_time_changed, meeting_removed,
+// meeting_cancelled, meeting_reminder). Missing keys default to opt-in (true).
+const preferences = ref({
+	...userPreferences.value,
+	meetingEmailPrefs: /** @type {Record<string, boolean>} */ ({}),
+});
+const savingPrefs = ref(false);
+
+const meetingEmailOptions = [
+	{ key: 'meeting_invited', label: 'Added to a meeting', hint: 'When someone adds you to a meeting' },
+	{ key: 'meeting_time_changed', label: 'Time changed', hint: 'When a meeting you are on is rescheduled' },
+	{ key: 'meeting_removed', label: 'Removed from a meeting', hint: 'When you are taken off a meeting' },
+	{ key: 'meeting_cancelled', label: 'Meeting cancelled', hint: 'When a meeting you are on is cancelled' },
+	{ key: 'meeting_reminder', label: 'Reminders', hint: '15 minutes before a meeting starts' },
+];
+
+// Pull persisted prefs from the server (email_notifications + the JSON map)
+// the first time the settings panel opens.
+const prefsHydrated = ref(false);
+async function hydratePrefs() {
+	if (prefsHydrated.value) return;
+	prefsHydrated.value = true;
+	try {
+		const data = await $fetch('/api/user/notification-preferences');
+		if (data?.email_notifications === false) {
+			preferences.value.emailEnabled = false;
+		} else if (data?.email_notifications === true) {
+			preferences.value.emailEnabled = true;
+		}
+		if (data?.notification_preferences && typeof data.notification_preferences === 'object') {
+			preferences.value.meetingEmailPrefs = { ...data.notification_preferences };
+		}
+	} catch (err) {
+		console.warn('[NotificationsMenu] could not hydrate prefs:', err);
+	}
+}
+watch(showSettings, (open) => { if (open) hydratePrefs(); });
 const notificationsContainer = ref(null);
 const loadMoreTrigger = ref(null);
 
@@ -403,8 +463,30 @@ const viewNotification = (notification) => {
 };
 
 const savePreferences = async () => {
-	await saveUserPreferences(preferences.value);
-	showSettings.value = false;
+	savingPrefs.value = true;
+	try {
+		// Local-only flags (sound, desktop) still go through the composable's
+		// localStorage path. Email + per-type prefs hit the server.
+		await saveUserPreferences({
+			soundEnabled: preferences.value.soundEnabled,
+			emailEnabled: preferences.value.emailEnabled,
+			desktopEnabled: preferences.value.desktopEnabled,
+		});
+		await $fetch('/api/user/notification-preferences', {
+			method: 'PATCH',
+			body: {
+				email_notifications: preferences.value.emailEnabled,
+				notification_preferences: preferences.value.meetingEmailPrefs || {},
+			},
+		});
+		toast.success('Notification settings saved');
+		showSettings.value = false;
+	} catch (err) {
+		console.error('[NotificationsMenu] save failed:', err);
+		toast.error(err?.data?.message || err?.message || 'Could not save settings');
+	} finally {
+		savingPrefs.value = false;
+	}
 };
 
 watch(

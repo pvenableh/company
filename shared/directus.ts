@@ -4280,6 +4280,8 @@ export interface DirectusUser {
 	external_identifier?: string | null;
 	auth_data?: 'json' | null;
 	email_notifications?: boolean | null;
+	/** @description Per-event-type opt-out map. Missing keys = opt-in (default). Keys: 'meeting_invited', 'meeting_time_changed', 'meeting_removed', 'meeting_cancelled', 'meeting_reminder'. */
+	notification_preferences?: Record<string, boolean> | null;
 	appearance?: null | 'auto' | 'light' | 'dark' | null;
 	theme_dark?: string | null;
 	theme_light?: string | null;

@@ -27,6 +27,10 @@
     {
       "path": "/api/cron/project-digests",
       "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/cron/meeting-reminders",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

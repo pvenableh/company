@@ -28,7 +28,6 @@ const emit = defineEmits(['update:modelValue', 'created', 'saved', 'deleted']);
 
 const toast = useToast();
 const { user } = useDirectusAuth();
-const appointmentItems = useDirectusItems('appointments');
 const appointmentsDirectusUsersItems = useDirectusItems('appointments_directus_users');
 const { filteredUsers, fetchFilteredUsers, loading: loadingUsers } = useFilteredUsers();
 const { getLeads } = useLeads();
@@ -432,7 +431,10 @@ const handleSubmit = async () => {
 				emit('created', response.data);
 			}
 		} else {
-			// Create appointment via Directus
+			// Create / update non-video appointment via server routes. Members
+			// are now plumbed through the API so the server fans out
+			// invited/removed/time_changed notifications instead of the client
+			// writing junction rows directly.
 			const appointmentData = {
 				title: form.title,
 				description: form.description,
@@ -443,26 +445,23 @@ const handleSubmit = async () => {
 			};
 
 			if (props.appointment) {
-				await appointmentItems.update(props.appointment.id, appointmentData);
+				await $fetch(`/api/appointments/${props.appointment.id}`, {
+					method: 'PATCH',
+					body: {
+						...appointmentData,
+						members: form.members.map(m => m.id),
+					},
+				});
 				toast.add({ title: 'Appointment updated', color: 'green' });
 				emit('saved');
 			} else {
 				const created = await $fetch<{ id: string }>('/api/appointments', {
 					method: 'POST',
-					body: appointmentData,
+					body: {
+						...appointmentData,
+						members: form.members.map(m => m.id),
+					},
 				});
-
-				// Link team members as attendees
-				if (form.members.length > 0) {
-					await Promise.all(
-						form.members.map(m =>
-							appointmentsDirectusUsersItems.create({
-								appointments_id: created.id,
-								directus_users_id: m.id,
-							}),
-						),
-					);
-				}
 
 				toast.add({ title: 'Appointment created', color: 'green' });
 				emit('created', created);
@@ -478,14 +477,26 @@ const handleSubmit = async () => {
 };
 
 const deleteMeeting = async () => {
-	if (!isEditingVideo.value || !editingMeeting.value?.id) return;
-	if (!window.confirm('Delete this meeting? The Daily room and linked appointment will also be removed. This cannot be undone.')) return;
+	const isVideo = isEditingVideo.value && !!editingMeeting.value?.id;
+	const isAppt = isEditingAppointment.value && !!props.appointment?.id;
+	if (!isVideo && !isAppt) return;
+	const confirmMsg = isVideo
+		? 'Delete this meeting? The Daily room and linked appointment will also be removed. This cannot be undone.'
+		: 'Delete this event? Anyone linked will be notified. This cannot be undone.';
+	if (!window.confirm(confirmMsg)) return;
 	deleting.value = true;
 	try {
-		await $fetch(`/api/video/meetings/${editingMeeting.value.id}`, { method: 'DELETE' });
-		toast.add({ title: 'Meeting deleted', color: 'green' });
-		emit('deleted', { id: editingMeeting.value.id });
-		emit('saved', { id: editingMeeting.value.id });
+		if (isVideo) {
+			await $fetch(`/api/video/meetings/${editingMeeting.value!.id}`, { method: 'DELETE' });
+			toast.add({ title: 'Meeting deleted', color: 'green' });
+			emit('deleted', { id: editingMeeting.value!.id });
+			emit('saved', { id: editingMeeting.value!.id });
+		} else {
+			await $fetch(`/api/appointments/${props.appointment!.id}`, { method: 'DELETE' });
+			toast.add({ title: 'Event deleted', color: 'green' });
+			emit('deleted', { id: props.appointment!.id });
+			emit('saved', { id: props.appointment!.id });
+		}
 		close();
 	} catch (error: any) {
 		toast.add({ title: 'Delete failed', description: error.message, color: 'red' });
@@ -758,6 +769,19 @@ const sendInviteMeeting = computed(() => {
 							<UIcon name="i-heroicons-paper-airplane" class="w-3.5 h-3.5" />
 							{{ showSendInvite ? 'Hide invite' : 'Send invite' }}
 						</button>
+						<button
+							type="button"
+							@click="deleteMeeting"
+							:disabled="deleting"
+							class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-medium text-red-600 hover:bg-red-500/10 transition-colors ios-press disabled:opacity-50"
+						>
+							<UIcon v-if="deleting" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
+							<UIcon v-else name="i-heroicons-trash" class="w-3.5 h-3.5" />
+							Delete
+						</button>
+					</template>
+					<!-- Edit-mode non-video event: just the delete button -->
+					<template v-else-if="isEditingAppointment">
 						<button
 							type="button"
 							@click="deleteMeeting"
