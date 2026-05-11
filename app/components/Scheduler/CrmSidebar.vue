@@ -63,9 +63,6 @@ const formatFollowUpDate = (event: CalendarEvent) => {
 
 <template>
 	<div class="space-y-4">
-		<!-- Instant Meeting -->
-		<SchedulerInstantMeetingButton />
-
 		<!-- Upcoming Follow-ups -->
 		<div class="ios-card p-4">
 			<div class="flex items-center gap-2 mb-3">

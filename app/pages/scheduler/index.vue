@@ -184,6 +184,7 @@
 						<p class="text-[15px] text-muted-foreground mt-0.5">Meetings, follow-ups, and CRM touchpoints</p>
 					</div>
 					<div class="flex items-center gap-2">
+						<SchedulerInstantMeetingButton @created="handleMeetingCreated" />
 						<SchedulerNewMeetingButton @created="handleMeetingCreated" />
 						<NuxtLink
 							to="/scheduler/settings"

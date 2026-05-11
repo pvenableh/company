@@ -77,7 +77,7 @@ const leadStageColor = computed(() => {
 <template>
 	<div
 		:class="[typeBg]"
-		class="relative rounded-md transition-all duration-200 cursor-pointer group hover:shadow-sm"
+		class="relative rounded-md transition-all duration-200 cursor-pointer group hover:shadow-sm min-w-0 overflow-hidden"
 		:style="[
 			compact ? 'padding: 2px 6px 2px 12px' : 'padding: 6px 8px 6px 14px',
 			{ opacity: chipOpacity },

@@ -36,7 +36,7 @@
 								v-for="weekDate in weekDates"
 								:key="weekDate.toString()"
 								:date="weekDate"
-								class="relative flex-1 p-0"
+								class="relative flex-1 min-w-0 p-0"
 								:class="{
 									'border-t border-border/20': true,
 									'border-r border-border/10 last:border-r-0': true,

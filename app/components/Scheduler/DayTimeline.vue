@@ -581,7 +581,7 @@ watch(() => [props.date, props.events.length], scrollToFocus, { immediate: true 
 }
 .day-timeline__body::-webkit-scrollbar { display: none; }
 
-.day-timeline__scroll { position: relative; }
+.day-timeline__scroll { position: relative; padding-bottom: 16px; }
 
 /* Hour header */
 .day-timeline__header {
