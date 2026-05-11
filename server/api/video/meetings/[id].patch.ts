@@ -21,11 +21,16 @@ interface Body {
 	related_lead?: number | string | null;
 	project?: string | null;
 	project_event?: string | null;
+	client?: string | null;
 	waiting_room_enabled?: boolean;
 	recording_enabled?: boolean;
 	transcription_enabled?: boolean;
 	/** Full replacement set of teammate Directus user IDs. Omit to leave members untouched. */
 	members?: string[];
+	/** Full replacement set of picker-added contacts. Omit to leave contacts untouched. */
+	contacts?: Array<{ contact_id: string; name?: string; email?: string; phone?: string; invite_method?: 'email' | 'sms' | 'both' | 'none' }>;
+	/** Full replacement set of manually-typed external guests. Omit to leave guests untouched. */
+	attendees?: Array<{ name?: string; email?: string; phone?: string; invite_method?: 'email' | 'sms' | 'both' | 'none' }>;
 }
 
 export default defineEventHandler(async (event) => {
@@ -116,6 +121,24 @@ export default defineEventHandler(async (event) => {
 	if ('related_lead' in body) meetingPatch.related_lead = body.related_lead ?? null;
 	if ('project' in body) meetingPatch.project = body.project ?? null;
 	if ('project_event' in body) meetingPatch.project_event = body.project_event ?? null;
+
+	// Keep `client` in sync with the project. Explicit body.client always wins.
+	// When the project changes and the caller didn't send `client`, re-resolve
+	// from the new project. A cleared project leaves the existing client alone
+	// (unless the caller explicitly nulls it) — manual edits are still possible.
+	if ('client' in body) {
+		meetingPatch.client = body.client ?? null;
+	} else if ('project' in body && body.project) {
+		try {
+			const proj = (await directus.request(
+				readItem('projects', body.project, { fields: ['client'] as any }),
+			)) as any;
+			const projClient = typeof proj?.client === 'object' ? proj.client?.id : proj?.client;
+			if (projClient) meetingPatch.client = projClient;
+		} catch (err) {
+			console.warn('[meetings.patch] failed to resolve project client:', err);
+		}
+	}
 	if (typeof body.waiting_room_enabled === 'boolean') meetingPatch.waiting_room_enabled = body.waiting_room_enabled;
 	if (typeof body.recording_enabled === 'boolean') meetingPatch.recording_enabled = body.recording_enabled;
 	if (typeof body.transcription_enabled === 'boolean') meetingPatch.transcription_enabled = body.transcription_enabled;
@@ -275,6 +298,112 @@ export default defineEventHandler(async (event) => {
 			});
 		} catch (err) {
 			console.error('[meetings.patch] notify(time_changed) failed:', err);
+		}
+	}
+
+	// ── Attendee diff (contacts + manual guests) ──
+	// `contacts` and `attendees` are both full replacement sets when present.
+	// We diff against the meeting's current video_meeting_attendees rows and
+	// apply create/delete deltas. `attendee_type: 'user'` rows (teammates) are
+	// left alone — those ride on appointments_directus_users.
+	if (Array.isArray(body.contacts) || Array.isArray(body.attendees)) {
+		try {
+			const existing = (await directus.request(
+				readItems('video_meeting_attendees', {
+					filter: { video_meeting: { _eq: meetingId } } as any,
+					fields: ['id', 'attendee_type', 'contact', 'guest_email', 'guest_name'] as any,
+					limit: -1,
+				}),
+			)) as any[];
+
+			const desiredContacts = Array.isArray(body.contacts) ? body.contacts.filter(c => c?.contact_id) : null;
+			const desiredGuests = Array.isArray(body.attendees) ? body.attendees.filter(a => a?.name || a?.email) : null;
+
+			// Contact diff — only run when body.contacts is present.
+			if (desiredContacts) {
+				const desiredIds = new Set(desiredContacts.map(c => c.contact_id));
+				const existingContactRows = existing.filter(r => r.attendee_type === 'guest' && r.contact);
+				const existingContactIds = new Set(
+					existingContactRows.map(r => (typeof r.contact === 'object' ? r.contact?.id : r.contact)).filter(Boolean),
+				);
+
+				// Add new contacts
+				for (const c of desiredContacts) {
+					if (existingContactIds.has(c.contact_id)) continue;
+					try {
+						await directus.request(
+							createItem('video_meeting_attendees', {
+								video_meeting: meetingId,
+								attendee_type: 'guest',
+								contact: c.contact_id,
+								guest_name: c.name || null,
+								guest_email: c.email || null,
+								guest_phone: c.phone || null,
+								invite_method: c.invite_method || (c.email ? 'email' : 'none'),
+								status: 'invited',
+							} as any),
+						);
+					} catch (err) {
+						console.error('[meetings.patch] failed to add contact attendee:', c.contact_id, err);
+					}
+				}
+
+				// Remove contact rows that are no longer in the set
+				const removalRowIds = existingContactRows
+					.filter(r => {
+						const cid = typeof r.contact === 'object' ? r.contact?.id : r.contact;
+						return cid && !desiredIds.has(cid);
+					})
+					.map(r => r.id);
+				if (removalRowIds.length > 0) {
+					try {
+						await directus.request(deleteItems('video_meeting_attendees', removalRowIds));
+					} catch (err) {
+						console.error('[meetings.patch] failed to remove contact attendee rows:', err);
+					}
+				}
+			}
+
+			// Manual-guest diff — only run when body.attendees is present.
+			// Matches by lowercased email; rows missing email fall back to name.
+			if (desiredGuests) {
+				const keyOf = (e?: string | null, n?: string | null) => `${(e || '').toLowerCase()}|${(n || '').toLowerCase()}`;
+				const desiredKeys = new Set(desiredGuests.map(g => keyOf(g.email, g.name)));
+				const existingGuestRows = existing.filter(r => r.attendee_type === 'guest' && !r.contact);
+				const existingKeys = new Set(existingGuestRows.map(r => keyOf(r.guest_email, r.guest_name)));
+
+				for (const g of desiredGuests) {
+					if (existingKeys.has(keyOf(g.email, g.name))) continue;
+					try {
+						await directus.request(
+							createItem('video_meeting_attendees', {
+								video_meeting: meetingId,
+								attendee_type: 'guest',
+								guest_name: g.name || null,
+								guest_email: g.email || null,
+								guest_phone: g.phone || null,
+								invite_method: g.invite_method || 'none',
+								status: 'invited',
+							} as any),
+						);
+					} catch (err) {
+						console.error('[meetings.patch] failed to add guest attendee:', g.email, err);
+					}
+				}
+
+				const removalRowIds = existingGuestRows
+					.filter(r => !desiredKeys.has(keyOf(r.guest_email, r.guest_name)))
+					.map(r => r.id);
+				if (removalRowIds.length > 0) {
+					try {
+						await directus.request(deleteItems('video_meeting_attendees', removalRowIds));
+					} catch (err) {
+						console.error('[meetings.patch] failed to remove guest attendee rows:', err);
+					}
+				}
+			}
+		} catch (err) {
+			console.error('[meetings.patch] attendee diff failed:', err);
 		}
 	}
 

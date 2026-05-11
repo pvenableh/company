@@ -14,7 +14,7 @@
 			</CalendarHeader>
 
 			<div class="w-full">
-				<CalendarGrid v-for="month in grid" :key="month.value.toString()" class="w-full border-collapse">
+				<CalendarGrid v-for="month in grid" :key="month.value.toString()" class="w-full border-collapse table-fixed">
 					<CalendarGridHead>
 						<CalendarGridRow class="flex w-full">
 							<CalendarHeadCell
@@ -64,12 +64,16 @@
 
 									<!-- Event chips — max 2 visible -->
 									<div class="flex flex-col gap-px overflow-hidden flex-1">
-										<SchedulerCalendarEventChip
+										<SchedulerMeetingActionsPopover
 											v-for="event in getEventsForDate(dateKey(weekDate)).slice(0, 2)"
 											:key="event.id"
 											:event="event"
-											compact
-										/>
+											@edit="emit('edit-event', $event)"
+											@join="emit('join-meeting', $event)"
+											@deleted="emit('deleted', $event)"
+										>
+											<SchedulerCalendarEventChip :event="event" compact />
+										</SchedulerMeetingActionsPopover>
 										<span
 											v-if="getEventsForDate(dateKey(weekDate)).length > 2"
 											class="text-[8px] text-muted-foreground/50 px-1 leading-tight"
@@ -109,7 +113,12 @@ const props = defineProps<{
 	externalEvents: CalendarEvent[];
 }>();
 
-const emit = defineEmits(['date-selected']);
+const emit = defineEmits<{
+	'date-selected': [date: string];
+	'edit-event': [event: CalendarEvent];
+	'join-meeting': [event: CalendarEvent];
+	'deleted': [event: CalendarEvent];
+}>();
 
 const calendarContainer = ref<HTMLElement | null>(null);
 const selectedDate = ref(new Date());

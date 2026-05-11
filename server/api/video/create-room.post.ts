@@ -1,7 +1,15 @@
 // server/api/video/create-room.post.ts
-import { createItem, updateItem } from '@directus/sdk';
+import { createItem, readItem, updateItem } from '@directus/sdk';
 
 interface AttendeeInput {
+	name?: string;
+	email?: string;
+	phone?: string;
+	invite_method?: 'none' | 'email' | 'sms' | 'both';
+}
+
+interface ContactInput {
+	contact_id: string;
 	name?: string;
 	email?: string;
 	phone?: string;
@@ -22,6 +30,8 @@ interface CreateRoomBody {
 	recording_enabled?: boolean;
 	transcription_enabled?: boolean;
 	attendees?: AttendeeInput[];
+	/** Picker-added contacts. Each becomes a video_meeting_attendees row with `contact` FK populated. */
+	contacts?: ContactInput[];
 	/** Directus user IDs to link as teammate attendees via appointments_directus_users. */
 	members?: string[];
 	custom_message?: string;
@@ -29,6 +39,7 @@ interface CreateRoomBody {
 	project?: string | null;
 	project_event?: string | null;
 	organization?: string | null;
+	client?: string | null;
 }
 
 export default defineEventHandler(async (event) => {
@@ -165,6 +176,23 @@ export default defineEventHandler(async (event) => {
 			videoMeetingData.related_organization = orgIdForDefaults;
 		}
 
+		// Auto-fill `client` from the project's client when the meeting is linked
+		// to a project and the caller didn't explicitly send a client. Lets the
+		// scheduler picker rank the meeting-client's contacts to the top.
+		if (body.client) {
+			videoMeetingData.client = body.client;
+		} else if (body.project) {
+			try {
+				const proj = (await directus.request(
+					readItem('projects', body.project, { fields: ['client'] as any }),
+				)) as any;
+				const projClient = typeof proj?.client === 'object' ? proj.client?.id : proj?.client;
+				if (projClient) videoMeetingData.client = projClient;
+			} catch (err) {
+				console.warn('[create-room] failed to resolve project client:', err);
+			}
+		}
+
 		const videoMeeting = await directus.request(
 			createItem('video_meetings', videoMeetingData),
 		);
@@ -260,7 +288,20 @@ export default defineEventHandler(async (event) => {
 		let inviteSent = false;
 
 		// Handle attendees array from the modal
-		const attendeesList = body.attendees?.filter((a) => a.name || a.email) || [];
+		const attendeesList: Array<AttendeeInput & { contact_id?: string }> = body.attendees?.filter((a) => a.name || a.email) || [];
+
+		// Picker-added contacts: same write path as guests, but with `contact` FK
+		// set so they round-trip back as avatar chips in edit mode.
+		for (const c of body.contacts || []) {
+			if (!c?.contact_id) continue;
+			attendeesList.push({
+				contact_id: c.contact_id,
+				name: c.name || '',
+				email: c.email || '',
+				phone: c.phone || '',
+				invite_method: c.invite_method || (c.email ? 'email' : 'none'),
+			});
+		}
 
 		// If no attendees array but legacy single invitee fields exist, convert them
 		if (attendeesList.length === 0 && (body.invitee_name || body.invitee_email)) {
@@ -279,12 +320,13 @@ export default defineEventHandler(async (event) => {
 					createItem('video_meeting_attendees', {
 						video_meeting: videoMeeting.id,
 						attendee_type: 'guest',
+						contact: attendeeInput.contact_id || null,
 						guest_name: attendeeInput.name || null,
 						guest_email: attendeeInput.email || null,
 						guest_phone: attendeeInput.phone || null,
 						status: 'invited',
 						invite_method: attendeeInput.invite_method || 'none',
-					}),
+					} as any),
 				);
 
 				const method = attendeeInput.invite_method || 'none';

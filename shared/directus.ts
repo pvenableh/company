@@ -3845,6 +3845,8 @@ export interface VideoMeetingAttendee {
 	video_meeting?: VideoMeeting | string;
 	attendee_type?: 'user' | 'guest';
 	directus_user?: DirectusUser | string | null;
+	/** @description Linked contact when the attendee was added via the contact picker. NULL for manually-entered guests. */
+	contact?: Contact | string | null;
 	/** @description Name for external guests */
 	guest_name?: string | null;
 	/** @description Email for external guests */
@@ -3931,6 +3933,8 @@ export interface VideoMeeting {
 	related_lead?: Lead | string | null;
 	/** @description Project event (milestone) this meeting belongs to */
 	project_event?: ProjectEvent | string | null;
+	/** @description Auto-filled from project.client when this meeting is linked to a project. Used to scope and rank contact pickers. */
+	client?: Client | string | null;
 	/** @description Daily.co transcript handle */
 	transcript_id?: string | null;
 	/** @description Daily-hosted transcript download URL */

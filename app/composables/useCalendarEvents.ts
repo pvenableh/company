@@ -33,6 +33,15 @@ export interface CalendarEvent {
 	waiting_room_enabled?: boolean;
 	host_name?: string | null;
 	attendee_count?: number;
+	// Compact roster surfaced to the row-action popover so it can render
+	// "Members" without a second fetch. Host first, then internal attendees
+	// (org teammates), then the external invitee.
+	members?: Array<{ name: string; role: 'host' | 'attendee' | 'invitee'; email?: string | null }>;
+	// Resolved client from the linked video_meeting (auto-filled from
+	// project.client server-side). Used by the contact picker to rank the
+	// meeting's-client contacts to the top.
+	client_id?: string | null;
+	client_name?: string | null;
 	// Org-wide event view: surface who created the appointment so the UI can
 	// flag teammates' events with a host-keyed accent color. `is_mine` is the
 	// quick check for "Mine only" filtering and for skipping the accent stripe
@@ -98,6 +107,7 @@ export function useCalendarEvents() {
 			'video_meeting.recording_enabled', 'video_meeting.transcription_enabled',
 			'video_meeting.waiting_room_enabled',
 			'video_meeting.invitee_name', 'video_meeting.invitee_email', 'video_meeting.invitee_phone',
+			'video_meeting.client.id', 'video_meeting.client.name',
 			'video_meeting.related_lead.id', 'video_meeting.related_lead.stage',
 			'video_meeting.related_lead.related_contact.first_name',
 			'video_meeting.related_lead.related_contact.last_name',
@@ -209,7 +219,9 @@ export function useCalendarEvents() {
 				: null;
 
 			const vm = apt.video_meeting || null;
-			const attendeeCount = Array.isArray(apt.attendees) ? apt.attendees.length : 0;
+			const attendeesArr = Array.isArray(apt.attendees) ? apt.attendees : [];
+			const attendeeCount = attendeesArr.length;
+			const members: Array<{ name: string; role: 'host' | 'attendee' | 'invitee'; email?: string | null }> = [];
 			const creatorId = typeof apt.user_created === 'object'
 				? apt.user_created?.id
 				: apt.user_created;
@@ -222,6 +234,27 @@ export function useCalendarEvents() {
 				|| (apt.user_created && typeof apt.user_created === 'object' ? apt.user_created.avatar : null)
 				|| null;
 			const hostName = vm?.host_identity || creatorName;
+
+			if (hostName) members.push({ name: hostName, role: 'host' });
+			for (const a of attendeesArr) {
+				const u = a?.directus_users_id;
+				if (!u) continue;
+				const userId = typeof u === 'object' ? u.id : u;
+				// Skip the host row — they already lead the list.
+				if (userId && creatorId && userId === creatorId) continue;
+				const fullName = typeof u === 'object'
+					? `${u.first_name || ''} ${u.last_name || ''}`.trim()
+					: '';
+				if (!fullName) continue;
+				members.push({ name: fullName, role: 'attendee' });
+			}
+			if (vm?.invitee_name || vm?.invitee_email) {
+				members.push({
+					name: vm.invitee_name || vm.invitee_email,
+					role: 'invitee',
+					email: vm.invitee_email || null,
+				});
+			}
 
 			result.push({
 				id: `apt-${apt.id}`,
@@ -248,6 +281,9 @@ export function useCalendarEvents() {
 				waiting_room_enabled: !!vm?.waiting_room_enabled,
 				host_name: hostName || null,
 				attendee_count: attendeeCount + (vm?.invitee_email && attendeeCount === 0 ? 1 : 0),
+				members,
+				client_id: (typeof vm?.client === 'object' ? vm?.client?.id : vm?.client) || null,
+				client_name: (typeof vm?.client === 'object' ? vm?.client?.name : null) || null,
 				creator_id: creatorId || null,
 				creator_name: creatorName || null,
 				creator_avatar: creatorAvatar,

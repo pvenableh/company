@@ -23,7 +23,6 @@ const emit = defineEmits<{
 }>();
 
 const router = useRouter();
-const toast = useToast();
 const { getStatusOpacity, getStatusAccent } = useStatusStyle();
 
 // ── Layout constants ──
@@ -115,14 +114,6 @@ const nowX = computed(() => {
 	return hourToX(h);
 });
 
-// Tick current time every minute
-const nowTick = ref(Date.now());
-let nowInterval: ReturnType<typeof setInterval> | null = null;
-onMounted(() => {
-	nowInterval = setInterval(() => { nowTick.value = Date.now(); }, 60_000);
-});
-onUnmounted(() => { if (nowInterval) clearInterval(nowInterval); });
-
 // ── Event styling ──
 const typeStyles = (event: CalendarEvent) => {
 	switch (event.type) {
@@ -186,20 +177,6 @@ function tooltipFor(event: CalendarEvent): string {
 	return parts.join(' · ');
 }
 
-// ── Card affordances ──
-const nowTs = computed(() => { void nowTick.value; return Date.now(); });
-
-// "Active window" = the 15-min lead-in or live meeting state. Drives whether
-// Join becomes the primary action vs. Copy-link.
-function isInActiveWindow(event: CalendarEvent): boolean {
-	if (event.type !== 'video_meeting') return false;
-	if (event.meeting_status === 'in_progress') return true;
-	if (!event.start_time) return false;
-	const startMs = new Date(event.start_time).getTime();
-	if (isNaN(startMs)) return false;
-	return Math.abs(startMs - nowTs.value) <= 15 * 60 * 1000;
-}
-
 function hostInitial(event: CalendarEvent): string {
 	const name = event.host_name?.trim();
 	if (!name) return '';
@@ -217,68 +194,6 @@ function hostEdgeStyle(event: CalendarEvent): Record<string, string> | null {
 		return { borderLeftColor: hostAccentColor(event.creator_id), borderLeftWidth: '3px', borderLeftStyle: 'solid' };
 	}
 	return null;
-}
-
-function getMeetingUrl(event: CalendarEvent): string | null {
-	if (event.meeting_link) return event.meeting_link;
-	if (event.room_name && import.meta.client) {
-		return `${window.location.origin}/meeting/${event.room_name}`;
-	}
-	return null;
-}
-
-async function copyLink(event: CalendarEvent) {
-	const url = getMeetingUrl(event);
-	if (!url) {
-		toast.add({ title: 'No meeting link', color: 'red' });
-		return;
-	}
-	try {
-		await navigator.clipboard.writeText(url);
-		toast.add({ title: 'Link copied', color: 'green' });
-	} catch {
-		toast.add({ title: 'Copy failed', color: 'red' });
-	}
-}
-
-function joinMeeting(event: CalendarEvent) {
-	if (!event.room_name) return;
-	emit('join-meeting', event);
-}
-
-// Shape required by SchedulerSendInvitePopover. Built per-row from the
-// calendar payload — invitee_phone was added to the realtime subscription so
-// the SMS field can pre-fill without a separate fetch.
-function meetingForInvite(event: CalendarEvent) {
-	if (!event.video_meeting_id) return null;
-	return {
-		id: event.video_meeting_id,
-		room_name: event.room_name || null,
-		title: event.title || '',
-		scheduled_start: event.start_time || null,
-		scheduled_end: event.end_time || null,
-		host_name: event.host_name || null,
-		invitee_name: event.invitee_name || null,
-		invitee_email: event.invitee_email || null,
-		invitee_phone: event.invitee_phone || null,
-	};
-}
-
-const deletingIds = ref(new Set<string>());
-
-async function deleteMeeting(event: CalendarEvent) {
-	if (!event.video_meeting_id) return;
-	if (!window.confirm(`Delete "${event.title || 'this meeting'}"? The Daily room and linked appointment will also be removed.`)) return;
-	deletingIds.value.add(event.id);
-	try {
-		await $fetch(`/api/video/meetings/${event.video_meeting_id}`, { method: 'DELETE' });
-		toast.add({ title: 'Meeting deleted', color: 'green' });
-		emit('deleted', event);
-	} catch (error: any) {
-		toast.add({ title: 'Delete failed', description: error.message, color: 'red' });
-	} finally {
-		deletingIds.value.delete(event.id);
-	}
 }
 
 // ── Interaction ──
@@ -392,12 +307,78 @@ watch(() => [props.date, props.events.length], scrollToFocus, { immediate: true 
 						:style="{ width: `${LABEL_WIDTH}px`, minWidth: `${LABEL_WIDTH}px`, ...(hostEdgeStyle(event) || {}) }"
 						:title="event.is_mine === false && event.creator_name ? `Hosted by ${event.creator_name}` : undefined"
 					>
+						<SchedulerMeetingActionsPopover
+							v-if="event.type !== 'follow_up'"
+							:event="event"
+							class="day-timeline__label-popover"
+							@edit="emit('edit-event', $event)"
+							@join="emit('join-meeting', $event)"
+							@deleted="emit('deleted', $event)"
+						>
+							<button type="button" class="day-timeline__label-body">
+								<!-- Title row -->
+								<div class="day-timeline__label-row1">
+									<UIcon :name="typeStyles(event).icon" :class="typeStyles(event).iconColor" class="w-3 h-3 shrink-0" />
+									<span class="day-timeline__label-title" :title="event.title">{{ event.title }}</span>
+									<span
+										v-if="event.lead"
+										class="shrink-0 w-1.5 h-1.5 rounded-full"
+										:style="{ backgroundColor: LEAD_STAGE_COLORS[event.lead.stage] }"
+										:title="LEAD_STAGE_LABELS[event.lead.stage]"
+									/>
+									<span
+										v-if="event.meeting_status === 'in_progress'"
+										class="day-timeline__live-dot"
+										title="In progress"
+									/>
+								</div>
+								<!-- Meta row -->
+								<div class="day-timeline__label-meta">
+									<span class="day-timeline__time">{{ formatTime(event.start_time) }}</span>
+									<span v-if="eventDuration(event)" class="opacity-60">{{ eventDuration(event) }}</span>
+									<span
+										v-if="event.recording_enabled"
+										class="day-timeline__pill day-timeline__pill--rec"
+										title="Recording"
+									>
+										<UIcon name="i-heroicons-video-camera" class="w-2.5 h-2.5" />
+									</span>
+									<span
+										v-if="event.transcription_enabled"
+										class="day-timeline__pill day-timeline__pill--trx"
+										title="Live transcription"
+									>
+										<UIcon name="i-heroicons-document-text" class="w-2.5 h-2.5" />
+									</span>
+									<span
+										v-if="event.waiting_room_enabled"
+										class="day-timeline__pill day-timeline__pill--wait"
+										title="Waiting room"
+									>
+										<UIcon name="i-heroicons-lock-closed" class="w-2.5 h-2.5" />
+									</span>
+									<span
+										v-if="event.attendee_count"
+										class="day-timeline__pill day-timeline__pill--meta"
+										:title="`${event.attendee_count} attendee${event.attendee_count === 1 ? '' : 's'}`"
+									>
+										<UIcon name="i-heroicons-users" class="w-2.5 h-2.5" />
+										{{ event.attendee_count }}
+									</span>
+									<span
+										v-if="hostInitial(event)"
+										class="day-timeline__host"
+										:title="event.host_name || ''"
+									>{{ hostInitial(event) }}</span>
+								</div>
+							</button>
+						</SchedulerMeetingActionsPopover>
 						<button
+							v-else
 							type="button"
 							class="day-timeline__label-body"
 							@click="handleEventClick(event)"
 						>
-							<!-- Title row -->
 							<div class="day-timeline__label-row1">
 								<UIcon :name="typeStyles(event).icon" :class="typeStyles(event).iconColor" class="w-3 h-3 shrink-0" />
 								<span class="day-timeline__label-title" :title="event.title">{{ event.title }}</span>
@@ -407,125 +388,12 @@ watch(() => [props.date, props.events.length], scrollToFocus, { immediate: true 
 									:style="{ backgroundColor: LEAD_STAGE_COLORS[event.lead.stage] }"
 									:title="LEAD_STAGE_LABELS[event.lead.stage]"
 								/>
-								<span
-									v-if="event.meeting_status === 'in_progress'"
-									class="day-timeline__live-dot"
-									title="In progress"
-								/>
 							</div>
-							<!-- Meta row -->
 							<div class="day-timeline__label-meta">
 								<span class="day-timeline__time">{{ formatTime(event.start_time) }}</span>
 								<span v-if="eventDuration(event)" class="opacity-60">{{ eventDuration(event) }}</span>
-								<span
-									v-if="event.recording_enabled"
-									class="day-timeline__pill day-timeline__pill--rec"
-									title="Recording"
-								>
-									<UIcon name="i-heroicons-video-camera" class="w-2.5 h-2.5" />
-								</span>
-								<span
-									v-if="event.transcription_enabled"
-									class="day-timeline__pill day-timeline__pill--trx"
-									title="Live transcription"
-								>
-									<UIcon name="i-heroicons-document-text" class="w-2.5 h-2.5" />
-								</span>
-								<span
-									v-if="event.waiting_room_enabled"
-									class="day-timeline__pill day-timeline__pill--wait"
-									title="Waiting room"
-								>
-									<UIcon name="i-heroicons-lock-closed" class="w-2.5 h-2.5" />
-								</span>
-								<span
-									v-if="event.attendee_count"
-									class="day-timeline__pill day-timeline__pill--meta"
-									:title="`${event.attendee_count} attendee${event.attendee_count === 1 ? '' : 's'}`"
-								>
-									<UIcon name="i-heroicons-users" class="w-2.5 h-2.5" />
-									{{ event.attendee_count }}
-								</span>
-								<span
-									v-if="hostInitial(event)"
-									class="day-timeline__host"
-									:title="event.host_name || ''"
-								>{{ hostInitial(event) }}</span>
 							</div>
 						</button>
-
-						<!-- Action group -->
-						<div
-							v-if="event.type === 'video_meeting'"
-							class="day-timeline__actions"
-							:class="{ 'day-timeline__actions--active': isInActiveWindow(event) }"
-						>
-							<button
-								v-if="isInActiveWindow(event)"
-								type="button"
-								class="day-timeline__action day-timeline__action--primary"
-								title="Join meeting"
-								@click.stop="joinMeeting(event)"
-							>
-								<UIcon name="i-heroicons-video-camera" class="w-3 h-3" />
-								<span class="day-timeline__action-label">Join</span>
-							</button>
-							<button
-								type="button"
-								class="day-timeline__action day-timeline__action--ghost"
-								:title="isInActiveWindow(event) ? 'Copy link' : 'Copy meeting link'"
-								@click.stop="copyLink(event)"
-							>
-								<UIcon name="i-heroicons-link" class="w-3 h-3" />
-							</button>
-							<SchedulerSendInvitePopover
-								v-if="meetingForInvite(event)"
-								:meeting="meetingForInvite(event)!"
-							>
-								<button
-									type="button"
-									class="day-timeline__action day-timeline__action--ghost"
-									title="Send invite"
-									@click.stop
-								>
-									<UIcon name="i-heroicons-paper-airplane" class="w-3 h-3" />
-								</button>
-							</SchedulerSendInvitePopover>
-							<button
-								type="button"
-								class="day-timeline__action day-timeline__action--ghost"
-								title="Edit meeting"
-								@click.stop="emit('edit-event', event)"
-							>
-								<UIcon name="i-heroicons-pencil-square" class="w-3 h-3" />
-							</button>
-							<button
-								v-if="event.video_meeting_id"
-								type="button"
-								class="day-timeline__action day-timeline__action--danger"
-								:disabled="deletingIds.has(event.id)"
-								title="Delete meeting"
-								@click.stop="deleteMeeting(event)"
-							>
-								<UIcon
-									:name="deletingIds.has(event.id) ? 'i-heroicons-arrow-path' : 'i-heroicons-trash'"
-									:class="['w-3 h-3', deletingIds.has(event.id) && 'animate-spin']"
-								/>
-							</button>
-						</div>
-						<div
-							v-else-if="event.type === 'appointment'"
-							class="day-timeline__actions"
-						>
-							<button
-								type="button"
-								class="day-timeline__action day-timeline__action--ghost"
-								title="Edit"
-								@click.stop="emit('edit-event', event)"
-							>
-								<UIcon name="i-heroicons-pencil-square" class="w-3 h-3" />
-							</button>
-						</div>
 					</div>
 
 					<!-- Track -->
@@ -749,59 +617,6 @@ watch(() => [props.date, props.events.length], scrollToFocus, { immediate: true 
 	font-weight: 700;
 	margin-left: auto;
 	flex-shrink: 0;
-}
-
-/* Action group — right edge of label, hover-revealed except primary Join */
-.day-timeline__actions {
-	display: flex;
-	align-items: center;
-	gap: 2px;
-	padding-right: 4px;
-	opacity: 0;
-	transition: opacity 0.15s;
-}
-.day-timeline__row:hover .day-timeline__actions { opacity: 1; }
-.day-timeline__actions--active { opacity: 1; }
-
-.day-timeline__action {
-	display: inline-flex;
-	align-items: center;
-	gap: 3px;
-	height: 22px;
-	padding: 0 6px;
-	border-radius: 6px;
-	border: 0;
-	font-size: 10px;
-	font-weight: 600;
-	cursor: pointer;
-	transition: background 0.15s, color 0.15s;
-}
-.day-timeline__action--primary {
-	background: hsl(160, 60%, 45%);
-	color: white;
-}
-.day-timeline__action--primary:hover { background: hsl(160, 60%, 40%); }
-.day-timeline__action--ghost {
-	background: hsl(var(--muted) / 0.5);
-	color: hsl(var(--muted-foreground));
-}
-.day-timeline__action--ghost:hover {
-	background: hsl(var(--muted));
-	color: hsl(var(--foreground));
-}
-.day-timeline__action--danger {
-	background: hsl(0, 70%, 50%, 0.08);
-	color: hsl(0, 70%, 50%);
-}
-.day-timeline__action--danger:hover {
-	background: hsl(0, 70%, 50%, 0.18);
-}
-.day-timeline__action--danger:disabled {
-	opacity: 0.6;
-	cursor: not-allowed;
-}
-.day-timeline__action-label {
-	letter-spacing: 0.02em;
 }
 
 .day-timeline__track {

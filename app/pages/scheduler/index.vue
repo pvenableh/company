@@ -232,7 +232,7 @@
 				</div>
 
 				<!-- Main Layout: Sidebar + Calendar + Day Detail -->
-				<div class="grid grid-cols-1 md:grid-cols-[1fr_320px] lg:grid-cols-[260px_1fr_320px] gap-5">
+				<div class="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_320px] lg:grid-cols-[260px_minmax(0,1fr)_320px] gap-5">
 					<!-- Left: CRM Sidebar -->
 					<div class="hidden lg:block">
 						<SchedulerCrmSidebar
@@ -249,6 +249,9 @@
 						<CalendarBookingCalendar
 							:external-events="filteredEvents"
 							@date-selected="handleDateSelect"
+							@edit-event="handleEditEvent"
+							@join-meeting="handleJoinMeeting"
+							@deleted="handleEventCreated"
 						/>
 					</div>
 

@@ -29,14 +29,71 @@ const emit = defineEmits(['update:modelValue', 'created', 'saved', 'deleted']);
 const toast = useToast();
 const { user } = useDirectusAuth();
 const appointmentsDirectusUsersItems = useDirectusItems('appointments_directus_users');
+const projectsItems = useDirectusItems('projects');
 const { filteredUsers, fetchFilteredUsers, loading: loadingUsers } = useFilteredUsers();
 const { getLeads } = useLeads();
+const { getContacts } = useContacts();
 const { selectedOrg } = useOrganization();
 
 const saving = ref(false);
 const deleting = ref(false);
 // Drives the inline send-invite form (rendered above the footer in edit mode).
 const showSendInvite = ref(false);
+
+// ── AI agenda generation ──
+// Suggestion lives in a preview card above the description until the host
+// accepts (replaces the description) or dismisses (drops the suggestion).
+const generatingAgenda = ref(false);
+const agendaSuggestion = ref<string | null>(null);
+
+const generateAgenda = async () => {
+	if (generatingAgenda.value) return;
+	generatingAgenda.value = true;
+	try {
+		const attendeeNames = [
+			...form.members.map(m => m.label),
+			...form.contacts.map(c => c.label),
+			...form.guests.filter(g => g.name).map(g => g.name),
+		];
+		const res = await $fetch<{ html: string }>('/api/ai/generate-agenda', {
+			method: 'POST',
+			body: {
+				organizationId: selectedOrg.value,
+				title: form.title,
+				brief: stripHtml(form.description),
+				durationMinutes: form.duration,
+				projectId: props.projectId || form.project?.id || null,
+				leadId: form.related_lead?.id || null,
+				attendeeNames,
+			},
+		});
+		agendaSuggestion.value = res.html || null;
+		if (!agendaSuggestion.value) {
+			toast.add({ title: 'No agenda returned', color: 'amber' });
+		}
+	} catch (err: any) {
+		toast.add({ title: 'Agenda generation failed', description: err?.data?.message || err.message, color: 'red' });
+	} finally {
+		generatingAgenda.value = false;
+	}
+};
+
+const acceptAgenda = () => {
+	if (!agendaSuggestion.value) return;
+	form.description = agendaSuggestion.value;
+	agendaSuggestion.value = null;
+};
+
+const dismissAgenda = () => { agendaSuggestion.value = null; };
+
+// Strip HTML for the brief sent to the LLM — Tiptap stores formatted HTML
+// but the model only needs the plain intent.
+const stripHtml = (html: string) => {
+	if (!html) return '';
+	if (typeof DOMParser === 'undefined') return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+	const doc = new DOMParser().parseFromString(html, 'text/html');
+	return (doc.body.textContent || '').replace(/\s+/g, ' ').trim();
+};
 
 // Old USelect bug stored `meeting_type` as `{label, value}` (sometimes JSON
 // stringified). Pull the `value` out so a corrupted row still renders the
@@ -94,6 +151,11 @@ const close = () => {
 };
 
 // ── Form state ──
+// `members` = Directus users (teammates). `contacts` = picker-added Directus
+// contacts (render as compact avatar chips, persisted with a `contact` FK on
+// video_meeting_attendees so we can round-trip them on edit). `guests` =
+// manually-typed externals with no contact record (render as editable cards).
+type ContactChip = { id: string; first_name: string; last_name: string; email: string; phone?: string; avatar_initial?: string; client_name?: string | null; label: string };
 const form = reactive({
 	title: '',
 	description: '',
@@ -106,9 +168,13 @@ const form = reactive({
 	recording_enabled: false,
 	transcription_enabled: false,
 	related_lead: null as any,
-	// Team/client members (Directus users)
+	// Resolved project + client. `client_name` is shown next to the project as a
+	// small badge so the meeting's billing/account context is obvious. Server
+	// derives `video_meetings.client` from this; manual client-only picks aren't
+	// supported yet.
+	project: null as null | { id: string; title: string; client_id?: string | null; client_name?: string | null },
 	members: [] as Array<{ id: string; first_name: string; last_name: string; email: string; avatar?: string; label: string }>,
-	// External guests (non-Directus users)
+	contacts: [] as ContactChip[],
 	guests: [] as Array<{ name: string; email: string; phone: string; invite_method: string }>,
 });
 
@@ -176,6 +242,60 @@ const selectLead = (lead: any) => {
 
 const clearLead = () => { form.related_lead = null; };
 
+// ── Project search ──
+// Picking a project also auto-derives the meeting's client (the server mirrors
+// project.client onto video_meetings.client). Pinned (read-only) when the
+// modal was launched with a projectId — that context shouldn't be reassignable.
+const projectSearch = ref('');
+const projectResults = ref<any[]>([]);
+const showProjectDropdown = ref(false);
+let projectSearchTimer: ReturnType<typeof setTimeout> | null = null;
+
+const projectPinned = computed(() => !!props.projectId);
+
+// Compact mode: project/lead picker inputs stay collapsed behind a "+ Add" pill
+// until clicked. Once a value is selected, the chip replaces the pill — clearing
+// the chip (X) returns to the pill state.
+const showProjectField = ref(false);
+const showLeadField = ref(false);
+
+// Meeting Settings popover (waiting room / recording / transcription).
+const showSettings = ref(false);
+const settingsCount = computed(() => {
+	let n = 0;
+	if (form.waiting_room_enabled) n++;
+	if (form.recording_enabled) n++;
+	if (form.transcription_enabled) n++;
+	return n;
+});
+
+const debouncedSearchProjects = () => {
+	if (projectSearchTimer) clearTimeout(projectSearchTimer);
+	projectSearchTimer = setTimeout(async () => {
+		const q = projectSearch.value.trim();
+		if (!q) { projectResults.value = []; return; }
+		try {
+			const results: any[] = await projectsItems.list({
+				fields: ['id', 'title', 'status', 'client.id', 'client.name'],
+				filter: { title: { _icontains: q } },
+				limit: 8,
+			});
+			projectResults.value = results || [];
+		} catch { projectResults.value = []; }
+	}, 250);
+};
+
+const selectProject = (proj: any) => {
+	const clientId = typeof proj.client === 'object' ? proj.client?.id : proj.client;
+	const clientName = typeof proj.client === 'object' ? proj.client?.name : null;
+	form.project = { id: proj.id, title: proj.title || 'Project', client_id: clientId || null, client_name: clientName || null };
+	projectSearch.value = '';
+	showProjectDropdown.value = false;
+	projectResults.value = [];
+};
+
+const clearProject = () => { form.project = null; };
+
 // ── Member search (team/client Directus users) ──
 const memberSearch = ref('');
 const showMemberDropdown = ref(false);
@@ -198,6 +318,142 @@ const addMember = (member: any) => {
 
 const removeMember = (id: string) => {
 	form.members = form.members.filter(m => m.id !== id);
+};
+
+// ── Contact search (Directus contacts → external guests) ──
+// The member input doubles as a contact picker so users can pull a contact
+// (e.g. Stacey Duncan) onto a meeting without typing name/email manually.
+// Contacts land in `form.guests` since they aren't Directus users.
+const contactSearchResults = ref<any[]>([]);
+let contactSearchTimer: ReturnType<typeof setTimeout> | null = null;
+
+// The meeting's client (auto-filled server-side from project.client). When the
+// search returns contacts across multiple clients, the ones whose
+// `contact.client.id` matches this one are surfaced first with a CLIENT badge.
+const meetingClientId = computed<string | null>(() => {
+	const fromAppointment = props.appointment?.video_meeting?.client;
+	const fromMeeting = props.meeting?.client;
+	const raw = fromAppointment ?? fromMeeting ?? null;
+	if (!raw) return null;
+	return typeof raw === 'object' ? raw.id || null : raw;
+});
+
+watch(memberSearch, (q) => {
+	if (contactSearchTimer) clearTimeout(contactSearchTimer);
+	if (!q.trim()) { contactSearchResults.value = []; return; }
+	contactSearchTimer = setTimeout(async () => {
+		try {
+			const { data } = await getContacts({ search: q.trim(), limit: 8 });
+			const addedEmails = new Set(form.guests.map(g => (g.email || '').toLowerCase()).filter(Boolean));
+			const addedContactIds = new Set(form.contacts.map(c => c.id));
+			const filtered = data.filter((c: any) => {
+				if (addedContactIds.has(c.id)) return false;
+				const email = (c.email || '').toLowerCase();
+				return !email || !addedEmails.has(email);
+			});
+			// Partition: contacts that belong to the meeting's client come first.
+			// Stable order within each group preserves the API's relevance sort.
+			const targetClient = meetingClientId.value;
+			if (targetClient) {
+				const matches: any[] = [];
+				const rest: any[] = [];
+				for (const c of filtered) {
+					const cClientId = typeof c.client === 'object' ? c.client?.id : c.client;
+					if (cClientId && cClientId === targetClient) matches.push(c);
+					else rest.push(c);
+				}
+				contactSearchResults.value = [...matches, ...rest];
+			} else {
+				contactSearchResults.value = filtered;
+			}
+		} catch {
+			contactSearchResults.value = [];
+		}
+	}, 250);
+});
+
+const addContact = (contact: any) => {
+	const name = `${contact.first_name || ''} ${contact.last_name || ''}`.trim()
+		|| contact.email
+		|| 'Contact';
+	const clientName = contact.client && typeof contact.client === 'object' ? contact.client.name || null : null;
+	form.contacts.push({
+		id: contact.id,
+		first_name: contact.first_name || '',
+		last_name: contact.last_name || '',
+		email: contact.email || '',
+		phone: contact.phone || '',
+		avatar_initial: (contact.first_name || contact.email || '?')[0]?.toUpperCase() || '?',
+		client_name: clientName,
+		label: name,
+	});
+	memberSearch.value = '';
+	showMemberDropdown.value = false;
+	contactSearchResults.value = [];
+};
+
+const removeContact = (id: string) => {
+	form.contacts = form.contacts.filter(c => c.id !== id);
+};
+
+// Pre-load existing video_meeting_attendees for edit mode. Attendees with a
+// `contact` FK come back as avatar chips in form.contacts; attendees without a
+// contact link land in form.guests as editable cards (preserves the old free-
+// form invite UX). `attendee_type: 'user'` rows are skipped — teammates ride
+// in via loadExistingMembers off the appointment's junction.
+const meetingAttendeesItems = useDirectusItems('video_meeting_attendees');
+const loadExistingAttendees = async (meetingId: string) => {
+	try {
+		const rows: any[] = await meetingAttendeesItems.list({
+			filter: { video_meeting: { _eq: meetingId } },
+			fields: [
+				'id',
+				'attendee_type',
+				'guest_name',
+				'guest_email',
+				'guest_phone',
+				'invite_method',
+				'contact.id',
+				'contact.first_name',
+				'contact.last_name',
+				'contact.email',
+				'contact.phone',
+				'contact.client.id',
+				'contact.client.name',
+			],
+			limit: -1,
+		});
+		const contactChips: ContactChip[] = [];
+		const guestRows: Array<{ name: string; email: string; phone: string; invite_method: string }> = [];
+		for (const row of rows) {
+			if (row.attendee_type === 'user') continue;
+			const c = typeof row.contact === 'object' ? row.contact : null;
+			if (c && c.id) {
+				const name = `${c.first_name || ''} ${c.last_name || ''}`.trim() || c.email || 'Contact';
+				contactChips.push({
+					id: c.id,
+					first_name: c.first_name || '',
+					last_name: c.last_name || '',
+					email: c.email || '',
+					phone: c.phone || '',
+					avatar_initial: (c.first_name || c.email || '?')[0]?.toUpperCase() || '?',
+					client_name: c.client && typeof c.client === 'object' ? c.client.name || null : null,
+					label: name,
+				});
+			} else if (row.guest_name || row.guest_email) {
+				guestRows.push({
+					name: row.guest_name || '',
+					email: row.guest_email || '',
+					phone: row.guest_phone || '',
+					invite_method: row.invite_method || 'email',
+				});
+			}
+		}
+		form.contacts = contactChips;
+		form.guests = guestRows;
+	} catch (err) {
+		console.error('[UnifiedEventModal] failed to load existing attendees:', err);
+	}
 };
 
 // Pre-load members linked to the appointment for edit mode. Reads the
@@ -252,8 +508,40 @@ if (import.meta.client) {
 	document.addEventListener('click', () => {
 		showLeadDropdown.value = false;
 		showMemberDropdown.value = false;
+		showProjectDropdown.value = false;
 	});
 }
+
+// ── Host display ──
+// Server pins host_user to session.user on create. On edit we surface the
+// stored host_user/host_identity instead so it's clear who owns the meeting
+// even when a teammate is editing.
+const hostDisplay = computed<{ name: string; initial: string; avatar: string | null; isMe: boolean }>(() => {
+	const m = editingMeeting.value as any;
+	if (m) {
+		const hu = m.host_user;
+		if (hu && typeof hu === 'object') {
+			const name = `${hu.first_name || ''} ${hu.last_name || ''}`.trim() || hu.email || m.host_identity || 'Host';
+			return {
+				name,
+				initial: (hu.first_name || hu.email || name || '?')[0]?.toUpperCase() || '?',
+				avatar: hu.avatar ? `${useRuntimeConfig().public.directusUrl}/assets/${hu.avatar}?key=small` : null,
+				isMe: hu.id === user.value?.id,
+			};
+		}
+		if (m.host_identity) {
+			return { name: m.host_identity, initial: m.host_identity[0]?.toUpperCase() || '?', avatar: null, isMe: false };
+		}
+	}
+	const u = user.value as any;
+	const name = u ? (`${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email || 'You') : 'You';
+	return {
+		name,
+		initial: (u?.first_name || u?.email || name || '?')[0]?.toUpperCase() || '?',
+		avatar: u?.avatar ? `${useRuntimeConfig().public.directusUrl}/assets/${u.avatar}?key=small` : null,
+		isMe: true,
+	};
+});
 
 // Resolve the edit-mode video meeting (if any). Either `meeting` is passed
 // directly or the caller passed an appointment whose `video_meeting` relation
@@ -315,17 +603,72 @@ watch(isOpen, async (open) => {
 			|| null;
 		form.related_lead = seedLead;
 		form.members = [];
+		form.contacts = [];
 		form.guests = [];
 		leadSearch.value = '';
 		memberSearch.value = '';
+		projectSearch.value = '';
+		agendaSuggestion.value = null;
+		generatingAgenda.value = false;
+		showProjectField.value = false;
+		showLeadField.value = false;
+		showSettings.value = false;
+
+		// Seed project from (in priority): launcher-pinned projectData, an
+		// expanded project object on the meeting/appointment, or — when only an
+		// ID is present — a one-shot fetch to resolve the title + client.
+		let seedProject: any = null;
+		if (props.projectData) {
+			seedProject = props.projectData;
+		} else if (m?.project && typeof m.project === 'object') {
+			seedProject = m.project;
+		} else if (props.appointment?.video_meeting?.project && typeof props.appointment.video_meeting.project === 'object') {
+			seedProject = props.appointment.video_meeting.project;
+		}
+		const seedProjectId: string | null = props.projectId
+			|| (typeof seedProject?.id === 'string' ? seedProject.id : null)
+			|| (typeof m?.project === 'string' ? m.project : null)
+			|| (typeof props.appointment?.video_meeting?.project === 'string' ? props.appointment.video_meeting.project : null);
+		if (seedProject && seedProject.id && (seedProject.title || seedProject.client)) {
+			form.project = {
+				id: seedProject.id,
+				title: seedProject.title || 'Project',
+				client_id: typeof seedProject.client === 'object' ? seedProject.client?.id : seedProject.client || null,
+				client_name: typeof seedProject.client === 'object' ? seedProject.client?.name : null,
+			};
+		} else if (seedProjectId) {
+			form.project = { id: seedProjectId, title: 'Project', client_id: null, client_name: null };
+			try {
+				const proj: any = await projectsItems.readOne(seedProjectId, {
+					fields: ['id', 'title', 'client.id', 'client.name'],
+				});
+				if (proj) {
+					form.project = {
+						id: proj.id,
+						title: proj.title || 'Project',
+						client_id: typeof proj.client === 'object' ? proj.client?.id : null,
+						client_name: typeof proj.client === 'object' ? proj.client?.name : null,
+					};
+				}
+			} catch (err) {
+				console.warn('[UnifiedEventModal] failed to hydrate project on open:', err);
+			}
+		} else {
+			form.project = null;
+		}
 
 		// In edit mode, pre-populate members from the appointment's junction so
-		// the host can add/remove without losing existing teammates.
+		// the host can add/remove without losing existing teammates. Also pull
+		// existing video_meeting_attendees so picker-added contacts come back as
+		// avatar chips and manual guests come back as editable cards.
 		const editAppointmentId = m?.related_appointment?.id
 			|| m?.related_appointment
 			|| props.appointment?.id;
 		if (isEditing.value && editAppointmentId) {
 			await loadExistingMembers(editAppointmentId);
+		}
+		if (isEditingVideo.value && m?.id) {
+			await loadExistingAttendees(m.id);
 		}
 
 		// Auto-add the lead contact as a guest on initial open, like the
@@ -375,6 +718,13 @@ const handleSubmit = async () => {
 
 		if (form.is_video) {
 			const validGuests = form.guests.filter(g => g.name || g.email);
+			const contactPayload = form.contacts.map(c => ({
+				contact_id: c.id,
+				name: c.label,
+				email: c.email,
+				phone: c.phone || '',
+				invite_method: c.email ? 'email' : 'none',
+			}));
 
 			if (isEditingVideo.value) {
 				// ── Edit: update the existing meeting row + Daily room ──
@@ -391,8 +741,10 @@ const handleSubmit = async () => {
 						recording_enabled: form.recording_enabled,
 						transcription_enabled: form.transcription_enabled,
 						related_lead: form.related_lead?.id || null,
-						project: props.projectId || null,
+						project: props.projectId || form.project?.id || null,
 						members: form.members.map(m => m.id),
+						contacts: contactPayload,
+						attendees: validGuests,
 					},
 				});
 				toast.add({ title: 'Meeting updated', color: 'green' });
@@ -412,13 +764,14 @@ const handleSubmit = async () => {
 						recording_enabled: form.recording_enabled,
 						transcription_enabled: form.transcription_enabled,
 						related_lead: form.related_lead?.id || null,
-						project: props.projectId || null,
+						project: props.projectId || form.project?.id || null,
 						organization: selectedOrg.value || null,
 						invitee_name: first?.name || undefined,
 						invitee_email: first?.email || undefined,
 						invitee_phone: first?.phone || undefined,
 						invite_method: first?.invite_method || 'none',
 						attendees: validGuests,
+						contacts: contactPayload,
 						members: form.members.map(m => m.id),
 					},
 				});
@@ -539,11 +892,12 @@ const sendInviteMeeting = computed(() => {
 
 			<!-- Form (scrollable) -->
 			<form @submit.prevent="handleSubmit" class="p-5 space-y-5 overflow-y-auto flex-1">
-				<!-- Project context badge -->
-				<div v-if="projectData" class="flex items-center gap-2 px-3 py-2 bg-cyan-500/5 border border-cyan-500/20 rounded-lg">
+				<!-- Pinned project context (modal launched from a project page) -->
+				<div v-if="projectPinned && form.project" class="flex items-center gap-2 px-3 py-2 bg-cyan-500/5 border border-cyan-500/20 rounded-lg">
 					<UIcon name="i-heroicons-folder" class="w-4 h-4 text-cyan-500 shrink-0" />
-					<span class="text-xs font-medium text-foreground">{{ projectData.title }}</span>
+					<span class="text-xs font-medium text-foreground">{{ form.project.title }}</span>
 					<span class="text-[9px] uppercase tracking-wider text-muted-foreground">Project</span>
+					<span v-if="form.project.client_name" class="ml-auto text-[9px] uppercase tracking-wider text-cyan-700/70 dark:text-cyan-300/70">{{ form.project.client_name }}</span>
 				</div>
 
 				<!-- Type + Video toggle -->
@@ -575,27 +929,194 @@ const sendInviteMeeting = computed(() => {
 					</UFormGroup>
 				</div>
 
-				<!-- Description -->
-				<UFormGroup label="Description">
-					<UTextarea v-model="form.description" placeholder="Agenda or notes..." rows="2" />
-				</UFormGroup>
-
-				<!-- CRM Lead Link (video only) -->
-				<template v-if="form.is_video">
-					<div class="flex items-center gap-3">
-						<div class="flex-1 h-px bg-border/30" />
-						<span class="text-[9px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/60">CRM</span>
-						<div class="flex-1 h-px bg-border/30" />
+				<!-- Description — formatted via Tiptap. The host writes a brief
+				     (a sentence of intent) and can click ✨ Expand into agenda to
+				     have AI turn it into a structured agenda. -->
+				<div class="space-y-2">
+					<div class="flex items-center justify-between gap-2">
+						<label class="text-[11px] font-medium text-foreground/80">Description</label>
+						<button
+							v-if="form.is_video"
+							type="button"
+							:disabled="generatingAgenda || !form.title.trim()"
+							@click="generateAgenda"
+							:title="!form.title.trim() ? 'Add a title first — the AI uses it to steer the agenda.' : ''"
+							class="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold uppercase tracking-[0.06em] text-primary hover:bg-primary/10 transition-colors disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+						>
+							<UIcon v-if="generatingAgenda" name="i-heroicons-arrow-path" class="w-3 h-3 animate-spin" />
+							<UIcon v-else name="i-heroicons-sparkles" class="w-3 h-3" />
+							{{ generatingAgenda ? 'Generating…' : 'Expand into agenda' }}
+						</button>
 					</div>
 
-					<div class="relative" @click.stop>
+					<!-- AI suggestion preview — sits above the field until accepted or dismissed -->
+					<div
+						v-if="agendaSuggestion"
+						class="rounded-xl border border-primary/30 bg-primary/5 p-3 space-y-2"
+					>
+						<div class="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-primary">
+							<UIcon name="i-heroicons-sparkles" class="w-3 h-3" />
+							Suggested agenda
+						</div>
+						<div class="prose prose-sm max-w-none text-[12px] text-foreground" v-html="agendaSuggestion" />
+						<div class="flex items-center gap-2 pt-1">
+							<button
+								type="button"
+								@click="acceptAgenda"
+								class="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-[11px] font-semibold transition-colors ios-press"
+							>
+								Accept
+							</button>
+							<button
+								type="button"
+								@click="dismissAgenda"
+								class="px-3 py-1.5 rounded-lg bg-muted/30 hover:bg-muted/60 text-[11px] font-medium text-foreground transition-colors ios-press"
+							>
+								Dismiss
+							</button>
+							<span class="ml-auto text-[10px] text-muted-foreground">Replaces description on Accept</span>
+						</div>
+					</div>
+
+					<FormTiptap
+						v-model="form.description"
+						height="min-h-16"
+						custom-classes="p-3"
+						:character-limit="0"
+						:show-char-count="false"
+						:allow-uploads="false"
+					/>
+				</div>
+
+				<!-- Compact picker + settings row (video only) -->
+				<template v-if="form.is_video">
+					<div class="flex flex-wrap items-center gap-1.5">
+						<!-- Project pill / chip — collapsed by default; expands to the
+						     search field on click; replaced by a chip once selected. -->
+						<button
+							v-if="!projectPinned && !form.project && !showProjectField"
+							type="button"
+							@click="showProjectField = true"
+							class="flex items-center gap-1 px-2.5 py-1 rounded-full border border-dashed border-border/60 text-[11px] font-medium text-muted-foreground hover:bg-muted/30 hover:text-foreground transition-colors"
+						>
+							<UIcon name="i-heroicons-folder" class="w-3 h-3" />
+							Project
+						</button>
+						<div v-if="!projectPinned && form.project" class="flex items-center gap-1.5 pl-2 pr-1.5 py-1 bg-cyan-500/5 border border-cyan-500/20 rounded-full">
+							<UIcon name="i-heroicons-folder" class="w-3 h-3 text-cyan-500" />
+							<span class="text-[11px] font-medium text-foreground truncate max-w-[150px]">{{ form.project.title }}</span>
+							<span v-if="form.project.client_name" class="text-[9px] uppercase tracking-wider text-cyan-700/70 dark:text-cyan-300/70 truncate max-w-[100px]">{{ form.project.client_name }}</span>
+							<button type="button" class="text-muted-foreground hover:text-foreground" @click="clearProject">
+								<UIcon name="i-heroicons-x-mark" class="w-3 h-3" />
+							</button>
+						</div>
+
+						<!-- Lead pill / chip -->
+						<button
+							v-if="!form.related_lead && !showLeadField"
+							type="button"
+							@click="showLeadField = true"
+							class="flex items-center gap-1 px-2.5 py-1 rounded-full border border-dashed border-border/60 text-[11px] font-medium text-muted-foreground hover:bg-muted/30 hover:text-foreground transition-colors"
+							title="Connects this meeting to a CRM pipeline lead — notes and outcomes auto-log to the lead timeline."
+						>
+							<UIcon name="i-heroicons-funnel" class="w-3 h-3" />
+							Lead
+						</button>
+						<div v-if="form.related_lead" class="flex items-center gap-1.5 pl-2 pr-1.5 py-1 bg-muted/20 rounded-full">
+							<span class="w-2 h-2 rounded-full" :style="{ backgroundColor: LEAD_STAGE_COLORS[form.related_lead.stage] || '#9CA3AF' }" />
+							<span class="text-[11px] font-medium text-foreground truncate max-w-[150px]">{{ getLeadContactName(form.related_lead) }}</span>
+							<button type="button" class="text-muted-foreground hover:text-foreground" @click="clearLead">
+								<UIcon name="i-heroicons-x-mark" class="w-3 h-3" />
+							</button>
+						</div>
+
+						<!-- Meeting Settings popover -->
+						<UPopover v-model:open="showSettings" :popper="{ placement: 'bottom-start', offsetDistance: 6 }">
+							<button
+								type="button"
+								class="flex items-center gap-1 px-2.5 py-1 rounded-full border border-dashed border-border/60 text-[11px] font-medium text-muted-foreground hover:bg-muted/30 hover:text-foreground transition-colors"
+								:class="{ '!border-solid !border-primary/30 !bg-primary/5 !text-primary': settingsCount > 0 }"
+							>
+								<UIcon name="i-heroicons-cog-6-tooth" class="w-3 h-3" />
+								Settings
+								<span v-if="settingsCount > 0" class="ml-0.5 text-[9px] font-semibold">{{ settingsCount }}</span>
+							</button>
+							<template #content>
+								<div class="w-72 p-3 space-y-3">
+									<UCheckbox v-model="form.waiting_room_enabled" label="Enable waiting room" />
+									<div>
+										<UCheckbox
+											v-model="form.recording_enabled"
+											:disabled="!meetingDefaults.recordingAvailable"
+											label="Cloud recording"
+										/>
+										<p class="ml-6 text-[10px] text-muted-foreground">
+											<template v-if="meetingDefaults.recordingAvailable">{{ meetingDefaults.recordingCostNote }}</template>
+											<template v-else>
+												<UIcon name="i-heroicons-lock-closed" class="w-3 h-3 inline -mt-0.5" />
+												Upgrade to a paid plan to record meetings
+											</template>
+										</p>
+									</div>
+									<div>
+										<UCheckbox
+											v-model="form.transcription_enabled"
+											:disabled="!meetingDefaults.transcriptionAvailable"
+											label="Live transcription + AI recap"
+										/>
+										<p class="ml-6 text-[10px] text-muted-foreground">
+											<template v-if="meetingDefaults.transcriptionAvailable">{{ meetingDefaults.transcriptionCostNote }}</template>
+											<template v-else>
+												<UIcon name="i-heroicons-lock-closed" class="w-3 h-3 inline -mt-0.5" />
+												Upgrade to a paid plan for live transcripts
+											</template>
+										</p>
+									</div>
+								</div>
+							</template>
+						</UPopover>
+					</div>
+
+					<!-- Expanded project search (only when pill was clicked, no value yet) -->
+					<div v-if="!projectPinned && showProjectField && !form.project" class="relative" @click.stop>
+						<UInput
+							v-model="projectSearch"
+							placeholder="Search projects..."
+							size="sm"
+							icon="i-heroicons-folder"
+							autofocus
+							@input="debouncedSearchProjects"
+							@focus="showProjectDropdown = true"
+							@blur="() => { if (!projectSearch) showProjectField = false; }"
+						/>
+						<div
+							v-if="showProjectDropdown && projectResults.length > 0"
+							class="absolute z-50 mt-1 w-full bg-card border border-border/50 rounded-xl shadow-lg overflow-hidden"
+						>
+							<div
+								v-for="proj in projectResults"
+								:key="proj.id"
+								class="flex items-center gap-2 px-3 py-2 hover:bg-muted/40 cursor-pointer transition-colors text-sm"
+								@click="selectProject(proj)"
+							>
+								<UIcon name="i-heroicons-folder" class="w-3.5 h-3.5 text-cyan-500 shrink-0" />
+								<span class="font-medium text-foreground">{{ proj.title }}</span>
+								<span v-if="proj.client && proj.client.name" class="text-[10px] uppercase tracking-wider text-muted-foreground ml-auto">{{ proj.client.name }}</span>
+							</div>
+						</div>
+					</div>
+
+					<!-- Expanded lead search -->
+					<div v-if="showLeadField && !form.related_lead" class="relative" @click.stop>
 						<UInput
 							v-model="leadSearch"
-							placeholder="Link to lead..."
+							placeholder="Search leads..."
 							size="sm"
 							icon="i-heroicons-funnel"
+							autofocus
 							@input="debouncedSearchLeads"
 							@focus="showLeadDropdown = true"
+							@blur="() => { if (!leadSearch) showLeadField = false; }"
 						/>
 						<div
 							v-if="showLeadDropdown && leadResults.length > 0"
@@ -612,93 +1133,112 @@ const sendInviteMeeting = computed(() => {
 								<span class="text-xs text-muted-foreground">{{ lead.related_contact?.company || '' }}</span>
 							</div>
 						</div>
-						<div v-if="form.related_lead" class="flex items-center gap-2 mt-2 px-2.5 py-1.5 bg-muted/20 rounded-lg">
-							<span class="w-2 h-2 rounded-full" :style="{ backgroundColor: LEAD_STAGE_COLORS[form.related_lead.stage] || '#9CA3AF' }" />
-							<span class="text-xs font-medium text-foreground">{{ getLeadContactName(form.related_lead) }}</span>
-							<button type="button" class="ml-auto text-muted-foreground hover:text-foreground" @click="clearLead">
-								<UIcon name="i-heroicons-x-mark" class="w-3 h-3" />
-							</button>
-						</div>
-					</div>
-
-					<div class="space-y-2">
-						<UCheckbox v-model="form.waiting_room_enabled" label="Enable waiting room" />
-						<div>
-							<UCheckbox
-								v-model="form.recording_enabled"
-								:disabled="!meetingDefaults.recordingAvailable"
-								label="Cloud recording"
-							/>
-							<p class="ml-6 text-[11px] text-muted-foreground">
-								<template v-if="meetingDefaults.recordingAvailable">{{ meetingDefaults.recordingCostNote }}</template>
-								<template v-else>
-									<UIcon name="i-heroicons-lock-closed" class="w-3 h-3 inline -mt-0.5" />
-									Upgrade to a paid plan to record meetings
-								</template>
-							</p>
-						</div>
-						<div>
-							<UCheckbox
-								v-model="form.transcription_enabled"
-								:disabled="!meetingDefaults.transcriptionAvailable"
-								label="Live transcription + AI recap"
-							/>
-							<p class="ml-6 text-[11px] text-muted-foreground">
-								<template v-if="meetingDefaults.transcriptionAvailable">{{ meetingDefaults.transcriptionCostNote }}</template>
-								<template v-else>
-									<UIcon name="i-heroicons-lock-closed" class="w-3 h-3 inline -mt-0.5" />
-									Upgrade to a paid plan for live transcripts
-								</template>
-							</p>
-						</div>
 					</div>
 				</template>
 
-				<!-- People -->
-				<div class="flex items-center gap-3">
-					<div class="flex-1 h-px bg-border/30" />
-					<span class="text-[9px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/60">People</span>
-					<div class="flex-1 h-px bg-border/30" />
+				<!-- Members section header + host row -->
+				<label class="block text-[11px] font-medium text-foreground/80 pt-1">Members</label>
+
+				<!-- Host row — read-only. Server pins host_user to the creator on
+				     create; in edit mode we show whoever the meeting is owned by. -->
+				<div class="flex items-center gap-2.5 px-2.5 py-1.5 bg-muted/15 rounded-lg">
+					<template v-if="hostDisplay.avatar">
+						<UAvatar :src="hostDisplay.avatar" :alt="hostDisplay.name" size="2xs" />
+					</template>
+					<span v-else class="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] font-semibold flex-shrink-0">
+						{{ hostDisplay.initial }}
+					</span>
+					<div class="flex items-baseline gap-2 min-w-0">
+						<span class="text-[12px] font-medium text-foreground truncate">{{ hostDisplay.name }}</span>
+						<span v-if="hostDisplay.isMe" class="text-[9px] uppercase tracking-wider text-muted-foreground/70">You</span>
+					</div>
+					<span class="ml-auto text-[9px] font-semibold uppercase tracking-[0.08em] text-amber-600 dark:text-amber-400">Host</span>
 				</div>
 
-				<!-- Team / Client Members -->
+				<!-- Team / Client Members + Contact search -->
 				<div class="relative" @click.stop>
 					<UInput
 						v-model="memberSearch"
-						placeholder="Add team or client member..."
+						placeholder="Add teammate or contact..."
 						size="sm"
 						icon="i-heroicons-users"
 						@focus="showMemberDropdown = true"
 					/>
 					<div
-						v-if="showMemberDropdown && memberSearchResults.length > 0"
-						class="absolute z-50 mt-1 w-full bg-card border border-border/50 rounded-xl shadow-lg overflow-hidden"
+						v-if="showMemberDropdown && (memberSearchResults.length > 0 || contactSearchResults.length > 0)"
+						class="absolute z-50 mt-1 w-full bg-card border border-border/50 rounded-xl shadow-lg overflow-hidden max-h-80 overflow-y-auto"
 					>
-						<div
-							v-for="member in memberSearchResults"
-							:key="member.id"
-							class="flex items-center gap-2.5 px-3 py-2 hover:bg-muted/40 cursor-pointer transition-colors"
-							@click="addMember(member)"
-						>
-							<UAvatar :src="getAvatarUrl(member)" :alt="member.label" size="2xs" />
-							<div class="flex-1 min-w-0">
-								<span class="text-[12px] font-medium text-foreground">{{ member.label }}</span>
-								<span class="text-[10px] text-muted-foreground ml-2">{{ member.email }}</span>
+						<template v-if="memberSearchResults.length > 0">
+							<div class="px-3 pt-2 pb-1 text-[9px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/70">Teammates</div>
+							<div
+								v-for="member in memberSearchResults"
+								:key="`u-${member.id}`"
+								class="flex items-center gap-2.5 px-3 py-2 hover:bg-muted/40 cursor-pointer transition-colors"
+								@click="addMember(member)"
+							>
+								<UAvatar :src="getAvatarUrl(member)" :alt="member.label" size="2xs" />
+								<div class="flex-1 min-w-0">
+									<span class="text-[12px] font-medium text-foreground">{{ member.label }}</span>
+									<span class="text-[10px] text-muted-foreground ml-2">{{ member.email }}</span>
+								</div>
 							</div>
-						</div>
+						</template>
+						<template v-if="contactSearchResults.length > 0">
+							<div class="px-3 pt-2 pb-1 text-[9px] font-semibold uppercase tracking-[0.08em] text-muted-foreground/70">Contacts</div>
+							<div
+								v-for="contact in contactSearchResults"
+								:key="`c-${contact.id}`"
+								class="flex items-center gap-2.5 px-3 py-2 hover:bg-muted/40 cursor-pointer transition-colors"
+								@click="addContact(contact)"
+							>
+								<span class="w-6 h-6 rounded-full bg-amber-500 text-white flex items-center justify-center text-[10px] font-semibold flex-shrink-0">
+									{{ (contact.first_name || contact.email || '?')[0].toUpperCase() }}
+								</span>
+								<div class="flex-1 min-w-0">
+									<div class="flex items-baseline gap-2 min-w-0">
+										<span class="text-[12px] font-medium text-foreground truncate">{{ `${contact.first_name || ''} ${contact.last_name || ''}`.trim() || contact.email }}</span>
+										<span v-if="contact.email" class="hidden sm:inline text-[10px] text-muted-foreground truncate">{{ contact.email }}</span>
+									</div>
+									<div
+										v-if="contact.client && typeof contact.client === 'object' && contact.client.name"
+										class="flex items-center gap-1.5 mt-0.5 min-w-0"
+									>
+										<span class="text-[8px] font-semibold uppercase tracking-[0.08em] text-primary/70 truncate">{{ contact.client.name }}</span>
+										<span
+											v-if="meetingClientId && contact.client.id === meetingClientId"
+											class="text-[7px] font-bold uppercase tracking-[0.1em] px-1 py-0.5 rounded bg-amber-500/15 text-amber-600 flex-shrink-0"
+										>Client</span>
+									</div>
+								</div>
+							</div>
+						</template>
 					</div>
 				</div>
 
-				<!-- Added members -->
-				<div v-if="form.members.length > 0" class="flex flex-wrap gap-1.5">
+				<!-- Added members + contacts -->
+				<div v-if="form.members.length > 0 || form.contacts.length > 0" class="flex flex-wrap gap-1.5">
 					<div
 						v-for="member in form.members"
-						:key="member.id"
+						:key="`m-${member.id}`"
 						class="flex items-center gap-1.5 pl-1 pr-2 py-1 bg-muted/20 rounded-full"
 					>
 						<UAvatar :src="getAvatarUrl(member)" :alt="member.label" size="3xs" />
 						<span class="text-[11px] font-medium text-foreground">{{ member.label }}</span>
 						<button type="button" @click="removeMember(member.id)" class="text-muted-foreground hover:text-foreground">
+							<UIcon name="i-heroicons-x-mark" class="w-3 h-3" />
+						</button>
+					</div>
+					<div
+						v-for="contact in form.contacts"
+						:key="`c-${contact.id}`"
+						class="flex items-center gap-1.5 pl-1 pr-2 py-1 bg-amber-500/10 rounded-full"
+						:title="contact.client_name ? `${contact.label} · ${contact.client_name}` : contact.label"
+					>
+						<span class="w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center text-[9px] font-semibold flex-shrink-0">
+							{{ contact.avatar_initial }}
+						</span>
+						<span class="text-[11px] font-medium text-foreground">{{ contact.label }}</span>
+						<button type="button" @click="removeContact(contact.id)" class="text-muted-foreground hover:text-foreground">
 							<UIcon name="i-heroicons-x-mark" class="w-3 h-3" />
 						</button>
 					</div>
