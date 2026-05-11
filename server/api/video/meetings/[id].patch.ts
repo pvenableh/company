@@ -8,7 +8,7 @@
 // Plan gate: turning recording/transcription ON re-asserts the org plan, the
 // same way create-room does. Toggling OFF is unrestricted.
 
-import { readItem, updateItem } from '@directus/sdk';
+import { createItem, deleteItems, readItem, readItems, updateItem } from '@directus/sdk';
 import { requireMeetingAccess } from '~~/server/utils/meeting-perms';
 import { updateDailyRoom } from '~~/server/utils/daily';
 
@@ -24,6 +24,8 @@ interface Body {
 	waiting_room_enabled?: boolean;
 	recording_enabled?: boolean;
 	transcription_enabled?: boolean;
+	/** Full replacement set of teammate Directus user IDs. Omit to leave members untouched. */
+	members?: string[];
 }
 
 export default defineEventHandler(async (event) => {
@@ -33,6 +35,11 @@ export default defineEventHandler(async (event) => {
 	}
 
 	const { organizationId } = await requireMeetingAccess(event, meetingId);
+
+	const session = await getUserSession(event);
+	const hostId = session?.user?.id || '';
+	const hostName =
+		`${session?.user?.first_name || ''} ${session?.user?.last_name || ''}`.trim() || 'Host';
 
 	const body = await readBody<Body>(event);
 	if (!body || typeof body !== 'object') {
@@ -47,7 +54,9 @@ export default defineEventHandler(async (event) => {
 		readItem('video_meetings', meetingId, {
 			fields: [
 				'id',
+				'title',
 				'room_name',
+				'meeting_url',
 				'scheduled_start',
 				'scheduled_end',
 				'duration_minutes',
@@ -132,6 +141,140 @@ export default defineEventHandler(async (event) => {
 			);
 		} catch (err) {
 			console.error('[meetings.patch] failed to mirror appointment update:', err);
+		}
+	}
+
+	// ── Member diff + notifications ──
+	// `members` is a full replacement set when present. We diff against the
+	// current appointments_directus_users rows for the linked appointment,
+	// apply the delta, and fan out invited/removed notifications. Time changes
+	// also notify members who remain on the meeting.
+	const appointmentId = current.related_appointment as string | null;
+	let addedMemberIds: string[] = [];
+	let removedMemberIds: string[] = [];
+	let remainingMemberIds: string[] = [];
+
+	if (appointmentId && Array.isArray(body.members)) {
+		const desired = Array.from(new Set(body.members.filter(Boolean)));
+		try {
+			const existingRows = (await directus.request(
+				readItems('appointments_directus_users', {
+					filter: { appointments_id: { _eq: appointmentId } } as any,
+					fields: ['id', 'directus_users_id'] as any,
+					limit: -1,
+				}),
+			)) as any[];
+
+			const existingIds = existingRows
+				.map((r) => (typeof r.directus_users_id === 'object' ? r.directus_users_id?.id : r.directus_users_id))
+				.filter(Boolean) as string[];
+
+			addedMemberIds = desired.filter((id) => !existingIds.includes(id));
+			removedMemberIds = existingIds.filter((id) => !desired.includes(id));
+			remainingMemberIds = desired.filter((id) => existingIds.includes(id));
+
+			// Apply additions
+			for (const memberId of addedMemberIds) {
+				try {
+					await directus.request(
+						createItem('appointments_directus_users', {
+							appointments_id: appointmentId,
+							directus_users_id: memberId,
+						} as any),
+					);
+				} catch (err) {
+					console.error('[meetings.patch] failed to link member:', memberId, err);
+				}
+			}
+
+			// Apply removals
+			const removalRowIds = existingRows
+				.filter((r) => {
+					const uid = typeof r.directus_users_id === 'object' ? r.directus_users_id?.id : r.directus_users_id;
+					return removedMemberIds.includes(uid);
+				})
+				.map((r) => r.id);
+			if (removalRowIds.length > 0) {
+				try {
+					await directus.request(deleteItems('appointments_directus_users', removalRowIds));
+				} catch (err) {
+					console.error('[meetings.patch] failed to remove member junction rows:', err);
+				}
+			}
+		} catch (err) {
+			console.error('[meetings.patch] member diff failed:', err);
+		}
+	} else if (appointmentId) {
+		// Members not in body — pull current set so a time-change notification
+		// can still reach everyone who's already linked.
+		try {
+			const existingRows = (await directus.request(
+				readItems('appointments_directus_users', {
+					filter: { appointments_id: { _eq: appointmentId } } as any,
+					fields: ['directus_users_id'] as any,
+					limit: -1,
+				}),
+			)) as any[];
+			remainingMemberIds = existingRows
+				.map((r) => (typeof r.directus_users_id === 'object' ? r.directus_users_id?.id : r.directus_users_id))
+				.filter(Boolean);
+		} catch (err) {
+			console.error('[meetings.patch] failed to read existing members for notify:', err);
+		}
+	}
+
+	const meetingRef = {
+		id: meetingId,
+		title: (meetingPatch.title as string) || current.title || 'Meeting',
+		meeting_url: (current.meeting_url as string | null) || null,
+		scheduled_start: nextStart.toISOString(),
+		duration_minutes: nextDuration,
+	};
+
+	if (addedMemberIds.length > 0) {
+		try {
+			await notifyMeetingChange({
+				event: { kind: 'invited' },
+				meeting: meetingRef,
+				recipientIds: addedMemberIds,
+				hostId,
+				hostName,
+			});
+		} catch (err) {
+			console.error('[meetings.patch] notify(invited) failed:', err);
+		}
+	}
+
+	if (removedMemberIds.length > 0) {
+		try {
+			await notifyMeetingChange({
+				event: { kind: 'removed' },
+				meeting: {
+					...meetingRef,
+					scheduled_start: new Date(current.scheduled_start).toISOString(),
+				},
+				recipientIds: removedMemberIds,
+				hostId,
+				hostName,
+			});
+		} catch (err) {
+			console.error('[meetings.patch] notify(removed) failed:', err);
+		}
+	}
+
+	// Notify still-linked members of date/time shifts. Skip title/description
+	// changes — per spec we only notify on schedule changes.
+	if (timingChanged && remainingMemberIds.length > 0) {
+		try {
+			await notifyMeetingChange({
+				event: { kind: 'time_changed', previousStart: new Date(current.scheduled_start) },
+				meeting: meetingRef,
+				recipientIds: remainingMemberIds,
+				hostId,
+				hostName,
+			});
+		} catch (err) {
+			console.error('[meetings.patch] notify(time_changed) failed:', err);
 		}
 	}
 

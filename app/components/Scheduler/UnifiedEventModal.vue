@@ -201,6 +201,39 @@ const removeMember = (id: string) => {
 	form.members = form.members.filter(m => m.id !== id);
 };
 
+// Pre-load members linked to the appointment for edit mode. Reads the
+// junction directly and resolves each user's name/email so the chips render
+// the same way as the picker.
+const loadExistingMembers = async (appointmentId: string) => {
+	try {
+		const rows: any[] = await appointmentsDirectusUsersItems.list({
+			filter: { appointments_id: { _eq: appointmentId } },
+			fields: [
+				'id',
+				'directus_users_id.id',
+				'directus_users_id.first_name',
+				'directus_users_id.last_name',
+				'directus_users_id.email',
+				'directus_users_id.avatar',
+			],
+			limit: -1,
+		});
+		form.members = rows
+			.map((r) => r.directus_users_id)
+			.filter((u: any) => u && u.id && u.id !== user.value?.id)
+			.map((u: any) => ({
+				id: u.id,
+				first_name: u.first_name || '',
+				last_name: u.last_name || '',
+				email: u.email || '',
+				avatar: u.avatar || undefined,
+				label: `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email || 'Member',
+			}));
+	} catch (err) {
+		console.error('[UnifiedEventModal] failed to load existing members:', err);
+	}
+};
+
 const getAvatarUrl = (member: any) => {
 	if (!member?.avatar) return null;
 	return `${useRuntimeConfig().public.directusUrl}/assets/${member.avatar}?key=small`;
@@ -287,6 +320,15 @@ watch(isOpen, async (open) => {
 		leadSearch.value = '';
 		memberSearch.value = '';
 
+		// In edit mode, pre-populate members from the appointment's junction so
+		// the host can add/remove without losing existing teammates.
+		const editAppointmentId = m?.related_appointment?.id
+			|| m?.related_appointment
+			|| props.appointment?.id;
+		if (isEditing.value && editAppointmentId) {
+			await loadExistingMembers(editAppointmentId);
+		}
+
 		// Auto-add the lead contact as a guest on initial open, like the
 		// retired NewMeetingModal did.
 		if (seedLead?.related_contact && !isEditing.value) {
@@ -351,6 +393,7 @@ const handleSubmit = async () => {
 						transcription_enabled: form.transcription_enabled,
 						related_lead: form.related_lead?.id || null,
 						project: props.projectId || null,
+						members: form.members.map(m => m.id),
 					},
 				});
 				toast.add({ title: 'Meeting updated', color: 'green' });
@@ -377,6 +420,7 @@ const handleSubmit = async () => {
 						invitee_phone: first?.phone || undefined,
 						invite_method: first?.invite_method || 'none',
 						attendees: validGuests,
+						members: form.members.map(m => m.id),
 					},
 				});
 

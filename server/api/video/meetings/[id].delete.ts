@@ -24,13 +24,38 @@ export default defineEventHandler(async (event) => {
 
 	await requireMeetingAccess(event, meetingId);
 
+	const session = await getUserSession(event);
+	const hostId = session?.user?.id || '';
+	const hostName =
+		`${session?.user?.first_name || ''} ${session?.user?.last_name || ''}`.trim() || 'Host';
+
 	const directus = getTypedDirectus();
 
 	const current = await directus.request(
 		readItem('video_meetings', meetingId, {
-			fields: ['id', 'room_name', 'related_appointment'] as any,
+			fields: ['id', 'title', 'room_name', 'scheduled_start', 'duration_minutes', 'related_appointment'] as any,
 		}),
 	) as any;
+
+	// Collect linked members BEFORE cascade so we can notify them after the
+	// row is gone. (We notify post-delete to avoid sending if the delete fails.)
+	let cancelledMemberIds: string[] = [];
+	if (current.related_appointment) {
+		try {
+			const rows = (await directus.request(
+				readItems('appointments_directus_users', {
+					filter: { appointments_id: { _eq: current.related_appointment } } as any,
+					fields: ['directus_users_id'] as any,
+					limit: -1,
+				}),
+			)) as any[];
+			cancelledMemberIds = rows
+				.map((r) => (typeof r.directus_users_id === 'object' ? r.directus_users_id?.id : r.directus_users_id))
+				.filter(Boolean);
+		} catch (err) {
+			console.warn('[meetings.delete] failed to read members for cancel notify:', err);
+		}
+	}
 
 	if (current.room_name) {
 		try {
@@ -89,6 +114,29 @@ export default defineEventHandler(async (event) => {
 			await directus.request(deleteItem('appointments', current.related_appointment));
 		} catch (err) {
 			console.warn('[meetings.delete] appointment cleanup failed:', err);
+		}
+	}
+
+	// Notify linked teammates that the meeting was cancelled. Cascade-deleting
+	// the appointment already dropped the junction rows; the user IDs are
+	// captured above.
+	if (cancelledMemberIds.length > 0) {
+		try {
+			await notifyMeetingChange({
+				event: { kind: 'cancelled' },
+				meeting: {
+					id: meetingId,
+					title: current.title || 'Meeting',
+					meeting_url: null,
+					scheduled_start: new Date(current.scheduled_start).toISOString(),
+					duration_minutes: current.duration_minutes || 30,
+				},
+				recipientIds: cancelledMemberIds,
+				hostId,
+				hostName,
+			});
+		} catch (err) {
+			console.error('[meetings.delete] cancel notify failed:', err);
 		}
 	}
 

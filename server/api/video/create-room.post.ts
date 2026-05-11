@@ -22,6 +22,8 @@ interface CreateRoomBody {
 	recording_enabled?: boolean;
 	transcription_enabled?: boolean;
 	attendees?: AttendeeInput[];
+	/** Directus user IDs to link as teammate attendees via appointments_directus_users. */
+	members?: string[];
 	custom_message?: string;
 	related_lead?: number | string | null;
 	project?: string | null;
@@ -197,6 +199,42 @@ export default defineEventHandler(async (event) => {
 			);
 		} catch (linkError) {
 			console.error('Failed to link video meeting to appointment:', linkError);
+		}
+
+		// Link teammate members (Directus users) to the appointment, and notify
+		// them in-app + via email. Host is skipped inside notifyMeetingChange.
+		const memberIds = (body.members || []).filter((id) => id && id !== userId);
+		if (memberIds.length > 0) {
+			for (const memberId of memberIds) {
+				try {
+					await directus.request(
+						createItem('appointments_directus_users', {
+							appointments_id: appointment.id,
+							directus_users_id: memberId,
+						} as any),
+					);
+				} catch (junctionError) {
+					console.error('Failed to link member to appointment:', memberId, junctionError);
+				}
+			}
+
+			try {
+				await notifyMeetingChange({
+					event: { kind: 'invited' },
+					meeting: {
+						id: videoMeeting.id,
+						title: body.title,
+						meeting_url: meetingUrl,
+						scheduled_start: scheduledStart.toISOString(),
+						duration_minutes: durationMinutes,
+					},
+					recipientIds: memberIds,
+					hostId: userId,
+					hostName: userName,
+				});
+			} catch (notifyError) {
+				console.error('Failed to notify members on meeting create:', notifyError);
+			}
 		}
 
 		// Auto-create lead activity if linked to a lead
