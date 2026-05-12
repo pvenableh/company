@@ -39,10 +39,14 @@ const fetchMeetings = async () => {
 				'host_user.last_name',
 				'project.id',
 				'project.title',
+				'project.client.id',
+				'project.client.name',
 				'project_event.id',
 				'project_event.title',
 				'project_event.project.id',
 				'project_event.project.title',
+				'client.id',
+				'client.name',
 				'related_organization.id',
 				'related_organization.name',
 				'attendees.id',
@@ -82,6 +86,8 @@ const filtered = computed(() => {
 				m.project?.title,
 				m.project_event?.title,
 				m.project_event?.project?.title,
+				m.client?.name,
+				m.project?.client?.name,
 				m.related_organization?.name,
 			].filter(Boolean).join(' ').toLowerCase();
 			if (!haystack.includes(q)) return false;
@@ -98,6 +104,15 @@ const formatDate = (s) => {
 			hour: 'numeric', minute: '2-digit',
 		});
 	} catch { return s; }
+};
+
+// Prefer the meeting's own client, then the project's client, then the legacy
+// related_organization label (no link when only the org label is available).
+const rowClient = (m) => {
+	if (m.client?.id) return { id: m.client.id, name: m.client.name || 'Client' };
+	if (m.project?.client?.id) return { id: m.project.client.id, name: m.project.client.name || 'Client' };
+	if (m.related_organization?.name) return { id: null, name: m.related_organization.name };
+	return null;
 };
 
 const statusChip = (m) => {
@@ -213,9 +228,9 @@ const toneClass = (tone) => {
 								<UIcon name="i-heroicons-flag" class="w-3 h-3" />
 								{{ m.project_event.title }}
 							</span>
-							<span v-if="m.related_organization?.name" class="inline-flex items-center gap-1">
+							<span v-if="rowClient(m)?.name" class="inline-flex items-center gap-1">
 								<UIcon name="i-heroicons-building-office" class="w-3 h-3" />
-								{{ m.related_organization.name }}
+								{{ rowClient(m).name }}
 							</span>
 							<span v-if="m.recording_url" class="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
 								<UIcon name="i-heroicons-film" class="w-3 h-3" />

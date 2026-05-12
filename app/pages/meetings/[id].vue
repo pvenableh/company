@@ -1,4 +1,6 @@
 <script setup>
+import { sanitizeAgendaHtml } from '~~/shared/sanitize-html';
+
 useHead({ title: 'Meeting recap | Earnest' });
 
 definePageMeta({
@@ -63,23 +65,35 @@ const fetchMeeting = async () => {
 						'host_user.email',
 						'project.id',
 						'project.title',
+						'project.client.id',
+						'project.client.name',
 						'project_event.id',
 						'project_event.title',
 						'project_event.event_date',
 						'project_event.project.id',
 						'project_event.project.title',
+						'client.id',
+						'client.name',
 						'related_organization.id',
 						'related_organization.name',
 						'related_contact.id',
 						'related_contact.first_name',
 						'related_contact.last_name',
 						'attendees.id',
+						'attendees.attendee_type',
+						'attendees.invite_method',
 						'attendees.guest_name',
 						'attendees.guest_email',
 						'attendees.directus_user.id',
 						'attendees.directus_user.first_name',
 						'attendees.directus_user.last_name',
 						'attendees.directus_user.email',
+						'attendees.contact.id',
+						'attendees.contact.first_name',
+						'attendees.contact.last_name',
+						'attendees.contact.email',
+						'attendees.contact.client.id',
+						'attendees.contact.client.name',
 					],
 				},
 			},
@@ -128,7 +142,7 @@ const adaptivePrompts = computed(() => {
 	const eventTitle = m.project_event?.title;
 	if (eventTitle) out.push(`What's left before "${eventTitle}" ships?`);
 
-	const clientName = m.related_organization?.name;
+	const clientName = m.client?.name || m.project?.client?.name || m.related_organization?.name;
 	if (clientName) out.push(`Draft a follow-up email to ${clientName}`);
 
 	if (chatMessages.value.length > 0) {
@@ -252,6 +266,18 @@ const formatDate = (s) => {
 const projectTitle = computed(() => meeting.value?.project_event?.project?.title || meeting.value?.project?.title);
 const projectId = computed(() => meeting.value?.project_event?.project?.id || meeting.value?.project?.id);
 
+// Prefer the meeting's own client FK, then the project's client (covers older
+// rows that pre-date the client field), then the related_organization label as
+// a final fallback. Only `client` / `project.client` give us a clickable ID.
+const meetingClient = computed(() => {
+	const m = meeting.value;
+	if (!m) return null;
+	if (m.client?.id) return { id: m.client.id, name: m.client.name || 'Client' };
+	if (m.project?.client?.id) return { id: m.project.client.id, name: m.project.client.name || 'Client' };
+	if (m.related_organization?.name) return { id: null, name: m.related_organization.name };
+	return null;
+});
+
 // ─── Attendee chips + contact-insight lookup ───
 // The attendees junction often duplicates the host (Daily auto-records the
 // host as an attendee on join). Dedupe so the host doesn't show twice. We
@@ -260,61 +286,108 @@ const attendeeContacts = ref({}); // email → contact summary
 
 const attendeesList = computed(() => {
 	if (!meeting.value) return [];
-	const out = [];
+	const host = [];
+	const teammates = [];
+	const contactRows = [];
+	const guestRows = [];
 	const seenUserIds = new Set();
 	const seenEmails = new Set();
+	const seenContactIds = new Set();
 
-	const pushIfNew = (entry) => {
-		if (entry.userId && seenUserIds.has(entry.userId)) return;
-		const emailKey = (entry.email || '').toLowerCase();
-		if (emailKey && seenEmails.has(emailKey)) return;
-		if (entry.userId) seenUserIds.add(entry.userId);
-		if (emailKey) seenEmails.add(emailKey);
-		out.push(entry);
+	const claimEmail = (email) => {
+		const key = (email || '').toLowerCase();
+		if (!key) return true;
+		if (seenEmails.has(key)) return false;
+		seenEmails.add(key);
+		return true;
 	};
 
-	const host = meeting.value.host_user;
-	if (host && typeof host === 'object') {
-		const name = `${host.first_name || ''} ${host.last_name || ''}`.trim() || host.email || 'Host';
-		const email = (host.email || '').toLowerCase();
-		pushIfNew({
-			name,
-			role: 'Host',
-			userId: host.id || null,
-			email,
-			isYou: !!(currentUserId.value && host.id === currentUserId.value),
-			contact: email ? attendeeContacts.value[email] || null : null,
-		});
+	const h = meeting.value.host_user;
+	if (h && typeof h === 'object') {
+		const name = `${h.first_name || ''} ${h.last_name || ''}`.trim() || h.email || 'Host';
+		const email = (h.email || '').toLowerCase();
+		if (claimEmail(email)) {
+			if (h.id) seenUserIds.add(h.id);
+			host.push({
+				kind: 'host',
+				name,
+				role: 'Host',
+				userId: h.id || null,
+				contactId: null,
+				clientName: null,
+				email,
+				isYou: !!(currentUserId.value && h.id === currentUserId.value),
+				contact: email ? attendeeContacts.value[email] || null : null,
+			});
+		}
 	}
 
 	for (const a of meeting.value.attendees || []) {
+		// Teammate (directus_user) — render as member chip
 		const u = a.directus_user;
 		if (u && typeof u === 'object') {
+			if (u.id && seenUserIds.has(u.id)) continue;
 			const name = `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.email || 'Member';
 			const email = (u.email || '').toLowerCase();
-			pushIfNew({
+			if (!claimEmail(email)) continue;
+			if (u.id) seenUserIds.add(u.id);
+			teammates.push({
+				kind: 'teammate',
 				name,
 				role: 'Member',
 				userId: u.id || null,
+				contactId: null,
+				clientName: null,
 				email,
 				isYou: !!(currentUserId.value && u.id === currentUserId.value),
 				contact: email ? attendeeContacts.value[email] || null : null,
 			});
 			continue;
 		}
+
+		// Contact-linked attendee — picker-added with a real contacts row.
+		const c = a.contact;
+		if (c && typeof c === 'object' && c.id) {
+			if (seenContactIds.has(c.id)) continue;
+			const name = `${c.first_name || ''} ${c.last_name || ''}`.trim() || c.email || a.guest_name || 'Contact';
+			const email = (c.email || a.guest_email || '').toLowerCase();
+			if (!claimEmail(email)) continue;
+			seenContactIds.add(c.id);
+			const initial = (c.first_name?.[0] || c.last_name?.[0] || name[0] || '?').toUpperCase();
+			contactRows.push({
+				kind: 'contact',
+				name,
+				role: 'Contact',
+				userId: null,
+				contactId: c.id,
+				clientName: c.client?.name || null,
+				email,
+				isYou: false,
+				initial,
+				contact: email ? attendeeContacts.value[email] || null : null,
+			});
+			continue;
+		}
+
+		// Manual guest (just name/email typed in)
 		if (a.guest_name || a.guest_email) {
 			const email = (a.guest_email || '').toLowerCase();
-			pushIfNew({
+			if (!claimEmail(email)) continue;
+			guestRows.push({
+				kind: 'guest',
 				name: a.guest_name || a.guest_email || 'Guest',
-				role: a.guest_email ? 'Guest' : 'Guest',
+				role: 'Guest',
 				userId: null,
+				contactId: null,
+				clientName: null,
 				email,
 				isYou: false,
 				contact: email ? attendeeContacts.value[email] || null : null,
 			});
 		}
 	}
-	return out;
+
+	return [...host, ...teammates, ...contactRows, ...guestRows];
 });
 
 // Fetch contacts collection rows that match the meeting participants' emails,
@@ -600,6 +673,71 @@ const downloadChat = () => {
 	URL.revokeObjectURL(url);
 };
 
+// ─── AI agenda (when description is empty + meeting hasn't started) ───
+// Reuses the modal's generateAgenda / acceptAgenda / dismissAgenda shape:
+// generate runs through /api/ai/generate-agenda, preview sits below the
+// header until Accept PATCHes the description back onto the meeting.
+const generatingAgenda = ref(false);
+const acceptingAgenda = ref(false);
+const agendaSuggestion = ref(null);
+
+const generateAgenda = async () => {
+	if (generatingAgenda.value) return;
+	const m = meeting.value;
+	if (!m?.title?.trim()) return;
+	generatingAgenda.value = true;
+	try {
+		const attendeeNames = (attendeesList.value || []).map((p) => p.name).filter(Boolean);
+		const orgId = selectedOrg.value || m.related_organization?.id;
+		const res = await $fetch('/api/ai/generate-agenda', {
+			method: 'POST',
+			body: {
+				organizationId: orgId,
+				title: m.title,
+				brief: '',
+				durationMinutes: m.actual_duration_minutes || 30,
+				projectId: projectId.value || null,
+				leadId: null,
+				attendeeNames,
+			},
+		});
+		agendaSuggestion.value = res?.html || null;
+		if (!agendaSuggestion.value) {
+			toast.add({ title: 'No agenda returned', color: 'amber' });
+		}
+	} catch (err) {
+		toast.add({
+			title: 'Agenda generation failed',
+			description: err?.data?.message || err.message || 'Please try again',
+			color: 'red',
+		});
+	}
+	generatingAgenda.value = false;
+};
+
+const acceptAgenda = async () => {
+	if (!agendaSuggestion.value || acceptingAgenda.value) return;
+	acceptingAgenda.value = true;
+	try {
+		await $fetch(`/api/video/meetings/${meetingId.value}`, {
+			method: 'PATCH',
+			body: { description: agendaSuggestion.value },
+		});
+		agendaSuggestion.value = null;
+		await fetchMeeting();
+		toast.add({ title: 'Agenda saved', color: 'green' });
+	} catch (err) {
+		toast.add({
+			title: 'Could not save agenda',
+			description: err?.data?.message || err.message || 'Please try again',
+			color: 'red',
+		});
+	}
+	acceptingAgenda.value = false;
+};
+
+const dismissAgenda = () => { agendaSuggestion.value = null; };
+
 // ─── Action item promotion ───
 const promoteActionItem = async (idx) => {
 	if (promotingIndex.value !== -1) return;
@@ -622,6 +760,19 @@ const promoteActionItem = async (idx) => {
 	}
 };
 </script>
+
+<style scoped>
+/* This project doesn't ship the @tailwindcss/typography plugin, so the .prose
+   class is a no-op. Restore the bits we actually need for agenda HTML: list
+   markers, heading rhythm, and paragraph spacing inside the v-html container. */
+.meeting-prose :deep(ol) { list-style: decimal; padding-left: 1.25rem; margin: 0.5rem 0; }
+.meeting-prose :deep(ul) { list-style: disc; padding-left: 1.25rem; margin: 0.5rem 0; }
+.meeting-prose :deep(li) { margin: 0.15rem 0; }
+.meeting-prose :deep(h3) { font-weight: 600; font-size: 0.95em; margin: 0.85rem 0 0.35rem; }
+.meeting-prose :deep(h4) { font-weight: 600; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-muted-foreground); margin: 0.75rem 0 0.3rem; }
+.meeting-prose :deep(p) { margin: 0.35rem 0; }
+.meeting-prose :deep(strong) { font-weight: 600; }
+</style>
 
 <template>
 	<div class="max-w-4xl mx-auto p-4 sm:p-6">
@@ -675,15 +826,78 @@ const promoteActionItem = async (idx) => {
 						<UIcon name="i-heroicons-flag" class="w-3.5 h-3.5" />
 						{{ meeting.project_event.title }}
 					</NuxtLink>
-					<span v-if="meeting.related_organization?.name" class="inline-flex items-center gap-1 text-muted-foreground">
+					<NuxtLink
+						v-if="meetingClient?.id"
+						:to="`/clients/${meetingClient.id}`"
+						class="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
+					>
 						<UIcon name="i-heroicons-building-office" class="w-3.5 h-3.5" />
-						{{ meeting.related_organization.name }}
+						{{ meetingClient.name }}
+					</NuxtLink>
+					<span v-else-if="meetingClient?.name" class="inline-flex items-center gap-1 text-muted-foreground">
+						<UIcon name="i-heroicons-building-office" class="w-3.5 h-3.5" />
+						{{ meetingClient.name }}
 					</span>
 				</div>
 
-				<p v-if="meeting.description" class="text-[13px] text-foreground/80 mt-3 pt-3 border-t border-border/30">
-					{{ meeting.description }}
-				</p>
+				<div
+					v-if="meeting.description"
+					class="meeting-prose mt-3 pt-3 border-t border-border/30 prose prose-sm max-w-none text-[13px] text-foreground/80"
+					v-html="sanitizeAgendaHtml(meeting.description)"
+				/>
+				<div
+					v-else-if="meeting.status === 'scheduled'"
+					class="mt-3 pt-3 border-t border-border/30 flex items-center justify-between gap-3"
+				>
+					<p class="text-[12px] text-muted-foreground italic">No agenda yet.</p>
+					<button
+						v-if="!agendaSuggestion"
+						type="button"
+						:disabled="generatingAgenda || !meeting.title?.trim()"
+						class="inline-flex items-center gap-1 h-7 px-3 rounded-full text-[10px] font-bold uppercase tracking-wider bg-primary/10 hover:bg-primary/20 text-primary disabled:opacity-50 transition-colors"
+						:title="!meeting.title?.trim() ? 'Add a title first.' : ''"
+						@click="generateAgenda"
+					>
+						<UIcon
+							:name="generatingAgenda ? 'i-heroicons-arrow-path' : 'i-heroicons-sparkles'"
+							:class="['w-3 h-3', generatingAgenda ? 'animate-spin' : '']"
+						/>
+						{{ generatingAgenda ? 'Generating…' : 'Expand into agenda' }}
+					</button>
+				</div>
+
+				<!-- AI agenda preview — sits below the header bar until accepted -->
+				<div
+					v-if="agendaSuggestion"
+					class="mt-3 pt-3 border-t border-border/30 rounded-xl border border-primary/30 bg-primary/5 p-3 space-y-2"
+				>
+					<div class="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-primary">
+						<UIcon name="i-heroicons-sparkles" class="w-3 h-3" />
+						Suggested agenda
+					</div>
+					<div
+						class="meeting-prose prose prose-sm max-w-none text-[13px] text-foreground"
+						v-html="sanitizeAgendaHtml(agendaSuggestion)"
+					/>
+					<div class="flex items-center gap-2 pt-1">
+						<button
+							type="button"
+							:disabled="acceptingAgenda"
+							class="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-[11px] font-semibold transition-colors disabled:opacity-50"
+							@click="acceptAgenda"
+						>
+							{{ acceptingAgenda ? 'Saving…' : 'Accept' }}
+						</button>
+						<button
+							type="button"
+							class="px-3 py-1.5 rounded-lg bg-muted/30 hover:bg-muted/60 text-[11px] font-medium text-foreground transition-colors"
+							@click="dismissAgenda"
+						>
+							Dismiss
+						</button>
+						<span class="ml-auto text-[10px] text-muted-foreground">Sets the meeting description on Accept</span>
+					</div>
+				</div>
 			</div>
 
 			<!-- Recordings (live from Daily.co) -->
@@ -957,28 +1171,44 @@ const promoteActionItem = async (idx) => {
 			<div v-if="attendeesList.length > 0" class="ios-card p-5 mb-4">
 				<h2 class="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Attendees</h2>
 				<div class="flex flex-wrap gap-2">
-					<component
-						:is="(p.contact && !p.isYou) ? 'button' : 'span'"
-						v-for="(p, i) in attendeesList"
-						:key="i"
-						:class="[
-							'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] transition-colors',
-							(p.contact && !p.isYou)
-								? 'bg-muted/40 hover:bg-muted/70 cursor-pointer ring-1 ring-inset ring-border/40'
-								: 'bg-muted/30',
-						]"
-						:title="(p.contact && !p.isYou) ? 'Open contact insights' : undefined"
-						@click="(p.contact && !p.isYou) && openAttendeeInsight(p)"
-					>
-						<UIcon name="i-heroicons-user" class="w-3.5 h-3.5 text-muted-foreground" />
-						<span class="font-medium">{{ p.name }}<span v-if="p.isYou" class="text-muted-foreground/70 font-normal"> (you)</span></span>
-						<span class="text-muted-foreground">· {{ p.role }}</span>
-						<UIcon
-							v-if="p.contact && !p.isYou"
-							name="i-heroicons-arrow-top-right-on-square"
-							class="w-3 h-3 text-muted-foreground/60"
-						/>
-					</component>
+					<template v-for="(p, i) in attendeesList" :key="i">
+						<!-- Contact-linked attendee: avatar chip linking to /contacts/[id] -->
+						<NuxtLink
+							v-if="p.kind === 'contact' && p.contactId"
+							:to="`/contacts/${p.contactId}`"
+							:title="p.clientName ? `${p.name} · ${p.clientName}` : p.name"
+							class="inline-flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full text-[12px] transition-colors bg-amber-500/10 hover:bg-amber-500/20 ring-1 ring-inset ring-amber-500/30"
+						>
+							<span class="w-5 h-5 rounded-full bg-amber-500/30 text-amber-700 dark:text-amber-300 flex items-center justify-center text-[10px] font-bold">
+								{{ p.initial }}
+							</span>
+							<span class="font-medium text-foreground">{{ p.name }}</span>
+							<span v-if="p.clientName" class="text-muted-foreground text-[11px]">· {{ p.clientName }}</span>
+						</NuxtLink>
+
+						<!-- Teammate / host: existing chip pattern; opens insight modal if a contacts-row lookup matched -->
+						<component
+							v-else
+							:is="(p.contact && !p.isYou) ? 'button' : 'span'"
+							:class="[
+								'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] transition-colors',
+								(p.contact && !p.isYou)
+									? 'bg-muted/40 hover:bg-muted/70 cursor-pointer ring-1 ring-inset ring-border/40'
+									: 'bg-muted/30',
+							]"
+							:title="(p.contact && !p.isYou) ? 'Open contact insights' : undefined"
+							@click="(p.contact && !p.isYou) && openAttendeeInsight(p)"
+						>
+							<UIcon name="i-heroicons-user" class="w-3.5 h-3.5 text-muted-foreground" />
+							<span class="font-medium">{{ p.name }}<span v-if="p.isYou" class="text-muted-foreground/70 font-normal"> (you)</span></span>
+							<span class="text-muted-foreground">· {{ p.role }}</span>
+							<UIcon
+								v-if="p.contact && !p.isYou"
+								name="i-heroicons-arrow-top-right-on-square"
+								class="w-3 h-3 text-muted-foreground/60"
+							/>
+						</component>
+					</template>
 				</div>
 			</div>
 
