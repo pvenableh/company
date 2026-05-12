@@ -79,11 +79,7 @@
 				<!-- Status pill -->
 				<span
 					class="text-[8px] uppercase font-semibold tracking-wider px-1.5 py-0.5 rounded-md shrink-0"
-					:class="{
-						'text-green-500 bg-green-500/10': task.status === 'done' || task.completed,
-						'text-blue-500 bg-blue-500/10': task.status === 'in_progress',
-						'text-muted-foreground bg-muted/40': task.status === 'todo' || (!task.status),
-					}"
+					:class="getStatusBadgeClasses(task.completed ? 'done' : (task.status || 'todo'))"
 				>
 					{{ task.status === 'done' || task.completed ? 'Done' : task.status === 'in_progress' ? 'In Progress' : 'To Do' }}
 				</span>
@@ -119,6 +115,7 @@ const emit = defineEmits<{
 }>();
 
 const taskItems = useDirectusItems('project_tasks');
+const { getStatusBadgeClasses } = useStatusStyle();
 
 const tasks = ref<any[]>([]);
 const loading = ref(true);

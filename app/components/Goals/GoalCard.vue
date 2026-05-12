@@ -19,17 +19,22 @@ const priorityConfig = {
 	low: { label: 'Low', color: 'text-blue-500 bg-blue-500/10' },
 };
 
-const statusConfig = {
-	draft: { label: 'Draft', color: 'text-gray-400 bg-gray-500/10' },
-	active: { label: 'Active', color: 'text-emerald-500 bg-emerald-500/10' },
-	paused: { label: 'Paused', color: 'text-amber-500 bg-amber-500/10' },
-	completed: { label: 'Completed', color: 'text-blue-500 bg-blue-500/10' },
-	archived: { label: 'Archived', color: 'text-gray-400 bg-gray-500/10' },
+const statusLabels = {
+	draft: 'Draft',
+	active: 'Active',
+	paused: 'Paused',
+	completed: 'Completed',
+	archived: 'Archived',
 };
+
+const { getStatusBadgeClasses } = useStatusStyle();
 
 const typeInfo = computed(() => typeConfig[props.goal.type] || typeConfig.custom);
 const priorityInfo = computed(() => priorityConfig[props.goal.priority] || priorityConfig.medium);
-const statusInfo = computed(() => statusConfig[props.goal.status] || statusConfig.draft);
+const statusInfo = computed(() => ({
+	label: statusLabels[props.goal.status] || statusLabels.draft,
+	color: getStatusBadgeClasses(props.goal.status || 'draft'),
+}));
 
 const progress = computed(() => {
 	if (!props.goal.target_value || props.goal.target_value === 0) return 0;

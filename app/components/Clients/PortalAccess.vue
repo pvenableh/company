@@ -164,10 +164,9 @@ function displayName(user: any): string {
   return `${f} ${l}`.trim();
 }
 
+const { getStatusBadgeClasses } = useStatusStyle();
 function statusClasses(status: string): string {
-  if (status === 'active') return 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400';
-  if (status === 'pending') return 'bg-amber-500/15 text-amber-600 dark:text-amber-400';
-  return 'bg-muted text-muted-foreground';
+  return getStatusBadgeClasses(status);
 }
 
 function relativeDate(iso: string): string {

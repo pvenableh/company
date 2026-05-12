@@ -130,12 +130,12 @@
 		<!-- Won/Lost Summary -->
 		<div class="flex items-center gap-3 px-4 mb-4">
 			<div class="flex items-center gap-1.5 text-[10px] font-medium">
-				<span class="w-2 h-2 rounded-full bg-emerald-500" />
-				<span class="text-emerald-600">{{ wonCount }} Won</span>
+				<span class="w-2 h-2 rounded-full bg-green-500" />
+				<span class="text-green-500">{{ wonCount }} Won</span>
 			</div>
 			<div class="flex items-center gap-1.5 text-[10px] font-medium">
-				<span class="w-2 h-2 rounded-full bg-red-500" />
-				<span class="text-red-500">{{ lostCount }} Lost</span>
+				<span class="w-2 h-2 rounded-full bg-destructive" />
+				<span class="text-destructive">{{ lostCount }} Lost</span>
 			</div>
 		</div>
 

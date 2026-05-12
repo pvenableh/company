@@ -4,6 +4,8 @@ import type { ProjectWithRelations } from '~~/shared/projects';
 defineProps<{
   projects: ProjectWithRelations[];
 }>();
+
+const { getStatusBadgeClasses } = useStatusStyle();
 </script>
 
 <template>
@@ -28,12 +30,7 @@ defineProps<{
         </span>
         <span
           class="text-[8px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-full"
-          :class="{
-            'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400': project.status === 'In Progress',
-            'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400': project.status === 'completed',
-            'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400': project.status === 'Scheduled',
-            'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400': project.status === 'Pending',
-          }"
+          :class="getStatusBadgeClasses(project.status)"
         >
           {{ project.status }}
         </span>

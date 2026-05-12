@@ -248,13 +248,7 @@
 									</template>
 									<span
 										class="text-[8px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-md"
-										:class="{
-											'text-blue-500 bg-blue-500/10': item.status === 'Active' || item.status === 'in_progress',
-											'text-green-500 bg-green-500/10': item.status === 'Completed' || item.status === 'completed' || item.status === 'paid',
-											'text-muted-foreground bg-muted/40': item.status === 'draft' || item.status === 'archived' || item.status === 'cancelled',
-											'text-cyan-500 bg-cyan-500/10': item.status === 'Scheduled' || item.status === 'scheduled',
-											'text-amber-500 bg-amber-500/10': item.status === 'pending' || item.status === 'no_show',
-										}"
+										:class="meetingStatusColor(item.status)"
 									>{{ item.status }}</span>
 									<UIcon name="i-heroicons-chevron-right" class="h-3.5 w-3.5 text-muted-foreground/50" />
 								</div>

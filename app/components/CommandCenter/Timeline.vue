@@ -9,6 +9,7 @@ const invoiceItems = useDirectusItems('invoices');
 
 // ── Timeline icon theme ──
 const { collectionIcons: themedCollectionIcons, actionIcons: themedActionIcons } = useTimelineTheme();
+const { getStatusBadgeClasses } = useStatusStyle();
 
 // ── State ──
 const timeline = ref([]);
@@ -714,25 +715,19 @@ watch(selectedOrg, () => {
 					<!-- Right column: detail badges -->
 					<div class="flex flex-col items-end gap-1.5 pt-1">
 						<!-- Task completion badge -->
-						<span v-if="item.collection === 'project_tasks' && item.itemData?.completed" class="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+						<span v-if="item.collection === 'project_tasks' && item.itemData?.completed" class="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full" :class="getStatusBadgeClasses('completed')">
 							<UIcon name="i-heroicons-check" class="w-3 h-3" />
 							Completed
 						</span>
 						<!-- Quick task completion badge -->
-						<span v-if="item.collection === 'tasks' && item.itemData?.status === 'completed'" class="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+						<span v-if="item.collection === 'tasks' && item.itemData?.status === 'completed'" class="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full" :class="getStatusBadgeClasses('completed')">
 							<UIcon name="i-heroicons-check" class="w-3 h-3" />
 							Completed
 						</span>
 
 						<!-- Email details -->
 						<template v-if="item.collection === 'emails' && item.itemData">
-							<span v-if="item.itemData.status" class="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full"
-								:class="{
-									'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400': item.itemData.status === 'sent',
-									'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400': item.itemData.status === 'sending',
-									'bg-muted text-muted-foreground': item.itemData.status === 'draft',
-								}"
-							>
+							<span v-if="item.itemData.status" class="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full" :class="getStatusBadgeClasses(item.itemData.status)">
 								{{ item.itemData.status }}
 							</span>
 							<span v-if="item.itemData.total_recipients" class="text-[10px] text-muted-foreground">
@@ -766,14 +761,7 @@ watch(selectedOrg, () => {
 						<!-- Client details -->
 						<template v-if="item.collection === 'clients' && item.itemData">
 							<span v-if="item.itemData.industry" class="text-[10px] text-muted-foreground">{{ item.itemData.industry }}</span>
-							<span v-if="item.itemData.account_state" class="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full"
-								:class="{
-									'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400': item.itemData.account_state === 'active',
-									'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400': item.itemData.account_state === 'prospect',
-									'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400': item.itemData.account_state === 'inactive',
-									'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400': item.itemData.account_state === 'churned',
-								}"
-							>
+							<span v-if="item.itemData.account_state" class="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full" :class="getStatusBadgeClasses(item.itemData.account_state)">
 								{{ item.itemData.account_state }}
 							</span>
 						</template>

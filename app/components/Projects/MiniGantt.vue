@@ -33,6 +33,7 @@ interface MiniRow {
 }
 
 const projectColor = computed(() => props.project?.service?.color || '#d4d4d8');
+const { getStatusBadgeClasses } = useStatusStyle();
 
 // Event type color map — "General" inherits from project service color
 const EVENT_TYPE_COLORS: Record<string, string> = {
@@ -288,12 +289,7 @@ function syncScroll() {
 						<span
 							v-if="row.status"
 							class="text-[7px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-md shrink-0"
-							:class="{
-								'text-green-500 bg-green-500/10': isCompleted(row.status),
-								'text-blue-500 bg-blue-500/10': row.status?.toLowerCase().replace(/\s+/g, '') === 'inprogress' || row.status?.toLowerCase() === 'active',
-								'text-amber-500 bg-amber-500/10': row.status?.toLowerCase() === 'scheduled' || row.status?.toLowerCase() === 'pending',
-								'text-muted-foreground bg-muted/40': !isCompleted(row.status) && !['inprogress', 'active', 'scheduled', 'pending'].includes(row.status?.toLowerCase().replace(/\s+/g, '') || ''),
-							}"
+							:class="getStatusBadgeClasses(row.status)"
 						>
 							{{ row.status }}
 						</span>

@@ -59,7 +59,7 @@
             </div>
             <span
               class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize"
-              :class="payment.status === 'paid' ? 'bg-emerald-500/15 text-emerald-400' : 'bg-yellow-500/15 text-yellow-400'"
+              :class="getStatusBadgeClasses(payment.status)"
             >
               {{ payment.status }}
             </span>
@@ -77,6 +77,8 @@ import type { Invoice } from '~~/shared/directus';
 const props = defineProps<{
   invoices: Invoice[];
 }>();
+
+const { getStatusBadgeClasses } = useStatusStyle();
 
 // Collect all payments from all invoices
 const allPayments = computed(() => {

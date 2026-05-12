@@ -37,46 +37,52 @@ export interface AppAccent {
 	l: number;
 }
 
+/**
+ * Accent hues are pulled from the status palette in `useStatusStyle` so the
+ * app chrome and the in-page status pills speak the same language. Don't
+ * invent new hues here — if you need another, add it to the status palette
+ * first and then reference it.
+ */
 export const APP_ACCENTS: Record<AppId, AppAccent> = {
 	clients: {
 		id: 'clients',
 		name: 'Clients',
-		icon: 'lucide:handshake',
+		icon: 'ph:users-three-duotone',
 		to: '/apps/clients',
-		h: 22, s: 92, l: 52,
+		h: 199, s: 89, l: 48,
 	},
 	work: {
 		id: 'work',
 		name: 'Work',
-		icon: 'lucide:briefcase-business',
+		icon: 'lucide:square-kanban',
 		to: '/apps/work',
-		h: 258, s: 74, l: 60,
+		h: 160, s: 60, l: 45,
 	},
 	money: {
 		id: 'money',
 		name: 'Money',
-		icon: 'lucide:landmark',
+		icon: 'lucide:trending-up',
 		to: '/apps/money',
-		h: 160, s: 62, l: 40,
+		h: 142, s: 72, l: 46,
 	},
 	marketing: {
 		id: 'marketing',
 		name: 'Marketing',
-		icon: 'lucide:megaphone',
+		icon: 'ph:waveform-duotone',
 		to: '/apps/marketing',
-		h: 200, s: 84, l: 48,
+		h: 38, s: 92, l: 50,
 	},
 	organization: {
 		id: 'organization',
 		name: 'Organization',
-		icon: 'lucide:building-2',
+		icon: 'ph:tree-structure-duotone',
 		to: '/apps/organization',
 		h: 215, s: 22, l: 48,
 	},
 	account: {
 		id: 'account',
 		name: 'Account',
-		icon: 'lucide:circle-user',
+		icon: 'lucide:circle-user-round',
 		to: '/account',
 		h: 220, s: 10, l: 48,
 	},

@@ -9,12 +9,12 @@ export function useStatusStyle() {
   // ── Status buckets (single source of truth; normalized keys) ──
   // Normalization strips spaces/underscores/hyphens and lowercases, so
   // "In Progress", "in_progress", "in-progress" all match "inprogress".
-  const SUCCESS = ['completed', 'done', 'paid', 'approved', 'published', 'succeeded', 'confirmed'];
-  const DESTRUCTIVE = ['overdue', 'rejected', 'failed', 'cancelled', 'canceled', 'noshow'];
-  const ACTIVE = ['active', 'inprogress', 'open'];
+  const SUCCESS = ['completed', 'done', 'paid', 'approved', 'published', 'succeeded', 'confirmed', 'won', 'signed', 'accepted', 'admitted', 'sent', 'resolved', 'completedearly', 'completedlate'];
+  const DESTRUCTIVE = ['overdue', 'rejected', 'failed', 'cancelled', 'canceled', 'noshow', 'lost', 'expired', 'revoked', 'bounced', 'error', 'pastdue'];
+  const ACTIVE = ['active', 'inprogress', 'open', 'ontrack'];
   const SCHEDULED = ['scheduled', 'submitted'];
-  const PENDING = ['pending', 'processing', 'new', 'draft', 'paused', 'publishing', 'todo', 'onhold', 'requirespaymentmethod', 'requiresaction', 'intransit', 'prospect'];
-  const MUTED = ['archived', 'closed', 'inactive', 'refunded'];
+  const PENDING = ['pending', 'processing', 'new', 'draft', 'paused', 'publishing', 'todo', 'onhold', 'requirespaymentmethod', 'requiresaction', 'intransit', 'prospect', 'sending', 'invited', 'trialing', 'atrisk'];
+  const MUTED = ['archived', 'closed', 'inactive', 'refunded', 'churned', 'unsubscribed'];
 
   /** Opacity value for bars, cards, and visual weight (Clean Gantt pattern) */
   function getStatusOpacity(status?: string | null): number {

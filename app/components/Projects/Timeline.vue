@@ -76,18 +76,8 @@ const calculateTimelineData = () => {
 				: 'overdue';
 };
 
-const getStatusColor = computed(
-	() =>
-		({
-			'completed-early': 'bg-green-500',
-			'completed-late': 'bg-red-500',
-			'on-track': 'bg-blue-500',
-			'at-risk': 'bg-yellow-500',
-			'in-progress': 'bg-blue-500',
-			overdue: 'bg-red-500',
-			pending: 'bg-gray-500',
-		})[timelineData.status] || 'bg-gray-500',
-);
+const { getStatusAccent } = useStatusStyle();
+const statusDotColor = computed(() => getStatusAccent(timelineData.status));
 
 watch(() => props.project, calculateTimelineData, { immediate: true });
 
@@ -159,11 +149,10 @@ onUnmounted(() => {
 						`marker-${type}`,
 						'absolute top-0 transform -translate-x-1/2 w-4 h-4 rounded-full border-2 border-white transition-all',
 						{
-							'bg-gray-500': type === 'start',
-							'bg-blue-500': type === 'due',
-							'bg-yellow-500': type === 'projected',
-							'bg-green-500': type === 'completion' && timelineData.status === 'completed-early',
-							'bg-red-500': type === 'completion' && timelineData.status === 'completed-late',
+							'bg-muted-foreground': type === 'start',
+							'bg-sky-500': type === 'due',
+							'bg-amber-500': type === 'projected',
+							'bg-green-500': type === 'completion',
 						},
 					]"
 					:style="{ left: `${position}%` }"
@@ -180,7 +169,7 @@ onUnmounted(() => {
 		<!-- Status Information -->
 		<div class="flex items-center justify-between text-sm">
 			<div class="flex items-center space-x-2">
-				<div :class="[getStatusColor, 'w-3 h-3 rounded-full']"></div>
+				<div class="w-3 h-3 rounded-full" :style="{ backgroundColor: statusDotColor }"></div>
 				<span class="capitalize">{{ timelineData.status.replace('-', ' ') }}</span>
 			</div>
 			<div v-if="!timelineData.completionDate">
