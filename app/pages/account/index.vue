@@ -1,45 +1,49 @@
 <template>
-	<div class="md:px-6 mx-auto flex items-start justify-center flex-col md:flex-row relative px-4 account">
-		<div class="md:top-4 flex md:items-end md:justify-end flex-col w-full md:mr-6 lg:mr account__navigation">
-			<UserAvatar size="md" />
+	<div class="account-page">
+		<LayoutPageContainer>
+			<h1 class="text-2xl font-semibold mb-6">Account</h1>
 
-			<h1 class="hidden md:inline-block mt-6">{{ user?.first_name }} {{ user?.last_name }}</h1>
-			<a :class="{ active: panel === 1 }" @click.prevent="changePanel(1)">Profile</a>
-			<a :class="{ active: panel === 2 }" @click.prevent="changePanel(2)">Reset Password</a>
-			<a :class="{ active: panel === 3 }" @click.prevent="changePanel(3)">Earnest Score</a>
-			<a :class="{ active: panel === 4 }" @click.prevent="changePanel(4)">Layout</a>
-			<a :class="{ active: panel === 5 }" @click.prevent="changePanel(5)">Appearance</a>
-			<a :class="{ active: panel === 6 }" @click.prevent="changePanel(6)">Notifications</a>
-			<AccountLogout v-if="user" class="logout-icon" />
-		</div>
-		<transition-group
-			name="list"
-			tag="div"
-			class="w-full flex flex-col items-center justify-start relative account__panels"
-		>
-			<div v-if="panel === 1" key="1" class="account__panel profile">
-				<AccountProfile />
-			</div>
-			<div v-if="panel === 2" key="2" class="account__panel">
-				<AccountPasswordRequest />
-			</div>
-			<div v-if="panel === 3" key="3" class="account__panel">
-				<div class="max-w-xl">
-					<h2 class="text-lg font-semibold text-foreground mb-6">Earnest Score</h2>
-					<EarnestProfilePanel />
+			<!-- Identity card -->
+			<div class="ios-card flex items-center gap-4 p-4 mb-6">
+				<UserAvatar size="md" />
+				<div class="min-w-0">
+					<p class="text-base font-semibold truncate">{{ fullName || 'Account' }}</p>
+					<p class="text-xs text-muted-foreground truncate">{{ user?.email }}</p>
+				</div>
+				<div class="ml-auto">
+					<AccountLogout v-if="user" />
 				</div>
 			</div>
-			<div v-if="panel === 4" key="4" class="account__panel">
-				<div class="max-w-md">
-					<h2 class="text-lg font-semibold text-foreground mb-6">Layout</h2>
 
-					<div class="space-y-6">
-						<!-- Apps Layout toggle -->
+			<AppFloorStrip
+				v-model="section"
+				:items="sections"
+				aria-label="Account sections"
+			/>
+
+			<div class="account-page__panel">
+				<section v-if="section === 'profile'">
+					<AccountProfile />
+				</section>
+
+				<section v-else-if="section === 'password'">
+					<h2 class="account-page__heading">Reset Password</h2>
+					<AccountPasswordRequest />
+				</section>
+
+				<section v-else-if="section === 'score'" class="max-w-xl">
+					<h2 class="account-page__heading">Earnest Score</h2>
+					<EarnestProfilePanel />
+				</section>
+
+				<section v-else-if="section === 'layout'" class="max-w-xl">
+					<h2 class="account-page__heading">Layout</h2>
+					<div class="ios-card p-5 space-y-6">
 						<div class="flex items-start justify-between gap-4">
 							<div class="flex-1 min-w-0">
-								<p class="text-sm font-medium">Try Apps Layout (preview)</p>
+								<p class="text-sm font-medium">Apps Layout</p>
 								<p class="text-xs text-muted-foreground mt-1">
-									An app-by-app shell for Clients, Work, Money, Marketing, and
+									App-by-app shell for Clients, Work, Money, Marketing, and
 									Organization. Your classic sidebar stays available — toggle
 									back any time.
 								</p>
@@ -51,7 +55,6 @@
 							/>
 						</div>
 
-						<!-- Rail position select (only when apps mode is on) -->
 						<div v-if="appsModeChecked" class="flex items-start justify-between gap-4">
 							<div class="flex-1 min-w-0">
 								<p class="text-sm font-medium">Rail Position</p>
@@ -78,20 +81,33 @@
 							</Select>
 						</div>
 					</div>
-				</div>
-			</div>
-			<div v-if="panel === 5" key="5" class="account__panel">
-				<div class="max-w-md">
-					<h2 class="text-lg font-semibold text-foreground mb-6">Appearance</h2>
-					<ThemeSwitcher />
-				</div>
-			</div>
-			<div v-if="panel === 6" key="6" class="account__panel">
-				<div class="max-w-md mx-auto">
-					<h2 class="text-lg font-semibold text-foreground mb-6">Notification Preferences</h2>
+				</section>
 
-					<!-- Desktop Notifications -->
-					<div class="space-y-5">
+				<section v-else-if="section === 'appearance'" class="w-full">
+					<h2 class="account-page__heading">Appearance</h2>
+
+					<!-- Dark mode (top-of-section quick toggle) -->
+					<div class="ios-card flex items-center justify-between gap-4 p-4 mb-6">
+						<div class="flex items-center gap-3 min-w-0">
+							<span class="flex items-center justify-center size-9 rounded-lg bg-muted/60 text-foreground/80 shrink-0">
+								<Icon :name="isDark ? 'lucide:moon' : 'lucide:sun'" class="size-4" />
+							</span>
+							<div class="min-w-0">
+								<p class="text-sm font-semibold">Dark mode</p>
+								<p class="text-xs text-muted-foreground">Use a dark colour scheme across the entire app.</p>
+							</div>
+						</div>
+						<Switch :model-value="isDark" @update:model-value="toggleDark" />
+					</div>
+
+					<!-- Theme + Typography (full width, modernized grid) -->
+					<ThemeSwitcher />
+				</section>
+
+				<section v-else-if="section === 'notifications'" class="max-w-xl">
+					<h2 class="account-page__heading">Notifications</h2>
+
+					<div class="ios-card p-5 space-y-5">
 						<div class="flex items-center justify-between">
 							<div>
 								<p class="text-sm font-medium">Desktop Notifications</p>
@@ -105,121 +121,78 @@
 								>
 									Enable
 								</button>
-								<span
-									v-else-if="!desktopNotifs.isSupported.value"
-									class="text-xs text-muted-foreground"
-								>
+								<span v-else-if="!desktopNotifs.isSupported.value" class="text-xs text-muted-foreground">
 									Not supported
 								</span>
-								<span
-									v-else
-									class="text-xs text-green-600 dark:text-green-400"
-								>
+								<span v-else class="text-xs text-green-600 dark:text-green-400">
 									Enabled
 								</span>
 							</div>
 						</div>
 
-						<div class="border-t dark:border-gray-700" />
+						<div class="border-t border-border/40" />
 
-						<!-- Sound Notifications -->
 						<div class="flex items-center justify-between">
 							<div>
 								<p class="text-sm font-medium">Sound Alerts</p>
 								<p class="text-xs text-muted-foreground">Play sound when new notifications arrive</p>
 							</div>
-							<button
-								class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors"
-								:class="notifPrefs.soundEnabled ? 'bg-primary' : 'bg-muted'"
-								@click="notifPrefs.soundEnabled = !notifPrefs.soundEnabled"
-							>
-								<span
-									class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition-transform"
-									:class="notifPrefs.soundEnabled ? 'translate-x-4' : 'translate-x-0'"
-								/>
-							</button>
+							<Switch
+								:model-value="notifPrefs.soundEnabled"
+								@update:model-value="(v) => notifPrefs.soundEnabled = v"
+							/>
 						</div>
 
-						<!-- Email Notifications -->
 						<div class="flex items-center justify-between">
 							<div>
 								<p class="text-sm font-medium">Email Notifications</p>
 								<p class="text-xs text-muted-foreground">Receive email for important updates</p>
 							</div>
-							<button
-								class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors"
-								:class="notifPrefs.emailEnabled ? 'bg-primary' : 'bg-muted'"
-								@click="notifPrefs.emailEnabled = !notifPrefs.emailEnabled"
-							>
-								<span
-									class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition-transform"
-									:class="notifPrefs.emailEnabled ? 'translate-x-4' : 'translate-x-0'"
-								/>
-							</button>
+							<Switch
+								:model-value="notifPrefs.emailEnabled"
+								@update:model-value="(v) => notifPrefs.emailEnabled = v"
+							/>
 						</div>
 
-						<!-- Desktop enabled preference -->
 						<div class="flex items-center justify-between">
 							<div>
 								<p class="text-sm font-medium">Desktop Alerts</p>
 								<p class="text-xs text-muted-foreground">Show desktop notification popups</p>
 							</div>
-							<button
-								class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors"
-								:class="notifPrefs.desktopEnabled ? 'bg-primary' : 'bg-muted'"
-								@click="notifPrefs.desktopEnabled = !notifPrefs.desktopEnabled"
-							>
-								<span
-									class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition-transform"
-									:class="notifPrefs.desktopEnabled ? 'translate-x-4' : 'translate-x-0'"
-								/>
-							</button>
+							<Switch
+								:model-value="notifPrefs.desktopEnabled"
+								@update:model-value="(v) => notifPrefs.desktopEnabled = v"
+							/>
 						</div>
 					</div>
 
-					<div class="border-t dark:border-gray-700 mt-2" />
+					<h3 class="account-page__subheading">Interaction Feedback</h3>
 
-					<h3 class="text-sm font-semibold text-foreground mt-5 mb-3">Interaction Feedback</h3>
-
-					<div class="space-y-5">
-						<!-- Haptic Feedback (hidden on devices without Vibration API, e.g. iOS Safari) -->
+					<div class="ios-card p-5 space-y-5">
 						<div v-if="hapticSupported" class="flex items-center justify-between">
 							<div>
 								<p class="text-sm font-medium">Haptic Feedback</p>
 								<p class="text-xs text-muted-foreground">Vibration on interactions (mobile devices)</p>
 							</div>
-							<button
-								class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors"
-								:class="feedbackPrefs.hapticEnabled ? 'bg-primary' : 'bg-muted'"
-								@click="toggleFeedbackPref('hapticEnabled')"
-							>
-								<span
-									class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition-transform"
-									:class="feedbackPrefs.hapticEnabled ? 'translate-x-4' : 'translate-x-0'"
-								/>
-							</button>
+							<Switch
+								:model-value="feedbackPrefs.hapticEnabled"
+								@update:model-value="() => toggleFeedbackPref('hapticEnabled')"
+							/>
 						</div>
 
-						<!-- Sound Feedback -->
 						<div class="flex items-center justify-between">
 							<div>
 								<p class="text-sm font-medium">Sound Feedback</p>
 								<p class="text-xs text-muted-foreground">Audio cues on actions like save, delete, and errors</p>
 							</div>
-							<button
-								class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors"
-								:class="feedbackPrefs.soundEnabled ? 'bg-primary' : 'bg-muted'"
-								@click="toggleFeedbackPref('soundEnabled')"
-							>
-								<span
-									class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-sm ring-0 transition-transform"
-									:class="feedbackPrefs.soundEnabled ? 'translate-x-4' : 'translate-x-0'"
-								/>
-							</button>
+							<Switch
+								:model-value="feedbackPrefs.soundEnabled"
+								@update:model-value="() => toggleFeedbackPref('soundEnabled')"
+							/>
 						</div>
 					</div>
 
-					<div class="mt-6 flex justify-end">
+					<div class="mt-5 flex justify-end">
 						<button
 							class="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
 							@click="handleSavePrefs"
@@ -227,9 +200,9 @@
 							Save Preferences
 						</button>
 					</div>
-				</div>
+				</section>
 			</div>
-		</transition-group>
+		</LayoutPageContainer>
 	</div>
 </template>
 
@@ -245,19 +218,45 @@ import {
 } from '@/components/ui/select';
 import type { RailPosition } from '~/composables/useAppsMode';
 
+type SectionKey = 'profile' | 'password' | 'score' | 'layout' | 'appearance' | 'notifications';
+
 const { user } = useDirectusAuth();
 const { isAppsMode, railPosition, setMode, setRailPosition } = useAppsMode();
+const route = useRoute();
+const router = useRouter();
 
 definePageMeta({
 	middleware: ['auth'],
 });
-useHead({ title: 'Account Settings | Earnest' });
+useHead({ title: 'Account | Earnest' });
 
-const panel = ref(1);
+const sections: Array<{ key: SectionKey; label: string; icon: string }> = [
+	{ key: 'profile',       label: 'Profile',       icon: 'lucide:user-round' },
+	{ key: 'password',      label: 'Password',      icon: 'lucide:key-round' },
+	{ key: 'score',         label: 'Earnest Score', icon: 'lucide:sparkles' },
+	{ key: 'layout',        label: 'Layout',        icon: 'lucide:layout-grid' },
+	{ key: 'appearance',    label: 'Appearance',    icon: 'lucide:palette' },
+	{ key: 'notifications', label: 'Notifications', icon: 'lucide:bell' },
+];
 
-function changePanel(val: string | number) {
-	panel.value = Number(val);
-}
+const SECTION_KEYS: SectionKey[] = sections.map((s) => s.key);
+const initialSection: SectionKey = (() => {
+	const v = route.query.section;
+	return typeof v === 'string' && SECTION_KEYS.includes(v as SectionKey)
+		? (v as SectionKey)
+		: 'profile';
+})();
+const section = ref<SectionKey>(initialSection);
+
+watch(section, (next) => {
+	router.replace({ query: { ...route.query, section: next === 'profile' ? undefined : next } });
+});
+
+const fullName = computed(() => {
+	const u = user.value as Record<string, any> | null;
+	if (!u) return '';
+	return [u.first_name, u.last_name].filter(Boolean).join(' ');
+});
 
 // ── Notification preferences ────────────────────────────────────────────────
 const { userPreferences, savePreferences } = useNotifications();
@@ -319,56 +318,31 @@ async function handleRailChange(next: unknown) {
 		railSaving.value = false;
 	}
 }
+
+// ── Appearance / dark mode ──────────────────────────────────────────────────
+const colorMode = useColorMode();
+const isDark = computed(() => colorMode.value === 'dark');
+function toggleDark(next: boolean) {
+	colorMode.preference = next ? 'dark' : 'light';
+}
 </script>
-<style>
+
+<style scoped>
 @reference "~/assets/css/tailwind.css";
-.account {
-	max-width: 1600px;
+
+.account-page {
+	@apply flex flex-col min-h-full;
 }
 
-.account__navigation {
-	border-bottom: thin solid var(--lightGrey);
-
-	@media (min-width: theme('screens.md')) {
-		width: 220px;
-		border-bottom: none;
-	}
-	h1 {
-		font-size: 10px;
-		@apply w-full text-center md:text-right uppercase tracking-wider pb-2 mb-0 md:mb-2;
-	}
-
-	a,
-	.logout-btn {
-		font-size: 10px;
-		@apply w-full text-center md:text-right uppercase tracking-wider pb-2 mb-0 md:mb-2 cursor-pointer;
-	}
-
-	a.active {
-		color: var(--purple);
-		opacity: 0.25;
-	}
+.account-page__panel {
+	@apply mt-1;
 }
 
-.account__panels {
-	width: 100%;
-
-	@media (min-width: theme('screens.md')) {
-		width: 800px;
-	}
+.account-page__heading {
+	@apply text-base font-semibold text-foreground mb-4;
 }
 
-.account__panel {
-	@apply w-full;
-
-	h2 {
-		@apply uppercase tracking-wider font-bold text-sm text-center w-full mt-6;
-	}
-
-	.addresses__nav {
-		a {
-			max-width: 200px;
-		}
-	}
+.account-page__subheading {
+	@apply text-sm font-semibold text-foreground mt-6 mb-3;
 }
 </style>

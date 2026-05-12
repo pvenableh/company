@@ -532,20 +532,7 @@ function onClientInvited() {
     </AppHeader>
 
     <LayoutPageContainer>
-      <!-- Floor strip -->
-      <div class="mb-5 inline-flex items-center gap-1 rounded-full border border-border bg-card p-0.5 overflow-x-auto max-w-full">
-        <button
-          v-for="seg in floors"
-          :key="seg.key"
-          type="button"
-          class="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors whitespace-nowrap"
-          :class="floor === seg.key ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'"
-          @click="floor = seg.key"
-        >
-          <Icon :name="seg.icon" class="w-3.5 h-3.5" />
-          {{ seg.label }}
-        </button>
-      </div>
+      <AppFloorStrip v-model="floor" :items="floors" aria-label="Organization sections" />
 
       <!-- Archived banner -->
       <div

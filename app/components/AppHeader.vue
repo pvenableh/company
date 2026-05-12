@@ -18,6 +18,7 @@
 
 const router = useRouter();
 const route = useRoute();
+const { accent } = useAppAccent();
 
 const props = withDefaults(
 	defineProps<{
@@ -38,6 +39,7 @@ function goBack() {
 }
 
 const fallbackBackLabel = computed(() => {
+	if (accent.value) return accent.value.name;
 	const seg = route.path.split('/').filter(Boolean);
 	if (seg[0] === 'apps' && seg.length >= 2) {
 		const appId = seg[1];
@@ -59,6 +61,7 @@ const fallbackBackLabel = computed(() => {
 				<Icon name="lucide:chevron-left" class="size-4" />
 				<span class="hidden sm:inline">{{ backLabel ?? fallbackBackLabel }}</span>
 			</button>
+			<span v-if="accent && !showBack" class="app-header__accent-dot" aria-hidden="true" />
 			<h1 v-if="title || $slots.default" class="app-header__title">
 				<slot>{{ title }}</slot>
 			</h1>
@@ -73,7 +76,26 @@ const fallbackBackLabel = computed(() => {
 @reference "~/assets/css/tailwind.css";
 
 .app-header {
-	@apply flex items-center justify-between gap-3 px-4 sm:px-6 h-12 shrink-0 border-b border-border/40 bg-background z-30;
+	@apply relative flex items-center justify-between gap-3 px-4 sm:px-6 h-12 shrink-0 border-b border-border/40 bg-background z-30;
+}
+
+/* Thin accent stripe under the header that picks up the current app's tone. */
+.app-header::after {
+	content: '';
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: -1px;
+	height: 2px;
+	background: linear-gradient(
+		90deg,
+		hsl(var(--app-accent-h, 220) var(--app-accent-s, 10%) var(--app-accent-l, 48%) / 0) 0%,
+		hsl(var(--app-accent-h, 220) var(--app-accent-s, 10%) var(--app-accent-l, 48%) / 0.6) 14%,
+		hsl(var(--app-accent-h, 220) var(--app-accent-s, 10%) var(--app-accent-l, 48%) / 0.6) 86%,
+		hsl(var(--app-accent-h, 220) var(--app-accent-s, 10%) var(--app-accent-l, 48%) / 0) 100%
+	);
+	opacity: 0.55;
+	pointer-events: none;
 }
 
 .app-header__left {
@@ -82,6 +104,12 @@ const fallbackBackLabel = computed(() => {
 
 .app-header__back {
 	@apply flex items-center gap-1 text-muted-foreground hover:text-foreground text-sm transition-colors -ml-1 px-1.5 py-1 rounded-md hover:bg-muted/40;
+}
+
+.app-header__accent-dot {
+	@apply inline-block w-1.5 h-1.5 rounded-full shrink-0;
+	background: hsl(var(--app-accent-h, 220) var(--app-accent-s, 10%) var(--app-accent-l, 48%));
+	box-shadow: 0 0 0 3px hsl(var(--app-accent-h, 220) var(--app-accent-s, 10%) var(--app-accent-l, 48%) / 0.18);
 }
 
 .app-header__title {

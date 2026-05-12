@@ -10,6 +10,7 @@
 				`apps-shell--rail-${railPosition}`,
 				railIsHorizontal ? 'apps-shell--horizontal' : 'apps-shell--vertical',
 			]"
+			:style="accentStyle"
 		>
 			<AppRail v-if="railPosition !== 'floating'" class="apps-shell__rail" />
 
@@ -43,12 +44,9 @@
 						>
 							<Icon name="lucide:sparkles" class="size-4" />
 						</button>
-						<NuxtLink v-if="user" to="/account" class="shrink-0">
-							<Avatar class="size-7">
-								<AvatarImage v-if="avatarUrl" :src="avatarUrl" :alt="userFirstName" />
-								<AvatarFallback class="text-xs font-semibold">{{ initials }}</AvatarFallback>
-							</Avatar>
-						</NuxtLink>
+						<ClientOnly>
+							<LayoutUserMenu v-if="user" class="shrink-0" />
+						</ClientOnly>
 					</div>
 				</header>
 
@@ -85,15 +83,13 @@
 </template>
 
 <script setup lang="ts">
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { timeTrackerModalOpen } from '~/composables/useTimeTrackerModal';
 import { tokenModalOpen } from '~/composables/useTokenModal';
 import { aiTrayOpen, aiTrayInitialPrompt, openAITray, closeAITray } from '~/composables/useAITray';
 
 const { user } = useDirectusAuth();
 const { railPosition } = useAppsMode();
-
-const config = useRuntimeConfig();
+const { accentStyle } = useAppAccent();
 
 const { isOnEntityPage, openSidebar: openEntitySidebar } = useEntityPageContext();
 
@@ -110,25 +106,6 @@ const timeTrackerModalVisible = timeTrackerModalOpen;
 const tokenModalVisible = tokenModalOpen;
 
 const railIsHorizontal = computed(() => railPosition.value === 'top' || railPosition.value === 'bottom');
-
-const userFirstName = computed(() => {
-	const u = user.value as Record<string, any> | null;
-	return u?.first_name ?? 'User';
-});
-
-const avatarUrl = computed(() => {
-	const u = user.value as Record<string, any> | null;
-	if (!u?.avatar) return null;
-	return `${config.public.assetsUrl}${u.avatar}?key=avatar`;
-});
-
-const initials = computed(() => {
-	const u = user.value as Record<string, any> | null;
-	if (!u) return 'U';
-	const first = (u.first_name as string | undefined)?.[0] ?? '';
-	const last = (u.last_name as string | undefined)?.[0] ?? '';
-	return (first + last).toUpperCase() || 'U';
-});
 
 if (import.meta.client) {
 	onMounted(() => {

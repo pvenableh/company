@@ -927,7 +927,7 @@ watch(searchEmail, (val) => {
 
 <template>
 	<LayoutPageContainer>
-		<h1 class="text-2xl font-semibold mb-6">Company</h1>
+		<h1 class="text-2xl font-semibold mb-6">Organization</h1>
 		<div class="w-full">
 			<!-- Loading state (wait for both org initialization and page data) -->
 			<div v-if="isLoading || (!orgIsInitialized && orgInitLoading)" class="flex justify-center items-center min-h-[300px]">

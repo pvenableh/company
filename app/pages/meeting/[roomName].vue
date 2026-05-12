@@ -408,7 +408,7 @@ const annotationBus = {
 const persistChatMessage = async (text, senderName, fromId) => {
 	if (!meeting.value?.id) return;
 	try {
-		await $fetch(`/api/video/meetings/${meeting.value.id}/chat-messages`, {
+		const res = await $fetch(`/api/video/meetings/${meeting.value.id}/chat-messages`, {
 			method: 'POST',
 			body: {
 				message: text,
@@ -417,15 +417,27 @@ const persistChatMessage = async (text, senderName, fromId) => {
 				sentAt: new Date().toISOString(),
 			},
 		});
+		console.log('[meeting] chat captured', { senderName, fromId, deduped: !!res?.deduped });
 	} catch (err) {
-		// Capture failures shouldn't disrupt the meeting — just log and move on.
-		console.warn('[meeting] chat capture failed', err?.message || err);
+		// Capture failures shouldn't disrupt the meeting — log loudly with
+		// status code so it's obvious in DevTools when the route is 401/403/etc.
+		console.warn(
+			'[meeting] chat capture failed',
+			err?.statusCode || err?.response?.status,
+			err?.data?.message || err?.message || err,
+		);
 	}
 };
 
 const handleAppMessage = (e) => {
 	const data = e?.data;
 	if (!data || typeof data !== 'object') return;
+
+	// One-line diagnostic so we can see in DevTools exactly what shapes
+	// Daily's prebuilt is firing. Cheap (one console.log per message) and
+	// invaluable for verifying chat-msg / annotation-* delivery without
+	// having to rebuild.
+	console.log('[meeting] app-message received', { fromId: e?.fromId, data });
 
 	if (data.type === 'annotation-stroke') {
 		if (!data.segment) return;
@@ -450,12 +462,12 @@ const handleAppMessage = (e) => {
 	const isChat = data.event === 'chat-msg' || data.kind === 'chat-msg' || data.type === 'chat-msg';
 	const text = data.message || data.msg || data.text;
 	if (isChat && typeof text === 'string' && text.trim()) {
-		// Daily's `*` broadcast skips the sender, so the sender never sees their
-		// own message — only receivers do. To avoid writing N rows per message
-		// (one per receiver) we designate the host's tab as the sole logger.
-		// If the host hasn't joined yet, the chat isn't captured — acceptable
-		// since the host is the one who'll review the recap anyway.
-		if (!isHost.value) return;
+		// Every participant attempts to log the messages they receive. Daily's
+		// `*` broadcast skips the sender, so the host never sees their own
+		// chat — letting guests log too is what captures the host's outbound
+		// messages. The server endpoint dedupes on
+		// (meeting, sender_session_id, message, ±5s) so the N receivers each
+		// POSTing the same line collapses into a single row.
 		persistChatMessage(text.trim(), data.name || data.fromName || 'Participant', e?.fromId);
 	}
 };
@@ -588,6 +600,34 @@ const wrapDailyIframe = async () => {
 	try {
 		const { default: DailyIframe } = await import('@daily-co/daily-js');
 		dailyCallObject = DailyIframe.wrap(el);
+
+		// Capture our own outbound chat. Daily's `sendAppMessage(data, '*')`
+		// broadcasts to everyone *except* the sender, so the host's own chat
+		// would never reach `app-message` on their tab. Wrap the method to
+		// peek at outbound `chat-msg` payloads and push them into the same
+		// persistChatMessage path the inbound branch uses.
+		try {
+			const originalSend = dailyCallObject.sendAppMessage?.bind(dailyCallObject);
+			if (originalSend) {
+				dailyCallObject.sendAppMessage = (data, to) => {
+					try {
+						const isChat = data?.event === 'chat-msg' || data?.kind === 'chat-msg' || data?.type === 'chat-msg';
+						const text = data?.message || data?.msg || data?.text;
+						if (isChat && typeof text === 'string' && text.trim()) {
+							persistChatMessage(
+								text.trim(),
+								data?.name || data?.fromName || 'You',
+								mySessionId.value || annotationAuthorId.value,
+							);
+						}
+					} catch (err) { console.warn('[meeting] outbound chat hook failed', err); }
+					return originalSend(data, to);
+				};
+			}
+		} catch (err) {
+			console.warn('[meeting] sendAppMessage wrap failed', err);
+		}
+
 		dailyCallObject.on('app-message', handleAppMessage);
 		dailyCallObject.on('joined-meeting', handleJoinedMeeting);
 		dailyCallObject.on('left-meeting', handleLeftMeeting);

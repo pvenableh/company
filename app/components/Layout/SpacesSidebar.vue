@@ -125,10 +125,12 @@ function handleTopup() {
 }
 
 async function handleEnterAppsMode() {
-	try {
-		await setAppsMode('apps')
-		await navigateTo('/apps/clients')
-	} catch {}
+	// Navigate first so users land in Apps Layout immediately, even if the
+	// persistence call to Directus errors out (e.g. on demo accounts where
+	// `layout_mode` isn't writable). The local ref still flips, so the apps
+	// shell renders correctly for the session.
+	void setAppsMode('apps').catch(() => {})
+	await navigateTo('/apps/clients')
 }
 </script>
 

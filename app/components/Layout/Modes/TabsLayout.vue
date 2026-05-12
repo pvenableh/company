@@ -120,12 +120,9 @@ function isActive(tab: typeof tabs[number]): boolean {
         <LayoutInboxBell />
         <LayoutNotificationsMenu />
 
-        <NuxtLink v-if="user" to="/account" class="shrink-0">
-          <Avatar class="size-8 ring-2 ring-transparent hover:ring-primary/20 transition-all duration-200">
-            <AvatarImage v-if="avatarUrl" :src="avatarUrl" :alt="user?.first_name" />
-            <AvatarFallback class="text-xs font-semibold">{{ initials }}</AvatarFallback>
-          </Avatar>
-        </NuxtLink>
+        <ClientOnly>
+          <LayoutUserMenu v-if="user" class="shrink-0" />
+        </ClientOnly>
       </div>
     </header>
 

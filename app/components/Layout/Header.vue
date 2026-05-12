@@ -114,12 +114,9 @@ onUnmounted(() => {
 				</DropdownMenu>
 				</client-only>
 
-				<nuxt-link to="/account" class="flex items-center justify-self-center">
-					<UserAvatar class="size-8 mr-2">
-						<AvatarImage v-if="avatarUrl" :src="avatarUrl" :alt="user?.first_name" />
-						<AvatarFallback>{{ initials }}</AvatarFallback>
-					</UserAvatar>
-				</nuxt-link>
+				<ClientOnly>
+					<LayoutUserMenu v-if="user" class="mr-2" />
+				</ClientOnly>
 				<LayoutNotificationsMenu class="mr-2" />
 			</template>
 			<template v-else>

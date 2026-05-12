@@ -81,26 +81,28 @@ export function useAppsMode() {
 	);
 
 	async function setMode(next: AppsLayoutMode): Promise<void> {
-		const prev = mode.value;
-		if (prev === next) return;
+		if (mode.value === next) return;
+		// Flip the local override immediately so the UI reacts even if the
+		// server-side save fails (e.g. demo accounts where `layout_mode`
+		// isn't writable). The user keeps the chosen layout for the
+		// session; persistence is best-effort.
 		localMode.value = next;
 		try {
 			await updateMe({ layout_mode: next });
 		} catch (err) {
-			localMode.value = prev;
+			console.warn('[useAppsMode] layout_mode persist failed; keeping local override', err);
 			throw err;
 		}
 	}
 
 	async function setRailPosition(next: RailPosition): Promise<void> {
-		const prev = railPosition.value;
-		if (prev === next) return;
 		if (!RAIL_POSITIONS.includes(next)) return;
+		if (railPosition.value === next) return;
 		localRailPosition.value = next;
 		try {
 			await updateMe({ app_rail_position: next });
 		} catch (err) {
-			localRailPosition.value = prev;
+			console.warn('[useAppsMode] app_rail_position persist failed; keeping local override', err);
 			throw err;
 		}
 	}

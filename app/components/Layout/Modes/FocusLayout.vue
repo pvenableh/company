@@ -81,12 +81,9 @@ function isActiveItem(to: string): boolean {
 				>
 					<Icon name="lucide:sparkles" class="w-4 h-4" />
 				</button>
-				<NuxtLink v-if="user" to="/account" class="shrink-0 mt-1">
-					<Avatar class="size-7">
-						<AvatarImage v-if="avatarUrl" :src="avatarUrl" :alt="user?.first_name" />
-						<AvatarFallback class="text-[10px] font-semibold">{{ initials }}</AvatarFallback>
-					</Avatar>
-				</NuxtLink>
+				<ClientOnly>
+					<LayoutUserMenu v-if="user" class="shrink-0 mt-1" />
+				</ClientOnly>
 			</div>
 		</aside>
 
