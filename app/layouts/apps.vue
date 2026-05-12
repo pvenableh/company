@@ -16,7 +16,11 @@
 
 			<div class="apps-shell__main">
 				<header class="apps-shell__chrome glass">
-					<div class="apps-shell__chrome-left" />
+					<div class="apps-shell__chrome-left">
+						<ClientOnly>
+							<LayoutClientSelect v-if="user" :user="user" @open-org-switcher="showOrgSwitcher = true" />
+						</ClientOnly>
+					</div>
 					<div class="apps-shell__chrome-center">
 						<LayoutEarnestBrand to="/" tagline="Do good work." />
 					</div>
@@ -79,6 +83,8 @@
 		<ClientOnly>
 			<LayoutSpotlightSearch :open="spotlightOpen" @close="spotlightOpen = false" />
 		</ClientOnly>
+
+		<LayoutOrgSwitcher v-model="showOrgSwitcher" />
 	</div>
 </template>
 
@@ -102,6 +108,7 @@ const handleOpenAI = () => {
 };
 
 const spotlightOpen = ref(false);
+const showOrgSwitcher = ref(false);
 const timeTrackerModalVisible = timeTrackerModalOpen;
 const tokenModalVisible = tokenModalOpen;
 
