@@ -328,6 +328,7 @@ export default defineNuxtConfig({
 			'heroicons-outline',
 			'heroicons-solid',
 			'lucide',
+			'ph',
 			'wi',
 			'meteocons',
 			'material-symbols',

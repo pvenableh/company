@@ -198,6 +198,9 @@ importers:
       '@iconify-json/meteocons':
         specifier: ^1.2.2
         version: 1.2.4
+      '@iconify-json/ph':
+        specifier: ^1.2.2
+        version: 1.2.2
       '@nuxt/devtools':
         specifier: latest
         version: 4.0.0-alpha.4(@pnpm/logger@1001.0.1)(db0@0.3.4)(ioredis@5.10.1)(typescript@5.9.3)(vite@7.3.2(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))(vue@3.5.32(typescript@5.9.3))
@@ -1463,6 +1466,9 @@ packages:
 
   '@iconify-json/meteocons@1.2.4':
     resolution: {integrity: sha512-E7YV02ql5WmJgAOpXU/hoF9Mdshq73KjwR6fBxZ5SrqMJghMa3CIcRG6NQGwP4I1uBOhIjOFlAikYoPAKuT56A==}
+
+  '@iconify-json/ph@1.2.2':
+    resolution: {integrity: sha512-PgkEZNtqa8hBGjHXQa4pMwZa93hmfu8FUSjs/nv4oUU6yLsgv+gh9nu28Kqi8Fz9CCVu4hj1MZs9/60J57IzFw==}
 
   '@iconify/collections@1.0.671':
     resolution: {integrity: sha512-+UO1BvRCf2zpuKg6REnJfgDjKvtMGjmTFKIZSRhOLK3A6sAFo1ZDB+AjDE1g0lzhKZ4KZsYM7b5tCHFFvalQQA==}
@@ -10255,6 +10261,10 @@ snapshots:
       '@iconify/types': 2.0.0
 
   '@iconify-json/meteocons@1.2.4':
+    dependencies:
+      '@iconify/types': 2.0.0
+
+  '@iconify-json/ph@1.2.2':
     dependencies:
       '@iconify/types': 2.0.0
 
