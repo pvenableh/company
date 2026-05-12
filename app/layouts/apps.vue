@@ -12,7 +12,11 @@
 			]"
 			:style="accentStyle"
 		>
-			<AppRail v-if="railPosition !== 'floating'" class="apps-shell__rail" />
+			<AppRail
+				v-if="railPosition === 'left' || railPosition === 'right'"
+				key="rail-vertical"
+				class="apps-shell__rail"
+			/>
 
 			<div class="apps-shell__main">
 				<header class="apps-shell__chrome glass">
@@ -54,12 +58,22 @@
 					</div>
 				</header>
 
-				<main class="apps-shell__page">
+				<main
+					class="apps-shell__page"
+					:class="{
+						'apps-shell__page--rail-top': railPosition === 'top',
+						'apps-shell__page--rail-bottom': railPosition === 'bottom',
+					}"
+				>
 					<slot />
 				</main>
 			</div>
 
-			<AppRail v-if="railPosition === 'floating'" class="apps-shell__rail apps-shell__rail--floating" />
+			<AppRail
+				v-if="railPosition === 'top' || railPosition === 'bottom' || railPosition === 'floating'"
+				:key="`rail-${railPosition}`"
+				class="apps-shell__rail"
+			/>
 		</div>
 
 		<!-- Slide-over teleport target — apps push content into here via <Teleport to="#app-slide-over-root"> -->
@@ -179,5 +193,15 @@ if (import.meta.client) {
 
 .apps-shell__page {
 	@apply flex-1 overflow-auto min-h-0;
+}
+
+/* Top + bottom rails float as glass pills over the page; pad the scroll area
+ * so its content never slides under them. */
+.apps-shell__page--rail-top {
+	@apply pt-16 sm:pt-20;
+}
+
+.apps-shell__page--rail-bottom {
+	@apply pb-16 sm:pb-20;
 }
 </style>

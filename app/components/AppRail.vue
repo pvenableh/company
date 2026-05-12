@@ -2,19 +2,21 @@
 /**
  * AppRail — top-level navigation rail for Apps Layout mode.
  *
- * Icons + colours come from `useAppAccent` (single source of truth). Active
- * chip uses the per-app accent at full saturation; inactive items echo the
- * accent in their icon tint at low opacity so the rail still reads as a
- * coloured palette without active state.
+ * Icons + colours come from `useAppAccent` (single source of truth). All
+ * chips render with the per-app solid accent (macOS/iOS-app-icon style);
+ * the active item just gets a stronger gradient + shadow to stand out.
+ * Where labels are hidden (vertical + floating) a hover tooltip surfaces
+ * the app name.
  *
  * Position respects `useAppsMode().railPosition`:
  *   left / right → vertical column with footer pinned to bottom
- *   top / bottom → horizontal strip, footer wraps to the right
- *   floating     → glass + shadow pill, bottom-center
+ *   top / bottom → fixed glass pill, anchored to its edge
+ *   floating     → fixed glass pill, bottom-center (compact, icon-only)
  *
  * Mobile (< md) forces bottom via useAppsMode.
  */
 import { APP_ACCENTS, APP_ORDER, APP_FOOTER_ORDER, type AppAccent } from '~/composables/useAppAccent';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
 
 const route = useRoute();
 const { railPosition } = useAppsMode();
@@ -36,6 +38,19 @@ const isHorizontal = computed(() =>
 	|| railPosition.value === 'floating',
 );
 
+// Tooltips fill in for the inline label when the rail is icon-only.
+const showTooltip = computed(() =>
+	railPosition.value === 'left'
+	|| railPosition.value === 'right'
+	|| railPosition.value === 'floating',
+);
+
+const tooltipSide = computed<'top' | 'bottom' | 'left' | 'right'>(() => {
+	if (railPosition.value === 'left') return 'right';
+	if (railPosition.value === 'right') return 'left';
+	return 'top';
+});
+
 function styleFor(app: AppAccent) {
 	return {
 		'--rail-h': String(app.h),
@@ -46,52 +61,76 @@ function styleFor(app: AppAccent) {
 </script>
 
 <template>
-	<nav
-		class="app-rail"
-		:class="[
-			`app-rail--${railPosition}`,
-			isHorizontal ? 'app-rail--horizontal' : 'app-rail--vertical',
-		]"
-		aria-label="Apps"
-	>
-		<ul class="app-rail__group app-rail__group--main">
-			<li v-for="app in apps" :key="app.id">
-				<NuxtLink
-					:to="app.to"
-					class="app-rail__item"
-					:class="{ 'app-rail__item--active': activeId === app.id }"
-					:style="styleFor(app)"
-					:title="app.name"
-					:aria-label="app.name"
-				>
-					<span class="app-rail__chip">
-						<Icon :name="app.icon" class="app-rail__icon" />
-					</span>
-					<span class="app-rail__label">{{ app.name }}</span>
-				</NuxtLink>
-			</li>
-		</ul>
+	<TooltipProvider :delay-duration="120">
+		<nav
+			class="app-rail"
+			:class="[
+				`app-rail--${railPosition}`,
+				isHorizontal ? 'app-rail--horizontal' : 'app-rail--vertical',
+			]"
+			aria-label="Apps"
+		>
+			<ul class="app-rail__group app-rail__group--main">
+				<li v-for="app in apps" :key="app.id">
+					<Tooltip>
+						<TooltipTrigger as-child>
+							<NuxtLink
+								:to="app.to"
+								class="app-rail__item"
+								:class="{ 'app-rail__item--active': activeId === app.id }"
+								:style="styleFor(app)"
+								:aria-label="app.name"
+							>
+								<span class="app-rail__chip">
+									<span class="app-rail__icon">
+										<Icon :name="app.icon" class="app-rail__icon-layer app-rail__icon-base" />
+										<span class="app-rail__icon-layer app-rail__icon-highlight-mask" aria-hidden="true">
+											<Icon :name="app.icon" class="app-rail__icon-highlight" />
+										</span>
+									</span>
+								</span>
+								<span class="app-rail__label">{{ app.name }}</span>
+							</NuxtLink>
+						</TooltipTrigger>
+						<TooltipContent v-if="showTooltip" :side="tooltipSide" :side-offset="8">
+							{{ app.name }}
+						</TooltipContent>
+					</Tooltip>
+				</li>
+			</ul>
 
-		<span class="app-rail__divider" aria-hidden="true" />
+			<span class="app-rail__divider" aria-hidden="true" />
 
-		<ul class="app-rail__group app-rail__group--footer">
-			<li v-for="app in footer" :key="app.id">
-				<NuxtLink
-					:to="app.to"
-					class="app-rail__item"
-					:class="{ 'app-rail__item--active': activeId === app.id }"
-					:style="styleFor(app)"
-					:title="app.name"
-					:aria-label="app.name"
-				>
-					<span class="app-rail__chip">
-						<Icon :name="app.icon" class="app-rail__icon" />
-					</span>
-					<span class="app-rail__label">{{ app.name }}</span>
-				</NuxtLink>
-			</li>
-		</ul>
-	</nav>
+			<ul class="app-rail__group app-rail__group--footer">
+				<li v-for="app in footer" :key="app.id">
+					<Tooltip>
+						<TooltipTrigger as-child>
+							<NuxtLink
+								:to="app.to"
+								class="app-rail__item"
+								:class="{ 'app-rail__item--active': activeId === app.id }"
+								:style="styleFor(app)"
+								:aria-label="app.name"
+							>
+								<span class="app-rail__chip">
+									<span class="app-rail__icon">
+										<Icon :name="app.icon" class="app-rail__icon-layer app-rail__icon-base" />
+										<span class="app-rail__icon-layer app-rail__icon-highlight-mask" aria-hidden="true">
+											<Icon :name="app.icon" class="app-rail__icon-highlight" />
+										</span>
+									</span>
+								</span>
+								<span class="app-rail__label">{{ app.name }}</span>
+							</NuxtLink>
+						</TooltipTrigger>
+						<TooltipContent v-if="showTooltip" :side="tooltipSide" :side-offset="8">
+							{{ app.name }}
+						</TooltipContent>
+					</Tooltip>
+				</li>
+			</ul>
+		</nav>
+	</TooltipProvider>
 </template>
 
 <style scoped>
@@ -119,17 +158,26 @@ function styleFor(app: AppAccent) {
 
 .app-rail--left { @apply border-r; }
 .app-rail--right { @apply border-l; }
-.app-rail--top { @apply border-b; }
-.app-rail--bottom { @apply border-t pb-[env(safe-area-inset-bottom)]; }
 
+/* Top + bottom both render as fixed glass pills, anchored to their edge.
+ * They mirror the floating variant's chrome (rounded, translucent, blurred);
+ * the layout adds page padding so content does not scroll under them. */
+.app-rail--top,
+.app-rail--bottom,
 .app-rail--floating {
 	@apply fixed left-1/2 -translate-x-1/2 z-40
-		flex-row items-center
 		rounded-full border border-border/40 shadow-2xl
 		bg-background/85 backdrop-blur-md
-		px-2 py-1.5 w-auto;
-	bottom: calc(1rem + env(safe-area-inset-bottom));
-	column-gap: 6px;
+		w-auto;
+}
+
+.app-rail--top {
+	top: calc(56px + 0.75rem); /* chrome height + breathing gap */
+}
+
+.app-rail--bottom,
+.app-rail--floating {
+	bottom: calc(0.75rem + env(safe-area-inset-bottom));
 }
 
 /* ── Groups ──────────────────────────────────────────────────────── */
@@ -185,13 +233,55 @@ function styleFor(app: AppAccent) {
 }
 
 /* ── Chip (icon container) ───────────────────────────────────────── */
+/* iOS-style liquid glass — diagonal dark wash from bottom-right gives
+ * the tile weight; a white plus-lighter sheen from the top-left adds
+ * Apple's signature highlight and brightens the icon glyph beneath. */
 .app-rail__chip {
 	@apply flex items-center justify-center shrink-0
-		rounded-lg
+		rounded-md
 		transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)];
+	position: relative;
 	width: 32px;
 	height: 32px;
-	background: hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.08);
+	background:
+		/* heavier angled dark wash for that submerged iOS look */
+		linear-gradient(335deg, rgba(0, 0, 0, 0.32) 0%, rgba(0, 0, 0, 0.08) 60%),
+		/* deeper colored gradient — lightness shifts noticeably darker */
+		linear-gradient(
+			155deg,
+			hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.85),
+			hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) - 10%) / 0.78) 55%,
+			hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) - 22%) / 0.7)
+		);
+	backdrop-filter: blur(10px);
+	-webkit-backdrop-filter: blur(10px);
+	box-shadow:
+		/* inset bottom shadow — depth from underneath */
+		inset 0 -1.5px 2px hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) - 35%) / 0.45),
+		/* inset top-edge highlight — light catching the rim */
+		inset 0 0.5px 0 hsl(0 0% 100% / 0.45),
+		/* hairline accent rim */
+		0 0 0 0.5px hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) + 12%) / 0.5) inset,
+		/* soft tinted drop shadow */
+		0 2px 8px -2px hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.3);
+}
+
+/* White sheen overlay — plus-lighter is Apple's signature blend mode for
+ * liquid glass. Brightens both the chip's top-left and the icon glyph
+ * beneath without washing out the rest of the tile. */
+.app-rail__chip::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	border-radius: inherit;
+	background: linear-gradient(
+		335deg,
+		hsl(0 0% 100% / 0) 50%,
+		hsl(0 0% 100% / 0.18) 80%,
+		hsl(0 0% 100% / 0.42) 100%
+	);
+	mix-blend-mode: plus-lighter;
+	pointer-events: none;
 }
 
 .app-rail--horizontal .app-rail__chip,
@@ -200,22 +290,76 @@ function styleFor(app: AppAccent) {
 	height: 26px;
 }
 
+/* Icon wrapper stacks two copies of the SVG. The base layer carries the
+ * accent color; the highlight layer is white, masked to a fade so it only
+ * shows in the top portion of the glyph. The composite reads as a true
+ * gradient INSIDE the icon shape (light top → accent bottom). */
 .app-rail__icon {
-	@apply size-4;
-	stroke-width: 1.75;
-	color: hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) - 4%));
-	transition: color 0.2s ease, transform 0.2s ease;
+	@apply relative inline-block;
+	width: 18px;
+	height: 18px;
+	z-index: 2;
+	transition: transform 0.2s ease;
 }
 
 .app-rail--horizontal .app-rail__icon,
 .app-rail--floating .app-rail__icon {
-	@apply size-[15px];
+	width: 17px;
+	height: 17px;
 }
 
-/* Hover lift — fill the chip with a stronger tint, raise it 1px. */
+.app-rail__icon-layer {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	display: block;
+	stroke-width: 1.75;
+}
+
+.app-rail__icon-base {
+	/* Push the icon much lighter than the chip base so it pops against the
+	 * deeper colored backdrop. */
+	color: hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) + 32%));
+	filter: drop-shadow(0 1.5px 2px hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) - 18%) / 0.6));
+	z-index: 0;
+}
+
+/* Highlight wrapper — applies the gradient mask. Putting the mask on the
+ * wrapper (not the Icon) avoids overriding Nuxt Icon's own internal
+ * mask-image (which is what makes the icon shape). The Icon inside still
+ * renders normally; the wrapper's mask just clips the bottom away. */
+.app-rail__icon-highlight-mask {
+	-webkit-mask-image: linear-gradient(180deg, black 0%, rgba(0, 0, 0, 0.5) 35%, transparent 70%);
+	mask-image: linear-gradient(180deg, black 0%, rgba(0, 0, 0, 0.5) 35%, transparent 70%);
+	pointer-events: none;
+	z-index: 1;
+}
+
+.app-rail__icon-highlight {
+	display: block;
+	width: 100%;
+	height: 100%;
+	color: hsl(0 0% 100% / 0.8);
+}
+
+/* Hover lift — raise 1px and brighten the rim/sheen. */
 .app-rail__item:hover .app-rail__chip {
 	transform: translateY(-1px);
-	background: hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.16);
+	box-shadow:
+		0 0 0 0.5px hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) + 14%) / 0.5) inset,
+		0 1px 0 0 hsl(0 0% 100% / 0.65) inset,
+		0 4px 12px -2px hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.3);
+}
+
+/* On hover-capable devices, surface the same colored ring preview as the
+ * active state — at lower opacity so it reads as "hint" not "selected".
+ * Excluded from touch devices via @media (hover: hover). */
+@media (hover: hover) {
+	.app-rail__item:not(.app-rail__item--active):hover .app-rail__chip {
+		outline: 1.5px solid hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.55);
+		outline-offset: 2px;
+	}
 }
 
 .app-rail__item:hover {
@@ -223,32 +367,63 @@ function styleFor(app: AppAccent) {
 }
 
 /* ── Active state ────────────────────────────────────────────────── */
+/* Active: glass becomes brighter + more saturated, icon deepens slightly. */
 .app-rail__item--active {
 	@apply text-foreground;
 }
 
 .app-rail__item--active .app-rail__chip {
-	background: linear-gradient(
-		135deg,
-		hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) + 8%)),
-		hsl(var(--rail-h) var(--rail-s) var(--rail-l))
-	);
+	background:
+		linear-gradient(335deg, rgba(0, 0, 0, 0.36) 0%, rgba(0, 0, 0, 0.1) 60%),
+		linear-gradient(
+			155deg,
+			hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) + 4%) / 0.95),
+			hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) - 10%) / 0.88) 55%,
+			hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) - 22%) / 0.82)
+		);
 	box-shadow:
-		0 1px 0 0 hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) + 14%) / 0.5) inset,
-		0 6px 14px -8px hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.6);
-	transform: none;
+		inset 0 -1.5px 2px hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) - 35%) / 0.5),
+		inset 0 0.5px 0 hsl(0 0% 100% / 0.55),
+		0 0 0 0.5px hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) + 12%) / 0.65) inset,
+		0 4px 14px -2px hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.45);
+	/* Floating ring at the app's true color with a small breathing gap.
+	 * outline-offset adds the gap; outline itself draws the colored ring. */
+	outline: 1.5px solid hsl(var(--rail-h) var(--rail-s) var(--rail-l));
+	outline-offset: 2px;
 }
 
-.app-rail__item--active .app-rail__icon {
-	color: white;
+.app-rail__item--active .app-rail__chip::after {
+	background: linear-gradient(
+		335deg,
+		hsl(0 0% 100% / 0) 45%,
+		hsl(0 0% 100% / 0.22) 78%,
+		hsl(0 0% 100% / 0.5) 100%
+	);
+}
+
+.app-rail__item--active .app-rail__icon-base {
+	color: hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) + 38%));
+	filter: drop-shadow(0 1.5px 3px hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) - 20%) / 0.65));
+}
+
+.app-rail__item--active .app-rail__icon-highlight {
+	color: hsl(0 0% 100% / 0.85);
 }
 
 /* ── Label ───────────────────────────────────────────────────────── */
 /* Vertical rail is icon-only; the title-attribute tooltip carries the
- * label. Horizontal mode keeps labels inline. Floating stays icon-only. */
+ * label. Horizontal mode keeps labels inline. Floating stays icon-only.
+ * On narrow viewports (forced-bottom on mobile) we drop the labels too
+ * so the centered pill fits comfortably without overflowing. */
 .app-rail--vertical .app-rail__label,
 .app-rail--floating .app-rail__label {
 	@apply sr-only;
+}
+
+@media (max-width: 767px) {
+	.app-rail--horizontal .app-rail__label {
+		@apply sr-only;
+	}
 }
 
 .app-rail__label {

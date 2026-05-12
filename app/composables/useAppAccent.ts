@@ -42,6 +42,13 @@ export interface AppAccent {
  * app chrome and the in-page status pills speak the same language. Don't
  * invent new hues here — if you need another, add it to the status palette
  * first and then reference it.
+ *
+ * Saturation/lightness convention (Apple iWork pattern):
+ *   - Work apps (Clients/Work/Money/Marketing) share s≈75, l≈50 so the
+ *     four icons read as one family despite hue differences.
+ *   - Footer apps (Organization/Account) stay intentionally muted —
+ *     they're system/settings, not work, and the lower saturation
+ *     reinforces that hierarchy in the rail.
  */
 export const APP_ACCENTS: Record<AppId, AppAccent> = {
 	clients: {
@@ -49,42 +56,42 @@ export const APP_ACCENTS: Record<AppId, AppAccent> = {
 		name: 'Clients',
 		icon: 'ph:users-three-duotone',
 		to: '/apps/clients',
-		h: 199, s: 89, l: 48,
+		h: 191, s: 100, l: 50,
 	},
 	work: {
 		id: 'work',
 		name: 'Work',
 		icon: 'lucide:square-kanban',
 		to: '/apps/work',
-		h: 160, s: 60, l: 45,
+		h: 160, s: 72, l: 46,
 	},
 	money: {
 		id: 'money',
 		name: 'Money',
 		icon: 'lucide:trending-up',
 		to: '/apps/money',
-		h: 142, s: 72, l: 46,
+		h: 142, s: 72, l: 48,
 	},
 	marketing: {
 		id: 'marketing',
 		name: 'Marketing',
 		icon: 'ph:waveform-duotone',
 		to: '/apps/marketing',
-		h: 38, s: 92, l: 50,
+		h: 308, s: 80, l: 52,
 	},
 	organization: {
 		id: 'organization',
 		name: 'Organization',
 		icon: 'ph:tree-structure-duotone',
 		to: '/apps/organization',
-		h: 215, s: 22, l: 48,
+		h: 205, s: 35, l: 48,
 	},
 	account: {
 		id: 'account',
 		name: 'Account',
 		icon: 'lucide:circle-user-round',
 		to: '/account',
-		h: 220, s: 10, l: 48,
+		h: 220, s: 10, l: 20,
 	},
 };
 

@@ -93,12 +93,13 @@ onUnmounted(() => {
 
 <template>
 	<div v-if="hasOrg" class="flex items-center gap-1.5">
-		<!-- Org icon (clickable for multi-org users to open switcher) -->
+		<!-- Org icon — always opens the org switcher modal. Single-org users
+		     still get the modal so they can register/switch orgs from there. -->
 		<button
 			class="flex items-center rounded-full border-2 border-[var(--cyan)] p-0.5 shadow-inner overflow-hidden transition-opacity"
 			:class="'cursor-pointer hover:opacity-80'"
 			:title="hasMultipleOrgs ? 'Switch organization' : currentOrg?.name"
-			@click="hasMultipleOrgs ? emit('open-org-switcher') : navigateTo('/organizations')"
+			@click="emit('open-org-switcher')"
 		>
 			<Avatar class="size-7">
 				<AvatarImage v-if="getIconUrl(currentOrg)" :src="getIconUrl(currentOrg)" :alt="currentOrg?.name" />

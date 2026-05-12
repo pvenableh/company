@@ -14,9 +14,10 @@
  * include these new fields (only id/email/name/avatar/role), so we
  * hydrate once from /api/directus/users/me on first read.
  *
- * Phase 7: mobile (< md) forces `railPosition = 'bottom'` regardless of
- * stored preference, so users always have thumb-reachable nav. The
- * stored value is preserved and re-engages on wider viewports.
+ * Small + medium screens (< lg, 1024px) force `railPosition = 'bottom'`
+ * regardless of stored preference, so users always have thumb-reachable
+ * nav on phones and tablets. The stored value is preserved and re-engages
+ * on wider viewports.
  */
 import { useMediaQuery } from '@vueuse/core';
 
@@ -66,7 +67,7 @@ export function useAppsMode() {
 
 	const isAppsMode = computed(() => mode.value === 'apps');
 
-	const isMobile = useMediaQuery('(max-width: 767px)');
+	const isMobile = useMediaQuery('(max-width: 1023px)');
 
 	const storedRailPosition = computed<RailPosition>(() => {
 		if (localRailPosition.value !== null) return localRailPosition.value;
@@ -74,8 +75,8 @@ export function useAppsMode() {
 		return raw && RAIL_POSITIONS.includes(raw) ? raw : 'left';
 	});
 
-	// Mobile always forces bottom for thumb reach; the stored pref is preserved
-	// and re-engages once the viewport is wide enough.
+	// Small + medium screens (phones + tablets, < lg) force bottom for thumb
+	// reach; the stored pref is preserved and re-engages on wider viewports.
 	const railPosition = computed<RailPosition>(() =>
 		isMobile.value ? 'bottom' : storedRailPosition.value,
 	);

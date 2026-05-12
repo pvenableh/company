@@ -50,7 +50,7 @@ const { visibleLinks } = useNavPreferences();
 		<NuxtPage />
 	</NuxtLayout>
 	<NuxtLoadingIndicator
-		color="repeating-linear-gradient(to right, hsl(var(--primary)) 0%, hsl(var(--muted-foreground)) 100%)"
+		color="linear-gradient(to right, #000000 0%, hsl(191, 100%, 50%) 100%)"
 	/>
 	<Toaster
 		position="bottom-center"
