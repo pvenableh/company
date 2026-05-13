@@ -46,6 +46,9 @@
 						<LayoutEarnestBrand to="/portal" tagline="Client Portal" />
 					</div>
 					<div class="portal-shell__chrome-right">
+						<div class="hidden sm:block">
+							<WalkthroughHelpMenu />
+						</div>
 						<ClientOnly>
 							<LayoutAppRailPositionPicker class="hidden lg:flex" />
 						</ClientOnly>
@@ -87,6 +90,10 @@
 		     Lists the user's orgs (portal + own) with the active one highlighted
 		     and an upsell when the user has no workspace of their own. -->
 		<LayoutPortalUpsellModal v-if="user" v-model="showUpsell" />
+
+		<ClientOnly>
+			<WalkthroughManager />
+		</ClientOnly>
 	</div>
 </template>
 

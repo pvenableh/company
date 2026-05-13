@@ -36,6 +36,9 @@
 						>
 							<Icon name="lucide:search" class="size-4" />
 						</button>
+						<div class="hidden sm:block">
+							<WalkthroughHelpMenu />
+						</div>
 						<ClientOnly>
 							<LayoutAppRailPositionPicker class="hidden sm:flex" />
 						</ClientOnly>
@@ -96,6 +99,10 @@
 		</ClientOnly>
 		<ClientOnly>
 			<LayoutSpotlightSearch :open="spotlightOpen" @close="spotlightOpen = false" />
+		</ClientOnly>
+
+		<ClientOnly>
+			<WalkthroughManager />
 		</ClientOnly>
 
 		<LayoutOrgSwitcher v-model="showOrgSwitcher" />

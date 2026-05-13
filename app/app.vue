@@ -49,6 +49,7 @@ const { visibleLinks } = useNavPreferences();
 	<NuxtLayout>
 		<NuxtPage />
 	</NuxtLayout>
+	<SupportReportModal v-if="user" />
 	<NuxtLoadingIndicator
 		color="linear-gradient(to right, #000000 0%, hsl(191, 100%, 50%) 100%)"
 	/>

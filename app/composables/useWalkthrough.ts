@@ -5,6 +5,8 @@
  * Persists completion state to localStorage.
  */
 
+type LayoutKey = 'classic' | 'apps' | 'portal';
+
 interface WalkthroughStep {
   target: string;
   title: string;
@@ -19,6 +21,9 @@ interface WalkthroughTour {
   route: string;
   icon?: string;
   steps: WalkthroughStep[];
+  // Which shells this tour belongs to. Omit = available everywhere
+  // (mainly for the global navigation-intro fallback).
+  layouts?: LayoutKey[];
 }
 
 const STORAGE_KEY = 'earnest-walkthrough-state';
@@ -112,4 +117,4 @@ export function useWalkthrough() {
   };
 }
 
-export type { WalkthroughStep, WalkthroughTour };
+export type { WalkthroughStep, WalkthroughTour, LayoutKey };

@@ -122,14 +122,7 @@ const fallbackBackLabel = computed(() => {
 	width: 22px;
 	height: 22px;
 	color: hsl(var(--app-accent-h, 220) var(--app-accent-s, 10%) calc(var(--app-accent-l, 48%) + 32%));
-	background:
-		linear-gradient(335deg, rgba(0, 0, 0, 0.32) 0%, rgba(0, 0, 0, 0.08) 60%),
-		linear-gradient(
-			155deg,
-			hsl(var(--app-accent-h, 220) var(--app-accent-s, 10%) var(--app-accent-l, 48%) / 0.85),
-			hsl(var(--app-accent-h, 220) var(--app-accent-s, 10%) calc(var(--app-accent-l, 48%) - 10%) / 0.78) 55%,
-			hsl(var(--app-accent-h, 220) var(--app-accent-s, 10%) calc(var(--app-accent-l, 48%) - 22%) / 0.7)
-		);
+	background: linear-gradient(335deg, rgba(0, 0, 0, 0.32) 0%, rgba(0, 0, 0, 0.08) 60%), linear-gradient(155deg, hsl(var(--app-accent-h, 220) var(--app-accent-s, 10%) var(--app-accent-l, 48%) / 0.85), hsl(var(--app-accent-h, 220) var(--app-accent-s, 10%) calc(var(--app-accent-l, 48%) - 10%) / 0.78) 55%, hsl(var(--app-accent-h, 220) var(--app-accent-s, 10%) calc(var(--app-accent-l, 48%) - 22%) / 0.7));
 	backdrop-filter: blur(10px);
 	-webkit-backdrop-filter: blur(10px);
 	box-shadow:
@@ -144,12 +137,7 @@ const fallbackBackLabel = computed(() => {
 	position: absolute;
 	inset: 0;
 	border-radius: inherit;
-	background: linear-gradient(
-		335deg,
-		hsl(0 0% 100% / 0) 50%,
-		hsl(0 0% 100% / 0.18) 80%,
-		hsl(0 0% 100% / 0.42) 100%
-	);
+	background: linear-gradient(335deg, hsl(0 0% 100% / 0) 50%, hsl(0 0% 100% / 0.18) 80%, hsl(0 0% 100% / 0.42) 100%);
 	mix-blend-mode: plus-lighter;
 	pointer-events: none;
 }

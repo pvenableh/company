@@ -166,6 +166,11 @@ export default defineNuxtConfig({
 		},
 		directusServerToken: process.env.DIRECTUS_SERVER_TOKEN,
 
+		// Earnest Support — internal bug/feedback inbox org id (see
+		// scripts/setup-earnest-support-org.ts). /api/support/submit
+		// 503s when unset rather than landing tickets in the wrong org.
+		earnestSupportOrgId: process.env.EARNEST_SUPPORT_ORG_ID || '',
+
 		// Daily.co video conferencing
 		dailyApiKey: process.env.DAILY_API_KEY || '',
 		dailyWebhookHmac: process.env.DAILY_WEBHOOK_HMAC || '',
