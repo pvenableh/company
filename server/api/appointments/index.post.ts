@@ -47,6 +47,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const directus = getTypedDirectus();
+  let resolvedOrgId: string | null = null;
 
   // Validate any FK that pins this appointment to an org-owned resource.
   if (body.related_lead != null) {
@@ -56,6 +57,7 @@ export default defineEventHandler(async (event) => {
     if (!lead) throw createError({ statusCode: 404, message: 'Lead not found' });
     if (!lead.organization) throw createError({ statusCode: 422, message: 'Lead has no organization' });
     await requireOrgMembership(event, lead.organization);
+    resolvedOrgId = lead.organization;
   }
 
   if (body.video_meeting != null) {
@@ -65,6 +67,7 @@ export default defineEventHandler(async (event) => {
     if (!meeting) throw createError({ statusCode: 404, message: 'Video meeting not found' });
     if (!meeting.related_organization) throw createError({ statusCode: 422, message: 'Video meeting has no organization' });
     await requireOrgMembership(event, meeting.related_organization);
+    resolvedOrgId = meeting.related_organization;
   }
 
   // Strip members before insert — it's a relation we plumb separately.
@@ -112,6 +115,7 @@ export default defineEventHandler(async (event) => {
                 ? Math.max(15, Math.round((new Date(body.end_time).getTime() - new Date(body.start_time).getTime()) / 60000))
                 : 30,
             collection: 'appointments',
+            orgId: resolvedOrgId,
           },
           recipientIds: memberIds,
           hostId: userId,

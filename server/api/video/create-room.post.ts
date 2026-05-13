@@ -1,5 +1,7 @@
 // server/api/video/create-room.post.ts
 import { createItem, readItem, updateItem } from '@directus/sdk';
+import { renderOrgEmail, escapeHtml, type OrgBrandRef } from '~~/server/utils/email-shell';
+import { sendBrandedEmail, fetchOrgBrand } from '~~/server/utils/email-send';
 
 interface AttendeeInput {
 	name?: string;
@@ -255,6 +257,7 @@ export default defineEventHandler(async (event) => {
 						meeting_url: meetingUrl,
 						scheduled_start: scheduledStart.toISOString(),
 						duration_minutes: durationMinutes,
+						orgId: orgIdForDefaults || null,
 					},
 					recipientIds: memberIds,
 					hostId: userId,
@@ -286,6 +289,9 @@ export default defineEventHandler(async (event) => {
 
 		// Create attendee records and send invitations
 		let inviteSent = false;
+
+		// Resolve org brand once for all external-guest invite emails on this room.
+		const orgBrandForInvites = orgIdForDefaults ? await fetchOrgBrand(orgIdForDefaults) : null;
 
 		// Handle attendees array from the modal
 		const attendeesList: Array<AttendeeInput & { contact_id?: string }> = body.attendees?.filter((a) => a.name || a.email) || [];
@@ -342,7 +348,7 @@ export default defineEventHandler(async (event) => {
 						meetingUrl,
 						scheduledStart,
 						durationMinutes,
-						config,
+						org: orgBrandForInvites,
 					});
 					inviteSent = true;
 				}
@@ -419,12 +425,9 @@ async function sendEmailInvitation(params: {
 	meetingUrl: string;
 	scheduledStart: Date;
 	durationMinutes: number;
-	config: any;
+	org: OrgBrandRef | null;
 }) {
-	const { to, guestName, hostName, meetingTitle, meetingUrl, scheduledStart, durationMinutes, config } = params;
-
-	const sgMail = await import('@sendgrid/mail');
-	sgMail.default.setApiKey(config.sendgridApiKey);
+	const { to, guestName, hostName, meetingTitle, meetingUrl, scheduledStart, durationMinutes, org } = params;
 
 	const formattedDate = scheduledStart.toLocaleDateString('en-US', {
 		weekday: 'long',
@@ -432,7 +435,6 @@ async function sendEmailInvitation(params: {
 		month: 'long',
 		day: 'numeric',
 	});
-
 	const formattedTime = scheduledStart.toLocaleTimeString('en-US', {
 		hour: 'numeric',
 		minute: '2-digit',
@@ -440,41 +442,34 @@ async function sendEmailInvitation(params: {
 		timeZoneName: 'short',
 	});
 
-	const message = {
-		to,
-		from: {
-			email: config.sendgridFromEmail,
-			name: config.sendgridFromName || 'Hue Creative Agency',
-		},
-		subject: `Video Meeting Invitation: ${meetingTitle}`,
-		html: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #333;">You're Invited to a Video Meeting</h2>
-        <p>Hi ${guestName},</p>
-        <p><strong>${hostName}</strong> has invited you to a video meeting.</p>
-        
-        <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="margin-top: 0; color: #333;">${meetingTitle}</h3>
-          <p><strong>Date:</strong> ${formattedDate}</p>
-          <p><strong>Time:</strong> ${formattedTime}</p>
-          <p><strong>Duration:</strong> ${durationMinutes} minutes</p>
-        </div>
-        
-        <a href="${meetingUrl}" style="display: inline-block; background: #10B981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
-          Join Meeting
-        </a>
-        
-        <p style="margin-top: 20px; color: #666; font-size: 14px;">
-          Or copy this link: <a href="${meetingUrl}">${meetingUrl}</a>
-        </p>
-        
-        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-        <p style="color: #999; font-size: 12px;">This is an automated message from Hue Creative Agency.</p>
-      </div>
-    `,
-	};
+	const subject = `Video Meeting Invitation: ${meetingTitle}`;
+	const heading = "You're invited to a video meeting";
+	const bodyHtml = `
+		<p style="margin:0 0 12px;">Hi ${escapeHtml(guestName)},</p>
+		<p style="margin:0 0 12px;"><strong>${escapeHtml(hostName)}</strong> has invited you to a video meeting.</p>
+		<div style="background:#f7f5f2;padding:16px 20px;border-radius:8px;margin:16px 0;">
+			<p style="margin:0 0 8px;font-size:16px;font-weight:600;color:#141210;">${escapeHtml(meetingTitle)}</p>
+			<p style="margin:0 0 4px;font-size:14px;color:#444;"><strong>Date:</strong> ${escapeHtml(formattedDate)}</p>
+			<p style="margin:0 0 4px;font-size:14px;color:#444;"><strong>Time:</strong> ${escapeHtml(formattedTime)}</p>
+			<p style="margin:0;font-size:14px;color:#444;"><strong>Duration:</strong> ${durationMinutes} minutes</p>
+		</div>
+	`;
+	const { html, text } = renderOrgEmail({
+		org,
+		subject,
+		heading,
+		bodyHtml,
+		cta: { label: 'Join meeting', url: meetingUrl },
+	});
 
-	await sgMail.default.send(message);
+	await sendBrandedEmail({
+		to,
+		subject,
+		html,
+		text,
+		org,
+		categories: ['transactional', 'video-invite'],
+	});
 }
 
 // Helper function to send SMS invitation

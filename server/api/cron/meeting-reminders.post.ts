@@ -84,7 +84,7 @@ export default defineEventHandler(async (event) => {
 					'is_video',
 					'reminder_sent',
 					'user_created',
-					'related_lead',
+					'related_lead.organization',
 					'video_meeting.id',
 					'video_meeting.title',
 					'video_meeting.meeting_url',
@@ -92,6 +92,7 @@ export default defineEventHandler(async (event) => {
 					'video_meeting.host_identity',
 					'video_meeting.duration_minutes',
 					'video_meeting.scheduled_start',
+					'video_meeting.related_organization',
 					'attendees.directus_users_id',
 				] as any,
 				limit: -1,
@@ -158,6 +159,12 @@ export default defineEventHandler(async (event) => {
 			continue;
 		}
 
+		const orgId: string | null = isVideo
+			? (typeof videoMeeting?.related_organization === 'object' ? videoMeeting.related_organization?.id : videoMeeting?.related_organization) || null
+			: (typeof (appt as any).related_lead === 'object'
+				? ((appt as any).related_lead?.organization?.id || (appt as any).related_lead?.organization)
+				: null);
+
 		try {
 			await notifyMeetingChange({
 				event: { kind: 'reminder' },
@@ -168,6 +175,7 @@ export default defineEventHandler(async (event) => {
 					scheduled_start: startTime.toISOString(),
 					duration_minutes: durationMinutes,
 					collection: isVideo ? 'video_meetings' : 'appointments',
+					orgId: orgId || null,
 				},
 				recipientIds,
 				hostId: hostId || '',

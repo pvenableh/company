@@ -22,7 +22,7 @@ export default defineEventHandler(async (event) => {
 		throw createError({ statusCode: 400, message: 'Meeting id is required' });
 	}
 
-	await requireMeetingAccess(event, meetingId);
+	const { organizationId } = await requireMeetingAccess(event, meetingId);
 
 	const session = await getUserSession(event);
 	const hostId = session?.user?.id || '';
@@ -130,6 +130,7 @@ export default defineEventHandler(async (event) => {
 					meeting_url: null,
 					scheduled_start: new Date(current.scheduled_start).toISOString(),
 					duration_minutes: current.duration_minutes || 30,
+					orgId: organizationId || null,
 				},
 				recipientIds: cancelledMemberIds,
 				hostId,

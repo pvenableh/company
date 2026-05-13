@@ -16,6 +16,7 @@ import {
 	sendMeetingTimeChangedEmail,
 	sendMeetingReminderEmail,
 } from './meeting-emails';
+import { fetchOrgBrand } from './email-send';
 
 export type MeetingNotificationKind =
 	| { kind: 'invited' }
@@ -42,6 +43,8 @@ interface MeetingRef {
 	duration_minutes: number | null;
 	/** Defaults to 'video_meetings' for backward compat with existing callers. */
 	collection?: MeetingCollection;
+	/** Org scope — drives logo, brand_color, reply-to on the outbound email. */
+	orgId?: string | null;
 }
 
 interface NotifyParams {
@@ -125,6 +128,9 @@ export async function notifyMeetingChange(params: NotifyParams): Promise<void> {
 	const scheduledStart = new Date(meeting.scheduled_start);
 	const durationMinutes = meeting.duration_minutes || 30;
 
+	// Resolve org brand once for the whole fan-out.
+	const orgBrand = meeting.orgId ? await fetchOrgBrand(meeting.orgId) : null;
+
 	await Promise.allSettled(
 		recipients.map(async (recipient) => {
 			// In-app notification — always. (Bell rows on the
@@ -170,6 +176,7 @@ export async function notifyMeetingChange(params: NotifyParams): Promise<void> {
 				scheduledStart,
 				config,
 				kind: emailKind as 'meeting' | 'event',
+				org: orgBrand,
 			};
 
 			try {

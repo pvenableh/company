@@ -1,14 +1,15 @@
 // server/utils/meeting-emails.ts
-// Centralized SendGrid templates for meeting/event lifecycle emails fired at
-// members (Directus users on the appointments_directus_users junction).
+// SendGrid templates for meeting/event lifecycle emails (video + non-video
+// appointments). Each helper accepts an optional org brand — when present
+// the email gets org logo + brand_color + reply-to chrome; otherwise it
+// falls back to Earnest branding.
 //
-// Used for both video meetings and non-video calendar events. When meetingUrl
-// is null/empty (non-video events), the "Join meeting" CTA is omitted and the
-// copy refers to the entry as an "event" rather than a "meeting".
-//
-// External-guest invites still live inline in create-room.post.ts —
-// `sendMeetingInvitedEmail` here is the same template, exported so the
-// teammate-notification path can reuse it.
+// External-guest invites for fresh video rooms still live inline in
+// create-room.post.ts and call sendMeetingInvitedEmail when reused for
+// teammate notifications.
+
+import { renderEarnestEmail, renderOrgEmail, escapeHtml, type OrgBrandRef } from './email-shell';
+import { sendBrandedEmail } from './email-send';
 
 type MeetingKind = 'meeting' | 'event';
 
@@ -20,9 +21,12 @@ interface BaseParams {
 	meetingUrl: string | null;
 	scheduledStart: Date;
 	durationMinutes: number;
-	config: any;
+	/** Retained for back-compat with old callers; ignored. */
+	config?: any;
 	/** Defaults to 'meeting' for backward compat. */
 	kind?: MeetingKind;
+	/** Org context — drives logo, brand_color, reply-to. Null → Earnest shell. */
+	org?: OrgBrandRef | null;
 }
 
 function formatDateTime(scheduledStart: Date) {
@@ -41,37 +45,15 @@ function formatDateTime(scheduledStart: Date) {
 	return { date, time };
 }
 
-async function sendViaSendGrid(config: any, message: { to: string; subject: string; html: string }) {
-	const sgMail = await import('@sendgrid/mail');
-	sgMail.default.setApiKey(config.sendgridApiKey);
-	await sgMail.default.send({
-		to: message.to,
-		from: {
-			email: config.sendgridFromEmail,
-			name: config.sendgridFromName || 'Hue Creative Agency',
-		},
-		subject: message.subject,
-		html: message.html,
-	});
-}
-
-function shell(body: string) {
-	return `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">${body}<hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;"><p style="color: #999; font-size: 12px;">This is an automated message from Hue Creative Agency.</p></div>`;
-}
-
 function detailsBlock(meetingTitle: string, date: string, time: string, durationMinutes: number) {
-	return `<div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
-		<h3 style="margin-top: 0; color: #333;">${meetingTitle}</h3>
-		<p><strong>Date:</strong> ${date}</p>
-		<p><strong>Time:</strong> ${time}</p>
-		<p><strong>Duration:</strong> ${durationMinutes} minutes</p>
-	</div>`;
-}
-
-function joinButton(meetingUrl: string | null) {
-	if (!meetingUrl) return '';
-	return `<a href="${meetingUrl}" style="display: inline-block; background: #10B981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Join Meeting</a>
-	<p style="margin-top: 20px; color: #666; font-size: 14px;">Or copy this link: <a href="${meetingUrl}">${meetingUrl}</a></p>`;
+	return `
+		<div style="background:#f7f5f2;padding:16px 20px;border-radius:8px;margin:16px 0;">
+			<p style="margin:0 0 8px;font-size:16px;font-weight:600;color:#141210;">${escapeHtml(meetingTitle)}</p>
+			<p style="margin:0 0 4px;font-size:14px;color:#444;"><strong>Date:</strong> ${escapeHtml(date)}</p>
+			<p style="margin:0 0 4px;font-size:14px;color:#444;"><strong>Time:</strong> ${escapeHtml(time)}</p>
+			<p style="margin:0;font-size:14px;color:#444;"><strong>Duration:</strong> ${durationMinutes} minutes</p>
+		</div>
+	`;
 }
 
 function kindLabel(kind: MeetingKind | undefined) {
@@ -82,41 +64,49 @@ function kindLabelCapitalized(kind: MeetingKind | undefined) {
 	return kind === 'event' ? 'Event' : 'Meeting';
 }
 
+function render(args: {
+	org?: OrgBrandRef | null;
+	subject: string;
+	heading: string;
+	bodyHtml: string;
+	cta?: { label: string; url: string } | null;
+}) {
+	return args.org
+		? renderOrgEmail({ org: args.org, subject: args.subject, heading: args.heading, bodyHtml: args.bodyHtml, cta: args.cta })
+		: renderEarnestEmail({ subject: args.subject, heading: args.heading, bodyHtml: args.bodyHtml, cta: args.cta });
+}
+
 export async function sendMeetingInvitedEmail(params: BaseParams) {
 	const { date, time } = formatDateTime(params.scheduledStart);
 	const label = kindLabel(params.kind);
 	const labelCap = kindLabelCapitalized(params.kind);
-	const html = shell(`
-		<h2 style="color: #333;">You've been added to a ${label}</h2>
-		<p>Hi ${params.recipientName},</p>
-		<p><strong>${params.hostName}</strong> added you to a ${label}.</p>
+	const subject = `${labelCap}: ${params.meetingTitle}`;
+	const heading = `You've been added to a ${label}`;
+	const bodyHtml = `
+		<p style="margin:0 0 12px;">Hi ${escapeHtml(params.recipientName)},</p>
+		<p style="margin:0 0 12px;"><strong>${escapeHtml(params.hostName)}</strong> added you to a ${label}.</p>
 		${detailsBlock(params.meetingTitle, date, time, params.durationMinutes)}
-		${joinButton(params.meetingUrl)}
-	`);
-	await sendViaSendGrid(params.config, {
-		to: params.to,
-		subject: `${labelCap}: ${params.meetingTitle}`,
-		html,
-	});
+	`;
+	const cta = params.meetingUrl ? { label: 'Join meeting', url: params.meetingUrl } : null;
+	const { html, text } = render({ org: params.org, subject, heading, bodyHtml, cta });
+	await sendBrandedEmail({ to: params.to, subject, html, text, org: params.org, categories: ['transactional', 'meeting-invited'] });
 }
 
 export async function sendMeetingTimeChangedEmail(params: BaseParams & { previousStart: Date }) {
 	const { date, time } = formatDateTime(params.scheduledStart);
 	const prev = formatDateTime(params.previousStart);
-	const label = kindLabel(params.kind);
-	const html = shell(`
-		<h2 style="color: #333;">${kindLabelCapitalized(params.kind)} time changed</h2>
-		<p>Hi ${params.recipientName},</p>
-		<p><strong>${params.hostName}</strong> rescheduled <strong>${params.meetingTitle}</strong>.</p>
-		<p style="color: #666;"><s>${prev.date} at ${prev.time}</s></p>
+	const labelCap = kindLabelCapitalized(params.kind);
+	const subject = `Rescheduled: ${params.meetingTitle}`;
+	const heading = `${labelCap} time changed`;
+	const bodyHtml = `
+		<p style="margin:0 0 12px;">Hi ${escapeHtml(params.recipientName)},</p>
+		<p style="margin:0 0 12px;"><strong>${escapeHtml(params.hostName)}</strong> rescheduled <strong>${escapeHtml(params.meetingTitle)}</strong>.</p>
+		<p style="margin:0 0 12px;color:#888;"><s>${escapeHtml(prev.date)} at ${escapeHtml(prev.time)}</s></p>
 		${detailsBlock(params.meetingTitle, date, time, params.durationMinutes)}
-		${joinButton(params.meetingUrl)}
-	`);
-	await sendViaSendGrid(params.config, {
-		to: params.to,
-		subject: `Rescheduled: ${params.meetingTitle}`,
-		html,
-	});
+	`;
+	const cta = params.meetingUrl ? { label: 'Join meeting', url: params.meetingUrl } : null;
+	const { html, text } = render({ org: params.org, subject, heading, bodyHtml, cta });
+	await sendBrandedEmail({ to: params.to, subject, html, text, org: params.org, categories: ['transactional', 'meeting-time-changed'] });
 }
 
 interface MinimalParams {
@@ -125,40 +115,36 @@ interface MinimalParams {
 	hostName: string;
 	meetingTitle: string;
 	scheduledStart: Date;
-	config: any;
-	/** Defaults to 'meeting' for backward compat. */
+	config?: any;
 	kind?: MeetingKind;
+	org?: OrgBrandRef | null;
 }
 
 export async function sendMeetingRemovedEmail(params: MinimalParams) {
 	const { date, time } = formatDateTime(params.scheduledStart);
 	const label = kindLabel(params.kind);
-	const html = shell(`
-		<h2 style="color: #333;">You were removed from a ${label}</h2>
-		<p>Hi ${params.recipientName},</p>
-		<p><strong>${params.hostName}</strong> removed you from <strong>${params.meetingTitle}</strong> (${date} at ${time}).</p>
-		<p style="color: #666; font-size: 14px;">If this was a mistake, reach out to ${params.hostName} directly.</p>
-	`);
-	await sendViaSendGrid(params.config, {
-		to: params.to,
-		subject: `Removed: ${params.meetingTitle}`,
-		html,
-	});
+	const subject = `Removed: ${params.meetingTitle}`;
+	const heading = `You were removed from a ${label}`;
+	const bodyHtml = `
+		<p style="margin:0 0 12px;">Hi ${escapeHtml(params.recipientName)},</p>
+		<p style="margin:0 0 12px;"><strong>${escapeHtml(params.hostName)}</strong> removed you from <strong>${escapeHtml(params.meetingTitle)}</strong> (${escapeHtml(date)} at ${escapeHtml(time)}).</p>
+		<p style="margin:0;font-size:13px;color:#888;">If this was a mistake, reach out to ${escapeHtml(params.hostName)} directly.</p>
+	`;
+	const { html, text } = render({ org: params.org, subject, heading, bodyHtml });
+	await sendBrandedEmail({ to: params.to, subject, html, text, org: params.org, categories: ['transactional', 'meeting-removed'] });
 }
 
 export async function sendMeetingCancelledEmail(params: MinimalParams) {
 	const { date, time } = formatDateTime(params.scheduledStart);
-	const label = kindLabel(params.kind);
-	const html = shell(`
-		<h2 style="color: #333;">${kindLabelCapitalized(params.kind)} cancelled</h2>
-		<p>Hi ${params.recipientName},</p>
-		<p><strong>${params.hostName}</strong> cancelled <strong>${params.meetingTitle}</strong> (${date} at ${time}).</p>
-	`);
-	await sendViaSendGrid(params.config, {
-		to: params.to,
-		subject: `Cancelled: ${params.meetingTitle}`,
-		html,
-	});
+	const labelCap = kindLabelCapitalized(params.kind);
+	const subject = `Cancelled: ${params.meetingTitle}`;
+	const heading = `${labelCap} cancelled`;
+	const bodyHtml = `
+		<p style="margin:0 0 12px;">Hi ${escapeHtml(params.recipientName)},</p>
+		<p style="margin:0 0 12px;"><strong>${escapeHtml(params.hostName)}</strong> cancelled <strong>${escapeHtml(params.meetingTitle)}</strong> (${escapeHtml(date)} at ${escapeHtml(time)}).</p>
+	`;
+	const { html, text } = render({ org: params.org, subject, heading, bodyHtml });
+	await sendBrandedEmail({ to: params.to, subject, html, text, org: params.org, categories: ['transactional', 'meeting-cancelled'] });
 }
 
 interface ReminderParams extends BaseParams {
@@ -171,16 +157,14 @@ export async function sendMeetingReminderEmail(params: ReminderParams) {
 	const lead = params.minutesUntilStart === 1
 		? '1 minute'
 		: `${params.minutesUntilStart} minutes`;
-	const html = shell(`
-		<h2 style="color: #333;">Your ${label} starts in ${lead}</h2>
-		<p>Hi ${params.recipientName},</p>
-		<p><strong>${params.meetingTitle}</strong> begins at ${time}.</p>
+	const subject = `Starting in ${lead}: ${params.meetingTitle}`;
+	const heading = `Your ${label} starts in ${lead}`;
+	const bodyHtml = `
+		<p style="margin:0 0 12px;">Hi ${escapeHtml(params.recipientName)},</p>
+		<p style="margin:0 0 12px;"><strong>${escapeHtml(params.meetingTitle)}</strong> begins at ${escapeHtml(time)}.</p>
 		${detailsBlock(params.meetingTitle, date, time, params.durationMinutes)}
-		${joinButton(params.meetingUrl)}
-	`);
-	await sendViaSendGrid(params.config, {
-		to: params.to,
-		subject: `Starting in ${lead}: ${params.meetingTitle}`,
-		html,
-	});
+	`;
+	const cta = params.meetingUrl ? { label: 'Join meeting', url: params.meetingUrl } : null;
+	const { html, text } = render({ org: params.org, subject, heading, bodyHtml, cta });
+	await sendBrandedEmail({ to: params.to, subject, html, text, org: params.org, categories: ['transactional', 'meeting-reminder'] });
 }

@@ -43,9 +43,24 @@ export default defineEventHandler(async (event) => {
 
 	const current = await directus.request(
 		readItem('appointments', appointmentId, {
-			fields: ['id', 'title', 'description', 'start_time', 'end_time', 'related_lead'] as any,
+			fields: ['id', 'title', 'description', 'start_time', 'end_time', 'related_lead.organization', 'video_meeting.related_organization'] as any,
 		}),
 	) as any;
+
+	const resolvedOrgId: string | null = (() => {
+		const fromVideo = current?.video_meeting && typeof current.video_meeting === 'object'
+			? (typeof current.video_meeting.related_organization === 'object'
+				? current.video_meeting.related_organization?.id
+				: current.video_meeting.related_organization)
+			: null;
+		if (fromVideo) return fromVideo;
+		const fromLead = current?.related_lead && typeof current.related_lead === 'object'
+			? (typeof current.related_lead.organization === 'object'
+				? current.related_lead.organization?.id
+				: current.related_lead.organization)
+			: null;
+		return fromLead || null;
+	})();
 
 	// ── Build the appointments patch ──
 	const patch: Record<string, any> = {};
@@ -146,6 +161,7 @@ export default defineEventHandler(async (event) => {
 		scheduled_start: new Date(nextStart).toISOString(),
 		duration_minutes: durationMinutes,
 		collection: 'appointments' as const,
+		orgId: resolvedOrgId,
 	};
 
 	if (addedMemberIds.length > 0) {

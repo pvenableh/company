@@ -252,6 +252,7 @@ export default defineEventHandler(async (event) => {
 		meeting_url: (current.meeting_url as string | null) || null,
 		scheduled_start: nextStart.toISOString(),
 		duration_minutes: nextDuration,
+		orgId: organizationId || null,
 	};
 
 	if (addedMemberIds.length > 0) {

@@ -25,9 +25,15 @@ export default defineEventHandler(async (event) => {
 
 	const current = await directus.request(
 		readItem('appointments', appointmentId, {
-			fields: ['id', 'title', 'start_time', 'end_time', 'is_video', 'video_meeting'] as any,
+			fields: ['id', 'title', 'start_time', 'end_time', 'is_video', 'video_meeting', 'related_lead.organization'] as any,
 		}),
 	) as any;
+
+	const resolvedOrgId: string | null = current?.related_lead && typeof current.related_lead === 'object'
+		? (typeof current.related_lead.organization === 'object'
+			? current.related_lead.organization?.id
+			: current.related_lead.organization) || null
+		: null;
 
 	// Reject video-meeting deletes here — the video meeting DELETE route owns
 	// the full cascade (Daily room, attendees, lead_activities, etc.).
@@ -75,6 +81,7 @@ export default defineEventHandler(async (event) => {
 					scheduled_start: new Date(current.start_time).toISOString(),
 					duration_minutes: durationMinutes,
 					collection: 'appointments',
+					orgId: resolvedOrgId,
 				},
 				recipientIds: cancelledMemberIds,
 				hostId,

@@ -15,6 +15,7 @@
 
 import { createNotification, readNotifications, readUsers, updateNotification } from '@directus/sdk';
 import { ctaLabelFor, sendNotificationEmail } from './notification-emails';
+import { fetchOrgBrand } from './email-send';
 import { NEVER_EMAIL, type NotificationCategory } from './notification-categories';
 
 interface EmitArgs {
@@ -106,6 +107,11 @@ export async function emitNotification(args: EmitArgs): Promise<{ bellSent: numb
 	const directus = getServerDirectus();
 	const config = useRuntimeConfig();
 
+	// Resolve org brand once — every recipient on this fan-out shares the
+	// same org chrome. Null falls through to Earnest branding inside
+	// sendNotificationEmail.
+	const orgBrand = orgId ? await fetchOrgBrand(orgId) : null;
+
 	let recipients: RecipientRow[] = [];
 	try {
 		recipients = (await directus.request(
@@ -169,7 +175,7 @@ export async function emitNotification(args: EmitArgs): Promise<{ bellSent: numb
 					body: stripHtmlTags(message) || subject,
 					link: link || null,
 					ctaLabel: ctaLabelFor(category),
-					config,
+					org: orgBrand,
 				});
 				emailSent++;
 			} catch (err) {
