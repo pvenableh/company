@@ -101,13 +101,13 @@ watch(() => selectedOrg.value, () => loadProposals());
 </script>
 
 <template>
-	<LayoutPageContainer>
-		<div class="mb-6">
-			<h1 class="text-xl font-semibold">Proposals</h1>
-			<p class="text-sm text-muted-foreground mt-0.5">Review proposals shared with you.</p>
-		</div>
+	<div class="portal-page">
+		<AppHeader title="Proposals" />
 
-		<!-- Loading -->
+		<LayoutPageContainer>
+			<p class="text-sm text-muted-foreground mb-6 -mt-1">Review proposals shared with you.</p>
+
+			<!-- Loading -->
 		<div v-if="loading" class="flex items-center justify-center py-24">
 			<Icon name="lucide:loader-2" class="w-8 h-8 text-muted-foreground animate-spin" />
 		</div>
@@ -177,5 +177,6 @@ watch(() => selectedOrg.value, () => loadProposals());
 				<Icon name="lucide:chevron-right" class="w-4 h-4 text-muted-foreground/40 shrink-0 group-hover:text-muted-foreground transition-colors" />
 			</NuxtLink>
 		</div>
-	</LayoutPageContainer>
+		</LayoutPageContainer>
+	</div>
 </template>

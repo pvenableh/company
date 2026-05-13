@@ -99,13 +99,13 @@ watch(() => selectedOrg.value, () => loadCampaigns());
 </script>
 
 <template>
-	<LayoutPageContainer>
-		<div class="mb-6">
-			<h1 class="text-xl font-semibold">Marketing Activity</h1>
-			<p class="text-sm text-muted-foreground mt-0.5">Campaigns and outreach activity for your brand.</p>
-		</div>
+	<div class="portal-page">
+		<AppHeader title="Marketing Activity" />
 
-		<!-- Loading -->
+		<LayoutPageContainer>
+			<p class="text-sm text-muted-foreground mb-6 -mt-1">Campaigns and outreach activity for your brand.</p>
+
+			<!-- Loading -->
 		<div v-if="loading" class="flex items-center justify-center py-24">
 			<Icon name="lucide:loader-2" class="w-8 h-8 text-muted-foreground animate-spin" />
 		</div>
@@ -253,7 +253,8 @@ watch(() => selectedOrg.value, () => loadCampaigns());
 				</div>
 			</Transition>
 		</Teleport>
-	</LayoutPageContainer>
+		</LayoutPageContainer>
+	</div>
 </template>
 
 <style scoped>

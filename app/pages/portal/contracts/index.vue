@@ -115,13 +115,13 @@ watch(() => selectedOrg.value, () => loadContracts());
 </script>
 
 <template>
-	<LayoutPageContainer>
-		<div class="mb-6">
-			<h1 class="text-xl font-semibold">Contracts</h1>
-			<p class="text-sm text-muted-foreground mt-0.5">View and sign your contracts.</p>
-		</div>
+	<div class="portal-page">
+		<AppHeader title="Contracts" />
 
-		<!-- Loading -->
+		<LayoutPageContainer>
+			<p class="text-sm text-muted-foreground mb-6 -mt-1">View and sign your contracts.</p>
+
+			<!-- Loading -->
 		<div v-if="loading" class="flex items-center justify-center py-24">
 			<Icon name="lucide:loader-2" class="w-8 h-8 text-muted-foreground animate-spin" />
 		</div>
@@ -262,7 +262,8 @@ watch(() => selectedOrg.value, () => loadContracts());
 				</div>
 			</Transition>
 		</Teleport>
-	</LayoutPageContainer>
+		</LayoutPageContainer>
+	</div>
 </template>
 
 <style scoped>

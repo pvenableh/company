@@ -14,6 +14,15 @@ const loading = ref(true);
 const tasks = ref<any[]>([]);
 const filter = ref<'active' | 'completed' | 'all'>('active');
 
+// AppFloorStrip segments — same component the staff apps use so the
+// sub-nav reads visually identical across both shells. Icons follow
+// the Tasks accent (green) when active.
+const taskSegments = [
+	{ key: 'active' as const,    label: 'Active',    icon: 'lucide:circle-dashed' },
+	{ key: 'completed' as const, label: 'Completed', icon: 'lucide:check-circle-2' },
+	{ key: 'all' as const,       label: 'All',       icon: 'lucide:list' },
+];
+
 const TASK_FIELDS = [
 	'id',
 	'description',
@@ -100,26 +109,14 @@ watch(filter, () => loadTasks());
 </script>
 
 <template>
-	<LayoutPageContainer>
-		<div class="flex items-center justify-between mb-6">
-			<div>
-				<h1 class="text-xl font-semibold">Tasks</h1>
-				<p class="text-sm text-muted-foreground mt-0.5">Track work items associated with your projects.</p>
-			</div>
-		</div>
+	<div class="portal-page">
+		<AppHeader title="Tasks" />
 
-		<!-- Filter Tabs -->
-		<div class="flex gap-1 mb-5 p-1 rounded-xl bg-muted/50 w-fit">
-			<button
-				v-for="f in (['active', 'completed', 'all'] as const)"
-				:key="f"
-				class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors capitalize"
-				:class="filter === f ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'"
-				@click="filter = f"
-			>
-				{{ f }}
-			</button>
-		</div>
+		<LayoutPageContainer>
+			<p class="text-sm text-muted-foreground mb-4 -mt-1">Track work items associated with your projects.</p>
+
+			<!-- Sub-nav — same AppFloorStrip the staff apps use. -->
+			<AppFloorStrip v-model="filter" :items="taskSegments" aria-label="Task filter" />
 
 		<!-- Loading -->
 		<div v-if="loading" class="flex items-center justify-center py-24">
@@ -211,5 +208,6 @@ watch(filter, () => loadTasks());
 				</div>
 			</div>
 		</div>
-	</LayoutPageContainer>
+		</LayoutPageContainer>
+	</div>
 </template>

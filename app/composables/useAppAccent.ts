@@ -149,3 +149,56 @@ export function useAppAccent() {
 
 	return { activeAppId, accent, accentStyle };
 }
+
+/**
+ * Shape returned by `useCurrentAccent` — narrowed to the fields shared
+ * components (AppHeader, AppSlideOver) actually consume. Both
+ * `useAppAccent` and `usePortalAccent` satisfy this shape; the union
+ * lets a single component render in either shell.
+ */
+export interface CurrentAccent {
+	id: string;
+	name: string;
+	icon: string;
+	h: number;
+	s: number;
+	l: number;
+}
+
+/**
+ * useCurrentAccent — dispatcher used by shared chrome components.
+ *
+ *   /apps/*   → useAppAccent (Clients/Work/Money/Marketing/Org/Account)
+ *   /portal/* → usePortalAccent (Dashboard/Projects/Tasks/Tickets/…)
+ *
+ * Returning a unified shape means `AppHeader` and `AppSlideOver` can be
+ * used as-is in the client portal — visually identical to the main app
+ * because they render through the same component.
+ */
+export function useCurrentAccent() {
+	const route = useRoute();
+
+	const isPortal = computed(() => route.path.startsWith('/portal'));
+
+	const portalAccent = usePortalAccent();
+	const appAccent = useAppAccent();
+
+	const accent = computed<CurrentAccent | null>(() => {
+		const a = isPortal.value ? portalAccent.accent.value : appAccent.accent.value;
+		if (!a) return null;
+		return {
+			id: String(a.id),
+			name: a.name,
+			icon: a.icon,
+			h: a.h,
+			s: a.s,
+			l: a.l,
+		};
+	});
+
+	const accentStyle = computed<CSSProperties>(() =>
+		(isPortal.value ? portalAccent.accentStyle.value : appAccent.accentStyle.value),
+	);
+
+	return { accent, accentStyle, isPortal };
+}

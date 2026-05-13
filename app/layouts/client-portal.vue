@@ -1,5 +1,5 @@
 <template>
-	<div class="relative bg-background text-foreground transition duration-150 lg:overflow-visible ios-safe-area">
+	<div class="relative bg-background text-foreground ios-safe-area">
 		<!-- Admin preview banner — when the route carries ?previewAs=<id>,
 		     this layout was opened by an admin from the main app's client
 		     switcher. Make the mode obvious so they don't think it's their
@@ -20,76 +20,73 @@
 			</button>
 		</div>
 
-		<LayoutPortalHeader />
+		<div
+			class="portal-shell"
+			:class="[
+				`portal-shell--rail-${railPosition}`,
+				railIsHorizontal ? 'portal-shell--horizontal' : 'portal-shell--vertical',
+				previewClientName ? 'portal-shell--with-preview' : '',
+			]"
+			:style="accentStyle"
+		>
+			<PortalRail
+				v-if="railPosition === 'left' || railPosition === 'right'"
+				key="rail-vertical"
+				class="portal-shell__rail"
+			/>
 
-		<div class="page pb-safe-portal pt-portal-header" :class="previewClientName ? 'pt-portal-header-preview' : ''">
-			<slot />
+			<div class="portal-shell__main">
+				<header class="portal-shell__chrome glass">
+					<div class="portal-shell__chrome-left">
+						<ClientOnly>
+							<LayoutPortalClientSelect v-if="user" :user="user" @open-org-switcher="showUpsell = true" />
+						</ClientOnly>
+					</div>
+					<div class="portal-shell__chrome-center">
+						<LayoutEarnestBrand to="/portal" tagline="Client Portal" />
+					</div>
+					<div class="portal-shell__chrome-right">
+						<ClientOnly>
+							<LayoutAppRailPositionPicker class="hidden lg:flex" />
+						</ClientOnly>
+						<ClientOnly>
+							<LayoutNotificationsMenu />
+						</ClientOnly>
+						<ClientOnly>
+							<LayoutPortalUserMenu v-if="user" class="shrink-0" />
+						</ClientOnly>
+					</div>
+				</header>
+
+				<main
+					class="portal-shell__page"
+					:class="{
+						'portal-shell__page--rail-top': railPosition === 'top',
+						'portal-shell__page--rail-bottom': railPosition === 'bottom',
+						'portal-shell__page--rail-floating': railPosition === 'floating',
+					}"
+				>
+					<slot />
+				</main>
+			</div>
+
+			<PortalRail
+				v-if="railPosition === 'top' || railPosition === 'bottom' || railPosition === 'floating'"
+				:key="`rail-${railPosition}`"
+				class="portal-shell__rail"
+			/>
 		</div>
 
-		<!-- Mobile toolbar — primary links only (hidden on lg+ where sidebar takes over) -->
-		<nav class="portal-toolbar lg:hidden">
-			<NuxtLink
-				v-for="link in primaryLinks"
-				:key="link.to"
-				:to="link.to"
-				class="portal-tab"
-				:class="{ 'portal-tab--active': isActiveRoute(link.to) }"
-			>
-				<Icon :name="link.icon" class="w-5 h-5" />
-				<span class="text-[10px] mt-0.5">{{ link.name }}</span>
-			</NuxtLink>
-			<!-- More sheet trigger -->
-			<button class="portal-tab" :class="{ 'portal-tab--active': showMore }" @click="showMore = !showMore">
-				<Icon name="lucide:more-horizontal" class="w-5 h-5" />
-				<span class="text-[10px] mt-0.5">More</span>
-			</button>
-		</nav>
+		<!-- Slide-over teleport target — portal pages push content into here
+		     via AppSlideOver / <Teleport to="#app-slide-over-root">. Mirrors the
+		     same hook used by the apps shell so the same component works in
+		     either context. -->
+		<div id="app-slide-over-root" />
 
-		<!-- Mobile "More" sheet -->
-		<Transition name="slide-up">
-			<div v-if="showMore" class="fixed inset-0 z-50 lg:hidden flex flex-col justify-end" @click.self="showMore = false">
-				<div class="bg-background border-t border-border/40 rounded-t-2xl shadow-xl p-4 pb-safe-portal">
-					<div class="w-12 h-1 rounded-full bg-muted mx-auto mb-4" />
-					<div class="grid grid-cols-4 gap-2">
-						<NuxtLink
-							v-for="link in secondaryLinks"
-							:key="link.to"
-							:to="link.to"
-							class="flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl transition-colors"
-							:class="isActiveRoute(link.to) ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'"
-							@click="showMore = false"
-						>
-							<Icon :name="link.icon" class="w-6 h-6" />
-							<span class="text-[10px]">{{ link.name }}</span>
-						</NuxtLink>
-					</div>
-				</div>
-			</div>
-		</Transition>
-
-		<!-- Desktop sidebar nav (visible on lg+) -->
-		<aside class="hidden lg:flex portal-sidebar">
-			<nav class="flex flex-col gap-1 p-3 w-full">
-				<NuxtLink
-					v-for="link in portalLinks"
-					:key="link.to"
-					:to="link.to"
-					class="portal-nav-item"
-					:class="{ 'portal-nav-item--active': isActiveRoute(link.to) }"
-				>
-					<Icon :name="link.icon" class="w-5 h-5" />
-					<span>{{ link.name }}</span>
-				</NuxtLink>
-			</nav>
-
-			<!-- Client info at bottom -->
-			<div v-if="clientName" class="p-3 border-t border-border/40 mt-auto">
-				<div class="flex items-center gap-2 px-3 py-2 rounded-xl bg-muted/50">
-					<Icon name="lucide:building-2" class="w-4 h-4 text-muted-foreground shrink-0" />
-					<span class="text-xs text-muted-foreground truncate">{{ clientName }}</span>
-				</div>
-			</div>
-		</aside>
+		<!-- Org switcher modal — same modal the previous portal header used.
+		     Lists the user's orgs (portal + own) with the active one highlighted
+		     and an upsell when the user has no workspace of their own. -->
+		<LayoutPortalUpsellModal v-if="user" v-model="showUpsell" />
 	</div>
 </template>
 
@@ -97,14 +94,20 @@
 const { user } = useDirectusAuth();
 const route = useRoute();
 const router = useRouter();
-const { clientName: portalClientName } = useClientPortalUser();
+const { railPosition } = useAppsMode();
+const { accentStyle } = usePortalAccent();
 
-const showMore = ref(false);
+const showUpsell = ref(false);
 
-// Admin preview-mode state. When an admin clicks "Preview <client> portal" in
-// the main-app client switcher we land on /portal?previewAs=<id> and a cookie
-// has been set; the portal API routes already pick up the cookie. The layout
-// just needs to label the mode and offer an exit.
+const railIsHorizontal = computed(() =>
+	railPosition.value === 'top' || railPosition.value === 'bottom',
+);
+
+// ── Admin preview mode ────────────────────────────────────────────────
+// When an admin clicks "Preview <client> portal" from the main app's
+// client switcher, the route carries ?previewAs=<id> and a cookie is
+// set. The portal API routes pick up the cookie; the layout just labels
+// the mode and offers an exit.
 const previewClientId = computed(() => {
 	const q = route.query?.previewAs;
 	return typeof q === 'string' && q ? q : null;
@@ -133,157 +136,86 @@ function exitPreview() {
 	if (import.meta.client) {
 		document.cookie = 'portal_preview_as=; path=/; max-age=0; samesite=lax';
 	}
-	// Send the admin back to where they likely came from.
 	router.push('/clients');
 }
-
-type PortalLink = { name: string; to: string; icon: string; key?: 'social' | 'marketing' | 'proposals' | 'contracts' };
-
-const ALL_LINKS: PortalLink[] = [
-	{ name: 'Dashboard',  to: '/portal',           icon: 'lucide:layout-dashboard' },
-	{ name: 'Projects',   to: '/portal/projects',  icon: 'lucide:folder-kanban' },
-	{ name: 'Tasks',      to: '/portal/tasks',     icon: 'lucide:check-square' },
-	{ name: 'Tickets',    to: '/portal/tickets',   icon: 'lucide:ticket' },
-	{ name: 'Invoices',   to: '/portal/invoices',  icon: 'lucide:file-text' },
-	{ name: 'Proposals',  to: '/portal/proposals', icon: 'lucide:file-signature', key: 'proposals' },
-	{ name: 'Contracts',  to: '/portal/contracts', icon: 'lucide:file-badge',     key: 'contracts' },
-	{ name: 'Social',     to: '/portal/social',    icon: 'lucide:bar-chart-2',    key: 'social' },
-	{ name: 'Marketing',  to: '/portal/marketing', icon: 'lucide:megaphone',      key: 'marketing' },
-	{ name: 'Messages',   to: '/portal/messages',  icon: 'lucide:message-square' },
-];
-
-// Optional sections — hidden when the client has zero data for them.
-const availability = ref<Partial<Record<NonNullable<PortalLink['key']>, boolean>>>({
-	social: true,
-	marketing: true,
-	proposals: true,
-	contracts: true,
-});
-
-async function loadAvailability() {
-	if (!user.value) return;
-	try {
-		availability.value = await $fetch('/api/portal/nav-availability');
-	} catch {
-		// Leave defaults (show everything) if the endpoint fails — better
-		// than hiding nav and confusing the user.
-	}
-}
-
-const portalLinks = computed(() => {
-	return ALL_LINKS.filter((link) => {
-		if (!link.key) return true;
-		return availability.value[link.key] !== false;
-	});
-});
-
-const primaryLinks = computed(() => portalLinks.value.slice(0, 4));
-const secondaryLinks = computed(() => portalLinks.value.slice(4));
-
-const clientName = computed(() => portalClientName.value);
-
-function isActiveRoute(path: string): boolean {
-	if (path === '/portal') {
-		return route.path === '/portal' || route.path === '/portal/';
-	}
-	return route.path.startsWith(path);
-}
-
-onMounted(() => {
-	if (import.meta.client) loadAvailability();
-});
-
-watch(() => user.value?.id, (id) => {
-	if (id) loadAvailability();
-});
 </script>
 
-<style>
+<style scoped>
 @reference "~/assets/css/tailwind.css";
 
-/* Mobile toolbar — only rendered <lg via Tailwind `lg:hidden`. The
-   display:flex sits inside a max-width media query so it doesn't override
-   the lg:hidden display:none on wider screens. */
-@media (max-width: 1023.98px) {
-	.portal-toolbar {
-		position: fixed;
-		bottom: 0;
-		left: 0;
-		right: 0;
-		z-index: 50;
-		display: flex;
-		justify-content: space-around;
-		align-items: center;
-		background: rgba(255, 255, 255, 0.82);
-		backdrop-filter: saturate(180%) blur(20px);
-		-webkit-backdrop-filter: saturate(180%) blur(20px);
-		border-top: 1px solid hsl(var(--border) / 0.4);
-		padding: 8px 0 calc(8px + env(safe-area-inset-bottom, 0px));
-	}
-	:is(.dark) .portal-toolbar {
-		background: rgba(20, 20, 20, 0.82);
-	}
+/* Mirror of `.apps-shell` — same flexbox layout flips so the user's
+ * chosen rail position (left/right/top/bottom/floating) behaves
+ * identically in the portal as it does in the main app shell. */
+.portal-shell {
+	@apply flex h-screen min-h-screen w-full;
 }
 
-.portal-tab {
-	@apply flex flex-col items-center justify-center gap-0.5 py-1 px-3 text-muted-foreground transition-colors;
-}
-.portal-tab--active {
-	@apply text-primary;
+.portal-shell--vertical {
+	@apply flex-row;
 }
 
-/* Desktop sidebar */
-.portal-sidebar {
-	position: fixed;
-	top: 0;
-	left: 0;
-	bottom: 0;
-	width: 200px;
-	z-index: 30;
-	padding-top: 80px;
-	flex-direction: column;
-	border-right: 1px solid hsl(var(--border) / 0.4);
-	background: hsl(var(--background));
+.portal-shell--horizontal {
+	@apply flex-col;
 }
 
-.portal-nav-item {
-	@apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors;
-}
-.portal-nav-item--active {
-	@apply text-foreground bg-muted/80 font-medium;
+.portal-shell--rail-right {
+	@apply flex-row-reverse;
 }
 
-/* Push page content below the fixed header. Header is ~76px tall expanded. */
-.pt-portal-header {
-	padding-top: 88px;
+.portal-shell--rail-bottom {
+	@apply flex-col-reverse;
 }
 
-/* When the admin preview banner is visible, push the page another ~30px so
-   the header isn't obscured. */
-.pt-portal-header-preview {
-	padding-top: 122px;
+/* When the admin-preview banner is showing, nudge the shell down so the
+ * fixed banner doesn't overlap the chrome row. */
+.portal-shell--with-preview {
+	padding-top: 30px;
+	height: calc(100vh - 30px);
+	min-height: calc(100vh - 30px);
 }
 
-/* Page content offset for sidebar (sidebar is lg+ only) */
-@media (min-width: 1024px) {
-	.page.pb-safe-portal {
-		margin-left: 200px;
-		padding-bottom: 0;
-	}
-}
-@media (max-width: 1023px) {
-	.pb-safe-portal {
-		padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 16px);
-	}
+.portal-shell__main {
+	@apply flex-1 flex flex-col min-w-0 min-h-0;
 }
 
-.slide-up-enter-active,
-.slide-up-leave-active {
-	transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+/* Inherits .glass from the template (saturate/blur backdrop), so we
+ * intentionally avoid setting bg-background here — it would mask the
+ * glass effect. */
+.portal-shell__chrome {
+	@apply grid items-center border-b border-border/40 px-3 sm:px-4 lg:px-6 shrink-0 z-40;
+	grid-template-columns: 1fr auto 1fr;
+	min-height: 56px;
 }
-.slide-up-enter-from,
-.slide-up-leave-to {
-	opacity: 0;
-	transform: translateY(100%);
+
+.portal-shell__chrome-left {
+	@apply flex items-center gap-2 min-w-0 justify-self-start;
+}
+
+.portal-shell__chrome-center {
+	@apply flex items-center justify-center;
+}
+
+.portal-shell__chrome-right {
+	@apply flex items-center gap-1.5 justify-self-end;
+}
+
+.portal-shell__avatar {
+	@apply flex items-center justify-center rounded-full hover:opacity-80 transition-opacity;
+}
+
+.portal-shell__page {
+	@apply flex-1 overflow-auto min-h-0;
+}
+
+/* Top + bottom rails float as glass pills over the page; pad the scroll
+ * area so its content never slides under them. Floating uses the same
+ * bottom padding as bottom so popovers/CTAs aren't hidden. */
+.portal-shell__page--rail-top {
+	@apply pt-16 sm:pt-20;
+}
+
+.portal-shell__page--rail-bottom,
+.portal-shell__page--rail-floating {
+	@apply pb-16 sm:pb-20;
 }
 </style>

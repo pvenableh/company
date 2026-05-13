@@ -11,6 +11,12 @@ const loading = ref(true);
 const invoices = ref<any[]>([]);
 const filter = ref<'all' | 'unpaid' | 'paid'>('all');
 
+const invoiceSegments = [
+	{ key: 'all' as const,    label: 'All',    icon: 'lucide:layers' },
+	{ key: 'unpaid' as const, label: 'Unpaid', icon: 'lucide:clock' },
+	{ key: 'paid' as const,   label: 'Paid',   icon: 'lucide:check-circle-2' },
+];
+
 async function loadInvoices() {
 	loading.value = true;
 	try {
@@ -57,26 +63,13 @@ watch(filter, () => loadInvoices());
 </script>
 
 <template>
-	<LayoutPageContainer>
-		<div class="flex items-center justify-between mb-6">
-			<div>
-				<h1 class="text-xl font-semibold">Invoices</h1>
-				<p class="text-sm text-muted-foreground mt-0.5">View your billing history and payment status.</p>
-			</div>
-		</div>
+	<div class="portal-page">
+		<AppHeader title="Invoices" />
 
-		<!-- Filter Tabs -->
-		<div class="flex gap-1 mb-5 p-1 rounded-xl bg-muted/50 w-fit">
-			<button
-				v-for="f in (['all', 'unpaid', 'paid'] as const)"
-				:key="f"
-				class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors capitalize"
-				:class="filter === f ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'"
-				@click="filter = f"
-			>
-				{{ f }}
-			</button>
-		</div>
+		<LayoutPageContainer>
+			<p class="text-sm text-muted-foreground mb-4 -mt-1">View your billing history and payment status.</p>
+
+			<AppFloorStrip v-model="filter" :items="invoiceSegments" aria-label="Invoice filter" />
 
 		<!-- Loading -->
 		<div v-if="loading" class="flex items-center justify-center py-24">
@@ -133,5 +126,6 @@ watch(filter, () => loadInvoices());
 				<Icon name="lucide:chevron-right" class="w-4 h-4 text-muted-foreground/40 shrink-0 group-hover:text-muted-foreground transition-colors" />
 			</NuxtLink>
 		</div>
-	</LayoutPageContainer>
+		</LayoutPageContainer>
+	</div>
 </template>

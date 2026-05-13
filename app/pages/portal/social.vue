@@ -11,12 +11,14 @@ useHead({ title: 'Social Analytics | Client Portal' });
 const { selectedOrg } = useOrganization();
 const { clientScope } = useOrgRole();
 
-// Date range preset
-const selectedPreset = ref('30d');
-const presets = [
-	{ label: '7 days', value: '7d' },
-	{ label: '30 days', value: '30d' },
-	{ label: '90 days', value: '90d' },
+// Date range preset — rendered through AppFloorStrip for visual parity
+// with the staff apps' sub-nav.
+type SocialPreset = '7d' | '30d' | '90d';
+const selectedPreset = ref<SocialPreset>('30d');
+const presets: Array<{ key: SocialPreset; label: string; icon: string }> = [
+	{ key: '7d',  label: '7 days',  icon: 'lucide:calendar-clock' },
+	{ key: '30d', label: '30 days', icon: 'lucide:calendar-range' },
+	{ key: '90d', label: '90 days', icon: 'lucide:calendar' },
 ];
 
 const dateRange = computed(() => {
@@ -92,27 +94,13 @@ const PLATFORM_COLORS: Record<string, string> = {
 </script>
 
 <template>
-	<LayoutPageContainer>
-		<!-- Header -->
-		<div class="flex items-center justify-between mb-6 flex-wrap gap-3">
-			<div>
-				<h1 class="text-xl font-semibold">Social Analytics</h1>
-				<p class="text-sm text-muted-foreground mt-0.5">Performance metrics across your connected channels.</p>
-			</div>
+	<div class="portal-page">
+		<AppHeader title="Social Analytics" />
 
-			<!-- Date Range -->
-			<div class="flex gap-1 p-1 rounded-xl bg-muted/50">
-				<button
-					v-for="p in presets"
-					:key="p.value"
-					class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-					:class="selectedPreset === p.value ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'"
-					@click="selectedPreset = p.value"
-				>
-					{{ p.label }}
-				</button>
-			</div>
-		</div>
+		<LayoutPageContainer>
+			<p class="text-sm text-muted-foreground mb-4 -mt-1">Performance metrics across your connected channels.</p>
+
+			<AppFloorStrip v-model="selectedPreset" :items="presets" aria-label="Date range" />
 
 		<!-- Loading -->
 		<div v-if="loading" class="flex items-center justify-center py-24">
@@ -211,5 +199,6 @@ const PLATFORM_COLORS: Record<string, string> = {
 				<p class="text-sm text-muted-foreground">Metrics are captured daily — check back tomorrow for your first snapshot.</p>
 			</div>
 		</template>
-	</LayoutPageContainer>
+		</LayoutPageContainer>
+	</div>
 </template>

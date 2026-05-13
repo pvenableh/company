@@ -99,14 +99,14 @@ function formatTotal(n: number | null | undefined) {
 </script>
 
 <template>
-	<LayoutPageContainer>
-		<div class="mb-4">
-			<NuxtLink to="/portal/proposals" class="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
-				<Icon name="lucide:chevron-left" class="w-3.5 h-3.5" />
-				Back to Proposals
-			</NuxtLink>
-		</div>
+	<div class="portal-page">
+		<AppHeader
+			:title="proposal?.title || 'Proposal'"
+			show-back
+			back-label="Proposals"
+		/>
 
+		<LayoutPageContainer>
 		<div v-if="loading" class="flex items-center justify-center py-20">
 			<Icon name="lucide:loader-2" class="w-6 h-6 text-muted-foreground animate-spin" />
 		</div>
@@ -161,5 +161,6 @@ function formatTotal(n: number | null | undefined) {
 				Accept or decline on the list
 			</NuxtLink>
 		</div>
-	</LayoutPageContainer>
+		</LayoutPageContainer>
+	</div>
 </template>

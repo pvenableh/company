@@ -160,10 +160,12 @@ watch(view, (v) => {
 	if (import.meta.client) localStorage.setItem(VIEW_KEY, v);
 });
 
-const VIEW_OPTIONS: Array<{ key: ViewMode; label: string; icon: string }> = [
-	{ key: 'gantt', label: 'Timeline', icon: 'lucide:bar-chart-3' },
-	{ key: 'kanban', label: 'Board', icon: 'lucide:kanban-square' },
-	{ key: 'list', label: 'List', icon: 'lucide:list' },
+// AppFloorStrip segments — shape matches the staff apps so the sub-nav
+// reads identical across both shells.
+const projectSegments: Array<{ key: ViewMode; label: string; icon: string }> = [
+	{ key: 'gantt',  label: 'Timeline', icon: 'lucide:bar-chart-3' },
+	{ key: 'kanban', label: 'Board',    icon: 'lucide:kanban-square' },
+	{ key: 'list',   label: 'List',     icon: 'lucide:list' },
 ];
 
 onMounted(() => loadProjects());
@@ -171,29 +173,13 @@ watch(() => selectedOrg.value, () => loadProjects());
 </script>
 
 <template>
-	<LayoutPageContainer>
-		<div class="flex items-center justify-between mb-6 gap-4">
-			<div>
-				<h1 class="text-xl font-semibold">Projects</h1>
-				<p class="text-sm text-muted-foreground mt-0.5">Track timeline, status, and progress.</p>
-			</div>
+	<div class="portal-page">
+		<AppHeader title="Projects" />
 
-			<!-- View switcher -->
-			<div class="flex gap-1 p-1 rounded-xl bg-muted/50 shrink-0">
-				<button
-					v-for="opt in VIEW_OPTIONS"
-					:key="opt.key"
-					class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors"
-					:class="view === opt.key
-						? 'bg-background shadow-sm text-foreground'
-						: 'text-muted-foreground hover:text-foreground'"
-					@click="view = opt.key"
-				>
-					<Icon :name="opt.icon" class="w-3.5 h-3.5" />
-					<span class="hidden sm:inline">{{ opt.label }}</span>
-				</button>
-			</div>
-		</div>
+		<LayoutPageContainer>
+			<p class="text-sm text-muted-foreground mb-4 -mt-1">Track timeline, status, and progress.</p>
+
+			<AppFloorStrip v-model="view" :items="projectSegments" aria-label="Project view" />
 
 		<!-- Loading -->
 		<div v-if="loading" class="flex items-center justify-center py-24">
@@ -430,7 +416,8 @@ watch(() => selectedOrg.value, () => loadProjects());
 				</div>
 			</Transition>
 		</Teleport>
-	</LayoutPageContainer>
+		</LayoutPageContainer>
+	</div>
 </template>
 
 <style scoped>

@@ -43,23 +43,18 @@ const priorityBadge: Record<string, string> = {
 </script>
 
 <template>
-	<LayoutPageContainer>
-		<!-- Header -->
-		<div class="flex items-center justify-between mb-6 gap-4 flex-wrap">
-			<div>
-				<h1 class="text-xl font-semibold">Tickets</h1>
-				<p class="text-sm text-muted-foreground mt-0.5">Track and manage your support requests.</p>
-			</div>
+	<div class="portal-page">
+		<AppHeader title="Tickets">
+			<template v-if="canCreateTickets" #actions>
+				<Button size="sm" @click="showCreateForm = !showCreateForm">
+					<Icon :name="showCreateForm ? 'lucide:x' : 'lucide:plus'" class="w-4 h-4 mr-1" />
+					{{ showCreateForm ? 'Cancel' : 'New Ticket' }}
+				</Button>
+			</template>
+		</AppHeader>
 
-			<Button
-				v-if="canCreateTickets"
-				size="sm"
-				@click="showCreateForm = !showCreateForm"
-			>
-				<Icon :name="showCreateForm ? 'lucide:x' : 'lucide:plus'" class="w-4 h-4 mr-1" />
-				{{ showCreateForm ? 'Cancel' : 'New Ticket' }}
-			</Button>
-		</div>
+		<LayoutPageContainer>
+			<p class="text-sm text-muted-foreground mb-6 -mt-1">Track and manage your support requests.</p>
 
 		<!-- Create Ticket Form (shared with the dashboard) -->
 		<div v-if="showCreateForm" class="mb-6">
@@ -159,7 +154,8 @@ const priorityBadge: Record<string, string> = {
 				</div>
 			</Transition>
 		</Teleport>
-	</LayoutPageContainer>
+		</LayoutPageContainer>
+	</div>
 </template>
 
 <style scoped>

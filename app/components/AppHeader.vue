@@ -18,7 +18,10 @@
 
 const router = useRouter();
 const route = useRoute();
-const { accent } = useAppAccent();
+// `useCurrentAccent` dispatches between `useAppAccent` (for /apps/*)
+// and `usePortalAccent` (for /portal/*) so this header looks/feels
+// identical in both shells without duplicating the component.
+const { accent } = useCurrentAccent();
 
 const props = withDefaults(
 	defineProps<{
@@ -41,7 +44,8 @@ function goBack() {
 const fallbackBackLabel = computed(() => {
 	if (accent.value) return accent.value.name;
 	const seg = route.path.split('/').filter(Boolean);
-	if (seg[0] === 'apps' && seg.length >= 2) {
+	// Recognise both /apps/<id> and /portal/<id> as "<Id>".
+	if ((seg[0] === 'apps' || seg[0] === 'portal') && seg.length >= 2) {
 		const appId = seg[1];
 		return appId ? appId.charAt(0).toUpperCase() + appId.slice(1) : 'Back';
 	}

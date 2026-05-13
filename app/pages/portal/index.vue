@@ -228,24 +228,23 @@ watch(() => selectedOrg.value, () => {
 </script>
 
 <template>
-	<LayoutPageContainer>
-		<!-- Welcome Header -->
-		<div class="flex items-start justify-between gap-4 mb-8 flex-wrap">
-			<div>
-				<h1 class="text-2xl font-semibold">
-					Welcome{{ user?.first_name ? `, ${user.first_name}` : '' }}
-				</h1>
-				<p class="text-sm text-muted-foreground mt-1">
-					<template v-if="clientName">{{ clientName }} &mdash; </template>
-					Here's an overview of your projects and tickets.
-				</p>
-			</div>
+	<div class="portal-page">
+		<AppHeader>
+			<template #default>
+				Welcome{{ user?.first_name ? `, ${user.first_name}` : '' }}
+			</template>
+			<template #actions>
+				<Button size="sm" @click="showTicketForm = !showTicketForm">
+					<Icon :name="showTicketForm ? 'lucide:x' : 'lucide:plus'" class="w-4 h-4 mr-1" />
+					{{ showTicketForm ? 'Cancel' : 'Submit a Ticket' }}
+				</Button>
+			</template>
+		</AppHeader>
 
-			<Button size="sm" @click="showTicketForm = !showTicketForm">
-				<Icon :name="showTicketForm ? 'lucide:x' : 'lucide:plus'" class="w-4 h-4 mr-1" />
-				{{ showTicketForm ? 'Cancel' : 'Submit a Ticket' }}
-			</Button>
-		</div>
+		<LayoutPageContainer>
+			<p v-if="clientName" class="text-sm text-muted-foreground mb-6 -mt-1">
+				{{ clientName }} &mdash; Here's an overview of your projects and tickets.
+			</p>
 
 		<!-- Inline ticket submission -->
 		<div v-if="showTicketForm" class="mb-8">
@@ -540,5 +539,6 @@ watch(() => selectedOrg.value, () => {
 				</div>
 			</div>
 		</template>
-	</LayoutPageContainer>
+		</LayoutPageContainer>
+	</div>
 </template>

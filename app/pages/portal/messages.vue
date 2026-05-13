@@ -156,7 +156,10 @@ watch(() => selectedOrg.value, () => {
 </script>
 
 <template>
-	<div class="flex h-[calc(100vh-80px)] max-h-[calc(100vh-80px)]">
+	<div class="portal-page portal-messages-page">
+		<AppHeader title="Messages" />
+
+		<div class="portal-messages-body">
 		<!-- Channel List Sidebar -->
 		<div class="w-full max-w-[240px] border-r border-border/40 flex flex-col shrink-0 hidden sm:flex">
 			<div class="p-3 border-b border-border/40">
@@ -312,5 +315,22 @@ watch(() => selectedOrg.value, () => {
 				<p class="text-sm text-muted-foreground">Select a channel to start messaging.</p>
 			</div>
 		</div>
+		</div>
 	</div>
 </template>
+
+<style scoped>
+@reference "~/assets/css/tailwind.css";
+
+/* The Messages page is a special-case full-height layout: header on top,
+ * channel list + message pane fill the remaining viewport. We use the
+ * page wrapper's flex column so the body claims whatever's left after
+ * AppHeader. */
+.portal-messages-page {
+	@apply flex flex-col h-full min-h-0;
+}
+
+.portal-messages-body {
+	@apply flex flex-1 min-h-0;
+}
+</style>

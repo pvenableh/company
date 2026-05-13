@@ -31,7 +31,14 @@ const defaultEmail = computed(() => {
 </script>
 
 <template>
-	<LayoutPageContainer>
+	<div class="portal-page">
+		<AppHeader
+			:title="invoice?.invoice_code || 'Invoice'"
+			show-back
+			back-label="Invoices"
+		/>
+
+		<LayoutPageContainer>
 		<div v-if="loadError" class="flex flex-col items-center justify-center py-24 gap-3">
 			<Icon name="lucide:alert-circle" class="w-10 h-10 text-muted-foreground/40" />
 			<p class="text-sm text-muted-foreground">{{ loadError }}</p>
@@ -39,14 +46,7 @@ const defaultEmail = computed(() => {
 		</div>
 
 		<div v-else-if="invoice" class="w-full flex flex-col items-center justify-center">
-			<div class="w-full max-w-screen-xl mx-auto z-10">
-				<NuxtLink to="/portal/invoices" class="uppercase text-[10px] text-gray-400 px-4 2xl:px-0">
-					<UIcon name="i-heroicons-arrow-left" class="-mb-0.5" />
-					Back to Invoices
-				</NuxtLink>
-			</div>
-
-			<div class="w-full flex flex-col lg:flex-row items-center lg:items-start justify-center relative z-10 mt-12">
+			<div class="w-full flex flex-col lg:flex-row items-center lg:items-start justify-center relative z-10">
 				<InvoicesInvoice :invoice="invoice" class="lg:sticky lg:top-12" />
 
 				<div v-if="invoice.status === 'pending'" class="w-full px-6 pt-0 pb-16 lg:w-1/2 max-w-xl">
@@ -82,5 +82,6 @@ const defaultEmail = computed(() => {
 				</div>
 			</div>
 		</div>
-	</LayoutPageContainer>
+		</LayoutPageContainer>
+	</div>
 </template>

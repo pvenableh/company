@@ -24,7 +24,9 @@ import {
 	SheetTrigger,
 } from '@/components/ui/sheet'
 
-const { accent, accentStyle } = useAppAccent()
+// Use `useCurrentAccent` so slide-overs render with the portal accent
+// when opened from a /portal/* page, and the app accent on /apps/*.
+const { accent, accentStyle } = useCurrentAccent()
 
 const props = withDefaults(
 	defineProps<{
