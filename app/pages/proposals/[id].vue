@@ -8,6 +8,9 @@ const route = useRoute();
 const router = useRouter();
 const proposalId = computed(() => route.params.id as string);
 
+// Archive unread bell rows for this proposal on mount.
+useMarkItemRead('proposals', proposalId);
+
 const { getProposal } = useProposals();
 const { getStatusBadgeClasses } = useStatusStyle();
 const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext();

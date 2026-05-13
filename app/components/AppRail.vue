@@ -20,6 +20,15 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/comp
 
 const route = useRoute();
 const { railPosition, railShowLabels } = useAppsMode();
+const { countFor } = useUnreadByCategory();
+
+function badgeFor(app: AppAccent): number {
+	if (!app.notificationCategories?.length) return 0;
+	return app.notificationCategories.reduce((sum, cat) => sum + countFor(cat), 0);
+}
+function badgeLabel(count: number) {
+	return count > 99 ? '99+' : String(count);
+}
 
 const apps = computed<AppAccent[]>(() => APP_ORDER.map((id) => APP_ACCENTS[id]));
 const footer = computed<AppAccent[]>(() => APP_FOOTER_ORDER.map((id) => APP_ACCENTS[id]));
@@ -97,6 +106,11 @@ function styleFor(app: AppAccent) {
 											<Icon :name="app.icon" class="app-rail__icon-highlight" />
 										</span>
 									</span>
+									<span
+										v-if="badgeFor(app) > 0"
+										class="app-rail__badge"
+										:aria-label="`${badgeFor(app)} unread`"
+									>{{ badgeLabel(badgeFor(app)) }}</span>
 								</span>
 								<span class="app-rail__label">{{ app.name }}</span>
 							</NuxtLink>
@@ -128,6 +142,11 @@ function styleFor(app: AppAccent) {
 											<Icon :name="app.icon" class="app-rail__icon-highlight" />
 										</span>
 									</span>
+									<span
+										v-if="badgeFor(app) > 0"
+										class="app-rail__badge"
+										:aria-label="`${badgeFor(app)} unread`"
+									>{{ badgeLabel(badgeFor(app)) }}</span>
 								</span>
 								<span class="app-rail__label">{{ app.name }}</span>
 							</NuxtLink>
@@ -460,5 +479,31 @@ function styleFor(app: AppAccent) {
 .app-rail__item--active .app-rail__label {
 	color: hsl(var(--foreground));
 	font-weight: 600;
+}
+
+/* ── Badge ────────────────────────────────────────────────────────── */
+/* Unread-count pill anchored to the chip's top-right. Sized so single
+ * digits render as a tight circle and longer counts (10+, "99+") grow
+ * naturally into a pill. The cyan accent matches the bell's unread dot
+ * for visual rhyme between the rail and the bell. */
+.app-rail__badge {
+	position: absolute;
+	top: -4px;
+	right: -4px;
+	min-width: 16px;
+	height: 16px;
+	padding: 0 4px;
+	border-radius: 999px;
+	background: var(--cyan, #06b6d4);
+	color: white;
+	font-size: 9px;
+	font-weight: 700;
+	line-height: 1;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: 0 1px 3px hsl(0 0% 0% / 0.25), 0 0 0 1.5px hsl(var(--background));
+	pointer-events: none;
+	z-index: 3;
 }
 </style>

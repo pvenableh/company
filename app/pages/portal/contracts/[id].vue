@@ -10,6 +10,9 @@ useHead({ title: 'Contract | Client Portal' });
 const route = useRoute();
 const contractItems = usePortalItems('contracts');
 
+// Archive unread bell rows for this contract on mount.
+useMarkItemRead('contracts', () => route.params.id as string);
+
 const contract = ref<any>(null);
 const loading = ref(true);
 const notFound = ref(false);

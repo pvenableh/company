@@ -8,6 +8,9 @@ const route = useRoute();
 const router = useRouter();
 const contractId = computed(() => route.params.id as string);
 
+// Archive unread bell rows for this contract on mount.
+useMarkItemRead('contracts', contractId);
+
 const { getContract } = useContracts();
 const { getStatusBadgeClasses } = useStatusStyle();
 

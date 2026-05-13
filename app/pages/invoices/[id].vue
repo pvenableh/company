@@ -3,6 +3,9 @@ useHead({ title: 'Invoice | Earnest' });
 
 const { params } = useRoute();
 const invoiceItems = useDirectusItems('invoices', { requireAuth: false });
+
+// Archive any unread bell rows for this invoice on mount.
+useMarkItemRead('invoices', () => params.id);
 const { user: sessionUser, loggedIn } = useUserSession();
 const user = computed(() => {
 	return loggedIn.value ? sessionUser.value ?? null : null;

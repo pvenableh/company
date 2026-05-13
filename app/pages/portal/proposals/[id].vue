@@ -10,6 +10,9 @@ useHead({ title: 'Proposal | Client Portal' });
 const route = useRoute();
 const proposalItems = usePortalItems('proposals');
 
+// Archive unread bell rows for this proposal on mount.
+useMarkItemRead('proposals', () => route.params.id as string);
+
 const proposal = ref<any>(null);
 const loading = ref(true);
 const notFound = ref(false);

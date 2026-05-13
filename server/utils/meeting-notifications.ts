@@ -127,7 +127,10 @@ export async function notifyMeetingChange(params: NotifyParams): Promise<void> {
 
 	await Promise.allSettled(
 		recipients.map(async (recipient) => {
-			// In-app notification — always
+			// In-app notification — always. (Bell rows on the
+			// `video_meetings`/`appointments` collections category-resolve to
+			// "meetings" via the heuristic in useUnreadByCategory — no
+			// metadata column required.)
 			try {
 				await directus.request(
 					createNotification({
@@ -147,10 +150,12 @@ export async function notifyMeetingChange(params: NotifyParams): Promise<void> {
 			// Email — opt-out only (null/undefined = opt-in).
 			// Master kill-switch: email_notifications === false suppresses all kinds.
 			// Per-type opt-out: notification_preferences[prefKey] === false.
+			// Category-level opt-out: notification_preferences.meetings === false.
 			// _all === false (in prefs) also kills everything.
 			if (recipient.email_notifications === false) return;
 			const prefs = recipient.notification_preferences || {};
 			if (prefs._all === false) return;
+			if (prefs.meetings === false) return;
 			if (prefs[prefKey] === false) return;
 			if (!recipient.email) return;
 			if (!config.sendgridApiKey || !config.sendgridFromEmail) return;

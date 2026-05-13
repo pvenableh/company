@@ -36,6 +36,22 @@ export interface AppAccent {
 	s: number;
 	/** HSL lightness percent (mid-tone — UI darkens/lightens around this) */
 	l: number;
+	/** Notification categories whose unread counts should sum onto a badge
+	 * for this rail item. AppRail.vue reads each entry through
+	 * `useUnreadByCategory.countFor()` and sums them. Use an array so that
+	 * macro nav items (Work = tickets+projects, Money = invoices+contracts+
+	 * proposals) and granular ones (portal "Tickets" = just tickets) share
+	 * the same shape. */
+	notificationCategories?: Array<
+		| 'conversations'
+		| 'reactions'
+		| 'tickets'
+		| 'projects'
+		| 'invoices'
+		| 'contracts'
+		| 'proposals'
+		| 'meetings'
+	>;
 }
 
 /**
@@ -72,6 +88,7 @@ export const APP_ACCENTS: Record<AppId, AppAccent> = {
 		icon: 'lucide:square-kanban',
 		to: '/apps/work',
 		h: 160, s: 72, l: 46,
+		notificationCategories: ['tickets', 'projects'],
 	},
 	money: {
 		id: 'money',
@@ -79,6 +96,7 @@ export const APP_ACCENTS: Record<AppId, AppAccent> = {
 		icon: 'lucide:trending-up',
 		to: '/apps/money',
 		h: 142, s: 72, l: 48,
+		notificationCategories: ['invoices', 'contracts', 'proposals'],
 	},
 	marketing: {
 		id: 'marketing',

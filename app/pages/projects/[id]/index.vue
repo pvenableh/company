@@ -19,6 +19,9 @@ definePageMeta({
 });
 useHead({ title: 'Project Details | Earnest' });
 
+// Archive unread bell rows for this project on mount.
+useMarkItemRead('projects', () => params.id);
+
 const router = useRouter();
 const showEditModal = ref(false);
 const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext();

@@ -8,6 +8,9 @@ useHead({ title: 'Invoice | Client Portal' });
 const route = useRoute();
 const { user: sessionUser } = useUserSession();
 
+// Archive unread bell rows for this invoice on mount.
+useMarkItemRead('invoices', () => route.params.id as string);
+
 const invoice = ref<any>(null);
 const loadError = ref<string | null>(null);
 

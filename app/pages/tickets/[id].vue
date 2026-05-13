@@ -7,6 +7,10 @@ definePageMeta({
 });
 useHead({ title: 'Ticket Details | Earnest' });
 
+// Archive any unread notifications for this ticket as soon as the user
+// lands here — click-through is implicit acknowledgement.
+useMarkItemRead('tickets', () => params.id);
+
 const ticket = await ticketItems.get(params.id, {
 	fields: [
 		'id',

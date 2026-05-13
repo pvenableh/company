@@ -163,7 +163,7 @@
 								<div class="font-medium text-sm">Sound Alerts</div>
 								<div class="text-xs text-muted-foreground">Play sound when new notifications arrive</div>
 							</div>
-							<Switch :checked="preferences.soundEnabled" @update:checked="preferences.soundEnabled = $event" />
+							<Switch :model-value="preferences.soundEnabled" @update:model-value="preferences.soundEnabled = $event" />
 						</div>
 
 						<div class="flex items-center justify-between">
@@ -171,13 +171,13 @@
 								<div class="font-medium text-sm">Email Notifications</div>
 								<div class="text-xs text-muted-foreground">Master switch — turn off to silence all email</div>
 							</div>
-							<Switch :checked="preferences.emailEnabled" @update:checked="preferences.emailEnabled = $event" />
+							<Switch :model-value="preferences.emailEnabled" @update:model-value="preferences.emailEnabled = $event" />
 						</div>
 
-						<div v-if="preferences.emailEnabled" class="pl-4 space-y-3 border-l-2 border-muted">
-							<div class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Meeting emails</div>
+						<div class="pl-4 space-y-3 border-l-2 border-muted">
+							<div class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">In-app + email</div>
 							<div
-								v-for="opt in meetingEmailOptions"
+								v-for="opt in emailableCategoryOptions"
 								:key="opt.key"
 								class="flex items-center justify-between"
 							>
@@ -186,11 +186,47 @@
 									<div class="text-xs text-muted-foreground">{{ opt.hint }}</div>
 								</div>
 								<Switch
-									:checked="preferences.meetingEmailPrefs[opt.key] !== false"
-									@update:checked="preferences.meetingEmailPrefs[opt.key] = $event"
+									:model-value="preferences.categoryPrefs[opt.key] !== false"
+									@update:model-value="preferences.categoryPrefs[opt.key] = $event"
 								/>
 							</div>
 						</div>
+
+						<div class="pl-4 space-y-3 border-l-2 border-muted">
+							<div class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">In-app only</div>
+							<div class="flex items-center justify-between">
+								<div>
+									<div class="font-medium text-sm">Reactions</div>
+									<div class="text-xs text-muted-foreground">Bell only — reactions never send email</div>
+								</div>
+								<Switch
+									:model-value="preferences.categoryPrefs.reactions !== false"
+									@update:model-value="preferences.categoryPrefs.reactions = $event"
+								/>
+							</div>
+						</div>
+
+						<details class="pl-4 border-l-2 border-muted">
+							<summary class="text-xs font-semibold uppercase tracking-wide text-muted-foreground cursor-pointer">
+								Per-meeting-type email controls
+							</summary>
+							<div class="space-y-3 mt-3">
+								<div
+									v-for="opt in meetingEmailOptions"
+									:key="opt.key"
+									class="flex items-center justify-between"
+								>
+									<div>
+										<div class="font-medium text-sm">{{ opt.label }}</div>
+										<div class="text-xs text-muted-foreground">{{ opt.hint }}</div>
+									</div>
+									<Switch
+										:model-value="preferences.categoryPrefs[opt.key] !== false"
+										@update:model-value="preferences.categoryPrefs[opt.key] = $event"
+									/>
+								</div>
+							</div>
+						</details>
 					</div>
 
 					<div class="flex justify-end gap-2 p-4 pt-2 border-t">
@@ -294,16 +330,32 @@ const isMarkingAll = ref(false);
 const statusFilter = ref('inbox');
 const typeFilter = ref('all');
 // Local form state. Mirrors the composable's local-only flags PLUS the
-// server-persisted email_notifications + per-event-type opt-out map. The
-// per-type map is keyed by the same strings server-side meeting-notifications
-// reads (meeting_invited, meeting_time_changed, meeting_removed,
-// meeting_cancelled, meeting_reminder). Missing keys default to opt-in (true).
+// server-persisted email_notifications + the per-category/per-event-type
+// opt-out map. Both top-level category keys (conversations, tickets,
+// projects, invoices, contracts, proposals, meetings, reactions) AND the
+// granular per-meeting-type keys (meeting_invited, …) live in the same
+// flat `notification_preferences` JSON map. Missing keys default to opt-in.
 const preferences = ref({
 	...userPreferences.value,
-	meetingEmailPrefs: /** @type {Record<string, boolean>} */ ({}),
+	categoryPrefs: /** @type {Record<string, boolean>} */ ({}),
 });
 const savingPrefs = ref(false);
 
+// Top-level categories that can send email. Reactions are deliberately
+// excluded from this list — they render in a separate "In-app only"
+// section because the email-delivery branch hardcodes a skip.
+const emailableCategoryOptions = [
+	{ key: 'conversations', label: 'Conversations', hint: 'Comments and replies on tickets, projects, and other items' },
+	{ key: 'tickets', label: 'Tickets', hint: 'Status changes and new assignments' },
+	{ key: 'projects', label: 'Projects', hint: 'Status changes, due-date shifts, and project completion' },
+	{ key: 'invoices', label: 'Invoices', hint: 'When an invoice is issued or paid' },
+	{ key: 'contracts', label: 'Contracts', hint: 'When a contract is sent or signed' },
+	{ key: 'proposals', label: 'Proposals', hint: 'When a proposal is sent, accepted, or declined' },
+	{ key: 'meetings', label: 'Meetings', hint: 'Invites, reschedules, reminders, cancellations' },
+];
+
+// Granular per-meeting-type controls. Tucked under a details/summary so the
+// main panel stays tidy — most users just want the category toggle.
 const meetingEmailOptions = [
 	{ key: 'meeting_invited', label: 'Added to a meeting', hint: 'When someone adds you to a meeting' },
 	{ key: 'meeting_time_changed', label: 'Time changed', hint: 'When a meeting you are on is rescheduled' },
@@ -326,7 +378,7 @@ async function hydratePrefs() {
 			preferences.value.emailEnabled = true;
 		}
 		if (data?.notification_preferences && typeof data.notification_preferences === 'object') {
-			preferences.value.meetingEmailPrefs = { ...data.notification_preferences };
+			preferences.value.categoryPrefs = { ...data.notification_preferences };
 		}
 	} catch (err) {
 		console.warn('[NotificationsMenu] could not hydrate prefs:', err);
@@ -342,37 +394,44 @@ const statusOptions = [
 	{ label: 'Read', value: 'archived' },
 ];
 
-// Type filter options
+// Type filter options. The "type" axis is the user-visible category from
+// the bell row's `metadata.category` (falling back to a heuristic for
+// legacy rows that predate the category stamp).
 const typeFilters = [
 	{ label: 'All', value: 'all' },
-	{ label: 'Mentions', value: 'mention' },
-	{ label: 'Comments', value: 'comment' },
-	{ label: 'Assignments', value: 'assignment' },
-	{ label: 'Messages', value: 'message' },
+	{ label: 'Conversations', value: 'conversations' },
+	{ label: 'Reactions', value: 'reactions' },
+	{ label: 'Tickets', value: 'tickets' },
+	{ label: 'Projects', value: 'projects' },
+	{ label: 'Invoices', value: 'invoices' },
+	{ label: 'Contracts', value: 'contracts' },
+	{ label: 'Proposals', value: 'proposals' },
+	{ label: 'Meetings', value: 'meetings' },
 ];
 
-// Map collection names to notification types for filtering
+// Resolve the category for a notification. Derived from subject + collection
+// heuristically — the Directus directus_notifications system collection has
+// no metadata column, so we don't try to read one.
 function getNotificationType(notification) {
-	// If the notification has a type metadata field, use it
-	if (notification.type) return notification.type;
-
-	// Infer type from collection
-	const collectionTypeMap = {
-		comments: 'comment',
-		messages: 'message',
-		tickets: 'assignment',
-		projects: 'assignment',
-		project_tasks: 'assignment',
-		invoices: 'invoice',
-	};
-
-	// Check subject for mention keywords
 	const subject = (notification.subject || '').toLowerCase();
-	if (subject.includes('mention')) return 'mention';
-	if (subject.includes('assign')) return 'assignment';
-	if (subject.includes('react')) return 'reaction';
+	if (subject.includes('react')) return 'reactions';
+	if (subject.includes('mention')) return 'conversations';
+	if (subject.startsWith('new comment') || subject.includes('comment on')) return 'conversations';
 
-	return collectionTypeMap[notification.collection] || 'system';
+	const collectionMap = {
+		comments: 'conversations',
+		messages: 'conversations',
+		tickets: 'tickets',
+		projects: 'projects',
+		project_tasks: 'projects',
+		project_events: 'projects',
+		invoices: 'invoices',
+		contracts: 'contracts',
+		proposals: 'proposals',
+		video_meetings: 'meetings',
+		appointments: 'meetings',
+	};
+	return collectionMap[notification.collection] || 'system';
 }
 
 // Computed properties for pagination
@@ -476,7 +535,7 @@ const savePreferences = async () => {
 			method: 'PATCH',
 			body: {
 				email_notifications: preferences.value.emailEnabled,
-				notification_preferences: preferences.value.meetingEmailPrefs || {},
+				notification_preferences: preferences.value.categoryPrefs || {},
 			},
 		});
 		toast.success('Notification settings saved');

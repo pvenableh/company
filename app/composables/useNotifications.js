@@ -162,7 +162,12 @@ export function useNotifications() {
 		],
 	});
 
-	// Set up realtime subscription when user is available
+	// Set up realtime subscription when user is available. We intentionally
+	// don't request `metadata` here — it's not a default field on the
+	// Directus `directus_notifications` system collection and requesting it
+	// 403s. The bell's category grouping derives from `collection` + a small
+	// subject heuristic instead (see useUnreadByCategory). A future setup
+	// script can add the field; until then, heuristic-only is correct.
 	const subscriptionFields = [
 		'id',
 		'timestamp',
@@ -398,12 +403,23 @@ export function useNotifications() {
 				}
 			}
 
-			// Standard routes for other item types
+			// Standard routes for other item types. Portal users get sent to
+			// /portal/* equivalents — the global middleware will redirect
+			// staff-only routes (and vice versa) but we route correctly up
+			// front when we can.
+			const isPortalRoute = window?.location?.pathname?.startsWith('/portal');
+			const prefix = isPortalRoute ? '/portal' : '';
 			const routeMap = {
-				tickets: `/tickets/${notification.item}`,
-				projects: `/projects/${notification.item}`,
-				comments: `/${notification.collection}/${notification.item}`,
-				invoices: `/invoices/${notification.item}`,
+				tickets: `${prefix}/tickets/${notification.item}`,
+				projects: `${prefix}/projects/${notification.item}`,
+				project_tasks: `${prefix}/tasks/${notification.item}`,
+				project_events: `${prefix}/projects/${notification.item}`,
+				comments: `${prefix}/${notification.collection}/${notification.item}`,
+				invoices: `${prefix}/invoices/${notification.item}`,
+				contracts: `${prefix}/contracts/${notification.item}`,
+				proposals: `${prefix}/proposals/${notification.item}`,
+				video_meetings: `/meetings/${notification.item}`,
+				appointments: `/meetings/${notification.item}`,
 			};
 
 			const route = routeMap[notification.collection];

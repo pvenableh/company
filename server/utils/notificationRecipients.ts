@@ -2,346 +2,713 @@
 /**
  * Resolves which users should receive notifications for a given event.
  *
- * Handles:
- * - @mentions in text content
- * - Assignees on tickets, tasks, projects
- * - Org admins for invoice events
- * - Channel members for new messages
- * - Comment/reaction targets
+ * Each branch in `resolveNotificationTargets` returns one or more
+ * `NotificationTarget`s — { recipientId, category, subject, message, ... }.
+ * The trigger endpoint hands these to `emitNotification` which does the
+ * actual bell + email fan-out (with pref checks).
+ *
+ * Portal-aware: most "X happened" events also notify portal users on the
+ * client that owns the X. Portal recipients are resolved via
+ * `getClientPortalRecipients` — it walks UP the parent_client chain (up to
+ * 2 hops) so a portal user rooted on a parent client sees activity on
+ * descendant clients.
  */
 
 import { readItems, readItem } from '@directus/sdk';
 import { parseMentions } from './mentionParser';
+import type { NotificationCategory } from './notification-categories';
 
 interface NotificationEvent {
-  collection: string;
-  action: 'create' | 'update' | 'delete';
-  item: Record<string, any>;
-  itemId: string;
-  userId: string; // The user who triggered the event
-  orgId?: string;
+	collection: string;
+	action: 'create' | 'update' | 'delete';
+	item: Record<string, any>;
+	itemId: string;
+	userId: string;
+	orgId?: string;
+	/** Optional: the previous version of the item for diff-based triggers.
+	 * Set this when the caller has access to the pre-update state — lets us
+	 * notify only on meaningful field changes rather than every PATCH. */
+	previousItem?: Record<string, any>;
 }
 
-interface NotificationTarget {
-  recipientId: string;
-  subject: string;
-  message: string;
-  type: string; // mention, comment, reaction, status_change, assignment, message, invoice
-  collection: string;
-  itemId: string;
+export interface NotificationTarget {
+	recipientId: string;
+	category: NotificationCategory;
+	type: string;
+	subject: string;
+	message: string;
+	/** Item the bell row points at (the parent, e.g. the ticket, not the comment). */
+	collection: string;
+	itemId: string;
+	/** Optional structured metadata to stash on the row (e.g. reaction emoji). */
+	metadata?: Record<string, any>;
 }
 
-/**
- * Resolve notification targets for a given event.
- * Returns an array of notification targets (one per recipient).
- */
 export async function resolveNotificationTargets(
-  directus: any,
-  event: NotificationEvent,
+	directus: any,
+	event: NotificationEvent,
 ): Promise<NotificationTarget[]> {
-  const targets: NotificationTarget[] = [];
-  const { collection, action, item, itemId, userId } = event;
+	const targets: NotificationTarget[] = [];
+	const { collection, action, item, itemId, userId, orgId, previousItem } = event;
 
-  try {
-    switch (collection) {
-      case 'comments': {
-        // Notify mentioned users
-        const mentions = parseMentions(item.content || item.comment);
-        for (const mentionedId of mentions) {
-          if (mentionedId !== userId) {
-            targets.push({
-              recipientId: mentionedId,
-              subject: 'You were mentioned in a comment',
-              message: truncateText(item.content || item.comment, 120),
-              type: 'mention',
-              collection: item.collection || collection,
-              itemId: item.item || itemId,
-            });
-          }
-        }
+	try {
+		switch (collection) {
+			case 'comments':
+				await resolveCommentTargets(directus, item, itemId, userId, targets);
+				break;
 
-        // Notify assignees of the parent item if it's a ticket/project/task
-        if (item.collection && item.item) {
-          const parentRecipients = await getParentItemAssignees(directus, item.collection, item.item);
-          for (const recipientId of parentRecipients) {
-            if (recipientId !== userId && !mentions.includes(recipientId)) {
-              targets.push({
-                recipientId,
-                subject: `New comment on ${formatCollectionName(item.collection)}`,
-                message: truncateText(item.content || item.comment, 120),
-                type: 'comment',
-                collection: item.collection,
-                itemId: item.item,
-              });
-            }
-          }
-        }
-        break;
-      }
+			case 'reactions':
+				await resolveReactionTargets(directus, item, userId, targets);
+				break;
 
-      case 'messages': {
-        // Notify mentioned users in channel messages
-        const mentions = parseMentions(item.content);
-        for (const mentionedId of mentions) {
-          if (mentionedId !== userId) {
-            targets.push({
-              recipientId: mentionedId,
-              subject: 'You were mentioned in a message',
-              message: truncateText(item.content, 120),
-              type: 'mention',
-              collection,
-              itemId,
-            });
-          }
-        }
+			case 'tickets':
+				if (action === 'update') {
+					await resolveTicketUpdateTargets(directus, item, previousItem, itemId, userId, targets);
+				}
+				break;
 
-        // Notify channel members (if channel has a defined member list)
-        if (item.channel) {
-          const channelMembers = await getChannelMembers(directus, item.channel);
-          for (const memberId of channelMembers) {
-            if (memberId !== userId && !mentions.includes(memberId)) {
-              targets.push({
-                recipientId: memberId,
-                subject: 'New message in channel',
-                message: truncateText(item.content, 120),
-                type: 'message',
-                collection,
-                itemId,
-              });
-            }
-          }
-        }
-        break;
-      }
+			case 'project_tasks':
+				if (action === 'update') {
+					await resolveTaskUpdateTargets(item, itemId, userId, targets);
+				}
+				break;
 
-      case 'reactions': {
-        // Notify the author of the item that received a reaction
-        if (item.item && item.collection) {
-          const authorId = await getItemAuthor(directus, item.collection, item.item);
-          if (authorId && authorId !== userId) {
-            targets.push({
-              recipientId: authorId,
-              subject: `Someone reacted to your ${formatCollectionName(item.collection)}`,
-              message: item.emoji || item.value || 'reacted',
-              type: 'reaction',
-              collection: item.collection,
-              itemId: item.item,
-            });
-          }
-        }
-        break;
-      }
+			case 'projects':
+				if (action === 'update') {
+					await resolveProjectUpdateTargets(directus, item, previousItem, itemId, userId, targets);
+				}
+				break;
 
-      case 'tickets': {
-        if (action === 'update' && item.status) {
-          // Status change — notify assignees
-          const assignees = await getItemAssignees(directus, collection, itemId);
-          for (const recipientId of assignees) {
-            if (recipientId !== userId) {
-              targets.push({
-                recipientId,
-                subject: `Ticket status changed to ${formatStatus(item.status)}`,
-                message: item.title || 'Ticket updated',
-                type: 'status_change',
-                collection,
-                itemId,
-              });
-            }
-          }
-        }
-        if (action === 'update' && item.assigned_to) {
-          // Assignment change — notify the new assignee
-          const newAssignee = typeof item.assigned_to === 'object' ? item.assigned_to.id : item.assigned_to;
-          if (newAssignee && newAssignee !== userId) {
-            targets.push({
-              recipientId: newAssignee,
-              subject: 'You were assigned to a ticket',
-              message: item.title || 'New ticket assignment',
-              type: 'assignment',
-              collection,
-              itemId,
-            });
-          }
-        }
-        break;
-      }
+			case 'invoices':
+				if (action === 'update' || action === 'create') {
+					await resolveInvoiceTargets(directus, item, previousItem, itemId, userId, orgId, targets);
+				}
+				break;
 
-      case 'project_tasks': {
-        if (action === 'update' && item.status) {
-          const assignees = await getItemAssignees(directus, collection, itemId);
-          for (const recipientId of assignees) {
-            if (recipientId !== userId) {
-              targets.push({
-                recipientId,
-                subject: `Task status changed to ${formatStatus(item.status)}`,
-                message: item.title || 'Task updated',
-                type: 'status_change',
-                collection,
-                itemId,
-              });
-            }
-          }
-        }
-        if (action === 'update' && item.assigned_to) {
-          const newAssignee = typeof item.assigned_to === 'object' ? item.assigned_to.id : item.assigned_to;
-          if (newAssignee && newAssignee !== userId) {
-            targets.push({
-              recipientId: newAssignee,
-              subject: 'You were assigned to a task',
-              message: item.title || 'New task assignment',
-              type: 'assignment',
-              collection,
-              itemId,
-            });
-          }
-        }
-        break;
-      }
+			case 'contracts':
+				if (action === 'update' || action === 'create') {
+					await resolveContractTargets(directus, item, previousItem, itemId, userId, orgId, targets);
+				}
+				break;
 
-      case 'invoices': {
-        if (action === 'update' && item.status) {
-          // Notify org admins on invoice status change
-          if (event.orgId) {
-            const admins = await getOrgAdmins(directus, event.orgId);
-            for (const adminId of admins) {
-              if (adminId !== userId) {
-                targets.push({
-                  recipientId: adminId,
-                  subject: `Invoice status changed to ${formatStatus(item.status)}`,
-                  message: item.invoice_number || item.title || 'Invoice updated',
-                  type: 'invoice',
-                  collection,
-                  itemId,
-                });
-              }
-            }
-          }
-        }
-        break;
-      }
+			case 'proposals':
+				if (action === 'update' || action === 'create') {
+					await resolveProposalTargets(directus, item, previousItem, itemId, userId, orgId, targets);
+				}
+				break;
 
-      case 'project_events': {
-        if (action === 'create' || action === 'update') {
-          // Notify assigned team on project events
-          if (item.project) {
-            const projectId = typeof item.project === 'object' ? item.project.id : item.project;
-            const assignees = await getItemAssignees(directus, 'projects', projectId);
-            for (const recipientId of assignees) {
-              if (recipientId !== userId) {
-                targets.push({
-                  recipientId,
-                  subject: action === 'create' ? 'New project event' : 'Project event updated',
-                  message: item.title || item.description || 'Project activity',
-                  type: 'status_change',
-                  collection: 'projects',
-                  itemId: projectId,
-                });
-              }
-            }
-          }
-        }
-        break;
-      }
-    }
-  } catch (err) {
-    console.error(`[notificationRecipients] Error resolving targets for ${collection}:`, err);
-  }
+			case 'project_events':
+				if (action === 'create' || action === 'update') {
+					await resolveProjectEventTargets(directus, item, userId, targets);
+				}
+				break;
+		}
+	} catch (err) {
+		console.error(`[notificationRecipients] Error resolving targets for ${collection}:`, err);
+	}
 
-  return targets;
+	return targets;
+}
+
+// ── Comments ───────────────────────────────────────────────────────────────────
+
+async function resolveCommentTargets(
+	directus: any,
+	item: Record<string, any>,
+	itemId: string,
+	userId: string,
+	targets: NotificationTarget[],
+) {
+	const text = item.content || item.comment || '';
+	const parentCollection = item.collection;
+	const parentId = item.item;
+
+	const mentions = parseMentions(text);
+	const mentioned = new Set(mentions.filter((m) => m && m !== userId));
+
+	for (const id of mentioned) {
+		targets.push({
+			recipientId: id,
+			category: 'conversations',
+			type: 'mention',
+			subject: 'You were mentioned in a comment',
+			message: truncateText(text, 160),
+			collection: parentCollection || 'comments',
+			itemId: parentId || itemId,
+		});
+	}
+
+	if (!parentCollection || !parentId) return;
+
+	// Staff: existing assignees on the parent item.
+	const staff = await getItemAssignees(directus, parentCollection, parentId);
+	for (const id of staff) {
+		if (id === userId || mentioned.has(id)) continue;
+		targets.push({
+			recipientId: id,
+			category: 'conversations',
+			type: 'comment',
+			subject: `New comment on ${formatCollectionName(parentCollection)}`,
+			message: truncateText(text, 160),
+			collection: parentCollection,
+			itemId: parentId,
+		});
+	}
+
+	// Portal users: anyone whose client_portal_users.client is an ancestor
+	// of the parent item's client (or the client itself).
+	const clientId = await getItemClientId(directus, parentCollection, parentId);
+	if (clientId) {
+		const portalRecipients = await getClientPortalRecipients(directus, clientId);
+		for (const id of portalRecipients) {
+			if (id === userId || mentioned.has(id)) continue;
+			if (staff.includes(id)) continue;
+			targets.push({
+				recipientId: id,
+				category: 'conversations',
+				type: 'comment',
+				subject: `New comment on ${formatCollectionName(parentCollection)}`,
+				message: truncateText(text, 160),
+				collection: parentCollection,
+				itemId: parentId,
+			});
+		}
+	}
+}
+
+// ── Reactions ──────────────────────────────────────────────────────────────────
+
+async function resolveReactionTargets(
+	directus: any,
+	item: Record<string, any>,
+	userId: string,
+	targets: NotificationTarget[],
+) {
+	// Reactions schema uses `table` not `collection`. Accept both for forward-
+	// compat with anything that sends a normalized "collection" key.
+	const reactedCollection = item.table || item.collection;
+	const reactedItem = item.item;
+	if (!reactedCollection || !reactedItem) return;
+
+	const authorId = await getItemAuthor(directus, reactedCollection, reactedItem);
+	if (!authorId || authorId === userId) return;
+
+	const emoji = item.reaction || item.emoji || item.value || '';
+	targets.push({
+		recipientId: authorId,
+		category: 'reactions',
+		type: 'reaction',
+		subject: `New reaction`,
+		message: emoji ? `Someone reacted ${emoji} to your ${formatCollectionName(reactedCollection)}` : `Someone reacted to your ${formatCollectionName(reactedCollection)}`,
+		collection: reactedCollection,
+		itemId: reactedItem,
+		metadata: { emoji },
+	});
+}
+
+// ── Tickets ────────────────────────────────────────────────────────────────────
+
+async function resolveTicketUpdateTargets(
+	directus: any,
+	item: Record<string, any>,
+	previousItem: Record<string, any> | undefined,
+	itemId: string,
+	userId: string,
+	targets: NotificationTarget[],
+) {
+	const statusChanged = item.status && (!previousItem || previousItem.status !== item.status);
+	const assignmentChanged = item.assigned_to && (!previousItem || JSON.stringify(previousItem.assigned_to) !== JSON.stringify(item.assigned_to));
+
+	if (!statusChanged && !assignmentChanged) return;
+
+	// Staff assignees + portal users on the ticket's client share this branch.
+	const staff = await getItemAssignees(directus, 'tickets', itemId);
+	const clientId = await getItemClientId(directus, 'tickets', itemId);
+	const portal = clientId ? await getClientPortalRecipients(directus, clientId) : [];
+	const recipients = unique([...staff, ...portal]);
+
+	if (statusChanged) {
+		for (const id of recipients) {
+			if (id === userId) continue;
+			targets.push({
+				recipientId: id,
+				category: 'tickets',
+				type: 'ticket.status_changed',
+				subject: `Ticket status: ${formatStatus(item.status)}`,
+				message: item.title || 'Ticket updated',
+				collection: 'tickets',
+				itemId,
+			});
+		}
+	}
+
+	if (assignmentChanged) {
+		const assignees = await getItemAssignees(directus, 'tickets', itemId);
+		for (const id of assignees) {
+			if (id === userId) continue;
+			targets.push({
+				recipientId: id,
+				category: 'tickets',
+				type: 'ticket.assigned',
+				subject: 'You were assigned to a ticket',
+				message: item.title || 'New ticket assignment',
+				collection: 'tickets',
+				itemId,
+			});
+		}
+	}
+}
+
+// ── Tasks (staff-only, no portal fan-out) ─────────────────────────────────────
+
+async function resolveTaskUpdateTargets(
+	item: Record<string, any>,
+	itemId: string,
+	userId: string,
+	targets: NotificationTarget[],
+) {
+	const newAssignee = typeof item.assignee_id === 'object' ? item.assignee_id?.id : item.assignee_id;
+	if (newAssignee && newAssignee !== userId) {
+		targets.push({
+			recipientId: newAssignee,
+			category: 'projects',
+			type: 'task.assigned',
+			subject: 'You were assigned to a task',
+			message: item.title || 'New task assignment',
+			collection: 'project_tasks',
+			itemId,
+		});
+	}
+}
+
+// ── Projects ───────────────────────────────────────────────────────────────────
+
+async function resolveProjectUpdateTargets(
+	directus: any,
+	item: Record<string, any>,
+	previousItem: Record<string, any> | undefined,
+	itemId: string,
+	userId: string,
+	targets: NotificationTarget[],
+) {
+	const statusChanged = item.status && (!previousItem || previousItem.status !== item.status);
+	const dueDateChanged = item.due_date && (!previousItem || previousItem.due_date !== item.due_date);
+	const completionChanged = 'completion_date' in item && (!previousItem || previousItem.completion_date !== item.completion_date);
+
+	if (!statusChanged && !dueDateChanged && !completionChanged) return;
+
+	const staff = await getItemAssignees(directus, 'projects', itemId);
+	const clientId = await getItemClientId(directus, 'projects', itemId);
+	const portal = clientId ? await getClientPortalRecipients(directus, clientId) : [];
+	const recipients = unique([...staff, ...portal]);
+
+	const title = item.title || 'Project updated';
+
+	if (completionChanged && item.completion_date) {
+		for (const id of recipients) {
+			if (id === userId) continue;
+			targets.push({
+				recipientId: id,
+				category: 'projects',
+				type: 'project.completed',
+				subject: 'Project completed',
+				message: `"${title}" has been marked complete.`,
+				collection: 'projects',
+				itemId,
+			});
+		}
+		return;
+	}
+
+	if (statusChanged) {
+		for (const id of recipients) {
+			if (id === userId) continue;
+			targets.push({
+				recipientId: id,
+				category: 'projects',
+				type: 'project.status_changed',
+				subject: `Project status: ${formatStatus(item.status)}`,
+				message: title,
+				collection: 'projects',
+				itemId,
+			});
+		}
+	}
+
+	if (dueDateChanged) {
+		for (const id of recipients) {
+			if (id === userId) continue;
+			targets.push({
+				recipientId: id,
+				category: 'projects',
+				type: 'project.due_date_changed',
+				subject: 'Project due date updated',
+				message: `"${title}" is now due ${formatDate(item.due_date)}.`,
+				collection: 'projects',
+				itemId,
+			});
+		}
+	}
+}
+
+// ── Invoices ───────────────────────────────────────────────────────────────────
+
+async function resolveInvoiceTargets(
+	directus: any,
+	item: Record<string, any>,
+	previousItem: Record<string, any> | undefined,
+	itemId: string,
+	userId: string,
+	orgId: string | undefined,
+	targets: NotificationTarget[],
+) {
+	// Trigger on the meaningful transitions only:
+	//   - sent: pending → processing (we issue the invoice)
+	//   - paid: anything → paid
+	const status = item.status;
+	const prevStatus = previousItem?.status;
+	const issued = status === 'processing' && prevStatus !== 'processing';
+	const paid = status === 'paid' && prevStatus !== 'paid';
+	if (!issued && !paid) return;
+
+	const clientId = typeof item.client === 'object' ? item.client?.id : item.client;
+	const staff = orgId ? await getOrgAdmins(directus, orgId) : [];
+	const portal = clientId ? await getClientPortalRecipients(directus, clientId) : [];
+	const recipients = unique([...staff, ...portal]);
+
+	const ref = item.invoice_code || item.title || 'Invoice';
+
+	for (const id of recipients) {
+		if (id === userId) continue;
+		if (issued) {
+			targets.push({
+				recipientId: id,
+				category: 'invoices',
+				type: 'invoice.issued',
+				subject: `Invoice issued: ${ref}`,
+				message: `Invoice ${ref} has been sent.`,
+				collection: 'invoices',
+				itemId,
+			});
+		} else if (paid) {
+			targets.push({
+				recipientId: id,
+				category: 'invoices',
+				type: 'invoice.paid',
+				subject: `Invoice paid: ${ref}`,
+				message: `Invoice ${ref} has been paid.`,
+				collection: 'invoices',
+				itemId,
+			});
+		}
+	}
+}
+
+// ── Contracts ──────────────────────────────────────────────────────────────────
+
+async function resolveContractTargets(
+	directus: any,
+	item: Record<string, any>,
+	previousItem: Record<string, any> | undefined,
+	itemId: string,
+	userId: string,
+	orgId: string | undefined,
+	targets: NotificationTarget[],
+) {
+	const cs = item.contract_status;
+	const prev = previousItem?.contract_status;
+	const sent = cs === 'sent' && prev !== 'sent';
+	const signed = cs === 'signed' && prev !== 'signed';
+	if (!sent && !signed) return;
+
+	const clientId = typeof item.client === 'object' ? item.client?.id : item.client;
+	const staff = orgId ? await getOrgAdmins(directus, orgId) : [];
+	const portal = clientId ? await getClientPortalRecipients(directus, clientId) : [];
+	const recipients = unique([...staff, ...portal]);
+
+	const ref = item.title || 'Contract';
+
+	for (const id of recipients) {
+		if (id === userId) continue;
+		if (sent) {
+			targets.push({
+				recipientId: id,
+				category: 'contracts',
+				type: 'contract.sent',
+				subject: `Contract sent: ${ref}`,
+				message: `"${ref}" has been sent for signature.`,
+				collection: 'contracts',
+				itemId,
+			});
+		} else if (signed) {
+			targets.push({
+				recipientId: id,
+				category: 'contracts',
+				type: 'contract.signed',
+				subject: `Contract signed: ${ref}`,
+				message: `"${ref}" has been signed.`,
+				collection: 'contracts',
+				itemId,
+			});
+		}
+	}
+}
+
+// ── Proposals (staff-only) ─────────────────────────────────────────────────────
+// Proposals are pre-client by design — they reference contacts/leads, not
+// clients. Portal users only see them once they're attached as inherited from
+// their client/lead chain, which is rare enough we keep proposal notifications
+// staff-only.
+
+async function resolveProposalTargets(
+	directus: any,
+	item: Record<string, any>,
+	previousItem: Record<string, any> | undefined,
+	itemId: string,
+	userId: string,
+	orgId: string | undefined,
+	targets: NotificationTarget[],
+) {
+	const ps = item.proposal_status;
+	const prev = previousItem?.proposal_status;
+	const sent = ps === 'sent' && prev !== 'sent';
+	const accepted = ps === 'accepted' && prev !== 'accepted';
+	const rejected = ps === 'rejected' && prev !== 'rejected';
+	if (!sent && !accepted && !rejected) return;
+
+	const staff = orgId ? await getOrgAdmins(directus, orgId) : [];
+	const ref = item.title || 'Proposal';
+
+	for (const id of staff) {
+		if (id === userId) continue;
+		if (sent) {
+			targets.push({
+				recipientId: id,
+				category: 'proposals',
+				type: 'proposal.sent',
+				subject: `Proposal sent: ${ref}`,
+				message: `"${ref}" has been sent.`,
+				collection: 'proposals',
+				itemId,
+			});
+		} else if (accepted) {
+			targets.push({
+				recipientId: id,
+				category: 'proposals',
+				type: 'proposal.accepted',
+				subject: `Proposal accepted: ${ref}`,
+				message: `"${ref}" was accepted.`,
+				collection: 'proposals',
+				itemId,
+			});
+		} else if (rejected) {
+			targets.push({
+				recipientId: id,
+				category: 'proposals',
+				type: 'proposal.rejected',
+				subject: `Proposal declined: ${ref}`,
+				message: `"${ref}" was declined.`,
+				collection: 'proposals',
+				itemId,
+			});
+		}
+	}
+}
+
+// ── Project events (staff assignees only) ─────────────────────────────────────
+
+async function resolveProjectEventTargets(
+	directus: any,
+	item: Record<string, any>,
+	userId: string,
+	targets: NotificationTarget[],
+) {
+	if (!item.project) return;
+	const projectId = typeof item.project === 'object' ? item.project.id : item.project;
+	const assignees = await getItemAssignees(directus, 'projects', projectId);
+	for (const id of assignees) {
+		if (id === userId) continue;
+		targets.push({
+			recipientId: id,
+			category: 'projects',
+			type: 'project_event',
+			subject: 'Project event updated',
+			message: item.title || item.description || 'Project activity',
+			collection: 'projects',
+			itemId: projectId,
+		});
+	}
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
+const PORTAL_USER_FK_FIELDS: Record<string, string> = {
+	tickets: 'client',
+	projects: 'client',
+	invoices: 'client',
+	contracts: 'client',
+};
+
+async function getItemClientId(directus: any, collection: string, itemId: string): Promise<string | null> {
+	const fk = PORTAL_USER_FK_FIELDS[collection];
+	if (!fk) return null;
+	try {
+		const item = await directus.request(readItem(collection, itemId, { fields: [fk] })) as any;
+		const raw = item?.[fk];
+		if (!raw) return null;
+		return typeof raw === 'object' ? raw.id ?? null : raw;
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Walk UP the parent_client chain (up to 2 hops) from `clientId`, then
+ * return all active client_portal_users whose root client is in the
+ * resulting set. Portal scope walks DOWN from the user's root, so a
+ * notification on a leaf client should reach portal users rooted on
+ * itself OR any ancestor (1-2 hops up).
+ */
+export async function getClientPortalRecipients(
+	directus: any,
+	clientId: string,
+): Promise<string[]> {
+	try {
+		const eligibleRoots = new Set<string>([clientId]);
+		let cursor = clientId;
+		for (let i = 0; i < 2; i++) {
+			let parent: any;
+			try {
+				parent = await directus.request(readItem('clients', cursor, { fields: ['parent_client'] }));
+			} catch {
+				break;
+			}
+			const next = typeof parent?.parent_client === 'object' ? parent.parent_client?.id : parent?.parent_client;
+			if (!next || eligibleRoots.has(next)) break;
+			eligibleRoots.add(next);
+			cursor = next;
+		}
+
+		const rows = await directus.request(
+			readItems('client_portal_users', {
+				filter: {
+					_and: [
+						{ status: { _eq: 'active' } },
+						{ client: { _in: Array.from(eligibleRoots) } },
+					],
+				} as any,
+				fields: ['user'] as any,
+				limit: -1,
+			}),
+		) as any[];
+
+		return rows
+			.map((r) => (typeof r.user === 'object' ? r.user?.id : r.user))
+			.filter(Boolean) as string[];
+	} catch (err) {
+		console.error('[notificationRecipients] getClientPortalRecipients failed:', err);
+		return [];
+	}
+}
+
 async function getItemAssignees(directus: any, collection: string, itemId: string): Promise<string[]> {
-  try {
-    const item = await directus.request(readItem(collection, itemId, {
-      fields: ['assigned_to'],
-    }));
+	try {
+		const item = await directus.request(readItem(collection, itemId, {
+			fields: ['assigned_to.directus_users_id', 'assigned_to.id'] as any,
+		})) as any;
 
-    if (!item?.assigned_to) return [];
+		if (!item?.assigned_to) return [];
 
-    // Handle both single user and array of users
-    if (Array.isArray(item.assigned_to)) {
-      return item.assigned_to.map((u: any) => typeof u === 'object' ? u.id : u).filter(Boolean);
-    }
-
-    const userId = typeof item.assigned_to === 'object' ? item.assigned_to.id : item.assigned_to;
-    return userId ? [userId] : [];
-  } catch {
-    return [];
-  }
-}
-
-async function getParentItemAssignees(directus: any, collection: string, itemId: string): Promise<string[]> {
-  return getItemAssignees(directus, collection, itemId);
-}
-
-async function getChannelMembers(directus: any, channelId: string): Promise<string[]> {
-  try {
-    // Channels may have a members field or be accessible by all org members
-    // For now, return empty — channel-level notification requires channel member tracking
-    // This can be expanded when channel membership is explicit
-    return [];
-  } catch {
-    return [];
-  }
+		const arr = Array.isArray(item.assigned_to) ? item.assigned_to : [item.assigned_to];
+		return arr
+			.map((entry: any) => {
+				if (!entry) return null;
+				if (typeof entry === 'string') return entry;
+				if (typeof entry === 'object') {
+					// Junction-table shape: { id, directus_users_id }
+					const u = entry.directus_users_id ?? entry.user ?? entry.id;
+					if (!u) return null;
+					return typeof u === 'object' ? u.id : u;
+				}
+				return null;
+			})
+			.filter(Boolean);
+	} catch {
+		return [];
+	}
 }
 
 async function getItemAuthor(directus: any, collection: string, itemId: string): Promise<string | null> {
-  try {
-    const item = await directus.request(readItem(collection, itemId, {
-      fields: ['user_created'],
-    }));
+	try {
+		const item = await directus.request(readItem(collection, itemId, {
+			fields: ['user_created', 'user'] as any,
+		})) as any;
 
-    if (!item?.user_created) return null;
-    return typeof item.user_created === 'object' ? item.user_created.id : item.user_created;
-  } catch {
-    return null;
-  }
+		const raw = item?.user_created ?? item?.user;
+		if (!raw) return null;
+		return typeof raw === 'object' ? raw.id : raw;
+	} catch {
+		return null;
+	}
 }
 
 async function getOrgAdmins(directus: any, orgId: string): Promise<string[]> {
-  try {
-    const memberships = await directus.request(readItems('org_memberships', {
-      filter: {
-        _and: [
-          { organization: { _eq: orgId } },
-          { status: { _eq: 'active' } },
-          { role: { slug: { _in: ['owner', 'admin'] } } },
-        ],
-      },
-      fields: ['user'],
-      limit: 50,
-    }));
+	try {
+		const memberships = await directus.request(readItems('org_memberships', {
+			filter: {
+				_and: [
+					{ organization: { _eq: orgId } },
+					{ status: { _eq: 'active' } },
+					{ role: { slug: { _in: ['owner', 'admin'] } } },
+				],
+			},
+			fields: ['user'],
+			limit: 100,
+		})) as any[];
 
-    return memberships
-      .map((m: any) => typeof m.user === 'object' ? m.user.id : m.user)
-      .filter(Boolean);
-  } catch {
-    return [];
-  }
+		return memberships
+			.map((m: any) => typeof m.user === 'object' ? m.user.id : m.user)
+			.filter(Boolean);
+	} catch {
+		return [];
+	}
+}
+
+function unique(ids: string[]): string[] {
+	return Array.from(new Set(ids.filter(Boolean)));
 }
 
 function truncateText(text: string | null | undefined, maxLength: number): string {
-  if (!text) return '';
-  // Strip HTML tags
-  const clean = text.replace(/<[^>]*>/g, '');
-  if (clean.length <= maxLength) return clean;
-  return clean.substring(0, maxLength) + '...';
+	if (!text) return '';
+	const clean = text.replace(/<[^>]*>/g, '');
+	if (clean.length <= maxLength) return clean;
+	return clean.substring(0, maxLength) + '...';
 }
 
 function formatCollectionName(collection: string): string {
-  const names: Record<string, string> = {
-    tickets: 'ticket',
-    projects: 'project',
-    project_tasks: 'task',
-    comments: 'comment',
-    messages: 'message',
-    invoices: 'invoice',
-  };
-  return names[collection] || collection;
+	const names: Record<string, string> = {
+		tickets: 'ticket',
+		projects: 'project',
+		project_tasks: 'task',
+		project_events: 'project',
+		comments: 'comment',
+		messages: 'message',
+		invoices: 'invoice',
+		contracts: 'contract',
+		proposals: 'proposal',
+		video_meetings: 'meeting',
+	};
+	return names[collection] || collection;
 }
 
 function formatStatus(status: string): string {
-  return status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+	return String(status).replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function formatDate(iso: string): string {
+	try {
+		return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+	} catch {
+		return iso;
+	}
 }

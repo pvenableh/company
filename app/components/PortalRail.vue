@@ -28,6 +28,15 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/comp
 const route = useRoute();
 const { railPosition } = useAppsMode();
 const { user } = useDirectusAuth();
+const { countFor } = useUnreadByCategory();
+
+function badgeFor(app: PortalAppAccent): number {
+	if (!app.notificationCategories?.length) return 0;
+	return app.notificationCategories.reduce((sum, cat) => sum + countFor(cat), 0);
+}
+function badgeLabel(count: number) {
+	return count > 99 ? '99+' : String(count);
+}
 
 // Availability: which portal sections have data for the active client.
 // The endpoint returns `{ social: bool, marketing: bool, proposals: bool,
@@ -146,6 +155,11 @@ function styleFor(app: PortalAppAccent) {
 											<Icon :name="app.icon" class="portal-rail__icon-highlight" />
 										</span>
 									</span>
+									<span
+										v-if="badgeFor(app) > 0"
+										class="portal-rail__badge"
+										:aria-label="`${badgeFor(app)} unread`"
+									>{{ badgeLabel(badgeFor(app)) }}</span>
 								</span>
 								<span class="portal-rail__label">{{ app.name }}</span>
 							</NuxtLink>
@@ -177,6 +191,11 @@ function styleFor(app: PortalAppAccent) {
 											<Icon :name="app.icon" class="portal-rail__icon-highlight" />
 										</span>
 									</span>
+									<span
+										v-if="badgeFor(app) > 0"
+										class="portal-rail__badge"
+										:aria-label="`${badgeFor(app)} unread`"
+									>{{ badgeLabel(badgeFor(app)) }}</span>
 								</span>
 								<span class="portal-rail__label">{{ app.name }}</span>
 							</NuxtLink>
@@ -469,5 +488,27 @@ function styleFor(app: PortalAppAccent) {
 .portal-rail__item--active .portal-rail__label {
 	color: hsl(var(--foreground));
 	font-weight: 600;
+}
+
+/* ── Badge ────────────────────────────────────────────────────────── */
+.portal-rail__badge {
+	position: absolute;
+	top: -4px;
+	right: -4px;
+	min-width: 16px;
+	height: 16px;
+	padding: 0 4px;
+	border-radius: 999px;
+	background: var(--cyan, #06b6d4);
+	color: white;
+	font-size: 9px;
+	font-weight: 700;
+	line-height: 1;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: 0 1px 3px hsl(0 0% 0% / 0.25), 0 0 0 1.5px hsl(var(--background));
+	pointer-events: none;
+	z-index: 3;
 }
 </style>

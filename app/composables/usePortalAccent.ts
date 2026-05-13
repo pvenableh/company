@@ -45,6 +45,19 @@ export interface PortalAppAccent {
 	s: number;
 	/** HSL lightness percent (mid-tone — UI darkens/lightens around this) */
 	l: number;
+	/** Notification categories whose unread counts roll up onto this rail
+	 * item's badge. Mirrors the shape on the staff AppAccent so PortalRail
+	 * and AppRail can share the same badge-rendering logic. */
+	notificationCategories?: Array<
+		| 'conversations'
+		| 'reactions'
+		| 'tickets'
+		| 'projects'
+		| 'invoices'
+		| 'contracts'
+		| 'proposals'
+		| 'meetings'
+	>;
 }
 
 export const PORTAL_ACCENTS: Record<PortalAppId, PortalAppAccent> = {
@@ -61,6 +74,7 @@ export const PORTAL_ACCENTS: Record<PortalAppId, PortalAppAccent> = {
 		icon: 'lucide:square-kanban',
 		to: '/portal/projects',
 		h: 160, s: 72, l: 46,
+		notificationCategories: ['projects'],
 	},
 	tasks: {
 		id: 'tasks',
@@ -75,6 +89,7 @@ export const PORTAL_ACCENTS: Record<PortalAppId, PortalAppAccent> = {
 		icon: 'ph:ticket-duotone',
 		to: '/portal/tickets',
 		h: 38, s: 92, l: 50,
+		notificationCategories: ['tickets'],
 	},
 	invoices: {
 		id: 'invoices',
@@ -82,6 +97,7 @@ export const PORTAL_ACCENTS: Record<PortalAppId, PortalAppAccent> = {
 		icon: 'lucide:trending-up',
 		to: '/portal/invoices',
 		h: 142, s: 72, l: 48,
+		notificationCategories: ['invoices'],
 	},
 	proposals: {
 		id: 'proposals',
@@ -90,6 +106,7 @@ export const PORTAL_ACCENTS: Record<PortalAppId, PortalAppAccent> = {
 		to: '/portal/proposals',
 		availabilityKey: 'proposals',
 		h: 268, s: 70, l: 56,
+		notificationCategories: ['proposals'],
 	},
 	contracts: {
 		id: 'contracts',
@@ -98,6 +115,7 @@ export const PORTAL_ACCENTS: Record<PortalAppId, PortalAppAccent> = {
 		to: '/portal/contracts',
 		availabilityKey: 'contracts',
 		h: 232, s: 70, l: 56,
+		notificationCategories: ['contracts'],
 	},
 	social: {
 		id: 'social',
@@ -121,6 +139,7 @@ export const PORTAL_ACCENTS: Record<PortalAppId, PortalAppAccent> = {
 		icon: 'ph:chats-circle-duotone',
 		to: '/portal/messages',
 		h: 215, s: 85, l: 55,
+		notificationCategories: ['conversations'],
 	},
 	account: {
 		id: 'account',
