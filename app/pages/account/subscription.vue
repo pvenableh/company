@@ -2,7 +2,7 @@
 import { format } from 'date-fns';
 import { toast } from 'vue-sonner';
 
-definePageMeta({ middleware: ['auth'] });
+definePageMeta({ layout: 'apps', middleware: ['auth'] });
 useHead({ title: 'Subscription | Earnest' });
 
 const {

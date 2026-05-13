@@ -19,7 +19,7 @@ import { APP_ACCENTS, APP_ORDER, APP_FOOTER_ORDER, type AppAccent } from '~/comp
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
 
 const route = useRoute();
-const { railPosition } = useAppsMode();
+const { railPosition, railShowLabels } = useAppsMode();
 
 const apps = computed<AppAccent[]>(() => APP_ORDER.map((id) => APP_ACCENTS[id]));
 const footer = computed<AppAccent[]>(() => APP_FOOTER_ORDER.map((id) => APP_ACCENTS[id]));
@@ -27,6 +27,7 @@ const footer = computed<AppAccent[]>(() => APP_FOOTER_ORDER.map((id) => APP_ACCE
 const activeId = computed(() => {
 	const path = route.path;
 	if (path.startsWith('/account')) return 'account';
+	if (path === '/' || path === '/apps' || path === '/apps/') return 'dashboard';
 	const seg = path.split('/').filter(Boolean);
 	if (seg[0] !== 'apps') return null;
 	return seg[1] ?? null;
@@ -38,11 +39,18 @@ const isHorizontal = computed(() =>
 	|| railPosition.value === 'floating',
 );
 
+// Horizontal rail (top/bottom) becomes icon-only when the user hides
+// labels — keep the inline text path for everyone else.
+const horizontalLabelsHidden = computed(() =>
+	(railPosition.value === 'top' || railPosition.value === 'bottom') && !railShowLabels.value,
+);
+
 // Tooltips fill in for the inline label when the rail is icon-only.
 const showTooltip = computed(() =>
 	railPosition.value === 'left'
 	|| railPosition.value === 'right'
-	|| railPosition.value === 'floating',
+	|| railPosition.value === 'floating'
+	|| horizontalLabelsHidden.value,
 );
 
 const tooltipSide = computed<'top' | 'bottom' | 'left' | 'right'>(() => {
@@ -67,6 +75,7 @@ function styleFor(app: AppAccent) {
 			:class="[
 				`app-rail--${railPosition}`,
 				isHorizontal ? 'app-rail--horizontal' : 'app-rail--vertical',
+				horizontalLabelsHidden && 'app-rail--icons-only',
 			]"
 			aria-label="Apps"
 		>
@@ -166,9 +175,12 @@ function styleFor(app: AppAccent) {
 .app-rail--bottom,
 .app-rail--floating {
 	@apply fixed left-1/2 -translate-x-1/2 z-40
-		rounded-full border border-border/40 shadow-2xl
+		rounded-full border border-border/40
 		bg-background/85 backdrop-blur-md
 		w-auto;
+	box-shadow:
+		0 4px 14px -6px hsl(0 0% 0% / 0.18),
+		0 2px 6px -2px hsl(0 0% 0% / 0.08);
 }
 
 .app-rail--top {
@@ -212,6 +224,11 @@ function styleFor(app: AppAccent) {
 	@apply w-px h-6 mx-1;
 }
 
+/* Horizontal pill variants (top/bottom/floating) sit the two groups flush
+ * — the rail's own column-gap is enough separation, so the divider is
+ * visual noise here. Only the vertical column rails keep it. */
+.app-rail--top .app-rail__divider,
+.app-rail--bottom .app-rail__divider,
 .app-rail--floating .app-rail__divider {
 	display: none;
 }
@@ -416,7 +433,8 @@ function styleFor(app: AppAccent) {
  * On narrow viewports (forced-bottom on mobile) we drop the labels too
  * so the centered pill fits comfortably without overflowing. */
 .app-rail--vertical .app-rail__label,
-.app-rail--floating .app-rail__label {
+.app-rail--floating .app-rail__label,
+.app-rail--icons-only .app-rail__label {
 	@apply sr-only;
 }
 

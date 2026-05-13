@@ -5,10 +5,13 @@ useHead({ title: 'Home | Earnest' });
 const { user } = useDirectusAuth();
 const config = useRuntimeConfig();
 
-const layout = 'default';
-
 // ── Layout mode ──
 const { currentMode } = useLayoutMode();
+// Apps mode users land here as their Dashboard surface — wrap content in
+// the apps shell so the rail/chrome stays visible. Classic mode keeps the
+// default sidebar.
+const { isAppsMode } = useAppsMode();
+const layout = computed(() => (isAppsMode.value ? 'apps' : 'default'));
 
 // ── Widget gating (legacy hat hooks; useHatLayout is now a no-op shim) ──
 const { showWidget, hatModules } = useHatLayout();

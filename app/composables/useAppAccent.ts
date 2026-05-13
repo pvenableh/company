@@ -17,6 +17,7 @@
 import type { CSSProperties } from 'vue';
 
 export type AppId =
+	| 'dashboard'
 	| 'clients'
 	| 'work'
 	| 'money'
@@ -51,12 +52,19 @@ export interface AppAccent {
  *     reinforces that hierarchy in the rail.
  */
 export const APP_ACCENTS: Record<AppId, AppAccent> = {
+	dashboard: {
+		id: 'dashboard',
+		name: 'Dashboard',
+		icon: 'ph:compass-tool-duotone',
+		to: '/',
+		h: 191, s: 100, l: 50,
+	},
 	clients: {
 		id: 'clients',
 		name: 'Clients',
 		icon: 'ph:users-three-duotone',
 		to: '/apps/clients',
-		h: 191, s: 100, l: 50,
+		h: 242, s: 72, l: 52,
 	},
 	work: {
 		id: 'work',
@@ -95,7 +103,7 @@ export const APP_ACCENTS: Record<AppId, AppAccent> = {
 	},
 };
 
-export const APP_ORDER: AppId[] = ['clients', 'work', 'money', 'marketing'];
+export const APP_ORDER: AppId[] = ['dashboard', 'clients', 'work', 'money', 'marketing'];
 export const APP_FOOTER_ORDER: AppId[] = ['organization', 'account'];
 
 export function useAppAccent() {
@@ -104,6 +112,10 @@ export function useAppAccent() {
 	const activeAppId = computed<AppId | null>(() => {
 		const path = route.path;
 		if (path.startsWith('/account')) return 'account';
+		// Dashboard lives at the app root rather than /apps/dashboard so the
+		// existing home page (Productivity Engine + CRM intelligence + score
+		// widgets) keeps a single canonical destination — IA stays clean.
+		if (path === '/' || path === '/apps' || path === '/apps/') return 'dashboard';
 		const seg = path.split('/').filter(Boolean);
 		if (seg[0] !== 'apps') return null;
 		const id = seg[1] as AppId | undefined;

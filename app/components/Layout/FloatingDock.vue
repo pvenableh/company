@@ -337,6 +337,23 @@ const MARGIN = 24; // px from edge
 const TOP_OFFSET = 80; // header clearance for top positions
 const DEFAULT_BOTTOM_OFFSET = '1.5rem';
 
+// When apps-mode parks the rail at the bottom (or floating), its glass pill
+// occupies the same bottom-center band the dock would otherwise spill into.
+// Push the dock up so the two never overlap — rail anchor (0.75rem) + rail
+// height (~38px chip + ~12px padding) + breathing gap (~0.5rem) ≈ 5rem.
+const RAIL_CLEARED_BOTTOM_OFFSET = '5rem';
+
+const { isAppsMode, railPosition } = useAppsMode();
+const bottomOffset = computed(() => {
+	if (
+		isAppsMode.value
+		&& (railPosition.value === 'bottom' || railPosition.value === 'floating')
+	) {
+		return RAIL_CLEARED_BOTTOM_OFFSET;
+	}
+	return DEFAULT_BOTTOM_OFFSET;
+});
+
 const dockRef = ref<HTMLElement | null>(null);
 const isDragging = ref(false);
 const isSnapping = ref(false);
@@ -365,7 +382,7 @@ const cornerStyles = computed(() => {
 	const style: Record<string, string> = {};
 
 	if (c.includes('bottom')) {
-		style.bottom = DEFAULT_BOTTOM_OFFSET;
+		style.bottom = bottomOffset.value;
 		style.top = 'auto';
 	} else {
 		style.top = `${TOP_OFFSET}px`;

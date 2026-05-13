@@ -80,6 +80,24 @@
 								</SelectContent>
 							</Select>
 						</div>
+
+						<div
+							v-if="appsModeChecked && (railPosition === 'top' || railPosition === 'bottom')"
+							class="flex items-start justify-between gap-4"
+						>
+							<div class="flex-1 min-w-0">
+								<p class="text-sm font-medium">Show app names</p>
+								<p class="text-xs text-muted-foreground mt-1">
+									Label each app next to its icon in the top or bottom rail. Hide
+									for a cleaner icon-only pill once you know the icons — names
+									still surface as tooltips on hover.
+								</p>
+							</div>
+							<Switch
+								:model-value="railShowLabels"
+								@update:model-value="setRailShowLabels"
+							/>
+						</div>
 					</div>
 				</section>
 
@@ -221,11 +239,12 @@ import type { RailPosition } from '~/composables/useAppsMode';
 type SectionKey = 'profile' | 'password' | 'score' | 'layout' | 'appearance' | 'notifications';
 
 const { user } = useDirectusAuth();
-const { isAppsMode, railPosition, setMode, setRailPosition } = useAppsMode();
+const { isAppsMode, railPosition, railShowLabels, setMode, setRailPosition, setRailShowLabels } = useAppsMode();
 const route = useRoute();
 const router = useRouter();
 
 definePageMeta({
+	layout: 'apps',
 	middleware: ['auth'],
 });
 useHead({ title: 'Account | Earnest' });

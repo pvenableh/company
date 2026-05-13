@@ -24,6 +24,13 @@ export default defineNuxtRouteMiddleware((to) => {
 	if (typeof explicitLayout === 'string' && ownLayouts.includes(explicitLayout)) {
 		return;
 	}
+	// `layout: false` is the page opting out of automatic layout — usually
+	// because it renders its own <NuxtLayout> with a computed name. Don't
+	// force the apps shell on top of that or both layouts stack and the
+	// chrome doubles up.
+	if (explicitLayout === false) {
+		return;
+	}
 
 	// Path-level skips for routes that should never be wrapped in apps shell.
 	if (

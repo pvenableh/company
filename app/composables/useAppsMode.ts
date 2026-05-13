@@ -39,11 +39,14 @@ async function hydrateFromServer() {
 				params: { fields: 'layout_mode,app_rail_position' },
 			})) as Record<string, any>;
 			const m = me?.layout_mode;
-			localMode.value = m === 'apps' ? 'apps' : 'classic';
+			// Default is 'apps' — only an explicit 'classic' stored on the
+			// user opts out. Existing users with null/undefined flip into
+			// the new shell; they can toggle back via /account?section=layout.
+			localMode.value = m === 'classic' ? 'classic' : 'apps';
 			const rp = me?.app_rail_position as RailPosition | undefined;
 			localRailPosition.value = rp && RAIL_POSITIONS.includes(rp) ? rp : 'left';
 		} catch {
-			localMode.value = 'classic';
+			localMode.value = 'apps';
 			localRailPosition.value = 'left';
 		}
 	})();
@@ -62,7 +65,7 @@ export function useAppsMode() {
 	const mode = computed<AppsLayoutMode>(() => {
 		if (localMode.value !== null) return localMode.value;
 		const raw = (user.value as any)?.layout_mode;
-		return raw === 'apps' ? 'apps' : 'classic';
+		return raw === 'classic' ? 'classic' : 'apps';
 	});
 
 	const isAppsMode = computed(() => mode.value === 'apps');
@@ -108,12 +111,28 @@ export function useAppsMode() {
 		}
 	}
 
+	// Label visibility for the horizontal rail (top/bottom). Vertical and
+	// floating modes are always icon-only; this only toggles the inline
+	// label that sits next to the chip when the rail is a horizontal pill.
+	// Cookie-backed so SSR + client agree and the label doesn't flash on
+	// first paint. Stays a local-only preference (no Directus column) —
+	// can be promoted to the user row later if cross-device sync matters.
+	const railShowLabels = useCookie<boolean>('app-rail-show-labels', {
+		default: () => true,
+	});
+
+	function setRailShowLabels(next: boolean): void {
+		railShowLabels.value = next;
+	}
+
 	return {
 		mode,
 		isAppsMode,
 		railPosition,
 		storedRailPosition,
+		railShowLabels,
 		setMode,
 		setRailPosition,
+		setRailShowLabels,
 	};
 }
