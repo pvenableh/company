@@ -7,8 +7,6 @@ definePageMeta({
 });
 useHead({ title: 'Portal Tickets | Earnest' });
 
-const { hasPermission } = useOrgRole();
-
 // Slide-over for portal-friendly ticket detail (comments + reactions live here).
 // TicketsBoard emits `view-ticket` when a card is clicked in portal mode.
 const selectedTicket = ref<any | null>(null);
@@ -20,8 +18,6 @@ function openTicket(ticket: any) {
 }
 
 const showCreateForm = ref(false);
-
-const canCreateTickets = computed(() => hasPermission('tickets', 'create'));
 
 function onTicketCreated() {
 	// TicketsBoard subscribes to refresh triggers via useTicketsStore.
@@ -45,10 +41,10 @@ const priorityBadge: Record<string, string> = {
 <template>
 	<div class="portal-page">
 		<AppHeader title="Tickets">
-			<template v-if="canCreateTickets" #actions>
+			<template #actions>
 				<Button size="sm" @click="showCreateForm = !showCreateForm">
 					<Icon :name="showCreateForm ? 'lucide:x' : 'lucide:plus'" class="w-4 h-4 mr-1" />
-					{{ showCreateForm ? 'Cancel' : 'New Ticket' }}
+					{{ showCreateForm ? 'Cancel' : 'Submit a Ticket' }}
 				</Button>
 			</template>
 		</AppHeader>
@@ -138,7 +134,7 @@ const priorityBadge: Record<string, string> = {
 							<!-- Reactions -->
 							<div>
 								<p class="text-xs text-muted-foreground mb-2">React</p>
-								<PortalReactions collection="tickets" :item-id="selectedTicket.id" />
+								<ReactionsBar collection="tickets" :item-id="selectedTicket.id" />
 							</div>
 
 							<!-- Comments -->

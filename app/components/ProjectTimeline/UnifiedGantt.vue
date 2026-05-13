@@ -1338,6 +1338,7 @@ const showUndated = ref(false);
 				<!-- Actions -->
 				<div class="flex items-center gap-2 pt-2 border-t border-border/40">
 					<nuxt-link
+						v-if="!portal"
 						:to="`/projects/${selectedProject.id}`"
 						class="flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground border border-border/50 rounded-lg hover:bg-muted/30 transition-colors"
 						@click="closeProjectPreview"

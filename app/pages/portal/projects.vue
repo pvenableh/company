@@ -400,7 +400,7 @@ watch(() => selectedOrg.value, () => loadProjects());
 							<!-- Reactions -->
 							<div>
 								<p class="text-xs text-muted-foreground mb-2">React</p>
-								<PortalReactions collection="projects" :item-id="selectedProject.id" />
+								<ReactionsBar collection="projects" :item-id="selectedProject.id" />
 							</div>
 
 							<!-- Comments -->
