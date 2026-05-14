@@ -153,6 +153,26 @@ export const useGoals = () => {
 		return goals.value.filter((g) => g.scope === 'user' && g.assigned_to === uid);
 	});
 
+	// Stage 2.5: stale-goal detection for the weekly check-in trigger.
+	// Stale = active scope=user goal, created >=7 days ago, with no snapshot
+	// in the last 7 days. Goals created this week don't nag the user.
+	const STALE_WINDOW_MS = 7 * 86400000;
+	const isGoalStale = (g: Goal): boolean => {
+		if (g.status !== 'active') return false;
+		const createdAt = g.date_created ? new Date(g.date_created).getTime() : 0;
+		if (!createdAt || Date.now() - createdAt < STALE_WINDOW_MS) return false;
+		const snaps = (g.snapshots as GoalSnapshot[] | undefined) || [];
+		const cutoff = Date.now() - STALE_WINDOW_MS;
+		const fresh = snaps.some((s) => {
+			const t = s.date_created ? new Date(s.date_created).getTime() : 0;
+			return t > cutoff;
+		});
+		return !fresh;
+	};
+
+	const staleUserGoals = computed(() => myGoals.value.filter(isGoalStale));
+	const activeMyGoals = computed(() => myGoals.value.filter((g) => g.status === 'active'));
+
 	const goalsByScope = computed(() => {
 		const grouped: Record<string, Goal[]> = { user: [], team: [], client: [], organization: [] };
 		for (const goal of goals.value) {
@@ -206,6 +226,9 @@ export const useGoals = () => {
 		activeGoals,
 		completedGoals,
 		myGoals,
+		activeMyGoals,
+		staleUserGoals,
+		isGoalStale,
 		goalsByScope,
 		goalsByCategory,
 		overdueGoals,

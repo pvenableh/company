@@ -100,6 +100,11 @@ const orgTeamGoalCount = computed(() => {
 	return ((byScope.team || []).length) + ((byScope.organization || []).length);
 });
 
+// ── Weekly check-in modal (Stage 2.5) ──
+// Modal lives at the bottom of <template>; trigger pill in YOU's right column
+// flips this ref. Lazy v-if keeps the modal tree out of the SSR payload.
+const checkinOpen = ref(false);
+
 // ── AI Tray ──
 const aiTrayOpen = ref(false);
 const aiTrayPrompt = ref('');
@@ -495,6 +500,11 @@ watch(activeTab, (t) => {
 							:team-size="earnestState.teamSize"
 							:dimensions="earnestState.dimensions"
 						/>
+
+						<!-- Stage 2.5: weekly check-in trigger pill. Renders only when
+						     >=1 of the user's active personal goals is stale (no snapshot
+						     in 7 days, created >=7 days ago). Quiet state = no DOM. -->
+						<GoalsCheckinTriggerPill @open="checkinOpen = true" />
 
 						<!-- My Goals (scope=user) — small inline mini-widget reusing
 						     useGoals state already loaded by GoalsSummaryWidget in US. -->
