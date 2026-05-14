@@ -10,6 +10,7 @@ import type { Goal } from '~~/shared/directus';
 const isOpen = defineModel<boolean>({ default: false });
 
 const { activeMyGoals, isGoalStale, recordSnapshot, goalProgress } = useGoals();
+const { selectedOrg } = useOrganization();
 const toast = useToast();
 
 type RowStatus = 'idle' | 'saving' | 'saved' | 'error';
@@ -100,10 +101,51 @@ async function saveRow(row: Row): Promise<{ ok: boolean; value: number; notes: s
 	}
 }
 
-// Stub kept so chunk b is self-contained — chunk c replaces the body with
-// a real fetch to /api/ai/goal-reflection in multi-goal mode.
-async function requestReflection(_savedGoalIds: string[]) {
-	reflectionLoading.value = false;
+// Pull the saved snapshots back from useGoals state (recordSnapshot pushed
+// them onto goal.snapshots already) and POST the batch to /api/ai/goal-reflection.
+// Failures here never block the check-in itself — the snapshots are already saved.
+async function requestReflection(savedGoalIds: string[]) {
+	reflectionLoading.value = true;
+	reflection.value = '';
+	reflectionError.value = '';
+	try {
+		const payload = {
+			organizationId: selectedOrg.value || undefined,
+			goals: savedGoalIds.map((id) => {
+				const g = goalById.value.get(id);
+				if (!g) return null;
+				const snapshots = ((g.snapshots as any[]) || [])
+					.slice(-5)
+					.map((s) => ({ value: s.value, notes: s.notes || null, date_created: s.date_created || null }));
+				return {
+					goal: {
+						id: g.id,
+						title: g.title,
+						description: g.description || null,
+						category: g.category || null,
+						scope: g.scope || null,
+						target_value: g.target_value ?? null,
+						target_unit: g.target_unit || null,
+						current_value: g.current_value ?? null,
+						end_date: g.end_date || null,
+						timeframe: g.timeframe || null,
+					},
+					snapshots,
+				};
+			}).filter(Boolean),
+		};
+
+		const res = await $fetch<{ reflection: string }>('/api/ai/goal-reflection', {
+			method: 'POST',
+			body: payload,
+		});
+		reflection.value = res?.reflection || '';
+		if (!reflection.value) reflectionError.value = 'empty';
+	} catch (e: any) {
+		reflectionError.value = e?.statusMessage || e?.message || 'failed';
+	} finally {
+		reflectionLoading.value = false;
+	}
 }
 
 async function handleSubmit() {
@@ -129,7 +171,6 @@ async function handleSubmit() {
 				color: failed > 0 ? 'warning' : 'success',
 			});
 			// Fire-and-forget — modal stays open while user reads reflection.
-			reflectionLoading.value = true;
 			void requestReflection(okIds);
 		} else {
 			toast.add({ title: 'Nothing saved', description: 'All rows failed — check connection.', color: 'error' });
