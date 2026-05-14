@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { AppIntroId } from '~/composables/useAppIntros';
+
 /**
  * AppHeader — per-app top strip.
  *
@@ -31,11 +33,29 @@ const props = withDefaults(
 		 * Show the iOS-style back chevron. Landing pages omit it.
 		 */
 		showBack?: boolean;
+		/**
+		 * When set on a top-level /apps/<id>/index page, this header renders
+		 * the always-visible tagline + a reopen-intro icon (the AppIntroCard
+		 * itself renders below the floor strip in the page body). Stage 3 of
+		 * the "Me" lens initiative.
+		 */
+		appId?: AppIntroId;
 	}>(),
 	{
 		showBack: false,
 	},
 );
+
+// Intro hooks are scoped to landing pages that pass `:app-id`. Static
+// access is fine — the composable is idempotent and the registry lookup
+// is cheap.
+const { isDismissed, reopen, getContent } = useAppIntros();
+const introContent = computed(() => (props.appId ? getContent(props.appId) : null));
+const introDismissed = computed(() => (props.appId ? isDismissed(props.appId) : false));
+
+function handleReopenIntro() {
+	if (props.appId) reopen(props.appId);
+}
 
 function goBack() {
 	router.back();
@@ -56,35 +76,48 @@ const fallbackBackLabel = computed(() => {
 <template>
 	<header class="app-header">
 		<div class="app-header__inner">
-			<div class="app-header__left">
-				<button
-					v-if="showBack"
-					type="button"
-					class="app-header__back"
-					@click="goBack"
-				>
-					<Icon name="lucide:chevron-left" class="size-4" />
-					<span class="hidden sm:inline">{{ backLabel ?? fallbackBackLabel }}</span>
-				</button>
-				<span
-					v-if="accent && !showBack"
-					class="app-header__accent-icon"
-					aria-hidden="true"
-				>
-					<span class="app-header__accent-glyph">
-						<Icon :name="accent.icon" class="app-header__accent-layer app-header__accent-base" />
-						<span class="app-header__accent-layer app-header__accent-highlight-mask">
-							<Icon :name="accent.icon" class="app-header__accent-highlight" />
+			<div class="app-header__row">
+				<div class="app-header__left">
+					<button
+						v-if="showBack"
+						type="button"
+						class="app-header__back"
+						@click="goBack"
+					>
+						<Icon name="lucide:chevron-left" class="size-4" />
+						<span class="hidden sm:inline">{{ backLabel ?? fallbackBackLabel }}</span>
+					</button>
+					<span
+						v-if="accent && !showBack"
+						class="app-header__accent-icon"
+						aria-hidden="true"
+					>
+						<span class="app-header__accent-glyph">
+							<Icon :name="accent.icon" class="app-header__accent-layer app-header__accent-base" />
+							<span class="app-header__accent-layer app-header__accent-highlight-mask">
+								<Icon :name="accent.icon" class="app-header__accent-highlight" />
+							</span>
 						</span>
 					</span>
-				</span>
-				<h1 v-if="title || $slots.default" class="app-header__title">
-					<slot>{{ title }}</slot>
-				</h1>
+					<h1 v-if="title || $slots.default" class="app-header__title">
+						<slot>{{ title }}</slot>
+					</h1>
+					<button
+						v-if="appId && introDismissed"
+						type="button"
+						class="app-header__intro-reopen"
+						aria-label="What is this app?"
+						title="What is this app?"
+						@click="handleReopenIntro"
+					>
+						<Icon name="lucide:info" class="w-3.5 h-3.5" />
+					</button>
+				</div>
+				<div v-if="$slots.actions" class="app-header__actions">
+					<slot name="actions" />
+				</div>
 			</div>
-			<div v-if="$slots.actions" class="app-header__actions">
-				<slot name="actions" />
-			</div>
+			<p v-if="introContent" class="app-header__tagline">{{ introContent.tagline }}</p>
 		</div>
 	</header>
 </template>
@@ -101,9 +134,21 @@ const fallbackBackLabel = computed(() => {
 }
 
 .app-header__inner {
-	@apply flex items-center justify-between gap-3
+	@apply flex flex-col gap-1.5
 		max-w-7xl mx-auto w-full
 		px-4 md:px-6 pt-5 pb-4;
+}
+
+.app-header__row {
+	@apply flex items-center justify-between gap-3;
+}
+
+.app-header__tagline {
+	@apply text-xs text-muted-foreground pl-8;
+}
+
+.app-header__intro-reopen {
+	@apply inline-flex items-center justify-center w-6 h-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors;
 }
 
 .app-header__left {

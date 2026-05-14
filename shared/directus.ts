@@ -4327,6 +4327,10 @@ export interface DirectusUser {
 	layout_mode?: 'classic' | 'apps';
 	/** @description Apps Layout rail placement. Ignored when layout_mode='classic'. */
 	app_rail_position?: 'left' | 'top' | 'right' | 'bottom' | 'floating';
+	/** @description "Me" lens preference for the Command Center: 'me' emphasizes YOU band, 'org' emphasizes US. */
+	view_lens?: 'me' | 'org' | null;
+	/** @description /apps/* intro cards the user has dismissed (Stage 3). Array of AppId strings. */
+	dismissed_app_intros?: string[] | null;
 	/** @description Stripe Customer id (cus_…). Set on registration; primary lookup key for webhook → org sync. */
 	stripe_customer_id?: string | null;
 	/** @description Stripe Subscription id (sub_…). Set by checkout/subscription webhooks. */

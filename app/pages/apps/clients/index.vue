@@ -269,7 +269,7 @@ watch(view, (next) => {
 
 <template>
   <div class="apps-page">
-    <AppHeader title="Clients">
+    <AppHeader title="Clients" app-id="clients">
       <template #actions>
         <Button v-if="view === 'clients'" size="sm" @click="showCreateClientModal = true">
           <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
@@ -284,6 +284,8 @@ watch(view, (next) => {
 
     <LayoutPageContainer>
       <AppFloorStrip v-model="view" :items="segments" aria-label="Clients sections" />
+
+      <AppIntroCard app-id="clients" />
 
       <!-- ── Clients view ─────────────────────────────────────────────── -->
       <template v-if="view === 'clients'">

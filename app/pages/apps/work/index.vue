@@ -295,7 +295,7 @@ function openMeetingSlideOver(meeting: any) {
 
 <template>
   <div class="apps-page">
-    <AppHeader title="Work">
+    <AppHeader title="Work" app-id="work">
       <template #actions>
         <NuxtLink
           v-if="floor === 'projects'"
@@ -312,6 +312,8 @@ function openMeetingSlideOver(meeting: any) {
 
     <LayoutPageContainer>
       <AppFloorStrip v-model="floor" :items="floors" aria-label="Work sections" />
+
+      <AppIntroCard app-id="work" />
 
       <!-- ── Gantt floor ──────────────────────────────────────────────── -->
       <ClientOnly v-if="floor === 'gantt'">

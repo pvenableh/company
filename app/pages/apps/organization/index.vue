@@ -522,7 +522,7 @@ function onClientInvited() {
 
 <template>
   <div class="apps-page">
-    <AppHeader :title="orgName">
+    <AppHeader :title="orgName" app-id="organization">
       <template #actions>
         <Button v-if="headerAction" size="sm" @click="headerAction.onClick">
           <Icon :name="headerAction.icon" class="w-4 h-4 mr-1" />
@@ -533,6 +533,8 @@ function onClientInvited() {
 
     <LayoutPageContainer>
       <AppFloorStrip v-model="floor" :items="floors" aria-label="Organization sections" />
+
+      <AppIntroCard app-id="organization" />
 
       <!-- Archived banner -->
       <div

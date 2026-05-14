@@ -525,7 +525,7 @@ const headerAction = computed(() => {
 
 <template>
   <div class="apps-page">
-    <AppHeader title="Money">
+    <AppHeader title="Money" app-id="money">
       <template #actions>
         <Button v-if="headerAction" size="sm" @click="headerAction.onClick">
           <Icon :name="headerAction.icon" class="w-4 h-4 mr-1" />
@@ -536,6 +536,8 @@ const headerAction = computed(() => {
 
     <LayoutPageContainer>
       <AppFloorStrip v-model="floor" :items="floors" aria-label="Money sections" />
+
+      <AppIntroCard app-id="money" />
 
       <!-- ── Cash flow floor ──────────────────────────────────────────── -->
       <template v-if="floor === 'cashflow'">

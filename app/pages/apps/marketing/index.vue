@@ -597,7 +597,7 @@ const scopeLabel = computed(() => {
 
 <template>
   <div class="apps-page">
-    <AppHeader title="Marketing">
+    <AppHeader title="Marketing" app-id="marketing">
       <template #actions>
         <Button v-if="headerAction" size="sm" @click="headerAction.onClick">
           <Icon :name="headerAction.icon" class="w-4 h-4 mr-1" />
@@ -608,6 +608,8 @@ const scopeLabel = computed(() => {
 
     <LayoutPageContainer>
       <AppFloorStrip v-model="floor" :items="floors" aria-label="Marketing sections" />
+
+      <AppIntroCard app-id="marketing" />
 
       <!-- ── Pulse floor ──────────────────────────────────────────────── -->
       <template v-if="floor === 'pulse'">
