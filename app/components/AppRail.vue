@@ -270,55 +270,32 @@ function styleFor(app: AppAccent) {
 }
 
 /* ── Chip (icon container) ───────────────────────────────────────── */
-/* iOS-style liquid glass — diagonal dark wash from bottom-right gives
- * the tile weight; a white plus-lighter sheen from the top-left adds
- * Apple's signature highlight and brightens the icon glyph beneath. */
+/* iOS-style Liquid Glass — neutral chips at rest, soft accent wash on
+ * active. The chip itself is a clean rounded square with no border or
+ * gradient; the only colour comes from the accent on the active state.
+ * Hover lifts the bg to a subtle muted tint as a hint, not a selection. */
 .app-rail__chip {
 	@apply flex items-center justify-center shrink-0
-		rounded-md
+		rounded-xl
 		transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)];
 	position: relative;
 	width: 32px;
 	height: 32px;
-	background:
-		/* heavier angled dark wash for that submerged iOS look */
-		linear-gradient(335deg, rgba(0, 0, 0, 0.32) 0%, rgba(0, 0, 0, 0.08) 60%),
-		/* deeper colored gradient — lightness shifts noticeably darker */
-		linear-gradient(
-			155deg,
-			hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.85),
-			hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) - 10%) / 0.78) 55%,
-			hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) - 22%) / 0.7)
-		);
-	backdrop-filter: blur(10px);
-	-webkit-backdrop-filter: blur(10px);
-	box-shadow:
-		/* inset bottom shadow — depth from underneath */
-		inset 0 -1.5px 2px hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) - 35%) / 0.45),
-		/* inset top-edge highlight — light catching the rim */
-		inset 0 0.5px 0 hsl(0 0% 100% / 0.45),
-		/* hairline accent rim */
-		0 0 0 0.5px hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) + 12%) / 0.5) inset,
-		/* soft tinted drop shadow */
-		0 2px 8px -2px hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.3);
+	background: transparent;
 }
 
-/* White sheen overlay — plus-lighter is Apple's signature blend mode for
- * liquid glass. Brightens both the chip's top-left and the icon glyph
- * beneath without washing out the rest of the tile. */
+/* Sheen + outline overlay from the previous rich treatment is no longer
+ * used — keep the rule so the ::after pseudo-element doesn't leak through. */
 .app-rail__chip::after {
-	content: '';
-	position: absolute;
-	inset: 0;
-	border-radius: inherit;
-	background: linear-gradient(
-		335deg,
-		hsl(0 0% 100% / 0) 50%,
-		hsl(0 0% 100% / 0.18) 80%,
-		hsl(0 0% 100% / 0.42) 100%
-	);
-	mix-blend-mode: plus-lighter;
-	pointer-events: none;
+	display: none;
+}
+
+/* Dual-layer icon (base + highlight mask) was for the rich treatment.
+ * The simpler Liquid Glass style uses a single solid-colour glyph, so
+ * the highlight layer is hidden. The template is kept intact so we can
+ * restore the rich treatment later without re-adding markup. */
+.app-rail__icon-highlight-mask {
+	display: none;
 }
 
 .app-rail--horizontal .app-rail__chip,
@@ -355,10 +332,9 @@ function styleFor(app: AppAccent) {
 }
 
 .app-rail__icon-base {
-	/* Push the icon much lighter than the chip base so it pops against the
-	 * deeper colored backdrop. */
-	color: hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) + 32%));
-	filter: drop-shadow(0 1.5px 2px hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) - 18%) / 0.6));
+	/* Inactive icons render in the muted-foreground neutral; the active
+	 * state below promotes them to the accent colour. */
+	color: hsl(var(--muted-foreground));
 	z-index: 0;
 }
 
@@ -380,23 +356,14 @@ function styleFor(app: AppAccent) {
 	color: hsl(0 0% 100% / 0.8);
 }
 
-/* Hover lift — raise 1px and brighten the rim/sheen. */
+/* Hover — subtle muted wash so the chip lights up under the cursor
+ * without preempting the active state's accent. */
 .app-rail__item:hover .app-rail__chip {
-	transform: translateY(-1px);
-	box-shadow:
-		0 0 0 0.5px hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) + 14%) / 0.5) inset,
-		0 1px 0 0 hsl(0 0% 100% / 0.65) inset,
-		0 4px 12px -2px hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.3);
+	background: hsl(var(--muted) / 0.6);
 }
 
-/* On hover-capable devices, surface the same colored ring preview as the
- * active state — at lower opacity so it reads as "hint" not "selected".
- * Excluded from touch devices via @media (hover: hover). */
-@media (hover: hover) {
-	.app-rail__item:not(.app-rail__item--active):hover .app-rail__chip {
-		outline: 1.5px solid hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.55);
-		outline-offset: 2px;
-	}
+.app-rail__item:hover .app-rail__icon-base {
+	color: hsl(var(--foreground));
 }
 
 .app-rail__item:hover {
@@ -404,47 +371,21 @@ function styleFor(app: AppAccent) {
 }
 
 /* ── Active state ────────────────────────────────────────────────── */
-/* Active: glass becomes brighter + more saturated, icon deepens slightly. */
+/* Active: soft tinted wash at the accent hue + the icon promotes to the
+ * accent colour itself. No border, no ring, no sheen — the colour wash
+ * is the entire visual signal. Small scale + drop shadow add weight. */
 .app-rail__item--active {
 	@apply text-foreground;
 }
 
 .app-rail__item--active .app-rail__chip {
-	background:
-		linear-gradient(335deg, rgba(0, 0, 0, 0.36) 0%, rgba(0, 0, 0, 0.1) 60%),
-		linear-gradient(
-			155deg,
-			hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) + 4%) / 0.95),
-			hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) - 10%) / 0.88) 55%,
-			hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) - 22%) / 0.82)
-		);
-	box-shadow:
-		inset 0 -1.5px 2px hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) - 35%) / 0.5),
-		inset 0 0.5px 0 hsl(0 0% 100% / 0.55),
-		0 0 0 0.5px hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) + 12%) / 0.65) inset,
-		0 4px 14px -2px hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.45);
-	/* Floating ring at the app's true color with a small breathing gap.
-	 * outline-offset adds the gap; outline itself draws the colored ring. */
-	outline: 1.5px solid hsl(var(--rail-h) var(--rail-s) var(--rail-l));
-	outline-offset: 2px;
-}
-
-.app-rail__item--active .app-rail__chip::after {
-	background: linear-gradient(
-		335deg,
-		hsl(0 0% 100% / 0) 45%,
-		hsl(0 0% 100% / 0.22) 78%,
-		hsl(0 0% 100% / 0.5) 100%
-	);
+	background: hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.14);
+	transform: scale(1.04);
+	box-shadow: 0 2px 8px -3px hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.25);
 }
 
 .app-rail__item--active .app-rail__icon-base {
-	color: hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) + 38%));
-	filter: drop-shadow(0 1.5px 3px hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) - 20%) / 0.65));
-}
-
-.app-rail__item--active .app-rail__icon-highlight {
-	color: hsl(0 0% 100% / 0.85);
+	color: hsl(var(--rail-h) var(--rail-s) var(--rail-l));
 }
 
 /* ── Label ───────────────────────────────────────────────────────── */

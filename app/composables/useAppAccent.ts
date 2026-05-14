@@ -24,7 +24,7 @@
  * read straight from this map rather than maintaining a parallel list.
  */
 import type { CSSProperties } from 'vue';
-import { useAppPalette, type AppPaletteId } from '~/composables/useAppPalette';
+import { useAppPalette } from '~/composables/useAppPalette';
 
 export type AppId =
 	| 'dashboard'
@@ -82,29 +82,39 @@ const APP_META: Record<AppId, AppMeta> = {
 type HSL = { h: number; s: number; l: number };
 
 /**
- * Per-palette colour assignments. Lightness is normalised so each app
- * reads at similar visual weight in the rail — the source hexes are
- * adjusted slightly (mostly L) to keep contrast consistent across themes.
+ * Palette registry — single source of truth for every palette that ships.
  *
- *   default — Apple iWork pattern, distinct hue per app for wayfinding
- *   oceanic — green-to-deep-blue gradient
- *   royal   — indigo-violet gradient
+ * To add a new palette: add one entry below with { meta, colors }. The
+ * picker (`AppPalettePicker.vue`) and the type alias (`AppPaletteId`)
+ * both derive from this map, so no other file needs updating.
  *
- * Footer apps (organization, account) stay intentionally muted across
- * every palette — they're system/settings, not work.
+ *   meta.label — picker chip label
+ *   meta.hint  — one-line description shown under the swatch row
+ *   colors     — { [appId]: { h, s, l } } — see APP_META for app ids
+ *
+ * Lightness across palettes is normalised so each app reads at similar
+ * visual weight in the rail. Footer apps (organization, account) stay
+ * intentionally muted across every palette — they're system/settings,
+ * not work.
+ *
+ * @see useAppPalette.ts — picks the active palette per user.
  */
-export const APP_PALETTES: Record<AppPaletteId, Record<AppId, HSL>> = {
-	// Original Apple iWork–style palette. Each work app is its own hue family.
+export const APP_PALETTES = {
+	// Original Apple iWork–style palette. Each work app is its own hue
+	// family so users read "I'm in Money" vs "I'm in Marketing" at a glance.
 	default: {
-		dashboard:    { h: 191, s: 100, l: 50 },
-		clients:      { h: 242, s: 72,  l: 52 },
-		work:         { h: 160, s: 72,  l: 46 },
-		money:        { h: 142, s: 72,  l: 48 },
-		marketing:    { h: 308, s: 80,  l: 52 },
-		organization: { h: 205, s: 35,  l: 48 },
-		account:      { h: 220, s: 10,  l: 20 },
+		meta: { label: 'Default', hint: 'Original Earnest hues — distinct per app' },
+		colors: {
+			dashboard:    { h: 191, s: 100, l: 50 },
+			clients:      { h: 242, s: 72,  l: 52 },
+			work:         { h: 160, s: 72,  l: 46 },
+			money:        { h: 142, s: 72,  l: 48 },
+			marketing:    { h: 308, s: 80,  l: 52 },
+			organization: { h: 205, s: 35,  l: 48 },
+			account:      { h: 220, s: 10,  l: 20 },
+		},
 	},
-	// Oceanic — Lime Cream → Yale Blue.
+	// Oceanic — Lime Cream → Yale Blue gradient.
 	//   dashboard → Tropical Teal  #34a0a4
 	//   clients   → Emerald        #76c893 (L bumped to ~50 for parity)
 	//   work      → Lime Cream     #d9ed92 (L pulled to ~50, otherwise too pale to read)
@@ -113,40 +123,69 @@ export const APP_PALETTES: Record<AppPaletteId, Record<AppId, HSL>> = {
 	//   org       → Yale Blue      #184e77 (footer)
 	//   account   → muted slate    (footer)
 	oceanic: {
-		dashboard:    { h: 182, s: 51, l: 42 },
-		clients:      { h: 138, s: 43, l: 50 },
-		work:         { h: 73,  s: 75, l: 50 },
-		money:        { h: 205, s: 67, l: 38 },
-		marketing:    { h: 192, s: 78, l: 38 },
-		organization: { h: 207, s: 35, l: 32 },
-		account:      { h: 207, s: 10, l: 22 },
+		meta: { label: 'Oceanic', hint: 'Lime through deep Yale blue' },
+		colors: {
+			dashboard:    { h: 182, s: 51, l: 42 },
+			clients:      { h: 138, s: 43, l: 50 },
+			work:         { h: 73,  s: 75, l: 50 },
+			money:        { h: 205, s: 67, l: 38 },
+			marketing:    { h: 192, s: 78, l: 38 },
+			organization: { h: 207, s: 35, l: 32 },
+			account:      { h: 207, s: 10, l: 22 },
+		},
 	},
-	// Royal — violet→aqua gradient. Distinct hue per app, all in the
-	// cool/jewel-tone family so the rail reads as one set.
+	// Gradient Blues — violet → blue → cyan jewel-tone family.
 	//   dashboard → Strong Cyan    #56cfe1
 	//   clients   → Royal Violet   #7400b8
 	//   work      → Indigo Bloom   #6930c3
-	//   money     → Slate Indigo   #5e60ce (L pulled for "money seriousness")
+	//   money     → Slate Indigo   #5e60ce
 	//   marketing → Blue Energy    #5390d9
 	//   org       → Fresh Sky      #4ea8de (footer, muted)
 	//   account   → muted slate    (footer)
-	royal: {
-		dashboard:    { h: 187, s: 70,  l: 55 },
-		clients:      { h: 278, s: 100, l: 40 },
-		work:         { h: 261, s: 60,  l: 48 },
-		money:        { h: 239, s: 56,  l: 50 },
-		marketing:    { h: 211, s: 64,  l: 55 },
-		organization: { h: 202, s: 35,  l: 50 },
-		account:      { h: 220, s: 10,  l: 22 },
+	gradientBlues: {
+		meta: { label: 'Gradient Blues', hint: 'Violet → blue → cyan jewel tones' },
+		colors: {
+			dashboard:    { h: 187, s: 70,  l: 55 },
+			clients:      { h: 278, s: 100, l: 40 },
+			work:         { h: 261, s: 60,  l: 48 },
+			money:        { h: 239, s: 56,  l: 50 },
+			marketing:    { h: 211, s: 64,  l: 55 },
+			organization: { h: 202, s: 35,  l: 50 },
+			account:      { h: 220, s: 10,  l: 22 },
+		},
 	},
+} as const satisfies Record<string, { meta: { label: string; hint: string }; colors: Record<AppId, HSL> }>;
+
+/** Palette id derived from the registry — adding a new palette doesn't
+ *  require updating this type. */
+export type AppPaletteId = keyof typeof APP_PALETTES;
+
+/** Stable order for the picker — derived from the registry's insertion
+ *  order so new palettes appear at the bottom by default. */
+export const APP_PALETTE_IDS = Object.keys(APP_PALETTES) as AppPaletteId[];
+
+/**
+ * Legacy palette aliases. When a stored `directus_users.app_palette`
+ * value points to a renamed palette, map it here. Read paths consult
+ * this before deciding whether to fall back to `default`, so users on
+ * the old id keep their selection.
+ */
+export const APP_PALETTE_ALIASES: Record<string, AppPaletteId> = {
+	royal: 'gradientBlues',
 };
+
+export function resolvePaletteId(raw: unknown): AppPaletteId {
+	if (typeof raw !== 'string') return 'default';
+	if (APP_PALETTE_ALIASES[raw]) return APP_PALETTE_ALIASES[raw]!;
+	return (APP_PALETTE_IDS as string[]).includes(raw) ? (raw as AppPaletteId) : 'default';
+}
 
 /** Resolved per-app accents for the active palette. */
 export function getAppAccents(paletteId: AppPaletteId): Record<AppId, AppAccent> {
 	const palette = APP_PALETTES[paletteId] ?? APP_PALETTES.default;
 	const out = {} as Record<AppId, AppAccent>;
 	for (const id of Object.keys(APP_META) as AppId[]) {
-		out[id] = { ...APP_META[id], ...palette[id] };
+		out[id] = { ...APP_META[id], ...palette.colors[id] };
 	}
 	return out;
 }
