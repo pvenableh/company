@@ -370,7 +370,7 @@ watch(activeTab, (t) => {
 							<span class="text-[10px] text-muted-foreground">/100</span>
 						</div>
 					</UTooltip>
-					<div class="w-px h-5 bg-border/60 shrink-0" />
+					<div class="w-px h-5 bg-border/60 shrink-0"></div>
 					<!-- Badges -->
 					<UTooltip
 						v-for="badge in earnestState.badges"
@@ -399,7 +399,7 @@ watch(activeTab, (t) => {
 					<div class="flex items-center gap-2">
 						<UIcon name="i-heroicons-user-circle" class="w-4 h-4 text-primary" />
 						<h2 class="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">You</h2>
-						<div class="flex-1 h-px bg-border/40" />
+						<div class="flex-1 h-px bg-border/40"></div>
 					</div>
 
 				<!-- Priority Actions + Quick Tasks | Earnest Score + My Goals -->
@@ -426,7 +426,7 @@ watch(activeTab, (t) => {
 
 							<!-- Loading State -->
 							<div v-if="isAnalyzing && topActions.length === 0" class="space-y-2">
-								<div v-for="n in 4" :key="n" class="h-16 bg-muted rounded-xl animate-pulse" />
+								<div v-for="n in 4" :key="n" class="h-16 bg-muted rounded-xl animate-pulse"></div>
 							</div>
 
 							<!-- Empty State -->
@@ -579,7 +579,7 @@ watch(activeTab, (t) => {
 					<div class="flex items-center gap-2">
 						<UIcon name="i-heroicons-building-office-2" class="w-4 h-4 text-primary" />
 						<h2 class="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Us</h2>
-						<div class="flex-1 h-px bg-border/40" />
+						<div class="flex-1 h-px bg-border/40"></div>
 					</div>
 
 					<!-- CRM Health (relocated from YOU's right column; now full width) -->
@@ -588,8 +588,8 @@ watch(activeTab, (t) => {
 
 							<!-- Loading (snapshot) -->
 							<div v-if="crmSnapshotLoading && healthScore === null" class="py-4">
-								<div class="w-20 h-20 mx-auto bg-muted rounded-full animate-pulse" />
-								<div class="w-24 h-3 mx-auto bg-muted rounded mt-3 animate-pulse" />
+								<div class="w-20 h-20 mx-auto bg-muted rounded-full animate-pulse"></div>
+								<div class="w-24 h-3 mx-auto bg-muted rounded mt-3 animate-pulse"></div>
 							</div>
 
 							<!-- Score Display -->
@@ -826,7 +826,7 @@ watch(activeTab, (t) => {
 						<summary class="flex items-center gap-2 cursor-pointer list-none py-1 select-none">
 							<UIcon name="i-heroicons-chevron-right" class="w-3.5 h-3.5 text-muted-foreground transition-transform group-open:rotate-90" />
 							<h2 class="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Less-used</h2>
-							<div class="flex-1 h-px bg-border/40" />
+							<div class="flex-1 h-px bg-border/40"></div>
 						</summary>
 						<div class="pt-4">
 							<DeferUntilVisible min-height="500px" @enter="onChatDeskEnter">

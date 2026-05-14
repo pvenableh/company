@@ -1,11 +1,45 @@
 <script setup lang="ts">
+import type { Goal } from '~~/shared/directus';
+
 const invoiceItems = useDirectusItems('invoices');
 const expenseItems = useDirectusItems('expenses');
 const { selectedOrg } = useOrganization();
+// Quarterly revenue targets now live in the unified `goals` collection
+// (Stage 1 of the "Me" lens initiative migrated `financial_goals` rows
+// over). Reads + writes go through useGoals so GoalsSummaryWidget +
+// /goals stay in sync.
+const { goals, createGoal, updateGoal, refresh: refreshGoals } = useGoals();
 
 const isLoading = ref(true);
 const currentYear = new Date().getFullYear();
 const selectedYear = ref(currentYear);
+
+// Build the deterministic filter for "this org's quarterly revenue goals
+// for the selected year." Stage 1's migration writes scope='organization',
+// category='revenue', timeframe='quarterly', start_date inside the quarter.
+const yearQuarterGoals = computed<Goal[]>(() => {
+	const year = selectedYear.value;
+	const startBoundary = `${year}-01-01`;
+	const endBoundary = `${year}-12-31`;
+	return (goals.value || []).filter((g: Goal) => {
+		if (g.scope !== 'organization') return false;
+		if (g.category !== 'revenue') return false;
+		if (g.timeframe !== 'quarterly') return false;
+		if (!g.start_date) return false;
+		return g.start_date >= startBoundary && g.start_date <= endBoundary;
+	});
+});
+
+// Prefer the migration's stamped metadata; fall back to deriving from
+// start_date for hand-created rows.
+function quarterOf(goal: Goal): number | null {
+	const stamped = (goal.metadata as any)?.quarter;
+	if (typeof stamped === 'number' && stamped >= 1 && stamped <= 4) return stamped;
+	if (!goal.start_date) return null;
+	const month = new Date(goal.start_date).getMonth();
+	if (Number.isNaN(month)) return null;
+	return Math.floor(month / 3) + 1;
+}
 
 interface QuarterData {
 	label: string;
@@ -231,24 +265,68 @@ const getProgressColor = (actual: number, goal: number) => {
 	return 'bg-red-500';
 };
 
-const saveGoals = () => {
-	editingGoals.value = false;
-	if (import.meta.client) {
-		localStorage.setItem(`financial-goals-${selectedYear.value}`, JSON.stringify(goalInputs.value));
+const saveGoals = async () => {
+	const year = selectedYear.value;
+	const existingByQuarter = new Map<number, Goal>();
+	for (const g of yearQuarterGoals.value) {
+		const q = quarterOf(g);
+		if (q !== null) existingByQuarter.set(q, g);
 	}
+
+	for (let qIdx = 0; qIdx < 4; qIdx++) {
+		const target = Number(goalInputs.value[qIdx]) || 0;
+		const q = qIdx + 1;
+		const { start, end } = getQuarterRange(qIdx, year);
+		const existing = existingByQuarter.get(q);
+
+		if (existing) {
+			const currentTarget = Number(existing.target_value) || 0;
+			if (currentTarget !== target) {
+				await updateGoal(existing.id, { target_value: target });
+			}
+		} else if (target > 0) {
+			await createGoal({
+				title: `Q${q} ${year} Revenue`,
+				scope: 'organization',
+				category: 'revenue',
+				timeframe: 'quarterly',
+				start_date: start,
+				end_date: end,
+				target_value: target,
+				target_unit: 'USD',
+				current_value: 0,
+				status: 'active',
+				metadata: { year, quarter: q },
+			});
+		}
+	}
+
+	editingGoals.value = false;
+	await refreshGoals();
 	loadFinancials();
 };
 
+// Sync goalInputs from yearQuarterGoals whenever the goals list resolves
+// or the year changes. Skipped while the user is mid-edit so server-side
+// data doesn't clobber unsaved input.
 const loadSavedGoals = () => {
-	if (import.meta.client) {
-		const saved = localStorage.getItem(`financial-goals-${selectedYear.value}`);
-		if (saved) {
-			goalInputs.value = JSON.parse(saved);
-		} else {
-			goalInputs.value = [0, 0, 0, 0];
+	if (editingGoals.value) return;
+	const next: number[] = [0, 0, 0, 0];
+	for (const g of yearQuarterGoals.value) {
+		const q = quarterOf(g);
+		if (q !== null && q >= 1 && q <= 4) {
+			next[q - 1] = Number(g.target_value) || 0;
 		}
 	}
+	goalInputs.value = next;
 };
+
+watch(yearQuarterGoals, () => {
+	loadSavedGoals();
+	// Re-derive the quarter cards once goals resolve so the "Goal:" label
+	// shows the real targets rather than the initial $0 placeholder.
+	if (!isLoading.value) loadFinancials();
+}, { deep: true });
 
 watch(selectedYear, () => {
 	loadSavedGoals();
