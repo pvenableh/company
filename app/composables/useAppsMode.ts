@@ -19,7 +19,7 @@
  * nav on phones and tablets. The stored value is preserved and re-engages
  * on wider viewports.
  */
-import { useMediaQuery } from '@vueuse/core';
+import { getCurrentInstance, onMounted, shallowRef, type Ref } from 'vue';
 
 export type AppsLayoutMode = 'classic' | 'apps';
 export type RailPosition = 'left' | 'top' | 'right' | 'bottom' | 'floating';
@@ -29,6 +29,27 @@ const RAIL_POSITIONS: RailPosition[] = ['left', 'top', 'right', 'bottom', 'float
 const localMode = ref<AppsLayoutMode | null>(null);
 const localRailPosition = ref<RailPosition | null>(null);
 let hydrationPromise: Promise<void> | null = null;
+
+// Module-level ref shared by every useAppsMode() consumer. Two reasons it
+// lives here, not inside the composable:
+//   1) Per-call instances drifted across effect scopes — useMediaQuery ties
+//      its cleanup to the first-calling component, so when that component
+//      unmounted, the listener died and later consumers got a pinned value.
+//   2) Initial sync is deferred to onMounted so SSR (where isMobile must be
+//      false, since there's no viewport) and the first client render agree.
+//      Setting it during hydration triggers a class-binding hydration
+//      mismatch that Vue silently fails to patch.
+const isMobile: Ref<boolean> = shallowRef(false);
+let mqlAttached = false;
+function ensureMqlListener() {
+	if (mqlAttached || !import.meta.client) return;
+	mqlAttached = true;
+	const mql = window.matchMedia('(max-width: 1023px)');
+	isMobile.value = mql.matches;
+	mql.addEventListener('change', (e) => {
+		isMobile.value = e.matches;
+	});
+}
 
 async function hydrateFromServer() {
 	if (hydrationPromise) return hydrationPromise;
@@ -62,6 +83,18 @@ export function useAppsMode() {
 		hydrateFromServer();
 	}
 
+	if (import.meta.client && getCurrentInstance()) {
+		// Defer the listener attach past the current paint. Inside onMounted
+		// directly, Vue's hydration is still considered in-flight: setting
+		// isMobile.value synchronously then patches the :class binding, but
+		// Vue treats the change as a hydration mismatch on class and silently
+		// keeps the SSR-rendered value. Pushing one frame out lets the patch
+		// run as a normal reactive update.
+		onMounted(() => {
+			requestAnimationFrame(ensureMqlListener);
+		});
+	}
+
 	const mode = computed<AppsLayoutMode>(() => {
 		if (localMode.value !== null) return localMode.value;
 		const raw = (user.value as any)?.layout_mode;
@@ -69,8 +102,6 @@ export function useAppsMode() {
 	});
 
 	const isAppsMode = computed(() => mode.value === 'apps');
-
-	const isMobile = useMediaQuery('(max-width: 1023px)');
 
 	const storedRailPosition = computed<RailPosition>(() => {
 		if (localRailPosition.value !== null) return localRailPosition.value;
