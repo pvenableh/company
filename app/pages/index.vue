@@ -884,6 +884,11 @@ watch(activeTab, (t) => {
 
 			<!-- AI Tray -->
 			<CommandCenterAITray :is-open="aiTrayOpen" :initial-prompt="aiTrayPrompt" @close="handleTrayClose" />
+
+			<!-- Weekly check-in modal (Stage 2.5). Mounted at root so the trigger
+			     pill in YOU's right column doesn't have to portal out of its
+			     stacking context. -->
+			<GoalsWeeklyCheckinModal v-model="checkinOpen" />
 		</div>
 	</div>
 	</NuxtLayout>
