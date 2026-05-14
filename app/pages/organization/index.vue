@@ -133,6 +133,58 @@ const infoForm = ref({
 	active: true,
 });
 
+// --- Email Branding (Stage 3) — reply-to + mailing address with live preview ---
+const editingEmailBranding = ref(false);
+const savingEmailBranding = ref(false);
+const emailBrandingForm = ref({
+	email_reply_to: '',
+	mailing_address: '',
+});
+const emailPreviewTemplate = ref('marketing-touch');
+const emailPreviewTemplates = [
+	{ value: 'welcome', label: 'Welcome (Earnest-branded)' },
+	{ value: 'notification', label: 'Notification' },
+	{ value: 'meeting-invited', label: 'Meeting invite' },
+	{ value: 'meeting-reminder', label: 'Meeting reminder' },
+	{ value: 'video-invite', label: 'Video room invite' },
+	{ value: 'marketing-touch', label: 'Marketing — campaign touch' },
+	{ value: 'newsletter', label: 'Marketing — newsletter' },
+];
+const emailPreviewUrl = computed(() => {
+	if (!org.value?.id) return '';
+	const params = new URLSearchParams({
+		template: emailPreviewTemplate.value,
+		org: String(org.value.id),
+	});
+	return `/api/email/preview?${params.toString()}`;
+});
+const startEditEmailBranding = () => {
+	emailBrandingForm.value = {
+		email_reply_to: org.value?.email_reply_to || '',
+		mailing_address: org.value?.mailing_address || '',
+	};
+	editingEmailBranding.value = true;
+};
+const saveEmailBranding = async () => {
+	if (!org.value?.id) return;
+	savingEmailBranding.value = true;
+	try {
+		await organizationItems.update(org.value.id, {
+			email_reply_to: emailBrandingForm.value.email_reply_to || null,
+			mailing_address: emailBrandingForm.value.mailing_address || null,
+		});
+		toast.add({ title: 'Success', description: 'Email branding updated', color: 'green' });
+		editingEmailBranding.value = false;
+		await fetchOrganizationData();
+		await fetchOrganizationDetails();
+	} catch (error) {
+		console.error('Email branding save failed:', error);
+		toast.add({ title: 'Error', description: 'Failed to save email branding', color: 'red' });
+	} finally {
+		savingEmailBranding.value = false;
+	}
+};
+
 const startEditInfo = () => {
 	infoForm.value = {
 		name: org.value?.name || '',
@@ -1438,6 +1490,84 @@ watch(searchEmail, (val) => {
 												@update:model-value="toggleWhitelabel"
 											/>
 										</div>
+									</div>
+								</UCard>
+
+								<!-- Email Branding (Stage 3) — reply-to + mailing address + live preview -->
+								<UCard v-if="canManageOrg">
+									<template #header>
+										<div class="flex items-center justify-between">
+											<h3 class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Email Branding</h3>
+											<UButton
+												v-if="!editingEmailBranding"
+												color="gray"
+												variant="ghost"
+												icon="i-heroicons-pencil-square"
+												size="xs"
+												@click="startEditEmailBranding"
+											/>
+										</div>
+									</template>
+
+									<!-- View mode -->
+									<div v-if="!editingEmailBranding" class="space-y-3 text-sm">
+										<p class="text-xs text-muted-foreground">
+											Logo + brand color (set above) plus these two fields drive every email Earnest sends on your behalf — notifications, meeting invites, marketing campaigns, and newsletters.
+										</p>
+										<div class="flex justify-between">
+											<span class="text-[10px] uppercase tracking-wider text-muted-foreground">Reply-to</span>
+											<span v-if="org.email_reply_to" class="truncate max-w-[180px]">{{ org.email_reply_to }}</span>
+											<span v-else class="text-muted-foreground italic">Earnest default</span>
+										</div>
+										<div>
+											<span class="text-[10px] uppercase tracking-wider text-muted-foreground block mb-1">Mailing address</span>
+											<p v-if="org.mailing_address" class="text-xs whitespace-pre-line">{{ org.mailing_address }}</p>
+											<p v-else class="text-[11px] text-amber-600 dark:text-amber-400">
+												Required on marketing emails (CAN-SPAM). Add an address to send campaigns and newsletters.
+											</p>
+										</div>
+									</div>
+
+									<!-- Edit mode -->
+									<div v-else class="space-y-3">
+										<UFormGroup label="Reply-to address" help="Address recipients hit when they reply. Leave blank to use the Earnest default.">
+											<UInput v-model="emailBrandingForm.email_reply_to" placeholder="team@yourdomain.com" type="email" />
+										</UFormGroup>
+										<UFormGroup label="Mailing address" help="Physical address rendered in the footer of marketing emails (CAN-SPAM). Multi-line OK.">
+											<UTextarea
+												v-model="emailBrandingForm.mailing_address"
+												placeholder="123 Main St, Suite 100&#10;City, ST 12345"
+												:rows="3"
+												autoresize
+											/>
+										</UFormGroup>
+										<div class="flex justify-end gap-2 pt-1">
+											<UButton color="gray" variant="ghost" size="xs" @click="editingEmailBranding = false">Cancel</UButton>
+											<UButton color="primary" size="xs" :loading="savingEmailBranding" @click="saveEmailBranding">Save</UButton>
+										</div>
+									</div>
+
+									<!-- Live preview -->
+									<div class="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+										<div class="flex items-center justify-between mb-2">
+											<span class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Live preview</span>
+											<select
+												v-model="emailPreviewTemplate"
+												class="rounded-full border bg-background px-2 py-1 text-xs"
+											>
+												<option v-for="t in emailPreviewTemplates" :key="t.value" :value="t.value">{{ t.label }}</option>
+											</select>
+										</div>
+										<div class="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-800 bg-white">
+											<iframe
+												v-if="emailPreviewUrl"
+												:src="emailPreviewUrl"
+												class="w-full h-[420px] block"
+												sandbox="allow-same-origin"
+												title="Email preview"
+											/>
+										</div>
+										<p class="text-[11px] text-muted-foreground mt-1.5">Sample data with your logo, brand color, reply-to, and mailing address.</p>
 									</div>
 								</UCard>
 
