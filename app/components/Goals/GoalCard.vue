@@ -5,36 +5,36 @@ const props = defineProps({
 
 const emit = defineEmits(['edit', 'update-progress', 'delete']);
 
-const typeConfig = {
-	financial: { icon: 'i-heroicons-banknotes', color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-	networking: { icon: 'i-heroicons-user-group', color: 'text-blue-500', bg: 'bg-blue-500/10' },
-	performance: { icon: 'i-heroicons-chart-bar', color: 'text-purple-500', bg: 'bg-purple-500/10' },
-	marketing: { icon: 'i-heroicons-megaphone', color: 'text-pink-500', bg: 'bg-pink-500/10' },
-	custom: { icon: 'i-heroicons-flag', color: 'text-amber-500', bg: 'bg-amber-500/10' },
+// Category styling (with legacy `type` fallback for un-migrated rows).
+const categoryConfig = {
+	revenue:   { label: 'Revenue',   icon: 'i-heroicons-banknotes',          color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+	growth:    { label: 'Growth',    icon: 'i-heroicons-arrow-trending-up',  color: 'text-blue-500',    bg: 'bg-blue-500/10' },
+	retention: { label: 'Retention', icon: 'i-heroicons-heart',              color: 'text-pink-500',    bg: 'bg-pink-500/10' },
+	learning:  { label: 'Learning',  icon: 'i-heroicons-academic-cap',       color: 'text-indigo-500',  bg: 'bg-indigo-500/10' },
+	wellbeing: { label: 'Wellbeing', icon: 'i-heroicons-sun',                color: 'text-amber-500',   bg: 'bg-amber-500/10' },
+	delivery:  { label: 'Delivery',  icon: 'i-heroicons-truck',              color: 'text-purple-500',  bg: 'bg-purple-500/10' },
+	custom:    { label: 'Custom',    icon: 'i-heroicons-flag',               color: 'text-slate-500',   bg: 'bg-slate-500/10' },
+};
+const legacyTypeToCategory = {
+	financial: 'revenue', networking: 'growth', performance: 'delivery', marketing: 'growth', custom: 'custom',
 };
 
-const priorityConfig = {
-	high: { label: 'High', color: 'text-red-500 bg-red-500/10' },
-	medium: { label: 'Medium', color: 'text-amber-500 bg-amber-500/10' },
-	low: { label: 'Low', color: 'text-blue-500 bg-blue-500/10' },
+const scopeConfig = {
+	user:         { label: 'For me',       icon: 'i-heroicons-user' },
+	team:         { label: 'Team',         icon: 'i-heroicons-user-group' },
+	client:       { label: 'Client',       icon: 'i-heroicons-briefcase' },
+	organization: { label: 'Organization', icon: 'i-heroicons-building-office-2' },
 };
 
-const statusLabels = {
-	draft: 'Draft',
-	active: 'Active',
-	paused: 'Paused',
-	completed: 'Completed',
-	archived: 'Archived',
-};
+const categoryInfo = computed(() => {
+	const key = props.goal.category || legacyTypeToCategory[props.goal.type] || 'custom';
+	return categoryConfig[key] || categoryConfig.custom;
+});
 
-const { getStatusBadgeClasses } = useStatusStyle();
-
-const typeInfo = computed(() => typeConfig[props.goal.type] || typeConfig.custom);
-const priorityInfo = computed(() => priorityConfig[props.goal.priority] || priorityConfig.medium);
-const statusInfo = computed(() => ({
-	label: statusLabels[props.goal.status] || statusLabels.draft,
-	color: getStatusBadgeClasses(props.goal.status || 'draft'),
-}));
+const scopeInfo = computed(() => {
+	const key = props.goal.scope || (props.goal.team ? 'team' : props.goal.client ? 'client' : props.goal.assigned_to ? 'user' : 'organization');
+	return scopeConfig[key] || scopeConfig.organization;
+});
 
 const progress = computed(() => {
 	if (!props.goal.target_value || props.goal.target_value === 0) return 0;
@@ -76,15 +76,15 @@ const formatDate = (dateStr) => getFriendlyDateThree(dateStr);
 		<!-- Header -->
 		<div class="flex items-start justify-between gap-3 mb-3">
 			<div class="flex items-center gap-2.5 min-w-0">
-				<div class="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center" :class="typeInfo.bg">
-					<UIcon :name="typeInfo.icon" class="w-4 h-4" :class="typeInfo.color" />
+				<div class="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center" :class="categoryInfo.bg">
+					<UIcon :name="categoryInfo.icon" class="w-4 h-4" :class="categoryInfo.color" />
 				</div>
 				<div class="min-w-0">
 					<h3 class="text-sm font-semibold text-foreground truncate">{{ goal.title }}</h3>
 					<p v-if="goal.description" class="text-xs text-muted-foreground line-clamp-1 mt-0.5">{{ goal.description }}</p>
 				</div>
 			</div>
-			<UDropdownMenu :items="[
+			<UDropdown :items="[
 				[{ label: 'Update Progress', icon: 'i-heroicons-arrow-trending-up', click: () => emit('update-progress', goal) }],
 				[{ label: 'Edit', icon: 'i-heroicons-pencil-square', click: () => emit('edit', goal) }],
 				[{ label: 'Delete', icon: 'i-heroicons-trash', click: () => emit('delete', goal) }],
@@ -92,7 +92,7 @@ const formatDate = (dateStr) => getFriendlyDateThree(dateStr);
 				<button class="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-muted">
 					<UIcon name="i-heroicons-ellipsis-vertical" class="w-4 h-4 text-muted-foreground" />
 				</button>
-			</UDropdownMenu>
+			</UDropdown>
 		</div>
 
 		<!-- Progress -->
@@ -110,15 +110,22 @@ const formatDate = (dateStr) => getFriendlyDateThree(dateStr);
 
 		<!-- Footer -->
 		<div class="flex items-center justify-between gap-2">
-			<div class="flex items-center gap-1.5">
-				<span class="text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded-md" :class="statusInfo.color">
-					{{ statusInfo.label }}
+			<div class="flex items-center gap-1.5 min-w-0">
+				<span
+					class="inline-flex items-center gap-1 text-[10px] font-medium tracking-wider px-1.5 py-0.5 rounded-md"
+					:class="[categoryInfo.bg, categoryInfo.color]"
+				>
+					<UIcon :name="categoryInfo.icon" class="w-3 h-3" />
+					{{ categoryInfo.label }}
 				</span>
-				<span class="text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded-md" :class="priorityInfo.color">
-					{{ priorityInfo.label }}
+				<span
+					class="inline-flex items-center gap-1 text-[10px] font-medium tracking-wider px-1.5 py-0.5 rounded-md bg-muted text-muted-foreground"
+				>
+					<UIcon :name="scopeInfo.icon" class="w-3 h-3" />
+					{{ scopeInfo.label }}
 				</span>
 			</div>
-			<div class="text-[10px] text-muted-foreground">
+			<div class="text-[10px] text-muted-foreground shrink-0">
 				<span v-if="isOverdue" class="text-red-500 font-medium">Overdue</span>
 				<span v-else-if="daysRemaining !== null && daysRemaining >= 0">{{ daysRemaining }}d left</span>
 				<span v-else-if="goal.end_date">{{ formatDate(goal.end_date) }}</span>

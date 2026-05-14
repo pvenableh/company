@@ -2,9 +2,43 @@
 definePageMeta({ middleware: ['auth'] });
 useHead({ title: 'Goals | Earnest' });
 
-const { goals, activeGoals, completedGoals, goalsByType, overdueGoals, isLoading, deleteGoal, recordSnapshot, goalProgress, refresh } = useGoals();
+const { goals, activeGoals, completedGoals, myGoals, goalsByScope, goalsByCategory, overdueGoals, isLoading, deleteGoal, recordSnapshot, goalProgress, refresh } = useGoals();
 
-const activeTab = ref('all');
+// Allow deep-links from other surfaces to preselect filters via the URL:
+//   /goals?scope=me        → My Goals
+//   /goals?category=revenue → Revenue chip lit
+//   /goals?status=all       → All statuses
+// Filter changes write back to the query so the URL stays shareable.
+const route = useRoute();
+const router = useRouter();
+
+type ScopeVal = 'all' | 'me' | 'team' | 'client' | 'organization';
+type CategoryVal = 'all' | 'revenue' | 'growth' | 'retention' | 'learning' | 'wellbeing' | 'delivery' | 'custom';
+type StatusVal = 'active' | 'completed' | 'all';
+
+const SCOPE_VALUES: ScopeVal[] = ['all', 'me', 'team', 'client', 'organization'];
+const CATEGORY_VALUES: CategoryVal[] = ['all', 'revenue', 'growth', 'retention', 'learning', 'wellbeing', 'delivery', 'custom'];
+const STATUS_VALUES: StatusVal[] = ['active', 'completed', 'all'];
+
+function readQuery<T extends string>(key: string, allowed: T[], fallback: T): T {
+	const raw = route.query[key];
+	const v = typeof raw === 'string' ? raw : Array.isArray(raw) ? raw[0] : '';
+	return allowed.includes(v as T) ? (v as T) : fallback;
+}
+
+const scopeFilter = ref<ScopeVal>(readQuery<ScopeVal>('scope', SCOPE_VALUES, 'all'));
+const categoryFilter = ref<CategoryVal>(readQuery<CategoryVal>('category', CATEGORY_VALUES, 'all'));
+const statusFilter = ref<StatusVal>(readQuery<StatusVal>('status', STATUS_VALUES, 'active'));
+
+// Reflect filter state back into the URL — but drop default values so the
+// shared URL stays clean (`/goals` not `/goals?scope=all&category=all&status=active`).
+watch([scopeFilter, categoryFilter, statusFilter], ([scope, cat, status]) => {
+	const next = { ...route.query };
+	if (scope === 'all') delete next.scope; else next.scope = scope;
+	if (cat === 'all') delete next.category; else next.category = cat;
+	if (status === 'active') delete next.status; else next.status = status;
+	router.replace({ query: next });
+});
 const showCreateModal = ref(false);
 const editingGoal = ref(null);
 const aiPrefill = ref(null);
@@ -46,7 +80,8 @@ const adoptSuggestion = (suggestion: any) => {
 	aiPrefill.value = {
 		title: suggestion.title || '',
 		description: suggestion.description || '',
-		type: suggestion.type || 'custom',
+		scope: suggestion.scope || 'user',
+		category: suggestion.category || 'custom',
 		target_value: suggestion.target_value || null,
 		target_unit: suggestion.target_unit || 'USD',
 		current_value: 0,
@@ -73,27 +108,54 @@ async function onGoalSaved() {
 	await refresh();
 }
 
-const tabs = [
-	{ label: 'All', value: 'all' },
-	{ label: 'Active', value: 'active' },
-	{ label: 'Completed', value: 'completed' },
-	{ label: 'Financial', value: 'financial' },
-	{ label: 'Networking', value: 'networking' },
-	{ label: 'Performance', value: 'performance' },
-	{ label: 'Marketing', value: 'marketing' },
+const scopeOptions = [
+	{ label: 'All', value: 'all' as const },
+	{ label: 'For me', value: 'me' as const, icon: 'i-heroicons-user' },
+	{ label: 'Team', value: 'team' as const, icon: 'i-heroicons-user-group' },
+	{ label: 'Client', value: 'client' as const, icon: 'i-heroicons-briefcase' },
+	{ label: 'Organization', value: 'organization' as const, icon: 'i-heroicons-building-office-2' },
+];
+
+const categoryOptions = [
+	{ label: 'All', value: 'all' as const },
+	{ label: 'Revenue', value: 'revenue' as const },
+	{ label: 'Growth', value: 'growth' as const },
+	{ label: 'Retention', value: 'retention' as const },
+	{ label: 'Learning', value: 'learning' as const },
+	{ label: 'Wellbeing', value: 'wellbeing' as const },
+	{ label: 'Delivery', value: 'delivery' as const },
+	{ label: 'Custom', value: 'custom' as const },
 ];
 
 const filteredGoals = computed(() => {
-	switch (activeTab.value) {
-		case 'active': return activeGoals.value;
-		case 'completed': return completedGoals.value;
-		case 'financial':
-		case 'networking':
-		case 'performance':
-		case 'marketing':
-			return goalsByType.value[activeTab.value] || [];
-		default: return goals.value;
+	let pool: any[];
+	if (scopeFilter.value === 'me') pool = myGoals.value as any[];
+	else if (scopeFilter.value === 'all') pool = goals.value as any[];
+	else pool = goalsByScope.value[scopeFilter.value] || [];
+
+	if (categoryFilter.value !== 'all') {
+		pool = pool.filter((g: any) => (g.category || 'custom') === categoryFilter.value);
 	}
+	if (statusFilter.value === 'active') pool = pool.filter((g: any) => g.status === 'active');
+	else if (statusFilter.value === 'completed') pool = pool.filter((g: any) => g.status === 'completed');
+	return pool;
+});
+
+const scopeCounts = computed(() => ({
+	all: goals.value.length,
+	me: myGoals.value.length,
+	team: goalsByScope.value.team?.length || 0,
+	client: goalsByScope.value.client?.length || 0,
+	organization: goalsByScope.value.organization?.length || 0,
+}));
+
+const categoryCounts = computed(() => {
+	const out: Record<string, number> = { all: goals.value.length };
+	for (const opt of categoryOptions) {
+		if (opt.value === 'all') continue;
+		out[opt.value] = goalsByCategory.value[opt.value]?.length || 0;
+	}
+	return out;
 });
 
 const stats = computed(() => ({
@@ -117,12 +179,60 @@ const handleDelete = async (goal) => {
 	toast.add({ title: 'Goal deleted', color: 'neutral' });
 };
 
+const reflection = ref<string>('');
+const reflectionLoading = ref(false);
+
 const openProgressUpdate = (goal) => {
 	progressGoal.value = goal;
 	progressValue.value = goal.current_value || 0;
 	progressNotes.value = '';
+	reflection.value = '';
 	showProgressModal.value = true;
 };
+
+const { selectedOrg } = useOrganization();
+
+async function fetchReflection(goal) {
+	reflectionLoading.value = true;
+	reflection.value = '';
+	try {
+		const fresh = goals.value.find((g) => g.id === goal.id) || goal;
+		const snapshots = (fresh.snapshots || [])
+			.slice()
+			.sort((a, b) => new Date(a.date_created || 0).getTime() - new Date(b.date_created || 0).getTime())
+			.slice(-5);
+		const { reflection: text } = await $fetch('/api/ai/goal-reflection', {
+			method: 'POST',
+			body: {
+				goal: {
+					id: fresh.id,
+					title: fresh.title,
+					description: fresh.description,
+					category: fresh.category,
+					scope: fresh.scope,
+					target_value: fresh.target_value,
+					target_unit: fresh.target_unit,
+					current_value: fresh.current_value,
+					end_date: fresh.end_date,
+					timeframe: fresh.timeframe,
+				},
+				snapshots: snapshots.map((s) => ({
+					value: s.value,
+					notes: s.notes,
+					date_created: s.date_created,
+				})),
+				organizationId: selectedOrg.value || undefined,
+			},
+		});
+		reflection.value = text || '';
+	} catch (err) {
+		// Reflection is a nice-to-have — silently swallow so it never blocks
+		// the progress-save path.
+		console.warn('[goals] reflection failed:', err);
+	} finally {
+		reflectionLoading.value = false;
+	}
+}
 
 const saveProgress = async () => {
 	if (!progressGoal.value) return;
@@ -130,8 +240,8 @@ const saveProgress = async () => {
 	try {
 		await recordSnapshot(progressGoal.value.id, progressValue.value, progressNotes.value);
 		toast.add({ title: 'Progress updated', color: 'success' });
-		showProgressModal.value = false;
-		progressGoal.value = null;
+		// Fire-and-display the AI reflection without blocking the save UX.
+		void fetchReflection(progressGoal.value);
 	} catch {
 		toast.add({ title: 'Error', description: 'Failed to update progress', color: 'error' });
 	} finally {
@@ -212,7 +322,7 @@ const saveProgress = async () => {
 								<p class="text-sm font-medium text-foreground">{{ suggestion.title }}</p>
 								<p v-if="suggestion.description" class="text-xs text-muted-foreground mt-0.5 truncate">{{ suggestion.description }}</p>
 								<div class="flex items-center gap-2 mt-1">
-									<span class="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">{{ suggestion.type }}</span>
+									<span class="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">{{ suggestion.category || suggestion.type }}</span>
 									<span v-if="suggestion.target_value" class="text-[10px] text-muted-foreground">
 										Target: {{ suggestion.target_value }} {{ suggestion.target_unit }}
 									</span>
@@ -266,14 +376,43 @@ const saveProgress = async () => {
 				</div>
 			</AccentCard>
 
-			<!-- Simple filter pills -->
+			<!-- Scope filter: For me / Team / Client / Organization -->
+			<div class="flex gap-1.5 flex-wrap mb-2">
+				<button
+					v-for="opt in scopeOptions"
+					:key="opt.value"
+					@click="scopeFilter = opt.value"
+					class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+					:class="scopeFilter === opt.value ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted'"
+				>
+					<UIcon v-if="opt.icon" :name="opt.icon" class="w-3.5 h-3.5" />
+					{{ opt.label }}
+					<span class="opacity-60">{{ scopeCounts[opt.value] }}</span>
+				</button>
+			</div>
+
+			<!-- Category filter -->
+			<div class="flex gap-1.5 flex-wrap mb-2">
+				<button
+					v-for="opt in categoryOptions"
+					:key="opt.value"
+					@click="categoryFilter = opt.value"
+					class="px-3 py-1 rounded-full text-[11px] font-medium transition-colors"
+					:class="categoryFilter === opt.value ? 'bg-foreground/10 text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'"
+				>
+					{{ opt.label }}
+					<span class="opacity-60">{{ categoryCounts[opt.value] }}</span>
+				</button>
+			</div>
+
+			<!-- Status filter -->
 			<div class="flex gap-1.5">
 				<button
-					v-for="tab in [{ label: 'Active', value: 'active' }, { label: 'Completed', value: 'completed' }, { label: 'All', value: 'all' }]"
+					v-for="tab in [{ label: 'Active', value: 'active' }, { label: 'Completed', value: 'completed' }, { label: 'All', value: 'all' }] as const"
 					:key="tab.value"
-					@click="activeTab = tab.value"
+					@click="statusFilter = tab.value"
 					class="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
-					:class="activeTab === tab.value ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted'"
+					:class="statusFilter === tab.value ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-muted'"
 				>
 					{{ tab.label }}
 					<span v-if="tab.value === 'active'" class="ml-1 opacity-60">{{ stats.active }}</span>
@@ -354,14 +493,32 @@ const saveProgress = async () => {
 							class="w-full bg-card border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
 						/>
 					</div>
+
+					<!-- AI reflection — appears after Save fires. Stays grounded in
+						 the goal's actual data; see feedback_goal_coaching_lattice_line.md -->
+					<div
+						v-if="reflectionLoading || reflection"
+						class="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3"
+					>
+						<div class="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-amber-600 dark:text-amber-400 font-semibold mb-1.5">
+							<UIcon name="i-heroicons-sparkles" class="w-3.5 h-3.5" />
+							Reflection
+						</div>
+						<p v-if="reflectionLoading" class="text-xs text-muted-foreground italic">
+							Thinking…
+						</p>
+						<p v-else class="text-sm text-foreground leading-relaxed">{{ reflection }}</p>
+					</div>
+
 					<div class="flex justify-end gap-2 pt-2">
 						<button
-							@click="showProgressModal = false"
+							@click="showProgressModal = false; progressGoal = null"
 							class="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg"
 						>
-							Cancel
+							{{ reflection || reflectionLoading ? 'Done' : 'Cancel' }}
 						</button>
 						<button
+							v-if="!reflection && !reflectionLoading"
 							@click="saveProgress"
 							:disabled="savingProgress"
 							class="px-4 py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"

@@ -5,7 +5,7 @@
 		:is-editing="isEditing"
 		:saving="saving"
 		:submit-disabled="!formRef?.hasTitle"
-		collection="team_goals"
+		collection="goals"
 		:item-id="goal?.id ?? null"
 		@submit="triggerSave"
 		@delete="handleDelete"
@@ -39,7 +39,7 @@ const saving = ref(false);
 const formRef = ref<any>(null);
 
 const toast = useToast();
-const goalItems = useDirectusItems('team_goals');
+const goalItems = useDirectusItems('goals');
 
 function triggerSave() {
 	formRef.value?.triggerSubmit?.();
@@ -48,12 +48,26 @@ function triggerSave() {
 async function onFormSave(payload: any) {
 	saving.value = true;
 	try {
+		// Form emits {title, description, target_date, progress}.
+		// Translate to the unified goals shape (scope=team, percent-progress).
+		const goalPayload: any = {
+			title: payload.title,
+			description: payload.description ?? null,
+			scope: 'team',
+			category: 'delivery',
+			status: 'active',
+			target_value: 100,
+			target_unit: '%',
+			current_value: payload.progress ?? 0,
+			end_date: payload.target_date ?? null,
+		};
+
 		if (isEditing.value && props.goal?.id) {
-			const updated = await goalItems.update(props.goal.id, payload);
+			const updated = await goalItems.update(props.goal.id, goalPayload);
 			toast.add({ title: 'Goal updated', color: 'green' });
 			emit('updated', updated);
 		} else {
-			const created = await goalItems.create({ ...payload, team: props.teamId });
+			const created = await goalItems.create({ ...goalPayload, team: props.teamId });
 			toast.add({ title: 'Goal added', color: 'green' });
 			emit('created', created);
 		}

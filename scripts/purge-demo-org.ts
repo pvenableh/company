@@ -111,9 +111,18 @@ async function purgeOrg(orgId: string): Promise<void> {
 	if (leadIds.length) await deleteByFilter('lead_activities', { lead: { _in: leadIds } }, 'id', 'lead_activities');
 	if (ticketIds.length) await deleteByFilter('tickets_directus_users', { tickets_id: { _in: ticketIds } }, 'id', 'tickets_directus_users');
 	if (ticketIds.length) await deleteByFilter('tickets_files', { tickets_id: { _in: ticketIds } }, 'id', 'tickets_files');
-	if (teamIds.length) await deleteByFilter('team_goals', { team: { _in: teamIds } }, 'id', 'team_goals');
 	if (teamIds.length) await deleteByFilter('junction_directus_users_teams', { teams_id: { _in: teamIds } }, 'id', 'junction_directus_users_teams');
 	if (teamIds.length) await deleteByFilter('clients_teams', { teams_id: { _in: teamIds } }, 'id', 'clients_teams');
+
+	// Unified goals collection (replaces legacy team_goals/financial_goals walks).
+	const goalsRes = await directusRequest<any[]>(
+		`/items/goals?filter=${encodeURIComponent(JSON.stringify({ organization: { _eq: orgId } }))}&fields=id&limit=-1`,
+	);
+	const goalIds = (goalsRes.ok && Array.isArray(goalsRes.data) ? goalsRes.data : []).map((g: any) => g.id);
+	if (goalIds.length) {
+		await deleteByFilter('goal_snapshots', { goal: { _in: goalIds } }, 'id', 'goal_snapshots');
+		await deleteByFilter('goals', { organization: { _eq: orgId } }, 'id', 'goals');
+	}
 	if (channelIds.length) await deleteByFilter('messages', { channel: { _in: channelIds } }, 'id', 'messages');
 	if (mailingListIds.length) await deleteByFilter('mailing_list_contacts', { list_id: { _in: mailingListIds } }, 'id', 'mailing_list_contacts');
 	if (clientIds.length) await deleteByFilter('contact_connections', { client: { _in: clientIds } }, 'id', 'contact_connections');

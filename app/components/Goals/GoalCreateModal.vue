@@ -16,17 +16,35 @@
 			<UInput v-model="form.title" placeholder="e.g., Reach $50K monthly revenue" />
 		</div>
 
-		<!-- Type (pill group) -->
+		<!-- Scope (pill group) -->
 		<div class="space-y-1">
-			<label class="t-label text-muted-foreground">Type</label>
+			<label class="t-label text-muted-foreground">Scope</label>
 			<div class="flex gap-2 flex-wrap pt-1">
 				<button
-					v-for="opt in goalTypeOptions"
+					v-for="opt in goalScopeOptions"
 					:key="opt.value"
 					type="button"
 					class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
-					:class="form.type === opt.value ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground'"
-					@click="form.type = opt.value"
+					:class="form.scope === opt.value ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground'"
+					@click="form.scope = opt.value"
+				>
+					<UIcon :name="opt.icon" class="w-3.5 h-3.5" />
+					{{ opt.label }}
+				</button>
+			</div>
+		</div>
+
+		<!-- Category (pill group) -->
+		<div class="space-y-1">
+			<label class="t-label text-muted-foreground">Category</label>
+			<div class="flex gap-2 flex-wrap pt-1">
+				<button
+					v-for="opt in goalCategoryOptions"
+					:key="opt.value"
+					type="button"
+					class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors"
+					:class="form.category === opt.value ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:text-foreground'"
+					@click="form.category = opt.value"
 				>
 					<UIcon :name="opt.icon" class="w-3.5 h-3.5" />
 					{{ opt.label }}
@@ -119,13 +137,23 @@ const isEditing = computed(() => !!props.goal?.id);
 const saving = ref(false);
 
 const toast = useToast();
+const { user } = useDirectusAuth();
 const { createGoal, updateGoal, deleteGoal } = useGoals();
 
-const goalTypeOptions = [
-	{ label: 'Financial', value: 'financial', icon: 'i-heroicons-banknotes' },
-	{ label: 'Networking', value: 'networking', icon: 'i-heroicons-user-group' },
-	{ label: 'Performance', value: 'performance', icon: 'i-heroicons-chart-bar' },
-	{ label: 'Marketing', value: 'marketing', icon: 'i-heroicons-megaphone' },
+const goalScopeOptions = [
+	{ label: 'For me', value: 'user', icon: 'i-heroicons-user' },
+	{ label: 'Team', value: 'team', icon: 'i-heroicons-user-group' },
+	{ label: 'Client', value: 'client', icon: 'i-heroicons-briefcase' },
+	{ label: 'Organization', value: 'organization', icon: 'i-heroicons-building-office-2' },
+];
+
+const goalCategoryOptions = [
+	{ label: 'Revenue', value: 'revenue', icon: 'i-heroicons-banknotes' },
+	{ label: 'Growth', value: 'growth', icon: 'i-heroicons-arrow-trending-up' },
+	{ label: 'Retention', value: 'retention', icon: 'i-heroicons-heart' },
+	{ label: 'Learning', value: 'learning', icon: 'i-heroicons-academic-cap' },
+	{ label: 'Wellbeing', value: 'wellbeing', icon: 'i-heroicons-sun' },
+	{ label: 'Delivery', value: 'delivery', icon: 'i-heroicons-truck' },
 	{ label: 'Custom', value: 'custom', icon: 'i-heroicons-flag' },
 ];
 
@@ -143,7 +171,9 @@ function defaultForm() {
 	return {
 		title: '',
 		description: '',
-		type: 'financial',
+		scope: 'user',
+		category: 'revenue',
+		assigned_to: user.value?.id || null,
 		target_value: null,
 		target_unit: 'USD',
 		current_value: 0,
@@ -157,13 +187,32 @@ function defaultForm() {
 
 const form = ref(defaultForm());
 
+function mapTypeToCategory(t) {
+	switch (t) {
+		case 'financial': return 'revenue';
+		case 'networking': return 'growth';
+		case 'performance': return 'delivery';
+		case 'marketing': return 'growth';
+		default: return 'custom';
+	}
+}
+
+function deriveScope(g) {
+	if (g.team) return 'team';
+	if (g.client) return 'client';
+	if (g.assigned_to) return 'user';
+	return 'organization';
+}
+
 function populateForm() {
 	if (props.goal?.id) {
 		const g = props.goal;
 		form.value = {
 			title: g.title || '',
 			description: g.description || '',
-			type: g.type || 'financial',
+			scope: g.scope || deriveScope(g),
+			category: g.category || mapTypeToCategory(g.type),
+			assigned_to: g.assigned_to || (g.scope === 'user' ? user.value?.id : null) || null,
 			target_value: g.target_value,
 			target_unit: g.target_unit || 'USD',
 			current_value: g.current_value || 0,
@@ -188,9 +237,15 @@ async function handleSubmit() {
 	if (!form.value.title.trim()) return;
 	saving.value = true;
 	try {
+		// Enforce scope invariants: scope=user MUST have assigned_to; non-user scopes clear it.
+		const scope = form.value.scope || 'user';
+		const assigned_to = scope === 'user' ? (form.value.assigned_to || user.value?.id || null) : null;
+
 		// Coerce empty numeric/date strings to null — Postgres hygiene (same class as Pass 2/5/7 fixes)
 		const payload = {
 			...form.value,
+			scope,
+			assigned_to,
 			target_value: form.value.target_value === '' || form.value.target_value == null ? null : Number(form.value.target_value),
 			current_value: form.value.current_value === '' || form.value.current_value == null ? 0 : Number(form.value.current_value),
 			start_date: form.value.start_date || null,

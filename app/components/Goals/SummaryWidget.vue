@@ -19,12 +19,28 @@ const avgProgress = computed(() => {
 	return Math.round(activeGoals.value.reduce((sum, g) => sum + goalProgress(g), 0) / activeGoals.value.length);
 });
 
-const typeConfig = {
-	financial: { icon: 'i-heroicons-banknotes', color: 'text-emerald-500' },
-	networking: { icon: 'i-heroicons-user-group', color: 'text-blue-500' },
-	performance: { icon: 'i-heroicons-chart-bar', color: 'text-purple-500' },
-	marketing: { icon: 'i-heroicons-megaphone', color: 'text-pink-500' },
+const categoryConfig = {
+	revenue: { icon: 'i-heroicons-banknotes', color: 'text-emerald-500' },
+	growth: { icon: 'i-heroicons-arrow-trending-up', color: 'text-blue-500' },
+	retention: { icon: 'i-heroicons-heart', color: 'text-pink-500' },
+	learning: { icon: 'i-heroicons-academic-cap', color: 'text-indigo-500' },
+	wellbeing: { icon: 'i-heroicons-sun', color: 'text-amber-500' },
+	delivery: { icon: 'i-heroicons-truck', color: 'text-purple-500' },
 	custom: { icon: 'i-heroicons-flag', color: 'text-amber-500' },
+};
+
+// Map legacy `type` values to the new `category` so older rows still render.
+const legacyTypeToCategory = {
+	financial: 'revenue',
+	networking: 'growth',
+	performance: 'delivery',
+	marketing: 'growth',
+	custom: 'custom',
+};
+
+const configFor = (goal) => {
+	const key = goal.category || legacyTypeToCategory[goal.type] || 'custom';
+	return categoryConfig[key] || categoryConfig.custom;
 };
 
 const progressColor = (pct) => {
@@ -83,9 +99,9 @@ const progressColor = (pct) => {
 				@click="router.push('/goals')"
 			>
 				<UIcon
-					:name="(typeConfig[goal.type] || typeConfig.custom).icon"
+					:name="configFor(goal).icon"
 					class="w-4 h-4 flex-shrink-0"
-					:class="(typeConfig[goal.type] || typeConfig.custom).color"
+					:class="configFor(goal).color"
 				/>
 				<div class="flex-1 min-w-0">
 					<p class="text-xs font-medium text-foreground truncate">{{ goal.title }}</p>

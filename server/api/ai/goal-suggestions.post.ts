@@ -29,11 +29,14 @@ export default defineEventHandler(async (event) => {
 Each goal should include:
 - title: A clear, measurable goal title (under 60 chars)
 - description: One sentence explaining why this matters
-- type: One of "financial", "networking", "performance", "marketing", or "custom"
+- scope: One of "user" (personal), "team", "client", or "organization"
+- category: One of "revenue", "growth", "retention", "learning", "wellbeing", "delivery", or "custom"
 - target_value: A realistic numeric target
 - target_unit: One of "USD", "percent", "contacts", "projects", "tasks", "campaigns"
 - timeframe: One of "weekly", "monthly", "quarterly", "yearly"
 - priority: One of "low", "medium", "high"
+
+Pick the scope that fits the goal: personal/learning/wellbeing goals → "user"; team velocity or delivery goals → "team"; account-specific outcomes → "client"; revenue/growth at the company level → "organization".
 
 If brand context is provided, tailor goals to align with the brand direction, target audience, and stated objectives.
 

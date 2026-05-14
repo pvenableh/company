@@ -94,9 +94,16 @@ export async function purgeOrganization(orgId: string): Promise<PurgeReport> {
     await deleteByFilter(directus, 'tickets_files', { tickets_id: { _in: ticketIds } }, report);
   }
   if (teamIds.length) {
-    await deleteByFilter(directus, 'team_goals', { team: { _in: teamIds } }, report);
     await deleteByFilter(directus, 'junction_directus_users_teams', { teams_id: { _in: teamIds } }, report);
     await deleteByFilter(directus, 'clients_teams', { teams_id: { _in: teamIds } }, report);
+  }
+
+  // Unified goals collection (replaces legacy team_goals/financial_goals walks).
+  // Delete snapshots first, then the goals themselves.
+  const goalIds = await listIds(directus, 'goals', { organization: { _eq: orgId } });
+  if (goalIds.length) {
+    await deleteByFilter(directus, 'goal_snapshots', { goal: { _in: goalIds } }, report);
+    await deleteByFilter(directus, 'goals', { organization: { _eq: orgId } }, report);
   }
   if (channelIds.length) await deleteByFilter(directus, 'messages', { channel: { _in: channelIds } }, report);
   if (mailingListIds.length) await deleteByFilter(directus, 'mailing_list_contacts', { list_id: { _in: mailingListIds } }, report);

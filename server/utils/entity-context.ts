@@ -708,10 +708,10 @@ async function buildTeamContext(directus: any, teamId: string, now: Date): Promi
     ).catch(() => []) as Promise<any[]>,
 
     directus.request(
-      readItems('team_goals', {
-        filter: { team: { _eq: teamId } },
-        fields: ['id', 'title', 'description', 'target_date', 'progress'],
-        sort: ['sort', 'target_date'],
+      readItems('goals', {
+        filter: { _and: [{ team: { _eq: teamId } }, { scope: { _eq: 'team' } }] },
+        fields: ['id', 'title', 'description', 'end_date', 'target_value', 'current_value', 'status'],
+        sort: ['sort', 'end_date'],
         limit: 10,
       }),
     ).catch(() => []) as Promise<any[]>,
@@ -764,9 +764,11 @@ async function buildTeamContext(directus: any, teamId: string, now: Date): Promi
     lines.push('[Source: Team Goals]');
     lines.push(`GOALS (${goals.length}):`);
     goals.slice(0, 8).forEach((g: any) => {
-      const pct = g.progress != null ? ` — ${g.progress}%` : '';
-      const target = g.target_date ? ` (target ${g.target_date})` : '';
-      lines.push(`  - ${g.title}${pct}${target}`);
+      const target = Number(g.target_value);
+      const pctNum = target ? Math.min(100, Math.max(0, Math.round(((g.current_value || 0) / target) * 100))) : null;
+      const pct = pctNum != null ? ` — ${pctNum}%` : '';
+      const due = g.end_date ? ` (target ${g.end_date})` : '';
+      lines.push(`  - ${g.title}${pct}${due}`);
     });
   }
 

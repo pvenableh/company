@@ -18,14 +18,14 @@
           <div
             class="h-full rounded-full transition-all"
             :class="progressColor"
-            :style="{ width: `${goal.progress || 0}%` }"
+            :style="{ width: `${percent}%` }"
           />
         </div>
-        <span class="text-xs font-medium text-muted-foreground w-8 text-right">{{ goal.progress || 0 }}%</span>
+        <span class="text-xs font-medium text-muted-foreground w-8 text-right">{{ percent }}%</span>
       </div>
 
-      <p v-if="goal.target_date" class="text-[10px] text-muted-foreground mt-1">
-        Target: {{ new Date(goal.target_date).toLocaleDateString() }}
+      <p v-if="targetDate" class="text-[10px] text-muted-foreground mt-1">
+        Target: {{ new Date(targetDate).toLocaleDateString() }}
       </p>
     </div>
 
@@ -54,8 +54,11 @@ const props = defineProps<{
     id: string;
     title: string;
     description?: string;
-    target_date?: string;
+    target_date?: string | null;
+    end_date?: string | null;
     progress?: number;
+    current_value?: number | null;
+    target_value?: number | null;
   };
 }>();
 
@@ -64,13 +67,22 @@ defineEmits<{
   delete: [goal: any];
 }>();
 
+const targetDate = computed(() => props.goal.target_date ?? props.goal.end_date ?? null);
+
+const percent = computed(() => {
+  if (typeof props.goal.progress === 'number') return props.goal.progress;
+  const target = Number(props.goal.target_value);
+  if (!target) return 0;
+  return Math.min(100, Math.max(0, Math.round(((props.goal.current_value || 0) / target) * 100)));
+});
+
 const isOverdue = computed(() => {
-  if (!props.goal.target_date) return false;
-  return new Date(props.goal.target_date) < new Date() && (props.goal.progress || 0) < 100;
+  if (!targetDate.value) return false;
+  return new Date(targetDate.value) < new Date() && percent.value < 100;
 });
 
 const progressColor = computed(() => {
-  const p = props.goal.progress || 0;
+  const p = percent.value;
   if (p >= 100) return 'bg-emerald-500';
   if (p >= 60) return 'bg-blue-500';
   if (p >= 30) return 'bg-yellow-500';

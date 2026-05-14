@@ -1402,7 +1402,7 @@ export const useAIProductivityEngine = () => {
 
 		try {
 			const goals = await goalItems.list({
-				fields: ['id', 'title', 'type', 'status', 'target_value', 'target_unit', 'current_value', 'end_date', 'priority'],
+				fields: ['id', 'title', 'category', 'type', 'scope', 'status', 'target_value', 'target_unit', 'current_value', 'end_date', 'priority'],
 				filter: {
 					status: { _in: ['active', 'draft'] },
 					...orgFilter(),
@@ -1454,7 +1454,7 @@ export const useAIProductivityEngine = () => {
 						priority: 'low',
 						icon: 'i-heroicons-flag',
 						title: `No progress on: ${goal.title}`,
-						description: `This ${goal.type || 'custom'} goal hasn't been started yet`,
+						description: `This ${goal.category || goal.type || 'custom'} goal hasn't been started yet`,
 						actionLabel: 'Get Started',
 						actionRoute: '/goals',
 						category: 'goals',

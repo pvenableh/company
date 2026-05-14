@@ -1674,6 +1674,11 @@ export interface Expense {
 	receipt?: DirectusFile | string | null;
 }
 
+/**
+ * @deprecated Rows have been migrated into the unified `goals` collection
+ * (scope='organization', category='revenue', timeframe='quarterly'). Drop in
+ * a follow-up commit after the live migration soaks.
+ */
 export interface FinancialGoal {
 	/** @primaryKey */
 	id: number;
@@ -1716,6 +1721,16 @@ export interface GbpPost {
 	source_blog_post?: Blog | string | null;
 }
 
+export type GoalScope = 'user' | 'team' | 'client' | 'organization';
+export type GoalCategory =
+	| 'revenue'
+	| 'growth'
+	| 'retention'
+	| 'learning'
+	| 'wellbeing'
+	| 'delivery'
+	| 'custom';
+
 export interface Goal {
 	/** @primaryKey */
 	id: string;
@@ -1728,6 +1743,11 @@ export interface Goal {
 	/** @required */
 	title: string;
 	description?: string | null;
+	/** Who the goal is for. */
+	scope?: GoalScope;
+	/** High-level theme. */
+	category?: GoalCategory;
+	/** @deprecated Use `category`. Kept for one release while the migration soaks. */
 	type?: 'financial' | 'networking' | 'performance' | 'marketing' | 'custom';
 	target_value?: number | null;
 	target_unit?: string | null;
@@ -3665,6 +3685,11 @@ export interface TasksDirectusUser {
 	sort?: number | null;
 }
 
+/**
+ * @deprecated Rows have been migrated into the unified `goals` collection
+ * (scope='team', target_value=100, target_unit='%', current_value=progress).
+ * Drop in a follow-up commit after the live migration soaks.
+ */
 export interface TeamGoal {
 	/** @primaryKey */
 	id: string;

@@ -12,7 +12,7 @@ const isLoading = ref(false);
 const GOAL_FIELDS = [
 	'id', 'status', 'sort', 'user_created', 'date_created',
 	'user_updated', 'date_updated', 'organization', 'title',
-	'description', 'type', 'target_value', 'target_unit',
+	'description', 'scope', 'category', 'type', 'target_value', 'target_unit',
 	'current_value', 'start_date', 'end_date', 'timeframe',
 	'priority', 'assigned_to', 'team', 'client', 'tags',
 	'metadata', 'snapshots.id', 'snapshots.value',
@@ -147,12 +147,28 @@ export const useGoals = () => {
 	const activeGoals = computed(() => goals.value.filter((g) => g.status === 'active'));
 	const completedGoals = computed(() => goals.value.filter((g) => g.status === 'completed'));
 
-	const goalsByType = computed(() => {
+	const myGoals = computed(() => {
+		const uid = user.value?.id;
+		if (!uid) return [] as Goal[];
+		return goals.value.filter((g) => g.scope === 'user' && g.assigned_to === uid);
+	});
+
+	const goalsByScope = computed(() => {
+		const grouped: Record<string, Goal[]> = { user: [], team: [], client: [], organization: [] };
+		for (const goal of goals.value) {
+			const scope = goal.scope || 'organization';
+			if (!grouped[scope]) grouped[scope] = [];
+			grouped[scope].push(goal);
+		}
+		return grouped;
+	});
+
+	const goalsByCategory = computed(() => {
 		const grouped: Record<string, Goal[]> = {};
 		for (const goal of goals.value) {
-			const type = goal.type || 'custom';
-			if (!grouped[type]) grouped[type] = [];
-			grouped[type].push(goal);
+			const category = goal.category || 'custom';
+			if (!grouped[category]) grouped[category] = [];
+			grouped[category].push(goal);
 		}
 		return grouped;
 	});
@@ -189,7 +205,9 @@ export const useGoals = () => {
 		goals: readonly(goals),
 		activeGoals,
 		completedGoals,
-		goalsByType,
+		myGoals,
+		goalsByScope,
+		goalsByCategory,
 		overdueGoals,
 		isLoading: readonly(isLoading),
 		createGoal,

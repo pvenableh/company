@@ -759,9 +759,9 @@ export async function generateTeamNotices(
     ).catch(() => null) as Promise<any>,
 
     directus.request(
-      readItems('team_goals', {
-        filter: { team: { _eq: teamId } },
-        fields: ['id', 'title', 'target_date', 'progress'],
+      readItems('goals', {
+        filter: { _and: [{ team: { _eq: teamId } }, { scope: { _eq: 'team' } }] },
+        fields: ['id', 'title', 'end_date', 'target_value', 'current_value', 'status'],
         limit: 30,
       }),
     ).catch(() => []) as Promise<any[]>,
@@ -803,9 +803,13 @@ export async function generateTeamNotices(
   }
 
   // Overdue goals
-  const overdueGoals = (goals || []).filter((g: any) =>
-    g.target_date && new Date(g.target_date) < now && (g.progress ?? 0) < 100,
-  );
+  const overdueGoals = (goals || []).filter((g: any) => {
+    if (!g.end_date || new Date(g.end_date) >= now) return false;
+    if (g.status === 'completed') return false;
+    const target = Number(g.target_value);
+    if (!target) return true;
+    return (Number(g.current_value) || 0) < target;
+  });
   if (overdueGoals.length > 0) {
     const sample = overdueGoals.slice(0, 2).map((g: any) => g.title).filter(Boolean).join(', ');
     notices.push({

@@ -12,7 +12,7 @@ const config = useRuntimeConfig();
 
 const teamItems = useDirectusItems<Team>('teams');
 const ticketItems = useDirectusItems('tickets');
-const goalItems = useDirectusItems('team_goals');
+const goalItems = useDirectusItems('goals');
 
 const { getStatusBadgeClasses } = useStatusStyle();
 const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext();
@@ -74,12 +74,11 @@ async function loadGoals() {
   try {
     goals.value = await goalItems.list({
       fields: ['*'],
-      filter: { team: { _eq: teamId } },
+      filter: { _and: [{ team: { _eq: teamId } }, { scope: { _eq: 'team' } }] },
       sort: ['sort', '-date_created'],
       limit: 50,
     });
   } catch (e) {
-    // team_goals collection may not exist yet
     console.warn('Goals not available:', e);
     goals.value = [];
   } finally {
@@ -147,9 +146,16 @@ function getUserInitials(user: any): string {
 
 const { isOrgManagerOrAbove } = useOrgRole();
 
+function goalPercent(g: any): number {
+  if (typeof g.progress === 'number') return g.progress;
+  const target = Number(g.target_value);
+  if (!target) return 0;
+  return Math.min(100, Math.max(0, Math.round(((g.current_value || 0) / target) * 100)));
+}
+
 const goalProgress = computed(() => {
   if (!goals.value.length) return 0;
-  return Math.round(goals.value.reduce((sum, g) => sum + (g.progress || 0), 0) / goals.value.length);
+  return Math.round(goals.value.reduce((sum, g) => sum + goalPercent(g), 0) / goals.value.length);
 });
 
 onMounted(loadTeam);

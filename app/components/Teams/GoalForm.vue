@@ -40,11 +40,21 @@ const emit = defineEmits<{
   save: [data: any];
 }>();
 
+// Goal rows now live in the unified `goals` collection (scope='team').
+// Legacy team_goals rows used `target_date` + `progress`; new rows use
+// `end_date` + `current_value` (with target_value=100, target_unit='%').
+// Accept both shapes for the edit case so older rows render correctly.
+const legacyDate = props.goal?.target_date ?? props.goal?.end_date ?? '';
+const legacyProgress =
+  typeof props.goal?.progress === 'number' ? props.goal.progress
+  : typeof props.goal?.current_value === 'number' ? props.goal.current_value
+  : 0;
+
 const formData = reactive({
   title: props.goal?.title || '',
   description: props.goal?.description || '',
-  target_date: props.goal?.target_date?.split('T')[0] || '',
-  progress: props.goal?.progress || 0,
+  target_date: typeof legacyDate === 'string' ? legacyDate.split('T')[0] : '',
+  progress: legacyProgress,
 });
 
 function handleSubmit() {
