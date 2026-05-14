@@ -277,11 +277,15 @@ function styleFor(app: AppAccent) {
  * highlights the selected dock icon. */
 .app-rail__chip {
 	@apply flex items-center justify-center shrink-0
-		rounded-lg
 		transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)];
 	position: relative;
-	width: 32px;
-	height: 32px;
+	width: 38px;
+	height: 38px;
+	/* iOS home-screen app icons use a ~22% corner radius (the "squircle"
+	 * is approximated with this proportion in CSS). 8px on a 38px chip
+	 * gives ~21%, which reads cleanly as "rounded square app icon" rather
+	 * than the pill-ish rounded-lg / rounded-xl. */
+	border-radius: 8px;
 	background: hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.15);
 }
 
@@ -302,8 +306,9 @@ function styleFor(app: AppAccent) {
 
 .app-rail--horizontal .app-rail__chip,
 .app-rail--floating .app-rail__chip {
-	width: 26px;
-	height: 26px;
+	width: 32px;
+	height: 32px;
+	border-radius: 7px;
 }
 
 /* Icon wrapper stacks two copies of the SVG. The base layer carries the
@@ -312,16 +317,16 @@ function styleFor(app: AppAccent) {
  * gradient INSIDE the icon shape (light top → accent bottom). */
 .app-rail__icon {
 	@apply relative inline-block;
-	width: 18px;
-	height: 18px;
+	width: 22px;
+	height: 22px;
 	z-index: 2;
 	transition: transform 0.2s ease;
 }
 
 .app-rail--horizontal .app-rail__icon,
 .app-rail--floating .app-rail__icon {
-	width: 17px;
-	height: 17px;
+	width: 19px;
+	height: 19px;
 }
 
 .app-rail__icon-layer {

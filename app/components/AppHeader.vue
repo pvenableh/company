@@ -114,36 +114,27 @@ const fallbackBackLabel = computed(() => {
 	@apply flex items-center gap-1 text-muted-foreground hover:text-foreground text-sm transition-colors -ml-1 px-1.5 py-1 rounded-md hover:bg-muted/40;
 }
 
-/* Small app-accent chip echoing the rail icon — same iOS liquid-glass
- * treatment so the page header reads as continuous with the rail. */
+/* Small app-accent chip echoing the rail's at-rest tile — light tinted
+ * bg + colored icon. Same iOS-app-icon proportion (~22% corner radius)
+ * so the header chip reads as a smaller member of the rail family. */
 .app-header__accent-icon {
-	@apply inline-flex items-center justify-center shrink-0 rounded-[7px];
+	@apply inline-flex items-center justify-center shrink-0;
 	position: relative;
-	width: 22px;
-	height: 22px;
-	color: hsl(var(--app-accent-h, 220) var(--app-accent-s, 10%) calc(var(--app-accent-l, 48%) + 32%));
-	background: linear-gradient(335deg, rgba(0, 0, 0, 0.32) 0%, rgba(0, 0, 0, 0.08) 60%), linear-gradient(155deg, hsl(var(--app-accent-h, 220) var(--app-accent-s, 10%) var(--app-accent-l, 48%) / 0.85), hsl(var(--app-accent-h, 220) var(--app-accent-s, 10%) calc(var(--app-accent-l, 48%) - 10%) / 0.78) 55%, hsl(var(--app-accent-h, 220) var(--app-accent-s, 10%) calc(var(--app-accent-l, 48%) - 22%) / 0.7));
-	backdrop-filter: blur(10px);
-	-webkit-backdrop-filter: blur(10px);
-	box-shadow:
-		inset 0 -1.5px 2px hsl(var(--app-accent-h, 220) var(--app-accent-s, 10%) calc(var(--app-accent-l, 48%) - 35%) / 0.45),
-		inset 0 0.5px 0 hsl(0 0% 100% / 0.45),
-		0 0 0 0.5px hsl(var(--app-accent-h, 220) var(--app-accent-s, 10%) calc(var(--app-accent-l, 48%) + 12%) / 0.5) inset,
-		0 1px 4px -1px hsl(var(--app-accent-h, 220) var(--app-accent-s, 10%) var(--app-accent-l, 48%) / 0.3);
+	width: 24px;
+	height: 24px;
+	border-radius: 5px;
+	background: hsl(var(--app-accent-h, 220) var(--app-accent-s, 10%) var(--app-accent-l, 48%) / 0.15);
 }
 
+/* Sheen overlay from the previous rich treatment is no longer used —
+ * keep the rule so the ::after pseudo-element stays inert. */
 .app-header__accent-icon::after {
-	content: '';
-	position: absolute;
-	inset: 0;
-	border-radius: inherit;
-	background: linear-gradient(335deg, hsl(0 0% 100% / 0) 50%, hsl(0 0% 100% / 0.18) 80%, hsl(0 0% 100% / 0.42) 100%);
-	mix-blend-mode: plus-lighter;
-	pointer-events: none;
+	display: none;
 }
 
-/* Stacked icon — base accent layer + white top-highlight layer masked to
- * a fade. Same recipe as AppRail so the chip reads as a continuous family. */
+/* Single-layer icon glyph in the accent's true colour. Dual-layer
+ * highlight markup is kept (hidden via CSS) so the richer treatment
+ * can be restored later without touching the template. */
 .app-header__accent-glyph {
 	position: relative;
 	display: inline-block;
@@ -161,25 +152,12 @@ const fallbackBackLabel = computed(() => {
 }
 
 .app-header__accent-base {
-	color: hsl(var(--app-accent-h, 220) var(--app-accent-s, 10%) calc(var(--app-accent-l, 48%) + 32%));
-	filter: drop-shadow(0 1px 1.5px hsl(var(--app-accent-h, 220) var(--app-accent-s, 10%) calc(var(--app-accent-l, 48%) - 18%) / 0.6));
+	color: hsl(var(--app-accent-h, 220) var(--app-accent-s, 10%) var(--app-accent-l, 48%));
 	z-index: 0;
 }
 
-/* Mask applied to the WRAPPER, not the Icon (which has its own
- * mask-image for the glyph shape). */
 .app-header__accent-highlight-mask {
-	-webkit-mask-image: linear-gradient(180deg, black 0%, rgba(0, 0, 0, 0.5) 35%, transparent 70%);
-	mask-image: linear-gradient(180deg, black 0%, rgba(0, 0, 0, 0.5) 35%, transparent 70%);
-	pointer-events: none;
-	z-index: 1;
-}
-
-.app-header__accent-highlight {
-	display: block;
-	width: 100%;
-	height: 100%;
-	color: hsl(0 0% 100% / 0.8);
+	display: none;
 }
 
 .app-header__title {
