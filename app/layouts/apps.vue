@@ -43,6 +43,9 @@
 							<LayoutAppRailPositionPicker class="hidden sm:flex" />
 						</ClientOnly>
 						<ClientOnly>
+							<LayoutAppPalettePicker class="hidden sm:flex" />
+						</ClientOnly>
+						<ClientOnly>
 							<LayoutInboxBell />
 						</ClientOnly>
 						<ClientOnly>

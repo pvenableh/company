@@ -15,11 +15,12 @@
  *
  * Mobile (< md) forces bottom via useAppsMode.
  */
-import { APP_ACCENTS, APP_ORDER, APP_FOOTER_ORDER, type AppAccent } from '~/composables/useAppAccent';
+import { APP_ORDER, APP_FOOTER_ORDER, type AppAccent } from '~/composables/useAppAccent';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
 
 const route = useRoute();
 const { railPosition, railShowLabels } = useAppsMode();
+const { accents } = useAppAccent();
 const { countFor } = useUnreadByCategory();
 
 function badgeFor(app: AppAccent): number {
@@ -30,8 +31,8 @@ function badgeLabel(count: number) {
 	return count > 99 ? '99+' : String(count);
 }
 
-const apps = computed<AppAccent[]>(() => APP_ORDER.map((id) => APP_ACCENTS[id]));
-const footer = computed<AppAccent[]>(() => APP_FOOTER_ORDER.map((id) => APP_ACCENTS[id]));
+const apps = computed<AppAccent[]>(() => APP_ORDER.map((id) => accents.value[id]));
+const footer = computed<AppAccent[]>(() => APP_FOOTER_ORDER.map((id) => accents.value[id]));
 
 const activeId = computed(() => {
 	const path = route.path;
