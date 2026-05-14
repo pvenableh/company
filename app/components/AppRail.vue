@@ -185,6 +185,16 @@ function styleFor(app: AppAccent) {
 	column-gap: 14px;
 }
 
+/* Floating rail: tighten the inter-group gap so the divider-less pill
+ * reads as one row of evenly spaced icons. The 14px inherited above is
+ * appropriate for top/bottom modes where the two groups have visual
+ * weight, but on the compact floating pill it creates a noticeable
+ * skip between the main and footer groups. Matching the rail-level
+ * gap to the in-group gap (set below) makes spacing uniform. */
+.app-rail--floating {
+	column-gap: 3px;
+}
+
 .app-rail--left { @apply border-r; }
 .app-rail--right { @apply border-l; }
 
@@ -225,6 +235,14 @@ function styleFor(app: AppAccent) {
 .app-rail--horizontal .app-rail__group {
 	@apply flex-row items-center;
 	column-gap: 4px;
+}
+
+/* Floating rail uses a tighter, uniform gap. The override below matches
+ * the rail-level column-gap on `.app-rail--floating` so the spacing
+ * between Marketing→Organization (across the group boundary) matches
+ * spacing inside each group. */
+.app-rail--floating .app-rail__group {
+	column-gap: 3px;
 }
 
 .app-rail--vertical .app-rail__group--main,
