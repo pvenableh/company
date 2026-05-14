@@ -270,30 +270,32 @@ function styleFor(app: AppAccent) {
 }
 
 /* ── Chip (icon container) ───────────────────────────────────────── */
-/* iOS-style Liquid Glass — neutral chips at rest, soft accent wash on
- * active. The chip itself is a clean rounded square with no border or
- * gradient; the only colour comes from the accent on the active state.
- * Hover lifts the bg to a subtle muted tint as a hint, not a selection. */
+/* iOS-app-icon styling — every chip is a rounded square tile in the
+ * app's accent colour. Inactive tiles use a light tint (0.15 alpha) so
+ * the rail reads colourful at rest. Active tile saturates to a darker
+ * shade with a white icon and a colour rim, mirroring how iOS
+ * highlights the selected dock icon. */
 .app-rail__chip {
 	@apply flex items-center justify-center shrink-0
-		rounded-xl
+		rounded-lg
 		transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)];
 	position: relative;
 	width: 32px;
 	height: 32px;
-	background: transparent;
+	background: hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.15);
 }
 
-/* Sheen + outline overlay from the previous rich treatment is no longer
- * used — keep the rule so the ::after pseudo-element doesn't leak through. */
+/* Sheen overlay from the previous rich treatment isn't used in this
+ * simpler iOS-icon style. The rule is kept so the ::after pseudo-element
+ * stays inert. */
 .app-rail__chip::after {
 	display: none;
 }
 
-/* Dual-layer icon (base + highlight mask) was for the rich treatment.
- * The simpler Liquid Glass style uses a single solid-colour glyph, so
- * the highlight layer is hidden. The template is kept intact so we can
- * restore the rich treatment later without re-adding markup. */
+/* Dual-layer icon (base + highlight mask) was for the rich glass
+ * treatment. The iOS-icon style uses a single solid-colour glyph, so
+ * the highlight layer is hidden via CSS. Template is intact so the
+ * richer look can be restored later without re-adding markup. */
 .app-rail__icon-highlight-mask {
 	display: none;
 }
@@ -332,9 +334,11 @@ function styleFor(app: AppAccent) {
 }
 
 .app-rail__icon-base {
-	/* Inactive icons render in the muted-foreground neutral; the active
-	 * state below promotes them to the accent colour. */
-	color: hsl(var(--muted-foreground));
+	/* Inactive icons render in the app's accent colour against the light
+	 * tinted bg — the chip reads as a coloured tile, like an iOS icon.
+	 * The active state below switches the icon to white when the tile
+	 * darkens. */
+	color: hsl(var(--rail-h) var(--rail-s) var(--rail-l));
 	z-index: 0;
 }
 
@@ -356,14 +360,11 @@ function styleFor(app: AppAccent) {
 	color: hsl(0 0% 100% / 0.8);
 }
 
-/* Hover — subtle muted wash so the chip lights up under the cursor
- * without preempting the active state's accent. */
+/* Hover — strengthen the accent tint so the chip lights up under the
+ * cursor. Icon stays in the accent colour; only the bg shifts. */
 .app-rail__item:hover .app-rail__chip {
-	background: hsl(var(--muted) / 0.6);
-}
-
-.app-rail__item:hover .app-rail__icon-base {
-	color: hsl(var(--foreground));
+	background: hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.25);
+	transform: translateY(-1px);
 }
 
 .app-rail__item:hover {
@@ -371,21 +372,31 @@ function styleFor(app: AppAccent) {
 }
 
 /* ── Active state ────────────────────────────────────────────────── */
-/* Active: soft tinted wash at the accent hue + the icon promotes to the
- * accent colour itself. No border, no ring, no sheen — the colour wash
- * is the entire visual signal. Small scale + drop shadow add weight. */
+/* Active: tile saturates to a deeper shade of the accent and the icon
+ * flips to white — like the highlighted iOS dock icon. A 1.5px rim at
+ * the true accent colour with a 2px offset gives the "selected" ring
+ * back from the original design. */
 .app-rail__item--active {
 	@apply text-foreground;
 }
 
 .app-rail__item--active .app-rail__chip {
-	background: hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.14);
-	transform: scale(1.04);
-	box-shadow: 0 2px 8px -3px hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.25);
+	background: hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) - 12%));
+	transform: translateY(-1px);
+	box-shadow:
+		/* Subtle top-edge highlight — light catching the rim of the tile. */
+		inset 0 0.5px 0 hsl(0 0% 100% / 0.35),
+		/* Tinted drop shadow that grounds the tile against the rail. */
+		0 3px 10px -3px hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.4);
+	/* Colour rim with a small breathing gap — restores the "selected"
+	 * outline cue from the previous design without bringing back the
+	 * heavy gradient + sheen treatment. */
+	outline: 1.5px solid hsl(var(--rail-h) var(--rail-s) var(--rail-l));
+	outline-offset: 2px;
 }
 
 .app-rail__item--active .app-rail__icon-base {
-	color: hsl(var(--rail-h) var(--rail-s) var(--rail-l));
+	color: hsl(0 0% 100%);
 }
 
 /* ── Label ───────────────────────────────────────────────────────── */
