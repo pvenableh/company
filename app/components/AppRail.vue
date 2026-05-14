@@ -241,9 +241,16 @@ function chipMagnifyStyle(appId: string) {
 /* Horizontal modes (top/bottom/floating) all use tight, uniform spacing
  * — the rail-level gap (between the main and footer groups) matches the
  * in-group gap below, so the divider-less floating pill and the
- * divider-less top/bottom pills all read as one evenly spaced row. */
+ * divider-less top/bottom pills all read as one evenly spaced row.
+ *
+ * `overflow: visible` is critical: any non-visible overflow on one axis
+ * forces the other to clip too (the well-known CSS overflow trap), which
+ * was slicing the tops off magnified chips on hover. Icons-only mode
+ * already keeps the rail narrow enough to fit on phones without
+ * horizontal scroll, so dropping the safety auto-scroll is fine. */
 .app-rail--horizontal {
-	@apply flex-row w-full px-3 py-1.5 overflow-x-auto justify-center items-center;
+	@apply flex-row w-full px-3 py-1.5 justify-center items-center;
+	overflow: visible;
 	column-gap: 2px;
 }
 
