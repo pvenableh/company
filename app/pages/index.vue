@@ -76,10 +76,29 @@ const marketingPulse = useMarketingPulse();
 watch(selectedOrg, () => marketingPulse.load(), { immediate: true });
 
 // ── View lens ("Me" lens initiative, Stage 2) ──
-// Persists per-user via `directus_users.view_lens`. This commit ships the
-// toggle UI + persistence only — band re-ranking lands in the follow-up
-// commit. Reading the lens here keeps the toggle reactive ahead of time.
+// Persists per-user via `directus_users.view_lens`. Re-ranks the YOU vs US
+// bands below — same content, different emphasis. REFERENCE band is always
+// last regardless of lens.
 const { lens: viewLens, setLens: setViewLens } = useViewLens();
+const youOrder = computed(() => (viewLens.value === 'me' ? 1 : 2));
+const usOrder = computed(() => (viewLens.value === 'me' ? 2 : 1));
+
+// ── My Goals (scope=user) for the YOU band's right column ──
+// Shares state with the rest of useGoals consumers (e.g. GoalsSummaryWidget),
+// so this doesn't add a separate fetch.
+const { myGoals, goalProgress: goalProgressFn } = useGoals();
+const topMyGoals = computed(() =>
+	(myGoals.value || [])
+		.filter((g: any) => g.status === 'active')
+		.slice(0, 3),
+);
+
+// ── Org/Team goal counts for the US band's chip strip ──
+const { goalsByScope } = useGoals();
+const orgTeamGoalCount = computed(() => {
+	const byScope = goalsByScope.value || {} as Record<string, any[]>;
+	return ((byScope.team || []).length) + ((byScope.organization || []).length);
+});
 
 // ── AI Tray ──
 const aiTrayOpen = ref(false);
@@ -338,7 +357,7 @@ watch(activeTab, (t) => {
 				<!-- ═══ Command Center Tab ═══ -->
 				<div v-show="activeTab === 'commander'" class="space-y-6">
 
-				<!-- Badge Highlights + Score Stat -->
+				<!-- Badge Highlights + Score Stat (always above the bands — user identity strip) -->
 				<div class="flex items-center gap-2 overflow-x-auto py-1 hide-scrollbar">
 					<!-- Earnest Score pill -->
 					<UTooltip :text="`Level ${earnestState.level} — ${earnestState.levelTitle} (${earnestState.totalEP.toLocaleString()} EP)`">
@@ -370,18 +389,20 @@ watch(activeTab, (t) => {
 					</UTooltip>
 				</div>
 
-				<!-- Unified Gantt Timeline -->
-				<ClientOnly v-if="showWidget('project-timeline')">
-					<div class="ios-card p-4 overflow-hidden">
-						<div class="flex items-center gap-2 mb-3">
-							<UIcon name="i-heroicons-chart-bar" class="w-5 h-5 text-primary" />
-							<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70">Project Timeline</h3>
-						</div>
-						<ProjectTimelineUnifiedGantt compact />
-					</div>
-				</ClientOnly>
+				<!-- Three-band layout. CSS `order` is reactive to the lens toggle —
+				     YOU/US swap; REFERENCE always last. Preserves DOM state across
+				     toggles so deferred widgets don't re-mount. -->
+				<div class="flex flex-col gap-6">
 
-				<!-- Priority Actions + Quick Tasks | CRM Health + Earnest Score -->
+				<!-- ─── YOU band ─── -->
+				<section :style="{ order: youOrder }" class="space-y-4">
+					<div class="flex items-center gap-2">
+						<UIcon name="i-heroicons-user-circle" class="w-4 h-4 text-primary" />
+						<h2 class="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">You</h2>
+						<div class="flex-1 h-px bg-border/40" />
+					</div>
+
+				<!-- Priority Actions + Quick Tasks | Earnest Score + My Goals -->
 				<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 					<!-- Left Column: Priority Actions + Quick Tasks (2/3 width) -->
 					<div class="lg:col-span-2 space-y-6">
@@ -454,18 +475,115 @@ watch(activeTab, (t) => {
 							</div>
 						</div>
 
-						<!-- Today's Briefs (above Quick Tasks; visible whenever briefs exist) -->
-						<ClientOnly v-if="showWidget('project-digests')">
-							<CommandCenterProjectDigestsWidget />
-						</ClientOnly>
-
 						<!-- Quick Tasks Widget (full width under Priority Actions) -->
 						<CommandCenterQuickTasksWidget v-if="showWidget('quick-tasks')" />
 					</div>
 
-					<!-- Right Column: CRM Health + Earnest Score (1/3 width, stretch to match) -->
+					<!-- Right Column: Earnest Score + My Goals (1/3 width). CRM Health
+					     relocated to US band so this column is now purely personal. -->
 					<div class="space-y-4 flex flex-col">
-						<div v-if="showWidget('crm-health')" :class="healthBg" class="ios-card p-5 text-center flex-1">
+						<!-- Earnest Score (lifted to top of column since CRM Health left) -->
+						<EarnestScoreWidget
+							:current-score="earnestState.currentScore"
+							:level="earnestState.level"
+							:level-title="earnestState.levelTitle"
+							:total-e-p="earnestState.totalEP"
+							:next-level-e-p="earnestState.nextLevelEP"
+							:level-progress="earnestState.levelProgress"
+							:streak="earnestState.streak"
+							:team-rank="earnestState.teamRank"
+							:team-size="earnestState.teamSize"
+							:dimensions="earnestState.dimensions"
+						/>
+
+						<!-- My Goals (scope=user) — small inline mini-widget reusing
+						     useGoals state already loaded by GoalsSummaryWidget in US. -->
+						<div class="ios-card p-5">
+							<div class="flex items-center justify-between mb-3">
+								<div class="flex items-center gap-2">
+									<UIcon name="i-heroicons-flag" class="w-4 h-4 text-amber-500" />
+									<h3 class="text-xs font-semibold uppercase tracking-wide text-foreground/70">My Goals</h3>
+								</div>
+								<NuxtLink to="/goals?scope=user" class="text-[11px] text-primary hover:underline">
+									{{ topMyGoals.length > 0 ? 'View all' : 'Set one' }} &rarr;
+								</NuxtLink>
+							</div>
+							<div v-if="topMyGoals.length === 0" class="py-3 text-center">
+								<p class="text-xs text-muted-foreground">No personal goals yet.</p>
+								<p class="text-[10px] text-muted-foreground/70 mt-0.5">Set one to track what's yours.</p>
+							</div>
+							<div v-else class="space-y-3">
+								<NuxtLink
+									v-for="g in topMyGoals"
+									:key="g.id"
+									:to="`/goals?id=${g.id}`"
+									class="block group"
+								>
+									<div class="flex items-center justify-between gap-2 mb-1">
+										<p class="text-xs font-medium text-foreground truncate group-hover:text-primary transition-colors">{{ g.title }}</p>
+										<span class="text-[10px] font-medium text-muted-foreground tabular-nums">{{ Math.round(goalProgressFn(g)) }}%</span>
+									</div>
+									<div class="h-1.5 bg-muted/40 rounded-full overflow-hidden">
+										<div
+											class="h-full rounded-full transition-all duration-500"
+											:class="{
+												'bg-emerald-500': goalProgressFn(g) >= 90,
+												'bg-blue-500': goalProgressFn(g) >= 50 && goalProgressFn(g) < 90,
+												'bg-amber-500': goalProgressFn(g) >= 25 && goalProgressFn(g) < 50,
+												'bg-red-500': goalProgressFn(g) < 25,
+											}"
+											:style="{ width: `${Math.max(goalProgressFn(g), 4)}%` }"
+										/>
+									</div>
+								</NuxtLink>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<!-- Other Suggestions (lower priority) — personal AI nudges, lives in YOU -->
+				<div v-if="showWidget('suggestions') && otherSuggestions.length > 0" class="ios-card p-5">
+					<div class="flex items-center justify-between mb-4">
+						<div class="flex items-center gap-2">
+							<UIcon name="i-heroicons-sparkles" class="w-5 h-5 text-primary" />
+							<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70">
+								Suggestions
+							</h3>
+						</div>
+						<button
+							v-if="suggestions.length > 10"
+							@click="aiTrayPrompt = ''; aiTrayOpen = true"
+							class="text-xs text-primary hover:underline"
+						>
+							View all {{ suggestions.length }} &rarr;
+						</button>
+					</div>
+
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+						<CommandCenterSuggestionCard
+							v-for="suggestion in otherSuggestions"
+							:key="suggestion.id"
+							:suggestion="suggestion"
+						/>
+					</div>
+				</div>
+
+				<!-- Team Leaderboard (shown when a team is selected) -->
+				<div v-if="showLeaderboard" class="ios-card p-5">
+					<EarnestTeamLeaderboard />
+				</div>
+				</section>
+
+				<!-- ─── US band ─── -->
+				<section :style="{ order: usOrder }" class="space-y-4">
+					<div class="flex items-center gap-2">
+						<UIcon name="i-heroicons-building-office-2" class="w-4 h-4 text-primary" />
+						<h2 class="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Us</h2>
+						<div class="flex-1 h-px bg-border/40" />
+					</div>
+
+					<!-- CRM Health (relocated from YOU's right column; now full width) -->
+					<div v-if="showWidget('crm-health')" :class="healthBg" class="ios-card p-5 text-center">
 							<h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">CRM Health</h3>
 
 							<!-- Loading (snapshot) -->
@@ -560,24 +678,10 @@ watch(activeTab, (t) => {
 							</div>
 						</div>
 
-						<!-- Earnest Score -->
-						<EarnestScoreWidget
-							:current-score="earnestState.currentScore"
-							:level="earnestState.level"
-							:level-title="earnestState.levelTitle"
-							:total-e-p="earnestState.totalEP"
-							:next-level-e-p="earnestState.nextLevelEP"
-							:level-progress="earnestState.levelProgress"
-							:streak="earnestState.streak"
-							:team-rank="earnestState.teamRank"
-							:team-size="earnestState.teamSize"
-							:dimensions="earnestState.dimensions"
-						/>
-
-						<!-- Marketing actions — compact (only when no social/email data) -->
-						<CommandCenterMarketingActionsWidget v-if="showWidget('marketing-actions') && !marketingPulse.hasRichData.value" />
-					</div>
-				</div>
+				<!-- Today's Briefs (org-wide project digests) -->
+				<ClientOnly v-if="showWidget('project-digests')">
+					<CommandCenterProjectDigestsWidget />
+				</ClientOnly>
 
 				<!-- Marketing & Social Pulse — full width when we have social/email data -->
 				<CommandCenterMarketingPulseWidget v-if="showWidget('marketing-pulse') && marketingPulse.hasRichData.value" />
@@ -669,70 +773,75 @@ watch(activeTab, (t) => {
 					</div>
 				</div>
 
-				<!-- Goals Summary -->
-				<DeferUntilVisible v-if="showWidget('goals')" min-height="120px">
-					<GoalsSummaryWidget />
-				</DeferUntilVisible>
+					<!-- Marketing actions — compact (only when no social/email data) -->
+					<CommandCenterMarketingActionsWidget v-if="showWidget('marketing-actions') && !marketingPulse.hasRichData.value" />
 
-	
-				<!-- Other Suggestions (lower priority) -->
-				<div v-if="showWidget('suggestions') && otherSuggestions.length > 0" class="ios-card p-5">
-					<div class="flex items-center justify-between mb-4">
+					<!-- Org/Team Goals chip strip — links to filtered /goals -->
+					<div v-if="orgTeamGoalCount > 0" class="ios-card p-4 flex flex-wrap items-center gap-3">
 						<div class="flex items-center gap-2">
-							<UIcon name="i-heroicons-sparkles" class="w-5 h-5 text-primary" />
-							<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70">
-								Suggestions
-							</h3>
+							<UIcon name="i-heroicons-flag" class="w-4 h-4 text-amber-500" />
+							<h3 class="text-xs font-semibold uppercase tracking-wide text-foreground/70">Shared Goals</h3>
 						</div>
-						<button
-							v-if="suggestions.length > 10"
-							@click="aiTrayPrompt = ''; aiTrayOpen = true"
-							class="text-xs text-primary hover:underline"
+						<NuxtLink
+							to="/goals?scope=team"
+							class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/40 hover:bg-muted/70 text-[11px] font-medium transition-colors"
 						>
-							View all {{ suggestions.length }} &rarr;
-						</button>
+							Team
+							<span class="text-muted-foreground tabular-nums">{{ (goalsByScope.team || []).length }}</span>
+						</NuxtLink>
+						<NuxtLink
+							to="/goals?scope=organization"
+							class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-muted/40 hover:bg-muted/70 text-[11px] font-medium transition-colors"
+						>
+							Organization
+							<span class="text-muted-foreground tabular-nums">{{ (goalsByScope.organization || []).length }}</span>
+						</NuxtLink>
+						<NuxtLink to="/goals" class="ml-auto text-[11px] text-primary hover:underline">View all &rarr;</NuxtLink>
 					</div>
 
-					<div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-						<CommandCenterSuggestionCard
-							v-for="suggestion in otherSuggestions"
-							:key="suggestion.id"
-							:suggestion="suggestion"
-						/>
-					</div>
-				</div>
+					<!-- Goals Summary (org-wide snapshot — shows all scopes) -->
+					<DeferUntilVisible v-if="showWidget('goals')" min-height="120px">
+						<GoalsSummaryWidget />
+					</DeferUntilVisible>
 
-				<!-- Team Leaderboard (shown when a team is selected) -->
-				<div v-if="showLeaderboard" class="ios-card p-5">
-					<EarnestTeamLeaderboard />
-				</div>
+					<!-- Financial Analysis (full width) — deferred until scrolled near.
+					     `invoices` / `deals` are dropped from accountant's default
+					     module set and lazy-loaded here when the slot enters view. -->
+					<DeferUntilVisible
+						v-if="showWidget('financial-quarter')"
+						min-height="320px"
+						@enter="onFinancialEnter"
+					>
+						<CommandCenterFinancialQuarter />
+					</DeferUntilVisible>
+				</section>
 
-				<!-- Bottom Section: Chat + CardDesk — deferred until scrolled near.
-				     `channels` / `carddesk` are dropped from each hat's default
-				     module set and lazy-loaded here when the slot enters view. -->
-				<DeferUntilVisible
+				<!-- ─── REFERENCE band ─── -->
+				<section
 					v-if="showWidget('realtime-chat') || showWidget('card-desk')"
-					min-height="500px"
-					@enter="onChatDeskEnter"
+					style="order: 3"
+					class="space-y-2"
 				>
-					<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-						<div v-if="showWidget('realtime-chat')" class="h-[500px]">
-							<CommandCenterRealtimeChat />
+					<details class="group">
+						<summary class="flex items-center gap-2 cursor-pointer list-none py-1 select-none">
+							<UIcon name="i-heroicons-chevron-right" class="w-3.5 h-3.5 text-muted-foreground transition-transform group-open:rotate-90" />
+							<h2 class="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">Less-used</h2>
+							<div class="flex-1 h-px bg-border/40" />
+						</summary>
+						<div class="pt-4">
+							<DeferUntilVisible min-height="500px" @enter="onChatDeskEnter">
+								<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+									<div v-if="showWidget('realtime-chat')" class="h-[500px]">
+										<CommandCenterRealtimeChat />
+									</div>
+									<CommandCenterCardDeskPipeline v-if="showWidget('card-desk')" />
+								</div>
+							</DeferUntilVisible>
 						</div>
-						<CommandCenterCardDeskPipeline v-if="showWidget('card-desk')" />
-					</div>
-				</DeferUntilVisible>
+					</details>
+				</section>
 
-				<!-- Financial Analysis (full width) — deferred until scrolled near.
-				     `invoices` / `deals` are dropped from accountant's default
-				     module set and lazy-loaded here when the slot enters view. -->
-				<DeferUntilVisible
-					v-if="showWidget('financial-quarter')"
-					min-height="320px"
-					@enter="onFinancialEnter"
-				>
-					<CommandCenterFinancialQuarter />
-				</DeferUntilVisible>
+				</div><!-- /three-band wrapper -->
 
 				</div><!-- /Commander tab -->
 
