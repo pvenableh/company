@@ -27,7 +27,7 @@ interface CtaSpec {
 interface EarnestShellArgs {
 	subject: string;
 	preheader?: string | null;
-	heading: string;
+	heading?: string | null;
 	bodyHtml: string;
 	cta?: CtaSpec | null;
 }
@@ -39,10 +39,18 @@ export interface OrgBrandRef {
 	brand_color?: string | null;
 	whitelabel?: boolean | null;
 	website?: string | null;
+	mailing_address?: string | null;
 }
 
 interface OrgShellArgs extends EarnestShellArgs {
 	org: OrgBrandRef | null | undefined;
+	/**
+	 * Marketing-only fields (CAN-SPAM). When present, the footer adds an
+	 * unsubscribe link and the org's physical mailing address. Transactional
+	 * sends omit both.
+	 */
+	unsubscribeUrl?: string | null;
+	physicalAddress?: string | null;
 }
 
 interface RenderedEmail {
@@ -172,26 +180,46 @@ function earnestFooterBlock(): string {
 	`;
 }
 
-function orgFooterBlock(org: OrgBrandRef | null | undefined): string {
+function orgFooterBlock(
+	org: OrgBrandRef | null | undefined,
+	unsubscribeUrl?: string | null,
+	physicalAddress?: string | null,
+): string {
 	const orgName = (org?.name && String(org.name).trim()) || 'this team';
 	const whitelabel = org?.whitelabel === true;
 	const tag = whitelabel
 		? `This is an automated message from ${escapeHtml(orgName)}.`
 		: `This is an automated message from ${escapeHtml(orgName)}. <span style="color:#aaaaaa;">Powered by <a href="${EARNEST_HOME}" style="color:#aaaaaa;text-decoration:underline;">Earnest</a>.</span>`;
+
+	const unsubUrl = safeUrl(unsubscribeUrl);
+	const addr = (physicalAddress && String(physicalAddress).trim()) || '';
+	const addrHtml = addr ? escapeHtml(addr).replace(/\n/g, '<br />') : '';
+	const marketingBlock = unsubUrl || addr
+		? `
+			<p style="margin:12px 0 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;font-size:12px;line-height:1.6;color:#888888;">
+				${unsubUrl ? `<a href="${escapeAttr(unsubUrl)}" style="color:#888888;text-decoration:underline;">Unsubscribe</a>${addr ? '<br />' : ''}` : ''}${addrHtml}
+			</p>
+		`
+		: '';
+
 	return `
 		<tr>
 			<td style="padding:24px 32px 32px 32px;border-top:1px solid #eeeeee;">
 				<p style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;font-size:12px;line-height:1.6;color:#888888;">${tag}</p>
+				${marketingBlock}
 			</td>
 		</tr>
 	`;
 }
 
-function bodyBlock(heading: string, bodyHtml: string, cta: CtaSpec | null | undefined, accent: string): string {
+function bodyBlock(heading: string | null | undefined, bodyHtml: string, cta: CtaSpec | null | undefined, accent: string): string {
+	const headingMarkup = heading && String(heading).trim()
+		? `<h1 style="margin:16px 0 16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;font-size:24px;line-height:1.3;font-weight:600;color:#141210;">${escapeHtml(heading)}</h1>`
+		: '';
 	return `
 		<tr>
 			<td style="padding:8px 32px 16px 32px;">
-				<h1 style="margin:16px 0 16px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;font-size:24px;line-height:1.3;font-weight:600;color:#141210;">${escapeHtml(heading)}</h1>
+				${headingMarkup}
 				<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;font-size:16px;line-height:1.6;color:#333333;">${bodyHtml}</div>
 				${ctaBlock(cta, accent)}
 			</td>
@@ -245,9 +273,12 @@ export function renderOrgEmail(args: OrgShellArgs): RenderedEmail {
 		preheader: args.preheader,
 		header: orgHeaderBlock(args.org),
 		body: bodyBlock(args.heading, args.bodyHtml, args.cta, accent),
-		footer: orgFooterBlock(args.org),
+		footer: orgFooterBlock(args.org, args.unsubscribeUrl, args.physicalAddress),
 	});
-	const text = htmlToText([args.heading, '', args.bodyHtml, args.cta?.url ? `\n${args.cta.label}: ${args.cta.url}` : ''].join('\n'));
+	const textLines = [args.heading || '', '', args.bodyHtml, args.cta?.url ? `\n${args.cta.label}: ${args.cta.url}` : ''];
+	if (args.unsubscribeUrl) textLines.push('', `Unsubscribe: ${args.unsubscribeUrl}`);
+	if (args.physicalAddress) textLines.push(args.physicalAddress);
+	const text = htmlToText(textLines.join('\n'));
 	return { html, text };
 }
 

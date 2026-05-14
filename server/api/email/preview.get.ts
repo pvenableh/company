@@ -34,7 +34,9 @@ type TemplateName =
 	| 'meeting-cancelled'
 	| 'meeting-removed'
 	| 'meeting-reminder'
-	| 'video-invite';
+	| 'video-invite'
+	| 'marketing-touch'
+	| 'newsletter';
 
 const TEMPLATES: TemplateName[] = [
 	'welcome',
@@ -45,7 +47,11 @@ const TEMPLATES: TemplateName[] = [
 	'meeting-removed',
 	'meeting-reminder',
 	'video-invite',
+	'marketing-touch',
+	'newsletter',
 ];
+
+const SAMPLE_UNSUBSCRIBE_URL = 'https://app.earnest.guru/unsubscribe?token=preview-sample-token';
 
 function sampleDetails() {
 	const start = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
@@ -176,6 +182,43 @@ function renderForTemplate(name: TemplateName, org: OrgBrandRef | null) {
 				`,
 				cta: joinCta,
 			} as any);
+		}
+		case 'marketing-touch': {
+			const physicalAddress = org?.mailing_address || '123 Main St, Suite 100\nSan Francisco, CA 94105';
+			return renderOrgEmail({
+				org,
+				subject: 'A quick note from the studio',
+				preheader: 'Sharing what we shipped this quarter.',
+				heading: null,
+				bodyHtml: `
+					<p style="margin:0 0 12px;">Hi Jane,</p>
+					<p style="margin:0 0 12px;">We just wrapped a packed quarter — three brand launches, a site redesign for a long-time client, and a new identity system we're particularly proud of.</p>
+					<p style="margin:0 0 12px;">If any of this resonates, hit reply — we're booking work for the back half of the year and would love to hear what you're up to.</p>
+					<p style="margin:0 0 12px;">— ${escapeHtml(orgName)}</p>
+				`,
+				unsubscribeUrl: SAMPLE_UNSUBSCRIBE_URL,
+				physicalAddress,
+			});
+		}
+		case 'newsletter': {
+			const physicalAddress = org?.mailing_address || '123 Main St, Suite 100\nSan Francisco, CA 94105';
+			return renderOrgEmail({
+				org,
+				subject: `The ${orgName} Quarterly`,
+				preheader: 'What we made, what we learned, and what is next.',
+				heading: null,
+				bodyHtml: `
+					<h2 style="margin:0 0 12px;font-size:20px;line-height:1.3;color:#141210;">Q2 dispatch</h2>
+					<p style="margin:0 0 12px;">A short read on what's shipped, what's planned, and the work we're most excited about.</p>
+					<h3 style="margin:24px 0 8px;font-size:16px;color:#141210;">Recent work</h3>
+					<ul style="margin:0 0 12px;padding-left:20px;"><li>Brand for a regional bakery — wordmark, packaging, and signage.</li><li>Site rebuild for a 20-person SaaS company.</li><li>Identity system for a new podcast network.</li></ul>
+					<h3 style="margin:24px 0 8px;font-size:16px;color:#141210;">Looking ahead</h3>
+					<p style="margin:0 0 12px;">We're picking up two new engagements in Q3 and have room for one more. If you've been waiting on a project, now's a good time to reach out.</p>
+				`,
+				cta: { label: 'See the full case study', url: 'https://app.earnest.guru/work/sample' },
+				unsubscribeUrl: SAMPLE_UNSUBSCRIBE_URL,
+				physicalAddress,
+			});
 		}
 	}
 }

@@ -29,9 +29,11 @@
  * or write to social_posts.
  */
 
-import sgMail from '@sendgrid/mail';
 import { createItem, readItem, readItems, updateItem } from '@directus/sdk';
 import type { MarketingTouchVariant } from '~~/shared/marketing-persistence';
+import { renderOrgEmail } from './email-shell';
+import { fetchOrgBrand, sendBrandedEmail } from './email-send';
+import { buildUnsubscribeUrl } from './unsubscribe';
 
 export interface SendTouchArgs {
 	touchId: number;
@@ -60,6 +62,7 @@ interface ContactRow {
 	email: string | null;
 	email_unsubscribed_at: string | null;
 	email_bounced: boolean | null;
+	unsubscribe_token: string | null;
 }
 
 function mdToHtml(md: string): string {
@@ -116,7 +119,7 @@ async function loadEligibleContacts(directus: any, ids: string[]): Promise<Conta
 					{ email_bounced: { _neq: true } },
 				],
 			},
-			fields: ['id', 'first_name', 'last_name', 'email', 'email_unsubscribed_at', 'email_bounced'],
+			fields: ['id', 'first_name', 'last_name', 'email', 'email_unsubscribed_at', 'email_bounced', 'unsubscribe_token'],
 			limit: 500,
 		}),
 	) as ContactRow[];
@@ -261,10 +264,12 @@ async function sendEmailTouch(args: {
 			reason: 'SendGrid API key not configured',
 		};
 	}
-	sgMail.setApiKey(apiKey as string);
 
-	const fromEmail = (config as any).sendgridFromEmail || (config as any).FROM_EMAIL || 'hello@earnest.guru';
-	const fromName = (config as any).sendgridFromName || 'Earnest';
+	// Resolve org brand once (logo, brand_color, whitelabel, mailing_address).
+	// All recipients in this touch share the same org.
+	const org = await fetchOrgBrand(campaign.organization);
+	const siteUrl = (config.public as any)?.siteUrl || 'https://app.earnest.guru';
+	const physicalAddress = org?.mailing_address || null;
 
 	const subjectTemplate = touch.email_subject || '';
 	const previewTemplate = touch.email_preview_text || '';
@@ -272,25 +277,37 @@ async function sendEmailTouch(args: {
 
 	let sentCount = 0;
 	for (const r of recipients) {
-		try {
-			const variant = variants.get(r.id);
-			// Variant strings are already personalized — no {{first_name}} swap.
-			// Base strings still go through personalize() for the legacy mail-merge.
-			const subject = variant?.email_subject ?? personalize(subjectTemplate, r);
-			const preview = variant?.email_preview_text ?? personalize(previewTemplate, r);
-			const body = variant?.email_body_markdown ?? personalize(bodyTemplate, r);
-			await sgMail.send({
-				to: { email: r.email!, name: [r.first_name, r.last_name].filter(Boolean).join(' ') || undefined },
-				from: { email: fromEmail, name: fromName },
-				subject,
-				text: body,
-				html: `${preview ? `<div style="display:none;">${preview}</div>` : ''}<div style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;color:#222;font-size:15px;line-height:1.55;">${mdToHtml(body)}</div>`,
-				categories: ['marketing', `campaign-${campaign.id}`, `touch-${touch.id}`],
-			});
-			sentCount++;
-		} catch (err: any) {
-			console.error(`[marketing-send] send to ${r.email} failed:`, err.message);
-		}
+		const variant = variants.get(r.id);
+		// Variant strings are already personalized — no {{first_name}} swap.
+		// Base strings still go through personalize() for the legacy mail-merge.
+		const subject = variant?.email_subject ?? personalize(subjectTemplate, r);
+		const preview = variant?.email_preview_text ?? personalize(previewTemplate, r);
+		const body = variant?.email_body_markdown ?? personalize(bodyTemplate, r);
+
+		const unsubscribeUrl = r.unsubscribe_token
+			? buildUnsubscribeUrl(r.unsubscribe_token, siteUrl)
+			: `${siteUrl}/unsubscribe`;
+
+		const { html, text } = renderOrgEmail({
+			org,
+			subject,
+			preheader: preview || null,
+			heading: null,
+			bodyHtml: mdToHtml(body),
+			unsubscribeUrl,
+			physicalAddress,
+		});
+
+		const result = await sendBrandedEmail({
+			to: r.email!,
+			subject,
+			html,
+			text: text || body,
+			org,
+			categories: ['marketing', `campaign-${campaign.id}`, `touch-${touch.id}`],
+		});
+		if (result.sent) sentCount++;
+		else console.error(`[marketing-send] send to ${r.email} failed:`, result.reason);
 	}
 
 	return {

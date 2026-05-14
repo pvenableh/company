@@ -6,7 +6,20 @@
 import sgMail from '@sendgrid/mail';
 import { compileMjml, compileSubject } from '~~/server/utils/mjml-compiler';
 import { buildContactVariableMap } from '~~/server/utils/contact-variables';
+import { renderOrgEmail } from '~~/server/utils/email-shell';
+import { fetchOrgBrand } from '~~/server/utils/email-send';
+import { buildUnsubscribeUrl } from '~~/server/utils/unsubscribe';
 import { readItems, readItem, createItem, updateItem } from '@directus/sdk';
+
+/**
+ * Extract the body content from a full MJML-compiled HTML document so it
+ * can be wrapped in renderOrgEmail without producing nested <html> docs.
+ * Falls back to the original string when no <body> is found.
+ */
+function extractMjmlBody(html: string): string {
+  const match = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+  return match ? match[1] : html;
+}
 
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig();
@@ -172,9 +185,18 @@ export default defineEventHandler(async (event) => {
   }
 
   const fromEmail = config.sendgridFromEmail || config.FROM_EMAIL || 'hello@earnest.guru';
-  const fromName = config.sendgridFromName || 'Earnest';
-  const appName = (config.public?.companyName as string) || fromName;
+  const globalFromName = config.sendgridFromName || 'Earnest';
+  const globalReplyTo = (config as any).sendgridReplyToEmail || (config as any).SENDGRID_REPLY_TO_EMAIL;
+  const appName = (config.public?.companyName as string) || globalFromName;
   const siteUrl = (config.public?.siteUrl as string) || 'https://app.earnest.guru';
+
+  // Resolve org branding once for the whole send (one campaign = one org).
+  // Drives fromName, reply-to, logo/brand_color, whitelabel, and the
+  // CAN-SPAM footer (unsubscribe + physical address).
+  const org = organization_id ? await fetchOrgBrand(organization_id) : null;
+  const fromName = (org?.name && String(org.name).trim()) || globalFromName;
+  const replyTo = (org as any)?.email_reply_to || globalReplyTo || null;
+  const physicalAddress = org?.mailing_address || null;
 
   // ── Pre-create / update email record as "sending" to get an ID ──────
   let recordedEmailId = email_id;
@@ -222,8 +244,8 @@ export default defineEventHandler(async (event) => {
       },
     });
 
-    const { html, errors: compileErrors } = compileMjml(template.mjml_source, variables);
-    if (!html) {
+    const { html: compiledHtml, errors: compileErrors } = compileMjml(template.mjml_source, variables);
+    if (!compiledHtml) {
       errors.push(`Failed to compile for ${contact.email}: ${compileErrors.join(', ')}`);
       continue;
     }
@@ -232,13 +254,29 @@ export default defineEventHandler(async (event) => {
       ? compileSubject(template.subject_template, variables)
       : template.name;
 
+    const unsubscribeUrl = contact.unsubscribe_token
+      ? buildUnsubscribeUrl(contact.unsubscribe_token, siteUrl)
+      : `${siteUrl}/unsubscribe`;
+
+    const { html: shellHtml, text: shellText } = renderOrgEmail({
+      org,
+      subject,
+      heading: null,
+      bodyHtml: extractMjmlBody(compiledHtml),
+      unsubscribeUrl,
+      physicalAddress,
+    });
+
     const msg: any = {
       to: contact.email,
       from: { email: fromEmail, name: fromName },
       subject,
-      html,
+      html: shellHtml,
+      text: shellText,
+      categories: ['marketing', `newsletter-template-${template_id}`, ...(recordedEmailId ? [`email-${recordedEmailId}`] : [])],
     };
 
+    if (replyTo) msg.replyTo = replyTo;
     if (cc_list?.length) {
       msg.cc = cc_list.map((email: string) => ({ email }));
     }
@@ -282,7 +320,17 @@ export default defineEventHandler(async (event) => {
     };
     const previewResult = compileMjml(template.mjml_source, previewVars);
     if (previewResult.html) {
-      previewHtml = previewResult.html;
+      const previewSubject = template.subject_template
+        ? compileSubject(template.subject_template, previewVars)
+        : template.name;
+      previewHtml = renderOrgEmail({
+        org,
+        subject: previewSubject,
+        heading: null,
+        bodyHtml: extractMjmlBody(previewResult.html),
+        unsubscribeUrl: `${siteUrl}/unsubscribe`,
+        physicalAddress,
+      }).html;
     }
   } catch {
     // Non-critical — web view just won't be available
