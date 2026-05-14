@@ -63,17 +63,24 @@
 									</span>
 
 									<!-- Event chips — max 2 visible -->
+									<!-- @click.stop wrapper prevents chip clicks from triggering the
+									     parent cell's dayClicked (which the apps-layout SchedulerHub
+									     wires to "open new-meeting modal"). -->
 									<div class="flex flex-col gap-px overflow-hidden flex-1">
-										<SchedulerMeetingActionsPopover
+										<div
 											v-for="event in getEventsForDate(dateKey(weekDate)).slice(0, 2)"
 											:key="event.id"
-											:event="event"
-											@edit="emit('edit-event', $event)"
-											@join="emit('join-meeting', $event)"
-											@deleted="emit('deleted', $event)"
+											@click.stop
 										>
-											<SchedulerCalendarEventChip :event="event" compact />
-										</SchedulerMeetingActionsPopover>
+											<SchedulerMeetingActionsPopover
+												:event="event"
+												@edit="emit('edit-event', $event)"
+												@join="emit('join-meeting', $event)"
+												@deleted="emit('deleted', $event)"
+											>
+												<SchedulerCalendarEventChip :event="event" compact />
+											</SchedulerMeetingActionsPopover>
+										</div>
 										<span
 											v-if="getEventsForDate(dateKey(weekDate)).length > 2"
 											class="text-[8px] text-muted-foreground/50 px-1 leading-tight"

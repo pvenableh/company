@@ -59,8 +59,8 @@
 										Request Meeting
 									</button>
 									<NuxtLink
-										v-if="host.booking_page_slug"
-										:to="`/book/${host.booking_page_slug || host.id}`"
+										v-if="host.booking_page_slug && host.org_slug"
+										:to="`/book/${host.org_slug}/${host.booking_page_slug || host.id}`"
 										target="_blank"
 										class="p-1.5 rounded-lg bg-muted/30 hover:bg-muted/60 transition-colors"
 									>
@@ -305,6 +305,7 @@ definePageMeta({ middleware: ['auth'] });
 useHead({ title: 'Calendar | Earnest' });
 
 const { user } = useDirectusAuth();
+const { currentOrg } = useOrganization();
 const { canAccess } = useOrgRole();
 const isAdmin = computed(() => canAccess('appointments'));
 const toast = useToast();
@@ -541,9 +542,17 @@ const requestForm = reactive({
 });
 
 const fetchAvailableHosts = async () => {
+	// Org-scoped per SaaS multitenancy — endpoint requires `?orgId`.
+	// Skip the fetch entirely if no org is active; the list just stays empty.
+	if (!currentOrg.value?.id) {
+		availableHosts.value = [];
+		return;
+	}
 	loadingHosts.value = true;
 	try {
-		const response = await $fetch('/api/scheduler/available-hosts');
+		const response = await $fetch('/api/scheduler/available-hosts', {
+			query: { orgId: currentOrg.value.id },
+		});
 		availableHosts.value = (response as any).data || [];
 	} catch {
 		// silently fail
@@ -551,6 +560,10 @@ const fetchAvailableHosts = async () => {
 		loadingHosts.value = false;
 	}
 };
+
+// Re-fetch when the active org changes so we don't keep showing the prior
+// org's hosts after an org switch.
+watch(() => currentOrg.value?.id, () => fetchAvailableHosts());
 
 const fetchClientRequests = async () => {
 	loadingClientRequests.value = true;

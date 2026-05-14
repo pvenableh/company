@@ -241,11 +241,10 @@ function formatMeetingDate(s: string | null | undefined) {
 }
 
 // ── Calendar floor ──────────────────────────────────────────────────────────
-// CalendarView consumes `schedulerData` via inject(); provide just enough.
-provide('schedulerData', {
-  videoMeetings: meetings,
-  refreshVideoMeetings: fetchMeetings,
-});
+// The calendar floor mounts <SchedulerHub />, which is self-contained:
+// it provides its own `schedulerData` and fetches its own video meetings
+// via the scheduler API. The Meetings floor still uses the local
+// `meetings` ref + fetchMeetings() above for its card list.
 
 // ── Lazy-load per floor ─────────────────────────────────────────────────────
 const projectsLoaded = ref(false);
@@ -258,7 +257,7 @@ watch(
       projectsLoaded.value = true;
       fetchProjects();
     }
-    if ((next === 'meetings' || next === 'calendar') && !meetingsLoaded.value) {
+    if (next === 'meetings' && !meetingsLoaded.value) {
       meetingsLoaded.value = true;
       fetchMeetings();
     }
@@ -470,11 +469,10 @@ function openMeetingSlideOver(meeting: any) {
       </template>
 
       <!-- ── Calendar floor ───────────────────────────────────────────── -->
+      <!-- Full scheduler hub: stats, filters, CRM sidebar, calendar with
+           day-click-to-create, day timeline, unified event/meeting modal. -->
       <ClientOnly v-else-if="floor === 'calendar'">
-        <CalendarView />
-        <p class="text-[11px] text-muted-foreground mt-3">
-          Showing scheduled video meetings. Phase 7 will fold in project events + appointments.
-        </p>
+        <SchedulerHub />
         <template #fallback>
           <div class="flex items-center justify-center min-h-[400px]">
             <Icon name="lucide:loader-2" class="w-8 h-8 text-muted-foreground animate-spin" />

@@ -165,17 +165,52 @@ async function deleteMeeting() {
 					</span>
 				</div>
 
-				<div class="flex items-center justify-between gap-1 px-2 py-1.5">
-					<UTooltip v-if="isInActiveWindow" text="Join meeting">
-						<button
-							type="button"
-							@click="joinMeeting"
-							class="w-8 h-8 inline-flex items-center justify-center rounded-md bg-emerald-500 text-white hover:bg-emerald-600 transition-colors"
-						>
-							<UIcon name="i-heroicons-video-camera" class="w-4 h-4" />
-						</button>
-					</UTooltip>
+				<!-- Primary nav links — full-width rows so both destinations
+				     (recap page / live room) are obvious. Enter meeting goes
+				     emerald to read as the active CTA when the meeting is in
+				     its 15-minute window; outside that window it stays neutral
+				     but remains clickable (no more "only enabled when live"
+				     gate — the room exists for the lifetime of the meeting,
+				     and pre-joining is a real use case). -->
+				<div
+					v-if="isVideo && event.video_meeting_id"
+					class="px-1 pb-1"
+				>
+					<NuxtLink
+						:to="`/meetings/${event.video_meeting_id}`"
+						class="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[12px] font-medium text-foreground hover:bg-muted/40 transition-colors"
+						@click="open = false"
+					>
+						<UIcon name="i-heroicons-document-text" class="w-3.5 h-3.5 text-muted-foreground" />
+						<span>Meeting details</span>
+					</NuxtLink>
+					<button
+						v-if="event.room_name"
+						type="button"
+						@click="joinMeeting"
+						:class="[
+							'w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[12px] font-medium transition-colors',
+							isInActiveWindow
+								? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/25'
+								: 'text-foreground hover:bg-muted/40',
+						]"
+					>
+						<UIcon name="i-heroicons-video-camera" class="w-3.5 h-3.5" :class="isInActiveWindow ? 'text-emerald-600' : 'text-muted-foreground'" />
+						<span>Enter meeting</span>
+						<span v-if="isInActiveWindow" class="ml-auto inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider text-emerald-600">
+							<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+							Live
+						</span>
+					</button>
+				</div>
 
+				<div
+					v-if="isVideo && event.video_meeting_id"
+					class="border-t border-border/30 my-1"
+				/>
+
+				<!-- Secondary icon-row actions: copy / invite / edit / delete. -->
+				<div class="flex items-center justify-between gap-1 px-2 py-1.5">
 					<UTooltip v-if="isVideo && meetingUrl" text="Copy link">
 						<button
 							type="button"
@@ -186,18 +221,23 @@ async function deleteMeeting() {
 						</button>
 					</UTooltip>
 
+					<!-- Send invite. UPopover's slot child becomes the trigger via
+					     Headless UI's PopoverButton (which renders its own
+					     <button>). We previously nested a real <button @click.stop>
+					     inside, which both produced invalid HTML (button-in-button)
+					     AND killed the click bubble that opens the popover — the
+					     form never appeared and the email "silently" never sent.
+					     Render a span here and let UPopover own the click. -->
 					<SchedulerSendInvitePopover
 						v-if="isVideo && meetingForInvite"
 						:meeting="meetingForInvite"
 					>
 						<UTooltip text="Send invite">
-							<button
-								type="button"
-								class="w-8 h-8 inline-flex items-center justify-center rounded-md bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 transition-colors"
-								@click.stop
+							<span
+								class="w-8 h-8 inline-flex items-center justify-center rounded-md bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 transition-colors cursor-pointer"
 							>
 								<UIcon name="i-heroicons-paper-airplane" class="w-4 h-4" />
-							</button>
+							</span>
 						</UTooltip>
 					</SchedulerSendInvitePopover>
 

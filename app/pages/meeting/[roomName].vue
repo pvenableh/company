@@ -151,12 +151,13 @@
 
 			<!-- Annotation overlay covers the entire iframe so users can draw
 			     directly on top of any screen-share or video tile. The canvas is
-			     pointer-events:none until the user toggles annotate mode on.
-			     Gated on `dailyJoined` so we don't render the toolbar while the
-			     prebuilt is still on its prejoin screen — sendAppMessage is a
-			     no-op until the local participant has actually joined. -->
+			     pointer-events:none until the user toggles annotate mode on, so
+			     the toolbar is the only visible element. We render as soon as
+			     `annotationAuthorId` is set (on mount) — drawing always works
+			     locally; the bus silently no-ops broadcasting until Daily's
+			     wrap'd iframe is joined. -->
 			<MeetingAnnotationCanvas
-				v-if="annotationAuthorId && dailyJoined"
+				v-if="annotationAuthorId"
 				ref="annotationCanvas"
 				:bus="annotationBus"
 				:author-id="annotationAuthorId"
@@ -178,65 +179,17 @@
 				<UIcon name="i-heroicons-arrow-top-right-on-square" class="w-3 h-3 opacity-60" />
 			</NuxtLink>
 
-			<!-- Top-right floating controls. Host gets clickable Recording /
-			     Transcribing toggles that double as live status pills — color
-			     keys whether the feature is on (saturated) or off (muted).
-			     Guests see a passive indicator only when something is running.
-			     Auto-start is gated on `meeting.recording_enabled` /
-			     `meeting.transcription_enabled` so we no longer burn ~$0.84/hr
-			     of API time on every meeting. -->
+			<!-- Top-right floating controls. Record + Transcribe are owned by
+			     Daily's native prebuilt toolbar (cloud recording + transcription
+			     are enabled at the room level + the host token is is_owner, so
+			     both buttons surface in the prebuilt UI for the host). Our own
+			     buttons used to live here but `startTranscription()` on a wrap'd
+			     prebuilt iframe is unreliable — Daily's internal state machine
+			     isn't synced with the iframe's join state, so the call errors
+			     with "only supported after join" even after `joined-meeting`
+			     fires. Letting the prebuilt own the controls also matches what
+			     guests already see and removes the dual-button confusion. -->
 			<div v-if="hasJoined" class="fixed top-16 right-4 z-30 flex items-center gap-2 pointer-events-auto">
-				<button
-					v-if="isHost"
-					:disabled="recordingPending"
-					@click="toggleRecording"
-					:class="[
-						'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-md text-[11px] font-medium shadow-lg transition-colors',
-						isRecording
-							? 'bg-red-500/90 hover:bg-red-600 text-white'
-							: 'bg-black/60 hover:bg-black/80 text-white/70',
-						recordingPending ? 'opacity-60 cursor-wait' : '',
-					]"
-					:title="isRecording ? 'Cloud recording is on (click to stop)' : 'Click to start cloud recording (~$0.59/hr per participant)'"
-				>
-					<span v-if="isRecording" class="w-2 h-2 rounded-full bg-white animate-pulse" />
-					<UIcon v-else name="i-heroicons-video-camera" class="w-3 h-3" />
-					<span>{{ isRecording ? 'Recording' : 'Record' }}</span>
-				</button>
-				<span
-					v-else-if="isRecording"
-					class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-500/90 backdrop-blur-md text-white text-[11px] font-medium shadow-lg"
-					title="Cloud recording is on"
-				>
-					<span class="w-2 h-2 rounded-full bg-white animate-pulse" />
-					<span>Recording</span>
-				</span>
-
-				<button
-					v-if="isHost"
-					:disabled="transcribingPending"
-					@click="toggleTranscription"
-					:class="[
-						'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-md text-[11px] font-medium shadow-lg transition-colors',
-						isTranscribing
-							? 'bg-emerald-500/90 hover:bg-emerald-600 text-white'
-							: 'bg-black/60 hover:bg-black/80 text-white/70',
-						transcribingPending ? 'opacity-60 cursor-wait' : '',
-					]"
-					:title="isTranscribing ? 'Transcription is on (click to stop)' : 'Click to start transcription (~$0.26/hr)'"
-				>
-					<UIcon name="i-heroicons-language" class="w-3 h-3" />
-					<span>{{ isTranscribing ? 'Transcribing' : 'Transcribe' }}</span>
-				</button>
-				<span
-					v-else-if="isTranscribing"
-					class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/90 backdrop-blur-md text-white text-[11px] font-medium shadow-lg"
-					title="Transcription is running — recap will be generated when the meeting ends"
-				>
-					<UIcon name="i-heroicons-language" class="w-3 h-3" />
-					<span>Transcribing</span>
-				</span>
-
 				<button
 					class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white text-[11px] font-medium transition-colors shadow-lg"
 					title="Ask Earnest about this meeting"
@@ -301,12 +254,10 @@ const loadingToken = ref(false);
 const dailyUrl = ref(null);
 const aiTrayOpen = ref(false);
 const dailyFrame = ref(null);
-const isRecording = ref(false);
-const isTranscribing = ref(false);
-const recordingPending = ref(false);
-const transcribingPending = ref(false);
-// Flips true after Daily fires `joined-meeting` — drawing/sendAppMessage do
-// nothing until then, so we hide the annotation toolbar while we wait.
+// Tracks whether the wrap'd Daily iframe has fired `joined-meeting`. Used
+// only as a hint for `sendAppMessage` callers — the annotation toolbar is
+// shown regardless, and the bus itself silently no-ops if the wrap object
+// isn't ready yet.
 const dailyJoined = ref(false);
 
 let statusPollInterval = null;
@@ -483,25 +434,14 @@ const handleJoinedMeeting = (e) => {
 			'*',
 		);
 	} catch {}
-	// Auto-start recording + transcription only when the meeting row opted in.
-	// `recording_enabled` / `transcription_enabled` are resolved at create time
-	// from the org's plan + per-org defaults; rows opted out (or on the free
-	// tier) stay quiet. Host can still flip the in-room toggles to override.
-	if (isHost.value) {
-		if (meeting.value?.recording_enabled) {
-			try { dailyCallObject?.startRecording?.(); }
-			catch (err) { console.warn('[meeting] startRecording failed', err); }
-		}
-		if (meeting.value?.transcription_enabled) {
-			try {
-				dailyCallObject?.startTranscription?.({
-					language: 'en',
-					model: 'nova-2-general',
-					punctuate: true,
-				});
-			} catch (err) { console.warn('[meeting] startTranscription failed', err); }
-		}
-	}
+	// Recording + transcription are driven by Daily's native prebuilt buttons.
+	// We used to auto-fire startRecording()/startTranscription() here, but
+	// those calls error on a wrap'd prebuilt iframe ("only supported after
+	// join") even after this event fires — Daily's wrap doesn't fully sync
+	// state from the prebuilt's internal call object. Hosts now click the
+	// Record / Transcribe buttons in the prebuilt's own toolbar (room is
+	// configured with enable_recording: 'cloud', enable_transcription_storage,
+	// canAdmin: 'transcription', and the host token is is_owner: true).
 };
 
 const handleLeftMeeting = () => {
@@ -509,87 +449,6 @@ const handleLeftMeeting = () => {
 	// session ends). The postMessage path is unreliable on prebuilt — relying
 	// on the wrap()'d event guarantees we tear down the iframe + canvas.
 	finishMeeting();
-};
-
-const handleRecordingStarted = () => {
-	isRecording.value = true;
-};
-const handleRecordingStopped = () => {
-	isRecording.value = false;
-};
-const handleRecordingError = (e) => {
-	const msg = e?.errorMsg || 'Recording failed';
-	toast.add({ title: 'Recording error', description: msg, color: 'red' });
-};
-const handleTranscriptionStarted = () => {
-	isTranscribing.value = true;
-};
-const handleTranscriptionStopped = () => {
-	isTranscribing.value = false;
-};
-const handleTranscriptionError = (e) => {
-	const msg = e?.errorMsg || 'Transcription failed to start';
-	console.warn('[meeting] transcription error', e);
-	toast.add({ title: 'Transcription error', description: msg, color: 'red' });
-};
-
-// Host-only in-room toggles. Persist the flag to Directus first so a refresh
-// keeps the new state, then fire the matching SDK call. We optimistically
-// update local refs but the wrap()'d events (`recording-started`/`-stopped`,
-// `transcription-started`/`-stopped`) are the source of truth.
-const toggleRecording = async () => {
-	if (!meeting.value?.id || recordingPending.value) return;
-	const next = !isRecording.value;
-	recordingPending.value = true;
-	try {
-		await $fetch(`/api/video/meetings/${meeting.value.id}/toggle-recording`, {
-			method: 'POST',
-			body: { enabled: next },
-		});
-		meeting.value.recording_enabled = next;
-		if (next) {
-			try { dailyCallObject?.startRecording?.(); }
-			catch (err) { console.warn('[meeting] startRecording failed', err); }
-		} else {
-			try { dailyCallObject?.stopRecording?.(); }
-			catch (err) { console.warn('[meeting] stopRecording failed', err); }
-		}
-	} catch (err) {
-		const msg = err?.data?.message || err?.message || 'Could not change recording';
-		toast.add({ title: 'Recording', description: msg, color: 'red' });
-	} finally {
-		recordingPending.value = false;
-	}
-};
-
-const toggleTranscription = async () => {
-	if (!meeting.value?.id || transcribingPending.value) return;
-	const next = !isTranscribing.value;
-	transcribingPending.value = true;
-	try {
-		await $fetch(`/api/video/meetings/${meeting.value.id}/toggle-transcription`, {
-			method: 'POST',
-			body: { enabled: next },
-		});
-		meeting.value.transcription_enabled = next;
-		if (next) {
-			try {
-				dailyCallObject?.startTranscription?.({
-					language: 'en',
-					model: 'nova-2-general',
-					punctuate: true,
-				});
-			} catch (err) { console.warn('[meeting] startTranscription failed', err); }
-		} else {
-			try { dailyCallObject?.stopTranscription?.(); }
-			catch (err) { console.warn('[meeting] stopTranscription failed', err); }
-		}
-	} catch (err) {
-		const msg = err?.data?.message || err?.message || 'Could not change transcription';
-		toast.add({ title: 'Transcription', description: msg, color: 'red' });
-	} finally {
-		transcribingPending.value = false;
-	}
 };
 
 const wrapDailyIframe = async () => {
@@ -631,12 +490,6 @@ const wrapDailyIframe = async () => {
 		dailyCallObject.on('app-message', handleAppMessage);
 		dailyCallObject.on('joined-meeting', handleJoinedMeeting);
 		dailyCallObject.on('left-meeting', handleLeftMeeting);
-		dailyCallObject.on('recording-started', handleRecordingStarted);
-		dailyCallObject.on('recording-stopped', handleRecordingStopped);
-		dailyCallObject.on('recording-error', handleRecordingError);
-		dailyCallObject.on('transcription-started', handleTranscriptionStarted);
-		dailyCallObject.on('transcription-stopped', handleTranscriptionStopped);
-		dailyCallObject.on('transcription-error', handleTranscriptionError);
 		console.log('[meeting] Daily wrap attached');
 		// In case we wrapped after the join already fired
 		const local = dailyCallObject.participants?.()?.local;

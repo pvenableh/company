@@ -89,7 +89,7 @@ export function useOrganization() {
 						users: { directus_users_id: { _eq: user.value.id } },
 						active: { _neq: false },
 					},
-					fields: ['id', 'name', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'default_hourly_rate', 'email', 'phone', 'address', 'archived_at', 'whitelabel'],
+					fields: ['id', 'name', 'slug', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'default_hourly_rate', 'email', 'phone', 'address', 'archived_at', 'whitelabel'],
 				}),
 				membershipItems.list({
 					filter: {
@@ -161,7 +161,7 @@ export function useOrganization() {
 							id: { _in: Array.from(extraOrgIds) },
 							active: { _neq: false },
 						},
-						fields: ['id', 'name', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'default_hourly_rate', 'email', 'phone', 'address', 'archived_at', 'whitelabel'],
+						fields: ['id', 'name', 'slug', 'logo', 'icon', 'plan', 'folder', 'active_addons', 'default_hourly_rate', 'email', 'phone', 'address', 'archived_at', 'whitelabel'],
 					});
 				} catch {
 					// Continue if extra orgs can't be fetched

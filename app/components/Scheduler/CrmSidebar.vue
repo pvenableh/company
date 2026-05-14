@@ -16,6 +16,7 @@ const emit = defineEmits<{
 }>();
 
 const { user } = useDirectusAuth();
+const { currentOrg } = useOrganization();
 const router = useRouter();
 const toast = useToast();
 
@@ -41,11 +42,17 @@ const topStages = computed(() => {
 });
 
 // ── Booking link ──
+// URL shape is `/book/<orgSlug>/<userSlug>` — multitenant SaaS namespace so
+// two "peter"s in different orgs don't collide. Falls back to a placeholder
+// if no org is active; the copy button disables in that case.
 const bookingUrl = computed(() => {
 	const baseUrl = useRuntimeConfig().public.siteUrl || (import.meta.client ? window.location.origin : '');
-	const slug = props.settings?.booking_page_slug || user.value?.id;
-	return `${baseUrl}/book/${slug}`;
+	const orgSlug = (currentOrg.value as any)?.slug;
+	const userSlug = props.settings?.booking_page_slug || user.value?.id;
+	if (!orgSlug) return `${baseUrl}/book/—/${userSlug}`;
+	return `${baseUrl}/book/${orgSlug}/${userSlug}`;
 });
+const bookingUrlReady = computed(() => !!(currentOrg.value as any)?.slug);
 
 const copyBookingLink = async () => {
 	await navigator.clipboard.writeText(bookingUrl.value);
@@ -156,11 +163,13 @@ const formatFollowUpDate = (event: CalendarEvent) => {
 				/>
 				<button
 					@click="copyBookingLink"
-					class="p-1.5 rounded-lg bg-muted/30 hover:bg-muted/60 transition-colors ios-press"
+					:disabled="!bookingUrlReady"
+					class="p-1.5 rounded-lg bg-muted/30 hover:bg-muted/60 transition-colors ios-press disabled:opacity-40 disabled:cursor-not-allowed"
 				>
 					<UIcon name="i-heroicons-clipboard" class="w-3.5 h-3.5 text-muted-foreground" />
 				</button>
 			</div>
+			<p v-if="!bookingUrlReady" class="text-[10px] text-amber-500 mt-1.5">Pick an active organization to generate the URL.</p>
 		</div>
 	</div>
 </template>

@@ -235,18 +235,45 @@ export function useCalendarEvents() {
 			const creatorAvatar = creatorFromMap?.avatar
 				|| (apt.user_created && typeof apt.user_created === 'object' ? apt.user_created.avatar : null)
 				|| null;
-			const hostName = vm?.host_identity || creatorName;
 
-			if (hostName) members.push({ name: hostName, role: 'host' });
+			// Host row resolution. We previously pushed the host first from
+			// `host_identity || creatorName` and then skipped the creator in
+			// the attendees loop. That dropped the host entirely when both
+			// strings were empty (orgUserMap not loaded yet + `user_created`
+			// returned as a bare ID due to read perms) — leaving only the
+			// non-host attendee in `members[]`. Resolve the host name from
+			// the richer attendees join when possible so the host always
+			// shows up, even if name lookup elsewhere fails.
+			const attendeeUser = (a: any) => a?.directus_users_id;
+			const attendeeUserId = (a: any) => {
+				const u = attendeeUser(a);
+				return typeof u === 'object' ? u?.id : u;
+			};
+			const attendeeUserName = (a: any) => {
+				const u = attendeeUser(a);
+				if (!u) return '';
+				if (typeof u === 'object') {
+					return `${u.first_name || ''} ${u.last_name || ''}`.trim() || (u.email ?? '');
+				}
+				return orgUserMap.value[u]?.name || '';
+			};
+			const hostFromAttendees = creatorId
+				? attendeesArr.find((a: any) => attendeeUserId(a) === creatorId)
+				: null;
+			const hostDisplayName = (hostFromAttendees ? attendeeUserName(hostFromAttendees) : '')
+				|| vm?.host_identity
+				|| creatorName
+				|| '';
+
+			if (hostDisplayName || creatorId) {
+				members.push({ name: hostDisplayName || 'Host', role: 'host' });
+			}
 			for (const a of attendeesArr) {
-				const u = a?.directus_users_id;
-				if (!u) continue;
-				const userId = typeof u === 'object' ? u.id : u;
+				const userId = attendeeUserId(a);
+				if (!userId) continue;
 				// Skip the host row — they already lead the list.
-				if (userId && creatorId && userId === creatorId) continue;
-				const fullName = typeof u === 'object'
-					? `${u.first_name || ''} ${u.last_name || ''}`.trim()
-					: '';
+				if (creatorId && userId === creatorId) continue;
+				const fullName = attendeeUserName(a);
 				if (!fullName) continue;
 				members.push({ name: fullName, role: 'attendee' });
 			}
@@ -281,7 +308,7 @@ export function useCalendarEvents() {
 				recording_enabled: !!vm?.recording_enabled,
 				transcription_enabled: !!vm?.transcription_enabled,
 				waiting_room_enabled: !!vm?.waiting_room_enabled,
-				host_name: hostName || null,
+				host_name: hostDisplayName || null,
 				attendee_count: attendeeCount + (vm?.invitee_email && attendeeCount === 0 ? 1 : 0),
 				members,
 				client_id: (typeof vm?.client === 'object' ? vm?.client?.id : vm?.client) || null,

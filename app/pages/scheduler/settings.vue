@@ -1,30 +1,62 @@
 <!-- pages/scheduler/settings.vue -->
+<!--
+  Scheduler Settings — Apps Layout edition.
+
+  Was a legacy LayoutPageContainer + UTabs page; rebuilt to match the Work /
+  Money / Organization pattern: apps shell + <AppHeader> + <AppFloorStrip> +
+  ios-card sections. Floors map to the original 5 tabs (General, Availability,
+  Booking Page, Calendar Sync, Notifications). The URL carries the active
+  floor via `?floor=<key>` so the gear-link from SchedulerHub deep-links into
+  whichever section the user was last on.
+-->
 <script setup>
-definePageMeta({ middleware: ['auth'] });
+import { Button } from '~/components/ui/button';
+
+definePageMeta({ layout: 'apps', middleware: ['auth'] });
 useHead({ title: 'Scheduler Settings | Earnest' });
 
 const { user } = useDirectusAuth();
+const { currentOrg } = useOrganization();
 const toast = useToast();
+const router = useRouter();
+const route = useRoute();
 
-// State
+// ── Floor strip ─────────────────────────────────────────────────────────────
+const FLOOR_KEYS = ['general', 'availability', 'booking', 'calendar', 'notifications'];
+
+const initialFloor = (() => {
+	const v = route.query.floor;
+	return typeof v === 'string' && FLOOR_KEYS.includes(v) ? v : 'general';
+})();
+const floor = ref(initialFloor);
+
+watch(floor, (next) => {
+	router.replace({ query: { ...route.query, floor: next === 'general' ? undefined : next } });
+});
+
+const floors = [
+	{ key: 'general', label: 'General', icon: 'lucide:settings' },
+	{ key: 'availability', label: 'Availability', icon: 'lucide:clock' },
+	{ key: 'booking', label: 'Booking Page', icon: 'lucide:link' },
+	{ key: 'calendar', label: 'Calendar Sync', icon: 'lucide:calendar' },
+	{ key: 'notifications', label: 'Notifications', icon: 'lucide:bell' },
+];
+
+// ── Settings state ──────────────────────────────────────────────────────────
 const saving = ref(false);
-const activeTab = ref(0);
 
-// Realtime subscription for scheduler_settings
 const {
 	data: settingsData,
 	error: settingsError,
 	refresh: refreshSettings,
 } = useRealtimeSubscription('scheduler_settings', ['*'], { user_id: { _eq: user.value?.id } });
 
-// Realtime subscription for availability
 const {
 	data: availabilityData,
 	error: availabilityError,
 	refresh: refreshAvailability,
 } = useRealtimeSubscription('availability', ['*'], { user_id: { _eq: user.value?.id } });
 
-// Initialize availability with defaults for all days
 const availability = ref({
 	monday: { enabled: true, start: '09:00', end: '17:00', breakStart: '', breakEnd: '' },
 	tuesday: { enabled: true, start: '09:00', end: '17:00', breakStart: '', breakEnd: '' },
@@ -35,16 +67,6 @@ const availability = ref({
 	sunday: { enabled: false, start: '09:00', end: '17:00', breakStart: '', breakEnd: '' },
 });
 
-// Tabs
-const tabs = [
-	{ key: 'general', label: 'General', icon: 'i-heroicons-cog-6-tooth' },
-	{ key: 'availability', label: 'Availability', icon: 'i-heroicons-clock' },
-	{ key: 'booking', label: 'Booking Page', icon: 'i-heroicons-link' },
-	{ key: 'calendar', label: 'Calendar Sync', icon: 'i-heroicons-calendar' },
-	{ key: 'notifications', label: 'Notifications', icon: 'i-heroicons-bell' },
-];
-
-// Options
 const durationOptions = [
 	{ label: '15 minutes', value: 15 },
 	{ label: '30 minutes', value: 30 },
@@ -82,7 +104,6 @@ const weekDays = [
 	{ label: 'Sunday', value: 'sunday' },
 ];
 
-// Form with defaults
 const form = reactive({
 	default_duration: 30,
 	default_meeting_type: 'general',
@@ -102,17 +123,22 @@ const form = reactive({
 	ical_feed_token: '',
 });
 
-// Computed
 const loading = computed(() => !settingsData.value && !settingsError.value);
-
 const settings = computed(() => settingsData.value?.[0] || null);
 
 const bookingUrl = computed(() => {
 	const config = useRuntimeConfig();
 	const baseUrl = config.public.siteUrl || (import.meta.client ? window.location.origin : '');
-	const slug = form.booking_page_slug || user.value?.id;
-	return `${baseUrl}/book/${slug}`;
+	const orgSlug = currentOrg.value?.slug;
+	const userSlug = form.booking_page_slug || user.value?.id;
+	// Pre-org URLs are intentionally non-functional — the route requires both
+	// segments. We surface a "pick an org" hint in the UI when no org is
+	// active so the user knows why the URL looks incomplete.
+	if (!orgSlug) return `${baseUrl}/book/—/${userSlug}`;
+	return `${baseUrl}/book/${orgSlug}/${userSlug}`;
 });
+
+const bookingUrlReady = computed(() => !!currentOrg.value?.slug);
 
 const icalFeedUrl = computed(() => {
 	const baseUrl = useRuntimeConfig().public.siteUrl || (import.meta.client ? window.location.origin : '');
@@ -132,7 +158,6 @@ const regenerateICalToken = async () => {
 	toast.add({ title: 'Feed token regenerated', description: 'Share the new URL with your calendar apps.', color: 'green' });
 };
 
-// Watch for settings changes and update form
 watch(
 	settings,
 	(newSettings) => {
@@ -147,7 +172,6 @@ watch(
 	{ immediate: true },
 );
 
-// Watch for availability changes
 watch(
 	availabilityData,
 	(newData) => {
@@ -169,52 +193,34 @@ watch(
 	{ immediate: true },
 );
 
-// Watch for errors
 watch(settingsError, (error) => {
-	if (error) {
-		console.warn('Settings subscription error:', error);
-	}
+	if (error) console.warn('Settings subscription error:', error);
 });
-
 watch(availabilityError, (error) => {
-	if (error) {
-		console.warn('Availability subscription error:', error);
-	}
+	if (error) console.warn('Availability subscription error:', error);
 });
 
-// Methods
 const schedulerSettingsItems = useDirectusItems('scheduler_settings');
 const availabilityItems = useDirectusItems('availability');
 
 const saveSettings = async () => {
 	saving.value = true;
 	try {
-		// First, check if we have settings from subscription
 		let existingSettingsId = settings.value?.id;
-
-		// If not loaded yet, fetch directly from Directus to check
 		if (!existingSettingsId) {
 			const existingSettings = await schedulerSettingsItems.list({
 				filter: { user_id: { _eq: user.value?.id } },
 				limit: 1,
 			});
-
 			if (existingSettings && existingSettings.length > 0) {
 				existingSettingsId = existingSettings[0].id;
 			}
 		}
-
 		if (existingSettingsId) {
-			// UPDATE existing settings
 			await schedulerSettingsItems.update(existingSettingsId, { ...form });
 		} else {
-			// CREATE new settings (only if none exist)
-			await schedulerSettingsItems.create({
-				user_id: user.value?.id,
-				...form,
-			});
+			await schedulerSettingsItems.create({ user_id: user.value?.id, ...form });
 		}
-
 		toast.add({ title: 'Settings saved', color: 'green' });
 		refreshSettings();
 	} catch (error) {
@@ -227,24 +233,15 @@ const saveSettings = async () => {
 const saveAvailability = async () => {
 	saving.value = true;
 	try {
-		// Delete existing availability for this user
 		if (availabilityData.value?.length) {
 			for (const item of availabilityData.value) {
 				await availabilityItems.remove(item.id);
 			}
 		}
-
-		// Create new records
 		const dayMapping = {
-			monday: 'Monday',
-			tuesday: 'Tuesday',
-			wednesday: 'Wednesday',
-			thursday: 'Thursday',
-			friday: 'Friday',
-			saturday: 'Saturday',
-			sunday: 'Sunday',
+			monday: 'Monday', tuesday: 'Tuesday', wednesday: 'Wednesday',
+			thursday: 'Thursday', friday: 'Friday', saturday: 'Saturday', sunday: 'Sunday',
 		};
-
 		for (const [day, data] of Object.entries(availability.value)) {
 			if (data.enabled) {
 				await availabilityItems.create({
@@ -259,7 +256,6 @@ const saveAvailability = async () => {
 				});
 			}
 		}
-
 		toast.add({ title: 'Availability saved', color: 'green' });
 		refreshAvailability();
 	} catch (error) {
@@ -273,7 +269,7 @@ const connectGoogle = async () => {
 	try {
 		const response = await $fetch('/api/calendar/google/auth-url');
 		window.location.href = response.url;
-	} catch (error) {
+	} catch {
 		toast.add({
 			title: 'Google Calendar not configured',
 			description: 'Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET',
@@ -289,7 +285,7 @@ const disconnectGoogle = async () => {
 		form.google_calendar_id = '';
 		refreshSettings();
 		toast.add({ title: 'Google Calendar disconnected', color: 'green' });
-	} catch (error) {
+	} catch {
 		toast.add({ title: 'Error disconnecting', color: 'red' });
 	}
 };
@@ -298,7 +294,7 @@ const connectOutlook = async () => {
 	try {
 		const response = await $fetch('/api/calendar/outlook/auth-url');
 		window.location.href = response.url;
-	} catch (error) {
+	} catch {
 		toast.add({
 			title: 'Outlook not configured',
 			description: 'Set AZURE_CLIENT_ID and AZURE_CLIENT_SECRET',
@@ -313,7 +309,7 @@ const disconnectOutlook = async () => {
 		form.outlook_calendar_enabled = false;
 		refreshSettings();
 		toast.add({ title: 'Outlook disconnected', color: 'green' });
-	} catch (error) {
+	} catch {
 		toast.add({ title: 'Error disconnecting', color: 'red' });
 	}
 };
@@ -323,9 +319,7 @@ const copyBookingLink = async () => {
 	toast.add({ title: 'Link copied', color: 'green' });
 };
 
-// Check URL params for OAuth callback status
 onMounted(() => {
-	const route = useRoute();
 	if (route.query.google === 'connected') {
 		toast.add({ title: 'Google Calendar connected!', color: 'green' });
 		form.google_calendar_enabled = true;
@@ -341,204 +335,236 @@ onMounted(() => {
 </script>
 
 <template>
-	<LayoutPageContainer>
-		<div class="flex items-center justify-between mb-6">
-			<div class="flex items-center gap-3">
-				<UButton color="gray" variant="ghost" icon="i-heroicons-arrow-left" to="/scheduler" />
-				<h1 class="text-2xl font-bold">Scheduler Settings</h1>
+	<div class="apps-page">
+		<AppHeader title="Scheduler Settings" back-label="Scheduler" :show-back="true">
+			<template #actions>
+				<Button
+					v-if="floor === 'availability'"
+					size="sm"
+					:disabled="saving"
+					@click="saveAvailability"
+				>
+					<Icon name="lucide:save" class="w-4 h-4 mr-1" />
+					{{ saving ? 'Saving…' : 'Save availability' }}
+				</Button>
+				<Button v-else size="sm" :disabled="saving" @click="saveSettings">
+					<Icon name="lucide:save" class="w-4 h-4 mr-1" />
+					{{ saving ? 'Saving…' : 'Save changes' }}
+				</Button>
+			</template>
+		</AppHeader>
+
+		<LayoutPageContainer>
+			<AppFloorStrip v-model="floor" :items="floors" aria-label="Scheduler settings sections" />
+
+			<div v-if="loading" class="flex flex-col items-center justify-center py-16 gap-3">
+				<Icon name="lucide:loader-2" class="w-6 h-6 text-muted-foreground animate-spin" />
+				<p class="text-sm text-muted-foreground">Loading settings…</p>
 			</div>
-			<UButton color="primary" :loading="saving" @click="saveSettings">Save Changes</UButton>
-		</div>
 
-		<div v-if="loading" class="text-center py-12">
-			<UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
-			<p class="text-sm text-muted-foreground mt-2">Loading settings...</p>
-		</div>
-
-		<div v-else class="flex gap-6">
-			<!-- Vertical Tab Navigation -->
-			<UTabs v-model="activeTab" :items="tabs" orientation="vertical" class="w-48 flex-shrink-0" />
-
-			<!-- Tab Content -->
-			<UCard class="flex-1">
-				<!-- General -->
-				<div v-if="activeTab === 0" class="space-y-6">
-					<h2 class="text-lg font-semibold">General Settings</h2>
-					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-						<UFormGroup label="Default Duration">
-							<USelect v-model="form.default_duration" :options="durationOptions" />
-						</UFormGroup>
-						<UFormGroup label="Default Meeting Type">
-							<USelect v-model="form.default_meeting_type" :options="meetingTypeOptions" />
-						</UFormGroup>
-						<UFormGroup label="Buffer Before (min)">
-							<UInput v-model.number="form.buffer_before" type="number" min="0" max="60" />
-						</UFormGroup>
-						<UFormGroup label="Buffer After (min)">
-							<UInput v-model.number="form.buffer_after" type="number" min="0" max="60" />
-						</UFormGroup>
-						<UFormGroup label="Timezone">
-							<USelect v-model="form.timezone" :options="timezoneOptions" />
-						</UFormGroup>
-					</div>
-				</div>
-
-				<!-- Availability -->
-				<div v-else-if="activeTab === 1" class="space-y-6">
-					<div class="flex items-center justify-between">
-						<h2 class="text-lg font-semibold">Availability</h2>
-						<UButton color="primary" size="sm" :loading="saving" @click="saveAvailability">Save Availability</UButton>
-					</div>
-					<div class="space-y-4">
-						<div
-							v-for="day in weekDays"
-							:key="day.value"
-							class="flex items-center gap-4 py-3 border-b border-border"
-						>
-							<div class="w-28">
-								<UCheckbox v-model="availability[day.value].enabled" :label="day.label" />
-							</div>
-							<template v-if="availability[day.value].enabled">
-								<UInput v-model="availability[day.value].start" type="time" class="w-28" size="sm" />
-								<span class="text-muted-foreground">to</span>
-								<UInput v-model="availability[day.value].end" type="time" class="w-28" size="sm" />
-								<span class="text-muted-foreground ml-4">Break:</span>
-								<UInput
-									v-model="availability[day.value].breakStart"
-									type="time"
-									class="w-24"
-									size="sm"
-									placeholder="Start"
-								/>
-								<span class="text-muted-foreground">-</span>
-								<UInput
-									v-model="availability[day.value].breakEnd"
-									type="time"
-									class="w-24"
-									size="sm"
-									placeholder="End"
-								/>
-							</template>
-							<span v-else class="text-muted-foreground text-sm">Unavailable</span>
+			<template v-else>
+				<!-- General ─────────────────────────────────────────────── -->
+				<template v-if="floor === 'general'">
+					<div class="ios-card p-5 space-y-5 max-w-3xl">
+						<div>
+							<h2 class="text-base font-semibold text-foreground">Defaults</h2>
+							<p class="text-xs text-muted-foreground mt-0.5">
+								Applied to new meetings when nothing else is specified.
+							</p>
 						</div>
-					</div>
-				</div>
-
-				<!-- Booking Page -->
-				<div v-else-if="activeTab === 2" class="space-y-6">
-					<h2 class="text-lg font-semibold">Booking Page</h2>
-					<UFormGroup label="Enable Public Booking">
-						<UToggle v-model="form.public_booking_enabled" />
-					</UFormGroup>
-					<UFormGroup label="Booking Page URL">
-						<div class="flex gap-2">
-							<UInput :model-value="bookingUrl" readonly class="flex-1" />
-							<UButton color="gray" icon="i-heroicons-clipboard" @click="copyBookingLink" />
-							<UButton color="gray" icon="i-heroicons-arrow-top-right-on-square" :to="bookingUrl" target="_blank" />
-						</div>
-					</UFormGroup>
-					<UFormGroup label="Custom URL Slug" hint="Leave empty to use your user ID">
-						<UInput v-model="form.booking_page_slug" placeholder="your-custom-slug" />
-					</UFormGroup>
-					<UFormGroup label="Page Title">
-						<UInput v-model="form.booking_page_title" placeholder="Schedule a meeting with me" />
-					</UFormGroup>
-					<UFormGroup label="Page Description">
-						<UTextarea v-model="form.booking_page_description" placeholder="Brief description" rows="3" />
-					</UFormGroup>
-				</div>
-
-				<!-- Calendar Sync -->
-				<div v-else-if="activeTab === 3" class="space-y-6">
-					<h2 class="text-lg font-semibold">Calendar Integrations</h2>
-					<p class="text-sm text-muted-foreground">Connect your calendars to sync events and block busy times.</p>
-
-					<!-- Google Calendar -->
-					<div class="p-4 border border-border rounded-lg">
-						<div class="flex items-center justify-between">
-							<div class="flex items-center gap-3">
-								<div class="w-10 h-10 bg-red-50 dark:bg-red-900/20 rounded-lg flex items-center justify-center">
-									<UIcon name="i-simple-icons-google" class="w-5 h-5 text-red-500" />
-								</div>
-								<div>
-									<div class="font-medium">Google Calendar</div>
-									<div class="text-sm" :class="form.google_calendar_enabled ? 'text-green-500' : 'text-muted-foreground'">
-										{{ form.google_calendar_enabled ? 'Connected' : 'Not connected' }}
-									</div>
-								</div>
-							</div>
-							<UButton v-if="!form.google_calendar_enabled" color="gray" @click="connectGoogle">Connect</UButton>
-							<UButton v-else color="red" variant="soft" @click="disconnectGoogle">Disconnect</UButton>
-						</div>
-						<div v-if="form.google_calendar_enabled" class="mt-4">
-							<UFormGroup label="Calendar ID">
-								<UInput v-model="form.google_calendar_id" placeholder="primary" />
+						<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+							<UFormGroup label="Default Duration">
+								<USelect v-model="form.default_duration" :options="durationOptions" />
+							</UFormGroup>
+							<UFormGroup label="Default Meeting Type">
+								<USelect v-model="form.default_meeting_type" :options="meetingTypeOptions" />
+							</UFormGroup>
+							<UFormGroup label="Buffer Before (min)">
+								<UInput v-model.number="form.buffer_before" type="number" min="0" max="60" />
+							</UFormGroup>
+							<UFormGroup label="Buffer After (min)">
+								<UInput v-model.number="form.buffer_after" type="number" min="0" max="60" />
+							</UFormGroup>
+							<UFormGroup label="Timezone">
+								<USelect v-model="form.timezone" :options="timezoneOptions" />
 							</UFormGroup>
 						</div>
 					</div>
+				</template>
 
-					<!-- Outlook Calendar -->
-					<div class="p-4 border border-border rounded-lg">
-						<div class="flex items-center justify-between">
-							<div class="flex items-center gap-3">
-								<div class="w-10 h-10 bg-blue-50 dark:bg-blue-900/20 rounded-lg flex items-center justify-center">
-									<UIcon name="i-simple-icons-microsoftoutlook" class="w-5 h-5 text-blue-500" />
+				<!-- Availability ─────────────────────────────────────────── -->
+				<template v-if="floor === 'availability'">
+					<div class="ios-card p-5 space-y-4 max-w-3xl">
+						<div>
+							<h2 class="text-base font-semibold text-foreground">Weekly availability</h2>
+							<p class="text-xs text-muted-foreground mt-0.5">
+								Hours your booking page offers slots within. Toggle a day off to block it entirely.
+							</p>
+						</div>
+						<div class="space-y-1">
+							<div
+								v-for="day in weekDays"
+								:key="day.value"
+								class="flex items-center gap-3 py-2.5 border-b border-border/30 last:border-b-0 flex-wrap"
+							>
+								<div class="w-28 shrink-0">
+									<UCheckbox v-model="availability[day.value].enabled" :label="day.label" />
 								</div>
-								<div>
-									<div class="font-medium">Outlook Calendar</div>
-									<div class="text-sm" :class="form.outlook_calendar_enabled ? 'text-green-500' : 'text-muted-foreground'">
-										{{ form.outlook_calendar_enabled ? 'Connected' : 'Not connected' }}
+								<template v-if="availability[day.value].enabled">
+									<UInput v-model="availability[day.value].start" type="time" class="w-28" size="sm" />
+									<span class="text-muted-foreground text-xs">to</span>
+									<UInput v-model="availability[day.value].end" type="time" class="w-28" size="sm" />
+									<span class="text-muted-foreground text-xs ml-2">Break:</span>
+									<UInput
+										v-model="availability[day.value].breakStart"
+										type="time"
+										class="w-24"
+										size="sm"
+										placeholder="Start"
+									/>
+									<span class="text-muted-foreground text-xs">–</span>
+									<UInput
+										v-model="availability[day.value].breakEnd"
+										type="time"
+										class="w-24"
+										size="sm"
+										placeholder="End"
+									/>
+								</template>
+								<span v-else class="text-muted-foreground text-xs">Unavailable</span>
+							</div>
+						</div>
+					</div>
+				</template>
+
+				<!-- Booking Page ─────────────────────────────────────────── -->
+				<template v-if="floor === 'booking'">
+					<div class="ios-card p-5 space-y-5 max-w-3xl">
+						<div class="flex items-start justify-between gap-4">
+							<div>
+								<h2 class="text-base font-semibold text-foreground">Booking page</h2>
+								<p class="text-xs text-muted-foreground mt-0.5">
+									Your public scheduling page that clients can use to book meetings.
+								</p>
+							</div>
+							<UFormGroup label="Enable">
+								<UToggle v-model="form.public_booking_enabled" />
+							</UFormGroup>
+						</div>
+
+						<UFormGroup label="Booking page URL" :hint="bookingUrlReady ? null : 'Pick an active organization to generate a URL'">
+							<div class="flex gap-2">
+								<UInput :model-value="bookingUrl" readonly class="flex-1 font-mono text-xs" />
+								<UButton color="gray" icon="i-heroicons-clipboard" :disabled="!bookingUrlReady" @click="copyBookingLink" />
+								<UButton color="gray" icon="i-heroicons-arrow-top-right-on-square" :disabled="!bookingUrlReady" :to="bookingUrlReady ? bookingUrl : undefined" target="_blank" />
+							</div>
+						</UFormGroup>
+						<UFormGroup label="Custom URL slug" hint="The user portion of the URL. Leave empty to use your user ID. Org slug is set in Organization settings.">
+							<UInput v-model="form.booking_page_slug" placeholder="your-custom-slug" />
+						</UFormGroup>
+						<UFormGroup label="Page title">
+							<UInput v-model="form.booking_page_title" placeholder="Schedule a meeting with me" />
+						</UFormGroup>
+						<UFormGroup label="Page description">
+							<UTextarea v-model="form.booking_page_description" placeholder="Brief description" rows="3" />
+						</UFormGroup>
+					</div>
+				</template>
+
+				<!-- Calendar Sync ────────────────────────────────────────── -->
+				<template v-if="floor === 'calendar'">
+					<div class="space-y-4 max-w-3xl">
+						<div class="ios-card p-5">
+							<div class="flex items-center justify-between">
+								<div class="flex items-center gap-3 min-w-0">
+									<div class="w-10 h-10 bg-red-50 dark:bg-red-900/20 rounded-lg flex items-center justify-center shrink-0">
+										<UIcon name="i-simple-icons-google" class="w-5 h-5 text-red-500" />
+									</div>
+									<div class="min-w-0">
+										<div class="font-medium text-sm">Google Calendar</div>
+										<div class="text-xs" :class="form.google_calendar_enabled ? 'text-emerald-500' : 'text-muted-foreground'">
+											{{ form.google_calendar_enabled ? 'Connected' : 'Not connected' }}
+										</div>
+									</div>
+								</div>
+								<UButton v-if="!form.google_calendar_enabled" color="gray" size="sm" @click="connectGoogle">Connect</UButton>
+								<UButton v-else color="red" variant="soft" size="sm" @click="disconnectGoogle">Disconnect</UButton>
+							</div>
+							<div v-if="form.google_calendar_enabled" class="mt-4">
+								<UFormGroup label="Calendar ID">
+									<UInput v-model="form.google_calendar_id" placeholder="primary" />
+								</UFormGroup>
+							</div>
+						</div>
+
+						<div class="ios-card p-5">
+							<div class="flex items-center justify-between">
+								<div class="flex items-center gap-3 min-w-0">
+									<div class="w-10 h-10 bg-blue-50 dark:bg-blue-900/20 rounded-lg flex items-center justify-center shrink-0">
+										<UIcon name="i-simple-icons-microsoftoutlook" class="w-5 h-5 text-blue-500" />
+									</div>
+									<div class="min-w-0">
+										<div class="font-medium text-sm">Outlook Calendar</div>
+										<div class="text-xs" :class="form.outlook_calendar_enabled ? 'text-emerald-500' : 'text-muted-foreground'">
+											{{ form.outlook_calendar_enabled ? 'Connected' : 'Not connected' }}
+										</div>
+									</div>
+								</div>
+								<UButton v-if="!form.outlook_calendar_enabled" color="gray" size="sm" @click="connectOutlook">Connect</UButton>
+								<UButton v-else color="red" variant="soft" size="sm" @click="disconnectOutlook">Disconnect</UButton>
+							</div>
+						</div>
+
+						<div class="ios-card p-5">
+							<div class="flex items-center justify-between mb-3">
+								<div class="flex items-center gap-3">
+									<div class="w-10 h-10 bg-violet-50 dark:bg-violet-900/20 rounded-lg flex items-center justify-center">
+										<UIcon name="i-heroicons-rss" class="w-5 h-5 text-violet-500" />
+									</div>
+									<div>
+										<div class="font-medium text-sm">iCal feed</div>
+										<div class="text-xs text-muted-foreground">Subscribe from any calendar app</div>
 									</div>
 								</div>
 							</div>
-							<UButton v-if="!form.outlook_calendar_enabled" color="gray" @click="connectOutlook">Connect</UButton>
-							<UButton v-else color="red" variant="soft" @click="disconnectOutlook">Disconnect</UButton>
-						</div>
-					</div>
-
-					<!-- iCal Feed -->
-					<div class="p-4 border border-border rounded-lg">
-						<div class="flex items-center justify-between mb-3">
-							<div class="flex items-center gap-3">
-								<div class="w-10 h-10 bg-violet-50 dark:bg-violet-900/20 rounded-lg flex items-center justify-center">
-									<UIcon name="i-heroicons-rss" class="w-5 h-5 text-violet-500" />
-								</div>
-								<div>
-									<div class="font-medium">iCal Feed</div>
-									<div class="text-sm text-muted-foreground">Subscribe from any calendar app</div>
-								</div>
+							<p class="text-xs text-muted-foreground mb-3">
+								Use this URL to subscribe to your Earnest calendar from Apple Calendar, Google Calendar, or any other app that supports iCal feeds.
+							</p>
+							<div class="flex gap-2 mb-2">
+								<UInput :model-value="icalFeedUrl" readonly size="sm" class="flex-1 text-xs font-mono" />
+								<UButton size="sm" color="gray" icon="i-heroicons-clipboard" @click="copyICalUrl">Copy</UButton>
 							</div>
+							<UButton size="xs" color="gray" variant="soft" @click="regenerateICalToken">
+								Regenerate token
+							</UButton>
+							<p class="text-[10px] text-muted-foreground mt-2">
+								Regenerating the token will invalidate the previous URL. Anyone subscribed with the old URL will need the new one.
+							</p>
 						</div>
-						<p class="text-xs text-muted-foreground mb-3">
-							Use this URL to subscribe to your Earnest calendar from Apple Calendar, Google Calendar, or any other app that supports iCal feeds.
-						</p>
-						<div class="flex gap-2 mb-2">
-							<UInput :model-value="icalFeedUrl" readonly size="sm" class="flex-1 text-xs font-mono" />
-							<UButton size="sm" color="gray" icon="i-heroicons-clipboard" @click="copyICalUrl">Copy</UButton>
-						</div>
-						<UButton size="xs" color="gray" variant="soft" @click="regenerateICalToken">
-							Regenerate Token
-						</UButton>
-						<p class="text-[10px] text-muted-foreground mt-2">
-							Regenerating the token will invalidate the previous URL. Anyone subscribed with the old URL will need the new one.
-						</p>
 					</div>
-				</div>
+				</template>
 
-				<!-- Notifications -->
-				<div v-else-if="activeTab === 4" class="space-y-6">
-					<h2 class="text-lg font-semibold">Notifications</h2>
-					<UFormGroup label="Send Confirmation Emails" hint="Send email when a meeting is booked">
-						<UToggle v-model="form.send_confirmations" />
-					</UFormGroup>
-					<UFormGroup label="Send Reminder Emails" hint="Send reminder before meetings">
-						<UToggle v-model="form.send_reminders" />
-					</UFormGroup>
-					<UFormGroup v-if="form.send_reminders" label="Reminder Time">
-						<USelect v-model="form.reminder_time" :options="reminderOptions" />
-					</UFormGroup>
-				</div>
-			</UCard>
-		</div>
-	</LayoutPageContainer>
+				<!-- Notifications ────────────────────────────────────────── -->
+				<template v-if="floor === 'notifications'">
+					<div class="ios-card p-5 space-y-5 max-w-3xl">
+						<div>
+							<h2 class="text-base font-semibold text-foreground">Email notifications</h2>
+							<p class="text-xs text-muted-foreground mt-0.5">
+								Pick which transactional emails Earnest sends on your behalf.
+							</p>
+						</div>
+						<UFormGroup label="Send confirmation emails" hint="Send email when a meeting is booked">
+							<UToggle v-model="form.send_confirmations" />
+						</UFormGroup>
+						<UFormGroup label="Send reminder emails" hint="Send reminder before meetings">
+							<UToggle v-model="form.send_reminders" />
+						</UFormGroup>
+						<UFormGroup v-if="form.send_reminders" label="Reminder time">
+							<USelect v-model="form.reminder_time" :options="reminderOptions" />
+						</UFormGroup>
+					</div>
+				</template>
+			</template>
+		</LayoutPageContainer>
+	</div>
 </template>
