@@ -85,8 +85,9 @@ const usOrder = computed(() => (viewLens.value === 'me' ? 2 : 1));
 
 // ── My Goals (scope=user) for the YOU band's right column ──
 // Shares state with the rest of useGoals consumers (e.g. GoalsSummaryWidget),
-// so this doesn't add a separate fetch.
-const { myGoals, goalProgress: goalProgressFn } = useGoals();
+// so this doesn't add a separate fetch. weeklyCheckinStreak (Stage 2.5)
+// is derived from snapshots already loaded by useGoals.
+const { myGoals, goalProgress: goalProgressFn, weeklyCheckinStreak } = useGoals();
 const topMyGoals = computed(() =>
 	(myGoals.value || [])
 		.filter((g: any) => g.status === 'active')
@@ -499,6 +500,7 @@ watch(activeTab, (t) => {
 							:team-rank="earnestState.teamRank"
 							:team-size="earnestState.teamSize"
 							:dimensions="earnestState.dimensions"
+							:weekly-checkin-streak="weeklyCheckinStreak"
 						/>
 
 						<!-- Stage 2.5: weekly check-in trigger pill. Renders only when

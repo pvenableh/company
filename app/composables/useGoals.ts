@@ -173,6 +173,45 @@ export const useGoals = () => {
 	const staleUserGoals = computed(() => myGoals.value.filter(isGoalStale));
 	const activeMyGoals = computed(() => myGoals.value.filter((g) => g.status === 'active'));
 
+	// Stage 2.5: weekly check-in streak. Counts consecutive ISO weeks (ending
+	// with the current week) that contain at least one snapshot on any
+	// scope=user goal owned by the viewer. Derived on-the-fly from snapshots
+	// already loaded by useGoals — no new query.
+	const weekKey = (d: Date) => {
+		// ISO week: Thursday-anchored. Cheap implementation.
+		const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+		const day = t.getUTCDay() || 7;
+		t.setUTCDate(t.getUTCDate() + 4 - day);
+		const yearStart = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
+		const wk = Math.ceil(((t.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+		return `${t.getUTCFullYear()}-W${String(wk).padStart(2, '0')}`;
+	};
+
+	const weeklyCheckinStreak = computed(() => {
+		const weeks = new Set<string>();
+		for (const g of myGoals.value) {
+			const snaps = (g.snapshots as GoalSnapshot[] | undefined) || [];
+			for (const s of snaps) {
+				if (!s.date_created) continue;
+				weeks.add(weekKey(new Date(s.date_created)));
+			}
+		}
+		if (weeks.size === 0) return 0;
+		let streak = 0;
+		const cursor = new Date();
+		// Walk backward week by week. Stop on first week with no snapshot.
+		// A safety cap prevents pathological infinite loops; 520 weeks ~= 10 years.
+		for (let i = 0; i < 520; i++) {
+			if (weeks.has(weekKey(cursor))) {
+				streak++;
+				cursor.setUTCDate(cursor.getUTCDate() - 7);
+			} else {
+				break;
+			}
+		}
+		return streak;
+	});
+
 	const goalsByScope = computed(() => {
 		const grouped: Record<string, Goal[]> = { user: [], team: [], client: [], organization: [] };
 		for (const goal of goals.value) {
@@ -229,6 +268,7 @@ export const useGoals = () => {
 		activeMyGoals,
 		staleUserGoals,
 		isGoalStale,
+		weeklyCheckinStreak,
 		goalsByScope,
 		goalsByCategory,
 		overdueGoals,

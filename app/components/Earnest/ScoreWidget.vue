@@ -20,7 +20,17 @@
 				</div>
 				<p class="text-xs font-medium mt-0.5" :class="tier.color">{{ tier.label }}</p>
 			</div>
-			<EarnestStreakIndicator :streak="streak" />
+			<div class="flex flex-col items-end gap-1">
+				<EarnestStreakIndicator :streak="streak" />
+				<!-- Stage 2.5: weekly check-in streak (separate signal from daily
+				     activity streak; only shows once user has at least 1 check-in). -->
+				<div v-if="weeklyCheckinStreak > 0" class="flex items-center gap-1">
+					<UIcon name="i-heroicons-arrow-path-rounded-square" class="w-3 h-3 text-emerald-500" />
+					<span class="text-[10px] font-medium text-muted-foreground tabular-nums">
+						{{ weeklyCheckinStreak }}-wk check-in
+					</span>
+				</div>
+			</div>
 		</div>
 
 		<p v-if="currentScore === 0 && totalEP === 0" class="text-[11px] text-muted-foreground text-center -mt-1">
@@ -64,6 +74,7 @@ const props = defineProps<{
 	teamRank: number | null;
 	teamSize: number | null;
 	dimensions: DimensionScores;
+	weeklyCheckinStreak?: number;
 }>();
 
 const { getScoreTier } = useEarnestScore();
