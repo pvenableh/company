@@ -15,6 +15,7 @@
  *
  * Mobile (< md) forces bottom via useAppsMode.
  */
+import { useMediaQuery } from '@vueuse/core';
 import { APP_ORDER, APP_FOOTER_ORDER, type AppAccent } from '~/composables/useAppAccent';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
 
@@ -76,6 +77,58 @@ function styleFor(app: AppAccent) {
 		'--rail-l': `${app.l}%`,
 	};
 }
+
+// ─── macOS-style cursor magnification (large + hover-capable only) ──────────
+// Tracks the pointer X across the rail and computes a per-chip scale based
+// on distance from the cursor. Disabled on touch, small screens, and the
+// vertical rails — only horizontal pills (top/bottom/floating) light up.
+const railEl = ref<HTMLElement | null>(null);
+const isLargeHoverCapable = useMediaQuery('(min-width: 1024px) and (hover: hover) and (pointer: fine)');
+const magnifyEnabled = computed(() => isHorizontal.value && isLargeHoverCapable.value);
+
+const itemScales = reactive<Record<string, number>>({});
+
+function applyMagnification(clientX: number) {
+	const root = railEl.value;
+	if (!root) return;
+	const items = root.querySelectorAll<HTMLElement>('[data-app-id]');
+	const reach = 110; // px — how far on either side the effect extends
+	const max = 0.35;  // chip can grow up to 1 + max = 1.35×
+	items.forEach((el) => {
+		const id = el.getAttribute('data-app-id');
+		if (!id) return;
+		const rect = el.getBoundingClientRect();
+		const center = rect.left + rect.width / 2;
+		const dx = Math.abs(clientX - center);
+		const t = dx >= reach ? 0 : 1 - dx / reach;
+		// Smoothstep for an organic curve — pulls the falloff closer to
+		// the cursor so neighbours stay relatively flat until the cursor
+		// is near them, then grow quickly. Matches Dock's feel.
+		const eased = t * t * (3 - 2 * t);
+		itemScales[id] = 1 + eased * max;
+	});
+}
+
+function resetMagnification() {
+	for (const key of Object.keys(itemScales)) itemScales[key] = 1;
+}
+
+function onPointerMove(e: PointerEvent) {
+	if (!magnifyEnabled.value) return;
+	if (e.pointerType !== 'mouse') return;
+	applyMagnification(e.clientX);
+}
+
+function onPointerLeave() {
+	resetMagnification();
+}
+
+function chipMagnifyStyle(appId: string) {
+	if (!magnifyEnabled.value) return undefined;
+	const s = itemScales[appId];
+	if (!s || s === 1) return undefined;
+	return { transform: `scale(${s})` };
+}
 </script>
 
 <template>
@@ -87,7 +140,10 @@ function styleFor(app: AppAccent) {
 				isHorizontal ? 'app-rail--horizontal' : 'app-rail--vertical',
 				horizontalLabelsHidden && 'app-rail--icons-only',
 			]"
+			ref="railEl"
 			aria-label="Apps"
+			@pointermove="onPointerMove"
+			@pointerleave="onPointerLeave"
 		>
 			<ul class="app-rail__group app-rail__group--main">
 				<li v-for="app in apps" :key="app.id">
@@ -98,9 +154,10 @@ function styleFor(app: AppAccent) {
 								class="app-rail__item"
 								:class="{ 'app-rail__item--active': activeId === app.id }"
 								:style="styleFor(app)"
+								:data-app-id="app.id"
 								:aria-label="app.name"
 							>
-								<span class="app-rail__chip">
+								<span class="app-rail__chip" :style="chipMagnifyStyle(app.id)">
 									<span class="app-rail__icon">
 										<Icon :name="app.icon" class="app-rail__icon-layer app-rail__icon-base" />
 										<span class="app-rail__icon-layer app-rail__icon-highlight-mask" aria-hidden="true">
@@ -134,9 +191,10 @@ function styleFor(app: AppAccent) {
 								class="app-rail__item"
 								:class="{ 'app-rail__item--active': activeId === app.id }"
 								:style="styleFor(app)"
+								:data-app-id="app.id"
 								:aria-label="app.name"
 							>
-								<span class="app-rail__chip">
+								<span class="app-rail__chip" :style="chipMagnifyStyle(app.id)">
 									<span class="app-rail__icon">
 										<Icon :name="app.icon" class="app-rail__icon-layer app-rail__icon-base" />
 										<span class="app-rail__icon-layer app-rail__icon-highlight-mask" aria-hidden="true">
@@ -180,19 +238,13 @@ function styleFor(app: AppAccent) {
 	justify-content: center;
 }
 
+/* Horizontal modes (top/bottom/floating) all use tight, uniform spacing
+ * — the rail-level gap (between the main and footer groups) matches the
+ * in-group gap below, so the divider-less floating pill and the
+ * divider-less top/bottom pills all read as one evenly spaced row. */
 .app-rail--horizontal {
 	@apply flex-row w-full px-3 py-1.5 overflow-x-auto justify-center items-center;
-	column-gap: 14px;
-}
-
-/* Floating rail: tighten the inter-group gap so the divider-less pill
- * reads as one row of evenly spaced icons. The 14px inherited above is
- * appropriate for top/bottom modes where the two groups have visual
- * weight, but on the compact floating pill it creates a noticeable
- * skip between the main and footer groups. Matching the rail-level
- * gap to the in-group gap (set below) makes spacing uniform. */
-.app-rail--floating {
-	column-gap: 3px;
+	column-gap: 2px;
 }
 
 .app-rail--left { @apply border-r; }
@@ -234,15 +286,7 @@ function styleFor(app: AppAccent) {
 
 .app-rail--horizontal .app-rail__group {
 	@apply flex-row items-center;
-	column-gap: 4px;
-}
-
-/* Floating rail uses a tighter, uniform gap. The override below matches
- * the rail-level column-gap on `.app-rail--floating` so the spacing
- * between Marketing→Organization (across the group boundary) matches
- * spacing inside each group. */
-.app-rail--floating .app-rail__group {
-	column-gap: 3px;
+	column-gap: 2px;
 }
 
 .app-rail--vertical .app-rail__group--main,
@@ -294,8 +338,15 @@ function styleFor(app: AppAccent) {
  * shade with a white icon and a colour rim, mirroring how iOS
  * highlights the selected dock icon. */
 .app-rail__chip {
-	@apply flex items-center justify-center shrink-0
-		transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)];
+	@apply flex items-center justify-center shrink-0;
+	/* Two-speed transition: background animates over 200ms for the
+	 * smooth hover/active wash, but transform is snappy (80ms) so the
+	 * cursor-driven magnification on horizontal rails tracks pointer
+	 * motion without visible lag. */
+	transition:
+		background 200ms cubic-bezier(0.16, 1, 0.3, 1),
+		transform 80ms ease-out,
+		box-shadow 200ms cubic-bezier(0.16, 1, 0.3, 1);
 	position: relative;
 	width: 38px;
 	height: 38px;
@@ -306,6 +357,16 @@ function styleFor(app: AppAccent) {
 	border-radius: 8px;
 	background: hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.15);
 }
+
+/* Magnification grows the chip outward from the rail edge so it doesn't
+ * get clipped by the pill's rounded background. Top rail anchors at
+ * top, bottom/floating anchor at bottom, vertical rails grow toward
+ * the page interior. */
+.app-rail--top .app-rail__chip { transform-origin: center top; }
+.app-rail--bottom .app-rail__chip,
+.app-rail--floating .app-rail__chip { transform-origin: center bottom; }
+.app-rail--left .app-rail__chip { transform-origin: left center; }
+.app-rail--right .app-rail__chip { transform-origin: right center; }
 
 /* Sheen overlay from the previous rich treatment isn't used in this
  * simpler iOS-icon style. The rule is kept so the ::after pseudo-element
