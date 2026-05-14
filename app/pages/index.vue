@@ -75,6 +75,12 @@ const router = useRouter();
 const marketingPulse = useMarketingPulse();
 watch(selectedOrg, () => marketingPulse.load(), { immediate: true });
 
+// ── View lens ("Me" lens initiative, Stage 2) ──
+// Persists per-user via `directus_users.view_lens`. This commit ships the
+// toggle UI + persistence only — band re-ranking lands in the follow-up
+// commit. Reading the lens here keeps the toggle reactive ahead of time.
+const { lens: viewLens, setLens: setViewLens } = useViewLens();
+
 // ── AI Tray ──
 const aiTrayOpen = ref(false);
 const aiTrayPrompt = ref('');
@@ -252,19 +258,51 @@ watch(activeTab, (t) => {
 		<!-- Action Board: shown when user IS logged in -->
 		<div v-if="user" class="min-h-screen bg-background">
 			<div class="max-w-screen-xl mx-auto px-4 pb-8 sm:px-6 lg:px-8 space-y-6">
-				<!-- Greeting + Assistant Button -->
-				<div class="flex items-end justify-between pt-2">
-					<div>
-						<h1 class="text-[28px] font-bold text-foreground tracking-tight leading-tight">{{ greeting }}</h1>
-						<p class="text-[15px] text-muted-foreground mt-0.5">{{ subtitle }}</p>
+				<!-- Greeting + Lens Toggle + Assistant Button -->
+				<div class="flex items-end justify-between gap-3 pt-2">
+					<div class="min-w-0">
+						<h1 class="text-[28px] font-bold text-foreground tracking-tight leading-tight truncate">{{ greeting }}</h1>
+						<p class="text-[15px] text-muted-foreground mt-0.5 truncate">{{ subtitle }}</p>
 					</div>
-					<button
-						@click="aiTrayPrompt = ''; aiTrayOpen = true"
-						class="flex items-center gap-1.5 px-3.5 py-2 bg-primary text-primary-foreground rounded-full shadow-sm transition-all duration-200 text-[13px] font-medium ios-press"
-					>
-						<EarnestIcon class="w-4 h-4" />
-						<span class="hidden sm:inline">Earnest</span>
-					</button>
+					<div class="flex items-center gap-2 shrink-0">
+						<!-- Lens toggle: re-ranks YOU vs US bands. No effect on what's shown,
+						     only the emphasis. -->
+						<div
+							class="flex items-center gap-0.5 p-0.5 bg-muted/40 rounded-full text-[12px] font-medium"
+							role="radiogroup"
+							aria-label="Command Center lens"
+						>
+							<button
+								type="button"
+								role="radio"
+								:aria-checked="viewLens === 'me'"
+								@click="setViewLens('me')"
+								class="px-2.5 sm:px-3 py-1 rounded-full transition-colors duration-150"
+								:class="viewLens === 'me' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+							>
+								<span class="hidden sm:inline">For me</span>
+								<span class="sm:hidden">Me</span>
+							</button>
+							<button
+								type="button"
+								role="radio"
+								:aria-checked="viewLens === 'org'"
+								@click="setViewLens('org')"
+								class="px-2.5 sm:px-3 py-1 rounded-full transition-colors duration-150"
+								:class="viewLens === 'org' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+							>
+								<span class="hidden sm:inline">For org</span>
+								<span class="sm:hidden">Org</span>
+							</button>
+						</div>
+						<button
+							@click="aiTrayPrompt = ''; aiTrayOpen = true"
+							class="flex items-center gap-1.5 px-3.5 py-2 bg-primary text-primary-foreground rounded-full shadow-sm transition-all duration-200 text-[13px] font-medium ios-press"
+						>
+							<EarnestIcon class="w-4 h-4" />
+							<span class="hidden sm:inline">Earnest</span>
+						</button>
+					</div>
 				</div>
 
 				<!-- Tab Switcher -->
