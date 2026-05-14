@@ -67,7 +67,18 @@ async function api<T = any>(path: string, init?: RequestInit): Promise<T> {
 }
 
 async function ensureReverseRelationField() {
-	// `/relations` ignores `filter[…]` params, so we list and pick client-side.
+	// Two pieces are required for the alias to actually be queryable:
+	//   a) `client_portal_users.user.meta.one_field` set to `'client_portal_users'`
+	//      so the relation declares the reverse pointer.
+	//   b) A `directus_fields` row for `directus_users.client_portal_users`
+	//      typed `alias`/`o2m`. Without (b) the alias is invisible to the
+	//      schema and any filter referencing `$CURRENT_USER.client_portal_users.X`
+	//      403s with "field client_portal_users in directus_users does not exist"
+	//      across *every* items request — not just the comments perm filter —
+	//      because Directus tries to resolve the substitution per request and
+	//      fails before the row filter is even applied.
+
+	// (a) relation patch
 	const all = await api<any[]>('/relations?limit=-1');
 	const rel = all.find(
 		(r) => r.collection === 'client_portal_users' && r.field === 'user',
@@ -76,19 +87,51 @@ async function ensureReverseRelationField() {
 		throw new Error('client_portal_users.user relation not found.');
 	}
 	if (rel.meta?.one_field === 'client_portal_users') {
-		console.log('✓ Reverse o2m directus_users.client_portal_users already exposed.');
+		console.log('✓ Relation one_field already set.');
+	} else {
+		console.log(
+			`Will set client_portal_users.user.meta.one_field = 'client_portal_users' ` +
+				`(currently: ${rel.meta?.one_field ?? '—'})`,
+		);
+		if (APPLY) {
+			await api(`/relations/client_portal_users/user`, {
+				method: 'PATCH',
+				body: JSON.stringify({ meta: { ...(rel.meta || {}), one_field: 'client_portal_users' } }),
+			});
+			console.log('  ✓ patched relation');
+		}
+	}
+
+	// (b) alias field row
+	let fieldExists = false;
+	try {
+		const f = await api<any>('/fields/directus_users/client_portal_users');
+		fieldExists = !!f;
+	} catch (e: any) {
+		// 404 / FORBIDDEN both mean "doesn't exist" for our purposes
+		fieldExists = false;
+	}
+	if (fieldExists) {
+		console.log('✓ directus_users.client_portal_users alias field already exists.');
 		return;
 	}
-	console.log(
-		`Will set client_portal_users.user.meta.one_field = 'client_portal_users' ` +
-			`(currently: ${rel.meta?.one_field ?? '—'})`,
-	);
+	console.log('Will create directus_users.client_portal_users alias field row');
 	if (!APPLY) return;
-	await api(`/relations/client_portal_users/user`, {
-		method: 'PATCH',
-		body: JSON.stringify({ meta: { ...(rel.meta || {}), one_field: 'client_portal_users' } }),
+	await api('/fields/directus_users', {
+		method: 'POST',
+		body: JSON.stringify({
+			field: 'client_portal_users',
+			type: 'alias',
+			meta: {
+				special: ['o2m'],
+				interface: 'list-o2m',
+				note: 'Active portal-user rows for this Directus user. Read-only o2m. Used by Client policy row filters.',
+				searchable: true,
+			},
+			schema: null,
+		}),
 	});
-	console.log('  ✓ patched relation');
+	console.log('  ✓ alias field created');
 }
 
 async function rewriteCommentPerms() {

@@ -11,9 +11,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { Switch } from '@/components/ui/switch';
 import type { RailPosition } from '~/composables/useAppsMode';
 
-const { railPosition, storedRailPosition, setRailPosition } = useAppsMode();
+const { railPosition, storedRailPosition, setRailPosition, railShowLabels, setRailShowLabels } = useAppsMode();
+
+const labelsToggleVisible = computed(
+	() => storedRailPosition.value === 'top' || storedRailPosition.value === 'bottom',
+);
 
 const options: Array<{ id: RailPosition; label: string; icon: string; hint: string }> = [
   { id: 'left', label: 'Left', icon: 'lucide:panel-left', hint: 'Vertical column on the left' },
@@ -87,6 +92,25 @@ async function handlePick(next: RailPosition) {
         class="mt-1.5 px-2 py-1.5 rounded-md bg-amber-500/10 text-[10px] text-amber-600 dark:text-amber-400 leading-snug"
       >
         Mobile forces Bottom. Your saved choice ({{ storedRailPosition }}) returns on wider screens.
+      </div>
+      <div
+        v-if="labelsToggleVisible"
+        class="mt-1.5 px-2 py-1.5 flex items-center gap-2.5 rounded-md hover:bg-muted/60 cursor-pointer"
+        @click="setRailShowLabels(!railShowLabels)"
+      >
+        <Icon name="lucide:case-sensitive" class="size-4 shrink-0 text-muted-foreground" />
+        <div class="flex-1 min-w-0">
+          <div class="text-xs font-medium leading-tight">Show app names</div>
+          <div class="text-[10px] text-muted-foreground leading-tight">
+            Labels appear next to each icon (lg screens and up).
+          </div>
+        </div>
+        <Switch
+          :model-value="railShowLabels"
+          class="shrink-0"
+          @update:model-value="setRailShowLabels"
+          @click.stop
+        />
       </div>
     </PopoverContent>
   </Popover>

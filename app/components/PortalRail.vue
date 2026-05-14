@@ -26,7 +26,7 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
 
 const route = useRoute();
-const { railPosition } = useAppsMode();
+const { railPosition, railShowLabels } = useAppsMode();
 const { user } = useDirectusAuth();
 const { countFor } = useUnreadByCategory();
 
@@ -106,6 +106,12 @@ const isHorizontal = computed(() =>
 	|| railPosition.value === 'floating',
 );
 
+// Label visibility for horizontal top/bottom rails. Mirrors AppRail.
+// Floating + vertical always hide via CSS. Mobile media-query also forces hide.
+const horizontalLabelsHidden = computed(
+	() => (railPosition.value === 'top' || railPosition.value === 'bottom') && !railShowLabels.value,
+);
+
 const showTooltip = computed(() =>
 	railPosition.value === 'left'
 	|| railPosition.value === 'right'
@@ -134,6 +140,7 @@ function styleFor(app: PortalAppAccent) {
 			:class="[
 				`portal-rail--${railPosition}`,
 				isHorizontal ? 'portal-rail--horizontal' : 'portal-rail--vertical',
+				horizontalLabelsHidden && 'portal-rail--icons-only',
 			]"
 			aria-label="Portal sections"
 		>
@@ -462,13 +469,32 @@ function styleFor(app: PortalAppAccent) {
 
 /* ── Label ───────────────────────────────────────────────────────── */
 .portal-rail--vertical .portal-rail__label,
-.portal-rail--floating .portal-rail__label {
+.portal-rail--floating .portal-rail__label,
+.portal-rail--icons-only .portal-rail__label {
 	@apply sr-only;
 }
 
-@media (max-width: 767px) {
+@media (max-width: 1023px) {
 	.portal-rail--horizontal .portal-rail__label {
 		@apply sr-only;
+	}
+	.portal-rail--horizontal .portal-rail__divider {
+		margin-left: 0;
+		margin-right: 0;
+	}
+}
+
+/* Mobile: tighter chip + gap so 8 items fit without clipping. */
+@media (max-width: 480px) {
+	.portal-rail--horizontal .portal-rail__group {
+		column-gap: 2px;
+	}
+	.portal-rail--horizontal .portal-rail__item {
+		padding: 4px 6px;
+	}
+	.portal-rail--horizontal .portal-rail__chip {
+		width: 22px;
+		height: 22px;
 	}
 }
 

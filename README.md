@@ -1,6 +1,6 @@
 # Earnest
 
-**Do good work.** An AI-powered business operating system built with [Nuxt 3](https://nuxt.com), [Vue 3](https://vuejs.org), and [Directus](https://directus.io) — designed around actionable experiences and intuitive movement. Every page is a surface you work from, not a report you read. Financials surface who owes you money. Your CRM shows who needs attention. Goals show one number — your progress — and what to do next. One platform replaces projects, invoicing, CRM, social media, email marketing, team channels, scheduling, goals, and AI-powered intelligence — all in one login. Because everything lives in one place, AI harnesses your entire operation to provide accurate, brand-aware suggestions and analysis that isolated apps never could. Organizations serve as the tenant boundary, with per-org roles, customizable permissions, and subscription plan gating.
+**Do good work.** An AI-powered business operating system built with [Nuxt 4](https://nuxt.com), [Vue 3](https://vuejs.org), and [Directus](https://directus.io) — designed around actionable experiences and intuitive movement. Every page is a surface you work from, not a report you read. Financials surface who owes you money. Your CRM shows who needs attention. Goals show one number — your progress — and what to do next. One platform replaces projects, invoicing, CRM, social media, email marketing, team channels, scheduling, goals, and AI-powered intelligence — all in one login. Because everything lives in one place, AI harnesses your entire operation to provide accurate, brand-aware suggestions and analysis that isolated apps never could. Organizations serve as the tenant boundary, with per-org roles, customizable permissions, and subscription plan gating.
 
 ### Information architecture: one destination per noun
 
@@ -16,22 +16,27 @@ Earnest ships with two companion apps: **CardDesk** — a networking CRM that tu
 - **Ticket Management** — Kanban board with drag-and-drop, custom statuses, service tagging, organization filtering, assignment modal, and detailed activity logs
 - **Project Management** — Visual Gantt-style timeline with milestones, Kanban board view, sub-tasks, event scheduling, file attachments, threaded conversations, emoji reactions, and a command-center–style project detail page with stats dashboard (ticket counts, task progress, billing totals, timeline), document uploads, invoice management, and project-scoped activity feed
 - **Expenses** — Full expense tracking with table and card views, 10 categories (Software & SaaS, Hardware & Equipment, Travel, Marketing & Ads, Office & Supplies, Contractor & Freelance, Hosting & Infrastructure, Insurance, Legal & Accounting, Other), billable/reimbursable flags, receipt attachments, vendor tracking, approval workflow (draft/submitted/approved/paid/rejected), project linking, advanced filtering (category, status, date range, billable-only), monthly comparison widget with top spending categories, and quarterly projections
-- **Invoicing & Payments** — Stripe-powered billing with table-first layout (default), invoice creation and editing, PDF generation (html2canvas + jsPDF), payment tracking, payout management, public payment links, and per-client billing fields (billing email, name, address, payment terms) with invoice-level billing snapshots for historical accuracy
+- **Invoicing & Payments** — Stripe-powered billing with table-first layout (default), invoice creation and editing, PDF generation (lazy-imported html2canvas + jsPDF), public payment links, and per-client billing fields (billing email, name, address, payment terms) with invoice-level billing snapshots for historical accuracy. **Rich-text line items** via TipTap on description and notes (sanitized with `dompurify`) with page-break CSS for clean print. **Time-block grouping** turns logged timer entries into HTML tables on the invoice; multi-select on the personal time tracker pulls timer blocks straight onto invoices. **Manual payment tracking** with per-method modals (cash / check / ACH / wire / other) and quick-action buttons for marking paid, with a payments card on each invoice that refreshes inline
+- **Stripe Connect for Payouts** — Each org can onboard a **Stripe Connect Standard** account so invoice payments land directly in the seller's Stripe — not the platform's. Onboarding link, "Manage on Stripe" deep-link for connected accounts, refresh and return URLs all flow through `/organization` settings. Earnest takes no fee on Connect-routed invoices; the platform Stripe account still handles Earnest's own SaaS subscriptions (and is used as a fallthrough for orgs that have not connected yet)
 - **Proposals & Contracts** — Block-based composer with a reusable `document_blocks` library (categories: Bio, References, Case Study, Deliverables, Pricing, Timeline, Terms, NDA, Cover, Other) for assembling pitches and agreements out of saved building blocks. Each document renders as an official, branded page (org logo + address + phone + email + website seller header, plus a cover-page layout when the first block is flagged with a page break) using the same `DocumentShell` chrome as invoices. **Convert proposal → contract** in one click; e-signature flow via public signing tokens (`/contracts/sign/[token]`); status timelines (draft → sent → accepted/signed → rejected/declined). Detail pages render the live document by default with PDF download (html2canvas + jsPDF), and toggle to Edit mode to compose blocks, set valid-until/effective dates, link contact/lead, and update metadata
 - **Document Themes** — One brand-wide aesthetic applied across every invoice, proposal, and contract you send. Three themes ship out of the box: **Classic** (clean white card, sans-serif, the default), **Editorial** (warm cream paper with serif body for traditional document feel), and **Mono** (minimal black-on-white with a configurable brand accent color). Org-level setting on the Organization Overview tab; the seller's chosen theme automatically applies to every client-facing render — list pages, preview routes, public payment+signing pages, and the PDF export
 - **Calendar-First CRM Hub** — Unified scheduling experience with three-column layout: CRM sidebar (today's agenda, lead follow-ups with stage colors, pipeline summary, pending requests, booking link) | interactive calendar (Reka UI) with color-coded event chips (green = video, blue = appointment, orange = follow-up) | day detail panel with quick actions. Deep lead integration: link meetings to pipeline leads, auto-fill invitee info from contacts, auto-create lead activities on meeting creation. Filter toggles for event types. Public booking links, availability management, Google Calendar and Outlook OAuth sync, iCal feed for subscribing from any calendar app, and built-in Daily.co video conferencing
+- **Video Meetings & Design Review** — Daily.co rooms with **auto-recording + live transcription** kicked off the moment the host joins (live "Transcribing" pill while it runs). After the call: notes/decisions tab on the meeting page, with AI **promotion to tasks** that writes into the regular task system via `tasks.source_meeting` FK. Drop a Figma file URL on a project event and the meeting room gets a side drawer that embeds the file (`DailyIframe.wrap()`-shared) with **last-write-wins presenter handoff** — when one person changes the frame, everyone follows. An annotation canvas overlays the embed for live drawing on Figma frames, with throttled broadcast (30 pts / 60ms), normalized coords, remote-cursor fade, and auto-clear on frame change. Daily webhooks are HMAC-verified via `DAILY_WEBHOOK_HMAC`
 - **Team Communication** — Slack-style channels per organization with threaded comments, @mentions, emoji reactions, and WebSocket-powered real-time messaging
 - **Social Media Management** — Compose, schedule, and publish to Instagram, TikTok, LinkedIn, Facebook Pages, and Threads; AI-powered content wizard generates platform-optimized posts with tailored copy, hashtags, and image suggestions; content calendar, engagement analytics, multi-client management, and OAuth account connections
 - **Email Marketing & Newsletters** — Block-based MJML newsletter builder with 17+ reusable blocks, drag-and-drop assembly, live preview, AI email wizard that generates complete templates from a brief description, mailing list management with deduplication, CSV contact import, merge-tag personalization via Handlebars, editable header/footer partials, one-click unsubscribe, "View in Browser" web links, and campaign send tracking via SendGrid
+- **Branded Email Shell** — A single org-wide email shell wraps both **transactional** (welcome, invoice, password reset, notification) and **marketing** (newsletter, campaign) sends through `renderOrgEmail()`. The org's logo, brand color, reply-to address, and mailing address render into every email. Marketing sends automatically append a **CAN-SPAM footer** (physical mailing address + one-click unsubscribe); transactional sends skip it. Live preview at `/api/email/preview` covers 10 templates, and the `/organization` settings page has an Email Branding card with an iframe preview that updates as you edit
 - **People & Companies (Unified CRM)** — Attention-first CRM that surfaces who needs follow-up, who owes money, and who you haven't talked to. Every person and company in one place. The `people` collection unifies contacts, clients, and CardDesk networking connections with a single relationship graph. Companies (formerly "clients") track the organizations you serve with status workflows (active, prospect, inactive, churned), industry tagging, brand direction, goals, target audience, services, and linked people/projects/tickets/invoices. People have tagging, custom fields, mailing list membership, subscription tracking, company associations, CSV import/export, **first-class partner/vendor/board/investor relationships via the `contact_connections` collection** (non-employment cross-client links with role + introduced-by tracking), and **sub-brand contact inheritance** that walks the `parent_client` chain so regular client-contacts surface on sub-brand detail pages without duplication
 - **Partner ROI Attribution** — Every won lead stores its `resulting_client` FK (set automatically on conversion). A "Leads Sourced" card on each contact's detail page rolls the attribution up into a 3-bucket view (won / open / lost with closed-$ and pipeline-$ totals) plus per-client breakdown. Partners always see the card; regular contacts see it only after winning their first deal
-- **Marketing Intelligence** — AI-powered marketing dashboard (`/marketing`) that aggregates data across contacts, social media, email campaigns, clients, revenue, projects, and tickets to generate a marketing health score (0-100), actionable insights, content velocity metrics, audience growth tracking, and AI-generated multi-channel campaign plans with email sequences, social posts, and KPIs
+- **Marketing Intelligence** — AI-powered marketing dashboard (`/marketing`) that aggregates data across contacts, social media, email campaigns, clients, revenue, projects, and tickets. Opens with a **recommendation feed** (the `marketing_recommendations` collection) — AI-surfaced "do this next" cards that turn into a campaign with one click. Below it: a KPI strip, action bar, email/social channel grid, Clean-Gantt timeline of active campaigns, and a marketing health score (0-100). Campaigns expand into **touches** (per-channel sends) and **per-contact variants** (`marketing_touches` / `marketing_touch_variants`) so a single campaign can ship tailored copy to different segments. Per-platform spec sheets on the social composer plus a heuristic recommendation engine to suggest the strongest channel for a given piece of content. AI-generated multi-channel campaign plans with email sequences, social posts, and KPIs
 - **AI Command Center** — AI-powered productivity engine that analyzes tickets, projects, tasks, invoices, contacts, deals, channels, social media, scheduling, and phone activity to generate prioritized action items, reminders, insights, and follow-ups; includes productivity scoring (0-100), customizable AI module preferences, team chat, financial analysis, social media–style activity timeline with reactions and comments, AI usage monitoring with server-side token enforcement and Stripe-powered token purchases, concise/regular response verbosity toggle, and persona-aware time-of-day greetings; supports Claude (Anthropic), GPT (OpenAI), and Gemini (Google) backends
 - **AI Contextual Sidebar** — "Ask Earnest" pane available on every entity detail page (lead, client, contact, project, invoice, ticket, team, proposal, channel, event, email template, list). The server-side **context broker** assembles a focused, tagged summary of the entity before each chat turn — `[Source: Pipeline]`, `[Source: Sourced Attribution]`, `[Source: Cross-Client Connections]`, `[Source: Client Hierarchy]`, `[Source: Email Engagement]` — so answers cite real row data instead of hallucinating. Entity-scoped chat sessions persist per user+entity and hydrate on reopen
+- **AI Mutations (Tool-Use Writes)** — When an entity context is present, the sidebar can also **act**, not just answer. Claude tool use is wired to three actions: `update_field` edits any field on the current entity, `reschedule_project` cascades start/due dates across nested events and milestones, and `add_task` creates a personal task linked to the entity. The sidebar sends `allowMutations: true` automatically on entity pages, so "shift this project a week later" or "set status to in review" lands as a real write instead of advice
 - **CRM Intelligence Engine** — AI-powered CRM analysis (`POST /api/crm/ai-intelligence`) that aggregates data across the unified People CRM (contacts, CardDesk networking connections, companies), projects, tasks, tickets, invoices, and deals pipeline — enriched with brand context (brand direction, goals, target audience, services) from organizations, companies, and teams. Four analysis modes: overview (health scores + actions), contact-strategy (segmentation + outreach cadence), growth-plan (targets + 4-week plan), and pipeline-review (deal analysis + revenue forecast)
 - **Goals** — Intuitive goal tracking with one big progress bar, AI-powered nudges for overdue goals, and streamlined filters (Active/Completed/All). Five goal types (financial, networking, performance, marketing, custom), AI-powered goal suggestions from the productivity engine, progress tracking with periodic snapshots, and integration with the AI Command Center for goal-aware prioritization and insights
 - **Organizations & Multi-Tenancy** — Multi-organization support with per-org roles (Owner, Admin, Manager, Member, Client), customizable permission matrices per role, team structures with focus and goals, member invitations, brand direction and strategy fields, subscription plan tiers, and cross-tab state sync
 - **Client Access Control** — Hybrid team-based and individual user access to clients. Owner/Admin roles see all clients; Manager/Member roles see only clients assigned to their teams plus any individual user overrides. Uses `clients_teams` and `clients_directus_users` junction tables with assignment UIs on the team detail and client detail pages
+- **Client Portal** — A separate, branded surface at `/portal/*` for your customers. Portal users get their own purpose-built dashboard, projects, tickets, invoices, proposals/contracts, messages, social analytics, and marketing activity views — all client-scoped automatically by middleware. Comments + emoji reactions on portal projects and tickets are **bidirectional** with staff threads, so a single conversation surface bridges your team and the client. Multi-root access lets a single portal contact see multiple client records (with an "Inherited" badge for sub-brand visibility through `parent_client` chains) and switch scope from a grouped picker. Per-category notification preferences and rail-badge unread counts. Mobile uses a bottom "More" sheet for nav. Portal users live in a dedicated `client_portal_users` collection (split out from `org_memberships` in 2026-05) and authenticate through a parallel portal-auth flow
 
 ### Supporting Features
 
@@ -41,7 +46,7 @@ Earnest ships with two companion apps: **CardDesk** — a networking CRM that tu
 - **Email Notifications** — Transactional emails via SendGrid for invoices, appointments, password resets, and team invitations
 - **Email Templates** — MJML-powered responsive email templates with block-based composition, design-time variables (`{{{triple braces}}}`), and runtime personalization (`{{double braces}}`)
 - **File Storage** — AWS S3 integration with presigned URLs for secure uploads
-- **Three Navigation Modes** — Choose your preferred workspace layout: **Spaces** (macOS-style sidebar with collapsible Work / Pipeline / Financials / Engage / Team sections, Hat picker for role-shaped presets, and an in-page pill nav that mirrors the active section), **Tabs** (iPadOS-style 5-tab top bar: Work, Pipeline, Financials, Engage, Chat), or **Home** (Apple TV-style card grid with breadcrumb drill-down). Mode persists per user via localStorage
+- **Four Navigation Modes** — Choose your preferred workspace layout: **Apps** (the new default — a thin app-rail with one icon per "app" — Work, Pipeline, Financials, Engage, Marketing, Clients, Settings — and a contextual second column for sub-nav. Detail surfaces open as full-height slide-overs so the list stays visible behind. Rail position and floating/docked chrome are user-configurable.), **Spaces** (classic macOS-style sidebar with collapsible Work / Pipeline / Financials / Engage / Team sections and an in-page pill nav that mirrors the active section), **Tabs** (iPadOS-style 5-tab top bar: Work, Pipeline, Financials, Engage, Chat), or **Home** (Apple TV-style card grid with breadcrumb drill-down). Mode persists per user via localStorage. (The earlier "Hats" role-preset picker has been retired in favor of the Apps Layout's per-app surfaces.)
 - **Unified Gantt Timeline** — Asana-style Gantt chart combining projects, project events, tickets, and personal tasks in a single interactive timeline. Supports nested (grouped by project) and flat (separate swimlanes) view modes, zoom controls, scroll-to-today, event selection, and expand/collapse — shown at the top of the Command Center and on the Projects page
 - **Floating Dock** — Draggable desktop toolbar with quick access to Tasks, Time Tracker, and AI assistant. Snaps to any screen corner with position persistence. Shows active task count badge and live timer display
 - **Theme System** — Four color themes (Glass, Ink, Mono, Chromatic) combined with four style variants (Modern, Classic, Casual, Bold). Mono and Chromatic themes generate full palettes from a single hue value. All combinations persist to localStorage with flash-of-unstyled-content prevention
@@ -60,7 +65,7 @@ Earnest ships with two companion apps: **CardDesk** — a networking CRM that tu
 
 | Layer | Technology |
 |---|---|
-| Framework | Nuxt 3, Vue 3, TypeScript |
+| Framework | Nuxt 4, Vue 3, TypeScript |
 | UI | shadcn-vue, Tailwind CSS v4, Reka UI |
 | Icons | @nuxt/icon (Heroicons, Lucide, Material Symbols) |
 | CMS / Backend | Directus (headless) |
@@ -120,6 +125,10 @@ Edit `.env` and fill in the required values. At minimum you need:
 | `NUXT_SESSION_PASSWORD` | Random string (>= 32 chars) for session cookie encryption. Generate with `openssl rand -base64 32` |
 | `DIRECTUS_URL` | URL of your Directus instance |
 | `DIRECTUS_SERVER_TOKEN` | Directus server token for server-side admin operations (webhooks, cron, etc.) |
+| `DAILY_API_KEY` | Daily.co REST API key for video meetings |
+| `DAILY_WEBHOOK_HMAC` | HMAC secret used to verify inbound Daily.co webhooks |
+| `PLAID_CLIENT_ID` / `PLAID_SECRET` / `PLAID_ENV` | Plaid credentials for the Bank Sync add-on (use `sandbox` for dev) |
+| `DEMO_USER_PASSWORD` / `DEMO_AGENCY_USER_PASSWORD` | Passwords for the seeded `/try-demo` users |
 
 See [`.env.example`](.env.example) for the full list of available variables.
 
@@ -156,47 +165,53 @@ The app will be available at `http://localhost:3000`.
 
 ## Project Structure
 
+Nuxt 4 layout — application code lives under `app/`, server code under `server/`, and shared types under `shared/`.
+
 ```
-├── pages/              # Route pages (Nuxt file-based routing)
-├── components/
-│   ├── Pages/          # Full-page components (SellSheet, etc.)
-│   ├── Tickets/        # Kanban board, dashboard, cards
-│   ├── Projects/       # Timeline, board, overview
-│   ├── Invoices/       # Invoice forms, PDF generation
-│   ├── Channels/       # Real-time messaging
-│   ├── Clients/        # Client forms, cards, user access assignment
-│   ├── Scheduler/      # CRM sidebar, day detail panel, event chips, meeting modals, booking
-│   ├── Marketing/     # Marketing intelligence dashboard, health score, campaign timeline
-│   ├── Expenses/       # Expense summary widget
-│   ├── CommandCenter/  # AI tray, suggestion cards, productivity meter, preferences, quick tasks widget, activity timeline, AI chat
-│   ├── Newsletter/     # Block builder, canvas, variable editor, partials
-│   ├── Contacts/       # Contact forms, tables, merge tag reference
-│   ├── Import/         # CSV column mapper
-│   ├── Social/         # Social media components, AI content wizard
-│   ├── ProjectTimeline/# Canvas-based timeline visualization
-│   ├── Comments/       # Threaded comment system
-│   ├── Reactions/      # Emoji reactions
-│   ├── Layout/         # Header, footer, navigation, notifications
-│   ├── Auth/           # Login, register, password reset forms
-│   ├── Form/           # Reusable form components (TipTap, uploads)
-│   ├── Payment/        # Stripe card and payment UI
-│   ├── Tasks/          # Quick task generator with AI suggestions and schedule grouping
-│   ├── Organization/   # Org settings, AI token management
-│   ├── Teams/          # Team management cards, modals, client assignment
-│   └── ui/             # shadcn-vue base components
-├── composables/        # Vue composables (auth, data fetching, real-time, etc.)
+├── app/
+│   ├── pages/              # Route pages (Nuxt file-based routing; includes /portal/*, /apps/*, /meetings/*)
+│   ├── layouts/            # default, client-portal, auth, blank, email
+│   ├── middleware/         # auth, guest, client-portal.global, active-org
+│   ├── plugins/            # Client-side plugins
+│   ├── composables/        # Vue composables (auth, data fetching, real-time, AI, plaid, portal scope, etc.)
+│   ├── assets/css/         # Tailwind CSS v4, theme system, fonts, variables
+│   └── components/
+│       ├── Layout/         # AppRail, PortalRail, AppRailPositionPicker, header, footer, notifications
+│       ├── Apps/           # Apps Layout app surfaces + slide-overs
+│       ├── Portal/         # PortalClientSelect, PortalAccess, InviteClientModal
+│       ├── Tickets/        # Kanban board, dashboard, cards
+│       ├── Projects/       # Timeline, board, overview
+│       ├── Invoices/       # Invoice forms, manual-payment modal, time-block tables, PDF generation
+│       ├── Channels/       # Real-time messaging
+│       ├── Clients/        # Client forms, cards, user access assignment
+│       ├── Scheduler/      # CRM sidebar, day detail panel, event chips, meeting modals, booking
+│       ├── Meetings/       # MeetingAnnotationCanvas, DesignFigmaEmbed, notes/decisions/promote tabs
+│       ├── Marketing/      # Recommendation feed, KPI strip, channel grid, Clean-Gantt
+│       ├── Expenses/       # Expense summary widget
+│       ├── CommandCenter/  # AI tray, suggestion cards, productivity meter, preferences, quick tasks widget, activity timeline, AI chat
+│       ├── Newsletter/     # Block builder, canvas, variable editor, partials, AI email wizard
+│       ├── Contacts/       # Contact forms, tables, merge tag reference
+│       ├── Import/         # CSV column mapper
+│       ├── Social/         # Social media components, AI content wizard, per-platform spec sheets
+│       ├── ProjectTimeline/# Canvas-based timeline visualization
+│       ├── Comments/       # Threaded comment system (CommentsSystem)
+│       ├── Reactions/      # Universal ReactionsBar
+│       ├── Auth/           # Login, register, password reset, portal-auth forms
+│       ├── Form/           # Reusable form components (TipTap, uploads)
+│       ├── Payment/        # Stripe card and payment UI, Connect onboarding
+│       ├── Tasks/          # Quick task generator with AI suggestions and schedule grouping
+│       ├── Organization/   # Org settings, email branding, Stripe Connect, document theme, AI token management
+│       ├── Document/       # DocumentShell, DocumentPdfGenerator, theme switcher
+│       ├── Teams/          # Team management cards, modals, client assignment
+│       └── ui/             # shadcn-vue base components
 ├── server/
-│   ├── api/            # API routes (auth, directus, stripe, email, social, org, etc.)
-│   ├── adapters/       # Social media platform adapters (Instagram, TikTok, LinkedIn, Facebook, Threads)
-│   ├── plugins/        # Nitro plugins (session hooks)
-│   └── utils/          # Server utilities (Directus client, crypto, logging)
-├── middleware/          # Route middleware (auth, guest)
-├── plugins/            # Client-side plugins
-├── layouts/            # Page layouts (default, auth, blank, email)
-├── types/              # TypeScript type definitions
-├── assets/css/         # Tailwind CSS, theme system, fonts, variables
-├── public/             # Static assets
-└── scripts/            # Setup and utility scripts
+│   ├── api/                # API routes (auth, directus, stripe, plaid, email, social, org, video, portal, marketing, etc.)
+│   ├── adapters/           # Social media platform adapters (Instagram, TikTok, LinkedIn, Facebook, Threads)
+│   ├── plugins/            # Nitro plugins (session hooks)
+│   └── utils/              # Server utilities (Directus, crypto, logging, renderOrgEmail, marketing-perms, daily)
+├── shared/                 # TypeScript types shared between app and server (use ~~/shared)
+├── public/                 # Static assets
+└── scripts/                # Setup, demo-seed, and one-off utility scripts
 ```
 
 ## Key Pages
@@ -233,10 +248,16 @@ The app will be available at `http://localhost:3000`.
 | Social Settings | `/social/settings` | Connect and manage platform accounts |
 | Clients | `/clients` | Client list with status filters and search |
 | Client Detail | `/clients/[id]` | Client overview with linked contacts, projects, and tickets |
-| Organization | `/organization` | Organization settings and member management |
+| Organization | `/organization` | Organization settings, email branding, Stripe Connect, document theme, member management |
 | Teams | `/organization/teams` | Team structure and roles |
 | Account | `/account` | User profile and settings |
 | Public Booking | `/book/[userId]` | Client-facing scheduling page |
+| Client Portal | `/portal` | Customer-facing dashboard (projects, tickets, invoices, proposals/contracts, messages, marketing activity, social analytics) — middleware-scoped to the active client |
+| Portal Tickets | `/portal/tickets` | Client-facing ticket list with Submit-a-Ticket CTA |
+| Try Demo | `/try-demo` | Public chooser landing for the Solo + Agency demo orgs |
+| Pitch | `/pitch` | Public investor pitch page with revenue calculator |
+| Contract Signing | `/contracts/sign/[token]` | Public, token-gated contract signature page |
+| Meeting Room | `/meetings/[id]` | Daily.co room with notes/decisions/promote tabs, Figma side-drawer, and annotation canvas |
 
 ## Multi-Tenant SaaS Architecture
 
@@ -284,6 +305,7 @@ All plans get all features. Differentiation is seats, AI tokens, and scan credit
 | Client Pack Pro | $59/mo | 10 client portal seats + 150K client tokens |
 | Client Pack Unlimited | $129/mo | Unlimited client seats + 500K client tokens |
 | Companion White-Label | $19/mo | Branded subdomain on earnest.guru |
+| Bank Sync (Plaid) | $9/mo | Connect bank + credit-card accounts; auto-import transactions for expense reconciliation, with manual refresh |
 
 **One-time purchases:** Token refills (100K/$9, 500K/$39, 1.5M/$99), Scan credits (100/$12, 500/$49).
 
@@ -318,6 +340,14 @@ The `planAllows(feature)` function in `useOrgRole()` gates only white-label by p
 | `availability` | Per-user weekly availability slots with break times |
 | `leads` | CRM pipeline: stages, scoring, `next_follow_up`, contact/org relations |
 | `lead_activities` | Lead activity log with `related_video_meeting` M2O to video_meetings |
+| `client_portal_users` | Dedicated portal-user identity (split from `org_memberships role='client'` in 2026-05); supports multi-root via multiple rows |
+| `meeting_notes` | Per-meeting notes, decisions, and discussion captured from `/meetings/[id]` |
+| `tasks.source_meeting` | FK on `tasks` set when the AI "promote to task" tool fires from a meeting |
+| `marketing_recommendations` | AI-surfaced "do this next" cards that feed the `/marketing` recommendation feed |
+| `marketing_touches` | Per-channel sends inside a campaign |
+| `marketing_touch_variants` | Per-contact-segment copy variants for a touch |
+| `document_blocks` | Reusable proposal/contract block library (Bio, Terms, Pricing, etc.) |
+| `proposals` / `contracts` | Block-composed documents with status timelines and signing tokens |
 | `testimonials` | Customer testimonials for the marketing site (CMS-managed, used by earnest-marketing) |
 | `partner_logos` | Partner/client logos for the marketing site carousel (CMS-managed, used by earnest-marketing) |
 
@@ -361,6 +391,17 @@ The `planAllows(feature)` function in `useOrgRole()` gates only white-label by p
 | `POST /api/phone/numbers/purchase` | Purchase a phone number for an org via Twilio sub-account |
 | `POST /api/video/setup-webhook` | One-time Daily.co webhook registration |
 | `POST /api/org/migrate-billing-to-clients` | Migrate billing data from organizations to client-level fields (supports dryRun) |
+| `GET /api/portal/scope` | Returns the portal user's accessible roots[] (with inherited sub-brands flagged) |
+| `POST /api/portal/set-active-scope` | Sets `portal_active_scope` cookie to the current client root |
+| `POST /api/portal/invite-client` | Idempotent invite by `(organization, user, client)` |
+| `POST /api/stripe/connect/onboard` | Creates a Stripe Connect Standard onboarding link for the org |
+| `POST /api/stripe/connect/dashboard` | "Manage on Stripe" deep-link for connected accounts |
+| `POST /api/plaid/link-token` | Mint a Plaid Link token (requires `bank_sync` add-on) |
+| `POST /api/plaid/exchange-token` | Exchange Plaid public token + persist access token |
+| `POST /api/plaid/refresh` | Manual refresh for a connected Plaid item |
+| `GET /api/email/preview?template=…` | Live preview for any of the 10 branded email templates |
+| `POST /api/ai/promote-meeting-notes` | Turn `meeting_notes` decisions/action items into real tasks |
+| `POST /api/org/cleanup-archived` | Daily Vercel cron (11:00 UTC) — purges orgs past the archive retention window (dry-run by default) |
 
 ### Migration Path
 
@@ -469,6 +510,41 @@ The platform implements a hybrid client access control system that combines team
 | `composables/useClients.ts` | Client queries filtered by `accessibleClientIds` based on role + assignments |
 | `components/Teams/ClientAssignment.vue` | UI for assigning clients to teams (team detail page sidebar) |
 | `components/Clients/UserAssignment.vue` | UI for assigning individual users to clients (client detail page sidebar) |
+
+## Client Portal
+
+A separate, branded surface where your customers self-serve everything you've shared with them — projects, tickets, invoices, proposals, contracts, marketing activity, and conversations — without ever seeing your internal staff UI.
+
+### Architecture
+
+| Concern | Implementation |
+|---|---|
+| Layout | `app/layouts/client-portal.vue` (independent of staff app shell) |
+| Routing | `app/middleware/client-portal.global.ts` redirects portal users away from staff routes, and staff users see a "View only" notice on portal pages |
+| Identity | Dedicated `client_portal_users` collection (split out from `org_memberships` in 2026-05); portal-auth flow is parallel to staff auth |
+| Multi-root | A single portal contact can have rows for multiple clients (e.g. parent + sub-brand); `portal_active_scope` cookie tracks the current root and `PortalClientSelect` shows a grouped picker. Sub-brand visibility walks the `parent_client` chain and shows an "Inherited" badge |
+| Conversations | `ReactionsBar` + `CommentsSystem` are reused on portal projects/tickets; permissions on `directus_users.client_portal_users` (reverse o2m alias) plus a 4-branch `_or` filter on the Portal + ClientManager policies make threads **bidirectional** between staff and portal |
+| Notifications | Per-category preferences; rail badges + mark-read-on-view; `emitNotification()` fan-out script seeds 8 Directus Flows |
+
+### Portal Pages
+
+| Route | Purpose |
+|---|---|
+| `/portal` | Dashboard with personalized activity, agenda, open invoices |
+| `/portal/projects` + `/portal/projects/[id]` | Read-only project board + detail with Gantt (the staff "Open Project" link is hidden when `portal=true`) |
+| `/portal/tickets` | Ticket list + Submit-a-Ticket CTA |
+| `/portal/invoices` + `/portal/invoices/[id]` | Invoice list + detail with public-style payment flow (anonymous links redirect into the portal when the viewer is a portal user) |
+| `/portal/proposals` / `/portal/contracts` | Read + sign documents (links route to staff-only routes are filtered out) |
+| `/portal/messages` | Bidirectional message threads |
+| `/portal/marketing` | Client's published social analytics + marketing activity view |
+
+### Inviting Portal Users
+
+`InviteClientModal` ships with two tabs:
+1. **Contact picker** — surface existing contacts with access badges (already invited / inherited / no access)
+2. **Email fallback** — invite an email that does not yet exist as a contact
+
+The `invite-client` server route is idempotent across `(organization, user, client)` so re-invites and access-grant top-ups are safe.
 
 ## CRM Intelligence Engine
 
@@ -720,26 +796,28 @@ Output directory: `.output`
 
 ## Roadmap
 
-The following features are planned for upcoming development phases:
-
-### In Progress
-
-- **Replace Role Checks** (Phase 3) — Refactor all `isAdmin()` / `hasAdminAccess()` checks to use `useOrgRole()` permission system; add `<PermissionGate>` renderless component; build admin page for editing org role permissions
-- **Registration & Invitation Flows** (Phase 4) — Sign-up creates user + org + default roles + owner membership; member invitation system with role selection; client invitation scoped to client records; welcome/invite email templates via MJML
-
 ### Planned
 
-- **Org-Scope Data Isolation** (Phase 5) — Ensure contacts, mailing lists, and email templates are org-scoped in all queries; add client filter support to contacts
-- **Client Portal** (Phase 6) — Simplified layout for client-role users with scoped access to their projects, tickets, and messages; middleware to redirect client users away from admin routes
+- **"Me" lens + Calendly-style booking pipeline** — Unified goal schema across user/team/client/org scope, re-stacked Command Center (You / Us / Reference), Calendly-equivalent event types + intake + auto-logged activity, paid bookings + embed, CRM Intelligence dashboard, and a unified client-scoped Inbox
 - **SendGrid Email Activity Tracking** — Webhook endpoint to receive SendGrid events (opens, clicks, bounces, spam reports); `email_activity` collection for per-recipient event history; automatic bounce handling and contact status updates
-- **Chat Widget** — Frontend UI for the existing `ai_chat_sessions` / `ai_chat_messages` Directus collections; `useAIChat` composable; streaming AI responses; persistent conversation history
-- **Notification Email Pipeline** — Unified transactional email handler for form submissions, sign-ups, ticket updates, and appointment confirmations using the existing MJML compiler + Handlebars system
-- **~~Subscription Plan Gating~~** — ✅ Implemented: `planAllows()`, `hasAddon()`, server-side token/scan enforcement, add-on billing
-- **~~SSO (Google & Apple Sign-In)~~** — ✅ Implemented: Directus-based SSO with graceful fallback; see `docs/directus-sso-setup.md`
-- **~~Calendar Timezone Fix~~** — ✅ Fixed: Dynamic timezone from user settings instead of hardcoded America/New_York
-- **~~Daily.co Video~~** — ✅ Implemented: Replaced Twilio Video with Daily.co; `server/utils/daily.ts`
 - **Apple Calendar (CalDAV)** — Future: requires CalDAV client implementation, not a REST API
-- **~~Domain Migration~~** — ✅ Completed: Migrated from `huestudios.company` to `earnest.guru`; app at `app.earnest.guru`, admin at `admin.earnest.guru`, marketing at `earnest.guru` (separate repo)
+
+### Recently Shipped
+
+- **~~Apps Layout~~** — ✅ Phases 0–7 shipped 2026-05-09 — new app-rail navigation as default, slide-overs on Work projects + meetings + Marketing campaigns, Activity feed under `/apps/clients/[id]?tab=activity`, retirement of the Hats role-preset picker
+- **~~Client Portal~~** — ✅ Phases 1–2 shipped 2026-05-05; multi-root + inherited-access UX and per-category notifications wired up 2026-05-13. 10 client-scoped pages under `/portal/*`, bidirectional comments + reactions, mobile "More" sheet nav, dedicated `client_portal_users` collection
+- **~~Branded Email Shell~~** — ✅ Stages 1–3 shipped 2026-05-13. Transactional + marketing senders on a single `renderOrgEmail()`, CAN-SPAM footer on marketing, `/api/email/preview` for 10 templates, live preview iframe on `/organization`
+- **~~Stripe Connect Standard~~** — ✅ Shipped 2026-05-08. Per-org Connect onboarding, invoice payouts route to the seller's Stripe, "Manage on Stripe" deep-link, platform fallthrough for un-onboarded orgs
+- **~~Invoicing Overhaul~~** — ✅ Shipped 2026-05-07. Manual payment tracking, rich-text line items, time-block grouping from the timer
+- **~~Plaid Bank Sync~~** — ✅ Code complete 2026-05-07 (Phases 1+2); awaiting live Stripe Product wiring + Plaid prod env
+- **~~Video Auto-Record + Annotation + Figma Sync~~** — ✅ Shipped 2026-05-06 across three sessions. Host auto-starts recording + transcription, `MeetingAnnotationCanvas` overlay, Figma frame embed with presenter handoff, `meeting_notes` capture + AI promote-to-tasks
+- **~~AI Mutations (Tool Use)~~** — ✅ Shipped 2026-05-05. `update_field`, `reschedule_project`, `add_task` tool calls from the contextual sidebar
+- **~~Document Themes + Branded Contracts/Proposals~~** — ✅ Shipped 2026-05-05. 3 themes on `.doc-shell`, org-level `document_theme` + `document_accent`, generic `DocumentPdfGenerator`
+- **~~Subscription Plan Gating~~** — ✅ `planAllows()`, `hasAddon()`, server-side token/scan enforcement, add-on billing
+- **~~SSO (Google & Apple Sign-In)~~** — ✅ Directus-based SSO with graceful fallback; see `docs/directus-sso-setup.md`
+- **~~Daily.co Video~~** — ✅ Replaced Twilio Video with Daily.co; `server/utils/daily.ts`
+- **~~Domain Migration~~** — ✅ Migrated to `earnest.guru`; app at `app.earnest.guru`, admin at `admin.earnest.guru`, marketing at `earnest.guru` (separate repo)
+- **~~Demo Mode~~** — ✅ Two-tier demo at `/try-demo` (Solo + Agency seeded orgs) with a Member login for Solo and a 5-user Agency org; 10K AI tokens/mo budget
 
 ## Stripe Subscription Setup
 
@@ -828,3 +906,23 @@ STRIPE_PRICE_ADDON_WHITE_LABEL=price_xxx
 | `composables/useSubscription.ts` | Client-side subscription state composable |
 | `composables/useOrgRole.ts` | Role checks + `planAllows()` + `hasAddon()` |
 | `components/Organization/TokenMeter.vue` | Live token usage bar (compact for sidebar, full for billing page) |
+
+### Stripe Connect Standard (Invoice Payouts)
+
+Earnest orgs can connect their own Stripe account so invoice payments route **directly to the seller** — Earnest takes no fee, and money never touches the platform balance.
+
+- **Onboarding** — From `/organization`, an "Connect Stripe" CTA opens a Stripe-hosted onboarding flow (`account_link.create` with the org's `stripe_account_id`). Refresh + return URLs round-trip back into the app.
+- **Manage on Stripe** — Once connected, the same card swaps to a "Manage on Stripe" deep-link.
+- **Webhook routing** — `paymentchange.ts` reads `event.account` so Connect events update the right org. Receipt URLs come from `charge.retrieve` (not the payment_intent alone).
+- **Fallthrough** — Orgs that have not connected fall back to the platform Stripe account (this is how Earnest's own SaaS subscriptions and the "Earnest by Hue" invoices both work on a single Stripe account).
+
+## Plaid Bank Sync (Add-On)
+
+The `$9/mo` Bank Sync add-on connects an org's bank and credit-card accounts via Plaid so transactions auto-import for expense reconciliation. Gated server-side by `hasAddon('bank_sync')` after a Stripe entitlement check.
+
+| File | Purpose |
+|---|---|
+| `server/api/plaid/link-token.post.ts` | Mint a Plaid Link token for the connect modal |
+| `server/api/plaid/exchange-token.post.ts` | Exchange the public token, store the access token encrypted on the org |
+| `server/api/plaid/refresh.post.ts` | Manual refresh (the `transactions` product is $0.30/acct/mo, refresh $0.12 each — see ops notes) |
+| `composables/usePlaid.ts` | Client-side connect, list, refresh |
