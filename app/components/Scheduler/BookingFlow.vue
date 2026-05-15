@@ -191,6 +191,16 @@ const formatIntakeForDescription = () => {
 	return lines.length > 0 ? `\n\n---\nIntake:\n${lines.join('\n')}` : '';
 };
 
+// Stage 5: paid event types route through Stripe Checkout. The submit button
+// label below switches to "Continue to payment" when this is truthy.
+const isPaid = computed(() => (eventType.value?.price_cents ?? 0) > 0);
+const priceLabel = computed(() => {
+	const c = eventType.value?.price_cents ?? 0;
+	if (!c) return null;
+	const dollars = c / 100;
+	return dollars % 1 === 0 ? `$${dollars}` : `$${dollars.toFixed(2)}`;
+});
+
 async function submitBooking() {
 	if (!bookingForm.name || !bookingForm.email) {
 		toast.add({ title: 'Please fill in required fields', color: 'red' });
@@ -201,6 +211,36 @@ async function submitBooking() {
 		const startTime = selectedTime.value.time;
 		const endTime = new Date(startTime.getTime() + duration.value * 60000);
 		const intakeBlock = formatIntakeForDescription();
+
+		if (isPaid.value && eventType.value?.id) {
+			// Build the URL we'll come back to. The success URL adds session_id +
+			// keeps the eventTypeSlug intact so we can resolve the merchant org.
+			const here = new URL(window.location.href);
+			here.search = '';
+			const successUrl = `${here.toString()}?session_id={CHECKOUT_SESSION_ID}`;
+			const cancelUrl = `${here.toString()}?canceled=1`;
+
+			const checkout = await $fetch('/api/scheduler/booking-checkout', {
+				method: 'POST',
+				body: {
+					hostUserId: props.hostUser.id,
+					eventTypeId: eventType.value.id,
+					scheduledStart: startTime.toISOString(),
+					scheduledEnd: endTime.toISOString(),
+					durationMinutes: duration.value,
+					inviteeName: bookingForm.name,
+					inviteeEmail: bookingForm.email,
+					inviteePhone: bookingForm.phone || undefined,
+					bookingNotes: (bookingForm.notes || '') + intakeBlock,
+					intakeResponses: hasIntake.value ? { ...intakeAnswers } : null,
+					successUrl,
+					cancelUrl,
+				},
+			});
+			window.location.href = checkout.url;
+			return;
+		}
+
 		const response = await $fetch('/api/scheduler/book', {
 			method: 'POST',
 			body: {
@@ -226,10 +266,90 @@ async function submitBooking() {
 	}
 	submitting.value = false;
 }
+
+// Embed mode: when this booking page is loaded inside an iframe via /embed.js,
+// the URL carries ?embed=1. We use it to (a) tell the parent we're done so it
+// can close the modal, and (b) tighten layout (deferred — host page wraps it).
+const isEmbedded = computed(() => route.query.embed === '1');
+
+function notifyEmbedHost(type) {
+	if (!import.meta.client) return;
+	if (window.parent === window) return;
+	try {
+		window.parent.postMessage({ type, source: 'earnest' }, '*');
+	} catch (_) { /* parent unreachable; ignore */ }
+}
+
+// When booking lands in `done`, emit so the embed modal can auto-close after
+// a beat (gives the user time to see the confirmation card).
+watch(currentStage, (s) => {
+	if (s === 'done' && isEmbedded.value) {
+		setTimeout(() => notifyEmbedHost('earnest:booking:done'), 4000);
+	}
+});
+
+// Stripe-return path: if we land here with ?session_id=… or ?canceled=1, react.
+const finalizingPayment = ref(false);
+const paymentError = ref('');
+
+async function handleStripeReturn() {
+	if (route.query.canceled === '1') {
+		toast.add({ title: 'Payment canceled', description: 'Your meeting was not booked. Try again when you\'re ready.', color: 'amber' });
+		const next = { ...route.query };
+		delete next.canceled;
+		router.replace({ query: next });
+		return;
+	}
+
+	const sessionId = typeof route.query.session_id === 'string' ? route.query.session_id : null;
+	if (!sessionId || !eventType.value?.id) return;
+
+	finalizingPayment.value = true;
+	paymentError.value = '';
+	try {
+		const response = await $fetch('/api/scheduler/checkout-success', {
+			method: 'POST',
+			body: { sessionId, eventTypeId: eventType.value.id },
+		});
+		createdMeeting.value = response.meeting;
+		stageIndex.value = stages.value.length - 1; // jump to "done"
+		const next = { ...route.query };
+		delete next.session_id;
+		router.replace({ query: next });
+		toast.add({ title: 'Payment received — meeting booked!', color: 'green' });
+	} catch (error) {
+		paymentError.value = error?.data?.message || error?.message || 'Failed to confirm booking.';
+		toast.add({ title: 'Couldn\'t confirm booking', description: paymentError.value, color: 'red' });
+	}
+	finalizingPayment.value = false;
+}
+
+onMounted(() => {
+	handleStripeReturn();
+});
 </script>
 
 <template>
 	<div>
+		<!-- Stage 5: confirming a Stripe Checkout return. -->
+		<div v-if="finalizingPayment" class="ios-card p-8 text-center mb-6">
+			<UIcon name="i-heroicons-arrow-path" class="w-8 h-8 text-primary mx-auto mb-3 animate-spin" />
+			<h2 class="text-base font-semibold mb-1">Confirming your payment…</h2>
+			<p class="text-xs text-muted-foreground">Don't close this page.</p>
+		</div>
+		<div v-if="paymentError && !finalizingPayment" class="ios-card p-5 mb-6 border-destructive/50">
+			<div class="flex items-start gap-3">
+				<UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+				<div class="min-w-0 flex-1">
+					<h2 class="text-sm font-semibold mb-1">Couldn't confirm your booking</h2>
+					<p class="text-xs text-muted-foreground">{{ paymentError }}</p>
+					<p class="text-xs text-muted-foreground mt-2">
+						If you were charged, contact the host with your receipt and they can confirm your meeting manually.
+					</p>
+				</div>
+			</div>
+		</div>
+
 		<!-- Picker view: no event type selected, or explicit ?picker=1 -->
 		<div v-if="!hasEventType">
 			<div v-if="eventTypes.length === 0" class="ios-card p-8 text-center">
@@ -254,7 +374,13 @@ async function submitBooking() {
 								/>
 								<span class="font-medium truncate">{{ et.title }}</span>
 							</div>
-							<span class="text-sm text-muted-foreground shrink-0">{{ et.duration }} min</span>
+							<div class="flex items-center gap-2 shrink-0">
+								<span
+									v-if="(et.price_cents ?? 0) > 0"
+									class="text-xs font-semibold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+								>${{ (et.price_cents / 100).toFixed(et.price_cents % 100 === 0 ? 0 : 2) }}</span>
+								<span class="text-sm text-muted-foreground">{{ et.duration }} min</span>
+							</div>
 						</div>
 						<p v-if="et.description" class="text-sm text-muted-foreground">{{ et.description }}</p>
 					</button>
@@ -271,7 +397,14 @@ async function submitBooking() {
 					:style="{ background: eventType.color || 'var(--primary)' }"
 				/>
 				<div class="min-w-0 flex-1">
-					<div class="font-medium truncate">{{ eventType.title }} <span class="text-muted-foreground font-normal">· {{ duration }} min</span></div>
+					<div class="font-medium truncate flex items-center gap-2 flex-wrap">
+						<span>{{ eventType.title }}</span>
+						<span class="text-muted-foreground font-normal">· {{ duration }} min</span>
+						<span
+							v-if="priceLabel"
+							class="text-xs font-semibold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+						>{{ priceLabel }}</span>
+					</div>
 					<p v-if="eventType.description" class="text-xs text-muted-foreground truncate">{{ eventType.description }}</p>
 				</div>
 				<NuxtLink
@@ -384,8 +517,11 @@ async function submitBooking() {
 						<UTextarea v-model="bookingForm.notes" placeholder="Anything you'd like us to know?" :rows="3" />
 					</UFormGroup>
 					<UButton type="submit" color="primary" size="lg" block :loading="submitting">
-						Confirm Booking
+						{{ isPaid ? `Continue to payment · ${priceLabel}` : 'Confirm Booking' }}
 					</UButton>
+					<p v-if="isPaid" class="text-[11px] text-muted-foreground text-center">
+						You'll be redirected to Stripe to complete payment. Your meeting is confirmed once payment succeeds.
+					</p>
 				</form>
 			</div>
 

@@ -385,6 +385,40 @@ const copyBookingLink = async () => {
 	toast.add({ title: 'Link copied', color: 'green' });
 };
 
+// Stage 5 — embed snippet generator. Defaults to default event type if any.
+const embedEventTypeSlug = ref('');
+const embedColor = ref('#6366F1');
+const embedLabel = ref('Book a call');
+
+watch(eventTypes, (rows) => {
+	if (!embedEventTypeSlug.value) {
+		const def = (rows || []).find((r) => r.is_default);
+		embedEventTypeSlug.value = def?.slug || '';
+	}
+}, { immediate: true });
+
+const embedSnippet = computed(() => {
+	const config = useRuntimeConfig();
+	const baseUrl = config.public.siteUrl || (import.meta.client ? window.location.origin : '');
+	const orgSlug = currentOrg.value?.slug || 'YOUR_ORG';
+	const userSlugPart = form.booking_page_slug || user.value?.id || 'YOUR_USER';
+	const attrs = [
+		`src="${baseUrl}/embed.js"`,
+		`data-org="${orgSlug}"`,
+		`data-user="${userSlugPart}"`,
+	];
+	if (embedEventTypeSlug.value) attrs.push(`data-event="${embedEventTypeSlug.value}"`);
+	if (embedLabel.value) attrs.push(`data-label="${embedLabel.value.replace(/"/g, '&quot;')}"`);
+	if (embedColor.value) attrs.push(`data-color="${embedColor.value}"`);
+	attrs.push('async');
+	return `<script ${attrs.join(' ')}><\/script>`;
+});
+
+const copyEmbedSnippet = async () => {
+	await navigator.clipboard.writeText(embedSnippet.value);
+	toast.add({ title: 'Snippet copied', color: 'green' });
+};
+
 onMounted(() => {
 	if (route.query.google === 'connected') {
 		toast.add({ title: 'Google Calendar connected!', color: 'green' });
@@ -603,6 +637,47 @@ onMounted(() => {
 						<UFormGroup label="Page description">
 							<UTextarea v-model="form.booking_page_description" placeholder="Brief description" rows="3" />
 						</UFormGroup>
+					</div>
+
+					<!-- Embed snippet (Stage 5) -->
+					<div class="ios-card p-5 space-y-4 max-w-3xl">
+						<div>
+							<h2 class="text-base font-semibold text-foreground">Embed on your website</h2>
+							<p class="text-xs text-muted-foreground mt-0.5">
+								Drop this snippet into any page. It auto-renders a "Book a call" button that opens your scheduler in a modal.
+							</p>
+						</div>
+						<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+							<UFormGroup label="Event type">
+								<select v-model="embedEventTypeSlug" class="w-full rounded-full border bg-background px-3 py-2 text-sm">
+									<option value="">Default (host's pick)</option>
+									<option v-for="et in eventTypes" :key="et.id" :value="et.slug">{{ et.title }}</option>
+								</select>
+							</UFormGroup>
+							<UFormGroup label="Button label">
+								<UInput v-model="embedLabel" placeholder="Book a call" />
+							</UFormGroup>
+							<UFormGroup label="Accent color">
+								<UInput v-model="embedColor" type="color" />
+							</UFormGroup>
+						</div>
+						<div class="flex gap-2">
+							<UTextarea
+								:model-value="embedSnippet"
+								readonly
+								:rows="3"
+								class="flex-1 font-mono text-xs"
+							/>
+							<UButton color="gray" icon="i-heroicons-clipboard" @click="copyEmbedSnippet" />
+						</div>
+						<details class="text-xs text-muted-foreground">
+							<summary class="cursor-pointer select-none">Advanced: imperative API</summary>
+							<pre class="mt-2 p-3 rounded bg-muted/30 overflow-x-auto whitespace-pre-wrap"><code>// Open the modal manually:
+EarnestEmbed.open({ org: '{{ currentOrg?.slug || 'YOUR_ORG' }}', user: '{{ form.booking_page_slug || user?.id || 'YOUR_USER' }}', event: '{{ embedEventTypeSlug || 'optional-slug' }}' });
+
+// Wire any element you've already styled:
+&lt;a href="#" data-earnest-book="true"&gt;Book&lt;/a&gt;</code></pre>
+						</details>
 					</div>
 				</template>
 

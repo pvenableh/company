@@ -19,8 +19,9 @@
 // same Stripe SDK + API version.
 import { defineEventHandler, getHeader, readRawBody } from 'h3';
 import Stripe from 'stripe';
-import { createItem, readItems, updateItem, updateItems } from '@directus/sdk';
+import { createItem, readItem, readItems, updateItem, updateItems } from '@directus/sdk';
 import { useStripe } from '~~/server/utils/stripe';
+import { finalizeBooking } from '~~/server/utils/scheduler-finalize';
 
 type ConnectStatus = 'none' | 'pending' | 'active' | 'restricted';
 
@@ -100,6 +101,17 @@ export default defineEventHandler(async (event) => {
 			case 'payment_intent.succeeded': {
 				const pi = stripeEvent.data.object as Stripe.PaymentIntent;
 				await handlePaymentSucceeded(pi, orgId, connectedAccountId || null);
+				break;
+			}
+
+			case 'checkout.session.completed': {
+				// Stage 5: paid scheduler bookings finalize here when the visitor
+				// closes the tab before hitting the success URL. Idempotent —
+				// finalizeBooking dedupes on payment_session_id.
+				const session = stripeEvent.data.object as Stripe.Checkout.Session;
+				if (session.metadata?.kind === 'scheduler_booking' && session.payment_status === 'paid') {
+					await handleSchedulerBookingPaid(session, orgId);
+				}
 				break;
 			}
 
@@ -218,6 +230,67 @@ async function handlePaymentSucceeded(
 		console.log(`[Stripe Connect] payment succeeded: ${paymentIntent.id} (org ${orgId || 'unknown'}, invoice ${invoiceId || 'n/a'})`);
 	} catch (error) {
 		console.error('[Stripe Connect] Error handling payment success:', error);
+	}
+}
+
+function reassemble(meta: Record<string, string>, key: string): string | null {
+	if (meta[key]) return meta[key];
+	const chunkCount = parseInt(meta[`${key}_chunks`] || '0', 10);
+	if (!chunkCount) return null;
+	let out = '';
+	for (let i = 0; i < chunkCount; i++) {
+		out += meta[`${key}_${i}`] || '';
+	}
+	return out;
+}
+
+async function handleSchedulerBookingPaid(session: Stripe.Checkout.Session, orgId: string | null) {
+	try {
+		const meta = (session.metadata || {}) as Record<string, string>;
+		const intakeRaw = reassemble(meta, 'intake_responses');
+		let intakeResponses: Record<string, any> | null = null;
+		if (intakeRaw) {
+			try { intakeResponses = JSON.parse(intakeRaw); } catch {}
+		}
+
+		// Resolve event type title for the meeting record.
+		let eventTypeTitle: string | null = null;
+		const eventTypeId = parseInt(meta.event_type_id || '0', 10) || null;
+		if (eventTypeId) {
+			try {
+				const directus = getTypedDirectus();
+				const et = (await directus.request(
+					readItem('event_types' as any, eventTypeId, { fields: ['title'] } as any),
+				)) as { title?: string } | null;
+				eventTypeTitle = et?.title || null;
+			} catch {}
+		}
+
+		await finalizeBooking({
+			hostUserId: meta.host_user_id!,
+			eventTypeId,
+			title: eventTypeTitle
+				? `${eventTypeTitle} with ${meta.invitee_name || meta.invitee_email}`
+				: null,
+			meetingType: 'consultation',
+			scheduledStart: meta.scheduled_start!,
+			scheduledEnd: meta.scheduled_end || null,
+			durationMinutes: parseInt(meta.duration_minutes || '0', 10) || null,
+			inviteeName: meta.invitee_name || null,
+			inviteeEmail: meta.invitee_email!,
+			inviteePhone: meta.invitee_phone || null,
+			bookingNotes: reassemble(meta, 'booking_notes') || null,
+			intakeResponses,
+			paymentSessionId: session.id,
+		});
+
+		// payments_received row is written by the payment_intent.succeeded
+		// handler that fires on the same Connect event stream — no need to
+		// double-write here.
+
+		console.log(`[Stripe Connect] scheduler booking finalized via webhook: ${session.id} (org ${orgId || 'unknown'})`);
+	} catch (err: any) {
+		console.error('[Stripe Connect] handleSchedulerBookingPaid error:', err);
 	}
 }
 

@@ -225,6 +225,8 @@ export interface Appointment {
 	event_type?: EventType | string | null;
 	/** @description Answers to the event type intake form. Shape mirrors intake_schema fields. */
 	intake_responses?: Record<string, any> | null;
+	/** @description Stripe Checkout Session id for paid bookings (Stage 5). Idempotency anchor — set when payment kicks off, used to dedupe finalize calls from the success URL + webhook. */
+	payment_session_id?: string | null;
 }
 
 export interface AppointmentsDirectusUser {

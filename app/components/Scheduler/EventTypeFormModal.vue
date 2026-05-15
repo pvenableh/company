@@ -111,7 +111,7 @@
 				</div>
 			</div>
 
-			<!-- Price (Stage 5 placeholder) -->
+			<!-- Price -->
 			<div class="space-y-1">
 				<label class="t-label text-muted-foreground">Price (USD, optional)</label>
 				<UInput
@@ -119,10 +119,20 @@
 					type="number"
 					min="0"
 					step="0.01"
-					disabled
 					placeholder="0.00"
+					@update:model-value="onPriceInput"
 				/>
-				<p class="text-[11px] text-muted-foreground italic">Payment collection coming in Stage 5.</p>
+				<p v-if="!stripeActive && (form.price_cents ?? 0) > 0" class="text-[11px] text-amber-600 flex items-center gap-1">
+					<Icon name="lucide:alert-triangle" class="h-3 w-3" />
+					<span>
+						Connect Stripe in
+						<NuxtLink to="/money/settings?floor=payments" class="underline">Money → Settings</NuxtLink>
+						to take payments. Bookings on this event type will fail until then.
+					</span>
+				</p>
+				<p v-else class="text-[11px] text-muted-foreground">
+					Leave blank for free. Paid bookings collect payment via Stripe Checkout before confirming.
+				</p>
 			</div>
 
 			<!-- Toggles -->
@@ -226,8 +236,46 @@ const form = reactive({
 	enabled: true,
 });
 
-// Stage 5 will wire payments. Read-only here.
 const priceDollars = computed(() => (form.price_cents == null ? null : form.price_cents / 100));
+
+function onPriceInput(v: string | number | null) {
+	const raw = v === null || v === undefined ? '' : String(v).trim();
+	if (!raw) {
+		form.price_cents = null;
+		return;
+	}
+	const parsed = parseFloat(raw);
+	if (!Number.isFinite(parsed) || parsed < 0) {
+		form.price_cents = null;
+		return;
+	}
+	form.price_cents = Math.round(parsed * 100);
+}
+
+// Surface a warning when the host sets a price without Stripe Connect active.
+// Defaults to true so the warning never flashes for orgs that are properly set up.
+const stripeActive = ref(true);
+if (import.meta.client) {
+	watch(
+		selectedOrg,
+		async (org) => {
+			const id = typeof org === 'string' ? org : (org as any)?.id;
+			if (!id) return;
+			try {
+				const res = await $fetch<{ status?: string }>(`/api/stripe/connect/status`, {
+					params: { organizationId: id },
+				});
+				stripeActive.value = res?.status === 'active';
+			} catch {
+				// 403 (no read perm) or 412 (no account) — assume not active so the
+				// warning surfaces. Hosts who can't see the status almost certainly
+				// can't take payments either.
+				stripeActive.value = false;
+			}
+		},
+		{ immediate: true },
+	);
+}
 
 const slugify = (s: string) => s.toLowerCase().trim()
 	.replace(/[^a-z0-9]+/g, '-')
