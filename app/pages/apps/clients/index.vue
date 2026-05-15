@@ -13,8 +13,8 @@ const route = useRoute();
 const config = useRuntimeConfig();
 
 // ── View segmented control ─────────────────────────────────────────────────
-type ViewKey = 'clients' | 'contacts' | 'partners';
-const VIEW_KEYS: ViewKey[] = ['clients', 'contacts', 'partners'];
+type ViewKey = 'clients' | 'contacts' | 'partners' | 'intelligence';
+const VIEW_KEYS: ViewKey[] = ['clients', 'contacts', 'partners', 'intelligence'];
 
 const initialView: ViewKey = (() => {
   const v = route.query.view;
@@ -30,7 +30,11 @@ const segments: Array<{ key: ViewKey; label: string; icon: string }> = [
   { key: 'clients', label: 'By Client', icon: 'lucide:building-2' },
   { key: 'contacts', label: 'All Contacts', icon: 'lucide:users' },
   { key: 'partners', label: 'Partners', icon: 'lucide:network' },
+  { key: 'intelligence', label: 'Intelligence', icon: 'lucide:sparkles' },
 ];
+
+// ── Intelligence data ──────────────────────────────────────────────────────
+const { intelligence, intelligenceLoading, fetchIntelligence } = useCRMIntelligence();
 
 // ── Clients data ───────────────────────────────────────────────────────────
 const { getClients, deleteClient: doDelete } = useClients();
@@ -254,6 +258,7 @@ onMounted(() => {
 
 let contactsLoaded = false;
 let partnersLoaded = false;
+let intelligenceLoaded = false;
 
 watch(view, (next) => {
   if (next === 'contacts' && !contactsLoaded) {
@@ -263,6 +268,10 @@ watch(view, (next) => {
   if (next === 'partners' && !partnersLoaded) {
     partnersLoaded = true;
     fetchPartners();
+  }
+  if (next === 'intelligence' && !intelligenceLoaded) {
+    intelligenceLoaded = true;
+    fetchIntelligence();
   }
 }, { immediate: true });
 </script>
@@ -435,7 +444,7 @@ watch(view, (next) => {
       </template>
 
       <!-- ── Partners view ────────────────────────────────────────────── -->
-      <template v-else>
+      <template v-else-if="view === 'partners'">
         <div class="flex gap-3 mb-5 flex-wrap items-center">
           <input
             v-model="partnerSearch"
@@ -497,6 +506,11 @@ watch(view, (next) => {
             <Icon name="lucide:chevron-right" class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0" />
           </NuxtLink>
         </div>
+      </template>
+
+      <!-- ── Intelligence view ────────────────────────────────────────── -->
+      <template v-else-if="view === 'intelligence'">
+        <ClientsIntelligenceView :data="intelligence" :loading="intelligenceLoading" />
       </template>
 
       <!-- Create Client modal -->

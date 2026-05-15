@@ -35,6 +35,8 @@ const AI_CACHE_TTL = 30 * 60 * 1000;
 // Module-level state to avoid duplicated requests across component instances
 const _snapshot = ref<any>(null);
 const _snapshotLoading = ref(false);
+const _intelligence = ref<any>(null);
+const _intelligenceLoading = ref(false);
 const _aiResult = ref<AnalysisResult | null>(null);
 const _aiLoading = ref(false);
 const _aiError = ref<string | null>(null);
@@ -61,6 +63,26 @@ export const useCRMIntelligence = () => {
 			console.warn('[CRM Intelligence] Snapshot failed:', e?.message);
 		} finally {
 			_snapshotLoading.value = false;
+		}
+	};
+
+	/**
+	 * Fetch Stage 6 dashboard metrics (pipeline velocity, conversion by source,
+	 * partner ROI, cold contacts, booking health). Pure algorithmic — no AI tokens.
+	 */
+	const fetchIntelligence = async () => {
+		const orgId = selectedOrg.value;
+		if (!orgId) return;
+
+		_intelligenceLoading.value = true;
+		try {
+			_intelligence.value = await $fetch('/api/crm/intelligence-metrics', {
+				params: { organizationId: orgId },
+			});
+		} catch (e: any) {
+			console.warn('[CRM Intelligence] Metrics failed:', e?.message);
+		} finally {
+			_intelligenceLoading.value = false;
 		}
 	};
 
@@ -166,6 +188,7 @@ export const useCRMIntelligence = () => {
 	const clearCache = () => {
 		_aiResult.value = null;
 		_snapshot.value = null;
+		_intelligence.value = null;
 		_lastAIAnalysis.value = null;
 
 		// Clear localStorage cache for this org
@@ -204,6 +227,10 @@ export const useCRMIntelligence = () => {
 		snapshot: readonly(_snapshot),
 		snapshotLoading: readonly(_snapshotLoading),
 
+		// Stage 6 dashboard metrics (instant, no AI)
+		intelligence: readonly(_intelligence),
+		intelligenceLoading: readonly(_intelligenceLoading),
+
 		// AI analysis (on-demand)
 		result: readonly(_aiResult),
 		isLoading: readonly(_aiLoading),
@@ -212,6 +239,7 @@ export const useCRMIntelligence = () => {
 
 		// Methods
 		fetchSnapshot,
+		fetchIntelligence,
 		analyze,
 		overview,
 		contactStrategy,

@@ -34,8 +34,8 @@ const router = useRouter();
 const route = useRoute();
 
 // ── Floor strip ─────────────────────────────────────────────────────────────
-type FloorKey = 'cashflow' | 'invoices' | 'payments' | 'expenses' | 'time';
-const FLOOR_KEYS: FloorKey[] = ['cashflow', 'invoices', 'payments', 'expenses', 'time'];
+type FloorKey = 'cashflow' | 'invoices' | 'payments' | 'expenses' | 'time' | 'insights';
+const FLOOR_KEYS: FloorKey[] = ['cashflow', 'invoices', 'payments', 'expenses', 'time', 'insights'];
 
 const initialFloor: FloorKey = (() => {
   const v = route.query.floor;
@@ -53,7 +53,18 @@ const floors: Array<{ key: FloorKey; label: string; icon: string }> = [
   { key: 'payments', label: 'Payments', icon: 'lucide:credit-card' },
   { key: 'expenses', label: 'Expenses', icon: 'lucide:receipt' },
   { key: 'time', label: 'Time', icon: 'lucide:clock' },
+  { key: 'insights', label: 'Insights', icon: 'lucide:bar-chart-3' },
 ];
+
+// ── Insights floor ──────────────────────────────────────────────────────────
+const { snapshot: moneyInsightsSnapshot, snapshotLoading: moneyInsightsLoading, fetchSnapshot: fetchMoneyInsights } = useCRMIntelligence();
+let moneyInsightsLoaded = false;
+watch(floor, (next) => {
+  if (next === 'insights' && !moneyInsightsLoaded) {
+    moneyInsightsLoaded = true;
+    if (!moneyInsightsSnapshot.value) fetchMoneyInsights();
+  }
+}, { immediate: true });
 
 // ── Common deps ─────────────────────────────────────────────────────────────
 const { getInvoices, updateInvoice } = useInvoices();
@@ -1139,6 +1150,11 @@ const headerAction = computed(() => {
             </Transition>
           </Teleport>
         </template>
+      </template>
+
+      <!-- ── Insights floor ────────────────────────────────────────────── -->
+      <template v-else-if="floor === 'insights'">
+        <MoneyInsightsView :snapshot="moneyInsightsSnapshot" :loading="moneyInsightsLoading" />
       </template>
     </LayoutPageContainer>
   </div>

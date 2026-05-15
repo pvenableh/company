@@ -26,8 +26,8 @@ const route = useRoute();
 const config = useRuntimeConfig();
 
 // ── Floor strip ─────────────────────────────────────────────────────────────
-type FloorKey = 'gantt' | 'projects' | 'tasks' | 'tickets' | 'meetings' | 'calendar';
-const FLOOR_KEYS: FloorKey[] = ['gantt', 'projects', 'tasks', 'tickets', 'meetings', 'calendar'];
+type FloorKey = 'gantt' | 'projects' | 'tasks' | 'tickets' | 'meetings' | 'calendar' | 'insights';
+const FLOOR_KEYS: FloorKey[] = ['gantt', 'projects', 'tasks', 'tickets', 'meetings', 'calendar', 'insights'];
 
 const initialFloor: FloorKey = (() => {
   const v = route.query.floor;
@@ -46,7 +46,18 @@ const floors: Array<{ key: FloorKey; label: string; icon: string }> = [
   { key: 'tickets', label: 'Tickets', icon: 'lucide:ticket' },
   { key: 'meetings', label: 'Meetings', icon: 'lucide:video' },
   { key: 'calendar', label: 'Calendar', icon: 'lucide:calendar' },
+  { key: 'insights', label: 'Insights', icon: 'lucide:bar-chart-3' },
 ];
+
+// ── Insights floor ──────────────────────────────────────────────────────────
+const { snapshot: insightsSnapshot, snapshotLoading: insightsLoading, fetchSnapshot: fetchInsights } = useCRMIntelligence();
+let insightsLoaded = false;
+watch(floor, (next) => {
+  if (next === 'insights' && !insightsLoaded) {
+    insightsLoaded = true;
+    if (!insightsSnapshot.value) fetchInsights();
+  }
+}, { immediate: true });
 
 // ── Common deps ─────────────────────────────────────────────────────────────
 const { user } = useDirectusAuth();
@@ -481,6 +492,10 @@ function openMeetingSlideOver(meeting: any) {
           </div>
         </template>
       </ClientOnly>
+
+      <template v-else-if="floor === 'insights'">
+        <WorkInsightsView :snapshot="insightsSnapshot" :loading="insightsLoading" />
+      </template>
     </LayoutPageContainer>
 
     <!-- Slide-overs (Phase 7 Track A) — teleport into the apps shell root -->

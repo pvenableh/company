@@ -30,13 +30,17 @@ const scopeFilter = ref<ScopeVal>(readQuery<ScopeVal>('scope', SCOPE_VALUES, 'al
 const categoryFilter = ref<CategoryVal>(readQuery<CategoryVal>('category', CATEGORY_VALUES, 'all'));
 const statusFilter = ref<StatusVal>(readQuery<StatusVal>('status', STATUS_VALUES, 'active'));
 
+type ViewKey = 'list' | 'insights';
+const view = ref<ViewKey>(route.query.view === 'insights' ? 'insights' : 'list');
+
 // Reflect filter state back into the URL — but drop default values so the
 // shared URL stays clean (`/goals` not `/goals?scope=all&category=all&status=active`).
-watch([scopeFilter, categoryFilter, statusFilter], ([scope, cat, status]) => {
+watch([scopeFilter, categoryFilter, statusFilter, view], ([scope, cat, status, v]) => {
 	const next = { ...route.query };
 	if (scope === 'all') delete next.scope; else next.scope = scope;
 	if (cat === 'all') delete next.category; else next.category = cat;
 	if (status === 'active') delete next.status; else next.status = status;
+	if (v === 'list') delete next.view; else next.view = v;
 	router.replace({ query: next });
 });
 const showCreateModal = ref(false);
@@ -179,8 +183,63 @@ const handleDelete = async (goal) => {
 	toast.add({ title: 'Goal deleted', color: 'neutral' });
 };
 
+const handleCoach = (goal) => {
+	coachGoal.value = goal;
+	coachLoading.value = true;
+	coachData.value = null;
+	showCoachModal.value = true;
+	void fetchCoachInsight(goal);
+};
+
 const reflection = ref<string>('');
 const reflectionLoading = ref(false);
+
+// Coach Me state
+const showCoachModal = ref(false);
+const coachGoal = ref<any>(null);
+const coachData = ref<any>(null);
+const coachLoading = ref(false);
+const coachError = ref<string | null>(null);
+
+async function fetchCoachInsight(goal: any) {
+	coachLoading.value = true;
+	coachError.value = null;
+	coachData.value = null;
+	try {
+		const snapshots = ((goal.snapshots || []) as any[])
+			.slice()
+			.filter((s: any) => s?.date_created)
+			.sort((a: any, b: any) => new Date(a.date_created).getTime() - new Date(b.date_created).getTime())
+			.slice(-12)
+			.map((s: any) => ({ value: s.value, notes: s.notes, date_created: s.date_created }));
+		const res = await $fetch('/api/ai/goal-coach', {
+			method: 'POST',
+			body: {
+				goal: {
+					id: goal.id,
+					title: goal.title,
+					description: goal.description,
+					category: goal.category,
+					scope: goal.scope,
+					target_value: goal.target_value,
+					target_unit: goal.target_unit,
+					current_value: goal.current_value,
+					end_date: goal.end_date,
+					start_date: goal.start_date,
+					timeframe: goal.timeframe,
+					template_id: goal.metadata?.template_id || null,
+				},
+				snapshots,
+				organizationId: selectedOrg.value || undefined,
+			},
+		}) as any;
+		coachData.value = res;
+	} catch (err: any) {
+		coachError.value = err?.data?.message || err?.message || 'Failed to load coaching';
+	} finally {
+		coachLoading.value = false;
+	}
+}
 
 const openProgressUpdate = (goal) => {
 	progressGoal.value = goal;
@@ -256,6 +315,13 @@ const saveProgress = async () => {
 		<div class="flex items-center justify-between mb-6">
 			<h1 class="text-xl font-semibold">Goals</h1>
 			<div class="flex items-center gap-2">
+				<NuxtLink
+					to="/goals/retrospective"
+					class="flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium border border-border text-muted-foreground hover:text-foreground hover:bg-muted/40 rounded-lg transition-colors"
+				>
+					<UIcon name="i-heroicons-document-chart-bar" class="w-4 h-4" />
+					Retrospective
+				</NuxtLink>
 				<button
 					@click="fetchAISuggestions"
 					:disabled="loadingSuggestions"
@@ -274,6 +340,41 @@ const saveProgress = async () => {
 			</div>
 		</div>
 
+		<!-- View toggle: List | Insights -->
+		<div class="mb-4 flex items-center gap-1 rounded-full border border-border bg-card p-0.5 w-fit">
+			<button
+				type="button"
+				class="rounded-full px-3 py-1 text-xs font-medium transition-colors"
+				:class="view === 'list' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'"
+				@click="view = 'list'"
+			>
+				<UIcon name="i-heroicons-queue-list" class="w-3.5 h-3.5 inline -mt-0.5 mr-1" />
+				List
+			</button>
+			<button
+				type="button"
+				class="rounded-full px-3 py-1 text-xs font-medium transition-colors"
+				:class="view === 'insights' ? 'bg-foreground text-background' : 'text-muted-foreground hover:text-foreground'"
+				@click="view = 'insights'"
+			>
+				<UIcon name="i-heroicons-chart-bar" class="w-3.5 h-3.5 inline -mt-0.5 mr-1" />
+				Insights
+			</button>
+		</div>
+
+		<template v-if="view === 'insights'">
+			<GoalsInsightsView
+				:goals="goals"
+				:active-goals="activeGoals"
+				:completed-goals="completedGoals"
+				:overdue-goals="overdueGoals"
+				:goals-by-scope="goalsByScope"
+				:goals-by-category="goalsByCategory"
+				:goal-progress="goalProgress"
+				:loading="isLoading"
+			/>
+		</template>
+		<template v-else>
 		<!-- AI Suggestions Panel -->
 		<Transition name="fade">
 			<div v-if="showAISuggestions" class="mb-6">
@@ -308,7 +409,7 @@ const saveProgress = async () => {
 
 					<!-- Loading -->
 					<div v-if="loadingSuggestions && !aiSuggestions.length" class="space-y-2">
-						<div v-for="i in 3" :key="i" class="h-16 bg-muted/30 rounded-lg animate-pulse" />
+						<div v-for="i in 3" :key="i" class="h-16 bg-muted/30 rounded-lg animate-pulse" ></div>
 					</div>
 
 					<!-- Suggestion cards -->
@@ -357,7 +458,7 @@ const saveProgress = async () => {
 						class="h-full rounded-full transition-all duration-700"
 						:class="stats.avgProgress >= 80 ? 'bg-emerald-500' : stats.avgProgress >= 50 ? 'bg-blue-500' : 'bg-amber-500'"
 						:style="{ width: stats.avgProgress + '%' }"
-					/>
+					></div>
 				</div>
 				<div class="flex items-center justify-between mt-2 text-xs text-muted-foreground">
 					<span>{{ stats.active }} active</span>
@@ -449,6 +550,7 @@ const saveProgress = async () => {
 				@edit="handleEdit"
 				@update-progress="openProgressUpdate"
 				@delete="handleDelete"
+				@coach="handleCoach"
 			/>
 		</div>
 
@@ -456,6 +558,7 @@ const saveProgress = async () => {
 		<div v-else class="text-center py-16 text-sm text-muted-foreground">
 			No goals match this filter.
 		</div>
+		</template>
 
 		<!-- Create/Edit Modal -->
 		<GoalsGoalCreateModal
@@ -526,6 +629,66 @@ const saveProgress = async () => {
 							{{ savingProgress ? 'Saving...' : 'Save Progress' }}
 						</button>
 					</div>
+			</div>
+		</UModal>
+
+		<!-- Coach Me Modal -->
+		<UModal v-model="showCoachModal">
+			<div v-if="coachGoal" class="space-y-4 p-1">
+				<div class="flex items-center gap-2">
+					<div class="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center">
+						<UIcon name="i-heroicons-sparkles" class="w-4 h-4 text-amber-500" />
+					</div>
+					<div>
+						<h2 class="text-lg font-semibold text-foreground">Coach me</h2>
+						<p class="text-xs text-muted-foreground truncate max-w-[280px]">{{ coachGoal.title }}</p>
+					</div>
+				</div>
+
+				<!-- Loading -->
+				<div v-if="coachLoading" class="py-8 text-center">
+					<UIcon name="i-heroicons-arrow-path" class="w-6 h-6 text-amber-500 animate-spin mx-auto mb-2" />
+					<p class="text-xs text-muted-foreground">Reading your data…</p>
+				</div>
+
+				<!-- Error -->
+				<div v-else-if="coachError" class="rounded-md border border-red-500/20 bg-red-500/5 p-3 text-sm text-red-500">
+					{{ coachError }}
+				</div>
+
+				<!-- Coach output -->
+				<div v-else-if="coachData" class="space-y-3">
+					<div v-if="coachData.insight" class="rounded-md border border-amber-500/20 bg-amber-500/5 p-3">
+						<p class="text-sm leading-relaxed">{{ coachData.insight }}</p>
+					</div>
+
+					<div v-if="coachData.questions?.length" class="space-y-1.5">
+						<h4 class="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Questions to sit with</h4>
+						<ul class="space-y-1.5">
+							<li v-for="(q, i) in coachData.questions" :key="i" class="text-sm flex gap-2">
+								<span class="text-amber-500">·</span>
+								<span>{{ q }}</span>
+							</li>
+						</ul>
+					</div>
+
+					<div v-if="coachData.next_step" class="rounded-md border border-primary/20 bg-primary/5 p-3">
+						<div class="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-primary font-semibold mb-1">
+							<UIcon name="i-heroicons-arrow-right-circle" class="w-3 h-3" />
+							Next step
+						</div>
+						<p class="text-sm leading-relaxed">{{ coachData.next_step }}</p>
+					</div>
+				</div>
+
+				<div class="flex justify-end pt-2">
+					<button
+						@click="showCoachModal = false; coachGoal = null; coachData = null"
+						class="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg"
+					>
+						Close
+					</button>
+				</div>
 			</div>
 		</UModal>
 		</ClientOnly>

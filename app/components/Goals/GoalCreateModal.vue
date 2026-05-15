@@ -10,6 +10,49 @@
 		@submit="handleSubmit"
 		@delete="handleDelete"
 	>
+		<!-- Template picker (new-goal only) -->
+		<div v-if="!isEditing" class="space-y-1.5">
+			<div class="flex items-center justify-between">
+				<label class="t-label text-muted-foreground">Start from a template</label>
+				<button
+					v-if="selectedTemplate"
+					type="button"
+					class="text-[10px] text-muted-foreground hover:text-foreground"
+					@click="clearTemplate"
+				>
+					Clear
+				</button>
+			</div>
+			<div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+				<button
+					v-for="tpl in templates"
+					:key="tpl.id"
+					type="button"
+					class="text-left rounded-lg border p-2.5 transition-all hover:border-foreground/30"
+					:class="selectedTemplate?.id === tpl.id ? 'border-primary bg-primary/5 ring-1 ring-primary/30' : 'border-border bg-card'"
+					@click="applyTemplate(tpl)"
+				>
+					<div class="flex items-center gap-2 mb-1">
+						<UIcon :name="tpl.icon" class="w-3.5 h-3.5" :style="{ color: tpl.accent }" />
+						<span class="text-xs font-semibold">{{ tpl.name }}</span>
+					</div>
+					<p class="text-[10px] text-muted-foreground leading-tight">{{ tpl.tagline }}</p>
+				</button>
+			</div>
+			<div v-if="selectedTemplate" class="rounded-md border border-amber-500/20 bg-amber-500/5 p-3 mt-2">
+				<div class="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-amber-600 dark:text-amber-400 font-semibold mb-1.5">
+					<UIcon name="i-heroicons-sparkles" class="w-3 h-3" />
+					Reflection prompts for this template
+				</div>
+				<ul class="space-y-1 text-[11px] text-foreground/80">
+					<li v-for="(p, i) in selectedTemplate.reflection_prompts" :key="i" class="flex gap-1.5">
+						<span class="text-amber-500">·</span>
+						<span>{{ p }}</span>
+					</li>
+				</ul>
+			</div>
+		</div>
+
 		<!-- Title -->
 		<div class="space-y-1">
 			<label class="t-label text-muted-foreground">Title</label>
@@ -124,6 +167,8 @@
 </template>
 
 <script setup>
+import { GOAL_TEMPLATES } from '~~/shared/goal-templates';
+
 const props = defineProps({
 	goal: { type: Object, default: null },
 	// Optional prefill for new-goal flow (e.g., adopting an AI suggestion)
@@ -139,6 +184,21 @@ const saving = ref(false);
 const toast = useToast();
 const { user } = useDirectusAuth();
 const { createGoal, updateGoal, deleteGoal } = useGoals();
+
+const templates = GOAL_TEMPLATES;
+const selectedTemplate = ref(null);
+
+function applyTemplate(tpl) {
+	selectedTemplate.value = tpl;
+	form.value = {
+		...form.value,
+		...tpl.prefill,
+	};
+}
+
+function clearTemplate() {
+	selectedTemplate.value = null;
+}
 
 const goalScopeOptions = [
 	{ label: 'For me', value: 'user', icon: 'i-heroicons-user' },
@@ -231,6 +291,7 @@ function populateForm() {
 
 watch(isOpen, (open) => {
 	if (open) populateForm();
+	else selectedTemplate.value = null;
 });
 
 async function handleSubmit() {
@@ -250,6 +311,9 @@ async function handleSubmit() {
 			current_value: form.value.current_value === '' || form.value.current_value == null ? 0 : Number(form.value.current_value),
 			start_date: form.value.start_date || null,
 			end_date: form.value.end_date || null,
+			metadata: selectedTemplate.value
+				? { ...(form.value.metadata || {}), template_id: selectedTemplate.value.id }
+				: form.value.metadata || null,
 		};
 
 		if (isEditing.value) {

@@ -39,7 +39,7 @@ function activityIcon(type: string) {
 </script>
 
 <template>
-  <Popover v-if="hasConnectedAccounts" v-model:open="isOpen">
+  <Popover v-model:open="isOpen">
     <PopoverTrigger as-child>
       <button
         class="flex items-center justify-center relative rounded-full h-8 w-8 hover:bg-muted/50 text-muted-foreground transition-colors"
@@ -58,7 +58,7 @@ function activityIcon(type: string) {
       <div class="flex items-center justify-between border-b p-3 dark:border-gray-700">
         <p class="text-sm font-bold">Social Activity</p>
         <NuxtLink
-          to="/social/inbox"
+          to="/inbox"
           class="text-xs text-blue-600 hover:underline"
           @click="isOpen = false"
         >
