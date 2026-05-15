@@ -25,26 +25,30 @@ export function useStatusStyle() {
     return 0.8;
   }
 
-  /** CSS color string for accent indicators (dots, borders, progress bars) */
+  /** CSS color string for accent indicators (dots, borders, progress bars).
+   *  All values resolve through CSS vars set by `applyPaletteToDocument`
+   *  so a palette switch re-skins every dot/border/progress bar in place. */
   function getStatusAccent(status?: string | null): string {
     const s = normalize(status);
     if (SUCCESS.includes(s)) return 'hsl(var(--success))';
     if (DESTRUCTIVE.includes(s)) return 'hsl(var(--destructive))';
-    if (ACTIVE.includes(s)) return 'hsl(160, 60%, 45%)';
-    if (SCHEDULED.includes(s)) return 'hsl(199, 89%, 48%)';
+    if (ACTIVE.includes(s)) return 'hsl(var(--status-active))';
+    if (SCHEDULED.includes(s)) return 'hsl(var(--status-scheduled))';
     if (PENDING.includes(s)) return 'hsl(var(--warning))';
     if (MUTED.includes(s)) return 'hsl(var(--muted-foreground))';
     return 'hsl(var(--muted-foreground))';
   }
 
-  /** Tailwind classes for inline badge (bg + text) */
+  /** Tailwind classes for inline badge (bg + text). Semantic tokens
+   *  (`bg-success`, `bg-status-active`, …) read from the palette-driven
+   *  CSS vars so swapping palettes re-tints all badges. */
   function getStatusBadgeClasses(status?: string | null): string {
     const s = normalize(status);
-    if (SUCCESS.includes(s)) return 'bg-green-500/15 text-green-500';
+    if (SUCCESS.includes(s)) return 'bg-success/15 text-success';
     if (DESTRUCTIVE.includes(s)) return 'bg-destructive/15 text-destructive';
-    if (ACTIVE.includes(s)) return 'bg-teal-500/15 text-teal-500';
-    if (SCHEDULED.includes(s)) return 'bg-sky-500/15 text-sky-500';
-    if (PENDING.includes(s)) return 'bg-amber-500/15 text-amber-500';
+    if (ACTIVE.includes(s)) return 'bg-status-active/15 text-status-active';
+    if (SCHEDULED.includes(s)) return 'bg-status-scheduled/15 text-status-scheduled';
+    if (PENDING.includes(s)) return 'bg-warning/15 text-warning';
     if (MUTED.includes(s)) return 'bg-muted text-muted-foreground';
     return 'bg-muted text-muted-foreground';
   }
@@ -60,11 +64,11 @@ export function useStatusStyle() {
   /** Solid bg + white text class for prominent status pills */
   function getStatusPillClass(status?: string | null): string {
     const s = normalize(status);
-    if (SUCCESS.includes(s)) return 'bg-green-500 text-white';
+    if (SUCCESS.includes(s)) return 'bg-success text-white';
     if (DESTRUCTIVE.includes(s)) return 'bg-destructive text-white';
-    if (ACTIVE.includes(s)) return 'bg-teal-500 text-white';
-    if (SCHEDULED.includes(s)) return 'bg-sky-500 text-white';
-    if (PENDING.includes(s)) return 'bg-amber-500 text-white';
+    if (ACTIVE.includes(s)) return 'bg-status-active text-white';
+    if (SCHEDULED.includes(s)) return 'bg-status-scheduled text-white';
+    if (PENDING.includes(s)) return 'bg-warning text-white';
     if (MUTED.includes(s)) return 'bg-muted-foreground text-white';
     return 'bg-muted-foreground text-white';
   }

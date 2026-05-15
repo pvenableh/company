@@ -16,13 +16,24 @@
  * Mobile (< md) forces bottom via useAppsMode.
  */
 import { useMediaQuery } from '@vueuse/core';
-import { APP_ORDER, APP_FOOTER_ORDER, appIdForPath, formatIconColor, iconHighlightForAccent, type AppAccent } from '~/composables/useAppAccent';
+import { APP_ORDER, APP_FOOTER_ORDER, appIdForPath, formatIconColor, getPaletteChrome, iconHighlightForAccent, type AppAccent } from '~/composables/useAppAccent';
+import { useAppPalette } from '~/composables/useAppPalette';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
 
 const route = useRoute();
 const { railPosition, railShowLabels } = useAppsMode();
 const { accents } = useAppAccent();
+const { palette, glassChrome } = useAppPalette();
 const { countFor } = useUnreadByCategory();
+
+/** Active chip rendering mode — `palette` for gradient chips, `neutral`
+ *  for the frosted-grey-with-accent-icon look. Glass-chrome toggle is
+ *  orthogonal: when ON it forces neutral regardless of palette, so
+ *  Sea Mist / Aurora users can wear the calm frosted look too. */
+const chipMode = computed(() => {
+	if (glassChrome.value) return 'neutral';
+	return getPaletteChrome(palette.value).chipMode;
+});
 
 function badgeFor(app: AppAccent): number {
 	if (!app.notificationCategories?.length) return 0;
@@ -138,6 +149,7 @@ function chipMagnifyStyle(appId: string) {
 				horizontalLabelsHidden && 'app-rail--icons-only',
 			]"
 			ref="railEl"
+			:data-chip-mode="chipMode"
 			aria-label="Apps"
 			@pointermove="onPointerMove"
 			@pointerleave="onPointerLeave"
@@ -499,6 +511,109 @@ function chipMagnifyStyle(appId: string) {
 	color: var(--rail-icon, hsl(0 0% 100%));
 }
 
+/* ── Neutral chip mode ───────────────────────────────────────────── */
+/* When the active palette is Neutral (or Glass toggle is on), chips drop
+ * their per-app gradient and render as uniform frosted tiles with a
+ * single palette-tinted glyph. The hairline border + soft highlight
+ * lifts each chip into iOS 26 "Liquid Glass" territory: a discrete
+ * crystalline disc that catches a top-light highlight rather than a
+ * flat translucent panel.
+ *
+ * Icons drop their cast shadow in this mode — the chrome already carries
+ * depth via the border + highlight, and a drop-shadow on a coloured glyph
+ * inside a translucent disc reads as smudge rather than dimension.
+ */
+.app-rail[data-chip-mode='neutral'] .app-rail__chip {
+	background: hsl(0 0% 100% / 0.42);
+	backdrop-filter: blur(14px) saturate(1.2);
+	-webkit-backdrop-filter: blur(14px) saturate(1.2);
+	border: 1px solid hsl(0 0% 100% / 0.7);
+	box-shadow:
+		inset 0 1px 0 hsl(0 0% 100% / 0.85),
+		inset 0 -1px 0 hsl(0 0% 0% / 0.04),
+		0 1px 3px hsl(0 0% 0% / 0.08),
+		0 4px 14px -6px hsl(0 0% 0% / 0.12);
+}
+
+.app-rail[data-chip-mode='neutral'] .app-rail__icon {
+	/* Drop the cast shadow in neutral mode — the disc's own border + inner
+	 * highlight already carry depth; a shadow on the coloured glyph reads
+	 * as smudge through the glass. */
+	filter: none;
+}
+
+.app-rail[data-chip-mode='neutral'] .app-rail__item:hover .app-rail__chip {
+	background: hsl(0 0% 100% / 0.55);
+	border-color: hsl(0 0% 100% / 0.85);
+	box-shadow:
+		inset 0 1px 0 hsl(0 0% 100% / 0.95),
+		inset 0 -1px 0 hsl(0 0% 0% / 0.04),
+		0 4px 12px -3px hsl(0 0% 0% / 0.14);
+}
+
+.app-rail[data-chip-mode='neutral'] .app-rail__item--active .app-rail__chip {
+	background: hsl(0 0% 100% / 0.72);
+	border-color: hsl(var(--primary) / 0.45);
+	box-shadow:
+		inset 0 1px 0 hsl(0 0% 100% / 0.95),
+		inset 0 -1px 0 hsl(0 0% 0% / 0.06),
+		0 4px 14px -3px hsl(var(--primary) / 0.35);
+	/* Selected ring picks up the palette primary so the active state
+	 * still sings even with a uniform chrome. */
+	outline: 1.25px solid hsl(var(--primary));
+	outline-offset: 2px;
+}
+
+.dark .app-rail[data-chip-mode='neutral'] .app-rail__chip {
+	background: hsl(0 0% 100% / 0.06);
+	border-color: hsl(0 0% 100% / 0.14);
+	box-shadow:
+		inset 0 1px 0 hsl(0 0% 100% / 0.12),
+		inset 0 -1px 0 hsl(0 0% 0% / 0.2),
+		0 1px 3px hsl(0 0% 0% / 0.4);
+}
+
+.dark .app-rail[data-chip-mode='neutral'] .app-rail__item:hover .app-rail__chip {
+	background: hsl(0 0% 100% / 0.1);
+	border-color: hsl(0 0% 100% / 0.2);
+}
+
+.dark .app-rail[data-chip-mode='neutral'] .app-rail__item--active .app-rail__chip {
+	background: hsl(0 0% 100% / 0.16);
+	border-color: hsl(var(--primary) / 0.55);
+}
+
+/* ── Neutral rail surface — slate tint for chip contrast ─────────── */
+/* The default rail background is `bg-background` (near-white), which
+ * leaves the frosted chips floating against a same-colour backdrop —
+ * the disc shape disappears. A whisper of neutral-grey on the rail
+ * itself gives the chips something to sit on, without crossing into
+ * "panel" territory. Floating / top / bottom pills already have their
+ * own translucent backdrop, so we tint them slightly cooler instead. */
+.app-rail[data-chip-mode='neutral'] {
+	background: hsl(220 14% 95%);
+}
+
+.app-rail[data-chip-mode='neutral'].app-rail--top,
+.app-rail[data-chip-mode='neutral'].app-rail--bottom,
+.app-rail[data-chip-mode='neutral'].app-rail--floating {
+	background: hsl(220 14% 95% / 0.78);
+}
+
+.dark .app-rail[data-chip-mode='neutral'] {
+	background: hsl(0 0% 10%);
+}
+
+.dark .app-rail[data-chip-mode='neutral'].app-rail--top,
+.dark .app-rail[data-chip-mode='neutral'].app-rail--bottom,
+.dark .app-rail[data-chip-mode='neutral'].app-rail--floating {
+	background: hsl(0 0% 8% / 0.78);
+}
+
+/* Glass-chrome icon overrides live in theme.css under
+ * `[data-surface='glass']` — scoped styles can't reach an ancestor
+ * `<html>` attribute, so the global stylesheet owns those rules. */
+
 /* ── Label ───────────────────────────────────────────────────────── */
 /* Vertical rail is icon-only; the title-attribute tooltip carries the
  * label. Horizontal mode keeps labels inline. Floating stays icon-only.
@@ -547,8 +662,8 @@ function chipMagnifyStyle(appId: string) {
 	height: 16px;
 	padding: 0 4px;
 	border-radius: 999px;
-	background: var(--cyan, #06b6d4);
-	color: white;
+	background: hsl(var(--primary));
+	color: hsl(var(--primary-foreground));
 	font-size: 9px;
 	font-weight: 700;
 	line-height: 1;

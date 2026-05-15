@@ -81,6 +81,12 @@
 	--success-foreground: 0 0% 100%;
 	--warning: 38 92% 50%;
 	--warning-foreground: 0 0% 0%;
+
+	/* Status accents — overridden per-palette by applyPaletteToDocument().
+	   Defaults match the Neutral palette (original status colours). */
+	--info: 199 89% 48%;
+	--status-active: 160 60% 45%;
+	--status-scheduled: 199 89% 48%;
 }
 
 [data-theme='glass'] .dark,
@@ -197,6 +203,11 @@
 	--success-foreground: 0 0% 100%;
 	--warning: 38 92% 50%;
 	--warning-foreground: 0 0% 0%;
+
+	/* Status accents — overridden per-palette by applyPaletteToDocument(). */
+	--info: 199 89% 48%;
+	--status-active: 160 60% 45%;
+	--status-scheduled: 199 89% 48%;
 }
 
 [data-theme='ink'] .dark {

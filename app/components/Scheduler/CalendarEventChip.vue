@@ -24,12 +24,19 @@ const chipOpacity = computed(() =>
 	getStatusOpacity(props.event.meeting_status || props.event.status),
 );
 
+// Type → semantic-token mapping. Switched from hardcoded Tailwind
+// emerald/amber/gray/blue to palette-driven CSS-var tokens so the
+// calendar re-skins on palette change:
+//   video_meeting → success  (positive scheduled outcome)
+//   follow_up     → warning  (action needed)
+//   external      → muted    (observed, not owned)
+//   default       → info     (generic appointment)
 const typeBg = computed(() => {
 	switch (props.event.type) {
-		case 'video_meeting': return 'bg-emerald-50/50 dark:bg-emerald-900/10';
-		case 'follow_up': return 'bg-amber-50/50 dark:bg-amber-900/10';
-		case 'external': return 'bg-gray-50/50 dark:bg-gray-800/30';
-		default: return 'bg-blue-50/50 dark:bg-blue-900/10';
+		case 'video_meeting': return 'bg-success/10';
+		case 'follow_up': return 'bg-warning/10';
+		case 'external': return 'bg-muted/40';
+		default: return 'bg-info/10';
 	}
 });
 
@@ -44,19 +51,19 @@ const typeIcon = computed(() => {
 
 const typeIconColor = computed(() => {
 	switch (props.event.type) {
-		case 'video_meeting': return 'text-emerald-500';
-		case 'follow_up': return 'text-amber-500';
-		case 'external': return 'text-gray-400';
-		default: return 'text-blue-500';
+		case 'video_meeting': return 'text-success';
+		case 'follow_up': return 'text-warning';
+		case 'external': return 'text-muted-foreground';
+		default: return 'text-info';
 	}
 });
 
 const typeAccent = computed(() => {
 	switch (props.event.type) {
-		case 'video_meeting': return 'bg-emerald-500';
-		case 'follow_up': return 'bg-amber-500';
-		case 'external': return 'bg-gray-400';
-		default: return 'bg-blue-500';
+		case 'video_meeting': return 'bg-success';
+		case 'follow_up': return 'bg-warning';
+		case 'external': return 'bg-muted-foreground';
+		default: return 'bg-info';
 	}
 });
 

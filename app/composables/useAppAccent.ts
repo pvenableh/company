@@ -182,6 +182,44 @@ export function pickGappy(sourceLen: number, count: number): number[] {
 	return Array.from({ length: count }, (_, i) => Math.round(i * step));
 }
 
+/**
+ * Semantic theme tokens — published to `<html>` as CSS vars so the entire
+ * app re-skins when the palette changes. Every Tailwind utility that reads
+ * `--primary`, `--destructive`, `--success`, `--warning`, plus the
+ * status-specific `--status-active` / `--status-scheduled` vars consumed by
+ * `useStatusStyle`, pick these up automatically — buttons, badges, pills,
+ * delete confirmations, focus rings, the lot.
+ *
+ * Optional `*Foreground` keys override the text-on-fill colour; omitted
+ * defaults to white (works for every solid swatch we ship).
+ */
+interface PaletteSemantics {
+	primary: HSL;
+	primaryForeground?: HSL;
+	destructive: HSL;
+	destructiveForeground?: HSL;
+	success: HSL;
+	warning: HSL;
+	/** Maps to `--status-scheduled` — scheduled/info badges, link blue. */
+	info: HSL;
+	/** Maps to `--status-active` — in-progress/active badges, live dot. */
+	active: HSL;
+}
+
+/**
+ * Chip chrome — controls how AppRail renders the per-app chips.
+ *
+ *   palette  — default: each chip uses its per-app accent gradient.
+ *   neutral  — every chip uses a uniform frosted/grey surface; icons all
+ *              use `chipAccent`. Lets a palette opt out of rainbow chips
+ *              while still driving buttons/status with a single accent.
+ */
+interface PaletteChrome {
+	chipMode: 'palette' | 'neutral';
+	/** Icon colour used by every chip when `chipMode === 'neutral'`. */
+	chipAccent?: HSL;
+}
+
 /** Palette definition — flat source list + optional separate icon source. */
 interface PaletteDef {
 	meta: { label: string; hint: string };
@@ -208,6 +246,16 @@ interface PaletteDef {
 	 * hand-picked icon colour the algorithmic pick can't produce.
 	 */
 	iconOverrides?: Partial<Record<number, HSL>>;
+	/**
+	 * Force every chip's icon to the same colour, regardless of strategy
+	 * or overrides. Used by Neutral so every grey chip wears the same
+	 * cyan glyph — chrome reads as "one system" instead of "rainbow".
+	 */
+	uniformIcon?: HSL;
+	/** Semantic colour tokens that drive buttons, badges, status, etc. */
+	semantics: PaletteSemantics;
+	/** Optional chip chrome override. Defaults to `{ chipMode: 'palette' }`. */
+	chrome?: PaletteChrome;
 }
 
 // ─── Source palettes ──────────────────────────────────────────────────────
@@ -243,6 +291,29 @@ const AURORA_SOURCE: readonly HSL[] = [
 ] as const;
 
 /**
+ * Neutral — Sky Aqua → Yale Blue (10 colours, bright cyan → deep navy).
+ * Chrome (`chipMode: 'neutral'` below) renders chips as frosted-glass
+ * discs, so these colours don't drive the chip *background* — they
+ * drive the chip *icon* via `iconStrategy: 'identity'` (icon = bg).
+ * pickGappy spreads 7 chips across the 10-step ramp at indices
+ * `[0, 2, 3, 5, 6, 8, 9]`, so the first chip always wears Sky Aqua
+ * and the last always wears Yale Blue 2; the middle chips slot in
+ * between. Adding chips re-balances the spread automatically.
+ */
+const NEUTRAL_SOURCE: readonly HSL[] = [
+	{ h: 196, s: 100, l: 50 }, // 0 Sky Aqua     #00cfff
+	{ h: 192, s: 97,  l: 47 }, // 1 Sky Surge    #04bfee
+	{ h: 193, s: 92,  l: 45 }, // 2 Sky Surge 2  #09b0dd
+	{ h: 193, s: 88,  l: 43 }, // 3 Blue Green   #0da0cc
+	{ h: 195, s: 83,  l: 40 }, // 4 Bondi Blue   #1191bb
+	{ h: 196, s: 77,  l: 38 }, // 5 Cerulean     #1681aa
+	{ h: 200, s: 71,  l: 35 }, // 6 Cerulean 2   #1a7299
+	{ h: 206, s: 64,  l: 33 }, // 7 Baltic Blue  #1e6288
+	{ h: 214, s: 55,  l: 30 }, // 8 Yale Blue    #235377
+	{ h: 220, s: 45,  l: 28 }, // 9 Yale Blue 2  #274366
+] as const;
+
+/**
  * Palette registry — flat source-list definitions. Per-app HSL maps are
  * derived on the fly via `pickGappy` (see `getAppAccents`).
  *
@@ -265,7 +336,10 @@ const AURORA_SOURCE: readonly HSL[] = [
  */
 export const APP_PALETTES = {
 	seaMist: {
-		meta: { label: 'Sea Mist', hint: 'Pastel aqua through bright sky blue' },
+		// Id stays `seaMist` so existing `directus_users.app_palette` values
+		// keep resolving without a migration; only the user-facing label
+		// flips to "Fresh".
+		meta: { label: 'Fresh', hint: 'Aquamarine through bright sky blue' },
 		sourceColors: SEA_MIST_SOURCE,
 		// `same-mirror` keeps every icon inside Sea Mist's own hue family
 		// (palette-cohesive look). The strategy's middle-3 fallback makes
@@ -276,6 +350,20 @@ export const APP_PALETTES = {
 		iconStrategy: 'same-mirror',
 		iconOverrides: {
 			4: { h: 278, s: 100, l: 36 }, // marketing → Royal Violet #7400b8
+		},
+		// Primary lifts Blue Energy (#5390d9) from the palette — confident
+		// button blue that still belongs to Sea Mist. Destructive rolls a
+		// rose red that pairs with aquas (warmer than pure crimson).
+		// Active/info stay in the cyan family so status pills feel like
+		// extensions of the rail.
+		semantics: {
+			primary: { h: 213, s: 64, l: 52 },        // Blue Energy, slightly deepened
+			primaryForeground: { h: 0, s: 0, l: 100 },
+			destructive: { h: 346, s: 78, l: 54 },    // rose
+			success: { h: 160, s: 62, l: 42 },        // sea-green
+			warning: { h: 38, s: 92, l: 50 },
+			info: { h: 202, s: 75, l: 54 },           // Fresh Sky
+			active: { h: 188, s: 70, l: 48 },         // Strong Cyan
 		},
 	},
 	aurora: {
@@ -293,6 +381,41 @@ export const APP_PALETTES = {
 			0: { h: 163, s: 100, l: 75 }, // Aquamarine  #80ffdb
 			1: { h: 180, s: 66,  l: 63 }, // Pearl Aqua  #64dfdf
 		},
+		// Electric Sapphire (#4361ee) is the deepest "still a button"
+		// colour in the source — neon pink is too brand-heavy for primary
+		// CTAs. Destructive picks a true crimson so it stays distinct
+		// from Aurora's hot pink/magenta family.
+		semantics: {
+			primary: { h: 230, s: 83, l: 55 },        // Electric Sapphire
+			primaryForeground: { h: 0, s: 0, l: 100 },
+			destructive: { h: 0, s: 78, l: 56 },      // crimson — distinct from neon pink
+			success: { h: 160, s: 65, l: 42 },
+			warning: { h: 38, s: 92, l: 50 },
+			info: { h: 194, s: 85, l: 56 },           // Sky Aqua, deepened
+			active: { h: 212, s: 84, l: 55 },         // Cloudy Sky
+		},
+	},
+	neutral: {
+		meta: { label: 'Neutral', hint: 'Frosted glass with sky → yale-blue chromatic icons' },
+		sourceColors: NEUTRAL_SOURCE,
+		// `identity` makes each chip's icon = its bg pick — so the icons
+		// wear the full chromatic ramp (Sky Aqua → Yale Blue 2) against
+		// frosted-glass discs. First + last chips always anchor the ramp
+		// (pickGappy locks index 0 + last); middle chips spread between.
+		iconStrategy: 'identity',
+		chrome: { chipMode: 'neutral', chipAccent: { h: 196, s: 100, l: 50 } },
+		// Sky Aqua primary so SVGs + CTAs share the brightest accent. All
+		// other status tokens stay stock so meeting greens, destructive
+		// reds, etc. don't shift in the calm Neutral palette.
+		semantics: {
+			primary: { h: 196, s: 100, l: 50 },       // Sky Aqua — top of ramp
+			primaryForeground: { h: 0, s: 0, l: 100 },
+			destructive: { h: 0, s: 72, l: 51 },
+			success: { h: 142, s: 72, l: 46 },
+			warning: { h: 38, s: 92, l: 50 },
+			info: { h: 199, s: 89, l: 48 },
+			active: { h: 160, s: 60, l: 45 },
+		},
 	},
 } as const satisfies Record<string, PaletteDef>;
 
@@ -305,7 +428,7 @@ export type AppPaletteId = keyof typeof APP_PALETTES;
  * gradientBlues) stay in `APP_PALETTES` for future revival but are
  * hidden from the picker and aliased to `seaMist` on resolve.
  */
-export const APP_PALETTE_IDS: readonly AppPaletteId[] = ['seaMist', 'aurora'];
+export const APP_PALETTE_IDS: readonly AppPaletteId[] = ['seaMist', 'aurora', 'neutral'];
 
 /**
  * Legacy palette aliases. When a stored `directus_users.app_palette`
@@ -365,7 +488,7 @@ const CHIP_IDS: readonly AppId[] = [...APP_ORDER, ...APP_FOOTER_ORDER];
  * retired and the locked-per-palette config drives everything now.
  * Tonal + triadic remain available for palette authors who want them.
  */
-export const ICON_STRATEGIES = ['cross-mirror', 'same-mirror', 'tonal', 'triadic'] as const;
+export const ICON_STRATEGIES = ['cross-mirror', 'same-mirror', 'tonal', 'triadic', 'identity'] as const;
 export type IconStrategyId = (typeof ICON_STRATEGIES)[number];
 
 /**
@@ -383,6 +506,13 @@ function resolveIconHsl(
 	chipIndex: number,
 	chipCount: number,
 ): HSL {
+	if (strategy === 'identity') {
+		// Icon = bg pick. Used by palettes that render chips on a
+		// neutral/frosted surface (Neutral, and any palette when the
+		// global Glass toggle is on) — the chip itself isn't coloured,
+		// the glyph carries the full palette hue.
+		return bg;
+	}
 	if (strategy === 'cross-mirror') {
 		const src = palette.iconSourceColors ?? palette.sourceColors;
 		const picks = pickGappy(src.length, chipCount).slice().reverse();
@@ -452,13 +582,81 @@ export function getAppAccents(paletteId: AppPaletteId): Record<AppId, AppAccent>
 	const out = {} as Record<AppId, AppAccent>;
 	CHIP_IDS.forEach((id, i) => {
 		const bg = palette.sourceColors[bgPicks[i]!]!;
-		// Per-chip override beats the strategy resolver — lets a palette
-		// nudge individual chips without throwing out the algorithm.
+		// `uniformIcon` (Neutral) wins outright; otherwise per-chip override
+		// beats the strategy resolver.
 		const override = palette.iconOverrides?.[i];
-		const icon = override ?? resolveIconHsl(strategy, palette, bg, i, CHIP_IDS.length);
+		const icon = palette.uniformIcon
+			?? override
+			?? resolveIconHsl(strategy, palette, bg, i, CHIP_IDS.length);
 		out[id] = { ...APP_META[id], ...bg, iconHsl: icon };
 	});
 	return out;
+}
+
+/**
+ * Read the active palette's chrome config — used by AppRail to switch
+ * between gradient chips (`palette`) and frosted-grey chips (`neutral`).
+ * Exported so any consumer can know what mode is active without re-importing
+ * the registry shape.
+ */
+export function getPaletteChrome(paletteId: AppPaletteId): PaletteChrome {
+	const palette = APP_PALETTES[paletteId] ?? APP_PALETTES.seaMist;
+	return palette.chrome ?? { chipMode: 'palette' };
+}
+
+/** Format an HSL tuple as the `H S% L%` string expected by the `--primary`
+ *  / `--destructive` style CSS vars (no `hsl()` wrapper — Tailwind's
+ *  `@theme inline` block already wraps these). */
+function hslToVarString(c: HSL): string {
+	return `${c.h} ${c.s}% ${c.l}%`;
+}
+
+/**
+ * Push the active palette's semantic tokens to `<html>` as CSS custom
+ * properties. Overrides `--primary`, `--destructive`, `--success`,
+ * `--warning`, plus the status-specific `--status-active` /
+ * `--status-scheduled` / `--info` that `useStatusStyle` consumes — so
+ * every Tailwind utility that reads these vars (bg-primary,
+ * text-destructive, the focus ring, status badges, …) re-skins on
+ * palette switch with no per-component plumbing.
+ *
+ * The chrome.chipMode is also published as the `data-chip-mode` attribute
+ * so AppRail's CSS can branch between gradient chips (palette) and
+ * frosted-grey chips (neutral).
+ *
+ * Idempotent + client-only — server-rendered markup picks up the *default*
+ * palette values from `themes.css`, then this function fires on hydration
+ * to apply the user's choice.
+ */
+export function applyPaletteToDocument(paletteId: AppPaletteId): void {
+	if (typeof document === 'undefined') return;
+	const palette = APP_PALETTES[paletteId] ?? APP_PALETTES.seaMist;
+	const s = palette.semantics;
+	const root = document.documentElement;
+	const set = (prop: string, value: string) => root.style.setProperty(prop, value);
+
+	set('--primary', hslToVarString(s.primary));
+	set('--primary-foreground', hslToVarString(s.primaryForeground ?? { h: 0, s: 0, l: 100 }));
+	set('--destructive', hslToVarString(s.destructive));
+	set('--destructive-foreground', hslToVarString(s.destructiveForeground ?? { h: 0, s: 0, l: 100 }));
+	set('--success', hslToVarString(s.success));
+	set('--warning', hslToVarString(s.warning));
+	// Custom status vars consumed by useStatusStyle + tailwind @theme.
+	set('--info', hslToVarString(s.info));
+	set('--status-scheduled', hslToVarString(s.info));
+	set('--status-active', hslToVarString(s.active));
+	// Ring follows primary so focus outlines match the palette.
+	set('--ring', hslToVarString(s.primary));
+
+	// Chrome attribute drives AppRail's chip-mode CSS branch.
+	const chrome = palette.chrome ?? { chipMode: 'palette' };
+	root.setAttribute('data-chip-mode', chrome.chipMode);
+	if (chrome.chipAccent) {
+		const a = chrome.chipAccent;
+		root.style.setProperty('--chip-accent', `hsl(${a.h} ${a.s}% ${a.l}%)`);
+	} else {
+		root.style.removeProperty('--chip-accent');
+	}
 }
 
 /**
@@ -526,9 +724,24 @@ export function appIdForPath(path: string): AppId | null {
 
 export function useAppAccent() {
 	const route = useRoute();
-	const { palette } = useAppPalette();
+	const { palette, glassChrome } = useAppPalette();
 
-	const accents = computed<Record<AppId, AppAccent>>(() => getAppAccents(palette.value));
+	const accents = computed<Record<AppId, AppAccent>>(() => {
+		const base = getAppAccents(palette.value);
+		if (!glassChrome.value) return base;
+		// Glass mode: override every chip's icon to its own bg colour so
+		// the rail wears the palette's full chromatic ramp on frosted
+		// discs. First + last bg picks anchor the ramp (locked by
+		// pickGappy); middle chips slot between them. Works across every
+		// palette — Sea Mist's aqua→violet, Aurora's pink→sky, Neutral's
+		// sky→navy — without per-palette wiring.
+		const out = {} as Record<AppId, AppAccent>;
+		for (const id of CHIP_IDS) {
+			const a = base[id]!;
+			out[id] = { ...a, iconHsl: { h: a.h, s: a.s, l: a.l } };
+		}
+		return out;
+	});
 
 	const activeAppId = computed<AppId | null>(() => appIdForPath(route.path));
 

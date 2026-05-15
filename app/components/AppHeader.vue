@@ -216,6 +216,40 @@ const fallbackBackLabel = computed(() => {
 	display: none;
 }
 
+/* ── Neutral / Glass chip mode ─────────────────────────────────── */
+/* Swap the per-app gradient for a frosted-glass disc whenever the
+ * Neutral palette is active (forces `data-chip-mode='neutral'` on
+ * `<html>`) or the Glass toggle is on (`data-surface='glass'`). The
+ * chromatic icon (set via `--app-accent-icon` from useAppAccent's
+ * glass-aware `accents` computed) sings against the frost, matching
+ * the rail's liquid-glass look. Drop the icon's cast shadow in this
+ * mode — the disc's border + inner highlight already carry depth.
+ *
+ * `html[…]` prefix lifts specificity above the scoped attribute
+ * selector so these rules beat the default gradient styling. */
+html[data-chip-mode='neutral'] .app-header__accent-icon,
+html[data-surface='glass'] .app-header__accent-icon {
+	background: hsl(0 0% 100% / 0.42);
+	backdrop-filter: blur(10px) saturate(1.2);
+	-webkit-backdrop-filter: blur(10px) saturate(1.2);
+	border: 1px solid hsl(0 0% 100% / 0.7);
+	box-shadow:
+		inset 0 0.5px 0 hsl(0 0% 100% / 0.85),
+		inset 0 -0.5px 0 hsl(0 0% 0% / 0.04),
+		0 1px 3px hsl(0 0% 0% / 0.06);
+}
+
+html[data-chip-mode='neutral'] .app-header__accent-glyph,
+html[data-surface='glass'] .app-header__accent-glyph {
+	filter: none;
+}
+
+html.dark[data-chip-mode='neutral'] .app-header__accent-icon,
+html.dark[data-surface='glass'] .app-header__accent-icon {
+	background: hsl(0 0% 100% / 0.06);
+	border-color: hsl(0 0% 100% / 0.14);
+}
+
 .app-header__title {
 	@apply text-base font-semibold truncate;
 }

@@ -279,4 +279,70 @@ form .relative > button[role="combobox"],
   border-radius: 9999px;
 }
 
+/* ============================================
+   Glass chrome — `<html data-surface="glass">`
+   ============================================
+   Orthogonal to palette choice. When the user enables the Glass toggle
+   (see useAppPalette.setGlassChrome), every primary surface (rail chips
+   + primary buttons) drops its solid accent fill in favour of a frosted
+   translucent surface, and the palette's `--primary` does the work
+   instead — chip icons + button labels. The accent still flows from the
+   palette, so Sea Mist + Glass reads blue-on-frost, Aurora + Glass reads
+   sapphire-on-frost, and so on.
+
+   Why this layer (theme.css) instead of AppRail's scoped styles: scoped
+   Vue styles can't match an ancestor `<html>` attribute. Glass rules need
+   a global stylesheet.
+
+   Selector specificity note: `[data-surface='glass'] .bg-primary` has
+   higher specificity than Tailwind's bare `.bg-primary` so it wins on
+   the cascade without needing `!important`.
+   ============================================ */
+
+/* Note: rail chip icon colours are no longer overridden globally in
+   glass mode. `useAppAccent`'s `accents` computed now swaps each chip's
+   `iconHsl` to its own bg pick when `glassChrome` is on, so the rail
+   wears the palette's chromatic ramp on frosted discs — first + last
+   bg picks always anchor the ramp via pickGappy, middle chips slot in
+   between. No CSS plumbing needed; the per-chip `--rail-icon` inline
+   style already reads through the updated iconHsl. */
+
+/* ---- Primary buttons — frosted surface, palette-coloured label ---- */
+/* Background swap on every primary fill. The accent does the legibility
+   work via the text colour swap below; the border keeps the button
+   discoverable as an actionable surface against the page background. */
+[data-surface='glass'] .bg-primary {
+  background-color: hsl(0 0% 100% / 0.5);
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  border: 1px solid hsl(var(--primary) / 0.22);
+  color: hsl(var(--primary));
+  box-shadow: 0 1px 2px hsl(0 0% 0% / 0.05);
+}
+
+[data-surface='glass'] .bg-primary:hover,
+[data-surface='glass'] .hover\:bg-primary\/90:hover {
+  background-color: hsl(0 0% 100% / 0.65);
+  border-color: hsl(var(--primary) / 0.32);
+}
+
+/* `text-primary-foreground` is the white-on-primary text colour Tailwind
+   pairs with `bg-primary`. Glass mode flips it to the palette accent so
+   the label reads coloured-on-frost. */
+[data-surface='glass'] .text-primary-foreground {
+  color: hsl(var(--primary));
+}
+
+/* Dark mode — frosted-grey reads as a darker translucent surface so
+   buttons stay visually grounded against the dark page. */
+.dark [data-surface='glass'] .bg-primary,
+[data-surface='glass'].dark .bg-primary {
+  background-color: hsl(0 0% 100% / 0.08);
+  border-color: hsl(var(--primary) / 0.35);
+}
+
+.dark [data-surface='glass'] .bg-primary:hover,
+[data-surface='glass'].dark .bg-primary:hover {
+  background-color: hsl(0 0% 100% / 0.14);
+}
 

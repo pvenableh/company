@@ -125,4 +125,31 @@ defineEmits<{
 .app-floor-strip__item--active:hover {
 	color: white;
 }
+
+/* Neutral palette + Glass-toggle override — per-app accent vars are flat
+ * grey for the Neutral palette (since its sourceColors are all grey), so
+ * the default active pill renders as white-on-grey gradient with white
+ * text → invisible. Force the active pill onto `--primary` (palette
+ * primary — Cyan for Neutral, Blue Energy for Sea Mist + Glass, Electric
+ * Sapphire for Aurora + Glass) so the active state always reads against
+ * the strip's white background.
+ *
+ * `html[…]` prefix lifts specificity above the scoped style attribute
+ * selector — without it the scoped rule wins on source order. */
+html[data-chip-mode='neutral'] .app-floor-strip__item--active,
+html[data-surface='glass'] .app-floor-strip__item--active {
+	background: linear-gradient(
+		135deg,
+		hsl(var(--primary) / 0.92),
+		hsl(var(--primary))
+	);
+	box-shadow:
+		0 1px 0 0 hsl(var(--primary) / 0.4) inset,
+		0 4px 10px -6px hsl(var(--primary) / 0.55);
+}
+
+html[data-chip-mode='neutral'] .app-floor-strip__item:hover,
+html[data-surface='glass'] .app-floor-strip__item:hover {
+	background: hsl(var(--primary) / 0.08);
+}
 </style>

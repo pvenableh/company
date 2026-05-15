@@ -29,10 +29,14 @@ import {
 } from '~/composables/useAppAccent';
 
 const { railPosition, storedRailPosition, setRailPosition, railShowLabels, setRailShowLabels } = useAppsMode();
-const { palette, setPalette } = useAppPalette();
+const { palette, setPalette, glassChrome, setGlassChrome } = useAppPalette();
 
+// Keyed off the *rendered* position rather than the stored choice, so a
+// user whose stored pref is `floating` (forcibly switched to bottom on
+// narrow screens by `useAppsMode`) still gets the labels toggle. Without
+// this the bottom-forced rail shows labels with no way to hide them.
 const labelsToggleVisible = computed(
-	() => storedRailPosition.value === 'top' || storedRailPosition.value === 'bottom',
+	() => railPosition.value === 'top' || railPosition.value === 'bottom',
 );
 
 const positionOptions: Array<{ id: RailPosition; label: string; icon: string; hint: string }> = [
@@ -61,7 +65,10 @@ async function handlePickPosition(next: RailPosition) {
 
 /** Build a swatch row for each palette so users see what they'll get.
  *  Reads through `getAppAccents` (the derived view of the palette's
- *  `sourceColors` + `pickGappy`) so swatches always match the rail. */
+ *  `sourceColors` + `pickGappy`) so swatches always match the rail.
+ *  The bg picks double as the chromatic icon colours under both Neutral
+ *  (iconStrategy: 'identity') and the Glass toggle, so a single swatch
+ *  row is accurate for every palette regardless of chip-mode. */
 function swatchesFor(id: AppPaletteId) {
   const accents = getAppAccents(id);
   return [...APP_ORDER, ...APP_FOOTER_ORDER].map((appId) => {
@@ -150,41 +157,62 @@ async function handlePickPalette(next: AppPaletteId) {
         />
       </div>
 
+      <!-- ── Section: Glass chrome toggle ──────────────────────────── -->
+      <!-- Orthogonal to palette: forces every chip + primary button onto
+           a frosted-grey surface and lets the palette accent drive icons
+           + button labels. Reads as a calmer, more uniform aesthetic. -->
+      <div class="mt-1.5 mb-0.5 mx-2 border-t border-border/40" aria-hidden="true" />
+      <div
+        class="px-2 py-1.5 flex items-center gap-2.5 rounded-md hover:bg-muted/60 cursor-pointer"
+        @click="setGlassChrome(!glassChrome)"
+      >
+        <Icon name="lucide:sparkles" class="size-4 shrink-0 text-muted-foreground" />
+        <div class="flex-1 min-w-0">
+          <div class="text-xs font-medium leading-tight">Glass chrome</div>
+          <div class="text-[10px] text-muted-foreground leading-tight">
+            Frosted chips + buttons; icons wear the palette's chromatic ramp.
+          </div>
+        </div>
+        <Switch
+          :model-value="glassChrome"
+          class="shrink-0"
+          @update:model-value="setGlassChrome"
+          @click.stop
+        />
+      </div>
+
       <!-- ── Section: Palette ──────────────────────────────────────── -->
-      <!-- Hidden while we lock the apps shell to the Sea Mist palette.
-           Re-show when APP_PALETTE_IDS exposes more than one entry. -->
+      <!-- 3 palettes rendered side-by-side. Each tile shows a label + a
+           row of skinny vertical bars representing pickGappy's spread
+           across the palette source — the same colours the rail chip
+           icons will wear under Neutral / Glass mode. Hint moved to
+           `title=` so it surfaces on hover without taking row space. -->
       <template v-if="APP_PALETTE_IDS.length > 1">
         <div class="mt-1.5 mb-0.5 mx-2 border-t border-border/40" aria-hidden="true" />
         <div class="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
           App Palette
         </div>
-        <div class="space-y-0.5">
+        <div class="flex gap-1 px-1.5 pb-1">
           <button
             v-for="id in APP_PALETTE_IDS"
             :key="id"
             type="button"
             :disabled="saving"
-            class="flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left transition-colors hover:bg-muted/60 disabled:opacity-60"
-            :class="{ 'bg-primary/10 text-primary': palette === id }"
+            :title="APP_PALETTES[id].meta.hint"
+            class="flex-1 flex flex-col items-center gap-1.5 px-1.5 py-2 transition-colors hover:bg-muted/60 disabled:opacity-60"
+            :class="{ 'bg-muted': palette === id }"
+            style="border-radius: 3px;"
             @click="handlePickPalette(id)"
           >
-            <div class="flex-1 min-w-0">
-              <div class="text-xs font-medium leading-tight mb-1">{{ APP_PALETTES[id].meta.label }}</div>
-              <div class="flex items-center gap-0.5 mb-1" aria-hidden="true">
-                <span
-                  v-for="(swatch, idx) in swatchesFor(id)"
-                  :key="idx"
-                  class="block w-3.5 h-3.5 rounded-sm shrink-0"
-                  :style="{ backgroundColor: swatch }"
-                />
-              </div>
-              <div class="text-[10px] text-muted-foreground leading-tight truncate">{{ APP_PALETTES[id].meta.hint }}</div>
-            </div>
-            <Icon
-              v-if="palette === id"
-              name="lucide:check"
-              class="size-3.5 text-primary shrink-0"
-            />
+            <span class="text-[10px] font-medium leading-tight">{{ APP_PALETTES[id].meta.label }}</span>
+            <span class="flex items-center gap-px h-7" aria-hidden="true">
+              <span
+                v-for="(swatch, idx) in swatchesFor(id)"
+                :key="idx"
+                class="block w-[3px] h-full rounded-[1px] shrink-0"
+                :style="{ backgroundColor: swatch }"
+              />
+            </span>
           </button>
         </div>
       </template>

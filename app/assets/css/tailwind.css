@@ -45,6 +45,14 @@
 	--color-warning: hsl(var(--warning));
 	--color-warning-foreground: hsl(var(--warning-foreground));
 
+	/* Status accents — palette-driven via applyPaletteToDocument().
+	   Use `bg-status-active`, `text-status-scheduled`, `bg-info/15`, etc.
+	   instead of hardcoded `bg-teal-500` / `bg-sky-500` so status pills
+	   re-skin with the palette. */
+	--color-info: hsl(var(--info));
+	--color-status-active: hsl(var(--status-active));
+	--color-status-scheduled: hsl(var(--status-scheduled));
+
 	--color-border: hsl(var(--border));
 	--color-input: hsl(var(--input));
 	--color-ring: hsl(var(--ring));
