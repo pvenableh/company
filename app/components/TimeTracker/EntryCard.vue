@@ -47,7 +47,7 @@
 					</Badge>
 					<span
 						v-if="entry.billable"
-						class="inline-flex items-center gap-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400"
+						class="inline-flex items-center gap-0.5 text-[11px] font-medium text-success dark:text-success"
 					>
 						<Icon name="lucide:dollar-sign" class="w-3 h-3" />
 					</span>
@@ -55,14 +55,14 @@
 					<Badge
 						v-if="entry.billed && invoiceStatus === 'paid'"
 						variant="outline"
-						class="text-[11px] px-1.5 py-0 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+						class="text-[11px] px-1.5 py-0 border-success/30 text-success dark:text-success"
 					>
 						Paid
 					</Badge>
 					<Badge
 						v-else-if="entry.billed"
 						variant="outline"
-						class="text-[11px] px-1.5 py-0 border-amber-500/30 text-amber-600 dark:text-amber-400"
+						class="text-[11px] px-1.5 py-0 border-warning/30 text-warning dark:text-warning"
 					>
 						Billed
 					</Badge>

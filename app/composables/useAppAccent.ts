@@ -256,7 +256,36 @@ interface PaletteDef {
 	semantics: PaletteSemantics;
 	/** Optional chip chrome override. Defaults to `{ chipMode: 'palette' }`. */
 	chrome?: PaletteChrome;
+	/**
+	 * Categorical / decorative ramp emitted as `--tag-1`…`--tag-N`. Consumers
+	 * that need N distinguishable colours with no semantic meaning (lead
+	 * stages, contact tags, host stripes, chart series, decorative badges)
+	 * read from `var(--tag-N)` so identity (slot assignment) is preserved
+	 * across palettes while hues re-skin. Auto-derived from `sourceColors`
+	 * via `pickGappy(sourceColors.length, TAG_RAMP_LENGTH)` if omitted —
+	 * provide an override only when the curated spread reads better than
+	 * the algorithmic one.
+	 */
+	tagRamp?: readonly HSL[];
 }
+
+/**
+ * Number of slots in the categorical tag ramp emitted as `--tag-1`…`--tag-N`.
+ * Eight reads as the sweet spot: enough room for the typical 5-7 lead
+ * stages / category tags with one or two spares, and a `hash % 8` host
+ * stripe distribution stays visually distinct across a busy day.
+ *
+ * Bumping this value requires four coordinated edits:
+ *   1. this constant
+ *   2. `--color-tag-N` entries in `@theme inline` in tailwind.css
+ *   3. `--tag-N` SSR defaults in `:root` in themes.css
+ *   4. `tag-{1,…,N}` patterns in the `@source inline(…)` safelist
+ *      in tailwind.css
+ *
+ * `TAG_SLOT_BY_COLOR` in `app/utils/palette-tokens.ts` may also need
+ * new entries if a colour-prop alias should land on a new slot.
+ */
+export const TAG_RAMP_LENGTH = 8;
 
 // ─── Source palettes ──────────────────────────────────────────────────────
 // Each list is the *full* gradient. The chip count (7 today) drops indices
@@ -611,6 +640,61 @@ function hslToVarString(c: HSL): string {
 	return `${c.h} ${c.s}% ${c.l}%`;
 }
 
+const WHITE: HSL = { h: 0, s: 0, l: 100 };
+
+/**
+ * Single source of truth for CSS-var → palette-field mapping. Every
+ * semantic token the app exposes is registered here exactly once;
+ * `applyPaletteToDocument` loops over the registry and writes each var
+ * to `<html>` from the active palette.
+ *
+ * Adding a new semantic token:
+ *   1. Add an entry below (one line: var name → resolver).
+ *   2. Add a matching `--color-<token>: hsl(var(--<token>))` line to the
+ *      `@theme inline` block in tailwind.css so it works as a Tailwind
+ *      utility (`bg-<token>`, `text-<token>`).
+ *   3. Add an SSR default to `:root` in themes.css.
+ *   4. (Optional) Add an explicit field to `PaletteSemantics` if every
+ *      palette must provide its own; otherwise resolve through an
+ *      existing semantic (alias).
+ *
+ * The categorical `--tag-N` ramp is emitted separately in
+ * `applyPaletteToDocument` because its var-count is data-driven
+ * (`TAG_RAMP_LENGTH`) rather than statically named.
+ */
+type TokenResolver = (s: PaletteSemantics) => HSL;
+const TOKEN_REGISTRY: Record<string, TokenResolver> = {
+	'--primary':                s => s.primary,
+	'--primary-foreground':     s => s.primaryForeground ?? WHITE,
+	'--destructive':            s => s.destructive,
+	'--destructive-foreground': s => s.destructiveForeground ?? WHITE,
+	'--success':                s => s.success,
+	'--warning':                s => s.warning,
+	'--info':                   s => s.info,
+	'--status-active':          s => s.active,
+	'--status-scheduled':       s => s.info,
+	// Ring tracks primary so focus outlines stay in palette family.
+	'--ring':                   s => s.primary,
+};
+
+/**
+ * Resolve the active palette's categorical tag ramp. Returns the curated
+ * `tagRamp` when the palette ships one; otherwise spreads
+ * `TAG_RAMP_LENGTH` indices across `sourceColors` via `pickGappy` for
+ * visually distinct slots that stay in-family with the palette's hue
+ * range.
+ *
+ * Same identity contract as the rail's bg picks: pickGappy's spread is
+ * deterministic per source length, so a given palette always yields the
+ * same ramp on every render — slot N keeps its meaning across page loads.
+ */
+export function getTagRamp(paletteId: AppPaletteId): readonly HSL[] {
+	const palette = APP_PALETTES[paletteId] ?? APP_PALETTES.seaMist;
+	if (palette.tagRamp) return palette.tagRamp;
+	const picks = pickGappy(palette.sourceColors.length, TAG_RAMP_LENGTH);
+	return picks.map((i) => palette.sourceColors[i]!);
+}
+
 /**
  * Push the active palette's semantic tokens to `<html>` as CSS custom
  * properties. Overrides `--primary`, `--destructive`, `--success`,
@@ -631,24 +715,22 @@ function hslToVarString(c: HSL): string {
 export function applyPaletteToDocument(paletteId: AppPaletteId): void {
 	if (typeof document === 'undefined') return;
 	const palette = APP_PALETTES[paletteId] ?? APP_PALETTES.seaMist;
-	const s = palette.semantics;
 	const root = document.documentElement;
 	const set = (prop: string, value: string) => root.style.setProperty(prop, value);
 
-	set('--primary', hslToVarString(s.primary));
-	set('--primary-foreground', hslToVarString(s.primaryForeground ?? { h: 0, s: 0, l: 100 }));
-	set('--destructive', hslToVarString(s.destructive));
-	set('--destructive-foreground', hslToVarString(s.destructiveForeground ?? { h: 0, s: 0, l: 100 }));
-	set('--success', hslToVarString(s.success));
-	set('--warning', hslToVarString(s.warning));
-	// Custom status vars consumed by useStatusStyle + tailwind @theme.
-	set('--info', hslToVarString(s.info));
-	set('--status-scheduled', hslToVarString(s.info));
-	set('--status-active', hslToVarString(s.active));
-	// Ring follows primary so focus outlines match the palette.
-	set('--ring', hslToVarString(s.primary));
+	// 1. Semantic tokens — single loop over the registry. Adding a new
+	//    token means one entry in TOKEN_REGISTRY + one @theme inline line.
+	for (const [varName, resolve] of Object.entries(TOKEN_REGISTRY)) {
+		set(varName, hslToVarString(resolve(palette.semantics)));
+	}
 
-	// Chrome attribute drives AppRail's chip-mode CSS branch.
+	// 2. Categorical tag ramp — emitted as `--tag-1`…`--tag-N`. Slot
+	//    assignments stay stable per consumer (lead stages, host stripes,
+	//    etc.) so identity is preserved when palette switches.
+	const ramp = getTagRamp(paletteId);
+	ramp.forEach((c, i) => set(`--tag-${i + 1}`, hslToVarString(c)));
+
+	// 3. Chrome attribute drives AppRail's chip-mode CSS branch.
 	const chrome = palette.chrome ?? { chipMode: 'palette' };
 	root.setAttribute('data-chip-mode', chrome.chipMode);
 	if (chrome.chipAccent) {

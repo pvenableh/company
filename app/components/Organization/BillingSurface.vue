@@ -507,7 +507,7 @@ const statusColor = (status: string): 'green' | 'amber' | 'red' | 'gray' => {
 									<td class="px-3 py-2 text-right tabular-nums font-medium">{{ formatMoney(p.amount, p.currency) }}</td>
 									<td class="px-3 py-2">
 										<UBadge :color="statusColor(p.status)" variant="soft" size="xs">{{ p.status }}</UBadge>
-										<span v-if="p.failureMessage" class="block text-[10px] text-red-500 mt-1">{{ p.failureMessage }}</span>
+										<span v-if="p.failureMessage" class="block text-[10px] text-destructive mt-1">{{ p.failureMessage }}</span>
 									</td>
 								</tr>
 							</tbody>

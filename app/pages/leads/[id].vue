@@ -376,7 +376,7 @@ onUnmounted(() => clearEntity());
 							</div>
 							<div>
 								<p class="t-text-muted">Next Follow-up</p>
-								<p class="font-medium" :class="isOverdueFollowUp ? 'text-red-500' : 't-text'">
+								<p class="font-medium" :class="isOverdueFollowUp ? 'text-destructive' : 't-text'">
 									{{ lead.next_follow_up ? new Date(lead.next_follow_up).toLocaleDateString() : '—' }}
 									<span v-if="isOverdueFollowUp" class="text-[9px] font-semibold ml-1">OVERDUE</span>
 								</p>
@@ -404,11 +404,11 @@ onUnmounted(() => clearEntity());
 					<!-- Email Engagement (pulled from related_contact) -->
 					<div v-if="lead.related_contact" class="ios-card p-4 space-y-2">
 						<p class="text-[10px] uppercase font-semibold t-text-muted tracking-wider">Email Engagement</p>
-						<div v-if="lead.related_contact.email_bounced" class="flex items-center gap-1.5 text-[11px] text-red-600 dark:text-red-400">
+						<div v-if="lead.related_contact.email_bounced" class="flex items-center gap-1.5 text-[11px] text-destructive dark:text-destructive">
 							<UIcon name="i-heroicons-exclamation-triangle" class="w-3.5 h-3.5" />
 							Bounced{{ lead.related_contact.email_bounce_type ? ` (${lead.related_contact.email_bounce_type})` : '' }}
 						</div>
-						<div v-if="lead.related_contact.email_subscribed === false" class="text-[11px] text-amber-600 dark:text-amber-400">
+						<div v-if="lead.related_contact.email_subscribed === false" class="text-[11px] text-warning dark:text-warning">
 							Unsubscribed
 						</div>
 						<div class="grid grid-cols-3 gap-2 text-xs">
@@ -519,9 +519,9 @@ onUnmounted(() => clearEntity());
 							<div
 								v-for="meeting in upcomingMeetings"
 								:key="meeting.id"
-								class="flex items-center gap-2.5 px-2 py-1.5 rounded-lg bg-emerald-50/50 dark:bg-emerald-900/10 border-l-[3px] border-l-emerald-500"
+								class="flex items-center gap-2.5 px-2 py-1.5 rounded-lg bg-success/10 dark:bg-success/10 border-l-[3px] border-l-emerald-500"
 							>
-								<UIcon name="i-heroicons-video-camera" class="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+								<UIcon name="i-heroicons-video-camera" class="w-3.5 h-3.5 text-success flex-shrink-0" />
 								<div class="flex-1 min-w-0">
 									<p class="text-[12px] font-medium text-foreground truncate">{{ meeting.title }}</p>
 									<p class="text-[10px] text-muted-foreground">
@@ -533,7 +533,7 @@ onUnmounted(() => clearEntity());
 									v-if="meeting.meeting_url"
 									:to="meeting.meeting_url"
 									target="_blank"
-									class="p-1 rounded-md bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 transition-colors"
+									class="p-1 rounded-md bg-success/10 text-success hover:bg-success/20 transition-colors"
 								>
 									<UIcon name="i-heroicons-arrow-top-right-on-square" class="w-3 h-3" />
 								</NuxtLink>

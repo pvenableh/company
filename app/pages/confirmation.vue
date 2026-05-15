@@ -23,7 +23,7 @@
 		<!-- Success State -->
 		<div v-else class="w-full max-w-md">
 			<div class="text-center mb-8">
-				<UIcon name="heroicons:check-circle" class="h-12 w-12 text-green-500 mx-auto mb-4" />
+				<UIcon name="heroicons:check-circle" class="h-12 w-12 text-success mx-auto mb-4" />
 				<h1 class="text-2xl font-bold uppercase tracking-wider mb-2">Thank you for your payment</h1>
 				<p class="text-gray-600 dark:text-gray-400">Your transaction has been completed</p>
 			</div>

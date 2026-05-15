@@ -19,7 +19,7 @@
 			/>
 			<div class="flex items-center gap-1.5 mt-2">
 				<button
-					class="flex-1 inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[11px] font-bold uppercase tracking-wider transition-colors disabled:opacity-50"
+					class="flex-1 inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-lg bg-success/10 hover:bg-success/20 text-success dark:text-success text-[11px] font-bold uppercase tracking-wider transition-colors disabled:opacity-50"
 					:disabled="!canSubmit"
 					title="Save as note (⌘↵)"
 					@click="submit('note')"
@@ -28,7 +28,7 @@
 					Note
 				</button>
 				<button
-					class="flex-1 inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 text-[11px] font-bold uppercase tracking-wider transition-colors disabled:opacity-50"
+					class="flex-1 inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-lg bg-warning/10 hover:bg-warning/20 text-warning dark:text-warning text-[11px] font-bold uppercase tracking-wider transition-colors disabled:opacity-50"
 					:disabled="!canSubmit"
 					title="Save as decision"
 					@click="submit('decision')"
@@ -37,7 +37,7 @@
 					Decision
 				</button>
 			</div>
-			<p v-if="error" class="text-[11px] text-red-500 mt-2">{{ error }}</p>
+			<p v-if="error" class="text-[11px] text-destructive mt-2">{{ error }}</p>
 		</div>
 
 		<!-- Recent entries -->
@@ -64,8 +64,8 @@
 						:class="[
 							'inline-flex items-center gap-1 px-1.5 h-4 rounded-full text-[9px] font-bold uppercase tracking-wider',
 							note.note_type === 'decision'
-								? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
-								: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
+								? 'bg-warning/15 text-warning dark:text-warning'
+								: 'bg-success/15 text-success dark:text-success',
 						]"
 					>
 						<Icon
@@ -76,7 +76,7 @@
 					</span>
 					<button
 						v-if="canDelete(note)"
-						class="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-red-500 p-0.5"
+						class="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive p-0.5"
 						title="Delete"
 						@click="handleDelete(note.id)"
 					>

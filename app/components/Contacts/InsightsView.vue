@@ -41,7 +41,7 @@
 						leads
 					</span>
 				</div>
-				<p class="text-[11px] text-emerald-500/90 font-medium">
+				<p class="text-[11px] text-success/90 font-medium">
 					${{ formatNumber(pipelineValue) }} value
 				</p>
 			</NuxtLink>
@@ -229,7 +229,7 @@
 							</div>
 							<div class="h-1.5 bg-muted/30 rounded-full overflow-hidden">
 								<div
-									class="h-full rounded-full bg-emerald-500/70"
+									class="h-full rounded-full bg-success/70"
 									:style="{ width: topClientBarWidth(client.revenue) + '%' }"
 								/>
 							</div>
@@ -246,7 +246,7 @@
 		<div v-if="needsAttention.length" class="ios-card p-5 mb-4">
 			<h3 class="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-3">
 				Needs Attention
-				<span class="text-amber-400 ml-1">({{ needsAttention.length }})</span>
+				<span class="text-warning ml-1">({{ needsAttention.length }})</span>
 			</h3>
 			<div class="space-y-0.5">
 				<NuxtLink
@@ -258,7 +258,7 @@
 					<div class="flex items-center gap-3 min-w-0 flex-1">
 						<span
 							class="w-2 h-2 rounded-full shrink-0"
-							:class="item.urgency === 'high' ? 'bg-red-500' : 'bg-amber-500'"
+							:class="item.urgency === 'high' ? 'bg-destructive' : 'bg-warning'"
 						/>
 						<div class="min-w-0">
 							<p class="text-sm font-medium truncate">{{ item.name }}</p>
@@ -343,8 +343,8 @@ function formatDelta(n: number): string {
 }
 
 function deltaColor(n: number): string {
-	if (n > 0) return 'text-emerald-500';
-	if (n < 0) return 'text-red-500';
+	if (n > 0) return 'text-success';
+	if (n < 0) return 'text-destructive';
 	return 'text-muted-foreground';
 }
 

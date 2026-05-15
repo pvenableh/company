@@ -160,7 +160,7 @@ const togglePassword = () => {
 				</div>
 
 				<div v-else-if="expired" class="text-center py-4">
-					<AlertCircle class="mx-auto size-8 text-amber-500 mb-4" />
+					<AlertCircle class="mx-auto size-8 text-warning mb-4" />
 					<p class="text-foreground">This invitation link has expired.</p>
 					<p class="text-sm text-muted-foreground mt-2">Please contact your administrator for a new invitation.</p>
 					<Button variant="ghost" as-child class="mt-4">
@@ -169,7 +169,7 @@ const togglePassword = () => {
 				</div>
 
 				<div v-else class="text-center py-4">
-					<AlertCircle class="mx-auto size-8 text-amber-500 mb-4" />
+					<AlertCircle class="mx-auto size-8 text-warning mb-4" />
 					<p class="text-foreground">Invalid invitation link.</p>
 					<p class="text-sm text-muted-foreground mt-2">Please check the URL or contact your administrator.</p>
 					<Button variant="ghost" as-child class="mt-4">

@@ -225,14 +225,14 @@ function ruleLabel(rule: LeadStageListRule): string {
 									</span>
 									<template v-if="rule.add_to_list">
 										<span class="text-muted-foreground">·</span>
-										<span class="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 text-[11px] font-medium">
+										<span class="inline-flex items-center gap-1 rounded-full bg-success/10 text-success dark:text-success px-2 py-0.5 text-[11px] font-medium">
 											<Icon name="lucide:plus" class="w-3 h-3" />
 											{{ listName(rule.add_to_list) }}
 										</span>
 									</template>
 									<template v-if="rule.remove_from_list">
 										<span class="text-muted-foreground">·</span>
-										<span class="inline-flex items-center gap-1 rounded-full bg-rose-500/10 text-rose-700 dark:text-rose-400 px-2 py-0.5 text-[11px] font-medium">
+										<span class="inline-flex items-center gap-1 rounded-full bg-destructive/10 text-destructive dark:text-destructive px-2 py-0.5 text-[11px] font-medium">
 											<Icon name="lucide:minus" class="w-3 h-3" />
 											{{ listName(rule.remove_from_list) }}
 										</span>

@@ -60,9 +60,9 @@ const typeConfig = {
 	General: { icon: 'i-heroicons-flag', color: 'text-gray-500', bg: 'bg-gray-500/10' },
 	Design: { icon: 'i-heroicons-paint-brush', color: 'text-blue-500', bg: 'bg-blue-500/10' },
 	Content: { icon: 'i-heroicons-document-text', color: 'text-purple-500', bg: 'bg-purple-500/10' },
-	Timeline: { icon: 'i-heroicons-calendar', color: 'text-cyan-500', bg: 'bg-cyan-500/10' },
-	Financial: { icon: 'i-heroicons-banknotes', color: 'text-green-500', bg: 'bg-green-500/10' },
-	Hours: { icon: 'i-heroicons-clock', color: 'text-amber-500', bg: 'bg-amber-500/10' },
+	Timeline: { icon: 'i-heroicons-calendar', color: 'text-info', bg: 'bg-info/10' },
+	Financial: { icon: 'i-heroicons-banknotes', color: 'text-success', bg: 'bg-success/10' },
+	Hours: { icon: 'i-heroicons-clock', color: 'text-warning', bg: 'bg-warning/10' },
 };
 
 const typeInfo = computed(() => typeConfig[eventData.value?.type] || typeConfig.General);
@@ -81,8 +81,8 @@ onMounted(loadEvent);
 
 			<!-- Error -->
 			<div v-else-if="error && !eventData" class="text-center py-20">
-				<div class="h-12 w-12 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
-					<UIcon name="i-heroicons-exclamation-triangle" class="w-6 h-6 text-red-500" />
+				<div class="h-12 w-12 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
+					<UIcon name="i-heroicons-exclamation-triangle" class="w-6 h-6 text-destructive" />
 				</div>
 				<h2 class="text-lg font-semibold text-foreground mb-1">Link Invalid</h2>
 				<p class="text-sm text-muted-foreground">{{ error }}</p>
@@ -91,12 +91,12 @@ onMounted(loadEvent);
 			<!-- Success -->
 			<div v-else-if="submitted" class="text-center py-20">
 				<div class="h-12 w-12 rounded-full flex items-center justify-center mx-auto mb-4"
-					:class="submittedAction === 'changes_requested' ? 'bg-amber-500/10' : 'bg-green-500/10'"
+					:class="submittedAction === 'changes_requested' ? 'bg-warning/10' : 'bg-success/10'"
 				>
 					<UIcon
 						:name="submittedAction === 'changes_requested' ? 'i-heroicons-chat-bubble-left-right' : 'i-heroicons-check-circle'"
 						class="w-6 h-6"
-						:class="submittedAction === 'changes_requested' ? 'text-amber-500' : 'text-green-500'"
+						:class="submittedAction === 'changes_requested' ? 'text-warning' : 'text-success'"
 					/>
 				</div>
 				<h2 class="text-lg font-semibold text-foreground mb-1">
@@ -124,8 +124,8 @@ onMounted(loadEvent);
 
 				<!-- Already approved -->
 				<div v-if="eventData.approval === 'Approved'" class="ios-card p-6 text-center">
-					<div class="h-10 w-10 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-3">
-						<UIcon name="i-heroicons-check-circle" class="w-5 h-5 text-green-500" />
+					<div class="h-10 w-10 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-3">
+						<UIcon name="i-heroicons-check-circle" class="w-5 h-5 text-success" />
 					</div>
 					<h2 class="text-sm font-semibold text-foreground">Already Approved</h2>
 					<p v-if="eventData.approved_at" class="text-xs text-muted-foreground mt-1">
@@ -225,7 +225,7 @@ onMounted(loadEvent);
 					<!-- Action buttons -->
 					<div v-else class="flex flex-col gap-2">
 						<button
-							class="w-full py-3 rounded-xl bg-green-500 text-white font-medium text-sm hover:bg-green-600 transition-colors flex items-center justify-center gap-2 ios-press"
+							class="w-full py-3 rounded-xl bg-success text-white font-medium text-sm hover:bg-success transition-colors flex items-center justify-center gap-2 ios-press"
 							:disabled="submitting"
 							@click="handleApprove"
 						>

@@ -182,15 +182,15 @@ const formatTokens = (n: number) => {
 				<button
 					@click="lowUsageMode = !lowUsageMode"
 					class="w-10 h-6 rounded-full flex items-center transition-colors flex-shrink-0 px-0.5"
-					:class="lowUsageMode ? 'bg-amber-500 justify-end' : 'bg-muted justify-start'"
+					:class="lowUsageMode ? 'bg-warning justify-end' : 'bg-muted justify-start'"
 				>
 					<div class="w-5 h-5 bg-white rounded-full shadow-sm" />
 				</button>
 			</div>
 
 			<!-- Low usage explanation -->
-			<div v-if="lowUsageMode" class="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-				<p class="text-[11px] text-amber-400">
+			<div v-if="lowUsageMode" class="p-3 rounded-lg bg-warning/10 border border-warning/20">
+				<p class="text-[11px] text-warning">
 					Low usage mode disables generated greetings, reduces suggestion frequency, and skips auto-generated content to conserve tokens.
 				</p>
 			</div>
@@ -225,7 +225,7 @@ const formatTokens = (n: number) => {
 					<div class="w-full h-1.5 bg-muted rounded-full overflow-hidden">
 						<div
 							class="h-full rounded-full transition-all"
-							:class="usageSummary.userTokensUsed / usageSummary.userBudget > 0.8 ? 'bg-red-500' : 'bg-primary'"
+							:class="usageSummary.userTokensUsed / usageSummary.userBudget > 0.8 ? 'bg-destructive' : 'bg-primary'"
 							:style="{ width: Math.min(100, (usageSummary.userTokensUsed / usageSummary.userBudget) * 100) + '%' }"
 						/>
 					</div>

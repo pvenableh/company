@@ -154,9 +154,9 @@ const inputClass = "w-full rounded-lg border bg-background px-3 py-2.5 text-sm f
                 id="firstName"
                 type="text"
                 v-bind="field"
-                :class="[inputClass, errors.length ? 'border-red-300 dark:border-red-700' : 'border-border']"
+                :class="[inputClass, errors.length ? 'border-destructive/30 dark:border-destructive' : 'border-border']"
               />
-              <p v-if="errors.length" class="text-xs text-red-500">{{ errors[0] }}</p>
+              <p v-if="errors.length" class="text-xs text-destructive">{{ errors[0] }}</p>
             </div>
           </VeeField>
 
@@ -167,9 +167,9 @@ const inputClass = "w-full rounded-lg border bg-background px-3 py-2.5 text-sm f
                 id="lastName"
                 type="text"
                 v-bind="field"
-                :class="[inputClass, errors.length ? 'border-red-300 dark:border-red-700' : 'border-border']"
+                :class="[inputClass, errors.length ? 'border-destructive/30 dark:border-destructive' : 'border-border']"
               />
-              <p v-if="errors.length" class="text-xs text-red-500">{{ errors[0] }}</p>
+              <p v-if="errors.length" class="text-xs text-destructive">{{ errors[0] }}</p>
             </div>
           </VeeField>
         </div>
@@ -182,9 +182,9 @@ const inputClass = "w-full rounded-lg border bg-background px-3 py-2.5 text-sm f
               type="email"
               placeholder="you@example.com"
               v-bind="field"
-              :class="[inputClass, errors.length ? 'border-red-300 dark:border-red-700' : 'border-border']"
+              :class="[inputClass, errors.length ? 'border-destructive/30 dark:border-destructive' : 'border-border']"
             />
-            <p v-if="errors.length" class="text-xs text-red-500">{{ errors[0] }}</p>
+            <p v-if="errors.length" class="text-xs text-destructive">{{ errors[0] }}</p>
           </div>
         </VeeField>
 
@@ -196,9 +196,9 @@ const inputClass = "w-full rounded-lg border bg-background px-3 py-2.5 text-sm f
               type="text"
               placeholder="Your company or team name"
               v-bind="field"
-              :class="[inputClass, errors.length ? 'border-red-300 dark:border-red-700' : 'border-border']"
+              :class="[inputClass, errors.length ? 'border-destructive/30 dark:border-destructive' : 'border-border']"
             />
-            <p v-if="errors.length" class="text-xs text-red-500">{{ errors[0] }}</p>
+            <p v-if="errors.length" class="text-xs text-destructive">{{ errors[0] }}</p>
             <p v-else class="text-[11px] text-muted-foreground">You'll be set as owner. Invite team members later.</p>
           </div>
         </VeeField>
@@ -210,9 +210,9 @@ const inputClass = "w-full rounded-lg border bg-background px-3 py-2.5 text-sm f
               id="reg-password"
               type="password"
               v-bind="field"
-              :class="[inputClass, errors.length ? 'border-red-300 dark:border-red-700' : 'border-border']"
+              :class="[inputClass, errors.length ? 'border-destructive/30 dark:border-destructive' : 'border-border']"
             />
-            <p v-if="errors.length" class="text-xs text-red-500">{{ errors[0] }}</p>
+            <p v-if="errors.length" class="text-xs text-destructive">{{ errors[0] }}</p>
 
             <template v-if="showPasswordRequirements">
               <div class="mt-1.5 space-y-0.5">
@@ -220,7 +220,7 @@ const inputClass = "w-full rounded-lg border bg-background px-3 py-2.5 text-sm f
                   v-for="req in passwordRequirements"
                   :key="req.label"
                   class="flex items-center gap-1.5 text-[11px]"
-                  :class="req.met ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'"
+                  :class="req.met ? 'text-success dark:text-success' : 'text-muted-foreground'"
                 >
                   <Check v-if="req.met" class="h-3 w-3" />
                   <X v-else class="h-3 w-3" />
@@ -238,9 +238,9 @@ const inputClass = "w-full rounded-lg border bg-background px-3 py-2.5 text-sm f
               id="confirmPassword"
               type="password"
               v-bind="field"
-              :class="[inputClass, errors.length ? 'border-red-300 dark:border-red-700' : 'border-border']"
+              :class="[inputClass, errors.length ? 'border-destructive/30 dark:border-destructive' : 'border-border']"
             />
-            <p v-if="errors.length" class="text-xs text-red-500">{{ errors[0] }}</p>
+            <p v-if="errors.length" class="text-xs text-destructive">{{ errors[0] }}</p>
           </div>
         </VeeField>
 
@@ -260,7 +260,7 @@ const inputClass = "w-full rounded-lg border bg-background px-3 py-2.5 text-sm f
                 <NuxtLink to="/privacy-policy" target="_blank" class="text-foreground font-medium hover:underline underline-offset-4">Privacy Policy</NuxtLink>.
               </span>
             </label>
-            <p v-if="errors.length" class="text-xs text-red-500 ml-6">{{ errors[0] }}</p>
+            <p v-if="errors.length" class="text-xs text-destructive ml-6">{{ errors[0] }}</p>
           </div>
         </VeeField>
 
@@ -287,7 +287,7 @@ const inputClass = "w-full rounded-lg border bg-background px-3 py-2.5 text-sm f
 
             <div
               v-if="googleRegError"
-              class="flex items-center gap-2 p-3 text-sm text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/40 border border-red-200/50 dark:border-red-800/50 rounded-lg"
+              class="flex items-center gap-2 p-3 text-sm text-destructive dark:text-destructive bg-destructive/10 dark:bg-destructive/40 border border-destructive/50 dark:border-destructive/50 rounded-lg"
             >
               <X class="h-4 w-4 flex-shrink-0" />
               <span>{{ googleRegError }}</span>

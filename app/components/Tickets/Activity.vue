@@ -78,7 +78,7 @@
 							"
 							class="mt-2"
 						>
-							<div class="border-l-2 border-green-200 dark:border-green-700 pl-3 py-1">
+							<div class="border-l-2 border-success/30 dark:border-success pl-3 py-1">
 								<div class="text-xs text-gray-700 dark:text-gray-300 font-medium mb-2">Changed to:</div>
 
 								<div class="space-y-2">
@@ -93,7 +93,7 @@
 
 										<!-- Team changes -->
 										<div v-if="field.name === 'team'" class="text-sm">
-											<div class="text-green-500 dark:text-green-400 flex items-center">
+											<div class="text-success dark:text-success flex items-center">
 												<UIcon name="i-heroicons-arrow-right" class="h-3 w-3 mr-1" />
 												<span class="font-medium">{{ getTeamName(field.newValue) }}</span>
 											</div>
@@ -101,7 +101,7 @@
 
 										<!-- Status changes -->
 										<div v-else-if="field.name === 'status'" class="text-sm">
-											<div class="text-green-500 dark:text-green-400 flex items-center">
+											<div class="text-success dark:text-success flex items-center">
 												<UIcon name="i-heroicons-arrow-right" class="h-3 w-3 mr-1" />
 												<span class="font-medium">{{ field.newValue || 'None' }}</span>
 											</div>
@@ -109,7 +109,7 @@
 
 										<!-- Due date changes -->
 										<div v-else-if="field.name === 'due_date'" class="text-sm">
-											<div class="text-green-500 dark:text-green-400 flex items-center">
+											<div class="text-success dark:text-success flex items-center">
 												<UIcon name="i-heroicons-arrow-right" class="h-3 w-3 mr-1" />
 												<span class="font-medium">{{ formatDate(field.newValue, true) }}</span>
 											</div>
@@ -117,7 +117,7 @@
 
 										<!-- Description changes -->
 										<div v-else-if="field.name === 'description'" class="text-sm">
-											<div class="text-green-500 dark:text-green-400 flex items-start">
+											<div class="text-success dark:text-success flex items-start">
 												<UIcon name="i-heroicons-arrow-right" class="h-3 w-3 mr-1 mt-1 flex-shrink-0" />
 												<div class="description-preview" v-html="sanitizeHtml(field.newValue)"></div>
 											</div>
@@ -125,7 +125,7 @@
 
 										<!-- Regular field changes -->
 										<div v-else class="text-sm">
-											<div class="text-green-500 dark:text-green-400 flex items-center">
+											<div class="text-success dark:text-success flex items-center">
 												<UIcon name="i-heroicons-arrow-right" class="h-3 w-3 mr-1" />
 												<span class="font-medium">{{ formatFieldValue(field.newValue) }}</span>
 											</div>
@@ -138,7 +138,7 @@
 						<!-- For create actions, show a summary of initial values -->
 						<div
 							v-if="item.type === 'revision' && item.action === 'create' && item.initialDetails?.length"
-							class="mt-2 border-l-2 border-green-200 dark:border-green-700 pl-3 py-1"
+							class="mt-2 border-l-2 border-success/30 dark:border-success pl-3 py-1"
 						>
 							<div class="text-xs text-gray-700 dark:text-gray-300 font-medium mb-2">Initial details:</div>
 							<div class="space-y-2">
@@ -150,7 +150,7 @@
 									<div class="font-medium text-xs text-gray-700 dark:text-gray-300 mb-1">
 										{{ formatFieldName(field.name) }}
 									</div>
-									<div class="text-green-500 dark:text-green-400 text-xs flex items-center">
+									<div class="text-success dark:text-success text-xs flex items-center">
 										<UIcon name="i-heroicons-plus-circle" class="h-3 w-3 mr-1" />
 										<!-- Special handling for description -->
 										<div v-if="field.name === 'description'" v-html="sanitizeHtml(field.value)"></div>
@@ -166,15 +166,15 @@
 			// If using debug mode, add debugging info at the bottom
 			<div
 				v-if="props.debugMode"
-				class="mt-6 p-4 border border-red-300 bg-red-50 dark:bg-red-900/10 dark:border-red-900 rounded-lg"
+				class="mt-6 p-4 border border-destructive/30 bg-destructive/10 dark:bg-destructive/10 dark:border-destructive rounded-lg"
 			>
-				<h5 class="text-red-600 dark:text-red-400 font-bold mb-2">Debug Mode Enabled</h5>
+				<h5 class="text-destructive dark:text-destructive font-bold mb-2">Debug Mode Enabled</h5>
 				<p class="text-xs mb-2">Debug information is being logged to the browser console.</p>
 				<UButton size="xs" color="red" @click="toggleDebugInfo">
 					{{ showDebugInfo ? 'Hide Debug Info' : 'Show Debug Info' }}
 				</UButton>
 
-				<pre v-if="showDebugInfo" class="mt-4 text-xs bg-black text-green-400 p-4 rounded overflow-auto max-h-96">{{
+				<pre v-if="showDebugInfo" class="mt-4 text-xs bg-black text-success p-4 rounded overflow-auto max-h-96">{{
 					debugInfo
 				}}</pre>
 			</div>

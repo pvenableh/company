@@ -60,7 +60,7 @@
         </div>
 
         <!-- Feedback -->
-        <div v-if="saveSuccess" class="rounded-xl px-3 py-2 bg-green-500/10 text-green-700 text-xs flex items-center gap-1.5">
+        <div v-if="saveSuccess" class="rounded-xl px-3 py-2 bg-success/10 text-success text-xs flex items-center gap-1.5">
           <Icon name="lucide:check" class="w-3.5 h-3.5" />
           Saved successfully
         </div>

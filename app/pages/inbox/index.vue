@@ -87,8 +87,8 @@ function timeAgo(iso: string): string {
 
 function sourceColor(source: string): string {
 	if (source === 'social') return 'bg-violet-500/15 text-violet-500';
-	if (source === 'comment') return 'bg-emerald-500/15 text-emerald-500';
-	if (source === 'notification') return 'bg-amber-500/15 text-amber-500';
+	if (source === 'comment') return 'bg-success/15 text-success';
+	if (source === 'notification') return 'bg-warning/15 text-warning';
 	return 'bg-muted text-muted-foreground';
 }
 
@@ -141,7 +141,7 @@ watch(selectedOrg, () => {
 				<label class="inline-flex items-center gap-2 text-xs text-muted-foreground cursor-pointer ml-2">
 					<input v-model="showUnreadOnly" type="checkbox" class="rounded border-border" />
 					Unread only
-					<span v-if="counts.unread > 0" class="text-amber-500 font-medium">({{ counts.unread }})</span>
+					<span v-if="counts.unread > 0" class="text-warning font-medium">({{ counts.unread }})</span>
 				</label>
 			</div>
 

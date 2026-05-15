@@ -45,24 +45,24 @@ const typeConfig = computed(() => {
 	const configs: Record<string, { icon: string; bg: string; iconBg: string; iconColor: string; card: string }> = {
 		strength: {
 			icon: 'lucide:trending-up',
-			bg: 'bg-green-50 dark:bg-green-900/20',
-			iconBg: 'bg-green-100 dark:bg-green-900/30',
-			iconColor: 'text-green-600 dark:text-green-400',
-			card: 'border-green-200/50 dark:border-green-800/30',
+			bg: 'bg-success/10 dark:bg-success/20',
+			iconBg: 'bg-success/10 dark:bg-success/30',
+			iconColor: 'text-success dark:text-success',
+			card: 'border-success/50 dark:border-success/30',
 		},
 		weakness: {
 			icon: 'lucide:trending-down',
-			bg: 'bg-red-50 dark:bg-red-900/20',
-			iconBg: 'bg-red-100 dark:bg-red-900/30',
-			iconColor: 'text-red-600 dark:text-red-400',
-			card: 'border-red-200/50 dark:border-red-800/30',
+			bg: 'bg-destructive/10 dark:bg-destructive/20',
+			iconBg: 'bg-destructive/10 dark:bg-destructive/30',
+			iconColor: 'text-destructive dark:text-destructive',
+			card: 'border-destructive/50 dark:border-destructive/30',
 		},
 		opportunity: {
 			icon: 'lucide:lightbulb',
-			bg: 'bg-amber-50 dark:bg-amber-900/20',
-			iconBg: 'bg-amber-100 dark:bg-amber-900/30',
-			iconColor: 'text-amber-600 dark:text-amber-400',
-			card: 'border-amber-200/50 dark:border-amber-800/30',
+			bg: 'bg-warning/10 dark:bg-warning/20',
+			iconBg: 'bg-warning/10 dark:bg-warning/30',
+			iconColor: 'text-warning dark:text-warning',
+			card: 'border-warning/50 dark:border-warning/30',
 		},
 		action: {
 			icon: 'lucide:zap',
@@ -82,9 +82,9 @@ const cardClass = computed(() => typeConfig.value.card);
 
 const priorityClass = computed(() => {
 	const classes: Record<string, string> = {
-		high: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-		medium: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-		low: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+		high: 'bg-destructive/10 text-destructive dark:bg-destructive/30 dark:text-destructive',
+		medium: 'bg-warning/10 text-warning dark:bg-warning/30 dark:text-warning',
+		low: 'bg-success/10 text-success dark:bg-success/30 dark:text-success',
 	};
 	return classes[props.insight.priority] || classes.medium;
 });

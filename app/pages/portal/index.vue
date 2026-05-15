@@ -273,8 +273,8 @@ watch(() => selectedOrg.value, () => {
 
 				<div class="ios-card p-5">
 					<div class="flex items-center gap-3">
-						<div class="flex items-center justify-center w-10 h-10 rounded-full bg-amber-500/10">
-							<Icon name="lucide:ticket" class="w-5 h-5 text-amber-500" />
+						<div class="flex items-center justify-center w-10 h-10 rounded-full bg-warning/10">
+							<Icon name="lucide:ticket" class="w-5 h-5 text-warning" />
 						</div>
 						<div>
 							<p class="text-2xl font-semibold">{{ stats.openTickets }}</p>
@@ -285,8 +285,8 @@ watch(() => selectedOrg.value, () => {
 
 				<div class="ios-card p-5">
 					<div class="flex items-center gap-3">
-						<div class="flex items-center justify-center w-10 h-10 rounded-full bg-green-500/10">
-							<Icon name="lucide:check-circle-2" class="w-5 h-5 text-green-500" />
+						<div class="flex items-center justify-center w-10 h-10 rounded-full bg-success/10">
+							<Icon name="lucide:check-circle-2" class="w-5 h-5 text-success" />
 						</div>
 						<div>
 							<p class="text-2xl font-semibold">{{ stats.resolvedTickets }}</p>

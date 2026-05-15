@@ -741,8 +741,8 @@ const fetchClientMemberships = async () => {
 };
 
 const clientStatusClass = (status) => {
-	if (status === 'active') return 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400';
-	if (status === 'pending') return 'bg-amber-500/15 text-amber-600 dark:text-amber-400';
+	if (status === 'active') return 'bg-success/15 text-success dark:text-success';
+	if (status === 'pending') return 'bg-warning/15 text-warning dark:text-warning';
 	return 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300';
 };
 
@@ -1000,13 +1000,13 @@ watch(searchEmail, (val) => {
 				<!-- Archived banner -->
 				<div
 					v-if="isArchived"
-					class="mb-6 flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/40 dark:bg-amber-900/20"
+					class="mb-6 flex flex-col sm:flex-row sm:items-center gap-3 rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 dark:border-warning/40 dark:bg-warning/20"
 				>
 					<div class="flex items-start gap-2 flex-grow">
-						<UIcon name="i-heroicons-archive-box" class="w-5 h-5 mt-0.5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+						<UIcon name="i-heroicons-archive-box" class="w-5 h-5 mt-0.5 text-warning dark:text-warning flex-shrink-0" />
 						<div class="text-sm">
-							<div class="font-medium text-amber-900 dark:text-amber-200">This organization is archived.</div>
-							<div class="text-amber-800/80 dark:text-amber-300/80">
+							<div class="font-medium text-warning">This organization is archived.</div>
+							<div class="text-warning/80 dark:text-warning/80">
 								Archived {{ archivedDate }}. Data is retained for 90 days and is still visible here until Session 5 ships. Restore any time before the retention window closes.
 							</div>
 						</div>
@@ -1480,7 +1480,7 @@ watch(searchEmail, (val) => {
 												<p class="text-xs text-muted-foreground mt-0.5">
 													Removes the badge from client-facing proposals, contracts, and invoices.
 												</p>
-												<p v-if="!whitelabelSupported" class="text-[11px] text-amber-600 dark:text-amber-400 mt-1">
+												<p v-if="!whitelabelSupported" class="text-[11px] text-warning dark:text-warning mt-1">
 													Upgrade to Studio, Agency, or Enterprise to remove this badge.
 												</p>
 											</div>
@@ -1522,7 +1522,7 @@ watch(searchEmail, (val) => {
 										<div>
 											<span class="text-[10px] uppercase tracking-wider text-muted-foreground block mb-1">Mailing address</span>
 											<p v-if="org.mailing_address" class="text-xs whitespace-pre-line">{{ org.mailing_address }}</p>
-											<p v-else class="text-[11px] text-amber-600 dark:text-amber-400">
+											<p v-else class="text-[11px] text-warning dark:text-warning">
 												Required on marketing emails (CAN-SPAM). Add an address to send campaigns and newsletters.
 											</p>
 										</div>
@@ -1596,9 +1596,9 @@ watch(searchEmail, (val) => {
 								</UCard>
 
 								<!-- Danger Zone — archive / restore (owner only) -->
-								<UCard v-if="isOrgOwner" class="border border-red-200 dark:border-red-900/50">
+								<UCard v-if="isOrgOwner" class="border border-destructive/30 dark:border-destructive/50">
 									<template #header>
-										<h3 class="text-[10px] uppercase tracking-wider font-semibold text-red-600 dark:text-red-400">Danger Zone</h3>
+										<h3 class="text-[10px] uppercase tracking-wider font-semibold text-destructive dark:text-destructive">Danger Zone</h3>
 									</template>
 									<div class="space-y-3 text-sm">
 										<template v-if="!isArchived">
@@ -1664,8 +1664,8 @@ watch(searchEmail, (val) => {
 							</div>
 
 							<!-- Pending invites banner -->
-							<div v-if="pendingInvites.length > 0" class="mb-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 px-4 py-3">
-								<div class="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-300">
+							<div v-if="pendingInvites.length > 0" class="mb-4 rounded-lg bg-warning/10 dark:bg-warning/20 px-4 py-3">
+								<div class="flex items-center gap-2 text-sm text-warning dark:text-warning">
 									<UIcon name="i-heroicons-clock" class="w-4 h-4" />
 									<span>{{ pendingInvites.length }} pending invitation{{ pendingInvites.length === 1 ? '' : 's' }}</span>
 								</div>
@@ -1906,10 +1906,10 @@ watch(searchEmail, (val) => {
 												Connect a Stripe account so payments on this organization's invoices land directly in your bank — not Hue's. Onboarding takes about 5 minutes; Stripe will ask for your business details and bank routing.
 											</p>
 											<ul class="text-sm space-y-2">
-												<li class="flex items-start gap-2"><UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />Funds settle to your bank on Stripe's standard 2-day rolling payout schedule.</li>
-												<li class="flex items-start gap-2"><UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />Customers can pay with cards, ACH, Apple Pay, Klarna, Cash App Pay, and more.</li>
-												<li class="flex items-start gap-2"><UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />Refunds, balance, and payouts live in this tab once active.</li>
-												<li class="flex items-start gap-2"><UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" />Manage your account anytime in your full Stripe dashboard.</li>
+												<li class="flex items-start gap-2"><UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-success mt-0.5 flex-shrink-0" />Funds settle to your bank on Stripe's standard 2-day rolling payout schedule.</li>
+												<li class="flex items-start gap-2"><UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-success mt-0.5 flex-shrink-0" />Customers can pay with cards, ACH, Apple Pay, Klarna, Cash App Pay, and more.</li>
+												<li class="flex items-start gap-2"><UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-success mt-0.5 flex-shrink-0" />Refunds, balance, and payouts live in this tab once active.</li>
+												<li class="flex items-start gap-2"><UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-success mt-0.5 flex-shrink-0" />Manage your account anytime in your full Stripe dashboard.</li>
 											</ul>
 											<UiActionButton
 												icon="lucide:credit-card"
@@ -1930,9 +1930,9 @@ watch(searchEmail, (val) => {
 											<p class="text-sm text-muted-foreground">
 												Stripe is still verifying your account. Continue onboarding to finish the remaining steps — once Stripe approves the account, this tab unlocks transactions, refunds, balance, and payouts.
 											</p>
-											<div v-if="connectStatus?.requirements?.currentlyDue?.length" class="rounded-md border border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-900/20 p-3">
-												<div class="text-xs font-medium text-amber-800 dark:text-amber-200 mb-1">Stripe still needs:</div>
-												<ul class="text-xs text-amber-700 dark:text-amber-300 list-disc pl-4 space-y-0.5">
+											<div v-if="connectStatus?.requirements?.currentlyDue?.length" class="rounded-md border border-warning/30 bg-warning/10 dark:border-warning/40 dark:bg-warning/20 p-3">
+												<div class="text-xs font-medium text-warning mb-1">Stripe still needs:</div>
+												<ul class="text-xs text-warning dark:text-warning list-disc pl-4 space-y-0.5">
 													<li v-for="req in connectStatus.requirements.currentlyDue" :key="req">{{ req }}</li>
 												</ul>
 											</div>
@@ -1963,16 +1963,16 @@ watch(searchEmail, (val) => {
 												<div>
 													<dt class="text-[10px] uppercase tracking-wider text-muted-foreground">Charges</dt>
 													<dd class="font-medium mt-0.5">
-														<UIcon v-if="connectStatus?.chargesEnabled" name="i-heroicons-check-circle" class="w-4 h-4 text-emerald-500 inline-block mr-1 align-text-bottom" />
-														<UIcon v-else name="i-heroicons-x-circle" class="w-4 h-4 text-red-500 inline-block mr-1 align-text-bottom" />
+														<UIcon v-if="connectStatus?.chargesEnabled" name="i-heroicons-check-circle" class="w-4 h-4 text-success inline-block mr-1 align-text-bottom" />
+														<UIcon v-else name="i-heroicons-x-circle" class="w-4 h-4 text-destructive inline-block mr-1 align-text-bottom" />
 														{{ connectStatus?.chargesEnabled ? 'Enabled' : 'Disabled' }}
 													</dd>
 												</div>
 												<div>
 													<dt class="text-[10px] uppercase tracking-wider text-muted-foreground">Payouts</dt>
 													<dd class="font-medium mt-0.5">
-														<UIcon v-if="connectStatus?.payoutsEnabled" name="i-heroicons-check-circle" class="w-4 h-4 text-emerald-500 inline-block mr-1 align-text-bottom" />
-														<UIcon v-else name="i-heroicons-x-circle" class="w-4 h-4 text-red-500 inline-block mr-1 align-text-bottom" />
+														<UIcon v-if="connectStatus?.payoutsEnabled" name="i-heroicons-check-circle" class="w-4 h-4 text-success inline-block mr-1 align-text-bottom" />
+														<UIcon v-else name="i-heroicons-x-circle" class="w-4 h-4 text-destructive inline-block mr-1 align-text-bottom" />
 														{{ connectStatus?.payoutsEnabled ? 'Enabled' : 'Disabled' }}
 													</dd>
 												</div>
@@ -1993,12 +1993,12 @@ watch(searchEmail, (val) => {
 
 										<!-- Restricted -->
 										<div v-else class="space-y-4">
-											<div class="rounded-md border border-red-200 bg-red-50 dark:border-red-900/40 dark:bg-red-900/20 p-3">
-												<div class="text-sm font-medium text-red-800 dark:text-red-200">Stripe has restricted this account.</div>
-												<div v-if="connectStatus?.requirements?.disabledReason" class="text-xs text-red-700 dark:text-red-300 mt-1">
+											<div class="rounded-md border border-destructive/30 bg-destructive/10 dark:border-destructive/40 dark:bg-destructive/20 p-3">
+												<div class="text-sm font-medium text-destructive">Stripe has restricted this account.</div>
+												<div v-if="connectStatus?.requirements?.disabledReason" class="text-xs text-destructive dark:text-destructive mt-1">
 													Reason: {{ connectStatus.requirements.disabledReason }}
 												</div>
-												<div v-if="connectStatus?.requirements?.pastDue?.length" class="text-xs text-red-700 dark:text-red-300 mt-2">
+												<div v-if="connectStatus?.requirements?.pastDue?.length" class="text-xs text-destructive dark:text-destructive mt-2">
 													Past-due fields: {{ connectStatus.requirements.pastDue.join(', ') }}
 												</div>
 											</div>

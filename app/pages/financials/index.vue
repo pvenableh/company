@@ -155,7 +155,7 @@ const sections = [
     description: 'Revenue, expenses, and financial overview',
     icon: 'lucide:bar-chart-3',
     route: '/command-center/financials',
-    color: 'text-emerald-400',
+    color: 'text-success',
   },
   {
     name: 'Products & Services',
@@ -169,7 +169,7 @@ const sections = [
     description: 'Create, manage, and track invoices',
     icon: 'lucide:file-text',
     route: '/invoices',
-    color: 'text-amber-400',
+    color: 'text-warning',
   },
   {
     name: 'Payments',
@@ -183,7 +183,7 @@ const sections = [
     description: 'Track and manage business expenses',
     icon: 'lucide:receipt',
     route: '/expenses',
-    color: 'text-red-400',
+    color: 'text-destructive',
   },
 ];
 </script>
@@ -209,22 +209,22 @@ const sections = [
     <div class="grid grid-cols-3 gap-3 mb-6">
       <div class="ios-card p-4">
         <p class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">This Month Revenue</p>
-        <p class="text-2xl font-bold text-emerald-400">{{ formatCurrency(thisMonthRevenue) }}</p>
-        <p v-if="revenueChange !== 0" class="text-xs mt-1" :class="revenueChange > 0 ? 'text-emerald-400' : 'text-red-400'">
+        <p class="text-2xl font-bold text-success">{{ formatCurrency(thisMonthRevenue) }}</p>
+        <p v-if="revenueChange !== 0" class="text-xs mt-1" :class="revenueChange > 0 ? 'text-success' : 'text-destructive'">
           {{ revenueChange > 0 ? '↑' : '↓' }} {{ Math.abs(revenueChange) }}% vs last month
         </p>
       </div>
       <div class="ios-card p-4">
         <p class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">This Month Expenses</p>
-        <p class="text-2xl font-bold text-red-400">{{ formatCurrency(thisMonthExpenses) }}</p>
-        <p v-if="expenseChange !== 0" class="text-xs mt-1" :class="expenseChange < 0 ? 'text-emerald-400' : 'text-red-400'">
+        <p class="text-2xl font-bold text-destructive">{{ formatCurrency(thisMonthExpenses) }}</p>
+        <p v-if="expenseChange !== 0" class="text-xs mt-1" :class="expenseChange < 0 ? 'text-success' : 'text-destructive'">
           {{ expenseChange > 0 ? '↑' : '↓' }} {{ Math.abs(expenseChange) }}%
         </p>
       </div>
       <div class="ios-card p-4">
         <p class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Net</p>
-        <p class="text-2xl font-bold" :class="thisMonthNet >= 0 ? 'text-blue-400' : 'text-red-400'">{{ formatCurrency(thisMonthNet) }}</p>
-        <p v-if="netChange !== 0" class="text-xs mt-1" :class="netChange > 0 ? 'text-emerald-400' : 'text-red-400'">
+        <p class="text-2xl font-bold" :class="thisMonthNet >= 0 ? 'text-blue-400' : 'text-destructive'">{{ formatCurrency(thisMonthNet) }}</p>
+        <p v-if="netChange !== 0" class="text-xs mt-1" :class="netChange > 0 ? 'text-success' : 'text-destructive'">
           {{ netChange > 0 ? '↑' : '↓' }} {{ Math.abs(netChange) }}%
         </p>
       </div>
@@ -349,9 +349,9 @@ const sections = [
         <div class="flex items-center justify-between mb-3">
           <h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Unpaid Invoices
-            <span v-if="unpaidInvoices.length" class="text-amber-400 ml-1">({{ unpaidInvoices.length }})</span>
+            <span v-if="unpaidInvoices.length" class="text-warning ml-1">({{ unpaidInvoices.length }})</span>
           </h3>
-          <span v-if="totalUnpaid > 0" class="text-sm font-bold text-amber-400">{{ formatCurrency(totalUnpaid) }}</span>
+          <span v-if="totalUnpaid > 0" class="text-sm font-bold text-warning">{{ formatCurrency(totalUnpaid) }}</span>
         </div>
         <div v-if="unpaidInvoices.length === 0" class="text-sm text-muted-foreground/60 py-4 text-center">
           All caught up — no unpaid invoices.
@@ -368,7 +368,7 @@ const sections = [
                 <span class="text-sm font-medium">{{ inv.invoice_code || 'Draft' }}</span>
                 <span class="text-xs text-muted-foreground truncate">{{ typeof inv.client === 'object' ? inv.client?.name : '' }}</span>
               </div>
-              <div class="text-[11px] mt-0.5" :class="inv.due_date && getDaysUntilDue(inv.due_date) < 0 ? 'text-red-400' : inv.due_date && getDaysUntilDue(inv.due_date) <= 7 ? 'text-amber-400' : 'text-muted-foreground'">
+              <div class="text-[11px] mt-0.5" :class="inv.due_date && getDaysUntilDue(inv.due_date) < 0 ? 'text-destructive' : inv.due_date && getDaysUntilDue(inv.due_date) <= 7 ? 'text-warning' : 'text-muted-foreground'">
                 <template v-if="inv.due_date">
                   <template v-if="getDaysUntilDue(inv.due_date) < 0">{{ Math.abs(getDaysUntilDue(inv.due_date)) }}d overdue</template>
                   <template v-else-if="getDaysUntilDue(inv.due_date) === 0">Due today</template>

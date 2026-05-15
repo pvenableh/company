@@ -19,8 +19,8 @@ const statusConfig: Record<string, { label: string; classes: string }> = {
 	draft:    { label: 'Draft',    classes: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' },
 	sent:     { label: 'Sent',     classes: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
 	viewed:   { label: 'Viewed',   classes: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' },
-	accepted: { label: 'Accepted', classes: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
-	declined: { label: 'Declined', classes: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
+	accepted: { label: 'Accepted', classes: 'bg-success/10 text-success dark:bg-success/30 dark:text-success' },
+	declined: { label: 'Declined', classes: 'bg-destructive/10 text-destructive dark:bg-destructive/30 dark:text-destructive' },
 };
 
 async function loadProposals() {
@@ -157,7 +157,7 @@ watch(() => selectedOrg.value, () => loadProposals());
 				     client a round trip to the preview page when they're decided. -->
 				<div v-if="isActionable(proposal.proposal_status)" class="flex items-center gap-1.5 shrink-0">
 					<button
-						class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 disabled:opacity-50 transition-colors"
+						class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-success/10 hover:bg-success/20 text-success dark:text-success disabled:opacity-50 transition-colors"
 						:disabled="actingId === proposal.id"
 						@click="actOnProposal(proposal, 'accept', $event)"
 					>
@@ -165,7 +165,7 @@ watch(() => selectedOrg.value, () => loadProposals());
 						Accept
 					</button>
 					<button
-						class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 disabled:opacity-50 transition-colors"
+						class="inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-destructive/10 hover:bg-destructive/20 text-destructive dark:text-destructive disabled:opacity-50 transition-colors"
 						:disabled="actingId === proposal.id"
 						@click="actOnProposal(proposal, 'decline', $event)"
 					>

@@ -80,7 +80,7 @@
 								<span class="text-[11px] font-medium capitalize w-24 shrink-0 truncate">{{ row.source }}</span>
 								<div class="flex-1 relative h-5 bg-muted/30 rounded-md overflow-hidden">
 									<div
-										class="absolute inset-y-0 left-0 rounded-md bg-emerald-500/70 transition-all"
+										class="absolute inset-y-0 left-0 rounded-md bg-success/70 transition-all"
 										:style="{ width: sourceBarWidth(row.converted) + '%' }"
 									/>
 									<div
@@ -94,7 +94,7 @@
 								<span class="text-[11px] font-semibold w-10 text-right">{{ row.conversionRate }}%</span>
 							</div>
 							<div v-if="row.wonValue > 0 || row.pipelineValue > 0" class="ml-26 flex items-center gap-3 text-[10px] text-muted-foreground">
-								<span v-if="row.wonValue > 0" class="text-emerald-500/90">${{ formatNumber(row.wonValue) }} won</span>
+								<span v-if="row.wonValue > 0" class="text-success/90">${{ formatNumber(row.wonValue) }} won</span>
 								<span v-if="row.pipelineValue > 0">${{ formatNumber(row.pipelineValue) }} open</span>
 							</div>
 						</div>
@@ -161,7 +161,7 @@
 								</p>
 							</div>
 							<div class="text-right shrink-0">
-								<p class="text-[11px] font-semibold text-emerald-500/90">${{ formatNumber(partner.totalRevenue) }}</p>
+								<p class="text-[11px] font-semibold text-success/90">${{ formatNumber(partner.totalRevenue) }}</p>
 								<p class="text-[10px] text-muted-foreground capitalize">{{ partnerRoleLabel(partner.role) }}</p>
 							</div>
 						</NuxtLink>
@@ -204,7 +204,7 @@
 				<div class="flex items-center justify-between mb-3">
 					<h3 class="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
 						Cold Contacts
-						<span class="text-amber-400 ml-1">({{ data.coldContacts.length }})</span>
+						<span class="text-warning ml-1">({{ data.coldContacts.length }})</span>
 					</h3>
 					<span class="text-[10px] text-muted-foreground">30+ days since touch</span>
 				</div>
@@ -217,7 +217,7 @@
 					>
 						<span
 							class="w-2 h-2 rounded-full shrink-0"
-							:class="c.daysSinceContact >= 90 ? 'bg-red-500' : 'bg-amber-500'"
+							:class="c.daysSinceContact >= 90 ? 'bg-destructive' : 'bg-warning'"
 						/>
 						<div class="flex-1 min-w-0">
 							<div class="flex items-center gap-2">
@@ -227,7 +227,7 @@
 							</div>
 							<p class="text-[11px] text-muted-foreground">{{ c.lastChannel }}</p>
 						</div>
-						<span class="text-[11px] font-medium shrink-0" :class="c.daysSinceContact >= 90 ? 'text-red-500' : 'text-amber-500'">
+						<span class="text-[11px] font-medium shrink-0" :class="c.daysSinceContact >= 90 ? 'text-destructive' : 'text-warning'">
 							{{ c.daysSinceContact }}d
 						</span>
 						<Icon name="lucide:chevron-right" class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0" />
@@ -267,13 +267,13 @@ function stageAgeBarWidth(days: number): number {
 	return Math.max(4, Math.min(100, (days / maxStageAge.value) * 100));
 }
 function agingBarColor(days: number): string {
-	if (days >= 60) return 'bg-red-500/70';
-	if (days >= 30) return 'bg-amber-500/70';
-	return 'bg-emerald-500/70';
+	if (days >= 60) return 'bg-destructive/70';
+	if (days >= 30) return 'bg-warning/70';
+	return 'bg-success/70';
 }
 function agingTextColor(days: number): string {
-	if (days >= 60) return 'text-red-500';
-	if (days >= 30) return 'text-amber-500';
+	if (days >= 60) return 'text-destructive';
+	if (days >= 30) return 'text-warning';
 	return 'text-muted-foreground';
 }
 
@@ -305,8 +305,8 @@ function formatDelta(n: number): string {
 
 function deltaColor(n: number | undefined): string {
 	if (!n) return 'text-muted-foreground';
-	if (n > 0) return 'text-emerald-500';
-	if (n < 0) return 'text-red-500';
+	if (n > 0) return 'text-success';
+	if (n < 0) return 'text-destructive';
 	return 'text-muted-foreground';
 }
 

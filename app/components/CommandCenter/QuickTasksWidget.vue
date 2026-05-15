@@ -72,7 +72,7 @@
 			<!-- Motivational text -->
 			<Transition name="widget-motivate">
 				<div v-if="motivationalText" class="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-primary/5 text-xs text-foreground/70 font-medium">
-					<UIcon name="i-heroicons-sparkles" class="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+					<UIcon name="i-heroicons-sparkles" class="w-3.5 h-3.5 text-warning flex-shrink-0" />
 					{{ motivationalText }}
 				</div>
 			</Transition>
@@ -164,7 +164,7 @@
 					class="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
 					@click="removeTask(task.id)"
 				>
-					<UIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5 text-muted-foreground hover:text-red-500" />
+					<UIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
 				</button>
 			</div>
 
@@ -192,7 +192,7 @@
 			<!-- Today -->
 			<div v-if="todayTasks.length > 0 || todayCompleted.length > 0">
 				<div class="flex items-center gap-2 mb-2">
-					<UIcon name="i-heroicons-sun" class="w-3.5 h-3.5 text-amber-500" />
+					<UIcon name="i-heroicons-sun" class="w-3.5 h-3.5 text-warning" />
 					<span class="text-[11px] font-semibold uppercase tracking-wider text-foreground/70">Today</span>
 					<span class="text-[10px] text-muted-foreground">({{ todayCompleted.length }}/{{ todayTasks.length + todayCompleted.length }})</span>
 				</div>
@@ -217,7 +217,7 @@
 							class="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
 							@click="removeTask(task.id)"
 						>
-							<UIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5 text-muted-foreground hover:text-red-500" />
+							<UIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
 						</button>
 					</div>
 				</div>
@@ -251,7 +251,7 @@
 							class="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
 							@click="removeTask(task.id)"
 						>
-							<UIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5 text-muted-foreground hover:text-red-500" />
+							<UIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
 						</button>
 					</div>
 				</div>
@@ -281,7 +281,7 @@
 							class="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
 							@click="removeTask(task.id)"
 						>
-							<UIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5 text-muted-foreground hover:text-red-500" />
+							<UIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5 text-muted-foreground hover:text-destructive" />
 						</button>
 					</div>
 				</div>
@@ -289,7 +289,7 @@
 
 			<!-- Empty grouped state -->
 			<div v-if="activeTasks.length === 0 && completedTasks.length > 0" class="text-center py-4">
-				<UIcon name="i-heroicons-check-circle" class="w-8 h-8 mx-auto mb-1 text-green-500" />
+				<UIcon name="i-heroicons-check-circle" class="w-8 h-8 mx-auto mb-1 text-success" />
 				<p class="text-xs font-medium text-foreground">All tasks completed!</p>
 				<button class="text-[10px] text-primary hover:underline mt-1" @click="clearCompleted">
 					Clear {{ completedTasks.length }} completed

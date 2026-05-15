@@ -16,7 +16,7 @@
 							{{ headline }}
 						</SheetTitle>
 						<SheetDescription class="text-xs text-muted-foreground mt-1 inline-flex items-center gap-2 normal-case">
-							<Icon name="lucide:check-circle-2" class="w-3.5 h-3.5 text-emerald-500" />
+							<Icon name="lucide:check-circle-2" class="w-3.5 h-3.5 text-success" />
 							<span>
 								Drafted in {{ formattedDuration }} · {{ formatTokens(draft.tokens_spent) }} tokens
 							</span>
@@ -99,7 +99,7 @@
 			<!-- Inline error -->
 			<div
 				v-if="touchError"
-				class="px-6 py-2 border-t border-rose-200 bg-rose-50 dark:bg-rose-900/20 dark:border-rose-800/40 text-xs text-rose-800 dark:text-rose-200 shrink-0"
+				class="px-6 py-2 border-t border-destructive/30 bg-destructive/10 dark:bg-destructive/20 dark:border-destructive/40 text-xs text-destructive shrink-0"
 			>
 				{{ touchError }}
 			</div>
@@ -132,7 +132,7 @@
 					</span>
 					<button
 						type="button"
-						class="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors"
+						class="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 dark:hover:bg-destructive/20 transition-colors"
 						@click="onDiscard"
 					>
 						Discard

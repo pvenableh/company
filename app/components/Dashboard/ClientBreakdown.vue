@@ -19,13 +19,13 @@
           <div class="w-full h-1.5 bg-muted rounded-full overflow-hidden">
             <div
               class="h-full rounded-full transition-all"
-              :class="client.unpaid > 0 ? 'bg-amber-500' : 'bg-emerald-500'"
+              :class="client.unpaid > 0 ? 'bg-warning' : 'bg-success'"
               :style="{ width: maxTotal > 0 ? `${(client.total / maxTotal) * 100}%` : '0%' }"
             />
           </div>
           <div class="flex justify-between mt-0.5 text-[10px] text-muted-foreground">
             <span>{{ client.count }} invoices</span>
-            <span v-if="client.unpaid > 0" class="text-amber-500">{{ formatCurrency(client.unpaid) }} unpaid</span>
+            <span v-if="client.unpaid > 0" class="text-warning">{{ formatCurrency(client.unpaid) }} unpaid</span>
           </div>
         </div>
       </div>

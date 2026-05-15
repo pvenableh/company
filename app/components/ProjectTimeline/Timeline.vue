@@ -131,7 +131,7 @@ onMounted(() => {
     <!-- Error state -->
     <div v-else-if="error" class="flex items-center justify-center min-h-[400px]">
       <div class="text-center">
-        <p class="text-sm text-red-500">{{ error }}</p>
+        <p class="text-sm text-destructive">{{ error }}</p>
         <button class="mt-2 text-xs uppercase tracking-widest text-gray-400 hover:text-gray-600" @click="refresh">
           Try again
         </button>

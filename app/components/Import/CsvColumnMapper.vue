@@ -26,7 +26,7 @@
       </select>
       <span
         v-if="isAutoMapped(header)"
-        class="text-xs text-green-600 shrink-0"
+        class="text-xs text-success shrink-0"
       >
         Auto
       </span>

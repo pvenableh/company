@@ -56,13 +56,13 @@ const goalById = computed(() => {
 });
 
 const categoryIcon: Record<string, { icon: string; color: string }> = {
-	revenue: { icon: 'i-heroicons-banknotes', color: 'text-emerald-500' },
+	revenue: { icon: 'i-heroicons-banknotes', color: 'text-success' },
 	growth: { icon: 'i-heroicons-arrow-trending-up', color: 'text-blue-500' },
 	retention: { icon: 'i-heroicons-heart', color: 'text-pink-500' },
 	learning: { icon: 'i-heroicons-academic-cap', color: 'text-indigo-500' },
-	wellbeing: { icon: 'i-heroicons-sun', color: 'text-amber-500' },
+	wellbeing: { icon: 'i-heroicons-sun', color: 'text-warning' },
 	delivery: { icon: 'i-heroicons-truck', color: 'text-purple-500' },
-	custom: { icon: 'i-heroicons-flag', color: 'text-amber-500' },
+	custom: { icon: 'i-heroicons-flag', color: 'text-warning' },
 };
 function iconFor(g: Goal | undefined) {
 	if (!g) return categoryIcon.custom;
@@ -221,8 +221,8 @@ const totalActiveStaleCount = computed(() => rows.value.filter((r) => {
 				:key="row.goalId"
 				class="border border-border/40 rounded-xl p-3 space-y-2"
 				:class="{
-					'bg-emerald-500/5 border-emerald-500/30': row.status === 'saved',
-					'bg-red-500/5 border-red-500/30': row.status === 'error',
+					'bg-success/5 border-success/30': row.status === 'saved',
+					'bg-destructive/5 border-destructive/30': row.status === 'error',
 				}"
 			>
 				<div class="flex items-start gap-2">
@@ -239,7 +239,7 @@ const totalActiveStaleCount = computed(() => rows.value.filter((r) => {
 					</div>
 					<span
 						v-if="row.status === 'saved'"
-						class="text-[10px] font-semibold text-emerald-600 px-2 py-0.5 rounded-full bg-emerald-500/10"
+						class="text-[10px] font-semibold text-success px-2 py-0.5 rounded-full bg-success/10"
 					>Saved</span>
 					<span
 						v-else-if="row.status === 'saving'"
@@ -248,7 +248,7 @@ const totalActiveStaleCount = computed(() => rows.value.filter((r) => {
 					<button
 						v-else-if="row.status === 'error'"
 						type="button"
-						class="text-[10px] font-semibold text-red-600 px-2 py-0.5 rounded-full bg-red-500/10 hover:bg-red-500/20"
+						class="text-[10px] font-semibold text-destructive px-2 py-0.5 rounded-full bg-destructive/10 hover:bg-destructive/20"
 						@click="retryRow(row)"
 					>Retry</button>
 				</div>
@@ -274,7 +274,7 @@ const totalActiveStaleCount = computed(() => rows.value.filter((r) => {
 					class="text-xs"
 				/>
 
-				<p v-if="row.status === 'error'" class="text-[11px] text-red-600">{{ row.errorMsg }}</p>
+				<p v-if="row.status === 'error'" class="text-[11px] text-destructive">{{ row.errorMsg }}</p>
 			</div>
 
 			<!-- Reflection slot — populated by chunk c. Renders only after submit. -->

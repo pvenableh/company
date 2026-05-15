@@ -14,11 +14,11 @@
 		</div>
 		<div class="ios-card p-4">
 			<p class="text-[10px] uppercase font-semibold t-text-muted tracking-wider">Pipeline Value</p>
-			<p class="text-2xl font-bold text-emerald-500 mt-1">${{ stats.pipeline_value.toLocaleString() }}</p>
+			<p class="text-2xl font-bold text-success mt-1">${{ stats.pipeline_value.toLocaleString() }}</p>
 		</div>
 		<div class="ios-card p-4">
 			<p class="text-[10px] uppercase font-semibold t-text-muted tracking-wider">Won</p>
-			<p class="text-2xl font-bold text-emerald-500 mt-1">{{ stats.by_stage?.won || 0 }}</p>
+			<p class="text-2xl font-bold text-success mt-1">{{ stats.by_stage?.won || 0 }}</p>
 		</div>
 	</div>
 </template>

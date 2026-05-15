@@ -87,6 +87,20 @@
 	--info: 199 89% 48%;
 	--status-active: 160 60% 45%;
 	--status-scheduled: 199 89% 48%;
+
+	/* Categorical tag ramp — overridden per-palette by applyPaletteToDocument().
+	   SSR-side defaults match Sea Mist's `pickGappy(10, 8)` spread so the
+	   first paint before hydration uses the shipping default palette's
+	   ramp. Bump the slot count here + in tailwind.css + in useAppAccent.ts
+	   (`TAG_RAMP_LENGTH`) in lockstep. */
+	--tag-1: 163 100% 75%;
+	--tag-2: 171 80% 69%;
+	--tag-3: 188 70% 61%;
+	--tag-4: 194 73% 59%;
+	--tag-5: 202 69% 59%;
+	--tag-6: 213 64% 59%;
+	--tag-7: 261 60% 48%;
+	--tag-8: 278 100% 36%;
 }
 
 [data-theme='glass'] .dark,

@@ -158,19 +158,19 @@ onMounted(() => fetchHistory());
 			</UCard>
 			<UCard :ui="{ body: 'p-4' }">
 				<div class="text-center">
-					<div class="text-2xl font-bold text-green-500">{{ stats.completed }}</div>
+					<div class="text-2xl font-bold text-success">{{ stats.completed }}</div>
 					<div class="text-xs text-gray-500">Completed</div>
 				</div>
 			</UCard>
 			<UCard :ui="{ body: 'p-4' }">
 				<div class="text-center">
-					<div class="text-2xl font-bold text-red-500">{{ stats.cancelled }}</div>
+					<div class="text-2xl font-bold text-destructive">{{ stats.cancelled }}</div>
 					<div class="text-xs text-gray-500">Cancelled</div>
 				</div>
 			</UCard>
 			<UCard :ui="{ body: 'p-4' }">
 				<div class="text-center">
-					<div class="text-2xl font-bold text-orange-500">{{ stats.noShow }}</div>
+					<div class="text-2xl font-bold text-warning">{{ stats.noShow }}</div>
 					<div class="text-xs text-gray-500">No Show</div>
 				</div>
 			</UCard>
@@ -207,15 +207,15 @@ onMounted(() => fetchHistory());
 			<div class="h-48 flex items-end gap-1">
 				<div v-for="(day, index) in chartData" :key="index" class="flex-1 flex flex-col items-center gap-1">
 					<div class="w-full flex flex-col gap-0.5">
-						<div v-if="day.completed > 0" class="w-full bg-green-500 rounded-t" :style="{ height: `${Math.max(day.completed * 20, 4)}px` }" />
-						<div v-if="day.cancelled > 0" class="w-full bg-red-400" :style="{ height: `${Math.max(day.cancelled * 20, 4)}px` }" />
+						<div v-if="day.completed > 0" class="w-full bg-success rounded-t" :style="{ height: `${Math.max(day.completed * 20, 4)}px` }" />
+						<div v-if="day.cancelled > 0" class="w-full bg-destructive" :style="{ height: `${Math.max(day.cancelled * 20, 4)}px` }" />
 					</div>
 					<span class="text-[10px] text-gray-400 truncate w-full text-center">{{ day.date }}</span>
 				</div>
 			</div>
 			<div class="flex items-center justify-center gap-4 mt-4 text-xs">
-				<div class="flex items-center gap-1"><div class="w-3 h-3 bg-green-500 rounded" /><span>Completed</span></div>
-				<div class="flex items-center gap-1"><div class="w-3 h-3 bg-red-400 rounded" /><span>Cancelled</span></div>
+				<div class="flex items-center gap-1"><div class="w-3 h-3 bg-success rounded" /><span>Completed</span></div>
+				<div class="flex items-center gap-1"><div class="w-3 h-3 bg-destructive rounded" /><span>Cancelled</span></div>
 			</div>
 		</UCard>
 
@@ -240,7 +240,7 @@ onMounted(() => fetchHistory());
 			<div v-else class="divide-y divide-gray-100 dark:divide-gray-800">
 				<div v-for="meeting in filteredMeetings" :key="meeting.id" class="py-3 flex items-center justify-between gap-4">
 					<div class="flex items-center gap-3 min-w-0">
-						<UIcon :name="meeting.room_name ? 'i-heroicons-video-camera' : 'i-heroicons-calendar'" :class="meeting.room_name ? 'text-green-500' : 'text-blue-500'" class="w-5 h-5 flex-shrink-0" />
+						<UIcon :name="meeting.room_name ? 'i-heroicons-video-camera' : 'i-heroicons-calendar'" :class="meeting.room_name ? 'text-success' : 'text-blue-500'" class="w-5 h-5 flex-shrink-0" />
 						<div class="min-w-0">
 							<div class="font-medium truncate">{{ meeting.title }}</div>
 							<div class="text-sm text-gray-500">

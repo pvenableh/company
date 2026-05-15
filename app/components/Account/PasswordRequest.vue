@@ -80,7 +80,7 @@ const resetFormState = () => {
 		</div>
 
 		<div v-else class="text-center py-6">
-			<CheckCircle class="mx-auto size-10 text-green-500 mb-4" />
+			<CheckCircle class="mx-auto size-10 text-success mb-4" />
 			<h3 class="text-lg font-medium mb-2">Check Your Email</h3>
 			<p class="text-sm text-gray-600 dark:text-gray-400 mb-6">
 				We've sent a password reset link to

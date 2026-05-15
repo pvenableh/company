@@ -108,7 +108,7 @@
 								</div>
 								<button
 									v-if="request.request_status === 'approved' && request.linked_appointment"
-									class="flex items-center gap-1 px-2.5 py-1.5 bg-emerald-500/10 text-emerald-600 rounded-lg text-[11px] font-medium ios-press"
+									class="flex items-center gap-1 px-2.5 py-1.5 bg-success/10 text-success rounded-lg text-[11px] font-medium ios-press"
 								>
 									<UIcon name="i-heroicons-video-camera" class="w-3 h-3" />
 									Join
@@ -355,8 +355,8 @@ onMounted(() => {
 
 const eventFilters = [
 	{ key: 'appointments', label: 'Appointments', dot: 'bg-blue-500', activeBg: 'bg-blue-100/60 dark:bg-blue-900/20', activeText: 'text-blue-700 dark:text-blue-300' },
-	{ key: 'video', label: 'Video', dot: 'bg-emerald-500', activeBg: 'bg-emerald-100/60 dark:bg-emerald-900/20', activeText: 'text-emerald-700 dark:text-emerald-300' },
-	{ key: 'follow_ups', label: 'Follow-ups', dot: 'bg-amber-500', activeBg: 'bg-amber-100/60 dark:bg-amber-900/20', activeText: 'text-amber-700 dark:text-amber-300' },
+	{ key: 'video', label: 'Video', dot: 'bg-success', activeBg: 'bg-success/10 dark:bg-success/20', activeText: 'text-success dark:text-success' },
+	{ key: 'follow_ups', label: 'Follow-ups', dot: 'bg-warning', activeBg: 'bg-warning/10 dark:bg-warning/20', activeText: 'text-warning dark:text-warning' },
 ];
 
 const toggleFilter = (key: string) => {

@@ -15,13 +15,13 @@ const router = useRouter();
 const { activeGoals, goalProgress, isLoading } = useGoals();
 
 const categoryConfig: Record<string, { icon: string; color: string }> = {
-	revenue: { icon: 'i-heroicons-banknotes', color: 'text-emerald-500' },
+	revenue: { icon: 'i-heroicons-banknotes', color: 'text-success' },
 	growth: { icon: 'i-heroicons-arrow-trending-up', color: 'text-blue-500' },
 	retention: { icon: 'i-heroicons-heart', color: 'text-pink-500' },
 	learning: { icon: 'i-heroicons-academic-cap', color: 'text-indigo-500' },
-	wellbeing: { icon: 'i-heroicons-sun', color: 'text-amber-500' },
+	wellbeing: { icon: 'i-heroicons-sun', color: 'text-warning' },
 	delivery: { icon: 'i-heroicons-truck', color: 'text-purple-500' },
-	custom: { icon: 'i-heroicons-flag', color: 'text-amber-500' },
+	custom: { icon: 'i-heroicons-flag', color: 'text-warning' },
 };
 
 const legacyTypeToCategory: Record<string, GoalCategory> = {
@@ -61,10 +61,10 @@ const seeAllHref = computed(() => {
 });
 
 const progressColor = (pct: number) => {
-	if (pct >= 90) return 'bg-emerald-500';
+	if (pct >= 90) return 'bg-success';
 	if (pct >= 50) return 'bg-blue-500';
-	if (pct >= 25) return 'bg-amber-500';
-	return 'bg-red-500';
+	if (pct >= 25) return 'bg-warning';
+	return 'bg-destructive';
 };
 
 const visible = computed(() => !isLoading.value && matchingGoals.value.length > 0);

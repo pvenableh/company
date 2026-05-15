@@ -569,7 +569,7 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
                   <code class="text-[12px]">{{ env.name }}</code>
                   <span
                     class="text-[10px] uppercase tracking-wider"
-                    :class="env.required ? 'text-rose-600 dark:text-rose-400' : 'text-muted-foreground'"
+                    :class="env.required ? 'text-destructive dark:text-destructive' : 'text-muted-foreground'"
                   >{{ env.required ? 'required' : 'optional' }}</span>
                   <span v-if="env.note" class="text-[12px] text-muted-foreground">— {{ env.note }}</span>
                 </li>
@@ -629,7 +629,7 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
           </div>
         </div>
 
-        <div class="rounded-md bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/40 p-3 text-xs text-amber-800 dark:text-amber-200 space-y-1">
+        <div class="rounded-md bg-warning/10 dark:bg-warning/20 border border-warning/30 dark:border-warning/40 p-3 text-xs text-warning space-y-1">
           <p>
             <UIcon name="i-lucide-info" class="w-3.5 h-3.5 inline-block align-text-bottom mr-1" />
             Meta retains roughly 28 days of account-level insights — anything before that may come back empty.
@@ -658,8 +658,8 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
     <UModal v-model="showDeleteModal">
       <template #header>
         <div class="flex items-center gap-3">
-          <div class="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
-            <UIcon name="i-lucide-alert-triangle" class="w-5 h-5 text-red-600 dark:text-red-400" />
+          <div class="p-2 bg-destructive/10 dark:bg-destructive/30 rounded-lg">
+            <UIcon name="i-lucide-alert-triangle" class="w-5 h-5 text-destructive dark:text-destructive" />
           </div>
           <h3 class="font-semibold text-gray-900 dark:text-white">Disconnect Account</h3>
         </div>

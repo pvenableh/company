@@ -111,8 +111,8 @@ function memberInitial(name: string): string {
 function memberAvatarClass(role: 'host' | 'attendee' | 'invitee'): string {
 	switch (role) {
 		case 'host': return 'bg-primary text-primary-foreground';
-		case 'invitee': return 'bg-amber-500 text-white';
-		default: return 'bg-slate-500 text-white';
+		case 'invitee': return 'bg-warning text-white';
+		default: return 'bg-muted-foreground text-white';
 	}
 }
 
@@ -191,14 +191,14 @@ async function deleteMeeting() {
 						:class="[
 							'w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-[12px] font-medium transition-colors',
 							isInActiveWindow
-								? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/25'
+								? 'bg-success/15 text-success hover:bg-success/25'
 								: 'text-foreground hover:bg-muted/40',
 						]"
 					>
-						<UIcon name="i-heroicons-video-camera" class="w-3.5 h-3.5" :class="isInActiveWindow ? 'text-emerald-600' : 'text-muted-foreground'" />
+						<UIcon name="i-heroicons-video-camera" class="w-3.5 h-3.5" :class="isInActiveWindow ? 'text-success' : 'text-muted-foreground'" />
 						<span>Enter meeting</span>
-						<span v-if="isInActiveWindow" class="ml-auto inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider text-emerald-600">
-							<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+						<span v-if="isInActiveWindow" class="ml-auto inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider text-success">
+							<span class="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
 							Live
 						</span>
 					</button>
@@ -215,7 +215,7 @@ async function deleteMeeting() {
 						<button
 							type="button"
 							@click="copyLink"
-							class="w-8 h-8 inline-flex items-center justify-center rounded-md bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 transition-colors"
+							class="w-8 h-8 inline-flex items-center justify-center rounded-md bg-info/10 text-info hover:bg-info/20 transition-colors"
 						>
 							<UIcon name="i-heroicons-link" class="w-4 h-4" />
 						</button>
@@ -234,7 +234,7 @@ async function deleteMeeting() {
 					>
 						<UTooltip text="Send invite">
 							<span
-								class="w-8 h-8 inline-flex items-center justify-center rounded-md bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 transition-colors cursor-pointer"
+								class="w-8 h-8 inline-flex items-center justify-center rounded-md bg-warning/10 text-warning hover:bg-warning/20 transition-colors cursor-pointer"
 							>
 								<UIcon name="i-heroicons-paper-airplane" class="w-4 h-4" />
 							</span>
@@ -256,7 +256,7 @@ async function deleteMeeting() {
 							type="button"
 							:disabled="deleting"
 							@click="deleteMeeting"
-							class="w-8 h-8 inline-flex items-center justify-center rounded-md bg-red-500/10 text-red-600 hover:bg-red-500/20 transition-colors disabled:opacity-50"
+							class="w-8 h-8 inline-flex items-center justify-center rounded-md bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors disabled:opacity-50"
 						>
 							<UIcon
 								:name="deleting ? 'i-heroicons-arrow-path' : 'i-heroicons-trash'"

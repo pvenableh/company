@@ -118,16 +118,16 @@ const CARD_CONFIGS: Record<MarketingCardType, CardTypeConfig> = {
 	dormant_clients: {
 		label: 'Re-engage clients',
 		icon: 'lucide:clock-arrow-up',
-		iconBg: 'bg-amber-100 dark:bg-amber-900/30',
-		iconColor: 'text-amber-700 dark:text-amber-400',
-		border: 'border-amber-200/40 dark:border-amber-800/30',
+		iconBg: 'bg-warning/10 dark:bg-warning/30',
+		iconColor: 'text-warning dark:text-warning',
+		border: 'border-warning/40 dark:border-warning/30',
 	},
 	project_complete: {
 		label: 'Recent win',
 		icon: 'lucide:trophy',
-		iconBg: 'bg-emerald-100 dark:bg-emerald-900/30',
-		iconColor: 'text-emerald-700 dark:text-emerald-400',
-		border: 'border-emerald-200/40 dark:border-emerald-800/30',
+		iconBg: 'bg-success/10 dark:bg-success/30',
+		iconColor: 'text-success dark:text-success',
+		border: 'border-success/40 dark:border-success/30',
 	},
 	lead_reengagement: {
 		label: 'Quiet leads',
@@ -153,16 +153,16 @@ const CARD_CONFIGS: Record<MarketingCardType, CardTypeConfig> = {
 	campaign_clone: {
 		label: 'Repeat a winner',
 		icon: 'lucide:copy',
-		iconBg: 'bg-cyan-100 dark:bg-cyan-900/30',
-		iconColor: 'text-cyan-700 dark:text-cyan-400',
-		border: 'border-cyan-200/40 dark:border-cyan-800/30',
+		iconBg: 'bg-info/10 dark:bg-info',
+		iconColor: 'text-info dark:text-info',
+		border: 'border-info/40 dark:border-info/30',
 	},
 	partner_anniversary: {
 		label: 'Partner moment',
 		icon: 'lucide:cake',
-		iconBg: 'bg-rose-100 dark:bg-rose-900/30',
-		iconColor: 'text-rose-700 dark:text-rose-400',
-		border: 'border-rose-200/40 dark:border-rose-800/30',
+		iconBg: 'bg-destructive/10 dark:bg-destructive/30',
+		iconColor: 'text-destructive dark:text-destructive',
+		border: 'border-destructive/40 dark:border-destructive/30',
 	},
 	event_teaser: {
 		label: 'Upcoming event',
@@ -296,8 +296,8 @@ const urgencyDotVisible = computed(() => typeof props.recommendation.urgency ===
 
 const urgencyDotClass = computed(() => {
 	const u = props.recommendation.urgency ?? 0;
-	if (u >= 70) return 'bg-rose-500';
-	if (u >= 40) return 'bg-amber-500';
+	if (u >= 70) return 'bg-destructive';
+	if (u >= 40) return 'bg-warning';
 	return 'bg-muted-foreground/40';
 });
 

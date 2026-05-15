@@ -265,10 +265,10 @@ onUnmounted(() => clearEntity());
       >
         <span class="text-[10px] uppercase tracking-wider text-muted-foreground mr-1">Record payment:</span>
         <button
-          class="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-card text-xs font-medium hover:bg-emerald-50 hover:border-emerald-300 dark:hover:bg-emerald-950/20 transition-colors"
+          class="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-card text-xs font-medium hover:bg-success/10 hover:border-success/30 dark:hover:bg-success/20 transition-colors"
           @click="openPaymentModal('check')"
         >
-          <Icon name="lucide:square-check-big" class="w-3.5 h-3.5 text-emerald-600" />
+          <Icon name="lucide:square-check-big" class="w-3.5 h-3.5 text-success" />
           Check
         </button>
         <button
@@ -279,17 +279,17 @@ onUnmounted(() => clearEntity());
           Zelle
         </button>
         <button
-          class="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-card text-xs font-medium hover:bg-sky-50 hover:border-sky-300 dark:hover:bg-sky-950/20 transition-colors"
+          class="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-card text-xs font-medium hover:bg-info/10 hover:border-info/30 dark:hover:bg-info/20 transition-colors"
           @click="openPaymentModal('venmo')"
         >
-          <Icon name="lucide:smartphone" class="w-3.5 h-3.5 text-sky-500" />
+          <Icon name="lucide:smartphone" class="w-3.5 h-3.5 text-info" />
           Venmo
         </button>
         <button
-          class="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-card text-xs font-medium hover:bg-amber-50 hover:border-amber-300 dark:hover:bg-amber-950/20 transition-colors"
+          class="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border bg-card text-xs font-medium hover:bg-warning/10 hover:border-warning/30 dark:hover:bg-warning/20 transition-colors"
           @click="openPaymentModal('cash')"
         >
-          <Icon name="lucide:banknote" class="w-3.5 h-3.5 text-amber-600" />
+          <Icon name="lucide:banknote" class="w-3.5 h-3.5 text-warning" />
           Cash
         </button>
         <button
@@ -305,7 +305,7 @@ onUnmounted(() => clearEntity());
       </div>
       <div
         v-else
-        class="flex items-center gap-2 mb-5 px-3 py-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900 text-xs text-emerald-700 dark:text-emerald-400"
+        class="flex items-center gap-2 mb-5 px-3 py-2 rounded-lg bg-success/10 dark:bg-success/20 border border-success/30 dark:border-success text-xs text-success dark:text-success"
       >
         <Icon name="lucide:check-circle-2" class="w-4 h-4" />
         Invoice fully paid ({{ formatCurrency(totalPaid) }} of {{ formatCurrency(invoice.total_amount || 0) }})

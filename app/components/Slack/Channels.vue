@@ -44,9 +44,9 @@ const refreshAll = () => {
     </div>
 
     <!-- Connection warning -->
-    <div v-if="!isFullyConnected && !isLoading" class="ios-card p-3 flex items-center gap-2 border-amber-200 dark:border-amber-800">
-      <div class="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
-        <Icon name="lucide:wifi-off" class="w-3.5 h-3.5 text-amber-500" />
+    <div v-if="!isFullyConnected && !isLoading" class="ios-card p-3 flex items-center gap-2 border-warning/30 dark:border-warning">
+      <div class="w-7 h-7 rounded-lg bg-warning/10 flex items-center justify-center shrink-0">
+        <Icon name="lucide:wifi-off" class="w-3.5 h-3.5 text-warning" />
       </div>
       <div class="flex-1 min-w-0">
         <p class="text-xs font-medium text-foreground">Connection lost</p>
@@ -56,9 +56,9 @@ const refreshAll = () => {
     </div>
 
     <!-- Error -->
-    <div v-if="hasError" class="ios-card p-3 flex items-center gap-2 border-red-200 dark:border-red-800">
-      <div class="w-7 h-7 rounded-lg bg-red-500/10 flex items-center justify-center shrink-0">
-        <Icon name="lucide:alert-circle" class="w-3.5 h-3.5 text-red-500" />
+    <div v-if="hasError" class="ios-card p-3 flex items-center gap-2 border-destructive/30 dark:border-destructive">
+      <div class="w-7 h-7 rounded-lg bg-destructive/10 flex items-center justify-center shrink-0">
+        <Icon name="lucide:alert-circle" class="w-3.5 h-3.5 text-destructive" />
       </div>
       <div class="flex-1 min-w-0">
         <p class="text-xs font-medium text-foreground">Failed to load channels</p>

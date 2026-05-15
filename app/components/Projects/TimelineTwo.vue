@@ -92,10 +92,10 @@ const formatDate = (date) => getFriendlyDateThree(date);
 const getStatusColor = computed(
 	() =>
 		({
-			'completed-early': 'bg-green-500',
-			'completed-late': 'bg-red-500',
+			'completed-early': 'bg-success',
+			'completed-late': 'bg-destructive',
 			'in-progress': 'bg-blue-500',
-			overdue: 'bg-red-500',
+			overdue: 'bg-destructive',
 			pending: 'bg-gray-500',
 		})[timelineData.status] || 'bg-gray-500',
 );
@@ -189,8 +189,8 @@ onUnmounted(() => {
 							{
 								'bg-gray-500': type === 'start',
 								'bg-blue-500': type === 'due',
-								'bg-green-500': type === 'completion' && timelineData.status === 'completed-early',
-								'bg-red-500': type === 'completion' && timelineData.status === 'completed-late',
+								'bg-success': type === 'completion' && timelineData.status === 'completed-early',
+								'bg-destructive': type === 'completion' && timelineData.status === 'completed-late',
 							},
 						]"
 						:style="{ left: `${position}%` }"
@@ -210,7 +210,7 @@ onUnmounted(() => {
 						:class="[
 							'w-2 h-2 rounded-full',
 							{
-								'bg-green-400': event.type === 'payment',
+								'bg-success': event.type === 'payment',
 								'bg-blue-400': event.type === 'design',
 								'bg-gray-400': !['payment', 'design'].includes(event.type),
 							},
@@ -232,8 +232,8 @@ onUnmounted(() => {
 			<div v-if="!timelineData.completionDate">
 				<span
 					:class="{
-						'text-red-500': timelineData.daysUntilDue < 0,
-						'text-green-500': timelineData.daysUntilDue > 0,
+						'text-destructive': timelineData.daysUntilDue < 0,
+						'text-success': timelineData.daysUntilDue > 0,
 						'text-gray-500': timelineData.daysUntilDue === 0,
 					}"
 				>

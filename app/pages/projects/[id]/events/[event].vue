@@ -92,11 +92,11 @@ const formatMeetingTime = (iso) => {
 };
 
 const meetingStatusTone = (status) => ({
-	scheduled: 'bg-sky-500/10 text-sky-600 dark:text-sky-400',
-	in_progress: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+	scheduled: 'bg-info/10 text-info dark:text-info',
+	in_progress: 'bg-success/10 text-success dark:text-success',
 	completed: 'bg-muted text-muted-foreground',
-	cancelled: 'bg-rose-500/10 text-rose-600 dark:text-rose-400',
-	no_show: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+	cancelled: 'bg-destructive/10 text-destructive dark:text-destructive',
+	no_show: 'bg-warning/10 text-warning dark:text-warning',
 	archived: 'bg-muted text-muted-foreground',
 }[status] || 'bg-muted text-muted-foreground');
 
@@ -254,7 +254,7 @@ const startMeetingForEvent = async () => {
 								<span v-if="meetings.length" class="text-muted-foreground/60">{{ meetings.length }}</span>
 							</h3>
 							<button
-								class="inline-flex items-center gap-1 h-6 px-2 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 transition-colors disabled:opacity-50"
+								class="inline-flex items-center gap-1 h-6 px-2 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-success/10 hover:bg-success/20 text-success dark:text-success transition-colors disabled:opacity-50"
 								:disabled="creatingMeeting"
 								@click="startMeetingForEvent"
 							>

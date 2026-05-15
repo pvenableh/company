@@ -268,7 +268,7 @@ watch(() => totalCount.value, scrollToNow);
 
 		<section class="px-6 sm:px-10 pb-12 max-w-screen-2xl mx-auto">
 			<div v-if="loading" class="text-sm text-muted-foreground py-12">Loading timeline…</div>
-			<div v-else-if="error" class="text-sm text-red-600 py-12">{{ error }}</div>
+			<div v-else-if="error" class="text-sm text-destructive py-12">{{ error }}</div>
 			<div
 				v-else-if="totalCount === 0"
 				class="text-sm text-muted-foreground py-12 text-center border border-dashed border-border/50 rounded-2xl"

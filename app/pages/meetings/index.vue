@@ -126,16 +126,10 @@ const statusChip = (m) => {
 	return { label: 'Scheduled', tone: 'gray' };
 };
 
-const toneClass = (tone) => {
-	const map = {
-		emerald: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-		sky: 'bg-sky-500/10 text-sky-600 dark:text-sky-400',
-		amber: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-		red: 'bg-red-500/10 text-red-600 dark:text-red-400',
-		gray: 'bg-muted/40 text-muted-foreground',
-	};
-	return map[tone] || map.gray;
-};
+// Meeting status tones flow through the shared `softTone` helper in
+// `~/utils/palette-tokens` (auto-imported by Nuxt) — same contract as
+// meetings/[id].vue, kept in lockstep automatically.
+const toneClass = (tone) => softTone(tone);
 </script>
 
 <template>
@@ -155,7 +149,7 @@ const toneClass = (tone) => {
 				<input
 					v-model="search"
 					placeholder="Search meetings, projects, clients…"
-					class="w-full h-9 pl-9 pr-3 rounded-full bg-muted/30 border border-border text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
+					class="w-full h-9 pl-9 pr-3 rounded-full bg-muted/30 border border-border text-sm focus:outline-none focus:ring-2 focus:ring-success/30"
 				/>
 			</div>
 			<div class="flex gap-1 rounded-full bg-muted/30 p-1">
@@ -196,8 +190,8 @@ const toneClass = (tone) => {
 				class="ios-card block px-4 py-3 hover:bg-muted/30 transition-colors"
 			>
 				<div class="flex items-start gap-3">
-					<div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
-						<UIcon name="i-heroicons-video-camera" class="w-5 h-5 text-emerald-500" />
+					<div class="w-10 h-10 rounded-xl bg-success/10 flex items-center justify-center flex-shrink-0">
+						<UIcon name="i-heroicons-video-camera" class="w-5 h-5 text-success" />
 					</div>
 					<div class="flex-1 min-w-0">
 						<div class="flex items-start justify-between gap-2">
@@ -232,7 +226,7 @@ const toneClass = (tone) => {
 								<UIcon name="i-heroicons-building-office" class="w-3 h-3" />
 								{{ rowClient(m).name }}
 							</span>
-							<span v-if="m.recording_url" class="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+							<span v-if="m.recording_url" class="inline-flex items-center gap-1 text-success dark:text-success">
 								<UIcon name="i-heroicons-film" class="w-3 h-3" />
 								Recording
 							</span>

@@ -74,7 +74,7 @@
 				<div class="flex items-center justify-between text-xs t-text-muted">
 					<span>{{ wordCount(b.content) }} words</span>
 					<span class="flex gap-1">
-						<span v-if="b.applies_to?.includes('proposals')" class="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">P</span>
+						<span v-if="b.applies_to?.includes('proposals')" class="px-1.5 py-0.5 rounded bg-success/10 text-success dark:bg-success/30 dark:text-success">P</span>
 						<span v-if="b.applies_to?.includes('contracts')" class="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">C</span>
 					</span>
 				</div>
@@ -135,8 +135,8 @@ function categoryLabel(cat: BlockCategory) {
 }
 
 function statusChipClass(status: string) {
-	if (status === 'published') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300';
-	if (status === 'draft') return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300';
+	if (status === 'published') return 'bg-success/10 text-success dark:bg-success/30 dark:text-success';
+	if (status === 'draft') return 'bg-warning/10 text-warning dark:bg-warning/30 dark:text-warning';
 	return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
 }
 

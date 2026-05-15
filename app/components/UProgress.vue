@@ -33,18 +33,14 @@ const sizeClasses = computed(() => {
   return sizes[props.size] || sizes.md
 })
 
+// Color prop → palette-driven solid fill. `tokenFor` lives in
+// `~/utils/palette-tokens` (auto-imported by Nuxt) so progress shares
+// the same alias table as UButton / UBadge / UAlert / UChip.
 const colorClasses = computed(() => {
-  const colors: Record<string, string> = {
-    primary: 'bg-primary',
-    gray: 'bg-gray-500',
-    red: 'bg-red-500',
-    green: 'bg-green-500',
-    blue: 'bg-blue-500',
-    yellow: 'bg-yellow-500',
-    emerald: 'bg-emerald-500',
-    amber: 'bg-amber-500',
-  }
-  return colors[props.color] || colors.primary
+  const token = tokenFor(props.color)
+  if (token) return `bg-${token}`
+  if (props.color === 'gray') return 'bg-muted-foreground'
+  return 'bg-primary'
 })
 </script>
 

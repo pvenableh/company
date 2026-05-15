@@ -21,7 +21,7 @@
 		<!-- Billable -->
 		<div class="ios-card rounded-2xl border border-border bg-card p-4 space-y-1">
 			<p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Billable</p>
-			<p class="text-2xl font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
+			<p class="text-2xl font-semibold text-success dark:text-success tabular-nums">
 				${{ billableAmount.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) }}
 			</p>
 			<p class="text-xs text-muted-foreground">

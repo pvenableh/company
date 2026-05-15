@@ -17,12 +17,12 @@
             <Icon name="lucide:loader-2" class="w-3 h-3 animate-spin" />
             <span class="hidden sm:inline">Saving…</span>
           </span>
-          <span v-else-if="justSaved" class="flex items-center gap-1 text-[10px] text-green-600 shrink-0">
+          <span v-else-if="justSaved" class="flex items-center gap-1 text-[10px] text-success shrink-0">
             <Icon name="lucide:check" class="w-3 h-3" />
             <span class="hidden sm:inline">Saved</span>
           </span>
-          <span v-else-if="builder.isDirty.value" class="flex items-center gap-1 text-[10px] text-amber-500 shrink-0">
-            <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+          <span v-else-if="builder.isDirty.value" class="flex items-center gap-1 text-[10px] text-warning shrink-0">
+            <span class="w-1.5 h-1.5 rounded-full bg-warning animate-pulse" />
             <span class="hidden sm:inline">Unsaved</span>
           </span>
         </Transition>
@@ -111,7 +111,7 @@
 
         <!-- Send -->
         <button
-          class="rounded-full px-2.5 py-1.5 text-[11px] font-medium bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 ios-press inline-flex items-center gap-1 transition-colors"
+          class="rounded-full px-2.5 py-1.5 text-[11px] font-medium bg-success/10 text-success dark:text-success hover:bg-success/20 ios-press inline-flex items-center gap-1 transition-colors"
           @click="showSendModal = true"
         >
           <Icon name="lucide:paper-plane" class="w-3 h-3" />
@@ -249,8 +249,8 @@
           <!-- Raw MJML fallback: template has source but no blocks yet -->
           <div v-else-if="builder.rawMjmlSource.value" class="py-6 sm:py-10">
             <div class="ios-card p-5 max-w-lg mx-auto text-center">
-              <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center mb-3 mx-auto">
-                <Icon name="lucide:layout-template" class="w-5 h-5 text-emerald-500" />
+              <div class="w-12 h-12 rounded-2xl bg-success/10 flex items-center justify-center mb-3 mx-auto">
+                <Icon name="lucide:layout-template" class="w-5 h-5 text-success" />
               </div>
               <h3 class="text-sm font-semibold text-foreground mb-1">Seeded from a template</h3>
               <p class="text-[11px] text-muted-foreground leading-relaxed mb-4">

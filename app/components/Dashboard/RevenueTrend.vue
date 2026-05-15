@@ -61,7 +61,7 @@
         Billed
       </span>
       <span class="flex items-center gap-1.5">
-        <span class="w-3 h-0.5 rounded-full bg-emerald-500"></span>
+        <span class="w-3 h-0.5 rounded-full bg-success"></span>
         Paid
       </span>
     </div>

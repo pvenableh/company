@@ -46,12 +46,12 @@ const tokensDepleted = computed(() => {
 });
 const tokensBarClass = computed(() => {
 	if (tokensUsedPct.value >= 90) return 'bg-destructive';
-	if (tokensUsedPct.value >= 70) return 'bg-amber-500';
+	if (tokensUsedPct.value >= 70) return 'bg-warning';
 	return 'bg-primary/60';
 });
 const tokensTextClass = computed(() => {
 	if (tokensUsedPct.value >= 90) return 'text-destructive';
-	if (tokensUsedPct.value >= 70) return 'text-amber-500';
+	if (tokensUsedPct.value >= 70) return 'text-warning';
 	return 'text-muted-foreground';
 });
 const canManageTokens = computed(() => canAccess('org_settings'));
@@ -544,7 +544,7 @@ watch(quickStreamingContent, () => {
 										<button
 											@click="submitTrayFeedback(msg, 'positive')"
 											class="flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-background border border-border shadow-sm hover:bg-muted transition-colors"
-											:class="msg.feedback?.rating === 'positive' ? 'text-green-500' : 'text-muted-foreground'"
+											:class="msg.feedback?.rating === 'positive' ? 'text-success' : 'text-muted-foreground'"
 											title="Helpful"
 										>
 											<UIcon name="i-heroicons-hand-thumb-up" class="w-2.5 h-2.5" />
@@ -552,7 +552,7 @@ watch(quickStreamingContent, () => {
 										<button
 											@click="openTrayCorrection(msg)"
 											class="flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium bg-background border border-border shadow-sm hover:bg-muted transition-colors"
-											:class="msg.feedback?.rating === 'negative' ? 'text-red-500' : 'text-muted-foreground'"
+											:class="msg.feedback?.rating === 'negative' ? 'text-destructive' : 'text-muted-foreground'"
 											title="Not helpful"
 										>
 											<UIcon name="i-heroicons-hand-thumb-down" class="w-2.5 h-2.5" />
@@ -572,7 +572,7 @@ watch(quickStreamingContent, () => {
 										/>
 										<button
 											@click="submitTrayCorrection"
-											class="px-2 py-1 rounded text-[9px] font-medium bg-red-500/10 text-red-600 hover:bg-red-500/20 transition-colors shrink-0"
+											class="px-2 py-1 rounded text-[9px] font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors shrink-0"
 										>
 											Submit
 										</button>
@@ -783,7 +783,7 @@ watch(quickStreamingContent, () => {
 								<UIcon
 									v-if="note.is_pinned"
 									name="i-heroicons-star-solid"
-									class="w-3 h-3 text-amber-500 flex-shrink-0"
+									class="w-3 h-3 text-warning flex-shrink-0"
 								/>
 							</div>
 							<p class="text-[11px] text-muted-foreground line-clamp-2 mt-1">

@@ -127,8 +127,8 @@ function urgencyLabel(u: number): string {
 }
 
 function urgencyChipClass(u: number): string {
-	if (u >= 0.75) return 'bg-rose-500/10 text-rose-600';
-	if (u >= 0.5) return 'bg-amber-500/10 text-amber-600';
+	if (u >= 0.75) return 'bg-destructive/10 text-destructive';
+	if (u >= 0.5) return 'bg-warning/10 text-warning';
 	return 'bg-muted/40 text-muted-foreground';
 }
 

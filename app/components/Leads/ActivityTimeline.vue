@@ -61,19 +61,19 @@ function activityIcon(type: string): string {
 
 function iconBg(type: string): string {
 	const classes: Record<string, string> = {
-		call: 'bg-green-500/15 text-green-400',
+		call: 'bg-success/15 text-success',
 		email: 'bg-blue-500/15 text-blue-400',
 		meeting: 'bg-purple-500/15 text-purple-400',
-		note: 'bg-yellow-500/15 text-yellow-400',
+		note: 'bg-warning/15 text-warning',
 		proposal: 'bg-indigo-500/15 text-indigo-400',
 	};
 	return classes[type] || 'bg-gray-500/15 text-gray-400';
 }
 
 function outcomeClass(outcome: string): string {
-	if (outcome === 'positive') return 'bg-emerald-500/15 text-emerald-400';
-	if (outcome === 'negative') return 'bg-red-500/15 text-red-400';
+	if (outcome === 'positive') return 'bg-success/15 text-success';
+	if (outcome === 'negative') return 'bg-destructive/15 text-destructive';
 	if (outcome === 'neutral') return 'bg-gray-500/15 text-gray-400';
-	return 'bg-yellow-500/15 text-yellow-400';
+	return 'bg-warning/15 text-warning';
 }
 </script>

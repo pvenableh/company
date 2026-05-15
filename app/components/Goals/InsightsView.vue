@@ -40,7 +40,7 @@
 					<p class="text-2xl font-bold">{{ onTrackCount }}</p>
 					<span class="text-[10px] text-muted-foreground">/ {{ activeGoals.length }}</span>
 				</div>
-				<p class="text-[11px]" :class="atRiskCount > 0 ? 'text-amber-500' : 'text-muted-foreground'">
+				<p class="text-[11px]" :class="atRiskCount > 0 ? 'text-warning' : 'text-muted-foreground'">
 					{{ atRiskCount }} at risk · {{ overdueGoals.length }} overdue
 				</p>
 			</div>
@@ -110,7 +110,7 @@
 		<div v-if="riskList.length" class="ios-card p-5">
 			<h3 class="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-3">
 				Needs Attention
-				<span class="text-amber-400 ml-1">({{ riskList.length }})</span>
+				<span class="text-warning ml-1">({{ riskList.length }})</span>
 			</h3>
 			<div class="space-y-0.5">
 				<div
@@ -121,7 +121,7 @@
 					<div class="flex items-center gap-3 min-w-0 flex-1">
 						<span
 							class="w-2 h-2 rounded-full shrink-0"
-							:class="g.reason === 'overdue' ? 'bg-red-500' : 'bg-amber-500'"
+							:class="g.reason === 'overdue' ? 'bg-destructive' : 'bg-warning'"
 						/>
 						<div class="min-w-0">
 							<p class="text-sm font-medium truncate">{{ g.title }}</p>
@@ -290,16 +290,16 @@ const riskList = computed<RiskRow[]>(() => {
 });
 
 function progressColor(p: number): string {
-	if (p >= 75) return 'bg-emerald-500/70';
+	if (p >= 75) return 'bg-success/70';
 	if (p >= 50) return 'bg-primary/70';
-	if (p >= 25) return 'bg-amber-500/70';
-	return 'bg-red-500/70';
+	if (p >= 25) return 'bg-warning/70';
+	return 'bg-destructive/70';
 }
 function progressTextColor(p: number): string {
-	if (p >= 75) return 'text-emerald-500';
+	if (p >= 75) return 'text-success';
 	if (p >= 50) return 'text-primary';
-	if (p >= 25) return 'text-amber-500';
-	return 'text-red-500';
+	if (p >= 25) return 'text-warning';
+	return 'text-destructive';
 }
 
 function formatDate(d: string): string {

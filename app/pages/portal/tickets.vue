@@ -31,8 +31,8 @@ function normalizeTicketStatus(s: string | undefined | null): string {
 }
 
 const priorityBadge: Record<string, string> = {
-	urgent: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-	high: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+	urgent: 'bg-destructive/10 text-destructive dark:bg-destructive/30 dark:text-destructive',
+	high: 'bg-warning/10 text-warning dark:bg-warning/30 dark:text-warning',
 	normal: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
 	low: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
 };
@@ -82,10 +82,10 @@ const priorityBadge: Record<string, string> = {
 									<p class="text-xs text-muted-foreground mb-1">Status</p>
 									<span class="text-xs px-2.5 py-1 rounded-full font-medium"
 										:class="{
-											'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400': normalizeTicketStatus(selectedTicket.status) === 'scheduled',
+											'bg-warning/10 text-warning dark:bg-warning/30 dark:text-warning': normalizeTicketStatus(selectedTicket.status) === 'scheduled',
 											'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400': normalizeTicketStatus(selectedTicket.status) === 'in_progress',
 											'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400': normalizeTicketStatus(selectedTicket.status) === 'pending',
-											'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400': normalizeTicketStatus(selectedTicket.status) === 'completed',
+											'bg-success/10 text-success dark:bg-success/30 dark:text-success': normalizeTicketStatus(selectedTicket.status) === 'completed',
 										}"
 									>
 										{{ selectedTicket.status }}

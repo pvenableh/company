@@ -87,8 +87,8 @@ const modalOpen = ref(false);
 const selectedTemplate = ref<Partial<ServiceTemplate> | null>(null);
 
 function statusChipClass(status: string) {
-	if (status === 'published') return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300';
-	if (status === 'draft') return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300';
+	if (status === 'published') return 'bg-success/10 text-success dark:bg-success/30 dark:text-success';
+	if (status === 'draft') return 'bg-warning/10 text-warning dark:bg-warning/30 dark:text-warning';
 	return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
 }
 

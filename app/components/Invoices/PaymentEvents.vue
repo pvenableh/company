@@ -74,7 +74,7 @@ watch(() => props.paymentIntentId, fetchEvents, { immediate: true });
 						<p class="text-sm font-medium text-gray-900 dark:text-gray-100 uppercase">
 							{{ event.type.replace('payment_intent.', '').replace(/_/g, ' ') }}
 						</p>
-						<p v-if="event.data.last_payment_error" class="mt-1 text-sm text-red-600 dark:text-red-400">
+						<p v-if="event.data.last_payment_error" class="mt-1 text-sm text-destructive dark:text-destructive">
 							{{ event.data.last_payment_error?.message }}
 						</p>
 						<p class="mt-1 text-xs text-gray-500 dark:text-gray-400">

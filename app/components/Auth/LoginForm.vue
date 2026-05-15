@@ -107,7 +107,7 @@ const onSubmit = handleSubmit(async (values) => {
         >
           <div
             v-if="formError"
-            class="flex items-center gap-2 p-3 text-sm text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/40 border border-red-200/50 dark:border-red-800/50 rounded-lg"
+            class="flex items-center gap-2 p-3 text-sm text-destructive dark:text-destructive bg-destructive/10 dark:bg-destructive/40 border border-destructive/50 dark:border-destructive/50 rounded-lg"
           >
             <AlertCircle class="h-4 w-4 flex-shrink-0" />
             <span>{{ formError }}</span>
@@ -124,9 +124,9 @@ const onSubmit = handleSubmit(async (values) => {
               v-bind="field"
               @input="clearFormError"
               class="w-full rounded-lg border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cyan)] focus:border-transparent transition-shadow"
-              :class="errors.length ? 'border-red-300' : 'border-border'"
+              :class="errors.length ? 'border-destructive/30' : 'border-border'"
             />
-            <p v-if="errors.length" class="text-xs text-red-500">{{ errors[0] }}</p>
+            <p v-if="errors.length" class="text-xs text-destructive">{{ errors[0] }}</p>
           </div>
         </VeeField>
 
@@ -148,9 +148,9 @@ const onSubmit = handleSubmit(async (values) => {
               v-bind="field"
               @input="clearFormError"
               class="w-full rounded-lg border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cyan)] focus:border-transparent transition-shadow"
-              :class="errors.length ? 'border-red-300' : 'border-border'"
+              :class="errors.length ? 'border-destructive/30' : 'border-border'"
             />
-            <p v-if="errors.length" class="text-xs text-red-500">{{ errors[0] }}</p>
+            <p v-if="errors.length" class="text-xs text-destructive">{{ errors[0] }}</p>
           </div>
         </VeeField>
 

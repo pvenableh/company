@@ -1,12 +1,12 @@
 <template>
 	<div class="space-y-6">
 		<!-- Admin: Grant Comp Tokens (Directus system admins only) -->
-		<div v-if="isDirectusAdmin" class="ios-card p-4 border border-amber-500/30 bg-amber-500/5">
+		<div v-if="isDirectusAdmin" class="ios-card p-4 border border-warning/30 bg-warning/5">
 			<div class="flex items-center justify-between mb-3">
 				<h4 class="text-sm font-semibold text-foreground flex items-center gap-2">
-					<UIcon name="i-heroicons-bolt" class="w-4 h-4 text-amber-500" />
+					<UIcon name="i-heroicons-bolt" class="w-4 h-4 text-warning" />
 					Grant Comp Tokens
-					<span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 font-medium">Admin</span>
+					<span class="text-[10px] px-1.5 py-0.5 rounded bg-warning/10 text-warning font-medium">Admin</span>
 				</h4>
 			</div>
 			<p class="text-xs text-muted-foreground mb-3">
@@ -38,7 +38,7 @@
 				</UButton>
 			</div>
 			<p v-if="lastGrantInfo" class="mt-2 text-[11px] text-muted-foreground">
-				Last grant: <span class="font-mono text-emerald-600">+{{ formatTokens(lastGrantInfo.granted) }}</span>
+				Last grant: <span class="font-mono text-success">+{{ formatTokens(lastGrantInfo.granted) }}</span>
 				· new balance <span class="font-mono">{{ formatTokens(lastGrantInfo.newBalance) }}</span>
 			</p>
 		</div>
@@ -171,7 +171,7 @@
 							<div class="h-1.5 rounded-full bg-muted/30 overflow-hidden">
 								<div
 									class="h-full rounded-full transition-all"
-									:class="member.tokensUsedThisMonth / member.tokenBudget > 0.8 ? 'bg-red-500' : 'bg-primary'"
+									:class="member.tokensUsedThisMonth / member.tokenBudget > 0.8 ? 'bg-destructive' : 'bg-primary'"
 									:style="{ width: Math.min(100, (member.tokensUsedThisMonth / member.tokenBudget) * 100) + '%' }"
 								/>
 							</div>

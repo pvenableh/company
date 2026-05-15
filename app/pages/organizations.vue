@@ -76,7 +76,7 @@ const handleSelectOrg = (orgId: string) => {
             class="w-full flex items-center gap-4 p-4 rounded-xl border transition-all cursor-pointer"
             :class="
               selectedOrg === org.id
-                ? 'border-[var(--cyan)] bg-cyan-50/50'
+                ? 'border-[var(--cyan)] bg-info/10'
                 : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
             "
             @click="handleSelectOrg(org.id)"
@@ -125,9 +125,9 @@ const handleSelectOrg = (orgId: string) => {
         <div class="border-t border-gray-200 pt-6 space-y-3">
           <NuxtLink
             to="/organization/new"
-            class="w-full flex items-center gap-3 p-4 rounded-xl border border-dashed border-gray-300 hover:border-[var(--cyan)] hover:bg-cyan-50/30 transition-all group"
+            class="w-full flex items-center gap-3 p-4 rounded-xl border border-dashed border-gray-300 hover:border-[var(--cyan)] hover:bg-info/10 transition-all group"
           >
-            <div class="w-10 h-10 rounded-xl bg-gray-100 group-hover:bg-cyan-100 flex items-center justify-center transition-colors">
+            <div class="w-10 h-10 rounded-xl bg-gray-100 group-hover:bg-info/10 flex items-center justify-center transition-colors">
               <Plus class="size-5 text-gray-400 group-hover:text-[var(--cyan)] transition-colors" />
             </div>
             <div class="text-left">

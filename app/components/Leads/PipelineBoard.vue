@@ -97,7 +97,7 @@
 								<span class="flex items-center gap-1">
 									<span
 										class="inline-block w-1.5 h-1.5 rounded-full"
-										:class="lead.is_junk ? 'bg-red-500' : 'bg-muted-foreground'"
+										:class="lead.is_junk ? 'bg-destructive' : 'bg-muted-foreground'"
 									/>
 									{{ lead.is_junk ? 'Junk' : 'Archived' }}
 								</span>
@@ -130,8 +130,8 @@
 		<!-- Won/Lost Summary -->
 		<div class="flex items-center gap-3 px-4 mb-4">
 			<div class="flex items-center gap-1.5 text-[10px] font-medium">
-				<span class="w-2 h-2 rounded-full bg-green-500" />
-				<span class="text-green-500">{{ wonCount }} Won</span>
+				<span class="w-2 h-2 rounded-full bg-success" />
+				<span class="text-success">{{ wonCount }} Won</span>
 			</div>
 			<div class="flex items-center gap-1.5 text-[10px] font-medium">
 				<span class="w-2 h-2 rounded-full bg-destructive" />

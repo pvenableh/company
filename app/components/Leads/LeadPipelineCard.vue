@@ -12,8 +12,8 @@
 			>
 				{{ lead.priority }}
 			</span>
-			<div v-if="isOverdue" class="flex items-center gap-1 text-red-500">
-				<span class="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+			<div v-if="isOverdue" class="flex items-center gap-1 text-destructive">
+				<span class="w-2 h-2 rounded-full bg-destructive animate-pulse" />
 				<span class="text-[9px] font-medium">Overdue</span>
 			</div>
 		</div>

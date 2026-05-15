@@ -142,9 +142,9 @@ function getMemberRole(memberId: string) {
 
 function getRoleBadgeClasses(slug: string) {
   if (slug === 'owner') return 'bg-purple-500/15 text-purple-700 dark:text-purple-300';
-  if (slug === 'admin') return 'bg-rose-500/15 text-rose-700 dark:text-rose-300';
-  if (slug === 'manager') return 'bg-sky-500/15 text-sky-700 dark:text-sky-300';
-  if (slug === 'member') return 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300';
+  if (slug === 'admin') return 'bg-destructive/15 text-destructive dark:text-destructive';
+  if (slug === 'manager') return 'bg-info/15 text-info dark:text-info';
+  if (slug === 'member') return 'bg-success/15 text-success dark:text-success';
   return 'bg-muted text-muted-foreground';
 }
 
@@ -169,8 +169,8 @@ async function fetchClientMemberships() {
 }
 
 function clientStatusClass(status: string) {
-  if (status === 'active') return 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400';
-  if (status === 'pending') return 'bg-amber-500/15 text-amber-600 dark:text-amber-400';
+  if (status === 'active') return 'bg-success/15 text-success dark:text-success';
+  if (status === 'pending') return 'bg-warning/15 text-warning dark:text-warning';
   return 'bg-muted text-muted-foreground';
 }
 
@@ -223,12 +223,12 @@ const subscriptionStatusBadge = computed(() => {
     return { label: 'No Plan', tone: 'bg-muted text-muted-foreground' };
   }
   const map: Record<string, { label: string; tone: string }> = {
-    active: { label: 'Active', tone: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400' },
-    trialing: { label: 'Trial', tone: 'bg-sky-500/15 text-sky-600 dark:text-sky-400' },
-    past_due: { label: 'Past Due', tone: 'bg-rose-500/15 text-rose-600 dark:text-rose-400' },
+    active: { label: 'Active', tone: 'bg-success/15 text-success dark:text-success' },
+    trialing: { label: 'Trial', tone: 'bg-info/15 text-info dark:text-info' },
+    past_due: { label: 'Past Due', tone: 'bg-destructive/15 text-destructive dark:text-destructive' },
     canceled: { label: 'Canceled', tone: 'bg-muted text-muted-foreground' },
-    incomplete: { label: 'Incomplete', tone: 'bg-amber-500/15 text-amber-600 dark:text-amber-400' },
-    unpaid: { label: 'Unpaid', tone: 'bg-rose-500/15 text-rose-600 dark:text-rose-400' },
+    incomplete: { label: 'Incomplete', tone: 'bg-warning/15 text-warning dark:text-warning' },
+    unpaid: { label: 'Unpaid', tone: 'bg-destructive/15 text-destructive dark:text-destructive' },
   };
   return map[status] || { label: status, tone: 'bg-muted text-muted-foreground' };
 });
@@ -414,9 +414,9 @@ const integrationsList = computed(() => {
 });
 
 function statusDotClass(status: IntegrationStatus) {
-  if (status === 'active') return 'bg-emerald-500';
-  if (status === 'pending') return 'bg-amber-500';
-  if (status === 'restricted') return 'bg-rose-500';
+  if (status === 'active') return 'bg-success';
+  if (status === 'pending') return 'bg-warning';
+  if (status === 'restricted') return 'bg-destructive';
   if (status === 'unknown') return 'bg-muted-foreground/40';
   return 'bg-muted-foreground/30';
 }
@@ -547,12 +547,12 @@ function onClientInvited() {
       <!-- Archived banner -->
       <div
         v-if="isArchived"
-        class="mb-5 rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-900/20 p-4 flex items-start gap-3"
+        class="mb-5 rounded-xl border border-warning/30 bg-warning/10 dark:bg-warning/20 p-4 flex items-start gap-3"
       >
-        <Icon name="lucide:archive" class="w-5 h-5 text-amber-600 mt-0.5" />
+        <Icon name="lucide:archive" class="w-5 h-5 text-warning mt-0.5" />
         <div class="flex-1 text-sm">
-          <p class="font-medium text-amber-800 dark:text-amber-200">This organization is archived</p>
-          <p class="text-xs text-amber-700 dark:text-amber-300 mt-0.5">
+          <p class="font-medium text-warning">This organization is archived</p>
+          <p class="text-xs text-warning dark:text-warning mt-0.5">
             Restore it from the classic settings page to reactivate access.
           </p>
         </div>
@@ -660,7 +660,7 @@ function onClientInvited() {
                   <span class="text-muted-foreground text-xs">Status</span>
                   <span
                     class="text-[10px] uppercase tracking-wider rounded-full px-2 py-0.5 font-medium"
-                    :class="org.active !== false ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' : 'bg-muted text-muted-foreground'"
+                    :class="org.active !== false ? 'bg-success/15 text-success dark:text-success' : 'bg-muted text-muted-foreground'"
                   >
                     {{ org.active !== false ? 'Active' : 'Inactive' }}
                   </span>
@@ -700,7 +700,7 @@ function onClientInvited() {
 
             <div
               v-if="pendingInvitesCount > 0"
-              class="mb-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 px-4 py-2.5 text-sm text-amber-700 dark:text-amber-300 flex items-center gap-2"
+              class="mb-3 rounded-xl bg-warning/10 dark:bg-warning/20 px-4 py-2.5 text-sm text-warning dark:text-warning flex items-center gap-2"
             >
               <Icon name="lucide:clock" class="w-4 h-4" />
               {{ pendingInvitesCount }} pending invitation{{ pendingInvitesCount === 1 ? '' : 's' }}
@@ -887,12 +887,12 @@ function onClientInvited() {
           <!-- Past Due alert -->
           <div
             v-if="isPastDue"
-            class="rounded-xl border-2 border-rose-300 bg-rose-50 dark:bg-rose-900/20 p-4 mb-5 flex items-start gap-3"
+            class="rounded-xl border-2 border-destructive/30 bg-destructive/10 dark:bg-destructive/20 p-4 mb-5 flex items-start gap-3"
           >
-            <Icon name="lucide:alert-triangle" class="w-5 h-5 text-rose-500 mt-0.5" />
+            <Icon name="lucide:alert-triangle" class="w-5 h-5 text-destructive mt-0.5" />
             <div class="flex-1">
-              <p class="font-semibold text-rose-800 dark:text-rose-300 text-sm">Payment Past Due</p>
-              <p class="text-xs text-rose-600 dark:text-rose-400 mt-1">
+              <p class="font-semibold text-destructive dark:text-destructive text-sm">Payment Past Due</p>
+              <p class="text-xs text-destructive dark:text-destructive mt-1">
                 Your last payment failed. Update your payment method to keep your subscription active.
               </p>
               <Button size="sm" variant="destructive" class="mt-3" @click="openPortal">
@@ -904,12 +904,12 @@ function onClientInvited() {
           <!-- Canceling notice -->
           <div
             v-if="isCanceling"
-            class="rounded-xl border-2 border-amber-300 bg-amber-50 dark:bg-amber-900/20 p-4 mb-5 flex items-start gap-3"
+            class="rounded-xl border-2 border-warning/30 bg-warning/10 dark:bg-warning/20 p-4 mb-5 flex items-start gap-3"
           >
-            <Icon name="lucide:clock" class="w-5 h-5 text-amber-500 mt-0.5" />
+            <Icon name="lucide:clock" class="w-5 h-5 text-warning mt-0.5" />
             <div class="flex-1">
-              <p class="font-semibold text-amber-800 dark:text-amber-300 text-sm">Subscription Canceling</p>
-              <p class="text-xs text-amber-600 dark:text-amber-400 mt-1">
+              <p class="font-semibold text-warning dark:text-warning text-sm">Subscription Canceling</p>
+              <p class="text-xs text-warning dark:text-warning mt-1">
                 Ends on
                 <strong>{{ periodEnd ? periodEnd.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '—' }}</strong>.
                 You'll retain access until then.
@@ -1024,9 +1024,9 @@ function onClientInvited() {
                   <span
                     class="text-[10px] uppercase tracking-wider rounded-full px-2 py-0.5 font-medium"
                     :class="inv.status === 'paid'
-                      ? 'bg-emerald-500/15 text-emerald-600'
+                      ? 'bg-success/15 text-success'
                       : inv.status === 'open'
-                        ? 'bg-amber-500/15 text-amber-600'
+                        ? 'bg-warning/15 text-warning'
                         : 'bg-muted text-muted-foreground'"
                   >
                     {{ inv.status }}
@@ -1128,8 +1128,8 @@ function onClientInvited() {
           </div>
 
           <!-- Danger zone -->
-          <div v-if="isOrgOwner" class="ios-card p-5 border border-rose-300 dark:border-rose-900/50">
-            <h3 class="text-[10px] uppercase tracking-wider font-semibold text-rose-600 dark:text-rose-400 mb-2">
+          <div v-if="isOrgOwner" class="ios-card p-5 border border-destructive/30 dark:border-destructive/50">
+            <h3 class="text-[10px] uppercase tracking-wider font-semibold text-destructive dark:text-destructive mb-2">
               Danger zone
             </h3>
             <p v-if="!isArchived" class="text-sm text-muted-foreground mb-3">
@@ -1138,7 +1138,7 @@ function onClientInvited() {
             <p v-else class="text-sm text-muted-foreground mb-3">
               This organization is archived. Restore it from the classic settings page.
             </p>
-            <Button size="sm" variant="outline" class="text-rose-600 border-rose-300" @click="router.push('/organization?tab=overview')">
+            <Button size="sm" variant="outline" class="text-destructive border-destructive/30" @click="router.push('/organization?tab=overview')">
               <Icon name="lucide:archive" class="w-4 h-4 mr-1" />
               {{ isArchived ? 'Manage archive' : 'Archive organization' }}
             </Button>

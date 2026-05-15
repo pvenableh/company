@@ -102,7 +102,7 @@
 					v-if="task.priority !== 'medium' && !task.completed"
 					class="text-[8px] uppercase font-semibold"
 					:class="{
-						'text-red-500': task.priority === 'high' || task.priority === 'urgent',
+						'text-destructive': task.priority === 'high' || task.priority === 'urgent',
 						'text-blue-400': task.priority === 'low',
 					}"
 				>
@@ -150,8 +150,8 @@ const scheduleOptions = [
 
 const priorityOptions = [
 	{ value: 'low' as const, label: 'Low', activeClass: 'bg-blue-500/10 text-blue-500 font-medium' },
-	{ value: 'medium' as const, label: 'Med', activeClass: 'bg-yellow-500/10 text-yellow-600 font-medium' },
-	{ value: 'high' as const, label: 'High', activeClass: 'bg-red-500/10 text-red-500 font-medium' },
+	{ value: 'medium' as const, label: 'Med', activeClass: 'bg-warning/10 text-warning font-medium' },
+	{ value: 'high' as const, label: 'High', activeClass: 'bg-destructive/10 text-destructive font-medium' },
 ];
 
 // Filter tasks to show only those linked to this context

@@ -2,7 +2,7 @@
 	<div class="space-y-2">
 		<div class="flex items-center justify-between">
 			<h4 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">30-Day Trend</h4>
-			<span v-if="history.length > 1" class="text-[10px] tabular-nums" :class="trendDirection >= 0 ? 'text-green-500' : 'text-red-500'">
+			<span v-if="history.length > 1" class="text-[10px] tabular-nums" :class="trendDirection >= 0 ? 'text-success' : 'text-destructive'">
 				{{ trendDirection >= 0 ? '+' : '' }}{{ trendDirection }}%
 			</span>
 		</div>

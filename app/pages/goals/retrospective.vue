@@ -129,10 +129,10 @@ function goalProgressPct(g: any): number {
 }
 
 function progressColor(p: number): string {
-	if (p >= 75) return 'bg-emerald-500/70';
+	if (p >= 75) return 'bg-success/70';
 	if (p >= 50) return 'bg-primary/70';
-	if (p >= 25) return 'bg-amber-500/70';
-	return 'bg-red-500/70';
+	if (p >= 25) return 'bg-warning/70';
+	return 'bg-destructive/70';
 }
 </script>
 
@@ -196,7 +196,7 @@ function progressColor(p: number): string {
 						<p class="text-[10px] uppercase tracking-wider text-muted-foreground">in window</p>
 					</div>
 					<div class="text-right">
-						<p class="text-lg font-bold text-emerald-500">{{ completedCount }}</p>
+						<p class="text-lg font-bold text-success">{{ completedCount }}</p>
 						<p class="text-[10px] uppercase tracking-wider text-muted-foreground">completed</p>
 					</div>
 					<div class="text-right">
@@ -231,7 +231,7 @@ function progressColor(p: number): string {
 					</div>
 					<span
 						class="text-[10px] font-semibold px-1.5 py-0.5 rounded shrink-0 capitalize"
-						:class="g.status === 'completed' ? 'bg-emerald-500/15 text-emerald-500' : 'bg-muted text-muted-foreground'"
+						:class="g.status === 'completed' ? 'bg-success/15 text-success' : 'bg-muted text-muted-foreground'"
 					>
 						{{ g.status }}
 					</span>
@@ -252,20 +252,20 @@ function progressColor(p: number): string {
 		</div>
 
 		<!-- Error -->
-		<div v-if="retroError" class="ios-card border-red-500/20 bg-red-500/5 p-4 mb-4 text-sm text-red-500">
+		<div v-if="retroError" class="ios-card border-destructive/20 bg-destructive/5 p-4 mb-4 text-sm text-destructive">
 			{{ retroError }}
 		</div>
 
 		<!-- Loading -->
 		<div v-if="retroLoading && !retro" class="ios-card p-6 text-center mb-4">
-			<UIcon name="i-heroicons-arrow-path" class="w-6 h-6 text-amber-500 animate-spin mx-auto mb-2" />
+			<UIcon name="i-heroicons-arrow-path" class="w-6 h-6 text-warning animate-spin mx-auto mb-2" />
 			<p class="text-sm text-muted-foreground">Reading the last {{ timeframe }} across your goals…</p>
 		</div>
 
 		<!-- Retrospective output -->
 		<div v-if="retro" class="space-y-3">
-			<div class="ios-card p-5 border border-amber-500/20">
-				<div class="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-amber-600 dark:text-amber-400 font-semibold mb-2">
+			<div class="ios-card p-5 border border-warning/20">
+				<div class="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-warning dark:text-warning font-semibold mb-2">
 					<UIcon name="i-heroicons-sparkles" class="w-3 h-3" />
 					Summary
 				</div>
@@ -284,20 +284,20 @@ function progressColor(p: number): string {
 				</div>
 
 				<div v-if="retro.wins.length" class="ios-card p-5">
-					<h4 class="text-[10px] uppercase tracking-wider text-emerald-500 font-semibold mb-2">Wins</h4>
+					<h4 class="text-[10px] uppercase tracking-wider text-success font-semibold mb-2">Wins</h4>
 					<ul class="space-y-1.5">
 						<li v-for="(w, i) in retro.wins" :key="i" class="text-sm flex gap-2">
-							<UIcon name="i-heroicons-check-circle" class="w-3.5 h-3.5 mt-0.5 text-emerald-500 shrink-0" />
+							<UIcon name="i-heroicons-check-circle" class="w-3.5 h-3.5 mt-0.5 text-success shrink-0" />
 							<span>{{ w }}</span>
 						</li>
 					</ul>
 				</div>
 
 				<div v-if="retro.blockers.length" class="ios-card p-5">
-					<h4 class="text-[10px] uppercase tracking-wider text-amber-500 font-semibold mb-2">Blockers</h4>
+					<h4 class="text-[10px] uppercase tracking-wider text-warning font-semibold mb-2">Blockers</h4>
 					<ul class="space-y-1.5">
 						<li v-for="(b, i) in retro.blockers" :key="i" class="text-sm flex gap-2">
-							<UIcon name="i-heroicons-exclamation-triangle" class="w-3.5 h-3.5 mt-0.5 text-amber-500 shrink-0" />
+							<UIcon name="i-heroicons-exclamation-triangle" class="w-3.5 h-3.5 mt-0.5 text-warning shrink-0" />
 							<span>{{ b }}</span>
 						</li>
 					</ul>

@@ -186,7 +186,7 @@ defineExpose({ dirty, save });
         <button
           class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition-colors"
           :class="form.is_milestone
-            ? 'bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400'
+            ? 'bg-warning/10 border-warning/30 text-warning dark:text-warning'
             : 'text-muted-foreground hover:text-foreground hover:border-foreground/30'"
           @click="form.is_milestone = !form.is_milestone"
         >
@@ -249,7 +249,7 @@ defineExpose({ dirty, save });
 
       <!-- Approval Status (Design, Content) -->
       <div v-if="visibleFields.showApproval && ((event as any).approved_by || (event as any).approved_at)" class="flex items-center gap-2">
-        <Icon name="lucide:check-circle-2" class="w-3.5 h-3.5 text-green-500" />
+        <Icon name="lucide:check-circle-2" class="w-3.5 h-3.5 text-success" />
         <span class="text-xs text-muted-foreground">
           Approved
           <template v-if="(event as any).approved_by">

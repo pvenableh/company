@@ -79,7 +79,7 @@
 				</div>
 				<div class="ios-card rounded-2xl border border-border bg-card p-4 space-y-1">
 					<p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Revenue</p>
-					<p class="text-2xl font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
+					<p class="text-2xl font-semibold text-success dark:text-success tabular-nums">
 						${{ formatCurrency(summaryTotalRevenue) }}
 					</p>
 				</div>
@@ -114,7 +114,7 @@
 							<div class="w-full h-1.5 bg-muted rounded-full overflow-hidden">
 								<div class="flex h-full rounded-full overflow-hidden">
 									<div
-										class="h-full bg-emerald-500 transition-all"
+										class="h-full bg-success transition-all"
 										:style="{ width: maxMemberMinutes > 0 ? `${(member.billableMinutes / maxMemberMinutes) * 100}%` : '0%' }"
 									/>
 									<div
@@ -125,7 +125,7 @@
 							</div>
 							<div class="flex justify-between mt-0.5 text-[10px] text-muted-foreground">
 								<span>{{ member.entryCount }} entries · {{ Math.round((member.billableMinutes / Math.max(member.totalMinutes, 1)) * 100) }}% billable</span>
-								<span v-if="member.totalRevenue > 0" class="text-emerald-500">${{ formatCurrency(member.totalRevenue) }}</span>
+								<span v-if="member.totalRevenue > 0" class="text-success">${{ formatCurrency(member.totalRevenue) }}</span>
 							</div>
 						</div>
 					</div>

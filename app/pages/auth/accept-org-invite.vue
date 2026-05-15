@@ -132,7 +132,7 @@ async function acceptInvite() {
 		<!-- Error -->
 		<UCard v-else-if="error" class="w-full max-w-md text-center">
 			<div class="py-4">
-				<UIcon name="i-heroicons-exclamation-triangle" class="w-8 h-8 text-amber-500 mx-auto mb-4" />
+				<UIcon name="i-heroicons-exclamation-triangle" class="w-8 h-8 text-warning mx-auto mb-4" />
 				<p class="mb-2">{{ error }}</p>
 				<p class="text-sm t-text-muted mb-4">Please check the URL or contact your administrator.</p>
 				<UButton variant="ghost" @click="router.push('/auth/signin')">Go to Login</UButton>
@@ -142,7 +142,7 @@ async function acceptInvite() {
 		<!-- Already accepted -->
 		<UCard v-else-if="membership?.status !== 'pending'" class="w-full max-w-md text-center">
 			<div class="py-4">
-				<UIcon name="i-heroicons-check-circle" class="w-8 h-8 text-green-500 mx-auto mb-4" />
+				<UIcon name="i-heroicons-check-circle" class="w-8 h-8 text-success mx-auto mb-4" />
 				<p class="mb-2">This invitation has already been accepted.</p>
 				<UButton color="primary" @click="router.push('/auth/signin')">Sign In</UButton>
 			</div>

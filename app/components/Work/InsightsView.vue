@@ -17,7 +17,7 @@
 					<div class="flex items-baseline gap-2">
 						<p class="text-2xl font-bold">{{ snapshot.metrics?.activeProjects ?? 0 }}</p>
 					</div>
-					<p class="text-[11px]" :class="overdueProjects > 0 ? 'text-red-500' : 'text-muted-foreground'">
+					<p class="text-[11px]" :class="overdueProjects > 0 ? 'text-destructive' : 'text-muted-foreground'">
 						{{ overdueProjects }} overdue
 					</p>
 				</div>
@@ -43,7 +43,7 @@
 						<p class="text-2xl font-bold">{{ snapshot.metrics?.avgResolutionDays ?? '—' }}</p>
 						<span class="text-[10px] text-muted-foreground">days avg</span>
 					</div>
-					<p class="text-[11px]" :class="overdueTickets > 0 ? 'text-amber-500' : 'text-muted-foreground'">
+					<p class="text-[11px]" :class="overdueTickets > 0 ? 'text-warning' : 'text-muted-foreground'">
 						{{ overdueTickets }} overdue · {{ unassignedTickets }} unassigned
 					</p>
 				</div>
@@ -113,7 +113,7 @@
 			<div v-if="needsAttention.length" class="ios-card p-5">
 				<h3 class="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-3">
 					Needs Attention
-					<span class="text-amber-400 ml-1">({{ needsAttention.length }})</span>
+					<span class="text-warning ml-1">({{ needsAttention.length }})</span>
 				</h3>
 				<div class="space-y-0.5">
 					<NuxtLink
@@ -125,7 +125,7 @@
 						<div class="flex items-center gap-3 min-w-0 flex-1">
 							<span
 								class="w-2 h-2 rounded-full shrink-0"
-								:class="item.urgency === 'high' ? 'bg-red-500' : 'bg-amber-500'"
+								:class="item.urgency === 'high' ? 'bg-destructive' : 'bg-warning'"
 							/>
 							<div class="min-w-0">
 								<p class="text-sm font-medium truncate">{{ item.title }}</p>
@@ -171,8 +171,8 @@ function projectStatusBarWidth(n: number): number {
 	return Math.max(4, (n / maxProjectStatusCount.value) * 100);
 }
 function statusColor(status: string): string {
-	if (status === 'overdue') return 'bg-red-500/70';
-	if (status === 'completed') return 'bg-emerald-500/70';
+	if (status === 'overdue') return 'bg-destructive/70';
+	if (status === 'completed') return 'bg-success/70';
 	return 'bg-primary/70';
 }
 
@@ -187,8 +187,8 @@ function ticketPriorityBarWidth(n: number): number {
 	return Math.max(4, (n / maxTicketPriorityCount.value) * 100);
 }
 function priorityColor(priority: string): string {
-	if (priority === 'overdue' || priority === 'urgent') return 'bg-red-500/70';
-	if (priority === 'unassigned' || priority === 'high') return 'bg-amber-500/70';
+	if (priority === 'overdue' || priority === 'urgent') return 'bg-destructive/70';
+	if (priority === 'unassigned' || priority === 'high') return 'bg-warning/70';
 	return 'bg-primary/70';
 }
 

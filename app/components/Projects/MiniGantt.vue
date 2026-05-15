@@ -258,9 +258,9 @@ function syncScroll() {
 								class="w-5 h-5 rounded-md flex items-center justify-center shrink-0"
 								:style="row.type === 'event' ? { backgroundColor: row.color + '1a' } : undefined"
 								:class="{
-									'bg-amber-500/10': row.type === 'ticket',
+									'bg-warning/10': row.type === 'ticket',
 									'bg-purple-500/10': row.type === 'task' || row.type === 'meeting',
-									'bg-green-500/10': row.type === 'invoice',
+									'bg-success/10': row.type === 'invoice',
 								}"
 							>
 								<Icon
@@ -268,9 +268,9 @@ function syncScroll() {
 									class="w-3 h-3"
 									:style="row.type === 'event' ? { color: row.color } : undefined"
 									:class="{
-										'text-amber-500': row.type === 'ticket',
+										'text-warning': row.type === 'ticket',
 										'text-purple-500': row.type === 'task' || row.type === 'meeting',
-										'text-green-500': row.type === 'invoice',
+										'text-success': row.type === 'invoice',
 									}"
 								/>
 							</span>
@@ -361,8 +361,8 @@ function syncScroll() {
 											:name="row.type === 'event' ? 'lucide:calendar' : row.type === 'ticket' ? 'lucide:ticket' : 'lucide:check-square'"
 											class="w-3 h-3"
 											:class="{
-												'text-cyan-400': row.type === 'event',
-												'text-amber-400': row.type === 'ticket',
+												'text-info': row.type === 'event',
+												'text-warning': row.type === 'ticket',
 												'text-purple-400': row.type === 'task',
 											}"
 										/>

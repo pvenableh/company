@@ -74,7 +74,7 @@
 				</div>
 				<div class="ios-card rounded-2xl border border-border bg-card p-4 space-y-1">
 					<p class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Revenue</p>
-					<p class="text-2xl font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
+					<p class="text-2xl font-semibold text-success dark:text-success tabular-nums">
 						${{ formatCurrency(totalRevenue) }}
 					</p>
 					<p class="text-xs text-muted-foreground">
@@ -122,7 +122,7 @@
 
 				<div class="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
 					<span class="flex items-center gap-1.5">
-						<span class="w-3 h-0.5 rounded-full bg-emerald-500" />
+						<span class="w-3 h-0.5 rounded-full bg-success" />
 						Billable
 					</span>
 					<span class="flex items-center gap-1.5">
@@ -160,7 +160,7 @@
 								</div>
 								<div class="flex justify-between mt-0.5 text-[10px] text-muted-foreground">
 									<span>{{ item.count }} {{ item.count === 1 ? 'entry' : 'entries' }}</span>
-									<span v-if="item.revenue > 0" class="text-emerald-500">${{ formatCurrency(item.revenue) }}</span>
+									<span v-if="item.revenue > 0" class="text-success">${{ formatCurrency(item.revenue) }}</span>
 								</div>
 							</div>
 						</div>
@@ -196,7 +196,7 @@
 								</div>
 								<div class="flex justify-between mt-0.5 text-[10px] text-muted-foreground">
 									<span>{{ item.count }} {{ item.count === 1 ? 'entry' : 'entries' }}{{ item.clientName ? ' · ' + item.clientName : '' }}</span>
-									<span v-if="item.revenue > 0" class="text-emerald-500">${{ formatCurrency(item.revenue) }}</span>
+									<span v-if="item.revenue > 0" class="text-success">${{ formatCurrency(item.revenue) }}</span>
 								</div>
 							</div>
 						</div>
@@ -231,7 +231,7 @@
 							</div>
 							<div class="flex justify-between mt-0.5 text-[10px] text-muted-foreground">
 								<span>{{ item.count }} {{ item.count === 1 ? 'entry' : 'entries' }}</span>
-								<span v-if="item.revenue > 0" class="text-emerald-500">${{ formatCurrency(item.revenue) }}</span>
+								<span v-if="item.revenue > 0" class="text-success">${{ formatCurrency(item.revenue) }}</span>
 							</div>
 						</div>
 					</div>

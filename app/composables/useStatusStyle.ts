@@ -85,23 +85,32 @@ export function useStatusStyle() {
   }
 
   // ── Priority styling (4-level: urgent > high > medium > low) ──
+  //
+  // Priority routes through palette-driven semantic tokens — no per-palette
+  // priority overrides are needed because urgency maps cleanly to existing
+  // intents:
+  //   urgent   → destructive   (highest-attention, palette's "danger" hue)
+  //   high     → warning       (palette's "action needed" hue)
+  //   medium   → info          (palette's "scheduled/informational" hue)
+  //   low      → muted         (de-emphasised)
+  // A palette switch re-skins every priority chip automatically.
 
   /** Tailwind bg class for priority pill badges (white text) */
   function getPriorityBadgeClass(priority?: string | null): string {
     const p = normalize(priority);
-    if (p === 'urgent') return 'bg-red-600';
-    if (p === 'high') return 'bg-[var(--red)]';
-    if (p === 'medium' || p === 'normal') return 'bg-[var(--cyan)]';
-    if (p === 'low') return 'bg-[var(--lightGrey)]';
-    return 'bg-[var(--lightGrey)]';
+    if (p === 'urgent') return 'bg-destructive';
+    if (p === 'high') return 'bg-warning';
+    if (p === 'medium' || p === 'normal') return 'bg-info';
+    if (p === 'low') return 'bg-muted-foreground/60';
+    return 'bg-muted-foreground/60';
   }
 
   /** Tinted bg + matching text (for subtle priority chips) */
   function getPriorityBadgeClasses(priority?: string | null): string {
     const p = normalize(priority);
-    if (p === 'urgent') return 'bg-red-600/15 text-red-600';
-    if (p === 'high') return 'bg-red-500/15 text-red-500';
-    if (p === 'medium' || p === 'normal') return 'bg-cyan-500/15 text-cyan-500';
+    if (p === 'urgent') return 'bg-destructive/15 text-destructive';
+    if (p === 'high') return 'bg-warning/15 text-warning';
+    if (p === 'medium' || p === 'normal') return 'bg-info/15 text-info';
     if (p === 'low') return 'bg-muted text-muted-foreground';
     return 'bg-muted text-muted-foreground';
   }
@@ -109,9 +118,9 @@ export function useStatusStyle() {
   /** Soft card background by priority (very light tint; for AccentCard bodies) */
   function getPriorityBg(priority?: string | null): string {
     const p = normalize(priority);
-    if (p === 'urgent') return 'bg-red-50/80 dark:bg-red-900/20';
-    if (p === 'high') return 'bg-red-50/40 dark:bg-red-900/10';
-    if (p === 'medium' || p === 'normal') return 'bg-cyan-50/50 dark:bg-cyan-900/10';
+    if (p === 'urgent') return 'bg-destructive/10';
+    if (p === 'high') return 'bg-warning/10';
+    if (p === 'medium' || p === 'normal') return 'bg-info/10';
     if (p === 'low') return 'bg-muted/30';
     return 'bg-muted/30';
   }
@@ -119,9 +128,9 @@ export function useStatusStyle() {
   /** Solid accent bar color by priority (for AccentCard left-rail, dots, lines) */
   function getPriorityAccent(priority?: string | null): string {
     const p = normalize(priority);
-    if (p === 'urgent') return 'bg-red-600';
-    if (p === 'high') return 'bg-red-500';
-    if (p === 'medium' || p === 'normal') return 'bg-cyan-500';
+    if (p === 'urgent') return 'bg-destructive';
+    if (p === 'high') return 'bg-warning';
+    if (p === 'medium' || p === 'normal') return 'bg-info';
     if (p === 'low') return 'bg-muted-foreground/40';
     return 'bg-muted-foreground/40';
   }
@@ -129,15 +138,17 @@ export function useStatusStyle() {
   /** Icon text color by priority */
   function getPriorityIconClass(priority?: string | null): string {
     const p = normalize(priority);
-    if (p === 'urgent') return 'text-red-600';
-    if (p === 'high') return 'text-red-500';
-    if (p === 'medium' || p === 'normal') return 'text-cyan-500';
+    if (p === 'urgent') return 'text-destructive';
+    if (p === 'high') return 'text-warning';
+    if (p === 'medium' || p === 'normal') return 'text-info';
     if (p === 'low') return 'text-muted-foreground';
     return 'text-muted-foreground';
   }
 
-  /** CSS gradient string for the priority segmented control */
-  const priorityGradient = 'linear-gradient(to right, var(--lightGrey), var(--cyan), var(--red))';
+  /** CSS gradient string for the priority segmented control.
+   *  Reads through the same palette-driven CSS vars so the gradient
+   *  re-tints on palette switch (low/medium/high → muted/info/destructive). */
+  const priorityGradient = 'linear-gradient(to right, hsl(var(--muted-foreground) / 0.4), hsl(var(--info)), hsl(var(--destructive)))';
 
   /** Priority options for segmented controls and selectors */
   const priorityOptions = [

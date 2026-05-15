@@ -265,7 +265,7 @@ const showEmptyState = computed(() => !analyticsLoading.value && (!hasAnyAccount
           <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1">
             {{ formatNumber(analytics.overview.followers.current) }}
           </p>
-          <p class="text-xs mt-1" :class="analytics.overview.followers.change >= 0 ? 'text-emerald-600' : 'text-red-600'">
+          <p class="text-xs mt-1" :class="analytics.overview.followers.change >= 0 ? 'text-success' : 'text-destructive'">
             {{ formatChange(analytics.overview.followers.change) }}
             <span class="text-gray-400">({{ formatChange(analytics.overview.followers.change_pct, '%') }})</span>
           </p>
@@ -278,7 +278,7 @@ const showEmptyState = computed(() => !analyticsLoading.value && (!hasAnyAccount
           <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1">
             {{ formatNumber(analytics.overview.reach.total) }}
           </p>
-          <p class="text-xs mt-1" :class="analytics.overview.reach.change_pct >= 0 ? 'text-emerald-600' : 'text-red-600'">
+          <p class="text-xs mt-1" :class="analytics.overview.reach.change_pct >= 0 ? 'text-success' : 'text-destructive'">
             {{ formatChange(analytics.overview.reach.change_pct, '%') }} vs previous
           </p>
         </div>
@@ -290,7 +290,7 @@ const showEmptyState = computed(() => !analyticsLoading.value && (!hasAnyAccount
           <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1">
             {{ formatNumber(analytics.overview.impressions.total) }}
           </p>
-          <p class="text-xs mt-1" :class="analytics.overview.impressions.change_pct >= 0 ? 'text-emerald-600' : 'text-red-600'">
+          <p class="text-xs mt-1" :class="analytics.overview.impressions.change_pct >= 0 ? 'text-success' : 'text-destructive'">
             {{ formatChange(analytics.overview.impressions.change_pct, '%') }} vs previous
           </p>
         </div>
@@ -302,7 +302,7 @@ const showEmptyState = computed(() => !analyticsLoading.value && (!hasAnyAccount
           <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1">
             {{ analytics.overview.engagement_rate.current }}%
           </p>
-          <p class="text-xs mt-1" :class="analytics.overview.engagement_rate.change >= 0 ? 'text-emerald-600' : 'text-red-600'">
+          <p class="text-xs mt-1" :class="analytics.overview.engagement_rate.change >= 0 ? 'text-success' : 'text-destructive'">
             {{ formatChange(analytics.overview.engagement_rate.change, '%') }} vs previous
           </p>
         </div>
@@ -445,7 +445,7 @@ const showEmptyState = computed(() => !analyticsLoading.value && (!hasAnyAccount
         >
           <div class="relative w-full flex justify-center mb-2">
             <div
-              class="w-3 h-3 rounded-full bg-emerald-500 z-10"
+              class="w-3 h-3 rounded-full bg-success z-10"
             />
             <!-- Line to next point -->
             <svg
@@ -460,7 +460,7 @@ const showEmptyState = computed(() => !analyticsLoading.value && (!hasAnyAccount
                 y2="0"
                 stroke="currentColor"
                 stroke-width="2"
-                class="text-emerald-300 dark:text-emerald-700"
+                class="text-success dark:text-success"
               />
             </svg>
           </div>

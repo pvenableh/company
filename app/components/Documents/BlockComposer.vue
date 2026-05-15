@@ -190,7 +190,7 @@ watch(pickerOpen, (open) => { if (open) ensureLibrary(); });
 							Detach
 						</button>
 						<button
-							class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded hover:bg-red-50 dark:hover:bg-red-950/40 text-red-600"
+							class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded hover:bg-destructive/10 dark:hover:bg-destructive/40 text-destructive"
 							@click="removeEntry(idx)"
 						>
 							Remove

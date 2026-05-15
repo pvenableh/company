@@ -251,7 +251,7 @@ const statusOptions = [
 							<td class="py-3 px-4 text-right" @click.stop>
 								<button
 									@click="handleDelete(expense)"
-									class="p-1 rounded text-muted-foreground hover:text-red-500 transition-colors"
+									class="p-1 rounded text-muted-foreground hover:text-destructive transition-colors"
 								>
 									<UIcon name="i-heroicons-trash" class="w-3.5 h-3.5" />
 								</button>
@@ -325,7 +325,7 @@ const statusOptions = [
 				<!-- Delete button -->
 				<button
 					@click.stop="handleDelete(expense)"
-					class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1 rounded text-muted-foreground hover:text-red-500 transition-all"
+					class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1 rounded text-muted-foreground hover:text-destructive transition-all"
 				>
 					<UIcon name="i-heroicons-trash" class="w-3.5 h-3.5" />
 				</button>

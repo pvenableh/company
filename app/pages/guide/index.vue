@@ -98,7 +98,7 @@ const goPrev = () => {
 								<p class="text-xs text-muted-foreground mt-1">Organize people into teams with roles that control access.</p>
 							</div>
 							<div class="border border-border rounded-xl p-4 text-center">
-								<UIcon name="i-heroicons-building-office-2" class="w-8 h-8 text-emerald-500 mx-auto mb-2" />
+								<UIcon name="i-heroicons-building-office-2" class="w-8 h-8 text-success mx-auto mb-2" />
 								<p class="text-sm font-semibold text-foreground">Clients & Contacts</p>
 								<p class="text-xs text-muted-foreground mt-1">Track the companies you serve and the people within them.</p>
 							</div>
@@ -143,10 +143,10 @@ const goPrev = () => {
 							</div>
 						</div>
 
-						<div class="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+						<div class="bg-warning/10 dark:bg-warning/20 border border-warning/30 dark:border-warning rounded-xl p-4">
 							<div class="flex gap-2">
-								<UIcon name="i-heroicons-information-circle" class="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-								<p class="text-sm text-amber-800 dark:text-amber-200">You can belong to <strong>multiple organizations</strong> and switch between them at any time. Your selection is remembered across sessions.</p>
+								<UIcon name="i-heroicons-information-circle" class="w-5 h-5 text-warning shrink-0 mt-0.5" />
+								<p class="text-sm text-warning">You can belong to <strong>multiple organizations</strong> and switch between them at any time. Your selection is remembered across sessions.</p>
 							</div>
 						</div>
 					</div>
@@ -157,9 +157,9 @@ const goPrev = () => {
 						<p class="text-sm text-muted-foreground">Every organization has 5 system roles that control what users can access.</p>
 
 						<div class="space-y-3">
-							<div class="flex items-start gap-3 p-3 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-900/10">
-								<div class="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center shrink-0">
-									<UIcon name="i-heroicons-crown" class="w-4 h-4 text-amber-600" />
+							<div class="flex items-start gap-3 p-3 rounded-xl border border-warning/30 dark:border-warning bg-warning/10 dark:bg-warning/10">
+								<div class="w-8 h-8 rounded-lg bg-warning/20 flex items-center justify-center shrink-0">
+									<UIcon name="i-heroicons-crown" class="w-4 h-4 text-warning" />
 								</div>
 								<div>
 									<p class="text-sm font-semibold text-foreground">Owner</p>
@@ -185,8 +185,8 @@ const goPrev = () => {
 								</div>
 							</div>
 							<div class="flex items-start gap-3 p-3 rounded-xl border border-border">
-								<div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
-									<UIcon name="i-heroicons-user" class="w-4 h-4 text-emerald-500" />
+								<div class="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
+									<UIcon name="i-heroicons-user" class="w-4 h-4 text-success" />
 								</div>
 								<div>
 									<p class="text-sm font-semibold text-foreground">Member</p>
@@ -194,8 +194,8 @@ const goPrev = () => {
 								</div>
 							</div>
 							<div class="flex items-start gap-3 p-3 rounded-xl border border-border">
-								<div class="w-8 h-8 rounded-lg bg-sky-500/10 flex items-center justify-center shrink-0">
-									<UIcon name="i-heroicons-building-office-2" class="w-4 h-4 text-sky-500" />
+								<div class="w-8 h-8 rounded-lg bg-info/10 flex items-center justify-center shrink-0">
+									<UIcon name="i-heroicons-building-office-2" class="w-4 h-4 text-info" />
 								</div>
 								<div>
 									<p class="text-sm font-semibold text-foreground">Client</p>
@@ -236,17 +236,17 @@ const goPrev = () => {
 
 						<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
 							<div class="border border-border rounded-xl p-3 text-center">
-								<div class="w-3 h-3 rounded-full bg-amber-400 mx-auto mb-2"></div>
+								<div class="w-3 h-3 rounded-full bg-warning mx-auto mb-2"></div>
 								<p class="text-xs font-semibold text-foreground">Pending</p>
 								<p class="text-[11px] text-muted-foreground">Invitation sent, waiting</p>
 							</div>
 							<div class="border border-border rounded-xl p-3 text-center">
-								<div class="w-3 h-3 rounded-full bg-emerald-500 mx-auto mb-2"></div>
+								<div class="w-3 h-3 rounded-full bg-success mx-auto mb-2"></div>
 								<p class="text-xs font-semibold text-foreground">Active</p>
 								<p class="text-[11px] text-muted-foreground">Accepted, full access</p>
 							</div>
 							<div class="border border-border rounded-xl p-3 text-center">
-								<div class="w-3 h-3 rounded-full bg-red-400 mx-auto mb-2"></div>
+								<div class="w-3 h-3 rounded-full bg-destructive mx-auto mb-2"></div>
 								<p class="text-xs font-semibold text-foreground">Suspended</p>
 								<p class="text-[11px] text-muted-foreground">Temporarily disabled</p>
 							</div>
@@ -334,7 +334,7 @@ const goPrev = () => {
 							<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70">How Contacts Relate to Clients</h3>
 							<div class="bg-muted/30 rounded-xl p-5 space-y-2 text-sm text-foreground/80">
 								<div class="flex items-center gap-2">
-									<UIcon name="i-heroicons-building-office-2" class="w-5 h-5 text-emerald-500" />
+									<UIcon name="i-heroicons-building-office-2" class="w-5 h-5 text-success" />
 									<span><strong>Client</strong> = a company (e.g., "Acme Corp")</span>
 								</div>
 								<div class="flex items-center gap-2">
@@ -396,23 +396,23 @@ const goPrev = () => {
 								<p class="text-xs font-semibold uppercase tracking-wide text-foreground/70">What Client Users Can Do</p>
 							</div>
 							<div class="p-4 space-y-2 text-sm">
-								<div class="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+								<div class="flex items-center gap-2 text-success dark:text-success">
 									<UIcon name="i-heroicons-check" class="w-4 h-4" />
 									<span>View projects and appointments for their client</span>
 								</div>
-								<div class="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+								<div class="flex items-center gap-2 text-success dark:text-success">
 									<UIcon name="i-heroicons-check" class="w-4 h-4" />
 									<span>Create tickets to report issues or make requests</span>
 								</div>
-								<div class="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+								<div class="flex items-center gap-2 text-success dark:text-success">
 									<UIcon name="i-heroicons-check" class="w-4 h-4" />
 									<span>Send messages and comments</span>
 								</div>
-								<div class="flex items-center gap-2 text-red-500">
+								<div class="flex items-center gap-2 text-destructive">
 									<UIcon name="i-heroicons-x-mark" class="w-4 h-4" />
 									<span>Cannot see other clients' data or internal projects</span>
 								</div>
-								<div class="flex items-center gap-2 text-red-500">
+								<div class="flex items-center gap-2 text-destructive">
 									<UIcon name="i-heroicons-x-mark" class="w-4 h-4" />
 									<span>Cannot access organization settings</span>
 								</div>
@@ -438,10 +438,10 @@ const goPrev = () => {
 								'Invite key client contacts to the platform',
 							]" :key="i"
 								class="flex items-center gap-3 p-2.5 rounded-lg text-sm"
-								:class="i < 3 ? 'bg-emerald-50 dark:bg-emerald-900/10 text-emerald-800 dark:text-emerald-200' : 'text-foreground/80'"
+								:class="i < 3 ? 'bg-success/10 dark:bg-success/10 text-success' : 'text-foreground/80'"
 							>
 								<span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-									:class="i < 3 ? 'bg-emerald-500/20 text-emerald-600' : 'bg-muted text-muted-foreground'">
+									:class="i < 3 ? 'bg-success/20 text-success' : 'bg-muted text-muted-foreground'">
 									{{ i + 1 }}
 								</span>
 								{{ step }}

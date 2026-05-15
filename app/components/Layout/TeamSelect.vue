@@ -91,7 +91,7 @@
 							<!-- Tags -->
 							<div class="ml-auto flex gap-1">
 								<span v-if="option.isAll" class="text-[7px] bg-blue-100 text-blue-800 px-1 rounded">All</span>
-								<span v-if="option.isManager" class="text-[7px] bg-green-100 text-green-800 px-1 rounded">Manager</span>
+								<span v-if="option.isManager" class="text-[7px] bg-success/10 text-success px-1 rounded">Manager</span>
 							</div>
 						</DropdownMenuItem>
 					</div>

@@ -325,7 +325,7 @@ const saveProgress = async () => {
 				<button
 					@click="fetchAISuggestions"
 					:disabled="loadingSuggestions"
-					class="flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium border border-amber-500/30 text-amber-600 dark:text-amber-400 rounded-lg hover:bg-amber-500/10 transition-colors"
+					class="flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium border border-warning/30 text-warning dark:text-warning rounded-lg hover:bg-warning/10 transition-colors"
 				>
 					<UIcon :name="loadingSuggestions ? 'i-heroicons-arrow-path' : 'i-heroicons-sparkles'" class="w-4 h-4" :class="loadingSuggestions ? 'animate-spin' : ''" />
 					AI Suggest
@@ -381,7 +381,7 @@ const saveProgress = async () => {
 				<div class="ios-card p-4">
 					<div class="flex items-center justify-between mb-3">
 						<div class="flex items-center gap-2">
-							<UIcon name="i-heroicons-sparkles" class="w-4 h-4 text-amber-500" />
+							<UIcon name="i-heroicons-sparkles" class="w-4 h-4 text-warning" />
 							<h3 class="text-sm font-semibold text-foreground">AI-Suggested Goals</h3>
 						</div>
 						<button @click="showAISuggestions = false; aiSuggestions = []" class="text-xs text-muted-foreground hover:text-foreground">
@@ -401,7 +401,7 @@ const saveProgress = async () => {
 						<button
 							@click="fetchAISuggestions"
 							:disabled="loadingSuggestions"
-							class="px-3 py-1.5 text-xs font-medium bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-lg hover:bg-amber-500/20 transition-colors"
+							class="px-3 py-1.5 text-xs font-medium bg-warning/10 text-warning dark:text-warning rounded-lg hover:bg-warning/20 transition-colors"
 						>
 							{{ loadingSuggestions ? 'Thinking...' : 'Refresh' }}
 						</button>
@@ -451,12 +451,12 @@ const saveProgress = async () => {
 			<div class="ios-card p-5 mb-3">
 				<div class="flex items-center justify-between mb-2">
 					<span class="text-sm font-medium">Overall Progress</span>
-					<span class="text-2xl font-bold" :class="stats.avgProgress >= 80 ? 'text-emerald-400' : stats.avgProgress >= 50 ? 'text-blue-400' : 'text-amber-400'">{{ stats.avgProgress }}%</span>
+					<span class="text-2xl font-bold" :class="stats.avgProgress >= 80 ? 'text-success' : stats.avgProgress >= 50 ? 'text-blue-400' : 'text-warning'">{{ stats.avgProgress }}%</span>
 				</div>
 				<div class="w-full h-3 bg-muted/40 rounded-full overflow-hidden">
 					<div
 						class="h-full rounded-full transition-all duration-700"
-						:class="stats.avgProgress >= 80 ? 'bg-emerald-500' : stats.avgProgress >= 50 ? 'bg-blue-500' : 'bg-amber-500'"
+						:class="stats.avgProgress >= 80 ? 'bg-success' : stats.avgProgress >= 50 ? 'bg-blue-500' : 'bg-warning'"
 						:style="{ width: stats.avgProgress + '%' }"
 					></div>
 				</div>
@@ -467,9 +467,9 @@ const saveProgress = async () => {
 			</div>
 
 			<!-- AI nudge for overdue -->
-			<AccentCard v-if="stats.overdue > 0" accent="bg-amber-500" class="ios-card mb-3">
+			<AccentCard v-if="stats.overdue > 0" accent="bg-warning" class="ios-card mb-3">
 				<div class="flex items-start gap-2">
-					<UIcon name="i-heroicons-sparkles" class="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+					<UIcon name="i-heroicons-sparkles" class="w-4 h-4 text-warning shrink-0 mt-0.5" />
 					<p class="text-sm text-foreground">
 						<span class="font-medium">{{ stats.overdue }} goal{{ stats.overdue > 1 ? 's are' : ' is' }} past due.</span>
 						<span class="text-muted-foreground"> Update your progress or adjust the deadline to stay on track.</span>
@@ -601,9 +601,9 @@ const saveProgress = async () => {
 						 the goal's actual data; see feedback_goal_coaching_lattice_line.md -->
 					<div
 						v-if="reflectionLoading || reflection"
-						class="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3"
+						class="rounded-lg border border-warning/20 bg-warning/5 p-3"
 					>
-						<div class="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-amber-600 dark:text-amber-400 font-semibold mb-1.5">
+						<div class="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-warning dark:text-warning font-semibold mb-1.5">
 							<UIcon name="i-heroicons-sparkles" class="w-3.5 h-3.5" />
 							Reflection
 						</div>
@@ -636,8 +636,8 @@ const saveProgress = async () => {
 		<UModal v-model="showCoachModal">
 			<div v-if="coachGoal" class="space-y-4 p-1">
 				<div class="flex items-center gap-2">
-					<div class="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center">
-						<UIcon name="i-heroicons-sparkles" class="w-4 h-4 text-amber-500" />
+					<div class="w-8 h-8 rounded-lg bg-warning/15 flex items-center justify-center">
+						<UIcon name="i-heroicons-sparkles" class="w-4 h-4 text-warning" />
 					</div>
 					<div>
 						<h2 class="text-lg font-semibold text-foreground">Coach me</h2>
@@ -647,18 +647,18 @@ const saveProgress = async () => {
 
 				<!-- Loading -->
 				<div v-if="coachLoading" class="py-8 text-center">
-					<UIcon name="i-heroicons-arrow-path" class="w-6 h-6 text-amber-500 animate-spin mx-auto mb-2" />
+					<UIcon name="i-heroicons-arrow-path" class="w-6 h-6 text-warning animate-spin mx-auto mb-2" />
 					<p class="text-xs text-muted-foreground">Reading your data…</p>
 				</div>
 
 				<!-- Error -->
-				<div v-else-if="coachError" class="rounded-md border border-red-500/20 bg-red-500/5 p-3 text-sm text-red-500">
+				<div v-else-if="coachError" class="rounded-md border border-destructive/20 bg-destructive/5 p-3 text-sm text-destructive">
 					{{ coachError }}
 				</div>
 
 				<!-- Coach output -->
 				<div v-else-if="coachData" class="space-y-3">
-					<div v-if="coachData.insight" class="rounded-md border border-amber-500/20 bg-amber-500/5 p-3">
+					<div v-if="coachData.insight" class="rounded-md border border-warning/20 bg-warning/5 p-3">
 						<p class="text-sm leading-relaxed">{{ coachData.insight }}</p>
 					</div>
 
@@ -666,7 +666,7 @@ const saveProgress = async () => {
 						<h4 class="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Questions to sit with</h4>
 						<ul class="space-y-1.5">
 							<li v-for="(q, i) in coachData.questions" :key="i" class="text-sm flex gap-2">
-								<span class="text-amber-500">·</span>
+								<span class="text-warning">·</span>
 								<span>{{ q }}</span>
 							</li>
 						</ul>

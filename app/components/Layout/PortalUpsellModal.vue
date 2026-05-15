@@ -93,7 +93,7 @@ function goToDemo() {
 			<div class="flex items-center gap-3 mb-5">
 				<div
 					class="w-10 h-10 rounded-xl flex items-center justify-center"
-					:class="hasOwnWorkspace ? 'bg-gray-100' : 'bg-cyan-50'"
+					:class="hasOwnWorkspace ? 'bg-gray-100' : 'bg-info/10'"
 				>
 					<Building2 v-if="hasOwnWorkspace" class="size-5 text-gray-500" />
 					<Sparkles v-else class="size-5 text-[var(--cyan)]" />
@@ -120,7 +120,7 @@ function goToDemo() {
 					class="w-full flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer"
 					:class="[
 						selectedOrg === org.id
-							? 'border-[var(--cyan)] bg-cyan-50/50'
+							? 'border-[var(--cyan)] bg-info/10'
 							: 'border-gray-200 hover:border-gray-300 hover:bg-gray-50',
 					]"
 					@click="handleSelectOrg(org.id)"
@@ -146,7 +146,7 @@ function goToDemo() {
 							</span>
 							<span
 								v-if="org.clientPortal"
-								class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wider text-[var(--cyan)] bg-cyan-50 px-1.5 py-0.5 rounded"
+								class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wider text-[var(--cyan)] bg-info/10 px-1.5 py-0.5 rounded"
 							>
 								<ExternalLink class="size-3" />
 								Client Portal
@@ -190,7 +190,7 @@ function goToDemo() {
 				</button>
 
 				<button
-					class="w-full mt-2 flex items-center justify-between gap-3 p-3 rounded-xl border border-gray-200 hover:border-[var(--cyan)] hover:bg-cyan-50/30 transition-colors group"
+					class="w-full mt-2 flex items-center justify-between gap-3 p-3 rounded-xl border border-gray-200 hover:border-[var(--cyan)] hover:bg-info/10 transition-colors group"
 					@click="goToDemo"
 				>
 					<div class="flex items-center gap-2">
@@ -208,10 +208,10 @@ function goToDemo() {
 			     "Register new organization" footer that mirrors OrgSwitcher. -->
 			<div v-else class="border-t border-gray-200 pt-4">
 				<button
-					class="w-full flex items-center gap-3 p-3 rounded-xl border border-dashed border-gray-300 hover:border-[var(--cyan)] hover:bg-cyan-50/30 transition-all group"
+					class="w-full flex items-center gap-3 p-3 rounded-xl border border-dashed border-gray-300 hover:border-[var(--cyan)] hover:bg-info/10 transition-all group"
 					@click="goToSignup"
 				>
-					<div class="w-10 h-10 rounded-xl bg-gray-100 group-hover:bg-cyan-100 flex items-center justify-center transition-colors">
+					<div class="w-10 h-10 rounded-xl bg-gray-100 group-hover:bg-info/10 flex items-center justify-center transition-colors">
 						<Plus class="size-5 text-gray-400 group-hover:text-[var(--cyan)] transition-colors" />
 					</div>
 					<div class="text-left">

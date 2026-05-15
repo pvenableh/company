@@ -506,7 +506,7 @@ async function handleFinish() {
                   :key="ind.id"
                   class="px-3 py-2.5 rounded-lg text-[11px] font-medium text-left transition-all border"
                   :class="selectedIndustry === ind.id
-                    ? 'border-[var(--cyan)] bg-cyan-50/50 text-foreground'
+                    ? 'border-[var(--cyan)] bg-info/10 text-foreground'
                     : 'border-gray-200 bg-white hover:border-gray-300 text-gray-600 hover:text-foreground'"
                   @click="selectedIndustry = ind.id"
                 >
@@ -558,7 +558,7 @@ async function handleFinish() {
               :key="plan.key"
               class="w-full text-left p-4 rounded-xl border-2 transition-all relative"
               :class="selectedPlan === plan.key
-                ? 'border-[var(--cyan)] bg-cyan-50/30'
+                ? 'border-[var(--cyan)] bg-info/10'
                 : 'border-gray-200 hover:border-gray-300 bg-white'"
               @click="selectedPlan = plan.key"
             >
@@ -654,7 +654,7 @@ async function handleFinish() {
           </div>
 
           <!-- Order summary -->
-          <div class="rounded-xl border-2 border-[var(--cyan)] bg-cyan-50/30 p-4 mb-5">
+          <div class="rounded-xl border-2 border-[var(--cyan)] bg-info/10 p-4 mb-5">
             <div class="flex items-start justify-between">
               <div>
                 <p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Selected plan</p>
@@ -666,7 +666,7 @@ async function handleFinish() {
                 <p class="text-[10px] text-muted-foreground mt-1 uppercase tracking-wider">{{ intervalLabel }}</p>
               </div>
             </div>
-            <div class="flex flex-wrap gap-x-4 gap-y-0.5 mt-3 pt-3 border-t border-cyan-200/40">
+            <div class="flex flex-wrap gap-x-4 gap-y-0.5 mt-3 pt-3 border-t border-info/40">
               <span v-for="f in currentPlan.features" :key="f" class="text-[10px] text-gray-600 flex items-center gap-1">
                 <Check class="w-3 h-3 text-[var(--cyan)]" />
                 {{ f }}
@@ -737,7 +737,7 @@ async function handleFinish() {
               :key="addon.id"
               class="w-full text-left p-3.5 rounded-xl border-2 transition-all flex items-center gap-3"
               :class="selectedAddons[addon.id]
-                ? 'border-[var(--cyan)] bg-cyan-50/30'
+                ? 'border-[var(--cyan)] bg-info/10'
                 : 'border-gray-200 hover:border-gray-300 bg-white'"
               @click="selectedAddons[addon.id] = !selectedAddons[addon.id]"
             >
@@ -763,7 +763,7 @@ async function handleFinish() {
           <!-- Running total -->
           <div
             v-if="selectedAddonCount > 0"
-            class="mt-4 p-3 rounded-lg bg-cyan-50/40 border border-cyan-200/60 flex items-center justify-between"
+            class="mt-4 p-3 rounded-lg bg-info/10 border border-info/60 flex items-center justify-between"
           >
             <span class="text-xs text-muted-foreground">{{ selectedAddonCount }} add-on{{ selectedAddonCount > 1 ? 's' : '' }} selected</span>
             <span class="text-sm font-bold">+${{ selectedAddonsTotal }}/mo</span>

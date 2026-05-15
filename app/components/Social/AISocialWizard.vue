@@ -354,16 +354,16 @@
                   <!-- Image suggestion -->
                   <div
                     v-if="post.imageSuggestion"
-                    class="flex items-start gap-2 px-4 py-3 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200/50 dark:border-amber-800/30"
+                    class="flex items-start gap-2 px-4 py-3 rounded-xl bg-warning/10 dark:bg-warning/10 border border-warning/50 dark:border-warning/30"
                   >
-                    <Icon name="lucide:image" class="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                    <Icon name="lucide:image" class="w-3.5 h-3.5 text-warning dark:text-warning shrink-0 mt-0.5" />
                     <div>
-                      <p class="text-[11px] font-medium text-amber-800 dark:text-amber-300">{{ post.imageSuggestion.description }}</p>
+                      <p class="text-[11px] font-medium text-warning dark:text-warning">{{ post.imageSuggestion.description }}</p>
                       <div class="flex flex-wrap gap-1 mt-1">
                         <span
                           v-for="term in post.imageSuggestion.searchTerms"
                           :key="term"
-                          class="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
+                          class="text-[10px] px-1.5 py-0.5 rounded-full bg-warning/10 dark:bg-warning/30 text-warning dark:text-warning"
                         >
                           {{ term }}
                         </span>
@@ -525,7 +525,7 @@ function getCharCountClass(post: SocialAIGeneratedPost): string {
     tiktok: 4000,
   };
   const limit = limits[post.platform] || 4000;
-  return post.content.length > limit ? 'text-red-500' : 'text-muted-foreground';
+  return post.content.length > limit ? 'text-destructive' : 'text-muted-foreground';
 }
 
 function removeHashtag(postIndex: number, tagIndex: number) {

@@ -16,7 +16,7 @@
 							</span>
 						</UTooltip>
 					</span>
-					<span v-if="isHidden" class="text-[9px] text-red-400 font-medium flex items-center gap-0.5">
+					<span v-if="isHidden" class="text-[9px] text-destructive font-medium flex items-center gap-0.5">
 						<Icon name="i-heroicons-eye-slash" class="w-3 h-3" /> Hidden
 					</span>
 				</div>
@@ -38,7 +38,7 @@
 							/>
 							<!-- Delete confirmation -->
 							<template v-if="confirmingDelete">
-								<span class="text-[9px] text-red-500 mr-1">Delete?</span>
+								<span class="text-[9px] text-destructive mr-1">Delete?</span>
 								<UButton size="xs" color="red" variant="ghost" icon="i-heroicons-check" :loading="deleteLoading" @click="handleDelete" />
 								<UButton size="xs" variant="ghost" icon="i-heroicons-x-mark" @click="confirmingDelete = false" />
 							</template>

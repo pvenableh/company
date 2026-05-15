@@ -29,7 +29,7 @@
 					<div class="flex items-baseline gap-1">
 						<p class="text-2xl font-bold">${{ formatNumber(outstandingAmount) }}</p>
 					</div>
-					<p class="text-[11px]" :class="outstandingAmount > 0 ? 'text-amber-500' : 'text-muted-foreground'">
+					<p class="text-[11px]" :class="outstandingAmount > 0 ? 'text-warning' : 'text-muted-foreground'">
 						{{ outstandingCount }} overdue invoice{{ outstandingCount === 1 ? '' : 's' }}
 					</p>
 				</div>
@@ -68,7 +68,7 @@
 							<span class="text-[11px] font-medium w-20 shrink-0">{{ formatMonth(m.month) }}</span>
 							<div class="flex-1 h-2 bg-muted/30 rounded-full overflow-hidden">
 								<div
-									class="h-full rounded-full bg-emerald-500/70"
+									class="h-full rounded-full bg-success/70"
 									:style="{ width: monthBarWidth(m.total) + '%' }"
 								/>
 							</div>
@@ -95,7 +95,7 @@
 								</div>
 								<div class="h-1.5 bg-muted/30 rounded-full overflow-hidden">
 									<div
-										class="h-full rounded-full bg-emerald-500/70"
+										class="h-full rounded-full bg-success/70"
 										:style="{ width: clientBarWidth(c.revenue) + '%' }"
 									/>
 								</div>
@@ -112,7 +112,7 @@
 			<div v-if="outstandingInvoices.length" class="ios-card p-5">
 				<h3 class="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-3">
 					Outstanding Invoices
-					<span class="text-amber-400 ml-1">({{ outstandingInvoices.length }})</span>
+					<span class="text-warning ml-1">({{ outstandingInvoices.length }})</span>
 				</h3>
 				<div class="space-y-0.5">
 					<NuxtLink
@@ -122,7 +122,7 @@
 						class="flex items-center justify-between py-2.5 px-2 -mx-2 rounded-md hover:bg-muted/30 transition-colors"
 					>
 						<div class="flex items-center gap-3 min-w-0 flex-1">
-							<span class="w-2 h-2 rounded-full shrink-0" :class="inv.daysOverdue >= 30 ? 'bg-red-500' : 'bg-amber-500'" />
+							<span class="w-2 h-2 rounded-full shrink-0" :class="inv.daysOverdue >= 30 ? 'bg-destructive' : 'bg-warning'" />
 							<div class="min-w-0">
 								<p class="text-sm font-medium truncate">{{ inv.code }} <span v-if="inv.client" class="text-muted-foreground font-normal">· {{ inv.client }}</span></p>
 								<p class="text-[11px] text-muted-foreground">{{ inv.daysOverdue }}d overdue</p>
@@ -179,8 +179,8 @@ function formatMonth(month: string): string {
 }
 
 function trendColor(t: 'up' | 'down' | 'flat'): string {
-	if (t === 'up') return 'text-emerald-500';
-	if (t === 'down') return 'text-red-500';
+	if (t === 'up') return 'text-success';
+	if (t === 'down') return 'text-destructive';
 	return 'text-muted-foreground';
 }
 

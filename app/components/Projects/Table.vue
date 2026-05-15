@@ -61,7 +61,7 @@
 							<div class="w-16 h-1.5 bg-muted/30 rounded-full overflow-hidden">
 								<div
 									class="h-full rounded-full transition-all"
-									:class="project.taskProgress > 75 ? 'bg-emerald-500' : project.taskProgress > 25 ? 'bg-amber-500' : 'bg-primary'"
+									:class="project.taskProgress > 75 ? 'bg-success' : project.taskProgress > 25 ? 'bg-warning' : 'bg-primary'"
 									:style="{ width: `${project.taskProgress || 0}%` }"
 								/>
 							</div>

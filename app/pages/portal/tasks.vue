@@ -73,8 +73,8 @@ async function loadTasks() {
 }
 
 const priorityConfig: Record<string, { label: string; classes: string }> = {
-	urgent: { label: 'Urgent', classes: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
-	high:   { label: 'High',   classes: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
+	urgent: { label: 'Urgent', classes: 'bg-destructive/10 text-destructive dark:bg-destructive/30 dark:text-destructive' },
+	high:   { label: 'High',   classes: 'bg-warning/10 text-warning dark:bg-warning/30 dark:text-warning' },
 	medium: { label: 'Medium', classes: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
 	low:    { label: 'Low',    classes: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' },
 };
@@ -143,7 +143,7 @@ watch(filter, () => loadTasks());
 					<div
 						class="mt-0.5 w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center"
 						:class="task.status === 'completed'
-							? 'border-green-500 bg-green-500'
+							? 'border-success bg-success'
 							: 'border-muted-foreground/30'"
 					>
 						<Icon v-if="task.status === 'completed'" name="lucide:check" class="w-3 h-3 text-white" />
@@ -172,8 +172,8 @@ watch(filter, () => loadTasks());
 								v-if="task.due_date"
 								class="text-[10px] flex items-center gap-1 font-medium"
 								:class="{
-									'text-red-500': isOverdue(task.due_date),
-									'text-amber-500': !isOverdue(task.due_date) && isDueSoon(task.due_date),
+									'text-destructive': isOverdue(task.due_date),
+									'text-warning': !isOverdue(task.due_date) && isDueSoon(task.due_date),
 									'text-muted-foreground': !isOverdue(task.due_date) && !isDueSoon(task.due_date),
 								}"
 							>

@@ -235,7 +235,7 @@ function useUpload() {
 						<button @click="deleteImage(fileIdx)">
 							<Icon
 								name="heroicons:trash"
-								class="w-5 h-5 text-red-500 stroke-current hover:text-red-600 flex-shrink-none"
+								class="w-5 h-5 text-destructive stroke-current hover:text-destructive flex-shrink-none"
 							/>
 						</button>
 					</span>

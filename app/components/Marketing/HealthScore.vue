@@ -89,8 +89,8 @@ const breakdownItems = computed(() => {
 });
 
 function getBarColor(value: number): string {
-	if (value >= 70) return 'bg-green-500';
-	if (value >= 40) return 'bg-yellow-500';
-	return 'bg-red-500';
+	if (value >= 70) return 'bg-success';
+	if (value >= 40) return 'bg-warning';
+	return 'bg-destructive';
 }
 </script>

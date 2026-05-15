@@ -149,7 +149,7 @@ onMounted(() => {
 					<h1 class="text-base font-semibold">#{{ params.channel }}</h1>
 					<span
 						class="w-2 h-2 rounded-full shrink-0"
-						:class="isConnected ? 'bg-emerald-500' : 'bg-red-400'"
+						:class="isConnected ? 'bg-success' : 'bg-destructive'"
 						:title="isConnected ? 'Connected' : 'Disconnected'"
 					/>
 				</div>
@@ -167,10 +167,10 @@ onMounted(() => {
 		</div>
 
 		<!-- Connection Error -->
-		<div v-if="messagesError || channelsError" class="px-5 py-3 bg-red-500/10 border-b border-red-500/20">
+		<div v-if="messagesError || channelsError" class="px-5 py-3 bg-destructive/10 border-b border-destructive/20">
 			<div class="flex items-center justify-between">
-				<p class="text-sm text-red-400">Connection error. Messages may not be up to date.</p>
-				<button class="text-xs text-red-400 hover:text-red-300 font-medium" @click="refreshMessages">Retry</button>
+				<p class="text-sm text-destructive">Connection error. Messages may not be up to date.</p>
+				<button class="text-xs text-destructive hover:text-destructive font-medium" @click="refreshMessages">Retry</button>
 			</div>
 		</div>
 

@@ -79,7 +79,7 @@ if (props.ticket.category === 'Completed') {
 		:class="{ minimize: minimize }"
 		:data-id="ticket.id"
 	>
-		<div v-if="alert" class="w-full bg-red-500 p-2 text-white uppercase text-xs">
+		<div v-if="alert" class="w-full bg-destructive p-2 text-white uppercase text-xs">
 			<UIcon name="i-heroicons-exclamation-triangle-solid" size="lg" class="-mb-[2px]" />
 			Due {{ getRelativeTime(ticket.due_date) }}
 		</div>
@@ -220,7 +220,7 @@ if (props.ticket.category === 'Completed') {
 
 	span {
 		color: red;
-		@apply inline-block ml-2 border-2 border-red-500;
+		@apply inline-block ml-2 border-2 border-destructive;
 	}
 }
 
@@ -246,7 +246,7 @@ if (props.ticket.category === 'Completed') {
 	@apply font-proxima-regular;
 
 	.alert {
-		@apply text-red-500;
+		@apply text-destructive;
 	}
 }
 
@@ -282,7 +282,7 @@ if (props.ticket.category === 'Completed') {
 }
 
 .ticket-card.alert {
-	@apply border-2 border-red-500;
+	@apply border-2 border-destructive;
 }
 
 /* .updated {

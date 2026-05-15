@@ -7,11 +7,11 @@ const emit = defineEmits(['edit', 'update-progress', 'delete', 'coach']);
 
 // Category styling (with legacy `type` fallback for un-migrated rows).
 const categoryConfig = {
-	revenue:   { label: 'Revenue',   icon: 'i-heroicons-banknotes',          color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+	revenue:   { label: 'Revenue',   icon: 'i-heroicons-banknotes',          color: 'text-success', bg: 'bg-success/10' },
 	growth:    { label: 'Growth',    icon: 'i-heroicons-arrow-trending-up',  color: 'text-blue-500',    bg: 'bg-blue-500/10' },
 	retention: { label: 'Retention', icon: 'i-heroicons-heart',              color: 'text-pink-500',    bg: 'bg-pink-500/10' },
 	learning:  { label: 'Learning',  icon: 'i-heroicons-academic-cap',       color: 'text-indigo-500',  bg: 'bg-indigo-500/10' },
-	wellbeing: { label: 'Wellbeing', icon: 'i-heroicons-sun',                color: 'text-amber-500',   bg: 'bg-amber-500/10' },
+	wellbeing: { label: 'Wellbeing', icon: 'i-heroicons-sun',                color: 'text-warning',   bg: 'bg-warning/10' },
 	delivery:  { label: 'Delivery',  icon: 'i-heroicons-truck',              color: 'text-purple-500',  bg: 'bg-purple-500/10' },
 	custom:    { label: 'Custom',    icon: 'i-heroicons-flag',               color: 'text-slate-500',   bg: 'bg-slate-500/10' },
 };
@@ -42,10 +42,10 @@ const progress = computed(() => {
 });
 
 const progressColor = computed(() => {
-	if (progress.value >= 90) return 'bg-emerald-500';
+	if (progress.value >= 90) return 'bg-success';
 	if (progress.value >= 50) return 'bg-blue-500';
-	if (progress.value >= 25) return 'bg-amber-500';
-	return 'bg-red-500';
+	if (progress.value >= 25) return 'bg-warning';
+	return 'bg-destructive';
 });
 
 const isOverdue = computed(() => {
@@ -100,7 +100,7 @@ const formatDate = (dateStr) => getFriendlyDateThree(dateStr);
 		<div class="mb-3">
 			<div class="flex items-center justify-between text-xs mb-1.5">
 				<span class="text-muted-foreground">{{ formatValue(goal.current_value) }} / {{ formatValue(goal.target_value) }}</span>
-				<span class="font-semibold" :class="progress >= 90 ? 'text-emerald-500' : progress >= 50 ? 'text-blue-500' : 'text-muted-foreground'">
+				<span class="font-semibold" :class="progress >= 90 ? 'text-success' : progress >= 50 ? 'text-blue-500' : 'text-muted-foreground'">
 					{{ Math.round(progress) }}%
 				</span>
 			</div>
@@ -127,7 +127,7 @@ const formatDate = (dateStr) => getFriendlyDateThree(dateStr);
 				</span>
 			</div>
 			<div class="text-[10px] text-muted-foreground shrink-0">
-				<span v-if="isOverdue" class="text-red-500 font-medium">Overdue</span>
+				<span v-if="isOverdue" class="text-destructive font-medium">Overdue</span>
 				<span v-else-if="daysRemaining !== null && daysRemaining >= 0">{{ daysRemaining }}d left</span>
 				<span v-else-if="goal.end_date">{{ formatDate(goal.end_date) }}</span>
 				<span v-else-if="goal.timeframe" class="capitalize">{{ goal.timeframe }}</span>

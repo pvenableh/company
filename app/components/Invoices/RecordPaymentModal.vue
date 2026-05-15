@@ -180,7 +180,7 @@ const methodMeta = computed(() => {
 		check: {
 			label: 'Check',
 			icon: 'lucide:square-check-big',
-			colorClass: 'text-emerald-600',
+			colorClass: 'text-success',
 			helper: 'Physical check received from the client.',
 		},
 		zelle: {
@@ -192,13 +192,13 @@ const methodMeta = computed(() => {
 		venmo: {
 			label: 'Venmo',
 			icon: 'lucide:smartphone',
-			colorClass: 'text-sky-500',
+			colorClass: 'text-info',
 			helper: 'Venmo payment.',
 		},
 		cash: {
 			label: 'Cash',
 			icon: 'lucide:banknote',
-			colorClass: 'text-amber-600',
+			colorClass: 'text-warning',
 			helper: 'Cash payment.',
 		},
 		other: {

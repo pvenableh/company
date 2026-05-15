@@ -472,7 +472,7 @@ const renderMarkdown = (text: string): string => {
                   <button
                     @click="submitSidebarFeedback(msg, 'positive')"
                     class="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded"
-                    :class="msg.feedback?.rating === 'positive' ? 'text-green-500' : 'text-muted-foreground/70 hover:text-green-500'"
+                    :class="msg.feedback?.rating === 'positive' ? 'text-success' : 'text-muted-foreground/70 hover:text-success'"
                     title="Helpful"
                   >
                     <Icon name="lucide:thumbs-up" class="w-3 h-3" />
@@ -480,7 +480,7 @@ const renderMarkdown = (text: string): string => {
                   <button
                     @click="openSidebarCorrection(msg)"
                     class="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded"
-                    :class="msg.feedback?.rating === 'negative' ? 'text-red-500' : 'text-muted-foreground/70 hover:text-red-500'"
+                    :class="msg.feedback?.rating === 'negative' ? 'text-destructive' : 'text-muted-foreground/70 hover:text-destructive'"
                     title="Not helpful"
                   >
                     <Icon name="lucide:thumbs-down" class="w-3 h-3" />
@@ -500,7 +500,7 @@ const renderMarkdown = (text: string): string => {
                   />
                   <button
                     @click="submitSidebarCorrection"
-                    class="px-2 py-1 rounded text-[9px] font-medium bg-red-500/10 text-red-600 hover:bg-red-500/20 transition-colors shrink-0"
+                    class="px-2 py-1 rounded text-[9px] font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors shrink-0"
                   >
                     Submit
                   </button>
@@ -514,10 +514,10 @@ const renderMarkdown = (text: string): string => {
         <div v-if="activeToolCall" class="msg-row flex justify-start">
           <div class="tool-pill max-w-[90%] px-3 py-2 rounded-2xl rounded-bl-md border text-xs"
             :class="activeToolCall.success === false
-              ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400'
+              ? 'bg-destructive/10 dark:bg-destructive/20 border-destructive/30 dark:border-destructive text-destructive dark:text-destructive'
               : activeToolCall.success === true
-                ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400'
-                : 'bg-sky-50 dark:bg-sky-900/20 border-sky-200 dark:border-sky-800 text-sky-700 dark:text-sky-400'"
+                ? 'bg-success/10 dark:bg-success/20 border-success/30 dark:border-success text-success dark:text-success'
+                : 'bg-info/10 dark:bg-info/20 border-info/30 dark:border-info text-info dark:text-info'"
           >
             <div class="flex items-center gap-1.5">
               <Icon
@@ -537,7 +537,7 @@ const renderMarkdown = (text: string): string => {
         </div>
 
         <!-- Error -->
-        <div v-if="error" class="px-3 py-2 rounded-xl bg-red-50 dark:bg-red-900/20 text-xs text-red-600 dark:text-red-400">
+        <div v-if="error" class="px-3 py-2 rounded-xl bg-destructive/10 dark:bg-destructive/20 text-xs text-destructive dark:text-destructive">
           {{ error }}
         </div>
       </div>
@@ -560,7 +560,7 @@ const renderMarkdown = (text: string): string => {
             class="shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-colors"
             :class="
               isStreaming
-                ? 'bg-red-500 hover:bg-red-600 text-white'
+                ? 'bg-destructive hover:bg-destructive text-white'
                 : newMessage.trim()
                   ? 'bg-primary hover:bg-primary/90 text-white'
                   : 'bg-muted text-muted-foreground/70'

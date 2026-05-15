@@ -14,7 +14,7 @@
 						:key="userId"
 						color="gray"
 						class="flex items-center gap-2"
-						:class="isCurrentUserBadge(userId) ? 'border border-cyan-300' : ''"
+						:class="isCurrentUserBadge(userId) ? 'border border-info/30' : ''"
 					>
 						<UAvatar
 							:src="getAvatarUrl(getUserById(userId))"

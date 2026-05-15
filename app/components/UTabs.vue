@@ -13,7 +13,7 @@ interface TabItem {
   icon?: string
   /** Optional count chip rendered to the right of the label */
   count?: number | string | null
-  /** Optional Tailwind class (e.g. `bg-emerald-500`) for a small status dot before the label */
+  /** Optional Tailwind class (e.g. `bg-success`) for a small status dot before the label */
   dotColor?: string
   disabled?: boolean
   slot?: string

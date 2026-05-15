@@ -163,11 +163,11 @@ const cashflowKpis = computed(() => {
 const arAgingBuckets = computed(() => {
   const now = new Date();
   const buckets = [
-    { key: 'current', label: 'Not yet due', amount: 0, count: 0, color: 'bg-emerald-500' },
-    { key: '0-30', label: '1–30 days', amount: 0, count: 0, color: 'bg-amber-400' },
-    { key: '31-60', label: '31–60 days', amount: 0, count: 0, color: 'bg-amber-500' },
-    { key: '61-90', label: '61–90 days', amount: 0, count: 0, color: 'bg-orange-500' },
-    { key: '90+', label: '90+ days', amount: 0, count: 0, color: 'bg-red-500' },
+    { key: 'current', label: 'Not yet due', amount: 0, count: 0, color: 'bg-success' },
+    { key: '0-30', label: '1–30 days', amount: 0, count: 0, color: 'bg-warning' },
+    { key: '31-60', label: '31–60 days', amount: 0, count: 0, color: 'bg-warning' },
+    { key: '61-90', label: '61–90 days', amount: 0, count: 0, color: 'bg-warning' },
+    { key: '90+', label: '90+ days', amount: 0, count: 0, color: 'bg-destructive' },
   ];
   for (const inv of cashflowInvoices.value) {
     if (inv.status !== 'pending' && inv.status !== 'processing') continue;
@@ -259,8 +259,8 @@ async function updateInvoiceStatus(inv: Invoice, newStatus: string) {
   }
 }
 const dueDateColors: Record<string, string> = {
-  past: 'text-red-400',
-  urgent: 'text-amber-400',
+  past: 'text-destructive',
+  urgent: 'text-warning',
   normal: 'text-muted-foreground',
 };
 function getDueDateUrgency(inv: Invoice): 'past' | 'urgent' | 'normal' {
@@ -563,14 +563,14 @@ const headerAction = computed(() => {
           <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
             <div class="ios-card p-4">
               <p class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Outstanding</p>
-              <p class="text-2xl font-bold" :class="cashflowKpis.outstanding > 0 ? 'text-amber-500' : 'text-foreground'">
+              <p class="text-2xl font-bold" :class="cashflowKpis.outstanding > 0 ? 'text-warning' : 'text-foreground'">
                 {{ fmtCompact(cashflowKpis.outstanding) }}
               </p>
               <p class="text-[11px] text-muted-foreground mt-0.5">across all open invoices</p>
             </div>
             <div class="ios-card p-4">
               <p class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Overdue</p>
-              <p class="text-2xl font-bold" :class="cashflowKpis.overdueCount > 0 ? 'text-red-500' : 'text-foreground'">
+              <p class="text-2xl font-bold" :class="cashflowKpis.overdueCount > 0 ? 'text-destructive' : 'text-foreground'">
                 {{ cashflowKpis.overdueCount }}
               </p>
               <p class="text-[11px] text-muted-foreground mt-0.5">{{ cashflowKpis.overdueCount === 1 ? 'invoice' : 'invoices' }} past due</p>
@@ -582,7 +582,7 @@ const headerAction = computed(() => {
             </div>
             <div class="ios-card p-4">
               <p class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Paid this month</p>
-              <p class="text-2xl font-bold text-emerald-500">{{ fmtCompact(cashflowKpis.paidThisMonth) }}</p>
+              <p class="text-2xl font-bold text-success">{{ fmtCompact(cashflowKpis.paidThisMonth) }}</p>
               <p class="text-[11px] text-muted-foreground mt-0.5">collected</p>
             </div>
           </div>
@@ -628,7 +628,7 @@ const headerAction = computed(() => {
               <div class="flex items-center justify-between mb-3">
                 <h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Unpaid Invoices
-                  <span v-if="unpaidInvoicesPreview.length" class="text-amber-400 ml-1">({{ unpaidInvoicesPreview.length }})</span>
+                  <span v-if="unpaidInvoicesPreview.length" class="text-warning ml-1">({{ unpaidInvoicesPreview.length }})</span>
                 </h3>
                 <button
                   class="text-xs text-primary hover:underline"
@@ -654,7 +654,7 @@ const headerAction = computed(() => {
                     </div>
                     <div
                       class="text-[11px] mt-0.5"
-                      :class="inv.due_date && getDaysUntilDue(inv.due_date) < 0 ? 'text-red-400' : inv.due_date && getDaysUntilDue(inv.due_date) <= 7 ? 'text-amber-400' : 'text-muted-foreground'"
+                      :class="inv.due_date && getDaysUntilDue(inv.due_date) < 0 ? 'text-destructive' : inv.due_date && getDaysUntilDue(inv.due_date) <= 7 ? 'text-warning' : 'text-muted-foreground'"
                     >
                       <template v-if="inv.due_date">
                         <template v-if="getDaysUntilDue(inv.due_date) < 0">{{ Math.abs(getDaysUntilDue(inv.due_date)) }}d overdue</template>
@@ -727,7 +727,7 @@ const headerAction = computed(() => {
                     <span v-if="p.payment_method" class="capitalize">· {{ p.payment_method }}</span>
                   </div>
                 </div>
-                <span class="text-sm font-bold tabular-nums shrink-0 ml-3 text-emerald-500">{{ fmtMoney(p.amount) }}</span>
+                <span class="text-sm font-bold tabular-nums shrink-0 ml-3 text-success">{{ fmtMoney(p.amount) }}</span>
               </div>
             </div>
           </div>
@@ -819,7 +819,7 @@ const headerAction = computed(() => {
                     </span>
                     <span
                       v-if="getDueDateUrgency(inv) === 'past'"
-                      class="text-[9px] uppercase font-semibold text-red-400 ml-1"
+                      class="text-[9px] uppercase font-semibold text-destructive ml-1"
                     >
                       Past due
                     </span>
@@ -852,7 +852,7 @@ const headerAction = computed(() => {
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
             <div class="ios-card p-4">
               <p class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Total Received</p>
-              <p class="text-2xl font-bold text-emerald-500">{{ fmtMoney(paymentsTotal) }}</p>
+              <p class="text-2xl font-bold text-success">{{ fmtMoney(paymentsTotal) }}</p>
             </div>
             <div class="ios-card p-4">
               <p class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Payments</p>
@@ -1030,7 +1030,7 @@ const headerAction = computed(() => {
                   <td class="py-3 px-4 text-right" @click.stop>
                     <button
                       type="button"
-                      class="p-1 rounded text-muted-foreground hover:text-red-500 transition-colors"
+                      class="p-1 rounded text-muted-foreground hover:text-destructive transition-colors"
                       @click="handleExpenseDelete(expense)"
                     >
                       <UIcon name="i-heroicons-trash" class="w-3.5 h-3.5" />

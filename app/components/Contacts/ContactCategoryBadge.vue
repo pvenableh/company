@@ -24,12 +24,12 @@ const CATEGORY_META: Record<NonNullable<Contact['category']>, { label: string; i
   client: {
     label: 'Client',
     icon: 'lucide:briefcase',
-    classes: 'bg-emerald-500/10 text-emerald-400 ring-1 ring-emerald-500/20',
+    classes: 'bg-success/10 text-success ring-1 ring-success/20',
   },
   prospect: {
     label: 'Prospect',
     icon: 'lucide:target',
-    classes: 'bg-sky-500/10 text-sky-400 ring-1 ring-sky-500/20',
+    classes: 'bg-info/10 text-info ring-1 ring-info/20',
   },
   architect: {
     label: 'Architect',
@@ -39,12 +39,12 @@ const CATEGORY_META: Record<NonNullable<Contact['category']>, { label: string; i
   developer: {
     label: 'Developer',
     icon: 'lucide:hammer',
-    classes: 'bg-amber-500/10 text-amber-400 ring-1 ring-amber-500/20',
+    classes: 'bg-warning/10 text-warning ring-1 ring-warning/20',
   },
   hospitality: {
     label: 'Hospitality',
     icon: 'lucide:utensils',
-    classes: 'bg-rose-500/10 text-rose-400 ring-1 ring-rose-500/20',
+    classes: 'bg-destructive/10 text-destructive ring-1 ring-destructive/20',
   },
   partner: {
     label: 'Partner',

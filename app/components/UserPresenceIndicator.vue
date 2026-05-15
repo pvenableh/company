@@ -48,14 +48,14 @@ const ringSize = computed(() => {
         dotSize,
         ringSize,
         'rounded-full ring-background flex-shrink-0 transition-colors duration-300',
-        online ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600',
+        online ? 'bg-success' : 'bg-gray-300 dark:bg-gray-600',
       ]"
       :title="online ? 'Online' : 'Offline'"
     />
     <span
       v-if="showLabel"
       class="text-xs"
-      :class="online ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'"
+      :class="online ? 'text-success dark:text-success' : 'text-muted-foreground'"
     >
       {{ online ? 'Online' : 'Offline' }}
     </span>

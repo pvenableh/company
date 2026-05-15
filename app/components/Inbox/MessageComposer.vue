@@ -47,7 +47,7 @@ function onPicked(files: { url: string; type: 'image' | 'video' }[]) {
 
 <template>
   <div class="border-t border-gray-200 p-3 dark:border-gray-800">
-    <p v-if="hint" class="mb-2 text-[11px] text-amber-600 dark:text-amber-400">{{ hint }}</p>
+    <p v-if="hint" class="mb-2 text-[11px] text-warning dark:text-warning">{{ hint }}</p>
 
     <!-- Attachment chip -->
     <div v-if="attachment" class="mb-2 inline-flex items-center gap-2 rounded-md border border-gray-200 bg-gray-50 px-2 py-1 dark:border-gray-700 dark:bg-gray-800">

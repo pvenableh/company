@@ -43,7 +43,7 @@
 			>
 				<!-- Rank -->
 				<div class="w-7 h-7 rounded-full flex items-center justify-center shrink-0"
-					:class="index === 0 ? 'bg-amber-500/20 text-amber-600' : index === 1 ? 'bg-gray-400/20 text-gray-500' : index === 2 ? 'bg-orange-400/20 text-orange-500' : 'bg-muted/50 text-muted-foreground'"
+					:class="index === 0 ? 'bg-warning/20 text-warning' : index === 1 ? 'bg-gray-400/20 text-gray-500' : index === 2 ? 'bg-warning/20 text-warning' : 'bg-muted/50 text-muted-foreground'"
 				>
 					<span class="text-xs font-bold">{{ index + 1 }}</span>
 				</div>

@@ -246,14 +246,14 @@ const minDate = today(getLocalTimeZone())
           <template #header>
             <div class="flex items-center justify-between">
               <h2 class="font-semibold text-gray-900 dark:text-white">Caption</h2>
-              <span class="text-xs font-mono" :class="captionWarning ? 'text-red-500' : 'text-gray-400'">
+              <span class="text-xs font-mono" :class="captionWarning ? 'text-destructive' : 'text-gray-400'">
                 {{ captionLength }} / 2,200
               </span>
             </div>
           </template>
 
           <UTextarea v-model="caption" :rows="6" autoresize class="w-full" />
-          <p v-if="captionWarning" class="text-sm text-red-500 mt-2">{{ captionWarning }}</p>
+          <p v-if="captionWarning" class="text-sm text-destructive mt-2">{{ captionWarning }}</p>
         </UCard>
 
         <!-- Media -->
@@ -279,7 +279,7 @@ const minDate = today(getLocalTimeZone())
               </div>
               <button
                 @click="removeMedia(index)"
-                class="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                class="absolute top-2 right-2 p-1 bg-destructive text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
               >
                 <UIcon name="i-lucide-x" class="w-4 h-4" />
               </button>

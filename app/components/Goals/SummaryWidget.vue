@@ -20,13 +20,13 @@ const avgProgress = computed(() => {
 });
 
 const categoryConfig = {
-	revenue: { icon: 'i-heroicons-banknotes', color: 'text-emerald-500' },
+	revenue: { icon: 'i-heroicons-banknotes', color: 'text-success' },
 	growth: { icon: 'i-heroicons-arrow-trending-up', color: 'text-blue-500' },
 	retention: { icon: 'i-heroicons-heart', color: 'text-pink-500' },
 	learning: { icon: 'i-heroicons-academic-cap', color: 'text-indigo-500' },
-	wellbeing: { icon: 'i-heroicons-sun', color: 'text-amber-500' },
+	wellbeing: { icon: 'i-heroicons-sun', color: 'text-warning' },
 	delivery: { icon: 'i-heroicons-truck', color: 'text-purple-500' },
-	custom: { icon: 'i-heroicons-flag', color: 'text-amber-500' },
+	custom: { icon: 'i-heroicons-flag', color: 'text-warning' },
 };
 
 // Map legacy `type` values to the new `category` so older rows still render.
@@ -44,10 +44,10 @@ const configFor = (goal) => {
 };
 
 const progressColor = (pct) => {
-	if (pct >= 90) return 'bg-emerald-500';
+	if (pct >= 90) return 'bg-success';
 	if (pct >= 50) return 'bg-blue-500';
-	if (pct >= 25) return 'bg-amber-500';
-	return 'bg-red-500';
+	if (pct >= 25) return 'bg-warning';
+	return 'bg-destructive';
 };
 </script>
 
@@ -55,7 +55,7 @@ const progressColor = (pct) => {
 	<div class="ios-card p-5">
 		<div class="flex items-center justify-between mb-4">
 			<div class="flex items-center gap-2">
-				<UIcon name="i-heroicons-flag" class="w-5 h-5 text-amber-500" />
+				<UIcon name="i-heroicons-flag" class="w-5 h-5 text-warning" />
 				<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70">Goals</h3>
 			</div>
 			<button
@@ -88,7 +88,7 @@ const progressColor = (pct) => {
 			<!-- Summary bar -->
 			<div class="flex items-center justify-between text-xs mb-1">
 				<span class="text-muted-foreground">{{ activeGoals.length }} active</span>
-				<span class="font-medium" :class="avgProgress >= 50 ? 'text-emerald-500' : 'text-muted-foreground'">{{ avgProgress }}% avg</span>
+				<span class="font-medium" :class="avgProgress >= 50 ? 'text-success' : 'text-muted-foreground'">{{ avgProgress }}% avg</span>
 			</div>
 
 			<!-- Goal items -->
@@ -119,7 +119,7 @@ const progressColor = (pct) => {
 			</div>
 
 			<!-- Overdue warning -->
-			<div v-if="overdueGoals.length" class="flex items-center gap-1.5 text-xs text-red-500 mt-1">
+			<div v-if="overdueGoals.length" class="flex items-center gap-1.5 text-xs text-destructive mt-1">
 				<UIcon name="i-heroicons-exclamation-triangle" class="w-3.5 h-3.5" />
 				<span>{{ overdueGoals.length }} overdue goal{{ overdueGoals.length > 1 ? 's' : '' }}</span>
 			</div>

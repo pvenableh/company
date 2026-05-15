@@ -95,7 +95,7 @@
 			<div v-if="progress > 0" class="mt-3 h-0.5 bg-muted/40 rounded-full overflow-hidden">
 				<div
 					class="h-full transition-all duration-500"
-					:class="progress >= 90 ? 'bg-emerald-500' : progress >= 50 ? 'bg-blue-500' : progress >= 25 ? 'bg-amber-500' : 'bg-red-500'"
+					:class="progress >= 90 ? 'bg-success' : progress >= 50 ? 'bg-blue-500' : progress >= 25 ? 'bg-warning' : 'bg-destructive'"
 					:style="{ width: progress + '%' }"
 				/>
 			</div>
@@ -151,8 +151,8 @@ const statusAccent = computed(() => getStatusAccent(props.element?.status));
 
 const priorityTextClass = computed(() => {
 	const p = props.element?.priority;
-	if (p === 'urgent') return 'text-red-500';
-	if (p === 'high') return 'text-orange-500';
+	if (p === 'urgent') return 'text-destructive';
+	if (p === 'high') return 'text-warning';
 	if (p === 'low') return 'text-muted-foreground';
 	return 'text-muted-foreground';
 });
@@ -161,9 +161,9 @@ const dueDateUrgency = computed(() => formatDueDateStatus(props.element?.due_dat
 
 const dueDateTextClass = computed(() => {
 	const u = dueDateUrgency.value;
-	if (u === 'past') return 'text-red-500';
-	if (u === 'urgent') return 'text-orange-500';
-	if (u === 'medium') return 'text-yellow-600';
+	if (u === 'past') return 'text-destructive';
+	if (u === 'urgent') return 'text-warning';
+	if (u === 'medium') return 'text-warning';
 	return 'text-muted-foreground';
 });
 

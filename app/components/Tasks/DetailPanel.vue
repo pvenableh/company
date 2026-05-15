@@ -25,7 +25,7 @@
 					</div>
 					<div class="flex items-center gap-1">
 						<button
-							class="p-1.5 rounded-md text-muted-foreground/50 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+							class="p-1.5 rounded-md text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors"
 							title="Delete task"
 							@click="confirmingDelete = true"
 						>
@@ -125,11 +125,11 @@
 				</div>
 
 				<!-- Delete Confirmation -->
-				<div v-if="confirmingDelete" class="px-5 py-4 border-t border-border bg-red-500/5">
-					<p class="text-sm text-red-400 mb-3">Delete this task? This cannot be undone.</p>
+				<div v-if="confirmingDelete" class="px-5 py-4 border-t border-border bg-destructive/5">
+					<p class="text-sm text-destructive mb-3">Delete this task? This cannot be undone.</p>
 					<div class="flex justify-end gap-2">
 						<button class="px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground" @click="confirmingDelete = false">Cancel</button>
-						<button class="px-3 py-1.5 rounded-lg text-xs bg-red-500 text-white hover:bg-red-600" @click="$emit('delete', task.id)">Delete</button>
+						<button class="px-3 py-1.5 rounded-lg text-xs bg-destructive text-white hover:bg-destructive" @click="$emit('delete', task.id)">Delete</button>
 					</div>
 				</div>
 			</div>
@@ -168,8 +168,8 @@ const statusLabels: Record<string, string> = {
 
 const priorityOptions = [
 	{ value: 'low', label: 'Low', activeClass: 'bg-blue-500/10 text-blue-500' },
-	{ value: 'medium', label: 'Medium', activeClass: 'bg-amber-500/10 text-amber-500' },
-	{ value: 'high', label: 'High', activeClass: 'bg-red-500/10 text-red-500' },
+	{ value: 'medium', label: 'Medium', activeClass: 'bg-warning/10 text-warning' },
+	{ value: 'high', label: 'High', activeClass: 'bg-destructive/10 text-destructive' },
 ];
 
 function saveField(field: string, value: any) {

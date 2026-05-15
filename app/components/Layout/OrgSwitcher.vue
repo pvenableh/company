@@ -94,7 +94,7 @@ const handleRegisterOrg = () => {
 					class="w-full flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer"
 					:class="[
 						selectedOrg === org.id
-							? 'border-[var(--cyan)] bg-cyan-50/50'
+							? 'border-[var(--cyan)] bg-info/10'
 							: 'border-gray-200 hover:border-gray-300 hover:bg-gray-50',
 						org.archived_at && 'opacity-70',
 					]"
@@ -114,7 +114,7 @@ const handleRegisterOrg = () => {
 							{{ org.name }}
 							<span
 								v-if="org.archived_at"
-								class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wider text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded"
+								class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wider text-warning bg-warning/10 px-1.5 py-0.5 rounded"
 							>
 								<Archive class="size-3" />
 								Archived
@@ -131,7 +131,7 @@ const handleRegisterOrg = () => {
 							</span>
 							<span
 								v-if="org.clientPortal"
-								class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wider text-[var(--cyan)] bg-cyan-50 px-1.5 py-0.5 rounded"
+								class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wider text-[var(--cyan)] bg-info/10 px-1.5 py-0.5 rounded"
 							>
 								<ExternalLink class="size-3" />
 								Client Portal
@@ -185,10 +185,10 @@ const handleRegisterOrg = () => {
 			<!-- Register new organization -->
 			<div class="border-t border-gray-200 pt-4">
 				<button
-					class="w-full flex items-center gap-3 p-3 rounded-xl border border-dashed border-gray-300 hover:border-[var(--cyan)] hover:bg-cyan-50/30 transition-all group"
+					class="w-full flex items-center gap-3 p-3 rounded-xl border border-dashed border-gray-300 hover:border-[var(--cyan)] hover:bg-info/10 transition-all group"
 					@click="handleRegisterOrg"
 				>
-					<div class="w-10 h-10 rounded-xl bg-gray-100 group-hover:bg-cyan-100 flex items-center justify-center transition-colors">
+					<div class="w-10 h-10 rounded-xl bg-gray-100 group-hover:bg-info/10 flex items-center justify-center transition-colors">
 						<Plus class="size-5 text-gray-400 group-hover:text-[var(--cyan)] transition-colors" />
 					</div>
 					<div class="text-left">

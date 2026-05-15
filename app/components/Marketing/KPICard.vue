@@ -16,7 +16,7 @@
 		<p v-else class="text-2xl sm:text-3xl font-bold text-foreground tabular-nums leading-tight">
 			{{ value }}
 		</p>
-		<p v-if="!loading && delta" class="text-[11px] text-emerald-600 dark:text-emerald-400 mt-1 font-medium">
+		<p v-if="!loading && delta" class="text-[11px] text-success dark:text-success mt-1 font-medium">
 			{{ delta }}
 		</p>
 	</div>
@@ -33,21 +33,21 @@ const props = defineProps<{
 }>();
 
 const TONE_BG: Record<string, string> = {
-	emerald: 'bg-emerald-500/10',
+	emerald: 'bg-success/10',
 	violet: 'bg-violet-500/10',
-	sky: 'bg-sky-500/10',
+	sky: 'bg-info/10',
 	fuchsia: 'bg-fuchsia-500/10',
-	amber: 'bg-amber-500/10',
-	rose: 'bg-rose-500/10',
+	amber: 'bg-warning/10',
+	rose: 'bg-destructive/10',
 	neutral: 'bg-muted/40',
 };
 const TONE_FG: Record<string, string> = {
-	emerald: 'text-emerald-500',
+	emerald: 'text-success',
 	violet: 'text-violet-500',
-	sky: 'text-sky-500',
+	sky: 'text-info',
 	fuchsia: 'text-fuchsia-500',
-	amber: 'text-amber-500',
-	rose: 'text-rose-500',
+	amber: 'text-warning',
+	rose: 'text-destructive',
 	neutral: 'text-muted-foreground',
 };
 

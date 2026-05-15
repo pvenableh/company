@@ -341,7 +341,7 @@ const getNoteUserName = (note: any) => {
                 <UIcon
                   v-if="note.is_pinned"
                   name="i-heroicons-star-solid"
-                  class="w-3 h-3 text-amber-500 ml-auto"
+                  class="w-3 h-3 text-warning ml-auto"
                 />
               </div>
 

@@ -127,7 +127,7 @@
 		<!-- KPIs -->
 		<div v-if="campaign.kpis?.length" class="mt-6">
 			<h4 class="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-				<Icon name="lucide:target" class="w-4 h-4 text-green-500" />
+				<Icon name="lucide:target" class="w-4 h-4 text-success" />
 				Key Performance Indicators
 			</h4>
 			<div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -181,8 +181,8 @@ function getChannelBg(channel: string): string {
 	const bgs: Record<string, string> = {
 		social: 'bg-purple-100 dark:bg-purple-900/30',
 		email: 'bg-blue-100 dark:bg-blue-900/30',
-		content: 'bg-amber-100 dark:bg-amber-900/30',
-		outreach: 'bg-green-100 dark:bg-green-900/30',
+		content: 'bg-warning/10 dark:bg-warning/30',
+		outreach: 'bg-success/10 dark:bg-success/30',
 	};
 	return bgs[channel] || 'bg-muted';
 }
@@ -191,8 +191,8 @@ function getChannelColor(channel: string): string {
 	const colors: Record<string, string> = {
 		social: 'text-purple-600 dark:text-purple-400',
 		email: 'text-blue-600 dark:text-blue-400',
-		content: 'text-amber-600 dark:text-amber-400',
-		outreach: 'text-green-600 dark:text-green-400',
+		content: 'text-warning dark:text-warning',
+		outreach: 'text-success dark:text-success',
 	};
 	return colors[channel] || 'text-muted-foreground';
 }

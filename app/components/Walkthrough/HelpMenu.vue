@@ -101,12 +101,12 @@ function handleReset() {
           @click="handleStartTour(tour.id)"
         >
           <div class="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-            :class="isTourCompleted(tour.id) ? 'bg-green-500/10' : 'bg-primary/10'"
+            :class="isTourCompleted(tour.id) ? 'bg-success/10' : 'bg-primary/10'"
           >
             <UIcon
               v-if="isTourCompleted(tour.id)"
               name="i-heroicons-check"
-              class="w-3.5 h-3.5 text-green-500"
+              class="w-3.5 h-3.5 text-success"
             />
             <UIcon
               v-else

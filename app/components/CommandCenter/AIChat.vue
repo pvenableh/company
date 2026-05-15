@@ -518,9 +518,9 @@ onUnmounted(() => {
 				<NuxtLink
 					v-if="brandIncomplete"
 					:to="brandSetupRoute"
-					class="flex items-start gap-3 p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/30 rounded-xl text-sm transition-colors hover:bg-amber-100 dark:hover:bg-amber-900/20"
+					class="flex items-start gap-3 p-3 bg-warning/10 dark:bg-warning/10 border border-warning/30 dark:border-warning/30 rounded-xl text-sm transition-colors hover:bg-warning/10 dark:hover:bg-warning/20"
 				>
-					<UIcon name="i-heroicons-light-bulb" class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+					<UIcon name="i-heroicons-light-bulb" class="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
 					<div>
 						<p class="font-medium text-foreground">Complete your brand profile for {{ brandEntityName }}</p>
 						<p class="text-xs text-muted-foreground mt-0.5">
@@ -540,35 +540,35 @@ onUnmounted(() => {
 						<div class="flex flex-wrap gap-2 justify-center">
 							<div
 								v-if="smartData.overdueInvoices.count > 0"
-								class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-xs font-medium text-amber-700 dark:text-amber-400"
+								class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-warning/10 border border-warning/20 text-xs font-medium text-warning dark:text-warning"
 							>
 								<UIcon name="i-heroicons-banknotes" class="w-3.5 h-3.5" />
 								{{ smartData.overdueInvoices.count }} overdue — ${{ smartData.overdueInvoices.total.toLocaleString() }}
 							</div>
 							<div
 								v-if="smartData.staleClients.length > 0"
-								class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20 text-xs font-medium text-orange-700 dark:text-orange-400"
+								class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-warning/10 border border-warning/20 text-xs font-medium text-warning dark:text-warning"
 							>
 								<UIcon name="i-heroicons-user-group" class="w-3.5 h-3.5" />
 								{{ smartData.staleClients.length }} client{{ smartData.staleClients.length > 1 ? 's' : '' }} need follow-up
 							</div>
 							<div
 								v-if="smartData.overdueProjects.length > 0"
-								class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-rose-500/10 border border-rose-500/20 text-xs font-medium text-rose-700 dark:text-rose-400"
+								class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-destructive/10 border border-destructive/20 text-xs font-medium text-destructive dark:text-destructive"
 							>
 								<UIcon name="i-heroicons-folder" class="w-3.5 h-3.5" />
 								{{ smartData.overdueProjects.length }} project{{ smartData.overdueProjects.length > 1 ? 's' : '' }} overdue
 							</div>
 							<div
 								v-if="smartData.overdueTasks > 0"
-								class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 text-xs font-medium text-red-700 dark:text-red-400"
+								class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-destructive/10 border border-destructive/20 text-xs font-medium text-destructive dark:text-destructive"
 							>
 								<UIcon name="i-heroicons-clipboard-document-check" class="w-3.5 h-3.5" />
 								{{ smartData.overdueTasks }} task{{ smartData.overdueTasks > 1 ? 's' : '' }} overdue
 							</div>
 							<div
 								v-if="smartData.openDeals.count > 0"
-								class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-xs font-medium text-emerald-700 dark:text-emerald-400"
+								class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-success/10 border border-success/20 text-xs font-medium text-success dark:text-success"
 							>
 								<UIcon name="i-heroicons-currency-dollar" class="w-3.5 h-3.5" />
 								{{ smartData.openDeals.count }} open deal{{ smartData.openDeals.count > 1 ? 's' : '' }} — ${{ smartData.openDeals.pipelineValue.toLocaleString() }}
@@ -721,7 +721,7 @@ onUnmounted(() => {
 								<button
 									@click="submitFeedback(msg, 'positive')"
 									class="flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium bg-background border border-border shadow-sm hover:bg-muted transition-colors"
-									:class="msg.feedback?.rating === 'positive' ? 'text-green-500' : 'text-muted-foreground'"
+									:class="msg.feedback?.rating === 'positive' ? 'text-success' : 'text-muted-foreground'"
 									title="Helpful"
 								>
 									<UIcon name="i-heroicons-hand-thumb-up" class="w-3 h-3" />
@@ -729,7 +729,7 @@ onUnmounted(() => {
 								<button
 									@click="openCorrection(msg)"
 									class="flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium bg-background border border-border shadow-sm hover:bg-muted transition-colors"
-									:class="msg.feedback?.rating === 'negative' ? 'text-red-500' : 'text-muted-foreground'"
+									:class="msg.feedback?.rating === 'negative' ? 'text-destructive' : 'text-muted-foreground'"
 									title="Not helpful"
 								>
 									<UIcon name="i-heroicons-hand-thumb-down" class="w-3 h-3" />
@@ -749,7 +749,7 @@ onUnmounted(() => {
 								/>
 								<button
 									@click="submitCorrection"
-									class="px-2.5 py-1.5 rounded-lg text-[10px] font-medium bg-red-500/10 text-red-600 hover:bg-red-500/20 transition-colors shrink-0"
+									class="px-2.5 py-1.5 rounded-lg text-[10px] font-medium bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors shrink-0"
 								>
 									Submit
 								</button>

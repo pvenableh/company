@@ -51,8 +51,8 @@ const onSubmit = handleSubmit(async (values) => {
       <!-- Success state -->
       <template v-if="isSuccess">
         <div class="flex flex-col items-center justify-center py-6 text-center">
-          <div class="w-12 h-12 rounded-full bg-green-50 dark:bg-green-950/40 flex items-center justify-center mb-4">
-            <CheckCircle2 class="h-6 w-6 text-green-500 dark:text-green-400" />
+          <div class="w-12 h-12 rounded-full bg-success/10 dark:bg-success/40 flex items-center justify-center mb-4">
+            <CheckCircle2 class="h-6 w-6 text-success dark:text-success" />
           </div>
           <h4 class="text-base font-semibold mb-1">Check your email</h4>
           <p class="text-sm text-muted-foreground mb-6">
@@ -81,9 +81,9 @@ const onSubmit = handleSubmit(async (values) => {
                 placeholder="you@example.com"
                 v-bind="field"
                 class="w-full rounded-lg border bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--cyan)] focus:border-transparent transition-shadow"
-                :class="errors.length ? 'border-red-300' : 'border-border'"
+                :class="errors.length ? 'border-destructive/30' : 'border-border'"
               />
-              <p v-if="errors.length" class="text-xs text-red-500">{{ errors[0] }}</p>
+              <p v-if="errors.length" class="text-xs text-destructive">{{ errors[0] }}</p>
             </div>
           </VeeField>
 

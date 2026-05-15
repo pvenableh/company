@@ -5,7 +5,7 @@
         <h4 class="text-sm font-medium truncate">{{ goal.title }}</h4>
         <span
           v-if="isOverdue"
-          class="inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-medium bg-red-500/15 text-red-400"
+          class="inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-medium bg-destructive/15 text-destructive"
         >
           Overdue
         </span>
@@ -83,9 +83,9 @@ const isOverdue = computed(() => {
 
 const progressColor = computed(() => {
   const p = percent.value;
-  if (p >= 100) return 'bg-emerald-500';
+  if (p >= 100) return 'bg-success';
   if (p >= 60) return 'bg-blue-500';
-  if (p >= 30) return 'bg-yellow-500';
-  return 'bg-red-500';
+  if (p >= 30) return 'bg-warning';
+  return 'bg-destructive';
 });
 </script>

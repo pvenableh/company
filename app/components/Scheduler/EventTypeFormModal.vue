@@ -122,7 +122,7 @@
 					placeholder="0.00"
 					@update:model-value="onPriceInput"
 				/>
-				<p v-if="!stripeActive && (form.price_cents ?? 0) > 0" class="text-[11px] text-amber-600 flex items-center gap-1">
+				<p v-if="!stripeActive && (form.price_cents ?? 0) > 0" class="text-[11px] text-warning flex items-center gap-1">
 					<Icon name="lucide:alert-triangle" class="h-3 w-3" />
 					<span>
 						Connect Stripe in

@@ -36,7 +36,7 @@
             <p class="text-xs text-muted-foreground">Total payments received</p>
           </div>
           <div>
-            <p class="text-lg font-medium text-emerald-500">{{ formatCurrency(totalPaidAmount) }}</p>
+            <p class="text-lg font-medium text-success">{{ formatCurrency(totalPaidAmount) }}</p>
             <p class="text-xs text-muted-foreground">Total collected</p>
           </div>
         </div>

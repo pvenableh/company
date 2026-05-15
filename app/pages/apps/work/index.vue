@@ -272,10 +272,10 @@ function meetingChip(m: any) {
 }
 
 const meetingTone: Record<string, string> = {
-  emerald: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-  sky: 'bg-sky-500/10 text-sky-600 dark:text-sky-400',
-  amber: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-  red: 'bg-red-500/10 text-red-600 dark:text-red-400',
+  emerald: 'bg-success/10 text-success dark:text-success',
+  sky: 'bg-info/10 text-info dark:text-info',
+  amber: 'bg-warning/10 text-warning dark:text-warning',
+  red: 'bg-destructive/10 text-destructive dark:text-destructive',
   gray: 'bg-muted/40 text-muted-foreground',
 };
 
@@ -546,8 +546,8 @@ function openMeetingSlideOver(meeting: any) {
             @click="openMeetingSlideOver(m)"
           >
             <div class="flex items-start gap-3">
-              <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
-                <Icon name="lucide:video" class="w-5 h-5 text-emerald-500" />
+              <div class="w-10 h-10 rounded-xl bg-success/10 flex items-center justify-center flex-shrink-0">
+                <Icon name="lucide:video" class="w-5 h-5 text-success" />
               </div>
               <div class="flex-1 min-w-0">
                 <div class="flex items-start justify-between gap-2">
@@ -578,7 +578,7 @@ function openMeetingSlideOver(meeting: any) {
                     <Icon name="lucide:building-2" class="w-3 h-3" />
                     {{ m.related_organization.name }}
                   </span>
-                  <span v-if="m.recording_url" class="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                  <span v-if="m.recording_url" class="inline-flex items-center gap-1 text-success dark:text-success">
                     <Icon name="lucide:film" class="w-3 h-3" />
                     Recording
                   </span>
@@ -645,7 +645,7 @@ function openMeetingSlideOver(meeting: any) {
                 <div class="flex-1 h-1.5 bg-muted/30 rounded-full overflow-hidden">
                   <div
                     class="h-full rounded-full transition-all"
-                    :class="slideOverProject.taskProgress > 75 ? 'bg-emerald-500' : slideOverProject.taskProgress > 25 ? 'bg-amber-500' : 'bg-primary'"
+                    :class="slideOverProject.taskProgress > 75 ? 'bg-success' : slideOverProject.taskProgress > 25 ? 'bg-warning' : 'bg-primary'"
                     :style="{ width: `${slideOverProject.taskProgress || 0}%` }"
                   />
                 </div>

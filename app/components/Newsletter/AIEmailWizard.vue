@@ -338,16 +338,16 @@
                   <!-- Image suggestion -->
                   <div
                     v-if="section.imageSuggestion"
-                    class="mt-2.5 flex items-start gap-2 px-2.5 py-2 rounded-xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200/50 dark:border-amber-800/30"
+                    class="mt-2.5 flex items-start gap-2 px-2.5 py-2 rounded-xl bg-warning/10 dark:bg-warning/10 border border-warning/50 dark:border-warning/30"
                   >
-                    <Icon name="lucide:image" class="w-3 h-3 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                    <Icon name="lucide:image" class="w-3 h-3 text-warning dark:text-warning shrink-0 mt-0.5" />
                     <div>
-                      <p class="text-[10px] font-medium text-amber-800 dark:text-amber-300">{{ section.imageSuggestion.description }}</p>
+                      <p class="text-[10px] font-medium text-warning dark:text-warning">{{ section.imageSuggestion.description }}</p>
                       <div class="flex flex-wrap gap-1 mt-1">
                         <span
                           v-for="term in section.imageSuggestion.searchTerms"
                           :key="term"
-                          class="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
+                          class="text-[9px] px-1.5 py-0.5 rounded-full bg-warning/10 dark:bg-warning/30 text-warning dark:text-warning"
                         >
                           {{ term }}
                         </span>
@@ -516,16 +516,16 @@ function getSectionPreview(section: any): string {
 function getSectionStyle(category: string): string {
   const styles: Record<string, string> = {
     hero: 'bg-violet-500/10 text-violet-600',
-    content: 'bg-green-500/10 text-green-600',
-    'two-column': 'bg-amber-500/10 text-amber-600',
-    'three-column': 'bg-amber-500/10 text-amber-600',
-    cta: 'bg-red-500/10 text-red-600',
-    image: 'bg-cyan-500/10 text-cyan-600',
+    content: 'bg-success/10 text-success',
+    'two-column': 'bg-warning/10 text-warning',
+    'three-column': 'bg-warning/10 text-warning',
+    cta: 'bg-destructive/10 text-destructive',
+    image: 'bg-info/10 text-info',
     stats: 'bg-indigo-500/10 text-indigo-600',
     quote: 'bg-pink-500/10 text-pink-600',
-    list: 'bg-teal-500/10 text-teal-600',
+    list: 'bg-info/10 text-info',
     divider: 'bg-gray-500/10 text-gray-600',
-    social: 'bg-sky-500/10 text-sky-600',
+    social: 'bg-info/10 text-info',
     header: 'bg-blue-500/10 text-blue-600',
     footer: 'bg-slate-500/10 text-slate-600',
   };

@@ -47,7 +47,7 @@
         </div>
         <span
           v-if="m.inherited"
-          class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium shrink-0 bg-sky-500/15 text-sky-600 dark:text-sky-400"
+          class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium shrink-0 bg-info/15 text-info dark:text-info"
           title="Access inherited from parent client"
         >
           <Icon name="lucide:link-2" class="w-2.5 h-2.5" />

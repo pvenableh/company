@@ -33,13 +33,13 @@ const stats = computed(() => [
 		label: 'Overdue Items',
 		value: props.metrics?.overdueItems ?? 0,
 		icon: 'i-heroicons-exclamation-triangle',
-		color: 'text-red-500',
+		color: 'text-destructive',
 	},
 	{
 		label: 'Pending Invoices',
 		value: props.metrics?.pendingInvoiceTotal ? `$${Math.round(props.metrics.pendingInvoiceTotal / 100).toLocaleString()}` : '$0',
 		icon: 'i-heroicons-currency-dollar',
-		color: 'text-green-500',
+		color: 'text-success',
 	},
 	{
 		label: 'Open Deals',

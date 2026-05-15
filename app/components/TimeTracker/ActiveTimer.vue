@@ -5,7 +5,7 @@
 	>
 		<!-- Accent border left edge -->
 		<div class="flex">
-			<div class="w-1 shrink-0" :class="isTimerPaused ? 'bg-amber-500' : 'bg-red-500 animate-pulse'" />
+			<div class="w-1 shrink-0" :class="isTimerPaused ? 'bg-warning' : 'bg-destructive animate-pulse'" />
 
 			<div class="flex-1 p-5 space-y-4">
 				<!-- Timer display -->
@@ -14,7 +14,7 @@
 					<span class="text-4xl md:text-5xl font-mono font-semibold tabular-nums tracking-tight" :class="isTimerPaused ? 'text-muted-foreground' : 'text-foreground'">
 						{{ formatElapsed(elapsed) }}
 					</span>
-					<Badge v-if="isTimerPaused" variant="outline" class="text-xs text-amber-600 border-amber-300 dark:border-amber-700">
+					<Badge v-if="isTimerPaused" variant="outline" class="text-xs text-warning border-warning/30 dark:border-warning">
 						Paused
 					</Badge>
 				</div>
@@ -37,7 +37,7 @@
 							<Icon name="lucide:folder" class="w-3 h-3" />
 							{{ projectName }}
 						</Badge>
-						<Badge v-if="activeTimer.billable" variant="outline" class="text-xs text-emerald-600 border-emerald-200 dark:border-emerald-800">
+						<Badge v-if="activeTimer.billable" variant="outline" class="text-xs text-success border-success/30 dark:border-success">
 							<Icon name="lucide:dollar-sign" class="w-3 h-3" />
 							Billable
 						</Badge>

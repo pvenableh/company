@@ -29,7 +29,7 @@
 					</div>
 					<div class="text-right">
 						<p class="text-xs text-muted-foreground">Created: {{ formatDate(ticket.date_created) }}</p>
-						<p class="text-xs font-bold text-red-500">Age: {{ formatDuration(getTicketAge(ticket)) }}</p>
+						<p class="text-xs font-bold text-destructive">Age: {{ formatDuration(getTicketAge(ticket)) }}</p>
 					</div>
 				</div>
 				<div class="flex justify-between mt-2">

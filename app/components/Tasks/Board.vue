@@ -9,7 +9,7 @@
 				<div v-if="allTasksCount" class="w-24 h-1.5 bg-muted/30 rounded-full overflow-hidden">
 					<div
 						class="h-full rounded-full transition-all duration-500"
-						:class="progressPercent > 75 ? 'bg-emerald-500' : progressPercent > 25 ? 'bg-amber-500' : 'bg-primary'"
+						:class="progressPercent > 75 ? 'bg-success' : progressPercent > 25 ? 'bg-warning' : 'bg-primary'"
 						:style="{ width: `${progressPercent}%` }"
 					/>
 				</div>
@@ -121,8 +121,8 @@ type TaskColumn = 'todo' | 'in_progress' | 'done';
 
 const columns: { key: TaskColumn; label: string; dotColor: string; badgeClass: string }[] = [
 	{ key: 'todo', label: 'To Do', dotColor: 'bg-blue-500', badgeClass: 'bg-blue-500/15 text-blue-600' },
-	{ key: 'in_progress', label: 'In Progress', dotColor: 'bg-amber-500', badgeClass: 'bg-amber-500/15 text-amber-600' },
-	{ key: 'done', label: 'Done', dotColor: 'bg-emerald-500', badgeClass: 'bg-emerald-500/15 text-emerald-600' },
+	{ key: 'in_progress', label: 'In Progress', dotColor: 'bg-warning', badgeClass: 'bg-warning/15 text-warning' },
+	{ key: 'done', label: 'Done', dotColor: 'bg-success', badgeClass: 'bg-success/15 text-success' },
 ];
 
 // Per-column reactive arrays for drag-and-drop. Declared with explicit

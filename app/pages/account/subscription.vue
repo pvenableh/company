@@ -113,12 +113,12 @@ async function handleManageBilling() {
 
 		<template v-else>
 			<!-- Past Due Alert -->
-			<div v-if="isPastDue" class="rounded-xl border-2 border-red-300 bg-red-50 dark:bg-red-900/20 p-4 mb-6">
+			<div v-if="isPastDue" class="rounded-xl border-2 border-destructive/30 bg-destructive/10 dark:bg-destructive/20 p-4 mb-6">
 				<div class="flex items-start gap-3">
-					<UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-red-500 mt-0.5" />
+					<UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-destructive mt-0.5" />
 					<div class="flex-1">
-						<h3 class="font-semibold text-red-800 dark:text-red-300">Payment Past Due</h3>
-						<p class="text-sm text-red-600 dark:text-red-400 mt-1">
+						<h3 class="font-semibold text-destructive dark:text-destructive">Payment Past Due</h3>
+						<p class="text-sm text-destructive dark:text-destructive mt-1">
 							Your last payment failed. Please update your payment method to keep your subscription active.
 						</p>
 						<UButton size="sm" color="red" class="mt-3" @click="handleManageBilling">
@@ -129,12 +129,12 @@ async function handleManageBilling() {
 			</div>
 
 			<!-- Canceling Notice -->
-			<div v-if="isCanceling" class="rounded-xl border-2 border-amber-300 bg-amber-50 dark:bg-amber-900/20 p-4 mb-6">
+			<div v-if="isCanceling" class="rounded-xl border-2 border-warning/30 bg-warning/10 dark:bg-warning/20 p-4 mb-6">
 				<div class="flex items-start gap-3">
-					<UIcon name="i-heroicons-clock" class="w-5 h-5 text-amber-500 mt-0.5" />
+					<UIcon name="i-heroicons-clock" class="w-5 h-5 text-warning mt-0.5" />
 					<div class="flex-1">
-						<h3 class="font-semibold text-amber-800 dark:text-amber-300">Subscription Canceling</h3>
-						<p class="text-sm text-amber-600 dark:text-amber-400 mt-1">
+						<h3 class="font-semibold text-warning dark:text-warning">Subscription Canceling</h3>
+						<p class="text-sm text-warning dark:text-warning mt-1">
 							Your subscription will end on
 							<strong>{{ periodEnd ? format(periodEnd, 'MMMM d, yyyy') : '—' }}</strong>.
 							You'll retain access until then.
@@ -300,8 +300,8 @@ async function handleManageBilling() {
 			<template #content>
 				<div class="p-6">
 					<div class="flex items-start gap-4">
-						<div class="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-							<UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-red-500" />
+						<div class="w-10 h-10 rounded-full bg-destructive/10 dark:bg-destructive/30 flex items-center justify-center">
+							<UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-destructive" />
 						</div>
 						<div class="flex-1">
 							<h3 class="text-lg font-semibold text-foreground">Cancel Subscription?</h3>

@@ -58,7 +58,7 @@
 		<!-- Action Bar -->
 		<div v-if="actionItems.length || loadingActions" class="mb-8">
 			<h3 class="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
-				<Icon name="lucide:zap" class="w-3 h-3 text-amber-500" />
+				<Icon name="lucide:zap" class="w-3 h-3 text-warning" />
 				Needs your attention
 			</h3>
 			<div v-if="loadingActions" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -68,7 +68,7 @@
 				</div>
 			</div>
 			<div v-else-if="actionItems.length === 0" class="ios-card p-4 flex items-center gap-3 text-xs text-muted-foreground">
-				<Icon name="lucide:check-circle-2" class="w-4 h-4 text-emerald-500" />
+				<Icon name="lucide:check-circle-2" class="w-4 h-4 text-success" />
 				All clear — nothing waiting on you right now.
 			</div>
 			<div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -107,8 +107,8 @@
 			<div class="ios-card p-5">
 				<div class="flex items-center justify-between mb-4">
 					<div class="flex items-center gap-2">
-						<div class="w-8 h-8 rounded-xl bg-sky-500/10 flex items-center justify-center">
-							<Icon name="lucide:mail" class="w-4 h-4 text-sky-500" />
+						<div class="w-8 h-8 rounded-xl bg-info/10 flex items-center justify-center">
+							<Icon name="lucide:mail" class="w-4 h-4 text-info" />
 						</div>
 						<h3 class="text-sm font-semibold text-foreground">Email</h3>
 					</div>
@@ -148,7 +148,7 @@
 						</div>
 						<div class="h-1.5 rounded-full bg-muted/40 overflow-hidden">
 							<div
-								class="h-full bg-sky-500/70"
+								class="h-full bg-info/70"
 								:style="{ width: `${Math.min(100, emailMetrics.subscriptionRate)}%` }"
 							/>
 						</div>
@@ -207,8 +207,8 @@
 			<div class="ios-card p-5">
 				<div class="flex items-center justify-between mb-4">
 					<div class="flex items-center gap-2">
-						<div class="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-							<Icon name="lucide:rocket" class="w-4 h-4 text-emerald-500" />
+						<div class="w-8 h-8 rounded-xl bg-success/10 flex items-center justify-center">
+							<Icon name="lucide:rocket" class="w-4 h-4 text-success" />
 						</div>
 						<h3 class="text-sm font-semibold text-foreground">Active Campaigns</h3>
 					</div>
@@ -284,8 +284,8 @@
 				@click="aiToolsOpen = !aiToolsOpen"
 			>
 				<div class="flex items-center gap-3">
-					<div class="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center">
-						<Icon name="lucide:wand" class="w-4 h-4 text-amber-500" />
+					<div class="w-8 h-8 rounded-xl bg-warning/10 flex items-center justify-center">
+						<Icon name="lucide:wand" class="w-4 h-4 text-warning" />
 					</div>
 					<div class="text-left">
 						<h3 class="text-sm font-semibold text-foreground">Earnest Intelligence</h3>
@@ -582,9 +582,9 @@ const actionItems = computed(() => {
 			message: `${count} post${count > 1 ? 's' : ''} failed to publish`,
 			icon: 'lucide:alert-circle',
 			href: { path: '/social', query: { status: 'failed' } },
-			toneClass: 'border-rose-500/20',
-			iconBgClass: 'bg-rose-500/10',
-			iconColorClass: 'text-rose-500',
+			toneClass: 'border-destructive/20',
+			iconBgClass: 'bg-destructive/10',
+			iconColorClass: 'text-destructive',
 		});
 	}
 
@@ -596,9 +596,9 @@ const actionItems = computed(() => {
 			message: `${expiring.length} ${expiring.length === 1 ? 'account' : 'accounts'} need reconnecting`,
 			icon: 'lucide:link-2-off',
 			href: '/social/settings',
-			toneClass: 'border-amber-500/20',
-			iconBgClass: 'bg-amber-500/10',
-			iconColorClass: 'text-amber-500',
+			toneClass: 'border-warning/20',
+			iconBgClass: 'bg-warning/10',
+			iconColorClass: 'text-warning',
 		});
 	}
 
@@ -615,9 +615,9 @@ const actionItems = computed(() => {
 			message: `${scheduledToday.length} scheduled post${scheduledToday.length > 1 ? 's' : ''} today`,
 			icon: 'lucide:clock',
 			href: { path: '/social', query: { status: 'scheduled' } },
-			toneClass: 'border-cyan-500/20',
-			iconBgClass: 'bg-cyan-500/10',
-			iconColorClass: 'text-cyan-500',
+			toneClass: 'border-info/20',
+			iconBgClass: 'bg-info/10',
+			iconColorClass: 'text-info',
 		});
 	}
 
@@ -727,35 +727,35 @@ const topRecs = computed(() =>
 // ── Helpers ────────────────────────────────────────────────────────────
 function recUrgencyDot(u: string | number): string {
 	const v = typeof u === 'string' ? u : (u >= 70 ? 'high' : u >= 40 ? 'medium' : 'low');
-	if (v === 'high') return 'bg-rose-500';
-	if (v === 'medium') return 'bg-amber-500';
-	return 'bg-emerald-500';
+	if (v === 'high') return 'bg-destructive';
+	if (v === 'medium') return 'bg-warning';
+	return 'bg-success';
 }
 
 function campaignStatusDot(s: string): string {
-	if (s === 'active') return 'bg-emerald-500';
-	if (s === 'paused') return 'bg-amber-500';
-	if (s === 'completed') return 'bg-sky-500';
+	if (s === 'active') return 'bg-success';
+	if (s === 'paused') return 'bg-warning';
+	if (s === 'completed') return 'bg-info';
 	return 'bg-muted-foreground/40';
 }
 
 function campaignBarColor(s: string): string {
-	if (s === 'active') return 'bg-emerald-500';
-	if (s === 'paused') return 'bg-amber-500';
-	if (s === 'completed') return 'bg-sky-500';
+	if (s === 'active') return 'bg-success';
+	if (s === 'paused') return 'bg-warning';
+	if (s === 'completed') return 'bg-info';
 	return 'bg-muted-foreground/40';
 }
 
 function effortColor(level: string): string {
-	if (level === 'low') return 'text-green-600 dark:text-green-400';
-	if (level === 'high') return 'text-red-600 dark:text-red-400';
-	return 'text-amber-600 dark:text-amber-400';
+	if (level === 'low') return 'text-success dark:text-success';
+	if (level === 'high') return 'text-destructive dark:text-destructive';
+	return 'text-warning dark:text-warning';
 }
 
 function impactColor(level: string): string {
-	if (level === 'high') return 'text-green-600 dark:text-green-400';
-	if (level === 'low') return 'text-red-600 dark:text-red-400';
-	return 'text-amber-600 dark:text-amber-400';
+	if (level === 'high') return 'text-success dark:text-success';
+	if (level === 'low') return 'text-destructive dark:text-destructive';
+	return 'text-warning dark:text-warning';
 }
 
 function formatNumber(n: number): string {

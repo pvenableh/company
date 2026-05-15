@@ -638,7 +638,7 @@ const formatCurrency = (amount) => {
 
 				<UiStatCard label="Events" :value="stats.eventCount">
 					<template #detail>
-						<span v-if="stats.pendingApprovals > 0" class="text-amber-500 font-medium">{{ stats.pendingApprovals }} pending</span>
+						<span v-if="stats.pendingApprovals > 0" class="text-warning font-medium">{{ stats.pendingApprovals }} pending</span>
 						<span v-else>phases</span>
 					</template>
 				</UiStatCard>
@@ -753,7 +753,7 @@ const formatCurrency = (amount) => {
 											<div class="flex items-center gap-2 mb-0.5">
 												<span class="text-xs font-semibold text-foreground tabular-nums">{{ formatEntryDuration(entry.duration_minutes) }}</span>
 												<span v-if="entry.date" class="text-[10px] text-muted-foreground">{{ formatEntryDate(entry.date) }}</span>
-												<span v-if="entry.billable" class="text-[10px] text-emerald-600 font-medium">$</span>
+												<span v-if="entry.billable" class="text-[10px] text-success font-medium">$</span>
 											</div>
 											<p class="text-xs text-foreground truncate">{{ entry.description || 'No description' }}</p>
 											<p class="text-[10px] text-muted-foreground">
@@ -929,16 +929,16 @@ const formatCurrency = (amount) => {
 								<div class="flex items-center gap-3 min-w-0">
 									<div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
 										:class="{
-											'bg-green-500/10': inv.status === 'paid',
-											'bg-amber-500/10': inv.status === 'pending',
+											'bg-success/10': inv.status === 'paid',
+											'bg-warning/10': inv.status === 'pending',
 											'bg-blue-500/10': inv.status === 'processing',
 											'bg-muted/60': inv.status === 'archived',
 										}"
 									>
 										<UIcon name="i-heroicons-document-currency-dollar" class="w-4 h-4"
 											:class="{
-												'text-green-500': inv.status === 'paid',
-												'text-amber-500': inv.status === 'pending',
+												'text-success': inv.status === 'paid',
+												'text-warning': inv.status === 'pending',
 												'text-blue-500': inv.status === 'processing',
 												'text-muted-foreground': inv.status === 'archived',
 											}"
@@ -954,8 +954,8 @@ const formatCurrency = (amount) => {
 									<span
 										class="text-[9px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-md"
 										:class="{
-											'text-green-500 bg-green-500/10': inv.status === 'paid',
-											'text-amber-500 bg-amber-500/10': inv.status === 'pending',
+											'text-success bg-success/10': inv.status === 'paid',
+											'text-warning bg-warning/10': inv.status === 'pending',
 											'text-blue-500 bg-blue-500/10': inv.status === 'processing',
 											'text-muted-foreground bg-muted/40': inv.status === 'archived',
 										}"

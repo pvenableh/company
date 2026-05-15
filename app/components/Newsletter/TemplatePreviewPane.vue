@@ -72,9 +72,9 @@
     </div>
 
     <!-- Success indicator -->
-    <div v-else-if="html" class="px-3 py-1 bg-green-500/5 border-b flex items-center gap-1.5">
-      <Icon name="lucide:check-circle-2" class="w-3 h-3 text-green-600" />
-      <span class="text-[10px] text-green-700 font-medium">Valid MJML</span>
+    <div v-else-if="html" class="px-3 py-1 bg-success/5 border-b flex items-center gap-1.5">
+      <Icon name="lucide:check-circle-2" class="w-3 h-3 text-success" />
+      <span class="text-[10px] text-success font-medium">Valid MJML</span>
     </div>
 
     <!-- Iframe preview -->

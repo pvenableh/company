@@ -33,8 +33,8 @@ async function loadInvoices() {
 const statusConfig: Record<string, { label: string; classes: string }> = {
 	pending:    { label: 'Pending',    classes: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' },
 	processing: { label: 'Processing', classes: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
-	paid:       { label: 'Paid',       classes: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' },
-	overdue:    { label: 'Overdue',    classes: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
+	paid:       { label: 'Paid',       classes: 'bg-success/10 text-success dark:bg-success/30 dark:text-success' },
+	overdue:    { label: 'Overdue',    classes: 'bg-destructive/10 text-destructive dark:bg-destructive/30 dark:text-destructive' },
 	archived:   { label: 'Archived',   classes: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500' },
 };
 

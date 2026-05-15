@@ -53,17 +53,14 @@ const sizeClasses = computed(() => {
   return dots[props.size] || dots.sm;
 });
 
+// Color prop → palette-driven solid fill + foreground. `tokenFor` +
+// `fgFor` live in `~/utils/palette-tokens` (auto-imported by Nuxt) so
+// chip dots share the same alias table as the other leaf primitives.
 const colorClasses = computed(() => {
-  const colors: Record<string, string> = {
-    primary: "bg-primary text-primary-foreground",
-    red: "bg-red-500 text-white",
-    green: "bg-emerald-500 text-white",
-    blue: "bg-blue-500 text-white",
-    gray: "bg-gray-500 text-white",
-    amber: "bg-amber-500 text-white",
-    emerald: "bg-emerald-500 text-white",
-  };
-  return colors[props.color] || colors.primary;
+  const token = tokenFor(props.color);
+  if (token) return `bg-${token} ${fgFor(token)}`;
+  if (props.color === "gray") return "bg-muted-foreground text-white";
+  return "bg-primary text-primary-foreground";
 });
 
 const positionClasses = computed(() => {

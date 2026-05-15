@@ -9,7 +9,7 @@
 			<span class="text-xs font-mono font-semibold tabular-nums" :class="isTimerPaused ? 'text-muted-foreground' : 'text-foreground'">
 				{{ formatElapsed(elapsed) }}
 			</span>
-			<span v-if="isTimerPaused" class="text-xs text-amber-600 font-medium">
+			<span v-if="isTimerPaused" class="text-xs text-warning font-medium">
 				Paused
 			</span>
 			<span

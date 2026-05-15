@@ -12,7 +12,7 @@
 			<span class="text-xs font-semibold text-foreground capitalize">{{ tile.platform }}</span>
 			<span
 				v-if="tile.expired"
-				class="ml-auto inline-flex items-center gap-1 text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-500 font-medium"
+				class="ml-auto inline-flex items-center gap-1 text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-warning/10 text-warning font-medium"
 			>
 				<Icon name="lucide:link-2-off" class="w-2.5 h-2.5" />
 				Expiring

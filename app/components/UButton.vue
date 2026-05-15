@@ -50,66 +50,39 @@ const emit = defineEmits<{
   (e: "click", event: MouseEvent): void;
 }>();
 
-// Map colors to tailwind classes
+// Color prop → palette-driven class strings. `tokenFor` + `fgFor` live
+// in `~/utils/palette-tokens` (auto-imported by Nuxt) so every leaf
+// primitive (UButton, UBadge, UAlert, UProgress, UChip) shares one
+// alias table and one foreground rule. Adding a new colour alias is
+// one line in palette-tokens.ts — every component picks it up.
 const colorClasses = computed(() => {
   const { color } = props;
-  // Map "subtle" to "soft"
   const variant = props.variant === "subtle" ? "soft" : props.variant;
 
-  // Primary color (turquoise)
-  if (color === "primary") {
-    if (variant === "solid") return "bg-primary text-primary-foreground hover:bg-primary/90";
-    if (variant === "soft") return "bg-primary/10 text-primary hover:bg-primary/20";
-    if (variant === "outline") return "border-primary text-primary hover:bg-primary/10";
-    if (variant === "ghost") return "text-primary hover:bg-primary/10";
+  const token = tokenFor(color);
+  if (token) {
+    const fg = fgFor(token);
+    if (variant === "solid") return `bg-${token} ${fg} hover:bg-${token}/90`;
+    if (variant === "soft") return `bg-${token}/10 text-${token} hover:bg-${token}/20`;
+    if (variant === "outline") return `border-${token} text-${token} hover:bg-${token}/10`;
+    if (variant === "ghost") return `text-${token} hover:bg-${token}/10`;
+    if (variant === "link") return `text-${token} underline-offset-4 hover:underline`;
+    return "";
   }
 
-  // Destructive/Red
-  if (color === "red" || color === "destructive") {
-    if (variant === "solid") return "bg-destructive text-destructive-foreground hover:bg-destructive/90";
-    if (variant === "soft") return "bg-destructive/10 text-destructive hover:bg-destructive/20";
-    if (variant === "outline") return "border-destructive text-destructive hover:bg-destructive/10";
-    if (variant === "ghost") return "text-destructive hover:bg-destructive/10";
-  }
-
-  // Green/Success
-  if (color === "green") {
-    if (variant === "solid") return "bg-green-600 text-white hover:bg-green-700";
-    if (variant === "soft") return "bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400";
-    if (variant === "outline") return "border-green-600 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20";
-    if (variant === "ghost") return "text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20";
-  }
-
-  // Emerald
-  if (color === "emerald") {
-    if (variant === "solid") return "bg-emerald-600 text-white hover:bg-emerald-700";
-    if (variant === "soft") return "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400";
-    if (variant === "outline") return "border-emerald-600 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20";
-    if (variant === "ghost") return "text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20";
-  }
-
-  // Amber
-  if (color === "amber") {
-    if (variant === "solid") return "bg-amber-500 text-white hover:bg-amber-600";
-    if (variant === "soft") return "bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400";
-    if (variant === "outline") return "border-amber-500 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20";
-    if (variant === "ghost") return "text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20";
-  }
-
-  // Gray/Secondary
+  // Foundation neutrals — palette-independent on purpose. gray/secondary
+  // pulls from shadcn's secondary token (paper greys, not coloured);
+  // white stays a literal #fff so "subtle on dark bg" surfaces work.
   if (color === "gray" || color === "secondary") {
     if (variant === "solid") return "bg-secondary text-secondary-foreground hover:bg-secondary/80";
     if (variant === "soft") return "bg-secondary/50 text-secondary-foreground hover:bg-secondary/70";
     if (variant === "outline") return "border-input bg-background hover:bg-accent hover:text-accent-foreground";
     if (variant === "ghost") return "hover:bg-accent hover:text-accent-foreground";
   }
-
-  // White
   if (color === "white") {
     return "bg-white text-gray-900 hover:bg-gray-100 border border-gray-200";
   }
 
-  // Default fallback
   return "";
 });
 

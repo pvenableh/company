@@ -145,7 +145,7 @@ const formatDate = (dateStr: string) => {
               <UIcon
                 :name="note?.is_pinned ? 'i-heroicons-star-solid' : 'i-heroicons-star'"
                 class="w-4 h-4"
-                :class="note?.is_pinned ? 'text-amber-500' : 'text-muted-foreground'"
+                :class="note?.is_pinned ? 'text-warning' : 'text-muted-foreground'"
               />
             </button>
             <button

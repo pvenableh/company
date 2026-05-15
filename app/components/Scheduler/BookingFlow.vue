@@ -377,7 +377,7 @@ onMounted(() => {
 							<div class="flex items-center gap-2 shrink-0">
 								<span
 									v-if="(et.price_cents ?? 0) > 0"
-									class="text-xs font-semibold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+									class="text-xs font-semibold px-1.5 py-0.5 rounded bg-success/15 text-success"
 								>${{ (et.price_cents / 100).toFixed(et.price_cents % 100 === 0 ? 0 : 2) }}</span>
 								<span class="text-sm text-muted-foreground">{{ et.duration }} min</span>
 							</div>
@@ -402,7 +402,7 @@ onMounted(() => {
 						<span class="text-muted-foreground font-normal">· {{ duration }} min</span>
 						<span
 							v-if="priceLabel"
-							class="text-xs font-semibold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+							class="text-xs font-semibold px-1.5 py-0.5 rounded bg-success/15 text-success"
 						>{{ priceLabel }}</span>
 					</div>
 					<p v-if="eventType.description" class="text-xs text-muted-foreground truncate">{{ eventType.description }}</p>
@@ -527,8 +527,8 @@ onMounted(() => {
 
 			<!-- Confirmation -->
 			<div v-else-if="currentStage === 'done'" class="text-center py-8">
-				<div class="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
-					<UIcon name="i-heroicons-check" class="w-8 h-8 text-green-500" />
+				<div class="w-16 h-16 bg-success/10 rounded-full flex items-center justify-center mx-auto mb-6">
+					<UIcon name="i-heroicons-check" class="w-8 h-8 text-success" />
 				</div>
 				<h2 class="text-2xl font-semibold mb-2">Meeting Confirmed!</h2>
 				<p class="text-muted-foreground mb-6">You'll receive a confirmation email with the meeting details.</p>

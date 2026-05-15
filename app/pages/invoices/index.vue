@@ -74,8 +74,8 @@ function getDueDateUrgency(inv: Invoice): 'past' | 'urgent' | 'normal' {
 }
 
 const dueDateColors: Record<string, string> = {
-  past: 'text-red-400',
-  urgent: 'text-amber-400',
+  past: 'text-destructive',
+  urgent: 'text-warning',
   normal: 'text-muted-foreground',
 };
 
@@ -182,7 +182,7 @@ watch(() => selectedClient.value, debouncedFetch);
     <!-- Stats -->
     <div class="flex gap-4 mb-6">
       <UiStatCard class="flex-1" label="Total Billed" :value="formatAmount(totalBilled)" />
-      <UiStatCard class="flex-1" label="Total Unpaid" :value="formatAmount(totalUnpaid)" :value-class="totalUnpaid > 0 ? 'text-amber-400' : ''" />
+      <UiStatCard class="flex-1" label="Total Unpaid" :value="formatAmount(totalUnpaid)" :value-class="totalUnpaid > 0 ? 'text-warning' : ''" />
     </div>
 
     <!-- Filters -->
@@ -302,7 +302,7 @@ watch(() => selectedClient.value, debouncedFetch);
                   </span>
                   <span
                     v-if="getDueDateUrgency(inv) === 'past'"
-                    class="text-[9px] uppercase font-semibold text-red-400 ml-1"
+                    class="text-[9px] uppercase font-semibold text-destructive ml-1"
                   >
                     Past due
                   </span>
@@ -318,7 +318,7 @@ watch(() => selectedClient.value, debouncedFetch);
                     </NuxtLink>
                     <button
                       v-if="isAdmin"
-                      class="p-1.5 rounded-md text-muted-foreground/50 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                      class="p-1.5 rounded-md text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors"
                       title="Delete invoice"
                       @click="deleteTarget = inv"
                     >
@@ -365,7 +365,7 @@ watch(() => selectedClient.value, debouncedFetch);
               </span>
               <span
                 v-if="getDueDateUrgency(inv) === 'past'"
-                class="text-[9px] uppercase font-semibold text-red-400 ml-1"
+                class="text-[9px] uppercase font-semibold text-destructive ml-1"
               >
                 Past due
               </span>
@@ -478,8 +478,8 @@ watch(() => selectedClient.value, debouncedFetch);
       >
         <div class="ios-card shadow-xl w-full max-w-sm mx-4 p-6">
           <div class="flex items-center gap-3 mb-4">
-            <div class="w-10 h-10 rounded-full bg-red-500/15 flex items-center justify-center shrink-0">
-              <Icon name="lucide:trash-2" class="w-5 h-5 text-red-400" />
+            <div class="w-10 h-10 rounded-full bg-destructive/15 flex items-center justify-center shrink-0">
+              <Icon name="lucide:trash-2" class="w-5 h-5 text-destructive" />
             </div>
             <div>
               <h2 class="font-semibold">Delete Invoice</h2>

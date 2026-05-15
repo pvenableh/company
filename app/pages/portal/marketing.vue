@@ -21,8 +21,8 @@ const loadingTouches = ref(false);
 const statusConfig: Record<string, { label: string; classes: string; icon: string }> = {
 	draft:         { label: 'Draft',         classes: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400', icon: 'lucide:file' },
 	scheduled:     { label: 'Scheduled',     classes: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400', icon: 'lucide:clock' },
-	partial_sent:  { label: 'In Progress',   classes: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400', icon: 'lucide:send' },
-	completed:     { label: 'Completed',     classes: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400', icon: 'lucide:check-circle-2' },
+	partial_sent:  { label: 'In Progress',   classes: 'bg-warning/10 text-warning dark:bg-warning/30 dark:text-warning', icon: 'lucide:send' },
+	completed:     { label: 'Completed',     classes: 'bg-success/10 text-success dark:bg-success/30 dark:text-success', icon: 'lucide:check-circle-2' },
 	cancelled:     { label: 'Cancelled',     classes: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500', icon: 'lucide:x-circle' },
 	archived:      { label: 'Archived',      classes: 'bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-600', icon: 'lucide:archive' },
 };
@@ -30,9 +30,9 @@ const statusConfig: Record<string, { label: string; classes: string; icon: strin
 const touchStatusConfig: Record<string, { label: string; dot: string }> = {
 	pending:   { label: 'Pending',   dot: 'bg-gray-400' },
 	scheduled: { label: 'Scheduled', dot: 'bg-blue-500' },
-	sent:      { label: 'Sent',      dot: 'bg-green-500' },
+	sent:      { label: 'Sent',      dot: 'bg-success' },
 	cancelled: { label: 'Cancelled', dot: 'bg-gray-400' },
-	failed:    { label: 'Failed',    dot: 'bg-red-500' },
+	failed:    { label: 'Failed',    dot: 'bg-destructive' },
 };
 
 async function loadCampaigns() {

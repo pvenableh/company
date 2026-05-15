@@ -179,7 +179,7 @@
 									>
 										<UAvatar :src="getAvatarUrl(getUserById(userId))" :alt="getUserFullName(getUserById(userId))" size="2xs" />
 										{{ getUserFullName(getUserById(userId)) }}
-										<button type="button" class="hover:text-red-500 transition-colors" @click="removeUser(userId)">
+										<button type="button" class="hover:text-destructive transition-colors" @click="removeUser(userId)">
 											<UIcon name="i-heroicons-x-mark" class="w-3 h-3" />
 										</button>
 									</span>

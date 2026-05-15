@@ -58,12 +58,12 @@
                     :key="t.id"
                     class="flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl border-2 transition-all text-center"
                     :class="form.projectType === t.id
-                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 shadow-sm'
+                      ? 'border-success bg-success/10 dark:bg-success/20 shadow-sm'
                       : 'border-transparent bg-muted/50 hover:bg-muted hover:border-muted-foreground/20'"
                     @click="form.projectType = t.id"
                   >
-                    <Icon :name="t.icon" class="w-5 h-5" :class="form.projectType === t.id ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'" />
-                    <span class="text-xs font-medium" :class="form.projectType === t.id ? 'text-emerald-700 dark:text-emerald-300' : 'text-foreground'">{{ t.label }}</span>
+                    <Icon :name="t.icon" class="w-5 h-5" :class="form.projectType === t.id ? 'text-success dark:text-success' : 'text-muted-foreground'" />
+                    <span class="text-xs font-medium" :class="form.projectType === t.id ? 'text-success dark:text-success' : 'text-foreground'">{{ t.label }}</span>
                   </button>
                 </div>
               </div>
@@ -77,12 +77,12 @@
                     :key="s.value"
                     class="flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl border-2 transition-all text-center"
                     :class="form.scope === s.value
-                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 shadow-sm'
+                      ? 'border-success bg-success/10 dark:bg-success/20 shadow-sm'
                       : 'border-transparent bg-muted/50 hover:bg-muted hover:border-muted-foreground/20'"
                     @click="form.scope = s.value"
                   >
-                    <Icon :name="s.icon" class="w-5 h-5" :class="form.scope === s.value ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'" />
-                    <span class="text-xs font-medium" :class="form.scope === s.value ? 'text-emerald-700 dark:text-emerald-300' : 'text-foreground'">{{ s.label }}</span>
+                    <Icon :name="s.icon" class="w-5 h-5" :class="form.scope === s.value ? 'text-success dark:text-success' : 'text-muted-foreground'" />
+                    <span class="text-xs font-medium" :class="form.scope === s.value ? 'text-success dark:text-success' : 'text-foreground'">{{ s.label }}</span>
                   </button>
                 </div>
               </div>
@@ -96,12 +96,12 @@
                     :key="c.value"
                     class="flex items-center gap-2 px-4 py-3 rounded-xl border-2 transition-all"
                     :class="form.clientType === c.value
-                      ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 shadow-sm'
+                      ? 'border-success bg-success/10 dark:bg-success/20 shadow-sm'
                       : 'border-transparent bg-muted/50 hover:bg-muted hover:border-muted-foreground/20'"
                     @click="form.clientType = c.value"
                   >
-                    <Icon :name="c.icon" class="w-5 h-5" :class="form.clientType === c.value ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'" />
-                    <span class="text-sm font-medium" :class="form.clientType === c.value ? 'text-emerald-700 dark:text-emerald-300' : 'text-foreground'">{{ c.label }}</span>
+                    <Icon :name="c.icon" class="w-5 h-5" :class="form.clientType === c.value ? 'text-success dark:text-success' : 'text-muted-foreground'" />
+                    <span class="text-sm font-medium" :class="form.clientType === c.value ? 'text-success dark:text-success' : 'text-foreground'">{{ c.label }}</span>
                   </button>
                 </div>
               </div>
@@ -113,7 +113,7 @@
                   <input
                     v-model="form.startDate"
                     type="date"
-                    class="w-full rounded-xl border bg-background px-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                    class="w-full rounded-xl border bg-background px-4 py-2.5 text-sm focus:ring-2 focus:ring-success/20 focus:border-success outline-none transition-all"
                   />
                 </div>
                 <div>
@@ -124,7 +124,7 @@
                   <input
                     v-model="form.targetDeadline"
                     type="date"
-                    class="w-full rounded-xl border bg-background px-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all"
+                    class="w-full rounded-xl border bg-background px-4 py-2.5 text-sm focus:ring-2 focus:ring-success/20 focus:border-success outline-none transition-all"
                   />
                 </div>
               </div>
@@ -140,7 +140,7 @@
                   rows="2"
                   maxlength="500"
                   placeholder="e.g. Needs accessibility audit, multi-language support, rush delivery..."
-                  class="w-full rounded-xl border bg-background px-4 py-3 text-sm resize-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 outline-none transition-all placeholder:text-muted-foreground/60"
+                  class="w-full rounded-xl border bg-background px-4 py-3 text-sm resize-none focus:ring-2 focus:ring-success/20 focus:border-success outline-none transition-all placeholder:text-muted-foreground/60"
                 />
                 <span v-if="form.specialRequirements.length > 400" class="text-xs text-muted-foreground text-right block mt-1">{{ form.specialRequirements.length }}/500</span>
               </div>
@@ -165,7 +165,7 @@
               <div class="relative w-16 h-16 mx-auto mb-6">
                 <div class="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 animate-pulse opacity-30" />
                 <div class="absolute inset-0 flex items-center justify-center">
-                  <Icon name="lucide:sparkles" class="w-7 h-7 text-emerald-600 dark:text-emerald-400 animate-bounce" />
+                  <Icon name="lucide:sparkles" class="w-7 h-7 text-success dark:text-success animate-bounce" />
                 </div>
               </div>
               <h3 class="font-semibold text-foreground mb-1">Generating your timeline...</h3>
@@ -173,7 +173,7 @@
                 Analyzing project requirements and building a custom timeline with tasks
               </p>
               <div class="flex justify-center gap-1 mt-4">
-                <div v-for="i in 3" :key="i" class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-bounce" :style="{ animationDelay: `${i * 150}ms` }" />
+                <div v-for="i in 3" :key="i" class="w-1.5 h-1.5 rounded-full bg-success animate-bounce" :style="{ animationDelay: `${i * 150}ms` }" />
               </div>
             </div>
 
@@ -202,9 +202,9 @@
             <!-- Timeline editor -->
             <div v-else-if="proposedEvents.length > 0" class="space-y-3">
               <!-- AI Summary -->
-              <div v-if="aiSummary" class="rounded-xl bg-emerald-50 dark:bg-emerald-900/10 border border-emerald-200/50 dark:border-emerald-800/30 p-3 flex items-start gap-2">
-                <Icon name="lucide:sparkles" class="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-                <p class="text-xs text-emerald-800 dark:text-emerald-300">{{ aiSummary }}</p>
+              <div v-if="aiSummary" class="rounded-xl bg-success/10 dark:bg-success/10 border border-success/50 dark:border-success/30 p-3 flex items-start gap-2">
+                <Icon name="lucide:sparkles" class="w-4 h-4 text-success dark:text-success shrink-0 mt-0.5" />
+                <p class="text-xs text-success dark:text-success">{{ aiSummary }}</p>
               </div>
 
               <!-- Stats bar -->
@@ -229,7 +229,7 @@
                     <button
                       class="mt-1 w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition-colors"
                       :class="evt.enabled
-                        ? 'bg-emerald-500 border-emerald-500 text-white'
+                        ? 'bg-success border-success text-white'
                         : 'border-muted-foreground/30 hover:border-muted-foreground/50'"
                       @click="evt.enabled = !evt.enabled"
                     >
@@ -259,7 +259,7 @@
                         <!-- Milestone toggle -->
                         <button
                           class="shrink-0 transition-colors"
-                          :class="evt.is_milestone ? 'text-amber-500' : 'text-muted-foreground/30 hover:text-muted-foreground'"
+                          :class="evt.is_milestone ? 'text-warning' : 'text-muted-foreground/30 hover:text-muted-foreground'"
                           @click="evt.is_milestone = !evt.is_milestone"
                           title="Toggle milestone"
                         >
@@ -329,7 +329,7 @@
                             </button>
                           </div>
                           <button
-                            class="text-[11px] text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 flex items-center gap-1"
+                            class="text-[11px] text-success dark:text-success hover:text-success dark:hover:text-success flex items-center gap-1"
                             @click="addTask(evt)"
                           >
                             <Icon name="lucide:plus" class="w-3 h-3" />
@@ -382,7 +382,7 @@
               <div class="relative w-16 h-16 mx-auto mb-6">
                 <div class="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 animate-pulse opacity-30" />
                 <div class="absolute inset-0 flex items-center justify-center">
-                  <Icon name="lucide:loader-2" class="w-7 h-7 text-emerald-600 dark:text-emerald-400 animate-spin" />
+                  <Icon name="lucide:loader-2" class="w-7 h-7 text-success dark:text-success animate-spin" />
                 </div>
               </div>
               <h3 class="font-semibold text-foreground mb-1">Creating events & tasks...</h3>
@@ -395,15 +395,15 @@
                 <h3 class="text-sm font-semibold text-foreground mb-3">Timeline Summary</h3>
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div class="text-center">
-                    <div class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{{ enabledEvents.length }}</div>
+                    <div class="text-2xl font-bold text-success dark:text-success">{{ enabledEvents.length }}</div>
                     <div class="text-[10px] text-muted-foreground uppercase tracking-wider">Events</div>
                   </div>
                   <div class="text-center">
-                    <div class="text-2xl font-bold text-teal-600 dark:text-teal-400">{{ totalTasks }}</div>
+                    <div class="text-2xl font-bold text-info dark:text-info">{{ totalTasks }}</div>
                     <div class="text-[10px] text-muted-foreground uppercase tracking-wider">Tasks</div>
                   </div>
                   <div class="text-center">
-                    <div class="text-2xl font-bold text-amber-600 dark:text-amber-400">{{ totalMilestones }}</div>
+                    <div class="text-2xl font-bold text-warning dark:text-warning">{{ totalMilestones }}</div>
                     <div class="text-[10px] text-muted-foreground uppercase tracking-wider">Milestones</div>
                   </div>
                   <div class="text-center">
@@ -426,7 +426,7 @@
                   <Icon
                     v-if="evt.is_milestone"
                     name="lucide:diamond"
-                    class="w-3.5 h-3.5 text-amber-500 shrink-0"
+                    class="w-3.5 h-3.5 text-warning shrink-0"
                   />
                   <span v-else class="w-3.5 h-3.5 flex items-center justify-center shrink-0">
                     <span class="w-1.5 h-1.5 rounded-full bg-muted-foreground/40" />
@@ -704,9 +704,9 @@ function getTypeBadgeStyle(type: string): string {
     General: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400',
     Design: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400',
     Content: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-    Timeline: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
-    Financial: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-    Hours: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
+    Timeline: 'bg-success/10 text-success dark:bg-success/30 dark:text-success',
+    Financial: 'bg-warning/10 text-warning dark:bg-warning/30 dark:text-warning',
+    Hours: 'bg-info/10 text-info dark:bg-info dark:text-info',
   };
   return styles[type] || styles.General;
 }
@@ -715,7 +715,7 @@ function getPriorityStyle(priority: string): string {
   const styles: Record<string, string> = {
     low: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
     medium: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
-    high: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
+    high: 'bg-destructive/10 text-destructive dark:bg-destructive/30 dark:text-destructive',
   };
   return styles[priority] || styles.medium;
 }

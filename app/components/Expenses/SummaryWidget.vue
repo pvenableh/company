@@ -53,7 +53,7 @@ const topCategories = computed(() => {
 	<div class="ios-card p-5">
 		<div class="flex items-center justify-between mb-4">
 			<div class="flex items-center gap-2">
-				<UIcon name="i-heroicons-receipt-percent" class="w-5 h-5 text-red-400" />
+				<UIcon name="i-heroicons-receipt-percent" class="w-5 h-5 text-destructive" />
 				<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70">Expenses</h3>
 			</div>
 			<button
@@ -91,7 +91,7 @@ const topCategories = computed(() => {
 					<span
 						v-if="monthChange !== null"
 						class="text-[10px] font-medium"
-						:class="monthChange > 0 ? 'text-red-400' : 'text-emerald-400'"
+						:class="monthChange > 0 ? 'text-destructive' : 'text-success'"
 					>
 						{{ monthChange > 0 ? '+' : '' }}{{ monthChange }}%
 					</span>

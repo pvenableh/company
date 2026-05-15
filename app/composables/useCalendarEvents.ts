@@ -53,20 +53,31 @@ export interface CalendarEvent {
 	source_record: any;
 }
 
+import { TAG_RAMP_LENGTH } from '~/composables/useAppAccent';
+
 /**
- * Deterministic HSL color from a string id. Used to color-key a host across
- * the calendar + day-timeline. Hue space is wide enough that two random IDs
- * don't visually collide; we hold saturation + lightness constant so colors
- * read as a related family rather than a clown palette.
+ * Deterministic palette-coherent color from a string id. Used to color-key
+ * a host across the calendar + day-timeline.
+ *
+ * Identity contract: same `id` → same `--tag-N` slot, every render. The
+ * actual hue at that slot is palette-driven (`applyPaletteToDocument`),
+ * so a busy calendar day reads as 5–8 cool aquas on Sea Mist, 5–8 neon
+ * sapphires on Aurora, 5–8 monochromatic blues on Neutral — coherent
+ * with the rest of the app's chrome, not a clown palette.
+ *
+ * Trade-off vs the previous 360-hue hash: collisions are higher (1/8
+ * within a slot vs 1/360 within a hue). Fine for the typical 1–5 hosts
+ * visible at once; bump `TAG_RAMP_LENGTH` if collisions become a problem
+ * (lockstep with the safelist + themes.css defaults + tailwind.css).
  */
 export function hostAccentColor(id: string | null | undefined): string {
-	if (!id) return 'hsl(0, 0%, 60%)';
+	if (!id) return 'hsl(var(--muted-foreground))';
 	let hash = 0;
 	for (let i = 0; i < id.length; i++) {
 		hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
 	}
-	const hue = hash % 360;
-	return `hsl(${hue}, 65%, 55%)`;
+	const slot = (hash % TAG_RAMP_LENGTH) + 1;
+	return `hsl(var(--tag-${slot}))`;
 }
 
 export function useCalendarEvents() {

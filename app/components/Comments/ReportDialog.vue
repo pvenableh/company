@@ -2,7 +2,7 @@
 	<UModal v-model="open">
 		<template #header>
 			<div class="flex items-center gap-2">
-				<Icon name="i-heroicons-flag" class="text-red-500" />
+				<Icon name="i-heroicons-flag" class="text-destructive" />
 				<span class="font-semibold text-sm">Report Comment</span>
 			</div>
 		</template>

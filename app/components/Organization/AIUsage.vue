@@ -2,8 +2,8 @@
 	<div class="space-y-6">
 		<!-- Permission gate -->
 		<div v-if="!canViewUsage" class="flex flex-col items-center justify-center py-16">
-			<div class="w-14 h-14 rounded-2xl bg-red-500/10 flex items-center justify-center mb-4">
-				<UIcon name="i-heroicons-lock-closed" class="w-6 h-6 text-red-400" />
+			<div class="w-14 h-14 rounded-2xl bg-destructive/10 flex items-center justify-center mb-4">
+				<UIcon name="i-heroicons-lock-closed" class="w-6 h-6 text-destructive" />
 			</div>
 			<h3 class="font-semibold text-foreground mb-1">Access Restricted</h3>
 			<p class="text-sm text-muted-foreground text-center max-w-sm">
@@ -42,7 +42,7 @@
 				<!-- Balance -->
 				<div>
 					<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Balance</span>
-					<p class="text-xl font-bold" :class="orgTokenInfo.balance !== null && orgTokenInfo.balance <= 0 ? 'text-red-400' : 'text-foreground'">
+					<p class="text-xl font-bold" :class="orgTokenInfo.balance !== null && orgTokenInfo.balance <= 0 ? 'text-destructive' : 'text-foreground'">
 						{{ orgTokenInfo.balance !== null ? formatNumber(orgTokenInfo.balance) : 'Unlimited' }}
 					</p>
 				</div>
@@ -64,7 +64,7 @@
 				<div class="w-full h-2 bg-muted/30 rounded-full overflow-hidden">
 					<div
 						class="h-full rounded-full transition-all"
-						:class="orgTokenInfo.used / orgTokenInfo.limit > 0.8 ? 'bg-red-500' : orgTokenInfo.used / orgTokenInfo.limit > 0.6 ? 'bg-amber-500' : 'bg-primary'"
+						:class="orgTokenInfo.used / orgTokenInfo.limit > 0.8 ? 'bg-destructive' : orgTokenInfo.used / orgTokenInfo.limit > 0.6 ? 'bg-warning' : 'bg-primary'"
 						:style="{ width: Math.min(100, (orgTokenInfo.used / orgTokenInfo.limit) * 100) + '%' }"
 					/>
 				</div>
@@ -74,8 +74,8 @@
 				</p>
 			</div>
 			<!-- Depleted warning -->
-			<div v-if="orgTokenInfo.balance !== null && orgTokenInfo.balance <= 0" class="mt-3 p-2.5 rounded-lg bg-red-500/10 border border-red-500/20">
-				<p class="text-[11px] text-red-400">
+			<div v-if="orgTokenInfo.balance !== null && orgTokenInfo.balance <= 0" class="mt-3 p-2.5 rounded-lg bg-destructive/10 border border-destructive/20">
+				<p class="text-[11px] text-destructive">
 					Token balance depleted. AI features are disabled until more tokens are purchased.
 				</p>
 			</div>
@@ -113,8 +113,8 @@
 				</div>
 				<div class="ios-card p-4">
 					<div class="flex items-center gap-2 mb-2">
-						<div class="h-8 w-8 rounded-xl bg-green-500/10 flex items-center justify-center">
-							<UIcon name="i-heroicons-currency-dollar" class="w-4 h-4 text-green-500" />
+						<div class="h-8 w-8 rounded-xl bg-success/10 flex items-center justify-center">
+							<UIcon name="i-heroicons-currency-dollar" class="w-4 h-4 text-success" />
 						</div>
 					</div>
 					<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Est. Cost</span>
@@ -122,8 +122,8 @@
 				</div>
 				<div class="ios-card p-4">
 					<div class="flex items-center gap-2 mb-2">
-						<div class="h-8 w-8 rounded-xl bg-amber-500/10 flex items-center justify-center">
-							<UIcon name="i-heroicons-users" class="w-4 h-4 text-amber-500" />
+						<div class="h-8 w-8 rounded-xl bg-warning/10 flex items-center justify-center">
+							<UIcon name="i-heroicons-users" class="w-4 h-4 text-warning" />
 						</div>
 					</div>
 					<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Active Users</span>
@@ -224,7 +224,7 @@
 								<div class="w-full h-1.5 bg-muted/30 rounded-full overflow-hidden">
 									<div
 										class="h-full rounded-full transition-all"
-										:class="ub.used / ub.budget > 0.8 ? 'bg-red-500' : 'bg-primary'"
+										:class="ub.used / ub.budget > 0.8 ? 'bg-destructive' : 'bg-primary'"
 										:style="{ width: Math.min(100, (ub.used / ub.budget) * 100) + '%' }"
 									/>
 								</div>
@@ -234,7 +234,7 @@
 							</div>
 							<p v-else class="text-[10px] text-muted-foreground">No budget set</p>
 						</div>
-						<span v-if="ub.isLowUsage" class="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 font-medium">Low Usage</span>
+						<span v-if="ub.isLowUsage" class="text-[10px] px-1.5 py-0.5 rounded bg-warning/10 text-warning font-medium">Low Usage</span>
 					</div>
 				</div>
 			</div>

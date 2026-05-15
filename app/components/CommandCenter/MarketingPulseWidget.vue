@@ -17,7 +17,7 @@
 				</span>
 				<span
 					v-if="metrics?.failedPosts && metrics.failedPosts > 0"
-					class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-600 text-[10px] font-semibold uppercase tracking-wider"
+					class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-destructive/10 text-destructive text-[10px] font-semibold uppercase tracking-wider"
 				>
 					<UIcon name="i-heroicons-exclamation-triangle" class="w-3 h-3" />
 					{{ metrics.failedPosts }} failed
@@ -110,7 +110,7 @@
 					<p
 						v-if="kpi.sublabel"
 						class="text-[11px] mt-auto"
-						:class="kpi.tone === 'positive' ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'"
+						:class="kpi.tone === 'positive' ? 'text-success dark:text-success' : 'text-muted-foreground'"
 					>
 						{{ kpi.sublabel }}
 					</p>
@@ -207,8 +207,8 @@ function urgencyLabel(u: number): string {
 }
 
 function urgencyChipClass(u: number): string {
-	if (u >= 0.75) return 'bg-rose-500/10 text-rose-600';
-	if (u >= 0.5) return 'bg-amber-500/10 text-amber-600';
+	if (u >= 0.75) return 'bg-destructive/10 text-destructive';
+	if (u >= 0.5) return 'bg-warning/10 text-warning';
 	return 'bg-muted/40 text-muted-foreground';
 }
 

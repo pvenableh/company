@@ -164,10 +164,17 @@ onMounted(() => {
 	});
 });
 
+// Filter chrome aligns with CalendarEventChip's type → semantic-token
+// mapping so the legend and the event chips read as one system:
+//   Appointments (default) → info
+//   Video (positive outcome) → success
+//   Follow-ups (action needed) → warning
+// Dark-mode variants drop out — semantic tokens read from the same CSS
+// var in both themes, so a single utility paints correctly under either.
 const eventFilters = [
-	{ key: 'appointments', label: 'Appointments', dot: 'bg-blue-500', activeBg: 'bg-blue-100/60 dark:bg-blue-900/20', activeText: 'text-blue-700 dark:text-blue-300' },
-	{ key: 'video', label: 'Video', dot: 'bg-emerald-500', activeBg: 'bg-emerald-100/60 dark:bg-emerald-900/20', activeText: 'text-emerald-700 dark:text-emerald-300' },
-	{ key: 'follow_ups', label: 'Follow-ups', dot: 'bg-amber-500', activeBg: 'bg-amber-100/60 dark:bg-amber-900/20', activeText: 'text-amber-700 dark:text-amber-300' },
+	{ key: 'appointments', label: 'Appointments', dot: 'bg-info',    activeBg: 'bg-info/10',    activeText: 'text-info' },
+	{ key: 'video',        label: 'Video',        dot: 'bg-success', activeBg: 'bg-success/10', activeText: 'text-success' },
+	{ key: 'follow_ups',   label: 'Follow-ups',   dot: 'bg-warning', activeBg: 'bg-warning/10', activeText: 'text-warning' },
 ];
 
 const toggleFilter = (key: string) => {

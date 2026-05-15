@@ -258,7 +258,7 @@ onMounted(fetchData);
 				v-if="contract.contract_status === 'signed'"
 				class="ios-card p-4 mb-4 border-l-4 border-l-green-500"
 			>
-				<p class="text-[10px] uppercase tracking-wider text-green-700 dark:text-green-400">Signed</p>
+				<p class="text-[10px] uppercase tracking-wider text-success dark:text-success">Signed</p>
 				<p class="text-sm t-text mt-0.5">
 					{{ contract.signed_by_name }} <span class="text-muted-foreground">&lt;{{ contract.signed_by_email }}&gt;</span>
 				</p>
@@ -270,9 +270,9 @@ onMounted(fetchData);
 			<!-- Save bar (sticky) when editing blocks -->
 			<div
 				v-if="mode === 'edit' && blocksDirty"
-				class="sticky top-2 z-30 mb-4 flex items-center justify-between gap-2 ios-card p-2.5 bg-amber-50/90 dark:bg-amber-900/30 border-amber-300/40"
+				class="sticky top-2 z-30 mb-4 flex items-center justify-between gap-2 ios-card p-2.5 bg-warning/10 dark:bg-warning/30 border-warning/40"
 			>
-				<p class="text-xs text-amber-800 dark:text-amber-200">Unsaved changes to contract blocks.</p>
+				<p class="text-xs text-warning">Unsaved changes to contract blocks.</p>
 				<button
 					class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
 					:disabled="savingBlocks"

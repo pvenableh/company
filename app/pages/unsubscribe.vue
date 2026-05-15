@@ -49,8 +49,8 @@ onMounted(async () => {
 
       <!-- Success -->
       <div v-if="status === 'success'" class="space-y-4">
-        <div class="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto">
-          <Icon name="lucide:check" class="w-8 h-8 text-green-600" />
+        <div class="w-16 h-16 rounded-full bg-success/10 dark:bg-success/30 flex items-center justify-center mx-auto">
+          <Icon name="lucide:check" class="w-8 h-8 text-success" />
         </div>
         <h1 class="text-2xl font-semibold">You've been unsubscribed</h1>
         <p class="text-muted-foreground">
@@ -65,8 +65,8 @@ onMounted(async () => {
 
       <!-- Error -->
       <div v-if="status === 'error'" class="space-y-4">
-        <div class="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mx-auto">
-          <Icon name="lucide:alert-triangle" class="w-8 h-8 text-red-600" />
+        <div class="w-16 h-16 rounded-full bg-destructive/10 dark:bg-destructive/30 flex items-center justify-center mx-auto">
+          <Icon name="lucide:alert-triangle" class="w-8 h-8 text-destructive" />
         </div>
         <h1 class="text-2xl font-semibold">Unable to Unsubscribe</h1>
         <p class="text-muted-foreground">{{ errorMessage }}</p>

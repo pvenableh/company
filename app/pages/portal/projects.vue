@@ -234,9 +234,9 @@ watch(() => selectedOrg.value, () => loadProjects());
 								<span
 									class="text-xs px-2.5 py-1 rounded-full font-medium"
 									:class="{
-										'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400': selectedProject.status === 'In Progress',
+										'bg-success/10 text-success dark:bg-success/30 dark:text-success': selectedProject.status === 'In Progress',
 										'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400': selectedProject.status === 'Scheduled',
-										'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400': selectedProject.status === 'Pending',
+										'bg-warning/10 text-warning dark:bg-warning/30 dark:text-warning': selectedProject.status === 'Pending',
 										'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400': selectedProject.status === 'Completed',
 									}"
 								>
@@ -286,7 +286,7 @@ watch(() => selectedOrg.value, () => loadProjects());
 							     review the design before approving. -->
 							<div v-if="pendingEvents.length > 0">
 								<p class="text-xs text-muted-foreground mb-2 flex items-center gap-1">
-									<UIcon name="i-heroicons-exclamation-circle" class="w-3.5 h-3.5 text-amber-500" />
+									<UIcon name="i-heroicons-exclamation-circle" class="w-3.5 h-3.5 text-warning" />
 									Pending Your Approval ({{ pendingEvents.length }})
 								</p>
 								<div class="space-y-3">
@@ -362,7 +362,7 @@ watch(() => selectedOrg.value, () => loadProjects());
 										<div class="flex items-center gap-2 min-w-0">
 											<div class="h-2 w-2 rounded-full shrink-0"
 												:class="{
-													'bg-green-500': evt.approval === 'Approved',
+													'bg-success': evt.approval === 'Approved',
 													'bg-gray-400': evt.approval !== 'Approved',
 												}"
 											/>
@@ -370,7 +370,7 @@ watch(() => selectedOrg.value, () => loadProjects());
 										</div>
 										<span
 											v-if="evt.approval === 'Approved'"
-											class="text-[8px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-md text-green-500 bg-green-500/10 shrink-0"
+											class="text-[8px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-md text-success bg-success/10 shrink-0"
 										>
 											Approved
 										</span>

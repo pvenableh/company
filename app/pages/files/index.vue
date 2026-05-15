@@ -112,8 +112,8 @@ function getFileIconColor(type: string): string {
   if (type.startsWith('image/')) return 'text-blue-400';
   if (type.startsWith('video/')) return 'text-purple-400';
   if (type.startsWith('audio/')) return 'text-pink-400';
-  if (type.includes('pdf')) return 'text-red-400';
-  if (type.includes('spreadsheet') || type.includes('excel')) return 'text-emerald-400';
+  if (type.includes('pdf')) return 'text-destructive';
+  if (type.includes('spreadsheet') || type.includes('excel')) return 'text-success';
   if (type.includes('document') || type.includes('word')) return 'text-blue-500';
   return 'text-muted-foreground';
 }
@@ -467,7 +467,7 @@ onMounted(async () => {
             @click="navigateToFolder(folder.id, folder.name)"
           >
             <div class="flex items-start justify-between mb-2">
-              <Icon name="lucide:folder" class="w-8 h-8 text-amber-400" />
+              <Icon name="lucide:folder" class="w-8 h-8 text-warning" />
               <div class="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
                 <button
                   class="p-1 text-muted-foreground hover:text-foreground transition-colors"
@@ -562,7 +562,7 @@ onMounted(async () => {
         @click="navigateToFolder(folder.id, folder.name)"
       >
         <div class="flex items-center gap-3">
-          <Icon name="lucide:folder" class="w-5 h-5 text-amber-400 shrink-0" />
+          <Icon name="lucide:folder" class="w-5 h-5 text-warning shrink-0" />
           <span class="text-sm font-medium truncate">{{ folder.name }}</span>
         </div>
         <span class="text-xs text-muted-foreground hidden md:block">—</span>

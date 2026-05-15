@@ -50,6 +50,6 @@ const getColorClass = () => {
   const isPositive = props.value > 0;
   const isBetter = (isPositive && props.higherIsBetter) || (!isPositive && !props.higherIsBetter);
   
-  return isBetter ? 'text-green-500' : 'text-red-500';
+  return isBetter ? 'text-success' : 'text-destructive';
 };
 </script>

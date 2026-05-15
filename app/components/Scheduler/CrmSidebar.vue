@@ -82,9 +82,9 @@ const formatFollowUpDate = (event: CalendarEvent) => {
 		<!-- Upcoming Follow-ups -->
 		<div class="ios-card p-4">
 			<div class="flex items-center gap-2 mb-3">
-				<UIcon name="i-heroicons-arrow-path" class="w-4 h-4 text-amber-500" />
+				<UIcon name="i-heroicons-arrow-path" class="w-4 h-4 text-warning" />
 				<h3 class="text-xs font-semibold uppercase tracking-wide text-foreground/70">Follow-ups</h3>
-				<span v-if="upcomingFollowUps.length" class="text-[10px] font-medium text-amber-600 bg-amber-100/60 dark:bg-amber-900/20 px-1.5 py-0.5 rounded-full">
+				<span v-if="upcomingFollowUps.length" class="text-[10px] font-medium text-warning bg-warning/10 px-1.5 py-0.5 rounded-full">
 					{{ upcomingFollowUps.length }}
 				</span>
 			</div>
@@ -147,8 +147,8 @@ const formatFollowUpDate = (event: CalendarEvent) => {
 			@click="$emit('open-requests')"
 		>
 			<div class="flex items-center gap-3">
-				<div class="p-2 bg-amber-100/60 dark:bg-amber-900/20 rounded-xl">
-					<UIcon name="i-heroicons-inbox" class="w-4 h-4 text-amber-600" />
+				<div class="p-2 bg-warning/10 rounded-xl">
+					<UIcon name="i-heroicons-inbox" class="w-4 h-4 text-warning" />
 				</div>
 				<div class="flex-1">
 					<p class="text-[12px] font-semibold text-foreground">{{ pendingRequests }} Pending Request{{ pendingRequests > 1 ? 's' : '' }}</p>
@@ -178,10 +178,10 @@ const formatFollowUpDate = (event: CalendarEvent) => {
 					<UIcon name="i-heroicons-clipboard" class="w-3.5 h-3.5 text-muted-foreground" />
 				</button>
 			</div>
-			<p v-if="bookingUrlBlockedReason === 'no-org'" class="text-[10px] text-amber-500 mt-1.5">Pick an active organization to generate the URL.</p>
-			<p v-else-if="bookingUrlBlockedReason === 'no-slug'" class="text-[10px] text-amber-500 mt-1.5">
+			<p v-if="bookingUrlBlockedReason === 'no-org'" class="text-[10px] text-warning mt-1.5">Pick an active organization to generate the URL.</p>
+			<p v-else-if="bookingUrlBlockedReason === 'no-slug'" class="text-[10px] text-warning mt-1.5">
 				Your organization has no URL slug yet.
-				<NuxtLink to="/organization" class="underline hover:text-amber-600">Set one in Organization settings →</NuxtLink>
+				<NuxtLink to="/organization" class="underline hover:text-warning">Set one in Organization settings →</NuxtLink>
 			</p>
 		</div>
 	</div>

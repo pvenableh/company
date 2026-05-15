@@ -151,14 +151,14 @@
 							<div class="flex items-center gap-2">
 								<span :class="isTimerPaused ? 'paused-dot' : 'pulsing-dot'" />
 								<span class="text-2xl font-mono font-bold tabular-nums" :class="isTimerPaused ? 'text-muted-foreground' : ''">{{ formatElapsed(elapsed) }}</span>
-								<span v-if="isTimerPaused" class="text-xs text-amber-600 font-medium">Paused</span>
+								<span v-if="isTimerPaused" class="text-xs text-warning font-medium">Paused</span>
 							</div>
 							<p v-if="activeTimer.description" class="text-sm text-muted-foreground">{{ activeTimer.description }}</p>
 							<div class="flex items-center gap-2">
 								<span v-if="activeTimer.client_id" class="text-xs bg-muted/60 px-2 py-0.5 rounded-full">
 									{{ activeTimer.client_name || 'Client' }}
 								</span>
-								<span v-if="activeTimer.billable" class="text-xs bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded-full">Billable</span>
+								<span v-if="activeTimer.billable" class="text-xs bg-success/10 text-success px-2 py-0.5 rounded-full">Billable</span>
 							</div>
 							<div class="flex gap-2 pt-2">
 								<button

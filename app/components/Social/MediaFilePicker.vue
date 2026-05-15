@@ -108,7 +108,7 @@
                   class="flex items-center gap-2 px-3 py-2 rounded-md border hover:bg-muted/40 transition-colors text-left"
                   @click="navigateToFolder(folder.id, folder.name)"
                 >
-                  <Icon name="lucide:folder" class="w-4 h-4 text-amber-400 shrink-0" />
+                  <Icon name="lucide:folder" class="w-4 h-4 text-warning shrink-0" />
                   <span class="text-xs font-medium truncate">{{ folder.name }}</span>
                 </button>
               </div>

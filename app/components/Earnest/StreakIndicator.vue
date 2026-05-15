@@ -3,7 +3,7 @@
 		<span class="earnest-flame text-base">{{ streak >= 7 ? '🔥' : '✨' }}</span>
 		<span class="text-xs font-medium text-foreground tabular-nums">{{ streak }}-day streak</span>
 		<span v-if="streak >= 30" class="text-[10px] text-primary font-semibold uppercase tracking-wider">Pillar</span>
-		<span v-else-if="streak >= 7" class="text-[10px] text-amber-500 font-semibold uppercase tracking-wider">Resolve</span>
+		<span v-else-if="streak >= 7" class="text-[10px] text-warning font-semibold uppercase tracking-wider">Resolve</span>
 	</div>
 	<div v-else class="flex items-center gap-1.5">
 		<span class="text-base opacity-40">✨</span>

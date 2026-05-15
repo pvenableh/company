@@ -117,20 +117,20 @@ const usagePercent = computed(() => {
 // Color logic: green 0-69%, amber 70-89%, red 90-100%
 const colorClass = computed(() => {
 	if (usagePercent.value >= 90) return 'text-destructive';
-	if (usagePercent.value >= 70) return 'text-amber-500';
-	return 'text-emerald-500';
+	if (usagePercent.value >= 70) return 'text-warning';
+	return 'text-success';
 });
 
 const barColorClass = computed(() => {
 	if (usagePercent.value >= 90) return 'bg-destructive';
-	if (usagePercent.value >= 70) return 'bg-amber-500';
-	return 'bg-emerald-500';
+	if (usagePercent.value >= 70) return 'bg-warning';
+	return 'bg-success';
 });
 
 const badgeClass = computed(() => {
 	if (usagePercent.value >= 90) return 'bg-destructive/10 text-destructive';
-	if (usagePercent.value >= 70) return 'bg-amber-500/10 text-amber-500';
-	return 'bg-emerald-500/10 text-emerald-500';
+	if (usagePercent.value >= 70) return 'bg-warning/10 text-warning';
+	return 'bg-success/10 text-success';
 });
 
 function formatTokens(value: number | null | undefined): string {

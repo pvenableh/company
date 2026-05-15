@@ -78,13 +78,13 @@
 					</div>
 					<div class="ios-card p-4 space-y-1">
 						<p class="text-xs font-semibold uppercase text-muted-foreground">Unbilled</p>
-						<p class="text-2xl font-semibold text-amber-600 dark:text-amber-400 tabular-nums">
+						<p class="text-2xl font-semibold text-warning dark:text-warning tabular-nums">
 							${{ formatCurrency(timeStats.unbilledAmount) }}
 						</p>
 					</div>
 					<div class="ios-card p-4 space-y-1">
 						<p class="text-xs font-semibold uppercase text-muted-foreground">Billed</p>
-						<p class="text-2xl font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
+						<p class="text-2xl font-semibold text-success dark:text-success tabular-nums">
 							${{ formatCurrency(timeStats.billedAmount) }}
 						</p>
 					</div>

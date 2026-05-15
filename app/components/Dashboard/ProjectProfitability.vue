@@ -25,8 +25,8 @@
           <div class="flex justify-between mt-0.5 text-[10px] text-muted-foreground">
             <span>{{ project.count }} invoices</span>
             <span>
-              <span class="text-emerald-500">{{ project.paidCount }} paid</span>
-              <span v-if="project.unpaidCount > 0" class="text-amber-500 ml-1">{{ project.unpaidCount }} unpaid</span>
+              <span class="text-success">{{ project.paidCount }} paid</span>
+              <span v-if="project.unpaidCount > 0" class="text-warning ml-1">{{ project.unpaidCount }} unpaid</span>
             </span>
           </div>
         </div>

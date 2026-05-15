@@ -19,7 +19,7 @@
           />
         </div>
 
-        <div v-if="result" class="rounded-xl px-3 py-2 text-xs" :class="result.success ? 'bg-green-500/10 text-green-700 dark:text-green-400' : 'bg-destructive/10 text-destructive'">
+        <div v-if="result" class="rounded-xl px-3 py-2 text-xs" :class="result.success ? 'bg-success/10 text-success dark:text-success' : 'bg-destructive/10 text-destructive'">
           {{ result.message || result.error }}
         </div>
       </div>

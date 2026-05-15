@@ -379,14 +379,14 @@ function onPickFiles(picked: { url: string; type: 'image' | 'video' }[]) {
 					<template #header>
 						<div class="flex items-center justify-between">
 							<h2 class="font-semibold text-gray-900 dark:text-white">Caption</h2>
-							<span class="text-xs font-mono" :class="captionWarning ? 'text-red-500' : 'text-gray-400'">
+							<span class="text-xs font-mono" :class="captionWarning ? 'text-destructive' : 'text-gray-400'">
 								{{ captionLength }} / {{ captionLimit }}
 							</span>
 						</div>
 					</template>
 
 					<UTextarea v-model="caption" placeholder="Write your caption here..." :rows="6" autoresize class="w-full" />
-					<p v-if="captionWarning" class="text-sm text-red-500 mt-2">{{ captionWarning }}</p>
+					<p v-if="captionWarning" class="text-sm text-destructive mt-2">{{ captionWarning }}</p>
 				</UCard>
 
 				<!-- Media -->
@@ -441,7 +441,7 @@ function onPickFiles(picked: { url: string; type: 'image' | 'video' }[]) {
 
 									<button
 										@click="removeMedia(index)"
-										class="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
+										class="absolute top-2 right-2 p-1 bg-destructive text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
 									>
 										<UIcon name="i-lucide-x" class="w-4 h-4" />
 									</button>
@@ -512,10 +512,10 @@ function onPickFiles(picked: { url: string; type: 'image' | 'video' }[]) {
 							>
 								Post as Instagram Story
 							</label>
-							<p v-if="storyBlockReason" class="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+							<p v-if="storyBlockReason" class="text-xs text-warning dark:text-warning mt-0.5">
 								{{ storyBlockReason }}
 							</p>
-							<p v-else-if="postAsStory" class="text-xs text-amber-600 dark:text-amber-400 mt-0.5 flex items-center gap-1">
+							<p v-else-if="postAsStory" class="text-xs text-warning dark:text-warning mt-0.5 flex items-center gap-1">
 								<UIcon name="i-lucide-clock" class="w-3 h-3" />
 								Stories disappear from your profile after 24 hours.
 							</p>
@@ -733,7 +733,7 @@ function onPickFiles(picked: { url: string; type: 'image' | 'video' }[]) {
 		<UModal v-model="showPostNowConfirm" class="sm:max-w-md">
 			<template #header>
 				<div class="flex items-center gap-2">
-					<UIcon name="i-lucide-send" class="w-5 h-5 text-green-600" />
+					<UIcon name="i-lucide-send" class="w-5 h-5 text-success" />
 					<h3 class="font-semibold">Post immediately?</h3>
 				</div>
 			</template>

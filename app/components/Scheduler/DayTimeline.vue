@@ -63,7 +63,7 @@ const relativeDay = computed(() => {
 const relativeDayColor = computed(() => {
 	switch (relativeDay.value) {
 		case 'Today': return 'text-primary bg-primary/10';
-		case 'Tomorrow': return 'text-blue-500 bg-blue-500/10';
+		case 'Tomorrow': return 'text-info bg-info/10';
 		case 'Yesterday': return 'text-muted-foreground bg-muted/30';
 		default: return '';
 	}
@@ -117,8 +117,8 @@ const nowX = computed(() => {
 // ── Event styling ──
 const typeStyles = (event: CalendarEvent) => {
 	switch (event.type) {
-		case 'video_meeting': return { color: '#10b981', icon: 'i-heroicons-video-camera', iconColor: 'text-emerald-500' };
-		case 'follow_up': return { color: '#f59e0b', icon: 'i-heroicons-arrow-path', iconColor: 'text-amber-500' };
+		case 'video_meeting': return { color: '#10b981', icon: 'i-heroicons-video-camera', iconColor: 'text-success' };
+		case 'follow_up': return { color: '#f59e0b', icon: 'i-heroicons-arrow-path', iconColor: 'text-warning' };
 		case 'external': return { color: '#9ca3af', icon: 'i-heroicons-globe-alt', iconColor: 'text-gray-400' };
 		default: return { color: '#3b82f6', icon: 'i-heroicons-calendar', iconColor: 'text-blue-500' };
 	}
@@ -242,7 +242,7 @@ watch(() => [props.date, props.events.length], scrollToFocus, { immediate: true 
 				<div class="flex items-center gap-1.5 -mt-[10px]">
 					<button
 						@click="emit('new-meeting', date)"
-						class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 text-[11px] font-medium hover:bg-emerald-500/20 transition-colors ios-press"
+						class="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-success/10 text-success text-[11px] font-medium hover:bg-success/20 transition-colors ios-press"
 					>
 						<UIcon name="i-heroicons-video-camera" class="w-3 h-3" />
 						Video

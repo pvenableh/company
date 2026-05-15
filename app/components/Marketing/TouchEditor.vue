@@ -210,7 +210,7 @@ const personalizeLabel = computed(() => {
 });
 
 const personalizeButtonClass = computed(() => {
-	if (personalizationDone.value) return 'bg-emerald-500/10 text-emerald-600';
+	if (personalizationDone.value) return 'bg-success/10 text-success';
 	if (personalizationInFlight.value) return 'bg-muted text-muted-foreground';
 	return 'bg-primary/10 text-primary hover:bg-primary/15';
 });
@@ -238,7 +238,7 @@ const kindIcon = computed(() => {
 
 const kindColor = computed(() => {
 	if (props.touch.kind === 'email') return 'text-blue-600';
-	if (props.touch.social_channel === 'linkedin') return 'text-sky-700';
+	if (props.touch.social_channel === 'linkedin') return 'text-info';
 	if (props.touch.social_channel === 'instagram') return 'text-pink-600';
 	return 'text-foreground';
 });

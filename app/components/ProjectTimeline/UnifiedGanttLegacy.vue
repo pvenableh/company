@@ -352,8 +352,8 @@ const activeTypeFilters = ref<Set<string>>(new Set(['project', 'event', 'ticket'
 
 const typeFilterOptions = [
 	{ key: 'project', label: 'Projects', icon: 'lucide:folder', color: 'text-primary', bg: 'bg-primary/10', activeBg: 'bg-primary/15' },
-	{ key: 'event', label: 'Events', icon: 'lucide:calendar', color: 'text-cyan-500', bg: 'bg-cyan-500/10', activeBg: 'bg-cyan-500/15' },
-	{ key: 'ticket', label: 'Tickets', icon: 'lucide:ticket', color: 'text-amber-500', bg: 'bg-amber-500/10', activeBg: 'bg-amber-500/15' },
+	{ key: 'event', label: 'Events', icon: 'lucide:calendar', color: 'text-info', bg: 'bg-info/10', activeBg: 'bg-info/15' },
+	{ key: 'ticket', label: 'Tickets', icon: 'lucide:ticket', color: 'text-warning', bg: 'bg-warning/10', activeBg: 'bg-warning/15' },
 	{ key: 'task', label: 'Tasks', icon: 'lucide:check-square', color: 'text-purple-500', bg: 'bg-purple-500/10', activeBg: 'bg-purple-500/15' },
 ];
 
@@ -574,8 +574,8 @@ function handleCloseDetail() {
 								class="w-5 h-5 rounded-md flex items-center justify-center shrink-0"
 								:class="{
 									'bg-primary/10': row.type === 'project',
-									'bg-cyan-500/10': row.type === 'event',
-									'bg-amber-500/10': row.type === 'ticket',
+									'bg-info/10': row.type === 'event',
+									'bg-warning/10': row.type === 'ticket',
 									'bg-purple-500/10': row.type === 'task',
 								}"
 							>
@@ -584,8 +584,8 @@ function handleCloseDetail() {
 									class="w-3 h-3"
 									:class="{
 										'text-primary': row.type === 'project',
-										'text-cyan-500': row.type === 'event',
-										'text-amber-500': row.type === 'ticket',
+										'text-info': row.type === 'event',
+										'text-warning': row.type === 'ticket',
 										'text-purple-500': row.type === 'task',
 									}"
 								/>
@@ -618,9 +618,9 @@ function handleCloseDetail() {
 							v-if="row.status"
 							class="text-[8px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded-md shrink-0"
 							:class="{
-								'text-green-500 bg-green-500/10': row.status?.toLowerCase().replace(/\s+/g, '') === 'completed' || row.status?.toLowerCase() === 'done',
+								'text-success bg-success/10': row.status?.toLowerCase().replace(/\s+/g, '') === 'completed' || row.status?.toLowerCase() === 'done',
 								'text-blue-500 bg-blue-500/10': row.status?.toLowerCase().replace(/\s+/g, '') === 'inprogress' || row.status?.toLowerCase() === 'active',
-								'text-amber-500 bg-amber-500/10': row.status?.toLowerCase() === 'scheduled' || row.status?.toLowerCase() === 'pending',
+								'text-warning bg-warning/10': row.status?.toLowerCase() === 'scheduled' || row.status?.toLowerCase() === 'pending',
 								'text-muted-foreground bg-muted/40': !['completed', 'done', 'inprogress', 'active', 'scheduled', 'pending'].includes(row.status?.toLowerCase().replace(/\s+/g, '') || ''),
 							}"
 						>
@@ -687,8 +687,8 @@ function handleCloseDetail() {
 								class="w-3 h-3 shrink-0"
 								:class="{
 									'text-primary': row.type === 'project',
-									'text-cyan-500': row.type === 'event',
-									'text-amber-500': row.type === 'ticket',
+									'text-info': row.type === 'event',
+									'text-warning': row.type === 'ticket',
 									'text-purple-500': row.type === 'task',
 								}"
 							/>

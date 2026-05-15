@@ -1,10 +1,10 @@
 <template>
   <div class="space-y-4">
     <div class="flex items-center gap-3 mb-6">
-      <div class="w-10 h-10 rounded-full flex items-center justify-center" :class="result.errors?.length ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-green-100 dark:bg-green-900/30'">
+      <div class="w-10 h-10 rounded-full flex items-center justify-center" :class="result.errors?.length ? 'bg-warning/10 dark:bg-warning/30' : 'bg-success/10 dark:bg-success/30'">
         <Icon
           :name="result.errors?.length ? 'lucide:alert-triangle' : 'lucide:check'"
-          :class="result.errors?.length ? 'text-amber-600 w-5 h-5' : 'text-green-600 w-5 h-5'"
+          :class="result.errors?.length ? 'text-warning w-5 h-5' : 'text-success w-5 h-5'"
         />
       </div>
       <div>
@@ -17,7 +17,7 @@
 
     <div class="grid grid-cols-3 gap-4">
       <div class="p-4 border rounded-lg text-center">
-        <p class="text-2xl font-bold text-green-600">{{ result.created }}</p>
+        <p class="text-2xl font-bold text-success">{{ result.created }}</p>
         <p class="text-xs text-muted-foreground mt-1">Created</p>
       </div>
       <div class="p-4 border rounded-lg text-center">

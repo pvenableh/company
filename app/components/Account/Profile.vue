@@ -223,7 +223,7 @@ async function updatePerson() {
 						type="button"
 						size="sm"
 						variant="ghost"
-						class="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+						class="text-destructive hover:text-destructive hover:bg-destructive/10"
 						@click="removeAvatar"
 					>
 						<Icon name="lucide:trash-2" class="w-3.5 h-3.5 mr-1.5" />

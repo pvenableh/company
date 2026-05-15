@@ -5,8 +5,8 @@
 		<!-- Loading State -->
 		<div v-if="loading" class="flex items-center justify-center min-h-screen">
 			<div class="text-center">
-				<div class="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center mx-auto mb-4">
-					<UIcon name="i-heroicons-video-camera" class="w-7 h-7 text-emerald-500 animate-pulse" />
+				<div class="w-14 h-14 rounded-2xl bg-success/10 flex items-center justify-center mx-auto mb-4">
+					<UIcon name="i-heroicons-video-camera" class="w-7 h-7 text-success animate-pulse" />
 				</div>
 				<p class="text-[13px] text-muted-foreground">Loading meeting...</p>
 			</div>
@@ -32,8 +32,8 @@
 		<!-- Meeting Ended -->
 		<div v-else-if="meetingEnded" class="flex items-center justify-center min-h-screen p-4">
 			<div class="ios-card p-8 text-center max-w-sm w-full">
-				<div class="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center mx-auto mb-4">
-					<UIcon name="i-heroicons-check-circle" class="w-7 h-7 text-emerald-500" />
+				<div class="w-14 h-14 rounded-2xl bg-success/10 flex items-center justify-center mx-auto mb-4">
+					<UIcon name="i-heroicons-check-circle" class="w-7 h-7 text-success" />
 				</div>
 				<h1 class="text-lg font-semibold text-foreground">Meeting Ended</h1>
 				<p class="text-sm text-muted-foreground mt-2">Thanks for joining!</p>
@@ -41,7 +41,7 @@
 					<NuxtLink
 						v-if="meeting?.id"
 						:to="`/meetings/${meeting.id}`"
-						class="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium transition-colors ios-press"
+						class="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-success hover:bg-success text-white text-sm font-medium transition-colors ios-press"
 					>
 						<UIcon name="i-heroicons-document-text" class="w-4 h-4" />
 						View Recap
@@ -61,8 +61,8 @@
 			<div class="ios-card p-6 w-full max-w-md">
 				<!-- Meeting info header -->
 				<div class="text-center mb-6 pb-5 border-b border-border/30">
-					<div class="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center mx-auto mb-4">
-						<UIcon name="i-heroicons-video-camera" class="w-6 h-6 text-emerald-500" />
+					<div class="w-12 h-12 rounded-2xl bg-success/10 flex items-center justify-center mx-auto mb-4">
+						<UIcon name="i-heroicons-video-camera" class="w-6 h-6 text-success" />
 					</div>
 					<h1 class="text-lg font-semibold text-foreground">{{ meeting.title }}</h1>
 					<p class="text-[13px] text-muted-foreground mt-1">
@@ -85,7 +85,7 @@
 					<button
 						type="submit"
 						:disabled="joining"
-						class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-medium text-sm transition-colors ios-press disabled:opacity-50"
+						class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-success hover:bg-success text-white font-medium text-sm transition-colors ios-press disabled:opacity-50"
 					>
 						<UIcon v-if="!joining" name="i-heroicons-video-camera" class="w-4 h-4" />
 						<UIcon v-else name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin" />
@@ -98,8 +98,8 @@
 		<!-- Waiting Room -->
 		<div v-else-if="inWaitingRoom && !isHost" class="flex items-center justify-center min-h-screen p-4">
 			<div class="ios-card p-8 text-center max-w-sm w-full">
-				<div class="w-14 h-14 rounded-2xl bg-amber-500/10 flex items-center justify-center mx-auto mb-4">
-					<UIcon name="i-heroicons-clock" class="w-7 h-7 text-amber-500 animate-pulse" />
+				<div class="w-14 h-14 rounded-2xl bg-warning/10 flex items-center justify-center mx-auto mb-4">
+					<UIcon name="i-heroicons-clock" class="w-7 h-7 text-warning animate-pulse" />
 				</div>
 				<h1 class="text-lg font-semibold text-foreground">Waiting to be admitted</h1>
 				<p class="text-sm text-muted-foreground mt-2">The host will let you in soon...</p>
@@ -116,8 +116,8 @@
 		<!-- Rejected -->
 		<div v-else-if="wasRejected" class="flex items-center justify-center min-h-screen p-4">
 			<div class="ios-card p-8 text-center max-w-sm w-full">
-				<div class="w-14 h-14 rounded-2xl bg-red-500/10 flex items-center justify-center mx-auto mb-4">
-					<UIcon name="i-heroicons-x-circle" class="w-7 h-7 text-red-500" />
+				<div class="w-14 h-14 rounded-2xl bg-destructive/10 flex items-center justify-center mx-auto mb-4">
+					<UIcon name="i-heroicons-x-circle" class="w-7 h-7 text-destructive" />
 				</div>
 				<h1 class="text-lg font-semibold text-foreground">Unable to Join</h1>
 				<p class="text-sm text-muted-foreground mt-2">The host did not admit you to this meeting.</p>
@@ -134,8 +134,8 @@
 		<div v-else class="fixed inset-0 z-10">
 			<div v-if="loadingToken" class="flex items-center justify-center h-full">
 				<div class="text-center">
-					<div class="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center mx-auto mb-3">
-						<UIcon name="i-heroicons-video-camera" class="w-6 h-6 text-emerald-500 animate-pulse" />
+					<div class="w-12 h-12 rounded-2xl bg-success/10 flex items-center justify-center mx-auto mb-3">
+						<UIcon name="i-heroicons-video-camera" class="w-6 h-6 text-success animate-pulse" />
 					</div>
 					<p class="text-[13px] text-muted-foreground">Connecting to meeting...</p>
 				</div>
@@ -193,7 +193,7 @@
 					:disabled="transcriptionBusy"
 					:class="[
 						'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-md text-[11px] font-medium transition-colors shadow-lg disabled:opacity-50',
-						transcribing ? 'bg-emerald-500/80 hover:bg-emerald-500 text-white' : 'bg-black/60 hover:bg-black/80 text-white',
+						transcribing ? 'bg-success/80 hover:bg-success text-white' : 'bg-black/60 hover:bg-black/80 text-white',
 					]"
 					:title="transcribing ? 'Stop live transcription' : 'Start live transcription (saves a transcript for the recap)'"
 					@click="toggleTranscription"
@@ -209,7 +209,7 @@
 					:disabled="recordingBusy"
 					:class="[
 						'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-md text-[11px] font-medium transition-colors shadow-lg disabled:opacity-50',
-						recording ? 'bg-red-500/80 hover:bg-red-500 text-white' : 'bg-black/60 hover:bg-black/80 text-white',
+						recording ? 'bg-destructive/80 hover:bg-destructive text-white' : 'bg-black/60 hover:bg-black/80 text-white',
 					]"
 					:title="recording ? 'Stop recording' : 'Start cloud recording'"
 					@click="toggleRecording"

@@ -76,7 +76,7 @@ watch(
 			<AvatarFallback>{{ initials }}</AvatarFallback>
 		</Avatar>
 		<span
-			class="absolute top-0 right-0 flex items-center justify-center rounded-full bg-sky-500 text-white text-[10px] leading-none size-4"
+			class="absolute top-0 right-0 flex items-center justify-center rounded-full bg-info text-white text-[10px] leading-none size-4"
 		>
 			{{ text }}
 		</span>

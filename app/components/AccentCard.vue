@@ -3,12 +3,12 @@
  * AccentCard — Reusable card with a left accent pill indicator.
  *
  * Usage:
- *   <AccentCard accent="bg-red-500" class="bg-red-50/50">
+ *   <AccentCard accent="bg-destructive" class="bg-destructive/10">
  *     content here
  *   </AccentCard>
  *
  * Props:
- *   accent  — Tailwind bg class for the pill color (e.g. "bg-red-500")
+ *   accent  — Tailwind bg class for the pill color (e.g. "bg-destructive")
  *   tag     — HTML element to render (default: "div")
  */
 import { cn } from '@/lib/utils'

@@ -19,9 +19,9 @@ withDefaults(defineProps<AlertProps>(), {
 		:class="[
 			'p-4 dark:brightness-90 border-2',
 			{
-				'border-amber-500 text-amber-800 dark:text-amber-200': type === 'warning',
-				'border-rose-500 text-rose-800 dark:text-rose-200': type === 'error',
-				'border-green-500 text-green-800 dark:text-green-200': type === 'success',
+				'border-warning/30 text-warning': type === 'warning',
+				'border-destructive/30 text-destructive': type === 'error',
+				'border-success/30 text-success': type === 'success',
 				'border-blue-500 text-blue-800 dark:text-blue-200': type === 'info',
 			},
 		]"
@@ -33,9 +33,9 @@ withDefaults(defineProps<AlertProps>(), {
 					:class="[
 						'w-6 h-6',
 						{
-							'text-amber-500': type === 'warning',
-							'text-rose-500': type === 'error',
-							'text-green-500': type === 'success',
+							'text-warning': type === 'warning',
+							'text-destructive': type === 'error',
+							'text-success': type === 'success',
 							'text-blue-500': type === 'info',
 						},
 					]"

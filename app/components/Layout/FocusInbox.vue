@@ -35,8 +35,8 @@ const upNextItems = computed(() => suggestions.value.filter((s) => s.priority ==
 const totalCount = computed(() => suggestions.value.length)
 
 const groups = computed(() => [
-	{ key: 'now', label: 'Now', items: nowItems.value, dot: 'bg-red-500' },
-	{ key: 'today', label: 'Today', items: todayItems.value, dot: 'bg-amber-500' },
+	{ key: 'now', label: 'Now', items: nowItems.value, dot: 'bg-destructive' },
+	{ key: 'today', label: 'Today', items: todayItems.value, dot: 'bg-warning' },
 	{ key: 'upnext', label: 'Up Next', items: upNextItems.value, dot: 'bg-muted-foreground/40' },
 ].filter((g) => g.items.length > 0))
 
@@ -57,15 +57,15 @@ const firstName = computed(() => user.value?.first_name ?? '')
 // ── Category icons ──
 const categoryStyles: Record<string, { icon: string; color: string }> = {
 	tasks: { icon: 'heroicons:clipboard-document-check', color: 'text-blue-500' },
-	invoices: { icon: 'heroicons:document-text', color: 'text-emerald-500' },
+	invoices: { icon: 'heroicons:document-text', color: 'text-success' },
 	projects: { icon: 'lucide:gantt-chart', color: 'text-violet-500' },
-	communication: { icon: 'heroicons:chat-bubble-left-right', color: 'text-cyan-500' },
-	leads: { icon: 'heroicons:funnel', color: 'text-amber-500' },
-	scheduling: { icon: 'heroicons:calendar-date-range', color: 'text-rose-500' },
+	communication: { icon: 'heroicons:chat-bubble-left-right', color: 'text-info' },
+	leads: { icon: 'heroicons:funnel', color: 'text-warning' },
+	scheduling: { icon: 'heroicons:calendar-date-range', color: 'text-destructive' },
 	social: { icon: 'lucide:hash', color: 'text-pink-500' },
 	phone: { icon: 'heroicons:phone', color: 'text-indigo-500' },
-	carddesk: { icon: 'heroicons:credit-card', color: 'text-teal-500' },
-	goals: { icon: 'heroicons:trophy', color: 'text-yellow-500' },
+	carddesk: { icon: 'heroicons:credit-card', color: 'text-info' },
+	goals: { icon: 'heroicons:trophy', color: 'text-warning' },
 }
 
 function styleFor(category: string) {
@@ -257,11 +257,11 @@ function submitAsk() {
 				<div class="flex items-center justify-between">
 					<div class="flex items-center gap-3">
 						<div class="flex items-center gap-1.5">
-							<Icon name="lucide:zap" class="w-3.5 h-3.5 text-amber-500" />
+							<Icon name="lucide:zap" class="w-3.5 h-3.5 text-warning" />
 							<span class="text-[13px] font-semibold tabular-nums text-foreground">{{ earnestState.currentScore }}</span>
 						</div>
 						<div class="flex items-center gap-1.5">
-							<Icon name="lucide:flame" class="w-3.5 h-3.5 text-orange-500" />
+							<Icon name="lucide:flame" class="w-3.5 h-3.5 text-warning" />
 							<span class="text-[12px] tabular-nums text-foreground">{{ earnestState.streak }}d</span>
 						</div>
 					</div>

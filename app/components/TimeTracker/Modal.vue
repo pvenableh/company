@@ -34,7 +34,7 @@
 							<UIcon name="i-heroicons-building-office-2" class="w-3 h-3" />
 							{{ clientName }}
 						</span>
-						<span v-if="activeTimer.billable" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-xs text-emerald-600 dark:text-emerald-400">
+						<span v-if="activeTimer.billable" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-success/10 text-xs text-success dark:text-success">
 							<UIcon name="i-heroicons-currency-dollar" class="w-3 h-3" />
 							Billable
 						</span>

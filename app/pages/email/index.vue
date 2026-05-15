@@ -284,7 +284,7 @@ onUnmounted(() => clearEntity());
 					</div>
 					<p v-if="list.description" class="text-xs text-muted-foreground line-clamp-2">{{ list.description }}</p>
 					<div v-if="list.double_opt_in" class="mt-2">
-						<span class="text-[10px] text-amber-600 bg-amber-500/10 px-2 py-0.5 rounded-full font-medium">Double opt-in</span>
+						<span class="text-[10px] text-warning bg-warning/10 px-2 py-0.5 rounded-full font-medium">Double opt-in</span>
 					</div>
 				</div>
 			</div>
@@ -340,8 +340,8 @@ onUnmounted(() => clearEntity());
 								<span
 									class="text-[10px] px-2 py-0.5 rounded-full font-medium"
 									:class="{
-										'bg-green-500/10 text-green-600': contact.status === 'active' || contact.status === 'published',
-										'bg-red-500/10 text-red-600': contact.status === 'unsubscribed' || contact.status === 'bounced',
+										'bg-success/10 text-success': contact.status === 'active' || contact.status === 'published',
+										'bg-destructive/10 text-destructive': contact.status === 'unsubscribed' || contact.status === 'bounced',
 										'bg-muted text-muted-foreground': !contact.status,
 									}"
 								>
@@ -414,8 +414,8 @@ onUnmounted(() => clearEntity());
 								class="flex items-center gap-3 w-full px-4 py-3.5 text-left hover:bg-muted/30 transition-colors ios-press"
 								@click="startMethod = 'starter'"
 							>
-								<div class="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-									<Icon name="lucide:layout-template" class="w-4 h-4 text-emerald-500" />
+								<div class="w-8 h-8 rounded-xl bg-success/10 flex items-center justify-center">
+									<Icon name="lucide:layout-template" class="w-4 h-4 text-success" />
 								</div>
 								<div class="flex-1">
 									<p class="text-sm font-medium text-foreground">Start from Template</p>
@@ -514,8 +514,8 @@ onUnmounted(() => clearEntity());
 								@keydown.enter.prevent="selectedSourceTemplate = tpl; newTemplateName = tpl.name"
 								@keydown.space.prevent="selectedSourceTemplate = tpl; newTemplateName = tpl.name"
 							>
-								<div class="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
-									<Icon name="lucide:layout-template" class="w-3.5 h-3.5 text-emerald-500" />
+								<div class="w-7 h-7 rounded-lg bg-success/10 flex items-center justify-center shrink-0">
+									<Icon name="lucide:layout-template" class="w-3.5 h-3.5 text-success" />
 								</div>
 								<div class="flex-1 min-w-0">
 									<p class="text-sm font-medium text-foreground truncate">{{ tpl.name }}</p>

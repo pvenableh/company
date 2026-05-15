@@ -142,7 +142,7 @@
 								<span v-else-if="!desktopNotifs.isSupported.value" class="text-xs text-muted-foreground">
 									Not supported
 								</span>
-								<span v-else class="text-xs text-green-600 dark:text-green-400">
+								<span v-else class="text-xs text-success dark:text-success">
 									Enabled
 								</span>
 							</div>

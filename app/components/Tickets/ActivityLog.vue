@@ -209,11 +209,11 @@ const getActivityIcon = (activity) => {
 // Get icon color for activity type
 const getActivityIconColor = (activity) => {
   switch (activity.type) {
-    case 'create': return 'text-green-500';
+    case 'create': return 'text-success';
     case 'update': return 'text-blue-500';
-    case 'comment': return 'text-cyan-500';
+    case 'comment': return 'text-info';
     case 'assignment': return 'text-purple-500';
-    case 'task': return 'text-green-500';
+    case 'task': return 'text-success';
     default: return 'text-gray-500';
   }
 };

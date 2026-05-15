@@ -88,14 +88,14 @@
 						</div>
 						<span
 							v-if="c.accessStatus === 'direct'"
-							class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium shrink-0 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+							class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium shrink-0 bg-success/15 text-success dark:text-success"
 						>
 							<Icon name="lucide:check" class="w-2.5 h-2.5" />
 							Has access
 						</span>
 						<span
 							v-else-if="c.accessStatus === 'inherited'"
-							class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium shrink-0 bg-sky-500/15 text-sky-600 dark:text-sky-400"
+							class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium shrink-0 bg-info/15 text-info dark:text-info"
 							:title="`Inherited via ${c.inheritedFromName ?? 'parent'}`"
 						>
 							<Icon name="lucide:link-2" class="w-2.5 h-2.5" />

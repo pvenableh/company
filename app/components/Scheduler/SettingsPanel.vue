@@ -519,7 +519,7 @@ onMounted(() => {
 									<span class="px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wider bg-muted text-muted-foreground font-mono">{{ et.slug }}</span>
 									<span class="text-xs text-muted-foreground">· {{ et.duration }} min</span>
 									<span v-if="et.is_default" class="px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wider bg-primary/15 text-primary">Default</span>
-									<span v-if="!et.enabled" class="px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wider bg-amber-500/15 text-amber-600">Paused</span>
+									<span v-if="!et.enabled" class="px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wider bg-warning/15 text-warning">Paused</span>
 								</div>
 								<p v-if="et.description" class="text-xs text-muted-foreground mt-0.5 truncate">{{ et.description }}</p>
 							</div>
@@ -688,12 +688,12 @@ EarnestEmbed.open({ org: '{{ currentOrg?.slug || 'YOUR_ORG' }}', user: '{{ form.
 					<div class="ios-card p-5">
 						<div class="flex items-center justify-between">
 							<div class="flex items-center gap-3 min-w-0">
-								<div class="w-10 h-10 bg-red-50 dark:bg-red-900/20 rounded-lg flex items-center justify-center shrink-0">
-									<UIcon name="i-simple-icons-google" class="w-5 h-5 text-red-500" />
+								<div class="w-10 h-10 bg-destructive/10 rounded-lg flex items-center justify-center shrink-0">
+									<UIcon name="i-simple-icons-google" class="w-5 h-5 text-destructive" />
 								</div>
 								<div class="min-w-0">
 									<div class="font-medium text-sm">Google Calendar</div>
-									<div class="text-xs" :class="form.google_calendar_enabled ? 'text-emerald-500' : 'text-muted-foreground'">
+									<div class="text-xs" :class="form.google_calendar_enabled ? 'text-success' : 'text-muted-foreground'">
 										{{ form.google_calendar_enabled ? 'Connected' : 'Not connected' }}
 									</div>
 								</div>
@@ -711,12 +711,12 @@ EarnestEmbed.open({ org: '{{ currentOrg?.slug || 'YOUR_ORG' }}', user: '{{ form.
 					<div class="ios-card p-5">
 						<div class="flex items-center justify-between">
 							<div class="flex items-center gap-3 min-w-0">
-								<div class="w-10 h-10 bg-blue-50 dark:bg-blue-900/20 rounded-lg flex items-center justify-center shrink-0">
-									<UIcon name="i-simple-icons-microsoftoutlook" class="w-5 h-5 text-blue-500" />
+								<div class="w-10 h-10 bg-info/10 rounded-lg flex items-center justify-center shrink-0">
+									<UIcon name="i-simple-icons-microsoftoutlook" class="w-5 h-5 text-info" />
 								</div>
 								<div class="min-w-0">
 									<div class="font-medium text-sm">Outlook Calendar</div>
-									<div class="text-xs" :class="form.outlook_calendar_enabled ? 'text-emerald-500' : 'text-muted-foreground'">
+									<div class="text-xs" :class="form.outlook_calendar_enabled ? 'text-success' : 'text-muted-foreground'">
 										{{ form.outlook_calendar_enabled ? 'Connected' : 'Not connected' }}
 									</div>
 								</div>
@@ -729,8 +729,8 @@ EarnestEmbed.open({ org: '{{ currentOrg?.slug || 'YOUR_ORG' }}', user: '{{ form.
 					<div class="ios-card p-5">
 						<div class="flex items-center justify-between mb-3">
 							<div class="flex items-center gap-3">
-								<div class="w-10 h-10 bg-violet-50 dark:bg-violet-900/20 rounded-lg flex items-center justify-center">
-									<UIcon name="i-heroicons-rss" class="w-5 h-5 text-violet-500" />
+								<div class="w-10 h-10 bg-tag-7/10 rounded-lg flex items-center justify-center">
+									<UIcon name="i-heroicons-rss" class="w-5 h-5 text-tag-7" />
 								</div>
 								<div>
 									<div class="font-medium text-sm">iCal feed</div>

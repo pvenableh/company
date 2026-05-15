@@ -191,7 +191,7 @@ const getNoteTags = (note: any) => {
           <UIcon
             v-if="note.is_pinned"
             name="i-heroicons-star-solid"
-            class="absolute top-3 right-3 w-3.5 h-3.5 text-amber-500"
+            class="absolute top-3 right-3 w-3.5 h-3.5 text-warning"
           />
 
           <!-- Title -->
@@ -236,7 +236,7 @@ const getNoteTags = (note: any) => {
                 <UIcon
                   :name="note.is_pinned ? 'i-heroicons-star-solid' : 'i-heroicons-star'"
                   class="w-3.5 h-3.5"
-                  :class="note.is_pinned ? 'text-amber-500' : 'text-muted-foreground'"
+                  :class="note.is_pinned ? 'text-warning' : 'text-muted-foreground'"
                 />
               </button>
               <button

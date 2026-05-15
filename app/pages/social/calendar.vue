@@ -258,11 +258,11 @@ const df = new DateFormatter('en-US', { month: 'long', year: 'numeric' })
           {{ monthStats.scheduled }} scheduled
         </span>
         <span class="flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full bg-emerald-500" />
+          <span class="w-2 h-2 rounded-full bg-success" />
           {{ monthStats.published }} published
         </span>
         <span v-if="monthStats.failed > 0" class="flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full bg-red-500" />
+          <span class="w-2 h-2 rounded-full bg-destructive" />
           {{ monthStats.failed }} failed
         </span>
       </div>

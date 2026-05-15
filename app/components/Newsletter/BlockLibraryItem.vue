@@ -36,16 +36,16 @@ defineEmits<{ add: [block: NewsletterBlock] }>();
 const categoryStyles: Record<string, { bg: string; fg: string; icon: string }> = {
   header: { bg: 'bg-blue-500/10', fg: 'text-blue-500', icon: 'lucide:panel-top' },
   hero: { bg: 'bg-violet-500/10', fg: 'text-violet-500', icon: 'lucide:image' },
-  content: { bg: 'bg-green-500/10', fg: 'text-green-500', icon: 'lucide:text' },
-  'two-column': { bg: 'bg-amber-500/10', fg: 'text-amber-500', icon: 'lucide:columns-2' },
-  'three-column': { bg: 'bg-amber-500/10', fg: 'text-amber-500', icon: 'lucide:columns-3' },
-  cta: { bg: 'bg-red-500/10', fg: 'text-red-500', icon: 'lucide:mouse-pointer-click' },
-  image: { bg: 'bg-cyan-500/10', fg: 'text-cyan-500', icon: 'lucide:image' },
+  content: { bg: 'bg-success/10', fg: 'text-success', icon: 'lucide:text' },
+  'two-column': { bg: 'bg-warning/10', fg: 'text-warning', icon: 'lucide:columns-2' },
+  'three-column': { bg: 'bg-warning/10', fg: 'text-warning', icon: 'lucide:columns-3' },
+  cta: { bg: 'bg-destructive/10', fg: 'text-destructive', icon: 'lucide:mouse-pointer-click' },
+  image: { bg: 'bg-info/10', fg: 'text-info', icon: 'lucide:image' },
   stats: { bg: 'bg-indigo-500/10', fg: 'text-indigo-500', icon: 'lucide:bar-chart-3' },
   quote: { bg: 'bg-pink-500/10', fg: 'text-pink-500', icon: 'lucide:quote' },
-  list: { bg: 'bg-teal-500/10', fg: 'text-teal-500', icon: 'lucide:list' },
+  list: { bg: 'bg-info/10', fg: 'text-info', icon: 'lucide:list' },
   divider: { bg: 'bg-gray-500/10', fg: 'text-gray-400', icon: 'lucide:minus' },
-  social: { bg: 'bg-sky-500/10', fg: 'text-sky-500', icon: 'lucide:share-2' },
+  social: { bg: 'bg-info/10', fg: 'text-info', icon: 'lucide:share-2' },
   footer: { bg: 'bg-slate-500/10', fg: 'text-slate-500', icon: 'lucide:panel-bottom' },
 };
 

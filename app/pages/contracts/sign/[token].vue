@@ -148,14 +148,14 @@ const isSignable = computed(() => contract.value?.contract_status === 'sent');
 				<!-- Signature block -->
 				<div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-600">
 					<div v-if="isSigned">
-						<p class="text-[10px] uppercase tracking-wider text-green-700 dark:text-green-400">Signed</p>
+						<p class="text-[10px] uppercase tracking-wider text-success dark:text-success">Signed</p>
 						<p class="text-base font-medium mt-1" style="font-family: 'Caveat', cursive;">
 							{{ contract.signed_by_name }}
 						</p>
 						<p class="text-xs text-muted-foreground mt-0.5">
 							{{ contract.signed_by_email }} · {{ contract.signed_at ? new Date(contract.signed_at).toLocaleString() : '' }}
 						</p>
-						<div v-if="justSigned" class="mt-3 rounded-md bg-green-50 dark:bg-green-900/20 px-3 py-2 text-xs text-green-700 dark:text-green-300">
+						<div v-if="justSigned" class="mt-3 rounded-md bg-success/10 dark:bg-success/20 px-3 py-2 text-xs text-success dark:text-success">
 							Thanks for signing! A copy will be on its way.
 						</div>
 					</div>
@@ -187,7 +187,7 @@ const isSignable = computed(() => contract.value?.contract_status === 'sent');
 							</span>
 						</label>
 
-						<div v-if="signError" class="text-xs text-red-600 dark:text-red-400">{{ signError }}</div>
+						<div v-if="signError" class="text-xs text-destructive dark:text-destructive">{{ signError }}</div>
 
 						<button
 							class="inline-flex items-center gap-2 h-10 px-5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"

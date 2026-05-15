@@ -46,19 +46,19 @@ const { state: earnestState, syncState, fetchState, fetchTeamRanking, fetchHisto
 
 const badgeColor = (id: string): string => {
 	const colors: Record<string, string> = {
-		'first-flame': 'bg-orange-500/10 text-orange-600 ring-1 ring-orange-500/20',
-		'keeper-of-promises': 'bg-green-500/10 text-green-600 ring-1 ring-green-500/20',
+		'first-flame': 'bg-warning/10 text-warning ring-1 ring-warning/20',
+		'keeper-of-promises': 'bg-success/10 text-success ring-1 ring-success/20',
 		'seven-day-resolve': 'bg-blue-500/10 text-blue-600 ring-1 ring-blue-500/20',
 		'thirty-day-pillar': 'bg-indigo-500/10 text-indigo-600 ring-1 ring-indigo-500/20',
-		'rapid-responder': 'bg-yellow-500/10 text-yellow-600 ring-1 ring-yellow-500/20',
-		'deep-current': 'bg-cyan-500/10 text-cyan-600 ring-1 ring-cyan-500/20',
+		'rapid-responder': 'bg-warning/10 text-warning ring-1 ring-warning/20',
+		'deep-current': 'bg-info/10 text-info ring-1 ring-info/20',
 		'the-preparator': 'bg-violet-500/10 text-violet-600 ring-1 ring-violet-500/20',
-		'team-anchor': 'bg-teal-500/10 text-teal-600 ring-1 ring-teal-500/20',
-		'first-close': 'bg-emerald-500/10 text-emerald-600 ring-1 ring-emerald-500/20',
-		'pipeline-builder': 'bg-rose-500/10 text-rose-600 ring-1 ring-rose-500/20',
-		'follow-up-master': 'bg-amber-500/10 text-amber-600 ring-1 ring-amber-500/20',
+		'team-anchor': 'bg-info/10 text-info ring-1 ring-info/20',
+		'first-close': 'bg-success/10 text-success ring-1 ring-success/20',
+		'pipeline-builder': 'bg-destructive/10 text-destructive ring-1 ring-destructive/20',
+		'follow-up-master': 'bg-warning/10 text-warning ring-1 ring-warning/20',
 		'quick-closer': 'bg-pink-500/10 text-pink-600 ring-1 ring-pink-500/20',
-		'iron-will': 'bg-red-500/10 text-red-600 ring-1 ring-red-500/20',
+		'iron-will': 'bg-destructive/10 text-destructive ring-1 ring-destructive/20',
 		'century': 'bg-purple-500/10 text-purple-600 ring-1 ring-purple-500/20',
 	};
 	return colors[id] || 'bg-primary/10 text-primary ring-1 ring-primary/20';
@@ -136,17 +136,17 @@ const crmAlerts = computed(() => crmSnapshot.value?.alerts ?? []);
 const healthColor = computed(() => {
 	const score = healthScore.value;
 	if (score === null) return 'text-muted-foreground';
-	if (score >= 75) return 'text-green-500';
-	if (score >= 50) return 'text-amber-500';
-	return 'text-red-500';
+	if (score >= 75) return 'text-success';
+	if (score >= 50) return 'text-warning';
+	return 'text-destructive';
 });
 
 const healthBg = computed(() => {
 	const score = healthScore.value;
 	if (score === null) return 'bg-muted/30';
-	if (score >= 75) return 'bg-green-50 dark:bg-green-900/10';
-	if (score >= 50) return 'bg-amber-50 dark:bg-amber-900/10';
-	return 'bg-red-50 dark:bg-red-900/10';
+	if (score >= 75) return 'bg-success/10 dark:bg-success/10';
+	if (score >= 50) return 'bg-warning/10 dark:bg-warning/10';
+	return 'bg-destructive/10 dark:bg-destructive/10';
 });
 
 // ── Insight Icons ──
@@ -158,10 +158,10 @@ const insightIcons: Record<string, string> = {
 };
 
 const insightColors: Record<string, string> = {
-	strength: 'text-green-500',
-	risk: 'text-red-500',
+	strength: 'text-success',
+	risk: 'text-destructive',
 	trend: 'text-blue-500',
-	opportunity: 'text-amber-500',
+	opportunity: 'text-warning',
 };
 
 // ── Priority Styles ──
@@ -441,7 +441,7 @@ watch(activeTab, (t) => {
 
 							<!-- Empty State -->
 							<div v-else-if="topActions.length === 0 && !isAnalyzing" class="ios-card p-8 text-center">
-								<UIcon name="i-heroicons-check-circle" class="w-12 h-12 mx-auto mb-3 text-green-500" />
+								<UIcon name="i-heroicons-check-circle" class="w-12 h-12 mx-auto mb-3 text-success" />
 								<p class="text-sm font-medium text-foreground">You're all caught up!</p>
 								<p class="text-xs text-muted-foreground mt-1">No urgent or high-priority items need your attention right now.</p>
 							</div>
@@ -517,7 +517,7 @@ watch(activeTab, (t) => {
 						<div class="ios-card p-5">
 							<div class="flex items-center justify-between mb-3">
 								<div class="flex items-center gap-2">
-									<UIcon name="i-heroicons-flag" class="w-4 h-4 text-amber-500" />
+									<UIcon name="i-heroicons-flag" class="w-4 h-4 text-warning" />
 									<h3 class="text-xs font-semibold uppercase tracking-wide text-foreground/70">My Goals</h3>
 								</div>
 								<NuxtLink to="/goals?scope=user" class="text-[11px] text-primary hover:underline">
@@ -543,10 +543,10 @@ watch(activeTab, (t) => {
 										<div
 											class="h-full rounded-full transition-all duration-500"
 											:class="{
-												'bg-emerald-500': goalProgressFn(g) >= 90,
+												'bg-success': goalProgressFn(g) >= 90,
 												'bg-blue-500': goalProgressFn(g) >= 50 && goalProgressFn(g) < 90,
-												'bg-amber-500': goalProgressFn(g) >= 25 && goalProgressFn(g) < 50,
-												'bg-red-500': goalProgressFn(g) < 25,
+												'bg-warning': goalProgressFn(g) >= 25 && goalProgressFn(g) < 50,
+												'bg-destructive': goalProgressFn(g) < 25,
 											}"
 											:style="{ width: `${Math.max(goalProgressFn(g), 4)}%` }"
 										/>
@@ -636,9 +636,9 @@ watch(activeTab, (t) => {
 											<div
 												class="h-full rounded-full transition-all duration-500"
 												:class="{
-													'bg-green-500': value >= 75,
-													'bg-amber-500': value >= 50 && value < 75,
-													'bg-red-500': value < 50,
+													'bg-success': value >= 75,
+													'bg-warning': value >= 50 && value < 75,
+													'bg-destructive': value < 50,
 												}"
 												:style="{ width: `${value}%` }"
 											/>
@@ -656,7 +656,7 @@ watch(activeTab, (t) => {
 									>
 										<UIcon
 											:name="alert.type === 'danger' ? 'i-heroicons-exclamation-triangle' : alert.type === 'warning' ? 'i-heroicons-exclamation-circle' : alert.type === 'success' ? 'i-heroicons-check-circle' : 'i-heroicons-information-circle'"
-											:class="alert.type === 'danger' ? 'text-red-500' : alert.type === 'warning' ? 'text-amber-500' : alert.type === 'success' ? 'text-green-500' : 'text-blue-500'"
+											:class="alert.type === 'danger' ? 'text-destructive' : alert.type === 'warning' ? 'text-warning' : alert.type === 'success' ? 'text-success' : 'text-blue-500'"
 											class="w-3.5 h-3.5 flex-shrink-0 mt-0.5"
 										/>
 										<span class="text-muted-foreground leading-tight">{{ alert.message }}</span>
@@ -751,9 +751,9 @@ watch(activeTab, (t) => {
 									<p class="text-sm font-medium text-foreground">{{ opp.title }}</p>
 									<span class="text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded-full flex-shrink-0"
 										:class="{
-											'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400': opp.effort === 'low',
-											'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400': opp.effort === 'medium',
-											'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400': opp.effort === 'high',
+											'bg-success/10 text-success dark:bg-success/30 dark:text-success': opp.effort === 'low',
+											'bg-warning/10 text-warning dark:bg-warning/30 dark:text-warning': opp.effort === 'medium',
+											'bg-destructive/10 text-destructive dark:bg-destructive/30 dark:text-destructive': opp.effort === 'high',
 										}"
 									>
 										{{ opp.effort }} effort
@@ -795,7 +795,7 @@ watch(activeTab, (t) => {
 					<!-- Org/Team Goals chip strip — links to filtered /goals -->
 					<div v-if="orgTeamGoalCount > 0" class="ios-card p-4 flex flex-wrap items-center gap-3">
 						<div class="flex items-center gap-2">
-							<UIcon name="i-heroicons-flag" class="w-4 h-4 text-amber-500" />
+							<UIcon name="i-heroicons-flag" class="w-4 h-4 text-warning" />
 							<h3 class="text-xs font-semibold uppercase tracking-wide text-foreground/70">Shared Goals</h3>
 						</div>
 						<NuxtLink

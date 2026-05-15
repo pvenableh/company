@@ -49,10 +49,10 @@ const showCreateClientModal = ref(false);
 const deleteTarget = ref<Client | null>(null);
 
 const clientTabs = [
-  { label: 'Active', value: 'active', color: 'bg-emerald-500', kind: 'accountState' as const },
-  { label: 'Prospects', value: 'prospect', color: 'bg-amber-500', kind: 'accountState' as const },
+  { label: 'Active', value: 'active', color: 'bg-success', kind: 'accountState' as const },
+  { label: 'Prospects', value: 'prospect', color: 'bg-warning', kind: 'accountState' as const },
   { label: 'Inactive', value: 'inactive', color: 'bg-neutral-400', kind: 'accountState' as const },
-  { label: 'Churned', value: 'churned', color: 'bg-red-500', kind: 'accountState' as const },
+  { label: 'Churned', value: 'churned', color: 'bg-destructive', kind: 'accountState' as const },
   { label: 'Archived', value: 'archived', color: 'bg-zinc-400', kind: 'status' as const },
 ];
 const activeClientTab = ref('active');
@@ -395,7 +395,7 @@ watch(view, (next) => {
                   <td class="py-3 px-4 text-right" @click.stop>
                     <div class="flex items-center justify-end gap-1">
                       <button
-                        class="p-1.5 rounded-md text-muted-foreground/50 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                        class="p-1.5 rounded-md text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors"
                         title="Delete client"
                         @click="deleteTarget = client"
                       >
@@ -500,7 +500,7 @@ watch(view, (next) => {
             <span
               v-if="row.introduced_by"
               class="text-[10px] font-medium px-1.5 py-0.5 rounded-full shrink-0"
-              :class="row.introduced_by === 'partner' ? 'bg-violet-500/15 text-violet-500' : 'bg-sky-500/15 text-sky-500'"
+              :class="row.introduced_by === 'partner' ? 'bg-violet-500/15 text-violet-500' : 'bg-info/15 text-info'"
             >
               {{ row.introduced_by === 'partner' ? 'intro → us' : 'intro ← us' }}
             </span>
@@ -529,8 +529,8 @@ watch(view, (next) => {
         >
           <div class="ios-card shadow-xl w-full max-w-sm mx-4 p-6">
             <div class="flex items-center gap-3 mb-4">
-              <div class="w-10 h-10 rounded-full bg-red-500/15 flex items-center justify-center shrink-0">
-                <Icon name="lucide:trash-2" class="w-5 h-5 text-red-400" />
+              <div class="w-10 h-10 rounded-full bg-destructive/15 flex items-center justify-center shrink-0">
+                <Icon name="lucide:trash-2" class="w-5 h-5 text-destructive" />
               </div>
               <div>
                 <h2 class="font-semibold">Delete Client</h2>

@@ -86,7 +86,7 @@
 								<h2 class="font-medium">Ticket Details</h2>
 								<div class="flex items-center gap-2">
 									<transition name="fade">
-										<span v-if="formRef?.isDirty" class="text-[10px] text-amber-500 uppercase tracking-wider font-medium">Unsaved</span>
+										<span v-if="formRef?.isDirty" class="text-[10px] text-warning uppercase tracking-wider font-medium">Unsaved</span>
 									</transition>
 									<button
 										class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border text-xs font-medium transition-colors"

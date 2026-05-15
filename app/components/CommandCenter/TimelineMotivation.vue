@@ -1,18 +1,18 @@
 <template>
 	<div class="ios-card p-5">
 		<div class="flex items-center gap-2 mb-3">
-			<UIcon name="i-heroicons-sparkles" class="w-5 h-5 text-amber-500" />
+			<UIcon name="i-heroicons-sparkles" class="w-5 h-5 text-warning" />
 			<h3 class="text-sm font-semibold text-foreground">{{ motivationTitle }}</h3>
 		</div>
 
 		<p class="text-[13px] text-muted-foreground leading-relaxed">{{ motivationMessage }}</p>
 
 		<!-- Streak -->
-		<div v-if="streak > 0" class="mt-4 flex items-center gap-2 p-2.5 rounded-lg bg-orange-50 dark:bg-orange-900/10">
+		<div v-if="streak > 0" class="mt-4 flex items-center gap-2 p-2.5 rounded-lg bg-warning/10 dark:bg-warning/10">
 			<span class="text-lg">🔥</span>
 			<div>
-				<p class="text-xs font-semibold text-orange-600 dark:text-orange-400">{{ streak }}-day streak</p>
-				<p class="text-[10px] text-orange-500/70 dark:text-orange-400/60">Keep it going!</p>
+				<p class="text-xs font-semibold text-warning dark:text-warning">{{ streak }}-day streak</p>
+				<p class="text-[10px] text-warning/70 dark:text-warning/60">Keep it going!</p>
 			</div>
 		</div>
 

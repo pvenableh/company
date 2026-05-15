@@ -20,17 +20,17 @@ const activitiesLoading = ref(false);
 
 const tabs = [
 	{ key: 'all', label: 'All' },
-	{ key: 'hot', label: 'Hot', color: 'text-red-500' },
-	{ key: 'warm', label: 'Warm', color: 'text-amber-500' },
-	{ key: 'nurture', label: 'Nurture', color: 'text-green-500' },
+	{ key: 'hot', label: 'Hot', color: 'text-destructive' },
+	{ key: 'warm', label: 'Warm', color: 'text-warning' },
+	{ key: 'nurture', label: 'Nurture', color: 'text-success' },
 	{ key: 'cold', label: 'Cold', color: 'text-blue-400' },
-	{ key: 'clients', label: 'Clients', color: 'text-emerald-600' },
+	{ key: 'clients', label: 'Clients', color: 'text-success' },
 ];
 
 const ratingColors: Record<string, string> = {
-	hot: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
-	warm: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-	nurture: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+	hot: 'bg-destructive/10 text-destructive dark:bg-destructive/30 dark:text-destructive',
+	warm: 'bg-warning/10 text-warning dark:bg-warning/30 dark:text-warning',
+	nurture: 'bg-success/10 text-success dark:bg-success/30 dark:text-success',
 	cold: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
 };
 
@@ -125,15 +125,15 @@ onMounted(async () => {
 					<div class="text-xs text-gray-500 uppercase mt-1">Total Active</div>
 				</div>
 				<div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700 text-center">
-					<div class="text-2xl font-bold text-red-500">{{ stats.hotContacts }}</div>
+					<div class="text-2xl font-bold text-destructive">{{ stats.hotContacts }}</div>
 					<div class="text-xs text-gray-500 uppercase mt-1">Hot</div>
 				</div>
 				<div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700 text-center">
-					<div class="text-2xl font-bold text-amber-500">{{ stats.warmContacts }}</div>
+					<div class="text-2xl font-bold text-warning">{{ stats.warmContacts }}</div>
 					<div class="text-xs text-gray-500 uppercase mt-1">Warm</div>
 				</div>
 				<div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700 text-center">
-					<div class="text-2xl font-bold text-green-500">{{ stats.nurtureContacts }}</div>
+					<div class="text-2xl font-bold text-success">{{ stats.nurtureContacts }}</div>
 					<div class="text-xs text-gray-500 uppercase mt-1">Nurture</div>
 				</div>
 				<div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700 text-center">
@@ -141,7 +141,7 @@ onMounted(async () => {
 					<div class="text-xs text-gray-500 uppercase mt-1">Cold</div>
 				</div>
 				<div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700 text-center">
-					<div class="text-2xl font-bold text-emerald-600">{{ stats.convertedClients }}</div>
+					<div class="text-2xl font-bold text-success">{{ stats.convertedClients }}</div>
 					<div class="text-xs text-gray-500 uppercase mt-1">Clients</div>
 				</div>
 			</div>
@@ -164,7 +164,7 @@ onMounted(async () => {
 						{{ stats.xp.totalXp.toLocaleString() }} / {{ stats.xp.nextLevelXp.toLocaleString() }} XP
 					</span>
 					<div v-if="stats.xp.streak > 0" class="flex items-center gap-1 text-xs text-gray-500 border-l pl-4 ml-2">
-						<span class="text-amber-500">🔥</span>
+						<span class="text-warning">🔥</span>
 						<span class="font-medium">{{ stats.xp.streak }}-day streak</span>
 					</div>
 				</div>
@@ -229,7 +229,7 @@ onMounted(async () => {
 										<span class="text-sm font-medium truncate">{{ contactDisplayName(contact) }}</span>
 										<span
 											v-if="contact.is_client"
-											class="text-[9px] bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 px-1.5 rounded-full font-medium"
+											class="text-[9px] bg-success/10 text-success dark:bg-success/30 dark:text-success px-1.5 rounded-full font-medium"
 										>
 											Client
 										</span>
@@ -326,7 +326,7 @@ onMounted(async () => {
 								>
 									{{ selectedContact.rating }}
 								</span>
-								<span v-if="selectedContact.is_client" class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">
+								<span v-if="selectedContact.is_client" class="text-[10px] bg-success/10 text-success px-2 py-0.5 rounded-full font-medium">
 									Client since {{ formatDate(selectedContact.client_at) }}
 								</span>
 								<span v-if="selectedContact.hibernated" class="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">
@@ -369,12 +369,12 @@ onMounted(async () => {
 									<div class="pb-3 flex-1 min-w-0">
 										<div class="flex items-center gap-2">
 											<span class="font-medium capitalize">{{ act.type }}</span>
-											<span v-if="act.is_response" class="text-[9px] bg-green-100 text-green-700 px-1 rounded">replied</span>
+											<span v-if="act.is_response" class="text-[9px] bg-success/10 text-success px-1 rounded">replied</span>
 											<span class="text-gray-400 ml-auto whitespace-nowrap">{{ formatDate(act.date) }}</span>
 										</div>
 										<p v-if="act.label" class="text-gray-500 mt-0.5">{{ act.label }}</p>
 										<p v-if="act.note" class="text-gray-400 mt-0.5 italic">{{ act.note }}</p>
-										<p v-if="act.is_response && act.response_note" class="text-green-600 dark:text-green-400 mt-0.5">
+										<p v-if="act.is_response && act.response_note" class="text-success dark:text-success mt-0.5">
 											↩ {{ act.response_note }}
 										</p>
 									</div>
@@ -388,7 +388,7 @@ onMounted(async () => {
 						<!-- Conversion Stats -->
 						<div class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
 							<h3 class="text-sm font-semibold mb-3 flex items-center gap-2">
-								<UIcon name="i-heroicons-arrow-trending-up" class="w-4 h-4 text-emerald-500" />
+								<UIcon name="i-heroicons-arrow-trending-up" class="w-4 h-4 text-success" />
 								Conversion Tracking
 							</h3>
 							<div class="space-y-3">
@@ -398,17 +398,17 @@ onMounted(async () => {
 								</div>
 								<div class="flex items-center justify-between">
 									<span class="text-xs text-gray-500">Contacts → Clients</span>
-									<span class="text-sm font-bold text-emerald-600">{{ stats.convertedClients }}</span>
+									<span class="text-sm font-bold text-success">{{ stats.convertedClients }}</span>
 								</div>
 								<div v-if="stats.totalContacts > 0" class="flex items-center justify-between">
 									<span class="text-xs text-gray-500">Conversion Rate</span>
-									<span class="text-sm font-bold text-emerald-600">
+									<span class="text-sm font-bold text-success">
 										{{ Math.round((stats.convertedClients / stats.totalContacts) * 100) }}%
 									</span>
 								</div>
 								<div class="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden mt-2">
 									<div
-										class="h-full bg-emerald-500 rounded-full transition-all"
+										class="h-full bg-success rounded-full transition-all"
 										:style="{ width: stats.totalContacts > 0 ? `${Math.round((stats.convertedClients / stats.totalContacts) * 100)}%` : '0%' }"
 									/>
 								</div>
@@ -418,7 +418,7 @@ onMounted(async () => {
 						<!-- Needs Follow-up -->
 						<div v-if="stats.needsFollowUp.length > 0" class="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
 							<h3 class="text-sm font-semibold mb-3 flex items-center gap-2">
-								<UIcon name="i-heroicons-bell-alert" class="w-4 h-4 text-amber-500" />
+								<UIcon name="i-heroicons-bell-alert" class="w-4 h-4 text-warning" />
 								Needs Follow-up
 							</h3>
 							<div class="space-y-2">
@@ -431,7 +431,7 @@ onMounted(async () => {
 									<div class="flex items-center gap-2 min-w-0">
 										<span
 											class="w-2 h-2 rounded-full flex-shrink-0"
-											:class="contact.rating === 'hot' ? 'bg-red-500' : 'bg-amber-500'"
+											:class="contact.rating === 'hot' ? 'bg-destructive' : 'bg-warning'"
 										/>
 										<span class="text-xs font-medium truncate">{{ contact.name }}</span>
 									</div>
@@ -456,7 +456,7 @@ onMounted(async () => {
 									<span class="truncate">
 										{{ act.type }}{{ act.contactName ? ` with ${act.contactName}` : '' }}
 									</span>
-									<span v-if="act.isResponse" class="text-[9px] bg-green-100 text-green-700 px-1 rounded">replied</span>
+									<span v-if="act.isResponse" class="text-[9px] bg-success/10 text-success px-1 rounded">replied</span>
 									<span class="text-[10px] text-gray-400 ml-auto whitespace-nowrap">{{ formatRelative(act.date) }}</span>
 								</div>
 							</div>

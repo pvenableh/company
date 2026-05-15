@@ -131,7 +131,7 @@ async function handlePickPalette(next: AppPaletteId) {
       </div>
       <div
         v-if="isMobileForced"
-        class="mt-1.5 px-2 py-1.5 rounded-md bg-amber-500/10 text-[10px] text-amber-600 dark:text-amber-400 leading-snug"
+        class="mt-1.5 px-2 py-1.5 rounded-md bg-warning/10 text-[10px] text-warning dark:text-warning leading-snug"
       >
         Mobile forces Bottom. Your saved choice ({{ storedRailPosition }}) returns on wider screens.
       </div>

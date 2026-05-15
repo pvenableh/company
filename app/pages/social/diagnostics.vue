@@ -89,14 +89,14 @@ const requiredCounts = computed(() => {
       <UButton :loading="loading" icon="i-lucide-refresh-cw" size="sm" @click="refresh">Refresh</UButton>
     </div>
 
-    <div v-if="isForbidden" class="rounded-xl border border-rose-200 bg-rose-50 dark:bg-rose-900/20 p-6 text-center">
-      <UIcon name="i-lucide-lock" class="w-8 h-8 text-rose-500 mx-auto mb-2" />
+    <div v-if="isForbidden" class="rounded-xl border border-destructive/30 bg-destructive/10 dark:bg-destructive/20 p-6 text-center">
+      <UIcon name="i-lucide-lock" class="w-8 h-8 text-destructive mx-auto mb-2" />
       <h2 class="font-semibold text-gray-900 dark:text-white mb-1">Admins only</h2>
       <p class="text-sm text-gray-600 dark:text-gray-300">{{ errorMessage }}</p>
     </div>
 
-    <div v-else-if="errorMessage && !data" class="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-900/20 p-6">
-      <p class="text-sm text-amber-900 dark:text-amber-200">{{ errorMessage }}</p>
+    <div v-else-if="errorMessage && !data" class="rounded-xl border border-warning/30 bg-warning/10 dark:bg-warning/20 p-6">
+      <p class="text-sm text-warning">{{ errorMessage }}</p>
     </div>
 
     <div v-else-if="loading && !data" class="text-center py-12 text-gray-500">
@@ -111,7 +111,7 @@ const requiredCounts = computed(() => {
             <div>
               <p class="text-xs uppercase tracking-wider text-muted-foreground">Required env vars</p>
               <p class="text-2xl font-bold mt-1">
-                <span :class="requiredCounts.envOk === requiredCounts.envTotal ? 'text-emerald-600' : 'text-amber-600'">
+                <span :class="requiredCounts.envOk === requiredCounts.envTotal ? 'text-success' : 'text-warning'">
                   {{ requiredCounts.envOk }}
                 </span>
                 <span class="text-gray-400 text-base"> / {{ requiredCounts.envTotal }}</span>
@@ -119,7 +119,7 @@ const requiredCounts = computed(() => {
             </div>
             <UIcon
               :name="requiredCounts.envOk === requiredCounts.envTotal ? 'i-lucide-check-circle' : 'i-lucide-alert-triangle'"
-              :class="requiredCounts.envOk === requiredCounts.envTotal ? 'text-emerald-500' : 'text-amber-500'"
+              :class="requiredCounts.envOk === requiredCounts.envTotal ? 'text-success' : 'text-warning'"
               class="w-7 h-7"
             />
           </div>
@@ -130,7 +130,7 @@ const requiredCounts = computed(() => {
             <div>
               <p class="text-xs uppercase tracking-wider text-muted-foreground">Account pings OK</p>
               <p class="text-2xl font-bold mt-1">
-                <span :class="requiredCounts.pingOk === requiredCounts.pingTotal && requiredCounts.pingTotal > 0 ? 'text-emerald-600' : requiredCounts.pingTotal === 0 ? 'text-gray-400' : 'text-rose-600'">
+                <span :class="requiredCounts.pingOk === requiredCounts.pingTotal && requiredCounts.pingTotal > 0 ? 'text-success' : requiredCounts.pingTotal === 0 ? 'text-gray-400' : 'text-destructive'">
                   {{ requiredCounts.pingOk }}
                 </span>
                 <span class="text-gray-400 text-base"> / {{ requiredCounts.pingTotal }}</span>
@@ -138,7 +138,7 @@ const requiredCounts = computed(() => {
             </div>
             <UIcon
               :name="requiredCounts.pingTotal === 0 ? 'i-lucide-circle-dashed' : requiredCounts.pingOk === requiredCounts.pingTotal ? 'i-lucide-check-circle' : 'i-lucide-x-circle'"
-              :class="requiredCounts.pingTotal === 0 ? 'text-gray-400' : requiredCounts.pingOk === requiredCounts.pingTotal ? 'text-emerald-500' : 'text-rose-500'"
+              :class="requiredCounts.pingTotal === 0 ? 'text-gray-400' : requiredCounts.pingOk === requiredCounts.pingTotal ? 'text-success' : 'text-destructive'"
               class="w-7 h-7"
             />
           </div>
@@ -184,15 +184,15 @@ const requiredCounts = computed(() => {
                 <li v-for="env in report.envChecks" :key="env.name" class="flex items-center gap-2 text-sm">
                   <UIcon
                     :name="env.present ? 'i-lucide-check-circle-2' : (env.required ? 'i-lucide-x-circle' : 'i-lucide-circle-dashed')"
-                    :class="env.present ? 'text-emerald-500' : (env.required ? 'text-rose-500' : 'text-gray-400')"
+                    :class="env.present ? 'text-success' : (env.required ? 'text-destructive' : 'text-gray-400')"
                     class="w-4 h-4 shrink-0"
                   />
                   <code class="text-[12px]">{{ env.name }}</code>
                   <span
                     class="text-[10px] uppercase tracking-wider"
-                    :class="env.required ? 'text-rose-600 dark:text-rose-400' : 'text-muted-foreground'"
+                    :class="env.required ? 'text-destructive dark:text-destructive' : 'text-muted-foreground'"
                   >{{ env.required ? 'required' : 'optional' }}</span>
-                  <span class="text-[12px]" :class="env.present ? 'text-muted-foreground' : 'text-rose-600 dark:text-rose-400'">
+                  <span class="text-[12px]" :class="env.present ? 'text-muted-foreground' : 'text-destructive dark:text-destructive'">
                     {{ env.present ? 'present' : 'missing' }}
                   </span>
                 </li>
@@ -232,7 +232,7 @@ const requiredCounts = computed(() => {
                     <div class="flex items-center gap-3 min-w-0">
                       <UIcon
                         :name="acc.status === 'ok' ? 'i-lucide-check-circle-2' : 'i-lucide-x-circle'"
-                        :class="acc.status === 'ok' ? 'text-emerald-500' : 'text-rose-500'"
+                        :class="acc.status === 'ok' ? 'text-success' : 'text-destructive'"
                         class="w-4 h-4 shrink-0"
                       />
                       <span class="text-sm font-medium text-gray-900 dark:text-white truncate">{{ acc.accountName }}</span>
@@ -242,7 +242,7 @@ const requiredCounts = computed(() => {
                       <span
                         v-if="acc.httpStatus"
                         class="text-[11px] font-medium"
-                        :class="acc.status === 'ok' ? 'text-emerald-600' : 'text-rose-600'"
+                        :class="acc.status === 'ok' ? 'text-success' : 'text-destructive'"
                       >HTTP {{ acc.httpStatus }}</span>
                       <UIcon name="i-lucide-chevron-down" class="w-4 h-4 text-muted-foreground transition-transform group-open:rotate-180" />
                     </div>
@@ -251,7 +251,7 @@ const requiredCounts = computed(() => {
                   <div class="px-3 py-3 border-t border-border/40 space-y-2 text-sm">
                     <div v-if="acc.errorMessage">
                       <p class="text-xs uppercase tracking-wider text-muted-foreground mb-1">Error</p>
-                      <p class="text-rose-700 dark:text-rose-400 text-[12px]">{{ acc.errorMessage }}</p>
+                      <p class="text-destructive dark:text-destructive text-[12px]">{{ acc.errorMessage }}</p>
                     </div>
                     <div v-if="acc.rawResponse !== undefined">
                       <p class="text-xs uppercase tracking-wider text-muted-foreground mb-1">Raw response</p>

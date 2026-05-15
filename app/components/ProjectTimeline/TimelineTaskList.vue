@@ -36,8 +36,8 @@ async function handleToggle(taskId: string, completed: boolean) {
 
 function getPriorityClasses(priority: string | null) {
   switch (priority) {
-    case 'high': return 'bg-red-500/10 text-red-500 border-red-500/20';
-    case 'medium': return 'bg-amber-500/10 text-amber-500 border-amber-500/20';
+    case 'high': return 'bg-destructive/10 text-destructive border-destructive/20';
+    case 'medium': return 'bg-warning/10 text-warning border-warning/20';
     case 'low': return 'bg-blue-500/10 text-blue-400 border-blue-400/20';
     default: return 'bg-muted text-muted-foreground border-border';
   }

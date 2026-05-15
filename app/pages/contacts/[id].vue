@@ -440,7 +440,7 @@ onUnmounted(() => clearEntity());
                     </span>
                     <span
                       v-else-if="conn.introduced_by === 'us'"
-                      class="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-sky-500/15 text-sky-400"
+                      class="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-info/15 text-info"
                       title="We introduced this partner to the client"
                     >
                       <Icon name="lucide:arrow-left" class="w-2.5 h-2.5 inline" /> us
@@ -685,7 +685,7 @@ onUnmounted(() => clearEntity());
               </div>
               <div class="flex justify-between">
                 <span class="text-muted-foreground">Subscribed</span>
-                <span :class="contact.email_subscribed ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'">
+                <span :class="contact.email_subscribed ? 'text-success dark:text-success' : 'text-muted-foreground'">
                   {{ contact.email_subscribed ? 'Yes' : 'No' }}
                 </span>
               </div>

@@ -150,9 +150,9 @@ onUnmounted(() => {
 						'absolute top-0 transform -translate-x-1/2 w-4 h-4 rounded-full border-2 border-white transition-all',
 						{
 							'bg-muted-foreground': type === 'start',
-							'bg-sky-500': type === 'due',
-							'bg-amber-500': type === 'projected',
-							'bg-green-500': type === 'completion',
+							'bg-info': type === 'due',
+							'bg-warning': type === 'projected',
+							'bg-success': type === 'completion',
 						},
 					]"
 					:style="{ left: `${position}%` }"
@@ -175,8 +175,8 @@ onUnmounted(() => {
 			<div v-if="!timelineData.completionDate">
 				<span
 					:class="{
-						'text-red-500': timelineData.daysUntilDue < 0,
-						'text-green-500': timelineData.daysUntilDue > 0,
+						'text-destructive': timelineData.daysUntilDue < 0,
+						'text-success': timelineData.daysUntilDue > 0,
 						'text-gray-500': timelineData.daysUntilDue === 0,
 					}"
 				>

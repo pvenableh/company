@@ -51,27 +51,27 @@ const collectionIcons = themedCollectionIcons;
 
 const collectionColors = {
 	projects: 'text-blue-500',
-	tickets: 'text-amber-500',
-	invoices: 'text-green-500',
+	tickets: 'text-warning',
+	invoices: 'text-success',
 	project_tasks: 'text-purple-500',
 	emails: 'text-pink-500',
-	cd_contacts: 'text-cyan-500',
-	cd_activities: 'text-teal-500',
+	cd_contacts: 'text-info',
+	cd_activities: 'text-info',
 	contacts: 'text-indigo-500',
-	clients: 'text-orange-500',
+	clients: 'text-warning',
 	tasks: 'text-violet-500',
 };
 
 const collectionTagColors = {
 	projects: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-	tickets: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-	invoices: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+	tickets: 'bg-warning/10 text-warning dark:bg-warning/30 dark:text-warning',
+	invoices: 'bg-success/10 text-success dark:bg-success/30 dark:text-success',
 	project_tasks: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
 	emails: 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400',
-	cd_contacts: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
-	cd_activities: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400',
+	cd_contacts: 'bg-info/10 text-info dark:bg-info/30 dark:text-info',
+	cd_activities: 'bg-info/10 text-info dark:bg-info/30 dark:text-info',
 	contacts: 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
-	clients: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+	clients: 'bg-warning/10 text-warning dark:bg-warning/30 dark:text-warning',
 	tasks: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400',
 };
 
@@ -740,21 +740,21 @@ watch(selectedOrg, () => {
 							<span v-if="item.itemData.company" class="text-[10px] text-muted-foreground">{{ item.itemData.company }}</span>
 							<span v-if="item.itemData.rating" class="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full"
 								:class="{
-									'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400': item.itemData.rating === 'hot',
-									'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400': item.itemData.rating === 'warm',
+									'bg-destructive/10 text-destructive dark:bg-destructive/30 dark:text-destructive': item.itemData.rating === 'hot',
+									'bg-warning/10 text-warning dark:bg-warning/30 dark:text-warning': item.itemData.rating === 'warm',
 									'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400': item.itemData.rating === 'nurture',
 									'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400': item.itemData.rating === 'cold',
 								}"
 							>
 								{{ item.itemData.rating }}
 							</span>
-							<span v-if="item.itemData.is_client" class="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+							<span v-if="item.itemData.is_client" class="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full bg-success/10 text-success dark:bg-success/30 dark:text-success">
 								Client
 							</span>
 						</template>
 
 						<!-- CardDesk activity type -->
-						<span v-if="item.collection === 'cd_activities' && item.itemData?.type" class="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400">
+						<span v-if="item.collection === 'cd_activities' && item.itemData?.type" class="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full bg-info/10 text-info dark:bg-info/30 dark:text-info">
 							{{ item.itemData.type }}
 						</span>
 

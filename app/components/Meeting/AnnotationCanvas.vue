@@ -383,7 +383,7 @@ onBeforeUnmount(() => {
 					:class="[
 						'inline-flex items-center gap-1 h-7 px-3 rounded-full text-[10px] font-bold uppercase tracking-wider transition-colors',
 						annotateMode
-							? 'bg-emerald-500 text-white hover:bg-emerald-600'
+							? 'bg-success text-white hover:bg-success/90'
 							: 'bg-muted/40 text-muted-foreground hover:bg-muted/60',
 					]"
 					:title="annotateMode ? 'Annotation on — click to pass clicks back to Figma' : 'Enable annotation (blocks Figma clicks while on)'"
@@ -443,7 +443,7 @@ onBeforeUnmount(() => {
 					</button>
 					<!-- Clear -->
 					<button
-						class="inline-flex items-center gap-1 h-7 px-2.5 rounded text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:bg-red-500/10 hover:text-red-500 transition-colors"
+						class="inline-flex items-center gap-1 h-7 px-2.5 rounded text-[10px] font-bold uppercase tracking-wider text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
 						title="Clear all annotations (broadcasts to everyone)"
 						@click="onClear"
 					>

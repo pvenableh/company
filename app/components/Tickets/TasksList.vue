@@ -108,7 +108,7 @@
 
 								<span v-if="task.ticketContext.due_date" class="mr-2 inline-flex items-center">
 									<UIcon name="i-heroicons-calendar" class="w-3 h-3 mr-1" />
-									<span :class="{ 'text-red-500': isTaskOverdue(task) }">
+									<span :class="{ 'text-destructive': isTaskOverdue(task) }">
 										{{ getFriendlyDateTwo(task.ticketContext.due_date) }}
 									</span>
 								</span>

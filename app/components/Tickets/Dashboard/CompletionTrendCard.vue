@@ -45,7 +45,7 @@
 					</ChartContainer>
 					<div class="flex items-center justify-center gap-6 mt-2 text-xs text-muted-foreground">
 						<span class="flex items-center gap-1.5">
-							<span class="w-3 h-0.5 rounded-full bg-emerald-400"></span>
+							<span class="w-3 h-0.5 rounded-full bg-success"></span>
 							Completed
 						</span>
 						<span class="flex items-center gap-1.5">

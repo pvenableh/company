@@ -615,7 +615,7 @@ onUnmounted(() => clearEntity());
                 <h2 class="text-[10px] uppercase tracking-wider text-muted-foreground">Effective Billing</h2>
                 <span
                   v-if="effectiveBilling.source === 'inherited' && effectiveBilling.fromName"
-                  class="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-500 font-medium"
+                  class="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-warning/15 text-warning font-medium"
                 >
                   <Icon name="lucide:corner-up-left" class="w-3 h-3" />
                   via {{ effectiveBilling.fromName }}
@@ -700,7 +700,7 @@ onUnmounted(() => clearEntity());
                 >
                   <span
                     class="w-1.5 h-1.5 rounded-full shrink-0"
-                    :class="row.isBilling ? 'bg-emerald-500' : row.source === 'direct' ? 'bg-primary/60' : 'bg-muted-foreground/40'"
+                    :class="row.isBilling ? 'bg-success' : row.source === 'direct' ? 'bg-primary/60' : 'bg-muted-foreground/40'"
                   />
                   <div class="flex-1 min-w-0 flex items-center gap-2">
                     <p class="text-sm font-medium truncate">{{ row.contact.first_name }} {{ row.contact.last_name }}</p>
@@ -715,11 +715,11 @@ onUnmounted(() => clearEntity());
                   >{{ row.contact.email }}</span>
                   <span
                     v-if="row.isBilling"
-                    class="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500 shrink-0"
+                    class="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-success/15 text-success shrink-0"
                   >Billing</span>
                   <span
                     v-if="row.source === 'inherited' && row.inheritedFromName"
-                    class="inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-500 shrink-0"
+                    class="inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-warning/15 text-warning shrink-0"
                   >
                     <Icon name="lucide:corner-up-left" class="w-2.5 h-2.5" />
                     via {{ row.inheritedFromName }}
@@ -752,7 +752,7 @@ onUnmounted(() => clearEntity());
                   <span
                     v-if="conn.introduced_by"
                     class="text-[10px] font-medium px-1.5 py-0.5 rounded-full shrink-0"
-                    :class="conn.introduced_by === 'partner' ? 'bg-violet-500/15 text-violet-500' : 'bg-sky-500/15 text-sky-500'"
+                    :class="conn.introduced_by === 'partner' ? 'bg-violet-500/15 text-violet-500' : 'bg-info/15 text-info'"
                   >
                     {{ conn.introduced_by === 'partner' ? 'intro → us' : 'intro ← us' }}
                   </span>
@@ -771,7 +771,7 @@ onUnmounted(() => clearEntity());
                       · {{ CONNECTION_ROLE_LABELS[conn.role as keyof typeof CONNECTION_ROLE_LABELS] || conn.role }}
                     </span>
                   </div>
-                  <span class="inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-500 shrink-0">
+                  <span class="inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-warning/15 text-warning shrink-0">
                     <Icon name="lucide:corner-up-left" class="w-2.5 h-2.5" />
                     via {{ inheritedFromName }}
                   </span>
@@ -861,7 +861,7 @@ onUnmounted(() => clearEntity());
                   <span class="text-xs text-muted-foreground truncate">@{{ acc.account_handle }}</span>
                   <span
                     class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium shrink-0"
-                    :class="acc.status === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'"
+                    :class="acc.status === 'active' ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'"
                   >
                     {{ acc.status }}
                   </span>

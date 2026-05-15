@@ -18,21 +18,21 @@
 				</span>
 				<span
 					v-else-if="errorCount > 0"
-					class="text-[10px] inline-flex items-center gap-1 text-rose-500 font-medium"
+					class="text-[10px] inline-flex items-center gap-1 text-destructive font-medium"
 				>
 					<Icon name="lucide:alert-circle" class="w-3 h-3" />
 					{{ errorCount }} blocking
 				</span>
 				<span
 					v-else-if="warnCount > 0"
-					class="text-[10px] inline-flex items-center gap-1 text-amber-500 font-medium"
+					class="text-[10px] inline-flex items-center gap-1 text-warning font-medium"
 				>
 					<Icon name="lucide:alert-triangle" class="w-3 h-3" />
 					{{ warnCount }} to fix
 				</span>
 				<span
 					v-else-if="recommendations.length === 0 && platforms.length > 0"
-					class="text-[10px] inline-flex items-center gap-1 text-emerald-500 font-medium"
+					class="text-[10px] inline-flex items-center gap-1 text-success font-medium"
 				>
 					<Icon name="lucide:check-circle-2" class="w-3 h-3" />
 					Looks good
@@ -216,14 +216,14 @@ function severityIcon(s: RecSeverity): string {
 }
 
 function severityColor(s: RecSeverity): string {
-	if (s === 'error') return 'text-rose-500';
-	if (s === 'warn') return 'text-amber-500';
-	return 'text-sky-500';
+	if (s === 'error') return 'text-destructive';
+	if (s === 'warn') return 'text-warning';
+	return 'text-info';
 }
 
 function severityBorder(s: RecSeverity): string {
-	if (s === 'error') return 'border-rose-500/20 bg-rose-500/5';
-	if (s === 'warn') return 'border-amber-500/20 bg-amber-500/5';
+	if (s === 'error') return 'border-destructive/20 bg-destructive/5';
+	if (s === 'warn') return 'border-warning/20 bg-warning/5';
 	return '';
 }
 

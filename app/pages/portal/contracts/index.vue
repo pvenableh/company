@@ -24,9 +24,9 @@ const signForm = reactive({ name: '', email: '', affirm: false });
 const statusConfig: Record<string, { label: string; classes: string; icon: string }> = {
 	draft:   { label: 'Draft',    classes: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',      icon: 'lucide:file' },
 	sent:    { label: 'Sent',     classes: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',   icon: 'lucide:send' },
-	signed:  { label: 'Signed',   classes: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400', icon: 'lucide:check-circle-2' },
+	signed:  { label: 'Signed',   classes: 'bg-success/10 text-success dark:bg-success/30 dark:text-success', icon: 'lucide:check-circle-2' },
 	void:    { label: 'Void',     classes: 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500',      icon: 'lucide:x-circle' },
-	expired: { label: 'Expired',  classes: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400', icon: 'lucide:clock' },
+	expired: { label: 'Expired',  classes: 'bg-warning/10 text-warning dark:bg-warning/30 dark:text-warning', icon: 'lucide:clock' },
 };
 
 async function loadContracts() {
@@ -144,7 +144,7 @@ watch(() => selectedOrg.value, () => loadContracts());
 					<Icon
 						:name="(statusConfig[contract.contract_status] ?? statusConfig.draft).icon"
 						class="w-5 h-5"
-						:class="contract.contract_status === 'signed' ? 'text-green-500' : 'text-muted-foreground'"
+						:class="contract.contract_status === 'signed' ? 'text-success' : 'text-muted-foreground'"
 					/>
 				</div>
 

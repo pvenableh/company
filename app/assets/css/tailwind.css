@@ -10,6 +10,49 @@
 @import './themes.css';
 
 /* ============================================
+   Safelist — palette-driven utilities generated dynamically
+   ============================================
+
+   Every leaf UI primitive (UButton, UBadge, UAlert, UProgress, UChip)
+   composes class names from a `color`-prop → palette-token lookup at
+   runtime (`bg-${token}/${opacity}` etc.) via `~/utils/palette-tokens`.
+   Tailwind v4's scanner can't see those template literals, so each
+   generated utility needs to be registered explicitly here.
+
+   Stays in lockstep with:
+     - SEMANTIC_BY_COLOR + TAG_SLOT_BY_COLOR in app/utils/palette-tokens.ts
+     - TAG_RAMP_LENGTH in app/composables/useAppAccent.ts (currently 8)
+     - --color-tag-N entries in the @theme inline block below
+
+   Adding a new tag slot means bumping the slot count in THREE places:
+   palette-tokens.ts (alias maps if a colour-prop name should land on
+   it), useAppAccent.ts (`TAG_RAMP_LENGTH`), and the `tag-{1,…,N}`
+   patterns + `--color-tag-N` registrations below.
+*/
+
+/* Semantic tokens — wide opacity range covers every variant in the app:
+     /5     — barely-there tinted card backgrounds (status banners)
+     /10,15,20,25 — soft/hover badge + button tints
+     /30    — ring + faint border variants
+     /90    — solid hover darken
+   Foreground tokens only register for primary + destructive (the two
+   semantics that ship `*-foreground`); other intents pair solids with
+   literal white. */
+@source inline("{bg,text,border,ring}-{primary,destructive,success,warning,info}");
+@source inline("bg-{primary,destructive,success,warning,info}/{5,10,15,20,25,30,90}");
+@source inline("hover:bg-{primary,destructive,success,warning,info}/{10,15,20,25,30,90}");
+@source inline("{border,ring}-{primary,destructive,success,warning,info}/{10,15,20,30,40}");
+@source inline("text-{primary,destructive}-foreground");
+
+/* Tag ramp: same shape, no `*-foreground` because we always pair solid
+   tag fills with literal white text (tag colours aren't guaranteed to
+   contrast against either the foreground or background neutral). */
+@source inline("{bg,text,border,ring}-tag-{1,2,3,4,5,6,7,8}");
+@source inline("bg-tag-{1,2,3,4,5,6,7,8}/{5,10,15,20,25,30,90}");
+@source inline("hover:bg-tag-{1,2,3,4,5,6,7,8}/{10,15,20,25,30,90}");
+@source inline("{border,ring}-tag-{1,2,3,4,5,6,7,8}/{10,15,20,30,40}");
+
+/* ============================================
    Tailwind v4 Theme Extensions
    ============================================ */
 
@@ -52,6 +95,19 @@
 	--color-info: hsl(var(--info));
 	--color-status-active: hsl(var(--status-active));
 	--color-status-scheduled: hsl(var(--status-scheduled));
+
+	/* Categorical tag ramp — palette-driven via applyPaletteToDocument().
+	   Use `bg-tag-3`, `text-tag-5` for purely decorative / categorical
+	   colour (lead stages, contact tags, host stripes, chart series).
+	   Slot count must match `TAG_RAMP_LENGTH` in useAppAccent.ts. */
+	--color-tag-1: hsl(var(--tag-1));
+	--color-tag-2: hsl(var(--tag-2));
+	--color-tag-3: hsl(var(--tag-3));
+	--color-tag-4: hsl(var(--tag-4));
+	--color-tag-5: hsl(var(--tag-5));
+	--color-tag-6: hsl(var(--tag-6));
+	--color-tag-7: hsl(var(--tag-7));
+	--color-tag-8: hsl(var(--tag-8));
 
 	--color-border: hsl(var(--border));
 	--color-input: hsl(var(--input));

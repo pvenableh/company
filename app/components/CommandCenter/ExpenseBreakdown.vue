@@ -115,7 +115,7 @@ onMounted(() => loadExpenses());
   <div class="ios-card p-5">
     <div class="flex items-center justify-between mb-5">
       <div class="flex items-center gap-2">
-        <Icon name="lucide:receipt" class="w-4 h-4 text-red-400" />
+        <Icon name="lucide:receipt" class="w-4 h-4 text-destructive" />
         <h3 class="text-sm font-semibold uppercase tracking-wide">Expense Breakdown</h3>
       </div>
       <span class="text-[10px] text-muted-foreground uppercase">{{ currentYear }}</span>

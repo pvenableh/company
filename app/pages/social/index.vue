@@ -136,8 +136,8 @@ const { getStatusColorName: statusColor } = useStatusStyle()
       </div>
 
       <div class="ios-card p-5 flex items-center gap-4">
-        <div class="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center shrink-0">
-          <UIcon name="i-lucide-check-circle" class="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+        <div class="w-12 h-12 rounded-xl bg-success/10 flex items-center justify-center shrink-0">
+          <UIcon name="i-lucide-check-circle" class="w-6 h-6 text-success dark:text-success" />
         </div>
         <div>
           <p class="text-sm text-gray-500 dark:text-gray-400 leading-none">Published Today</p>
@@ -350,7 +350,7 @@ const { getStatusColorName: statusColor } = useStatusStyle()
               </div>
               <div
                 class="w-2 h-2 rounded-full"
-                :class="account.status === 'active' ? 'bg-emerald-500' : 'bg-red-500'"
+                :class="account.status === 'active' ? 'bg-success' : 'bg-destructive'"
               />
             </div>
           </div>

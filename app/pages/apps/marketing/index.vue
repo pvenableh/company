@@ -83,16 +83,16 @@ function relativeDate(iso: string | Date): string {
 }
 
 function campaignStatusDot(s: string): string {
-  if (s === 'active') return 'bg-emerald-500';
-  if (s === 'paused') return 'bg-amber-500';
-  if (s === 'completed') return 'bg-sky-500';
+  if (s === 'active') return 'bg-success';
+  if (s === 'paused') return 'bg-warning';
+  if (s === 'completed') return 'bg-info';
   return 'bg-muted-foreground/40';
 }
 
 function campaignBarColor(s: string): string {
-  if (s === 'active') return 'bg-emerald-500';
-  if (s === 'paused') return 'bg-amber-500';
-  if (s === 'completed') return 'bg-sky-500';
+  if (s === 'active') return 'bg-success';
+  if (s === 'paused') return 'bg-warning';
+  if (s === 'completed') return 'bg-info';
   return 'bg-muted-foreground/40';
 }
 
@@ -944,7 +944,7 @@ const scopeLabel = computed(() => {
             <span class="font-medium">{{ a.account_name }}</span>
             <span
               class="w-1.5 h-1.5 rounded-full"
-              :class="a.status === 'active' ? 'bg-emerald-500' : 'bg-red-500'"
+              :class="a.status === 'active' ? 'bg-success' : 'bg-destructive'"
             />
           </div>
           <NuxtLink
@@ -1078,7 +1078,7 @@ const scopeLabel = computed(() => {
             </div>
             <div class="ios-card p-4">
               <p class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Subscribed</p>
-              <p class="text-2xl font-bold text-emerald-500">{{ formatNumber(audienceSubscribed) }}</p>
+              <p class="text-2xl font-bold text-success">{{ formatNumber(audienceSubscribed) }}</p>
             </div>
             <div class="ios-card p-4">
               <p class="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Prospects</p>
@@ -1134,7 +1134,7 @@ const scopeLabel = computed(() => {
                 </div>
                 <p v-if="list.description" class="text-xs text-muted-foreground line-clamp-2">{{ list.description }}</p>
                 <div v-if="list.double_opt_in" class="mt-2">
-                  <span class="text-[10px] text-amber-600 bg-amber-500/10 px-2 py-0.5 rounded-full font-medium">
+                  <span class="text-[10px] text-warning bg-warning/10 px-2 py-0.5 rounded-full font-medium">
                     Double opt-in
                   </span>
                 </div>

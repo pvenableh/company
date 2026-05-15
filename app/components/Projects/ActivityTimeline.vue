@@ -32,10 +32,10 @@ const collectionIcons = {
 
 const collectionColors = {
 	projects: 'text-blue-500 bg-blue-50 dark:bg-blue-900/20',
-	tickets: 'text-amber-500 bg-amber-50 dark:bg-amber-900/20',
+	tickets: 'text-warning bg-warning/10 dark:bg-warning/20',
 	project_tasks: 'text-purple-500 bg-purple-50 dark:bg-purple-900/20',
-	project_events: 'text-cyan-500 bg-cyan-50 dark:bg-cyan-900/20',
-	invoices: 'text-green-500 bg-green-50 dark:bg-green-900/20',
+	project_events: 'text-info bg-info/10 dark:bg-info',
+	invoices: 'text-success bg-success/10 dark:bg-success/20',
 	comments: 'text-pink-500 bg-pink-50 dark:bg-pink-900/20',
 };
 

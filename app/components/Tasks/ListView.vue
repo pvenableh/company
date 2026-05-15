@@ -69,7 +69,7 @@
 					v-if="task.priority && task.priority !== 'medium' && !(task.completed || task.status === 'done')"
 					class="text-[8px] uppercase font-semibold px-1.5 py-0.5 rounded-md shrink-0"
 					:class="{
-						'text-red-500 bg-red-500/10': task.priority === 'high',
+						'text-destructive bg-destructive/10': task.priority === 'high',
 						'text-blue-400 bg-blue-500/10': task.priority === 'low',
 					}"
 				>

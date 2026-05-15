@@ -105,7 +105,7 @@ const onSubmit = handleSubmit(async (values) => {
       <div class="p-6 pt-0">
         <template v-if="isSuccess">
           <div class="flex flex-col items-center justify-center py-8 text-center">
-            <PartyPopper class="h-12 w-12 text-green-500 mb-4" />
+            <PartyPopper class="h-12 w-12 text-success mb-4" />
             <h4 class="text-lg font-medium mb-2">Welcome aboard!</h4>
             <p class="text-sm text-muted-foreground mb-6">
               Your account has been set up successfully.
@@ -183,7 +183,7 @@ const onSubmit = handleSubmit(async (values) => {
                         v-for="req in passwordRequirements"
                         :key="req.label"
                         class="flex items-center gap-1"
-                        :class="req.met ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'"
+                        :class="req.met ? 'text-success dark:text-success' : 'text-muted-foreground'"
                       >
                         <Check v-if="req.met" class="h-3 w-3" />
                         <X v-else class="h-3 w-3" />

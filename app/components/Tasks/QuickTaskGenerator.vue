@@ -17,7 +17,7 @@
 		<!-- Motivational text -->
 		<Transition name="motivate">
 			<div v-if="motivationalText" class="motivational-bar">
-				<UIcon name="i-heroicons-sparkles" class="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+				<UIcon name="i-heroicons-sparkles" class="w-3.5 h-3.5 text-warning flex-shrink-0" />
 				<span>{{ motivationalText }}</span>
 			</div>
 		</Transition>
@@ -223,7 +223,7 @@
 			<!-- Today -->
 			<template v-if="todayTasks.length">
 				<div class="schedule-header">
-					<UIcon name="i-heroicons-sun" class="w-3.5 h-3.5 text-amber-500" />
+					<UIcon name="i-heroicons-sun" class="w-3.5 h-3.5 text-warning" />
 					<span>Today</span>
 					<span class="schedule-count">{{ todayTasks.length }}</span>
 				</div>
@@ -291,7 +291,7 @@
 			<!-- Completed tasks -->
 			<template v-if="completedTasks.length">
 				<div class="schedule-header mt-3">
-					<UIcon name="i-heroicons-check-circle" class="w-3.5 h-3.5 text-emerald-500" />
+					<UIcon name="i-heroicons-check-circle" class="w-3.5 h-3.5 text-success" />
 					<span>Completed</span>
 					<span class="schedule-count">{{ completedTasks.length }}</span>
 				</div>
@@ -446,8 +446,8 @@ const schedules = [
 
 const priorities = [
 	{ value: 'low', label: 'Low', activeClass: 'border-blue-300 bg-blue-50 text-blue-600 dark:bg-blue-950 dark:border-blue-700 dark:text-blue-400' },
-	{ value: 'medium', label: 'Medium', activeClass: 'border-yellow-300 bg-yellow-50 text-yellow-700 dark:bg-yellow-950 dark:border-yellow-700 dark:text-yellow-400' },
-	{ value: 'high', label: 'High', activeClass: 'border-red-300 bg-red-50 text-red-600 dark:bg-red-950 dark:border-red-700 dark:text-red-400' },
+	{ value: 'medium', label: 'Medium', activeClass: 'border-warning/30 bg-warning/10 text-warning dark:bg-warning dark:border-warning dark:text-warning' },
+	{ value: 'high', label: 'High', activeClass: 'border-destructive/30 bg-destructive/10 text-destructive dark:bg-destructive dark:border-destructive dark:text-destructive' },
 ];
 
 // Show starting motivation when component mounts with active tasks
@@ -565,7 +565,7 @@ const TaskRow = defineComponent({
 							? h('span', {
 								class: [
 									'text-[8px] uppercase tracking-wider font-semibold',
-									props.task.priority === 'high' ? 'text-red-500' : 'text-blue-400',
+									props.task.priority === 'high' ? 'text-destructive' : 'text-blue-400',
 								].join(' '),
 							}, props.task.priority)
 							: null,

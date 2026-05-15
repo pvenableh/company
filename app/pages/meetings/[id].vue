@@ -513,13 +513,11 @@ const summaryStatusLabel = computed(() => {
 	return { text: 'No transcript', tone: 'gray' };
 });
 
-const toneClass = (tone) => ({
-	emerald: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-	sky: 'bg-sky-500/10 text-sky-600 dark:text-sky-400',
-	amber: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-	red: 'bg-red-500/10 text-red-600 dark:text-red-400',
-	gray: 'bg-muted/40 text-muted-foreground',
-}[tone] || 'bg-muted/40 text-muted-foreground');
+// Recap status tones flow through the shared `softTone` helper in
+// `~/utils/palette-tokens` (auto-imported by Nuxt). The `tone` keys
+// (emerald/sky/amber/red) stay as a stable contract for the page state
+// machine; the class output is what re-skins on palette switch.
+const toneClass = (tone) => softTone(tone);
 
 // Allow the user to force a recap whenever they're not actively in the middle
 // of one. We deliberately enable this while status is 'pending' — that's the
@@ -816,8 +814,8 @@ const promoteActionItem = async (idx) => {
 
 		<div v-if="loading" class="text-center py-12 text-sm text-muted-foreground">Loading…</div>
 		<div v-else-if="error" class="ios-card p-8 text-center">
-			<div class="w-12 h-12 rounded-2xl bg-red-500/10 flex items-center justify-center mx-auto mb-3">
-				<UIcon name="i-heroicons-exclamation-triangle" class="w-6 h-6 text-red-500" />
+			<div class="w-12 h-12 rounded-2xl bg-destructive/10 flex items-center justify-center mx-auto mb-3">
+				<UIcon name="i-heroicons-exclamation-triangle" class="w-6 h-6 text-destructive" />
 			</div>
 			<p class="text-sm text-foreground">{{ error }}</p>
 		</div>
@@ -838,7 +836,7 @@ const promoteActionItem = async (idx) => {
 							v-if="canEndMeeting"
 							type="button"
 							:disabled="ending"
-							class="inline-flex items-center gap-1 h-6 px-2.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 disabled:opacity-50 transition-colors"
+							class="inline-flex items-center gap-1 h-6 px-2.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-destructive/10 hover:bg-destructive/20 text-destructive disabled:opacity-50 transition-colors"
 							title="Mark this meeting as ended (host only)"
 							@click="endMeeting"
 						>
@@ -972,7 +970,7 @@ const promoteActionItem = async (idx) => {
 					</button>
 				</div>
 
-				<div v-if="recordingsError" class="text-[12px] text-red-500 py-2">{{ recordingsError }}</div>
+				<div v-if="recordingsError" class="text-[12px] text-destructive py-2">{{ recordingsError }}</div>
 
 				<div v-else-if="recordingsLoading && recordings.length === 0" class="text-[12px] text-muted-foreground py-3 text-center">
 					Checking for recordings…
@@ -994,7 +992,7 @@ const promoteActionItem = async (idx) => {
 									<span
 										v-if="rec.status && rec.status !== 'finished'"
 										class="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full"
-										:class="rec.status === 'in-progress' ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400' : 'bg-muted/40 text-muted-foreground'"
+										:class="rec.status === 'in-progress' ? 'bg-info/10 text-info' : 'bg-muted/40 text-muted-foreground'"
 									>
 										{{ rec.status }}
 									</span>
@@ -1009,7 +1007,7 @@ const promoteActionItem = async (idx) => {
 									v-if="rec.status === 'finished'"
 									type="button"
 									:disabled="linkLoadingId === rec.id"
-									class="inline-flex items-center gap-1 h-7 px-3 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 disabled:opacity-50 transition-colors"
+									class="inline-flex items-center gap-1 h-7 px-3 rounded-full text-[10px] font-bold uppercase tracking-wider bg-success/10 hover:bg-success/20 text-success disabled:opacity-50 transition-colors"
 									@click="playRecording(rec.id)"
 								>
 									<UIcon
@@ -1048,7 +1046,7 @@ const promoteActionItem = async (idx) => {
 					<button
 						v-if="canRegenerate"
 						:disabled="generating"
-						class="inline-flex items-center gap-1 h-7 px-3 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 disabled:opacity-50 transition-colors"
+						class="inline-flex items-center gap-1 h-7 px-3 rounded-full text-[10px] font-bold uppercase tracking-wider bg-success/10 hover:bg-success/20 text-success disabled:opacity-50 transition-colors"
 						@click="generateSummary"
 					>
 						<UIcon
@@ -1068,7 +1066,7 @@ const promoteActionItem = async (idx) => {
 					<span class="block text-[12px] text-muted-foreground/70 mt-1">If this hangs for more than a minute, click <em>Force generate</em> above to run it now.</span>
 				</div>
 				<div v-else-if="meeting.summary_status === 'failed'" class="text-sm py-4">
-					<p class="text-red-500">{{ meeting.summary_error || 'Recap generation failed.' }}</p>
+					<p class="text-destructive">{{ meeting.summary_error || 'Recap generation failed.' }}</p>
 					<p class="text-muted-foreground text-xs mt-1">Click Regenerate to try again.</p>
 				</div>
 				<div v-else-if="!meeting.transcript_text" class="text-sm text-muted-foreground py-4 text-center">
@@ -1097,7 +1095,7 @@ const promoteActionItem = async (idx) => {
 					/>
 					<div class="flex items-center gap-1.5 mt-2">
 						<button
-							class="inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 disabled:opacity-50 transition-colors"
+							class="inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-[10px] font-bold uppercase tracking-wider bg-success/10 hover:bg-success/20 text-success disabled:opacity-50 transition-colors"
 							:disabled="!noteDraft.trim() || noteSubmitting"
 							@click="submitNote('note')"
 						>
@@ -1105,7 +1103,7 @@ const promoteActionItem = async (idx) => {
 							Note
 						</button>
 						<button
-							class="inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 disabled:opacity-50 transition-colors"
+							class="inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-[10px] font-bold uppercase tracking-wider bg-warning/10 hover:bg-warning/20 text-warning disabled:opacity-50 transition-colors"
 							:disabled="!noteDraft.trim() || noteSubmitting"
 							@click="submitNote('decision')"
 						>
@@ -1121,18 +1119,18 @@ const promoteActionItem = async (idx) => {
 
 				<!-- Decisions group -->
 				<div v-if="groupedNotes.decisions.length > 0" class="mb-4">
-					<h3 class="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-2">Decisions</h3>
+					<h3 class="text-[10px] font-bold uppercase tracking-wider text-warning mb-2">Decisions</h3>
 					<ul class="space-y-2">
 						<li
 							v-for="n in groupedNotes.decisions"
 							:key="n.id"
-							class="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 group"
+							class="rounded-lg border border-warning/20 bg-warning/5 p-3 group"
 						>
 							<div class="flex items-start justify-between gap-2">
 								<p class="text-[13px] text-foreground whitespace-pre-wrap leading-snug flex-1">{{ n.content }}</p>
 								<button
 									v-if="n.author?.id === currentUserId"
-									class="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-red-500 p-0.5 flex-shrink-0"
+									class="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive p-0.5 flex-shrink-0"
 									title="Delete"
 									@click="handleDeleteNote(n.id)"
 								>
@@ -1148,7 +1146,7 @@ const promoteActionItem = async (idx) => {
 
 				<!-- General notes group -->
 				<div v-if="groupedNotes.general.length > 0">
-					<h3 class="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-2">Notes</h3>
+					<h3 class="text-[10px] font-bold uppercase tracking-wider text-success mb-2">Notes</h3>
 					<ul class="space-y-2">
 						<li
 							v-for="n in groupedNotes.general"
@@ -1159,7 +1157,7 @@ const promoteActionItem = async (idx) => {
 								<p class="text-[13px] text-foreground whitespace-pre-wrap leading-snug flex-1">{{ n.content }}</p>
 								<button
 									v-if="n.author?.id === currentUserId"
-									class="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-red-500 p-0.5 flex-shrink-0"
+									class="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive p-0.5 flex-shrink-0"
 									title="Delete"
 									@click="handleDeleteNote(n.id)"
 								>
@@ -1183,7 +1181,7 @@ const promoteActionItem = async (idx) => {
 						:key="i"
 						class="flex items-start gap-2.5 text-sm"
 					>
-						<UIcon name="i-heroicons-arrow-right-circle" class="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+						<UIcon name="i-heroicons-arrow-right-circle" class="w-4 h-4 text-success flex-shrink-0 mt-0.5" />
 						<div class="flex-1 min-w-0">
 							<p class="text-foreground" :class="item.promoted ? 'line-through text-muted-foreground' : ''">{{ item.description }}</p>
 							<p v-if="item.assignee || item.due_date" class="text-[11px] text-muted-foreground mt-0.5">
@@ -1195,7 +1193,7 @@ const promoteActionItem = async (idx) => {
 						<button
 							v-if="!item.promoted"
 							:disabled="promotingIndex === i"
-							class="flex-shrink-0 inline-flex items-center gap-1 h-6 px-2.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 disabled:opacity-50 transition-colors"
+							class="flex-shrink-0 inline-flex items-center gap-1 h-6 px-2.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-success/10 hover:bg-success/20 text-success disabled:opacity-50 transition-colors"
 							@click="promoteActionItem(i)"
 						>
 							<UIcon
@@ -1225,9 +1223,9 @@ const promoteActionItem = async (idx) => {
 							v-if="p.kind === 'contact' && p.contactId"
 							:to="`/contacts/${p.contactId}`"
 							:title="p.clientName ? `${p.name} · ${p.clientName}` : p.name"
-							class="inline-flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full text-[12px] transition-colors bg-amber-500/10 hover:bg-amber-500/20 ring-1 ring-inset ring-amber-500/30"
+							class="inline-flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full text-[12px] transition-colors bg-warning/10 hover:bg-warning/20 ring-1 ring-inset ring-warning/30"
 						>
-							<span class="w-5 h-5 rounded-full bg-amber-500/30 text-amber-700 dark:text-amber-300 flex items-center justify-center text-[10px] font-bold">
+							<span class="w-5 h-5 rounded-full bg-warning/30 text-warning flex items-center justify-center text-[10px] font-bold">
 								{{ p.initial }}
 							</span>
 							<span class="font-medium text-foreground">{{ p.name }}</span>

@@ -17,10 +17,10 @@ const props = withDefaults(
 );
 
 const scoreColor = computed(() => {
-	if (props.score >= 80) return 'text-green-500';
+	if (props.score >= 80) return 'text-success';
 	if (props.score >= 60) return 'text-blue-500';
-	if (props.score >= 40) return 'text-amber-500';
-	return 'text-red-500';
+	if (props.score >= 40) return 'text-warning';
+	return 'text-destructive';
 });
 
 const scoreLabel = computed(() => {
@@ -31,10 +31,10 @@ const scoreLabel = computed(() => {
 });
 
 const progressColor = computed(() => {
-	if (props.score >= 80) return 'bg-green-500';
+	if (props.score >= 80) return 'bg-success';
 	if (props.score >= 60) return 'bg-blue-500';
-	if (props.score >= 40) return 'bg-amber-500';
-	return 'bg-red-500';
+	if (props.score >= 40) return 'bg-warning';
+	return 'bg-destructive';
 });
 
 // Show expanded metrics only when extra data is available
@@ -68,13 +68,13 @@ const hasExtendedMetrics = computed(() => {
 				<p class="text-[10px] uppercase tracking-wider text-muted-foreground">Done Today</p>
 			</div>
 			<div>
-				<p class="text-lg font-bold" :class="overdueItems > 0 ? 'text-red-500' : 'text-foreground'">
+				<p class="text-lg font-bold" :class="overdueItems > 0 ? 'text-destructive' : 'text-foreground'">
 					{{ overdueItems }}
 				</p>
 				<p class="text-[10px] uppercase tracking-wider text-muted-foreground">Overdue</p>
 			</div>
 			<div>
-				<p class="text-lg font-bold text-emerald-600">${{ (pendingInvoiceTotal / 1000).toFixed(1) }}k</p>
+				<p class="text-lg font-bold text-success">${{ (pendingInvoiceTotal / 1000).toFixed(1) }}k</p>
 				<p class="text-[10px] uppercase tracking-wider text-muted-foreground">Pending</p>
 			</div>
 		</div>
@@ -86,11 +86,11 @@ const hasExtendedMetrics = computed(() => {
 				<p class="text-[10px] uppercase tracking-wider text-muted-foreground">Projects</p>
 			</div>
 			<div v-if="unreadMessages > 0">
-				<p class="text-lg font-bold text-cyan-500">{{ unreadMessages }}</p>
+				<p class="text-lg font-bold text-info">{{ unreadMessages }}</p>
 				<p class="text-[10px] uppercase tracking-wider text-muted-foreground">Messages</p>
 			</div>
 			<div v-if="upcomingMeetings > 0">
-				<p class="text-lg font-bold text-amber-500">{{ upcomingMeetings }}</p>
+				<p class="text-lg font-bold text-warning">{{ upcomingMeetings }}</p>
 				<p class="text-[10px] uppercase tracking-wider text-muted-foreground">Meetings</p>
 			</div>
 		</div>

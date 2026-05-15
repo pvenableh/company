@@ -95,9 +95,9 @@ const dueDateUrgency = computed(() => formatDueDateStatus(props.task?.due_date))
 
 const dueDateTextClass = computed(() => {
 	const u = dueDateUrgency.value;
-	if (u === 'past') return 'text-red-500';
-	if (u === 'urgent') return 'text-orange-500';
-	if (u === 'medium') return 'text-yellow-600';
+	if (u === 'past') return 'text-destructive';
+	if (u === 'urgent') return 'text-warning';
+	if (u === 'medium') return 'text-warning';
 	return 'text-muted-foreground';
 });
 

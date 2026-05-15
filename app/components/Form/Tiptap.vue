@@ -64,7 +64,7 @@
 				<span
 					class="text-[10px]"
 					:class="{
-						'text-red-500': characterCount > characterLimit && characterLimit > 0,
+						'text-destructive': characterCount > characterLimit && characterLimit > 0,
 						'text-gray-500': characterCount <= characterLimit || characterLimit === 0,
 					}"
 				>

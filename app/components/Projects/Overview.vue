@@ -125,8 +125,8 @@
 			<!-- Financial Summary Widget -->
 			<div class="ios-card p-5">
 				<div class="flex items-center gap-2 mb-4">
-					<div class="h-8 w-8 rounded-xl bg-emerald-500/10 flex items-center justify-center">
-						<UIcon name="i-heroicons-banknotes" class="w-4 h-4 text-emerald-500" />
+					<div class="h-8 w-8 rounded-xl bg-success/10 flex items-center justify-center">
+						<UIcon name="i-heroicons-banknotes" class="w-4 h-4 text-success" />
 					</div>
 					<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Financials</span>
 				</div>
@@ -141,11 +141,11 @@
 					</div>
 					<div class="flex items-center justify-between">
 						<span class="text-xs text-muted-foreground">Paid</span>
-						<span class="text-xs font-medium text-green-600">{{ formatCurrency(stats.paidTotal) }}</span>
+						<span class="text-xs font-medium text-success">{{ formatCurrency(stats.paidTotal) }}</span>
 					</div>
 					<div class="flex items-center justify-between">
 						<span class="text-xs text-muted-foreground">Outstanding</span>
-						<span class="text-xs font-medium" :class="stats.invoiceTotal - stats.paidTotal > 0 ? 'text-amber-500' : 'text-foreground'">
+						<span class="text-xs font-medium" :class="stats.invoiceTotal - stats.paidTotal > 0 ? 'text-warning' : 'text-foreground'">
 							{{ formatCurrency(stats.invoiceTotal - stats.paidTotal) }}
 						</span>
 					</div>
@@ -155,7 +155,7 @@
 							<span class="text-[10px] font-medium text-foreground">{{ Math.round((stats.invoiceTotal / project.contract_value) * 100) }}%</span>
 						</div>
 						<div class="h-1.5 bg-muted/30 rounded-full overflow-hidden">
-							<div class="h-full rounded-full bg-emerald-500 transition-all duration-500" :style="{ width: `${Math.min(100, (stats.invoiceTotal / project.contract_value) * 100)}%` }" />
+							<div class="h-full rounded-full bg-success transition-all duration-500" :style="{ width: `${Math.min(100, (stats.invoiceTotal / project.contract_value) * 100)}%` }" />
 						</div>
 					</div>
 				</div>
@@ -166,8 +166,8 @@
 		<div class="ios-card p-3 sm:p-5 overflow-hidden">
 			<div class="flex items-center justify-between gap-2 mb-4">
 				<div class="flex items-center gap-2 sm:gap-3 min-w-0">
-					<div class="h-7 w-7 sm:h-8 sm:w-8 rounded-xl bg-cyan-500/10 flex items-center justify-center shrink-0">
-						<UIcon name="i-heroicons-calendar" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-500" />
+					<div class="h-7 w-7 sm:h-8 sm:w-8 rounded-xl bg-info/10 flex items-center justify-center shrink-0">
+						<UIcon name="i-heroicons-calendar" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-info" />
 					</div>
 					<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Events</span>
 					<span v-if="allTimelineItems.length" class="text-[10px] text-muted-foreground/50">({{ allTimelineItems.length }})</span>
@@ -212,22 +212,22 @@
 									<div v-if="item.source === 'meeting'" class="h-5 w-5 rounded-full bg-purple-500/10 flex items-center justify-center shrink-0">
 										<UIcon name="i-heroicons-video-camera" class="w-3 h-3 text-purple-500" />
 									</div>
-									<div v-else-if="item.source === 'invoice'" class="h-5 w-5 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
-										<UIcon name="i-heroicons-document-text" class="w-3 h-3 text-emerald-500" />
+									<div v-else-if="item.source === 'invoice'" class="h-5 w-5 rounded-full bg-success/10 flex items-center justify-center shrink-0">
+										<UIcon name="i-heroicons-document-text" class="w-3 h-3 text-success" />
 									</div>
 									<div v-else
 										class="h-2.5 w-2.5 rounded-full shrink-0"
 										:class="{
 											'bg-pink-500': item.type === 'Design',
-											'bg-orange-500': item.type === 'Content',
-											'bg-cyan-500': item.type === 'Timeline',
+											'bg-warning': item.type === 'Content',
+											'bg-info': item.type === 'Timeline',
 											'bg-violet-500': item.type === 'Hours',
 											'bg-gray-400': !['Design', 'Content', 'Timeline', 'Hours'].includes(item.type),
 										}"
 									/>
 									<h5 class="uppercase tracking-wide font-bold text-xs truncate">{{ item.title }}</h5>
 									<!-- Invoice amount -->
-									<span v-if="item.source === 'invoice' && item._raw.total_amount != null" class="text-[10px] font-medium text-emerald-600">
+									<span v-if="item.source === 'invoice' && item._raw.total_amount != null" class="text-[10px] font-medium text-success">
 										{{ formatCurrency(item._raw.total_amount) }}
 									</span>
 								</div>
@@ -239,11 +239,11 @@
 									<template v-if="item.source === 'event'">
 										<span
 											v-if="item._raw.approval === 'Need Approval'"
-											class="text-[8px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-md text-amber-500 bg-amber-500/10"
+											class="text-[8px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-md text-warning bg-warning/10"
 										>Needs Approval</span>
 										<span
 											v-else-if="item._raw.approval === 'Approved'"
-											class="text-[8px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-md text-green-500 bg-green-500/10"
+											class="text-[8px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-md text-success bg-success/10"
 										>Approved</span>
 									</template>
 									<span
@@ -313,7 +313,7 @@
 						<div v-for="(file, i) in pendingFiles" :key="i" class="flex items-center gap-2 text-xs text-foreground bg-muted/30 rounded-lg px-3 py-1.5">
 							<UIcon name="i-heroicons-document" class="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
 							<span class="truncate flex-1">{{ file.name }}</span>
-							<button @click.prevent="removeEventFile(i)" class="text-muted-foreground hover:text-red-500 flex-shrink-0">
+							<button @click.prevent="removeEventFile(i)" class="text-muted-foreground hover:text-destructive flex-shrink-0">
 								<UIcon name="i-heroicons-x-mark" class="w-3.5 h-3.5" />
 							</button>
 						</div>
@@ -350,7 +350,7 @@
 							<!-- Approval actions -->
 							<template v-if="selectedEventFull?.approval === 'Need Approval'">
 								<button
-									class="inline-flex items-center gap-1 rounded-full bg-green-500/10 border border-green-500/30 px-2.5 py-1 text-xs font-medium text-green-600 dark:text-green-400 transition-colors hover:bg-green-500/20"
+									class="inline-flex items-center gap-1 rounded-full bg-success/10 border border-success/30 px-2.5 py-1 text-xs font-medium text-success dark:text-success transition-colors hover:bg-success/20"
 									:disabled="approvingEvent"
 									@click="approveEvent(selectedEventFull)"
 								>
@@ -368,7 +368,7 @@
 							</template>
 							<span
 								v-else-if="selectedEventFull?.approval === 'Approved'"
-								class="inline-flex items-center gap-1 rounded-full bg-green-500/10 px-2.5 py-1 text-[9px] uppercase tracking-wider font-semibold text-green-500"
+								class="inline-flex items-center gap-1 rounded-full bg-success/10 px-2.5 py-1 text-[9px] uppercase tracking-wider font-semibold text-success"
 							>
 								<Icon name="lucide:check-circle" class="w-3 h-3" />
 								Approved
@@ -533,9 +533,9 @@ const newStatusText = ref('');
 const postingUpdate = ref(false);
 
 const statusUpdateColors = {
-	on_track: { bg: 'bg-emerald-500/15', text: 'text-emerald-400', dot: 'bg-emerald-500', label: 'On Track' },
-	at_risk: { bg: 'bg-amber-500/15', text: 'text-amber-400', dot: 'bg-amber-500', label: 'At Risk' },
-	off_track: { bg: 'bg-red-500/15', text: 'text-red-400', dot: 'bg-red-500', label: 'Off Track' },
+	on_track: { bg: 'bg-success/15', text: 'text-success', dot: 'bg-success', label: 'On Track' },
+	at_risk: { bg: 'bg-warning/15', text: 'text-warning', dot: 'bg-warning', label: 'At Risk' },
+	off_track: { bg: 'bg-destructive/15', text: 'text-destructive', dot: 'bg-destructive', label: 'Off Track' },
 };
 
 async function loadStatusUpdates() {

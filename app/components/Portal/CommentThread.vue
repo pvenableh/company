@@ -157,7 +157,7 @@ watch(() => props.itemId, load);
 							</button>
 							<button
 								v-if="canDeleteComment(comment)"
-								class="text-[10px] text-muted-foreground hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+								class="text-[10px] text-muted-foreground hover:text-destructive transition-colors opacity-0 group-hover:opacity-100"
 								@click="remove(comment)"
 							>
 								Delete
@@ -239,6 +239,6 @@ watch(() => props.itemId, load);
 				</button>
 			</div>
 		</div>
-		<p v-if="error" class="text-xs text-red-500">{{ error }}</p>
+		<p v-if="error" class="text-xs text-destructive">{{ error }}</p>
 	</div>
 </template>

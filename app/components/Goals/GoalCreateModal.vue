@@ -39,14 +39,14 @@
 					<p class="text-[10px] text-muted-foreground leading-tight">{{ tpl.tagline }}</p>
 				</button>
 			</div>
-			<div v-if="selectedTemplate" class="rounded-md border border-amber-500/20 bg-amber-500/5 p-3 mt-2">
-				<div class="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-amber-600 dark:text-amber-400 font-semibold mb-1.5">
+			<div v-if="selectedTemplate" class="rounded-md border border-warning/20 bg-warning/5 p-3 mt-2">
+				<div class="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-warning dark:text-warning font-semibold mb-1.5">
 					<UIcon name="i-heroicons-sparkles" class="w-3 h-3" />
 					Reflection prompts for this template
 				</div>
 				<ul class="space-y-1 text-[11px] text-foreground/80">
 					<li v-for="(p, i) in selectedTemplate.reflection_prompts" :key="i" class="flex gap-1.5">
-						<span class="text-amber-500">·</span>
+						<span class="text-warning">·</span>
 						<span>{{ p }}</span>
 					</li>
 				</ul>

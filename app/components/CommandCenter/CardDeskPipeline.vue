@@ -3,16 +3,16 @@ const { stats, isLoading, fetchStats } = useCardDesk();
 const config = useRuntimeConfig();
 
 const ratingColors: Record<string, string> = {
-	hot: 'text-red-500',
-	warm: 'text-amber-500',
-	nurture: 'text-green-500',
+	hot: 'text-destructive',
+	warm: 'text-warning',
+	nurture: 'text-success',
 	cold: 'text-blue-400',
 };
 
 const ratingBgColors: Record<string, string> = {
-	hot: 'bg-red-50 dark:bg-red-900/20',
-	warm: 'bg-amber-50 dark:bg-amber-900/20',
-	nurture: 'bg-green-50 dark:bg-green-900/20',
+	hot: 'bg-destructive/10 dark:bg-destructive/20',
+	warm: 'bg-warning/10 dark:bg-warning/20',
+	nurture: 'bg-success/10 dark:bg-success/20',
 	cold: 'bg-blue-50 dark:bg-blue-900/20',
 };
 
@@ -90,7 +90,7 @@ onMounted(() => {
 
 			<!-- Streak -->
 			<div v-if="stats.xp.streak > 0" class="flex items-center gap-2 text-xs text-gray-500">
-				<span class="text-amber-500">🔥</span>
+				<span class="text-warning">🔥</span>
 				<span class="font-medium">{{ stats.xp.streak }}-day streak</span>
 			</div>
 
@@ -110,9 +110,9 @@ onMounted(() => {
 			</div>
 
 			<!-- Converted Contacts -->
-			<div v-if="stats.convertedClients > 0" class="flex items-center gap-2 px-3 py-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
-				<UIcon name="i-heroicons-check-badge" class="w-4 h-4 text-emerald-500" />
-				<span class="text-xs font-medium text-emerald-700 dark:text-emerald-300">
+			<div v-if="stats.convertedClients > 0" class="flex items-center gap-2 px-3 py-2 bg-success/10 dark:bg-success/20 rounded-lg">
+				<UIcon name="i-heroicons-check-badge" class="w-4 h-4 text-success" />
+				<span class="text-xs font-medium text-success dark:text-success">
 					{{ stats.convertedClients }} converted to contact{{ stats.convertedClients !== 1 ? 's' : '' }}
 				</span>
 			</div>
@@ -129,7 +129,7 @@ onMounted(() => {
 						<div class="flex items-center gap-2 min-w-0">
 							<span
 								class="w-2 h-2 rounded-full flex-shrink-0"
-								:class="contact.rating === 'hot' ? 'bg-red-500' : 'bg-amber-500'"
+								:class="contact.rating === 'hot' ? 'bg-destructive' : 'bg-warning'"
 							/>
 							<span class="text-xs font-medium truncate">{{ contact.name }}</span>
 							<span v-if="contact.company" class="text-[10px] text-gray-400 truncate hidden sm:inline">
@@ -163,7 +163,7 @@ onMounted(() => {
 						<span class="truncate">
 							{{ act.type }} {{ act.contactName ? `with ${act.contactName}` : '' }}
 						</span>
-						<span v-if="act.isResponse" class="text-[9px] bg-green-100 text-green-700 px-1 rounded">replied</span>
+						<span v-if="act.isResponse" class="text-[9px] bg-success/10 text-success px-1 rounded">replied</span>
 						<span class="text-[10px] text-gray-400 ml-auto whitespace-nowrap">{{ formatDate(act.date) }}</span>
 					</div>
 				</div>

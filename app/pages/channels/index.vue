@@ -259,7 +259,7 @@ const sortedChannels = computed(() => {
 						<UFormGroup label="Channel Name" required>
 							<UInput v-model="newChannelName" placeholder="e.g. general, design, marketing" :disabled="creatingChannel" />
 						</UFormGroup>
-						<p v-if="newChannelName && newChannelName.length < 3" class="text-xs text-red-500">
+						<p v-if="newChannelName && newChannelName.length < 3" class="text-xs text-destructive">
 							Channel name must be at least 3 characters.
 						</p>
 						<UFormGroup label="Link to Project" hint="Optional">

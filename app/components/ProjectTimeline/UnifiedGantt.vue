@@ -906,7 +906,7 @@ const showUndated = ref(false);
 				<button
 					v-if="undatedProjects.length > 0"
 					@click="showUndated = !showUndated"
-					class="flex items-center gap-1 text-[9px] font-medium text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/15 px-2 py-0.5 rounded-full transition-colors"
+					class="flex items-center gap-1 text-[9px] font-medium text-warning dark:text-warning bg-warning/10 hover:bg-warning/15 px-2 py-0.5 rounded-full transition-colors"
 				>
 					<Icon name="lucide:calendar-off" class="w-2.5 h-2.5" />
 					{{ undatedProjects.length }} undated
@@ -1080,7 +1080,7 @@ const showUndated = ref(false);
 							v-if="row.depth > 0 && row.type !== 'task'"
 							:name="row.type === 'event' ? 'lucide:calendar' : 'lucide:ticket'"
 							class="w-3 h-3 shrink-0"
-							:class="{ 'text-amber-500': row.type === 'ticket' }"
+							:class="{ 'text-warning': row.type === 'ticket' }"
 							:style="{ marginLeft: `${16 + row.depth * 16}px`, ...(row.type === 'event' ? { color: row.color } : {}) }"
 						/>
 						<!-- Task status icon -->
@@ -1088,7 +1088,7 @@ const showUndated = ref(false);
 							v-if="row.type === 'task'"
 							:name="isTaskDoneEffective(row) ? 'lucide:check-circle-2' : 'lucide:circle'"
 							class="w-3 h-3 shrink-0"
-							:class="isTaskDoneEffective(row) ? 'text-emerald-500' : 'text-purple-500'"
+							:class="isTaskDoneEffective(row) ? 'text-success' : 'text-purple-500'"
 							:style="{ marginLeft: `${16 + row.depth * 16}px` }"
 						/>
 						<!-- Label text -->
@@ -1240,11 +1240,11 @@ const showUndated = ref(false);
 				<div class="flex items-center gap-3 flex-wrap">
 					<span v-if="selectedProject.service?.name" class="text-[10px] text-muted-foreground bg-muted/30 px-2 py-0.5 rounded-md">{{ selectedProject.service.name }}</span>
 					<span v-if="selectedProjectChildCount.events > 0" class="text-[10px] text-muted-foreground flex items-center gap-1">
-						<Icon name="lucide:calendar-days" class="w-2.5 h-2.5 text-cyan-500" />
+						<Icon name="lucide:calendar-days" class="w-2.5 h-2.5 text-info" />
 						{{ selectedProjectChildCount.events }} event{{ selectedProjectChildCount.events > 1 ? 's' : '' }}
 					</span>
 					<span v-if="selectedProjectChildCount.tickets > 0" class="text-[10px] text-muted-foreground flex items-center gap-1">
-						<Icon name="lucide:ticket" class="w-2.5 h-2.5 text-amber-500" />
+						<Icon name="lucide:ticket" class="w-2.5 h-2.5 text-warning" />
 						{{ selectedProjectChildCount.tickets }} ticket{{ selectedProjectChildCount.tickets > 1 ? 's' : '' }}
 					</span>
 				</div>
@@ -1317,7 +1317,7 @@ const showUndated = ref(false);
 							<Icon
 								:name="child.type === 'event' ? 'lucide:calendar' : 'lucide:ticket'"
 								class="w-3 h-3 shrink-0"
-								:class="child.type === 'event' ? 'text-cyan-500' : 'text-amber-500'"
+								:class="child.type === 'event' ? 'text-info' : 'text-warning'"
 							/>
 							<span class="truncate flex-1 text-foreground/70">{{ child.label }}</span>
 							<span v-if="child.date" class="text-[9px] text-muted-foreground shrink-0">{{ getFriendlyDate(child.date) }}</span>
@@ -1325,9 +1325,9 @@ const showUndated = ref(false);
 								v-if="child.status"
 								class="text-[8px] uppercase font-medium shrink-0"
 								:class="{
-									'text-green-500': child.status?.toLowerCase().replace(/\s+/g, '') === 'completed',
+									'text-success': child.status?.toLowerCase().replace(/\s+/g, '') === 'completed',
 									'text-blue-500': child.status?.toLowerCase().replace(/\s+/g, '') === 'inprogress',
-									'text-amber-500': child.status?.toLowerCase() === 'scheduled' || child.status?.toLowerCase() === 'pending',
+									'text-warning': child.status?.toLowerCase() === 'scheduled' || child.status?.toLowerCase() === 'pending',
 									'text-muted-foreground': !['completed', 'inprogress', 'scheduled', 'pending'].includes(child.status?.toLowerCase().replace(/\s+/g, '') || ''),
 								}"
 							>{{ child.status }}</span>

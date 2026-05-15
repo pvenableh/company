@@ -14,7 +14,7 @@
 			<!-- Multi-client warning -->
 			<div
 				v-if="multipleClients"
-				class="rounded-xl border border-amber-300 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 px-3 py-2.5 text-xs text-amber-800 dark:text-amber-300"
+				class="rounded-xl border border-warning/30 bg-warning/10 dark:border-warning dark:bg-warning/30 px-3 py-2.5 text-xs text-warning dark:text-warning"
 			>
 				<div class="flex items-start gap-2">
 					<Icon name="lucide:triangle-alert" class="w-4 h-4 mt-0.5 shrink-0" />
@@ -37,7 +37,7 @@
 				</div>
 				<div class="rounded-xl bg-muted/50 p-3 text-center">
 					<p class="text-xs text-muted-foreground">Estimated Total</p>
-					<p class="text-lg font-semibold text-emerald-600">${{ formatCurrency(estimatedTotal) }}</p>
+					<p class="text-lg font-semibold text-success">${{ formatCurrency(estimatedTotal) }}</p>
 				</div>
 			</div>
 
@@ -78,7 +78,7 @@
 						</div>
 						<div class="text-right shrink-0 ml-3">
 							<p class="text-sm font-semibold tabular-nums">{{ item.hours }}h × ${{ item.rate }}</p>
-							<p class="text-xs text-emerald-600">${{ formatCurrency(item.amount) }}</p>
+							<p class="text-xs text-success">${{ formatCurrency(item.amount) }}</p>
 						</div>
 					</div>
 				</div>

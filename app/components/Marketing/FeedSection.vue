@@ -41,15 +41,15 @@
 		<!-- Error -->
 		<div
 			v-if="error"
-			class="mb-4 rounded-xl border border-rose-200 bg-rose-50 dark:bg-rose-900/20 dark:border-rose-800/40 p-4"
+			class="mb-4 rounded-xl border border-destructive/30 bg-destructive/10 dark:bg-destructive/20 dark:border-destructive/40 p-4"
 		>
 			<div class="flex items-start gap-3">
-				<Icon name="lucide:circle-alert" class="w-4 h-4 text-rose-500 mt-0.5 shrink-0" />
+				<Icon name="lucide:circle-alert" class="w-4 h-4 text-destructive mt-0.5 shrink-0" />
 				<div>
-					<p class="text-sm font-medium text-rose-900 dark:text-rose-200">{{ error }}</p>
+					<p class="text-sm font-medium text-destructive">{{ error }}</p>
 					<button
 						type="button"
-						class="text-xs text-rose-700 dark:text-rose-300 hover:underline mt-1"
+						class="text-xs text-destructive dark:text-destructive hover:underline mt-1"
 						@click="loadRecommendations"
 					>
 						Try again
@@ -131,8 +131,8 @@
 				class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm shadow-lg border"
 				:class="
 					toast.kind === 'success'
-						? 'bg-emerald-50 border-emerald-200 text-emerald-900 dark:bg-emerald-900/40 dark:border-emerald-700/40 dark:text-emerald-100'
-						: 'bg-rose-50 border-rose-200 text-rose-900 dark:bg-rose-900/40 dark:border-rose-700/40 dark:text-rose-100'
+						? 'bg-success/10 border-success/30 text-success dark:bg-success/40 dark:border-success/40'
+						: 'bg-destructive/10 border-destructive/30 text-destructive dark:bg-destructive/40 dark:border-destructive/40'
 				"
 			>
 				<Icon

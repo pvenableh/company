@@ -22,10 +22,10 @@ const deleteTarget = ref<Client | null>(null);
 // and by lifecycle `status` for Archived.
 const activeTab = ref('active');
 const tabs = [
-  { label: 'Active', value: 'active', color: 'bg-emerald-500', kind: 'accountState' as const },
-  { label: 'Prospects', value: 'prospect', color: 'bg-amber-500', kind: 'accountState' as const },
+  { label: 'Active', value: 'active', color: 'bg-success', kind: 'accountState' as const },
+  { label: 'Prospects', value: 'prospect', color: 'bg-warning', kind: 'accountState' as const },
   { label: 'Inactive', value: 'inactive', color: 'bg-neutral-400', kind: 'accountState' as const },
-  { label: 'Churned', value: 'churned', color: 'bg-red-500', kind: 'accountState' as const },
+  { label: 'Churned', value: 'churned', color: 'bg-destructive', kind: 'accountState' as const },
   { label: 'Archived', value: 'archived', color: 'bg-zinc-400', kind: 'status' as const },
 ];
 
@@ -349,7 +349,7 @@ onMounted(() => {
                     <Button variant="ghost" size="sm" class="h-7 text-xs">Edit</Button>
                   </NuxtLink>
                   <button
-                    class="p-1.5 rounded-md text-muted-foreground/50 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                    class="p-1.5 rounded-md text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors"
                     title="Delete client"
                     @click="deleteTarget = client"
                   >
@@ -375,8 +375,8 @@ onMounted(() => {
       >
         <div class="ios-card shadow-xl w-full max-w-sm mx-4 p-6">
           <div class="flex items-center gap-3 mb-4">
-            <div class="w-10 h-10 rounded-full bg-red-500/15 flex items-center justify-center shrink-0">
-              <Icon name="lucide:trash-2" class="w-5 h-5 text-red-400" />
+            <div class="w-10 h-10 rounded-full bg-destructive/15 flex items-center justify-center shrink-0">
+              <Icon name="lucide:trash-2" class="w-5 h-5 text-destructive" />
             </div>
             <div>
               <h2 class="font-semibold">Delete Client</h2>

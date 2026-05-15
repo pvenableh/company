@@ -118,7 +118,7 @@
         <div
           v-if="sendResult"
           class="rounded-xl px-3 py-2 text-xs"
-          :class="sendResult.success ? 'bg-green-500/10 text-green-700 dark:text-green-400' : 'bg-destructive/10 text-destructive'"
+          :class="sendResult.success ? 'bg-success/10 text-success dark:text-success' : 'bg-destructive/10 text-destructive'"
         >
           <p v-if="sendResult.success">
             Sent to {{ sendResult.sent }} of {{ sendResult.total }} recipient{{ sendResult.total === 1 ? '' : 's' }}.
@@ -134,7 +134,7 @@
 
       <div class="flex items-center justify-between gap-2 px-5 py-3 border-t border-border/30 shrink-0">
         <p v-if="!hasTargets" class="text-[10px] text-muted-foreground">Pick a list or add a segment to enable send.</p>
-        <p v-else-if="!previewResult?.total && previewResult" class="text-[10px] text-amber-600 dark:text-amber-400">
+        <p v-else-if="!previewResult?.total && previewResult" class="text-[10px] text-warning dark:text-warning">
           No eligible recipients — check segment filters.
         </p>
         <div v-else />

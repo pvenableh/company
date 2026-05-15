@@ -252,9 +252,9 @@ onUnmounted(() => clearEntity());
 			<!-- Save bar (sticky) when editing blocks -->
 			<div
 				v-if="mode === 'edit' && blocksDirty"
-				class="sticky top-2 z-30 mb-4 flex items-center justify-between gap-2 ios-card p-2.5 bg-amber-50/90 dark:bg-amber-900/30 border-amber-300/40"
+				class="sticky top-2 z-30 mb-4 flex items-center justify-between gap-2 ios-card p-2.5 bg-warning/10 dark:bg-warning/30 border-warning/40"
 			>
-				<p class="text-xs text-amber-800 dark:text-amber-200">Unsaved changes to proposal blocks.</p>
+				<p class="text-xs text-warning">Unsaved changes to proposal blocks.</p>
 				<button
 					class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
 					:disabled="savingBlocks"
