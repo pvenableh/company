@@ -40,10 +40,10 @@ const emit = defineEmits<{
   save: [data: any];
 }>();
 
-// Goal rows now live in the unified `goals` collection (scope='team').
-// Legacy team_goals rows used `target_date` + `progress`; new rows use
-// `end_date` + `current_value` (with target_value=100, target_unit='%').
-// Accept both shapes for the edit case so older rows render correctly.
+// Goal rows live in the unified `goals` collection (scope='team'). New rows
+// use `end_date` + `current_value` (with target_value=100, target_unit='%').
+// Accept the older `target_date`/`progress` shape too so legacy edits still
+// render — present for one rev while in-flight rows finish migrating in UI.
 const legacyDate = props.goal?.target_date ?? props.goal?.end_date ?? '';
 const legacyProgress =
   typeof props.goal?.progress === 'number' ? props.goal.progress

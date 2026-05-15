@@ -4,10 +4,8 @@ import type { Goal } from '~~/shared/directus';
 const invoiceItems = useDirectusItems('invoices');
 const expenseItems = useDirectusItems('expenses');
 const { selectedOrg } = useOrganization();
-// Quarterly revenue targets now live in the unified `goals` collection
-// (Stage 1 of the "Me" lens initiative migrated `financial_goals` rows
-// over). Reads + writes go through useGoals so GoalsSummaryWidget +
-// /goals stay in sync.
+// Quarterly revenue targets live in the unified `goals` collection. Reads +
+// writes go through useGoals so GoalsSummaryWidget + /goals stay in sync.
 const { goals, createGoal, updateGoal, refresh: refreshGoals } = useGoals();
 
 const isLoading = ref(true);

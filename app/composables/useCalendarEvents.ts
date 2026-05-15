@@ -107,6 +107,23 @@ export function useCalendarEvents() {
 			'video_meeting.recording_enabled', 'video_meeting.transcription_enabled',
 			'video_meeting.waiting_room_enabled',
 			'video_meeting.invitee_name', 'video_meeting.invitee_email', 'video_meeting.invitee_phone',
+			// Rich attendees from `video_meeting_attendees` — the contact picker
+			// and the manual-guest cards write here, NOT to the legacy
+			// invitee_name/email scalars. Without this join the popover roster
+			// only shows the first manual guest, which is why "two people" on
+			// a picked-contact meeting was reading as "1 person".
+			'video_meeting.attendees.id',
+			'video_meeting.attendees.attendee_type',
+			'video_meeting.attendees.guest_name',
+			'video_meeting.attendees.guest_email',
+			'video_meeting.attendees.directus_user.id',
+			'video_meeting.attendees.directus_user.first_name',
+			'video_meeting.attendees.directus_user.last_name',
+			'video_meeting.attendees.directus_user.email',
+			'video_meeting.attendees.contact.id',
+			'video_meeting.attendees.contact.first_name',
+			'video_meeting.attendees.contact.last_name',
+			'video_meeting.attendees.contact.email',
 			'video_meeting.client.id', 'video_meeting.client.name',
 			'video_meeting.project.id', 'video_meeting.project.title',
 			'video_meeting.project.client.id', 'video_meeting.project.client.name',
@@ -277,12 +294,55 @@ export function useCalendarEvents() {
 				if (!fullName) continue;
 				members.push({ name: fullName, role: 'attendee' });
 			}
+
+			// `video_meeting.attendees` (the rich VideoMeetingAttendee rows) hold
+			// picker-added contacts AND manual external guests. Without folding
+			// these in, the popover roster collapsed back to "host only" for any
+			// meeting created via the contact picker. Track seen emails to
+			// dedupe against the legacy invitee_* fields below.
+			const vmAttendees = Array.isArray(vm?.attendees) ? vm.attendees : [];
+			const seenEmails = new Set<string>();
+			for (const va of vmAttendees) {
+				if (!va || typeof va !== 'object') continue;
+				const du = (va as any).directus_user;
+				const cn = (va as any).contact;
+				let name = '';
+				let email: string | null = null;
+				if (du && typeof du === 'object') {
+					// Skip if this attendee row IS the host (some flows mirror the
+					// host into video_meeting_attendees as attendee_type='user').
+					if (creatorId && du.id === creatorId) continue;
+					name = `${du.first_name || ''} ${du.last_name || ''}`.trim() || du.email || '';
+					email = du.email || null;
+					if (!name) continue;
+					members.push({ name, role: 'attendee', email });
+				} else if (cn && typeof cn === 'object') {
+					name = `${cn.first_name || ''} ${cn.last_name || ''}`.trim() || cn.email || '';
+					email = cn.email || (va as any).guest_email || null;
+					if (!name) continue;
+					members.push({ name, role: 'invitee', email });
+				} else {
+					name = (va as any).guest_name || (va as any).guest_email || '';
+					email = (va as any).guest_email || null;
+					if (!name) continue;
+					members.push({ name, role: 'invitee', email });
+				}
+				if (email) seenEmails.add(email.toLowerCase());
+			}
+
+			// Legacy single-invitee fields (vm.invitee_*). Only push if they
+			// don't already appear in the rich attendees — otherwise the same
+			// guest reads twice in the popover.
 			if (vm?.invitee_name || vm?.invitee_email) {
-				members.push({
-					name: vm.invitee_name || vm.invitee_email,
-					role: 'invitee',
-					email: vm.invitee_email || null,
-				});
+				const legacyEmail = (vm.invitee_email || '').toLowerCase();
+				const dup = legacyEmail && seenEmails.has(legacyEmail);
+				if (!dup) {
+					members.push({
+						name: vm.invitee_name || vm.invitee_email,
+						role: 'invitee',
+						email: vm.invitee_email || null,
+					});
+				}
 			}
 
 			result.push({
@@ -309,7 +369,10 @@ export function useCalendarEvents() {
 				transcription_enabled: !!vm?.transcription_enabled,
 				waiting_room_enabled: !!vm?.waiting_room_enabled,
 				host_name: hostDisplayName || null,
-				attendee_count: attendeeCount + (vm?.invitee_email && attendeeCount === 0 ? 1 : 0),
+				// Attendee count reflects everyone visible in `members[]` *minus*
+				// the host so the day-timeline count pill reads "2" on a host +
+				// 2-guest meeting instead of "1" (legacy single-invitee path).
+				attendee_count: Math.max(0, members.length - (members[0]?.role === 'host' ? 1 : 0)),
 				members,
 				client_id: (typeof vm?.client === 'object' ? vm?.client?.id : vm?.client) || null,
 				client_name: (typeof vm?.client === 'object' ? vm?.client?.name : null) || null,

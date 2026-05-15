@@ -4,10 +4,13 @@
   Self-contained: stats row, filter chips, CRM sidebar, booking calendar,
   day timeline, and the UnifiedEventModal for both create + edit.
 
-  Apps-layout behavior change vs. the legacy /scheduler page: clicking a day
-  (anywhere outside an event chip) opens the new-meeting modal pre-filled with
-  that date AND updates the day timeline. Click an event chip to edit — the
-  chip popover stops propagation so it does not trigger the modal.
+  Day-click behavior: clicking a day cell just selects that date — the day
+  timeline column on the right updates to show its events. The new-meeting
+  modal opens only via explicit affordances (the day-timeline "+ Video" /
+  "+ Event" buttons, or the top-bar Instant/New Meeting buttons). We tried
+  opening the modal on every day click and users reported it as "click did
+  nothing" because the modal popped out of view before they noticed the
+  day-timeline update.
 -->
 <template>
 	<div>
@@ -222,16 +225,12 @@ watch(showEventModal, (open) => {
 	if (!open) resetEventModalEditState();
 });
 
-// Event handlers — apps-layout behavior: day click both selects the day
-// (so the timeline updates) AND opens the new-meeting modal pre-filled.
-// Chip clicks bubble through MeetingActionsPopover, which stops propagation
-// in BookingCalendar so they don't double-trigger.
+// Day click only updates the selected date — the day-timeline column
+// refreshes to show that day's events. Creation is an explicit action via
+// the "+ Video" / "+ Event" buttons in the day timeline, or the Instant /
+// New Meeting buttons in the action bar.
 const handleDateSelect = (dateStr: string) => {
 	selectedDate.value = dateStr;
-	resetEventModalEditState();
-	eventModalDate.value = parseISO(dateStr);
-	eventModalDefaultVideo.value = true;
-	showEventModal.value = true;
 };
 
 const handleNewEvent = (dateStr: string) => {

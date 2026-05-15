@@ -74,7 +74,7 @@ const TENANT_COLLECTIONS = [
   'comments', 'products', 'time_entries',
   'video_meetings',
   'channels',
-  'teams', 'team_goals',
+  'teams',
   'org_roles', 'org_memberships',
   'ai_notes', 'ai_chat_sessions', 'ai_chat_messages', 'ai_preferences',
   'ai_context_snapshots',
@@ -92,8 +92,6 @@ function scopeFor(collection: string): any {
       return { users: { directus_users_id: { _eq: '$CURRENT_USER' } } }
     case 'tasks':
       return { organization_id: { _in: '$CURRENT_USER.organizations.organizations_id' } }
-    case 'team_goals':
-      return { team: { organization: { _in: '$CURRENT_USER.organizations.organizations_id' } } }
     case 'mailing_list_contacts':
       return { list_id: { organization: { _in: '$CURRENT_USER.organizations.organizations_id' } } }
     case 'invoices':

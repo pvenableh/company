@@ -63,9 +63,11 @@
 									</span>
 
 									<!-- Event chips — max 2 visible -->
-									<!-- @click.stop wrapper prevents chip clicks from triggering the
-									     parent cell's dayClicked (which the apps-layout SchedulerHub
-									     wires to "open new-meeting modal"). -->
+									<!-- @click.stop wrapper prevents chip clicks from bubbling up
+									     to the day cell's `dayClicked` (which only selects the day —
+									     opening the popover for an event would otherwise reselect
+									     the day and shift the day-timeline focus away from the user's
+									     intent). -->
 									<div class="flex flex-col gap-px overflow-hidden flex-1">
 										<div
 											v-for="event in getEventsForDate(dateKey(weekDate)).slice(0, 2)"

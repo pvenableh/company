@@ -1720,30 +1720,6 @@ export interface EventType {
 	enabled?: boolean;
 }
 
-/**
- * @deprecated Rows have been migrated into the unified `goals` collection
- * (scope='organization', category='revenue', timeframe='quarterly'). Drop in
- * a follow-up commit after the live migration soaks.
- */
-export interface FinancialGoal {
-	/** @primaryKey */
-	id: number;
-	/** @required */
-	year: number;
-	/** @description Q1 revenue target */
-	q1_goal?: number | null;
-	/** @description Q2 revenue target */
-	q2_goal?: number | null;
-	/** @description Q3 revenue target */
-	q3_goal?: number | null;
-	/** @description Q4 revenue target */
-	q4_goal?: number | null;
-	date_created?: string | null;
-	date_updated?: string | null;
-	organization?: Organization | string | null;
-	user_created?: DirectusUser | string | null;
-}
-
 export interface GbpPost {
 	/** @primaryKey */
 	id: string;
@@ -3731,31 +3707,6 @@ export interface TasksDirectusUser {
 	sort?: number | null;
 }
 
-/**
- * @deprecated Rows have been migrated into the unified `goals` collection
- * (scope='team', target_value=100, target_unit='%', current_value=progress).
- * Drop in a follow-up commit after the live migration soaks.
- */
-export interface TeamGoal {
-	/** @primaryKey */
-	id: string;
-	sort?: number | null;
-	date_created?: string | null;
-	date_updated?: string | null;
-	user_created?: string | null;
-	user_updated?: string | null;
-	/** @description Short label for the goal @required */
-	title: string;
-	/** @description Detail on what success looks like */
-	description?: string | null;
-	/** @description Optional deadline */
-	target_date?: string | null;
-	/** @description 0-100 percent complete */
-	progress?: number | null;
-	/** @description Owning team @required */
-	team: Team | string;
-}
-
 export interface Team {
 	/** @primaryKey */
 	id: string;
@@ -4649,7 +4600,6 @@ export interface Schema {
 	email_templates: EmailTemplate[];
 	event_types: EventType[];
 	expenses: Expense[];
-	financial_goals: FinancialGoal[];
 	gbp_posts: GbpPost[];
 	goals: Goal[];
 	goal_snapshots: GoalSnapshot[];
@@ -4751,7 +4701,6 @@ export interface Schema {
 	social_threads: SocialThread[];
 	tasks: Task[];
 	tasks_directus_users: TasksDirectusUser[];
-	team_goals: TeamGoal[];
 	teams: Team[];
 	template_blocks: TemplateBlock[];
 	testimonials: Testimonial[];
@@ -4881,7 +4830,6 @@ export enum CollectionNames {
 	email_templates = 'email_templates',
 	event_types = 'event_types',
 	expenses = 'expenses',
-	financial_goals = 'financial_goals',
 	gbp_posts = 'gbp_posts',
 	goals = 'goals',
 	goal_snapshots = 'goal_snapshots',
@@ -4983,7 +4931,6 @@ export enum CollectionNames {
 	social_threads = 'social_threads',
 	tasks = 'tasks',
 	tasks_directus_users = 'tasks_directus_users',
-	team_goals = 'team_goals',
 	teams = 'teams',
 	template_blocks = 'template_blocks',
 	testimonials = 'testimonials',

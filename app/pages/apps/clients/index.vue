@@ -295,6 +295,7 @@ watch(view, (next) => {
       <AppFloorStrip v-model="view" :items="segments" aria-label="Clients sections" />
 
       <AppIntroCard app-id="clients" />
+      <GoalsRelatedGoalsCard :categories="['growth', 'retention']" title="Goals in this lens" />
 
       <!-- ── Clients view ─────────────────────────────────────────────── -->
       <template v-if="view === 'clients'">

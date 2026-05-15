@@ -9,7 +9,6 @@
  *   - ai_preferences       (user-owned, CRUD own records)
  *   - ai_chat_sessions     (user-owned, CRUD own records)
  *   - ai_chat_messages     (user creates, reads own session's messages)
- *   - financial_goals      (admin/manager create+edit, all read)
  *
  * Usage:
  *   pnpm tsx scripts/setup-ai-permissions.ts
@@ -184,7 +183,6 @@ async function createPermission(policyId: string, rule: PermissionRule): Promise
 
 // Filter: only records where user = current user
 const OWNER_FILTER = { user: { _eq: '$CURRENT_USER' } }
-const CREATOR_FILTER = { user_created: { _eq: '$CURRENT_USER' } }
 const SESSION_OWNER_FILTER = { session: { user: { _eq: '$CURRENT_USER' } } }
 
 // Preset: auto-fill user field on create
@@ -194,7 +192,6 @@ const USER_PRESET = { user: '$CURRENT_USER' }
  * Permissions for Client Manager role:
  * - Full CRUD on own AI preferences, chat sessions
  * - Create + read on chat messages (own sessions)
- * - Full CRUD on financial goals (shared resource for managers)
  */
 function getClientManagerPermissions(): PermissionRule[] {
   return [
@@ -283,74 +280,6 @@ function getClientManagerPermissions(): PermissionRule[] {
       presets: null,
       fields: ['*'],
     },
-
-    // ── financial_goals ──
-    {
-      collection: 'financial_goals',
-      action: 'create',
-      permissions: null,
-      validation: null,
-      presets: null,
-      fields: ['*'],
-    },
-    {
-      collection: 'financial_goals',
-      action: 'read',
-      permissions: null,   // all goals visible
-      validation: null,
-      presets: null,
-      fields: ['*'],
-    },
-    {
-      collection: 'financial_goals',
-      action: 'update',
-      permissions: CREATOR_FILTER,
-      validation: null,
-      presets: null,
-      fields: ['*'],
-    },
-    {
-      collection: 'financial_goals',
-      action: 'delete',
-      permissions: CREATOR_FILTER,
-      validation: null,
-      presets: null,
-      fields: ['*'],
-    },
-
-    // ── team_goals ──
-    {
-      collection: 'team_goals',
-      action: 'create',
-      permissions: null,
-      validation: null,
-      presets: null,
-      fields: ['*'],
-    },
-    {
-      collection: 'team_goals',
-      action: 'read',
-      permissions: null,
-      validation: null,
-      presets: null,
-      fields: ['*'],
-    },
-    {
-      collection: 'team_goals',
-      action: 'update',
-      permissions: null,
-      validation: null,
-      presets: null,
-      fields: ['*'],
-    },
-    {
-      collection: 'team_goals',
-      action: 'delete',
-      permissions: null,
-      validation: null,
-      presets: null,
-      fields: ['*'],
-    },
   ]
 }
 
@@ -358,7 +287,6 @@ function getClientManagerPermissions(): PermissionRule[] {
  * Permissions for regular User role:
  * - Full CRUD on own AI preferences, chat sessions
  * - Create + read on chat messages (own sessions)
- * - Read-only on financial goals
  */
 function getUserPermissions(): PermissionRule[] {
   return [
@@ -443,50 +371,6 @@ function getUserPermissions(): PermissionRule[] {
       collection: 'ai_chat_messages',
       action: 'read',
       permissions: SESSION_OWNER_FILTER,
-      validation: null,
-      presets: null,
-      fields: ['*'],
-    },
-
-    // ── financial_goals (read-only) ──
-    {
-      collection: 'financial_goals',
-      action: 'read',
-      permissions: null,
-      validation: null,
-      presets: null,
-      fields: ['*'],
-    },
-
-    // ── team_goals ──
-    {
-      collection: 'team_goals',
-      action: 'create',
-      permissions: null,
-      validation: null,
-      presets: null,
-      fields: ['*'],
-    },
-    {
-      collection: 'team_goals',
-      action: 'read',
-      permissions: null,
-      validation: null,
-      presets: null,
-      fields: ['*'],
-    },
-    {
-      collection: 'team_goals',
-      action: 'update',
-      permissions: null,
-      validation: null,
-      presets: null,
-      fields: ['*'],
-    },
-    {
-      collection: 'team_goals',
-      action: 'delete',
-      permissions: null,
       validation: null,
       presets: null,
       fields: ['*'],
@@ -606,7 +490,6 @@ async function main() {
     console.log('  ai_preferences      - Users can CRUD their own preferences')
     console.log('  ai_chat_sessions    - Users can CRUD their own chat sessions')
     console.log('  ai_chat_messages    - Users can create and read their own session messages')
-    console.log('  financial_goals     - Managers can CRUD, regular users read-only')
     console.log('')
     console.log('Admin role has full access by default (no explicit permissions needed).')
   } else {

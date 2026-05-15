@@ -16,7 +16,7 @@
  * Mobile (< md) forces bottom via useAppsMode.
  */
 import { useMediaQuery } from '@vueuse/core';
-import { APP_ORDER, APP_FOOTER_ORDER, type AppAccent } from '~/composables/useAppAccent';
+import { APP_ORDER, APP_FOOTER_ORDER, appIdForPath, type AppAccent } from '~/composables/useAppAccent';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
 
 const route = useRoute();
@@ -35,14 +35,7 @@ function badgeLabel(count: number) {
 const apps = computed<AppAccent[]>(() => APP_ORDER.map((id) => accents.value[id]));
 const footer = computed<AppAccent[]>(() => APP_FOOTER_ORDER.map((id) => accents.value[id]));
 
-const activeId = computed(() => {
-	const path = route.path;
-	if (path.startsWith('/account')) return 'account';
-	if (path === '/' || path === '/apps' || path === '/apps/') return 'dashboard';
-	const seg = path.split('/').filter(Boolean);
-	if (seg[0] !== 'apps') return null;
-	return seg[1] ?? null;
-});
+const activeId = computed(() => appIdForPath(route.path));
 
 const isHorizontal = computed(() =>
 	railPosition.value === 'top'

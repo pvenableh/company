@@ -55,7 +55,7 @@ const TENANT_COLLECTIONS = new Set([
   'video_meetings', 'calendar_events',
   'channels', 'channel_messages', 'messages',
   'appointments', 'call_logs',
-  'teams', 'team_goals',
+  'teams',
   'org_roles', 'org_memberships',
   'ai_notes', 'ai_notices', 'ai_chat_sessions', 'ai_chat_messages',
   'ai_context_snapshots', 'ai_preferences',
@@ -68,8 +68,6 @@ function scopeFor(collection: string): any {
   switch (collection) {
     case 'tasks':
       return { organization_id: { _in: '$CURRENT_USER.organizations.organizations_id' } }
-    case 'team_goals':
-      return { team: { organization: { _in: '$CURRENT_USER.organizations.organizations_id' } } }
     case 'mailing_list_contacts':
       return { list_id: { organization: { _in: '$CURRENT_USER.organizations.organizations_id' } } }
     case 'invoices':
@@ -117,8 +115,8 @@ const VALIDATION_BY_COLLECTION: Record<string, any> = {
   ai_chat_sessions: { user: { _eq: '$CURRENT_USER' } },
   ai_preferences: { user: { _eq: '$CURRENT_USER' } },
   // ai_chat_messages: scope is FK walk (session.user) — validation can't enforce.
-  // contact_connections, team_goals, comments: same — FK walks. Permissions
-  // filter is documentation only on create; update/delete ARE enforced.
+  // contact_connections, comments: same — FK walks. Permissions filter is
+  // documentation only on create; update/delete ARE enforced.
 }
 
 async function api<T = any>(path: string, init?: RequestInit): Promise<T> {

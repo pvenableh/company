@@ -98,8 +98,7 @@ export async function purgeOrganization(orgId: string): Promise<PurgeReport> {
     await deleteByFilter(directus, 'clients_teams', { teams_id: { _in: teamIds } }, report);
   }
 
-  // Unified goals collection (replaces legacy team_goals/financial_goals walks).
-  // Delete snapshots first, then the goals themselves.
+  // Unified goals collection. Delete snapshots first, then the goals themselves.
   const goalIds = await listIds(directus, 'goals', { organization: { _eq: orgId } });
   if (goalIds.length) {
     await deleteByFilter(directus, 'goal_snapshots', { goal: { _in: goalIds } }, report);

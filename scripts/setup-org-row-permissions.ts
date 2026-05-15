@@ -106,7 +106,6 @@ const SKIP_COLLECTIONS = new Set<string>([
   'ai_context_snapshots',
   'ai_notice_history',
   'ai_usage_logs',
-  'financial_goals',
   // System / identity collections.
   'directus_users',
   'directus_files',

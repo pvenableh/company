@@ -549,6 +549,7 @@ const headerAction = computed(() => {
       <AppFloorStrip v-model="floor" :items="floors" aria-label="Money sections" />
 
       <AppIntroCard app-id="money" />
+      <GoalsRelatedGoalsCard :categories="['revenue', 'retention']" title="Goals in this lens" />
 
       <!-- ── Cash flow floor ──────────────────────────────────────────── -->
       <template v-if="floor === 'cashflow'">

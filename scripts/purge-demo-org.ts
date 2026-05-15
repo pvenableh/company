@@ -114,7 +114,7 @@ async function purgeOrg(orgId: string): Promise<void> {
 	if (teamIds.length) await deleteByFilter('junction_directus_users_teams', { teams_id: { _in: teamIds } }, 'id', 'junction_directus_users_teams');
 	if (teamIds.length) await deleteByFilter('clients_teams', { teams_id: { _in: teamIds } }, 'id', 'clients_teams');
 
-	// Unified goals collection (replaces legacy team_goals/financial_goals walks).
+	// Unified goals collection.
 	const goalsRes = await directusRequest<any[]>(
 		`/items/goals?filter=${encodeURIComponent(JSON.stringify({ organization: { _eq: orgId } }))}&fields=id&limit=-1`,
 	);

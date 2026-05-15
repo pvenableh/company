@@ -448,8 +448,7 @@ The AI Productivity Engine (`useAIProductivityEngine.ts`) scans 9 business modul
 | `ai_preferences` | Per-user AI module toggle preferences |
 | `ai_chat_sessions` | AI assistant chat session history with context |
 | `ai_chat_messages` | Individual messages (user/assistant/system roles) |
-| `financial_goals` | Quarterly revenue goals per organization |
-| `goals` | User and org goals with type (financial, networking, performance, marketing, custom), targets, and progress |
+| `goals` | Unified goals (scope=user/team/client/organization; category=revenue/growth/retention/learning/wellbeing/delivery/custom) with targets, current value, and progress |
 | `goal_snapshots` | Periodic progress snapshots for goal tracking over time |
 
 ### Setup

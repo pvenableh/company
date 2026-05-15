@@ -796,7 +796,7 @@ async function seedTeams(
 	return out;
 }
 
-async function seedTeamGoals(teamIds: Record<string, string>): Promise<void> {
+async function seedTeamGoals(orgId: string, teamIds: Record<string, string>): Promise<void> {
 	const today = new Date();
 	const future = (days: number) => {
 		const d = new Date(today);
@@ -804,25 +804,31 @@ async function seedTeamGoals(teamIds: Record<string, string>): Promise<void> {
 		return d.toISOString().slice(0, 10);
 	};
 	const goals = [
-		{ teamKey: 'creative', title: 'Ship Helios West brand system', description: 'Full delivery incl. collateral + signage.', target_date: future(30), progress: 65 },
-		{ teamKey: 'creative', title: 'Redesign portfolio site', description: 'Internal marketing site refresh.', target_date: future(90), progress: 15 },
-		{ teamKey: 'delivery', title: 'Launch Pinecrest portal soft release', description: 'Limited rollout to one clinic.', target_date: future(80), progress: 20 },
-		{ teamKey: 'delivery', title: 'Reduce PM overhead by 10%', description: 'Internal process audit.', target_date: future(120), progress: 5 },
+		{ teamKey: 'creative', title: 'Ship Helios West brand system', description: 'Full delivery incl. collateral + signage.', end_date: future(30), current_value: 65 },
+		{ teamKey: 'creative', title: 'Redesign portfolio site', description: 'Internal marketing site refresh.', end_date: future(90), current_value: 15 },
+		{ teamKey: 'delivery', title: 'Launch Pinecrest portal soft release', description: 'Limited rollout to one clinic.', end_date: future(80), current_value: 20 },
+		{ teamKey: 'delivery', title: 'Reduce PM overhead by 10%', description: 'Internal process audit.', end_date: future(120), current_value: 5 },
 	];
 	for (const g of goals) {
 		const teamId = teamIds[g.teamKey];
 		if (!teamId) continue;
 		await findOrCreate(
-			'team_goals',
+			'goals',
 			{ _and: [{ team: { _eq: teamId } }, { title: { _eq: g.title } }] },
 			{
+				scope: 'team',
+				category: 'delivery',
+				status: 'active',
+				target_value: 100,
+				target_unit: '%',
+				current_value: g.current_value,
 				team: teamId,
+				organization: orgId,
 				title: g.title,
 				description: g.description,
-				target_date: g.target_date,
-				progress: g.progress,
+				end_date: g.end_date,
 			},
-			`team_goal "${g.title}"`,
+			`team goal "${g.title}"`,
 		);
 	}
 }
@@ -1298,7 +1304,7 @@ async function main() {
 	const teamIds = await seedTeams(org.id, teammateIds);
 
 	console.log('\n--- team goals ---');
-	await seedTeamGoals(teamIds);
+	await seedTeamGoals(org.id, teamIds);
 
 	console.log('\n--- mailing lists + campaign ---');
 	await seedMailingListsAndCampaign(org.id, contactIds);

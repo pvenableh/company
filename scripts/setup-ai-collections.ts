@@ -6,7 +6,6 @@
  *   1. ai_preferences      – Per-user AI module toggle preferences
  *   2. ai_chat_sessions     – AI assistant chat session history
  *   3. ai_chat_messages     – Individual messages within AI chat sessions
- *   4. financial_goals      – Quarterly revenue goals (replaces localStorage)
  *
  * Run once during initial setup:
  *
@@ -351,94 +350,6 @@ async function setupAIChatMessages() {
   })
 }
 
-async function setupFinancialGoals() {
-  console.log('\n=== financial_goals ===')
-
-  await createCollection('financial_goals', {
-    icon: 'trending_up',
-    note: 'Quarterly revenue goals for the financial analysis dashboard',
-    hidden: false,
-    singleton: false,
-    sort_field: null,
-    archive_field: null,
-  })
-
-  await createField('financial_goals', {
-    field: 'id',
-    type: 'uuid',
-    meta: { special: ['uuid'], interface: 'input', readonly: true, hidden: true },
-    schema: { is_primary_key: true, has_auto_increment: false },
-  })
-
-  await createField('financial_goals', {
-    field: 'year',
-    type: 'integer',
-    meta: { interface: 'input', required: true, width: 'half' },
-    schema: {},
-  })
-
-  await createField('financial_goals', {
-    field: 'organization',
-    type: 'uuid',
-    meta: {
-      interface: 'select-dropdown-m2o',
-      special: ['m2o'],
-      note: 'Optional org-specific goal. Null = personal/global goal.',
-      width: 'half',
-    },
-    schema: {},
-  })
-
-  await createField('financial_goals', {
-    field: 'q1_goal',
-    type: 'float',
-    meta: { interface: 'input', width: 'half', note: 'Q1 revenue target' },
-    schema: { default_value: 0 },
-  })
-
-  await createField('financial_goals', {
-    field: 'q2_goal',
-    type: 'float',
-    meta: { interface: 'input', width: 'half', note: 'Q2 revenue target' },
-    schema: { default_value: 0 },
-  })
-
-  await createField('financial_goals', {
-    field: 'q3_goal',
-    type: 'float',
-    meta: { interface: 'input', width: 'half', note: 'Q3 revenue target' },
-    schema: { default_value: 0 },
-  })
-
-  await createField('financial_goals', {
-    field: 'q4_goal',
-    type: 'float',
-    meta: { interface: 'input', width: 'half', note: 'Q4 revenue target' },
-    schema: { default_value: 0 },
-  })
-
-  await createField('financial_goals', {
-    field: 'user_created',
-    type: 'uuid',
-    meta: { special: ['user-created'], interface: 'select-dropdown-m2o', readonly: true, hidden: true },
-    schema: {},
-  })
-
-  await createField('financial_goals', {
-    field: 'date_created',
-    type: 'timestamp',
-    meta: { special: ['date-created'], interface: 'datetime', readonly: true, hidden: true },
-    schema: {},
-  })
-
-  await createField('financial_goals', {
-    field: 'date_updated',
-    type: 'timestamp',
-    meta: { special: ['date-updated'], interface: 'datetime', readonly: true, hidden: true },
-    schema: {},
-  })
-}
-
 // ─── Relationships ────────────────────────────────────────────────────────────
 
 async function setupRelationships() {
@@ -473,16 +384,6 @@ async function setupRelationships() {
     meta: { one_field: 'messages', sort_field: 'sort', one_deselect_action: 'nullify' },
     schema: { on_delete: 'CASCADE' },
   })
-
-  // financial_goals.organization -> organizations
-  console.log('  financial_goals.organization -> organizations')
-  await directusRequest('/relations', 'POST', {
-    collection: 'financial_goals',
-    field: 'organization',
-    related_collection: 'organizations',
-    meta: { one_field: null, sort_field: null, one_deselect_action: 'nullify' },
-    schema: { on_delete: 'SET NULL' },
-  })
 }
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
@@ -504,7 +405,6 @@ async function main() {
   await setupAIPreferences()
   await setupAIChatSessions()
   await setupAIChatMessages()
-  await setupFinancialGoals()
   await setupRelationships()
 
   console.log('\n=========================================')

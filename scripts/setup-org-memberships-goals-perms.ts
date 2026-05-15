@@ -1,23 +1,18 @@
 #!/usr/bin/env npx tsx
 /**
- * Directus org_memberships + team_goals — Permissions Setup Script
+ * Directus org_memberships — Permissions Setup Script
  *
- * Grants app roles read/write access to two collections that the conformance
- * pass uncovered as blocked (403 "doesn't have permission or collection does
- * not exist"):
- *
- *   - org_memberships: client code (useOrgRole, useOrganization, useFilteredUsers,
- *     useTimeTracker, /organization pages) queries this to resolve the current
- *     user's role + org. Without read access, the app hits a cascading 500 on
- *     every authenticated request and /proposals renders as "Broken" on cold
- *     load.
- *   - team_goals: the Teams detail page's Goals card. Without create/update/
- *     delete, Pass 6's GoalFormModal renders but can't save.
+ * Grants app roles read access to org_memberships, which the conformance pass
+ * uncovered as blocked (403 "doesn't have permission or collection does not
+ * exist"). Client code (useOrgRole, useOrganization, useFilteredUsers,
+ * useTimeTracker, /organization pages) queries this to resolve the current
+ * user's role + org. Without read access, the app hits a cascading 500 on
+ * every authenticated request and /proposals renders as "Broken" on cold load.
  *
  * Permission model:
  *   - Admin:          Full access (admin_access bypass — no explicit rules)
- *   - Client Manager: org_memberships CRUD scoped to own org, team_goals CRUD
- *   - Regular User:   org_memberships READ own rows only, team_goals CRUD
+ *   - Client Manager: org_memberships READ scoped to own row
+ *   - Regular User:   org_memberships READ own rows only
  *   - Public:         No access
  *
  * org_memberships row filter (non-admin users):
@@ -25,10 +20,6 @@
  * — a user only sees their own membership rows. Sufficient because
  *   useOrgRole's client-side filter already scopes to the current user anyway;
  *   this just enforces it at the data layer.
- *
- * team_goals has no row filter for now. Can be tightened to team.organization
- * membership later if needed; for the conformance pass, unblocking goal CRUD
- * for authenticated users is the goal.
  *
  * Safety:
  *   - Dry-run by default (prints what would happen). Use --apply to write.
@@ -42,7 +33,7 @@
  *
  * Prerequisites:
  *   - DIRECTUS_SERVER_TOKEN or DIRECTUS_ADMIN_TOKEN env var set
- *   - org_memberships + team_goals collections exist in Directus schema
+ *   - org_memberships collection exists in Directus schema
  */
 
 import 'dotenv/config';
@@ -184,22 +175,9 @@ function orgMembershipsPermissions(_isManager: boolean): PermissionRule[] {
 	];
 }
 
-function teamGoalsPermissions(): PermissionRule[] {
-	// Full CRUD for all authenticated roles (team collaboration data).
-	// Can be tightened to team.organization membership later if needed.
-	return (['create', 'read', 'update', 'delete'] as const).map((action) => ({
-		collection: 'team_goals',
-		action,
-		permissions: null,
-		validation: null,
-		presets: null,
-		fields: ['*'],
-	}));
-}
-
 async function main() {
 	console.log('==========================================');
-	console.log('  org_memberships + team_goals — Perms');
+	console.log('  org_memberships — Perms');
 	console.log('==========================================');
 	console.log(`Target: ${DIRECTUS_URL}`);
 	console.log(`Mode:   ${APPLY ? 'APPLY (writing permissions)' : 'DRY-RUN (no changes)'}\n`);
@@ -211,9 +189,9 @@ async function main() {
 	}
 	console.log('Connected to Directus\n');
 
-	// Check which collections exist; skip perms for missing ones with a warning.
+	// Check the org_memberships collection exists; skip perms with a warning if not.
 	const collectionAvailable: Record<string, boolean> = {};
-	for (const collection of ['org_memberships', 'team_goals']) {
+	for (const collection of ['org_memberships']) {
 		const exists = await collectionExists(collection);
 		collectionAvailable[collection] = exists;
 		if (exists) {
@@ -250,7 +228,6 @@ async function main() {
 
 		const allRules = [
 			...(collectionAvailable.org_memberships ? orgMembershipsPermissions(isManager) : []),
-			...(collectionAvailable.team_goals ? teamGoalsPermissions() : []),
 		];
 
 		for (const rule of allRules) {

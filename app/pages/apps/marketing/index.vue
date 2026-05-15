@@ -610,6 +610,7 @@ const scopeLabel = computed(() => {
       <AppFloorStrip v-model="floor" :items="floors" aria-label="Marketing sections" />
 
       <AppIntroCard app-id="marketing" />
+      <GoalsRelatedGoalsCard :categories="['growth']" title="Goals in this lens" />
 
       <!-- ── Pulse floor ──────────────────────────────────────────────── -->
       <template v-if="floor === 'pulse'">

@@ -31,7 +31,7 @@ const TENANT_COLLECTIONS = [
   'video_meetings', 'calendar_events',
   'channels', 'channel_messages', 'messages',
   'appointments', 'call_logs',
-  'teams', 'team_goals',
+  'teams',
   'org_roles', 'org_memberships',
   'ai_notes', 'ai_notices', 'ai_chat_sessions', 'ai_chat_messages',
   'ai_context_snapshots', 'ai_preferences',

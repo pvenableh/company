@@ -200,24 +200,54 @@ export const APP_ACCENTS: Record<AppId, AppAccent> = getAppAccents('default');
 export const APP_ORDER: AppId[] = ['dashboard', 'clients', 'work', 'money', 'marketing'];
 export const APP_FOOTER_ORDER: AppId[] = ['organization', 'account'];
 
+/**
+ * Path → owning-app mapping for routes that live outside `/apps/*` but still
+ * belong to a Work-app surface (meeting room, meeting recap, scheduler
+ * settings, project detail, ticket detail, …). Keeps the AppRail's active
+ * chip and the apps-shell accent in lockstep with the user's mental model:
+ * "I'm still in Work even though the URL doesn't say `/apps/work`."
+ *
+ * AppRail.vue + useAppAccent both consult this — keep them in sync via the
+ * helper, never re-derive the prefix list in components.
+ */
+export function appIdForPath(path: string): AppId | null {
+	if (path.startsWith('/account')) return 'account';
+	if (path === '/' || path === '/apps' || path === '/apps/') return 'dashboard';
+
+	const seg = path.split('/').filter(Boolean);
+	if (seg.length === 0) return null;
+
+	// /apps/<id>/... → canonical app routes.
+	if (seg[0] === 'apps') {
+		const id = seg[1] as AppId | undefined;
+		return id && id in APP_META ? id : null;
+	}
+
+	// Classic-named routes that semantically belong to an app. Drill-downs
+	// (e.g. /meetings/[id]) reach these from the apps-layout floors, so the
+	// rail should stay anchored to the originating app.
+	const WORK_PREFIXES = ['meetings', 'meeting', 'scheduler', 'projects', 'tickets', 'tasks'];
+	if (WORK_PREFIXES.includes(seg[0]!)) return 'work';
+
+	const MONEY_PREFIXES = ['invoices', 'contracts', 'proposals', 'expenses'];
+	if (MONEY_PREFIXES.includes(seg[0]!)) return 'money';
+
+	const CLIENT_PREFIXES = ['clients', 'contacts', 'leads'];
+	if (CLIENT_PREFIXES.includes(seg[0]!)) return 'clients';
+
+	if (seg[0] === 'marketing' || seg[0] === 'social') return 'marketing';
+	if (seg[0] === 'organization' || seg[0] === 'team') return 'organization';
+
+	return null;
+}
+
 export function useAppAccent() {
 	const route = useRoute();
 	const { palette } = useAppPalette();
 
 	const accents = computed<Record<AppId, AppAccent>>(() => getAppAccents(palette.value));
 
-	const activeAppId = computed<AppId | null>(() => {
-		const path = route.path;
-		if (path.startsWith('/account')) return 'account';
-		// Dashboard lives at the app root rather than /apps/dashboard so the
-		// existing home page (Productivity Engine + CRM intelligence + score
-		// widgets) keeps a single canonical destination — IA stays clean.
-		if (path === '/' || path === '/apps' || path === '/apps/') return 'dashboard';
-		const seg = path.split('/').filter(Boolean);
-		if (seg[0] !== 'apps') return null;
-		const id = seg[1] as AppId | undefined;
-		return id && id in APP_META ? id : null;
-	});
+	const activeAppId = computed<AppId | null>(() => appIdForPath(route.path));
 
 	const accent = computed<AppAccent | null>(() =>
 		activeAppId.value ? accents.value[activeAppId.value] : null,

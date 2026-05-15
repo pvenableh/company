@@ -325,6 +325,7 @@ function openMeetingSlideOver(meeting: any) {
       <AppFloorStrip v-model="floor" :items="floors" aria-label="Work sections" />
 
       <AppIntroCard app-id="work" />
+      <GoalsRelatedGoalsCard :categories="['delivery']" title="Goals in this lens" />
 
       <!-- ── Gantt floor ──────────────────────────────────────────────── -->
       <ClientOnly v-if="floor === 'gantt'">

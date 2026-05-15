@@ -82,14 +82,16 @@ export async function createDailyRoom(params: {
 				enable_screenshare: true,
 				start_video_off: false,
 				start_audio_off: false,
-				// `enable_transcription_storage` keeps the VTT file after the
-				// meeting; without `permissions.canAdmin: 'transcription'` (or
-				// the prebuilt's enable_transcription room flag) the prebuilt
-				// "Transcribe" button stays hidden, so transcription never
-				// starts at all. We auto-start via startTranscription() from
-				// the host's join, but keeping the flags ensures the prebuilt
-				// UI also shows the controls as a fallback.
-				enable_transcription_storage: enableTranscription,
+				// Always enable transcription storage — the storage flag is what
+				// makes the prebuilt "Transcribe" button save the VTT after the
+				// call. We previously gated this on per-meeting opt-in, which
+				// meant hosts who flipped the room-creation toggle off (or who
+				// joined a room that was created before the flag became a
+				// default) would press Transcribe and see no transcript on the
+				// recap page. The per-meeting `transcription_enabled` flag is
+				// still honoured downstream — it just no longer suppresses the
+				// underlying capability.
+				enable_transcription_storage: true,
 				// Knock-and-admit. When the meeting was created with the
 				// "Waiting room" toggle on, we delegate the entire knock/admit
 				// flow to Daily's prebuilt — `enable_knocking` makes guests hit
@@ -301,6 +303,7 @@ export async function createDailyMeetingToken(params: {
 	redirectOnExit?: string;
 }): Promise<string> {
 	const expiresAt = params.expiresAt ?? new Date(Date.now() + 4 * 60 * 60 * 1000);
+	const isOwner = params.isOwner ?? false;
 
 	const result = await dailyFetch<DailyMeetingToken>('/meeting-tokens', {
 		method: 'POST',
@@ -309,9 +312,16 @@ export async function createDailyMeetingToken(params: {
 				room_name: params.roomName,
 				user_id: params.userId,
 				user_name: params.userName,
-				is_owner: params.isOwner ?? false,
+				is_owner: isOwner,
 				exp: Math.floor(expiresAt.getTime() / 1000),
 				eject_at_token_exp: true,
+				// Owners explicitly get transcription-admin so the "Transcribe"
+				// button surfaces in Daily's prebuilt toolbar. The room-level
+				// `permissions.canAdmin: ['transcription']` should already cover
+				// this, but Daily occasionally requires the same on the token
+				// before the button renders — belt-and-braces avoids the dead
+				// button hosts were reporting.
+				...(isOwner ? { permissions: { canAdmin: ['transcription'] as any } } : {}),
 				...(params.redirectOnExit
 					? { redirect_on_meeting_exit: params.redirectOnExit }
 					: {}),
