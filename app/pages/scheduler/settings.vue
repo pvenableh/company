@@ -22,7 +22,7 @@ const router = useRouter();
 const route = useRoute();
 
 // ── Floor strip ─────────────────────────────────────────────────────────────
-const FLOOR_KEYS = ['general', 'availability', 'booking', 'calendar', 'notifications'];
+const FLOOR_KEYS = ['general', 'event-types', 'availability', 'booking', 'calendar', 'notifications'];
 
 const initialFloor = (() => {
 	const v = route.query.floor;
@@ -36,6 +36,7 @@ watch(floor, (next) => {
 
 const floors = [
 	{ key: 'general', label: 'General', icon: 'lucide:settings' },
+	{ key: 'event-types', label: 'Event Types', icon: 'lucide:layers' },
 	{ key: 'availability', label: 'Availability', icon: 'lucide:clock' },
 	{ key: 'booking', label: 'Booking Page', icon: 'lucide:link' },
 	{ key: 'calendar', label: 'Calendar Sync', icon: 'lucide:calendar' },
@@ -74,12 +75,6 @@ const durationOptions = [
 	{ label: '60 minutes', value: 60 },
 ];
 
-const meetingTypeOptions = [
-	{ label: 'Consultation', value: 'consultation' },
-	{ label: 'Discovery Call', value: 'discovery' },
-	{ label: 'General', value: 'general' },
-];
-
 const reminderOptions = [
 	{ label: '15 minutes before', value: 15 },
 	{ label: '30 minutes before', value: 30 },
@@ -106,7 +101,6 @@ const weekDays = [
 
 const form = reactive({
 	default_duration: 30,
-	default_meeting_type: 'general',
 	buffer_before: 0,
 	buffer_after: 0,
 	timezone: 'America/New_York',
@@ -202,6 +196,78 @@ watch(availabilityError, (error) => {
 
 const schedulerSettingsItems = useDirectusItems('scheduler_settings');
 const availabilityItems = useDirectusItems('availability');
+const eventTypeItems = useDirectusItems('event_types');
+
+// ── Event Types CRUD ───────────────────────────────────────────────────────
+const eventTypes = ref([]);
+const eventTypesLoading = ref(false);
+const eventTypeModalOpen = ref(false);
+const editingEventType = ref(null);
+const copiedUrlFor = ref(null);
+
+const loadEventTypes = async () => {
+	if (!user.value?.id) return;
+	eventTypesLoading.value = true;
+	try {
+		const rows = await eventTypeItems.list({
+			filter: { host_user: { _eq: user.value.id } },
+			sort: ['sort', 'title'],
+			limit: -1,
+		});
+		eventTypes.value = rows || [];
+	} catch (err) {
+		console.error('Error loading event types:', err);
+	}
+	eventTypesLoading.value = false;
+};
+
+const openNewEventTypeModal = () => {
+	editingEventType.value = null;
+	eventTypeModalOpen.value = true;
+};
+
+const openEditEventTypeModal = (et) => {
+	editingEventType.value = et;
+	eventTypeModalOpen.value = true;
+};
+
+const copyEventTypeUrl = async (et) => {
+	const config = useRuntimeConfig();
+	const baseUrl = config.public.siteUrl || (import.meta.client ? window.location.origin : '');
+	const orgSlug = currentOrg.value?.slug;
+	const userSlugPart = form.booking_page_slug || user.value?.id;
+	const url = `${baseUrl}/book/${orgSlug || '—'}/${userSlugPart}/${et.slug}`;
+	try {
+		await navigator.clipboard.writeText(url);
+		copiedUrlFor.value = et.id;
+		toast.add({ title: 'Link copied', description: url, color: 'green' });
+		setTimeout(() => { if (copiedUrlFor.value === et.id) copiedUrlFor.value = null; }, 1500);
+	} catch {
+		toast.add({ title: 'Copy failed', color: 'red' });
+	}
+};
+
+const onEventTypeCreated = (et) => {
+	// If the new one is default, optimistic-clear other defaults locally.
+	if (et.is_default) {
+		eventTypes.value = eventTypes.value.map((x) => ({ ...x, is_default: false }));
+	}
+	eventTypes.value = [...eventTypes.value, et];
+	loadEventTypes();
+};
+const onEventTypeUpdated = (et) => {
+	if (et.is_default) {
+		eventTypes.value = eventTypes.value.map((x) => x.id === et.id ? et : { ...x, is_default: false });
+	} else {
+		eventTypes.value = eventTypes.value.map((x) => x.id === et.id ? et : x);
+	}
+	loadEventTypes();
+};
+const onEventTypeDeleted = (id) => {
+	eventTypes.value = eventTypes.value.filter((x) => x.id !== id);
+};
+
+watch(() => user.value?.id, (id) => { if (id) loadEventTypes(); }, { immediate: true });
 
 const saveSettings = async () => {
 	saving.value = true;
@@ -376,9 +442,6 @@ onMounted(() => {
 							<UFormGroup label="Default Duration">
 								<USelect v-model="form.default_duration" :options="durationOptions" />
 							</UFormGroup>
-							<UFormGroup label="Default Meeting Type">
-								<USelect v-model="form.default_meeting_type" :options="meetingTypeOptions" />
-							</UFormGroup>
 							<UFormGroup label="Buffer Before (min)">
 								<UInput v-model.number="form.buffer_before" type="number" min="0" max="60" />
 							</UFormGroup>
@@ -389,6 +452,78 @@ onMounted(() => {
 								<USelect v-model="form.timezone" :options="timezoneOptions" />
 							</UFormGroup>
 						</div>
+					</div>
+				</template>
+
+				<template v-if="floor === 'event-types'">
+					<div class="space-y-3 max-w-3xl">
+						<div class="flex items-start justify-between gap-4">
+							<div>
+								<h2 class="text-base font-semibold text-foreground">Event types</h2>
+								<p class="text-xs text-muted-foreground mt-0.5">
+									Each event type is a bookable URL. The default loads when visitors hit your bare booking page.
+								</p>
+							</div>
+							<Button size="sm" @click="openNewEventTypeModal">
+								<Icon name="lucide:plus" class="w-4 h-4 mr-1" /> New event type
+							</Button>
+						</div>
+
+						<div v-if="eventTypesLoading" class="ios-card p-8 text-center">
+							<Icon name="lucide:loader-2" class="w-5 h-5 animate-spin mx-auto text-muted-foreground" />
+						</div>
+						<div v-else-if="eventTypes.length === 0" class="ios-card p-8 text-center">
+							<Icon name="lucide:layers" class="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+							<p class="text-sm font-medium">No event types yet</p>
+							<p class="text-xs text-muted-foreground mt-1">
+								Create one above, or run <code>pnpm tsx scripts/setup-event-types.ts</code> to seed defaults.
+							</p>
+						</div>
+						<div v-else class="space-y-2">
+							<div
+								v-for="et in eventTypes"
+								:key="et.id"
+								class="ios-card p-4 flex items-center gap-3 cursor-pointer hover:bg-muted/30 transition"
+								@click="openEditEventTypeModal(et)"
+							>
+								<span
+									class="w-3 h-3 rounded-full shrink-0"
+									:style="{ background: et.color || 'var(--primary)' }"
+								/>
+								<div class="min-w-0 flex-1">
+									<div class="flex items-center gap-2 flex-wrap">
+										<span class="font-medium text-sm">{{ et.title }}</span>
+										<span class="px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wider bg-muted text-muted-foreground font-mono">{{ et.slug }}</span>
+										<span class="text-xs text-muted-foreground">· {{ et.duration }} min</span>
+										<span v-if="et.is_default" class="px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wider bg-primary/15 text-primary">Default</span>
+										<span v-if="!et.enabled" class="px-1.5 py-0.5 rounded text-[10px] uppercase tracking-wider bg-amber-500/15 text-amber-600">Paused</span>
+									</div>
+									<p v-if="et.description" class="text-xs text-muted-foreground mt-0.5 truncate">{{ et.description }}</p>
+								</div>
+								<div class="flex items-center gap-1 shrink-0" @click.stop>
+									<Button
+										variant="ghost"
+										size="icon-sm"
+										:title="copiedUrlFor === et.id ? 'Copied!' : 'Copy booking URL'"
+										@click="copyEventTypeUrl(et)"
+									>
+										<Icon :name="copiedUrlFor === et.id ? 'lucide:check' : 'lucide:link'" class="w-3.5 h-3.5" />
+									</Button>
+									<Button variant="ghost" size="icon-sm" title="Edit" @click="openEditEventTypeModal(et)">
+										<Icon name="lucide:pencil" class="w-3.5 h-3.5" />
+									</Button>
+								</div>
+							</div>
+						</div>
+
+						<SchedulerEventTypeFormModal
+							v-model="eventTypeModalOpen"
+							:event-type="editingEventType"
+							:all-event-types="eventTypes"
+							@created="onEventTypeCreated"
+							@updated="onEventTypeUpdated"
+							@deleted="onEventTypeDeleted"
+						/>
 					</div>
 				</template>
 

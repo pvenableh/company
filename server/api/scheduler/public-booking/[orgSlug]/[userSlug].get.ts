@@ -1,6 +1,8 @@
 // server/api/scheduler/public-booking/[orgSlug]/[userSlug].get.ts
 //
-// Org-scoped public booking endpoint. URL: /api/scheduler/public-booking/<orgSlug>/<userSlug>
+// Org-scoped public booking endpoint.
+//
+// URL: /api/scheduler/public-booking/<orgSlug>/<userSlug>?eventTypeSlug=<slug>
 //
 // Resolution order:
 //   1. Look up the organization by `slug`. 404 if not found.
@@ -10,6 +12,9 @@
 //      junction (`users` o2m on organizations) — otherwise 404, so a known
 //      user's UUID can't be used to brand under another org's URL.
 //   3. Standard load: settings + availability + upcoming 30-day meetings.
+//   4. Event types: all enabled, published rows belonging to the host. If
+//      `eventTypeSlug` is passed, also returns the resolved event type as
+//      `selectedEventType`. Without it, the host's `is_default` row wins.
 
 import { createDirectus, rest, staticToken, readItems, readUser } from '@directus/sdk';
 
@@ -19,6 +24,8 @@ export default defineEventHandler(async (event) => {
 	const config = useRuntimeConfig();
 	const orgSlug = getRouterParam(event, 'orgSlug');
 	const userSlug = getRouterParam(event, 'userSlug');
+	const query = getQuery(event);
+	const eventTypeSlug = typeof query.eventTypeSlug === 'string' ? query.eventTypeSlug : null;
 
 	if (!orgSlug || !userSlug) {
 		throw createError({ statusCode: 400, message: 'orgSlug and userSlug are required' });
@@ -131,6 +138,43 @@ export default defineEventHandler(async (event) => {
 			}),
 		);
 
+		// 4. Event types — host's enabled, published rows.
+		let eventTypes: any[] = [];
+		try {
+			eventTypes = await client.request(
+				readItems('event_types', {
+					fields: [
+						'id', 'title', 'slug', 'description', 'duration', 'color',
+						'intake_schema', 'price_cents', 'is_default', 'sort', 'status', 'enabled',
+					],
+					filter: {
+						_and: [
+							{ host_user: { _eq: user.id } },
+							{ organization: { _eq: organization.id } },
+							{ status: { _eq: 'published' } },
+							{ enabled: { _eq: true } },
+						],
+					},
+					sort: ['sort', 'title'],
+				}),
+			);
+		} catch (err: any) {
+			// Collection may not exist yet (pre-Stage-4 environments). Fall back
+			// to an empty list — the booking page renders a sane error state.
+			console.warn('[public-booking] event_types lookup failed (collection missing?):', err.message);
+			eventTypes = [];
+		}
+
+		let selectedEventType: any | null = null;
+		if (eventTypeSlug) {
+			selectedEventType = eventTypes.find((et) => et.slug === eventTypeSlug) || null;
+			if (!selectedEventType) {
+				throw createError({ statusCode: 404, message: 'Event type not found' });
+			}
+		} else {
+			selectedEventType = eventTypes.find((et) => et.is_default) || null;
+		}
+
 		return {
 			organization: {
 				id: organization.id,
@@ -148,6 +192,8 @@ export default defineEventHandler(async (event) => {
 				...existingMeetings,
 				...existingAppointments.map((a: any) => ({ scheduled_start: a.start_time, scheduled_end: a.end_time })),
 			],
+			eventTypes,
+			selectedEventType,
 		};
 	} catch (error: any) {
 		if (!error.statusCode) console.error('Error fetching booking data:', error);

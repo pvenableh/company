@@ -221,6 +221,10 @@ export interface Appointment {
 	/** @description Linked lead (if this appointment is about a lead) */
 	related_lead?: Lead | string | null;
 	attendees?: AppointmentsDirectusUser[] | string[];
+	/** @description Event type used when this appointment was booked. Null for legacy/pre-Stage-4 rows. */
+	event_type?: EventType | string | null;
+	/** @description Answers to the event type intake form. Shape mirrors intake_schema fields. */
+	intake_responses?: Record<string, any> | null;
 }
 
 export interface AppointmentsDirectusUser {
@@ -1672,6 +1676,46 @@ export interface Expense {
 	project?: Project | string | null;
 	/** @description Receipt or supporting document */
 	receipt?: DirectusFile | string | null;
+}
+
+export interface EventTypeIntakeField {
+	/** @description Machine name (e.g. "company"). Sent as a key in Appointment.intake_responses. */
+	name: string;
+	/** @description Display label shown above the form input. */
+	label: string;
+	/** @description Renderer hint. */
+	type: 'text' | 'textarea' | 'select' | 'checkbox';
+	required?: boolean;
+	/** @description For type='select', the list of option labels. */
+	options?: string[];
+}
+
+export interface EventType {
+	/** @primaryKey */
+	id: number;
+	status?: 'published' | 'draft' | 'archived';
+	sort?: number | null;
+	user_created?: DirectusUser | string | null;
+	date_created?: string | null;
+	user_updated?: DirectusUser | string | null;
+	date_updated?: string | null;
+	organization: Organization | string;
+	host_user: DirectusUser | string;
+	title: string;
+	/** @description URL-safe slug. Unique per host_user. */
+	slug: string;
+	description?: string | null;
+	/** @description Duration in minutes. */
+	duration: number;
+	/** @description Hex color or design-token reference. */
+	color?: string | null;
+	/** @description Form schema rendered before the time picker. */
+	intake_schema?: EventTypeIntakeField[] | null;
+	/** @description Null = free. Stage 5 wires Stripe Connect. */
+	price_cents?: number | null;
+	/** @description Exactly one per host_user. Bare /book/<org>/<user> renders this one. */
+	is_default?: boolean;
+	enabled?: boolean;
 }
 
 /**
@@ -4601,6 +4645,7 @@ export interface Schema {
 	email_partials: EmailPartial[];
 	emails: Email[];
 	email_templates: EmailTemplate[];
+	event_types: EventType[];
 	expenses: Expense[];
 	financial_goals: FinancialGoal[];
 	gbp_posts: GbpPost[];
@@ -4832,6 +4877,7 @@ export enum CollectionNames {
 	email_partials = 'email_partials',
 	emails = 'emails',
 	email_templates = 'email_templates',
+	event_types = 'event_types',
 	expenses = 'expenses',
 	financial_goals = 'financial_goals',
 	gbp_posts = 'gbp_posts',
