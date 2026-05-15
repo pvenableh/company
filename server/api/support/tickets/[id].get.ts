@@ -103,7 +103,7 @@ export default defineEventHandler(async (event) => {
 			const body = plain.slice(PUBLIC_PREFIX.length).replace(/^\s+/, '');
 			const first = c?.user?.first_name || '';
 			const last = c?.user?.last_name || '';
-			const name = [first, last].filter(Boolean).join(' ') || 'Earnest Support';
+			const name = [first, last].filter(Boolean).join(' ') || 'Earnest';
 			return {
 				id: c.id,
 				body,

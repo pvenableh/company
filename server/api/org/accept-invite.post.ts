@@ -16,7 +16,7 @@
  * 4. Auto-login the user and return session
  */
 
-import { readItems, updateItem } from '@directus/sdk';
+import { readItems, updateItem, updateUser } from '@directus/sdk';
 
 export default defineEventHandler(async (event) => {
   try {
@@ -111,6 +111,24 @@ export default defineEventHandler(async (event) => {
         throw createError({
           statusCode: 400,
           message: 'Failed to accept invitation. The invite link may have expired.',
+        });
+      }
+    } else if (userStatus === 'invited' && password && !directusToken) {
+      // We sent the user our own branded invite email (Directus SMTP isn't
+      // wired in every environment), so the Directus token from
+      // `acceptUserInvite` never reaches them. Set the password directly via
+      // the admin client and flip the user to `active` so they can sign in.
+      try {
+        const userId = membership.user?.id;
+        if (!userId) throw new Error('Membership row has no user id');
+        await directus.request(
+          updateUser(userId, { password, status: 'active' } as any),
+        );
+      } catch (setPwErr: any) {
+        console.error('Admin-set password failed:', setPwErr);
+        throw createError({
+          statusCode: 500,
+          message: 'Failed to set your password. Please try again or request a new invitation.',
         });
       }
     }

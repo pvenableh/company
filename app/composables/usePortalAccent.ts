@@ -17,6 +17,7 @@
  *   - Account stays intentionally muted to mark it as system/settings.
  */
 import type { CSSProperties } from 'vue';
+import { formatIconColor, iconHighlightForAccent } from '~/composables/useAppAccent';
 
 export type PortalAppId =
 	| 'dashboard'
@@ -223,12 +224,16 @@ export function usePortalAccent() {
 				'--app-accent-h': '220',
 				'--app-accent-s': '10%',
 				'--app-accent-l': '48%',
+				'--app-accent-icon': 'hsl(0 0% 100%)',
+				'--app-accent-icon-bright': 'hsl(0 0% 100%)',
 			} as CSSProperties;
 		}
 		return {
 			'--app-accent-h': String(a.h),
 			'--app-accent-s': `${a.s}%`,
 			'--app-accent-l': `${a.l}%`,
+			'--app-accent-icon': formatIconColor(a),
+			'--app-accent-icon-bright': iconHighlightForAccent(a.h, a.s, a.l),
 		} as CSSProperties;
 	});
 

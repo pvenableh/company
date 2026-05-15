@@ -1,8 +1,8 @@
 #!/usr/bin/env npx tsx
 /**
- * Earnest Support — internal bug/feedback inbox org.
+ * Earnest — internal bug/feedback inbox org.
  *
- * Creates (or upgrades) the dedicated "Earnest Support" organization that
+ * Creates (or upgrades) the dedicated "Earnest" organization that
  * receives every ticket submitted through the Help → Report-a-bug menu in
  * the app. Reuses the existing `tickets` collection so kanban, statuses,
  * comments, and AI context all work out of the box.
@@ -12,7 +12,7 @@
  *   - Cross-tenant submissions land in one place regardless of reporter org.
  *
  * The script:
- *   1. Find-or-creates the org by `code=ERN` / `slug=earnest-support`.
+ *   1. Find-or-creates the org by `code=ERN` / `slug=earnest`.
  *   2. Seeds the five system org_roles via ensureRoles().
  *   3. Adds the owner (defaults to peter@huestudios.com) as an Owner member.
  *   4. Prints the org UUID — paste into Vercel env as EARNEST_SUPPORT_ORG_ID.
@@ -33,9 +33,9 @@ import {
 	ensureMembership,
 } from './lib/demo-seed';
 
-const SUPPORT_ORG_NAME = 'Earnest Support';
-const SUPPORT_ORG_SLUG = 'earnest-support';
-const SUPPORT_ORG_SHORT = 'Support';
+const SUPPORT_ORG_NAME = 'Earnest';
+const SUPPORT_ORG_SLUG = 'earnest';
+const SUPPORT_ORG_SHORT = 'Earnest';
 const SUPPORT_ORG_CODE = 'ERN';
 const OWNER_EMAIL = process.env.EARNEST_SUPPORT_OWNER_EMAIL || 'peter@huestudios.com';
 
@@ -86,7 +86,7 @@ async function findUserByEmail(email: string): Promise<any | null> {
 async function main() {
 	assertDirectusToken();
 
-	console.log(`Earnest Support org bootstrap (owner: ${OWNER_EMAIL})`);
+	console.log(`Earnest org bootstrap (owner: ${OWNER_EMAIL})`);
 
 	const org = await ensureSupportOrg();
 	if (!org) process.exit(1);

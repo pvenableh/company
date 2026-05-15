@@ -16,7 +16,7 @@ const emit = defineEmits<{
 }>();
 
 const { user } = useDirectusAuth();
-const { currentOrg } = useOrganization();
+const { currentOrg, isLoading: orgsLoading, isInitialized: orgsInitialized } = useOrganization();
 const router = useRouter();
 const toast = useToast();
 
@@ -53,6 +53,15 @@ const bookingUrl = computed(() => {
 	return `${baseUrl}/book/${orgSlug}/${userSlug}`;
 });
 const bookingUrlReady = computed(() => !!(currentOrg.value as any)?.slug);
+// While orgs are still loading the readiness check is null — surface the
+// "set a slug" prompt only after we've actually resolved the active org so we
+// don't flash a misleading warning during hydration.
+const bookingUrlBlockedReason = computed<'loading' | 'no-org' | 'no-slug' | null>(() => {
+	if (!orgsInitialized.value || orgsLoading.value) return 'loading';
+	if (!currentOrg.value) return 'no-org';
+	if (!(currentOrg.value as any)?.slug) return 'no-slug';
+	return null;
+});
 
 const copyBookingLink = async () => {
 	await navigator.clipboard.writeText(bookingUrl.value);
@@ -169,7 +178,11 @@ const formatFollowUpDate = (event: CalendarEvent) => {
 					<UIcon name="i-heroicons-clipboard" class="w-3.5 h-3.5 text-muted-foreground" />
 				</button>
 			</div>
-			<p v-if="!bookingUrlReady" class="text-[10px] text-amber-500 mt-1.5">Pick an active organization to generate the URL.</p>
+			<p v-if="bookingUrlBlockedReason === 'no-org'" class="text-[10px] text-amber-500 mt-1.5">Pick an active organization to generate the URL.</p>
+			<p v-else-if="bookingUrlBlockedReason === 'no-slug'" class="text-[10px] text-amber-500 mt-1.5">
+				Your organization has no URL slug yet.
+				<NuxtLink to="/organization" class="underline hover:text-amber-600">Set one in Organization settings →</NuxtLink>
+			</p>
 		</div>
 	</div>
 </template>

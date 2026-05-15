@@ -8,7 +8,7 @@
  *   openReportModal('bug');
  *
  * Submits to /api/support/submit which routes the ticket into the
- * Earnest Support organization (see scripts/setup-earnest-support-org.ts).
+ * Earnest organization (see scripts/setup-earnest-support-org.ts).
  */
 
 import type { SupportType } from '~/composables/useReportIssue';

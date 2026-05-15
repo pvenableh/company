@@ -12,8 +12,9 @@
  * 5. Also creates the legacy junction entry for backward compat
  */
 
-import { createItem, readItems, readUsers, readRoles, inviteUser, createUser } from '@directus/sdk';
+import { createItem, readItems, readUsers, readRoles, inviteUser, readItem, readUser } from '@directus/sdk';
 import { ensureContactForUser } from '~~/server/utils/contact-sync';
+import { sendOrgInviteEmail } from '~~/server/utils/invite-email';
 
 export default defineEventHandler(async (event) => {
   try {
@@ -270,6 +271,35 @@ export default defineEventHandler(async (event) => {
       });
     } catch (contactErr: any) {
       console.warn('Contact sync failed (non-fatal):', contactErr?.message);
+    }
+
+    // Send our own branded invite email. Directus's inviteUser also sends one
+    // when SMTP is configured, but most environments rely on this path —
+    // SendGrid is wired centrally and this is the only delivery guarantee.
+    try {
+      const [org, inviter] = await Promise.all([
+        directus.request(
+          readItem('organizations' as any, organizationId, { fields: ['id', 'name'] as any }),
+        ).catch(() => null) as Promise<any>,
+        directus.request(
+          readUser(currentUserId, { fields: ['id', 'first_name', 'last_name', 'email'] as any }),
+        ).catch(() => null) as Promise<any>,
+      ]);
+      const inviterName = inviter
+        ? `${inviter.first_name || ''} ${inviter.last_name || ''}`.trim() || inviter.email || null
+        : null;
+      await sendOrgInviteEmail({
+        to: email,
+        inviterName,
+        inviterEmail: inviter?.email || null,
+        orgId: organizationId,
+        orgName: org?.name || 'Earnest',
+        membershipId: membership.id,
+        roleLabel: targetRole[0].name || targetRole[0].slug || 'Member',
+        isNewUser,
+      });
+    } catch (emailErr: any) {
+      console.warn('Invite email send failed (non-fatal):', emailErr?.message || emailErr);
     }
 
     return {

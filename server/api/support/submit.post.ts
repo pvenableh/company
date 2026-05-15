@@ -4,7 +4,7 @@
  *
  * Any signed-in user (staff member or portal user) can submit a bug
  * report / feature request / question / generic feedback through this
- * route. The ticket is created in the dedicated "Earnest Support"
+ * route. The ticket is created in the dedicated "Earnest" support
  * organization, NOT the reporter's own org — that's the whole point.
  *
  * We can't grant every user a Directus role in the Support org, so the

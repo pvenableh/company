@@ -3,11 +3,18 @@
  * Work app — Apps Layout Phase 3.
  *
  * Single landing page with a pill-segmented floor strip:
- *   Gantt (default) | Projects | Tasks | Tickets | Meetings | Calendar
+ *   Projects (default) | Tasks | Tickets | Meetings | Calendar | Insights
  *
  * Floor switching is in-place (v-if on a query param), so the shell never
  * remounts. Drill-downs from any floor still push to the canonical
  * classic routes (`/projects/[id]`, `/tickets/[id]`, `/meetings/[id]`).
+ *
+ * The Projects floor exposes two views of the same `projects` data:
+ *   - `timeline` (default) — `ProjectTimelineUnifiedGantt`
+ *   - `table`              — `ProjectsTable` with search + status filter
+ * The view is persisted via `?view=table` (timeline is default and omitted
+ * from the URL). Legacy `?floor=gantt` deep-links are redirected to
+ * `?floor=projects` (which lands on Timeline anyway).
  *
  * Multi-home decision (documented for Phase 3):
  *   Meetings + Tasks do NOT get their own tab on /apps/clients/[id].
@@ -26,21 +33,23 @@ const route = useRoute();
 const config = useRuntimeConfig();
 
 // ── Floor strip ─────────────────────────────────────────────────────────────
-type FloorKey = 'gantt' | 'projects' | 'tasks' | 'tickets' | 'meetings' | 'calendar' | 'insights';
-const FLOOR_KEYS: FloorKey[] = ['gantt', 'projects', 'tasks', 'tickets', 'meetings', 'calendar', 'insights'];
+type FloorKey = 'projects' | 'tasks' | 'tickets' | 'meetings' | 'calendar' | 'insights';
+const FLOOR_KEYS: FloorKey[] = ['projects', 'tasks', 'tickets', 'meetings', 'calendar', 'insights'];
 
+// Migrate legacy `?floor=gantt` deep-links onto the merged Projects floor.
+// Gantt was its own floor pre-merge; it's now the default *view* on Projects.
 const initialFloor: FloorKey = (() => {
   const v = route.query.floor;
-  return typeof v === 'string' && FLOOR_KEYS.includes(v as FloorKey) ? (v as FloorKey) : 'gantt';
+  if (v === 'gantt') return 'projects';
+  return typeof v === 'string' && FLOOR_KEYS.includes(v as FloorKey) ? (v as FloorKey) : 'projects';
 })();
 const floor = ref<FloorKey>(initialFloor);
 
 watch(floor, (next) => {
-  router.replace({ query: { ...route.query, floor: next === 'gantt' ? undefined : next } });
+  router.replace({ query: { ...route.query, floor: next === 'projects' ? undefined : next } });
 });
 
 const floors: Array<{ key: FloorKey; label: string; icon: string }> = [
-  { key: 'gantt', label: 'Gantt', icon: 'lucide:bar-chart-horizontal' },
   { key: 'projects', label: 'Projects', icon: 'lucide:folder-kanban' },
   { key: 'tasks', label: 'Tasks', icon: 'lucide:check-square' },
   { key: 'tickets', label: 'Tickets', icon: 'lucide:ticket' },
@@ -48,6 +57,28 @@ const floors: Array<{ key: FloorKey; label: string; icon: string }> = [
   { key: 'calendar', label: 'Calendar', icon: 'lucide:calendar' },
   { key: 'insights', label: 'Insights', icon: 'lucide:bar-chart-3' },
 ];
+
+// View toggle on the Projects floor — `timeline` (default) renders the
+// unified Gantt; `table` renders the searchable ProjectsTable. Persists
+// via `?view=table`; the default is omitted from the URL.
+type ProjectsView = 'timeline' | 'table';
+const initialProjectsView: ProjectsView = route.query.view === 'table' ? 'table' : 'timeline';
+const projectsView = ref<ProjectsView>(initialProjectsView);
+
+watch(projectsView, (next) => {
+  router.replace({
+    query: { ...route.query, view: next === 'timeline' ? undefined : next },
+  });
+});
+
+// Rewrite any `?floor=gantt` URL once on mount so the legacy query stops
+// hanging around in the address bar (and so back-button doesn't bounce
+// the user back to the dead floor). The view defaults to `timeline`
+// which is what Gantt was anyway.
+if (route.query.floor === 'gantt') {
+  const { floor: _drop, ...rest } = route.query;
+  router.replace({ query: rest });
+}
 
 // ── Insights floor ──────────────────────────────────────────────────────────
 const { snapshot: insightsSnapshot, snapshotLoading: insightsLoading, fetchSnapshot: fetchInsights } = useCRMIntelligence();
@@ -63,6 +94,10 @@ watch(floor, (next) => {
 const { user } = useDirectusAuth();
 const { selectedOrg, getOrganizationFilter } = useOrganization();
 const { selectedClient, getClientFilter } = useClients();
+// Team filter is shared state via `useState`, so the picker on the Projects
+// floor + the TicketsBoard's filter both read/write the same `selectedTeam`.
+// Changing it triggers a refetch on the active floor.
+const { selectedTeam, visibleTeams, fetchTeams, setTeam, clearTeam } = useTeams();
 
 // ── Projects floor ──────────────────────────────────────────────────────────
 const projectItems = useDirectusItems('projects');
@@ -85,6 +120,11 @@ async function fetchProjects() {
     const filter: Record<string, any> = {};
     Object.assign(filter, getOrganizationFilter());
     Object.assign(filter, getClientFilter());
+    // Direct team filter — `projects.team` is a M2O field. Matches the same
+    // shape TicketsBoard uses for tickets.team, so both floors are aligned.
+    if (selectedTeam.value) {
+      filter.team = { _eq: selectedTeam.value };
+    }
 
     const statusFilter =
       projectStatusFilter.value === 'active'
@@ -264,6 +304,11 @@ const meetingsLoaded = ref(false);
 watch(
   floor,
   (next) => {
+    // Eager-load projects on floor entry so the Table view is populated
+    // the moment the user toggles to it (Timeline view has its own
+    // fetcher via ProjectTimelineUnifiedGantt; the cost of pre-fetching
+    // the table data is small and avoids a race where toggling to Table
+    // races the watcher and renders an empty list).
     if (next === 'projects' && !projectsLoaded.value) {
       projectsLoaded.value = true;
       fetchProjects();
@@ -277,9 +322,26 @@ watch(
 );
 
 // Refetch projects when filters change (only if Projects floor is active or already loaded)
-watch([projectStatusFilter, selectedOrg, selectedClient], () => {
+watch([projectStatusFilter, selectedOrg, selectedClient, selectedTeam], () => {
   if (projectsLoaded.value) fetchProjects();
 });
+
+// Load the team list once we know the active org. Picker hides until the
+// org has at least one team — keeps the chrome clean for solo accounts.
+watch(selectedOrg, (orgId) => {
+  if (orgId) fetchTeams(orgId).catch(() => {});
+}, { immediate: true });
+
+const currentTeamLabel = computed(() => {
+  if (!selectedTeam.value) return 'All teams';
+  const t = visibleTeams.value.find((x: any) => x.id === selectedTeam.value);
+  return t?.name || 'Team';
+});
+
+function handleSelectTeam(id: string | null) {
+  if (!id) clearTeam();
+  else setTeam(id);
+}
 
 // ── Slide-overs (Phase 7 Track A) ──────────────────────────────────────────
 // Row clicks on the Projects + Meetings floors open a quick-look slide-over
@@ -308,6 +370,26 @@ function openMeetingSlideOver(meeting: any) {
   <div class="apps-page">
     <AppHeader title="Work" app-id="work">
       <template #actions>
+        <!-- Team filter — only shows when the active org has at least one team
+             and the floor it can affect is open. Picker writes to the shared
+             `selectedTeam` state, which TicketsBoard already reads. -->
+        <UDropdown
+          v-if="visibleTeams.length > 0 && (floor === 'projects' || floor === 'tickets')"
+          :items="[
+            [{ label: 'All teams', icon: 'i-heroicons-user-group', click: () => handleSelectTeam(null) }],
+            visibleTeams.map((t) => ({ label: t.name, icon: 'i-heroicons-users', click: () => handleSelectTeam(t.id) })),
+          ]"
+        >
+          <button
+            type="button"
+            class="inline-flex items-center gap-1 h-8 px-2.5 rounded-md border border-border bg-background text-xs font-medium text-foreground hover:bg-muted/40"
+          >
+            <Icon name="lucide:users" class="w-3.5 h-3.5 text-muted-foreground" />
+            <span class="hidden sm:inline">{{ currentTeamLabel }}</span>
+            <span class="sm:hidden">Team</span>
+            <Icon name="lucide:chevron-down" class="w-3 h-3 text-muted-foreground" />
+          </button>
+        </UDropdown>
         <NuxtLink
           v-if="floor === 'projects'"
           to="/projects?new=1"
@@ -327,39 +409,64 @@ function openMeetingSlideOver(meeting: any) {
       <AppIntroCard app-id="work" />
       <GoalsRelatedGoalsCard :categories="['delivery']" title="Goals in this lens" />
 
-      <!-- ── Gantt floor ──────────────────────────────────────────────── -->
-      <ClientOnly v-if="floor === 'gantt'">
-        <div class="min-h-svh">
-          <ProjectTimelineUnifiedGantt />
-        </div>
-        <template #fallback>
-          <div class="flex items-center justify-center min-h-[400px]">
-            <div class="flex flex-col items-center gap-3">
-              <Icon name="lucide:loader-2" class="w-8 h-8 text-muted-foreground animate-spin" />
-              <span class="text-sm text-muted-foreground">Loading timeline…</span>
-            </div>
-          </div>
-        </template>
-      </ClientOnly>
-
-      <!-- ── Projects floor ───────────────────────────────────────────── -->
-      <template v-else-if="floor === 'projects'">
+      <!-- ── Projects floor (Timeline + Table views) ──────────────────── -->
+      <template v-if="floor === 'projects'">
         <div class="flex gap-3 mb-5 flex-wrap items-center">
-          <input
-            v-model="projectsSearch"
-            type="search"
-            placeholder="Search projects..."
-            class="flex-1 min-w-48 rounded-md border bg-background px-3 py-2 text-sm"
-            @input="debouncedFetchProjects"
-          />
-          <UTabs
-            v-model="projectStatusFilter"
-            :items="projectStatusItems"
-            class="w-fit"
-          />
+          <!-- View toggle — same `projects` data, two visualisations. -->
+          <div class="inline-flex items-center rounded-md border border-border bg-background p-0.5" role="tablist">
+            <button
+              v-for="opt in [
+                { key: 'timeline', label: 'Timeline', icon: 'lucide:bar-chart-horizontal' },
+                { key: 'table',    label: 'Table',    icon: 'lucide:list' },
+              ]"
+              :key="opt.key"
+              type="button"
+              role="tab"
+              :aria-selected="projectsView === opt.key"
+              class="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[5px] text-xs font-medium transition-colors"
+              :class="projectsView === opt.key
+                ? 'bg-muted/70 text-foreground'
+                : 'text-muted-foreground hover:text-foreground'"
+              @click="projectsView = opt.key as ProjectsView"
+            >
+              <Icon :name="opt.icon" class="w-3.5 h-3.5" />
+              {{ opt.label }}
+            </button>
+          </div>
+
+          <!-- Table-only filters. The Gantt view does its own filtering
+               inside ProjectTimelineUnifiedGantt. -->
+          <template v-if="projectsView === 'table'">
+            <input
+              v-model="projectsSearch"
+              type="search"
+              placeholder="Search projects..."
+              class="flex-1 min-w-48 rounded-md border bg-background px-3 py-2 text-sm"
+              @input="debouncedFetchProjects"
+            />
+            <UTabs
+              v-model="projectStatusFilter"
+              :items="projectStatusItems"
+              class="w-fit"
+            />
+          </template>
         </div>
 
-        <div class="ios-card p-5">
+        <ClientOnly v-if="projectsView === 'timeline'">
+          <div class="min-h-svh">
+            <ProjectTimelineUnifiedGantt />
+          </div>
+          <template #fallback>
+            <div class="flex items-center justify-center min-h-[400px]">
+              <div class="flex flex-col items-center gap-3">
+                <Icon name="lucide:loader-2" class="w-8 h-8 text-muted-foreground animate-spin" />
+                <span class="text-sm text-muted-foreground">Loading timeline…</span>
+              </div>
+            </div>
+          </template>
+        </ClientOnly>
+
+        <div v-else class="ios-card p-5">
           <ProjectsTable
             :projects="projectsList"
             :loading="projectsLoading"

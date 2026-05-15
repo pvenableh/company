@@ -20,7 +20,13 @@ import {
 import { Switch } from '@/components/ui/switch';
 import type { RailPosition } from '~/composables/useAppsMode';
 import { useAppPalette, type AppPaletteId } from '~/composables/useAppPalette';
-import { APP_PALETTES, APP_PALETTE_IDS, APP_ORDER, APP_FOOTER_ORDER } from '~/composables/useAppAccent';
+import {
+  APP_PALETTES,
+  APP_PALETTE_IDS,
+  APP_ORDER,
+  APP_FOOTER_ORDER,
+  getAppAccents,
+} from '~/composables/useAppAccent';
 
 const { railPosition, storedRailPosition, setRailPosition, railShowLabels, setRailShowLabels } = useAppsMode();
 const { palette, setPalette } = useAppPalette();
@@ -53,11 +59,13 @@ async function handlePickPosition(next: RailPosition) {
   }
 }
 
-/** Build a swatch row for each palette so users see what they'll get. */
+/** Build a swatch row for each palette so users see what they'll get.
+ *  Reads through `getAppAccents` (the derived view of the palette's
+ *  `sourceColors` + `pickGappy`) so swatches always match the rail. */
 function swatchesFor(id: AppPaletteId) {
-  const colors = APP_PALETTES[id].colors;
+  const accents = getAppAccents(id);
   return [...APP_ORDER, ...APP_FOOTER_ORDER].map((appId) => {
-    const c = colors[appId];
+    const c = accents[appId];
     return `hsl(${c.h} ${c.s}% ${c.l}%)`;
   });
 }
@@ -143,39 +151,44 @@ async function handlePickPalette(next: AppPaletteId) {
       </div>
 
       <!-- ── Section: Palette ──────────────────────────────────────── -->
-      <div class="mt-1.5 mb-0.5 mx-2 border-t border-border/40" aria-hidden="true" />
-      <div class="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-        App Palette
-      </div>
-      <div class="space-y-0.5">
-        <button
-          v-for="id in APP_PALETTE_IDS"
-          :key="id"
-          type="button"
-          :disabled="saving"
-          class="flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left transition-colors hover:bg-muted/60 disabled:opacity-60"
-          :class="{ 'bg-primary/10 text-primary': palette === id }"
-          @click="handlePickPalette(id)"
-        >
-          <div class="flex-1 min-w-0">
-            <div class="text-xs font-medium leading-tight mb-1">{{ APP_PALETTES[id].meta.label }}</div>
-            <div class="flex items-center gap-0.5 mb-1" aria-hidden="true">
-              <span
-                v-for="(swatch, idx) in swatchesFor(id)"
-                :key="idx"
-                class="block w-3.5 h-3.5 rounded-sm shrink-0"
-                :style="{ backgroundColor: swatch }"
-              />
+      <!-- Hidden while we lock the apps shell to the Sea Mist palette.
+           Re-show when APP_PALETTE_IDS exposes more than one entry. -->
+      <template v-if="APP_PALETTE_IDS.length > 1">
+        <div class="mt-1.5 mb-0.5 mx-2 border-t border-border/40" aria-hidden="true" />
+        <div class="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          App Palette
+        </div>
+        <div class="space-y-0.5">
+          <button
+            v-for="id in APP_PALETTE_IDS"
+            :key="id"
+            type="button"
+            :disabled="saving"
+            class="flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left transition-colors hover:bg-muted/60 disabled:opacity-60"
+            :class="{ 'bg-primary/10 text-primary': palette === id }"
+            @click="handlePickPalette(id)"
+          >
+            <div class="flex-1 min-w-0">
+              <div class="text-xs font-medium leading-tight mb-1">{{ APP_PALETTES[id].meta.label }}</div>
+              <div class="flex items-center gap-0.5 mb-1" aria-hidden="true">
+                <span
+                  v-for="(swatch, idx) in swatchesFor(id)"
+                  :key="idx"
+                  class="block w-3.5 h-3.5 rounded-sm shrink-0"
+                  :style="{ backgroundColor: swatch }"
+                />
+              </div>
+              <div class="text-[10px] text-muted-foreground leading-tight truncate">{{ APP_PALETTES[id].meta.hint }}</div>
             </div>
-            <div class="text-[10px] text-muted-foreground leading-tight truncate">{{ APP_PALETTES[id].meta.hint }}</div>
-          </div>
-          <Icon
-            v-if="palette === id"
-            name="lucide:check"
-            class="size-3.5 text-primary shrink-0"
-          />
-        </button>
-      </div>
+            <Icon
+              v-if="palette === id"
+              name="lucide:check"
+              class="size-3.5 text-primary shrink-0"
+            />
+          </button>
+        </div>
+      </template>
+
     </PopoverContent>
   </Popover>
 </template>

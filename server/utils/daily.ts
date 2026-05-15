@@ -301,6 +301,12 @@ export async function createDailyMeetingToken(params: {
 	isOwner?: boolean;
 	expiresAt?: Date;
 	redirectOnExit?: string;
+	/** When true, Daily server-side starts transcription on join. Avoids the
+	 *  wrap'd-iframe race where `startTranscription()` is called before
+	 *  Daily's internal state machine is ready. Only honored for owners. */
+	autoStartTranscription?: boolean;
+	/** Same idea for recording — server-side auto-start on join. */
+	autoStartRecording?: boolean;
 }): Promise<string> {
 	const expiresAt = params.expiresAt ?? new Date(Date.now() + 4 * 60 * 60 * 1000);
 	const isOwner = params.isOwner ?? false;
@@ -322,6 +328,16 @@ export async function createDailyMeetingToken(params: {
 				// before the button renders — belt-and-braces avoids the dead
 				// button hosts were reporting.
 				...(isOwner ? { permissions: { canAdmin: ['transcription'] as any } } : {}),
+				// Server-side auto-start. Daily kicks these on as soon as the
+				// owner joins, which is far more reliable than firing
+				// startTranscription()/startRecording() from the wrap'd
+				// prebuilt iframe after `joined-meeting`.
+				...(isOwner && params.autoStartTranscription
+					? { auto_start_transcription: true }
+					: {}),
+				...(isOwner && params.autoStartRecording
+					? { auto_start_recording: true }
+					: {}),
 				...(params.redirectOnExit
 					? { redirect_on_meeting_exit: params.redirectOnExit }
 					: {}),

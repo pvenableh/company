@@ -48,7 +48,7 @@ async function hydrateFromServer(updateMe?: (patch: any) => Promise<unknown>) {
 				updateMe({ app_palette: resolved }).catch(() => undefined);
 			}
 		} catch {
-			localPalette.value = 'default';
+			localPalette.value = 'seaMist';
 		}
 	})();
 	return hydrationPromise;

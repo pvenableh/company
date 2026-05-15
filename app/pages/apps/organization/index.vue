@@ -36,8 +36,8 @@ const config = useRuntimeConfig();
 const toast = useToast();
 
 // ── Floor strip ─────────────────────────────────────────────────────────────
-type FloorKey = 'overview' | 'members' | 'billing' | 'integrations' | 'settings';
-const FLOOR_KEYS: FloorKey[] = ['overview', 'members', 'billing', 'integrations', 'settings'];
+type FloorKey = 'overview' | 'members' | 'teams' | 'billing' | 'integrations' | 'settings';
+const FLOOR_KEYS: FloorKey[] = ['overview', 'members', 'teams', 'billing', 'integrations', 'settings'];
 
 const initialFloor: FloorKey = (() => {
   const v = route.query.floor;
@@ -52,6 +52,7 @@ watch(floor, (next) => {
 const floors: Array<{ key: FloorKey; label: string; icon: string }> = [
   { key: 'overview', label: 'Overview', icon: 'lucide:home' },
   { key: 'members', label: 'Members', icon: 'lucide:users' },
+  { key: 'teams', label: 'Teams', icon: 'lucide:user-group' },
   { key: 'billing', label: 'Billing', icon: 'lucide:credit-card' },
   { key: 'integrations', label: 'Integrations', icon: 'lucide:plug' },
   { key: 'settings', label: 'Settings', icon: 'lucide:settings' },
@@ -60,6 +61,13 @@ const floors: Array<{ key: FloorKey; label: string; icon: string }> = [
 // ── Common deps ─────────────────────────────────────────────────────────────
 const { selectedOrg, currentOrg } = useOrganization();
 const { canAccess, isOrgOwner } = useOrgRole();
+const { visibleTeams, loading: teamsLoading, fetchTeams } = useTeams();
+
+// Lazy-load teams when the Teams floor opens so the Overview/Members floors
+// don't pay the cost on first paint.
+watch([floor, selectedOrg], ([f, orgId]) => {
+  if (f === 'teams' && orgId) fetchTeams(orgId as string).catch(() => {});
+}, { immediate: true });
 
 const canManageOrg = computed(() => canAccess('organization_settings'));
 
@@ -805,6 +813,63 @@ function onClientInvited() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- ── Teams floor ──────────────────────────────────────────────── -->
+      <template v-else-if="floor === 'teams'">
+        <div class="space-y-4 max-w-5xl">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <h2 class="text-base font-semibold text-foreground">Teams</h2>
+              <p class="text-xs text-muted-foreground mt-0.5">
+                Group members into teams so Work + Calendar views can scope by team.
+                Each team has its own roster of members and shared client visibility.
+              </p>
+            </div>
+            <NuxtLink to="/organization/teams" class="inline-flex">
+              <Button size="sm" variant="outline">
+                <Icon name="lucide:settings" class="w-4 h-4 mr-1" />
+                Manage teams
+              </Button>
+            </NuxtLink>
+          </div>
+
+          <div v-if="teamsLoading" class="ios-card p-8 text-center">
+            <Icon name="lucide:loader-2" class="w-5 h-5 animate-spin mx-auto text-muted-foreground" />
+          </div>
+          <div v-else-if="!visibleTeams.length" class="ios-card p-8 text-center">
+            <Icon name="lucide:user-group" class="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+            <p class="text-sm font-medium">No teams yet</p>
+            <p class="text-xs text-muted-foreground mt-1 mb-3">
+              Group members so the Work app and calendar can be filtered by team.
+            </p>
+            <NuxtLink to="/organization/teams" class="inline-flex">
+              <Button size="sm">
+                <Icon name="lucide:plus" class="w-4 h-4 mr-1" />
+                Create team
+              </Button>
+            </NuxtLink>
+          </div>
+          <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <NuxtLink
+              v-for="t in visibleTeams"
+              :key="t.id"
+              :to="`/teams/${t.id}`"
+              class="ios-card p-4 hover:bg-muted/30 transition-colors"
+            >
+              <div class="flex items-start justify-between gap-2">
+                <div class="min-w-0">
+                  <p class="text-sm font-semibold text-foreground truncate">{{ t.name }}</p>
+                  <p v-if="t.description" class="text-xs text-muted-foreground mt-0.5 line-clamp-2">{{ t.description }}</p>
+                </div>
+                <Icon name="lucide:arrow-up-right" class="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+              </div>
+              <div class="mt-3 text-[11px] text-muted-foreground">
+                {{ (t.users?.length || 0) }} {{ (t.users?.length || 0) === 1 ? 'member' : 'members' }}
+              </div>
+            </NuxtLink>
           </div>
         </div>
       </template>

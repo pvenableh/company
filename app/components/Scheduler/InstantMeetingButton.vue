@@ -117,7 +117,7 @@ const startMeeting = async () => {
 </script>
 
 <template>
-	<UPopover v-model:open="open" :popper="{ placement: 'bottom', offsetDistance: 6 }">
+	<UPopover v-model:open="open" :popper="{ placement: 'bottom-end', offsetDistance: 6, strategy: 'fixed' }">
 		<button
 			:disabled="loading"
 			class="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-medium shadow-sm transition-colors ios-press disabled:opacity-50"

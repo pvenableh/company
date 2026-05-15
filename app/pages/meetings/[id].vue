@@ -738,6 +738,38 @@ const acceptAgenda = async () => {
 
 const dismissAgenda = () => { agendaSuggestion.value = null; };
 
+// ─── Manual "End meeting" ───
+// Daily's webhook normally flips status → 'completed', but the webhook can
+// miss (HMAC unset, tab-close before flush, dropped event). Hosts need a way
+// to clear out meetings stuck on 'in_progress' from the recap page.
+const ending = ref(false);
+const isMeetingHost = computed(() => {
+	const hostId = typeof meeting.value?.host_user === 'object'
+		? meeting.value.host_user?.id
+		: meeting.value?.host_user;
+	return !!(currentUserId.value && hostId && hostId === currentUserId.value);
+});
+const canEndMeeting = computed(() => {
+	if (!isMeetingHost.value) return false;
+	const s = meeting.value?.status;
+	return s === 'in_progress' || s === 'scheduled';
+});
+const endMeeting = async () => {
+	if (!meetingId.value || ending.value) return;
+	if (!confirm('Mark this meeting as ended? Status will change to "completed".')) return;
+	ending.value = true;
+	try {
+		const res = await $fetch(`/api/video/meetings/${meetingId.value}/end`, { method: 'POST' });
+		if (meeting.value) meeting.value.status = res?.data?.status || 'completed';
+		toast.add({ title: 'Meeting ended', color: 'green' });
+	} catch (err) {
+		const msg = err?.data?.message || err?.message || 'Failed to end meeting';
+		toast.add({ title: 'Could not end meeting', description: msg, color: 'red' });
+	} finally {
+		ending.value = false;
+	}
+};
+
 // ─── Action item promotion ───
 const promoteActionItem = async (idx) => {
 	if (promotingIndex.value !== -1) return;
@@ -777,7 +809,7 @@ const promoteActionItem = async (idx) => {
 <template>
 	<div class="max-w-4xl mx-auto p-4 sm:p-6">
 		<!-- Back -->
-		<NuxtLink to="/meetings" class="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mb-4">
+		<NuxtLink to="/apps/work?floor=meetings" class="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mb-4">
 			<UIcon name="i-heroicons-arrow-left" class="w-3.5 h-3.5" />
 			All meetings
 		</NuxtLink>
@@ -801,11 +833,27 @@ const promoteActionItem = async (idx) => {
 							<span v-if="meeting.actual_duration_minutes"> · {{ meeting.actual_duration_minutes }} min</span>
 						</p>
 					</div>
-					<span
-						:class="['flex-shrink-0 inline-flex items-center px-2.5 h-6 rounded-full text-[10px] font-bold uppercase tracking-wider', toneClass(summaryStatusLabel.tone)]"
-					>
-						{{ summaryStatusLabel.text }}
-					</span>
+					<div class="flex flex-shrink-0 items-center gap-2">
+						<button
+							v-if="canEndMeeting"
+							type="button"
+							:disabled="ending"
+							class="inline-flex items-center gap-1 h-6 px-2.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 disabled:opacity-50 transition-colors"
+							title="Mark this meeting as ended (host only)"
+							@click="endMeeting"
+						>
+							<UIcon
+								:name="ending ? 'i-heroicons-arrow-path' : 'i-heroicons-stop-circle'"
+								:class="['w-3 h-3', ending ? 'animate-spin' : '']"
+							/>
+							{{ ending ? 'Ending…' : 'End meeting' }}
+						</button>
+						<span
+							:class="['inline-flex items-center px-2.5 h-6 rounded-full text-[10px] font-bold uppercase tracking-wider', toneClass(summaryStatusLabel.tone)]"
+						>
+							{{ summaryStatusLabel.text }}
+						</span>
+					</div>
 				</div>
 
 				<!-- Pivots -->

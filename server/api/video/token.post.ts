@@ -30,6 +30,8 @@ export default defineEventHandler(async (event) => {
 		let identity: string;
 		let userId: string | undefined;
 		let isOwner = false;
+		let autoStartTranscription = false;
+		let autoStartRecording = false;
 
 		if (session?.user) {
 			// Authenticated user
@@ -39,19 +41,25 @@ export default defineEventHandler(async (event) => {
 				identity = session.user.email?.split('@')[0] || `user-${session.user.id.substring(0, 8)}`;
 			}
 
-			// Check if this user is the host of the meeting
+			// Check if this user is the host of the meeting + pick up the
+			// transcription/recording opt-in flags so we can hand them to
+			// Daily's token-level `auto_start_*` properties (more reliable
+			// than client-side startTranscription() after wrap).
 			try {
 				const directus = getTypedDirectus();
 				const { readItems } = await import('@directus/sdk');
 				const meetings = await directus.request(
 					readItems('video_meetings', {
 						filter: { room_name: { _eq: body.roomName } },
-						fields: ['host_user'],
+						fields: ['host_user', 'transcription_enabled', 'recording_enabled'] as any,
 						limit: 1,
 					}),
 				);
 				if (meetings.length > 0 && (meetings[0] as any)?.host_user === userId) {
 					isOwner = true;
+					const meetingRow = meetings[0] as any;
+					autoStartTranscription = !!meetingRow.transcription_enabled;
+					autoStartRecording = !!meetingRow.recording_enabled;
 				}
 			} catch {
 				// If we can't check host status, default to non-owner
@@ -78,6 +86,8 @@ export default defineEventHandler(async (event) => {
 			userName: identity,
 			isOwner,
 			redirectOnExit,
+			autoStartTranscription,
+			autoStartRecording,
 		});
 
 		return {

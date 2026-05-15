@@ -2,7 +2,7 @@
 /**
  * GET /api/support/tickets
  *
- * Returns the caller's own submissions in the Earnest Support org. Same
+ * Returns the caller's own submissions in the Earnest support org. Same
  * cross-org trust boundary as /submit — gate on the session, then read
  * through the server token because the reporter has no role inside the
  * Support org. Mirrors the pattern in server/utils/marketing-perms.ts.

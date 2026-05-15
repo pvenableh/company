@@ -179,17 +179,47 @@
 				<UIcon name="i-heroicons-arrow-top-right-on-square" class="w-3 h-3 opacity-60" />
 			</NuxtLink>
 
-			<!-- Top-right floating controls. Record + Transcribe are owned by
-			     Daily's native prebuilt toolbar (cloud recording + transcription
-			     are enabled at the room level + the host token is is_owner, so
-			     both buttons surface in the prebuilt UI for the host). Our own
-			     buttons used to live here but `startTranscription()` on a wrap'd
-			     prebuilt iframe is unreliable — Daily's internal state machine
-			     isn't synced with the iframe's join state, so the call errors
-			     with "only supported after join" even after `joined-meeting`
-			     fires. Letting the prebuilt own the controls also matches what
-			     guests already see and removes the dual-button confusion. -->
+			<!-- Top-right floating controls. Record + Transcribe are also owned
+			     by Daily's native prebuilt toolbar, but we expose explicit pills
+			     here so the host has a visible affordance regardless of which
+			     prebuilt toolbar layout is active (Daily occasionally hides
+			     these inside the "..." menu, especially on smaller windows).
+			     Buttons are host-only and gate on `dailyJoined` so we don't
+			     fire `startTranscription()` before Daily's internal state
+			     machine is ready. -->
 			<div v-if="hasJoined" class="fixed top-16 right-4 z-30 flex items-center gap-2 pointer-events-auto">
+				<button
+					v-if="isHost && dailyJoined"
+					:disabled="transcriptionBusy"
+					:class="[
+						'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-md text-[11px] font-medium transition-colors shadow-lg disabled:opacity-50',
+						transcribing ? 'bg-emerald-500/80 hover:bg-emerald-500 text-white' : 'bg-black/60 hover:bg-black/80 text-white',
+					]"
+					:title="transcribing ? 'Stop live transcription' : 'Start live transcription (saves a transcript for the recap)'"
+					@click="toggleTranscription"
+				>
+					<UIcon
+						:name="transcriptionBusy ? 'i-heroicons-arrow-path' : (transcribing ? 'i-heroicons-microphone' : 'i-heroicons-microphone-solid')"
+						:class="['w-3.5 h-3.5', transcriptionBusy ? 'animate-spin' : '']"
+					/>
+					<span>{{ transcribing ? 'Transcribing' : 'Transcribe' }}</span>
+				</button>
+				<button
+					v-if="isHost && dailyJoined"
+					:disabled="recordingBusy"
+					:class="[
+						'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-md text-[11px] font-medium transition-colors shadow-lg disabled:opacity-50',
+						recording ? 'bg-red-500/80 hover:bg-red-500 text-white' : 'bg-black/60 hover:bg-black/80 text-white',
+					]"
+					:title="recording ? 'Stop recording' : 'Start cloud recording'"
+					@click="toggleRecording"
+				>
+					<UIcon
+						:name="recordingBusy ? 'i-heroicons-arrow-path' : (recording ? 'i-heroicons-stop' : 'i-heroicons-record')"
+						:class="['w-3.5 h-3.5', recordingBusy ? 'animate-spin' : '']"
+					/>
+					<span>{{ recording ? 'Recording' : 'Record' }}</span>
+				</button>
 				<button
 					class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white text-[11px] font-medium transition-colors shadow-lg"
 					title="Ask Earnest about this meeting"
@@ -261,6 +291,69 @@ const dailyFrame = ref(null);
 const dailyJoined = ref(false);
 
 let statusPollInterval = null;
+
+// ── Host-only transcribe + record toggles ────────────────────────────────
+// Daily's prebuilt has its own buttons, but they're sometimes hidden inside
+// the "..." overflow on smaller windows. These pills always surface and call
+// straight into the wrap'd call object so a failure (room not configured for
+// transcription / Deepgram not provisioned at the domain level / etc) lands
+// in a visible toast instead of a silent no-op.
+const recording = ref(false);
+const recordingBusy = ref(false);
+const transcribing = ref(false);
+const transcriptionBusy = ref(false);
+
+const toggleRecording = async () => {
+	if (recordingBusy.value || !dailyCallObject || !dailyJoined.value) return;
+	recordingBusy.value = true;
+	try {
+		if (recording.value) {
+			await dailyCallObject.stopRecording();
+			recording.value = false;
+			toast.add({ title: 'Recording stopped', color: 'gray' });
+		} else {
+			await dailyCallObject.startRecording();
+			recording.value = true;
+			toast.add({ title: 'Recording started', color: 'green' });
+		}
+	} catch (err) {
+		const msg = err?.errorMsg || err?.message || 'Recording failed';
+		console.error('[meeting] recording toggle failed', err);
+		toast.add({ title: 'Recording failed', description: msg, color: 'red' });
+	} finally {
+		recordingBusy.value = false;
+	}
+};
+
+const toggleTranscription = async () => {
+	if (transcriptionBusy.value || !dailyCallObject || !dailyJoined.value) return;
+	transcriptionBusy.value = true;
+	try {
+		if (transcribing.value) {
+			await dailyCallObject.stopTranscription();
+			transcribing.value = false;
+			toast.add({ title: 'Transcription stopped', color: 'gray' });
+		} else {
+			await dailyCallObject.startTranscription();
+			transcribing.value = true;
+			toast.add({
+				title: 'Transcription started',
+				description: 'The recap will use this transcript when the meeting ends.',
+				color: 'green',
+			});
+		}
+	} catch (err) {
+		const msg = err?.errorMsg || err?.message || 'Transcription failed';
+		console.error('[meeting] transcription toggle failed', err);
+		toast.add({
+			title: 'Transcription failed',
+			description: `${msg}. If this persists, the Daily domain may not have Deepgram credentials configured.`,
+			color: 'red',
+		});
+	} finally {
+		transcriptionBusy.value = false;
+	}
+};
 
 // Computed
 const isHost = computed(() => {
@@ -434,14 +527,13 @@ const handleJoinedMeeting = (e) => {
 			'*',
 		);
 	} catch {}
-	// Recording + transcription are driven by Daily's native prebuilt buttons.
-	// We used to auto-fire startRecording()/startTranscription() here, but
-	// those calls error on a wrap'd prebuilt iframe ("only supported after
-	// join") even after this event fires — Daily's wrap doesn't fully sync
-	// state from the prebuilt's internal call object. Hosts now click the
-	// Record / Transcribe buttons in the prebuilt's own toolbar (room is
-	// configured with enable_recording: 'cloud', enable_transcription_storage,
-	// canAdmin: 'transcription', and the host token is is_owner: true).
+
+	// Recording + transcription auto-start happens server-side via the meeting
+	// token's `auto_start_recording` / `auto_start_transcription` properties
+	// (see server/api/video/token.post.ts). Daily fires `recording-started`
+	// and `transcription-started` shortly after join, which our wrap'd
+	// listeners pick up to flip the pill state. The manual pills here still
+	// work for toggling mid-call.
 };
 
 const handleLeftMeeting = () => {
@@ -490,6 +582,20 @@ const wrapDailyIframe = async () => {
 		dailyCallObject.on('app-message', handleAppMessage);
 		dailyCallObject.on('joined-meeting', handleJoinedMeeting);
 		dailyCallObject.on('left-meeting', handleLeftMeeting);
+		// Mirror native prebuilt toolbar / remote-host actions into our pills.
+		dailyCallObject.on('recording-started', () => { recording.value = true; });
+		dailyCallObject.on('recording-stopped', () => { recording.value = false; });
+		dailyCallObject.on('transcription-started', () => { transcribing.value = true; });
+		dailyCallObject.on('transcription-stopped', () => { transcribing.value = false; });
+		dailyCallObject.on('transcription-error', (err) => {
+			transcribing.value = false;
+			console.error('[meeting] daily transcription-error', err);
+			toast.add({
+				title: 'Transcription error',
+				description: err?.errorMsg || 'Daily reported a transcription error.',
+				color: 'red',
+			});
+		});
 		console.log('[meeting] Daily wrap attached');
 		// In case we wrapped after the join already fired
 		const local = dailyCallObject.participants?.()?.local;

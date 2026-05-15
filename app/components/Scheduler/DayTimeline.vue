@@ -358,12 +358,12 @@ watch(() => [props.date, props.events.length], scrollToFocus, { immediate: true 
 										<UIcon name="i-heroicons-lock-closed" class="w-2.5 h-2.5" />
 									</span>
 									<span
-										v-if="event.attendee_count"
+										v-if="(event.members?.length || 0) > 0"
 										class="day-timeline__pill day-timeline__pill--meta"
-										:title="`${event.attendee_count} attendee${event.attendee_count === 1 ? '' : 's'}`"
+										:title="`${event.members.length} ${event.members.length === 1 ? 'member' : 'members'}`"
 									>
 										<UIcon name="i-heroicons-users" class="w-2.5 h-2.5" />
-										{{ event.attendee_count }}
+										{{ event.members.length }}
 									</span>
 									<span
 										v-if="hostInitial(event)"

@@ -159,33 +159,43 @@ const fallbackBackLabel = computed(() => {
 	@apply flex items-center gap-1 text-muted-foreground hover:text-foreground text-sm transition-colors -ml-1 px-1.5 py-1 rounded-md hover:bg-muted/40;
 }
 
-/* Small app-accent chip echoing the rail's at-rest tile — light tinted
- * bg + colored icon. Same iOS-app-icon proportion (~22% corner radius)
- * so the header chip reads as a smaller member of the rail family. */
+/* Small app-accent chip echoing the rail's gradient tile — same hue
+ * ramp (lighter top → base → shaded bottom), full circle, and inset
+ * highlight. Reads as a smaller member of the rail family. */
 .app-header__accent-icon {
 	@apply inline-flex items-center justify-center shrink-0;
 	position: relative;
 	width: 24px;
 	height: 24px;
-	border-radius: 5px;
-	background: hsl(var(--app-accent-h, 220) var(--app-accent-s, 10%) var(--app-accent-l, 48%) / 0.15);
+	border-radius: 50%;
+	background: linear-gradient(
+		160deg,
+		hsl(var(--app-accent-h, 220) var(--app-accent-s, 10%) calc(var(--app-accent-l, 48%) + 12%)) 0%,
+		hsl(var(--app-accent-h, 220) var(--app-accent-s, 10%) var(--app-accent-l, 48%)) 55%,
+		hsl(var(--app-accent-h, 220) var(--app-accent-s, 10%) calc(var(--app-accent-l, 48%) - 8%)) 100%
+	);
+	box-shadow:
+		inset 0 0.5px 0 hsl(0 0% 100% / 0.28),
+		inset 0 -0.5px 0 hsl(0 0% 0% / 0.08),
+		0 1px 2px hsl(var(--app-accent-h, 220) var(--app-accent-s, 10%) var(--app-accent-l, 48%) / 0.25);
 }
 
-/* Sheen overlay from the previous rich treatment is no longer used —
- * keep the rule so the ::after pseudo-element stays inert. */
+/* Sheen overlay disabled — kept inert so the rule can be flipped back
+ * by setting `content: ''`. */
 .app-header__accent-icon::after {
 	display: none;
 }
 
-/* Single-layer icon glyph in the accent's true colour. Dual-layer
- * highlight markup is kept (hidden via CSS) so the richer treatment
- * can be restored later without touching the template. */
+/* Dual-layer icon glyph — base (deep) on top, highlight (bright) below
+ * via the masked highlight layer. Same composite as the rail chip,
+ * scaled down. */
 .app-header__accent-glyph {
 	position: relative;
 	display: inline-block;
 	width: 14px;
 	height: 14px;
 	z-index: 2;
+	filter: drop-shadow(0 0.5px 1px rgba(0, 0, 0, 0.28));
 }
 
 .app-header__accent-layer {
@@ -197,11 +207,12 @@ const fallbackBackLabel = computed(() => {
 }
 
 .app-header__accent-base {
-	color: hsl(var(--app-accent-h, 220) var(--app-accent-s, 10%) var(--app-accent-l, 48%));
+	/* Per-app glyph colour, mirrored from the rail's `--rail-icon`. */
+	color: var(--app-accent-icon, hsl(0 0% 100%));
 	z-index: 0;
 }
 
-.app-header__accent-highlight-mask {
+.app-header__accent-layer.app-header__accent-highlight-mask {
 	display: none;
 }
 

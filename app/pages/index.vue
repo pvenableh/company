@@ -282,6 +282,10 @@ watch(activeTab, (t) => {
 	<div v-else class="min-h-screen t-bg t-text">
 		<!-- Action Board: shown when user IS logged in -->
 		<div v-if="user" class="min-h-screen bg-background">
+			<!-- Apps Layout per-app header — shows the dashboard accent
+			     chip + page title, matching the rest of /apps/*. Only
+			     rendered in apps mode; classic mode keeps its own chrome. -->
+			<AppHeader v-if="isAppsMode" title="Dashboard" />
 			<div class="max-w-screen-xl mx-auto px-4 pb-8 sm:px-6 lg:px-8 space-y-6">
 				<!-- Greeting + Lens Toggle + Assistant Button -->
 				<div class="flex items-end justify-between gap-3 pt-2">

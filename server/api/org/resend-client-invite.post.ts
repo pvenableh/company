@@ -11,6 +11,7 @@
  */
 
 import { readItem, readItems, readUser, inviteUser } from '@directus/sdk';
+import { sendOrgInviteEmail } from '~~/server/utils/invite-email';
 
 export default defineEventHandler(async (event) => {
   try {
@@ -56,7 +57,7 @@ export default defineEventHandler(async (event) => {
 
     const portalRow = await directus.request(
       readItem('client_portal_users', membershipId, {
-        fields: ['id', 'status', 'organization', 'user'],
+        fields: ['id', 'status', 'organization', 'user', 'client'],
       } as any)
     ) as any;
 
@@ -104,6 +105,39 @@ export default defineEventHandler(async (event) => {
       );
     } catch (inviteErr: any) {
       console.warn('Directus resend invite error (may be ok):', inviteErr?.message);
+    }
+
+    // Branded resend email (always send so it works regardless of Directus SMTP).
+    try {
+      const [org, inviter, clientRow] = await Promise.all([
+        directus.request(
+          readItem('organizations' as any, organizationId, { fields: ['id', 'name'] as any }),
+        ).catch(() => null) as Promise<any>,
+        directus.request(
+          readUser(currentUserId, { fields: ['id', 'first_name', 'last_name', 'email'] as any }),
+        ).catch(() => null) as Promise<any>,
+        (typeof portalRow.client === 'string' || typeof portalRow.client === 'number')
+          ? directus.request(
+            readItem('clients' as any, portalRow.client, { fields: ['id', 'name'] as any }),
+          ).catch(() => null) as Promise<any>
+          : Promise.resolve(portalRow.client || null),
+      ]);
+      const inviterName = inviter
+        ? `${inviter.first_name || ''} ${inviter.last_name || ''}`.trim() || inviter.email || null
+        : null;
+      await sendOrgInviteEmail({
+        to: user.email,
+        inviterName,
+        inviterEmail: inviter?.email || null,
+        orgId: organizationId,
+        orgName: org?.name || 'Earnest',
+        membershipId: portalRow.id,
+        roleLabel: 'Client Portal',
+        clientName: clientRow?.name || null,
+        isNewUser: false,
+      });
+    } catch (emailErr: any) {
+      console.warn('Invite resend email failed (non-fatal):', emailErr?.message || emailErr);
     }
 
     return {

@@ -9,8 +9,9 @@
  * across the codebase).
  */
 
-import { createItem, readItems, readUsers, readRoles, inviteUser } from '@directus/sdk';
+import { createItem, readItem, readItems, readUser, readUsers, readRoles, inviteUser } from '@directus/sdk';
 import { ensureContactForUser } from '~~/server/utils/contact-sync';
+import { sendOrgInviteEmail } from '~~/server/utils/invite-email';
 
 export default defineEventHandler(async (event) => {
   try {
@@ -211,6 +212,34 @@ export default defineEventHandler(async (event) => {
       });
     } catch (contactErr: any) {
       console.warn('Contact sync failed (non-fatal):', contactErr?.message);
+    }
+
+    // Branded invite email — see invite-member.post.ts for rationale.
+    try {
+      const [org, inviter] = await Promise.all([
+        directus.request(
+          readItem('organizations' as any, organizationId, { fields: ['id', 'name'] as any }),
+        ).catch(() => null) as Promise<any>,
+        directus.request(
+          readUser(currentUserId, { fields: ['id', 'first_name', 'last_name', 'email'] as any }),
+        ).catch(() => null) as Promise<any>,
+      ]);
+      const inviterName = inviter
+        ? `${inviter.first_name || ''} ${inviter.last_name || ''}`.trim() || inviter.email || null
+        : null;
+      await sendOrgInviteEmail({
+        to: email,
+        inviterName,
+        inviterEmail: inviter?.email || null,
+        orgId: organizationId,
+        orgName: org?.name || 'Earnest',
+        membershipId: portalRow.id,
+        roleLabel: 'Client Portal',
+        clientName: clientRecord[0].name,
+        isNewUser,
+      });
+    } catch (emailErr: any) {
+      console.warn('Invite email send failed (non-fatal):', emailErr?.message || emailErr);
     }
 
     return {

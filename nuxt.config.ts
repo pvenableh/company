@@ -166,7 +166,7 @@ export default defineNuxtConfig({
 		},
 		directusServerToken: process.env.DIRECTUS_SERVER_TOKEN,
 
-		// Earnest Support — internal bug/feedback inbox org id (see
+		// Earnest — internal bug/feedback inbox org id (see
 		// scripts/setup-earnest-support-org.ts). /api/support/submit
 		// 503s when unset rather than landing tickets in the wrong org.
 		earnestSupportOrgId: process.env.EARNEST_SUPPORT_ORG_ID || '',
@@ -415,6 +415,17 @@ export default defineNuxtConfig({
 	// },
 
 	devtools: { enabled: true },
+
+	// Pin the dev server to IPv4 127.0.0.1. Without this, Nitro's HMR
+	// upgrade socket binds IPv6 *:3000 alongside Vite's IPv4 listener
+	// — `localhost` then resolves to ::1 first on macOS and hits an
+	// HTTP-only request to a WebSocket port (HTTP 426 Upgrade Required),
+	// breaking ad-hoc curls and the preview-MCP browser. Single-stack v4
+	// makes both `localhost` (after Happy Eyeballs fallback) and
+	// `127.0.0.1` work consistently.
+	devServer: {
+		host: '127.0.0.1',
+	},
 
 	nitro: {
 		externals: {

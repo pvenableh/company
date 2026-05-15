@@ -186,12 +186,15 @@
 					<div class="flex items-center gap-2">
 						<SchedulerInstantMeetingButton @created="handleMeetingCreated" />
 						<SchedulerNewMeetingButton @created="handleMeetingCreated" />
-						<NuxtLink
-							to="/scheduler/settings"
+						<button
+							type="button"
 							class="p-2 rounded-xl bg-muted/30 hover:bg-muted/60 transition-colors ios-press"
+							title="Scheduler settings"
+							aria-label="Open scheduler settings"
+							@click="showSettings = true"
 						>
 							<UIcon name="i-heroicons-cog-6-tooth" class="w-4.5 h-4.5 text-muted-foreground" />
-						</NuxtLink>
+						</button>
 					</div>
 				</div>
 
@@ -240,7 +243,7 @@
 							:settings="settings"
 							:pending-requests="pendingRequestCount"
 							@open-requests="showRequestsModal = true"
-							@open-settings="$router.push('/scheduler/settings')"
+							@open-settings="showSettings = true"
 						/>
 					</div>
 
@@ -293,6 +296,11 @@
 					<SchedulerMeetingRequests />
 				</div>
 			</UModal>
+
+			<!-- Scheduler settings slide-over — one-deep edit per nav strategy. -->
+			<AppSlideOver v-model="showSettings" title="Scheduler Settings" :ui="{ body: 'p-0' }">
+				<SchedulerSettingsPanel :in-overlay="true" />
+			</AppSlideOver>
 		</template>
 	</div>
 </template>
@@ -320,6 +328,7 @@ const videoMeetings = ref<any[]>([]);
 const loadingVideoMeetings = ref(true);
 const meetingRequests = ref<any[]>([]);
 const showRequestsModal = ref(false);
+const showSettings = ref(false);
 const selectedDate = ref(new Date().toISOString().substring(0, 10));
 
 // ── Filters ──

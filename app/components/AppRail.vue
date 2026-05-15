@@ -16,7 +16,7 @@
  * Mobile (< md) forces bottom via useAppsMode.
  */
 import { useMediaQuery } from '@vueuse/core';
-import { APP_ORDER, APP_FOOTER_ORDER, appIdForPath, type AppAccent } from '~/composables/useAppAccent';
+import { APP_ORDER, APP_FOOTER_ORDER, appIdForPath, formatIconColor, iconHighlightForAccent, type AppAccent } from '~/composables/useAppAccent';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
 
 const route = useRoute();
@@ -68,6 +68,8 @@ function styleFor(app: AppAccent) {
 		'--rail-h': String(app.h),
 		'--rail-s': `${app.s}%`,
 		'--rail-l': `${app.l}%`,
+		'--rail-icon': formatIconColor(app),
+		'--rail-icon-bright': iconHighlightForAccent(app.h, app.s, app.l),
 	};
 }
 
@@ -85,8 +87,10 @@ function applyMagnification(clientX: number) {
 	const root = railEl.value;
 	if (!root) return;
 	const items = root.querySelectorAll<HTMLElement>('[data-app-id]');
-	const reach = 110; // px — how far on either side the effect extends
-	const max = 0.35;  // chip can grow up to 1 + max = 1.35×
+	// macOS Dock-style proportions — wider reach so neighbours rise with
+	// the focused chip, larger peak so the hovered chip pops clearly.
+	const reach = 160;
+	const max = 0.65; // hovered chip grows up to 1.65×
 	items.forEach((el) => {
 		const id = el.getAttribute('data-app-id');
 		if (!id) return;
@@ -332,11 +336,11 @@ function chipMagnifyStyle(appId: string) {
 }
 
 /* ── Chip (icon container) ───────────────────────────────────────── */
-/* iOS-app-icon styling — every chip is a rounded square tile in the
- * app's accent colour. Inactive tiles use a light tint (0.15 alpha) so
- * the rail reads colourful at rest. Active tile saturates to a darker
- * shade with a white icon and a colour rim, mirroring how iOS
- * highlights the selected dock icon. */
+/* Solid-gradient app-icon styling — each chip is a rounded square tile
+ * carrying a top-light → base → bottom-shaded vertical gradient in the
+ * app's accent hue. Reads as a 3D-ish iOS home-screen icon. The icon
+ * glyph picks white or near-black (`--rail-icon`) for legibility based
+ * on the accent's perceived lightness. */
 .app-rail__chip {
 	@apply flex items-center justify-center shrink-0;
 	/* Two-speed transition: background animates over 200ms for the
@@ -350,12 +354,21 @@ function chipMagnifyStyle(appId: string) {
 	position: relative;
 	width: 38px;
 	height: 38px;
-	/* iOS home-screen app icons use a ~22% corner radius (the "squircle"
-	 * is approximated with this proportion in CSS). 8px on a 38px chip
-	 * gives ~21%, which reads cleanly as "rounded square app icon" rather
-	 * than the pill-ish rounded-lg / rounded-xl. */
-	border-radius: 8px;
-	background: hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.15);
+	/* Full circle — chips read as soft, friendly badges. */
+	border-radius: 50%;
+	background: linear-gradient(
+		160deg,
+		hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) + 12%)) 0%,
+		hsl(var(--rail-h) var(--rail-s) var(--rail-l)) 55%,
+		hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) - 8%)) 100%
+	);
+	/* Inset top highlight + bottom shade reinforces the 3D tile read
+	 * without a heavy gloss. Drop shadow tinted in the accent hue so the
+	 * tile feels "lit" rather than just bordered. */
+	box-shadow:
+		inset 0 1px 0 hsl(0 0% 100% / 0.28),
+		inset 0 -1px 0 hsl(0 0% 0% / 0.08),
+		0 1px 2px hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.25);
 }
 
 /* Magnification grows the chip outward from the rail edge so it doesn't
@@ -368,18 +381,21 @@ function chipMagnifyStyle(appId: string) {
 .app-rail--left .app-rail__chip { transform-origin: left center; }
 .app-rail--right .app-rail__chip { transform-origin: right center; }
 
-/* Sheen overlay from the previous rich treatment isn't used in this
- * simpler iOS-icon style. The rule is kept so the ::after pseudo-element
- * stays inert. */
+/* `::after` is reserved for the active-state blurred shadow ring (see
+ * the `.app-rail__item--active .app-rail__chip::after` rule below). The
+ * sheen overlay this pseudo used to carry has been retired — gradient bg
+ * + drop-shadowed icon carry the depth without it. Default state hides
+ * the ring; the active rule fills `content` to draw it. */
 .app-rail__chip::after {
-	display: none;
+	content: none;
 }
 
-/* Dual-layer icon (base + highlight mask) was for the rich glass
- * treatment. The iOS-icon style uses a single solid-colour glyph, so
- * the highlight layer is hidden via CSS. Template is intact so the
- * richer look can be restored later without re-adding markup. */
-.app-rail__icon-highlight-mask {
+/* Dual-layer icon highlight disabled — single solid white glyph reads
+ * cleaner. Markup retained so we can revive the inner gradient by
+ * flipping `display: block` here and re-pointing the colour rule below. */
+/* Co-applied class on the same element bumps specificity above the
+ * generic `.app-rail__icon-layer { display: block }` defined below. */
+.app-rail__icon-layer.app-rail__icon-highlight-mask {
 	display: none;
 }
 
@@ -387,7 +403,8 @@ function chipMagnifyStyle(appId: string) {
 .app-rail--floating .app-rail__chip {
 	width: 32px;
 	height: 32px;
-	border-radius: 7px;
+	/* Inherits border-radius: 50% from the base rule above — circular at
+	 * every size, just smaller in the floating/horizontal pills. */
 }
 
 /* Icon wrapper stacks two copies of the SVG. The base layer carries the
@@ -400,6 +417,8 @@ function chipMagnifyStyle(appId: string) {
 	height: 22px;
 	z-index: 2;
 	transition: transform 0.2s ease;
+	/* Soft cast shadow under the glyph — uniform across chips. */
+	filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.28));
 }
 
 .app-rail--horizontal .app-rail__icon,
@@ -418,37 +437,29 @@ function chipMagnifyStyle(appId: string) {
 }
 
 .app-rail__icon-base {
-	/* Inactive icons render in the app's accent colour against the light
-	 * tinted bg — the chip reads as a coloured tile, like an iOS icon.
-	 * The active state below switches the icon to white when the tile
-	 * darkens. */
-	color: hsl(var(--rail-h) var(--rail-s) var(--rail-l));
+	/* Per-chip glyph colour, sourced from the palette's `iconColors`
+	 * mirror map (Sea Mist pairs Aquamarine bg ↔ Royal Violet glyph).
+	 * Falls back to the perceived-lightness contrast colour for
+	 * palettes that don't define iconColors. */
+	color: var(--rail-icon, hsl(0 0% 100%));
 	z-index: 0;
 }
 
-/* Highlight wrapper — applies the gradient mask. Putting the mask on the
- * wrapper (not the Icon) avoids overriding Nuxt Icon's own internal
- * mask-image (which is what makes the icon shape). The Icon inside still
- * renders normally; the wrapper's mask just clips the bottom away. */
-.app-rail__icon-highlight-mask {
-	-webkit-mask-image: linear-gradient(180deg, black 0%, rgba(0, 0, 0, 0.5) 35%, transparent 70%);
-	mask-image: linear-gradient(180deg, black 0%, rgba(0, 0, 0, 0.5) 35%, transparent 70%);
-	pointer-events: none;
-	z-index: 1;
-}
-
-.app-rail__icon-highlight {
-	display: block;
-	width: 100%;
-	height: 100%;
-	color: hsl(0 0% 100% / 0.8);
-}
-
-/* Hover — strengthen the accent tint so the chip lights up under the
- * cursor. Icon stays in the accent colour; only the bg shifts. */
+/* Hover — slight lift and brighter top stop so the tile catches more
+ * "light". Background stays solid-gradient; only the lightness ramp
+ * shifts. */
 .app-rail__item:hover .app-rail__chip {
-	background: hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.25);
+	background: linear-gradient(
+		160deg,
+		hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) + 16%)) 0%,
+		hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) + 2%)) 55%,
+		hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) - 6%)) 100%
+	);
 	transform: translateY(-1px);
+	box-shadow:
+		inset 0 1px 0 hsl(0 0% 100% / 0.32),
+		inset 0 -1px 0 hsl(0 0% 0% / 0.08),
+		0 4px 10px -3px hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.4);
 }
 
 .app-rail__item:hover {
@@ -456,31 +467,36 @@ function chipMagnifyStyle(appId: string) {
 }
 
 /* ── Active state ────────────────────────────────────────────────── */
-/* Active: tile saturates to a deeper shade of the accent and the icon
- * flips to white — like the highlighted iOS dock icon. A 1.5px rim at
- * the true accent colour with a 2px offset gives the "selected" ring
- * back from the original design. */
+/* Active: tile saturates to a deeper shade of the accent. Selected cue
+ * is a thin, crisp accent ring sitting just outside the chip — bright
+ * and clean, no glow blur. Inset highlights/lowlights + a tinted drop
+ * shadow carry the lift. */
 .app-rail__item--active {
 	@apply text-foreground;
 }
 
 .app-rail__item--active .app-rail__chip {
-	background: hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) - 12%));
+	/* Active tile darkens overall — same hue family, deeper bottom stop,
+	 * so the selected app reads as the most saturated tile in the rail. */
+	background: linear-gradient(
+		160deg,
+		hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) + 6%)) 0%,
+		hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) - 4%)) 55%,
+		hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) - 14%)) 100%
+	);
 	transform: translateY(-1px);
 	box-shadow:
-		/* Subtle top-edge highlight — light catching the rim of the tile. */
-		inset 0 0.5px 0 hsl(0 0% 100% / 0.35),
-		/* Tinted drop shadow that grounds the tile against the rail. */
-		0 3px 10px -3px hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.4);
-	/* Colour rim with a small breathing gap — restores the "selected"
-	 * outline cue from the previous design without bringing back the
-	 * heavy gradient + sheen treatment. */
-	outline: 1.5px solid hsl(var(--rail-h) var(--rail-s) var(--rail-l));
+		inset 0 1px 0 hsl(0 0% 100% / 0.35),
+		inset 0 -1px 0 hsl(0 0% 0% / 0.12),
+		0 4px 12px -3px hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.5);
+	/* Thin, bright accent ring with a 2px breathing gap — sharp + clean,
+	 * reads as a confident "selected" cue without the heavy glow. */
+	outline: 1.25px solid hsl(var(--rail-h) var(--rail-s) var(--rail-l));
 	outline-offset: 2px;
 }
 
 .app-rail__item--active .app-rail__icon-base {
-	color: hsl(0 0% 100%);
+	color: var(--rail-icon, hsl(0 0% 100%));
 }
 
 /* ── Label ───────────────────────────────────────────────────────── */
