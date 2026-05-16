@@ -10,14 +10,24 @@
  * via `useCurrentAccent`) and any tinted chrome stay in lockstep with
  * PortalRail's active chip.
  *
- * Saturation/lightness convention (Apple iWork pattern):
- *   - Work-style pages keep s≈75, l≈50 so the icons read as one family.
- *   - Comms / billing pages bend toward warmer hues to feel distinct
- *     without breaking the family.
- *   - Account stays intentionally muted to mark it as system/settings.
+ * Chip colours are derived from the active `useAppPalette` palette's
+ * `sourceColors`, spread across the portal section list via the same
+ * `pickGappy` helper the main rail uses. This keeps the portal in
+ * lockstep with the user's palette pick — switching to Aurora in
+ * Appearance re-skins the portal rail the same way it re-skins the
+ * main app rail. Per-section icon resolution defers to the palette's
+ * `iconStrategy`.
  */
 import type { CSSProperties } from 'vue';
-import { formatIconColor, iconHighlightForAccent } from '~/composables/useAppAccent';
+import {
+	formatIconColor,
+	iconHighlightForAccent,
+	pickGappy,
+	APP_PALETTES,
+	type AppPaletteId,
+	type HSL,
+} from '~/composables/useAppAccent';
+import { useAppPalette } from '~/composables/useAppPalette';
 
 export type PortalAppId =
 	| 'dashboard'
@@ -59,96 +69,26 @@ export interface PortalAppAccent {
 		| 'proposals'
 		| 'meetings'
 	>;
+	/** Optional palette-resolved icon colour. Same shape as `AppAccent.iconHsl`
+	 *  so shared formatters (`formatIconColor`) work in either shell. */
+	iconHsl?: HSL;
 }
 
-export const PORTAL_ACCENTS: Record<PortalAppId, PortalAppAccent> = {
-	dashboard: {
-		id: 'dashboard',
-		name: 'Dashboard',
-		icon: 'ph:squares-four-duotone',
-		to: '/portal',
-		h: 191, s: 100, l: 50,
-	},
-	projects: {
-		id: 'projects',
-		name: 'Projects',
-		icon: 'lucide:square-kanban',
-		to: '/portal/projects',
-		h: 160, s: 72, l: 46,
-		notificationCategories: ['projects'],
-	},
-	tasks: {
-		id: 'tasks',
-		name: 'Tasks',
-		icon: 'ph:check-square-duotone',
-		to: '/portal/tasks',
-		h: 135, s: 65, l: 48,
-	},
-	tickets: {
-		id: 'tickets',
-		name: 'Tickets',
-		icon: 'ph:ticket-duotone',
-		to: '/portal/tickets',
-		h: 38, s: 92, l: 50,
-		notificationCategories: ['tickets'],
-	},
-	invoices: {
-		id: 'invoices',
-		name: 'Invoices',
-		icon: 'lucide:trending-up',
-		to: '/portal/invoices',
-		h: 142, s: 72, l: 48,
-		notificationCategories: ['invoices'],
-	},
-	proposals: {
-		id: 'proposals',
-		name: 'Proposals',
-		icon: 'ph:file-text-duotone',
-		to: '/portal/proposals',
-		availabilityKey: 'proposals',
-		h: 268, s: 70, l: 56,
-		notificationCategories: ['proposals'],
-	},
-	contracts: {
-		id: 'contracts',
-		name: 'Contracts',
-		icon: 'ph:certificate-duotone',
-		to: '/portal/contracts',
-		availabilityKey: 'contracts',
-		h: 232, s: 70, l: 56,
-		notificationCategories: ['contracts'],
-	},
-	social: {
-		id: 'social',
-		name: 'Social',
-		icon: 'ph:chart-line-up-duotone',
-		to: '/portal/social',
-		availabilityKey: 'social',
-		h: 340, s: 80, l: 56,
-	},
-	marketing: {
-		id: 'marketing',
-		name: 'Marketing',
-		icon: 'ph:waveform-duotone',
-		to: '/portal/marketing',
-		availabilityKey: 'marketing',
-		h: 308, s: 80, l: 52,
-	},
-	messages: {
-		id: 'messages',
-		name: 'Messages',
-		icon: 'ph:chats-circle-duotone',
-		to: '/portal/messages',
-		h: 215, s: 85, l: 55,
-		notificationCategories: ['conversations'],
-	},
-	account: {
-		id: 'account',
-		name: 'Account',
-		icon: 'lucide:circle-user-round',
-		to: '/portal/account',
-		h: 220, s: 10, l: 20,
-	},
+/** Static meta — palette-independent (id/name/icon/route/notification + availability hooks). */
+type PortalAppMeta = Omit<PortalAppAccent, 'h' | 's' | 'l' | 'iconHsl'>;
+
+const PORTAL_META: Record<PortalAppId, PortalAppMeta> = {
+	dashboard: { id: 'dashboard', name: 'Dashboard', icon: 'ph:squares-four-duotone',     to: '/portal' },
+	projects:  { id: 'projects',  name: 'Projects',  icon: 'lucide:square-kanban',        to: '/portal/projects',  notificationCategories: ['projects'] },
+	tasks:     { id: 'tasks',     name: 'Tasks',     icon: 'ph:check-square-duotone',     to: '/portal/tasks' },
+	tickets:   { id: 'tickets',   name: 'Tickets',   icon: 'ph:ticket-duotone',           to: '/portal/tickets',   notificationCategories: ['tickets'] },
+	invoices:  { id: 'invoices',  name: 'Invoices',  icon: 'lucide:trending-up',          to: '/portal/invoices',  notificationCategories: ['invoices'] },
+	proposals: { id: 'proposals', name: 'Proposals', icon: 'ph:file-text-duotone',        to: '/portal/proposals', availabilityKey: 'proposals', notificationCategories: ['proposals'] },
+	contracts: { id: 'contracts', name: 'Contracts', icon: 'ph:certificate-duotone',      to: '/portal/contracts', availabilityKey: 'contracts', notificationCategories: ['contracts'] },
+	social:    { id: 'social',    name: 'Social',    icon: 'ph:chart-line-up-duotone',    to: '/portal/social',    availabilityKey: 'social' },
+	marketing: { id: 'marketing', name: 'Marketing', icon: 'ph:waveform-duotone',         to: '/portal/marketing', availabilityKey: 'marketing' },
+	messages:  { id: 'messages',  name: 'Messages',  icon: 'ph:chats-circle-duotone',     to: '/portal/messages',  notificationCategories: ['conversations'] },
+	account:   { id: 'account',   name: 'Account',   icon: 'lucide:circle-user-round',    to: '/portal/account' },
 };
 
 /**
@@ -171,8 +111,51 @@ export const PORTAL_ORDER: PortalAppId[] = [
 
 export const PORTAL_FOOTER_ORDER: PortalAppId[] = ['account'];
 
+/** Visual order: main group + footer concatenated. Drives pickGappy's
+ *  spread so chip 0 always wears the brightest source colour. */
+const PORTAL_CHIP_IDS: readonly PortalAppId[] = [...PORTAL_ORDER, ...PORTAL_FOOTER_ORDER];
+
+/**
+ * Resolve every portal chip's colour from the active palette. Spreads
+ * `PORTAL_CHIP_IDS.length` picks across `palette.sourceColors` via
+ * `pickGappy` so portal chips re-balance the moment a new palette is
+ * picked, identical to how `useAppAccent.getAppAccents` derives the
+ * main rail's chips. Icon colour is the mirror across the (icon-)
+ * source list — same recipe as the main rail's cross/same-mirror
+ * strategies, simplified to "use the opposite end".
+ */
+export function getPortalAccents(paletteId: AppPaletteId): Record<PortalAppId, PortalAppAccent> {
+	const palette = APP_PALETTES[paletteId] ?? APP_PALETTES.seaMist;
+	const count = PORTAL_CHIP_IDS.length;
+	const bgPicks = pickGappy(palette.sourceColors.length, count);
+	const iconSrc = palette.iconSourceColors ?? palette.sourceColors;
+	const iconPicks = pickGappy(iconSrc.length, count).slice().reverse();
+	const out = {} as Record<PortalAppId, PortalAppAccent>;
+	PORTAL_CHIP_IDS.forEach((id, i) => {
+		const bg = palette.sourceColors[bgPicks[i]!]!;
+		const icon = palette.uniformIcon ?? iconSrc[iconPicks[i]!]!;
+		out[id] = { ...PORTAL_META[id], h: bg.h, s: bg.s, l: bg.l, iconHsl: icon };
+	});
+	return out;
+}
+
 export function usePortalAccent() {
 	const route = useRoute();
+	const { palette, glassChrome } = useAppPalette();
+
+	const accents = computed<Record<PortalAppId, PortalAppAccent>>(() => {
+		const base = getPortalAccents(palette.value);
+		if (!glassChrome.value) return base;
+		// Glass mode: every chip wears its own bg as the icon colour so
+		// the rail shows the full chromatic ramp on frosted discs —
+		// same recipe as `useAppAccent`'s glass override.
+		const out = {} as Record<PortalAppId, PortalAppAccent>;
+		for (const id of PORTAL_CHIP_IDS) {
+			const a = base[id]!;
+			out[id] = { ...a, iconHsl: { h: a.h, s: a.s, l: a.l } };
+		}
+		return out;
+	});
 
 	/**
 	 * Map the current portal route to a portal app id. We match longest-
@@ -205,7 +188,7 @@ export function usePortalAccent() {
 	});
 
 	const accent = computed<PortalAppAccent | null>(() =>
-		activeAppId.value ? PORTAL_ACCENTS[activeAppId.value] : null,
+		activeAppId.value ? accents.value[activeAppId.value] : null,
 	);
 
 	/**
@@ -237,5 +220,5 @@ export function usePortalAccent() {
 		} as CSSProperties;
 	});
 
-	return { activeAppId, accent, accentStyle };
+	return { activeAppId, accent, accents, accentStyle };
 }

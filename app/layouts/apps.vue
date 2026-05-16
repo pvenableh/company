@@ -19,9 +19,6 @@
 					<div class="apps-shell__chrome-center">
 						<LayoutEarnestBrand to="/" tagline="Do good work." />
 					</div>
-					<!-- Four-control header. Help, layout/display, and the social
-					     inbox have been folded into the avatar menu — chrome stays
-					     to: search, notifications, AI, account. -->
 					<div class="apps-shell__chrome-right">
 						<button
 							class="apps-shell__chrome-btn hidden sm:flex"
@@ -30,6 +27,12 @@
 						>
 							<Icon name="lucide:search" class="size-4" />
 						</button>
+						<div class="hidden sm:block">
+							<WalkthroughHelpMenu />
+						</div>
+						<ClientOnly>
+							<LayoutAppRailPositionPicker class="hidden sm:flex" />
+						</ClientOnly>
 						<ClientOnly>
 							<LayoutNotificationsMenu />
 						</ClientOnly>

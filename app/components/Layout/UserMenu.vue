@@ -121,8 +121,8 @@ function handleLogout() {
 				<span>Social inbox</span>
 			</DropdownMenuItem>
 			<DropdownMenuItem @select="goTo('/support')">
-				<Icon name="lucide:circle-help" class="size-4 mr-2 shrink-0" />
-				<span>Help &amp; feedback</span>
+				<Icon name="lucide:inbox" class="size-4 mr-2 shrink-0" />
+				<span>My reports</span>
 			</DropdownMenuItem>
 
 			<DropdownMenuSeparator />

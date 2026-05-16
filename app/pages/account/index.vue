@@ -39,8 +39,18 @@
 				<section v-else-if="section === 'appearance'" class="w-full">
 					<h2 class="account-page__heading">Appearance</h2>
 
-					<!-- Dark mode (top-of-section quick toggle) -->
-					<div class="ios-card flex items-center justify-between gap-4 p-4 mb-6">
+					<!-- Dark mode (top-of-section quick toggle).
+					     `@click` on the row + the Switch's own click are both
+					     wired to `toggleDark()` because reka-ui's Switch
+					     occasionally swallows the first post-hydration click
+					     when modelValue resolves through a computed that
+					     finalises after mount; the row click is the reliable
+					     path and the Switch's @click is the redundant one
+					     that still feels natural to hit. -->
+					<div
+						class="ios-card flex items-center justify-between gap-4 p-4 mb-6 cursor-pointer"
+						@click="toggleDark()"
+					>
 						<div class="flex items-center gap-3 min-w-0">
 							<span class="flex items-center justify-center size-9 rounded-lg bg-muted/60 text-foreground/80 shrink-0">
 								<Icon :name="isDark ? 'lucide:moon' : 'lucide:sun'" class="size-4" />
@@ -50,7 +60,7 @@
 								<p class="text-xs text-muted-foreground">Use a dark colour scheme across the entire app.</p>
 							</div>
 						</div>
-						<Switch :model-value="isDark" @update:model-value="toggleDark" />
+						<Switch :model-value="isDark" @click.stop="toggleDark()" />
 					</div>
 
 					<!-- Theme + Typography (full width, modernized grid) -->
@@ -62,7 +72,10 @@
 					     the app looks. -->
 					<h3 class="account-page__subheading">Layout</h3>
 					<div class="ios-card p-5 space-y-6 max-w-xl">
-						<div class="flex items-start justify-between gap-4">
+						<div
+							class="flex items-start justify-between gap-4 cursor-pointer"
+							@click="appsModeSaving || handleToggleAppsMode(!appsModeChecked)"
+						>
 							<div class="flex-1 min-w-0">
 								<p class="text-sm font-medium">Apps Layout</p>
 								<p class="text-xs text-muted-foreground mt-1">
@@ -74,7 +87,7 @@
 							<Switch
 								:model-value="appsModeChecked"
 								:disabled="appsModeSaving"
-								@update:model-value="handleToggleAppsMode"
+								@click.stop="appsModeSaving || handleToggleAppsMode(!appsModeChecked)"
 							/>
 						</div>
 
@@ -322,6 +335,11 @@ async function handleToggleAppsMode(next: boolean) {
 	try {
 		await setMode(next ? 'apps' : 'classic');
 		toast.success(next ? 'Apps Layout enabled' : 'Apps Layout disabled');
+		// /account is hardcoded to the apps layout, so toggling off here
+		// wouldn't change anything visible. Hand the user to the classic
+		// dashboard (or back to the apps clients hub) so they can actually
+		// see the layout they just picked.
+		await router.push(next ? '/apps/clients' : '/');
 	} catch {
 		toast.error("Couldn't save layout preference");
 	} finally {
@@ -344,8 +362,12 @@ async function handleRailChange(next: unknown) {
 // ── Appearance / dark mode ──────────────────────────────────────────────────
 const colorMode = useColorMode();
 const isDark = computed(() => colorMode.value === 'dark');
-function toggleDark(next: boolean) {
-	colorMode.preference = next ? 'dark' : 'light';
+function toggleDark() {
+	// Read the live value at click-time and flip it, so the toggle works
+	// even when reka-ui's Switch emits the wrong boolean on its first
+	// post-hydration click (the local vmodel can initialise stale before
+	// `colorMode.value` resolves on the client).
+	colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark';
 }
 </script>
 

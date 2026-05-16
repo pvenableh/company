@@ -18,15 +18,16 @@
  * rail layout follows them between shells.
  */
 import {
-	PORTAL_ACCENTS,
 	PORTAL_ORDER,
 	PORTAL_FOOTER_ORDER,
+	usePortalAccent,
 	type PortalAppAccent,
 } from '~/composables/usePortalAccent';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
 
 const route = useRoute();
 const { railPosition, railShowLabels } = useAppsMode();
+const { accents: portalAccents } = usePortalAccent();
 const { user } = useDirectusAuth();
 const { countFor } = useUnreadByCategory();
 
@@ -72,10 +73,10 @@ function shouldShow(app: PortalAppAccent): boolean {
 }
 
 const apps = computed<PortalAppAccent[]>(() =>
-	PORTAL_ORDER.map((id) => PORTAL_ACCENTS[id]).filter(shouldShow),
+	PORTAL_ORDER.map((id) => portalAccents.value[id]).filter(shouldShow),
 );
 const footer = computed<PortalAppAccent[]>(() =>
-	PORTAL_FOOTER_ORDER.map((id) => PORTAL_ACCENTS[id]).filter(shouldShow),
+	PORTAL_FOOTER_ORDER.map((id) => portalAccents.value[id]).filter(shouldShow),
 );
 
 const activeId = computed(() => {
