@@ -66,6 +66,11 @@ export default defineNuxtConfig({
 				{ name: 'theme-color', content: '#141210', media: '(prefers-color-scheme: dark)' },
 			],
 			link: [
+				// SVG favicon adapts to light/dark via prefers-color-scheme.
+				// PNG fallback for browsers without SVG-favicon support (older Safari, Edge legacy).
+				// favicon.ico in /public is auto-served as the final fallback.
+				{ rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
+				{ rel: 'icon', href: '/favicon-32x32.png', type: 'image/png', sizes: '32x32' },
 				{ rel: 'apple-touch-icon', href: '/android-icon-192x192.png' },
 				// Preload critical above-the-fold fonts
 				{
