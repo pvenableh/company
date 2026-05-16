@@ -57,7 +57,7 @@
 					</div>
 					<div>
 						<h3 class="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-							<Icon name="lucide:sparkles" class="w-3 h-3 text-primary/70" />
+							<EarnestIcon class="w-3 h-3 text-primary/70" />
 							Drafted from your context
 						</h3>
 						<div class="flex flex-wrap gap-1.5 mb-2">
@@ -398,7 +398,7 @@ function factIcon(kind: string): string {
 		case 'testimonial':
 			return 'lucide:quote';
 		default:
-			return 'lucide:sparkles';
+			return 'lucide:circle-dot';
 	}
 }
 </script>

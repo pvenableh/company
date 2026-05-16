@@ -367,7 +367,7 @@ const renderMarkdown = (text: string): string => {
         <div class="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-primary/5 to-violet-500/5">
           <div class="flex items-center gap-2.5 min-w-0">
             <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-              <Icon name="lucide:sparkles" class="w-4 h-4 text-primary" />
+              <EarnestIcon class="w-4 h-4 text-primary" />
             </div>
             <div class="min-w-0">
               <h2 class="text-sm font-bold text-foreground truncate">
@@ -408,7 +408,7 @@ const renderMarkdown = (text: string): string => {
         <!-- Empty state -->
         <div v-else-if="!messages.length && !isStreaming" class="flex flex-col items-center justify-center h-full text-center px-4">
           <div class="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-3">
-            <Icon name="lucide:sparkles" class="w-6 h-6 text-primary" />
+            <EarnestIcon class="w-6 h-6 text-primary" />
           </div>
           <p class="text-sm font-medium text-foreground mb-1">
             Ask Earnest about this {{ entityTypeReadable }}
@@ -423,7 +423,7 @@ const renderMarkdown = (text: string): string => {
               @click="handlePromptClick(prompt)"
               class="w-full text-left px-3 py-2 rounded-xl border border-border text-xs text-foreground hover:bg-primary/5 hover:border-primary/30 transition-colors"
             >
-              <Icon name="lucide:sparkles" class="w-3 h-3 text-primary/60 inline mr-1.5" />
+              <EarnestIcon class="w-3 h-3 text-primary/60 inline-block mr-1.5" />
               {{ prompt }}
             </button>
           </div>

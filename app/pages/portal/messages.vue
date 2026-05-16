@@ -224,7 +224,7 @@ watch(() => selectedOrg.value, () => {
 			<!-- Channel Header -->
 			<div class="p-3 border-b border-border/40 flex items-center gap-2 shrink-0">
 				<button class="sm:hidden p-1 rounded-lg hover:bg-muted/60" @click="selectedChannel = null">
-					<Icon name="lucide:arrow-left" class="w-5 h-5" />
+					<Icon name="lucide:chevron-left" class="w-5 h-5" />
 				</button>
 				<Icon :name="'lucide:hash'" class="w-4 h-4 text-muted-foreground" />
 				<h3 class="font-medium text-sm">{{ selectedChannel.name }}</h3>

@@ -520,8 +520,9 @@ watch(activeTab, (t) => {
 									<UIcon name="i-heroicons-flag" class="w-4 h-4 text-warning" />
 									<h3 class="text-xs font-semibold uppercase tracking-wide text-foreground/70">My Goals</h3>
 								</div>
-								<NuxtLink to="/goals?scope=user" class="text-[11px] text-primary hover:underline">
-									{{ topMyGoals.length > 0 ? 'View all' : 'Set one' }} &rarr;
+								<NuxtLink to="/goals?scope=user" class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-primary hover:underline">
+									{{ topMyGoals.length > 0 ? 'View all' : 'Set one' }}
+									<Icon name="lucide:chevron-right" class="w-3 h-3" />
 								</NuxtLink>
 							</div>
 							<div v-if="topMyGoals.length === 0" class="py-3 text-center">
@@ -569,9 +570,10 @@ watch(activeTab, (t) => {
 						<button
 							v-if="suggestions.length > 10"
 							@click="aiTrayPrompt = ''; aiTrayOpen = true"
-							class="text-xs text-primary hover:underline"
+							class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-primary hover:underline"
 						>
-							View all {{ suggestions.length }} &rarr;
+							View all {{ suggestions.length }}
+							<Icon name="lucide:chevron-right" class="w-3 h-3" />
 						</button>
 					</div>
 
@@ -812,7 +814,10 @@ watch(activeTab, (t) => {
 							Organization
 							<span class="text-muted-foreground tabular-nums">{{ (goalsByScope.organization || []).length }}</span>
 						</NuxtLink>
-						<NuxtLink to="/goals" class="ml-auto text-[11px] text-primary hover:underline">View all &rarr;</NuxtLink>
+						<NuxtLink to="/goals" class="ml-auto inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-primary hover:underline">
+							View all
+							<Icon name="lucide:chevron-right" class="w-3 h-3" />
+						</NuxtLink>
 					</div>
 
 					<!-- Goals Summary (org-wide snapshot — shows all scopes) -->

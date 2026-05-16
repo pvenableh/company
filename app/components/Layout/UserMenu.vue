@@ -156,7 +156,7 @@ function handleLogout() {
 						:name="isAppsMode ? 'lucide:sidebar' : 'lucide:layout-grid'"
 						class="size-4 mr-2 shrink-0"
 					/>
-					<span>{{ isAppsMode ? 'Use Default Layout' : 'Try Apps Layout' }}</span>
+					<span>{{ isAppsMode ? 'Using Apps Layout' : 'Use Apps Layout' }}</span>
 				</span>
 				<span
 					class="user-menu__switch"

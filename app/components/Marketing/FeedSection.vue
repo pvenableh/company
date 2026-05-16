@@ -27,10 +27,11 @@
 				@click="onGenerateAll"
 			>
 				<Icon
-					:name="generatingAll ? 'lucide:loader-circle' : 'lucide:sparkles'"
-					class="w-3.5 h-3.5"
-					:class="{ 'animate-spin': generatingAll }"
+					v-if="generatingAll"
+					name="lucide:loader-circle"
+					class="w-3.5 h-3.5 animate-spin"
 				/>
+				<EarnestIcon v-else class="w-3.5 h-3.5" />
 				<span>Do all {{ recommendations.length }}</span>
 				<span v-if="totalTokenEstimate" class="text-[10px] opacity-70 font-normal">
 					~{{ formatTokens(totalTokenEstimate) }} tokens
@@ -100,7 +101,7 @@
 			v-else
 			class="rounded-2xl border border-dashed border-border bg-muted/20 p-6 text-center"
 		>
-			<Icon name="lucide:sparkles" class="w-6 h-6 mx-auto mb-2 text-muted-foreground/60" />
+			<EarnestIcon class="w-6 h-6 mx-auto mb-2 text-muted-foreground/60" />
 			<p class="text-xs text-muted-foreground max-w-sm mx-auto">
 				Earnest will surface marketing actions here as your CRM fills out.
 			</p>

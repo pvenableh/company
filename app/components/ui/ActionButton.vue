@@ -6,6 +6,7 @@
 		@click="$emit('click', $event)"
 	>
 		<Icon v-if="loading" name="lucide:loader-2" class="w-3.5 h-3.5 animate-spin" />
+		<EarnestIcon v-else-if="icon === 'earnest'" class="w-3.5 h-3.5" />
 		<Icon v-else-if="icon" :name="icon" class="w-3.5 h-3.5" />
 		<span v-if="$slots.default" :class="labelClass">
 			<slot />

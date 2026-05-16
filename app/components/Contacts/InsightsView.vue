@@ -182,7 +182,10 @@
 			<div class="ios-card p-5">
 				<div class="flex items-center justify-between mb-3">
 					<h3 class="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Lead Pipeline</h3>
-					<NuxtLink to="/leads" class="text-[10px] text-primary hover:underline">View all →</NuxtLink>
+					<NuxtLink to="/leads" class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-primary hover:underline">
+						View all
+						<Icon name="lucide:chevron-right" class="w-3 h-3" />
+					</NuxtLink>
 				</div>
 				<div v-if="funnelStages.some(s => s.count > 0)" class="space-y-2">
 					<div

@@ -144,7 +144,7 @@ defineExpose({ dirty, save });
           title="Ask Earnest about this event — suggestions, status updates, follow-up tasks"
           @click="sidebarOpen = true"
         >
-          <Icon name="lucide:sparkles" class="w-3 h-3" />
+          <EarnestIcon class="w-3 h-3" />
           Ask Earnest
         </button>
       </div>

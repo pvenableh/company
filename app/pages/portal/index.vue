@@ -470,8 +470,9 @@ watch(() => selectedOrg.value, () => {
 							<Icon name="lucide:folder-kanban" class="w-4 h-4 text-muted-foreground" />
 							Recent Projects
 						</h2>
-						<NuxtLink to="/portal/projects" class="text-xs text-primary hover:underline">
+						<NuxtLink to="/portal/projects" class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-primary hover:underline">
 							View all
+							<Icon name="lucide:chevron-right" class="w-3 h-3" />
 						</NuxtLink>
 					</div>
 
@@ -503,8 +504,9 @@ watch(() => selectedOrg.value, () => {
 							<Icon name="lucide:ticket" class="w-4 h-4 text-muted-foreground" />
 							Recent Tickets
 						</h2>
-						<NuxtLink to="/portal/tickets" class="text-xs text-primary hover:underline">
+						<NuxtLink to="/portal/tickets" class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-primary hover:underline">
 							View all
+							<Icon name="lucide:chevron-right" class="w-3 h-3" />
 						</NuxtLink>
 					</div>
 

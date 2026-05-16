@@ -154,7 +154,7 @@ function ruleLabel(rule: LeadStageListRule): string {
 					to="/leads"
 					class="inline-flex items-center justify-center w-8 h-8 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
 				>
-					<Icon name="lucide:arrow-left" class="w-4 h-4" />
+					<Icon name="lucide:chevron-left" class="w-4 h-4" />
 				</NuxtLink>
 				<div>
 					<h1 class="text-xl font-bold t-text">Lead Automations</h1>

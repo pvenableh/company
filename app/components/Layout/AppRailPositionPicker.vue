@@ -165,7 +165,7 @@ async function handlePickPalette(next: AppPaletteId) {
         class="px-2 py-1.5 flex items-center gap-2.5 rounded-md hover:bg-muted/60 cursor-pointer"
         @click="setGlassChrome(!glassChrome)"
       >
-        <Icon name="lucide:sparkles" class="size-4 shrink-0 text-muted-foreground" />
+        <Icon name="lucide:gem" class="size-4 shrink-0 text-muted-foreground" />
         <div class="flex-1 min-w-0">
           <div class="text-xs font-medium leading-tight">Glass chrome</div>
           <div class="text-[10px] text-muted-foreground leading-tight">

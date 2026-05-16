@@ -195,7 +195,10 @@ function submitAsk() {
 			<section class="px-5 pt-6 pb-5 border-b border-border/30">
 				<div class="flex items-center justify-between mb-3">
 					<h3 class="panel-label">Today</h3>
-					<NuxtLink to="/scheduler" class="text-[10px] text-muted-foreground hover:text-foreground">View all</NuxtLink>
+					<NuxtLink to="/scheduler" class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground">
+						View all
+						<Icon name="lucide:chevron-right" class="w-3 h-3" />
+					</NuxtLink>
 				</div>
 				<div v-if="visibleTodayEvents.length === 0" class="text-[11px] text-muted-foreground py-2">
 					Nothing scheduled.
@@ -285,7 +288,7 @@ function submitAsk() {
 						type="submit"
 						class="absolute right-1 top-1/2 -translate-y-1/2 flex items-center justify-center w-7 h-7 rounded-md text-primary hover:bg-primary/10"
 					>
-						<Icon name="lucide:sparkles" class="w-3.5 h-3.5" />
+						<EarnestIcon class="w-3.5 h-3.5" />
 					</button>
 				</form>
 			</section>

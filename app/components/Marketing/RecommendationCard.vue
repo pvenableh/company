@@ -39,7 +39,7 @@
 			v-if="contextHint"
 			class="mb-5 rounded-lg bg-muted/40 px-3 py-2.5 text-xs text-muted-foreground flex items-start gap-2"
 		>
-			<Icon name="lucide:sparkles" class="w-3.5 h-3.5 mt-0.5 shrink-0 text-primary/70" />
+			<EarnestIcon class="w-3.5 h-3.5 mt-0.5 shrink-0 text-primary/70" />
 			<span>{{ contextHint }}</span>
 		</div>
 
@@ -64,10 +64,11 @@
 				@click="$emit('generate', recommendation)"
 			>
 				<Icon
-					:name="generating ? 'lucide:loader-circle' : 'lucide:sparkles'"
-					class="w-3.5 h-3.5"
-					:class="{ 'animate-spin': generating }"
+					v-if="generating"
+					name="lucide:loader-circle"
+					class="w-3.5 h-3.5 animate-spin"
 				/>
+				<EarnestIcon v-else class="w-3.5 h-3.5" />
 				{{ generating ? 'Drafting…' : 'Generate' }}
 			</button>
 			<button

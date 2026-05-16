@@ -7,7 +7,7 @@
           to="/email"
           class="rounded-full p-1.5 hover:bg-muted/50 text-muted-foreground hover:text-foreground ios-press transition-colors shrink-0"
         >
-          <Icon name="lucide:arrow-left" class="w-3.5 h-3.5" />
+          <Icon name="lucide:chevron-left" class="w-3.5 h-3.5" />
         </NuxtLink>
         <h1 class="font-medium text-sm truncate">{{ template?.name || 'Template Builder' }}</h1>
 
@@ -40,13 +40,13 @@
           <span class="hidden sm:inline">Blocks</span>
         </button>
 
-        <!-- AI Generate -->
+        <!-- Earnest Generate -->
         <button
           class="rounded-full px-2.5 py-1.5 text-[11px] font-medium bg-violet-500/10 text-violet-600 hover:bg-violet-500/20 dark:text-violet-400 ios-press inline-flex items-center gap-1 transition-colors"
           @click="showAIWizard = true"
         >
-          <Icon name="lucide:sparkles" class="w-3 h-3" />
-          <span class="hidden sm:inline">AI</span>
+          <EarnestIcon class="w-3 h-3" />
+          <span class="hidden sm:inline">Earnest</span>
         </button>
 
         <!-- HTML dropdown -->
@@ -287,11 +287,11 @@
                 @click="showAIWizard = true"
               >
                 <div class="w-12 h-12 rounded-2xl bg-violet-500/10 flex items-center justify-center mb-3 mx-auto group-hover:scale-105 transition-transform">
-                  <Icon name="lucide:sparkles" class="w-5 h-5 text-violet-500" />
+                  <EarnestIcon class="w-5 h-5 text-violet-500" />
                 </div>
-                <h3 class="text-sm font-semibold text-foreground mb-0.5">Start with AI</h3>
+                <h3 class="text-sm font-semibold text-foreground mb-0.5">Start with Earnest</h3>
                 <p class="text-[10px] text-muted-foreground leading-relaxed">
-                  Describe your email and AI generates layout and content
+                  Describe your email and Earnest generates layout and content
                 </p>
                 <span class="mt-2 inline-flex items-center gap-1 text-[10px] font-medium text-violet-600 dark:text-violet-400">
                   Recommended <Icon name="lucide:arrow-right" class="w-2.5 h-2.5" />

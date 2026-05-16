@@ -155,7 +155,7 @@ export function useAppsMode() {
 	// first paint. Stays a local-only preference (no Directus column) —
 	// can be promoted to the user row later if cross-device sync matters.
 	const railShowLabels = useCookie<boolean>('app-rail-show-labels', {
-		default: () => true,
+		default: () => false,
 	});
 
 	function setRailShowLabels(next: boolean): void {

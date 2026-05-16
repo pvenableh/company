@@ -160,7 +160,7 @@ function formatTotal(n: number | null | undefined) {
 				class="mt-6 inline-flex items-center gap-1.5 text-xs font-medium text-white bg-primary hover:bg-primary/90 transition-colors px-4 py-2 rounded-full"
 				data-pdf-strip
 			>
-				<Icon name="lucide:arrow-left" class="w-3.5 h-3.5" />
+				<Icon name="lucide:chevron-left" class="w-3.5 h-3.5" />
 				Accept or decline on the list
 			</NuxtLink>
 		</div>

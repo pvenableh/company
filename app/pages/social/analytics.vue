@@ -393,7 +393,7 @@ const showEmptyState = computed(() => !analyticsLoading.value && (!hasAnyAccount
       <template #header>
         <div class="flex items-center justify-between">
           <h3 class="font-semibold text-gray-900 dark:text-white">Top Performing Posts</h3>
-          <UButton variant="ghost" size="xs" trailing-icon="i-lucide-arrow-right">View All</UButton>
+          <UButton variant="ghost" size="xs" trailing-icon="i-lucide-chevron-right" class="text-[10px] font-medium uppercase tracking-wide">View all</UButton>
         </div>
       </template>
 

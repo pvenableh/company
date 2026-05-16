@@ -120,7 +120,7 @@ async function runImport() {
   <LayoutPageContainer size="narrow">
     <div class="flex items-center gap-3 mb-6">
       <NuxtLink to="/contacts" class="text-muted-foreground hover:text-foreground">
-        <Icon name="lucide:arrow-left" class="w-5 h-5" />
+        <Icon name="lucide:chevron-left" class="w-5 h-5" />
       </NuxtLink>
       <h1 class="text-xl font-semibold">Import Contacts from CSV</h1>
     </div>

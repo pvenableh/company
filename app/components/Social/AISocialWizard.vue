@@ -17,11 +17,11 @@
 
             <div class="flex items-center gap-3 mb-1">
               <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
-                <Icon name="lucide:sparkles" class="w-4.5 h-4.5 text-white" />
+                <EarnestIcon class="w-4 h-4 text-white" />
               </div>
               <div>
-                <h2 class="text-lg font-semibold text-foreground">AI Social Content</h2>
-                <p class="text-xs text-muted-foreground">Generate platform-optimized posts with AI</p>
+                <h2 class="text-lg font-semibold text-foreground">Earnest Social Content</h2>
+                <p class="text-xs text-muted-foreground">Generate platform-optimized posts with Earnest</p>
               </div>
             </div>
 
@@ -230,7 +230,7 @@
                 class="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white border-0 shadow-lg shadow-blue-500/20 px-6"
                 @click="generate"
               >
-                <Icon name="lucide:sparkles" class="w-4 h-4 mr-1" />
+                <EarnestIcon class="w-4 h-4 mr-1" />
                 Generate Posts
               </Button>
             </div>
@@ -243,7 +243,7 @@
               <div class="relative w-16 h-16 mx-auto mb-6">
                 <div class="absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 animate-pulse opacity-30" />
                 <div class="absolute inset-0 flex items-center justify-center">
-                  <Icon name="lucide:sparkles" class="w-7 h-7 text-blue-600 dark:text-blue-400 animate-bounce" />
+                  <EarnestIcon class="w-7 h-7 text-blue-600 dark:text-blue-400 animate-bounce" />
                 </div>
               </div>
               <h3 class="font-semibold text-foreground mb-1">Crafting your posts...</h3>

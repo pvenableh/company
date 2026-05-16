@@ -200,7 +200,7 @@ const sections = [
         class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium text-primary hover:bg-primary/10 hover:border-primary/30 transition-colors"
         @click="sidebarOpen = true"
       >
-        <UIcon name="lucide:sparkles" class="w-3.5 h-3.5" />
+        <EarnestIcon class="w-3.5 h-3.5" />
         <span class="hidden sm:inline">Ask Earnest</span>
       </button>
     </div>
@@ -380,8 +380,9 @@ const sections = [
             <span class="text-sm font-bold tabular-nums shrink-0 ml-3">{{ formatCurrency(Number(inv.total_amount) || 0) }}</span>
           </div>
         </div>
-        <NuxtLink v-if="unpaidInvoices.length > 0" to="/invoices" class="block text-center text-xs text-primary hover:underline mt-3 pt-3 border-t border-border/30">
-          View all invoices →
+        <NuxtLink v-if="unpaidInvoices.length > 0" to="/invoices" class="mt-3 pt-3 border-t border-border/30 flex items-center justify-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-primary hover:underline">
+          View all invoices
+          <Icon name="lucide:chevron-right" class="w-3 h-3" />
         </NuxtLink>
       </div>
 
@@ -389,7 +390,10 @@ const sections = [
       <div class="ios-card p-5">
         <div class="flex items-center justify-between mb-3">
           <h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Recent Expenses</h3>
-          <NuxtLink to="/expenses" class="text-xs text-primary hover:underline">View all</NuxtLink>
+          <NuxtLink to="/expenses" class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-primary hover:underline">
+            View all
+            <Icon name="lucide:chevron-right" class="w-3 h-3" />
+          </NuxtLink>
         </div>
         <div v-if="recentExpenses.length === 0" class="text-sm text-muted-foreground/60 py-4 text-center">
           No expenses recorded yet.

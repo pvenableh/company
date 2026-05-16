@@ -7,7 +7,7 @@
 		>
 			<div class="flex items-center gap-2">
 				<div class="w-7 h-7 rounded-lg bg-fuchsia-500/10 flex items-center justify-center">
-					<Icon name="lucide:sparkles" class="w-3.5 h-3.5 text-fuchsia-500" />
+					<EarnestIcon class="w-3.5 h-3.5 text-fuchsia-500" />
 				</div>
 				<span class="text-sm font-semibold text-foreground">Earnest Recommends</span>
 				<span

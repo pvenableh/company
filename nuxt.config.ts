@@ -53,9 +53,14 @@ export default defineNuxtConfig({
 			meta: [
 				// iOS PWA — native app feel
 				{ name: 'apple-mobile-web-app-capable', content: 'yes' },
-				{ name: 'apple-mobile-web-app-status-bar-style', content: 'default' },
+				// black-translucent draws content under the status bar so the
+				// app feels truly full-screen; the safe-area inset on the
+				// shell wrapper keeps chrome below the notch.
+				{ name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
 				{ name: 'apple-mobile-web-app-title', content: 'Earnest' },
 				{ name: 'mobile-web-app-capable', content: 'yes' },
+				{ name: 'application-name', content: 'Earnest' },
+				{ name: 'format-detection', content: 'telephone=no' },
 				// Viewport with safe area coverage for notched devices
 				{
 					name: 'viewport',
@@ -71,7 +76,14 @@ export default defineNuxtConfig({
 				// favicon.ico in /public is auto-served as the final fallback.
 				{ rel: 'icon', href: '/favicon.svg', type: 'image/svg+xml' },
 				{ rel: 'icon', href: '/favicon-32x32.png', type: 'image/png', sizes: '32x32' },
-				{ rel: 'apple-touch-icon', href: '/android-icon-192x192.png' },
+				// iOS home-screen icons across the common sizes — iOS picks
+				// the closest match. apple-touch-icon must be a PNG (Safari
+				// ignores SVG here).
+				{ rel: 'apple-touch-icon', href: '/apple-touch-icon.png', sizes: '180x180' },
+				{ rel: 'apple-touch-icon', href: '/icon-152x152.png', sizes: '152x152' },
+				{ rel: 'apple-touch-icon', href: '/icon-192x192.png', sizes: '192x192' },
+				// PWA manifest — required for installability + iOS standalone.
+				{ rel: 'manifest', href: '/manifest.json' },
 				// Preload critical above-the-fold fonts
 				{
 					rel: 'preload',

@@ -248,6 +248,18 @@ function chipMagnifyStyle(appId: string) {
 	column-gap: 2px;
 }
 
+/* Phones: tighten chip spacing so the centered pill fits all chips
+ * comfortably without horizontal overflow when icon-only. */
+@media (max-width: 767px) {
+	.app-rail--horizontal {
+		@apply px-1.5 py-1;
+		column-gap: 0;
+	}
+	.app-rail--horizontal .app-rail__item {
+		padding: 4px 4px;
+	}
+}
+
 .app-rail--vertical {
 	@apply flex-col px-1.5 py-3 justify-center items-center;
 	overflow: visible;

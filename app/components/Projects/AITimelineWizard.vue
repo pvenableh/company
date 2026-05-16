@@ -17,7 +17,7 @@
 
             <div class="flex items-center gap-3 mb-1">
               <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                <Icon name="lucide:sparkles" class="w-4.5 h-4.5 text-white" />
+                <EarnestIcon class="w-4 h-4 text-white" />
               </div>
               <div>
                 <h2 class="text-lg font-semibold text-foreground">Earnest Timeline Generator</h2>
@@ -46,7 +46,7 @@
                 <span v-if="form.projectType !== 'custom'" class="text-xs text-muted-foreground ml-auto">
                   Matched to {{ projectTypes.find(t => t.id === form.projectType)?.label }} template
                 </span>
-                <span v-else class="text-xs text-muted-foreground ml-auto">AI will generate from scratch</span>
+                <span v-else class="text-xs text-muted-foreground ml-auto">Earnest will generate from scratch</span>
               </div>
 
               <!-- Project type -->
@@ -153,7 +153,7 @@
                 @click="generateTimeline"
               >
                 Generate Timeline
-                <Icon name="lucide:sparkles" class="w-4 h-4 ml-1" />
+                <EarnestIcon class="w-4 h-4 ml-1" />
               </Button>
             </div>
           </div>
@@ -165,7 +165,7 @@
               <div class="relative w-16 h-16 mx-auto mb-6">
                 <div class="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 animate-pulse opacity-30" />
                 <div class="absolute inset-0 flex items-center justify-center">
-                  <Icon name="lucide:sparkles" class="w-7 h-7 text-success dark:text-success animate-bounce" />
+                  <EarnestIcon class="w-7 h-7 text-success dark:text-success animate-bounce" />
                 </div>
               </div>
               <h3 class="font-semibold text-foreground mb-1">Generating your timeline...</h3>
@@ -201,9 +201,9 @@
 
             <!-- Timeline editor -->
             <div v-else-if="proposedEvents.length > 0" class="space-y-3">
-              <!-- AI Summary -->
+              <!-- Earnest summary -->
               <div v-if="aiSummary" class="rounded-xl bg-success/10 dark:bg-success/10 border border-success/50 dark:border-success/30 p-3 flex items-start gap-2">
-                <Icon name="lucide:sparkles" class="w-4 h-4 text-success dark:text-success shrink-0 mt-0.5" />
+                <EarnestIcon class="w-4 h-4 text-success dark:text-success shrink-0 mt-0.5" />
                 <p class="text-xs text-success dark:text-success">{{ aiSummary }}</p>
               </div>
 

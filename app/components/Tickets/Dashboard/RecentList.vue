@@ -3,8 +3,8 @@
 		<template #header>
 			<div class="flex justify-between items-center">
 				<h2 class="font-bold uppercase tracking-wide text-sm">Recently Completed</h2>
-				<UButton size="xs" variant="ghost" @click="$emit('viewTicket', tickets[0]?.id)" v-if="tickets.length">
-					View All
+				<UButton size="xs" variant="ghost" @click="$emit('viewTicket', tickets[0]?.id)" v-if="tickets.length" icon="i-heroicons-chevron-right" :trailing="true" class="text-[10px] font-medium uppercase tracking-wide">
+					View all
 				</UButton>
 			</div>
 		</template>

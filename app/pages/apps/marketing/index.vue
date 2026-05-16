@@ -673,10 +673,11 @@ const scopeLabel = computed(() => {
                 <span v-if="pulseTopCampaigns.length" class="text-foreground ml-1">({{ pulseTopCampaigns.length }})</span>
               </h3>
               <button
-                class="text-xs text-primary hover:underline"
+                class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-primary hover:underline"
                 @click="floor = 'campaigns'"
               >
-                View all →
+                View all
+                <Icon name="lucide:chevron-right" class="w-3 h-3" />
               </button>
             </div>
 
@@ -727,8 +728,9 @@ const scopeLabel = computed(() => {
                   Recent Posts
                   <span v-if="pulseRecentPosts.length" class="text-foreground ml-1">({{ pulseRecentPosts.length }})</span>
                 </h3>
-                <button class="text-xs text-primary hover:underline" @click="floor = 'social'">
-                  View all →
+                <button class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-primary hover:underline" @click="floor = 'social'">
+                  View all
+                  <Icon name="lucide:chevron-right" class="w-3 h-3" />
                 </button>
               </div>
               <div v-if="!pulseRecentPosts.length" class="text-sm text-muted-foreground/70 py-4 text-center">
@@ -1052,10 +1054,11 @@ const scopeLabel = computed(() => {
 
               <button
                 v-if="group.posts.length > 6"
-                class="w-full text-xs text-primary hover:underline pt-2 border-t border-border/30"
+                class="w-full inline-flex items-center justify-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-primary hover:underline pt-2 border-t border-border/30"
                 @click="router.push(`/social?platform=${group.platform}`)"
               >
-                View all {{ group.posts.length }} on {{ SOCIAL_LABELS[group.platform] }} →
+                View all {{ group.posts.length }} on {{ SOCIAL_LABELS[group.platform] }}
+                <Icon name="lucide:chevron-right" class="w-3 h-3" />
               </button>
             </div>
           </div>

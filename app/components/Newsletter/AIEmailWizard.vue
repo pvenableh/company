@@ -17,10 +17,10 @@
 
             <div class="flex items-center gap-3 mb-1">
               <div class="w-8 h-8 rounded-xl bg-violet-500/10 flex items-center justify-center">
-                <Icon name="lucide:sparkles" class="w-4 h-4 text-violet-500" />
+                <EarnestIcon class="w-4 h-4 text-violet-500" />
               </div>
               <div>
-                <h2 class="text-sm font-semibold text-foreground">AI Email Generator</h2>
+                <h2 class="text-sm font-semibold text-foreground">Earnest Email Generator</h2>
                 <p class="text-[10px] text-muted-foreground">Describe your email and we'll create it</p>
               </div>
             </div>
@@ -253,7 +253,7 @@
                 class="rounded-full px-4 py-2 text-[11px] font-medium bg-violet-600 text-white hover:bg-violet-700 ios-press shadow-sm transition-colors inline-flex items-center gap-1.5"
                 @click="generate"
               >
-                <Icon name="lucide:sparkles" class="w-3 h-3" /> Generate Email
+                <EarnestIcon class="w-3 h-3" /> Generate Email
               </button>
             </div>
           </div>
@@ -263,7 +263,7 @@
             <!-- Loading -->
             <div v-if="generating" class="py-12 text-center">
               <div class="w-14 h-14 rounded-2xl bg-violet-500/10 flex items-center justify-center mx-auto mb-4">
-                <Icon name="lucide:sparkles" class="w-6 h-6 text-violet-500 animate-bounce" />
+                <EarnestIcon class="w-6 h-6 text-violet-500 animate-bounce" />
               </div>
               <h3 class="text-sm font-semibold text-foreground mb-1">Crafting your email...</h3>
               <p class="text-xs text-muted-foreground max-w-xs mx-auto">

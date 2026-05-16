@@ -27,7 +27,7 @@
 					class="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium border border-border bg-card hover:bg-muted ios-press transition-colors"
 					@click="sidebarOpen = true"
 				>
-					<Icon name="lucide:sparkles" class="w-3 h-3" />
+					<EarnestIcon class="w-3 h-3" />
 					<span class="hidden sm:inline">Ask Earnest</span>
 				</button>
 			</div>
@@ -313,7 +313,7 @@
 						:disabled="analyzing"
 						@click="runDashboardAnalysis"
 					>
-						<Icon v-if="!analyzing" name="lucide:sparkles" class="w-3.5 h-3.5" />
+						<EarnestIcon v-if="!analyzing" class="w-3.5 h-3.5" />
 						<Icon v-else name="lucide:loader-2" class="w-3.5 h-3.5 animate-spin" />
 						{{ analyzing ? 'Analyzing…' : (dashboard ? 'Re-run' : 'Run analysis') }}
 					</button>
@@ -369,7 +369,7 @@
 							:disabled="!campaignGoal.trim() || generatingCampaign"
 							@click="runCampaignAnalysis"
 						>
-							<Icon v-if="!generatingCampaign" name="lucide:sparkles" class="w-3.5 h-3.5" />
+							<EarnestIcon v-if="!generatingCampaign" class="w-3.5 h-3.5" />
 							<Icon v-else name="lucide:loader-2" class="w-3.5 h-3.5 animate-spin" />
 							{{ generatingCampaign ? 'Planning…' : 'Generate Plan' }}
 						</button>

@@ -5,10 +5,11 @@
 				<span class="text-sm font-semibold">Time Tracker</span>
 				<NuxtLink
 					to="/time-tracker"
-					class="text-xs text-primary hover:underline"
+					class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-primary hover:underline"
 					@click="isOpen = false"
 				>
 					View all entries
+					<Icon name="lucide:chevron-right" class="w-3 h-3" />
 				</NuxtLink>
 			</div>
 		</template>

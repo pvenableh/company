@@ -37,11 +37,11 @@
 							<LayoutNotificationsMenu />
 						</ClientOnly>
 						<button
-							class="apps-shell__chrome-btn"
-							aria-label="AI assistant"
+							class="apps-shell__chrome-btn hidden sm:flex"
+							aria-label="Earnest assistant"
 							@click="handleOpenAI"
 						>
-							<Icon name="lucide:sparkles" class="size-4" />
+							<EarnestIcon class="size-4 text-foreground" />
 						</button>
 						<ClientOnly>
 							<LayoutUserMenu v-if="user" class="shrink-0" />

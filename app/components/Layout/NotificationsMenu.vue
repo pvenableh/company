@@ -38,11 +38,11 @@
 							Mark all read
 						</button>
 						<button
-							class="flex items-center gap-1 rounded-md px-1.5 py-1 text-[10px] font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
+							class="flex items-center gap-0.5 rounded-md px-1.5 py-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
 							@click="openSheet"
 						>
-							<Maximize2 class="size-3" />
 							View all
+							<Icon name="lucide:chevron-right" class="size-3" />
 						</button>
 					</div>
 				</div>
@@ -61,10 +61,11 @@
 
 					<div v-if="notifications.length > 5" class="border-t border-border/40 mt-1.5 pt-1.5">
 						<button
-							class="w-full rounded-md px-2 py-1.5 text-[10px] font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
+							class="inline-flex w-full items-center justify-center gap-0.5 rounded-md px-2 py-1.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
 							@click="openSheet"
 						>
 							View all notifications
+							<Icon name="lucide:chevron-right" class="size-3" />
 						</button>
 					</div>
 				</div>

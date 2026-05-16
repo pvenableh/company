@@ -631,10 +631,11 @@ const headerAction = computed(() => {
                   <span v-if="unpaidInvoicesPreview.length" class="text-warning ml-1">({{ unpaidInvoicesPreview.length }})</span>
                 </h3>
                 <button
-                  class="text-xs text-primary hover:underline"
+                  class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-primary hover:underline"
                   @click="floor = 'invoices'"
                 >
-                  View all →
+                  View all
+                  <Icon name="lucide:chevron-right" class="w-3 h-3" />
                 </button>
               </div>
               <div v-if="!unpaidInvoicesPreview.length" class="text-sm text-muted-foreground/70 py-4 text-center">
@@ -673,10 +674,11 @@ const headerAction = computed(() => {
               <div class="flex items-center justify-between mb-3">
                 <h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Recent Expenses</h3>
                 <button
-                  class="text-xs text-primary hover:underline"
+                  class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-primary hover:underline"
                   @click="floor = 'expenses'"
                 >
-                  View all →
+                  View all
+                  <Icon name="lucide:chevron-right" class="w-3 h-3" />
                 </button>
               </div>
               <div v-if="!recentExpensesPreview.length" class="text-sm text-muted-foreground/70 py-4 text-center">
@@ -706,8 +708,9 @@ const headerAction = computed(() => {
           <div v-if="cashflowPayments.length" class="ios-card p-5 mt-4">
             <div class="flex items-center justify-between mb-3">
               <h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Recent Payments</h3>
-              <button class="text-xs text-primary hover:underline" @click="floor = 'payments'">
-                View all →
+              <button class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-primary hover:underline" @click="floor = 'payments'">
+                View all
+                <Icon name="lucide:chevron-right" class="w-3 h-3" />
               </button>
             </div>
             <div class="space-y-0.5">

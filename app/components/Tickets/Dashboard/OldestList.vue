@@ -8,10 +8,11 @@
 					variant="ghost"
 					to="/tickets"
 					v-if="tickets.length"
-					icon="i-heroicons-arrow-right"
+					icon="i-heroicons-chevron-right"
 					:trailing="true"
+					class="text-[10px] font-medium uppercase tracking-wide"
 				>
-					View All
+					View all
 				</UButton>
 			</div>
 		</template>

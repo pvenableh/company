@@ -72,14 +72,14 @@ function isActiveItem(to: string): boolean {
 				</NuxtLink>
 			</nav>
 
-			<!-- Footer: AI + avatar -->
+			<!-- Footer: Earnest + avatar -->
 			<div class="flex flex-col items-center gap-1 pb-3">
 				<button
 					@click="emit('open-ai-tray')"
-					data-tooltip="Earnest AI"
+					data-tooltip="Earnest"
 					class="rail-btn has-tooltip"
 				>
-					<Icon name="lucide:sparkles" class="w-4 h-4" />
+					<EarnestIcon class="w-4 h-4" />
 				</button>
 				<ClientOnly>
 					<LayoutUserMenu v-if="user" class="shrink-0 mt-1" />

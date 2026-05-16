@@ -229,7 +229,7 @@ const minDate = today(getLocalTimeZone())
           class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium text-primary hover:bg-primary/10 hover:border-primary/30 transition-colors"
           @click="sidebarOpen = true"
         >
-          <UIcon name="lucide:sparkles" class="w-3.5 h-3.5" />
+          <EarnestIcon class="w-3.5 h-3.5" />
           <span class="hidden sm:inline">Ask Earnest</span>
         </button>
         <UButton variant="soft" color="red" icon="i-lucide-trash-2" @click="deletePost">

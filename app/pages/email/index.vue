@@ -382,7 +382,7 @@ onUnmounted(() => clearEntity());
 					<div class="flex items-center justify-between px-5 py-4 border-b border-border/30">
 						<div class="flex items-center gap-2">
 							<button v-if="startMethod" class="p-1 rounded-full hover:bg-muted ios-press text-muted-foreground" @click="startMethod = null; selectedSourceTemplate = null">
-								<Icon name="lucide:arrow-left" class="w-3.5 h-3.5" />
+								<Icon name="lucide:chevron-left" class="w-3.5 h-3.5" />
 							</button>
 							<h2 class="text-sm font-semibold text-foreground">
 								{{ !startMethod ? 'Create Email' : startMethod === 'existing' ? 'From Existing' : startMethod === 'starter' ? 'Start from Template' : startMethod === 'ai' ? 'AI Generate' : 'New Template' }}

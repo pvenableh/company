@@ -605,7 +605,7 @@ const formatCurrency = (amount) => {
 					</div>
 				</div>
 				<div class="flex items-center gap-1.5">
-					<UiActionButton icon="lucide:sparkles" variant="primary" @click="sidebarOpen = true" hide-label="sm">
+					<UiActionButton icon="earnest" variant="primary" @click="sidebarOpen = true" hide-label="sm">
 						Ask Earnest
 					</UiActionButton>
 					<UiActionButton icon="lucide:pencil" @click="showEditModal = true" hide-label="sm">

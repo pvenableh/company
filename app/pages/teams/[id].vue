@@ -181,8 +181,8 @@ onUnmounted(() => clearEntity());
       <Icon name="lucide:alert-circle" class="w-10 h-10 text-destructive" />
       <p class="text-sm text-destructive">{{ error }}</p>
       <div class="flex gap-2">
-        <Button variant="outline" size="sm" @click="router.push('/organization/teams')">
-          <Icon name="lucide:arrow-left" class="w-4 h-4 mr-1" />
+        <Button variant="outline" size="sm" class="text-[10px] font-medium uppercase tracking-wide" @click="router.push('/organization/teams')">
+          <Icon name="lucide:chevron-left" class="w-4 h-4 mr-1" />
           Back to Teams
         </Button>
         <Button size="sm" @click="loadTeam">Retry</Button>
@@ -229,7 +229,7 @@ onUnmounted(() => clearEntity());
             class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium text-primary hover:bg-primary/10 hover:border-primary/30 transition-colors"
             @click="sidebarOpen = true"
           >
-            <Icon name="lucide:sparkles" class="w-3.5 h-3.5" />
+            <EarnestIcon class="w-3.5 h-3.5" />
             <span class="hidden sm:inline">Ask Earnest</span>
           </button>
         </div>

@@ -1,17 +1,13 @@
 <template>
 	<svg
 		xmlns="http://www.w3.org/2000/svg"
-		viewBox="0 0 24 24"
+		viewBox="0 0 700 700"
 		fill="none"
-		stroke="currentColor"
-		stroke-width="2"
-		stroke-linecap="round"
-		stroke-linejoin="round"
+		aria-hidden="true"
 		:class="props.class"
 	>
-		<!-- Placeholder: replace with your custom Earnest brand icon SVG paths -->
-		<circle cx="12" cy="12" r="10" />
-		<path d="M9 8h6M9 12h4M9 16h6" />
+		<path fill="#00BFFF" d="M626 586.427C626 603.312 612.295 617 595.39 617C578.485 617 564.78 603.312 564.78 586.427C564.78 569.543 578.485 555.855 595.39 555.855C612.295 555.855 626 569.543 626 586.427Z" />
+		<path fill="currentColor" d="M149.917 597.693V94.9696H84V83H483.249L492.238 210.177H480.253C480.253 124.146 423.324 94.9696 343.924 94.9696H226.321V335.858H282.501C360.403 335.858 367.894 288.728 367.894 240.101H379.879V439.096H367.894C367.894 382.24 360.403 347.827 281.752 347.827H226.321V597.693H328.943C450.29 597.693 508.717 583.479 508.717 456.302H520.702V609.663H84V597.693H149.917Z" />
 	</svg>
 </template>
 

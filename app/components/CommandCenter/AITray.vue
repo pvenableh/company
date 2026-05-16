@@ -632,7 +632,7 @@ watch(quickStreamingContent, () => {
 							</button>
 						</form>
 						<div class="flex items-center justify-between mt-1.5">
-							<p class="text-[10px] text-muted-foreground">AI may make mistakes.</p>
+							<p class="text-[10px] text-muted-foreground">Earnest may make mistakes.</p>
 							<div class="flex items-center gap-2">
 								<button
 									v-if="quickMessages.length > 0"
@@ -806,9 +806,10 @@ watch(quickStreamingContent, () => {
 					<div class="p-3 border-t border-border/30">
 						<button
 							@click="router.push('/command-center/notes'); emit('close')"
-							class="w-full text-xs text-center text-muted-foreground hover:text-primary transition-colors"
+							class="inline-flex w-full items-center justify-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground hover:text-primary transition-colors"
 						>
 							View all notes
+							<Icon name="lucide:chevron-right" class="w-3 h-3" />
 						</button>
 					</div>
 				</div>

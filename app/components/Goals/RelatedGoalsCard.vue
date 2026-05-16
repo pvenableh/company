@@ -82,7 +82,7 @@ const visible = computed(() => !isLoading.value && matchingGoals.value.length > 
 			</div>
 			<NuxtLink :to="seeAllHref" class="related-goals-card__see-all">
 				See all
-				<Icon name="lucide:arrow-right" class="w-3 h-3" />
+				<Icon name="lucide:chevron-right" class="w-3 h-3" />
 			</NuxtLink>
 		</div>
 
@@ -136,7 +136,7 @@ const visible = computed(() => !isLoading.value && matchingGoals.value.length > 
 }
 
 .related-goals-card__see-all {
-	@apply inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors;
+	@apply inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground transition-colors;
 }
 
 .related-goals-card__list {

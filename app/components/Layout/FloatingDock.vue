@@ -136,11 +136,11 @@
 						<!-- Link to full page -->
 						<NuxtLink
 							to="/tasks"
-							class="mt-4 flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors py-2"
+							class="mt-4 flex items-center justify-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground transition-colors py-2"
 							@click="activePanel = null"
 						>
 							See all tasks
-							<Icon name="lucide:arrow-right" class="w-3 h-3" />
+							<Icon name="lucide:chevron-right" class="w-3 h-3" />
 						</NuxtLink>
 					</div>
 
@@ -198,11 +198,11 @@
 						<!-- Link to full page -->
 						<NuxtLink
 							to="/time-tracker"
-							class="mt-4 flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors py-2"
+							class="mt-4 flex items-center justify-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground transition-colors py-2"
 							@click="activePanel = null"
 						>
 							View all entries
-							<Icon name="lucide:arrow-right" class="w-3 h-3" />
+							<Icon name="lucide:chevron-right" class="w-3 h-3" />
 						</NuxtLink>
 					</div>
 				</div>
