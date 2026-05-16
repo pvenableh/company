@@ -87,7 +87,7 @@ function handleReset() {
     <template #panel>
       <div class="w-64 p-2">
         <p class="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold px-2 py-1.5">
-          Feature Guides
+          Guided Tours
         </p>
 
         <div v-if="availableTours.length === 0" class="px-2 py-4 text-center text-xs text-muted-foreground">

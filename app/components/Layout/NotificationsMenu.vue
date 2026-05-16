@@ -21,60 +21,61 @@
 				</button>
 			</PopoverTrigger>
 
-			<PopoverContent align="end" :side-offset="8" class="w-96 max-h-[70vh] overflow-y-auto p-0">
+			<PopoverContent align="end" :side-offset="8" class="w-96 max-h-[70vh] overflow-y-auto p-2">
 				<!-- Header -->
-				<div class="flex items-center justify-between p-4 border-b dark:border-gray-700">
-					<p class="text-sm font-bold">Notifications</p>
-					<div class="flex items-center gap-2">
-						<Button
+				<div class="flex items-center justify-between px-2 py-1.5">
+					<p class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+						Notifications
+					</p>
+					<div class="flex items-center gap-1">
+						<button
 							v-if="unreadCount > 0"
-							variant="ghost"
-							size="sm"
-							class="h-7 text-xs"
+							class="flex items-center gap-1 rounded-md px-1.5 py-1 text-[10px] font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors disabled:opacity-60"
 							:disabled="isMarkingAll"
 							@click="handleMarkAllAsRead"
 						>
-							<Check class="size-3 mr-1" />
-							Mark all as read
-						</Button>
-						<Button
-							variant="ghost"
-							size="sm"
-							class="h-7 text-xs"
+							<Check class="size-3" />
+							Mark all read
+						</button>
+						<button
+							class="flex items-center gap-1 rounded-md px-1.5 py-1 text-[10px] font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
 							@click="openSheet"
 						>
-							<Maximize2 class="size-3 mr-1" />
+							<Maximize2 class="size-3" />
 							View all
-						</Button>
+						</button>
 					</div>
 				</div>
 
 				<!-- Notifications List -->
-				<div class="p-4">
-					<div v-if="notifications?.length" class="space-y-4">
-						<LayoutNotificationItem
-							v-for="notification in notifications.slice(0, 5)"
-							:key="notification.id"
-							:notification="notification"
-							:loading="loadingNotifications.has(notification.id)"
-							@mark-read="handleMarkAsRead"
-							@navigate="viewNotification"
-							compact
-						/>
+				<div v-if="notifications?.length" class="space-y-0.5">
+					<LayoutNotificationItem
+						v-for="notification in notifications.slice(0, 5)"
+						:key="notification.id"
+						:notification="notification"
+						:loading="loadingNotifications.has(notification.id)"
+						@mark-read="handleMarkAsRead"
+						@navigate="viewNotification"
+						compact
+					/>
 
-						<div v-if="notifications.length > 5" class="text-center pt-2 border-t dark:border-gray-700">
-							<Button variant="link" size="sm" class="text-[var(--cyan)] text-xs" @click="openSheet">
-								View all notifications
-							</Button>
-						</div>
+					<div v-if="notifications.length > 5" class="border-t border-border/40 mt-1.5 pt-1.5">
+						<button
+							class="w-full rounded-md px-2 py-1.5 text-[10px] font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground transition-colors"
+							@click="openSheet"
+						>
+							View all notifications
+						</button>
 					</div>
+				</div>
 
-					<div v-else-if="isLoading" class="text-center py-8">
-						<Loader2 class="size-5 animate-spin mx-auto mb-2 text-muted-foreground" />
-						<p class="text-gray-500 text-sm">Loading notifications...</p>
-					</div>
+				<div v-else-if="isLoading" class="px-2 py-6 text-center">
+					<Loader2 class="size-4 animate-spin mx-auto mb-1.5 text-muted-foreground" />
+					<p class="text-xs text-muted-foreground">Loading notifications…</p>
+				</div>
 
-					<div v-else class="text-center py-8 text-gray-500 text-sm">No new notifications</div>
+				<div v-else class="px-2 py-6 text-center text-xs text-muted-foreground">
+					No new notifications
 				</div>
 			</PopoverContent>
 		</Popover>

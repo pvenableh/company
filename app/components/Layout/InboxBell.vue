@@ -54,55 +54,57 @@ function activityIcon(type: string) {
       </button>
     </PopoverTrigger>
 
-    <PopoverContent align="end" :side-offset="8" class="w-96 max-h-[70vh] overflow-y-auto p-0">
-      <div class="flex items-center justify-between border-b p-3 dark:border-gray-700">
-        <p class="text-sm font-bold">Social Activity</p>
+    <PopoverContent align="end" :side-offset="8" class="w-96 max-h-[70vh] overflow-y-auto p-2">
+      <div class="flex items-center justify-between px-2 py-1.5">
+        <p class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Social Inbox
+        </p>
         <NuxtLink
           to="/inbox"
-          class="text-xs text-blue-600 hover:underline"
+          class="text-[10px] font-medium text-primary hover:underline"
           @click="isOpen = false"
         >
           Open inbox →
         </NuxtLink>
       </div>
 
-      <div v-if="!activity.length" class="p-8 text-center text-sm text-gray-400">
+      <div v-if="!activity.length" class="px-2 py-6 text-center text-xs text-muted-foreground">
         Nothing new.
       </div>
 
-      <ul v-else class="divide-y dark:divide-gray-800">
+      <ul v-else class="space-y-0.5">
         <li
           v-for="a in activity"
           :key="a.id"
-          class="flex items-start gap-3 p-3 transition hover:bg-gray-50 dark:hover:bg-gray-800/40"
-          :class="!a.read ? 'bg-blue-50/50 dark:bg-blue-950/20' : ''"
+          class="flex items-start gap-2.5 rounded-md px-2 py-2 transition-colors hover:bg-muted/60"
+          :class="!a.read ? 'bg-primary/5' : ''"
         >
           <div class="relative shrink-0">
-            <div class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
-              <component :is="activityIcon(a.type)" class="h-4 w-4 text-gray-500" />
+            <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
+              <component :is="activityIcon(a.type)" class="h-3.5 w-3.5 text-primary" />
             </div>
             <UIcon
               :name="getSocialPlatformIcon(a.platform)"
-              class="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-white p-px ring-2 ring-white dark:bg-gray-900 dark:ring-gray-900"
+              class="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-background p-px ring-2 ring-background"
             />
           </div>
 
           <div class="min-w-0 flex-1">
-            <p class="text-xs">
-              <span class="font-medium">{{ a.actor_name || 'Someone' }}</span>
-              <span class="text-gray-500"> {{ a.type === 'mention' ? 'mentioned you' : a.type === 'reaction' ? 'reacted' : 'commented' }}</span>
+            <p class="text-xs leading-tight">
+              <span class="font-medium text-foreground">{{ a.actor_name || 'Someone' }}</span>
+              <span class="text-muted-foreground"> {{ a.type === 'mention' ? 'mentioned you' : a.type === 'reaction' ? 'reacted' : 'commented' }}</span>
             </p>
-            <p v-if="a.preview" class="mt-0.5 truncate text-xs text-gray-600 dark:text-gray-400">
+            <p v-if="a.preview" class="mt-0.5 truncate text-[10px] text-muted-foreground">
               {{ a.preview }}
             </p>
-            <p class="mt-0.5 text-[10px] text-gray-400">
+            <p class="mt-0.5 text-[10px] text-muted-foreground/70">
               {{ a.account.account_name }} · {{ timeAgo(a.created_at) }}
             </p>
           </div>
 
           <button
             v-if="!a.read"
-            class="shrink-0 text-[10px] text-blue-600 hover:underline"
+            class="shrink-0 text-[10px] font-medium text-primary hover:underline"
             @click="markRead(a.id)"
           >
             Mark read
