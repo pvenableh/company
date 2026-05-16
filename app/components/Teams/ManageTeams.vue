@@ -136,34 +136,45 @@
 
 		<!-- Team Management Modal -->
 		<UModal v-model="showTeamMembersModal" :ui="{ width: 'max-w-xl' }">
-			<div class="flex items-center p-4 border-b border-gray-200 dark:border-gray-700">
-				<h3 class="text-lg font-semibold">Manage Team: {{ currentEditTeam?.name }}</h3>
-			</div>
+			<template #header>
+				<div class="flex items-center gap-2">
+					<UIcon name="i-heroicons-user-plus" class="w-4 h-4 text-primary" />
+					<h3 class="text-sm font-semibold uppercase tracking-wide">
+						Manage Team: {{ currentEditTeam?.name }}
+					</h3>
+				</div>
+			</template>
 
-			<div class="p-4">
-				<TeamsManageTeamMembers
-					v-if="currentEditTeam"
-					:team-id="currentEditTeam.id"
-					:team-name="currentEditTeam.name"
-					:organization-id="effectiveOrgId"
-					@update="refreshTeams"
-				/>
-			</div>
+			<TeamsManageTeamMembers
+				v-if="currentEditTeam"
+				:team-id="currentEditTeam.id"
+				:team-name="currentEditTeam.name"
+				:organization-id="effectiveOrgId"
+				@update="refreshTeams"
+			/>
 		</UModal>
 
 		<!-- Create/Edit Team Modal -->
 		<UModal v-model="showCreateTeamModal">
-			<div class="flex items-center p-4 border-b border-border">
-				<h3 class="text-lg font-semibold">{{ isEditing ? 'Edit' : 'Create' }} Team</h3>
-			</div>
+			<template #header>
+				<div class="flex items-center gap-2">
+					<UIcon
+						:name="isEditing ? 'i-heroicons-pencil-square' : 'i-heroicons-user-group'"
+						class="w-4 h-4 text-primary"
+					/>
+					<h3 class="text-sm font-semibold uppercase tracking-wide">
+						{{ isEditing ? 'Edit Team' : 'Create Team' }}
+					</h3>
+				</div>
+			</template>
 
-			<form @submit.prevent="submitTeamForm" class="space-y-4 p-4">
+			<form @submit.prevent="submitTeamForm" class="space-y-4">
 				<!-- Icon Upload -->
 				<UFormGroup label="Team Icon" hint="Optional">
 					<div class="flex items-center gap-4">
 						<div
 							class="w-16 h-16 rounded-xl border-2 border-dashed border-border flex items-center justify-center bg-muted/30 overflow-hidden cursor-pointer hover:border-primary/40 transition-colors"
-							@click="$refs.iconInput?.click()"
+							@click="iconInput?.click()"
 						>
 							<img
 								v-if="teamForm.iconPreview"
@@ -182,7 +193,7 @@
 								@change="handleIconUpload"
 							/>
 							<div class="flex gap-2">
-								<UButton type="button" size="xs" variant="outline" @click="$refs.iconInput?.click()">
+								<UButton type="button" size="xs" variant="outline" @click="iconInput?.click()">
 									{{ teamForm.iconPreview ? 'Change' : 'Upload' }}
 								</UButton>
 								<UButton v-if="teamForm.iconPreview" type="button" size="xs" variant="ghost" color="red" @click="removeIcon">
@@ -200,7 +211,7 @@
 				</UFormGroup>
 
 				<UFormGroup label="Team Name" required>
-					<UInput v-model="teamForm.name" placeholder="Enter team name" />
+					<UInput v-model="teamForm.name" placeholder="Enter team name" autofocus />
 				</UFormGroup>
 
 				<UFormGroup label="Description">
@@ -219,37 +230,46 @@
 					<div class="flex items-center gap-3">
 						<UToggle v-model="teamForm.active" />
 						<span class="text-sm text-muted-foreground">
-							{{ teamForm.active ? 'Team is active and visible in selectors' : 'Team is inactive and hidden from selectors' }}
+							{{ teamForm.active ? 'Visible in selectors' : 'Hidden from selectors' }}
 						</span>
 					</div>
 				</UFormGroup>
 			</form>
 
-			<div class="flex justify-end gap-2 p-4 border-t border-border">
-				<UButton color="gray" variant="ghost" @click="cancelTeamForm">Cancel</UButton>
-				<UButton color="primary" :loading="submittingTeam" :disabled="!teamForm.name || iconUploading" @click="submitTeamForm">
-					{{ isEditing ? 'Save Changes' : 'Create Team' }}
-				</UButton>
-			</div>
+			<template #footer>
+				<div class="flex justify-end gap-2 w-full">
+					<UButton color="gray" variant="ghost" @click="cancelTeamForm">Cancel</UButton>
+					<UButton color="primary" :loading="submittingTeam" :disabled="!teamForm.name || iconUploading" @click="submitTeamForm">
+						{{ isEditing ? 'Save Changes' : 'Create Team' }}
+					</UButton>
+				</div>
+			</template>
 		</UModal>
 
 		<!-- Delete Confirmation Modal -->
 		<UModal v-model="showDeleteTeamModal">
-			<div class="p-4 border-b border-gray-200 dark:border-gray-700">
-				<h3 class="text-lg font-semibold text-destructive">Delete Team</h3>
-			</div>
+			<template #header>
+				<div class="flex items-center gap-2">
+					<UIcon name="i-heroicons-exclamation-triangle" class="w-4 h-4 text-destructive" />
+					<h3 class="text-sm font-semibold uppercase tracking-wide text-destructive">Delete Team</h3>
+				</div>
+			</template>
 
-			<div class="p-4">
-				<p class="mb-4">Are you sure you want to delete the team "{{ currentEditTeam?.name }}"?</p>
-				<p class="text-sm text-gray-500">
-					This action cannot be undone. All team associations will be removed, but user accounts will remain.
+			<div class="space-y-3">
+				<p class="text-sm text-foreground">
+					Delete <span class="font-semibold">"{{ currentEditTeam?.name }}"</span>?
+				</p>
+				<p class="text-sm text-muted-foreground">
+					This cannot be undone. All team associations are removed; user accounts remain.
 				</p>
 			</div>
 
-			<div class="flex justify-end gap-2 p-4 border-t border-gray-200 dark:border-gray-700">
-				<UButton color="gray" variant="ghost" @click="showDeleteTeamModal = false">Cancel</UButton>
-				<UButton color="red" :loading="deletingTeam" @click="deleteTeam">Delete Team</UButton>
-			</div>
+			<template #footer>
+				<div class="flex justify-end gap-2 w-full">
+					<UButton color="gray" variant="ghost" @click="showDeleteTeamModal = false">Cancel</UButton>
+					<UButton color="red" :loading="deletingTeam" @click="deleteTeam">Delete Team</UButton>
+				</div>
+			</template>
 		</UModal>
 	</div>
 </template>
@@ -353,6 +373,7 @@ const submittingTeam = ref(false);
 const deletingTeam = ref(false);
 const iconUploading = ref(false);
 const iconProgress = ref(0);
+const iconInput = ref(null);
 
 // File upload for team icon
 const { processUpload, uploadFilesWithProgress } = useFileUpload();

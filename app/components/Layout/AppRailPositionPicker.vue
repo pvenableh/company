@@ -40,11 +40,10 @@ const labelsToggleVisible = computed(
 );
 
 const positionOptions: Array<{ id: RailPosition; label: string; icon: string; hint: string }> = [
-  { id: 'left', label: 'Left', icon: 'lucide:panel-left', hint: 'Vertical column on the left' },
-  { id: 'right', label: 'Right', icon: 'lucide:panel-right', hint: 'Vertical column on the right' },
-  { id: 'top', label: 'Top', icon: 'lucide:panel-top', hint: 'Horizontal strip below the header' },
-  { id: 'bottom', label: 'Bottom', icon: 'lucide:panel-bottom', hint: 'Horizontal strip pinned to the bottom' },
-  { id: 'floating', label: 'Floating', icon: 'lucide:focus', hint: 'Bottom-center pill that stays out of the way' },
+  { id: 'left', label: 'Left', icon: 'lucide:panel-left', hint: 'Floating pill on the left edge' },
+  { id: 'right', label: 'Right', icon: 'lucide:panel-right', hint: 'Floating pill on the right edge' },
+  { id: 'top', label: 'Top', icon: 'lucide:panel-top', hint: 'Floating pill along the top' },
+  { id: 'bottom', label: 'Bottom', icon: 'lucide:panel-bottom', hint: 'Floating pill along the bottom' },
 ];
 
 const isMobileForced = computed(() => railPosition.value === 'bottom' && storedRailPosition.value !== 'bottom');

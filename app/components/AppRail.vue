@@ -5,13 +5,11 @@
  * Icons + colours come from `useAppAccent` (single source of truth). All
  * chips render with the per-app solid accent (macOS/iOS-app-icon style);
  * the active item just gets a stronger gradient + shadow to stand out.
- * Where labels are hidden (vertical + floating) a hover tooltip surfaces
- * the app name.
+ * Vertical (left/right) pills are icon-only with a hover tooltip; horizontal
+ * (top/bottom) pills show inline labels unless the user hides them.
  *
- * Position respects `useAppsMode().railPosition`:
- *   left / right → vertical column with footer pinned to bottom
- *   top / bottom → fixed glass pill, anchored to its edge
- *   floating     → fixed glass pill, bottom-center (compact, icon-only)
+ * Position respects `useAppsMode().railPosition` — every position renders
+ * as a fixed glass pill hugging the chosen edge (left / right / top / bottom).
  *
  * Mobile (< md) forces bottom via useAppsMode.
  */
@@ -49,23 +47,20 @@ const footer = computed<AppAccent[]>(() => APP_FOOTER_ORDER.map((id) => accents.
 const activeId = computed(() => appIdForPath(route.path));
 
 const isHorizontal = computed(() =>
-	railPosition.value === 'top'
-	|| railPosition.value === 'bottom'
-	|| railPosition.value === 'floating',
+	railPosition.value === 'top' || railPosition.value === 'bottom',
 );
 
 // Horizontal rail (top/bottom) becomes icon-only when the user hides
-// labels — keep the inline text path for everyone else.
+// labels — keep the inline text path for everyone else. Vertical pills
+// (left/right) are always icon-only since the pill is too narrow for
+// inline text.
 const horizontalLabelsHidden = computed(() =>
-	(railPosition.value === 'top' || railPosition.value === 'bottom') && !railShowLabels.value,
+	isHorizontal.value && !railShowLabels.value,
 );
 
 // Tooltips fill in for the inline label when the rail is icon-only.
 const showTooltip = computed(() =>
-	railPosition.value === 'left'
-	|| railPosition.value === 'right'
-	|| railPosition.value === 'floating'
-	|| horizontalLabelsHidden.value,
+	!isHorizontal.value || horizontalLabelsHidden.value,
 );
 
 const tooltipSide = computed<'top' | 'bottom' | 'left' | 'right'>(() => {
@@ -238,56 +233,76 @@ function chipMagnifyStyle(appId: string) {
 }
 
 /* ── Layout ──────────────────────────────────────────────────────── */
-/* Desktop vertical rail is icon-only (Linear/Slack-style); labels live
- * on the title-attribute tooltip and on horizontal mode. Keeps the rail
- * narrow so the work area gets the screen real-estate it deserves. */
-.app-rail--vertical {
-	@apply flex-col w-[56px] shrink-0 py-2;
-	row-gap: var(--rail-gap);
-	justify-content: center;
-}
-
-/* Horizontal modes (top/bottom/floating) all use tight, uniform spacing
- * — the rail-level gap (between the main and footer groups) matches the
- * in-group gap below, so the divider-less floating pill and the
- * divider-less top/bottom pills all read as one evenly spaced row.
+/* Every position renders as a fixed glass pill hugging the chosen edge.
+ * Horizontal (top/bottom) pills lay chips out left-to-right; vertical
+ * (left/right) pills lay them top-to-bottom. Pill chrome (rounded,
+ * translucent, blurred) is identical across all four — only orientation
+ * + anchor coordinates change.
  *
  * `overflow: visible` is critical: any non-visible overflow on one axis
  * forces the other to clip too (the well-known CSS overflow trap), which
- * was slicing the tops off magnified chips on hover. Icons-only mode
- * already keeps the rail narrow enough to fit on phones without
- * horizontal scroll, so dropping the safety auto-scroll is fine. */
+ * was slicing the magnified chips on hover. */
 .app-rail--horizontal {
-	@apply flex-row w-full px-3 py-1.5 justify-center items-center;
+	@apply flex-row px-3 py-1.5 justify-center items-center;
 	overflow: visible;
 	column-gap: 2px;
 }
 
-.app-rail--left { @apply border-r; }
-.app-rail--right { @apply border-l; }
+.app-rail--vertical {
+	@apply flex-col px-1.5 py-3 justify-center items-center;
+	overflow: visible;
+	row-gap: 4px;
+}
 
-/* Top + bottom both render as fixed glass pills, anchored to their edge.
- * They mirror the floating variant's chrome (rounded, translucent, blurred);
- * the layout adds page padding so content does not scroll under them. */
 .app-rail--top,
 .app-rail--bottom,
-.app-rail--floating {
-	@apply fixed left-1/2 -translate-x-1/2 z-40
+.app-rail--left,
+.app-rail--right {
+	@apply fixed z-40
 		rounded-full border border-border/40
-		bg-background/85 backdrop-blur-md
+		backdrop-blur-md
 		w-auto;
+	/* Unified glass-chrome backdrop across every palette/chip mode — the
+	 * cool light-grey tint gives the floating chips something to sit on
+	 * regardless of the page beneath. Palette-specific overrides below
+	 * have been retired; this is the single source of truth. */
+	background: hsl(220 14% 95% / 0.78);
 	box-shadow:
 		0 4px 14px -6px hsl(0 0% 0% / 0.18),
 		0 2px 6px -2px hsl(0 0% 0% / 0.08);
+}
+
+.dark .app-rail--top,
+.dark .app-rail--bottom,
+.dark .app-rail--left,
+.dark .app-rail--right {
+	background: hsl(0 0% 8% / 0.78);
+}
+
+.app-rail--top,
+.app-rail--bottom {
+	@apply left-1/2 -translate-x-1/2;
 }
 
 .app-rail--top {
 	top: calc(56px + 0.75rem); /* chrome height + breathing gap */
 }
 
-.app-rail--bottom,
-.app-rail--floating {
+.app-rail--bottom {
 	bottom: calc(0.75rem + env(safe-area-inset-bottom));
+}
+
+.app-rail--left,
+.app-rail--right {
+	@apply top-1/2 -translate-y-1/2;
+}
+
+.app-rail--left {
+	left: 0.75rem;
+}
+
+.app-rail--right {
+	right: 0.75rem;
 }
 
 /* ── Groups ──────────────────────────────────────────────────────── */
@@ -322,12 +337,9 @@ function chipMagnifyStyle(appId: string) {
 	@apply w-px h-6 mx-1;
 }
 
-/* Horizontal pill variants (top/bottom/floating) sit the two groups flush
- * — the rail's own column-gap is enough separation, so the divider is
- * visual noise here. Only the vertical column rails keep it. */
-.app-rail--top .app-rail__divider,
-.app-rail--bottom .app-rail__divider,
-.app-rail--floating .app-rail__divider {
+/* Floating pills sit the two groups flush — the rail's own gap is enough
+ * separation, so the divider is visual noise. Hide everywhere. */
+.app-rail__divider {
 	display: none;
 }
 
@@ -341,10 +353,13 @@ function chipMagnifyStyle(appId: string) {
 	padding: 2px;
 }
 
-.app-rail--horizontal .app-rail__item,
-.app-rail--floating .app-rail__item {
+.app-rail--horizontal .app-rail__item {
 	@apply flex-row gap-2;
 	padding: 4px 10px;
+}
+
+.app-rail--vertical .app-rail__item {
+	padding: 4px 2px;
 }
 
 /* ── Chip (icon container) ───────────────────────────────────────── */
@@ -384,12 +399,10 @@ function chipMagnifyStyle(appId: string) {
 }
 
 /* Magnification grows the chip outward from the rail edge so it doesn't
- * get clipped by the pill's rounded background. Top rail anchors at
- * top, bottom/floating anchor at bottom, vertical rails grow toward
- * the page interior. */
+ * get clipped by the pill's rounded background. Each position anchors
+ * its transform-origin to the page-facing side. */
 .app-rail--top .app-rail__chip { transform-origin: center top; }
-.app-rail--bottom .app-rail__chip,
-.app-rail--floating .app-rail__chip { transform-origin: center bottom; }
+.app-rail--bottom .app-rail__chip { transform-origin: center bottom; }
 .app-rail--left .app-rail__chip { transform-origin: left center; }
 .app-rail--right .app-rail__chip { transform-origin: right center; }
 
@@ -412,11 +425,11 @@ function chipMagnifyStyle(appId: string) {
 }
 
 .app-rail--horizontal .app-rail__chip,
-.app-rail--floating .app-rail__chip {
+.app-rail--vertical .app-rail__chip {
 	width: 32px;
 	height: 32px;
 	/* Inherits border-radius: 50% from the base rule above — circular at
-	 * every size, just smaller in the floating/horizontal pills. */
+	 * every size, just smaller in the floating pills. */
 }
 
 /* Icon wrapper stacks two copies of the SVG. The base layer carries the
@@ -434,7 +447,7 @@ function chipMagnifyStyle(appId: string) {
 }
 
 .app-rail--horizontal .app-rail__icon,
-.app-rail--floating .app-rail__icon {
+.app-rail--vertical .app-rail__icon {
 	width: 19px;
 	height: 19px;
 }
@@ -579,35 +592,25 @@ function chipMagnifyStyle(appId: string) {
 }
 
 .dark .app-rail[data-chip-mode='neutral'] .app-rail__item--active .app-rail__chip {
-	background: hsl(0 0% 100% / 0.16);
-	border-color: hsl(var(--primary) / 0.55);
+	background: hsl(0 0% 100% / 0.22);
+	border-color: hsl(var(--primary) / 0.7);
+	box-shadow:
+		inset 0 1px 0 hsl(0 0% 100% / 0.18),
+		inset 0 -1px 0 hsl(0 0% 0% / 0.2),
+		0 4px 14px -3px hsl(var(--primary) / 0.5);
 }
 
-/* ── Neutral rail surface — slate tint for chip contrast ─────────── */
-/* The default rail background is `bg-background` (near-white), which
- * leaves the frosted chips floating against a same-colour backdrop —
- * the disc shape disappears. A whisper of neutral-grey on the rail
- * itself gives the chips something to sit on, without crossing into
- * "panel" territory. Floating / top / bottom pills already have their
- * own translucent backdrop, so we tint them slightly cooler instead. */
-.app-rail[data-chip-mode='neutral'] {
-	background: hsl(220 14% 95%);
+/* Dark + neutral chip mode: the per-chip icon colour was picked for the
+ * pastel "would-be" gradient (often a deep accent), which leaves it
+ * fighting the dark frosted disc. Swap to the bright variant so the glyph
+ * lifts off the chip — especially on the active state where we want it
+ * to read first. */
+.dark .app-rail[data-chip-mode='neutral'] .app-rail__icon-base {
+	color: var(--rail-icon-bright, hsl(0 0% 92%));
 }
 
-.app-rail[data-chip-mode='neutral'].app-rail--top,
-.app-rail[data-chip-mode='neutral'].app-rail--bottom,
-.app-rail[data-chip-mode='neutral'].app-rail--floating {
-	background: hsl(220 14% 95% / 0.78);
-}
-
-.dark .app-rail[data-chip-mode='neutral'] {
-	background: hsl(0 0% 10%);
-}
-
-.dark .app-rail[data-chip-mode='neutral'].app-rail--top,
-.dark .app-rail[data-chip-mode='neutral'].app-rail--bottom,
-.dark .app-rail[data-chip-mode='neutral'].app-rail--floating {
-	background: hsl(0 0% 8% / 0.78);
+.dark .app-rail[data-chip-mode='neutral'] .app-rail__item--active .app-rail__icon-base {
+	color: hsl(0 0% 100%);
 }
 
 /* Glass-chrome icon overrides live in theme.css under
@@ -615,12 +618,11 @@ function chipMagnifyStyle(appId: string) {
  * `<html>` attribute, so the global stylesheet owns those rules. */
 
 /* ── Label ───────────────────────────────────────────────────────── */
-/* Vertical rail is icon-only; the title-attribute tooltip carries the
- * label. Horizontal mode keeps labels inline. Floating stays icon-only.
- * On narrow viewports (forced-bottom on mobile) we drop the labels too
- * so the centered pill fits comfortably without overflowing. */
+/* Vertical rails (left/right) are always icon-only; the tooltip carries
+ * the label. Horizontal mode keeps labels inline unless icons-only is
+ * toggled. On narrow viewports (forced-bottom on mobile) we also drop
+ * the labels so the centered pill fits comfortably without overflowing. */
 .app-rail--vertical .app-rail__label,
-.app-rail--floating .app-rail__label,
 .app-rail--icons-only .app-rail__label {
 	@apply sr-only;
 }

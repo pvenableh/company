@@ -5,19 +5,10 @@
 		</ClientOnly>
 
 		<div
-			class="apps-shell"
-			:class="[
-				`apps-shell--rail-${railPosition}`,
-				railIsHorizontal ? 'apps-shell--horizontal' : 'apps-shell--vertical',
-			]"
+			class="apps-shell apps-shell--floating-rail"
+			:class="`apps-shell--rail-${railPosition}`"
 			:style="accentStyle"
 		>
-			<AppRail
-				v-if="railPosition === 'left' || railPosition === 'right'"
-				key="rail-vertical"
-				class="apps-shell__rail"
-			/>
-
 			<div class="apps-shell__main">
 				<header class="apps-shell__chrome glass">
 					<div class="apps-shell__chrome-left">
@@ -60,17 +51,18 @@
 					:class="{
 						'apps-shell__page--rail-top': railPosition === 'top',
 						'apps-shell__page--rail-bottom': railPosition === 'bottom',
+						'apps-shell__page--rail-left': railPosition === 'left',
+						'apps-shell__page--rail-right': railPosition === 'right',
 					}"
 				>
 					<slot />
 				</main>
 			</div>
 
-			<AppRail
-				v-if="railPosition === 'top' || railPosition === 'bottom' || railPosition === 'floating'"
-				:key="`rail-${railPosition}`"
-				class="apps-shell__rail"
-			/>
+			<!-- Rail always renders as a single floating pill — left/right
+			     hug the side edges (vertical), top/bottom hug those edges
+			     (horizontal). Position-driven styling lives on the rail itself. -->
+			<AppRail :key="`rail-${railPosition}`" class="apps-shell__rail" />
 		</div>
 
 		<!-- Slide-over teleport target — apps push content into here via <Teleport to="#app-slide-over-root"> -->
@@ -127,8 +119,6 @@ const showOrgSwitcher = ref(false);
 const timeTrackerModalVisible = timeTrackerModalOpen;
 const tokenModalVisible = tokenModalOpen;
 
-const railIsHorizontal = computed(() => railPosition.value === 'top' || railPosition.value === 'bottom');
-
 if (import.meta.client) {
 	onMounted(() => {
 		const handler = (e: KeyboardEvent) => {
@@ -147,23 +137,7 @@ if (import.meta.client) {
 @reference "~/assets/css/tailwind.css";
 
 .apps-shell {
-	@apply flex h-screen min-h-screen w-full;
-}
-
-.apps-shell--vertical {
-	@apply flex-row;
-}
-
-.apps-shell--horizontal {
-	@apply flex-col;
-}
-
-.apps-shell--rail-right {
-	@apply flex-row-reverse;
-}
-
-.apps-shell--rail-bottom {
-	@apply flex-col-reverse;
+	@apply h-screen min-h-screen w-full flex flex-col;
 }
 
 .apps-shell__main {
@@ -196,13 +170,23 @@ if (import.meta.client) {
 	@apply flex-1 overflow-auto min-h-0;
 }
 
-/* Top + bottom rails float as glass pills over the page; pad the scroll area
- * so its content never slides under them. */
+/* The rail floats as a glass pill over the page regardless of side. Pad
+ * the scroll area on the rail's edge so content never slides under it.
+ * Top + bottom keep their original padding; left + right add horizontal
+ * room for the vertical pill (chip width + breathing gap). */
 .apps-shell__page--rail-top {
 	@apply pt-16 sm:pt-20;
 }
 
 .apps-shell__page--rail-bottom {
 	@apply pb-16 sm:pb-20;
+}
+
+.apps-shell__page--rail-left {
+	@apply pl-16 sm:pl-20;
+}
+
+.apps-shell__page--rail-right {
+	@apply pr-16 sm:pr-20;
 }
 </style>

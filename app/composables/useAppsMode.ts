@@ -22,9 +22,17 @@
 import { getCurrentInstance, onMounted, shallowRef, type Ref } from 'vue';
 
 export type AppsLayoutMode = 'classic' | 'apps';
-export type RailPosition = 'left' | 'top' | 'right' | 'bottom' | 'floating';
+export type RailPosition = 'left' | 'top' | 'right' | 'bottom';
 
-const RAIL_POSITIONS: RailPosition[] = ['left', 'top', 'right', 'bottom', 'floating'];
+const RAIL_POSITIONS: RailPosition[] = ['left', 'top', 'right', 'bottom'];
+
+// Older user rows may still carry the retired 'floating' choice. Map it
+// to the closest replacement so the rail still renders cleanly until the
+// next setRailPosition() persists a valid value.
+function normalizePosition(raw: unknown): RailPosition {
+	if (raw === 'floating') return 'bottom';
+	return raw && RAIL_POSITIONS.includes(raw as RailPosition) ? (raw as RailPosition) : 'left';
+}
 
 const localMode = ref<AppsLayoutMode | null>(null);
 const localRailPosition = ref<RailPosition | null>(null);
@@ -64,8 +72,7 @@ async function hydrateFromServer() {
 			// user opts out. Existing users with null/undefined flip into
 			// the new shell; they can toggle back via /account?section=layout.
 			localMode.value = m === 'classic' ? 'classic' : 'apps';
-			const rp = me?.app_rail_position as RailPosition | undefined;
-			localRailPosition.value = rp && RAIL_POSITIONS.includes(rp) ? rp : 'left';
+			localRailPosition.value = normalizePosition(me?.app_rail_position);
 		} catch {
 			localMode.value = 'apps';
 			localRailPosition.value = 'left';
@@ -105,8 +112,7 @@ export function useAppsMode() {
 
 	const storedRailPosition = computed<RailPosition>(() => {
 		if (localRailPosition.value !== null) return localRailPosition.value;
-		const raw = (user.value as any)?.app_rail_position as RailPosition | undefined;
-		return raw && RAIL_POSITIONS.includes(raw) ? raw : 'left';
+		return normalizePosition((user.value as any)?.app_rail_position);
 	});
 
 	// Small + medium screens (phones + tablets, < lg) force bottom for thumb

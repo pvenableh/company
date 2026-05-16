@@ -119,7 +119,10 @@ const fallbackBackLabel = computed(() => {
 					<slot name="actions" />
 				</div>
 			</div>
-			<p v-if="introContent" class="app-header__tagline">{{ introContent.tagline }}</p>
+			<!-- Tagline is part of the intro experience — only surfaces once
+			     the user has clicked the info button. Same toggle that
+			     reveals the AppIntroCard below the header. -->
+			<p v-if="introContent && introOpen" class="app-header__tagline">{{ introContent.tagline }}</p>
 		</div>
 	</header>
 </template>
@@ -252,8 +255,17 @@ html[data-surface='glass'] .app-header__accent-glyph {
 
 html.dark[data-chip-mode='neutral'] .app-header__accent-icon,
 html.dark[data-surface='glass'] .app-header__accent-icon {
-	background: hsl(0 0% 100% / 0.06);
-	border-color: hsl(0 0% 100% / 0.14);
+	background: hsl(0 0% 100% / 0.1);
+	border-color: hsl(0 0% 100% / 0.22);
+}
+
+/* Dark + neutral / glass: the per-app icon colour (`--app-accent-icon`)
+ * was chosen for the pastel "would-be" gradient and reads as a muddy dark
+ * glyph on a dark frosted disc. Force a near-white tone so the header
+ * accent reads as confidently as it does in light mode. */
+html.dark[data-chip-mode='neutral'] .app-header__accent-base,
+html.dark[data-surface='glass'] .app-header__accent-base {
+	color: hsl(0 0% 96%);
 }
 
 .app-header__title {

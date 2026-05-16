@@ -59,8 +59,8 @@
 							<div class="flex-1 min-w-0">
 								<p class="text-sm font-medium">Rail Position</p>
 								<p class="text-xs text-muted-foreground mt-1">
-									Where the app rail sits. Left and right are vertical columns; top
-									is a horizontal strip.
+									Which edge the rail hugs. Every position renders as a floating
+									glass pill.
 								</p>
 							</div>
 							<Select
@@ -76,7 +76,6 @@
 									<SelectItem value="top">Top</SelectItem>
 									<SelectItem value="right">Right</SelectItem>
 									<SelectItem value="bottom">Bottom</SelectItem>
-									<SelectItem value="floating">Floating</SelectItem>
 								</SelectContent>
 							</Select>
 						</div>
