@@ -36,9 +36,32 @@
 					<EarnestProfilePanel />
 				</section>
 
-				<section v-else-if="section === 'layout'" class="max-w-xl">
-					<h2 class="account-page__heading">Layout</h2>
-					<div class="ios-card p-5 space-y-6">
+				<section v-else-if="section === 'appearance'" class="w-full">
+					<h2 class="account-page__heading">Appearance</h2>
+
+					<!-- Dark mode (top-of-section quick toggle) -->
+					<div class="ios-card flex items-center justify-between gap-4 p-4 mb-6">
+						<div class="flex items-center gap-3 min-w-0">
+							<span class="flex items-center justify-center size-9 rounded-lg bg-muted/60 text-foreground/80 shrink-0">
+								<Icon :name="isDark ? 'lucide:moon' : 'lucide:sun'" class="size-4" />
+							</span>
+							<div class="min-w-0">
+								<p class="text-sm font-semibold">Dark mode</p>
+								<p class="text-xs text-muted-foreground">Use a dark colour scheme across the entire app.</p>
+							</div>
+						</div>
+						<Switch :model-value="isDark" @update:model-value="toggleDark" />
+					</div>
+
+					<!-- Theme + Typography (full width, modernized grid) -->
+					<ThemeSwitcher />
+
+					<!-- Layout — apps mode + rail position. Same surface as theme
+					     because the two interact (palette only visibly applies in
+					     apps mode) and the user thinks of them as one bucket: how
+					     the app looks. -->
+					<h3 class="account-page__subheading">Layout</h3>
+					<div class="ios-card p-5 space-y-6 max-w-xl">
 						<div class="flex items-start justify-between gap-4">
 							<div class="flex-1 min-w-0">
 								<p class="text-sm font-medium">Apps Layout</p>
@@ -98,27 +121,6 @@
 							/>
 						</div>
 					</div>
-				</section>
-
-				<section v-else-if="section === 'appearance'" class="w-full">
-					<h2 class="account-page__heading">Appearance</h2>
-
-					<!-- Dark mode (top-of-section quick toggle) -->
-					<div class="ios-card flex items-center justify-between gap-4 p-4 mb-6">
-						<div class="flex items-center gap-3 min-w-0">
-							<span class="flex items-center justify-center size-9 rounded-lg bg-muted/60 text-foreground/80 shrink-0">
-								<Icon :name="isDark ? 'lucide:moon' : 'lucide:sun'" class="size-4" />
-							</span>
-							<div class="min-w-0">
-								<p class="text-sm font-semibold">Dark mode</p>
-								<p class="text-xs text-muted-foreground">Use a dark colour scheme across the entire app.</p>
-							</div>
-						</div>
-						<Switch :model-value="isDark" @update:model-value="toggleDark" />
-					</div>
-
-					<!-- Theme + Typography (full width, modernized grid) -->
-					<ThemeSwitcher />
 				</section>
 
 				<section v-else-if="section === 'notifications'" class="max-w-xl">
@@ -235,7 +237,7 @@ import {
 } from '@/components/ui/select';
 import type { RailPosition } from '~/composables/useAppsMode';
 
-type SectionKey = 'profile' | 'password' | 'score' | 'layout' | 'appearance' | 'notifications';
+type SectionKey = 'profile' | 'password' | 'score' | 'appearance' | 'notifications';
 
 const { user } = useDirectusAuth();
 const { isAppsMode, railPosition, railShowLabels, setMode, setRailPosition, setRailShowLabels } = useAppsMode();
@@ -252,14 +254,16 @@ const sections: Array<{ key: SectionKey; label: string; icon: string }> = [
 	{ key: 'profile',       label: 'Profile',       icon: 'lucide:user-round' },
 	{ key: 'password',      label: 'Password',      icon: 'lucide:key-round' },
 	{ key: 'score',         label: 'Earnest Score', icon: 'lucide:sparkles' },
-	{ key: 'layout',        label: 'Layout',        icon: 'lucide:layout-grid' },
 	{ key: 'appearance',    label: 'Appearance',    icon: 'lucide:palette' },
 	{ key: 'notifications', label: 'Notifications', icon: 'lucide:bell' },
 ];
 
 const SECTION_KEYS: SectionKey[] = sections.map((s) => s.key);
+// Legacy /account?section=layout links land on Appearance now — the
+// layout controls live as a card inside that section.
 const initialSection: SectionKey = (() => {
 	const v = route.query.section;
+	if (v === 'layout') return 'appearance';
 	return typeof v === 'string' && SECTION_KEYS.includes(v as SectionKey)
 		? (v as SectionKey)
 		: 'profile';

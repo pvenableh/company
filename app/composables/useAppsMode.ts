@@ -70,7 +70,7 @@ async function hydrateFromServer() {
 			const m = me?.layout_mode;
 			// Default is 'apps' — only an explicit 'classic' stored on the
 			// user opts out. Existing users with null/undefined flip into
-			// the new shell; they can toggle back via /account?section=layout.
+			// the new shell; they can toggle back via /account?section=appearance.
 			localMode.value = m === 'classic' ? 'classic' : 'apps';
 			localRailPosition.value = normalizePosition(me?.app_rail_position);
 		} catch {
