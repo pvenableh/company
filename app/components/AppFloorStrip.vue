@@ -53,7 +53,8 @@ defineEmits<{
 				:class="{ 'app-floor-strip__item--active': modelValue === seg.key }"
 				@click="$emit('update:modelValue', seg.key)"
 			>
-				<Icon :name="seg.icon" class="app-floor-strip__icon" />
+				<EarnestIcon v-if="seg.icon === 'earnest'" class="app-floor-strip__icon" />
+				<Icon v-else :name="seg.icon" class="app-floor-strip__icon" />
 				<span class="app-floor-strip__label">{{ seg.label }}</span>
 			</button>
 		</div>

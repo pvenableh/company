@@ -2,6 +2,7 @@
 import type { Client } from '~~/shared/directus';
 import type { Contact } from '~~/shared/email/contacts';
 import { Button } from '~/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '~/components/ui/dropdown-menu';
 import { useDebounceFn } from '@vueuse/core';
 import { CONNECTION_ROLE_LABELS } from '~/composables/useContactConnections';
 
@@ -30,16 +31,57 @@ const segments: Array<{ key: ViewKey; label: string; icon: string }> = [
   { key: 'clients', label: 'By Client', icon: 'lucide:building-2' },
   { key: 'contacts', label: 'All Contacts', icon: 'lucide:users' },
   { key: 'partners', label: 'Partners', icon: 'lucide:network' },
-  { key: 'intelligence', label: 'Intelligence', icon: 'lucide:sparkles' },
+  { key: 'intelligence', label: 'Intelligence', icon: 'earnest' },
 ];
 
 // ── Intelligence data ──────────────────────────────────────────────────────
 const { intelligence, intelligenceLoading, fetchIntelligence } = useCRMIntelligence();
 
 // ── Clients data ───────────────────────────────────────────────────────────
-const { getClients, deleteClient: doDelete } = useClients();
+const { getClients, deleteClient: doDelete, updateClient } = useClients();
 const { getStatusBadgeClasses } = useStatusStyle();
 const { selectedOrg } = useOrganization();
+
+// Persisted "View as Table / Board" toggle (per-user). Stored client-side
+// only — power users tend to lock in one or the other and switch is rare.
+const clientsViewMode = useCookie<'table' | 'board'>('clients-view-mode', { default: () => 'table' });
+
+const STATUS_QUICK_OPTIONS: Array<{ value: 'active' | 'prospect' | 'inactive' | 'archived'; label: string }> = [
+  { value: 'active', label: 'Active' },
+  { value: 'prospect', label: 'Prospect' },
+  { value: 'inactive', label: 'Inactive' },
+  { value: 'archived', label: 'Archived' },
+];
+
+async function changeClientStatus(
+  client: Client,
+  next: 'active' | 'prospect' | 'inactive' | 'archived',
+) {
+  const patch: Partial<Client> = {};
+  if (next === 'archived') {
+    patch.status = 'archived' as Client['status'];
+  } else {
+    patch.account_state = next;
+    if (client.status === 'archived') patch.status = 'published' as Client['status'];
+  }
+  // Optimistic local update so the row reflects the new bucket immediately;
+  // the next fetch reconciles authoritative state.
+  Object.assign(client, patch);
+  try {
+    await updateClient(client.id as string, patch);
+  } finally {
+    fetchClients();
+  }
+}
+
+function onBoardUpdate(payload: { id: string; account_state?: Client['account_state']; status?: string }) {
+  const c = allClients.value.find((x) => x.id === payload.id);
+  if (!c) return;
+  const next = payload.status === 'archived'
+    ? 'archived'
+    : (payload.account_state || 'active');
+  changeClientStatus(c, next as 'active' | 'prospect' | 'inactive' | 'archived');
+}
 
 const allClients = ref<Client[]>([]);
 const clientsTotal = ref(0);
@@ -52,7 +94,6 @@ const clientTabs = [
   { label: 'Active', value: 'active', color: 'bg-success', kind: 'accountState' as const },
   { label: 'Prospects', value: 'prospect', color: 'bg-warning', kind: 'accountState' as const },
   { label: 'Inactive', value: 'inactive', color: 'bg-neutral-400', kind: 'accountState' as const },
-  { label: 'Churned', value: 'churned', color: 'bg-destructive', kind: 'accountState' as const },
   { label: 'Archived', value: 'archived', color: 'bg-zinc-400', kind: 'status' as const },
 ];
 const activeClientTab = ref('active');
@@ -66,9 +107,12 @@ function clientTabFilter(value: string): { status?: string; accountState?: strin
 async function fetchClients() {
   clientsLoading.value = true;
   try {
+    // Board view needs every column populated, so skip the per-tab filter
+    // when in board mode — drag-and-drop crosses all four columns.
+    const filter = clientsViewMode.value === 'board' ? {} : clientTabFilter(activeClientTab.value);
     const result = await getClients({
       search: clientSearch.value || undefined,
-      ...clientTabFilter(activeClientTab.value),
+      ...filter,
       sort: ['sort', 'name'],
       limit: 200,
       page: 1,
@@ -299,12 +343,36 @@ watch(view, (next) => {
 
       <!-- ── Clients view ─────────────────────────────────────────────── -->
       <template v-if="view === 'clients'">
-        <UTabs
-          v-model="activeClientTab"
-          :items="clientTabs.map((t) => ({ key: t.value, label: t.label, dotColor: t.color }))"
-          class="mb-5 w-fit"
-          @change="fetchClients"
-        />
+        <div class="flex items-center justify-between gap-3 mb-5 flex-wrap">
+          <UTabs
+            v-if="clientsViewMode === 'table'"
+            v-model="activeClientTab"
+            :items="clientTabs.map((t) => ({ key: t.value, label: t.label, dotColor: t.color }))"
+            class="w-fit"
+            @change="fetchClients"
+          />
+          <div v-else class="text-xs text-muted-foreground">Drag a card to change its status.</div>
+          <div class="inline-flex items-center gap-0.5 p-0.5 bg-muted/40 rounded-full text-[12px] font-medium">
+            <button
+              type="button"
+              class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-colors"
+              :class="clientsViewMode === 'table' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+              @click="clientsViewMode = 'table'"
+            >
+              <Icon name="lucide:list" class="w-3.5 h-3.5" />
+              Table
+            </button>
+            <button
+              type="button"
+              class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-colors"
+              :class="clientsViewMode === 'board' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+              @click="clientsViewMode = 'board'; activeClientTab = 'active'; fetchClients()"
+            >
+              <Icon name="lucide:columns-3" class="w-3.5 h-3.5" />
+              Board
+            </button>
+          </div>
+        </div>
 
         <div class="flex gap-3 mb-5 flex-wrap items-center">
           <input
@@ -316,7 +384,15 @@ watch(view, (next) => {
           />
         </div>
 
-        <div v-if="clientsLoading" class="flex flex-col items-center justify-center py-24 gap-3">
+        <ClientsBoard
+          v-if="clientsViewMode === 'board'"
+          :clients="allClients"
+          :loading="clientsLoading"
+          @view="viewClient"
+          @update="onBoardUpdate"
+        />
+
+        <div v-else-if="clientsLoading" class="flex flex-col items-center justify-center py-24 gap-3">
           <Icon name="lucide:loader-2" class="w-8 h-8 text-muted-foreground animate-spin" />
           <p class="text-sm text-muted-foreground">Loading clients...</p>
         </div>
@@ -353,7 +429,7 @@ watch(view, (next) => {
                   v-for="client in allClients"
                   :key="client.id"
                   class="border-b border-border/30 last:border-b-0 hover:bg-muted/20 cursor-pointer transition-colors"
-                  :class="{ 'opacity-50': client.account_state === 'inactive' || client.account_state === 'churned' || client.status === 'archived' }"
+                  :class="{ 'opacity-50': client.account_state === 'inactive' || client.status === 'archived' }"
                   @click="viewClient(client)"
                 >
                   <td class="py-3 px-4">
@@ -375,13 +451,36 @@ watch(view, (next) => {
                       <span class="font-medium truncate max-w-[200px]">{{ client.name }}</span>
                     </div>
                   </td>
-                  <td class="py-3 px-4">
-                    <span
-                      class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize"
-                      :class="getStatusBadgeClasses(client.account_state || 'active')"
-                    >
-                      {{ client.account_state || 'active' }}
-                    </span>
+                  <td class="py-3 px-4" @click.stop>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger as-child>
+                        <button
+                          type="button"
+                          class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium capitalize hover:opacity-80"
+                          :class="getStatusBadgeClasses(client.status === 'archived' ? 'archived' : (client.account_state || 'active'))"
+                          :title="`Change status (current: ${client.status === 'archived' ? 'archived' : (client.account_state || 'active')})`"
+                        >
+                          {{ client.status === 'archived' ? 'archived' : (client.account_state || 'active') }}
+                          <Icon name="lucide:chevron-down" class="w-3 h-3 opacity-60" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" class="w-40">
+                        <DropdownMenuItem
+                          v-for="opt in STATUS_QUICK_OPTIONS"
+                          :key="opt.value"
+                          @select="changeClientStatus(client, opt.value)"
+                        >
+                          <span
+                            class="w-2 h-2 rounded-full mr-2"
+                            :class="opt.value === 'active' ? 'bg-success'
+                              : opt.value === 'prospect' ? 'bg-warning'
+                              : opt.value === 'inactive' ? 'bg-neutral-400'
+                              : 'bg-zinc-400'"
+                          />
+                          {{ opt.label }}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </td>
                   <td class="py-3 px-4 text-muted-foreground">
                     {{ getPrimaryContactName(client) || '—' }}

@@ -84,10 +84,19 @@ function styleFor(app: AppAccent) {
 // on distance from the cursor. Disabled on touch, small screens, and the
 // vertical rails — only horizontal pills (top/bottom/floating) light up.
 const railEl = ref<HTMLElement | null>(null);
-const isLargeHoverCapable = useMediaQuery('(min-width: 1024px) and (hover: hover) and (pointer: fine)');
+// `any-hover` + `any-pointer` instead of `hover`/`pointer` so devices with a
+// secondary fine pointer light up the dock — iPadOS reports a coarse primary
+// pointer even with a Magic Keyboard / trackpad / mouse attached, but exposes
+// the fine pointer via the `any-*` variants. Threshold drops to 980px so
+// iPad Air landscape (1180px) clears it with margin.
+const isLargeHoverCapable = useMediaQuery('(min-width: 980px) and (any-hover: hover) and (any-pointer: fine)');
 const magnifyEnabled = computed(() => isHorizontal.value && isLargeHoverCapable.value);
 
 const itemScales = reactive<Record<string, number>>({});
+// Sideways push for each chip, in CSS pixels. Adjacent chips shift outward
+// from the focal chip to make room for its scaled-up footprint — the macOS
+// Dock effect. Re-computed every pointermove alongside `itemScales`.
+const itemShifts = reactive<Record<string, number>>({});
 
 function applyMagnification(clientX: number) {
 	const root = railEl.value;
@@ -97,6 +106,14 @@ function applyMagnification(clientX: number) {
 	// the focused chip, larger peak so the hovered chip pops clearly.
 	const reach = 160;
 	const max = 0.65; // hovered chip grows up to 1.65×
+	// Base chip diameter (matches `.app-rail__chip` width on horizontal
+	// rails). Used to convert each chip's scale into the number of extra
+	// CSS pixels its footprint adds, which then drives the push-aside
+	// shift below.
+	const chipBase = 32;
+
+	// First pass: per-chip scale based on cursor distance.
+	const data: Array<{ id: string; scale: number }> = [];
 	items.forEach((el) => {
 		const id = el.getAttribute('data-app-id');
 		if (!id) return;
@@ -108,12 +125,32 @@ function applyMagnification(clientX: number) {
 		// the cursor so neighbours stay relatively flat until the cursor
 		// is near them, then grow quickly. Matches Dock's feel.
 		const eased = t * t * (3 - 2 * t);
-		itemScales[id] = 1 + eased * max;
+		const scale = 1 + eased * max;
+		data.push({ id, scale });
+	});
+
+	// Second pass: push-aside shift. Each chip's added footprint is
+	// `(scale - 1) * chipBase`; half of that pushes left, half pushes
+	// right. For a chip at index i, sum the half-footprints from chips
+	// to its left (push i rightward) and subtract those from the right
+	// (push i leftward) so the visual gaps open symmetrically around
+	// the focal chip while the rail's total width stays constant.
+	data.forEach((cur, i) => {
+		let shift = 0;
+		for (let j = 0; j < data.length; j++) {
+			if (j === i) continue;
+			const grown = (data[j]!.scale - 1) * chipBase;
+			if (j < i) shift += grown / 2;
+			else shift -= grown / 2;
+		}
+		itemScales[cur.id] = cur.scale;
+		itemShifts[cur.id] = shift;
 	});
 }
 
 function resetMagnification() {
 	for (const key of Object.keys(itemScales)) itemScales[key] = 1;
+	for (const key of Object.keys(itemShifts)) itemShifts[key] = 0;
 }
 
 function onPointerMove(e: PointerEvent) {
@@ -126,11 +163,28 @@ function onPointerLeave() {
 	resetMagnification();
 }
 
+/**
+ * Sideways push for the whole item (chip + label). Living on the wrapper
+ * means the label rides along with its chip — just like a macOS Dock icon
+ * label hugs the icon as it slides aside. The wrapper itself doesn't scale.
+ */
+function itemMagnifyStyle(appId: string) {
+	if (!magnifyEnabled.value) return undefined;
+	const x = itemShifts[appId] ?? 0;
+	if (Math.abs(x) < 0.25) return undefined;
+	return { transform: `translateX(${x.toFixed(2)}px)` };
+}
+
+/**
+ * Per-chip scale only. Kept separate from the wrapper's translate so the
+ * label below stays a constant size — only the gradient tile lifts and
+ * grows, matching the Dock convention where the caption never scales.
+ */
 function chipMagnifyStyle(appId: string) {
 	if (!magnifyEnabled.value) return undefined;
 	const s = itemScales[appId];
 	if (!s || s === 1) return undefined;
-	return { transform: `scale(${s})` };
+	return { transform: `scale(${s.toFixed(3)})` };
 }
 </script>
 
@@ -157,7 +211,7 @@ function chipMagnifyStyle(appId: string) {
 								:to="app.to"
 								class="app-rail__item"
 								:class="{ 'app-rail__item--active': activeId === app.id }"
-								:style="styleFor(app)"
+								:style="[styleFor(app), itemMagnifyStyle(app.id)]"
 								:data-app-id="app.id"
 								:aria-label="app.name"
 							>
@@ -174,7 +228,7 @@ function chipMagnifyStyle(appId: string) {
 										:aria-label="`${badgeFor(app)} unread`"
 									>{{ badgeLabel(badgeFor(app)) }}</span>
 								</span>
-								<span class="app-rail__label">{{ app.name }}</span>
+								<span class="app-rail__label">{{ app.shortName || app.name }}</span>
 							</NuxtLink>
 						</TooltipTrigger>
 						<TooltipContent v-if="showTooltip" :side="tooltipSide" :side-offset="8">
@@ -184,8 +238,6 @@ function chipMagnifyStyle(appId: string) {
 				</li>
 			</ul>
 
-			<span class="app-rail__divider" aria-hidden="true" />
-
 			<ul class="app-rail__group app-rail__group--footer">
 				<li v-for="app in footer" :key="app.id">
 					<Tooltip>
@@ -194,7 +246,7 @@ function chipMagnifyStyle(appId: string) {
 								:to="app.to"
 								class="app-rail__item"
 								:class="{ 'app-rail__item--active': activeId === app.id }"
-								:style="styleFor(app)"
+								:style="[styleFor(app), itemMagnifyStyle(app.id)]"
 								:data-app-id="app.id"
 								:aria-label="app.name"
 							>
@@ -211,7 +263,7 @@ function chipMagnifyStyle(appId: string) {
 										:aria-label="`${badgeFor(app)} unread`"
 									>{{ badgeLabel(badgeFor(app)) }}</span>
 								</span>
-								<span class="app-rail__label">{{ app.name }}</span>
+								<span class="app-rail__label">{{ app.shortName || app.name }}</span>
 							</NuxtLink>
 						</TooltipTrigger>
 						<TooltipContent v-if="showTooltip" :side="tooltipSide" :side-offset="8">
@@ -257,6 +309,21 @@ function chipMagnifyStyle(appId: string) {
 	}
 	.app-rail--horizontal .app-rail__item {
 		padding: 4px 4px;
+	}
+}
+
+/* Tablet + desktop, horizontal rails only (top / bottom): give chips
+ * room to breathe so the row reads as a line-up of distinct iOS-style
+ * tiles instead of a packed strip. Bumps both the rail-level gap
+ * (between groups) and the per-group gap (between chips). Vertical
+ * rails keep their tighter row-gap. */
+@media (min-width: 768px) {
+	.app-rail--horizontal {
+		@apply px-4 py-2;
+		column-gap: 8px;
+	}
+	.app-rail--horizontal .app-rail__group {
+		column-gap: 8px;
 	}
 }
 
@@ -360,14 +427,31 @@ function chipMagnifyStyle(appId: string) {
 	@apply flex flex-col items-center justify-center
 		rounded-lg
 		text-muted-foreground
-		transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]
 		no-underline;
 	padding: 2px;
+	will-change: transform;
+	/* Two-speed transitions: snap the transform (80ms) so cursor-driven
+	 * push-aside tracks the pointer in real time, while colour / bg /
+	 * shadow keep the existing 200ms ease for soft hover state. */
+	transition:
+		color 200ms cubic-bezier(0.16, 1, 0.3, 1),
+		background 200ms cubic-bezier(0.16, 1, 0.3, 1),
+		box-shadow 200ms cubic-bezier(0.16, 1, 0.3, 1),
+		transform 80ms ease-out;
 }
 
 .app-rail--horizontal .app-rail__item {
-	@apply flex-row gap-2;
-	padding: 4px 10px;
+	@apply flex-col items-center justify-center;
+	gap: 4px;
+	padding: 4px 4px;
+}
+
+/* Fixed cell width when labels are visible — chip ≈ 32px + breathing pad
+ * keeps every chip on the same column even when the label below is
+ * "Mktg" vs "Clients". Without labels, items hug the chip naturally so
+ * mobile/phones with sr-only labels don't waste horizontal space. */
+.app-rail--horizontal:not(.app-rail--icons-only) .app-rail__item {
+	width: 48px;
 }
 
 .app-rail--vertical .app-rail__item {
@@ -645,13 +729,23 @@ function chipMagnifyStyle(appId: string) {
 	}
 }
 
+/* iOS home-screen style — tiny, ALL CAPS, widely tracked, low contrast.
+ * Hidden by default (railShowLabels=false); when shown they sit directly
+ * under the chip in horizontal rails. */
 .app-rail__label {
-	font-size: 11px;
-	font-weight: 500;
-	letter-spacing: 0.02em;
+	font-size: 8px;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
 	line-height: 1;
 	color: hsl(var(--muted-foreground));
 	transition: color 0.2s ease;
+	/* Truncate inside the chip cell so a longer name can't overflow into
+	 * its neighbour and break the iOS-grid alignment. */
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .app-rail__item:hover .app-rail__label {

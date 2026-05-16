@@ -283,11 +283,11 @@
 		<!-- Empty state -->
 		<div v-else-if="!stats" class="flex flex-col items-center justify-center py-16">
 			<div class="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
-				<UIcon name="i-heroicons-sparkles" class="w-6 h-6 text-primary" />
+				<EarnestIcon class="w-6 h-6 text-primary" />
 			</div>
 			<h3 class="font-semibold text-foreground mb-1">No usage data yet</h3>
 			<p class="text-sm text-muted-foreground text-center max-w-sm">
-				AI usage will appear here as your team uses AI features like Chat, Marketing Intelligence, Social, and Email generators.
+				Earnest usage will appear here as your team uses Earnest features like Chat, Marketing Intelligence, Social, and Email generators.
 			</p>
 		</div>
 		</template>

@@ -89,7 +89,37 @@ const DEFAULT_HAT: Hat = {
 	routes: [...DEFAULT_VISIBLE_ROUTES],
 };
 
-const HATS: Hat[] = [DEFAULT_HAT];
+const HATS: Hat[] = [
+	DEFAULT_HAT,
+	{
+		id: 'project_manager',
+		icon: 'i-fluent-emoji-flat-clipboard',
+		name: 'Project Manager',
+		description: 'Projects, tickets, tasks & scheduling',
+		routes: ['/', '/projects', '/tickets', '/tasks', '/scheduler', '/channels', '/activity', '/contacts'],
+	},
+	{
+		id: 'accountant',
+		icon: 'i-fluent-emoji-flat-money-bag',
+		name: 'Accountant',
+		description: 'Invoices, contracts, expenses & reports',
+		routes: ['/', '/invoices', '/contracts', '/expenses', '/financials', '/time-tracker', '/contacts', '/organization?tab=billing'],
+	},
+	{
+		id: 'salesman',
+		icon: 'i-fluent-emoji-flat-rocket',
+		name: 'Salesman',
+		description: 'Leads, proposals, CRM & outreach',
+		routes: ['/', '/leads', '/proposals', '/clients', '/contacts', '/contracts', '/scheduler', '/email'],
+	},
+	{
+		id: 'marketing_manager',
+		icon: 'i-fluent-emoji-flat-bullseye',
+		name: 'Marketing Manager',
+		description: 'Campaigns, social, email & insights',
+		routes: ['/', '/marketing', '/social', '/email', '/contacts', '/scheduler'],
+	},
+];
 
 const HAT_STORAGE_KEY = 'earnest-active-hat';
 
@@ -189,14 +219,18 @@ export const useNavPreferences = () => {
 		}, 500);
 	};
 
-	/** @deprecated Hats removed in Phase 7; kept as no-op for one release. */
-	const setHat = (_hatId: string) => {};
+	const setHat = (hatId: string) => {
+		if (!HATS.some(h => h.id === hatId)) return;
+		activeHatId.value = hatId;
+		save();
+	};
 
-	/** @deprecated Hats removed in Phase 7; no-op. */
+	/** Stays a no-op — hats are an explicit user choice, not derived. */
 	const applySmartDefaultHat = () => {};
 
-	/** @deprecated Always returns the Default hat — hats are removed. */
-	const activeHat = computed<Hat>(() => DEFAULT_HAT);
+	const activeHat = computed<Hat>(() => {
+		return HATS.find(h => h.id === activeHatId.value) ?? DEFAULT_HAT;
+	});
 
 	const toggle = (route: string) => {
 		const set = new Set(visible.value);

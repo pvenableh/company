@@ -71,7 +71,6 @@ const ACCOUNT_STATE_FIELD = {
         { text: 'Active', value: 'active', color: 'var(--theme--primary)' },
         { text: 'Prospect', value: 'prospect', color: 'var(--theme--foreground)' },
         { text: 'Inactive', value: 'inactive', color: 'var(--theme--warning)' },
-        { text: 'Churned', value: 'churned', color: 'var(--theme--danger)' },
       ],
     },
     display: 'labels',
@@ -81,7 +80,6 @@ const ACCOUNT_STATE_FIELD = {
         { text: 'Active', value: 'active', foreground: 'var(--theme--primary)', background: 'var(--theme--primary-background)' },
         { text: 'Prospect', value: 'prospect', foreground: 'var(--theme--foreground)', background: 'var(--theme--background-normal)' },
         { text: 'Inactive', value: 'inactive', foreground: 'var(--theme--warning)', background: 'var(--theme--warning-background)' },
-        { text: 'Churned', value: 'churned', foreground: 'var(--theme--danger)', background: 'var(--theme--danger-background)' },
       ],
     },
     note: 'Customer relationship state. Lifecycle (published/draft/archived) lives on `status`.',
@@ -110,7 +108,7 @@ async function main() {
 
   console.log('\nPlan:');
   console.log('  - POST /fields/clients — create `account_state` (string, dropdown, default "active", nullable)');
-  console.log('    enum: active | prospect | inactive | churned');
+  console.log('    enum: active | prospect | inactive');
   console.log('    interface mirrors current clients.status (same colors + dot display)');
 
   if (!APPLY) {

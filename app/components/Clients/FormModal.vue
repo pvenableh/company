@@ -52,7 +52,6 @@ const accountStateOptions = [
 	{ id: 'active', name: 'Active' },
 	{ id: 'prospect', name: 'Prospect' },
 	{ id: 'inactive', name: 'Inactive' },
-	{ id: 'churned', name: 'Churned' },
 ];
 
 watch(isOpen, (open) => {

@@ -133,7 +133,8 @@ const CLIENT_SEEDS: Array<{
 	name: string;
 	industry: string;
 	website: string;
-	account_state: 'active' | 'prospect' | 'inactive' | 'churned';
+	account_state: 'active' | 'prospect' | 'inactive';
+	status?: 'published' | 'archived';
 	code: string;
 }> = [
 	{ key: 'helios-studio', name: 'Helios Hospitality Group', industry: 'Hospitality', website: 'https://helios.example', account_state: 'active', code: 'HEL' },
@@ -141,7 +142,7 @@ const CLIENT_SEEDS: Array<{
 	{ key: 'northwind-dev', name: 'Northwind Development', industry: 'Real Estate', website: 'https://northwind.example', account_state: 'prospect', code: 'NWD' },
 	{ key: 'pinecrest-clinic', name: 'Pinecrest Clinic', industry: 'Healthcare', website: 'https://pinecrest.example', account_state: 'active', code: 'PIN' },
 	{ key: 'atlas-fintech', name: 'Atlas Fintech', industry: 'Finance', website: 'https://atlas.example', account_state: 'inactive', code: 'ATL' },
-	{ key: 'beacon-school', name: 'Beacon School', industry: 'Education', website: 'https://beacon.example', account_state: 'churned', code: 'BCN' },
+	{ key: 'beacon-school', name: 'Beacon School', industry: 'Education', website: 'https://beacon.example', account_state: 'inactive', status: 'archived', code: 'BCN' },
 ];
 
 async function seedClients(orgId: string): Promise<Record<string, string>> {
@@ -158,7 +159,7 @@ async function seedClients(orgId: string): Promise<Record<string, string>> {
 				website: c.website,
 				account_state: c.account_state,
 				code: c.code,
-				status: 'published',
+				status: c.status ?? 'published',
 				notes: 'Agency demo seed.',
 			},
 			`client "${c.name}"`,
@@ -193,7 +194,7 @@ const CONTACT_SEEDS: Array<{
 	{ first_name: 'Sana', last_name: 'Mirza', email: 'sana@northwind.example', title: 'Co-Principal', company: 'Northwind Development', category: 'prospect', clientKey: 'northwind-dev' },
 	// Atlas (inactive)
 	{ first_name: 'Julia', last_name: 'Holt', email: 'julia@atlas.example', title: 'VP Marketing', company: 'Atlas Fintech', category: 'client', clientKey: 'atlas-fintech' },
-	// Beacon (churned)
+	// Beacon (archived)
 	{ first_name: 'Pat', last_name: 'Dowling', email: 'pat@beacon.example', title: 'Head of School', company: 'Beacon School', category: 'client', clientKey: 'beacon-school' },
 
 	// Free-floating prospects (no client yet)

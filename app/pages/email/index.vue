@@ -156,7 +156,7 @@ onUnmounted(() => clearEntity());
 					class="rounded-full px-3 py-1.5 text-[11px] font-medium border border-border bg-card hover:bg-muted ios-press inline-flex items-center gap-1.5 transition-colors"
 					@click="sidebarOpen = true"
 				>
-					<Icon name="lucide:sparkles" class="w-3 h-3" />
+					<EarnestIcon class="w-3 h-3" />
 					<span class="hidden sm:inline">Ask Earnest</span>
 				</button>
 				<NuxtLink to="/contacts/import">
@@ -443,11 +443,11 @@ onUnmounted(() => clearEntity());
 								@click="startMethod = 'ai'"
 							>
 								<div class="w-8 h-8 rounded-xl bg-violet-500/10 flex items-center justify-center">
-									<Icon name="lucide:sparkles" class="w-4 h-4 text-violet-500" />
+									<EarnestIcon class="w-4 h-4 text-violet-500" />
 								</div>
 								<div class="flex-1">
-									<p class="text-sm font-medium text-foreground">AI Generate</p>
-									<p class="text-[11px] text-muted-foreground">Describe your email, AI builds it</p>
+									<p class="text-sm font-medium text-foreground">Earnest Generate</p>
+									<p class="text-[11px] text-muted-foreground">Describe your email, Earnest builds it</p>
 								</div>
 								<Icon name="lucide:chevron-right" class="w-4 h-4 text-muted-foreground/40" />
 							</button>
@@ -494,7 +494,7 @@ onUnmounted(() => clearEntity());
 								:disabled="!newTemplateName.trim() || creatingTemplate"
 								@click="handleCreateTemplate"
 							>
-								<Icon v-if="startMethod === 'ai'" name="lucide:sparkles" class="w-3 h-3" />
+								<EarnestIcon v-if="startMethod === 'ai'" class="w-3 h-3" />
 								{{ creatingTemplate ? 'Creating...' : startMethod === 'ai' ? 'Create & Generate' : 'Create' }}
 							</button>
 						</div>

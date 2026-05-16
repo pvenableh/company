@@ -280,7 +280,7 @@ const totalActiveStaleCount = computed(() => rows.value.filter((r) => {
 			<!-- Reflection slot — populated by chunk c. Renders only after submit. -->
 			<div v-if="submitted && (reflectionLoading || reflection || reflectionError)" class="border border-primary/20 bg-primary/5 rounded-xl p-3 space-y-1">
 				<div class="flex items-center gap-1.5">
-					<UIcon name="i-heroicons-sparkles" class="w-3.5 h-3.5 text-primary" />
+					<EarnestIcon class="w-3.5 h-3.5 text-primary" />
 					<p class="text-[11px] font-semibold uppercase tracking-wide text-primary">Reflection</p>
 				</div>
 				<div v-if="reflectionLoading" class="space-y-1.5">

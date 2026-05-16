@@ -73,12 +73,12 @@ const handleAI = () => {
 			<span class="ios-tab-label">{{ displayName(link) }}</span>
 		</nuxt-link>
 
-		<!-- AI Assistant center button -->
+		<!-- Earnest assistant center button -->
 		<button class="ios-tab-item ios-tab-ai" @click="handleAI">
 			<div class="ios-tab-ai-btn">
-				<UIcon name="i-heroicons-sparkles" class="ios-tab-ai-icon" />
+				<EarnestIcon class="ios-tab-ai-icon" />
 			</div>
-			<span class="ios-tab-label">EARNEST AI</span>
+			<span class="ios-tab-label">EARNEST</span>
 		</button>
 
 		<!-- Right nav links -->

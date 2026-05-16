@@ -1,7 +1,7 @@
 <template>
 	<div class="ios-card p-5">
 		<div class="flex items-center gap-2 mb-3">
-			<UIcon name="i-heroicons-sparkles" class="w-5 h-5 text-warning" />
+			<EarnestIcon class="w-5 h-5 text-warning" />
 			<h3 class="text-sm font-semibold text-foreground">{{ motivationTitle }}</h3>
 		</div>
 

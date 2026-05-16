@@ -904,21 +904,19 @@ const promoteActionItem = async (idx) => {
 						:title="!meeting.title?.trim() ? 'Add a title first.' : ''"
 						@click="generateAgenda"
 					>
-						<UIcon
-							:name="generatingAgenda ? 'i-heroicons-arrow-path' : 'i-heroicons-sparkles'"
-							:class="['w-3 h-3', generatingAgenda ? 'animate-spin' : '']"
-						/>
+						<UIcon v-if="generatingAgenda" name="i-heroicons-arrow-path" class="w-3 h-3 animate-spin" />
+						<EarnestIcon v-else class="w-3 h-3" />
 						{{ generatingAgenda ? 'Generating…' : 'Expand into agenda' }}
 					</button>
 				</div>
 
-				<!-- AI agenda preview — sits below the header bar until accepted -->
+				<!-- Earnest agenda preview — sits below the header bar until accepted -->
 				<div
 					v-if="agendaSuggestion"
 					class="mt-3 pt-3 border-t border-border/30 rounded-xl border border-primary/30 bg-primary/5 p-3 space-y-2"
 				>
 					<div class="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-primary">
-						<UIcon name="i-heroicons-sparkles" class="w-3 h-3" />
+						<EarnestIcon class="w-3 h-3" />
 						Suggested agenda
 					</div>
 					<div
@@ -1049,10 +1047,9 @@ const promoteActionItem = async (idx) => {
 						class="inline-flex items-center gap-1 h-7 px-3 rounded-full text-[10px] font-bold uppercase tracking-wider bg-success/10 hover:bg-success/20 text-success disabled:opacity-50 transition-colors"
 						@click="generateSummary"
 					>
-						<UIcon
-							:name="generating ? 'i-heroicons-arrow-path' : (meeting.summary ? 'i-heroicons-arrow-path-rounded-square' : 'i-heroicons-sparkles')"
-							:class="['w-3 h-3', generating ? 'animate-spin' : '']"
-						/>
+						<UIcon v-if="generating" name="i-heroicons-arrow-path" class="w-3 h-3 animate-spin" />
+						<UIcon v-else-if="meeting.summary" name="i-heroicons-arrow-path-rounded-square" class="w-3 h-3" />
+						<EarnestIcon v-else class="w-3 h-3" />
 						{{ meeting.summary ? 'Regenerate' : meeting.summary_status === 'pending' ? 'Force generate' : 'Generate' }}
 					</button>
 				</div>

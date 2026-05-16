@@ -48,8 +48,8 @@ const tabs = [
   },
   {
     id: 'ai',
-    label: 'Chat',
-    icon: 'heroicons:sparkles',
+    label: 'Earnest',
+    icon: 'earnest',
     to: '/',
     routes: ['/command-center', '/'],
   },
@@ -102,7 +102,8 @@ function isActive(tab: typeof tabs[number]): boolean {
           class="tab-pill"
           :class="isActive(tab) ? 'tab-pill-active' : 'tab-pill-inactive'"
         >
-          <Icon :name="tab.icon" class="w-4 h-4" />
+          <EarnestIcon v-if="tab.icon === 'earnest'" class="w-4 h-4" />
+          <Icon v-else :name="tab.icon" class="w-4 h-4" />
           <span class="text-[13px] font-medium">{{ tab.label }}</span>
         </NuxtLink>
       </nav>
@@ -171,7 +172,8 @@ function isActive(tab: typeof tabs[number]): boolean {
           :class="isActive(tab) ? 'mobile-tab-active' : 'mobile-tab-inactive'"
         >
           <span class="mobile-tab-icon-wrap" :class="{ 'mobile-tab-icon-wrap-active': isActive(tab) }">
-            <Icon :name="tab.icon" class="w-5 h-5" />
+            <EarnestIcon v-if="tab.icon === 'earnest'" class="w-5 h-5" />
+            <Icon v-else :name="tab.icon" class="w-5 h-5" />
           </span>
           <span class="text-[10px] font-medium leading-none mt-1">{{ tab.label }}</span>
         </NuxtLink>

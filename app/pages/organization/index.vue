@@ -80,7 +80,7 @@ const tabItems = [
 	{ slot: 'client-access', label: 'Client Access', icon: 'i-heroicons-key' },
 	{ slot: 'teams', label: 'Teams', icon: 'i-heroicons-user-group' },
 	{ slot: 'billing', label: 'Billing', icon: 'i-heroicons-credit-card' },
-	{ slot: 'ai-usage', label: 'Usage', icon: 'i-heroicons-sparkles' },
+	{ slot: 'ai-usage', label: 'Usage', icon: 'i-heroicons-bolt' },
 ];
 
 const route = useRoute();

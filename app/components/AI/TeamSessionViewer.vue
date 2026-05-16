@@ -140,7 +140,7 @@ const renderMarkdown = (text: string): string => {
               v-else
               class="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center"
             >
-              <UIcon name="i-heroicons-sparkles" class="w-4 h-4 text-primary" />
+              <EarnestIcon class="w-4 h-4 text-primary" />
             </div>
           </div>
 

@@ -18,6 +18,32 @@ const { showWidget, hatModules } = useHatLayout();
 
 // ── Productivity Engine (existing) ──
 const { suggestions, metrics, isAnalyzing, greeting, subtitle, analyze, loadModule } = useAIProductivityEngine();
+
+// Typed-in greeting. The heading slot is height-reserved in the template, so
+// nothing shifts when this advances. We only animate once per "value change"
+// to keep the effect calm — every persona/tab change retypes from blank.
+const typedGreeting = ref('');
+let typedGreetingTimer: ReturnType<typeof setInterval> | null = null;
+function typeGreeting(target: string) {
+	if (typedGreetingTimer) clearInterval(typedGreetingTimer);
+	typedGreeting.value = '';
+	if (!target) return;
+	let i = 0;
+	typedGreetingTimer = setInterval(() => {
+		i += 1;
+		typedGreeting.value = target.slice(0, i);
+		if (i >= target.length && typedGreetingTimer) {
+			clearInterval(typedGreetingTimer);
+			typedGreetingTimer = null;
+		}
+	}, 28);
+}
+watch(greeting, (next) => {
+	if (next && next !== typedGreeting.value) typeGreeting(next);
+}, { immediate: true });
+onUnmounted(() => {
+	if (typedGreetingTimer) clearInterval(typedGreetingTimer);
+});
 const { enabledModules } = useAIPreferences();
 const { selectedPersona } = useAIPersona();
 
@@ -290,8 +316,16 @@ watch(activeTab, (t) => {
 				<!-- Greeting + Lens Toggle + Assistant Button -->
 				<div class="flex items-end justify-between gap-3 pt-2">
 					<div class="min-w-0">
-						<h1 class="text-[28px] font-bold text-foreground tracking-tight leading-tight truncate">{{ greeting }}</h1>
-						<p class="text-[15px] text-muted-foreground mt-0.5 truncate">{{ subtitle }}</p>
+						<!-- Reserve a single-line slot for the greeting so the
+						     dashboard doesn't jump when the AI greeting resolves.
+						     Heights match leading-tight × text-[28px] for the
+						     heading and the default 1.5 leading × text-[15px]
+						     for the subtitle. Greeting types in once it lands. -->
+						<h1
+							class="text-[28px] font-bold text-foreground tracking-tight leading-tight truncate"
+							style="min-height: 34px"
+						>{{ typedGreeting }}<span v-if="greeting && typedGreeting.length < greeting.length" class="dashboard-cursor" aria-hidden="true">|</span></h1>
+						<p class="text-[15px] text-muted-foreground mt-0.5 truncate" style="min-height: 22px">{{ subtitle }}</p>
 					</div>
 					<div class="flex items-center gap-2 shrink-0">
 						<!-- Lens toggle: re-ranks YOU vs US bands. No effect on what's shown,
@@ -562,7 +596,7 @@ watch(activeTab, (t) => {
 				<div v-if="showWidget('suggestions') && otherSuggestions.length > 0" class="ios-card p-5">
 					<div class="flex items-center justify-between mb-4">
 						<div class="flex items-center gap-2">
-							<UIcon name="i-heroicons-sparkles" class="w-5 h-5 text-primary" />
+							<EarnestIcon class="w-5 h-5 text-primary" />
 							<h3 class="text-sm font-semibold uppercase tracking-wide text-foreground/70">
 								Suggestions
 							</h3>
@@ -673,7 +707,7 @@ watch(activeTab, (t) => {
 									class="mt-3 inline-flex items-center gap-1 px-2.5 py-1 text-[10px] font-medium rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
 								>
 									<UIcon v-if="crmLoading" name="i-heroicons-arrow-path" class="w-3 h-3 animate-spin" />
-									<UIcon v-else name="i-heroicons-sparkles" class="w-3 h-3" />
+									<EarnestIcon v-else class="w-3 h-3" />
 									{{ crmLoading ? 'Analyzing...' : 'Run Analysis' }}
 								</button>
 								<p v-if="crmLastAI" class="text-[9px] text-muted-foreground mt-1">
@@ -909,6 +943,19 @@ watch(activeTab, (t) => {
 @reference "~/assets/css/tailwind.css";
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 .hide-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Blinking caret for the dashboard's typed greeting. The character is part
+ * of the line so it inherits the heading's color and weight. */
+.dashboard-cursor {
+	display: inline-block;
+	margin-left: 1px;
+	color: hsl(var(--primary));
+	animation: dashboard-cursor-blink 1s steps(2, end) infinite;
+}
+@keyframes dashboard-cursor-blink {
+	0%, 50% { opacity: 1; }
+	50.01%, 100% { opacity: 0; }
+}
 .home {
 	.building {
 		max-width: 350px;

@@ -15,7 +15,7 @@ const { logout } = useLogout()
 const { usageSummary } = useAITokens()
 const { isOrgAdminOrAbove } = useOrgRole()
 const { isDirectusAdmin } = useViewAsOrgAdmin()
-const { isAppsMode, setMode: setAppsMode } = useAppsMode()
+const { isAppsMode } = useAppsMode()
 
 const showTokenMeter = computed(() => {
 	if (isDirectusAdmin.value) return true
@@ -124,14 +124,6 @@ function handleTopup() {
 	openTokenModal()
 }
 
-async function handleEnterAppsMode() {
-	// Navigate first so users land in Apps Layout immediately, even if the
-	// persistence call to Directus errors out (e.g. on demo accounts where
-	// `layout_mode` isn't writable). The local ref still flips, so the apps
-	// shell renders correctly for the session.
-	void setAppsMode('apps').catch(() => {})
-	await navigateTo('/apps/clients')
-}
 </script>
 
 <template>
@@ -286,18 +278,11 @@ async function handleEnterAppsMode() {
 				</div>
 		</nav>
 
-		<!-- Apps Layout entry point — surfaced for classic users -->
+		<!-- Hat picker — classic-mode-only role lens for the dashboard.
+		     Apps Layout fragments by role at the route level, so it doesn't
+		     need a picker. -->
 		<div v-if="!isAppsMode" class="px-3 py-2 border-t border-border/30 shrink-0">
-			<button
-				type="button"
-				class="nav-item w-full"
-				:class="{ 'justify-center': sidebarCollapsed, 'has-tooltip': sidebarCollapsed }"
-				:data-tooltip="sidebarCollapsed ? 'Try Apps Layout' : undefined"
-				@click="handleEnterAppsMode"
-			>
-				<Icon name="lucide:layout-grid" class="w-4 h-4 shrink-0" />
-				<span v-if="!sidebarCollapsed" class="text-[13px]">Try Apps Layout</span>
-			</button>
+			<LayoutHatPicker :collapsed="sidebarCollapsed" />
 		</div>
 
 		<!-- Footer utilities -->
@@ -434,15 +419,7 @@ async function handleEnterAppsMode() {
 				</nav>
 
 				<div class="p-3 border-t border-border/30 space-y-0.5">
-					<button
-						v-if="!isAppsMode"
-						type="button"
-						class="nav-item w-full"
-						@click="handleEnterAppsMode"
-					>
-						<Icon name="lucide:layout-grid" class="w-4 h-4 shrink-0" />
-						<span class="text-[13px]">Try Apps Layout</span>
-					</button>
+					<LayoutHatPicker v-if="!isAppsMode" :collapsed="false" />
 					<OrganizationTokenMeter
 						v-if="showTokenMeter"
 						compact

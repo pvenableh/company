@@ -14,7 +14,7 @@ export function useStatusStyle() {
   const ACTIVE = ['active', 'inprogress', 'open', 'ontrack'];
   const SCHEDULED = ['scheduled', 'submitted'];
   const PENDING = ['pending', 'processing', 'new', 'draft', 'paused', 'publishing', 'todo', 'onhold', 'requirespaymentmethod', 'requiresaction', 'intransit', 'prospect', 'sending', 'invited', 'trialing', 'atrisk'];
-  const MUTED = ['archived', 'closed', 'inactive', 'refunded', 'churned', 'unsubscribed'];
+  const MUTED = ['archived', 'closed', 'inactive', 'refunded', 'unsubscribed'];
 
   /** Opacity value for bars, cards, and visual weight (Clean Gantt pattern) */
   function getStatusOpacity(status?: string | null): number {

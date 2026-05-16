@@ -205,7 +205,7 @@
 			<template #header>
 				<div class="flex items-center gap-2">
 					<div class="w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
-						<UIcon name="i-heroicons-sparkles" class="h-3.5 w-3.5 text-white" />
+						<EarnestIcon class="h-3.5 w-3.5 text-white" />
 					</div>
 					<h3 class="text-sm font-bold uppercase tracking-wide">Generate Timeline?</h3>
 				</div>
@@ -216,7 +216,7 @@
 					<span class="font-semibold">"{{ lastCreatedProject?.title }}"</span> has been created.
 				</p>
 				<p class="text-sm text-muted-foreground">
-					Would you like AI to generate a project timeline with milestones and tasks?
+					Would you like Earnest to generate a project timeline with milestones and tasks?
 				</p>
 			</div>
 
@@ -228,7 +228,7 @@
 						class="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white border-0"
 						@click="showTimelinePrompt = false; showTimelineWizard = true"
 					>
-						<UIcon name="i-heroicons-sparkles" class="h-3 w-3 mr-1" />
+						<EarnestIcon class="h-3 w-3 mr-1" />
 						Generate Timeline
 					</Button>
 				</div>

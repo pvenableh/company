@@ -661,7 +661,7 @@ onUnmounted(() => {
 								v-else
 								class="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center"
 							>
-								<UIcon name="i-heroicons-sparkles" class="w-4 h-4 text-primary" />
+								<EarnestIcon class="w-4 h-4 text-primary" />
 							</div>
 						</div>
 
@@ -761,7 +761,7 @@ onUnmounted(() => {
 					<div v-if="streamingContent" class="flex gap-3">
 						<div class="flex-shrink-0 mt-0.5">
 							<div class="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center">
-								<UIcon name="i-heroicons-sparkles" class="w-4 h-4 text-primary animate-pulse" />
+								<EarnestIcon class="w-4 h-4 text-primary animate-pulse" />
 							</div>
 						</div>
 						<div class="max-w-[80%] rounded-xl px-4 py-2.5 bg-muted">

@@ -113,8 +113,8 @@ const { getStatusColorName: statusColor } = useStatusStyle()
           <span><strong class="text-foreground">Connect</strong> your Instagram, TikTok, LinkedIn, or Facebook accounts</span>
         </div>
         <div class="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
-          <UIcon name="i-lucide-sparkles" class="w-4 h-4 text-violet-500 shrink-0 mt-0.5" />
-          <span><strong class="text-foreground">Generate</strong> posts with AI tailored to your brand and audience</span>
+          <EarnestIcon class="w-4 h-4 text-violet-500 shrink-0 mt-0.5" />
+          <span><strong class="text-foreground">Generate</strong> posts with Earnest tailored to your brand and audience</span>
         </div>
         <div class="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400">
           <UIcon name="i-lucide-calendar-clock" class="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
@@ -263,10 +263,12 @@ const { getStatusColorName: statusColor } = useStatusStyle()
               block
               variant="soft"
               color="violet"
-              icon="i-lucide-sparkles"
               @click="showAIWizard = true"
             >
-              AI Generate
+              <template #leading>
+                <EarnestIcon class="w-3.5 h-3.5" />
+              </template>
+              Earnest Generate
             </UButton>
             <UButton
               to="/social/calendar"

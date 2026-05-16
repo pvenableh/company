@@ -225,7 +225,7 @@
 					title="Ask Earnest about this meeting"
 					@click="aiTrayOpen = true"
 				>
-					<UIcon name="i-heroicons-sparkles" class="w-3.5 h-3.5" />
+					<EarnestIcon class="w-3.5 h-3.5" />
 					<span>Ask Earnest</span>
 				</button>
 			</div>

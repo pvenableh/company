@@ -56,11 +56,9 @@ const dismissOptions = () => {
 				:disabled="isGenerating"
 				@click="handleGenerate"
 			>
-				<UIcon
-					:name="isGenerating ? 'i-heroicons-arrow-path' : 'i-heroicons-sparkles'"
-					:class="isGenerating ? 'w-3.5 h-3.5 animate-spin' : 'w-3.5 h-3.5'"
-				/>
-				{{ isGenerating ? 'Generating...' : 'AI Suggest' }}
+				<UIcon v-if="isGenerating" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
+				<EarnestIcon v-else class="w-3.5 h-3.5" />
+				{{ isGenerating ? 'Generating...' : 'Earnest Suggest' }}
 			</button>
 		</div>
 
@@ -72,12 +70,12 @@ const dismissOptions = () => {
 			:placeholder="placeholder"
 		/>
 
-		<!-- AI Options Picker -->
+		<!-- Earnest options picker -->
 		<div v-if="showOptions && options.length > 0" class="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-2">
 			<div class="flex items-center justify-between">
 				<span class="text-xs font-medium text-primary flex items-center gap-1">
-					<UIcon name="i-heroicons-sparkles" class="w-3 h-3" />
-					AI Suggestions
+					<EarnestIcon class="w-3 h-3" />
+					Earnest Suggestions
 				</span>
 				<button type="button" class="text-xs text-muted-foreground hover:text-foreground" @click="dismissOptions">
 					Dismiss

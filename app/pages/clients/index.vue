@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Client } from '~~/shared/directus';
 import { Button } from '~/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '~/components/ui/dropdown-menu';
 import { useDebounceFn } from '@vueuse/core';
 
 definePageMeta({ middleware: ['auth'] });
@@ -8,7 +9,33 @@ useHead({ title: 'Clients | Earnest' });
 
 const router = useRouter();
 const config = useRuntimeConfig();
-const { getClients, deleteClient: doDelete } = useClients();
+const { getClients, deleteClient: doDelete, updateClient } = useClients();
+
+const STATUS_QUICK_OPTIONS: Array<{ value: 'active' | 'prospect' | 'inactive' | 'archived'; label: string }> = [
+  { value: 'active', label: 'Active' },
+  { value: 'prospect', label: 'Prospect' },
+  { value: 'inactive', label: 'Inactive' },
+  { value: 'archived', label: 'Archived' },
+];
+
+async function changeClientStatus(
+  client: Client,
+  next: 'active' | 'prospect' | 'inactive' | 'archived',
+) {
+  const patch: Partial<Client> = {};
+  if (next === 'archived') {
+    patch.status = 'archived' as Client['status'];
+  } else {
+    patch.account_state = next;
+    if (client.status === 'archived') patch.status = 'published' as Client['status'];
+  }
+  Object.assign(client, patch);
+  try {
+    await updateClient(client.id as string, patch);
+  } finally {
+    fetchClients();
+  }
+}
 
 const allClients = ref<Client[]>([]);
 const total = ref(0);
@@ -18,14 +45,13 @@ const showCreateModal = ref(false);
 const deleteTarget = ref<Client | null>(null);
 
 // ── Status Tabs ──────────────────────────────────────────────────────────────
-// Tabs filter by `account_state` (relationship state) for Active/Prospects/Inactive/Churned,
-// and by lifecycle `status` for Archived.
+// Tabs filter by `account_state` for Active/Prospects/Inactive and by lifecycle
+// `status` for Archived. Former "Churned" state was folded into Archived.
 const activeTab = ref('active');
 const tabs = [
   { label: 'Active', value: 'active', color: 'bg-success', kind: 'accountState' as const },
   { label: 'Prospects', value: 'prospect', color: 'bg-warning', kind: 'accountState' as const },
   { label: 'Inactive', value: 'inactive', color: 'bg-neutral-400', kind: 'accountState' as const },
-  { label: 'Churned', value: 'churned', color: 'bg-destructive', kind: 'accountState' as const },
   { label: 'Archived', value: 'archived', color: 'bg-zinc-400', kind: 'status' as const },
 ];
 
@@ -276,7 +302,7 @@ onMounted(() => {
               v-for="client in allClients"
               :key="client.id"
               class="border-b border-border/30 last:border-b-0 hover:bg-muted/20 cursor-pointer transition-colors"
-              :class="{ 'opacity-50': client.account_state === 'inactive' || client.account_state === 'churned' || client.status === 'archived' }"
+              :class="{ 'opacity-50': client.account_state === 'inactive' || client.status === 'archived' }"
               @click="viewClient(client)"
             >
               <!-- Client Name + Logo -->
@@ -300,14 +326,37 @@ onMounted(() => {
                 </div>
               </td>
 
-              <!-- Status -->
-              <td class="py-3 px-4">
-                <span
-                  class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium capitalize"
-                  :class="getStatusBadgeClasses(client.account_state || 'active')"
-                >
-                  {{ client.account_state || 'active' }}
-                </span>
+              <!-- Status (quick-select) -->
+              <td class="py-3 px-4" @click.stop>
+                <DropdownMenu>
+                  <DropdownMenuTrigger as-child>
+                    <button
+                      type="button"
+                      class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium capitalize hover:opacity-80"
+                      :class="getStatusBadgeClasses(client.status === 'archived' ? 'archived' : (client.account_state || 'active'))"
+                      :title="`Change status (current: ${client.status === 'archived' ? 'archived' : (client.account_state || 'active')})`"
+                    >
+                      {{ client.status === 'archived' ? 'archived' : (client.account_state || 'active') }}
+                      <Icon name="lucide:chevron-down" class="w-3 h-3 opacity-60" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" class="w-40">
+                    <DropdownMenuItem
+                      v-for="opt in STATUS_QUICK_OPTIONS"
+                      :key="opt.value"
+                      @select="changeClientStatus(client, opt.value)"
+                    >
+                      <span
+                        class="w-2 h-2 rounded-full mr-2"
+                        :class="opt.value === 'active' ? 'bg-success'
+                          : opt.value === 'prospect' ? 'bg-warning'
+                          : opt.value === 'inactive' ? 'bg-neutral-400'
+                          : 'bg-zinc-400'"
+                      />
+                      {{ opt.label }}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </td>
 
               <!-- Primary Contact -->

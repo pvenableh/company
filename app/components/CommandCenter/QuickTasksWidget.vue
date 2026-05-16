@@ -73,7 +73,7 @@
 			<!-- Motivational text -->
 			<Transition name="widget-motivate">
 				<div v-if="motivationalText" class="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-primary/5 text-xs text-foreground/70 font-medium">
-					<UIcon name="i-heroicons-sparkles" class="w-3.5 h-3.5 text-warning flex-shrink-0" />
+					<EarnestIcon class="w-3.5 h-3.5 text-warning flex-shrink-0" />
 					{{ motivationalText }}
 				</div>
 			</Transition>
@@ -120,8 +120,8 @@
 				@click="showAiSuggestions ? (showAiSuggestions = false) : fetchAiSuggestions()"
 			>
 				<UIcon v-if="aiLoading" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
-				<UIcon v-else name="i-heroicons-sparkles" class="w-3.5 h-3.5" />
-				{{ aiLoading ? 'Generating...' : showAiSuggestions ? 'Hide suggestions' : 'Generate tasks with AI' }}
+				<EarnestIcon v-else class="w-3.5 h-3.5" />
+				{{ aiLoading ? 'Generating...' : showAiSuggestions ? 'Hide suggestions' : 'Generate tasks with Earnest' }}
 			</button>
 
 			<!-- AI suggestions (collapsible) -->
@@ -306,8 +306,8 @@
 				@click="showAiSuggestions ? (showAiSuggestions = false) : fetchAiSuggestions()"
 			>
 				<UIcon v-if="aiLoading" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
-				<UIcon v-else name="i-heroicons-sparkles" class="w-3.5 h-3.5" />
-				{{ aiLoading ? 'Generating...' : showAiSuggestions ? 'Hide suggestions' : 'Suggest tasks with AI' }}
+				<EarnestIcon v-else class="w-3.5 h-3.5" />
+				{{ aiLoading ? 'Generating...' : showAiSuggestions ? 'Hide suggestions' : 'Suggest tasks with Earnest' }}
 			</button>
 
 			<!-- AI suggestions (collapsible) -->

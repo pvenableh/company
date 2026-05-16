@@ -327,8 +327,9 @@ const saveProgress = async () => {
 					:disabled="loadingSuggestions"
 					class="flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium border border-warning/30 text-warning dark:text-warning rounded-lg hover:bg-warning/10 transition-colors"
 				>
-					<UIcon :name="loadingSuggestions ? 'i-heroicons-arrow-path' : 'i-heroicons-sparkles'" class="w-4 h-4" :class="loadingSuggestions ? 'animate-spin' : ''" />
-					AI Suggest
+					<UIcon v-if="loadingSuggestions" name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin" />
+					<EarnestIcon v-else class="w-4 h-4" />
+					Earnest Suggest
 				</button>
 				<button
 					@click="openNewGoal"
@@ -375,14 +376,14 @@ const saveProgress = async () => {
 			/>
 		</template>
 		<template v-else>
-		<!-- AI Suggestions Panel -->
+		<!-- Earnest Suggestions Panel -->
 		<Transition name="fade">
 			<div v-if="showAISuggestions" class="mb-6">
 				<div class="ios-card p-4">
 					<div class="flex items-center justify-between mb-3">
 						<div class="flex items-center gap-2">
-							<UIcon name="i-heroicons-sparkles" class="w-4 h-4 text-warning" />
-							<h3 class="text-sm font-semibold text-foreground">AI-Suggested Goals</h3>
+							<EarnestIcon class="w-4 h-4 text-warning" />
+							<h3 class="text-sm font-semibold text-foreground">Earnest-Suggested Goals</h3>
 						</div>
 						<button @click="showAISuggestions = false; aiSuggestions = []" class="text-xs text-muted-foreground hover:text-foreground">
 							Dismiss
@@ -466,10 +467,10 @@ const saveProgress = async () => {
 				</div>
 			</div>
 
-			<!-- AI nudge for overdue -->
+			<!-- Earnest nudge for overdue -->
 			<AccentCard v-if="stats.overdue > 0" accent="bg-warning" class="ios-card mb-3">
 				<div class="flex items-start gap-2">
-					<UIcon name="i-heroicons-sparkles" class="w-4 h-4 text-warning shrink-0 mt-0.5" />
+					<EarnestIcon class="w-4 h-4 text-warning shrink-0 mt-0.5" />
 					<p class="text-sm text-foreground">
 						<span class="font-medium">{{ stats.overdue }} goal{{ stats.overdue > 1 ? 's are' : ' is' }} past due.</span>
 						<span class="text-muted-foreground"> Update your progress or adjust the deadline to stay on track.</span>
@@ -597,14 +598,14 @@ const saveProgress = async () => {
 						/>
 					</div>
 
-					<!-- AI reflection — appears after Save fires. Stays grounded in
+					<!-- Earnest reflection — appears after Save fires. Stays grounded in
 						 the goal's actual data; see feedback_goal_coaching_lattice_line.md -->
 					<div
 						v-if="reflectionLoading || reflection"
 						class="rounded-lg border border-warning/20 bg-warning/5 p-3"
 					>
 						<div class="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-warning dark:text-warning font-semibold mb-1.5">
-							<UIcon name="i-heroicons-sparkles" class="w-3.5 h-3.5" />
+							<EarnestIcon class="w-3.5 h-3.5" />
 							Reflection
 						</div>
 						<p v-if="reflectionLoading" class="text-xs text-muted-foreground italic">
@@ -637,7 +638,7 @@ const saveProgress = async () => {
 			<div v-if="coachGoal" class="space-y-4 p-1">
 				<div class="flex items-center gap-2">
 					<div class="w-8 h-8 rounded-lg bg-warning/15 flex items-center justify-center">
-						<UIcon name="i-heroicons-sparkles" class="w-4 h-4 text-warning" />
+						<EarnestIcon class="w-4 h-4 text-warning" />
 					</div>
 					<div>
 						<h2 class="text-lg font-semibold text-foreground">Coach me</h2>

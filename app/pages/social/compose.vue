@@ -364,10 +364,12 @@ function onPickFiles(picked: { url: string; type: 'image' | 'video' }[]) {
 			<UButton
 				variant="soft"
 				color="violet"
-				icon="i-lucide-sparkles"
 				@click="showAIWizard = true"
 			>
-				AI Generate
+				<template #leading>
+					<EarnestIcon class="w-3.5 h-3.5" />
+				</template>
+				Earnest Generate
 			</UButton>
 		</div>
 

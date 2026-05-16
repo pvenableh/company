@@ -90,7 +90,7 @@ const goBack = () => {
 const minibarItems = [
 	{ id: 'home', icon: 'lucide:home', label: 'Home', to: '/' },
 	{ id: 'timer', icon: 'heroicons:clock', label: 'Timer', action: () => emit('open-timer') },
-	{ id: 'ai', icon: 'heroicons:sparkles', label: 'AI', to: '/command-center/ai' },
+	{ id: 'ai', icon: 'earnest', label: 'Earnest', to: '/command-center/ai' },
 	{ id: 'search', icon: 'lucide:search', label: 'Search', action: () => emit('open-spotlight') },
 ]
 
@@ -177,7 +177,8 @@ const initials = computed(() => {
 						class="minibar-item"
 						:class="{ 'minibar-item-active': route.path === item.to }"
 					>
-						<Icon :name="item.icon" class="w-5 h-5" />
+						<EarnestIcon v-if="item.icon === 'earnest'" class="w-5 h-5" />
+						<Icon v-else :name="item.icon" class="w-5 h-5" />
 						<span class="text-[9px] font-medium">{{ item.label }}</span>
 					</NuxtLink>
 					<button
@@ -185,7 +186,8 @@ const initials = computed(() => {
 						@click="item.action?.()"
 						class="minibar-item"
 					>
-						<Icon :name="item.icon" class="w-5 h-5" />
+						<EarnestIcon v-if="item.icon === 'earnest'" class="w-5 h-5" />
+						<Icon v-else :name="item.icon" class="w-5 h-5" />
 						<span class="text-[9px] font-medium">{{ item.label }}</span>
 					</button>
 				</template>

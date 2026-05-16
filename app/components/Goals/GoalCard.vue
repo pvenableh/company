@@ -86,7 +86,7 @@ const formatDate = (dateStr) => getFriendlyDateThree(dateStr);
 			</div>
 			<UDropdown :items="[
 				[{ label: 'Update Progress', icon: 'i-heroicons-arrow-trending-up', click: () => emit('update-progress', goal) }],
-				[{ label: 'Coach me', icon: 'i-heroicons-sparkles', click: () => emit('coach', goal) }],
+				[{ label: 'Coach me', icon: 'i-heroicons-academic-cap', click: () => emit('coach', goal) }],
 				[{ label: 'Edit', icon: 'i-heroicons-pencil-square', click: () => emit('edit', goal) }],
 				[{ label: 'Delete', icon: 'i-heroicons-trash', click: () => emit('delete', goal) }],
 			]">

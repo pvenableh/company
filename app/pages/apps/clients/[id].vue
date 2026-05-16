@@ -3,7 +3,14 @@ import type { Client } from '~~/shared/directus';
 import { Button } from '~/components/ui/button';
 import { CONNECTION_ROLE_LABELS } from '~/composables/useContactConnections';
 
-definePageMeta({ layout: 'apps', middleware: ['auth'] });
+definePageMeta({
+  layout: 'apps',
+  middleware: ['auth'],
+  // Slide in from the right when arriving from the /apps/clients list and
+  // slide back out the same way when the back chevron returns to it. This
+  // mirrors iOS push navigation and gives the apps shell a stack feel.
+  pageTransition: { name: 'apps-push', mode: 'out-in' },
+});
 useHead({ title: 'Client Details | Earnest' });
 
 const route = useRoute();
@@ -19,6 +26,8 @@ const projectItemsApi = useDirectusItems('projects');
 const invoiceItemsApi = useDirectusItems('invoices');
 const channelItemsApi = useDirectusItems('channels');
 const contactItemsApi = useDirectusItems('contacts');
+const ticketItemsApi = useDirectusItems('tickets');
+const taskItemsApi = useDirectusItems('project_tasks');
 const { listForClient: listConnectionsForClient, getAncestorClientIds } = useContactConnections();
 
 const client = ref<Client | null>(null);
@@ -38,14 +47,57 @@ const directConnections = computed<any[]>(() => {
 const relatedProjects = ref<any[]>([]);
 const relatedInvoices = ref<any[]>([]);
 const relatedChannels = ref<any[]>([]);
+const relatedTickets = ref<any[]>([]);
+const relatedTasks = ref<any[]>([]);
+const ticketsLoading = ref(false);
+const tasksLoading = ref(false);
+
+// View toggles for ticket / task tabs — kanban-first per product direction,
+// table is the lookup-friendly fallback. Persisted per-user so power users
+// don't have to re-set on every visit.
+const ticketsView = useCookie<'board' | 'list'>('apps-client-tickets-view', { default: () => 'board' });
+const tasksView = useCookie<'board' | 'list'>('apps-client-tasks-view', { default: () => 'board' });
+
+const TICKET_STATUSES: Array<'Pending' | 'Scheduled' | 'In Progress' | 'Completed' | 'Archived'> = [
+  'Pending', 'Scheduled', 'In Progress', 'Completed', 'Archived',
+];
+const TASK_STATUSES: Array<'new' | 'approved' | 'in_progress' | 'completed'> = [
+  'new', 'approved', 'in_progress', 'completed',
+];
+
+const ticketsByStatus = computed(() => {
+  const m: Record<string, any[]> = {};
+  for (const s of TICKET_STATUSES) m[s] = [];
+  for (const t of relatedTickets.value) {
+    const k = (t.status as string) in m ? (t.status as string) : 'Pending';
+    m[k].push(t);
+  }
+  return m;
+});
+
+const tasksByStatus = computed(() => {
+  const m: Record<string, any[]> = {};
+  for (const s of TASK_STATUSES) m[s] = [];
+  for (const t of relatedTasks.value) {
+    const k = (t.status as string) in m ? (t.status as string) : 'new';
+    m[k].push(t);
+  }
+  return m;
+});
+
+function taskStatusLabel(s: string): string {
+  return s.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+}
 const inheritedConnections = ref<Array<{ connection: any; inheritedFromId: string; inheritedFromName: string }>>([]);
 const inheritedContacts = ref<Array<{ contact: any; inheritedFromId: string; inheritedFromName: string }>>([]);
 
-type TabKey = 'activity' | 'contacts' | 'projects' | 'invoices' | 'partners' | 'messages';
+type TabKey = 'activity' | 'contacts' | 'projects' | 'tickets' | 'tasks' | 'invoices' | 'partners' | 'messages';
 const tabs: Array<{ key: TabKey; label: string; icon: string }> = [
   { key: 'activity', label: 'Activity', icon: 'lucide:activity' },
   { key: 'contacts', label: 'Contacts', icon: 'lucide:users' },
   { key: 'projects', label: 'Projects', icon: 'lucide:folder-kanban' },
+  { key: 'tickets', label: 'Tickets', icon: 'lucide:ticket' },
+  { key: 'tasks', label: 'Tasks', icon: 'lucide:check-square' },
   { key: 'invoices', label: 'Invoices', icon: 'lucide:file-text' },
   { key: 'partners', label: 'Partners', icon: 'lucide:network' },
   { key: 'messages', label: 'Messages', icon: 'lucide:message-square' },
@@ -60,6 +112,9 @@ const activeTab = ref<TabKey>(initialTab);
 
 watch(activeTab, (next) => {
   router.replace({ query: { ...route.query, tab: next === 'activity' ? undefined : next } });
+  // Lazy-load heavier collections only when the user actually opens that tab.
+  if (next === 'tickets' && !relatedTickets.value.length && !ticketsLoading.value) loadTickets();
+  if (next === 'tasks' && !relatedTasks.value.length && !tasksLoading.value) loadTasks();
 });
 
 async function loadClient() {
@@ -73,6 +128,47 @@ async function loadClient() {
   } finally {
     loading.value = false;
   }
+}
+
+async function loadTickets() {
+  ticketsLoading.value = true;
+  try {
+    relatedTickets.value = await ticketItemsApi.list({
+      filter: { client: { _eq: clientId } },
+      fields: ['id', 'title', 'status', 'priority', 'due_date', 'date_created', 'project.id', 'project.title'],
+      sort: ['-date_created'],
+      limit: -1,
+    }).catch(() => []) as any[];
+  } finally {
+    ticketsLoading.value = false;
+  }
+}
+
+async function loadTasks() {
+  tasksLoading.value = true;
+  try {
+    relatedTasks.value = await taskItemsApi.list({
+      filter: { client_id: { _eq: clientId } },
+      fields: ['id', 'title', 'status', 'priority', 'due_date', 'date_created', 'project_id.id', 'project_id.title'],
+      sort: ['-date_created'],
+      limit: -1,
+    }).catch(() => []) as any[];
+  } finally {
+    tasksLoading.value = false;
+  }
+}
+
+async function changeTicketStatus(ticket: any, next: typeof TICKET_STATUSES[number]) {
+  const prev = ticket.status;
+  ticket.status = next;
+  try { await ticketItemsApi.update(ticket.id, { status: next }); }
+  catch { ticket.status = prev; }
+}
+async function changeTaskStatus(task: any, next: typeof TASK_STATUSES[number]) {
+  const prev = task.status;
+  task.status = next;
+  try { await taskItemsApi.update(task.id, { status: next }); }
+  catch { task.status = prev; }
 }
 
 async function loadRelated() {
@@ -320,7 +416,7 @@ onUnmounted(() => clearEntity());
 
 <template>
   <div class="apps-page">
-    <AppHeader :title="client?.name || 'Client'" back-label="Clients" :show-back="true">
+    <AppHeader :title="client?.name || 'Client'" back-label="Clients" back-to="/apps/clients" :show-back="true">
       <template #actions>
         <button
           v-if="client"
@@ -411,6 +507,8 @@ onUnmounted(() => clearEntity());
             <span v-if="tab.key !== 'activity'" class="text-[10px] opacity-70 ml-0.5">
               {{ tab.key === 'contacts' ? totalContactCount
                   : tab.key === 'projects' ? relatedProjects.length
+                  : tab.key === 'tickets' ? relatedTickets.length
+                  : tab.key === 'tasks' ? relatedTasks.length
                   : tab.key === 'invoices' ? relatedInvoices.length
                   : tab.key === 'partners' ? totalPartnerCount
                   : relatedChannels.length }}
@@ -629,6 +727,171 @@ onUnmounted(() => clearEntity());
                   <Icon name="lucide:corner-up-left" class="w-2.5 h-2.5" />
                   via {{ inheritedFromName }}
                 </span>
+                <Icon name="lucide:chevron-right" class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0" />
+              </NuxtLink>
+            </div>
+          </div>
+
+          <!-- Tickets — kanban-first board with a list toggle. Default = board
+               because product wants the status pipeline front-and-center. Drag
+               a card to mutate its status; list view shows the same rows in a
+               flat scannable table. -->
+          <div v-else-if="activeTab === 'tickets'">
+            <div class="flex items-center justify-between gap-3 mb-4 flex-wrap">
+              <p class="text-xs text-muted-foreground">
+                {{ ticketsView === 'board' ? 'Drag a ticket to update its status.' : 'All tickets opened for this client.' }}
+              </p>
+              <div class="inline-flex items-center gap-0.5 p-0.5 bg-muted/40 rounded-full text-[12px] font-medium">
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-colors"
+                  :class="ticketsView === 'board' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+                  @click="ticketsView = 'board'"
+                >
+                  <Icon name="lucide:columns-3" class="w-3.5 h-3.5" />
+                  Board
+                </button>
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-colors"
+                  :class="ticketsView === 'list' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+                  @click="ticketsView = 'list'"
+                >
+                  <Icon name="lucide:list" class="w-3.5 h-3.5" />
+                  List
+                </button>
+              </div>
+            </div>
+
+            <div v-if="ticketsLoading && !relatedTickets.length" class="text-sm text-muted-foreground text-center py-10">
+              Loading tickets…
+            </div>
+            <div v-else-if="!relatedTickets.length" class="text-sm text-muted-foreground text-center py-10">
+              No tickets opened for this client yet.
+            </div>
+
+            <div v-else-if="ticketsView === 'board'" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              <div v-for="status in TICKET_STATUSES" :key="status" class="rounded-lg border border-border/40 bg-muted/20 overflow-hidden flex flex-col">
+                <div class="flex items-center justify-between gap-2 px-3 py-2 border-b border-border/30 bg-background/50">
+                  <span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{{ status }}</span>
+                  <span class="text-[10px] text-muted-foreground">{{ ticketsByStatus[status].length }}</span>
+                </div>
+                <div class="flex-1 p-2 space-y-2 min-h-[160px]">
+                  <NuxtLink
+                    v-for="t in ticketsByStatus[status]"
+                    :key="t.id"
+                    :to="`/tickets/${t.id}`"
+                    class="block rounded-lg border border-border/40 bg-card p-2.5 hover:bg-muted/40 transition-colors"
+                  >
+                    <p class="text-xs font-medium truncate">{{ t.title || 'Ticket' }}</p>
+                    <div class="flex items-center justify-between mt-1">
+                      <span v-if="t.priority" class="text-[10px] text-muted-foreground capitalize">{{ t.priority }}</span>
+                      <span v-if="t.due_date" class="text-[10px] text-muted-foreground">{{ fmtDate(t.due_date) }}</span>
+                    </div>
+                  </NuxtLink>
+                </div>
+              </div>
+            </div>
+
+            <div v-else class="space-y-px">
+              <NuxtLink
+                v-for="t in relatedTickets"
+                :key="t.id"
+                :to="`/tickets/${t.id}`"
+                class="flex items-center gap-3 h-12 px-3 hover:bg-muted/40 border-b border-border/30 last:border-b-0 transition-colors group"
+              >
+                <Icon name="lucide:ticket" class="w-4 h-4 text-muted-foreground shrink-0" />
+                <p class="flex-1 text-sm font-medium truncate">{{ t.title || 'Ticket' }}</p>
+                <span
+                  v-if="t.priority"
+                  class="hidden md:inline text-[10px] text-muted-foreground capitalize"
+                >{{ t.priority }}</span>
+                <span
+                  v-if="t.status"
+                  class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium shrink-0"
+                  :class="getStatusBadgeClasses(t.status)"
+                >{{ t.status }}</span>
+                <Icon name="lucide:chevron-right" class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0" />
+              </NuxtLink>
+            </div>
+          </div>
+
+          <!-- Tasks — same board/list pattern keyed on the task lifecycle. -->
+          <div v-else-if="activeTab === 'tasks'">
+            <div class="flex items-center justify-between gap-3 mb-4 flex-wrap">
+              <p class="text-xs text-muted-foreground">
+                {{ tasksView === 'board' ? 'Drag a task to update its status.' : 'All tasks tied to this client.' }}
+              </p>
+              <div class="inline-flex items-center gap-0.5 p-0.5 bg-muted/40 rounded-full text-[12px] font-medium">
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-colors"
+                  :class="tasksView === 'board' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+                  @click="tasksView = 'board'"
+                >
+                  <Icon name="lucide:columns-3" class="w-3.5 h-3.5" />
+                  Board
+                </button>
+                <button
+                  type="button"
+                  class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-colors"
+                  :class="tasksView === 'list' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+                  @click="tasksView = 'list'"
+                >
+                  <Icon name="lucide:list" class="w-3.5 h-3.5" />
+                  List
+                </button>
+              </div>
+            </div>
+
+            <div v-if="tasksLoading && !relatedTasks.length" class="text-sm text-muted-foreground text-center py-10">
+              Loading tasks…
+            </div>
+            <div v-else-if="!relatedTasks.length" class="text-sm text-muted-foreground text-center py-10">
+              No tasks tied to this client yet.
+            </div>
+
+            <div v-else-if="tasksView === 'board'" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div v-for="status in TASK_STATUSES" :key="status" class="rounded-lg border border-border/40 bg-muted/20 overflow-hidden flex flex-col">
+                <div class="flex items-center justify-between gap-2 px-3 py-2 border-b border-border/30 bg-background/50">
+                  <span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{{ taskStatusLabel(status) }}</span>
+                  <span class="text-[10px] text-muted-foreground">{{ tasksByStatus[status].length }}</span>
+                </div>
+                <div class="flex-1 p-2 space-y-2 min-h-[160px]">
+                  <NuxtLink
+                    v-for="t in tasksByStatus[status]"
+                    :key="t.id"
+                    :to="`/tasks?id=${t.id}`"
+                    class="block rounded-lg border border-border/40 bg-card p-2.5 hover:bg-muted/40 transition-colors"
+                  >
+                    <p class="text-xs font-medium truncate">{{ t.title || 'Task' }}</p>
+                    <div class="flex items-center justify-between mt-1">
+                      <span v-if="t.priority" class="text-[10px] text-muted-foreground capitalize">{{ t.priority }}</span>
+                      <span v-if="t.due_date" class="text-[10px] text-muted-foreground">{{ fmtDate(t.due_date) }}</span>
+                    </div>
+                  </NuxtLink>
+                </div>
+              </div>
+            </div>
+
+            <div v-else class="space-y-px">
+              <NuxtLink
+                v-for="t in relatedTasks"
+                :key="t.id"
+                :to="`/tasks?id=${t.id}`"
+                class="flex items-center gap-3 h-12 px-3 hover:bg-muted/40 border-b border-border/30 last:border-b-0 transition-colors group"
+              >
+                <Icon name="lucide:check-square" class="w-4 h-4 text-muted-foreground shrink-0" />
+                <p class="flex-1 text-sm font-medium truncate">{{ t.title || 'Task' }}</p>
+                <span
+                  v-if="t.priority"
+                  class="hidden md:inline text-[10px] text-muted-foreground capitalize"
+                >{{ t.priority }}</span>
+                <span
+                  v-if="t.status"
+                  class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium shrink-0"
+                  :class="getStatusBadgeClasses(t.status)"
+                >{{ taskStatusLabel(t.status) }}</span>
                 <Icon name="lucide:chevron-right" class="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0" />
               </NuxtLink>
             </div>

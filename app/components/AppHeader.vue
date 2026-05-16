@@ -34,6 +34,13 @@ const props = withDefaults(
 		 */
 		showBack?: boolean;
 		/**
+		 * Explicit parent route. When provided, the back button navigates here
+		 * directly instead of `router.back()` — important for deep-linked or
+		 * bookmarked detail pages where browser history would exit the app
+		 * entirely. Omit for plain "go to previous screen" behaviour.
+		 */
+		backTo?: string;
+		/**
 		 * When set on a top-level /apps/<id>/index page, this header renders
 		 * the always-visible tagline + an info button that toggles the
 		 * AppIntroCard (which renders below the floor strip in the page
@@ -58,7 +65,23 @@ function handleToggleIntro() {
 }
 
 function goBack() {
-	router.back();
+	// If an explicit parent was provided, use it. Otherwise prefer history
+	// (preserves scroll + active tab), but fall back to the rail-derived
+	// app root so a deep-link / refresh / bookmark doesn't exit the SPA.
+	if (props.backTo) {
+		router.push(props.backTo);
+		return;
+	}
+	if (import.meta.client && window.history.length > 1) {
+		router.back();
+		return;
+	}
+	const seg = route.path.split('/').filter(Boolean);
+	if ((seg[0] === 'apps' || seg[0] === 'portal') && seg[1]) {
+		router.push(`/${seg[0]}/${seg[1]}`);
+		return;
+	}
+	router.push('/');
 }
 
 const fallbackBackLabel = computed(() => {

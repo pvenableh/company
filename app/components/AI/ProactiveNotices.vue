@@ -54,7 +54,7 @@ const handleAction = (notice: any) => {
   <div v-if="visibleNotices.length > 0" class="mb-4">
     <!-- Header -->
     <div class="flex items-center gap-1.5 mb-2">
-      <UIcon name="i-heroicons-sparkles" class="w-3.5 h-3.5 text-primary" />
+      <EarnestIcon class="w-3.5 h-3.5 text-primary" />
       <span class="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
         Earnest Notices
       </span>

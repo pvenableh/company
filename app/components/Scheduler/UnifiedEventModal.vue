@@ -940,22 +940,22 @@ const sendInviteMeeting = computed(() => {
 							type="button"
 							:disabled="generatingAgenda || !form.title.trim()"
 							@click="generateAgenda"
-							:title="!form.title.trim() ? 'Add a title first — the AI uses it to steer the agenda.' : ''"
+							:title="!form.title.trim() ? 'Add a title first — Earnest uses it to steer the agenda.' : ''"
 							class="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-semibold uppercase tracking-[0.06em] text-primary hover:bg-primary/10 transition-colors disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed"
 						>
 							<UIcon v-if="generatingAgenda" name="i-heroicons-arrow-path" class="w-3 h-3 animate-spin" />
-							<UIcon v-else name="i-heroicons-sparkles" class="w-3 h-3" />
+							<EarnestIcon v-else class="w-3 h-3" />
 							{{ generatingAgenda ? 'Generating…' : 'Expand into agenda' }}
 						</button>
 					</div>
 
-					<!-- AI suggestion preview — sits above the field until accepted or dismissed -->
+					<!-- Earnest suggestion preview — sits above the field until accepted or dismissed -->
 					<div
 						v-if="agendaSuggestion"
 						class="rounded-xl border border-primary/30 bg-primary/5 p-3 space-y-2"
 					>
 						<div class="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-primary">
-							<UIcon name="i-heroicons-sparkles" class="w-3 h-3" />
+							<EarnestIcon class="w-3 h-3" />
 							Suggested agenda
 						</div>
 						<div class="prose prose-sm max-w-none text-[12px] text-foreground" v-html="agendaSuggestion" />

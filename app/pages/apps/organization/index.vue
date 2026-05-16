@@ -52,7 +52,7 @@ watch(floor, (next) => {
 const floors: Array<{ key: FloorKey; label: string; icon: string }> = [
   { key: 'overview', label: 'Overview', icon: 'lucide:home' },
   { key: 'members', label: 'Members', icon: 'lucide:users' },
-  { key: 'teams', label: 'Teams', icon: 'lucide:user-group' },
+  { key: 'teams', label: 'Teams', icon: 'lucide:users-round' },
   { key: 'billing', label: 'Billing', icon: 'lucide:credit-card' },
   { key: 'integrations', label: 'Integrations', icon: 'lucide:plug' },
   { key: 'settings', label: 'Settings', icon: 'lucide:settings' },
@@ -840,7 +840,7 @@ function onClientInvited() {
             <Icon name="lucide:loader-2" class="w-5 h-5 animate-spin mx-auto text-muted-foreground" />
           </div>
           <div v-else-if="!visibleTeams.length" class="ios-card p-8 text-center">
-            <Icon name="lucide:user-group" class="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+            <Icon name="lucide:users-round" class="w-8 h-8 text-muted-foreground mx-auto mb-2" />
             <p class="text-sm font-medium">No teams yet</p>
             <p class="text-xs text-muted-foreground mt-1 mb-3">
               Group members so the Work app and calendar can be filtered by team.
@@ -922,7 +922,7 @@ function onClientInvited() {
             <div class="flex items-center justify-between mb-4">
               <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-                  <Icon name="lucide:sparkles" class="w-5 h-5 text-primary-foreground" />
+                  <EarnestIcon class="w-5 h-5 text-primary-foreground" />
                 </div>
                 <div>
                   <p class="font-semibold text-foreground">{{ planName }}</p>

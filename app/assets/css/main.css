@@ -100,6 +100,27 @@ a {
   opacity: 0;
 }
 
+/* iOS-style push: detail pages in the apps layout slide in from the right
+ * and slide out the way they came. Used by /apps/<app>/[id] pages via
+ * definePageMeta({ pageTransition: { name: 'apps-push', mode: 'out-in' } }).
+ *
+ * The transition pairs with the AppHeader's back chevron to give the same
+ * "drill-down → drill-up" feeling iOS users expect from a navigation stack. */
+.apps-push-enter-from {
+  opacity: 0;
+  transform: translateX(28px);
+}
+.apps-push-enter-active {
+  transition: opacity 0.32s var(--spring), transform 0.32s var(--spring);
+}
+.apps-push-leave-active {
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+.apps-push-leave-to {
+  opacity: 0;
+  transform: translateX(-12px);
+}
+
 /* ============================================
    Fade transition
    ============================================ */

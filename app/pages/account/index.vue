@@ -266,7 +266,7 @@ useHead({ title: 'Account | Earnest' });
 const sections: Array<{ key: SectionKey; label: string; icon: string }> = [
 	{ key: 'profile',       label: 'Profile',       icon: 'lucide:user-round' },
 	{ key: 'password',      label: 'Password',      icon: 'lucide:key-round' },
-	{ key: 'score',         label: 'Earnest Score', icon: 'lucide:sparkles' },
+	{ key: 'score',         label: 'Earnest Score', icon: 'earnest' },
 	{ key: 'appearance',    label: 'Appearance',    icon: 'lucide:palette' },
 	{ key: 'notifications', label: 'Notifications', icon: 'lucide:bell' },
 ];

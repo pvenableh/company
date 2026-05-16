@@ -17,7 +17,7 @@
 		<!-- Motivational text -->
 		<Transition name="motivate">
 			<div v-if="motivationalText" class="motivational-bar">
-				<UIcon name="i-heroicons-sparkles" class="w-3.5 h-3.5 text-warning flex-shrink-0" />
+				<EarnestIcon class="w-3.5 h-3.5 text-warning flex-shrink-0" />
 				<span>{{ motivationalText }}</span>
 			</div>
 		</Transition>
@@ -166,15 +166,15 @@
 			</div>
 		</div>
 
-		<!-- AI Suggestions -->
+		<!-- Earnest suggestions -->
 		<div class="mb-4">
 			<button
 				class="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors group"
 				:disabled="aiLoading"
 				@click="showAiPrompt = !showAiPrompt"
 			>
-				<UIcon name="i-heroicons-sparkles" class="w-4 h-4 group-hover:text-primary transition-colors" />
-				<span class="uppercase tracking-wide font-medium">AI Suggestions</span>
+				<EarnestIcon class="w-4 h-4 group-hover:text-primary transition-colors" />
+				<span class="uppercase tracking-wide font-medium">Earnest Suggestions</span>
 				<UIcon
 					:name="showAiPrompt ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'"
 					class="w-3 h-3"
@@ -196,7 +196,7 @@
 						@click="fetchAiSuggestions"
 					>
 						<UIcon v-if="aiLoading" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
-						<UIcon v-else name="i-heroicons-sparkles" class="w-3.5 h-3.5" />
+						<EarnestIcon v-else class="w-3.5 h-3.5" />
 						{{ aiLoading ? 'Thinking...' : 'Suggest' }}
 					</button>
 				</div>
@@ -580,7 +580,7 @@ const TaskRow = defineComponent({
 							])
 							: null,
 						props.task.aiSuggested
-							? h(resolveComponent('UIcon'), { name: 'i-heroicons-sparkles', class: 'w-3 h-3 text-violet-400' })
+							? h(resolveComponent('EarnestIcon'), { class: 'w-3 h-3 text-violet-400' })
 							: null,
 					]),
 				]),

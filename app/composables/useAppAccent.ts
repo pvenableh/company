@@ -45,6 +45,12 @@ export type AppId =
 export interface AppAccent {
 	id: AppId;
 	name: string;
+	/**
+	 * Short label used by the AppRail when labels are visible. Keeps every
+	 * chip cell the same width — "Marketing" doesn't push neighbouring
+	 * chips off-grid. Falls back to `name` if a chip doesn't define one.
+	 */
+	shortName?: string;
 	icon: string;
 	to: string;
 	/** HSL hue 0-360 */
@@ -80,18 +86,18 @@ export interface AppAccent {
 }
 
 /** Palette-independent app metadata. */
-type AppMeta = Pick<AppAccent, 'id' | 'name' | 'icon' | 'to' | 'notificationCategories'>;
+type AppMeta = Pick<AppAccent, 'id' | 'name' | 'shortName' | 'icon' | 'to' | 'notificationCategories'>;
 
 const APP_META: Record<AppId, AppMeta> = {
-	dashboard:    { id: 'dashboard',    name: 'Dashboard',    icon: 'ph:compass-tool-duotone',    to: '/' },
-	clients:      { id: 'clients',      name: 'Clients',      icon: 'ph:users-three-duotone',     to: '/apps/clients' },
-	work:         { id: 'work',         name: 'Work',         icon: 'lucide:square-kanban',       to: '/apps/work',
+	dashboard:    { id: 'dashboard',    name: 'Dashboard',    shortName: 'Home',    icon: 'ph:compass-tool-duotone',    to: '/' },
+	clients:      { id: 'clients',      name: 'Clients',      shortName: 'Clients', icon: 'ph:users-three-duotone',     to: '/apps/clients' },
+	work:         { id: 'work',         name: 'Work',         shortName: 'Work',    icon: 'lucide:square-kanban',       to: '/apps/work',
 		notificationCategories: ['tickets', 'projects'] },
-	money:        { id: 'money',        name: 'Money',        icon: 'lucide:trending-up',         to: '/apps/money',
+	money:        { id: 'money',        name: 'Money',        shortName: 'Money',   icon: 'lucide:trending-up',         to: '/apps/money',
 		notificationCategories: ['invoices', 'contracts', 'proposals'] },
-	marketing:    { id: 'marketing',    name: 'Marketing',    icon: 'ph:waveform-duotone',        to: '/apps/marketing' },
-	organization: { id: 'organization', name: 'Organization', icon: 'ph:tree-structure-duotone',  to: '/apps/organization' },
-	account:      { id: 'account',      name: 'Account',      icon: 'lucide:circle-user-round',   to: '/account' },
+	marketing:    { id: 'marketing',    name: 'Marketing',    shortName: 'Mktg',    icon: 'ph:waveform-duotone',        to: '/apps/marketing' },
+	organization: { id: 'organization', name: 'Organization', shortName: 'Org',     icon: 'ph:tree-structure-duotone',  to: '/apps/organization' },
+	account:      { id: 'account',      name: 'Account',      shortName: 'Me',      icon: 'lucide:circle-user-round',   to: '/account' },
 };
 
 export type HSL = { h: number; s: number; l: number; a?: number };

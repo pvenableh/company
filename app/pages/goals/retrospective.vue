@@ -171,11 +171,8 @@ function progressColor(p: number): string {
 					:disabled="retroLoading || !inWindowGoals.length"
 					@click="generateRetrospective"
 				>
-					<UIcon
-						:name="retroLoading ? 'i-heroicons-arrow-path' : 'i-heroicons-sparkles'"
-						class="w-3.5 h-3.5 mr-1"
-						:class="retroLoading ? 'animate-spin' : ''"
-					/>
+					<UIcon v-if="retroLoading" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 mr-1 animate-spin" />
+					<EarnestIcon v-else class="w-3.5 h-3.5 mr-1" />
 					{{ retroLoading ? 'Reflecting…' : 'Generate retrospective' }}
 				</Button>
 			</div>
@@ -266,7 +263,7 @@ function progressColor(p: number): string {
 		<div v-if="retro" class="space-y-3">
 			<div class="ios-card p-5 border border-warning/20">
 				<div class="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-warning dark:text-warning font-semibold mb-2">
-					<UIcon name="i-heroicons-sparkles" class="w-3 h-3" />
+					<EarnestIcon class="w-3 h-3" />
 					Summary
 				</div>
 				<p class="text-sm leading-relaxed">{{ retro.summary }}</p>

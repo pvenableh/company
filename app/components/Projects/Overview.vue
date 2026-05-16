@@ -174,7 +174,7 @@
 				</div>
 				<div class="flex items-center gap-1 sm:gap-2 shrink-0">
 					<Button size="sm" variant="outline" class="uppercase text-[9px] sm:text-[10px] tracking-wide h-7 px-2 sm:px-3" @click="showTimelineWizard = true">
-						<UIcon name="i-heroicons-sparkles" class="h-3 w-3 mr-0.5 sm:mr-1" />
+						<EarnestIcon class="h-3 w-3 mr-0.5 sm:mr-1" />
 						<span class="hidden sm:inline">Generate</span> Timeline
 					</Button>
 					<Button size="sm" variant="outline" class="uppercase text-[9px] sm:text-[10px] tracking-wide h-7 px-2 sm:px-3" @click="showScheduleMeeting = true">

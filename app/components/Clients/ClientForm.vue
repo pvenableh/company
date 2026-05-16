@@ -236,7 +236,6 @@ const accountStateOptions = [
   { label: 'Active', value: 'active' },
   { label: 'Prospect', value: 'prospect' },
   { label: 'Inactive', value: 'inactive' },
-  { label: 'Churned', value: 'churned' },
 ];
 
 const industryItems = useDirectusItems('industries');

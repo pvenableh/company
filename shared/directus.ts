@@ -1158,7 +1158,7 @@ export interface Client {
 	/** @description Parent client for sub-brands. Billing falls back to parent if not set on this client. */
 	parent_client?: Client | string | null;
 	/** @description Customer relationship state. Lifecycle (published/draft/archived) lives on `status`. */
-	account_state?: 'active' | 'prospect' | 'inactive' | 'churned' | null;
+	account_state?: 'active' | 'prospect' | 'inactive' | null;
 	/** @description Teams assigned to this client */
 	assigned_teams?: ClientsTeam[] | string[];
 	/** @description Individual users with direct access to this client */

@@ -41,7 +41,7 @@
 			</div>
 			<div v-if="selectedTemplate" class="rounded-md border border-warning/20 bg-warning/5 p-3 mt-2">
 				<div class="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-warning dark:text-warning font-semibold mb-1.5">
-					<UIcon name="i-heroicons-sparkles" class="w-3 h-3" />
+					<EarnestIcon class="w-3 h-3" />
 					Reflection prompts for this template
 				</div>
 				<ul class="space-y-1 text-[11px] text-foreground/80">
