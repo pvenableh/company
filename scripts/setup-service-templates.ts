@@ -217,6 +217,25 @@ async function setupServiceTemplates() {
     meta: { interface: 'input', width: 'half', note: 'Typical project length' },
     schema: {},
   });
+  await createField('service_templates', {
+    field: 'color', type: 'string',
+    meta: {
+      interface: 'select-color',
+      width: 'half',
+      note: 'Hex swatch for calendar chips, invoice line items, and any other surface that distinguishes services. Null falls through to the Work-app accent.',
+    },
+    schema: {},
+  });
+  await createField('service_templates', {
+    field: 'icon', type: 'string',
+    meta: {
+      interface: 'input',
+      width: 'half',
+      note: 'A single emoji to personalize the service. Renders alongside the colour swatch wherever the service appears.',
+      options: { placeholder: '🎨' },
+    },
+    schema: {},
+  });
 
   // Tenant FK
   await createField('service_templates', {

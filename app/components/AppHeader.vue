@@ -35,9 +35,9 @@ const props = withDefaults(
 		showBack?: boolean;
 		/**
 		 * When set on a top-level /apps/<id>/index page, this header renders
-		 * the always-visible tagline + a reopen-intro icon (the AppIntroCard
-		 * itself renders below the floor strip in the page body). Stage 3 of
-		 * the "Me" lens initiative.
+		 * the always-visible tagline + an info button that toggles the
+		 * AppIntroCard (which renders below the floor strip in the page
+		 * body). The card is hidden by default — opt-in reference material.
 		 */
 		appId?: AppIntroId;
 	}>(),
@@ -49,12 +49,12 @@ const props = withDefaults(
 // Intro hooks are scoped to landing pages that pass `:app-id`. Static
 // access is fine — the composable is idempotent and the registry lookup
 // is cheap.
-const { isDismissed, reopen, getContent } = useAppIntros();
+const { isOpen, toggle, getContent } = useAppIntros();
 const introContent = computed(() => (props.appId ? getContent(props.appId) : null));
-const introDismissed = computed(() => (props.appId ? isDismissed(props.appId) : false));
+const introOpen = computed(() => (props.appId ? isOpen(props.appId) : false));
 
-function handleReopenIntro() {
-	if (props.appId) reopen(props.appId);
+function handleToggleIntro() {
+	if (props.appId) toggle(props.appId);
 }
 
 function goBack() {
@@ -103,12 +103,14 @@ const fallbackBackLabel = computed(() => {
 						<slot>{{ title }}</slot>
 					</h1>
 					<button
-						v-if="appId && introDismissed"
+						v-if="appId"
 						type="button"
 						class="app-header__intro-reopen"
-						aria-label="What is this app?"
-						title="What is this app?"
-						@click="handleReopenIntro"
+						:class="{ 'app-header__intro-reopen--active': introOpen }"
+						:aria-label="introOpen ? 'Hide intro' : 'What is this app?'"
+						:aria-expanded="introOpen"
+						:title="introOpen ? 'Hide intro' : 'What is this app?'"
+						@click="handleToggleIntro"
 					>
 						<Icon name="lucide:info" class="w-3.5 h-3.5" />
 					</button>
@@ -149,6 +151,10 @@ const fallbackBackLabel = computed(() => {
 
 .app-header__intro-reopen {
 	@apply inline-flex items-center justify-center w-6 h-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors;
+}
+
+.app-header__intro-reopen--active {
+	@apply text-foreground bg-muted/50;
 }
 
 .app-header__left {

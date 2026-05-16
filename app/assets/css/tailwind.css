@@ -52,6 +52,15 @@
 @source inline("hover:bg-tag-{1,2,3,4,5,6,7,8}/{10,15,20,25,30,90}");
 @source inline("{border,ring}-tag-{1,2,3,4,5,6,7,8}/{10,15,20,30,40}");
 
+/* Per-app accents — `bg-app-work`, `text-app-work`, `bg-app-work/10`
+   etc. Emitted by applyPaletteToDocument(). Currently only `work` is
+   used (scheduler + InstantMeetingButton); add more app ids here as
+   they get adopted by app-scoped surfaces. */
+@source inline("{bg,text,border,ring}-app-work");
+@source inline("bg-app-work/{5,10,15,20,25,30,90}");
+@source inline("hover:bg-app-work/{10,15,20,25,30,90}");
+@source inline("{border,ring}-app-work/{10,15,20,30,40}");
+
 /* ============================================
    Tailwind v4 Theme Extensions
    ============================================ */
@@ -108,6 +117,12 @@
 	--color-tag-6: hsl(var(--tag-6));
 	--color-tag-7: hsl(var(--tag-7));
 	--color-tag-8: hsl(var(--tag-8));
+
+	/* Per-app accents — palette-driven via applyPaletteToDocument().
+	   Use `bg-app-work`, `text-app-work` etc. for surfaces scoped to a
+	   specific app (scheduler video-meeting events, InstantMeetingButton)
+	   that should follow the rail chip's colour. */
+	--color-app-work: hsl(var(--app-work));
 
 	--color-border: hsl(var(--border));
 	--color-input: hsl(var(--input));

@@ -24,16 +24,18 @@ const chipOpacity = computed(() =>
 	getStatusOpacity(props.event.meeting_status || props.event.status),
 );
 
-// Type → semantic-token mapping. Switched from hardcoded Tailwind
-// emerald/amber/gray/blue to palette-driven CSS-var tokens so the
-// calendar re-skins on palette change:
-//   video_meeting → success  (positive scheduled outcome)
+// Type → token mapping. Video meetings adopt the Work app's rail accent
+// so the calendar visibly re-skins per palette (Sea Mist cyan, Aurora
+// blue, Neutral sky). Other types keep their semantic tokens — those
+// colours carry meaning (warning = action needed, muted = not-mine,
+// info = generic) and should stay consistent across palettes.
+//   video_meeting → app-work (palette-driven, matches Work rail chip)
 //   follow_up     → warning  (action needed)
 //   external      → muted    (observed, not owned)
 //   default       → info     (generic appointment)
 const typeBg = computed(() => {
 	switch (props.event.type) {
-		case 'video_meeting': return 'bg-success/10';
+		case 'video_meeting': return 'bg-app-work/10';
 		case 'follow_up': return 'bg-warning/10';
 		case 'external': return 'bg-muted/40';
 		default: return 'bg-info/10';
@@ -51,7 +53,7 @@ const typeIcon = computed(() => {
 
 const typeIconColor = computed(() => {
 	switch (props.event.type) {
-		case 'video_meeting': return 'text-success';
+		case 'video_meeting': return 'text-app-work';
 		case 'follow_up': return 'text-warning';
 		case 'external': return 'text-muted-foreground';
 		default: return 'text-info';
@@ -60,7 +62,7 @@ const typeIconColor = computed(() => {
 
 const typeAccent = computed(() => {
 	switch (props.event.type) {
-		case 'video_meeting': return 'bg-success';
+		case 'video_meeting': return 'bg-app-work';
 		case 'follow_up': return 'bg-warning';
 		case 'external': return 'bg-muted-foreground';
 		default: return 'bg-info';

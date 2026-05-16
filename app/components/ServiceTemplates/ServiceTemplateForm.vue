@@ -48,6 +48,67 @@
 			</div>
 		</div>
 
+		<div class="space-y-3">
+			<!-- Icon picker — curated grid of common-for-agency emojis.
+			     Inline rather than popovered because UPopover doesn't open
+			     reliably inside a modal (focus-trap conflict). One tap to
+			     pick; Clear resets. -->
+			<div class="space-y-1">
+				<div class="flex items-center justify-between">
+					<label class="t-label text-muted-foreground">Icon</label>
+					<button
+						v-if="form.icon"
+						type="button"
+						class="text-xs text-muted-foreground hover:text-foreground underline"
+						@click="form.icon = ''"
+					>Clear</button>
+				</div>
+				<div class="flex flex-wrap gap-1.5">
+					<button
+						v-for="e in EMOJI_OPTIONS"
+						:key="e"
+						type="button"
+						class="w-8 h-8 rounded-md text-base flex items-center justify-center hover:bg-muted/60 transition-colors"
+						:class="form.icon === e ? 'bg-muted/70 ring-1 ring-primary/40' : 'bg-muted/20'"
+						@click="form.icon = e"
+					>{{ e }}</button>
+				</div>
+			</div>
+
+			<!-- Color picker -->
+			<div class="space-y-1">
+				<label class="t-label text-muted-foreground">Color</label>
+				<div class="flex items-center gap-3">
+					<label class="relative inline-flex items-center justify-center w-9 h-9 rounded-full border cursor-pointer overflow-hidden shrink-0" :style="swatchStyle">
+						<input type="color" :value="colorOrFallback" @input="onColorInput" class="absolute inset-0 opacity-0 cursor-pointer" />
+					</label>
+					<UInput v-model="form.color" placeholder="#56cfe1" class="flex-1 max-w-[180px]" />
+					<button
+						v-if="form.color"
+						type="button"
+						class="text-xs text-muted-foreground hover:text-foreground underline"
+						@click="form.color = ''"
+					>Reset</button>
+				</div>
+			</div>
+		</div>
+
+		<!-- Live preview chip — shows the service name + chosen emoji on
+		     the picked colour with a contrast-adapted foreground. Whatever
+		     the user picks, the chip below proves the text stays legible. -->
+		<div>
+			<div class="text-[10px] uppercase tracking-wider t-text-muted mb-1.5">Preview</div>
+			<span
+				class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium"
+				:style="previewChipStyle"
+			>
+				<span v-if="form.icon" class="text-base leading-none">{{ form.icon }}</span>
+				<span v-else class="w-1.5 h-1.5 rounded-full" :style="{ backgroundColor: previewChipStyle.color }" />
+				{{ form.name || 'Service name' }}
+			</span>
+			<p class="text-xs t-text-muted mt-1.5">Used as the swatch wherever this service is surfaced. Leave empty to fall through to the Work-app accent.</p>
+		</div>
+
 		<div class="space-y-1">
 			<label class="t-label text-muted-foreground">Default scope</label>
 			<UTextarea
@@ -62,11 +123,18 @@
 
 <script setup lang="ts">
 import type { ServiceTemplate } from '~/composables/useServiceTemplates';
+import { legibleTextOn, legibleTextOnHsl } from '~/utils/color-contrast';
 
 const props = defineProps<{
 	template?: Partial<ServiceTemplate> | null;
 	saving?: boolean;
 }>();
+
+// Live Work-accent HSL for the no-color fallback. Reading it here means
+// the preview chip's text contrast tracks the palette switch — Aurora's
+// Electric Sapphire wants white text, Sea Mist's Strong Cyan wants dark.
+const { accents } = useAppAccent();
+const workAccent = computed(() => accents.value.work);
 
 const emit = defineEmits<{
 	submit: [data: any];
@@ -80,11 +148,48 @@ const form = reactive({
 	scope_template: props.template?.scope_template || '',
 	default_total: props.template?.default_total ?? '',
 	default_duration_days: props.template?.default_duration_days ?? '',
+	color: props.template?.color || '',
+	icon: props.template?.icon || '',
 });
+
+// Curated grid covering the kinds of work an agency runs. Six columns by
+// four rows = 24 picks — enough to feel personal, few enough to make
+// picking feel like recognition, not a decision.
+const EMOJI_OPTIONS = [
+	'🎨', '✏️', '🖼️', '🎬', '📷', '🎵',
+	'🌐', '📱', '💻', '⚙️', '🤖', '🔧',
+	'📣', '📢', '✉️', '📰', '📊', '📈',
+	'💼', '📦', '🛍️', '🏷️', '🎯', '✨',
+] as const;
+
+const colorOrFallback = computed(() => form.color || '#56cfe1');
+const swatchStyle = computed(() => ({ backgroundColor: form.color || 'hsl(var(--app-work))' }));
+
+// Preview chip: if the user hasn't picked a colour, fall through to the
+// live Work-app accent so the preview tracks the active palette. Text
+// contrast is computed off the same source — hex via legibleTextOn,
+// HSL via legibleTextOnHsl — so legibility is guaranteed at every value
+// the user can dial in and on every palette they can switch to.
+const previewChipStyle = computed(() => {
+	if (form.color) {
+		return { backgroundColor: form.color, color: legibleTextOn(form.color) };
+	}
+	const a = workAccent.value;
+	return {
+		backgroundColor: `hsl(${a.h} ${a.s}% ${a.l}%)`,
+		color: legibleTextOnHsl(a.h, a.s, a.l),
+	};
+});
+
+function onColorInput(e: Event) {
+	form.color = (e.target as HTMLInputElement).value;
+}
 
 function handleSubmit() {
 	emit('submit', {
 		...form,
+		color: form.color?.trim() || null,
+		icon: form.icon?.trim() || null,
 		default_total: form.default_total === '' || form.default_total == null ? null : Number(form.default_total),
 		default_duration_days: form.default_duration_days === '' || form.default_duration_days == null ? null : Number(form.default_duration_days),
 	});

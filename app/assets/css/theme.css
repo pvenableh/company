@@ -122,7 +122,10 @@
   -webkit-backdrop-filter: saturate(180%) blur(20px);
 }
 .dark .glass {
-  background: rgba(30, 30, 30, 0.72);
+  /* Lifted to compose to ~hsl(0 0% 13%) over the hsl(0 0% 5%) body so
+   * the apps-shell toolbar (and any other .glass surface) reads as a
+   * distinct plinth in dark mode instead of melting into the page. */
+  background: rgba(40, 40, 40, 0.88);
 }
 
 .glass-thin {

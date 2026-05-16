@@ -116,6 +116,17 @@ function handleLogout() {
 
 			<DropdownMenuSeparator />
 
+			<DropdownMenuItem @select="goTo('/inbox')">
+				<Icon name="lucide:message-square" class="size-4 mr-2 shrink-0" />
+				<span>Social inbox</span>
+			</DropdownMenuItem>
+			<DropdownMenuItem @select="goTo('/support')">
+				<Icon name="lucide:circle-help" class="size-4 mr-2 shrink-0" />
+				<span>Help &amp; feedback</span>
+			</DropdownMenuItem>
+
+			<DropdownMenuSeparator />
+
 			<DropdownMenuItem
 				class="flex items-center justify-between cursor-pointer"
 				@select="(e: Event) => { e.preventDefault(); toggleDark(); }"

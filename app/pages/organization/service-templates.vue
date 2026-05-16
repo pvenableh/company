@@ -44,9 +44,20 @@
 				@click="openEdit(t)"
 			>
 				<div class="flex items-start justify-between gap-2 mb-2">
-					<div class="flex-1 min-w-0">
-						<p class="text-[10px] uppercase tracking-wider t-text-muted">{{ t.category || 'other' }}</p>
-						<h3 class="text-base font-semibold truncate">{{ t.name }}</h3>
+					<div class="flex items-start gap-2 flex-1 min-w-0">
+						<span
+							v-if="t.icon"
+							class="inline-flex items-center justify-center w-8 h-8 rounded-full text-lg shrink-0"
+							:style="{ backgroundColor: t.color || 'hsl(var(--app-work) / 0.15)' }"
+						>{{ t.icon }}</span>
+						<div class="flex-1 min-w-0">
+							<span
+								class="inline-block text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full mb-1.5"
+								:style="categoryBadgeStyle(t.color)"
+								:title="t.color ? `Color: ${t.color}` : 'Default (Work accent)'"
+							>{{ t.category || 'other' }}</span>
+							<h3 class="text-base font-semibold truncate">{{ t.name }}</h3>
+						</div>
 					</div>
 					<span
 						class="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full"
@@ -74,6 +85,12 @@
 
 <script setup lang="ts">
 import type { ServiceTemplate } from '~/composables/useServiceTemplates';
+import { legibleTextOn, legibleTextOnHsl } from '~/utils/color-contrast';
+
+// Active Work-accent HSL — used as the fallback chip background when a
+// service has no colour set. Tracks palette switches.
+const { accents } = useAppAccent();
+const workAccent = computed(() => accents.value.work);
 
 definePageMeta({ middleware: ['auth'] });
 useHead({ title: 'Service Templates | Earnest' });
@@ -90,6 +107,25 @@ function statusChipClass(status: string) {
 	if (status === 'published') return 'bg-success/10 text-success dark:bg-success/30 dark:text-success';
 	if (status === 'draft') return 'bg-warning/10 text-warning dark:bg-warning/30 dark:text-warning';
 	return 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400';
+}
+
+/**
+ * Category badge styling — service colour as bg, contrast-adapted text
+ * on top. When the user hasn't set a colour, the badge falls through to
+ * the live Work-app accent (so the row visually tracks the active
+ * palette). Text contrast is computed from the same source the bg uses,
+ * so dark text on Sea Mist's pale cyan and white text on Aurora's deep
+ * sapphire both come out right.
+ */
+function categoryBadgeStyle(color: string | null | undefined) {
+	if (color) {
+		return { backgroundColor: color, color: legibleTextOn(color) };
+	}
+	const a = workAccent.value;
+	return {
+		backgroundColor: `hsl(${a.h} ${a.s}% ${a.l}%)`,
+		color: legibleTextOnHsl(a.h, a.s, a.l),
+	};
 }
 
 function formatMoney(n: number) {

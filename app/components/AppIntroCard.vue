@@ -1,15 +1,10 @@
 <script setup lang="ts">
 /**
- * AppIntroCard — dismissible "what is this app for" card for /apps/*.
+ * AppIntroCard — opt-in "what is this app for" card for /apps/*.
  *
- * Renders below the floor strip on each /apps/<id>/index.vue. After the
- * user clicks the close button, dismissal persists to
- * `directus_users.dismissed_app_intros` and the card stays hidden across
- * sessions. The reopen icon on AppHeader brings it back for the current
- * session only.
- *
- * Stage 3 of the "Me" lens initiative. See useAppIntros for the registry
- * of tagline + intro copy.
+ * Hidden by default. The `info` icon in AppHeader opens it for the
+ * current session; the close X on the card collapses it again. Session-
+ * only state — see useAppIntros for the registry of tagline + intro copy.
  *
  * Visual: ios-card with an accent-tinted left border. Sized so it doesn't
  * dominate the page — single column, bullets optional, accent close X.
@@ -18,10 +13,10 @@ import type { AppIntroId } from '~/composables/useAppIntros';
 
 const props = defineProps<{ appId: AppIntroId }>();
 
-const { isDismissed, dismiss, getContent } = useAppIntros();
+const { isOpen, close, getContent } = useAppIntros();
 
 const content = computed(() => getContent(props.appId));
-const visible = computed(() => !isDismissed(props.appId));
+const visible = computed(() => isOpen(props.appId));
 </script>
 
 <template>
@@ -29,8 +24,8 @@ const visible = computed(() => !isDismissed(props.appId));
 		<button
 			type="button"
 			class="app-intro-card__close"
-			aria-label="Dismiss intro"
-			@click="dismiss(appId)"
+			aria-label="Close intro"
+			@click="close(appId)"
 		>
 			<Icon name="lucide:x" class="w-3.5 h-3.5" />
 		</button>

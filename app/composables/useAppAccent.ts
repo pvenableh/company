@@ -730,7 +730,27 @@ export function applyPaletteToDocument(paletteId: AppPaletteId): void {
 	const ramp = getTagRamp(paletteId);
 	ramp.forEach((c, i) => set(`--tag-${i + 1}`, hslToVarString(c)));
 
-	// 3. Chrome attribute drives AppRail's chip-mode CSS branch.
+	// 3. Per-app accent vars. Two shapes:
+	//    - `--app-{id}` = `H S% L%` triple, consumed by Tailwind via
+	//      `--color-app-{id}: hsl(var(--app-{id}))` so `bg-app-work` /
+	//      `bg-app-work/90` etc. work as ordinary utilities.
+	//    - `--app-{id}-h/s/l` (raw components) + `--app-{id}-icon` (ready
+	//      CSS colour) for inline-style consumers that need to compose
+	//      with a custom alpha or hue shift.
+	//    Surfaces scoped to an app (Scheduler's video-meeting chip, the
+	//    InstantMeetingButton) bind to these to stay in lockstep with the
+	//    rail's chip colour when the palette changes.
+	const appAccents = getAppAccents(paletteId);
+	for (const id of CHIP_IDS) {
+		const a = appAccents[id]!;
+		set(`--app-${id}`, hslToVarString(a));
+		set(`--app-${id}-h`, String(a.h));
+		set(`--app-${id}-s`, `${a.s}%`);
+		set(`--app-${id}-l`, `${a.l}%`);
+		set(`--app-${id}-icon`, formatIconColor(a));
+	}
+
+	// 4. Chrome attribute drives AppRail's chip-mode CSS branch.
 	const chrome = palette.chrome ?? { chipMode: 'palette' };
 	root.setAttribute('data-chip-mode', chrome.chipMode);
 	if (chrome.chipAccent) {

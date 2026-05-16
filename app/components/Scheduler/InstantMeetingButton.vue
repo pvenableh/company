@@ -100,6 +100,14 @@ const startMeeting = async () => {
 				duration: prefs.duration,
 				waiting_room_enabled: prefs.waitingRoom,
 				recording_enabled: prefs.recording,
+				// Hard-default transcription ON for instant meetings. Drives the
+				// post-meeting recap + the live AI sidebar; transcription is
+				// cheap (~$0.26/hr) and creating the meeting via this button
+				// implies the host wants it captured. Paid-plan orgs honour
+				// this; free orgs get a 402 from create-room which surfaces
+				// the upgrade path. Plan-aware orgs can still override per-
+				// meeting from the scheduled-meeting form.
+				transcription_enabled: meetingDefaults.value.transcriptionAvailable,
 				organization: selectedOrg.value || null,
 			},
 		});
@@ -120,7 +128,7 @@ const startMeeting = async () => {
 	<UPopover v-model:open="open" :popper="{ placement: 'bottom-end', offsetDistance: 6, strategy: 'fixed' }">
 		<button
 			:disabled="loading"
-			class="flex items-center gap-2 px-4 py-2 rounded-xl bg-success hover:bg-success/90 text-white text-sm font-medium shadow-sm transition-colors ios-press disabled:opacity-50"
+			class="flex items-center gap-2 px-4 py-2 rounded-xl bg-app-work hover:bg-app-work/90 text-white text-sm font-medium shadow-sm transition-colors ios-press disabled:opacity-50"
 		>
 			<UIcon v-if="!loading" name="i-heroicons-video-camera" class="w-4 h-4" />
 			<UIcon v-else name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin" />
@@ -177,7 +185,7 @@ const startMeeting = async () => {
 					type="button"
 					:disabled="loading"
 					@click="startMeeting"
-					class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-success hover:bg-success/90 text-white text-[12px] font-semibold transition-colors ios-press disabled:opacity-50"
+					class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-app-work hover:bg-app-work/90 text-white text-[12px] font-semibold transition-colors ios-press disabled:opacity-50"
 				>
 					<UIcon v-if="loading" name="i-heroicons-arrow-path" class="w-3.5 h-3.5 animate-spin" />
 					<UIcon v-else name="i-heroicons-video-camera" class="w-3.5 h-3.5" />

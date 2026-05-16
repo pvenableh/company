@@ -15,6 +15,12 @@ export interface ServiceTemplate {
   scope_template: string | null;
   default_total: number | null;
   default_duration_days: number | null;
+  /** Hex swatch (e.g. "#56cfe1"). Null = fall through to the Work-app accent
+   *  in any UI that wants to distinguish services. */
+  color: string | null;
+  /** Single emoji used to personalize the service in pickers, list cards,
+   *  and preview chips. Null = no glyph. */
+  icon: string | null;
   organization: string;
   date_created?: string;
   date_updated?: string;

@@ -290,6 +290,14 @@ const dailyFrame = ref(null);
 // isn't ready yet.
 const dailyJoined = ref(false);
 
+// Live transcript buffer for THIS meeting. Daily fires
+// `transcription-message` events in real time once host clicks Transcribe
+// (or the token auto-starts it). We push each line into a shared store
+// keyed by meeting id so the AI sidebar can ask "what's been said?" while
+// the call is still happening — the persisted VTT only arrives via the
+// `transcript.ready-to-download` webhook AFTER the meeting ends.
+const { append: appendLiveTranscriptLine } = useLiveMeetingTranscript(() => meeting.value?.id);
+
 let statusPollInterval = null;
 
 // ── Host-only transcribe + record toggles ────────────────────────────────
@@ -595,6 +603,17 @@ const wrapDailyIframe = async () => {
 				description: err?.errorMsg || 'Daily reported a transcription error.',
 				color: 'red',
 			});
+		});
+		// Live transcript fan-out. Daily payload looks like
+		// `{ text, participantId, user_id, user_name, is_final, timestamp }`.
+		// We only buffer finalised cues so the AI sees coherent sentences
+		// instead of interim word-by-word fragments.
+		dailyCallObject.on('transcription-message', (msg) => {
+			if (!msg || msg.is_final === false) return;
+			const speaker = msg.user_name || msg.userName || msg.participantId || 'Speaker';
+			const text = msg.text || '';
+			if (!text.trim()) return;
+			appendLiveTranscriptLine({ speaker, text });
 		});
 		console.log('[meeting] Daily wrap attached');
 		// In case we wrapped after the join already fired

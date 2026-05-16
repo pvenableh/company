@@ -37,7 +37,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event);
-  const { sessionId, message, model, clientId, organizationId, responseStyle, verbosity, entityType, entityId, allowMutations } = body;
+  const { sessionId, message, model, clientId, organizationId, responseStyle, verbosity, entityType, entityId, allowMutations, liveTranscript } = body;
 
   if (!message?.trim()) {
     throw createError({ statusCode: 400, message: 'Message is required' });
@@ -314,6 +314,22 @@ export default defineEventHandler(async (event) => {
     // Entity context (Layer 4): focused context when chatting from an entity detail page
     const entityBlock = entityContext ? `\n\n${entityContext}` : '';
 
+    // Live transcript block — only present when the user is chatting from
+    // an active video meeting. The Directus row's `transcript_text` is
+    // still empty mid-call (Daily delivers VTT via webhook AFTER the
+    // meeting ends), so without this block the model would answer
+    // "nothing captured yet" to every mid-meeting question. Cap at the
+    // last ~12k chars so a long meeting doesn't blow the context budget;
+    // the buffer is already speaker-prefixed.
+    let liveTranscriptBlock = '';
+    if (entityType === 'video_meeting' && typeof liveTranscript === 'string' && liveTranscript.trim()) {
+      const TRIM = 12000;
+      const trimmed = liveTranscript.length > TRIM
+        ? `…\n${liveTranscript.slice(-TRIM)}`
+        : liveTranscript;
+      liveTranscriptBlock = `\n\nACTIVE MEETING TRANSCRIPT (live, this is what has been said so far in the meeting that's still in progress — use it as the primary source for any "what was said / decided / discussed" question):\n${trimmed}`;
+    }
+
     // When the chat opts into mutation tools, give Claude an unambiguous handle
     // to the focused record + permission to use the tools without asking. Without
     // this, the model often hallucinates an id (or asks the user) instead of
@@ -323,7 +339,7 @@ export default defineEventHandler(async (event) => {
       ? `\n\nTOOLS ENABLED: You can mutate this entity directly. The user's currently focused record is ${entityType}="${entityId}" in organization="${organizationId}". When the user asks to reschedule, update, or add — call the matching tool (reschedule_project / update_field / add_task) with this exact id. Do NOT refuse or describe the change; execute it. If a tool returns success:false, surface the error verbatim instead of inventing a permission excuse.`
       : '';
 
-    const systemPrompt = buildSystemPrompt(orgContext) + notesContext + taskContext + brandContext + entityBlock + toolNudge + styleContext + verbosityContext;
+    const systemPrompt = buildSystemPrompt(orgContext) + notesContext + taskContext + brandContext + entityBlock + liveTranscriptBlock + toolNudge + styleContext + verbosityContext;
 
     // 6. Stream/tool response via SSE
     let provider;

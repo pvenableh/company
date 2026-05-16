@@ -1,22 +1,17 @@
 /**
- * useAppIntros — per-user dismissible intro cards on every /apps/* landing.
+ * useAppIntros — opt-in "what is this app?" intro cards on every /apps/*
+ * landing.
  *
- * Stage 3 of the "Me" lens initiative. Each top-level app gets a short
- * "what is this app for" card on its index page. The user can dismiss it;
- * dismissal is persisted on `directus_users.dismissed_app_intros` (a json
- * array of AppId strings) so it stays gone across sessions and devices.
+ * Each top-level app has a short intro registered here. The card is HIDDEN
+ * by default — the user clicks the `info` icon in AppHeader to open it
+ * for the current session. The "X" inside the card closes it again.
  *
- * A one-line `tagline` is always visible under the page title regardless
- * of dismissal — it's the "what is this" anchor for users who dismissed
- * the card months ago and forgot.
+ * Session-only state — no persistence. The intro is reference material
+ * the user occasionally wants to re-read, not a first-run onboarding
+ * banner that needs to be dismissed across sessions.
  *
- * Persistence pattern mirrors useViewLens / useAppPalette: a module-level
- * ref hydrates once from `/api/directus/users/me`; reads come from the
- * server-attached `user` until then. Writes go through `updateMe()`.
- *
- * Tolerates a missing `dismissed_app_intros` field on the server (orgs
- * that haven't run `scripts/setup-app-intros-field.ts` yet) — treats null
- * as "nothing dismissed".
+ * The always-visible `tagline` under the page title is the permanent
+ * "what is this" anchor; the card is the deeper read.
  */
 import type { AppId } from '~/composables/useAppAccent';
 
@@ -119,88 +114,35 @@ export const APP_INTROS: Record<AppIntroId, AppIntroContent> = {
 
 export const APP_INTRO_IDS: readonly AppIntroId[] = Object.keys(APP_INTROS) as AppIntroId[];
 
-function isAppIntroId(v: unknown): v is AppIntroId {
-	return typeof v === 'string' && (APP_INTRO_IDS as readonly string[]).includes(v);
-}
-
-/** Module-level state — shared across all composable callers. */
-const dismissedPersisted = ref<Set<AppIntroId>>(new Set());
-/**
- * Session-only re-shown apps. When the user clicks the reopen icon we
- * locally re-enable the card *without* writing to the server, so the
- * persisted dismissal stays intact until they explicitly dismiss again.
- */
-const reopenedThisSession = ref<Set<AppIntroId>>(new Set());
-let hydrationPromise: Promise<void> | null = null;
-
-function parseDismissed(raw: unknown): Set<AppIntroId> {
-	if (!Array.isArray(raw)) return new Set();
-	const out = new Set<AppIntroId>();
-	for (const v of raw) if (isAppIntroId(v)) out.add(v);
-	return out;
-}
-
-async function hydrateFromServer() {
-	if (hydrationPromise) return hydrationPromise;
-	hydrationPromise = (async () => {
-		try {
-			const me = (await $fetch('/api/directus/users/me', {
-				method: 'GET',
-				params: { fields: 'dismissed_app_intros' },
-			})) as Record<string, any>;
-			dismissedPersisted.value = parseDismissed(me?.dismissed_app_intros);
-		} catch {
-			dismissedPersisted.value = new Set();
-		}
-	})();
-	return hydrationPromise;
-}
+/** Apps the user has opened the intro for in this session. */
+const openedThisSession = ref<Set<AppIntroId>>(new Set());
 
 export function useAppIntros() {
-	const { user } = useDirectusAuth();
-	const { updateMe } = useDirectusUsers();
-
-	if (import.meta.client && !hydrationPromise) {
-		// Seed from the auth-attached user immediately so SSR-hydrated reads
-		// don't flash the card before the /me round-trip resolves.
-		const seeded = parseDismissed((user.value as any)?.dismissed_app_intros);
-		if (seeded.size) dismissedPersisted.value = seeded;
-		hydrateFromServer();
+	function isOpen(id: AppIntroId): boolean {
+		return openedThisSession.value.has(id);
 	}
 
-	function isDismissed(id: AppIntroId): boolean {
-		if (reopenedThisSession.value.has(id)) return false;
-		return dismissedPersisted.value.has(id);
-	}
-
-	async function dismiss(id: AppIntroId): Promise<void> {
-		if (dismissedPersisted.value.has(id) && !reopenedThisSession.value.has(id)) return;
-		// Clear any session-level re-open so persisted state wins.
-		reopenedThisSession.value.delete(id);
-		const next = new Set(dismissedPersisted.value);
+	function open(id: AppIntroId): void {
+		if (openedThisSession.value.has(id)) return;
+		const next = new Set(openedThisSession.value);
 		next.add(id);
-		dismissedPersisted.value = next;
-		try {
-			await updateMe({ dismissed_app_intros: Array.from(next) } as any);
-		} catch (err) {
-			console.warn('[useAppIntros] persist dismissal failed; keeping local override', err);
-		}
+		openedThisSession.value = next;
 	}
 
-	/**
-	 * Locally re-show a dismissed intro for the rest of this session. Does
-	 * NOT write to the server — the user's persisted "I don't need this"
-	 * stays intact. If they dismiss again, `dismiss()` re-writes.
-	 */
-	function reopen(id: AppIntroId): void {
-		const next = new Set(reopenedThisSession.value);
-		next.add(id);
-		reopenedThisSession.value = next;
+	function close(id: AppIntroId): void {
+		if (!openedThisSession.value.has(id)) return;
+		const next = new Set(openedThisSession.value);
+		next.delete(id);
+		openedThisSession.value = next;
+	}
+
+	function toggle(id: AppIntroId): void {
+		openedThisSession.value.has(id) ? close(id) : open(id);
 	}
 
 	function getContent(id: AppIntroId): AppIntroContent {
 		return APP_INTROS[id];
 	}
 
-	return { isDismissed, dismiss, reopen, getContent };
+	return { isOpen, open, close, toggle, getContent };
 }

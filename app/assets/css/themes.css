@@ -101,6 +101,16 @@
 	--tag-6: 213 64% 59%;
 	--tag-7: 261 60% 48%;
 	--tag-8: 278 100% 36%;
+
+	/* Per-app accent vars — overridden per-palette by applyPaletteToDocument().
+	   SSR defaults match Sea Mist's pickGappy(10, 7) spread for the Work app
+	   chip (Strong Cyan #56cfe1). Surfaces scoped to the Work app (scheduler
+	   event chip, InstantMeetingButton) bind to these so they stay in lockstep
+	   with the AppRail chip on palette switch. */
+	--app-work: 188 70% 61%;
+	--app-work-h: 188;
+	--app-work-s: 70%;
+	--app-work-l: 61%;
 }
 
 [data-theme='glass'] .dark,

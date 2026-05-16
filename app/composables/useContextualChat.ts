@@ -7,6 +7,7 @@
  * Sessions are persisted server-side in Directus (ai_chat_sessions + ai_chat_messages).
  * On sidebar open, the most recent session for the entity is loaded automatically.
  */
+import { getLiveTranscriptFor } from '~/composables/useLiveMeetingTranscript';
 
 interface ContextualMessage {
   id: string;
@@ -214,6 +215,16 @@ export function useContextualChat() {
     };
     chat.messages.push(userMsg, assistantMsg);
 
+    // Live meeting transcript: when the focused entity is an in-flight
+    // video meeting, the Directus row's `transcript_text` is still empty
+    // (Daily only delivers VTT via webhook AFTER the meeting ends). We
+    // pull the in-page buffer the meeting view has been pushing to and
+    // forward it as `liveTranscript` so the model can answer "what was
+    // just said?" mid-call instead of "nothing captured yet".
+    const liveTranscript = entityType === 'video_meeting'
+      ? getLiveTranscriptFor(entityId)
+      : '';
+
     try {
       abortController = new AbortController();
       const response = await fetch('/api/ai/chat', {
@@ -229,6 +240,7 @@ export function useContextualChat() {
           entityType,
           entityId,
           allowMutations: true,
+          liveTranscript: liveTranscript || undefined,
         }),
       });
 
