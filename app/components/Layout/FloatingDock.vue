@@ -197,7 +197,7 @@
 
 						<!-- Link to full page -->
 						<NuxtLink
-							to="/time-tracker"
+							:to="timeTrackerLink"
 							class="mt-4 flex items-center justify-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground hover:text-foreground transition-colors py-2"
 							@click="activePanel = null"
 						>
@@ -217,6 +217,14 @@ const { user } = useDirectusAuth();
 // org-scoped and would either 403 or no-op until they finish onboarding.
 const { organizations } = useOrganization();
 const hasOrg = computed(() => organizations.value.length > 0);
+// The dock mounts in both default.vue (classic) and apps.vue (apps). The
+// "View all entries" link below must point at whichever Time Tracker home
+// matches the user's chosen mode — classic /time-tracker page or the
+// apps Money > Time floor.
+const { isAppsMode } = useAppsMode();
+const timeTrackerLink = computed(() =>
+	isAppsMode.value ? '/apps/money?floor=time' : '/time-tracker',
+);
 const { activeTasks } = useQuickTasks();
 const {
 	activeTimer,
@@ -343,7 +351,7 @@ const DEFAULT_BOTTOM_OFFSET = '1.5rem';
 // height (~38px chip + ~12px padding) + breathing gap (~0.5rem) ≈ 5rem.
 const RAIL_CLEARED_BOTTOM_OFFSET = '5rem';
 
-const { isAppsMode, railPosition } = useAppsMode();
+const { railPosition } = useAppsMode();
 const bottomOffset = computed(() => {
 	if (
 		isAppsMode.value

@@ -68,8 +68,14 @@
 			<AppRail :key="`rail-${railPosition}`" class="apps-shell__rail" />
 		</div>
 
-		<!-- Slide-over teleport target — apps push content into here via <Teleport to="#app-slide-over-root"> -->
-		<div id="app-slide-over-root" />
+		<!-- Universal slide-over stack — one mount-point, looks up each
+		     panel from `components/apps/panels/registry.ts` and renders
+		     them with iOS push/pop visuals. Pages no longer render their
+		     own AppSlideOver markup; they just call
+		     `useAppSlideOver(type).open(id)` from row-click handlers. -->
+		<ClientOnly>
+			<AppsAppSlideOverStack />
+		</ClientOnly>
 
 		<ClientOnly>
 			<CommandCenterAITray :is-open="aiTrayOpen" :initial-prompt="aiTrayInitialPrompt" @close="closeAITray" />
@@ -108,6 +114,11 @@ const { railPosition } = useAppsMode();
 const { accentStyle } = useAppAccent();
 
 const { isOnEntityPage, openSidebar: openEntitySidebar } = useEntityPageContext();
+
+// Reconcile the global slide-over stack from `?slide=` on every route change.
+// Pages opt in via `useAppSlideOver(type)`; this sync makes deep links + back/
+// forward / swipe-back drive the same state.
+useAppSlideOverStackUrlSync();
 
 const handleOpenAI = () => {
 	if (isOnEntityPage.value) {

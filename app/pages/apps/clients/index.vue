@@ -186,8 +186,13 @@ watch(clientsViewMode, () => {
 
 const debouncedFetchClients = useDebounceFn(fetchClients, 300);
 
+// Open the client as an iOS-style slide-over via the universal stack.
+// Direct deep-links to `/apps/clients/<id>` still render the full page
+// (the route wrapper mounts `<AppsPanelsClientDetailPanel>` for that case).
+const clientSlide = useAppSlideOver('client');
 function viewClient(client: Client) {
-  router.push(`/apps/clients/${client.id}`);
+  if (!client?.id) return;
+  clientSlide.open(String(client.id));
 }
 
 async function onClientCreated() {

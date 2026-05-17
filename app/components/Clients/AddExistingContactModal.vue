@@ -2,7 +2,7 @@
   <UModal
     v-model="isOpen"
     title="Add Existing Contact"
-    description="Search unattached contacts and link one to this client."
+    description="Search your contacts and link one to this client. Contacts already on another client move here when picked."
     :ui="{ content: 'max-w-lg' }"
   >
     <div class="space-y-3 mt-1">
@@ -26,13 +26,13 @@
           <Icon name="lucide:loader-2" class="w-4 h-4 animate-spin inline-block" />
         </div>
         <div v-else-if="!filteredContacts.length" class="px-3 py-6 text-center text-xs text-muted-foreground">
-          {{ search ? 'No matching unattached contacts.' : 'No unattached contacts available.' }}
+          {{ search ? 'No matching contacts.' : 'No attachable contacts in this organization.' }}
         </div>
         <div v-else class="max-h-[320px] overflow-y-auto">
           <button
             v-for="c in filteredContacts"
             :key="c.id"
-            class="flex items-center gap-3 w-full h-12 px-3 hover:bg-muted/40 border-b border-border/30 last:border-b-0 transition-colors text-left disabled:opacity-50"
+            class="flex items-center gap-3 w-full min-h-12 py-2 px-3 hover:bg-muted/40 border-b border-border/30 last:border-b-0 transition-colors text-left disabled:opacity-50"
             :disabled="attaching === c.id"
             @click="attach(c)"
           >
@@ -47,6 +47,14 @@
                 <span v-if="c.company">{{ c.company }}</span>
               </p>
             </div>
+            <span
+              v-if="c.client?.name"
+              class="hidden sm:inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-warning/15 text-warning shrink-0"
+              :title="`Currently on ${c.client.name} — attaching will move them here.`"
+            >
+              <Icon name="lucide:corner-up-left" class="w-2.5 h-2.5" />
+              on {{ c.client.name }}
+            </span>
             <Icon
               v-if="attaching === c.id"
               name="lucide:loader-2"
@@ -90,19 +98,26 @@ const { selectedOrg } = useOrganization();
 const contactItems = useDirectusItems('contacts');
 const toast = useToast();
 
-async function fetchUnattached() {
+async function fetchAttachable() {
   loading.value = true;
   try {
+    // Pull every contact in the org EXCEPT ones already on this client.
+    // Contacts already on another client are still listed so the user can
+    // re-home them — the row renders a "currently on <name>" chip so the
+    // move is intentional, not silent.
     contacts.value = await contactItems.list({
-      fields: ['id', 'first_name', 'last_name', 'email', 'company', 'category'],
+      fields: ['id', 'first_name', 'last_name', 'email', 'company', 'category', 'client.id', 'client.name'],
       filter: {
         _and: [
-          { client: { _null: true } },
+          { _or: [
+            { client: { _null: true } },
+            { client: { id: { _neq: props.clientId } } },
+          ] },
           { organizations: { organizations_id: { _eq: selectedOrg.value } } },
         ],
       },
       sort: ['first_name', 'last_name'],
-      limit: 200,
+      limit: 500,
     });
   } catch (err: any) {
     console.error('[AddExistingContactModal] fetch failed:', err);
@@ -143,7 +158,7 @@ watch(isOpen, (open) => {
   if (open) {
     search.value = '';
     markAsBilling.value = false;
-    fetchUnattached();
+    fetchAttachable();
   }
 });
 </script>

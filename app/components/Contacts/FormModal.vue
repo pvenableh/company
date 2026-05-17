@@ -13,9 +13,9 @@
 	>
 		<ContactsContactForm
 			v-if="isOpen"
-			:key="contact?.id || 'new'"
+			:key="contact?.id || `new-${clientId || 'noclient'}`"
 			ref="formRef"
-			:contact="contact"
+			:contact="contact || (clientId ? ({ client: clientId } as any) : null)"
 			:saving="saving"
 			@submit="onFormSave"
 		/>
@@ -27,6 +27,7 @@ import type { Contact, CreateContactPayload } from '~~/shared/email/contacts';
 
 const props = defineProps<{
 	contact?: Contact | null;
+	clientId?: string | null;
 }>();
 
 const emit = defineEmits<{

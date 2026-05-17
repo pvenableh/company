@@ -294,63 +294,21 @@ const filteredCampaigns = computed(() => {
   return campaignsList.value.filter(c => c.status === campaignsStatusFilter.value);
 });
 
-// ── Campaign slide-over (Phase 7 Track A) ───────────────────────────────────
-// Quick-edit status / goal / dates without leaving the floor. Big edits still
-// happen on /marketing-timeline (linked from the slide-over footer).
-const slideOverCampaign = ref<any>(null);
-const slideOverDraft = reactive<{ status: string; goal: string; start_date: string; end_date: string }>({
-  status: '',
-  goal: '',
-  start_date: '',
-  end_date: '',
-});
-const campaignSlideOpen = computed({
-  get: () => !!slideOverCampaign.value,
-  set: (v) => { if (!v) slideOverCampaign.value = null; },
-});
-const campaignSaving = ref(false);
-
-const CAMPAIGN_STATUS_OPTIONS = ['draft', 'active', 'paused', 'completed'];
-
-function toDateInput(s: string | null | undefined): string {
-  if (!s) return '';
-  try {
-    const d = new Date(s);
-    if (Number.isNaN(d.getTime())) return '';
-    return d.toISOString().slice(0, 10);
-  } catch { return ''; }
-}
+// ── Campaign slide-over (URL-bound via useAppSlideOver) ─────────────────────
+// Quick-edit lives in `components/apps/panels/CampaignPanel.vue`, rendered
+// by the shell-level <AppsAppSlideOverStack>. The panel bumps a shared
+// `marketing-campaigns-refresh` useState counter on save; we react here so
+// the floor list reflects new statuses without remounting.
+const campaignSlide = useAppSlideOver('marketing-campaign');
+const campaignRefreshSignal = useState<number>('marketing-campaigns-refresh', () => 0);
 
 function openCampaignSlideOver(c: any) {
-  slideOverCampaign.value = c;
-  slideOverDraft.status = c.status || 'draft';
-  slideOverDraft.goal = c.goal || '';
-  slideOverDraft.start_date = toDateInput(c.start_date);
-  slideOverDraft.end_date = toDateInput(c.end_date);
+  campaignSlide.open(String(c.id));
 }
 
-async function saveCampaignDraft() {
-  if (!slideOverCampaign.value || campaignSaving.value) return;
-  campaignSaving.value = true;
-  try {
-    await $fetch(`/api/marketing/campaigns/${slideOverCampaign.value.id}`, {
-      method: 'PATCH',
-      body: {
-        status: slideOverDraft.status,
-        goal: slideOverDraft.goal,
-        start_date: slideOverDraft.start_date || null,
-        end_date: slideOverDraft.end_date || null,
-      },
-    });
-    // Refresh the lists so the floor reflects the new state
-    await Promise.all([fetchCampaigns(), fetchPulse()]).catch(() => {});
-    slideOverCampaign.value = null;
-  } catch (err) {
-    console.error('[apps/marketing] saveCampaignDraft failed', err);
-  } finally {
-    campaignSaving.value = false;
-  }
-}
+watch(campaignRefreshSignal, () => {
+  Promise.all([fetchCampaigns(), fetchPulse()]).catch(() => {});
+});
 
 // ── Email floor ─────────────────────────────────────────────────────────────
 const { getTemplates } = useEmailTemplates();
@@ -1199,79 +1157,6 @@ const scopeLabel = computed(() => {
         </template>
       </template>
     </LayoutPageContainer>
-
-    <!-- Campaign quick-edit slide-over (Phase 7 Track A) -->
-    <ClientOnly>
-      <Teleport to="#app-slide-over-root">
-        <AppSlideOver
-          v-model="campaignSlideOpen"
-          :title="slideOverCampaign?.title || 'Campaign'"
-        >
-          <div v-if="slideOverCampaign" class="space-y-5">
-            <div>
-              <label class="text-[10px] uppercase tracking-wider text-muted-foreground">Status</label>
-              <div class="mt-1 inline-flex items-center gap-1 rounded-full border border-border bg-card p-0.5">
-                <button
-                  v-for="opt in CAMPAIGN_STATUS_OPTIONS"
-                  :key="opt"
-                  type="button"
-                  class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium capitalize transition-colors"
-                  :class="slideOverDraft.status === opt
-                    ? 'bg-foreground text-background'
-                    : 'text-muted-foreground hover:text-foreground'"
-                  @click="slideOverDraft.status = opt"
-                >
-                  {{ opt }}
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label class="text-[10px] uppercase tracking-wider text-muted-foreground">Goal</label>
-              <textarea
-                v-model="slideOverDraft.goal"
-                rows="3"
-                class="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
-                placeholder="What outcome should this campaign drive?"
-              />
-            </div>
-
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="text-[10px] uppercase tracking-wider text-muted-foreground">Start</label>
-                <input
-                  v-model="slideOverDraft.start_date"
-                  type="date"
-                  class="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
-                />
-              </div>
-              <div>
-                <label class="text-[10px] uppercase tracking-wider text-muted-foreground">End</label>
-                <input
-                  v-model="slideOverDraft.end_date"
-                  type="date"
-                  class="mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm"
-                />
-              </div>
-            </div>
-
-            <div class="flex items-center justify-between pt-3 border-t border-border/30">
-              <NuxtLink
-                :to="`/marketing-timeline?campaign=${slideOverCampaign.id}`"
-                class="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-              >
-                Open in timeline
-                <Icon name="lucide:external-link" class="w-3 h-3" />
-              </NuxtLink>
-              <Button size="sm" :disabled="campaignSaving" @click="saveCampaignDraft">
-                <Icon v-if="campaignSaving" name="lucide:loader-2" class="w-3.5 h-3.5 mr-1 animate-spin" />
-                Save
-              </Button>
-            </div>
-          </div>
-        </AppSlideOver>
-      </Teleport>
-    </ClientOnly>
   </div>
 </template>
 

@@ -343,26 +343,19 @@ function handleSelectTeam(id: string | null) {
   else setTeam(id);
 }
 
-// ── Slide-overs (Phase 7 Track A) ──────────────────────────────────────────
+// ── Slide-overs (URL-bound via useAppSlideOver) ────────────────────────────
 // Row clicks on the Projects + Meetings floors open a quick-look slide-over
-// instead of pushing to the full page. Each panel exposes an "Open full page"
-// link for two-deep flows (slide-overs do not stack).
-const slideOverProject = ref<any>(null);
-const projectSlideOpen = computed({
-  get: () => !!slideOverProject.value,
-  set: (v) => { if (!v) slideOverProject.value = null; },
-});
-function openProjectSlideOver(project: any) {
-  slideOverProject.value = project;
-}
+// bound to `?slide=`. The shell-level <AppsAppSlideOverStack> in the layout
+// renders the actual panel from `components/apps/panels/registry.ts` — pages
+// only need to wire the open() call here.
+const projectSlide = useAppSlideOver('work-project');
+const meetingSlide = useAppSlideOver('work-meeting');
 
-const slideOverMeeting = ref<any>(null);
-const meetingSlideOpen = computed({
-  get: () => !!slideOverMeeting.value,
-  set: (v) => { if (!v) slideOverMeeting.value = null; },
-});
+function openProjectSlideOver(project: any) {
+  projectSlide.open(project.id);
+}
 function openMeetingSlideOver(meeting: any) {
-  slideOverMeeting.value = meeting;
+  meetingSlide.open(meeting.id);
 }
 </script>
 
@@ -605,139 +598,6 @@ function openMeetingSlideOver(meeting: any) {
         <WorkInsightsView :snapshot="insightsSnapshot" :loading="insightsLoading" />
       </template>
     </LayoutPageContainer>
-
-    <!-- Slide-overs (Phase 7 Track A) — teleport into the apps shell root -->
-    <ClientOnly>
-      <Teleport to="#app-slide-over-root">
-        <AppSlideOver
-          v-model="projectSlideOpen"
-          :title="slideOverProject?.title || 'Project'"
-        >
-          <div v-if="slideOverProject" class="space-y-5">
-            <div class="flex flex-wrap items-center gap-2">
-              <span
-                class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium uppercase tracking-wider"
-              >
-                {{ slideOverProject.status }}
-              </span>
-              <span v-if="slideOverProject.service?.name" class="text-xs text-muted-foreground">
-                {{ slideOverProject.service.name }}
-              </span>
-              <span v-if="slideOverProject.client?.name" class="text-xs text-muted-foreground">
-                · {{ slideOverProject.client.name }}
-              </span>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Due date</p>
-                <p>{{ slideOverProject.due_date ? new Date(slideOverProject.due_date).toLocaleDateString() : '—' }}</p>
-              </div>
-              <div>
-                <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Updated</p>
-                <p>{{ slideOverProject.date_updated ? new Date(slideOverProject.date_updated).toLocaleDateString() : '—' }}</p>
-              </div>
-            </div>
-
-            <div v-if="slideOverProject.taskCount">
-              <p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Progress</p>
-              <div class="flex items-center gap-2">
-                <div class="flex-1 h-1.5 bg-muted/30 rounded-full overflow-hidden">
-                  <div
-                    class="h-full rounded-full transition-all"
-                    :class="slideOverProject.taskProgress > 75 ? 'bg-success' : slideOverProject.taskProgress > 25 ? 'bg-warning' : 'bg-primary'"
-                    :style="{ width: `${slideOverProject.taskProgress || 0}%` }"
-                  />
-                </div>
-                <span class="text-xs text-muted-foreground tabular-nums">{{ slideOverProject.taskProgress }}%</span>
-              </div>
-            </div>
-
-            <div v-if="slideOverProject.assigned_to?.length">
-              <p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Assigned</p>
-              <div class="flex flex-wrap gap-1.5">
-                <span
-                  v-for="a in slideOverProject.assigned_to"
-                  :key="a.id"
-                  class="text-xs px-2 py-0.5 rounded-full bg-muted/40"
-                >
-                  {{ a.directus_users_id?.first_name }} {{ a.directus_users_id?.last_name }}
-                </span>
-              </div>
-            </div>
-
-            <div class="pt-3 border-t border-border/30">
-              <NuxtLink
-                :to="`/projects/${slideOverProject.id}`"
-                class="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-              >
-                Open full project page
-                <Icon name="lucide:external-link" class="w-3 h-3" />
-              </NuxtLink>
-            </div>
-          </div>
-        </AppSlideOver>
-
-        <AppSlideOver
-          v-model="meetingSlideOpen"
-          :title="slideOverMeeting?.title || 'Meeting'"
-        >
-          <div v-if="slideOverMeeting" class="space-y-5">
-            <span
-              :class="[
-                'inline-flex items-center px-2 h-5 rounded-full text-[10px] font-bold uppercase tracking-wider',
-                meetingTone[meetingChip(slideOverMeeting).tone],
-              ]"
-            >
-              {{ meetingChip(slideOverMeeting).label }}
-            </span>
-
-            <div class="grid grid-cols-2 gap-3 text-sm">
-              <div>
-                <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Started</p>
-                <p>{{ formatMeetingDate(slideOverMeeting.actual_start || slideOverMeeting.scheduled_start) }}</p>
-              </div>
-              <div v-if="slideOverMeeting.actual_duration_minutes">
-                <p class="text-[10px] uppercase tracking-wider text-muted-foreground">Duration</p>
-                <p>{{ slideOverMeeting.actual_duration_minutes }} min</p>
-              </div>
-            </div>
-
-            <div v-if="slideOverMeeting.project_event?.project?.title || slideOverMeeting.project?.title" class="text-sm">
-              <p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Project</p>
-              <p>{{ slideOverMeeting.project_event?.project?.title || slideOverMeeting.project?.title }}</p>
-            </div>
-
-            <div v-if="slideOverMeeting.related_organization?.name" class="text-sm">
-              <p class="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Client</p>
-              <p>{{ slideOverMeeting.related_organization.name }}</p>
-            </div>
-
-            <div v-if="slideOverMeeting.recording_url" class="text-sm">
-              <a
-                :href="slideOverMeeting.recording_url"
-                target="_blank"
-                rel="noopener"
-                class="inline-flex items-center gap-1 text-primary hover:underline"
-              >
-                <Icon name="lucide:film" class="w-4 h-4" />
-                Open recording
-              </a>
-            </div>
-
-            <div class="pt-3 border-t border-border/30">
-              <NuxtLink
-                :to="`/meetings/${slideOverMeeting.id}`"
-                class="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-              >
-                Open meeting page
-                <Icon name="lucide:external-link" class="w-3 h-3" />
-              </NuxtLink>
-            </div>
-          </div>
-        </AppSlideOver>
-      </Teleport>
-    </ClientOnly>
   </div>
 </template>
 

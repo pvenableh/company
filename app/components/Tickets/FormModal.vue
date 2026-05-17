@@ -96,6 +96,7 @@ import { useFilteredUsers } from '~/composables/useFilteredUsers';
 const props = defineProps({
 	ticket: { type: Object, default: null },
 	projectId: { type: String, default: null },
+	clientId: { type: String, default: null },
 	organizationId: { type: String, default: null },
 });
 
@@ -197,7 +198,7 @@ function populateForm() {
 		form.title = '';
 		form.priority = 'low';
 		form.status = 'Pending';
-		form.client = null;
+		form.client = props.clientId || null;
 		form.project = props.projectId || null;
 		form.team = null;
 		form.due_date = '';

@@ -188,7 +188,11 @@ const fallbackBackLabel = computed(() => {
 }
 
 .app-header__back {
-	@apply flex items-center gap-1 text-muted-foreground hover:text-foreground text-sm transition-colors -ml-1 px-1.5 py-1 rounded-md hover:bg-muted/40;
+	@apply flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors -ml-1 px-1.5 py-1 rounded-md hover:bg-muted/40;
+	font-size: 11px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
 }
 
 /* Small app-accent chip echoing the rail's gradient tile — same hue

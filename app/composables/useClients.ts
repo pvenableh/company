@@ -417,6 +417,7 @@ export function useClients() {
         'contacts.title',
         'contacts.category',
         'contacts.is_billing_contact',
+        'contacts.sort',
         'projects.id',
         'projects.title',
         'projects.status',

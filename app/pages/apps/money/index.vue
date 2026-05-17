@@ -10,7 +10,11 @@
  * to the canonical classic detail routes (`/invoices/detail/[id]`,
  * `/invoices/[id]`, etc.). The classic list pages
  * (`/invoices`, `/invoices/payments`, `/expenses`, `/time-tracker`) stay
- * intact alongside this app.
+ * intact alongside this app — classic-mode users navigate to those
+ * pages directly. The Time floor below is the apps-mode home for
+ * time tracking; classic users keep `/time-tracker`. Shared modal +
+ * floating dock branch on `useAppsMode().isAppsMode` so the "View all
+ * entries" link routes to whichever home matches the user's mode.
  *
  * Decisions documented for Phase 4:
  *   - "Invoice payments" stays inside the invoice detail page (per-invoice

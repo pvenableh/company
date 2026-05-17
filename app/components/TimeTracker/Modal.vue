@@ -4,7 +4,7 @@
 			<div class="flex items-center justify-between w-full">
 				<span class="text-sm font-semibold">Time Tracker</span>
 				<NuxtLink
-					to="/time-tracker"
+					:to="timeTrackerLink"
 					class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-primary hover:underline"
 					@click="isOpen = false"
 				>
@@ -71,6 +71,14 @@
 <script setup lang="ts">
 const isOpen = defineModel<boolean>({ default: false });
 const startFormRef = ref<any>(null);
+
+// Modal is global — mounted in both default.vue and apps.vue. The
+// "View all entries" link must route to whichever Time Tracker home
+// matches the user's chosen mode.
+const { isAppsMode } = useAppsMode();
+const timeTrackerLink = computed(() =>
+	isAppsMode.value ? '/apps/money?floor=time' : '/time-tracker',
+);
 
 // Refresh form options whenever modal opens
 watch(isOpen, (open) => {

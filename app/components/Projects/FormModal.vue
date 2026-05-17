@@ -128,6 +128,7 @@ import { toast } from 'vue-sonner';
 
 const props = defineProps({
 	project: { type: Object, default: null },
+	defaults: { type: Object, default: null },
 });
 
 const emit = defineEmits(['created', 'updated', 'deleted']);
@@ -192,8 +193,8 @@ function populateForm() {
 	} else {
 		form.title = '';
 		form.description = '';
-		form.client = null;
-		form.service = null;
+		form.client = props.defaults?.client || null;
+		form.service = props.defaults?.service || null;
 		form.template = 'web-project';
 		form.start_date = '';
 		form.due_date = '';
