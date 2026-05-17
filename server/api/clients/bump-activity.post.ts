@@ -19,16 +19,17 @@
  * inside a 5s window collapse into one database write — which is why
  * even a 500-row bulk insert costs ~1 client PATCH per affected client.
  *
- * Auth: if NOTIFICATION_WEBHOOK_SECRET is set, the request body must
- * include a matching `secret` field. (Matches the existing notification
- * webhook pattern in scripts/setup-notification-flows.ts.) Otherwise
- * unauthenticated — same trust model as the notification trigger.
+ * Auth: intentionally unauthenticated. The only side effect this endpoint
+ * can produce is a timestamp bump on `clients.last_activity_at`, which has
+ * no security impact (it's a sort key). The write is also rate-limited by
+ * the 5s debounce filter — an attacker can't generate write volume even
+ * with unlimited request volume. Trust the URL as the secret.
  */
 import { readItems, updateItems } from '@directus/sdk';
 
 type IncomingBody =
-	| { collection: 'projects' | 'tickets' | 'tasks'; itemIds: string[] | string; secret?: string }
-	| { clientIds: string[]; secret?: string };
+	| { collection: 'projects' | 'tickets' | 'tasks'; itemIds: string[] | string }
+	| { clientIds: string[] };
 
 const FK_BY_COLLECTION: Record<string, string> = {
 	projects: 'client',
@@ -36,14 +37,29 @@ const FK_BY_COLLECTION: Record<string, string> = {
 	tasks: 'client_id',
 };
 
-export default defineEventHandler(async (event) => {
-	const config = useRuntimeConfig();
-	const expectedSecret = (config as any).notificationWebhookSecret || process.env.NOTIFICATION_WEBHOOK_SECRET || '';
-	const body = (await readBody<IncomingBody>(event)) || ({} as IncomingBody);
-
-	if (expectedSecret && (body as any).secret !== expectedSecret) {
-		throw createError({ statusCode: 401, statusMessage: 'Invalid webhook secret' });
+/**
+ * Directus's flow templating substitutes `{{$trigger.keys}}` as a JSON
+ * string when wrapped in quotes — `"itemIds": "{{$trigger.keys}}"` ends up
+ * as `"itemIds": "[\"id\"]"` after substitution. Even with unquoted
+ * templates, edge cases (single-key updates, older Directus versions) can
+ * arrive as bare strings. Accept all three shapes.
+ */
+function normalizeItemIds(raw: unknown): string[] {
+	if (Array.isArray(raw)) return raw.filter((v): v is string => typeof v === 'string');
+	if (typeof raw !== 'string' || !raw) return [];
+	if (raw.startsWith('[')) {
+		try {
+			const parsed = JSON.parse(raw);
+			if (Array.isArray(parsed)) return parsed.filter((v): v is string => typeof v === 'string');
+		} catch {
+			/* fall through to single-id treatment */
+		}
 	}
+	return [raw];
+}
+
+export default defineEventHandler(async (event) => {
+	const body = (await readBody<IncomingBody>(event)) || ({} as IncomingBody);
 
 	const directus = getTypedDirectus();
 	let clientIds: string[] = [];
@@ -55,10 +71,7 @@ export default defineEventHandler(async (event) => {
 		if (!fk) {
 			throw createError({ statusCode: 400, statusMessage: `Unsupported collection: ${body.collection}` });
 		}
-		// Normalize itemIds: Directus flow templates serialize $trigger.keys
-		// as a JSON array, but a single-key update may render as a bare string.
-		const raw = body.itemIds;
-		const ids = Array.isArray(raw) ? raw : raw ? [raw] : [];
+		const ids = normalizeItemIds((body as any).itemIds);
 		if (!ids.length) return { bumped: 0 };
 
 		const rows = await directus.request(

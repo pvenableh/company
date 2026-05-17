@@ -475,6 +475,10 @@ export function useClients() {
       organization: orgId,
       status: payload.status || 'published',
       account_state: (payload as any).account_state || 'active',
+      // Seed activity so a brand-new client ranks above existing zero-activity
+      // rows in Recent sort. The 3 child-collection flows will keep this in
+      // sync going forward.
+      last_activity_at: (payload as any).last_activity_at || new Date().toISOString(),
     } as any);
 
     // Auto-create a folder for this client under the org's Clients/ subfolder
@@ -516,7 +520,15 @@ export function useClients() {
     if (payload.slug && selectedOrg.value) {
       payload.slug = await ensureUniqueSlug(payload.slug, selectedOrg.value, id);
     }
-    const result = await items.update(id, payload);
+    // Direct client edits (status change, name, notes, etc.) are activity
+    // too — child flows only cover project/ticket/task writes. Stamp here
+    // instead of via a clients.update flow, which would loop on itself.
+    // Sort drag-and-drop sends just `{ sort: N }` via updateClientSort and
+    // intentionally bypasses this — re-ordering isn't activity.
+    const result = await items.update(id, {
+      ...payload,
+      last_activity_at: (payload as any).last_activity_at || new Date().toISOString(),
+    } as any);
     await fetchActiveClients();
     return result;
   };

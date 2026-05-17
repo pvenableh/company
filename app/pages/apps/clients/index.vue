@@ -120,7 +120,13 @@ const activeClientTab = ref('active');
 function clientTabFilter(value: string): { status?: string; accountState?: string } {
   const tab = clientTabs.find((t) => t.value === value);
   if (!tab) return {};
-  return tab.kind === 'status' ? { status: value } : { accountState: value };
+  // Archived tab filters by `status`. The lifecycle tabs (active/prospect/
+  // inactive) filter by `account_state` AND require `status='published'` so
+  // a client that was archived without also flipping account_state doesn't
+  // leak into the Active list.
+  return tab.kind === 'status'
+    ? { status: value }
+    : { accountState: value, status: 'published' };
 }
 
 async function fetchClients() {

@@ -211,11 +211,14 @@ function buildFlowPayload(spec: FlowSpec) {
 }
 
 function buildOperationPayload(flowId: string, spec: FlowSpec) {
-	const body: Record<string, any> = {
-		collection: spec.collection,
-		itemIds: '{{$trigger.keys}}',
-	};
-	if (WEBHOOK_SECRET) body.secret = WEBHOOK_SECRET;
+	// Hand-built JSON template — wrapping `{{$trigger.keys}}` in quotes would
+	// make Directus substitute the array as a JSON string ("[\"id\"]"). The
+	// endpoint normalizes either shape, but unquoted lands as a real array
+	// and is easier to read in flow revision logs.
+	const body = `{
+  "collection": "${spec.collection}",
+  "itemIds": {{$trigger.keys}}
+}`;
 	return {
 		flow: flowId,
 		name: 'POST bump-activity',
@@ -227,7 +230,7 @@ function buildOperationPayload(flowId: string, spec: FlowSpec) {
 			method: 'POST',
 			url: ENDPOINT_URL,
 			headers: [{ header: 'Content-Type', value: 'application/json' }],
-			body: JSON.stringify(body, null, 2),
+			body,
 		},
 	};
 }
