@@ -177,6 +177,13 @@ watch(clientsSortMode, () => {
   fetchClients();
 });
 
+// Board view fetches with an empty filter (all status columns). Switching
+// back to Table without a refetch would leave `allClients` populated with
+// archived rows that the active tab filter would have excluded.
+watch(clientsViewMode, () => {
+  fetchClients();
+});
+
 const debouncedFetchClients = useDebounceFn(fetchClients, 300);
 
 function viewClient(client: Client) {

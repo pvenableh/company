@@ -65,7 +65,12 @@ const tabItems = computed(() => tabs.map((t) => ({
 function tabFilter(value: string): { status?: string; accountState?: string } {
   const tab = tabs.find((t) => t.value === value);
   if (!tab) return {};
-  return tab.kind === 'status' ? { status: value } : { accountState: value };
+  // Archived tab filters by `status`. Lifecycle tabs (active/prospect/inactive)
+  // filter by `account_state` AND require `status='published'` so an archived
+  // row whose account_state was preserved doesn't leak into the Active list.
+  return tab.kind === 'status'
+    ? { status: value }
+    : { accountState: value, status: 'published' };
 }
 
 const { getStatusBadgeClasses } = useStatusStyle();
