@@ -39,15 +39,18 @@ export async function getCRMContext(
 		cdXpState,
 	] = await Promise.all([
 		// ─── Contacts ───
+		// Contacts live in an M2M with organizations (contacts_organizations
+		// junction); they have no direct `organization` FK. Filter through the
+		// junction or you bypass tenant scoping entirely.
 		directus.request(readItems('contacts', {
-			filter: { organization: { _eq: orgId } },
+			filter: { organizations: { organizations_id: { _eq: orgId } } },
 			fields: ['id', 'email', 'phone', 'email_subscribed', 'tags', 'industry'],
 			limit: -1,
 		})).catch(() => [] as any[]),
 
 		directus.request(readItems('contacts', {
 			filter: {
-				organization: { _eq: orgId },
+				organizations: { organizations_id: { _eq: orgId } },
 				date_created: { _gte: thirtyDaysAgo },
 			},
 			fields: ['id'],

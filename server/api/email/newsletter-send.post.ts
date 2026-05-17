@@ -9,6 +9,7 @@ import { buildContactVariableMap } from '~~/server/utils/contact-variables';
 import { renderOrgEmail } from '~~/server/utils/email-shell';
 import { fetchOrgBrand } from '~~/server/utils/email-send';
 import { buildUnsubscribeUrl } from '~~/server/utils/unsubscribe';
+import { requireOrgMembership } from '~~/server/utils/marketing-perms';
 import { readItems, readItem, createItem, updateItem } from '@directus/sdk';
 
 /**
@@ -51,12 +52,15 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  if (target_segments?.length && !organization_id) {
-    throw createError({
-      statusCode: 400,
-      message: 'organization_id is required when using target_segments',
-    });
+  // Gate the whole route on org membership. The route uses the service-account
+  // directus token below — without this check, any authed user (or unauthed
+  // caller in some configs) could send under another tenant's brand and burn
+  // its SendGrid quota. The contacts-leak audit already added M2M filters on
+  // every recipient lookup, but the auth gate has to live here.
+  if (!organization_id) {
+    throw createError({ statusCode: 400, message: 'organization_id is required' });
   }
+  await requireOrgMembership(event, organization_id);
 
   const apiKey = config.sendgridApiKey || config.SENDGRID_API_KEY;
   if (!apiKey && !dryRun) {
@@ -66,12 +70,58 @@ export default defineEventHandler(async (event) => {
   if (apiKey) sgMail.setApiKey(apiKey as string);
   const directus = getServerDirectus();
 
-  // Fetch the template (skipped on dry run — we only need recipient resolution)
+  // Fetch the template (skipped on dry run — we only need recipient resolution).
+  // Ownership check: the template must belong to organization_id OR be a
+  // platform starter (is_starter=true). Otherwise a caller could pass another
+  // tenant's template_id and send under their content under their own org's brand.
   const template = template_id
-    ? ((await directus.request(readItem('email_templates', template_id))) as any)
+    ? ((await directus.request(
+        readItem('email_templates', template_id, {
+          fields: ['id', 'name', 'subject_template', 'mjml_source', 'organization', 'is_starter'],
+        }),
+      ).catch(() => null)) as any)
     : null;
+  if (template_id && !template) {
+    throw createError({ statusCode: 404, message: 'Template not found' });
+  }
+  if (template && !template.is_starter) {
+    const templateOrg = typeof template.organization === 'string'
+      ? template.organization
+      : template.organization?.id;
+    if (templateOrg !== organization_id) {
+      throw createError({ statusCode: 403, message: 'Template does not belong to this organization' });
+    }
+  }
   if (!dryRun && !template?.mjml_source) {
     throw createError({ statusCode: 400, message: 'Template has no compiled MJML' });
+  }
+
+  // Same ownership check on mailing lists — without it a caller could pass a
+  // foreign-org list id and the M2M contact filter below would still narrow
+  // to their own subscribers (correctly), but the list lookup itself would
+  // succeed and that's a confusing error surface.
+  if (target_lists?.length) {
+    const listRows = (await directus.request(
+      readItems('mailing_lists', {
+        filter: { id: { _in: target_lists } },
+        fields: ['id', 'organization'],
+        limit: -1,
+      }),
+    )) as any[];
+    if (listRows.length !== target_lists.length) {
+      throw createError({ statusCode: 404, message: 'One or more mailing lists not found' });
+    }
+    for (const row of listRows) {
+      const listOrg = typeof row.organization === 'string'
+        ? row.organization
+        : row.organization?.id;
+      if (listOrg !== organization_id) {
+        throw createError({
+          statusCode: 403,
+          message: `Mailing list ${row.id} does not belong to this organization`,
+        });
+      }
+    }
   }
 
   // ── Resolve recipients from mailing lists (deduplicated) ──────────────
@@ -79,6 +129,12 @@ export default defineEventHandler(async (event) => {
   const contacts: any[] = [];
 
   if (target_lists?.length) {
+    // Org-scope each list lookup so a caller can't pass a foreign-org listId
+    // and pull that tenant's subscribers. Contacts join orgs via the M2M
+    // junction — filter through `contact_id.organizations.organizations_id`.
+    const listOrgFilter = organization_id
+      ? [{ 'contact_id.organizations.organizations_id': { _eq: organization_id } }]
+      : [];
     const allMembers = await Promise.all(
       target_lists.map((listId: number) =>
         directus.request(
@@ -91,6 +147,7 @@ export default defineEventHandler(async (event) => {
                 { 'contact_id.email_subscribed': { _eq: true } },
                 { 'contact_id.email_bounced': { _eq: false } },
                 { 'contact_id.status': { _eq: 'published' } },
+                ...listOrgFilter,
               ],
             },
             limit: -1,
@@ -149,6 +206,12 @@ export default defineEventHandler(async (event) => {
 
   // Also include individual recipients
   if (recipient_ids?.length) {
+    // Constrain to contacts that belong to the sending org. Without this,
+    // a caller could pass any contact ids and the service-account token
+    // would happily return them, leaking subscribers across tenants.
+    const recipientOrgFilter = organization_id
+      ? [{ organizations: { organizations_id: { _eq: organization_id } } }]
+      : [];
     const fetched = (await directus.request(
       readItems('contacts', {
         filter: {
@@ -157,6 +220,7 @@ export default defineEventHandler(async (event) => {
             { email_subscribed: { _eq: true } },
             { email_bounced: { _eq: false } },
             { status: { _eq: 'published' } },
+            ...recipientOrgFilter,
           ],
         },
         limit: -1,
@@ -299,7 +363,9 @@ export default defineEventHandler(async (event) => {
     const successEmails = contacts
       .map((c) => c.email)
       .filter((e): e is string => !!e);
-    await touchContacts(successEmails, 'email');
+    // Scope the touch update to the sending org — without it, contacts
+    // sharing the same email across orgs all get bumped.
+    await touchContacts(successEmails, 'email', organization_id || null);
   }
 
   // ── Build a generic preview HTML for web view (no personalized data) ──

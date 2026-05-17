@@ -41,12 +41,21 @@ export default defineEventHandler(async (event) => {
   const formData = await readMultipartFormData(event);
   const csvFile = formData?.find((f) => f.name === 'file');
   const listIdStr = formData?.find((f) => f.name === 'list_id')?.data?.toString();
+  const organizationId = formData?.find((f) => f.name === 'organization_id')?.data?.toString();
   const updateExisting =
     formData?.find((f) => f.name === 'update_existing')?.data?.toString() === 'true';
 
   if (!csvFile?.data) {
     return { success: false, error: 'No CSV file provided' };
   }
+  if (!organizationId) {
+    return { success: false, error: 'organization_id is required' };
+  }
+
+  // Verify the caller is an active member of the org being imported into.
+  // Without this gate, contacts could be created in or stolen from foreign
+  // tenants via the service-account token below.
+  await requireOrgMembership(event, organizationId);
 
   const listId = listIdStr ? parseInt(listIdStr) : null;
   const directus = getServerDirectus();
@@ -117,10 +126,18 @@ export default defineEventHandler(async (event) => {
     }
 
     try {
-      // Check if contact exists
+      // Scope the "does this email already exist?" lookup to the importing
+      // org. Without it, a CSV row would either silently update another
+      // tenant's contact (updateExisting=true) or get skipped without
+      // creating an org-local copy (updateExisting=false).
       const existing = (await directus.request(
         readItems('contacts', {
-          filter: { email: { _eq: email } },
+          filter: {
+            _and: [
+              { email: { _eq: email } },
+              { organizations: { organizations_id: { _eq: organizationId } } },
+            ],
+          },
           fields: ['id'],
           limit: 1,
         })
@@ -146,6 +163,15 @@ export default defineEventHandler(async (event) => {
           })
         )) as any;
         contactId = created.id;
+        // Attach the new contact to the importing org via the M2M junction.
+        // A freshly-created contact with no junction row is invisible to
+        // every list and tenant — it would be orphaned.
+        await directus.request(
+          createItem('contacts_organizations', {
+            contacts_id: contactId,
+            organizations_id: organizationId,
+          })
+        );
         result.created++;
       }
 

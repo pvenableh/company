@@ -24,12 +24,6 @@ import {
 } from '~~/server/utils/ai-notices';
 
 export default defineEventHandler(async (event) => {
-  const session = await requireUserSession(event);
-  const userId = (session as any).user?.id;
-  if (!userId) {
-    throw createError({ statusCode: 401, message: 'Authentication required' });
-  }
-
   const query = getQuery(event);
   const entityType = query.entityType as string;
   const entityId = query.entityId as string;
@@ -38,6 +32,10 @@ export default defineEventHandler(async (event) => {
   if (!entityType || !entityId || !organizationId) {
     throw createError({ statusCode: 400, message: 'entityType, entityId, and organizationId are required' });
   }
+
+  // Gate on org membership so a curious authed user can't pass a foreign
+  // organizationId and surface that tenant's entity data through notices.
+  await requireOrgMembership(event, organizationId);
 
   const directus = await getUserDirectus(event);
   const now = new Date();

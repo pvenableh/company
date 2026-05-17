@@ -43,7 +43,7 @@ export async function getEntityContext(
     } else if (entityType === 'lead') {
       return await buildLeadContext(directus, entityId, now);
     } else if (entityType === 'contact') {
-      return await buildContactContext(directus, entityId, now);
+      return await buildContactContext(directus, entityId, now, organizationId);
     } else if (entityType === 'proposal') {
       return await buildProposalContext(directus, entityId, now);
     } else if (entityType === 'ticket') {
@@ -527,17 +527,26 @@ async function buildLeadContext(directus: any, leadId: string, now: Date): Promi
 
 // ─── Contact Context ────────────────────────────────────────────────────────
 
-async function buildContactContext(directus: any, contactId: string, _now: Date): Promise<string> {
-  // Fetch display name separately (cheap) so the header reads well even if the
-  // summary helper returns empty. The helper itself parallels 3 queries inside.
-  const [headerLookup, summary] = await Promise.all([
-    directus.request(
-      readItem('contacts', contactId, { fields: ['id', 'first_name', 'last_name', 'email'] }),
-    ).catch(() => null) as Promise<any>,
+async function buildContactContext(directus: any, contactId: string, _now: Date, organizationId: string): Promise<string> {
+  // Verify the contact belongs to the caller's current org before exposing
+  // any of its data. The service-account token bypasses Directus row perms,
+  // so without this check a session in Org A could pass a foreign contact id
+  // (entityType=contact) and pull Org B's contact summary into chat context.
+  const headerLookup = await directus.request(
+    readItem('contacts', contactId, {
+      fields: ['id', 'first_name', 'last_name', 'email', 'organizations.organizations_id'],
+    }),
+  ).catch(() => null) as any;
 
-    buildContactSummary(contactId),
-  ]);
+  if (!headerLookup) return '';
+  const orgIds = Array.isArray(headerLookup.organizations)
+    ? headerLookup.organizations
+        .map((j: any) => (typeof j === 'object' ? j?.organizations_id : null))
+        .filter(Boolean)
+    : [];
+  if (!organizationId || !orgIds.includes(organizationId)) return '';
 
+  const summary = await buildContactSummary(contactId);
   if (!summary) return '';
 
   const name = `${headerLookup?.first_name || ''} ${headerLookup?.last_name || ''}`.trim()

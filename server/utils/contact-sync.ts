@@ -38,6 +38,13 @@ export interface EnsureContactResult {
  *  3. Create a new Contact
  *
  * Always ensures a contacts_organizations junction row for the target org.
+ *
+ * NOTE — intentionally cross-org: the find-by-user and adopt-by-email
+ * lookups span every org. A contact is a single global identity per
+ * person; this helper attaches that identity to the target org via the
+ * M2M junction so the same human can be a contact in multiple tenants
+ * without duplication. Tenant scoping then happens everywhere else via
+ * the junction filter.
  */
 export async function ensureContactForUser(
   input: EnsureContactInput,

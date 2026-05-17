@@ -13,7 +13,11 @@ export default defineEventHandler(async (event) => {
 
   const directus = getServerDirectus();
 
-  // Find contact by unsubscribe token
+  // Find contact by unsubscribe token. Intentionally cross-org: unsubscribe
+  // links are clicked from emails that have no session context, so we rely
+  // on the unguessable per-contact `unsubscribe_token` for authorization.
+  // Tokens are unique across the contacts table so this can't return another
+  // tenant's row by accident.
   const contacts = await directus.request(
     readItems('contacts', {
       filter: { unsubscribe_token: { _eq: token } },

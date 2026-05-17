@@ -255,8 +255,14 @@ export async function finalizeBooking(input: FinalizeBookingInput): Promise<Fina
 	}
 
 	// ── Touch contacts + log to pipeline ──────────────────────────────────────
+	const finalizeOrgId =
+		typeof eventType?.organization === 'string'
+			? eventType.organization
+			: (eventType?.organization?.id ?? null);
 	try {
-		await touchContacts([input.inviteeEmail], 'meeting');
+		// Scope the touch update to the booking's org so identical emails
+		// across tenants don't all get bumped from one public booking.
+		await touchContacts([input.inviteeEmail], 'meeting', finalizeOrgId);
 	} catch (e) {
 		console.warn('[finalize] touchContacts failed:', e);
 	}
@@ -271,10 +277,7 @@ export async function finalizeBooking(input: FinalizeBookingInput): Promise<Fina
 			eventTypeTitle: eventType?.title || input.title || 'Meeting',
 			scheduledStart: startTime.toISOString(),
 			durationMinutes: input.durationMinutes || 30,
-			organizationId:
-				typeof eventType?.organization === 'string'
-					? eventType.organization
-					: (eventType?.organization?.id ?? null),
+			organizationId: finalizeOrgId,
 		});
 	} catch (e: any) {
 		console.warn('[finalize] auto-log to pipeline failed:', e.message);

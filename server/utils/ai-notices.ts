@@ -571,15 +571,26 @@ export async function generateContactNotices(
 ): Promise<AINotice[]> {
   const notices: AINotice[] = [];
 
-  const contact = await directus.request(
-    readItem('contacts', contactId, {
+  // M2M-filtered lookup — a by-PK readItem here would let the directus
+  // `user_created` row-perm fallback surface a foreign-org contact through
+  // the AI sidebar. See project_contacts_xorg_audit.md.
+  const matches = await directus.request(
+    readItems('contacts', {
+      filter: {
+        _and: [
+          { id: { _eq: contactId } },
+          { organizations: { organizations_id: { _eq: organizationId } } },
+        ],
+      },
       fields: [
         'id', 'first_name', 'last_name', 'email', 'phone',
         'email_bounced', 'email_bounce_type', 'email_subscribed', 'email_unsubscribed_at',
         'total_emails_sent', 'total_opens', 'last_opened_at',
       ],
+      limit: 1,
     }),
-  ).catch(() => null) as any;
+  ).catch(() => []) as any[];
+  const contact = matches[0];
 
   if (!contact) return notices;
 

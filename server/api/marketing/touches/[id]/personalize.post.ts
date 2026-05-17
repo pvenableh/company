@@ -108,7 +108,9 @@ export default defineEventHandler(async (event) => {
 
 	// Filter to contacts the send cron would actually email (has email,
 	// not unsubscribed, not bounced). No point burning tokens on contacts
-	// who'll be filtered out at send time.
+	// who'll be filtered out at send time. Cross-check membership in the
+	// touch's org via the contacts_organizations M2M — defense in depth
+	// against corrupted audience_snapshots leaking foreign contact ids.
 	let eligibleContacts: { id: string }[] = [];
 	try {
 		eligibleContacts = await directus.request(
@@ -116,6 +118,7 @@ export default defineEventHandler(async (event) => {
 				filter: {
 					_and: [
 						{ id: { _in: contactIds as any } },
+						{ organizations: { organizations_id: { _eq: organizationId } } },
 						{ email: { _nnull: true } },
 						{ email_unsubscribed_at: { _null: true } },
 						{ email_bounced: { _neq: true } },

@@ -14,6 +14,7 @@ const clientId = route.params.id as string;
 const { getClient, updateClient } = useClients();
 const { setEntity, clearEntity, sidebarOpen, closeSidebar } = useEntityPageContext();
 const { getStatusBadgeClasses } = useStatusStyle();
+const { selectedOrg } = useOrganization();
 
 const projectItemsApi = useDirectusItems('projects');
 const ticketItemsApi = useDirectusItems('tickets');
@@ -119,8 +120,19 @@ async function loadInheritedContacts() {
   try {
     const ancestors = await getAncestorClientIds(clientId, 3);
     for (const ancestor of ancestors) {
+      // Defense in depth — the contacts row-perm has a `user_created`
+      // fallback. Without an explicit organizations filter, contacts the
+      // current user once created in another tenant could leak in here.
+      const orgFilterClause = selectedOrg.value
+        ? [{ organizations: { organizations_id: { _eq: selectedOrg.value } } }]
+        : [];
       const rows = await contactItemsApi.list({
-        filter: { client: { _eq: ancestor.id } },
+        filter: {
+          _and: [
+            { client: { _eq: ancestor.id } },
+            ...orgFilterClause,
+          ],
+        },
         fields: ['id', 'first_name', 'last_name', 'email', 'phone', 'title', 'category', 'is_billing_contact'],
         limit: -1,
       }).catch(() => []);

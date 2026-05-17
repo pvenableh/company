@@ -7,6 +7,7 @@ useHead({ title: 'Import Contacts | Earnest' });
 
 const { getLists } = useMailingLists();
 const { downloadTemplate } = useCsvTemplate();
+const { selectedOrg } = useOrganization();
 
 const steps = ['Upload', 'Map Columns', 'Preview', 'Results'];
 const currentStep = ref(0);
@@ -87,8 +88,22 @@ async function runImport() {
   if (!csvFile.value) return;
   importing.value = true;
 
+  if (!selectedOrg.value) {
+    importing.value = false;
+    importResult.value = {
+      total: csvRows.value.length,
+      created: 0,
+      updated: 0,
+      skipped: 0,
+      errors: [{ row: 0, email: '', reason: 'No organization selected' }],
+    };
+    currentStep.value = 3;
+    return;
+  }
+
   const formData = new FormData();
   formData.append('file', csvFile.value);
+  formData.append('organization_id', selectedOrg.value);
   if (targetListId.value) {
     formData.append('list_id', String(targetListId.value));
   }

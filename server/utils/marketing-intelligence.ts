@@ -39,8 +39,11 @@ export async function getMarketingContext(
 		tickets,
 	] = await Promise.all([
 		// Contacts: total + subscription info
+		// Contacts join orgs via the contacts_organizations M2M — they have no
+		// direct `organization` FK. Filter through the junction or the query
+		// is bypassing tenant scoping.
 		directus.request(readItems('contacts', {
-			filter: { organization: { _eq: orgId } },
+			filter: { organizations: { organizations_id: { _eq: orgId } } },
 			fields: ['id', 'email_subscribed', 'tags'],
 			limit: -1,
 		})).catch(() => [] as any[]),
@@ -48,7 +51,7 @@ export async function getMarketingContext(
 		// Recent contacts (last 30 days)
 		directus.request(readItems('contacts', {
 			filter: {
-				organization: { _eq: orgId },
+				organizations: { organizations_id: { _eq: orgId } },
 				date_created: { _gte: thirtyDaysAgo },
 			},
 			fields: ['id'],

@@ -107,13 +107,18 @@ function personalize(template: string, contact: ContactRow): string {
 	return template.replace(/\{\{first_name\}\}/g, first);
 }
 
-async function loadEligibleContacts(directus: any, ids: string[]): Promise<ContactRow[]> {
+async function loadEligibleContacts(directus: any, ids: string[], organizationId: string): Promise<ContactRow[]> {
 	if (ids.length === 0) return [];
+	// Defense in depth: the audience_snapshot is supposed to contain only
+	// contacts from the campaign's org, but a corrupted snapshot or a stale
+	// resolver run could include foreign-org ids. Cross-check via the M2M
+	// junction so the send cron physically can't email another tenant.
 	const rows = await directus.request(
 		readItems('contacts', {
 			filter: {
 				_and: [
 					{ id: { _in: ids as any } },
+					{ organizations: { organizations_id: { _eq: organizationId } } },
 					{ email: { _nnull: true } },
 					{ email_unsubscribed_at: { _null: true } },
 					{ email_bounced: { _neq: true } },
@@ -136,7 +141,7 @@ async function resolveAudience(args: {
 	const baseIds: string[] = (campaign.audience_snapshot?.contact_ids || []) as string[];
 
 	if (filter === 'all' || filter.startsWith('cluster:')) {
-		return loadEligibleContacts(directus, baseIds);
+		return loadEligibleContacts(directus, baseIds, campaign.organization);
 	}
 
 	if (filter === 'unopened_previous' || filter === 'opened_previous') {
@@ -156,7 +161,7 @@ async function resolveAudience(args: {
 			}),
 		) as any[];
 		const prev = previous[0];
-		if (!prev) return loadEligibleContacts(directus, baseIds);
+		if (!prev) return loadEligibleContacts(directus, baseIds, campaign.organization);
 
 		// Look for opens via email_activity (if collection exists).
 		let openedIds: Set<string> = new Set();
@@ -176,16 +181,16 @@ async function resolveAudience(args: {
 			openedIds = new Set(opens.map((o: any) => o.contact).filter(Boolean));
 		} catch {
 			// email_activity may not exist on this DB — fall back to "all".
-			return loadEligibleContacts(directus, baseIds);
+			return loadEligibleContacts(directus, baseIds, campaign.organization);
 		}
 
 		const targetIds = filter === 'opened_previous'
 			? baseIds.filter((id) => openedIds.has(id))
 			: baseIds.filter((id) => !openedIds.has(id));
-		return loadEligibleContacts(directus, targetIds);
+		return loadEligibleContacts(directus, targetIds, campaign.organization);
 	}
 
-	return loadEligibleContacts(directus, baseIds);
+	return loadEligibleContacts(directus, baseIds, campaign.organization);
 }
 
 async function loadVariantsByContact(

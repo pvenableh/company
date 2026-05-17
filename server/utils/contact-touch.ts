@@ -35,17 +35,22 @@ export async function touchContacts(
   try {
     const directus = getTypedDirectus();
 
-    // Match by email. Optionally constrain by org — only contacts linked to
-    // the right tenant get touched. The org junction is `contacts_organizations`,
-    // so we walk via `organizations.organizations_id`.
-    const filter: any = { email: { _in: cleaned } };
-    if (organizationId) {
-      filter._and = [
+    // Match by email. Constrain by org — only contacts linked to the right
+    // tenant get touched. The org junction is `contacts_organizations`, so we
+    // walk via `organizations.organizations_id`. Callers MUST pass an
+    // organizationId; without one, identical emails across tenants would all
+    // be bumped from a single send. The omitted-org path is logged so we
+    // notice if anything legacy still slips through.
+    if (!organizationId) {
+      console.warn('[contact-touch] called without organizationId — skipping to avoid cross-tenant bump');
+      return;
+    }
+    const filter: any = {
+      _and: [
         { email: { _in: cleaned } },
         { organizations: { organizations_id: { _eq: organizationId } } },
-      ];
-      delete filter.email;
-    }
+      ],
+    };
 
     const rows = (await directus.request(
       readItems('contacts', {

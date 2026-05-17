@@ -243,6 +243,7 @@ const industries = ref<Array<{ id: string; name: string }>>([]);
 const { getClientOptions } = useClients();
 const { getAncestorClientIds } = useContactConnections();
 const contactItemsApi = useDirectusItems('contacts');
+const { selectedOrg } = useOrganization();
 const parentClientOptions = ref<Array<{ label: string; value: string }>>([]);
 
 const formData = reactive({
@@ -283,9 +284,21 @@ async function loadPickerContacts() {
   if (!props.client?.id) return;
   loadingPickerContacts.value = true;
   try {
+    // Defense in depth — the contacts row-perm has a `user_created` fallback
+    // that ignores the M2M org junction. Without an explicit organizations
+    // filter, contacts the current user once created in another tenant could
+    // surface in this picker.
+    const orgFilterClause = selectedOrg.value
+      ? [{ organizations: { organizations_id: { _eq: selectedOrg.value } } }]
+      : [];
     const selfRows = (await contactItemsApi.list({
       fields: ['id', 'first_name', 'last_name', 'email'],
-      filter: { client: { _eq: props.client.id } },
+      filter: {
+        _and: [
+          { client: { _eq: props.client.id } },
+          ...orgFilterClause,
+        ],
+      },
       limit: -1,
     })) as any[];
 
@@ -294,7 +307,12 @@ async function loadPickerContacts() {
     for (const a of ancestors) {
       const rows = (await contactItemsApi.list({
         fields: ['id', 'first_name', 'last_name', 'email'],
-        filter: { client: { _eq: a.id } },
+        filter: {
+          _and: [
+            { client: { _eq: a.id } },
+            ...orgFilterClause,
+          ],
+        },
         limit: -1,
       }).catch(() => [])) as any[];
       for (const r of rows) {
