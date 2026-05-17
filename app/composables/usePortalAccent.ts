@@ -1,22 +1,35 @@
 /**
  * usePortalAccent — single source of truth for portal-side branding
- * (icon + colour) per page.
+ * (icon + colour) per app.
  *
  * Mirrors `useAppAccent` exactly so the portal shell + rail + page
  * headers reuse the same iOS-liquid-glass treatment. Each portal
- * page gets a tone with HSL components that propagate through CSS
+ * app gets a tone with HSL components that propagate through CSS
  * custom properties (`--app-accent-h/s/l`); the client-portal layout
  * binds those to its root so `AppHeader` (shared with the main app
  * via `useCurrentAccent`) and any tinted chrome stay in lockstep with
  * PortalRail's active chip.
  *
  * Chip colours are derived from the active `useAppPalette` palette's
- * `sourceColors`, spread across the portal section list via the same
- * `pickGappy` helper the main rail uses. This keeps the portal in
- * lockstep with the user's palette pick — switching to Aurora in
+ * `sourceColors`, spread across the portal app list via the same
+ * `pickGappy` helper the main rail uses. Switching palettes in
  * Appearance re-skins the portal rail the same way it re-skins the
- * main app rail. Per-section icon resolution defers to the palette's
- * `iconStrategy`.
+ * main app rail.
+ *
+ * App taxonomy: the portal exposes six client-side apps rather than
+ * the 11 flat sections it used to. Each app groups several legacy
+ * sub-pages so the client's mental model is "what matters" rather
+ * than "what does the agency call it":
+ *   - home         /portal              dashboard, attention items, roll-up
+ *   - progress     /portal/progress     projects + tasks + tickets
+ *   - billing      /portal/billing      invoices + proposals + contracts
+ *   - performance  /portal/performance  social + marketing
+ *   - messages     /portal/messages     conversations
+ *   - account      /portal/account      profile + appearance (footer)
+ *
+ * Legacy sub-pages keep their existing URLs (/portal/projects,
+ * /portal/invoices, etc.) and the activeAppId resolver below maps
+ * each prefix to its parent app so the correct rail chip lights up.
  */
 import type { CSSProperties } from 'vue';
 import {
@@ -30,26 +43,25 @@ import {
 import { useAppPalette } from '~/composables/useAppPalette';
 
 export type PortalAppId =
-	| 'dashboard'
-	| 'projects'
-	| 'tasks'
-	| 'tickets'
-	| 'invoices'
-	| 'proposals'
-	| 'contracts'
-	| 'social'
-	| 'marketing'
+	| 'home'
+	| 'progress'
+	| 'billing'
+	| 'performance'
 	| 'messages'
 	| 'account';
 
 export interface PortalAppAccent {
 	id: PortalAppId;
 	name: string;
+	/** Optional iOS-style compact label used in rail chips when the long
+	 *  name would crowd the cell. Mirrors `AppAccent.shortName`. */
+	shortName?: string;
 	icon: string;
 	to: string;
 	/** Optional availability key — when the portal nav endpoint says the
-	 * client has zero data for this section, the rail/footer hides it. */
-	availabilityKey?: 'social' | 'marketing' | 'proposals' | 'contracts';
+	 * client has zero data for any of the app's sub-sections, the rail
+	 * hides the whole app. */
+	availabilityKey?: 'progress' | 'billing' | 'performance' | 'messages';
 	/** HSL hue 0-360 */
 	h: number;
 	/** HSL saturation percent */
@@ -78,17 +90,12 @@ export interface PortalAppAccent {
 type PortalAppMeta = Omit<PortalAppAccent, 'h' | 's' | 'l' | 'iconHsl'>;
 
 const PORTAL_META: Record<PortalAppId, PortalAppMeta> = {
-	dashboard: { id: 'dashboard', name: 'Dashboard', icon: 'ph:squares-four-duotone',     to: '/portal' },
-	projects:  { id: 'projects',  name: 'Projects',  icon: 'lucide:square-kanban',        to: '/portal/projects',  notificationCategories: ['projects'] },
-	tasks:     { id: 'tasks',     name: 'Tasks',     icon: 'ph:check-square-duotone',     to: '/portal/tasks' },
-	tickets:   { id: 'tickets',   name: 'Tickets',   icon: 'ph:ticket-duotone',           to: '/portal/tickets',   notificationCategories: ['tickets'] },
-	invoices:  { id: 'invoices',  name: 'Invoices',  icon: 'lucide:trending-up',          to: '/portal/invoices',  notificationCategories: ['invoices'] },
-	proposals: { id: 'proposals', name: 'Proposals', icon: 'ph:file-text-duotone',        to: '/portal/proposals', availabilityKey: 'proposals', notificationCategories: ['proposals'] },
-	contracts: { id: 'contracts', name: 'Contracts', icon: 'ph:certificate-duotone',      to: '/portal/contracts', availabilityKey: 'contracts', notificationCategories: ['contracts'] },
-	social:    { id: 'social',    name: 'Social',    icon: 'ph:chart-line-up-duotone',    to: '/portal/social',    availabilityKey: 'social' },
-	marketing: { id: 'marketing', name: 'Marketing', icon: 'ph:waveform-duotone',         to: '/portal/marketing', availabilityKey: 'marketing' },
-	messages:  { id: 'messages',  name: 'Messages',  icon: 'ph:chats-circle-duotone',     to: '/portal/messages',  notificationCategories: ['conversations'] },
-	account:   { id: 'account',   name: 'Account',   icon: 'lucide:circle-user-round',    to: '/portal/account' },
+	home:        { id: 'home',        name: 'Home',        shortName: 'Home', icon: 'ph:squares-four-duotone',  to: '/portal' },
+	progress:    { id: 'progress',    name: 'Progress',    shortName: 'Prog', icon: 'lucide:square-kanban',     to: '/portal/progress',    availabilityKey: 'progress',    notificationCategories: ['projects', 'tickets'] },
+	billing:     { id: 'billing',     name: 'Billing',     shortName: 'Bill', icon: 'lucide:trending-up',       to: '/portal/billing',     availabilityKey: 'billing',     notificationCategories: ['invoices', 'proposals', 'contracts'] },
+	performance: { id: 'performance', name: 'Performance', shortName: 'Perf', icon: 'ph:chart-line-up-duotone', to: '/portal/performance', availabilityKey: 'performance' },
+	messages:    { id: 'messages',    name: 'Messages',    shortName: 'Msgs', icon: 'ph:chats-circle-duotone',  to: '/portal/messages',    availabilityKey: 'messages',    notificationCategories: ['conversations'] },
+	account:     { id: 'account',     name: 'Account',     shortName: 'Me',   icon: 'lucide:circle-user-round', to: '/portal/account' },
 };
 
 /**
@@ -97,15 +104,10 @@ const PORTAL_META: Record<PortalAppId, PortalAppMeta> = {
  * system/settings, not work, so it lives apart).
  */
 export const PORTAL_ORDER: PortalAppId[] = [
-	'dashboard',
-	'projects',
-	'tasks',
-	'tickets',
-	'invoices',
-	'proposals',
-	'contracts',
-	'social',
-	'marketing',
+	'home',
+	'progress',
+	'billing',
+	'performance',
 	'messages',
 ];
 
@@ -114,6 +116,21 @@ export const PORTAL_FOOTER_ORDER: PortalAppId[] = ['account'];
 /** Visual order: main group + footer concatenated. Drives pickGappy's
  *  spread so chip 0 always wears the brightest source colour. */
 const PORTAL_CHIP_IDS: readonly PortalAppId[] = [...PORTAL_ORDER, ...PORTAL_FOOTER_ORDER];
+
+/**
+ * Sub-route prefixes that belong to each portal app. The rail's
+ * activeAppId resolver walks this list longest-prefix-first so a
+ * deep route like `/portal/invoices/abc` still highlights the
+ * Billing chip. Keeping the mapping in one place makes adding a new
+ * sub-section a one-line change.
+ */
+const PORTAL_APP_PREFIXES: Array<{ id: PortalAppId; prefixes: string[] }> = [
+	{ id: 'account',     prefixes: ['/portal/account'] },
+	{ id: 'progress',    prefixes: ['/portal/progress', '/portal/projects', '/portal/tasks', '/portal/tickets'] },
+	{ id: 'billing',     prefixes: ['/portal/billing', '/portal/invoices', '/portal/proposals', '/portal/contracts'] },
+	{ id: 'performance', prefixes: ['/portal/performance', '/portal/social', '/portal/marketing'] },
+	{ id: 'messages',    prefixes: ['/portal/messages'] },
+];
 
 /**
  * Resolve every portal chip's colour from the active palette. Spreads
@@ -146,9 +163,6 @@ export function usePortalAccent() {
 	const accents = computed<Record<PortalAppId, PortalAppAccent>>(() => {
 		const base = getPortalAccents(palette.value);
 		if (!glassChrome.value) return base;
-		// Glass mode: every chip wears its own bg as the icon colour so
-		// the rail shows the full chromatic ramp on frosted discs —
-		// same recipe as `useAppAccent`'s glass override.
 		const out = {} as Record<PortalAppId, PortalAppAccent>;
 		for (const id of PORTAL_CHIP_IDS) {
 			const a = base[id]!;
@@ -158,48 +172,29 @@ export function usePortalAccent() {
 	});
 
 	/**
-	 * Map the current portal route to a portal app id. We match longest-
-	 * prefix-first so /portal/invoices/[id] still resolves to "invoices"
-	 * rather than the dashboard.
+	 * Map the current portal route to its parent app id. Iteration is
+	 * longest-prefix-first inside each entry, but the entries themselves
+	 * are ordered with `account` first so a wildcard root match (the
+	 * fallback `/portal` → `home`) doesn't shadow real matches.
 	 */
 	const activeAppId = computed<PortalAppId | null>(() => {
 		const path = route.path;
 		if (!path.startsWith('/portal')) return null;
 
-		// Order matters: scan deepest segments first.
-		const ordered: Array<[PortalAppId, string]> = [
-			['account', '/portal/account'],
-			['proposals', '/portal/proposals'],
-			['contracts', '/portal/contracts'],
-			['invoices', '/portal/invoices'],
-			['projects', '/portal/projects'],
-			['tickets', '/portal/tickets'],
-			['tasks', '/portal/tasks'],
-			['social', '/portal/social'],
-			['marketing', '/portal/marketing'],
-			['messages', '/portal/messages'],
-		];
-		for (const [id, prefix] of ordered) {
-			if (path === prefix || path.startsWith(`${prefix}/`)) return id;
+		for (const { id, prefixes } of PORTAL_APP_PREFIXES) {
+			for (const prefix of prefixes) {
+				if (path === prefix || path.startsWith(`${prefix}/`)) return id;
+			}
 		}
-		// Bare /portal → dashboard. /portal/ also counts.
-		if (path === '/portal' || path === '/portal/') return 'dashboard';
-		return 'dashboard';
+
+		if (path === '/portal' || path === '/portal/') return 'home';
+		return 'home';
 	});
 
 	const accent = computed<PortalAppAccent | null>(() =>
 		activeAppId.value ? accents.value[activeAppId.value] : null,
 	);
 
-	/**
-	 * CSS custom properties suitable for binding to `:style`. Falls back to
-	 * neutral muted-foreground values when no app is active so anything
-	 * inheriting these vars still renders without conditionals.
-	 *
-	 * Uses the same `--app-accent-*` variable names as `useAppAccent` so
-	 * shared components (e.g. AppHeader's chip CSS) work in either shell
-	 * without branching.
-	 */
 	const accentStyle = computed<CSSProperties>(() => {
 		const a = accent.value;
 		if (!a) {

@@ -1120,6 +1120,8 @@ export interface Client {
 	user_created?: DirectusUser | string | null;
 	date_created?: string | null;
 	date_updated?: string | null;
+	/** @description Max(client.date_updated, project/ticket/task.date_updated). Kept in sync by Directus flows that POST to /api/clients/bump-activity on child writes. Drives "Recent" sort across the app. */
+	last_activity_at?: string | null;
 	/** @required */
 	name: string;
 	slug?: string | null;

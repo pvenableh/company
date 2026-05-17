@@ -98,6 +98,14 @@ const itemScales = reactive<Record<string, number>>({});
 // Dock effect. Re-computed every pointermove alongside `itemScales`.
 const itemShifts = reactive<Record<string, number>>({});
 
+// How far the outermost chips poke past the rail's natural left/right
+// edges at peak magnification. We mirror that as extra inline padding so
+// the pill background grows with the chips instead of letting them spill
+// out of the chrome. Magnification only fires on horizontal rails ≥980px,
+// so we don't bother with vertical-axis handling.
+const magnifyPadLeft = ref(0);
+const magnifyPadRight = ref(0);
+
 function applyMagnification(clientX: number) {
 	const root = railEl.value;
 	if (!root) return;
@@ -146,11 +154,47 @@ function applyMagnification(clientX: number) {
 		itemScales[cur.id] = cur.scale;
 		itemShifts[cur.id] = shift;
 	});
+
+	// Third pass: grow the pill chrome to contain the magnified chips. The
+	// leftmost chip's visual left edge sits at `(natural_x + shift)
+	// - (scale - 1) * chipBase / 2`; we want the pill's content box to
+	// extend by that overhang so the chip stays inside the rounded
+	// background. Same logic mirrored on the right.
+	const first = data[0];
+	const last = data[data.length - 1];
+	const overhang = (entry: { id: string; scale: number } | undefined, sign: 1 | -1) => {
+		if (!entry) return 0;
+		const halfGrown = (entry.scale - 1) * chipBase / 2;
+		const shift = itemShifts[entry.id] ?? 0;
+		return Math.max(0, sign * shift + halfGrown);
+	};
+	magnifyPadLeft.value = overhang(first, -1);
+	magnifyPadRight.value = overhang(last, 1);
 }
 
 function resetMagnification() {
 	for (const key of Object.keys(itemScales)) itemScales[key] = 1;
 	for (const key of Object.keys(itemShifts)) itemShifts[key] = 0;
+	magnifyPadLeft.value = 0;
+	magnifyPadRight.value = 0;
+}
+
+/**
+ * Inline padding override that grows the pill background to envelope
+ * the magnified chips. Magnification only fires on horizontal rails at
+ * ≥980px, so the base padding here is the md+ value (`px-4` = 16px) —
+ * the inline rule simply adds the overhang to that. Returns `undefined`
+ * when no growth is needed so the rail falls back to its scoped CSS
+ * padding without an inline override fighting the stylesheet.
+ */
+function railMagnifyStyle() {
+	if (!magnifyEnabled.value) return undefined;
+	if (magnifyPadLeft.value === 0 && magnifyPadRight.value === 0) return undefined;
+	const base = 16; // px-4 — magnification is gated to ≥980px
+	return {
+		paddingLeft: `${(base + magnifyPadLeft.value).toFixed(2)}px`,
+		paddingRight: `${(base + magnifyPadRight.value).toFixed(2)}px`,
+	};
 }
 
 function onPointerMove(e: PointerEvent) {
@@ -199,6 +243,7 @@ function chipMagnifyStyle(appId: string) {
 			]"
 			ref="railEl"
 			:data-chip-mode="chipMode"
+			:style="railMagnifyStyle()"
 			aria-label="Apps"
 			@pointermove="onPointerMove"
 			@pointerleave="onPointerLeave"
@@ -298,6 +343,10 @@ function chipMagnifyStyle(appId: string) {
 	@apply flex-row px-3 py-1.5 justify-center items-center;
 	overflow: visible;
 	column-gap: 2px;
+	/* Snap padding alongside the per-chip translate so the pill chrome
+	 * grows in lockstep with the magnification. Matches the chip
+	 * transform timing so the background never lags behind the chips. */
+	transition: padding 80ms ease-out;
 }
 
 /* Phones: tighten chip spacing so the centered pill fits all chips
@@ -355,7 +404,9 @@ function chipMagnifyStyle(appId: string) {
 .dark .app-rail--bottom,
 .dark .app-rail--left,
 .dark .app-rail--right {
-	background: hsl(0 0% 8% / 0.78);
+	/* Match the .glass header backdrop (rgba(40,40,40,0.88)) so the rail
+	 * reads as the same plinth as the chrome above it in dark mode. */
+	background: rgba(40, 40, 40, 0.88);
 }
 
 .app-rail--top,

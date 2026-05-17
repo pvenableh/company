@@ -10,17 +10,18 @@
  * This middleware rewrites `to.meta.layout` to `'apps'` for any page that
  * would otherwise fall back to the `default` layout. Pages with their own
  * explicit non-default layout (auth/client-portal/email/blank) are left
- * alone, as are paths that have nothing to do with the authenticated
- * product surface (auth flows, portal, register).
+ * alone — `client-portal` is itself a reactive wrapper that picks
+ * apps-vs-classic from `useAppsMode().mode` at render time.
  *
  * Runs client-side only — `useAppsMode` hydrates from a client-only fetch.
  */
 export default defineNuxtRouteMiddleware((to) => {
 	if (import.meta.server) return;
 
+	const explicitLayout = to.meta.layout;
+
 	// Pages with explicit non-default layouts — never override.
 	const ownLayouts = ['auth', 'apps', 'client-portal', 'email', 'blank'];
-	const explicitLayout = to.meta.layout;
 	if (typeof explicitLayout === 'string' && ownLayouts.includes(explicitLayout)) {
 		return;
 	}

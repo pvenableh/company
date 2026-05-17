@@ -2,9 +2,14 @@
 /**
  * GET /api/portal/nav-availability
  *
- * Returns booleans for which optional portal nav items have content for
- * the current portal user. The layout uses these to hide buttons that
- * would otherwise lead to empty pages.
+ * Returns booleans for which portal apps have content for the current
+ * portal user. The layout uses these to hide rail chips that would
+ * otherwise lead to empty hubs. Booleans are app-shaped, not section-
+ * shaped: `progress`, `billing`, `performance`, `messages`.
+ *
+ * Each flag rolls up the underlying collections — Progress is on if any
+ * of projects/tasks/tickets has rows, Billing is on if any of invoices/
+ * proposals/contracts has rows, etc.
  *
  * Cheap aggregate counts only — no row data leaves the server.
  */
@@ -19,48 +24,55 @@ export default defineEventHandler(async (event) => {
   const orgFilter = { organization: { _eq: ctx.organizationId } };
   const clientFilter = { client: { _in: ctx.scopedClientIds } };
 
-  // Aggregates run in parallel; each returns the count for the relevant
-  // collection scoped to the user's client.
+  const count = (collection: string) =>
+    directus
+      .request(aggregate(collection as never, {
+        aggregate: { count: '*' },
+        query: { filter: { _and: [orgFilter, clientFilter] } },
+      }))
+      .catch(() => [{ count: 0 }]);
+
   const [
+    projects,
+    tickets,
+    tasks,
+    invoices,
+    proposals,
+    contracts,
     socialAccounts,
     socialPosts,
     emailCampaigns,
     marketingCampaigns,
-    proposals,
-    contracts,
+    channels,
   ] = await Promise.all([
-    directus.request(aggregate('social_accounts', {
-      aggregate: { count: '*' },
-      query: { filter: { _and: [orgFilter, clientFilter] } },
-    })).catch(() => [{ count: 0 }]),
-    directus.request(aggregate('social_posts', {
-      aggregate: { count: '*' },
-      query: { filter: { _and: [orgFilter, clientFilter] } },
-    })).catch(() => [{ count: 0 }]),
-    directus.request(aggregate('email_campaigns', {
-      aggregate: { count: '*' },
-      query: { filter: { _and: [orgFilter, clientFilter] } },
-    })).catch(() => [{ count: 0 }]),
-    directus.request(aggregate('marketing_campaigns', {
-      aggregate: { count: '*' },
-      query: { filter: { _and: [orgFilter, clientFilter] } },
-    })).catch(() => [{ count: 0 }]),
-    directus.request(aggregate('proposals', {
-      aggregate: { count: '*' },
-      query: { filter: { _and: [orgFilter, clientFilter] } },
-    })).catch(() => [{ count: 0 }]),
-    directus.request(aggregate('contracts', {
-      aggregate: { count: '*' },
-      query: { filter: { _and: [orgFilter, clientFilter] } },
-    })).catch(() => [{ count: 0 }]),
+    count('projects'),
+    count('tickets'),
+    count('tasks'),
+    count('invoices'),
+    count('proposals'),
+    count('contracts'),
+    count('social_accounts'),
+    count('social_posts'),
+    count('email_campaigns'),
+    count('marketing_campaigns'),
+    count('channels'),
   ]);
 
-  const toCount = (rows: any[]) => Number(rows?.[0]?.count ?? 0);
+  const toCount = (rows: unknown) => {
+    const r = (rows as Array<{ count?: number | string | null }> | null) ?? [];
+    return Number(r[0]?.count ?? 0);
+  };
+
+  const hasProgress = toCount(projects) > 0 || toCount(tickets) > 0 || toCount(tasks) > 0;
+  const hasBilling = toCount(invoices) > 0 || toCount(proposals) > 0 || toCount(contracts) > 0;
+  const hasPerformance = toCount(socialAccounts) > 0 || toCount(socialPosts) > 0
+    || toCount(emailCampaigns) > 0 || toCount(marketingCampaigns) > 0;
+  const hasMessages = toCount(channels) > 0;
 
   return {
-    social: toCount(socialAccounts) > 0 || toCount(socialPosts) > 0,
-    marketing: toCount(emailCampaigns) > 0 || toCount(marketingCampaigns) > 0,
-    proposals: toCount(proposals) > 0,
-    contracts: toCount(contracts) > 0,
+    progress: hasProgress,
+    billing: hasBilling,
+    performance: hasPerformance,
+    messages: hasMessages,
   };
 });

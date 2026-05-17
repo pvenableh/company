@@ -21,9 +21,21 @@
         >
           <td class="py-3 pr-4">
             <div>
-              <span class="font-medium">
-                {{ contact.prefix ? `${contact.prefix} ` : '' }}{{ contact.first_name }} {{ contact.last_name }}
-              </span>
+              <div class="flex items-center gap-1.5">
+                <span class="font-medium">
+                  {{ contact.prefix ? `${contact.prefix} ` : '' }}{{ contact.first_name }} {{ contact.last_name }}
+                </span>
+                <NuxtLink
+                  v-if="cardDeskEmails && contact.email && cardDeskEmails.has(contact.email.toLowerCase())"
+                  to="/apps/clients?view=carddesk"
+                  class="inline-flex items-center gap-1 rounded-full bg-gradient-to-br from-orange-400/15 to-red-500/15 text-orange-600 dark:text-orange-400 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider hover:from-orange-400/25 hover:to-red-500/25 transition-colors"
+                  title="From Card Desk — click to manage networking pipeline"
+                  @click.stop
+                >
+                  <Icon name="i-heroicons-identification" class="w-3 h-3" />
+                  Card Desk
+                </NuxtLink>
+              </div>
               <span v-if="contact.title" class="block text-xs text-muted-foreground">
                 {{ contact.title }}
               </span>
@@ -91,6 +103,12 @@ import { Button } from '~/components/ui/button';
 defineProps<{
   contacts: Contact[];
   loading?: boolean;
+  /**
+   * Set of lowercase emails that match the current user's Card Desk
+   * contacts. Rows with a matching email get a "Card Desk" pill so the
+   * provenance is visible at a glance. Empty/undefined = no badges.
+   */
+  cardDeskEmails?: Set<string>;
 }>();
 
 defineEmits<{

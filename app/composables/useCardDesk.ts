@@ -258,6 +258,64 @@ export const useCardDesk = () => {
 		});
 	};
 
+	// Update a cd_contact (rating, hibernation, client status, etc.). Writes
+	// straight through the user's token — perms are governed by
+	// scripts/setup-carddesk-permissions.ts.
+	const updateContact = async (contactId: string, patch: Record<string, unknown>) => {
+		return contactItems.update(contactId, patch);
+	};
+
+	// Convenience: flip is_client and stamp client_at when promoting.
+	const setIsClient = async (contactId: string, isClient: boolean) => {
+		return updateContact(contactId, {
+			is_client: isClient,
+			client_at: isClient ? new Date().toISOString() : null,
+		});
+	};
+
+	// Create a new cd_activity row for the given contact. Date defaults to
+	// now; user_created is stamped by Directus from the auth token.
+	const addActivity = async (
+		contactId: string,
+		input: { type: string; label?: string | null; note?: string | null; date?: string },
+	) => {
+		return activityItems.create({
+			contact: contactId,
+			type: input.type,
+			label: input.label || null,
+			note: input.note || null,
+			date: input.date || new Date().toISOString(),
+		});
+	};
+
+	// Lightweight email index for cross-app badge matching on /contacts.
+	// Returns a lowercase Set of every email belonging to the current user's
+	// cd_contacts. Cheap query (one field, no joins).
+	const fetchCardDeskEmails = async (): Promise<Set<string>> => {
+		const userId = authUser.value?.id;
+		if (!userId) return new Set();
+		try {
+			const rows = await contactItems.list({
+				fields: ['email'],
+				filter: {
+					_and: [
+						{ user_created: { _eq: userId } },
+						{ email: { _nnull: true } },
+					],
+				},
+				limit: -1,
+			});
+			return new Set(
+				rows
+					.map((r: any) => (r.email || '').trim().toLowerCase())
+					.filter(Boolean),
+			);
+		} catch (e) {
+			console.warn('[CardDesk] Could not fetch email index:', e);
+			return new Set();
+		}
+	};
+
 	return {
 		stats: readonly(stats),
 		isLoading: readonly(isLoading),
@@ -265,5 +323,9 @@ export const useCardDesk = () => {
 		fetchStats,
 		fetchContacts,
 		fetchContactActivities,
+		updateContact,
+		setIsClient,
+		addActivity,
+		fetchCardDeskEmails,
 	};
 };

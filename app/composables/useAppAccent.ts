@@ -821,7 +821,7 @@ export function appIdForPath(path: string): AppId | null {
 	const MONEY_PREFIXES = ['invoices', 'contracts', 'proposals', 'expenses'];
 	if (MONEY_PREFIXES.includes(seg[0]!)) return 'money';
 
-	const CLIENT_PREFIXES = ['clients', 'contacts', 'leads'];
+	const CLIENT_PREFIXES = ['clients', 'contacts', 'leads', 'carddesk'];
 	if (CLIENT_PREFIXES.includes(seg[0]!)) return 'clients';
 
 	if (seg[0] === 'marketing' || seg[0] === 'social') return 'marketing';

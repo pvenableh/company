@@ -4,10 +4,9 @@
  *
  * Mirrors `AppRail` exactly so the portal shell shares the same iOS
  * liquid-glass language as the main apps shell. Icons + colours come
- * from `usePortalAccent` (single source of truth). Active chip
- * is brighter + ringed; non-active items render with the per-app
- * gradient at standard intensity. Where labels are hidden (vertical +
- * floating + mobile bottom) a hover tooltip surfaces the section name.
+ * from `usePortalAccent` (single source of truth) and the active
+ * `useAppPalette` palette — switching palettes in Appearance re-skins
+ * the portal the same way it re-skins the main rail.
  *
  * Visibility: items whose `availabilityKey` returns false from
  * `/api/portal/nav-availability` are hidden so clients without social
@@ -15,8 +14,18 @@
  *
  * Position respects `useAppsMode().railPosition` — the portal reuses
  * the same per-user preference as the main app so the user's chosen
- * rail layout follows them between shells.
+ * rail layout follows them between shells. Every position renders as a
+ * fixed glass pill hugging the chosen edge.
+ *
+ * Mobile (< md) forces bottom via useAppsMode.
  */
+import { useMediaQuery } from '@vueuse/core';
+import {
+	formatIconColor,
+	getPaletteChrome,
+	iconHighlightForAccent,
+} from '~/composables/useAppAccent';
+import { useAppPalette } from '~/composables/useAppPalette';
 import {
 	PORTAL_ORDER,
 	PORTAL_FOOTER_ORDER,
@@ -27,9 +36,18 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/comp
 
 const route = useRoute();
 const { railPosition, railShowLabels } = useAppsMode();
-const { accents: portalAccents } = usePortalAccent();
+const { accents: portalAccents, activeAppId } = usePortalAccent();
+const { palette, glassChrome } = useAppPalette();
 const { user } = useDirectusAuth();
 const { countFor } = useUnreadByCategory();
+
+/** Active chip rendering mode — `palette` for gradient chips, `neutral`
+ *  for the frosted-grey-with-accent-icon look. Glass-chrome toggle is
+ *  orthogonal: when ON it forces neutral regardless of palette. */
+const chipMode = computed(() => {
+	if (glassChrome.value) return 'neutral';
+	return getPaletteChrome(palette.value).chipMode;
+});
 
 function badgeFor(app: PortalAppAccent): number {
 	if (!app.notificationCategories?.length) return 0;
@@ -39,16 +57,16 @@ function badgeLabel(count: number) {
 	return count > 99 ? '99+' : String(count);
 }
 
-// Availability: which portal sections have data for the active client.
-// The endpoint returns `{ social: bool, marketing: bool, proposals: bool,
-// contracts: bool }`. Defaults to "show everything" so the rail never
+// Availability: which portal apps have data for the active client.
+// The endpoint returns `{ progress, billing, performance, messages }`
+// as booleans. Defaults to "show everything" so the rail never
 // flickers empty on first paint.
 type AvailabilityKey = NonNullable<PortalAppAccent['availabilityKey']>;
 const availability = ref<Partial<Record<AvailabilityKey, boolean>>>({
-	social: true,
-	marketing: true,
-	proposals: true,
-	contracts: true,
+	progress: true,
+	billing: true,
+	performance: true,
+	messages: true,
 });
 
 async function loadAvailability() {
@@ -79,44 +97,23 @@ const footer = computed<PortalAppAccent[]>(() =>
 	PORTAL_FOOTER_ORDER.map((id) => portalAccents.value[id]).filter(shouldShow),
 );
 
-const activeId = computed(() => {
-	const path = route.path;
-	if (path === '/portal' || path === '/portal/') return 'dashboard';
-	// Walk longest-prefix first so /portal/invoices/[id] resolves to invoices.
-	const ordered: Array<[string, string]> = [
-		['account', '/portal/account'],
-		['proposals', '/portal/proposals'],
-		['contracts', '/portal/contracts'],
-		['invoices', '/portal/invoices'],
-		['projects', '/portal/projects'],
-		['tickets', '/portal/tickets'],
-		['tasks', '/portal/tasks'],
-		['social', '/portal/social'],
-		['marketing', '/portal/marketing'],
-		['messages', '/portal/messages'],
-	];
-	for (const [id, prefix] of ordered) {
-		if (path === prefix || path.startsWith(`${prefix}/`)) return id;
-	}
-	return null;
-});
+const activeId = computed(() => activeAppId.value);
 
 const isHorizontal = computed(() =>
-	railPosition.value === 'top'
-	|| railPosition.value === 'bottom'
-	|| railPosition.value === 'floating',
+	railPosition.value === 'top' || railPosition.value === 'bottom',
 );
 
-// Label visibility for horizontal top/bottom rails. Mirrors AppRail.
-// Floating + vertical always hide via CSS. Mobile media-query also forces hide.
-const horizontalLabelsHidden = computed(
-	() => (railPosition.value === 'top' || railPosition.value === 'bottom') && !railShowLabels.value,
+// Horizontal rail (top/bottom) becomes icon-only when the user hides
+// labels — keep the inline text path for everyone else. Vertical pills
+// (left/right) are always icon-only since the pill is too narrow for
+// inline text.
+const horizontalLabelsHidden = computed(() =>
+	isHorizontal.value && !railShowLabels.value,
 );
 
+// Tooltips fill in for the inline label when the rail is icon-only.
 const showTooltip = computed(() =>
-	railPosition.value === 'left'
-	|| railPosition.value === 'right'
-	|| railPosition.value === 'floating',
+	!isHorizontal.value || horizontalLabelsHidden.value,
 );
 
 const tooltipSide = computed<'top' | 'bottom' | 'left' | 'right'>(() => {
@@ -130,46 +127,157 @@ function styleFor(app: PortalAppAccent) {
 		'--rail-h': String(app.h),
 		'--rail-s': `${app.s}%`,
 		'--rail-l': `${app.l}%`,
+		'--rail-icon': formatIconColor(app),
+		'--rail-icon-bright': iconHighlightForAccent(app.h, app.s, app.l),
 	};
+}
+
+// ─── macOS-style cursor magnification (large + hover-capable only) ──────────
+// Tracks the pointer X across the rail and computes a per-chip scale based
+// on distance from the cursor. Disabled on touch, small screens, and the
+// vertical rails — only horizontal pills (top/bottom) light up.
+const railEl = ref<HTMLElement | null>(null);
+const isLargeHoverCapable = useMediaQuery('(min-width: 980px) and (any-hover: hover) and (any-pointer: fine)');
+const magnifyEnabled = computed(() => isHorizontal.value && isLargeHoverCapable.value);
+
+const itemScales = reactive<Record<string, number>>({});
+const itemShifts = reactive<Record<string, number>>({});
+
+// Tracks how far the outermost chips poke past the rail's natural edges
+// at peak magnification so we can grow the pill background to envelope
+// them. Mirrors AppRail's handling.
+const magnifyPadLeft = ref(0);
+const magnifyPadRight = ref(0);
+
+function applyMagnification(clientX: number) {
+	const root = railEl.value;
+	if (!root) return;
+	const items = root.querySelectorAll<HTMLElement>('[data-app-id]');
+	const reach = 160;
+	const max = 0.65;
+	const chipBase = 32;
+
+	const data: Array<{ id: string; scale: number }> = [];
+	items.forEach((el) => {
+		const id = el.getAttribute('data-app-id');
+		if (!id) return;
+		const rect = el.getBoundingClientRect();
+		const center = rect.left + rect.width / 2;
+		const dx = Math.abs(clientX - center);
+		const t = dx >= reach ? 0 : 1 - dx / reach;
+		const eased = t * t * (3 - 2 * t);
+		const scale = 1 + eased * max;
+		data.push({ id, scale });
+	});
+
+	data.forEach((cur, i) => {
+		let shift = 0;
+		for (let j = 0; j < data.length; j++) {
+			if (j === i) continue;
+			const grown = (data[j]!.scale - 1) * chipBase;
+			if (j < i) shift += grown / 2;
+			else shift -= grown / 2;
+		}
+		itemScales[cur.id] = cur.scale;
+		itemShifts[cur.id] = shift;
+	});
+
+	const first = data[0];
+	const last = data[data.length - 1];
+	const overhang = (entry: { id: string; scale: number } | undefined, sign: 1 | -1) => {
+		if (!entry) return 0;
+		const halfGrown = (entry.scale - 1) * chipBase / 2;
+		const shift = itemShifts[entry.id] ?? 0;
+		return Math.max(0, sign * shift + halfGrown);
+	};
+	magnifyPadLeft.value = overhang(first, -1);
+	magnifyPadRight.value = overhang(last, 1);
+}
+
+function resetMagnification() {
+	for (const key of Object.keys(itemScales)) itemScales[key] = 1;
+	for (const key of Object.keys(itemShifts)) itemShifts[key] = 0;
+	magnifyPadLeft.value = 0;
+	magnifyPadRight.value = 0;
+}
+
+function railMagnifyStyle() {
+	if (!magnifyEnabled.value) return undefined;
+	if (magnifyPadLeft.value === 0 && magnifyPadRight.value === 0) return undefined;
+	const base = 16;
+	return {
+		paddingLeft: `${(base + magnifyPadLeft.value).toFixed(2)}px`,
+		paddingRight: `${(base + magnifyPadRight.value).toFixed(2)}px`,
+	};
+}
+
+function onPointerMove(e: PointerEvent) {
+	if (!magnifyEnabled.value) return;
+	if (e.pointerType !== 'mouse') return;
+	applyMagnification(e.clientX);
+}
+
+function onPointerLeave() {
+	resetMagnification();
+}
+
+function itemMagnifyStyle(appId: string) {
+	if (!magnifyEnabled.value) return undefined;
+	const x = itemShifts[appId] ?? 0;
+	if (Math.abs(x) < 0.25) return undefined;
+	return { transform: `translateX(${x.toFixed(2)}px)` };
+}
+
+function chipMagnifyStyle(appId: string) {
+	if (!magnifyEnabled.value) return undefined;
+	const s = itemScales[appId];
+	if (!s || s === 1) return undefined;
+	return { transform: `scale(${s.toFixed(3)})` };
 }
 </script>
 
 <template>
 	<TooltipProvider :delay-duration="120">
 		<nav
-			class="portal-rail"
+			class="app-rail"
 			:class="[
-				`portal-rail--${railPosition}`,
-				isHorizontal ? 'portal-rail--horizontal' : 'portal-rail--vertical',
-				horizontalLabelsHidden && 'portal-rail--icons-only',
+				`app-rail--${railPosition}`,
+				isHorizontal ? 'app-rail--horizontal' : 'app-rail--vertical',
+				horizontalLabelsHidden && 'app-rail--icons-only',
 			]"
+			ref="railEl"
+			:data-chip-mode="chipMode"
+			:style="railMagnifyStyle()"
 			aria-label="Portal sections"
+			@pointermove="onPointerMove"
+			@pointerleave="onPointerLeave"
 		>
-			<ul class="portal-rail__group portal-rail__group--main">
+			<ul class="app-rail__group app-rail__group--main">
 				<li v-for="app in apps" :key="app.id">
 					<Tooltip>
 						<TooltipTrigger as-child>
 							<NuxtLink
 								:to="app.to"
-								class="portal-rail__item"
-								:class="{ 'portal-rail__item--active': activeId === app.id }"
-								:style="styleFor(app)"
+								class="app-rail__item"
+								:class="{ 'app-rail__item--active': activeId === app.id }"
+								:style="[styleFor(app), itemMagnifyStyle(app.id)]"
+								:data-app-id="app.id"
 								:aria-label="app.name"
 							>
-								<span class="portal-rail__chip">
-									<span class="portal-rail__icon">
-										<Icon :name="app.icon" class="portal-rail__icon-layer portal-rail__icon-base" />
-										<span class="portal-rail__icon-layer portal-rail__icon-highlight-mask" aria-hidden="true">
-											<Icon :name="app.icon" class="portal-rail__icon-highlight" />
+								<span class="app-rail__chip" :style="chipMagnifyStyle(app.id)">
+									<span class="app-rail__icon">
+										<Icon :name="app.icon" class="app-rail__icon-layer app-rail__icon-base" />
+										<span class="app-rail__icon-layer app-rail__icon-highlight-mask" aria-hidden="true">
+											<Icon :name="app.icon" class="app-rail__icon-highlight" />
 										</span>
 									</span>
 									<span
 										v-if="badgeFor(app) > 0"
-										class="portal-rail__badge"
+										class="app-rail__badge"
 										:aria-label="`${badgeFor(app)} unread`"
 									>{{ badgeLabel(badgeFor(app)) }}</span>
 								</span>
-								<span class="portal-rail__label">{{ app.name }}</span>
+								<span class="app-rail__label">{{ app.shortName || app.name }}</span>
 							</NuxtLink>
 						</TooltipTrigger>
 						<TooltipContent v-if="showTooltip" :side="tooltipSide" :side-offset="8">
@@ -179,33 +287,32 @@ function styleFor(app: PortalAppAccent) {
 				</li>
 			</ul>
 
-			<span class="portal-rail__divider" aria-hidden="true" />
-
-			<ul class="portal-rail__group portal-rail__group--footer">
+			<ul class="app-rail__group app-rail__group--footer">
 				<li v-for="app in footer" :key="app.id">
 					<Tooltip>
 						<TooltipTrigger as-child>
 							<NuxtLink
 								:to="app.to"
-								class="portal-rail__item"
-								:class="{ 'portal-rail__item--active': activeId === app.id }"
-								:style="styleFor(app)"
+								class="app-rail__item"
+								:class="{ 'app-rail__item--active': activeId === app.id }"
+								:style="[styleFor(app), itemMagnifyStyle(app.id)]"
+								:data-app-id="app.id"
 								:aria-label="app.name"
 							>
-								<span class="portal-rail__chip">
-									<span class="portal-rail__icon">
-										<Icon :name="app.icon" class="portal-rail__icon-layer portal-rail__icon-base" />
-										<span class="portal-rail__icon-layer portal-rail__icon-highlight-mask" aria-hidden="true">
-											<Icon :name="app.icon" class="portal-rail__icon-highlight" />
+								<span class="app-rail__chip" :style="chipMagnifyStyle(app.id)">
+									<span class="app-rail__icon">
+										<Icon :name="app.icon" class="app-rail__icon-layer app-rail__icon-base" />
+										<span class="app-rail__icon-layer app-rail__icon-highlight-mask" aria-hidden="true">
+											<Icon :name="app.icon" class="app-rail__icon-highlight" />
 										</span>
 									</span>
 									<span
 										v-if="badgeFor(app) > 0"
-										class="portal-rail__badge"
+										class="app-rail__badge"
 										:aria-label="`${badgeFor(app)} unread`"
 									>{{ badgeLabel(badgeFor(app)) }}</span>
 								</span>
-								<span class="portal-rail__label">{{ app.name }}</span>
+								<span class="app-rail__label">{{ app.shortName || app.name }}</span>
 							</NuxtLink>
 						</TooltipTrigger>
 						<TooltipContent v-if="showTooltip" :side="tooltipSide" :side-offset="8">
@@ -221,164 +328,205 @@ function styleFor(app: PortalAppAccent) {
 <style scoped>
 @reference "~/assets/css/tailwind.css";
 
-/* The portal rail intentionally mirrors AppRail's styling — same iOS
- * liquid-glass chip recipe, same active-state ring, same hover lift.
- * Keeping these in lockstep means the user moving between the main app
- * and the portal never experiences a visual stutter; the cosmetic
- * grammar is identical, only the route list differs. */
+/* Styles are a 1:1 mirror of AppRail's so the portal shell shares the
+ * same iOS liquid-glass language as the main app. Keep these in lockstep —
+ * only the route list + availability gating differ between the two rails. */
 
-.portal-rail {
+.app-rail {
 	@apply flex bg-background border-border/40 select-none;
 	--rail-gap: 8px;
 }
 
 /* ── Layout ──────────────────────────────────────────────────────── */
-.portal-rail--vertical {
-	@apply flex-col w-[56px] shrink-0 py-2;
-	row-gap: var(--rail-gap);
-	justify-content: center;
+.app-rail--horizontal {
+	@apply flex-row px-3 py-1.5 justify-center items-center;
+	overflow: visible;
+	column-gap: 2px;
+	transition: padding 80ms ease-out;
 }
 
-.portal-rail--horizontal {
-	@apply flex-row w-full px-3 py-1.5 overflow-x-auto justify-center items-center;
-	column-gap: 14px;
+@media (max-width: 767px) {
+	.app-rail--horizontal {
+		@apply px-1.5 py-1;
+		column-gap: 0;
+	}
+	.app-rail--horizontal .app-rail__item {
+		padding: 4px 4px;
+	}
 }
 
-.portal-rail--left { @apply border-r; }
-.portal-rail--right { @apply border-l; }
+@media (min-width: 768px) {
+	.app-rail--horizontal {
+		@apply px-4 py-2;
+		column-gap: 8px;
+	}
+	.app-rail--horizontal .app-rail__group {
+		column-gap: 8px;
+	}
+}
 
-.portal-rail--top,
-.portal-rail--bottom,
-.portal-rail--floating {
-	@apply fixed left-1/2 -translate-x-1/2 z-40
-		rounded-full border border-border/40 shadow-2xl
-		bg-background/85 backdrop-blur-md
+.app-rail--vertical {
+	@apply flex-col px-1.5 py-3 justify-center items-center;
+	overflow: visible;
+	row-gap: 4px;
+}
+
+.app-rail--top,
+.app-rail--bottom,
+.app-rail--left,
+.app-rail--right {
+	@apply fixed z-40
+		rounded-full border border-border/40
+		backdrop-blur-md
 		w-auto;
+	background: hsl(220 14% 95% / 0.78);
+	box-shadow:
+		0 4px 14px -6px hsl(0 0% 0% / 0.18),
+		0 2px 6px -2px hsl(0 0% 0% / 0.08);
 }
 
-.portal-rail--top {
+.dark .app-rail--top,
+.dark .app-rail--bottom,
+.dark .app-rail--left,
+.dark .app-rail--right {
+	/* Match the .glass header backdrop (rgba(40,40,40,0.88)) so the rail
+	 * reads as the same plinth as the chrome above it in dark mode. */
+	background: rgba(40, 40, 40, 0.88);
+}
+
+.app-rail--top,
+.app-rail--bottom {
+	@apply left-1/2 -translate-x-1/2;
+}
+
+.app-rail--top {
 	top: calc(56px + 0.75rem);
 }
 
-.portal-rail--bottom,
-.portal-rail--floating {
+.app-rail--bottom {
 	bottom: calc(0.75rem + env(safe-area-inset-bottom));
 }
 
+.app-rail--left,
+.app-rail--right {
+	@apply top-1/2 -translate-y-1/2;
+}
+
+.app-rail--left {
+	left: 0.75rem;
+}
+
+.app-rail--right {
+	right: 0.75rem;
+}
+
 /* ── Groups ──────────────────────────────────────────────────────── */
-.portal-rail__group {
+.app-rail__group {
 	@apply flex list-none m-0 p-0;
 }
 
-.portal-rail--vertical .portal-rail__group {
+.app-rail--vertical .app-rail__group {
 	@apply flex-col items-stretch w-full;
 	row-gap: 6px;
 }
 
-.portal-rail--horizontal .portal-rail__group {
+.app-rail--horizontal .app-rail__group {
 	@apply flex-row items-center;
-	column-gap: 4px;
+	column-gap: 2px;
 }
 
-.portal-rail--vertical .portal-rail__group--main,
-.portal-rail--vertical .portal-rail__group--footer {
+.app-rail--vertical .app-rail__group--main,
+.app-rail--vertical .app-rail__group--footer {
 	@apply px-1;
 }
 
-.portal-rail__divider {
-	@apply bg-border/40 self-center shrink-0;
-}
-
-.portal-rail--vertical .portal-rail__divider {
-	@apply h-px w-6 my-1;
-}
-
-.portal-rail--horizontal .portal-rail__divider {
-	@apply w-px h-6 mx-1;
-}
-
-.portal-rail--floating .portal-rail__divider {
-	display: none;
-}
-
 /* ── Item ─────────────────────────────────────────────────────────── */
-.portal-rail__item {
+.app-rail__item {
 	@apply flex flex-col items-center justify-center
 		rounded-lg
 		text-muted-foreground
-		transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]
 		no-underline;
 	padding: 2px;
+	will-change: transform;
+	transition:
+		color 200ms cubic-bezier(0.16, 1, 0.3, 1),
+		background 200ms cubic-bezier(0.16, 1, 0.3, 1),
+		box-shadow 200ms cubic-bezier(0.16, 1, 0.3, 1),
+		transform 80ms ease-out;
 }
 
-.portal-rail--horizontal .portal-rail__item,
-.portal-rail--floating .portal-rail__item {
-	@apply flex-row gap-2;
-	padding: 4px 10px;
+.app-rail--horizontal .app-rail__item {
+	@apply flex-col items-center justify-center;
+	gap: 4px;
+	padding: 4px 4px;
+}
+
+.app-rail--horizontal:not(.app-rail--icons-only) .app-rail__item {
+	width: 48px;
+}
+
+.app-rail--vertical .app-rail__item {
+	padding: 4px 2px;
 }
 
 /* ── Chip ────────────────────────────────────────────────────────── */
-.portal-rail__chip {
-	@apply flex items-center justify-center shrink-0
-		rounded-md
-		transition-all duration-200 ease-[cubic-bezier(0.16,1,0.3,1)];
+.app-rail__chip {
+	@apply flex items-center justify-center shrink-0;
+	transition:
+		background 200ms cubic-bezier(0.16, 1, 0.3, 1),
+		transform 80ms ease-out,
+		box-shadow 200ms cubic-bezier(0.16, 1, 0.3, 1);
 	position: relative;
+	width: 38px;
+	height: 38px;
+	border-radius: 50%;
+	background: linear-gradient(
+		160deg,
+		hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) + 12%)) 0%,
+		hsl(var(--rail-h) var(--rail-s) var(--rail-l)) 55%,
+		hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) - 8%)) 100%
+	);
+	box-shadow:
+		inset 0 1px 0 hsl(0 0% 100% / 0.28),
+		inset 0 -1px 0 hsl(0 0% 0% / 0.08),
+		0 1px 2px hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.25);
+}
+
+.app-rail--top .app-rail__chip { transform-origin: center top; }
+.app-rail--bottom .app-rail__chip { transform-origin: center bottom; }
+.app-rail--left .app-rail__chip { transform-origin: left center; }
+.app-rail--right .app-rail__chip { transform-origin: right center; }
+
+.app-rail__chip::after {
+	content: none;
+}
+
+.app-rail__icon-layer.app-rail__icon-highlight-mask {
+	display: none;
+}
+
+.app-rail--horizontal .app-rail__chip,
+.app-rail--vertical .app-rail__chip {
 	width: 32px;
 	height: 32px;
-	background:
-		linear-gradient(335deg, rgba(0, 0, 0, 0.32) 0%, rgba(0, 0, 0, 0.08) 60%),
-		linear-gradient(
-			155deg,
-			hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.85),
-			hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) - 10%) / 0.78) 55%,
-			hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) - 22%) / 0.7)
-		);
-	backdrop-filter: blur(10px);
-	-webkit-backdrop-filter: blur(10px);
-	box-shadow:
-		inset 0 -1.5px 2px hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) - 35%) / 0.45),
-		inset 0 0.5px 0 hsl(0 0% 100% / 0.45),
-		0 0 0 0.5px hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) + 12%) / 0.5) inset,
-		0 2px 8px -2px hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.3);
 }
 
-.portal-rail__chip::after {
-	content: '';
-	position: absolute;
-	inset: 0;
-	border-radius: inherit;
-	background: linear-gradient(
-		335deg,
-		hsl(0 0% 100% / 0) 50%,
-		hsl(0 0% 100% / 0.18) 80%,
-		hsl(0 0% 100% / 0.42) 100%
-	);
-	mix-blend-mode: plus-lighter;
-	pointer-events: none;
-}
-
-.portal-rail--horizontal .portal-rail__chip,
-.portal-rail--floating .portal-rail__chip {
-	width: 26px;
-	height: 26px;
-}
-
-/* ── Icon (stacked base + masked highlight) ─────────────────────── */
-.portal-rail__icon {
+.app-rail__icon {
 	@apply relative inline-block;
-	width: 18px;
-	height: 18px;
+	width: 22px;
+	height: 22px;
 	z-index: 2;
 	transition: transform 0.2s ease;
+	filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.28));
 }
 
-.portal-rail--horizontal .portal-rail__icon,
-.portal-rail--floating .portal-rail__icon {
-	width: 17px;
-	height: 17px;
+.app-rail--horizontal .app-rail__icon,
+.app-rail--vertical .app-rail__icon {
+	width: 19px;
+	height: 19px;
 }
 
-.portal-rail__icon-layer {
+.app-rail__icon-layer {
 	position: absolute;
 	inset: 0;
 	width: 100%;
@@ -387,138 +535,160 @@ function styleFor(app: PortalAppAccent) {
 	stroke-width: 1.75;
 }
 
-.portal-rail__icon-base {
-	color: hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) + 32%));
-	filter: drop-shadow(0 1.5px 2px hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) - 18%) / 0.6));
+.app-rail__icon-base {
+	color: var(--rail-icon, hsl(0 0% 100%));
 	z-index: 0;
 }
 
-.portal-rail__icon-highlight-mask {
-	-webkit-mask-image: linear-gradient(180deg, black 0%, rgba(0, 0, 0, 0.5) 35%, transparent 70%);
-	mask-image: linear-gradient(180deg, black 0%, rgba(0, 0, 0, 0.5) 35%, transparent 70%);
-	pointer-events: none;
-	z-index: 1;
-}
-
-.portal-rail__icon-highlight {
-	display: block;
-	width: 100%;
-	height: 100%;
-	color: hsl(0 0% 100% / 0.8);
-}
-
-/* ── Hover ───────────────────────────────────────────────────────── */
-.portal-rail__item:hover .portal-rail__chip {
+/* Hover */
+.app-rail__item:hover .app-rail__chip {
+	background: linear-gradient(
+		160deg,
+		hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) + 16%)) 0%,
+		hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) + 2%)) 55%,
+		hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) - 6%)) 100%
+	);
 	transform: translateY(-1px);
 	box-shadow:
-		0 0 0 0.5px hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) + 14%) / 0.5) inset,
-		0 1px 0 0 hsl(0 0% 100% / 0.65) inset,
-		0 4px 12px -2px hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.3);
+		inset 0 1px 0 hsl(0 0% 100% / 0.32),
+		inset 0 -1px 0 hsl(0 0% 0% / 0.08),
+		0 4px 10px -3px hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.4);
 }
 
-@media (hover: hover) {
-	.portal-rail__item:not(.portal-rail__item--active):hover .portal-rail__chip {
-		outline: 1.5px solid hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.55);
-		outline-offset: 2px;
-	}
-}
-
-.portal-rail__item:hover {
+.app-rail__item:hover {
 	@apply text-foreground;
 }
 
 /* ── Active state ────────────────────────────────────────────────── */
-.portal-rail__item--active {
+.app-rail__item--active {
 	@apply text-foreground;
 }
 
-.portal-rail__item--active .portal-rail__chip {
-	background:
-		linear-gradient(335deg, rgba(0, 0, 0, 0.36) 0%, rgba(0, 0, 0, 0.1) 60%),
-		linear-gradient(
-			155deg,
-			hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) + 4%) / 0.95),
-			hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) - 10%) / 0.88) 55%,
-			hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) - 22%) / 0.82)
-		);
+.app-rail__item--active .app-rail__chip {
+	background: linear-gradient(
+		160deg,
+		hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) + 6%)) 0%,
+		hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) - 4%)) 55%,
+		hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) - 14%)) 100%
+	);
+	transform: translateY(-1px);
 	box-shadow:
-		inset 0 -1.5px 2px hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) - 35%) / 0.5),
-		inset 0 0.5px 0 hsl(0 0% 100% / 0.55),
-		0 0 0 0.5px hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) + 12%) / 0.65) inset,
-		0 4px 14px -2px hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.45);
-	outline: 1.5px solid hsl(var(--rail-h) var(--rail-s) var(--rail-l));
+		inset 0 1px 0 hsl(0 0% 100% / 0.35),
+		inset 0 -1px 0 hsl(0 0% 0% / 0.12),
+		0 4px 12px -3px hsl(var(--rail-h) var(--rail-s) var(--rail-l) / 0.5);
+	outline: 1.25px solid hsl(var(--rail-h) var(--rail-s) var(--rail-l));
 	outline-offset: 2px;
 }
 
-.portal-rail__item--active .portal-rail__chip::after {
-	background: linear-gradient(
-		335deg,
-		hsl(0 0% 100% / 0) 45%,
-		hsl(0 0% 100% / 0.22) 78%,
-		hsl(0 0% 100% / 0.5) 100%
-	);
+.app-rail__item--active .app-rail__icon-base {
+	color: var(--rail-icon, hsl(0 0% 100%));
 }
 
-.portal-rail__item--active .portal-rail__icon-base {
-	color: hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) + 38%));
-	filter: drop-shadow(0 1.5px 3px hsl(var(--rail-h) var(--rail-s) calc(var(--rail-l) - 20%) / 0.65));
+/* ── Neutral chip mode ───────────────────────────────────────────── */
+.app-rail[data-chip-mode='neutral'] .app-rail__chip {
+	background: hsl(0 0% 100% / 0.42);
+	backdrop-filter: blur(14px) saturate(1.2);
+	-webkit-backdrop-filter: blur(14px) saturate(1.2);
+	border: 1px solid hsl(0 0% 100% / 0.7);
+	box-shadow:
+		inset 0 1px 0 hsl(0 0% 100% / 0.85),
+		inset 0 -1px 0 hsl(0 0% 0% / 0.04),
+		0 1px 3px hsl(0 0% 0% / 0.08),
+		0 4px 14px -6px hsl(0 0% 0% / 0.12);
 }
 
-.portal-rail__item--active .portal-rail__icon-highlight {
-	color: hsl(0 0% 100% / 0.85);
+.app-rail[data-chip-mode='neutral'] .app-rail__icon {
+	filter: none;
+}
+
+.app-rail[data-chip-mode='neutral'] .app-rail__item:hover .app-rail__chip {
+	background: hsl(0 0% 100% / 0.55);
+	border-color: hsl(0 0% 100% / 0.85);
+	box-shadow:
+		inset 0 1px 0 hsl(0 0% 100% / 0.95),
+		inset 0 -1px 0 hsl(0 0% 0% / 0.04),
+		0 4px 12px -3px hsl(0 0% 0% / 0.14);
+}
+
+.app-rail[data-chip-mode='neutral'] .app-rail__item--active .app-rail__chip {
+	background: hsl(0 0% 100% / 0.72);
+	border-color: hsl(var(--primary) / 0.45);
+	box-shadow:
+		inset 0 1px 0 hsl(0 0% 100% / 0.95),
+		inset 0 -1px 0 hsl(0 0% 0% / 0.06),
+		0 4px 14px -3px hsl(var(--primary) / 0.35);
+	outline: 1.25px solid hsl(var(--primary));
+	outline-offset: 2px;
+}
+
+.dark .app-rail[data-chip-mode='neutral'] .app-rail__chip {
+	background: hsl(0 0% 100% / 0.06);
+	border-color: hsl(0 0% 100% / 0.14);
+	box-shadow:
+		inset 0 1px 0 hsl(0 0% 100% / 0.12),
+		inset 0 -1px 0 hsl(0 0% 0% / 0.2),
+		0 1px 3px hsl(0 0% 0% / 0.4);
+}
+
+.dark .app-rail[data-chip-mode='neutral'] .app-rail__item:hover .app-rail__chip {
+	background: hsl(0 0% 100% / 0.1);
+	border-color: hsl(0 0% 100% / 0.2);
+}
+
+.dark .app-rail[data-chip-mode='neutral'] .app-rail__item--active .app-rail__chip {
+	background: hsl(0 0% 100% / 0.22);
+	border-color: hsl(var(--primary) / 0.7);
+	box-shadow:
+		inset 0 1px 0 hsl(0 0% 100% / 0.18),
+		inset 0 -1px 0 hsl(0 0% 0% / 0.2),
+		0 4px 14px -3px hsl(var(--primary) / 0.5);
+}
+
+.dark .app-rail[data-chip-mode='neutral'] .app-rail__icon-base {
+	color: var(--rail-icon-bright, hsl(0 0% 92%));
+}
+
+.dark .app-rail[data-chip-mode='neutral'] .app-rail__item--active .app-rail__icon-base {
+	color: hsl(0 0% 100%);
 }
 
 /* ── Label ───────────────────────────────────────────────────────── */
-.portal-rail--vertical .portal-rail__label,
-.portal-rail--floating .portal-rail__label,
-.portal-rail--icons-only .portal-rail__label {
+.app-rail--vertical .app-rail__label,
+.app-rail--icons-only .app-rail__label {
 	@apply sr-only;
 }
 
-@media (max-width: 1023px) {
-	.portal-rail--horizontal .portal-rail__label {
+@media (max-width: 767px) {
+	.app-rail--horizontal .app-rail__label {
 		@apply sr-only;
 	}
-	.portal-rail--horizontal .portal-rail__divider {
-		margin-left: 0;
-		margin-right: 0;
-	}
 }
 
-/* Mobile: tighter chip + gap so 8 items fit without clipping. */
-@media (max-width: 480px) {
-	.portal-rail--horizontal .portal-rail__group {
-		column-gap: 2px;
-	}
-	.portal-rail--horizontal .portal-rail__item {
-		padding: 4px 6px;
-	}
-	.portal-rail--horizontal .portal-rail__chip {
-		width: 22px;
-		height: 22px;
-	}
-}
-
-.portal-rail__label {
-	font-size: 11px;
-	font-weight: 500;
-	letter-spacing: 0.02em;
+.app-rail__label {
+	font-size: 8px;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
 	line-height: 1;
 	color: hsl(var(--muted-foreground));
 	transition: color 0.2s ease;
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
-.portal-rail__item:hover .portal-rail__label {
+.app-rail__item:hover .app-rail__label {
 	color: hsl(var(--foreground));
 }
 
-.portal-rail__item--active .portal-rail__label {
+.app-rail__item--active .app-rail__label {
 	color: hsl(var(--foreground));
 	font-weight: 600;
 }
 
 /* ── Badge ────────────────────────────────────────────────────────── */
-.portal-rail__badge {
+.app-rail__badge {
 	position: absolute;
 	top: -4px;
 	right: -4px;
@@ -526,8 +696,8 @@ function styleFor(app: PortalAppAccent) {
 	height: 16px;
 	padding: 0 4px;
 	border-radius: 999px;
-	background: var(--cyan, #06b6d4);
-	color: white;
+	background: hsl(var(--primary));
+	color: hsl(var(--primary-foreground));
 	font-size: 9px;
 	font-weight: 700;
 	line-height: 1;

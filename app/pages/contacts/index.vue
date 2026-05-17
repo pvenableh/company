@@ -10,6 +10,11 @@ const router = useRouter();
 const route = useRoute();
 const { getContacts, deleteContact: doDelete, unsubscribeContact: doUnsubscribe } = useContacts();
 const { getLists } = useMailingLists();
+const { fetchCardDeskEmails } = useCardDesk();
+
+// Lowercase emails belonging to the current user's Card Desk contacts.
+// Used by ContactTable to render a "Card Desk" provenance pill.
+const cardDeskEmails = ref<Set<string>>(new Set());
 
 type ViewKey = 'list' | 'insights';
 
@@ -99,6 +104,9 @@ async function onContactCreated() {
 
 onMounted(async () => {
   lists.value = await getLists();
+  // Card Desk email index runs in parallel with the contacts fetch — it's
+  // a single-field query and absence of perms just yields an empty Set.
+  fetchCardDeskEmails().then((set) => { cardDeskEmails.value = set; });
   await fetchData();
 });
 </script>
@@ -183,6 +191,7 @@ onMounted(async () => {
       <ContactsContactTable
         :contacts="contacts"
         :loading="loading"
+        :card-desk-emails="cardDeskEmails"
         @edit="editContact"
         @unsubscribe="handleUnsubscribe"
         @delete="handleDelete"

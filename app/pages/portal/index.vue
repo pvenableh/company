@@ -1,198 +1,73 @@
 <script setup lang="ts">
+/**
+ * /portal — Home.
+ *
+ * The cross-cutting overview. Each sub-app hub goes deep on its
+ * own scope; Home is the only screen that spans them.
+ *
+ * Sections, top to bottom:
+ *   1. "Needs your attention" — proposals/contracts/invoices/tickets
+ *      that require client action. Empty state celebrates being caught
+ *      up. Drives the difference between a portal clients actually
+ *      open and one they ignore.
+ *   2. App roll-up strip — one tile per main app (Progress, Billing,
+ *      Performance, Messages), each with a single headline number and
+ *      a deep-link into the hub.
+ *   3. Recent activity feed — combined timeline across apps.
+ *   4. Project Timeline (Gantt) — at-a-glance view of in-flight work.
+ *
+ * Every number on this page comes from /api/portal/summary so the
+ * Home view re-renders whenever the underlying collections update.
+ */
 import { Button } from '~/components/ui/button';
-import { VisXYContainer, VisGroupedBar, VisAxis, VisSingleContainer, VisDonut, VisLine, VisArea } from '@unovis/vue';
-import { CurveType } from '@unovis/ts';
 
 definePageMeta({
 	layout: 'client-portal',
 	middleware: ['auth'],
 });
-useHead({ title: 'Client Portal | Earnest' });
+useHead({ title: 'Home | Client Portal' });
 
 const { user } = useDirectusAuth();
 const { selectedOrg } = useOrganization();
 const { membership } = useOrgRole();
 
-const projectItems = usePortalItems('projects');
-const ticketItems = usePortalItems('tickets');
+interface SummaryResponse {
+	attention: Array<{
+		id: string;
+		type: 'proposal' | 'contract' | 'invoice' | 'ticket';
+		label: string;
+		detail: string;
+		href: string;
+		dueDate?: string | null;
+		severity: 'urgent' | 'normal' | 'info';
+	}>;
+	kpis: {
+		progress: { activeProjects: number; openTickets: number };
+		billing: { outstandingTotal: number; pendingProposals: number; unsignedContracts: number };
+		performance: { campaignsThisMonth: number };
+		messages: { channelCount: number };
+	};
+	activity: Array<{
+		id: string;
+		type: 'project' | 'ticket' | 'invoice' | 'proposal' | 'contract';
+		title: string;
+		detail: string;
+		href: string;
+		timestamp: string;
+	}>;
+}
 
+const summary = ref<SummaryResponse | null>(null);
 const loading = ref(true);
-const stats = ref({
-	activeProjects: 0,
-	openTickets: 0,
-	resolvedTickets: 0,
-});
-const recentTickets = ref<any[]>([]);
-const recentProjects = ref<any[]>([]);
-
-// Chart data
-const projectStatusBreakdown = ref<Array<{ key: string; label: string; value: number; color: string }>>([]);
-const ticketPriorityBreakdown = ref<Array<{ key: string; label: string; value: number; color: string }>>([]);
-const ticketActivityWeekly = ref<Array<{ weekIdx: number; label: string; opened: number; closed: number }>>([]);
-
 const showTicketForm = ref(false);
 
-const STATUS_COLORS: Record<string, string> = {
-	pending: '#f59e0b',
-	scheduled: '#06b6d4',
-	in_progress: '#3b82f6',
-	completed: '#22c55e',
-};
-
-const PRIORITY_COLORS: Record<string, string> = {
-	urgent: '#ef4444',
-	high: '#f59e0b',
-	normal: '#3b82f6',
-	medium: '#3b82f6',
-	low: '#9ca3af',
-};
-
-function normalizeKey(s: string | null | undefined): string {
-	return (s ?? '').toLowerCase().replace(/\s+/g, '_');
-}
-
-function startOfWeek(d: Date): Date {
-	const x = new Date(d);
-	x.setHours(0, 0, 0, 0);
-	const day = x.getDay();
-	const diff = (day + 6) % 7; // Monday-start week
-	x.setDate(x.getDate() - diff);
-	return x;
-}
-
-async function loadDashboard() {
+async function loadSummary() {
 	if (!selectedOrg.value) return;
 	loading.value = true;
-
 	try {
-		// Status enums for projects + tickets are capitalized in this schema.
-		const projectsActive = ['Pending', 'Scheduled', 'In Progress'];
-		const ticketsActive = ['Pending', 'Scheduled', 'In Progress'];
-
-		const [
-			projects,
-			tickets,
-			resolved,
-			projectStatusAgg,
-			ticketPriorityAgg,
-			recentTicketsForActivity,
-		] = await Promise.all([
-			projectItems.list({
-				filter: { status: { _in: projectsActive } },
-				fields: ['id', 'title', 'status', 'date_updated'],
-				sort: ['-date_updated'],
-				limit: 5,
-			}),
-			ticketItems.list({
-				filter: { status: { _in: ticketsActive } },
-				fields: ['id', 'title', 'status', 'priority', 'date_updated'],
-				sort: ['-date_updated'],
-				limit: 5,
-			}),
-			ticketItems.count({ status: { _eq: 'Completed' } }),
-			projectItems.aggregate({
-				aggregate: { count: ['*'] },
-				groupBy: ['status'],
-				filter: { status: { _neq: 'Archived' } },
-			}).catch(() => []),
-			ticketItems.aggregate({
-				aggregate: { count: ['*'] },
-				groupBy: ['priority'],
-				filter: { status: { _neq: 'Archived' } },
-			}).catch(() => []),
-			// Pull last 60 days of tickets to build the activity sparkline.
-			// Date_updated is the closest "closed at" proxy we have given
-			// status enum lacks a real resolved_at field.
-			ticketItems.list({
-				fields: ['id', 'status', 'date_created', 'date_updated'],
-				filter: {
-					date_created: {
-						_gte: new Date(Date.now() - 1000 * 60 * 60 * 24 * 60).toISOString(),
-					},
-				},
-				sort: ['-date_created'],
-				limit: 500,
-			}).catch(() => []),
-		]);
-
-		stats.value = {
-			activeProjects: projects.length,
-			openTickets: tickets.length,
-			resolvedTickets: resolved || 0,
-		};
-
-		recentProjects.value = projects;
-		recentTickets.value = tickets;
-
-		// Project status donut data
-		projectStatusBreakdown.value = (projectStatusAgg as any[])
-			.filter((row) => row?.status)
-			.map((row) => {
-				const key = normalizeKey(row.status);
-				return {
-					key,
-					label: row.status,
-					value: parseInt(row.count?.id || row.count || 0) || 0,
-					color: STATUS_COLORS[key] || '#9ca3af',
-				};
-			})
-			.filter((r) => r.value > 0);
-
-		// Ticket priority bar data
-		ticketPriorityBreakdown.value = (ticketPriorityAgg as any[])
-			.filter((row) => row?.priority)
-			.map((row) => {
-				const key = normalizeKey(row.priority);
-				return {
-					key,
-					label: row.priority,
-					value: parseInt(row.count?.id || row.count || 0) || 0,
-					color: PRIORITY_COLORS[key] || '#9ca3af',
-				};
-			})
-			.filter((r) => r.value > 0)
-			// Stable order: urgent → high → normal/medium → low
-			.sort((a, b) => {
-				const order = ['urgent', 'high', 'normal', 'medium', 'low'];
-				return order.indexOf(a.key) - order.indexOf(b.key);
-			});
-
-		// Weekly activity: 8 weeks back, opened (date_created) vs closed (date_updated when status=Completed)
-		const weeks: Array<{ weekIdx: number; label: string; opened: number; closed: number; start: number }> = [];
-		const now = new Date();
-		for (let i = 7; i >= 0; i--) {
-			const d = startOfWeek(new Date(now));
-			d.setDate(d.getDate() - i * 7);
-			weeks.push({
-				weekIdx: 7 - i,
-				label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-				opened: 0,
-				closed: 0,
-				start: d.getTime(),
-			});
-		}
-
-		const weekFor = (ts: number) => {
-			for (let i = weeks.length - 1; i >= 0; i--) {
-				if (ts >= weeks[i].start) return weeks[i];
-			}
-			return null;
-		};
-
-		for (const t of recentTicketsForActivity as any[]) {
-			if (t.date_created) {
-				const w = weekFor(new Date(t.date_created).getTime());
-				if (w) w.opened++;
-			}
-			if (t.status === 'Completed' && t.date_updated) {
-				const w = weekFor(new Date(t.date_updated).getTime());
-				if (w) w.closed++;
-			}
-		}
-
-		ticketActivityWeekly.value = weeks.map(({ start, ...rest }) => rest);
+		summary.value = await $fetch<SummaryResponse>('/api/portal/summary');
 	} catch (err) {
-		console.error('Failed to load portal dashboard:', err);
+		console.error('Failed to load portal summary:', err);
 	} finally {
 		loading.value = false;
 	}
@@ -204,27 +79,51 @@ const clientName = computed(() => {
 	return typeof client === 'object' ? client.name : null;
 });
 
-const projectStatusTotal = computed(() =>
-	projectStatusBreakdown.value.reduce((sum, r) => sum + r.value, 0),
+const attention = computed(() => summary.value?.attention ?? []);
+const kpis = computed(
+	() => summary.value?.kpis ?? {
+		progress: { activeProjects: 0, openTickets: 0 },
+		billing: { outstandingTotal: 0, pendingProposals: 0, unsignedContracts: 0 },
+		performance: { campaignsThisMonth: 0 },
+		messages: { channelCount: 0 },
+	},
 );
+const activity = computed(() => summary.value?.activity ?? []);
 
-const ticketActivityTotal = computed(() =>
-	ticketActivityWeekly.value.reduce((sum, w) => sum + w.opened + w.closed, 0),
-);
+const attentionIcon: Record<string, string> = {
+	proposal: 'lucide:file-text',
+	contract: 'lucide:file-signature',
+	invoice: 'lucide:dollar-sign',
+	ticket: 'lucide:ticket',
+};
 
-const maxPriorityValue = computed(() =>
-	Math.max(1, ...ticketPriorityBreakdown.value.map((r) => r.value)),
-);
+const activityIcon: Record<string, string> = {
+	project: 'lucide:folder-kanban',
+	ticket: 'lucide:ticket',
+	invoice: 'lucide:dollar-sign',
+	proposal: 'lucide:file-text',
+	contract: 'lucide:file-signature',
+};
 
-const { getPriorityBadgeClasses, getStatusBadgeClasses } = useStatusStyle();
+function formatCurrency(n: number): string {
+	return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
+}
 
-onMounted(() => {
-	loadDashboard();
-});
+function timeAgo(iso: string): string {
+	if (!iso) return '';
+	const ms = Date.now() - new Date(iso).getTime();
+	const minutes = Math.floor(ms / (1000 * 60));
+	if (minutes < 1) return 'just now';
+	if (minutes < 60) return `${minutes}m ago`;
+	const hours = Math.floor(minutes / 60);
+	if (hours < 24) return `${hours}h ago`;
+	const days = Math.floor(hours / 24);
+	if (days < 7) return `${days}d ago`;
+	return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
 
-watch(() => selectedOrg.value, () => {
-	loadDashboard();
-});
+onMounted(() => loadSummary());
+watch(() => selectedOrg.value, () => loadSummary());
 </script>
 
 <template>
@@ -243,304 +142,159 @@ watch(() => selectedOrg.value, () => {
 
 		<LayoutPageContainer>
 			<p v-if="clientName" class="text-sm text-muted-foreground mb-6 -mt-1">
-				{{ clientName }} &mdash; Here's an overview of your projects and tickets.
+				{{ clientName }} &mdash; the headline view across everything.
 			</p>
 
-		<!-- Inline ticket submission -->
-		<div v-if="showTicketForm" class="mb-8">
-			<PortalQuickTicketForm v-model:open="showTicketForm" @created="loadDashboard" />
-		</div>
-
-		<!-- Loading -->
-		<div v-if="loading" class="flex items-center justify-center py-24">
-			<Icon name="lucide:loader-2" class="w-8 h-8 text-muted-foreground animate-spin" />
-		</div>
-
-		<template v-else>
-			<!-- Stats Cards -->
-			<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-				<div class="ios-card p-5">
-					<div class="flex items-center gap-3">
-						<div class="flex items-center justify-center w-10 h-10 rounded-full bg-blue-500/10">
-							<Icon name="lucide:folder-kanban" class="w-5 h-5 text-blue-500" />
-						</div>
-						<div>
-							<p class="text-2xl font-semibold">{{ stats.activeProjects }}</p>
-							<p class="text-xs text-muted-foreground">Active Projects</p>
-						</div>
-					</div>
-				</div>
-
-				<div class="ios-card p-5">
-					<div class="flex items-center gap-3">
-						<div class="flex items-center justify-center w-10 h-10 rounded-full bg-warning/10">
-							<Icon name="lucide:ticket" class="w-5 h-5 text-warning" />
-						</div>
-						<div>
-							<p class="text-2xl font-semibold">{{ stats.openTickets }}</p>
-							<p class="text-xs text-muted-foreground">Open Tickets</p>
-						</div>
-					</div>
-				</div>
-
-				<div class="ios-card p-5">
-					<div class="flex items-center gap-3">
-						<div class="flex items-center justify-center w-10 h-10 rounded-full bg-success/10">
-							<Icon name="lucide:check-circle-2" class="w-5 h-5 text-success" />
-						</div>
-						<div>
-							<p class="text-2xl font-semibold">{{ stats.resolvedTickets }}</p>
-							<p class="text-xs text-muted-foreground">Resolved Tickets</p>
-						</div>
-					</div>
-				</div>
+			<div v-if="showTicketForm" class="mb-8">
+				<PortalQuickTicketForm v-model:open="showTicketForm" @created="loadSummary" />
 			</div>
 
-			<!-- Charts row: project status donut · ticket priority bars · activity sparkline -->
-			<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-				<!-- Project Status Donut -->
-				<div class="ios-card p-5">
+			<div v-if="loading" class="flex items-center justify-center py-24">
+				<Icon name="lucide:loader-2" class="w-8 h-8 text-muted-foreground animate-spin" />
+			</div>
+
+			<template v-else>
+				<!-- ── Needs Your Attention ──────────────────────────── -->
+				<div class="ios-card p-5 mb-6">
 					<div class="flex items-center justify-between mb-3">
-						<h3 class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-							Projects by Status
-						</h3>
-						<Icon name="lucide:pie-chart" class="w-3.5 h-3.5 text-muted-foreground" />
+						<h2 class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+							Needs Your Attention
+						</h2>
+						<span v-if="attention.length" class="text-[11px] text-muted-foreground tabular-nums">
+							{{ attention.length }} {{ attention.length === 1 ? 'item' : 'items' }}
+						</span>
 					</div>
 
-					<ClientOnly>
-						<div v-if="projectStatusBreakdown.length" class="relative h-[160px]">
-							<VisSingleContainer :data="projectStatusBreakdown" :height="160">
-								<VisDonut
-									:value="(d: any) => d.value"
-									:arc-width="22"
-									:pad-angle="0.02"
-									:corner-radius="3"
-									:color="(d: any) => d.color"
-									:show-empty-segments="false"
-									:arc-label="() => ''"
-								/>
-							</VisSingleContainer>
-							<div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-								<div class="text-center">
-									<p class="text-2xl font-bold leading-none">{{ projectStatusTotal }}</p>
-									<p class="text-[10px] uppercase tracking-wider text-muted-foreground mt-0.5">total</p>
-								</div>
-							</div>
-						</div>
-						<div v-else class="h-[160px] flex items-center justify-center text-[11px] text-muted-foreground">
-							No projects yet.
-						</div>
-					</ClientOnly>
-
-					<div v-if="projectStatusBreakdown.length" class="grid grid-cols-2 gap-x-3 gap-y-1.5 mt-3">
-						<div
-							v-for="row in projectStatusBreakdown"
-							:key="row.key"
-							class="flex items-center gap-1.5 text-[11px]"
+					<div v-if="attention.length" class="space-y-2">
+						<NuxtLink
+							v-for="item in attention"
+							:key="`${item.type}-${item.id}`"
+							:to="item.href"
+							class="flex items-center gap-3 p-3 rounded-xl bg-muted/40 hover:bg-muted/70 transition-colors"
 						>
-							<span class="w-2 h-2 rounded-sm shrink-0" :style="{ background: row.color }" />
-							<span class="text-muted-foreground truncate capitalize">{{ row.label.toLowerCase() }}</span>
-							<span class="ml-auto font-medium tabular-nums">{{ row.value }}</span>
-						</div>
-					</div>
-				</div>
-
-				<!-- Ticket Priority bars -->
-				<div class="ios-card p-5">
-					<div class="flex items-center justify-between mb-3">
-						<h3 class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-							Tickets by Priority
-						</h3>
-						<Icon name="lucide:bar-chart-2" class="w-3.5 h-3.5 text-muted-foreground" />
-					</div>
-
-					<div v-if="ticketPriorityBreakdown.length" class="space-y-3 h-[160px] flex flex-col justify-center">
-						<div
-							v-for="row in ticketPriorityBreakdown"
-							:key="row.key"
-							class="space-y-1"
-						>
-							<div class="flex items-baseline justify-between text-[11px]">
-								<span class="text-muted-foreground capitalize">{{ row.label }}</span>
-								<span class="font-medium tabular-nums">{{ row.value }}</span>
-							</div>
-							<div class="h-1.5 rounded-full bg-muted/40 overflow-hidden">
-								<div
-									class="h-full rounded-full transition-all"
-									:style="{
-										width: `${(row.value / maxPriorityValue) * 100}%`,
-										background: row.color,
-									}"
-								/>
-							</div>
-						</div>
-					</div>
-					<div v-else class="h-[160px] flex items-center justify-center text-[11px] text-muted-foreground">
-						No tickets yet.
-					</div>
-				</div>
-
-				<!-- Activity sparkline (last 8 weeks) -->
-				<div class="ios-card p-5">
-					<div class="flex items-center justify-between mb-3">
-						<h3 class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-							Ticket Activity · 8 wks
-						</h3>
-						<Icon name="lucide:activity" class="w-3.5 h-3.5 text-muted-foreground" />
-					</div>
-
-					<ClientOnly>
-						<div v-if="ticketActivityTotal > 0" class="h-[140px] overflow-hidden">
-							<VisXYContainer
-								:data="ticketActivityWeekly"
-								:height="140"
-								:margin="{ top: 6, right: 6, bottom: 20, left: 6 }"
+							<div
+								class="flex items-center justify-center w-8 h-8 rounded-full shrink-0"
+								:class="item.severity === 'urgent'
+									? 'bg-destructive/10 text-destructive'
+									: item.severity === 'info'
+										? 'bg-muted text-muted-foreground'
+										: 'bg-primary/10 text-primary'"
 							>
-								<VisArea
-									:x="(d: any) => d.weekIdx"
-									:y="(d: any) => d.opened"
-									:color="['rgba(245, 158, 11, 0.18)']"
-									:opacity="1"
-									:curve-type="CurveType.MonotoneX"
-								/>
-								<VisLine
-									:x="(d: any) => d.weekIdx"
-									:y="(d: any) => d.opened"
-									:color="['#f59e0b']"
-									:curve-type="CurveType.MonotoneX"
-								/>
-								<VisLine
-									:x="(d: any) => d.weekIdx"
-									:y="(d: any) => d.closed"
-									:color="['#22c55e']"
-									:curve-type="CurveType.MonotoneX"
-								/>
-								<VisAxis
-									type="x"
-									:tick-format="(i: number) => {
-										const idx = Math.round(i);
-										return idx >= 0 && idx < ticketActivityWeekly.length
-											? ticketActivityWeekly[idx]?.label || ''
-											: '';
-									}"
-									:grid-line="false"
-									:num-ticks="4"
-								/>
-							</VisXYContainer>
-						</div>
-						<div v-else class="h-[140px] flex items-center justify-center text-[11px] text-muted-foreground">
-							No ticket activity yet.
-						</div>
-					</ClientOnly>
-
-					<div class="flex items-center gap-3 mt-2 text-[11px]">
-						<span class="flex items-center gap-1.5 text-muted-foreground">
-							<span class="w-2 h-2 rounded-full" style="background: #f59e0b" />
-							Opened
-						</span>
-						<span class="flex items-center gap-1.5 text-muted-foreground">
-							<span class="w-2 h-2 rounded-full" style="background: #22c55e" />
-							Closed
-						</span>
+								<Icon :name="attentionIcon[item.type] ?? 'lucide:circle-alert'" class="w-4 h-4" />
+							</div>
+							<div class="flex-1 min-w-0">
+								<p class="text-sm font-medium truncate">{{ item.label }}</p>
+								<p class="text-xs text-muted-foreground truncate">{{ item.detail }}</p>
+							</div>
+							<Icon name="lucide:chevron-right" class="w-4 h-4 text-muted-foreground shrink-0" />
+						</NuxtLink>
+					</div>
+					<div v-else class="py-6 text-center">
+						<Icon name="lucide:check-circle-2" class="w-8 h-8 text-success/60 mx-auto mb-2" />
+						<p class="text-sm text-muted-foreground">You're all caught up &mdash; nice.</p>
 					</div>
 				</div>
-			</div>
 
-			<!-- Project timeline — same Gantt as /portal/projects, auto-expanded
-				 when there are ≤3 projects so the dashboard shows events and
-				 tickets without an extra click. -->
-			<div class="mb-6">
-				<div class="flex items-center justify-between mb-3">
-					<h2 class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-						Project Timeline
-					</h2>
-					<NuxtLink to="/portal/projects" class="text-[11px] text-primary hover:underline">
-						Open full view →
+				<!-- ── App Roll-up Strip ─────────────────────────────── -->
+				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+					<NuxtLink to="/portal/progress" class="ios-card p-5 hover:bg-muted/30 transition-colors group">
+						<div class="flex items-center justify-between mb-2">
+							<div class="flex items-center justify-center w-9 h-9 rounded-full bg-blue-500/10">
+								<Icon name="lucide:square-kanban" class="w-4 h-4 text-blue-500" />
+							</div>
+							<Icon name="lucide:chevron-right" class="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+						</div>
+						<p class="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-1">Progress</p>
+						<p class="text-xl font-semibold leading-tight">{{ kpis.progress.activeProjects }} active</p>
+						<p class="text-xs text-muted-foreground">{{ kpis.progress.openTickets }} open tickets</p>
+					</NuxtLink>
+
+					<NuxtLink to="/portal/billing" class="ios-card p-5 hover:bg-muted/30 transition-colors group">
+						<div class="flex items-center justify-between mb-2">
+							<div class="flex items-center justify-center w-9 h-9 rounded-full bg-warning/10">
+								<Icon name="lucide:trending-up" class="w-4 h-4 text-warning" />
+							</div>
+							<Icon name="lucide:chevron-right" class="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+						</div>
+						<p class="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-1">Billing</p>
+						<p class="text-xl font-semibold leading-tight tabular-nums">{{ formatCurrency(kpis.billing.outstandingTotal) }}</p>
+						<p class="text-xs text-muted-foreground">
+							{{ kpis.billing.pendingProposals }} proposals · {{ kpis.billing.unsignedContracts }} contracts pending
+						</p>
+					</NuxtLink>
+
+					<NuxtLink to="/portal/performance" class="ios-card p-5 hover:bg-muted/30 transition-colors group">
+						<div class="flex items-center justify-between mb-2">
+							<div class="flex items-center justify-center w-9 h-9 rounded-full bg-success/10">
+								<Icon name="ph:chart-line-up-duotone" class="w-4 h-4 text-success" />
+							</div>
+							<Icon name="lucide:chevron-right" class="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+						</div>
+						<p class="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-1">Performance</p>
+						<p class="text-xl font-semibold leading-tight">{{ kpis.performance.campaignsThisMonth }} active</p>
+						<p class="text-xs text-muted-foreground">campaigns in the last 30 days</p>
+					</NuxtLink>
+
+					<NuxtLink to="/portal/messages" class="ios-card p-5 hover:bg-muted/30 transition-colors group">
+						<div class="flex items-center justify-between mb-2">
+							<div class="flex items-center justify-center w-9 h-9 rounded-full bg-primary/10">
+								<Icon name="ph:chats-circle-duotone" class="w-4 h-4 text-primary" />
+							</div>
+							<Icon name="lucide:chevron-right" class="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+						</div>
+						<p class="text-[11px] uppercase tracking-wider font-semibold text-muted-foreground mb-1">Messages</p>
+						<p class="text-xl font-semibold leading-tight">{{ kpis.messages.channelCount }}</p>
+						<p class="text-xs text-muted-foreground">conversation {{ kpis.messages.channelCount === 1 ? 'channel' : 'channels' }}</p>
 					</NuxtLink>
 				</div>
-				<ProjectTimelineUnifiedGantt portal :auto-expand-threshold="3" compact />
-			</div>
 
-			<!-- Recent Activity Grid -->
-			<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-				<!-- Recent Projects -->
-				<div class="ios-card p-5">
-					<div class="flex items-center justify-between mb-4">
-						<h2 class="font-medium flex items-center gap-2">
-							<Icon name="lucide:folder-kanban" class="w-4 h-4 text-muted-foreground" />
-							Recent Projects
-						</h2>
-						<NuxtLink to="/portal/projects" class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-primary hover:underline">
-							View all
-							<Icon name="lucide:chevron-right" class="w-3 h-3" />
-						</NuxtLink>
-					</div>
+				<!-- ── Recent Activity + Project Timeline ─────────────── -->
+				<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+					<!-- Recent activity feed -->
+					<div class="ios-card p-5 lg:col-span-1">
+						<div class="flex items-center justify-between mb-4">
+							<h2 class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+								Recent Activity
+							</h2>
+							<Icon name="lucide:activity" class="w-3.5 h-3.5 text-muted-foreground" />
+						</div>
 
-					<div v-if="recentProjects.length" class="space-y-2">
-						<NuxtLink
-							v-for="project in recentProjects"
-							:key="project.id"
-							:to="`/portal/projects?highlight=${project.id}`"
-							class="flex items-center justify-between p-3 rounded-xl bg-muted/40 hover:bg-muted/70 transition-colors"
-						>
-							<span class="text-sm font-medium truncate">{{ project.title }}</span>
-							<span
-								class="text-xs px-2 py-0.5 rounded-full shrink-0"
-								:class="getStatusBadgeClasses(project.status)"
+						<div v-if="activity.length" class="space-y-2">
+							<NuxtLink
+								v-for="item in activity"
+								:key="`${item.type}-${item.id}`"
+								:to="item.href"
+								class="flex items-start gap-3 p-2.5 rounded-xl hover:bg-muted/40 transition-colors -mx-1"
 							>
-								{{ project.status?.replace('_', ' ') }}
-							</span>
-						</NuxtLink>
-					</div>
-					<p v-else class="text-sm text-muted-foreground text-center py-6">
-						No active projects yet.
-					</p>
-				</div>
-
-				<!-- Recent Tickets -->
-				<div class="ios-card p-5">
-					<div class="flex items-center justify-between mb-4">
-						<h2 class="font-medium flex items-center gap-2">
-							<Icon name="lucide:ticket" class="w-4 h-4 text-muted-foreground" />
-							Recent Tickets
-						</h2>
-						<NuxtLink to="/portal/tickets" class="inline-flex items-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-primary hover:underline">
-							View all
-							<Icon name="lucide:chevron-right" class="w-3 h-3" />
-						</NuxtLink>
+								<div class="flex items-center justify-center w-7 h-7 rounded-full bg-muted shrink-0">
+									<Icon :name="activityIcon[item.type] ?? 'lucide:circle'" class="w-3.5 h-3.5 text-muted-foreground" />
+								</div>
+								<div class="flex-1 min-w-0">
+									<p class="text-sm font-medium truncate">{{ item.title }}</p>
+									<p class="text-xs text-muted-foreground truncate">{{ item.detail }}</p>
+								</div>
+								<span class="text-[10px] text-muted-foreground tabular-nums shrink-0 mt-1">{{ timeAgo(item.timestamp) }}</span>
+							</NuxtLink>
+						</div>
+						<p v-else class="text-sm text-muted-foreground text-center py-6">
+							No recent activity.
+						</p>
 					</div>
 
-					<div v-if="recentTickets.length" class="space-y-2">
-						<NuxtLink
-							v-for="ticket in recentTickets"
-							:key="ticket.id"
-							:to="`/portal/tickets?highlight=${ticket.id}`"
-							class="flex items-center justify-between p-3 rounded-xl bg-muted/40 hover:bg-muted/70 transition-colors"
-						>
-							<span class="text-sm font-medium truncate">{{ ticket.title }}</span>
-							<div class="flex items-center gap-2 shrink-0">
-								<span
-									v-if="ticket.priority"
-									class="text-xs px-2 py-0.5 rounded-full"
-									:class="getPriorityBadgeClasses(ticket.priority)"
-								>
-									{{ ticket.priority }}
-								</span>
-								<span
-									class="text-xs px-2 py-0.5 rounded-full"
-									:class="getStatusBadgeClasses(ticket.status)"
-								>
-									{{ ticket.status?.replace('_', ' ') }}
-								</span>
-							</div>
-						</NuxtLink>
+					<!-- Project timeline -->
+					<div class="lg:col-span-2">
+						<div class="flex items-center justify-between mb-3">
+							<h2 class="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+								Project Timeline
+							</h2>
+							<NuxtLink to="/portal/progress" class="text-[11px] text-primary hover:underline">
+								Open full view →
+							</NuxtLink>
+						</div>
+						<ProjectTimelineUnifiedGantt portal :auto-expand-threshold="3" compact />
 					</div>
-					<p v-else class="text-sm text-muted-foreground text-center py-6">
-						No open tickets.
-					</p>
 				</div>
-			</div>
-		</template>
+			</template>
 		</LayoutPageContainer>
 	</div>
 </template>

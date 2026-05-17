@@ -47,6 +47,11 @@ const sections: Array<{ key: PanelKey; label: string; icon: string }> = [
 				<div v-else-if="panel === 'appearance'">
 					<h2 class="text-lg font-semibold mb-6">Appearance</h2>
 					<ThemeSwitcher />
+					<div class="mt-8 pt-6 border-t border-border/40">
+						<ClientOnly>
+							<LayoutAppRailSettingsPanel />
+						</ClientOnly>
+					</div>
 				</div>
 			</div>
 		</LayoutPageContainer>

@@ -22,14 +22,24 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const router = useRouter();
+const route = useRoute();
 const config = useRuntimeConfig();
 const { user } = useDirectusAuth();
 const { logout } = useLogout();
+const { isAppsMode, setMode } = useAppsMode();
 
 const colorMode = useColorMode();
 const isDark = computed(() => colorMode.value === 'dark');
 function toggleDark() {
 	colorMode.preference = isDark.value ? 'light' : 'dark';
+}
+
+async function toggleLayoutMode() {
+	const next = isAppsMode.value ? 'classic' : 'apps';
+	void setMode(next).catch(() => {});
+	// Stay on the same portal page — the global middleware will pick up
+	// the new mode and swap the underlying shell on next nav.
+	await router.replace(route.fullPath);
 }
 
 const avatarUrl = computed(() => {
@@ -117,6 +127,26 @@ function handleLogout() {
 				<span
 					class="portal-user-menu__switch"
 					:class="isDark ? 'portal-user-menu__switch--on' : 'portal-user-menu__switch--off'"
+					aria-hidden="true"
+				>
+					<span class="portal-user-menu__switch-knob" />
+				</span>
+			</DropdownMenuItem>
+
+			<DropdownMenuItem
+				class="flex items-center justify-between cursor-pointer"
+				@select="(e: Event) => { e.preventDefault(); toggleLayoutMode(); }"
+			>
+				<span class="inline-flex items-center">
+					<Icon
+						:name="isAppsMode ? 'lucide:sidebar' : 'lucide:layout-grid'"
+						class="size-4 mr-2 shrink-0"
+					/>
+					<span>{{ isAppsMode ? 'Using Apps Layout' : 'Use Apps Layout' }}</span>
+				</span>
+				<span
+					class="portal-user-menu__switch"
+					:class="isAppsMode ? 'portal-user-menu__switch--on' : 'portal-user-menu__switch--off'"
 					aria-hidden="true"
 				>
 					<span class="portal-user-menu__switch-knob" />

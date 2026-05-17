@@ -38,6 +38,53 @@ export function useClients() {
     priorities: ['cookie', 'localStorage'],
   });
 
+  // ── Sort mode (shared across header dropdown + page table + all forms) ────
+  // `manual`   → respect the numeric `sort` field (drag-and-drop on /apps/clients)
+  // `activity` → most recently touched first (`date_updated` desc). This is a
+  //              proxy for activity — it bumps on direct edits + status changes
+  //              but not when child rows (projects/tickets/messages) change.
+  type ClientsSortMode = 'manual' | 'activity';
+  const clientsSortMode = useCookie<ClientsSortMode>('clients-sort-mode', {
+    default: () => 'manual',
+    maxAge: 60 * 60 * 24 * 365,
+    path: '/',
+    sameSite: 'lax',
+  });
+
+  function setClientsSortMode(next: ClientsSortMode) {
+    clientsSortMode.value = next;
+  }
+
+  function getClientsSortFields(): string[] {
+    // `last_activity_at` is the denormalized max(client.date_updated,
+    // children.date_updated) maintained by setup-client-activity.ts (field
+    // + 3 Directus flows + /api/clients/bump-activity endpoint). Single
+    // indexed column → server can sort cheaply.
+    return clientsSortMode.value === 'activity'
+      ? ['-last_activity_at', '-date_updated', 'name']
+      : ['sort', 'name'];
+  }
+
+  /**
+   * Pushes `clients.last_activity_at = NOW` on the given clients via the
+   * server endpoint (admin token, 5s server-side debounce). Use from any
+   * bulk-write callsite that wants to coalesce N child writes into a
+   * single client PATCH per affected client.
+   */
+  async function bumpClientActivity(clientIds: string[]): Promise<{ bumped: number }> {
+    const ids = (clientIds || []).filter(Boolean);
+    if (!ids.length) return { bumped: 0 };
+    try {
+      return await $fetch('/api/clients/bump-activity', {
+        method: 'POST',
+        body: { clientIds: ids },
+      });
+    } catch (err) {
+      console.warn('bumpClientActivity failed:', err);
+      return { bumped: 0 };
+    }
+  }
+
   // ── Client options for the header dropdown ────────────────────────────────
   const clientOptions = computed(() => {
     const orgName = currentOrg.value?.name || 'Organization';
@@ -201,9 +248,9 @@ export function useClients() {
       }
 
       const data = await items.list({
-        fields: ['id', 'name', 'logo', 'status', 'account_state'],
+        fields: ['id', 'name', 'logo', 'status', 'account_state', 'sort', 'date_updated', 'last_activity_at'],
         filter,
-        sort: ['sort', 'name'],
+        sort: getClientsSortFields(),
         limit: -1,
       });
 
@@ -265,6 +312,15 @@ export function useClients() {
       },
       { immediate: true }
     );
+
+    // Refetch the header dropdown when the sort mode flips so the order
+    // matches whatever surface the user just toggled on /apps/clients.
+    watch(
+      () => clientsSortMode.value,
+      () => {
+        if (selectedOrg.value) fetchActiveClients();
+      }
+    );
   }
 
   // ── CRUD operations ───────────────────────────────────────────────────────
@@ -312,15 +368,16 @@ export function useClients() {
       filter._and.push({ tags: { _contains: params.tags[0] } });
     }
 
-    const data = await items.list({
-      fields: ['*', 'logo.*', 'primary_contact.first_name', 'primary_contact.last_name', 'primary_contact.email', 'organization.name'],
-      filter: filter._and.length ? filter : undefined,
-      sort: params?.sort || ['name'],
-      limit: params?.limit || 50,
-      page: params?.page || 1,
-    });
-
-    const total = await items.count(filter._and.length ? filter : undefined);
+    const [data, total] = await Promise.all([
+      items.list({
+        fields: ['*', 'logo.*', 'primary_contact.first_name', 'primary_contact.last_name', 'primary_contact.email', 'organization.name'],
+        filter: filter._and.length ? filter : undefined,
+        sort: params?.sort || getClientsSortFields(),
+        limit: params?.limit || 50,
+        page: params?.page || 1,
+      }),
+      items.count(filter._and.length ? filter : undefined),
+    ]);
 
     return { data, total };
   };
@@ -488,9 +545,9 @@ export function useClients() {
     }
 
     const data = await items.list({
-      fields: ['id', 'name', 'status', 'account_state'],
+      fields: ['id', 'name', 'status', 'account_state', 'last_activity_at'],
       filter,
-      sort: ['sort', 'name'],
+      sort: getClientsSortFields(),
       limit: -1,
     });
 
@@ -513,6 +570,12 @@ export function useClients() {
     getClientFilter,
     fetchActiveClients,
     setupClientListeners,
+
+    // Sort mode (shared across header dropdown + page + every consumer)
+    clientsSortMode,
+    setClientsSortMode,
+    getClientsSortFields,
+    bumpClientActivity,
 
     // Access control
     accessibleClientIds: readonly(accessibleClientIds),

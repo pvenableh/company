@@ -5,6 +5,7 @@ import { Button } from '~/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '~/components/ui/dropdown-menu';
 import { useDebounceFn } from '@vueuse/core';
 import { CONNECTION_ROLE_LABELS } from '~/composables/useContactConnections';
+import VueDraggable from 'vuedraggable';
 
 definePageMeta({ layout: 'apps', middleware: ['auth'] });
 useHead({ title: 'Clients | Earnest' });
@@ -14,8 +15,12 @@ const route = useRoute();
 const config = useRuntimeConfig();
 
 // ── View segmented control ─────────────────────────────────────────────────
-type ViewKey = 'clients' | 'contacts' | 'partners' | 'intelligence';
-const VIEW_KEYS: ViewKey[] = ['clients', 'contacts', 'partners', 'intelligence'];
+// Segments are people-noun lenses. Each one can render its own layout —
+// simple list/table for clients/contacts/partners, dashboard-shaped for
+// Card Desk and Intelligence. The page wrapper stays the same; the body
+// switches via v-if/v-else-if blocks below.
+type ViewKey = 'clients' | 'contacts' | 'partners' | 'carddesk' | 'intelligence';
+const VIEW_KEYS: ViewKey[] = ['clients', 'contacts', 'partners', 'carddesk', 'intelligence'];
 
 const initialView: ViewKey = (() => {
   const v = route.query.view;
@@ -31,6 +36,7 @@ const segments: Array<{ key: ViewKey; label: string; icon: string }> = [
   { key: 'clients', label: 'By Client', icon: 'lucide:building-2' },
   { key: 'contacts', label: 'All Contacts', icon: 'lucide:users' },
   { key: 'partners', label: 'Partners', icon: 'lucide:network' },
+  { key: 'carddesk', label: 'Card Desk', icon: 'lucide:contact' },
   { key: 'intelligence', label: 'Intelligence', icon: 'earnest' },
 ];
 
@@ -38,13 +44,26 @@ const segments: Array<{ key: ViewKey; label: string; icon: string }> = [
 const { intelligence, intelligenceLoading, fetchIntelligence } = useCRMIntelligence();
 
 // ── Clients data ───────────────────────────────────────────────────────────
-const { getClients, deleteClient: doDelete, updateClient } = useClients();
+const {
+  getClients,
+  deleteClient: doDelete,
+  updateClient,
+  updateClientSort,
+  clientsSortMode,
+  setClientsSortMode,
+} = useClients();
 const { getStatusBadgeClasses } = useStatusStyle();
 const { selectedOrg } = useOrganization();
 
 // Persisted "View as Table / Board" toggle (per-user). Stored client-side
 // only — power users tend to lock in one or the other and switch is rare.
 const clientsViewMode = useCookie<'table' | 'board'>('clients-view-mode', { default: () => 'table' });
+
+// Drag-and-drop is only active in manual sort mode + table view; in activity
+// mode the rows are ordered by `-date_updated` and reordering would be a lie.
+const canDragSort = computed(
+  () => clientsSortMode.value === 'manual' && clientsViewMode.value === 'table',
+);
 
 const STATUS_QUICK_OPTIONS: Array<{ value: 'active' | 'prospect' | 'inactive' | 'archived'; label: string }> = [
   { value: 'active', label: 'Active' },
@@ -113,7 +132,8 @@ async function fetchClients() {
     const result = await getClients({
       search: clientSearch.value || undefined,
       ...filter,
-      sort: ['sort', 'name'],
+      // No `sort` — let useClients honor the shared clientsSortMode so the
+      // page table, header dropdown, and every form pull from one source.
       limit: 200,
       page: 1,
     });
@@ -123,6 +143,33 @@ async function fetchClients() {
     clientsLoading.value = false;
   }
 }
+
+// Persist drag order: walk the current visible order and PATCH only the rows
+// whose `sort` value no longer matches their position. Sort step is 10 so we
+// have headroom to splice new rows between existing ones later if needed.
+async function onSortDragEnd() {
+  if (!canDragSort.value) return;
+  const updates: Array<{ id: string; sort: number }> = [];
+  allClients.value.forEach((c, idx) => {
+    const next = (idx + 1) * 10;
+    if (c.sort !== next) {
+      c.sort = next;
+      updates.push({ id: c.id as string, sort: next });
+    }
+  });
+  if (!updates.length) return;
+  try {
+    await Promise.all(updates.map((u) => updateClientSort(u.id, u.sort)));
+  } catch (err) {
+    console.error('Failed to persist client order:', err);
+    fetchClients();
+  }
+}
+
+// When the user flips Recent ↔ Manual, refetch with the new sort direction.
+watch(clientsSortMode, () => {
+  fetchClients();
+});
 
 const debouncedFetchClients = useDebounceFn(fetchClients, 300);
 
@@ -352,25 +399,53 @@ watch(view, (next) => {
             @change="fetchClients"
           />
           <div v-else class="text-xs text-muted-foreground">Drag a card to change its status.</div>
-          <div class="inline-flex items-center gap-0.5 p-0.5 bg-muted/40 rounded-full text-[12px] font-medium">
-            <button
-              type="button"
-              class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-colors"
-              :class="clientsViewMode === 'table' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
-              @click="clientsViewMode = 'table'"
+          <div class="flex items-center gap-2">
+            <!-- Shared sort mode — also drives the header client dropdown and
+                 every other surface that lists clients. -->
+            <div
+              class="inline-flex items-center gap-0.5 p-0.5 bg-muted/40 rounded-full text-[12px] font-medium"
+              :title="clientsSortMode === 'activity' ? 'Sorted by most recently updated' : 'Sorted by manual drag-and-drop order'"
             >
-              <Icon name="lucide:list" class="w-3.5 h-3.5" />
-              Table
-            </button>
-            <button
-              type="button"
-              class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-colors"
-              :class="clientsViewMode === 'board' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
-              @click="clientsViewMode = 'board'; activeClientTab = 'active'; fetchClients()"
-            >
-              <Icon name="lucide:columns-3" class="w-3.5 h-3.5" />
-              Board
-            </button>
+              <button
+                type="button"
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-colors"
+                :class="clientsSortMode === 'activity' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+                @click="setClientsSortMode('activity')"
+              >
+                <Icon name="lucide:activity" class="w-3.5 h-3.5" />
+                Recent
+              </button>
+              <button
+                type="button"
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-colors"
+                :class="clientsSortMode === 'manual' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+                @click="setClientsSortMode('manual')"
+              >
+                <Icon name="lucide:grip-vertical" class="w-3.5 h-3.5" />
+                Manual
+              </button>
+            </div>
+
+            <div class="inline-flex items-center gap-0.5 p-0.5 bg-muted/40 rounded-full text-[12px] font-medium">
+              <button
+                type="button"
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-colors"
+                :class="clientsViewMode === 'table' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+                @click="clientsViewMode = 'table'"
+              >
+                <Icon name="lucide:list" class="w-3.5 h-3.5" />
+                Table
+              </button>
+              <button
+                type="button"
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-colors"
+                :class="clientsViewMode === 'board' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'"
+                @click="clientsViewMode = 'board'; activeClientTab = 'active'; fetchClients()"
+              >
+                <Icon name="lucide:columns-3" class="w-3.5 h-3.5" />
+                Board
+              </button>
+            </div>
           </div>
         </div>
 
@@ -416,6 +491,7 @@ watch(view, (next) => {
             <table class="w-full text-sm">
               <thead>
                 <tr class="border-b border-border/50">
+                  <th v-if="canDragSort" class="w-8 px-2" aria-label="Drag handle" />
                   <th class="text-left py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Client</th>
                   <th class="text-left py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Status</th>
                   <th class="text-left py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wider">Contact</th>
@@ -424,14 +500,32 @@ watch(view, (next) => {
                   <th class="text-right py-3 px-4 font-medium text-muted-foreground text-xs uppercase tracking-wider w-24"></th>
                 </tr>
               </thead>
-              <tbody>
+              <VueDraggable
+                v-model="allClients"
+                tag="tbody"
+                item-key="id"
+                handle=".client-row-drag-handle"
+                :disabled="!canDragSort"
+                ghost-class="clients-table__ghost"
+                chosen-class="clients-table__chosen"
+                drag-class="clients-table__drag"
+                @end="onSortDragEnd"
+              >
+                <template #item="{ element: client }">
                 <tr
-                  v-for="client in allClients"
                   :key="client.id"
                   class="border-b border-border/30 last:border-b-0 hover:bg-muted/20 cursor-pointer transition-colors"
                   :class="{ 'opacity-50': client.account_state === 'inactive' || client.status === 'archived' }"
                   @click="viewClient(client)"
                 >
+                  <td
+                    v-if="canDragSort"
+                    class="client-row-drag-handle w-8 px-2 text-muted-foreground/40 hover:text-muted-foreground cursor-grab active:cursor-grabbing"
+                    title="Drag to reorder"
+                    @click.stop
+                  >
+                    <Icon name="lucide:grip-vertical" class="w-4 h-4" />
+                  </td>
                   <td class="py-3 px-4">
                     <div class="flex items-center gap-3">
                       <div class="shrink-0">
@@ -503,7 +597,8 @@ watch(view, (next) => {
                     </div>
                   </td>
                 </tr>
-              </tbody>
+                </template>
+              </VueDraggable>
             </table>
           </div>
         </div>
@@ -608,6 +703,15 @@ watch(view, (next) => {
         </div>
       </template>
 
+      <!-- ── Card Desk view ───────────────────────────────────────────── -->
+      <!-- Dashboard-shaped segment: hero stats + XP bar + filterable
+           contacts + editable detail panel. Same component the
+           standalone /carddesk route renders, so deep links and
+           bookmarks still work. -->
+      <template v-else-if="view === 'carddesk'">
+        <CardDeskDashboard />
+      </template>
+
       <!-- ── Intelligence view ────────────────────────────────────────── -->
       <template v-else-if="view === 'intelligence'">
         <ClientsIntelligenceView :data="intelligence" :loading="intelligenceLoading" />
@@ -651,7 +755,19 @@ watch(view, (next) => {
 </template>
 
 <style scoped>
+@reference "~/assets/css/tailwind.css";
+
 .apps-page {
   @apply flex flex-col min-h-full;
+}
+
+.clients-table__ghost {
+  @apply opacity-30;
+}
+.clients-table__chosen {
+  @apply bg-muted/30;
+}
+.clients-table__drag {
+  @apply shadow-lg;
 }
 </style>
