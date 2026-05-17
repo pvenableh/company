@@ -232,6 +232,11 @@ export function useClients() {
       const filter: any = {
         _and: [
           { account_state: { _eq: 'active' } },
+          // Archiving a client only flips `status`, not `account_state`, so
+          // an archived row can still have account_state='active'. Require
+          // status='published' here so the header dropdown matches the
+          // page's Active tab.
+          { status: { _eq: 'published' } },
           { organization: { _eq: selectedOrg.value } },
         ],
       };
@@ -545,6 +550,9 @@ export function useClients() {
     const filter: any = {
       _and: [
         { account_state: { _in: ['active', 'prospect'] } },
+        // Same archive-leak guard as fetchActiveClients — archived rows
+        // can still have account_state='active'|'prospect'.
+        { status: { _eq: 'published' } },
         { organization: { _eq: selectedOrg.value } },
       ],
     };
