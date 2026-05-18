@@ -34,8 +34,8 @@ watch(view, (next) => {
 });
 
 const segments: Array<{ key: ViewKey; label: string; icon: string }> = [
-  { key: 'clients', label: 'By Company', icon: 'lucide:building-2' },
-  { key: 'contacts', label: 'All Contacts', icon: 'lucide:users' },
+  { key: 'clients', label: 'Clients', icon: 'lucide:building-2' },
+  { key: 'contacts', label: 'Contacts', icon: 'lucide:users' },
   { key: 'leads', label: 'Leads', icon: 'lucide:trending-up' },
   { key: 'carddesk', label: 'Card Desk', icon: 'lucide:contact' },
   { key: 'intelligence', label: 'Intelligence', icon: 'earnest' },
