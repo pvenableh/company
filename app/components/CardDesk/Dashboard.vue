@@ -155,21 +155,27 @@ const toggleClient = async () => {
 };
 
 // ── Promote-to-Earnest ────────────────────────────────────────────────────
-// Local session-scoped map: cd_contact id → { contactId, leadStage | null }.
-// Tracks promoted state for THIS session while the FK column doesn't exist
-// yet. Once schema lands, replace with `selectedContact.promoted_contact`
-// + a fetched lead status; the UI shape below stays identical.
+// Persisted state lives in `cd_contacts.promoted_contact`. The session-scoped
+// Map below carries the leadStage from the modal's response so the freshly-
+// promoted row shows "Lead opened · <stage> stage" without an extra fetch;
+// when only the FK is known we still show "In Earnest CRM" but without the
+// stage line.
 const promoteModalOpen = ref(false);
 const promotedMap = ref(new Map<string, { contactId: string; leadStage: string | null }>());
 
 const isPromoted = computed(() => {
 	if (!selectedContact.value) return false;
-	return promotedMap.value.has(selectedContact.value.id);
+	return !!selectedContact.value.promoted_contact || promotedMap.value.has(selectedContact.value.id);
 });
 
 const promotedInfo = computed(() => {
 	if (!selectedContact.value) return null;
-	return promotedMap.value.get(selectedContact.value.id) || null;
+	const fromMap = promotedMap.value.get(selectedContact.value.id);
+	if (fromMap) return fromMap;
+	if (selectedContact.value.promoted_contact) {
+		return { contactId: selectedContact.value.promoted_contact, leadStage: null };
+	}
+	return null;
 });
 
 const openPromoteModal = () => {
@@ -182,6 +188,11 @@ const onPromoted = (result: { contact: { id: string }; lead: { stage: string } |
 		contactId: result.contact.id,
 		leadStage: result.lead?.stage || null,
 	});
+	// Patch the in-memory row so isPromoted stays true after the modal closes,
+	// even after the row is re-fetched from a list refresh.
+	selectedContact.value.promoted_contact = result.contact.id;
+	const rowInList = contacts.value.find((c) => c.id === selectedContact.value!.id);
+	if (rowInList) rowInList.promoted_contact = result.contact.id;
 };
 
 // ── Activity logging ──────────────────────────────────────────────────────
@@ -244,8 +255,29 @@ watch([activeTab, searchQuery], () => {
 	loadContacts();
 });
 
+// Optional deep-link: /carddesk?selected=<cd_contact.id> auto-opens that
+// row's detail panel after the list loads. Used by the "Open Card Desk →"
+// link inside the /contacts/[id] Card Desk slide-over. If the id is on a
+// page we haven't loaded yet, we fetch the contact directly so the panel
+// still opens.
+const route = useRoute();
+const router = useRouter();
+const { fetchContactById } = useCardDesk() as any;
+
 onMounted(async () => {
 	await Promise.all([fetchStats(), loadContacts()]);
+	const selectedId = String(route.query.selected || '');
+	if (!selectedId) return;
+	const inList = contacts.value.find((c) => c.id === selectedId);
+	if (inList) {
+		openContact(inList);
+	} else if (typeof fetchContactById === 'function') {
+		const fetched = await fetchContactById(selectedId).catch(() => null);
+		if (fetched) openContact(fetched);
+	}
+	// Strip the query param once consumed so navigating back doesn't
+	// re-trigger the open on every list refresh.
+	router.replace({ query: { ...route.query, selected: undefined } });
 });
 </script>
 

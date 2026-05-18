@@ -183,9 +183,10 @@ watch(
 				</ul>
 			</div>
 
-			<!-- Footer link to Card Desk -->
+			<!-- Footer link to Card Desk — deep-links to this specific card so
+			     the dashboard auto-opens its detail panel after the list loads. -->
 			<NuxtLink
-				to="/carddesk"
+				:to="`/carddesk?selected=${card.id}`"
 				class="block text-center text-xs font-medium text-primary hover:underline pt-2"
 				@click="$emit('close')"
 			>

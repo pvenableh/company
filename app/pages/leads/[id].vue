@@ -330,7 +330,10 @@ onUnmounted(() => clearEntity());
 			</ClientOnly>
 
 			<!-- Pipeline Stage Timeline -->
-			<div class="ios-card p-4 mb-6">
+			<!-- pb-10: stage labels are absolute-positioned beneath the dot row
+			     (StatusTimeline.vue uses top-full mt-2), so the card needs
+			     extra bottom padding or the labels graze the edge. -->
+			<div class="ios-card p-4 pb-10 mb-6">
 				<p class="text-[10px] uppercase font-semibold t-text-muted tracking-wider mb-4">Pipeline Stage</p>
 				<FormStatusTimeline
 					:currentStatus="lead.stage"

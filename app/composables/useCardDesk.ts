@@ -236,7 +236,7 @@ export const useCardDesk = () => {
 		}
 
 		return contactItems.list({
-			fields: ['id', 'name', 'first_name', 'last_name', 'title', 'company', 'email', 'phone', 'industry', 'met_at', 'rating', 'hibernated', 'is_client', 'client_at', 'notes', 'date_created'],
+			fields: ['id', 'name', 'first_name', 'last_name', 'title', 'company', 'email', 'phone', 'industry', 'met_at', 'rating', 'hibernated', 'is_client', 'client_at', 'notes', 'date_created', 'promoted_contact'],
 			filter: conditions.length > 1 ? { _and: conditions } : filter,
 			sort: ['-date_created'],
 			limit: opts?.limit || 25,
@@ -263,6 +263,23 @@ export const useCardDesk = () => {
 	// scripts/setup-carddesk-permissions.ts.
 	const updateContact = async (contactId: string, patch: Record<string, unknown>) => {
 		return contactItems.update(contactId, patch);
+	};
+
+	// Single-row fetch for deep-link open (`/carddesk?selected=<id>`). Returns
+	// the row shaped like fetchContacts output. Returns null if not found or
+	// not the caller's row (perms filter `user_created = $CURRENT_USER`).
+	const fetchContactById = async (contactId: string) => {
+		try {
+			return await contactItems.get(contactId, {
+				fields: [
+					'id', 'name', 'first_name', 'last_name', 'email', 'phone',
+					'company', 'title', 'industry', 'met_at', 'notes', 'rating',
+					'hibernated', 'is_client', 'client_at', 'date_created',
+				],
+			} as any);
+		} catch {
+			return null;
+		}
 	};
 
 	// Convenience: flip is_client and stamp client_at when promoting.
@@ -326,6 +343,7 @@ export const useCardDesk = () => {
 		error: readonly(error),
 		fetchStats,
 		fetchContacts,
+		fetchContactById,
 		fetchContactActivities,
 		updateContact,
 		setIsClient,
