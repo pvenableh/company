@@ -21,26 +21,40 @@
  * }
  */
 
+import { timingSafeEqual } from 'node:crypto';
 import { readItem } from '@directus/sdk';
 import { resolveNotificationTargets } from '~~/server/utils/notificationRecipients';
 import { emitNotification } from '~~/server/utils/notify-event';
 
+// Constant-time secret compare — `===` leaks length/prefix via timing.
+function secretsMatch(a: string, b: string): boolean {
+	const aBuf = Buffer.from(a);
+	const bBuf = Buffer.from(b);
+	if (aBuf.length !== bBuf.length) return false;
+	return timingSafeEqual(aBuf, bBuf);
+}
+
 export default defineEventHandler(async (event) => {
 	try {
+		const config = useRuntimeConfig();
+		const webhookSecret = (config as any).notificationWebhookSecret;
+
+		// Fail closed: if the secret env is unset we reject every request, rather
+		// than fall through to admin-privileged Directus reads + bell/email fan-out
+		// for anyone on the internet. Production sets NOTIFICATION_WEBHOOK_SECRET;
+		// local dev needs it set in .env to exercise this route.
 		const body = await readBody(event);
 		const { collection, action, item, itemId, userId, orgId, previousItem, secret } = body || {};
+
+		if (!webhookSecret || typeof secret !== 'string' || !secretsMatch(secret, webhookSecret)) {
+			throw createError({ statusCode: 403, message: 'Invalid webhook secret' });
+		}
 
 		if (!collection || !action || !itemId || !userId) {
 			throw createError({
 				statusCode: 400,
 				message: 'collection, action, itemId, and userId are required',
 			});
-		}
-
-		const config = useRuntimeConfig();
-		const webhookSecret = (config as any).notificationWebhookSecret;
-		if (webhookSecret && secret !== webhookSecret) {
-			throw createError({ statusCode: 403, message: 'Invalid webhook secret' });
 		}
 
 		const directus = getServerDirectus();
