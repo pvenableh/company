@@ -296,7 +296,36 @@ export async function updateSocialPost(id: string, data: Partial<SocialPost>): P
     method: 'PATCH',
     body: mapPostToDirectus(data as unknown as Record<string, unknown>),
   })
-  return mapDirectusPost(raw)
+  const updated = mapDirectusPost(raw)
+
+  // Phase 6 publisher bridge: when a post lands in `approved` state with a
+  // future scheduled_at and at least one platform target wired to an account,
+  // flip post_status draft → scheduled so the existing cron worker
+  // (findDueScheduledPosts) can pick it up. Fire-and-forget — a promotion
+  // failure must never block the underlying state change.
+  if (shouldAutoPromoteOnApprove(updated)) {
+    try {
+      const promoted = await directusFetch<DirectusSocialPost>(`/items/social_posts/${id}`, {
+        method: 'PATCH',
+        body: mapPostToDirectus({ status: 'scheduled' } as Record<string, unknown>),
+      })
+      return mapDirectusPost(promoted)
+    } catch (err) {
+      console.error('[social-directus] auto-promote on approve failed:', err)
+    }
+  }
+
+  return updated
+}
+
+function shouldAutoPromoteOnApprove(post: SocialPost): boolean {
+  if (post.approval_state !== 'approved') return false
+  if (post.status !== 'draft') return false
+  if (!post.scheduled_at) return false
+  const ts = Date.parse(post.scheduled_at)
+  if (!Number.isFinite(ts) || ts <= Date.now()) return false
+  if (!Array.isArray(post.platforms) || post.platforms.length === 0) return false
+  return post.platforms.some((p) => !!p?.account_id)
 }
 
 export async function deleteSocialPost(id: string): Promise<void> {

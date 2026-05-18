@@ -99,17 +99,21 @@ const fallbackBackLabel = computed(() => {
 <template>
 	<header class="app-header">
 		<div class="app-header__inner">
+			<!-- Back row — sits on its own line above the title so the back
+			     affordance is always discoverable without competing with the
+			     title or right-side actions. Only rendered on sub-pages. -->
+			<button
+				v-if="showBack"
+				type="button"
+				class="app-header__back app-header__back--row"
+				@click="goBack"
+			>
+				<Icon name="lucide:chevron-left" class="size-4" />
+				<span>{{ backLabel ?? fallbackBackLabel }}</span>
+			</button>
+
 			<div class="app-header__row">
 				<div class="app-header__left">
-					<button
-						v-if="showBack"
-						type="button"
-						class="app-header__back"
-						@click="goBack"
-					>
-						<Icon name="lucide:chevron-left" class="size-4" />
-						<span class="hidden sm:inline">{{ backLabel ?? fallbackBackLabel }}</span>
-					</button>
 					<span
 						v-if="accent && !showBack"
 						class="app-header__accent-icon"
@@ -193,6 +197,14 @@ const fallbackBackLabel = computed(() => {
 	font-weight: 600;
 	text-transform: uppercase;
 	letter-spacing: 0.06em;
+}
+
+/* When the back chevron sits on its own row above the title, hug the
+ * left edge and pin the next row tight (negative margin neutralises the
+ * parent `gap-1.5`). Pulling the title row up keeps the back affordance
+ * visually anchored to the title without competing for space. */
+.app-header__back--row {
+	@apply self-start py-0 -mb-1;
 }
 
 /* Small app-accent chip echoing the rail's gradient tile — same hue

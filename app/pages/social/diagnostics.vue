@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import { Button } from '~/components/ui/button'
 import type { SocialPlatform } from '~~/shared/social'
 
 definePageMeta({
-  layout: 'default',
+  layout: 'apps',
   middleware: ['auth'],
 })
 useHead({ title: 'Social Diagnostics | Earnest' })
@@ -77,17 +78,25 @@ const requiredCounts = computed(() => {
 </script>
 
 <template>
-  <LayoutPageContainer>
-    <div class="flex items-center gap-4 mb-8">
-      <UButton to="/social/settings" variant="ghost" icon="i-lucide-arrow-left" size="sm" />
-      <div class="flex-1">
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Connection Diagnostics</h1>
-        <p class="text-gray-500 dark:text-gray-400 mt-0.5">
-          Developer-only health check for each social platform's OAuth configuration and connected accounts.
-        </p>
-      </div>
-      <UButton :loading="loading" icon="i-lucide-refresh-cw" size="sm" @click="refresh">Refresh</UButton>
-    </div>
+  <div class="apps-page">
+    <AppHeader
+      title="Connection Diagnostics"
+      :show-back="true"
+      back-to="/social/settings"
+      back-label="Settings"
+    >
+      <template #actions>
+        <Button size="sm" :disabled="loading" @click="refresh">
+          <Icon name="lucide:refresh-cw" class="w-4 h-4 mr-1" :class="{ 'animate-spin': loading }" />
+          Refresh
+        </Button>
+      </template>
+    </AppHeader>
+
+    <LayoutPageContainer>
+      <p class="text-xs text-muted-foreground mb-5">
+        Developer-only health check for each social platform's OAuth configuration and connected accounts.
+      </p>
 
     <div v-if="isForbidden" class="rounded-xl border border-destructive/30 bg-destructive/10 dark:bg-destructive/20 p-6 text-center">
       <UIcon name="i-lucide-lock" class="w-8 h-8 text-destructive mx-auto mb-2" />
@@ -265,5 +274,12 @@ const requiredCounts = computed(() => {
         </UCard>
       </div>
     </template>
-  </LayoutPageContainer>
+    </LayoutPageContainer>
+  </div>
 </template>
+
+<style scoped>
+.apps-page {
+  @apply flex flex-col min-h-full;
+}
+</style>

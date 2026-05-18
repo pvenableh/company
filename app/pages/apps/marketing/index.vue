@@ -308,6 +308,13 @@ function openCampaignSlideOver(c: any) {
   campaignSlide.open(String(c.id));
 }
 
+// Social post slide-over — keeps Pulse / Social floor drilldowns inside the
+// apps layout instead of bouncing to /social.
+const socialPostSlide = useAppSlideOver('social-post');
+function openSocialPostSlideOver(post: any) {
+  socialPostSlide.open(String(post.id));
+}
+
 watch(campaignRefreshSignal, () => {
   Promise.all([fetchCampaigns(), fetchPulse()]).catch(() => {});
 });
@@ -750,7 +757,7 @@ const scopeLabel = computed(() => {
                   v-for="p in pulseRecentPosts.slice(0, 6)"
                   :key="p.id"
                   class="flex items-center gap-2 py-2 px-2 -mx-2 rounded-md hover:bg-muted/30 cursor-pointer transition-colors"
-                  @click="router.push(`/social`)"
+                  @click="openSocialPostSlideOver(p)"
                 >
                   <Icon
                     v-for="target in (p.platforms || []).slice(0, 3)"
@@ -887,9 +894,6 @@ const scopeLabel = computed(() => {
             :items="emailFilterItems"
             class="w-fit"
           />
-          <NuxtLink to="/email" class="text-xs text-primary hover:underline ml-auto">
-            Open classic Email →
-          </NuxtLink>
         </div>
 
         <div v-if="emailLoading && !emailTemplates.length" class="flex flex-col items-center justify-center py-24 gap-3">
@@ -1066,7 +1070,7 @@ const scopeLabel = computed(() => {
               v-for="post in upcomingScheduledPosts"
               :key="post.id"
               class="flex items-center gap-3 py-2 cursor-pointer hover:bg-muted/30 rounded-md -mx-2 px-2 transition-colors"
-              @click="router.push('/social')"
+              @click="openSocialPostSlideOver(post)"
             >
               <div class="w-10 h-10 rounded-lg bg-muted/40 overflow-hidden flex-shrink-0">
                 <img
@@ -1179,10 +1183,10 @@ const scopeLabel = computed(() => {
 
             <div class="space-y-2">
               <div
-                v-for="post in group.posts.slice(0, 6)"
+                v-for="post in (socialPlatformFilter === group.platform ? group.posts : group.posts.slice(0, 6))"
                 :key="`${group.platform}-${post.id}`"
                 class="flex items-start gap-3 py-2 px-2 -mx-2 rounded-md hover:bg-muted/30 cursor-pointer transition-colors"
-                @click="router.push(`/social`)"
+                @click="openSocialPostSlideOver(post)"
               >
                 <div class="w-10 h-10 rounded-lg bg-muted/30 overflow-hidden flex-shrink-0">
                   <img
@@ -1224,9 +1228,9 @@ const scopeLabel = computed(() => {
               </div>
 
               <button
-                v-if="group.posts.length > 6"
+                v-if="group.posts.length > 6 && socialPlatformFilter !== group.platform"
                 class="w-full inline-flex items-center justify-center gap-0.5 text-[10px] font-medium uppercase tracking-wide text-primary hover:underline pt-2 border-t border-border/30"
-                @click="router.push(`/social?platform=${group.platform}`)"
+                @click="socialPlatformFilter = group.platform"
               >
                 View all {{ group.posts.length }} on {{ SOCIAL_LABELS[group.platform] }}
                 <Icon name="lucide:chevron-right" class="w-3 h-3" />

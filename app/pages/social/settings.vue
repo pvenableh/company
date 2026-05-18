@@ -5,10 +5,11 @@
  */
 
 import { differenceInDays } from 'date-fns'
+import { Button } from '~/components/ui/button'
 import type { SocialAccountPublic, SocialPlatform } from '~~/shared/social'
 
 definePageMeta({
-  layout: 'default',
+  layout: 'apps',
   middleware: ['auth'],
 })
 useHead({ title: 'Social Settings | Earnest' })
@@ -382,24 +383,28 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
 </script>
 
 <template>
-  <LayoutPageContainer>
-    <!-- Header -->
-    <div class="flex items-center gap-4 mb-8">
-      <UButton to="/social" variant="ghost" icon="i-lucide-arrow-left" size="sm" />
-      <div class="flex-1">
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Social Settings</h1>
-        <p class="text-gray-500 dark:text-gray-400 mt-0.5">Manage your connected accounts</p>
-      </div>
-      <UButton
-        v-if="isOrgAdminOrAbove"
-        to="/social/diagnostics"
-        variant="ghost"
-        icon="i-lucide-stethoscope"
-        size="sm"
-      >
-        Diagnostics
-      </UButton>
-    </div>
+  <div class="apps-page">
+    <AppHeader
+      title="Social Settings"
+      :show-back="true"
+      back-to="/apps/marketing?floor=social"
+      back-label="Marketing"
+    >
+      <template #actions>
+        <Button
+          v-if="isOrgAdminOrAbove"
+          variant="ghost"
+          size="sm"
+          @click="$router.push('/social/diagnostics')"
+        >
+          <Icon name="lucide:stethoscope" class="w-4 h-4 mr-1" />
+          Diagnostics
+        </Button>
+      </template>
+    </AppHeader>
+
+    <LayoutPageContainer>
+      <p class="text-xs text-muted-foreground mb-5">Manage your connected accounts</p>
 
     <div class="space-y-8">
       <!-- Platform Sections -->
@@ -679,5 +684,12 @@ async function reassignAccountClient(account: SocialAccountPublic, newClient: st
         </div>
       </template>
     </UModal>
-  </LayoutPageContainer>
+    </LayoutPageContainer>
+  </div>
 </template>
+
+<style scoped>
+.apps-page {
+  @apply flex flex-col min-h-full;
+}
+</style>

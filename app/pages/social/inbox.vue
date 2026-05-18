@@ -3,9 +3,10 @@
  * Social Inbox — unified DMs, replies, mentions for FB / IG / Threads
  * /social/inbox
  */
+import { Button } from '~/components/ui/button';
 
 definePageMeta({
-  layout: 'default',
+  layout: 'apps',
   middleware: ['auth'],
 })
 useHead({ title: 'Inbox | Social | Earnest' })
@@ -47,26 +48,31 @@ async function onArchive(value: boolean) {
 </script>
 
 <template>
-  <LayoutPageContainer>
-    <div class="flex items-center justify-between mb-4">
-      <div>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Inbox</h1>
-        <p class="mt-1 text-sm text-gray-500">DMs, replies, and mentions across Facebook, Instagram, and Threads.</p>
-      </div>
-      <div class="flex items-center gap-2">
-        <UButton
-          :variant="archived ? 'soft' : 'ghost'"
+  <div class="apps-page">
+    <AppHeader
+      title="Inbox"
+      :show-back="true"
+      back-to="/apps/marketing?floor=social"
+      back-label="Marketing"
+    >
+      <template #actions>
+        <Button
+          :variant="archived ? 'secondary' : 'ghost'"
           size="sm"
-          :icon="archived ? 'i-lucide-archive' : 'i-lucide-archive'"
           @click="archived = !archived"
         >
+          <Icon name="lucide:archive" class="w-4 h-4 mr-1" />
           {{ archived ? 'Showing archived' : 'Active only' }}
-        </UButton>
-        <UButton to="/social/settings" variant="ghost" size="sm" icon="i-lucide-settings">
+        </Button>
+        <Button variant="ghost" size="sm" @click="$router.push('/social/settings')">
+          <Icon name="lucide:settings" class="w-4 h-4 mr-1" />
           Settings
-        </UButton>
-      </div>
-    </div>
+        </Button>
+      </template>
+    </AppHeader>
+
+    <LayoutPageContainer>
+      <p class="text-xs text-muted-foreground mb-5">DMs, replies, and mentions across Facebook, Instagram, and Threads.</p>
 
     <!-- Split-pane shell -->
     <div class="grid h-[calc(100vh-180px)] grid-cols-12 overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
@@ -90,5 +96,12 @@ async function onArchive(value: boolean) {
         />
       </div>
     </div>
-  </LayoutPageContainer>
+    </LayoutPageContainer>
+  </div>
 </template>
+
+<style scoped>
+.apps-page {
+  @apply flex flex-col min-h-full;
+}
+</style>

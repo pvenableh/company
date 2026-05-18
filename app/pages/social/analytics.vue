@@ -16,7 +16,7 @@ import { CalendarDate, getLocalTimeZone, today } from '@internationalized/date'
 import type { SocialAccountPublic, SocialAnalyticsSnapshot, InstagramMetrics, TikTokMetrics } from '~~/shared/social'
 
 definePageMeta({
-  layout: 'default',
+  layout: 'apps',
   middleware: ['auth'],
 })
 useHead({ title: 'Social Analytics | Earnest' })
@@ -171,19 +171,16 @@ const showEmptyState = computed(() => !analyticsLoading.value && (!hasAnyAccount
 </script>
 
 <template>
-  <LayoutPageContainer>
-    <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-      <div class="flex items-center gap-4">
-        <UButton to="/social" variant="ghost" icon="i-lucide-arrow-left" size="sm" />
-        <div>
-          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Analytics</h1>
-          <p class="text-gray-500 dark:text-gray-400 mt-0.5">
-            Track your social media performance
-          </p>
-        </div>
-      </div>
-    </div>
+  <div class="apps-page">
+    <AppHeader
+      title="Analytics"
+      :show-back="true"
+      back-to="/apps/marketing?floor=social"
+      back-label="Marketing"
+    />
+
+    <LayoutPageContainer>
+      <p class="text-xs text-muted-foreground mb-5">Track your social media performance</p>
 
     <!-- Filters Row -->
     <div class="flex flex-wrap items-center gap-3 mb-6">
@@ -473,5 +470,12 @@ const showEmptyState = computed(() => !analyticsLoading.value && (!hasAnyAccount
         </div>
       </div>
     </UCard>
-  </LayoutPageContainer>
+    </LayoutPageContainer>
+  </div>
 </template>
+
+<style scoped>
+.apps-page {
+  @apply flex flex-col min-h-full;
+}
+</style>

@@ -76,6 +76,57 @@ function resetForm() {
 const selectedPost = ref<SocialPost | null>(null);
 const detailBusy = ref(false);
 
+// Phase 6 — Publisher bridge UI. The picker is a `datetime-local` value
+// (YYYY-MM-DDTHH:mm, no timezone). It rides along with the Approve
+// transition, and on its own via Save Schedule once a post is approved.
+const scheduleAt = ref<string>('');
+const savingSchedule = ref(false);
+
+function toLocalDateTimeInput(iso: string | null | undefined): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function fromLocalDateTimeInput(local: string): string | null {
+  if (!local) return null;
+  const d = new Date(local);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toISOString();
+}
+
+const hasPlatformTarget = computed(() => {
+  const p = selectedPost.value?.platforms;
+  return Array.isArray(p) && p.some((x) => !!x?.account_id);
+});
+
+const scheduledAtInFuture = computed(() => {
+  const iso = selectedPost.value?.scheduled_at;
+  if (!iso) return false;
+  const t = Date.parse(iso);
+  return Number.isFinite(t) && t > Date.now();
+});
+
+const showScheduleHint = computed(() => {
+  const s = selectedPost.value?.approval_state;
+  if (s !== 'approved') return false;
+  if (selectedPost.value?.status === 'scheduled' || selectedPost.value?.status === 'published') return false;
+  return !scheduledAtInFuture.value && hasPlatformTarget.value;
+});
+
+const showPickPlatformsHint = computed(() => {
+  const s = selectedPost.value?.approval_state;
+  if (s !== 'approved' && s !== 'in_review') return false;
+  return !hasPlatformTarget.value;
+});
+
+const scheduleDirty = computed(() => {
+  const current = toLocalDateTimeInput(selectedPost.value?.scheduled_at ?? null);
+  return scheduleAt.value !== current;
+});
+
 // ── Edit mode inside detail modal ─────────────────────────────────
 // Approved/published posts are locked — changes after approval should
 // go through a "Request Changes" cycle, not silent edits.
@@ -92,12 +143,16 @@ const editForm = ref({
 });
 
 function hydrateEditForm(post: SocialPost) {
+  // Fall back to the first attached media when the Studio cover field
+  // hasn't been set — older posts pre-date `design_image_url` but still
+  // have something the user expects to see in the edit modal.
+  const initialCover = post.design_image_url || (post.media_urls && post.media_urls[0]) || '';
   editForm.value = {
     caption: post.caption || '',
     post_type: (post.post_type as any) || 'image',
     project: post.project || '',
     target_client: post.target_client || '',
-    design_image_url: post.design_image_url || '',
+    design_image_url: initialCover,
     figma_frame_url: post.figma_frame_url || '',
     target_month: post.target_month ? post.target_month.slice(0, 10) : '',
   };
@@ -164,17 +219,64 @@ async function fetchClients() {
 }
 
 // ── Computed ──────────────────────────────────────────────────────
-const projectOptions = computed(() => {
-  const arr = Array.from(projectsById.value.values());
-  return arr.map((p) => ({
+// When a client is selected (form or page-level Client Selector),
+// narrow the project list to that client's projects so the user can't
+// accidentally cross-attach.
+function buildProjectOptions(scopedClientId: string | null): { label: string; value: string }[] {
+  const all = Array.from(projectsById.value.values());
+  const filtered = scopedClientId
+    ? all.filter((p) => p.client?.id === scopedClientId)
+    : all;
+  return filtered.map((p) => ({
     label: `${p.title}${p.client?.name ? ` — ${p.client.name}` : ''}`,
     value: p.id,
   }));
+}
+
+const pageScopedClientId = computed<string | null>(() => {
+  const sel = selectedClient.value;
+  return sel && sel !== 'org' ? sel : null;
 });
+
+const createProjectOptions = computed(() =>
+  buildProjectOptions(form.value.target_client || pageScopedClientId.value || null),
+);
+
+const editProjectOptions = computed(() =>
+  buildProjectOptions(editForm.value.target_client || pageScopedClientId.value || null),
+);
 
 const clientOptions = computed(() =>
   Array.from(clientsById.value.values()).map((c) => ({ label: c.name, value: c.id })),
 );
+
+// Cross-fill: picking a project auto-populates the client when empty,
+// and clears the project if a different client is picked.
+function syncFormFromProject(target: 'create' | 'edit') {
+  const f = target === 'create' ? form.value : editForm.value;
+  const project = f.project ? projectsById.value.get(f.project) : null;
+  const projectClientId = project?.client?.id || null;
+  if (projectClientId && !f.target_client) {
+    f.target_client = projectClientId;
+  }
+}
+
+function syncFormFromClient(target: 'create' | 'edit') {
+  const f = target === 'create' ? form.value : editForm.value;
+  if (!f.project) return;
+  const project = projectsById.value.get(f.project);
+  const projectClientId = project?.client?.id || null;
+  // If the user picked a client that doesn't match the project's client,
+  // drop the project so they can pick one that fits.
+  if (f.target_client && projectClientId && projectClientId !== f.target_client) {
+    f.project = '';
+  }
+}
+
+watch(() => form.value.project, () => syncFormFromProject('create'));
+watch(() => form.value.target_client, () => syncFormFromClient('create'));
+watch(() => editForm.value.project, () => syncFormFromProject('edit'));
+watch(() => editForm.value.target_client, () => syncFormFromClient('edit'));
 
 interface PostGroup {
   key: string;
@@ -349,15 +451,28 @@ async function saveEdit() {
 async function transition(post: SocialPost, next: ApprovalState) {
   detailBusy.value = true;
   try {
+    const body: Record<string, unknown> = { approval_state: next };
+    // Roll any user-picked schedule into the Approve transition so the
+    // Phase 6 bridge can flip post_status → scheduled in a single round-trip.
+    if (next === 'approved' && scheduleDirty.value) {
+      const iso = fromLocalDateTimeInput(scheduleAt.value);
+      if (iso) body.scheduled_at = iso;
+    }
     const r = await $fetch<{ data: SocialPost }>(`/api/social/posts/${post.id}`, {
       method: 'PATCH',
-      body: { approval_state: next },
+      body,
     });
     selectedPost.value = r?.data ?? null;
+    if (selectedPost.value) scheduleAt.value = toLocalDateTimeInput(selectedPost.value.scheduled_at);
     // Refresh list in place
     const idx = posts.value.findIndex((p) => p.id === post.id);
     if (idx >= 0 && r?.data) posts.value[idx] = r.data;
-    toast.add({ title: `Marked ${stateLabel(next)}`, icon: 'i-lucide-check', color: 'green' });
+    const promoted = r?.data?.status === 'scheduled' && next === 'approved';
+    toast.add({
+      title: promoted ? 'Approved & scheduled' : `Marked ${stateLabel(next)}`,
+      icon: 'i-lucide-check',
+      color: 'green',
+    });
   } catch (err: any) {
     console.error('Studio transition failed', err);
     toast.add({
@@ -368,6 +483,44 @@ async function transition(post: SocialPost, next: ApprovalState) {
     });
   } finally {
     detailBusy.value = false;
+  }
+}
+
+async function saveSchedule() {
+  if (!selectedPost.value) return;
+  const iso = fromLocalDateTimeInput(scheduleAt.value);
+  if (!iso) {
+    toast.add({ title: 'Pick a date and time', icon: 'i-lucide-alert-circle', color: 'yellow' });
+    return;
+  }
+  savingSchedule.value = true;
+  try {
+    const r = await $fetch<{ data: SocialPost }>(`/api/social/posts/${selectedPost.value.id}`, {
+      method: 'PATCH',
+      body: { scheduled_at: iso },
+    });
+    if (r?.data) {
+      selectedPost.value = r.data;
+      scheduleAt.value = toLocalDateTimeInput(r.data.scheduled_at);
+      const idx = posts.value.findIndex((p) => p.id === r.data.id);
+      if (idx >= 0) posts.value[idx] = r.data;
+    }
+    const promoted = r?.data?.status === 'scheduled';
+    toast.add({
+      title: promoted ? 'Scheduled for publish' : 'Schedule updated',
+      icon: 'i-lucide-calendar-check',
+      color: 'green',
+    });
+  } catch (err: any) {
+    console.error('Studio saveSchedule failed', err);
+    toast.add({
+      title: 'Could not save schedule',
+      description: err?.data?.message || err?.message || 'Unknown error',
+      icon: 'i-lucide-alert-circle',
+      color: 'red',
+    });
+  } finally {
+    savingSchedule.value = false;
   }
 }
 
@@ -398,6 +551,7 @@ function openDetail(post: SocialPost) {
   selectedPost.value = post;
   editing.value = false;
   hydrateEditForm(post);
+  scheduleAt.value = toLocalDateTimeInput(post.scheduled_at);
 }
 
 function startEditing() {
@@ -409,6 +563,33 @@ function startEditing() {
 function cancelEditing() {
   editing.value = false;
   if (selectedPost.value) hydrateEditForm(selectedPost.value);
+}
+
+// ── Media picker (Directus Files) ─────────────────────────────────
+// Single image per post: we take the first picked file's URL and
+// write it into design_image_url for whichever form is open.
+const showMediaPicker = ref(false);
+const mediaPickerTarget = ref<'create' | 'edit'>('create');
+
+function openMediaPicker(target: 'create' | 'edit') {
+  mediaPickerTarget.value = target;
+  showMediaPicker.value = true;
+}
+
+function onMediaPicked(picked: { url: string; type: 'image' | 'video' }[]) {
+  const first = picked[0];
+  showMediaPicker.value = false;
+  if (!first) return;
+  if (mediaPickerTarget.value === 'create') {
+    form.value.design_image_url = first.url;
+  } else {
+    editForm.value.design_image_url = first.url;
+  }
+}
+
+function clearDesignImage(target: 'create' | 'edit') {
+  if (target === 'create') form.value.design_image_url = '';
+  else editForm.value.design_image_url = '';
 }
 
 watch(stateFilter, fetchPosts);
@@ -425,19 +606,52 @@ onMounted(() => {
 </script>
 
 <template>
-  <div>
-    <!-- Toolbar -->
-    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
-      <p v-if="currentClient && (currentClient as any).id !== 'org'" class="cg-text-child text-muted-foreground">
-        Studio scoped to <span class="font-medium text-foreground">{{ (currentClient as any).name }}</span>
-      </p>
-      <span v-else />
-      <div class="flex items-center gap-1.5 ml-auto">
+  <div class="studio-shell">
+    <!-- Hero strip — sets the Studio identity + at-a-glance summary -->
+    <section class="studio-hero">
+      <div class="studio-hero__main">
+        <div class="studio-hero__icon">
+          <Icon name="lucide:palette" class="w-6 h-6" />
+        </div>
+        <div class="flex-1 min-w-0">
+          <h2 class="studio-hero__title">Content Studio</h2>
+          <p class="studio-hero__sub">
+            <template v-if="currentClient && (currentClient as any).id !== 'org'">
+              Scoped to <span class="font-medium text-foreground">{{ (currentClient as any).name }}</span>
+            </template>
+            <template v-else>
+              Design social posts, share with clients for review, then publish.
+            </template>
+          </p>
+        </div>
         <UiActionButton icon="lucide:plus" variant="primary" @click="showCreate = true">
           New Draft
         </UiActionButton>
       </div>
-    </div>
+
+      <div class="studio-hero__stats">
+        <div class="studio-stat">
+          <span class="studio-stat__label">Total</span>
+          <span class="studio-stat__value">{{ totalPosts }}</span>
+        </div>
+        <div class="studio-stat studio-stat--draft">
+          <span class="studio-stat__label">Drafts</span>
+          <span class="studio-stat__value">{{ stateCounts.draft || 0 }}</span>
+        </div>
+        <div class="studio-stat studio-stat--review">
+          <span class="studio-stat__label">In Review</span>
+          <span class="studio-stat__value">{{ stateCounts.in_review || 0 }}</span>
+        </div>
+        <div class="studio-stat studio-stat--approved">
+          <span class="studio-stat__label">Approved</span>
+          <span class="studio-stat__value">{{ stateCounts.approved || 0 }}</span>
+        </div>
+        <div class="studio-stat studio-stat--published">
+          <span class="studio-stat__label">Published</span>
+          <span class="studio-stat__value">{{ stateCounts.published || 0 }}</span>
+        </div>
+      </div>
+    </section>
 
     <!-- State pill tabs -->
     <div class="studio-tabs" role="tablist" aria-label="Approval state filter">
@@ -468,36 +682,38 @@ onMounted(() => {
     </div>
 
     <!-- Empty -->
-    <div v-else-if="!groups.length" class="flex flex-col items-center justify-center py-24 gap-4">
-      <Icon name="lucide:layout-grid" class="w-12 h-12 text-muted-foreground/40" />
-      <div class="text-center">
-        <p class="text-sm font-medium text-muted-foreground">No content yet</p>
-        <p class="cg-text-child text-muted-foreground/70 mt-1">
-          Draft a post and tie it to a retainer project — no account connection needed.
-        </p>
+    <div v-else-if="!groups.length" class="studio-empty">
+      <div class="studio-empty__mark">
+        <Icon name="lucide:palette" class="w-9 h-9" />
       </div>
+      <p class="text-base font-semibold text-foreground">Your studio is quiet</p>
+      <p class="text-sm text-muted-foreground/80 max-w-sm text-center">
+        Start a draft, attach a project, share it with your client for review — all without needing a connected social account.
+      </p>
       <UiActionButton icon="lucide:plus" variant="primary" @click="showCreate = true">
         New Draft
       </UiActionButton>
     </div>
 
     <!-- Grouped list -->
-    <div v-else class="space-y-6">
-      <div v-for="g in groups" :key="g.key">
-        <div class="flex items-baseline justify-between mb-2 px-1">
-          <div>
-            <h3 class="cg-text-header">
+    <div v-else class="space-y-8">
+      <div v-for="g in groups" :key="g.key" class="studio-group">
+        <div class="studio-group__header">
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="studio-group__chip">
+              <Icon name="lucide:folder" class="w-3 h-3" />
               {{ g.projectTitle }}
-              <span v-if="g.clientName" class="text-muted-foreground font-normal"> · {{ g.clientName }}</span>
-            </h3>
-            <p class="cg-text-child text-muted-foreground">{{ g.monthLabel }}</p>
+            </span>
+            <span v-if="g.clientName" class="studio-group__client">{{ g.clientName }}</span>
           </div>
-          <span class="cg-text-child text-muted-foreground tabular-nums">
-            {{ g.posts.length }} {{ g.posts.length === 1 ? 'post' : 'posts' }}
-          </span>
+          <div class="flex items-center gap-3 text-[11px] text-muted-foreground tabular-nums">
+            <span class="font-medium">{{ g.monthLabel }}</span>
+            <span class="studio-group__dot" />
+            <span>{{ g.posts.length }} {{ g.posts.length === 1 ? 'post' : 'posts' }}</span>
+          </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           <button
             v-for="post in g.posts"
             :key="post.id"
@@ -519,20 +735,19 @@ onMounted(() => {
                 loading="lazy"
               />
               <div v-else class="studio-card__placeholder">
-                <Icon name="lucide:image" class="w-8 h-8 text-muted-foreground/40" />
+                <Icon name="lucide:image" class="w-9 h-9 text-muted-foreground/30" />
               </div>
-            </div>
-            <div class="studio-card__body">
               <span class="studio-card__state" :class="stateTone(post.approval_state)">
                 {{ stateLabel(post.approval_state) }}
               </span>
-              <p class="cg-text-child text-foreground line-clamp-3 text-left">
+              <div v-if="post.figma_frame_url" class="studio-card__figma" title="Figma frame linked">
+                <Icon name="lucide:figma" class="w-3 h-3" />
+              </div>
+            </div>
+            <div class="studio-card__body">
+              <p class="studio-card__caption">
                 {{ post.caption || 'Untitled draft' }}
               </p>
-              <div v-if="post.figma_frame_url" class="flex items-center gap-1 text-[10px] text-muted-foreground">
-                <Icon name="lucide:figma" class="w-3 h-3" />
-                <span>Figma linked</span>
-              </div>
             </div>
           </button>
         </div>
@@ -545,7 +760,7 @@ onMounted(() => {
         <div>
           <h2 class="cg-text-header">New Content Draft</h2>
           <p class="cg-text-child text-muted-foreground">
-            Tied to a retainer project, viewable by your team. No connected account required.
+            Design a post, attach a project, share with the client for review.
           </p>
         </div>
 
@@ -557,23 +772,25 @@ onMounted(() => {
           />
         </UFormGroup>
 
-        <div class="grid grid-cols-2 gap-3">
-          <UFormGroup label="Project">
+        <div class="grid grid-cols-2 gap-3 min-w-0">
+          <UFormGroup label="Project" class="min-w-0">
             <USelect
               v-model="form.project"
-              :options="projectOptions"
+              :options="createProjectOptions"
               option-attribute="label"
               value-attribute="value"
               placeholder="Pick a project"
+              class="w-full"
             />
           </UFormGroup>
-          <UFormGroup label="Target Client">
+          <UFormGroup label="Target Client" class="min-w-0">
             <USelect
               v-model="form.target_client"
               :options="clientOptions"
               option-attribute="label"
               value-attribute="value"
               placeholder="Pick a client"
+              class="w-full"
             />
           </UFormGroup>
         </div>
@@ -598,11 +815,46 @@ onMounted(() => {
           </UFormGroup>
         </div>
 
-        <UFormGroup label="Design Image URL" hint="Cover art / mockup">
-          <UInput v-model="form.design_image_url" placeholder="https://cdn…" />
+        <UFormGroup
+          label="Cover Image"
+          description="The hero image clients see in their review surface — upload a mockup or pick from your media library."
+        >
+          <button
+            v-if="!form.design_image_url"
+            type="button"
+            class="studio-image-empty"
+            @click="openMediaPicker('create')"
+          >
+            <Icon name="lucide:image-plus" class="w-7 h-7 text-muted-foreground/60" />
+            <span class="text-xs text-muted-foreground">Choose image or upload new</span>
+          </button>
+          <div v-else class="studio-image-preview">
+            <img :src="form.design_image_url" alt="Cover preview" />
+            <div class="studio-image-preview__actions">
+              <button
+                type="button"
+                class="studio-image-preview__btn"
+                @click="openMediaPicker('create')"
+              >
+                <Icon name="lucide:image" class="w-3.5 h-3.5" />
+                Replace
+              </button>
+              <button
+                type="button"
+                class="studio-image-preview__btn studio-image-preview__btn--danger"
+                @click="clearDesignImage('create')"
+              >
+                <Icon name="lucide:x" class="w-3.5 h-3.5" />
+                Remove
+              </button>
+            </div>
+          </div>
         </UFormGroup>
 
-        <UFormGroup label="Figma Frame URL" hint="Link to the source frame">
+        <UFormGroup
+          label="Figma Frame URL"
+          description="Link back to the source design frame so reviewers can see context."
+        >
           <UInput v-model="form.figma_frame_url" placeholder="https://figma.com/file/…" />
         </UFormGroup>
 
@@ -671,6 +923,72 @@ onMounted(() => {
             Approved {{ new Date(selectedPost.approved_at).toLocaleString() }}
           </div>
 
+          <!-- Phase 6 publisher bridge: schedule picker + hint banners.
+               Visible while a post is awaiting/under review (so Approve can
+               carry the schedule) and after approval (so staff can update it
+               without re-opening the rich composer). -->
+          <div
+            v-if="selectedPost.approval_state === 'in_review' || selectedPost.approval_state === 'approved'"
+            class="space-y-3 rounded-lg border border-border bg-muted/30 p-3"
+          >
+            <div class="flex items-center justify-between gap-2">
+              <div>
+                <p class="text-xs font-semibold text-foreground">Schedule</p>
+                <p class="text-[11px] text-muted-foreground">
+                  {{
+                    selectedPost.status === 'scheduled'
+                      ? 'Queued for auto-publish.'
+                      : 'Pick a future time to auto-publish on approval.'
+                  }}
+                </p>
+              </div>
+              <span
+                v-if="selectedPost.status === 'scheduled'"
+                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide bg-sky-500/12 text-sky-700 dark:text-sky-300 border border-sky-500/30"
+              >
+                <Icon name="lucide:calendar-clock" class="w-3 h-3" />
+                Scheduled
+              </span>
+            </div>
+            <div class="flex flex-wrap items-end gap-2">
+              <UInput
+                v-model="scheduleAt"
+                type="datetime-local"
+                class="flex-1 min-w-[180px]"
+              />
+              <UiActionButton
+                v-if="selectedPost.approval_state === 'approved' && scheduleDirty"
+                icon="lucide:calendar-check"
+                variant="primary"
+                :loading="savingSchedule"
+                @click="saveSchedule"
+              >
+                Save Schedule
+              </UiActionButton>
+            </div>
+
+            <div
+              v-if="showScheduleHint"
+              class="rounded border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-200"
+            >
+              Approved. Schedule a publish time to push live.
+            </div>
+
+            <div
+              v-if="showPickPlatformsHint"
+              class="rounded border border-violet-500/30 bg-violet-500/10 px-3 py-2 text-xs text-violet-800 dark:text-violet-200 flex items-center justify-between gap-2"
+            >
+              <span>No platforms picked yet — this stays a Studio draft until you wire one.</span>
+              <NuxtLink
+                :to="`/social/posts/${selectedPost.id}/edit`"
+                class="inline-flex items-center gap-1 font-medium underline-offset-2 hover:underline shrink-0"
+              >
+                Pick platforms
+                <Icon name="lucide:arrow-right" class="w-3 h-3" />
+              </NuxtLink>
+            </div>
+          </div>
+
           <div class="flex flex-wrap justify-end gap-2 pt-3 border-t border-border">
             <UiActionButton
               v-for="t in availableTransitions"
@@ -691,23 +1009,25 @@ onMounted(() => {
             <UTextarea v-model="editForm.caption" :rows="4" />
           </UFormGroup>
 
-          <div class="grid grid-cols-2 gap-3">
-            <UFormGroup label="Project">
+          <div class="grid grid-cols-2 gap-3 min-w-0">
+            <UFormGroup label="Project" class="min-w-0">
               <USelect
                 v-model="editForm.project"
-                :options="projectOptions"
+                :options="editProjectOptions"
                 option-attribute="label"
                 value-attribute="value"
                 placeholder="Pick a project"
+                class="w-full"
               />
             </UFormGroup>
-            <UFormGroup label="Target Client">
+            <UFormGroup label="Target Client" class="min-w-0">
               <USelect
                 v-model="editForm.target_client"
                 :options="clientOptions"
                 option-attribute="label"
                 value-attribute="value"
                 placeholder="Pick a client"
+                class="w-full"
               />
             </UFormGroup>
           </div>
@@ -732,11 +1052,46 @@ onMounted(() => {
             </UFormGroup>
           </div>
 
-          <UFormGroup label="Design Image URL" hint="Cover art / mockup">
-            <UInput v-model="editForm.design_image_url" placeholder="https://cdn…" />
+          <UFormGroup
+            label="Cover Image"
+            description="The hero image clients see in their review surface — upload a mockup or pick from your media library."
+          >
+            <button
+              v-if="!editForm.design_image_url"
+              type="button"
+              class="studio-image-empty"
+              @click="openMediaPicker('edit')"
+            >
+              <Icon name="lucide:image-plus" class="w-7 h-7 text-muted-foreground/60" />
+              <span class="text-xs text-muted-foreground">Choose image or upload new</span>
+            </button>
+            <div v-else class="studio-image-preview">
+              <img :src="editForm.design_image_url" alt="Cover preview" />
+              <div class="studio-image-preview__actions">
+                <button
+                  type="button"
+                  class="studio-image-preview__btn"
+                  @click="openMediaPicker('edit')"
+                >
+                  <Icon name="lucide:image" class="w-3.5 h-3.5" />
+                  Replace
+                </button>
+                <button
+                  type="button"
+                  class="studio-image-preview__btn studio-image-preview__btn--danger"
+                  @click="clearDesignImage('edit')"
+                >
+                  <Icon name="lucide:x" class="w-3.5 h-3.5" />
+                  Remove
+                </button>
+              </div>
+            </div>
           </UFormGroup>
 
-          <UFormGroup label="Figma Frame URL" hint="Link to the source frame">
+          <UFormGroup
+            label="Figma Frame URL"
+            description="Link back to the source design frame so reviewers can see context."
+          >
             <UInput v-model="editForm.figma_frame_url" placeholder="https://figma.com/file/…" />
           </UFormGroup>
 
@@ -755,17 +1110,106 @@ onMounted(() => {
         </template>
       </div>
     </UModal>
+
+    <!-- Media picker (Directus files) -->
+    <SocialMediaFilePicker
+      v-if="showMediaPicker"
+      @picked="onMediaPicked"
+      @close="showMediaPicker = false"
+    />
   </div>
 </template>
 
 <style scoped>
 @reference "~/assets/css/tailwind.css";
 
-.studio-tabs {
-  @apply mb-5 flex;
+.studio-shell {
   --accent-h: var(--app-accent-h, 220);
   --accent-s: var(--app-accent-s, 10%);
   --accent-l: var(--app-accent-l, 48%);
+}
+
+.studio-hero {
+  @apply mb-5 rounded-2xl border border-border bg-card
+    px-5 py-4 space-y-4;
+  background-image:
+    radial-gradient(circle at 0% 0%, hsl(var(--accent-h) var(--accent-s) var(--accent-l) / 0.08), transparent 45%),
+    radial-gradient(circle at 100% 100%, hsl(var(--accent-h) var(--accent-s) var(--accent-l) / 0.05), transparent 50%);
+}
+
+.studio-hero__main {
+  @apply flex items-center gap-3;
+}
+
+.studio-hero__icon {
+  @apply w-10 h-10 rounded-full flex items-center justify-center shrink-0
+    text-white;
+  background: linear-gradient(
+    135deg,
+    hsl(var(--accent-h) var(--accent-s) calc(var(--accent-l) + 10%)),
+    hsl(var(--accent-h) var(--accent-s) var(--accent-l))
+  );
+  box-shadow: 0 4px 14px -6px hsl(var(--accent-h) var(--accent-s) var(--accent-l) / 0.5);
+}
+
+.studio-hero__title {
+  @apply text-base font-semibold text-foreground tracking-tight;
+}
+
+.studio-hero__sub {
+  @apply text-xs text-muted-foreground mt-0.5;
+}
+
+.studio-hero__stats {
+  @apply grid grid-cols-2 sm:grid-cols-5 gap-2;
+}
+
+.studio-stat {
+  @apply flex items-baseline justify-between rounded-lg
+    border border-border/70 bg-background/60 px-3 py-2;
+}
+
+.studio-stat__label {
+  @apply text-[10px] uppercase tracking-wide text-muted-foreground;
+}
+
+.studio-stat__value {
+  @apply text-base font-semibold text-foreground tabular-nums;
+}
+
+.studio-stat--draft .studio-stat__value { @apply text-muted-foreground; }
+.studio-stat--review .studio-stat__value { @apply text-amber-600 dark:text-amber-400; }
+.studio-stat--approved .studio-stat__value { @apply text-success; }
+.studio-stat--published .studio-stat__value { @apply text-sky-600 dark:text-sky-400; }
+
+.studio-empty {
+  @apply flex flex-col items-center justify-center py-24 gap-4;
+}
+
+.studio-empty__mark {
+  @apply w-16 h-16 rounded-2xl flex items-center justify-center
+    text-muted-foreground/60 bg-muted/40 border border-border/60;
+}
+
+.studio-group__header {
+  @apply flex items-center justify-between mb-3 px-1 gap-2 flex-wrap;
+}
+
+.studio-group__chip {
+  @apply inline-flex items-center gap-1.5 h-6 px-2 rounded-full
+    text-xs font-medium bg-muted/60 text-foreground border border-border/60;
+}
+
+.studio-group__client {
+  @apply text-xs text-muted-foreground truncate;
+}
+
+.studio-group__dot {
+  @apply w-1 h-1 rounded-full bg-muted-foreground/40 inline-block;
+}
+
+.studio-tabs {
+  @apply mb-5 flex;
 }
 
 .studio-tabs__scroller {
@@ -827,35 +1271,84 @@ onMounted(() => {
 }
 
 .studio-card {
-  @apply flex flex-col text-left bg-card border border-border rounded-lg
+  @apply flex flex-col text-left bg-card border border-border/70 rounded-xl
     overflow-hidden transition-all duration-200
-    hover:border-foreground/20 hover:shadow-md focus-visible:outline-none
+    hover:-translate-y-0.5 hover:shadow-lg hover:shadow-foreground/5
+    hover:border-foreground/20 focus-visible:outline-none
     focus-visible:ring-2 focus-visible:ring-primary;
 }
 
 .studio-card__media {
-  @apply relative aspect-square bg-muted/40 overflow-hidden;
+  @apply relative aspect-[4/5] bg-muted/40 overflow-hidden;
 }
 
 .studio-card__media img {
-  @apply w-full h-full object-cover transition-transform duration-300;
+  @apply w-full h-full object-cover transition-transform duration-500 ease-out;
 }
 
 .studio-card:hover .studio-card__media img {
-  @apply scale-[1.02];
+  @apply scale-[1.04];
 }
 
 .studio-card__placeholder {
   @apply absolute inset-0 flex items-center justify-center;
+  background-image:
+    linear-gradient(135deg, hsl(var(--accent-h) var(--accent-s) var(--accent-l) / 0.06), transparent 60%);
 }
 
 .studio-card__body {
-  @apply p-3 space-y-2;
+  @apply px-3 py-2.5;
+}
+
+.studio-card__caption {
+  @apply text-xs text-foreground line-clamp-2 leading-snug;
 }
 
 .studio-card__state {
-  @apply inline-flex items-center px-2 py-0.5 rounded-full
+  @apply absolute top-2 left-2 inline-flex items-center
+    px-2 py-0.5 rounded-full
     text-[10px] font-semibold uppercase tracking-wide
-    border;
+    border backdrop-blur-sm;
+}
+
+.studio-card__figma {
+  @apply absolute top-2 right-2 inline-flex items-center justify-center
+    w-6 h-6 rounded-full bg-white/85 dark:bg-black/55
+    text-foreground backdrop-blur-sm border border-white/40 dark:border-black/40
+    shadow-sm;
+}
+
+.studio-image-empty {
+  @apply flex flex-col items-center justify-center gap-2
+    w-full aspect-[16/9] rounded-lg
+    border-2 border-dashed border-border bg-muted/30
+    text-muted-foreground hover:text-foreground
+    hover:border-foreground/30 hover:bg-muted/50
+    transition-colors;
+}
+
+.studio-image-preview {
+  @apply relative w-full overflow-hidden rounded-lg
+    border border-border bg-muted/30;
+  aspect-ratio: 16 / 9;
+}
+
+.studio-image-preview img {
+  @apply w-full h-full object-cover;
+}
+
+.studio-image-preview__actions {
+  @apply absolute inset-x-0 bottom-0 flex items-center justify-end gap-1.5
+    px-2 py-1.5 bg-gradient-to-t from-black/55 to-transparent;
+}
+
+.studio-image-preview__btn {
+  @apply inline-flex items-center gap-1 h-6 px-2 rounded-md
+    text-[11px] font-medium text-white bg-black/40 backdrop-blur-sm
+    hover:bg-black/60 transition-colors;
+}
+
+.studio-image-preview__btn--danger {
+  @apply hover:bg-rose-500/70;
 }
 </style>

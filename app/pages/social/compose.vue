@@ -8,6 +8,7 @@
  * - Select multiple accounts across clients
  * - Per-platform options
  */
+import { Button } from '~/components/ui/button';
 
 import { format, addHours, roundToNearestMinutes } from 'date-fns';
 import draggable from 'vuedraggable';
@@ -30,7 +31,7 @@ function handleAICreated(posts: { platform: SocialPlatform; caption: string }[])
 }
 
 definePageMeta({
-	layout: 'default',
+	layout: 'apps',
 	middleware: ['auth'],
 });
 useHead({ title: 'Compose Post | Earnest' });
@@ -353,25 +354,22 @@ function onPickFiles(picked: { url: string; type: 'image' | 'video' }[]) {
 </script>
 
 <template>
-	<LayoutPageContainer>
-		<!-- Header -->
-		<div class="flex items-center gap-4 mb-8">
-			<UButton to="/social" variant="ghost" icon="i-lucide-arrow-left" size="sm" />
-			<div class="flex-1">
-				<h1 class="text-2xl font-bold text-gray-900 dark:text-white">Create Post</h1>
-				<p class="text-gray-500 dark:text-gray-400 mt-0.5">Schedule content across multiple accounts</p>
-			</div>
-			<UButton
-				variant="soft"
-				color="violet"
-				@click="showAIWizard = true"
-			>
-				<template #leading>
-					<EarnestIcon class="w-3.5 h-3.5" />
-				</template>
-				Earnest Generate
-			</UButton>
-		</div>
+	<div class="apps-page">
+		<AppHeader
+			title="Create Post"
+			:show-back="true"
+			back-to="/apps/marketing?floor=social"
+			back-label="Marketing"
+		>
+			<template #actions>
+				<Button variant="outline" size="sm" @click="showAIWizard = true">
+					<EarnestIcon class="w-3.5 h-3.5 mr-1" />
+					Earnest Generate
+				</Button>
+			</template>
+		</AppHeader>
+
+		<LayoutPageContainer>
 
 		<div class="grid lg:grid-cols-5 gap-8">
 			<!-- Main Form -->
@@ -764,5 +762,12 @@ function onPickFiles(picked: { url: string; type: 'image' | 'video' }[]) {
 				</div>
 			</template>
 		</UModal>
-	</LayoutPageContainer>
+		</LayoutPageContainer>
+	</div>
 </template>
+
+<style scoped>
+.apps-page {
+	@apply flex flex-col min-h-full;
+}
+</style>

@@ -8,9 +8,10 @@ import { format, parseISO } from 'date-fns'
 import { CalendarDate, getLocalTimeZone, parseDate, today } from '@internationalized/date'
 import type { SocialPost, SocialAccountPublic, SocialPostTarget, PostType } from '~~/shared/social'
 import { getSocialPlatformIcon } from '~/utils/icons'
+import { Button } from '~/components/ui/button'
 
 definePageMeta({
-  layout: 'default',
+  layout: 'apps',
   middleware: ['auth'],
 })
 useHead({ title: 'Edit Post | Earnest' })
@@ -211,32 +212,30 @@ const minDate = today(getLocalTimeZone())
 </script>
 
 <template>
-  <LayoutPageContainer>
-    <!-- Header -->
-    <div class="flex items-center justify-between mb-8">
-      <div class="flex items-center gap-4">
-        <UButton to="/social/calendar" variant="ghost" icon="i-lucide-arrow-left" size="sm" />
-        <div>
-          <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Edit Post</h1>
-          <p class="text-gray-500 dark:text-gray-400 mt-0.5">
-            {{ post.status === 'draft' ? 'Draft' : 'Scheduled' }} •
-            Created {{ format(parseISO(post.date_created), 'MMM d, yyyy') }}
-          </p>
-        </div>
-      </div>
-      <div class="flex items-center gap-1.5">
-        <button
-          class="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border text-xs font-medium text-primary hover:bg-primary/10 hover:border-primary/30 transition-colors"
-          @click="sidebarOpen = true"
-        >
-          <EarnestIcon class="w-3.5 h-3.5" />
-          <span class="hidden sm:inline">Ask Earnest</span>
-        </button>
-        <UButton variant="soft" color="red" icon="i-lucide-trash-2" @click="deletePost">
+  <div class="apps-page">
+    <AppHeader
+      title="Edit Post"
+      :show-back="true"
+      back-to="/social/calendar"
+      back-label="Calendar"
+    >
+      <template #actions>
+        <Button variant="outline" size="sm" @click="sidebarOpen = true">
+          <EarnestIcon class="w-3.5 h-3.5 mr-1" />
+          Ask Earnest
+        </Button>
+        <Button variant="destructive" size="sm" @click="deletePost">
+          <Icon name="lucide:trash-2" class="w-4 h-4 mr-1" />
           Delete
-        </UButton>
-      </div>
-    </div>
+        </Button>
+      </template>
+    </AppHeader>
+
+    <LayoutPageContainer>
+      <p v-if="post" class="text-xs text-muted-foreground mb-5">
+        {{ post.status === 'draft' ? 'Draft' : 'Scheduled' }} ·
+        Created {{ format(parseISO(post.date_created), 'MMM d, yyyy') }}
+      </p>
 
     <div class="grid lg:grid-cols-5 gap-8">
       <!-- Main Form -->
@@ -478,8 +477,15 @@ const minDate = today(getLocalTimeZone())
         <div v-if="sidebarOpen" class="fixed inset-0 bg-black/20 z-40" @click="closeSidebar" />
       </Transition>
     </ClientOnly>
-  </LayoutPageContainer>
+    </LayoutPageContainer>
+  </div>
 </template>
+
+<style scoped>
+.apps-page {
+  @apply flex flex-col min-h-full;
+}
+</style>
 
 <script lang="ts">
 // Helper functions for calendar (outside setup)
