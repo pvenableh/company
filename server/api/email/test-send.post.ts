@@ -11,10 +11,11 @@
  * Used by the new /api/email/preview QA endpoint and the soon-to-be admin
  * UI for verifying branded chrome.
  */
-import { readItems } from '@directus/sdk';
+import { readItem } from '@directus/sdk';
 import { compileMjml, compileSubject } from '~~/server/utils/mjml-compiler';
 import { renderEarnestEmail, renderOrgEmail } from '~~/server/utils/email-shell';
 import { sendBrandedEmail, fetchOrgBrand } from '~~/server/utils/email-send';
+import { requireOrgMembership } from '~~/server/utils/marketing-perms';
 
 interface RequestBody {
   template_id?: string;
@@ -34,16 +35,37 @@ export default defineEventHandler(async (event) => {
   const body = await readBody<RequestBody>(event);
   const to_email = body?.to_email;
 
-  if (!to_email) {
-    throw createError({ statusCode: 400, message: 'to_email is required' });
+  // Single-recipient string only. SendGrid's `to` field accepts arrays and an
+  // unauthenticated caller passing one would fan a branded email out. We gate
+  // auth below, but defense-in-depth on the recipient shape is cheap.
+  if (!to_email || typeof to_email !== 'string' || !to_email.includes('@')) {
+    throw createError({ statusCode: 400, message: 'to_email is required (single email address)' });
   }
 
   if (!config.sendgridApiKey) {
     throw createError({ statusCode: 500, message: 'SendGrid API key not configured' });
   }
 
+  // Auth gate for BOTH modes. Without this, anyone could anonymously send
+  // an email branded as any tenant (shell-mode) or send a starter template
+  // to arbitrary addresses (template-mode). Mirrors the pattern landed in
+  // server/api/email/newsletter-send.post.ts (commit ae56180).
+  const session = await requireUserSession(event);
+  const userId = (session as any).user?.id;
+  if (!userId) {
+    throw createError({ statusCode: 401, message: 'Authentication required' });
+  }
+
   // ── Shell-mode (Stage 1 transactional preview) ──
   if (body.shell === 'earnest' || body.shell === 'org') {
+    // Org-shell mode impersonates the org's brand chrome. Require the caller
+    // to actually belong to that org.
+    if (body.shell === 'org') {
+      if (!body.org_id) {
+        throw createError({ statusCode: 400, message: 'org_id is required when shell=org' });
+      }
+      await requireOrgMembership(event, body.org_id);
+    }
     const subject = `[TEST] ${body.preview_subject || 'Transactional shell preview'}`;
     const heading = body.preview_heading || 'This is a transactional preview';
     const bodyHtml = `
@@ -56,10 +78,7 @@ export default defineEventHandler(async (event) => {
     let rendered: { html: string; text: string };
     let org = null as any;
     if (body.shell === 'org') {
-      if (!body.org_id) {
-        throw createError({ statusCode: 400, message: 'org_id is required when shell=org' });
-      }
-      org = await fetchOrgBrand(body.org_id);
+      org = await fetchOrgBrand(body.org_id!);
       if (!org) {
         throw createError({ statusCode: 404, message: `Org ${body.org_id} not found` });
       }
@@ -88,21 +107,38 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: 'template_id is required (or pass shell=earnest|org)' });
   }
 
-  try {
-    const directus = await getUserDirectus(event);
-    const templates = await directus.request(
-      readItems('email_templates', {
-        filter: { id: { _eq: template_id } },
-        limit: 1,
+  // Read via service token so the ownership check below is enforceable
+  // regardless of the caller's RBAC. Then gate on org membership for the
+  // template's org (or accept platform starters). Same shape as
+  // server/api/email/newsletter-send.post.ts:77-94.
+  //
+  // Kept OUTSIDE the catch-all try below so 401/403 thrown by
+  // requireOrgMembership propagate as real auth errors instead of being
+  // downgraded to 200 { success: false }.
+  const adminDirectus = getServerDirectus();
+  const template = (await adminDirectus
+    .request(
+      readItem('email_templates', template_id, {
+        fields: ['id', 'name', 'subject_template', 'mjml_source', 'organization', 'is_starter'],
       }),
-    );
+    )
+    .catch(() => null)) as any;
 
-    const template = (templates as any[])?.[0];
-    if (!template) return { success: false, error: 'Template not found' };
-    if (!template.mjml_source) {
-      return { success: false, error: 'Template has no compiled MJML. Save the template first.' };
+  if (!template) return { success: false, error: 'Template not found' };
+  if (!template.is_starter) {
+    const templateOrg = typeof template.organization === 'string'
+      ? template.organization
+      : template.organization?.id;
+    if (!templateOrg) {
+      throw createError({ statusCode: 403, message: 'Template is not associated with an organization' });
     }
+    await requireOrgMembership(event, templateOrg);
+  }
+  if (!template.mjml_source) {
+    return { success: false, error: 'Template has no compiled MJML. Save the template first.' };
+  }
 
+  try {
     const variables = {
       first_name: 'Test',
       last_name: 'User',
